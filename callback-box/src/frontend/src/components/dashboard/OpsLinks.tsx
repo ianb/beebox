@@ -10,29 +10,33 @@
 
 import { Link, useParams } from "@tanstack/react-router";
 import { href } from "../../lib/routing";
+import { Card } from "../ui/Card";
+import { Stack } from "../ui/Stack";
+import { Text } from "../ui/Text";
+import { TextLink } from "../ui/TextLink";
 
 export function OpsLinks() {
   const { boxSlug } = useParams({ strict: false });
   return (
-    <nav aria-label="Box tools" className="flex items-center gap-3">
-      <Link
-        to={href(`/${boxSlug}/browse`)}
-        className="text-sm text-primary hover:text-primary-dark"
-      >
-        Browse &rarr;
-      </Link>
-      <Link
-        to={href(`/${boxSlug}/history`)}
-        className="text-sm text-primary hover:text-primary-dark"
-      >
-        History &rarr;
-      </Link>
-      <Link
-        to={href(`/${boxSlug}/inventory`)}
-        className="text-sm text-primary hover:text-primary-dark"
-      >
-        Box files &rarr;
-      </Link>
-    </nav>
+    <Stack gap="sm">
+      <nav aria-label="Box tools" className="flex items-center gap-3">
+        <Link
+          to={href(`/${boxSlug}/browse`)}
+          className="text-sm text-primary hover:text-primary-dark"
+        >
+          Browse &rarr;
+        </Link>
+        <Link
+          to={href(`/${boxSlug}/history`)}
+          className="text-sm text-primary hover:text-primary-dark"
+        >
+          History &rarr;
+        </Link>
+      </nav>
+      <Card background="info" padding="sm" as="section" aria-label="Inventory summary">
+        <TextLink to={href(`/${boxSlug}/inventory`)} underline={false}>Open inventory summary &rarr;</TextLink>
+        <Text as="p" size="sm" tone="muted" className="mt-1">See repository size, Git and annex storage, file types, and linked versus unlinked content.</Text>
+      </Card>
+    </Stack>
   );
 }

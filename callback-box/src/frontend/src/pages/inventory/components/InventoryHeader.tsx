@@ -28,8 +28,8 @@ export function InventoryHeader({ boxSlug, refreshing, refresh, refreshError }: 
 function InventoryTitle() {
   return (
     <Stack gap="xs">
-      <Text as="h1" size="2xl" weight="bold">Box files</Text>
-      <Text as="p" tone="muted">Counts and disk size by file type.</Text>
+      <Text as="h1" size="2xl" weight="bold">Inventory summary</Text>
+      <Text as="p" tone="muted">Repository storage, file types, and linked versus unlinked content.</Text>
     </Stack>
   );
 }
