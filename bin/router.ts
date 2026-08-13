@@ -1051,6 +1051,7 @@ function createRouterServer(core: RouterCore, gate: { authDeps: RouterAuthDeps; 
         mainRoot: MAIN_ROOT,
         worktreesRoot: WORKTREES_ROOT,
         res,
+        req,
         flash: requestUrl.searchParams.get("flash") ?? "",
         query: requestUrl.searchParams.toString(),
       });

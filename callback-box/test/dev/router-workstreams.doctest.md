@@ -6,9 +6,10 @@ visible, and exposes actions through a small server-rendered HTTP surface.
 ```ts setup
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
-import type { ServerResponse } from "node:http";
+import type { IncomingMessage, ServerResponse } from "node:http";
 import os from "node:os";
 import path from "node:path";
+import { Readable } from "node:stream";
 import { execa } from "execa";
 
 import {
@@ -737,6 +738,11 @@ await fs.writeFile(
   path.join(root, "issues", "bugs", "2026-08-09-seam.md"),
   "---\ntitle: Seam bug\n---\n",
 );
+await execa("git", ["init", "-b", "main"], { cwd: root });
+await execa("git", ["config", "user.email", "test@example.com"], { cwd: root });
+await execa("git", ["config", "user.name", "Test"], { cwd: root });
+await execa("git", ["add", "."], { cwd: root });
+await execa("git", ["commit", "-m", "baseline"], { cwd: root });
 const issues = responseDouble();
 const deps: WorkstreamsDeps = {
   list: async () => [], run: async () => undefined,
@@ -755,8 +761,13 @@ assert.match(
 );
 assert.match(
   issues.captured.body,
-  /role="radiogroup" aria-label="Priority for Seam bug; saves to main"[\s\S]*aria-label="Important" title="Important"[\s\S]*>!<\/button>[\s\S]*aria-label="Normal" title="Normal"[\s\S]*>−<\/button>[\s\S]*aria-label="Backlog" title="Backlog"[\s\S]*>↓<\/button>[\s\S]*aria-label="Uncategorized" title="Uncategorized"[\s\S]*>\?<\/button>/,
+  /role="radiogroup" data-issue="bugs\/2026-08-09-seam.md" data-visibility="public" data-original-priority="uncategorized" aria-label="Priority for Seam bug; saves to main"[\s\S]*data-priority="important"[\s\S]*>!<\/button>[\s\S]*data-priority="normal"[\s\S]*>−<\/button>[\s\S]*data-priority="backlog"[\s\S]*>↓<\/button>[\s\S]*data-priority="uncategorized"[\s\S]*>\?<\/button>/,
 );
+assert.match(issues.captured.body, /class="issue-editor-bar"/);
+assert.match(issues.captured.body, /data-dirty-count[^>]*>0 unsaved issues/);
+assert.match(issues.captured.body, /data-reset disabled>Reset<\/button>/);
+assert.match(issues.captured.body, /data-save[^>]*disabled>Save<\/button>/);
+assert.match(issues.captured.body, /Active filters[\s\S]*status: open/);
 assert.equal(
   issues.captured.headers["content-security-policy"],
   "default-src 'none'; style-src 'unsafe-inline'; script-src 'self'; connect-src 'self'",
@@ -784,10 +795,19 @@ await serveWorkstreams({
 });
 assert.equal(priorityScript.captured.status, 200);
 assert.match(priorityScript.captured.body, /addEventListener\("submit"/);
+assert.match(priorityScript.captured.body, /Saving and committing/);
+assert.match(priorityScript.captured.body, /beforeunload/);
 assert.deepEqual(
   classifyRouterRoute({
     method: "POST",
     url: "/workstreams/issues/action/priority?issue=bugs%2Fseam.md",
+  }),
+  { kind: "control" },
+);
+assert.deepEqual(
+  classifyRouterRoute({
+    method: "POST",
+    url: "/workstreams/issues/action/save-priorities",
   }),
   { kind: "control" },
 );
@@ -797,14 +817,14 @@ await serveWorkstreams({
   method: "POST",
   pathname: "/workstreams/issues/action/priority",
   query:
-    "visibility=public&issue=bugs%2F2026-08-09-seam.md&priority=important&return=priority%3Duncategorized",
+    "visibility=public&issue=bugs%2F2026-08-09-seam.md&priority=important&originalPriority=uncategorized&return=priority%3Duncategorized",
   repoRoot: root,
   mainRoot: root,
   worktreesRoot: path.join(root, "worktrees"),
   res: priorityUpdate.res,
   deps,
 });
-assert.equal(priorityUpdate.captured.status, 303);
+assert.equal(priorityUpdate.captured.status, 303, priorityUpdate.captured.body);
 assert.equal(
   priorityUpdate.captured.headers.location,
   "/workstreams/issues/?priority=uncategorized",
@@ -815,6 +835,10 @@ assert.match(
     "utf8",
   ),
   /priority: important/,
+);
+assert.equal(
+  (await execa("git", ["log", "-1", "--pretty=%s"], { cwd: root })).stdout,
+  "Update issue priorities",
 );
 const updatedIssues = responseDouble();
 await serveWorkstreams({
@@ -828,7 +852,67 @@ await serveWorkstreams({
 });
 assert.match(
   updatedIssues.captured.body,
-  /<button type="submit" role="radio" aria-label="Important" title="Important" aria-checked="true" class="active">!<\/button>/,
+  /<button type="submit" role="radio" data-priority="important" aria-label="Important" title="Important" aria-checked="true" class="active">!<\/button>/,
+);
+
+const secondIssue = path.join(root, "issues", "bugs", "2026-08-10-second.md");
+await fs.writeFile(secondIssue, "---\ntitle: Second bug\n---\n");
+await fs.writeFile(path.join(root, "notes.txt"), "baseline\n");
+await execa("git", ["add", "."], { cwd: root });
+await execa("git", ["commit", "-m", "add second issue"], { cwd: root });
+await fs.writeFile(path.join(root, "notes.txt"), "unrelated staged edit\n");
+await execa("git", ["add", "notes.txt"], { cwd: root });
+const saveBody = JSON.stringify({
+  changes: [
+    { issue: "bugs/2026-08-09-seam.md", visibility: "public", priority: "normal", originalPriority: "important" },
+    { issue: "bugs/2026-08-10-second.md", visibility: "public", priority: "backlog", originalPriority: "uncategorized" },
+  ],
+});
+const savePriorities = responseDouble();
+await serveWorkstreams({
+  method: "POST",
+  pathname: "/workstreams/issues/action/save-priorities",
+  repoRoot: root,
+  mainRoot: root,
+  worktreesRoot: path.join(root, "worktrees"),
+  req: Readable.from([saveBody]) as IncomingMessage,
+  res: savePriorities.res,
+  deps,
+});
+assert.equal(savePriorities.captured.status, 200);
+assert.deepEqual(JSON.parse(savePriorities.captured.body), { saved: 2 });
+assert.match(await fs.readFile(secondIssue, "utf8"), /priority: backlog/);
+assert.equal(
+  (await execa("git", ["status", "--short", "--", "notes.txt"], { cwd: root })).stdout,
+  "M  notes.txt",
+);
+assert.doesNotMatch(
+  (await execa("git", ["show", "--pretty=", "--name-only", "HEAD"], { cwd: root })).stdout,
+  /notes\.txt/,
+);
+await fs.appendFile(secondIssue, "Uncommitted investigation notes.\n");
+const rejectedBody = JSON.stringify({
+  changes: [
+    { issue: "bugs/2026-08-09-seam.md", visibility: "public", priority: "backlog", originalPriority: "normal" },
+    { issue: "bugs/2026-08-10-second.md", visibility: "public", priority: "normal", originalPriority: "backlog" },
+  ],
+});
+const rejectedPriorities = responseDouble();
+await serveWorkstreams({
+  method: "POST",
+  pathname: "/workstreams/issues/action/save-priorities",
+  repoRoot: root,
+  mainRoot: root,
+  worktreesRoot: path.join(root, "worktrees"),
+  req: Readable.from([rejectedBody]) as IncomingMessage,
+  res: rejectedPriorities.res,
+  deps,
+});
+assert.equal(rejectedPriorities.captured.status, 409);
+assert.match(rejectedPriorities.captured.body, /other uncommitted edits/);
+assert.match(
+  await fs.readFile(path.join(root, "issues", "bugs", "2026-08-09-seam.md"), "utf8"),
+  /priority: normal/,
 );
 const invalidPriority = responseDouble();
 await serveWorkstreams({
@@ -872,7 +956,7 @@ await serveWorkstreams({
   method: "POST",
   pathname: "/workstreams/issues/action/priority",
   query:
-    "visibility=public&issue=bugs%2F2026-08-09-seam.md&priority=normal",
+    "visibility=public&issue=bugs%2F2026-08-09-seam.md&priority=backlog&originalPriority=important",
   repoRoot: root,
   mainRoot: root,
   worktreesRoot: path.join(root, "worktrees"),
@@ -880,13 +964,13 @@ await serveWorkstreams({
   deps,
 });
 assert.equal(overlayPriority.captured.status, 303);
-assert.match(await fs.readFile(ownerIssue, "utf8"), /priority: normal/);
+assert.match(await fs.readFile(ownerIssue, "utf8"), /priority: backlog/);
 assert.match(
   await fs.readFile(
     path.join(root, "issues", "bugs", "2026-08-09-seam.md"),
     "utf8",
   ),
-  /priority: important/,
+  /priority: normal/,
 );
 
 assert.equal(

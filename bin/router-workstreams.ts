@@ -1197,6 +1197,7 @@ export async function serveWorkstreams(params: {
   mainRoot?: string;
   worktreesRoot?: string;
   res: http.ServerResponse;
+  req?: http.IncomingMessage;
   deps?: WorkstreamsDeps;
   flash?: string;
   query?: string;
@@ -1269,6 +1270,7 @@ export async function serveWorkstreams(params: {
       worktreesRoot: params.worktreesRoot ?? path.dirname(repoRoot),
       rel: pathname.slice("/workstreams/issues".length),
       query: new URLSearchParams(params.query ?? ""),
+      ...(params.req ? { req: params.req } : {}),
       res,
     });
     return;

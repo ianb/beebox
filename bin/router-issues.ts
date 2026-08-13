@@ -31,40 +31,85 @@ const CATEGORIES = [
 const ISSUE_REL_RE =
   /^(?:closed\/)?(?:bugs|features|code-quality|docs-and-chores|decisions|exploration|watch)\/[^/]+\.md$/;
 const PRIORITY_SCRIPT = `
-document.addEventListener("submit", async (event) => {
+const pending = new Map();
+const editor = document.querySelector(".issue-editor-bar");
+const save = editor?.querySelector("[data-save]");
+const reset = editor?.querySelector("[data-reset]");
+const count = editor?.querySelector("[data-dirty-count]");
+const status = editor?.querySelector("[data-save-status]");
+
+function updateEditor() {
+  const size = pending.size;
+  if (count) count.textContent = size === 1 ? "1 unsaved issue" : size + " unsaved issues";
+  if (save) save.disabled = size === 0;
+  if (reset) reset.disabled = size === 0;
+}
+
+function selectPriority(group, priority) {
+  for (const button of group.querySelectorAll("button")) {
+    const active = button.dataset.priority === priority;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-checked", String(active));
+  }
+}
+
+document.addEventListener("submit", (event) => {
   const form = event.target instanceof HTMLFormElement
     ? event.target.closest(".priority-controls form")
     : null;
   if (!form) return;
   event.preventDefault();
   const group = form.closest(".priority-controls");
-  const row = form.closest("li");
-  if (!group || !row) return;
-  const buttons = [...group.querySelectorAll("button")];
-  for (const button of buttons) button.disabled = true;
-  row.querySelector(".priority-error")?.remove();
-  try {
-    const url = new URL(form.action);
-    url.searchParams.set("format", "json");
-    const response = await fetch(url, { method: "POST" });
-    if (!response.ok) throw new Error((await response.text()).trim() || "Priority update failed");
-    for (const button of buttons) {
-      const active = button === form.querySelector("button");
-      button.classList.toggle("active", active);
-      button.setAttribute("aria-checked", String(active));
-    }
-    const selected = url.searchParams.get("priority");
-    const filter = new URLSearchParams(location.search).get("priority");
-    if (filter && filter !== selected) row.remove();
-  } catch (error) {
-    const message = document.createElement("span");
-    message.className = "priority-error";
-    message.setAttribute("role", "alert");
-    message.textContent = error instanceof Error ? error.message : String(error);
-    group.insertAdjacentElement("afterend", message);
-  } finally {
-    for (const button of buttons) button.disabled = false;
+  if (!group) return;
+  const button = form.querySelector("button");
+  const priority = button?.dataset.priority;
+  if (!priority) return;
+  selectPriority(group, priority);
+  const key = group.dataset.visibility + ":" + group.dataset.issue;
+  if (priority === group.dataset.originalPriority) pending.delete(key);
+  else pending.set(key, {
+    issue: group.dataset.issue,
+    visibility: group.dataset.visibility,
+    priority,
+    originalPriority: group.dataset.originalPriority,
+  });
+  if (status) status.textContent = "";
+  updateEditor();
+});
+
+reset?.addEventListener("click", () => {
+  for (const group of document.querySelectorAll(".priority-controls")) {
+    selectPriority(group, group.dataset.originalPriority);
   }
+  pending.clear();
+  if (status) status.textContent = "Changes reset";
+  updateEditor();
+});
+
+save?.addEventListener("click", async () => {
+  if (pending.size === 0) return;
+  save.disabled = true;
+  reset.disabled = true;
+  if (status) status.textContent = "Saving and committing…";
+  try {
+    const response = await fetch(save.dataset.endpoint, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ changes: [...pending.values()] }),
+    });
+    if (!response.ok) throw new Error((await response.text()).trim() || "Save failed");
+    if (status) status.textContent = "Saved; refreshing…";
+    pending.clear();
+    location.reload();
+  } catch (error) {
+    if (status) status.textContent = error instanceof Error ? error.message : String(error);
+    updateEditor();
+  }
+});
+
+addEventListener("beforeunload", (event) => {
+  if (pending.size === 0) return;
+  event.preventDefault();
 });
 `;
 type Category = (typeof CATEGORIES)[number];
@@ -814,6 +859,14 @@ function worktreeBadges(entries: OverlayEntry[] | undefined): string {
 }
 
 const ISSUES_CSS = `
+  .issue-editor-bar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 0.8em; margin: 0 -0.4em 1em; padding: 0.65em 0.4em; border-bottom: 1px solid #d8dde3; background: rgba(255, 255, 255, 0.96); }
+  .issue-editor-bar h1 { flex: 0 0 auto; margin: 0; }
+  .issue-editor-filters { display: flex; min-width: 0; flex: 1 1 auto; flex-wrap: wrap; gap: 0.3em; align-items: center; }
+  .issue-editor-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 0.5em; }
+  .issue-editor-actions button { padding: 0.3em 0.7em; }
+  .issue-editor-actions button:disabled { cursor: default; opacity: 0.45; }
+  .dirty-count, .save-status { color: #666; font: 12px ui-monospace, Menlo, monospace; }
+  .save-status { max-width: 24em; color: #a23522; }
   .filters { margin: 0 0 1.4em; font: 13px ui-monospace, Menlo, monospace; }
   .filters .chip { cursor: default; }
   .filters a.chip { cursor: pointer; }
@@ -866,6 +919,9 @@ const ISSUES_CSS = `
     ul.issues .issue-priority { justify-self: end; }
   }
   @media (max-width: 700px) {
+    .issue-editor-bar { align-items: flex-start; flex-wrap: wrap; }
+    .issue-editor-filters { order: 3; flex-basis: 100%; }
+    .issue-editor-actions { margin-left: auto; }
     ul.issues li { grid-template-columns: minmax(0, 1fr); }
     ul.issues .issue-priority { justify-self: start; }
     .priority-target { text-align: left; }
@@ -1074,6 +1130,25 @@ function filterChipsHtml(
   </div>`;
 }
 
+function activeFiltersHtml(f: Filters): string {
+  const filters = [
+    `status: ${f.status}`,
+    f.priority ? `priority: ${f.priority}` : undefined,
+    f.category ? `category: ${f.category}` : undefined,
+    f.area ? `area: ${f.area}` : undefined,
+    f.needs ? `needs: ${f.needs}` : undefined,
+    f.labels ? `label: ${f.labels}` : undefined,
+    f.research ? `research: ${f.research}` : undefined,
+    f.visibility ? `visibility: ${f.visibility}` : undefined,
+    f.assigned ? "assigned" : undefined,
+    f.unassigned ? "unassigned" : undefined,
+    f.worktreeTouched ? "touched by worktree" : undefined,
+  ].filter((filter): filter is string => filter !== undefined);
+  return filters
+    .map((filter) => `<span class="chip">${escapeHtml(filter)}</span>`)
+    .join("");
+}
+
 function issueRowHtml(
   base: string,
   issue: IssueRecord,
@@ -1112,8 +1187,8 @@ function issueRowHtml(
         backlog: "↓",
         uncategorized: "?",
       }[priority];
-      const action = `${base}/issues/action/priority?visibility=${issue.visibility}&amp;issue=${encodeURIComponent(issue.relPath)}&amp;priority=${priority}${returnQuery ? `&amp;return=${encodeURIComponent(returnQuery)}` : ""}`;
-      return `<form method="POST" action="${action}"><button type="submit" role="radio" aria-label="${label}" title="${label}" aria-checked="${active ? "true" : "false"}"${active ? ' class="active"' : ""}>${symbol}</button></form>`;
+      const action = `${base}/issues/action/priority?visibility=${issue.visibility}&amp;issue=${encodeURIComponent(issue.relPath)}&amp;priority=${priority}&amp;originalPriority=${issue.frontmatter.priority}${returnQuery ? `&amp;return=${encodeURIComponent(returnQuery)}` : ""}`;
+      return `<form method="POST" action="${action}"><button type="submit" role="radio" data-priority="${priority}" aria-label="${label}" title="${label}" aria-checked="${active ? "true" : "false"}"${active ? ' class="active"' : ""}>${symbol}</button></form>`;
     })
     .join("");
   return `<li>
@@ -1122,7 +1197,7 @@ function issueRowHtml(
       <span class="meta">${escapeHtml(date)}${date && shortSlug ? " · " : ""}${escapeHtml(shortSlug)}</span>
       <div class="issue-pills">${pills}</div>
     </div>
-    <div class="issue-priority"><div class="priority-controls" role="radiogroup" aria-label="Priority for ${escapeHtml(issue.frontmatter.title)}; saves to ${escapeHtml(editTarget)}">${priorityControls}</div>${editTargetHtml}</div>
+    <div class="issue-priority"><div class="priority-controls" role="radiogroup" data-issue="${escapeHtml(issue.relPath)}" data-visibility="${issue.visibility}" data-original-priority="${issue.frontmatter.priority}" aria-label="Priority for ${escapeHtml(issue.frontmatter.title)}; saves to ${escapeHtml(editTarget)}">${priorityControls}</div>${editTargetHtml}</div>
   </li>`;
 }
 
@@ -1268,7 +1343,16 @@ async function renderIssueIndex(
     return `<h2 class="cat">${escapeHtml(cat)} <span class="count">${count}</span></h2>${f.status === "closed" ? closedList : openList}${f.status === "all" ? closedList : ""}`;
   }).join("");
 
-  const body = `<h1>issues</h1>
+  const body = `<div class="issue-editor-bar">
+  <h1>issues</h1>
+  <div class="issue-editor-filters" aria-label="Active filters">${activeFiltersHtml(f)}</div>
+  <div class="issue-editor-actions">
+    <span class="dirty-count" data-dirty-count aria-live="polite">0 unsaved issues</span>
+    <span class="save-status" data-save-status role="alert"></span>
+    <button type="button" data-reset disabled>Reset</button>
+    <button type="button" data-save data-endpoint="${base}/issues/action/save-priorities" disabled>Save</button>
+  </div>
+</div>
 ${filterChipsHtml(base, f, facets)}
 ${categoryHtml || `<p class="empty">no issues match these filters</p>`}<script src="${base}/issues/priority.js" defer></script>`;
   return renderDevShell(
@@ -1284,9 +1368,10 @@ async function priorityTarget(params: {
   worktreesRoot: string;
   relPath: string;
   visibility: Visibility;
+  overlay?: OverlayResult;
 }): Promise<string> {
   const { roots, worktreesRoot, relPath, visibility } = params;
-  const overlay = await collectOverlay(worktreesRoot);
+  const overlay = params.overlay ?? (await collectOverlay(worktreesRoot));
   const entries =
     (visibility === "private" ? overlay.byPathPrivate : overlay.byPath).get(
       relPath,
@@ -1319,6 +1404,256 @@ async function priorityTarget(params: {
   );
 }
 
+interface PriorityChange {
+  issue: string;
+  visibility: Visibility;
+  priority: IssuePriority;
+  originalPriority?: IssuePriority;
+}
+
+function isPriority(value: unknown): value is IssuePriority {
+  return (
+    value === "important" ||
+    value === "normal" ||
+    value === "backlog" ||
+    value === "uncategorized"
+  );
+}
+
+function validatePriorityChange(value: unknown): PriorityChange {
+  if (!value || typeof value !== "object")
+    throw new Error("invalid priority change");
+  const candidate = value as Record<string, unknown>;
+  if (
+    typeof candidate.issue !== "string" ||
+    !ISSUE_REL_RE.test(candidate.issue) ||
+    (candidate.visibility !== "public" && candidate.visibility !== "private") ||
+    !isPriority(candidate.priority) ||
+    (candidate.originalPriority !== undefined &&
+      !isPriority(candidate.originalPriority))
+  )
+    throw new Error("invalid priority change");
+  return {
+    issue: candidate.issue,
+    visibility: candidate.visibility,
+    priority: candidate.priority,
+    ...(candidate.originalPriority !== undefined
+      ? { originalPriority: candidate.originalPriority }
+      : {}),
+  };
+}
+
+async function readJsonBody(req: http.IncomingMessage): Promise<unknown> {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of req) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    size += buffer.length;
+    if (size > 1_000_000) throw new Error("priority save is too large");
+    chunks.push(buffer);
+  }
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  } catch {
+    throw new Error("invalid priority save body");
+  }
+}
+
+async function commitPriorityTargets(targets: string[]): Promise<void> {
+  const byRepo = new Map<string, string[]>();
+  for (const target of targets) {
+    const canonicalTarget = await fs.realpath(target);
+    const { stdout } = await execa("git", ["rev-parse", "--show-toplevel"], {
+      cwd: path.dirname(canonicalTarget),
+    });
+    const repoRoot = stdout.trim();
+    const repoTargets = byRepo.get(repoRoot) ?? [];
+    repoTargets.push(path.relative(repoRoot, canonicalTarget));
+    byRepo.set(repoRoot, repoTargets);
+  }
+  for (const [repoRoot, repoTargets] of byRepo) {
+    await execa("git", ["add", "--", ...repoTargets], { cwd: repoRoot });
+    const staged = await execa(
+      "git",
+      ["diff", "--cached", "--quiet", "--", ...repoTargets],
+      { cwd: repoRoot, reject: false },
+    );
+    if (staged.exitCode === 0) continue;
+    if (staged.exitCode !== 1)
+      throw new Error(`could not inspect staged issue priorities in ${repoRoot}`);
+    await execa(
+      "git",
+      ["commit", "--only", "-m", "Update issue priorities", "--", ...repoTargets],
+      { cwd: repoRoot },
+    );
+  }
+}
+
+async function assertPriorityOnlyTarget(params: {
+  target: string;
+  source: string;
+  currentPriority: IssuePriority;
+  issue: string;
+}): Promise<void> {
+  const { target, source, currentPriority, issue } = params;
+  const canonicalTarget = await fs.realpath(target);
+  const { stdout } = await execa("git", ["rev-parse", "--show-toplevel"], {
+    cwd: path.dirname(canonicalTarget),
+  });
+  const repoRoot = stdout.trim();
+  const repoPath = path.relative(repoRoot, canonicalTarget);
+  const head = await execa("git", ["show", `HEAD:${repoPath}`], {
+    cwd: repoRoot,
+    reject: false,
+    stripFinalNewline: false,
+  });
+  if (head.exitCode !== 0)
+    throw new Error(`commit this new issue before changing its priority: ${issue}`);
+  if (setIssuePriority(head.stdout, currentPriority) !== source)
+    throw new Error(`issue has other uncommitted edits: ${issue}`);
+  const staged = await execa(
+    "git",
+    ["diff", "--cached", "--quiet", "--", repoPath],
+    { cwd: repoRoot, reject: false },
+  );
+  if (staged.exitCode === 1)
+    throw new Error(`issue has staged edits: ${issue}`);
+  if (staged.exitCode !== 0)
+    throw new Error(`could not inspect issue state: ${issue}`);
+}
+
+async function savePriorityChanges(params: {
+  changes: PriorityChange[];
+  roots: { mainIssuesRoot: string; mainPrivateRoot: string };
+  worktreesRoot: string;
+}): Promise<number> {
+  const { changes, roots, worktreesRoot } = params;
+  if (changes.length === 0) return 0;
+  if (changes.length > 1_000) throw new Error("too many priority changes");
+  const keys = new Set<string>();
+  const overlay = await collectOverlay(worktreesRoot);
+  const prepared = await Promise.all(
+    changes.map(async (change) => {
+      const key = `${change.visibility}:${change.issue}`;
+      if (keys.has(key)) throw new Error(`duplicate priority change: ${change.issue}`);
+      keys.add(key);
+      const target = await priorityTarget({
+        roots,
+        worktreesRoot,
+        relPath: change.issue,
+        visibility: change.visibility,
+        overlay,
+      });
+      const before = await fs.stat(target, { bigint: true });
+      const source = await fs.readFile(target, "utf8");
+      const afterRead = await fs.stat(target, { bigint: true });
+      if (
+        before.ino !== afterRead.ino ||
+        before.mtimeNs !== afterRead.mtimeNs ||
+        before.size !== afterRead.size
+      )
+        throw new Error(`issue changed while being read: ${change.issue}`);
+      const currentPriority = parseIssueFile(
+        change.issue,
+        source,
+        change.visibility,
+      ).frontmatter.priority;
+      if (
+        change.originalPriority !== undefined &&
+        change.originalPriority !== currentPriority
+      )
+        throw new Error(`issue priority changed since the page loaded: ${change.issue}`);
+      await assertPriorityOnlyTarget({
+        target,
+        source,
+        currentPriority,
+        issue: change.issue,
+      });
+      return {
+        change,
+        target,
+        source,
+        updated: setIssuePriority(source, change.priority),
+        stat: afterRead,
+      };
+    }),
+  );
+  const changed = prepared.filter(({ source, updated }) => source !== updated);
+  const temporaries = new Map<string, string>();
+  try {
+    for (const item of changed) {
+      const temporary = `${item.target}.priority-${randomUUID()}.tmp`;
+      await fs.writeFile(temporary, item.updated, {
+        mode: Number(item.stat.mode & 0o777n),
+      });
+      temporaries.set(item.target, temporary);
+    }
+    for (const item of changed) {
+      const current = await fs.stat(item.target, { bigint: true });
+      if (
+        current.ino !== item.stat.ino ||
+        current.mtimeNs !== item.stat.mtimeNs ||
+        current.size !== item.stat.size
+      )
+        throw new Error(`issue changed while being saved: ${item.change.issue}`);
+    }
+    const renamed: typeof changed = [];
+    try {
+      for (const item of changed) {
+        await fs.rename(temporaries.get(item.target)!, item.target);
+        renamed.push(item);
+      }
+    } catch (error) {
+      await Promise.all(
+        renamed.map(async (item) =>
+          fs.writeFile(item.target, item.source, {
+            mode: Number(item.stat.mode & 0o777n),
+          }),
+        ),
+      );
+      throw error;
+    }
+  } finally {
+    await Promise.all(
+      [...temporaries.values()].map(async (temporary) =>
+        fs.unlink(temporary).catch(() => undefined),
+      ),
+    );
+  }
+  if (changed.length > 0)
+    await commitPriorityTargets(changed.map(({ target }) => target));
+  return changed.length;
+}
+
+async function servePrioritySave(params: {
+  roots: { mainIssuesRoot: string; mainPrivateRoot: string };
+  worktreesRoot: string;
+  req: http.IncomingMessage | undefined;
+  res: http.ServerResponse;
+}): Promise<void> {
+  const { roots, worktreesRoot, req, res } = params;
+  if (!req) {
+    res.writeHead(400, { "content-type": "text/plain; charset=utf-8" });
+    res.end("missing priority save body\n");
+    return;
+  }
+  try {
+    const body = await readJsonBody(req);
+    const rawChanges =
+      body && typeof body === "object"
+        ? (body as Record<string, unknown>).changes
+        : undefined;
+    if (!Array.isArray(rawChanges)) throw new Error("invalid priority save body");
+    const changes = rawChanges.map(validatePriorityChange);
+    const saved = await savePriorityChanges({ changes, roots, worktreesRoot });
+    res.writeHead(200, { "content-type": "application/json; charset=utf-8" });
+    res.end(JSON.stringify({ saved }));
+  } catch (error) {
+    res.writeHead(409, { "content-type": "text/plain; charset=utf-8" });
+    res.end(error instanceof Error ? error.message : String(error));
+  }
+}
+
 async function servePriorityAction(params: {
   base: string;
   roots: { mainIssuesRoot: string; mainPrivateRoot: string };
@@ -1330,51 +1665,26 @@ async function servePriorityAction(params: {
   const relPath = query.get("issue") ?? "";
   const visibility = query.get("visibility");
   const priority = query.get("priority");
+  const originalPriority = query.get("originalPriority");
   if (
     !ISSUE_REL_RE.test(relPath) ||
     (visibility !== "public" && visibility !== "private") ||
     (priority !== "important" &&
       priority !== "normal" &&
       priority !== "backlog" &&
-      priority !== "uncategorized")
+      priority !== "uncategorized") ||
+    !isPriority(originalPriority)
   ) {
     res.writeHead(400, { "content-type": "text/plain; charset=utf-8" });
     res.end("invalid issue priority action\n");
     return;
   }
   try {
-    const target = await priorityTarget({
+    await savePriorityChanges({
+      changes: [{ issue: relPath, visibility, priority, originalPriority }],
       roots,
       worktreesRoot,
-      relPath,
-      visibility,
     });
-    const before = await fs.stat(target, { bigint: true });
-    const source = await fs.readFile(target, "utf8");
-    const afterRead = await fs.stat(target, { bigint: true });
-    if (
-      before.ino !== afterRead.ino ||
-      before.mtimeNs !== afterRead.mtimeNs ||
-      before.size !== afterRead.size
-    )
-      throw new Error("issue changed while its priority was being read");
-    const updated = setIssuePriority(source, priority);
-    const temporary = `${target}.priority-${randomUUID()}.tmp`;
-    try {
-      await fs.writeFile(temporary, updated, {
-        mode: Number(afterRead.mode & 0o777n),
-      });
-      const beforeRename = await fs.stat(target, { bigint: true });
-      if (
-        beforeRename.ino !== afterRead.ino ||
-        beforeRename.mtimeNs !== afterRead.mtimeNs ||
-        beforeRename.size !== afterRead.size
-      )
-        throw new Error("issue changed while its priority was being saved");
-      await fs.rename(temporary, target);
-    } finally {
-      await fs.unlink(temporary).catch(() => undefined);
-    }
   } catch (error) {
     if (query.get("format") === "json") {
       res.writeHead(409, { "content-type": "text/plain; charset=utf-8" });
@@ -1610,9 +1920,10 @@ export async function serveIssues(params: {
   worktreesRoot: string;
   rel: string;
   query: URLSearchParams;
+  req?: http.IncomingMessage;
   res: http.ServerResponse;
 }): Promise<void> {
-  const { base, method, mainRoot, worktreesRoot, rel, query, res } = params;
+  const { base, method, mainRoot, worktreesRoot, rel, query, req, res } = params;
   const roots = {
     mainIssuesRoot: path.join(mainRoot, "issues"),
     mainPrivateRoot: path.join(mainRoot, "private-issues"),
@@ -1629,6 +1940,11 @@ export async function serveIssues(params: {
 
   if (method === "POST" && rel === "/action/priority") {
     await servePriorityAction({ base, roots, worktreesRoot, query, res });
+    return;
+  }
+
+  if (method === "POST" && rel === "/action/save-priorities") {
+    await servePrioritySave({ roots, worktreesRoot, req, res });
     return;
   }
 
