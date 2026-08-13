@@ -86,6 +86,12 @@ content and source-module docs have different corpora, refresh triggers, and
 audiences — but sharing the store means one thing to keep warm and one query
 path for `cb-plan` to call.
 
+**Separately: `cb search` is underused.** Its capabilities were a surprise even
+to Ian — full-text and vector in one index, already built and already indexing.
+Agents here reach for `grep` by reflex. Worth exercising it deliberately (and
+teaching agents to reach for it) independent of this feature: a search that
+nobody runs decays quietly, and this proposal is about to depend on it.
+
 ## Open: does jsdoc actually fit?
 
 Ian's own doubt, and worth taking seriously. The preset carries **no jsdoc rules
