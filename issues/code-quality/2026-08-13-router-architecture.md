@@ -47,6 +47,37 @@ disturbed: the UDS-vs-TCP capability boundary, the fail-closed auth posture, the
 concurrency invariants promoted into `bin/docs/router-protocol.md`, and 23 test
 files including real coverage of auth and lifecycle.
 
+## The UI half should probably use the house stack
+
+Boxholder, 2026-08-13: the UI surfaces should mostly follow callback-box's own
+conventions — React, XState, React Router, Vite — rather than hand-rolled
+server-rendered strings.
+
+It is already drifting that way without the benefits. `router-issues.ts:1540`
+emits `<script src=".../issues/priority.js">` and `:2161` serves that file, with
+`script-src 'self'` in the CSP. So there is already client-side interactivity,
+written by hand, outside the stack that exists one directory over — with its own
+state handling, its own event wiring, and no component model.
+
+**But the router is the tool you reach for when things are broken**, and that
+argues for keeping *some* of it buildless. `/dev/` is deliberately served
+straight from disk so it never cold-starts a worktree. If the router's UI
+depended on the app's build output, a broken build would take out the surface
+you'd use to diagnose the broken build.
+
+So the split is probably by *kind of surface*, not by file:
+
+- **Always-available, buildless**: the worktree list, status, error pages,
+  `/dev/` artifact serving. Small, boring, works when nothing else does.
+- **App-shaped, house stack**: `/workstreams/` and the issues browser. These do
+  filtering, mutation, and POST actions — they are applications, and they are
+  where the hand-rolled cost is concentrated.
+
+Open: who builds that bundle and where it lives, given the router supervises the
+install that would produce it. A bundle built once and committed, or built by
+the main checkout only, may sidestep the circularity — decide it before writing
+components.
+
 ## The tension worth deciding first
 
 Adopting a framework (Fastify, Hono) would supply routing, middleware,
