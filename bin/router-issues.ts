@@ -1616,6 +1616,7 @@ async function savePriorityChanges(params: {
   } finally {
     await Promise.all(
       [...temporaries.values()].map(async (temporary) =>
+        // Best-effort cleanup: renamed temporaries no longer exist.
         fs.unlink(temporary).catch(() => undefined),
       ),
     );
