@@ -14,6 +14,31 @@
  */
 
 import type { ChatEvent } from "./chat-types";
+import { scrollTraceToggle } from "../lib/scroll-diagnostics";
+
+/**
+ * `/scrolldebug` — toggle the scroll-controller trace (lib/scroll-diagnostics.ts)
+ * and confirm the new state as a synthetic streamed reply. Frontend-only, like
+ * /fakestream; exists so the trace can be flipped on a phone with no devtools.
+ */
+export function runScrollDebugToggle(
+  { sendBack, terminal }: {
+    sendBack: (event: ChatEvent) => void;
+    terminal: (event: ChatEvent) => void;
+  },
+): () => void {
+  const on = scrollTraceToggle();
+  sendBack({
+    type: "STREAM_TEXT",
+    text: on
+      ? "Scroll trace **on** — reproduce the scroll problem now, then send `/scrolldebug` again to stop and flush it to the client debug log."
+      : "Scroll trace **off** — flushed to the client debug log.",
+  });
+  terminal({ type: "STREAM_RESULT" });
+  return () => {
+    /* nothing to cancel — the toggle is synchronous */
+  };
+}
 
 export function runFakeStream(
   message: string,
