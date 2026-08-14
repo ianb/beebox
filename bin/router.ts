@@ -935,7 +935,7 @@ export function routerGuardHeaders(url: string): Record<string, string> {
  * connection can only reach the handler of the server it landed on, so which
  * listener accepted it is the whole story.
  */
-interface RouterServerGate {
+export interface RouterServerGate {
   authDeps: RouterAuthDeps;
   trustedLocal: boolean;
   workstreamsApp?: {
@@ -944,7 +944,7 @@ interface RouterServerGate {
   };
 }
 
-function createRouterServer(core: RouterCore, gate: RouterServerGate): http.Server {
+export function createRouterServer(core: RouterCore, gate: RouterServerGate): http.Server {
   const { authDeps, trustedLocal, workstreamsApp } = gate;
   const refusedUpgradeLogAt = new Map<string, number>();
 
@@ -1055,7 +1055,7 @@ function createRouterServer(core: RouterCore, gate: RouterServerGate): http.Serv
         res.end("workstreams app is disabled\n");
         return;
       }
-      void workstreamsApp.supervisor.retry();
+      await workstreamsApp.supervisor.retry();
       res.writeHead(303, { location: "/workstreams/" });
       res.end();
       return;

@@ -20,6 +20,7 @@ h2 small { color: #827d75; font-size: .78em; font-weight: 500; }
 .button:hover:not(:disabled) { border-color: #315ba8; color: #204a97; }
 .button:disabled { cursor: not-allowed; opacity: .5; }
 .button-primary { border-color: #315ba8; background: #315ba8; color: white; }
+.button-primary:hover:not(:disabled) { border-color: #204a97; background: #204a97; color: white; }
 .button-danger { border-color: #a24734; background: #a24734; color: white; }
 .pill { display: inline-block; padding: .14rem .5rem; border-radius: 999px; background: #edf0f4; color: #586678; font: 650 .76rem/1.2 system-ui, sans-serif; white-space: nowrap; }
 .pill-info { background: #dbe7fa; color: #294f99; }.pill-success { background: #dcefe0; color: #28633b; }.pill-warning { background: #fbeab8; color: #765300; }.pill-danger { background: #f5dbd4; color: #84351f; }.pill-accent { background: #eee4fb; color: #6543ac; }.pill-manual { background: #8c5700; color: #fff; }
