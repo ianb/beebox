@@ -255,6 +255,70 @@ JSON.parse("{bad json")
   t.notOk(sources.some((source) => source.includes("FIRST_PASSING_MARKER")), "failure sources exclude passing examples");
 });
 
+test("a cleanup block still runs when an earlier example fails", async (t) => {
+  // Cleanup exists FOR the failure case, so its `t.teardown()` registration is
+  // emitted ahead of the example body rather than at the point the cleanup
+  // block appears. Registering it inline meant a throwing example never reached
+  // the registration: the cleanup silently never ran, and a doctest holding an
+  // OS handle (an `fs.watch`, a server, a child process) kept the tap child
+  // alive until tap's per-file timeout killed it. A single failed assertion
+  // then surfaced as an opaque whole-file `expired:` naming no assertion at
+  // all, and leaked the handle besides.
+  const dir = await mkdtemp(join(process.cwd(), ".doctest-cleanup-"));
+  t.teardown(() => rm(dir, { recursive: true, force: true }));
+  const fixture = join(dir, "cleanup-on-failure.doctest.md");
+  await writeFile(fixture, `# Cleanup on failure
+
+\`\`\`ts setup
+const opened: string[] = [];
+\`\`\`
+
+\`\`\`
+opened.push("handle");
+"CLEANUP_FIXTURE_MARKER"
+=> expected-to-fail
+\`\`\`
+
+\`\`\`ts cleanup
+opened.pop();
+console.log("CLEANUP_RAN opened=" + opened.length);
+\`\`\`
+`);
+
+  const tapCheck = fileURLToPath(new URL("../src/tap-check.ts", import.meta.url));
+  const loader = fileURLToPath(new URL("../src/doctest-loader.ts", import.meta.url));
+  const result = spawnSync(
+    process.execPath,
+    [`--import=tsx`, `--import=${tapCheck}`, `--import=${loader}`, fixture],
+    { cwd: process.cwd(), encoding: "utf8" },
+  );
+
+  t.not(result.status, 0, "the fixture's example must fail");
+  t.match(result.stdout, /CLEANUP_RAN opened=0/, "cleanup ran despite the failure, and released the handle");
+});
+
+test("generateTestSource: teardown is registered before the examples that need it", async (t) => {
+  const md = `\`\`\`
+const box = open();
+box.name
+=> expected
+\`\`\`
+
+\`\`\`ts cleanup
+box.close();
+\`\`\`
+`;
+
+  const source = generateTestSource(md, "/test.doctest.md");
+  // The emitted statement, not the same text inside the generated test's name.
+  const body = source.indexOf("\n  const box = open();");
+  t.ok(body > 0, "the example statement is emitted");
+  t.ok(
+    source.indexOf("t.teardown") < body,
+    "an example that throws must not be able to skip its own cleanup registration",
+  );
+});
+
 test("generateTestSource: throws assertion emits an awaited async thunk", async (t) => {
   const md = `\`\`\`
 await failAsync()

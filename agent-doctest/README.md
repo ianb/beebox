@@ -243,6 +243,12 @@ await server.close();
 ```
 ````
 
+The teardown is registered before the examples run, so a failing assertion
+cannot leave the resource open. That matters most for a doctest holding an OS
+handle — a watch, a server, a child process — where a leaked handle keeps the
+tap child process alive and turns one failed assertion into a whole-file
+timeout that names nothing.
+
 ### print()
 
 Each test gets a `print()` function. Printed lines drain into the next `=>` assertion:

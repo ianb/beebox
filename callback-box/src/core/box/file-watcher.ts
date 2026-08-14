@@ -45,10 +45,10 @@ const HIGH_CHURN_DIRS = ["procedure/runs", "store/trash"];
  * convenience for UI freshness; crossing this boundary degrades live updates
  * instead of allowing an unusually large box to exhaust the server process.
  */
-const MAX_WATCHED_DIRS = 1024;
+export const MAX_WATCHED_DIRS = 1024;
 
 /** Ceiling for each kind of queued bookkeeping behind frontend freshness hints. */
-const MAX_NOTIFICATION_WORK = 1024;
+export const MAX_NOTIFICATION_WORK = 1024;
 
 /**
  * Throttle window for a given `(event, path)` pair. `fs.watch` is chattier than
@@ -59,7 +59,47 @@ const MAX_NOTIFICATION_WORK = 1024;
  * closes, so a consumer that refetched on the first one can't be left holding
  * stale content.
  */
-const COALESCE_MS = 50;
+export const COALESCE_MS = 50;
+
+/**
+ * A watcher's bounds. Production always takes the defaults; a caller supplies
+ * them so the *shape* of a bound can be exercised without materializing its
+ * production magnitude. Proving that a limit of 1,024 holds costs 1,024 real
+ * `fs.watch` handles, and on macOS closing each one is a blocking round-trip to
+ * libuv's single FSEvents run-loop thread — measured at ~6 s for 1,024 handles
+ * on a loaded machine, and super-linear in the handle count. That expense
+ * exercises the platform, not this module, so a caller that only needs the
+ * boundary behavior configures a small limit instead.
+ */
+export interface BoxWatcherLimits {
+  /** Live directory watches. Defaults to {@link MAX_WATCHED_DIRS}. */
+  maxWatchedDirs?: number | undefined;
+  /** Queued notification bookkeeping. Defaults to {@link MAX_NOTIFICATION_WORK}. */
+  maxNotificationWork?: number | undefined;
+  /** Per-`(event, path)` throttle window. Defaults to {@link COALESCE_MS}. */
+  coalesceMs?: number | undefined;
+}
+
+/** Everything {@link ensureBoxWatcher} needs beyond the box root. */
+export interface EnsureBoxWatcherOptions extends BoxWatcherLimits {
+  eventBus: EventBus;
+}
+
+/** A watcher's resolved bounds — every field settled, none optional. */
+interface ResolvedLimits {
+  maxWatchedDirs: number;
+  maxNotificationWork: number;
+  coalesceMs: number;
+}
+
+/** Settle a caller's partial bounds against the production defaults. */
+function resolveLimits(limits: BoxWatcherLimits): ResolvedLimits {
+  return {
+    maxWatchedDirs: limits.maxWatchedDirs ?? MAX_WATCHED_DIRS,
+    maxNotificationWork: limits.maxNotificationWork ?? MAX_NOTIFICATION_WORK,
+    coalesceMs: limits.coalesceMs ?? COALESCE_MS,
+  };
+}
 
 /** A watched directory: its watcher, plus the inode it was watching. */
 interface WatchedDir {
@@ -106,10 +146,13 @@ class BoxWatcher implements BoxWatcherHandle {
   /** Set by `ensureBoxWatcher` to the initial walk; resolved for a fresh instance. */
   ready: Promise<void> = Promise.resolve();
 
-  constructor(
-    private readonly boxRoot: string,
-    private readonly eventBus: EventBus,
-  ) {}
+  private readonly eventBus: EventBus;
+  private readonly limits: ResolvedLimits;
+
+  constructor(private readonly boxRoot: string, opts: EnsureBoxWatcherOptions) {
+    this.eventBus = opts.eventBus;
+    this.limits = resolveLimits(opts);
+  }
 
   /** Whether `absPath` is excluded from watching and from emission. */
   private ignored(absPath: string): boolean {
@@ -121,7 +164,7 @@ class BoxWatcher implements BoxWatcherHandle {
   /** Reserve one of the bounded watch slots before the first filesystem await. */
   private reserveDir(dir: string, reservation: symbol): boolean {
     if (this.closed || this.dirs.has(dir) || this.pendingDirs.has(dir) || this.ignored(dir)) return false;
-    if (this.dirs.size + this.pendingDirs.size >= MAX_WATCHED_DIRS) {
+    if (this.dirs.size + this.pendingDirs.size >= this.limits.maxWatchedDirs) {
       this.reportWatchLimit(dir);
       return false;
     }
@@ -134,7 +177,7 @@ class BoxWatcher implements BoxWatcherHandle {
     if (this.limitReported) return;
     this.limitReported = true;
     console.error(
-      `[box-watcher] directory watch limit of ${MAX_WATCHED_DIRS.toLocaleString("en-US")} reached for ${this.boxRoot}; ` +
+      `[box-watcher] directory watch limit of ${this.limits.maxWatchedDirs.toLocaleString("en-US")} reached for ${this.boxRoot}; ` +
         `live updates below ${path.relative(this.boxRoot, dir)} are disabled`,
     );
   }
@@ -146,9 +189,9 @@ class BoxWatcher implements BoxWatcherHandle {
 
   /** Whether another entry can still consume useful bounded watcher state. */
   private entryBudgetExhausted(dir: string, emitDiscovered: boolean): boolean {
-    const watchBudgetFull = this.dirs.size + this.pendingDirs.size >= MAX_WATCHED_DIRS;
+    const watchBudgetFull = this.dirs.size + this.pendingDirs.size >= this.limits.maxWatchedDirs;
     const notificationBudgetFull =
-      emitDiscovered && this.windows.size >= MAX_NOTIFICATION_WORK;
+      emitDiscovered && this.windows.size >= this.limits.maxNotificationWork;
     if (watchBudgetFull) this.reportWatchLimit(dir);
     if (notificationBudgetFull) this.reportNotificationLimit();
     return watchBudgetFull || notificationBudgetFull;
@@ -291,7 +334,7 @@ class BoxWatcher implements BoxWatcherHandle {
    * add and leave the subtree half-watched.
    */
   private reconcile(absPath: string): void {
-    if (this.pendingReconciles >= MAX_NOTIFICATION_WORK) {
+    if (this.pendingReconciles >= this.limits.maxNotificationWork) {
       this.reportNotificationLimit();
       return;
     }
@@ -332,7 +375,7 @@ class BoxWatcher implements BoxWatcherHandle {
     if (this.notificationLimitReported) return;
     this.notificationLimitReported = true;
     console.error(
-      `[box-watcher] notification work limit of ${MAX_NOTIFICATION_WORK.toLocaleString("en-US")} reached for ${this.boxRoot}; ` +
+      `[box-watcher] notification work limit of ${this.limits.maxNotificationWork.toLocaleString("en-US")} reached for ${this.boxRoot}; ` +
         "excess live-update hints are being dropped",
     );
   }
@@ -353,7 +396,7 @@ class BoxWatcher implements BoxWatcherHandle {
       open.pending = true;
       return;
     }
-    if (this.windows.size >= MAX_NOTIFICATION_WORK) {
+    if (this.windows.size >= this.limits.maxNotificationWork) {
       this.reportNotificationLimit();
       return;
     }
@@ -369,7 +412,7 @@ class BoxWatcher implements BoxWatcherHandle {
       this.windows.delete(key);
       // Trailing edge: a change we collapsed still needs to reach consumers.
       if (window?.pending === true) this.emit(event, absPath);
-    }, COALESCE_MS);
+    }, this.limits.coalesceMs);
     // The watcher must never be the reason a process stays alive.
     timer.unref();
     this.windows.set(key, { timer, pending: false });
@@ -409,11 +452,14 @@ function errnoOf(e: unknown): string | null {
  * so a concurrent caller can't start a second walk. Production callers ignore
  * the return value and let the initial tree walk (`ready`) run in the
  * background; a caller that must observe a settled watcher awaits `ready`.
+ *
+ * Idempotency covers the options too: the first call for a root fixes that
+ * watcher's bus and bounds, and a later call's options are ignored.
  */
-export function ensureBoxWatcher(boxRoot: string, eventBus: EventBus): BoxWatcherHandle {
+export function ensureBoxWatcher(boxRoot: string, opts: EnsureBoxWatcherOptions): BoxWatcherHandle {
   const existing = watchers.get(boxRoot);
   if (existing) return existing;
-  const watcher = new BoxWatcher(boxRoot, eventBus);
+  const watcher = new BoxWatcher(boxRoot, opts);
   watchers.set(boxRoot, watcher);
   watcher.ready = watcher.addDir(boxRoot).catch((e: unknown) => {
     console.error(`[box-watcher] initial walk of ${boxRoot} failed:`, e);

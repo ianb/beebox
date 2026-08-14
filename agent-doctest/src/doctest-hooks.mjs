@@ -392,12 +392,40 @@ export function generateTestSource(markdown, filePath) {
   // "cleanup" blocks register teardown via t.teardown()
   let testOpen = false;
   let pendingCleanup = []; // cleanup lines waiting for a test to attach to
+  // The open test's pieces, buffered so every `t.teardown()` registration can
+  // be emitted AHEAD of the body. Registering them inline — where the cleanup
+  // block appears in the document — means a throwing example never reaches the
+  // registration, so the cleanup never runs. A doctest that holds an OS handle
+  // (an `fs.watch`, a server, a child process) then keeps the tap child alive
+  // forever, and a single failed assertion surfaces as an opaque whole-file
+  // `expired:` at tap's timeout instead of naming the assertion that failed.
+  // That is what made `file-watcher.doctest.md` unreadable across three rounds
+  // of flake investigation
+  // (`issues/bugs/2026-08-06-file-watcher-doctest-suite-timeout.md`).
+  let testHeader = [];
+  let testBody = [];
+  let testTeardowns = [];
+
+  /** Register one cleanup block as a teardown of the open test. */
+  function addTeardown(lines) {
+    testTeardowns.push(lines);
+  }
 
   function closeTest() {
     if (!testOpen) return;
+    out.push(...testHeader);
+    for (const lines of testTeardowns) {
+      out.push(`  t.teardown(async () => {`);
+      emitLines(out, lines, "    ");
+      out.push(`  });`);
+    }
+    out.push(...testBody);
     out.push(`});`);
     out.push("");
     testOpen = false;
+    testHeader = [];
+    testBody = [];
+    testTeardowns = [];
   }
 
   for (const block of blocks) {
@@ -408,10 +436,7 @@ export function generateTestSource(markdown, filePath) {
 
     if (isCleanup) {
       if (testOpen) {
-        // Emit teardown inline in the current test
-        out.push(`  t.teardown(async () => {`);
-        emitLines(out, block.content, "    ");
-        out.push(`  });`);
+        addTeardown(block.content);
       } else {
         // Save for the next test
         for (const line of block.content.split("\n")) {
@@ -426,8 +451,8 @@ export function generateTestSource(markdown, filePath) {
 
     if (isContinue && testOpen) {
       // Append to the open test function
-      out.push(`  // --- continue (${fileName}:${block.line}) ---`);
-      emitExamples(out, examples, filePath, block.line);
+      testBody.push(`  // --- continue (${fileName}:${block.line}) ---`);
+      emitExamples(testBody, examples, filePath, block.line);
     } else {
       if (isContinue) {
         throw new Error(
@@ -441,21 +466,21 @@ export function generateTestSource(markdown, filePath) {
       const firstLabel = examples[0].expression.split("\n")[0].trim();
       const testName = `${fileName}:${block.line} — ${firstLabel}`;
 
-      out.push(`// ${fileName}:${block.line}`);
-      out.push(`test(${JSON.stringify(testName)}, async (t) => {`);
-      out.push(`  const __prints = [];`);
-      out.push(`  const print = (s) => void __prints.push(String(s));`);
+      testHeader = [
+        `// ${fileName}:${block.line}`,
+        `test(${JSON.stringify(testName)}, async (t) => {`,
+        `  const __prints = [];`,
+        `  const print = (s) => void __prints.push(String(s));`,
+      ];
       testOpen = true;
 
-      // Emit any pending cleanup as teardown
+      // A cleanup block that preceded this test still tears it down.
       if (pendingCleanup.length > 0) {
-        out.push(`  t.teardown(async () => {`);
-        emitLines(out, pendingCleanup, "    ");
-        out.push(`  });`);
+        addTeardown(pendingCleanup);
         pendingCleanup = [];
       }
 
-      emitExamples(out, examples, filePath, block.line);
+      emitExamples(testBody, examples, filePath, block.line);
     }
   }
 
