@@ -9,549 +9,277 @@ issues:
 
 # Codex as an optional box engine
 
-This plan adds Codex as a complete, optional runtime for agents that operate inside a
-box. It keeps each vendor harness intact, uses each harness's supported session API,
-and keeps Claude Code as the default engine for existing boxes and chats.
+When the boxholder disagrees with one vendor's harness direction or output quality, he
+wants a box to use another complete native harness, so box chat, wakeups, and procedures
+do not depend on Claude Code alone.
 
-**Implementation decision update (2026-08-13):** callback-box will not own a normalized
-replacement transcript. Each chat is pinned to its native engine and session ID. A
-provider transcript adapter reads Claude history through the existing Claude importer
-and Codex history through app-server `thread/read`. Live adapters retain provider event
-types below the existing application message boundary. This supersedes Track 2's
-earlier callback-owned JSONL direction wherever the older text conflicts.
+Callback Box now supports `claude` and `codex` as box engines. Each harness keeps its
+own tools, session state, authentication, and transcript. Callback Box adapts their
+supported APIs at its product boundaries. It does not use ACP and does not replace either
+harness with a callback-owned agent loop.
 
-Callback-box also ships two installed native plugins: `callback-box-claude` and
-`callback-box-codex`. The plugins provide each harness's context, rule, hook,
-validation, and lifecycle integration. They call shared callback-box commands and
-libraries but keep provider schemas and packaging separate. Ordinary editable context
-uses symlinks (`AGENTS.md -> CLAUDE.md` and `.agents/skills -> .claude/skills`) rather
-than copied mirrors.
-
-The goal is independence from Anthropic's harness decisions and output quality. A
-different model provider under Claude Code does not meet that goal. That cheaper option
-keeps the Claude Code harness, system prompt, tools, context loading, hooks, session
-store, and transcript format.
+The implementation uses Codex app-server JSON-RPC directly. New jobs and chats read
+`agentEngine` from `config/box.json`. The default is `claude`. Each chat history row also
+stores its engine, so an existing chat always resumes through the harness that created it.
+There is no automatic fallback and no live engine switch.
 
 ## Stated preferences this plan trades against
 
-- Engineering principle 1, **Types are structure**. The engine and transcript variants
-  must be discriminated unions. A Claude session ID must not be accepted where a Codex
-  thread ID is required.
-- Principle 2, **Exhaustiveness is enforced**. Adding an engine must make every engine
-  dispatch fail to compile until it handles the new variant.
-- Principle 3, **Validate at boundaries and during parsing**. Engine config, SDK events,
-  hook output, and transcript records are external or on-disk inputs.
-- Principle 4, **Resilient AND never silent**. Missing auth, quota exhaustion, transcript
-  write failure, and reduced engine capability must be visible.
-- Principle 8, **One way to do each thing**. Chat history consumers use one transcript
-  interface, with provider adapters behind it. They do not parse provider stores at
-  call sites.
-- Principle 9, **Formal structure for essential complexity**. Session identity,
-  transcript ownership, and capability differences need named protocols.
-- Principle 10, **Testability is architectural**. Both engines need contract fakes and
-  fixtures at the runtime boundary.
-- Principle 12, **The maintainer is usually an agent**. Engine-specific behavior must be
-  explicit in types and generated context, not remembered by a future session.
-- `callback-box/CLAUDE.md:97`: *"The reactor (`src/core/reactor/DESIGN.md`) is the
-  engine: find jobs → agent processing (batch or per-thread chat) → `cb finalize`
-  flushes outbound."* The plan changes this runtime boundary, not the development
-  worktree tooling.
-- `callback-box/CLAUDE.md:107`: *"Read before writing. Don't guess file formats, XML
-  structures, or API shapes."* Implementation starts with executable contract probes
-  against pinned Claude and Codex versions.
-- `callback-box/CLAUDE.md:118`: *"Leave the repo clean when committing."* Each track has
-  a narrow commit boundary and verification step.
-- `callback-box/code-style.md:29-30`: *"If there's an error boundary with recovery,
-  ALWAYS log the error somewhere"* and *"Never silently ignore errors."* Engine fallback
-  is never automatic or silent.
+- Engineering principle 1, **Types are structure**. Engine values and native protocol
+  records are validated at their boundaries.
+- Principle 3, **Validate at boundaries and during parsing**. Config, app-server events,
+  transcripts, and hook payloads use explicit schemas.
+- Principle 4, **Resilient AND never silent**. Missing sessions, validation failures,
+  subprocess failures, and unavailable usage are visible failures or warnings.
+- Principle 8, **One way to do each thing**. Product chat history goes through
+  `loadSessionHistory`; provider adapters own native history access.
+- Principle 10, **Testability is architectural**. Pure transcript, config, context, hook,
+  and usage adapters have doctests. Real capability probes cover the native runtime.
+- Principle 12, **The maintainer is usually an agent**. Canonical editable context is
+  shared, while generated provider surfaces state their provenance.
+- `callback-box/CLAUDE.md` requires the box reactor, chat, and procedures to use the same
+  box contract. The selector is therefore box-wide for new work.
+- `callback-box/code-style.md` requires errors with recovery paths to remain visible.
+  Codex never falls back silently to Claude.
 
 ## What already exists
 
-- The batch port is already narrow. `callback-box/src/core/agent/types.ts:100-118`
-  defines `Agent` as `invoke`, `invokeStructured`, and a session ID. The Codex adapter
-  reuses this interface. It does not add a second caller API.
-- Batch callers already accept factories. `callback-box/src/core/procedure/engine-types.ts:84-97`
-  says *"Agent factory type — matches createAgent() signature"* and exposes
-  `createAgent?: AgentFactory`. `callback-box/src/core/reactor/engine.ts:59-60` likewise
-  exposes an agent factory for the reactor. The plan lifts this existing test seam into
-  a production engine registry.
-- Chat has a nominal port. `callback-box/src/services/claude-chat-types.ts:77-85`
-  defines `ChatBackend`, but line 65 exposes `AsyncIterable<SDKMessage>`. The plan moves
-  vendor adaptation below this interface rather than creating another chat stack.
-- A stable application wire type exists. The July coupling audit identifies
-  `src/core/chat/message-types.ts` and `adaptSdkMessage` as the existing normalization
-  point. The plan reuses the adapter location, but not the current type unchanged.
-  `ChatMessage` still contains a bare native session ID, required Claude cost, raw
-  Anthropic stream events, and Claude task events. Track 1 replaces those fields before
-  the type becomes a backend or transcript contract.
-- Claude session ownership is private-store coupling. `callback-box/src/core/chat/session/transcript-paths.ts:1-12`
-  says the helpers are for *"Claude Code session logs"* at
-  `~/.claude/projects/<encoded-cwd>/<session-id>.jsonl`. Codex does not use this
-  module: its transcript adapter reads supported app-server thread history.
-- Session history already has a callback-owned index.
-  `callback-box/src/core/chat/session/history.ts:6-20` documents
-  `.callback-box/chat-session-history.json` and the most-active pointer. The plan evolves
-  each entry with an engine-qualified runtime identity.
-- Usage is derived from the same private transcript. `callback-box/src/core/usage.ts:4-9`
-  says `syncUsage()` combines a callback manifest with Claude Code JSONL. The new
-  transcript envelope records normalized usage at write time and keeps `usage.db`
-  rebuildable.
-- The Claude runtime contract is explicit in one place.
-  `callback-box/src/core/agent/run.ts:69-97` configures cwd, permissions, session
-  create/resume, structured output, extra directories, validation hooks, project
-  settings, and a Claude Code system-prompt append. The new runtime interface covers
-  these capabilities instead of pretending they are generic SDK options.
-- Existing related research remains the baseline:
-  `research/backend-alternatives/2026-07-18-sdk-coupling-audit.md` inventories five
-  layers, and `research/backend-alternatives/2026-07-18-alt-harnesses.md` scores Codex
-  against the harness contract. This plan updates that work. It does not repeat the
-  market survey.
+- `src/core/agent/types.ts` already defines the narrow batch `Agent` contract. The Codex
+  implementation satisfies it instead of adding another caller API.
+- `src/services/claude-chat-types.ts` already defines a chat backend seam. Codex uses the
+  same lifecycle boundary and emits provider-tagged normalized messages.
+- `.callback-box/chat-session-history.json` already indexes chats. Its rows now include
+  `engine`; a missing value means legacy Claude.
+- `src/core/chat/session/load-history.ts` is the bounded product history entry point. It
+  dispatches to the Claude JSONL parser or Codex `thread/read`.
+- `cb validate --hook` already expresses Callback Box's edit validator. Both plugins and
+  the app-server adapter reuse it.
+- Box docs and skills are generated from canonical `CLAUDE.md`, `.claude/skills`, and
+  `.claude/rules` sources. Codex mirrors reuse that generation pass.
 
 ## Prior art (external)
 
-- The current [Codex SDK documentation](https://learn.chatgpt.com/docs/codex-sdk)
-  documents TypeScript and stable Python clients that start, continue, and resume local
-  threads. The July research only treated the TypeScript subprocess SDK as the main
-  embedding surface.
-- The current [Codex app-server documentation](https://learn.chatgpt.com/docs/codex-app-server)
-  exposes thread and turn lifecycle over JSON-RPC. It is a better long-term adapter
-  boundary than parsing CLI stdout, but callback-box must pin and probe the protocol
-  features it uses.
-- The current [Codex non-interactive documentation](https://learn.chatgpt.com/docs/non-interactive-mode)
-  documents JSONL events, structured output, image input, saved-auth reuse, explicit
-  resume by session ID, and token usage on completed turns. These are positive evidence
-  for the batch contract, not proof of chat parity.
-- The current [Codex hooks documentation](https://learn.chatgpt.com/docs/hooks) lists
-  lifecycle hooks including PreToolUse, PostToolUse, compaction, session, prompt, and
-  stop events. Command hooks can block and add context. They remain subprocess hooks,
-  so callback-box must expose its validator as a quiet command and test the exact
-  feedback path.
-- The current [Codex AGENTS.md documentation](https://learn.chatgpt.com/docs/agents-md)
-  defines walk-up project instruction loading. callback-box cannot assume its existing
-  `CLAUDE.md`, `.claude/rules`, and Claude-specific skill layout load unchanged.
-- OpenAI documents ChatGPT login for Codex across its official surfaces in
-  [Using Codex with your ChatGPT plan](https://help.openai.com/en/articles/11369540-using-codex-with-your-chatgpt-plan).
-  It still does not state that a third-party commercial product may redistribute or
-  broker a consumer account. The plan therefore supports local, single-user saved
-  login only and requires a policy review before any multi-user or hosted use.
-- Anthropic's current [Agent SDK subscription article](https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan)
-  still says the June credit-pool split is paused. That watchlist item has not fired.
-  This reduces urgency but does not answer the new harness-quality motivation.
-- OpenAI now uses token-based Codex credit accounting and publishes a live
-  [Codex rate card](https://help.openai.com/en/articles/20001106-codex-rate-card).
-  Static message-count estimates from July are obsolete. The implementation must
-  measure representative box workloads against the boxholder's actual plan.
+- Codex app-server exposes typed thread and turn lifecycle, `thread/read`, `thread/list`,
+  `thread/delete`, images, structured output, sandbox policy, interruption, and token
+  events. The implementation uses those supported operations directly.
+- Codex plugins package skills and hooks. They are not a general provider adapter and do
+  not provide a native equivalent of Claude's path-scoped `.claude/rules` directory.
+- Claude Agent SDK loads a local plugin package directly. Claude Code still owns its
+  hidden prompt, tools, session store, and native rule discovery.
+- Shape A from the July research—changing the model provider beneath Claude Code—does not
+  meet this work's goal. It leaves the objected-to harness intact.
 
 ## Tracks / scope
 
-### Track 1 — Lock the runtime and capability contract
+### Track 1 — Select the native engine
 
-**What:** Replace the Claude-named construction points with an `AgentRuntime` registry.
-The registry supplies the existing `Agent` and a normalized `ChatBackend`. It also
-declares capabilities that callers genuinely branch on.
+**What:** Add `agentEngine: "claude" | "codex"` to box config. Use it for new batch jobs
+and chats. Store the engine on every new chat history row.
 
-**Why this needs to change:** The existing `Agent` interface is close to portable, but
-its comments and implementation assume Claude session semantics. The chat interface
-leaks `SDKMessage`, Claude auth, and warm-query concepts. A second implementation without
-an explicit contract would spread engine checks through the product.
+**Why this needs to change:** A test-only injected backend does not provide operational
+vendor independence. Resuming an old native session through a different harness is
+invalid.
 
-**Direction:** Introduce these shapes in a leaf module:
+**Direction:** Missing config remains Claude. Invalid values fail config loading. Batch
+agents bind their delegate on first invocation. New chats use the current box setting.
+Resumed chats use their stored engine regardless of later config changes.
 
-```ts
-type AgentEngine = "claude" | "codex";
+### Track 2 — Drive Codex through app-server
 
-type RuntimeSessionRef =
-  | { engine: "claude"; id: string }
-  | { engine: "codex"; id: string };
+**What:** Own one Codex app-server subprocess per batch turn or active chat backend.
 
-interface AgentRuntime {
-  readonly engine: AgentEngine;
-  readonly capabilities: {
-    interactiveChat: boolean;
-    images: boolean;
-    structuredOutput: boolean;
-    liveValidation: boolean;
-  };
-  createAgent(options: AgentCreateOptions): Agent;
-  createChatBackend(): ChatBackend;
-  authStatus(): Promise<RuntimeAuthStatus>;
-}
-```
+**Why this needs to change:** Codex is another harness, not another model endpoint. Its
+native process must continue to own tools, approvals, sandboxing, sessions, and auth.
 
-Change `Agent.sessionId` and result session identity to `RuntimeSessionRef`. Refactor
-`ChatMessage` into an application-owned union first: qualify session identity, represent
-missing cost as an explicit unavailable variant, replace raw Anthropic deltas, and map
-Claude task events to the small lifecycle set the UI uses. Move `adaptSdkMessage` into
-the Claude backend only after that type change. Make `ChatBackendRun.messages` yield the
-new union plus a small normalized delta union. Rename `requiresClaudeAuth` to an
-engine-neutral auth preflight result. Keep prewarm optional; it is an optimization, not
-a capability requirement.
+**Direction:** Use JSON-RPC over stdio with Zod-validated responses and notifications.
+Map cwd, writable roots, model, images, structured output, resume, interrupt, and final
+status into existing Callback Box contracts. Count completed tool items to approximate
+`maxTurns`. Report that Codex cannot enforce `maxBudgetUsd`.
 
-The default engine for new chats and box jobs is static per box in
-`config/box.json`:
+### Track 3 — Read native transcripts through supported APIs
 
-```json
-{
-  "agentEngine": "codex"
-}
-```
+**What:** Keep each harness's session and transcript native. Dispatch product history by
+the chat's pinned engine.
 
-Absent means `claude`. Existing chats retain the engine recorded in their history entry.
-There is no per-turn routing and no automatic fallback. Validate this field at config
-load. An unavailable selected engine fails the operation with a specific auth, quota,
-capability, or startup error.
+**Why this needs to change:** Callback Box reads Claude Code's private JSONL. Codex has a
+different private rollout format, but its supported `thread/read` API supplies the
+durable conversation needed by the product.
 
-**Vocabulary lock-ins:** Use **engine** for the complete harness. Use **provider** only
-for the model server beneath a harness. Use **runtime session reference** for the
-engine-qualified native resumable identity. Use **chat ID** for callback-box's stable
-user-visible identity.
+**Direction:** Claude keeps the existing bounded parser. Codex calls `thread/read` and
+adapts durable user messages, agent messages, and compaction markers to `SessionEntry`.
+List, availability, update time, and deletion use `thread/list`, `thread/read`, and
+`thread/delete`. Husk titles, the History page, capture/upload duplicate checks,
+diarization context, and nightly chat review all use the provider-aware history path.
 
-**First implementation chunk:** Add contract tests for Claude behavior, introduce the
-discriminated types and registry, move Claude adaptation below the ports, and keep
-`claude` as the only registry member. No behavior or default changes in this chunk.
+The adapter intentionally does not reproduce raw Codex tool calls, tool results,
+encrypted reasoning, injected context snapshots, or world-state records. Those remain
+native runtime diagnostics. Chat rendering and review retain the durable human/agent
+dialogue.
 
-### Track 2 — Pin chat identity and adapt native transcripts
+### Track 4 — Share context and package harness integration
 
-**What:** Add an engine discriminator to each chat history entry. Keep the native
-session ID as the stable chat ID for this release. Route history operations through a
-provider transcript interface.
+**What:** Ship separate `callback-box-claude` and `callback-box-codex` plugins. Keep
+editable box guidance canonical.
 
-**Why this needs to change:** Claude history currently reaches directly into Claude
-Code's private JSONL. Codex app-server provides supported `thread/read`, `thread/list`,
-and `thread/delete` operations. Creating a third callback-owned transcript would add a
-durability protocol and discard native information without solving a current need.
+**Why this needs to change:** Plugin schemas and hook payloads are provider-specific.
+Copying editable `CLAUDE.md`, `AGENTS.md`, and skills would create drift.
 
-**Direction:** Evolve history entries to
-`{ id, engine: "claude" | "codex", contextDir?, features? }`. Missing `engine` means
-`claude`, so existing boxes need no eager migration. A new chat records the currently
-selected engine. Resuming, displaying, reviewing, and deleting that chat always dispatch
-by its recorded engine, even if the box default later changes. There is no live engine
-conversion.
+**Direction:** Generate relative `AGENTS.md -> CLAUDE.md` and
+`.agents/skills/<name> -> .claude/skills/<name>` symlinks. Expand top-level Claude
+`@file` includes into Codex developer instructions because app-server did not load them
+reliably. Keep `.claude/rules` canonical and generate Codex rule skills from it.
 
-Define a `TranscriptBackend` that returns the application history model and owns native
-list/read/delete semantics. The Claude implementation reuses the current bounded JSONL
-parser. The Codex implementation calls app-server `thread/read(includeTurns: true)` and
-adapts its public user-message, agent-message, file-change, web-search, subagent, and
-compaction items. It must not read Codex rollout JSONL. Provider-only debug/raw views may
-remain separate.
+Rules cannot live only in the plugins. Claude plugins do not expose a native `rules/`
+component, and path-scoped rules belong to the box package rather than the installed
+harness package. The generated rule skills are therefore the one copied surface. Their
+headers name the canonical source, and normal agents do not edit them.
 
-The current-chat probe showed the intentional loss boundary. `thread/read` omitted raw
-tool calls, encrypted reasoning, injected turn context, token events, and world state,
-while retaining the completed user-visible turns and selected durable activity. The
-chat UI uses the supported representation. Live app-server notifications provide
-in-progress activity. Usage comes from token-usage events during invocation, not from
-history reconstruction.
+The Claude plugin runs Callback Box validation through native PostToolUse hooks. The
+Codex plugin does the same for ordinary CLI sessions. Current Codex app-server sessions
+did not execute installed or project-local hooks, even with hook trust bypassed. The
+app-server adapter therefore consumes completed `fileChange` items and runs the same
+validator itself. A validation finding makes the turn fail visibly. It does not feed the
+finding back into the same model turn.
 
-**Vocabulary lock-ins:** A **chat** is an engine-qualified native session. A
-**transcript backend** reads the harness's supported history representation. A private
-Claude JSONL or Codex rollout is a **runtime log** and is not a cross-provider contract.
+### Track 5 — Preserve usage accounting
 
-**First implementation chunk:** Add the engine field with a legacy-Claude default and
-contract tests. Introduce the transcript dispatch interface with the existing Claude
-reader as its only member. Then add the fixture-backed Codex `thread/read` adapter.
+**What:** Persist Codex's final per-turn token event in
+`store/usage/codex-turns.jsonl` and import it into the existing usage database.
 
-### Track 3 — Re-provide the harness contract for Codex
+**Why this needs to change:** Codex `thread/read` omits token events. Reading its private
+rollout would recreate the private-transcript coupling this design avoids.
 
-**What:** Implement the Codex runtime through the pinned official SDK or app-server. It
-must satisfy filesystem tools, context loading, prompt composition, validation feedback,
-sandbox scope, images, structured output, interrupt, resume, and usage reporting.
-
-**Why this needs to change:** callback-box defines no filesystem or shell tools. It relies
-on the harness. A thin model call or a `codex exec` wrapper that returns final text is not
-an engine implementation.
-
-**Direction:** Build and check a capability matrix before the adapter:
-
-| Harness dependency | Codex direction | Allowed degradation |
-|---|---|---|
-| Read, edit, search, shell | Use Codex built-ins in the box workspace. | Tool names may differ; box outcomes may not. |
-| Cwd and extra roots | Use workspace-write plus explicit writable roots. | None. A landmark session must still reach the box root. |
-| Context files | Generate `AGENTS.md` mirrors and Codex skill/rule surfaces from the same canonical box context that generates Claude files. | Engine-specific prose is allowed; missing box rules are not. |
-| System prompt | Put callback-box invariants in developer instructions. Do not copy Claude Code's hidden preset. | Wording differs. Behavioral contract does not. |
-| Validation hooks | Invoke a quiet callback validator from Codex PostToolUse and return blocking/additional context in Codex's hook schema. | Subprocess latency is accepted. Silent loss of validation is not. |
-| Permissions | Select explicit sandbox and approval policy owned by callback-box. | Prompt wording differs. Scope may not widen. |
-| Images | Send supported local-image input or a box-contained path verified to reach a vision-capable model. | No text-only fallback for image-bearing turns. |
-| Structured output | Use the SDK schema facility and validate again with the caller's Zod schema. | None for callers of `invokeStructured`. |
-| Session lifecycle | Store the Codex-assigned thread ID in `RuntimeSessionRef`; resume it by ID. | Caller-minted native IDs are not required because chat IDs are separate. |
-| Interrupt | Map chat stop to turn interrupt and confirm terminal state. | Timing may differ; a claimed stop that keeps running is not allowed. |
-| Usage and quota | Record normalized token usage from turn events and a typed quota/auth failure. | USD cost may be absent; absence must be visible. |
-
-Pin the Codex runtime version with the callback-box release. Parse every event through a
-Zod boundary. Keep raw events out of core and frontend types. Treat unsupported protocol
-events as logged diagnostics, while required terminal and persistence events fail loudly.
-
-**Vocabulary lock-ins:** **Parity** means the user-visible outcome and safety property,
-not identical tool names or event order. **Degradation** is a declared capability loss
-shown before a run. It is not silent fallback to Claude.
-
-**First implementation chunk:** Add a non-mutating executable probe that starts Codex in
-a temporary git box and verifies assigned thread ID, resume, image visibility, structured
-output with tool use, sandbox denial outside allowed roots, interrupt, hook feedback, and
-usage events. Commit the recorded fixture and adapter only after every required probe has
-a positive result or the plan is revised.
-
-### Track 3A — Package native integration as two harness plugins
-
-**What:** Ship `callback-box-claude` and `callback-box-codex` as versioned plugin
-directories in the callback-box package. Install or load them for every box runtime.
-Both plugins call one shared context/rule resolver and the existing card validator.
-
-**Why this needs to change:** Project-local `.claude/rules` couples rule discovery to
-Claude Code. Plugins are the native packaging mechanism for shared skills and lifecycle
-hooks in both harnesses. Generating provider-specific copies of ordinary editable
-context creates avoidable drift.
-
-**Direction:** Add an engine-neutral `cb agent-context` and `cb agent-rules`
-implementation. Given a cwd and tool event, it resolves the active box package, expands
-top-level `@file` includes when required, matches canonical path-scoped rules, and emits
-structured context or validation results. It never embeds every rule in each session.
-
-The Claude plugin uses `.claude-plugin/plugin.json` and `hooks/hooks.json`. The Agent
-SDK loads this local package plugin explicitly. Claude keeps its native `.claude/rules`
-loading because plugins do not expose a direct `rules/` component.
-
-The Codex plugin uses `.codex-plugin/plugin.json`, skills, and trusted lifecycle hooks.
-Its hooks translate shared validation and lifecycle results into Codex's hook schema.
-Codex rule guidance is generated from the canonical `.claude/rules` corpus during box
-context refresh. Codex preflight verifies that the installed plugin is enabled and its
-current hook definition is trusted. Boxes expose the package plugin through their local
-package marketplace; they do not generate unique plugin copies.
-
-For ordinary editable guidance, use relative symlinks. `AGENTS.md` points to
-`CLAUDE.md`; `.agents/skills/<name>` points to `.claude/skills/<name>`. Editing through
-either harness changes the same file. Only plugin manifests, generated rule indexes,
-and provider hook adapters differ.
-
-**Vocabulary lock-ins:** A **harness plugin** is provider-native integration packaging,
-not the runtime adapter. A **rule resolver** is callback-box-owned logic shared by both
-plugins. A **context alias** is a symlink between equivalent editable harness files.
-
-**First implementation chunk:** Add both minimal plugin manifests and hook fixtures.
-Make both hook adapters pass the same validation/lifecycle contract cases. Load the
-Claude plugin through the SDK, verify the installed Codex plugin through app-server,
-and verify generated Codex rule guidance against the canonical Claude rule corpus.
-
-### Track 4 — Select, authenticate, and operate the engine
-
-**What:** Add per-box selection, engine status, login guidance, quota diagnostics, and
-usage comparison. Wire the runtime registry into web chat, reactor chat and batch jobs,
-triage, scheduled procedures, review, and other operational box agents.
-
-**Why this needs to change:** A backend that works only when injected by a test or a CLI
-flag does not give a boxholder vendor independence. Authentication and quota exhaustion
-are part of the runtime contract.
-
-**Direction:** `agentEngine` selects one engine for all box-operational workloads. Startup
-and settings report selected engine, auth state, runtime version, model, and capability
-status. Claude keeps its current login flow. Codex initially reuses a local single-user
-Codex login owned by that installation. Do not copy, expose, or commit `auth.json`.
-
-Before enabling Codex, show its privacy/billing posture and require an explicit boxholder
-choice. Record tokens and runtime identity for every turn. Add a report that compares a
-representative, boxholder-approved dry-run corpus on Claude and Codex. Report token use,
-wall time, task success, validation retries, and any paid credits. Do not send private box
-prompts to both engines without explicit approval.
-
-Wire the selected runtime once at process composition. Do not add `if (engine === ...)`
-branches to individual jobs. If a selected engine cannot start, fail visibly and leave
-jobs pending. Never fall back to the other vendor automatically because that defeats
-privacy, cost, and output expectations.
-
-Engine changes are not retroactive session conversions. Existing web chats remain pinned
-and resumable on their recorded engine. A newly created chat uses the new default. For
-reactor chat sessions, replace bare IDs with `RuntimeSessionRef`; existing active thread
-refs continue on their recorded engine until explicitly reset. Batch jobs use the box
-default at invocation time. No path silently resumes a native session through a different
-engine.
-
-**Vocabulary lock-ins:** **Selected engine** is the one explicit per-box choice.
-**Fallback** always means an explicit boxholder configuration change.
-
-**First implementation chunk:** Add validated config and status rendering with `claude`
-as the default and only enabled choice. Then enable `codex` only after Tracks 2 and 3 pass
-their contract suites.
+**Direction:** Record input, cached input, cache-write input, output, reasoning output,
+model, task, native thread, and turn identity after completion. Usage sync aggregates
+the callback-owned ledger alongside Claude sessions. Codex does not report a USD cost,
+so no fake dollar value is stored.
 
 ## Could this be simpler?
 
-The simplest plausible version is Codex only for procedure and reactor batch agents.
-That version can use the existing `Agent` factory and avoid chat ports and transcripts.
-It is a useful spike, but it is not the planned product:
+A batch-only Codex engine would reuse the narrow `Agent` interface and avoid all chat
+history work. It would leave web chat and chat work handled by `cb wakeup` dependent on
+Claude Code, which does not satisfy the job.
 
-- `cb wakeup` processes both batch and per-thread chat work. A batch-only engine still
-  leaves ordinary wakeups dependent on Claude Code.
-- Web chat is the main place where harness output quality and product direction are
-  experienced. Leaving it Claude-only does not meet the motivation.
-- A batch-only adapter would encourage native string session IDs and raw event parsing
-  to escape into core, making the later chat port harder.
-
-The full approach buys one typed engine boundary and one product-owned history for all
-box workloads. This follows principles 1, 8, and 9. The implementation may use the
-batch surface as its first probe, but no batch-only selector ships.
-
-Shape A is even simpler: change `ANTHROPIC_BASE_URL` and keep Claude Code. It does not
-address the goal because the objected-to harness remains in control. It stays outside
-this plan.
+ACP would provide one protocol but reduce both harnesses to its shared surface. This
+implementation instead keeps small provider adapters against the richest supported
+native APIs. OpenCode or Pi can later become another engine adapter; neither is the
+adapter architecture itself.
 
 ## Failure modes
 
-There are no accepted critical gaps. A failed durable transcript append is a hard turn
-failure, not a silent gap.
-
-| What can fail | Test exists? | Handling exists? | Clear-or-silent? |
-|---|---|---|---|
-| Config contains an unknown engine | Planned config doctest | Reject at load; name allowed values | Clear |
-| Selected engine is not authenticated | Planned runtime contract test | Typed preflight failure; jobs remain pending | Clear |
-| Codex is out of quota or credits | Planned fixture + manual quota probe | Typed terminal failure; no fallback | Clear |
-| Runtime returns a changed event shape | Planned schema fixture tests | Boundary parse error with engine/version/event type | Clear |
-| Transcript append fails after an event arrives | Planned fault-injection doctest | Stop turn; do not publish as durable history | Clear |
-| Lazy Claude transcript migration sees malformed or oversized input | Existing parser fixtures plus planned migration cases | Keep old source, report session-specific failure, do not mark migrated | Clear |
-| Codex thread is missing during resume | Planned adapter test | Preserve history; offer explicit new-runtime-session recovery | Clear |
-| Validation hook fails or times out | Planned hook probe | Block the write path and surface validator failure | Clear |
-| Image is accepted by transport but unseen by model | Planned image recognition probe | Capability check fails; image-bearing turn does not start | Clear |
-| Structured schema is ignored during tool use | Planned tool-plus-schema probe | Zod validation fails the invocation | Clear |
-| Sandbox permits access outside box and allowed roots | Planned negative probe | Codex engine remains disabled for release | Clear |
-| Interrupt reports success while work continues | Planned process-state test | Keep session in stopping/error state and kill owned runtime at deadline | Clear |
-| Process dies with an incomplete durable turn | Planned crash-window integration test | Never resume the possibly-advanced runtime; visibly fork and seed from durable history | Clear |
-| Usage event omits USD cost | Planned fixture | Store tokens and explicit `cost: unavailable` | Clear |
-| A completed Codex batch turn has no usage-ledger record | Planned invariant test | Fail usage sync and name the runtime session; never report zero | Clear |
-| Two engines write one chat concurrently | Planned lock test | Per-chat lock and engine-qualified active-turn invariant reject the second writer | Clear |
-| Engine config changes while old chat refs remain | Planned config/reset doctest | Refuse change until explicit archive/fork reset | Clear |
+| What can fail | Handling and evidence | Clear-or-silent? |
+|---|---|---|
+| Unknown `agentEngine` | Config doctest rejects it and names allowed values. | Clear |
+| Codex executable, login, or quota unavailable | App-server startup/turn error becomes a failed job or chat turn. No fallback. | Clear |
+| App-server response shape changes | Zod boundary rejects required records. | Clear |
+| Native session is missing | Availability check reports the chat unavailable. | Clear |
+| Sandbox escapes configured roots | Real negative probe denied an outside write. | Clear |
+| Interrupt leaves work running | Real probe interrupted a delayed write; the file was not created. | Clear |
+| Codex plugin is missing or stale | Runtime installs or repoints the shipped local plugin version before use. | Clear |
+| App-server omits hooks | Wrapper validates completed `fileChange` paths and fails the turn on findings. | Clear |
+| Context include escapes the package | Resolver rejects absolute and parent-escaping includes. | Clear |
+| Transcript contains provider-private details only | Product adapter ignores them deliberately; native diagnostics retain them. | Declared loss |
+| Token usage event is missing | Batch output warns; no zero-valued record is fabricated. | Clear |
+| USD cost or exact dollar budget is requested | Cost stays unavailable; batch warns that only host-side tool counting applies. | Clear |
+| Codex usage ledger has a partial final line | Sync skips the malformed line and retains earlier durable turns. | Clear |
 
 ## Agent-flow / user-flow edge cases
 
-- **Wrong tag / wrong field — ADDRESSED.** Both engines run the same callback validator
-  and `cb validate`; Track 3 makes validation feedback a parity requirement.
-- **Stale ref — ADDRESSED.** This plan does not change card reference resolution. Both
-  engines use the box CLI and current validation rules.
-- **Two agents touching the same card — ADDRESSED.** Existing git/card locking remains.
-  The failure table adds a per-chat lock for transcript/runtime concurrency.
-- **Hand-edit drift — ADDRESSED.** Engine config is validated at load. Transcript files
-  are internal state and parsed through a versioned schema.
-- **Fabricated free-form value — DEFERRED.** Engine quality is measured with the same
-  tasks, but this plan does not introduce a new truthfulness mechanism.
-- **Validation error UX — ADDRESSED.** Track 3 requires Codex hook feedback to reach the
-  active agent and engine errors to reach the boxholder.
-- **Partial migration / transition state — ADDRESSED.** Track 2 uses per-chat lazy
-  migration, validates before marking success, and preserves the Claude source.
+- **Wrong tag / wrong field — ADDRESSED.** Both engines run the same Callback Box
+  validator. App-server validation occurs after the turn and fails it visibly.
+- **Stale ref — ADDRESSED.** Both engines use the same box CLI and validators.
+- **Two agents touching one card — UNCHANGED.** Existing git and card coordination owns
+  this problem; engine selection adds no new writer.
+- **Hand-edit drift — ADDRESSED.** Editable context has one canonical file through
+  symlinks. Generated rules name their source.
+- **Fabricated free-form value — DEFERRED.** A second harness changes output quality but
+  does not add a truthfulness mechanism.
+- **Validation error UX — DEGRADED ON APP-SERVER.** The result is visible to the
+  boxholder, but Codex cannot self-correct within that completed turn because hooks did
+  not run in the probed app-server path.
+- **Partial transition — ADDRESSED.** Missing history engine means Claude. Existing
+  chats remain pinned while new work follows current config.
 
 ## NOT in scope
 
-- Model-provider substitution under Claude Code. It does not remove the harness that
-  motivates this work.
-- Automatic per-task model routing, load balancing, or failover. Static box selection
-  keeps privacy, billing, and output provenance understandable.
-- Development worktree sessions. `bin/launch-worktree-session --agent codex` and the
-  finish flow already cover that separate surface.
-- Hosted multi-user brokerage of ChatGPT subscription credentials. Current official
-  documentation does not establish that commercial redistribution right.
-- A callback-owned agent loop or callback-defined filesystem tool suite. Codex and
-  Claude Code remain the harnesses.
-- Importing Codex private rollout files. callback-box records its own normalized events.
-- Bit-for-bit transcript parity. Vendor reasoning blocks and internal compaction details
-  may remain in runtime logs; user messages, assistant messages, tools needed by the UI,
-  usage, and lifecycle are durable product data.
-- Automatic deletion of old Claude JSONL. Migration preserves it through a documented
-  retention period and deletion is a separate explicit cleanup.
-- Self-hosted models, OpenRouter, or other harnesses. The typed registry leaves a clear
-  extension point, but this plan implements only Claude and Codex.
+- Model-provider substitution beneath Claude Code. It leaves the harness intact.
+- Automatic routing, load balancing, failover, or mid-chat engine conversion.
+- A callback-owned loop, filesystem tools, or normalized replacement transcript.
+- Parsing Codex's private rollout files.
+- Hosted brokerage of consumer ChatGPT credentials. The first scope is a local,
+  single-user installation.
+- Bit-for-bit event parity. Provider-only activity and diagnostics stay below the
+  product boundary.
 
 ## Open design questions
 
-- **Which Codex credential tier should the first supported release require?** Lean:
-  support a local single-user ChatGPT login for the boxholder's own installation, with
-  an API-key path only when official SDK support and privacy requirements are verified.
-  This choice must receive a current policy review before implementation ships.
-- **What transcript retention window is sufficient before old Claude JSONL can be
-  removed?** Lean: never remove automatically in this plan. Measure storage and make any
-  later cleanup an explicit maintenance command.
-- **Which representative box tasks may be sent to both vendors for quality and cost
-  comparison?** The boxholder must choose a non-sensitive corpus or explicitly approve
-  the data. Implementation does not infer consent from engine configuration.
-- **What performance regression is acceptable for subprocess validation and a second
-  durable append?** Lean: correctness gates first; measure p50/p95 turn-start and
-  validation latency before choosing a threshold.
-
-These questions do not change the first implementation chunks. They gate enabling the
-Codex choice for real boxes and the final rollout.
+- Should a future app-server validation failure start a synthetic repair turn? The
+  current implementation fails visibly and avoids adding hidden user messages or
+  spending an unbounded second turn.
+- Should the product display Codex token counts in the live chat result? They are
+  retained in usage reporting now, but the current chat result UI only has optional USD
+  cost.
+- Should generated Codex rule skills eventually come from a provider-neutral rule
+  source? The current Claude files are canonical because no rule has needed
+  engine-specific tuning.
+- Which non-sensitive corpus should compare Claude and Codex quality, latency, and
+  consumption? Running private prompts through both vendors still requires explicit
+  boxholder approval.
 
 ## Knowledge audits
 
-This plan changes what a box agent loads and how validation reaches it. Add paired
-knowledge-audit cases tagged `engine-parity` that ask Claude and Codex agents to identify
-the box root, applicable instructions, card-validation workflow, and allowed external
-roots. Run the cases against the isolated test box for both engines before rollout.
+Context behavior received direct runtime probes rather than a token-spending paired
+knowledge-audit corpus. A temporary box used a Claude-style briefing-file include that
+contained a nonce. Codex returned the nonce without file tools after Callback Box
+expanded the include into developer instructions. The generated symlink and rule-skill
+surfaces also have filesystem doctests.
 
-Do not add an audit for the `agentEngine` setting. The box agent does not need to know
-which implementation selected it unless diagnostics explicitly ask; runtime status owns
-that fact.
+A future paired audit should ask both engines to identify the box root, applicable card
+rules, validation command, and allowed external roots. It should use a non-sensitive
+test box.
 
 ## Implementation order
 
-1. Add the Codex harness probe before changing production types or persistence. Verify
-   assigned thread ID, resume, hooks, sandbox, image visibility, structured output with
-   tools, interrupt, and usage. If a required capability fails, revise or stop this plan.
-2. Add executable Claude contract tests and the engine-neutral types. Move Claude event
-   normalization behind the ports. Commit with no behavior change.
-3. Add engine-qualified chat history and provider transcript backends. Compare Codex
-   `thread/read` and the current Claude reader against each application consumer.
-4. Add both harness plugins, the shared rule/context resolver, symlinked editable
-   context, and provider hook adapters. Verify both plugin installations and hooks.
-5. Implement the Codex `Agent` adapter, context integration, auth preflight, and
-   usage normalization. Pass batch and structured contract tests.
-6. Implement the Codex `ChatBackend`, resume mapping, images, interrupt, and transcript
-   integration. Pass the shared chat contract suite.
-7. Add validated per-box selection, engine-pinned chat creation, and status
-   UI/CLI. Keep Claude as default. Run paired knowledge audits and the approved
-   cost/quality corpus.
-8. Run the complete suite, migrate a cloned test-box chat history, rehearse explicit
-   Claude→Codex→Claude selection, and document recovery. Enable Codex only after all
-   tracks pass; ship the plan as one unit.
+1. Probe app-server session, resume, image, structured output, sandbox, interrupt, hooks,
+   token events, and supported transcript fidelity.
+2. Add validated box selection and the Codex batch adapter.
+3. Add engine-pinned chat and supported native history operations.
+4. Add both harness plugins, context symlinks, generated rule skills, direct include
+   expansion, and wrapper validation fallback.
+5. Route secondary chat consumers and nightly review through provider history.
+6. Persist Codex token usage and import it into usage reporting.
+7. Run focused tests, the complete suite, cross-model review, and `/finish`.
 
 ## Rollout shape
 
-- **Tests first:** Add a runtime-contract doctest for batch, structured output, session
-  identity, auth and failures; a chat-backend contract doctest for send/stream/interrupt/
-  resume/images; transcript-adapter and migration doctests; and a process integration test
-  for hooks, sandbox, crash windows, and real SDK events.
-- **Fixtures:** Record scrubbed Claude and Codex event fixtures with pinned runtime
-  versions. Fixtures contain no real box content or credentials.
-- **Manual test:** On the isolated box clone, run a new chat, resume it after process
-  restart, interrupt a tool turn, send an image, process a batch wakeup, and run a
-  scheduled procedure on each engine. Verify native history adapters and usage without
-  reading Codex's private runtime log.
-- **Cost/quota test:** Run only a boxholder-approved corpus. Record actual token/credit
-  consumption and quiet-machine latency separately from functional tests.
-- **Migration:** Lazy, per chat, backup-preserving, and idempotent. Existing boxes default
-  to Claude. No migration runs merely because the package upgrades.
-- **Rollback:** Change `agentEngine` to `claude` for new chats and batch jobs. Existing
-  chats remain pinned to their recorded engine and native session. Reset a reactor-chat
-  reference explicitly when it should start over on the new default.
-- **Documentation:** Update box config reference, chat/session design, usage docs,
-  authentication guidance, privacy guidance, and operator recovery steps. State which
-  runtime version is pinned and how to run the contract probe.
+- Existing boxes remain on Claude until `config/box.json` explicitly selects Codex.
+- Existing chats remain Claude-owned. Changing the box default affects only new chats
+  and new batch work.
+- The isolated test box is the runtime rehearsal target. Real capability probes have
+  already verified resume after process restart, local images, structured output with
+  tools, sandbox denial, interruption, transcript read/list/delete, context expansion,
+  and token persistence.
+- Rollback changes `agentEngine` back to `claude`. Codex chats remain available through
+  their pinned history rows.
+- No approved cross-vendor quality corpus has run. Functional probes used synthetic
+  prompts and test assets.
 
 ## Stuff you should know
 
-- This is a real second-runtime project, not an SDK swap. Supported native transcript
-  APIs make history smaller than the original audit predicted; plugin-packaged harness
-  integration and engine-pinned chat identity are now the central boundaries.
-- The plan deliberately chooses a full box engine. A Codex-for-procedures-only feature
-  would be much cheaper, but chat and mixed `cb wakeup` runs would remain exposed to the
-  harness you want independence from.
-- The strongest design choice is to own normalized transcripts. You may prefer a smaller
-  Codex-format translator. That is less work initially, but it creates two private-format
-  dependencies and makes a third engine more expensive.
-- Codex may be slower on validation because current hooks execute commands. The plan
-  keeps live validation and measures the cost instead of silently dropping it.
-- Claude-only details remain: warm-process behavior, raw Claude task events not used by
-  the product, and old private runtime logs. User-visible chat, images, resume, stop,
-  validation, and usage provenance are not allowed to be Claude-only.
-- The Anthropic credit-pool watch item has not fired as of this refresh. The reason to do
-  this now is harness/output independence, not a confirmed loss of Anthropic subscription
-  access.
-- OpenAI's current docs support ChatGPT login in Codex, but they do not clearly grant a
-  commercial product the right to broker consumer subscription credentials. The first
-  scope is a local, single-user installation. Revisit policy before broader distribution.
-- Do not estimate ongoing cost from worker-session experience. Box chat, wakeups, image
-  turns, and schedules are a different workload. The rollout requires measured usage on
-  an approved corpus before the setting is enabled on a real box.
+- This became a medium adapter project, not a reimplementation of an agent runtime. The
+  app-server and Agent SDK preserve the two native harnesses.
+- The transcript is lossy by design. Codex history keeps user/assistant dialogue and
+  compaction markers, but Callback Box does not display raw Codex tool results,
+  reasoning, injected context, or world state after the turn.
+- Live Codex chat updates are coarser than Claude's current SDK stream. Final assistant
+  messages, result state, interruption, and durability work; provider-specific tool
+  progress is not normalized into the existing Claude-oriented UI.
+- Validation is safety-equivalent but not interaction-equivalent in app-server. A bad
+  edit fails after the turn instead of becoming same-turn hook feedback to Codex.
+- `maxTurns` is an approximation based on completed tool items. `maxBudgetUsd` has no
+  Codex equivalent. Token usage is recorded; USD cost is unavailable.
+- Rules are not wholly plugin-owned. Editable docs and skills use symlinks. Claude rules
+  remain canonical and generate Codex rule skills because neither plugin format gives a
+  sound shared path-scoped rule store.
+- The first supported deployment assumes the machine already has a working local Codex
+  login. Callback Box does not copy or broker credentials.
