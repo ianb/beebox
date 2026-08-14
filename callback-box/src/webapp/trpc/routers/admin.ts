@@ -25,16 +25,17 @@ import { getGoogleClientCreds } from "../../../connectors/google-auth.js";
  * `.default()` on every field lets a missing file or missing key read as the
  * documented default rather than casting an untyped `JSON.parse` result.
  */
+const googleServicesSchema = z.object({
+  calendar: z.boolean().optional(),
+  gmail: z.boolean().optional(),
+  drive: z.boolean().optional(),
+});
+
 const boxConfigSchema = z.object({
+  agentEngine: z.enum(["claude", "codex"]).default("claude"),
   allowedEmails: z.array(z.string()).default([]),
   publicUrl: z.string().nullable().default(null),
-  googleServices: z
-    .object({
-      calendar: z.boolean().optional(),
-      gmail: z.boolean().optional(),
-      drive: z.boolean().optional(),
-    })
-    .default({}),
+  googleServices: googleServicesSchema.default({}),
 });
 
 /** Per-box admin router (Telegram, box config). */
@@ -153,7 +154,11 @@ export const adminRouter = router({
       config = boxConfigSchema.parse(JSON.parse(await fs.readFile(configPath, "utf-8")));
     } catch (e) {
       if (errnoCode(e) !== "ENOENT") {
-        console.debug("box.json missing or unreadable, returning default box config:", e);
+        console.warn("box.json is unreadable; refusing to return fabricated defaults:", e);
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Box configuration is unreadable.",
+        });
       }
       config = boxConfigSchema.parse({});
     }
@@ -174,6 +179,7 @@ export const adminRouter = router({
       ownerEmail: userDetails.ownerEmail,
       googleLoginConfigured: getGoogleClientCreds() !== null,
       googleServices: config.googleServices,
+      agentEngine: config.agentEngine,
     };
   }),
 
@@ -189,10 +195,11 @@ export const adminRouter = router({
       z
         .object({
           allowedEmails: z.array(z.string()).optional(),
-          googleServices: z.record(z.string(), z.boolean()).optional(),
+          googleServices: googleServicesSchema.optional(),
+          agentEngine: z.enum(["claude", "codex"]).optional(),
         })
-        .refine((v) => v.allowedEmails !== undefined || v.googleServices !== undefined, {
-          message: "At least one of allowedEmails or googleServices is required",
+        .refine((v) => v.allowedEmails !== undefined || v.googleServices !== undefined || v.agentEngine !== undefined, {
+          message: "At least one box configuration field is required",
         }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -200,6 +207,7 @@ export const adminRouter = router({
         boxRoot: ctx.boxRoot,
         ...(input.allowedEmails === undefined ? {} : { allowedEmails: input.allowedEmails }),
         ...(input.googleServices === undefined ? {} : { googleServices: input.googleServices }),
+        ...(input.agentEngine === undefined ? {} : { agentEngine: input.agentEngine }),
       });
       if (result.commitError) {
         console.error(`[admin] box config was saved but its Git commit failed for ${ctx.boxRoot}:`, result.commitError);
@@ -210,6 +218,7 @@ export const adminRouter = router({
         commitWarning: result.commitError === null ? null : "Saved, but the Git commit failed.",
         allowedEmails: saved.allowedEmails,
         googleServices: saved.googleServices,
+        agentEngine: saved.agentEngine,
       };
     }),
 

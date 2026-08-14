@@ -88,7 +88,7 @@ export interface SessionEntry {
 /** A client-created entry tracked until authoritative history echoes it. */
 export type PendingSessionEntry = SessionEntry & { reconcileKnownUuids: string[] };
 
-export async function getChatStatus(params: { sessionId: string | null }): Promise<{ sessionId: string | null; running: boolean; busy: boolean; model: string | null }> {
+export async function getChatStatus(params: { sessionId: string | null }): Promise<{ sessionId: string | null; running: boolean; busy: boolean; model: string | null; engine: "claude" | "codex" }> {
   return trpcClient.chat.status.query({ session: params.sessionId ?? undefined });
 }
 

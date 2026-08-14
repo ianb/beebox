@@ -86,11 +86,13 @@ async function mutateConfig(options: {
 export async function updateBoxConfigFields(options: {
   boxRoot: string;
   allowedEmails?: string[] | undefined;
-  googleServices?: Record<string, boolean> | undefined;
+  googleServices?: Partial<Record<"calendar" | "gmail" | "drive", boolean | undefined>> | undefined;
+  agentEngine?: "claude" | "codex" | undefined;
 }): Promise<BoxConfigMutationResult> {
   const changed = [
     ...(options.allowedEmails === undefined ? [] : ["allowedEmails"]),
     ...(options.googleServices === undefined ? [] : ["googleServices"]),
+    ...(options.agentEngine === undefined ? [] : ["agentEngine"]),
   ];
   return mutateConfig({
     boxRoot: options.boxRoot,
@@ -101,6 +103,9 @@ export async function updateBoxConfigFields(options: {
       }
       if (options.googleServices !== undefined) {
         config.googleServices = options.googleServices;
+      }
+      if (options.agentEngine !== undefined) {
+        config.agentEngine = options.agentEngine;
       }
     },
   });

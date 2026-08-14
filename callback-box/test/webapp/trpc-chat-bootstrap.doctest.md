@@ -81,7 +81,7 @@ const server = await makeTestServer();
 
 const empty = await caller(server).chat.bootstrap({ slice: TAIL });
 JSON.stringify(empty)
-=> {"kind":"empty","sessionId":null,"history":null,"label":null,"status":{"sessionId":null,"running":false,"busy":false,"model":null}}
+=> {"kind":"empty","sessionId":null,"history":null,"label":null,"status":{"sessionId":null,"running":false,"busy":false,"model":null,"engine":"claude"}}
 ```
 
 ## An explicit session id returns that session's history and status
@@ -172,7 +172,7 @@ doesn't.)
 ```ts continue
 const missing = await caller(server).chat.bootstrap({ session: "no-such-session", slice: TAIL });
 JSON.stringify(missing)
-=> {"kind":"unavailable","sessionId":"no-such-session","history":null,"label":null,"status":{"sessionId":"no-such-session","running":false,"busy":false,"model":null},"reason":"missing-local-transcript","huskPath":null}
+=> {"kind":"unavailable","sessionId":"no-such-session","history":null,"label":null,"status":{"sessionId":"no-such-session","running":false,"busy":false,"model":null,"engine":"claude"},"reason":"missing-local-transcript","huskPath":null}
 ```
 
 Input still validates: a non-string session is rejected before any work, and so
@@ -245,7 +245,7 @@ than a session named `""`:
 ```ts continue
 await setDefaultSession(server, "");
 JSON.stringify(await caller(server).chat.bootstrap({ slice: TAIL }))
-=> {"kind":"empty","sessionId":null,"history":null,"label":null,"status":{"sessionId":null,"running":false,"busy":false,"model":null}}
+=> {"kind":"empty","sessionId":null,"history":null,"label":null,"status":{"sessionId":null,"running":false,"busy":false,"model":null,"engine":"claude"}}
 ```
 
 ```ts cleanup

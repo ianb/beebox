@@ -79,7 +79,7 @@ export const chatBootstrapProcedure = {
           sessionId: null,
           history: null,
           label: null,
-          status: readSessionStatus(ctx.boxRoot, null),
+          status: await readSessionStatus(ctx.boxRoot, null),
         };
       }
       const runtime = getChatRuntime(ctx.boxRoot);
@@ -100,7 +100,7 @@ export const chatBootstrapProcedure = {
           sessionId,
           history: null,
           label: await titleForSession(ctx.boxRoot, sessionId),
-          status: readSessionStatus(ctx.boxRoot, sessionId),
+          status: await readSessionStatus(ctx.boxRoot, sessionId),
           reason: availability.reason,
           huskPath: availability.huskPath,
         };
@@ -111,7 +111,7 @@ export const chatBootstrapProcedure = {
         sessionId,
         history,
         label,
-        status: readSessionStatus(ctx.boxRoot, sessionId),
+        status: await readSessionStatus(ctx.boxRoot, sessionId),
       };
     }),
 };

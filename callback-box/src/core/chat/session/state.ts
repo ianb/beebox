@@ -58,6 +58,11 @@ export async function releaseRunLock(lockPath: string): Promise<void> {
  */
 export const DEFAULT_MODEL_FILE = ".callback-box/chat-model.json";
 
+/** Per-session model override used by the web chat registry. */
+export function chatModelFileForSession(sessionId: string): string {
+  return `.callback-box/chat-models/${encodeURIComponent(sessionId)}.json`;
+}
+
 /** Read the box's persisted chat-model override from the default file. */
 export function loadPersistedChatModel(boxRoot: string): string | null {
   return loadCurrentModel(boxRoot, DEFAULT_MODEL_FILE);

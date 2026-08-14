@@ -46,6 +46,12 @@ export function isClaudeMdFile(filePath: string): boolean {
   return path.basename(filePath) === "CLAUDE.md";
 }
 
+/** Either harness's native instruction filename. Box AGENTS.md is a CLAUDE.md symlink. */
+export function isAgentInstructionsFile(filePath: string): boolean {
+  const basename = path.basename(filePath);
+  return basename === "CLAUDE.md" || basename === "AGENTS.md";
+}
+
 /**
  * Return a soft warning line if the CLAUDE.md is large, else null. Two tiers:
  * a gentle nudge at {@link CLAUDE_MD_WARN_CHARS}, firmer language at

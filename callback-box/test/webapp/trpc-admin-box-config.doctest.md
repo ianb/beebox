@@ -1,9 +1,9 @@
 # admin.boxConfig / updateBoxConfig parity
 
-The `admin` tRPC procedures reached parity with the raw `/api/admin/box-config`
-route so the raw route can retire: `boxConfig` returns `ownerEmail`, and
-`updateBoxConfig` accepts `googleServices` (not just `allowedEmails`), commits
-the change, and returns both fields.
+The `admin` tRPC procedures expose the owner-managed box settings. `boxConfig`
+returns `ownerEmail` and the selected agent engine. `updateBoxConfig` accepts
+Google services, allowed emails, and the engine, commits the change, and returns
+the saved fields.
 
 ```ts setup
 import { appRouter } from "../../src/webapp/trpc/router.js";
@@ -144,6 +144,41 @@ print(`hasOwnerEmailField: ${"ownerEmail" in cfg}`);
 =>
 services: {"calendar":true,"gmail":false}
 hasOwnerEmailField: true
+```
+
+Missing engine configuration defaults to Claude, while a Codex selection is
+persisted and returned through the same owner-only mutation.
+
+```ts continue
+cfg.agentEngine
+=> claude
+
+const engineResult = await caller(box.root).admin.updateBoxConfig({ agentEngine: "codex" });
+const engineConfig = JSON.parse(await box.read("config/box.json"));
+JSON.stringify({ returned: engineResult.agentEngine, saved: engineConfig.agentEngine })
+=> {"returned":"codex","saved":"codex"}
+
+(await caller(box.root).admin.boxConfig()).agentEngine
+=> codex
+```
+
+An invalid configured engine is not presented as a valid Claude default. The
+runtime rejects this value too, so Admin must surface the same configuration
+failure instead of fabricating a usable-looking payload.
+
+```ts continue
+await box.write("config/box.json", JSON.stringify({ agentEngine: "other" }));
+const originalConsoleWarn = console.warn;
+console.warn = () => {};
+const invalidConfigResult = await caller(box.root).admin.boxConfig().then(
+  () => "allowed",
+  (error) => `${error.code}: ${error.message}`,
+);
+console.warn = originalConsoleWarn;
+invalidConfigResult
+=> PRECONDITION_FAILED: Box configuration is unreadable.
+
+await box.write("config/box.json", JSON.stringify({ agentEngine: "codex" }));
 ```
 
 Google login availability is reported separately from per-box Google service

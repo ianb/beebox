@@ -1,17 +1,12 @@
 /**
  * Pure helpers and shared constants for InteractiveChat and its sibling
- * modules. No JSX, no React hooks — just string/number formatting, id
- * minting, and the model-option table. Kept separate so the controls,
+ * modules. No JSX, no React hooks — just string/number formatting and id
+ * minting. Kept separate so the controls,
  * composer, and message-list siblings can share them without a value
  * import cycle through the main component.
  */
 
 import { applySelections, type SelectionItem } from "../../lib/selection/serialize";
-// Raw relative (not `@shared/…`): this module is transitively loaded by the
-// tap/tsx doctest runner (via input/emission + input/voice-intent), which uses
-// the root tsconfig where @shared doesn't resolve. Exempted from the
-// shared-alias lint rule in eslint.config.mjs.
-import { MODEL_ID } from "../../../../shared/model-ids.js";
 
 /**
  * Format the current local time as HH:MM for the typed/speech tag.
@@ -81,27 +76,6 @@ export function formatTimePassed(ms: number): string | null {
   const hours = totalHours % 24;
   return hours > 0 ? `${days}d${hours}h` : `${days}d`;
 }
-
-/**
- * Model options surfaced in the chat debug menu. `null` = CLI default.
- * Ordered as presented to the user: Default first, then ascending skill
- * (least → most capable): Haiku → Sonnet → Opus → Fable.
- *
- * The model-ID strings come from the canonical `MODEL_ID` source
- * (`shared/model-ids.ts`) that the procedure engine's MODEL_MAP also uses — one
- * place to bump a model version. This UI list is a superset of MODEL_MAP's short
- * names (it also offers fable), so it stays its own list keyed on shared IDs
- * rather than being derived from MODEL_MAP. Retired IDs a stored selection may
- * still carry (Opus 4.8, `[1m]` variants) are dropped from the picker but
- * translated forward at runtime by `normalizeModelId`.
- */
-export const MODEL_OPTIONS: ReadonlyArray<{ label: string; model: string | null }> = [
-  { label: "Default (Opus)", model: null },
-  { label: "Haiku 4.5", model: MODEL_ID.haiku },
-  { label: "Sonnet 5", model: MODEL_ID.sonnet },
-  { label: "Opus 5", model: MODEL_ID.opus },
-  { label: "Fable 5", model: MODEL_ID.fable },
-];
 
 /**
  * Ephemeral marker shown in the message stream when the user switches models.
