@@ -18,15 +18,6 @@ import { createPidStore, type PidStore } from "./router-pidfile.js";
 export const WORKSTREAMS_APP_CAPABILITY_HEADER = "x-cb-workstreams-capability";
 export const WORKSTREAMS_APP_BASE_PATH = "/workstreams";
 
-// Track B ships behind an opt-in. Cutover changes this one default rather than
-// scattering environment checks through request dispatch and boot.
-export const WORKSTREAMS_APP_DEFAULT_ENABLED = false;
-
-export function shouldUseWorkstreamsApp(value = process.env.CB_WORKSTREAMS_APP): boolean {
-  if (value === undefined || value === "") return WORKSTREAMS_APP_DEFAULT_ENABLED;
-  return value === "1";
-}
-
 export type WorkstreamsAppPhase = "starting" | "ready" | "restarting" | "failed" | "stopped";
 
 export type WorkstreamsAppState =

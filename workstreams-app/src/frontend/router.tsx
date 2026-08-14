@@ -10,7 +10,7 @@ import { WorkstreamsPage } from "./pages/WorkstreamsPage.js";
 const rootRoute = createRootRoute({ component: () => <Outlet /> });
 const appRoute = createRoute({ getParentRoute: () => rootRoute, id: "app", component: AppLayout });
 const indexRoute = createRoute({ getParentRoute: () => appRoute, path: "/", component: WorkstreamsPage, validateSearch: z.object({ q: z.string().optional() }) });
-const detailRoute = createRoute({ getParentRoute: () => appRoute, path: "/workstreams/$name", component: WorkstreamDetailPage });
+const detailRoute = createRoute({ getParentRoute: () => appRoute, path: "/$name", component: WorkstreamDetailPage });
 const issuesRoute = createRoute({ getParentRoute: () => appRoute, path: "/issues", component: IssuesPage, validateSearch: z.object({ issue: z.string().optional(), status: z.enum(["open", "closed", "all"]).optional(), sort: z.enum(["date", "priority"]).optional(), category: z.string().optional(), priority: z.enum(["important", "normal", "backlog", "uncategorized"]).optional(), needs: z.string().optional() }) });
 const plansRoute = createRoute({ getParentRoute: () => appRoute, path: "/plans", component: PlansPage });
 const testingRoute = createRoute({ getParentRoute: () => appRoute, path: "/testing", component: TestingPage });

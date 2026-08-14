@@ -7,9 +7,11 @@
     "dev:server": "tsx src/server/main.ts",
     "dev:frontend": "vite --config src/frontend/vite.config.ts",
     "build:frontend": "vite build --config src/frontend/vite.config.ts",
+    "typecheck": "pnpm run '/^typecheck:(backend|frontend)$/'",
+    "typecheck:backend": "tsc --noEmit",
     "typecheck:frontend": "tsc --noEmit -p src/frontend/tsconfig.json",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint src/",
+    "lint": "pnpm run '/^lint:(backend|frontend)$/'",
+    "lint:backend": "eslint src/",
     "lint:frontend": "eslint --config eslint.frontend.config.mjs src/frontend/",
     "test": "tap"
   },

@@ -21,7 +21,6 @@ import {
   createWorkstreamsAppSupervisor,
   fingerprintWorkstreamsApp,
   shouldRestartWorkstreamsBackend,
-  shouldUseWorkstreamsApp,
   type WorkstreamsAppChild,
   type WorkstreamsAppEffects,
   type WorkstreamsAppSpawnOptions,
@@ -140,17 +139,13 @@ function makeEffects() {
 }
 ```
 
-## Opt-in and fail-closed route classification
+## Fail-closed route classification
 
-Track B is initially dark. tRPC queries retain owner read authorization, while
-mutations require the owner plus the existing same-origin check. Unknown verbs
-stay denied.
+The resident app is the only workstreams renderer. tRPC queries retain owner
+read authorization, while mutations require the owner plus the existing
+same-origin check. Unknown verbs stay denied.
 
 ```ts
-assert.equal(shouldUseWorkstreamsApp(undefined), false);
-assert.equal(shouldUseWorkstreamsApp("1"), true);
-assert.equal(shouldUseWorkstreamsApp("0"), false);
-
 assert.deepEqual(
   classifyRouterRoute({ method: "GET", url: "/workstreams/api/trpc/workstreams.list" }),
   { kind: "control-read", json: false },

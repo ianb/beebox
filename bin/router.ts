@@ -57,16 +57,22 @@ import {
 import { escapeHtml, serveDev } from "./router-docs.js";
 import { serveSite } from "./router-site.js";
 import { serveStoryEvalSave } from "./router-story-eval.js";
-import { legacyIssuesRedirect, serveWorkstreams } from "./router-workstreams.js";
 import {
   createRealWorkstreamsAppEffects,
   createWorkstreamsAppSupervisor,
-  shouldUseWorkstreamsApp,
   WORKSTREAMS_APP_CAPABILITY_HEADER,
   type WorkstreamsAppState,
   type WorkstreamsAppSupervisor,
   type WorkstreamsAppTarget,
 } from "./workstreams-app-supervisor.js";
+
+function legacyIssuesRedirect(afterWorkstream: string): string | null {
+  const pathname = afterWorkstream.split("?")[0] ?? afterWorkstream;
+  if (pathname !== "/dev/issues" && !pathname.startsWith("/dev/issues/"))
+    return null;
+  const suffix = afterWorkstream.slice("/dev/issues".length);
+  return `/workstreams/issues${suffix || "/"}`;
+}
 import {
   type WorktreeHandle,
   type CapturedError,
@@ -1170,18 +1176,11 @@ function createRouterServer(core: RouterCore, gate: RouterServerGate): http.Serv
         }
         return;
       }
-      const requestUrl = new URL(url, "http://router.local");
-      await serveWorkstreams({
-        method: req.method || "GET",
-        pathname: requestPathname,
-        repoRoot: REPO_ROOT,
-        mainRoot: MAIN_ROOT,
-        worktreesRoot: WORKTREES_ROOT,
-        res,
-        req,
-        flash: requestUrl.searchParams.get("flash") ?? "",
-        query: requestUrl.searchParams.toString(),
+      res.writeHead(503, {
+        "content-type": "text/plain; charset=utf-8",
+        "retry-after": "2",
       });
+      res.end("Workstreams app supervisor is unavailable. Restart the router.\n");
       return;
     }
 
@@ -1517,22 +1516,21 @@ async function main(): Promise<void> {
   // the `trustedLocal` flag baked into each server instance.
   const authDeps = createRouterAuthDeps({ resolveWorktree, resolveBoxEntries });
   const workstreamsAppLogPath = path.join(LOG_DIR, "workstreams-app.log");
-  const workstreamsApp = shouldUseWorkstreamsApp()
-    ? createWorkstreamsAppSupervisor(createRealWorkstreamsAppEffects(STATE_DIR), {
-        appRoot: path.join(MAIN_ROOT, "workstreams-app"),
-        logPath: workstreamsAppLogPath,
-        log,
-        killGraceMs: KILL_GRACE_MS,
-      })
-    : null;
-  const workstreamsAppGate = workstreamsApp
-    ? {
-        supervisor: workstreamsApp,
-        displayLogPath: workstreamsAppLogPath.startsWith(`${os.homedir()}${path.sep}`)
-          ? `~${workstreamsAppLogPath.slice(os.homedir().length)}`
-          : workstreamsAppLogPath,
-      }
-    : undefined;
+  const workstreamsApp = createWorkstreamsAppSupervisor(
+    createRealWorkstreamsAppEffects(STATE_DIR),
+    {
+      appRoot: path.join(MAIN_ROOT, "workstreams-app"),
+      logPath: workstreamsAppLogPath,
+      log,
+      killGraceMs: KILL_GRACE_MS,
+    },
+  );
+  const workstreamsAppGate = {
+    supervisor: workstreamsApp,
+    displayLogPath: workstreamsAppLogPath.startsWith(`${os.homedir()}${path.sep}`)
+      ? `~${workstreamsAppLogPath.slice(os.homedir().length)}`
+      : workstreamsAppLogPath,
+  };
   const server = createRouterServer(core, {
     authDeps,
     trustedLocal: false,
