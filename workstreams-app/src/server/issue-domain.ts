@@ -2,13 +2,13 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import { resolveIssuePath } from "./issue-path.js";
+import { issueNextActionSchema, type IssueNextAction } from "../shared/documents.js";
 
 export const ISSUE_CATEGORIES = [
   "bugs", "features", "code-quality", "docs-and-chores", "decisions", "exploration", "watch",
 ] as const;
 
 export type IssuePriority = "important" | "normal" | "uncategorized" | "backlog";
-export type IssueNextAction = "reconfirm" | "duplicate" | "invalid" | "fixed";
 export type ResearchState = "none" | "awaiting" | "researched";
 export type Visibility = "public" | "private";
 
@@ -120,8 +120,8 @@ export function parseIssueFile(options: {
   const priority: IssuePriority = priorityValue === "important" || priorityValue === "normal" || priorityValue === "backlog"
     ? priorityValue : "uncategorized";
   const nextValue = scalar(data["next-action"]);
-  const nextAction = nextValue === "reconfirm" || nextValue === "duplicate" || nextValue === "invalid" || nextValue === "fixed"
-    ? nextValue : undefined;
+  const parsedNextAction = issueNextActionSchema.safeParse(nextValue);
+  const nextAction = parsedNextAction.success ? parsedNextAction.data : undefined;
   const optional = {
     area: scalar(data.area), filedBy: scalar(data["filed-by"]), discoveredBy: scalar(data["discovered-by"]),
     discoveredIn: scalar(data["discovered-in"]), resolution: scalar(data.resolution), design: scalar(data.design),

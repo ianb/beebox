@@ -1,22 +1,26 @@
 ---
 name: cb-issue-actions
-description: Work the issue queue's `next-action:` tags — provisional agent tasks (reconfirm, duplicate, invalid, fixed) that ask you to verify a suspected outcome and apply it only when evidence confirms it. Use when the human says "work the next actions", "go through the reconfirms", "check the issues tagged fixed", "triage the queue", or when you want to find issues an agent can resolve without a decision. Includes extraction scripts. Conventions in issues/CLAUDE.md.
+description: Work the issue queue's `next-action:` tags — discussion flags and provisional agent tasks (discuss, reconfirm, duplicate, invalid, fixed). Use when the human says "work the next actions", "go through the reconfirms", "check the issues tagged fixed", "triage the queue", or when you want to find issues that need a disposition. Includes extraction scripts. Conventions in issues/CLAUDE.md.
 ---
 
 # Working `next-action:` tags
 
-`next-action:` is a **provisional agent task** on an issue. Someone suspects an
-outcome and is asking the next agent to check it. The whole discipline is in one
-line of `issues/CLAUDE.md`:
+`next-action:` says what must happen before implementation begins. `discuss`
+routes an issue to Ian; the other values are **provisional agent tasks** where
+someone suspects an outcome and is asking the next agent to check it. The whole
+discipline for those provisional values is in one line of `issues/CLAUDE.md`:
 
 > A matching tag is not permission to close blindly.
 
-Read every value with the question mark the UI shows — **"fixed?"**,
-**"reconfirm?"**. Nothing here is asserted. It is what Ian thinks is *likely*
-and wants confirmed properly.
+Read every provisional value with the question mark the UI shows — **"fixed?"**,
+**"reconfirm?"**. Nothing there is asserted. It is what Ian thinks is *likely*
+and wants confirmed properly. `discuss` is different: do not investigate toward
+implementation or make the decision yourself. Surface the issue to Ian and
+record the disposition that comes out of the discussion.
 
-Your job is to **produce evidence**, then act on what the evidence says — which
-is often the opposite of what the tag guesses.
+For the provisional values, your job is to **produce evidence**, then act on
+what the evidence says — which is often the opposite of what the tag guesses.
+For `discuss`, your job is only to frame and surface the discussion.
 
 Second rule, equally load-bearing:
 
@@ -47,7 +51,8 @@ grep -rh "^next-action:" issues --include='*.md' \
   | sort | uniq -c | sort -rn
 ```
 
-One value only (substitute `reconfirm` / `duplicate` / `invalid` / `fixed`):
+One value only (substitute `discuss` / `reconfirm` / `duplicate` / `invalid` /
+`fixed`):
 
 ```bash
 grep -rl "^next-action: *reconfirm" issues --include='*.md' | grep -v CLAUDE.md
@@ -66,6 +71,12 @@ done | sort
 ```
 
 ## What each value asks of you
+
+**`discuss` — bring this to Ian before doing the work.** Summarize the decision
+or design tension and the smallest useful set of options. Do not treat this as
+permission to implement, and do not silently convert it into research. After
+the discussion, remove the field and record the resulting disposition or next
+step in the issue.
 
 **`reconfirm` — two questions, in order.** The most common tag, and it is
 `fixed` and `invalid` stacked:
@@ -125,8 +136,8 @@ Close with `resolution: implemented` naming the resolving commit.
 
 ## Verification bar
 
-The tag is a hypothesis from someone with less context than you now have. Match
-the evidence to the claim:
+Each provisional tag is a hypothesis from someone with less context than you
+now have. Match the evidence to the claim:
 
 - **Behavioral claims need a run.** Reproduce, or drive the app (`browse` skill,
   `bin/browse`). Reading the diff is not verification.
@@ -164,7 +175,8 @@ together.
 ## Fixing in place
 
 Some of these are small enough to just fix — that is the point of surfacing them
-as agent tasks. Judge by blast radius, not by category:
+as agent tasks. This never applies to `discuss`, regardless of blast radius.
+For the provisional values, judge by blast radius, not by category:
 
 - **Fix inline** when it is contained and verifiable here (a lint fix, a wrong
   string, a one-file bug with a test).

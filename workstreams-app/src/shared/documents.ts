@@ -7,11 +7,13 @@ export const issuePrioritySchema = z.enum([
   "uncategorized",
 ]);
 export const issueNextActionSchema = z.enum([
+  "discuss",
   "reconfirm",
   "duplicate",
   "invalid",
   "fixed",
 ]);
+export type IssueNextAction = z.infer<typeof issueNextActionSchema>;
 export const issueVisibilitySchema = z.enum(["public", "private"]);
 export const issueRelPathSchema = z.string().regex(
   /^(?:closed\/)?(?:bugs|features|code-quality|docs-and-chores|decisions|exploration|watch)\/[A-Za-z0-9][A-Za-z0-9._-]*\.md$/u,

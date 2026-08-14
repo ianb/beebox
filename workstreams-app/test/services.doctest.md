@@ -144,6 +144,7 @@ const associated = parseIssueFile({
 title: Associated issue
 workstream: example
 discovered-in: worktree-example — investigation
+next-action: discuss
 ---
 `,
 });
@@ -157,6 +158,7 @@ workstream: example
 });
 previouslyClosed.closed = true;
 JSON.stringify({
+  nextAction: associated.frontmatter.nextAction,
   reopened: workstreamIssueIndicators({
     workstream: "example", issue: associated, main: previouslyClosed, changedHere: true,
   }),
@@ -164,7 +166,7 @@ JSON.stringify({
     workstream: "example", issue: associated, changedHere: true,
   }),
 })
-=> {"reopened":{"owned":true,"discovered":true,"activity":"reopened"},"opened":{"owned":true,"discovered":true,"activity":"opened"}}
+=> {"nextAction":"discuss","reopened":{"owned":true,"discovered":true,"activity":"reopened"},"opened":{"owned":true,"discovered":true,"activity":"opened"}}
 ```
 
 The detail boundary rejects traversal even when called below tRPC, and public
@@ -216,6 +218,35 @@ JSON.stringify({
   subject,
 })
 => {"saved":1,"important":true,"actionRemoved":true,"status":"?? notes.txt","subject":"Update issue metadata"}
+```
+
+The discussion action survives the complete mutation path and can be cleared
+again once the discussion produces a disposition.
+
+```ts continue
+await documents.saveIssueChanges([{
+  relPath: "bugs/2026-08-13-second.md",
+  visibility: "public",
+  priority: "normal",
+  nextAction: "discuss",
+  originalPriority: "normal",
+  originalNextAction: null,
+}]);
+const discussSource = await fs.readFile(fixture.secondIssuePath, "utf8");
+await documents.saveIssueChanges([{
+  relPath: "bugs/2026-08-13-second.md",
+  visibility: "public",
+  priority: "normal",
+  nextAction: null,
+  originalPriority: "normal",
+  originalNextAction: "discuss",
+}]);
+const discussedSource = await fs.readFile(fixture.secondIssuePath, "utf8");
+JSON.stringify({
+  discussWritten: discussSource.includes("next-action: discuss"),
+  discussCleared: !discussedSource.includes("next-action:"),
+})
+=> {"discussWritten":true,"discussCleared":true}
 ```
 
 A stale browser revision fails before writing or committing.
