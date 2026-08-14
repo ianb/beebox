@@ -1,8 +1,9 @@
 ---
 title: "Let the agent see the interface and point at things in it"
-workstream: unattached
+workstream: points-at-ui
 area: callback-box
 needs: [design]
+design: ../../callback-box/docs/plans/agent-points-at-ui.md
 labels: [chat, ui-sensibility]
 filed-by: agent
 discovered-by: Ian
