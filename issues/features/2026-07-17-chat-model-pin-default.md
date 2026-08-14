@@ -5,6 +5,7 @@ needs: [design]
 filed-by: agent
 discovered-in: main session — boxholder idea while thinking about the chat model selector
 area: callback-box
+next-action: duplicate
 ---
 
 Add a **pin** affordance next to each model in the chat model selector. Two

@@ -6,6 +6,7 @@ filed-by: agent
 discovered-in: worktree-integration-tests — field-test operator prototype (Priya, activities 1+2)
 labels: [soft-launch, field-test-findings, ui-sensibility]
 priority: normal
+next-action: discuss
 ---
 
 > When I've put things into the box and come back days later, I want an

@@ -7,6 +7,7 @@
 #   launch-worktree-session [--agent claude|codex] [--model <model>] [--issue issues/<path>.md] <worktree-name> "<prompt text>"
 #   launch-worktree-session [--model <model>] <worktree-name> -      # prompt from stdin
 #   launch-worktree-session [--model <model>] <worktree-name> @<file># prompt from a file
+#   launch-worktree-session --help
 #
 # --model passes `claude --model <model>` (e.g. claude-fable-5, opus, sonnet) —
 # or `codex -m <model>` (e.g. gpt-5.5) with --agent codex — so a worktree can
@@ -64,8 +65,18 @@ remote_control=1
 agent="claude"
 emoji=""
 issue=""
+
+# `--help` prints this file's own header comment — the usage block, the flag
+# explanations, and the examples are already written there, and a second copy
+# in a heredoc would be the one that goes stale. Reads from the line after the
+# shebang to the first line that isn't a comment, stripping the `# ` prefix.
+usage() {
+  sed -n '2,${/^#/!q;s/^# \{0,1\}//;p;}' "${BASH_SOURCE[0]}"
+}
+
 while [ $# -ge 1 ]; do
   case "$1" in
+    --help|-h) usage; exit 0 ;;
     --model)   [ $# -ge 2 ] || { echo "launch-worktree-session: --model needs a value" >&2; exit 1; }; model="$2"; shift 2 ;;
     --model=*) model="${1#--model=}"; shift ;;
     --agent)   [ $# -ge 2 ] || { echo "launch-worktree-session: --agent needs a value" >&2; exit 1; }; agent="$2"; shift 2 ;;
@@ -86,7 +97,8 @@ case "$agent" in
 esac
 
 if [ $# -lt 1 ]; then
-  echo "Usage: launch-worktree-session [--agent claude|codex] [--model <model>] [--emoji <char>] [--no-remote-control] <worktree-name> [<prompt> | - | @<file>]" >&2
+  echo "Usage: launch-worktree-session [--agent claude|codex] [--model <model>] [--emoji <char>] [--issue <path>] [--no-remote-control] <worktree-name> [<prompt> | - | @<file>]" >&2
+  echo "       launch-worktree-session --help   # full documentation" >&2
   exit 1
 fi
 

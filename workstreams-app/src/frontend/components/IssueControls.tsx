@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { CheckIcon, CopyIcon, Pill } from "./ui.js";
+import { issueNextActionSchema } from "../../shared/documents.js";
 import type { Issue, NextAction, Priority } from "../types.js";
 
 const PRIORITIES: Array<{ value: Priority; symbol: string; label: string }> = [{ value: "important", symbol: "!", label: "Important" }, { value: "normal", symbol: "−", label: "Normal" }, { value: "backlog", symbol: "↓", label: "Backlog" }, { value: "uncategorized", symbol: "?", label: "Uncategorized" }];
 function nextActionFrom(value: string): NextAction | undefined {
-  return value === "reconfirm" || value === "duplicate" || value === "invalid" || value === "fixed" ? value : undefined;
+  const parsed = issueNextActionSchema.safeParse(value);
+  return parsed.success ? parsed.data : undefined;
 }
 
 export function PriorityControls({ value, onChange }: { value: Priority; onChange: (value: Priority) => void }) {
@@ -12,7 +14,7 @@ export function PriorityControls({ value, onChange }: { value: Priority; onChang
 }
 
 export function NextActionSelect({ value, onChange }: { value?: NextAction | undefined; onChange: (value?: NextAction | undefined) => void }) {
-  return <select className="next-action" value={value ?? ""} aria-label="Next action" onChange={(event) => onChange(nextActionFrom(event.target.value))}><option value="">Next action…</option><option value="reconfirm">Reconfirm?</option><option value="duplicate">Dup?</option><option value="invalid">Invalid?</option><option value="fixed">Fixed?</option></select>;
+  return <select className="next-action" value={value ?? ""} aria-label="Next action" onChange={(event) => onChange(nextActionFrom(event.target.value))}><option value="">Next action…</option><option value="discuss">Discuss</option><option value="reconfirm">Reconfirm?</option><option value="duplicate">Dup?</option><option value="invalid">Invalid?</option><option value="fixed">Fixed?</option></select>;
 }
 
 export function IssueTags({ issue }: { issue: Issue }) {

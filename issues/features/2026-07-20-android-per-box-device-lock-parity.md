@@ -5,6 +5,7 @@ area: callback-box
 needs: [design, manual-testing]
 filed-by: agent
 discovered-in: iOS per-box device lock implementation
+priority: backlog
 ---
 
 The iOS companion now supports an optional device-local navigation lock for

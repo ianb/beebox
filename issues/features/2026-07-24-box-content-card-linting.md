@@ -6,6 +6,7 @@ labels: [lint, security, openclaw-borrow]
 filed-by: agent
 discovered-in: worktree-openclaw-security-lints — while scoping shellcheck for embedded box shell
 needs: [design]
+priority: normal
 ---
 
 Distinct scope from the dev-repo hooks

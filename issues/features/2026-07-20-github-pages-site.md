@@ -6,6 +6,7 @@ area: docs
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder
 labels: [soft-launch]
+priority: important
 ---
 
 The launch front door is the README (see

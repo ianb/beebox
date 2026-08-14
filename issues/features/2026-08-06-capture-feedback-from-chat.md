@@ -4,6 +4,7 @@ workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — split out of the closed chat-page-improvements item
+priority: normal
 ---
 
 > **Job to be done:** *When something in a chat goes wrong or well — the agent

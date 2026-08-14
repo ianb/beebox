@@ -6,6 +6,7 @@ filed-by: agent
 discovered-in: worktree-todo-annotation — landing the todo-annotation system
 needs: [manual-testing]
 design: ../../callback-box/docs/implemented-plans/todo-annotation.md
+priority: important
 ---
 
 The todo-annotation system (`{% todo %}`/`{% see-also %}` tags, `cb todos`,

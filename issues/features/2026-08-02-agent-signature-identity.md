@@ -6,6 +6,7 @@ area: callback-box
 labels: [soft-launch]
 filed-by: agent
 discovered-in: worktree-openclaw-onboarding-research — OpenClaw identity-onboarding research corpus
+priority: important
 ---
 
 The assistant has no visual identity anywhere in callback-box. `goes-by`

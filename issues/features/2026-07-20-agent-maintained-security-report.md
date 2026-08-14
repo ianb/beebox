@@ -6,6 +6,7 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder
 labels: [soft-launch]
+next-action: fixed
 ---
 
 > **Status 2026-08-07** — built on `worktree-security-report`: the

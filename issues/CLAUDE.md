@@ -82,7 +82,7 @@ design: ../../callback-box/docs/plans/foo.md   # link once a design/plan exists
 area: callback-box            # callback-box | router | vibe-check | clerk | docs | ...
 labels: [soft-launch]         # optional cross-cutting tags (kebab-case, multiple allowed)
 priority: important           # important | normal | backlog; omitted is uncategorized
-next-action: fixed            # reconfirm | duplicate | invalid | fixed; provisional agent task
+next-action: discuss          # discuss | reconfirm | duplicate | invalid | fixed
 filed-by: agent               # only for non-Ian items
 discovered-by: Ian            # person or agent that first identified the issue
 discovered-in: worktree-foo — while doing X    # workstream/context provenance
@@ -116,6 +116,10 @@ resolution: implemented       # closed/ only: implemented | wontfix | superseded
   **orthogonal** to the `decisions/` category: a *feature* can carry
   `needs: [decision]` and still live in `features/`; `decisions/` is only for
   items whose *whole deliverable* is the call.
+  `needs: [decision]` is a standing property: the issue cannot be completed
+  without Ian choosing a direction. `next-action: discuss` is a removable queue
+  signal that discussion is the next step. An issue can carry both when both
+  facts matter.
 - `needs: [manual-testing]` means **the code is written and ready to test, but an
   agent cannot finish verifying it — Ian has to exercise it himself.** Unlike the
   other two it's usually added *after* the code lands, not before: the work is
@@ -165,14 +169,27 @@ resolution: implemented       # closed/ only: implemented | wontfix | superseded
   not an authored frontmatter value. The issue browser defaults to newest-filed
   order. Its priority sort groups important, normal, uncategorized, then backlog,
   with newest-filed order inside each group. All four states are filters.
-- `next-action:` asks the next agent to verify a suspected outcome and apply it
-  only when the evidence confirms it. It is separate from priority. The issue
-  browser renders the values with question marks to keep their provisional
-  meaning visible: `reconfirm` means reassess whether the issue is still live;
-  `duplicate` means confirm that another issue owns the same work; `invalid`
-  means confirm that the premise does not hold; and `fixed` means confirm that
-  the reported behavior is already resolved. A matching tag is not permission
-  to close blindly. Remove the field after acting on it or disproving it.
+  **Agents do not set this field.** Priority is Ian's attention budget, and an
+  agent guessing at it produces a queue that looks triaged when it isn't —
+  `backlog` in particular buries an item nobody decided to bury. Omit the field
+  unless Ian has indicated a priority in the request; `uncategorized` is the
+  honest state for a freshly filed issue and is a filter he can work through.
+  Write the field only when he says what it is, or when he asks you to record a
+  priority he has already given.
+- `next-action:` says what should happen before implementation begins. It is
+  separate from priority. `discuss` means bring the issue to Ian for discussion;
+  do not start implementing it. The remaining values ask the next agent to
+  verify a suspected outcome and apply it only when the evidence confirms it.
+  The issue browser renders those values with question marks to keep their
+  provisional meaning visible: `reconfirm` means reassess whether the issue is
+  still live; `duplicate` means confirm that another issue owns the same work;
+  `invalid` means confirm that the premise does not hold; and `fixed` means
+  confirm that the reported behavior is already resolved. A matching tag is not
+  permission to close blindly. Remove the field after acting on it or disproving
+  it; remove `discuss` after the discussion produces a disposition.
+  Agents may set `discuss` when work reaches a genuine human judgment call, but
+  must summarize the tension in the issue rather than using the tag as a vague
+  escalation.
 - `resolution:` is set when moving to `closed/`. Add a short closing note at the
   top of the body naming the resolving commit, plan doc, or reason.
 
@@ -285,7 +302,10 @@ Filing is at your discretion — no thresholds or quotas. When you notice someth
 worth keeping that's outside your current task: check for an existing item, pick a
 category, then file with `title:`, `workstream: unattached`, `filed-by: agent`,
 `discovered-by:` (the actual source), and `discovered-in:` (your worktree and
-what you were doing), and move on. Set
+what you were doing), and move on. Leave `priority:` off — see above; it is
+Ian's call, not yours. Set
 `workstream:` to the current workstream only when it has explicitly taken
 responsibility for resolving the issue. Don't fix out-of-scope things in place,
-and don't file trivia you'd be embarrassed to see triaged.
+and don't file trivia you'd be embarrassed to see triaged. Set `next-action:
+discuss` only when the issue describes a concrete judgment Ian must make next;
+the tag is not a substitute for explaining the decision in the body.

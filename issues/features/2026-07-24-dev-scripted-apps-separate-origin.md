@@ -6,6 +6,7 @@ area: router
 filed-by: agent
 discovered-in: worktree-github-pages-site — Codex review of the dev sandbox-exemption
 labels: [security]
+next-action: invalid
 ---
 
 The dev router serves `/dev/` HTML with a bare `sandbox` CSP because it shares

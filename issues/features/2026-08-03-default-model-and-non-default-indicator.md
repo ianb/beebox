@@ -5,6 +5,7 @@ needs: [design]
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder wants to see at a glance when a chat is off-default
+priority: normal
 ---
 
 Give the chat two related things: a **user-settable "default model"**, and an

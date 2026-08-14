@@ -5,6 +5,7 @@ needs: [design]
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder's idea
+priority: normal
 ---
 
 An **MCP tool the box agent can call** to hand the live conversation off into a

@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — first-run UX audit for the soft launch
 labels: [soft-launch]
+priority: important
 ---
 
 **Implementation update (2026-08-07):** The permanent single-conversation

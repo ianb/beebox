@@ -6,6 +6,7 @@ needs: [manual-testing]
 design: ../../callback-box/docs/implemented-plans/pub-setup-wrangler.md
 filed-by: agent
 discovered-in: main session — boxholder ran the first live `cb pub setup` and got stuck on the manual Access step
+priority: important
 ---
 
 **2026-07-31 — BUILT (worktree-pub-setup-wrangler), pending live verification.**
