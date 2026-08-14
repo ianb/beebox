@@ -22,6 +22,9 @@ import type { EventBus } from "../../event-bus.js";
 import { resolveSessionLogPath } from "./history.js";
 import { getBoxTimeISO } from "../../../lib/time.js";
 import { errnoCode } from "../../../lib/error-guards.js";
+import { resolveChatEngine } from "./engine.js";
+import { loadSessionHistory } from "./load-history.js";
+import { MAX_SESSION_ENTRIES } from "../../../cli/lib/session.js";
 
 /** Raised when the non-busy `send()` of a delivered user message fails. Retryable. */
 export class UserMessageDeliveryError extends Error {
@@ -67,6 +70,20 @@ export async function userMessageAlreadyLanded(opts: {
   const { boxRoot, sessionId, docPath } = opts;
   const logPrefix = opts.logPrefix ?? "chat";
   if (sessionId === null) return false;
+  if (await resolveChatEngine(boxRoot, sessionId) === "codex") {
+    try {
+      const { entries } = await loadSessionHistory(boxRoot, {
+        sessionId,
+        slice: { mode: "page", offset: 0, limit: MAX_SESSION_ENTRIES },
+      });
+      return entries.some((entry) => entry.content.some(
+        (block) => block.type === "text" && block.text?.includes(docPath) === true,
+      ));
+    } catch (error) {
+      console.warn(`[${logPrefix}] Could not read Codex transcript for at-most-once probe:`, error);
+      return false;
+    }
+  }
   const logPath = await resolveSessionLogPath(boxRoot, sessionId);
   try {
     // Stream line by line with an early return — the target chat is the

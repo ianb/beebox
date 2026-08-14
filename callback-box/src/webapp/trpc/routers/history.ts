@@ -12,6 +12,9 @@ import {
 } from "../../../lib/git.js";
 import { MAX_SESSION_ENTRIES, parseSessionLog } from "../../../cli/lib/session.js";
 import { resolveSessionLogPath } from "../../../core/chat/session/history.js";
+import { loadSessionHistory } from "../../../core/chat/session/load-history.js";
+import { resolveChatEngine } from "../../../core/chat/session/engine.js";
+import { codexSessionExists } from "../../../core/chat/session/codex-transcript.js";
 import { boxRelativePath } from "../../../shared/box-path.js";
 import * as path from "node:path";
 
@@ -125,6 +128,32 @@ export const historyRouter = router({
       })
     )
     .query(async ({ input, ctx }) => {
+      if (await resolveChatEngine(ctx.boxRoot, input.sessionId) === "codex") {
+        const found = await codexSessionExists(ctx.boxRoot, input.sessionId);
+        if (!found) {
+          return {
+            sessionId: input.sessionId,
+            found: false,
+            entries: [],
+            total: 0,
+            hasMore: false,
+            nextCursor: undefined,
+          };
+        }
+        const result = await loadSessionHistory(ctx.boxRoot, {
+          sessionId: input.sessionId,
+          slice: { mode: "page", offset: input.cursor, limit: input.limit },
+        });
+        const hasMore = input.cursor + result.entries.length < result.total;
+        return {
+          sessionId: input.sessionId,
+          found: true,
+          entries: result.entries,
+          total: result.total,
+          hasMore,
+          nextCursor: hasMore ? input.cursor + result.entries.length : undefined,
+        };
+      }
       const logPath = await resolveSessionLogPath(ctx.boxRoot, input.sessionId);
 
       if (!fs.existsSync(logPath)) {
