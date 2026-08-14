@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-08-14T19:32:44Z
-Total documents: 266
+Generated: 2026-08-14T20:41:47Z
+Total documents: 267
 
 ## Issues
 
@@ -19,6 +19,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/companion-pane-card-activity.md** — "Companion-pane card activity awareness for chat" (372 lines)
 - **docs/implemented-plans/courseware-lesson-plan.md** — "Courseware: the `lesson-plan` card" (351 lines)
 - **docs/implemented-plans/delivered-user-message-codec.md** — "Exhaustive delivered-user-message codec" (168 lines)
+- **docs/implemented-plans/engine-aware-chat-models.md** — "Engine-aware chat model selection" (109 lines)
 - **docs/implemented-plans/extfile-card.md** — "`extfile` Card — an In-Box Pointer to a Live External File" (720 lines)
 - **docs/implemented-plans/input-extraction.review.md** — "Plan Engineering Review — input-extraction (codex cross-model pass)" (86 lines)
 - **docs/implemented-plans/local-password-auth.review.md** — "Cross-model review — local-password-auth (Codex, 2026-07-19)" (81 lines)
@@ -2606,6 +2607,12 @@ References:
 - → docs/cards-as-markdown.md (mention)
 - → docs/implemented-plans/asset-manifests.md (mention)
 - → docs/design/trust.md (mention)
+
+#### docs/implemented-plans/engine-aware-chat-models.md **[ORPHAN]**
+
+Title: "Engine-aware chat model selection" | 109 lines
+
+No references in or out.
 
 #### docs/implemented-plans/expose-dev-router.md
 
