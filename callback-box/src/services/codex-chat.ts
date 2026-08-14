@@ -17,6 +17,7 @@ import { join } from "node:path";
 import { findBoxRoot } from "../lib/paths.js";
 import { validateHookPaths } from "../cli/commands/validate-hook.js";
 import { appendCodexTurnUsage, codexTokenUsageSchema, type CodexTokenUsage } from "../core/codex-usage.js";
+import { codexBoxThreadSettings, codexBoxTurnSettings } from "./codex-sandbox.js";
 
 const threadSchema = z.looseObject({ thread: z.looseObject({ id: z.string() }) });
 const turnSchema = z.looseObject({ turn: z.looseObject({ id: z.string() }) });
@@ -80,17 +81,37 @@ function codexInput(content: ChatContentBlock[]): Array<Record<string, unknown>>
 }
 
 async function openThread(server: CodexAppServer, opts: ChatBackendStartOptions): Promise<string> {
+  const raw = opts.resumeSessionId === undefined
+    ? await server.request({ method: "thread/start", params: codexChatThreadParams(opts) })
+    : await server.request({ method: "thread/resume", params: codexChatThreadParams(opts) });
+  return threadSchema.parse(raw).thread.id;
+}
+
+export function codexChatThreadParams(opts: ChatBackendStartOptions): Record<string, unknown> {
   const common = {
     cwd: opts.cwd,
-    approvalPolicy: "never",
-    sandbox: "workspace-write",
+    ...codexBoxThreadSettings(),
     developerInstructions: opts.systemPrompt,
     model: opts.model,
   };
-  const raw = opts.resumeSessionId === undefined
-    ? await server.request({ method: "thread/start", params: { ...common, ephemeral: false, sessionStartSource: "startup" } })
-    : await server.request({ method: "thread/resume", params: { ...common, threadId: opts.resumeSessionId } });
-  return threadSchema.parse(raw).thread.id;
+  return opts.resumeSessionId === undefined
+    ? { ...common, ephemeral: false, sessionStartSource: "startup" }
+    : { ...common, threadId: opts.resumeSessionId };
+}
+
+export function codexChatTurnParams(options: {
+  opts: ChatBackendStartOptions;
+  threadId: string;
+  content: ChatContentBlock[];
+}): Record<string, unknown> {
+  const { opts, threadId, content } = options;
+  return {
+    threadId,
+    input: codexInput(content),
+    cwd: opts.cwd,
+    ...codexBoxTurnSettings(),
+    model: opts.model,
+  };
 }
 
 function waitForTurn(options: {
@@ -220,20 +241,7 @@ function createRun(opts: ChatBackendStartOptions): ChatBackendRun {
         if (server === null) throw new CodexChatNotInitializedError();
         const raw = await server.request({
           method: "turn/start",
-          params: {
-            threadId,
-            input: codexInput(content),
-            cwd: opts.cwd,
-            approvalPolicy: "never",
-            model: opts.model,
-            sandboxPolicy: {
-              type: "workspaceWrite",
-              writableRoots: [opts.cwd, ...(opts.additionalDirectories ?? [])],
-              networkAccess: true,
-              excludeTmpdirEnvVar: false,
-              excludeSlashTmp: false,
-            },
-          },
+          params: codexChatTurnParams({ opts, threadId, content }),
         });
         activeTurnId = turnSchema.parse(raw).turn.id;
         await waitForTurn({

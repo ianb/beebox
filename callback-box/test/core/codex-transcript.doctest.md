@@ -48,3 +48,30 @@ Page slicing uses the normalized entry sequence:
 JSON.stringify(adaptCodexThreadHistory(response, { mode: "page", offset: 1, limit: 2 }).entries.map((entry) => entry.uuid))
 => ["agent-1","user-2"]
 ```
+
+User identity carried by callback-box's message wrapper is normalized just as
+it is for Claude transcripts. The UI uses the email to recognize the signed-in
+person; comparing the display name to that email would falsely render the
+message as another participant.
+
+```ts
+const attributed = adaptCodexThreadHistory({
+  thread: {
+    updatedAt: 300,
+    turns: [{
+      id: "turn-attributed",
+      startedAt: 300,
+      items: [{
+        type: "userMessage",
+        id: "user-attributed",
+        content: [{
+          type: "text",
+          text: '<typed user="Ian Bicking" user-email="ian@example.com">Hello</typed>',
+        }],
+      }],
+    }],
+  },
+}, { mode: "tail", tail: 20 });
+JSON.stringify({ user: attributed.entries[0]?.user, userEmail: attributed.entries[0]?.userEmail })
+=> {"user":"Ian Bicking","userEmail":"ian@example.com"}
+```

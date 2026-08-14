@@ -55,7 +55,7 @@ function graftToolResults(content: SessionContentBlock[], recent: SessionEntry[]
 }
 
 /** Pull a user-message identity attribute (user / user-email) from leading tag text. */
-function userIdentity(content: SessionContentBlock[], attr: "user" | "user-email"): string | undefined {
+export function userIdentity(content: SessionContentBlock[], attr: "user" | "user-email"): string | undefined {
   const firstText = content.find((b) => b.type === "text")?.text || "";
   const re =
     attr === "user"

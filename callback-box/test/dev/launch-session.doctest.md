@@ -26,6 +26,7 @@ async function buildScript(
   options: {
     agent: "claude" | "codex";
     mono?: string;
+    model?: string;
     resume: boolean;
     issue?: string;
     worktreePath?: string;
@@ -52,7 +53,7 @@ async function buildScript(
         LS_CODEX_RESUME: resume ? "1" : "0",
         LS_EMOJI: "🧵",
         LS_LAUNCH_DIR: launchDir,
-        LS_MODEL: agent === "claude" ? "opus" : "gpt-test",
+        LS_MODEL: options.model ?? (agent === "claude" ? "opus" : "gpt-test"),
         LS_MONO: options.mono ?? repoRoot,
         LS_PROMPT_FILE: promptFile,
         LS_REMOTE_CONTROL: "1",
@@ -143,13 +144,20 @@ JSON.stringify([
 
 ```ts continue
 const codexScript = await buildScript(root, { agent: "codex", resume: false });
+const defaultCodexScript = await buildScript(root, {
+  agent: "codex",
+  model: "",
+  resume: false,
+});
 JSON.stringify([
   codexScript.includes('./bin/workstreams create "seam"'),
   codexScript.includes('-s danger-full-access -a never'),
   codexScript.includes('-m "gpt-test"'),
   codexScript.includes('bin/codex-session-end'),
+  defaultCodexScript.includes('-m "gpt-5.6-sol"'),
+  defaultCodexScript.includes('--arg model "gpt-5.6-sol"'),
 ])
-=> [true,true,true,true]
+=> [true,true,true,true,true,true]
 
 const codexResumeScript = await buildScript(root, { agent: "codex", resume: true });
 codexResumeScript.includes('codex resume --last "${codex_args[@]}"')

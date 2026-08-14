@@ -147,7 +147,7 @@ bin/launch-worktree-session <worktree-name> -            # stdin (heredoc)
 bin/launch-worktree-session <worktree-name> @<file>      # from a file
 bin/launch-worktree-session --model <model> <name> @<file>   # run on a specific model
 bin/launch-worktree-session --no-remote-control <name> -     # opt out of Remote Control
-bin/launch-worktree-session --agent codex [--model gpt-5.5] <name> -  # OpenAI Codex session
+bin/launch-worktree-session --agent codex [--model gpt-5.6-sol] <name> -  # OpenAI Codex session
 ```
 
 **`--agent codex`** launches OpenAI's codex CLI instead of Claude Code: same
@@ -155,10 +155,10 @@ worktree + box clone + installs (both launch paths call the agent-neutral
 `bin/workstreams create` command), plus generated AGENTS.md
 mirrors of every CLAUDE.md so codex gets the repo docs (mechanism:
 `bin/CLAUDE.md` → "Codex worktree sessions"). With codex, `--model` takes
-OpenAI names (`gpt-5.5` was the known-good pick when the account throttled the
-default model, 2026-07 — see the `cross-model` skill); Remote Control doesn't exist
-for codex and the flag is ignored; the briefing wrapper works the same. Only
-use this when the human asked for a Codex session. Cleanup also differs: no
+OpenAI names. If it is omitted, the launcher explicitly uses `gpt-5.6-sol`
+rather than inheriting potentially stale Codex CLI state; an explicit model
+still wins. Remote Control doesn't exist for codex and the flag is ignored; the
+briefing wrapper works the same. Only use this when the human asked for a Codex session. Cleanup also differs: no
 hook fires on codex exit, so the worktree lingers until `bin/workstreams sweep`
 collects it once merged + clean.
 

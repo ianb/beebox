@@ -15,6 +15,10 @@ import { validateHookPaths } from "../../cli/commands/validate-hook.js";
 import { codexRunErrorText, resultFromCodexTurn } from "./codex-run-result.js";
 import { codexTokenUsageSchema, type CodexTokenUsage } from "../codex-usage.js";
 import { recordCodexAgentUsage } from "./codex-run-usage.js";
+import {
+  codexBoxThreadSettings,
+  codexBoxTurnSettings,
+} from "../../services/codex-sandbox.js";
 
 const threadResultSchema = z.looseObject({
   thread: z.looseObject({ id: z.string() }),
@@ -79,6 +83,8 @@ export interface CodexRunOptions {
   onSessionId?: ((id: string) => void) | undefined;
   outputSchema?: Record<string, unknown> | undefined;
   cwd?: string | undefined;
+  /** Retained for parity with the Agent contract. Full-access Codex box turns
+   * already include these paths; this becomes meaningful if policy narrows. */
   additionalDirectories?: string[] | undefined;
 }
 
@@ -173,29 +179,37 @@ async function openThread(server: CodexAppServer, options: CodexRunOptions): Pro
   if (options.resumeSessionId !== undefined) {
     const resumed = await server.request({
       method: "thread/resume",
-      params: {
-        threadId: options.resumeSessionId,
-        cwd: options.cwd ?? options.boxRoot,
-        approvalPolicy: "never",
-        sandbox: "workspace-write",
-        developerInstructions: options.systemPrompt,
-      },
+      params: codexRunThreadParams(options),
     });
     return threadResultSchema.parse(resumed).thread.id;
   }
   const started = await server.request({
     method: "thread/start",
-    params: {
-      cwd: options.cwd ?? options.boxRoot,
-      approvalPolicy: "never",
-      sandbox: "workspace-write",
-      developerInstructions: options.systemPrompt,
-      model: options.model,
-      ephemeral: false,
-      sessionStartSource: "startup",
-    },
+    params: codexRunThreadParams(options),
   });
   return threadResultSchema.parse(started).thread.id;
+}
+
+export function codexRunThreadParams(options: CodexRunOptions): Record<string, unknown> {
+  const common = {
+    cwd: options.cwd ?? options.boxRoot,
+    ...codexBoxThreadSettings(),
+    developerInstructions: options.systemPrompt,
+  };
+  return options.resumeSessionId === undefined
+    ? { ...common, model: options.model, ephemeral: false, sessionStartSource: "startup" }
+    : { ...common, threadId: options.resumeSessionId };
+}
+
+export function codexRunTurnParams(run: CodexRunOptions, threadId: string): Record<string, unknown> {
+  return {
+    threadId,
+    input: [{ type: "text", text: run.prompt, text_elements: [] }],
+    cwd: run.cwd ?? run.boxRoot,
+    ...codexBoxTurnSettings(),
+    model: run.model,
+    outputSchema: run.outputSchema,
+  };
 }
 
 function startTurn(options: {
@@ -204,25 +218,9 @@ function startTurn(options: {
   threadId: string;
 }): Promise<unknown> {
   const { server, run, threadId } = options;
-  const cwd = run.cwd ?? run.boxRoot;
-  const writableRoots = [cwd, ...(run.additionalDirectories ?? [])];
   return server.request({
     method: "turn/start",
-    params: {
-      threadId,
-      input: [{ type: "text", text: run.prompt, text_elements: [] }],
-      cwd,
-      approvalPolicy: "never",
-      model: run.model,
-      sandboxPolicy: {
-        type: "workspaceWrite",
-        writableRoots,
-        networkAccess: true,
-        excludeTmpdirEnvVar: false,
-        excludeSlashTmp: false,
-      },
-      outputSchema: run.outputSchema,
-    },
+    params: codexRunTurnParams(run, threadId),
   });
 }
 

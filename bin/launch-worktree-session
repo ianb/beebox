@@ -10,8 +10,9 @@
 #   launch-worktree-session --help
 #
 # --model passes `claude --model <model>` (e.g. claude-fable-5, opus, sonnet) —
-# or `codex -m <model>` (e.g. gpt-5.5) with --agent codex — so a worktree can
-# be spun up on a specific model; omit to use the agent's default.
+# or `codex -m <model>` with --agent codex — so a worktree can be spun up on a
+# specific model. Omitted Claude models use Claude's default; omitted Codex
+# models use gpt-5.6-sol.
 #
 # --emoji 🐛 prefixes the Terminal tab title with a glyph, so a wall of tabs is
 # scannable at a glance. Omit it and one is derived

@@ -6,6 +6,10 @@ launch_session_build() {
   local model_arg="" rc_arg="" model_line=""
   LS_LAUNCHER="$LS_LAUNCH_DIR/launch.sh"
 
+  if [ "$LS_AGENT" = "codex" ] && [ -z "$LS_MODEL" ]; then
+    LS_MODEL="gpt-5.6-sol"
+  fi
+
   if [ "$LS_AGENT" = "claude" ]; then
     [ -n "$LS_MODEL" ] && model_arg="--model $LS_MODEL"
     [ "$LS_REMOTE_CONTROL" = "1" ] && rc_arg="--remote-control $LS_WORKSTREAM"

@@ -5,6 +5,7 @@ import { ensureCodexPluginInstalled } from "../../agent/ensure-codex-plugin.js";
 import { CodexAppServer } from "../../../services/codex-app-server.js";
 import { CodexRpcError } from "../../../services/codex-app-server.js";
 import type { SessionEntry, SessionLogSlice } from "../../../cli/lib/session.js";
+import { userIdentity } from "../../../cli/lib/session-entry.js";
 
 const threadReadSchema = z.object({
   thread: z.looseObject({
@@ -110,7 +111,17 @@ function entriesFromThread(raw: unknown): SessionEntry[] {
         const text = item.content?.filter((part) => part.type === "text")
           .map((part) => part.text ?? "").join("\n") ?? "";
         if (text !== "") {
-          entries.push({ uuid: item.id, type: "user", timestamp: timestamp(turn.startedAt), content: [{ type: "text", text }] });
+          const content = [{ type: "text" as const, text }];
+          const user = userIdentity(content, "user");
+          const userEmail = userIdentity(content, "user-email");
+          entries.push({
+            uuid: item.id,
+            type: "user",
+            timestamp: timestamp(turn.startedAt),
+            content,
+            ...(user ? { user } : {}),
+            ...(userEmail ? { userEmail } : {}),
+          });
         }
       } else if (item.type === "agentMessage" && item.text !== undefined) {
         entries.push({

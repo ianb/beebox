@@ -41,8 +41,10 @@ export interface ChatBackendStartOptions {
   cwd: string;
   /**
    * Extra directories the agent can read/write beyond `cwd`. Equivalent to
-   * the CLI's `--add-dir`. Landmark sessions set `cwd` to the landmark dir
-   * and add the box root here so the agent retains full box access.
+   * the Claude CLI's `--add-dir`. Landmark sessions set `cwd` to the landmark
+   * dir and add the box root here. Codex box turns run with full access because
+   * its narrower sandbox force-mounts `.git` read-only, so the field is
+   * intentionally redundant for that provider.
    */
   additionalDirectories?: string[] | undefined;
   /** Appended to the `claude_code` system-prompt preset. */

@@ -342,8 +342,11 @@ claude workers, which run unsandboxed via `--dangerously-skip-permissions` (a
 `workspace-write` sandbox can't commit/`/finish` in a linked worktree, since codex
 force-mounts `.git` read-only). Launch-scoped `-c` overrides pre-trust the worktree
 and raise `project_doc_max_bytes`; nothing is persisted to `~/.codex/config.toml`.
-`--model` maps to `codex -m` (OpenAI model names). Remote Control is claude-only
-and ignored for codex.
+`--model` maps to `codex -m` (OpenAI model names). When it is omitted, the
+launcher explicitly uses `gpt-5.6-sol` rather than inheriting Codex CLI state;
+this keeps a stale or unavailable saved default from breaking the first turn.
+An explicit model still wins, including the model recorded for a resumed
+workstream. Remote Control is claude-only and ignored for codex.
 
 Codex's `workspace-write` sandbox confines **writes** (workspace + the `--add-dir`
 roots) and network, but **reads are global** — verified empirically 2026-08-04: a

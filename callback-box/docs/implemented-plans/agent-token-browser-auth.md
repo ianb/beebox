@@ -6,9 +6,16 @@ issues: []
 ---
 # Let an agent-driven browser reach a local dev page
 
-`bin/browse` cannot open any authenticated page of the local dev app, so any
-issue whose verification says "check it in a real browser" is un-verifiable by
-an agent. Issue:
+> **Historical implementation plan — not an operational runbook.** This
+> document records the problem, design process, and implementation findings as
+> they existed while browser authentication was being built. Do not follow its
+> testing recipes or troubleshooting narrative to operate the current browser
+> infrastructure. Use the repository's `browse` skill and the current
+> `bin/browse` wrapper instead; their behavior and guidance are authoritative.
+
+Before this work was implemented, `bin/browse` could not open any authenticated
+page of the local dev app, so any issue whose verification said "check it in a
+real browser" was unverifiable by an agent. Issue:
 `issues/bugs/2026-07-31-browse-cannot-authenticate-dev-pages.md`.
 
 ## Design: an opt-in API key, following `CB_DIAG_API_KEY`

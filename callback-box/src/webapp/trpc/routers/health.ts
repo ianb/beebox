@@ -7,7 +7,6 @@
 
 import { z } from "zod";
 import * as fs from "node:fs/promises";
-import { constants as fsConstants } from "node:fs";
 import * as path from "node:path";
 import { PACKAGE_ROOT } from "../../../lib/package-root.js";
 import { createClaudeCliService, type ClaudeCliService } from "../../../services/claude-cli.js";
@@ -28,6 +27,7 @@ import { getHealthSnapshot } from "./health-snapshot.js";
 import { checkSchedulerHeartbeat } from "../../../core/schedule/health-box.js";
 import { boxGrowthHealthCheck } from "../../../core/box-growth/health.js";
 import { acknowledgeBoxGrowthProcedure, expectBoxGrowthRatesProcedure } from "./health-box-growth.js";
+import { isWritable, writability } from "./health-writability.js";
 
 export interface HealthCheck {
   name: string;
@@ -86,24 +86,6 @@ export async function readVersionInfo(): Promise<VersionInfo> {
     processStartedAt: PROCESS_STARTED_AT,
     uptimeSec: Math.round(process.uptime()),
   };
-}
-
-/**
- * Check that a directory is writable by the current process.
- *
- * Uses `fs.access(..., W_OK)` — a POSIX permission probe that never
- * creates a file. An earlier version wrote and unlinked a `.health-check-*`
- * file, which leaked into watched directories when the unlink failed or
- * a file watcher grabbed the file first.
- */
-async function isWritable(dirPath: string): Promise<boolean> {
-  try {
-    await fs.access(dirPath, fsConstants.W_OK);
-    return true;
-  } catch (_e) {
-    // access(W_OK) throwing IS the answer: not writable (or missing). Return false.
-    return false;
-  }
 }
 
 /**
@@ -262,13 +244,18 @@ export async function runHealthChecks(
   // docs/implemented-plans/boxes-as-packages-v2.md).
   const { packageRoot: gitRoot } = await getBoxShape(boxRoot);
   const gitObjectsDir = path.join(gitRoot, ".git/objects");
-  const gitWritable = await isWritable(gitObjectsDir);
+  const gitWritability = await writability(gitObjectsDir);
+  const gitWritable = gitWritability === "writable";
   checks.push({
     name: "git-writable",
     ok: gitWritable,
-    message: gitWritable
-      ? ".git/objects is writable"
-      : ".git/objects is not writable — all commits will fail (run: chown -R callback:callback " + gitRoot + ")",
+    message:
+      gitWritability === "writable"
+        ? ".git/objects is writable"
+        : gitWritability === "missing"
+          ? ".git/objects is missing — commits will fail; verify the Git repository at " + gitRoot
+          : ".git/objects is not writable in this process — commits will fail; " +
+            "filesystem permissions or an execution sandbox may be preventing writes",
     severity: "error",
   });
 
