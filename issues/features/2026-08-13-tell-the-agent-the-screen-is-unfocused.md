@@ -6,6 +6,7 @@ labels: [chat, voice, agent-context]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder request
+priority: normal
 ---
 
 When the screen isn't focused — the iOS app backgrounded, a web tab in the

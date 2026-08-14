@@ -6,6 +6,7 @@ filed-by: agent
 discovered-in: worktree-integration-tests — field-test run 2, dentist-email + whats-needed items
 labels: [soft-launch, field-test-findings, ui-sensibility]
 needs: [design]
+priority: normal
 ---
 
 When [situation] the box agent finishes real work — files an email, creates

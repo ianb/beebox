@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-box-family-email — a production box went five days without importing mail
 needs: [design]
+priority: normal
 ---
 
 > **When something upstream changes and my box quietly stops collecting, I want

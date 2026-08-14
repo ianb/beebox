@@ -7,6 +7,7 @@ labels: [discoverability, lint, cb-plan]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — cb feedback triage
+priority: normal
 ---
 
 A structured description of each module (and ideally each export), enforced by

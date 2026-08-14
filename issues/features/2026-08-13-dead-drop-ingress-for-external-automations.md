@@ -7,6 +7,7 @@ labels: [ingress, connectors, soft-launch]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — Apple Health / Shortcuts use case
+priority: backlog
 ---
 
 There is no easy way for an external automation to put data **into** a box. The
