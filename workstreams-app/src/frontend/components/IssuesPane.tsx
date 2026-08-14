@@ -1,6 +1,7 @@
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 
 import { CopyIssuePath, IssueTags, NextActionSelect, PriorityControls } from "./IssueControls.js";
+import { Markdown } from "./Markdown.js";
 import { Button, Pill } from "./ui.js";
 import { trpc } from "../trpc.js";
 import type { Issue, IssueChange, NextAction, Priority, Visibility } from "../types.js";
@@ -89,7 +90,7 @@ function IssueRow({ issue, selected, change, onSelect, onChange }: { issue: Issu
 function LoadedIssueDetail({ issue, onBack }: { issue: Issue; onBack: () => void }) {
   const detail = trpc.issues.detail.useQuery({ relPath: issue.relPath, visibility: issue.visibility });
   const value = detail.data ?? issue;
-  return <aside className="issue-detail"><Button className="mobile-back" onClick={onBack}>← Issues</Button><header><h2>{value.frontmatter.title}</h2><p className="issue-meta">{value.relPath} · {value.closed ? "Closed" : "Open"}</p><IssueTags issue={value} /></header>{detail.isLoading ? <section className="loading-skeleton" aria-busy="true"><span /></section> : detail.isError ? <section className="error-state"><p>Couldn’t load details: {detail.error.message}</p><Button onClick={() => void detail.refetch()}>Retry</Button></section> : value.body ? <article className="issue-body"><pre>{value.body}</pre></article> : <p className="muted">No issue details found.</p>}</aside>;
+  return <aside className="issue-detail"><Button className="mobile-back" onClick={onBack}>← Issues</Button><header><h2>{value.frontmatter.title}</h2><p className="issue-meta">{value.relPath} · {value.closed ? "Closed" : "Open"}</p><IssueTags issue={value} /></header>{detail.isLoading ? <section className="loading-skeleton" aria-busy="true"><span /></section> : detail.isError ? <section className="error-state"><p>Couldn’t load details: {detail.error.message}</p><Button onClick={() => void detail.refetch()}>Retry</Button></section> : value.body ? <article className="issue-body"><Markdown source={value.body} /></article> : <p className="muted">No issue details found.</p>}</aside>;
 }
 
 function IssueDetail({ issue, onBack }: { issue?: Issue | undefined; onBack: () => void }) {

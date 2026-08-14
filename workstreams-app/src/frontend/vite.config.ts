@@ -10,7 +10,18 @@ export default defineConfig({
   root: resolve(import.meta.dirname),
   base,
   plugins: [viteReact()],
-  build: { outDir: resolve(import.meta.dirname, "../../dist/frontend"), emptyOutDir: true },
+  build: {
+    outDir: resolve(import.meta.dirname, "../../dist/frontend"),
+    emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          // Keep the parser out of the already-large app bundle so routine builds remain warning-free.
+          return id.includes("@markdoc/markdoc") ? "markdown" : undefined;
+        },
+      },
+    },
+  },
   server: {
     host: "127.0.0.1",
     port: Number(process.env.WORKSTREAMS_APP_FRONTEND_PORT ?? 3221),
