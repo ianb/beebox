@@ -5,6 +5,7 @@ area: bin
 labels: [soft-launch]
 filed-by: agent
 discovered-in: worktree-security-report — running /finish at the end of the security-report work
+next-action: reconfirm
 ---
 
 A worktree-isolated Claude Code session can no longer run **any** git

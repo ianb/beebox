@@ -4,6 +4,7 @@ workstream: compacting
 area: callback-box
 filed-by: agent
 discovered-in: worktree-compacting — while eval'ing chat review against real boxes
+next-action: fixed
 ---
 
 `findChatHusk` (`callback-box/src/core/chat/husk.ts:42`) locates a session's husk

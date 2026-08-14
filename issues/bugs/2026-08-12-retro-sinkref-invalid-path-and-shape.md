@@ -7,6 +7,7 @@ labels: [retro, vocabulary]
 filed-by: agent
 discovered-by: agent
 discovered-in: main session — cb feedback triage from a real box
+priority: important
 ---
 
 Two related problems in how a retrospective observation names where its learning

@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-in: main session — while scoping the worktree workflow redesign
 labels: [worktrees, data-loss]
+priority: normal
 ---
 
 `event-bus.ts` opens `.callback-box/events.db` and reconciles against an

@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test operator prototype (Priya, activity 2)
 labels: [field-test-findings, code-error]
+next-action: reconfirm
 ---
 
 During the field-test prototype, the served app stopped responding entirely:

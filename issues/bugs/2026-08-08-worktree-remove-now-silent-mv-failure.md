@@ -4,6 +4,7 @@ workstream: seam
 area: bin
 filed-by: agent
 discovered-in: "worktree-seam — cross-model review follow-up on the worktree control surface"
+priority: normal
 ---
 
 `bin/lib/worktree-teardown.sh` `wt_remove_now`:
