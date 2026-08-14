@@ -78,6 +78,11 @@ narrative* + a *determinism decision*.
 - Cadence/trigger: on-demand, on UI-affecting merges, or scheduled.
 - How far to take Tier B here vs. deferring the polish to a separate item.
 
+Prior art to evaluate before building the capture layer:
+[proving-it-works](../exploration/2026-08-14-proving-it-works-demo-video-plugin.md)
+— a Claude Code plugin that records narrated demos and verifies them
+mechanically.
+
 Related surfaces: `docs/tours.md`, `test/tours/tour-lib/`, `bin/tour`,
 `src/scenario/`, `src/lib/time.ts`, agent-browser (`get cdp-url`). A concrete build
 probably wants a short plan (`docs/plans/`) before implementation given the
