@@ -4,6 +4,7 @@ workstream: unknown
 area: monorepo
 design: ../../callback-box/docs/implemented-plans/workstreams.md
 labels: [worktrees, sessions, workflow]
+next-action: fixed
 ---
 
 Sessions are currently doing double duty as a to-do database. A worktree stays

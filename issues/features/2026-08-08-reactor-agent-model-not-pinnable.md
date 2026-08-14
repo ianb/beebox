@@ -6,6 +6,7 @@ filed-by: agent
 discovered-in: field-test Track 2 chunk 2 (cross-model review finding)
 labels: [field-test-findings, code-error]
 needs: [design]
+priority: normal
 ---
 
 A box can pin the model its **chat** agent uses (`.callback-box/chat-model.json`,
