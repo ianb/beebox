@@ -1,6 +1,6 @@
 ---
 title: "Codex as an optional box engine"
-status: active
+status: implemented
 workstream: codex-engine-plan
 issues:
   - ../../../issues/closed/decisions/2026-08-13-codex-as-an-alternative-engine.md

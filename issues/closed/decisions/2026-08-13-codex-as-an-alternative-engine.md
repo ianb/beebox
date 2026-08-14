@@ -9,7 +9,7 @@ discovered-by: Ian
 discovered-in: main session — boxholder decision to reduce single-vendor exposure
 ---
 
-Resolved by the [Codex box engine plan](../../../callback-box/docs/plans/codex-box-engine.md)
+Resolved by the [Codex box engine plan](../../../callback-box/docs/implemented-plans/codex-box-engine.md)
 (commit `9c90712a`). The plan chooses a complete optional box engine, with
 callback-owned normalized transcripts as the central boundary. Subsequent discussion
 favored thinner, provider-specific adapters that keep each harness intact and pin a

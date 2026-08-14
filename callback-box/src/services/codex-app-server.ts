@@ -100,6 +100,7 @@ export class CodexAppServer {
 
   constructor(options: CodexAppServerOptions) {
     this.child = spawn(
+      // TODO(env-migration): test/diagnostic override; move into the typed env boundary.
       options.binary ?? process.env.CB_CODEX_BINARY ?? "codex",
       ["app-server", "--listen", "stdio://"],
       {
