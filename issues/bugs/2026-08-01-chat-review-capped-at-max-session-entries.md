@@ -4,6 +4,7 @@ workstream: chat-history-oom-mobile-lock
 area: callback-box
 filed-by: agent
 discovered-in: worktree-chat-history-oom-mobile-lock — Track A of docs/plans/chat-history-oom-mobile-lock.md
+priority: normal
 ---
 
 `parseSessionLog` no longer retains a whole transcript (that OOM'd `cb serve`

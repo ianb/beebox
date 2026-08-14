@@ -5,6 +5,7 @@ needs: [design]
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder
+priority: important
 ---
 
 The narration-mode indicator is built on a **microphone glyph**, but a mic can't

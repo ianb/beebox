@@ -230,7 +230,9 @@ export function classifyRouterRoute({ method, url }: { method: string; url: stri
     if (
       method === "POST" &&
       (pathname.startsWith("/workstreams/action/") ||
-        pathname.startsWith("/workstreams/issues/action/"))
+        pathname.startsWith("/workstreams/issues/action/") ||
+        pathname === "/workstreams/api/trpc" ||
+        pathname.startsWith("/workstreams/api/trpc/"))
     )
       return { kind: "control" };
     return { kind: "unknown" };

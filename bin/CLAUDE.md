@@ -300,11 +300,15 @@ unmerged `keep` branch in the workstream's test1 clone is pushed into the source
 test1 repository as `keep/<workstream>-<date>` before deletion; a failed push
 refuses the cull. The `test-setup` branch is the repeatable reset baseline.
 
-The authenticated top-level `/workstreams/` app exposes the joined status and
-safe POST actions, with `/workstreams/issues/`, `/workstreams/plans/`, and
-`/workstreams/testing/` beneath it. Router code ships dark from a worktree: the
-shared router sees these routes only after merge and a boxholder-run `pnpm dev`
-restart. Never restart that shared router from a worktree session.
+The authenticated top-level `/workstreams/` surface is a resident Fastify +
+Vite app in the top-level `workstreams-app/` package. The router authenticates,
+supervises, and proxies it; the app invokes the stable `bin/workstreams` CLI
+instead of reimplementing lifecycle guards. It exposes joined status and safe
+actions, with `/workstreams/issues/`, `/workstreams/plans/`, and
+`/workstreams/testing/` beneath it. App source changes landed in main reload the
+app child without restarting the router. Router or supervisor changes still
+require one boxholder-run `pnpm dev` restart after merge. Never restart the
+shared router from a worktree session.
 
 Isolated router testing: `CALLBACK_STATE_DIR` + `ROUTER_PORT` run a
 second router without touching the live one (which only picks up

@@ -6,6 +6,7 @@ labels: [views, boxes-as-packages]
 filed-by: agent
 discovered-by: agent
 discovered-in: main session — cb feedback triage from a real box
+priority: normal
 ---
 
 Any view using React hooks fails to render under `cb view test` when the host is

@@ -6,6 +6,7 @@ labels: [cli, schemas]
 filed-by: agent
 discovered-by: agent
 discovered-in: main session — cb feedback triage from a real box
+priority: important
 ---
 
 After adding two box-local schemas (each with `instructions`), `cb init .` from

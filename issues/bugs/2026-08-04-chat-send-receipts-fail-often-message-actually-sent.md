@@ -4,6 +4,7 @@ workstream: send-receipt-logging
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder reports it happening commonly across normal use
+priority: important
 ---
 
 > **Job to be done:** *When I send a message and then lock my phone / switch apps /

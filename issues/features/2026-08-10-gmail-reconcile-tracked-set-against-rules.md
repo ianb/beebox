@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-box-family-email — after a boxholder narrowed their Gmail rules
 needs: [design]
+priority: backlog
 ---
 
 > **When I realize my email rules were wrong and fix them, I want to see which

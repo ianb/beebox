@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-ios-audio-session-fix — Codex review of the audio-session fix
 labels: [mobile]
+priority: normal
 ---
 
 `CaptureAudioRecorder` starts an `AVAudioRecorder` and then watches only the

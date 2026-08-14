@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test operator prototype (Priya, activity 1)
 labels: [soft-launch, field-test-findings, ui-error, ui-sensibility]
+priority: important
 ---
 
 > **Partly resolved 2026-08-09.** Item 1's display half: the `[fileN]` token

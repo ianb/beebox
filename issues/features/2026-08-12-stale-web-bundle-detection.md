@@ -7,6 +7,7 @@ labels: [mobile, deploy, webview]
 filed-by: agent
 discovered-by: Ian
 discovered-in: streaming-scroll worktree session — iOS scroll field probe
+priority: normal
 ---
 
 The iOS app's WKWebView (and any long-lived pinned tab) keeps running whatever

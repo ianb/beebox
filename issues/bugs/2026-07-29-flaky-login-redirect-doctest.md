@@ -4,6 +4,7 @@ workstream: finish-skill-audit
 area: callback-box
 filed-by: agent
 discovered-in: worktree-finish-skill-audit — /finish full-suite run after merging main
+next-action: reconfirm
 ---
 
 `test/webapp/login-redirect.doctest.md` failed (jobId 3, exit 1) in a full

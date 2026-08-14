@@ -5,6 +5,7 @@ needs: [manual-testing]
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder; got much worse recently
+next-action: reconfirm
 ---
 
 > **⏳ Awaiting manual testing** — fix landed in `4ceb0de6`; send typed, capture,

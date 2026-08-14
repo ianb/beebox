@@ -4,6 +4,7 @@ workstream: security-report
 area: callback-box
 filed-by: agent
 discovered-in: worktree-security-report — egress inventory for the security report
+priority: backlog
 ---
 
 The iOS app's dictation prefers the on-device `SpeechAnalyzer` /

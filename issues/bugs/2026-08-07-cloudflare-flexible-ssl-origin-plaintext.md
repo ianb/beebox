@@ -5,6 +5,7 @@ area: callback-box
 labels: [soft-launch]
 filed-by: agent
 discovered-in: worktree-security-report — operational inventory for the security report
+priority: normal
 ---
 
 The public deploy path is Cloudflare-proxied DNS with SSL mode

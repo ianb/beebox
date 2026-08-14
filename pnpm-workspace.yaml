@@ -22,6 +22,7 @@ packages:
   - agent-doctest
   - canvas-loop
   - scan-uploader
+  - workstreams-app
   - site
   - browse
   - browse/packages/agent-browser-typed

@@ -7,6 +7,7 @@ labels: [scheduler, workstreams, notifications]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — cb feedback triage
+priority: normal
 ---
 
 The recurring jobs — the Agent SDK update monitor, the weekly manual-test run,
