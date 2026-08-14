@@ -1,0 +1,17 @@
+{
+  "description": "Validate Callback Box files after Codex edits them.",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "apply_patch|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cb validate --hook",
+            "statusMessage": "Validating box files"
+          }
+        ]
+      }
+    ]
+  }
+}

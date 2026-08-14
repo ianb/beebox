@@ -9,6 +9,12 @@
 import { join } from "node:path";
 import { writeFile, readFile } from "node:fs/promises";
 import { AGENT_GUIDE_FILE } from "./shared.js";
+import { generateAgentContextMirrors } from "../agent-context-mirrors.js";
+
+export async function ensureAgentContext(boxRoot: string, briefingPaths: string[]): Promise<void> {
+  await ensureClaudeMdIncludes(boxRoot, briefingPaths);
+  await generateAgentContextMirrors(boxRoot);
+}
 
 /**
  * Ensure CLAUDE.md has the @-include for the agent guide and any compiled briefings.

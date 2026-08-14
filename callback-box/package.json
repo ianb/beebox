@@ -26,6 +26,7 @@
     "dist",
     "bin",
     "templates",
+    "plugins",
     "src/frontend/dist",
     "src/frontend/package.json",
     "src/types",

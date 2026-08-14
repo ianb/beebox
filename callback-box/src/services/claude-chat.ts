@@ -24,7 +24,7 @@ import {
   type SDKUserMessage,
   type WarmQuery,
 } from "@anthropic-ai/claude-agent-sdk";
-import { cardValidatorHook, gitMvNudgeHook } from "../core/sdk-hooks.js";
+import { gitMvNudgeHook } from "../core/sdk-hooks.js";
 import { resolveClaudeCodeBinary } from "../core/sdk-binary-path.js";
 import { dropUndefined } from "../lib/drop-undefined.js";
 import { createAsyncIterableQueue } from "./claude-chat-queue.js";
@@ -36,6 +36,7 @@ import {
   writeSessionIdFile,
 } from "../core/chat/session/session-id-file.js";
 import { toSdkUserContent } from "./claude-chat-content.js";
+import { resolveHarnessPluginPath } from "../core/agent/plugin-paths.js";
 import type {
   ChatBackend,
   ChatBackendRun,
@@ -116,7 +117,12 @@ function buildQueryOptions(
   if (opts.tools !== undefined) {
     queryOptions.tools = opts.tools;
   }
-  queryOptions.hooks = { PreToolUse: [gitMvNudgeHook()], PostToolUse: [cardValidatorHook()] };
+  queryOptions.hooks = { PreToolUse: [gitMvNudgeHook()] };
+  queryOptions.plugins = [{
+    type: "local",
+    path: resolveHarnessPluginPath("claude"),
+    skipMcpDiscovery: true,
+  }];
   if (opts.includePartialMessages === true) {
     queryOptions.includePartialMessages = true;
   }

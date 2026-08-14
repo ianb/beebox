@@ -1,0 +1,10 @@
+{
+  "name": "callback-box-claude",
+  "version": "0.1.0",
+  "description": "Native Claude Code lifecycle and validation integration for Callback Box",
+  "author": {
+    "name": "Callback Box"
+  },
+  "license": "GPL-3.0-or-later",
+  "keywords": ["callback-box", "claude-code", "validation"]
+}

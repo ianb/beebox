@@ -1,0 +1,21 @@
+{
+  "name": "callback-box-codex",
+  "version": "0.1.0",
+  "description": "Native Codex lifecycle and validation integration for Callback Box",
+  "author": {
+    "name": "Callback Box"
+  },
+  "license": "GPL-3.0-or-later",
+  "keywords": ["callback-box", "codex", "validation"],
+  "interface": {
+    "displayName": "Callback Box for Codex",
+    "shortDescription": "Codex integration for Callback Box",
+    "longDescription": "Provides native Codex hooks, validation feedback, and lifecycle integration for Callback Box packages.",
+    "developerName": "Callback Box",
+    "category": "Developer Tools",
+    "capabilities": ["Write"],
+    "defaultPrompt": [
+      "Help me work with this Callback Box."
+    ]
+  }
+}
