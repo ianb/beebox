@@ -5,6 +5,7 @@ area: callback-box
 needs: [design]
 filed-by: agent
 discovered-in: first real-tailscaled live proof of the exposed dev router (2026-07-22)
+priority: normal
 ---
 
 The dev-router Tailscale exposure (`docs/implemented-plans/expose-dev-router.md`)

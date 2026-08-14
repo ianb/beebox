@@ -5,6 +5,7 @@ needs: [design]
 filed-by: agent
 discovered-in: main session — boxholder wants a shareable demo video an agent can keep current
 area: callback-box
+priority: backlog
 ---
 
 Produce a **shareable video of interacting with the app** — for demo/marketing —

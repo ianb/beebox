@@ -6,6 +6,7 @@ design: ../../callback-box/docs/plans/clerk-tab-arrangements.md
 area: clerk
 filed-by: agent
 discovered-in: worktree-tab-organizer-clerk — simplifying the experimental tab-arrangement plan
+priority: backlog
 ---
 
 When my browser workspace uses local Chrome tab groups, I want to include those tabs in a Clerk arrangement, so the box can preserve or revise the organization without flattening the groups.

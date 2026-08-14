@@ -6,6 +6,7 @@ filed-by: agent
 needs: [manual-testing]
 design: ../../callback-box/docs/implemented-plans/google-auth-reauth-health.md
 discovered-in: main session — boxholder, after the Google OAuth thread
+priority: important
 ---
 
 **Implemented** on `worktree-google-reauth-health` — design and the decisions

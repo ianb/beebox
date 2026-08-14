@@ -6,6 +6,8 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder
 labels: [soft-launch]
+priority: important
+next-action: discuss
 ---
 
 Today the box agent runs with the full Claude Code toolset and no

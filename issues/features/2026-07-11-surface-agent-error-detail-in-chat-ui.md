@@ -4,6 +4,7 @@ workstream: fix-bugs
 area: callback-box
 filed-by: agent
 discovered-in: worktree-fix-bugs — bug-queue validation; split out of the closed box-child-stderr issue
+next-action: reconfirm
 ---
 
 When a chat turn ends `is_error=true`, the client shows only "the run reported

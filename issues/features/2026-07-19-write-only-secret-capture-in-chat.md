@@ -5,6 +5,7 @@ needs: [design]
 filed-by: agent
 discovered-in: main session — boxholder idea alongside the /admin chat landmark
 area: callback-box
+priority: backlog
 ---
 
 In the `/admin` chat (the admin landmark — see

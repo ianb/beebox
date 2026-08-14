@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder wants a concrete demo box
 labels: [soft-launch]
+priority: normal
 ---
 
 Build a second standing box alongside `test1` — **a real, fully-formed fictional

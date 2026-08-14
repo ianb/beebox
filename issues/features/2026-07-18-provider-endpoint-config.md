@@ -5,6 +5,7 @@ needs: [design]
 area: callback-box
 filed-by: agent
 discovered-in: worktree-backend-research — deep-pass backend-alternatives research
+next-action: invalid
 ---
 
 The ADOPT recommendation from the backend deep pass
