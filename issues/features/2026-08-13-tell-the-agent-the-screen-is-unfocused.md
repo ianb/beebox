@@ -30,6 +30,39 @@ suspected trigger in
 [send receipts fail](../bugs/2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md),
 and iOS scene transitions already forward to the box log as `[ios] lifecycle`.
 
+## Unspeakable content must be announced, not dropped
+
+Boxholder: some things can't be said aloud — a link, a path, a code block. Those
+still get written. But with no visual feedback the user doesn't know they exist,
+so the agent has to **introduce the fact that supplemental information is
+there**: say that a link is in the message, then stop. The failure mode to
+avoid is either reading a URL character by character or silently writing
+something the listener never learns about.
+
+That makes the guidance two-sided — compress what's speakable, and flag what
+isn't — rather than a blanket "be shorter".
+
+## Mute is not known today, and should be
+
+Checked: nothing tracks it. The only audio-adjacent state is the `narration`
+feature (on/off, set by the user) and a speech-playback signal that flows
+frontend → native shell (`use-native-bridge.ts:70,78`). Neither reaches the
+agent, and neither is mute.
+
+Three states the agent would want distinguished:
+
+- narration **off** — the user chose not to hear replies;
+- narration **on but inaudible** — muted, silenced, or volume at zero, so speech
+  plays to nobody and leaning on voice is exactly wrong;
+- narration **on and audible** — the case this feature is for.
+
+Implementation caveat worth recording before anyone estimates it: iOS does not
+expose the ringer/silent switch through a supported API. `AVAudioSession`
+gives output volume, and route changes reveal headphones or a speaker, but
+"silenced" is inferred rather than read. Web has even less. So this may be a
+best-effort signal, and the agent's guidance should degrade sensibly when it's
+unknown rather than assuming audible.
+
 ## Design questions
 
 - **What the agent does with it.** "Lean on voice" needs to mean something
@@ -40,10 +73,10 @@ and iOS scene transitions already forward to the box log as `[ios] lifecycle`.
   phone muted. The flag says the screen is unattended, not that audio is
   reaching anyone. Consider whether the signal is focus, or focus combined with
   the `narration` feature state.
-- **Staleness.** The tag is composed per turn, so it reports focus *at send
-  time*. A long agent turn may finish after the user has come back — or left.
-  Decide whether that is acceptable (probably yes) or whether the state should
-  update mid-turn.
+- **Staleness — accepted.** The tag is composed per turn, so it reports focus at
+  send time and a long turn can outlive it. The boxholder's call: live with the
+  lag rather than build mid-turn updates. Worth stating in the prompt so the
+  agent treats it as a hint about the moment the message was sent.
 - **Web and iOS parity.** Web tab visibility and iOS scene phase are different
   signals with different granularity; both should map to one attribute rather
   than the agent learning two vocabularies.
