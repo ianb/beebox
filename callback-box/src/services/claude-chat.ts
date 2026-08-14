@@ -37,6 +37,7 @@ import {
 } from "../core/chat/session/session-id-file.js";
 import { toSdkUserContent } from "./claude-chat-content.js";
 import { resolveHarnessPluginPath } from "../core/agent/plugin-paths.js";
+import { createCodexChatBackend } from "./codex-chat.js";
 import type {
   ChatBackend,
   ChatBackendRun,
@@ -166,7 +167,7 @@ function warmCompatible(
   return true;
 }
 
-export function createChatBackend(): ChatBackend {
+export function createClaudeChatBackend(): ChatBackend {
   let warmSlot:
     | { warmQuery: WarmQuery; opts: ChatBackendStartOptions; sessionIdFilePath: string | null }
     | null = null;
@@ -325,5 +326,20 @@ export function createChatBackend(): ChatBackend {
       });
       return buildRunFromQuery({ q, opts, inputQueue, messageQueue, sessionIdFilePath });
     },
+  };
+}
+
+/** Dispatch each engine-pinned chat to its native harness backend. */
+export function createChatBackend(): ChatBackend {
+  const claude = createClaudeChatBackend();
+  const codex = createCodexChatBackend();
+  return {
+    requiresClaudeAuth: true,
+    start: (opts) => opts.engine === "codex" ? codex.start(opts) : claude.start(opts),
+    prewarm: async (opts) => {
+      if (opts.engine !== "codex") await claude.prewarm?.(opts);
+    },
+    closeWarm: () => claude.closeWarm?.(),
+    hasWarm: () => claude.hasWarm?.() ?? false,
   };
 }

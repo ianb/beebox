@@ -12,6 +12,7 @@
 import { assertNever } from "../../../lib/invariant.js";
 import { buildChatContentBlocks } from "../../../shared/chat-content-blocks.js";
 import type { ChatContentBlock } from "../../../services/claude-chat.js";
+import type { ChatBackendMessage } from "../../../services/claude-chat-types.js";
 import type { ActivityKind, CardStateDetails } from "../card-activity.js";
 import type {
   SDKMessage,
@@ -270,6 +271,11 @@ export function adaptSdkMessage(msg: SDKMessage): ChatMessage | null {
       // counted wire-tolerance sentinel rather than dropping it silently.
       return unknownChatMessage(msg);
   }
+}
+
+/** Adapt either Claude SDK events or a provider-normalized backend event. */
+export function adaptBackendMessage(msg: ChatBackendMessage): ChatMessage | null {
+  return "provider" in msg ? msg.message : adaptSdkMessage(msg);
 }
 
 /**

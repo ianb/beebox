@@ -1,6 +1,9 @@
 # Chat Session History
 
-`chat-session-history.json` tracks which Claude session ids belong to web chat for this box, plus an optional per-session `contextDir` association used by landmark-started chats. The on-disk format evolved from a flat string array (v1) to per-session entries (v2); this doctest covers the migration and the directory-association helpers.
+`chat-session-history.json` tracks which native session ids belong to web chat
+for this box, their owning engine, and an optional per-session `contextDir`
+association used by landmark-started chats. Missing engine values are legacy
+Claude entries.
 
 ```ts setup
 import { readFile, mkdir, writeFile, rm } from "node:fs/promises";
@@ -19,6 +22,7 @@ import {
   setMostActive,
 } from "../../src/core/chat/session/history.js";
 import { getSessionDir } from "../../src/core/chat/session/transcript-paths.js";
+import { resolveChatEngine } from "../../src/core/chat/session/engine.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 // `getLastSessionForDirectory` skips entries whose JSONL doesn't exist
@@ -41,6 +45,25 @@ async function cleanupSessionLogs(boxRoot: string, contextDirs: string[]): Promi
     await rm(dir, { recursive: true, force: true });
   }
 }
+```
+
+## Engine ownership
+
+Legacy entries remain Claude-owned, while an explicit Codex entry stays pinned
+to Codex regardless of the current box default.
+
+```ts
+const box = await makeTmpBox();
+await box.write(
+  ".callback-box/chat-session-history.json",
+  JSON.stringify({ sessions: [{ id: "old" }, { id: "new", engine: "codex" }], migrated: true }),
+);
+JSON.stringify([await resolveChatEngine(box.root, "old"), await resolveChatEngine(box.root, "new")])
+=> ["claude","codex"]
+```
+
+```ts cleanup
+await box.cleanup();
 ```
 
 ## Deletion removes exact duplicates and conditionally clears the pointer
@@ -95,10 +118,12 @@ JSON.stringify(await loadHistoryEntries(box.root), null, 2)
 =>
 [
   {
-    "id": "abc"
+    "id": "abc",
+    "engine": "claude"
   },
   {
-    "id": "def"
+    "id": "def",
+    "engine": "claude"
   }
 ]
 
@@ -134,10 +159,12 @@ JSON.stringify(parsed, null, 2)
 {
   "sessions": [
     {
-      "id": "abc"
+      "id": "abc",
+      "engine": "claude"
     },
     {
-      "id": "def"
+      "id": "def",
+      "engine": "claude"
     }
   ],
   "migrated": true
@@ -181,6 +208,7 @@ JSON.stringify(await loadHistoryEntries(box.root), null, 2)
 [
   {
     "id": "abc",
+    "engine": "claude",
     "contextDir": "store/recipes"
   }
 ]

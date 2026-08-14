@@ -94,7 +94,9 @@ export async function runBackfillIfNeeded(boxRoot: string): Promise<void> {
           // Keep the landmark binding the scan just discovered — appending a
           // bare id would make resolveSessionLogPath treat it as root-bound.
           // Box-root finds stay bare-id, matching pre-landmark entries.
-          file.sessions.push(s.contextDir === "" ? { id: s.sessionId } : { id: s.sessionId, contextDir: s.contextDir });
+          file.sessions.push(s.contextDir === ""
+            ? { id: s.sessionId, engine: "claude" }
+            : { id: s.sessionId, engine: "claude", contextDir: s.contextDir });
           known.add(s.sessionId);
           added += 1;
         }

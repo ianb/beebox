@@ -86,9 +86,8 @@ store, and transcript format.
   the type becomes a backend or transcript contract.
 - Claude session ownership is private-store coupling. `callback-box/src/core/chat/session/transcript-paths.ts:1-12`
   says the helpers are for *"Claude Code session logs"* at
-  `~/.claude/projects/<encoded-cwd>/<session-id>.jsonl`. The plan does not teach this
-  module Codex paths. It replaces it with a callback-owned transcript store and retains
-  the Claude reader only for migration.
+  `~/.claude/projects/<encoded-cwd>/<session-id>.jsonl`. Codex does not use this
+  module: its transcript adapter reads supported app-server thread history.
 - Session history already has a callback-owned index.
   `callback-box/src/core/chat/session/history.ts:6-20` documents
   `.callback-box/chat-session-history.json` and the most-active pointer. The plan evolves

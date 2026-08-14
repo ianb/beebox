@@ -76,11 +76,12 @@ export async function checkClaudeAuth(options?: CheckClaudeAuthOptions): Promise
  */
 export async function preflightChatBackend(params: {
   backend: { requiresClaudeAuth?: boolean | undefined };
+  engine?: "claude" | "codex" | undefined;
   session: { emit(event: "error", error: Error): boolean };
   /** CLI service for the probe. Omit in production; tests inject a fake. */
   claudeCli?: ClaudeCliService | undefined;
 }): Promise<boolean> {
-  if (params.backend.requiresClaudeAuth !== true) return true;
+  if (params.engine === "codex" || params.backend.requiresClaudeAuth !== true) return true;
   try {
     await checkClaudeAuth({ claudeCli: params.claudeCli });
     return true;
