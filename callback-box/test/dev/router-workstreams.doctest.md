@@ -793,6 +793,14 @@ assert.match(
   /class="issue-header-nav"[^>]*><a href="\/"[^>]*>\/</,
 );
 assert.doesNotMatch(issues.captured.body, /<nav class="crumbs">/);
+assert.match(
+  issues.captured.body,
+  /class="issue-filter-menu" data-filter-menu>[\s\S]*<summary>Filter<\/summary>[\s\S]*class="issue-filter-popover"/,
+);
+assert.doesNotMatch(
+  issues.captured.body,
+  /class="issue-list-pane"[^>]*>[\s\S]{0,100}<div class="filters">/,
+);
 assert.match(issues.captured.body, /data-dirty-count[^>]*>0 unsaved issues/);
 assert.match(issues.captured.body, /data-reset disabled>Reset<\/button>/);
 assert.match(issues.captured.body, /data-save[^>]*disabled>Save<\/button>/);

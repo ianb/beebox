@@ -37,10 +37,27 @@ const save = editor?.querySelector("[data-save]");
 const reset = editor?.querySelector("[data-reset]");
 const count = editor?.querySelector("[data-dirty-count]");
 const status = editor?.querySelector("[data-save-status]");
+const filterMenu = editor?.querySelector("[data-filter-menu]");
 const issueBrowser = document.querySelector("[data-issue-browser]");
 const detailPane = document.querySelector("[data-issue-detail]");
 const detailEndpoint = issueBrowser?.dataset.detailEndpoint;
 let detailRequest;
+
+document.addEventListener("click", (event) => {
+  if (
+    filterMenu?.open &&
+    event.target instanceof Node &&
+    !filterMenu.contains(event.target)
+  ) {
+    filterMenu.open = false;
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape" || !filterMenu?.open) return;
+  filterMenu.open = false;
+  filterMenu.querySelector("summary")?.focus();
+});
 
 function selectedIssue() {
   return new URLSearchParams(location.search).get("issue");
@@ -1093,7 +1110,12 @@ const ISSUES_CSS = `
   .issue-header-nav { display: flex; flex: 0 0 auto; align-items: baseline; gap: 0.45em; font: 13px ui-monospace, Menlo, monospace; }
   .issue-header-nav a { color: #2255aa; text-decoration: none; }
   .issue-header-nav a:hover { text-decoration: underline; }
-  .issue-header-nav h1 { margin: 0; font: 700 15px ui-monospace, Menlo, monospace; }
+  .issue-header-nav h1 { margin: 0; font: 700 1.4em system-ui, sans-serif; }
+  .issue-filter-menu { position: relative; flex: 0 0 auto; }
+  .issue-filter-menu summary { padding: 0.25em 0.65em; border: 1px solid #bbc2ca; border-radius: 4px; background: #fff; color: #555; font: 600 12px ui-monospace, Menlo, monospace; cursor: pointer; list-style: none; }
+  .issue-filter-menu summary::-webkit-details-marker { display: none; }
+  .issue-filter-menu[open] summary { border-color: #2255aa; color: #2255aa; }
+  .issue-filter-popover { position: absolute; top: calc(100% + 0.45em); left: 0; z-index: 20; box-sizing: border-box; width: min(72vw, 72em); max-height: calc(100vh - 5em); overflow: auto; padding: 0.8em 1em; border: 1px solid #ccd2d8; border-radius: 6px; background: #fff; box-shadow: 0 5px 18px rgba(0, 0, 0, 0.16); }
   .issue-editor-filters { display: flex; min-width: 0; flex: 1 1 auto; flex-wrap: wrap; gap: 0.3em; align-items: center; }
   .issue-editor-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 0.5em; }
   .issue-editor-actions button { padding: 0.3em 0.7em; }
@@ -1109,10 +1131,10 @@ const ISSUES_CSS = `
   .issue-detail-loading, .issue-detail-error { display: flex; min-height: 10em; flex-direction: column; align-items: center; justify-content: center; gap: 0.5em; color: #666; text-align: center; }
   .issue-detail-loading span, .issue-detail-error span { font-size: 0.9em; }
   .issue-detail-error { color: #a23522; }
-  .issue-detail-header { display: none; justify-content: flex-end; margin-bottom: 0.5em; }
-  .issue-browser.has-selection .issue-detail-header { display: flex; }
-  .issue-detail-header button { padding: 0.25em 0.65em; }
-  .filters { margin: 0 0 1.4em; font: 13px ui-monospace, Menlo, monospace; }
+  .issue-detail-header { display: none; margin-bottom: 0.5em; }
+  .issue-detail-header button { display: inline-flex; align-items: center; gap: 0.3em; padding: 0.25em 0.65em; }
+  .issue-detail-header svg { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 2; }
+  .filters { font: 13px ui-monospace, Menlo, monospace; }
   .filters .chip { cursor: default; }
   .filters a.chip { cursor: pointer; }
   .filters .active { background: #2255aa; color: #fff; }
@@ -1179,6 +1201,7 @@ const ISSUES_CSS = `
     body { display: block; height: auto; min-height: 100vh; overflow: auto; padding-bottom: 5em; }
     .issue-editor-bar { align-items: flex-start; flex-wrap: wrap; }
     .issue-editor-filters { order: 3; flex-basis: 100%; }
+    .issue-filter-popover { position: fixed; top: 3.5em; right: 0.8em; left: 0.8em; width: auto; max-height: calc(100vh - 4.3em); }
     .issue-editor-actions { margin-left: auto; }
     ul.issues .issue-actions-row { flex-direction: column; gap: 0.45em; }
     .priority-target { text-align: left; }
@@ -1187,6 +1210,7 @@ const ISSUES_CSS = `
     .issue-detail-pane { display: none; padding: 0; border-left: none; }
     .issue-browser.has-selection .issue-list-pane { display: none; }
     .issue-browser.has-selection .issue-detail-pane { display: block; }
+    .issue-browser.has-selection .issue-detail-header { display: block; }
   }
 `;
 
@@ -1700,6 +1724,10 @@ async function renderIssueIndex(
     : `<p class="issue-detail-empty">Select an issue to read it.</p>`;
   const body = `<div class="issue-editor-bar">
   <nav class="issue-header-nav" aria-label="Issue browser"><a href="/" aria-label="Router home">/</a><a href="${base}/">workstreams</a><h1>issues</h1></nav>
+  <details class="issue-filter-menu" data-filter-menu>
+    <summary>Filter</summary>
+    <div class="issue-filter-popover">${filterChipsHtml(base, f, facets, selectedIssue)}</div>
+  </details>
   <div class="issue-editor-filters" aria-label="Active filters">${activeFiltersHtml(f)}</div>
   <div class="issue-editor-actions">
     <span class="dirty-count" data-dirty-count aria-live="polite">0 unsaved issues</span>
@@ -1710,11 +1738,10 @@ async function renderIssueIndex(
 </div>
 <div class="issue-browser${selectedIssue ? " has-selection" : ""}" data-issue-browser data-detail-endpoint="${base}/issues/detail"${selectedIssue ? ` data-initial-issue="${escapeHtml(selectedIssue)}"` : ""}>
   <section class="issue-list-pane" aria-label="Issue list">
-    ${filterChipsHtml(base, f, facets, selectedIssue)}
     ${categoryHtml || `<p class="empty">no issues match these filters</p>`}
   </section>
   <section class="issue-detail-pane" aria-label="Issue detail">
-    <div class="issue-detail-header"><button type="button" data-close-issue>Back to issues</button></div>
+    <div class="issue-detail-header"><button type="button" data-close-issue><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>Issues</button></div>
     <div data-issue-detail aria-live="polite">${initialDetail}</div>
   </section>
 </div><script src="${base}/issues/priority.js" defer></script>`;
