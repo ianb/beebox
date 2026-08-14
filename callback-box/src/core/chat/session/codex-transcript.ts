@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { ensureCodexPluginInstalled } from "../../agent/ensure-codex-plugin.js";
 import { CodexAppServer } from "../../../services/codex-app-server.js";
+import { CodexRpcError } from "../../../services/codex-app-server.js";
 import type { SessionEntry, SessionLogSlice } from "../../../cli/lib/session.js";
 
 const threadReadSchema = z.object({
@@ -101,4 +102,25 @@ export async function readCodexSessionHistory(options: {
 export async function readCodexSessionUpdatedAt(boxRoot: string, sessionId: string): Promise<Date> {
   const raw = await readThread(boxRoot, sessionId);
   return new Date(threadReadSchema.parse(raw).thread.updatedAt * 1000);
+}
+
+export async function codexSessionExists(boxRoot: string, sessionId: string): Promise<boolean> {
+  try {
+    await readThread(boxRoot, sessionId);
+    return true;
+  } catch (error) {
+    if (error instanceof CodexRpcError && /not found|not loaded|unknown thread/i.test(error.rpcMessage)) return false;
+    throw error;
+  }
+}
+
+export async function deleteCodexSession(boxRoot: string, sessionId: string): Promise<void> {
+  await ensureCodexPluginInstalled();
+  const server = new CodexAppServer({ cwd: boxRoot });
+  try {
+    await server.initialize();
+    await server.request({ method: "thread/delete", params: { threadId: sessionId } });
+  } finally {
+    server.close();
+  }
 }
