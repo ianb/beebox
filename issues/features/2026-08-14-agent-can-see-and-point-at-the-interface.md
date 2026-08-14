@@ -25,14 +25,23 @@ kind of answer that is worst to receive by ear.
 Roughly three `cb`-side capabilities, deliberately small:
 
 1. **View** — dump the interface: what controls are present and what each one
-   does. The accessibility tree is the base, but the interesting part is the
-   **extended metadata**: a description of what a control *does*, authored for a
-   reader who cannot see it. An accessible name says "Attach"; the agent needs
-   "opens the attach menu — camera, file, or a card from this box."
+   does. **The accessibility tree is the base**, and it should carry most of the
+   weight — we have real a11y coverage and it is already the machine-readable
+   description of what is on screen. But the agent wants **more than a11y gives
+   it**: a11y says what a control *is* and how it is labelled, and the agent
+   needs what it *does*. An accessible name says "Attach"; the useful line is
+   "opens the attach menu — camera, file, or a card from this box." So: a11y
+   tree plus an extended-metadata layer over it, not a hand-built parallel list.
 2. **Point** — refer to a specific element so the user can find it.
 3. **A few limited actions** — open, focus, open a menu. Not driving the UI;
    just getting the user to the thing. The line is roughly "reveal it" versus
    "do it for them."
+
+Basing the dump on a11y rather than an annotation allowlist is a deliberate
+divergence from memory-atlas (below): everything is visible to the agent by
+default, annotations only *enrich*, and an unannotated control degrades to its
+accessible name instead of disappearing. It also means the a11y work and this
+feature reinforce each other rather than competing for the same effort.
 
 ## Prior art: memory-atlas built most of this
 
@@ -83,16 +92,49 @@ user clicks. There is an unused `highlightElementsWithOverlay` primitive at
 `lib/highlightelement.ts:1-55` — no callers — which looks like an earlier,
 agent-fires-it-directly approach that lost.
 
-That last point matches the boxholder's instinct: **things you tap are the right
-affordance**, not a bubble the agent pops unbidden. An anchored bubble on click
-gets both — the reference is contextualized in the sentence where it makes
-sense, and the spotlight only interrupts when asked for.
-
 **What memory-atlas does not have**: any open/focus/menu action tool (only
 `switchActivity`, a navigate), an agent-initiated highlight, or custom rendering
 for the reference beyond a plain link. Its tag system (`lib/parsetags.ts`)
 carries `speech`/`reasoning`/`addendum` and similar — nothing UI-related. So
 capability 3 above has no precedent there and is genuinely new design.
+
+## The pointer: a link with a custom scheme, not a tour
+
+The spotlight-tour half of memory-atlas is the part **not** to copy. Boxholder's
+preferred shape is a link in the markdown, rendered with a **custom icon beside
+it**, which on click focuses the target and can show a bit of text:
+
+```markdown
+[look at this](control:control-id?action=focus&description=See%20it%20open)
+```
+
+- `control:` — a custom scheme, taking the control id as its body.
+- `action` — optional, defaulting to `point`. `focus` and the other limited
+  actions from capability 3 are the other values.
+- `description` (or `help`) — text shown beside the link. Agent-authored, so it
+  can say why this control, in this answer, rather than repeating the generic
+  metadata.
+
+This keeps the reference *in* the sentence that motivates it, which is the point:
+a pointer is mostly useful contextualized. The icon marks it as different from an
+ordinary link so the reader knows it acts on the interface rather than navigating
+away.
+
+**We have the seam for it.** `classifyMarkdownHref` (used by `makeLink`,
+`src/frontend/src/components/Markdown.tsx:92-141`) already classifies hrefs into
+kinds — relative box path, external, and the retired `view:` legacy marker — and
+renders each differently, including a `BrokenLink` for a target that does not
+resolve. A `control:` kind slots directly into that switch, and the
+does-not-resolve case already has an established treatment: render visibly broken
+rather than silently inert. That matters here, since a control that has scrolled
+away or unmounted is the normal failure.
+
+**One honest tension**: we just retired the `view:` scheme, and reintroducing a
+custom scheme days later deserves an argument. The argument is that they differ
+in kind — `view:` duplicated an address space that already existed (a card has a
+path; `view:` was a second way to say the same thing), whereas a control has no
+address in the box at all. There is nothing for `control:` to duplicate. Worth
+stating in the design so the next reader does not read it as backsliding.
 
 ## What we already have
 
@@ -113,8 +155,9 @@ capability 3 above has no precedent there and is genuinely new design.
   only to be listed by its caller. The hand-rolled layer in
   `src/frontend/src/components/chat/message-parsing.ts:41-56,113-132,211-225`
   handles `<attachments>`, `<schedule>`, `<task-notification>` and friends and
-  strips control tags from rendered markdown. A UI pointer could be a tag there,
-  or a link convention as in memory-atlas — deciding which is part of the design.
+  strips control tags from rendered markdown. Not the mechanism for the pointer
+  itself (that is a link, above), but the place a *snapshot request* or any
+  out-of-band control traffic would live if the design needs one.
 - **The reverse direction already ships.** The user can select content in the
   companion pane and attach it to a message, which serializes as a
   `[selectionN]` token (`InteractiveChat-selections.ts`,
@@ -136,10 +179,17 @@ say "that one over there." Worth deciding before either is built.
 
 ## Design questions
 
-- **Who authors the metadata, and does it drift?** Annotating components by hand
-  is what makes the descriptions good and what makes them go stale. Is there a
-  check that a control with an action has a description, the way `doc-check`
-  guards links?
+- **What is a control id, and is it stable?** `control:` needs a name the agent
+  can write into prose and the client can still resolve on click. The tours'
+  a11y refs (`ref=eN`) are per-snapshot handles and useless for this. A DOM `id`
+  works only where one exists and is unique. This is the first thing to settle,
+  because everything else hangs off it — and it decides how much annotation the
+  feature needs even in the a11y-first design.
+- **Where the extended metadata lives.** A11y gives the base; the "what it does"
+  layer has to come from somewhere — a prop on the component, a registry keyed by
+  control id, or a doc the dump joins against. Whichever it is, ask whether a
+  control can be checked for having one, the way `doc-check` guards links, since
+  a description that quietly goes stale is worse than none.
 - **Snapshot per turn, tool on demand, or both?** memory-atlas does both. Per
   turn is reliable but pays context on every message; on demand is cheap but the
   agent has to know to look. The `hideFromUi` / collapse-old-copies treatment is
@@ -158,4 +208,9 @@ say "that one over there." Worth deciding before either is built.
   [screen-unfocused](2026-08-13-tell-the-agent-the-screen-is-unfocused.md).
 - **Staleness.** The snapshot describes the screen at send time. A long turn, or
   a user who navigates mid-answer, leaves the agent pointing at something gone.
-  The pointer should fail visibly rather than spotlight the wrong element.
+  The pointer should fail visibly rather than highlight the wrong element —
+  `BrokenLink` is the existing precedent for exactly this.
+- **What `point` does, visually.** `focus` has an obvious meaning. The default
+  `point` does not: a flash, a ring that persists, a scroll-into-view, or all
+  three. Whatever it is should not require a modal layer — the reason for
+  rejecting the tour was that it takes over the screen.
