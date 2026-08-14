@@ -416,7 +416,22 @@ export function generateTestSource(markdown, filePath) {
     out.push(...testHeader);
     for (const lines of testTeardowns) {
       out.push(`  t.teardown(async () => {`);
-      emitLines(out, lines, "    ");
+      out.push(`    try {`);
+      emitLines(out, lines, "      ");
+      // tap runs teardowns LIFO and abandons the rest once one throws, so one
+      // cleanup that cannot run would skip every earlier cleanup and leak
+      // exactly the handles they exist to release. That is reachable now that
+      // registration is hoisted: a cleanup whose `continue` block never ran
+      // references a `const` still in its temporal dead zone. Report the
+      // failure as an assertion instead — visible, and it strands nothing.
+      out.push(`    } catch (__cleanupError) {`);
+      // console.error names it (tap has usually closed the test's plan by
+      // teardown time, so its own diagnostic degrades to a generic "assertion
+      // after Promise resolution"); t.error is what still turns it into a
+      // non-zero exit.
+      out.push(`      console.error("doctest cleanup block failed:", __cleanupError);`);
+      out.push(`      t.error(__cleanupError, "doctest cleanup block failed");`);
+      out.push(`    }`);
       out.push(`  });`);
     }
     out.push(...testBody);

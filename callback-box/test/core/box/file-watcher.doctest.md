@@ -415,7 +415,7 @@ try {
   console.error = originalConsoleError;
 }
 
-`bounded: ${events <= 20} | logs: ${capLogs.length} | named-limit: ${capLogs[0]?.includes("16") === true}`
+`bounded: ${events <= 20} | logs: ${capLogs.length} | named-limit: ${capLogs[0]?.includes("limit of 16 reached") === true}`
 => bounded: true | logs: 1 | named-limit: true
 ```
 
@@ -485,7 +485,7 @@ try {
   console.error = originalConsoleError;
 }
 
-`watched: ${watcher.watchedDirs().length} | logs: ${capLogs.length} | named-limit: ${capLogs[0]?.includes("16") === true}`
+`watched: ${watcher.watchedDirs().length} | logs: ${capLogs.length} | named-limit: ${capLogs[0]?.includes("limit of 16 reached") === true}`
 => watched: 16 | logs: 1 | named-limit: true
 ```
 
