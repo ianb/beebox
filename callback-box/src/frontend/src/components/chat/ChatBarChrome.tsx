@@ -34,6 +34,7 @@ import { SessionChip } from "./SessionChip";
 import { VoiceChip } from "./VoiceChip";
 import type { SessionEntry } from "../../api";
 import type { OnZoomView } from "./ChatMessages";
+import type { ChatAgentEngine } from "@shared/chat-models.js";
 
 export interface ChatBarChromeProps {
   /** The session's bound directory: `""` for box root, null for no context. */
@@ -50,6 +51,7 @@ export interface ChatBarChromeProps {
   hqInFlight: boolean;
   onNewSession: () => void;
   selectedModel: string | null;
+  agentEngine: ChatAgentEngine | null;
   onSelectModel: (model: string | null) => void;
   onStopProcess: () => void;
   onRestartProcess: () => void;
@@ -67,7 +69,7 @@ export function ChatBarChrome(props: ChatBarChromeProps) {
   const {
     contextDir, boxSlug, sessionLabel, messages, onZoomView,
     muted, onToggleMute, narrationEnabled, onToggleNarration, hqInFlight,
-    onNewSession, selectedModel, onSelectModel, onStopProcess, onRestartProcess, onCompactSession,
+    onNewSession, selectedModel, agentEngine, onSelectModel, onStopProcess, onRestartProcess, onCompactSession,
     sessionId, running, busy, debugView, setDebugView, showDebugLog, setShowDebugLog,
   } = props;
 
@@ -103,6 +105,7 @@ export function ChatBarChrome(props: ChatBarChromeProps) {
         contextDir={contextDir}
         onNewSession={onNewSession}
         selectedModel={selectedModel}
+        agentEngine={agentEngine}
         onSelectModel={onSelectModel}
         onStopProcess={onStopProcess}
         onRestartProcess={onRestartProcess}

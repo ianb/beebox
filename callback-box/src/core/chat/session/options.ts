@@ -24,7 +24,9 @@ export interface ChatSessionOptions {
    */
   sessionFile?: string | null;
   /** Path to the current-model pointer, relative to boxRoot. Default: .callback-box/chat-model.json. */
-  modelFile?: string;
+  modelFile?: string | null;
+  /** Select the model file once a native harness assigns a fresh session id. */
+  modelFileForSession?: (sessionId: string) => string;
   /** Extra env vars merged into the SDK subprocess env. */
   extraEnv?: Record<string, string>;
   /** Called once when the SDK assigns a new session ID. Used for per-session bookkeeping. */

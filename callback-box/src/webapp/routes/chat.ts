@@ -39,6 +39,7 @@ import { registerChatSendRoutes, loadProcessedMessageIds } from "./chat-send-rou
 import { registerChatAudioRoutes } from "./chat-audio-routes.js";
 import { registerChatLastAudioRoutes } from "./chat-last-audio-routes.js";
 import { registerChatScreenshotRoutes } from "./chat-screenshot-routes.js";
+import { chatModelFileForSession, DEFAULT_MODEL_FILE } from "../../core/chat/session/state.js";
 
 interface RegisterChatRoutesOptions {
   server: FastifyInstance;
@@ -88,7 +89,13 @@ export async function registerChatRoutes(options: RegisterChatRoutesOptions): Pr
   // speech queue pick them up live.
   const registry = new ChatSessionRegistry(boxRoot, {
     ...(chatBackend !== undefined ? { backend: chatBackend } : {}),
-    buildSessionOptions: () => ({ includePartialMessages: true }),
+    buildSessionOptions: (sessionId) => ({
+      includePartialMessages: true,
+      // A fresh session inherits the legacy default once (field tests use it),
+      // then promotes that value into its native session-specific file.
+      modelFile: sessionId === null ? DEFAULT_MODEL_FILE : chatModelFileForSession(sessionId),
+      modelFileForSession: chatModelFileForSession,
+    }),
   });
   registry.startCleanup();
   if (prewarmChat === true) {

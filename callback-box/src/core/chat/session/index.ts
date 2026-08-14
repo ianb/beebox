@@ -78,7 +78,7 @@ export class ChatSession extends EventEmitter {
   private messageQueue: ChatSendInput[] = [];
   private readonly options: ChatSessionOptions;
   private readonly sessionFile: string | null;
-  private readonly modelFile: string;
+  private modelFile: string | null;
   private readonly backend: ChatBackend;
   private currentModel: string | null = null;
   /** Chat-feature flag state: lazy-loaded map plus persistence + change events. */
@@ -100,14 +100,14 @@ export class ChatSession extends EventEmitter {
     this.boxRoot = boxRoot;
     this.options = options;
     this.sessionFile = options.sessionFile === undefined ? DEFAULT_SESSION_FILE : options.sessionFile;
-    this.modelFile = options.modelFile ?? DEFAULT_MODEL_FILE;
+    this.modelFile = options.modelFile === undefined ? DEFAULT_MODEL_FILE : options.modelFile;
     this.backend = options.backend ?? createChatBackend();
     if (options.initialSessionId !== undefined) {
       this.sessionId = options.initialSessionId;
     } else {
       this.sessionId = loadSessionId(this.boxRoot, this.sessionFile);
     }
-    this.currentModel = loadCurrentModel(this.boxRoot, this.modelFile);
+    this.currentModel = this.modelFile === null ? null : loadCurrentModel(this.boxRoot, this.modelFile);
     this.features = new FeatureStore({
       boxRoot: this.boxRoot,
       getSessionId: () => this.sessionId,
@@ -241,6 +241,8 @@ export class ChatSession extends EventEmitter {
     const assigned = captureAssignedSessionId({ msg, current: this.sessionId, sessionFile: this.sessionFile, boxRoot: this.boxRoot, onAssigned: this.options.onSessionIdAssigned });
     if (assigned !== null) {
       this.sessionId = assigned;
+      this.modelFile = this.options.modelFileForSession?.(assigned) ?? this.modelFile;
+      if (this.modelFile !== null && this.currentModel !== null) saveCurrentModel(this.boxRoot, { modelFile: this.modelFile, model: this.currentModel });
       log("session", `Got session ID: ${assigned}`);
     }
     // Background-task events fire between turns (no per-turn SSE attached), so
@@ -375,7 +377,7 @@ export class ChatSession extends EventEmitter {
    */
   setModel(model: string | null): void {
     this.currentModel = model;
-    saveCurrentModel(this.boxRoot, { modelFile: this.modelFile, model });
+    if (this.modelFile !== null) saveCurrentModel(this.boxRoot, { modelFile: this.modelFile, model });
   }
 
   getCurrentModel(): string | null {

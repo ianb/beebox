@@ -10,7 +10,13 @@ fails with `EBADF`, so the chat agent could not start at all
 (`issues/bugs/2026-08-03-intermittent-spawn-ebadf-sdk-chat-run.md`).
 
 ```ts setup
-import { ensureBoxWatcher, closeBoxWatcher } from "../../../src/core/box/file-watcher.js";
+import {
+  ensureBoxWatcher,
+  closeBoxWatcher,
+  MAX_WATCHED_DIRS,
+  MAX_NOTIFICATION_WORK,
+  COALESCE_MS,
+} from "../../../src/core/box/file-watcher.js";
 import { createEventBus, type EventBus } from "../../../src/core/event-bus.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -83,7 +89,7 @@ const box = await makeTmpBox();
 const bus = createEventBus(box.root, { pollInterval: 60_000 });
 await seedTree(box.root, 4, 100);
 
-const watcher = ensureBoxWatcher(box.root, bus);
+const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
 await watcher.ready;
 
 watcher.watchedDirs().join(" ")
@@ -110,7 +116,7 @@ const bus = createEventBus(box.root, { pollInterval: 60_000 });
 await seedTree(box.root, 4, 100);
 
 const before = openFDs();
-const watcher = ensureBoxWatcher(box.root, bus);
+const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
 await watcher.ready;
 const grew = openFDs() - before;
 
@@ -136,7 +142,7 @@ await mkdir(join(box.root, "store"), { recursive: true });
 const seen: string[] = [];
 bus.subscribe({ listener: (e) => { if (e.event === "file-change") seen.push(String(e.data.path)); } });
 
-const watcher = ensureBoxWatcher(box.root, bus);
+const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
 await watcher.ready;
 await waitForWatch(box.root, bus, "store");
 
@@ -163,7 +169,7 @@ const box = await makeTmpBox();
 const bus = createEventBus(box.root, { pollInterval: 60_000 });
 await mkdir(join(box.root, "store"), { recursive: true });
 
-const watcher = ensureBoxWatcher(box.root, bus);
+const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
 await watcher.ready;
 await waitForWatch(box.root, bus, "store");
 
@@ -192,7 +198,7 @@ const box = await makeTmpBox();
 const bus = createEventBus(box.root, { pollInterval: 60_000 });
 await mkdir(join(box.root, "store", "Trip.attach", "old"), { recursive: true });
 
-const watcher = ensureBoxWatcher(box.root, bus);
+const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
 await watcher.ready;
 await waitForWatch(box.root, bus, "store");
 
@@ -227,7 +233,7 @@ await mkdir(join(box.root, "store"), { recursive: true });
 const seen: string[] = [];
 bus.subscribe({ listener: (e) => { if (e.event === "file-change") seen.push(String(e.data.path)); } });
 
-const watcher = ensureBoxWatcher(box.root, bus);
+const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
 await watcher.ready;
 await waitForWatch(box.root, bus, "store");
 
@@ -262,7 +268,7 @@ const bus = createEventBus(box.root, { pollInterval: 60_000 });
 await mkdir(join(box.root, "store"), { recursive: true });
 await mkdir(join(box.root, "procedure", "runs", "noisy"), { recursive: true });
 
-const watcher = ensureBoxWatcher(box.root, bus);
+const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
 await watcher.ready;
 await waitForWatch(box.root, bus, "store");
 
@@ -304,7 +310,7 @@ await mkdir(join(box.root, "store"), { recursive: true });
 const card = join(box.root, "store", "Note.memo.card");
 await writeFile(card, "---\nstatus: new\n---\nv1\n");
 
-const watcher = ensureBoxWatcher(box.root, bus);
+const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
 await watcher.ready;
 await waitForWatch(box.root, bus, "store");
 
@@ -354,7 +360,7 @@ await mkdir(join(box.root, "store", "trash", "old"), { recursive: true });
 await mkdir(join(box.root, "box", "inbox", "email", "thread.attach"), { recursive: true });
 await mkdir(join(box.root, "store", "keep"), { recursive: true });
 
-const watcher = ensureBoxWatcher(box.root, bus);
+const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
 await watcher.ready;
 
 watcher.watchedDirs().join(" ")
@@ -374,16 +380,20 @@ would normally open its own coalescing window, so this work is capped just like
 directory watches. Excess hints are deliberately dropped and the degradation is
 reported once; filesystem events are only a frontend freshness convenience.
 
+The watcher takes its bound from the caller, so this proves the boundary at 16
+rather than at the production 1,024 — see [the note on scale](#the-production-defaults-are-what-the-bounds-tests-scale-down-from)
+below for why the magnitude is not what carries the coverage.
+
 ```ts
 const box = await makeTmpBox();
 const bus = createEventBus(box.root, { pollInterval: 60_000 });
 await mkdir(join(box.root, "store"), { recursive: true });
 await mkdir(join(box.root, ".incoming"), { recursive: true });
-for (let i = 0; i < 1100; i++) {
+for (let i = 0; i < 64; i++) {
   await writeFile(join(box.root, ".incoming", `file-${i}.txt`), "x");
 }
 
-const watcher = ensureBoxWatcher(box.root, bus);
+const watcher = ensureBoxWatcher(box.root, { eventBus: bus, maxNotificationWork: 16 });
 await watcher.ready;
 await waitForWatch(box.root, bus, "store");
 
@@ -399,17 +409,13 @@ console.error = (...args: unknown[]) => {
 try {
   const { rename } = await import("node:fs/promises");
   await rename(join(box.root, ".incoming"), join(box.root, "store", "arrived"));
-  // The bounded reconcile still stats up to 1,024 files sequentially. Under
-  // six-way suite contention that can legitimately exceed five seconds, so
-  // keep polling for the outcome instead of imposing an interactive latency
-  // budget on this scale test.
-  await waitFor(() => capLogs.length === 1, 30_000, "the notification work limit");
+  await waitFor(() => capLogs.length === 1, 10_000, "the notification work limit");
   await watcher.settled();
 } finally {
   console.error = originalConsoleError;
 }
 
-`bounded: ${events <= 1025} | logs: ${capLogs.length} | named-limit: ${capLogs[0]?.includes("1,024") === true}`
+`bounded: ${events <= 20} | logs: ${capLogs.length} | named-limit: ${capLogs[0]?.includes("limit of 16 reached") === true}`
 => bounded: true | logs: 1 | named-limit: true
 ```
 
@@ -430,7 +436,7 @@ const nestedRoot = join(outer.root, ".container", "content");
 await mkdir(join(nestedRoot, "store"), { recursive: true });
 const bus = createEventBus(nestedRoot, { pollInterval: 60_000 });
 
-const watcher = ensureBoxWatcher(nestedRoot, bus);
+const watcher = ensureBoxWatcher(nestedRoot, { eventBus: bus });
 await watcher.ready;
 
 watcher.watchedDirs().join(" ")
@@ -449,11 +455,15 @@ An unexpectedly large imported tree must degrade live updates instead of
 allocating watchers until `cb serve` runs out of memory. Hitting the ceiling is
 reported exactly once, and the initial walk still resolves normally.
 
+The walk is breadth-first and sequential, so the watched set at the ceiling is
+exact rather than merely bounded: the root, `bulk`, and the first 14 of its
+children.
+
 ```ts
 const box = await makeTmpBox();
 const bus = createEventBus(box.root, { pollInterval: 60_000 });
 await mkdir(join(box.root, "bulk"), { recursive: true });
-for (let i = 0; i < 1100; i++) {
+for (let i = 0; i < 64; i++) {
   await mkdir(join(box.root, "bulk", `dir-${i}`));
 }
 
@@ -469,18 +479,38 @@ console.error = (...args: unknown[]) => {
 };
 let watcher: ReturnType<typeof ensureBoxWatcher>;
 try {
-  watcher = ensureBoxWatcher(box.root, bus);
+  watcher = ensureBoxWatcher(box.root, { eventBus: bus, maxWatchedDirs: 16 });
   await watcher.ready;
 } finally {
   console.error = originalConsoleError;
 }
 
-`bounded: ${watcher.watchedDirs().length === 1024} | logs: ${capLogs.length} | named-limit: ${capLogs[0]?.includes("1,024") === true}`
-=> bounded: true | logs: 1 | named-limit: true
+`watched: ${watcher.watchedDirs().length} | logs: ${capLogs.length} | named-limit: ${capLogs[0]?.includes("limit of 16 reached") === true}`
+=> watched: 16 | logs: 1 | named-limit: true
 ```
 
 ```ts cleanup
 await closeBoxWatcher(box.root);
 bus.close();
 await box.cleanup();
+```
+
+## The production defaults are what the bounds tests scale down from
+
+Both bounds above are proved at 16 because their production magnitude of 1,024
+buys nothing and costs a great deal. Materializing a 1,024-directory ceiling
+means opening and then closing 1,024 real `fs.watch` handles, and on macOS each
+`close()` is a blocking round-trip to libuv's single FSEvents run-loop thread —
+measured at roughly six seconds for 1,024 handles on a loaded machine, and
+super-linear in the count, against a fraction of a second idle. That is what
+made this file take 8 seconds alone and expire past tap's 300-second per-file
+limit under parallel suite load
+(`issues/bugs/2026-08-06-file-watcher-doctest-suite-timeout.md`). The number
+1,024 is a capacity decision about a real server, not a behavior of this module,
+so it is pinned here directly and the boundary logic is exercised where it is
+cheap.
+
+```ts
+`dirs: ${MAX_WATCHED_DIRS} | notifications: ${MAX_NOTIFICATION_WORK} | coalesce: ${COALESCE_MS}`
+=> dirs: 1024 | notifications: 1024 | coalesce: 50
 ```

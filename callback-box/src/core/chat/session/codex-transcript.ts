@@ -6,9 +6,12 @@ import { CodexAppServer } from "../../../services/codex-app-server.js";
 import { CodexRpcError } from "../../../services/codex-app-server.js";
 import type { SessionEntry, SessionLogSlice } from "../../../cli/lib/session.js";
 import { userIdentity } from "../../../cli/lib/session-entry.js";
+import * as path from "node:path";
+import * as fs from "node:fs";
 
 const threadReadSchema = z.object({
   thread: z.looseObject({
+    cwd: z.string(),
     updatedAt: z.number(),
     turns: z.array(z.looseObject({
       id: z.string(),
@@ -92,10 +95,26 @@ async function withSharedServer<T>(boxRoot: string, operation: (server: CodexApp
 }
 
 async function readThread(boxRoot: string, sessionId: string): Promise<unknown> {
-  return withSharedServer(boxRoot, (server) => server.request({
+  const raw = await withSharedServer(boxRoot, (server) => server.request({
     method: "thread/read",
     params: { threadId: sessionId, includeTurns: true },
   }));
+  assertCodexThreadCwd(boxRoot, threadReadSchema.parse(raw).thread.cwd);
+  return raw;
+}
+
+export class CodexSessionOutsideBoxError extends Error {
+  constructor() {
+    super("Codex session belongs to a working directory outside this box");
+    this.name = "CodexSessionOutsideBoxError";
+  }
+}
+
+/** `thread/read` accepts any known ID, so enforce the box boundary ourselves. */
+export function assertCodexThreadCwd(boxRoot: string, threadCwd: string): void {
+  const relative = path.relative(fs.realpathSync(boxRoot), fs.realpathSync(threadCwd));
+  if (relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative))) return;
+  throw new CodexSessionOutsideBoxError();
 }
 
 function timestamp(seconds: number | null): string {

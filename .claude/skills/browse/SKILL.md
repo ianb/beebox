@@ -8,7 +8,8 @@ allowed-tools: Bash(bin/browse:*), Bash(pnpm verify-help:*), Bash(pnpm --filter 
 
 `bin/browse` is this monorepo's wrapper around the upstream `agent-browser` Chromium CLI. It adds:
 
-- **Worktree-aware URL rewriting** — `bin/browse open /dashboard` resolves to `http://localhost:3210/<this-worktree>/<box>/dashboard`.
+- **Worktree-aware URL rewriting** — `bin/browse open /dashboard` resolves to `http://localhost:3210/<this-worktree>/<box>/dashboard`. **The worktree and box are added for you — write the app path only.** `open /test1/chats` doubles the box and silently lands on some other page instead of erroring.
+- **Authenticated navigation** — it seeds the browse-key cookie so pages, fetches, and the WebSocket all carry one credential. See [Auth](#auth-why-a-navigation-lands-on-the-login-page) when you hit a login page.
 - **Per-worktree isolated daemons** — each worktree runs its own `agent-browser` daemon with its own Chrome profile (cookies, history, login state). No cross-worktree leakage. Backed by `AGENT_BROWSER_SOCKET_DIR` and `AGENT_BROWSER_PROFILE` env vars rooted at `~/.cache/callback-box/browse/<worktree>/`.
 - **Per-worktree dashboard** — the dev router auto-starts an `agent-browser dashboard` per worktree on its own port. Find the URL via `bin/workstreams status` (`.worktrees[<wt>].dashboardUrl`) or the "dashboard ↗" link on the router home page at `http://localhost:3210/`.
 - **Self-describing screenshots** — `bin/browse screenshot` writes a sidecar `<image>.json` with the URL/title/timestamp/worktree so the file alone tells you what it captured.
@@ -38,6 +39,7 @@ bin/browse snapshot -i       # 4. Re-snapshot — refs are stale after page chan
 ```bash
 # Navigation
 bin/browse open /chats                          # → http://localhost:3210/<wt>/<box>/chats
+bin/browse open /test1/chats                    # WRONG — doubles the box, lands elsewhere silently
 bin/browse open https://example.com             # bare URL passes through unchanged
 bin/browse back / forward / reload
 
@@ -124,6 +126,51 @@ passing arm once the failing one has actually failed.
 
 First request to a worktree spins up Vite + a `cb hub` (~4s cold); the hub then lazy-starts the specific box's `cb serve` child on its first request. Subsequent calls are fast. The dev router lazy-shuts idle worktrees after 5 minutes.
 
+## Auth — why a navigation lands on the login page
+
+Dev auth is always on: every TCP request to the router authenticates. `bin/browse` handles this for you by reading `CB_BROWSE_API_KEY` from this checkout's gitignored `callback-box/.env` and seeding it as a cookie in the worktree's isolated Chrome profile. When it works you never think about it.
+
+When you land on `/auth/login`, work through these in order. **The first two are far more common than a bad key**, so check them before touching credentials.
+
+**1. Did you write the box slug into the path?** `open /test1/chats` becomes `/<wt>/test1/test1/chats`, which resolves to no route. You get redirected somewhere plausible rather than an error. Write `open /chats`.
+
+**2. Are you asking for something the key doesn't grant?** The browse key authenticates **box routes** — `/<worktree>/<box>/…`. It does *not* grant the router's own surfaces:
+
+| path | what authenticates it |
+|---|---|
+| `/<wt>/<box>/…` | browse key ✅ |
+| `/` (worktree index) | owner session only |
+| `/__router/…` (control routes) | owner session only |
+| `/<wt>/dev/…` | owner session only |
+
+A navigation denied at those returns 401, which the router renders as the login page — so "I got the login page" does not by itself mean your key is wrong.
+
+**3. Is the key live in the running router?** One probe answers it, and it must use the **cookie** form against a **box route**:
+
+```bash
+KEY=$(grep '^CB_BROWSE_API_KEY=' callback-box/.env | cut -d= -f2-)
+curl -s -o /dev/null -w '%{http_code}\n' \
+  -H "Cookie: cb_browse_key=$KEY" http://localhost:3210/main/test1/
+# 200 → the router has this key. 401 → it doesn't.
+```
+
+**Do not probe with `Authorization: Bearer`.** The router's gate accepts the key only as a cookie and returns 401 for a bearer header *even when the key is correct* — so a bearer probe produces a false "the key is rejected" every time. (`core/browse-key.ts` documents both forms because the box wall and hub accept both; the dev router does not.)
+
+**4. Does this worktree's `.env` have the key at all?** The WorktreeCreate hook copies main's `.env` into new worktrees, but worktrees created before that existed don't have it:
+
+```bash
+grep -c '^CB_BROWSE_API_KEY=' callback-box/.env    # 0 means that's your problem
+grep -v '^BOXES=' ../../callback-box/callback-box/.env > callback-box/.env
+```
+
+Copy it **minus `BOXES=`** — that line points at the real boxes, and a worktree that inherits it serves those instead of its own clone.
+
+**5. Only then suspect the value.** The key is machine-wide: one router fronts every worktree, and it loads main's `.env` **at startup**. A worktree with a different key passes its own children and is refused at the router; a key edited after the router started needs a `pnpm dev` restart, which is the boxholder's call — never restart the shared router from a worktree session.
+
+A one-off override without touching any file: `CB_BROWSE_API_KEY=… bin/browse open /`.
+
+**No key set at all is not an error.** browse proceeds unauthenticated and you land on the login page — which is the honest signal, not a malfunction.
+
 ## Screenshots — what the sidecar buys
 
 Every `bin/browse screenshot` writes `<image>.json`:
@@ -175,3 +222,6 @@ bin/browse --session b fill @e3 "bob@test.com"
 - **"tsx not found in browse/node_modules"** — run `pnpm install` in `browse/`.
 - **First request hangs ~4s** — cold start for the worktree's dev server. Normal.
 - **Refs from a prior snapshot don't work** — page changed (navigation, viewport, dialog). Re-snapshot.
+- **You land on `/auth/login`** — work [Auth](#auth-why-a-navigation-lands-on-the-login-page) in order. Usually a box slug written into the path, or a request for an owner-session-only surface — not a bad key.
+- **You navigated somewhere you didn't ask for** — check `bin/browse get url` before concluding anything about the page. A path that resolves to no route redirects rather than erroring, so a typo reads as "the app is behaving strangely."
+- **A stray Chrome is eating CPU after a session ends** — `bin/workstreams panic` reclaims agent-browser's tracked daemons. It matches the daemon binary under `node_modules/agent-browser/`, so a Chrome launched by hand from `~/.agent-browser/browsers/` is invisible to it and must be killed with `ps` + `kill`. Another reason to drive through `bin/browse` rather than the browser binary.
