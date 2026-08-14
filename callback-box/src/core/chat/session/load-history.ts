@@ -22,6 +22,8 @@ import {
   type SessionLogSlice,
 } from "../../../cli/lib/session.js";
 import { errnoCode } from "../../../lib/error-guards.js";
+import { resolveChatEngine } from "./engine.js";
+import { readCodexSessionHistory } from "./codex-transcript.js";
 
 // Re-exported so callers of the loader name their slice from the same module.
 export type { SessionLogSlice } from "../../../cli/lib/session.js";
@@ -156,6 +158,12 @@ export async function loadSessionHistory(
   const { sessionId, slice, fresh = false } = opts;
   if (!sessionId) {
     return { sessionId: null, entries: [], total: 0 };
+  }
+
+  if (await resolveChatEngine(boxRoot, sessionId) === "codex") {
+    const { entries, total } = await readCodexSessionHistory({ boxRoot, sessionId, slice });
+    Object.freeze(entries);
+    return { sessionId, entries, total };
   }
 
   const logPath = await resolveSessionLogPath(boxRoot, sessionId);
