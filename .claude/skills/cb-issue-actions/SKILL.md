@@ -1,5 +1,5 @@
 ---
-name: issue-actions
+name: cb-issue-actions
 description: Work the issue queue's `next-action:` tags — provisional agent tasks (reconfirm, duplicate, invalid, fixed) that ask you to verify a suspected outcome and apply it only when evidence confirms it. Use when the human says "work the next actions", "go through the reconfirms", "check the issues tagged fixed", "triage the queue", or when you want to find issues an agent can resolve without a decision. Includes extraction scripts. Conventions in issues/CLAUDE.md.
 ---
 
@@ -11,9 +11,12 @@ line of `issues/CLAUDE.md`:
 
 > A matching tag is not permission to close blindly.
 
+Read every value with the question mark the UI shows — **"fixed?"**,
+**"reconfirm?"**. Nothing here is asserted. It is what Ian thinks is *likely*
+and wants confirmed properly.
+
 Your job is to **produce evidence**, then act on what the evidence says — which
-is often the opposite of what the tag guesses. The browser renders these values
-with question marks for exactly that reason.
+is often the opposite of what the tag guesses.
 
 Second rule, equally load-bearing:
 
@@ -81,9 +84,19 @@ Issues get filed on a misread of the code, and they also get filed correctly and
 then misjudged as invalid. If the premise fails, close with `resolution: wontfix`
 and say what was actually true.
 
-**`fixed` — is the reported behavior already resolved?** Reproduce it. A commit
-that *looks* like the fix is not evidence it worked; verify the behavior. Then
-close with `resolution: implemented` naming the resolving commit.
+**`fixed` — is the reported behavior already resolved?** Usually this means:
+*the work probably happened, there is evidence in git, and the issue just got
+lost.* So **search history first** — the fix commonly landed under a different
+description, inside a larger change, or in a workstream that never closed the
+item:
+
+```bash
+git log --oneline -S'<a distinctive symbol or string from the issue>' -- <path>
+git log --oneline --since='<issue date>' -- <the file the issue names>
+```
+
+Then confirm the behavior rather than trusting a commit that reads like the fix.
+Close with `resolution: implemented` naming the resolving commit.
 
 ## Verification bar
 
@@ -96,9 +109,15 @@ the evidence to the claim:
   tracked-flake protocol in `.claude/agents/finish.md`.
 - **Anything needing a real device, a phone, live credentials, or a human eye is
   not yours to confirm.** That is what `needs: [manual-testing]` exists for, and
-  **only Ian clears it.** A `next-action: fixed` on an issue that also carries
-  `needs: [manual-testing]` does **not** override it: verify what you can,
-  report, and leave the flag.
+  **only Ian clears it.**
+
+**`needs: [manual-testing]` plus `fixed` or `reconfirm` → check in with Ian.**
+Don't resolve those alone and don't silently skip them. The two tags together
+mean the code side is believed done while the confirming evidence is the kind
+only he can produce, so the useful move is to bring him the specific question:
+what you verified, what remains unverifiable from here, and the smallest thing
+he could do to settle it. Narrowing a written multi-step protocol down to one
+action is often the whole contribution.
 
 When you cannot settle it, that is a legitimate outcome. Remove the field, write
 what you checked and what would settle it, and move on. An issue that has been
