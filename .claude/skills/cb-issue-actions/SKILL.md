@@ -67,22 +67,47 @@ done | sort
 
 ## What each value asks of you
 
-**`reconfirm` — is this still live?** The most common tag and the most open. Read
-the issue, then check the current tree: has the code changed, did another
-workstream fix it incidentally, does the described behavior still reproduce? A
-flake tagged `reconfirm` needs a real run, not a reading. Outcome is usually
-"still live, field removed" or "resolved by X, closed".
+**`reconfirm` — two questions, in order.** The most common tag, and it is
+`fixed` and `invalid` stacked:
 
-**`duplicate` — does another issue own this work?** Find the other issue and
-compare *scope*, not titles. Two issues about the same symptom with different
-root causes are not duplicates. If it is one: close this one with
-`resolution: superseded`, note the surviving issue, and make sure anything
-unique here is carried over first — a duplicate often has the better repro.
+1. **Was it explicitly fixed?** Do the `fixed` search below — git history first.
+2. **If not obviously fixed, is it still an issue at all?** It may be **moot**:
+   the surrounding code changed, the feature moved, the situation that produced
+   it no longer exists.
 
-**`invalid` — does the premise hold?** Check the claim, not the conclusion.
-Issues get filed on a misread of the code, and they also get filed correctly and
-then misjudged as invalid. If the premise fails, close with `resolution: wontfix`
-and say what was actually true.
+Three outcomes: fixed → close `implemented` naming the commit; moot → close
+`wontfix` saying what made it moot; still live → remove the field and record what
+you checked, so the next pass starts further along. A flake tagged `reconfirm`
+needs a real run, not a reading.
+
+**`duplicate` — does another issue own this work?** Compare *scope*, not titles.
+Two issues about the same symptom with different root causes are not duplicates.
+
+**Search `closed/` too.** A duplicate of an already-closed issue means this one
+closes as well — the work is done, the item just outlived it.
+
+When it is a duplicate: **merge the details into one issue first**, then close
+this one `superseded` with a reference to the survivor. Do the merge before the
+move; a duplicate often carries the better reproduction, the sharper `file:line`
+pointers, or a second sighting that matters as evidence. Losing that is the real
+cost of a careless dedup.
+
+**Ask Ian** when merging looks lossy, or when the merged result would be an
+oversized issue covering too much. Two focused issues can beat one sprawling
+one, and that is his call rather than yours.
+
+**`invalid` — is this moot?** Mostly Ian asking whether the issue still applies:
+it describes a situation, a file, or a behavior that no longer exists. Check
+whether the thing it is about is still there at all before assessing the claim.
+
+Two ways an issue can be invalid, and they get different closing notes:
+
+- **Moot** — it was true and the world moved. Say what changed.
+- **Never held** — filed on a misread. Say what was actually true, so the same
+  misread doesn't get filed again.
+
+Both close `wontfix`. And issues do get filed correctly and *then* misjudged as
+invalid, so confirm before closing — the tag is a question.
 
 **`fixed` — is the reported behavior already resolved?** Usually this means:
 *the work probably happened, there is evidence in git, and the issue just got
