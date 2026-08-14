@@ -70,6 +70,9 @@ async function readHookFilePaths(): Promise<string[]> {
 
 export async function validateHookPath(fp: string): Promise<string | null> {
   if (!existsSync(fp)) return null;
+  if (/tricks\/scripts\/[^/]+\.ts$/.test(fp)) {
+    return "Trick scripts must be in a subdirectory: tricks/scripts/<name>/index.ts, not directly in tricks/scripts/";
+  }
   if (isClaudeMdFile(fp)) {
     const boxRoot = await requireBoxRoot();
     return lintClaudeMdFile(boxRoot, fp);

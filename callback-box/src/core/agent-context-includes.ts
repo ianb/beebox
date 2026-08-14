@@ -6,6 +6,16 @@ import { errnoCode } from "../lib/error-guards.js";
 
 const INCLUDE_PATTERN = /^@(.+\.md)\s*$/gm;
 
+export class UnsafeAgentContextIncludeError extends Error {
+  readonly specifier: string;
+
+  constructor(specifier: string) {
+    super("Agent context include must stay inside the box package");
+    this.name = "UnsafeAgentContextIncludeError";
+    this.specifier = specifier;
+  }
+}
+
 async function readIfPresent(path: string): Promise<string | null> {
   try {
     return await readFile(path, "utf8");
@@ -27,10 +37,12 @@ export async function expandClaudeIncludes(options: {
     if (content === null) return;
     for (const match of content.matchAll(INCLUDE_PATTERN)) {
       const specifier = match[1];
-      if (specifier === undefined || isAbsolute(specifier)) continue;
+      if (specifier === undefined) continue;
+      if (isAbsolute(specifier)) throw new UnsafeAgentContextIncludeError(specifier);
       const included = resolve(dirname(path), specifier);
       const rel = relative(options.packageRoot, included);
-      if (rel.startsWith("..") || isAbsolute(rel) || seen.has(included)) continue;
+      if (rel.startsWith("..") || isAbsolute(rel)) throw new UnsafeAgentContextIncludeError(specifier);
+      if (seen.has(included)) continue;
       seen.add(included);
       const includedContent = await readIfPresent(included);
       if (includedContent === null) continue;

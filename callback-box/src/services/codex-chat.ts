@@ -24,6 +24,7 @@ const itemSchema = z.looseObject({
   threadId: z.string(),
   turnId: z.string(),
   item: z.looseObject({
+    id: z.string(),
     type: z.string(),
     text: z.string().optional(),
     phase: z.enum(["commentary", "final_answer"]).nullable().optional(),
@@ -48,6 +49,13 @@ class CodexChatNotInitializedError extends Error {
   constructor() {
     super("Codex chat thread was not initialized");
     this.name = "CodexChatNotInitializedError";
+  }
+}
+
+class CodexChatTurnTimeoutError extends Error {
+  constructor() {
+    super("Codex chat turn did not complete before the timeout");
+    this.name = "CodexChatTurnTimeoutError";
   }
 }
 
@@ -96,7 +104,17 @@ function waitForTurn(options: {
 }): Promise<void> {
   const changedPaths = new Set<string>();
   let usage: CodexTokenUsage | null = null;
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      remove();
+      removeExit();
+      reject(new CodexChatTurnTimeoutError());
+    }, 600_000);
+    const removeExit = options.server.onExit((error) => {
+      clearTimeout(timer);
+      remove();
+      reject(error);
+    });
     const remove = options.server.onNotification((notification) => {
       if (notification.method === "thread/tokenUsage/updated") {
         const parsed = tokenUsageSchema.safeParse(notification.params);
@@ -111,6 +129,7 @@ function waitForTurn(options: {
           options.queue.push(event({
             type: "assistant",
             session_id: options.threadId,
+            uuid: item.id,
             message: { role: "assistant", content: [{ type: "text", text: item.text }] },
           }));
         }
@@ -124,6 +143,8 @@ function waitForTurn(options: {
       if (!parsed.success || parsed.data.turn.id !== options.turnId) return;
       if (parsed.data.turn.status === "inProgress") return;
       remove();
+      removeExit();
+      clearTimeout(timer);
       options.setActiveTurn(null);
       void Promise.all([
         validateHookPaths([...changedPaths]),
@@ -150,7 +171,7 @@ function waitForTurn(options: {
           : { result: `Callback Box validation failed:\n${validationFeedback}` }),
         }));
         resolve();
-      });
+      }).catch(reject);
     });
   });
 }
@@ -161,6 +182,7 @@ function createRun(opts: ChatBackendStartOptions): ChatBackendRun {
   let activeTurnId: string | null = null;
   let threadId: string | null = null;
   let boxRoot: string | null = null;
+  let initializationError: unknown = null;
   let chain = ensureCodexPluginInstalled().then(async () => {
     boxRoot = await findBoxRoot(opts.cwd);
     const included = boxRoot === null ? "" : await expandClaudeIncludes({
@@ -174,6 +196,17 @@ function createRun(opts: ChatBackendStartOptions): ChatBackendRun {
       systemPrompt: [opts.systemPrompt, included].filter(Boolean).join("\n\n"),
     });
     queue.push(event({ type: "system", subtype: "init", session_id: threadId }));
+  }).catch((error: unknown) => {
+    initializationError = error;
+    queue.push(event({
+      type: "result",
+      subtype: "failed",
+      session_id: opts.resumeSessionId ?? "",
+      is_error: true,
+      duration_ms: 0,
+      num_turns: 0,
+      result: errorText(error),
+    }));
   });
   const run: ChatBackendRun = {
     closed: false,
@@ -181,6 +214,7 @@ function createRun(opts: ChatBackendStartOptions): ChatBackendRun {
     send(content): void {
       if (run.closed) return;
       chain = chain.then(async () => {
+        if (initializationError !== null) return;
         if (threadId === null) throw new CodexChatNotInitializedError();
         queue.push(event({ type: "user", session_id: threadId, message: { role: "user", content } }));
         if (server === null) throw new CodexChatNotInitializedError();

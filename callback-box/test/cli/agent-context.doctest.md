@@ -24,10 +24,10 @@ await writeFile(join(root, "content/briefing.md"), "# Briefing\n");
 => true
 ```
 
-Absolute and package-escaping includes are ignored:
+Absolute and package-escaping includes fail visibly:
 
 ```ts
 await writeFile(join(root, "content/CLAUDE.md"), "@/tmp/private.md\n@../../private.md\n");
 await expandClaudeIncludes({ claudePath: join(root, "content/CLAUDE.md"), packageRoot: root })
-=>
+=> throws UnsafeAgentContextIncludeError: Agent context include must stay inside the box package
 ```

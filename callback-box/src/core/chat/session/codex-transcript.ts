@@ -22,15 +22,79 @@ const threadReadSchema = z.object({
   }),
 });
 
-async function readThread(boxRoot: string, sessionId: string): Promise<unknown> {
-  await ensureCodexPluginInstalled();
+const threadListSchema = z.object({
+  data: z.array(z.looseObject({
+    id: z.string(),
+    preview: z.string(),
+    updatedAt: z.number(),
+  })),
+  nextCursor: z.string().nullable(),
+});
+
+export interface CodexThreadMetadata {
+  id: string;
+  preview: string;
+  updatedAt: Date;
+}
+
+interface SharedServer {
+  server: CodexAppServer;
+  ready: Promise<void>;
+  chain: Promise<void>;
+  idleTimer: NodeJS.Timeout | null;
+}
+
+const sharedServers = new Map<string, SharedServer>();
+const IDLE_CLOSE_MS = 30_000;
+
+function sharedServer(boxRoot: string): SharedServer {
+  const existing = sharedServers.get(boxRoot);
+  if (existing !== undefined) return existing;
   const server = new CodexAppServer({ cwd: boxRoot });
-  try {
-    await server.initialize();
-    return await server.request({ method: "thread/read", params: { threadId: sessionId, includeTurns: true } });
-  } finally {
-    server.close();
-  }
+  const entry: SharedServer = {
+    server,
+    ready: server.initialize(),
+    chain: Promise.resolve(),
+    idleTimer: null,
+  };
+  server.onExit(() => sharedServers.delete(boxRoot));
+  sharedServers.set(boxRoot, entry);
+  return entry;
+}
+
+async function withSharedServer<T>(boxRoot: string, operation: (server: CodexAppServer) => Promise<T>): Promise<T> {
+  await ensureCodexPluginInstalled();
+  const entry = sharedServer(boxRoot);
+  if (entry.idleTimer !== null) clearTimeout(entry.idleTimer);
+  const result = entry.chain.then(async () => {
+    try {
+      await entry.ready;
+      return await operation(entry.server);
+    } catch (error) {
+      sharedServers.delete(boxRoot);
+      entry.server.close();
+      throw error;
+    }
+  });
+  const settled = result.then(() => {}, () => {});
+  entry.chain = settled;
+  await result.finally(() => {
+    if (entry.chain !== settled) return;
+    entry.idleTimer = setTimeout(() => {
+      if (sharedServers.get(boxRoot) !== entry) return;
+      sharedServers.delete(boxRoot);
+      entry.server.close();
+    }, IDLE_CLOSE_MS);
+    entry.idleTimer.unref();
+  });
+  return result;
+}
+
+async function readThread(boxRoot: string, sessionId: string): Promise<unknown> {
+  return withSharedServer(boxRoot, (server) => server.request({
+    method: "thread/read",
+    params: { threadId: sessionId, includeTurns: true },
+  }));
 }
 
 function timestamp(seconds: number | null): string {
@@ -104,6 +168,40 @@ export async function readCodexSessionUpdatedAt(boxRoot: string, sessionId: stri
   return new Date(threadReadSchema.parse(raw).thread.updatedAt * 1000);
 }
 
+/** List native metadata in one paginated RPC sequence for chat-picker rendering. */
+export async function listCodexThreadMetadata(
+  boxRoot: string,
+  cwds: string[],
+): Promise<Map<string, CodexThreadMetadata>> {
+  return withSharedServer(boxRoot, async (server) => {
+    const threads = new Map<string, CodexThreadMetadata>();
+    let cursor: string | null = null;
+    do {
+      const raw = await server.request({
+        method: "thread/list",
+        params: {
+          cursor,
+          limit: 100,
+          sortKey: "updated_at",
+          sortDirection: "desc",
+          cwd: cwds,
+          useStateDbOnly: true,
+        },
+      });
+      const page = threadListSchema.parse(raw);
+      for (const thread of page.data) {
+        threads.set(thread.id, {
+          id: thread.id,
+          preview: thread.preview,
+          updatedAt: new Date(thread.updatedAt * 1000),
+        });
+      }
+      cursor = page.nextCursor;
+    } while (cursor !== null);
+    return threads;
+  });
+}
+
 export async function codexSessionExists(boxRoot: string, sessionId: string): Promise<boolean> {
   try {
     await readThread(boxRoot, sessionId);
@@ -115,12 +213,7 @@ export async function codexSessionExists(boxRoot: string, sessionId: string): Pr
 }
 
 export async function deleteCodexSession(boxRoot: string, sessionId: string): Promise<void> {
-  await ensureCodexPluginInstalled();
-  const server = new CodexAppServer({ cwd: boxRoot });
-  try {
-    await server.initialize();
+  await withSharedServer(boxRoot, async (server) => {
     await server.request({ method: "thread/delete", params: { threadId: sessionId } });
-  } finally {
-    server.close();
-  }
+  });
 }

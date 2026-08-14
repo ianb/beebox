@@ -268,6 +268,15 @@ export async function runCodexAgent(options: CodexRunOptions): Promise<AgentResu
       maxTurns: options.maxTurns ?? 20,
       onOutput: options.onOutput,
     });
+    await recordCodexAgentUsage({
+      boxRoot: options.boxRoot,
+      threadId,
+      turnId,
+      task: options.task,
+      model: options.model,
+      usage: completed.usage,
+      onOutput: options.onOutput,
+    });
     const validationFeedback = await validateHookPaths(completed.changedPaths);
     if (validationFeedback !== null) {
       const output = [completed.output, `Callback Box validation failed:\n${validationFeedback}`]
@@ -282,15 +291,6 @@ export async function runCodexAgent(options: CodexRunOptions): Promise<AgentResu
         sessionId: threadId,
       };
     }
-    await recordCodexAgentUsage({
-      boxRoot: options.boxRoot,
-      threadId,
-      turnId,
-      task: options.task,
-      model: options.model,
-      usage: completed.usage,
-      onOutput: options.onOutput,
-    });
     let structuredOutput: unknown;
     if (options.outputSchema !== undefined && completed.status === "completed") {
       structuredOutput = JSON.parse(completed.resultText);

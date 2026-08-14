@@ -43,13 +43,15 @@ export async function readCodexTurnUsage(boxRoot: string): Promise<CodexTurnUsag
     throw error;
   }
   const entries: CodexTurnUsage[] = [];
-  for (const line of content.split("\n")) {
+  for (const [index, line] of content.split("\n").entries()) {
     if (line.trim() === "") continue;
     try {
       const parsed = codexTurnUsageSchema.safeParse(JSON.parse(line));
       if (parsed.success) entries.push(parsed.data);
-    } catch (_error) {
+      else console.warn(`Codex usage ledger line ${String(index + 1)} has an unsupported shape; skipping it.`);
+    } catch (error) {
       // A partial final append must not hide earlier durable usage entries.
+      console.warn(`Codex usage ledger line ${String(index + 1)} is malformed; skipping it:`, error);
     }
   }
   return entries;

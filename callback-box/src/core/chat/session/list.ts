@@ -20,9 +20,9 @@ import { resolveSessionLabel } from "../session-label.js";
 import { errnoCode } from "../../../lib/error-guards.js";
 import { mapInBatches, mapInBatchesSettled } from "../../../lib/map-batched.js";
 import { loadHistoryEntries, type SessionHistoryEntry } from "./history.js";
-import { loadSessionHistory } from "./load-history.js";
-import { readCodexSessionUpdatedAt } from "./codex-transcript.js";
+import { listCodexThreadMetadata, type CodexThreadMetadata } from "./codex-transcript.js";
 import type { AgentEngine } from "../../box/config.js";
+import * as path from "node:path";
 
 /**
  * Chats resolved at once — see {@link mapInBatchesSettled}. `resolveSessionLabel`
@@ -52,6 +52,8 @@ export interface ChatSessionEntry {
   logPath: string;
   /** The husk's editorial `title`, when it has one. Free — it rode the husk. */
   title: string | undefined;
+  /** Native first-message preview used only for Codex picker labels. */
+  nativePreview?: string | undefined;
 }
 
 /** A chat as a *list* shows it — an entry plus its display name. */
@@ -75,9 +77,22 @@ export interface ChatSessionRow extends ChatSessionEntry {
 export async function listSessionEntries(boxRoot: string): Promise<ChatSessionEntry[]> {
   const [husks, history] = await Promise.all([listChatHusks(boxRoot), loadHistoryEntries(boxRoot)]);
   const historyById = new Map(history.map((entry) => [entry.id, entry]));
+  const codexCwds = husks
+    .filter((husk) => historyById.get(husk.session)?.engine === "codex")
+    .map((husk) => husk.contextDir === undefined || husk.contextDir === ""
+      ? boxRoot
+      : path.join(boxRoot, husk.contextDir));
+  const codexThreads = codexCwds.length === 0
+    ? new Map<string, CodexThreadMetadata>()
+    : await listCodexThreadMetadata(boxRoot, [...new Set(codexCwds)]);
   const settled = await mapInBatchesSettled(husks, {
     size: READ_CONCURRENCY,
-    map: (husk) => loadSessionEntry({ boxRoot, husk, history: historyById.get(husk.session) }),
+    map: (husk) => loadSessionEntry({
+      boxRoot,
+      husk,
+      history: historyById.get(husk.session),
+      codexMetadata: codexThreads.get(husk.session),
+    }),
   });
   const entries: ChatSessionEntry[] = [];
   for (const [i, outcome] of settled.entries()) {
@@ -106,7 +121,7 @@ export async function loadAllSessions(boxRoot: string): Promise<ChatSessionRow[]
     map: async (entry) => ({
       ...entry,
       label: entry.engine === "codex"
-        ? await codexSessionLabel(boxRoot, entry)
+        ? codexSessionLabel(entry)
         : await resolveSessionLabel({ sessionId: entry.sessionId, logPath: entry.logPath, title: entry.title }),
     }),
   });
@@ -117,15 +132,19 @@ async function loadSessionEntry(options: {
   boxRoot: string;
   husk: ChatHuskEntry;
   history: SessionHistoryEntry | undefined;
+  codexMetadata: CodexThreadMetadata | undefined;
 }): Promise<ChatSessionEntry | null> {
-  const { boxRoot, husk, history } = options;
+  const { boxRoot, husk, history, codexMetadata } = options;
   const engine = history?.engine ?? "claude";
   const logPath = huskTranscriptPath(boxRoot, husk);
   let mtime: Date;
   try {
-    mtime = engine === "codex"
-      ? await readCodexSessionUpdatedAt(boxRoot, husk.session)
-      : (await fs.stat(logPath)).mtime;
+    if (engine === "codex") {
+      if (codexMetadata === undefined) return null;
+      mtime = codexMetadata.updatedAt;
+    } else {
+      mtime = (await fs.stat(logPath)).mtime;
+    }
   } catch (e) {
     if (errnoCode(e) !== "ENOENT") {
       // Not "the transcript was cleaned up" — the file may well be there and
@@ -145,17 +164,13 @@ async function loadSessionEntry(options: {
     huskPath: husk.path,
     logPath,
     title: husk.title,
+    ...(codexMetadata === undefined ? {} : { nativePreview: codexMetadata.preview }),
   };
 }
 
-async function codexSessionLabel(boxRoot: string, entry: ChatSessionEntry): Promise<string> {
+function codexSessionLabel(entry: ChatSessionEntry): string {
   if (entry.title !== undefined && entry.title !== "") return entry.title;
-  const history = await loadSessionHistory(boxRoot, {
-    sessionId: entry.sessionId,
-    slice: { mode: "page", offset: 0, limit: 1 },
-  });
-  return history.entries[0]?.content.find((block) => block.type === "text")?.text?.slice(0, 400)
-    ?? entry.sessionId.slice(0, 8);
+  return entry.nativePreview?.slice(0, 400) || entry.sessionId.slice(0, 8);
 }
 
 /**

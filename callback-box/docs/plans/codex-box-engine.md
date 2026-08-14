@@ -92,8 +92,8 @@ Resumed chats use their stored engine regardless of later config changes.
 native process must continue to own tools, approvals, sandboxing, sessions, and auth.
 
 **Direction:** Use JSON-RPC over stdio with Zod-validated responses and notifications.
-Map cwd, writable roots, model, images, structured output, resume, interrupt, and final
-status into existing Callback Box contracts. Count completed tool items to approximate
+Map cwd, writable roots, model, chat images, structured output, resume, interrupt, and
+final status into existing Callback Box contracts. Count completed tool items to approximate
 `maxTurns`. Report that Codex cannot enforce `maxBudgetUsd`.
 
 ### Track 3 — Read native transcripts through supported APIs
@@ -134,7 +134,10 @@ component, and path-scoped rules belong to the box package rather than the insta
 harness package. The generated rule skills are therefore the one copied surface. Their
 headers name the canonical source, and normal agents do not edit them.
 
-The Claude plugin runs Callback Box validation through native PostToolUse hooks. The
+The Claude plugin runs Callback Box validation through native PostToolUse hooks. This
+replaces the prior in-process SDK validator for Agent SDK turns, adds subprocess startup
+per edit, and changes findings from advisory context to a failed validation hook. The
+shared validator retains the special `tricks/scripts/<name>/index.ts` layout rule. The
 Codex plugin does the same for ordinary CLI sessions. Current Codex app-server sessions
 did not execute installed or project-local hooks, even with hook trust bypassed. The
 app-server adapter therefore consumes completed `fileChange` items and runs the same
@@ -171,8 +174,8 @@ adapter architecture itself.
 |---|---|---|
 | Unknown `agentEngine` | Config doctest rejects it and names allowed values. | Clear |
 | Codex executable, login, or quota unavailable | App-server startup/turn error becomes a failed job or chat turn. No fallback. | Clear |
-| App-server response shape changes | Zod boundary rejects required records. | Clear |
-| Native session is missing | Availability check reports the chat unavailable. | Clear |
+| App-server response shape changes | Zod rejects required records; unknown server requests receive JSON-RPC method-not-found and are logged. | Clear |
+| Native session is missing | Availability maps Codex's current native missing-thread errors to unavailable; other RPC failures remain visible errors. | Clear |
 | Sandbox escapes configured roots | Real negative probe denied an outside write. | Clear |
 | Interrupt leaves work running | Real probe interrupted a delayed write; the file was not created. | Clear |
 | Codex plugin is missing or stale | Runtime installs or repoints the shipped local plugin version before use. | Clear |
@@ -210,6 +213,9 @@ adapter architecture itself.
   single-user installation.
 - Bit-for-bit event parity. Provider-only activity and diagnostics stay below the
   product boundary.
+- Claude-oriented diagnostic commands such as `cb session --raw` and `cb feedback`.
+  Product chat history and review support Codex, but these commands still inspect Claude
+  Code JSONL and cannot show a Codex native rollout.
 
 ## Open design questions
 
@@ -283,3 +289,6 @@ test box.
   sound shared path-scoped rule store.
 - The first supported deployment assumes the machine already has a working local Codex
   login. Callback Box does not copy or broker credentials.
+- Codex transcript reads share one serialized app-server per box and close it after an
+  idle window. This avoids one subprocess per chat row. A dead chat app-server rejects
+  the active turn, and every chat turn has a bounded completion timeout.

@@ -101,7 +101,7 @@ export class CodexAppServer {
   constructor(options: CodexAppServerOptions) {
     this.child = spawn(
       options.binary ?? process.env.CB_CODEX_BINARY ?? "codex",
-      ["--dangerously-bypass-hook-trust", "app-server", "--listen", "stdio://"],
+      ["app-server", "--listen", "stdio://"],
       {
         cwd: options.cwd,
         env: options.env,
@@ -120,7 +120,9 @@ export class CodexAppServer {
     this.child.on("exit", (code, signal) => {
       if (this.closing) return;
       const detail = `code=${String(code)} signal=${String(signal)} stderr=${this.stderr.trim()}`;
-      this.failPending(new CodexAppServerExitError(detail));
+      const error = new CodexAppServerExitError(detail);
+      this.failPending(error);
+      this.events.emit("exit", error);
     });
   }
 
@@ -169,6 +171,11 @@ export class CodexAppServer {
   onNotification(listener: (notification: CodexNotification) => void): () => void {
     this.events.on("notification", listener);
     return () => this.events.off("notification", listener);
+  }
+
+  onExit(listener: (error: CodexAppServerExitError) => void): () => void {
+    this.events.on("exit", listener);
+    return () => this.events.off("exit", listener);
   }
 
   close(): void {
@@ -230,8 +237,15 @@ export class CodexAppServer {
   }
 
   private answerServerRequest(id: number, method: string): void {
-    const decision = method.includes("requestApproval") ? "decline" : "denied";
-    this.child.stdin.write(`${JSON.stringify({ id, result: { decision } })}\n`);
+    if (method.endsWith("/requestApproval")) {
+      this.child.stdin.write(`${JSON.stringify({ id, result: { decision: "decline" } })}\n`);
+      return;
+    }
+    console.warn(`[codex-app-server] unsupported server request: ${method}`);
+    this.child.stdin.write(`${JSON.stringify({
+      id,
+      error: { code: -32601, message: `Callback Box does not implement ${method}` },
+    })}\n`);
   }
 
   private failPending(error: Error): void {
