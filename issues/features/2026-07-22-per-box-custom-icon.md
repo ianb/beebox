@@ -4,6 +4,7 @@ workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder wants a distinct icon per box
+priority: important
 ---
 
 Each box should be able to define its own icon, used wherever a box is

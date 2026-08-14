@@ -4,6 +4,7 @@ workstream: publish-pages
 area: callback-box
 needs: [manual-testing]
 design: ../../callback-box/docs/plans/publish-pages.md
+priority: important
 ---
 
 Handoff for the external-publishing feature (publish box docs/views to public(ish)

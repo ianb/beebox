@@ -6,6 +6,7 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — first-run UX audit for the soft launch
 labels: [soft-launch]
+priority: important
 ---
 
 **Update 2026-08-02** (`callback-box/docs/implemented-plans/top-nav-ia.md`): new users

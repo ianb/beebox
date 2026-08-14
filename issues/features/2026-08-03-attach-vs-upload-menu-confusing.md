@@ -5,6 +5,8 @@ needs: [design]
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder couldn't tell the two apart
+priority: important
+next-action: discuss
 ---
 
 The chat composer's Add menu (`InteractiveChat-composer.tsx:224,226`) has two

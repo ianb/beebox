@@ -3,6 +3,8 @@ title: "Implement complete iOS input-plane parity"
 workstream: unknown
 design: ../../callback-box/docs/plans/ios-input-plane-parity.md
 area: callback-box
+priority: important
+next-action: fixed
 ---
 
 The native iOS composer is visually usable but does not yet have the web input

@@ -4,6 +4,7 @@ workstream: compacting
 area: callback-box
 filed-by: agent
 discovered-in: worktree-compacting — eval'ing chat review against real boxes
+priority: normal
 ---
 
 **Implementation update (2026-08-07):** `worktree-chat-session-delete` makes

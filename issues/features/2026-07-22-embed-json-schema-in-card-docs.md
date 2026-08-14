@@ -4,6 +4,7 @@ workstream: github-pages-site
 area: callback-box
 filed-by: agent
 discovered-in: worktree-github-pages-site — story-extraction triage of cards-as-markdown-rfc.md
+priority: important
 ---
 
 The cards-as-markdown RFC argued that **"agents read JSON Schema natively"**

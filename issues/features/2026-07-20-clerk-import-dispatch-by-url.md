@@ -5,6 +5,7 @@ area: callback-clerk
 needs: [design]
 filed-by: agent
 discovered-in: main session — boxholder proposed reframing the clerk's primary action
+next-action: fixed
 ---
 
 The clerk's main action today is essentially **"capture this web page"**: freeze

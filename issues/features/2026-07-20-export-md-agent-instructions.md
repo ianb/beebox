@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder
 labels: [soft-launch]
+priority: normal
 ---
 
 Data export on the SECURITY.md pattern (boxholder, 2026-07-20): not a

@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder asked to file
 needs: [design]
+priority: important
 ---
 
 A box can *edit* a Google Doc it already synced, but there's no easy path for a

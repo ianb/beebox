@@ -6,6 +6,7 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder
 labels: [soft-launch]
+priority: backlog
 ---
 
 Once the repo is public and bug reports are the invited contribution mode

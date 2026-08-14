@@ -4,6 +4,7 @@ workstream: lightbox-horizontal-pan
 area: callback-box
 filed-by: agent
 discovered-in: worktree-lightbox-horizontal-pan — measured while chasing a different (mis-stated) bug
+next-action: discuss
 ---
 
 Double-tap zoom is a constant 2.5× (`ZOOM_SCALE`). Pan travel per axis is
