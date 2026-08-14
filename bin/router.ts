@@ -59,6 +59,15 @@ import { serveSite } from "./router-site.js";
 import { serveStoryEvalSave } from "./router-story-eval.js";
 import { legacyIssuesRedirect, serveWorkstreams } from "./router-workstreams.js";
 import {
+  createRealWorkstreamsAppEffects,
+  createWorkstreamsAppSupervisor,
+  shouldUseWorkstreamsApp,
+  WORKSTREAMS_APP_CAPABILITY_HEADER,
+  type WorkstreamsAppState,
+  type WorkstreamsAppSupervisor,
+  type WorkstreamsAppTarget,
+} from "./workstreams-app-supervisor.js";
+import {
   type WorktreeHandle,
   type CapturedError,
   type TimerHandle,
@@ -465,6 +474,15 @@ function stripClientCbHeaders(headers: http.IncomingHttpHeaders): void {
   }
 }
 
+/** Apply the workstreams app's private hop capability after the spoof wall. */
+export function prepareWorkstreamsAppHeaders(
+  headers: http.IncomingHttpHeaders,
+  capability: string | null,
+): void {
+  stripClientCbHeaders(headers);
+  if (capability !== null) headers[WORKSTREAMS_APP_CAPABILITY_HEADER] = capability;
+}
+
 /** One proxy attempt. Resolves with the proxy error, or undefined on success. */
 function proxyOnce(
   req: http.IncomingMessage,
@@ -477,6 +495,19 @@ function proxyOnce(
     res.on("close", () => resolve(undefined));
     const options = body === null ? { target } : { target, buffer: Readable.from(body) };
     proxy.web(req, res, options, (err: Error & { code?: string } | undefined) => resolve(err));
+  });
+}
+
+/** The resident app does not cold-start or retry request bodies. */
+function proxyWorkstreamsAppOnce(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  target: WorkstreamsAppTarget,
+): Promise<(Error & { code?: string }) | undefined> {
+  prepareWorkstreamsAppHeaders(req.headers, target.kind === "backend" ? target.capability : null);
+  return new Promise((resolve) => {
+    res.on("close", () => resolve(undefined));
+    proxy.web(req, res, { target: `http://127.0.0.1:${target.port}` }, (error) => resolve(error));
   });
 }
 
@@ -800,6 +831,39 @@ ${fastifySection}
 `;
 }
 
+export function renderWorkstreamsAppFallback(state: WorkstreamsAppState, logPath: string): string {
+  const detail = state.phase === "failed"
+    ? `<div class="err">${escapeHtml(state.message)}</div>`
+    : `<p>The resident app is currently <strong>${escapeHtml(state.phase)}</strong>.</p>`;
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workstreams app unavailable</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; max-width: 52rem; margin: 3rem auto; padding: 0 1rem; color: #222; }
+  h1 { font-size: 1.35rem; }
+  .err { margin: 1rem 0; padding: 0.8rem 1rem; background: #fff5f5; border-left: 4px solid #b43; white-space: pre-wrap; }
+  .actions { display: flex; gap: 1rem; align-items: center; margin: 1.5rem 0; }
+  button { font: inherit; padding: 0.45rem 0.8rem; }
+  code { background: #f3f3f3; padding: 0.1rem 0.3rem; }
+  a { color: #2456a6; }
+</style>
+</head>
+<body>
+<h1>Workstreams app unavailable</h1>
+${detail}
+<p>The dev router is still healthy. App output is in <code>${escapeHtml(logPath)}</code>.</p>
+<p>If the log reports missing dependencies, run <code>pnpm install</code> in the main checkout, then retry. The router itself does not need a restart.</p>
+<div class="actions">
+  <form method="POST" action="/__router/retry/workstreams-app"><button type="submit">Retry app startup</button></form>
+  <a href="/">Router diagnostics</a>
+</div>
+</body>
+</html>`;
+}
+
 // Per-worktree, just like the box apps: /<name>/dev/ serves <name>'s checkout —
 // its tracked dev/ directory (artifacts) and a markdown doc browser over its own
 // .md files. Served straight from disk, so it never cold-starts the worktree.
@@ -817,7 +881,7 @@ function worktreeRoot(name: string): string {
  */
 function loginWorktree(url: string): string {
   const first = parseWorktreeName(url);
-  if (!first || first === "dev" || first === "__router") return "main";
+  if (!first || first === "dev" || first === "__router" || first === "workstreams") return "main";
   return first;
 }
 
@@ -865,8 +929,17 @@ export function routerGuardHeaders(url: string): Record<string, string> {
  * connection can only reach the handler of the server it landed on, so which
  * listener accepted it is the whole story.
  */
-function createRouterServer(core: RouterCore, gate: { authDeps: RouterAuthDeps; trustedLocal: boolean }): http.Server {
-  const { authDeps, trustedLocal } = gate;
+interface RouterServerGate {
+  authDeps: RouterAuthDeps;
+  trustedLocal: boolean;
+  workstreamsApp?: {
+    supervisor: WorkstreamsAppSupervisor;
+    displayLogPath: string;
+  };
+}
+
+function createRouterServer(core: RouterCore, gate: RouterServerGate): http.Server {
+  const { authDeps, trustedLocal, workstreamsApp } = gate;
   const refusedUpgradeLogAt = new Map<string, number>();
 
   // The per-request dispatch. Wrapped below in a `.catch` rejection boundary so
@@ -951,11 +1024,34 @@ function createRouterServer(core: RouterCore, gate: { authDeps: RouterAuthDeps; 
       }
       res.end(
         JSON.stringify(
-          { routerPort: ROUTER_PORT, routerPid: process.pid, idleTimeoutMs: IDLE_TIMEOUT_MS, worktrees: state },
+          {
+            routerPort: ROUTER_PORT,
+            routerPid: process.pid,
+            idleTimeoutMs: IDLE_TIMEOUT_MS,
+            workstreamsApp: workstreamsApp?.supervisor.state() ?? { phase: "disabled" },
+            worktrees: state,
+          },
           null,
           2,
         ),
       );
+      return;
+    }
+
+    if (url === "/__router/retry/workstreams-app" || url === "/__router/retry/workstreams-app/") {
+      if (req.method !== "POST") {
+        res.writeHead(405, { "content-type": "text/plain", allow: "POST" });
+        res.end("retry requires POST\n");
+        return;
+      }
+      if (!workstreamsApp) {
+        res.writeHead(404, { "content-type": "text/plain" });
+        res.end("workstreams app is disabled\n");
+        return;
+      }
+      void workstreamsApp.supervisor.retry();
+      res.writeHead(303, { location: "/workstreams/" });
+      res.end();
       return;
     }
 
@@ -1043,6 +1139,37 @@ function createRouterServer(core: RouterCore, gate: { authDeps: RouterAuthDeps; 
 
     const requestPathname = url.split("?")[0] ?? url;
     if (requestPathname === "/workstreams" || requestPathname.startsWith("/workstreams/")) {
+      if (requestPathname === "/workstreams") {
+        res.writeHead(301, { location: `/workstreams/${url.includes("?") ? url.slice(url.indexOf("?")) : ""}` });
+        res.end();
+        return;
+      }
+      if (workstreamsApp) {
+        const target = workstreamsApp.supervisor.targetFor(url);
+        if (!target) {
+          const appState = workstreamsApp.supervisor.state();
+          const wantsJson = requestPathname.startsWith("/workstreams/api/") ||
+            requestPathname.startsWith("/workstreams/__internal/");
+          res.writeHead(503, {
+            "content-type": wantsJson ? "application/json; charset=utf-8" : "text/html; charset=utf-8",
+            "retry-after": "2",
+          });
+          if (req.method === "HEAD") {
+            res.end();
+          } else if (wantsJson) {
+            res.end(`${JSON.stringify({ error: "workstreams-app-unavailable", phase: appState.phase })}\n`);
+          } else {
+            res.end(renderWorkstreamsAppFallback(appState, workstreamsApp.displayLogPath));
+          }
+          return;
+        }
+        const proxyError = await proxyWorkstreamsAppOnce(req, res, target);
+        if (proxyError && !res.headersSent) {
+          res.writeHead(502, { "content-type": "text/plain; charset=utf-8" });
+          res.end(`Workstreams app proxy failed: ${proxyError.message}\n`);
+        }
+        return;
+      }
       const requestUrl = new URL(url, "http://router.local");
       await serveWorkstreams({
         method: req.method || "GET",
@@ -1190,6 +1317,22 @@ function createRouterServer(core: RouterCore, gate: { authDeps: RouterAuthDeps; 
     }
     if (!decision.allow) {
       socket.destroy();
+      return;
+    }
+    const upgradePathname = reqUrl.split("?")[0] ?? reqUrl;
+    if (workstreamsApp && upgradePathname.startsWith("/workstreams/")) {
+      const target = workstreamsApp.supervisor.targetFor(reqUrl);
+      if (!target || target.kind !== "frontend") {
+        socket.end("HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n");
+        return;
+      }
+      prepareWorkstreamsAppHeaders(req.headers, null);
+      proxy.ws(req, socket, head, { target: `http://127.0.0.1:${target.port}` }, (error: Error | undefined) => {
+        if (error) {
+          log(`[workstreams-app] ws proxy error: ${error.message}`);
+          socket.destroy();
+        }
+      });
       return;
     }
     // The spoof wall on the upgrade path too: strip client `x-cb-*` before the
@@ -1373,8 +1516,33 @@ async function main(): Promise<void> {
   // ONE handler-building function and ONE RouterAuthDeps — the only difference is
   // the `trustedLocal` flag baked into each server instance.
   const authDeps = createRouterAuthDeps({ resolveWorktree, resolveBoxEntries });
-  const server = createRouterServer(core, { authDeps, trustedLocal: false });
-  const localServer = createRouterServer(core, { authDeps, trustedLocal: true });
+  const workstreamsAppLogPath = path.join(LOG_DIR, "workstreams-app.log");
+  const workstreamsApp = shouldUseWorkstreamsApp()
+    ? createWorkstreamsAppSupervisor(createRealWorkstreamsAppEffects(STATE_DIR), {
+        appRoot: path.join(MAIN_ROOT, "workstreams-app"),
+        logPath: workstreamsAppLogPath,
+        log,
+        killGraceMs: KILL_GRACE_MS,
+      })
+    : null;
+  const workstreamsAppGate = workstreamsApp
+    ? {
+        supervisor: workstreamsApp,
+        displayLogPath: workstreamsAppLogPath.startsWith(`${os.homedir()}${path.sep}`)
+          ? `~${workstreamsAppLogPath.slice(os.homedir().length)}`
+          : workstreamsAppLogPath,
+      }
+    : undefined;
+  const server = createRouterServer(core, {
+    authDeps,
+    trustedLocal: false,
+    ...(workstreamsAppGate ? { workstreamsApp: workstreamsAppGate } : {}),
+  });
+  const localServer = createRouterServer(core, {
+    authDeps,
+    trustedLocal: true,
+    ...(workstreamsAppGate ? { workstreamsApp: workstreamsAppGate } : {}),
+  });
 
   let shuttingDown = false;
   const shutdown = async (reason: string): Promise<void> => {
@@ -1388,7 +1556,7 @@ async function main(): Promise<void> {
     server.close();
     localServer.close();
     setTimeout(() => process.exit(0), KILL_GRACE_MS + 500).unref();
-    await core.stopAllChildren();
+    await Promise.all([core.stopAllChildren(), workstreamsApp?.shutdown()]);
     await fs.unlink(ROUTER_PID_FILE).catch(() => {});
     await fs.unlink(ROUTER_SOCK).catch(() => {});
     process.exit(0);
@@ -1429,6 +1597,11 @@ async function main(): Promise<void> {
     }
   } catch (err) {
     log(`startup reclaim failed (continuing): ${errMessage(err)}`);
+  }
+  if (workstreamsApp) {
+    // Startup is intentionally not awaited: the authenticated fallback must be
+    // reachable while dependencies are missing or the resident app is slow.
+    void workstreamsApp.start();
   }
   await listenUnixSocket(localServer, ROUTER_SOCK);
   log(`trusted-local socket at ${ROUTER_SOCK} (mode 0600; unauthenticated, local CLI)`);
