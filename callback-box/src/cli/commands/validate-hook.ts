@@ -35,14 +35,17 @@ export function parseHookFilePaths(parsed: unknown): string[] {
   const toolInput = parsed["tool_input"];
   if (!isRecord(toolInput)) return [];
   const filePath = toolInput["file_path"];
-  if (typeof filePath === "string") return [filePath];
+  const cwd = typeof parsed["cwd"] === "string" ? parsed["cwd"] : undefined;
+  const resolvePath = (candidate: string): string =>
+    cwd !== undefined && !path.isAbsolute(candidate) ? path.resolve(cwd, candidate) : candidate;
+  if (typeof filePath === "string") return [resolvePath(filePath)];
   const command = toolInput["command"];
   if (typeof command !== "string") return [];
   const paths: string[] = [];
   const pattern = /^\*\*\* (?:Add|Update|Delete) File: (.+)$/gm;
   for (const match of command.matchAll(pattern)) {
     const matchedPath = match[1];
-    if (matchedPath !== undefined) paths.push(matchedPath);
+    if (matchedPath !== undefined) paths.push(resolvePath(matchedPath));
   }
   return [...new Set(paths)];
 }
@@ -65,7 +68,7 @@ async function readHookFilePaths(): Promise<string[]> {
   }
 }
 
-async function validateHookPath(fp: string): Promise<string | null> {
+export async function validateHookPath(fp: string): Promise<string | null> {
   if (!existsSync(fp)) return null;
   if (isClaudeMdFile(fp)) {
     const boxRoot = await requireBoxRoot();
@@ -104,6 +107,16 @@ async function validateHookPath(fp: string): Promise<string | null> {
   return parts.length === 0 ? null : parts.join("\n");
 }
 
+/** Validate paths reported by a harness and return the combined agent feedback. */
+export async function validateHookPaths(paths: string[]): Promise<string | null> {
+  const feedback: string[] = [];
+  for (const fp of [...new Set(paths)]) {
+    const result = await validateHookPath(fp);
+    if (result !== null) feedback.push(result);
+  }
+  return feedback.length === 0 ? null : feedback.join("\n");
+}
+
 /**
  * Hook mode: read the touched file path from stdin, validate it, and exit.
  * Non-card paths exit 0 silently; errors AND warnings exit 2 so the agent
@@ -111,13 +124,9 @@ async function validateHookPath(fp: string): Promise<string | null> {
  */
 export async function runHookMode(): Promise<never> {
   const paths = await readHookFilePaths();
-  const feedback: string[] = [];
-  for (const fp of paths) {
-    const result = await validateHookPath(fp);
-    if (result !== null) feedback.push(result);
-  }
-  if (feedback.length > 0) {
-    process.stderr.write(`${feedback.join("\n")}\n`);
+  const feedback = await validateHookPaths(paths);
+  if (feedback !== null) {
+    process.stderr.write(`${feedback}\n`);
     process.exit(2);
   }
   process.exit(0);

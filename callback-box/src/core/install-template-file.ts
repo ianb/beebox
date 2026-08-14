@@ -99,6 +99,7 @@ const TEMPLATE_MANAGED_PATTERNS: readonly RegExp[] = [
   /^AGENTS\.md$/,
   /^.+\/AGENTS\.md$/,
   /^\.\.\/\.agents\/skills\/.+$/,
+  /^\.\.\/\.codex\/hooks\.json$/,
 ];
 
 /** Whether `relPath` is callback-box template output (see {@link TEMPLATE_MANAGED_PATTERNS}). */

@@ -16,6 +16,7 @@ await writeFile(join(root, "package.json"), JSON.stringify({ dependencies: { "ca
 await writeFile(join(boxRoot, ".cb-box"), JSON.stringify({ shapeVersion: 2 }));
 await mkdir(join(root, ".claude/skills/calendar"), { recursive: true });
 await mkdir(join(root, ".claude/rules"), { recursive: true });
+await mkdir(join(root, "node_modules/callback-box/plugins/callback-box-codex/hooks"), { recursive: true });
 await mkdir(join(root, "nested"), { recursive: true });
 await writeFile(join(root, "CLAUDE.md"), "# Box\n");
 await writeFile(join(root, "nested/CLAUDE.md"), "# Nested\n");
@@ -27,6 +28,7 @@ paths:
 
 # Memo rules
 `);
+await writeFile(join(root, "node_modules/callback-box/plugins/callback-box-codex/hooks/hooks.json"), "{}");
 await generateAgentContextMirrors(boxRoot);
 ```
 
@@ -41,6 +43,9 @@ JSON.stringify(await readlink(join(root, "nested/AGENTS.md")))
 
 JSON.stringify(await readlink(join(root, ".agents/skills/calendar")))
 => "../../.claude/skills/calendar"
+
+JSON.stringify(await readlink(join(root, ".codex/hooks.json")))
+=> "../node_modules/callback-box/plugins/callback-box-codex/hooks/hooks.json"
 ```
 
 Rules are copied into provider-valid skills:

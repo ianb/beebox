@@ -8,8 +8,13 @@ import {
   CodexAppServerTimeoutError,
   CodexRpcError,
 } from "../../services/codex-app-server.js";
-import type { AgentResult, AgentResultBase } from "./types.js";
+import type { AgentResult } from "./types.js";
 import { ensureCodexPluginInstalled } from "./ensure-codex-plugin.js";
+import { expandClaudeIncludes } from "../agent-context-includes.js";
+import { getBoxShape } from "../../lib/box-shape.js";
+import { join } from "node:path";
+import { validateHookPaths } from "../../cli/commands/validate-hook.js";
+import { resultFromCodexTurn } from "./codex-run-result.js";
 
 const threadResultSchema = z.looseObject({
   thread: z.looseObject({ id: z.string() }),
@@ -34,7 +39,11 @@ const itemCompletedSchema = z.looseObject({
       aggregatedOutput: z.string().nullable(),
       exitCode: z.number().nullable(),
     }),
-    z.looseObject({ type: z.literal("fileChange") }),
+    z.looseObject({
+      type: z.literal("fileChange"),
+      status: z.enum(["inProgress", "completed", "failed", "declined"]),
+      changes: z.array(z.looseObject({ path: z.string() })),
+    }),
     z.looseObject({ type: z.literal("mcpToolCall") }),
     z.looseObject({ type: z.literal("dynamicToolCall") }),
   ]),
@@ -107,11 +116,12 @@ function waitForTurn(options: {
   turnId: string;
   maxTurns: number;
   onOutput?: ((text: string) => void) | undefined;
-}): Promise<{ output: string; resultText: string; durationMs: number; status: "completed" | "interrupted" | "failed" }> {
+}): Promise<{ output: string; resultText: string; durationMs: number; status: "completed" | "interrupted" | "failed"; changedPaths: string[] }> {
   const output: string[] = [];
   const finalText: string[] = [];
   let toolCount = 0;
   let interruptSent = false;
+  const changedPaths = new Set<string>();
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       remove();
@@ -127,6 +137,9 @@ function waitForTurn(options: {
           if (item.phase === "final_answer" || item.phase === null) finalText.push(item.text);
           options.onOutput?.(`${item.text}\n`);
           return;
+        }
+        if (item.type === "fileChange" && item.status === "completed") {
+          for (const change of item.changes) changedPaths.add(change.path);
         }
         toolCount += 1;
         const rendered = renderCommand(item);
@@ -157,6 +170,7 @@ function waitForTurn(options: {
         resultText: finalText.join("\n"),
         durationMs: turn.durationMs ?? 0,
         status: turn.status,
+        changedPaths: [...changedPaths],
       });
     });
   });
@@ -219,28 +233,6 @@ function startTurn(options: {
   });
 }
 
-function resultFromTurn(options: {
-  threadId: string;
-  output: string;
-  resultText: string;
-  status: "completed" | "interrupted" | "failed";
-  structuredOutput?: unknown;
-}): AgentResult {
-  const base: AgentResultBase = {
-    output: options.output,
-    resultText: options.resultText,
-    exitCode: options.status === "completed" ? 0 : 1,
-    sessionId: options.threadId,
-    structuredOutput: options.structuredOutput,
-  };
-  if (options.status === "completed") return { ...base, success: true };
-  return {
-    ...base,
-    success: false,
-    error: options.status === "interrupted" ? "Codex turn was interrupted" : "Codex turn failed",
-  };
-}
-
 /** Run one fresh or resumed Codex turn and map it to the existing Agent result. */
 export async function runCodexAgent(options: CodexRunOptions): Promise<AgentResult> {
   if (options.dryRun === true) {
@@ -257,6 +249,11 @@ export async function runCodexAgent(options: CodexRunOptions): Promise<AgentResu
   let server: CodexAppServer | null = null;
   try {
     await ensureCodexPluginInstalled();
+    const { packageRoot } = await getBoxShape(options.boxRoot);
+    const includedContext = await expandClaudeIncludes({
+      claudePath: join(options.boxRoot, "CLAUDE.md"),
+      packageRoot,
+    });
     server = new CodexAppServer({ cwd: options.cwd ?? options.boxRoot });
     if (options.maxBudgetUsd !== undefined) {
       options.onOutput?.(
@@ -266,7 +263,7 @@ export async function runCodexAgent(options: CodexRunOptions): Promise<AgentResu
     await server.initialize();
     const threadId = await openThread(server, {
       ...options,
-      systemPrompt: options.systemPrompt + tzContext,
+      systemPrompt: [options.systemPrompt + tzContext, includedContext].filter(Boolean).join("\n\n"),
     });
     options.onSessionId?.(threadId);
     const rawTurn = await startTurn({ server, run: options, threadId });
@@ -278,11 +275,25 @@ export async function runCodexAgent(options: CodexRunOptions): Promise<AgentResu
       maxTurns: options.maxTurns ?? 20,
       onOutput: options.onOutput,
     });
+    const validationFeedback = await validateHookPaths(completed.changedPaths);
+    if (validationFeedback !== null) {
+      const output = [completed.output, `Callback Box validation failed:\n${validationFeedback}`]
+        .filter(Boolean)
+        .join("\n");
+      return {
+        success: false,
+        output,
+        resultText: completed.resultText,
+        error: "Codex edits failed Callback Box validation",
+        exitCode: 1,
+        sessionId: threadId,
+      };
+    }
     let structuredOutput: unknown;
     if (options.outputSchema !== undefined && completed.status === "completed") {
       structuredOutput = JSON.parse(completed.resultText);
     }
-    return resultFromTurn({ ...completed, threadId, structuredOutput });
+    return resultFromCodexTurn({ ...completed, threadId, structuredOutput });
   } catch (error) {
     return {
       success: false,

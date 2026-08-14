@@ -80,6 +80,20 @@ async function mirrorSkills(packageRoot: string): Promise<string[]> {
   return changed;
 }
 
+async function mirrorCodexHooks(packageRoot: string): Promise<string[]> {
+  const linkPath = join(packageRoot, ".codex", "hooks.json");
+  const targetPath = join(
+    packageRoot,
+    "node_modules",
+    "callback-box",
+    "plugins",
+    "callback-box-codex",
+    "hooks",
+    "hooks.json",
+  );
+  return await ensureRelativeSymlink(linkPath, targetPath) ? [linkPath] : [];
+}
+
 function ruleSkill(ruleName: string, rule: string): string {
   const frontmatter = /^---\n([\S\s]*?)\n---\n+/.exec(rule)?.[1] ?? "";
   const paths = [...frontmatter.matchAll(/^\s*-\s+["']?(.+?)["']?\s*$/gm)]
@@ -136,5 +150,6 @@ export async function generateAgentContextMirrors(boxRoot: string): Promise<stri
     ...await mirrorClaudeDocs(packageRoot),
     ...await mirrorSkills(packageRoot),
     ...await mirrorRules(packageRoot),
+    ...await mirrorCodexHooks(packageRoot),
   ];
 }

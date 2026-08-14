@@ -1,6 +1,17 @@
 {
   "description": "Validate Callback Box files after Codex edits them.",
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cb agent-context --hook",
+            "statusMessage": "Loading Callback Box context"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "apply_patch|Edit|Write",

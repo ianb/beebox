@@ -11,6 +11,11 @@ import type {
   NativeChatBackendMessage,
 } from "./claude-chat-types.js";
 import { ensureCodexPluginInstalled } from "../core/agent/ensure-codex-plugin.js";
+import { expandClaudeIncludes } from "../core/agent-context-includes.js";
+import { getBoxShape } from "../lib/box-shape.js";
+import { join } from "node:path";
+import { findBoxRoot } from "../lib/paths.js";
+import { validateHookPaths } from "../cli/commands/validate-hook.js";
 
 const threadSchema = z.looseObject({ thread: z.looseObject({ id: z.string() }) });
 const turnSchema = z.looseObject({ turn: z.looseObject({ id: z.string() }) });
@@ -21,6 +26,8 @@ const itemSchema = z.looseObject({
     type: z.string(),
     text: z.string().optional(),
     phase: z.enum(["commentary", "final_answer"]).nullable().optional(),
+    status: z.enum(["inProgress", "completed", "failed", "declined"]).optional(),
+    changes: z.array(z.looseObject({ path: z.string() })).optional(),
   }),
 });
 const completedSchema = z.looseObject({
@@ -80,6 +87,7 @@ function waitForTurn(options: {
   turnId: string;
   setActiveTurn(id: string | null): void;
 }): Promise<void> {
+  const changedPaths = new Set<string>();
   return new Promise((resolve) => {
     const remove = options.server.onNotification((notification) => {
       if (notification.method === "item/completed") {
@@ -93,6 +101,9 @@ function waitForTurn(options: {
             message: { role: "assistant", content: [{ type: "text", text: item.text }] },
           }));
         }
+        if (item.type === "fileChange" && item.status === "completed") {
+          for (const change of item.changes ?? []) changedPaths.add(change.path);
+        }
         return;
       }
       if (notification.method !== "turn/completed") return;
@@ -101,15 +112,20 @@ function waitForTurn(options: {
       if (parsed.data.turn.status === "inProgress") return;
       remove();
       options.setActiveTurn(null);
-      options.queue.push(event({
+      void validateHookPaths([...changedPaths]).then((validationFeedback) => {
+        options.queue.push(event({
         type: "result",
-        subtype: parsed.data.turn.status,
+        subtype: validationFeedback === null ? parsed.data.turn.status : "failed",
         session_id: options.threadId,
-        is_error: parsed.data.turn.status !== "completed",
+        is_error: parsed.data.turn.status !== "completed" || validationFeedback !== null,
         duration_ms: parsed.data.turn.durationMs ?? 0,
         num_turns: 1,
-      }));
-      resolve();
+        ...(validationFeedback === null
+          ? {}
+          : { result: `Callback Box validation failed:\n${validationFeedback}` }),
+        }));
+        resolve();
+      });
     });
   });
 }
@@ -120,9 +136,17 @@ function createRun(opts: ChatBackendStartOptions): ChatBackendRun {
   let activeTurnId: string | null = null;
   let threadId: string | null = null;
   let chain = ensureCodexPluginInstalled().then(async () => {
+    const boxRoot = await findBoxRoot(opts.cwd);
+    const included = boxRoot === null ? "" : await expandClaudeIncludes({
+      claudePath: join(boxRoot, "CLAUDE.md"),
+      packageRoot: (await getBoxShape(boxRoot)).packageRoot,
+    });
     server = new CodexAppServer({ cwd: opts.cwd, env: opts.env });
     await server.initialize();
-    threadId = await openThread(server, opts);
+    threadId = await openThread(server, {
+      ...opts,
+      systemPrompt: [opts.systemPrompt, included].filter(Boolean).join("\n\n"),
+    });
     queue.push(event({ type: "system", subtype: "init", session_id: threadId }));
   });
   const run: ChatBackendRun = {

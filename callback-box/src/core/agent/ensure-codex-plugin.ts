@@ -21,7 +21,7 @@ const marketplaceListSchema = z.object({
   })),
 });
 const PLUGIN_ID = "callback-box-codex@callback-box";
-const PLUGIN_VERSION = "0.1.0";
+const PLUGIN_VERSION = "0.1.1";
 
 class CodexPluginInstallError extends Error {
   constructor(cause: unknown) {

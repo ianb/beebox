@@ -47,3 +47,15 @@ parseHookFilePaths({ tool_name: "Bash", tool_input: { command: "git status" } })
 parseHookFilePaths(null)
 => []
 ```
+
+Codex paths are resolved against the hook payload's cwd, not the hook
+subprocess's potentially different cwd:
+
+```ts
+JSON.stringify(parseHookFilePaths({
+  cwd: "/box/content",
+  tool_name: "apply_patch",
+  tool_input: { command: "*** Begin Patch\n*** Update File: store/One.memo.card\n*** End Patch" },
+}))
+=> ["/box/content/store/One.memo.card"]
+```
