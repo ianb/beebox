@@ -56,8 +56,9 @@ the ear gets when the eye is elsewhere.
   - **8 (one way to do each thing)** — one pointer vocabulary shared with the
     existing card-path link convention, one dump format shared with the tours'
     a11y snapshot idiom.
-  - **11 (enforcement beats convention)** — the reveal/do boundary is enforced
-    by construction, not by asking the agent to be careful.
+  - **11 (enforcement beats convention)** — the reveal/do boundary is an
+    explicit author opt-in checked by a doctest, not an inference from markup
+    and not a request that the agent be careful.
 - `callback-box/CLAUDE.md` — "don't add features beyond what the task
   requires"; the `src/shared/ref-path.ts` fails-closed precedent.
 - `callback-box/code-style.md` — no default parameters, max two positional
@@ -129,11 +130,13 @@ the page's own JavaScript cannot do.
 channel last-activity health todos open-card/>`. **Reused for one attribute
 only** (`surface`, Track 5), not for the dump.
 
-**The iOS bridge has a declared extension point.**
-`ios-app/CallbackBox/Models/NativeComposerContract.swift:65-74` defines
-`NativeComposerCommand.Kind` with a single member, `addSelection`, with strict
-V1 decoding and a required-`reason` rejection ack
-(`NativeComposerContract.swift:108-150`). The neutral transport is
+**The iOS bridge has a transport to reuse and a command shape that must
+change.** `NativeComposerContract.swift:65-74` defines
+`NativeComposerCommand.Kind` with a single member, `addSelection` — but the
+struct also declares a non-optional `selection` decoded unconditionally
+(`:88`), and its acknowledgement is `{accepted, reason?}` with no room for a
+payload (`:108-150`). So the command itself is **rebuilt** (Track 5), not
+reused. The neutral transport is
 `window.callbackboxNativePost(channel, payload)`
 (`ChatWebView.swift:765-832`), which the Android plan fixed as the
 cross-platform shape (`docs/plans/android-companion-app.md`, Track 0).
@@ -216,7 +219,8 @@ not derived. No prior art found for a cross-platform control-address scheme.
 **What.** A frontend library that walks the live DOM and produces a typed list
 of the interactive controls currently on screen, each with an address, a role,
 an accessible name, an optional "what it does" line, and a flag for whether it
-discloses something. Plus the address resolver that runs the other direction.
+does. Plus the resolver that runs the other direction, from an address back to
+a live element.
 
 **Why this needs to change.** Nothing today can answer "what is on the user's
 screen". `bin/browse snapshot` is a developer instrument driven over CDP
@@ -229,15 +233,13 @@ JavaScript is the only thing that can see the user's actual screen.
 New directory `src/frontend/src/lib/ui-scan/`.
 
 ```ts
-/** How a control is addressed. Two tiers, distinguishable by shape. */
-export type ControlId = string;   // branded; see below
-
-export type ControlIdTier = "authored" | "derived";
-
 export interface ControlEntry {
-  /** `composer.mic` (authored) or `compose-message/button/add` (derived). */
-  id: ControlId;
-  tier: ControlIdTier;
+  /**
+   * Author-declared address, from `data-control`. Null for a control that is
+   * on screen but was never given one — such a control appears in the dump so
+   * the agent knows it exists, but cannot be pointed at.
+   */
+  id: string | null;
   /** ARIA role, explicit or implicit from the tag. */
   role: string;
   /** Computed accessible name. Never empty — a nameless control is dropped. */
@@ -246,34 +248,37 @@ export interface ControlEntry {
   container: string | null;
   /** Author-written "what it does", from `data-control-does`. */
   does: string | null;
-  /** True when the control's own semantics say it opens something. */
-  discloses: boolean;
+  /** Actions this control opts into, from `data-control-reveal`. */
+  actions: ControlAction[];
   /** Present and false for a control that is visible but not operable. */
   disabled: boolean;
 }
 ```
 
-**The address.** Two tiers, with deliberately different syntax so the tier is
-readable at a glance and the namespaces cannot collide.
+**The address: authored only. Seen ≠ addressable.** A control is addressable if
+and only if it carries `data-control="composer.mic"` — a dotted, hand-chosen,
+stable name **shared with the native shell**, so `control:composer.mic` means
+the same control whether the user is on the web or in the iOS app. Roughly 25
+controls get one (Track 4's table).
 
-- **Authored (dotted)** — `data-control="composer.mic"`. Stable across
-  renames, restyles, and state changes, and **shared with the native shell**,
-  so `control:composer.mic` means the same control whether the user is on the
-  web or in the iOS app. This is the durable vocabulary; it covers the ~25
-  controls people actually ask about.
-- **Derived (slashed)** — `<container-slug>/<role>/<name-slug>`, e.g.
-  `compose-message/button/add`. Free coverage for everything else. Computed
-  from the same three fields the dump prints, so an agent can see where the
-  address came from. Collisions get a `~2`, `~3` suffix in DOM order.
+Everything else the scan sees is still **listed** in the dump, with its role,
+name and container, and no address. The agent can say *"the pencil button at
+the top right of the card panel"* — it just cannot hand out a tappable link for
+it. This is the issue's requirement met exactly: everything visible by default,
+annotation enriches, and an unannotated control degrades to its accessible
+name. What it does not do is promise a link the app cannot reliably honour.
 
-Authored ids exist because derived ids are state-dependent in exactly the place
-it hurts most. `InteractiveChat-voice-button.tsx:47` gives the mic a four-way
-`title`:
+The alternative — deriving an address from role + name + container for
+unannotated controls — was designed and cut. It fails on its most important
+case. `InteractiveChat-voice-button.tsx:47` gives the mic a four-way `title`:
 ``title={voicePaused ? "Resume recording (stops speech)" : isTranscribing ? "Stop recording" : narrationEnabled ? "Voice input (narration mode)" : "Voice input"}``
-— so its derived address churns between `voice-input`,
-`voice-input-narration-mode`, `stop-recording` and
-`resume-recording-stops-speech` as the user talks. The mic is the single most
-asked-about control in a voice product. It gets `data-control="composer.mic"`.
+— so a name-derived address for the mic churns between four values as the user
+talks, and the mic is the single most asked-about control in a voice product. A
+derived scheme therefore needs authored overrides anyway, plus collision
+suffixes, plus a re-scan-and-match resolver, to be *less* reliable than the
+attribute it was avoiding. Authored ids alone make resolution a single
+`querySelector` and make every address that appears in a dump one the app has
+committed to.
 
 **Accessible name.** Computed in this order, stopping at the first non-empty
 result: `aria-labelledby` → `aria-label` → `alt` (img/area/input[image]) →
@@ -318,34 +323,49 @@ menu are invisible to it by construction. `data-control-does` on the trigger is
 how "capture, file, upload, screenshot, share location" reaches the agent at
 all. Everything else degrades to its accessible name, per the issue.
 
-**Disclosure detection, and the reveal/do boundary.** `discloses` is true when
-the element has `aria-expanded`, or `aria-haspopup`, or `role="tab"`. This is
-not a heuristic bolted on the side — it is the same accessibility layer the
-rest of the feature reads, which means improving the app's a11y improves this
-feature and vice versa, exactly as the issue argues.
+**The reveal/do boundary: opt-in, not inferred.** `reveal` is the only action
+that dispatches a synthetic click, so it is the only place the "reveal it,
+don't do it for them" line can be crossed. It requires an explicit opt-in:
 
-It is also the enforcement mechanism for the reveal/do line (principle 11).
-`reveal` dispatches a click **only** to an element the accessibility tree
-declares to be a disclosure control. A destructive button cannot be revealed
-into firing, because there is no generic click path — not because the agent was
-told not to. `Dropdown.tsx:301` already hands its trigger
-`aria-haspopup: "menu"` and `aria-expanded: open`, and every call site spreads
-them.
+```tsx
+data-control="composer.add" data-control-reveal
+```
 
-**Resolution** runs against the live DOM at click time, never against the
-snapshot: an authored id is `[data-control="<id>"]`; a derived id re-runs the
-scan and matches. Zero matches or more than one → the pointer is broken. Fails
-closed, like `resolveRefPath` (`src/shared/ref-path.ts`).
+meaning *the author asserts that clicking this control only changes what is
+disclosed*. A control without the attribute is never clicked, whatever its
+markup says. `actions` on the entry is `["point", "focus"]` by default and
+gains `"reveal"` only from the attribute.
 
-**Vocabulary lock-ins.** `data-control`, `data-control-does`, the dotted /
-slashed tier split, the `~N` disambiguator, the action names `point` / `focus`
-/ `reveal`, and the `control:` scheme. All of these cross into iOS and, later,
+An earlier draft inferred this from `aria-expanded` / `aria-haspopup` /
+`role="tab"` and claimed it was enforcement by construction. That claim is
+false, and the codebase disproves it: `role="tab"` on `TabBar.tsx:34` fires
+`onChange`, and the companion-pane tabs at `InteractiveChat-controls.tsx:176`
+switch which file the user is looking at. ARIA describes interaction semantics;
+it does not classify an action as safe. Inference here would have been a
+guess dressed as a guarantee, which is worse than no guarantee at all
+(principle 4, and principle 11 — the enforcement has to be real).
+
+The ARIA check survives as a **secondary** requirement, not the basis: a
+control carrying `data-control-reveal` must also present `aria-expanded`,
+`aria-haspopup` or `role="tab"`, asserted by a doctest over the annotated set.
+That catches an author who tags a control that has no disclosure semantics at
+all, and it keeps the a11y layer and this feature reinforcing each other as the
+issue argues — it just no longer stands alone.
+
+**Resolution** is `document.querySelector('[data-control="<id>"]')` against the
+live DOM. Zero matches, or more than one, is a failure — never "pick the first"
+— and a duplicate `data-control` in one document is a bug the scan reports in
+its header. Fails closed, like `resolveRefPath` (`src/shared/ref-path.ts`).
+
+**Vocabulary lock-ins.** `data-control`, `data-control-does`,
+`data-control-reveal`, the dotted id form, the action names `point` / `focus` /
+`reveal`, and the `control:` scheme. All of these cross into iOS and, later,
 Android; renaming any of them afterwards is a bridge-contract migration.
 
 **First implementation chunk.** `src/frontend/src/lib/ui-scan/scan.ts` +
-`accessible-name.ts` + `control-id.ts` with pure-function doctests, and
-`data-control` on the ~25 chat-surface controls listed in Track 4's inventory.
-No route, no CLI, no link rendering yet.
+`accessible-name.ts` with pure-function doctests, and the three `data-control*`
+attributes on the ~25 chat-surface controls listed in Track 4's inventory. No
+route, no CLI, no link rendering yet.
 
 ### Track 2 — The pointer: `control:` links
 
@@ -393,7 +413,7 @@ the app renders markdown, and a second rendering path would violate principle
 |---|---|---|
 | `point` | scroll into view if needed, then draw a ring around the element's box for ~2s | no |
 | `focus` | `point`, then `element.focus()` | focus only |
-| `reveal` | `point`, then click **iff** `discloses` | disclosure only |
+| `reveal` | `point`, then click **iff** the target carries `data-control-reveal` | disclosure only |
 
 The ring is an absolutely-positioned overlay with `pointer-events: none`,
 removed on a timer, honouring `prefers-reduced-motion` by drawing a static ring
@@ -402,16 +422,36 @@ the tour was that it takes over the screen, and a mask is the part that does
 that. This is memory-atlas's unused `lib/highlightelement.ts` shape, which lost
 there to reactour and wins here.
 
-**When it cannot resolve**, the pointer renders as `BrokenLink` —
+**When it cannot resolve**, the pointer takes the `BrokenLink` treatment —
 `Markdown.tsx:150-156`, *"renders as a visibly-disabled marker with the reason
 in its tooltip, so the content reads as broken-on-sight."* A control that
-unmounted, scrolled out of a virtualised list, or belongs to a page the user
-has since left is the **normal** failure here, not an exceptional one, which is
-why it gets the established visible treatment rather than an inert no-op
-(principle 4; `code-style.md` "user-initiated actions never silently no-op").
+unmounted, or belongs to a page the user has since left, is the **normal**
+failure here, not an exceptional one, which is why it gets the established
+visible treatment rather than an inert no-op (principle 4; `code-style.md`
+"user-initiated actions never silently no-op").
 
-Resolution happens at click time, so a broken pointer means *broken now* — the
-tooltip says which id failed and whether it matched zero controls or several.
+**This is not free reuse, and the plan should not pretend otherwise.**
+`BrokenLink` today is a module-private function in `Markdown.tsx`, chosen
+during render from a *static* classification: a `view:` href and a
+box-escaping path are broken the same way forever. A `control:` pointer's
+validity is live state — the same link is fine while the chat is open and
+broken after the user navigates. So two changes are needed:
+
+- **Move `BrokenLink` into a shared module** (`components/ui/BrokenLink.tsx`)
+  and import it from both `Markdown.tsx` and `ControlPointer`. It is
+  presentation only, so this is a move, not a redesign.
+- **`ControlPointer` is stateful.** It resolves on mount and re-resolves on a
+  cheap trigger — a `MutationObserver` scoped to `[data-control]` attribute and
+  childList changes, debounced — so a pointer that has gone dead *looks* dead
+  without the user clicking it. That is what "broken-on-sight" has to mean
+  here; a link that only reveals its brokenness on click is exactly the silent
+  failure the treatment exists to avoid.
+- **A click that fails at the last moment** (resolved a frame ago, gone now)
+  flips the same component to its broken state in place and does not navigate,
+  toast, or no-op silently.
+
+The tooltip names the id and says whether it matched nothing or matched more
+than one element.
 
 **Vocabulary lock-ins.** The scheme name `control:`, the param names `action`
 and `description`, and the three action values.
@@ -463,23 +503,28 @@ Covers: browser DOM only. This surface has no native chrome.
 
 navigation "Primary"
   button [Place: test1](control:nav.place)
-  button [Session: Dinner plans](control:nav.session) [opens]
+  button [Session: Dinner plans](control:nav.session) [reveal]
     — the thread menu: new session, recent chats, model, delete this chat
-  button [Voice input (narration mode)](control:nav.voice) [opens]
+  button [Voice input (narration mode)](control:nav.voice) [reveal]
     — mute and narration toggles, and voice settings
+  button "Open debug log (2 errors)"                    (no address)
 region "Compose message"
-  button [Add](control:composer.add) [opens]
+  button [Add](control:composer.add) [reveal]
     — the attach menu: capture, attach file, upload files, screenshot,
       share location
   textbox [Type a message...](control:composer.input)
   button [Send](control:composer.send)
   button [Voice input](control:composer.mic)
     — hold to dictate; tap to start continuous dictation
+tablist "Open files"
+  tab "Dinner_Plans.doc.card"                           (no address)
 
 To point the user at one of these, write its link into your reply:
 [the mic](control:composer.mic?action=point&description=tap%20and%20talk).
-`action` is `point` (default), `focus`, or `reveal` — `reveal` opens a control
-marked `[opens]`. It reveals; it never acts for the user.
+`action` is `point` (default), `focus`, or `reveal` — `reveal` is available
+only on a control marked `[reveal]`, and it opens the control; it never acts
+for the user. A control shown as `(no address)` is on screen but has no link —
+describe it in words instead of inventing an address for it.
 ```
 
 Presenting each control as the link the agent should write back is memory-atlas's
@@ -508,9 +553,9 @@ doctests, the client-side request handler, and the CLI command.
 
 ### Track 4 — Annotation pass, prompt convention, and audits
 
-**What.** Put `data-control` and `data-control-does` on the controls that
-matter, document the convention where the agent reads conventions, and verify
-it absorbed it.
+**What.** Put `data-control`, `data-control-does` and `data-control-reveal` on
+the controls that matter, document the convention where the agent reads
+conventions, and verify it absorbed it.
 
 **Why this needs to change.** An unannotated app still produces a dump, but the
 disclosure controls — the ones whose contents the agent cannot see — carry no
@@ -532,12 +577,25 @@ Authored ids, chosen so web and native agree (Track 5 uses the same strings):
 | `composer.send` | `InteractiveChat-composer.tsx:121` | `NativeComposerView.swift:361` |
 | `composer.mic` | `InteractiveChat-voice-button.tsx:28` | `NativeComposerView.swift:386` |
 | `composer.capture` | `InteractiveChat-composer.tsx:238` | `NativeCaptureView` entry |
-| `composer.stop` | `TargetStrip.tsx:56` | `NativeComposerView.swift:354` |
+| `composer.stop-dictation` | — (web has no separate control) | `NativeComposerView.swift:354` "Stop continuous dictation" |
+| `chat.stop-agent` | `TargetStrip.tsx:53` "Stop agent" | — |
+| `chat.stop-speech` | `TargetStrip.tsx:43` "Stop speaking" | — |
 | `panel.tabs` / `panel.close` | `InteractiveChat-controls.tsx:163,209` | — |
 
-`data-control-does` goes on every `[opens]` control in that table plus the
+An id means the same control on both platforms or it is not shared. An earlier
+draft mapped one `composer.stop` onto web `TargetStrip.tsx:53` (*"Stop agent"*,
+shown while streaming) and native `NativeComposerView.swift:354` (*"Stop
+continuous dictation"*) — two unrelated controls under one name, which would
+have shipped the shared-id contract already broken. They are separate ids
+above, and a `—` in a column is the honest answer: the platform has no
+counterpart, so the agent gets `no such control on this surface` rather than a
+pointer at the wrong thing.
+
+`data-control-does` goes on every `[reveal]` control in that table plus the
 mic, whose behaviour (tap versus hold, and the spoken keywords) is not
-inferable from a label.
+inferable from a label. `data-control-reveal` goes on `nav.session`,
+`nav.voice`, `nav.profile` and `composer.add` — the four menu triggers — and
+nothing else in this pass.
 
 Prompt text lands in `src/core/chat/session/prompts.ts`, in the existing
 "Showing things in chat" section, directly after the card-path link paragraph —
@@ -565,9 +623,12 @@ section. The audits follow once Tracks 1-3 are runnable.
 **What.** The iOS shell contributes its native controls to the scan and draws
 the ring on them, and the agent is told which surface it is talking to.
 
-**Why this needs to change.** This is not an edge case. `nativeComposer=1`
-makes the web suppress its own composer entirely
-(`docs/mobile-contract.md` §3.1, `ChatWebView.swift:189`), so **the DOM inside
+**Why this needs to change.** This is not an edge case. The native shell loads
+the chat with `nativeComposer=1` (`ios-app/CallbackBox/Models/PairedBox.swift:47-50`,
+*"Keep this query parameter in sync with ChatPage's nativeComposer search
+option"*); `ChatPage.tsx:126-130` reads it — or, after an in-app navigation
+drops the param, detects the bridge directly — and
+`InteractiveChat-view.tsx:339` suppresses the web composer. So **the DOM inside
 the webview is the transcript and nothing else**. Every control in the job
 stories above — mic, send, add, capture, box switcher, narration — is SwiftUI.
 A DOM-only scan on a phone returns almost nothing while looking like a complete
@@ -592,13 +653,30 @@ automatically state-correct — the same property the DOM scan gets for free.
 The same registry serves both directions: the scan reads it, and pointing looks
 up the frame to draw the ring.
 
-**Two new `NativeComposerCommand.Kind` members**, extending the enum the
-contract already calls the extension point
-(`NativeComposerContract.swift:65-74`): `scan-controls` and `point-at-control`.
-V1 strictness and the required-`reason` rejection ack apply unchanged, and the
-existing `callbackboxNativeComposerCommandAck` return path carries the answer.
+**A command envelope V2, not two enum members.** The existing command is not
+extensible as it stands, and calling it "the extension point" understates the
+work. `NativeComposerCommand` (`NativeComposerContract.swift:65-100`) declares
+`var selection: Selection` **non-optional** and decodes it unconditionally
+(`selection = try container.decode(...)`), so any command that is not an
+`add-selection` fails to decode. And the return path cannot carry data at all:
+`NativeComposerCommandAcknowledgement` is `{version, id, accepted, reason?}`
+(`NativeComposerContract.swift:108-150`) — enough to say *no, because*, not
+enough to return an inventory.
+
+So Track 5 lands:
+
+- **`NativeComposerCommand` V2** with `kind` discriminating a `payload` union —
+  `addSelection(Selection)` / `scanControls` / `pointAtControl(id, action)` —
+  keeping V1 decodable so an old web bundle talking to a new app still works.
+  Mirrored in `src/frontend/src/components/chat/native-composer-command.ts`.
+- **A result channel**: either `NativeComposerCommandAcknowledgement` gains an
+  optional typed `result` payload, or a sibling `callbackboxNativeCommandResult`
+  global is added beside the existing ack global. The ack stays what it is —
+  accepted/rejected — and the result is separate, so a rejection with a reason
+  and a successful empty result stay distinguishable.
+
 Web→native rides `window.callbackboxNativePost` with a string payload, which is
-the Android-compatible shape the plan fixed in Track 0.
+the Android-compatible shape the Android plan fixed in Track 0.
 
 **Merging.** The web scan handler, when the native bridge is present, requests
 `scan-controls`, waits up to ~1.5 s, and merges native entries into the
@@ -622,21 +700,33 @@ and `reveal` map onto native focus and sheet presentation where they exist and
 are rejected with a reason where they do not; the web side must not assume
 symmetry.
 
-**Surface reporting.** Add one attribute to the `<chat-app>` snapshot's
-`contextAttrs` (`src/core/chat/features.ts`): `surface="web-desktop" |
-"web-mobile" | "ios-native"`. Today `channel` is classified from the
-user-agent (`chat-helpers.ts` `classifyChannel`), which reports the iOS webview
-as `web-mobile` and hides the one distinction that changes the answer. The
-client sends it — it knows whether `nativeComposer=1` is in effect — rather
-than the server guessing from a UA string. This is also the attribute
+**Surface reporting.** A new `<chat-app>` attribute `surface="web-desktop" |
+"web-mobile" | "ios-native"`. Today `channel` is classified server-side from
+the user-agent (`chat-send-routes.ts:240` → `chat-helpers.ts` `classifyChannel`),
+which reports the iOS webview as `web-mobile` and hides the one distinction
+that changes the answer. The client must send it instead — only the client
+knows whether the native shell is in effect (`ChatPage.tsx:126-130`).
+
+It is one attribute in the dump and five touchpoints in the code, which the
+plan should say out loud rather than call cheap: the send-body Zod schema and
+`extractCardFields`-style filter in `chat-helpers.ts`; a `surface` field on
+`ChatSendInput` (`src/core/chat/session/messages.ts`); latest-wins merging in
+`combineQueuedInputs` (`src/core/chat/session/state.ts`) alongside `channel`;
+`contextAttrs` **and** `READ_ONLY_ATTRS` in `src/core/chat/features.ts` (a
+context attribute the agent must not be able to set via a delta); and the
+client-side send plumbing through `api-chat.ts` and the chat machine. That is
+the same path `openCard` already walks, so it is well-trodden, not novel.
+
+This is also the attribute
 `issues/features/2026-08-13-tell-the-agent-the-screen-is-unfocused.md` will
 sit beside; the two should not invent separate vocabularies for "what the user
 is looking at".
 
 **Contract discipline.** `bin/mobile-contract-check.ts` enforces that a commit
 touching a listed anchor updates `docs/mobile-contract.md` in the same commit
-(anchor manifest at `mobile-contract.md:868-902`). Two new command kinds, a new
-registry, and a new snapshot attribute all land with §3.3, §7, §8 and §11
+(anchor manifest at `mobile-contract.md:868-902`). The V2 command envelope, the
+result channel, the native registry, and the new snapshot attribute all land
+with §3.3, §7, §8 and §11
 updates and golden fixtures under `test/mobile-contract/fixtures/`. The
 DEBUG-only composer fixture screens (`NativeComposerFixtureScreen.swift`, the
 `--composer-fixture=` launch args) are the existing harness for exercising
@@ -663,9 +753,14 @@ smallest piece that removes the "iOS looks like mobile web" lie.
 constant listing ~20 controls with an id, a label, a CSS selector and a
 description. `cb chat ui` prints it, filtered by which selectors currently
 match a visible element. `control:<id>` resolves by
-`document.querySelector(entry.selector)`. No accname computation, no derived
-ids, no `data-` attributes, no role walk. Perhaps 150 lines against the plan's
-several hundred, and it would answer the three job stories on the web today.
+`document.querySelector(entry.selector)`. No accname computation, no `data-`
+attributes, no role walk, no dump of anything the list does not name. Perhaps
+150 lines against the plan's several hundred, and it would answer the three job
+stories on the web today.
+
+After the cross-model review this plan moved substantially toward that shape:
+addresses are now authored-only, so the remaining difference is that the scan
+*reads the live DOM* rather than trusting a constant.
 
 **What the fuller approach buys, concretely.**
 
@@ -686,12 +781,12 @@ several hundred, and it would answer the three job stories on the web today.
    markup and it points at nothing, or worse, at something else. On the element
    it cannot.
 
-**What it does not buy, and where the plan should stay small.** The derived-id
-tier is the part most at risk of being over-built. It exists to satisfy a
-decided requirement — everything visible by default, unannotated controls
-degrade to their accessible name — and it is genuinely cheap once accname
-exists. But if it proves noisy in practice, the honest retreat is to keep the
-scan and print only authored-id controls by default, not to add machinery.
+**What it does not buy, and where the plan should stay small.** Listing
+unaddressable controls is now the part most at risk of being noise. It exists
+to satisfy a decided requirement — everything visible by default, unannotated
+controls degrade to their accessible name — and it is nearly free once the walk
+and accname exist. If the long tail proves to be clutter, the retreat is a flag
+on the dump that prints addressable controls only, not more machinery.
 Recorded here so the next reader knows which knob to turn first.
 
 The plan deliberately does **not** add: a registry keyed by id (rejected above),
@@ -716,12 +811,12 @@ plan; both are recorded in the table.
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
 | Agent writes `control:` with an id that has unmounted or scrolled out of a virtualised list | Yes — `ControlPointer` component doctest for the zero-match path | Yes — resolver returns zero matches → `BrokenLink` with the id in the tooltip | Clear |
-| A derived id matches two elements at click time (a name that was unique at scan time is not now) | Yes — resolver doctest, multi-match case | Yes — more than one match is a failure, never "pick the first" | Clear |
+| Two elements carry the same `data-control` (a component rendered twice, e.g. the desktop and mobile composer rows both mounted) | Yes — resolver doctest, multi-match case; plus a scan doctest asserting the dump reports duplicates | Yes — more than one match is a failure, never "pick the first"; the scan header names the duplicated id | Clear |
 | Native bridge does not answer `scan-controls` in time | Yes — route doctest with a fake bridge that never answers | Yes — `coverage: "dom-native-unavailable"` and an explicit sentence in the dump | Clear |
 | No client attached when the agent runs `cb chat ui` (phone locked, tab closed) | Yes — route doctest via the existing ack-window path | Yes — `no-client`, distinct from `timeout`, inherited from `pending-browser-request.ts:11-18` | Clear |
 | Accname computation returns empty for a control that is genuinely important | Partly — doctests cover the fallback chain, not "was this one important" | Dropped from the dump, but the drop **count** is printed in the header | Clear (count), silent (which) — accepted; see below |
-| `reveal` targets a control whose `aria-expanded` is missing because a `Dropdown` caller forgot to spread `ariaProps` | Yes — a tour assertion that every `Dropdown` trigger exposes `aria-haspopup` | Partial — the control appears without `[opens]`, so the agent will not offer `reveal` on it | Silent to the user, visible in the tour report — accepted |
-| `reveal` fires on a disclosure control that also mutates (a toggle with `aria-expanded`) | Yes — resolver doctest asserting `role="switch"` is not revealable | Yes — `discloses` requires `aria-expanded`/`aria-haspopup`/`role="tab"`, and `role="switch"` carries `aria-checked`, not `aria-expanded` | Clear |
+| An author puts `data-control-reveal` on a control that does more than disclose | Yes — a doctest asserting every `data-control-reveal` element also presents `aria-expanded`/`aria-haspopup`/`role="tab"` | Partial — the doctest catches the missing-semantics case, not a genuinely mislabelled disclosure control | Silent — accepted, and it is why the attribute is opt-in and confined to four menu triggers in this pass |
+| A `Dropdown` caller forgets to spread `ariaProps`, so its trigger has no `aria-expanded` | Yes — a tour assertion that every `Dropdown` trigger exposes `aria-haspopup` | Yes — the `data-control-reveal` doctest fails, so the annotation cannot land | Clear |
 | Scan payload is malformed or hostile (a compromised/old client) | Yes — route doctest with a bad body | Yes — Zod `strict()` schema at the route, per principle 3 | Clear |
 | Dump is large enough to matter (a page with 200 controls) | Yes — scan doctest asserting the cap | Yes — hard cap on entries, with the truncation stated in the header and the omitted count given | Clear |
 | Agent uses a dump from earlier in the conversation after the user navigated | No — not mechanically detectable server-side | Partial — the dump header carries the scan time and the URL; the pointer breaks visibly at click time | Clear at click, silent in the agent's reasoning — accepted; see Staleness |
@@ -773,10 +868,17 @@ highlight — the outcome the issue asks for.
   `scan-controls`. **ADDRESSED**: an old web client does not recognise the
   request and never acks, so the request resolves `no-client` rather than
   hanging or half-answering. An old iOS build throws
-  `DecodeError.unsupportedVersion` on the unknown kind
-  (`NativeComposerContract.swift`), which surfaces as
-  `coverage: "dom-native-unavailable"`. Both degrade to an honest partial
-  answer.
+  cannot decode the command at all — `receiveComposerCommand`
+  (`ChatWebView.swift:591-601`) wraps the decode in `try?`, so it answers with
+  a *rejection carrying a reason* when the payload has an `id`, and returns
+  **silently** when it does not. The web side therefore treats "no result
+  within the wait" identically to an explicit rejection and reports
+  `coverage: "dom-native-unavailable"`. (An earlier draft claimed the old
+  build would surface `DecodeError.unsupportedVersion`; the `try?` erases it,
+  and that error would only fire on a `version` bump, not on an unknown
+  `kind`. The observable outcome is the same, but the mechanism written down
+  was wrong, so the V2 envelope must always carry a non-empty `id` — that is
+  what keeps the failure loud rather than silent.)
 - **Voice** — the user cannot see the link. **ADDRESSED**: Track 4's prompt
   text requires the sentence around the pointer to locate the control in words,
   so the link is supplementary rather than load-bearing. This is the same
@@ -842,10 +944,12 @@ highlight — the outcome the issue asks for.
   Track 4's prompt guidance is written; the likely answer is that the agent
   keeps pointers out of `<speech>` and in the visible text, and the prose
   locates the control in words.
-- **The `~N` disambiguator.** Adequate but unlovely, and DOM order is a weak
-  tiebreak. If duplicate role+name+container triples turn out to be common in
-  practice, the better answer is a `data-control` on the offenders rather than a
-  cleverer suffix.
+- **Duplicate `data-control` on a responsive pair.** `DesktopComposerRow` and
+  `InteractiveChat-mobile-row.tsx` render the same four controls, and if both
+  are mounted with only one visible, the id is duplicated in the DOM. The scan's
+  visibility filter should make only one of them a candidate, but that is a
+  claim to verify in Track 1 rather than assume — if both can be mounted at
+  once, the ids need a variant suffix or the rows need to share one element.
 - **Whether `focus` and `reveal` have honest native meanings.** `focus` maps to
   first-responder; `reveal` maps to presenting the sheet a control opens. Both
   are plausible and neither is verified. The plan requires them to be rejected
@@ -908,12 +1012,13 @@ outcome the issue warns about.
   over the app's real shapes: `aria-label` + `title` together, `title`-only,
   text-content with an `aria-hidden` icon inside, `placeholder`-only, and the
   empty case that gets dropped.
-- `test/frontend/lib/ui-scan/control-id.doctest.md` — authored beats derived;
-  slug normalisation; the `~N` collision path; the state-churn case (the mic's
-  four titles produce four derived ids and one authored id).
+- `test/frontend/lib/ui-scan/annotations.doctest.md` — every `data-control` in
+  the app is unique among simultaneously-visible elements; every
+  `data-control-reveal` element also presents `aria-expanded`/`aria-haspopup`/
+  `role="tab"`; every id in Track 4's table exists in the source.
 - `test/frontend/lib/ui-scan/scan.doctest.md` — visibility rules, off-screen
-  included and marked, `aria-hidden` subtree excluded, `discloses` true for
-  `aria-expanded`/`aria-haspopup`/`role="tab"` and false for `role="switch"`,
+  included and marked, `aria-hidden` subtree excluded, an unannotated control
+  listed with a null id, `actions` gaining `reveal` only from the attribute,
   the entry cap.
 - `test/frontend/lib/view-url.doctest.md` (extend) — `control:` classification,
   params, unknown action degrades to `point`, empty id falls through.
@@ -926,7 +1031,7 @@ outcome the issue warns about.
 
 **Done-when**, as checkable assertions: `cb chat ui` against a live chat
 session returns a dump containing `composer.mic`, `composer.send` and
-`composer.add` with `[opens]` on `composer.add`; a hand-written
+`composer.add`, with `[reveal]` on `composer.add`; a hand-written
 `control:composer.add?action=reveal` link opens the attach menu; the same link
 with a nonexistent id renders as `BrokenLink`; the same dump run from the iOS
 app includes the native composer entries and reports `coverage: dom+native`;
@@ -939,6 +1044,15 @@ attribute is additive and read-only, and old clients that do not send it simply
 omit it, which the snapshot composer already handles by dropping absent
 attributes.
 
-**Cross-model review.** Required before this plan is called done, per the
-monorepo CLAUDE.md — this is well past a small-scope bug fix, it introduces a
-vocabulary shared across three surfaces, and it changes a bridge contract.
+**Cross-model review.** Done (Codex, gpt-5.5, plan mode). Eight findings; the
+plan was revised on six of them. The load-bearing ones: the derived-id tier was
+cut in favour of authored-only addresses; the `reveal` predicate stopped being
+inferred from ARIA once `TabBar.tsx:34` and `InteractiveChat-controls.tsx:176`
+showed `role="tab"` firing real state changes; the two-new-enum-members claim
+about the iOS command became a V2 envelope plus a result channel, once
+`NativeComposerContract.swift:88` (non-optional `selection`) and `:108-150` (an
+ack that cannot carry data) were read; `BrokenLink` was found to be private and
+render-time-static, so it moves to a shared module and `ControlPointer` becomes
+stateful; `composer.stop` was mapping two unrelated controls to one shared id;
+and a citation to `ChatWebView.swift:189` was simply wrong. Re-review is
+warranted if the iOS track's shape changes again.
