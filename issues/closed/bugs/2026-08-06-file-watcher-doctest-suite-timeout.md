@@ -63,7 +63,23 @@ exercises macOS, not this module.
   mutation testing — breaking either budget fails its test.
 
 The file now runs 13 assertions in 1.4 s, down from 12 in 5.8 s, with no section
-over 140 ms.
+over 140 ms, and 1.4–1.8 s under full six-way suite load (it was 7.7–23 s).
+
+## What the cross-model review caught
+
+The first version of the teardown fix was incomplete, and codex found it.
+Hoisting registration made a *new* thrower reachable: a cleanup block belonging
+to a `continue` block the test never reached closes over a `const` still in its
+temporal dead zone. tap runs teardowns LIFO and abandons the rest once one
+throws, so that ReferenceError would skip every earlier cleanup — including the
+one holding the handle — reproducing the very leak the hoist was meant to fix.
+Each teardown body is now wrapped, so one failure cannot strand its siblings.
+
+Writing the regression test for it exposed a second mistake: **a failed
+`t.check` does not throw.** The first fixture "failed" by assertion and so
+proved nothing — its cleanup would have run under the old generator too. Only an
+actual exception (which is what a `waitFor` timeout raises) skips the rest of a
+test. Both fixtures now throw.
 
 ## Related
 
