@@ -61,7 +61,7 @@ export const eventsRouter = router({
       const signal = opts.signal;
       // The bus's `file-change` events come from this watcher; start it here so
       // the subscription is self-sufficient (the SSE route used to do this).
-      ensureBoxWatcher(opts.ctx.boxRoot, opts.ctx.eventBus);
+      ensureBoxWatcher(opts.ctx.boxRoot, { eventBus: opts.ctx.eventBus });
       const afterId = opts.input?.lastEventId ? Number(opts.input.lastEventId) : 0;
       const queue: BusEvent[] = [];
       let coalescedTransients = 0;

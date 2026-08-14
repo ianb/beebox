@@ -255,6 +255,156 @@ JSON.parse("{bad json")
   t.notOk(sources.some((source) => source.includes("FIRST_PASSING_MARKER")), "failure sources exclude passing examples");
 });
 
+test("a cleanup block still runs when an earlier example fails", async (t) => {
+  // Cleanup exists FOR the failure case, so its `t.teardown()` registration is
+  // emitted ahead of the example body rather than at the point the cleanup
+  // block appears. Registering it inline meant a throwing example never reached
+  // the registration: the cleanup silently never ran, and a doctest holding an
+  // OS handle (an `fs.watch`, a server, a child process) kept the tap child
+  // alive until tap's per-file timeout killed it. A single failed assertion
+  // then surfaced as an opaque whole-file `expired:` naming no assertion at
+  // all, and leaked the handle besides.
+  const dir = await mkdtemp(join(process.cwd(), ".doctest-cleanup-"));
+  t.teardown(() => rm(dir, { recursive: true, force: true }));
+  const fixture = join(dir, "cleanup-on-failure.doctest.md");
+  await writeFile(fixture, `# Cleanup on failure
+
+\`\`\`ts setup
+const opened: string[] = [];
+\`\`\`
+
+\`\`\`
+opened.push("handle");
+throw new Error("CLEANUP_FIXTURE_THROW");
+\`\`\`
+
+\`\`\`ts cleanup
+opened.pop();
+console.log("CLEANUP_RAN opened=" + opened.length);
+\`\`\`
+`);
+
+  const tapCheck = fileURLToPath(new URL("../src/tap-check.ts", import.meta.url));
+  const loader = fileURLToPath(new URL("../src/doctest-loader.ts", import.meta.url));
+  const result = spawnSync(
+    process.execPath,
+    [`--import=tsx`, `--import=${tapCheck}`, `--import=${loader}`, fixture],
+    { cwd: process.cwd(), encoding: "utf8" },
+  );
+
+  t.not(result.status, 0, "the fixture's example must fail");
+  t.match(result.stdout, /CLEANUP_RAN opened=0/, "cleanup ran despite the failure, and released the handle");
+});
+
+test("a cleanup for an unreached continue block cannot strand an earlier cleanup", async (t) => {
+  // Hoisting registration exposes a second way to leak: the second cleanup
+  // closes over a `const` its `continue` block never declared, so it throws
+  // ReferenceError at teardown. tap runs teardowns LIFO and abandons the rest
+  // once one throws, which would skip the FIRST cleanup — the one actually
+  // holding the handle. Each teardown body is wrapped so one failure cannot
+  // strand the others.
+  const dir = await mkdtemp(join(process.cwd(), ".doctest-cleanup-order-"));
+  t.teardown(() => rm(dir, { recursive: true, force: true }));
+  const fixture = join(dir, "cleanup-order.doctest.md");
+  await writeFile(fixture, `# Cleanup order
+
+\`\`\`ts setup
+const opened: string[] = [];
+\`\`\`
+
+\`\`\`
+opened.push("first");
+throw new Error("ORDER_FIXTURE_THROW");
+\`\`\`
+
+\`\`\`ts cleanup
+opened.pop();
+console.log("FIRST_CLEANUP_RAN opened=" + opened.length);
+\`\`\`
+
+Prose separates the continue block that never runs.
+
+\`\`\`ts continue
+const second = "never reached";
+second
+=> never reached
+\`\`\`
+
+\`\`\`ts cleanup
+console.log("SECOND_CLEANUP_SAW " + second);
+\`\`\`
+`);
+
+  const tapCheck = fileURLToPath(new URL("../src/tap-check.ts", import.meta.url));
+  const loader = fileURLToPath(new URL("../src/doctest-loader.ts", import.meta.url));
+  const result = spawnSync(
+    process.execPath,
+    [`--import=tsx`, `--import=${tapCheck}`, `--import=${loader}`, fixture],
+    { cwd: process.cwd(), encoding: "utf8" },
+  );
+
+  t.not(result.status, 0, "the fixture's example must fail");
+  t.match(
+    result.stdout,
+    /FIRST_CLEANUP_RAN opened=0/,
+    "the cleanup holding the handle ran even though a later cleanup could not",
+  );
+});
+
+test("a cleanup block that throws fails its test rather than passing quietly", async (t) => {
+  // The other half of wrapping each teardown: swallowing the error would let a
+  // broken cleanup pass unnoticed. (When the test itself already rejected, tap
+  // has closed the plan and this assertion has nowhere to land — the real
+  // failure is reported there instead, so nothing is lost.)
+  const dir = await mkdtemp(join(process.cwd(), ".doctest-cleanup-throws-"));
+  t.teardown(() => rm(dir, { recursive: true, force: true }));
+  const fixture = join(dir, "cleanup-throws.doctest.md");
+  await writeFile(fixture, `# Cleanup that throws
+
+\`\`\`
+1 + 1
+=> 2
+\`\`\`
+
+\`\`\`ts cleanup
+throw new Error("CLEANUP_THROW_MARKER");
+\`\`\`
+`);
+
+  const tapCheck = fileURLToPath(new URL("../src/tap-check.ts", import.meta.url));
+  const loader = fileURLToPath(new URL("../src/doctest-loader.ts", import.meta.url));
+  const result = spawnSync(
+    process.execPath,
+    [`--import=tsx`, `--import=${tapCheck}`, `--import=${loader}`, fixture],
+    { cwd: process.cwd(), encoding: "utf8" },
+  );
+
+  t.not(result.status, 0, "a failing cleanup fails the run");
+  t.match(result.stderr, /doctest cleanup block failed[\s\S]*CLEANUP_THROW_MARKER/, "the cleanup failure is named, not swallowed");
+});
+
+test("generateTestSource: teardown is registered before the examples that need it", async (t) => {
+  const md = `\`\`\`
+const box = open();
+box.name
+=> expected
+\`\`\`
+
+\`\`\`ts cleanup
+box.close();
+\`\`\`
+`;
+
+  const source = generateTestSource(md, "/test.doctest.md");
+  // The emitted statement, not the same text inside the generated test's name.
+  const body = source.indexOf("\n  const box = open();");
+  t.ok(body > 0, "the example statement is emitted");
+  t.ok(
+    source.indexOf("t.teardown") < body,
+    "an example that throws must not be able to skip its own cleanup registration",
+  );
+});
+
 test("generateTestSource: throws assertion emits an awaited async thunk", async (t) => {
   const md = `\`\`\`
 await failAsync()
