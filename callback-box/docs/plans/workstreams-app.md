@@ -1,12 +1,28 @@
 ---
 title: "Resident workstreams application"
-status: active
+status: partial
 workstream: workstreams
 issues:
-  - ../../../issues/code-quality/2026-08-13-resident-workstreams-app.md
+  - ../../../issues/closed/code-quality/2026-08-13-resident-workstreams-app.md
 ---
 
 # Resident workstreams application
+
+## Implementation status
+
+Tracks A through F are implemented in `workstreams-app/`,
+`bin/workstreams-app-supervisor.ts`, and the router proxy. The legacy
+interactive workstreams renderer is removed. Automated package, route,
+supervisor, compatibility, and build checks pass, and the app has been exercised
+through an isolated router and browser.
+
+The plan remains partial until the boxholder restarts the shared router once and
+performs the real-machine acceptance rehearsal in implementation step 11. That
+rehearsal must cover shared-router startup and fallback, issue Save, workstream
+resume, real Terminal opening, and recovery from a broken main install. Isolated
+tests and fake terminal launchers do not satisfy this acceptance boundary. After
+the initial restart, landed app-only changes restart the resident child without
+another router restart.
 
 Move the interactive workstreams, issues, plans, and testing surfaces out of the
 dependency-light dev router and into a resident application. Keep the router as
@@ -52,11 +68,11 @@ depending on the broken build.
   replaces that call site; the path remains stable.
 - `bin/router-auth.ts:216-237` classifies workstreams reads and mutations before
   dispatch. Reuse this fail-closed outer authorization gate.
-- `bin/router-workstreams.ts:231-280` already treats `bin/workstreams` as a
-  process boundary. Preserve the CLI as the canonical lifecycle command surface.
-- `bin/router-workstreams.ts:1193-1373` combines routing, data access, actions,
-  HTML, JavaScript, CSP, and error handling. Split these responsibilities; do
-  not port the string renderer into React.
+- The removed legacy workstreams renderer treated `bin/workstreams` as a
+  process boundary. The CLI remains the canonical lifecycle command surface.
+- The removed renderer combined routing, data access, actions, HTML, JavaScript,
+  CSP, and error handling. The resident app now splits those responsibilities
+  instead of porting the string renderer into React.
 - `bin/workstreams` is an agent-facing command surface. Its `list --json` branch
   deliberately keeps liveness in Bash (`bin/workstreams:487-507`) so there is
   one guard in front of destructive actions. The app shells through this
@@ -253,9 +269,9 @@ failure-propagation tests before enabling the app by default.
 
 ## Could this be simpler?
 
-The simplest plausible change is to keep `bin/router-workstreams.ts` as the
-backend and replace only its HTML strings with a Vite React bundle. That avoids
-a process, proxy, capability, and API package.
+The simpler alternative was to retain the legacy router backend and replace
+only its HTML strings with a Vite React bundle. That would have avoided a
+process, proxy, capability, and API package.
 
 It does not solve the issue's routing, validation, failure-domain, or bootstrap
 concerns. It also leaves destructive actions inside the same process that must

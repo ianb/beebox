@@ -10,7 +10,7 @@ discovered-in: main session — boxholder observation
 ---
 
 The resident workstreams application has been split into
-[`2026-08-13-resident-workstreams-app.md`](2026-08-13-resident-workstreams-app.md).
+[`2026-08-13-resident-workstreams-app.md`](../closed/code-quality/2026-08-13-resident-workstreams-app.md).
 This issue remains open for the dependency-light bootstrap router itself.
 
 `bin/` is now **~12,500 lines** of router, and it started as a small script. It

@@ -130,6 +130,7 @@ async function collectClaude(options: {
     ? { ...cache.quota, stale: true, message: cache.error }
     : { provider: "claude", status: "unavailable", fetchedAt: options.fetchedAt, windows: [], message: cache.error };
   if (options.background) {
+    // refreshClaude persists any failure in the cache for the next request.
     void refreshClaude(options).catch(() => {});
     return cache.quota ? { ...cache.quota, stale: true } : {
       provider: "claude", status: "unavailable", fetchedAt: options.fetchedAt, windows: [],

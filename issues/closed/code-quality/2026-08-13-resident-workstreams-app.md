@@ -2,13 +2,19 @@
 title: "Move the interactive workstreams surface into a resident application"
 workstream: workstreams
 area: router
-needs: [design]
 labels: [router, architecture, workstreams]
+resolution: implemented
 filed-by: agent
 discovered-by: Ian
 discovered-in: workstreams — router architecture planning
-design: ../../callback-box/docs/plans/workstreams-app.md
+design: ../../../callback-box/docs/plans/workstreams-app.md
 ---
+
+Implemented by the resident-app commit series from `43dd7891` through
+`ef03d0f6`. The router now owns authentication, supervision, proxying, and the
+buildless failure fallback; `workstreams-app/` owns the interactive application.
+The boxholder-only shared-router and real-Terminal acceptance rehearsal remains
+tracked in the partial plan rather than keeping this implementation issue open.
 
 The workstreams, issues, plans, testing, quota, and lifecycle surfaces are now
 an application implemented as HTML strings and hand-written browser JavaScript

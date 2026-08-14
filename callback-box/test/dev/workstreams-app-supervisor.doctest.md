@@ -162,6 +162,7 @@ assert.deepEqual(
 const redirect = { status: 0, location: "" };
 writeDeny(
   { url: "/workstreams/issues/", headers: { accept: "text/html" } } as IncomingMessage,
+  // Test-only structural response double implements every method writeDeny uses.
   {
     writeHead: (status: number, headers: Record<string, string>) => {
       redirect.status = status;

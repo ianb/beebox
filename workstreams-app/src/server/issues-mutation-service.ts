@@ -228,6 +228,7 @@ async function writeChanges(
     }
   } finally {
     await Promise.all([...temporaries.values()].map(async (temporary) => {
+      // Best-effort cleanup: successfully renamed temporaries no longer exist.
       await fs.unlink(temporary).catch(() => {});
     }));
   }
