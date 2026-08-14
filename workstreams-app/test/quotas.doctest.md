@@ -9,6 +9,7 @@ import os from "node:os";
 import path from "node:path";
 import { collectAgentQuotas } from "../src/server/quota-collect.js";
 import { parseClaudeQuota, parseCodexQuota } from "../src/server/quota-parse.js";
+import { quotaWindowsForDisplay } from "../src/frontend/lib/format.js";
 
 const fetchedAt = "2026-08-13T12:00:00.000Z";
 ```
@@ -42,6 +43,19 @@ JSON.stringify({
   claude: { status: claude.status, windows: claude.windows },
 })
 => {"codex":{"status":"available","windows":[{"label":"7-day window","usedPercent":25,"resetsAt":"2026-08-20T12:00:00.000Z","durationMinutes":10080}],"credits":{"balance":"42","unlimited":false}},"claude":{"status":"available","windows":[{"label":"7-day window","usedPercent":35,"resetsAt":"2026-08-20T12:00:00.000Z","durationMinutes":10080},{"label":"Sonnet · 7-day window","usedPercent":10,"resetsAt":"2026-08-20T12:00:00.000Z","durationMinutes":10080}]}}
+```
+
+Claude's short window is secondary in the panel even when the provider returns
+it first. Other providers retain their source order.
+
+```ts
+const short = { label: "5-hour window", usedPercent: 10, resetsAt: fetchedAt, durationMinutes: 300 };
+const weekly = { label: "7-day window", usedPercent: 20, resetsAt: fetchedAt, durationMinutes: 10_080 };
+JSON.stringify({
+  claude: quotaWindowsForDisplay({ provider: "claude", status: "available", fetchedAt, windows: [short, weekly] }).map((window) => window.label),
+  codex: quotaWindowsForDisplay({ provider: "codex", status: "available", fetchedAt, windows: [short, weekly] }).map((window) => window.label),
+})
+=> {"claude":["7-day window","5-hour window"],"codex":["5-hour window","7-day window"]}
 ```
 
 ## Collection observes the ten-minute Claude cadence

@@ -1,4 +1,10 @@
-import type { QuotaWindow } from "../types.js";
+import type { Quota, QuotaWindow } from "../types.js";
+
+export function quotaWindowsForDisplay(quota: Quota): Quota["windows"] {
+  if (quota.provider !== "claude") return quota.windows;
+  return quota.windows.toSorted((left, right) =>
+    Number(left.durationMinutes === 300) - Number(right.durationMinutes === 300));
+}
 
 export function relativeTime(value: string, now?: Date): string {
   const reference = now ?? new Date();
