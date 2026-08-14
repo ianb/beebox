@@ -13,6 +13,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import {
   HUGE_TRANSCRIPT_BYTES,
+  sessionEntriesPrintable,
   transcriptPrintable,
 } from "../../../src/cli/commands/session-modes.js";
 
@@ -46,6 +47,23 @@ whatever is there.
 
 ```ts
 transcriptPrintable({ logPath: hugePath, sessionId: "s3", allowHuge: true })
+=> true
+```
+
+Supported-API transcripts have no native file to stat, so the guard measures the
+normalized readable entries and honors the same explicit override.
+
+```ts
+const hugeEntries = [{
+  uuid: "u1",
+  type: "assistant" as const,
+  timestamp: "",
+  content: [{ type: "text" as const, text: "x".repeat(HUGE_TRANSCRIPT_BYTES + 1) }],
+}];
+sessionEntriesPrintable({ entries: hugeEntries, sessionId: "codex-1", allowHuge: false })
+=> false
+
+sessionEntriesPrintable({ entries: hugeEntries, sessionId: "codex-1", allowHuge: true })
 => true
 ```
 

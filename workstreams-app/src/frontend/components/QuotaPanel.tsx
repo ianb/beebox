@@ -1,4 +1,4 @@
-import { compactDuration, friendlyTimestamp, quotaPace } from "../lib/format.js";
+import { compactDuration, friendlyTimestamp, quotaPace, quotaWindowsForDisplay } from "../lib/format.js";
 import { useState } from "react";
 import type { Quota } from "../types.js";
 
@@ -22,6 +22,6 @@ export function QuotaPanel({ quotas }: { quotas: Quota[] }) {
   const [open, setOpen] = useState(false);
   const summary = quotas.map((quota) => quota.status !== "available" ? `${quota.provider} unavailable` : `${quota.provider} ${quota.windows.some((window) => !quotaPace(window)?.onTrack) ? "over pace" : "on track"}`).join(" · ");
   return <details className="quota-popover" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}><summary>Quotas{summary ? ` · ${summary}` : ""}</summary><button type="button" className="quota-backdrop" aria-label="Close quotas" onClick={() => setOpen(false)} /><div className="quota-panel" role="region" aria-label="Agent capacity">
-    {quotas.map((quota) => <article className="quota-card" key={quota.provider}><h2>{quota.provider === "claude" ? "Claude account" : "Codex"}</h2>{quota.status === "available" ? quota.windows.map((window) => <Window key={window.label} window={window} />) : <p>{quota.message ?? "Quota unavailable."}</p>}{quota.credits ? <p className="muted">Credits: {quota.credits.unlimited ? "unlimited" : quota.credits.balance ?? "unavailable"}</p> : null}<p className="muted">{quota.stale ? "Stale · " : ""}Updated {friendlyTimestamp(quota.fetchedAt)}</p></article>)}
+    {quotas.map((quota) => <article className="quota-card" key={quota.provider}><h2>{quota.provider === "claude" ? "Claude account" : "Codex"}</h2>{quota.status === "available" ? quotaWindowsForDisplay(quota).map((window) => <Window key={window.label} window={window} />) : <p>{quota.message ?? "Quota unavailable."}</p>}{quota.credits ? <p className="muted">Credits: {quota.credits.unlimited ? "unlimited" : quota.credits.balance ?? "unavailable"}</p> : null}<p className="muted">{quota.stale ? "Stale · " : ""}Updated {friendlyTimestamp(quota.fetchedAt)}</p></article>)}
   </div></details>;
 }

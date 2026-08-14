@@ -25,6 +25,7 @@ import {
   enrichSessions,
   type EnrichedSession,
 } from "./session-format.js";
+import type { SessionEntry } from "../lib/session.js";
 import { fmt } from "../../lib/format.js";
 import { renderEntries, type RenderOptions } from "./session-render.js";
 import { invariant } from "../../lib/invariant.js";
@@ -230,6 +231,23 @@ export function transcriptPrintable(options: {
   if (size <= HUGE_TRANSCRIPT_BYTES) return true;
   console.error(
     `Refusing to print session ${sessionId}: its transcript is ${formatMb(size)} ` +
+      `(threshold ${formatMb(HUGE_TRANSCRIPT_BYTES)}). ` +
+      "Re-run with --allow-huge if you really want a result this size.",
+  );
+  return false;
+}
+
+/** Apply the same output guard to a supported-API transcript with no backing file. */
+export function sessionEntriesPrintable(options: {
+  entries: SessionEntry[];
+  sessionId: string;
+  allowHuge: boolean;
+}): boolean {
+  if (options.allowHuge) return true;
+  const bytes = Buffer.byteLength(JSON.stringify(options.entries));
+  if (bytes <= HUGE_TRANSCRIPT_BYTES) return true;
+  console.error(
+    `Refusing to print session ${options.sessionId}: its readable history is ${formatMb(bytes)} ` +
       `(threshold ${formatMb(HUGE_TRANSCRIPT_BYTES)}). ` +
       "Re-run with --allow-huge if you really want a result this size.",
   );
