@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { IssuesPane } from "../components/IssuesPane.js";
+import { issueChangeKey, IssuesPane } from "../components/IssuesPane.js";
 import { Button } from "../components/ui.js";
 import { trpc } from "../trpc.js";
 import type { Issue, IssueChange } from "../types.js";
@@ -18,8 +18,9 @@ export function IssuesPage() {
   function change(next: IssueChange): void {
     setChanges((current) => {
       const updated = new Map(current);
-      if (next.priority === next.originalPriority && next.nextAction === next.originalNextAction) updated.delete(next.relPath);
-      else updated.set(next.relPath, next);
+      const key = issueChangeKey(next);
+      if (next.priority === next.originalPriority && next.nextAction === next.originalNextAction) updated.delete(key);
+      else updated.set(key, next);
       return updated;
     });
   }
