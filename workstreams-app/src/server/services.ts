@@ -1,4 +1,16 @@
 import type { WorkstreamSummary } from "../shared/workstreams.js";
+import type {
+  Issue,
+  IssueChange,
+  Plan,
+  Quota,
+  TestingQueue,
+} from "../shared/documents.js";
+import type {
+  ActionResult,
+  ActionVerb,
+  LifecycleJob,
+} from "../shared/actions.js";
 
 export interface WorkstreamsService {
   list(): Promise<WorkstreamSummary[]>;
@@ -6,4 +18,26 @@ export interface WorkstreamsService {
 
 export interface AppServices {
   workstreams: WorkstreamsService;
+  documents: DocumentsService;
+  quotas: QuotasService;
+  actions: ActionsService;
+}
+
+export interface DocumentsService {
+  listIssues(): Promise<Issue[]>;
+  issueDetail(relPath: string, visibility: "public" | "private"): Promise<Issue>;
+  listPlans(): Promise<Plan[]>;
+  testingQueue(): Promise<TestingQueue>;
+  issuesForWorkstream(name: string): Promise<Issue[]>;
+  saveIssueChanges(changes: IssueChange[]): Promise<number>;
+}
+
+export interface QuotasService {
+  get(): Promise<Quota[]>;
+}
+
+export interface ActionsService {
+  run(verb: ActionVerb, name: string): Promise<ActionResult>;
+  job(id: string): LifecycleJob | null;
+  activeJobs(): number;
 }

@@ -701,6 +701,9 @@ importers:
 
   workstreams-app:
     dependencies:
+      '@anthropic-ai/claude-agent-sdk':
+        specifier: 0.3.227
+        version: 0.3.227(@anthropic-ai/sdk@0.93.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(zod@4.4.3)
       '@tanstack/react-query':
         specifier: ^5.90.21
         version: 5.100.14(react@18.3.1)
@@ -716,6 +719,9 @@ importers:
       '@trpc/server':
         specifier: ^11.11.0
         version: 11.17.0(typescript@5.9.3)
+      execa:
+        specifier: ^9.6.1
+        version: 9.6.1
       fastify:
         specifier: ^5.7.2
         version: 5.8.5

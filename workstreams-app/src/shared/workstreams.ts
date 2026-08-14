@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { issueSchema, planSchema, quotaSchema, testingQueueSchema } from "./documents.js";
 
 const removedStateSchema = z.object({
   at: z.iso.datetime(),
@@ -64,6 +65,19 @@ export const workstreamSummarySchema = workstreamsCliRowSchema.omit({
 
 export const workstreamListResultSchema = z.object({
   items: z.array(workstreamSummarySchema),
+});
+
+export const workstreamDetailSchema = z.object({
+  workstream: workstreamSummarySchema,
+  issues: z.array(issueSchema),
+});
+
+export const dashboardSchema = z.object({
+  workstreams: z.array(workstreamSummarySchema),
+  issues: z.array(issueSchema),
+  plans: z.array(planSchema),
+  quotas: z.array(quotaSchema),
+  testing: testingQueueSchema,
 });
 
 export type WorkstreamSummary = z.infer<typeof workstreamSummarySchema>;

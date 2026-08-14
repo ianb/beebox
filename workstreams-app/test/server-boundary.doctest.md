@@ -14,6 +14,8 @@ import {
   ROUTER_CAPABILITY_HEADER,
   buildApp,
 } from "../src/server/app.js";
+import type { AppServices } from "../src/server/services.js";
+import type { WorkstreamSummary } from "../src/shared/workstreams.js";
 
 function cliRow(name = "example") {
   return {
@@ -35,6 +37,26 @@ function cliRow(name = "example") {
       archived: null,
     },
     boxState: { testSetup: false, keepUnmerged: false, pristine: null },
+  };
+}
+
+function fakeServices(workstreams: WorkstreamSummary[] = []): AppServices {
+  return {
+    workstreams: { list: async () => workstreams },
+    documents: {
+      listIssues: async () => [],
+      issueDetail: async () => { throw new Error("not configured"); },
+      listPlans: async () => [],
+      testingQueue: async () => ({ landed: [], pending: [] }),
+      issuesForWorkstream: async () => [],
+      saveIssueChanges: async () => 0,
+    },
+    quotas: { get: async () => [] },
+    actions: {
+      run: async () => ({ status: "complete" }),
+      job: () => null,
+      activeJobs: () => 0,
+    },
   };
 }
 ```
@@ -113,7 +135,7 @@ the supervisor.
 
 ```ts
 const app = await buildApp({
-  services: { workstreams: { list: async () => [] } },
+  services: fakeServices(),
   routerCapability: "correct-capability",
   basePath: "/workstreams/",
   buildId: "build-42",
@@ -141,9 +163,7 @@ disabled so the outer router can classify each read or mutation independently.
 ```ts continue
 const row = cliRow("from-api");
 const apiApp = await buildApp({
-  services: {
-    workstreams: {
-      list: async () => [{
+  services: fakeServices([{
         name: row.name,
         branch: row.branch,
         url: row.url,
@@ -152,9 +172,7 @@ const apiApp = await buildApp({
         agent: row.agent,
         session: row.session,
         boxState: row.boxState,
-      }],
-    },
-  },
+  }]),
   routerCapability: "correct-capability",
   basePath: "/workstreams",
   buildId: "build-42",
