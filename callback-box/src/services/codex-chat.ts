@@ -10,6 +10,7 @@ import type {
   ChatContentBlock,
   NativeChatBackendMessage,
 } from "./claude-chat-types.js";
+import { ensureCodexPluginInstalled } from "../core/agent/ensure-codex-plugin.js";
 
 const threadSchema = z.looseObject({ thread: z.looseObject({ id: z.string() }) });
 const turnSchema = z.looseObject({ turn: z.looseObject({ id: z.string() }) });
@@ -115,10 +116,12 @@ function waitForTurn(options: {
 
 function createRun(opts: ChatBackendStartOptions): ChatBackendRun {
   const queue = createAsyncIterableQueue<NativeChatBackendMessage>();
-  const server = new CodexAppServer({ cwd: opts.cwd, env: opts.env });
+  let server: CodexAppServer | null = null;
   let activeTurnId: string | null = null;
   let threadId: string | null = null;
-  let chain = server.initialize().then(async () => {
+  let chain = ensureCodexPluginInstalled().then(async () => {
+    server = new CodexAppServer({ cwd: opts.cwd, env: opts.env });
+    await server.initialize();
     threadId = await openThread(server, opts);
     queue.push(event({ type: "system", subtype: "init", session_id: threadId }));
   });
@@ -130,6 +133,7 @@ function createRun(opts: ChatBackendStartOptions): ChatBackendRun {
       chain = chain.then(async () => {
         if (threadId === null) throw new CodexChatNotInitializedError();
         queue.push(event({ type: "user", session_id: threadId, message: { role: "user", content } }));
+        if (server === null) throw new CodexChatNotInitializedError();
         const raw = await server.request({
           method: "turn/start",
           params: {
@@ -163,14 +167,14 @@ function createRun(opts: ChatBackendStartOptions): ChatBackendRun {
       });
     },
     async interrupt(): Promise<void> {
-      if (threadId === null || activeTurnId === null) return;
+      if (server === null || threadId === null || activeTurnId === null) return;
       await server.request({ method: "turn/interrupt", params: { threadId, turnId: activeTurnId }, timeoutMs: 10_000 });
     },
     async close(): Promise<void> {
       if (run.closed) return;
       await chain;
       run.closed = true;
-      server.close();
+      server?.close();
       queue.end();
     },
   };

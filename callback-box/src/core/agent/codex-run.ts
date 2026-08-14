@@ -9,6 +9,7 @@ import {
   CodexRpcError,
 } from "../../services/codex-app-server.js";
 import type { AgentResult, AgentResultBase } from "./types.js";
+import { ensureCodexPluginInstalled } from "./ensure-codex-plugin.js";
 
 const threadResultSchema = z.looseObject({
   thread: z.looseObject({ id: z.string() }),
@@ -253,8 +254,10 @@ export async function runCodexAgent(options: CodexRunOptions): Promise<AgentResu
   const tzContext = options.resumeSessionId === undefined
     ? await buildTimezoneContext(options.boxRoot)
     : "";
-  const server = new CodexAppServer({ cwd: options.cwd ?? options.boxRoot });
+  let server: CodexAppServer | null = null;
   try {
+    await ensureCodexPluginInstalled();
+    server = new CodexAppServer({ cwd: options.cwd ?? options.boxRoot });
     if (options.maxBudgetUsd !== undefined) {
       options.onOutput?.(
         `${fmt.warn("Codex does not expose a per-turn USD budget; callback-box will enforce the configured tool-turn limit only.")}\n`,
@@ -289,6 +292,6 @@ export async function runCodexAgent(options: CodexRunOptions): Promise<AgentResu
       sessionId: options.resumeSessionId ?? "",
     };
   } finally {
-    server.close();
+    server?.close();
   }
 }

@@ -27,6 +27,7 @@
     "bin",
     "templates",
     "plugins",
+    ".agents",
     "src/frontend/dist",
     "src/frontend/package.json",
     "src/types",
