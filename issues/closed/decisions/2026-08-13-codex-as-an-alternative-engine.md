@@ -64,11 +64,62 @@ The remaining lossy areas are mostly product policy and presentation:
 - No live mid-chat engine switch was tested or is proposed. Pinning each chat
   to its engine avoids translating model-private state.
 
-Two practical follow-up probes remain before implementation estimation is
-credible: (1) create/resume/read/list/delete a thread and compare the returned
-turn/item data with every field callback-box renders or extracts; (2) establish
-the supported project hook trust/configuration path and verify that blocking
+Two practical follow-up tracks remain before implementation estimation is
+credible: (1) finish the transcript audit begun below, including
+list/delete/retention and every callback-box consumer; (2) establish the
+supported project hook trust/configuration path and verify that blocking
 PostToolUse feedback actually replaces the tool result seen by the model.
+
+### Current-chat transcript comparison
+
+The first transcript follow-up used the Codex thread running this investigation,
+not another synthetic chat. `CODEX_THREAD_ID` identified its private session
+JSONL, and a separately spawned app-server process successfully called
+`thread/read` with that ID and `includeTurns: true` while the original Codex
+process remained active.
+
+At the observation point, the private JSONL had 433 records (about 1.7 MB):
+
+- session metadata and six turn-context snapshots;
+- user and agent messages;
+- 72 custom tool calls and 71 corresponding outputs;
+- 13 function calls and 13 outputs;
+- encrypted reasoning records;
+- 148 lifecycle/event records, including token counts;
+- compaction, world-state, and inter-agent metadata.
+
+The supported `thread/read` response returned the five completed turns (the
+sixth was this still-active turn), with stable turn IDs, status, timing, and 47
+presentation-level items:
+
+- 5 `userMessage` items;
+- 25 phased `agentMessage` items;
+- 12 `fileChange` items;
+- 3 `webSearch` items;
+- 1 `subAgentActivity` item;
+- 1 `contextCompaction` item.
+
+It also returned useful thread metadata: session/thread IDs, CLI version, cwd,
+source, model provider, git info, timestamps, preview/name, parent/fork fields,
+history mode, pin state, and the private transcript path. The read-only call did
+not disturb the running chat.
+
+This API representation is intentionally lossy relative to the private file:
+it omitted raw tool calls/results, encrypted reasoning, token-count events,
+full injected turn context, and world-state snapshots. That is probably the
+right loss boundary for callback-box rather than a defect. The chat UI needs
+user/agent content and selected durable activity, while active-turn streaming
+can carry transient tool progress. Debug/raw-transcript tooling may remain
+provider-specific.
+
+Most importantly, **Codex chat history does not require callback-box to parse
+Codex's private JSONL**. A provider transcript adapter can use the supported
+`thread/read` result and retain Codex's native item types. The remaining audit
+is now narrower: map those returned items against callback-box's rendered chat
+entries, first-message labels, delivered-message decoding, self-notes, husk
+review/extraction, retention slicing, and delete/archive behavior. `thread/list`
+and `thread/delete` still need non-destructive/synthetic testing; the current
+real chat was deliberately not deleted.
 
 Ian wants callback-box able to run on **Codex as an engine**, not only Claude
 Code, to reduce exposure to a single vendor's product decisions. There was no
