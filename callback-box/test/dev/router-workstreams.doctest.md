@@ -781,13 +781,18 @@ assert.match(
 );
 assert.match(
   issues.captured.body,
-  /class="issue-main"[\s\S]*class="issue-pills"[\s\S]*class="issue-priority"[\s\S]*class="priority-controls"/,
+  /class="issue-title-row"[\s\S]*class="meta"[\s\S]*class="issue-actions-row"[\s\S]*class="issue-pills"[\s\S]*class="issue-priority"[\s\S]*class="priority-controls"/,
 );
 assert.match(
   issues.captured.body,
   /class="issue-editor-controls" data-issue="bugs\/2026-08-09-seam.md" data-visibility="public" data-original-priority="uncategorized" data-original-next-action=""[\s\S]*role="radiogroup" aria-label="Priority for Seam bug; saves to main"[\s\S]*data-priority="important"[\s\S]*>!<\/button>[\s\S]*data-priority="normal"[\s\S]*>−<\/button>[\s\S]*data-priority="backlog"[\s\S]*>↓<\/button>[\s\S]*data-priority="uncategorized"[\s\S]*>\?<\/button>[\s\S]*data-next-action[\s\S]*Reconfirm\?[\s\S]*Dup\?[\s\S]*Invalid\?[\s\S]*Fixed\?/,
 );
 assert.match(issues.captured.body, /class="issue-editor-bar"/);
+assert.match(
+  issues.captured.body,
+  /class="issue-header-nav"[^>]*><a href="\/"[^>]*>\/</,
+);
+assert.doesNotMatch(issues.captured.body, /<nav class="crumbs">/);
 assert.match(issues.captured.body, /data-dirty-count[^>]*>0 unsaved issues/);
 assert.match(issues.captured.body, /data-reset disabled>Reset<\/button>/);
 assert.match(issues.captured.body, /data-save[^>]*disabled>Save<\/button>/);

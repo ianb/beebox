@@ -1088,17 +1088,21 @@ function worktreeBadges(entries: OverlayEntry[] | undefined): string {
 }
 
 const ISSUES_CSS = `
-  .issue-editor-bar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 0.8em; margin: 0 -0.4em 1em; padding: 0.65em 0.4em; border-bottom: 1px solid #d8dde3; background: rgba(255, 255, 255, 0.96); }
-  .issue-editor-bar h1 { flex: 0 0 auto; margin: 0; }
+  body { display: flex; box-sizing: border-box; height: 100vh; max-width: none; flex-direction: column; overflow: hidden; padding-bottom: 0; }
+  .issue-editor-bar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 0.8em; margin: -0.5em -0.4em 0.7em; padding: 0.45em 0.4em; border-bottom: 1px solid #d8dde3; background: rgba(255, 255, 255, 0.96); }
+  .issue-header-nav { display: flex; flex: 0 0 auto; align-items: baseline; gap: 0.45em; font: 13px ui-monospace, Menlo, monospace; }
+  .issue-header-nav a { color: #2255aa; text-decoration: none; }
+  .issue-header-nav a:hover { text-decoration: underline; }
+  .issue-header-nav h1 { margin: 0; font: 700 15px ui-monospace, Menlo, monospace; }
   .issue-editor-filters { display: flex; min-width: 0; flex: 1 1 auto; flex-wrap: wrap; gap: 0.3em; align-items: center; }
   .issue-editor-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 0.5em; }
   .issue-editor-actions button { padding: 0.3em 0.7em; }
   .issue-editor-actions button:disabled { cursor: default; opacity: 0.45; }
   .dirty-count, .save-status { color: #666; font: 12px ui-monospace, Menlo, monospace; }
   .save-status { max-width: 24em; color: #a23522; }
-  .issue-browser { display: grid; grid-template-columns: minmax(30em, 0.9fr) minmax(0, 1.1fr); gap: 1.2em; align-items: start; }
-  .issue-list-pane, .issue-detail-pane { min-width: 0; max-height: calc(100vh - 7em); overflow: auto; }
-  .issue-list-pane { padding-right: 0.2em; }
+  .issue-browser { display: grid; min-height: 0; flex: 1 1 auto; grid-template-columns: minmax(30em, 0.9fr) minmax(0, 1.1fr); gap: 0; }
+  .issue-list-pane, .issue-detail-pane { box-sizing: border-box; min-width: 0; height: 100%; overflow: auto; }
+  .issue-list-pane { padding-right: 1em; }
   .issue-detail-pane { padding: 0 0.8em 2em 1.3em; border-left: 1px solid #d8dde3; }
   .issue-detail-pane h1 { margin-top: 0; }
   .issue-detail-empty { margin: 3em 1em; color: #888; text-align: center; }
@@ -1128,11 +1132,10 @@ const ISSUES_CSS = `
   .badge-renamed { background: #f3eefb; color: #6f42c1; }
   .badge.uncommitted { border: 1px dashed currentColor; }
   ul.issues { list-style: none; padding: 0; margin: 0 0 1.6em; border: 1px solid #e3e3e3; border-radius: 8px; overflow: hidden; }
-  ul.issues li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 1.2em; padding: 0.7em 1em; border-bottom: 1px solid #eee; }
+  ul.issues li { display: flex; min-width: 0; flex-direction: column; gap: 0.25em; padding: 0.7em 1em; border-bottom: 1px solid #eee; }
   ul.issues li:last-child { border-bottom: none; }
   ul.issues li:hover { background: #f6f8fa; }
   ul.issues li.selected { background: #eaf1fb; box-shadow: inset 3px 0 #2255aa; }
-  ul.issues .issue-main { display: flex; min-width: 0; flex-direction: column; align-items: flex-start; }
   ul.issues .issue-title-row { display: flex; min-width: 0; align-items: baseline; gap: 0.5em; }
   ul.issues a.title { display: block; font-weight: 600; text-decoration: none; color: #222; }
   ul.issues a.title:hover { color: #2255aa; text-decoration: underline; }
@@ -1141,7 +1144,8 @@ const ISSUES_CSS = `
   .copy-issue-path.copied { border-color: #3f7b50; color: #2f6b40; }
   .copy-issue-path.copy-failed { border-color: #a23522; color: #a23522; }
   ul.issues .meta { display: block; color: #888; font: 12px ui-monospace, Menlo, monospace; margin-top: 0.2em; }
-  ul.issues .issue-priority { min-width: 0; justify-self: end; }
+  ul.issues .issue-actions-row { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 1em; }
+  ul.issues .issue-priority { min-width: 0; flex: 0 0 auto; }
   .priority-controls { display: flex; flex: 0 0 auto; }
   .priority-controls form { margin: 0; }
   .priority-controls button { min-width: 2.25em; padding: 0.25em 0.5em; border: 1px solid #bbc2ca; border-right-width: 0; background: #fff; color: #555; font: 600 13px ui-monospace, Menlo, monospace; cursor: pointer; }
@@ -1155,9 +1159,9 @@ const ISSUES_CSS = `
   .next-action-control { padding: 0.25em 0.45em; border: 1px solid #bbc2ca; border-radius: 4px; background: #fff; color: #666; font: 600 12px ui-monospace, Menlo, monospace; }
   .priority-target { display: block; margin-top: 0.15em; color: #888; font: 10px ui-monospace, Menlo, monospace; text-align: right; }
   .priority-error { display: block; max-width: 22em; margin-top: 0.2em; color: #a23522; font-size: 0.8em; }
-  ul.issues .issue-pills { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 0.2em; margin-top: 0.35em; }
+  ul.issues .issue-pills { display: flex; min-width: 0; flex: 1 1 auto; flex-wrap: wrap; justify-content: flex-start; gap: 0.2em; }
   ul.issues .issue-pills .chip, ul.issues .issue-pills .badge { font-size: 0.78em; opacity: 0.85; margin: 0; }
-  h2.cat { display: flex; align-items: baseline; gap: 0.5em; font-weight: 500; color: #444; }
+  h2.cat { position: sticky; top: 0; z-index: 2; display: flex; align-items: baseline; gap: 0.5em; margin: 0; padding: 0.45em 0; background: #fff; font-weight: 500; color: #444; }
   h2.cat .count { color: #999; font-size: 0.7em; font-weight: 400; }
   details.closed-group summary { cursor: pointer; color: #888; margin: 0.6em 0; }
   details.closed-group ul.issues { margin-top: 0.5em; }
@@ -1169,18 +1173,17 @@ const ISSUES_CSS = `
   .wt-diff pre { font-size: 0.82em; }
   .diff-add { color: #1e6b34; } .diff-del { color: #a23522; }
   @media (max-width: 1000px) {
-    ul.issues li { grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 0.7em; }
-    ul.issues .issue-priority { justify-self: end; }
+    ul.issues .issue-actions-row { align-items: flex-start; }
   }
   @media (max-width: 700px) {
+    body { display: block; height: auto; min-height: 100vh; overflow: auto; padding-bottom: 5em; }
     .issue-editor-bar { align-items: flex-start; flex-wrap: wrap; }
     .issue-editor-filters { order: 3; flex-basis: 100%; }
     .issue-editor-actions { margin-left: auto; }
-    ul.issues li { grid-template-columns: minmax(0, 1fr); }
-    ul.issues .issue-priority { justify-self: start; }
+    ul.issues .issue-actions-row { flex-direction: column; gap: 0.45em; }
     .priority-target { text-align: left; }
     .issue-browser { display: block; }
-    .issue-list-pane, .issue-detail-pane { max-height: none; overflow: visible; }
+    .issue-list-pane, .issue-detail-pane { height: auto; max-height: none; overflow: visible; }
     .issue-detail-pane { display: none; padding: 0; border-left: none; }
     .issue-browser.has-selection .issue-list-pane { display: none; }
     .issue-browser.has-selection .issue-detail-pane { display: block; }
@@ -1524,12 +1527,12 @@ function issueRowHtml(
   const copyPath = `${issue.visibility === "private" ? "private-issues" : "issues"}/${issue.relPath}`;
   const selected = paneIssue === selectedIssue;
   return `<li${selected ? ' class="selected"' : ""}>
-    <div class="issue-main">
-      <div class="issue-title-row"><a class="title" href="${href}" data-issue-link="${escapeHtml(paneIssue)}"${selected ? ' aria-current="true"' : ""}>${escapeHtml(issue.frontmatter.title)}</a><button type="button" class="copy-issue-path" data-copy-path="${escapeHtml(copyPath)}" aria-label="Copy issue path ${escapeHtml(copyPath)}" title="Copy ${escapeHtml(copyPath)}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h3"/></svg></button></div>
-      <span class="meta">${escapeHtml(date)}${date && shortSlug ? " · " : ""}${escapeHtml(shortSlug)}</span>
+    <div class="issue-title-row"><a class="title" href="${href}" data-issue-link="${escapeHtml(paneIssue)}"${selected ? ' aria-current="true"' : ""}>${escapeHtml(issue.frontmatter.title)}</a><button type="button" class="copy-issue-path" data-copy-path="${escapeHtml(copyPath)}" aria-label="Copy issue path ${escapeHtml(copyPath)}" title="Copy ${escapeHtml(copyPath)}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h3"/></svg></button></div>
+    <span class="meta">${escapeHtml(date)}${date && shortSlug ? " · " : ""}${escapeHtml(shortSlug)}</span>
+    <div class="issue-actions-row">
       <div class="issue-pills">${pills}</div>
+      <div class="issue-priority"><div class="issue-editor-controls" data-issue="${escapeHtml(issue.relPath)}" data-visibility="${issue.visibility}" data-original-priority="${issue.frontmatter.priority}" data-original-next-action="${nextAction}"><div class="priority-controls" role="radiogroup" aria-label="Priority for ${escapeHtml(issue.frontmatter.title)}; saves to ${escapeHtml(editTarget)}">${priorityControls}</div><select class="next-action-control" data-next-action aria-label="Next action for ${escapeHtml(issue.frontmatter.title)}" title="Ask the next agent to verify and apply this outcome">${nextActionOptions}</select></div>${editTargetHtml}</div>
     </div>
-    <div class="issue-priority"><div class="issue-editor-controls" data-issue="${escapeHtml(issue.relPath)}" data-visibility="${issue.visibility}" data-original-priority="${issue.frontmatter.priority}" data-original-next-action="${nextAction}"><div class="priority-controls" role="radiogroup" aria-label="Priority for ${escapeHtml(issue.frontmatter.title)}; saves to ${escapeHtml(editTarget)}">${priorityControls}</div><select class="next-action-control" data-next-action aria-label="Next action for ${escapeHtml(issue.frontmatter.title)}" title="Ask the next agent to verify and apply this outcome">${nextActionOptions}</select></div>${editTargetHtml}</div>
   </li>`;
 }
 
@@ -1696,7 +1699,7 @@ async function renderIssueIndex(
       : `<div class="issue-detail-error" role="alert"><strong>Could not load issue</strong><span>${escapeHtml(selectedDetail.body.trim())}</span><button type="button" data-retry-issue>Retry</button></div>`
     : `<p class="issue-detail-empty">Select an issue to read it.</p>`;
   const body = `<div class="issue-editor-bar">
-  <h1>issues</h1>
+  <nav class="issue-header-nav" aria-label="Issue browser"><a href="/" aria-label="Router home">/</a><a href="${base}/">workstreams</a><h1>issues</h1></nav>
   <div class="issue-editor-filters" aria-label="Active filters">${activeFiltersHtml(f)}</div>
   <div class="issue-editor-actions">
     <span class="dirty-count" data-dirty-count aria-live="polite">0 unsaved issues</span>
@@ -1717,7 +1720,7 @@ async function renderIssueIndex(
 </div><script src="${base}/issues/priority.js" defer></script>`;
   return renderDevShell(
     "issues",
-    devBreadcrumbs(base, "issues"),
+    "",
     body,
     ISSUES_CSS,
   );

@@ -181,7 +181,7 @@ export function renderDevShell(title: string, breadcrumbs: string, body: string,
 ${extraCss}</style>
 </head>
 <body>
-<nav class="crumbs">${breadcrumbs}</nav>
+${breadcrumbs ? `<nav class="crumbs">${breadcrumbs}</nav>` : ""}
 ${body}
 </body>
 </html>`;
