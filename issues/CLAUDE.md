@@ -169,6 +169,13 @@ resolution: implemented       # closed/ only: implemented | wontfix | superseded
   not an authored frontmatter value. The issue browser defaults to newest-filed
   order. Its priority sort groups important, normal, uncategorized, then backlog,
   with newest-filed order inside each group. All four states are filters.
+  **Agents do not set this field.** Priority is Ian's attention budget, and an
+  agent guessing at it produces a queue that looks triaged when it isn't —
+  `backlog` in particular buries an item nobody decided to bury. Omit the field
+  unless Ian has indicated a priority in the request; `uncategorized` is the
+  honest state for a freshly filed issue and is a filter he can work through.
+  Write the field only when he says what it is, or when he asks you to record a
+  priority he has already given.
 - `next-action:` says what should happen before implementation begins. It is
   separate from priority. `discuss` means bring the issue to Ian for discussion;
   do not start implementing it. The remaining values ask the next agent to
@@ -295,7 +302,8 @@ Filing is at your discretion — no thresholds or quotas. When you notice someth
 worth keeping that's outside your current task: check for an existing item, pick a
 category, then file with `title:`, `workstream: unattached`, `filed-by: agent`,
 `discovered-by:` (the actual source), and `discovered-in:` (your worktree and
-what you were doing), and move on. Set
+what you were doing), and move on. Leave `priority:` off — see above; it is
+Ian's call, not yours. Set
 `workstream:` to the current workstream only when it has explicitly taken
 responsibility for resolving the issue. Don't fix out-of-scope things in place,
 and don't file trivia you'd be embarrassed to see triaged. Set `next-action:

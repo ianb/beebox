@@ -6,7 +6,8 @@ labels: [tooling-eval, demo-video]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — link passed along for evaluation
-priority: backlog
+priority: normal
+next-action: discuss
 ---
 
 [proving-it-works](https://github.com/prime-radiant-inc/proving-it-works) (Prime
