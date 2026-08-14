@@ -312,7 +312,8 @@ router behavior still require boxholder acceptance; automated tests use fakes.
   tab. The UI does not report “opened” without positive launcher evidence.
 - The main checkout is dirty for unrelated reasons. Issue Save uses the shipped
   path-scoped commit behavior and blocks only when a selected issue file has
-  conflicting staged or unstaged edits (`bin/router-issues.ts:1873-1937`).
+  conflicting staged or unstaged edits
+  (`workstreams-app/src/server/issues-mutation-service.ts`).
 - A private issue appears in a worktree overlay. The API preserves visibility
   and never includes private content in logs or public search results.
 - A hidden quota panel remains closed for days. It does not poll. Opening it
@@ -416,3 +417,30 @@ The review found eight items:
    path-scoped issue commit and selected-file conflict checks.
 
 No review finding remains unresolved.
+
+Claude Fable reviewed the implementation diff on 2026-08-13. The review found
+ten items, all resolved before the final verification pass:
+
+1. Issue paths now have strict shared schema validation plus canonical
+   resolve-under-root, regular-file, extension, and symlink containment checks.
+2. Legacy `/workstreams/issues/<path>` links redirect into SPA query state,
+   preserving private visibility.
+3. Workstream issue ownership, discovery, and activity are computed by the
+   server instead of being reconstructed incorrectly in the browser.
+4. Restart deferral counts every in-flight mutation, including issue saves.
+5. Watcher and fingerprint exclusions agree and ignore Vite/install/test cache
+   churn.
+6. Public and private issue identity includes both visibility and relative path
+   in staged edits and URL state.
+7. The remaining legacy issue implementation was removed; the resident app is
+   the sole issue-domain and issue-mutation implementation.
+8. The `needs` filter is applied and represented in active filter state.
+9. Boundary doctests now cover traversal, symlink escape, private isolation,
+   capability rejection, conflicts, scoped commits, and atomic-write rollback.
+10. The false build-ID mismatch claim was removed. The documented contract is
+    coordinated backend/Vite replacement with visible overlapping failures and
+    Vite's normal reconnect reload.
+
+Recommendation: proceed to the isolated-router and boxholder rehearsals because
+the independent review's security, compatibility, and lifecycle findings are
+now implemented and covered by focused tests.
