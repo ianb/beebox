@@ -19,6 +19,10 @@ import { huskTranscriptPath } from "../husk-transcript.js";
 import { resolveSessionLabel } from "../session-label.js";
 import { errnoCode } from "../../../lib/error-guards.js";
 import { mapInBatches, mapInBatchesSettled } from "../../../lib/map-batched.js";
+import { loadHistoryEntries, type SessionHistoryEntry } from "./history.js";
+import { loadSessionHistory } from "./load-history.js";
+import { readCodexSessionUpdatedAt } from "./codex-transcript.js";
+import type { AgentEngine } from "../../box/config.js";
 
 /**
  * Chats resolved at once — see {@link mapInBatchesSettled}. `resolveSessionLabel`
@@ -34,6 +38,7 @@ const READ_CONCURRENCY = 64;
  */
 export interface ChatSessionEntry {
   sessionId: string;
+  engine: AgentEngine;
   /** "" for root-bound, undefined for legacy unbound (treated as root). */
   contextDir: string | undefined;
   mtime: Date;
@@ -68,10 +73,11 @@ export interface ChatSessionRow extends ChatSessionEntry {
  * already a per-husk skip, and must not abandon the others.
  */
 export async function listSessionEntries(boxRoot: string): Promise<ChatSessionEntry[]> {
-  const husks = await listChatHusks(boxRoot);
+  const [husks, history] = await Promise.all([listChatHusks(boxRoot), loadHistoryEntries(boxRoot)]);
+  const historyById = new Map(history.map((entry) => [entry.id, entry]));
   const settled = await mapInBatchesSettled(husks, {
     size: READ_CONCURRENCY,
-    map: (husk) => loadSessionEntry(boxRoot, husk),
+    map: (husk) => loadSessionEntry({ boxRoot, husk, history: historyById.get(husk.session) }),
   });
   const entries: ChatSessionEntry[] = [];
   for (const [i, outcome] of settled.entries()) {
@@ -99,21 +105,27 @@ export async function loadAllSessions(boxRoot: string): Promise<ChatSessionRow[]
     size: READ_CONCURRENCY,
     map: async (entry) => ({
       ...entry,
-      label: await resolveSessionLabel({
-        sessionId: entry.sessionId,
-        logPath: entry.logPath,
-        title: entry.title,
-      }),
+      label: entry.engine === "codex"
+        ? await codexSessionLabel(boxRoot, entry)
+        : await resolveSessionLabel({ sessionId: entry.sessionId, logPath: entry.logPath, title: entry.title }),
     }),
   });
 }
 
 /** One husk's entry, or null when there's no transcript left to resume. */
-async function loadSessionEntry(boxRoot: string, husk: ChatHuskEntry): Promise<ChatSessionEntry | null> {
+async function loadSessionEntry(options: {
+  boxRoot: string;
+  husk: ChatHuskEntry;
+  history: SessionHistoryEntry | undefined;
+}): Promise<ChatSessionEntry | null> {
+  const { boxRoot, husk, history } = options;
+  const engine = history?.engine ?? "claude";
   const logPath = huskTranscriptPath(boxRoot, husk);
   let mtime: Date;
   try {
-    mtime = (await fs.stat(logPath)).mtime;
+    mtime = engine === "codex"
+      ? await readCodexSessionUpdatedAt(boxRoot, husk.session)
+      : (await fs.stat(logPath)).mtime;
   } catch (e) {
     if (errnoCode(e) !== "ENOENT") {
       // Not "the transcript was cleaned up" — the file may well be there and
@@ -127,12 +139,23 @@ async function loadSessionEntry(boxRoot: string, husk: ChatHuskEntry): Promise<C
 
   return {
     sessionId: husk.session,
+    engine,
     contextDir: husk.contextDir,
     mtime,
     huskPath: husk.path,
     logPath,
     title: husk.title,
   };
+}
+
+async function codexSessionLabel(boxRoot: string, entry: ChatSessionEntry): Promise<string> {
+  if (entry.title !== undefined && entry.title !== "") return entry.title;
+  const history = await loadSessionHistory(boxRoot, {
+    sessionId: entry.sessionId,
+    slice: { mode: "page", offset: 0, limit: 1 },
+  });
+  return history.entries[0]?.content.find((block) => block.type === "text")?.text?.slice(0, 400)
+    ?? entry.sessionId.slice(0, 8);
 }
 
 /**

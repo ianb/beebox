@@ -7,6 +7,7 @@ import type { SessionEntry, SessionLogSlice } from "../../../cli/lib/session.js"
 
 const threadReadSchema = z.object({
   thread: z.looseObject({
+    updatedAt: z.number(),
     turns: z.array(z.looseObject({
       id: z.string(),
       startedAt: z.number().nullable(),
@@ -19,6 +20,17 @@ const threadReadSchema = z.object({
     })),
   }),
 });
+
+async function readThread(boxRoot: string, sessionId: string): Promise<unknown> {
+  await ensureCodexPluginInstalled();
+  const server = new CodexAppServer({ cwd: boxRoot });
+  try {
+    await server.initialize();
+    return await server.request({ method: "thread/read", params: { threadId: sessionId, includeTurns: true } });
+  } finally {
+    server.close();
+  }
+}
 
 function timestamp(seconds: number | null): string {
   return seconds === null ? "" : new Date(seconds * 1000).toISOString();
@@ -81,16 +93,12 @@ export async function readCodexSessionHistory(options: {
   sessionId: string;
   slice: SessionLogSlice;
 }): Promise<{ entries: SessionEntry[]; total: number }> {
-  await ensureCodexPluginInstalled();
-  const server = new CodexAppServer({ cwd: options.boxRoot });
-  try {
-    await server.initialize();
-    const raw = await server.request({
-      method: "thread/read",
-      params: { threadId: options.sessionId, includeTurns: true },
-    });
-    return adaptCodexThreadHistory(raw, options.slice);
-  } finally {
-    server.close();
-  }
+  const raw = await readThread(options.boxRoot, options.sessionId);
+  return adaptCodexThreadHistory(raw, options.slice);
+}
+
+/** Last native update time, used where Claude uses transcript mtime. */
+export async function readCodexSessionUpdatedAt(boxRoot: string, sessionId: string): Promise<Date> {
+  const raw = await readThread(boxRoot, sessionId);
+  return new Date(threadReadSchema.parse(raw).thread.updatedAt * 1000);
 }

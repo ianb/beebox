@@ -30,6 +30,7 @@ import { isRecord } from "../../card-io.js";
 import { writeFileAtomic } from "../../../lib/atomic-write.js";
 import { withCardLock } from "../../../lib/card-lock.js";
 import { loadAgentEngine, type AgentEngine } from "../../box/config.js";
+import { readCodexSessionUpdatedAt } from "./codex-transcript.js";
 
 const HISTORY_FILE = ".callback-box/chat-session-history.json";
 const MOST_ACTIVE_FILE = ".callback-box/chat-session-id.json";
@@ -322,9 +323,9 @@ export async function getLastSessionForDirectory(boxRoot: string, contextDir: st
     if (!entry) continue;
     const matches = entry.contextDir === contextDir || (contextDir === "" && entry.contextDir === undefined);
     if (!matches) continue;
-    const logPath = await resolveSessionLogPath(boxRoot, entry.id);
     try {
-      await fs.access(logPath);
+      if (entry.engine === "codex") await readCodexSessionUpdatedAt(boxRoot, entry.id);
+      else await fs.access(await resolveSessionLogPath(boxRoot, entry.id));
       return entry.id;
     } catch (_e) {
       // Ghost entry — no log on disk. The fs.access rejection only tells us
@@ -332,7 +333,7 @@ export async function getLastSessionForDirectory(boxRoot: string, contextDir: st
       // error object itself and log our own contextual warning instead. A
       // recurring ghost-creation bug shows up as repeated skips for the
       // same id across sessions.
-      console.warn(`[chat-session-history] Skipping ghost entry for ${contextDir === "" ? "<root>" : contextDir}: ${entry.id} (no JSONL at ${logPath})`);
+      console.warn(`[chat-session-history] Skipping ghost ${entry.engine} entry for ${contextDir === "" ? "<root>" : contextDir}: ${entry.id}`);
       continue;
     }
   }

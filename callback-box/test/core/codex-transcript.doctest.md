@@ -8,6 +8,7 @@ import { adaptCodexThreadHistory } from "../../src/core/chat/session/codex-trans
 
 const response = {
   thread: {
+    updatedAt: 200,
     turns: [
       {
         id: "turn-1",
