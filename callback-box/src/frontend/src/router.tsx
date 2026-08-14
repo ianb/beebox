@@ -18,6 +18,7 @@ import { CapturePage } from "./pages/capture/CapturePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { AdminPage } from "./pages/AdminPage";
 import { AppLayout, BoxRedirect, BrowsePageWrapper, RootLayout } from "./app-shell";
+import { RouteError } from "./components/RouteError";
 import { LoginPage } from "./pages/login/LoginPage";
 import { SetupPage } from "./pages/login/SetupPage";
 import { CardViewPage } from "./pages/card/CardViewPage";
@@ -33,6 +34,9 @@ import { InventoryPage } from "./pages/inventory/InventoryPage";
 
 const rootRoute = createRootRoute({
   component: RootLayout,
+  // Without this the router logs "The following error wasn't caught by any
+  // route!" and renders nothing, so a thrown render turns into a blank page.
+  errorComponent: RouteError,
 });
 
 // --- Top-level routes (no boxSlug) ---
