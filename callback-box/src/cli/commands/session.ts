@@ -79,6 +79,7 @@ async function explicitSessionLogPath(options: {
     boxRoot: options.boxRoot,
     sessionId: options.sessionId,
     requestedEngine: options.requestedEngine,
+    // TODO(env-migration): native harness identity inherited only by this command path.
     codexThreadId: process.env["CODEX_THREAD_ID"],
   });
   if (engine === "claude") {

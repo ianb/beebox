@@ -62,6 +62,7 @@ async function resolveSession(
     const found = await findSessionLog(boxRoot, envSessionId);
     if (found.ok) return { engine: "claude", sessionId: envSessionId, logPath: found.value };
   }
+  // TODO(env-migration): native harness identity inherited only by this command path.
   const codexThreadId = process.env["CODEX_THREAD_ID"];
   if (codexThreadId) {
     try {

@@ -1,6 +1,6 @@
 ---
 title: "Provider-aware agent diagnostics"
-status: active
+status: implemented
 workstream: codex-engine-plan
 issues: []
 ---
