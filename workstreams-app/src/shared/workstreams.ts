@@ -67,9 +67,16 @@ export const workstreamListResultSchema = z.object({
   items: z.array(workstreamSummarySchema),
 });
 
+export const workstreamIssueSchema = z.object({
+  issue: issueSchema,
+  owned: z.boolean(),
+  discovered: z.boolean(),
+  activity: z.enum(["opened", "updated", "closed", "reopened"]).optional(),
+});
+
 export const workstreamDetailSchema = z.object({
   workstream: workstreamSummarySchema,
-  issues: z.array(issueSchema),
+  issues: z.array(workstreamIssueSchema),
 });
 
 export const dashboardSchema = z.object({
@@ -82,3 +89,4 @@ export const dashboardSchema = z.object({
 
 export type WorkstreamSummary = z.infer<typeof workstreamSummarySchema>;
 export type WorkstreamListResult = z.infer<typeof workstreamListResultSchema>;
+export type WorkstreamIssue = z.infer<typeof workstreamIssueSchema>;

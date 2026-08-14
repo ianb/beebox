@@ -13,6 +13,10 @@ export const issueNextActionSchema = z.enum([
   "fixed",
 ]);
 export const issueVisibilitySchema = z.enum(["public", "private"]);
+export const issueRelPathSchema = z.string().regex(
+  /^(?:closed\/)?(?:bugs|features|code-quality|docs-and-chores|decisions|exploration|watch)\/[A-Za-z0-9][A-Za-z0-9._-]*\.md$/u,
+  "Invalid issue path",
+);
 
 const issueFrontmatterSchema = z.object({
   title: z.string(),
@@ -36,7 +40,7 @@ const issueOverlaySchema = z.object({
 });
 
 export const issueSchema = z.object({
-  relPath: z.string(),
+  relPath: issueRelPathSchema,
   category: z.string(),
   closed: z.boolean(),
   slug: z.string(),
@@ -80,7 +84,7 @@ export const testingQueueSchema = z.object({
 });
 
 export const issueChangeSchema = z.object({
-  relPath: z.string(),
+  relPath: issueRelPathSchema,
   visibility: issueVisibilitySchema,
   priority: issuePrioritySchema,
   nextAction: issueNextActionSchema.nullable(),

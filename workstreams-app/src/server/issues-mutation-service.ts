@@ -18,6 +18,7 @@ import {
   type OverlayResult,
 } from "./issue-overlay.js";
 import type { IssueChange } from "../shared/documents.js";
+import { resolveIssuePath } from "./issue-path.js";
 
 const MAX_CHANGES = 1_000;
 
@@ -54,8 +55,9 @@ async function readWorktreeIssue(options: {
   visibility: Visibility;
 }): Promise<IssueRecord | null> {
   const { root, relPath, visibility } = options;
-  const target = path.join(root, visibility === "private" ? "private-issues" : "issues", relPath);
+  const documentsRoot = path.join(root, visibility === "private" ? "private-issues" : "issues");
   try {
+    const target = await resolveIssuePath(documentsRoot, relPath);
     return parseIssueFile({ relPath, source: await fs.readFile(target, "utf8"), visibility });
   } catch (_error) {
     return null;
@@ -86,7 +88,7 @@ export async function resolveIssueTarget(options: {
   const root = selected
     ? path.join(selected.root, documentsDir)
     : path.join(options.mainRoot, documentsDir);
-  return path.join(root, options.relPath);
+  return resolveIssuePath(root, options.relPath);
 }
 
 async function assertMetadataOnly(options: {
@@ -154,6 +156,14 @@ interface PreparedChange {
   stat: BigIntStats;
 }
 
+export interface IssueMutationOperations {
+  renameFile(source: string, target: string): Promise<void>;
+}
+
+const DEFAULT_OPERATIONS: IssueMutationOperations = {
+  renameFile: fs.rename,
+};
+
 async function prepareChange(
   change: IssueChange,
   options: { mainRoot: string; overlay: OverlayResult },
@@ -185,7 +195,10 @@ async function prepareChange(
   return { change, target, source, updated, stat: afterRead };
 }
 
-async function writeChanges(changed: PreparedChange[]): Promise<void> {
+async function writeChanges(
+  changed: PreparedChange[],
+  operations: IssueMutationOperations,
+): Promise<void> {
   const temporaries = new Map<string, string>();
   try {
     for (const item of changed) {
@@ -204,7 +217,7 @@ async function writeChanges(changed: PreparedChange[]): Promise<void> {
       for (const item of changed) {
         const temporary = temporaries.get(item.target);
         if (!temporary) throw mutationError("inspect-failed", item.change.relPath);
-        await fs.rename(temporary, item.target);
+        await operations.renameFile(temporary, item.target);
         renamed.push(item);
       }
     } catch (error) {
@@ -224,6 +237,7 @@ export async function saveIssueChanges(options: {
   changes: IssueChange[];
   mainRoot: string;
   worktreesRoot: string;
+  operations?: IssueMutationOperations;
 }): Promise<number> {
   if (options.changes.length > MAX_CHANGES) throw mutationError("too-many", "");
   const keys = new Set<string>();
@@ -236,7 +250,7 @@ export async function saveIssueChanges(options: {
   const prepared = await Promise.all(options.changes.map((change) =>
     prepareChange(change, { mainRoot: options.mainRoot, overlay })));
   const changed = prepared.filter((item) => item.source !== item.updated);
-  await writeChanges(changed);
+  await writeChanges(changed, options.operations ?? DEFAULT_OPERATIONS);
   await commitTargets(changed.map((item) => item.target));
   return changed.length;
 }

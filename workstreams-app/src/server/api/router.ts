@@ -8,6 +8,7 @@ import {
 } from "../../shared/workstreams.js";
 import {
   issueChangeSchema,
+  issueRelPathSchema,
   issueSchema,
   issueVisibilitySchema,
   planSchema,
@@ -44,7 +45,7 @@ const issuesRouter = router({
     items: await ctx.services.documents.listIssues(),
   })),
   detail: procedure.input(z.object({
-    relPath: z.string().min(1),
+    relPath: issueRelPathSchema,
     visibility: issueVisibilitySchema,
   })).output(issueSchema).query(async ({ input, ctx }) =>
     ctx.services.documents.issueDetail(input.relPath, input.visibility)),

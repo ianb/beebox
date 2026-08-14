@@ -18,8 +18,10 @@ import type {
   Plan,
   TestingQueue,
 } from "../shared/documents.js";
+import type { WorkstreamIssue } from "../shared/workstreams.js";
 import type { DocumentsService } from "./services.js";
 import { resolveIssueTarget, saveIssueChanges } from "./issues-mutation-service.js";
+import { resolveIssuePath } from "./issue-path.js";
 
 const DOCUMENT_CACHE_MS = 60_000;
 
@@ -27,8 +29,11 @@ interface DocumentsSnapshot {
   issues: IssueRecord[];
   plans: Plan[];
   worktreeIssues: Array<{ worktree: string; issue: IssueRecord }>;
-  worktreeTouchedSlugs: Array<{ worktree: string; slug: string }>;
   overlay: OverlayResult;
+}
+
+function issueKey(issue: Pick<IssueRecord, "relPath" | "visibility">): string {
+  return `${issue.visibility}:${issue.relPath}`;
 }
 
 function discoveredInWorkstream(issue: IssueRecord, workstream: string): boolean {
@@ -36,28 +41,6 @@ function discoveredInWorkstream(issue: IssueRecord, workstream: string): boolean
     issue.frontmatter.discoveredIn ?? "",
   )?.[1];
   return origin === `worktree-${workstream}`;
-}
-
-function selectIssuesForWorkstream(
-  documents: DocumentsSnapshot,
-  workstream: string,
-): IssueRecord[] {
-  const touched = new Set(documents.worktreeTouchedSlugs.map((entry) => entry.slug));
-  const main = documents.issues.filter((issue) => !touched.has(issue.slug));
-  const candidates = new Map<string, Array<{ worktree: string; issue: IssueRecord }>>();
-  for (const entry of documents.worktreeIssues) {
-    const records = candidates.get(entry.issue.slug) ?? [];
-    records.push(entry);
-    candidates.set(entry.issue.slug, records);
-  }
-  const overlaid = [...candidates.values()].map((records) => {
-    const sorted = records.toSorted((a, b) => a.worktree.localeCompare(b.worktree));
-    return (sorted.find((entry) => entry.issue.frontmatter.workstream === entry.worktree) ?? sorted[0])?.issue;
-  }).filter((issue) => issue !== undefined);
-  return [...main, ...overlaid].filter((issue) =>
-    issue.frontmatter.workstream === workstream || discoveredInWorkstream(issue, workstream),
-  ).toSorted((a, b) =>
-    Number(a.closed) - Number(b.closed) || a.frontmatter.title.localeCompare(b.frontmatter.title));
 }
 
 function overlayMap(overlay: OverlayResult, visibility: Visibility): Map<string, OverlayEntry[]> {
@@ -70,8 +53,9 @@ async function readWorktreeIssue(options: {
   visibility: Visibility;
 }): Promise<IssueRecord | null> {
   const { root, relPath, visibility } = options;
-  const target = path.join(root, visibility === "private" ? "private-issues" : "issues", relPath);
+  const documentsRoot = path.join(root, visibility === "private" ? "private-issues" : "issues");
   try {
+    const target = await resolveIssuePath(documentsRoot, relPath);
     return parseIssueFile({ relPath, source: await fs.readFile(target, "utf8"), visibility });
   } catch (_error) {
     return null;
@@ -94,23 +78,23 @@ async function authoritativeIssues(options: {
   const touched = new Set<string>();
   const candidates = new Map<string, Array<{ issue: IssueRecord; worktree: string }>>();
   for (const [relPath, entries] of overlayMap(overlay, visibility)) {
-    const slug = path.posix.basename(relPath, ".md");
     for (const worktree of new Set(entries.map((entry) => entry.worktree))) {
       const root = overlay.worktreeRoots.get(worktree);
       if (!root) continue;
       const issue = await readWorktreeIssue({ root, relPath, visibility });
       if (!issue) continue;
-      touched.add(slug);
-      const current = candidates.get(slug) ?? [];
+      const key = issueKey(issue);
+      touched.add(key);
+      const current = candidates.get(key) ?? [];
       current.push({ issue, worktree });
-      candidates.set(slug, current);
+      candidates.set(key, current);
     }
   }
   const selected = [...candidates.values()].flatMap((records) => {
     const candidate = preferredCandidate(records);
     return candidate ? [candidate.issue] : [];
   });
-  return [...main.filter((issue) => !touched.has(issue.slug)), ...selected];
+  return [...main.filter((issue) => !touched.has(issueKey(issue))), ...selected];
 }
 
 function publicIssue(issue: IssueRecord, entries?: OverlayEntry[] | undefined): Issue {
@@ -122,21 +106,44 @@ function publicIssue(issue: IssueRecord, entries?: OverlayEntry[] | undefined): 
 
 async function worktreeIssueChanges(overlay: OverlayResult): Promise<{
   worktreeIssues: Array<{ worktree: string; issue: IssueRecord }>;
-  worktreeTouchedSlugs: Array<{ worktree: string; slug: string }>;
 }> {
   const worktreeIssues: Array<{ worktree: string; issue: IssueRecord }> = [];
-  const worktreeTouchedSlugs: Array<{ worktree: string; slug: string }> = [];
-  for (const [relPath, entries] of overlay.byPath) {
-    for (const worktree of new Set(entries.map((entry) => entry.worktree))) {
-      const root = overlay.worktreeRoots.get(worktree);
-      if (!root) continue;
-      const issue = await readWorktreeIssue({ root, relPath, visibility: "public" });
-      if (!issue) continue;
-      worktreeIssues.push({ worktree, issue });
-      worktreeTouchedSlugs.push({ worktree, slug: issue.slug });
+  for (const [visibility, entriesByPath] of [
+    ["public", overlay.byPath],
+    ["private", overlay.byPathPrivate],
+  ] as const) {
+    for (const [relPath, entries] of entriesByPath) {
+      for (const worktree of new Set(entries.map((entry) => entry.worktree))) {
+        const root = overlay.worktreeRoots.get(worktree);
+        if (!root) continue;
+        const issue = await readWorktreeIssue({ root, relPath, visibility });
+        if (!issue) continue;
+        worktreeIssues.push({ worktree, issue });
+      }
     }
   }
-  return { worktreeIssues, worktreeTouchedSlugs };
+  return { worktreeIssues };
+}
+
+export function workstreamIssueIndicators(options: {
+  workstream: string;
+  issue: IssueRecord;
+  main?: IssueRecord | undefined;
+  changedHere: boolean;
+}): Omit<WorkstreamIssue, "issue"> {
+  const { workstream, issue, main, changedHere } = options;
+  let activity: WorkstreamIssue["activity"];
+  if (changedHere) {
+    if (main?.closed && !issue.closed) activity = "reopened";
+    else if (!main) activity = "opened";
+    else if (!main.closed && issue.closed) activity = "closed";
+    else activity = "updated";
+  }
+  return {
+    owned: issue.frontmatter.workstream === workstream,
+    discovered: discoveredInWorkstream(issue, workstream),
+    ...(activity ? { activity } : {}),
+  };
 }
 
 async function listPlans(mainRoot: string): Promise<Plan[]> {
@@ -188,22 +195,26 @@ export function createDocumentsService(options: DocumentsServiceOptions): Docume
     return value;
   }
 
+  async function currentIssues(state: DocumentsSnapshot): Promise<IssueRecord[]> {
+    const [publicIssues, privateIssues] = await Promise.all([
+      authoritativeIssues({
+        main: state.issues.filter((issue) => issue.visibility === "public"),
+        overlay: state.overlay,
+        visibility: "public",
+      }),
+      authoritativeIssues({
+        main: state.issues.filter((issue) => issue.visibility === "private"),
+        overlay: state.overlay,
+        visibility: "private",
+      }),
+    ]);
+    return [...publicIssues, ...privateIssues];
+  }
+
   return {
     async listIssues(): Promise<Issue[]> {
       const state = await snapshot();
-      const [publicIssues, privateIssues] = await Promise.all([
-        authoritativeIssues({
-          main: state.issues.filter((issue) => issue.visibility === "public"),
-          overlay: state.overlay,
-          visibility: "public",
-        }),
-        authoritativeIssues({
-          main: state.issues.filter((issue) => issue.visibility === "private"),
-          overlay: state.overlay,
-          visibility: "private",
-        }),
-      ]);
-      return [...publicIssues, ...privateIssues].map((issue) =>
+      return (await currentIssues(state)).map((issue) =>
         publicIssue(issue, overlayMap(state.overlay, issue.visibility).get(issue.relPath)),
       );
     },
@@ -224,19 +235,32 @@ export function createDocumentsService(options: DocumentsServiceOptions): Docume
     },
     async testingQueue(): Promise<TestingQueue> {
       const state = await snapshot();
-      const changedSlugs = new Set(state.worktreeTouchedSlugs.map((entry) => entry.slug));
+      const changedPaths = new Set(state.worktreeIssues.map(({ issue }) => issueKey(issue)));
       return {
         landed: state.issues.filter((issue) =>
-          issue.visibility === "public" && !changedSlugs.has(issue.slug) && !issue.closed && issue.frontmatter.needs.includes("manual-testing"),
+          issue.visibility === "public" && !changedPaths.has(issueKey(issue)) && !issue.closed && issue.frontmatter.needs.includes("manual-testing"),
         ).map((issue) => publicIssue(issue)),
         pending: state.worktreeIssues.filter(({ issue }) =>
           !issue.closed && issue.frontmatter.needs.includes("manual-testing"),
         ).map(({ worktree, issue }) => ({ worktree, issue: publicIssue(issue) })),
       };
     },
-    async issuesForWorkstream(name): Promise<Issue[]> {
+    async issuesForWorkstream(name): Promise<WorkstreamIssue[]> {
       const state = await snapshot();
-      return selectIssuesForWorkstream(state, name).map((issue) => publicIssue(issue));
+      return (await currentIssues(state)).filter((issue) =>
+        issue.frontmatter.workstream === name || discoveredInWorkstream(issue, name),
+      ).toSorted((left, right) =>
+        Number(left.closed) - Number(right.closed) || left.frontmatter.title.localeCompare(right.frontmatter.title),
+      ).map((issue) => ({
+        issue: publicIssue(issue, overlayMap(state.overlay, issue.visibility).get(issue.relPath)),
+        ...workstreamIssueIndicators({
+          workstream: name,
+          issue,
+          main: state.issues.find((candidate) => issueKey(candidate) === issueKey(issue)),
+          changedHere: state.worktreeIssues.some((entry) =>
+            entry.worktree === name && issueKey(entry.issue) === issueKey(issue)),
+        }),
+      }));
     },
     async saveIssueChanges(changes): Promise<number> {
       const saved = await saveIssueChanges({

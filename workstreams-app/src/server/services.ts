@@ -1,4 +1,4 @@
-import type { WorkstreamSummary } from "../shared/workstreams.js";
+import type { WorkstreamIssue, WorkstreamSummary } from "../shared/workstreams.js";
 import type {
   Issue,
   IssueChange,
@@ -28,7 +28,7 @@ export interface DocumentsService {
   issueDetail(relPath: string, visibility: "public" | "private"): Promise<Issue>;
   listPlans(): Promise<Plan[]>;
   testingQueue(): Promise<TestingQueue>;
-  issuesForWorkstream(name: string): Promise<Issue[]>;
+  issuesForWorkstream(name: string): Promise<WorkstreamIssue[]>;
   saveIssueChanges(changes: IssueChange[]): Promise<number>;
 }
 

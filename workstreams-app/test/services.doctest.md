@@ -9,9 +9,11 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { execa } from "execa";
-import { createDocumentsService } from "../src/server/documents-service.js";
+import { createDocumentsService, workstreamIssueIndicators } from "../src/server/documents-service.js";
+import { parseIssueFile } from "../src/server/issue-domain.js";
 import { mergeOverlaySources } from "../src/server/issue-overlay.js";
-import { resolveIssueTarget } from "../src/server/issues-mutation-service.js";
+import { resolveIssueTarget, saveIssueChanges } from "../src/server/issues-mutation-service.js";
+import { issueRelPathSchema } from "../src/shared/documents.js";
 import { createActionsService, createResumeMarkerParser, type ActionCommandRequest } from "../src/server/actions-service.js";
 
 async function git(cwd: string, args: string[]) {
@@ -20,15 +22,19 @@ async function git(cwd: string, args: string[]) {
 
 async function makeRepo() {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "workstreams-app-"));
+  const privateRoot = await fs.mkdtemp(path.join(os.tmpdir(), "workstreams-private-"));
   const worktreesRoot = path.join(root, "worktrees");
   await Promise.all([
     fs.mkdir(path.join(root, "issues", "bugs"), { recursive: true }),
+    fs.mkdir(path.join(privateRoot, "bugs"), { recursive: true }),
     fs.mkdir(path.join(root, "callback-box", "docs", "plans"), { recursive: true }),
     fs.mkdir(path.join(root, "callback-box", "docs", "implemented-plans"), { recursive: true }),
     fs.mkdir(path.join(root, "callback-box", "docs", "unimplemented-plans"), { recursive: true }),
     fs.mkdir(worktreesRoot, { recursive: true }),
   ]);
   const issuePath = path.join(root, "issues", "bugs", "2026-08-13-example.md");
+  const secretPath = path.join(root, "secret.md");
+  await fs.writeFile(secretPath, "must stay outside issue access\n");
   await fs.writeFile(issuePath, `---
 title: Example issue
 workstream: example
@@ -41,19 +47,65 @@ next-action: reconfirm
 
 Body text.
 `);
+  const secondIssuePath = path.join(root, "issues", "bugs", "2026-08-13-second.md");
+  await fs.writeFile(secondIssuePath, `---
+title: Second issue
+workstream: example
+needs: []
+labels: []
+priority: normal
+---
+Second body.
+`);
+  await fs.symlink(
+    secretPath,
+    path.join(root, "issues", "bugs", "2026-08-13-escape.md"),
+  );
+  const privateIssuePath = path.join(privateRoot, "bugs", "2026-08-13-example.md");
+  await fs.writeFile(privateIssuePath, `---
+title: Private example
+workstream: example
+needs: []
+labels: [private]
+priority: normal
+---
+Private body.
+`);
   await fs.writeFile(path.join(root, "callback-box", "docs", "plans", "example.md"), `---
 title: Example plan
 status: draft
 workstream: example
 ---
 `);
+  await fs.writeFile(path.join(root, ".gitignore"), "/private-issues\n");
+  await fs.symlink(privateRoot, path.join(root, "private-issues"));
   await git(root, ["init", "-q"]);
   await git(root, ["config", "user.email", "test@example.com"]);
   await git(root, ["config", "user.name", "Workstreams Test"]);
   await git(root, ["add", "."]);
   await git(root, ["commit", "-qm", "fixture"]);
-  return { root, worktreesRoot, issuePath };
+  await git(privateRoot, ["init", "-q"]);
+  await git(privateRoot, ["config", "user.email", "test@example.com"]);
+  await git(privateRoot, ["config", "user.name", "Workstreams Test"]);
+  await git(privateRoot, ["add", "."]);
+  await git(privateRoot, ["commit", "-qm", "private fixture"]);
+  return { root, privateRoot, worktreesRoot, issuePath, privateIssuePath, secondIssuePath };
 }
+```
+
+Issue paths are category-relative Markdown files. Closed and private issues use
+the same path grammar; visibility selects the root, so `private/` is never a
+path prefix supplied by a client.
+
+```ts
+JSON.stringify({
+  open: issueRelPathSchema.safeParse("bugs/2026-08-13-example.md").success,
+  closed: issueRelPathSchema.safeParse("closed/watch/2026-08-13-example.md").success,
+  privatePrefix: issueRelPathSchema.safeParse("private/bugs/2026-08-13-example.md").success,
+  traversal: issueRelPathSchema.safeParse("bugs/../../secret.md").success,
+  wrongExtension: issueRelPathSchema.safeParse("bugs/2026-08-13-example.txt").success,
+})
+=> {"open":true,"closed":true,"privatePrefix":false,"traversal":false,"wrongExtension":false}
 ```
 
 ## Documents retain issue, plan, body, and testing semantics
@@ -72,12 +124,72 @@ const [issues, plans, testing, detail] = await Promise.all([
 ]);
 JSON.stringify({
   issue: issues[0]?.frontmatter.title,
+  privateIssue: issues.find((issue) => issue.visibility === "private")?.frontmatter.title,
   plan: plans[0]?.title,
   landed: testing.landed.length,
   pending: testing.pending.length,
   body: detail.body?.trim(),
 })
-=> {"issue":"Example issue","plan":"Example plan","landed":1,"pending":0,"body":"# Example issue\n\nBody text."}
+=> {"issue":"Example issue","privateIssue":"Private example","plan":"Example plan","landed":1,"pending":0,"body":"# Example issue\n\nBody text."}
+```
+
+Workstream associations are derived by the server, including the structured
+`discovered-in` convention and worktree activity relative to main. The frontend
+receives these indicators instead of parsing provenance itself.
+
+```ts continue
+const associated = parseIssueFile({
+  relPath: "bugs/2026-08-13-associated.md",
+  source: `---
+title: Associated issue
+workstream: example
+discovered-in: worktree-example — investigation
+---
+`,
+});
+const previouslyClosed = parseIssueFile({
+  relPath: associated.relPath,
+  source: `---
+title: Associated issue
+workstream: example
+---
+`,
+});
+previouslyClosed.closed = true;
+JSON.stringify({
+  reopened: workstreamIssueIndicators({
+    workstream: "example", issue: associated, main: previouslyClosed, changedHere: true,
+  }),
+  opened: workstreamIssueIndicators({
+    workstream: "example", issue: associated, changedHere: true,
+  }),
+})
+=> {"reopened":{"owned":true,"discovered":true,"activity":"reopened"},"opened":{"owned":true,"discovered":true,"activity":"opened"}}
+```
+
+The detail boundary rejects traversal even when called below tRPC, and public
+and private visibility cannot cross-read the same relative path.
+
+```ts continue
+await documents.issueDetail("../secret.md", "public")
+=> throws InvalidIssuePathError: invalid issue path: ../secret.md
+
+await documents.issueDetail("bugs/2026-08-13-escape.md", "public")
+=> throws InvalidIssuePathError: invalid issue path: bugs/2026-08-13-escape.md
+
+await documents.saveIssueChanges([{
+  relPath: "closed/bugs/../../secret.md",
+  visibility: "public",
+  priority: "backlog",
+  nextAction: null,
+  originalPriority: "normal",
+  originalNextAction: null,
+}])
+=> throws InvalidIssuePathError: invalid issue path: closed/bugs/../../secret.md
+
+const privateDetail = await documents.issueDetail("bugs/2026-08-13-example.md", "private");
+JSON.stringify({ title: privateDetail.frontmatter.title, body: privateDetail.body?.trim() })
+=> {"title":"Private example","body":"Private body."}
 ```
 
 Saving changes updates both fields and makes exactly one path-scoped commit.
@@ -120,6 +232,102 @@ await documents.saveIssueChanges([{
 => throws IssueMutationError: issue priority changed since the page loaded: bugs/2026-08-13-example.md
 ```
 
+A conflict in any member preflights the whole batch. Earlier valid members are
+not written, and a failure during a later atomic rename restores already-renamed
+members and cleans temporary files.
+
+```ts continue
+const sourceBeforeBatch = await fs.readFile(fixture.issuePath, "utf8");
+const batchConflict = await documents.saveIssueChanges([
+  {
+    relPath: "bugs/2026-08-13-example.md",
+    visibility: "public",
+    priority: "backlog",
+    nextAction: null,
+    originalPriority: "important",
+    originalNextAction: null,
+  },
+  {
+    relPath: "bugs/2026-08-13-second.md",
+    visibility: "public",
+    priority: "backlog",
+    nextAction: null,
+    originalPriority: "important",
+    originalNextAction: null,
+  },
+]).catch((error: unknown) => error instanceof Error ? error.message : String(error));
+JSON.stringify({
+  conflict: batchConflict,
+  firstUnchanged: (await fs.readFile(fixture.issuePath, "utf8")) === sourceBeforeBatch,
+  secondUnchanged: (await fs.readFile(fixture.secondIssuePath, "utf8")).includes("priority: normal"),
+})
+=> {"conflict":"issue priority changed since the page loaded: bugs/2026-08-13-second.md","firstUnchanged":true,"secondUnchanged":true}
+
+const secondBeforeBatch = await fs.readFile(fixture.secondIssuePath, "utf8");
+let renameCalls = 0;
+const renameFailure = await saveIssueChanges({
+  mainRoot: fixture.root,
+  worktreesRoot: fixture.worktreesRoot,
+  changes: [
+    {
+      relPath: "bugs/2026-08-13-example.md",
+      visibility: "public",
+      priority: "backlog",
+      nextAction: null,
+      originalPriority: "important",
+      originalNextAction: null,
+    },
+    {
+      relPath: "bugs/2026-08-13-second.md",
+      visibility: "public",
+      priority: "backlog",
+      nextAction: null,
+      originalPriority: "normal",
+      originalNextAction: null,
+    },
+  ],
+  operations: {
+    renameFile: async (source, target) => {
+      renameCalls += 1;
+      if (renameCalls === 2) throw new Error("simulated rename failure");
+      await fs.rename(source, target);
+    },
+  },
+}).catch((error: unknown) => error instanceof Error ? error.message : String(error));
+const issueDirEntries = await fs.readdir(path.dirname(fixture.issuePath));
+JSON.stringify({
+  renameCalls,
+  failure: renameFailure,
+  firstRestored: (await fs.readFile(fixture.issuePath, "utf8")) === sourceBeforeBatch,
+  secondRestored: (await fs.readFile(fixture.secondIssuePath, "utf8")) === secondBeforeBatch,
+  temporaries: issueDirEntries.filter((name) => name.endsWith(".tmp")).length,
+})
+=> {"renameCalls":2,"failure":"simulated rename failure","firstRestored":true,"secondRestored":true,"temporaries":0}
+```
+
+Saving the private record commits only in the private repository and leaves the
+public issue with the same relative path untouched.
+
+```ts continue
+const privateSaved = await documents.saveIssueChanges([{
+  relPath: "bugs/2026-08-13-example.md",
+  visibility: "private",
+  priority: "backlog",
+  nextAction: null,
+  originalPriority: "normal",
+  originalNextAction: null,
+}]);
+const publicAfterPrivateSave = await fs.readFile(fixture.issuePath, "utf8");
+const privateAfterSave = await fs.readFile(fixture.privateIssuePath, "utf8");
+JSON.stringify({
+  privateSaved,
+  publicImportant: publicAfterPrivateSave.includes("priority: important"),
+  privateBacklog: privateAfterSave.includes("priority: backlog"),
+  privateSubject: (await git(fixture.privateRoot, ["log", "-1", "--pretty=%s"])).stdout,
+})
+=> {"privateSaved":1,"publicImportant":true,"privateBacklog":true,"privateSubject":"Update issue metadata"}
+```
+
 An authoritative worktree overlay resolves beneath that checkout's `issues/`
 directory, not at the checkout root.
 
@@ -138,7 +346,7 @@ const overlayTarget = await resolveIssueTarget({
     worktreeRoots: new Map([["example", overlayRoot]]),
   },
 });
-path.relative(overlayRoot, overlayTarget)
+path.relative(await fs.realpath(overlayRoot), overlayTarget)
 => issues/bugs/2026-08-13-example.md
 ```
 
@@ -160,6 +368,7 @@ JSON.stringify(Object.fromEntries(
 
 ```ts cleanup
 await fs.rm(fixture.root, { recursive: true, force: true });
+await fs.rm(fixture.privateRoot, { recursive: true, force: true });
 ```
 
 ## Resume jobs expose meaningful phases and deduplicate active work

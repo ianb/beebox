@@ -1,6 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
+import { resolveIssuePath } from "./issue-path.js";
+
 export const ISSUE_CATEGORIES = [
   "bugs", "features", "code-quality", "docs-and-chores", "decisions", "exploration", "watch",
 ] as const;
@@ -162,7 +164,7 @@ export async function listIssues(root: string, visibility?: Visibility): Promise
         try {
           records.push(parseIssueFile({
             relPath,
-            source: await fs.readFile(path.join(directory, file), "utf8"),
+            source: await fs.readFile(await resolveIssuePath(root, relPath), "utf8"),
             visibility: resolvedVisibility,
           }));
         } catch (_error) {
