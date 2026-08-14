@@ -1,6 +1,6 @@
 ---
 title: "Codex as an optional box engine"
-status: draft
+status: active
 workstream: codex-engine-plan
 issues:
   - ../../../issues/closed/decisions/2026-08-13-codex-as-an-alternative-engine.md
@@ -10,8 +10,15 @@ issues:
 # Codex as an optional box engine
 
 This plan adds Codex as a complete, optional runtime for agents that operate inside a
-box. It removes Claude Code from callback-box's durable chat and usage records, while
-keeping Claude Code as the default engine and preserving existing boxes.
+box. It keeps each vendor harness intact, uses each harness's supported session API,
+and keeps Claude Code as the default engine for existing boxes and chats.
+
+**Implementation decision update (2026-08-13):** callback-box will not own a normalized
+replacement transcript. Each chat is pinned to its native engine and session ID. A
+provider transcript adapter reads Claude history through the existing Claude importer
+and Codex history through app-server `thread/read`. Live adapters retain provider event
+types below the existing application message boundary. This supersedes Track 2's
+earlier callback-owned JSONL direction wherever the older text conflicts.
 
 The goal is independence from Anthropic's harness decisions and output quality. A
 different model provider under Claude Code does not meet that goal. That cheaper option
@@ -29,8 +36,9 @@ store, and transcript format.
   hook output, and transcript records are external or on-disk inputs.
 - Principle 4, **Resilient AND never silent**. Missing auth, quota exhaustion, transcript
   write failure, and reduced engine capability must be visible.
-- Principle 8, **One way to do each thing**. Chat history and usage reporting must read
-  callback-box records through one interface, not one private store per vendor.
+- Principle 8, **One way to do each thing**. Chat history consumers use one transcript
+  interface, with provider adapters behind it. They do not parse provider stores at
+  call sites.
 - Principle 9, **Formal structure for essential complexity**. Session identity,
   transcript ownership, and capability differences need named protocols.
 - Principle 10, **Testability is architectural**. Both engines need contract fakes and
@@ -173,7 +181,8 @@ new union plus a small normalized delta union. Rename `requiresClaudeAuth` to an
 engine-neutral auth preflight result. Keep prewarm optional; it is an optimization, not
 a capability requirement.
 
-Engine selection is static per box in `config/box.json`:
+The default engine for new chats and box jobs is static per box in
+`config/box.json`:
 
 ```json
 {
@@ -181,9 +190,10 @@ Engine selection is static per box in `config/box.json`:
 }
 ```
 
-Absent means `claude`. There is no per-turn routing and no automatic fallback. Validate
-this field at config load. An unavailable selected engine fails the operation with a
-specific auth, quota, capability, or startup error.
+Absent means `claude`. Existing chats retain the engine recorded in their history entry.
+There is no per-turn routing and no automatic fallback. Validate this field at config
+load. An unavailable selected engine fails the operation with a specific auth, quota,
+capability, or startup error.
 
 **Vocabulary lock-ins:** Use **engine** for the complete harness. Use **provider** only
 for the model server beneath a harness. Use **runtime session reference** for the
@@ -194,71 +204,45 @@ user-visible identity.
 discriminated types and registry, move Claude adaptation below the ports, and keep
 `claude` as the only registry member. No behavior or default changes in this chunk.
 
-### Track 2 — Own chat identity and transcripts
+### Track 2 — Pin chat identity and adapt native transcripts
 
-**What:** Make callback-box the authority for user-visible chat history. Store normalized
-events under `.callback-box/chat-transcripts/<chat-id>.jsonl`. Store the runtime session
-reference in the chat index, not in the public chat ID.
+**What:** Add an engine discriminator to each chat history entry. Keep the native
+session ID as the stable chat ID for this release. Route history operations through a
+provider transcript interface.
 
-**Why this needs to change:** Translating Codex rollout JSONL would replace one private
-format dependency with two. Reading each harness store also makes history, deletion,
-usage, and migration engine-specific. The product already emits the normalized stream
-needed for its own record.
+**Why this needs to change:** Claude history currently reaches directly into Claude
+Code's private JSONL. Codex app-server provides supported `thread/read`, `thread/list`,
+and `thread/delete` operations. Creating a third callback-owned transcript would add a
+durability protocol and discard native information without solving a current need.
 
-**Direction:** Define a versioned, validated envelope:
+**Direction:** Evolve history entries to
+`{ id, engine: "claude" | "codex", contextDir?, features? }`. Missing `engine` means
+`claude`, so existing boxes need no eager migration. A new chat records the currently
+selected engine. Resuming, displaying, reviewing, and deleting that chat always dispatch
+by its recorded engine, even if the box default later changes. There is no live engine
+conversion.
 
-```ts
-type ChatTranscriptRecord = {
-  version: 1;
-  chatId: string;
-  sequence: number;
-  recordedAt: string;
-  event: ChatMessage | NormalizedChatDelta | RuntimeUsageEvent;
-};
-```
+Define a `TranscriptBackend` that returns the application history model and owns native
+list/read/delete semantics. The Claude implementation reuses the current bounded JSONL
+parser. The Codex implementation calls app-server `thread/read(includeTurns: true)` and
+adapts its public user-message, agent-message, file-change, web-search, subagent, and
+compaction items. It must not read Codex rollout JSONL. Provider-only debug/raw views may
+remain separate.
 
-Append each accepted user event and each normalized backend event before publishing it
-to downstream consumers. Use an atomic per-chat append discipline and monotonic sequence
-numbers. A transcript append failure stops the turn and reports that persistence failed;
-the UI must never show an unrecorded assistant reply as durable history.
+The current-chat probe showed the intentional loss boundary. `thread/read` omitted raw
+tool calls, encrypted reasoning, injected turn context, token events, and world state,
+while retaining the completed user-visible turns and selected durable activity. The
+chat UI uses the supported representation. Live app-server notifications provide
+in-progress activity. Usage comes from token-usage events during invocation, not from
+history reconstruction.
 
-Write a `turn-started` record before sending content to the runtime and a `turn-completed`
-record only after every normalized event is durable. On startup, an incomplete turn is a
-recovery boundary. Never resume that native runtime session, because it may know content
-the callback transcript lost. Preserve the visible incomplete-turn marker, create a new
-native session, and seed it from a bounded replay or explicit summary of the durable
-callback transcript. This is a visible recovery, not silent continuation. It avoids
-parsing private runtime logs while preventing hidden context from leaking into later
-replies.
+**Vocabulary lock-ins:** A **chat** is an engine-qualified native session. A
+**transcript backend** reads the harness's supported history representation. A private
+Claude JSONL or Codex rollout is a **runtime log** and is not a cross-provider contract.
 
-Extend the history entry to `{ id: chatId, runtime: RuntimeSessionRef, contextDir?,
-features? }`. Existing Claude entries migrate lazily: keep their current chat ID, qualify
-their ID as a Claude runtime session, read the old Claude transcript once, normalize it
-into the callback store, then mark the entry migrated. Preserve the old JSONL until the
-new transcript validates and a backup retention window expires. New turns read only the
-callback transcript for display and use the runtime reference only to ask the selected
-engine to resume.
-
-Move session listing, history loading, tail calculation, chat deletion, husk parsing,
-self-note parsing, and usage aggregation to the callback transcript interface. Retain a
-narrow `ClaudeTranscriptImporter` for old records. Do not add a Codex rollout parser.
-
-Chat transcripts do not cover batch agents. Add a separate append-only
-`.callback-box/runtime-usage.jsonl` ledger keyed by runtime session reference, task,
-turn, engine, model, and timestamp. Every agent and chat adapter writes normalized token
-usage or an explicit unavailable record. Rebuild `usage.db` from this ledger plus chat
-metadata. Import historical Claude usage through the existing reader once, then mark the
-source range imported. An empty Codex ledger after a completed Codex turn is an invariant
-failure, not zero usage.
-
-**Vocabulary lock-ins:** A **transcript** is callback-box's normalized durable record. A
-Claude project JSONL or Codex rollout is a **runtime log**. Runtime logs are diagnostic
-and resume implementation details, never product history.
-
-**First implementation chunk:** Add transcript schemas, a fixture-backed store, and
-round-trip contract tests. Dual-write normalized events for new Claude chats behind a
-test-only gate. Compare callback-owned replay with current Claude-history replay before
-switching readers.
+**First implementation chunk:** Add the engine field with a legacy-Claude default and
+contract tests. Introduce the transcript dispatch interface with the existing Claude
+reader as its only member. Then add the fixture-backed Codex `thread/read` adapter.
 
 ### Track 3 — Re-provide the harness contract for Codex
 
@@ -326,15 +310,12 @@ branches to individual jobs. If a selected engine cannot start, fail visibly and
 jobs pending. Never fall back to the other vendor automatically because that defeats
 privacy, cost, and output expectations.
 
-Engine changes are not retroactive session conversions. Refuse to change `agentEngine`
-while web-chat or reactor-chat runtime references belong to the other engine unless the
-boxholder chooses an explicit reset/fork operation. For web chat, that operation creates
-a visibly new chat ID and seeds its first prompt with a bounded replay or explicit
-summary; it does not present an amnesiac native session as continuous history. For
-`.callback-box/chat-sessions.json`, replace bare IDs with `RuntimeSessionRef`. The reset
-operation archives those refs. An unattended `cb wakeup` that finds a mismatched legacy
-or engine-qualified ref fails the affected job pending and names the required reset; it
-never rotates context silently.
+Engine changes are not retroactive session conversions. Existing web chats remain pinned
+and resumable on their recorded engine. A newly created chat uses the new default. For
+reactor chat sessions, replace bare IDs with `RuntimeSessionRef`; existing active thread
+refs continue on their recorded engine until explicitly reset. Batch jobs use the box
+default at invocation time. No path silently resumes a native session through a different
+engine.
 
 **Vocabulary lock-ins:** **Selected engine** is the one explicit per-box choice.
 **Fallback** always means an explicit boxholder configuration change.
