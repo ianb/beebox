@@ -298,27 +298,25 @@ directories in the callback-box package. Install or load them for every box runt
 Both plugins call one shared context/rule resolver and the existing card validator.
 
 **Why this needs to change:** Project-local `.claude/rules` couples rule discovery to
-Claude Code. Copying the test box's 228 KB rule corpus into Codex `AGENTS.md` destroys
-lazy loading and creates a large input-token floor. Generating provider-specific copies
-of editable context also creates drift. Plugins are the native packaging mechanism for
-skills and lifecycle hooks in both harnesses.
+Claude Code. Plugins are the native packaging mechanism for shared skills and lifecycle
+hooks in both harnesses. Generating provider-specific copies of ordinary editable
+context creates avoidable drift.
 
 **Direction:** Add an engine-neutral `cb agent-context` and `cb agent-rules`
 implementation. Given a cwd and tool event, it resolves the active box package, expands
 top-level `@file` includes when required, matches canonical path-scoped rules, and emits
 structured context or validation results. It never embeds every rule in each session.
 
-The Claude plugin uses `.claude-plugin/plugin.json` and `hooks/hooks.json`. Claude
-plugins do not have a direct `rules/` component, so their PreToolUse/PostToolUse hooks
-call the shared resolver and translate its result into Claude's hook schema. The Agent
-SDK loads this local package plugin explicitly. Existing `.claude/rules` remains the
-canonical rule corpus during migration; the plugin reads it instead of copying it.
+The Claude plugin uses `.claude-plugin/plugin.json` and `hooks/hooks.json`. The Agent
+SDK loads this local package plugin explicitly. Claude keeps its native `.claude/rules`
+loading because plugins do not expose a direct `rules/` component.
 
 The Codex plugin uses `.codex-plugin/plugin.json`, skills, and trusted lifecycle hooks.
-Its hooks call the same resolver and translate results into Codex's hook schema. Codex
-preflight verifies that the installed plugin is enabled and its current hook definition
-is trusted. Boxes expose the package plugin through their local package marketplace;
-they do not generate unique plugin copies.
+Its hooks translate shared validation and lifecycle results into Codex's hook schema.
+Codex rule guidance is generated from the canonical `.claude/rules` corpus during box
+context refresh. Codex preflight verifies that the installed plugin is enabled and its
+current hook definition is trusted. Boxes expose the package plugin through their local
+package marketplace; they do not generate unique plugin copies.
 
 For ordinary editable guidance, use relative symlinks. `AGENTS.md` points to
 `CLAUDE.md`; `.agents/skills/<name>` points to `.claude/skills/<name>`. Editing through
@@ -330,9 +328,9 @@ not the runtime adapter. A **rule resolver** is callback-box-owned logic shared 
 plugins. A **context alias** is a symlink between equivalent editable harness files.
 
 **First implementation chunk:** Add both minimal plugin manifests and hook fixtures.
-Add a pure rule matcher with fixture-backed tests, then make both hook adapters pass the
-same contract cases. Load the Claude plugin through the SDK and verify the installed
-Codex plugin through app-server before removing any standalone rule path.
+Make both hook adapters pass the same validation/lifecycle contract cases. Load the
+Claude plugin through the SDK, verify the installed Codex plugin through app-server,
+and verify generated Codex rule guidance against the canonical Claude rule corpus.
 
 ### Track 4 — Select, authenticate, and operate the engine
 
