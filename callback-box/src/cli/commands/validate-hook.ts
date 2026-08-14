@@ -19,7 +19,7 @@ import { requireBoxRoot, findBoxRoot, isCardFile, isViewFile } from "../../lib/p
 import { lintViewFile } from "../../webapp/views/compiler.js";
 import { lintViewRefs } from "../../core/views/refs.js";
 import { lintCardsDispatch } from "../../core/card-lint.js";
-import { isClaudeMdFile, lintClaudeMdFile } from "../../core/claude-md-lint.js";
+import { isAgentInstructionsFile, lintClaudeMdFile } from "../../core/claude-md-lint.js";
 import { buildLoadContext } from "../../core/load-context.js";
 import { staleContainsWarning } from "../../core/search/contains-state.js";
 import { refreshDerivedRules } from "../../core/refresh-derived-rules.js";
@@ -73,7 +73,7 @@ export async function validateHookPath(fp: string): Promise<string | null> {
   if (/tricks\/scripts\/[^/]+\.ts$/.test(fp)) {
     return "Trick scripts must be in a subdirectory: tricks/scripts/<name>/index.ts, not directly in tricks/scripts/";
   }
-  if (isClaudeMdFile(fp)) {
+  if (isAgentInstructionsFile(fp)) {
     const boxRoot = await requireBoxRoot();
     return lintClaudeMdFile(boxRoot, fp);
   }

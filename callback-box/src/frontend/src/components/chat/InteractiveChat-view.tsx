@@ -122,7 +122,7 @@ function BarChromeRegion(props: ChatBodyProps) {
     sessionId, processRunning, isStreaming, debugView, setDebugView, showDebugLog, setShowDebugLog,
   } = props;
   const { onZoomView } = tabs;
-  const { selectedModel, narrationEnabled, handleToggleNarration, handleSelectModel } = model;
+  const { agentEngine, selectedModel, narrationEnabled, handleToggleNarration, handleSelectModel } = model;
   return (
     <ChatBarChrome
       contextDir={effectiveContextDir}
@@ -137,6 +137,7 @@ function BarChromeRegion(props: ChatBodyProps) {
       hqInFlight={voice.hqInFlight}
       onNewSession={actions.handleNewSession}
       selectedModel={selectedModel}
+      agentEngine={agentEngine}
       onSelectModel={handleSelectModel}
       onStopProcess={actions.handleStopProcess}
       onRestartProcess={actions.handleRestartProcess}
