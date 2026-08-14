@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noImplicitAny": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "exactOptionalPropertyTypes": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": false,
+    "sourceMap": true,
+    "outDir": "dist",
+    "rootDir": ".",
+    "lib": ["ES2023"],
+    "types": ["node"]
+  },
+  "include": ["src/server/**/*", "src/shared/**/*"],
+  "exclude": ["node_modules", "dist", "src/frontend"]
+}
