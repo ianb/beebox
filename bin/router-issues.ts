@@ -231,6 +231,7 @@ document.addEventListener("click", async (event) => {
   if (!button) return;
   if (button.disabled) return;
   const copyPath = button.dataset.copyPath;
+  const idleContent = button.innerHTML;
   button.disabled = true;
   try {
     try {
@@ -252,7 +253,7 @@ document.addEventListener("click", async (event) => {
     button.setAttribute("aria-label", "Copied " + copyPath);
     button.classList.add("copied");
     setTimeout(() => {
-      button.textContent = "Copy";
+      button.innerHTML = idleContent;
       button.setAttribute("aria-label", "Copy issue path " + copyPath);
       button.classList.remove("copied");
       button.disabled = false;
@@ -263,7 +264,7 @@ document.addEventListener("click", async (event) => {
     button.classList.add("copy-failed");
     if (status) status.textContent = "Could not copy " + copyPath;
     setTimeout(() => {
-      button.textContent = "Copy";
+      button.innerHTML = idleContent;
       button.setAttribute("aria-label", "Copy issue path " + copyPath);
       button.classList.remove("copy-failed");
       button.disabled = false;
@@ -1087,7 +1088,6 @@ function worktreeBadges(entries: OverlayEntry[] | undefined): string {
 }
 
 const ISSUES_CSS = `
-  body { max-width: 1500px; }
   .issue-editor-bar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 0.8em; margin: 0 -0.4em 1em; padding: 0.65em 0.4em; border-bottom: 1px solid #d8dde3; background: rgba(255, 255, 255, 0.96); }
   .issue-editor-bar h1 { flex: 0 0 auto; margin: 0; }
   .issue-editor-filters { display: flex; min-width: 0; flex: 1 1 auto; flex-wrap: wrap; gap: 0.3em; align-items: center; }
@@ -1136,7 +1136,8 @@ const ISSUES_CSS = `
   ul.issues .issue-title-row { display: flex; min-width: 0; align-items: baseline; gap: 0.5em; }
   ul.issues a.title { display: block; font-weight: 600; text-decoration: none; color: #222; }
   ul.issues a.title:hover { color: #2255aa; text-decoration: underline; }
-  .copy-issue-path { flex: 0 0 auto; padding: 0.1em 0.35em; border: 1px solid #ccd2d8; border-radius: 4px; background: #fff; color: #66717c; font: 600 10px ui-monospace, Menlo, monospace; cursor: pointer; }
+  .copy-issue-path { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 1.8em; height: 1.8em; padding: 0; border: 1px solid #ccd2d8; border-radius: 4px; background: #fff; color: #66717c; cursor: pointer; }
+  .copy-issue-path svg { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 1.8; }
   .copy-issue-path.copied { border-color: #3f7b50; color: #2f6b40; }
   .copy-issue-path.copy-failed { border-color: #a23522; color: #a23522; }
   ul.issues .meta { display: block; color: #888; font: 12px ui-monospace, Menlo, monospace; margin-top: 0.2em; }
@@ -1524,7 +1525,7 @@ function issueRowHtml(
   const selected = paneIssue === selectedIssue;
   return `<li${selected ? ' class="selected"' : ""}>
     <div class="issue-main">
-      <div class="issue-title-row"><a class="title" href="${href}" data-issue-link="${escapeHtml(paneIssue)}"${selected ? ' aria-current="true"' : ""}>${escapeHtml(issue.frontmatter.title)}</a><button type="button" class="copy-issue-path" data-copy-path="${escapeHtml(copyPath)}" aria-label="Copy issue path ${escapeHtml(copyPath)}" title="Copy ${escapeHtml(copyPath)}">Copy</button></div>
+      <div class="issue-title-row"><a class="title" href="${href}" data-issue-link="${escapeHtml(paneIssue)}"${selected ? ' aria-current="true"' : ""}>${escapeHtml(issue.frontmatter.title)}</a><button type="button" class="copy-issue-path" data-copy-path="${escapeHtml(copyPath)}" aria-label="Copy issue path ${escapeHtml(copyPath)}" title="Copy ${escapeHtml(copyPath)}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h3"/></svg></button></div>
       <span class="meta">${escapeHtml(date)}${date && shortSlug ? " · " : ""}${escapeHtml(shortSlug)}</span>
       <div class="issue-pills">${pills}</div>
     </div>
