@@ -183,6 +183,7 @@ export interface RenderItemContext {
   streamTools: SessionContentBlock[];
   debugView: boolean;
   currentUserEmail: string | undefined;
+  currentUserName: string | undefined;
   speechPlayback: SpeechPlaybackState;
   handleStopSpeech: () => void;
   handleSkipSpeech: () => void;
@@ -206,7 +207,7 @@ function GroupItem({
   acks?: AckIndication[];
   ctx: RenderItemContext;
 }) {
-  const { debugView, currentUserEmail, speechPlayback, lastAssistantGroupIndex, onZoomView, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, proseEnabled } = ctx;
+  const { debugView, currentUserEmail, currentUserName, speechPlayback, lastAssistantGroupIndex, onZoomView, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, proseEnabled } = ctx;
   const boundaryLabel = `${group.type}#${groupIndex}:${group.entries[0]?.uuid ?? ""}`;
   let body: ReactNode;
   if (group.type === "compaction") {
@@ -222,7 +223,7 @@ function GroupItem({
       </div>
     );
   } else if (group.type === "user") {
-    body = <div className="py-0.5"><UserMessage entries={group.entries} debugView={debugView} currentUserEmail={currentUserEmail} acks={acks} onZoomView={onZoomView} /></div>;
+    body = <div className="py-0.5"><UserMessage entries={group.entries} debugView={debugView} currentUserEmail={currentUserEmail} currentUserName={currentUserName} acks={acks} onZoomView={onZoomView} /></div>;
   } else {
     // "This message is playing" matches either an explicit replay
     // (playingMessageId is this group's uuid) or auto-played speech

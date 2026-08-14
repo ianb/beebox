@@ -308,7 +308,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
       totalEntries={totalEntries}
       pendingCount={pendingMessages.filter((entry) => entry.pending === true).length}
       error={error}
-      currentUserEmail={currentUser ? currentUser.email : undefined}
+      currentUserEmail={currentUser ? currentUser.email : undefined} currentUserName={currentUser ? currentUser.name : undefined}
       modelMarkers={model.modelMarkers}
       loadingOlder={loadingOlder}
       scrollToBottomTrigger={scrollToBottomTrigger} liveTurnId={liveTurnId}

@@ -65,6 +65,7 @@ interface ChatBodyProps {
   pendingCount: number;
   error: string | null | undefined;
   currentUserEmail: string | undefined;
+  currentUserName: string | undefined;
   modelMarkers: ModelMarker[];
   loadingOlder: boolean;
   scrollToBottomTrigger: number;
@@ -156,7 +157,7 @@ function BarChromeRegion(props: ChatBodyProps) {
 function MessageListRegion(props: ChatBodyProps) {
   const {
     tabs, model, voice, actions, messages, groups, modelMarkers, isStreaming, streamText, streamTools,
-    debugView, currentUserEmail, snapshot, totalEntries, loadingOlder, scrollToBottomTrigger, liveTurnId,
+    debugView, currentUserEmail, currentUserName, snapshot, totalEntries, loadingOlder, scrollToBottomTrigger, liveTurnId,
     captureBubbles, onCaptureRetry,
   } = props;
   const { onZoomView } = tabs;
@@ -172,6 +173,7 @@ function MessageListRegion(props: ChatBodyProps) {
       streamTools={streamTools}
       debugView={debugView}
       currentUserEmail={currentUserEmail}
+      currentUserName={currentUserName}
       speechPlayback={speechPlayback}
       handleStopSpeech={handleStopSpeech}
       handleSkipSpeech={handleSkipSpeech}

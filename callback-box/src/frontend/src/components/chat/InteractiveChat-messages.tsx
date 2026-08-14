@@ -103,7 +103,7 @@ function ScrollToBottomButton({ emphasized, onClick }: { emphasized: boolean; on
 
 function MessageListInner({
   messages, groups, modelMarkers, isStreaming, streamText, streamTools,
-  debugView, currentUserEmail, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, snapshot,
+  debugView, currentUserEmail, currentUserName, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, snapshot,
   totalEntries, onLoadOlder, loadingOlder, scrollToBottomTrigger, liveTurnId, proseEnabled, pendingHqDraft,
   captureBubbles, onCaptureRetry,
 }: {
@@ -115,6 +115,7 @@ function MessageListInner({
   streamTools: SessionContentBlock[];
   debugView: boolean;
   currentUserEmail: string | undefined;
+  currentUserName: string | undefined;
   speechPlayback: SpeechPlaybackState;
   handleStopSpeech: () => void;
   handleSkipSpeech: () => void;
@@ -196,6 +197,7 @@ function MessageListInner({
     streamTools,
     debugView,
     currentUserEmail,
+    currentUserName,
     speechPlayback,
     handleStopSpeech,
     handleSkipSpeech,
@@ -204,7 +206,7 @@ function MessageListInner({
     proseEnabled,
     lastAssistantGroupIndex,
     handleCaptureRetry: onCaptureRetry,
-  }), [streamText, streamTools, debugView, currentUserEmail, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, proseEnabled, lastAssistantGroupIndex, onCaptureRetry]);
+  }), [streamText, streamTools, debugView, currentUserEmail, currentUserName, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, proseEnabled, lastAssistantGroupIndex, onCaptureRetry]);
 
   if (messages.length === 0 && !isStreaming) {
     return (

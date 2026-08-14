@@ -27,6 +27,7 @@ import {
 import { CaptureChip } from "./CaptureChip";
 import { UploadChip } from "./UploadChip";
 import { UserMessageText } from "./user-message-text";
+import { isOtherChatUser } from "./chat-message-sender";
 
 /**
  * Map a settled task's status to its dot color and an optional label. The SDK's
@@ -205,7 +206,7 @@ function UserEntryContent({ entry, debugView }: { entry: SessionEntry; debugView
  * Render a user message bubble.
  * When currentUserEmail is provided, messages from other users are styled differently.
  */
-export function UserMessage({ entries, debugView, currentUserEmail, acks, onZoomView }: { entries: SessionEntry[]; debugView?: boolean; currentUserEmail?: string; acks?: AckIndication[]; onZoomView?: OnZoomView }) {
+export function UserMessage({ entries, debugView, currentUserEmail, currentUserName, acks, onZoomView }: { entries: SessionEntry[]; debugView?: boolean; currentUserEmail?: string; currentUserName?: string; acks?: AckIndication[]; onZoomView?: OnZoomView }) {
   const allTexts = entries.flatMap((e) =>
     e.content.filter((b) => b.type === "text").map((b) => b.text ?? "")
   );
@@ -236,9 +237,7 @@ export function UserMessage({ entries, debugView, currentUserEmail, acks, onZoom
   const senderName = getUserName(firstEntry);
   const senderEmail = firstEntry.userEmail;
   // Compare by email if available (same user across devices), fall back to name
-  const isOtherUser = currentUserEmail
-    ? senderEmail ? senderEmail !== currentUserEmail : senderName ? senderName !== currentUserEmail : false
-    : false;
+  const isOtherUser = isOtherChatUser({ senderEmail, senderName, currentUserEmail, currentUserName });
 
   const isPending = entries.every((e) => e.pending === true);
   const pendingClass = isPending ? " opacity-60" : "";
