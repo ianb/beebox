@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CopyIcon, Pill } from "./ui.js";
+import { CheckIcon, CopyIcon, Pill } from "./ui.js";
 import type { Issue, NextAction, Priority } from "../types.js";
 
 const PRIORITIES: Array<{ value: Priority; symbol: string; label: string }> = [{ value: "important", symbol: "!", label: "Important" }, { value: "normal", symbol: "−", label: "Normal" }, { value: "backlog", symbol: "↓", label: "Backlog" }, { value: "uncategorized", symbol: "?", label: "Uncategorized" }];
@@ -30,5 +30,6 @@ export function CopyIssuePath({ issue }: { issue: Issue }) {
   const [result, setResult] = useState<"idle" | "copied" | "failed">("idle");
   const path = `${issue.visibility === "private" ? "private-issues" : "issues"}/${issue.relPath}`;
   async function copy() { try { await navigator.clipboard.writeText(path); setResult("copied"); } catch (_error) { setResult("failed"); } window.setTimeout(() => setResult("idle"), 1500); }
-  return <button type="button" className={`copy-issue-path ${result}`} aria-label={`Copy ${path}`} title={result === "copied" ? "Copied" : `Copy ${path}`} onClick={() => void copy()}><CopyIcon /></button>;
+  const copied = result === "copied";
+  return <button type="button" className={`copy-issue-path ${result}`} aria-label={copied ? `Copied ${path}` : `Copy ${path}`} title={copied ? "Copied!" : `Copy ${path}`} aria-live="polite" onClick={() => void copy()}>{copied ? <CheckIcon /> : <CopyIcon />}</button>;
 }
