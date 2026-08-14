@@ -16,7 +16,7 @@ issues: []
 Before this work was implemented, `bin/browse` could not open any authenticated
 page of the local dev app, so any issue whose verification said "check it in a
 real browser" was unverifiable by an agent. Issue:
-`issues/bugs/2026-07-31-browse-cannot-authenticate-dev-pages.md`.
+`issues/closed/bugs/2026-07-31-browse-cannot-authenticate-dev-pages.md`.
 
 ## Design: an opt-in API key, following `CB_DIAG_API_KEY`
 
