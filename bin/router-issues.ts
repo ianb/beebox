@@ -2188,14 +2188,20 @@ async function worktreeDiffHtml(
   return sections.join("");
 }
 
-interface IssueDetailResult {
-  status: number;
-  contentType: string;
-  body: string;
-  title?: string;
-  relPath?: string;
-  visibility?: Visibility;
-}
+type IssueDetailResult =
+  | {
+      status: 200;
+      contentType: string;
+      body: string;
+      title: string;
+      relPath: string;
+      visibility: Visibility;
+    }
+  | {
+      status: 403 | 404;
+      contentType: string;
+      body: string;
+    };
 
 async function buildIssueDetail(
   base: string,
@@ -2330,10 +2336,10 @@ async function renderIssueDetail(
   }
   res.end(
     renderDevShell(
-      result.title!,
+      result.title,
       devBreadcrumbs(
         base,
-        `issues/${addVisibilityPrefix(result.relPath!, result.visibility!)}`,
+        `issues/${addVisibilityPrefix(result.relPath, result.visibility)}`,
       ),
       result.body,
       ISSUES_CSS,
