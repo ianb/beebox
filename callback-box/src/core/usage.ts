@@ -15,6 +15,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as readline from "node:readline";
 import { listSessions } from "../cli/lib/session.js";
+import { CODEX_USAGE_REL_PATH, readCodexTurnUsage } from "./codex-usage.js";
 
 const DB_REL_PATH = ".callback-box/usage.db";
 const MANIFEST_REL_PATH = "store/usage/session-manifest.jsonl";
@@ -294,6 +295,59 @@ export async function syncUsage(boxRoot: string): Promise<SyncResult> {
     txn();
 
     result.sessionsProcessed++;
+  }
+
+  const codexPath = path.join(boxRoot, CODEX_USAGE_REL_PATH);
+  let codexSize: number | null = null;
+  try {
+    codexSize = fs.statSync(codexPath).size;
+  } catch (_error) {
+    // A box that has never run Codex has no Codex ledger.
+  }
+  const codexSyncKey = "__callback_box_codex_turn_ledger__";
+  if (codexSize !== null && getSyncState.get(codexSyncKey)?.file_size !== codexSize) {
+    const codexEntries = await readCodexTurnUsage(boxRoot);
+    const sessions = new Set(codexEntries.map((entry) => entry.sessionId));
+    const buckets = new Map<string, UsageBucket & { sessionId: string; task: string; date: string; model: string }>();
+    for (const entry of codexEntries) {
+      const date = entry.timestamp.slice(0, 10) || "unknown";
+      const key = `${entry.sessionId}\t${date}\t${entry.model}`;
+      const bucket = buckets.get(key) ?? {
+        sessionId: entry.sessionId,
+        task: entry.task,
+        date,
+        model: entry.model,
+        inputTokens: 0,
+        outputTokens: 0,
+        cacheWriteTokens: 0,
+        cacheReadTokens: 0,
+        messageCount: 0,
+      };
+      bucket.inputTokens += entry.usage.inputTokens;
+      bucket.outputTokens += entry.usage.outputTokens;
+      bucket.cacheWriteTokens += entry.usage.cacheWriteInputTokens;
+      bucket.cacheReadTokens += entry.usage.cachedInputTokens;
+      bucket.messageCount += 1;
+      buckets.set(key, bucket);
+    }
+    db.transaction(() => {
+      for (const sessionId of sessions) deleteUsage.run(sessionId);
+      for (const bucket of buckets.values()) {
+        upsertUsage.run(
+          bucket.sessionId,
+          bucket.task,
+          bucket.date,
+          bucket.model,
+          bucket.inputTokens,
+          bucket.outputTokens,
+          bucket.cacheWriteTokens,
+          bucket.cacheReadTokens,
+          bucket.messageCount,
+        );
+      }
+      upsertSync.run(codexSyncKey, codexSize);
+    })();
+    result.sessionsProcessed += sessions.size;
   }
 
   db.close();

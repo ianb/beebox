@@ -5,8 +5,6 @@ import { fmt } from "../../lib/format.js";
 import { buildTimezoneContext } from "../box/config.js";
 import {
   CodexAppServer,
-  CodexAppServerTimeoutError,
-  CodexRpcError,
 } from "../../services/codex-app-server.js";
 import type { AgentResult } from "./types.js";
 import { ensureCodexPluginInstalled } from "./ensure-codex-plugin.js";
@@ -14,7 +12,9 @@ import { expandClaudeIncludes } from "../agent-context-includes.js";
 import { getBoxShape } from "../../lib/box-shape.js";
 import { join } from "node:path";
 import { validateHookPaths } from "../../cli/commands/validate-hook.js";
-import { resultFromCodexTurn } from "./codex-run-result.js";
+import { codexRunErrorText, resultFromCodexTurn } from "./codex-run-result.js";
+import { codexTokenUsageSchema, type CodexTokenUsage } from "../codex-usage.js";
+import { recordCodexAgentUsage } from "./codex-run-usage.js";
 
 const threadResultSchema = z.looseObject({
   thread: z.looseObject({ id: z.string() }),
@@ -59,8 +59,15 @@ const turnCompletedSchema = z.looseObject({
   }),
 });
 
+const tokenUsageSchema = z.looseObject({
+  threadId: z.string(),
+  turnId: z.string(),
+  tokenUsage: z.looseObject({ last: codexTokenUsageSchema }),
+});
+
 export interface CodexRunOptions {
   boxRoot: string;
+  task?: string | undefined;
   systemPrompt: string;
   prompt: string;
   onOutput?: ((text: string) => void) | undefined;
@@ -75,32 +82,11 @@ export interface CodexRunOptions {
   additionalDirectories?: string[] | undefined;
 }
 
-class CodexTurnFailedError extends Error {
-  readonly detail: string;
-
-  constructor(detail: string) {
-    super("Codex turn failed");
-    this.name = "CodexTurnFailedError";
-    this.detail = detail;
-  }
-}
-
 class CodexTurnCompletionTimeoutError extends Error {
   constructor() {
     super("Codex turn did not complete before the timeout");
     this.name = "CodexTurnCompletionTimeoutError";
   }
-}
-
-function errorText(error: unknown): string {
-  if (error instanceof CodexRpcError) {
-    return `${error.message}: ${error.method}: ${error.rpcMessage}`;
-  }
-  if (error instanceof CodexAppServerTimeoutError) {
-    return `${error.message}: ${error.operation}`;
-  }
-  if (error instanceof CodexTurnFailedError) return `${error.message}: ${error.detail}`;
-  return error instanceof Error ? error.message : String(error);
 }
 
 function renderCommand(item: z.infer<typeof itemCompletedSchema>["item"]): string {
@@ -116,18 +102,24 @@ function waitForTurn(options: {
   turnId: string;
   maxTurns: number;
   onOutput?: ((text: string) => void) | undefined;
-}): Promise<{ output: string; resultText: string; durationMs: number; status: "completed" | "interrupted" | "failed"; changedPaths: string[] }> {
+}): Promise<{ output: string; resultText: string; durationMs: number; status: "completed" | "interrupted" | "failed"; changedPaths: string[]; usage: CodexTokenUsage | null }> {
   const output: string[] = [];
   const finalText: string[] = [];
   let toolCount = 0;
   let interruptSent = false;
   const changedPaths = new Set<string>();
+  let usage: CodexTokenUsage | null = null;
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       remove();
       reject(new CodexTurnCompletionTimeoutError());
     }, 600_000);
     const remove = options.server.onNotification((notification) => {
+      if (notification.method === "thread/tokenUsage/updated") {
+        const parsed = tokenUsageSchema.safeParse(notification.params);
+        if (parsed.success && parsed.data.turnId === options.turnId) usage = parsed.data.tokenUsage.last;
+        return;
+      }
       if (notification.method === "item/completed") {
         const parsed = itemCompletedSchema.safeParse(notification.params);
         if (!parsed.success || parsed.data.turnId !== options.turnId) return;
@@ -171,6 +163,7 @@ function waitForTurn(options: {
         durationMs: turn.durationMs ?? 0,
         status: turn.status,
         changedPaths: [...changedPaths],
+        usage,
       });
     });
   });
@@ -289,6 +282,15 @@ export async function runCodexAgent(options: CodexRunOptions): Promise<AgentResu
         sessionId: threadId,
       };
     }
+    await recordCodexAgentUsage({
+      boxRoot: options.boxRoot,
+      threadId,
+      turnId,
+      task: options.task,
+      model: options.model,
+      usage: completed.usage,
+      onOutput: options.onOutput,
+    });
     let structuredOutput: unknown;
     if (options.outputSchema !== undefined && completed.status === "completed") {
       structuredOutput = JSON.parse(completed.resultText);
@@ -298,7 +300,7 @@ export async function runCodexAgent(options: CodexRunOptions): Promise<AgentResu
     return {
       success: false,
       output: "",
-      error: errorText(error),
+      error: codexRunErrorText(error),
       exitCode: -1,
       sessionId: options.resumeSessionId ?? "",
     };

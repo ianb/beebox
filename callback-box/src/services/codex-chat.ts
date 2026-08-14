@@ -16,6 +16,7 @@ import { getBoxShape } from "../lib/box-shape.js";
 import { join } from "node:path";
 import { findBoxRoot } from "../lib/paths.js";
 import { validateHookPaths } from "../cli/commands/validate-hook.js";
+import { appendCodexTurnUsage, codexTokenUsageSchema, type CodexTokenUsage } from "../core/codex-usage.js";
 
 const threadSchema = z.looseObject({ thread: z.looseObject({ id: z.string() }) });
 const turnSchema = z.looseObject({ turn: z.looseObject({ id: z.string() }) });
@@ -37,6 +38,10 @@ const completedSchema = z.looseObject({
     status: z.enum(["completed", "interrupted", "failed", "inProgress"]),
     durationMs: z.number().nullable(),
   }),
+});
+const tokenUsageSchema = z.looseObject({
+  turnId: z.string(),
+  tokenUsage: z.looseObject({ last: codexTokenUsageSchema }),
 });
 
 class CodexChatNotInitializedError extends Error {
@@ -85,11 +90,19 @@ function waitForTurn(options: {
   queue: ReturnType<typeof createAsyncIterableQueue<NativeChatBackendMessage>>;
   threadId: string;
   turnId: string;
+  boxRoot: string | null;
+  model?: string | undefined;
   setActiveTurn(id: string | null): void;
 }): Promise<void> {
   const changedPaths = new Set<string>();
+  let usage: CodexTokenUsage | null = null;
   return new Promise((resolve) => {
     const remove = options.server.onNotification((notification) => {
+      if (notification.method === "thread/tokenUsage/updated") {
+        const parsed = tokenUsageSchema.safeParse(notification.params);
+        if (parsed.success && parsed.data.turnId === options.turnId) usage = parsed.data.tokenUsage.last;
+        return;
+      }
       if (notification.method === "item/completed") {
         const parsed = itemSchema.safeParse(notification.params);
         if (!parsed.success || parsed.data.turnId !== options.turnId) return;
@@ -112,7 +125,19 @@ function waitForTurn(options: {
       if (parsed.data.turn.status === "inProgress") return;
       remove();
       options.setActiveTurn(null);
-      void validateHookPaths([...changedPaths]).then((validationFeedback) => {
+      void Promise.all([
+        validateHookPaths([...changedPaths]),
+        usage === null || options.boxRoot === null
+          ? Promise.resolve()
+          : appendCodexTurnUsage(options.boxRoot, {
+            sessionId: options.threadId,
+            turnId: options.turnId,
+            task: "web-chat",
+            timestamp: new Date().toISOString(),
+            model: options.model ?? "codex-default",
+            usage,
+          }),
+      ]).then(([validationFeedback]) => {
         options.queue.push(event({
         type: "result",
         subtype: validationFeedback === null ? parsed.data.turn.status : "failed",
@@ -135,8 +160,9 @@ function createRun(opts: ChatBackendStartOptions): ChatBackendRun {
   let server: CodexAppServer | null = null;
   let activeTurnId: string | null = null;
   let threadId: string | null = null;
+  let boxRoot: string | null = null;
   let chain = ensureCodexPluginInstalled().then(async () => {
-    const boxRoot = await findBoxRoot(opts.cwd);
+    boxRoot = await findBoxRoot(opts.cwd);
     const included = boxRoot === null ? "" : await expandClaudeIncludes({
       claudePath: join(boxRoot, "CLAUDE.md"),
       packageRoot: (await getBoxShape(boxRoot)).packageRoot,
@@ -176,7 +202,15 @@ function createRun(opts: ChatBackendStartOptions): ChatBackendRun {
           },
         });
         activeTurnId = turnSchema.parse(raw).turn.id;
-        await waitForTurn({ server, queue, threadId, turnId: activeTurnId, setActiveTurn: (id) => { activeTurnId = id; } });
+        await waitForTurn({
+          server,
+          queue,
+          threadId,
+          turnId: activeTurnId,
+          boxRoot,
+          model: opts.model,
+          setActiveTurn: (id) => { activeTurnId = id; },
+        });
       }).catch((error: unknown) => {
         const id = threadId ?? opts.resumeSessionId ?? "";
         queue.push(event({
