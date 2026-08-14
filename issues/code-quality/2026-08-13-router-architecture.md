@@ -9,6 +9,10 @@ discovered-by: Ian
 discovered-in: main session — boxholder observation
 ---
 
+The resident workstreams application has been split into
+[`2026-08-13-resident-workstreams-app.md`](2026-08-13-resident-workstreams-app.md).
+This issue remains open for the dependency-light bootstrap router itself.
+
 `bin/` is now **~12,500 lines** of router, and it started as a small script. It
 does a lot: process supervision for every worktree, a fail-closed
 authenticating proxy on two listeners, Vite/hub child lifecycle, the `/dev/`
