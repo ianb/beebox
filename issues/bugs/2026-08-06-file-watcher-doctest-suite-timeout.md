@@ -4,6 +4,7 @@ workstream: workstreams
 area: callback-box
 filed-by: agent
 discovered-in: worktree-ios-box-switcher-gate — /finish full-suite verification
+next-action: reconfirm
 ---
 
 Reopened 2026-08-10 after the same whole-file expiration recurred during the

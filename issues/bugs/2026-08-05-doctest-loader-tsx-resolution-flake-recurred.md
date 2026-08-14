@@ -4,6 +4,7 @@ workstream: load-older-label
 area: callback-box
 filed-by: agent
 discovered-in: worktree-load-older-label — full finish-suite verification
+next-action: reconfirm
 ---
 
 The full parallel `callback-box` suite still intermittently resolves an

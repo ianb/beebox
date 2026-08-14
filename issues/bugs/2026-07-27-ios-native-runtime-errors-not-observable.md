@@ -5,6 +5,7 @@ needs: [manual-testing]
 area: callback-box
 filed-by: agent
 discovered-in: main — diagnosing automatic speech playback failures in the iOS app
+next-action: fixed
 ---
 
 > **⏳ Awaiting manual testing** — fix landed in `b39545a4`; exercise the app

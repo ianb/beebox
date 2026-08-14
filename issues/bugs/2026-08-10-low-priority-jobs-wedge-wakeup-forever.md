@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-box-family-email — investigating growth on a production box
 labels: [code-error]
+priority: important
 ---
 
 `cb wakeup` runs its reactor cycle with `skipLowPriority: true`

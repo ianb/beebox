@@ -4,6 +4,7 @@ workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder opened a landmark's most-recent chat
+next-action: reconfirm
 ---
 
 > **Job to be done:** *When I open a chat I was already in — to read it or pick it

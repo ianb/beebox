@@ -6,6 +6,7 @@ labels: [cli, feedback]
 filed-by: agent
 discovered-by: agent
 discovered-in: main session — cb feedback triage from a real box
+next-action: reconfirm
 ---
 
 `cb feedback` failed on its first invocation because of a trailing space in the
