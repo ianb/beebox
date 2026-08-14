@@ -129,6 +129,28 @@ does-not-resolve case already has an established treatment: render visibly broke
 rather than silently inert. That matters here, since a control that has scrolled
 away or unmounted is the normal failure.
 
+**Why not a fragment.** The obvious first move is `[look here](#control-id)` —
+no new scheme, and fragments already mean "somewhere on this page." Rejected for
+three reasons, in increasing order of weight:
+
+1. **No room for `action` or `description`.** A fragment is a bare name. The
+   only way to attach parameters is a query string glued onto the fragment —
+   `#control-id?action=focus&…` — which is precisely the shape memory-atlas
+   landed on (`#help=elementId&instructions=…`) and it reads as perverse: a
+   query string belongs before the fragment, not inside it.
+2. **It is not a link.** A fragment link navigates — it moves you to a place in
+   the document. This does not navigate in any sense. The target is a control on
+   the screen you are already looking at, and clicking it makes the interface
+   *do* something. Borrowing the syntax of navigation for something that is not
+   navigation is the actual mistake; the surface similarity is what makes it
+   tempting.
+3. **Fragments are already spoken for.** They mean something in a URL, and a
+   card path can carry one. A control reference that looks like an in-document
+   anchor invites exactly the confusion the scheme prevents.
+
+`control:` says what it is at the front of the string, leaves the query string in
+its normal position doing its normal job, and cannot be mistaken for navigation.
+
 **One honest tension**: we just retired the `view:` scheme, and reintroducing a
 custom scheme days later deserves an argument. The argument is that they differ
 in kind — `view:` duplicated an address space that already existed (a card has a
