@@ -130,8 +130,8 @@ await failed.list()
 ## Router capability and health
 
 Every route, including health, requires the router-minted per-process
-capability. Health reports the build generation and active lifecycle jobs for
-the supervisor.
+capability. Health reports the build generation and all activity that makes a
+restart unsafe: detached lifecycle jobs plus in-flight mutating procedures.
 
 ```ts
 const app = await buildApp({
@@ -190,7 +190,59 @@ JSON.stringify({
 => {"status":200,"name":"from-api"}
 ```
 
+Every mutating procedure contributes to the health activity count until it
+settles. This includes issue commits, not only long-running resume jobs, so the
+supervisor cannot replace the backend during a write transaction.
+
+```ts continue
+let saveStarted: (() => void) | undefined;
+let finishSave: (() => void) | undefined;
+const startedSaving = new Promise<void>((resolve) => { saveStarted = resolve; });
+const saving = new Promise<void>((resolve) => { finishSave = resolve; });
+const mutationServices = fakeServices();
+mutationServices.documents.saveIssueChanges = async () => {
+  saveStarted?.();
+  await saving;
+  return 0;
+};
+const mutationApp = await buildApp({
+  services: mutationServices,
+  routerCapability: "correct-capability",
+  basePath: "/workstreams",
+  buildId: "build-42",
+  activeJobs: () => 2,
+});
+const saveRequest = mutationApp.inject({
+  method: "POST",
+  url: "/workstreams/api/trpc/issues.save",
+  headers: {
+    [ROUTER_CAPABILITY_HEADER]: "correct-capability",
+    "content-type": "application/json",
+  },
+  payload: { changes: [] },
+});
+await startedSaving;
+const duringSave = await mutationApp.inject({
+  method: "GET",
+  url: "/workstreams/__internal/health",
+  headers: { [ROUTER_CAPABILITY_HEADER]: "correct-capability" },
+});
+finishSave?.();
+await saveRequest;
+const afterSave = await mutationApp.inject({
+  method: "GET",
+  url: "/workstreams/__internal/health",
+  headers: { [ROUTER_CAPABILITY_HEADER]: "correct-capability" },
+});
+JSON.stringify({
+  during: duringSave.json().activeJobs,
+  after: afterSave.json().activeJobs,
+})
+=> {"during":3,"after":2}
+```
+
 ```ts cleanup
 await app.close();
 await apiApp.close();
+await mutationApp.close();
 ```

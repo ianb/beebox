@@ -4,6 +4,7 @@ import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
 import Fastify, { type FastifyInstance } from "fastify";
 
 import { appRouter } from "./api/router.js";
+import { createMutationActivity } from "./mutation-activity.js";
 import type { AppServices } from "./services.js";
 
 export const ROUTER_CAPABILITY_HEADER = "x-cb-workstreams-capability";
@@ -34,6 +35,7 @@ export interface BuildAppOptions {
 export async function buildApp(options: BuildAppOptions): Promise<FastifyInstance> {
   const app = Fastify({ logger: options.logger ?? false });
   const basePath = normalizeBasePath(options.basePath);
+  const mutationActivity = createMutationActivity();
 
   await app.register(async (scope) => {
     scope.addHook("onRequest", async (request, reply) => {
@@ -46,7 +48,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
     scope.get("/__internal/health", async () => ({
       status: "ready" as const,
-      activeJobs: options.activeJobs(),
+      activeJobs: options.activeJobs() + mutationActivity.active(),
       buildId: options.buildId,
     }));
 
@@ -54,7 +56,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
       prefix: "/api/trpc",
       trpcOptions: {
         router: appRouter,
-        createContext: () => ({ services: options.services }),
+        createContext: () => ({ services: options.services, mutationActivity }),
         allowBatching: false,
       },
     });

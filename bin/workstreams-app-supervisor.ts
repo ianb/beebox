@@ -432,12 +432,19 @@ export function createWorkstreamsAppSupervisor(
   return { start, retry, requestRestart, state: () => currentState, targetFor, shutdown };
 }
 
-const FINGERPRINT_IGNORED_DIRS = new Set([".git", "dist", "node_modules", "test"]);
+const WATCH_IGNORED_DIRS = new Set([
+  ".cache",
+  ".git",
+  ".tap",
+  "dist",
+  "node_modules",
+  "test",
+]);
 
 export function shouldRestartWorkstreamsBackend(relativePath: string): boolean {
   const normalized = relativePath.split(path.sep).join("/").replace(/^\.\//, "");
   const first = normalized.split("/")[0] ?? normalized;
-  if (first === ".git" || first === "dist" || first === "test") return false;
+  if (WATCH_IGNORED_DIRS.has(first)) return false;
   return !(normalized === "src/frontend" || normalized.startsWith("src/frontend/"));
 }
 
@@ -452,7 +459,7 @@ async function fingerprintFiles(root: string, relative = ""): Promise<string[]> 
   }
   const files: string[] = [];
   for (const entry of entries) {
-    if (entry.isDirectory() && FINGERPRINT_IGNORED_DIRS.has(entry.name)) continue;
+    if (entry.isDirectory() && WATCH_IGNORED_DIRS.has(entry.name)) continue;
     const child = path.join(relative, entry.name);
     if (!shouldRestartWorkstreamsBackend(child)) continue;
     if (entry.isDirectory()) files.push(...await fingerprintFiles(root, child));

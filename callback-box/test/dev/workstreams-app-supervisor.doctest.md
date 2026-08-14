@@ -207,8 +207,8 @@ assert.deepEqual(viteHeaders, {});
 
 The first generation exposes separate backend and frontend targets. A backend
 change is coalesced for the quiet period. If the health endpoint reports an
-active lifecycle job, the old generation remains ready and the restart stays
-pending until the job is terminal.
+active lifecycle job or mutating request, the old generation remains ready and
+the restart stays pending until the activity is finished.
 
 ```ts
 const fake = makeEffects();
@@ -308,6 +308,13 @@ await fs.writeFile(path.join(root, "src/server/app.ts"), "one");
 const before = await fingerprintWorkstreamsApp(root);
 await fs.writeFile(path.join(root, "src/frontend/App.tsx"), "two");
 assert.equal(await fingerprintWorkstreamsApp(root), before);
+await fs.mkdir(path.join(root, "node_modules", ".vite"), { recursive: true });
+await fs.mkdir(path.join(root, ".cache"), { recursive: true });
+await fs.mkdir(path.join(root, ".tap"), { recursive: true });
+await fs.writeFile(path.join(root, "node_modules", ".vite", "metadata.json"), "generated");
+await fs.writeFile(path.join(root, ".cache", "generated.json"), "generated");
+await fs.writeFile(path.join(root, ".tap", "results.json"), "generated");
+assert.equal(await fingerprintWorkstreamsApp(root), before);
 await fs.writeFile(path.join(root, "src/server/app.ts"), "two");
 assert.notEqual(await fingerprintWorkstreamsApp(root), before);
 
@@ -316,8 +323,9 @@ assert.equal(shouldRestartWorkstreamsBackend("src/shared/workstreams.ts"), true)
 assert.equal(shouldRestartWorkstreamsBackend("package.json"), true);
 assert.equal(shouldRestartWorkstreamsBackend("test/server.doctest.md"), false);
 assert.equal(shouldRestartWorkstreamsBackend("dist/frontend/index.html"), false);
-// Install writes extend the quiet period so package changes do not restart
-// halfway through post-merge dependency synchronization.
-assert.equal(shouldRestartWorkstreamsBackend("node_modules/.modules.yaml"), true);
+assert.equal(shouldRestartWorkstreamsBackend("node_modules/.modules.yaml"), false);
+assert.equal(shouldRestartWorkstreamsBackend("node_modules/.vite/deps/_metadata.json"), false);
+assert.equal(shouldRestartWorkstreamsBackend(".tap/test-results/results.json"), false);
+assert.equal(shouldRestartWorkstreamsBackend(".cache/generated.json"), false);
 await fs.rm(root, { recursive: true, force: true });
 ```

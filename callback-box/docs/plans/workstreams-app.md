@@ -146,7 +146,8 @@ installs, wait for the tree to become quiet, and keep serving the fallback while
 the replacement starts. A periodic source fingerprint reconciles missed watcher
 events. Frontend-only edits flow through Vite HMR. Backend edits set a pending
 restart. The supervisor does not restart a healthy backend while it owns an
-active lifecycle job; it restarts after all jobs reach a terminal state. A
+active lifecycle job or serves an in-flight mutating procedure; it restarts
+after every mutation is settled and all jobs reach a terminal state. A
 crashed backend loses its in-memory progress record, and the UI reports the
 interrupted job instead of claiming completion. Changes to router code still
 require the boxholder to restart the shared router.
@@ -292,7 +293,7 @@ are explicitly separate work.
 | Quota provider is slow or unavailable | Extend quota doctest | Preserve provider caches; mark last good snapshot stale | Clear |
 | A query refetches while tab is hidden | Add browser instrumentation check | Disable intervals; focus/demand invalidation only | Clear |
 | Old URL is bookmarked | Add redirect table doctest | Stable redirect preserving safe query state | Clear |
-| App assets and backend versions differ | Add build smoke test | Health reports build ID; router rejects mismatch | Clear |
+| Browser remains open across an app restart | Add supervisor and browser checks | Backend and Vite restart as one generation; failed API requests remain visible and Vite's normal reconnect reloads the page | Clear |
 
 There is no accepted critical gap. Physical Terminal opening and real shared
 router behavior still require boxholder acceptance; automated tests use fakes.
@@ -317,8 +318,11 @@ router behavior still require boxholder acceptance; automated tests use fakes.
 - A hidden quota panel remains closed for days. It does not poll. Opening it
   requests server state; existing caches remain one minute for Codex and ten
   minutes for Claude (`bin/agent-quotas.ts:64-65`).
-- An app deploy and browser tab cross versions. The build ID mismatch forces one
-  reload rather than allowing incompatible procedure calls.
+- An app update and browser tab cross generations. The supervisor replaces the
+  backend and Vite processes together. Vite's development client reconnects and
+  reloads the page; an API request that overlaps replacement fails visibly and
+  can refetch after reload or focus. The health build ID is diagnostic only:
+  there is no app-specific client/backend mismatch detector.
 
 ## NOT in scope
 
@@ -400,7 +404,8 @@ The review found eight items:
 2. **Accepted:** specify the resident runtime. It is Fastify plus Vite in
    development; production build is a verification mode.
 3. **Accepted:** defer automatic backend restarts during active lifecycle jobs
-   and reconcile missed watcher events with a periodic fingerprint.
+   and in-flight mutations, then reconcile missed watcher events with a periodic
+   fingerprint.
 4. **Accepted:** define tRPC method classification at the outer auth gate and
    disable batching.
 5. **Accepted:** use a backend discriminated union, not backend XState.
