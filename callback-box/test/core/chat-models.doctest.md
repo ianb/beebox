@@ -3,7 +3,7 @@
 The model picker and mutation boundary share one engine-indexed registry.
 
 ```ts setup
-import { chatModelOptions, isChatModelAllowed } from "../../src/shared/chat-models.js";
+import { chatModelOptions, isChatModelAllowed, parseChatAgentEngine } from "../../src/shared/chat-models.js";
 import { chatModelFileForSession, loadCurrentModel, saveCurrentModel } from "../../src/core/chat/session/state.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 ```
@@ -20,6 +20,9 @@ isChatModelAllowed("codex", "gpt-5.6-sol")
 
 isChatModelAllowed("codex", "claude-opus-5")
 => false
+
+JSON.stringify([parseChatAgentEngine("codex"), parseChatAgentEngine(undefined), parseChatAgentEngine("other")])
+=> ["codex",null,null]
 ```
 
 Web chats persist overrides independently by native session id.

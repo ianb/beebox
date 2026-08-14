@@ -7,6 +7,11 @@ export interface ChatModelOption {
   model: string | null;
 }
 
+/** Validate an engine value crossing a runtime/API boundary. */
+export function parseChatAgentEngine(value: unknown): ChatAgentEngine | null {
+  return value === "claude" || value === "codex" ? value : null;
+}
+
 const OPTIONS: Record<ChatAgentEngine, readonly ChatModelOption[]> = {
   claude: [
     { label: "Default (Opus)", model: null },
