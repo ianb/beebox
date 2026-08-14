@@ -9,12 +9,11 @@ discovered-by: Ian
 discovered-in: main session — boxholder decision to reduce single-vendor exposure
 ---
 
-Resolved by the [Codex box engine plan](../../../callback-box/docs/implemented-plans/codex-box-engine.md)
-(commit `9c90712a`). The plan chooses a complete optional box engine, with
-callback-owned normalized transcripts as the central boundary. Subsequent discussion
-favored thinner, provider-specific adapters that keep each harness intact and pin a
-chat to its originating engine; treat the plan's transcript normalization choice as
-an option, not a settled implementation decision. Implementation remains separate.
+Resolved by the [implemented Codex box engine plan](../../../callback-box/docs/implemented-plans/codex-box-engine.md).
+The implementation culminated in `405414e2`: Callback Box now supports a complete
+optional Codex box engine through thin provider-specific adapters, pins each chat to
+its originating engine, and reads supported Codex history through app-server rather
+than owning a normalized replacement transcript.
 
 ## Codex capability probe — 2026-08-13
 
