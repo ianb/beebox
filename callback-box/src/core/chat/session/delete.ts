@@ -19,6 +19,13 @@ import type { ChatSessionRegistry } from "./registry.js";
 import { parseSdkSessionId } from "./session-id.js";
 import { finishDeletedHusks } from "./delete-husks.js";
 import { logDeletePhase } from "./delete-log.js";
+import { codexSessionExists, deleteCodexSession } from "./codex-transcript.js";
+import type { AgentEngine } from "../../box/config.js";
+
+async function inspectCodexStorage(boxRoot: string, sessionId: string) {
+  const present = await codexSessionExists(boxRoot, sessionId);
+  return { jsonl: present, sidecar: false, state: present ? "present" as const : "absent" as const };
+}
 
 export class ChatSessionNotFoundError extends Error {
   constructor(sessionId: string) {
@@ -121,12 +128,15 @@ export async function deleteChatSession(options: DeleteChatOptions): Promise<Del
   await options.runtime.maintenance;
   const authority = await findAuthority(options.boxRoot, sessionId);
   await verifyHistoryBinding({ boxRoot: options.boxRoot, sessionId, contextDir: authority.contextDir });
-  const targets = await resolveSessionStorageTargets({
-    boxRoot: options.boxRoot,
-    contextDir: authority.contextDir,
-    sessionId,
-  });
-  const beforeStorage = await inspectSessionStoragePresence(targets);
+  const historyEntry = (await readHistoryFile(options.boxRoot, { strict: true }))?.sessions
+    .find((entry) => entry.id === sessionId);
+  const engine: AgentEngine = historyEntry?.engine ?? "claude";
+  const targets = engine === "claude"
+    ? await resolveSessionStorageTargets({ boxRoot: options.boxRoot, contextDir: authority.contextDir, sessionId })
+    : null;
+  const beforeStorage = targets === null
+    ? await inspectCodexStorage(options.boxRoot, sessionId)
+    : await inspectSessionStoragePresence(targets);
   logDeletePhase({ sessionId, phase: "preflight", detail: { storage: beforeStorage.state, activeHusks: authority.active.length, trashedHusks: authority.trashed.length } });
   const releaseReview = await acquireChatReviewLease(options.boxRoot, "chat-delete");
 
@@ -160,11 +170,13 @@ export async function deleteChatSession(options: DeleteChatOptions): Promise<Del
         const review = await removeSessionFromReview(options.boxRoot, sessionId);
         state.review = review;
         logDeletePhase({ sessionId, phase: "review", detail: { removed: review !== null } });
-        const deletedStorage = await deleteSdkSessionStorage({
-          targets,
-          sessionId,
-          ...(options.sdkDelete === undefined ? {} : { sdkDelete: options.sdkDelete }),
-        });
+        const deletedStorage = targets === null
+          ? await deleteCodexSession(options.boxRoot, sessionId).then(() => "absent" as const)
+          : await deleteSdkSessionStorage({
+            targets,
+            sessionId,
+            ...(options.sdkDelete === undefined ? {} : { sdkDelete: options.sdkDelete }),
+          });
         logDeletePhase({ sessionId, phase: "storage", detail: { state: deletedStorage } });
         return deletedStorage;
       })();
@@ -196,7 +208,9 @@ export async function deleteChatSession(options: DeleteChatOptions): Promise<Del
     logDeletePhase({ sessionId, phase: "husk", detail: { complete: true } });
     return { status: "deleted", sessionId, schedulesCancelled };
     } catch (error) {
-      const afterStorage = await inspectSessionStoragePresence(targets);
+      const afterStorage = targets === null
+        ? await inspectCodexStorage(options.boxRoot, sessionId)
+        : await inspectSessionStoragePresence(targets);
       const storageChanged = beforeStorage.jsonl !== afterStorage.jsonl || beforeStorage.sidecar !== afterStorage.sidecar;
       if (!storageChanged && removedRef.value !== null) {
         const restored = await compensate({

@@ -86,7 +86,7 @@ await updateFeaturesForSession(box.root, {
 });
 const entries = await loadHistoryEntries(box.root);
 JSON.stringify(entries[0])
-=> {"id":"sess-1","contextDir":"store/recipes","features":{"narration":"on"}}
+=> {"id":"sess-1","engine":"claude","contextDir":"store/recipes","features":{"narration":"on"}}
 ```
 
 ```ts cleanup

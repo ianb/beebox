@@ -210,7 +210,13 @@ export function trackOperatorTurns(options: TurnTrackerOptions): TurnTracker {
 
   const pump = (async (): Promise<void> => {
     try {
-      for await (const msg of run.messages) handleMessage(msg);
+      for await (const msg of run.messages) {
+        if ("provider" in msg) {
+          failPending("field-test operator supports only the Claude backend");
+        } else {
+          handleMessage(msg);
+        }
+      }
     } catch (e) {
       failPending(errorMessage(e));
     } finally {

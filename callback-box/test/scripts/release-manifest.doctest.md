@@ -101,6 +101,8 @@ checkedIn
 => [
   "bin",
   "templates",
+  "plugins",
+  ".agents",
   "src/frontend/package.json",
   "src/types",
   "tsconfig.json",

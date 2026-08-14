@@ -3,7 +3,7 @@ title: "Move the worktree docs browser into the workstreams application"
 workstream: unattached
 area: router
 labels: [router, workstreams, documents]
-priority: backlog
+priority: important
 filed-by: agent
 discovered-by: Ian
 discovered-in: workstreams — resident application planning

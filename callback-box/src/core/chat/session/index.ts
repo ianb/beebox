@@ -168,7 +168,8 @@ export class ChatSession extends EventEmitter {
 
     // Preflight the real SDK backend's Claude login before we transition or
     // lock; a missing one is emitted as "error" (→ turn buffer). Fakes skip it.
-    if (!(await preflightChatBackend({ backend: this.backend, session: this }))) return;
+    const preview = await this.buildBackendStartOptions();
+    if (!(await preflightChatBackend({ backend: this.backend, session: this, engine: preview.engine }))) return;
 
     this.transition({ phase: "starting" });
 

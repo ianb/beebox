@@ -4,6 +4,7 @@ workstream: unknown
 area: callback-box
 needs: [design]
 labels: [clerk, documents, commentary]
+priority: normal
 ---
 
 Reading a paper on the web (an academic PDF served straight from a university

@@ -9,6 +9,7 @@ export { migrateCommand } from "./migrate.js";
 export { upgradeCommand } from "./upgrade.js";
 export { statusCommand } from "./status.js";
 export { validateCommand } from "./validate.js";
+export { agentContextCommand } from "./agent-context.js";
 export { createCommand } from "./create.js";
 export { serveCommand } from "./serve.js";
 export { hubCommand } from "./hub.js";

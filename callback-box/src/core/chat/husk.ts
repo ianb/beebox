@@ -14,10 +14,11 @@ import { parse as parseYaml } from "yaml";
 import { splitCardContent } from "../../cards/index.js";
 import { createChatHuskTemplate } from "../../schemas/chat.js";
 import { loadHistoryEntries, resolveSessionLogPath } from "./session/history.js";
-import { readFirstUserSnippet } from "../../cli/lib/session-snippet.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 import { isRecord } from "../card-io.js";
 import { mapInBatchesSettled } from "../../lib/map-batched.js";
+import { readCodexSessionUpdatedAt } from "./session/codex-transcript.js";
+import { loadSessionHistory } from "./session/load-history.js";
 
 /** Husk cards read at once — see {@link mapInBatchesSettled}. */
 const READ_CONCURRENCY = 64;
@@ -58,9 +59,16 @@ export async function findChatHusk(boxRoot: string, sessionId: string): Promise<
 /** Best-effort title from the transcript's first user message; null when unavailable. */
 async function readSnippetTitle(boxRoot: string, sessionId: string): Promise<string | null> {
   try {
-    const logPath = await resolveSessionLogPath(boxRoot, sessionId);
-    const snippet = (await readFirstUserSnippet({ logPath, snippetMaxLen: TITLE_MAX_LEN }))?.trim();
-    return snippet !== undefined && snippet !== "" ? snippet : null;
+    const { entries } = await loadSessionHistory(boxRoot, {
+      sessionId,
+      slice: { mode: "page", offset: 0, limit: 100 },
+    });
+    const text = entries.find((entry) => entry.type === "user")?.content
+      .filter((block) => block.type === "text")
+      .map((block) => block.text)
+      .join("\n")
+      .trim();
+    return text === undefined || text === "" ? null : text.slice(0, TITLE_MAX_LEN);
   } catch (_e) {
     // No transcript yet (brand-new session) or unreadable — the husk starts
     // untitled; enrichment is editorial, not plumbing.
@@ -234,8 +242,9 @@ export async function reconcileChatHusks(boxRoot: string): Promise<void> {
     if (husked.has(entry.id)) continue;
     let mtime: Date;
     try {
-      const logPath = await resolveSessionLogPath(boxRoot, entry.id);
-      mtime = (await fs.stat(logPath)).mtime;
+      mtime = entry.engine === "codex"
+        ? await readCodexSessionUpdatedAt(boxRoot, entry.id)
+        : (await fs.stat(await resolveSessionLogPath(boxRoot, entry.id))).mtime;
     } catch (_e) {
       // Ghost entry — transcript gone; nothing to resume, so no husk.
       continue;

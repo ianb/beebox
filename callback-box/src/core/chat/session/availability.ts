@@ -3,6 +3,8 @@ import { errnoCode } from "../../../lib/error-guards.js";
 import { findChatHuskEntry } from "../husk.js";
 import { resolveSessionLogPath } from "./history.js";
 import type { ChatSessionRegistry } from "./registry.js";
+import { resolveChatEngine } from "./engine.js";
+import { codexSessionExists } from "./codex-transcript.js";
 
 export type SessionAvailability =
   | { kind: "resumable" }
@@ -19,6 +21,11 @@ export async function resolveSessionAvailability(args: { boxRoot: string; sessio
     return { kind: "unavailable", reason: "deletion-in-progress", huskPath: husk?.path ?? null };
   }
   if (args.registry.deletion.hasAssignedSession(args.sessionId)) return { kind: "resumable" };
+  if (await resolveChatEngine(args.boxRoot, args.sessionId) === "codex") {
+    if (await codexSessionExists(args.boxRoot, args.sessionId)) return { kind: "resumable" };
+    const husk = await findChatHuskEntry(args.boxRoot, args.sessionId);
+    return { kind: "unavailable", reason: "missing-local-transcript", huskPath: husk?.path ?? null };
+  }
   const [husk, logPath] = await Promise.all([findChatHuskEntry(args.boxRoot, args.sessionId), resolveSessionLogPath(args.boxRoot, args.sessionId)]);
   try {
     await fs.access(logPath);

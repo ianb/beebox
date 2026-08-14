@@ -31,6 +31,10 @@ import { listChatHusks, type ChatHuskEntry } from "../husk.js";
 import { huskTranscriptPath } from "../husk-transcript.js";
 import { METADATA_CONSUMER, sessionState, type ReviewState } from "./state.js";
 import { resolveSpan, spanSize, type BootstrapReason, type ResolvedSpan } from "./span.js";
+import { resolveChatEngine } from "../session/engine.js";
+import { loadSessionHistory } from "../session/load-history.js";
+import { readCodexSessionUpdatedAt } from "../session/codex-transcript.js";
+import type { AgentEngine } from "../../box/config.js";
 
 /**
  * How long a transcript must sit unmodified before it is reviewed — don't
@@ -70,6 +74,8 @@ export interface QualifiedSession {
   /** Box-relative husk card path. */
   huskPath: string;
   logPath: string;
+  /** Native harness that owns the transcript. Missing means legacy Claude. */
+  engine?: AgentEngine;
   mtime: Date;
   /** Pre-elision rendered length of the span, measured during the scan. */
   spanChars: number;
@@ -175,8 +181,14 @@ export async function readSessionWindow(args: {
   sessionId: string;
   logPath: string;
   state: ReviewState;
+  boxRoot?: string;
 }): Promise<SessionWindow | null> {
-  const parsed = await parseFull(args.logPath);
+  const parsed = args.boxRoot === undefined
+    ? await parseFull(args.logPath)
+    : await loadSessionHistory(args.boxRoot, {
+      sessionId: args.sessionId,
+      slice: { mode: "page", offset: 0, limit: PARSE_LIMIT },
+    }).then(({ entries, total }) => ({ entries, truncated: entries.length < total }));
   if (parsed === null) return null;
   const { entries, truncated } = parsed;
   const applied = sessionState(args.state, args.sessionId).applied[METADATA_CONSUMER] ?? null;
@@ -205,10 +217,13 @@ async function qualifyHusk(
 ): Promise<QualifiedSession | null> {
   const { boxRoot, options, result } = args;
   const logPath = huskTranscriptPath(boxRoot, husk);
+  const engine = await resolveChatEngine(boxRoot, husk.session);
 
   let mtime: Date;
   try {
-    mtime = (await fs.stat(logPath)).mtime;
+    mtime = engine === "codex"
+      ? await readCodexSessionUpdatedAt(boxRoot, husk.session)
+      : (await fs.stat(logPath)).mtime;
   } catch (e) {
     if (errnoCode(e) !== "ENOENT") throw e;
     result.missingTranscripts += 1;
@@ -220,7 +235,22 @@ async function qualifyHusk(
     return null;
   }
 
-  const meta = await getSessionMetadata({ sessionId: husk.session, logPath, snippetMaxLen: 80 });
+  const codexHistory = engine === "codex"
+    ? await loadSessionHistory(boxRoot, {
+      sessionId: husk.session,
+      slice: { mode: "page", offset: 0, limit: PARSE_LIMIT },
+    })
+    : null;
+  const meta = codexHistory === null
+    ? await getSessionMetadata({ sessionId: husk.session, logPath, snippetMaxLen: 80 })
+    : {
+      userTurns: codexHistory.entries.filter((entry) => entry.type === "user").length,
+      firstUserSnippet: codexHistory.entries.find((entry) => entry.type === "user")?.content
+        .filter((block) => block.type === "text")
+        .map((block) => block.text ?? "")
+        .join("\n")
+        .slice(0, 80),
+    };
   if (meta.userTurns < REVIEW_MIN_USER_TURNS) {
     result.tooFewTurns += 1;
     return null;
@@ -228,7 +258,12 @@ async function qualifyHusk(
 
   // Scoped to this block so the window is unreachable the moment the scalars
   // below have been taken from it — the array must not outlive qualification.
-  const window = await readSessionWindow({ sessionId: husk.session, logPath, state: options.state });
+  const window = await readSessionWindow({
+    sessionId: husk.session,
+    logPath,
+    state: options.state,
+    ...(engine === "codex" ? { boxRoot } : {}),
+  });
   if (window === null) {
     result.missingTranscripts += 1;
     return null;
@@ -251,6 +286,7 @@ async function qualifyHusk(
     sessionId: husk.session,
     huskPath: husk.path,
     logPath,
+    ...(engine === "codex" ? { engine } : {}),
     mtime,
     spanChars,
     bootstrap,

@@ -1,5 +1,5 @@
 /**
- * chat-session-history — tracks which session ids belong to web chat for
+ * chat-session-history — tracks which native session ids belong to web chat for
  * this box, and (optionally) which directory each one is "associated with"
  * via a landmark.
  *
@@ -7,7 +7,8 @@
  * evolved from a flat string array to per-session entries:
  *
  *   v1 (legacy): { "sessionIds": ["abc-123", ...], "migrated": true }
- *   v2 (current): { "sessions": [{ "id": "abc-123", "contextDir": "store/recipes" }, ...], "migrated": true }
+ *   v2: { "sessions": [{ "id": "abc-123", "contextDir": "store/recipes" }, ...], "migrated": true }
+ *   v3 (current): adds `engine`; a missing value decodes as `claude`
  *
  * v1 files are auto-converted on first read. The list drives the session
  * dropdown — only sessions in here show up.
@@ -28,12 +29,16 @@ import { errnoCode, errorMessage } from "../../../lib/error-guards.js";
 import { isRecord } from "../../card-io.js";
 import { writeFileAtomic } from "../../../lib/atomic-write.js";
 import { withCardLock } from "../../../lib/card-lock.js";
+import { loadAgentEngine, type AgentEngine } from "../../box/config.js";
+import { readCodexSessionUpdatedAt } from "./codex-transcript.js";
 
 const HISTORY_FILE = ".callback-box/chat-session-history.json";
 const MOST_ACTIVE_FILE = ".callback-box/chat-session-id.json";
 
 export interface SessionHistoryEntry {
   id: string;
+  /** Native harness that owns this session. Missing on disk means Claude. */
+  engine: AgentEngine;
   /** Directory this chat is associated with (from a landmark). Undefined for unassociated chats. */
   contextDir?: string;
   /**
@@ -72,7 +77,9 @@ class MalformedChatHistoryError extends Error {
 function parseSessionEntry(raw: unknown): SessionHistoryEntry | null {
   if (raw === null || typeof raw !== "object") return null;
   if (!("id" in raw) || typeof raw.id !== "string") return null;
-  const entry: SessionHistoryEntry = { id: raw.id };
+  const engine = "engine" in raw ? raw.engine : "claude";
+  if (engine !== "claude" && engine !== "codex") return null;
+  const entry: SessionHistoryEntry = { id: raw.id, engine };
   if ("contextDir" in raw && typeof raw.contextDir === "string" && raw.contextDir.length > 0) {
     entry.contextDir = raw.contextDir;
   }
@@ -108,7 +115,7 @@ export async function readHistoryFile(boxRoot: string, options?: { strict?: bool
       }
     } else if (Array.isArray(parsed.sessionIds)) {
       for (const id of parsed.sessionIds) {
-        if (typeof id === "string") sessions.push({ id });
+        if (typeof id === "string") sessions.push({ id, engine: "claude" });
         else if (options?.strict === true) throw new MalformedChatHistoryError();
       }
     } else if (options?.strict === true && ("sessions" in parsed || "sessionIds" in parsed)) {
@@ -196,6 +203,7 @@ export async function listSessionRoots(boxRoot: string): Promise<SessionRoot[]> 
 
 interface AppendHistoryOptions {
   sessionId: string;
+  engine?: AgentEngine;
   /**
    * Directory this chat is associated with. A non-empty path means the
    * chat is bound to a landmark subdirectory; an empty string means the
@@ -224,12 +232,13 @@ export async function appendHistory(boxRoot: string, opts: AppendHistoryOptions)
       }
       return;
     }
-    const entry: SessionHistoryEntry = { id: opts.sessionId };
+    const entry: SessionHistoryEntry = { id: opts.sessionId, engine: opts.engine ?? await loadAgentEngine(boxRoot) };
     if (opts.contextDir !== undefined) entry.contextDir = opts.contextDir;
     file.sessions.push(entry);
     await writeHistoryFile(boxRoot, file);
   });
 }
+
 
 /** Remove every exact matching history entry. Returns the removed entries. */
 export async function removeSessionFromHistory(boxRoot: string, sessionId: string): Promise<SessionHistoryEntry[]> {
@@ -314,9 +323,9 @@ export async function getLastSessionForDirectory(boxRoot: string, contextDir: st
     if (!entry) continue;
     const matches = entry.contextDir === contextDir || (contextDir === "" && entry.contextDir === undefined);
     if (!matches) continue;
-    const logPath = await resolveSessionLogPath(boxRoot, entry.id);
     try {
-      await fs.access(logPath);
+      if (entry.engine === "codex") await readCodexSessionUpdatedAt(boxRoot, entry.id);
+      else await fs.access(await resolveSessionLogPath(boxRoot, entry.id));
       return entry.id;
     } catch (_e) {
       // Ghost entry — no log on disk. The fs.access rejection only tells us
@@ -324,7 +333,7 @@ export async function getLastSessionForDirectory(boxRoot: string, contextDir: st
       // error object itself and log our own contextual warning instead. A
       // recurring ghost-creation bug shows up as repeated skips for the
       // same id across sessions.
-      console.warn(`[chat-session-history] Skipping ghost entry for ${contextDir === "" ? "<root>" : contextDir}: ${entry.id} (no JSONL at ${logPath})`);
+      console.warn(`[chat-session-history] Skipping ghost ${entry.engine} entry for ${contextDir === "" ? "<root>" : contextDir}: ${entry.id}`);
       continue;
     }
   }
@@ -358,7 +367,7 @@ export async function updateFeaturesForSession(boxRoot: string, opts: { sessionI
     };
     let entry = file.sessions.find((s) => s.id === sessionId);
     if (!entry) {
-      entry = { id: sessionId };
+      entry = { id: sessionId, engine: await loadAgentEngine(boxRoot) };
       file.sessions.push(entry);
     }
     const merged: Record<string, string> = { ...(entry.features ?? {}) };

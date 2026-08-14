@@ -7,6 +7,7 @@ labels: [chat, voice, ui]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder report
+priority: important
 ---
 
 When the agent runs `cb chat retranscribe`, the user sees nothing. Their message

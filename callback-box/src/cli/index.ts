@@ -17,6 +17,7 @@ import {
   upgradeCommand,
   statusCommand,
   validateCommand,
+  agentContextCommand,
   createCommand,
   serveCommand,
   hubCommand,
@@ -93,6 +94,7 @@ program.addCommand(migrateCommand);
 program.addCommand(upgradeCommand);
 program.addCommand(statusCommand);
 program.addCommand(validateCommand);
+program.addCommand(agentContextCommand);
 program.addCommand(doctorCommand);
 program.addCommand(createCommand);
 program.addCommand(serveCommand);

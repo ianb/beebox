@@ -48,7 +48,7 @@ import {
 } from "./compile.js";
 import type { ProcedureSummary } from "./compile.js";
 import { compileExpositionRules } from "../compile-exposition-rules.js";
-import { ensureClaudeMdIncludes } from "./claude-md.js";
+import { ensureAgentContext } from "./claude-md.js";
 
 export type { ProcedureSummary, GuideSummary } from "./compile.js";
 
@@ -514,7 +514,7 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
   // Compile briefing cards to .md files
   const briefingPaths = await compileBriefings(boxRoot, debug);
 
-  await ensureClaudeMdIncludes(boxRoot, briefingPaths);
+  await ensureAgentContext(boxRoot, briefingPaths);
 
   // Write marker so next call can skip if nothing changed
   const commitLine = currentCommit ? `\n${currentCommit}` : "";

@@ -10,6 +10,16 @@
  */
 
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+import type { AgentEngine } from "../core/box/config.js";
+import type { ChatMessage } from "../core/chat/message-types.js";
+
+/** A provider-normalized event emitted by a non-Claude chat backend. */
+export interface NativeChatBackendMessage {
+  provider: "codex";
+  message: ChatMessage;
+}
+
+export type ChatBackendMessage = SDKMessage | NativeChatBackendMessage;
 
 /** Content blocks accepted by `ChatBackendRun.send()`. */
 export type ChatContentBlock =
@@ -25,6 +35,8 @@ export type ChatContentBlock =
     };
 
 export interface ChatBackendStartOptions {
+  /** Native harness selected for this chat's complete lifetime. */
+  engine?: AgentEngine;
   /** Working directory for the underlying SDK subprocess. */
   cwd: string;
   /**
@@ -62,7 +74,7 @@ export interface ChatBackendRun {
   /** Push a user message into the running query. */
   send(content: ChatContentBlock[]): void;
   /** Async iterable of SDK message events. Iterate exactly once per run. */
-  messages: AsyncIterable<SDKMessage>;
+  messages: AsyncIterable<ChatBackendMessage>;
   /** Interrupt the in-progress turn, if any. */
   interrupt(): Promise<void>;
   /**
