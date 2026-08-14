@@ -20,6 +20,13 @@ and Codex history through app-server `thread/read`. Live adapters retain provide
 types below the existing application message boundary. This supersedes Track 2's
 earlier callback-owned JSONL direction wherever the older text conflicts.
 
+Callback-box also ships two installed native plugins: `callback-box-claude` and
+`callback-box-codex`. The plugins provide each harness's context, rule, hook,
+validation, and lifecycle integration. They call shared callback-box commands and
+libraries but keep provider schemas and packaging separate. Ordinary editable context
+uses symlinks (`AGENTS.md -> CLAUDE.md` and `.agents/skills -> .claude/skills`) rather
+than copied mirrors.
+
 The goal is independence from Anthropic's harness decisions and output quality. A
 different model provider under Claude Code does not meet that goal. That cheaper option
 keeps the Claude Code harness, system prompt, tools, context loading, hooks, session
@@ -284,6 +291,49 @@ output with tool use, sandbox denial outside allowed roots, interrupt, hook feed
 usage events. Commit the recorded fixture and adapter only after every required probe has
 a positive result or the plan is revised.
 
+### Track 3A — Package native integration as two harness plugins
+
+**What:** Ship `callback-box-claude` and `callback-box-codex` as versioned plugin
+directories in the callback-box package. Install or load them for every box runtime.
+Both plugins call one shared context/rule resolver and the existing card validator.
+
+**Why this needs to change:** Project-local `.claude/rules` couples rule discovery to
+Claude Code. Copying the test box's 228 KB rule corpus into Codex `AGENTS.md` destroys
+lazy loading and creates a large input-token floor. Generating provider-specific copies
+of editable context also creates drift. Plugins are the native packaging mechanism for
+skills and lifecycle hooks in both harnesses.
+
+**Direction:** Add an engine-neutral `cb agent-context` and `cb agent-rules`
+implementation. Given a cwd and tool event, it resolves the active box package, expands
+top-level `@file` includes when required, matches canonical path-scoped rules, and emits
+structured context or validation results. It never embeds every rule in each session.
+
+The Claude plugin uses `.claude-plugin/plugin.json` and `hooks/hooks.json`. Claude
+plugins do not have a direct `rules/` component, so their PreToolUse/PostToolUse hooks
+call the shared resolver and translate its result into Claude's hook schema. The Agent
+SDK loads this local package plugin explicitly. Existing `.claude/rules` remains the
+canonical rule corpus during migration; the plugin reads it instead of copying it.
+
+The Codex plugin uses `.codex-plugin/plugin.json`, skills, and trusted lifecycle hooks.
+Its hooks call the same resolver and translate results into Codex's hook schema. Codex
+preflight verifies that the installed plugin is enabled and its current hook definition
+is trusted. Boxes expose the package plugin through their local package marketplace;
+they do not generate unique plugin copies.
+
+For ordinary editable guidance, use relative symlinks. `AGENTS.md` points to
+`CLAUDE.md`; `.agents/skills/<name>` points to `.claude/skills/<name>`. Editing through
+either harness changes the same file. Only plugin manifests, generated rule indexes,
+and provider hook adapters differ.
+
+**Vocabulary lock-ins:** A **harness plugin** is provider-native integration packaging,
+not the runtime adapter. A **rule resolver** is callback-box-owned logic shared by both
+plugins. A **context alias** is a symlink between equivalent editable harness files.
+
+**First implementation chunk:** Add both minimal plugin manifests and hook fixtures.
+Add a pure rule matcher with fixture-backed tests, then make both hook adapters pass the
+same contract cases. Load the Claude plugin through the SDK and verify the installed
+Codex plugin through app-server before removing any standalone rule path.
+
 ### Track 4 — Select, authenticate, and operate the engine
 
 **What:** Add per-box selection, engine status, login guidance, quota diagnostics, and
@@ -445,17 +495,18 @@ that fact.
    tools, interrupt, and usage. If a required capability fails, revise or stop this plan.
 2. Add executable Claude contract tests and the engine-neutral types. Move Claude event
    normalization behind the ports. Commit with no behavior change.
-3. Add the callback-owned transcript store, incomplete-turn recovery, general runtime
-   usage ledger, migration importer, and history/usage readers. Dual-write and compare
-   Claude output before switching readers.
-4. Implement the Codex `Agent` adapter, hooks, context generation, auth preflight, and
+3. Add engine-qualified chat history and provider transcript backends. Compare Codex
+   `thread/read` and the current Claude reader against each application consumer.
+4. Add both harness plugins, the shared rule/context resolver, symlinked editable
+   context, and provider hook adapters. Verify both plugin installations and hooks.
+5. Implement the Codex `Agent` adapter, context integration, auth preflight, and
    usage normalization. Pass batch and structured contract tests.
-5. Implement the Codex `ChatBackend`, resume mapping, images, interrupt, and transcript
+6. Implement the Codex `ChatBackend`, resume mapping, images, interrupt, and transcript
    integration. Pass the shared chat contract suite.
-6. Add validated per-box selection, explicit session reset/fork handling, and status
+7. Add validated per-box selection, engine-pinned chat creation, and status
    UI/CLI. Keep Claude as default. Run paired knowledge audits and the approved
    cost/quality corpus.
-7. Run the complete suite, migrate a cloned test-box chat history, rehearse explicit
+8. Run the complete suite, migrate a cloned test-box chat history, rehearse explicit
    Claude→Codex→Claude selection, and document recovery. Enable Codex only after all
    tracks pass; ship the plan as one unit.
 
@@ -463,31 +514,30 @@ that fact.
 
 - **Tests first:** Add a runtime-contract doctest for batch, structured output, session
   identity, auth and failures; a chat-backend contract doctest for send/stream/interrupt/
-  resume/images; transcript-store and migration doctests; and a process integration test
+  resume/images; transcript-adapter and migration doctests; and a process integration test
   for hooks, sandbox, crash windows, and real SDK events.
 - **Fixtures:** Record scrubbed Claude and Codex event fixtures with pinned runtime
   versions. Fixtures contain no real box content or credentials.
 - **Manual test:** On the isolated box clone, run a new chat, resume it after process
   restart, interrupt a tool turn, send an image, process a batch wakeup, and run a
-  scheduled procedure on each engine. Verify callback-owned history and usage after
-  deleting or moving the runtime log fixture copy.
+  scheduled procedure on each engine. Verify native history adapters and usage without
+  reading Codex's private runtime log.
 - **Cost/quota test:** Run only a boxholder-approved corpus. Record actual token/credit
   consumption and quiet-machine latency separately from functional tests.
 - **Migration:** Lazy, per chat, backup-preserving, and idempotent. Existing boxes default
   to Claude. No migration runs merely because the package upgrades.
-- **Rollback:** Select an explicit reset/fork to archive active Codex runtime references,
-  then change `agentEngine` to `claude`. Callback-owned transcripts remain readable. A
-  web chat gets a visibly new chat ID seeded from bounded durable history. Reactor chat
-  refs are archived and their pending jobs remain visible until the reset completes.
+- **Rollback:** Change `agentEngine` to `claude` for new chats and batch jobs. Existing
+  chats remain pinned to their recorded engine and native session. Reset a reactor-chat
+  reference explicitly when it should start over on the new default.
 - **Documentation:** Update box config reference, chat/session design, usage docs,
   authentication guidance, privacy guidance, and operator recovery steps. State which
   runtime version is pinned and how to run the contract probe.
 
 ## Stuff you should know
 
-- This is a real second-runtime project, not an SDK swap. The transcript work is the
-  center because callback-box currently reads Claude Code's private store for history,
-  deletion, summaries, and usage.
+- This is a real second-runtime project, not an SDK swap. Supported native transcript
+  APIs make history smaller than the original audit predicted; plugin-packaged harness
+  integration and engine-pinned chat identity are now the central boundaries.
 - The plan deliberately chooses a full box engine. A Codex-for-procedures-only feature
   would be much cheaper, but chat and mixed `cb wakeup` runs would remain exposed to the
   harness you want independence from.
