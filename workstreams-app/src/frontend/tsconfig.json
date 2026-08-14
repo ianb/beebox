@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["vite/client"]
+  },
+  "include": ["./**/*", "../shared/**/*", "../server/api/router.ts", "../server/api/trpc.ts", "../server/services.ts"],
+  "exclude": ["node_modules", "dist"]
+}
