@@ -5,8 +5,23 @@ area: bin
 labels: [soft-launch]
 filed-by: agent
 discovered-in: worktree-security-report — running /finish at the end of the security-report work
-next-action: reconfirm
+resolution: implemented
 ---
+
+**Closed 2026-08-14 — fixed direction A.** `bin/land` is the blessed wrapper
+(`9786e489`, refined in `d51733d7`): it resolves the main checkout through
+`--git-common-dir` and targets it explicitly, so the harness permits it from
+inside a worktree. Run bare from a worktree it lands that worktree's own
+branch. `/finish` steps 8-9 call it instead of the bare `git -C`
+(`.claude/agents/finish.md:449,463-469,505`), and `bin/CLAUDE.md` documents it
+("Landing a worktree branch"), so all three items the issue asked for are done.
+
+One thing the issue could not have predicted, worth recording: a second,
+separate harness guard refuses any command containing `$(…)` command
+substitution as "too complex to verify." `d51733d7` removed a `$(…)` from
+`bin/land`'s own invocation path for that reason — pipes, `;`-chains, and
+plain `$VAR` are fine, so the constraint is narrow but real when writing
+anything a worktree session must run.
 
 A worktree-isolated Claude Code session can no longer run **any** git
 command targeting the shared main checkout `~/src/callback-box`. The

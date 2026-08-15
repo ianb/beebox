@@ -4,8 +4,22 @@ workstream: unknown
 design: ../../callback-box/docs/plans/ios-input-plane-parity.md
 area: callback-box
 priority: important
-next-action: fixed
 ---
+
+> **Checked 2026-08-14 — not closeable; the remainder is a real-device pass.**
+> Tagged `fixed`; removed. Tracks 1-5 and most of 6 are implemented (the
+> progress list below is current), but the plan is still
+> `status: partial` and still in `docs/plans/`, not `implemented-plans/`.
+>
+> What is left is Track 6 acceptance, and it is explicitly physical-device work
+> the plan spells out: camera, Photos including an iCloud-backed item, and the
+> landscape/VoiceOver sweep. The issue's own "Close only when" list also
+> requires those results be *recorded in the plan* before it closes. So this is
+> not an agent's to finish — it wants a phone in hand.
+>
+> Given that, it should probably carry `needs: [manual-testing]` rather than
+> nothing, but per the convention only Ian adds and clears that, so it is left
+> alone here rather than set by an agent.
 
 The native iOS composer is visually usable but does not yet have the web input
 plane's complete semantics. The implementation-ready design is

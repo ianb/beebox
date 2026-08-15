@@ -20,7 +20,7 @@ Two coupled tensions, boxholder-raised 2026-07-20:
    strangers track the repo, some release discipline may be warranted:
    tags/versions, a changelog (or agent-generated release notes — same
    family as the
-   [agent-maintained security report](../features/2026-07-20-agent-maintained-security-report.md)),
+   [agent-maintained security report](../closed/features/2026-07-20-agent-maintained-security-report.md)),
    a statement of what "updating" means for existing boxes
    (`docs/migrations.md` is currently a maintainer runbook, not an
    operator answer).

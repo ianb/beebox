@@ -1,6 +1,6 @@
 ---
 name: cb-issue-actions
-description: Work the issue queue's `next-action:` tags — discussion flags and provisional agent tasks (discuss, reconfirm, duplicate, invalid, fixed). Use when the human says "work the next actions", "go through the reconfirms", "check the issues tagged fixed", "triage the queue", or when you want to find issues that need a disposition. Includes extraction scripts. Conventions in issues/CLAUDE.md.
+description: Work the issue queue's `next-action:` tags — discussion flags, provisional agent tasks, and released manual-testing gates (discuss, reconfirm, duplicate, invalid, fixed, verify-without-me). Use when the human says "work the next actions", "go through the reconfirms", "check the issues tagged fixed", "triage the queue", or when you want to find issues that need a disposition. Includes extraction scripts. Conventions in issues/CLAUDE.md.
 ---
 
 # Working `next-action:` tags
@@ -52,7 +52,7 @@ grep -rh "^next-action:" issues --include='*.md' \
 ```
 
 One value only (substitute `discuss` / `reconfirm` / `duplicate` / `invalid` /
-`fixed`):
+`fixed` / `verify-without-me`):
 
 ```bash
 grep -rl "^next-action: *reconfirm" issues --include='*.md' | grep -v CLAUDE.md
@@ -154,6 +154,33 @@ only he can produce, so the useful move is to bring him the specific question:
 what you verified, what remains unverifiable from here, and the smallest thing
 he could do to settle it. Narrowing a written multi-step protocol down to one
 action is often the whole contribution.
+
+**`verify-without-me` is his answer when that gate will never close.** Only Ian
+sets it. It means: he can't reproduce the failure on demand, or the test isn't
+worth his time — so stop waiting and settle the issue on evidence reachable
+without him.
+
+Do the deepest audit you can, then dispose of it:
+
+- **Close it** when code, tests, and a simulator carry the claim, naming what
+  stays unverified and why that's acceptable.
+- **Keep it open, drop `manual-testing`** when they don't, recording exactly
+  what ships unchecked. "Unverified, and here is the residual risk" is a real
+  outcome and beats an item parked forever.
+
+Two things to get right, both learned from the audit that produced this value:
+
+- **It is not an instruction to close.** An audit can find work that was never
+  *built* — that is a live issue needing implementation, not a missing test.
+  Leave it open for the work and say so plainly.
+- **Separate "impossible without a device" from "nobody ran it."** Real camera
+  hardware and an iCloud-backed asset are the first; a landscape screenshot pass
+  a simulator could drive is the second, and the second is often fixable right
+  here. Collapsing them lets buildable work hide behind a device excuse.
+
+Name concrete residual failure modes, not a disclaimer — "the camera
+acquisition call has no automated coverage, so a crash there reaches users
+first" is useful; "not fully tested" is not.
 
 When you cannot settle it, that is a legitimate outcome. Remove the field, write
 what you checked and what would settle it, and move on. An issue that has been

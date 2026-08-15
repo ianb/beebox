@@ -12,7 +12,6 @@ resolution: implemented
 > status, resident workstreams app, and manual-testing queue are live. Real-box
 > attachment is separate follow-up work in
 > [workstream real-box attachment](../../features/2026-08-14-workstream-real-box-attachment.md).
-
 Sessions are currently doing double duty as a to-do database. A worktree stays
 open until Ian has verified the work, because the open session is the only
 record of _what still needs checking_. Everything else follows from that:

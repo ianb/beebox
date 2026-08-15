@@ -113,7 +113,7 @@ to people; close when the soft launch happens. Builds on
    what-is-this / should-you-use-it, the subscription requirement stated
    plainly, what-leaves-your-machine, contribution stance.
 4. **SECURITY.md**, produced as the first run of the
-   [agent-maintained security report](../features/2026-07-20-agent-maintained-security-report.md)
+   [agent-maintained security report](../closed/features/2026-07-20-agent-maintained-security-report.md)
    (seed: [todo-security.md](../../callback-box/docs/todo-security.md)).
 5. **Issues scrub** — done except one open question: whether "the ledger
    box" in
@@ -162,7 +162,7 @@ instance).
 
 Filed — features:
 [inline-bug-submission](../features/2026-07-20-inline-bug-submission.md),
-[agent-maintained-security-report](../features/2026-07-20-agent-maintained-security-report.md),
+[agent-maintained-security-report](../closed/features/2026-07-20-agent-maintained-security-report.md),
 [web-password-change](../closed/features/2026-07-20-web-password-change.md),
 [invite-links](../closed/features/2026-07-20-invite-links.md),
 [github-pages-site](../features/2026-07-20-github-pages-site.md),

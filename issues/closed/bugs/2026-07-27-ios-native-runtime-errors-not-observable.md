@@ -1,16 +1,31 @@
 ---
 title: "iOS native and web-view runtime errors are not observable"
 workstream: ios-log-forwarding
-needs: [manual-testing]
 area: callback-box
 filed-by: agent
 discovered-in: main — diagnosing automatic speech playback failures in the iOS app
-next-action: fixed
+resolution: implemented
 ---
 
-> **⏳ Awaiting manual testing** — fix landed in `b39545a4`; exercise the app
-> on a physical iPhone and confirm the box log receives useful native state and
-> media diagnostics without retry flooding. Only Ian clears this.
+**Closed 2026-08-14 — boxholder's call: verification deferred to real use.**
+The fix landed in `b39545a4` and the code side was re-verified today:
+`BoxLog.swift:53-65` (`BoxLogLevel.info`), `RootView.swift:72,102,182,192`
+(scene/navigation/speech/audio-session transitions), `audio/context.ts:78-84`
+(media-error metadata), plus the offline priority-eviction queue. The design
+doc moved to `implemented-plans/` marked implemented (`bd936c97`).
+
+The `needs: [manual-testing]` flag was removed rather than cleared by testing.
+The boxholder's reasoning: the original failures are too hard to reproduce on
+demand, so the honest plan is to wait and find out whether the logging helps
+the next time something goes wrong on the phone. Holding the issue open for a
+test nobody is going to run only makes the manual-testing list less
+trustworthy — an item in that list should be something he can pick up and do.
+
+**How this reopens.** Not by someone re-reading this issue, but by the symptom:
+an iOS problem that cannot be diagnosed because `.callback-box/client-debug.log`
+lacks the `[ios]` lines it should have, or has them with bare numeric codes
+instead of symbolic labels. That is a new bug with real evidence attached, and
+better than a stale open item.
 
 When behavior fails only inside the iOS shell, there is no durable, user-accessible
 diagnostic record. Xcode's console helps only while a development build is attached,

@@ -29,4 +29,4 @@ that matters; surfacing push destination + last-push in the dashboard's
 system info so it's at least visible. Related:
 [EXPORT.md](../features/2026-07-20-export-md-agent-instructions.md)
 (the backup paragraph), the security report's data-flow inventory
-([agent-maintained security report](../features/2026-07-20-agent-maintained-security-report.md)).
+([agent-maintained security report](../closed/features/2026-07-20-agent-maintained-security-report.md)).
