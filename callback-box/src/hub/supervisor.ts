@@ -21,7 +21,7 @@ import type { HubConfig, BoxEntry } from "./hub-config.js";
 import { HubState } from "./hub-state.js";
 import { invariant } from "../lib/invariant.js";
 import type { Endpoint, EndpointProvider } from "./endpoints.js";
-import { killGroup, sleep, describeError } from "./child-process-utils.js";
+import { killGroup, sleep, describeError, DEV_BUNDLE_RELOAD_EXIT_CODE, KILL_GRACE_MS, restartAfterDevBundleReload } from "./child-process-utils.js";
 import { buildChildEnv } from "./child-env.js";
 import { forwardChildOutput } from "./child-output-log.js";
 import { boxHasPendingSchedules } from "./pending-schedules.js";
@@ -35,7 +35,6 @@ import { type ChildProc, type SpawnChildFn, type CheckReadyFn, defaultSpawnChild
 // `resolveBoxRoot` importers point at `./child-spawn.js` directly.
 export { buildChildEnv };
 
-const KILL_GRACE_MS = 2000;
 /** After this many consecutive crash-loop restarts, stop retrying and mark
  *  the box unhealthy until `reloadUnhealthy()` (SIGHUP) is called. No
  *  precedent in router.ts (worktrees don't self-restart) — chosen per the
@@ -498,6 +497,7 @@ export class Supervisor implements EndpointProvider {
       box.expectedExitGeneration = undefined;
       return;
     }
+    if (restartAfterDevBundleReload({ code, expectedCode: DEV_BUNDLE_RELOAD_EXIT_CODE, box, launch: () => void this.launch(box) })) return;
     box.lastError = `child exited unexpectedly (code=${String(code)}, signal=${String(signal)})`;
     box.consecutiveFailures += 1;
     box.child = undefined;
