@@ -15,6 +15,12 @@ optional Codex box engine through thin provider-specific adapters, pins each cha
 its originating engine, and reads supported Codex history through app-server rather
 than owning a normalized replacement transcript.
 
+Subsequent checkpoints added Codex knowledge audits and fixed chat model, sender,
+sandbox, validator-cwd, and validation-severity behavior through `b74301b5`. The
+engine decision is fully implemented. Operational verification still has one explicit
+gap: the broader `intake` audit batch was interrupted before completion; the exact
+`how-items-enter` and `intake-unexpected-legal` reruns passed after the cwd fix.
+
 ## Codex capability probe — 2026-08-13
 
 I exercised the raw Codex app-server protocol using the installed
