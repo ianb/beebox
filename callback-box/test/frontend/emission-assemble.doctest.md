@@ -322,6 +322,25 @@ markUnsureWords(
 => In fact you are an <unsure>agent</unsure>. <unsure>something</unsure> happened after
 ```
 
+A closing quote after the terminator is still a sentence end (`agent."` —
+the words stream carries Deepgram's punctuated form, quotes included):
+
+```ts
+markUnsureWords(
+  'he said "agent." something happened',
+  {
+    words: [
+      { word: "he", confidence: 0.99 },
+      { word: "said", confidence: 0.98 },
+      { word: '"agent."', confidence: 0.5 },
+      { word: "something", confidence: 0.4 },
+      { word: "happened", confidence: 0.97 },
+    ],
+  },
+)
+=> he said "<unsure>agent</unsure>." <unsure>something</unsure> happened
+```
+
 ## Fail-open projection: unmatched words, repeats, prefixes, tags
 
 Without a `spokenStart`, the search for the first words-stream entry just

@@ -75,7 +75,10 @@ export function resolveEmissionWords(
 }
 
 function isSentenceFinal(word: string): boolean {
-  return /[!.?]$/.test(word.trim());
+  // Tolerate closing quotes/brackets after the terminator (`agent."`,
+  // `done!)`) — the words stream carries Deepgram's punctuated form, and a
+  // span must not cross a sentence end just because a quote trails it.
+  return /[!.?]["')\]’”]*$/.test(word.trim());
 }
 
 /**
