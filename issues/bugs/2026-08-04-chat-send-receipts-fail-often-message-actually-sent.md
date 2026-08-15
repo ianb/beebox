@@ -24,10 +24,47 @@ The boxholder reports this is **common**, in two grades of the same failure:
   appearing in history.
 
 The **receipt** side of the emission/receipt model is failing (or arriving late)
-often. The exact trigger is unknown; the boxholder's guesses are **backgrounding the
-app/tab before the receipt arrives**, or **other connection blips**. The soft grade
-is the tell: the message is in history, yet the composer is still holding the text —
-so composer/emission state is keyed off the receipt, not off durable history.
+often. The soft grade is the tell: the message is in history, yet the composer is
+still holding the text — so composer/emission state is keyed off the receipt, not
+off durable history.
+
+## A reliable reproduction (2026-08-15) — the first send after a cold agent
+
+The trigger was unknown when this was filed (guesses: backgrounding the tab,
+connection blips). The boxholder has since found a deterministic one:
+
+> "each time the server restarts and I send a message, it happens. I think that
+> also means each time the codex process starts up in response to a user
+> message, the user message never gets that received receipt."
+
+So it is not fundamentally about backgrounding or flaky networks — those may
+widen the window, but **the reproducible case is the first message sent after
+the agent process is cold**. Spawning the engine takes seconds; the receipt for
+the message that *triggered* the spawn is the one that goes missing. That is a
+race with a start-up cost, which is why it looked random: it fires whenever the
+agent happens to be cold, and normal use keeps it warm.
+
+**Caveat from the boxholder: only observed with the Codex engine.** Whether a
+Claude Code backend has the same gap is untested, and the answer matters — if
+Claude Code is fine, the bug is in the Codex spawn path rather than in the
+receipt model, and the fix is much narrower.
+
+**This also explains the recovery-draft symptom**, which is filed separately as
+[voice send lingers as an unsent recovery draft](2026-07-23-voice-send-lingers-as-unsent-recovery-draft.md).
+A draft that never receives its receipt is, correctly, still "unsent" as far as
+the persistence layer knows — so it is offered back for recovery after it has
+already been sent. Those two issues were checked on 2026-08-14 and confirmed
+*not* duplicates (different root causes), and that still holds: this is one
+mechanism producing the other's visible symptom, not one bug. Fixing the receipt
+may make the recovery-draft symptom disappear without the draft-persistence race
+being fixed at all — worth not mistaking one for the other.
+
+**Interaction with in-flight work, worth flagging before it bites.**
+[Long-lived processes never reload the rebuilt bundle](2026-08-15-long-lived-processes-never-reload-the-rebuilt-bundle.md)
+proposes making stale processes restart themselves. Every such restart leaves
+the agent cold, so it walks straight into this bug — a fix that makes restarts
+*more* frequent will make this fire *more* often. These two should know about
+each other.
 
 ## Why it matters
 
