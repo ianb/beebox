@@ -6,20 +6,7 @@ dispatcher (fire-and-forget into the chat machine) and the send outcome
 messageId. See docs/plans/input-extraction.md chunk 3.
 
 ```ts setup
-import { expectReceipt, settleReceipt, pendingReceiptCount, RECEIPT_TIMEOUT_MS } from "../../src/frontend/src/input/targets/receipts.js";
-```
-
-## Cold startup has a multi-minute acceptance window
-
-The send endpoint does not report acceptance until the backend has started the
-turn. A cold Codex startup can legitimately keep that request pending for more
-than three minutes. The receipt backstop must remain beyond that measured
-window; otherwise the client restores a message which the server later accepts
-and runs.
-
-```ts
-RECEIPT_TIMEOUT_MS
-=> 600000
+import { expectReceipt, settleReceipt, pendingReceiptCount } from "../../src/frontend/src/input/targets/receipts.js";
 ```
 
 ## Settle resolves the matching expectation, once

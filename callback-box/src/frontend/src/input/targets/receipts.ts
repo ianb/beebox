@@ -25,40 +25,24 @@ export type Receipt =
 
 interface PendingReceipt {
   resolve: (receipt: Receipt) => void;
-  timer: ReturnType<typeof setTimeout>;
 }
-
-/** Settlement backstop: a send whose outcome never reports (a code path
- * we missed, an actor torn down mid-flight) rejects rather than hangs.
- *
- * `/chat/send` resolves only after the backend accepts the turn. Cold Codex
- * startup has exceeded three minutes in the field, so this bound must cover
- * legitimate multi-minute startup rather than manufacture a false rejection
- * while the POST remains in flight. */
-export const RECEIPT_TIMEOUT_MS = 10 * 60_000;
 
 const pending = new Map<string, PendingReceipt>();
 
 /**
  * Register interest in a send's outcome BEFORE dispatching it. Exactly one
- * settle wins; the timeout backstop rejects (disposition, not a thrown
- * error) if nothing reports.
+ * settle wins. There is deliberately no elapsed-time verdict: `/chat/send`
+ * resolves only after the backend accepts the turn, and cold startup can take
+ * several minutes. Transport and backend failures settle explicitly; treating
+ * a still-pending POST as rejected restores a message the server may later run.
  */
 export function expectReceipt(emissionId: string): Promise<Receipt> {
   // A duplicate expectation for the same id (a double dispatch) supersedes
-  // the older one: settle it as rejected now, so its promise doesn't hang
-  // until timeout and its timer can't fire later against the new entry.
+  // the older one: settle it as rejected now, so one promise cannot remain
+  // stranded behind another expectation carrying the same correlation id.
   settleReceipt({ disposition: "rejected", emissionId, reason: "superseded by a newer send with the same id" });
   return new Promise((resolve) => {
-    const entry: PendingReceipt = {
-      resolve,
-      timer: setTimeout(() => {
-        if (pending.get(emissionId) !== entry) return;
-        pending.delete(emissionId);
-        resolve({ disposition: "rejected", emissionId, reason: "no outcome reported (timeout)" });
-      }, RECEIPT_TIMEOUT_MS),
-    };
-    pending.set(emissionId, entry);
+    pending.set(emissionId, { resolve });
   });
 }
 
@@ -73,7 +57,6 @@ export function settleReceipt(receipt: Receipt): void {
   const entry = pending.get(receipt.emissionId);
   if (entry === undefined) return;
   pending.delete(receipt.emissionId);
-  clearTimeout(entry.timer);
   entry.resolve(receipt);
 }
 

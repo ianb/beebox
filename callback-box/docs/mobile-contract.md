@@ -305,18 +305,19 @@ the contract.
 - **Anchors:**
   | side | anchor |
   |---|---|
-  | web post | `src/frontend/src/components/chat/use-native-bridge.ts` — `postNativeReceipt`; `src/frontend/src/input/targets/receipts.ts` — `Receipt` union, `expectReceipt` (10-minute backstop) |
+  | web post | `src/frontend/src/components/chat/use-native-bridge.ts` — `postNativeReceipt`; `src/frontend/src/input/targets/receipts.ts` — `Receipt` union, `expectReceipt` |
   | native decode | `ios-app/CallbackBox/Views/ChatWebView.swift` — `receiveEmissionReceipt`, `NativeEmissionReceipt.Disposition { sent, queued, rejected }` |
 - **Ack/dedup semantics:** native `deliver` only sends emissions not already in
-  `inflightEmissionIDs`, marks inflight, starts a **10-minute 5-second** receipt timeout, and on an
-  `evaluateJavaScript` error reports a synthetic `rejected` immediately. Delivery is gated on
+  `inflightEmissionIDs`, marks them inflight, and on an `evaluateJavaScript` error reports a
+  synthetic `rejected` immediately. Delivery is gated on
   `pageLoaded` (items typed during nav are held, re-delivered on `didFinish`). On any receipt
   (real, timeout, or error) `RootView` clears the emission from `pendingNativeEmissions`;
-  `NativeComposerView` restores text+images on `rejected`. Native remains five seconds longer than
-  web deliberately, so web reports first. Cold agent startup can take several minutes; neither
-  side treats an unresolved `/chat/send` request as rejected during that legitimate startup window.
-- **Drift:** SILENT→LOUD (no receipt → native 10-minute 5-second timeout → user sees "not
-  confirmed").
+  `NativeComposerView` restores text+images on `rejected`. Neither web nor native manufactures a
+  rejection from elapsed time: cold agent startup can keep `/chat/send` pending for several
+  minutes. Transport, bridge-evaluation, malformed-response, and backend failures still reject
+  explicitly. Navigation clears native inflight state and redelivers the same persisted emission ID;
+  server dedup makes that retry safe.
+- **Drift:** a missing outcome remains visibly pending; navigation retries the same emission ID.
 - **Benign field drift:** native ignores `deduplicated` on `sent` receipts.
 
 ### 4.3 Location preference toggle (native → web) + state/result (web → native)

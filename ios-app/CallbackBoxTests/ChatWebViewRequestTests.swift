@@ -76,7 +76,6 @@ final class ChatWebViewRequestTests: XCTestCase {
         var loadedURL: URL?
         var externalURL: URL?
         let coordinator = makeCoordinator(
-            timeout: 60,
             evaluate: { _, completion in completion(nil) },
             openExternalURL: { externalURL = $0 },
             loadInCurrentContext: { _, request in loadedURL = request.url }
@@ -93,7 +92,6 @@ final class ChatWebViewRequestTests: XCTestCase {
         var loadedURL: URL?
         var externalURL: URL?
         let coordinator = makeCoordinator(
-            timeout: 60,
             evaluate: { _, completion in completion(nil) },
             openExternalURL: { externalURL = $0 },
             loadInCurrentContext: { _, request in loadedURL = request.url }
@@ -134,25 +132,23 @@ final class ChatWebViewRequestTests: XCTestCase {
     }
 
     @MainActor
-    func testUnacknowledgedEmissionTimesOutAsRejected() async {
+    func testUnacknowledgedEmissionRemainsPending() async {
         let emission = makeEmission()
-        let timedOut = expectation(description: "receipt timeout")
+        let noReceipt = expectation(description: "no fabricated receipt")
+        noReceipt.isInverted = true
         var receipt: NativeEmissionReceipt?
         let coordinator = makeCoordinator(
-            timeout: 0.01,
             onReceipt: {
                 receipt = $0
-                timedOut.fulfill()
+                noReceipt.fulfill()
             },
             evaluate: { _, completion in completion(nil) }
         )
 
         coordinator.deliver([emission], to: WKWebView())
-        await fulfillment(of: [timedOut], timeout: 1)
+        await fulfillment(of: [noReceipt], timeout: 0.05)
 
-        XCTAssertEqual(receipt?.emissionID, emission.id)
-        XCTAssertEqual(receipt?.disposition, .rejected)
-        XCTAssertEqual(receipt?.reason, "The chat did not confirm the message. Try sending it again.")
+        XCTAssertNil(receipt)
     }
 
     @MainActor
@@ -161,7 +157,6 @@ final class ChatWebViewRequestTests: XCTestCase {
         var attempts: [UUID] = []
         var evaluationCount = 0
         let coordinator = makeCoordinator(
-            timeout: 60,
             onAttempt: { attempts.append($0) },
             evaluate: { _, completion in
                 evaluationCount += 1
@@ -193,7 +188,6 @@ final class ChatWebViewRequestTests: XCTestCase {
 
     @MainActor
     private func makeCoordinator(
-        timeout: TimeInterval,
         onAttempt: @escaping (UUID) -> Void = { _ in },
         onReceipt: @escaping (NativeEmissionReceipt) -> Void = { _ in },
         evaluate: @escaping (String, @escaping (Error?) -> Void) -> Void,
@@ -214,7 +208,6 @@ final class ChatWebViewRequestTests: XCTestCase {
             onScreenshotResult: { _ in },
             onComposerCommand: { _ in },
             onComposerCommandAcknowledgementDelivered: { _ in },
-            receiptTimeoutDelay: timeout,
             pageLoaded: true,
             evaluateEmission: evaluate,
             openExternalURL: openExternalURL,
