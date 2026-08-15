@@ -17,6 +17,7 @@ import {
 import {
   codexChatThreadParams,
   codexChatTurnParams,
+  codexTurnErrorText,
 } from "../../src/services/codex-chat.js";
 ```
 
@@ -67,4 +68,21 @@ JSON.stringify(codexChatThreadParams({ ...chat, resumeSessionId: "thread-2" }))
 
 JSON.stringify(codexChatTurnParams({ opts: chat, threadId: "thread-2", content: [{ type: "text", text: "hello" }] }))
 => {"threadId":"thread-2","input":[{"type":"text","text":"hello","text_elements":[]}],"cwd":"/box/content","approvalPolicy":"never","sandboxPolicy":{"type":"dangerFullAccess"},"model":"test-model"}
+```
+
+Codex turn failures retain the provider's useful inner message instead of the
+JSON envelope emitted by app-server.
+
+```ts
+codexTurnErrorText({
+  message: JSON.stringify({ error: { message: "The selected model is not supported." } }),
+  additionalDetails: null,
+})
+=> The selected model is not supported.
+
+codexTurnErrorText("Provider failed before returning structured detail")
+=> Provider failed before returning structured detail
+
+codexTurnErrorText({ code: "unknown_error" })
+=> null
 ```

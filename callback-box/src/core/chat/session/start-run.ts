@@ -102,7 +102,7 @@ export async function openChatRun(opts: {
   backend: ChatBackend;
   boxRoot: string;
   skipBootstrap: boolean;
-  buildStartOptions: () => Promise<ChatBackendStartOptions>;
+  startOptions: ChatBackendStartOptions;
   resumeSessionId: string | undefined;
   model: string | undefined;
   acquireLock: () => Promise<void>;
@@ -124,7 +124,7 @@ export async function openChatRun(opts: {
     await opts.acquireLock();
 
     return startBackendRun(opts.backend, {
-      ...(await opts.buildStartOptions()),
+      ...opts.startOptions,
       resumeSessionId: opts.resumeSessionId,
       model: opts.model,
     });

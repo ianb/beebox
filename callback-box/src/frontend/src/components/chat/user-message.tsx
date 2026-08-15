@@ -237,7 +237,13 @@ export function UserMessage({ entries, debugView, currentUserEmail, currentUserN
   const senderName = getUserName(firstEntry);
   const senderEmail = firstEntry.userEmail;
   // Compare by email if available (same user across devices), fall back to name
-  const isOtherUser = isOtherChatUser({ senderEmail, senderName, currentUserEmail, currentUserName });
+  const isOtherUser = isOtherChatUser({
+    locallyAuthored: firstEntry.reconcileKnownUuids !== undefined,
+    senderEmail,
+    senderName,
+    currentUserEmail,
+    currentUserName,
+  });
 
   const isPending = entries.every((e) => e.pending === true);
   const pendingClass = isPending ? " opacity-60" : "";

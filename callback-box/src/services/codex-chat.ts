@@ -38,6 +38,7 @@ const completedSchema = z.looseObject({
   turn: z.looseObject({
     id: z.string(),
     status: z.enum(["completed", "interrupted", "failed", "inProgress"]),
+    error: z.unknown().optional(),
     durationMs: z.number().nullable(),
   }),
 });
@@ -67,6 +68,28 @@ function event(message: NativeChatBackendMessage["message"]): NativeChatBackendM
 function errorText(error: unknown): string {
   if (error instanceof CodexRpcError) return `${error.message}: ${error.method}: ${error.rpcMessage}`;
   return error instanceof Error ? error.message : String(error);
+}
+
+/** Prefer the API's inner error message over its JSON-encoded envelope. */
+export function codexTurnErrorText(error: unknown): string | null {
+  if (error === null || error === undefined) return null;
+  if (typeof error === "string") return error;
+  if (typeof error !== "object" || !("message" in error) || typeof error.message !== "string") return null;
+  try {
+    const parsed: unknown = JSON.parse(error.message);
+    if (
+      parsed !== null && typeof parsed === "object" && "error" in parsed &&
+      parsed.error !== null && typeof parsed.error === "object" && "message" in parsed.error &&
+      typeof parsed.error.message === "string"
+    ) {
+      return parsed.error.message;
+    }
+  } catch (_error) {
+    // Plain-text provider error; use it as-is below.
+  }
+  return "additionalDetails" in error && typeof error.additionalDetails === "string"
+    ? error.additionalDetails
+    : error.message;
 }
 
 function codexInput(content: ChatContentBlock[]): Array<Record<string, unknown>> {
@@ -167,6 +190,7 @@ function waitForTurn(options: {
       removeExit();
       clearTimeout(timer);
       options.setActiveTurn(null);
+      const turnError = codexTurnErrorText(parsed.data.turn.error);
       void Promise.all([
         validateHookPaths([...changedPaths]),
         usage === null || options.boxRoot === null
@@ -187,9 +211,11 @@ function waitForTurn(options: {
         is_error: parsed.data.turn.status !== "completed" || validationFeedback !== null,
         duration_ms: parsed.data.turn.durationMs ?? 0,
         num_turns: 1,
-        ...(validationFeedback === null
-          ? {}
-          : { result: `Callback Box validation failed:\n${validationFeedback}` }),
+        ...((turnError === null && validationFeedback === null) ? {} : {
+          result: [turnError, validationFeedback === null ? null : `Callback Box validation failed:\n${validationFeedback}`]
+            .filter((detail): detail is string => detail !== null)
+            .join("\n\n"),
+        }),
         }));
         resolve();
       }).catch(reject);
