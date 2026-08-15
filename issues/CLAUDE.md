@@ -177,7 +177,17 @@ resolution: implemented       # closed/ only: implemented | wontfix | superseded
   Write the field only when he says what it is, or when he asks you to record a
   priority he has already given.
 - `next-action:` says what should happen before implementation begins. It is
-  separate from priority. `discuss` means bring the issue to Ian for discussion;
+  separate from priority.
+
+  **This field is Ian's, and it is how he hands an idea back to an agent.** He
+  reads the queue, forms a suspicion about an item, and writes it here for
+  whoever picks it up next — so in practice he sets every value, and an agent's
+  job is to answer the tag rather than to write one. (The `discuss` carve-out
+  below is the sole exception, and it is deliberately narrow.) Reading a tag as
+  a peer's note misses the point: it is the boxholder thinking out loud at the
+  one moment he had the whole queue in view, addressed to you.
+
+  `discuss` means bring the issue to Ian for discussion;
   do not start implementing it. The remaining values ask the next agent to
   verify a suspected outcome and apply it only when the evidence confirms it.
   The issue browser renders those values with question marks to keep their
@@ -187,9 +197,8 @@ resolution: implemented       # closed/ only: implemented | wontfix | superseded
   confirm that the reported behavior is already resolved. A matching tag is not
   permission to close blindly. Remove the field after acting on it or disproving
   it; remove `discuss` after the discussion produces a disposition.
-- `next-action: verify-without-me` is the one value **only Ian may set**, and it
-  applies to `needs: [manual-testing]` items. It says the human gate is not
-  going to close — he cannot reproduce the failure on demand, or the test is not
+- `next-action: verify-without-me` applies to `needs: [manual-testing]` items.
+  It says the human gate is not going to close — he cannot reproduce the failure on demand, or the test is not
   worth his time — so stop waiting on it and settle the issue on whatever
   evidence is reachable without him.
 

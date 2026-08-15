@@ -7,8 +7,17 @@ description: Work the issue queue's `next-action:` tags — discussion flags, pr
 
 `next-action:` says what must happen before implementation begins. `discuss`
 routes an issue to Ian; the other values are **provisional agent tasks** where
-someone suspects an outcome and is asking the next agent to check it. The whole
-discipline for those provisional values is in one line of `issues/CLAUDE.md`:
+someone suspects an outcome and is asking the next agent to check it.
+
+**Ian writes these tags — effectively all of them.** The field is how he hands
+an idea back: he reads the queue, forms a suspicion about an item, and leaves it
+here for whoever picks it up next. So working this queue is answering him, not
+processing a backlog, and every tag carries the context of the moment he had the
+whole queue in view. Your output goes back to him in the same channel — the note
+you leave on an issue is what he reads next time.
+
+The whole discipline for the provisional values is in one line of
+`issues/CLAUDE.md`:
 
 > A matching tag is not permission to close blindly.
 
@@ -155,10 +164,9 @@ what you verified, what remains unverifiable from here, and the smallest thing
 he could do to settle it. Narrowing a written multi-step protocol down to one
 action is often the whole contribution.
 
-**`verify-without-me` is his answer when that gate will never close.** Only Ian
-sets it. It means: he can't reproduce the failure on demand, or the test isn't
-worth his time — so stop waiting and settle the issue on evidence reachable
-without him.
+**`verify-without-me` is his answer when that gate will never close.** It means:
+he can't reproduce the failure on demand, or the test isn't worth his time — so
+stop waiting and settle the issue on evidence reachable without him.
 
 Do the deepest audit you can, then dispose of it:
 
