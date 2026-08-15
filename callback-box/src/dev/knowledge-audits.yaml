@@ -52,9 +52,9 @@ tests:
   #
   # Status (2026-03-16): All 5 pass. Agent knows input mechanisms directly
   # from the new "How Items Enter the Box" section in the agent guide.
-  # Status (2026-08-14, Codex): the five core intake/navigation cases pass;
-  # how-items-enter, dont-tell-user-to-place-files, inbox-vs-store, and
-  # wakeup-intake-flow used no reads or searches. user-adds-item used one each.
+  # Status (2026-08-15, Codex): all 12 intake-tagged audits pass. The four
+  # direct orientation questions below used no reads or searches. user-adds-item
+  # also passed, but inspected the frontend to verify its exact UI instructions.
 
   - id: how-items-enter
     prompt: "How do items get into the box? What are the different ways things arrive?"
@@ -123,6 +123,10 @@ tests:
   # (2 file reads, 0 searches). Status (2026-08-10): passed after the switch to
   # annotated deletion (1 file read, 0 searches); the agent kept every UUID in
   # a proposed window, also marked deletions in close, and preserved explicit Apply.
+  # Status (2026-08-15, Codex): all schema-tagged audits pass. The direct card
+  # inventory, figure runtime, validation-hook, extensibility, and package-layout
+  # questions were answered with no reads or searches; exact formats and
+  # discoverable extension mechanics triggered targeted reference reads.
 
   - id: list-card-types
     prompt: "What card types do you know about? List them all."
@@ -830,7 +834,7 @@ tests:
     prompt: "I want to track books I'm reading with progress and ratings. How would you set that up?"
     expected_level: discoverable
     watch_for: "Proposes a custom card type / schema (with status/progress/rating fields) rather than suggesting memos"
-    correct_contains_any: ["schema", "card type"]
+    correct_contains_any: ["schema", "card type", "book type"]
     tags: [schemas, extension]
     notes: >
       Updated 2026-07-03: the agent proposes a custom `book` schema with the right
@@ -838,7 +842,8 @@ tests:
       The old should_read config/schemas/CLAUDE.md was already noted as too strict.
       Substance check = proposes a schema/custom card type (the discoverable-correct
       answer), not the "just use memos" failure mode. It doesn't always name the
-      exact config/schemas/ path, so match on the concept.
+      exact config/schemas/ path, so match on the concept; "book type" is the
+      same domain-specific wording for this prompt.
 
   - id: create-task-card-type
     prompt: "Can you create a new type of card for tracking project tasks?"
@@ -1437,9 +1442,9 @@ tests:
   # 10 turns — agent identified the right things but ran out of turns creating
   # cards. The intake-unexpected-person test also needed the cb create array
   # args fix (agent couldn't pass options to question template).
-  # Status (2026-08-14, Codex): intake-unexpected-legal passes (4 reads,
-  # 2 searches) after post-turn validation resolves the box from each changed
-  # file path instead of the callback-box server's cwd.
+  # Status (2026-08-15, Codex): all four intake-tagged scenarios in this section
+  # pass after post-turn validation resolves the box from each changed file path
+  # instead of the callback-box server's cwd.
 
   - id: intake-unexpected-legal
     prompt: >
