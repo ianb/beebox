@@ -16,13 +16,23 @@ import type {
   DetailedTranscriptionResult,
   TranscribeAudioParams,
   TranscriptionError,
+  WordTimestamp,
 } from "./index.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
 /** One scripted transcription result. */
 const fakeTranscriptionEntrySchema = z.object({
   text: z.string(),
-  words: z.array(z.object({ word: z.string(), start: z.number(), end: z.number() })).optional(),
+  words: z
+    .array(
+      z.object({
+        word: z.string(),
+        start: z.number(),
+        end: z.number(),
+        confidence: z.number().optional(),
+      }),
+    )
+    .optional(),
   duration: z.number().optional(),
   language: z.string().optional(),
 });
@@ -78,7 +88,17 @@ export async function transcribeAudioFake(
   }
   const entry = script[filename] ?? script["*"];
   if (!entry) throw new FakeTranscriptionScriptError({ configPath, filename });
-  const words = entry.words ?? [];
+  // Zod's `.optional()` types `confidence` as `number | undefined`, which
+  // exactOptionalPropertyTypes rejects against WordTimestamp's `confidence?:
+  // number` (present-or-absent, never explicitly undefined) — rebuild each
+  // word so the key is genuinely omitted when unscripted.
+  const words: WordTimestamp[] = (entry.words ?? []).map((w) => {
+    const word: WordTimestamp = { word: w.word, start: w.start, end: w.end };
+    if (typeof w.confidence === "number") {
+      word.confidence = w.confidence;
+    }
+    return word;
+  });
   return {
     text: entry.text,
     duration: entry.duration ?? (words[words.length - 1]?.end ?? 0),

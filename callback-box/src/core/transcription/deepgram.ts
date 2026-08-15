@@ -13,6 +13,7 @@ import type {
   TranscriptionResult,
   DetailedTranscriptionResult,
   TranscriptionError,
+  WordTimestamp,
 } from "./index.js";
 import { getDeepgramCredentials } from "../deepgram-key.js";
 import { errorMessage } from "../../lib/error-guards.js";
@@ -59,6 +60,29 @@ interface DeepgramWord {
   start: number;
   end: number;
   punctuated_word?: string;
+  confidence?: number;
+}
+
+/**
+ * Map Deepgram's raw per-word shape to our WordTimestamp. Deepgram is an
+ * untrusted boundary and success responses are not zod-validated (only
+ * `.json<DeepgramResponse>()` cast), so `confidence` is read defensively:
+ * only attached when it's genuinely a number, otherwise omitted — an
+ * absent/mistyped field degrades to "no confidence data" rather than
+ * crashing or lying with a fabricated 0.
+ */
+export function mapDeepgramWords(words: DeepgramWord[]): WordTimestamp[] {
+  return words.map((w) => {
+    const word: WordTimestamp = {
+      word: w.punctuated_word ?? w.word,
+      start: w.start,
+      end: w.end,
+    };
+    if (typeof w.confidence === "number") {
+      word.confidence = w.confidence;
+    }
+    return word;
+  });
 }
 
 interface DeepgramAlternative {
@@ -124,11 +148,7 @@ export async function transcribeAudioDeepgram(
     const language = channel?.detected_language ?? "unknown";
 
     if (options?.wordTimestamps && alt?.words) {
-      const words = alt.words.map((w) => ({
-        word: w.punctuated_word ?? w.word,
-        start: w.start,
-        end: w.end,
-      }));
+      const words = mapDeepgramWords(alt.words);
       return {
         text,
         duration,

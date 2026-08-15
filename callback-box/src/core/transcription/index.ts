@@ -82,6 +82,12 @@ export interface WordTimestamp {
   word: string;
   start: number;  // seconds
   end: number;    // seconds
+  /**
+   * Per-word acoustic confidence (0–1), when the backend reports one.
+   * Only Deepgram does; absent means "no confidence data backs this
+   * word" — not "confident" and not "low confidence".
+   */
+  confidence?: number;
 }
 
 export interface DetailedTranscriptionResult extends TranscriptionResult {
