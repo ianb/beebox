@@ -4,6 +4,7 @@ import { z } from "zod";
 import { ensureCodexPluginInstalled } from "../../agent/ensure-codex-plugin.js";
 import { CodexAppServer } from "../../../services/codex-app-server.js";
 import { CodexRpcError } from "../../../services/codex-app-server.js";
+import { normalizeCodexToolItem } from "../../../services/codex-tool-activity.js";
 import type { SessionEntry, SessionLogSlice } from "../../../cli/lib/session.js";
 import { userIdentity } from "../../../cli/lib/session-entry.js";
 import * as path from "node:path";
@@ -149,8 +150,24 @@ function entriesFromThread(raw: unknown): SessionEntry[] {
           timestamp: timestamp(turn.startedAt),
           content: [{ type: "text", text: item.text }],
         });
-      } else if (item.type === "contextCompaction") {
-        entries.push({ uuid: item.id, type: "compaction", timestamp: timestamp(turn.startedAt), content: [] });
+      } else {
+        const tool = normalizeCodexToolItem(item);
+        if (tool !== null) {
+          entries.push({
+            uuid: item.id,
+            type: "assistant",
+            timestamp: timestamp(turn.startedAt),
+            content: [{
+              type: "tool_use",
+              toolId: tool.id,
+              toolName: tool.name,
+              input: tool.input,
+              inputSummary: tool.name,
+            }],
+          });
+        } else if (item.type === "contextCompaction") {
+          entries.push({ uuid: item.id, type: "compaction", timestamp: timestamp(turn.startedAt), content: [] });
+        }
       }
     }
   }

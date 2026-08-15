@@ -1,5 +1,4 @@
 /** Long-lived Codex app-server backend for interactive box chat. */
-
 import { z } from "zod";
 import { CodexAppServer, CodexRpcError } from "./codex-app-server.js";
 import { createAsyncIterableQueue } from "./claude-chat-queue.js";
@@ -18,18 +17,19 @@ import { findBoxRoot } from "../lib/paths.js";
 import { validateHookPathsResult } from "../cli/commands/validate-hook.js";
 import { appendCodexTurnUsage, codexTokenUsageSchema, type CodexTokenUsage } from "../core/codex-usage.js";
 import { codexBoxThreadSettings, codexBoxTurnSettings } from "./codex-sandbox.js";
+import { codexToolChatMessage } from "./codex-tool-activity.js";
 
 const threadSchema = z.looseObject({ thread: z.looseObject({ id: z.string() }) });
 const turnSchema = z.looseObject({ turn: z.looseObject({ id: z.string() }) });
-const itemSchema = z.looseObject({
+export const codexChatItemNotificationSchema = z.looseObject({
   threadId: z.string(),
   turnId: z.string(),
   item: z.looseObject({
     id: z.string(),
     type: z.string(),
     text: z.string().optional(),
-    phase: z.enum(["commentary", "final_answer"]).nullable().optional(),
-    status: z.enum(["inProgress", "completed", "failed", "declined"]).optional(),
+    phase: z.string().nullable().optional(),
+    status: z.string().optional(),
     changes: z.array(z.looseObject({ path: z.string() })).optional(),
   }),
 });
@@ -166,17 +166,18 @@ function waitForTurn(options: {
         return;
       }
       if (notification.method === "item/completed") {
-        const parsed = itemSchema.safeParse(notification.params);
+        const parsed = codexChatItemNotificationSchema.safeParse(notification.params);
         if (!parsed.success || parsed.data.turnId !== options.turnId) return;
         const { item } = parsed.data;
-        if (item.type === "agentMessage" && item.text !== undefined) {
-          options.queue.push(event({
+        const message: ReturnType<typeof codexToolChatMessage> = item.type === "agentMessage" && item.text !== undefined
+          ? {
             type: "assistant",
             session_id: options.threadId,
             uuid: item.id,
             message: { role: "assistant", content: [{ type: "text", text: item.text }] },
-          }));
-        }
+          }
+          : codexToolChatMessage(item, options.threadId);
+        if (message !== null) options.queue.push(event(message));
         if (item.type === "fileChange" && item.status === "completed") {
           for (const change of item.changes ?? []) changedPaths.add(change.path);
         }
