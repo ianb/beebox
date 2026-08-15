@@ -58,6 +58,7 @@ export class CodexHistoryServer {
   private closing = false;
 
   constructor(cwd: string) {
+    // TODO(env-migration): test/diagnostic binary override; move into the typed env boundary.
     this.child = spawn(process.env.CB_CODEX_BINARY ?? "codex", ["app-server", "--listen", "stdio://"], {
       cwd,
       stdio: ["pipe", "pipe", "pipe"],

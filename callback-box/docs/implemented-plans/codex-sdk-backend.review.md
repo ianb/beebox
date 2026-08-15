@@ -1,9 +1,9 @@
 ---
 title: "Plan engineering review — Codex SDK backend"
-status: active
+status: implemented
 workstream: codex-engine-plan
 issues:
-  - ../../../issues/code-quality/2026-08-15-replace-raw-codex-app-server-with-sdk.md
+  - ../../../issues/closed/code-quality/2026-08-15-replace-raw-codex-app-server-with-sdk.md
 ---
 
 # Plan Engineering Review — Codex SDK backend

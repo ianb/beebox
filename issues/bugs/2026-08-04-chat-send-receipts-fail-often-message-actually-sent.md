@@ -65,7 +65,7 @@ may make the recovery-draft symptom disappear without the draft-persistence race
 being fixed at all — worth not mistaking one for the other.
 
 **Interaction with in-flight work, worth flagging before it bites.**
-[Long-lived processes never reload the rebuilt bundle](2026-08-15-long-lived-processes-never-reload-the-rebuilt-bundle.md)
+[Long-lived processes never reload the rebuilt bundle](../closed/bugs/2026-08-15-long-lived-processes-never-reload-the-rebuilt-bundle.md)
 proposes making stale processes restart themselves. Every such restart leaves
 the agent cold, so it walks straight into this bug — a fix that makes restarts
 *more* frequent will make this fire *more* often. These two should know about
