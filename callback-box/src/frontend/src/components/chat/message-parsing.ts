@@ -31,6 +31,13 @@ export type { SelfNoteInfo };
  * block than the `<attachments>` declaration — deriving ids from this
  * fragment alone would miss it. Omitted, ids come from this text (the
  * single-block case).
+ *
+ * Only the `<speech>`/`<typed>` *shell* tags (and their attributes, e.g.
+ * `stt="deepgram"`) are stripped here — a marker embedded *inside* the body,
+ * like `<unsure>word</unsure>` (docs/plans/transcript-confidence.md, Track
+ * 4), survives this pass on purpose and is handled downstream by
+ * `UserMessageText` (`user-message-text.tsx`), which renders it as its inner
+ * word with a subtle style rather than dropping it.
  */
 export function stripUserDisplayTags(
   text: string,
