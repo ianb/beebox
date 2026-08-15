@@ -4,8 +4,24 @@ workstream: unknown
 area: monorepo
 design: ../../callback-box/docs/implemented-plans/workstreams.md
 labels: [worktrees, sessions, workflow]
-next-action: fixed
 ---
+
+> **Checked 2026-08-14 — core redesign shipped, three dependencies open.**
+> Tagged `fixed`; removed, and the issue stays open for the remainder.
+>
+> **Built:** `bin/workstreams` replaced the old `bin/worktrees` flow
+> (`a4d74648`); issues-browser integration landed (`5f6a34f4`, `71b7a22b`,
+> `b4f8c02a`); the resident control-surface app shipped (`65854d50`,
+> `053ea222`); destructive actions were hardened (`264a724f`).
+> `docs/implemented-plans/workstreams.md` is marked implemented and names this
+> issue. `create`/`remove`/`resume`/`list --json`/`focus`/`close`/`sweep` are
+> all live.
+>
+> **Open, per this issue's own dependency list:** the manual-testing-flag-overuse
+> decision (`../decisions/2026-07-29-manual-testing-flag-overuse.md`); box
+> forking / attaching a real box, deliberately scoped out at `871ed09c` rather
+> than solved; and the events.db truncation hazard that blocks safe box forking
+> (`../bugs/2026-08-08-events-db-truncates-across-engine-checkouts.md`).
 
 Sessions are currently doing double duty as a to-do database. A worktree stays
 open until Ian has verified the work, because the open session is the only

@@ -5,12 +5,24 @@ needs: [manual-testing]
 area: callback-box
 filed-by: agent
 discovered-in: main — diagnosing automatic speech playback failures in the iOS app
-next-action: fixed
 ---
 
 > **⏳ Awaiting manual testing** — fix landed in `b39545a4`; exercise the app
 > on a physical iPhone and confirm the box log receives useful native state and
 > media diagnostics without retry flooding. Only Ian clears this.
+>
+> **Code side re-verified 2026-08-14** (`next-action: fixed` removed — it was
+> correct about the code and cannot clear the device check). Present and
+> confirmed: `BoxLog.swift:53-65` (`BoxLogLevel.info`), `RootView.swift:72,102,182,192`
+> (scene/navigation/speech/audio-session transitions), `audio/context.ts:78-84`
+> (media-error metadata), plus the offline priority-eviction queue. The design
+> doc is in `implemented-plans/` marked implemented (`bd936c97`).
+>
+> **The smallest thing that would settle it**, if the full protocol below is
+> more than you want to do: background and foreground the app once, play one
+> speech response, then read `.callback-box/client-debug.log` and check the
+> `[ios]` lines carry *symbolic* error labels rather than bare numeric codes.
+> That single pass exercises the scene, speech, and formatting paths together.
 
 When behavior fails only inside the iOS shell, there is no durable, user-accessible
 diagnostic record. Xcode's console helps only while a development build is attached,

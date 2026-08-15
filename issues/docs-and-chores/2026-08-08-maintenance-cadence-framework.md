@@ -45,7 +45,7 @@ Several **judgment-heavy periodic tasks have no scheduled runner** and rely on
 human memory, with inconsistent (or no) reporting:
 
 - **SECURITY.md regeneration** — designed with git-rev-anchored, diff-driven
-  updates ([agent-maintained-security-report](../features/2026-07-20-agent-maintained-security-report.md)),
+  updates ([agent-maintained-security-report](../closed/features/2026-07-20-agent-maintained-security-report.md)),
   but no cadence home decides *when* it re-runs or where.
 - **Knowledge-audit revisit** — `pnpm knowledge-audit` exists and the doc says
   "monthly is probably enough," but **nothing runs it on a cadence** — it waits
@@ -89,7 +89,7 @@ and standardize report + issue-raising across all of them.
 
 ## Related
 
-- [agent-maintained-security-report](../features/2026-07-20-agent-maintained-security-report.md)
+- [agent-maintained-security-report](../closed/features/2026-07-20-agent-maintained-security-report.md)
   — the SECURITY.md regen that needs a cadence home; its git-rev-anchored update
   model is one concrete task this framework would schedule.
 - [doc-refresh-cadence](2026-07-04-doc-refresh-cadence.md),

@@ -21,7 +21,7 @@ Directions worth exploring when this gets picked up: generated-from-the-box
 content (the system demonstrating itself), a live/regenerable demo artifact
 (cf. [regenerable-app-demo-video](2026-07-17-regenerable-app-demo-video.md)),
 hand-drawn/plain-HTML aesthetics, the agent maintaining the site the same
-way it would maintain [the security report](2026-07-20-agent-maintained-security-report.md).
+way it would maintain [the security report](../closed/features/2026-07-20-agent-maintained-security-report.md).
 The positioning content is already worked out in the competitive research
 (cards-first vs chat-first; enforced-in-code vs doctrine —
 [research synthesis](../../research/CLAUDE.md)).
@@ -81,7 +81,7 @@ Boxholder's words quoted; the rest is agent structure.
   ideas ARE the site's content spine, telling the project's story, not
   decoration behind a letter.
 - **Bootstrap by hand first**; the
-  [agent-maintained](2026-07-20-agent-maintained-security-report.md)-style
+  [agent-maintained](../closed/features/2026-07-20-agent-maintained-security-report.md)-style
   ongoing loop is a plausible later phase, "not unreasonable" but "we'd have
   to bootstrap it first."
 - **Two derivation tiers** (2026-07-21): "Some of the aspects of the site

@@ -20,7 +20,7 @@ system has an agent by definition, so a well-written agent-legible
 operational doc IS the capability — same move as
 [agent-install](../../callback-box/docs/agent-install.md) (agent adapts
 install to the environment) and the
-[agent-maintained security report](2026-07-20-agent-maintained-security-report.md)
+[agent-maintained security report](../closed/features/2026-07-20-agent-maintained-security-report.md)
 (committed prompts as process). It also demos the system's own thesis:
 plain files + git means exit is genuinely easy, and this doc proves it
 instead of claiming it.

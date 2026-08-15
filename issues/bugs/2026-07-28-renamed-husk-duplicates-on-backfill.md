@@ -4,8 +4,29 @@ workstream: compacting
 area: callback-box
 filed-by: agent
 discovered-in: worktree-compacting — while eval'ing chat review against real boxes
-next-action: fixed
 ---
+
+> **Checked 2026-08-14 — partly fixed, one recurrence path left.** Tagged
+> `fixed`; the tag was half right, so it is removed and the issue stays open
+> with the remainder narrowed.
+>
+> **Closed:** the backfill path. `b7ca3a64` replaced the one-shot marker-gated
+> `backfillChatHusks` with `reconcileChatHusks`, which runs every boot and keys
+> off `listChatHusks` session data rather than filenames. `ac8e12c5` made
+> `findChatHuskEntry` fall back to a session-field scan, so read paths tolerate
+> a renamed husk.
+>
+> **Still live:** `ensureChatHusk` (`callback-box/src/core/chat/husk.ts:84-104`)
+> still gates idempotency on the filename-suffix check in `findChatHusk`
+> (lines 46-57), unchanged. The session-resume path
+> (`registry.ts:181-199,256-286` → `husk.ts:280`) calls `ensureChatHusk` on
+> every resume, so a husk renamed past its `_<shortid>` suffix still gets
+> duplicated the next time its session resumes — after a server restart, for
+> instance. And the validation the original doc comment leaned on to make this
+> "discoverable rather than harmful" still does not exist: `src/schemas/chat.ts:18`
+> has `session` as a bare `z.string()` with no uniqueness check in card lint.
+>
+> Traced statically end to end; no run needed to confirm the path exists.
 
 `findChatHusk` (`callback-box/src/core/chat/husk.ts:42`) locates a session's husk
 by the `_<shortid>.chat.card` **filename suffix**. Its doc comment accepts that a
