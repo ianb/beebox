@@ -15,7 +15,7 @@ import { expandClaudeIncludes } from "../core/agent-context-includes.js";
 import { getBoxShape } from "../lib/box-shape.js";
 import { join } from "node:path";
 import { findBoxRoot } from "../lib/paths.js";
-import { validateHookPaths } from "../cli/commands/validate-hook.js";
+import { validateHookPathsResult } from "../cli/commands/validate-hook.js";
 import { appendCodexTurnUsage, codexTokenUsageSchema, type CodexTokenUsage } from "../core/codex-usage.js";
 import { codexBoxThreadSettings, codexBoxTurnSettings } from "./codex-sandbox.js";
 
@@ -192,7 +192,7 @@ function waitForTurn(options: {
       options.setActiveTurn(null);
       const turnError = codexTurnErrorText(parsed.data.turn.error);
       void Promise.all([
-        validateHookPaths([...changedPaths]),
+        validateHookPathsResult([...changedPaths]),
         usage === null || options.boxRoot === null
           ? Promise.resolve()
           : appendCodexTurnUsage(options.boxRoot, {
@@ -203,16 +203,19 @@ function waitForTurn(options: {
             model: options.model ?? "codex-default",
             usage,
           }),
-      ]).then(([validationFeedback]) => {
+      ]).then(([validation]) => {
+        if (validation.feedback !== null && !validation.hasErrors) {
+          console.warn(`[CodexChat:validation-warning] ${validation.feedback}`);
+        }
         options.queue.push(event({
         type: "result",
-        subtype: validationFeedback === null ? parsed.data.turn.status : "failed",
+        subtype: validation.hasErrors ? "failed" : parsed.data.turn.status,
         session_id: options.threadId,
-        is_error: parsed.data.turn.status !== "completed" || validationFeedback !== null,
+        is_error: parsed.data.turn.status !== "completed" || validation.hasErrors,
         duration_ms: parsed.data.turn.durationMs ?? 0,
         num_turns: 1,
-        ...((turnError === null && validationFeedback === null) ? {} : {
-          result: [turnError, validationFeedback === null ? null : `Callback Box validation failed:\n${validationFeedback}`]
+        ...((turnError === null && !validation.hasErrors) ? {} : {
+          result: [turnError, validation.hasErrors ? `Callback Box validation failed:\n${validation.feedback ?? "Unknown validation error"}` : null]
             .filter((detail): detail is string => detail !== null)
             .join("\n\n"),
         }),

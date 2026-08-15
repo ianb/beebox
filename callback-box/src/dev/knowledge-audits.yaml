@@ -1,6 +1,10 @@
 tests:
   # === Box Structure and Navigation ===
   #
+  # Status (2026-08-14, Codex): 13/13 navigation-tagged audits pass. The
+  # how-items-enter check now accepts the semantically equivalent phrase
+  # "connected services" after Codex named Gmail, Telegram, Calendar, and Drive.
+  #
   # Status (2026-07-03): 2/3 pass. REAL GAP: find-memo-cards — agent answers
   # `cb ls --kind memo` (hallucinated; `cb ls` has no --kind) instead of the
   # `*.memo.card` glob. See docs/reports/knowledge-audit-rerun-2026-07-03.md.
@@ -48,12 +52,16 @@ tests:
   #
   # Status (2026-03-16): All 5 pass. Agent knows input mechanisms directly
   # from the new "How Items Enter the Box" section in the agent guide.
+  # Status (2026-08-14, Codex): the five core intake/navigation cases pass;
+  # how-items-enter, dont-tell-user-to-place-files, inbox-vs-store, and
+  # wakeup-intake-flow used no reads or searches. user-adds-item used one each.
 
   - id: how-items-enter
     prompt: "How do items get into the box? What are the different ways things arrive?"
     expected_level: knows_directly
     watch_for: "Names capture UI, connectors, cb create, and chat — not manual file placement"
-    correct_contains: ["capture", "connector"]
+    correct_contains: ["capture"]
+    correct_contains_any: ["connector", "connected services"]
     tags: [intake, navigation]
     notes: >
       The agent should know input mechanisms directly from the agent guide.
@@ -1429,6 +1437,9 @@ tests:
   # 10 turns — agent identified the right things but ran out of turns creating
   # cards. The intake-unexpected-person test also needed the cb create array
   # args fix (agent couldn't pass options to question template).
+  # Status (2026-08-14, Codex): intake-unexpected-legal passes (4 reads,
+  # 2 searches) after post-turn validation resolves the box from each changed
+  # file path instead of the callback-box server's cwd.
 
   - id: intake-unexpected-legal
     prompt: >

@@ -11,7 +11,7 @@ import { ensureCodexPluginInstalled } from "./ensure-codex-plugin.js";
 import { expandClaudeIncludes } from "../agent-context-includes.js";
 import { getBoxShape } from "../../lib/box-shape.js";
 import { join } from "node:path";
-import { validateHookPaths } from "../../cli/commands/validate-hook.js";
+import { validateHookPathsResult } from "../../cli/commands/validate-hook.js";
 import { codexRunErrorText, resultFromCodexTurn } from "./codex-run-result.js";
 import { codexTokenUsageSchema, type CodexTokenUsage } from "../codex-usage.js";
 import { recordCodexAgentUsage } from "./codex-run-usage.js";
@@ -255,9 +255,12 @@ export async function runCodexAgent(options: CodexRunOptions): Promise<AgentResu
       usage: completed.usage,
       onOutput: options.onOutput,
     });
-    const validationFeedback = await validateHookPaths(completed.changedPaths);
-    if (validationFeedback !== null) {
-      const output = [completed.output, `Callback Box validation failed:\n${validationFeedback}`]
+    const validation = await validateHookPathsResult(completed.changedPaths);
+    if (validation.feedback !== null && !validation.hasErrors) {
+      options.onOutput?.(`Callback Box validation warning:\n${validation.feedback}\n`);
+    }
+    if (validation.hasErrors) {
+      const output = [completed.output, `Callback Box validation failed:\n${validation.feedback ?? "Unknown validation error"}`]
         .filter(Boolean)
         .join("\n");
       return {
