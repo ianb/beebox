@@ -1,16 +1,15 @@
 ---
 title: "Chat sends often show 'failed'/stay in the composer though the message actually sent — receipts are unreliable"
 workstream: send-receipt-logging
-needs: [manual-testing]
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder reports it happening commonly across normal use
 priority: important
 ---
 
-> **⏳ Awaiting manual testing** — fix landed through `3ef82d85`; after a box/server restart,
-> send the first message from the native composer and confirm it receives a sent/queued
-> receipt rather than returning as rejected. Only the developer clears this.
+> **Still reproduces (2026-08-15)** — the developer tested the first send from a
+> fresh Codex session after `3ef82d85` landed. The message ran, but its receipt did
+> not return. The cancellation-path fix did not resolve the reported failure.
 
 > **Job to be done:** *When I send a message and then lock my phone / switch apps /
 > background the tab before the reply starts — or my connection blips for a
@@ -71,7 +70,7 @@ the agent cold, so it walks straight into this bug — a fix that makes restarts
 *more* frequent will make this fire *more* often. These two should know about
 each other.
 
-## Fixed through `3ef82d85` (2026-08-15)
+## Attempted fix through `3ef82d85` (2026-08-15)
 
 The cold-start timing exposed a frontend lifecycle hole rather than a missing
 server receipt channel. The streaming actor discarded a completed
@@ -86,6 +85,22 @@ already-open tab returned HTTP 200 and settled after 5.287 seconds; this proved
 the cold path is slower, but also showed that raising the 30/35-second web/iOS
 backstops would only delay a lifecycle bug rather than fix it. Focused doctests
 cover accepted and rejected POST outcomes after actor cancellation.
+
+The developer's subsequent manual test failed. The first send from a fresh
+Codex session still ran without returning its receipt.
+
+## Browser reproduction attempts (2026-08-15)
+
+The isolated browser loop has not reproduced the missing receipt on current
+`main`. Three Codex sends succeeded after a cold start: two brand-new sessions
+after stopping the worktree children, and one existing session after using
+**Stop Process** to kill only its Codex subprocess. The measured anomaly trace
+for one new-session send recorded HTTP 200 and local receipt settlement after
+5.325 seconds. Each message ran once and the composer stayed clear.
+
+This is a red-capable loop, but it is missing a condition from the developer's
+failure. Do not use these green controls to close the issue. Compare the failing
+client's diagnostic timeline with this control before making another fix.
 
 ## Manual testing
 
