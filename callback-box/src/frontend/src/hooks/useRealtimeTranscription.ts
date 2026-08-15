@@ -65,11 +65,13 @@ export interface UseRealtimeTranscriptionResult {
   finalTranscript: string;
   /**
    * Words backing `finalTranscript`, with confidence when the service
-   * reports one (Deepgram only — Voxtral/OpenAI leave this empty). Stays
-   * aligned with `finalTranscript` across reconnects; see
-   * realtimeTranscriptionMachine's `finalWords` context field.
+   * reports one. `null` means no confidence data has been captured for
+   * this segment (Voxtral/OpenAI realtime, or nothing finalized yet) —
+   * only Deepgram ever produces an array. Stays aligned with
+   * `finalTranscript` across reconnects; see realtimeTranscriptionMachine's
+   * `finalWords` context field.
    */
-  finalWords: FinalWord[];
+  finalWords: FinalWord[] | null;
   /** Live, unconfirmed text. May change as the recognizer revises. */
   interimTranscript: string;
   error: string | null;
@@ -81,8 +83,14 @@ export interface UseRealtimeTranscriptionResult {
    * attempt errors out (e.g. permission denied) before recording begins.
    */
   start: (opts?: { earcon?: boolean }) => void;
-  /** Stop recording and wait for final transcript. Returns the final text. */
-  stop: () => Promise<string>;
+  /**
+   * Stop recording and wait for the final transcript. Resolves with the
+   * words backing that text too (Fix D, docs/plans/
+   * transcript-confidence.md) — read inside the hook at the same idle
+   * transition that finalizes them, never from a caller's possibly-stale
+   * closure over the returned handle.
+   */
+  stop: () => Promise<{ text: string; words: FinalWord[] | null }>;
   cancel: () => void;
   dismissError: () => void;
 }
@@ -179,7 +187,7 @@ function dispatchKeyword(
      * Track 3) — a plain state variable would go stale inside this
      * module-level function, which isn't itself a hook.
      */
-    finalWordsRef: React.MutableRefObject<FinalWord[]>;
+    finalWordsRef: React.MutableRefObject<FinalWord[] | null>;
   }
 ): void {
   const { send, optionsRef, pendingSendRef, finalWordsRef } = ctx;
@@ -247,7 +255,7 @@ export function useRealtimeTranscription(
   useEffect(() => {
     optionsRef.current = options;
   });
-  const doneResolveRef = useRef<((text: string) => void) | null>(null);
+  const doneResolveRef = useRef<((result: { text: string; words: FinalWord[] | null }) => void) | null>(null);
   /**
    * When a send-keyword fires, we send STOP to the machine and wait for it
    * to transition to idle so the audio blob lands in context. The pending
@@ -293,7 +301,7 @@ export function useRealtimeTranscription(
   // same moment it commits the text (Track 3, docs/plans/
   // transcript-confidence.md). Declared here — before fireKeyword/keyword
   // spotting below — so the sync effect runs first within a commit.
-  const finalWordsRef = useRef<FinalWord[]>(finalWords);
+  const finalWordsRef = useRef<FinalWord[] | null>(finalWords);
   useEffect(() => {
     finalWordsRef.current = finalWords;
   });
@@ -341,14 +349,16 @@ export function useRealtimeTranscription(
     return () => clearInterval(interval);
   }, [state, transcript]);
 
-  // Resolve stop() promise when machine returns to idle
+  // Resolve stop() promise when machine returns to idle — words come from
+  // context at this same idle transition (Fix D), not from a caller's
+  // possibly-stale closure over the returned handle.
   useEffect(() => {
     if (state === "idle" && doneResolveRef.current) {
-      doneResolveRef.current(transcript);
+      doneResolveRef.current({ text: transcript, words: snapshot.context.finalWords });
       doneResolveRef.current = null;
       consumedRef.current = true;
     }
-  }, [state, transcript]);
+  }, [state, transcript, snapshot.context.finalWords]);
 
   // Segment ended with text nobody took (see onUnconsumedTranscript docs).
   // Declared after the keyword-send and stop()-resolve effects so their
@@ -393,18 +403,18 @@ export function useRealtimeTranscription(
     send({ type: "START" });
   }, [send, keywordSpotting]);
 
-  const stop = useCallback((): Promise<string> => {
+  const stop = useCallback((): Promise<{ text: string; words: FinalWord[] | null }> => {
     // A stop during a reconnect blip still ends the segment properly —
     // resolving immediately would leave the machine reconnecting and the
     // expired window would later re-surface the same text as unconsumed.
     if (state !== "recording" && state !== "reconnecting") {
-      return Promise.resolve(transcript);
+      return Promise.resolve({ text: transcript, words: finalWords });
     }
     send({ type: "STOP" });
-    return new Promise<string>((resolve) => {
+    return new Promise((resolve) => {
       doneResolveRef.current = resolve;
     });
-  }, [state, transcript, send]);
+  }, [state, transcript, finalWords, send]);
 
   const cancel = useCallback(() => {
     keywordSpotting.reset();

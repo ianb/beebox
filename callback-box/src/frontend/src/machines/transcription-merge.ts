@@ -22,8 +22,17 @@ export function mergeFinalText(committedPrefix: string, text: string): string {
   return `${committedPrefix} ${text}`;
 }
 
-/** Prepend words committed by prior connections in this segment. */
-export function mergeFinalWords(committedWords: FinalWord[], words: FinalWord[]): FinalWord[] {
-  if (committedWords.length === 0) return words;
-  return [...committedWords, ...words];
+/**
+ * Prepend words committed by prior connections in this segment. `null` on
+ * both sides means no service has ever attached word data to this segment
+ * (Voxtral/OpenAI, or nothing finalized yet) and stays `null` — merging
+ * "no data" with "no data" must not manufacture a `[]` that looks captured
+ * (Track 3 review fix, Fix A). Either side actually holding words wins.
+ */
+export function mergeFinalWords(
+  committedWords: FinalWord[] | null,
+  words: FinalWord[] | null,
+): FinalWord[] | null {
+  if (committedWords === null && words === null) return null;
+  return [...(committedWords ?? []), ...(words ?? [])];
 }

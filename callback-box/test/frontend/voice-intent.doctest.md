@@ -86,6 +86,43 @@ a.id !== b.id
 => true
 ```
 
+## `words: null` (Voxtral/OpenAI-style — Fix A) never reaches the emission as data
+
+A service that never captures confidence (or a segment nothing was
+finalized for) reports `null`, not an empty array — `buildVoiceSubmitEmission`
+collapses that onto `undefined` via `resolveEmissionWords`, so the assembler
+never stamps a false `stt="deepgram"`.
+
+```ts
+buildVoiceSubmitEmission({
+  priorInput: "", finalText: "voxtral said this", selectionsSnapshot: [], imagesSnapshot: [], filesSnapshot: [], diarized: false,
+  words: null,
+}).words
+=> undefined
+```
+
+Belt-and-braces: an array is present but no entry carries a numeric
+`confidence` — equally uninformative, equally `undefined`.
+
+```ts
+buildVoiceSubmitEmission({
+  priorInput: "", finalText: "no scores here", selectionsSnapshot: [], imagesSnapshot: [], filesSnapshot: [], diarized: false,
+  words: [{ word: "no" }, { word: "scores" }],
+}).words
+=> undefined
+```
+
+A real Deepgram capture — even one where every word cleared the
+threshold — rides straight through, so the assembler still stamps `stt`:
+
+```ts
+buildVoiceSubmitEmission({
+  priorInput: "", finalText: "all clear", selectionsSnapshot: [], imagesSnapshot: [], filesSnapshot: [], diarized: false,
+  words: [{ word: "all", confidence: 0.99 }, { word: "clear", confidence: 0.98 }],
+}).words?.length
+=> 2
+```
+
 ## Cleanup-send holds this frozen message for HQ
 
 The async HQ result is applied to the composer context captured when the

@@ -73,3 +73,26 @@ text
 JSON.stringify(words)
 => [{"word":"hello","confidence":0.9},{"word":"there","confidence":0.4},{"word":"world","confidence":0.99}]
 ```
+
+## `null` stays `null` across a reconnect (Voxtral/OpenAI — Fix A)
+
+A service that never attaches confidence data reports `null`, not `[]`, at
+every connection — `mergeFinalWords` must never manufacture a `[]` that
+looks like "captured, empty" out of two "no data" folds (that's exactly
+what let a Voxtral send falsely stamp `stt="deepgram"`).
+
+```ts
+mergeFinalWords(null, null)
+=> null
+```
+
+Any side actually holding words wins — a mid-segment service switch isn't
+real, but the merge must still not lose data if it were:
+
+```ts
+JSON.stringify(mergeFinalWords(null, [{ word: "hi", confidence: 0.9 }]))
+=> [{"word":"hi","confidence":0.9}]
+
+JSON.stringify(mergeFinalWords([{ word: "hi", confidence: 0.9 }], null))
+=> [{"word":"hi","confidence":0.9}]
+```

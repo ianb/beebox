@@ -155,10 +155,15 @@ class TranscriptionSession {
   private committedPrefix = "";
   /** Most recent `finalText` from the *current* connection (sans prefix). */
   private lastConnectionFinal = "";
-  /** Word-list counterpart to {@link committedPrefix} (see transcription-merge.ts). */
-  private committedWords: FinalWord[] = [];
+  /**
+   * Word-list counterpart to {@link committedPrefix} (see
+   * transcription-merge.ts). `null` means no service has attached word data
+   * to this segment yet (Voxtral/OpenAI, or nothing committed) — stays
+   * `null` rather than becoming a falsely-"captured" `[]` (Fix A).
+   */
+  private committedWords: FinalWord[] | null = null;
   /** Most recent `finalWords` from the *current* connection (sans committed). */
-  private lastConnectionWords: FinalWord[] = [];
+  private lastConnectionWords: FinalWord[] | null = null;
   private watchdogId: ReturnType<typeof setInterval> | null = null;
   /** Last time `bufferedAmount` was observed at 0 (i.e. fully drained). */
   private lastDrainedAt = 0;
@@ -240,7 +245,7 @@ class TranscriptionSession {
     if (finalFn) {
       const audioBlob = this.takeAudioBlob();
       const wordsFn = socketFinalWords(ws);
-      const words = mergeFinalWords(this.committedWords, wordsFn ? wordsFn() : []);
+      const words = mergeFinalWords(this.committedWords, wordsFn ? wordsFn() : null);
       this.sendBack({ type: "TRANSCRIPTION_DONE", text: mergeFinalText(this.committedPrefix, finalFn()), audioBlob, words });
     } else {
       this.sendBack({ type: "WS_CLOSED" });
@@ -297,7 +302,7 @@ class TranscriptionSession {
       this.lastConnectionFinal = "";
     }
     this.committedWords = mergeFinalWords(this.committedWords, this.lastConnectionWords);
-    this.lastConnectionWords = [];
+    this.lastConnectionWords = null;
     this.sendBack({ type: "CONNECTION_DEGRADED", cause: "network" });
     // Replay from before the drop to cover detection latency.
     const replayFrom = Math.max(0, this.audioChunks.length - REPLAY_PAD_CHUNKS);
@@ -382,7 +387,10 @@ class TranscriptionSession {
         onTextUpdate: ({ finalText, interimText, finalWords }) => {
           if (this.disposed) return;
           this.lastConnectionFinal = finalText;
-          this.lastConnectionWords = finalWords ?? [];
+          // Only Deepgram's TextUpdate ever sets `finalWords`; Voxtral/OpenAI
+          // leave it `undefined`, which must stay "no data" (`null`), not
+          // become a falsely-"captured" `[]` (Fix A).
+          this.lastConnectionWords = finalWords ?? null;
           const mergedText = mergeFinalText(this.committedPrefix, finalText);
           const mergedWords = mergeFinalWords(this.committedWords, this.lastConnectionWords);
           this.sendBack({ type: "TEXT_UPDATE", finalText: mergedText, interimText, finalWords: mergedWords });

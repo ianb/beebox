@@ -9,7 +9,7 @@ refactor's zero-behavior-change guarantee is these strings.
 import { assembleChatMessage } from "../../src/frontend/src/input/targets/chat-assemble.js";
 import { createTypedEmission, createVoiceEmission } from "../../src/frontend/src/input/emission.js";
 import { buildSpeechMessage } from "../../src/frontend/src/components/chat/InteractiveChat-helpers.js";
-import { markUnsureWords, UNSURE_THRESHOLD } from "../../src/frontend/src/input/unsure-words.js";
+import { markUnsureWords, resolveEmissionWords, UNSURE_THRESHOLD } from "../../src/frontend/src/input/unsure-words.js";
 
 const W = { localTime: "14:23", zoomedView: null, timePassed: null };
 ```
@@ -181,17 +181,17 @@ const cleanWords = [
   { word: "code", confidence: 0.95 },
   { word: "in", confidence: 0.9 },
 ];
-markUnsureWords("they're all cloud code in", cleanWords)
+markUnsureWords("they're all cloud code in", { words: cleanWords })
 => they're all <unsure>cloud</unsure> code in
 ```
 
 Boundary: exactly 0.85 is confident (unchanged body); just under wraps.
 
 ```ts
-markUnsureWords("the", [{ word: "the", confidence: 0.85 }])
+markUnsureWords("the", { words: [{ word: "the", confidence: 0.85 }] })
 => the
 
-markUnsureWords("the", [{ word: "the", confidence: 0.8499 }])
+markUnsureWords("the", { words: [{ word: "the", confidence: 0.8499 }] })
 => <unsure>the</unsure>
 ```
 
@@ -199,32 +199,56 @@ A word with no `confidence` field is "no data" — never wrapped, even when
 it's the only entry:
 
 ```ts
-markUnsureWords("the plan", [{ word: "the" }, { word: "plan" }])
+markUnsureWords("the plan", { words: [{ word: "the" }, { word: "plan" }] })
 => the plan
 ```
 
 Nothing unsure: body comes back byte-identical.
 
 ```ts
-markUnsureWords("cloud computing", [{ word: "cloud", confidence: 0.9 }, { word: "computing", confidence: 0.95 }])
+markUnsureWords("cloud computing", { words: [{ word: "cloud", confidence: 0.9 }, { word: "computing", confidence: 0.95 }] })
 => cloud computing
 ```
 
-A prior-typed-input PREFIX the words stream never covered (spoken text
-prepended to composer text at keyword-fire) is left unmarked — the search
-for the first words-stream entry simply scans past it:
+Without a `spokenStart`, the search for the first words-stream entry just
+scans forward from 0 — a prior-typed-input PREFIX the words stream never
+covered still ends up unmarked here only because it happens not to repeat
+a stream word:
 
 ```ts
 markUnsureWords(
   "note to self, cloud computing is great",
-  [
-    { word: "cloud", confidence: 0.3 },
-    { word: "computing", confidence: 0.98 },
-    { word: "is", confidence: 0.99 },
-    { word: "great", confidence: 0.97 },
-  ],
+  {
+    words: [
+      { word: "cloud", confidence: 0.3 },
+      { word: "computing", confidence: 0.98 },
+      { word: "is", confidence: 0.99 },
+      { word: "great", confidence: 0.97 },
+    ],
+  },
 )
 => note to self, <unsure>cloud</unsure> computing is great
+```
+
+`spokenStart` is what actually GUARANTEES the prefix is off-limits (review
+Fix B): here the typed prefix "cloud budget:" repeats the low-confidence
+stream word "cloud" — without `spokenStart` this would wrap the TYPED
+"cloud"; with it, the scan skips every token before the spoken region and
+marks the real, spoken occurrence.
+
+```ts
+const typedPrefix = "cloud budget:";
+markUnsureWords(
+  `${typedPrefix} cloud computing is great`,
+  {
+    words: [
+      { word: "cloud", confidence: 0.3 },
+      { word: "computing", confidence: 0.98 },
+    ],
+    spokenStart: typedPrefix.length + 1,
+  },
+)
+=> cloud budget: <unsure>cloud</unsure> computing is great
 ```
 
 A keyword-stripped TAIL — words-stream entries with no home in the body
@@ -235,13 +259,15 @@ skipped.
 ```ts
 markUnsureWords(
   "let's grab lunch",
-  [
-    { word: "let's", confidence: 0.97 },
-    { word: "grab", confidence: 0.4 },
-    { word: "lunch", confidence: 0.98 },
-    { word: "send", confidence: 0.99 },
-    { word: "message", confidence: 0.99 },
-  ],
+  {
+    words: [
+      { word: "let's", confidence: 0.97 },
+      { word: "grab", confidence: 0.4 },
+      { word: "lunch", confidence: 0.98 },
+      { word: "send", confidence: 0.99 },
+      { word: "message", confidence: 0.99 },
+    ],
+  },
 )
 => let's <unsure>grab</unsure> lunch
 ```
@@ -253,12 +279,14 @@ doesn't.
 ```ts
 markUnsureWords(
   "that one not that",
-  [
-    { word: "that", confidence: 0.6 },
-    { word: "one", confidence: 0.99 },
-    { word: "not", confidence: 0.98 },
-    { word: "that", confidence: 0.9 },
-  ],
+  {
+    words: [
+      { word: "that", confidence: 0.6 },
+      { word: "one", confidence: 0.99 },
+      { word: "not", confidence: 0.98 },
+      { word: "that", confidence: 0.9 },
+    ],
+  },
 )
 => <unsure>that</unsure> one not that
 ```
@@ -268,21 +296,75 @@ for (already consumed by an earlier match): the extra entry has no slot
 left and is skipped rather than double-marking or guessing.
 
 ```ts
-markUnsureWords(
-  "that one thing",
-  [
-    { word: "that", confidence: 0.6 },
-    { word: "that", confidence: 0.3 },
-  ],
-)
+markUnsureWords("that one thing", { words: [{ word: "that", confidence: 0.6 }, { word: "that", confidence: 0.3 }] })
 => <unsure>that</unsure> one thing
 ```
 
 Punctuation stays outside the tag; only the word core wraps.
 
 ```ts
-markUnsureWords("cloud, right?", [{ word: "cloud", confidence: 0.2 }, { word: "right", confidence: 0.99 }])
+markUnsureWords("cloud, right?", { words: [{ word: "cloud", confidence: 0.2 }, { word: "right", confidence: 0.99 }] })
 => <unsure>cloud</unsure>, right?
+```
+
+Non-ASCII words wrap whole, and normalization is case-insensitive across
+accents (review Fix C — an ASCII-only tokenizer used to split "café" and
+wrap only "caf"):
+
+```ts
+markUnsureWords("I love café music", { words: [{ word: "café", confidence: 0.4 }] })
+=> I love <unsure>café</unsure> music
+
+markUnsureWords("I met Beyoncé backstage", { words: [{ word: "BEYONCÉ", confidence: 0.3 }] })
+=> I met <unsure>Beyoncé</unsure> backstage
+```
+
+Control markup (`<send-message phrase="…" />`, `<user-selection>…`) is
+tag-aware and opaque: a stream word can't land a mark inside one, even
+when it normalizes the same as text the tag happens to contain (review
+Fix B — `keyword.processedTranscript` replaces the spoken trigger phrase
+with exactly this kind of tag, `speech-keywords.ts`'s `keywordTag`). The
+low-confidence "message" here has no home outside the tag, so the tag
+comes back byte-identical:
+
+```ts
+markUnsureWords(
+  `let's grab lunch <send-message phrase="send message" />`,
+  { words: [{ word: "let's", confidence: 0.97 }, { word: "grab", confidence: 0.98 }, { word: "lunch", confidence: 0.95 }, { word: "message", confidence: 0.3 }] },
+)
+=> let's grab lunch <send-message phrase="send message" />
+```
+
+The same low-confidence word DOES mark when it also occurs as real spoken
+text outside the tag — the tag stays untouched either way:
+
+```ts
+markUnsureWords(
+  `the message got lost <send-message phrase="send message" />`,
+  { words: [{ word: "the", confidence: 0.99 }, { word: "message", confidence: 0.3 }, { word: "got", confidence: 0.97 }, { word: "lost", confidence: 0.95 }] },
+)
+=> the <unsure>message</unsure> got lost <send-message phrase="send message" />
+```
+
+## `resolveEmissionWords` — collapsing "no data" onto one state (Fix A)
+
+`null`/`undefined` (a service that never captured confidence — Voxtral,
+OpenAI realtime) and a defined array where NO entry has a numeric
+`confidence` (belt-and-braces) both become `undefined`, never a false
+`stt="deepgram"` claim.
+
+```ts
+resolveEmissionWords(null)
+=> undefined
+
+resolveEmissionWords(undefined)
+=> undefined
+
+resolveEmissionWords([{ word: "hi" }, { word: "there" }])
+=> undefined
+
+resolveEmissionWords([{ word: "hi" }, { word: "there", confidence: 0.9 }])?.length
+=> 2
 ```
 
 ## Site 2 — keyword voice send: inline `<unsure>` marks + `stt` attribute

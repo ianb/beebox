@@ -138,8 +138,9 @@ function StateBlock({ spec }: { spec: Spec }) {
   const transcription: TranscriptionHandle = {
     state: spec.isTranscribing ? "recording" : "idle",
     transcript: spec.transcript,
+    finalWords: null,
     start: noop,
-    stop: () => Promise.resolve(spec.transcript),
+    stop: () => Promise.resolve({ text: spec.transcript, words: null }),
     cancel: noop,
   };
   const targetBusy = chatTargetStatus({ isStreaming: spec.isStreaming, processBusy: false }).state === "busy";

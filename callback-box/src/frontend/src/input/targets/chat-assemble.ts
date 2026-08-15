@@ -76,7 +76,7 @@ export function assembleChatMessage(
   // marked word is a narrow, accepted trade for keeping the marker placement
   // itself simple and never XML-corrupting.
   const markedText = emission.origin === "voice" && emission.words !== undefined
-    ? markUnsureWords(text, emission.words)
+    ? markUnsureWords(text, { words: emission.words, spokenStart: emission.spokenStart ?? 0 })
     : text;
   const body = applySelections(markedText, {
     selections: [...emission.selections],

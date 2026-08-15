@@ -47,7 +47,7 @@ export type TranscriptionEvent =
   | { type: "WS_CLOSED" }
   | { type: "CONNECTION_DEGRADED"; cause: DropCause }
   | { type: "CONNECTION_RESTORED" }
-  | { type: "TEXT_UPDATE"; finalText: string; interimText: string; finalWords: FinalWord[] }
-  | { type: "TRANSCRIPTION_DONE"; text?: string; audioBlob?: Blob; words?: FinalWord[] }
+  | { type: "TEXT_UPDATE"; finalText: string; interimText: string; finalWords: FinalWord[] | null }
+  | { type: "TRANSCRIPTION_DONE"; text?: string; audioBlob?: Blob; words?: FinalWord[] | null }
   | { type: "SERVER_ERROR"; message: string }
   | { type: "SETUP_ERROR"; message: string };

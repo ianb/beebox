@@ -23,7 +23,7 @@ import type { ScreenshotRequestController } from "./screenshot-request-handler";
 import type { LiveTask } from "./background-tasks";
 import type { SessionEntry, SessionContentBlock } from "../../api";
 import type { MessageGroup } from "./ChatMessages";
-import type { ModelMarker } from "./InteractiveChat-helpers";
+import type { ModelMarker, VoiceSegmentSend } from "./InteractiveChat-helpers";
 import type { useChatTabs, useChatModelFeatures, useChatMute, useChatSchedules } from "./InteractiveChat-hooks";
 import type { useChatVoice } from "./InteractiveChat-voice";
 import { useChatAttachmentValues, type useChatAttachments } from "./InteractiveChat-attachments";
@@ -80,7 +80,7 @@ interface ChatBodyProps {
   setTypingMode: React.Dispatch<React.SetStateAction<boolean>>;
   typingLocked: boolean;
   setTypingLocked: React.Dispatch<React.SetStateAction<boolean>>;
-  onVoiceSegmentSend: (text: string) => void;
+  onVoiceSegmentSend: VoiceSegmentSend;
   send: (event: { type: "DISMISS_ERROR" }) => void;
   /** Report user activity on the open companion card (scrolled/navigated/…). */
   reportCardActivity: (kind: ActivityKind, detail?: string) => void;

@@ -58,6 +58,14 @@ export interface Emission {
    * Only a voice-origin emission ever sets this.
    */
   readonly words?: readonly FinalWord[];
+  /**
+   * Char offset in `text` where the spoken portion begins (Track 3 review
+   * Fix B) — text before it is a typed composer prefix the words stream
+   * never describes, and the assembler's `<unsure>` marking must never wrap
+   * anything there. Default 0 (the whole text is spoken); only meaningful
+   * when `words` is defined.
+   */
+  readonly spokenStart?: number;
 }
 
 /**
@@ -110,6 +118,8 @@ interface VoiceEmissionInput {
   diarized: boolean;
   /** See `Emission.words` — omit for "no data captured". */
   words?: readonly FinalWord[];
+  /** See `Emission.spokenStart`. */
+  spokenStart?: number;
 }
 
 /**
@@ -128,5 +138,6 @@ export function createVoiceEmission(input: VoiceEmissionInput): Emission {
     selections: input.selections,
     diarized: input.diarized,
     words: input.words,
+    spokenStart: input.spokenStart,
   };
 }

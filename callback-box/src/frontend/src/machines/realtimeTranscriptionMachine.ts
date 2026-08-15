@@ -52,9 +52,14 @@ export const realtimeTranscriptionMachine = setup({
        * Finalized words with confidence, aligned with finalTranscript —
        * updated in the same transitions so a reconnect can never drift the
        * two out of step (see the Track 2 reconnect direction detail in
-       * docs/plans/transcript-confidence.md). Only Deepgram populates it.
+       * docs/plans/transcript-confidence.md). `null` means no confidence
+       * data has been captured for this segment (Voxtral/OpenAI realtime,
+       * or nothing finalized yet) — distinct from `[]` (Deepgram captured
+       * words but none exist yet/anymore). Only Deepgram ever sets an
+       * array; conflating "no data" with "empty array" is what let a
+       * Voxtral send falsely stamp `stt="deepgram"` (Track 3 review fix).
        */
-      finalWords: FinalWord[];
+      finalWords: FinalWord[] | null;
       error: string | null;
       /** WAV blob of the segment's audio, set on TRANSCRIPTION_DONE.
        *  Consumed by narration mode for the HQ pass. */
@@ -75,7 +80,7 @@ export const realtimeTranscriptionMachine = setup({
       }
       return { finalTranscript: event.finalText, interimTranscript: event.interimText, finalWords: event.finalWords };
     }),
-    clearTranscript: assign({ finalTranscript: "", interimTranscript: "", finalWords: [], error: null, audioBlob: null, dropCause: null }),
+    clearTranscript: assign({ finalTranscript: "", interimTranscript: "", finalWords: null, error: null, audioBlob: null, dropCause: null }),
     setError: assign(({ event }) => {
       // setError is wired to WS_ERROR / SERVER_ERROR / SETUP_ERROR — all
       // share a `message: string` field. Narrow by checking the field
@@ -100,7 +105,7 @@ export const realtimeTranscriptionMachine = setup({
       const textProvided = event.text !== undefined && event.text.length > 0;
       return {
         finalTranscript: textProvided ? event.text : context.finalTranscript,
-        finalWords: textProvided ? (event.words ?? []) : context.finalWords,
+        finalWords: textProvided ? (event.words ?? null) : context.finalWords,
         interimTranscript: "",
         audioBlob: event.audioBlob ?? context.audioBlob,
       };
@@ -170,7 +175,7 @@ export const realtimeTranscriptionMachine = setup({
 }).createMachine({
   id: "realtimeTranscription",
   initial: "idle",
-  context: { finalTranscript: "", interimTranscript: "", finalWords: [], error: null, audioBlob: null, dropCause: null },
+  context: { finalTranscript: "", interimTranscript: "", finalWords: null, error: null, audioBlob: null, dropCause: null },
   states: {
     idle: {
       on: {

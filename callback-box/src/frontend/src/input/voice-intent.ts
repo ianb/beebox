@@ -19,9 +19,10 @@
 import type { ChatImageAttachment } from "../api-chat";
 import type { SelectionItem } from "../lib/selection/serialize";
 import type { FinalWord } from "../machines/transcription-events";
-import { joinTranscript } from "../components/chat/InteractiveChat-helpers";
+import { joinTranscript, spokenTextStart } from "../components/chat/InteractiveChat-helpers";
 import { appendSendKeywordTag, detectKeyword } from "../lib/audio/speech-keywords";
 import { createVoiceEmission, type Emission, type EmissionFile } from "./emission";
+import { resolveEmissionWords } from "./unsure-words";
 
 export type VoiceIntent =
   | {
@@ -40,11 +41,12 @@ export type VoiceIntent =
        * Realtime words backing `text` at commit time (Track 3, docs/plans/
        * transcript-confidence.md) — fast path: snapshotted at CANCEL; slow
        * path: the machine's `finalWords` read at its idle transition, which
-       * lands alongside the parked text. Always present (possibly empty);
-       * the HQ-drop decision (words describe discarded text) is the
+       * lands alongside the parked text. `null` means the service captured
+       * no confidence data (Voxtral/OpenAI realtime, or nothing finalized —
+       * Fix A); the HQ-drop decision (words describe discarded text) is the
        * consumer's job, not this shape's.
        */
-      words: readonly FinalWord[];
+      words: readonly FinalWord[] | null;
     }
   | { kind: "cancel" }
   | { kind: "mic-off" }
@@ -69,13 +71,14 @@ export function buildVoiceSubmitEmission(opts: {
   filesSnapshot: readonly EmissionFile[];
   diarized: boolean;
   /**
-   * Realtime words backing `finalText`, or absent/`undefined` when no
-   * confidence data applies to the text being sent (HQ replaced it —
-   * Track 3's HQ-drop rule). Carried through to the emission as-is; the
-   * assembler does the `<unsure>` marking against the sent body, since the
-   * body isn't final until selections/attachments fold in.
+   * Realtime words backing `finalText`, or absent/`null`/`undefined` when
+   * no confidence data applies to the text being sent (HQ replaced it —
+   * Track 3's HQ-drop rule; or the service never captured any — Fix A).
+   * Resolved through `resolveEmissionWords` before landing on the
+   * emission; the assembler does the `<unsure>` marking against the sent
+   * body, since the body isn't final until selections/attachments fold in.
    */
-  words?: readonly FinalWord[];
+  words?: readonly FinalWord[] | null;
 }): Emission {
   const full = joinTranscript(opts.priorInput, opts.finalText);
   return createVoiceEmission({
@@ -84,7 +87,8 @@ export function buildVoiceSubmitEmission(opts: {
     files: opts.filesSnapshot,
     selections: opts.selectionsSnapshot,
     diarized: opts.diarized,
-    words: opts.words,
+    words: resolveEmissionWords(opts.words),
+    spokenStart: spokenTextStart(opts.priorInput),
   });
 }
 
