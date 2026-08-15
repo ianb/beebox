@@ -9,7 +9,7 @@ refactor's zero-behavior-change guarantee is these strings.
 import { assembleChatMessage } from "../../src/frontend/src/input/targets/chat-assemble.js";
 import { createTypedEmission, createVoiceEmission } from "../../src/frontend/src/input/emission.js";
 import { buildSpeechMessage } from "../../src/frontend/src/components/chat/InteractiveChat-helpers.js";
-import { markUnsureWords, resolveEmissionWords, UNSURE_THRESHOLD } from "../../src/frontend/src/input/unsure-words.js";
+import { markUnsureWords, resolveEmissionWords, UNSURE_THRESHOLD, UNSURE_EXTEND } from "../../src/frontend/src/input/unsure-words.js";
 
 const W = { localTime: "14:23", zoomedView: null, timePassed: null };
 ```
@@ -165,16 +165,25 @@ assembleChatMessage(e, W).message
 => <speech local-time="14:23">the text that survived the drop</speech>
 ```
 
-## `markUnsureWords` — the pure marking function (Track 3)
+## `markUnsureWords` — the pure marking function (Track 3, span rework)
 
-`UNSURE_THRESHOLD` is 0.7 (lowered from 0.85 after real-world use — see the
-constant's comment); a word AT the threshold is confident, not unsure
-(`< 0.7`, not `<=`).
+`UNSURE_THRESHOLD` (0.7) SEEDS a span; `UNSURE_EXTEND` (0.9) grows it
+outward across adjacent gray words; a one-word gap between two spans
+BRIDGES them; a span never crosses sentence-final punctuation. A word AT
+either threshold is on the confident side (`<`, not `<=`).
 
 ```ts
 UNSURE_THRESHOLD
 => 0.7
 
+UNSURE_EXTEND
+=> 0.9
+```
+
+Single low word with confident (≥0.9) neighbors: still a single-word span
+— unchanged from the pre-rework behavior.
+
+```ts
 const cleanWords = [
   { word: "they're", confidence: 0.99 },
   { word: "all", confidence: 0.97 },
@@ -186,7 +195,7 @@ markUnsureWords("they're all cloud code in", { words: cleanWords })
 => they're all <unsure>cloud</unsure> code in
 ```
 
-Boundary: exactly 0.7 is confident (unchanged body); just under wraps.
+Boundary: exactly 0.7 is confident (unchanged body); just under seeds.
 
 ```ts
 markUnsureWords("the", { words: [{ word: "the", confidence: 0.7 }] })
@@ -196,20 +205,124 @@ markUnsureWords("the", { words: [{ word: "the", confidence: 0.6999 }] })
 => <unsure>the</unsure>
 ```
 
-A word with no `confidence` field is "no data" — never wrapped, even when
-it's the only entry:
+## Hysteresis: a seed's gray (0.7–0.9) neighbors join its span
+
+This is the rework's whole point: the recognizer's language model often
+repairs the actually-wrong word to something plausible, smearing doubt
+across its neighbors rather than leaving it scored low itself. "all" and
+"code" are both gray (below `UNSURE_EXTEND`, above `UNSURE_THRESHOLD`) and
+adjacent to the seed "cloud", so the whole run joins one span; "they're"
+(0.99) and "in" (0.95) are confident and stop it on both sides.
 
 ```ts
-markUnsureWords("the plan", { words: [{ word: "the" }, { word: "plan" }] })
+markUnsureWords(
+  "they're all cloud code in",
+  {
+    words: [
+      { word: "they're", confidence: 0.99 },
+      { word: "all", confidence: 0.8 },
+      { word: "cloud", confidence: 0.29 },
+      { word: "code", confidence: 0.85 },
+      { word: "in", confidence: 0.95 },
+    ],
+  },
+)
+=> they're <unsure>all cloud code</unsure> in
+```
+
+Gray words with NO seed among them never mark at all — extension only
+grows an existing span, it never starts one on its own.
+
+```ts
+markUnsureWords("the plan", { words: [{ word: "the", confidence: 0.8 }, { word: "plan", confidence: 0.85 }] })
 => the plan
 ```
 
-Nothing unsure: body comes back byte-identical.
+## Bridge: two spans separated by exactly one word join into one
+
+The gap word here is confident (0.95, not even gray) — bridging doesn't
+care about the gap word's own score, only that it's a single word between
+two already-marked regions (the "wrong word scores fine between two dips"
+shape this rework targets).
 
 ```ts
-markUnsureWords("cloud computing", { words: [{ word: "cloud", confidence: 0.9 }, { word: "computing", confidence: 0.95 }] })
-=> cloud computing
+markUnsureWords(
+  "that one not",
+  {
+    words: [
+      { word: "that", confidence: 0.6 },
+      { word: "one", confidence: 0.95 },
+      { word: "not", confidence: 0.5 },
+    ],
+  },
+)
+=> <unsure>that one not</unsure>
 ```
+
+A gap word with NO confidence value bridges the same way (rule 5 — treated
+like confident for extension/bridge, transparent rather than a wall):
+
+```ts
+markUnsureWords(
+  "that one not",
+  {
+    words: [
+      { word: "that", confidence: 0.6 },
+      { word: "one" },
+      { word: "not", confidence: 0.5 },
+    ],
+  },
+)
+=> <unsure>that one not</unsure>
+```
+
+Two confident words between two seeds is too wide a gap — bridge only
+fires for EXACTLY one — so this stays two separate spans.
+
+```ts
+markUnsureWords(
+  "that one two not",
+  {
+    words: [
+      { word: "that", confidence: 0.6 },
+      { word: "one", confidence: 0.95 },
+      { word: "two", confidence: 0.95 },
+      { word: "not", confidence: 0.5 },
+    ],
+  },
+)
+=> <unsure>that</unsure> one two <unsure>not</unsure>
+```
+
+## Sentence stop: a span never crosses sentence-final punctuation
+
+"agent." ends its sentence (its own text ends in `.`) — even directly
+adjacent to another seed ("something", the very next word), the two never
+merge into one span; adjacent spans separated only by a sentence boundary
+stay separate. The trailing period of the first span's last token stays
+OUTSIDE the tag, same as any other trailing punctuation.
+
+```ts
+markUnsureWords(
+  "In fact you are an agent. something happened after",
+  {
+    words: [
+      { word: "In", confidence: 0.99 },
+      { word: "fact", confidence: 0.98 },
+      { word: "you", confidence: 0.97 },
+      { word: "are", confidence: 0.96 },
+      { word: "an", confidence: 0.95 },
+      { word: "agent.", confidence: 0.5 },
+      { word: "something", confidence: 0.4 },
+      { word: "happened", confidence: 0.97 },
+      { word: "after", confidence: 0.98 },
+    ],
+  },
+)
+=> In fact you are an <unsure>agent</unsure>. <unsure>something</unsure> happened after
+```
+
+## Fail-open projection: unmatched words, repeats, prefixes, tags
 
 Without a `spokenStart`, the search for the first words-stream entry just
 scans forward from 0 — a prior-typed-input PREFIX the words stream never
@@ -253,9 +366,9 @@ markUnsureWords(
 ```
 
 A keyword-stripped TAIL — words-stream entries with no home in the body
-(the trigger phrase itself, stripped from `processedTranscript`) — are
-tolerated: earlier matches still land, the unmatched tail is silently
-skipped.
+(the trigger phrase itself, stripped from `processedTranscript`) — is
+tolerated: earlier matches still land, the unmatched tail contributes
+nothing to the span's projection.
 
 ```ts
 markUnsureWords(
@@ -275,7 +388,8 @@ markUnsureWords(
 
 A repeated word: alignment order disambiguates which occurrence gets
 marked — the first low-confidence "that" wraps, the later confident one
-doesn't.
+doesn't (both stay single-word spans; "one"/"not" between them are too
+confident to extend into, and there's no second seed to bridge toward).
 
 ```ts
 markUnsureWords(
@@ -292,16 +406,19 @@ markUnsureWords(
 => <unsure>that</unsure> one not that
 ```
 
-Ambiguous — the words stream claims a repeat the body doesn't have room
-for (already consumed by an earlier match): the extra entry has no slot
-left and is skipped rather than double-marking or guessing.
+The words stream claims a repeat the body doesn't have room for (both
+"that" entries are adjacent seeds — one word-span in stream-space — but
+the body only has one "that" to match): the projection just wraps the one
+token that actually matched, rather than guessing where the second one
+would have gone.
 
 ```ts
 markUnsureWords("that one thing", { words: [{ word: "that", confidence: 0.6 }, { word: "that", confidence: 0.3 }] })
 => <unsure>that</unsure> one thing
 ```
 
-Punctuation stays outside the tag; only the word core wraps.
+Punctuation stays outside the tag; only the word core (and anything
+strictly between a span's first and last matched core) wraps.
 
 ```ts
 markUnsureWords("cloud, right?", { words: [{ word: "cloud", confidence: 0.2 }, { word: "right", confidence: 0.99 }] })
@@ -345,6 +462,20 @@ markUnsureWords(
   { words: [{ word: "the", confidence: 0.99 }, { word: "message", confidence: 0.3 }, { word: "got", confidence: 0.97 }, { word: "lost", confidence: 0.95 }] },
 )
 => the <unsure>message</unsure> got lost <send-message phrase="send message" />
+```
+
+A tag SPLITS what would otherwise be one word-span into two separate
+wraps: "grab" and "lunch" are adjacent seeds (one contiguous span in
+stream-space), but the tag sits physically between their matched body
+tokens, so the projection breaks there — a span never contains or crosses
+a control tag.
+
+```ts
+markUnsureWords(
+  `grab <send-message phrase="x" /> lunch`,
+  { words: [{ word: "grab", confidence: 0.4 }, { word: "lunch", confidence: 0.3 }] },
+)
+=> <unsure>grab</unsure> <send-message phrase="x" /> <unsure>lunch</unsure>
 ```
 
 ## `resolveEmissionWords` — collapsing "no data" onto one state (Fix A)

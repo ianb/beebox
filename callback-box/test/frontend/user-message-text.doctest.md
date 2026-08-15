@@ -45,6 +45,25 @@ out.includes(">cloud</span>")
 => true
 ```
 
+## A multi-word span (Track 3's hysteresis/bridge rework) renders as ONE run
+
+`markUnsureWords` now wraps whole PHRASE SPANS, not single words — the
+regex's `[\S\s]*?` inner capture already handles arbitrary text (spaces,
+interior punctuation) between the tags, so a multi-word span renders as
+one styled `<span>` covering the whole phrase, not one per word.
+
+```ts
+const spanOut = render('<speech stt="deepgram">they said <unsure>the cloud, right</unsure> away</speech>');
+(spanOut.match(/decoration-dotted/g) ?? []).length
+=> 1
+
+spanOut.includes(">the cloud, right</span>")
+=> true
+
+spanOut.includes("<unsure")
+=> false
+```
+
 ## Marked word in the middle of a sentence — surrounding text is untouched
 
 ```ts

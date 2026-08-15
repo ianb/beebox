@@ -80,10 +80,11 @@ cannot mark anything" that is not silently pretending everything is confident.
 ## Manual testing
 
 What shipped (see the linked plan for the design): dictating in the web
-composer with Deepgram realtime now wraps low-acoustic-confidence words
-(< 0.7 — lowered from 0.85 after the boxholder found the initial mark rate
-too noisy in practice) in `<unsure>word</unsure>` in the persisted `<speech>`
-message, and
+composer with Deepgram realtime now wraps low-confidence **phrase spans** in
+`<unsure>…</unsure>` in the persisted `<speech>` message — a span seeds at a
+word under 0.7 (lowered from 0.85 after the boxholder found the initial rate
+too noisy) and spreads across adjacent sub-0.9 words, since real mishearings
+sit in low-confidence regions rather than on one exactly-scored word — and
 stamps `stt="deepgram"` whenever confidence data was captured. The chat agent
 is prompted to treat marked meaning-critical words as unverified; the sent
 bubble renders marked words with a subtle dotted underline.
