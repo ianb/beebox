@@ -1,8 +1,9 @@
 ---
 title: "Mark low-confidence words in a transcript so a misheard word is visible"
-workstream: unattached
+workstream: transcript-confidence
 area: callback-box
 needs: [design]
+design: ../../callback-box/docs/plans/transcript-confidence.md
 labels: [transcription, voice, chat]
 priority: important
 filed-by: agent
