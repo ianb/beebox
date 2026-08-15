@@ -16,6 +16,7 @@ import { useMachine } from "@xstate/react";
 import {
   realtimeTranscriptionMachine,
   type TranscriptionState,
+  type FinalWord,
 } from "../machines/realtimeTranscriptionMachine";
 import { detectKeyword, type KeywordResult } from "../lib/audio/speech-keywords";
 import { stillListening, recordingStart } from "../lib/audio/earcons";
@@ -62,6 +63,13 @@ export interface UseRealtimeTranscriptionResult {
   transcript: string;
   /** Confirmed text only — keyword detection runs against this. */
   finalTranscript: string;
+  /**
+   * Words backing `finalTranscript`, with confidence when the service
+   * reports one (Deepgram only — Voxtral/OpenAI leave this empty). Stays
+   * aligned with `finalTranscript` across reconnects; see
+   * realtimeTranscriptionMachine's `finalWords` context field.
+   */
+  finalWords: FinalWord[];
   /** Live, unconfirmed text. May change as the recognizer revises. */
   interimTranscript: string;
   error: string | null;
@@ -269,7 +277,7 @@ export function useRealtimeTranscription(
           ? "connecting"
           : "idle";
 
-  const { finalTranscript, interimTranscript, error } = snapshot.context;
+  const { finalTranscript, finalWords, interimTranscript, error } = snapshot.context;
   const transcript = combine(finalTranscript, interimTranscript);
 
   // Wake-lock used to live here, tied to mic state. It now lives in the
@@ -415,6 +423,7 @@ export function useRealtimeTranscription(
     state,
     transcript,
     finalTranscript,
+    finalWords,
     interimTranscript,
     error,
     start,

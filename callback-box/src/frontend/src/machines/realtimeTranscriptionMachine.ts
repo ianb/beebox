@@ -35,7 +35,9 @@
 import { setup, assign } from "xstate";
 import { recordingStop, recordingError, recordingDropped, recordingResumed } from "../lib/audio/earcons";
 import { transcriptionActor } from "./transcription-actor";
-import { MachineActionError, type TranscriptionEvent, type DropCause } from "./transcription-events";
+import { MachineActionError, type TranscriptionEvent, type DropCause, type FinalWord } from "./transcription-events";
+
+export type { FinalWord } from "./transcription-events";
 
 export type { TranscriptionState } from "./transcription-events";
 
@@ -46,6 +48,13 @@ export const realtimeTranscriptionMachine = setup({
     context: {} as {
       finalTranscript: string;
       interimTranscript: string;
+      /**
+       * Finalized words with confidence, aligned with finalTranscript —
+       * updated in the same transitions so a reconnect can never drift the
+       * two out of step (see the Track 2 reconnect direction detail in
+       * docs/plans/transcript-confidence.md). Only Deepgram populates it.
+       */
+      finalWords: FinalWord[];
       error: string | null;
       /** WAV blob of the segment's audio, set on TRANSCRIPTION_DONE.
        *  Consumed by narration mode for the HQ pass. */
@@ -64,9 +73,9 @@ export const realtimeTranscriptionMachine = setup({
         const message = `applyTextUpdate: unexpected event type "${event.type}"`;
         throw new MachineActionError(message);
       }
-      return { finalTranscript: event.finalText, interimTranscript: event.interimText };
+      return { finalTranscript: event.finalText, interimTranscript: event.interimText, finalWords: event.finalWords };
     }),
-    clearTranscript: assign({ finalTranscript: "", interimTranscript: "", error: null, audioBlob: null, dropCause: null }),
+    clearTranscript: assign({ finalTranscript: "", interimTranscript: "", finalWords: [], error: null, audioBlob: null, dropCause: null }),
     setError: assign(({ event }) => {
       // setError is wired to WS_ERROR / SERVER_ERROR / SETUP_ERROR — all
       // share a `message: string` field. Narrow by checking the field
@@ -84,9 +93,14 @@ export const realtimeTranscriptionMachine = setup({
         const message = `setFinalTranscript: unexpected event type "${event.type}"`;
         throw new MachineActionError(message);
       }
-      const final = event.text && event.text.length > 0 ? event.text : context.finalTranscript;
+      // event.words is decided by the SAME condition as event.text (both
+      // computed together by the actor at the same call site) so the two
+      // can never drift: a provided text always brings its own word list
+      // (possibly empty), and an absent/empty text keeps both from context.
+      const textProvided = event.text !== undefined && event.text.length > 0;
       return {
-        finalTranscript: final,
+        finalTranscript: textProvided ? event.text : context.finalTranscript,
+        finalWords: textProvided ? (event.words ?? []) : context.finalWords,
         interimTranscript: "",
         audioBlob: event.audioBlob ?? context.audioBlob,
       };
@@ -156,13 +170,7 @@ export const realtimeTranscriptionMachine = setup({
 }).createMachine({
   id: "realtimeTranscription",
   initial: "idle",
-  context: {
-    finalTranscript: "",
-    interimTranscript: "",
-    error: null,
-    audioBlob: null,
-    dropCause: null,
-  },
+  context: { finalTranscript: "", interimTranscript: "", finalWords: [], error: null, audioBlob: null, dropCause: null },
   states: {
     idle: {
       on: {

@@ -58,13 +58,15 @@ import {
   type ConnectionHandle,
   type ServiceCallbacks,
   socketFinalText,
+  socketFinalWords,
   startDeepgramConnection,
   startOpenAIRealtimeConnection,
   startVoxtralConnection,
 } from "./transcription-connections";
+import { mergeFinalText, mergeFinalWords } from "./transcription-merge";
 import { openWithRetry } from "./transcription-wait-for-open";
 import type { TranscriptionService } from "@core/transcription/index.js";
-import type { TranscriptionEvent } from "./transcription-events";
+import type { FinalWord, TranscriptionEvent } from "./transcription-events";
 
 interface TranscriptionActorInput {
   dummy?: never;
@@ -153,6 +155,10 @@ class TranscriptionSession {
   private committedPrefix = "";
   /** Most recent `finalText` from the *current* connection (sans prefix). */
   private lastConnectionFinal = "";
+  /** Word-list counterpart to {@link committedPrefix} (see transcription-merge.ts). */
+  private committedWords: FinalWord[] = [];
+  /** Most recent `finalWords` from the *current* connection (sans committed). */
+  private lastConnectionWords: FinalWord[] = [];
   private watchdogId: ReturnType<typeof setInterval> | null = null;
   /** Last time `bufferedAmount` was observed at 0 (i.e. fully drained). */
   private lastDrainedAt = 0;
@@ -172,13 +178,6 @@ class TranscriptionSession {
     const blob = encodePcmChunksAsWav(this.audioChunks);
     this.audioChunks.length = 0;
     return blob;
-  }
-
-  /** Prepend text confirmed by prior connections (see committedPrefix). */
-  private mergeFinal(text: string): string {
-    if (!this.committedPrefix) return text;
-    if (!text) return this.committedPrefix;
-    return `${this.committedPrefix} ${text}`;
   }
 
   private stopWatchdog() {
@@ -240,7 +239,9 @@ class TranscriptionSession {
     const finalFn = socketFinalText(ws);
     if (finalFn) {
       const audioBlob = this.takeAudioBlob();
-      this.sendBack({ type: "TRANSCRIPTION_DONE", text: this.mergeFinal(finalFn()), audioBlob });
+      const wordsFn = socketFinalWords(ws);
+      const words = mergeFinalWords(this.committedWords, wordsFn ? wordsFn() : []);
+      this.sendBack({ type: "TRANSCRIPTION_DONE", text: mergeFinalText(this.committedPrefix, finalFn()), audioBlob, words });
     } else {
       this.sendBack({ type: "WS_CLOSED" });
     }
@@ -292,9 +293,11 @@ class TranscriptionSession {
     // Fold the dying session's text into the prefix so the fresh session's
     // (empty-start) accumulator appends to it rather than replacing it.
     if (this.lastConnectionFinal) {
-      this.committedPrefix = this.mergeFinal(this.lastConnectionFinal);
+      this.committedPrefix = mergeFinalText(this.committedPrefix, this.lastConnectionFinal);
       this.lastConnectionFinal = "";
     }
+    this.committedWords = mergeFinalWords(this.committedWords, this.lastConnectionWords);
+    this.lastConnectionWords = [];
     this.sendBack({ type: "CONNECTION_DEGRADED", cause: "network" });
     // Replay from before the drop to cover detection latency.
     const replayFrom = Math.max(0, this.audioChunks.length - REPLAY_PAD_CHUNKS);
@@ -376,15 +379,18 @@ class TranscriptionSession {
       if (this.isDisposed()) { this.cleanup(); return; }
 
       this.callbacks = {
-        onTextUpdate: (finalText, interimText) => {
+        onTextUpdate: ({ finalText, interimText, finalWords }) => {
           if (this.disposed) return;
           this.lastConnectionFinal = finalText;
-          this.sendBack({ type: "TEXT_UPDATE", finalText: this.mergeFinal(finalText), interimText });
+          this.lastConnectionWords = finalWords ?? [];
+          const mergedText = mergeFinalText(this.committedPrefix, finalText);
+          const mergedWords = mergeFinalWords(this.committedWords, this.lastConnectionWords);
+          this.sendBack({ type: "TEXT_UPDATE", finalText: mergedText, interimText, finalWords: mergedWords });
         },
         onDone: (text) => {
           if (this.disposed) return;
           const audioBlob = this.takeAudioBlob();
-          this.sendBack({ type: "TRANSCRIPTION_DONE", text: this.mergeFinal(text ?? ""), audioBlob });
+          this.sendBack({ type: "TRANSCRIPTION_DONE", text: mergeFinalText(this.committedPrefix, text ?? ""), audioBlob });
         },
         onServerError: (message) => {
           if (this.disposed || this.reconnecting) return;
