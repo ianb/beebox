@@ -355,6 +355,7 @@ export async function startServer(options?: ServerOptions): Promise<void> {
     // Only a hub child has a supervisor that can safely replace it. Standalone
     // `cb serve` deliberately does not self-spawn: its pidfile and orphan
     // detector make overlapping parent/successor lifetimes destructive.
+    // TODO(env-migration): The launcher stamps this internal supervision marker before exec.
     if (isHubMode() && process.env.CB_DEV_BUNDLE_ID) {
       let drainStartedAt: number | undefined;
       const reloadCheck = setInterval(() => {

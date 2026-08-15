@@ -12,6 +12,7 @@ function identity(info: BigIntStats): string {
 }
 
 export async function devBundleWasReplaced(): Promise<boolean> {
+  // TODO(env-migration): These launcher-stamped values are intentionally read lazily so tests and re-exec boundaries can replace them.
   const bundlePath = process.env.CB_DEV_BUNDLE_PATH;
   const loadedIdentity = process.env.CB_DEV_BUNDLE_ID;
   if (!bundlePath || !loadedIdentity) return false;
@@ -29,6 +30,7 @@ export function beginDevBundleDrain(): void {
 }
 
 export async function abandonDevBundleDrain(): Promise<void> {
+  // TODO(env-migration): Read the launcher's current artifact path at the drain boundary.
   const bundlePath = process.env.CB_DEV_BUNDLE_PATH;
   if (bundlePath) {
     try {
