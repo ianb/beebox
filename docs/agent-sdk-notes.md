@@ -21,16 +21,121 @@ break this repo — v2.1.218's worktree git isolation silently broke `/finish`'s
 merge step for days. Claude Code versions that move harness behavior get their
 own entries here, labeled as such, with no pin to apply.
 
-- **Current pin:** `0.3.227` (in `callback-box/package.json` — see the split-pin
-  note below; the monorepo root now carries a second, unmanaged pin)
-- **Latest reviewed upstream version:** `0.3.231` (SDK), `2.1.231` (Claude Code)
+- **Current pin:** `0.3.231` (in `callback-box/package.json` — see the split-pin
+  note below; the monorepo root still carries a second, unmanaged pin at
+  `0.3.226`)
+- **Latest reviewed upstream version:** `0.3.233` (SDK), `2.1.233` (Claude Code)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** `0.3.228` clears the 48h window within hours of
-  this turn and `0.3.229` tomorrow; take them on the normal settled path.
-  Nothing act-now on either channel. Watch `0.3.229`'s file-watcher handle-leak
-  fix (see its entry) — it is the most callback-box-shaped item in the backlog.
+- **Current recommendation:** `0.3.232` clears the 48h window within hours and
+  `0.3.233` tomorrow; take them on the normal settled path. Nothing act-now on
+  either channel.
 
 ## Release ledger
+
+### 0.3.233 — pending
+
+- **Upstream (SDK):** Notification hooks now fire for pending permission prompts
+  on the SDK path, matching the interactive REPL. Todo/task-tracking tools
+  (`TaskCreate`/`TaskGet`/`TaskUpdate`/`TaskList`, `TodoWrite`) are no longer in
+  the default tool surface on Opus 4.8, Sonnet 5, Fable 5, Mythos 5, and newer
+  models; keep them by naming them in `tools`/`allowedTools` or setting
+  `CLAUDE_CODE_ENABLE_TODO_TOOLS=1`. Claude Code 2.1.233 adds the same removal
+  plus: opt-in Bash memory cgroups on Linux (`CLAUDE_CODE_TOOL_MEMORY_LIMIT`),
+  `CLAUDE_CODE_WEBFETCH_CACHE_TTL_MS`, a fix for idle Linux sessions pinning a
+  CPU core when sandboxing is on, a fix for bundled skill aliases reporting
+  "Unknown command" in `-p` mode when a user/project skill shadows them, an NT
+  `\??\` device-prefix path-validation fix (NTLM credential-leak vector), and a
+  **revert of 2.1.232's Bash permission changes** for Cygwin-style symlinks and
+  input redirections (`< file`).
+- **Callback-box applicability (runtime):** The todo-tool removal was checked
+  rather than assumed and is **inert here**. Callback-box never asks for those
+  tools: `buildQueryOptions` (`src/core/agent/run.ts`) and
+  `src/services/claude-chat.ts` pass no `tools`/`allowedTools` at all, and the
+  one place that does set an explicit surface — `OPERATOR_TOOLS` in
+  `src/field-test/run.ts:61` — is `["Bash", "Read"]`. The many `todo` hits in
+  `src/` are callback-box's own `{% todo %}` card annotation, an unrelated
+  concept. Notification hooks are also inert: callback-box registers only
+  `PreToolUse`/`PostToolUse` (`run.ts`), and runs `bypassPermissions`, so there
+  are no pending permission prompts to notify about.
+- **Callback-box applicability (harness):** The todo-tool removal **does** land
+  here — worker sessions on Opus/Sonnet 5 lose `TodoWrite` and the `Task*` tools
+  from their default surface, changing how agents track multi-step work in this
+  repo. `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` restores them if that turns out to
+  matter. Also relevant: the skill-shadowing fix touches `-p` mode, which is how
+  the `cross-model` skill invokes `claude -p`, and this repo carries a large
+  local skill set that could shadow bundled aliases. The Linux CPU-pinning fix
+  and Bash memory cgroups are prod-side opportunities (`cb hub` runs Linux),
+  though sandboxing is not enabled for box agents.
+- **Action:** Published 2026-08-14T18:52Z, ~21h old, inside the settling window.
+  The boxholder's harness is already on 2.1.233 independently.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03233), [Claude Code 2.1.233](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21233)
+
+### 0.3.232 — pending (parity content from Claude Code 2.1.232)
+
+- **Upstream (SDK):** Subagent MCP `tool_result` frames whose result carries
+  `_meta` now emit `tool_use_result` as `{ content, _meta }` instead of a bare
+  value. `/context` result messages carry a structured `context_usage` payload
+  (new `SDKContextUsage` type). `vcs_state_changed` events now populate `branch`
+  for push operations. The bundled Claude Code 2.1.232 is a large release; its
+  callback-box-relevant items are below.
+- **Callback-box applicability (runtime):** All three SDK changes are inert —
+  `tool_use_result`, `context_usage`, `SDKContextUsage`, and `vcs_state_changed`
+  appear nowhere in `callback-box/src`. Note the `tool_use_result` shape change
+  is *not* the same thing as the Anthropic `tool_result` **content block** that
+  callback-box does consume (`src/core/agent/render.ts`,
+  `src/cli/lib/session-content.ts`, the frontend `SessionLog`); those are
+  unaffected. Callback-box also configures no MCP servers, so subagent MCP
+  results do not arise.
+- **Callback-box applicability (harness) — two items worth keeping:**
+  - **Subagent forking is now on by default**: a `subagent_type: "fork"`
+    subagent inherits the full conversation and prompt cache, and non-teammate
+    agent spawns in interactive sessions now run in the background by default.
+    This repo leans on subagents heavily (root CLAUDE.md makes them discretionary
+    and encouraged) and ships a custom `.claude/agents/finish.md`. A default
+    flip to background spawning changes the shape of any flow that expects a
+    spawned agent's result inline. Nothing observed broken; flagged because it
+    is a default change to the mechanism `/finish` and fan-out work ride on.
+  - **Nested git repositories no longer inherit trust from a parent
+    directory** — each now requires its own trust confirmation. This is the
+    2.1.218-shaped risk (a permission/isolation tightening that an unattended
+    session cannot answer), so the surfaces were enumerated: the nested repos in
+    this checkout are `.deploy-checkout/.git` and the symlink-mounted
+    `private-issues/`. Neither is used as a *session project root* today —
+    `.deploy-checkout` is driven by `deploy.sh` over shell git, and
+    private-issues is committed from inside it via shell git — so no trust
+    prompt is currently reachable. Boxes are standalone repos
+    (`~/src/boxes/test1/.git`) with the agent cwd at `<box>/content` inside
+    them, not nested in a parent repo. Revisit if a worker session is ever
+    started with cwd inside a nested repo.
+  - Security fixes in this release do not apply: the PowerShell
+    `$PSDefaultParameterValues` bypass and the Git Bash Cygwin-symlink bypass
+    are Windows-only, and `sandbox.ripgrep` tier-restriction plus the Linux
+    sandbox protected-path hardening land on sandbox config this repo does not
+    set (`.claude/settings.json` carries only `statusLine` and hooks).
+  - The `< file` Bash permission-check change from this release **was reverted in
+    2.1.233**, so the friction noted at the time never needs acting on.
+  - Also here: a fix for a startup race that could silently unregister a plugin
+    marketplace via concurrent `known_marketplaces.json` writes — the third
+    plugin-integrity fix in four releases, and this monorepo ships plugins.
+- **Action:** Published 2026-08-13T21:31Z, ~42h old — inside the window at this
+  turn, clears within hours.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03232), [Claude Code 2.1.232](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21232)
+
+### Validation note — the 0.3.228 test failure did not reproduce
+
+On 2026-08-14 a bump to `0.3.228` was reverted: `test/core/box/file-watcher.doctest.md`
+hit tap's 300s timeout twice under it (3 reported failures = that file plus its
+cascade), while the suite was clean at `0.3.227`. That looked like a possible
+regression and was reported as suggestive-but-unproven.
+
+**It did not reproduce.** This turn's bump to `0.3.231` — which contains
+everything `0.3.228` introduced — ran a clean 6980/6980. Combined with the file
+passing standalone in ~16s at the time and the test ledger showing it failing 5
+times across 92 historical runs, the 2026-08-14 failure is best read as
+load/timing flake in that doctest, not an SDK regression. Recorded so the
+earlier caution is not left standing as an unresolved suspicion against
+`0.3.228`. The underlying flake in `file-watcher.doctest.md` is a real test-suite
+issue, but it belongs to the repo, not to this ledger.
 
 ### Monitor reliability — the SDK pin has split in two (needs a decision)
 
@@ -62,7 +167,7 @@ boxholder: either teach `update-agent-sdk.ts` to rewrite both manifests (and rea
 the version it actually manages), or drop the root pin in favor of the workspace
 one.
 
-### 0.3.231 — pending (parity with Claude Code 2.1.231)
+### 0.3.231 — applied (parity with Claude Code 2.1.231)
 
 - **Upstream:** SDK entry is only "Updated to parity with Claude Code v2.1.231".
   The itemized content is Claude Code 2.1.231's single fix: MCP OAuth sign-in
@@ -72,7 +177,11 @@ one.
   configures no `mcpServers` (still true as of this turn). On the harness
   channel it only affects a boxholder session signing in to a pre-registered
   MCP OAuth server; no repo surface, nothing to adjust.
-- **Action:** Published 2026-08-13T08:31Z, ~8h old, inside the settling window.
+- **Action:** Published 2026-08-13T08:31Z. Applied 2026-08-15 via
+  `pnpm update-agent-sdk` at ~56h as the newest settled version, carrying
+  `0.3.228` and `0.3.229` in with it. Verified: typecheck clean,
+  `pnpm -C callback-box test` 6980/6980 pass, and
+  `scripts/sdk-steering-probe.ts` holds all four steering behaviors.
 - **Sources:** [Agent SDK release](https://github.com/anthropics/claude-agent-sdk-typescript/releases/tag/v0.3.231), [Claude Code 2.1.231](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21231)
 
 ### 0.3.230 — never published to npm (evidence for the settling window)
@@ -84,7 +193,7 @@ was cut and then withdrawn upstream this week. Nothing to apply; recorded becaus
 it is direct, current evidence that the two-day settling window earns its keep,
 and a caution against reading the changelog as the list of installable versions.
 
-### 0.3.229 — pending
+### 0.3.229 — applied
 
 - **Upstream (SDK):** Added `terminal_slash_commands` to the system init message
   so Remote Control clients can hide terminal-oriented commands. Changed
@@ -154,7 +263,10 @@ and a caution against reading the changelog as the list of installable versions.
   - Not applicable: self-hosted-runner items, sandbox IPv6 bracketing (no
     sandbox rules configured), Windows path fixes, IDE-diagnostics stalls, and
     the VSCode/Remote Control UI items.
-- **Action:** Published 2026-08-12T19:30Z, ~21h old, inside the settling window.
+- **Action:** Published 2026-08-12T19:30Z. Applied 2026-08-15, carried in by the
+  settled bump to `0.3.231`. The file-watcher handle-leak fix flagged above is
+  therefore now present at the pin; if resident-process handle or memory growth
+  was ever going to improve from it, this is the release that did it.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03229), [Claude Code 2.1.229](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21229)
 
 ### Claude Code 2.1.228 — harness channel (no pin)
@@ -195,7 +307,7 @@ apply. Recorded because several items land squarely on this repo's workflow.
   privacy fix with no repo surface.
 - **Sources:** [Claude Code 2.1.228](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21228)
 
-### 0.3.228 — pending
+### 0.3.228 — applied
 
 - **Upstream:** One change, and it is a real API item rather than a parity
   line: agent tool results (`AgentOutput`) now carry through
@@ -210,7 +322,9 @@ apply. Recorded because several items land squarely on this repo's workflow.
   piece of the same picture: cost accounting here undercounts anything outside
   the main loop. No behavior changes by upgrading.
 - **Callback-box applicability (harness):** Nothing — no CLI behavior claimed.
-- **Action:** Published 2026-08-11T17:49Z, ~22h old, inside the settling window.
+- **Action:** Published 2026-08-11T17:49Z. A direct bump to it on 2026-08-14 was
+  reverted on a test failure that did not reproduce (see the validation note
+  above); applied 2026-08-15, carried in by the settled bump to `0.3.231`.
 - **Sources:** [Agent SDK release](https://github.com/anthropics/claude-agent-sdk-typescript/releases/tag/v0.3.228), [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03228)
 
 ### 0.3.227 — applied (parity with Claude Code 2.1.227)
