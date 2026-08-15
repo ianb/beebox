@@ -2,7 +2,7 @@
 title: "Mark low-confidence words in a transcript so a misheard word is visible"
 workstream: transcript-confidence
 area: callback-box
-needs: [design]
+needs: [manual-testing]
 design: ../../callback-box/docs/plans/transcript-confidence.md
 labels: [transcription, voice, chat]
 priority: important
@@ -10,6 +10,11 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder asked whether Deepgram reports confidence
 ---
+
+> **⏳ Awaiting manual testing** — implemented on `worktree-transcript-confidence`
+> (design + build per the linked plan; commits `b4d11c33`…`932961d5`); dictate via
+> the web composer against a Deepgram-realtime box and check the marks (see
+> [Manual testing](#manual-testing)). Only the developer clears this.
 
 When the boxholder reads back something they dictated — a memo, a chat turn, a
 captured note — they want the words the transcriber was **unsure about** to be
@@ -71,6 +76,34 @@ agent reading the card later believes.
 **Voxtral parity.** `src/core/transcription/voxtral.ts` is the other backend.
 If it reports nothing comparable, the design needs an answer for "this backend
 cannot mark anything" that is not silently pretending everything is confident.
+
+## Manual testing
+
+What shipped (see the linked plan for the design): dictating in the web
+composer with Deepgram realtime now wraps low-acoustic-confidence words
+(< 0.85) in `<unsure>word</unsure>` in the persisted `<speech>` message, and
+stamps `stt="deepgram"` whenever confidence data was captured. The chat agent
+is prompted to treat marked meaning-critical words as unverified; the sent
+bubble renders marked words with a subtle dotted underline.
+
+To try (needs a real microphone, which no agent has):
+
+1. On a Deepgram-realtime box, dictate a message with a keyword send ("…send
+   message") — ideally including a name or a mumbled word. Check the sent
+   bubble for dotted-underlined words, and the session JSONL (or
+   `cb chat retranscribe`'s printed realtime transcript) for the `<unsure>`
+   tags and `stt="deepgram"`.
+2. Dictate and tap the send button instead of speaking the keyword — marks
+   should still appear (this path was wired in the review fix round).
+3. Say something with a marked meaning-critical word (e.g. an ambiguous
+   can/can't) and watch whether the agent asks / retranscribes instead of
+   acting on it.
+4. Voxtral or iOS dictation: messages should carry NO `stt=` and no marks —
+   absence, not a false claim.
+5. Judge mark volume: measurement predicts ~2–5 marked words per long
+   dictation, including function words (kept deliberately — the agent needs
+   the shaky "can"/"not"). If the display feels noisy, a display-side filter
+   is the knob to ask for; the stored marks stay.
 
 ## Related
 

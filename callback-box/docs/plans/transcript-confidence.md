@@ -1,6 +1,6 @@
 ---
 title: "Mark low-confidence transcript words, agent-first"
-status: draft
+status: implemented
 workstream: transcript-confidence
 issues:
   - ../../../issues/features/2026-08-15-mark-low-confidence-words-in-transcripts.md
@@ -438,11 +438,22 @@ subprojects' files); 3–4 are serialized after 2 (same frontend area —
 
 - **Cross-model review**: the plan was reviewed by Codex (gpt-5.5, high
   effort, 2026-08-15; raw output in the session scratch). Findings 1–6 and 8
-  drove the child-element + context-anchoring redesign and the reconnect/HQ
-  handling above; finding 7 added the runtime guards; finding 9 (citations the
-  reviewer could not reach) was verified separately during planning. A second
-  cross-model pass runs on the implementation diff before the work is called
-  done.
+  drove the fail-open alignment + reconnect/HQ handling above; finding 7
+  added the runtime guards; finding 9 (citations the reviewer could not
+  reach) was verified separately during planning. A second adversarial Codex
+  pass on the implementation diff found four real defects, all fixed in the
+  same branch (commit `932961d5`): false `stt=` stamping for non-Deepgram
+  services (words context is now `FinalWord[] | null`, and an array with no
+  confidence-bearing entries collapses to no-data), the aligner wrapping text
+  inside generated `<send-message>` markup (tokenizer treats `<...>` spans as
+  opaque), typed-prefix words taking a spoken word's mark (`spokenStart`
+  offset), and ASCII-only word splitting corrupting accented words (Unicode
+  classes). It also wired the tap-send path to carry words, and surfaced the
+  pre-existing husk-title raw-markup bug (filed:
+  `issues/bugs/2026-08-15-chat-husk-title-contains-raw-message-markup.md`).
+  Accepted, not fixed: selection anchor matching can degrade to estimated
+  placement when an anchor phrase contains a marked word (documented in
+  `chat-assemble.ts`).
 - **No migration**: additive markup in new messages only; old messages and
   non-Deepgram messages read as "no data" everywhere.
 - **Ships as one unit** from this worktree when the boxholder says so; the
