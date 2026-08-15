@@ -533,14 +533,17 @@ tests:
   # image files directly); scan-import runs its own Gemini pass at import
   # time. Nothing left to assert here as a "discover this command" audit.
 
-  # Status (2026-08-14): Claude and Codex both pass after correcting stale
-  # card-image guidance. Each reads the generated card doc; Codex no longer
-  # needs an implementation crawl to discover that the old guidance was wrong.
+  # Status (2026-08-15): Codex passes through the official SDK. It reads the
+  # generated path-scoped image rule skill and answers correctly. Claude may
+  # instead read the equivalent generated card doc, so either canonical
+  # generated surface satisfies the navigation check.
   - id: image-exif-date
-    prompt: "On an image card, what does filename.captured represent, and where should the photo's original EXIF capture time go?"
+    prompt: "Consult the box's generated image-card guidance. What does filename.captured represent, and where should the photo's original EXIF capture time go?"
     expected_level: knows_about
     watch_for: "Distinguishes the capture/upload/import timestamp in filename.captured from the photo's original timestamp in exif.date"
-    should_read: ["docs/generated/card-image.md"]
+    should_read_any:
+      - "docs/generated/card-image.md"
+      - "callback-box-rule-card-image/SKILL.md"
     correct_contains: ["filename.captured", "exif.date"]
     correct_matches:
       - "filename\\.captured[\\s\\S]{0,120}\\b(?:acquisition|upload|ingestion|import|browser|selection)\\b[\\s\\S]{0,40}\\b(?:time|timestamp)\\b|\\b(?:acquisition|upload|ingestion|import|browser|selection)\\b[\\s\\S]{0,40}\\b(?:time|timestamp)\\b[\\s\\S]{0,120}filename\\.captured"

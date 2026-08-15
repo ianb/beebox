@@ -36,6 +36,8 @@ export const auditTestSchema = z.object({
   response_not_matches: z.array(regexPatternSchema).optional(),
   cards_contain: z.array(z.string()).optional(),
   should_read: z.array(z.string()).optional(),
+  /** At least one path fragment must appear in observed reads. */
+  should_read_any: z.array(z.string()).min(1).optional(),
   should_not_read: z.array(z.string()).optional(),
   bash_contains: z.array(z.string()).optional(),
   style: z.string().optional(),

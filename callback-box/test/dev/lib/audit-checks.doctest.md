@@ -46,6 +46,22 @@ JSON.stringify({
 => {"good":{"pattern":"\\b(?:not|never)\\b(?:\\W+\\w+){0,2}\\W+host\\W+/tmp\\b","found":true,"matched":"not the host `/tmp"},"bad":false,"misleading":false}
 ```
 
+Equivalent generated guidance surfaces can satisfy one navigation check. This
+lets Claude read a generated card doc while Codex reads its generated rule
+skill without weakening the expected knowledge.
+
+```ts
+const alternateSource = runChecks({
+  ...auditTest,
+  should_read_any: ["docs/generated/card-image.md", "callback-box-rule-card-image/SKILL.md"],
+}, {
+  behavior: { ...behavior("answer"), filesRead: [".agents/skills/callback-box-rule-card-image/SKILL.md"] },
+  newOrModifiedCards: new Map(),
+});
+JSON.stringify(alternateSource.shouldReadAnyCheck)
+=> {"files":["docs/generated/card-image.md","callback-box-rule-card-image/SKILL.md"],"wasRead":true,"matched":"callback-box-rule-card-image/SKILL.md"}
+```
+
 Regexes are rejected at the YAML schema boundary before an audit spends an
 agent run. Empty patterns are also invalid because they match every response.
 

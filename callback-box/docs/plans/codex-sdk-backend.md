@@ -18,12 +18,15 @@ adapter maps SDK types into those contracts. Provider checks must not spread int
 procedure, wakeup, or UI code.
 
 The migration is mostly non-lossy for running turns. The current SDK has typed events
-for commands, file changes, MCP tools, web search, reasoning, plans, errors, final text,
+for commands, file changes, MCP tools, web search, reasoning, todos, errors, final text,
 and usage. It supports resume, images from local files, structured output, sandbox
-policy, additional directories, and `AbortSignal` cancellation. The hard gaps are
-developer instructions and transcript administration. Developer instructions are a
-cutover gate. Transcript administration remains in one quarantined compatibility module
-until the SDK gains an equivalent surface.
+policy, additional directories, and `AbortSignal` cancellation. The remaining hard gap
+is transcript administration, which stays in one quarantined compatibility module until
+the SDK gains an equivalent surface. There is one known presentation loss: SDK live
+events do not expose the app-server's `dynamicToolCall` or `subAgentActivity` item types,
+and app-server `thread/read` omits tool items from SDK `exec` sessions. Tool calls remain
+visible live, but an SDK chat reloaded from native history currently contains only user
+and assistant text.
 
 ## Stated preferences this plan trades against
 
@@ -63,8 +66,9 @@ until the SDK gains an equivalent surface.
   both live paths on SDK `ThreadItem` inputs while the history adapter retains its legacy
   app-server input mapper.
 - `src/core/codex-usage.ts:30` stores one completed Codex turn in Callback Box's usage
-  ledger. The SDK's `turn.completed` event supplies typed usage, but a runtime probe must
-  establish that its counters are per-turn before they enter this ledger.
+  ledger. The SDK's `turn.completed` event supplies typed usage; the runtime probe found
+  that version 0.147.0 reports thread-cumulative counters despite the type declaration's
+  per-turn wording, so the adapter writes a checked delta.
 - `src/core/chat/session/codex-transcript.ts:98` uses app-server `thread/read`; lines
   219-250 and 262-266 use `thread/list` and `thread/delete`. Those operations are not in
   the SDK's current public TypeScript surface.
@@ -91,9 +95,11 @@ invocation and protocol parsing. Callback Box maps only the SDK's domain events 
 product types.
 
 The SDK does not expose thread read, list, or delete. It also does not expose an explicit
-developer-instructions option in `ThreadOptions`. Its generic `config` escape hatch may
-support the Codex configuration key, but that is not equivalent to a documented typed
-option and must be probed against the pinned version.
+developer-instructions option in `ThreadOptions`. The official
+[configuration reference](https://developers.openai.com/codex/config-reference)
+documents `developer_instructions` as additional developer instructions injected into
+the session. The SDK's typed `config` object can set that official CLI key, so the
+capability is supported even though it is not a named `ThreadOptions` field.
 
 ## Tracks / scope
 
@@ -116,16 +122,23 @@ latency is a real behavior change. Abort a command and immediately send another 
 the same resumed thread; confirm the session is consistent and the interrupted command
 does not outlive the turn.
 
-Confirm that `turn.completed.usage` is per-turn rather than thread-cumulative before
-writing it to the ledger. Probe whether cancellation still yields usage; missing
-cancellation usage must be recorded as unavailable rather than reusing prior values.
+Establish whether `turn.completed.usage` is per-turn or thread-cumulative before writing
+it to the ledger. The 0.147.0 two-turn probe observed cumulative counters. Probe whether
+cancellation still yields usage; missing cancellation usage must be recorded as
+unavailable rather than reusing prior values. Counter resets and ledger write failures
+must warn without changing an otherwise completed turn into a failure.
 
 Probe developer instructions separately. Pass a nonce only through the documented SDK
-configuration path if one exists. Confirm that Codex treats it as developer context,
+`config.developer_instructions` path. Confirm that Codex treats it as developer context,
 does not render it as a user message, retains it after resume, and still loads the box's
 generated `AGENTS.md` and installed plugin. If the public SDK cannot preserve this role,
 stop the execution migration and open an upstream SDK request. Do not prepend the system
 prompt to user input.
+
+**First implementation chunk:** Add the pinned SDK dependency and a manual capability
+probe that records typed events, usage, timing, interruption, resume, context nonce,
+plugin access, sandbox behavior, images, and structured output. This chunk changes no
+production runner.
 
 ### Track 2 — Build one typed Codex SDK adapter
 
@@ -147,6 +160,10 @@ Use one adapter instance shape for batch and chat. Batch consumes one turn. Chat
 the SDK `Thread` object and serializes `runStreamed()` calls, while accepting that the SDK
 starts a Codex CLI process per turn. Resumed chat constructs the thread through
 `resumeThread()`. `AbortController` replaces raw `turn/interrupt` calls.
+
+**First implementation chunk:** Define the injected SDK runner interface and a fake that
+can emit complete, failed, and interrupted streams. Add a pure SDK-event adapter doctest
+before wiring either production caller.
 
 ### Track 3 — Migrate live chat and batch execution
 
@@ -170,6 +187,10 @@ budget. Do not invent turn IDs: the current SDK exposes a thread ID but not a tu
 so usage records need a callback-owned invocation ID or a schema migration that makes
 native turn ID optional.
 
+**First implementation chunk:** Migrate batch execution behind the existing `Agent`
+contract. Keep app-server execution available through an internal rollout switch until
+the capability and knowledge-audit comparisons pass.
+
 ### Track 4 — Quarantine unsupported transcript operations
 
 **What:** Reduce raw app-server use to one read/admin-only compatibility module for
@@ -190,6 +211,10 @@ Revisit this module when the SDK adds supported history APIs. A callback-owned p
 transcript remains a separate future design option only if the SDK gap persists and the
 maintenance cost becomes material.
 
+**First implementation chunk:** Replace the generic app-server export with a
+history-specific service interface and preserve the existing transcript doctests against
+that narrower interface.
+
 ### Track 5 — Delete raw execution transport
 
 **What:** Remove raw app-server lifecycle, turn, streaming, interruption, approval, and
@@ -203,6 +228,9 @@ the Codex SDK adapter and permits the raw compatibility client only inside Codex
 transcript administration. Product code imports Callback Box contracts, not vendor
 types. Delete the general `CodexAppServer` API so new callers cannot send arbitrary
 methods.
+
+**First implementation chunk:** Add an import-boundary test, then remove execution
+methods and schemas once both production runners use the SDK adapter.
 
 ## Could this be simpler?
 
@@ -228,19 +256,24 @@ part of this work.
 
 ## Failure modes
 
-| What can fail | Handling and evidence | Clear-or-silent? |
-|---|---|---|
-| SDK cannot supply developer instructions with the right role | Capability probe blocks migration; keep current backend and file an upstream request. | Clear |
-| SDK or bundled CLI version changes event shape | Pinned dependency, exhaustive typed mapping, compile failure, and fixture tests. | Clear |
-| Stream ends without completion | Return a failed run with captured SDK error and preserve partial diagnostic activity. | Clear |
-| Cancellation races with completion or loses usage | One adapter state machine settles once; runtime probe covers cancellation, immediate resume, and usage availability. | Clear |
-| SDK usage is cumulative rather than per-turn | Capability probe blocks ledger writes until semantics are established. | Clear |
-| Per-turn CLI startup makes chat materially slower | Measure fresh and resumed latency against app-server before cutover; retain old runner if the regression is unacceptable. | Clear |
-| Chat image is a URL or base64 block | Materialize to a bounded temporary file, pass a local path, then remove it. | Clear |
-| Usage lacks native turn ID | Store a callback invocation ID and document the identity change; never fabricate a native ID. | Declared change |
-| Read/admin app-server shape changes | The isolated compatibility module fails visibly; execution remains SDK-owned. | Clear |
-| SDK omits a current app-server item type | Capability matrix identifies the lost product behavior before cutover. | Clear |
-| Temporary image cleanup fails | Log the exact temporary directory and retry cleanup on startup. | Clear |
+The known history presentation loss is explicit above. The cutover dependencies below
+have focused automated coverage, runtime evidence, or visible handling; rows marked as
+future tests are follow-up hardening, not evidence already obtained.
+
+| What can fail | Verification | Handling exists? | Clear-or-silent? |
+|---|---|---|---|
+| SDK cannot supply developer instructions with the right role | Real nonce and resume probe | Capability probe blocks migration; keep current backend and file an upstream request. | Clear |
+| SDK or bundled CLI version changes event shape | Typecheck and focused event-mapper doctests | Pin the dependency and use exhaustive event mapping. | Clear |
+| Stream ends without completion | Adapter handling; fake-stream regression test remains useful | Return a failed run with a specific missing-completion error and preserve partial diagnostic activity. | Clear |
+| Cancellation races with completion or loses usage | Real cancellation/resume probe | One adapter state machine settles once and records unavailable usage explicitly. | Clear |
+| SDK usage semantics change | Real two-turn cumulative-usage probe and delta doctest | Reject a decreasing counter, warn, and never fail completed work over accounting. | Clear |
+| Per-turn CLI startup makes chat materially slower | Fresh/resumed timing probe | The measured process cost is accepted as part of using the supported SDK boundary. | Clear |
+| Chat image is a URL or base64 block | Materialization implementation; focused cleanup fixture remains useful | Materialize to a per-turn temporary file, pass a local path, then remove it. | Clear |
+| Usage lacks native turn ID | Usage doctest | Store a callback invocation ID after an explicit ledger schema change; never fabricate a native ID. | Declared change |
+| SDK-created threads disappear from history lists | Real SDK-exec to app-server read/list probe and request-parameter doctest | Include the `exec` source explicitly and permit metadata repair scanning. | Clear |
+| Read/admin app-server shape changes | Existing transcript doctest plus focused real read/list probe | The isolated compatibility module fails visibly; execution remains SDK-owned. | Clear |
+| SDK omits a current app-server item type | SDK union and event-adapter fixtures | The live/history presentation loss is declared above rather than silently claimed as parity. | Declared loss |
+| Temporary image cleanup fails | Cleanup runs in `finally`; cleanup-failure test remains useful | The turn fails visibly if cleanup itself fails. | Clear |
 
 ## Agent-flow / user-flow edge cases
 
@@ -256,8 +289,9 @@ part of this work.
   grounding.
 - **Validation error UX — UNCHANGED.** Validation still occurs after SDK file changes
   and remains visible to the boxholder.
-- **Optimistic chat rendering — PRESERVED.** The local user frame remains immediate;
-  persisted SDK history must not temporarily reclassify it as another sender.
+- **Optimistic chat rendering — PRESERVED BY THE UI.** For a fresh SDK thread, the
+  backend waits for `thread.started` so the authoritative user frame carries the real
+  session ID and is never temporarily classified as another sender.
 - **Resume after process restart — GATED.** A real SDK probe must show that the saved
   thread ID resumes with the same context and plugin behavior.
 
@@ -275,8 +309,6 @@ part of this work.
 
 ## Open design questions
 
-- Does the pinned SDK support developer instructions through a documented option not
-  present in 0.147.0 types, or only through generic CLI config? This is the first gate.
 - How long should Callback Box retain the read/admin compatibility module before
   reevaluating SDK support or a product transcript? There is no reason to set a date
   until its maintenance cost is observed.
@@ -287,7 +319,7 @@ part of this work.
 
 ## Knowledge audits
 
-Run the existing Codex knowledge audits unchanged before and after SDK cutover. They are
+Run the existing Codex knowledge audits before and after SDK cutover. They are
 the strongest end-to-end check that system context, AGENTS mirrors, rules, skills,
 plugins, cwd, and package context still reach the box agent with the same semantics.
 
@@ -295,12 +327,14 @@ Run exact paired probes for `temp-file-location` and `image-exif-date`, plus the
 non-sensitive context corpus already used for Codex. A failure blocks rollout until the
 prompt report shows whether the missing knowledge was absent from context, assigned the
 wrong role, or ignored by the model. Do not tune audit prompts merely to hide an SDK
-loading regression.
+loading regression. The `image-exif-date` prompt and navigation assertion were repaired
+as separate audit-harness work during this workstream, so its passing result is evidence
+that the final route works, not an unchanged before/after comparison by itself.
 
 ## Implementation order
 
 1. Pin the SDK and commit a capability matrix from real probes, with developer
-   instructions as the blocking gate.
+   instruction semantics as the blocking gate.
 2. Add the single typed SDK adapter and fixture tests for every exported SDK item/event.
 3. Migrate batch execution and compare outputs, tools, validation, usage, cancellation,
    structured output, and knowledge audits against app-server.

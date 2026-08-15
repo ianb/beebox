@@ -1,6 +1,7 @@
 /** Normalize Codex app-server activity into callback-box's shared tool-call shape. */
 
 import { z } from "zod";
+import type { CodexSdkItem } from "./codex-sdk-session.js";
 import type { ChatMessageAssistant, ChatMessageContent } from "../core/chat/message-types.js";
 import { isRecord } from "../lib/is-record.js";
 
@@ -133,9 +134,56 @@ export function normalizeCodexToolItem(raw: unknown): CodexToolContent | null {
   };
 }
 
+/** Convert the official SDK item vocabulary used by live batch and chat runs. */
+export function normalizeCodexSdkToolItem(item: CodexSdkItem): CodexToolContent | null {
+  switch (item.type) {
+    case "command_execution":
+      return { type: "tool_use", id: item.id, name: "Bash", input: { command: item.command } };
+    case "file_change": {
+      const paths = item.changes.map((change) => change.path);
+      return {
+        type: "tool_use",
+        id: item.id,
+        name: "Edit",
+        input: {
+          ...(paths[0] === undefined ? {} : { file_path: paths[0] }),
+          ...(paths.length <= 1 ? {} : { file_paths: paths }),
+          status: item.status,
+        },
+      };
+    }
+    case "web_search":
+      return { type: "tool_use", id: item.id, name: "WebSearch", input: { query: item.query } };
+    case "mcp_tool_call":
+      return {
+        type: "tool_use",
+        id: item.id,
+        name: `${item.server}.${item.tool}`,
+        input: record(item.arguments),
+      };
+    case "todo_list":
+      return { type: "tool_use", id: item.id, name: "TodoWrite", input: { items: item.items } };
+    case "agent_message":
+    case "reasoning":
+    case "error":
+      return null;
+  }
+}
+
 /** Build the provider-neutral assistant frame consumed by live ChatSession. */
 export function codexToolChatMessage(raw: unknown, sessionId: string): ChatMessageAssistant | null {
   const tool = normalizeCodexToolItem(raw);
+  if (tool === null) return null;
+  return {
+    type: "assistant",
+    session_id: sessionId,
+    uuid: tool.id,
+    message: { role: "assistant", content: [tool] },
+  };
+}
+
+export function codexSdkToolChatMessage(item: CodexSdkItem, sessionId: string): ChatMessageAssistant | null {
+  const tool = normalizeCodexSdkToolItem(item);
   if (tool === null) return null;
   return {
     type: "assistant",

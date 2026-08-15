@@ -27,6 +27,13 @@ export const codexTurnUsageSchema = z.object({
 export type CodexTokenUsage = z.infer<typeof codexTokenUsageSchema>;
 export type CodexTurnUsage = z.infer<typeof codexTurnUsageSchema>;
 
+export class CodexUsageCounterResetError extends Error {
+  constructor() {
+    super("Codex cumulative usage was smaller than its recorded session total");
+    this.name = "CodexUsageCounterResetError";
+  }
+}
+
 /** Append one completed native turn. Callers pass `last`, never cumulative totals. */
 export async function appendCodexTurnUsage(boxRoot: string, entry: CodexTurnUsage): Promise<void> {
   const filePath = path.join(boxRoot, CODEX_USAGE_REL_PATH);
@@ -55,4 +62,43 @@ export async function readCodexTurnUsage(boxRoot: string): Promise<CodexTurnUsag
     }
   }
   return entries;
+}
+
+export async function totalCodexSessionUsage(boxRoot: string, sessionId: string): Promise<CodexTokenUsage> {
+  const total: CodexTokenUsage = {
+    inputTokens: 0,
+    cachedInputTokens: 0,
+    cacheWriteInputTokens: 0,
+    outputTokens: 0,
+    reasoningOutputTokens: 0,
+  };
+  for (const entry of await readCodexTurnUsage(boxRoot)) {
+    if (entry.sessionId !== sessionId) continue;
+    total.inputTokens += entry.usage.inputTokens;
+    total.cachedInputTokens += entry.usage.cachedInputTokens;
+    total.cacheWriteInputTokens += entry.usage.cacheWriteInputTokens;
+    total.outputTokens += entry.usage.outputTokens;
+    total.reasoningOutputTokens += entry.usage.reasoningOutputTokens;
+  }
+  return total;
+}
+
+/** The SDK reports thread-cumulative usage; the ledger stores one turn at a time. */
+export function codexUsageDelta(current: CodexTokenUsage, previous: CodexTokenUsage): CodexTokenUsage {
+  if (
+    current.inputTokens < previous.inputTokens ||
+    current.cachedInputTokens < previous.cachedInputTokens ||
+    current.cacheWriteInputTokens < previous.cacheWriteInputTokens ||
+    current.outputTokens < previous.outputTokens ||
+    current.reasoningOutputTokens < previous.reasoningOutputTokens
+  ) {
+    throw new CodexUsageCounterResetError();
+  }
+  return {
+    inputTokens: current.inputTokens - previous.inputTokens,
+    cachedInputTokens: current.cachedInputTokens - previous.cachedInputTokens,
+    cacheWriteInputTokens: current.cacheWriteInputTokens - previous.cacheWriteInputTokens,
+    outputTokens: current.outputTokens - previous.outputTokens,
+    reasoningOutputTokens: current.reasoningOutputTokens - previous.reasoningOutputTokens,
+  };
 }

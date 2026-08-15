@@ -7,9 +7,9 @@ existing history view without reading Codex's private rollout file.
 import {
   adaptCodexThreadHistory,
   assertCodexThreadCwd,
+  codexHistoryListParams,
 } from "../../src/core/chat/session/codex-transcript.js";
-import { normalizeCodexToolItem } from "../../src/services/codex-tool-activity.js";
-import { codexChatItemNotificationSchema } from "../../src/services/codex-chat.js";
+import { normalizeCodexSdkToolItem, normalizeCodexToolItem } from "../../src/services/codex-tool-activity.js";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -80,17 +80,29 @@ JSON.stringify([
 => [{"name":"Bash","input":{"command":"cb status"}},{"name":"Edit","input":{"file_path":"store/A.card","status":"completed"}},{"name":"WebSearch","input":{"query":"callback box"}},{"name":"calendar.list","input":{"days":7}},{"name":"Agent","input":{"description":"/root/review","kind":"started","thread_id":"thread-1"}}]
 ```
 
-Live notification validation accepts tool-specific status values before the
-shared adapter sees the item:
+The live SDK vocabulary maps through a separate typed entry point while native
+history retains its app-server vocabulary:
 
 ```ts
-const liveTool = codexChatItemNotificationSchema.parse({
-  threadId: "thread-1",
-  turnId: "turn-1",
-  item: { id: "mcp-1", type: "mcpToolCall", status: "running", server: "drive", tool: "find", arguments: {} },
-});
-normalizeCodexToolItem(liveTool.item)?.name
+normalizeCodexSdkToolItem({
+  id: "mcp-1",
+  type: "mcp_tool_call",
+  status: "completed",
+  server: "drive",
+  tool: "find",
+  arguments: {},
+  result: { content: [], structured_content: {} },
+})?.name
 => drive.find
+```
+
+SDK threads are created by `codex exec`. The history app-server defaults to
+interactive sources, so listing must opt into both SDK and legacy execution
+sources and permit its JSONL metadata repair scan.
+
+```ts
+JSON.stringify(codexHistoryListParams(["/boxes/example"], "next"))
+=> {"cursor":"next","limit":100,"sortKey":"updated_at","sortDirection":"desc","cwd":["/boxes/example"],"sourceKinds":["exec","appServer"],"useStateDbOnly":false}
 ```
 
 User identity carried by callback-box's message wrapper is normalized just as
