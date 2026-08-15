@@ -1,17 +1,26 @@
 ---
 title: "The dev router grew ad hoc and its environment is underpowered"
-workstream: unattached
+workstream: streams-and-issues
 area: router
-needs: [design]
 labels: [router, architecture]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder observation
+resolution: wontfix
 ---
 
-The resident workstreams application has been split into
-[`2026-08-13-resident-workstreams-app.md`](../closed/code-quality/2026-08-13-resident-workstreams-app.md).
-This issue remains open for the dependency-light bootstrap router itself.
+> **Closed as moot on 2026-08-14.** The resident `workstreams-app/` extraction
+> removed the app-shaped UI, issue mutation, and destructive workstream actions
+> that motivated this refactor. The remaining router is intentionally a
+> dependency-light bootstrap, authentication, proxy, diagnostic, and process
+> supervision layer. Its complexity is protected by focused lifecycle and auth
+> tests. There is no current mandate to replace that deliberate boundary with a
+> framework or a new internal routing abstraction.
+
+The resident workstreams application was split into
+[`2026-08-13-resident-workstreams-app.md`](2026-08-13-resident-workstreams-app.md).
+The original issue then remained open for the dependency-light bootstrap
+router itself until the 2026-08-14 disposition above.
 
 `bin/` is now **~12,500 lines** of router, and it started as a small script. It
 does a lot: process supervision for every worktree, a fail-closed
@@ -144,7 +153,7 @@ browser gained interactive mutation that writes to the main checkout. The next
 feature will pay the same tax, and destructive endpoints raise what a missing
 guard costs.
 
-Related, unfiled: the issues browser's interactive priority control writes to
-the main checkout without committing (`router-issues.ts:1355`), which leaves
-main dirty — and `bin/land` refuses to merge into a dirty main checkout, so
-triage in the browser can block every worktree's `/finish`.
+The former issues browser wrote priority changes without committing them. The
+resident app's `issues-mutation-service.ts` now commits metadata-only changes
+through `commitTargets`, so browser triage no longer leaves main dirty and
+blocks `bin/land`.

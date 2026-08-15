@@ -1,11 +1,18 @@
 ---
 title: "Watch for a Claude worktree-isolation off switch"
-workstream: workstreams
+workstream: streams-and-issues
 area: tooling
-design: ../../callback-box/docs/implemented-plans/workstreams.md
+design: ../../../callback-box/docs/implemented-plans/workstreams.md
 filed-by: agent
 discovered-in: worktree-workstreams — reviewing the landing and router action boundaries
+resolution: wontfix
 ---
+
+> **Closed as invalid on 2026-08-14.** `bin/land` and the narrow lifecycle
+> commands are the desired architecture, not temporary compromises around
+> Claude Code isolation. They provide one auditable, agent-neutral path with
+> repository-owned safety checks. A future isolation off-switch would not
+> remove that need.
 
 Claude Code's worktree isolation currently prevents a worker from using git
 directly against the main checkout. That constraint is why `bin/land` resolves

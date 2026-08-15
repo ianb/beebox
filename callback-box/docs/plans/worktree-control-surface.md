@@ -14,11 +14,11 @@ client of the same command. Behavior does not change. Who can call it does.
 
 **Issues addressed:**
 
-- [worktree/session workflow redesign](../../../issues/features/2026-08-08-worktree-session-workflow-redesign.md)
+- [worktree/session workflow redesign](../../../issues/closed/features/2026-08-08-worktree-session-workflow-redesign.md)
   — this plan is that issue's *enabling refactor*, and does not close it. It
   makes the pieces recombinable; the workflow change stays there.
 
-- [derive public worktree paths](../../../issues/code-quality/2026-08-01-derive-public-worktree-paths.md)
+- [derive public worktree paths](../../../issues/closed/code-quality/2026-08-01-derive-public-worktree-paths.md)
   — the hardcoded `~/src/…` paths live in exactly the files this plan rewrites.
   Deriving them is folded into Track A, not left as a separate sweep.
 - [dev scripts into bin](../../../issues/docs-and-chores/2026-05-26-dev-scripts-into-bin.md)
@@ -36,7 +36,7 @@ items exist or design a flow that produces them. See NOT in scope.
 **On the "issue about making the system":** no such item existed when this plan
 was written — I grepped every open category directory for `worktree` (109 files
 hit) and read every candidate title. The boxholder filed
-[the redesign issue](../../../issues/features/2026-08-08-worktree-session-workflow-redesign.md)
+[the redesign issue](../../../issues/closed/features/2026-08-08-worktree-session-workflow-redesign.md)
 later the same day, and it agrees with this plan on the substance: the two-case
 distinction, the rejection of Conductor and the desktop app as unbuildable-upon,
 the Codex-must-stay-first-class constraint, and the three-way status

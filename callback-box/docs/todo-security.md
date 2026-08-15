@@ -2,7 +2,7 @@
 
 This file was the standing security-posture notes. It dissolved
 (2026-08-07) into two better homes, per the
-[agent-maintained security report](../../issues/features/2026-07-20-agent-maintained-security-report.md)
+[agent-maintained security report](../../issues/closed/features/2026-07-20-agent-maintained-security-report.md)
 design:
 
 - **Current posture, accepted risks, and the full inventory** →

@@ -1,11 +1,16 @@
 ---
 title: "wt_remove_now silently continues to branch deletion when the trash-mv fails"
-workstream: seam
+workstream: streams-and-issues
 area: bin
 filed-by: agent
 discovered-in: "worktree-seam — cross-model review follow-up on the worktree control surface"
 priority: normal
+resolution: implemented
 ---
+
+> **Resolved in `b1eafe78`.** A failed worktree trash move now reports the
+> error, returns failure, and preserves both the worktree registration and its
+> branch. A regression doctest simulates the move failure.
 
 `bin/lib/worktree-teardown.sh` `wt_remove_now`:
 

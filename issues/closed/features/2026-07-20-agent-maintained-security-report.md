@@ -6,10 +6,21 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder
 labels: [soft-launch]
-next-action: fixed
+resolution: implemented
 ---
 
-> **Status 2026-08-07** — built on `worktree-security-report`: the
+**Closed 2026-08-14.** Built and signed off. `db7901c5` created the system (the
+`/security-report` skill as the committed rubric, `callback-box/docs/security-report.md`,
+and `callback-box/SECURITY.md`); `3589d96c` and `3bbddcc5` applied cross-model
+review findings; `8c9c3ec9` stamped the boxholder sign-off, live now in the
+`reviewed-by:` header at `callback-box/SECURITY.md:6`. `a8aa45fd` shows a
+second regeneration cycle has already run in practice, which is the property
+the issue actually wanted — a document an agent maintains, not a one-time audit.
+
+The status note below was stale: it said "DRAFT — unreviewed / awaiting
+boxholder review", which the sign-off commit superseded a week ago.
+
+> **Status 2026-08-07 (superseded)** — built on `worktree-security-report`: the
 > `/security-report` skill (the committed rubric), the structured report
 > (`callback-box/docs/security-report.md`), and a DRAFT
 > `callback-box/SECURITY.md`, cross-model-reviewed (7 findings applied).
@@ -18,7 +29,7 @@ next-action: fixed
 
 The launch needs a SECURITY.md-shaped "what this can touch" page (the
 OpenClaw lesson from
-[the competitive research](../../research/openclaw-hermes/README.md):
+[the competitive research](../../../research/openclaw-hermes/README.md):
 install UX was never the complaint, blast radius was — what saved them was an
 explicit threat-model doc). Rather than hand-writing it once and letting it
 rot, the boxholder wants a **system**: the report is generated and updated by
@@ -34,16 +45,16 @@ boxholder, 2026-07-20.)
 Content the generation pass should inventory: unauthenticated endpoints,
 auth surfaces and bind defaults, what the agent can touch (filesystem/tools),
 external services data flows to, residual accepted risks.
-[todo-security.md](../../callback-box/docs/todo-security.md) is the seed —
+[todo-security.md](../../../callback-box/docs/todo-security.md) is the seed —
 it's already an honest posture doc (auth model, setup-token window, no MFA)
 and shows the right register.
 
 Fits existing infrastructure: knowledge-audits
-([docs](../../callback-box/docs/knowledge-audits.md)) and the doc-generation
+([docs](../../../callback-box/docs/knowledge-audits.md)) and the doc-generation
 tooling are precedents for committed-prompt → generated-artifact loops.
 
 **First run produces the launch SECURITY.md** — gate 4 in
-[soft-launch posture](../decisions/2026-07-20-soft-launch-posture.md) — so
+[soft-launch posture](../../decisions/2026-07-20-soft-launch-posture.md) — so
 the system and the gate are one piece of work, not two.
 
 Open: where the prompt lives (a procedure card? `src/dev/`? a skill), what
@@ -113,9 +124,9 @@ captured here so the report author has the outline.
 
 **Filed as issues:**
 - WS-auth socket-level integration test →
-  [no-socket-level-ws-auth-test](../code-quality/2026-08-07-no-socket-level-ws-auth-test.md).
+  [no-socket-level-ws-auth-test](../../code-quality/2026-08-07-no-socket-level-ws-auth-test.md).
 - Incremental auth + per-box Google API audit logging → folded into
-  [google-auth-policy-proxy](2026-07-28-google-auth-policy-proxy.md) as conditional
+  [google-auth-policy-proxy](../../features/2026-07-28-google-auth-policy-proxy.md) as conditional
   sub-mitigations.
 
 **Already fixed / already tracked (seed the accepted-risks + inventory sections;
@@ -128,10 +139,10 @@ do not re-file):**
   ownership, cross-process lock lease-steal (closed issue) — documented tradeoffs.
 - Agent blast radius (`permissionMode: "bypassPermissions"`, no tool allowlist —
   `src/core/agent/run.ts`) → tracked in
-  [agent-containment-allowed-directories](2026-07-20-agent-containment-allowed-directories.md).
+  [agent-containment-allowed-directories](../../features/2026-07-20-agent-containment-allowed-directories.md).
 - Mobile token at rest →
-  [ios-token-plaintext-not-keychain](../closed/bugs/2026-07-17-ios-token-plaintext-not-keychain.md),
-  [mobile-device-token-no-expiry](../code-quality/2026-07-19-mobile-device-token-no-expiry.md).
+  [ios-token-plaintext-not-keychain](../bugs/2026-07-17-ios-token-plaintext-not-keychain.md),
+  [mobile-device-token-no-expiry](../../code-quality/2026-07-19-mobile-device-token-no-expiry.md).
 
 **Report content outline (structure + pointers the report must cover):**
 - **Endpoints / auth / abilities** — every route + its auth; enumerate the

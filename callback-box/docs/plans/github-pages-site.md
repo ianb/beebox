@@ -295,7 +295,7 @@ Ordered by implementation dependency, then surface size.
   zero/ambiguous → visible stale marker; missing source or non-allowlisted
   path → **build fails** (fail-closed). This is the same
   committed-input → auditable-artifact shape the
-  [security report](../../../issues/features/2026-07-20-agent-maintained-security-report.md)
+  [security report](../../../issues/closed/features/2026-07-20-agent-maintained-security-report.md)
   *proposes* (that system is designed but not yet built — this site is the
   pattern's first implementation, not its second).
 - **Derivation tiers** (boxholder, 2026-07-21: "Some of the aspects of the
