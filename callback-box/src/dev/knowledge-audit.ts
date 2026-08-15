@@ -168,6 +168,7 @@ program
 
       // Print quick summary
       const passedContains = result.checks.containsChecks.every((c) => c.found);
+      const passedMatches = result.checks.matchesChecks.every((c) => c.found);
       const passedNotContains = result.checks.notContainsChecks.every((c) => !c.found);
       const passedNotMatches = result.checks.notMatchesChecks.every((c) => !c.found);
       const passedAny = result.checks.containsAnyCheck ? result.checks.containsAnyCheck.found : true;
@@ -175,7 +176,7 @@ program
       const passedReads = result.checks.shouldReadChecks.every((c) => c.wasRead);
       const passedAvoidedReads = result.checks.shouldNotReadChecks.every((c) => !c.wasRead);
       const passedBash = result.checks.bashContainsChecks.every((c) => c.found);
-      const status = passedContains && passedNotContains && passedNotMatches && passedAny && passedCards && passedReads && passedAvoidedReads && passedBash ? "\u2713" : "\u2717";
+      const status = passedContains && passedMatches && passedNotContains && passedNotMatches && passedAny && passedCards && passedReads && passedAvoidedReads && passedBash ? "\u2713" : "\u2717";
       const ctx = result.behavior.context;
       const ctxNote = ctx ? `, ${Math.round(ctx.initialTokens / 1000)}k ctx` : "";
       console.log(`\n${status} ${test.id} — ${result.behavior.filesRead.length} files read, ${result.behavior.searches.length} searches${ctxNote}`);

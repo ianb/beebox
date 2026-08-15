@@ -1,6 +1,7 @@
 /** Adapt Codex's live provider activity into knowledge-audit observations. */
 
 import type { CodexObservedActivity } from "../../core/agent/codex-run.js";
+import { shellCommandConsultsFiles, shellCommandSearches } from "./shell-command-observation.js";
 import type { AgentBehavior } from "./test-runner.js";
 
 /** Pure normalization boundary for fixture tests and provider parity checks. */
@@ -16,7 +17,7 @@ export function codexBehaviorFromActivity(
     return [];
   });
   const shellSearches = commands
-    .filter((command) => /(?:^|\s|[;&|])(?:rg|grep|find|fd)\s/u.test(command))
+    .filter(shellCommandSearches)
     .map((command) => ({ tool: "Bash", summary: command }));
   const responseText = rawResponseText.trim();
   return {
@@ -24,7 +25,7 @@ export function codexBehaviorFromActivity(
     // tool. Keep only commands that actually invoke a text-reading utility,
     // and normalize editable AGENTS.md mirrors to their canonical CLAUDE.md.
     filesRead: commands
-      .filter((command) => /(?:^|\s|[;&|])(?:cat|head|tail|less|more|sed)\s/u.test(command))
+      .filter(shellCommandConsultsFiles)
       .map((command) => command.replaceAll("AGENTS.md", "CLAUDE.md")),
     searches: [...providerSearches, ...shellSearches],
     bashCommands: commands,

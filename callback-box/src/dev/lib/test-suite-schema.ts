@@ -7,6 +7,16 @@
 
 import { z } from "zod";
 
+const regexPatternSchema = z.string().min(1).refine((pattern) => {
+  try {
+    // eslint-disable-next-line security/detect-non-literal-regexp -- validation is the purpose of this schema
+    new RegExp(pattern, "i");
+    return true;
+  } catch (_error) {
+    return false;
+  }
+}, { message: "Must be a valid non-empty regular expression" });
+
 export const auditTestSchema = z.object({
   id: z.string(),
   prompt: z.string(),
@@ -14,6 +24,8 @@ export const auditTestSchema = z.object({
   watch_for: z.string(),
   correct_contains: z.array(z.string()).optional(),
   correct_contains_any: z.array(z.string()).optional(),
+  /** Case-insensitive regexes that must match the response. */
+  correct_matches: z.array(regexPatternSchema).optional(),
   /** Substrings that must NOT appear in the agent's response. */
   response_not_contains: z.array(z.string()).optional(),
   /**
@@ -21,7 +33,7 @@ export const auditTestSchema = z.object({
    * for forbidden shapes a substring can't express (e.g. a bare card
    * filename outside a markdown link target or ref attribute).
    */
-  response_not_matches: z.array(z.string()).optional(),
+  response_not_matches: z.array(regexPatternSchema).optional(),
   cards_contain: z.array(z.string()).optional(),
   should_read: z.array(z.string()).optional(),
   should_not_read: z.array(z.string()).optional(),

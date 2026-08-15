@@ -204,10 +204,7 @@ function formatResponse(behavior: Behavior): string[] {
 }
 
 function formatCheckLines(checks: Checks): string[] {
-  const checkLines: string[] = [];
-  for (const c of checks.containsChecks) {
-    checkLines.push(`- ${c.found ? "\u2713" : "\u2717"} Response contains "${c.expected}"`);
-  }
+  const checkLines = formatPositiveTextChecks(checks);
   for (const c of checks.notContainsChecks) {
     // Forbidden: pass when *not* found, fail when found.
     checkLines.push(`- ${c.found ? "\u2717" : "\u2713"} Response does NOT contain "${c.forbidden}"`);
@@ -237,4 +234,14 @@ function formatCheckLines(checks: Checks): string[] {
     checkLines.push(`- ${c.found ? "\u2713" : "\u2717"} Bash command contains "${c.expected}"${detail}`);
   }
   return checkLines;
+}
+
+function formatPositiveTextChecks(checks: Checks): string[] {
+  const lines = checks.containsChecks.map((check) =>
+    `- ${check.found ? "✓" : "✗"} Response contains "${check.expected}"`);
+  for (const check of checks.matchesChecks) {
+    const detail = check.found && check.matched ? ` (matched "${check.matched}")` : "";
+    lines.push(`- ${check.found ? "✓" : "✗"} Response matches /${check.pattern}/${detail}`);
+  }
+  return lines;
 }

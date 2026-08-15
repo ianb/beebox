@@ -11,6 +11,7 @@ import type { CodexObservedActivity } from "../../../src/core/agent/codex-run-ac
 
 const behavior = codexBehaviorFromActivity([
   { type: "command", command: "sed -n '1,80p' docs/generated/card-image.md" },
+  { type: "command", command: "/opt/homebrew/bin/bash -lc \"sed -n '1,80p' docs/generated/card-image.md && rg -n EXIF docs/generated\"" },
   { type: "command", command: "rg -n EXIF docs/generated" },
   { type: "search", tool: "WebSearch", summary: "EXIF DateTimeOriginal" },
 ], "  The date comes from EXIF.  ");
@@ -38,13 +39,14 @@ JSON.stringify(observed)
 
 ```ts
 const summary = JSON.stringify({
-  filesRead: behavior.filesRead,
-  bash: behavior.bashRawCommands,
-  searches: behavior.searches,
+  readCount: behavior.filesRead.length,
+  wrappedReadDetected: behavior.filesRead.some((command) => command.includes("bash -lc")),
+  bashCount: behavior.bashRawCommands.length,
+  searchCount: behavior.searches.length,
   response: behavior.responseText,
   words: behavior.responseLength,
   context: behavior.context,
 });
 summary
-=> {"filesRead":["sed -n '1,80p' docs/generated/card-image.md"],"bash":["sed -n '1,80p' docs/generated/card-image.md","rg -n EXIF docs/generated"],"searches":[{"tool":"WebSearch","summary":"EXIF DateTimeOriginal"},{"tool":"Bash","summary":"rg -n EXIF docs/generated"}],"response":"The date comes from EXIF.","words":5,"context":null}
+=> {"readCount":3,"wrappedReadDetected":true,"bashCount":3,"searchCount":3,"response":"The date comes from EXIF.","words":5,"context":null}
 ```

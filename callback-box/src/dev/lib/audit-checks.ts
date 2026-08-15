@@ -15,6 +15,11 @@ export function runChecks(
     expected,
     found: behavior.responseText.toLowerCase().includes(expected.toLowerCase()),
   }));
+  const matchesChecks = (test.correct_matches ?? []).map((pattern) => {
+    // eslint-disable-next-line security/detect-non-literal-regexp -- authored in committed audit YAML
+    const match = new RegExp(pattern, "i").exec(behavior.responseText);
+    return { pattern, found: match !== null, ...(match && { matched: match[0] }) };
+  });
   const notContainsChecks = (test.response_not_contains ?? []).map((forbidden) => ({
     forbidden,
     found: behavior.responseText.toLowerCase().includes(forbidden.toLowerCase()),
@@ -52,6 +57,7 @@ export function runChecks(
   });
   return {
     containsChecks,
+    matchesChecks,
     notContainsChecks,
     notMatchesChecks,
     containsAnyCheck,
