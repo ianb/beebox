@@ -809,14 +809,17 @@ tests:
   #
   # Status (2026-07-03): both pass. add-daily-task answered scheduled-script +
   # config/schedules/ directly (dropped stale should_read card-scheduled-script.md).
-  # Status (2026-08-15, Codex): add-daily-task passes after its prompt was made
-  # explicit about implementing the automation inside the box, rather than
-  # ambiguously asking how a user requests one.
+  # Status (2026-08-15, Codex): both pass. Schedule authoring intentionally lives
+  # on the on-demand schedules skill rather than the always-on agent guide, so
+  # how-schedules-work now expects a generated schedule-card reference read.
+  # add-daily-task's prompt is explicit about implementing the automation inside
+  # the box rather than ambiguously asking how a user requests one.
 
   - id: how-schedules-work
     prompt: "How do scheduled tasks work in this box?"
-    expected_level: knows_directly
-    watch_for: "Describes tick/scheduled mechanism from agent guide"
+    expected_level: knows_about
+    should_read: ["docs/generated/card-scheduled-script.md"]
+    watch_for: "Loads the on-demand schedule guidance and describes the scheduled mechanism"
     tags: [schedules]
 
   - id: add-daily-task
