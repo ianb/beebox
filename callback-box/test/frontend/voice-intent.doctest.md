@@ -100,6 +100,7 @@ const hqIntent = {
   audioBlob: new Blob(["audio"], { type: "audio/wav" }),
   closeMic: false,
   hq: true,
+  words: [{ word: "rough", confidence: 0.4 }],
 };
 let finishHq: () => void = () => {};
 const hqGate = new Promise<void>((resolve) => { finishHq = resolve; });
@@ -126,7 +127,15 @@ prepared.emission.text.includes(nextComposerText)
 
 prepared.emission.diarized
 => true
+
+prepared.emission.words
+=> undefined
 ```
+
+The HQ pass used `hqIntent`'s words to describe text that got replaced —
+`usedHq` is true, so Track 3's HQ-drop rule applies: no `words` (and no
+`stt`/`<unsure>` marks at assemble time) regardless of what the realtime
+pass captured.
 
 ## Cleanup-send falls back to the realtime message on HQ failure
 
@@ -145,4 +154,16 @@ fallback.usedHq
 
 fallback.emission.text
 => frozen draft rough words <send-message phrase="clean up and send" />
+```
+
+The fallback used the realtime text, so `hqIntent.words` rides straight
+through onto the emission unchanged — `usedHq` is false, so the HQ-drop
+rule doesn't apply:
+
+```ts continue
+fallback.emission.words?.length
+=> 1
+
+fallback.emission.words?.[0]?.word
+=> rough
 ```

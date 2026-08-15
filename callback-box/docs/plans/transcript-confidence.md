@@ -151,30 +151,35 @@ Searched 2026-08-15 (see session research report):
 
 ## Vocabulary lock-ins
 
-One new machine-authored child element inside `<speech>` (following the
-`<user-selection>` child-element precedent, `chat-assemble.ts:74-88`), plus one
-new `<speech>` attribute. The user's spoken text is **never** modified or
-wrapped — the body stays byte-identical to today (cross-model review finding,
-2026-08-15: inline tags muddy user words, system annotation, and display markup
-in the one string every downstream consumer reads).
+One new inline marker inside the `<speech>` body, plus one new `<speech>`
+attribute (boxholder decision, 2026-08-15, after reviewing rendered examples
+from the measurement data):
 
-- `<unsure-words>"cloud" (0.29, in "they're all cloud code in"); "can" (0.52,
-  in "I think can have some")</unsure-words>` — appended after the body, one
-  entry per word below the threshold. Each entry carries the punctuated word,
-  the score (2 decimals), and a **context snippet of ±2 neighboring words taken
-  from the Deepgram words stream itself** — never from the sent body. Content
-  anchoring survives every transform the text goes through before send
-  (keyword-phrase removal, prior-composer-text prepend, punctuation drift);
-  repeated words ("that" ×3 under 0.8 in one sample message) are disambiguated
-  by their snippet.
+- `<unsure>word</unsure>` — wraps, in place, each word the transcriber had low
+  acoustic confidence in: `<unsure>In</unsure> fact, you are an agent…`. **No
+  score is carried** — a numeric confidence is false precision for the
+  consumer; the threshold is applied once, internally. The tag name is the
+  self-documentation: session logs, retranscribe printouts, and quoted
+  messages all read sensibly with no key at hand. Markers are placed by
+  matching the Deepgram words stream against the sent body (sequential,
+  normalized, fail-open per word — a word that cannot be confidently located
+  is left unmarked; a marker on the wrong word is worse than none).
 - `<speech stt="deepgram" …>` — stamped **only when confidence data was
-  captured and attached**. Its absence means no per-word confidence backs this
+  captured and applied**. Its absence means no per-word confidence backs this
   message (Voxtral, OpenAI realtime, iOS native dictation, HQ-replaced text,
-  or a capture failure): unmarked-because-blind, distinct from
+  or a capture/alignment failure): unmarked-because-blind, distinct from
   unmarked-because-confident. This is the honest answer to Voxtral parity, and
   it keeps every degradation collapsed onto one truthful state.
 - Threshold: **0.85**, a named constant with a comment citing this plan's
   measurement. Not user-configurable.
+- **Leakage-by-copy is the accepted cost** of inline (the cross-model review
+  argued for a separate element on this ground): an agent reusing dictated
+  text into a card could carry markers along. Mitigation is Track 5's prompt
+  key — strip `<unsure>` markers when reusing the text — plus the display
+  never rendering raw tags. A separate `<unsure-words>` element with context
+  snippets was fully designed and implemented first, then rejected for
+  indirection: the agent had to join entries back to occurrences, which
+  in-place marking gives for free.
 
 ## Tracks / scope
 
@@ -224,54 +229,49 @@ Ordered by implementation dependency.
 - **First chunk**: connections + actor context + hook, with a doctest at the
   machine level using scripted messages including a reconnect.
 
-### Track 3 — emission carries unsure entries; assemble appends the element
+### Track 3 — emission carries words; assemble marks the body inline
 
-- **What**: at keyword-fire / stop time, compute the low-confidence entries
-  **directly from the captured words stream**: for each word < 0.85, take
-  `{word, confidence, context}` where context is the ±2 neighboring words from
-  the same stream. There is **no alignment against the sent body** — the body
-  is `keyword.processedTranscript` (keyword-stripped, sometimes
-  interim-derived, `useRealtimeTranscription.ts:119-145`), joined with prior
-  composer input (`runKeywordSend`, `InteractiveChat-voice.ts:94-134`), so
-  positional alignment against it is structurally unreliable (cross-model
-  review findings 1–2). `createVoiceEmission`
-  (`src/frontend/src/input/emission.ts:108`) gains optional
-  `unsureWords: Array<{word, confidence, context}>`; `chat-assemble.ts`
-  serializes them as the `<unsure-words>` child element (XML-escaped) and
-  stamps `stt="deepgram"`.
+- **What**: at keyword-fire / stop time, snapshot the captured words stream
+  onto the emission (`words: FinalWord[]`, undefined = no data captured). At
+  assemble time, place `<unsure>` markers into the body by **sequential
+  normalized matching** of the words stream against the body text. The body is
+  `keyword.processedTranscript` (keyword-stripped, sometimes interim-derived,
+  `useRealtimeTranscription.ts:119-145`), joined with prior composer input
+  (`runKeywordSend`, `InteractiveChat-voice.ts:94-134`), so matching must be
+  **fail-open per word** (cross-model review findings 1–2): tokens the words
+  stream cannot be confidently aligned to (typed prior input, interim tails,
+  stripped keyword remnants) simply carry no markers. `stt="deepgram"` is
+  stamped when words were captured and applied.
 - **Send-site rules**:
-  - Keyword fast path and slow path (`runKeywordSend`): entries computed from
-    the hook's `finalWords` at fire time, passed on the emission.
+  - Keyword fast path and slow path (`runKeywordSend`): words snapshotted from
+    the hook at fire time, passed on the emission.
   - **HQ/narration replaces the text** (`prepareVoiceSubmitEmission` with
     `usedHq`, `InteractiveChat-voice.ts:132-151`): realtime words describe
-    text that was discarded — **drop the entries and the `stt` attr** (review
+    text that was discarded — **drop the words and the `stt` attr** (review
     finding 5). When the HQ pass falls back to realtime text (`!usedHq`),
-    entries attach.
+    marks attach.
   - Recovered dictation (`sendVoiceSegment`) and manual stop-and-send: pass
-    entries when the hook still holds them for the sent text; otherwise none.
+    words when the hook still holds them for the sent text; otherwise none.
 - **Why**: this is the persistence step — the `<speech>` content in the SDK
   JSONL is what the agent reads and what the display re-parses after reload.
-- **First chunk**: pure entry-computation + serialization functions with
-  doctests (extend `emission-assemble.doctest.md`: entries present, entries
-  empty, XML-escape case, HQ-drop case), then the wiring.
+- **First chunk**: pure marking function (words stream × body text →
+  marked body) with doctests (extend `emission-assemble.doctest.md`: clean
+  match, prior-typed-input prefix, keyword-stripped tail, repeated words,
+  no-match fail-open, none-unsure → `stt` only, HQ-drop case), then the
+  wiring.
 
-### Track 4 — display marks in the sent bubble
+### Track 4 — display styling of marked words
 
-- **What**: the user-message rendering path parses the `<unsure-words>`
-  element out of the message (it must never show raw), then for each entry
-  locates the word in the displayed text by **substring-matching its context
-  snippet** and styles that word (dotted underline; tooltip "transcriber
-  unsure (0.29)"). A word whose context no longer matches the displayed text
-  (edited, HQ-shifted, keyword boundary) gets **no visual mark** — fail-open
-  per word, never a mark on the wrong word (principle #4: a wrong mark is
-  worse than no mark).
-- **Verify during implementation**: the plan's earlier claim that
-  `user-message.tsx` already strips unknown embedded tags is **unverified**
-  (review finding 8 — it delegates to imported parsers). First step of this
-  track is reading `DeliveredMessageParts`/`UserMessageText`'s actual parser
-  and slotting `<unsure-words>` into the same mechanism `<user-selection>`
-  uses; if unknown-tag stripping does not exist, add explicit handling for
-  this element.
+- **What**: the user-message rendering path parses `<unsure>word</unsure>`
+  spans in the displayed text and renders the word with a subtle style
+  (italic, a muted color, or a dotted underline — pick one during
+  implementation with a `bin/browse` look). Nothing more: no tooltip, no
+  legend chrome (boxholder decision, 2026-08-15). Raw tags must never show.
+- **Verify during implementation**: whether the message parser strips unknown
+  embedded tags is **unverified** (review finding 8 —
+  `user-message.tsx` delegates to imported parsers). First step is reading
+  `DeliveredMessageParts`/`UserMessageText`'s actual parser and handling
+  `<unsure>` explicitly there.
 - **Why**: the read-back moment; same data, second consumer.
 - **First chunk**: the whole track, with a frontend doctest for the parse and
   a `bin/browse` visual check.
@@ -280,13 +280,13 @@ Ordered by implementation dependency.
 
 - **What**: a short addition to the chat prompt
   (`src/core/chat/session/prompts.ts`, beside the existing retranscribe
-  guidance): an `<unsure-words>` element lists words the transcriber had low
-  acoustic confidence in, with context and score; treat a listed
-  meaning-critical word (not/can't/numbers/names) as unverified — ask or
-  `cb chat retranscribe`; **absence of the element is not verification**
-  (messages without `stt=` carry no confidence data at all, and confident
-  substitutions never get flagged); never fabricate the element in your own
-  output.
+  guidance): `<unsure>word</unsure>` wraps words the transcriber had low
+  acoustic confidence in; treat a marked meaning-critical word
+  (not/can't/numbers/names) as unverified — ask or `cb chat retranscribe`;
+  **absence of marks is not verification** (messages without `stt=` carry no
+  confidence data at all, and confident substitutions never get flagged);
+  **strip the markers when reusing the text** (writing it into a card, quoting
+  it); never fabricate the marker in your own output.
 - **Why**: the marks are only as good as the agent's understanding of their
   semantics (principle #12).
 - **First chunk**: the prompt text + one knowledge-audit entry (see below).
@@ -294,33 +294,31 @@ Ordered by implementation dependency.
 ## Could this be simpler?
 
 Simplest plausible version: a bare trailing list —
-`<unsure-words>"cloud" (0.29); "can" (0.52)</unsure-words>` — no context
-snippets, no display work.
+`<unsure-words>"cloud"; "can"</unsure-words>` — no body changes, no matching.
 
-What the fuller plan buys, concretely:
+Why the plan marks inline instead: the bare list is **ambiguous for repeated
+words**, and the low tail is dominated by repeatable function words
+(measurement: "that" ×3 under 0.8 in one message). For the agent's
+inverted-meaning case, *which* "not" is uncertain is the entire signal;
+in-place marking answers it with zero indirection, and display styling falls
+out of the same parse. (Principle #3: the boundary annotation must be
+unambiguous to its consumer.)
 
-- The bare list is **ambiguous for repeated words**, and the low tail is
-  dominated by repeatable function words (measurement: "that" ×3 under 0.8 in
-  one message). For the agent's inverted-meaning case, *which* "not" is
-  uncertain is the entire signal. The context snippet disambiguates at the
-  cost of a few words per entry. (Principle #3: the boundary annotation must
-  be unambiguous to its consumer.)
-- Display marking reuses the same snippets for locating words; without them
-  the display would guess among duplicates.
-
-A **fancier** version was drafted and cut after cross-model review: inline
-`<unsure c="…">word</unsure>` tags woven into the `<speech>` body. It gave
-exact positions but (a) required aligning the words stream against a body that
-keyword-stripping, interim commits, prior-input joins, and HQ replacement all
-transform (`InteractiveChat-voice.ts:94-163`,
-`useRealtimeTranscription.ts:119-145`) — structurally unreliable; and (b) put
-machine-authored markup inside the user's own words, the one string every
-downstream consumer (agent quoting, transcript rendering, retranscribe
-comparison) reads. The child element keeps the body byte-identical to today.
+The design went around the loop deliberately (all on 2026-08-15): inline tags
+with scores → separate `<unsure-words>` element with context snippets (after
+cross-model review flagged that keyword-stripping, interim commits,
+prior-input joins, and HQ replacement all transform the body,
+`InteractiveChat-voice.ts:94-163`, `useRealtimeTranscription.ts:119-145`, and
+that machine markup muddies the user's words) → **inline `<unsure>` without
+scores** (boxholder decision, after reviewing rendered examples: the
+element's entry-to-occurrence indirection was the worse cost, and a numeric
+score is false precision). What survived the loop: the alignment concern
+(marking is fail-open per word), the leakage concern (Track 5's strip-on-reuse
+instruction), and the `stt=` no-data discriminator. Scores were dropped.
 
 What the plan deliberately keeps from the simple version: no new metadata
 channel, no per-message JSON field, no sidecar for chat — the existing
-embedded-XML child-element convention carries everything.
+embedded-markup convention carries everything.
 
 A second simplification considered and taken: **no display-side stopword
 suppression and no second threshold**. The measurement showed suppression helps
@@ -342,14 +340,13 @@ future work — this plan does not build it.
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
 | Deepgram omits/mistypes `confidence` on a word (success responses are not zod-validated: `deepgram.ts:107-118` typed `.json<…>`, realtime raw `JSON.parse`) | planned (Track 1/2 doctests) | runtime `typeof` guard at read; word treated as no-data | silent by design (no data → no entry) |
-| Interim-triggered keyword send commits interim text with no final words for the tail | planned (Track 3 doctest) | entries cover only finalized segments; stated coverage limit | silent, bounded (entries that exist still attach) |
+| Interim-triggered keyword send commits interim text with no final words for the tail | planned (Track 3 doctest) | marks cover only finalized segments; stated coverage limit | silent, bounded (marks that can be placed still are) |
 | Reconnect merges text (`committedPrefix`) but words drift | planned (Track 2 reconnect doctest) | words committed in the same actor transitions as text; on any unmergeable case, discard words → message sends without `stt=` | clear (`stt` absent = no data claim) |
-| HQ pass replaces realtime text; realtime words describe discarded text | planned (Track 3 HQ-drop doctest) | drop entries + `stt` when `usedHq` | clear (`stt` absent) |
-| Entry text contains XML-significant characters (`<`, `&`, quotes) | planned (Track 3 doctest) | escape at serialization | clear (test-pinned) |
-| Display shows raw `<unsure-words>` element (unknown-tag stripping unverified — review finding 8) | planned (Track 4 doctest) | Track 4 explicitly wires the element into the message parser | clear (visible if it regresses) |
-| Display context-match fails (edited/shifted text) | planned (Track 4 doctest) | per-word fail-open: no visual mark; agent-facing element unaffected | silent per word, by design (wrong mark is worse) |
-| Agent imitates `<unsure-words>` in its own output | no (prompt-level) | prompt forbids; display only parses it inside user messages | silent gap, low harm |
-| iOS native dictation / Voxtral / OpenAI paths send no words | planned (Track 3: absence case) | no `stt` attr, no element; prompt explains the distinction | clear (attribute absent) |
+| HQ pass replaces realtime text; realtime words describe discarded text | planned (Track 3 HQ-drop doctest) | drop words + `stt` when `usedHq` | clear (`stt` absent) |
+| Words-stream token can't be confidently located in the transformed body (prior typed input, keyword remnants, repeated words) | planned (Track 3 doctests) | fail-open per word: no marker placed | silent per word, by design (wrong mark is worse) |
+| Display shows raw `<unsure>` tags (unknown-tag stripping unverified — review finding 8) | planned (Track 4 doctest) | Track 4 explicitly handles the marker in the message parser | clear (visible if it regresses) |
+| Agent copies `<unsure>` markers into cards / its own output | no (prompt-level) | prompt: strip on reuse, never fabricate | silent gap, low harm — visible cruft if it happens |
+| iOS native dictation / Voxtral / OpenAI paths send no words | planned (Track 3: absence case) | no `stt` attr, no marks; prompt explains the distinction | clear (attribute absent) |
 
 **Critical gap:** none identified. Every degradation collapses onto one
 truthful, distinguishable state — `stt=` absent means "no confidence data
@@ -392,9 +389,9 @@ backs this message" — rather than overloading "unmarked" with five meanings
 
 ## Open design questions
 
-- **Display mark styling weight** — dotted underline vs. background tint;
-  settle in Track 4 via `bin/browse` screenshots, boxholder eyeball. Lean:
-  dotted underline, tooltip with score.
+- **Display styling** — decided (boxholder, 2026-08-15): just a subtle style
+  on the marked words (italic / muted color / dotted underline — pick one in
+  Track 4 with a `bin/browse` look); no tooltip, no legend chrome.
 - **Display suppression of function words** — deliberately deferred until the
   boxholder has lived with unsuppressed marks (see Could this be simpler?).
   The knob, if needed, is display-only; the embedded data never thins.

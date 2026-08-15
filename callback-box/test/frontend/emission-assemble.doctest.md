@@ -9,6 +9,7 @@ refactor's zero-behavior-change guarantee is these strings.
 import { assembleChatMessage } from "../../src/frontend/src/input/targets/chat-assemble.js";
 import { createTypedEmission, createVoiceEmission } from "../../src/frontend/src/input/emission.js";
 import { buildSpeechMessage } from "../../src/frontend/src/components/chat/InteractiveChat-helpers.js";
+import { markUnsureWords, UNSURE_THRESHOLD } from "../../src/frontend/src/input/unsure-words.js";
 
 const W = { localTime: "14:23", zoomedView: null, timePassed: null };
 ```
@@ -162,6 +163,184 @@ Historical builder: `handleRecoverSend`
 const e = createVoiceEmission({ text: "the text that survived the drop", selections: [], diarized: false });
 assembleChatMessage(e, W).message
 => <speech local-time="14:23">the text that survived the drop</speech>
+```
+
+## `markUnsureWords` — the pure marking function (Track 3)
+
+`UNSURE_THRESHOLD` is 0.85; a word AT the threshold is confident, not
+unsure (`< 0.85`, not `<=`).
+
+```ts
+UNSURE_THRESHOLD
+=> 0.85
+
+const cleanWords = [
+  { word: "they're", confidence: 0.99 },
+  { word: "all", confidence: 0.97 },
+  { word: "cloud", confidence: 0.29 },
+  { word: "code", confidence: 0.95 },
+  { word: "in", confidence: 0.9 },
+];
+markUnsureWords("they're all cloud code in", cleanWords)
+=> they're all <unsure>cloud</unsure> code in
+```
+
+Boundary: exactly 0.85 is confident (unchanged body); just under wraps.
+
+```ts
+markUnsureWords("the", [{ word: "the", confidence: 0.85 }])
+=> the
+
+markUnsureWords("the", [{ word: "the", confidence: 0.8499 }])
+=> <unsure>the</unsure>
+```
+
+A word with no `confidence` field is "no data" — never wrapped, even when
+it's the only entry:
+
+```ts
+markUnsureWords("the plan", [{ word: "the" }, { word: "plan" }])
+=> the plan
+```
+
+Nothing unsure: body comes back byte-identical.
+
+```ts
+markUnsureWords("cloud computing", [{ word: "cloud", confidence: 0.9 }, { word: "computing", confidence: 0.95 }])
+=> cloud computing
+```
+
+A prior-typed-input PREFIX the words stream never covered (spoken text
+prepended to composer text at keyword-fire) is left unmarked — the search
+for the first words-stream entry simply scans past it:
+
+```ts
+markUnsureWords(
+  "note to self, cloud computing is great",
+  [
+    { word: "cloud", confidence: 0.3 },
+    { word: "computing", confidence: 0.98 },
+    { word: "is", confidence: 0.99 },
+    { word: "great", confidence: 0.97 },
+  ],
+)
+=> note to self, <unsure>cloud</unsure> computing is great
+```
+
+A keyword-stripped TAIL — words-stream entries with no home in the body
+(the trigger phrase itself, stripped from `processedTranscript`) — are
+tolerated: earlier matches still land, the unmatched tail is silently
+skipped.
+
+```ts
+markUnsureWords(
+  "let's grab lunch",
+  [
+    { word: "let's", confidence: 0.97 },
+    { word: "grab", confidence: 0.4 },
+    { word: "lunch", confidence: 0.98 },
+    { word: "send", confidence: 0.99 },
+    { word: "message", confidence: 0.99 },
+  ],
+)
+=> let's <unsure>grab</unsure> lunch
+```
+
+A repeated word: alignment order disambiguates which occurrence gets
+marked — the first low-confidence "that" wraps, the later confident one
+doesn't.
+
+```ts
+markUnsureWords(
+  "that one not that",
+  [
+    { word: "that", confidence: 0.6 },
+    { word: "one", confidence: 0.99 },
+    { word: "not", confidence: 0.98 },
+    { word: "that", confidence: 0.9 },
+  ],
+)
+=> <unsure>that</unsure> one not that
+```
+
+Ambiguous — the words stream claims a repeat the body doesn't have room
+for (already consumed by an earlier match): the extra entry has no slot
+left and is skipped rather than double-marking or guessing.
+
+```ts
+markUnsureWords(
+  "that one thing",
+  [
+    { word: "that", confidence: 0.6 },
+    { word: "that", confidence: 0.3 },
+  ],
+)
+=> <unsure>that</unsure> one thing
+```
+
+Punctuation stays outside the tag; only the word core wraps.
+
+```ts
+markUnsureWords("cloud, right?", [{ word: "cloud", confidence: 0.2 }, { word: "right", confidence: 0.99 }])
+=> <unsure>cloud</unsure>, right?
+```
+
+## Site 2 — keyword voice send: inline `<unsure>` marks + `stt` attribute
+
+Words present and applied: marks land in place, `stt="deepgram"` leads
+before `diarized` — pinned exact serialization from the plan's Vocabulary
+lock-ins example.
+
+```ts
+const spokenWords = [
+  { word: "They're", confidence: 0.99 },
+  { word: "all", confidence: 0.97 },
+  { word: "cloud", confidence: 0.29 },
+  { word: "code", confidence: 0.95 },
+  { word: "in", confidence: 0.9 },
+  { word: "different", confidence: 0.98 },
+  { word: "ways", confidence: 0.99 },
+];
+const eMarked = createVoiceEmission({
+  text: "They're all cloud code in different ways.",
+  selections: [],
+  diarized: false,
+  words: spokenWords,
+});
+assembleChatMessage(eMarked, W).message
+=> <speech stt="deepgram" local-time="14:23">They're all <unsure>cloud</unsure> code in different ways.</speech>
+```
+
+Captured but none unsure: `stt="deepgram"` stamps, body comes back
+unchanged — distinct from "no data captured".
+
+```ts
+const eNoneUnsure = createVoiceEmission({
+  text: "everything came through clean",
+  selections: [],
+  diarized: false,
+  words: [
+    { word: "everything", confidence: 0.99 },
+    { word: "came", confidence: 0.97 },
+    { word: "through", confidence: 0.95 },
+    { word: "clean", confidence: 0.98 },
+  ],
+});
+assembleChatMessage(eNoneUnsure, W).message
+=> <speech stt="deepgram" local-time="14:23">everything came through clean</speech>
+```
+
+Undefined (no confidence data at all — HQ-replaced text, a non-Deepgram
+service, or typed origin): no `stt` attribute, body unchanged. The same
+shape a `usedHq` send produces (`prepareVoiceSubmitEmission` passes
+`words: undefined`; see `voice-intent.doctest.md`'s HQ-drop case) — from
+this layer down, "HQ dropped the words" and "no words were ever captured"
+are the same state.
+
+```ts
+const eNoData = createVoiceEmission({ text: "no data here", selections: [], diarized: false });
+assembleChatMessage(eNoData, W).message
+=> <speech local-time="14:23">no data here</speech>
 ```
 
 ## Emission ids are distinct per creation (the dedup key)

@@ -173,9 +173,16 @@ function dispatchKeyword(
     send: (event: { type: "STOP" | "CANCEL" | "START" }) => void;
     optionsRef: React.MutableRefObject<UseRealtimeTranscriptionOptions | undefined>;
     pendingSendRef: React.MutableRefObject<{ processedTranscript: string; matchedPhrase: string; closeMic: boolean; hq: boolean } | null>;
+    /**
+     * Live-synced snapshot of `finalWords`, read at the same moment the
+     * fast path commits its text (docs/plans/transcript-confidence.md,
+     * Track 3) — a plain state variable would go stale inside this
+     * module-level function, which isn't itself a hook.
+     */
+    finalWordsRef: React.MutableRefObject<FinalWord[]>;
   }
 ): void {
-  const { send, optionsRef, pendingSendRef } = ctx;
+  const { send, optionsRef, pendingSendRef, finalWordsRef } = ctx;
   switch (keyword.action) {
     case "send":
     case "sendHq":
@@ -209,6 +216,7 @@ function dispatchKeyword(
           audioBlob: null,
           closeMic,
           hq,
+          words: finalWordsRef.current,
         });
       }
       break;
@@ -280,13 +288,23 @@ export function useRealtimeTranscription(
   const { finalTranscript, finalWords, interimTranscript, error } = snapshot.context;
   const transcript = combine(finalTranscript, interimTranscript);
 
+  // Live-synced snapshot of finalWords, read by the fast keyword-send path
+  // (dispatchKeyword, a module function outside the render closure) at the
+  // same moment it commits the text (Track 3, docs/plans/
+  // transcript-confidence.md). Declared here — before fireKeyword/keyword
+  // spotting below — so the sync effect runs first within a commit.
+  const finalWordsRef = useRef<FinalWord[]>(finalWords);
+  useEffect(() => {
+    finalWordsRef.current = finalWords;
+  });
+
   // Wake-lock used to live here, tied to mic state. It now lives in the
   // chat layer where the broader "voice conversation in progress" signal
   // is available — mic-active alone doesn't capture the TTS-playback
   // window where the mic is intentionally paused.
 
   const fireKeyword = useCallback(
-    (keyword: KeywordResult) => dispatchKeyword(keyword, { send, optionsRef, pendingSendRef }),
+    (keyword: KeywordResult) => dispatchKeyword(keyword, { send, optionsRef, pendingSendRef, finalWordsRef }),
     [send]
   );
 
@@ -305,8 +323,11 @@ export function useRealtimeTranscription(
       closeMic: pending.closeMic,
       hq: pending.hq,
       audioBlob: snapshot.context.audioBlob,
+      // Read alongside the parked text at the same idle transition, so the
+      // words are the ones the machine finalized for it (Track 3).
+      words: snapshot.context.finalWords,
     });
-  }, [state, snapshot.context.audioBlob]);
+  }, [state, snapshot.context.audioBlob, snapshot.context.finalWords]);
 
   const keywordSpotting = useKeywordSpotting({ state, finalTranscript, interimTranscript, fireKeyword });
 

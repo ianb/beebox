@@ -18,6 +18,7 @@
 import type { ChatImageAttachment } from "../api-chat";
 import type { SelectionItem } from "../lib/selection/serialize";
 import type { ImageItem, FileItem } from "./emission-store";
+import type { FinalWord } from "../machines/transcription-events";
 import { newMessageId } from "../components/chat/InteractiveChat-helpers";
 
 /**
@@ -47,6 +48,16 @@ export interface Emission {
   readonly selections: readonly SelectionItem[];
   /** Voice metadata: the HQ transcription reported speaker diarization. */
   readonly diarized: boolean;
+  /**
+   * Realtime words backing `text`, with confidence (Track 3, docs/plans/
+   * transcript-confidence.md). `undefined` means no per-word confidence
+   * data was captured for this text (typed origin, a non-Deepgram service,
+   * or an HQ pass that replaced the realtime words) — the assembler stamps
+   * `stt="deepgram"` and marks `<unsure>` words in the body only when this
+   * is defined (an empty array still stamps `stt`, just marks nothing).
+   * Only a voice-origin emission ever sets this.
+   */
+  readonly words?: readonly FinalWord[];
 }
 
 /**
@@ -97,6 +108,8 @@ interface VoiceEmissionInput {
   files?: readonly EmissionFile[];
   selections: readonly SelectionItem[];
   diarized: boolean;
+  /** See `Emission.words` — omit for "no data captured". */
+  words?: readonly FinalWord[];
 }
 
 /**
@@ -114,5 +127,6 @@ export function createVoiceEmission(input: VoiceEmissionInput): Emission {
     files: input.files ?? [],
     selections: input.selections,
     diarized: input.diarized,
+    words: input.words,
   };
 }

@@ -18,6 +18,7 @@
 
 import type { ChatImageAttachment } from "../api-chat";
 import type { SelectionItem } from "../lib/selection/serialize";
+import type { FinalWord } from "../machines/transcription-events";
 import { joinTranscript } from "../components/chat/InteractiveChat-helpers";
 import { appendSendKeywordTag, detectKeyword } from "../lib/audio/speech-keywords";
 import { createVoiceEmission, type Emission, type EmissionFile } from "./emission";
@@ -35,6 +36,15 @@ export type VoiceIntent =
       closeMic: boolean;
       /** This keyword explicitly requests HQ cleanup, independently of narration mode. */
       hq: boolean;
+      /**
+       * Realtime words backing `text` at commit time (Track 3, docs/plans/
+       * transcript-confidence.md) — fast path: snapshotted at CANCEL; slow
+       * path: the machine's `finalWords` read at its idle transition, which
+       * lands alongside the parked text. Always present (possibly empty);
+       * the HQ-drop decision (words describe discarded text) is the
+       * consumer's job, not this shape's.
+       */
+      words: readonly FinalWord[];
     }
   | { kind: "cancel" }
   | { kind: "mic-off" }
@@ -58,6 +68,14 @@ export function buildVoiceSubmitEmission(opts: {
   imagesSnapshot: readonly ChatImageAttachment[];
   filesSnapshot: readonly EmissionFile[];
   diarized: boolean;
+  /**
+   * Realtime words backing `finalText`, or absent/`undefined` when no
+   * confidence data applies to the text being sent (HQ replaced it —
+   * Track 3's HQ-drop rule). Carried through to the emission as-is; the
+   * assembler does the `<unsure>` marking against the sent body, since the
+   * body isn't final until selections/attachments fold in.
+   */
+  words?: readonly FinalWord[];
 }): Emission {
   const full = joinTranscript(opts.priorInput, opts.finalText);
   return createVoiceEmission({
@@ -66,6 +84,7 @@ export function buildVoiceSubmitEmission(opts: {
     files: opts.filesSnapshot,
     selections: opts.selectionsSnapshot,
     diarized: opts.diarized,
+    words: opts.words,
   });
 }
 
@@ -119,6 +138,11 @@ export async function prepareVoiceSubmitEmission(opts: {
   return {
     emission: buildVoiceSubmitEmission({
       priorInput, finalText, selectionsSnapshot, imagesSnapshot, filesSnapshot, diarized,
+      // The HQ pass replaced the realtime text: those words describe
+      // discarded audio content, so drop the entries and `stt` entirely
+      // (Track 3 HQ-drop rule). A fallback to realtime text (!usedHq)
+      // attaches the intent's words like any other realtime send.
+      words: usedHq ? undefined : intent.words,
     }),
     usedHq,
   };

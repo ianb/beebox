@@ -160,6 +160,7 @@ function runKeywordSend(opts: {
       imagesSnapshot,
       filesSnapshot,
       diarized: false,
+      words: intent.words,
     }));
   }
   settleMic();
