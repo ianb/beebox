@@ -8,16 +8,17 @@
 import type { FinalWord } from "../machines/transcription-events";
 
 /**
- * Confidence threshold below which a word gets wrapped in `<unsure>`. Named
- * per the plan's Vocabulary lock-ins section: measured against the
- * production batch call over 11 dictation recordings (642 words) — 0.85
- * caught every observed transcription error ("cloud" for *Claude* at
- * 0.29/0.76, "can" for *can't* at 0.52, a "worked" mishearing at 0.48,
- * "Anthropix" for *Anthropic's* at 0.82) while passing confident proper
- * nouns unmarked (Minneapolis 0.999, Bicking 0.926). See docs/plans/
- * transcript-confidence.md, "Measurement basis". Not user-configurable.
+ * Confidence threshold below which a word gets wrapped in `<unsure>`.
+ * Measured against the production batch call over 11 dictation recordings
+ * (642 words) — see docs/implemented-plans/transcript-confidence.md,
+ * "Measurement basis". Initially 0.85 (caught every observed error incl.
+ * the borderline "Anthropix" 0.82 / "cloud" 0.76, at ~4.7 marks per long
+ * dictation); lowered to 0.7 after real-world use (boxholder, 2026-08-15)
+ * showed that mark rate too noisy — 0.7 keeps the clear catches ("cloud"
+ * for *Claude* at 0.29, "can" for *can't* at 0.52, a "worked" mishearing
+ * at 0.48) at roughly a third the marks. Not user-configurable.
  */
-export const UNSURE_THRESHOLD = 0.85;
+export const UNSURE_THRESHOLD = 0.7;
 
 /**
  * Map a raw realtime-words snapshot onto what an emission is allowed to

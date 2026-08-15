@@ -171,7 +171,10 @@ from the measurement data):
   unmarked-because-confident. This is the honest answer to Voxtral parity, and
   it keeps every degradation collapsed onto one truthful state.
 - Threshold: **0.85**, a named constant with a comment citing this plan's
-  measurement. Not user-configurable.
+  measurement. Not user-configurable. *(Post-ship correction, 2026-08-15:
+  lowered to **0.7** after the boxholder's real-world dictation showed the
+  0.85 mark rate much noisier than the measurement sample predicted — the
+  constant's comment in `unsure-words.ts` records the trade.)*
 - **Leakage-by-copy is the accepted cost** of inline (the cross-model review
   argued for a separate element on this ground): an agent reusing dictated
   text into a card could carry markers along. Mitigation is Track 5's prompt

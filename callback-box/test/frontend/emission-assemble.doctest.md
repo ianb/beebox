@@ -167,12 +167,13 @@ assembleChatMessage(e, W).message
 
 ## `markUnsureWords` — the pure marking function (Track 3)
 
-`UNSURE_THRESHOLD` is 0.85; a word AT the threshold is confident, not
-unsure (`< 0.85`, not `<=`).
+`UNSURE_THRESHOLD` is 0.7 (lowered from 0.85 after real-world use — see the
+constant's comment); a word AT the threshold is confident, not unsure
+(`< 0.7`, not `<=`).
 
 ```ts
 UNSURE_THRESHOLD
-=> 0.85
+=> 0.7
 
 const cleanWords = [
   { word: "they're", confidence: 0.99 },
@@ -185,13 +186,13 @@ markUnsureWords("they're all cloud code in", { words: cleanWords })
 => they're all <unsure>cloud</unsure> code in
 ```
 
-Boundary: exactly 0.85 is confident (unchanged body); just under wraps.
+Boundary: exactly 0.7 is confident (unchanged body); just under wraps.
 
 ```ts
-markUnsureWords("the", { words: [{ word: "the", confidence: 0.85 }] })
+markUnsureWords("the", { words: [{ word: "the", confidence: 0.7 }] })
 => the
 
-markUnsureWords("the", { words: [{ word: "the", confidence: 0.8499 }] })
+markUnsureWords("the", { words: [{ word: "the", confidence: 0.6999 }] })
 => <unsure>the</unsure>
 ```
 
