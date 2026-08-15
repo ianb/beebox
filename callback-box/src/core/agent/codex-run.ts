@@ -19,6 +19,14 @@ import {
   codexBoxThreadSettings,
   codexBoxTurnSettings,
 } from "../../services/codex-sandbox.js";
+import {
+  emitObservedActivity,
+  itemCompletedSchema,
+  renderCodexCommand,
+  type CodexObservedActivity,
+} from "./codex-run-activity.js";
+
+export type { CodexObservedActivity } from "./codex-run-activity.js";
 
 const threadResultSchema = z.looseObject({
   thread: z.looseObject({ id: z.string() }),
@@ -26,31 +34,6 @@ const threadResultSchema = z.looseObject({
 
 const turnResultSchema = z.looseObject({
   turn: z.looseObject({ id: z.string() }),
-});
-
-const itemCompletedSchema = z.looseObject({
-  threadId: z.string(),
-  turnId: z.string(),
-  item: z.discriminatedUnion("type", [
-    z.looseObject({
-      type: z.literal("agentMessage"),
-      text: z.string(),
-      phase: z.enum(["commentary", "final_answer"]).nullable(),
-    }),
-    z.looseObject({
-      type: z.literal("commandExecution"),
-      command: z.string(),
-      aggregatedOutput: z.string().nullable(),
-      exitCode: z.number().nullable(),
-    }),
-    z.looseObject({
-      type: z.literal("fileChange"),
-      status: z.enum(["inProgress", "completed", "failed", "declined"]),
-      changes: z.array(z.looseObject({ path: z.string() })),
-    }),
-    z.looseObject({ type: z.literal("mcpToolCall") }),
-    z.looseObject({ type: z.literal("dynamicToolCall") }),
-  ]),
 });
 
 const turnCompletedSchema = z.looseObject({
@@ -75,6 +58,7 @@ export interface CodexRunOptions {
   systemPrompt: string;
   prompt: string;
   onOutput?: ((text: string) => void) | undefined;
+  onActivity?: ((activity: CodexObservedActivity) => void) | undefined;
   dryRun?: boolean | undefined;
   maxTurns?: number | undefined;
   maxBudgetUsd?: number | undefined;
@@ -95,19 +79,13 @@ class CodexTurnCompletionTimeoutError extends Error {
   }
 }
 
-function renderCommand(item: z.infer<typeof itemCompletedSchema>["item"]): string {
-  if (item.type !== "commandExecution") return "";
-  const output = item.aggregatedOutput ?? "";
-  const suffix = item.exitCode === null ? "" : ` [exit ${item.exitCode}]`;
-  return `${fmt.dim("$ ")}${fmt.cmd(item.command)}${fmt.dim(suffix)}\n${output}`;
-}
-
 function waitForTurn(options: {
   server: CodexAppServer;
   threadId: string;
   turnId: string;
   maxTurns: number;
   onOutput?: ((text: string) => void) | undefined;
+  onActivity?: ((activity: CodexObservedActivity) => void) | undefined;
 }): Promise<{ output: string; resultText: string; durationMs: number; status: "completed" | "interrupted" | "failed"; changedPaths: string[]; usage: CodexTokenUsage | null }> {
   const output: string[] = [];
   const finalText: string[] = [];
@@ -136,11 +114,12 @@ function waitForTurn(options: {
           options.onOutput?.(`${item.text}\n`);
           return;
         }
+        emitObservedActivity(item, options.onActivity);
         if (item.type === "fileChange" && item.status === "completed") {
           for (const change of item.changes) changedPaths.add(change.path);
         }
         toolCount += 1;
-        const rendered = renderCommand(item);
+        const rendered = renderCodexCommand(item);
         if (rendered !== "") options.onOutput?.(`${rendered}\n`);
         if (toolCount > options.maxTurns && !interruptSent) {
           interruptSent = true;
@@ -265,6 +244,7 @@ export async function runCodexAgent(options: CodexRunOptions): Promise<AgentResu
       turnId,
       maxTurns: options.maxTurns ?? 20,
       onOutput: options.onOutput,
+      onActivity: options.onActivity,
     });
     await recordCodexAgentUsage({
       boxRoot: options.boxRoot,

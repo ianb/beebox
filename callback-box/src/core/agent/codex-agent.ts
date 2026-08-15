@@ -4,7 +4,11 @@ import type { z } from "zod";
 import { toJSONSchema } from "zod";
 import { appendSessionManifest } from "./manifest.js";
 import { validateStructuredResult } from "./json.js";
-import { runCodexAgent, type CodexRunOptions } from "./codex-run.js";
+import {
+  runCodexAgent,
+  type CodexObservedActivity,
+  type CodexRunOptions,
+} from "./codex-run.js";
 import type {
   Agent,
   AgentInvokeOptions,
@@ -17,6 +21,7 @@ export interface CreateCodexAgentOptions {
   sessionId?: string;
   resume?: boolean;
   onOutput?: (text: string) => void;
+  onActivity?: (activity: CodexObservedActivity) => void;
 }
 
 /** Create a batch agent backed by the installed Codex app-server. */
@@ -36,6 +41,7 @@ export function createCodexAgent(options: CreateCodexAgentOptions): Agent {
       systemPrompt: invoke.systemPrompt ?? "",
       prompt: invoke.prompt,
       onOutput: options.onOutput,
+      onActivity: options.onActivity,
       model: invoke.model,
       maxTurns: invoke.maxTurns,
       maxBudgetUsd: invoke.maxBudgetUsd,

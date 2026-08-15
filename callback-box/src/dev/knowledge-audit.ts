@@ -9,7 +9,7 @@
  *   pnpm knowledge-audit eval <report-path>
  */
 
-import { Command } from "commander";
+import { Command, InvalidArgumentError } from "commander";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { execSync } from "node:child_process";
@@ -20,10 +20,43 @@ import { generateReport } from "./lib/report.js";
 import { recordRun, loadHistory, type RunMeasurement } from "./lib/context-history.js";
 import { generateDocs } from "../core/docs-gen/index.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
+import type { AgentEngine } from "../core/box/config.js";
+import type { AuditTest } from "./lib/test-runner.js";
 
 const DEFAULT_TESTS_DIR = path.join(PACKAGE_ROOT, "src", "dev");
 const DEFAULT_OUTPUT_DIR = path.join(DEFAULT_TESTS_DIR, "reports");
 const HISTORY_PATH = path.join(DEFAULT_TESTS_DIR, "context-history.yaml");
+
+class InvalidAuditEngineError extends InvalidArgumentError {
+  constructor() {
+    super("Expected claude or codex");
+    this.name = "InvalidAuditEngineError";
+  }
+}
+
+function parseEngine(value: string): AgentEngine {
+  if (value === "claude" || value === "codex") return value;
+  throw new InvalidAuditEngineError();
+}
+
+function describeRunTarget(boxRoot: string, engine: AgentEngine | undefined): string {
+  return engine === undefined
+    ? `${boxRoot} using its configured engine`
+    : `${boxRoot} with ${engine}`;
+}
+
+function auditRunOptions(options: {
+  test: AuditTest;
+  boxRoot: string;
+  engine: AgentEngine | undefined;
+}) {
+  const { test, boxRoot, engine } = options;
+  return engine === undefined ? { test, boxRoot } : { test, boxRoot, engine };
+}
+
+function reportEngine(results: Array<{ engine: AgentEngine }>, override: AgentEngine | undefined): string {
+  return results[0]?.engine ?? override ?? "configured";
+}
 
 /** Short-circuiting git HEAD lookup; "unknown" if the dir isn't a repo. */
 function gitHead(cwd: string): string {
@@ -62,10 +95,12 @@ program
   .option("--box <path>", "Box root directory")
   .option("--tests <path>", "Path to audits.yaml")
   .option("--filter <id-or-tag>", "Filter by audit ID or tag")
+  .option("--engine <engine>", "Override the box engine: claude or codex", parseEngine)
   .option("--output <path>", "Output report path")
-  .action(async (options: { box?: string; tests?: string; filter?: string; output?: string }) => {
+  .action(async (options: { box?: string; tests?: string; filter?: string; output?: string; engine?: AgentEngine }) => {
     const testsPath = options.tests ?? getTestsPath(DEFAULT_TESTS_DIR);
     const boxRoot = options.box ?? path.join(process.env.HOME ?? "~", "src/boxes/test1");
+    const engine = options.engine;
 
     // `--box` may name either a v2 package root or its nested operational
     // (`content/`) root; resolve to the operational root (where `.cb-box`, cards,
@@ -119,7 +154,7 @@ program
     console.log(`Regenerating docs in ${resolvedBox}...`);
     await generateDocs(resolvedBox, { force: true });
 
-    console.log(`Running ${tests.length} knowledge audits against ${resolvedBox}\n`);
+    console.log(`Running ${tests.length} knowledge audits against ${describeRunTarget(resolvedBox, engine)}\n`);
 
     const results = [];
     for (const test of tests) {
@@ -128,7 +163,7 @@ program
       console.log(`Prompt: "${test.prompt}"`);
       console.log("=".repeat(60));
 
-      const result = await runTest({ test, boxRoot: resolvedBox });
+      const result = await runTest(auditRunOptions({ test, boxRoot: resolvedBox, engine }));
       results.push(result);
 
       // Print quick summary
@@ -138,8 +173,9 @@ program
       const passedAny = result.checks.containsAnyCheck ? result.checks.containsAnyCheck.found : true;
       const passedCards = result.checks.cardsContainChecks.every((c) => c.found);
       const passedReads = result.checks.shouldReadChecks.every((c) => c.wasRead);
+      const passedAvoidedReads = result.checks.shouldNotReadChecks.every((c) => !c.wasRead);
       const passedBash = result.checks.bashContainsChecks.every((c) => c.found);
-      const status = passedContains && passedNotContains && passedNotMatches && passedAny && passedCards && passedReads && passedBash ? "\u2713" : "\u2717";
+      const status = passedContains && passedNotContains && passedNotMatches && passedAny && passedCards && passedReads && passedAvoidedReads && passedBash ? "\u2713" : "\u2717";
       const ctx = result.behavior.context;
       const ctxNote = ctx ? `, ${Math.round(ctx.initialTokens / 1000)}k ctx` : "";
       console.log(`\n${status} ${test.id} — ${result.behavior.filesRead.length} files read, ${result.behavior.searches.length} searches${ctxNote}`);
@@ -154,7 +190,8 @@ program
       priorHistory: priorHistory[boxName] ?? {},
     });
     const timestamp = new Date().toISOString().replace(/[.:]/g, "-").substring(0, 19);
-    const outputPath = options.output ?? path.join(DEFAULT_OUTPUT_DIR, `audit-report-${timestamp}.md`);
+    const engineLabel = reportEngine(results, engine);
+    const outputPath = options.output ?? path.join(DEFAULT_OUTPUT_DIR, `audit-report-${engineLabel}-${timestamp}.md`);
 
     // reports/ is gitignored, so a fresh worktree checkout doesn't have it.
     await fs.mkdir(path.dirname(outputPath), { recursive: true });
