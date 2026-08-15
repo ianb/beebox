@@ -1,9 +1,10 @@
 ---
 title: "Long-lived dev processes run stale engine code — staleness is only checked at spawn"
-workstream: unattached
+workstream: stale-process-reload
 area: callback-box
 labels: [dev-server, process-lifecycle, scheduler]
 priority: important
+resolution: implemented
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder noticed main's dev server not showing recent changes
@@ -95,3 +96,30 @@ Preference is for self-healing over reporting, per the boxholder.
   rather than assuming.
 - **Whether this generalizes.** Any long-lived process spawned from a dev
   checkout has the same shape. Enumerate them before fixing two cases.
+
+## Fixed
+
+Development bundle invocations now stamp the exact artifact identity they
+loaded. The scheduler checks it only after a complete all-box pass and exits
+with a reload code for its launchd `KeepAlive` owner to replace. Hub-spawned
+`cb serve` children stop accepting mutations, pause persisted chat schedules,
+and wait for accepted HTTP work, chat turns (including async turn preparation),
+Telegram background turns, and scheduled deliveries before exiting with the
+same expected code; the hub replaces them without consuming crash-loop budget.
+A drain that cannot become safe within ten minutes reopens mutations and warns
+instead of killing work or wedging read-only.
+
+Packed installs and `CB_CLI_PREBUILT` production checkouts do not opt in.
+Standalone foreground `cb serve` has no safe supervisor because overlapping
+replacement conflicts with its pidfile and orphan detector, so it warns rather
+than self-spawning. The dev router's `tsx` hub and legacy `CB_DEV_NO_HUB`
+process are source-loaded rather than bundle-backed and are outside this
+rebuilt-bundle mismatch.
+
+Verified on the isolated `stale-process-reload/test1` runtime: rebuilding
+`dist/cli.mjs` kept the hub PID stable while its box child drained and changed
+PID, then authenticated browser navigation remained live. An isolated empty
+scheduler exited 75 after its completed pass when the bundle changed. Focused
+doctests cover artifact identity, mutation draining, expected supervisor
+replacement, scheduler utilities, chat queue/start failure behavior, and
+scheduled delivery behavior.

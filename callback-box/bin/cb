@@ -31,11 +31,20 @@ SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
 BUNDLE="$PROJECT_DIR/dist/cli.mjs"
+# Never inherit another cb process's artifact identity. Only this invocation's
+# dev path may opt the process it execs into reload detection.
+unset CB_DEV_BUNDLE_PATH CB_DEV_BUNDLE_ID
 # V8 compile cache — caches bytecode of the bundle across runs (~20% faster).
 export NODE_COMPILE_CACHE="$PROJECT_DIR/dist/.compile-cache"
 
 run_bundle() {
   exec node --disable-warning=DEP0040 --enable-source-maps "$BUNDLE" "$@"
+}
+
+stamp_dev_bundle() {
+  export CB_DEV_BUNDLE_PATH="$BUNDLE"
+  export CB_DEV_BUNDLE_ID
+  CB_DEV_BUNDLE_ID="$(node -e 'const fs=require("fs"); const s=fs.statSync(process.argv[1], {bigint:true}); process.stdout.write(`${s.dev}:${s.ino}:${s.size}:${s.mtimeNs}`)' "$BUNDLE")"
 }
 
 run_tsx() {
@@ -98,6 +107,12 @@ if [ "$needs_build" = 1 ]; then
 fi
 
 if [ -f "$BUNDLE" ]; then
+  # Packed/prod paths returned above. Only a dev invocation identifies the
+  # exact artifact it loaded so supervised long-lived processes can notice a
+  # replacement (identity, not mtime ordering) at a safe boundary.
+  if [ "$1" = "serve" ] || { [ "$1" = "scheduler" ] && [ "$2" = "start" ]; }; then
+    stamp_dev_bundle
+  fi
   run_bundle "$@"
 else
   run_tsx "$@"
