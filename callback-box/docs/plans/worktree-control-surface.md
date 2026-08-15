@@ -18,7 +18,7 @@ client of the same command. Behavior does not change. Who can call it does.
   — this plan is that issue's *enabling refactor*, and does not close it. It
   makes the pieces recombinable; the workflow change stays there.
 
-- [derive public worktree paths](../../../issues/code-quality/2026-08-01-derive-public-worktree-paths.md)
+- [derive public worktree paths](../../../issues/closed/code-quality/2026-08-01-derive-public-worktree-paths.md)
   — the hardcoded `~/src/…` paths live in exactly the files this plan rewrites.
   Deriving them is folded into Track A, not left as a separate sweep.
 - [dev scripts into bin](../../../issues/docs-and-chores/2026-05-26-dev-scripts-into-bin.md)

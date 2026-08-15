@@ -4,8 +4,13 @@ workstream: unknown
 area: monorepo
 design: ../../callback-box/docs/implemented-plans/workstreams.md
 labels: [worktrees, sessions, workflow]
-next-action: fixed
 ---
+
+> **Core workflow implemented.** The durable registry, disposable sessions,
+> resume/focus/recreate flow, joined status, resident workstreams app, and
+> manual-testing queue are live. The remaining scope recorded in this issue is
+> real-box attachment or forking. It has separate safety blockers and was not
+> part of the implemented session/worktree workflow.
 
 Sessions are currently doing double duty as a to-do database. A worktree stays
 open until Ian has verified the work, because the open session is the only

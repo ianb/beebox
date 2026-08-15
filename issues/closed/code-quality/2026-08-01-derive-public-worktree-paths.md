@@ -4,8 +4,14 @@ workstream: private-issues
 area: router
 filed-by: agent
 discovered-in: worktree-private-issues — while building the private-issues shadow repo
-design: ../../callback-box/docs/plans/worktree-control-surface.md
+design: ../../../callback-box/docs/plans/worktree-control-surface.md
+resolution: implemented
 ---
+
+> **Resolved in `b1eafe78`.** The final orphan-report and orphan-sweep callers
+> now obtain the public worktree root from `worktree-paths.sh`, including the
+> `CALLBACK_WORKTREE_ROOT` override. An isolated doctest covers a non-default
+> root.
 
 > **Mostly resolved 2026-08 in `worktree-worktree-seam`.** The new
 > `bin/lib/worktree-paths.sh` (`wt_paths_init`) now covers the
@@ -16,7 +22,7 @@ design: ../../callback-box/docs/plans/worktree-control-surface.md
 > Leaving this open for that one item rather than re-triaging from scratch.
 
 > **Folded into a plan.** The derivation helper is Track A / chunk 1 of
-> [the worktree control surface plan](../../callback-box/docs/plans/worktree-control-surface.md),
+> [the worktree control surface plan](../../../callback-box/docs/plans/worktree-control-surface.md),
 > which rewrites three of the four files listed below anyway. The tension that
 > remains here is the fourth (`bin/private-issues`'s `callback-worktrees`
 > basename assumption) and the care the sweep demands.

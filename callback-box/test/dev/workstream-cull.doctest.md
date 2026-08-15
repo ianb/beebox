@@ -140,7 +140,9 @@ const failureScript = [
   'WT_AHEAD=0',
   'WT_DIRTY=0',
   'FAIL_PATH="$7"',
+  'GIT_CALLS="$6/git-calls"',
   'mv() { if [ "$1" = "$FAIL_PATH" ]; then echo "simulated move failure" >&2; return 1; fi; command mv "$@"; }',
+  'git() { if { [ "$1" = worktree ] && [ "$2" = prune ]; } || { [ "$1" = branch ] && [ "$2" = -D ]; }; then printf "%s %s\n" "$1" "$2" >> "$GIT_CALLS"; fi; command git "$@"; }',
   'wt_remove_now "$7" worktree-failure-fixture',
 ].join("; ");
 const failure = await execFileAsync("bash", ["-c", failureScript, "failure-test", teardownLib, failureMono, join(failureRoot, "worktrees"), join(failureRoot, "boxes"), failureState, failureRoot, failureWorktree])
@@ -148,8 +150,9 @@ const failure = await execFileAsync("bash", ["-c", failureScript, "failure-test"
 const registered = (await git(failureMono, "worktree", "list", "--porcelain")).stdout.includes("branch refs/heads/worktree-failure-fixture");
 const branchExists = await git(failureMono, "show-ref", "--verify", "refs/heads/worktree-failure-fixture")
   .then(() => true, () => false);
-JSON.stringify({ code: failure.code, registered, branchExists, reported: failure.stdout.includes("refusing branch cleanup") })
-=> {"code":1,"registered":true,"branchExists":true,"reported":true}
+const cleanupCalls = await readFile(join(failureRoot, "git-calls"), "utf8").catch(() => "");
+JSON.stringify({ code: failure.code, registered, branchExists, cleanupSkipped: cleanupCalls === "", reported: failure.stdout.includes("refusing branch cleanup") })
+=> {"code":1,"registered":true,"branchExists":true,"cleanupSkipped":true,"reported":true}
 ```
 
 ```ts cleanup
