@@ -483,10 +483,13 @@ wt_remove_now() {
   cd "$WT_MONO" || return 0
 
   # Trash the worktree directory, then prune the now-dangling registration.
-  if mv "$worktree_path" "$WT_TRASH/wt-$name-$(date +%s)" 2>/dev/null; then
-    wt_say "trashed worktree $worktree_path"
-    moved=true
+  if ! mv "$worktree_path" "$WT_TRASH/wt-$name-$(date +%s)"; then
+    wt_say "refusing branch cleanup: failed to trash worktree $worktree_path"
+    wt_log "trash failed wt=$worktree_path branch=$branch"
+    return 1
   fi
+  wt_say "trashed worktree $worktree_path"
+  moved=true
   git worktree prune 2>/dev/null || true
 
   if [ -n "$keep_branch" ]; then
