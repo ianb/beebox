@@ -82,7 +82,7 @@ design: ../../callback-box/docs/plans/foo.md   # link once a design/plan exists
 area: callback-box            # callback-box | router | vibe-check | clerk | docs | ...
 labels: [soft-launch]         # optional cross-cutting tags (kebab-case, multiple allowed)
 priority: important           # important | normal | backlog; omitted is uncategorized
-next-action: discuss          # discuss | reconfirm | duplicate | invalid | fixed
+next-action: discuss          # discuss | reconfirm | duplicate | invalid | fixed | verify-without-me
 filed-by: agent               # only for non-Ian items
 discovered-by: Ian            # person or agent that first identified the issue
 discovered-in: worktree-foo — while doing X    # workstream/context provenance
@@ -187,6 +187,28 @@ resolution: implemented       # closed/ only: implemented | wontfix | superseded
   confirm that the reported behavior is already resolved. A matching tag is not
   permission to close blindly. Remove the field after acting on it or disproving
   it; remove `discuss` after the discussion produces a disposition.
+- `next-action: verify-without-me` is the one value **only Ian may set**, and it
+  applies to `needs: [manual-testing]` items. It says the human gate is not
+  going to close — he cannot reproduce the failure on demand, or the test is not
+  worth his time — so stop waiting on it and settle the issue on whatever
+  evidence is reachable without him.
+
+  The agent's job is then: verify everything code, tests, and a simulator *can*
+  establish, and then dispose of the issue. Close it when the evidence carries
+  it, naming what remains unverified and why that is acceptable. Otherwise
+  remove `manual-testing` and record precisely what ships unchecked — an
+  honest "unverified, here is the residual risk" beats an item parked forever
+  on a test nobody will run.
+
+  **It is not an instruction to close.** An audit under this tag can find work
+  that was never built, and that is a live issue needing implementation, not a
+  missing test. Say so and leave it open for the work. It is also worth
+  separating "genuinely impossible without a device" from "nobody has run it" —
+  the second is often fixable here.
+
+  Removing the field is not enough on its own: an item that leaves
+  `grep -rl "manual-testing" issues/` must leave it because it was settled, so
+  that list stays a queue Ian can work rather than a graveyard.
   Agents may set `discuss` when work reaches a genuine human judgment call, but
   must summarize the tension in the issue rather than using the tag as a vague
   escalation.
