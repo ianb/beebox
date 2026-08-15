@@ -1,15 +1,17 @@
 ---
 title: "Chat sends often show 'failed'/stay in the composer though the message actually sent — receipts are unreliable"
 workstream: send-receipt-logging
+needs: [manual-testing]
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder reports it happening commonly across normal use
 priority: important
 ---
 
-> **Still reproduces (2026-08-15)** — the developer tested the first send from a
-> fresh Codex session after `3ef82d85` landed. The message ran, but its receipt did
-> not return. The cancellation-path fix did not resolve the reported failure.
+> **⏳ Awaiting manual testing** — the outcome-driven fix landed through
+> `ef20af7f`; repeat the cold Codex send from the native composer and confirm it
+> remains pending until the real sent/queued outcome instead of restoring the
+> message after an elapsed-time rejection. Only the developer clears this.
 
 > **Job to be done:** *When I send a message and then lock my phone / switch apps /
 > background the tab before the reply starts — or my connection blips for a
@@ -102,6 +104,27 @@ This is a red-capable loop, but it is missing a condition from the developer's
 failure. Do not use these green controls to close the issue. Compare the failing
 client's diagnostic timeline with this control before making another fix.
 
+## Outcome-driven fix through `ef20af7f` (2026-08-15)
+
+Metadata-only field diagnostics supplied the missing condition: the old web
+receipt timeout rejected a still-running send, then `/api/chat/send` returned
+success after that rejection. The receipt was not lost; the client manufactured
+a failure from elapsed time while cold Codex startup was still legitimately
+pending.
+
+Web and native delivery now wait for an actual send outcome. Duplicate
+expectations for the same emission ID share that outcome rather than rejecting
+one another. Native provisional navigation preserves receipts from the old
+document until the replacement commits, then redelivers the same persisted ID;
+content-process termination follows the same recovery path. Server dedup retains
+claimed message IDs for seven days so those navigation and recovery redeliveries
+remain idempotent. A 30-second metadata-only diagnostic records that a receipt is
+still pending without changing its disposition.
+
+Focused web receipt tests, the full callback-box suite, and simulator request
+tests cover these paths. Cold Codex browser controls are green. Physical-device
+confirmation remains the final gate.
+
 ## Manual testing
 
 1. Open an existing Codex conversation in the iOS app and let it become idle.
@@ -135,16 +158,18 @@ client but the server already ran the turn. It is likely **not iOS-only** — th
 native emission path mirrors the web one (`components/chat/native-emission.ts`), so
 the web composer is exposed to the same lost-receipt window.
 
-## Fix direction
+## Superseded fix direction
 
 Same principle the reload-time banner issue lands on, extended to the **live** send
-path: **reconcile against durable chat history, not just the ephemeral receipt.**
+path was to **reconcile against durable chat history, not just the ephemeral receipt.**
 Before declaring a send failed (receipt timeout / WS drop), check whether the
 message is already present in the conversation history; if it is, confirm it
 **silently** — no error, no composer-restore, no Retry. Treat the receipt as an
 optimization and history as the source of truth. Only a pending emission with **no**
 corresponding history entry is a real failure worth surfacing (and Retry should be
-safe only then).
+safe only then). Field diagnostics instead showed that the actual outcome was
+still pending, so removing elapsed-time verdicts is both narrower and avoids
+guessing from possibly stale history.
 
 ## Research (2026-08-11)
 
