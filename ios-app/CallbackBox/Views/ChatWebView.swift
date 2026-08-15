@@ -3,6 +3,8 @@ import SwiftUI
 import UIKit
 import WebKit
 
+private let emissionReceiptTimeoutDelay: TimeInterval = 10 * 60 + 5
+
 struct NativeChatEmission: Equatable, Identifiable {
     typealias Origin = NativeEmissionV2.Origin
 
@@ -236,7 +238,7 @@ struct ChatWebView: UIViewRepresentable {
             onScreenshotResult: @escaping (NativeScreenshotResult) -> Void,
             onComposerCommand: @escaping (NativeComposerCommandDelivery) -> Void,
             onComposerCommandAcknowledgementDelivered: @escaping (String) -> Void,
-            receiptTimeoutDelay: TimeInterval = 35,
+            receiptTimeoutDelay: TimeInterval = emissionReceiptTimeoutDelay,
             pageLoaded: Bool = false,
             evaluateEmission: ((String, @escaping (Error?) -> Void) -> Void)? = nil,
             openExternalURL: @escaping (URL) -> Void = { UIApplication.shared.open($0) },

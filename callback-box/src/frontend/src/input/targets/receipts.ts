@@ -29,8 +29,13 @@ interface PendingReceipt {
 }
 
 /** Settlement backstop: a send whose outcome never reports (a code path
- * we missed, an actor torn down mid-flight) rejects rather than hangs. */
-const RECEIPT_TIMEOUT_MS = 30_000;
+ * we missed, an actor torn down mid-flight) rejects rather than hangs.
+ *
+ * `/chat/send` resolves only after the backend accepts the turn. Cold Codex
+ * startup has exceeded three minutes in the field, so this bound must cover
+ * legitimate multi-minute startup rather than manufacture a false rejection
+ * while the POST remains in flight. */
+export const RECEIPT_TIMEOUT_MS = 10 * 60_000;
 
 const pending = new Map<string, PendingReceipt>();
 

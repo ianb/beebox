@@ -305,16 +305,18 @@ the contract.
 - **Anchors:**
   | side | anchor |
   |---|---|
-  | web post | `src/frontend/src/components/chat/use-native-bridge.ts` — `postNativeReceipt`; `src/frontend/src/input/targets/receipts.ts` — `Receipt` union, `expectReceipt` (30s backstop) |
+  | web post | `src/frontend/src/components/chat/use-native-bridge.ts` — `postNativeReceipt`; `src/frontend/src/input/targets/receipts.ts` — `Receipt` union, `expectReceipt` (10-minute backstop) |
   | native decode | `ios-app/CallbackBox/Views/ChatWebView.swift` — `receiveEmissionReceipt`, `NativeEmissionReceipt.Disposition { sent, queued, rejected }` |
 - **Ack/dedup semantics:** native `deliver` only sends emissions not already in
-  `inflightEmissionIDs`, marks inflight, starts a **35s** receipt timeout, and on an
+  `inflightEmissionIDs`, marks inflight, starts a **10-minute 5-second** receipt timeout, and on an
   `evaluateJavaScript` error reports a synthetic `rejected` immediately. Delivery is gated on
   `pageLoaded` (items typed during nav are held, re-delivered on `didFinish`). On any receipt
   (real, timeout, or error) `RootView` clears the emission from `pendingNativeEmissions`;
-  `NativeComposerView` restores text+images on `rejected`. Native 35s > web 30s deliberately (web
-  reports first).
-- **Drift:** SILENT→LOUD (no receipt → native 35s timeout → user sees "not confirmed").
+  `NativeComposerView` restores text+images on `rejected`. Native remains five seconds longer than
+  web deliberately, so web reports first. Cold agent startup can take several minutes; neither
+  side treats an unresolved `/chat/send` request as rejected during that legitimate startup window.
+- **Drift:** SILENT→LOUD (no receipt → native 10-minute 5-second timeout → user sees "not
+  confirmed").
 - **Benign field drift:** native ignores `deduplicated` on `sent` receipts.
 
 ### 4.3 Location preference toggle (native → web) + state/result (web → native)
