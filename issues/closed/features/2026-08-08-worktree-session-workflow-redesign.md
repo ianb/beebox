@@ -1,6 +1,6 @@
 ---
 title: "Worktree/session workflow: make follow-ups outlive their worktrees"
-workstream: unknown
+workstream: streams-and-issues
 area: monorepo
 design: ../../../callback-box/docs/implemented-plans/workstreams.md
 labels: [worktrees, sessions, workflow]

@@ -1,6 +1,6 @@
 ---
 title: "wt_remove_now silently continues to branch deletion when the trash-mv fails"
-workstream: seam
+workstream: streams-and-issues
 area: bin
 filed-by: agent
 discovered-in: "worktree-seam — cross-model review follow-up on the worktree control surface"

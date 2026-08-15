@@ -1,6 +1,6 @@
 ---
 title: "Watch for a Claude worktree-isolation off switch"
-workstream: workstreams
+workstream: streams-and-issues
 area: tooling
 design: ../../../callback-box/docs/implemented-plans/workstreams.md
 filed-by: agent
