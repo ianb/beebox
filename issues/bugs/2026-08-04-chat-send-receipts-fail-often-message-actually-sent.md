@@ -1,11 +1,16 @@
 ---
 title: "Chat sends often show 'failed'/stay in the composer though the message actually sent — receipts are unreliable"
 workstream: send-receipt-logging
+needs: [manual-testing]
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder reports it happening commonly across normal use
 priority: important
 ---
+
+> **⏳ Awaiting manual testing** — fix landed through `3ef82d85`; after a box/server restart,
+> send the first message from the native composer and confirm it receives a sent/queued
+> receipt rather than returning as rejected. Only the developer clears this.
 
 > **Job to be done:** *When I send a message and then lock my phone / switch apps /
 > background the tab before the reply starts — or my connection blips for a
@@ -65,6 +70,30 @@ proposes making stale processes restart themselves. Every such restart leaves
 the agent cold, so it walks straight into this bug — a fix that makes restarts
 *more* frequent will make this fire *more* often. These two should know about
 each other.
+
+## Fixed through `3ef82d85` (2026-08-15)
+
+The cold-start timing exposed a frontend lifecycle hole rather than a missing
+server receipt channel. The streaming actor discarded a completed
+`/api/chat/send` outcome when the actor had been cancelled during the in-flight
+request. The server could accept and run the message, but the actor returned
+before settling its receipt. Send success and failure now settle independently
+of the actor's remaining UI work.
+
+A real-browser control after stopping the worktree child found that Claude's
+first send cleared immediately. The corresponding resumed Codex send from an
+already-open tab returned HTTP 200 and settled after 5.287 seconds; this proved
+the cold path is slower, but also showed that raising the 30/35-second web/iOS
+backstops would only delay a lifecycle bug rather than fix it. Focused doctests
+cover accepted and rejected POST outcomes after actor cancellation.
+
+## Manual testing
+
+1. Open an existing Codex conversation in the iOS app and let it become idle.
+2. Restart the box/server so the webview and Codex process are cold.
+3. Send one message immediately from the native composer.
+4. Confirm the message receives a sent or queued receipt, does not return to the
+   composer or show “The chat did not confirm the message,” and runs exactly once.
 
 ## Why it matters
 
