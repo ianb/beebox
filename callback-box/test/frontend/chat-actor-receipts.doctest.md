@@ -42,3 +42,26 @@ JSON.stringify({
 })
 => {"shouldContinue":false,"disposition":"rejected","reason":"network failed","pending":0}
 ```
+
+## Every accepted response shape keeps its disposition
+
+```ts
+const queued = expectReceipt("queued");
+const queuedContinues = settleFromTurnStart({ messageId: "queued", result: { queued: true } });
+const queuedReceipt = await queued;
+
+const duplicate = expectReceipt("duplicate");
+const duplicateContinues = settleFromTurnStart({ messageId: "duplicate", result: { deduplicated: true } });
+const duplicateReceipt = await duplicate;
+
+const malformed = expectReceipt("malformed");
+const malformedContinues = settleFromTurnStart({ messageId: "malformed", result: {} });
+const malformedReceipt = await malformed;
+
+JSON.stringify({
+  queued: [queuedContinues, queuedReceipt.disposition],
+  duplicate: [duplicateContinues, duplicateReceipt.disposition],
+  malformed: [malformedContinues, malformedReceipt.disposition],
+})
+=> {"queued":[true,"queued"],"duplicate":[true,"sent"],"malformed":[true,"rejected"]}
+```
