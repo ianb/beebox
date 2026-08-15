@@ -4593,3 +4593,43 @@ tests:
       path/ref to resolve, a card type, or a user identity.
     correct_contains_any: ["scan upload", "scan-upload", "uploader", "scanner"]
     tags: [cards, intake, scanner-ingest]
+
+  # === Transcript confidence marks ===
+  #
+  # Status (2026-08-15): 1/1 pass, 0 file reads, 0 searches, 52k ctx. The
+  # agent read <unsure> as low acoustic confidence, named the can/can't
+  # inversion, chose ask-about-audio/retranscribe/ask before writing, and
+  # volunteered both caveats (unmarked ≠ verified; no stt= = no data; strip
+  # tags when quoting into a card) unprompted.
+  #
+  # The chat prompt's "Voice is transcribed" section defines <unsure> marks
+  # (docs/plans/transcript-confidence.md): the realtime transcriber wraps
+  # low-acoustic-confidence words, stt= names the transcriber, and absence of
+  # marks is not verification. The failure this guards against is the agent
+  # building on a marked meaning-critical word (a negative, a number, a name)
+  # as if it were verified — the exact silent-mishearing the feature exists to
+  # catch. Needs chat_mode: true — the semantics live only in the chat prompt.
+
+  - id: chat-unsure-word-semantics
+    prompt: >
+      A voice message arrives as `<speech stt="deepgram">I
+      <unsure>can</unsure> make the 3 PM meeting tomorrow</speech>` and the
+      user is asking you to update their schedule. What does the markup around
+      "can" tell you, and what should you do before updating anything?
+    expected_level: knows_directly
+    watch_for: >
+      Reads <unsure> as the transcriber's low acoustic confidence in that word
+      — here possibly "can't", which inverts the meaning — and does not build
+      on it silently: confirms with the user or checks the audio
+      (cb chat retranscribe / ask-about-audio) before updating the schedule.
+      Should NOT treat the mark as an error to ignore, and should not copy the
+      tag into anything it writes.
+    correct_contains_any: ["can't", "cannot", "invert", "opposite"]
+    correct_matches:
+      - "retranscribe|ask-about-audio|confirm|ask (?:the user|them|him|her|first|before)"
+    chat_mode: true
+    tags: [chat, voice, transcription]
+    notes: >
+      Also worth watching in the transcript: the agent should know absence of
+      marks is not verification (confident mishearings get no mark) and that
+      messages without stt= carry no confidence data at all.

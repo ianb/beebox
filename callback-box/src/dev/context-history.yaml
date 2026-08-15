@@ -3763,6 +3763,14 @@ test1:
       peak: 44966
       added: 0
       turns: 2
+  chat-unsure-word-semantics:
+    - date: 2026-08-15T07:16:50.923Z
+      boxCommit: c032d7d32d2acb97640a7799083dddea5f0f3446
+      repoCommit: b508d98ff3f5d6f220d795bf88dca3c232ca4a76
+      initial: 51887
+      peak: 51887
+      added: 0
+      turns: 2
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

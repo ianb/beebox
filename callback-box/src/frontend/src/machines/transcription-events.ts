@@ -15,6 +15,18 @@ export type DropCause = "network" | "microphone";
 export type TranscriptionState = "idle" | "connecting" | "recording" | "reconnecting" | "finalizing";
 
 /**
+ * A finalized transcript word plus its acoustic confidence, captured from a
+ * Deepgram `is_final` Results message. `confidence` is absent when the
+ * service didn't report one (or reported something that failed the runtime
+ * `typeof` guard at the WS boundary) — absent means "no data", not "low
+ * confidence". Voxtral and OpenAI realtime never populate this.
+ */
+export interface FinalWord {
+  word: string;
+  confidence?: number;
+}
+
+/**
  * A machine action was reached by an event it wasn't wired for (a config bug).
  * The detail names the action and the offending event.
  */
@@ -35,7 +47,7 @@ export type TranscriptionEvent =
   | { type: "WS_CLOSED" }
   | { type: "CONNECTION_DEGRADED"; cause: DropCause }
   | { type: "CONNECTION_RESTORED" }
-  | { type: "TEXT_UPDATE"; finalText: string; interimText: string }
-  | { type: "TRANSCRIPTION_DONE"; text?: string; audioBlob?: Blob }
+  | { type: "TEXT_UPDATE"; finalText: string; interimText: string; finalWords: FinalWord[] | null }
+  | { type: "TRANSCRIPTION_DONE"; text?: string; audioBlob?: Blob; words?: FinalWord[] | null }
   | { type: "SERVER_ERROR"; message: string }
   | { type: "SETUP_ERROR"; message: string };

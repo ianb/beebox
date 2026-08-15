@@ -7,6 +7,7 @@
  */
 
 import { applySelections, type SelectionItem } from "../../lib/selection/serialize";
+import type { FinalWord } from "../../machines/transcription-events";
 
 /**
  * Format the current local time as HH:MM for the typed/speech tag.
@@ -46,6 +47,30 @@ export function joinTranscript(priorInput: string, transcript: string): string {
   if (!transcript) return priorInput;
   return `${priorInput} ${transcript}`;
 }
+
+/**
+ * Char offset in `joinTranscript(priorInput, transcript)` where the spoken
+ * portion begins — the boundary the Track 3 aligner (`markUnsureWords`,
+ * `input/unsure-words.ts`) must never wrap before, so a low-confidence
+ * spoken word can't land a mark on typed composer text that merely
+ * normalizes the same way (review Fix B).
+ */
+export function spokenTextStart(priorInput: string): number {
+  return priorInput ? priorInput.length + 1 : 0;
+}
+
+/**
+ * A stop-and-send / keyword-submit callback's voice metadata: the realtime
+ * words backing the sent text (`null` = none captured) and where the spoken
+ * portion begins within it (see `spokenTextStart`).
+ */
+export interface VoiceSegmentMeta {
+  words: readonly FinalWord[] | null;
+  spokenStart: number;
+}
+
+/** Shared shape for every `onVoiceSegmentSend`-style prop (composer, mobile row). */
+export type VoiceSegmentSend = (text: string, meta: VoiceSegmentMeta) => void;
 
 // Minted at SEND-dispatch time and threaded through to /chat/send so the
 // backend's processedMessageIds dedupe (chat.ts:269-284) catches the case
