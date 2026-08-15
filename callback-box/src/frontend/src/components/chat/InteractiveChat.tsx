@@ -235,7 +235,11 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
     clearDraftRef, inputStore, dispatchEmission: dispatchEmissionVoid,
   });
   useNativeBridges({
-    enabled: usesNativeShell, dispatchEmission: dispatchNativeEmission, boxSlug,
+    // The native queue is authoritative and is drained when this becomes true.
+    // Do not dispatch into the chat machine while it is still in `loading`:
+    // that state has no SEND transition, so it would silently drop the event
+    // after registering a receipt expectation.
+    enabled: usesNativeShell && !isLoading, dispatchEmission: dispatchNativeEmission, boxSlug,
     narrationEnabled: model.narrationEnabled, responseActive: snapshot.value === "streaming",
     speechPlaying: voice.speechPlayback.isPlaying });
   useEnsureComposerVisible({ ensureComposerVisibleRef, isTranscribing: voice.isTranscribing, setTypingMode, textareaRef });
