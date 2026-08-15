@@ -27,6 +27,8 @@ export function generateReport(options: ReportOptions): string {
   lines.push(`# Knowledge Audit Report — ${timestamp}`);
   lines.push("");
   lines.push(`Box: ${boxRoot}`);
+  const engines = [...new Set(results.map((result) => result.engine))];
+  lines.push(`Engine: ${engines.join(", ")}`);
   lines.push(`Tests run: ${results.length}`);
   lines.push("");
 

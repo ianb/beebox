@@ -525,8 +525,15 @@ End your final message with a status line the caller can act on:
 
 - `RESULT: MERGED` — followed by: merge hash, `worktree-<name>` + commit count,
   test counts (X/X) or "docs-only, verification skipped", honest scope/verification
-  notes (the step 5b MET/PARTIAL/UNMET tally when there was a plan to check), and
-  any deferred cleanup.
+notes (the step 5b MET/PARTIAL/UNMET tally when there was a plan to check), and
+any deferred cleanup.
+
+This report is an internal handoff to the calling agent, not the final
+conversation ending. Keep it factual and compact. Do not add generic advice to
+exit, clean up, close the workstream, or continue. Supply the evidence the
+caller needs to decide whether this landing is a checkpoint or genuine
+completion. Omit categories that are routine and empty; the structured status
+lines below are the exception because the caller parses them.
 - When the private leg is active (step 1b), EVERY report also carries exactly
   one `PRIVATE:` line, one of:
   - `PRIVATE: merged <hash>`

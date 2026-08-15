@@ -76,10 +76,15 @@ there's a diff against `main` → ask review-or-challenge.
    positional form (details per direction below).
 6. **Foreground, not backgrounded.** Backgrounded reviewer runs get killed
    before completing in this harness.
-7. **Present the reviewer verbatim.** Show its own words in a fenced block — the
-   value is the different voice; summarizing averages it back into yours. You
-   may shorten a repeated absolute-path prefix for readability and say you did.
-8. **Force the synthesis line** (below). Never skip it.
+7. **Treat the review as working evidence, not the work-unit conclusion.**
+   Adjudicate it, apply verified findings, and keep the final handoff centered
+   on the actual plan or implementation. Do not append the raw review by
+   default.
+8. **Report only material review outcomes.** Mention findings that remain open,
+   require a human choice, or materially changed the work. Collapse resolved
+   findings to a short phrase when useful. If the human explicitly asked to
+   see the independent review itself, provide a concise ranked summary with
+   your adjudication; provide verbatim output only when they ask for raw output.
 9. **Surface failures loudly.** If a run exits non-zero or stalls, say so with
    stderr — a silent reviewer crash reads as "nothing happened" and wastes the
    human's time.
@@ -302,8 +307,8 @@ Other notes:
 
 Both use the same `claude -p` invocation; only the prompt changes. There is no
 `claude` subcommand equivalent to `codex review`, so write the review prompt
-yourself with the shared scaffolding (orientation glue, fencing, verify-don't-
-opine, forced synthesis line).
+yourself with the shared scaffolding (orientation glue, fencing, and
+verify-don't-opine).
 
 ---
 
@@ -341,20 +346,25 @@ reviewer from reading the surrounding context. Point at the path.)
 and a chaos engineer — edge cases, races, resource leaks, silent data
 corruption. No compliments, just the problems."* Optional focus narrows it.
 
-## The forced synthesis line (mandatory, every mode, both directions)
+## Adjudication and handoff
 
-After the verbatim block, emit exactly one line:
+The reviewer is evidence, not authority. Verify each actionable claim against
+the source, distinguish real defects from scope opinions or noise, and decide
+what to change.
 
-```
-Recommendation: <action> because <reason that names the most actionable finding>
-```
-- Must name a **specific finding** from the reviewer's output.
-- Must **compare against alternatives** (another finding, fix-vs-ship, fix order).
-- Generic reasons ("because it's safer", "because it found things") fail.
-- Then give your own read: which findings are real (say which you verified),
-  which are cross-model noise, which are scope judgments the human already made.
-  The reviewer is not authoritative — it's a different set of blind spots, not
-  fewer.
+For a cross-model pass required as validation during another work unit:
+
+- Apply verified findings before declaring the work done.
+- In the final handoff, lead with the work outcome and validation status.
+- Mention the review only to explain a material change, unresolved risk, or
+  decision the human may want to override.
+- Do not add a review transcript, a ritual `Recommendation:` line, or a second
+  conclusion after the actual conclusion.
+
+When the human explicitly requests the review as the deliverable, return a
+concise ranked summary in your own words, followed by your adjudication. Quote
+the reviewer sparingly where its exact wording matters. Raw/verbatim output is
+opt-in.
 
 ## What's different from gstack (and why)
 
@@ -378,5 +388,6 @@ Recommendation: <action> because <reason that names the most actionable finding>
 - **Dropped for v1:** session continuity (`.context/codex-session-id`), the
   gstack preamble (telemetry/gbrain/voice), and the known-bad-version probe.
 - **Kept:** filesystem-boundary prefix, `-s read-only`, `-C` monorepo root,
-  `model_reasoning_effort="high"`, verbatim presentation, forced `Recommendation:`
-  line, loud exit-code surfacing.
+  `model_reasoning_effort="high"`, explicit adjudication, and loud exit-code
+  surfacing. Raw reviewer output is retained as a scratch artifact but is not
+  pasted into an unrelated work-unit conclusion.

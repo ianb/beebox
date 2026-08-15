@@ -26,7 +26,7 @@ See `docs/reports/knowledge-audit-rerun-2026-07-03.md` for the latest full-corpu
 ## Running
 
 ```bash
-npx tsx src/dev/knowledge-audit.ts run --box ~/src/boxes/test1 [--filter <tag-or-id>]
+npx tsx src/dev/knowledge-audit.ts run --box ~/src/boxes/test1 [--filter <tag-or-id>] [--engine claude|codex]
 npx tsx src/dev/knowledge-audit.ts list
 ```
 
@@ -36,6 +36,15 @@ same box, and the context-history ledger keys off the package name either way
 (`src/dev/lib/audit-box.ts`). Pass an absolute path (or `~/…`), never a bare
 name like `test1`, which would resolve inside the monorepo and be refused by the
 nested-box guard.
+
+By default the runner uses the box's configured engine. `--engine` overrides
+that choice for the audit only, so the same definitions can be exercised
+against Claude and Codex without editing `config/box.json`. Reports include the
+engine and use engine-qualified default filenames. Codex behavior is captured
+from the validated live app-server event stream; private rollout files are not
+parsed. Codex does not expose Claude-equivalent per-turn context snapshots on
+that surface, so Codex reports deliberately omit the context baseline rather
+than presenting incomparable usage as parity.
 
 ## Recording results
 
