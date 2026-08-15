@@ -42,5 +42,5 @@ Possible directions, none decided:
   checkouts — the lock paths are box-relative and engine-agnostic.
 - Tag shared `.callback-box/` state with the engine identity that wrote it.
 
-Related: [worktree/session workflow redesign](../features/2026-08-08-worktree-session-workflow-redesign.md),
+Related: [workstream real-box attachment](../features/2026-08-14-workstream-real-box-attachment.md),
 which wants running new engine code against real boxes and is blocked on this.

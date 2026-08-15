@@ -3,7 +3,7 @@ title: "The /workstreams/ app and disposable sessions"
 status: implemented
 workstream: workstreams
 issues:
-  - ../../../issues/features/2026-08-08-worktree-session-workflow-redesign.md
+  - ../../../issues/closed/features/2026-08-08-worktree-session-workflow-redesign.md
   - ../../../issues/decisions/2026-07-29-manual-testing-flag-overuse.md
 ---
 
@@ -20,7 +20,7 @@ checkout currently attached to it. See Vocabulary lock-ins.)
 
 **Issues addressed:**
 
-- [worktree/session workflow redesign](../../../issues/features/2026-08-08-worktree-session-workflow-redesign.md)
+- [worktree/session workflow redesign](../../../issues/closed/features/2026-08-08-worktree-session-workflow-redesign.md)
   — the primary item; this plan is the workflow change its enabling refactor
   ([the worktree control surface](../plans/worktree-control-surface.md)) deferred.
 - [plans need frontmatter and issue mapping](../../../issues/closed/docs-and-chores/2026-08-08-plan-lifecycle-frontmatter-and-issue-mapping.md)

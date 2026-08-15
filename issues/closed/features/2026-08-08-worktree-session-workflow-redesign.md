@@ -2,15 +2,16 @@
 title: "Worktree/session workflow: make follow-ups outlive their worktrees"
 workstream: unknown
 area: monorepo
-design: ../../callback-box/docs/implemented-plans/workstreams.md
+design: ../../../callback-box/docs/implemented-plans/workstreams.md
 labels: [worktrees, sessions, workflow]
+resolution: implemented
 ---
 
-> **Core workflow implemented.** The durable registry, disposable sessions,
-> resume/focus/recreate flow, joined status, resident workstreams app, and
-> manual-testing queue are live. The remaining scope recorded in this issue is
-> real-box attachment or forking. It has separate safety blockers and was not
-> part of the implemented session/worktree workflow.
+> **Resolved by the [implemented workstreams plan](../../../callback-box/docs/implemented-plans/workstreams.md).**
+> The durable registry, disposable sessions, resume/focus/recreate flow, joined
+> status, resident workstreams app, and manual-testing queue are live. Real-box
+> attachment is separate follow-up work in
+> [workstream real-box attachment](../../features/2026-08-14-workstream-real-box-attachment.md).
 
 Sessions are currently doing double duty as a to-do database. A worktree stays
 open until Ian has verified the work, because the open session is the only
@@ -39,7 +40,7 @@ Today both pin a tab. Separating them is what makes the first case disposable.
 
 ## What already exists
 
-- `needs: [manual-testing]` (see [issues/CLAUDE.md](../CLAUDE.md)) is the
+- `needs: [manual-testing]` (see [issues/CLAUDE.md](../../CLAUDE.md)) is the
   existing record for "landed, awaiting human verification" — 10 open items
   carry it. Only Ian may clear it; agents must never remove it.
 - `bin/router-issues.ts` already serves a faceted `/workstreams/issues/` browser with
@@ -56,13 +57,13 @@ Today both pin a tab. Separating them is what makes the first case disposable.
 - **Resume and unified status are implemented.** The session registry,
   `bin/workstreams resume`, joined `list --json` state, and the
   `/workstreams/` control surface now live in the
-  [workstreams plan](../../callback-box/docs/implemented-plans/workstreams.md). Remaining
+  [workstreams plan](../../../callback-box/docs/implemented-plans/workstreams.md). Remaining
   territory in this issue is the real-box/forking work described below, not the
   terminal-tab lifecycle.
 
 ## The enabling refactor is landing (2026-08-08, `worktree-seam`)
 
-[The agent-neutral worktree control surface](../../callback-box/docs/plans/worktree-control-surface.md)
+[The agent-neutral worktree control surface](../../../callback-box/docs/plans/worktree-control-surface.md)
 is the plan for the pieces this redesign needs, deliberately scoped to change
 **no** workflow — only to make the pieces recombinable. What it removes from the
 gap list above:
@@ -81,7 +82,7 @@ gap list above:
 
 That enabling refactor is now consumed by the implemented workstreams design;
 the current workflow and status live in the
-[workstreams plan](../../callback-box/docs/implemented-plans/workstreams.md).
+[workstreams plan](../../../callback-box/docs/implemented-plans/workstreams.md).
 
 ## Direction (not settled)
 
@@ -93,20 +94,20 @@ Packaged tools were evaluated and rejected: Conductor (conductor.build) and
 Claude Code's desktop app are monoliths that own the layer we've customized most
 and can't be built on top of. **Codex must stay first-class**, so nothing may be
 Claude-Code-only. The enabling refactor has its own plan —
-[the agent-neutral worktree control surface](../../callback-box/docs/plans/worktree-control-surface.md),
+[the agent-neutral worktree control surface](../../../callback-box/docs/plans/worktree-control-surface.md),
 summarized above.
 
 ## Open dependencies
 
-- [manual-testing flag overuse](../decisions/2026-07-29-manual-testing-flag-overuse.md)
+- [manual-testing flag overuse](../../decisions/2026-07-29-manual-testing-flag-overuse.md)
   is unresolved — Ian has said the flag is over-applied. Don't design a flow that
   assumes _more_ manual-testing items until that's settled; tightening the
   criteria may shrink this problem more than tooling would.
-- Box forking is part of this redesign and unfiled here: Ian wants to point new
+- Box forking was originally recorded as part of this redesign: Ian wants to point new
   engine code at his real working boxes rather than a clone, when no migration is
   needed. Pointing an engine at an arbitrary box already works (`BOXES=` in a
   worktree's `.env`, or `cb serve <path>`). Two things block doing it safely —
   module-resolution split-brain (box-local schemas resolve `callback-box` through
   the box's own `node_modules` symlink, so a worktree's `cb serve` can load a
   _second_ engine build in-process), and the `events.db` truncation hazard filed
-  as [two engines on one box truncate each other's events](../bugs/2026-08-08-events-db-truncates-across-engine-checkouts.md).
+  as [two engines on one box truncate each other's events](../../bugs/2026-08-08-events-db-truncates-across-engine-checkouts.md).
