@@ -33,6 +33,21 @@ import { registerCspReportRoute } from "./routes/api-csp-report.js";
 import { HASHED_ASSET_CACHE_OPTIONS } from "./static-cache.js";
 import { invariant } from "../lib/invariant.js";
 import { PROD_CSP_REPORT_PATH } from "../lib/csp.js";
+import {
+  DEV_BUNDLE_RELOAD_EXIT_CODE,
+  abandonDevBundleDrain,
+  beginDevBundleDrain,
+  devBundleWasReplaced,
+  hasActiveMutations,
+  isDevBundleDraining,
+  trackMutationStart,
+} from "../lib/dev-bundle-reload.js";
+import { chatRuntimesAreIdle } from "./chat-runtime.js";
+import {
+  allChatScheduleDeliveriesAreIdle,
+  pauseChatSchedulesForDevReload,
+  resumeChatSchedulesAfterAbortedDevReload,
+} from "../core/chat/schedules.js";
 
 export type { BoxSpec, ServerOptions, ServerContext } from "./server-types.js";
 
@@ -114,6 +129,24 @@ export async function createServer(options?: InternalServerOptions): Promise<Fas
   });
 
   registerChromeExtensionCors(server);
+
+  // A hub-supervised dev reload keeps reads available while current work
+  // drains, but admits no new mutation that could race the final idle check.
+  // Track the complete request because a chat send performs async preparation
+  // before its registry session becomes visibly busy.
+  server.addHook("onRequest", async (request, reply) => {
+    const oauthCallback = request.method === "GET" && request.url.startsWith("/auth/google-services/callback");
+    if (!oauthCallback && (request.method === "GET" || request.method === "HEAD" || request.method === "OPTIONS")) {
+      return;
+    }
+    if (isDevBundleDraining()) {
+      await reply.status(503).send({ error: "Server is reloading updated development code; retry this request." });
+      return;
+    }
+    const finish = trackMutationStart();
+    request.raw.once("close", finish);
+    reply.raw.once("finish", finish);
+  });
 
   // Attach the Content-Security-Policy (Report-Only) + Reporting-Endpoints
   // headers to HTML document responses. Registered early so its onSend runs on
@@ -272,7 +305,7 @@ export async function startServer(options?: ServerOptions): Promise<void> {
 
   // Shutdown handler — force-close all connections immediately so
   // --watch restarts don't hang on open WebSocket sockets.
-  const shutdown = async (signal: string) => {
+  const shutdown = async (signal: string, exitCode?: number) => {
     console.log(`\nReceived ${signal}, shutting down...`);
     for (const pf of pidFiles) {
       await fs.promises.unlink(pf).catch(() => {});
@@ -280,7 +313,7 @@ export async function startServer(options?: ServerOptions): Promise<void> {
     server.server.closeAllConnections();
     await server.close();
     console.log("Server closed.");
-    process.exit(0);
+    process.exit(exitCode ?? 0);
   };
 
   // Fire-and-forget shutdown: signal handlers and the orphan-detection timer
@@ -317,6 +350,49 @@ export async function startServer(options?: ServerOptions): Promise<void> {
     console.log(`Server running at http://${host}:${port}`);
     for (const box of boxes) {
       console.log(`  ${box.slug}: http://${host}:${port}/${box.slug}/`);
+    }
+
+    // Only a hub child has a supervisor that can safely replace it. Standalone
+    // `cb serve` deliberately does not self-spawn: its pidfile and orphan
+    // detector make overlapping parent/successor lifetimes destructive.
+    // TODO(env-migration): The launcher stamps this internal supervision marker before exec.
+    if (isHubMode() && process.env.CB_DEV_BUNDLE_ID) {
+      let drainStartedAt: number | undefined;
+      const reloadCheck = setInterval(() => {
+        void (async () => {
+          if (!isDevBundleDraining()) {
+            if (!(await devBundleWasReplaced())) return;
+            console.log("Development bundle changed; draining before reload...");
+            beginDevBundleDrain();
+            pauseChatSchedulesForDevReload();
+            drainStartedAt = Date.now();
+          }
+          if (hasActiveMutations() || !chatRuntimesAreIdle() || !allChatScheduleDeliveriesAreIdle()) {
+            if (drainStartedAt !== undefined && Date.now() - drainStartedAt >= 10 * 60 * 1000) {
+              await abandonDevBundleDrain();
+              resumeChatSchedulesAfterAbortedDevReload();
+              drainStartedAt = undefined;
+              console.warn("Development bundle reload could not reach a safe boundary within 10 minutes; continuing on the loaded bundle.");
+            }
+            return;
+          }
+          clearInterval(reloadCheck);
+          shuttingDown = true;
+          await shutdown("development bundle reload", DEV_BUNDLE_RELOAD_EXIT_CODE);
+        })().catch((err: unknown) => {
+          console.error("Development bundle reload check failed:", err);
+        });
+      }, 1000);
+      reloadCheck.unref();
+    } else if (process.env.CB_DEV_BUNDLE_ID) {
+      const staleWarning = setInterval(() => {
+        void devBundleWasReplaced().then((replaced) => {
+          if (!replaced) return;
+          clearInterval(staleWarning);
+          console.warn("Development bundle changed. Restart this standalone `cb serve` process to load it safely.");
+        });
+      }, 1000);
+      staleWarning.unref();
     }
   } catch (err) {
     for (const pf of pidFiles) {

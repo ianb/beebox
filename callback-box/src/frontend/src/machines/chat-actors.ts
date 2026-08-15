@@ -17,7 +17,6 @@ import {
   type SessionContentBlock,
   type ChatImageAttachment,
 } from "../api";
-import type { ChatTurnStart } from "../api-chat";
 import { trpcClient } from "../lib/trpc";
 // Raw relative (not `@shared/…`): loaded outside Vite by the tap/tsx doctest
 // runner (root tsconfig, no @shared resolution) — see OUTSIDE_VITE_SHARED_RAW.
@@ -35,7 +34,8 @@ import {
   type SessionInput,
 } from "./chat-types";
 import { runFakeStream, runScrollDebugToggle } from "./chat-actors-fakestream";
-import { chatSendReasonKind, recordChatSendEvent } from "../lib/chat-send-diagnostics";
+import { settleFromTurnStart, settleRejectedTurnStart } from "./chat-receipt-settlement";
+import { recordChatSendEvent } from "../lib/chat-send-diagnostics";
 
 export const fetchInitialActor = fromPromise<
   { entries: SessionEntry[]; total: number; sessionId: string | null; running: boolean; busy: boolean },
@@ -199,30 +199,6 @@ export function handleTurnMessage(
   }
 }
 
-/**
- * Map a `startChatTurn` result onto a receipt settlement, shared by the
- * idle-path send (`streamActor`) and the mid-turn queued send
- * (`queueMessageToBackend`) — both report the same three shapes
- * (deduplicated / queued / turnId) plus the no-turnId failure.
- */
-function settleFromTurnStart(messageId: string, result: ChatTurnStart): void {
-  recordChatSendEvent(messageId, { event: "post-response", detail: {
-    outcome: result.deduplicated ? "deduplicated" : result.queued ? "queued" : result.turnId ? "turn-started" : "empty" } });
-  if (result.deduplicated) {
-    settleReceipt({ disposition: "sent", emissionId: messageId, deduplicated: true });
-    return;
-  }
-  if (result.queued) {
-    settleReceipt({ disposition: "queued", emissionId: messageId });
-    return;
-  }
-  if (result.turnId) {
-    settleReceipt({ disposition: "sent", emissionId: messageId, deduplicated: false });
-    return;
-  }
-  settleReceipt({ disposition: "rejected", emissionId: messageId, reason: "Send returned no turn id" });
-}
-
 /** A frame yielded by events.turnStream, possibly still inside a tracked envelope. */
 type TurnStreamWire =
   | { t: "msg"; msg: ChatMessage }
@@ -288,10 +264,12 @@ export const streamActor = fromCallback(
       ...(input.cardState && Object.keys(input.cardState).length > 0 ? { cardState: input.cardState } : {}),
     })
       .then((result) => {
-        if (cancelled) return;
         // Settle the receipt (acceptance-level, BEFORE the stream runs for a
         // turnId result — see settleFromTurnStart) up front for every shape.
-        settleFromTurnStart(input.messageId, result);
+        // Settlement belongs to the POST, not this actor's lifetime: a route
+        // change or machine transition can cancel streaming while the server
+        // still accepts the in-flight message.
+        if (!settleFromTurnStart({ messageId: input.messageId, result, actorCancelled: cancelled })) return;
         // Queued / deduplicated finish the turn without a stream — the chat
         // machine refreshes history from these terminal states.
         if (result.deduplicated) {
@@ -355,12 +333,10 @@ export const streamActor = fromCallback(
         unsubscribe = () => sub.unsubscribe();
       })
       .catch((err: unknown) => {
-        if (cancelled) return;
         const msg = err instanceof Error ? err.message : "Send failed";
-        recordChatSendEvent(input.messageId, { event: "post-error", detail: { reasonKind: chatSendReasonKind(msg) } });
+        if (!settleRejectedTurnStart({ messageId: input.messageId, reason: msg, actorCancelled: cancelled })) return;
         console.error(`[chat] send failed: ${msg}`);
         logFsm("stream-throw", { msg, msgCount });
-        settleReceipt({ disposition: "rejected", emissionId: input.messageId, reason: msg });
         sendBack({ type: "STREAM_FAILED", error: msg, accepted: false });
       });
 
@@ -403,10 +379,9 @@ export function queueMessageToBackend(opts: { session: string; message: string; 
     ...(cardActivity && cardActivity.length > 0 ? { cardActivity } : {}),
     ...(cardState && Object.keys(cardState).length > 0 ? { cardState } : {}),
   })
-    .then((result) => settleFromTurnStart(messageId, result))
+    .then((result) => settleFromTurnStart({ messageId, result }))
     .catch((err: unknown) => {
       const msg = err instanceof Error ? err.message : "Send failed";
-      recordChatSendEvent(messageId, { event: "post-error", detail: { reasonKind: chatSendReasonKind(msg) } });
-      settleReceipt({ disposition: "rejected", emissionId: messageId, reason: msg });
+      settleRejectedTurnStart({ messageId, reason: msg });
     });
 }

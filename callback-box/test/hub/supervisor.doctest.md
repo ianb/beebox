@@ -170,6 +170,41 @@ await supervisor.stopAll();
 await fixture.cleanup();
 ```
 
+## A development reload exit restarts cleanly without consuming crash budget
+
+```ts continue
+const reloadFixture = await makeTmpBox();
+const reloadChildren = [];
+function reloadSpawnChild() {
+  const child = makeFakeChild(905000 + reloadChildren.length);
+  reloadChildren.push(child);
+  return child;
+}
+const reloadConfig = {
+  port: undefined,
+  host: undefined,
+  boxes: { fixture: { path: reloadFixture.root } },
+  configPath: reloadFixture.path("hub.json"),
+};
+const reloadSupervisor = new Supervisor({
+  config: reloadConfig,
+  hubSecret: "test-hub-secret",
+  spawnChild: reloadSpawnChild,
+  checkReady: () => Promise.resolve(),
+});
+await reloadSupervisor.startAll();
+reloadChildren[0].fireExit(75, null);
+await new Promise((resolve) => setTimeout(resolve, 20));
+const reloadStatus = reloadSupervisor.getStatuses()[0];
+JSON.stringify({ status: reloadStatus.status, pid: reloadStatus.pid, restarts: reloadStatus.restarts, failures: reloadStatus.consecutiveFailures })
+=> {"status":"running","pid":905001,"restarts":1,"failures":0}
+```
+
+```ts cleanup
+await reloadSupervisor.stopAll();
+await reloadFixture.cleanup();
+```
+
 ## Lazy mode: `startAll` spawns nothing, `ensureRunning` cold-starts on first call, idle collection returns it to "stopped"
 
 Boxholder directive (2026-07-04): a `lazy: true` hub gives each box the same
