@@ -59,26 +59,21 @@ ra.disposition === "rejected" && ra.reason === "network"
 => true
 ```
 
-## A duplicate expectation supersedes the older one
+## Duplicate expectations share the real outcome
 
-A double dispatch of the same emission id must not leave the first
-promise hanging until timeout, nor let its stale timer clobber the new
-entry: the older expectation settles `rejected` immediately and the
-newer one carries the id alone.
+A repeated dispatch can register the same persisted emission ID before the
+first POST settles. Both callers must receive the eventual real outcome; a
+duplicate expectation is not evidence that either send failed.
 
 ```ts
 const first = expectReceipt("msg-dup");
 const second = expectReceipt("msg-dup");
-const r1 = await first;
-r1.disposition === "rejected" && r1.reason.includes("superseded")
-=> true
-
 pendingReceiptCount()
 => 1
 
 settleReceipt({ disposition: "sent", emissionId: "msg-dup", deduplicated: false });
-(await second).disposition
-=> sent
+JSON.stringify([(await first).disposition, (await second).disposition])
+=> ["sent","sent"]
 
 pendingReceiptCount()
 => 0

@@ -316,7 +316,8 @@ the contract.
   rejection from elapsed time: cold agent startup can keep `/chat/send` pending for several
   minutes. Transport, bridge-evaluation, malformed-response, and backend failures still reject
   explicitly. Navigation clears native inflight state and redelivers the same persisted emission ID;
-  server dedup makes that retry safe.
+  server dedup retains the claimed ID for seven days, which makes normal
+  navigation and crash-recovery retries safe.
 - **Drift:** a missing outcome remains visibly pending; navigation retries the same emission ID.
 - **Benign field drift:** native ignores `deduplicated` on `sent` receipts.
 

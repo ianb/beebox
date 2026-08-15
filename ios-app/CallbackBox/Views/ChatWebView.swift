@@ -278,12 +278,19 @@ struct ChatWebView: UIViewRepresentable {
                 navigationStartLogged = true
                 BoxLog.info("chat navigation started", category: .webview, targetBoxID: boxID)
             }
-            inflightEmissionIDs.removeAll()
             inflightLocationRequestID = nil
             locationRequestTimeout?.cancel()
             locationRequestTimeout = nil
             inflightScreenshotRequestID = nil
             inflightComposerCommandAcknowledgementIDs.removeAll()
+        }
+
+        func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+            // The old document can still deliver a real receipt while a
+            // provisional navigation is pending. Only clear its inflight IDs
+            // once the replacement document commits; didFinish then redelivers
+            // the same persisted IDs into the new page.
+            inflightEmissionIDs.removeAll()
         }
 
         func webView(
@@ -322,6 +329,9 @@ struct ChatWebView: UIViewRepresentable {
                     + " inflight=\(inflightEmissionIDs.count)",
                 category: .webview
             )
+            pageLoaded = false
+            inflightEmissionIDs.removeAll()
+            webView.reload()
         }
 
         func webView(
@@ -430,7 +440,7 @@ struct ChatWebView: UIViewRepresentable {
             }
         }
 
-        private func receiveEmissionReceipt(_ body: Any) {
+        func receiveEmissionReceipt(_ body: Any) {
             guard
                 let payload = ChatWebView.dictionaryPayload(from: body),
                 let idString = payload["emissionId"] as? String,

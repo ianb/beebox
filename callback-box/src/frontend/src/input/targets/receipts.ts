@@ -24,8 +24,11 @@ export type Receipt =
   | { disposition: "rejected"; emissionId: string; reason: string };
 
 interface PendingReceipt {
-  resolve: (receipt: Receipt) => void;
+  resolves: Set<(receipt: Receipt) => void>;
+  diagnosticTimer: ReturnType<typeof setTimeout>;
 }
+
+const PENDING_DIAGNOSTIC_MS = 30_000;
 
 const pending = new Map<string, PendingReceipt>();
 
@@ -37,12 +40,22 @@ const pending = new Map<string, PendingReceipt>();
  * a still-pending POST as rejected restores a message the server may later run.
  */
 export function expectReceipt(emissionId: string): Promise<Receipt> {
-  // A duplicate expectation for the same id (a double dispatch) supersedes
-  // the older one: settle it as rejected now, so one promise cannot remain
-  // stranded behind another expectation carrying the same correlation id.
-  settleReceipt({ disposition: "rejected", emissionId, reason: "superseded by a newer send with the same id" });
   return new Promise((resolve) => {
-    pending.set(emissionId, { resolve });
+    const entry = pending.get(emissionId);
+    if (entry === undefined) {
+      pending.set(emissionId, {
+        resolves: new Set([resolve]),
+        diagnosticTimer: setTimeout(() => {
+          if (!pending.has(emissionId)) return;
+          recordChatSendEvent(emissionId, {
+            event: "receipt-pending",
+            detail: { elapsedMs: PENDING_DIAGNOSTIC_MS },
+          });
+        }, PENDING_DIAGNOSTIC_MS),
+      });
+    } else {
+      entry.resolves.add(resolve);
+    }
   });
 }
 
@@ -57,7 +70,8 @@ export function settleReceipt(receipt: Receipt): void {
   const entry = pending.get(receipt.emissionId);
   if (entry === undefined) return;
   pending.delete(receipt.emissionId);
-  entry.resolve(receipt);
+  clearTimeout(entry.diagnosticTimer);
+  for (const resolve of entry.resolves) resolve(receipt);
 }
 
 /** Test seam: outstanding expectation count. */

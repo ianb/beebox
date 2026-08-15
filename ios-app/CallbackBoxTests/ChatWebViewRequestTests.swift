@@ -168,10 +168,32 @@ final class ChatWebViewRequestTests: XCTestCase {
 
         coordinator.deliver([emission], to: webView)
         coordinator.webView(webView, didStartProvisionalNavigation: nil)
+        coordinator.webView(webView, didCommit: nil)
         coordinator.webView(webView, didFinish: nil)
 
         XCTAssertEqual(attempts, [emission.id, emission.id])
         XCTAssertEqual(evaluationCount, 2)
+    }
+
+    @MainActor
+    func testProvisionalNavigationKeepsOldPageReceiptEligible() {
+        let emission = makeEmission()
+        var receipt: NativeEmissionReceipt?
+        let coordinator = makeCoordinator(
+            onReceipt: { receipt = $0 },
+            evaluate: { _, completion in completion(nil) }
+        )
+        let webView = WKWebView()
+
+        coordinator.deliver([emission], to: webView)
+        coordinator.webView(webView, didStartProvisionalNavigation: nil)
+        coordinator.receiveEmissionReceipt([
+            "emissionId": emission.id.uuidString,
+            "disposition": "sent",
+        ])
+
+        XCTAssertEqual(receipt?.emissionID, emission.id)
+        XCTAssertEqual(receipt?.disposition, .sent)
     }
 
     private func makeEmission() -> NativeChatEmission {
