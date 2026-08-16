@@ -55,6 +55,11 @@ export const fisheyeTags: NonNullable<Config["tags"]> = {
     selfClosing: true,
     transform(node: Node, config: Config): RenderableTreeNode {
       const slug = String(node.transformAttributes(config)["slug"] ?? "");
+      // A nugget renders as a <figure>; splicing one into a sentence would
+      // put block content inside <p>, which browsers repair unpredictably.
+      if (node.inline) {
+        throw new Error(`nugget "${slug}" is embedded mid-sentence — place {% nugget /%} on its own line`);
+      }
       // Placeholder element; embedNuggets() (nuggets.ts) substitutes the real
       // rendered nugget and fails the build on an unknown slug.
       return new Tag("x-nugget", { slug }, []);

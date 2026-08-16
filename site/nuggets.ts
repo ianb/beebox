@@ -117,6 +117,11 @@ export async function loadNuggets(params: { nuggetsDir: string; repoRoot: string
     if (trimmedBody === "" && frontmatter.status !== "excerpt") {
       throw new NuggetError(`${file}:1 status "${frontmatter.status}" requires a body (only excerpt may be empty)`);
     }
+    // Fail-closed both ways: an excerpt's content IS its span. A body on an
+    // excerpt would publish other words under the source's citation.
+    if (trimmedBody !== "" && frontmatter.status === "excerpt") {
+      throw new NuggetError(`${file}:1 status "excerpt" must have no body — the span is the content`);
+    }
 
     const sourceText = await fs.readFile(path.join(repoRoot, frontmatter.source), "utf8").catch((e: unknown) => {
       throw new NuggetError(
@@ -206,6 +211,12 @@ export function renderNugget(nugget: Nugget, params: { base: string; pageSitePat
   }
   const text = nugget.body === "" ? nugget.span : nugget.body;
   const { html } = renderBody(text, { pageSitePath: params.pageSitePath, base: params.base });
+  // A nugget body embedding another nugget would ship an inert <x-nugget>
+  // that bypassed the unknown-slug check. Refuse until nesting is a designed
+  // feature rather than an accident.
+  if (html.includes("<x-nugget")) {
+    throw new NuggetError(`nugget "${nugget.slug}" embeds another nugget in its body — nuggets cannot nest`);
+  }
   const stale =
     nugget.spanState === "current"
       ? ""

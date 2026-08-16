@@ -209,3 +209,30 @@ test("the input manifest covers both the nugget files and the sources they cite"
     assert.ok(rels.includes(`../${nugget.source}`), `manifest is missing the cited source ${nugget.source}`);
   }
 });
+
+// --- cross-model review fixes (2026-08-16) ------------------------------------
+
+test("an excerpt with a body fails to load — the span is the content", async () => {
+  await assert.rejects(
+    loadOne(nuggetFile({ source: DOC, span: "the shape of the idea", status: "excerpt", body: "Other words." }), {
+      [DOC]: "Design: the shape of the idea, as Engelbart had it.\n",
+    }),
+    (e: unknown) => e instanceof NuggetError && /must have no body/.test(e.message),
+  );
+});
+
+test("a nugget whose body embeds another nugget refuses to render", async () => {
+  const nugget = await loadOne(
+    nuggetFile({
+      source: DOC,
+      span: "the shape of the idea",
+      status: "reinterpreted",
+      body: "See the record:\n\n{% nugget slug=\"other\" /%}\n",
+    }),
+    { [DOC]: "Design: the shape of the idea, as Engelbart had it.\n" },
+  );
+  assert.throws(
+    () => renderNugget(nugget, RENDER_PARAMS),
+    (e: unknown) => e instanceof NuggetError && /cannot nest/.test(e.message),
+  );
+});

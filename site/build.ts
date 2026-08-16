@@ -87,13 +87,32 @@ interface BuiltPage {
   linkTargets: { target: string; href: string }[];
 }
 
-// The machine-facing twin is the page's flat markdown form: the body with the
-// fisheye tag markers stripped, so all text is present with no disclosure
-// (an embedded nugget's placeholder disappears — the nugget's own source is
-// already repo content). The body carries its own H1; frontmatter is build
-// metadata, not content.
-function twinMarkdown(body: string): string {
-  return `${body.replace(/{%[\S\s]*?%}/g, "").trimStart().trimEnd()}\n`;
+// The machine-facing twin is the page's flat markdown form: fisheye tag
+// markers stripped (all text present, no disclosure), an embedded nugget
+// flattened to a blockquote with its provenance, and fenced code blocks left
+// untouched — a literal `{% %}` in an example is content, not markup. The
+// body carries its own H1; frontmatter is build metadata, not content.
+function flatNugget(slug: string, nuggets: readonly Nugget[]): string {
+  const nugget = nuggets.find((n) => n.slug === slug);
+  // Unknown/refused slugs already failed the build in embedNuggets; this
+  // guard only keeps the twin pass from ever being the thing that throws.
+  if (!nugget || !isRenderable(nugget)) return "";
+  const text = nugget.body === "" ? nugget.span : nugget.body;
+  const quoted = text.split("\n").map((line) => `> ${line}`.trimEnd()).join("\n");
+  return `${quoted}\n> — from ${nugget.source}`;
+}
+
+function twinMarkdown(body: string, nuggets: readonly Nugget[]): string {
+  const flat = body
+    .split(/(```[\S\s]*?```)/g)
+    .map((part, i) => {
+      if (i % 2 === 1) return part; // inside a code fence: literal content
+      return part
+        .replace(/{%\s*nugget\s+slug="([^"]*)"\s*\/%}/g, (_m, slug: string) => flatNugget(slug, nuggets))
+        .replace(/{%[\S\s]*?%}/g, "");
+    })
+    .join("");
+  return `${flat.trimStart().trimEnd()}\n`;
 }
 
 function renderLlmsTxt(params: { home: PageFrontmatter; pages: BuiltPage[]; base: string }): string {
@@ -155,7 +174,7 @@ async function main(): Promise<void> {
     const twinOut = path.join(DIST_DIR, `${file.stem}.md`);
     await fs.mkdir(path.dirname(htmlOut), { recursive: true });
     await fs.writeFile(htmlOut, pageShell({ title: frontmatter.title, bodyHtml: html, base }), "utf8");
-    await fs.writeFile(twinOut, twinMarkdown(body), "utf8");
+    await fs.writeFile(twinOut, twinMarkdown(body, nuggets), "utf8");
 
     emitted.add(pageSitePath);
     built.push({

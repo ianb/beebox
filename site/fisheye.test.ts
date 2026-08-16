@@ -74,3 +74,10 @@ test("embedNuggets: a page embedding a proposed nugget still refuses to render i
     NuggetError,
   );
 });
+
+test("nugget tag refuses inline position — a figure cannot live mid-sentence", () => {
+  assert.throws(
+    () => renderBody("A sentence with {% nugget slug=\"n1\" /%} inside it.", RENDER),
+    /mid-sentence/,
+  );
+});
