@@ -15,9 +15,36 @@ type AudioBadgeKind = "retranscribed" | "consulted";
 
 export interface AudioBadgeSpec {
   kind: AudioBadgeKind;
-  glyph: string;
+  glyph: ReactNode;
   label: string;
   detail: ReactNode;
+}
+
+/**
+ * Both audio badges share a LISTENING motif (boxholder, 2026-08-16 — the
+ * first pencil glyph wrongly implied editing): retranscription is the ear
+ * alone (listened carefully to get the words right — the swapped text shows
+ * the outcome), understanding adds a sparkle (grasped something about what
+ * it heard). Stroke SVGs, same idiom as the selection pill's icon.
+ */
+function EarGlyph() {
+  return (
+    <svg className="w-[13px] h-[13px]" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 9a6 6 0 1 1 12 0c0 4.5-4 5-4 8.5a3 3 0 1 1-6 0" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M14.5 9a2.5 2.5 0 0 0-5 0" />
+    </svg>
+  );
+}
+
+function EarSparkleGlyph() {
+  return (
+    <svg className="w-[13px] h-[13px]" viewBox="0 0 24 24" aria-hidden>
+      <g fill="none" stroke="currentColor" strokeWidth={2.8}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 11a5.5 5.5 0 1 1 11 0c0 4-3.5 4.5-3.5 7.5a2.8 2.8 0 1 1-5.6 0" />
+      </g>
+      <path fill="currentColor" d="M18.5 2l1.3 3.2L23 6.5l-3.2 1.3L18.5 11l-1.3-3.2L14 6.5l3.2-1.3z" />
+    </svg>
+  );
 }
 
 /**
@@ -31,7 +58,7 @@ export function buildAudioBadgeSpecs(overlay: AudioOverlayEntry, originalText: s
     const { service } = overlay.retranscription;
     specs.push({
       kind: "retranscribed",
-      glyph: "✎",
+      glyph: <EarGlyph />,
       label: service ? `Retranscribed — ${service}` : "Retranscribed",
       detail: (
         <>
@@ -44,7 +71,7 @@ export function buildAudioBadgeSpecs(overlay: AudioOverlayEntry, originalText: s
   if (overlay.consulted) {
     specs.push({
       kind: "consulted",
-      glyph: "\u{1F3A7}",
+      glyph: <EarSparkleGlyph />,
       label: "The agent analyzed this recording",
       detail: null,
     });
@@ -112,14 +139,14 @@ function AudioOverlayBadge({ spec, open, onToggle, onClose }: {
         aria-label={spec.label}
         aria-haspopup="dialog"
         aria-expanded={open}
-        // Muted white-on-color, matching this bubble's opacity convention
-        // (pills' bg-white/20, PendingIndicator's text-white/70) rather than
-        // AckBadge's solid bg-info — subtle by design (boxholder asked for
-        // emoticon-scale, not chrome), and reads in both themes since the
-        // bubble is always white-on-color regardless of app theme.
-        className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-white/25 text-white text-[9px] leading-none ring-1 ring-white/40 cursor-pointer"
+        // Solid contrast like AckBadge (the first muted bg-white/25 pass was
+        // illegible — boxholder, 2026-08-16), one step larger than the ack
+        // cluster, with a stroke-SVG glyph instead of a font glyph so it
+        // stays crisp at badge size. Reads in both themes since the bubble
+        // is always white-on-color regardless of app theme.
+        className="inline-flex items-center justify-center w-[18px] h-[18px] rounded-full bg-info text-white leading-none ring-1 ring-warm-50 cursor-pointer"
       >
-        <span aria-hidden>{spec.glyph}</span>
+        <span aria-hidden className="inline-flex">{spec.glyph}</span>
       </button>
       {open ? (
         <div
