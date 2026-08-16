@@ -34,6 +34,8 @@
 . "$(dirname "${BASH_SOURCE[0]}")/worktree-paths.sh"
 # shellcheck source=session-registry.sh
 . "$(dirname "${BASH_SOURCE[0]}")/session-registry.sh"
+# shellcheck source=exhibits-store.sh
+. "$(dirname "${BASH_SOURCE[0]}")/exhibits-store.sh"
 if ! wt_paths_init "$(dirname "${BASH_SOURCE[0]}")/.."; then
   # Leave every derived location empty rather than half-set: `cd ""` and
   # `[ -d "" ]` both fail, so each destructive step declines on its own.
@@ -477,6 +479,20 @@ wt_remove_now() {
   fi
 
   wt_remove_private_issues "$worktree_path"
+
+  # Exhibits: the mount is a symlink, so the trash-mv below only ever takes
+  # the link. A REAL directory here means the mount failed and something
+  # wrote exhibit content into the doomed tree — rescue it into the store
+  # first, and refuse the removal if the rescue fails (a lingering worktree
+  # is collected by the next sweep; trashed exhibit content is gone).
+  if [ -d "$worktree_path/exhibits" ] && [ ! -L "$worktree_path/exhibits" ]; then
+    if ! wt_exhibits_rescue "$worktree_path" "$name"; then
+      wt_say "refusing removal: real exhibits/ dir could not be rescued into the store"
+      wt_log "exhibits rescue failed wt=$worktree_path"
+      return 1
+    fi
+  fi
+
   wt_remove_satellites "$name"
 
   # Move out of the worktree dir before removing it.

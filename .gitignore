@@ -77,3 +77,7 @@ dev/story-eval/verdicts/
 # Private-issues shadow-repo mount (a SYMLINK in every checkout — no trailing
 # slash: dir-only patterns do not match symlinks). See issues/CLAUDE.md.
 /private-issues
+
+# Exhibit-store mount (same symlink rule — bin/lib/exhibits-store.sh; design
+# in callback-box/docs/plans/workstream-exhibits.md).
+/exhibits
