@@ -25,6 +25,7 @@ export type ChatSendDiagnosticEvent =
   | { event: "post-retry-scheduled"; detail: { reasonKind: "network"; delayMs: number } }
   | { event: "post-error"; detail: { reasonKind: ChatSendReasonKind } }
   | { event: "post-response"; detail: { outcome: "deduplicated" | "queued" | "turn-started" | "empty" } }
+  | { event: "receipt-pending"; detail: { elapsedMs: number } }
   | { event: "receipt-settled"; detail: { disposition: ReceiptDisposition; reasonKind?: ChatSendReasonKind } }
   | { event: "turn-stream-frame"; detail: { frame: TurnFrameKind; frameNumber: number } }
   | { event: "turn-stream-error"; detail: { errorLength: number } }
@@ -200,7 +201,7 @@ export function recordChatSendEvent(
     return;
   }
   append(trace, input);
-  const initial = input.event === "post-retry-scheduled";
+  const initial = input.event === "post-retry-scheduled" || input.event === "receipt-pending";
   const terminal = input.event === "post-error" || input.event === "turn-stream-error" ||
     (input.event === "turn-stream-complete" && !input.detail.terminalFired) ||
     (input.event === "receipt-settled" && input.detail.disposition === "rejected");

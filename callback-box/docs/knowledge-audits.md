@@ -90,6 +90,9 @@ Each entry in `knowledge-audits.yaml` has these fields:
   of exact substrings would overfit.
 - `cards_contain` — strings that must appear in card files created by the agent.
 - `should_read` — files the agent should read before answering.
+- `should_read_any` — alternative files, at least one of which the agent should
+  read. Use this when generated guidance and its installed skill are equivalent
+  navigation outcomes.
 - `max_turns` — override the default 10-turn limit (use for tests requiring multi-step card creation).
 - `tags` — for filtering with `--filter`.
 - `context_dir` — box-relative subdirectory to run the agent from. Sets the SDK's `cwd` there and adds the box root to `additionalDirectories`, mirroring how a chat session bound to a landmark is spawned. Use to audit that the subdirectory's `CLAUDE.md` (and its `@MAP.md` import) actually load into the agent's context at session start.

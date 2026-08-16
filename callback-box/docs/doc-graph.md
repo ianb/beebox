@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-08-15T07:58:22Z
-Total documents: 268
+Generated: 2026-08-15T19:40:20Z
+Total documents: 270
 
 ## Issues
 
@@ -16,6 +16,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/box-schema-reload.md** — "Box-local schema reload — design & implementation plan" (357 lines)
 - **docs/implemented-plans/chat-composer-rerender.md** — "Plan: stop composer keystrokes from re-rendering chat history" (160 lines)
 - **docs/implemented-plans/codex-diagnostic-parity.md** — "Provider-aware agent diagnostics" (168 lines)
+- **docs/implemented-plans/codex-sdk-backend.review.md** — "Plan Engineering Review — Codex SDK backend" (162 lines)
 - **docs/implemented-plans/companion-pane-card-activity.md** — "Companion-pane card activity awareness for chat" (372 lines)
 - **docs/implemented-plans/courseware-lesson-plan.md** — "Courseware: the `lesson-plan` card" (351 lines)
 - **docs/implemented-plans/delivered-user-message-codec.md** — "Exhaustive delivered-user-message codec" (168 lines)
@@ -57,7 +58,7 @@ These references point to files that don't exist.
 
 - **docs/implemented-plans/link-validation-fix.md:536** → `/store/foo/bar.md` (link)
   Context: `[x](/store/foo/bar.md)`. What does the leading slash mean?"*;
-- **docs/knowledge-audits.md:95** → `MAP.md` (at-include)
+- **docs/knowledge-audits.md:98** → `MAP.md` (at-include)
   Context: - `context_dir` — box-relative subdirectory to run the agent from. Sets the SDK's `cwd` there and adds the box root to `
 - **docs/reports/user-stories-audit-2026-06-26.md:5334** → `MAP.md` (at-include)
   Context: - Ensure per-dir CLAUDE.md includes are correct: IMPLEMENTED in finalize.ts lines 58-79 with `ensureClaudeMdInDir()` tha
@@ -130,7 +131,7 @@ Referenced by:
 - docs/implemented-plans/shared-frontend-backend-code.subplan.md:29 (mention) — `CLAUDE.md`. We share what Track 2 forces us to share. We do not
 - docs/implemented-plans/todo-annotation.md:126 (mention) — CLAUDE.md that @-imports MAP.md"). **Reused** as the channel for
 - docs/implemented-plans/top-nav-ia.md:449 (mention) — | Voice/session chips regress companion-pane memo stability (bar re-renders on chat state) | Render-count probe (chat CL
-- docs/implemented-plans/transcript-confidence.md:409 (mention) — arrive via the per-turn chat prompt (not CLAUDE.md recall), so the audit
+- docs/implemented-plans/transcript-confidence.md:417 (mention) — arrive via the per-turn chat prompt (not CLAUDE.md recall), so the audit
 - docs/implemented-plans/user-location.md:261 (mention) — CLAUDE.md default; the raw-route carve-out doesn't apply. (An earlier
 - docs/implemented-plans/view-render-testing.md:264 (mention) — of the orphan-prone dev machinery in CLAUDE.md — no router, no Vite, no Fastify,
 - docs/implemented-plans/web-push-notifications.md:198 (mention) — prune both write it; CLAUDE.md *"All cross-process locks go through ...file-lock.ts"*).
@@ -1033,6 +1034,7 @@ Referenced by:
 - docs/implemented-plans/capture-mode.md:22 (mention) — - `docs/engineering-principles.md` — findings trace mostly to: **#3**
 - docs/implemented-plans/chat-header-chips.md:63 (mention) — - `docs/engineering-principles.md` — principle 2 (exhaustiveness; frontend
 - docs/implemented-plans/chat-review.md:42 (mention) — - **`docs/engineering-principles.md`** — findings trace to:
+- docs/implemented-plans/codex-sdk-backend.md:44 (mention) — (`docs/engineering-principles.md:12`).
 - docs/implemented-plans/delivered-user-message-codec.md:18 (mention) — - Engineering principle 1, Types are structure. `docs/engineering-principles.md:12-18` says: *"Prefer types that make il
 - docs/implemented-plans/expose-dev-router.md:27 (mention) — - `docs/engineering-principles.md` — **fail-closed / resilient-not-silent** is
 - docs/implemented-plans/hub-healthz-box-aggregation.md:32 (mention) — - **Principle 1, types are structure** (`docs/engineering-principles.md:12`):
@@ -1235,7 +1237,7 @@ References:
 
 #### docs/knowledge-audits.md
 
-Title: "Knowledge Audits" | 110 lines
+Title: "Knowledge Audits" | 113 lines
 
 Referenced by:
 - CLAUDE.md:170 (mention) — | Knowledge audits | `docs/knowledge-audits.md` |
@@ -2552,6 +2554,26 @@ Title: "Provider-aware agent diagnostics" | 168 lines
 References:
 - → code-style.md (mention)
 
+#### docs/implemented-plans/codex-sdk-backend.md
+
+Title: "Use the official Codex SDK at the Codex engine boundary" | 380 lines
+
+Referenced by:
+- docs/implemented-plans/codex-sdk-backend.review.md:74 (mention) — **Location in plan:** `callback-box/docs/plans/codex-sdk-backend.md`, Prior art and Open
+- ../issues/code-quality/2026-08-15-replace-raw-codex-app-server-with-sdk.md:25 (link) — Plan: [Use the official Codex SDK](../../callback-box/docs/implemented-plans/codex-sdk-backend.md).
+
+References:
+- → ../issues/code-quality/2026-08-15-replace-raw-codex-app-server-with-sdk.md (frontmatter)
+- → docs/engineering-principles.md (mention)
+
+#### docs/implemented-plans/codex-sdk-backend.review.md **[ORPHAN]**
+
+Title: "Plan Engineering Review — Codex SDK backend" | 162 lines
+
+References:
+- → ../issues/code-quality/2026-08-15-replace-raw-codex-app-server-with-sdk.md (frontmatter)
+- → docs/implemented-plans/codex-sdk-backend.md (mention)
+
 #### docs/implemented-plans/codex-worktree-sessions.md
 
 Title: "Codex worktree sessions" | 209 lines
@@ -2624,7 +2646,7 @@ Title: "Make the shared dev router safely exposable over Tailscale" | 566 lines
 Referenced by:
 - docs/docker-install.md:193 (mention) — router's auth model and `docs/implemented-plans/expose-dev-router.md` for the
 - docs/implemented-plans/expose-dev-router.review.md:4 (mention) — `expose-dev-router.md`, 2026-07-21. **Verdict: unsafe as written — do not
-- ../bin/CLAUDE.md:108 (mention) — `callback-box/docs/implemented-plans/expose-dev-router.md`.
+- ../bin/CLAUDE.md:124 (mention) — `callback-box/docs/implemented-plans/expose-dev-router.md`.
 - ../issues/closed/bugs/2026-07-20-dev-router-login-page-broken.md:11 (mention) — `expose-dev-router` plan (`callback-box/docs/implemented-plans/expose-dev-router.md`),
 - ../issues/closed/features/2026-07-21-expose-dev-checkout-over-tailscale.md:13 (mention) — (`callback-box/docs/implemented-plans/expose-dev-router.md`): the shared
 - ../issues/features/2026-07-22-cb-tailscale-dev-router-operational-polish.md:11 (mention) — The dev-router Tailscale exposure (`docs/implemented-plans/expose-dev-router.md`)
@@ -3022,7 +3044,7 @@ References:
 Title: "Private issues: a shadow repo mounted at `<checkout>/private-issues/`" | 444 lines
 
 Referenced by:
-- ../bin/CLAUDE.md:449 (mention) — `callback-box/docs/implemented-plans/private-issues-shadow-repo.md`). Design invariants,
+- ../bin/CLAUDE.md:465 (mention) — `callback-box/docs/implemented-plans/private-issues-shadow-repo.md`). Design invariants,
 
 References:
 - → README.md (mention)
@@ -3476,7 +3498,7 @@ References:
 
 #### docs/implemented-plans/transcript-confidence.md
 
-Title: "Mark low-confidence transcript words, agent-first" | 462 lines
+Title: "Mark low-confidence transcript words, agent-first" | 470 lines
 
 Referenced by:
 - ../issues/features/2026-08-15-mark-low-confidence-words-in-transcripts.md:6 (frontmatter) — design: ../../callback-box/docs/implemented-plans/transcript-confidence.md
@@ -4455,7 +4477,7 @@ Title: "An agent-neutral worktree control surface" | 700 lines
 
 Referenced by:
 - docs/implemented-plans/workstreams.md:25 (link) — ([the worktree control surface](../plans/worktree-control-surface.md)) deferred.
-- ../bin/CLAUDE.md:208 (mention) — Design and rationale: `callback-box/docs/plans/worktree-control-surface.md`.
+- ../bin/CLAUDE.md:224 (mention) — Design and rationale: `callback-box/docs/plans/worktree-control-surface.md`.
 - ../issues/closed/bugs/2026-08-04-sweep-live-agent-guard-fails-open.md:7 (frontmatter) — design: ../../../callback-box/docs/plans/worktree-control-surface.md
 - ../issues/closed/bugs/2026-08-04-sweep-live-agent-guard-fails-open.md:21 (link) — > [the worktree control surface plan](../../../callback-box/docs/plans/worktree-control-surface.md)
 - ../issues/closed/code-quality/2026-08-01-derive-public-worktree-paths.md:7 (frontmatter) — design: ../../../callback-box/docs/plans/worktree-control-surface.md

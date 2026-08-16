@@ -203,6 +203,13 @@ function formatResponse(behavior: Behavior): string[] {
   return lines;
 }
 
+function formatShouldReadAny(checks: Checks): string[] {
+  if (checks.shouldReadAnyCheck === undefined) return [];
+  const check = checks.shouldReadAnyCheck;
+  const detail = check.matched === undefined ? "" : ` (matched ${check.matched})`;
+  return [`- ${check.wasRead ? "\u2713" : "\u2717"} Read any of [${check.files.join(", ")}]${detail}`];
+}
+
 function formatCheckLines(checks: Checks): string[] {
   const checkLines = formatPositiveTextChecks(checks);
   for (const c of checks.notContainsChecks) {
@@ -226,6 +233,7 @@ function formatCheckLines(checks: Checks): string[] {
   for (const c of checks.shouldReadChecks) {
     checkLines.push(`- ${c.wasRead ? "\u2713" : "\u2717"} Read ${c.file}`);
   }
+  checkLines.push(...formatShouldReadAny(checks));
   for (const c of checks.shouldNotReadChecks) {
     checkLines.push(`- ${c.wasRead ? "\u2717" : "\u2713"} Did not read ${c.file}`);
   }

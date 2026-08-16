@@ -1,12 +1,12 @@
 # Codex knowledge-audit behavior
 
-Codex audit evidence comes from the supported app-server activity surface. Shell
+Codex audit evidence comes from the official SDK activity surface. Shell
 commands are retained both as Bash activity and as read evidence, allowing the
 existing path-oriented checks to work without inventing a Claude-style Read tool.
 
 ```ts setup
 import { codexBehaviorFromActivity } from "../../../src/dev/lib/codex-audit-behavior.js";
-import { emitObservedActivity, itemCompletedSchema } from "../../../src/core/agent/codex-run-activity.js";
+import { emitObservedActivity } from "../../../src/core/agent/codex-run-activity.js";
 import type { CodexObservedActivity } from "../../../src/core/agent/codex-run-activity.js";
 
 const behavior = codexBehaviorFromActivity([
@@ -17,22 +17,19 @@ const behavior = codexBehaviorFromActivity([
 ], "  The date comes from EXIF.  ");
 ```
 
-The live app-server item boundary validates the provider payload before
-normalizing it:
+The typed SDK item feeds the audit activity mapper directly:
 
 ```ts
 const observed: CodexObservedActivity[] = [];
-const completed = itemCompletedSchema.parse({
-  threadId: "thread-1",
-  turnId: "turn-1",
-  item: {
-    type: "commandExecution",
-    command: "/bin/bash -lc 'cat AGENTS.md'",
-    aggregatedOutput: "instructions",
-    exitCode: 0,
-  },
-});
-emitObservedActivity(completed.item, (activity) => observed.push(activity));
+const completed = {
+  id: "command-1",
+  type: "command_execution" as const,
+  command: "/bin/bash -lc 'cat AGENTS.md'",
+  aggregated_output: "instructions",
+  exit_code: 0,
+  status: "completed" as const,
+};
+emitObservedActivity(completed, (activity) => observed.push(activity));
 JSON.stringify(observed)
 => [{"type":"command","command":"/bin/bash -lc 'cat AGENTS.md'"}]
 ```

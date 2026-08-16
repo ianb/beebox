@@ -1,16 +1,6 @@
 import type { AgentResult, AgentResultBase } from "./types.js";
-import {
-  CodexAppServerTimeoutError,
-  CodexRpcError,
-} from "../../services/codex-app-server.js";
 
 export function codexRunErrorText(error: unknown): string {
-  if (error instanceof CodexRpcError) {
-    return `${error.message}: ${error.method}: ${error.rpcMessage}`;
-  }
-  if (error instanceof CodexAppServerTimeoutError) {
-    return `${error.message}: ${error.operation}`;
-  }
   return error instanceof Error ? error.message : String(error);
 }
 
@@ -19,6 +9,7 @@ export function resultFromCodexTurn(options: {
   output: string;
   resultText: string;
   status: "completed" | "interrupted" | "failed";
+  error?: string | null | undefined;
   structuredOutput?: unknown;
 }): AgentResult {
   const base: AgentResultBase = {
@@ -32,6 +23,6 @@ export function resultFromCodexTurn(options: {
   return {
     ...base,
     success: false,
-    error: options.status === "interrupted" ? "Codex turn was interrupted" : "Codex turn failed",
+    error: options.error ?? (options.status === "interrupted" ? "Codex turn was interrupted" : "Codex turn failed"),
   };
 }

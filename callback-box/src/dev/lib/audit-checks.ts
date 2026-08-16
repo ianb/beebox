@@ -46,6 +46,11 @@ export function runChecks(
     file,
     wasRead: behavior.filesRead.some((read) => read.includes(file)),
   }));
+  let shouldReadAnyCheck: AutomatedChecks["shouldReadAnyCheck"];
+  if (test.should_read_any !== undefined) {
+    const matched = test.should_read_any.find((file) => behavior.filesRead.some((read) => read.includes(file)));
+    shouldReadAnyCheck = { files: test.should_read_any, wasRead: matched !== undefined, matched };
+  }
   const shouldNotReadChecks = (test.should_not_read ?? []).map((file) => ({
     file,
     wasRead: behavior.filesRead.some((read) => read.includes(file)),
@@ -63,7 +68,21 @@ export function runChecks(
     containsAnyCheck,
     cardsContainChecks,
     shouldReadChecks,
+    shouldReadAnyCheck,
     shouldNotReadChecks,
     bashContainsChecks,
   };
+}
+
+export function automatedChecksPassed(checks: AutomatedChecks): boolean {
+  return checks.containsChecks.every((check) => check.found) &&
+    checks.matchesChecks.every((check) => check.found) &&
+    checks.notContainsChecks.every((check) => !check.found) &&
+    checks.notMatchesChecks.every((check) => !check.found) &&
+    (checks.containsAnyCheck?.found ?? true) &&
+    checks.cardsContainChecks.every((check) => check.found) &&
+    checks.shouldReadChecks.every((check) => check.wasRead) &&
+    (checks.shouldReadAnyCheck?.wasRead ?? true) &&
+    checks.shouldNotReadChecks.every((check) => !check.wasRead) &&
+    checks.bashContainsChecks.every((check) => check.found);
 }

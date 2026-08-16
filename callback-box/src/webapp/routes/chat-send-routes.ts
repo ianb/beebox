@@ -36,7 +36,7 @@ import {
   warnOnUnnormalizedImageOrientation,
 } from "./chat-helpers.js";
 
-const MESSAGE_ID_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const MESSAGE_ID_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 /**
  * Capture an in-flight turn's messages into a resumable buffer keyed by

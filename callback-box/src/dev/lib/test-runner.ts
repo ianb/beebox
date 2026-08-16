@@ -55,6 +55,7 @@ export interface AutomatedChecks {
   containsAnyCheck?: { options: string[]; found: boolean; matched?: string | undefined } | undefined;
   cardsContainChecks: Array<{ expected: string; found: boolean; foundIn?: string }>;
   shouldReadChecks: Array<{ file: string; wasRead: boolean }>;
+  shouldReadAnyCheck?: { files: string[]; wasRead: boolean; matched?: string | undefined } | undefined;
   shouldNotReadChecks: Array<{ file: string; wasRead: boolean }>;
   bashContainsChecks: Array<{ expected: string; found: boolean; matchedCommand?: string }>;
 }

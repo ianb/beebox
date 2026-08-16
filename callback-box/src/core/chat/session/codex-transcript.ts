@@ -2,8 +2,9 @@
 
 import { z } from "zod";
 import { ensureCodexPluginInstalled } from "../../agent/ensure-codex-plugin.js";
-import { CodexAppServer } from "../../../services/codex-app-server.js";
-import { CodexRpcError } from "../../../services/codex-app-server.js";
+import { CodexHistoryServer } from "../../../services/codex-history-server.js";
+import { CodexHistoryRpcError } from "../../../services/codex-history-server.js";
+import { normalizeCodexToolItem } from "../../../services/codex-tool-activity.js";
 import type { SessionEntry, SessionLogSlice } from "../../../cli/lib/session.js";
 import { userIdentity } from "../../../cli/lib/session-entry.js";
 import * as path from "node:path";
@@ -41,8 +42,21 @@ export interface CodexThreadMetadata {
   updatedAt: Date;
 }
 
+/** Include SDK `codex exec` sessions; app-server defaults to interactive sources. */
+export function codexHistoryListParams(cwds: string[], cursor: string | null): Record<string, unknown> {
+  return {
+    cursor,
+    limit: 100,
+    sortKey: "updated_at",
+    sortDirection: "desc",
+    cwd: cwds,
+    sourceKinds: ["exec", "appServer"],
+    useStateDbOnly: false,
+  };
+}
+
 interface SharedServer {
-  server: CodexAppServer;
+  server: CodexHistoryServer;
   ready: Promise<void>;
   chain: Promise<void>;
   idleTimer: NodeJS.Timeout | null;
@@ -54,7 +68,7 @@ const IDLE_CLOSE_MS = 30_000;
 function sharedServer(boxRoot: string): SharedServer {
   const existing = sharedServers.get(boxRoot);
   if (existing !== undefined) return existing;
-  const server = new CodexAppServer({ cwd: boxRoot });
+  const server = new CodexHistoryServer(boxRoot);
   const entry: SharedServer = {
     server,
     ready: server.initialize(),
@@ -66,7 +80,7 @@ function sharedServer(boxRoot: string): SharedServer {
   return entry;
 }
 
-async function withSharedServer<T>(boxRoot: string, operation: (server: CodexAppServer) => Promise<T>): Promise<T> {
+async function withSharedServer<T>(boxRoot: string, operation: (server: CodexHistoryServer) => Promise<T>): Promise<T> {
   await ensureCodexPluginInstalled();
   const entry = sharedServer(boxRoot);
   if (entry.idleTimer !== null) clearTimeout(entry.idleTimer);
@@ -95,10 +109,7 @@ async function withSharedServer<T>(boxRoot: string, operation: (server: CodexApp
 }
 
 async function readThread(boxRoot: string, sessionId: string): Promise<unknown> {
-  const raw = await withSharedServer(boxRoot, (server) => server.request({
-    method: "thread/read",
-    params: { threadId: sessionId, includeTurns: true },
-  }));
+  const raw = await withSharedServer(boxRoot, (server) => server.readThread(sessionId));
   assertCodexThreadCwd(boxRoot, threadReadSchema.parse(raw).thread.cwd);
   return raw;
 }
@@ -149,8 +160,24 @@ function entriesFromThread(raw: unknown): SessionEntry[] {
           timestamp: timestamp(turn.startedAt),
           content: [{ type: "text", text: item.text }],
         });
-      } else if (item.type === "contextCompaction") {
-        entries.push({ uuid: item.id, type: "compaction", timestamp: timestamp(turn.startedAt), content: [] });
+      } else {
+        const tool = normalizeCodexToolItem(item);
+        if (tool !== null) {
+          entries.push({
+            uuid: item.id,
+            type: "assistant",
+            timestamp: timestamp(turn.startedAt),
+            content: [{
+              type: "tool_use",
+              toolId: tool.id,
+              toolName: tool.name,
+              input: tool.input,
+              inputSummary: tool.name,
+            }],
+          });
+        } else if (item.type === "contextCompaction") {
+          entries.push({ uuid: item.id, type: "compaction", timestamp: timestamp(turn.startedAt), content: [] });
+        }
       }
     }
   }
@@ -207,17 +234,7 @@ export async function listCodexThreadMetadata(
     const threads = new Map<string, CodexThreadMetadata>();
     let cursor: string | null = null;
     do {
-      const raw = await server.request({
-        method: "thread/list",
-        params: {
-          cursor,
-          limit: 100,
-          sortKey: "updated_at",
-          sortDirection: "desc",
-          cwd: cwds,
-          useStateDbOnly: true,
-        },
-      });
+      const raw = await server.listThreads(codexHistoryListParams(cwds, cursor));
       const page = threadListSchema.parse(raw);
       for (const thread of page.data) {
         threads.set(thread.id, {
@@ -237,13 +254,13 @@ export async function codexSessionExists(boxRoot: string, sessionId: string): Pr
     await readThread(boxRoot, sessionId);
     return true;
   } catch (error) {
-    if (error instanceof CodexRpcError && /not found|not loaded|unknown thread/i.test(error.rpcMessage)) return false;
+    if (error instanceof CodexHistoryRpcError && /not found|not loaded|unknown thread/i.test(error.rpcMessage)) return false;
     throw error;
   }
 }
 
 export async function deleteCodexSession(boxRoot: string, sessionId: string): Promise<void> {
   await withSharedServer(boxRoot, async (server) => {
-    await server.request({ method: "thread/delete", params: { threadId: sessionId } });
+    await server.deleteThread(sessionId);
   });
 }

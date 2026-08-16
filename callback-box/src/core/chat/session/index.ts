@@ -73,7 +73,7 @@ export class ChatSession extends EventEmitter {
   private turnText = "";
   /** Per-session gate keeping schedule-health a rare reminder (see `admitHealth`). */
   private readonly healthGate = createHealthGate();
-  private messageQueue: ChatSendInput[] = [];
+  private messageQueue: ChatSendInput[] = []; private preparingTurn = false;
   private readonly options: ChatSessionOptions;
   private readonly sessionFile: string | null;
   private modelFile: string | null;
@@ -314,7 +314,7 @@ export class ChatSession extends EventEmitter {
       return false;
     }
 
-    const rawInput: ChatSendInput = typeof message === "string" ? { text: message } : message;
+    const rawInput: ChatSendInput = typeof message === "string" ? { text: message } : message; this.preparingTurn = true; try {
 
     // Composed BEFORE the run starts (it does filesystem I/O), and awaited
     // before run creation: observers of "a run exists" (drain-path tests,
@@ -351,6 +351,7 @@ export class ChatSession extends EventEmitter {
       throw e;
     }
     return true;
+    } finally { this.preparingTurn = false; }
   }
 
   /**
@@ -418,7 +419,7 @@ export class ChatSession extends EventEmitter {
   }
 
   isBusy(): boolean {
-    return lifecycleBusy(this.state);
+    return this.preparingTurn || lifecycleBusy(this.state);
   }
 
   /**

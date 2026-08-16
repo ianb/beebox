@@ -37,3 +37,11 @@ export function clearChatRuntime(boxRoot: string): void {
 export function getChatRuntime(boxRoot: string): ChatRuntime | undefined {
   return runtimes.get(boxRoot);
 }
+
+/** Process-wide safe boundary for a bundle-backed server replacement. */
+export function chatRuntimesAreIdle(): boolean {
+  for (const runtime of runtimes.values()) {
+    if (runtime.registry.snapshotAll().some((session) => session.busy)) return false;
+  }
+  return true;
+}

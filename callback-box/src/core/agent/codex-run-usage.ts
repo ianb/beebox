@@ -4,7 +4,7 @@ import { appendCodexTurnUsage, type CodexTokenUsage } from "../codex-usage.js";
 export async function recordCodexAgentUsage(options: {
   boxRoot: string;
   threadId: string;
-  turnId: string;
+  invocationId: string;
   task?: string | undefined;
   model?: string | undefined;
   usage: CodexTokenUsage | null;
@@ -16,7 +16,7 @@ export async function recordCodexAgentUsage(options: {
   }
   await appendCodexTurnUsage(options.boxRoot, {
     sessionId: options.threadId,
-    turnId: options.turnId,
+    turnId: options.invocationId,
     task: options.task ?? "unknown",
     timestamp: new Date().toISOString(),
     model: options.model ?? "codex-default",
