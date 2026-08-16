@@ -66,6 +66,8 @@ export interface BuildExhibitsAppOptions {
   /** The main checkout's tracked dev/apps; may not exist yet. */
   appsRoot: string;
   token: string;
+  /** This listener's own port — the origin a mutating request must come from. */
+  port: number;
   createAssets(server: http.Server): Promise<ExhibitsAssets>;
   logger?: boolean | undefined;
 }
@@ -205,7 +207,7 @@ export async function buildExhibitsApp(options: BuildExhibitsAppOptions): Promis
   // page holds one open, so a plain close hangs until the supervisor's SIGKILL.
   app.addHook("preClose", async () => rawServer.closeAllConnections());
   app.addHook("onClose", () => assets.close());
-  registerExhibitsAuth(app, options.token);
+  registerExhibitsAuth(app, { token: options.token, port: options.port });
   // On this instance, so the API inherits the auth hook above: a separately
   // built instance would be an unauthenticated write surface.
   await app.register(exhibitsApiPlugin, { prefix: "/api", storeRoot: options.storeRoot });

@@ -25,6 +25,7 @@ a:hover { text-decoration: underline; }
 .problem { color: #84351f; }
 pre { padding: 1rem; overflow: auto; border: 1px solid #e4c5bd; border-radius: .4rem; background: #fff5f2; color: #84351f; }
 code { font-size: .95em; }
+pre.command { border-color: #d8d3cc; background: #f4f2ee; color: #292724; user-select: all; }
 `;
 
 export function escapeHtml(value: string): string {
@@ -129,6 +130,25 @@ export function renderCompileError(options: { scope: string; message: string }):
     <h1 class="problem">This exhibit failed to compile</h1>
     <p><code>${escapeHtml(options.scope)}/index.tsx</code> did not build:</p>
     <pre>${escapeHtml(options.message)}</pre>`,
+  );
+}
+
+/**
+ * The 401. It is the first page most developers see on this origin, so it is a
+ * real page rather than a text/plain line: the hint's command is the only thing
+ * that gets them in, and it has to be readable and copyable.
+ */
+export function renderUnauthorized(hint: string): string {
+  const command = /`([^`]+)`/u.exec(hint)?.[1] ?? "bin/exhibits url <workstream>/<exhibit>";
+  const prose = hint.replace(/`[^`]+`/u, "the command below");
+  return layout(
+    "Exhibits need a token",
+    `
+    <h1>This page needs a token</h1>
+    <p>${escapeHtml(prose)}</p>
+    <pre class="command"><code>${escapeHtml(command)}</code></pre>
+    <p>Open the URL it prints once; the token is exchanged for a cookie scoped to this origin
+    and the page reloads without it in the address bar.</p>`,
   );
 }
 

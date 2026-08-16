@@ -17,6 +17,7 @@ import { EXHIBITS_COOKIE } from "../src/server/exhibits/auth.js";
 import { STORE_MARKER } from "../src/server/exhibits/store.js";
 
 const TOKEN = "exhibits-test-token-0123456789";
+const EXHIBITS_PORT = 3230;
 
 interface FakeAssets extends ExhibitsAssets {
   noticed: string[];
@@ -88,6 +89,7 @@ async function makeApp(storeRoot: string, assets: ExhibitsAssets) {
     storeRoot,
     appsRoot: path.join(storeRoot, "apps"),
     token: TOKEN,
+    port: EXHIBITS_PORT,
     createAssets: async () => assets,
   });
 }
@@ -98,9 +100,11 @@ const authorized = { cookie: `${EXHIBITS_COOKIE}=${TOKEN}` };
 ## Token, then cookie
 
 Access follows Jupyter's handshake. A request with no credential is refused with
-the command that prints an authorized URL — never a silent empty page. `?token=`
-on a GET exchanges the machine-scoped token for an origin-scoped session cookie
-and redirects to the clean URL, so the capability leaves the address bar.
+a real page carrying the command that prints an authorized URL — never a silent
+empty page, and never a bare text/plain line, because this refusal is the first
+thing most developers see on this origin. `?token=` on a GET exchanges the
+machine-scoped token for an origin-scoped session cookie and redirects to the
+clean URL, so the capability leaves the address bar.
 
 ```ts
 const store = await makeStore();
@@ -108,8 +112,13 @@ const assets = fakeAssets();
 const app = await makeApp(store, assets);
 
 const anonymous = await app.inject({ method: "GET", url: "/" });
-JSON.stringify({ status: anonymous.statusCode, body: anonymous.body.trim() })
-=> {"status":401,"body":"Exhibits need a token. Run `bin/exhibits url <workstream>/<exhibit>` to print an authorized URL."}
+JSON.stringify({
+  status: anonymous.statusCode,
+  type: anonymous.headers["content-type"],
+  title: anonymous.body.includes("<title>Exhibits need a token</title>"),
+  command: anonymous.body.includes("<code>bin/exhibits url &lt;workstream&gt;/&lt;exhibit&gt;</code>"),
+})
+=> {"status":401,"type":"text/html; charset=utf-8","title":true,"command":true}
 
 const wrongToken = await app.inject({ method: "GET", url: "/?token=not-the-token" });
 const wrongCookie = await app.inject({ method: "GET", url: "/", headers: { cookie: `${EXHIBITS_COOKIE}=nope` } });
@@ -246,6 +255,52 @@ JSON.stringify({
 => {"traversal":404,"escape":404,"source":404,"sourceBody":true,"dotfile":404}
 
 await fs.rm(secret, { force: true });
+```
+
+A symlinked *entry* is refused the same way, and — this is the part a scan can
+get wrong — it is refused consistently. Listings and the ask queue enumerate the
+store and then read `exhibit.json` and `data/disposition.json` from the names
+they find, so following a link there would read (and advertise) a directory
+outside the store that the direct routes already 404. `lstat`, not `stat`.
+
+```ts continue
+const outside = path.join(store, "..", `exhibits-outside-${String(process.pid)}`);
+await writeFile(path.join(outside, "exhibit.json"), manifest({ title: "Planted from outside the store" }));
+await writeFile(path.join(outside, "data/disposition.json"), JSON.stringify({
+  askType: "fyi",
+  decidedAt: "2026-08-15T00:00:00Z",
+}));
+// An exhibit-shaped link inside a workstream, and a whole workstream-shaped one.
+await fs.symlink(outside, path.join(store, "demo-ws/planted"));
+await fs.symlink(outside, path.join(store, "planted-ws"));
+// A link where the manifest itself is the symlink: the directory is real.
+await fs.mkdir(path.join(store, "demo-ws/borrowed"));
+await fs.symlink(path.join(outside, "exhibit.json"), path.join(store, "demo-ws/borrowed/exhibit.json"));
+
+const { createExhibitsQueueService } = await import("../src/server/exhibits-queue-service.js");
+const queue = await createExhibitsQueueService({
+  storeRoot: store,
+  appsRoot: path.join(store, "apps"),
+  origin: `http://127.0.0.1:${String(EXHIBITS_PORT)}`,
+}).askQueue();
+
+const workstreams = await app.inject({ method: "GET", url: "/", headers: authorized });
+const exhibits = await app.inject({ method: "GET", url: "/demo-ws/", headers: authorized });
+const planted = await app.inject({ method: "GET", url: "/demo-ws/planted/", headers: authorized });
+const borrowed = await app.inject({ method: "GET", url: "/demo-ws/borrowed/", headers: authorized });
+JSON.stringify({
+  workstreamListed: workstreams.body.includes("planted-ws"),
+  exhibitListed: exhibits.body.includes("planted"),
+  plantedRoute: planted.statusCode,
+  borrowedRoute: borrowed.statusCode,
+  borrowedRefusesTheLink: borrowed.body.includes("is a symlink"),
+  outsideTitleAnywhere: [workstreams.body, exhibits.body, planted.body, borrowed.body, JSON.stringify(queue)]
+    .some((body) => body.includes("Planted from outside the store")),
+  queueSlugs: queue.entries.map((entry) => entry.slug),
+})
+=> {"workstreamListed":false,"exhibitListed":false,"plantedRoute":404,"borrowedRoute":500,"borrowedRefusesTheLink":true,"outsideTitleAnywhere":false,"queueSlugs":["borrowed","instrument","malformed","passive","plain","unmanifested"]}
+
+await fs.rm(outside, { recursive: true, force: true });
 ```
 
 ```ts cleanup

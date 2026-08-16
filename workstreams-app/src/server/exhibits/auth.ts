@@ -10,16 +10,52 @@
 // nothing else — the router/workstreams authority lives on a different origin
 // behind a different credential, which is the whole reason for the second
 // listener.
+//
+// SameSite is NOT a boundary here. Every loopback server is one "site" to a
+// browser regardless of port, so any page on any localhost port — including an
+// exhibit page's own scripts and anything else the developer runs locally —
+// can send a cookie-bearing cross-origin write to this one. Mutating methods
+// therefore check `Origin` explicitly: present-and-not-ours is refused, absent
+// (curl, a non-browser agent) is allowed, because a browser always sends it on
+// a cross-origin write.
 
 import crypto from "node:crypto";
 
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyRequest } from "fastify";
+
+import { renderUnauthorized } from "./pages.js";
 
 export const EXHIBITS_COOKIE = "cb_exhibits_session";
 export const EXHIBITS_TOKEN_PARAM = "token";
 
-const UNAUTHORIZED_HINT =
+export const UNAUTHORIZED_HINT =
   "Exhibits need a token. Run `bin/exhibits url <workstream>/<exhibit>` to print an authorized URL.";
+
+/** Loopback spellings of this origin; only the port is load-bearing. */
+const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]", "::1"]);
+
+/**
+ * True when a mutating request may proceed: no Origin at all (a non-browser
+ * client), or an Origin that is this very listener. A browser sends Origin on
+ * every cross-origin write, so "absent" is not a hole a page can walk through.
+ */
+export function originAllowed(origin: string | undefined, port: number): boolean {
+  if (origin === undefined || origin === "") return true;
+  let parsed: URL;
+  try {
+    parsed = new URL(origin);
+  } catch (_error) {
+    // "null" (a sandboxed iframe) and anything unparseable are not this origin.
+    return false;
+  }
+  if (parsed.protocol !== "http:") return false;
+  if (!LOOPBACK_HOSTS.has(parsed.hostname)) return false;
+  return parsed.port === String(port);
+}
+
+function isMutating(request: FastifyRequest): boolean {
+  return request.method !== "GET" && request.method !== "HEAD" && request.method !== "OPTIONS";
+}
 
 /** Constant-time compare, same shape as app.ts's capabilitiesMatch. */
 export function tokensMatch(actual: string | undefined, expected: string): boolean {
@@ -46,7 +82,8 @@ function sessionCookie(token: string): string {
   return `${EXHIBITS_COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax`;
 }
 
-export function registerExhibitsAuth(app: FastifyInstance, token: string): void {
+export function registerExhibitsAuth(app: FastifyInstance, options: { token: string; port: number }): void {
+  const { token } = options;
   app.addHook("onRequest", async (request, reply) => {
     const url = new URL(request.url, "http://exhibits.invalid");
     const presented = url.searchParams.get(EXHIBITS_TOKEN_PARAM);
@@ -56,7 +93,18 @@ export function registerExhibitsAuth(app: FastifyInstance, token: string): void 
       await reply.header("set-cookie", sessionCookie(token)).redirect(target, 302);
       return;
     }
-    if (tokensMatch(readCookie(request.headers.cookie, EXHIBITS_COOKIE), token)) return;
-    await reply.code(401).type("text/plain; charset=utf-8").send(`${UNAUTHORIZED_HINT}\n`);
+    if (!tokensMatch(readCookie(request.headers.cookie, EXHIBITS_COOKIE), token)) {
+      await reply
+        .code(401)
+        .type("text/html; charset=utf-8")
+        .send(renderUnauthorized(UNAUTHORIZED_HINT));
+      return;
+    }
+    if (isMutating(request) && !originAllowed(request.headers.origin, options.port)) {
+      await reply.code(403).type("text/plain; charset=utf-8").send(
+        `Refused: this write came from ${request.headers.origin ?? "an unknown origin"}, not the exhibits origin.\n`,
+      );
+      return;
+    }
   });
 }

@@ -16,6 +16,7 @@ import { EXHIBITS_COOKIE } from "../src/server/exhibits/auth.js";
 import { STORE_MARKER } from "../src/server/exhibits/store.js";
 
 const TOKEN = "exhibits-test-token-0123456789";
+const EXHIBITS_PORT = 3230;
 const authorized = { cookie: `${EXHIBITS_COOKIE}=${TOKEN}` };
 const json = { ...authorized, "content-type": "application/json" };
 
@@ -43,6 +44,7 @@ async function makeApp(storeRoot: string) {
     storeRoot,
     appsRoot: path.join(storeRoot, "unused-apps-root"),
     token: TOKEN,
+    port: EXHIBITS_PORT,
     createAssets: async () => fakeAssets(),
   });
 }
@@ -67,6 +69,65 @@ const anonymous = await app.inject({
 });
 JSON.stringify({ status: anonymous.statusCode, hint: anonymous.body.includes("bin/exhibits url") })
 => {"status":401,"hint":true}
+```
+
+## A cookie is not enough for a write: the origin must match
+
+Every loopback port is one "site" to a browser, so `SameSite` does not separate
+this origin from any other local server — a page on `http://localhost:5173`
+could otherwise drive cookie-authenticated writes here. A mutating request that
+declares an `Origin` must declare this one. A request with no `Origin` at all is
+a non-browser client (curl, an agent) and is allowed: browsers always send it on
+a cross-origin write.
+
+```ts continue
+const foreign = await app.inject({
+  method: "PUT",
+  url: `${scope}/data/settings`,
+  headers: { ...json, origin: "http://localhost:5173" },
+  payload: '{"threshold":0.9}',
+});
+const sameOrigin = await app.inject({
+  method: "PUT",
+  url: `${scope}/data/settings`,
+  headers: { ...json, origin: `http://127.0.0.1:${String(EXHIBITS_PORT)}` },
+  payload: '{"threshold":0.4}',
+});
+const namedHost = await app.inject({
+  method: "PUT",
+  url: `${scope}/data/settings`,
+  headers: { ...json, origin: `http://localhost:${String(EXHIBITS_PORT)}` },
+  payload: '{"threshold":0.4}',
+});
+const opaque = await app.inject({
+  method: "PUT",
+  url: `${scope}/data/settings`,
+  headers: { ...json, origin: "null" },
+  payload: '{"threshold":0.9}',
+});
+const noOrigin = await app.inject({
+  method: "PUT",
+  url: `${scope}/data/settings`,
+  headers: json,
+  payload: '{"threshold":0.4}',
+});
+// Reading is not a write; a cross-origin GET is still refused a body by the
+// browser's own rules, so the Origin check does not apply to it.
+const crossOriginRead = await app.inject({
+  method: "GET",
+  url: `${scope}/data/settings`,
+  headers: { ...authorized, origin: "http://localhost:5173" },
+});
+JSON.stringify({
+  foreign: foreign.statusCode,
+  refusalNamesOrigin: foreign.body.includes("http://localhost:5173"),
+  sameOrigin: sameOrigin.statusCode,
+  namedHost: namedHost.statusCode,
+  opaque: opaque.statusCode,
+  noOrigin: noOrigin.statusCode,
+  crossOriginRead: crossOriginRead.statusCode,
+})
+=> {"foreign":403,"refusalNamesOrigin":true,"sameOrigin":200,"namedHost":200,"opaque":403,"noOrigin":200,"crossOriginRead":200}
 ```
 
 ## Documents round-trip

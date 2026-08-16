@@ -144,9 +144,16 @@ function formatIssue(issue: { path: PropertyKey[]; message: string }): string {
  * (principle 4) — the ask is what makes an exhibit an exhibit.
  */
 export async function readManifest(dir: string, options: { requireAsk: boolean }): Promise<ManifestResult> {
+  const file = path.join(dir, MANIFEST_FILE);
+  // The same posture the events log takes (api.ts): a manifest that is a
+  // symlink is refused rather than followed, so nothing outside the store can
+  // be read through an exhibit directory.
+  if (await fs.lstat(file).then((stats) => stats.isSymbolicLink(), () => false)) {
+    return { ok: false, missing: false, issues: [`${MANIFEST_FILE} is a symlink; it is refused rather than followed`] };
+  }
   let raw: string;
   try {
-    raw = await fs.readFile(path.join(dir, MANIFEST_FILE), "utf8");
+    raw = await fs.readFile(file, "utf8");
   } catch (error) {
     if (error instanceof Error && "code" in error && error.code === "ENOENT") {
       return { ok: false, missing: true, issues: [`${MANIFEST_FILE} is missing`] };
@@ -180,12 +187,21 @@ async function readdirSafe(dir: string): Promise<string[]> {
   }
 }
 
-/** Directory entries that can be routed to: named like a segment, a directory. */
+/**
+ * Directory entries that can be routed to: named like a segment, a real
+ * directory.
+ *
+ * `lstat`, never `stat`: a scan enumerates names that callers then join to the
+ * root and read from, and a symlinked entry would make those reads follow the
+ * link wherever it points. The direct routes refuse such an entry already
+ * (resolveUnderRoot realpaths), so following it here would also make listings
+ * advertise pages that 404 — one rule, both paths.
+ */
 export async function listRoutableDirs(root: string): Promise<string[]> {
   const names: string[] = [];
   for (const name of (await readdirSafe(root)).toSorted()) {
     if (!exhibitSegmentSchema.safeParse(name).success) continue;
-    const stats = await fs.stat(path.join(root, name)).catch(() => null);
+    const stats = await fs.lstat(path.join(root, name)).catch(() => null);
     if (stats?.isDirectory()) names.push(name);
   }
   return names;

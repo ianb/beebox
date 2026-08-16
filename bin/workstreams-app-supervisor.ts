@@ -129,6 +129,8 @@ export interface WorkstreamsAppSupervisorConfig {
   reconcileMs?: number;
   activeJobPollMs?: number;
   killGraceMs?: number;
+  /** Wait between attempts to bind the exhibits port after a child releases it. */
+  exhibitsHoldRetryMs?: number;
 }
 
 interface Generation extends WorkstreamsAppGenerationRecord {
@@ -153,9 +155,21 @@ const DEFAULT_QUIET_MS = 1_000;
 const DEFAULT_RECONCILE_MS = 30_000;
 const DEFAULT_ACTIVE_JOB_POLL_MS = 1_000;
 const DEFAULT_KILL_GRACE_MS = 2_000;
+const DEFAULT_EXHIBITS_HOLD_RETRY_MS = 250;
+/** A dying child's listening socket outlives the process by milliseconds, not seconds. */
+const EXHIBITS_HOLD_ATTEMPTS = 4;
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+/**
+ * "This work is over", success or failure — for waiters that only care that the
+ * port is no longer claimed. The original promise keeps its rejection for the
+ * caller that owns the failure.
+ */
+function settled(work: Promise<unknown>): Promise<void> {
+  return work.then(() => undefined, () => undefined);
 }
 
 function isBackendUrl(url: string): boolean {
@@ -193,6 +207,7 @@ export function createWorkstreamsAppSupervisor(
   const activeJobPollMs = config.activeJobPollMs ?? DEFAULT_ACTIVE_JOB_POLL_MS;
   const killGraceMs = config.killGraceMs ?? DEFAULT_KILL_GRACE_MS;
   const exhibitsPort = config.exhibitsPort ?? EXHIBITS_DEFAULT_PORT;
+  const exhibitsHoldRetryMs = config.exhibitsHoldRetryMs ?? DEFAULT_EXHIBITS_HOLD_RETRY_MS;
 
   let currentState: WorkstreamsAppState = { phase: "stopped", changedAt: effects.now() };
   let current: Generation | null = null;
@@ -213,17 +228,37 @@ export function createWorkstreamsAppSupervisor(
   // child while the state change that took it may still be settling.
   let exhibitsHoldWork: Promise<void> = Promise.resolve();
 
-  function acquireExhibitsHold(): Promise<void> {
+  function delay(ms: number): Promise<void> {
+    return new Promise((resolve) => {
+      effects.setTimer(ms, resolve);
+    });
+  }
+
+  /**
+   * Take the fallback port. `after` is the release of whatever still owns it —
+   * a surviving child of a failed generation — because binding before that
+   * lands is EADDRINUSE, and an EADDRINUSE here means the developer gets a
+   * connection refusal on a direct exhibit URL with no child AND no fallback.
+   * The retries cover the socket that outlives the process it belonged to.
+   */
+  function acquireExhibitsHold(after?: Promise<void>): Promise<void> {
     exhibitsHoldWork = exhibitsHoldWork.then(async () => {
-      if (exhibitsHold !== null || shuttingDown) return;
-      try {
-        exhibitsHold = await effects.holdExhibitsPort({
-          port: exhibitsPort,
-          render: () => renderExhibitsFallback(currentState, config.logPath),
-        });
-      } catch (error) {
-        // The child may still own the port (a stop that has not landed yet).
-        config.log(`[workstreams-app] exhibits fallback could not bind ${String(exhibitsPort)}: ${errorMessage(error)}`);
+      if (after) await after;
+      for (let attempt = 1; attempt <= EXHIBITS_HOLD_ATTEMPTS; attempt++) {
+        if (exhibitsHold !== null || shuttingDown) return;
+        try {
+          exhibitsHold = await effects.holdExhibitsPort({
+            port: exhibitsPort,
+            render: () => renderExhibitsFallback(currentState, config.logPath),
+          });
+          return;
+        } catch (error) {
+          if (attempt === EXHIBITS_HOLD_ATTEMPTS) {
+            config.log(`[workstreams-app] exhibits fallback could not bind ${String(exhibitsPort)}: ${errorMessage(error)}`);
+            return;
+          }
+          await delay(exhibitsHoldRetryMs);
+        }
       }
     });
     return exhibitsHoldWork;
@@ -243,13 +278,17 @@ export function createWorkstreamsAppSupervisor(
     return exhibitsHoldWork;
   }
 
-  function setState(state: WorkstreamsAppState): void {
+  /**
+   * `portFreed` is awaited before the fallback binds — the caller passes it
+   * when a child of the outgoing generation may still hold the exhibits port.
+   */
+  function setState(state: WorkstreamsAppState, portFreed?: Promise<void>): void {
     currentState = state;
     config.log(`[workstreams-app] ${state.phase}`);
     // A direct exhibit URL must not connection-refuse into silence while the
     // child is down; spawnGeneration releases the port back to the replacement.
     if (state.phase === "failed" || state.phase === "starting" || state.phase === "restarting") {
-      void acquireExhibitsHold();
+      void acquireExhibitsHold(portFreed);
     }
   }
 
@@ -272,14 +311,17 @@ export function createWorkstreamsAppSupervisor(
     if (generation.intentionalStop || current !== generation || shuttingDown) return;
     current = null;
     const detail = exit.signal ? `signal ${exit.signal}` : `code ${String(exit.code)}`;
+    void effects.removeGeneration(generation);
+    generation.intentionalStop = true;
+    // One child died; its sibling may still be listening on the exhibits port.
+    // Stop it FIRST and let the fallback bind after — the other order races
+    // the surviving child for the port and loses it to EADDRINUSE.
+    const stopped = effects.stopChildren([generation.backend, generation.frontend], killGraceMs);
     setState({
       phase: "failed",
       changedAt: effects.now(),
       message: `${kind} exited unexpectedly (${detail})`,
-    });
-    void effects.removeGeneration(generation);
-    generation.intentionalStop = true;
-    void effects.stopChildren([generation.backend, generation.frontend], killGraceMs);
+    }, settled(stopped));
   }
 
   function wireChildExits(generation: Generation): void {
@@ -353,13 +395,16 @@ export function createWorkstreamsAppSupervisor(
     const coveredRestartVersion = restartVersion;
     const run = (async () => {
       const previous = current;
-      if (mode === "restart") {
-        setState({ phase: "restarting", changedAt: effects.now(), reason });
-      } else {
-        setState({ phase: "starting", changedAt: effects.now() });
-      }
       current = null;
-      if (previous) await stopGeneration(previous);
+      // Same ordering rule as childExited: the outgoing generation owns the
+      // exhibits port until it is stopped, so the fallback waits for that.
+      const stopped = previous ? stopGeneration(previous) : Promise.resolve();
+      if (mode === "restart") {
+        setState({ phase: "restarting", changedAt: effects.now(), reason }, settled(stopped));
+      } else {
+        setState({ phase: "starting", changedAt: effects.now() }, settled(stopped));
+      }
+      await stopped;
       try {
         const result = await spawnGeneration();
         if (shuttingDown || current !== result.generation) {

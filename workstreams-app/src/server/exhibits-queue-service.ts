@@ -10,16 +10,10 @@
 // live in exhibits/store.ts and this module calls them (principle 6). Every
 // failure below becomes a visible row or a `storeProblem`, never a silent skip.
 
-import fs from "node:fs/promises";
 import path from "node:path";
 
-import {
-  DISPOSITION_KEY,
-  dispositionSchema,
-  type AskQueue,
-  type AskQueueEntry,
-} from "../shared/exhibits.js";
-import { DATA_DIR } from "./exhibits/api.js";
+import type { AskQueue, AskQueueEntry } from "../shared/exhibits.js";
+import { readDisposition } from "./exhibits/disposition.js";
 import {
   APPS_SEGMENT,
   UninitializedStoreError,
@@ -37,54 +31,6 @@ export interface ExhibitsQueueServiceOptions {
   appsRoot: string;
   /** Origin of the exhibits listener; links are built from it client-side. */
   origin: string;
-}
-
-interface DispositionRead {
-  answered: boolean;
-  decidedAt: string | null;
-  problem: string | null;
-}
-
-const UNANSWERED: DispositionRead = { answered: false, decidedAt: null, problem: null };
-
-/**
- * A disposition that exists but does not parse is reported as unanswered with a
- * problem: the developer's answer is what we cannot see, so claiming "answered"
- * would hide the ask, and claiming nothing would hide the corruption.
- */
-async function readDisposition(exhibitDataDir: string): Promise<DispositionRead> {
-  let raw: string;
-  try {
-    raw = await fs.readFile(path.join(exhibitDataDir, `${DISPOSITION_KEY}.json`), "utf8");
-  } catch (error) {
-    if (error instanceof Error && "code" in error && (error.code === "ENOENT" || error.code === "ENOTDIR")) {
-      return UNANSWERED;
-    }
-    return {
-      ...UNANSWERED,
-      problem: `disposition unreadable: ${error instanceof Error ? error.message : String(error)}`,
-    };
-  }
-  let parsed: unknown;
-  try {
-    // eslint-disable-next-line no-restricted-syntax -- JSON.parse is the parse boundary; the result is handed straight to Zod.
-    parsed = JSON.parse(raw) as unknown;
-  } catch (error) {
-    return {
-      ...UNANSWERED,
-      problem: `disposition is not valid JSON: ${error instanceof Error ? error.message : String(error)}`,
-    };
-  }
-  const result = dispositionSchema.safeParse(parsed);
-  if (!result.success) {
-    return {
-      ...UNANSWERED,
-      problem: `disposition is invalid: ${result.error.issues
-        .map((issue) => `${issue.path.map(String).join(".")}: ${issue.message}`)
-        .join("; ")}`,
-    };
-  }
-  return { answered: true, decidedAt: result.data.decidedAt, problem: null };
 }
 
 interface ScanTarget {
@@ -122,7 +68,7 @@ async function scanTarget(target: ScanTarget): Promise<AskQueueEntry | null> {
   const ask = manifest.manifest.ask ?? null;
   // An app with no ask is a durable tool, not a question: nothing waits on it.
   if (ask === null) return null;
-  const disposition = await readDisposition(path.join(target.dataDir, DATA_DIR));
+  const disposition = await readDisposition(target.dataDir);
   return {
     ...base,
     title: manifest.manifest.title,

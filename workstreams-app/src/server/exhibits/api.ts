@@ -22,6 +22,7 @@ import type { FastifyError, FastifyPluginAsync, FastifyRequest } from "fastify";
 import { z } from "zod";
 
 import { exhibitSegmentSchema } from "../../shared/exhibits.js";
+import { DATA_DIR } from "./disposition.js";
 import {
   APPS_SEGMENT,
   InvalidExhibitPathError,
@@ -31,7 +32,6 @@ import {
   resolveUnderRoot,
 } from "./store.js";
 
-export const DATA_DIR = "data";
 export const CAPTURES_DIR = "captures";
 export const EVENTS_FILE = "events.jsonl";
 

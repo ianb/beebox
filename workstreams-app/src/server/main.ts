@@ -46,6 +46,7 @@ async function startExhibits(env: z.infer<typeof serverEnvSchema>): Promise<Fast
     storeRoot,
     appsRoot,
     token: env.EXHIBITS_TOKEN,
+    port: env.EXHIBITS_PORT,
     createAssets: (server) =>
       createViteAssets({
         server,
