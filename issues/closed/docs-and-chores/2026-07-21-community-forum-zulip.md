@@ -37,7 +37,7 @@ done; the rest is the other places a newcomer looks:
 - **A Zulip invite link** rather than the bare org URL, so joining is one click —
   see [invite-links](../features/2026-07-20-invite-links.md). Swap it into the
   README once it exists.
-- **The [GitHub Pages site](../../features/2026-07-20-github-pages-site.md)** should
+- **The [GitHub Pages site](../../features/2026-07-20-public-site.md)** should
   link it when that lands.
 - **The GitHub repo's About/description** (the sidebar link field) — a one-time
   setting, easy to forget.

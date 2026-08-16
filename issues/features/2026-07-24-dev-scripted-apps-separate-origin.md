@@ -1,6 +1,6 @@
 ---
 title: "Serve scripted /dev/ apps from a separate origin (proper isolation)"
-workstream: github-pages-site
+workstream: public-site
 needs: [design]
 area: router
 filed-by: agent

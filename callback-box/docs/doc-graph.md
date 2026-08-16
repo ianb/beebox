@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-08-15T19:40:20Z
-Total documents: 270
+Generated: 2026-08-16T04:20:35Z
+Total documents: 271
 
 ## Issues
 
@@ -43,6 +43,7 @@ These documents are not referenced by any other document.
 - **docs/plans/google-owner-member-credentials.md** — "Google owners can administer local member credentials" (309 lines)
 - **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines)
 - **docs/plans/operator-member-password-reset.md** — "Operator-driven member password reset" (711 lines)
+- **docs/plans/public-site-orientation.md** — "Public site — orientation & re-entry map" (93 lines)
 - **docs/plans/scan-guide-card.review.md** — "Plan Engineering Review — scan-guide-card (codex cross-model, 2026-08-01)" (105 lines)
 - **docs/plans/scan-vision-claude.review.md** — "Plan Engineering Review — scan-vision-claude" (140 lines)
 - **field-tests/onboarding-first-days/README.md** — "onboarding-first-days" (60 lines)
@@ -147,12 +148,12 @@ Referenced by:
 - docs/plans/design-reconciliation.md:88 (mention) — - **Reality/tension** — CLAUDE.md:1 (the sentence agents actually load): "A
 - docs/plans/docs-reorg.gap-analysis.md:39 (mention) — `setTimeout` counts macOS sleep. CLAUDE.md covers the analogous
 - docs/plans/docs-reorg.md:13 (mention) — history out of the way but findable, and slim CLAUDE.md files down to
-- docs/plans/github-pages-site-story-extraction.subplan.md:59 (mention) — per CLAUDE.md ("Sonnet 5 is good at subagent work"; extraction is
-- docs/plans/github-pages-site.md:30 (mention) — - Root `CLAUDE.md`: the deploy-hook path scoping ("Auto-deploy is `main`-only,
 - docs/plans/ios-companion-app.md:29 (mention) — - `callback-box/CLAUDE.md` — the tRPC-vs-raw-Fastify boundary (`CLAUDE.md`: *"Raw Fastify routes … are only for … file u
 - docs/plans/ios-companion-review-2026-07-09.md:62 (mention) — Every successful verify does a full read-modify-write of the shared JSON with no `withCardLock`/`file-lock` — the CLAUDE
 - docs/plans/operator-member-password-reset.md:87 (mention) — - **HTTP route boundary.** `CLAUDE.md:110` says: *“HTTP endpoints go in tRPC by
 - docs/plans/prompt-surface-ia-review.md:145 (mention) — empty in every box (only auto-generated `MAP.md`/`CLAUDE.md`, zero real items)
+- docs/plans/public-site-story-extraction.subplan.md:59 (mention) — per CLAUDE.md ("Sonnet 5 is good at subagent work"; extraction is
+- docs/plans/public-site.md:30 (mention) — - Root `CLAUDE.md`: the deploy-hook path scoping ("Auto-deploy is `main`-only,
 - docs/plans/publish-pages.md:150 (mention) — - **Preview:** a raw Fastify route inside the box auth wall (`server-box-scope.ts:59` preHandler applies) serving `box/p
 - docs/plans/scan-vision-claude.md:494 (mention) — | Box CLAUDE.md / settings leaking into the vision call | covered by construction | `settingSources: []`, `tools: []` — 
 - docs/plans/scanner-ingest.md:263 (mention) — CLAUDE.md rule that file upload doesn't fit the tRPC shape), a quarantine
@@ -498,7 +499,7 @@ Title: "Security" | 215 lines
 Referenced by:
 - README.md:88 (link) — what the agent can actually do — is in [SECURITY.md](SECURITY.md).
 - docs/maintenance.md:30 (mention) — | Security report | `/security-report` (skill) | At release boundaries; when the staleness diff (`git diff <generated-at
-- docs/plans/github-pages-site.md:226 (mention) — `llms.txt` indexing the machine-facing files (agent-install.md, SECURITY.md
+- docs/plans/public-site.md:226 (mention) — `llms.txt` indexing the machine-facing files (agent-install.md, SECURITY.md
 - docs/security-report.md:11 (link) — The exhaustive accounting behind [SECURITY.md](../SECURITY.md). An agent
 - docs/todo-security.md:10 (link) — and [SECURITY.md](../SECURITY.md) (the readable report).
 - ../.claude/skills/security-report/SKILL.md:3 (mention) — description: Generate or update callback-box's security report — the structured accounting in callback-box/docs/security
@@ -602,6 +603,7 @@ Referenced by:
 - docs/plans/design-reconciliation.md:28 (mention) — `docs/activities-retrospective.md`).
 - docs/plans/docs-reorg.md:228 (mention) — `activities-design.md` + `activities-retrospective.md` pair (the model for
 - docs/plans/narration-mode.md:9 (link) — > Note: this doc references the Activities system as a coordinate ("the infrastructure that makes activities being phase
+- ../dev/story-eval/runs/run-003/self-review.md:5 (mention) — two docs chosen for actual story density: `activities-retrospective.md`
 - ../research/openclaw-hermes/deep-cbx-retro.md:11 (mention) — line-by-line below). Note: `callback-box/docs/activities-retrospective.md` is an
 
 References:
@@ -685,7 +687,7 @@ Referenced by:
 - docs/implemented-plans/local-password-auth.md:534 (mention) — `docs/agent-install.md` gain the first-run account step;
 - docs/implemented-plans/remove-open-mode.md:51 (mention) — `docs/agent-install.md`, implemented-plans (historical — leave those).
 - docs/implemented-plans/tailscale-expose-and-protect.md:545 (mention) — surface is `docs/agent-install.md`'s existing "widening exposure is a real
-- docs/plans/github-pages-site.md:226 (mention) — `llms.txt` indexing the machine-facing files (agent-install.md, SECURITY.md
+- docs/plans/public-site.md:226 (mention) — `llms.txt` indexing the machine-facing files (agent-install.md, SECURITY.md
 - ../issues/closed/features/2026-07-28-excel-reader-standard-install.md:53 (mention) — - `docs/developer-install.md`, `docs/docker-install.md`, `docs/agent-install.md`
 - ../issues/decisions/2026-07-20-soft-launch-posture.md:27 (link) — handing [the agent install guide](../../callback-box/docs/agent-install.md)
 - ../issues/features/2026-07-19-installation-remaining-work.md:24 (mention) — (`docs/agent-install.md`). Node pin + `engine-strict` landed at 22, then
@@ -1067,8 +1069,6 @@ Referenced by:
 - docs/plans/chat-photo-batch-upload.md:25 (link) — - [`docs/engineering-principles.md`](../engineering-principles.md) — chiefly
 - docs/plans/chat-session-delete.md:58 (mention) — - **`docs/engineering-principles.md`:**
 - docs/plans/clerk-tab-arrangements.md:65 (mention) — - Engineering principle 1, **Types are structure**, applies to transfer IDs, tab UUIDs, proposal states, and apply resul
-- docs/plans/github-pages-site-story-extraction.subplan.md:39 (mention) — - `docs/engineering-principles.md`: **3** (validate at boundaries — spans
-- docs/plans/github-pages-site.md:23 (mention) — - `docs/engineering-principles.md` — traced below by number, chiefly:
 - docs/plans/google-owner-member-credentials.md:23 (mention) — `docs/engineering-principles.md:14` says: *"Prefer types that make illegal
 - docs/plans/installation-story.md:43 (mention) — - `docs/engineering-principles.md` #4 (validate at boundaries) and #6
 - docs/plans/invite-links-and-password-change.md:36 (mention) — - `docs/engineering-principles.md:37-47`: validate disk, form, OAuth, and config
@@ -1077,6 +1077,8 @@ Referenced by:
 - docs/plans/ios-native-capture-mode.md:17 (mention) — - `docs/engineering-principles.md`: **#1 types are structure** (native capture
 - docs/plans/ios-share-extension-capture.md:36 (mention) — - `docs/engineering-principles.md` principle 3, validate at boundaries. The extension validates provider values, and the
 - docs/plans/operator-member-password-reset.md:50 (mention) — - **Principle 1, types are structure.** `docs/engineering-principles.md:12-21`
+- docs/plans/public-site-story-extraction.subplan.md:39 (mention) — - `docs/engineering-principles.md`: **3** (validate at boundaries — spans
+- docs/plans/public-site.md:23 (mention) — - `docs/engineering-principles.md` — traced below by number, chiefly:
 - docs/plans/publish-pages.md:15 (mention) — - `callback-box/docs/engineering-principles.md` — the principles this plan leans on:
 - docs/plans/scan-guide-card.md:21 (mention) — - `docs/engineering-principles.md` — traced by number below:
 - docs/plans/scan-vision-claude.md:25 (mention) — - `callback-box/docs/engineering-principles.md` — especially
@@ -1085,6 +1087,7 @@ Referenced by:
 - docs/plans/worktree-control-surface.md:111 (mention) — - `callback-box/docs/engineering-principles.md` §7 *Hierarchy is a
 - ../.claude/memory/feedback_files_over_external_trackers.md:24 (mention) — - Specific applicable cases: TODO/work-queue → `TODOS.md` or similar; design notes → `docs/`; architectural decisions → 
 - ../.claude/skills/cb-plan/SKILL.md:122 (mention) — - `callback-box/docs/engineering-principles.md` — the twelve durable
+- ../dev/story-eval/runs/run-002/self-review.md:3 (mention) — 3 variants × `callback-box/docs/engineering-principles.md` (159 lines, a new
 - ../issues/closed/bugs/2026-08-08-worktree-remove-now-silent-mv-failure.md:36 (mention) — removal. Violates `docs/engineering-principles.md` §4 (resilient AND never
 - ../issues/code-quality/2026-07-06-engine-dev-knowledge-audits.md:17 (mention) — and the rest of `docs/engineering-principles.md` / `code-style.md`.
 - ../issues/decisions/2026-07-22-config-untrusted-principle-drift.md:7 (mention) — discovered-in: worktree-github-pages-site — story-extraction triage of engineering-principles.md
@@ -1245,7 +1248,7 @@ Referenced by:
 - docs/implemented-plans/workstreams.md:1224 (mention) — box agents, whom knowledge audits test (`docs/knowledge-audits.md`). The
 - docs/maintenance.md:130 (mention) — **Full guide:** `docs/knowledge-audits.md` (test structure, recording results, interpreting failures).
 - docs/plans/docs-reorg.md:117 (mention) — policy — `.gitignore` and `knowledge-audits.md` both say reports are
-- docs/plans/github-pages-site-story-extraction.subplan.md:183 (mention) — `callback-box/docs/knowledge-audits.md` (distinctive-practice doc),
+- docs/plans/public-site-story-extraction.subplan.md:183 (mention) — `callback-box/docs/knowledge-audits.md` (distinctive-practice doc),
 - docs/reports/user-stories-audit-2026-06-26.md:5670 (mention) — Both claimed files exist at the correct paths. The implementation is complete: test-runner.ts extracts context metrics f
 - src/dev/CLAUDE.md:7 (mention) — | `knowledge-audit.ts` | Runs YAML-defined tests against a real box agent | `docs/knowledge-audits.md` |
 - ../.claude/memory/feedback_run_audits.md:10 (mention) — When the user asks for new knowledge audits in `src/dev/knowledge-audits.yaml`, just run them after writing them. Don't 
@@ -1396,7 +1399,7 @@ References:
 
 #### docs/mobile-contract.md
 
-Title: "Cross-Platform Mobile Contract" | 903 lines
+Title: "Cross-Platform Mobile Contract" | 907 lines
 
 Referenced by:
 - CLAUDE.md:145 (mention) — | Cross-platform mobile contract (iOS/Android ↔ box) | `docs/mobile-contract.md` |
@@ -1816,7 +1819,7 @@ Title: "Tours — scripted browser walks for rendering + a11y review" | 133 line
 
 Referenced by:
 - CLAUDE.md:139 (mention) — | Tours (browser walks for UI/a11y review) | `docs/tours.md` |
-- docs/plans/github-pages-site.md:95 (mention) — `docs/tours.md:39-50`) — the future automated-screenshot pipeline if
+- docs/plans/public-site.md:95 (mention) — `docs/tours.md:39-50`) — the future automated-screenshot pipeline if
 - docs/testing.md:551 (link) — them: [tours.md](tours.md).
 - ../issues/closed/code-quality/2026-07-10-tour-lib-lint-debt.md:46 (mention) — Filed while formalizing tours (docs/tours.md); the 2026-07-10 fixes to
 - ../issues/exploration/2026-07-15-claude-code-cloud-environment.md:194 (mention) — (`agent-browser` / `bin/browse`) and **tours** (`docs/tours.md` — scripted browser
@@ -2343,7 +2346,7 @@ Title: "Bulk file upload" | 461 lines
 
 Referenced by:
 - docs/box-layout.md:103 (mention) — `docs/implemented-plans/bulk-file-upload.md`; agent duties:
-- docs/mobile-contract.md:487 (mention) — `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
+- docs/mobile-contract.md:491 (mention) — `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
 - docs/plans/chat-photo-batch-upload.md:15 (link) — [bulk-file-upload](../implemented-plans/bulk-file-upload.md) — the iOS native
 - ../issues/closed/bugs/2026-07-27-bulk-upload-arbitrary-ext-gitignore.md:16 (mention) — Surfaced building Track 1 chunk 1 of `docs/plans/bulk-file-upload.md`.
 
@@ -2414,7 +2417,7 @@ Referenced by:
 - docs/cards-as-markdown.md:5 (mention) — This is the living reference for the card *file format* — filenames, frontmatter/body split, attachments, and refs. For 
 - docs/implemented-plans/remove-cardworks-and-xml.md:123 (mention) — production migration"* (`docs/implemented-plans/cards-as-markdown-rfc.md`). **Reuse:** the
 - docs/migrations.md:302 (mention) — - `docs/cards-as-markdown.md` — living reference for the YAML-frontmatter format these migrators target; `docs/implement
-- docs/plans/github-pages-site-story-extraction.subplan.md:184 (mention) — `callback-box/docs/implemented-plans/cards-as-markdown-rfc.md` (2555-line
+- docs/plans/public-site-story-extraction.subplan.md:184 (mention) — `callback-box/docs/implemented-plans/cards-as-markdown-rfc.md` (2555-line
 - docs/stack-decisions.md:804 (mention) — > **Superseded in practice (2026-05).** The frontend no longer uses react-markdown / remark / rehype — it renders via Ma
 - ../issues/features/2026-07-22-embed-json-schema-in-card-docs.md:6 (mention) — discovered-in: worktree-github-pages-site — story-extraction triage of cards-as-markdown-rfc.md
 
@@ -2560,10 +2563,10 @@ Title: "Use the official Codex SDK at the Codex engine boundary" | 380 lines
 
 Referenced by:
 - docs/implemented-plans/codex-sdk-backend.review.md:74 (mention) — **Location in plan:** `callback-box/docs/plans/codex-sdk-backend.md`, Prior art and Open
-- ../issues/code-quality/2026-08-15-replace-raw-codex-app-server-with-sdk.md:25 (link) — Plan: [Use the official Codex SDK](../../callback-box/docs/implemented-plans/codex-sdk-backend.md).
+- ../issues/closed/code-quality/2026-08-15-replace-raw-codex-app-server-with-sdk.md:32 (link) — Plan: [Use the official Codex SDK](../../../callback-box/docs/implemented-plans/codex-sdk-backend.md).
 
 References:
-- → ../issues/code-quality/2026-08-15-replace-raw-codex-app-server-with-sdk.md (frontmatter)
+- → ../issues/closed/code-quality/2026-08-15-replace-raw-codex-app-server-with-sdk.md (frontmatter)
 - → docs/engineering-principles.md (mention)
 
 #### docs/implemented-plans/codex-sdk-backend.review.md **[ORPHAN]**
@@ -2571,7 +2574,7 @@ References:
 Title: "Plan Engineering Review — Codex SDK backend" | 162 lines
 
 References:
-- → ../issues/code-quality/2026-08-15-replace-raw-codex-app-server-with-sdk.md (frontmatter)
+- → ../issues/closed/code-quality/2026-08-15-replace-raw-codex-app-server-with-sdk.md (frontmatter)
 - → docs/implemented-plans/codex-sdk-backend.md (mention)
 
 #### docs/implemented-plans/codex-worktree-sessions.md
@@ -2960,7 +2963,7 @@ References:
 Title: "Mobile device token: replace `?mobileToken=` with a box-scoped session cookie" | 510 lines
 
 Referenced by:
-- docs/mobile-contract.md:791 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
+- docs/mobile-contract.md:795 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
 - ../issues/closed/bugs/2026-07-17-mobile-token-in-url-query.md:11 (mention) — `../../../callback-box/docs/implemented-plans/mobile-token-handshake.md`. The query-param carrier is gone: the
 - ../issues/closed/code-quality/2026-07-17-mobile-auth-parser-plumbing-cleanups.md:13 (mention) — `../../../callback-box/docs/implemented-plans/mobile-token-handshake.md`; the single resolver every mobile
 - ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:40 (mention) — The mobile-token work (`docs/implemented-plans/mobile-token-handshake.md`) ran into this and deliberately
@@ -3750,7 +3753,7 @@ Referenced by:
 Title: "Chat photo batch upload" | 494 lines
 
 Referenced by:
-- docs/mobile-contract.md:486 (mention) — (`docs/plans/chat-photo-batch-upload.md`, the Track 3 that
+- docs/mobile-contract.md:490 (mention) — (`docs/plans/chat-photo-batch-upload.md`, the Track 3 that
 - ../issues/bugs/2026-07-30-capture-teardown-race.md:12 (link) — [chat-photo-batch-upload](../../callback-box/docs/plans/chat-photo-batch-upload.md)):
 - ../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md:8 (frontmatter) — design: ../../../callback-box/docs/plans/chat-photo-batch-upload.md
 - ../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md:23 (link) — [chat-photo-batch-upload](../../../callback-box/docs/plans/chat-photo-batch-upload.md)).
@@ -3962,41 +3965,6 @@ References:
 - → docs/connectors.md (mention)
 - → docs/gmail-setup.md (mention)
 
-#### docs/plans/github-pages-site-story-extraction.subplan.md
-
-Title: "Story extraction: rubric, prompts, and the A/B review loop" | 297 lines
-
-Referenced by:
-- docs/plans/github-pages-site.md:320 (link) — [github-pages-site-story-extraction.subplan.md](github-pages-site-story-extraction.subplan.md)
-
-References:
-- → ../issues/features/2026-07-05-writing-skill.md (link)
-- → docs/engineering-principles.md (mention)
-- → docs/plans/github-pages-site.md (link)
-- → CLAUDE.md (mention)
-- → docs/knowledge-audits.md (mention)
-- → docs/implemented-plans/cards-as-markdown-rfc.md (mention)
-
-#### docs/plans/github-pages-site.md
-
-Title: "GitHub Pages front-door site" | 487 lines
-
-Referenced by:
-- docs/plans/github-pages-site-story-extraction.subplan.md:52 (link) — format ([github-pages-site.md](github-pages-site.md), Track E). Eval runs add
-- ../issues/docs-and-chores/2026-07-21-pages-site-go-live.md:12 (link) — [plan doc](../../callback-box/docs/plans/github-pages-site.md)) builds and
-
-References:
-- → ../issues/features/2026-07-20-github-pages-site.md (link)
-- → docs/engineering-principles.md (mention)
-- → CLAUDE.md (mention)
-- → docs/tours.md (mention)
-- → docs/agent-install.md (mention)
-- → SECURITY.md (mention)
-- → docs/plans/README.md (mention)
-- → ../issues/closed/features/2026-07-20-agent-maintained-security-report.md (link)
-- → docs/plans/github-pages-site-story-extraction.subplan.md (link)
-- → ../issues/features/2026-07-17-regenerable-app-demo-video.md (link)
-
 #### docs/plans/google-owner-member-credentials.md **[ORPHAN]**
 
 Title: "Google owners can administer local member credentials" | 309 lines
@@ -4116,7 +4084,7 @@ References:
 Title: "iOS Companion — follow-up code review (2026-07-17)" | 155 lines
 
 Referenced by:
-- docs/mobile-contract.md:785 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
+- docs/mobile-contract.md:789 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
 - docs/plans/android-companion-app.md:38 (mention) — `docs/plans/ios-companion-review-2026-07-17.md`. This plan ports the iOS
 - docs/plans/ios-companion-review-2026-07-09.md:9 (mention) — **Superseded:** follow-up review at `ios-companion-review-2026-07-17.md` (2026-07-17) — most iOS findings closed by the 
 - ../issues/bugs/2026-07-17-ios-pairing-flow-robustness.md:6 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
@@ -4250,6 +4218,52 @@ References:
 - → code-style.md (mention)
 - → docs/implemented-plans/job-xml-purge.subplan.md (mention)
 
+#### docs/plans/public-site-orientation.md **[ORPHAN]**
+
+Title: "Public site — orientation & re-entry map" | 93 lines
+
+References:
+- → docs/plans/public-site.md (link)
+- → docs/plans/public-site-story-extraction.subplan.md (link)
+- → ../issues/features/2026-07-20-public-site.md (link)
+
+#### docs/plans/public-site-story-extraction.subplan.md
+
+Title: "Story extraction: rubric, prompts, and the A/B review loop" | 297 lines
+
+Referenced by:
+- docs/plans/public-site-orientation.md:16 (link) — [the extraction subplan](public-site-story-extraction.subplan.md).
+- docs/plans/public-site.md:320 (link) — [public-site-story-extraction.subplan.md](public-site-story-extraction.subplan.md)
+
+References:
+- → ../issues/features/2026-07-05-writing-skill.md (link)
+- → docs/engineering-principles.md (mention)
+- → docs/plans/public-site.md (link)
+- → CLAUDE.md (mention)
+- → docs/knowledge-audits.md (mention)
+- → docs/implemented-plans/cards-as-markdown-rfc.md (mention)
+
+#### docs/plans/public-site.md
+
+Title: "Public site" | 487 lines
+
+Referenced by:
+- docs/plans/public-site-orientation.md:15 (link) — [the site plan](public-site.md) and
+- docs/plans/public-site-story-extraction.subplan.md:52 (link) — format ([public-site.md](public-site.md), Track E). Eval runs add
+- ../issues/docs-and-chores/2026-07-21-pages-site-go-live.md:12 (link) — [plan doc](../../callback-box/docs/plans/public-site.md)) builds and
+
+References:
+- → ../issues/features/2026-07-20-public-site.md (link)
+- → docs/engineering-principles.md (mention)
+- → CLAUDE.md (mention)
+- → docs/tours.md (mention)
+- → docs/agent-install.md (mention)
+- → SECURITY.md (mention)
+- → docs/plans/README.md (mention)
+- → ../issues/closed/features/2026-07-20-agent-maintained-security-report.md (link)
+- → docs/plans/public-site-story-extraction.subplan.md (link)
+- → ../issues/features/2026-07-17-regenerable-app-demo-video.md (link)
+
 #### docs/plans/publish-pages.md
 
 Title: "Publish Pages — External Static Publishing via Cloudflare Workers" | 281 lines
@@ -4284,7 +4298,7 @@ Referenced by:
 - docs/implemented-plans/workstreams.md:693 (mention) — status encodings would drift (§8). `docs/plans/README.md` is rewritten to
 - docs/plans/README.md:35 (mention) — Every plan (including `*.subplan.md`, excluding `README.md` and review
 - docs/plans/asset-annex.md:1071 (mention) — the server. See that directory's `README.md` for the restore
-- docs/plans/github-pages-site.md:270 (mention) — `research/`, root `README.md` — enforced by the generator), `span` (a
+- docs/plans/public-site.md:270 (mention) — `research/`, root `README.md` — enforced by the generator), `span` (a
 - docs/plans/scan-guide-card.md:92 (mention) — `README.md` install table. Reshaped in place to guide-card form.
 - docs/plans/source-available-release.md:76 (mention) — (`README.md:24`: *"npm publish is planned but not live yet"*). The
 - ../.claude/agents/finish.md:347 (mention) — `callback-box/docs/plans/README.md`), then either fold durable "how it works
