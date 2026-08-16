@@ -1,6 +1,6 @@
 /**
  * Corner badges for the two audio-review overlays on a user message
- * (docs/plans/retranscription-in-chat.md Track 3): a retranscription (the
+ * (docs/implemented-plans/retranscription-in-chat.md Track 3): a retranscription (the
  * bubble's text was swapped for a better HQ pass) and/or a consult (the
  * agent listened to the recording without correcting the text). Follows
  * `AckBadgeCluster`'s corner-badge + popover *pattern* (`ack-badge.tsx`) but

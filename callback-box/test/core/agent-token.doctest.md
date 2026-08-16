@@ -95,7 +95,7 @@ const authed = await ctx.request({
 });
 print(`with bearer: ${authed.statusCode} ${authed.body.error}`);
 // messageId is required since the targeted-fetch change
-// (docs/plans/retranscription-in-chat.md, Track 1b) — this test only
+// (docs/implemented-plans/retranscription-in-chat.md, Track 1b) — this test only
 // exercises the bearer wall, so any id works; no tab answers → 504.
 const audio = await ctx.request({
   method: "POST",

@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-08-15T19:40:20Z
-Total documents: 270
+Generated: 2026-08-16T04:28:09Z
+Total documents: 272
 
 ## Issues
 
@@ -40,6 +40,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/schema-validate-hook.md** — "Schema `validate` hook — co-locate non-Zod card validation with its schema" (379 lines)
 - **docs/implemented-plans/view-render-testing.md** — "Plan: testing agent-authored views" (550 lines)
 - **docs/plans/chat-session-delete.review.md** — "Plan Engineering Review — Chat Session Delete" (154 lines)
+- **docs/plans/github-pages-site-orientation.md** — "GitHub Pages site — orientation & re-entry map" (90 lines)
 - **docs/plans/google-owner-member-credentials.md** — "Google owners can administer local member credentials" (309 lines)
 - **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines)
 - **docs/plans/operator-member-password-reset.md** — "Operator-driven member password reset" (711 lines)
@@ -1051,6 +1052,7 @@ Referenced by:
 - docs/implemented-plans/remove-cb-render.md:22 (mention) — - **`docs/engineering-principles.md`** — the plan traces mainly to these:
 - docs/implemented-plans/remove-open-mode.md:19 (mention) — - `callback-box/docs/engineering-principles.md` — fail-closed; make invalid
 - docs/implemented-plans/responsive-figures.md:34 (mention) — - `docs/engineering-principles.md` — **#6 Right-sized defensiveness** (the
+- docs/implemented-plans/retranscription-in-chat.md:30 (mention) — - `docs/engineering-principles.md` — #1 (types are structure: two precise
 - docs/implemented-plans/scan-uploader-pairing.md:37 (mention) — - `docs/engineering-principles.md`: **#3 validate-at-boundaries** (the
 - docs/implemented-plans/see-as-the-user.md:25 (mention) — - `callback-box/docs/engineering-principles.md` — traced by number below.
 - docs/implemented-plans/semantic-search.md:22 (mention) — - `docs/engineering-principles.md` #3 (validate at boundaries) — the
@@ -1396,7 +1398,7 @@ References:
 
 #### docs/mobile-contract.md
 
-Title: "Cross-Platform Mobile Contract" | 903 lines
+Title: "Cross-Platform Mobile Contract" | 907 lines
 
 Referenced by:
 - CLAUDE.md:145 (mention) — | Cross-platform mobile contract (iOS/Android ↔ box) | `docs/mobile-contract.md` |
@@ -2343,7 +2345,7 @@ Title: "Bulk file upload" | 461 lines
 
 Referenced by:
 - docs/box-layout.md:103 (mention) — `docs/implemented-plans/bulk-file-upload.md`; agent duties:
-- docs/mobile-contract.md:487 (mention) — `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
+- docs/mobile-contract.md:491 (mention) — `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
 - docs/plans/chat-photo-batch-upload.md:15 (link) — [bulk-file-upload](../implemented-plans/bulk-file-upload.md) — the iOS native
 - ../issues/closed/bugs/2026-07-27-bulk-upload-arbitrary-ext-gitignore.md:16 (mention) — Surfaced building Track 1 chunk 1 of `docs/plans/bulk-file-upload.md`.
 
@@ -2560,10 +2562,10 @@ Title: "Use the official Codex SDK at the Codex engine boundary" | 380 lines
 
 Referenced by:
 - docs/implemented-plans/codex-sdk-backend.review.md:74 (mention) — **Location in plan:** `callback-box/docs/plans/codex-sdk-backend.md`, Prior art and Open
-- ../issues/code-quality/2026-08-15-replace-raw-codex-app-server-with-sdk.md:25 (link) — Plan: [Use the official Codex SDK](../../callback-box/docs/implemented-plans/codex-sdk-backend.md).
+- ../issues/closed/code-quality/2026-08-15-replace-raw-codex-app-server-with-sdk.md:32 (link) — Plan: [Use the official Codex SDK](../../../callback-box/docs/implemented-plans/codex-sdk-backend.md).
 
 References:
-- → ../issues/code-quality/2026-08-15-replace-raw-codex-app-server-with-sdk.md (frontmatter)
+- → ../issues/closed/code-quality/2026-08-15-replace-raw-codex-app-server-with-sdk.md (frontmatter)
 - → docs/engineering-principles.md (mention)
 
 #### docs/implemented-plans/codex-sdk-backend.review.md **[ORPHAN]**
@@ -2571,7 +2573,7 @@ References:
 Title: "Plan Engineering Review — Codex SDK backend" | 162 lines
 
 References:
-- → ../issues/code-quality/2026-08-15-replace-raw-codex-app-server-with-sdk.md (frontmatter)
+- → ../issues/closed/code-quality/2026-08-15-replace-raw-codex-app-server-with-sdk.md (frontmatter)
 - → docs/implemented-plans/codex-sdk-backend.md (mention)
 
 #### docs/implemented-plans/codex-worktree-sessions.md
@@ -2960,7 +2962,7 @@ References:
 Title: "Mobile device token: replace `?mobileToken=` with a box-scoped session cookie" | 510 lines
 
 Referenced by:
-- docs/mobile-contract.md:791 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
+- docs/mobile-contract.md:795 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
 - ../issues/closed/bugs/2026-07-17-mobile-token-in-url-query.md:11 (mention) — `../../../callback-box/docs/implemented-plans/mobile-token-handshake.md`. The query-param carrier is gone: the
 - ../issues/closed/code-quality/2026-07-17-mobile-auth-parser-plumbing-cleanups.md:13 (mention) — `../../../callback-box/docs/implemented-plans/mobile-token-handshake.md`; the single resolver every mobile
 - ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:40 (mention) — The mobile-token work (`docs/implemented-plans/mobile-token-handshake.md`) ran into this and deliberately
@@ -3297,6 +3299,17 @@ References:
 - → code-style.md (mention)
 - → CLAUDE.md (mention)
 - → docs/testing.md (mention)
+
+#### docs/implemented-plans/retranscription-in-chat.md
+
+Title: "Show retranscriptions and audio consultations on the chat message" | 486 lines
+
+Referenced by:
+- ../issues/features/2026-08-12-show-retranscription-in-chat.md:19 (mention) — > (design: `callback-box/docs/implemented-plans/retranscription-in-chat.md`; commits
+
+References:
+- → ../issues/features/2026-08-12-show-retranscription-in-chat.md (frontmatter)
+- → docs/engineering-principles.md (mention)
 
 #### docs/implemented-plans/router-state-formalization.md
 
@@ -3750,7 +3763,7 @@ Referenced by:
 Title: "Chat photo batch upload" | 494 lines
 
 Referenced by:
-- docs/mobile-contract.md:486 (mention) — (`docs/plans/chat-photo-batch-upload.md`, the Track 3 that
+- docs/mobile-contract.md:490 (mention) — (`docs/plans/chat-photo-batch-upload.md`, the Track 3 that
 - ../issues/bugs/2026-07-30-capture-teardown-race.md:12 (link) — [chat-photo-batch-upload](../../callback-box/docs/plans/chat-photo-batch-upload.md)):
 - ../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md:8 (frontmatter) — design: ../../../callback-box/docs/plans/chat-photo-batch-upload.md
 - ../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md:23 (link) — [chat-photo-batch-upload](../../../callback-box/docs/plans/chat-photo-batch-upload.md)).
@@ -3962,11 +3975,21 @@ References:
 - → docs/connectors.md (mention)
 - → docs/gmail-setup.md (mention)
 
+#### docs/plans/github-pages-site-orientation.md **[ORPHAN]**
+
+Title: "GitHub Pages site — orientation & re-entry map" | 90 lines
+
+References:
+- → docs/plans/github-pages-site.md (link)
+- → docs/plans/github-pages-site-story-extraction.subplan.md (link)
+- → ../issues/features/2026-07-20-github-pages-site.md (link)
+
 #### docs/plans/github-pages-site-story-extraction.subplan.md
 
 Title: "Story extraction: rubric, prompts, and the A/B review loop" | 297 lines
 
 Referenced by:
+- docs/plans/github-pages-site-orientation.md:13 (link) — [the extraction subplan](github-pages-site-story-extraction.subplan.md).
 - docs/plans/github-pages-site.md:320 (link) — [github-pages-site-story-extraction.subplan.md](github-pages-site-story-extraction.subplan.md)
 
 References:
@@ -3982,6 +4005,7 @@ References:
 Title: "GitHub Pages front-door site" | 487 lines
 
 Referenced by:
+- docs/plans/github-pages-site-orientation.md:12 (link) — [the site plan](github-pages-site.md) and
 - docs/plans/github-pages-site-story-extraction.subplan.md:52 (link) — format ([github-pages-site.md](github-pages-site.md), Track E). Eval runs add
 - ../issues/docs-and-chores/2026-07-21-pages-site-go-live.md:12 (link) — [plan doc](../../callback-box/docs/plans/github-pages-site.md)) builds and
 
@@ -4116,7 +4140,7 @@ References:
 Title: "iOS Companion — follow-up code review (2026-07-17)" | 155 lines
 
 Referenced by:
-- docs/mobile-contract.md:785 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
+- docs/mobile-contract.md:789 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
 - docs/plans/android-companion-app.md:38 (mention) — `docs/plans/ios-companion-review-2026-07-17.md`. This plan ports the iOS
 - docs/plans/ios-companion-review-2026-07-09.md:9 (mention) — **Superseded:** follow-up review at `ios-companion-review-2026-07-17.md` (2026-07-17) — most iOS findings closed by the 
 - ../issues/bugs/2026-07-17-ios-pairing-flow-robustness.md:6 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md

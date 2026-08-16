@@ -16,7 +16,7 @@ negative — while the agent quietly works from a better version. So the person 
 reading one thing and being answered about another.
 
 > **⏳ Awaiting manual testing** — implemented on `worktree-transcript-confidence`
-> (design: `callback-box/docs/plans/retranscription-in-chat.md`; commits
+> (design: `callback-box/docs/implemented-plans/retranscription-in-chat.md`; commits
 > `60358e66`…`d4ae8649`); see [Manual testing](#manual-testing). Only the
 > developer clears this.
 

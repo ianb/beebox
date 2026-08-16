@@ -1,6 +1,6 @@
 # Audio-review overlay: resolution, store, session filtering
 
-Track 3 of `docs/plans/retranscription-in-chat.md`: the frontend overlay a
+Track 3 of `docs/implemented-plans/retranscription-in-chat.md`: the frontend overlay a
 `cb chat retranscribe` / `ask-about-audio` report paints onto the user's
 bubble. This covers the pure seams — entry-to-key resolution
 (`resolveEntryMessageId`, `message-parsing.ts`), the overlay store

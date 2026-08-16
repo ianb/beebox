@@ -2,7 +2,7 @@
 
 `UserMessage` (`components/chat/user-message.tsx`) overlays a retranscription
 or audio-consult report onto a user's bubble
-(docs/plans/retranscription-in-chat.md Track 3): the swapped text reaches
+(docs/implemented-plans/retranscription-in-chat.md Track 3): the swapped text reaches
 `UserMessageText`, the original stays recoverable in the badge's popover
 content, and the popover never opens by default — so these tests render the
 badge cluster's pure spec-building seam (`buildAudioBadgeSpecs`) directly for

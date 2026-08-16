@@ -207,7 +207,7 @@ export function UserMessage({ entries, debugView, currentUserEmail, currentUserN
           instead of the bubble overflowing the row. */}
       <div className="relative min-w-0">
         {/* Shared corner row: ack badges keep precedence order, audio
-            badges append after (docs/plans/retranscription-in-chat.md
+            badges append after (docs/implemented-plans/retranscription-in-chat.md
             Track 3, "badge rendering"). */}
         <span className="absolute -top-1 -left-1 inline-flex items-center gap-0.5">
           <AckBadgeCluster acks={acks} onZoomView={onZoomView} />

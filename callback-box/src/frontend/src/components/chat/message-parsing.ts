@@ -108,7 +108,7 @@ const MESSAGE_ID_WRAPPER_RE = /^\s*<speech\b[^>]*\bmessage-id="([^"]*)"/;
 
 /**
  * Resolve the key an audio-overlay event addresses this entry by
- * (docs/plans/retranscription-in-chat.md Track 3): the `message-id="…"`
+ * (docs/implemented-plans/retranscription-in-chat.md Track 3): the `message-id="…"`
  * attribute `chat-assemble.ts` stamps on the `<speech>` wrapper of a voice
  * send, read from the entry's raw text (stripping only happens at render).
  *

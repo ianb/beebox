@@ -81,7 +81,7 @@ function DeliveredMessageParts({ text, attachedFileIds }: { text: string; attach
  * true, swaps ONLY the string handed to `DeliveredMessageParts`/
  * `UserMessageText` for text blocks — file refs, images, and the debug view
  * all keep deriving from the block's ORIGINAL text
- * (docs/plans/retranscription-in-chat.md Track 3, "replacement is scoped to
+ * (docs/implemented-plans/retranscription-in-chat.md Track 3, "replacement is scoped to
  * the display text only").
  */
 export function UserEntryContent({ entry, debugView, audioOverlay, matchesOverlay }: {
