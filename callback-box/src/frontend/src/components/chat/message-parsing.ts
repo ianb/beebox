@@ -96,6 +96,30 @@ export function extractFileAttachments(text: string): FileAttachmentRef[] {
   return refs;
 }
 
+const MESSAGE_ID_ATTR_RE = /\bmessage-id="([^"]*)"/;
+
+/**
+ * Resolve the key an audio-overlay event addresses this entry by
+ * (docs/plans/retranscription-in-chat.md Track 3): the `message-id="…"`
+ * attribute `chat-assemble.ts` stamps on the `<speech>` wrapper of a voice
+ * send, read the same way `userIdentity()` reads `user`/`user-email`
+ * (`src/cli/lib/session-entry.ts:58-69`) — a regex over the entry's raw text,
+ * since stripping only happens at render.
+ *
+ * Falls back to the entry's own `uuid` for a still-pending optimistic stub,
+ * which is built with `uuid: event.messageId` (`chat-actions.ts`) and has no
+ * wrapper text yet to carry the attribute. Because this re-reads the raw text
+ * on every call, it re-resolves correctly across the pending→authoritative
+ * uuid swap: the swapped-in server entry's raw text carries the attribute,
+ * so resolution moves from the uuid fallback to the attribute match without
+ * any special-casing at the call site.
+ */
+export function resolveEntryMessageId(entry: SessionEntry): string {
+  const firstText = entry.content.find((b) => b.type === "text")?.text ?? "";
+  const match = firstText.match(MESSAGE_ID_ATTR_RE)?.[1];
+  return match && match.length > 0 ? match : entry.uuid;
+}
+
 /**
  * Extract user name from a session entry.
  * Checks the entry's user field first, then parses from tag attributes.

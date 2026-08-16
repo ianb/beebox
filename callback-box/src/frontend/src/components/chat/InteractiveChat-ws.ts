@@ -23,6 +23,7 @@ import { href, toSearch } from "../../lib/routing";
 import { applyFeaturesChange } from "./InteractiveChat-helpers";
 import { fulfillLastAudioRequest } from "../../lib/audio/last-audio";
 import { bumpFileVersion } from "../../lib/file-version";
+import type { AudioOverlayStore } from "./audio-overlay-store";
 import type { ChatEvent } from "../../machines/chat-types";
 import type { TaskEvent } from "./background-tasks";
 import type { CaptureLiveStatus } from "./capture-bubble";
@@ -60,6 +61,18 @@ function forSession(dataSessionId: string | null, sessionId: string | null): boo
   return !(dataSessionId && sessionId && dataSessionId !== sessionId);
 }
 
+/**
+ * True when this tab has its own session assigned AND it's the exact one an
+ * audio-review event (`chat-retranscription` / `chat-audio-consulted`)
+ * targets. Unlike {@link forSession}, there is no null-permissive default —
+ * a null `sessionId` (session not yet assigned) never matches, even though
+ * `forSession(x, null)` would. A point-to-point report has one intended
+ * recipient tab; broadcast-style adoption doesn't apply here.
+ */
+export function matchesOwnSession(sessionId: string | null, eventSessionId: string): boolean {
+  return sessionId !== null && sessionId === eventSessionId;
+}
+
 interface SecondaryEventDeps {
   sessionId: string | null;
   sessionInput: string;
@@ -72,6 +85,8 @@ interface SecondaryEventDeps {
   onCaptureStatus: (data: { stagingId: string; status: CaptureLiveStatus }) => void;
   /** The agent asked this session's tab for a screenshot (`cb chat screenshot`). */
   onScreenshotRequest: (request: ScreenshotRequest) => void;
+  /** Written by the two audio-review events; read by `UserMessage`'s badges. */
+  audioOverlayStore: AudioOverlayStore;
 }
 
 /**
@@ -80,7 +95,7 @@ interface SecondaryEventDeps {
  * main dispatcher to keep each handler's branching legible.
  */
 function handleSecondaryEvent(event: RealtimeEvent, deps: SecondaryEventDeps): void {
-  const { sessionId, sessionInput, isStreaming, send, setChatFeatures, onTaskEvent, onCaptureStatus, onScreenshotRequest } = deps;
+  const { sessionId, sessionInput, isStreaming, send, setChatFeatures, onTaskEvent, onCaptureStatus, onScreenshotRequest, audioOverlayStore } = deps;
   const capture = busEventData(event, "capture-status");
   if (capture) {
     // `sessionId` on the event is null until delivery, so we don't filter by
@@ -106,6 +121,25 @@ function handleSecondaryEvent(event: RealtimeEvent, deps: SecondaryEventDeps): v
     // server waits out other tabs), tagged with this tab's own session id
     // (null before assignment).
     void fulfillLastAudioRequest(lastAudio.requestId, { messageId: lastAudio.messageId, sessionId });
+    return;
+  }
+  const retranscription = busEventData(event, "chat-retranscription");
+  if (retranscription) {
+    if (matchesOwnSession(sessionId, retranscription.sessionId)) {
+      audioOverlayStore.applyRetranscription(retranscription.messageId, {
+        newText: retranscription.newText,
+        service: retranscription.service,
+        diarized: retranscription.diarized,
+        recordedAt: retranscription.recordedAt,
+      });
+    }
+    return;
+  }
+  const audioConsulted = busEventData(event, "chat-audio-consulted");
+  if (audioConsulted) {
+    if (matchesOwnSession(sessionId, audioConsulted.sessionId)) {
+      audioOverlayStore.applyConsulted(audioConsulted.messageId);
+    }
     return;
   }
   const screenshot = busEventData(event, "screenshot-request");
@@ -149,8 +183,10 @@ export function useChatWs(opts: {
   onScreenshotRequest: (request: ScreenshotRequest) => void;
   /** Called immediately before assignment rewrites the fresh-chat URL. */
   onSessionAssignment?: (sessionId: string) => void;
+  /** Written by the two audio-review events; read by `UserMessage`'s badges. */
+  audioOverlayStore: AudioOverlayStore;
 }) {
-  const { sessionId, sessionInput, boxSlug, currentUser, isStreaming, send, fetchSchedules, setChatFeatures, onTaskEvent, onCaptureStatus, onScreenshotRequest, onSessionAssignment } = opts;
+  const { sessionId, sessionInput, boxSlug, currentUser, isStreaming, send, fetchSchedules, setChatFeatures, onTaskEvent, onCaptureStatus, onScreenshotRequest, onSessionAssignment, audioOverlayStore } = opts;
   const navigate = useNavigate();
   const search = useSearch({ strict: false });
   // Rate-gates reconnect-driven REFRESHes: a connect within PROMPT_SUBSCRIPTION_MS
@@ -244,9 +280,9 @@ export function useChatWs(opts: {
           });
         }
       } else {
-        handleSecondaryEvent(event, { sessionId, sessionInput, isStreaming, send, setChatFeatures, onTaskEvent, onCaptureStatus, onScreenshotRequest });
+        handleSecondaryEvent(event, { sessionId, sessionInput, isStreaming, send, setChatFeatures, onTaskEvent, onCaptureStatus, onScreenshotRequest, audioOverlayStore });
       }
-    }, [fetchSchedules, send, currentUser, sessionId, sessionInput, isStreaming, setChatFeatures, onTaskEvent, onCaptureStatus, onScreenshotRequest]),
+    }, [fetchSchedules, send, currentUser, sessionId, sessionInput, isStreaming, setChatFeatures, onTaskEvent, onCaptureStatus, onScreenshotRequest, audioOverlayStore]),
   });
 
   // Update the URL when the machine learns the assigned session id. Fires for

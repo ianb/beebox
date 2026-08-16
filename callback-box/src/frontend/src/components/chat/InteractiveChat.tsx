@@ -11,6 +11,7 @@
  */
 
 import { useState, useRef, useCallback, useMemo } from "react";
+import { createAudioOverlayStore } from "./audio-overlay-store";
 // search params read via window.location — avoids coupling to route definition
 import { useMachine } from "@xstate/react";
 import { chatMachine } from "../../machines/chatMachine.js";
@@ -151,18 +152,16 @@ function ChatModeOverlays({ captureMode, bulkUpload, usesNativeShell, sessionId,
 }
 
 export function InteractiveChat({ sessionInput, contextDir, companion, card, emissionStore, embedded, nativeComposer, openCaptureOnMount, initial, sessionLabel, onSessionAssignment }: InteractiveChatProps) {
-  const usesNativeComposer = nativeComposer === true;
-  const usesNativeShell = embedded === true || usesNativeComposer;
+  const usesNativeComposer = nativeComposer === true; const usesNativeShell = embedded === true || usesNativeComposer;
   const [snapshot, send] = useMachine(chatMachine, {
     input: { sessionInput, contextDir, initial },
   });
   const { messages, pendingMessages, streamText, streamTools, error, sessionId, processRunning, processBusy, totalEntries, liveTurnId } = snapshot.context;
   const effectiveContextDir = useEffectiveContextDir({ sessionId, contextDir });
-  const isStreaming = snapshot.matches("streaming") || snapshot.matches("refreshing");
-  const isLoading = snapshot.matches("loading");
+  const isStreaming = snapshot.matches("streaming") || snapshot.matches("refreshing"); const isLoading = snapshot.matches("loading");
   const currentUser = useCurrentUser();
   const { boxSlug } = useParams({ strict: false });
-  const backgroundTasks = useBackgroundTasks();
+  const backgroundTasks = useBackgroundTasks(); const audioOverlayStore = useMemo(() => createAudioOverlayStore(), []); // see audio-overlay-store.ts
 
   // Composer text lives outside React state, so keystrokes re-render only its textareas.
   // The full emission store is a prop (see above); this derives the
@@ -264,6 +263,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
     onCaptureStatus: applyCaptureStatus,
     onScreenshotRequest: screenshots.onScreenshotRequest,
     onSessionAssignment,
+    audioOverlayStore,
   });
   const actions = useChatActions({
     send, sessionId, boxSlug, effectiveContextDir, messages, totalEntries, loadingOlder, setLoadingOlder,
@@ -331,6 +331,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
       onEnterCapture={() => setCaptureMode(true)} captureEnabled={!usesNativeShell} captureDisabledReason={sessionId === null ? "Send a message first" : undefined}
       onUploadFiles={handleOpenBulkUpload} uploadFilesDisabledReason={sessionId === null ? "Send a message first" : undefined}
       screenshots={screenshots}
+      audioOverlayStore={audioOverlayStore}
       />
       <ChatModeOverlays captureMode={captureMode} bulkUpload={bulkUploadLaunch} usesNativeShell={usesNativeShell} sessionId={sessionId} onExitCapture={() => setCaptureMode(false)} onExitBulkUpload={handleCloseBulkUpload} onBulkUploadDelivered={handleBulkUploadDelivered} />
     </InputStoreProvider>

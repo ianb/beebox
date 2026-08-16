@@ -31,6 +31,7 @@ import type { useChatSelections } from "./InteractiveChat-selections";
 import type { useChatActions } from "./InteractiveChat-actions";
 import type { ActivityKind } from "@core/chat/card-activity.js";
 import type { CaptureBubbleModel } from "./capture-bubble";
+import type { AudioOverlayStore } from "./audio-overlay-store";
 import { useCompanionSelection } from "./use-companion-selection";
 
 interface ChatBodyProps {
@@ -60,12 +61,9 @@ interface ChatBodyProps {
   /** Confirmed display state; raw processBusy still owns queue affordances. */
   showAgentWorking: boolean;
   processRunning: boolean;
-  sessionId: string | null;
-  totalEntries: number;
-  pendingCount: number;
-  error: string | null | undefined;
-  currentUserEmail: string | undefined;
-  currentUserName: string | undefined;
+  sessionId: string | null; totalEntries: number;
+  pendingCount: number; error: string | null | undefined;
+  currentUserEmail: string | undefined; currentUserName: string | undefined;
   modelMarkers: ModelMarker[];
   loadingOlder: boolean;
   scrollToBottomTrigger: number;
@@ -109,6 +107,7 @@ interface ChatBodyProps {
   uploadFilesDisabledReason?: string | undefined;
   /** Agent-initiated screenshot requests: FIFO consent popup + ephemeral indicator rows. */
   screenshots: ScreenshotRequestController;
+  audioOverlayStore: AudioOverlayStore; // written by the audio-review events; read by UserMessage's badges
 }
 
 /**
@@ -158,7 +157,7 @@ function MessageListRegion(props: ChatBodyProps) {
   const {
     tabs, model, voice, actions, messages, groups, modelMarkers, isStreaming, streamText, streamTools,
     debugView, currentUserEmail, currentUserName, snapshot, totalEntries, loadingOlder, scrollToBottomTrigger, liveTurnId,
-    captureBubbles, onCaptureRetry,
+    captureBubbles, onCaptureRetry, audioOverlayStore,
   } = props;
   const { onZoomView } = tabs;
   const { speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, pendingHqDraft } = voice;
@@ -189,6 +188,7 @@ function MessageListRegion(props: ChatBodyProps) {
       pendingHqDraft={pendingHqDraft}
       captureBubbles={captureBubbles}
       onCaptureRetry={onCaptureRetry}
+      audioOverlayStore={audioOverlayStore}
     />
   );
 }
