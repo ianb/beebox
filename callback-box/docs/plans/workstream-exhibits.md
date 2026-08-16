@@ -3,7 +3,7 @@ title: "Workstream exhibits: a persistent presentation medium with asks"
 status: active
 workstream: dev-docs-workflow
 issues:
-  - ../../../issues/features/2026-07-24-dev-scripted-apps-separate-origin.md
+  - ../../../issues/closed/features/2026-07-24-dev-scripted-apps-separate-origin.md
 ---
 
 # Workstream exhibits
