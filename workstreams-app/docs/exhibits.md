@@ -19,6 +19,13 @@ vocabulary: `callback-box/docs/plans/workstream-exhibits.md`.
 `<worktree>/exhibits` is a symlink to `<parent>/workstream-exhibits/<workstream>/`.
 Content survives a worktree cull; removing the worktree removes only the link.
 
+`bin/exhibits add --title <t> --ask <type> --prose <p> [--option <label>]…
+[files…]` does all of that: it derives the workstream from the checkout you run
+it in, copies the files in, labels the figures `A1`, `A2`, … in argument order,
+and prints the URL — one line on stdout, so it pastes straight into chat. Write
+the directory by hand when you want something the CLI does not do; the contract
+is the files, not the tool.
+
 `exhibit.json`:
 
 ```json
@@ -54,6 +61,23 @@ The queue only works if the type is honest — `fyi` is not a dumping ground and
 real decision tagged `fyi` is a decision that never gets made. The ask's prose
 says what happens *after* each answer. Figures get short labels (`A1`, `B3`) so
 feedback in chat can address them precisely.
+
+## Writing a good exhibit
+
+- **The ask is honest, and it says what happens next.** The prose states the
+  consequence of each answer ("pick a density; I apply it everywhere and delete
+  the other"), not just the question. An over-applied tag rots the queue it
+  feeds — the `manual-testing` flag did exactly that
+  ([2026-07-29](../../issues/decisions/2026-07-29-manual-testing-flag-overuse.md)):
+  once a marker stops meaning anything, the human stops reading it. `fyi` is the
+  one with no cost to the developer, so it is the one that tempts.
+- **Figures get labels and captions.** The label is the handle feedback uses;
+  the caption says what to look at. Two screenshots with no captions are a
+  spot-the-difference puzzle you are asking the developer to solve.
+- **Present it live, in label terms.** When the developer is in chat, run
+  `bin/exhibits add --open`: they get the page, you get to say "A3 has too much
+  white space" and be understood. `bin/exhibits list` is the other half — a
+  later session runs it to find which asks came back answered.
 
 ## The three page tiers
 
