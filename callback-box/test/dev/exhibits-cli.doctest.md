@@ -220,6 +220,72 @@ JSON.stringify({
 => {"url":true,"shipsByMerge":true,"manifestKeys":["created","title"],"manifestTitle":"Threshold Tuner","starterPage":true,"storeAppsDir":false,"beforeMerge":false,"afterMerge":{"workstream":"apps","name":"threshold-tuner","title":"Threshold Tuner","ask":"","answered":false,"permanent":true}}
 ```
 
+Copied files are renamed to something the app can route to. The server validates
+every path segment, so a screenshot straight off a Mac desktop
+(`Screen Shot 2026-08-15.png`) would otherwise be a figure whose URL 404s.
+
+```ts
+const shot3 = join(root, "Screen Shot 2026-08-15.png");
+await writeFile(shot3, "png-bytes");
+const shaped = await run([
+  "add", "--workstream", "demo", "--title", "Named Files",
+  "--ask", "fyi", "--prose", "just showing you", shot3,
+]);
+const shapedDir = join(store, "demo/named-files");
+const shapedManifest = JSON.parse(await readFile(join(shapedDir, "exhibit.json"), "utf8"));
+const { exhibitSegmentSchema } = await import(
+  resolve(repoRoot, "workstreams-app/src/shared/exhibits.ts")
+);
+JSON.stringify({
+  code: shaped.code,
+  figures: shapedManifest.figures,
+  onDisk: (await readFile(join(shapedDir, "screen-shot-2026-08-15.png"), "utf8")) === "png-bytes",
+  routable: exhibitSegmentSchema.safeParse(shapedManifest.figures[0].file).success,
+  saidSo: shaped.stderr.includes("copied Screen Shot 2026-08-15.png as screen-shot-2026-08-15.png"),
+})
+=> {"code":0,"figures":[{"label":"A1","file":"screen-shot-2026-08-15.png"}],"onDisk":true,"routable":true,"saidSo":true}
+```
+
+`answered` means the disposition parses AND is one — the rule the app applies
+(`workstreams-app/src/server/exhibits/disposition.ts`). A truncated answer is a
+live ask with a stated problem, not a silently closed one.
+
+```ts
+await mkdir(join(store, "demo/named-files/data"), { recursive: true });
+await writeFile(join(store, "demo/named-files/data/disposition.json"), '{"askType":"fyi","dec');
+const rows = JSON.parse((await run(["list", "--json", "--workstream", "demo"])).stdout);
+const row = rows.find((r: { name: string }) => r.name === "named-files");
+const table = await run(["list", "--workstream", "demo"]);
+JSON.stringify({
+  answered: row.answered,
+  problem: row.problem,
+  hasDecidedAt: "decidedAt" in row,
+  table: table.stdout.includes("waiting (unreadable answer)"),
+})
+=> {"answered":false,"problem":"disposition.json is not a readable answer","hasDecidedAt":false,"table":true}
+```
+
+The URL always carries a token. The supervisor mints one and reuses whatever it
+finds, so the CLI mints it too when the app has never run — a URL without
+`?token=` is a URL that 401s, which reads as a broken exhibit.
+
+```ts
+const tokenFile = join(state, "exhibits-token");
+await rm(tokenFile);
+const minted = await run(["url", "demo/derived"]);
+const first = (await readFile(tokenFile, "utf8")).trim();
+const again = await run(["url", "demo/derived"]);
+const mode = (await lstat(tokenFile)).mode & 0o777;
+JSON.stringify({
+  carriesToken: minted.stdout.trim() === `http://127.0.0.1:3230/demo/derived/?token=${first}`,
+  longEnough: first.length >= 16,
+  urlSafe: /^[A-Za-z0-9_-]+$/u.test(first),
+  mode: mode.toString(8),
+  reused: again.stdout.trim() === minted.stdout.trim(),
+})
+=> {"carriesToken":true,"longEnough":true,"urlSafe":true,"mode":"600","reused":true}
+```
+
 ```ts cleanup
 await rm(root, { recursive: true, force: true });
 ```

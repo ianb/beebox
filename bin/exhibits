@@ -87,6 +87,25 @@ slugify() {
   printf '%s' "$s"
 }
 
+# sanitize_basename <name> — the filename an exhibit is served under. The app
+# routes sibling files through its segment schema
+# (workstreams-app/src/shared/exhibits.ts), which refuses spaces and most
+# punctuation, so a copied "Screen Shot 2026-08-15.png" would be a figure URL
+# that 404s. Lowercase, one "-" per run of anything else, extension preserved.
+# Prints nothing and fails when there is nothing left to name the file with.
+sanitize_basename() {
+  local name="$1" stem ext
+  case "$name" in
+    *.*) stem="${name%.*}"; ext="${name##*.}" ;;
+    *)   stem="$name"; ext="" ;;
+  esac
+  stem="$(printf '%s' "$stem" | tr '[:upper:]' '[:lower:]' \
+    | sed -e 's/[^a-z0-9._-]\{1,\}/-/g' -e 's/-\{2,\}/-/g' -e 's/^[^a-z0-9]*//' -e 's/[-._]*$//')"
+  ext="$(printf '%s' "$ext" | tr '[:upper:]' '[:lower:]' | sed -e 's/[^a-z0-9]//g')"
+  [ -n "$stem" ] || return 1
+  if [ -n "$ext" ]; then printf '%s.%s' "$stem" "$ext"; else printf '%s' "$stem"; fi
+}
+
 is_figure_file() {
   case "$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')" in
     *.png|*.jpg|*.jpeg|*.gif|*.webp|*.svg|*.mp4|*.webm|*.mp3|*.wav|*.ogg) return 0 ;;
@@ -94,19 +113,42 @@ is_figure_file() {
   return 1
 }
 
-# exhibit_url <scope> — scope is "<ws>/<name>" or "apps/<name>". The token is
-# machine-scoped and minted by the supervisor; it may not exist yet if the app
-# has never run, in which case the URL still works once you paste it after a run.
-exhibit_url() {
-  local scope="$1" token_file token
-  token_file="$WT_STATE_DIR/exhibits-token"
+# exhibits_token — the machine-scoped token, minting it if it does not exist.
+#
+# The supervisor mints the same file and REUSES an existing one rather than
+# overwriting it, so whoever gets there first wins and both agree. Minting here
+# matters because the whole point of this CLI is a pasteable URL: before, an
+# exhibit created while the app had never run printed a URL that 401s, which
+# reads as "the exhibit is broken".
+exhibits_token() {
+  local token_file="$WT_STATE_DIR/exhibits-token" token
   if [ -r "$token_file" ]; then
     token="$(tr -d '\n' < "$token_file")"
+    if [ "${#token}" -ge 16 ]; then printf '%s' "$token"; return 0; fi
   fi
-  if [ -n "${token:-}" ]; then
+  mkdir -p "$WT_STATE_DIR" || return 1
+  if command -v openssl >/dev/null; then
+    token="$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=\n')"
+  else
+    token="$(head -c 32 /dev/urandom | base64 | tr '+/' '-_' | tr -d '=\n')"
+  fi
+  [ "${#token}" -ge 16 ] || return 1
+  # noclobber: an exclusive create, so a supervisor starting at the same moment
+  # cannot have its token replaced by ours. Loser re-reads the winner's file.
+  ( umask 077; set -C; printf '%s\n' "$token" > "$token_file" ) 2>/dev/null || true
+  chmod 600 "$token_file" 2>/dev/null || true
+  token="$(tr -d '\n' < "$token_file")"
+  [ "${#token}" -ge 16 ] || return 1
+  printf '%s' "$token"
+}
+
+# exhibit_url <scope> — scope is "<ws>/<name>" or "apps/<name>".
+exhibit_url() {
+  local scope="$1" token
+  if token="$(exhibits_token)" && [ -n "$token" ]; then
     printf 'http://127.0.0.1:%s/%s/?token=%s\n' "$EXHIBITS_PORT" "$scope" "$token"
   else
-    say "no token yet at $token_file (the exhibits app has never run) — URL printed without ?token="
+    say "could not read or mint $WT_STATE_DIR/exhibits-token — URL printed without ?token=, so it will 401"
     printf 'http://127.0.0.1:%s/%s/\n' "$EXHIBITS_PORT" "$scope"
   fi
 }
@@ -209,10 +251,14 @@ case "$cmd" in
     n=0
     for f in ${files[@]+"${files[@]}"}; do
       base="$(basename "$f")"
-      cp "$f" "$dest/$base"
-      if is_figure_file "$base"; then
+      safe="$(sanitize_basename "$base")" \
+        || die "add: '$base' has no characters a URL segment can carry — rename it and retry"
+      [ ! -e "$dest/$safe" ] || die "add: '$base' becomes '$safe', which is already in this exhibit — rename one of them"
+      cp "$f" "$dest/$safe"
+      [ "$safe" = "$base" ] || say "copied $base as $safe (the app routes files by URL segment)"
+      if is_figure_file "$safe"; then
         n=$((n + 1))
-        figures_json="$(jq -c --arg label "A$n" --arg file "$base" '. + [{label: $label, file: $file}]' <<<"$figures_json")"
+        figures_json="$(jq -c --arg label "A$n" --arg file "$safe" '. + [{label: $label, file: $file}]' <<<"$figures_json")"
       fi
     done
 
@@ -271,7 +317,7 @@ HTML
     rows="[]"
     add_row() {
       local ws="$1" name="$2" dir="$3" data_dir="$4" permanent="$5"
-      local manifest ask_type title answered decided_at
+      local manifest ask_type title answered decided_at problem
       manifest="$dir/exhibit.json"
       [ -f "$manifest" ] || return 0
       jq -e . "$manifest" >/dev/null 2>&1 || { say "skipping unparseable manifest: $manifest"; return 0; }
@@ -279,17 +325,29 @@ HTML
       ask_type="$(jq -r '.ask.type // ""' "$manifest")"
       answered=false
       decided_at=""
+      problem=""
+      # Answered means the disposition PARSES and is one — the same rule the app
+      # applies (workstreams-app/src/server/exhibits/disposition.ts). A file that
+      # merely exists used to count, so a half-written answer hid a live ask here
+      # while the app's own queue still showed it waiting.
       if [ -f "$data_dir/disposition.json" ]; then
-        answered=true
-        decided_at="$(jq -r '.decidedAt // ""' "$data_dir/disposition.json" 2>/dev/null || true)"
+        if decided_at="$(jq -er 'if (.askType | type) == "string" and (.decidedAt | type) == "string"
+                                 then .decidedAt else error("not a disposition") end' \
+                          "$data_dir/disposition.json" 2>/dev/null)"; then
+          answered=true
+        else
+          decided_at=""
+          problem="disposition.json is not a readable answer"
+        fi
       fi
       rows="$(jq -c \
         --arg workstream "$ws" --arg name "$name" --arg title "$title" \
-        --arg ask "$ask_type" --arg decidedAt "$decided_at" \
+        --arg ask "$ask_type" --arg decidedAt "$decided_at" --arg problem "$problem" \
         --argjson answered "$answered" --argjson permanent "$permanent" \
         '. + [{workstream: $workstream, name: $name, title: $title, ask: $ask,
                answered: $answered, permanent: $permanent}
-              | if $decidedAt == "" then . else .decidedAt = $decidedAt end]' <<<"$rows")"
+              | if $decidedAt == "" then . else .decidedAt = $decidedAt end
+              | if $problem == "" then . else .problem = $problem end]' <<<"$rows")"
     }
 
     if [ -d "${WT_EXHIBITS_ROOT:-}" ]; then
@@ -328,6 +386,7 @@ HTML
                         (if .ask == "" then "-" else .ask end),
                         (if .permanent then "permanent"
                          elif .answered then "answered " + (.decidedAt // "")
+                         elif .problem then "waiting (unreadable answer)"
                          else "waiting" end),
                         .title]))
                | @tsv' <<<"$rows" | column -t -s "$(printf '\t')"
