@@ -11,15 +11,17 @@ import type { OnZoomView } from "./markdown-rendering";
 
 /**
  * Small ack badges shown alongside a user message — one per `<ack>` the
- * agent emitted in its reply. The first sits at the top-left of the
- * bubble; additional badges extend to the right. Same background as the
- * user bubble so they read as part of it.
+ * agent emitted in its reply. Same background as the user bubble so they
+ * read as part of it. Renders inline, no positioning of its own — the
+ * caller places this in the bubble's absolutely-positioned corner row,
+ * shared with `AudioOverlayBadgeCluster` (audio-overlay-badge.tsx),
+ * ack badges first.
  */
 export function AckBadgeCluster({ acks, onZoomView }: { acks: AckIndication[] | undefined; onZoomView?: OnZoomView }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   if (!acks || acks.length === 0) return null;
   return (
-    <span className="absolute -top-1 -left-1 inline-flex items-center gap-0.5">
+    <span className="inline-flex items-center gap-0.5">
       {acks.map((ack, i) => (
         <AckBadge
           key={i}

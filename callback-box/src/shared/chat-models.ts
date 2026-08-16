@@ -22,8 +22,9 @@ const OPTIONS: Record<ChatAgentEngine, readonly ChatModelOption[]> = {
   ],
   codex: [
     { label: "Default (Codex)", model: null },
-    { label: "GPT-5.6 Sol", model: "gpt-5.6-sol" },
-    { label: "GPT-5.6 Terra", model: "gpt-5.6-terra" },
+    { label: "Sol", model: "gpt-5.6-sol" },
+    { label: "Terra", model: "gpt-5.6-terra" },
+    { label: "Luna", model: "gpt-5.6-luna" },
   ],
 };
 
@@ -33,4 +34,9 @@ export function chatModelOptions(engine: ChatAgentEngine): readonly ChatModelOpt
 
 export function isChatModelAllowed(engine: ChatAgentEngine, model: string | null): boolean {
   return OPTIONS[engine].some((option) => option.model === model);
+}
+
+/** Ignore a persisted model that belongs to a different native harness. */
+export function chatModelForEngine(engine: ChatAgentEngine, model: string | null): string | null {
+  return isChatModelAllowed(engine, model) ? model : null;
 }

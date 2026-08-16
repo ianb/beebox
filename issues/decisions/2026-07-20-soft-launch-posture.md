@@ -56,7 +56,7 @@ to people; close when the soft launch happens. Builds on
   collaborators aren't); Tailscale identity rejected (footgun-prone); Google
   OAuth stays the documented optional extra.
 - **Front door**: README is the launch front door; a
-  [GitHub Pages site](../features/2026-07-20-github-pages-site.md)
+  [GitHub Pages site](../features/2026-07-20-public-site.md)
   (deliberately un-polished, cool in other ways) may follow.
 - **Register**: the audience is friendly but low-attention; what grabs
   attention is *personal* — the front door reads as a message from the
@@ -165,7 +165,7 @@ Filed — features:
 [agent-maintained-security-report](../closed/features/2026-07-20-agent-maintained-security-report.md),
 [web-password-change](../closed/features/2026-07-20-web-password-change.md),
 [invite-links](../closed/features/2026-07-20-invite-links.md),
-[github-pages-site](../features/2026-07-20-github-pages-site.md),
+[public-site](../features/2026-07-20-public-site.md),
 [explicit-api-key-config](../features/2026-07-20-explicit-api-key-config.md),
 [export-md-agent-instructions](../features/2026-07-20-export-md-agent-instructions.md),
 [schedules-off-by-default](../features/2026-07-20-schedules-off-by-default.md),

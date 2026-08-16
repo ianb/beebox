@@ -89,8 +89,14 @@ export const eventSchemas = {
     path: z.string(),
     timestamp: z.string(),
   }),
-  /** A browser tab was asked to re-upload its last audio blob. */
-  "chat-last-audio-request": z.object({ requestId: z.string() }),
+  /**
+   * A browser tab was asked to re-upload its last audio blob. `messageId` is
+   * the exact emission id the request targets (Track 1b — targeting is
+   * required; there is no untargeted "latest" mode) — the fulfilling tab must
+   * echo it back, and the server ignores any answer that omits or mismatches
+   * it.
+   */
+  "chat-last-audio-request": z.object({ requestId: z.string(), messageId: z.string().min(1) }),
   /**
    * The chat agent asked the browser tab holding a specific chat session to
    * capture a screenshot of what the user currently sees. Emitted transiently
@@ -188,6 +194,34 @@ export const eventSchemas = {
     sessionId: z.string().nullable(),
     status: z.enum(["preparing", "transcribing", "delivered", "failed"]),
     docPath: z.string().optional(),
+  }),
+  /**
+   * A message's audio was re-transcribed through the HQ pass
+   * (`cb chat retranscribe`, retranscription-in-chat plan Track 2). Emitted
+   * transiently by `POST /api/chat/audio-review` so a connected chat tab can
+   * overlay the improved text on the original bubble. `service` is the
+   * actually-resolved HQ service name (never the CLI's unresolved "box
+   * default" placeholder) — omitted when genuinely unknown so a badge never
+   * shows a placeholder.
+   */
+  "chat-retranscription": z.object({
+    sessionId: z.string().min(1),
+    messageId: z.string().min(1),
+    newText: z.string().min(1),
+    service: z.string().optional(),
+    diarized: z.boolean(),
+    recordedAt: z.string().optional(),
+  }),
+  /**
+   * The chat agent analyzed a message's audio (`cb chat ask-about-audio`)
+   * without producing replacement text — a trace that the recording was
+   * consulted, not a correction. Emitted transiently, same route as
+   * `chat-retranscription`.
+   */
+  "chat-audio-consulted": z.object({
+    sessionId: z.string().min(1),
+    messageId: z.string().min(1),
+    command: z.literal("ask-about-audio"),
   }),
 } satisfies Record<string, z.ZodType>;
 

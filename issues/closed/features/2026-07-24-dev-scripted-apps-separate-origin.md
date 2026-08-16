@@ -1,6 +1,6 @@
 ---
 title: "Serve scripted /dev/ apps from a separate origin (proper isolation)"
-workstream: github-pages-site
+workstream: public-site
 needs: [design]
 area: router
 filed-by: agent
@@ -30,7 +30,7 @@ resolution: implemented
 > `dev/tools.json` still lists the same trusted app, and `bin/router.ts:1279`
 > is still the only `http.createServer` — no second origin exists.
 >
-> The broader [router architecture](../code-quality/2026-08-13-router-architecture.md)
+> The broader [router architecture](../closed/code-quality/2026-08-13-router-architecture.md)
 > item filed the same week does not subsume this: it covers splitting
 > `/workstreams/` out, and never touches scripted-app origin isolation.
 

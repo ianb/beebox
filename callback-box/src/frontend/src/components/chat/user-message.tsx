@@ -4,29 +4,24 @@
  */
 
 import { useState } from "react";
-import { assertNever, invariant } from "@shared/invariant";
-import {
-  parseDeliveredUserMessageParts,
-  type DeliveredUserMessagePart,
-} from "@shared/delivered-user-message";
-import { Image } from "../ui/Image";
+import { invariant } from "@shared/invariant";
 import { Pre } from "../ui/Pre";
 import { getApiBase } from "../../api";
 import type { SessionEntry } from "../../api";
 import type { AckIndication } from "../../lib/structured-output-parsing";
 import type { OnZoomView } from "./markdown-rendering";
 import { AckBadgeCluster } from "./ack-badge";
+import { AudioOverlayBadgeCluster } from "./audio-overlay-badge";
+import { useAudioOverlayEntry, type AudioOverlayStore } from "./audio-overlay-store";
 import {
   extractFileAttachments,
   getUserName,
-  imageBlockSrc,
   parseTaskNotification,
+  resolveEntryMessageId,
   stripUserDisplayTags,
   type TaskNotification,
 } from "./message-parsing";
-import { CaptureChip } from "./CaptureChip";
-import { UploadChip } from "./UploadChip";
-import { UserMessageText } from "./user-message-text";
+import { UserEntryContent, originalDisplayText } from "./user-entry-content";
 import { isOtherChatUser } from "./chat-message-sender";
 
 /**
@@ -108,105 +103,25 @@ function TaskNotificationMessage({ notification }: { notification: TaskNotificat
 }
 
 /**
- * Thumbnail + lightbox for an inline image in a user message bubble.
- */
-function MessageImage({ src, alt }: { src: string; alt: string }) {
-  return <Image src={src} alt={alt} size="sm" lightbox bordered className="my-1" />;
-}
-
-/**
- * Inline chip showing an attached file with its original name. The path
- * sits in <boxRoot>/tmp/, gitignored and swept by housekeeping; we don't
- * link it because the chip is just a "you sent this" affordance.
- */
-function MessageFileChip({ name }: { name: string }) {
-  return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-warm-100 border border-warm-300 text-xs text-warm-800">
-      <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-      </svg>
-      <span className="truncate max-w-[16rem]">{name}</span>
-    </span>
-  );
-}
-
-function DeliveredMessagePart({ part, attachedFileIds }: { part: DeliveredUserMessagePart; attachedFileIds: ReadonlySet<number> }) {
-  switch (part.kind) {
-    case "text":
-      if (stripUserDisplayTags(part.text, { attachedFileIds }).trim() === "") return null;
-      return (
-        <div className="text-sm whitespace-pre-wrap">
-          <UserMessageText text={part.text} attachedFileIds={attachedFileIds} />
-        </div>
-      );
-    case "capture":
-      return <CaptureChip model={part} />;
-    case "upload":
-      return <UploadChip model={part} />;
-    default:
-      return assertNever(part);
-  }
-}
-
-function DeliveredMessageParts({ text, attachedFileIds }: { text: string; attachedFileIds: ReadonlySet<number> }) {
-  const parts = parseDeliveredUserMessageParts(text);
-  return (
-    <>
-      {parts.map((part, index) => (
-        <DeliveredMessagePart key={`${part.kind}-${String(index)}`} part={part} attachedFileIds={attachedFileIds} />
-      ))}
-    </>
-  );
-}
-
-/**
- * Render a user entry's content blocks: text blocks go through the normal
- * tag-stripping display, image blocks render as clickable thumbnails. File
- * attachments parsed from a sibling <attachments> block render as chips.
- */
-function UserEntryContent({ entry, debugView }: { entry: SessionEntry; debugView: boolean }) {
-  const fileRefs = entry.content
-    .filter((b) => b.type === "text")
-    .flatMap((b) => extractFileAttachments(b.text ?? ""));
-  // Entry-level, not per-block: `[imageN]` expansion splits a sent message
-  // into several text blocks, and a file token can sit in an earlier block
-  // than the `<attachments>` declaration it resolves through.
-  const attachedFileIds = new Set(fileRefs.map((f) => f.id));
-  return (
-    <>
-      {entry.content.map((block, i) => {
-        const key = `${entry.uuid}-${i}`;
-        if (block.type === "text") {
-          if (debugView) {
-            return (
-              <Pre key={key} size="xs">{block.text ?? ""}</Pre>
-            );
-          }
-          return <DeliveredMessageParts key={key} text={block.text ?? ""} attachedFileIds={attachedFileIds} />;
-        }
-        if (block.type === "image") {
-          const src = imageBlockSrc(block);
-          if (!src) return null;
-          return <MessageImage key={key} src={src} alt={`Attached image ${i + 1}`} />;
-        }
-        return null;
-      })}
-      {!debugView && fileRefs.length > 0 ? (
-        <div className="flex flex-wrap gap-1.5 mt-1.5">
-          {fileRefs.map((f) => (
-            <MessageFileChip key={f.id} name={f.displayName} />
-          ))}
-        </div>
-      ) : null}
-    </>
-  );
-}
-
-/**
  * Render a user message bubble.
  * When currentUserEmail is provided, messages from other users are styled differently.
  */
-export function UserMessage({ entries, debugView, currentUserEmail, currentUserName, acks, onZoomView }: { entries: SessionEntry[]; debugView?: boolean; currentUserEmail?: string; currentUserName?: string; acks?: AckIndication[]; onZoomView?: OnZoomView }) {
+export function UserMessage({ entries, debugView, currentUserEmail, currentUserName, acks, onZoomView, audioOverlayStore }: {
+  entries: SessionEntry[];
+  debugView?: boolean;
+  currentUserEmail?: string;
+  currentUserName?: string;
+  acks?: AckIndication[];
+  onZoomView?: OnZoomView;
+  /** Overlay store for retranscription/consulted badges (Track 3); undefined where no chat is wired to one (e.g. the dev harness). */
+  audioOverlayStore?: AudioOverlayStore;
+}) {
+  // A hook, so it must run unconditionally — before the early returns below.
+  // `entries` is never empty in practice (see the invariant further down),
+  // but the hook can't wait for that check to run.
+  const audioResolvedKey = entries[0] ? resolveEntryMessageId(entries[0]) : null;
+  const audioOverlay = useAudioOverlayEntry(audioOverlayStore, audioResolvedKey);
+
   const allTexts = entries.flatMap((e) =>
     e.content.filter((b) => b.type === "text").map((b) => b.text ?? "")
   );
@@ -237,25 +152,49 @@ export function UserMessage({ entries, debugView, currentUserEmail, currentUserN
   const senderName = getUserName(firstEntry);
   const senderEmail = firstEntry.userEmail;
   // Compare by email if available (same user across devices), fall back to name
-  const isOtherUser = isOtherChatUser({ senderEmail, senderName, currentUserEmail, currentUserName });
+  const isOtherUser = isOtherChatUser({
+    locallyAuthored: firstEntry.reconcileKnownUuids !== undefined,
+    senderEmail,
+    senderName,
+    currentUserEmail,
+    currentUserName,
+  });
 
   const isPending = entries.every((e) => e.pending === true);
   const pendingClass = isPending ? " opacity-60" : "";
   const pendingTitle = isPending ? "Queued — waiting for agent" : undefined;
 
   if (isOtherUser) {
-    // Other user's message: left-aligned with name label
+    // Other user's message: left-aligned with name label. Fix (2026-08,
+    // cross-model review): in a shared session, another user's retranscribed
+    // message must update on THIS viewer's screen too — the overlay isn't
+    // scoped to the sender. Ack badges stay absent here by the existing
+    // deliberate design (this branch never threaded `acks` through); the
+    // audio-overlay cluster still goes on, matching the bubble's own
+    // white-on-`bg-primary` palette (same muted convention as the own-message
+    // bubble's `bg-info`).
     return (
       <div className="pr-12 sm:pr-24 py-1">
         <div className="text-xs text-warm-500 ml-3 sm:ml-6 mb-0.5">{senderName}</div>
-        <div
-          className={"ml-3 sm:ml-6 rounded-r-2xl bg-primary text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] w-fit break-words" + pendingClass}
-          title={pendingTitle}
-        >
-          {entries.map((entry) => (
-            <UserEntryContent key={entry.uuid} entry={entry} debugView={debugView ?? false} />
-          ))}
-          {isPending ? <PendingIndicator /> : null}
+        <div className="relative ml-3 sm:ml-6 w-fit">
+          <span className="absolute -top-1 -left-1 inline-flex items-center gap-0.5">
+            <AudioOverlayBadgeCluster overlay={audioOverlay} originalText={originalDisplayText(firstEntry)} />
+          </span>
+          <div
+            className={"rounded-r-2xl bg-primary text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] w-fit break-words" + pendingClass}
+            title={pendingTitle}
+          >
+            {entries.map((entry) => (
+              <UserEntryContent
+                key={entry.uuid}
+                entry={entry}
+                debugView={debugView ?? false}
+                audioOverlay={audioOverlay}
+                matchesOverlay={entry.uuid === firstEntry.uuid}
+              />
+            ))}
+            {isPending ? <PendingIndicator /> : null}
+          </div>
         </div>
       </div>
     );
@@ -267,13 +206,25 @@ export function UserMessage({ entries, debugView, currentUserEmail, currentUserN
           width, so break-words can wrap a long unbreakable string (e.g. a URL)
           instead of the bubble overflowing the row. */}
       <div className="relative min-w-0">
-        <AckBadgeCluster acks={acks} onZoomView={onZoomView} />
+        {/* Shared corner row: ack badges keep precedence order, audio
+            badges append after (docs/implemented-plans/retranscription-in-chat.md
+            Track 3, "badge rendering"). */}
+        <span className="absolute -top-1 -left-1 inline-flex items-center gap-0.5">
+          <AckBadgeCluster acks={acks} onZoomView={onZoomView} />
+          <AudioOverlayBadgeCluster overlay={audioOverlay} originalText={originalDisplayText(firstEntry)} />
+        </span>
         <div
           className={"rounded-l-2xl bg-info text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] break-words" + pendingClass}
           title={pendingTitle}
         >
           {entries.map((entry) => (
-            <UserEntryContent key={entry.uuid} entry={entry} debugView={debugView ?? false} />
+            <UserEntryContent
+              key={entry.uuid}
+              entry={entry}
+              debugView={debugView ?? false}
+              audioOverlay={audioOverlay}
+              matchesOverlay={entry.uuid === firstEntry.uuid}
+            />
           ))}
           {isPending ? <PendingIndicator /> : null}
         </div>

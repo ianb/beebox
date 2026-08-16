@@ -55,33 +55,40 @@ function MessageSelectionPill({ text, sourceRef, position, placement }: { text: 
 type MessagePart =
   | { type: "text"; value: string }
   | { type: "send"; phrase: string }
-  | { type: "selection"; text: string; sourceRef: string; position: string; placement: string };
+  | { type: "selection"; text: string; sourceRef: string; position: string; placement: string }
+  | { type: "unsure"; word: string };
 
 export function UserMessageText({ text, attachedFileIds }: { text: string; attachedFileIds?: ReadonlySet<number> }) {
   const stripped = stripUserDisplayTags(text, { attachedFileIds });
 
   const parts: MessagePart[] = [];
   // Pills: <send-message phrase="…"/> / <send-close-message phrase="…"/> (voice
-  // keyword — plain send and the "send and close" sign-off render the same pill)
-  // and <user-selection ref="…" pos="…">quoted text</user-selection> (attached
-  // document text).
-  const tagRe = /<send(?:-close)?-message\s+phrase="([^"]*?)"\s*\/>|<user-selection\b([^>]*)>([\S\s]*?)<\/user-selection>/gi;
+  // keyword — plain send and the "send and close" sign-off render the same pill),
+  // <user-selection ref="…" pos="…">quoted text</user-selection> (attached
+  // document text), and <unsure>word</unsure> (a low-confidence dictated word,
+  // Track 4 of docs/plans/transcript-confidence.md — see message-parsing.ts's
+  // stripUserDisplayTags for why the wrapper survives that generic strip: only
+  // the <speech>/<typed> shell tags are stripped there, not inner markers).
+  const tagRe = /<send(?:-close)?-message\s+phrase="([^"]*?)"\s*\/>|<user-selection\b([^>]*)>([\S\s]*?)<\/user-selection>|<unsure>([\S\s]*?)<\/unsure>/gi;
   let lastIndex = 0;
   let match;
   while ((match = tagRe.exec(stripped)) !== null) {
     if (match.index > lastIndex) {
       parts.push({ type: "text", value: stripped.slice(lastIndex, match.index) });
     }
-    // `.at()` (not `match[n]`): the pattern alternates between two
-    // capture-group sets, so whichever branch DIDN'T match has its groups
-    // genuinely undefined at runtime — but TS's built-in RegExpExecArray
-    // types a plain index read as always `string` (it doesn't model
-    // alternation), whereas `.at()` is honestly `string | undefined`.
+    // `.at()` (not `match[n]`): the pattern alternates between capture-group
+    // sets, so whichever branch DIDN'T match has its groups genuinely
+    // undefined at runtime — but TS's built-in RegExpExecArray types a plain
+    // index read as always `string` (it doesn't model alternation), whereas
+    // `.at()` is honestly `string | undefined`.
     const sendPhrase = match.at(1);
     const selectionAttrs = match.at(2);
     const selectionText = match.at(3);
+    const unsureWord = match.at(4);
     if (sendPhrase !== undefined) {
       parts.push({ type: "send", phrase: sendPhrase.replace(/&quot;/g, '"').replace(/&amp;/g, "&") });
+    } else if (unsureWord !== undefined) {
+      parts.push({ type: "unsure", word: decodeXml(unsureWord) });
     } else {
       const attrs = selectionAttrs ?? "";
       parts.push({
@@ -111,6 +118,20 @@ export function UserMessageText({ text, attachedFileIds }: { text: string; attac
         }
         if (p.type === "selection") {
           return <MessageSelectionPill key={i} text={p.text} sourceRef={p.sourceRef} position={p.position} placement={p.placement} />;
+        }
+        if (p.type === "unsure") {
+          // Subtle mark for a word the transcriber had low acoustic
+          // confidence in (docs/plans/transcript-confidence.md — no
+          // tooltip/legend, boxholder decision 2026-08-15). A dotted
+          // underline in a muted variant of the bubble's own white text
+          // reads in both themes without a new palette token, matching the
+          // opacity-based "muted" convention already used in this file
+          // (the pills' bg-white/20, PendingIndicator's text-white/70).
+          return (
+            <span key={i} className="underline decoration-dotted decoration-white/40 underline-offset-2">
+              {p.word}
+            </span>
+          );
         }
         return (
           <span key={i} className="inline-flex items-center gap-1 bg-white/20 rounded-full px-2 py-0.5 text-xs font-medium">

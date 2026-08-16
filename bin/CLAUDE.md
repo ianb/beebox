@@ -84,6 +84,22 @@ that worktree, so boxes cold-start and idle-stop independently of the
 worktree they live in. `CB_DEV_NO_HUB=1` reverts to the router spawning
 a single legacy `server-main.ts` Fastify process per worktree instead.
 
+In a development checkout, `callback-box/bin/cb` stamps the exact CLI bundle
+artifact it execs. A hub-spawned `cb serve` child watches that identity; when a
+later build replaces it, the child stops admitting mutations, finishes active
+requests, chat turns, and scheduled-chat deliveries, then exits with the
+expected reload code. The hub supervisor respawns it without consuming the
+crash-loop budget. Schedule timers pause during the drain and re-arm from their
+persisted entries after replacement. A drain that cannot reach a safe boundary
+within ten minutes reopens mutations and keeps the loaded code, with a warning,
+rather than wedging the box read-only. The global scheduler uses the same
+identity but checks only
+between complete all-box passes; its launchd `KeepAlive` service performs the
+replacement. Packed installs and `CB_CLI_PREBUILT` production checkouts never
+opt into this dev behavior. A standalone foreground `cb serve`/scheduler has no
+safe owner to replace it and exits or remains visible rather than self-spawning
+an overlapping successor.
+
 `router.ts` holds the process-supervision/proxying machinery only; the
 `/<worktree>/dev/` HTML rendering (manifest, markdown doc browser, static
 artifact serving) lives in the sibling `router-docs.ts`, imported one-way

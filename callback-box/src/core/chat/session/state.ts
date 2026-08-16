@@ -17,6 +17,8 @@ import type { ChatImage, ChatMessage, ChatSendInput } from "./messages.js";
 import { unionActivityKinds, mergeCardStateDetails } from "../card-activity.js";
 import { errorMessage } from "../../../lib/error-guards.js";
 import { isRecord } from "../../card-io.js";
+import { chatModelForEngine } from "../../../shared/chat-models.js";
+import type { AgentEngine } from "../../box/config.js";
 
 const log = makeLog("ChatSession");
 
@@ -83,6 +85,14 @@ export function loadCurrentModel(boxRoot: string, modelFile: string): string | n
     log("model", `Failed to load model file: ${e}`);
   }
   return null;
+}
+
+/** Read a model override only when it belongs to the session's engine. */
+export function loadCurrentModelForEngine(
+  boxRoot: string,
+  { modelFile, engine }: { modelFile: string; engine: AgentEngine },
+): string | null {
+  return chatModelForEngine(engine, loadCurrentModel(boxRoot, modelFile));
 }
 
 /**

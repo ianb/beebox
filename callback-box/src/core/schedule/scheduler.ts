@@ -21,6 +21,7 @@ import {
   type BoxesConfig,
 } from "../box/boxes-config.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { DEV_BUNDLE_RELOAD_EXIT_CODE, devBundleWasReplaced } from "../../lib/dev-bundle-reload.js";
 
 /** @deprecated — use `BoxesConfig` from `./boxes-config.js`. */
 export type SchedulerConfig = BoxesConfig;
@@ -290,6 +291,15 @@ export async function runScheduler(options?: SchedulerOptions): Promise<never> {
           error: errorMessage(err),
         });
       }
+    }
+
+    // The installed launchd service owns replacement. Exit only between full
+    // passes, and nonzero so KeepAlive restarts through bin/cb with a fresh
+    // artifact stamp. A foreground scheduler exits visibly instead of risking
+    // two concurrent daemons by trying to spawn its own successor.
+    if (await devBundleWasReplaced()) {
+      console.log(`[${new Date().toISOString()}] Development bundle changed; restarting scheduler after completed pass.`);
+      process.exit(DEV_BUNDLE_RELOAD_EXIT_CODE);
     }
 
     await new Promise((resolve) => setTimeout(resolve, interval));

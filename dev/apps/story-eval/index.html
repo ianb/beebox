@@ -43,22 +43,14 @@
   }
   .topbar-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.75rem 1.25rem; }
   h1 { font-size: 1rem; font-weight: 650; margin: 0; letter-spacing: 0.01em; }
-  .docpick { display: flex; flex-wrap: wrap; gap: 0.35rem; }
-  .docpick button {
-    font: inherit;
-    font-size: 0.82rem;
-    padding: 0.2rem 0.6rem;
-    border: 1px solid var(--line-strong);
-    background: var(--bg);
-    color: var(--fg);
-    border-radius: 999px;
-    cursor: pointer;
+  /* One compact dropdown instead of a wall of 37 pills. Each option carries its
+     own done/total (and a ✓ when complete) so progress stays visible on open. */
+  .docpick {
+    font: inherit; font-size: 0.85rem; max-width: 22rem;
+    padding: 0.2rem 0.5rem; border: 1px solid var(--line-strong);
+    border-radius: var(--radius); background: var(--bg); color: var(--fg); cursor: pointer;
   }
-  .docpick button[aria-pressed="true"] {
-    background: var(--fg);
-    color: var(--bg);
-    border-color: var(--fg);
-  }
+  .docpick.alldone { border-color: var(--accent); color: var(--accent); }
   .meta-row {
     display: flex;
     flex-wrap: wrap;
@@ -237,7 +229,6 @@
     }
     blockquote.span code { background: rgba(255,255,255,0.08); }
     .chip[aria-pressed="true"] { color: #1a1a1a; }
-    .docpick button[aria-pressed="true"] { color: #1a1a1a; }
   }
 </style>
 </head>
@@ -245,7 +236,7 @@
 <header class="topbar">
   <div class="topbar-row">
     <h1>Story-eval review</h1>
-    <nav class="docpick" id="docpick" aria-label="Document"></nav>
+    <select class="docpick" id="docpick" aria-label="Document"></select>
     <div class="actions">
       <button id="btn-export" title="Download verdicts JSON (e)">Export</button>
       <button id="btn-copy" title="Copy verdicts JSON to clipboard">Copy</button>
@@ -301,38 +292,38 @@ const MANIFEST = [
   "runs/run-003/v1-openclaw-research.json",
   "runs/run-003/v2-openclaw-research.json",
   "runs/run-003/v3-openclaw-research.json",
-  "runs/run-004/v1-decision-per-box-secrets.json",
-  "runs/run-004/v2-decision-per-box-secrets.json",
-  "runs/run-004/v1-decision-glossary-proper-nouns.json",
-  "runs/run-004/v2-decision-glossary-proper-nouns.json",
-  "runs/run-004/v1-decision-bin-browse-future.json",
-  "runs/run-004/v2-decision-bin-browse-future.json",
-  "runs/run-004/v1-decision-box-registry-manifests.json",
-  "runs/run-004/v2-decision-box-registry-manifests.json",
-  "runs/run-004/v1-decision-cb-render-vs-browse.json",
-  "runs/run-004/v2-decision-cb-render-vs-browse.json",
-  "runs/run-004/v1-decision-dead-symlinks.json",
-  "runs/run-004/v2-decision-dead-symlinks.json",
-  "runs/run-004/v1-decision-orama-restore-cost.json",
-  "runs/run-004/v2-decision-orama-restore-cost.json",
-  "runs/run-004/v1-decision-boxes-share-one-origin.json",
-  "runs/run-004/v2-decision-boxes-share-one-origin.json",
-  "runs/run-004/v1-decision-git-push-confirmation.json",
-  "runs/run-004/v2-decision-git-push-confirmation.json",
-  "runs/run-004/v1-decision-release-discipline.json",
-  "runs/run-004/v2-decision-release-discipline.json",
-  "runs/run-004/v1-decision-soft-launch-posture.json",
-  "runs/run-004/v2-decision-soft-launch-posture.json",
-  "runs/run-004/v1-decision-discussion-channel.json",
-  "runs/run-004/v2-decision-discussion-channel.json",
-  "runs/run-004/v1-decision-config-untrusted-drift.json",
-  "runs/run-004/v2-decision-config-untrusted-drift.json",
-  "runs/run-004/v1-decision-arch-review-open.json",
-  "runs/run-004/v2-decision-arch-review-open.json",
-  "runs/run-004/v1-decision-categorize-issues.json",
-  "runs/run-004/v2-decision-categorize-issues.json",
-  "runs/run-004/v1-decision-single-export-types.json",
-  "runs/run-004/v2-decision-single-export-types.json",
+  "runs/run-006/v1-decision-per-box-secrets.json",
+  "runs/run-006/v2-decision-per-box-secrets.json",
+  "runs/run-006/v1-decision-glossary-proper-nouns.json",
+  "runs/run-006/v2-decision-glossary-proper-nouns.json",
+  "runs/run-006/v1-decision-bin-browse-future.json",
+  "runs/run-006/v2-decision-bin-browse-future.json",
+  "runs/run-006/v1-decision-box-registry-manifests.json",
+  "runs/run-006/v2-decision-box-registry-manifests.json",
+  "runs/run-006/v1-decision-cb-render-vs-browse.json",
+  "runs/run-006/v2-decision-cb-render-vs-browse.json",
+  "runs/run-006/v1-decision-dead-symlinks.json",
+  "runs/run-006/v2-decision-dead-symlinks.json",
+  "runs/run-006/v1-decision-orama-restore-cost.json",
+  "runs/run-006/v2-decision-orama-restore-cost.json",
+  "runs/run-006/v1-decision-boxes-share-one-origin.json",
+  "runs/run-006/v2-decision-boxes-share-one-origin.json",
+  "runs/run-006/v1-decision-git-push-confirmation.json",
+  "runs/run-006/v2-decision-git-push-confirmation.json",
+  "runs/run-006/v1-decision-release-discipline.json",
+  "runs/run-006/v2-decision-release-discipline.json",
+  "runs/run-006/v1-decision-soft-launch-posture.json",
+  "runs/run-006/v2-decision-soft-launch-posture.json",
+  "runs/run-006/v1-decision-discussion-channel.json",
+  "runs/run-006/v2-decision-discussion-channel.json",
+  "runs/run-006/v1-decision-config-untrusted-drift.json",
+  "runs/run-006/v2-decision-config-untrusted-drift.json",
+  "runs/run-006/v1-decision-arch-review-open.json",
+  "runs/run-006/v2-decision-arch-review-open.json",
+  "runs/run-006/v1-decision-categorize-issues.json",
+  "runs/run-006/v2-decision-categorize-issues.json",
+  "runs/run-006/v1-decision-single-export-types.json",
+  "runs/run-006/v2-decision-single-export-types.json",
   "runs/run-004/v1-backend-alternatives-readme.json",
   "runs/run-004/v2-backend-alternatives-readme.json",
   "runs/run-004/v1-writing-practice-readme.json",
@@ -773,20 +764,49 @@ async function load() {
   selectDoc(firstDoc, { failures: failures.length });
 }
 
+// How many groups in a doc carry a keep/drop decision (triage progress).
+function triagedCount(docKey) {
+  const dv = state.verdicts[docKey] || {};
+  let n = 0;
+  for (const g of state.groupsByDoc[docKey] || []) if (dv[g.id]?.decision) n++;
+  return n;
+}
+
+// Refresh one doc's <option> label (done/total + ✓) and the aggregate summary.
+function updateDocPickerButton(docKey) {
+  const opt = document.querySelector(`#docpick option[value="${docKey}"]`);
+  if (!opt) return;
+  const total = (state.groupsByDoc[docKey] || []).length;
+  const done = triagedCount(docKey);
+  const complete = total > 0 && done === total;
+  opt.textContent = `${complete ? "✓ " : ""}${DOC_LABELS[docKey]} ${done}/${total}`;
+  // Green the whole control when the currently-selected doc is complete.
+  const sel = document.getElementById("docpick");
+  if (state.currentDoc === docKey) sel.classList.toggle("alldone", complete);
+}
+
 function buildDocPicker() {
-  const nav = document.getElementById("docpick");
-  nav.innerHTML = "";
+  const sel = document.getElementById("docpick");
+  sel.innerHTML = "";
   for (const docKey of DOC_ORDER) {
-    const groups = state.groupsByDoc[docKey];
-    if (!groups) continue;
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.textContent = `${DOC_LABELS[docKey]} (${groups.length})`;
-    btn.setAttribute("aria-pressed", "false");
-    btn.addEventListener("click", () => selectDoc(docKey));
-    btn.dataset.doc = docKey;
-    nav.appendChild(btn);
+    if (!state.groupsByDoc[docKey]) continue;
+    const opt = document.createElement("option");
+    opt.value = docKey;
+    sel.appendChild(opt);
+    updateDocPickerButton(docKey);
   }
+  sel.onchange = () => selectDoc(sel.value);
+}
+
+// Aggregate across all docs: how many are fully triaged. Shown in the progress line.
+function docsComplete() {
+  let done = 0;
+  const docs = DOC_ORDER.filter((d) => state.groupsByDoc[d]);
+  for (const d of docs) {
+    const total = state.groupsByDoc[d].length;
+    if (total > 0 && triagedCount(d) === total) done++;
+  }
+  return { done, total: docs.length };
 }
 
 function selectDoc(docKey, opts = {}) {
@@ -794,9 +814,8 @@ function selectDoc(docKey, opts = {}) {
   state.focusIndex = 0;
   // The doc is a hash URL, so reload/back/forward keep your place.
   if (location.hash.slice(1) !== docKey) location.hash = docKey;
-  for (const btn of document.querySelectorAll("#docpick button")) {
-    btn.setAttribute("aria-pressed", String(btn.dataset.doc === docKey));
-  }
+  const sel = document.getElementById("docpick");
+  if (sel.value !== docKey) sel.value = docKey;
   render();
   window.scrollTo(0, 0);
   if (opts.failures) toast(`${opts.failures} run file(s) failed to load — see console`);
@@ -1043,8 +1062,12 @@ function updateProgress() {
   for (const g of groups) {
     if (dv[g.id]?.decision) decided++;
   }
+  const agg = docsComplete();
   document.getElementById("progress").innerHTML =
-    `<b>${decided}</b> / ${total} triaged` + (total ? ` &middot; group <b>${state.focusIndex + 1}</b>` : "");
+    `<b>${decided}</b> / ${total} triaged`
+    + (total ? ` &middot; group <b>${state.focusIndex + 1}</b>` : "")
+    + ` &middot; <b>${agg.done}</b>/${agg.total} docs done`;
+  updateDocPickerButton(state.currentDoc);
 }
 
 function openNote() {

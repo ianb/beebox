@@ -20,4 +20,10 @@ isOtherChatUser({ senderEmail: undefined, senderName: "Other", currentUserEmail:
 
 isOtherChatUser({ senderEmail: "other@example.com", senderName: "Ian", currentUserEmail: "ian@example.com", currentUserName: "Ian" })
 => true
+
+isOtherChatUser({ locallyAuthored: true, senderEmail: undefined, senderName: "Ian", currentUserEmail: "ian@example.com", currentUserName: "Ian Bicking" })
+=> false
+
+isOtherChatUser({ senderEmail: undefined, senderName: null, currentUserEmail: "ian@example.com", currentUserName: "Ian" })
+=> false
 ```

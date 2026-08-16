@@ -4,8 +4,8 @@ The generated public front-door site for callback-box. A spare static site
 built from `site/content/*.md` to gitignored `site/dist/`, deployed to GitHub
 Pages and viewable on the dev router at `/<worktree>/site/`.
 
-- Principles (settled with the boxholder): `issues/features/2026-07-20-github-pages-site.md`
-- Full plan / tracks: `../callback-box/docs/plans/github-pages-site.md`
+- Principles (settled with the boxholder): `issues/features/2026-07-20-public-site.md`
+- Full plan / tracks: `../callback-box/docs/plans/public-site.md`
 
 ## Hard constraint: static output only
 

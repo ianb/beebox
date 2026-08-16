@@ -1,8 +1,8 @@
 ---
 title: "Show a retranscription in chat — an indicator, and the improved text in place"
-workstream: unattached
+workstream: transcript-confidence
 area: callback-box
-needs: [design]
+needs: [manual-testing]
 labels: [chat, voice, ui]
 filed-by: agent
 discovered-by: Ian
@@ -15,8 +15,22 @@ keeps whatever the on-device transcriber produced — mangled names, a dropped
 negative — while the agent quietly works from a better version. So the person is
 reading one thing and being answered about another.
 
+> **⏳ Awaiting manual testing** — implemented on `worktree-transcript-confidence`
+> (design: `callback-box/docs/implemented-plans/retranscription-in-chat.md`; commits
+> `60358e66`…`d4ae8649`); see [Manual testing](#manual-testing). Only the
+> developer clears this.
+
 Wanted: **an indicator that a retranscription happened, and the improved text
 shown in place of the original.**
+
+Extended scope (boxholder, 2026-08-15): the same treatment for **any
+agent-side audio consultation** — `cb chat ask-about-audio` should also mark
+the message it examined (something small, e.g. an emoticon/icon on the
+bubble), so "the agent went back to the recording" is visible even when no
+text was replaced. This matters more now that `<unsure>` spans (see
+[mark low-confidence words](2026-08-15-mark-low-confidence-words-in-transcripts.md),
+shipped) actively prompt the agent to reach for the audio commands — those
+consultations should leave a visible trace on the message they checked.
 
 Explicitly **not** required to alter the durable transcript — visual only, in
 the chat, is enough.
@@ -55,6 +69,36 @@ message's audio it asked for, which is most of the identification problem.
 - **Failure and latency.** A high-quality pass isn't instant. Does the indicator
   appear while it runs, or only on success? A retranscription that fails should
   leave the original untouched and say nothing rather than leaving a spinner.
+
+## Manual testing
+
+What shipped: voice messages carry a `message-id` address on their `<speech>`
+wrapper; the audio commands require `--message <id>` (bare invocations error
+with instructions; the wrong-recording/cross-user race is closed by
+answer-by-key with echo-and-verify); successful `retranscribe` runs swap the
+corrected text onto the bubble with a ✎ badge (popover: service + the original
+realtime transcript); `ask-about-audio` adds a 🎧 badge. Transient by design —
+a reload reverts to the original text (accepted; the persisted `message-id`
+leaves a durable-overlay extension open).
+
+To try (needs a real microphone):
+
+1. Dictate a mumbled message; ask the agent to double-check it. It should run
+   `cb chat retranscribe --message <id>` (watch that it targets rather than
+   errors), and the bubble should swap to the corrected text with the ✎
+   badge; the popover shows the realtime original, readable (no raw
+   `<unsure>` tags).
+2. Ask a question about the audio itself ("did I sound annoyed?") — 🎧 badge
+   on the message after the agent answers.
+3. Dictate two messages, then have the agent retranscribe the FIRST — the
+   swap must land on the first bubble, not the latest (this is the
+   wrong-recording fix).
+4. Two tabs/sessions (or a second user): the retranscription shows in the
+   session it belongs to, including on the other participant's view of the
+   bubble; other sessions see nothing.
+5. Reload: overlay reverts by design — confirm it reads acceptably.
+6. Watch mark volume of the agent's targeting behavior: a bare command in the
+   agent transcript means the prompt guidance needs strengthening.
 
 ## Why it's worth doing
 

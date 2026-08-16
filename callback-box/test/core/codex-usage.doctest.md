@@ -1,11 +1,16 @@
 # Codex usage ledger
 
-Codex app-server reports per-turn token counts, but its supported transcript API
-does not retain them. Callback Box appends the final `last` count for each turn
-to its own ledger, and the ordinary usage sync imports both native engines.
+Codex SDK reports thread-cumulative token counts, but its supported transcript
+API does not retain them. Callback Box subtracts the prior ledger total and
+appends one delta per turn. The ordinary usage sync imports both native engines.
 
 ```ts setup
-import { appendCodexTurnUsage, readCodexTurnUsage } from "../../src/core/codex-usage.js";
+import {
+  appendCodexTurnUsage,
+  codexUsageDelta,
+  readCodexTurnUsage,
+  totalCodexSessionUsage,
+} from "../../src/core/codex-usage.js";
 import { queryUsage, syncUsage } from "../../src/core/usage.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 ```
@@ -38,6 +43,21 @@ await appendCodexTurnUsage(box.root, {
 
 (await readCodexTurnUsage(box.root)).length
 => 2
+
+JSON.stringify(await totalCodexSessionUsage(box.root, "codex-session"))
+=> {"inputTokens":200,"cachedInputTokens":120,"cacheWriteInputTokens":8,"outputTokens":24,"reasoningOutputTokens":14}
+
+JSON.stringify(codexUsageDelta({
+  inputTokens: 260,
+  cachedInputTokens: 150,
+  cacheWriteInputTokens: 8,
+  outputTokens: 30,
+  reasoningOutputTokens: 18,
+}, await totalCodexSessionUsage(box.root, "codex-session")))
+=> {"inputTokens":60,"cachedInputTokens":30,"cacheWriteInputTokens":0,"outputTokens":6,"reasoningOutputTokens":4}
+
+codexUsageDelta({ ...usage, inputTokens: 50 }, usage)
+=> throws CodexUsageCounterResetError: Codex cumulative usage was smaller than its recorded session total
 
 await syncUsage(box.root);
 JSON.stringify(queryUsage(box.root, "SELECT task, input_tokens, output_tokens, cache_write_tokens, cache_read_tokens, message_count FROM usage"))

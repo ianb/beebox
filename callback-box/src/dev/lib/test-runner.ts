@@ -29,6 +29,7 @@ import {
   type ContextStats,
 } from "./context-usage.js";
 import { codexBehaviorFromActivity } from "./codex-audit-behavior.js";
+import { shellCommandConsultsFiles, shellCommandSearches } from "./shell-command-observation.js";
 import { runChecks } from "./audit-checks.js";
 import { generateAgentContextMirrors } from "../../core/agent-context-mirrors.js";
 
@@ -48,11 +49,13 @@ export interface AgentBehavior {
 
 export interface AutomatedChecks {
   containsChecks: Array<{ expected: string; found: boolean }>;
+  matchesChecks: Array<{ pattern: string; found: boolean; matched?: string }>;
   notContainsChecks: Array<{ forbidden: string; found: boolean }>;
   notMatchesChecks: Array<{ pattern: string; found: boolean; matched?: string }>;
   containsAnyCheck?: { options: string[]; found: boolean; matched?: string | undefined } | undefined;
   cardsContainChecks: Array<{ expected: string; found: boolean; foundIn?: string }>;
   shouldReadChecks: Array<{ file: string; wasRead: boolean }>;
+  shouldReadAnyCheck?: { files: string[]; wasRead: boolean; matched?: string | undefined } | undefined;
   shouldNotReadChecks: Array<{ file: string; wasRead: boolean }>;
   bashContainsChecks: Array<{ expected: string; found: boolean; matchedCommand?: string }>;
 }
@@ -309,7 +312,11 @@ const TOOL_USE_CATEGORIZERS: Partial<Record<KnownToolName, (ctx: ToolUseContext)
     if (summary) acc.bashCommands.push(summary);
     if (block.input) {
       const cmd = String(block.input.command ?? "");
-      if (cmd) acc.bashRawCommands.push(cmd);
+      if (cmd) {
+        acc.bashRawCommands.push(cmd);
+        if (shellCommandConsultsFiles(cmd)) acc.filesRead.push(cmd);
+        if (shellCommandSearches(cmd)) acc.searches.push({ tool: "Bash", summary: cmd });
+      }
     }
   },
 } satisfies Partial<Record<KnownToolName, (ctx: ToolUseContext) => void>>;

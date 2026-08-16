@@ -13,15 +13,18 @@ import { ShareLocationMenuItem } from "./ShareLocationMenuItem";
 import { ScreenshotMenuItem } from "./ScreenshotMenuItem";
 import { VoiceToggleButton } from "./InteractiveChat-voice-button";
 import { MicOverlay } from "./MicOverlay";
-import { composerTextareaClasses, joinTranscript } from "./InteractiveChat-helpers";
+import { composerTextareaClasses, joinTranscript, spokenTextStart, type VoiceSegmentSend } from "./InteractiveChat-helpers";
 import { useInputValue, useInputStore } from "./input-store";
 import type { TranscriptionState } from "../../hooks/useRealtimeTranscription";
+import type { FinalWord } from "../../machines/transcription-events";
 
 export interface TranscriptionHandle {
   state: TranscriptionState;
   transcript: string;
+  /** Words backing `transcript`'s finalized portion (Fix D) — null when none captured. */
+  finalWords: readonly FinalWord[] | null;
   start: () => void;
-  stop: () => Promise<string>;
+  stop: () => Promise<{ text: string; words: readonly FinalWord[] | null }>;
   cancel: () => void;
 }
 
@@ -50,7 +53,7 @@ function DesktopComposerRow({
   handleCancelTranscription: () => void;
   clearDraft: () => void;
   onStopDictation: () => void;
-  onVoiceSegmentSend: (text: string) => void;
+  onVoiceSegmentSend: VoiceSegmentSend;
   onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
 }) {
@@ -102,8 +105,12 @@ function DesktopComposerRow({
             onClick={() => {
               // Continue from any prior composer text so it isn't dropped.
               const text = joinTranscript(input, transcription.transcript).trim();
+              // Read synchronously, same render as `text` — no await between
+              // this and the click, so `transcription.finalWords` can't have
+              // gone stale (Fix D; contrast the mobile row's stop()-await path).
+              const words = transcription.finalWords;
               transcription.cancel();
-              if (text) onVoiceSegmentSend(text);
+              if (text) onVoiceSegmentSend(text, { words, spokenStart: spokenTextStart(input) });
               setInput("");
               // Segment committed — drop the persisted dictation draft.
               clearDraft();
@@ -159,7 +166,7 @@ export function ChatInputArea({
   onKeyboard: () => void;
   onVoice: () => void;
   onStopDictation: () => void;
-  onVoiceSegmentSend: (text: string) => void;
+  onVoiceSegmentSend: VoiceSegmentSend;
   voicePaused: boolean;
   onUnpause: () => void;
   hideMobile?: boolean;

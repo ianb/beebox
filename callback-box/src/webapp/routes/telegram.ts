@@ -22,6 +22,7 @@ import { ChatSessionPool } from "../../core/chat/session/pool.js";
 import { sendTelegramMessage, startTypingIndicator } from "../../core/telegram-send.js";
 import { appendMessageToThread } from "../../connectors/chat-utils.js";
 import { stageAndCommitPaths } from "../../lib/git.js";
+import { trackMutationStart } from "../../lib/dev-bundle-reload.js";
 
 interface RegisterTelegramRoutesOptions {
   server: FastifyInstance;
@@ -72,7 +73,8 @@ export async function registerTelegramRoutes(opts: RegisterTelegramRoutesOptions
         const chatDescription = extracted.msg.chat.title ?? extracted.senderName;
 
         // Fire-and-forget: send to pool, deliver responses, archive
-        handleChatMessage({
+        const finishBackgroundWork = trackMutationStart();
+        void handleChatMessage({
           pool,
           boxRoot,
           threadRef: result.threadRef,
@@ -83,9 +85,11 @@ export async function registerTelegramRoutes(opts: RegisterTelegramRoutesOptions
           chatId,
           botToken: config.botToken,
           eventBus,
-        }).catch((err) => {
-          console.error(`[telegram-webhook] Pool handling failed: ${err}`);
-        });
+        })
+          .catch((err) => {
+            console.error(`[telegram-webhook] Pool handling failed: ${err}`);
+          })
+          .finally(finishBackgroundWork);
       }
 
       return reply.status(200).send({ ok: true });

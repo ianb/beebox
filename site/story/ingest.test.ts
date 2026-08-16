@@ -55,7 +55,7 @@ test("fabricated span is a hard error naming the nugget", () => {
     (e: unknown) => {
       assert.ok(e instanceof IngestError);
       assert.match(e.message, /made-up-beat/);
-      assert.match(e.message, /not found verbatim/);
+      assert.match(e.message, /span not found in|fabricated span/);
       return true;
     },
   );

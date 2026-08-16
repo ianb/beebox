@@ -205,7 +205,6 @@ struct ChatWebView: UIViewRepresentable {
         var screenshotRequest: NativeScreenshotRequest?
         var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = []
         private var inflightEmissionIDs = Set<NativeChatEmission.ID>()
-        private var receiptTimeouts: [NativeChatEmission.ID: DispatchWorkItem] = [:]
         private var inflightLocationRequestID: NativeLocationShareRequest.ID?
         private var locationRequestTimeout: DispatchWorkItem?
         private var inflightScreenshotRequestID: NativeScreenshotRequest.ID?
@@ -217,7 +216,6 @@ struct ChatWebView: UIViewRepresentable {
         /// Start is latched through offline retries and cleared only by a
         /// successful load, matching the failure latch below.
         private var navigationStartLogged = false
-        private let receiptTimeoutDelay: TimeInterval
         private let evaluateEmission: ((String, @escaping (Error?) -> Void) -> Void)?
         private let openExternalURL: (URL) -> Void
         private let loadInCurrentContext: (WKWebView, URLRequest) -> Void
@@ -236,7 +234,6 @@ struct ChatWebView: UIViewRepresentable {
             onScreenshotResult: @escaping (NativeScreenshotResult) -> Void,
             onComposerCommand: @escaping (NativeComposerCommandDelivery) -> Void,
             onComposerCommandAcknowledgementDelivered: @escaping (String) -> Void,
-            receiptTimeoutDelay: TimeInterval = 35,
             pageLoaded: Bool = false,
             evaluateEmission: ((String, @escaping (Error?) -> Void) -> Void)? = nil,
             openExternalURL: @escaping (URL) -> Void = { UIApplication.shared.open($0) },
@@ -257,7 +254,6 @@ struct ChatWebView: UIViewRepresentable {
             self.onScreenshotResult = onScreenshotResult
             self.onComposerCommand = onComposerCommand
             self.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
-            self.receiptTimeoutDelay = receiptTimeoutDelay
             self.pageLoaded = pageLoaded
             self.evaluateEmission = evaluateEmission
             self.openExternalURL = openExternalURL
@@ -282,14 +278,19 @@ struct ChatWebView: UIViewRepresentable {
                 navigationStartLogged = true
                 BoxLog.info("chat navigation started", category: .webview, targetBoxID: boxID)
             }
-            inflightEmissionIDs.removeAll()
-            receiptTimeouts.values.forEach { $0.cancel() }
-            receiptTimeouts.removeAll()
             inflightLocationRequestID = nil
             locationRequestTimeout?.cancel()
             locationRequestTimeout = nil
             inflightScreenshotRequestID = nil
             inflightComposerCommandAcknowledgementIDs.removeAll()
+        }
+
+        func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+            // The old document can still deliver a real receipt while a
+            // provisional navigation is pending. Only clear its inflight IDs
+            // once the replacement document commits; didFinish then redelivers
+            // the same persisted IDs into the new page.
+            inflightEmissionIDs.removeAll()
         }
 
         func webView(
@@ -328,6 +329,9 @@ struct ChatWebView: UIViewRepresentable {
                     + " inflight=\(inflightEmissionIDs.count)",
                 category: .webview
             )
+            pageLoaded = false
+            inflightEmissionIDs.removeAll()
+            webView.reload()
         }
 
         func webView(
@@ -421,7 +425,6 @@ struct ChatWebView: UIViewRepresentable {
                 }
                 onEmissionDeliveryAttempt(emission.id)
                 inflightEmissionIDs.insert(emission.id)
-                startReceiptTimeout(for: emission.id)
                 let script = "window.callbackboxNativeReceive(\(detail));"
                 evaluate(script, in: webView) { [weak self] error in
                     guard error != nil else {
@@ -437,7 +440,7 @@ struct ChatWebView: UIViewRepresentable {
             }
         }
 
-        private func receiveEmissionReceipt(_ body: Any) {
+        func receiveEmissionReceipt(_ body: Any) {
             guard
                 let payload = ChatWebView.dictionaryPayload(from: body),
                 let idString = payload["emissionId"] as? String,
@@ -456,22 +459,6 @@ struct ChatWebView: UIViewRepresentable {
             ))
         }
 
-        private func startReceiptTimeout(for emissionID: NativeChatEmission.ID) {
-            let timeout = DispatchWorkItem { [weak self] in
-                guard let self, self.inflightEmissionIDs.contains(emissionID) else {
-                    return
-                }
-                self.finishInflightEmission(emissionID)
-                self.onEmissionReceipt(NativeEmissionReceipt(
-                    emissionID: emissionID,
-                    disposition: .rejected,
-                    reason: "The chat did not confirm the message. Try sending it again."
-                ))
-            }
-            receiptTimeouts[emissionID] = timeout
-            DispatchQueue.main.asyncAfter(deadline: .now() + receiptTimeoutDelay, execute: timeout)
-        }
-
         private func evaluate(
             _ script: String,
             in webView: WKWebView,
@@ -488,7 +475,6 @@ struct ChatWebView: UIViewRepresentable {
 
         private func finishInflightEmission(_ emissionID: NativeChatEmission.ID) {
             inflightEmissionIDs.remove(emissionID)
-            receiptTimeouts.removeValue(forKey: emissionID)?.cancel()
         }
 
         func deliverLocationRequest(to webView: WKWebView) {

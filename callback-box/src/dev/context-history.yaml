@@ -1235,6 +1235,34 @@ test1:
       peak: 42865
       added: 1680
       turns: 5
+    - date: 2026-08-15T03:00:16.392Z
+      boxCommit: ca55f64df7d224252ce38fb915caf21ae54cc74f
+      repoCommit: 4078e3f83f25aac1f4f544cdb1e8a6ace9fd4f99
+      initial: 45733
+      peak: 50652
+      added: 4919
+      turns: 11
+    - date: 2026-08-15T03:02:07.360Z
+      boxCommit: ca55f64df7d224252ce38fb915caf21ae54cc74f
+      repoCommit: 4078e3f83f25aac1f4f544cdb1e8a6ace9fd4f99
+      initial: 45780
+      peak: 47780
+      added: 2000
+      turns: 4
+    - date: 2026-08-15T03:20:54.645Z
+      boxCommit: ca55f64df7d224252ce38fb915caf21ae54cc74f
+      repoCommit: 4078e3f83f25aac1f4f544cdb1e8a6ace9fd4f99
+      initial: 45780
+      peak: 46939
+      added: 1159
+      turns: 4
+    - date: 2026-08-15T03:22:29.190Z
+      boxCommit: ca55f64df7d224252ce38fb915caf21ae54cc74f
+      repoCommit: 4078e3f83f25aac1f4f544cdb1e8a6ace9fd4f99
+      initial: 45780
+      peak: 48569
+      added: 2789
+      turns: 5
   list-procedures:
     - date: 2026-07-03T11:01:45.769Z
       boxCommit: 70e60ead52f851e6f3ad6217a7afe438b367a069
@@ -2752,6 +2780,20 @@ test1:
       peak: 46157
       added: 0
       turns: 1
+    - date: 2026-08-16T03:51:11.985Z
+      boxCommit: ae23e166238856a486c88f8e37200fb05cd27718
+      repoCommit: 67f0fadbf0629dafb5389e92c2c41d103843ef06
+      initial: 52368
+      peak: 52368
+      added: 0
+      turns: 2
+    - date: 2026-08-16T03:51:40.307Z
+      boxCommit: ae23e166238856a486c88f8e37200fb05cd27718
+      repoCommit: 67f0fadbf0629dafb5389e92c2c41d103843ef06
+      initial: 52352
+      peak: 52352
+      added: 0
+      turns: 2
   views-write-conflict-safe:
     - date: 2026-07-03T12:10:11.783Z
       boxCommit: ace0632a8b2fad06e6e6bd1d312197b3b19c6ff0
@@ -3675,6 +3717,20 @@ test1:
       peak: 43895
       added: 0
       turns: 1
+    - date: 2026-08-15T03:12:06.971Z
+      boxCommit: ca55f64df7d224252ce38fb915caf21ae54cc74f
+      repoCommit: 4078e3f83f25aac1f4f544cdb1e8a6ace9fd4f99
+      initial: 45799
+      peak: 45799
+      added: 0
+      turns: 1
+    - date: 2026-08-15T03:17:56.958Z
+      boxCommit: ca55f64df7d224252ce38fb915caf21ae54cc74f
+      repoCommit: 4078e3f83f25aac1f4f544cdb1e8a6ace9fd4f99
+      initial: 45799
+      peak: 45799
+      added: 0
+      turns: 1
   tab-arrangement-editing:
     - date: 2026-08-05T01:30:13.099Z
       boxCommit: d5d65f9e78e90bfd5cf79141ebe46673a32fb627
@@ -3719,6 +3775,21 @@ test1:
       repoCommit: 4ef7266f7c3bfb694a45678c17c374b1bc40e7b2
       initial: 44966
       peak: 44966
+      added: 0
+      turns: 2
+  chat-unsure-word-semantics:
+    - date: 2026-08-15T07:16:50.923Z
+      boxCommit: c032d7d32d2acb97640a7799083dddea5f0f3446
+      repoCommit: b508d98ff3f5d6f220d795bf88dca3c232ca4a76
+      initial: 51887
+      peak: 51887
+      added: 0
+      turns: 2
+    - date: 2026-08-16T03:51:55.211Z
+      boxCommit: ae23e166238856a486c88f8e37200fb05cd27718
+      repoCommit: 67f0fadbf0629dafb5389e92c2c41d103843ef06
+      initial: 51364
+      peak: 51364
       added: 0
       turns: 2
 content:

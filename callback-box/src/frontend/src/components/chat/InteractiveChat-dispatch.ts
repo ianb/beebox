@@ -11,13 +11,14 @@ import type { SessionEntry } from "../../api";
 import { serializeViewUrl } from "../../lib/view-url";
 import { refreshLocationIfStale } from "../../lib/location-share";
 import { createVoiceEmission, draftAttachments, type Emission } from "../../input/emission";
+import { resolveEmissionWords } from "../../input/unsure-words";
 import { markVoiceAudioAbsent } from "../../lib/audio/last-audio";
 import type { ChatWitness } from "../../input/targets/chat-assemble";
 import { acceptEmission, planRestore, applyRestorePlan } from "../../input/targets/chat-target";
 import type { Receipt } from "../../input/targets/receipts";
 import type { EmissionStore } from "../../input/emission-store";
 import type { SelectionItem } from "../../lib/selection/serialize";
-import { localTime, formatTimePassed } from "./InteractiveChat-helpers";
+import { localTime, formatTimePassed, type VoiceSegmentMeta } from "./InteractiveChat-helpers";
 import type { ChatEvent } from "../../machines/chat-types";
 import type { CardSendFields } from "./InteractiveChat-card-hooks";
 import type { ViewTarget } from "../../lib/view-url";
@@ -116,9 +117,17 @@ export function useEmissionDispatch(opts: {
   // attached mid-dictation used to be silently dropped). Selections and
   // attachments reset after send, same as runKeywordSend's freeze-and-clear.
   const sendStopSend = useCallback(
-    (text: string) => {
+    (text: string, voice: VoiceSegmentMeta) => {
       const { images, files } = draftAttachments(emissionStore.get());
-      const emission = createVoiceEmission({ text, images, files, selections, diarized: false });
+      const emission = createVoiceEmission({
+        text, images, files, selections, diarized: false,
+        // Fix D (docs/plans/transcript-confidence.md): the tap-send path
+        // now carries the hook's realtime words too, same as a keyword
+        // send — the interim tail (if any) simply has no words, which the
+        // aligner tolerates (fail-open per word).
+        words: resolveEmissionWords(voice.words),
+        spokenStart: voice.spokenStart,
+      });
       // Same tombstone as sendVoiceSegment: this path carries no recording.
       markVoiceAudioAbsent(emission.id);
       void dispatchEmission(emission);

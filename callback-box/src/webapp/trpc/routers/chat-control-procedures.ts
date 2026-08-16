@@ -10,10 +10,10 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { ownerProcedure, publicProcedure } from "../trpc.js";
 import { getChatRuntime, type ChatRuntime } from "../../chat-runtime.js";
-import { chatModelFileForSession, loadCurrentModel } from "../../../core/chat/session/state.js";
+import { chatModelFileForSession, loadCurrentModelForEngine } from "../../../core/chat/session/state.js";
 import { resolveChatEngine } from "../../../core/chat/session/engine.js";
 import type { AgentEngine } from "../../../core/box/config.js";
-import { isChatModelAllowed } from "../../../shared/chat-models.js";
+import { chatModelForEngine, isChatModelAllowed } from "../../../shared/chat-models.js";
 import { deleteChatSession, ChatSessionNotFoundError, SessionStorageContextMismatchError } from "../../../core/chat/session/delete.js";
 import { sdkSessionIdSchema } from "../../../core/chat/session/session-id.js";
 import { SessionDeletingError } from "../../../core/chat/session/registry.js";
@@ -59,13 +59,19 @@ export async function readSessionStatus(boxRoot: string, sessionId: string | nul
   }
   const target = registry.get(sessionId);
   if (!target) {
-    return { sessionId, running: false, busy: false, model: loadCurrentModel(boxRoot, chatModelFileForSession(sessionId)), engine };
+    return {
+      sessionId,
+      running: false,
+      busy: false,
+      model: loadCurrentModelForEngine(boxRoot, { modelFile: chatModelFileForSession(sessionId), engine }),
+      engine,
+    };
   }
   return {
     sessionId: target.getSessionId(),
     running: target.isRunning(),
     busy: target.isBusy(),
-    model: target.getCurrentModel(),
+    model: chatModelForEngine(engine, target.getCurrentModel()),
     engine,
   };
 }
