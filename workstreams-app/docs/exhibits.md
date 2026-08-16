@@ -21,8 +21,9 @@ Content survives a worktree cull; removing the worktree removes only the link.
 
 `bin/exhibits add --title <t> --ask <type> --prose <p> [--option <label>]…
 [files…]` does all of that: it derives the workstream from the checkout you run
-it in, copies the files in, labels the figures `A1`, `A2`, … in argument order,
-and prints the URL — one line on stdout, so it pastes straight into chat. Write
+it in, copies the files in under names the app can route to (`Screen Shot
+2026-08-15.png` lands as `screen-shot-2026-08-15.png`), labels the figures `A1`,
+`A2`, … in argument order, and prints the URL — one line on stdout, so it pastes straight into chat. Write
 the directory by hand when you want something the CLI does not do; the contract
 is the files, not the tool.
 
@@ -176,8 +177,17 @@ workstreams origin: pages here script freely and hold no workstreams authority.
 
 A request needs the machine-scoped token, once, as `?token=<t>`; the origin
 exchanges it for a session cookie and redirects to the clean URL. The token is
-minted by the supervisor and persisted at `$CALLBACK_STATE_DIR/exhibits-token`.
+persisted at `$CALLBACK_STATE_DIR/exhibits-token`; the supervisor mints it, and
+so does `bin/exhibits` when the app has never run — both reuse an existing file,
+so a printed URL always carries a token that works.
 `bin/exhibits url <workstream>/<exhibit>` prints an authorized URL (Track D).
+
+The cookie is not the whole gate for writes. Every loopback port is one "site"
+to a browser, so `SameSite` separates nothing between local servers: a mutating
+request (`PUT`, `POST`) that declares an `Origin` must declare this one, or it
+is refused with a 403. A request with no `Origin` — curl, an agent, a script —
+is allowed, because a browser always sends it on a cross-origin write. Pages on
+this origin need do nothing: their own `fetch` carries the right `Origin`.
 
 ## Writing pages the checks will not see
 
