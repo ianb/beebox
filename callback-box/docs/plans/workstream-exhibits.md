@@ -1,12 +1,29 @@
 ---
 title: "Workstream exhibits: a persistent presentation medium with asks"
-status: active
+status: partial
 workstream: dev-docs-workflow
 issues:
   - ../../../issues/closed/features/2026-07-24-dev-scripted-apps-separate-origin.md
 ---
 
 # Workstream exhibits
+
+## Implementation status
+
+Tracks A through F are implemented on this branch, through the fix round
+that resolved every finding from the cross-model (Codex) review of the
+implementation diff and the live browser pass. Automated coverage is green:
+the store lifecycle, exhibits listener (auth, containment, page tiers,
+manifest validation), documents/events/captures API, disposition wiring, ask
+queue, CLI, supervisor port-holding, and the retired scripted-app exemption
+all have passing doctests; typecheck and lint are clean at every level.
+
+The plan remains partial until the boxholder performs the acceptance pass:
+one shared-router restart (to pick up the supervisor changes), then a real
+exhibit round-trip — `bin/exhibits add` from a worktree, answer the ask in
+the browser, `bin/exhibits list` shows it answered — plus a look at the ask
+queue and the migrated story-eval app at `/apps/story-eval/`. Isolated-port
+verification does not satisfy this boundary.
 
 Give agents a first-class medium for showing work to the developer — rendered
 documents, labeled screenshots, and small interactive pages — with an explicit
