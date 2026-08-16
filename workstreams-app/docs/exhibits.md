@@ -147,6 +147,20 @@ tracked and merges to main, while its runtime data still lands in the store
 (`apps/<name>/`), so using an app never dirties a checkout. A committed app may
 omit `ask`: it appears in the app list, not the ask queue.
 
+## The ask queue
+
+The workstreams app answers "what is waiting on me" at
+`/main/workstreams/asks`: every unanswered ask across every workstream plus the
+committed apps, grouped `decide`, `confirm`, `react`, with FYI collapsed and
+answered asks listed with the time they were decided. It is a read of the same
+files — `exhibit.json` and `data/disposition.json` — so an exhibit whose
+manifest does not parse appears as a broken row rather than disappearing.
+
+That surface never writes: answering happens on the exhibits origin, and its
+links point there. They carry no token, so a browser that has not been through
+`bin/exhibits url` once will get the origin's 401 hint instead of a page — the
+token stays out of the workstreams UI on purpose.
+
 ## Access
 
 The exhibits surface is a second origin on `http://127.0.0.1:<EXHIBITS_PORT>/`

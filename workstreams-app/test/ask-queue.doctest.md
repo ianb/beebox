@@ -14,6 +14,7 @@ import { ROUTER_CAPABILITY_HEADER, buildApp } from "../src/server/app.js";
 import { createExhibitsQueueService } from "../src/server/exhibits-queue-service.js";
 import { STORE_MARKER } from "../src/server/exhibits/store.js";
 import type { AppServices } from "../src/server/services.js";
+import { groupAskQueue } from "../src/frontend/lib/ask-queue.js";
 
 async function writeJson(file: string, value: unknown): Promise<void> {
   await fs.mkdir(path.dirname(file), { recursive: true });
@@ -137,6 +138,24 @@ JSON.stringify({
   answered: queue.entries.map((entry) => entry.answered),
 })
 => {"hasProblem":true,"mentionsMarker":true,"slugs":["story-eval"],"answered":[true]}
+```
+
+## The panel groups by cost and collapses FYI
+
+`decide`, `confirm`, `react` are the queue; FYI is shown but never counted as
+waiting, and broken and answered entries are their own lists.
+
+```ts
+const fixture = await makeFixture();
+const grouped = groupAskQueue(await queueFor(fixture));
+JSON.stringify({
+  groups: grouped.groups.map((group) => [group.type, group.entries.length]),
+  waitingCount: grouped.waitingCount,
+  fyi: grouped.fyi.map((entry) => entry.slug),
+  broken: grouped.broken.map((entry) => entry.slug),
+  answered: grouped.answered.map((entry) => entry.slug),
+})
+=> {"groups":[["decide",1],["confirm",1],["react",1]],"waitingCount":3,"fyi":["notes"],"broken":["busted"],"answered":["copy","story-eval"]}
 ```
 
 ## The procedure is read-only and behind the capability wall
