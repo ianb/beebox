@@ -1,10 +1,13 @@
 ---
-title: "GitHub Pages site — orientation & re-entry map"
+title: "Front-door site — orientation & re-entry map"
 status: partial
-workstream: github-pages-site
+workstream: front-door
 issues: []
 ---
-# GitHub Pages site — orientation & re-entry map
+# Front-door site — orientation & re-entry map
+
+*(The public site for callback-box — deploys to GitHub Pages, but that's just
+the target. The thing is the project's front door.)*
 
 **Read this first when picking the work back up.** A snapshot of where the
 effort is and the open fork, so a fresh session (and the boxholder) can
