@@ -12,6 +12,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
+import { locateSpan, type SpanCheck } from "./span-locate.js";
 
 // site/story/ingest.ts → repo root is two levels up from site/.
 const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..");
@@ -51,8 +52,6 @@ export type RawNugget = z.infer<typeof rawNuggetSchema>;
 
 const rawFileSchema = z.strictObject({ nuggets: z.array(rawNuggetSchema) });
 
-type SpanCheck = "ok" | "ambiguous";
-
 /** An output nugget: the raw shape plus the verified spanCheck verdict. */
 export interface OutputNugget extends RawNugget {
   spanCheck: SpanCheck;
@@ -78,18 +77,6 @@ function formatIssuePath(parts: readonly PropertyKey[]): string {
   return out || "(root)";
 }
 
-/** Count VERBATIM occurrences of needle in haystack (overlaps counted). */
-function countOccurrences(haystack: string, needle: string): number {
-  let count = 0;
-  let pos = 0;
-  for (;;) {
-    const idx = haystack.indexOf(needle, pos);
-    if (idx === -1) break;
-    count++;
-    pos = idx + 1;
-  }
-  return count;
-}
 
 /**
  * Validate one raw extraction file and verify every span against its source.
@@ -115,23 +102,23 @@ export function buildRunFile(params: {
 
   const nuggets: OutputNugget[] = [];
   for (const [index, nugget] of parsed.data.nuggets.entries()) {
-    const occurrences = countOccurrences(docText, nugget.span);
-    if (occurrences === 0) {
+    const located = locateSpan(docText, nugget.span);
+    if (located.kind === "missing") {
       throw new IngestError(
-        `${fileName}: nugget "${nugget.slug}" (index ${index}): span not found verbatim in ` +
-          `${doc} — fabricated or mangled span, refusing to write`,
+        `${fileName}: nugget "${nugget.slug}" (index ${index}): span not found in ` +
+          `${doc} (even under whitespace normalization) — fabricated span, refusing to write`,
       );
     }
-    const spanCheck: SpanCheck = occurrences === 1 ? "ok" : "ambiguous";
-    // Explicit key order so output diffs cleanly against committed run files.
+    // Store located.span — the canonical SOURCE substring — never the agent's
+    // copy, so a whitespace-recovered span is still verbatim in the output.
     nuggets.push({
       slug: nugget.slug,
-      span: nugget.span,
+      span: located.span,
       gloss: nugget.gloss,
       tags: nugget.tags,
       criteria: nugget.criteria,
       confidence: nugget.confidence,
-      spanCheck,
+      spanCheck: located.kind,
     });
   }
 
