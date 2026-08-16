@@ -1,6 +1,6 @@
 ---
 title: "Workstream exhibits: a persistent presentation medium with asks"
-status: draft
+status: active
 workstream: dev-docs-workflow
 issues:
   - ../../../issues/features/2026-07-24-dev-scripted-apps-separate-origin.md
@@ -374,7 +374,7 @@ are separable: one process, two listeners, two trust domains.
 
 **First implementation chunk.** A spike proving the load-bearing mechanism
 end to end on an isolated port, with explicit acceptance criteria: (1) Vite
-middleware mode inside Fastify with `fs.allow` + glob-routing over an
+middleware mode inside Fastify with `fs.allow` + routing over an
 out-of-repo store directory; (2) HMR fires on a dropped/edited `index.tsx`;
 (3) Tailwind v3 content scanning generates classes for out-of-repo pages,
 including on file change; (4) the watcher ignores `data/`, `captures/`, and
@@ -384,6 +384,30 @@ cannot do (1)–(4) cleanly, the fallback is backend-driven esbuild
 compile-on-request (the figure-compile shape, without its process-global
 caches) — decide from the spike before building anything else in this
 track.
+
+**Spike outcome (2026-08-15, criteria 1–4): Vite middleware mode is viable,
+with two mechanism corrections.** All four criteria pass, verified with the
+store both inside `scratch/` and in a genuinely out-of-repo temp directory.
+(a) **No `import.meta.glob` over the store**: an absolute out-of-root glob
+compiles to `{}` silently, so route resolution is a per-request `readdir` on
+the store plus a runtime `import()` of the page via `/@fs/<abs-path>`
+(`@vite-ignore`), with `server.fs.allow` covering the store root. (b) **The
+Tailwind CSS module must be explicitly invalidated
+(`moduleGraph.invalidateModule`) when a not-yet-seen exhibit is first
+served** — Vite caches the transformed CSS and never watches store dirs, so
+a new exhibit's unique utilities are otherwise missing until an unrelated
+edit. Recorded implementation pitfalls (spike `scratch/exhibits-spike/`
+README, to carry into Track B): HMR shares the Fastify port via
+`serverFactory` + `server.hmr.server`; Vite-internal URLs (`/@fs/…`,
+`/@vite/client`) must fall through to Vite, not 404; stylesheets load via
+module import, not `<link>` (dev serves direct `.css` as JS);
+`vite.transformRequest()` preflight turns a broken page into a real 500
+(middleware-mode error handling swallows it otherwise);
+`optimizeDeps.include` for react/jsx-dev-runtime is mandatory under
+`appType: "custom"`; the sibling-file route must refuse `.ts/.tsx/.jsx`
+(source is not content); watcher ignores for `data/`/`captures/` are
+currently vacuous (Vite watches only module-graph files) and kept as cheap
+insurance.
 
 ### Track C — The generic backend: documents, events, captures
 
@@ -658,9 +682,7 @@ step.
 
 ## Open design questions
 
-- **The name.** "Exhibit" is the planner's proposal (locked above so the doc
-  is consistent); the boxholder may prefer another. Rename is cheap before
-  Track B lands, expensive after (URLs, CLI, docs).
+- ~~The name~~ — settled: the boxholder confirmed "exhibit" (2026-08-15).
 - **Does `fyi` expire?** Lean: no auto-expiry; the queue shows `fyi` items in
   a collapsed section so they never compete with `decide`/`confirm`.
 - **Port number and origin naming** (`exhibits.localhost`? a fixed port?).
