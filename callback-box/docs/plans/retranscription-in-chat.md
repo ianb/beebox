@@ -115,7 +115,8 @@ Searched 2026-08-15 (session research report):
   addressable after the pending→authoritative uuid swap and across reloads.
   Typed sends don't carry it (no recording to point back at). Display
   strips it with the shell (already attribute-generic); the agent prompt
-  notes it as system metadata to ignore.
+  teaches it as the message's address — the value the audio commands'
+  required `--message` flag takes (Track 4).
 - **Two transient bus events** (added to `EventMap` + `eventSchemas` in
   `src/core/event-bus-schemas.ts` — `event-bus.ts` re-exports them):
   - `chat-retranscription` `{ sessionId, messageId, newText, service?,
