@@ -1,6 +1,6 @@
 ---
 title: "Move the worktree docs browser into the workstreams application"
-workstream: unattached
+workstream: dev-docs-workflow
 area: router
 labels: [router, workstreams, documents]
 priority: important
