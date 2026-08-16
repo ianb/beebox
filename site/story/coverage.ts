@@ -3,7 +3,7 @@
 //   pnpm --dir site coverage           # regenerate site/story/coverage.json
 //   pnpm --dir site coverage --check   # drift report; nonzero exit if any drift
 //
-// The extraction runs themselves (dev/story-eval/runs/) are GITIGNORED — the
+// The extraction runs themselves (dev/apps/story-eval/runs/) are GITIGNORED — the
 // triage process is untracked, only outcomes are. This ledger is the one
 // committable record of WHICH repo docs have been scanned, in which runs and
 // variants, and whether the content we scanned still matches what's on disk.
@@ -24,13 +24,13 @@ import path from "node:path";
 
 // site/story/coverage.ts → repo root is two levels up from site/.
 const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..");
-const RUNS_DIR = path.join(REPO_ROOT, "dev", "story-eval", "runs");
+const RUNS_DIR = path.join(REPO_ROOT, "dev", "apps", "story-eval", "runs");
 const LEDGER_PATH = path.join(import.meta.dirname, "coverage.json");
 
 const LEDGER_NOTE =
   "Coverage ledger for story extraction: which repo docs have been scanned, in " +
   "which runs/variants, and whether the scanned content still matches disk. The " +
-  "runs themselves (dev/story-eval/runs/) are gitignored — this ledger is the only " +
+  "runs themselves (dev/apps/story-eval/runs/) are gitignored — this ledger is the only " +
   "tracked record. Regenerate with `pnpm --dir site coverage`; find docs needing a " +
   "re-scan with `pnpm --dir site coverage --check`.";
 
@@ -219,7 +219,7 @@ const HELP = `story coverage — the tracked ledger of which docs have been scan
   pnpm --dir site coverage --check   Report docs whose content drifted from their
                                      scanned hash; nonzero exit if any. Writes nothing.
 
-The extraction runs (dev/story-eval/runs/) are gitignored; this ledger is the
+The extraction runs (dev/apps/story-eval/runs/) are gitignored; this ledger is the
 only tracked record. Whether an unscanned doc belongs in the corpus is a human
 call — --check flags drift, it does not enumerate the repo.`;
 

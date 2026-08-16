@@ -102,7 +102,7 @@ sources and permit its JSONL metadata repair scan.
 
 ```ts
 JSON.stringify(codexHistoryListParams(["/boxes/example"], "next"))
-=> {"cursor":"next","limit":100,"sortKey":"updated_at","sortDirection":"desc","cwd":["/boxes/example"],"sourceKinds":["exec","appServer"],"useStateDbOnly":false}
+=> {"cursor":"next","limit":100,"sortKey":"updated_at","sortDirection":"desc","cwd":["/boxes/example"],"sourceKinds":["cli","vscode","exec","appServer"],"useStateDbOnly":false}
 ```
 
 User identity carried by callback-box's message wrapper is normalized just as

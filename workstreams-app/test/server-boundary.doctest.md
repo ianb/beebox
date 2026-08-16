@@ -52,6 +52,9 @@ function fakeServices(workstreams: WorkstreamSummary[] = []): AppServices {
       saveIssueChanges: async () => 0,
     },
     quotas: { get: async () => [] },
+    exhibits: {
+      askQueue: async () => ({ origin: "http://127.0.0.1:3230", storeProblem: null, entries: [] }),
+    },
     actions: {
       run: async () => ({ status: "complete" }),
       job: () => null,

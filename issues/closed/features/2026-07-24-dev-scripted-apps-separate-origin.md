@@ -6,7 +6,19 @@ area: router
 filed-by: agent
 discovered-in: worktree-github-pages-site — Codex review of the dev sandbox-exemption
 labels: [security]
+resolution: implemented
 ---
+
+> **Closed 2026-08-15 — implemented by relocation** (Track F of
+> `callback-box/docs/plans/workstream-exhibits.md`). The separate origin this
+> issue asked for is the exhibits listener: a second Fastify instance behind its
+> own token/cookie, holding no router or workstreams authority. story-eval moved
+> there as a committed app (`dev/apps/story-eval/`, served at
+> `/apps/story-eval/`), and its bespoke `POST …/dev/story-eval/save` route was
+> replaced by a scoped document `PUT /api/apps/story-eval/data/verdicts`. The
+> origin-wide grant is gone: `tools.json` `scripted`, `isPathInScriptedApp`, and
+> the relaxed-CSP branch are deleted, so every `/dev/` HTML response now carries
+> the bare `sandbox` CSP unconditionally.
 
 > **Checked 2026-08-14 — still valid.** Tagged `invalid`; removed, and the
 > issue stays open. The scripted-app CSP exemption is live and unchanged, and

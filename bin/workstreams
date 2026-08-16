@@ -814,6 +814,20 @@ case "$cmd" in
       fi
     fi
 
+    # Exhibit stores: REPORT-ONLY, every run, both modes. Sweep never deletes
+    # a store — culling exhibit content is always the developer's manual act
+    # (docs/plans/workstream-exhibits.md Track A). "main" and the reserved
+    # "apps" namespace are never orphans.
+    if [ -d "${WT_EXHIBITS_ROOT:-}" ]; then
+      for d in "$WT_EXHIBITS_ROOT"/*; do
+        [ -d "$d" ] || continue
+        name=$(basename "$d")
+        { [ "$name" = "main" ] || [ "$name" = "apps" ]; } && continue
+        [ -d "$WT_ROOT/$name" ] && continue
+        echo "orphan exhibits (manual cull only): $d ($(du -sh "$d" 2>/dev/null | cut -f1))"
+      done
+    fi
+
     # Drain the trash even when nothing was removed this run. Otherwise the only
     # thing that reaps is a removal, so a reaper killed partway (sleep, reboot)
     # leaves its ~1GB box tree in the cache until the NEXT removal happens —

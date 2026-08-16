@@ -1,0 +1,18 @@
+{
+  "//": "Compiler settings for exhibit pages, which live OUTSIDE every checkout (docs/exhibits.md). Extend this by absolute path from a tsconfig.json in a page directory so an editor agrees with what the container compiles.",
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["vite/client"],
+    "strict": true,
+    "noImplicitAny": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "paths": {
+      "@exhibits/client": ["./src/frontend/exhibits/client.ts"]
+    }
+  }
+}
