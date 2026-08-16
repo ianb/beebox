@@ -25,6 +25,10 @@ export interface LastAudioFulfillment {
   recordedAt: string | null;
   /** Snippet of the transcribed message the audio belongs to, if sent. */
   text: string | null;
+  /** The emission id the recording is retained under, if the tab sent one. */
+  messageId: string | null;
+  /** The answering tab's own chat session id, if it sent one. */
+  sessionId: string | null;
 }
 
 export type LastAudioOutcome =

@@ -102,8 +102,9 @@ function handleSecondaryEvent(event: RealtimeEvent, deps: SecondaryEventDeps): v
   const lastAudio = busEventData(event, "chat-last-audio-request");
   if (lastAudio) {
     // The box agent ran `cb chat get-last-audio` — answer with this tab's
-    // cached recording (or "none"; the server waits out other tabs).
-    void fulfillLastAudioRequest(lastAudio.requestId);
+    // cached recording (or "none"; the server waits out other tabs), tagged
+    // with this tab's own session id (null before assignment).
+    void fulfillLastAudioRequest(lastAudio.requestId, sessionId);
     return;
   }
   const screenshot = busEventData(event, "screenshot-request");

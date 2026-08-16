@@ -21,6 +21,8 @@ reg.fulfill(requestId, {
   contentType: "audio/wav",
   recordedAt: "2026-06-11T12:00:00Z",
   text: "hello there",
+  messageId: "msg-abc",
+  sessionId: "sess-1",
 });
 const result = await outcome;
 print(`status: ${result.status}`);
@@ -67,7 +69,7 @@ status: none
 const reg = createLastAudioPending({ graceMs: 1000 });
 const { requestId, outcome } = reg.create({ timeoutMs: 5000 });
 reg.reportNone(requestId);
-reg.fulfill(requestId, { audio: Buffer.from("x"), contentType: "audio/wav", recordedAt: null, text: null });
+reg.fulfill(requestId, { audio: Buffer.from("x"), contentType: "audio/wav", recordedAt: null, text: null, messageId: null, sessionId: null });
 const result = await outcome;
 result.status
 => audio
@@ -77,11 +79,11 @@ result.status
 
 ```ts
 const reg = createLastAudioPending();
-print(`unknown fulfill: ${reg.fulfill("nope", { audio: Buffer.from("x"), contentType: "audio/wav", recordedAt: null, text: null })}`);
+print(`unknown fulfill: ${reg.fulfill("nope", { audio: Buffer.from("x"), contentType: "audio/wav", recordedAt: null, text: null, messageId: null, sessionId: null })}`);
 print(`unknown none: ${reg.reportNone("nope")}`);
 const { requestId, outcome } = reg.create({ timeoutMs: 5000 });
-print(`first: ${reg.fulfill(requestId, { audio: Buffer.from("a"), contentType: "audio/wav", recordedAt: null, text: null })}`);
-print(`second: ${reg.fulfill(requestId, { audio: Buffer.from("b"), contentType: "audio/wav", recordedAt: null, text: null })}`);
+print(`first: ${reg.fulfill(requestId, { audio: Buffer.from("a"), contentType: "audio/wav", recordedAt: null, text: null, messageId: null, sessionId: null })}`);
+print(`second: ${reg.fulfill(requestId, { audio: Buffer.from("b"), contentType: "audio/wav", recordedAt: null, text: null, messageId: null, sessionId: null })}`);
 const result = await outcome;
 print(`winner: ${result.fulfillment.audio.toString()}`);
 =>
@@ -187,6 +189,14 @@ const upload = [
   "",
   "remember to water the plants",
   `--${boundary}`,
+  'Content-Disposition: form-data; name="messageId"',
+  "",
+  "msg-plants-1",
+  `--${boundary}`,
+  'Content-Disposition: form-data; name="sessionId"',
+  "",
+  "sess-42",
+  `--${boundary}`,
   'Content-Disposition: form-data; name="file"; filename="last-message.wav"',
   "Content-Type: audio/wav",
   "",
@@ -206,6 +216,8 @@ print(`status: ${res.statusCode}`);
 print(`content-type: ${res.headers["content-type"]}`);
 print(`recorded-at: ${res.headers["x-recorded-at"]}`);
 print(`text: ${decodeURIComponent(res.headers["x-message-text"])}`);
+print(`message-id: ${decodeURIComponent(res.headers["x-message-id"])}`);
+print(`session-id: ${decodeURIComponent(res.headers["x-session-id"])}`);
 print(`audio: ${res.payload}`);
 =>
 answer ok: {"ok":true}
@@ -213,7 +225,64 @@ status: 200
 content-type: audio/wav
 recorded-at: 2026-06-11T12:00:00Z
 text: remember to water the plants
+message-id: msg-plants-1
+session-id: sess-42
 audio: RIFFfakewavbytes
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+## Route: an answer without message/session identity omits those headers
+
+An old tab (or one with no session context yet) answers with just
+`recordedAt`/`text`, same as today — `X-Message-Id`/`X-Session-Id` are
+simply absent rather than sent empty.
+
+```ts
+const ctx = await makeTestServer();
+const gotId = new Promise((resolve) => {
+  ctx.eventBus.subscribe({ listener: (e) => {
+    if (e.event === "chat-last-audio-request") resolve(e.data.requestId);
+  }});
+});
+const longPoll = ctx.rawRequest({
+  method: "POST",
+  url: "/api/chat/last-audio/request",
+  payload: { timeoutMs: 5000 },
+});
+const requestId = await gotId;
+const boundary = "----cbtestboundary2";
+const upload = [
+  `--${boundary}`,
+  'Content-Disposition: form-data; name="recordedAt"',
+  "",
+  "2026-06-11T12:00:00Z",
+  `--${boundary}`,
+  'Content-Disposition: form-data; name="text"',
+  "",
+  "no identity here",
+  `--${boundary}`,
+  'Content-Disposition: form-data; name="file"; filename="last-message.wav"',
+  "Content-Type: audio/wav",
+  "",
+  "RIFFfakewavbytes",
+  `--${boundary}--`,
+  "",
+].join("\r\n");
+await ctx.request({
+  method: "POST",
+  url: `/api/chat/last-audio/${requestId}`,
+  payload: upload,
+  headers: { "content-type": `multipart/form-data; boundary=${boundary}` },
+});
+const res = await longPoll;
+print(`message-id header: ${res.headers["x-message-id"]}`);
+print(`session-id header: ${res.headers["x-session-id"]}`);
+=>
+message-id header: undefined
+session-id header: undefined
 ```
 
 ```ts cleanup

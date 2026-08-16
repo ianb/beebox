@@ -10,7 +10,9 @@
  * and broadcasts a transient `chat-last-audio-request` bus event; every
  * connected chat tab answers (its cached recording, or "none"); the first
  * audio answer streams back as the long-poll's response body, with the
- * recording's metadata in `X-Recorded-At` / `X-Message-Text` headers.
+ * recording's metadata in `X-Recorded-At` / `X-Message-Text` /
+ * `X-Message-Id` / `X-Session-Id` headers (the last two only when the
+ * answering tab sent them — old/foreign tabs degrade to today's headers).
  */
 
 import {
@@ -76,12 +78,14 @@ export function registerChatLastAudioRoutes(ctx: ChatRoutesContext): void {
           message: "No recording is cached for the last message — it was typed, or recorded before the chat tab was last loaded.",
         });
       }
-      const { audio, contentType, recordedAt, text } = result.fulfillment;
+      const { audio, contentType, recordedAt, text, messageId, sessionId } = result.fulfillment;
       reply.header("Content-Type", contentType);
       if (recordedAt !== null) reply.header("X-Recorded-At", recordedAt);
       if (text !== null) {
         reply.header("X-Message-Text", encodeURIComponent(text.slice(0, MAX_TEXT_HEADER_CHARS)));
       }
+      if (messageId !== null) reply.header("X-Message-Id", encodeURIComponent(messageId));
+      if (sessionId !== null) reply.header("X-Session-Id", encodeURIComponent(sessionId));
       return reply.send(audio);
     }
   );
@@ -100,6 +104,8 @@ export function registerChatLastAudioRoutes(ctx: ChatRoutesContext): void {
           contentType: data.mimetype || "application/octet-stream",
           recordedAt: multipartField(data.fields, "recordedAt"),
           text: multipartField(data.fields, "text"),
+          messageId: multipartField(data.fields, "messageId"),
+          sessionId: multipartField(data.fields, "sessionId"),
         };
         if (!pendingRequests.fulfill(requestId, fulfillment)) {
           // Expected in multi-tab use: another tab's audio already won.

@@ -108,9 +108,13 @@ Searched 2026-08-15 (session research report):
 
 ## Vocabulary lock-ins
 
-- **`message-id="msg-…"` attribute on the `<speech>` wrapper** of voice
+- **`message-id="…"` attribute on the `<speech>` wrapper** of voice
   sends, stamped at assemble beside `stt=`/`diarized=`. It is the emission
-  id — the same value that keys the audio retention store and the wire
+  id **verbatim, whatever its format** — browser emissions are
+  `msg-<timestamp><random>` (`InteractiveChat-helpers.ts:79`), native
+  bridge emissions are UUIDs (`native-emission.ts:49`); nothing may assume
+  a `msg-` prefix (review finding 4). It is the same value that keys the
+  audio retention store and the wire
   `messageId` — persisted into the transcript text so the message is
   addressable after the pending→authoritative uuid swap and across reloads.
   Typed sends don't carry it (no recording to point back at). Display
@@ -193,6 +197,18 @@ Ordered by implementation dependency.
   doesn't hold that recording. **The untargeted latest-wins mode is
   removed entirely** — a bare command errors with a message telling the
   caller to read `message-id="…"` off the message's wrapper.
+- **Echo-and-verify (second cross-model review, finding 1 — load-bearing)**:
+  a stale/old tab still answers any `chat-last-audio-request` with its
+  `retention.latest()` and no identity fields
+  (`InteractiveChat-ws.ts:102`, `last-audio.ts:53`), and the server
+  accepts any multipart (`chat-last-audio-routes.ts:94`) — so "absent
+  fields degrade to today" would quietly re-create the wrong-recording
+  race whenever one open tab predates the deploy. Instead: the pending
+  request stores the requested `messageId`; a fulfillment must **echo it**
+  (new multipart field), and the server IGNORES answers that omit or
+  mismatch it — the request keeps waiting for a correct answer or times
+  out to "not available". Identity-less answers can satisfy only
+  `{none:true}` bookkeeping, never deliver audio, for a targeted request.
 - **Why — this is a live defect, not polish** (boxholder report,
   2026-08-15): the fetch is a box-wide broadcast where every tab answers
   its own per-tab latest and the first audio answer wins
@@ -213,11 +229,15 @@ Ordered by implementation dependency.
   race is also a **cross-user leak** — with two users on the box, user B's
   tab can win user A's agent's request and hand it B's latest recording
   (nothing in `chat-last-audio-routes.ts:58-87` scopes by session or
-  user). Requiring the target closes it outright: a request is answered
-  only by a tab holding that exact emission id, and a message id from A's
-  session never lives in B's retention store. (An earlier draft added
-  env-injected session scoping for untargeted requests; with no untargeted
-  mode there is nothing left to scope — cut as unnecessary complexity.)
+  user). Required targeting plus echo-and-verify closes the practical
+  leak: a request is fulfilled only by a tab actually holding that exact
+  emission id, which lives only in the originating user's tab. Stated
+  precisely (review finding 5): this is collision-resistance, not a
+  structural guarantee — emission ids are timestamp+random
+  (`InteractiveChat-helpers.ts:79`), native ones UUIDs; a session check on
+  the fulfillment can be layered later if that residue ever matters. (An
+  earlier draft's env-injected session scoping for untargeted requests was
+  cut — no untargeted mode remains to scope.)
 - **Native-id question (boxholder, 2026-08-15)**: the SDK transcript's
   per-entry `uuid` (and Codex's rollout ids) was considered as the address
   and rejected — it is assigned when the SDK writes the entry (the tab
@@ -227,8 +247,10 @@ Ordered by implementation dependency.
   wire `messageId`, not a new identity.
 - **Old messages**: pre-attribute messages have no id to target — the
   command errors clearly ("this message carries no message-id; sent before
-  targeting existed"); the retention window (5) bounds how far back audio
-  exists anyway, so the practical loss is nil after a few messages.
+  targeting existed"); the retention window bounds how far back audio
+  exists anyway — five retained voice EMISSIONS, tombstones included
+  (`retention.ts:46`, `last-audio.ts:32`; a no-audio voice send occupies a
+  slot), so "not available" can arrive after fewer than five recordings.
 - **First chunk**: request-payload field + tab-side keyed lookup + CLI
   required flags, with a route doctest (targeted hit, targeted miss →
   none, missing target → CLI error before any request).
@@ -294,13 +316,21 @@ Ordered by implementation dependency.
 
 ### Track 4 — agent guidance touch-up
 
-- **What**: a short addition to `src/core/chat/session/prompts.ts` beside
-  the existing wrapper/retranscribe documentation: `message-id` on a
-  `<speech>` wrapper is the message's address — the audio commands
-  **require** `--message <id>`, read it off the message you mean; never
-  fabricate the attribute in your own output; and a successful
-  retranscription is shown to the user automatically, so don't paste the
-  corrected text back into chat unless asked.
+- **What**: a guidance SWEEP, not one sentence (second review finding 2 —
+  every surface that teaches the bare commands would now teach an error):
+  - `src/core/chat/session/prompts.ts:51-53`: `message-id` on a `<speech>`
+    wrapper is the message's address — the audio commands **require**
+    `--message <id>`, read it off the message you mean; never fabricate
+    the attribute; a successful retranscription is shown to the user
+    automatically, so don't paste the corrected text back unless asked.
+  - `src/core/docs-gen/cb-commands-scheduling.ts:140`: the generated
+    command guide's "most recent voice message" copy and syntax lines.
+  - CLI help/descriptions in `chat-audio.ts:149,182,263`.
+  - Knowledge audits: update `knowledge-audits.yaml` entries that accept
+    bare invocations (the last-audio audit ~:3506 and
+    `chat-unsure-word-semantics` ~:4616) to expect targeted usage, and
+    RE-RUN them (this reverses the earlier "no new audit" call — the
+    requirement is exactly the kind of procedure agents must recall).
 - **Why**: a required flag fails loudly if unexplained (agents would
   flounder on the error), and without the last sentence agents will keep
   quoting the corrected text as a reply, duplicating what the UI now shows
@@ -377,8 +407,11 @@ audio).
 - **Validation error UX** — ADDRESSED: the report route zod-rejects with a
   400 the CLI warns about; the command still succeeds.
 - **Partial migration / transition state** — ADDRESSED: pre-existing
-  messages have no `message-id`; retranscribing them yields a fetch with no
-  id → no report → today's behavior. No backfill.
+  messages have no `message-id`, so they cannot be targeted — the command
+  errors before any fetch (Track 1b), including the rollout window where a
+  pre-attribute recording is still cached but unaddressable (brief, bounded
+  by the retention window; accepted). No backfill. Stale TABS are the
+  echo-and-verify case above.
 
 ## NOT in scope
 

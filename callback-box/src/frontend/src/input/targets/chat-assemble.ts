@@ -101,7 +101,13 @@ export function assembleChatMessage(
     // (Track 3 Vocabulary lock-ins) — its absence means no per-word
     // confidence backs this message, distinct from "captured, none unsure".
     const sttAttr = emission.words !== undefined ? " stt=\"deepgram\"" : "";
-    wrapped = `<speech${sttAttr}${diarizedAttr}${attrs}>${body}</speech>`;
+    // `message-id` (retranscription-in-chat plan, Vocabulary lock-ins) is the
+    // emission id — the same value returned as `messageId` below and the key
+    // the audio retention store uses — stamped on every voice send so the
+    // message stays addressable after the pending→authoritative uuid swap.
+    // Typed sends carry no recording to point back at, so they don't get it.
+    const messageIdAttr = ` message-id="${emission.id}"`;
+    wrapped = `<speech${sttAttr}${diarizedAttr}${messageIdAttr}${attrs}>${body}</speech>`;
   }
 
   // File attachments emit a sibling <attachments> block of markdown-style

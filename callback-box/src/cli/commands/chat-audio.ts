@@ -80,6 +80,14 @@ interface LastAudioFetch {
   recordedAt: string | null;
   /** Transcript snippet of the message the recording belongs to. */
   text: string | null;
+  /**
+   * The emission id the recording is retained under, or null when the
+   * answering tab didn't send one (old tab, or no session context yet).
+   * Not surfaced to stdout yet — Tracks 1b/2 consume it.
+   */
+  messageId: string | null;
+  /** The answering tab's chat session id, or null under the same conditions. */
+  sessionId: string | null;
 }
 
 /**
@@ -133,11 +141,15 @@ async function fetchLastAudio(opts: {
   }
 
   const encodedText = res.headers.get("x-message-text");
+  const encodedMessageId = res.headers.get("x-message-id");
+  const encodedSessionId = res.headers.get("x-session-id");
   return {
     audio: Buffer.from(await res.arrayBuffer()),
     contentType: res.headers.get("content-type") ?? "",
     recordedAt: res.headers.get("x-recorded-at"),
     text: encodedText !== null ? decodeURIComponent(encodedText) : null,
+    messageId: encodedMessageId !== null ? decodeURIComponent(encodedMessageId) : null,
+    sessionId: encodedSessionId !== null ? decodeURIComponent(encodedSessionId) : null,
   };
 }
 

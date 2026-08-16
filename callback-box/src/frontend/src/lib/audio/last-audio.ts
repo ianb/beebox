@@ -50,8 +50,15 @@ export function markVoiceAudioAbsent(emissionId: string): void {
   retention.retain(emissionId, null);
 }
 
-/** Answer one agent request: upload the most recently retained recording, or report none. */
-export async function fulfillLastAudioRequest(requestId: string): Promise<void> {
+/**
+ * Answer one agent request: upload the most recently retained recording, or
+ * report none. `sessionId` is this tab's own chat session id (the same value
+ * `InteractiveChat-ws.ts` scopes broadcast events by) — `null` when the tab
+ * has no assigned session yet; sent alongside the recording's identity so
+ * the request's answerer is addressable (retranscription-in-chat plan,
+ * Track 1).
+ */
+export async function fulfillLastAudioRequest(requestId: string, sessionId: string | null): Promise<void> {
   const url = `${getApiBase()}/chat/last-audio/${encodeURIComponent(requestId)}`;
   const entry = retention.latest();
   try {
@@ -67,6 +74,8 @@ export async function fulfillLastAudioRequest(requestId: string): Promise<void> 
       const form = new FormData();
       form.append("recordedAt", audio.recordedAt);
       form.append("text", audio.text.slice(0, MAX_TEXT_CHARS));
+      form.append("messageId", entry.emissionId);
+      if (sessionId !== null) form.append("sessionId", sessionId);
       const ext = audio.blob.type.includes("wav") ? "wav" : "webm";
       form.append("file", audio.blob, `last-message.${ext}`);
       res = await fetch(url, { method: "POST", body: form });
