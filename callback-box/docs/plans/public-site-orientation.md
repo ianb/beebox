@@ -1,21 +1,24 @@
 ---
-title: "GitHub Pages site — orientation & re-entry map"
+title: "Public site — orientation & re-entry map"
 status: partial
-workstream: github-pages-site
+workstream: public-site
 issues: []
 ---
-# GitHub Pages site — orientation & re-entry map
+# Public site — orientation & re-entry map
+
+*(This deploys to GitHub Pages, but that's just the target. The thing is
+the project's public site.)*
 
 **Read this first when picking the work back up.** A snapshot of where the
 effort is and the open fork, so a fresh session (and the boxholder) can
 re-enter without replaying the whole history. Links the two design docs:
-[the site plan](github-pages-site.md) and
-[the extraction subplan](github-pages-site-story-extraction.subplan.md).
+[the site plan](public-site.md) and
+[the extraction subplan](public-site-story-extraction.subplan.md).
 
 ## What this is
 
-A public front-door site for callback-box on GitHub Pages. Settled principles
-(in [the issue](../../../issues/features/2026-07-20-github-pages-site.md)):
+A public site for callback-box on GitHub Pages. Settled principles
+(in [the issue](../../../issues/features/2026-07-20-public-site.md)):
 spare, not slick — "cool in a different way," discovered by iterating, not a
 hero page; **the boxholder's own words carry the human-facing prose** (AI
 structure ok, AI words not); a visibly separate machine layer for agents

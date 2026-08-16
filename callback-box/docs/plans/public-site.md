@@ -1,15 +1,15 @@
 ---
-title: "GitHub Pages front-door site"
+title: "Public site"
 status: partial
 workstream: unknown
 issues: []
 ---
-# GitHub Pages front-door site
+# Public site
 
 A static public site for callback-box, generated from repo content, deployed to
 GitHub Pages, and viewable on the dev router. The design principles were settled
 with the boxholder in discussion (recorded in
-[the issue](../../../issues/features/2026-07-20-github-pages-site.md)): spare and
+[the issue](../../../issues/features/2026-07-20-public-site.md)): spare and
 antiprofessional to start, iterating toward "cool in a different way";
 the boxholder's words carry the human-facing page (AI structure fine, AI words
 not); a visibly separate machine-facing layer for agents (llms.txt, markdown
@@ -317,7 +317,7 @@ Ordered by implementation dependency, then surface size.
   sessions follow as content work, not code work.
 - **Subplan**: the extraction rubric, prompt A/B evaluation, and review app
   are designed in
-  [github-pages-site-story-extraction.subplan.md](github-pages-site-story-extraction.subplan.md)
+  [public-site-story-extraction.subplan.md](public-site-story-extraction.subplan.md)
   (2026-07-21) — that loop earns trust in the prompts before any full-corpus
   extraction feeds this track.
 
@@ -347,7 +347,7 @@ Ordered by implementation dependency, then surface size.
 
 None yet. If the Track F prototype surfaces enough design (interaction
 grammar, authoring vocabulary) to need its own decision table, spin
-`github-pages-site-fisheye.subplan.md` at that point rather than inflating
+`public-site-fisheye.subplan.md` at that point rather than inflating
 this plan speculatively.
 
 ## Failure modes
