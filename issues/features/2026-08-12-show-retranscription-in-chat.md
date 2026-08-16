@@ -1,6 +1,6 @@
 ---
 title: "Show a retranscription in chat — an indicator, and the improved text in place"
-workstream: unattached
+workstream: transcript-confidence
 area: callback-box
 needs: [design]
 labels: [chat, voice, ui]
