@@ -22,6 +22,7 @@ import {
   type SpeechPlaybackState,
 } from "./InteractiveChat-message-items";
 import type { CaptureBubbleModel } from "./capture-bubble";
+import type { AudioOverlayStore } from "./audio-overlay-store";
 
 interface LiveTurnState { turnId: string | null; uuid: string | null }
 
@@ -105,7 +106,7 @@ function MessageListInner({
   messages, groups, modelMarkers, isStreaming, streamText, streamTools,
   debugView, currentUserEmail, currentUserName, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, snapshot,
   totalEntries, onLoadOlder, loadingOlder, scrollToBottomTrigger, liveTurnId, proseEnabled, pendingHqDraft,
-  captureBubbles, onCaptureRetry,
+  captureBubbles, onCaptureRetry, audioOverlayStore,
 }: {
   messages: SessionEntry[];
   groups: MessageGroup[];
@@ -131,6 +132,7 @@ function MessageListInner({
   pendingHqDraft: string | null;
   captureBubbles: CaptureBubbleModel[];
   onCaptureRetry: (id: string) => void;
+  audioOverlayStore: AudioOverlayStore;
 }) {
   const { boxSlug } = useParams({ strict: false });
   const hasOlder = totalEntries > messages.length;
@@ -206,7 +208,8 @@ function MessageListInner({
     proseEnabled,
     lastAssistantGroupIndex,
     handleCaptureRetry: onCaptureRetry,
-  }), [streamText, streamTools, debugView, currentUserEmail, currentUserName, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, proseEnabled, lastAssistantGroupIndex, onCaptureRetry]);
+    audioOverlayStore,
+  }), [streamText, streamTools, debugView, currentUserEmail, currentUserName, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, proseEnabled, lastAssistantGroupIndex, onCaptureRetry, audioOverlayStore]);
 
   if (messages.length === 0 && !isStreaming) {
     return (

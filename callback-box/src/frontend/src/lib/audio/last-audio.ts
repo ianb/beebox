@@ -50,23 +50,40 @@ export function markVoiceAudioAbsent(emissionId: string): void {
   retention.retain(emissionId, null);
 }
 
-/** Answer one agent request: upload the most recently retained recording, or report none. */
-export async function fulfillLastAudioRequest(requestId: string): Promise<void> {
+/**
+ * Answer one agent request: upload the recording retained under the
+ * requested `messageId`, or report none when this tab doesn't hold that
+ * exact recording (evicted, never retained here, or a tombstone — no
+ * recording exists for that emission). Every request targets a specific
+ * message (retranscription-in-chat plan, Track 1b — the untargeted "answer
+ * with whatever's latest" mode is gone, since it's how the wrong recording
+ * used to win). The echoed `messageId` lets the server verify this answer
+ * actually addresses the requested message before ever delivering it.
+ * `sessionId` is this tab's own chat session id (the same value
+ * `InteractiveChat-ws.ts` scopes broadcast events by) — `null` when the tab
+ * has no assigned session yet.
+ */
+export async function fulfillLastAudioRequest(
+  requestId: string,
+  opts: { messageId: string; sessionId: string | null }
+): Promise<void> {
+  const { messageId, sessionId } = opts;
   const url = `${getApiBase()}/chat/last-audio/${encodeURIComponent(requestId)}`;
-  const entry = retention.latest();
+  const audio = retention.get(messageId);
   try {
     let res: Response;
-    if (entry === undefined || entry.audio === null) {
+    if (audio === undefined || audio === null) {
       res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ none: true }),
       });
     } else {
-      const { audio } = entry;
       const form = new FormData();
       form.append("recordedAt", audio.recordedAt);
       form.append("text", audio.text.slice(0, MAX_TEXT_CHARS));
+      form.append("messageId", messageId);
+      if (sessionId !== null) form.append("sessionId", sessionId);
       const ext = audio.blob.type.includes("wav") ? "wav" : "webm";
       form.append("file", audio.blob, `last-message.${ext}`);
       res = await fetch(url, { method: "POST", body: form });

@@ -96,6 +96,36 @@ export function extractFileAttachments(text: string): FileAttachmentRef[] {
   return refs;
 }
 
+// Anchored to the OPENING `<speech …>` wrapper tag only (optional leading
+// whitespace, then the tag name, then attributes up to the tag's own `>`) —
+// not a bare `\bmessage-id="…"` scan of the whole text. A user can TYPE the
+// literal string `message-id="msg-real"` anywhere in their message body; an
+// unanchored scan would bind that typed text to the real message's overlay
+// (cross-model review finding). `[^>]*` can't cross the tag's closing `>`,
+// so an occurrence anywhere outside the wrapper's own opening tag — including
+// later in the same `<speech>` element's body — never matches.
+const MESSAGE_ID_WRAPPER_RE = /^\s*<speech\b[^>]*\bmessage-id="([^"]*)"/;
+
+/**
+ * Resolve the key an audio-overlay event addresses this entry by
+ * (docs/implemented-plans/retranscription-in-chat.md Track 3): the `message-id="…"`
+ * attribute `chat-assemble.ts` stamps on the `<speech>` wrapper of a voice
+ * send, read from the entry's raw text (stripping only happens at render).
+ *
+ * Falls back to the entry's own `uuid` for a still-pending optimistic stub,
+ * which is built with `uuid: event.messageId` (`chat-actions.ts`) and has no
+ * wrapper text yet to carry the attribute. Because this re-reads the raw text
+ * on every call, it re-resolves correctly across the pending→authoritative
+ * uuid swap: the swapped-in server entry's raw text carries the attribute,
+ * so resolution moves from the uuid fallback to the attribute match without
+ * any special-casing at the call site.
+ */
+export function resolveEntryMessageId(entry: SessionEntry): string {
+  const firstText = entry.content.find((b) => b.type === "text")?.text ?? "";
+  const match = firstText.match(MESSAGE_ID_WRAPPER_RE)?.[1];
+  return match && match.length > 0 ? match : entry.uuid;
+}
+
 /**
  * Extract user name from a session entry.
  * Checks the entry's user field first, then parses from tag attributes.

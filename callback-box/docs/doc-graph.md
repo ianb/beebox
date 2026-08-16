@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-08-16T04:20:35Z
-Total documents: 271
+Generated: 2026-08-16T04:30:24Z
+Total documents: 272
 
 ## Issues
 
@@ -603,7 +603,6 @@ Referenced by:
 - docs/plans/design-reconciliation.md:28 (mention) — `docs/activities-retrospective.md`).
 - docs/plans/docs-reorg.md:228 (mention) — `activities-design.md` + `activities-retrospective.md` pair (the model for
 - docs/plans/narration-mode.md:9 (link) — > Note: this doc references the Activities system as a coordinate ("the infrastructure that makes activities being phase
-- ../dev/story-eval/runs/run-003/self-review.md:5 (mention) — two docs chosen for actual story density: `activities-retrospective.md`
 - ../research/openclaw-hermes/deep-cbx-retro.md:11 (mention) — line-by-line below). Note: `callback-box/docs/activities-retrospective.md` is an
 
 References:
@@ -1053,6 +1052,7 @@ Referenced by:
 - docs/implemented-plans/remove-cb-render.md:22 (mention) — - **`docs/engineering-principles.md`** — the plan traces mainly to these:
 - docs/implemented-plans/remove-open-mode.md:19 (mention) — - `callback-box/docs/engineering-principles.md` — fail-closed; make invalid
 - docs/implemented-plans/responsive-figures.md:34 (mention) — - `docs/engineering-principles.md` — **#6 Right-sized defensiveness** (the
+- docs/implemented-plans/retranscription-in-chat.md:30 (mention) — - `docs/engineering-principles.md` — #1 (types are structure: two precise
 - docs/implemented-plans/scan-uploader-pairing.md:37 (mention) — - `docs/engineering-principles.md`: **#3 validate-at-boundaries** (the
 - docs/implemented-plans/see-as-the-user.md:25 (mention) — - `callback-box/docs/engineering-principles.md` — traced by number below.
 - docs/implemented-plans/semantic-search.md:22 (mention) — - `docs/engineering-principles.md` #3 (validate at boundaries) — the
@@ -1087,7 +1087,6 @@ Referenced by:
 - docs/plans/worktree-control-surface.md:111 (mention) — - `callback-box/docs/engineering-principles.md` §7 *Hierarchy is a
 - ../.claude/memory/feedback_files_over_external_trackers.md:24 (mention) — - Specific applicable cases: TODO/work-queue → `TODOS.md` or similar; design notes → `docs/`; architectural decisions → 
 - ../.claude/skills/cb-plan/SKILL.md:122 (mention) — - `callback-box/docs/engineering-principles.md` — the twelve durable
-- ../dev/story-eval/runs/run-002/self-review.md:3 (mention) — 3 variants × `callback-box/docs/engineering-principles.md` (159 lines, a new
 - ../issues/closed/bugs/2026-08-08-worktree-remove-now-silent-mv-failure.md:36 (mention) — removal. Violates `docs/engineering-principles.md` §4 (resilient AND never
 - ../issues/code-quality/2026-07-06-engine-dev-knowledge-audits.md:17 (mention) — and the rest of `docs/engineering-principles.md` / `code-style.md`.
 - ../issues/decisions/2026-07-22-config-untrusted-principle-drift.md:7 (mention) — discovered-in: worktree-github-pages-site — story-extraction triage of engineering-principles.md
@@ -3300,6 +3299,17 @@ References:
 - → code-style.md (mention)
 - → CLAUDE.md (mention)
 - → docs/testing.md (mention)
+
+#### docs/implemented-plans/retranscription-in-chat.md
+
+Title: "Show retranscriptions and audio consultations on the chat message" | 486 lines
+
+Referenced by:
+- ../issues/features/2026-08-12-show-retranscription-in-chat.md:19 (mention) — > (design: `callback-box/docs/implemented-plans/retranscription-in-chat.md`; commits
+
+References:
+- → ../issues/features/2026-08-12-show-retranscription-in-chat.md (frontmatter)
+- → docs/engineering-principles.md (mention)
 
 #### docs/implemented-plans/router-state-formalization.md
 

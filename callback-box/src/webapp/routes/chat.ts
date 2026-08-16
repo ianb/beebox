@@ -38,6 +38,7 @@ import { setChatRuntime, clearChatRuntime } from "../chat-runtime.js";
 import { registerChatSendRoutes, loadProcessedMessageIds } from "./chat-send-routes.js";
 import { registerChatAudioRoutes } from "./chat-audio-routes.js";
 import { registerChatLastAudioRoutes } from "./chat-last-audio-routes.js";
+import { registerChatAudioReviewRoutes } from "./chat-audio-review-routes.js";
 import { registerChatScreenshotRoutes } from "./chat-screenshot-routes.js";
 import { chatModelFileForSession, DEFAULT_MODEL_FILE } from "../../core/chat/session/state.js";
 
@@ -200,6 +201,7 @@ export async function registerChatRoutes(options: RegisterChatRoutesOptions): Pr
   registerChatSendRoutes(ctx);
   registerChatAudioRoutes(ctx);
   registerChatLastAudioRoutes(ctx);
+  registerChatAudioReviewRoutes(ctx);
   registerChatScreenshotRoutes(ctx);
 
   // Surface session-id assignments as SSE events so a tab waiting on a

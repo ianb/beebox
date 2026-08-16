@@ -66,8 +66,8 @@ const e = createVoiceEmission({
   selections: [],
   diarized: false,
 });
-JSON.stringify(assembleChatMessage(e, W).message)
-=> "<speech local-time=\"14:23\">summarize the attached report [file1]</speech>\n<attachments>\n[file1]: tmp/2026-07-19T10-00-00_report.pdf\n</attachments>"
+JSON.stringify(assembleChatMessage(e, W).message.replace(e.id, "ID"))
+=> "<speech message-id=\"ID\" local-time=\"14:23\">summarize the attached report [file1]</speech>\n<attachments>\n[file1]: tmp/2026-07-19T10-00-00_report.pdf\n</attachments>"
 ```
 
 A present token is left in place — only the absent ones append:
@@ -114,16 +114,17 @@ tokens, so selections append.
 const sel = [{ id: 2, ref: "/store/recipes/Bread.recipe.card", text: "300g flour", position: "body" }];
 const e = createVoiceEmission({ text: "add that to the list", selections: sel, diarized: true });
 const out = assembleChatMessage(e, W);
-JSON.stringify(out.message)
-=> "<speech diarized=\"1\" local-time=\"14:23\">add that to the list\n<user-selection ref=\"/store/recipes/Bread.recipe.card\" pos=\"body\">300g flour</user-selection></speech>"
+JSON.stringify(out.message.replace(e.id, "ID"))
+=> "<speech diarized=\"1\" message-id=\"ID\" local-time=\"14:23\">add that to the list\n<user-selection ref=\"/store/recipes/Bread.recipe.card\" pos=\"body\">300g flour</user-selection></speech>"
 ```
 
-Equivalence with the historical helper (same inputs → same bytes), while
-it still exists:
+Equivalence with the historical helper (same inputs → same bytes, modulo the
+`message-id` stamp `buildSpeechMessage` predates and never grew — Track 1,
+retranscription-in-chat plan), while it still exists:
 
 ```ts continue
 const legacy = buildSpeechMessage({ text: "add that to the list", diarized: true, selections: sel, attrs: " local-time=\"14:23\"" });
-out.message === legacy
+out.message.replace(` message-id="${e.id}"`, "") === legacy
 => true
 ```
 
@@ -140,8 +141,8 @@ other send path already folds.
 ```ts
 const sel = [{ id: 3, ref: "/store/notes/Bread.doc.card", text: "let it rise", position: "body" }];
 const e = createVoiceEmission({ text: "quick thought before I go", selections: sel, diarized: false });
-JSON.stringify(assembleChatMessage(e, { localTime: "23:59", zoomedView: null, timePassed: "8h" }).message)
-=> "<speech local-time=\"23:59\" time-passed=\"8h\">quick thought before I go\n<user-selection ref=\"/store/notes/Bread.doc.card\" pos=\"body\">let it rise</user-selection></speech>"
+JSON.stringify(assembleChatMessage(e, { localTime: "23:59", zoomedView: null, timePassed: "8h" }).message.replace(e.id, "ID"))
+=> "<speech message-id=\"ID\" local-time=\"23:59\" time-passed=\"8h\">quick thought before I go\n<user-selection ref=\"/store/notes/Bread.doc.card\" pos=\"body\">let it rise</user-selection></speech>"
 ```
 
 With no selections pending (the common case), the fold is the identity —
@@ -149,8 +150,8 @@ still byte-identical to the old, permanently-unfolded behavior:
 
 ```ts
 const e2 = createVoiceEmission({ text: "quick thought before I go", selections: [], diarized: false });
-assembleChatMessage(e2, { localTime: "23:59", zoomedView: null, timePassed: "8h" }).message
-=> <speech local-time="23:59" time-passed="8h">quick thought before I go</speech>
+assembleChatMessage(e2, { localTime: "23:59", zoomedView: null, timePassed: "8h" }).message.replace(e2.id, "ID")
+=> <speech message-id="ID" local-time="23:59" time-passed="8h">quick thought before I go</speech>
 ```
 
 ## Site 5 — recovered dictation: same shape as stop-and-send
@@ -161,8 +162,8 @@ Historical builder: `handleRecoverSend`
 
 ```ts
 const e = createVoiceEmission({ text: "the text that survived the drop", selections: [], diarized: false });
-assembleChatMessage(e, W).message
-=> <speech local-time="14:23">the text that survived the drop</speech>
+assembleChatMessage(e, W).message.replace(e.id, "ID")
+=> <speech message-id="ID" local-time="14:23">the text that survived the drop</speech>
 ```
 
 ## `markUnsureWords` — the pure marking function (Track 3, span rework)
@@ -540,8 +541,8 @@ const eMarked = createVoiceEmission({
   diarized: false,
   words: spokenWords,
 });
-assembleChatMessage(eMarked, W).message
-=> <speech stt="deepgram" local-time="14:23">They're all <unsure>cloud</unsure> code in different ways.</speech>
+assembleChatMessage(eMarked, W).message.replace(eMarked.id, "ID")
+=> <speech stt="deepgram" message-id="ID" local-time="14:23">They're all <unsure>cloud</unsure> code in different ways.</speech>
 ```
 
 Captured but none unsure: `stt="deepgram"` stamps, body comes back
@@ -559,8 +560,8 @@ const eNoneUnsure = createVoiceEmission({
     { word: "clean", confidence: 0.98 },
   ],
 });
-assembleChatMessage(eNoneUnsure, W).message
-=> <speech stt="deepgram" local-time="14:23">everything came through clean</speech>
+assembleChatMessage(eNoneUnsure, W).message.replace(eNoneUnsure.id, "ID")
+=> <speech stt="deepgram" message-id="ID" local-time="14:23">everything came through clean</speech>
 ```
 
 Undefined (no confidence data at all — HQ-replaced text, a non-Deepgram
@@ -572,8 +573,8 @@ are the same state.
 
 ```ts
 const eNoData = createVoiceEmission({ text: "no data here", selections: [], diarized: false });
-assembleChatMessage(eNoData, W).message
-=> <speech local-time="14:23">no data here</speech>
+assembleChatMessage(eNoData, W).message.replace(eNoData.id, "ID")
+=> <speech message-id="ID" local-time="14:23">no data here</speech>
 ```
 
 ## Emission ids are distinct per creation (the dedup key)
