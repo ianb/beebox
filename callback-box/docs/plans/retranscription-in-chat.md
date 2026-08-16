@@ -179,6 +179,58 @@ Ordered by implementation dependency.
   `emission-assemble.doctest.md` pinned serializations), multipart fields +
   headers + pending-shape change with a route doctest.
 
+### Track 1b — targeted fetch (fixes the wrong-recording defect)
+
+- **What**: the last-audio request gains an optional target. `cb chat
+  retranscribe` / `ask-about-audio` / `get-last-audio` gain
+  `--message <msg-id>`; the request body carries it;
+  `chat-last-audio-request`'s payload gains `messageId?`; the fulfilling
+  tab answers `retention.get(messageId)` instead of `retention.latest()`
+  when a target is present (the store is already keyed by emission id,
+  `retention.ts:38-60` / `last-audio.ts:41-46`) and answers none when it
+  doesn't hold that recording. Untargeted requests keep today's
+  latest-wins behavior.
+- **Why — this is a live defect, not polish** (boxholder report,
+  2026-08-15): the fetch is a box-wide broadcast where every tab answers
+  its own per-tab latest and the first audio answer wins
+  (`chat-last-audio-routes.ts:58-87`, `last-audio.ts:54-81`,
+  `last-audio-pending.ts` outcome race). A second tab on another session
+  can win with a different conversation's recording, and "latest" drifts
+  off the intended message the moment the user dictates again — real-world
+  wrong-transcript cases confirmed. Targeting by id makes the failure mode
+  "recording not available" (clean, honest) instead of "wrong audio,
+  silently."
+- **How the agent gets the id**: it reads `message-id="…"` off the
+  `<speech>` wrapper of the message it is acting on — the same attribute
+  Track 1 stamps. Track 4's prompt guidance changes from "ignore
+  message-id" to: pass it via `--message` whenever retranscribing or
+  analyzing a specific message; a bare command means "most recent
+  recording, any tab" and can grab the wrong one.
+- **Cross-user isolation (boxholder question, 2026-08-15)**: today the
+  race is also a **cross-user leak** — with two users on the box, user B's
+  tab can win user A's agent's request and hand it B's latest recording
+  (nothing in `chat-last-audio-routes.ts:58-87` scopes by session or
+  user). Two fixes layer:
+  1. A targeted request is answered only by a tab holding that exact
+     emission id — a message id from A's session never lives in B's
+     retention store.
+  2. Untargeted requests become **session-scoped**: `ChatSession` provides
+     its session id to the agent subprocess environment (e.g.
+     `CB_CHAT_SESSION`; the exact injection seam — wherever cwd/env are
+     set at agent spawn — is verified at implementation), the CLI includes
+     it in the request body, the broadcast payload carries it, and a tab
+     fulfills only when it matches the tab's own session. No env (manual
+     shell use of `cb chat retranscribe`) → today's box-wide behavior,
+     unchanged for the single-user case and explicitly a human's own call.
+  With both, an agent can no longer receive another session's — or another
+  user's — audio.
+- **Old messages**: pre-attribute messages have no id to target — the
+  agent falls back to untargeted (session-scoped) fetch; the retention
+  window (5) bounds how far back audio exists anyway.
+- **First chunk**: request-payload fields + tab-side keyed/scoped lookup +
+  CLI flags + env injection, with a route doctest (targeted hit, targeted
+  miss → none, session mismatch → none, untargeted-no-env unchanged).
+
 ### Track 2 — report route and events
 
 - **What**: add the two events to `EventMap`/`eventSchemas`; add
@@ -240,14 +292,18 @@ Ordered by implementation dependency.
 
 ### Track 4 — agent guidance touch-up
 
-- **What**: one sentence in `src/core/chat/session/prompts.ts` beside the
-  existing wrapper documentation: `message-id` is system routing metadata —
-  ignore it, never fabricate it. And one sentence extending the existing
-  retranscribe guidance: a successful retranscription is shown to the user
-  automatically, so the agent doesn't need to paste the corrected text back
-  into chat unless asked.
-- **Why**: without the second sentence, agents will keep quoting the
-  corrected text as a reply, duplicating what the UI now shows (#12).
+- **What**: a short addition to `src/core/chat/session/prompts.ts` beside
+  the existing wrapper/retranscribe documentation: `message-id` on a
+  `<speech>` wrapper is the message's address — **pass it via
+  `--message <id>` whenever retranscribing or analyzing a specific
+  message** (a bare command means "most recent recording" and can grab the
+  wrong one); never fabricate the attribute in your own output; and a
+  successful retranscription is shown to the user automatically, so don't
+  paste the corrected text back into chat unless asked.
+- **Why**: the targeting flag only fixes the wrong-recording defect if
+  agents actually use it, and without the last sentence agents will keep
+  quoting the corrected text as a reply, duplicating what the UI now shows
+  (#12).
 - **First chunk**: the whole track.
 
 ## Could this be simpler?
@@ -298,9 +354,13 @@ None.
 | Report POST succeeds but no tab is subscribed (disconnect during the HQ pass) | no (untestable without heavy harness) | none — transient emit has no ack; indicator silently missed | silent, accepted for a visual-only feature (documented in Vocabulary lock-ins) |
 | Two retranscriptions of the same message | planned | last event wins the overlay; popover always shows the ORIGINAL bubble text, not the previous overlay | clear |
 | Agent fabricates `message-id` in its own output | no (prompt-level) | prompt forbids; overlay only consults user entries | silent gap, low harm |
+| Untargeted fetch races: wrong tab/session/user answers first (TODAY'S defect, incl. cross-user audio leak) | planned (Track 1b doctests: session mismatch → none) | targeted requests answer by id only; untargeted requests session-scoped via env-injected session id | clear (miss → "recording not available", never wrong audio) |
+| Agent omits `--message` despite guidance | no (prompt-level) | session scoping still bounds the blast radius to the agent's own session | silent, bounded |
+| `CB_CHAT_SESSION` injection seam doesn't exist as assumed | verified at implementation (Track 1b) | fall back to shipping targeted-only; untargeted stays box-wide with the risk documented | flagged in report if hit |
 
-**Critical gap:** none — every degradation lands on today's behavior
-(stdout-only, no indicator).
+**Critical gap:** none — every degradation lands on today's behavior or
+better (targeted/scoped misses answer "not available" rather than wrong
+audio).
 
 ## Agent-flow / user-flow edge cases
 
@@ -358,14 +418,18 @@ proves to need enforcement (agents keep double-posting corrections), add a
 
 1. **Track 1** — identity thread-through (attribute, multipart fields,
    headers, pending shape) + doctests.
-2. **Track 2** — events + report route + CLI call sites + doctests.
+2. **Track 1b** — targeted + session-scoped fetch (request fields, keyed
+   tab lookup, CLI flags, env injection) + doctests. Depends on 1.
+3. **Track 2** — events + report route + CLI call sites + doctests.
    Depends on 1.
-3. **Track 3** — frontend handlers, overlay store, badges/popovers +
+4. **Track 3** — frontend handlers, overlay store, badges/popovers +
    doctests + `bin/browse` check. Depends on 2 for payload shapes.
-4. **Track 4** — prompt sentences. Independent.
-5. Manual-testing note on the issue (real dictation → agent retranscribe →
+5. **Track 4** — prompt guidance (targeting + don't-repaste). Depends on
+   1b for the `--message` flag existing.
+6. Manual-testing note on the issue (real dictation → agent retranscribe →
    swapped text + badge; ask-about-audio → badge; reload → reverts by
-   design).
+   design; two-tab/two-session wrong-recording scenario now answers "not
+   available" or the right one).
 
 Tracks are serialized (one subagent at a time — same-subproject typecheck
 collisions).
