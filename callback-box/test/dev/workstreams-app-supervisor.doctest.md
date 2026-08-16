@@ -18,8 +18,10 @@ import {
   writeDeny,
 } from "../../../bin/router.js";
 import {
+  EXHIBITS_DEFAULT_PORT,
   createWorkstreamsAppSupervisor,
   fingerprintWorkstreamsApp,
+  renderExhibitsFallback,
   shouldRestartWorkstreamsBackend,
   type WorkstreamsAppChild,
   type WorkstreamsAppEffects,
@@ -67,6 +69,8 @@ function makeEffects() {
   const timers: FakeTimerRecord[] = [];
   const spawnOptions: WorkstreamsAppSpawnOptions[] = [];
   const stopped: number[][] = [];
+  const exhibitsEvents: string[] = [];
+  let exhibitsRender: (() => string) | null = null;
 
   function timer(ms: number, callback: () => void, repeat: boolean): FakeTimerRecord {
     const record: FakeTimerRecord = {
@@ -105,6 +109,17 @@ function makeEffects() {
     },
     waitUntilReady: async () => ({ status: "ready", activeJobs, buildId: lastBuildId }),
     readHealth: async () => ({ status: "ready", activeJobs, buildId: lastBuildId }),
+    exhibitsToken: async () => "exhibits-token-abcdefghijklmnop",
+    holdExhibitsPort: async (options) => {
+      exhibitsEvents.push(`hold:${String(options.port)}`);
+      exhibitsRender = options.render;
+      return {
+        release: async () => {
+          exhibitsEvents.push("release");
+          exhibitsRender = null;
+        },
+      };
+    },
     fingerprint: async () => fingerprint,
     watch: (_root, onChange) => {
       watchChange = onChange;
@@ -126,11 +141,19 @@ function makeEffects() {
     await new Promise((resolve) => setImmediate(resolve));
   }
 
+  async function settle(): Promise<void> {
+    await new Promise((resolve) => setImmediate(resolve));
+    await new Promise((resolve) => setImmediate(resolve));
+  }
+
   return {
     effects,
     children,
     spawnOptions,
     stopped,
+    exhibitsEvents,
+    exhibitsFallback: () => exhibitsRender?.() ?? null,
+    settle,
     setActiveJobs: (count: number) => { activeJobs = count; },
     setFingerprint: (value: string) => { fingerprint = value; },
     triggerWatch: (relativePath: string | null) => watchChange?.(relativePath),
@@ -329,4 +352,61 @@ assert.equal(shouldRestartWorkstreamsBackend("node_modules/.vite/deps/_metadata.
 assert.equal(shouldRestartWorkstreamsBackend(".tap/test-results/results.json"), false);
 assert.equal(shouldRestartWorkstreamsBackend(".cache/generated.json"), false);
 await fs.rm(root, { recursive: true, force: true });
+```
+
+## The exhibits port is never a connection refusal
+
+The exhibits surface is a second listener in the same process group, on its own
+origin, and the router does not proxy it — so the router's `/workstreams/*`
+fallback cannot help a direct exhibit URL. The supervisor holds the port itself
+whenever no child owns it, and hands it back before spawning the replacement.
+The child receives the port and the persisted token; Vite never learns the
+token.
+
+```ts
+const exhibits = makeEffects();
+const exhibitsSupervisor = createWorkstreamsAppSupervisor(exhibits.effects, {
+  appRoot: "/tmp/fake-workstreams-app",
+  logPath: "/tmp/fake-workstreams-app.log",
+  log: () => {},
+  quietMs: 10,
+  activeJobPollMs: 20,
+  reconcileMs: 30,
+});
+await exhibitsSupervisor.start();
+
+assert.deepEqual(exhibits.exhibitsEvents, [`hold:${String(EXHIBITS_DEFAULT_PORT)}`, "release"]);
+assert.equal(exhibits.exhibitsFallback(), null);
+assert.equal(exhibits.spawnOptions[0]?.exhibitsPort, EXHIBITS_DEFAULT_PORT);
+assert.equal(exhibits.spawnOptions[0]?.exhibitsToken, "exhibits-token-abcdefghijklmnop");
+```
+
+A failed child puts the fallback back on the port, and the page reports the
+state, the failure, and the log to read — without depending on the app package
+that just failed to start.
+
+```ts continue
+exhibits.children.at(-1)!.fire({ code: 9, signal: null });
+await exhibits.settle();
+assert.deepEqual(exhibits.exhibitsEvents.slice(2), [`hold:${String(EXHIBITS_DEFAULT_PORT)}`]);
+
+const page = exhibits.exhibitsFallback() ?? "";
+assert.match(page, /Exhibits unavailable/);
+assert.match(page, /frontend exited unexpectedly \(code 9\)/);
+assert.match(page, /fake-workstreams-app\.log/);
+assert.match(page, /files in the store and are unaffected/);
+```
+
+A retry releases the port to the replacement child before it is spawned, so the
+new listener can bind it.
+
+```ts continue
+await exhibitsSupervisor.retry();
+assert.equal(exhibitsSupervisor.state().phase, "ready");
+// The fallback is already bound from the failure, so the retry only releases.
+assert.deepEqual(exhibits.exhibitsEvents.slice(3), ["release"]);
+assert.equal(exhibits.exhibitsFallback(), null);
+
+await exhibitsSupervisor.shutdown();
+assert.equal(exhibits.exhibitsFallback(), null);
 ```

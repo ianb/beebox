@@ -18,6 +18,13 @@ import { createPidStore, type PidStore } from "./router-pidfile.js";
 export const WORKSTREAMS_APP_CAPABILITY_HEADER = "x-cb-workstreams-capability";
 export const WORKSTREAMS_APP_BASE_PATH = "/workstreams";
 
+// The exhibits surface is a SECOND listener in the same supervised process
+// group, on its own origin (docs/plans/workstream-exhibits.md, Track B). The
+// router never proxies it: exhibit URLs are direct, which is exactly why the
+// supervisor holds the port itself while the child is down — the router's
+// /workstreams/* fallback cannot help a direct-origin URL.
+export const EXHIBITS_DEFAULT_PORT = 3230;
+
 export type WorkstreamsAppPhase = "starting" | "ready" | "restarting" | "failed" | "stopped";
 
 export type WorkstreamsAppState =
@@ -65,9 +72,16 @@ export interface WorkstreamsAppSpawnOptions {
   appRoot: string;
   backendPort: number;
   frontendPort: number;
+  exhibitsPort: number;
+  exhibitsToken: string;
   capability: string;
   buildId: string;
   logPath: string;
+}
+
+/** The supervisor's claim on the exhibits port while no child owns it. */
+export interface ExhibitsPortHold {
+  release(): Promise<void>;
 }
 
 export interface WorkstreamsAppGenerationRecord {
@@ -98,6 +112,9 @@ export interface WorkstreamsAppEffects {
   watch(appRoot: string, onChange: (relativePath: string | null) => void, onError: (error: Error) => void): WorkstreamsAppWatch;
   setTimer(ms: number, callback: () => void): WorkstreamsAppTimer;
   setInterval(ms: number, callback: () => void): WorkstreamsAppTimer;
+  /** Mint-once, persist: the exhibits token survives app restarts. */
+  exhibitsToken(): Promise<string>;
+  holdExhibitsPort(options: { port: number; render: () => string }): Promise<ExhibitsPortHold>;
   recordGeneration(record: WorkstreamsAppGenerationRecord): Promise<void>;
   removeGeneration(record?: WorkstreamsAppGenerationRecord): Promise<void>;
 }
@@ -106,6 +123,7 @@ export interface WorkstreamsAppSupervisorConfig {
   appRoot: string;
   logPath: string;
   log: (message: string) => void;
+  exhibitsPort?: number;
   startupTimeoutMs?: number;
   quietMs?: number;
   reconcileMs?: number;
@@ -174,6 +192,7 @@ export function createWorkstreamsAppSupervisor(
   const reconcileMs = config.reconcileMs ?? DEFAULT_RECONCILE_MS;
   const activeJobPollMs = config.activeJobPollMs ?? DEFAULT_ACTIVE_JOB_POLL_MS;
   const killGraceMs = config.killGraceMs ?? DEFAULT_KILL_GRACE_MS;
+  const exhibitsPort = config.exhibitsPort ?? EXHIBITS_DEFAULT_PORT;
 
   let currentState: WorkstreamsAppState = { phase: "stopped", changedAt: effects.now() };
   let current: Generation | null = null;
@@ -188,10 +207,50 @@ export function createWorkstreamsAppSupervisor(
   let watcher: WorkstreamsAppWatch | null = null;
   let lastFingerprint: string | null = null;
   let shuttingDown = false;
+  let exhibitsHold: ExhibitsPortHold | null = null;
+  let exhibitsToken: string | null = null;
+  // Acquire and release are serialized: a restart releases the hold to the new
+  // child while the state change that took it may still be settling.
+  let exhibitsHoldWork: Promise<void> = Promise.resolve();
+
+  function acquireExhibitsHold(): Promise<void> {
+    exhibitsHoldWork = exhibitsHoldWork.then(async () => {
+      if (exhibitsHold !== null || shuttingDown) return;
+      try {
+        exhibitsHold = await effects.holdExhibitsPort({
+          port: exhibitsPort,
+          render: () => renderExhibitsFallback(currentState, config.logPath),
+        });
+      } catch (error) {
+        // The child may still own the port (a stop that has not landed yet).
+        config.log(`[workstreams-app] exhibits fallback could not bind ${String(exhibitsPort)}: ${errorMessage(error)}`);
+      }
+    });
+    return exhibitsHoldWork;
+  }
+
+  function releaseExhibitsHold(): Promise<void> {
+    exhibitsHoldWork = exhibitsHoldWork.then(async () => {
+      const hold = exhibitsHold;
+      exhibitsHold = null;
+      if (hold === null) return;
+      try {
+        await hold.release();
+      } catch (error) {
+        config.log(`[workstreams-app] exhibits fallback release failed: ${errorMessage(error)}`);
+      }
+    });
+    return exhibitsHoldWork;
+  }
 
   function setState(state: WorkstreamsAppState): void {
     currentState = state;
     config.log(`[workstreams-app] ${state.phase}`);
+    // A direct exhibit URL must not connection-refuse into silence while the
+    // child is down; spawnGeneration releases the port back to the replacement.
+    if (state.phase === "failed" || state.phase === "starting" || state.phase === "restarting") {
+      void acquireExhibitsHold();
+    }
   }
 
   function clearTimer(timer: WorkstreamsAppTimer | null): null {
@@ -233,14 +292,19 @@ export function createWorkstreamsAppSupervisor(
     const [backendPort, frontendPort] = await Promise.all([effects.getPort(), effects.getPort()]);
     const capability = effects.randomCapability();
     const buildId = effects.randomBuildId();
+    exhibitsToken ??= await effects.exhibitsToken();
     const spawnOptions: WorkstreamsAppSpawnOptions = {
       appRoot: config.appRoot,
       backendPort,
       frontendPort,
+      exhibitsPort,
+      exhibitsToken,
       capability,
       buildId,
       logPath: config.logPath,
     };
+    // The child binds the exhibits port, so the fallback must let go first.
+    await releaseExhibitsHold();
     const backend = effects.spawnBackend(spawnOptions);
     const frontend = effects.spawnFrontend(spawnOptions);
     const generation: Generation = {
@@ -426,6 +490,7 @@ export function createWorkstreamsAppSupervisor(
     const generation = current;
     current = null;
     if (generation) await stopGeneration(generation);
+    await releaseExhibitsHold();
     setState({ phase: "stopped", changedAt: effects.now() });
   }
 
@@ -479,6 +544,78 @@ export async function fingerprintWorkstreamsApp(appRoot: string): Promise<string
     hash.update("\0");
   }
   return hash.digest("hex");
+}
+
+function escapeExhibitsHtml(value: string): string {
+  return value.replace(/&/gu, "&amp;").replace(/</gu, "&lt;").replace(/>/gu, "&gt;");
+}
+
+/**
+ * The buildless page the supervisor serves on the exhibits port while no child
+ * owns it. It depends on nothing in the app package, because the reason it is
+ * showing is usually that the package would not start.
+ */
+export function renderExhibitsFallback(state: WorkstreamsAppState, logPath: string): string {
+  const detail = state.phase === "failed"
+    ? `<div class="err">${escapeExhibitsHtml(state.message)}</div>`
+    : `<p>The exhibits surface is currently <strong>${escapeExhibitsHtml(state.phase)}</strong>.</p>`;
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Exhibits unavailable</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; max-width: 52rem; margin: 3rem auto; padding: 0 1rem; color: #222; }
+  h1 { font-size: 1.35rem; }
+  .err { margin: 1rem 0; padding: 0.8rem 1rem; background: #fff5f5; border-left: 4px solid #b43; white-space: pre-wrap; }
+  code { background: #f3f3f3; padding: 0.1rem 0.3rem; }
+</style>
+</head>
+<body>
+<h1>Exhibits unavailable</h1>
+${detail}
+<p>Your exhibits are files in the store and are unaffected; only the app serving them is down.</p>
+<p>App output is in <code>${escapeExhibitsHtml(logPath)}</code>. Reload once it reports a ready generation.</p>
+</body>
+</html>`;
+}
+
+async function readOrCreateExhibitsToken(stateDir: string): Promise<string> {
+  const file = path.join(stateDir, "exhibits-token");
+  try {
+    const existing = (await fs.readFile(file, "utf8")).trim();
+    if (existing.length >= 16) return existing;
+  } catch (error) {
+    if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
+  }
+  const token = randomBytes(32).toString("base64url");
+  await fs.mkdir(stateDir, { recursive: true });
+  await fs.writeFile(file, `${token}\n`, { mode: 0o600 });
+  // writeFile's mode does not apply to a file that already existed.
+  await fs.chmod(file, 0o600);
+  return token;
+}
+
+function holdExhibitsPort(options: { port: number; render: () => string }): Promise<ExhibitsPortHold> {
+  return new Promise((resolve, reject) => {
+    const server = http.createServer((_req, res) => {
+      res.writeHead(503, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
+      res.end(options.render());
+    });
+    server.once("error", reject);
+    server.listen(options.port, "127.0.0.1", () => {
+      server.removeListener("error", reject);
+      // A later listen error would otherwise be an unhandled 'error' event.
+      server.on("error", () => {});
+      resolve({
+        release: () => new Promise<void>((released) => {
+          server.closeAllConnections();
+          server.close(() => released());
+        }),
+      });
+    });
+  });
 }
 
 function requestHealth(port: number, capability: string): Promise<WorkstreamsAppHealth> {
@@ -599,6 +736,10 @@ function spawnAppChild(
   if (command === "dev:server") {
     env.WORKSTREAMS_APP_ROUTER_CAPABILITY = options.capability;
     env.WORKSTREAMS_APP_BUILD_ID = options.buildId;
+    // The exhibits listener lives in the backend process, on its own origin
+    // with its own credential. Vite never learns either.
+    env.EXHIBITS_PORT = String(options.exhibitsPort);
+    env.EXHIBITS_TOKEN = options.exhibitsToken;
   } else {
     // Vite is an asset/HMR target, not a second authenticated proxy. In the
     // router-owned runtime, API requests go directly to Fastify. Withholding
@@ -606,6 +747,7 @@ function spawnAppChild(
     // standalone-dev API proxy to bypass the outer owner/CSRF gate.
     delete env.WORKSTREAMS_APP_ROUTER_CAPABILITY;
     delete env.WORKSTREAMS_APP_BUILD_ID;
+    delete env.EXHIBITS_TOKEN;
   }
   const child = execa("pnpm", ["--dir", options.appRoot, command], {
     cwd: options.appRoot,
@@ -672,6 +814,8 @@ export function createRealWorkstreamsAppEffects(stateDir: string): WorkstreamsAp
     waitUntilReady,
     readHealth: requestHealth,
     fingerprint: fingerprintWorkstreamsApp,
+    exhibitsToken: () => readOrCreateExhibitsToken(stateDir),
+    holdExhibitsPort,
     watch: createRealWatcher,
     setTimer: (ms, callback) => realTimer(ms, callback, false),
     setInterval: (ms, callback) => realTimer(ms, callback, true),
