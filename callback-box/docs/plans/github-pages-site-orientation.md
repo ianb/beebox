@@ -1,4 +1,10 @@
-# GitHub Pages site — status & re-entry map
+---
+title: "GitHub Pages site — orientation & re-entry map"
+status: partial
+workstream: github-pages-site
+issues: []
+---
+# GitHub Pages site — orientation & re-entry map
 
 **Read this first when picking the work back up.** A snapshot of where the
 effort is and the open fork, so a fresh session (and the boxholder) can
