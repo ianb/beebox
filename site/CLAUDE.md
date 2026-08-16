@@ -71,7 +71,7 @@ writes the input manifest last (so a partial build never masks staleness).
 - `story/ingest.ts` — story-extraction ingest CLI (`pnpm --dir site ingest`,
   `--help`): validates raw extraction JSON (strict zod), verifies every span
   appears verbatim in its source (fabrication = hard error), and writes the
-  review app's run files into `dev/story-eval/runs/<run>/` with `docText`
+  review app's run files into `dev/apps/story-eval/runs/<run>/` with `docText`
   embedded. See the story-extraction subplan, Track B.
 - `story/coverage.ts` — coverage-ledger CLI (`pnpm --dir site coverage`,
   `--check`): scans the (gitignored) run dirs and regenerates the tracked

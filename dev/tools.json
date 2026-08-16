@@ -1,11 +1,4 @@
 {
-  "tools": [
-    {
-      "emoji": "🔎",
-      "title": "Story-eval review",
-      "href": "dev/story-eval/index.html",
-      "desc": "Triage extracted story nuggets: keep/drop, chips, notes. Blind A/B/C prompt-variant glosses per source span."
-    }
-  ],
+  "tools": [],
   "scripted": ["story-eval"]
 }

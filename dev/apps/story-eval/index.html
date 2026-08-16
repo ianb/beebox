@@ -268,13 +268,13 @@
 "use strict";
 /*
  * Story-eval review app (Track C of the github-pages-site story-extraction subplan).
- * Static, no build step, no external requests. Served straight from disk by the dev
- * router at /<worktree>/dev/story-eval/ — so all data fetches use RELATIVE paths and
- * work under any router prefix.
+ * Static, no build step, no external requests. A committed app on the exhibits
+ * origin (dev/apps/story-eval/, served at /apps/story-eval/) — run-file fetches stay
+ * RELATIVE and are served from this directory; only the autosave PUT is absolute.
  *
  * LIMITATION (v1, deliberate): this app does NOT render whole source documents with
- * span-anchored highlighting (the subplan's "span-anchored doc view"). The dev route
- * serves only the dev/ directory, so the repo-relative source docs named in each run
+ * span-anchored highlighting (the subplan's "span-anchored doc view"). The origin
+ * serves only this app directory, so the repo-relative source docs named in each run
  * JSON are not fetchable here, and no markdown twin lives beside them. Instead each
  * nugget's verbatim `span` IS shown as the source excerpt (a quote block). A proper
  * doc view needs a data change: the ingest step embedding the source doc text into the
@@ -662,14 +662,13 @@ function saveVerdicts() {
   scheduleAutosave();
 }
 
-// ---------- router-backed autosave (best-effort, never blocking) ----------
-// On every change we (debounced) POST the same JSON the export produces to the
-// router's "save" endpoint, which atomically writes it to a working file on
-// disk. This is a durability BACKUP: localStorage stays the live store and manual
-// export (e) is unchanged. The endpoint only exists once this router change has
-// reached main and the shared router restarted; before then — and on any old
-// router — the POST fails and we show a quiet "unavailable" hint. Failures are
-// never noisy and never block triage.
+// ---------- exhibit-backed autosave (best-effort, never blocking) ----------
+// On every change we (debounced) PUT the same JSON the export produces to this
+// app's exhibit document `verdicts`, which the exhibits API writes atomically to
+// <store>/apps/story-eval/data/verdicts.json. This is a durability BACKUP:
+// localStorage stays the live store and manual export (e) is unchanged. Outside
+// the exhibits origin (e.g. opening this file directly) the PUT fails and we show
+// a quiet "unavailable" hint. Failures are never noisy and never block triage.
 const AUTOSAVE_DEBOUNCE_MS = 2000;
 let autosaveTimer = null;
 let autosaveInFlight = false;
@@ -687,9 +686,10 @@ async function runAutosave() {
   }
   autosaveInFlight = true;
   try {
-    // Relative URL: resolves to /<prefix>/dev/story-eval/save under any router prefix.
-    const res = await fetch("save", {
-      method: "POST",
+    // Absolute: the page lives at /apps/story-eval/ but the API is rooted at
+    // /api/, so a relative path would resolve inside the page directory.
+    const res = await fetch("/api/apps/story-eval/data/verdicts", {
+      method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(buildExport()),
     });

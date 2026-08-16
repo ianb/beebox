@@ -1,6 +1,6 @@
 // Story-extraction ingest tool (run via tsx: `pnpm --dir site ingest ...`, see
 // --help). Turns the raw JSON an extraction subagent emits ({"nuggets":[...]})
-// into the run files the story-eval review app reads (dev/story-eval/runs/<run>/).
+// into the run files the story-eval review app reads (dev/apps/story-eval/runs/<run>/).
 // It is the honesty boundary of the extraction loop: every nugget is validated
 // against a strict zod schema and every span is verified to appear VERBATIM in
 // its source document. A fabricated span (0 occurrences) is a hard error naming
@@ -15,7 +15,7 @@ import { z } from "zod";
 
 // site/story/ingest.ts → repo root is two levels up from site/.
 const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..");
-const DEFAULT_RUNS_DIR = path.join(REPO_ROOT, "dev", "story-eval", "runs");
+const DEFAULT_RUNS_DIR = path.join(REPO_ROOT, "dev", "apps", "story-eval", "runs");
 
 /** A hard, fail-closed ingest failure: bad input, a fabricated span, etc. */
 export class IngestError extends Error {
@@ -168,7 +168,7 @@ Manifest:
   --doc <path>    Source doc, repo-root-relative — sticks like --variant.
   --in <raw>      A raw extraction file; flushes one item (variant+doc+input).
   --label <slug>  Output filename slug for the NEXT --in (default: doc basename).
-  --out <dir>     Output directory (default: dev/story-eval/runs/<run-id>).
+  --out <dir>     Output directory (default: dev/apps/story-eval/runs/<run-id>).
   --manifest <f>  JSON {run, out?, inputs:[{variant,doc,input,label?}]}; input
                   and out paths resolve against the manifest's directory.
   --help          Show this help.

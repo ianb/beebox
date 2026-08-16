@@ -68,8 +68,7 @@ dev/prompts/data.json
 # committed (promoted nuggets in site/, rubric/prompt revisions, distilled
 # learnings folded into the subplan). The app + prompts + ingest tool stay
 # tracked as real code.
-dev/story-eval/runs/
-dev/story-eval/verdicts/
+dev/apps/story-eval/runs/
 
 # OpenGrep SARIF/JSON scan output
 .opengrep-out/
