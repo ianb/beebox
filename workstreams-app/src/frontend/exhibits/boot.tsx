@@ -45,5 +45,19 @@ const boot = window.__EXHIBIT__;
 const container = document.getElementById("root");
 if (!boot || !container) throw new MissingExhibitBootError();
 
-const page = await loadPage(boot);
-createRoot(container).render(<ExhibitContainer boot={boot}>{page}</ExhibitContainer>);
+/** An import-time failure lands before the boundary, so it is caught here. */
+async function page(ready: ExhibitBoot): Promise<ReactNode> {
+  try {
+    return await loadPage(ready);
+  } catch (error) {
+    return (
+      <div className="flex flex-col gap-2 rounded-lg border border-red-300 bg-red-50 p-4" role="alert">
+        <h2 className="m-0 text-base font-bold text-red-900">This page failed to load</h2>
+        <pre className="m-0 overflow-auto whitespace-pre-wrap text-sm text-red-900">
+          {error instanceof Error ? error.message : String(error)}
+        </pre>
+      </div>
+    );
+  }
+}
+createRoot(container).render(<ExhibitContainer boot={boot}>{await page(boot)}</ExhibitContainer>);

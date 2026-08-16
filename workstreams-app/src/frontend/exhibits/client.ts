@@ -1,9 +1,9 @@
 // The typed client an exhibit page uses to persist state.
 //
-// TRACK C NOTE: the server side of these URLs is not built yet. Every call
-// here already speaks the Track C shapes, so pages written now keep working
-// when the routes land; until then a call resolves to a 404 and throws
-// ExhibitApiError.
+// Every call goes to the exhibits origin's own API, scoped by this page's
+// exhibit: documents at data/<key>.json, appends to events.jsonl, raw bytes
+// under captures/. What a page writes is what a later agent session reads off
+// disk, so the shapes here are the contract on both sides.
 //
 // Honest limit: the type parameter is compile-time only. The server stores
 // schema-agnostic JSON, so pass a schema when a page needs a runtime guarantee:
@@ -12,10 +12,37 @@
 
 const BOOT_KEY = "__EXHIBIT__";
 
+export interface ExhibitApiFailure {
+  status: number;
+  url: string;
+  /** The API's own message, when it sent one. */
+  detail?: string | undefined;
+}
+
 export class ExhibitApiError extends Error {
-  constructor(public readonly status: number, url: string) {
-    super(`exhibit API ${url} failed with HTTP ${String(status)}`);
+  readonly status: number;
+  readonly detail: string | undefined;
+
+  constructor(failure: ExhibitApiFailure) {
+    const suffix = failure.detail === undefined || failure.detail === "" ? "" : `: ${failure.detail}`;
+    super(`exhibit API ${failure.url} failed with HTTP ${String(failure.status)}${suffix}`);
     this.name = "ExhibitApiError";
+    this.status = failure.status;
+    this.detail = failure.detail;
+  }
+}
+
+/** The API refuses in JSON with a readable message; surface it, never a bare code. */
+async function refusal(response: Response, url: string): Promise<ExhibitApiError> {
+  try {
+    const body: unknown = await response.json();
+    const detail =
+      typeof body === "object" && body !== null && "error" in body && typeof body.error === "string"
+        ? body.error
+        : undefined;
+    return new ExhibitApiError({ status: response.status, url, detail });
+  } catch (_error) {
+    return new ExhibitApiError({ status: response.status, url });
   }
 }
 
@@ -61,7 +88,7 @@ export class Storage<T> {
     const url = apiUrl(`data/${encodeURIComponent(this.#key)}`);
     const response = await fetch(url);
     if (response.status === 404) return null;
-    if (!response.ok) throw new ExhibitApiError(response.status, url);
+    if (!response.ok) throw await refusal(response, url);
     const value: unknown = await response.json();
     if (this.#schema) return this.#schema.parse(value);
     // eslint-disable-next-line no-restricted-syntax -- the documented compile-time-only guarantee: the server stores schema-agnostic JSON.
@@ -69,13 +96,16 @@ export class Storage<T> {
   }
 
   async save(value: T): Promise<void> {
+    // Validate before the write when a schema was supplied: a bad document is
+    // the page's bug, and it should not reach disk for the next agent to read.
+    const checked = this.#schema ? this.#schema.parse(value) : value;
     const url = apiUrl(`data/${encodeURIComponent(this.#key)}`);
     const response = await fetch(url, {
       method: "PUT",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(value),
+      body: JSON.stringify(checked),
     });
-    if (!response.ok) throw new ExhibitApiError(response.status, url);
+    if (!response.ok) throw await refusal(response, url);
   }
 }
 
@@ -94,7 +124,7 @@ export class EventLog<T> {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ log: this.#log, data: event }),
     });
-    if (!response.ok) throw new ExhibitApiError(response.status, url);
+    if (!response.ok) throw await refusal(response, url);
   }
 }
 
@@ -102,5 +132,5 @@ export class EventLog<T> {
 export async function postCapture(name: string, blob: Blob): Promise<void> {
   const url = apiUrl(`captures/${encodeURIComponent(name)}`);
   const response = await fetch(url, { method: "POST", body: blob });
-  if (!response.ok) throw new ExhibitApiError(response.status, url);
+  if (!response.ok) throw await refusal(response, url);
 }

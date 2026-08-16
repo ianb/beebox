@@ -49,6 +49,23 @@ export type ExhibitFigure = z.infer<typeof figureSchema>;
 export type ExhibitManifest = z.infer<typeof appManifestSchema>;
 
 /**
+ * The developer's answer, written by the renderer as the document
+ * `data/disposition.json`. Dispositions are not a special primitive: agents and
+ * the ask queue read this file from disk like any other exhibit data.
+ */
+export const DISPOSITION_KEY = "disposition";
+
+export const dispositionSchema = z.object({
+  askType: z.enum(askTypes),
+  /** The chosen option (decide) or verdict (confirm); absent for react/fyi. */
+  choice: z.string().min(1).optional(),
+  comment: z.string().min(1).optional(),
+  decidedAt: z.string().min(1),
+});
+
+export type ExhibitDisposition = z.infer<typeof dispositionSchema>;
+
+/**
  * One safe path segment. Every route parameter that becomes a path component is
  * validated with this before it is joined to a root: no separators, no
  * traversal, no dotfiles (the store marker and any future metadata stay

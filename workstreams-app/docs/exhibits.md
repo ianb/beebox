@@ -60,8 +60,9 @@ feedback in chat can address them precisely.
 One mechanism, three levels of effort:
 
 1. **No `index.tsx` / `index.html`** — the default renderer: the ask header,
-   `doc.md`, the manifest's figures as labeled images, and the disposition
-   control. Most exhibits want exactly this.
+   `doc.md`, the manifest's figures as labeled images, and a working
+   disposition control (it writes `data/disposition.json` and appends an
+   event). Most exhibits want exactly this.
 2. **`index.html`** — served as-is, scripts allowed. Sibling files (`data.json`,
    images) are served from the directory, so relative `fetch` works. Namespace
    your `localStorage` keys: the whole origin shares them.
@@ -92,12 +93,27 @@ The type parameter is **compile-time only** — the server stores schema-agnosti
 JSON. Pass a schema when a page needs a runtime guarantee:
 `new Storage("settings", { schema })`.
 
-> These routes land in **Track C**; until then a call resolves 404 and throws
-> `ExhibitApiError`. Pages written against this API keep working unchanged.
+Documents are replaced atomically, so a reader never sees half a file. Events
+are append-only and the server stamps each line with `at`; the server never
+reads the log back. Captures are written once — posting the same name again is a
+409, because a capture is a record of a moment rather than a mutable slot.
+
+Refusals are JSON with a message worth showing the developer, and the client
+raises them as `ExhibitApiError` (with `.status` and `.detail`). The limits:
+
+| | Cap | Names |
+|---|---|---|
+| documents, events | 1 MB | key: one segment, no extension (the server appends `.json`) |
+| captures | 25 MB | name: one segment ending in png, jpg, jpeg, gif, webp, svg, webm, mp4, mp3, wav, ogg, json, csv, txt, md, pdf |
+
+Nothing the origin would execute is capturable — `.html`, `.js`, `.ts`, `.tsx`
+are refused — and no path can leave the exhibit directory.
 
 Everything a page writes lands as files in the exhibit directory, which is the
 point: a later agent session reads `data/`, `events.jsonl`, and `captures/`
-straight from disk.
+straight from disk. The developer's answer is not special: the default renderer
+writes `data/disposition.json` as
+`{ askType, choice?, comment?, decidedAt }` and appends a `disposition` event.
 
 ## Committed apps
 
