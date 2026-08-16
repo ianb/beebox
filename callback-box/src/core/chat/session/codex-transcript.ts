@@ -42,7 +42,7 @@ export interface CodexThreadMetadata {
   updatedAt: Date;
 }
 
-/** Include SDK `codex exec` sessions; app-server defaults to interactive sources. */
+/** Include SDK `exec` sessions and the interactive sources used by older Callback Box chats. */
 export function codexHistoryListParams(cwds: string[], cursor: string | null): Record<string, unknown> {
   return {
     cursor,
@@ -50,7 +50,7 @@ export function codexHistoryListParams(cwds: string[], cursor: string | null): R
     sortKey: "updated_at",
     sortDirection: "desc",
     cwd: cwds,
-    sourceKinds: ["exec", "appServer"],
+    sourceKinds: ["cli", "vscode", "exec", "appServer"],
     useStateDbOnly: false,
   };
 }
