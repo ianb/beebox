@@ -26,7 +26,7 @@ const TS = "2026-07-09T00:00:00.000Z";
 // would reject a legitimate live row.
 const samples = {
   "file-change": { event: "add", path: "notes/a.md", timestamp: TS },
-  "chat-last-audio-request": { requestId: "req-1" },
+  "chat-last-audio-request": { requestId: "req-1", messageId: "msg-1" },
   "screenshot-request": { requestId: "req-1", session: "s1", expiresAt: TS },
   "card-created": { path: "Voice.voice-memo.card", template: "voice-memo", timestamp: TS, audioPath: "attach/a.webm" },
   "command-complete": { command: "wakeup", success: true, timestamp: TS },

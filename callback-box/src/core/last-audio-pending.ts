@@ -10,6 +10,17 @@
  * answered — the route maps this to "no client connected"). The generic
  * `fulfilled` status is renamed `audio` here so existing callers and the
  * doctest keep their `status === "audio"` / `result.fulfillment.audio` shape.
+ *
+ * **Echo-and-verify** (retranscription-in-chat plan, Track 1b — load-bearing):
+ * every request targets an exact `messageId` (there is no untargeted "latest"
+ * mode). A tab's answer must echo that id back on {@link LastAudioFulfillment};
+ * `fulfill()` checks it against the request's stored target and returns
+ * `"ignored"` — WITHOUT settling the request — when the echoed id is absent
+ * or mismatched. This is what stops a stale pre-1b tab (which still answers
+ * with whatever it last retained and no identity attached) from winning a
+ * targeted request with the wrong audio: an identity-less or mismatched
+ * answer can only ever satisfy `{none:true}` bookkeeping via `reportNone`,
+ * never deliver audio for a targeted request.
  */
 
 import {
@@ -36,18 +47,31 @@ export type LastAudioOutcome =
   | { status: "none" }
   | { status: "timeout" };
 
+/**
+ * The result of a fulfillment attempt: `"delivered"` settles the request;
+ * `"ignored"` means the echoed `messageId` was absent or didn't match the
+ * request's target (the request keeps waiting for a correct answer, or
+ * times out — see the echo-and-verify note above); `"unknown"` means the
+ * request id itself is unknown or already settled (same as today's 404).
+ */
+export type LastAudioFulfillOutcome = "delivered" | "ignored" | "unknown";
+
 export interface LastAudioPending {
   /**
-   * Park a new request; `outcome` resolves on answer or timeout. The id is
-   * generated internally and returned — never caller-supplied (see
-   * {@link createPendingBrowserRequests}).
+   * Park a new request targeting `messageId`; `outcome` resolves on a
+   * correctly-targeted answer or timeout. The id is generated internally and
+   * returned — never caller-supplied (see {@link createPendingBrowserRequests}).
    */
-  create(opts: { timeoutMs: number }): {
+  create(opts: { timeoutMs: number; messageId: string }): {
     requestId: string;
     outcome: Promise<LastAudioOutcome>;
   };
-  /** Deliver audio. False when the id is unknown or already settled. */
-  fulfill(requestId: string, fulfillment: LastAudioFulfillment): boolean;
+  /**
+   * Attempt to deliver audio. Settles the request only when
+   * `fulfillment.messageId` matches the request's target — see
+   * {@link LastAudioFulfillOutcome}.
+   */
+  fulfill(requestId: string, fulfillment: LastAudioFulfillment): LastAudioFulfillOutcome;
   /** A client answered "no audio cached". False when the id is unknown. */
   reportNone(requestId: string): boolean;
   /** Unsettled request count (observability + tests). */
@@ -82,13 +106,27 @@ export function createLastAudioPending(options?: CreateLastAudioPendingOptions):
   const inner = createPendingBrowserRequests<LastAudioFulfillment>(
     options?.graceMs === undefined ? undefined : { graceMs: options.graceMs }
   );
+  // The requested messageId per unsettled request — the target a fulfillment
+  // must echo. Cleaned up whenever the request settles (any status), via the
+  // outcome promise itself, so it never outlives the request it targets.
+  const targets = new Map<string, string>();
   return {
-    create({ timeoutMs }) {
+    create({ timeoutMs, messageId }) {
       const { requestId: id, outcome } = inner.create({ timeoutMs });
-      return { requestId: id, outcome: outcome.then(toLastAudioOutcome) };
+      targets.set(id, messageId);
+      return {
+        requestId: id,
+        outcome: outcome.then((result) => {
+          targets.delete(id);
+          return toLastAudioOutcome(result);
+        }),
+      };
     },
     fulfill(requestId, fulfillment) {
-      return inner.fulfill(requestId, fulfillment);
+      const target = targets.get(requestId);
+      if (target === undefined) return "unknown";
+      if (fulfillment.messageId !== target) return "ignored";
+      return inner.fulfill(requestId, fulfillment) ? "delivered" : "unknown";
     },
     reportNone(requestId) {
       return inner.reportNone(requestId);

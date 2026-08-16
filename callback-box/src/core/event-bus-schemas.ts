@@ -89,8 +89,14 @@ export const eventSchemas = {
     path: z.string(),
     timestamp: z.string(),
   }),
-  /** A browser tab was asked to re-upload its last audio blob. */
-  "chat-last-audio-request": z.object({ requestId: z.string() }),
+  /**
+   * A browser tab was asked to re-upload its last audio blob. `messageId` is
+   * the exact emission id the request targets (Track 1b — targeting is
+   * required; there is no untargeted "latest" mode) — the fulfilling tab must
+   * echo it back, and the server ignores any answer that omits or mismatches
+   * it.
+   */
+  "chat-last-audio-request": z.object({ requestId: z.string(), messageId: z.string().min(1) }),
   /**
    * The chat agent asked the browser tab holding a specific chat session to
    * capture a screenshot of what the user currently sees. Emitted transiently

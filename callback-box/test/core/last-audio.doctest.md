@@ -7,29 +7,33 @@ CLI long-poll to the browser tab holding the recording.
 ```ts setup
 import { createLastAudioPending } from "../../src/core/last-audio-pending.js";
 import { buildAudioQuestionPrompt } from "../../src/core/audio-question.js";
-import { audioMimeType } from "../../src/cli/commands/chat-audio.js";
+import { audioMimeType, missingMessageIdError } from "../../src/cli/commands/chat-audio.js";
 import { makeTestServer } from "../helpers/doctest-server.js";
 ```
 
 ## Registry: an audio answer resolves the request
 
+`create` targets an exact `messageId`; a fulfillment must echo the same id
+back to be delivered.
+
 ```ts
 const reg = createLastAudioPending();
-const { requestId, outcome } = reg.create({ timeoutMs: 5000 });
-reg.fulfill(requestId, {
+const { requestId, outcome } = reg.create({ timeoutMs: 5000, messageId: "msg-abc" });
+print(`fulfill: ${reg.fulfill(requestId, {
   audio: Buffer.from("RIFFfake"),
   contentType: "audio/wav",
   recordedAt: "2026-06-11T12:00:00Z",
   text: "hello there",
   messageId: "msg-abc",
   sessionId: "sess-1",
-});
+})}`);
 const result = await outcome;
 print(`status: ${result.status}`);
 print(`audio: ${result.fulfillment.audio.toString()}`);
 print(`recordedAt: ${result.fulfillment.recordedAt}`);
 print(`pending left: ${reg.size()}`);
 =>
+fulfill: delivered
 status: audio
 audio: RIFFfake
 recordedAt: 2026-06-11T12:00:00Z
@@ -40,7 +44,7 @@ pending left: 0
 
 ```ts
 const reg = createLastAudioPending();
-const { outcome } = reg.create({ timeoutMs: 20 });
+const { outcome } = reg.create({ timeoutMs: 20, messageId: "msg-x" });
 const result = await outcome;
 result.status
 => timeout
@@ -50,11 +54,12 @@ result.status
 
 A tab reporting "no audio cached" doesn't settle immediately — another tab
 might still hold the recording — but once the grace window passes with no
-audio, the request resolves `none`.
+audio, the request resolves `none`. `{none:true}` answers aren't targeted
+(a tab can only say "I don't have it"), so this is unaffected by echo-and-verify.
 
 ```ts
 const reg = createLastAudioPending({ graceMs: 20 });
-const { requestId, outcome } = reg.create({ timeoutMs: 5000 });
+const { requestId, outcome } = reg.create({ timeoutMs: 5000, messageId: "msg-y" });
 print(`reported: ${reg.reportNone(requestId)}`);
 const result = await outcome;
 print(`status: ${result.status}`);
@@ -67,12 +72,38 @@ status: none
 
 ```ts
 const reg = createLastAudioPending({ graceMs: 1000 });
-const { requestId, outcome } = reg.create({ timeoutMs: 5000 });
+const { requestId, outcome } = reg.create({ timeoutMs: 5000, messageId: "msg-z" });
 reg.reportNone(requestId);
-reg.fulfill(requestId, { audio: Buffer.from("x"), contentType: "audio/wav", recordedAt: null, text: null, messageId: null, sessionId: null });
+reg.fulfill(requestId, { audio: Buffer.from("x"), contentType: "audio/wav", recordedAt: null, text: null, messageId: "msg-z", sessionId: null });
 const result = await outcome;
 result.status
 => audio
+```
+
+## Registry: a mismatched or missing echoed messageId is ignored, not delivered
+
+Echo-and-verify (Track 1b, load-bearing): a fulfillment whose `messageId`
+doesn't match the request's target — including a stale-tab answer that omits
+`messageId` entirely — is ignored outright. The request stays pending; a
+later, correctly-targeted answer still wins it.
+
+```ts
+const reg = createLastAudioPending();
+const { requestId, outcome } = reg.create({ timeoutMs: 5000, messageId: "msg-target" });
+print(`mismatched: ${reg.fulfill(requestId, { audio: Buffer.from("wrong"), contentType: "audio/wav", recordedAt: null, text: null, messageId: "msg-other", sessionId: null })}`);
+print(`no-id (stale tab): ${reg.fulfill(requestId, { audio: Buffer.from("stale"), contentType: "audio/wav", recordedAt: null, text: null, messageId: null, sessionId: null })}`);
+print(`still pending: ${reg.size()}`);
+print(`correct: ${reg.fulfill(requestId, { audio: Buffer.from("right"), contentType: "audio/wav", recordedAt: null, text: null, messageId: "msg-target", sessionId: null })}`);
+const result = await outcome;
+print(`status: ${result.status}`);
+print(`audio: ${result.fulfillment.audio.toString()}`);
+=>
+mismatched: ignored
+no-id (stale tab): ignored
+still pending: 1
+correct: delivered
+status: audio
+audio: right
 ```
 
 ## Registry: unknown and already-settled ids are refused
@@ -81,16 +112,16 @@ result.status
 const reg = createLastAudioPending();
 print(`unknown fulfill: ${reg.fulfill("nope", { audio: Buffer.from("x"), contentType: "audio/wav", recordedAt: null, text: null, messageId: null, sessionId: null })}`);
 print(`unknown none: ${reg.reportNone("nope")}`);
-const { requestId, outcome } = reg.create({ timeoutMs: 5000 });
-print(`first: ${reg.fulfill(requestId, { audio: Buffer.from("a"), contentType: "audio/wav", recordedAt: null, text: null, messageId: null, sessionId: null })}`);
-print(`second: ${reg.fulfill(requestId, { audio: Buffer.from("b"), contentType: "audio/wav", recordedAt: null, text: null, messageId: null, sessionId: null })}`);
+const { requestId, outcome } = reg.create({ timeoutMs: 5000, messageId: "msg-a" });
+print(`first: ${reg.fulfill(requestId, { audio: Buffer.from("a"), contentType: "audio/wav", recordedAt: null, text: null, messageId: "msg-a", sessionId: null })}`);
+print(`second: ${reg.fulfill(requestId, { audio: Buffer.from("b"), contentType: "audio/wav", recordedAt: null, text: null, messageId: "msg-a", sessionId: null })}`);
 const result = await outcome;
 print(`winner: ${result.fulfillment.audio.toString()}`);
 =>
-unknown fulfill: false
+unknown fulfill: unknown
 unknown none: false
-first: true
-second: false
+first: delivered
+second: unknown
 winner: a
 ```
 
@@ -143,13 +174,33 @@ const ctx = await makeTestServer();
 const res = await ctx.request({
   method: "POST",
   url: "/api/chat/last-audio/request",
-  payload: { timeoutMs: 1 },
+  payload: { timeoutMs: 1, messageId: "msg-nobody" },
 });
 print(`status: ${res.statusCode}`);
 print(`error: ${res.body.error}`);
 =>
 status: 504
 error: no-client
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+## Route: a request without messageId is rejected before any wait
+
+Track 1b removed the untargeted "latest" mode entirely — every request must
+name the exact message it wants.
+
+```ts
+const ctx = await makeTestServer();
+const res = await ctx.request({
+  method: "POST",
+  url: "/api/chat/last-audio/request",
+  payload: { timeoutMs: 1 },
+});
+res.statusCode
+=> 400
 ```
 
 ```ts cleanup
@@ -174,7 +225,7 @@ const gotId = new Promise((resolve) => {
 const longPoll = ctx.rawRequest({
   method: "POST",
   url: "/api/chat/last-audio/request",
-  payload: { timeoutMs: 5000 },
+  payload: { timeoutMs: 5000, messageId: "msg-plants-1" },
 });
 // The id is emitted synchronously as the request parks.
 const requestId = await gotId;
@@ -234,11 +285,12 @@ audio: RIFFfakewavbytes
 await ctx.cleanup();
 ```
 
-## Route: an answer without message/session identity omits those headers
+## Route: a stale-tab answer with no echoed messageId is ignored, then a correct answer wins
 
-An old tab (or one with no session context yet) answers with just
-`recordedAt`/`text`, same as today — `X-Message-Id`/`X-Session-Id` are
-simply absent rather than sent empty.
+Echo-and-verify (Track 1b, load-bearing): a stale pre-1b tab still answers
+with whatever it last retained and no `messageId` field at all. That answer
+must not win a targeted request — it's ignored (200, `ok:false`), the
+long-poll keeps waiting, and a subsequent correctly-targeted answer delivers.
 
 ```ts
 const ctx = await makeTestServer();
@@ -250,43 +302,169 @@ const gotId = new Promise((resolve) => {
 const longPoll = ctx.rawRequest({
   method: "POST",
   url: "/api/chat/last-audio/request",
-  payload: { timeoutMs: 5000 },
+  payload: { timeoutMs: 5000, messageId: "msg-real" },
 });
 const requestId = await gotId;
-const boundary = "----cbtestboundary2";
+function multipartUpload(boundary: string, fields: Record<string, string>): string {
+  const parts: string[] = [];
+  for (const [name, value] of Object.entries(fields)) {
+    if (name === "file") continue;
+    parts.push(`--${boundary}`, `Content-Disposition: form-data; name="${name}"`, "", value);
+  }
+  parts.push(
+    `--${boundary}`,
+    'Content-Disposition: form-data; name="file"; filename="last-message.wav"',
+    "Content-Type: audio/wav",
+    "",
+    fields.file,
+    `--${boundary}--`,
+    ""
+  );
+  return parts.join("\r\n");
+}
+const staleBoundary = "----cbteststale";
+const staleAnswer = await ctx.request({
+  method: "POST",
+  url: `/api/chat/last-audio/${requestId}`,
+  payload: multipartUpload(staleBoundary, {
+    recordedAt: "2026-06-11T12:00:00Z",
+    text: "no identity here",
+    file: "STALEWAVBYTES",
+  }),
+  headers: { "content-type": `multipart/form-data; boundary=${staleBoundary}` },
+});
+print(`stale answer: ${JSON.stringify(staleAnswer.body)}`);
+const rightBoundary = "----cbtestright";
+const rightAnswer = await ctx.request({
+  method: "POST",
+  url: `/api/chat/last-audio/${requestId}`,
+  payload: multipartUpload(rightBoundary, {
+    recordedAt: "2026-06-11T12:05:00Z",
+    text: "the real message",
+    messageId: "msg-real",
+    sessionId: "sess-real",
+    file: "REALWAVBYTES",
+  }),
+  headers: { "content-type": `multipart/form-data; boundary=${rightBoundary}` },
+});
+print(`right answer: ${JSON.stringify(rightAnswer.body)}`);
+const res = await longPoll;
+print(`status: ${res.statusCode}`);
+print(`message-id: ${decodeURIComponent(res.headers["x-message-id"])}`);
+print(`audio: ${res.payload}`);
+=>
+stale answer: {"ok":false,"ignored":true,"message":"messageId did not match the pending request's target"}
+right answer: {"ok":true}
+status: 200
+message-id: msg-real
+audio: REALWAVBYTES
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+## Route: an answer with a mismatched messageId is ignored, not delivered
+
+```ts
+const ctx = await makeTestServer();
+const gotId = new Promise((resolve) => {
+  ctx.eventBus.subscribe({ listener: (e) => {
+    if (e.event === "chat-last-audio-request") resolve(e.data.requestId);
+  }});
+});
+const longPoll = ctx.rawRequest({
+  method: "POST",
+  url: "/api/chat/last-audio/request",
+  payload: { timeoutMs: 100, messageId: "msg-wanted" },
+});
+const requestId = await gotId;
+const boundary = "----cbtestmismatch";
 const upload = [
   `--${boundary}`,
-  'Content-Disposition: form-data; name="recordedAt"',
+  'Content-Disposition: form-data; name="messageId"',
   "",
-  "2026-06-11T12:00:00Z",
-  `--${boundary}`,
-  'Content-Disposition: form-data; name="text"',
-  "",
-  "no identity here",
+  "msg-someone-elses",
   `--${boundary}`,
   'Content-Disposition: form-data; name="file"; filename="last-message.wav"',
   "Content-Type: audio/wav",
   "",
-  "RIFFfakewavbytes",
+  "WRONGWAVBYTES",
   `--${boundary}--`,
   "",
 ].join("\r\n");
-await ctx.request({
+const answer = await ctx.request({
   method: "POST",
   url: `/api/chat/last-audio/${requestId}`,
   payload: upload,
   headers: { "content-type": `multipart/form-data; boundary=${boundary}` },
 });
+print(`answer: ${JSON.stringify(answer.body)}`);
 const res = await longPoll;
-print(`message-id header: ${res.headers["x-message-id"]}`);
-print(`session-id header: ${res.headers["x-session-id"]}`);
+print(`status: ${res.statusCode}`);
+print(`error: ${JSON.parse(res.payload).error}`);
 =>
-message-id header: undefined
-session-id header: undefined
+answer: {"ok":false,"ignored":true,"message":"messageId did not match the pending request's target"}
+status: 504
+error: no-client
 ```
 
 ```ts cleanup
 await ctx.cleanup();
+```
+
+## Route: a targeted request where the tab answers none resolves not-available
+
+A tab that doesn't hold the requested recording answers `{none:true}` — the
+request resolves the same "not available" outcome as no tab answering at all,
+never wrong audio.
+
+```ts
+const ctx = await makeTestServer();
+const gotId = new Promise((resolve) => {
+  ctx.eventBus.subscribe({ listener: (e) => {
+    if (e.event === "chat-last-audio-request") resolve(e.data.requestId);
+  }});
+});
+const longPoll = ctx.rawRequest({
+  method: "POST",
+  url: "/api/chat/last-audio/request",
+  payload: { timeoutMs: 5000, messageId: "msg-not-held" },
+});
+const requestId = await gotId;
+const answer = await ctx.request({
+  method: "POST",
+  url: `/api/chat/last-audio/${requestId}`,
+  payload: { none: true },
+});
+print(`answer: ${JSON.stringify(answer.body)}`);
+const res = await longPoll;
+print(`status: ${res.statusCode}`);
+print(`error: ${JSON.parse(res.payload).error}`);
+=>
+answer: {"ok":true}
+status: 404
+error: no-audio
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+## CLI: the required `--message` error is agent-legible
+
+`retranscribe`/`ask-about-audio`/`get-last-audio` all require `--message <id>`
+(unless `--file` supplies the audio directly for the first two) — validated
+before any HTTP request. The Commander actions call `process.exit`, which
+would kill the test process, so this pins the extracted, unit-testable error
+text instead of invoking the command.
+
+```ts
+print(missingMessageIdError("cb chat get-last-audio"));
+print(missingMessageIdError("cb chat retranscribe"));
+=>
+cb chat get-last-audio: requires --message <id> — read message-id="…" off the <speech> wrapper of the message you mean
+cb chat retranscribe: requires --message <id> — read message-id="…" off the <speech> wrapper of the message you mean
 ```
 
 ## ask-about-audio helpers
