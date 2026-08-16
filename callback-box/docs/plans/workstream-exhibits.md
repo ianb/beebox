@@ -137,12 +137,23 @@ satellite-storage patterns the repo already shipped.
 - **Atomic writes** — `callback-box/src/lib/atomic-write.ts` is the pattern,
   but `workstreams-app` set the precedent that resident apps share callback-box
   **patterns, not source** (`docs/plans/workstreams-app.md`, "Reuse
-  callback-box patterns, not callback-box source code"). `workstreams-app`
-  carries a small local `writeFileAtomic`.
-- **esbuild and Tailwind availability** — esbuild is already a dependency in
-  four packages (`callback-box/package.json` among them); no Tailwind usage
-  exists in the monorepo yet, so `workstreams-app` introduces it as a normal
-  package-local dependency with the Vite plugin, scoped to exhibit pages.
+  callback-box patterns, not callback-box source code"). No atomic-write
+  helper exists in `workstreams-app` today (verified 2026-08-15); Track C
+  adds a small local one.
+- **Tailwind already exists in workstreams-app** — Tailwind v3 via PostCSS,
+  content-scanned over `./src/frontend/**` only
+  (`workstreams-app/tailwind.config.js:5`,
+  `workstreams-app/postcss.config.js`). Track B extends the content globs to
+  the store's page tree (out-of-repo absolute globs); whether the v3 scanner
+  watches out-of-repo files correctly is a spike acceptance criterion, and a
+  v4 migration is NOT part of this plan.
+- **The existing app runtime shape** — one Fastify backend on loopback
+  (`workstreams-app/src/server/main.ts:50`) with router-capability header
+  auth (`workstreams-app/src/server/app.ts:41-47`), plus one Vite dev server
+  rooted at `src/frontend` with base `/workstreams/`, HMR proxied through the
+  router. The exhibits listener is a second, separate surface in the same
+  process group; it reuses none of the `/workstreams/` Vite instance (see
+  Track B).
 - **Figure-compile machinery NOT reused** — the box `.attach` figure compile
   route (see `issues/code-quality/2026-07-15-figure-compile-cache-and-attach-guard.md`)
   is box-scoped and cache-heavy; Vite's dev server already does
@@ -213,9 +224,19 @@ and the content outlives the tree.
   private-issues mount.
 - `.gitignore` gains `/exhibits` (no trailing slash — symlink lesson,
   `.gitignore:79`).
-- Teardown (`bin/lib/worktree-teardown.sh` `wt_remove_now`) needs **no
-  change**: it removes the worktree tree, which contains only the symlink.
-  A doctest proves this (see Failure modes).
+- The store root carries a marker file (`.workstream-exhibits`), and the
+  mount refuses to symlink to an unmarked directory — the identity-check
+  posture `bin/private-issues:76-82` uses before mutating (the "reuses the
+  topology" claim is only safe with this part copied too).
+- Teardown gains one guard: if `<worktree>/exhibits` exists and is a **real
+  directory** (a failed mount followed by an agent `mkdir`), `wt_remove_now`
+  moves its contents into the store (or refuses) instead of trashing them
+  with the tree — without this, that state is silent data loss at cull time.
+  The symlink case needs no teardown change: removing the tree removes only
+  the link. Doctests cover both (see Failure modes).
+- `bin/exhibits` (Track D) never writes through the checkout symlink — it
+  derives the store path itself (fail-closed), so a broken mount cannot
+  redirect exhibit writes into the doomed tree.
 - `bin/workstreams sweep` gains a report line for store directories whose
   workstream is neither registered nor a live worktree ("orphaned exhibits:
   <name> (<size>)"), mirroring the orphaned-private-worktree report. Sweep
@@ -260,6 +281,29 @@ are separable: one process, two listeners, two trust domains.
   cookie scoped to the exhibits origin. Every other request without the
   cookie gets 401 with a hint naming the CLI command that prints a fresh
   URL. Tailscale exposure is out of scope (loopback binding).
+- **One Vite instance per origin, middleware mode.** The exhibits listener
+  is a Fastify server that mounts its own Vite dev server in middleware mode
+  (`server.middlewareMode`), rooted at the package's exhibits frontend
+  directory, `base: "/"`, with `server.fs.allow` extended to the store root.
+  Shell, page modules, HMR websocket, and the Track C API all ride one
+  origin — no cross-origin asset or HMR routing. The existing `/workstreams/`
+  Vite instance is untouched and never serves store files.
+- **The supervisor holds the port when the child is down.** A direct
+  exhibit URL must not connection-refuse into silence (the existing fallback
+  only covers router-proxied `/workstreams/*` requests,
+  `bin/router.ts:1147-1169` — it cannot help a direct-origin URL). When the
+  exhibits child is failed or restarting, the supervisor binds the exhibits
+  port itself and serves the buildless fallback page (state, last failure,
+  log path), releasing the port to the replacement child on restart.
+- **One trust domain across exhibits, named honestly.** All exhibit pages
+  share the exhibits origin, so a custom page's script can call the Track C
+  API for any exhibit, not only its own. Accepted residual, the same shape
+  as `issues/closed/decisions/2026-07-19-boxes-share-one-origin.md` accepted
+  for boxes: single developer, local-only, agent-authored content, and the
+  events log makes cross-exhibit writes visible. The load-bearing boundary
+  is between exhibit pages and the router/workstreams authority — that one
+  is structural (different origin, different cookie). Per-exhibit isolation
+  would need per-exhibit origins and is deliberately not built.
 - **Filesystem routing.** Route = store path. A request for
   `/<ws>/<exhibit>/` resolves `store/<ws>/<exhibit>/`:
   - `index.tsx` present → serve the SPA shell; the page module is loaded via
@@ -279,25 +323,40 @@ are separable: one process, two listeners, two trust domains.
   created, figures?: [{ label, file, caption? }] }`). A missing or invalid
   manifest renders an error page naming the file and the Zod issue
   (principle 4); it never renders a bare directory listing as if intended.
-- **Container contract.** The package owns: React 18, Tailwind (Vite
-  plugin, content scan over the store's `**/*.tsx`), a shared layout shell
-  (nav back to the exhibit list, the ask header), a typed client
-  (`@exhibits/client`-style module: `getDoc/putDoc/appendEvent/postCapture`,
-  all typed against Track C), a `tsconfig` the store pages compile under,
+- **Container contract.** The package owns: React 18, Tailwind (the
+  existing v3/PostCSS setup with content globs extended to the store's
+  `**/*.tsx`), a shared layout shell (nav back to the exhibit list, the ask
+  header), a typed client, a `tsconfig` the store pages compile under,
   and a **minimal ESLint preset applied only to store pages** (boxholder
   decision 2026-08-15: parse errors and correctness rules only; not the
   house preset). `workstreams-app/` source itself keeps the house preset.
+- **Typed client shape** (boxholder, 2026-08-15): each page declares its
+  data type and gets type-checked save/load —
+  `const storage = new Storage<MyState>("thresholds")` with
+  `await storage.load()` / `await storage.save(state)` over Track C
+  documents, plus `new EventLog<MyEvent>("ratings")` for appends and a
+  `postCapture(name, blob)` helper. Honest limit, stated in the docs: the
+  type parameter is compile-time only — the server stores schema-agnostic
+  JSON (Track C caps and containment are the runtime guarantees). A page
+  that wants runtime validation passes a Zod schema:
+  `new Storage("thresholds", { schema })`.
 - **Docs.** A `workstreams-app/docs/exhibits.md` page documents the page
   contract ("create `<worktree>/exhibits/<name>/`, write `exhibit.json`,
   optionally `index.tsx`; these functions are available"), with one worked
   example of each kind (a screenshot presentation, an instrument).
 
-**First implementation chunk.** A spike proving the load-bearing mechanism:
-Vite dev server with `fs.allow` + glob-routing over an out-of-repo store
-directory, HMR on a dropped `index.tsx`, on an isolated port. If Vite cannot
-do this cleanly, the fallback is backend-driven esbuild compile-on-request
-(the figure-compile shape, without its process-global caches) — decide from
-the spike before building anything else in this track.
+**First implementation chunk.** A spike proving the load-bearing mechanism
+end to end on an isolated port, with explicit acceptance criteria: (1) Vite
+middleware mode inside Fastify with `fs.allow` + glob-routing over an
+out-of-repo store directory; (2) HMR fires on a dropped/edited `index.tsx`;
+(3) Tailwind v3 content scanning generates classes for out-of-repo pages,
+including on file change; (4) the watcher ignores `data/`, `captures/`, and
+`events.jsonl` (no rebuild storm while an instrument writes); (5) the
+token→cookie handshake; (6) the supervisor-held fallback port swap. If Vite
+cannot do (1)–(4) cleanly, the fallback is backend-driven esbuild
+compile-on-request (the figure-compile shape, without its process-global
+caches) — decide from the spike before building anything else in this
+track.
 
 ### Track C — The generic backend: documents, events, captures
 
@@ -404,6 +463,13 @@ whose stated revisit trigger is "if more scripted apps appear" — this plan is
 that trigger, and it builds the isolated origin the issue asks for. Leaving
 both mechanisms alive is two ways to do one thing (principle 8).
 
+**Severability.** Track F is deliberately last and separately committable:
+the exhibits medium works without it, and the origin issue itself says the
+fix is not urgent at one scripted app. If the rollout wants a smaller merge,
+Track F may land as an immediate follow-up — but it stays in this plan so
+the two-mechanisms state (`scripted` grant + exhibits origin) is a named,
+bounded transition, not a drift.
+
 **First implementation chunk.** The story-eval port (content move + a
 document-backed autosave), verified side by side before the router code is
 deleted.
@@ -458,6 +524,8 @@ step.
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
 | Worktree removal deletes exhibits | Track A doctest: remove → store intact | Store is outside the tree; only the symlink dies (private-issues topology) | Clear |
+| `exhibits/` is a real dir at cull time (failed mount + agent `mkdir`) | Track A doctest | Teardown guard preserves contents into the store or refuses; CLI never writes through the symlink | Clear |
+| Mount adopts an unrelated directory | Track A doctest | `.workstream-exhibits` marker required before symlinking | Clear |
 | Store dir missing on resume (moved/renamed) | Track A doctest | Mount recreates the dir; sweep reports orphans under the old name | Clear |
 | Dangling `exhibits` symlink after manual store deletion | Track A doctest | Mount self-heals on resume; app 404s with the workstream name | Clear |
 | Invalid/missing `exhibit.json` | Track B doctest | Error page naming file + Zod issue | Clear |
@@ -467,12 +535,13 @@ step.
 | Two writers race on one document | Track C doctest | Atomic replace; last write wins, both writes logged as events | Clear (accepted: single user + one agent per exhibit in practice) |
 | Oversize capture / document | Track C doctest | 413 with the cap in the message | Clear |
 | Token leaks via a pasted URL | — | Loopback-only origin; token grants exhibits app only (no router/box authority); W3C capability-URL caveats documented | Clear (accepted residual) |
-| Workstreams app down (install broken, crash) takes exhibits with it | Supervisor doctest (existing pattern) | Supervisor fallback page with state + log path; router root page lists app state | Clear |
-| Vite cannot glob/HMR the out-of-repo store | Track B spike (first chunk) | Decision gate: esbuild compile-on-request fallback | Clear — resolved before dependent tracks |
+| Exhibits child down; developer follows a direct exhibit URL | Supervisor doctest | Supervisor binds the exhibits port and serves the fallback page (a direct-origin URL cannot use the router's `/workstreams/*` fallback) | Clear |
+| Vite cannot glob/HMR/Tailwind-scan the out-of-repo store | Track B spike criteria (1)–(4) | Decision gate: esbuild compile-on-request fallback | Clear — resolved before dependent tracks |
+| An exhibit page writes another exhibit's data | — | Accepted residual (one trust domain across exhibits, named in Track B); events log makes it visible | Clear (documented) |
 | Store grows unbounded (captures) | — | Sweep reports per-store size; culling is manual and developer-only | Clear |
 | Exhibit name collision on `add` | Track D doctest | CLI refuses and suggests `-2` suffix; never overwrites | Clear |
 | Developer answers while agent rewrites the exhibit | — | Disposition lives in `data/`, which `add`/agents never overwrite; content edits don't touch answers | Clear |
-| Watching the store burns CPU as it grows | — | Vite watches only globbed `.tsx`; captures/data dirs excluded from the watcher | Clear (verified in spike) |
+| Watching the store burns CPU as it grows | Track B spike criterion (4) | Watcher excludes `data/`, `captures/`, `events.jsonl` | Gate — not claimed until the spike proves it |
 
 ## Agent-flow / user-flow edge cases
 
