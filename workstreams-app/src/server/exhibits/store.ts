@@ -181,7 +181,7 @@ async function readdirSafe(dir: string): Promise<string[]> {
 }
 
 /** Directory entries that can be routed to: named like a segment, a directory. */
-async function listRoutableDirs(root: string): Promise<string[]> {
+export async function listRoutableDirs(root: string): Promise<string[]> {
   const names: string[] = [];
   for (const name of (await readdirSafe(root)).toSorted()) {
     if (!exhibitSegmentSchema.safeParse(name).success) continue;

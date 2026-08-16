@@ -66,6 +66,39 @@ export const dispositionSchema = z.object({
 export type ExhibitDisposition = z.infer<typeof dispositionSchema>;
 
 /**
+ * One row of the workstreams app's "waiting on you" queue (Track E). The queue
+ * is a read of the same files the exhibits origin serves, so a row can describe
+ * an exhibit whose manifest does not parse: `problem` is set and `ask` is null
+ * rather than the row vanishing (engineering principle 4).
+ */
+export const askQueueEntrySchema = z.object({
+  /** The store workstream directory, or `apps` for a committed app. */
+  workstream: z.string(),
+  slug: z.string(),
+  /** Path on the exhibits origin, joined to the queue's `origin`. */
+  path: z.string(),
+  /** A committed app: tracked in the main checkout, outlives every workstream. */
+  permanent: z.boolean(),
+  title: z.string().nullable(),
+  ask: askSchema.nullable(),
+  answered: z.boolean(),
+  decidedAt: z.string().nullable(),
+  /** A broken manifest or an unreadable disposition, phrased for the developer. */
+  problem: z.string().nullable(),
+});
+
+export const askQueueSchema = z.object({
+  /** Origin of the exhibits listener, e.g. `http://127.0.0.1:3230`. */
+  origin: z.string(),
+  /** Set when the store itself could not be read at all. */
+  storeProblem: z.string().nullable(),
+  entries: z.array(askQueueEntrySchema),
+});
+
+export type AskQueueEntry = z.infer<typeof askQueueEntrySchema>;
+export type AskQueue = z.infer<typeof askQueueSchema>;
+
+/**
  * One safe path segment. Every route parameter that becomes a path component is
  * validated with this before it is joined to a root: no separators, no
  * traversal, no dotfiles (the store marker and any future metadata stay

@@ -9,6 +9,7 @@ import { defaultStoreRoot } from "./exhibits/store.js";
 import { createViteAssets } from "./exhibits/vite-assets.js";
 import { createWorkstreamsCommandService } from "./workstreams-command.js";
 import { createDocumentsService } from "./documents-service.js";
+import { createExhibitsQueueService } from "./exhibits-queue-service.js";
 import { createQuotasService } from "./quotas-service.js";
 import {
   createActionCommandRunner,
@@ -32,9 +33,15 @@ const serverEnvSchema = z.object({
 const packageRoot = path.resolve(import.meta.dirname, "../..");
 const repoRoot = path.resolve(import.meta.dirname, "../../..");
 
+function exhibitsRoots(env: z.infer<typeof serverEnvSchema>): { storeRoot: string; appsRoot: string } {
+  return {
+    storeRoot: env.CALLBACK_EXHIBITS_ROOT ?? defaultStoreRoot(repoRoot),
+    appsRoot: path.join(repoRoot, "dev", "apps"),
+  };
+}
+
 async function startExhibits(env: z.infer<typeof serverEnvSchema>): Promise<FastifyInstance> {
-  const storeRoot = env.CALLBACK_EXHIBITS_ROOT ?? defaultStoreRoot(repoRoot);
-  const appsRoot = path.join(repoRoot, "dev", "apps");
+  const { storeRoot, appsRoot } = exhibitsRoots(env);
   const app = await buildExhibitsApp({
     storeRoot,
     appsRoot,
@@ -64,6 +71,12 @@ async function main(): Promise<void> {
     documents: createDocumentsService({ mainRoot: repoRoot, worktreesRoot }),
     quotas: createQuotasService(),
     actions,
+    // The queue reads the same store the exhibits listener serves, and links
+    // back to its origin: same host, the port that listener binds below.
+    exhibits: createExhibitsQueueService({
+      ...exhibitsRoots(env),
+      origin: `http://127.0.0.1:${String(env.EXHIBITS_PORT)}`,
+    }),
   };
   const app = await buildApp({
     services,

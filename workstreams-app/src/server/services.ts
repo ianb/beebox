@@ -11,6 +11,7 @@ import type {
   ActionVerb,
   LifecycleJob,
 } from "../shared/actions.js";
+import type { AskQueue } from "../shared/exhibits.js";
 
 export interface WorkstreamsService {
   list(): Promise<WorkstreamSummary[]>;
@@ -21,6 +22,12 @@ export interface AppServices {
   documents: DocumentsService;
   quotas: QuotasService;
   actions: ActionsService;
+  exhibits: ExhibitsService;
+}
+
+/** Read-only: the workstreams origin never answers an ask (Track E). */
+export interface ExhibitsService {
+  askQueue(): Promise<AskQueue>;
 }
 
 export interface DocumentsService {
