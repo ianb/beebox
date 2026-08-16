@@ -61,6 +61,14 @@ satellite-storage patterns the repo already shipped.
 - **Instrument** — informal term for an exhibit with a custom `index.tsx`
   page. Not a separate mechanism: every exhibit is a directory; a custom page
   is an override of the default renderer.
+- **Committed app** — the permanent tier (boxholder, 2026-08-15: "sometimes
+  apps SHOULD become part of the main branch and live forever; other apps
+  are temporary — persistence built into the path and routing"). Same page
+  contract and API as an exhibit, but the directory is **tracked** at
+  `dev/apps/<name>/` and served from the main checkout at `/apps/<name>/`.
+  A workstream exhibit is temporary-by-default; a committed app merges to
+  main and outlives every workstream. (`dev/apps/`, not a tracked
+  `exhibits/`, because `<checkout>/exhibits` is the store symlink.)
 
 ## Stated preferences this plan trades against
 
@@ -311,6 +319,25 @@ are separable: one process, two listeners, two trust domains.
     the glob pattern is anchored at the store root so nothing outside it is
     importable). Creating a directory and dropping `index.tsx` is the whole
     publish step; HMR picks it up.
+  - `index.html` present (and no `index.tsx`) → served as-is with scripts
+    allowed — this origin exists so agent pages can script. A vanilla
+    HTML+JS page is a first-class exhibit ("write some HTML … and get by
+    really quickly" — boxholder, 2026-08-15); it reaches the Track C API
+    with plain relative `fetch`. Sibling files (data JSON, images) are
+    served from the exhibit directory, so relative fetches work. The
+    existing story-eval app validates this tier: a single `index.html`
+    fetching `runs/*.json` manifest data translates without a rewrite.
+    `localStorage` is shared across the exhibits origin; the docs tell pages
+    to namespace keys (story-eval already does).
+  - **Two roots, one contract.** `/<ws>/<exhibit>/` resolves in the store
+    (temporary, workstream-persistent); `/apps/<name>/` resolves in the
+    **main checkout's** tracked `dev/apps/<name>/` (permanent, versioned,
+    merges to main). Persistence is legible from the URL and the path. The
+    same manifest, page tiers, and Track C API apply to both; a committed
+    app's manifest may omit the ask (a durable tool is not asking anything —
+    it appears in the app list, not the ask queue). A worktree developing a
+    committed app previews it through the isolated-port run mode; the
+    resident instance serves main's copy only.
   - no `index.tsx` → the **default presentation renderer**: manifest header
     (title, ask, status), `doc.md` rendered via Markdoc (client-side,
     `Markdoc.renderers.react`, the `workstreams-app` pattern), images and
@@ -372,6 +399,12 @@ workstreams-app backend:
 
 All three are served only on the exhibits origin (Track B).
 
+For committed apps (`/apps/<name>/`), the same three routes write to
+`store/apps/<name>/…` — a reserved store namespace (`apps` is refused as a
+workstream name at mount time). Code is tracked; the developer's
+interactions are not: runtime data never lands in the git tree, so a
+committed app cannot dirty a checkout by being used.
+
 **Why this needs to change.** Instruments need persistence and the ask needs
 a recorded answer; today the only write path an interactive dev page has is
 story-eval's bespoke router route (`bin/router.ts:1233-1238`). A generic,
@@ -405,6 +438,9 @@ create and reference exhibits — plus the conventions that make exhibits good.
   the files, writes the manifest with auto-assigned figure labels, prints the
   exhibit URL (with `?token=`) on stdout. `--open` also runs macOS `open`.
   Workstream defaults from the cwd's checkout (derived, fail-closed).
+  `--permanent` creates a committed app skeleton at the current checkout's
+  `dev/apps/<name>/` instead (tracked; lands on main by the normal merge
+  flow) and prints the `/apps/<name>/` URL it will have once merged.
 - `bin/exhibits list [--workstream <ws>] [--json]` — exhibits with ask type
   and disposition state. This is also what a later agent session runs to find
   answered asks.
@@ -469,6 +505,15 @@ fix is not urgent at one scripted app. If the rollout wants a smaller merge,
 Track F may land as an immediate follow-up — but it stays in this plan so
 the two-mechanisms state (`scripted` grant + exhibits origin) is a named,
 bounded transition, not a drift.
+
+**Translation sketch (verified against the app, 2026-08-15).** story-eval
+is one vanilla `index.html` (~43 KB): a run manifest fetched via relative
+`runs/*.json` paths, namespaced `localStorage` live state, and a debounced
+autosave POST to the bespoke router route. It is a durable tool, so it
+becomes a **committed app**: `git mv dev/story-eval dev/apps/story-eval`
+plus its run JSONs (relative fetches still resolve — the `index.html` tier
+above); the autosave POST becomes a Track C document write; `localStorage`
+keeps working. No React rewrite, and its git history is preserved.
 
 **First implementation chunk.** The story-eval port (content move + a
 document-backed autosave), verified side by side before the router code is
@@ -618,8 +663,13 @@ step.
   Track B lands, expensive after (URLs, CLI, docs).
 - **Does `fyi` expire?** Lean: no auto-expiry; the queue shows `fyi` items in
   a collapsed section so they never compete with `decide`/`confirm`.
-- **Port number and origin naming** (3220? `exhibits.localhost`?). Lean:
-  plain `localhost:3220`, decided at Track B implementation.
+- **Port number and origin naming** (`exhibits.localhost`? a fixed port?).
+  Lean: a fixed dedicated port, decided at Track B implementation (the
+  workstreams backend already defaults to 3220, so not that one).
+(The "where do graduated tools live" question was settled by the boxholder
+on 2026-08-15: both tiers are first-class — committed apps at
+`dev/apps/<name>/`, workstream exhibits in the store, persistence encoded in
+path and routing. See Vocabulary and Track B.)
 
 ## Knowledge audits
 
