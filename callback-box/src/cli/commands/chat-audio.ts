@@ -34,6 +34,11 @@ import {
   fetchLastAudio,
   requireMessageId,
 } from "./chat-audio-fetch.js";
+import {
+  buildConsultedReport,
+  buildRetranscriptionReport,
+  postAudioReviewReport,
+} from "./chat-audio-report.js";
 
 export { loopbackHeaders, audioMimeType, missingMessageIdError } from "./chat-audio-fetch.js";
 
@@ -112,6 +117,10 @@ export const askAboutAudioCommand = new Command("ask-about-audio")
     let mimeType: string;
     let recordedAt: string | null = null;
     let transcript: string | null = options.transcript ?? null;
+    // Only set when the audio came from a targeted fetch (not --file) — the
+    // consulted report needs both to address the message.
+    let fetchedSessionId: string | null = null;
+    let fetchedMessageId: string | null = null;
     if (options.file !== undefined) {
       const filePath = path.resolve(options.file);
       const mime = audioMimeType(filePath);
@@ -140,6 +149,8 @@ export const askAboutAudioCommand = new Command("ask-about-audio")
       // The system's own transcript rides along automatically so the model
       // can flag transcription flaws; an explicit --transcript wins.
       transcript = transcript ?? fetched.text;
+      fetchedSessionId = fetched.sessionId;
+      fetchedMessageId = fetched.messageId;
     }
 
     try {
@@ -156,6 +167,11 @@ export const askAboutAudioCommand = new Command("ask-about-audio")
       if (recordedAt !== null) console.log(`recorded-at: ${recordedAt}`);
       if (transcript !== null) console.log(`transcript: ${transcript}`);
       console.log(`model: ${model}`);
+
+      // Best-effort trace that the recording was consulted — skips silently
+      // for --file runs or old tabs that never echoed an id.
+      const report = buildConsultedReport({ sessionId: fetchedSessionId, messageId: fetchedMessageId });
+      if (report !== null) await postAudioReviewReport(report);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       console.error(`${label}: audio model request failed: ${msg}`);
@@ -207,6 +223,10 @@ export const retranscribeCommand = new Command("retranscribe")
     let audioPath: string;
     let recordedAt: string | null = null;
     let realtimeTranscript: string | null = null;
+    // Only set when the audio came from a targeted fetch (not --file) — the
+    // retranscription report needs both to address the message.
+    let fetchedSessionId: string | null = null;
+    let fetchedMessageId: string | null = null;
     if (options.file !== undefined) {
       const filePath = path.resolve(options.file);
       try {
@@ -230,6 +250,8 @@ export const retranscribeCommand = new Command("retranscribe")
       audioPath = path.resolve(filename);
       recordedAt = fetched.recordedAt;
       realtimeTranscript = fetched.text;
+      fetchedSessionId = fetched.sessionId;
+      fetchedMessageId = fetched.messageId;
     }
 
     const boxRoot = await findBoxRoot(process.cwd());
@@ -265,6 +287,21 @@ export const retranscribeCommand = new Command("retranscribe")
       if (sidecarPath !== null) console.log(`word-timestamps: ${sidecarPath}`);
       if (recordedAt !== null) console.log(`recorded-at: ${recordedAt}`);
       if (realtimeTranscript !== null) console.log(`realtime-transcript: ${realtimeTranscript}`);
+
+      // Best-effort report of the correction — skips silently for --file
+      // runs or old tabs that never echoed an id. `newText` is the exact
+      // string just printed (post relabel/diarization processing);
+      // `result.service` is the actually-resolved HQ service name, never the
+      // unresolved "(box default)" placeholder printed above.
+      const report = buildRetranscriptionReport({
+        sessionId: fetchedSessionId,
+        messageId: fetchedMessageId,
+        newText: result.text.trim(),
+        service: result.service,
+        diarized: result.diarized === true,
+        recordedAt,
+      });
+      if (report !== null) await postAudioReviewReport(report);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       console.error(`${label}: transcription failed: ${msg}`);
