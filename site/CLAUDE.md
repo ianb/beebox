@@ -67,7 +67,13 @@ writes the input manifest last (so a partial build never masks staleness).
   manifest, shared by `build.ts` (writes `dist/.inputs.json`) and
   `bin/router-site.ts` (compares it to decide whether to auto-rebuild). One
   enumeration, so the two sides can't drift.
-- `content/` — markdown sources (frontmatter: `title`, `summary`).
+- `content/` — markdown sources (frontmatter: `title`, `summary`, optional
+  `unlisted` to keep a page out of llms.txt).
+- `fisheye.ts` — the expand-in-place vocabulary (plan Track F): the
+  `{% expand label="…" %}` Markdoc tag (inline → button + `hidden=until-found`
+  span; block → native `<details>`) and the `{% nugget slug="…" /%}` embed
+  placeholder that `embedNuggets()` (nuggets.ts) substitutes at build, failing
+  on unknown slugs. `content/fisheye.md` is the unlisted prototype page.
 - `nuggets/<slug>.md` — committed excerpts of repo content: frontmatter `source`
   (repo-relative, restricted to `issues/`, `callback-box/docs/`, `research/`,
   root `README.md`), `span` (a verbatim excerpt of that source), and

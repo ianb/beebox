@@ -1,0 +1,114 @@
+// Fisheye / telescopic presentation (plan Track F): expand-in-place depth.
+// This module owns the authoring vocabulary (the Markdoc tags), the disclosure
+// CSS, and the tiny inline script. Two orthogonal tags, one concept each:
+//
+//   {% expand label="trigger text" %}…{% /expand %}
+//     Pure disclosure. Inline (mid-sentence) it renders a button + a
+//     hidden=until-found span, so collapsed depth stays find-in-page
+//     searchable; block-level it renders native <details>/<summary>, the
+//     platform primitive (which browsers likewise auto-open on find).
+//
+//   {% nugget slug="…" /%}
+//     Embeds a committed nugget (site/nuggets/<slug>.md) with provenance.
+//     Rendered as a placeholder element here and substituted by
+//     embedNuggets() in nuggets.ts — this module stays nugget-free so the
+//     import graph stays acyclic (render → fisheye; nuggets → render).
+//
+// All text ships in the page; the .md twin is the flat form. Depth cues stay
+// in the shell's near-monochrome palette: unfolded inline text gets a faint
+// wash that darkens one step per nesting level, block depth reads by left
+// hairline + indent.
+
+import Markdoc from "@markdoc/markdoc";
+import type { Config, Node, RenderableTreeNode } from "@markdoc/markdoc";
+
+// eslint-disable-next-line import-x/no-named-as-default-member -- CJS interop: only the default namespace carries these at runtime
+const { Tag } = Markdoc;
+
+function expandInline(label: string, children: RenderableTreeNode[]): RenderableTreeNode {
+  return new Tag("span", { class: "fx" }, [
+    new Tag("button", { type: "button", class: "fx-t", "aria-expanded": "false" }, [label]),
+    new Tag("span", { class: "fx-b", hidden: "until-found" }, children),
+  ]);
+}
+
+function expandBlock(label: string, children: RenderableTreeNode[]): RenderableTreeNode {
+  return new Tag("details", { class: "fx" }, [new Tag("summary", {}, [label]), ...children]);
+}
+
+/**
+ * Markdoc tag definitions for the fisheye vocabulary — merged into the
+ * transform config by render.ts.
+ */
+export const fisheyeTags: NonNullable<Config["tags"]> = {
+  expand: {
+    attributes: { label: { type: String, required: true } },
+    selfClosing: false,
+    transform(node: Node, config: Config): RenderableTreeNode {
+      const label = String(node.transformAttributes(config)["label"] ?? "");
+      const children = node.transformChildren(config);
+      return node.inline ? expandInline(label, children) : expandBlock(label, children);
+    },
+  },
+  nugget: {
+    attributes: { slug: { type: String, required: true } },
+    selfClosing: true,
+    transform(node: Node, config: Config): RenderableTreeNode {
+      const slug = String(node.transformAttributes(config)["slug"] ?? "");
+      // Placeholder element; embedNuggets() (nuggets.ts) substitutes the real
+      // rendered nugget and fails the build on an unknown slug.
+      return new Tag("x-nugget", { slug }, []);
+    },
+  },
+};
+
+// Depth treatment, spare register: the trigger reads as text with a dotted
+// underline and a trailing ellipsis; once opened the underline goes solid and
+// the revealed text carries a faint wash, one step darker per nesting level.
+// Block depth uses <details> with a left hairline + indent (nesting indents
+// naturally). Nuggets render as quiet figures with provenance captions.
+export const FISHEYE_CSS = `
+.fx-t {
+  font: inherit; color: inherit; background: none; border: none; padding: 0;
+  cursor: pointer; border-bottom: 1px dotted #8a8a82;
+}
+.fx-t::after { content: "\\2009\\2026"; color: #8a8a82; }
+.fx-t[aria-expanded="true"] { border-bottom-style: solid; }
+.fx-t[aria-expanded="true"]::after { content: ""; }
+.fx-b {
+  background: #f2f2ee; border-radius: 2px; padding: 0 0.15em;
+  -webkit-box-decoration-break: clone; box-decoration-break: clone;
+}
+.fx-b .fx-b { background: #e9e9e1; }
+.fx-b .fx-b .fx-b { background: #dfdfd6; }
+details.fx { margin: 0.9rem 0 0.9rem 0.1rem; border-left: 2px solid #d8d8d2; padding-left: 0.9rem; }
+details.fx > summary { cursor: pointer; color: #55554f; }
+details.fx[open] > summary { color: #17171a; }
+figure.nugget { margin: 0.9rem 0; padding: 0.8rem 1rem; background: #f7f7f3; border-radius: 4px; }
+figure.nugget > :first-child { margin-top: 0; }
+figure.nugget figcaption { font-size: 0.8rem; color: #55554f; margin-top: 0.5rem; }
+p.nugget-stale { font-size: 0.85rem; color: #8a6d3b; margin: 0.4rem 0 0; }
+`.trim();
+
+// Inline-expansion behavior. Non-load-bearing: with JS off the collapsed text
+// is still in the DOM (hidden=until-found), and the .md twin is the flat form.
+// beforematch fires when find-in-page lands inside a collapsed span — open it
+// and keep aria state truthful.
+export const FISHEYE_SCRIPT = `
+document.querySelectorAll(".fx-t").forEach((t, i) => {
+  const b = t.nextElementSibling;
+  if (!b) return;
+  if (!b.id) b.id = "fx-b-" + i;
+  t.setAttribute("aria-controls", b.id);
+  const open = () => { t.setAttribute("aria-expanded", "true"); b.removeAttribute("hidden"); };
+  t.addEventListener("click", () => {
+    if (t.getAttribute("aria-expanded") === "true") {
+      t.setAttribute("aria-expanded", "false");
+      b.setAttribute("hidden", "until-found");
+    } else {
+      open();
+    }
+  });
+  b.addEventListener("beforematch", open);
+});
+`.trim();

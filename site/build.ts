@@ -12,7 +12,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { baseFromBranch, normalizeBase } from "./links.js";
-import { isRenderable, loadNuggets, renderNugget, type Nugget } from "./nuggets.js";
+import { embedNuggets, isRenderable, loadNuggets, renderNugget, type Nugget } from "./nuggets.js";
 import { parseSource, renderBody, pageShell, type PageFrontmatter } from "./render.js";
 import { writeManifest } from "./sources.js";
 
@@ -87,15 +87,18 @@ interface BuiltPage {
   linkTargets: { target: string; href: string }[];
 }
 
-// The machine-facing twin is the page's flat markdown form: the body verbatim
-// (which already carries its own H1). Frontmatter is build metadata, not content.
+// The machine-facing twin is the page's flat markdown form: the body with the
+// fisheye tag markers stripped, so all text is present with no disclosure
+// (an embedded nugget's placeholder disappears — the nugget's own source is
+// already repo content). The body carries its own H1; frontmatter is build
+// metadata, not content.
 function twinMarkdown(body: string): string {
-  return `${body.trimStart().trimEnd()}\n`;
+  return `${body.replace(/{%[\S\s]*?%}/g, "").trimStart().trimEnd()}\n`;
 }
 
 function renderLlmsTxt(params: { home: PageFrontmatter; pages: BuiltPage[]; base: string }): string {
   const lines = [`# ${params.home.title}`, "", `> ${params.home.summary}`, "", "## Pages", ""];
-  for (const page of params.pages) {
+  for (const page of params.pages.filter((p) => p.frontmatter.unlisted !== true)) {
     lines.push(`- [${page.frontmatter.title}](${params.base}${page.stem}.md): ${page.frontmatter.summary}`);
   }
   return `${lines.join("\n")}\n`;
@@ -137,13 +140,16 @@ async function main(): Promise<void> {
 
   const emitted = new Set<string>();
   const built: BuiltPage[] = [];
+  const nuggets = await loadNuggets({ nuggetsDir: NUGGETS_DIR, repoRoot: REPO_ROOT });
 
   for (const file of content) {
     const src = await fs.readFile(file.abs, "utf8");
     const relForErrors = path.relative(SITE_DIR, file.abs);
     const { frontmatter, body } = parseSource(src, relForErrors);
     const pageSitePath = `${file.stem}.html`;
-    const { html, linkTargets } = renderBody(body, { pageSitePath, base });
+    const rendered = renderBody(body, { pageSitePath, base });
+    const html = embedNuggets(rendered.html, { nuggets, base, pageSitePath });
+    const { linkTargets } = rendered;
 
     const htmlOut = path.join(DIST_DIR, pageSitePath);
     const twinOut = path.join(DIST_DIR, `${file.stem}.md`);
@@ -170,7 +176,7 @@ async function main(): Promise<void> {
     throw new BuildError(`broken internal link(s):\n  ${broken.join("\n  ")}`);
   }
 
-  const nuggetSummary = checkNuggets(await loadNuggets({ nuggetsDir: NUGGETS_DIR, repoRoot: REPO_ROOT }), base);
+  const nuggetSummary = checkNuggets(nuggets, base);
 
   const home = built.find((p) => p.stem === "index");
   if (!home) throw new BuildError("no index.md — the site needs a home page");

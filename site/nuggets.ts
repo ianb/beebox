@@ -179,6 +179,27 @@ const STALE_TEXT: Record<Exclude<NuggetSpanState, "current">, string> = {
  * matches its source exactly once. Refuses `proposed` — the AI-words rule is
  * enforced here rather than trusted to callers.
  */
+const NUGGET_PLACEHOLDER_RE = /<x-nugget slug="([^"]*)"><\/x-nugget>/g;
+
+/**
+ * Substitute the `{% nugget slug="…" /%}` placeholders a page rendered
+ * (`<x-nugget slug="…">`, emitted by the fisheye `nugget` tag) with the real
+ * rendered nuggets. An unknown slug fails the build naming the page — same
+ * fail-closed row as a missing source.
+ */
+export function embedNuggets(
+  html: string,
+  params: { nuggets: readonly Nugget[]; base: string; pageSitePath: string },
+): string {
+  return html.replace(NUGGET_PLACEHOLDER_RE, (_match, slug: string) => {
+    const nugget = params.nuggets.find((n) => n.slug === slug);
+    if (!nugget) {
+      throw new NuggetError(`${params.pageSitePath} embeds unknown nugget slug "${slug}" (no nuggets/${slug}.md)`);
+    }
+    return renderNugget(nugget, { base: params.base, pageSitePath: params.pageSitePath });
+  });
+}
+
 export function renderNugget(nugget: Nugget, params: { base: string; pageSitePath: string }): string {
   if (!isRenderable(nugget)) {
     throw new NuggetError(`nugget "${nugget.slug}" has status "proposed" and must not be rendered`);

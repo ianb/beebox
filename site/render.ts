@@ -10,6 +10,7 @@ import Markdoc from "@markdoc/markdoc";
 import type { RenderableTreeNode } from "@markdoc/markdoc";
 import YAML from "yaml";
 import { z } from "zod";
+import { FISHEYE_CSS, FISHEYE_SCRIPT, fisheyeTags } from "./fisheye.js";
 import { classifyHref, resolveInternalHref } from "./links.js";
 
 // @markdoc/markdoc is CommonJS: at runtime the ESM named exports don't exist,
@@ -23,6 +24,8 @@ export const pageFrontmatterSchema = z
   .object({
     title: z.string().min(1),
     summary: z.string().min(1),
+    /** Unlisted pages build and serve but stay out of llms.txt (prototypes). */
+    unlisted: z.boolean().optional(),
   })
   .strict();
 
@@ -113,7 +116,7 @@ export interface RenderedPage {
 /** Render a markdown body to HTML, rewriting/collecting internal links. */
 export function renderBody(body: string, params: { pageSitePath: string; base: string }): RenderedPage {
   const ast = markdocParse(body);
-  const content = markdocTransform(ast);
+  const content = markdocTransform(ast, { tags: fisheyeTags });
   const targets: string[] = [];
   rewriteLinks(content, { pageSitePath: params.pageSitePath, base: params.base, targets });
   return { html: renderers.html(content), linkTargets: targets };
@@ -212,14 +215,16 @@ export function pageShell(params: { title: string; bodyHtml: string; base: strin
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(params.title)}</title>
-<style>${SHELL_CSS}</style>
+<style>${SHELL_CSS}
+${FISHEYE_CSS}</style>
 </head>
 <body>
 ${headerHtml(params.base)}
 <main>
 ${params.bodyHtml}
 </main>
-<script>${COPY_SCRIPT}</script>
+<script>${COPY_SCRIPT}
+${FISHEYE_SCRIPT}</script>
 </body>
 </html>
 `;
