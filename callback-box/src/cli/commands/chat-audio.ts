@@ -171,7 +171,7 @@ export const askAboutAudioCommand = new Command("ask-about-audio")
 
       // Best-effort trace that the recording was consulted — skips silently
       // for --file runs or old tabs that never echoed an id.
-      const report = buildConsultedReport({ sessionId: fetchedSessionId, messageId: fetchedMessageId });
+      const report = buildConsultedReport({ sessionId: fetchedSessionId, messageId: fetchedMessageId, question });
       if (report !== null) await postAudioReviewReport(report);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);

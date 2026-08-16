@@ -222,6 +222,8 @@ export const eventSchemas = {
     sessionId: z.string().min(1),
     messageId: z.string().min(1),
     command: z.literal("ask-about-audio"),
+    /** The question the agent asked about the recording — shown in the badge popover. */
+    question: z.string().min(1),
   }),
 } satisfies Record<string, z.ZodType>;
 

@@ -24,10 +24,13 @@ export interface RetranscriptionOverlay {
   recordedAt?: string;
 }
 
-/** Overlay state for one message. `consulted` is sticky — never cleared. */
+/**
+ * Overlay state for one message. `consulted` is sticky — never cleared;
+ * each ask-about-audio appends its question (shown in the badge popover).
+ */
 export interface AudioOverlayEntry {
   retranscription?: RetranscriptionOverlay;
-  consulted?: true;
+  consulted?: { questions: readonly string[] };
 }
 
 type Listener = () => void;
@@ -40,7 +43,7 @@ export interface AudioOverlayStore {
   /** A later retranscription for the same message overwrites the earlier one. */
   applyRetranscription: (messageId: string, overlay: RetranscriptionOverlay) => void;
   /** Sticky: a repeat consult is a no-op (no redundant re-render). */
-  applyConsulted: (messageId: string) => void;
+  applyConsulted: (messageId: string, question: string) => void;
 }
 
 export function createAudioOverlayStore(): AudioOverlayStore {
@@ -70,10 +73,14 @@ export function createAudioOverlayStore(): AudioOverlayStore {
       entries.set(messageId, { ...prev, retranscription: overlay });
       notify(messageId);
     },
-    applyConsulted: (messageId) => {
+    applyConsulted: (messageId, question) => {
       const prev = entries.get(messageId);
-      if (prev?.consulted) return;
-      entries.set(messageId, { ...prev, consulted: true });
+      // Append, deduping an identical re-ask (a retried command shouldn't
+      // double the list); order preserved otherwise.
+      const questions = prev?.consulted?.questions.includes(question)
+        ? prev.consulted.questions
+        : [...(prev?.consulted?.questions ?? []), question];
+      entries.set(messageId, { ...prev, consulted: { questions } });
       notify(messageId);
     },
   };

@@ -43,7 +43,7 @@ const samples = {
   "chat-session-assigned": { sessionId: "s1" },
   "capture-status": { stagingId: "cap_1", sessionId: "s1", status: "preparing", docPath: "captures/cap_1.capture-session.card" },
   "chat-retranscription": { sessionId: "s1", messageId: "msg-1", newText: "corrected text", service: "whisper", diarized: false, recordedAt: TS },
-  "chat-audio-consulted": { sessionId: "s1", messageId: "msg-1", command: "ask-about-audio" },
+  "chat-audio-consulted": { sessionId: "s1", messageId: "msg-1", command: "ask-about-audio", question: "did I say can or cannot?" },
 };
 ```
 

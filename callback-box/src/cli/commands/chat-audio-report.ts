@@ -28,6 +28,8 @@ export interface ConsultedReport {
   sessionId: string;
   messageId: string;
   command: "ask-about-audio";
+  /** The question asked about the recording — surfaces in the badge popover. */
+  question: string;
 }
 
 export type AudioReviewReport = RetranscriptionReport | ConsultedReport;
@@ -63,10 +65,11 @@ export function buildRetranscriptionReport(opts: {
 export function buildConsultedReport(opts: {
   sessionId: string | null;
   messageId: string | null;
+  question: string;
 }): ConsultedReport | null {
-  const { sessionId, messageId } = opts;
+  const { sessionId, messageId, question } = opts;
   if (sessionId === null || messageId === null) return null;
-  return { kind: "consulted", sessionId, messageId, command: "ask-about-audio" };
+  return { kind: "consulted", sessionId, messageId, command: "ask-about-audio", question };
 }
 
 /**

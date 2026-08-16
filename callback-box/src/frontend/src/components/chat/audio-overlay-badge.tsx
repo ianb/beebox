@@ -69,11 +69,21 @@ export function buildAudioBadgeSpecs(overlay: AudioOverlayEntry, originalText: s
     });
   }
   if (overlay.consulted) {
+    const { questions } = overlay.consulted;
     specs.push({
       kind: "consulted",
       glyph: <EarSparkleGlyph />,
       label: "The agent analyzed this recording",
-      detail: null,
+      detail: (
+        <>
+          <div className="text-warm-500 text-[10px] uppercase tracking-wide mt-1.5">
+            {questions.length === 1 ? "question asked" : "questions asked"}
+          </div>
+          {questions.map((q) => (
+            <div key={q} className="mt-0.5 whitespace-pre-wrap">{q}</div>
+          ))}
+        </>
+      ),
     });
   }
   return specs;
