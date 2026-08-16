@@ -1,7 +1,7 @@
 ---
 title: "Story extraction: rubric, prompts, and the A/B review loop"
 status: active
-workstream: unknown
+workstream: public-site
 issues: []
 ---
 # Story extraction: rubric, prompts, and the A/B review loop

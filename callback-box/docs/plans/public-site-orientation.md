@@ -81,12 +81,26 @@ The back half of the pipeline, and the site itself, are undesigned. Pick one:
 
 No default is right — it's a boxholder call about where energy goes.
 
-## Practical state
+## Practical state (updated 2026-08-15)
 
-- Branch `worktree-github-pages-site`, several commits ahead of `main` (rubric,
-  re-extraction outcomes, picker dropdown, ingest fix). **`/finish` to land
-  before continuing** so a new session starts from merged main.
-- Triage verdicts live in the browser's localStorage until exported (`e`) —
-  export before abandoning a browser.
+- **All tooling is landed on `main`** (through `e84d2ac6`); the workstream was
+  renamed `github-pages-site` → `public-site` and the old worktree/branch
+  removed. Current work happens in the `public-site` worktree.
+- **The triage working set did not survive the old worktree's removal.** The
+  extraction runs (`dev/story-eval/runs/`, ~37 docs of nuggets) and the
+  autosave verdicts file were gitignored and lived only in that worktree; no
+  manual export exists on disk. What remains:
+  - `site/story/coverage.json` — which docs were scanned, content hashes,
+    nugget counts (but not the nuggets themselves).
+  - Browser localStorage (`story-eval-verdicts-v1`, origin `localhost:3210`,
+    shared across worktree prefixes) — likely still holds decisions, chips,
+    and the triage **notes** (the proto-elicitation material). The app's
+    Export builds from loaded runs, which now 404, so salvage means reading
+    the key directly via devtools console, not pressing `e`.
+  - Verdicts key on group ids derived from run spans, and re-extraction is
+    not deterministic — so decisions can't be re-joined to spans. The notes
+    text (keyed by doc) is the recoverable part worth salvaging.
+  - The rubric sharpenings and learnings above were committed — the durable
+    outcomes survived; the working process did not (as the principles said).
 - App/`dev/` changes need no router restart (served from disk); past
   `router.ts` changes did.
