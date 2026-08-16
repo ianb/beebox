@@ -18,7 +18,23 @@
 // `/favicon.*`) lives at the bare root, not under a worktree.
 
 import { assertNever } from "../callback-box/src/lib/invariant.js";
+import { isScanUploadSubpath } from "../callback-box/src/hub/scan-gate.js";
 import { isPairingRedeemUrl } from "../callback-box/src/webapp/routes/pairing.js";
+
+/**
+ * The router-scoped variant of `isPairingRedeemUrl`. The shared matcher is
+ * anchored to the box-only shape (`/<box>/api/pairing/redeem`) the hub and box
+ * servers see — deliberately, per
+ * issues/closed/code-quality/2026-07-19-mobile-contract-small-cleanups.md,
+ * which tightened it away from an unbounded `endsWith` match. The router sees
+ * requests un-stripped (`/<worktree>/<box>/...`), one segment deeper, so it
+ * needs its own anchor rather than reusing the box-level one — widening the
+ * shared matcher to accept two segments would re-open the imprecision that
+ * fix closed for the hub/box servers.
+ */
+function isRouterPairingRedeemUrl(pathname: string): boolean {
+  return isPairingRedeemUrl(pathname) || /^\/[^/]+\/[^/]+\/api\/pairing\/redeem$/.test(pathname);
+}
 
 /** Node's incoming header bag. Repeated headers arrive as arrays. */
 export type RouterHeaders = Record<string, string | string[] | undefined>;
@@ -43,30 +59,37 @@ export interface BoxTarget {
  *
  * - `unauth-allowlist`: bootstrap surface reachable with no credential — the
  *   `/auth/*` API + login/setup HTML, the login SPA static assets, public
- *   favicons, and the pre-auth iOS pairing-redeem POST.
+ *   favicons, the pre-auth iOS pairing-redeem POST, and the scan-upload
+ *   surface (`POST /<w>/<box>/api/scan/check`, `PUT
+ *   /<w>/<box>/api/scan/files/<sha256>`) whose scan-token bearer the hub's
+ *   scan gate and the box child each verify independently.
  * - `control`: MUTATING router control (`/__router/{stop,retry}` and the
  *   dashboard cold-start) — owner session AND a CSRF-safe origin.
  * - `control-read`: read-only router infra (`/__router/status`, the `/` worktree
  *   index, the `/<w>/dev/` browser) — owner session, no CSRF requirement.
  *   `json` distinguishes the machine endpoint (`/__router/status`, always a JSON
  *   401 on deny) from the browser pages (which redirect a navigation to login).
- * - `box`: a per-box or root-worktree app request (`/<w>/<box>/...`, `/<w>/api/*`,
- *   `/<w>/`) — the box precedence ladder against the TARGET box.
+ * - `worktree-box-list`: the hub's `GET /<w>/api/boxes` endpoint. Reachable by
+ *   any valid credential in the worktree because the hub performs the
+ *   credential-to-box filtering before returning the list.
+ * - `box`: a per-box or root-worktree app request (`/<w>/<box>/...`, other
+ *   `/<w>/api/*`, `/<w>/`) — the box precedence ladder against the TARGET box.
  * - `worktree-asset`: a NON-SENSITIVE worktree-root dev asset Vite serves itself
  *   (`/<w>/@vite/...`, `/<w>/@fs/...`, `/<w>/@id/...`, `/<w>/@react-refresh`,
  *   `/<w>/node_modules/...`, `/<w>/src/...`) — the dev SPA shell an iOS webview
  *   needs. Reachable by ANY valid box credential in the worktree (a session, OR a
- *   per-box mobile token for any box there), NOT the cross-box picker/API which
- *   stay session-only. These paths never serve box data — Vite owns them, so a
- *   box literally named `src`/`node_modules` is already unreachable in dev anyway
- *   (this classification mirrors the proxy's real routing). Built `assets`/`icons`
- *   are separately in `unauth-allowlist`.
+ *   per-box mobile token for any box there), NOT the cross-box picker or other
+ *   root APIs, which stay session-only. These paths never serve box data —
+ *   Vite owns them, so a box literally named `src`/`node_modules` is already
+ *   unreachable in dev anyway (this classification mirrors the proxy's real
+ *   routing). Built `assets`/`icons` are separately in `unauth-allowlist`.
  * - `unknown`: anything else — deny (fail closed).
  */
 export type RouterRoute =
   | { kind: "unauth-allowlist" }
   | { kind: "control" }
   | { kind: "control-read"; json: boolean }
+  | { kind: "worktree-box-list"; targetWorktree: string }
   | ({ kind: "box" } & BoxTarget)
   | { kind: "worktree-asset"; targetWorktree: string }
   | { kind: "unknown" };
@@ -100,7 +123,9 @@ export interface BoxAccessIdentity {
  * - `resolveWorktreeAsset` — true if ANY valid box credential in the worktree is
  *   present: a session (owner, or a member of any box there), OR a per-box mobile
  *   token / agent bearer for any box there. Gates the non-sensitive dev assets
- *   without demanding the cross-box picker's per-user session.
+ *   without demanding the cross-box picker's per-user session. The box-list
+ *   route reuses this resolver only as a worktree credential gate; the hub
+ *   still filters the response to boxes authorized by that credential.
  */
 export interface RouterAuthDeps {
   resolveOwnerSession(headers: RouterHeaders): Awaitable<OwnerIdentity | null>;
@@ -157,10 +182,11 @@ const VITE_DEV_ASSET_SEGMENTS = new Set<string>([
   "src",
 ]);
 
-/** Login SPA static-asset prefixes (Track A rewrites these under `<prefix>/`). */
-function isLoginAssetPath(rest: string): boolean {
+/** Public frontend static-asset paths (Track A rewrites these under `<prefix>/`). */
+function isPublicFrontendAssetPath(rest: string): boolean {
   return (
     rest === "/manifest.webmanifest" ||
+    rest === "/sw.js" ||
     rest === "/assets" ||
     rest.startsWith("/assets/") ||
     rest === "/icons" ||
@@ -190,14 +216,27 @@ function classifyRouterControl(pathname: string): RouterRoute {
 export function classifyRouterRoute({ method, url }: { method: string; url: string }): RouterRoute {
   const pathname = pathnameOf(url);
 
-  // The pre-auth iOS pairing bootstrap, matched by the REUSED prefix-agnostic
-  // matcher (the same one the hub and box use) — the ticket is the credential.
-  if (method === "POST" && isPairingRedeemUrl(url)) return { kind: "unauth-allowlist" };
+  // The pre-auth iOS pairing bootstrap. Router-scoped: the router sees the
+  // request un-stripped, one segment deeper than the hub/box servers do — see
+  // isRouterPairingRedeemUrl. The ticket is the credential.
+  if (method === "POST" && isRouterPairingRedeemUrl(pathname)) return { kind: "unauth-allowlist" };
 
   // Router infra at the bare root (never under a worktree).
   if (pathname === "/" || pathname === "") return { kind: "control-read", json: false };
   if (pathname === "/favicon.png" || pathname === "/favicon.ico") return { kind: "unauth-allowlist" };
   if (pathname === "/__router" || pathname.startsWith("/__router/")) return classifyRouterControl(pathname);
+  if (pathname === "/workstreams" || pathname.startsWith("/workstreams/")) {
+    if (method === "GET" || method === "HEAD") return { kind: "control-read", json: false };
+    if (
+      method === "POST" &&
+      (pathname.startsWith("/workstreams/action/") ||
+        pathname.startsWith("/workstreams/issues/action/") ||
+        pathname === "/workstreams/api/trpc" ||
+        pathname.startsWith("/workstreams/api/trpc/"))
+    )
+      return { kind: "control" };
+    return { kind: "unknown" };
+  }
   // Bare `/dev` / `/dev/` redirect to `/main/dev/` — the dev browser (owner).
   if (pathname === "/dev" || pathname === "/dev/") return { kind: "control-read", json: false };
 
@@ -209,8 +248,8 @@ export function classifyRouterRoute({ method, url }: { method: string; url: stri
   // callback). Method-agnostic: login is a POST, `/auth/me` a GET.
   if (rest === "/auth" || rest.startsWith("/auth/")) return { kind: "unauth-allowlist" };
 
-  // `/<w>/{assets,icons,manifest.webmanifest}` — login SPA static assets (GET).
-  if (method === "GET" && isLoginAssetPath(rest)) return { kind: "unauth-allowlist" };
+  // `/<w>/{assets,icons,manifest.webmanifest,sw.js}` — public frontend static assets (GET).
+  if (method === "GET" && isPublicFrontendAssetPath(rest)) return { kind: "unauth-allowlist" };
 
   // `/<w>/dev` / `/<w>/dev/...` — the worktree's dev browser (owner, read-only).
   if (rest === "/dev" || rest.startsWith("/dev/")) return { kind: "control-read", json: false };
@@ -225,11 +264,33 @@ export function classifyRouterRoute({ method, url }: { method: string; url: stri
     return { kind: "worktree-asset", targetWorktree: name };
   }
 
+  // The hub filters this list to boxes authorized by the request credential.
+  // It must therefore be reachable before the frontend knows which box slug
+  // that credential belongs to.
+  if (method === "GET" && rest === "/api/boxes") {
+    return { kind: "worktree-box-list", targetWorktree: name };
+  }
+
   // Root-worktree API (`/<w>/api/*`) — box class, no single box slug in the path.
   if (seg2 === "api") return { kind: "box", targetWorktree: name, targetBox: null };
 
   // Bare worktree root (`/<w>` / `/<w>/`) — the box picker; box class, no slug.
   if (seg2 === null) return { kind: "box", targetWorktree: name, targetBox: null };
+
+  // `/<w>/<box>/api/scan/{check,files/<sha256>}` — the scan-upload surface,
+  // matched by the REUSED hub shape matcher with the method pinned to the
+  // contract's verb per path. Like the pairing redeem above, the router
+  // forwards on shape alone: the scan bearer is the credential, verified
+  // independently by the hub's scan gate AND the box child's scan-auth
+  // preHandler. A scan path with the wrong verb falls through to the normal
+  // box wall.
+  const boxRest = rest.slice(`/${seg2}`.length);
+  if (isScanUploadSubpath(boxRest)) {
+    const wantsCheck = boxRest === "/api/scan/check";
+    if ((wantsCheck && method === "POST") || (!wantsCheck && method === "PUT")) {
+      return { kind: "unauth-allowlist" };
+    }
+  }
 
   // `/<w>/<box>/...` — a box-scoped request; the slug is the target box.
   return { kind: "box", targetWorktree: name, targetBox: seg2 };
@@ -320,6 +381,15 @@ export async function authorizeRouterRequest(
       if (await deps.resolveMobileForBox(headers, targetBoxRoot)) return { allow: true, route };
       if (await deps.resolveBoxAccessSession(headers, targetBoxRoot)) return { allow: true, route };
       return deny({ status: 401, reason: "box-auth-required", redirectToLogin: nav, route });
+    }
+
+    case "worktree-box-list": {
+      // The hub is the data-authorization boundary for this endpoint: it
+      // verifies the same credential against every configured box and returns
+      // only matches. The router only establishes that the credential belongs
+      // to this worktree so the request can reach that filter.
+      if (await deps.resolveWorktreeAsset(headers, route.targetWorktree)) return { allow: true, route };
+      return deny({ status: 401, reason: "worktree-box-list-auth-required", redirectToLogin: nav, route });
     }
 
     case "worktree-asset": {

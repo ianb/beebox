@@ -18,6 +18,7 @@ import { CapturePage } from "./pages/capture/CapturePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { AdminPage } from "./pages/AdminPage";
 import { AppLayout, BoxRedirect, BrowsePageWrapper, RootLayout } from "./app-shell";
+import { RouteError } from "./components/RouteError";
 import { LoginPage } from "./pages/login/LoginPage";
 import { SetupPage } from "./pages/login/SetupPage";
 import { CardViewPage } from "./pages/card/CardViewPage";
@@ -27,11 +28,15 @@ import { ChatsPage } from "./pages/chats/ChatsPage";
 import { SpeechTestPage } from "./pages/dev/SpeechTestPage";
 import { ComposerStatesPage } from "./pages/dev/ComposerStatesPage";
 import { CaptureModePage } from "./pages/dev/CaptureModeHarness";
+import { InventoryPage } from "./pages/inventory/InventoryPage";
 
 // --- Root route ---
 
 const rootRoute = createRootRoute({
   component: RootLayout,
+  // Without this the router logs "The following error wasn't caught by any
+  // route!" and renders nothing, so a thrown render turns into a blank page.
+  errorComponent: RouteError,
 });
 
 // --- Top-level routes (no boxSlug) ---
@@ -70,10 +75,29 @@ const boxLayoutRoute = createRoute({
 
 // --- Box child routes ---
 
-const dashboardRoute = createRoute({
+// The box index lands on chat — the conversation is the primary surface
+// (docs/plans/top-nav-ia.md Track A). A redirect rather than mounting
+// ChatPage here: the chat flows canonicalize onto /chat (ChatPage rewrites
+// the resolved session there), so a root-mounted chat would immediately
+// navigate away from itself.
+const boxIndexRoute = createRoute({
   getParentRoute: () => boxLayoutRoute,
   path: "/",
+  beforeLoad: ({ params }) => {
+    throw redirect({ to: "/$boxSlug/chat", params: { boxSlug: params.boxSlug } });
+  },
+});
+
+const dashboardRoute = createRoute({
+  getParentRoute: () => boxLayoutRoute,
+  path: "/dashboard",
   component: DashboardPage,
+});
+
+const inventoryRoute = createRoute({
+  getParentRoute: () => boxLayoutRoute,
+  path: "/inventory",
+  component: InventoryPage,
 });
 
 const chatRoute = createRoute({
@@ -91,8 +115,6 @@ const chatRoute = createRoute({
     // active card changes. Distinct from `companion`, which is a one-shot
     // deep-link opened only on mount.
     card: z.string().optional(),
-    // Native companion embed mode: conversation-only chat, no web composer.
-    embed: z.union([z.literal("1"), z.literal(1)]).optional(),
     // Native iOS mode: preserve web navigation and chat controls while the
     // shell supplies a keyboard-safe native composer.
     nativeComposer: z.union([z.literal("1"), z.literal(1)]).optional(),
@@ -119,6 +141,7 @@ const historySearchSchema = z.object({
   touchpoint: z.boolean().optional(),
   feedback: z.boolean().optional(),
   session: z.string().optional(),
+  path: z.string().optional(),
 });
 
 const historyRoute = createRoute({
@@ -219,7 +242,9 @@ const routeTree = rootRoute.addChildren([
   loginRoute,
   setupRoute,
   boxLayoutRoute.addChildren([
+    boxIndexRoute,
     dashboardRoute,
+    inventoryRoute,
     chatRoute,
     questionsRoute,
     browseRoute,

@@ -1,7 +1,10 @@
 ---
 title: "memory gardener consolidation loop"
+workstream: unknown
 area: callback-box
 needs: [design]
+priority: backlog
+next-action: discuss
 ---
 
 From the Rowboat review (`research/rowboat-review.md`). Rowboat's memory isn't the

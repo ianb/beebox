@@ -102,3 +102,12 @@ JSON.stringify(loadEnv(cliEnvSchema, { PORT: "3000", CB_SESSION_SECRET: "leak-me
 JSON.stringify(loadEnv(serverEnvSchema, { CB_SESSION_SECRET: "kept" }).CB_SESSION_SECRET)
 => "kept"
 ```
+
+The global credential-store override is common to the hub, server, and CLI;
+keeping it in the base schema is what lets a validated hub pass the same path
+to its children.
+
+```ts
+JSON.stringify(loadEnv(cliEnvSchema, { CB_AUTH_FILE: "/srv/callback/auth.json" }).CB_AUTH_FILE)
+=> "/srv/callback/auth.json"
+```

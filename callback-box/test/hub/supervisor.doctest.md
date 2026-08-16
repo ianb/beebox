@@ -50,6 +50,7 @@ const sourceEnv = {
   HOME: "/home/callback",
   NODE_ENV: "production",
   PUBLIC_URL: "https://cb.example.org",
+  CB_AUTH_FILE: "/home/callback/.cb-auth.json",
   CB_DIAG_API_KEY: "diag-key-value",
   CB_GOOGLE_TOKENS_FILE: "/home/callback/.google-tokens.json",
   THINKING_OPENAI_API_KEY: "sk-thinking-value",
@@ -78,6 +79,7 @@ JSON.stringify({
   home: env.HOME,
   nodeEnv: env.NODE_ENV,
   publicUrl: env.PUBLIC_URL,
+  authFile: env.CB_AUTH_FILE,
   diagKey: env.CB_DIAG_API_KEY,
   tokensFile: env.CB_GOOGLE_TOKENS_FILE,
   thinkingKey: env.THINKING_OPENAI_API_KEY,
@@ -88,7 +90,7 @@ JSON.stringify({
   geminiKey: env.GEMINI_KEY,
   hubSecret: env.CB_HUB_SECRET,
 })
-=> {"path":"/usr/bin:/bin","home":"/home/callback","nodeEnv":"production","publicUrl":"https://cb.example.org","diagKey":"diag-key-value","tokensFile":"/home/callback/.google-tokens.json","thinkingKey":"sk-thinking-value","googleClientId":"app-oauth-client-id","googleClientSecret":"app-oauth-client-secret","deepgramApiKey":"dg-api-key-value","deepgramProject":"dg-project-value","geminiKey":"gemini-key-value","hubSecret":"per-boot-hub-secret"}
+=> {"path":"/usr/bin:/bin","home":"/home/callback","nodeEnv":"production","publicUrl":"https://cb.example.org","authFile":"/home/callback/.cb-auth.json","diagKey":"diag-key-value","tokensFile":"/home/callback/.google-tokens.json","thinkingKey":"sk-thinking-value","googleClientId":"app-oauth-client-id","googleClientSecret":"app-oauth-client-secret","deepgramApiKey":"dg-api-key-value","deepgramProject":"dg-project-value","geminiKey":"gemini-key-value","hubSecret":"per-boot-hub-secret"}
 ```
 
 ```ts continue
@@ -166,6 +168,41 @@ JSON.stringify({ status: afterExit.status, restarts: afterExit.restarts })
 ```ts cleanup
 await supervisor.stopAll();
 await fixture.cleanup();
+```
+
+## A development reload exit restarts cleanly without consuming crash budget
+
+```ts continue
+const reloadFixture = await makeTmpBox();
+const reloadChildren = [];
+function reloadSpawnChild() {
+  const child = makeFakeChild(905000 + reloadChildren.length);
+  reloadChildren.push(child);
+  return child;
+}
+const reloadConfig = {
+  port: undefined,
+  host: undefined,
+  boxes: { fixture: { path: reloadFixture.root } },
+  configPath: reloadFixture.path("hub.json"),
+};
+const reloadSupervisor = new Supervisor({
+  config: reloadConfig,
+  hubSecret: "test-hub-secret",
+  spawnChild: reloadSpawnChild,
+  checkReady: () => Promise.resolve(),
+});
+await reloadSupervisor.startAll();
+reloadChildren[0].fireExit(75, null);
+await new Promise((resolve) => setTimeout(resolve, 20));
+const reloadStatus = reloadSupervisor.getStatuses()[0];
+JSON.stringify({ status: reloadStatus.status, pid: reloadStatus.pid, restarts: reloadStatus.restarts, failures: reloadStatus.consecutiveFailures })
+=> {"status":"running","pid":905001,"restarts":1,"failures":0}
+```
+
+```ts cleanup
+await reloadSupervisor.stopAll();
+await reloadFixture.cleanup();
 ```
 
 ## Lazy mode: `startAll` spawns nothing, `ensureRunning` cold-starts on first call, idle collection returns it to "stopped"

@@ -1,5 +1,6 @@
 ---
 title: "Model-backend pluggability: can the Agent SDK run on an Anthropic-compatible endpoint?"
+workstream: unknown
 needs: [design]
 filed-by: agent
 discovered-in: main session — backend-alternatives research (research/backend-alternatives/README.md)
@@ -47,7 +48,7 @@ several bullets that originally stood here:
   only" bullet was half wrong): Anthropic blocks third-party clients and sanctions
   our own single-tenant SDK-on-own-login pattern; OpenAI informally tolerates
   third-party ChatGPT-subscription riding — see
-  [codex-sdk-second-backend](2026-07-18-codex-sdk-second-backend.md) for why we
+  [codex-sdk-second-backend](../closed/exploration/2026-07-18-codex-sdk-second-backend.md) for why we
   still don't build on it now.
 - **Vision gates the provider list hard**: MiniMax and DeepSeek are disqualified
   (text-only API surfaces); Kimi API is the best China-based fit but trains on
@@ -64,4 +65,4 @@ Concrete follow-ons filed:
 [provider-endpoint-config](../features/2026-07-18-provider-endpoint-config.md)
 (the ADOPT item, blocked on the spike above),
 [chat-backend-port-hygiene](../code-quality/2026-07-18-chat-backend-port-hygiene.md),
-[codex-sdk-second-backend](2026-07-18-codex-sdk-second-backend.md).
+[codex-sdk-second-backend](../closed/exploration/2026-07-18-codex-sdk-second-backend.md).

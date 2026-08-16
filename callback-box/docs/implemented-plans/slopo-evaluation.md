@@ -1,3 +1,9 @@
+---
+title: "slopo evaluation — callback-box/src"
+status: implemented
+workstream: unknown
+issues: []
+---
 # slopo evaluation — callback-box/src
 
 **Date:** 2026-07-02 · **Scope:** `callback-box/src` (622 source files, 3552 code units after excludes)

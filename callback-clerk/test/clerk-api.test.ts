@@ -3,6 +3,7 @@ import {
   readEnvelopeData,
   parseDestinationsData,
   parseCommentaryResult,
+  parseTabArrangementResult,
 } from "../src/platform/clerk-api.js";
 
 test("readEnvelopeData unwraps a well-formed tRPC success envelope", async (t) => {
@@ -64,4 +65,14 @@ test("parseCommentaryResult rejects skewed responses", async (t) => {
   t.equal(parseCommentaryResult({ created: [1], open: "x" }), null, "created entry not a string");
   t.equal(parseCommentaryResult({ created: [], open: 5 }), null, "open not a string");
   t.equal(parseCommentaryResult(null), null, "not a record");
+});
+
+test("parseTabArrangementResult validates the handoff response", async (t) => {
+  t.same(parseTabArrangementResult({ card: "box/inbox/Tabs.card", open: "chat?session=new", transferId: "abc" }), {
+    card: "box/inbox/Tabs.card",
+    open: "chat?session=new",
+    transferId: "abc",
+  });
+  t.equal(parseTabArrangementResult({ card: "x", open: "y" }), null);
+  t.equal(parseTabArrangementResult({ card: "x", open: 2, transferId: "abc" }), null);
 });

@@ -23,16 +23,17 @@ app exists.
 | Bridge origin enforcement | done (in-script origin check) | planned (Track 1, `allowedOriginRules` — platform-enforced, stronger) |
 | Native emission bridge with delivery receipts (35 s timeout, restore-on-rejected) | done | planned (Track 3) |
 | Text composer | done | planned (Track 3) |
-| Photo attachments (picker + camera, ≤4, EXIF baked upright) | done | planned (Track 3) |
+| Photo attachments (picker + camera, unlimited selection, EXIF baked upright) | done — **at most 4 ride inline**; a larger selection routes to a bulk batch (`docs/mobile-contract.md` §8, `INLINE_PHOTO_LIMIT`) | planned (Track 3 — must implement the same threshold; inlining an unbounded selection is a known crash, `issues/bugs/2026-07-30-many-photos-to-chat-fails-ios.md`) |
+| Bulk file-upload batch (many-file drop → `<upload>` message → chat-agent filing) | done — dedicated native uploader (`Services/BulkUploadAPI.swift`, `Services/BulkUploadCoordinator.swift`), bounded at 3 concurrent, file-backed bodies, delivery confirmed before local state is released. **NOT durable across a relaunch**: uploads use `URLSession.shared`, not a background session, and no local batch record is persisted, so a force-quit mid-batch strands an open batch server-side (`BulkUploadCoordinator.resume` exists and is tested for in-session use, but nothing calls it after a cold start). Photos only so far (the composer's `.fileImporter` still uses the single-file attach path) | not planned until an Android uploader ships — the server contract (`docs/mobile-contract.md` §5.6) is uploader-agnostic and now has two reference implementations (web overlay, iOS) |
 | Voice: live on-device partial transcription | done (SpeechAnalyzer / SFSpeechRecognizer) | **divergent** — record-only; Android `SpeechRecognizer` holds the mic exclusively, so no live partials alongside the recording (plan Track 4) |
 | Voice: spoken keyword commands (e.g. "send") | done | **divergent** — requires live partials; same reason as above |
-| Voice: HQ server transcription upload | done (float WAV — format question tracked in `issues/bugs/2026-07-17-ios-hq-wav-float-format-needs-verify.md`) | planned (Track 4, 16 kHz mono 16-bit PCM WAV) |
+| Voice: HQ server transcription upload | done (Float32 WAV verified against all HQ paths; `issues/closed/bugs/2026-07-17-ios-hq-wav-float-format-needs-verify.md`) | planned (Track 4, 16 kHz mono 16-bit PCM WAV) |
 | Location share via bridge | done | planned (Track 5, + geolocation permission handoff) |
 | External links → system browser | done (Safari hand-off) | planned (Track 1, Custom Tabs) |
 | Shared golden-fixture contract tests | done (`docs/implemented-plans/mobile-parity-sync.md` step 3 — TS doctest + iOS `MobileContractFixtureDecodeTests`/`SpeechKeywordsTests`) | planned (Track 6) |
 | Headless CI build + unit tests | n/a — needs macOS/Xcode | planned (Track 6 / open question; Linux-friendly) |
 | Per-box local device lock | done (`docs/implemented-plans/ios-per-box-device-lock.md`; physical-device acceptance remains) | planned (`issues/features/2026-07-20-android-per-box-device-lock-parity.md`) |
-| Capture mode | planned (`docs/plans/ios-native-capture-mode.md`) | not planned until iOS capture ships |
+| Capture mode | done (`docs/plans/ios-native-capture-mode.md`; recorder silent-stop tracked in `issues/bugs/`) | not planned |
 | Push notifications | not planned (no APNs channel server-side) | not planned (no FCM channel server-side) |
 | Share-sheet intake | not planned yet (umbrella plan Track E) | not planned |
 

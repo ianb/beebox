@@ -18,8 +18,11 @@
 
 import type { ChatImageAttachment } from "../api-chat";
 import type { SelectionItem } from "../lib/selection/serialize";
-import { joinTranscript } from "../components/chat/InteractiveChat-helpers";
+import type { FinalWord } from "../machines/transcription-events";
+import { joinTranscript, spokenTextStart } from "../components/chat/InteractiveChat-helpers";
+import { appendSendKeywordTag, detectKeyword } from "../lib/audio/speech-keywords";
 import { createVoiceEmission, type Emission, type EmissionFile } from "./emission";
+import { resolveEmissionWords } from "./unsure-words";
 
 export type VoiceIntent =
   | {
@@ -32,6 +35,18 @@ export type VoiceIntent =
       audioBlob: Blob | null;
       /** "Send and close": after commit, leave the mic closed (no re-arm). */
       closeMic: boolean;
+      /** This keyword explicitly requests HQ cleanup, independently of narration mode. */
+      hq: boolean;
+      /**
+       * Realtime words backing `text` at commit time (Track 3, docs/plans/
+       * transcript-confidence.md) — fast path: snapshotted at CANCEL; slow
+       * path: the machine's `finalWords` read at its idle transition, which
+       * lands alongside the parked text. `null` means the service captured
+       * no confidence data (Voxtral/OpenAI realtime, or nothing finalized —
+       * Fix A); the HQ-drop decision (words describe discarded text) is the
+       * consumer's job, not this shape's.
+       */
+      words: readonly FinalWord[] | null;
     }
   | { kind: "cancel" }
   | { kind: "mic-off" }
@@ -55,6 +70,15 @@ export function buildVoiceSubmitEmission(opts: {
   imagesSnapshot: readonly ChatImageAttachment[];
   filesSnapshot: readonly EmissionFile[];
   diarized: boolean;
+  /**
+   * Realtime words backing `finalText`, or absent/`null`/`undefined` when
+   * no confidence data applies to the text being sent (HQ replaced it —
+   * Track 3's HQ-drop rule; or the service never captured any — Fix A).
+   * Resolved through `resolveEmissionWords` before landing on the
+   * emission; the assembler does the `<unsure>` marking against the sent
+   * body, since the body isn't final until selections/attachments fold in.
+   */
+  words?: readonly FinalWord[] | null;
 }): Emission {
   const full = joinTranscript(opts.priorInput, opts.finalText);
   return createVoiceEmission({
@@ -63,5 +87,67 @@ export function buildVoiceSubmitEmission(opts: {
     files: opts.filesSnapshot,
     selections: opts.selectionsSnapshot,
     diarized: opts.diarized,
+    words: resolveEmissionWords(opts.words),
+    spokenStart: spokenTextStart(opts.priorInput),
   });
+}
+
+interface HqTranscript {
+  text: string;
+  diarized: boolean;
+}
+
+/**
+ * Resolve an optional HQ pass against one frozen keyword-send snapshot. The
+ * caller may keep accepting composer input while this awaits: only the values
+ * passed here can reach the returned emission. A missing or rejected HQ result
+ * deliberately falls back to the realtime text rather than losing the send.
+ */
+export async function prepareVoiceSubmitEmission(opts: {
+  intent: Extract<VoiceIntent, { kind: "submit" }>;
+  priorInput: string;
+  selectionsSnapshot: readonly SelectionItem[];
+  imagesSnapshot: readonly ChatImageAttachment[];
+  filesSnapshot: readonly EmissionFile[];
+  runHq: boolean;
+  transcribe: (audio: Blob) => Promise<HqTranscript | null>;
+}): Promise<{ emission: Emission; usedHq: boolean }> {
+  const {
+    intent, priorInput, selectionsSnapshot, imagesSnapshot, filesSnapshot, runHq, transcribe,
+  } = opts;
+  let finalText = intent.text;
+  let diarized = false;
+  let usedHq = false;
+
+  if (runHq && intent.audioBlob !== null) {
+    let hqResult: HqTranscript | null = null;
+    try {
+      hqResult = await transcribe(intent.audioBlob);
+    } catch (_e) {
+      // The realtime transcript below is the durable failure fallback.
+    }
+    if (hqResult !== null) {
+      const keyword = detectKeyword(hqResult.text);
+      finalText = keyword
+        ? keyword.processedTranscript
+        : appendSendKeywordTag(hqResult.text, {
+          action: intent.closeMic ? "sendClose" : "send",
+          matchedPhrase: intent.matchedPhrase,
+        });
+      diarized = hqResult.diarized;
+      usedHq = true;
+    }
+  }
+
+  return {
+    emission: buildVoiceSubmitEmission({
+      priorInput, finalText, selectionsSnapshot, imagesSnapshot, filesSnapshot, diarized,
+      // The HQ pass replaced the realtime text: those words describe
+      // discarded audio content, so drop the entries and `stt` entirely
+      // (Track 3 HQ-drop rule). A fallback to realtime text (!usedHq)
+      // attaches the intent's words like any other realtime send.
+      words: usedHq ? undefined : intent.words,
+    }),
+    usedHq,
+  };
 }

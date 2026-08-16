@@ -54,10 +54,9 @@ function nextLiveTargetUuid(opts: { prev: LiveTurnState; data: DataItem[]; liveT
   return prev.uuid;
 }
 
-function LoadOlderHeader({ hasOlder, loadingOlder, earlierCount, onLoadOlder }: {
+function LoadOlderHeader({ hasOlder, loadingOlder, onLoadOlder }: {
   hasOlder: boolean;
   loadingOlder: boolean;
-  earlierCount: number;
   onLoadOlder: () => void;
 }) {
   if (!hasOlder) return null;
@@ -68,7 +67,7 @@ function LoadOlderHeader({ hasOlder, loadingOlder, earlierCount, onLoadOlder }: 
         disabled={loadingOlder}
         className="text-sm text-primary hover:text-primary/80 disabled:text-warm-400"
       >
-        {loadingOlder ? "Loading..." : `Show ${earlierCount} earlier messages`}
+        {loadingOlder ? "Loading..." : "Show earlier messages"}
       </button>
     </div>
   );
@@ -103,8 +102,8 @@ function ScrollToBottomButton({ emphasized, onClick }: { emphasized: boolean; on
 }
 
 function MessageListInner({
-  messages, groups, modelMarkers, isStreaming, streamText, streamTools, processingShown,
-  debugView, currentUserEmail, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, snapshot,
+  messages, groups, modelMarkers, isStreaming, streamText, streamTools,
+  debugView, currentUserEmail, currentUserName, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, snapshot,
   totalEntries, onLoadOlder, loadingOlder, scrollToBottomTrigger, liveTurnId, proseEnabled, pendingHqDraft,
   captureBubbles, onCaptureRetry,
 }: {
@@ -114,9 +113,9 @@ function MessageListInner({
   isStreaming: boolean;
   streamText: string;
   streamTools: SessionContentBlock[];
-  processingShown: boolean;
   debugView: boolean;
   currentUserEmail: string | undefined;
+  currentUserName: string | undefined;
   speechPlayback: SpeechPlaybackState;
   handleStopSpeech: () => void;
   handleSkipSpeech: () => void;
@@ -135,7 +134,6 @@ function MessageListInner({
 }) {
   const { boxSlug } = useParams({ strict: false });
   const hasOlder = totalEntries > messages.length;
-  const earlierCount = totalEntries - messages.length;
 
   // Keep the streamed bubble visible through `refreshing` too — the brief
   // fetchHistory roundtrip after a turn completes. The machine holds
@@ -148,8 +146,8 @@ function MessageListInner({
     || (snapshot.matches("refreshing") && (streamText.length > 0 || streamTools.length > 0));
 
   const data = useMemo<DataItem[]>(
-    () => buildDataItems({ groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, processingShown, pendingHqDraft, captureBubbles, debugView }),
-    [groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, processingShown, pendingHqDraft, captureBubbles, debugView],
+    () => buildDataItems({ groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, pendingHqDraft, captureBubbles, debugView }),
+    [groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, pendingHqDraft, captureBubbles, debugView],
   );
 
   const { scrollerRef, contentRef, isPinned, hasUnseenContent, scrollToBottom, captureForPrepend } = useStickToBottom();
@@ -199,6 +197,7 @@ function MessageListInner({
     streamTools,
     debugView,
     currentUserEmail,
+    currentUserName,
     speechPlayback,
     handleStopSpeech,
     handleSkipSpeech,
@@ -207,7 +206,7 @@ function MessageListInner({
     proseEnabled,
     lastAssistantGroupIndex,
     handleCaptureRetry: onCaptureRetry,
-  }), [streamText, streamTools, debugView, currentUserEmail, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, proseEnabled, lastAssistantGroupIndex, onCaptureRetry]);
+  }), [streamText, streamTools, debugView, currentUserEmail, currentUserName, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, proseEnabled, lastAssistantGroupIndex, onCaptureRetry]);
 
   if (messages.length === 0 && !isStreaming) {
     return (
@@ -233,7 +232,6 @@ function MessageListInner({
           <LoadOlderHeader
             hasOlder={hasOlder}
             loadingOlder={loadingOlder}
-            earlierCount={earlierCount}
             onLoadOlder={handleLoadOlder}
           />
           {data.map((item) => {

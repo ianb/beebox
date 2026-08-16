@@ -1,7 +1,7 @@
 // The site's own small Markdoc pipeline. Deliberately NOT imported from
-// bin/router-docs.ts: that module drags in execa, highlight.js, and a cycle
-// with router-issues, and reaches Markdoc only by a hoisting accident. This
-// package declares @markdoc/markdoc explicitly and renders through it here.
+// bin/router-docs.ts: that module drags in router/runtime dependencies that do
+// not belong in the static-site build. This package declares @markdoc/markdoc
+// explicitly and renders through it here.
 //
 // Frontmatter is parsed strictly (zod) and fails the build with file+line on
 // malformed input — a publish boundary, unlike the tolerant browse-tool parser.

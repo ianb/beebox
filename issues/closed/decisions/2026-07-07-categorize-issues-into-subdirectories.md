@@ -1,5 +1,6 @@
 ---
 title: "categorize issues into subdirectories"
+workstream: unknown
 area: issues
 resolution: implemented
 ---

@@ -1,3 +1,9 @@
+---
+title: "Plan Engineering Review — Markdoc Tags Design"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Plan Engineering Review — Markdoc Tags Design
 
 Trial run of an adapted plan-eng-review (no numeric scoring, no scope-gate, no cognitive-patterns checklist; citation-discipline gate ON; failure-modes per new codepath; agent-flow edge cases).

@@ -1,3 +1,9 @@
+---
+title: "Box migration to frontmatter (subplan of remove-cardworks-package)"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Box migration to frontmatter (subplan of remove-cardworks-package)
 
 Migrate every box's on-disk card data from legacy XML to YAML frontmatter, so

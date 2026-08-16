@@ -108,7 +108,7 @@ calendarCommand
     const syncList = config.calendars || ["primary"];
     const syncing = new Set(syncList);
 
-    const svc = createGoogleCalendarService(createGoogleAuthService(auth));
+    const svc = createGoogleCalendarService(createGoogleAuthService(auth, { boxRoot }));
     const available = await fetchAvailableCalendars(svc);
 
     // "primary" is an alias for the user's main calendar

@@ -10,14 +10,18 @@
  * `failed:deliver`) rather than fire-and-forgotten.
  */
 
-import * as fs from "node:fs/promises";
 import type { ChatSession } from "../chat/session/index.js";
 import type { ChatSessionRegistry } from "../chat/session/registry.js";
 import type { EventBus } from "../event-bus.js";
-import { loadHistory, getMostActive, getDirectoryForSession, resolveSessionLogPath } from "../chat/session/history.js";
-import { getBoxTimeISO } from "../../lib/time.js";
-import { invariant } from "../../lib/invariant.js";
-import { errnoCode } from "../../lib/error-guards.js";
+import { loadHistory, getMostActive, getDirectoryForSession } from "../chat/session/history.js";
+import {
+  deliverUserMessage,
+  userMessageAlreadyLanded,
+  UserMessageDeliveryError,
+  type DeliveryTarget,
+} from "../chat/session/deliver-user-message.js";
+
+export { buildCaptureWrapper } from "../../shared/delivered-user-message.js";
 
 /** Raised when the non-busy `send()` of a capture message fails. Retryable. */
 export class CaptureDeliveryError extends Error {
@@ -25,47 +29,6 @@ export class CaptureDeliveryError extends Error {
     super("Capture delivery send failed");
     this.name = "CaptureDeliveryError";
   }
-}
-
-/** Format a total seconds count as `M:SS` for the wrapper's `audio` attr. */
-function formatAudioDuration(totalSeconds: number): string {
-  const s = Math.max(0, Math.round(totalSeconds));
-  const minutes = Math.floor(s / 60);
-  const seconds = s % 60;
-  return `${minutes}:${String(seconds).padStart(2, "0")}`;
-}
-
-/**
- * Build the `<capture …>` chat-message wrapper (a first-class user message
- * pointing at the committed capture document). Pure — the exact string is a
- * chat-vocabulary lock-in, doctested exact.
- */
-export function buildCaptureWrapper(opts: {
-  /** Box-relative path of the capture-session card. */
-  docPath: string;
-  imageCount: number;
-  audioSeconds: number;
-  summary: string;
-  partial?: boolean;
-  transcriptionFailed?: boolean;
-}): string {
-  // `doc` is a server-generated path (`<contextDir>/tmp-capture/capture-…`);
-  // a double quote or newline in it would break the wrapper's attribute
-  // parsing. These characters can't occur in the generated basename, and a
-  // landmark contextDir carrying one is a broken invariant, not runtime input —
-  // fail loudly rather than emit an unparseable message.
-  invariant(
-    !/[\n\r"]/.test(opts.docPath),
-    `Capture doc path contains a quote or newline: ${JSON.stringify(opts.docPath)}`,
-  );
-  const attrs = [
-    `doc="${opts.docPath}"`,
-    `images="${String(opts.imageCount)}"`,
-    `audio="${formatAudioDuration(opts.audioSeconds)}"`,
-  ];
-  if (opts.partial === true) attrs.push("partial=\"1\"");
-  if (opts.transcriptionFailed === true) attrs.push("transcription-failed=\"1\"");
-  return `<capture ${attrs.join(" ")}>\n${opts.summary.trim()}\n</capture>`;
 }
 
 /** First sentence of a transcript, or the whole trimmed text if no boundary. */
@@ -96,14 +59,11 @@ export function summarizeCapture(opts: {
 /**
  * A resolved delivery destination — computed ONCE at the start of preparation
  * (before cards are written) so placement and delivery agree, and persisted so
- * a retry reuses it. `sessionId === null` means "no existing chat resolved;
- * create a fresh session at delivery time".
+ * a retry reuses it. Structurally the shared {@link DeliveryTarget}.
+ * `sessionId === null` means "no existing chat resolved; create a fresh session
+ * at delivery time".
  */
-export interface CaptureDeliveryTarget {
-  sessionId: string | null;
-  /** Box-relative landmark dir of the target chat (drives `tmp-capture/` placement). */
-  contextDir: string | null;
-}
+export type CaptureDeliveryTarget = DeliveryTarget;
 
 /**
  * Resolve where a capture should be delivered, purely from on-disk state (no
@@ -157,18 +117,7 @@ export async function captureMessageAlreadyLanded(opts: {
   sessionId: string | null;
   docPath: string;
 }): Promise<boolean> {
-  const { boxRoot, sessionId, docPath } = opts;
-  if (sessionId === null) return false;
-  const logPath = await resolveSessionLogPath(boxRoot, sessionId);
-  try {
-    const raw = await fs.readFile(logPath, "utf-8");
-    return raw.includes(docPath);
-  } catch (e) {
-    if (errnoCode(e) !== "ENOENT") {
-      console.warn(`[capture] Could not read transcript ${logPath} for at-most-once probe:`, e);
-    }
-    return false;
-  }
+  return userMessageAlreadyLanded({ ...opts, logPrefix: "capture" });
 }
 
 export interface DeliverCaptureResult {
@@ -200,60 +149,13 @@ export async function deliverCaptureMessage(opts: {
    *  existing session; on assignment for a freshly-created one). */
   onSessionResolved?: ((sessionId: string) => void | Promise<void>) | undefined;
 }): Promise<DeliverCaptureResult> {
-  const { boxRoot, registry, eventBus, wireSession, target, message, onSessionResolved } = opts;
-
-  let session: ChatSession;
-  let id: string | null;
-  if (target.sessionId !== null) {
-    session = registry.getOrCreate(target.sessionId);
-    id = target.sessionId;
-  } else {
-    session = registry.createNew(
-      target.contextDir !== null && target.contextDir !== "" ? { contextDir: target.contextDir } : {},
-    );
-    id = null;
-    // The fresh session's id arrives asynchronously via the registry's
-    // `session-assigned` event; persist it the moment it matches this exact
-    // session object (guarded so duck-typed test-double registries without an
-    // event emitter are a no-op).
-    if (onSessionResolved && typeof registry.on === "function") {
-      const handler = (payload: { sessionId: string }): void => {
-        if (session.getSessionId() !== payload.sessionId) return;
-        registry.off("session-assigned", handler);
-        void Promise.resolve(onSessionResolved(payload.sessionId)).catch((e: unknown) => {
-          console.error(`[capture] Persisting resolved target ${payload.sessionId} failed:`, e);
-        });
-      };
-      registry.on("session-assigned", handler);
-    }
+  try {
+    return await deliverUserMessage({ ...opts, logPrefix: "capture" });
+  } catch (e) {
+    // Map the shared retryable failure to capture's own error class so the
+    // worker's `instanceof CaptureDeliveryError` → `failed:deliver` branch and
+    // the existing capture tests stay unchanged.
+    if (e instanceof UserMessageDeliveryError) throw new CaptureDeliveryError();
+    throw e;
   }
-  wireSession?.(session);
-
-  if (id !== null && onSessionResolved) {
-    await onSessionResolved(id);
-  }
-
-  eventBus.emit("chat-user-message", {
-    sessionId: id,
-    message,
-    user: null,
-    timestamp: getBoxTimeISO(boxRoot),
-  });
-
-  if (session.isBusy()) {
-    session.enqueue({ text: message });
-    return { sessionId: id, queued: true };
-  }
-
-  if (id !== null) {
-    registry.enforceLiveCap(id);
-    registry.touch(id, { subprocessUse: true });
-    void registry.markMostActive(id).catch((e: unknown) => {
-      console.error(`[capture] markMostActive(${id}) failed:`, e);
-    });
-  }
-
-  const sent = await session.send({ text: message });
-  if (!sent) throw new CaptureDeliveryError();
-  return { sessionId: session.getSessionId(), queued: false };
 }

@@ -7,7 +7,7 @@ the manual procedure in `docs/chat-scroll-testing.md`, but the *decision* is
 deterministic and checked here.
 
 ```ts setup
-import { decideReconcile } from "../../src/frontend/src/components/chat/scroll-reconcile.js";
+import { decideReconcile, decideScroll } from "../../src/frontend/src/components/chat/scroll-reconcile.js";
 ```
 
 A prepend of older history (loaded on scroll-up) grows the content just like a
@@ -56,5 +56,49 @@ decideReconcile({ source: "scroller", grew: true, pinned: false, prepend: false,
 
 // content source but nothing grew
 decideReconcile({ source: "content", grew: false, pinned: false, prepend: false, anchorMoved: false })
+=> none
+```
+
+## Scroll-event classification (`decideScroll`)
+
+The companion classifier for user scroll events (the controller's `scroll`
+handler, after programmatic writes are filtered out). An upward scroll with
+recent wheel/touch/key intent disengages following.
+
+```ts
+decideScroll({ scrolledUp: true, recentIntent: true, fromBottom: 300, nearBottomPx: 70 })
+=> disengage
+
+// even an intent-carrying scroll-up that stays near the bottom disengages
+decideScroll({ scrolledUp: true, recentIntent: true, fromBottom: 30, nearBottomPx: 70 })
+=> disengage
+```
+
+A scrollbar-thumb drag fires no wheel/touch/key events, so it carries no
+recorded intent — but an upward scroll that lands well above the bottom can
+only be the user, so it disengages anyway (the mid-stream scrollbar-drag
+fight bug). The layout clamps the intent gate exists to ignore — content
+shrinking below the reader, the mobile keyboard dismissing — land AT the new
+bottom, so the away-from-bottom condition never matches them.
+
+```ts
+// scrollbar drag: no intent, but well above the bottom — the user
+decideScroll({ scrolledUp: true, recentIntent: false, fromBottom: 300, nearBottomPx: 70 })
+=> disengage
+
+// keyboard-dismiss / shrink clamp: scrollTop drops to the new bottom, no
+// intent — must NOT disengage (nor re-engage: it reads as scrolled-up)
+decideScroll({ scrolledUp: true, recentIntent: false, fromBottom: 0, nearBottomPx: 70 })
+=> none
+```
+
+A downward (or stationary) scroll that settles near the bottom re-engages —
+no intent needed; one that stays far from the bottom does nothing.
+
+```ts
+decideScroll({ scrolledUp: false, recentIntent: false, fromBottom: 40, nearBottomPx: 70 })
+=> re-engage
+
+decideScroll({ scrolledUp: false, recentIntent: false, fromBottom: 500, nearBottomPx: 70 })
 => none
 ```

@@ -8,9 +8,10 @@
  * Results are merged into a single LintSummary so callers (e.g. cb validate)
  * can format them uniformly.
  *
- * Ref-checking walks two sides: `extractRefs` (src/cards) over parsed
- * frontmatter fields, and `extractBodyRefs` over the Markdoc body. Both
- * yield `{path, ref}` entries with the same shape; both are surfaced as
+ * Ref-checking walks three sides: `extractRefs` (src/cards) over parsed
+ * frontmatter fields, `extractBodyRefs` over the Markdoc body, and
+ * `extractBodyLinks` over the body's inline markdown links/images. All three
+ * yield `{path, ref}` entries with the same shape; all are surfaced as
  * warnings (not errors) so legitimate moves don't block commits.
  *
  * Type-specific, self-contained validation (rules Zod can't express, e.g.
@@ -18,6 +19,13 @@
  * it lives on each schema as a `validate` hook, invoked generically below.
  * The ref-existence walk stays here because it is box-aware (resolves refs
  * against the box root), which the self-contained hook deliberately lacks.
+ *
+ * Every card with a markdown body also gets a universal Markdoc parse+
+ * validate pass here (`body-markdoc-lint.ts`), warning-severity
+ * (`docs/implemented-plans/todo-annotation.md`, Track 1 chunk 2) — skipped for a schema
+ * that sets `ownMarkdocValidation` (commentary already runs it at error
+ * severity via its own `validate` hook; running it again here would
+ * double-report the same violation).
  */
 
 import { readFile } from "node:fs/promises";
@@ -31,9 +39,17 @@ import {
 } from "../cards/index.js";
 import { parse as parseYaml } from "yaml";
 import { parseCardText, typeFromFilename, isRecord, type LoadCardContext } from "./card-io.js";
-import { extractBodyRefs } from "./body-refs.js";
+import { extractBodyLinks, extractBodyRefs } from "./body-refs.js";
+import { lintBodyMarkdoc } from "./body-markdoc-lint.js";
 import { resolveRefExists } from "./ref-exists.js";
+import {
+  boxRelativeDoc,
+  canonicalIssueMessage,
+  cardRefProbe,
+  planCanonicalRef,
+} from "./canonical-refs.js";
 import { lintLessonPlanNodeRefs, lintProgressNodeRefs } from "./lint-node-refs.js";
+import { lintFigureEntry, lintLandmarkSymbolSrc } from "./lint-path-fields.js";
 import { conceptMapShapeWarnings } from "../schemas/concept-map.js";
 import { errorMessage } from "../lib/error-guards.js";
 
@@ -44,6 +60,13 @@ export interface LintDispatchOptions {
    */
   boxRoot: string;
   ctx: LoadCardContext;
+  /**
+   * Also flag refs written in the non-canonical (document-relative) form, as
+   * `type: "canonical"` warnings. Off unless `cb validate --canonical` asks for
+   * it: a box carries legacy relative refs by the hundred, and reporting them
+   * by default would bury the broken-ref signal (`canonical-refs.ts`).
+   */
+  canonical?: boolean;
 }
 
 /**
@@ -145,8 +168,16 @@ async function lintFrontmatterCard(input: {
   const frontmatterRefs = extractRefs(parsed.fields);
   const bodyField = parsed.fields["body"];
   const bodyRefs = typeof bodyField === "string" ? extractBodyRefs(bodyField) : [];
+  // Inline markdown links/images in the body are refs too — `cb mv` rewrites
+  // them, so validate checks them (the asymmetry meant a link broken by a
+  // hand-edit or a delete stayed silent until someone clicked it).
+  const bodyLinks = typeof bodyField === "string" ? extractBodyLinks(bodyField) : [];
   const warnings: LintIssue[] = [];
-  for (const { path: refPath, ref } of [...frontmatterRefs, ...bodyRefs]) {
+  const allRefs = [...frontmatterRefs, ...bodyRefs, ...bodyLinks];
+  if (options.canonical === true) {
+    warnings.push(...(await canonicalWarnings({ path, refs: allRefs, boxRoot: options.boxRoot })));
+  }
+  for (const { path: refPath, ref } of allRefs) {
     try {
       const exists = await resolveRefExists({ ref, fromPath: path, boxRoot: options.boxRoot });
       if (!exists) {
@@ -167,16 +198,31 @@ async function lintFrontmatterCard(input: {
   const containsWarning = lintContainsLength(parsed.fields);
   if (containsWarning !== null) warnings.push(containsWarning);
   warnings.push(...unknownKeyWarnings({ content, schema: parsed.schema }));
+  // Universal Markdoc body validation (docs/implemented-plans/todo-annotation.md, Track 1
+  // chunk 2): every card with a markdown body gets Markdoc parse+validate,
+  // warning-first — except a schema that already runs its own (commentary),
+  // which sets `ownMarkdocValidation` so the same violation isn't reported
+  // twice at two severities.
+  if (parsed.schema.ownMarkdocValidation !== true && typeof bodyField === "string") {
+    warnings.push(...lintBodyMarkdoc(bodyField));
+  }
   // Type-specific box-aware checks: progress entries and lesson-plan segments
   // name concept-map node ids, which can't be verified self-contained (the map
   // is in another card) nor by the generic ref walk (a node id isn't a file
   // ref). The lesson-plan adapter also warns on deferred-but-unmarked material.
+  // Landmark and figure carry the two path fields NOT named `ref`
+  // (`navigation.symbol.src`, `entry`), which the generic walk therefore misses
+  // — see lint-path-fields.ts.
   if (type === "progress") {
     warnings.push(...(await lintProgressNodeRefs({ path, fields: parsed.fields, boxRoot: options.boxRoot })));
   } else if (type === "lesson-plan") {
     warnings.push(...(await lintLessonPlanNodeRefs({ path, fields: parsed.fields, boxRoot: options.boxRoot })));
   } else if (type === "concept-map") {
     warnings.push(...conceptMapShapeWarnings(parsed.fields));
+  } else if (type === "landmark") {
+    warnings.push(...(await lintLandmarkSymbolSrc({ path, fields: parsed.fields, boxRoot: options.boxRoot })));
+  } else if (type === "figure") {
+    warnings.push(...(await lintFigureEntry({ path, fields: parsed.fields, boxRoot: options.boxRoot })));
   }
   // Type-specific, self-contained validation (rules Zod can't express) lives on
   // the schema as its `validate` hook — see the commentary/extfile schema
@@ -184,6 +230,32 @@ async function lintFrontmatterCard(input: {
   // the loader (box-aware), which the self-contained hook deliberately lacks.
   const errors = parsed.schema.validate ? parsed.schema.validate({ fields: parsed.fields }) : [];
   return { path, errors, warnings };
+}
+
+/**
+ * Non-canonical (document-relative) refs in one card, as `type: "canonical"`
+ * warnings — a type distinct from `"reference"` so they never inflate the
+ * broken-ref count. Each message names the box-root form the ref should be
+ * written as, so the report doubles as a preview of `--canonical --fix` — which
+ * is why it consults the filesystem through the same planner the fixer uses: a
+ * ref that `--fix` would REPAIR (dangling as written, resolvable from the box
+ * root) says so, and one it would refuse as ambiguous says that.
+ */
+async function canonicalWarnings(input: {
+  path: string;
+  refs: Array<{ path: string; ref: string }>;
+  boxRoot: string;
+}): Promise<LintIssue[]> {
+  const fromPath = boxRelativeDoc(input.boxRoot, input.path);
+  if (fromPath === null) return [];
+  const exists = cardRefProbe({ absPath: input.path, boxRoot: input.boxRoot });
+  const out: LintIssue[] = [];
+  for (const { path: locator, ref } of input.refs) {
+    const plan = await planCanonicalRef({ ref, fromPath, kind: "card" }, { exists });
+    const message = canonicalIssueMessage({ locator, ref }, plan);
+    if (message !== null) out.push({ type: "canonical", severity: "warning", message });
+  }
+  return out;
 }
 
 /**

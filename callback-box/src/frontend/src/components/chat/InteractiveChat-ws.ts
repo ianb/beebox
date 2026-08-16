@@ -8,11 +8,13 @@
  * dispatcher.
  */
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { z } from "zod";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useBusSubscription, type RealtimeEvent } from "../../hooks/useBusSubscription";
+import { useDeferredResync } from "../../hooks/useDeferredResync";
 import { busEventData } from "../../lib/bus-events";
+import { createReconnectRefreshGate, type ReconnectRefreshGate } from "./reconnect-refresh-gate";
 import { getApiBase } from "../../api";
 import { getTTSClient } from "../../lib/audio/tts-client";
 import { alarm } from "../../lib/audio/earcons";
@@ -25,6 +27,7 @@ import type { ChatEvent } from "../../machines/chat-types";
 import type { TaskEvent } from "./background-tasks";
 import type { CaptureLiveStatus } from "./capture-bubble";
 import type { ScreenshotRequest } from "./screenshot-request-handler";
+import { recordChatSendEnvironmentEvent } from "../../lib/chat-send-diagnostics";
 
 /**
  * Server response shape of GET /api/chat/voice-config (mirrors the backend's
@@ -43,6 +46,14 @@ const voiceConfigSchema = z.object({
 function stampFileVersion(data: { path: string; timestamp: string }): void {
   bumpFileVersion(data.path, data.timestamp.replace(/\D/g, ""));
 }
+
+/**
+ * How soon after mount a first subscription start still counts as "this mount
+ * established it" (so its REFRESH is redundant with the mount's own bootstrap).
+ * Later than this and the socket was down at mount: the start is a reconnect,
+ * and the preloaded history is old enough to be worth re-reading.
+ */
+const PROMPT_SUBSCRIPTION_MS = 5000;
 
 /** True when an event tagged with `dataSessionId` belongs to this view's session. */
 function forSession(dataSessionId: string | null, sessionId: string | null): boolean {
@@ -134,23 +145,56 @@ export function useChatWs(opts: {
   onTaskEvent: (task: TaskEvent) => void;
   onCaptureStatus: (data: { stagingId: string; status: CaptureLiveStatus }) => void;
   onScreenshotRequest: (request: ScreenshotRequest) => void;
+  /** Called immediately before assignment rewrites the fresh-chat URL. */
+  onSessionAssignment?: (sessionId: string) => void;
 }) {
-  const { sessionId, sessionInput, boxSlug, currentUser, isStreaming, send, fetchSchedules, setChatFeatures, onTaskEvent, onCaptureStatus, onScreenshotRequest } = opts;
+  const { sessionId, sessionInput, boxSlug, currentUser, isStreaming, send, fetchSchedules, setChatFeatures, onTaskEvent, onCaptureStatus, onScreenshotRequest, onSessionAssignment } = opts;
   const navigate = useNavigate();
   const search = useSearch({ strict: false });
+  // Rate-gates reconnect-driven REFRESHes: a connect within PROMPT_SUBSCRIPTION_MS
+  // of the last one (or of mount, before the first) is redundant — either this
+  // mount's own bootstrap just loaded history, or the socket is flapping and
+  // already got a fresh REFRESH moments ago. Built once per mount (a session
+  // switch remounts this hook, so its baseline is likewise a fresh mount);
+  // `shouldRefresh()` re-evaluates on every later reconnect too, not just the
+  // first — a flapping socket used to send one REFRESH per flap.
+  const refreshGateRef = useRef<ReconnectRefreshGate | null>(null);
+  useEffect(() => {
+    const gate = createReconnectRefreshGate({ minIntervalMs: PROMPT_SUBSCRIPTION_MS, baselineAt: Date.now() });
+    refreshGateRef.current = gate;
+    // Cancel any pending trailing refresh timer on unmount — a session switch
+    // remounts this hook, and a stale timer firing into a torn-down closure
+    // would REFRESH the wrong (or a since-unmounted) session.
+    return () => {
+      gate.dispose();
+      refreshGateRef.current = null;
+    };
+  }, []);
+
+  // A reconnect-driven REFRESH is deferred while the tab is hidden — a
+  // backgrounded tab shouldn't round-trip chat history until it's looked at
+  // again — and fires once on becoming visible, no matter how many reconnects
+  // (gate-eligible or not) accumulated in the meantime.
+  const triggerRefresh = useDeferredResync(useCallback(() => {
+    send({ type: "REFRESH" });
+  }, [send]));
 
   // Subscribe to the box event stream over the shared WebSocket: schedule-fired,
   // chat-history, chat-complete, chat-user-message, chat-session-assigned.
   // Events tagged with a sessionId are filtered to this view's session only.
   useBusSubscription({
     onConnect: useCallback(() => {
+      recordChatSendEnvironmentEvent("bus-ws-connect");
       console.debug("[chatfsm] ws-connect");
-      // Re-sync on every (re)connect: a full history REFRESH backs up the
+      // Re-sync on every RE-connect: a full history REFRESH backs up the
       // subscription's automatic lastEventId replay for gaps that exceed the
       // event-bus retention window. REFRESH is ignored in streaming, so it's
-      // safe to dispatch unconditionally.
-      send({ type: "REFRESH" });
-    }, [send]),
+      // safe to dispatch unconditionally (once the gate clears it). A
+      // reconnect inside the gate's window isn't dropped — the gate arms a
+      // trailing timer so it's still eventually serviced.
+      refreshGateRef.current?.notifyReconnect(triggerRefresh);
+    }, [triggerRefresh]),
+    onError: useCallback(() => { recordChatSendEnvironmentEvent("bus-ws-error"); }, []),
     onEvent: useCallback((event: RealtimeEvent) => {
       const scheduleFired = busEventData(event, "schedule-fired");
       const history = busEventData(event, "chat-history");
@@ -177,7 +221,19 @@ export function useChatWs(opts: {
         send({ type: "REFRESH" });
       } else if (userMessage) {
         if (!forSession(userMessage.sessionId, sessionId)) return;
-        if (userMessage.user && currentUser && userMessage.user.email !== currentUser.email) {
+        if (userMessage.user === null) {
+          // SERVER-INJECTED message — a delivered `<upload>` batch or `<capture>`
+          // (`core/chat/session/deliver-user-message.ts` emits `user: null`).
+          // Nothing in this client initiated it, so without a refresh the message
+          // and the agent turn it starts are both invisible until a manual
+          // reload — which is exactly what a boxholder hit after a bulk upload
+          // (2026-08-01): photos landed, the agent replied, and the chat showed
+          // neither until they reloaded the page.
+          //
+          // REFRESH is ignored while streaming, so this can't disturb a turn this
+          // client is already following.
+          send({ type: "REFRESH" });
+        } else if (currentUser && userMessage.user.email !== currentUser.email) {
           send({
             type: "OTHER_USER_MESSAGE",
             message: userMessage.message,
@@ -200,6 +256,7 @@ export function useChatWs(opts: {
   useEffect(() => {
     if (sessionInput !== "new") return;
     if (!sessionId) return;
+    onSessionAssignment?.(sessionId);
     // Spread the previous search so a live `?card=` (and any other param)
     // survives the id assignment — a fresh `{ session }` object would drop it.
     // toSearch() is the sanctioned router-boundary escape hatch (see routing.ts).
@@ -210,7 +267,7 @@ export function useChatWs(opts: {
       search: toSearch({ ...search, session: sessionId }),
       replace: true,
     });
-  }, [sessionInput, sessionId, navigate, boxSlug, search]);
+  }, [sessionInput, sessionId, navigate, boxSlug, search, onSessionAssignment]);
 
   // Load voice config from personality on mount
   useEffect(() => {

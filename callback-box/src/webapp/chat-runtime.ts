@@ -19,6 +19,8 @@ export interface ChatRuntime {
   scheduleManager: ChatScheduleManager;
   /** Wire a session's events onto the shared event bus (idempotent). */
   wireSession: (session: ChatSession) => void;
+  /** Startup backfill followed by husk reconciliation. */
+  maintenance: Promise<void>;
 }
 
 const runtimes = new Map<string, ChatRuntime>();
@@ -34,4 +36,12 @@ export function clearChatRuntime(boxRoot: string): void {
 /** The box's chat runtime, or undefined if its chat routes aren't registered. */
 export function getChatRuntime(boxRoot: string): ChatRuntime | undefined {
   return runtimes.get(boxRoot);
+}
+
+/** Process-wide safe boundary for a bundle-backed server replacement. */
+export function chatRuntimesAreIdle(): boolean {
+  for (const runtime of runtimes.values()) {
+    if (runtime.registry.snapshotAll().some((session) => session.busy)) return false;
+  }
+  return true;
 }

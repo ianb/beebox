@@ -1,13 +1,10 @@
+---
+title: "Native Android companion app"
+status: partial
+workstream: unknown
+issues: []
+---
 # Native Android companion app
-
-**Status:** partially implemented 2026-07-17 — Track 0 (platform-neutral
-web→native posting, box-side + iOS prerequisite) has shipped; the Android app
-itself (`android-app/`) does not exist yet. Stack (native Kotlin + Compose),
-depth, and monorepo location were chosen by the boxholder; the rest is
-grounded in the same-day contract inventory (`docs/mobile-contract.md`), the iOS
-follow-up review (`ios-companion-review-2026-07-17.md`), and Android platform
-research, pending boxholder review. Mirrors the shipped iOS companion app against
-the same box wire contract.
 
 This plan adds a native Kotlin/Jetpack Compose Android app that pairs with one or
 more self-hosted Callback Box instances and reproduces the iOS companion's stance:
@@ -73,8 +70,9 @@ advantage over the iOS target, which needs macOS/Xcode.
   configured provider unmodified** — it does not resample. Provider-side acceptance of
   a 16 kHz mono **16-bit PCM** WAV is *expected* (Whisper and Voxtral both document
   WAV support) and keeps uploads small, but it **must be verified against each
-  configured HQ provider** (Track 4's first chunk), not assumed. The 16-bit choice
-  also sidesteps the iOS float-WAV ambiguity (review finding I8).
+  configured HQ provider** (Track 4's first chunk), not assumed. The iOS Float32 WAV path was
+  verified separately on 2026-08-06 (review finding I8); Android's exact 16-bit output still needs
+  its own Track 4 check.
 - **The iOS app is the behavioral reference.** `ios-app/CallbackBox/` holds the
   mirror: `Views/ChatWebView.swift` (bridge + nav policy), `Views/NativeComposerView.swift`
   and `Views/ComposerActionsView.swift` (composer dock + `+` actions),
@@ -498,8 +496,8 @@ guarantee. This is a bounded UX regression, called out as such.
   supported), writing the **actual** sample rate into the WAV header. Never assume
   the requested rate was honored. Stream into a file with a hand-written 44-byte
   RIFF/WAV header. The server forwards the bytes to the provider unmodified, so 16
-  kHz (when available) keeps uploads small while staying widely accepted; **16-bit
-  PCM** (not float) also sidesteps the iOS float-WAV question (review I8).
+  kHz (when available) keeps uploads small while staying widely accepted. The iOS Float32 path is
+  verified (review I8), but Android must still test its exact **16-bit PCM** output in Track 4.
 - **Upload.** `POST <baseURL>/api/chat/transcribe-audio`, multipart with a `session`
   text field and a `file` field (`audio/wav`); when `box.sessionID` is empty, first
   `GET /api/chat/default` to resolve it (contract map §5.2–5.3). Surface non-2xx

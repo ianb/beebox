@@ -200,7 +200,7 @@ echo "Deploying ref '$RAW_REF' ($SHA) from build checkout $CHECKOUT"
 # `.deploy-checkout` is a SEPARATE local clone, NOT a git worktree — deliberately.
 # A worktree shares the main repo's `.git/worktrees/` bookkeeping, which every
 # concurrent worktree op mutates: worktree sessions spinning up, cleanup hooks,
-# `bin/worktrees sweep`, AND Claude Code's own `git worktree remove` on session
+# `bin/workstreams sweep`, AND Claude Code's own `git worktree remove` on session
 # exit. Those repeatedly corrupted the worktree mid-creation and failed the prod
 # deploy (ENOTDIR on `.git/index`). A clone has its OWN `.git` dir and is immune
 # to all of it — no serialization/backoff/lock needed. `--shared` points its
@@ -561,6 +561,31 @@ if [[ "$SKIP_RESTART" != true ]]; then
   #      most boxes rest "stopped". A fleet-wide startup break (e.g. a native-
   #      module ABI mismatch) makes this 503. Parsed with node (jq isn't on the
   #      server); the box slug + error land in the log on failure.
+  # Verify the runtime tools the box shells out to are actually installed.
+  # These are declared in setup-server.sh, but a box provisioned before a tool
+  # was added silently 503s the upload/processing path that needs it (qpdf → PDF
+  # scan uploads; poppler pdfinfo/pdftoppm → PDF intake; pandoc → doc convert;
+  # imagemagick convert → image ops; openpyxl/xlsx2csv → spreadsheet reads;
+  # ffmpeg → audio transcode/concat (capture voice); git-annex/git-lfs →
+  # assets) until someone hits it in the wild. Catch a
+  # "declared but not installed on this older box" gap at deploy, not at first use.
+  echo "Verifying required external tools..."
+  ssh "root@$SERVER_IP" bash -s <<'TOOLCHECK'
+    set -uo pipefail
+    missing=""
+    for t in qpdf pdfinfo pdftoppm pandoc convert xlsx2csv ffmpeg git git-lfs git-annex; do
+      command -v "$t" >/dev/null 2>&1 || missing="$missing $t"
+    done
+    python3 -c "import openpyxl" >/dev/null 2>&1 || missing="$missing python3-openpyxl"
+    if [ -n "$missing" ]; then
+      echo "  FAILED: required runtime tools missing on the server:$missing"
+      echo "  Fix: re-run deploy/setup-server.sh on the server (or apt-get install the"
+      echo "  missing packages), then redeploy. See setup-server.sh for the package list."
+      exit 1
+    fi
+    echo "  Required tools present."
+TOOLCHECK
+
   echo "Verifying hub health + box canary..."
   ssh "root@$SERVER_IP" bash -s <<'HEALTHCHECK'
     set -euo pipefail
@@ -631,6 +656,18 @@ HEALTHCHECK
 fi
 
 echo "Deploy complete."
+# Truthful "what is actually live" marker, written ONLY here — past the upload,
+# the restart, and the health verification. Nothing else in this script is a
+# safe proxy: `.deploy-last-sha` is written right after `pnpm install` (it is a
+# node_modules cache key, not a success record), so a run that dies during the
+# build or the upload leaves it claiming a sha that never shipped.
+#
+# Why it exists: a deploy killed outright (OOM, terminal closed) never runs the
+# EXIT trap, so it prints no "Deploy failed", sends no notification, and leaves
+# main silently undeployed — observed 2026-08-10, caught only because someone
+# happened to ask. `bin/doctor.ts` compares this against main's HEAD so the
+# gap becomes visible instead of waiting for the next question.
+echo "$SHA" > "$SCRIPT_DIR/.last-deployed-sha"
 # Show what shipped (hash + commit subject) rather than the — frankly boring —
 # server IP. Both vars are computed above for deploy-info.json.
 notify "✅ callback-box deployed" "$CALLBACK_BOX_HASH $CALLBACK_BOX_SUBJECT"

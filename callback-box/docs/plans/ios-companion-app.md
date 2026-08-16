@@ -1,6 +1,10 @@
+---
+title: "iOS Companion App for Callback Box"
+status: active
+workstream: unknown
+issues: []
+---
 # iOS Companion App for Callback Box
-
-**Status:** active — umbrella plan; the pairing/auth and APNs tracks need their own subplans before implementation. (Revised 2026-07-06 after a codex cross-model review.)
 
 This plan designs a native iOS app that pairs with one or more self-hosted Callback Box instances and replaces the parts of the web experience that are weak on a phone: text/voice **input**, **audio** (both listening and the box speaking back), and **capture/sharing** into the box. It is deliberately **not** a full iOS port of the web UI. **The conversation view itself is the box's existing web chat, embedded in a `WKWebView`;** the app makes native only the parts that are weak in mobile web — input, voice, capture, and notifications. The native input POSTs to `/chat/send`; to make the embedded webview show that turn *streaming live* (not just refresh once it finishes), a box-side change broadcasts the native-started `turnId` on the event bus so the webview subscribes to that turn's stream (**Track H**) — because today `/chat/send` returns the `turnId` only to the POSTing client and other clients see only the turn-end `chat-complete`. This keeps native and webview in sync through the box (no `WKWebView`↔native JS bridge), but it is a real box-side change, not free reuse. The app targets **public App Store distribution** as a client for users' own self-hosted boxes (no commercial hosting), stands on its own as a **standalone mobile client**, and treats **audio as a core capability** within the ceiling iOS actually permits (see Track D and Failure modes).
 

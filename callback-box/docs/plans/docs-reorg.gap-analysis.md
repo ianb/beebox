@@ -1,7 +1,10 @@
+---
+title: "Docs-reorg companion: gap analysis — non-obvious, undocumented conventions"
+status: active
+workstream: unknown
+issues: []
+---
 # Docs-reorg companion: gap analysis — non-obvious, undocumented conventions
-
-**Status:** survey artifact 2026-07-04 — input to `docs-reorg.md`; findings
-verified by spot-check against code at time of writing.
 
 Premise (from the plan's Direction section): document only what contradicts
 a fresh agent's intuition; flag possibly-incidental divergences as questions
@@ -54,11 +57,11 @@ Data-loss / corruption tier:
 9. **v2 box slug comes from the package root's basename, not the served
    `content/` dir.** `src/cli/commands/serve.ts:25-45`; missing from
    `docs/box-layout.md`'s v2 section.
-10. **SSR authoring rules:** `window` deliberately undefined at import
-    time, `document` polyfilled (`src/frontend/src/ssr/setup.ts:1-24`);
-    guard with `typeof window === "undefined"` inside render bodies;
-    `useSSRMachine` (not `@xstate/react` `useMachine`) is required but
-    unenforced — candidate `no-restricted-imports` lint rule.
+10. ~~**SSR authoring rules**~~ — **obsolete (2026-08-01).** SSR and
+    `cb render` were removed; `useSSRMachine` is gone and `useMachine` is
+    now the correct import. The module-scope `typeof window === "undefined"`
+    guards were kept as general defense, but there is no SSR authoring
+    contract left to document.
 11. **`restrict-component-classes` silently skips dynamic `className`
     expressions** (`personal-vibe-check/rules/restrict-component-classes.mjs:17-19`);
     FRONTEND.md implies categorical enforcement. Rule of thumb to state:

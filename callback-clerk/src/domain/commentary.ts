@@ -8,6 +8,7 @@
  */
 
 import type { CommentaryPayload } from "../contract/clerk-contract.generated.js";
+import { boxPageUrl } from "./box-url.js";
 
 /** The readable rendering of a page (Defuddle markdown + metadata). */
 export interface ReadablePage {
@@ -48,14 +49,29 @@ export function buildCommentaryPayload(params: {
 }
 
 /**
+ * Why the active tab can't be commented on, or null when it can. The capture
+ * content script only runs on http(s) pages, so browser-internal pages
+ * (chrome://, the extension's own pages, the new-tab page, PDFs in the viewer)
+ * are out — the popup shows the reason on a disabled button rather than hiding
+ * the action, which would look like a bug.
+ */
+export function commentBlockedReason(url: string | undefined): string | null {
+  if (url === undefined || url === "") {
+    return "No page to comment on.";
+  }
+  if (!url.startsWith("http://") && !url.startsWith("https://")) {
+    return "This page isn't a web page the extension can read — only http and https pages can be captured.";
+  }
+  return null;
+}
+
+/**
  * Resolve the server's relative `open` path (e.g.
  * `chat?session=new&companion=…`) against the box's root URL into an absolute
- * URL the extension can open in a new tab. `boxUrl` already carries the box's
- * path prefix (origin + base + slug), so the open path is appended as a
- * sibling segment — mirroring how clerk-api builds `${boxUrl}/api/trpc/clerk.…`.
+ * URL the extension can open in a new tab.
  */
 export function commentaryOpenUrl(boxUrl: string, openPath: string): string {
-  return `${boxUrl.replace(/\/+$/, "")}/${openPath.replace(/^\/+/, "")}`;
+  return boxPageUrl(boxUrl, openPath);
 }
 
 function linkMarkdown(title: string, url: string): string {

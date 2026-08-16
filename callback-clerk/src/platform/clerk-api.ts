@@ -11,6 +11,8 @@ import type {
   CommentaryPayload,
   CommentaryDestination,
   CommentaryResult,
+  TabArrangementPayload,
+  TabArrangementResult,
 } from "../contract/clerk-contract.generated.js";
 import { isRecord } from "../domain/is-record.js";
 
@@ -167,10 +169,31 @@ export function parseCommentaryResult(data: unknown): CommentaryResult | null {
   return { created: paths, open };
 }
 
+/** Runtime twin of the generated `TabArrangementResult`. */
+export function parseTabArrangementResult(data: unknown): TabArrangementResult | null {
+  if (!isRecord(data)) return null;
+  const card = data["card"];
+  const open = data["open"];
+  const transferId = data["transferId"];
+  if (typeof card !== "string" || typeof open !== "string" || typeof transferId !== "string") return null;
+  return { card, open, transferId };
+}
+
 export async function getCommentaryDestinations(box: EnabledBox): Promise<CommentaryDestination[]> {
   return trpcQuery(box, { procedure: "clerk.commentaryDestinations", shape: parseDestinationsData });
 }
 
 export async function postCommentary(box: EnabledBox, payload: CommentaryPayload): Promise<CommentaryResult> {
   return trpcMutation(box, { procedure: "clerk.commentary", input: payload, shape: parseCommentaryResult });
+}
+
+export async function postTabArrangement(
+  box: EnabledBox,
+  payload: TabArrangementPayload,
+): Promise<TabArrangementResult> {
+  return trpcMutation(box, {
+    procedure: "clerk.tabArrangement",
+    input: payload,
+    shape: parseTabArrangementResult,
+  });
 }

@@ -12,6 +12,18 @@ set -e
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BRANCH=$(git -C "$REPO_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
 
+# A merged lockfile can make the existing node_modules unusable immediately:
+# bin/cb rebuilds its externalized CLI bundle against the new dependency graph,
+# then Node cannot resolve packages that the old install never contained. Do
+# this for every checkout, before deploy/build work. The hook cannot change a
+# completed merge's outcome, so a failure warns on stderr and deploy continues.
+if [ "${1:-0}" = "1" ]; then
+  # A squash merge changes the index/worktree without moving HEAD.
+  "$REPO_DIR/bin/post-merge-install.sh" "$REPO_DIR" HEAD WORKTREE || true
+else
+  "$REPO_DIR/bin/post-merge-install.sh" "$REPO_DIR" ORIG_HEAD HEAD || true
+fi
+
 if [ "$BRANCH" = "main" ]; then
   # Only deploy when the merge actually changed something deploy.sh ships (see
   # post-commit / callback-box/deploy/deploy.sh): callback-box, agent-doctest,

@@ -12,7 +12,26 @@ export interface CommentOnPageMessage {
   destinationDir?: string;
 }
 
-export type ClerkMessage = CommentOnPageMessage;
+export interface ShareTabsMessage {
+  type: "shareTabs";
+  scope: "current-window" | "all-windows";
+  sourceWindowId: number;
+}
+
+export interface OpenTabOrganizerMessage {
+  type: "openTabOrganizer";
+  transferId: string;
+}
+
+export interface GetLatestTabTransferMessage {
+  type: "getLatestTabTransfer";
+}
+
+export type ClerkMessage =
+  | CommentOnPageMessage
+  | ShareTabsMessage
+  | OpenTabOrganizerMessage
+  | GetLatestTabTransferMessage;
 
 export interface ActionFailure {
   ok: false;
@@ -21,8 +40,29 @@ export interface ActionFailure {
   message: string;
 }
 
-export type ActionResponse = { ok: true } | ActionFailure;
+export interface SharedTabsResult {
+  kind: "shared-tabs";
+  transferId: string;
+  tabCount: number;
+  replacedUndo?: boolean | undefined;
+  organizerOpened?: boolean | undefined;
+}
+
+export type ActionResponse = { ok: true; result?: SharedTabsResult | undefined } | ActionFailure;
 
 export function isClerkMessage(value: unknown): value is ClerkMessage {
-  return isRecord(value) && value["type"] === "commentOnPage";
+  if (!isRecord(value)) return false;
+  if (value["type"] === "commentOnPage") {
+    return typeof value["tabId"] === "number";
+  }
+  if (value["type"] === "shareTabs") {
+    return (
+      (value["scope"] === "current-window" || value["scope"] === "all-windows") &&
+      typeof value["sourceWindowId"] === "number"
+    );
+  }
+  if (value["type"] === "openTabOrganizer") {
+    return typeof value["transferId"] === "string";
+  }
+  return value["type"] === "getLatestTabTransfer";
 }

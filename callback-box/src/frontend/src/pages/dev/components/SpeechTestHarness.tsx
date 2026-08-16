@@ -30,6 +30,13 @@ const SEGMENTS: SpeechSegment[] = [
   { text: "Finally, this is the third and last segment.", displayText: "Finally, this is the third and last segment.", hasTextBefore: false },
 ];
 
+class MockMediaPlaybackError extends Error {
+  constructor() {
+    super("Mock media playback rejection");
+    this.name = "MockMediaPlaybackError";
+  }
+}
+
 export function SpeechTestHarness() {
   const sp = useSpeechPlayback();
   const [logVersion, setLogVersion] = useState(0);
@@ -47,16 +54,28 @@ export function SpeechTestHarness() {
       return Number.isFinite(parsed) ? parsed : fallback;
     };
     const tts = getTTSClient();
+    const failText = params.get("failText");
+    const rejectPlayback = params.get("rejectPlayback") === "1";
+    const originalPlay = HTMLMediaElement.prototype.play;
+    if (rejectPlayback) {
+      HTMLMediaElement.prototype.play = async () => {
+        throw new MockMediaPlaybackError();
+      };
+    }
     tts.setTestRequestExtras({
       mock: true,
       delayMs: num("delayMs", 500),
       chunkMs: num("chunkMs", 80),
       chunkSize: num("chunkSize", 4096),
+      ...(failText === null ? {} : { failText }),
     });
     // No personality config loads here; release the config gate so playback
     // doesn't wait forever for it.
     tts.markConfigLoaded();
     setLogVersion((v) => v + 1);
+    return () => {
+      HTMLMediaElement.prototype.play = originalPlay;
+    };
   }, []);
 
   const playing = sp.isPlaying && sp.playingMessageId === MESSAGE_ID;
@@ -66,6 +85,8 @@ export function SpeechTestHarness() {
     window.__speechState = {
       isPlaying: sp.isPlaying,
       playingMessageId: sp.playingMessageId,
+      statusMessageId: sp.statusMessageId,
+      segmentStates: sp.segmentStates,
       remainingCount: sp.remainingCount,
     };
   });
@@ -127,17 +148,19 @@ export function SpeechTestHarness() {
 
       <div className="text-sm text-warm-700">
         <div data-testid="state">
-          isPlaying={String(sp.isPlaying)} playingMessageId={String(sp.playingMessageId)} segment={String(sp.playingSegmentIndex)} remaining={sp.remainingCount}
+          isPlaying={String(sp.isPlaying)} playingMessageId={String(sp.playingMessageId)}
+          {" "}segment={String(sp.playingSegmentIndex)} remaining={sp.remainingCount}
+          {" "}states={JSON.stringify(sp.segmentStates)}
         </div>
       </div>
 
       {/* Rendered message body: each speech chunk highlights while playing. */}
       <div data-testid="chunks" className="flex flex-col gap-1 bg-accent/30 rounded-lg p-3">
         {SEGMENTS.map((seg, i) => {
-          const active = playing && sp.playingSegmentIndex === i;
+          const state = sp.segmentStates[i];
           return (
-            <div key={i} data-chunk={i} data-active={String(active)}>
-              <SpeechChunk name={seg.name} active={active}>
+            <div key={i} data-chunk={i} data-speech-state={state}>
+              <SpeechChunk name={seg.name} state={state}>
                 <div>{seg.displayText}</div>
               </SpeechChunk>
             </div>

@@ -17,8 +17,30 @@ const MAX_LOG_FILE_BYTES = 100_000;
 const pendingAppends = new Map<string, Promise<void>>();
 
 export function appendRollingLog(filePath: string, content: string): Promise<void> {
+  return chainAppend(filePath, () => appendRollingLogUnserialized({ filePath, content, strict: false }));
+}
+
+/**
+ * Strict variant: rejects on filesystem failure instead of swallowing it.
+ * For callers whose contract depends on a 2xx meaning "durably written" —
+ * a mutation that fails here must propagate the error so the caller (and, up
+ * the chain, its own caller) knows the write did not happen.
+ */
+export function appendRollingLogStrict(filePath: string, content: string): Promise<void> {
+  return chainAppend(filePath, () => appendRollingLogUnserialized({ filePath, content, strict: true }));
+}
+
+/** Thrown by {@link appendRollingLogStrict} when the underlying write fails. */
+export class RollingLogWriteError extends Error {
+  constructor(readonly filePath: string, options: { cause: unknown }) {
+    super(`Failed to append to rolling log ${filePath}`, options);
+    this.name = "RollingLogWriteError";
+  }
+}
+
+function chainAppend(filePath: string, run: () => Promise<void>): Promise<void> {
   const previous = pendingAppends.get(filePath) ?? Promise.resolve();
-  const current = previous.then(() => appendRollingLogUnserialized(filePath, content));
+  const current = previous.then(run, run);
   const cleanedUp = current.finally(() => {
     if (pendingAppends.get(filePath) === current) {
       pendingAppends.delete(filePath);
@@ -28,7 +50,9 @@ export function appendRollingLog(filePath: string, content: string): Promise<voi
   return cleanedUp;
 }
 
-async function appendRollingLogUnserialized(filePath: string, content: string): Promise<void> {
+async function appendRollingLogUnserialized(
+  { filePath, content, strict }: { filePath: string; content: string; strict: boolean },
+): Promise<void> {
   try {
     await fs.mkdir(path.dirname(filePath), { recursive: true });
     await fs.appendFile(filePath, content);
@@ -39,7 +63,8 @@ async function appendRollingLogUnserialized(filePath: string, content: string): 
       const firstNewline = half.indexOf("\n");
       await fs.writeFile(filePath, firstNewline !== -1 ? half.slice(firstNewline + 1) : half);
     }
-  } catch (_e) {
+  } catch (e) {
+    if (strict) throw new RollingLogWriteError(filePath, { cause: e });
     // Don't let log-file failures break the caller.
   }
 }

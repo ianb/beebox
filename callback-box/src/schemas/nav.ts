@@ -1,9 +1,10 @@
 /**
  * Nav card schema — the box-editable top navigation.
  *
- * A positional card (`nav.card`) at the box root. Its `entries` list drives
- * AppNav; when the card is absent or invalid, the shell falls back to the
- * builtin nav (and an invalid card is surfaced as a health warning — see
+ * A positional card (`nav.card`) at the box root. Its `entries` list adds a
+ * section to the app bar's switch menu (docs/plans/top-nav-ia.md Track C3);
+ * when the card is absent or invalid, the menu simply shows its builtin rows
+ * (and an invalid card is surfaced as a health warning — see
  * runHealthChecks). First slice of docs/plans/interface-as-cards.md; plan in
  * docs/implemented-plans/nav-card.md.
  *
@@ -11,12 +12,14 @@
  *   entries:
  *     - { href: /questions }
  *     - { href: /chat, label: Recent }
- *     - { ref: store/projects/Big_Refactor.project.card, label: The Refactor }
+ *     - { ref: /store/projects/Big_Refactor.project.card, label: The Refactor }
  *   ---
  *
  * `href` entries point at builtin routes and are validated against the
  * route table (src/shared/nav-routes.ts). `ref` entries are card refs
- * (box-root-relative), tracked like any ref by `cb validate` / `cb mv`.
+ * written as box paths (leading `/`; a bare path is accepted and means the
+ * same thing, since `nav.card` sits at the box root), tracked like any ref
+ * by `cb validate` / `cb mv`.
  */
 
 import { z } from "zod";
@@ -34,9 +37,10 @@ export const NavHref = z.string().refine((h) => validHrefs.has(h), {
 });
 
 /**
- * One nav entry: either a builtin route (`href`) or a card ref (`ref`,
- * box-root-relative). `label` overrides the default (the route's builtin
- * label, or the target card's title).
+ * One nav entry: either a builtin route (`href`) or a card ref (`ref`, a box
+ * path with a leading `/`; bare is accepted for back-compat). `label`
+ * overrides the default (the route's builtin label, or the target card's
+ * title).
  */
 export const NavEntry = z.union([
   z.object({ href: NavHref, label: z.string().optional() }).strict(),
@@ -61,27 +65,28 @@ export const NavSchema: CardSchema = cardSchema("nav", {
   searchable: false,
   instructions: `# Nav Card
 
-\`nav.card\` at the box root defines the top navigation bar. Editing it reshapes the nav immediately — no deploy. When the card is absent, the builtin nav is shown; when it is invalid, the builtin nav is shown and a health warning names the problem. Deleting the card is always a safe way back to stock navigation.
+\`nav.card\` at the box root adds the box's own entries to the app bar's place menu (the one that opens from the box ▸ landmark pill). Editing it reshapes that section immediately — no deploy. When the card is absent or invalid, the menu shows only its builtin rows, and an invalid card also raises a health warning naming the problem. Deleting the card is always a safe way back to stock navigation.
+
+Entries pointing at a destination the menu already reaches (\`/\`, \`/chat\`, \`/chats\`, \`/landmarks\`, \`/browse\`, \`/history\`, \`/dashboard\`) are skipped rather than shown twice — pin cards and the less-travelled routes.
 
 \`\`\`yaml
 entries:
-  - { href: / }                # builtin routes, validated against the route set:
-  - { href: /chat, label: Recent }   # ${hrefList}
-  - { href: /questions }
-  - { ref: store/projects/Big_Refactor.project.card, label: The Refactor }
+  - { href: /questions }       # builtin routes, validated against the route set:
+  - { href: /capture, label: Quick capture }   # ${hrefList}
+  - { ref: /store/projects/Big_Refactor.project.card, label: The Refactor }
 \`\`\`
 
 - **\`href\`** — a builtin route. \`label\` defaults to the route's standard name.
-- **\`ref\`** — any card, by box-root-relative path; it opens in Browse. \`label\` defaults to the target's title. Use this to pin a card (a project, a list, a note) into the nav.
+- **\`ref\`** — any card, by box path (leading \`/\`, from the box root); it opens in Browse. \`label\` defaults to the target's title. Use this to pin a card (a project, a list, a note) into the menu.
 
-Keep the list short — this is a navigation bar, not a directory. Order is display order.`,
+Keep the list short — this is a menu section, not a directory. Order is display order.`,
 });
 
 /**
  * Parse a nav card's raw text into typed frontmatter. Unlike the landmark
  * reader this returns the validation error text on failure — an invalid
- * nav card is surfaced (health warning, builtin fallback), not silently
- * skipped.
+ * nav card is surfaced (health warning; the menu keeps its builtin rows),
+ * not silently skipped.
  */
 export function parseNavFields(
   content: string,

@@ -136,7 +136,8 @@ export interface ChatMessageResult {
   subtype: string;
   session_id: string;
   is_error: boolean;
-  total_cost_usd: number;
+  /** Absent when the native harness does not report USD cost. */
+  total_cost_usd?: number;
   duration_ms: number;
   num_turns: number;
   /** The SDK's final-turn text; present only on a `success` result. */

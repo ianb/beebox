@@ -9,68 +9,37 @@
  *   one-line summary
  *   </capture>
  *
- * This turns that string back into the chip model the transcript renders. Kept
- * import-free (no React, no view-url) so it doctests against the exact wrapper
- * string, and so `message-parsing`/`user-message` can consume it without a cycle.
+ * The shared delivered-user-message codec turns that string into the chip model
+ * the transcript renders. This module keeps the capture-specific compatibility
+ * parser and label text.
  */
+
+import {
+  parseDeliveredUserMessageParts,
+  type CaptureUserMessage,
+} from "@shared/delivered-user-message";
 
 /** The parsed shape a capture chip renders from. */
-export interface CaptureChipModel {
-  /** Box-relative path of the capture-session card (`doc=`). */
-  doc: string;
-  /** Number of photos in the capture. */
-  images: number;
-  /** Audio duration label, `M:SS` (empty string when the capture had no audio > 0). */
-  audio: string;
-  /** The one-line summary (wrapper body). */
-  summary: string;
-  /** The capture cut off unexpectedly (browser crash / abandonment sweep). */
-  partial: boolean;
-  /** Transcription failed at preparation; audio is present but untranscribed. */
-  transcriptionFailed: boolean;
-}
-
-const CAPTURE_RE = /<capture\b([^>]*)>([\S\s]*?)<\/capture>/i;
-
-const DOC_RE = /\bdoc="([^"]*)"/i;
-const IMAGES_RE = /\bimages="([^"]*)"/i;
-const AUDIO_RE = /\baudio="([^"]*)"/i;
-const PARTIAL_RE = /\bpartial="([^"]*)"/i;
-const TRANSCRIPTION_FAILED_RE = /\btranscription-failed="([^"]*)"/i;
-
-function readStringAttr(attrs: string, re: RegExp): string | null {
-  const match = re.exec(attrs);
-  return match ? (match[1] ?? "") : null;
-}
+export type CaptureChipModel = Omit<CaptureUserMessage, "kind">;
 
 /**
- * Parse a `<capture>` wrapper out of a user message. Returns `null` when the
- * text isn't a capture wrapper (the common case — a normal message), so callers
- * can branch on it. Tolerant of surrounding whitespace, but the ENTIRE trimmed
- * message must be the wrapper: a message with text before or after the block is
- * ordinary prose that happens to mention `<capture>`, not a delivered capture,
- * and rendering it as a chip would swallow the surrounding text. `doc` is
- * required (a wrapper without it isn't a capture we can link).
+ * Compatibility parser for callers that expect one capture model or `null`.
+ * The transcript renderer uses the shared ordered-parts parser so it can retain
+ * text around a delivered block. This helper accepts only one capture plus
+ * optional surrounding whitespace.
  */
 export function parseCaptureWrapper(text: string): CaptureChipModel | null {
-  const trimmed = text.trim();
-  const match = CAPTURE_RE.exec(trimmed);
-  // Reject unless the wrapper is the whole message (no leading/trailing text).
-  if (!match || match[0] !== trimmed) return null;
-  const attrs = match[1] ?? "";
-  const doc = readStringAttr(attrs, DOC_RE);
-  if (doc === null || doc === "") return null;
-  const imagesRaw = readStringAttr(attrs, IMAGES_RE);
-  const images = imagesRaw === null ? 0 : Number.parseInt(imagesRaw, 10);
-  const audioRaw = readStringAttr(attrs, AUDIO_RE);
-  const audio = audioRaw === null || audioRaw === "0:00" ? "" : audioRaw;
+  const parts = parseDeliveredUserMessageParts(text)
+    .filter((part) => part.kind !== "text" || part.text.trim() !== "");
+  const part = parts.length === 1 ? parts.at(0) : undefined;
+  if (part?.kind !== "capture") return null;
   return {
-    doc,
-    images: Number.isNaN(images) ? 0 : images,
-    audio,
-    summary: (match[2] ?? "").trim(),
-    partial: readStringAttr(attrs, PARTIAL_RE) === "1",
-    transcriptionFailed: readStringAttr(attrs, TRANSCRIPTION_FAILED_RE) === "1",
+    doc: part.doc,
+    images: part.images,
+    audio: part.audio,
+    summary: part.summary,
+    partial: part.partial,
+    transcriptionFailed: part.transcriptionFailed,
   };
 }
 
@@ -81,7 +50,7 @@ export function parseCaptureWrapper(text: string): CaptureChipModel | null {
 export function captureChipLabel(model: CaptureChipModel): string {
   const parts: string[] = [];
   if (model.images > 0) parts.push(`${String(model.images)} photo${model.images === 1 ? "" : "s"}`);
-  if (model.audio !== "") parts.push(`${model.audio} audio`);
+  if (model.audio !== "0:00") parts.push(`${model.audio} audio`);
   if (parts.length === 0) parts.push("capture");
   return `Capture — ${parts.join(", ")}`;
 }

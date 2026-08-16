@@ -4,6 +4,7 @@ import {
   emptyConfig,
   getActiveBox,
   isBoxEnabled,
+  moveBox,
   normalizeConfig,
   removeBox,
   setActiveBox,
@@ -12,16 +13,16 @@ import {
 const boxA = { boxUrl: "https://cb.example.com/main", slug: "main", title: "Main" };
 const boxB = { boxUrl: "http://localhost:3210/wt/test1", slug: "test1", title: "Test 1" };
 
-test("addBox enables a box and makes the first one active", async (t) => {
+test("addBox enables a box and makes it active", async (t) => {
   const config = addBox(emptyConfig(), boxA);
   t.same(config.boxes, [boxA]);
   t.equal(config.activeBoxUrl, boxA.boxUrl);
 });
 
-test("addBox keeps the existing active box when adding a second", async (t) => {
+test("addBox makes a newly added box active", async (t) => {
   const config = addBox(addBox(emptyConfig(), boxA), boxB);
   t.equal(config.boxes.length, 2);
-  t.equal(config.activeBoxUrl, boxA.boxUrl);
+  t.equal(config.activeBoxUrl, boxB.boxUrl);
 });
 
 test("addBox replaces an already-enabled box by boxUrl", async (t) => {
@@ -32,7 +33,8 @@ test("addBox replaces an already-enabled box by boxUrl", async (t) => {
 });
 
 test("removeBox of the active box promotes the first remaining box", async (t) => {
-  const config = removeBox(addBox(addBox(emptyConfig(), boxA), boxB), boxA.boxUrl);
+  const enabled = setActiveBox(addBox(addBox(emptyConfig(), boxA), boxB), boxA.boxUrl);
+  const config = removeBox(enabled, boxA.boxUrl);
   t.same(config.boxes, [boxB]);
   t.equal(config.activeBoxUrl, boxB.boxUrl);
 });
@@ -43,8 +45,8 @@ test("removeBox of the last box clears the active box", async (t) => {
 });
 
 test("setActiveBox switches between enabled boxes", async (t) => {
-  const config = setActiveBox(addBox(addBox(emptyConfig(), boxA), boxB), boxB.boxUrl);
-  t.equal(getActiveBox(config)?.slug, "test1");
+  const config = setActiveBox(addBox(addBox(emptyConfig(), boxA), boxB), boxA.boxUrl);
+  t.equal(getActiveBox(config)?.slug, "main");
 });
 
 test("setActiveBox ignores URLs that aren't enabled", async (t) => {
@@ -79,4 +81,22 @@ test("normalizeConfig drops malformed boxes and repairs activeBoxUrl", async (t)
   });
   t.same(config.boxes, [boxA]);
   t.equal(config.activeBoxUrl, boxA.boxUrl);
+});
+
+test("moveBox reorders the list without touching the active box", async (t) => {
+  const config = setActiveBox(addBox(addBox(emptyConfig(), boxA), boxB), boxA.boxUrl);
+  const moved = moveBox(config, { boxUrl: boxB.boxUrl, delta: -1 });
+  t.same(moved.boxes.map((b) => b.boxUrl), [boxB.boxUrl, boxA.boxUrl]);
+  t.equal(moved.activeBoxUrl, boxA.boxUrl);
+});
+
+test("moveBox past either end is a no-op, not a wrap", async (t) => {
+  const config = addBox(addBox(emptyConfig(), boxA), boxB);
+  t.same(moveBox(config, { boxUrl: boxA.boxUrl, delta: -1 }).boxes, config.boxes);
+  t.same(moveBox(config, { boxUrl: boxB.boxUrl, delta: 1 }).boxes, config.boxes);
+});
+
+test("moveBox ignores a URL that isn't enabled", async (t) => {
+  const config = addBox(emptyConfig(), boxA);
+  t.same(moveBox(config, { boxUrl: "https://evil.example.com", delta: 1 }), config);
 });

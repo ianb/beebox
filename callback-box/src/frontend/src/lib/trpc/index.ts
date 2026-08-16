@@ -1,5 +1,5 @@
 import { createTRPCReact } from "@trpc/react-query";
-import { createTRPCClient, createWSClient, httpBatchLink, splitLink, wsLink, type TRPCLink } from "@trpc/client";
+import { createTRPCClient, createWSClient, httpBatchStreamLink, splitLink, wsLink, type TRPCLink } from "@trpc/client";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@backend/trpc/router.js";
 import { getApiBase, getWebSocketUrl, withBase } from "../../api.js";
@@ -51,6 +51,16 @@ async function trpcFetch(url: RequestInfo | URL, options?: RequestInit): Promise
  * (keeps module load SSR-safe).
  */
 let wsClientSingleton: ReturnType<typeof createWSClient> | null = null;
+
+async function wakeDevBox(): Promise<void> {
+  if (!import.meta.env.DEV) return;
+  try {
+    await fetch(`${getApiBase()}/keepalive`, { method: "HEAD", cache: "no-store" });
+  } catch (_error) {
+    // A failed wake should not suppress tRPC's normal reconnect behavior.
+  }
+}
+
 function getWsClient(): ReturnType<typeof createWSClient> {
   if (!wsClientSingleton) {
     wsClientSingleton = createWSClient({
@@ -63,6 +73,11 @@ function getWsClient(): ReturnType<typeof createWSClient> {
       // socket open (lazy + 30s closeMs, so this is rare), in exchange for
       // removing that failure mode entirely.
       url: async () => {
+        // A lazy hub deliberately refuses to cold-start a box from a WebSocket
+        // upgrade. Wake it over HTTP first, then open the socket only after the
+        // box child is ready. This stays dev-only; production hubs keep their
+        // existing upgrade behavior.
+        await wakeDevBox();
         if (isMobileAuthenticated()) await refreshMobileSession(getApiBase());
         return getWebSocketUrl();
       },
@@ -89,6 +104,17 @@ function getWsClient(): ReturnType<typeof createWSClient> {
  *   its batch-mates down with it.
  * - Everything else (queries/mutations) goes over the GET/POST batch, with a
  *   capped URL length so an oversized query can't poison its batch.
+ *
+ * Both HTTP branches use `httpBatchStreamLink`, not `httpBatchLink`. Same
+ * batching, but the server writes each procedure's result as a JSONL line the
+ * moment it resolves instead of holding the whole batch until the slowest
+ * member finishes. That coupling was the single biggest warm-load cost: the
+ * dashboard's six queries all waited on `health.check` (~600 ms), and every
+ * page's first batch waited on `status.status` (~275 ms). Nothing else changes
+ * — same URL, same `fetch`, same 401 handling, and the WS split above is
+ * untouched. A proxy that buffers the response degrades this to the old
+ * all-at-once behavior rather than breaking it (hence `proxy_buffering off` in
+ * deploy/setup-server.sh).
  */
 function buildTrpcLink(): TRPCLink<AppRouter> {
   return splitLink({
@@ -96,8 +122,8 @@ function buildTrpcLink(): TRPCLink<AppRouter> {
     true: wsLink({ client: getWsClient() }),
     false: splitLink({
       condition: (op) => op.path === "files.summarize",
-      true: httpBatchLink({ url: "/api/trpc", methodOverride: "POST", fetch: trpcFetch }),
-      false: httpBatchLink({ url: "/api/trpc", maxURLLength: 2000, fetch: trpcFetch }),
+      true: httpBatchStreamLink({ url: "/api/trpc", methodOverride: "POST", fetch: trpcFetch }),
+      false: httpBatchStreamLink({ url: "/api/trpc", maxURLLength: 2000, fetch: trpcFetch }),
     }),
   });
 }

@@ -1,7 +1,9 @@
 ---
 title: "selection provenance canonical anchors"
+workstream: unknown
 area: callback-box
 needs: [design]
+priority: normal
 ---
 
 From the HoverSource review (`research/hoversource-review.md`). We already have a

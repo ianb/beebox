@@ -26,7 +26,7 @@ See `docs/reports/knowledge-audit-rerun-2026-07-03.md` for the latest full-corpu
 ## Running
 
 ```bash
-npx tsx src/dev/knowledge-audit.ts run --box ~/src/boxes/test1 [--filter <tag-or-id>]
+npx tsx src/dev/knowledge-audit.ts run --box ~/src/boxes/test1 [--filter <tag-or-id>] [--engine claude|codex]
 npx tsx src/dev/knowledge-audit.ts list
 ```
 
@@ -36,6 +36,15 @@ same box, and the context-history ledger keys off the package name either way
 (`src/dev/lib/audit-box.ts`). Pass an absolute path (or `~/…`), never a bare
 name like `test1`, which would resolve inside the monorepo and be refused by the
 nested-box guard.
+
+By default the runner uses the box's configured engine. `--engine` overrides
+that choice for the audit only, so the same definitions can be exercised
+against Claude and Codex without editing `config/box.json`. Reports include the
+engine and use engine-qualified default filenames. Codex behavior is captured
+from the validated live app-server event stream; private rollout files are not
+parsed. Codex does not expose Claude-equivalent per-turn context snapshots on
+that surface, so Codex reports deliberately omit the context baseline rather
+than presenting incomparable usage as parity.
 
 ## Recording results
 
@@ -76,8 +85,14 @@ Each entry in `knowledge-audits.yaml` has these fields:
   - `knows_about` — should know which docs to read, then answer.
   - `discoverable` — should be able to find the answer by exploring the filesystem.
 - `correct_contains` / `correct_contains_any` — strings that must appear in the response.
+- `correct_matches` — case-insensitive regexes that must match the response; use
+  when the required relationship has legitimate wording variation that a list
+  of exact substrings would overfit.
 - `cards_contain` — strings that must appear in card files created by the agent.
 - `should_read` — files the agent should read before answering.
+- `should_read_any` — alternative files, at least one of which the agent should
+  read. Use this when generated guidance and its installed skill are equivalent
+  navigation outcomes.
 - `max_turns` — override the default 10-turn limit (use for tests requiring multi-step card creation).
 - `tags` — for filtering with `--filter`.
 - `context_dir` — box-relative subdirectory to run the agent from. Sets the SDK's `cwd` there and adds the box root to `additionalDirectories`, mirroring how a chat session bound to a landmark is spawned. Use to audit that the subdirectory's `CLAUDE.md` (and its `@MAP.md` import) actually load into the agent's context at session start.

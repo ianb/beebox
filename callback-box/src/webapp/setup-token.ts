@@ -1,7 +1,7 @@
 /**
  * First-run setup token.
  *
- * When authentication is required and the credential store has zero users, the
+ * When authentication is required and the credential store does not exist, the
  * server prints a one-time claim link to the console at listen time (the Jupyter
  * shape — a boot-logged token — rather than Portainer's self-terminating
  * service, which on a personal server would read as a crash). The token gates
@@ -20,7 +20,8 @@
  */
 
 import * as crypto from "node:crypto";
-import { listUsers } from "./local-users.js";
+import { getOwnerEmail } from "./auth.js";
+import { isLocalAuthStoreInitialized } from "./local-users.js";
 import { AuthStoreUnavailableError } from "./local-users-errors.js";
 
 const SETUP_TOKEN_TTL_MS = 15 * 60 * 1000;
@@ -66,16 +67,28 @@ export function clearSetupToken(): void {
 }
 
 /**
- * At listen time, when auth is required AND the store has zero users, arm a
- * setup token and print the claim link. No-op in open access (there's no wall)
- * or once a user exists. A corrupt/unreadable store degrades to "no setup link"
- * with a loud error — logins will surface the store problem per-request.
+ * At listen time, when auth is required AND the server has no owner at all, arm
+ * a setup token and print the claim link. No-op in open access (there's no
+ * wall), once a local user exists, or when an owner is already established some
+ * other way. A corrupt/unreadable store degrades to "no setup link" with a loud
+ * error — logins will surface the store problem per-request.
+ *
+ * The owner check is not the same as the zero-local-users check. A server whose
+ * owner signs in through Google OAuth (`CB_OWNER_EMAIL` set, no local password
+ * account) has zero local users *permanently*, so the user-count test alone
+ * re-armed and re-printed a setup link on every single restart — 105 times on
+ * the deployed server before this was noticed. That link was never usable
+ * (`POST /auth/setup` refuses to create an owner that doesn't match
+ * `CB_OWNER_EMAIL`), so it was pure noise that read as an unclaimed server.
  */
 export function maybeArmFirstRunSetup({ publicUrl, openAccess }: { publicUrl: string; openAccess: boolean }): void {
   if (openAccess) return;
-  let userCount: number;
+  // An owner already exists (env override or a local owner account) — there is
+  // nothing to claim, so no token and no link.
+  if (getOwnerEmail() !== null) return;
+  let storeInitialized: boolean;
   try {
-    userCount = listUsers().length;
+    storeInitialized = isLocalAuthStoreInitialized();
   } catch (e) {
     if (e instanceof AuthStoreUnavailableError) {
       console.error("[auth] cannot check for first-run setup — credential store unavailable:", e);
@@ -83,7 +96,7 @@ export function maybeArmFirstRunSetup({ publicUrl, openAccess }: { publicUrl: st
     }
     throw e;
   }
-  if (userCount > 0) return;
+  if (storeInitialized) return;
   const token = armSetupToken({ now: Date.now() });
   console.log(`First-run setup: ${publicUrl}/auth/setup?token=${token}`);
 }

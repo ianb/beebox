@@ -53,6 +53,21 @@ export const EmailThreadSchema = cardSchema("email-thread", {
 - \`box/inbox/email/\` — new threads, awaiting processing
 - \`store/archive/email/\` — processed/archived threads
 
+This card is part of a tracked working set, not a mailbox mirror. Its existence
+means the Gmail connector will keep the thread synchronized. Moving the card
+keeps it tracked. Deleting or trashing it stops tracking and NEVER deletes the
+Gmail thread. To track another thread, run
+\`cb connector gmail track <thread-id>\`.
+
+Mail without a live card is absent from box search and context. Search or read
+it remotely with \`cb connector gmail gws -- <gws Gmail read args>\`; inspect
+bounded rule discoveries with \`cb connector gmail pending [rule]\`.
+Automatic routing is configured as named rules in
+\`config/connectors/gmail.json\`. A rule either tracks matching new threads
+within a rolling budget or requests a procedure after sync. Procedure shell
+prechecks can skip before any agent step runs. The \`gws\` passthrough is
+remote-read-only: it cannot send, modify, trash, or delete mail.
+
 Each thread has a card (\`{basename}.email-thread.card\`) plus an attach scope
 (\`{basename}.attach/\`) containing:
 - \`msg-NNN.email-message.card\` — individual message metadata (referenced from

@@ -1,7 +1,9 @@
 ---
 title: "adapt the SDK's new conversation_reset message"
+workstream: unknown
 area: callback-box
 needs: [design]
+next-action: reconfirm
 ---
 
 The agent SDK (new as of 0.3.20x, seen while bumping the pin to 0.3.205) added a

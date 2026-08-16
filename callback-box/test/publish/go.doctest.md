@@ -19,6 +19,8 @@ import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 const now = new Date("2026-07-14T12:00:00Z");
 const noopCommit = async () => {};
+// This test explicitly exercises the non-interactive refusal path.
+process.stdin.isTTY = false;
 
 function draftCtx() {
   return { now, ownerEmail: "owner@box.test", softwareVersion: "1.0.0", commit: noopCommit };

@@ -1,146 +1,226 @@
-/**
- * Allowed-emails access control for a box. Owner is always listed and cannot
- * be removed. Empty allowlist means any authenticated user can access.
- */
+/** Box access list and operator-issued password resets for existing members. */
 
-import { useState, useEffect, useCallback } from "react";
-import { TextField } from "../ui/fields";
+import { type RouterOutput } from "../../lib/trpc";
+import { useAllowedEmails, type ResetLink } from "../../hooks/useAllowedEmails";
+import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
-import { trpcClient } from "../../lib/trpc";
-import { errorMessage } from "@shared/error-guards";
+import { Card } from "../ui/Card";
+import { InlineAction } from "../ui/InlineAction";
+import { Row } from "../ui/Row";
+import { Stack } from "../ui/Stack";
+import { Text } from "../ui/Text";
+import { TextField } from "../ui/fields";
 
-export function AllowedEmailsSection() {
-  const [emails, setEmails] = useState<string[]>([]);
-  const [ownerEmail, setOwnerEmail] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [newEmail, setNewEmail] = useState("");
-  const [saving, setSaving] = useState(false);
+type AllowedUserDetail = RouterOutput["admin"]["boxConfig"]["allowedUserDetails"][number];
+type LocalPasswordStatus = RouterOutput["admin"]["boxConfig"]["localPasswordStatus"];
 
-  const fetchConfig = useCallback(async () => {
-    try {
-      const data = await trpcClient.admin.boxConfig.query();
-      setEmails(data.allowedEmails);
-      setOwnerEmail(data.ownerEmail ?? null);
-      setError(null);
-    } catch (err) {
-      setError(errorMessage(err));
-    }
-  }, []);
+function AccountBadge({ kind, googleLoginConfigured }: {
+  kind: AllowedUserDetail["kind"];
+  googleLoginConfigured: boolean;
+}) {
+  if (kind === "local-member" || kind === "local-owner") {
+    return <Badge tone="success">Local password account</Badge>;
+  }
+  if (kind === "owner-entry") return <Badge tone="neutral">Owner</Badge>;
+  if (kind === "unknown") return <Badge tone="warning">Password status unavailable</Badge>;
+  if (googleLoginConfigured) return <Badge tone="info">Google sign-in only</Badge>;
+  return <Badge tone="info">Needs account setup</Badge>;
+}
 
-  // Mount-only fetch — the setLoading calls are the standard
-  // "show spinner, fetch, hide spinner" pattern; nothing to be derived
-  // from existing state here.
+function LocalPasswordNotice({ status }: { status: LocalPasswordStatus }) {
+  if (status === "ready") return null;
+  return (
+    <div role="alert">
+      <Text as="p" size="sm" tone="danger">
+        The local password store is unavailable. Password-account details and resets cannot be loaded.
+      </Text>
+    </div>
+  );
+}
 
-  useEffect(() => {
-    setLoading(true);
-    // fetchConfig catches its own errors into `error` state.
-    void fetchConfig().finally(() => setLoading(false));
-  }, [fetchConfig]);
-
-
-  const saveEmails = async (updated: string[]) => {
-    setSaving(true);
-    setError(null);
-    try {
-      const data = await trpcClient.admin.updateBoxConfig.mutate({ allowedEmails: updated });
-      setEmails(data.allowedEmails);
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleAdd = () => {
-    const email = newEmail.trim().toLowerCase();
-    if (!email || !email.includes("@")) return;
-    if (emails.includes(email)) {
-      setNewEmail("");
-      return;
-    }
-    const updated = [...emails, email];
-    setNewEmail("");
-    // saveEmails catches its own errors into `error` state.
-    void saveEmails(updated);
-  };
-
-  const handleRemove = (email: string) => {
-    void saveEmails(emails.filter((e) => e !== email));
-  };
-
-  if (loading) {
+function AllowedUserRows(options: {
+  emails: string[];
+  details: Map<string, AllowedUserDetail>;
+  googleLoginConfigured: boolean;
+  resettingEmail: string | null;
+  removingEmail: string | null;
+  onReset: (email: string) => Promise<void>;
+  onRemove: (email: string) => Promise<void>;
+}) {
+  if (options.emails.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-warm-800 mb-4">Allowed Users</h2>
-        <p className="text-sm text-warm-600">Loading...</p>
-      </div>
+      <Card background="warm" border="subtle" padding="sm">
+        <Text size="sm" tone="muted">Owner-only — no additional users can access this box.</Text>
+      </Card>
     );
   }
+  return (
+    <Stack gap="sm">
+      {options.emails.map((email) => (
+        <Card key={email} background="warm" border="subtle" padding="sm">
+          <Row justify="between" wrap>
+            <Stack gap="xs" className="min-w-0 flex-1">
+              <Text size="sm" breakAll>{email}</Text>
+              <div>
+                <AccountBadge
+                  kind={options.details.get(email)?.kind ?? "unknown"}
+                  googleLoginConfigured={options.googleLoginConfigured}
+                />
+              </div>
+            </Stack>
+            <Row gap="md">
+              {options.details.get(email)?.resetEligible === true ? (
+                <InlineAction onClick={() => options.onReset(email)} disabled={options.resettingEmail === email}>
+                  Reset password
+                </InlineAction>
+              ) : null}
+              <InlineAction
+                intent="danger"
+                onClick={() => options.onRemove(email)}
+                disabled={options.removingEmail === email}
+              >
+                Remove
+              </InlineAction>
+            </Row>
+          </Row>
+        </Card>
+      ))}
+    </Stack>
+  );
+}
+
+function ResetLinkCard({ resetLink }: { resetLink: ResetLink }) {
+  return (
+    <Card background="warm" border="subtle" padding="sm">
+      <Stack gap="sm">
+        <Text size="sm" weight="medium">Password reset link for {resetLink.email}</Text>
+        <Text mono breakAll size="sm">{resetLink.url}</Text>
+        <Text size="xs" tone="muted">Expires {new Date(resetLink.expiresAt).toLocaleTimeString()}</Text>
+        <Text size="xs" tone="muted">
+          Single-use. Creating another link replaces this one. Send it only through a trusted channel.
+        </Text>
+        <Button
+          type="button"
+          intent="secondary"
+          onClick={() => navigator.clipboard.writeText(resetLink.url)}
+          flash={{ label: "Copied" }}
+        >
+          Copy reset link
+        </Button>
+      </Stack>
+    </Card>
+  );
+}
+
+function LoadingAllowedUsers() {
+  return (
+    <Card as="section" aria-label="Allowed users" shadow>
+      <Text size="sm" tone="muted">Loading allowed users…</Text>
+    </Card>
+  );
+}
+
+export function AllowedEmailsSection() {
+  const {
+    configQuery,
+    updateMutation,
+    resetMutation,
+    emails,
+    newEmail,
+    setNewEmail,
+    checking,
+    pendingExistingEmail,
+    setPendingExistingEmail,
+    localError,
+    resetLink,
+    resettingEmail,
+    removingEmail,
+    saveEmails,
+    addEmail,
+    createReset,
+  } = useAllowedEmails();
+
+  if (configQuery.isLoading) return <LoadingAllowedUsers />;
+
+  const queryError = configQuery.error?.message ?? null;
+  const mutationError = resetMutation.error?.message ?? updateMutation.error?.message ?? localError;
+  const details = new Map(configQuery.data?.allowedUserDetails.map((user) => [user.email, user]));
+  const visibleEmails = emails.filter((email) => email !== configQuery.data?.ownerEmail);
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-lg font-semibold text-warm-800 mb-2">Allowed Users</h2>
-      <p className="text-sm text-warm-700 mb-4">
-        Email addresses that can access this box. Leave empty to allow all authenticated users.
-      </p>
+    <Card as="section" aria-label="Allowed users" shadow>
+      <Stack gap="md">
+        <Stack gap="xs">
+          <Text as="h2" size="lg" weight="semibold">Allowed Users</Text>
+          <Text size="sm" tone="muted">
+            Email addresses that can access this box. Leave empty to keep the box owner-only.
+          </Text>
+        </Stack>
 
-      {ownerEmail ? (
-        <div className="mb-4 p-2 bg-warm-50 border border-warm-200 rounded text-sm flex items-center gap-2">
-          <span className="flex-1 text-warm-800">{ownerEmail}</span>
-          <span className="text-xs text-warm-500">owner — always has access</span>
-        </div>
-      ) : null}
+        {configQuery.data?.ownerEmail ? (
+          <Card background="warm" border="subtle" padding="sm">
+            <Row justify="between" wrap>
+              <Text size="sm" breakAll>{configQuery.data.ownerEmail}</Text>
+              <Text size="xs" tone="muted">owner — always has access</Text>
+            </Row>
+          </Card>
+        ) : null}
 
-      {emails.length > 0 ? (
-        <div className="mb-4 space-y-2">
-          {emails.map((email) => (
-            <div key={email} className="flex items-center gap-2 p-2 bg-warm-50 border border-warm-200 rounded text-sm">
-              <span className="flex-1 text-warm-800">{email}</span>
-              <button
-                onClick={() => handleRemove(email)}
-                disabled={saving}
-                aria-label={`Remove ${email}`}
-                className="text-warm-500 hover:text-danger-dark text-xs px-2"
-              >
-                remove
-              </button>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="mb-4 p-3 bg-warm-50 border border-warm-200 rounded text-sm text-warm-600">
-          No restrictions — all authenticated users can access this box.
-        </div>
-      )}
+        {configQuery.data ? <LocalPasswordNotice status={configQuery.data.localPasswordStatus} /> : null}
 
-      <div className="flex gap-2 items-start">
-        <TextField
-          label="Allowed email"
-          hideLabel
-          type="email"
-          value={newEmail}
-          onChange={setNewEmail}
-          onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
-          placeholder="user@example.com"
-          className="flex-1"
+        <AllowedUserRows
+          emails={visibleEmails}
+          details={details}
+          googleLoginConfigured={configQuery.data?.googleLoginConfigured === true}
+          resettingEmail={resettingEmail}
+          removingEmail={removingEmail}
+          onReset={createReset}
+          onRemove={(email) => saveEmails(emails.filter((candidate) => candidate !== email), email)}
         />
-        <Button
-          intent="primary"
-          onClick={handleAdd}
-          disabled={!newEmail.trim().includes("@")}
-          loading={saving}
-          loadingLabel="Saving…"
-        >
-          Add
-        </Button>
-      </div>
 
-      {error ? (
-        <div className="mt-3 p-3 bg-danger-50 border border-danger-100 rounded text-sm text-danger-dark">
-          {error}
-        </div>
-      ) : null}
-    </div>
+        <Row gap="sm" align="start">
+          <TextField
+            label="Allowed email"
+            hideLabel
+            type="email"
+            value={newEmail}
+            onChange={(value) => {
+              setNewEmail(value);
+              setPendingExistingEmail(null);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                void addEmail();
+              }
+            }}
+            placeholder="user@example.com"
+            className="flex-1"
+          />
+          <Button
+            intent="primary"
+            onClick={() => void addEmail()}
+            disabled={!newEmail.trim().includes("@")}
+            loading={updateMutation.isPending || checking}
+            loadingLabel={checking ? "Checking…" : "Saving…"}
+          >
+            Add
+          </Button>
+        </Row>
+
+        {pendingExistingEmail ? (
+          <Card background="info" border="subtle" padding="sm">
+            <Text size="sm">
+              A local password account already exists for {pendingExistingEmail}. Adding it grants that account
+              access; click Add again to confirm.
+            </Text>
+          </Card>
+        ) : null}
+
+        {resetLink ? <ResetLinkCard resetLink={resetLink} /> : null}
+
+        {queryError || mutationError ? <Text size="sm" tone="danger">{queryError ?? mutationError}</Text> : null}
+      </Stack>
+    </Card>
   );
 }

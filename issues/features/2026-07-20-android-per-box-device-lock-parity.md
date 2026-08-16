@@ -1,9 +1,11 @@
 ---
 title: Add Android parity for the device-local per-box lock
+workstream: ios-per-box-device-lock
 area: callback-box
-needs: [design, implementation, manual-testing]
+needs: [design, manual-testing]
 filed-by: agent
 discovered-in: iOS per-box device lock implementation
+priority: backlog
 ---
 
 The iOS companion now supports an optional device-local navigation lock for
@@ -33,3 +35,9 @@ Android-specific subplan once the companion's Track 1/2 architecture exists,
 then add unit tests plus emulator and physical-device lifecycle/authentication
 acceptance. Close only when the Android cell in `docs/mobile-parity.md` can be
 changed from planned to done or to a documented deliberate divergence.
+
+## Manual testing
+
+Follow the concrete reproduction or verification steps above. Confirm the
+observed result matches the expected behavior described in this issue before
+clearing the manual-testing flag.

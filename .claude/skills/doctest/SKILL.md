@@ -1,0 +1,63 @@
+---
+name: doctest
+description: Directs writing, running, and triaging callback-box's `.doctest.md` tests — when a doctest is the right tier, how to author and run one, and the flake-triage discipline (never call a flaky test "fixed" without re-running it). Use when writing a new doctest, debugging a failing/flaky one, or deciding whether a suite failure is a real regression. Triggers include "write a doctest", "this doctest is flaky", "is this a real test failure", "add a test for X" (once the tier is decided).
+---
+
+# Doctests: author, run, triage
+
+Directs the workflow. Per-file syntax mechanics live in
+`callback-box/.claude/rules/doctest.md` (auto-loads when you edit a
+`.doctest.md` file) and the deeper reference in the monorepo's
+`agent-doctest/docs/`. Whether a doctest is even the right tier —
+pure/route/filesystem, vs scenario/knowledge-audit/browser-probe — is
+`cb-guide-testing`'s call, not this skill's; read it first if that's
+still open.
+
+## Authoring
+
+Create `test/<name>.doctest.md` (path mirrors the `src/` file under
+test, per `callback-box/CLAUDE.md`). Write prose, then fenced examples.
+Don't restate syntax here — when in doubt, read the rule file and an
+existing doctest near the code you're touching. Blocks are full
+TypeScript (esbuild); the traps are in assertion semantics (see the
+rule file's string-comparison rules), not syntax.
+
+## Running
+
+- One file: `pnpm exec tap test/<path>.doctest.md`
+- Whole suite: `pnpm test`. Note pre-commit runs typecheck + lint only,
+  NOT the suite — run `pnpm test` yourself before declaring done.
+- Force serial (rule out contention as a cause): add `-j1`
+
+**Never declare a doctest fixed without actually running it.** Reading
+the diff, typechecking, or a parse-only check tells you the file is
+well-formed — not that the assertion passes. Reproduce the original
+failure first, then rerun after the fix, in isolation at minimum.
+
+## Flake triage
+
+The suite runs `jobs: 6` in parallel (`callback-box/.taprc`) and that
+contention is a real, tracked hazard — not every red run is your bug.
+Shapes seen repeatedly in `issues/bugs/` (grep there for the current
+list before assuming a new one):
+
+- **Settle-wait races** — a timing assertion (fs watcher, poll loop)
+  fires before state has actually settled. Fix: poll-until-true, not a
+  bigger fixed sleep.
+- **Timeout under load** — passes solo, times out only in the full
+  run (hub-e2e, login-redirect, run-target). Confirm with an isolated
+  rerun before treating it as a regression.
+- **"no tests found" with a non-zero exit** — the file crashed during
+  module load under contention, not during a test body; looks like an
+  empty file, isn't one.
+- **A real bug wearing a flake costume** — reproduces every run,
+  including on the unmodified tree. Don't assume "the test is wrong"
+  just because it's been red a while (see the bulk-upload sweep issue).
+
+Full protocol (isolated rerun, grep `issues/` for a matching
+signature, at most one full-suite rerun, when to file a new issue vs
+fix inline) is in `.claude/agents/finish.md` — follow it rather than
+re-deriving it. File in `issues/bugs/` (see the `issues` skill) when
+you hit a new flake shape that isn't tracked yet and isn't yours to
+fix right now; fix inline when it's a real bug in code or fixture you
+can pin down.

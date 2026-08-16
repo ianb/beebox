@@ -2,6 +2,11 @@ node_modules/
 dist/
 *.log
 
+# Machine-local scheduled-maintenance output. Individual logs are ignored by
+# the rule above; ignore the directory too so symlinks such as latest.log can
+# never become repository state.
+/logs/
+
 # Deploy build checkout + latest-wins lock state (see callback-box/deploy/deploy.sh).
 # The checkout is a disposable detached git worktree; the other two are runtime
 # lock/coordination files. All live at the main repo root.
@@ -17,8 +22,11 @@ dist/
 # The tracked .commit-blocklist.example documents the format.
 .commit-blocklist
 
-# Codex mirror (AGENTS.md / .agents/ / .codex/) — kept local for now; not
-# committed to avoid maintaining a sync with the .claude/ + CLAUDE.md sources.
+# Codex mirrors: AGENTS.md files and .agents/skills symlinks are GENERATED from
+# CLAUDE.md, .claude/rules, and .claude/skills at worktree spin-up
+# (bin/generate-agents-md.ts, called by the WorktreeCreate hook) and must never
+# be committed — a committed mirror is exactly the drift-to-stale failure mode
+# the generator exists to prevent (see 872450eb).
 AGENTS.md
 .agents/
 .codex/
@@ -40,8 +48,8 @@ AGENTS.md
 
 # Xcode local state / build products
 *.xcuserstate
-*.xcworkspace/xcuserdata/
-*.xcodeproj/xcuserdata/
+**/*.xcworkspace/xcuserdata/
+**/*.xcodeproj/xcuserdata/
 DerivedData/
 ios-app/build/
 
@@ -62,3 +70,10 @@ dev/prompts/data.json
 # tracked as real code.
 dev/story-eval/runs/
 dev/story-eval/verdicts/
+
+# OpenGrep SARIF/JSON scan output
+.opengrep-out/
+
+# Private-issues shadow-repo mount (a SYMLINK in every checkout — no trailing
+# slash: dir-only patterns do not match symlinks). See issues/CLAUDE.md.
+/private-issues

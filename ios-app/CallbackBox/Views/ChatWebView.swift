@@ -70,6 +70,8 @@ struct ChatWebView: UIViewRepresentable {
     var onLocationShareResult: (NativeLocationShareResult) -> Void
     var onLocationSharingStateChange: (Bool) -> Void
     var onNarrationStateChange: (Bool) -> Void
+    var onSpeechPlaybackStateChange: (Bool) -> Void
+    var onResponseStateChange: (Bool) -> Void
     var onScreenshotResult: (NativeScreenshotResult) -> Void
     var onComposerCommand: (NativeComposerCommandDelivery) -> Void
     var onComposerCommandAcknowledgementDelivered: (String) -> Void
@@ -86,6 +88,8 @@ struct ChatWebView: UIViewRepresentable {
         onLocationShareResult: @escaping (NativeLocationShareResult) -> Void = { _ in },
         onLocationSharingStateChange: @escaping (Bool) -> Void = { _ in },
         onNarrationStateChange: @escaping (Bool) -> Void = { _ in },
+        onSpeechPlaybackStateChange: @escaping (Bool) -> Void = { _ in },
+        onResponseStateChange: @escaping (Bool) -> Void = { _ in },
         onScreenshotResult: @escaping (NativeScreenshotResult) -> Void = { _ in },
         onComposerCommand: @escaping (NativeComposerCommandDelivery) -> Void = { _ in },
         onComposerCommandAcknowledgementDelivered: @escaping (String) -> Void = { _ in }
@@ -101,19 +105,22 @@ struct ChatWebView: UIViewRepresentable {
         self.onLocationShareResult = onLocationShareResult
         self.onLocationSharingStateChange = onLocationSharingStateChange
         self.onNarrationStateChange = onNarrationStateChange
+        self.onSpeechPlaybackStateChange = onSpeechPlaybackStateChange
+        self.onResponseStateChange = onResponseStateChange
         self.onScreenshotResult = onScreenshotResult
         self.onComposerCommand = onComposerCommand
         self.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
     }
 
     func makeUIView(context: Context) -> WKWebView {
-        let configuration = WKWebViewConfiguration()
-        configuration.allowsInlineMediaPlayback = true
+        let configuration = Self.makeConfiguration()
         configuration.userContentController.add(context.coordinator, name: "callbackboxSession")
         configuration.userContentController.add(context.coordinator, name: "callbackboxEmissionReceipt")
         configuration.userContentController.add(context.coordinator, name: "callbackboxLocationResult")
         configuration.userContentController.add(context.coordinator, name: "callbackboxLocationState")
         configuration.userContentController.add(context.coordinator, name: "callbackboxNarrationState")
+        configuration.userContentController.add(context.coordinator, name: "callbackboxSpeechPlaybackState")
+        configuration.userContentController.add(context.coordinator, name: "callbackboxResponseState")
         configuration.userContentController.add(context.coordinator, name: "callbackboxComposerCommand")
         if let script = startupScript() {
             configuration.userContentController.addUserScript(script)
@@ -127,6 +134,13 @@ struct ChatWebView: UIViewRepresentable {
         return webView
     }
 
+    static func makeConfiguration() -> WKWebViewConfiguration {
+        let configuration = WKWebViewConfiguration()
+        configuration.allowsInlineMediaPlayback = true
+        configuration.mediaTypesRequiringUserActionForPlayback = []
+        return configuration
+    }
+
     func updateUIView(_ webView: WKWebView, context: Context) {
         context.coordinator.onSessionChange = onSessionChange
         context.coordinator.onEmissionDeliveryAttempt = onEmissionDeliveryAttempt
@@ -134,9 +148,12 @@ struct ChatWebView: UIViewRepresentable {
         context.coordinator.onLocationShareResult = onLocationShareResult
         context.coordinator.onLocationSharingStateChange = onLocationSharingStateChange
         context.coordinator.onNarrationStateChange = onNarrationStateChange
+        context.coordinator.onSpeechPlaybackStateChange = onSpeechPlaybackStateChange
+        context.coordinator.onResponseStateChange = onResponseStateChange
         context.coordinator.onScreenshotResult = onScreenshotResult
         context.coordinator.onComposerCommand = onComposerCommand
         context.coordinator.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
+        context.coordinator.boxID = box.id
         context.coordinator.allowedOrigin = Self.origin(from: box.baseURL)
         context.coordinator.pendingEmissions = pendingEmissions
         context.coordinator.locationShareRequest = locationShareRequest
@@ -153,6 +170,7 @@ struct ChatWebView: UIViewRepresentable {
 
     func makeCoordinator() -> Coordinator {
         Coordinator(
+            boxID: box.id,
             allowedOrigin: Self.origin(from: box.baseURL),
             onSessionChange: onSessionChange,
             onEmissionDeliveryAttempt: onEmissionDeliveryAttempt,
@@ -160,6 +178,8 @@ struct ChatWebView: UIViewRepresentable {
             onLocationShareResult: onLocationShareResult,
             onLocationSharingStateChange: onLocationSharingStateChange,
             onNarrationStateChange: onNarrationStateChange,
+            onSpeechPlaybackStateChange: onSpeechPlaybackStateChange,
+            onResponseStateChange: onResponseStateChange,
             onScreenshotResult: onScreenshotResult,
             onComposerCommand: onComposerCommand,
             onComposerCommandAcknowledgementDelivered: onComposerCommandAcknowledgementDelivered
@@ -167,6 +187,7 @@ struct ChatWebView: UIViewRepresentable {
     }
 
     final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler, WKUIDelegate {
+        var boxID: PairedBox.ID
         var allowedOrigin: String?
         var onSessionChange: (String?) -> Void
         var onEmissionDeliveryAttempt: (NativeChatEmission.ID) -> Void
@@ -174,6 +195,8 @@ struct ChatWebView: UIViewRepresentable {
         var onLocationShareResult: (NativeLocationShareResult) -> Void
         var onLocationSharingStateChange: (Bool) -> Void
         var onNarrationStateChange: (Bool) -> Void
+        var onSpeechPlaybackStateChange: (Bool) -> Void
+        var onResponseStateChange: (Bool) -> Void
         var onScreenshotResult: (NativeScreenshotResult) -> Void
         var onComposerCommand: (NativeComposerCommandDelivery) -> Void
         var onComposerCommandAcknowledgementDelivered: (String) -> Void
@@ -182,18 +205,23 @@ struct ChatWebView: UIViewRepresentable {
         var screenshotRequest: NativeScreenshotRequest?
         var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = []
         private var inflightEmissionIDs = Set<NativeChatEmission.ID>()
-        private var receiptTimeouts: [NativeChatEmission.ID: DispatchWorkItem] = [:]
         private var inflightLocationRequestID: NativeLocationShareRequest.ID?
         private var locationRequestTimeout: DispatchWorkItem?
         private var inflightScreenshotRequestID: NativeScreenshotRequest.ID?
         private var inflightComposerCommandAcknowledgementIDs = Set<String>()
         private var pageLoaded: Bool
-        private let receiptTimeoutDelay: TimeInterval
+        /// One log line per transition into navigation failure; cleared by the
+        /// next successful load.
+        private var navigationFailureLogged = false
+        /// Start is latched through offline retries and cleared only by a
+        /// successful load, matching the failure latch below.
+        private var navigationStartLogged = false
         private let evaluateEmission: ((String, @escaping (Error?) -> Void) -> Void)?
         private let openExternalURL: (URL) -> Void
         private let loadInCurrentContext: (WKWebView, URLRequest) -> Void
 
         init(
+            boxID: PairedBox.ID,
             allowedOrigin: String?,
             onSessionChange: @escaping (String?) -> Void,
             onEmissionDeliveryAttempt: @escaping (NativeChatEmission.ID) -> Void,
@@ -201,10 +229,11 @@ struct ChatWebView: UIViewRepresentable {
             onLocationShareResult: @escaping (NativeLocationShareResult) -> Void,
             onLocationSharingStateChange: @escaping (Bool) -> Void,
             onNarrationStateChange: @escaping (Bool) -> Void,
+            onSpeechPlaybackStateChange: @escaping (Bool) -> Void,
+            onResponseStateChange: @escaping (Bool) -> Void,
             onScreenshotResult: @escaping (NativeScreenshotResult) -> Void,
             onComposerCommand: @escaping (NativeComposerCommandDelivery) -> Void,
             onComposerCommandAcknowledgementDelivered: @escaping (String) -> Void,
-            receiptTimeoutDelay: TimeInterval = 35,
             pageLoaded: Bool = false,
             evaluateEmission: ((String, @escaping (Error?) -> Void) -> Void)? = nil,
             openExternalURL: @escaping (URL) -> Void = { UIApplication.shared.open($0) },
@@ -212,6 +241,7 @@ struct ChatWebView: UIViewRepresentable {
                 webView.load(request)
             }
         ) {
+            self.boxID = boxID
             self.allowedOrigin = allowedOrigin
             self.onSessionChange = onSessionChange
             self.onEmissionDeliveryAttempt = onEmissionDeliveryAttempt
@@ -219,10 +249,11 @@ struct ChatWebView: UIViewRepresentable {
             self.onLocationShareResult = onLocationShareResult
             self.onLocationSharingStateChange = onLocationSharingStateChange
             self.onNarrationStateChange = onNarrationStateChange
+            self.onSpeechPlaybackStateChange = onSpeechPlaybackStateChange
+            self.onResponseStateChange = onResponseStateChange
             self.onScreenshotResult = onScreenshotResult
             self.onComposerCommand = onComposerCommand
             self.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
-            self.receiptTimeoutDelay = receiptTimeoutDelay
             self.pageLoaded = pageLoaded
             self.evaluateEmission = evaluateEmission
             self.openExternalURL = openExternalURL
@@ -231,6 +262,9 @@ struct ChatWebView: UIViewRepresentable {
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             pageLoaded = true
+            navigationFailureLogged = false
+            navigationStartLogged = false
+            BoxLog.info("chat navigation finished", category: .webview, targetBoxID: boxID)
             onSessionChange(ChatWebView.visibleSessionID(from: webView.url))
             deliver(pendingEmissions, to: webView)
             deliverLocationRequest(to: webView)
@@ -240,14 +274,64 @@ struct ChatWebView: UIViewRepresentable {
 
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
             pageLoaded = false
-            inflightEmissionIDs.removeAll()
-            receiptTimeouts.values.forEach { $0.cancel() }
-            receiptTimeouts.removeAll()
+            if navigationStartLogged == false {
+                navigationStartLogged = true
+                BoxLog.info("chat navigation started", category: .webview, targetBoxID: boxID)
+            }
             inflightLocationRequestID = nil
             locationRequestTimeout?.cancel()
             locationRequestTimeout = nil
             inflightScreenshotRequestID = nil
             inflightComposerCommandAcknowledgementIDs.removeAll()
+        }
+
+        func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+            // The old document can still deliver a real receipt while a
+            // provisional navigation is pending. Only clear its inflight IDs
+            // once the replacement document commits; didFinish then redelivers
+            // the same persisted IDs into the new page.
+            inflightEmissionIDs.removeAll()
+        }
+
+        func webView(
+            _ webView: WKWebView,
+            didFailProvisionalNavigation navigation: WKNavigation!,
+            withError error: Error
+        ) {
+            noteNavigationFailure("provisional", error: error)
+        }
+
+        func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            noteNavigationFailure("committed", error: error)
+        }
+
+        /// The chat page reloads on its own while offline, so this logs the
+        /// TRANSITION into failure, not every retry — a reconnecting phone must
+        /// not fill the box's debug log with the same line.
+        private func noteNavigationFailure(_ stage: String, error: Error) {
+            guard navigationFailureLogged == false else {
+                return
+            }
+            navigationFailureLogged = true
+            BoxLog.warn(
+                "chat navigation failed stage=\(stage)"
+                    + " urlError=\((error as? URLError)?.code.rawValue ?? -1): \(error.localizedDescription)",
+                category: .webview
+            )
+        }
+
+        /// The web content process died — the transcript, its session state, and
+        /// every pending native emission went with it. Nothing else in the app
+        /// can see this.
+        func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+            BoxLog.error(
+                "web content process terminated pendingEmissions=\(pendingEmissions.count)"
+                    + " inflight=\(inflightEmissionIDs.count)",
+                category: .webview
+            )
+            pageLoaded = false
+            inflightEmissionIDs.removeAll()
+            webView.reload()
         }
 
         func webView(
@@ -310,6 +394,14 @@ struct ChatWebView: UIViewRepresentable {
                 receiveNarrationState(message.body)
                 return
             }
+            if message.name == "callbackboxSpeechPlaybackState" {
+                receiveSpeechPlaybackState(message.body)
+                return
+            }
+            if message.name == "callbackboxResponseState" {
+                receiveResponseState(message.body)
+                return
+            }
             if message.name == "callbackboxComposerCommand" {
                 receiveComposerCommand(message.body)
                 return
@@ -333,7 +425,6 @@ struct ChatWebView: UIViewRepresentable {
                 }
                 onEmissionDeliveryAttempt(emission.id)
                 inflightEmissionIDs.insert(emission.id)
-                startReceiptTimeout(for: emission.id)
                 let script = "window.callbackboxNativeReceive(\(detail));"
                 evaluate(script, in: webView) { [weak self] error in
                     guard error != nil else {
@@ -349,7 +440,7 @@ struct ChatWebView: UIViewRepresentable {
             }
         }
 
-        private func receiveEmissionReceipt(_ body: Any) {
+        func receiveEmissionReceipt(_ body: Any) {
             guard
                 let payload = ChatWebView.dictionaryPayload(from: body),
                 let idString = payload["emissionId"] as? String,
@@ -368,22 +459,6 @@ struct ChatWebView: UIViewRepresentable {
             ))
         }
 
-        private func startReceiptTimeout(for emissionID: NativeChatEmission.ID) {
-            let timeout = DispatchWorkItem { [weak self] in
-                guard let self, self.inflightEmissionIDs.contains(emissionID) else {
-                    return
-                }
-                self.finishInflightEmission(emissionID)
-                self.onEmissionReceipt(NativeEmissionReceipt(
-                    emissionID: emissionID,
-                    disposition: .rejected,
-                    reason: "The chat did not confirm the message. Try sending it again."
-                ))
-            }
-            receiptTimeouts[emissionID] = timeout
-            DispatchQueue.main.asyncAfter(deadline: .now() + receiptTimeoutDelay, execute: timeout)
-        }
-
         private func evaluate(
             _ script: String,
             in webView: WKWebView,
@@ -400,7 +475,6 @@ struct ChatWebView: UIViewRepresentable {
 
         private func finishInflightEmission(_ emissionID: NativeChatEmission.ID) {
             inflightEmissionIDs.remove(emissionID)
-            receiptTimeouts.removeValue(forKey: emissionID)?.cancel()
         }
 
         func deliverLocationRequest(to webView: WKWebView) {
@@ -465,6 +539,20 @@ struct ChatWebView: UIViewRepresentable {
                 return
             }
             onNarrationStateChange(enabled)
+        }
+
+        private func receiveSpeechPlaybackState(_ body: Any) {
+            guard let playing = ChatWebView.speechPlaybackActive(from: body) else {
+                return
+            }
+            onSpeechPlaybackStateChange(playing)
+        }
+
+        private func receiveResponseState(_ body: Any) {
+            guard let active = ChatWebView.responseActive(from: body) else {
+                return
+            }
+            onResponseStateChange(active)
         }
 
         private func startLocationRequestTimeout(for requestID: NativeLocationShareRequest.ID) {
@@ -600,6 +688,14 @@ struct ChatWebView: UIViewRepresentable {
 
     static func narrationEnabled(from body: Any) -> Bool? {
         dictionaryPayload(from: body)?["enabled"] as? Bool
+    }
+
+    static func speechPlaybackActive(from body: Any) -> Bool? {
+        dictionaryPayload(from: body)?["playing"] as? Bool
+    }
+
+    static func responseActive(from body: Any) -> Bool? {
+        dictionaryPayload(from: body)?["active"] as? Bool
     }
 
     /// Script-message payloads arrive as a dictionary from legacy direct

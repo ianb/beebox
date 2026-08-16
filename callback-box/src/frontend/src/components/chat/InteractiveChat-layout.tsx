@@ -1,73 +1,28 @@
 /**
  * Layout chrome for InteractiveChat split out of the main component so its
- * body stays focused on state + effects: the header bar, the
- * status-banner/attachment stack above the composer, and the composer
- * section (desktop bar + mobile typing row). Presentational — every
- * interactive bit comes in as a prop.
+ * body stays focused on state + effects: the status-banner/attachment stack
+ * above the composer and the composer section (desktop bar + mobile typing
+ * row). Presentational — every interactive bit comes in as a prop.
+ *
+ * The chat header row is gone (docs/plans/top-nav-ia.md Track C2): its title,
+ * context chip, voice chip and `⋯` menu now live in the single app bar, fed
+ * by `ChatBarChrome`. `ChatView` keeps a visually-hidden `h1` so the page
+ * still has a heading.
  */
 
 import { type ReactNode } from "react";
 import { AttachmentPanel, FileAttachmentPanel, type AttachmentItem, type FileAttachmentItem } from "./ChatAttachments";
 import { SelectionPanel } from "./ChatSelections";
 import { type SelectionItem } from "../../lib/selection/serialize";
-import { SessionListButton } from "./SessionListButton";
-import { RecentFilesButton } from "./RecentFilesButton";
-import { LandmarkLinksButton } from "./LandmarkLinksButton";
 import { getTTSClient } from "../../lib/audio/tts-client";
 import { alarm } from "../../lib/audio/earcons";
-import { SchedulePill, NarrationStatusBadge, MuteButton, NewSessionButton, ChatContextLink } from "./InteractiveChat-controls";
-import { ChatDebugMenu } from "./InteractiveChat-debug-menu";
+import { SchedulePill } from "./InteractiveChat-controls";
+import { VisuallyHidden } from "../ui/VisuallyHidden";
 import { ChatInputArea } from "./InteractiveChat-composer";
 import { MobileTextareaRow } from "./InteractiveChat-mobile-row";
-import type { OnZoomView } from "./ChatMessages";
-import type { SessionEntry } from "../../api";
 import type { ChatSchedule } from "@core/chat/schedules.js";
 
 export type { AttachmentItem, FileAttachmentItem };
-
-export function ChatHeader(props: {
-  effectiveContextDir: string | null;
-  boxSlug: string | undefined;
-  narrationEnabled: boolean;
-  hqInFlight: boolean;
-  onToggleNarration: () => void;
-  muted: boolean;
-  onToggleMute: () => void;
-  messages: SessionEntry[];
-  onZoomView: OnZoomView;
-  onNewSession: () => void;
-  debugMenu: ReactNode;
-}) {
-  const { effectiveContextDir, boxSlug, narrationEnabled, hqInFlight, onToggleNarration, muted, onToggleMute, messages, onZoomView, onNewSession, debugMenu } = props;
-  return (
-    <header className="flex-shrink-0 flex items-center gap-2 w-full max-w-5xl mx-auto px-4 py-2 bg-gradient-to-r from-accent via-coral to-primary">
-      <h1 className="text-sm font-semibold text-white tracking-wide">Chat</h1>
-      <ChatContextLink dir={effectiveContextDir} boxSlug={boxSlug ?? ""} />
-      <NarrationStatusBadge enabled={narrationEnabled} hqInFlight={hqInFlight} onToggle={onToggleNarration} />
-      <div className="flex-1" />
-      <MuteButton muted={muted} onToggle={onToggleMute} />
-      <LandmarkLinksButton
-        contextDir={effectiveContextDir}
-        onPanel={(link) => onZoomView({
-          target: { path: link.ref, viewer: null, params: {} },
-          label: link.label ?? link.title,
-        })}
-      />
-      <RecentFilesButton
-        entries={messages}
-        onPanel={(summary) => onZoomView({
-          target: { path: summary.path, viewer: null, params: {} },
-          label: summary.title,
-        })}
-      />
-      <SessionListButton />
-      <NewSessionButton onClick={onNewSession} />
-      {debugMenu}
-    </header>
-  );
-}
-
-export { ChatDebugMenu };
 
 export function ChatStatusBanners(props: {
   error: string | null | undefined;
@@ -252,28 +207,31 @@ export { ChatInputArea, MobileTextareaRow };
 
 /**
  * Top-level frame that arranges the companion panel, the chat column
- * (header, virtualized list, status banners, composer), and the floating
- * debug-log panel. Receives each region as a pre-built node so the parent
- * keeps ownership of the data wiring.
+ * (heading, list, status banners, composer), and the floating debug-log
+ * panel. Receives each region as a pre-built node so the parent keeps
+ * ownership of the data wiring.
  */
 export function ChatView(props: {
   hasCompanion: boolean;
   companionPanel: ReactNode;
-  header: ReactNode;
+  /** The chat's app-bar publications (`ChatBarChrome`) — portals, no visible DOM here. */
+  barChrome: ReactNode;
   messageList: ReactNode;
   statusBanners: ReactNode;
   composerSection: ReactNode;
   debugLog: ReactNode;
 }) {
-  const { hasCompanion, companionPanel, header, messageList, statusBanners, composerSection, debugLog } = props;
+  const { hasCompanion, companionPanel, barChrome, messageList, statusBanners, composerSection, debugLog } = props;
   return (
     <>
       <div className={`h-full flex ${hasCompanion ? "flex-col md:flex-row" : "flex-col"} bg-gradient-to-b from-warm-50 to-warm-200 overflow-hidden`}>
         {hasCompanion ? companionPanel : null}
         <div className="flex-1 flex flex-col min-h-0 min-w-0 w-full">
-          {/* Header with debug controls — centered at the same max-width as
-              the message list and composer below. */}
-          {header}
+          {/* The visible heading moved into the app bar's place pill (Track
+              C2), which is a chip, not a heading — so the page's h1 stays
+              here for the a11y tree. */}
+          <VisuallyHidden as="h1">Chat</VisuallyHidden>
+          {barChrome}
           {/* Messages area — virtualized */}
           {messageList}
           {/* Everything below the scroll pane (status banners + composer) is

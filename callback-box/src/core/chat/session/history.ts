@@ -1,5 +1,5 @@
 /**
- * chat-session-history — tracks which session ids belong to web chat for
+ * chat-session-history — tracks which native session ids belong to web chat for
  * this box, and (optionally) which directory each one is "associated with"
  * via a landmark.
  *
@@ -7,7 +7,8 @@
  * evolved from a flat string array to per-session entries:
  *
  *   v1 (legacy): { "sessionIds": ["abc-123", ...], "migrated": true }
- *   v2 (current): { "sessions": [{ "id": "abc-123", "contextDir": "store/recipes" }, ...], "migrated": true }
+ *   v2: { "sessions": [{ "id": "abc-123", "contextDir": "store/recipes" }, ...], "migrated": true }
+ *   v3 (current): adds `engine`; a missing value decodes as `claude`
  *
  * v1 files are auto-converted on first read. The list drives the session
  * dropdown — only sessions in here show up.
@@ -26,12 +27,18 @@ import * as path from "node:path";
 import { getSessionDir, getSessionLogPath } from "./transcript-paths.js";
 import { errnoCode, errorMessage } from "../../../lib/error-guards.js";
 import { isRecord } from "../../card-io.js";
+import { writeFileAtomic } from "../../../lib/atomic-write.js";
+import { withCardLock } from "../../../lib/card-lock.js";
+import { loadAgentEngine, type AgentEngine } from "../../box/config.js";
+import { readCodexSessionUpdatedAt } from "./codex-transcript.js";
 
 const HISTORY_FILE = ".callback-box/chat-session-history.json";
 const MOST_ACTIVE_FILE = ".callback-box/chat-session-id.json";
 
 export interface SessionHistoryEntry {
   id: string;
+  /** Native harness that owns this session. Missing on disk means Claude. */
+  engine: AgentEngine;
   /** Directory this chat is associated with (from a landmark). Undefined for unassociated chats. */
   contextDir?: string;
   /**
@@ -47,12 +54,19 @@ export interface HistoryFile {
   migrated: boolean;
 }
 
-interface MostActiveFile {
-  sessionId: string;
+export interface MostActiveFile {
+  sessionId: string | null;
   savedAt: string;
 }
 
 const log = makeLog("chat-history");
+
+class MalformedChatHistoryError extends Error {
+  constructor() {
+    super("Chat session history is malformed");
+    this.name = "MalformedChatHistoryError";
+  }
+}
 
 /**
  * Narrow a single entry from the persisted JSON into a SessionHistoryEntry.
@@ -63,7 +77,9 @@ const log = makeLog("chat-history");
 function parseSessionEntry(raw: unknown): SessionHistoryEntry | null {
   if (raw === null || typeof raw !== "object") return null;
   if (!("id" in raw) || typeof raw.id !== "string") return null;
-  const entry: SessionHistoryEntry = { id: raw.id };
+  const engine = "engine" in raw ? raw.engine : "claude";
+  if (engine !== "claude" && engine !== "codex") return null;
+  const entry: SessionHistoryEntry = { id: raw.id, engine };
   if ("contextDir" in raw && typeof raw.contextDir === "string" && raw.contextDir.length > 0) {
     entry.contextDir = raw.contextDir;
   }
@@ -81,28 +97,34 @@ function parseSessionEntry(raw: unknown): SessionHistoryEntry | null {
  * Read the raw history file (both writers — this module and backfill.ts —
  * go through this and writeHistoryFile; nothing else should).
  */
-export async function readHistoryFile(boxRoot: string): Promise<HistoryFile | null> {
+export async function readHistoryFile(boxRoot: string, options?: { strict?: boolean }): Promise<HistoryFile | null> {
   const filePath = path.join(boxRoot, HISTORY_FILE);
   try {
     const data = await fs.readFile(filePath, "utf-8");
     // The file is read in two compatible shapes — v1 had `sessionIds`,
     // v2 has `sessions`. Tolerate either, and let the next write upgrade.
     const parsedRaw: unknown = JSON.parse(data);
+    if (!isRecord(parsedRaw) && options?.strict === true) throw new MalformedChatHistoryError();
     const parsed = isRecord(parsedRaw) ? parsedRaw : {};
     const sessions: SessionHistoryEntry[] = [];
     if (Array.isArray(parsed.sessions)) {
       for (const raw of parsed.sessions) {
         const entry = parseSessionEntry(raw);
         if (entry) sessions.push(entry);
+        else if (options?.strict === true) throw new MalformedChatHistoryError();
       }
     } else if (Array.isArray(parsed.sessionIds)) {
       for (const id of parsed.sessionIds) {
-        if (typeof id === "string") sessions.push({ id });
+        if (typeof id === "string") sessions.push({ id, engine: "claude" });
+        else if (options?.strict === true) throw new MalformedChatHistoryError();
       }
+    } else if (options?.strict === true && ("sessions" in parsed || "sessionIds" in parsed)) {
+      throw new MalformedChatHistoryError();
     }
     return { sessions, migrated: parsed.migrated === true };
   } catch (e) {
     if (errnoCode(e) === "ENOENT") return null;
+    if (options?.strict === true) throw e;
     log("read", `Failed to read history file: ${errorMessage(e)}`);
     return null;
   }
@@ -110,9 +132,14 @@ export async function readHistoryFile(boxRoot: string): Promise<HistoryFile | nu
 
 export async function writeHistoryFile(boxRoot: string, contents: HistoryFile): Promise<void> {
   const filePath = path.join(boxRoot, HISTORY_FILE);
-  const dir = path.dirname(filePath);
-  await fs.mkdir(dir, { recursive: true });
-  await fs.writeFile(filePath, JSON.stringify(contents, null, 2));
+  await writeFileAtomic(filePath, {
+    content: JSON.stringify(contents, null, 2),
+  });
+}
+
+/** Serialize a complete history read-modify-write operation. */
+export function withHistoryLock<T>(boxRoot: string, fn: () => Promise<T>): Promise<T> {
+  return withCardLock(path.join(boxRoot, HISTORY_FILE), fn);
 }
 
 /**
@@ -176,6 +203,7 @@ export async function listSessionRoots(boxRoot: string): Promise<SessionRoot[]> 
 
 interface AppendHistoryOptions {
   sessionId: string;
+  engine?: AgentEngine;
   /**
    * Directory this chat is associated with. A non-empty path means the
    * chat is bound to a landmark subdirectory; an empty string means the
@@ -188,25 +216,57 @@ interface AppendHistoryOptions {
 /**
  * Append a session id to the history. Idempotent — duplicates are ignored.
  */
-export async function appendHistory(
-  boxRoot: string,
-  opts: AppendHistoryOptions,
-): Promise<void> {
-  const file = (await readHistoryFile(boxRoot)) ?? { sessions: [], migrated: false };
-  const existing = file.sessions.find((s) => s.id === opts.sessionId);
-  if (existing) {
-    // Fill in a binding if the entry didn't have one yet — empty string
-    // ("root-bound") is just as much a binding as a real subdirectory.
-    if (opts.contextDir !== undefined && existing.contextDir === undefined) {
-      existing.contextDir = opts.contextDir;
-      await writeHistoryFile(boxRoot, file);
+export async function appendHistory(boxRoot: string, opts: AppendHistoryOptions): Promise<void> {
+  await withHistoryLock(boxRoot, async () => {
+    const file = (await readHistoryFile(boxRoot)) ?? {
+      sessions: [],
+      migrated: false,
+    };
+    const existing = file.sessions.find((s) => s.id === opts.sessionId);
+    if (existing) {
+      // Fill in a binding if the entry didn't have one yet — empty string
+      // ("root-bound") is just as much a binding as a real subdirectory.
+      if (opts.contextDir !== undefined && existing.contextDir === undefined) {
+        existing.contextDir = opts.contextDir;
+        await writeHistoryFile(boxRoot, file);
+      }
+      return;
     }
-    return;
-  }
-  const entry: SessionHistoryEntry = { id: opts.sessionId };
-  if (opts.contextDir !== undefined) entry.contextDir = opts.contextDir;
-  file.sessions.push(entry);
-  await writeHistoryFile(boxRoot, file);
+    const entry: SessionHistoryEntry = { id: opts.sessionId, engine: opts.engine ?? await loadAgentEngine(boxRoot) };
+    if (opts.contextDir !== undefined) entry.contextDir = opts.contextDir;
+    file.sessions.push(entry);
+    await writeHistoryFile(boxRoot, file);
+  });
+}
+
+
+/** Remove every exact matching history entry. Returns the removed entries. */
+export async function removeSessionFromHistory(boxRoot: string, sessionId: string): Promise<SessionHistoryEntry[]> {
+  return withHistoryLock(boxRoot, async () => {
+    const file = await readHistoryFile(boxRoot, { strict: true });
+    if (file === null) return [];
+    const removed = file.sessions.filter((entry) => entry.id === sessionId);
+    if (removed.length === 0) return [];
+    file.sessions = file.sessions.filter((entry) => entry.id !== sessionId);
+    await writeHistoryFile(boxRoot, file);
+    return removed;
+  });
+}
+
+/** Restore removed entries without overwriting history written by other sessions. */
+export async function restoreSessionHistoryEntries(boxRoot: string, entries: SessionHistoryEntry[]): Promise<void> {
+  if (entries.length === 0) return;
+  await withHistoryLock(boxRoot, async () => {
+    const file = (await readHistoryFile(boxRoot, { strict: true })) ?? {
+      sessions: [],
+      migrated: false,
+    };
+    const existing = new Set(file.sessions.map((entry) => entry.id));
+    for (const entry of entries) {
+      if (!existing.has(entry.id)) file.sessions.push(entry);
+    }
+    await writeHistoryFile(boxRoot, file);
+  });
 }
 
 /**
@@ -215,10 +275,7 @@ export async function appendHistory(
  * binding (the box-root landmark) and is distinguished from `null`
  * (no entry, or entry has no binding recorded).
  */
-export async function getDirectoryForSession(
-  boxRoot: string,
-  sessionId: string,
-): Promise<string | null> {
+export async function getDirectoryForSession(boxRoot: string, sessionId: string): Promise<string | null> {
   const entries = await loadHistoryEntries(boxRoot);
   const entry = entries.find((s) => s.id === sessionId);
   if (!entry || entry.contextDir === undefined) return null;
@@ -232,10 +289,7 @@ export async function getDirectoryForSession(
  * one. Empty-string / null contextDir means a root-bound chat — log at
  * the box-root path.
  */
-export async function resolveSessionLogPath(
-  boxRoot: string,
-  sessionId: string,
-): Promise<string> {
+export async function resolveSessionLogPath(boxRoot: string, sessionId: string): Promise<string> {
   const contextDir = await getDirectoryForSession(boxRoot, sessionId);
   if (contextDir === null || contextDir === "") return getSessionLogPath(boxRoot, sessionId);
   return getSessionLogPath(path.join(boxRoot, contextDir), sessionId);
@@ -250,10 +304,7 @@ export async function resolveSessionLogPath(
  * as box-root chats, so a query for `""` (the root binding) matches
  * both empty-string entries and entries with no `contextDir` at all.
  */
-export async function getLastSessionForDirectory(
-  boxRoot: string,
-  contextDir: string,
-): Promise<string | null> {
+export async function getLastSessionForDirectory(boxRoot: string, contextDir: string): Promise<string | null> {
   const entries = await loadHistoryEntries(boxRoot);
   // Walk newest → oldest and skip ghost entries — history rows are written
   // when the SDK first assigns an id (before any output is committed), so a
@@ -270,12 +321,11 @@ export async function getLastSessionForDirectory(
   for (let i = entries.length - 1; i >= 0; i -= 1) {
     const entry = entries[i];
     if (!entry) continue;
-    const matches = entry.contextDir === contextDir
-      || (contextDir === "" && entry.contextDir === undefined);
+    const matches = entry.contextDir === contextDir || (contextDir === "" && entry.contextDir === undefined);
     if (!matches) continue;
-    const logPath = await resolveSessionLogPath(boxRoot, entry.id);
     try {
-      await fs.access(logPath);
+      if (entry.engine === "codex") await readCodexSessionUpdatedAt(boxRoot, entry.id);
+      else await fs.access(await resolveSessionLogPath(boxRoot, entry.id));
       return entry.id;
     } catch (_e) {
       // Ghost entry — no log on disk. The fs.access rejection only tells us
@@ -283,7 +333,7 @@ export async function getLastSessionForDirectory(
       // error object itself and log our own contextual warning instead. A
       // recurring ghost-creation bug shows up as repeated skips for the
       // same id across sessions.
-      console.warn(`[chat-session-history] Skipping ghost entry for ${contextDir === "" ? "<root>" : contextDir}: ${entry.id} (no JSONL at ${logPath})`);
+      console.warn(`[chat-session-history] Skipping ghost ${entry.engine} entry for ${contextDir === "" ? "<root>" : contextDir}: ${entry.id}`);
       continue;
     }
   }
@@ -295,10 +345,7 @@ export async function getLastSessionForDirectory(
  * exists (or the entry has no features field — which means "use
  * defaults"). The caller is expected to merge with registry defaults.
  */
-export async function getFeaturesForSession(
-  boxRoot: string,
-  sessionId: string,
-): Promise<Record<string, string> | null> {
+export async function getFeaturesForSession(boxRoot: string, sessionId: string): Promise<Record<string, string> | null> {
   const entries = await loadHistoryEntries(boxRoot);
   const entry = entries.find((s) => s.id === sessionId);
   if (!entry || !entry.features) return null;
@@ -311,21 +358,23 @@ export async function getFeaturesForSession(
  * message has assigned a session id. Caller passes only the keys it
  * wants to change; existing keys not in `updates` are preserved.
  */
-export async function updateFeaturesForSession(
-  boxRoot: string,
-  opts: { sessionId: string; updates: Record<string, string> },
-): Promise<void> {
-  const { sessionId, updates } = opts;
-  const file = (await readHistoryFile(boxRoot)) ?? { sessions: [], migrated: false };
-  let entry = file.sessions.find((s) => s.id === sessionId);
-  if (!entry) {
-    entry = { id: sessionId };
-    file.sessions.push(entry);
-  }
-  const merged: Record<string, string> = { ...(entry.features ?? {}) };
-  for (const [k, v] of Object.entries(updates)) merged[k] = v;
-  entry.features = merged;
-  await writeHistoryFile(boxRoot, file);
+export async function updateFeaturesForSession(boxRoot: string, opts: { sessionId: string; updates: Record<string, string> }): Promise<void> {
+  await withHistoryLock(boxRoot, async () => {
+    const { sessionId, updates } = opts;
+    const file = (await readHistoryFile(boxRoot)) ?? {
+      sessions: [],
+      migrated: false,
+    };
+    let entry = file.sessions.find((s) => s.id === sessionId);
+    if (!entry) {
+      entry = { id: sessionId, engine: await loadAgentEngine(boxRoot) };
+      file.sessions.push(entry);
+    }
+    const merged: Record<string, string> = { ...(entry.features ?? {}) };
+    for (const [k, v] of Object.entries(updates)) merged[k] = v;
+    entry.features = merged;
+    await writeHistoryFile(boxRoot, file);
+  });
 }
 
 /**
@@ -371,11 +420,51 @@ export async function getMostActiveSavedAt(boxRoot: string): Promise<Date | null
  */
 export async function setMostActive(boxRoot: string, sessionId: string): Promise<void> {
   const filePath = path.join(boxRoot, MOST_ACTIVE_FILE);
-  const dir = path.dirname(filePath);
-  await fs.mkdir(dir, { recursive: true });
-  const contents: MostActiveFile = {
-    sessionId,
-    savedAt: new Date().toISOString(),
-  };
-  await fs.writeFile(filePath, JSON.stringify(contents, null, 2));
+  await withCardLock(filePath, async () => {
+    const contents: MostActiveFile = {
+      sessionId,
+      savedAt: new Date().toISOString(),
+    };
+    await writeFileAtomic(filePath, {
+      content: JSON.stringify(contents, null, 2),
+    });
+  });
+}
+
+/** Clear the most-active id only when it still names `sessionId`. */
+export async function clearMostActiveIfMatches(boxRoot: string, sessionId: string): Promise<MostActiveFile | null> {
+  const filePath = path.join(boxRoot, MOST_ACTIVE_FILE);
+  return withCardLock(filePath, async () => {
+    let previous: MostActiveFile;
+    try {
+      const raw: unknown = JSON.parse(await fs.readFile(filePath, "utf-8"));
+      if (!isRecord(raw) || raw.sessionId !== sessionId || typeof raw.savedAt !== "string") return null;
+      previous = { sessionId, savedAt: raw.savedAt };
+    } catch (error) {
+      if (errnoCode(error) === "ENOENT") return null;
+      throw error;
+    }
+    await writeFileAtomic(filePath, {
+      content: JSON.stringify({ sessionId: null, savedAt: previous.savedAt }, null, 2),
+    });
+    return previous;
+  });
+}
+
+/** Restore a cleared pointer only if no newer session has claimed it. */
+export async function restoreMostActiveIfEmpty(boxRoot: string, previous: MostActiveFile | null): Promise<void> {
+  if (previous === null) return;
+  const filePath = path.join(boxRoot, MOST_ACTIVE_FILE);
+  await withCardLock(filePath, async () => {
+    let current: unknown = null;
+    try {
+      current = JSON.parse(await fs.readFile(filePath, "utf-8"));
+    } catch (error) {
+      if (errnoCode(error) !== "ENOENT") throw error;
+    }
+    if (isRecord(current) && typeof current.sessionId === "string") return;
+    await writeFileAtomic(filePath, {
+      content: JSON.stringify(previous, null, 2),
+    });
+  });
 }

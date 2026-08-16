@@ -9,6 +9,8 @@ struct NativeComposerView: View {
     @ObservedObject var pendingStore: PendingEmissionStore
     var captureAvailable: Bool
     var narrationEnabled: Bool
+    var speechPlaybackActive: Bool
+    var responseActive: Bool
     var locationSharingEnabled: Bool
     var locationShareResult: NativeLocationShareResult?
     var screenshotResult: NativeScreenshotResult?
@@ -23,6 +25,8 @@ struct NativeComposerView: View {
     @EnvironmentObject private var boxLockManager: BoxLockManager
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
     @State private var statusText: String?
+    /// Non-nil while a large photo selection is uploading as a bulk batch.
+    @State private var batchProgress: BulkUploadProgress?
     @State private var isPreparingSend = false
     @State private var editorHeight: CGFloat = 58
     @State private var focused = false
@@ -33,46 +37,36 @@ struct NativeComposerView: View {
     @State private var showingFileImporter = false
     @State private var detailedSelection: DraftSelection?
     @State private var activeVoicePreparationIDs: Set<UUID> = []
+    @State private var voiceTurn = NativeVoiceTurnState()
+    @State private var earconState = NativeEarconState()
     @StateObject private var dictation = SpeechDictation()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if hasComposerContext {
-                ScrollView(.vertical, showsIndicators: true) {
-                    composerContext
-                }
-                .frame(maxHeight: 220)
-                .scrollBounceBehavior(.basedOnSize)
-            }
+        presentedComposer
+    }
 
-            HStack(alignment: .bottom, spacing: 10) {
-                composerButton(
-                    systemImage: "plus",
-                    accessibilityLabel: "Add",
-                    action: { showingActions = true }
-                )
-                .disabled(isSending)
-
-                textEntry
-
-                trailingControl
-            }
-            .padding(.horizontal, 12)
-            .padding(.top, 10)
-            .padding(.bottom, 5)
-            .offset(y: 10)
-        }
+    private var composerLifecycle: some View {
+        composerSurface
         .background(.regularMaterial)
         .ignoresSafeArea(.container, edges: .bottom)
         .onChange(of: draftStore.draft.text) { _, newValue in
             dictation.noteManualTextChange(newValue)
         }
         .onChange(of: dictation.transcript) { _, newValue in
-            draftStore.setText(newValue)
+            draftStore.setDictationTranscript(newValue)
             draftStore.setVoiceSelectionContext(transcript: newValue, active: dictation.isRecording)
+            applyEarcon(.transcriptChanged(
+                hasText: newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+            ))
         }
         .onChange(of: dictation.isRecording) { _, isRecording in
             draftStore.setVoiceSelectionContext(transcript: dictation.transcript, active: isRecording)
+        }
+        .onChange(of: dictation.state) { _, state in
+            applyEarcon(.dictationStateChanged(state))
+        }
+        .onChange(of: dictation.interruptionCount) {
+            applyEarcon(.recordingInterrupted)
         }
         .onChange(of: dictation.keywordIntent) { _, newValue in
             guard let newValue else {
@@ -80,12 +74,20 @@ struct NativeComposerView: View {
             }
             handleKeywordIntent(newValue)
         }
+        .onChange(of: speechPlaybackActive) { _, playing in
+            applyVoiceTurn(.speechPlaybackChanged(playing: playing))
+        }
+        .onChange(of: responseActive) { _, active in
+            applyEarcon(.responseActiveChanged(active))
+        }
         .onChange(of: pendingStore.voicePreparations) { _, preparations in
             if automaticallyResumeVoicePreparations {
                 resumeVoicePreparations(preparations)
             }
         }
         .onAppear {
+            applyVoiceTurn(.speechPlaybackChanged(playing: speechPlaybackActive))
+            applyEarcon(.responseActiveChanged(responseActive))
             if initiallyFocused {
                 focused = true
             }
@@ -123,9 +125,15 @@ struct NativeComposerView: View {
             }
         }
         .onDisappear {
-            dictation.stop()
+            applyVoiceTurn(.microphoneStopped)
+            applyEarcon(.cancelWaiting)
+            NativeEarconPlayer.shared.stopAllTimers()
             draftStore.setVoiceSelectionContext(transcript: "", active: false)
         }
+    }
+
+    private var presentedComposer: some View {
+        composerLifecycle
         .sheet(isPresented: $showingActions) {
             ComposerActionsView(
                 selectedPhotoItems: $selectedPhotoItems,
@@ -177,7 +185,7 @@ struct NativeComposerView: View {
         }
     }
 
-    private var composerContext: some View {
+    private var composerSurface: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let visibleStatusText {
                 Text(visibleStatusText)
@@ -186,6 +194,36 @@ struct NativeComposerView: View {
                     .padding(.horizontal, 14)
                     .padding(.top, 8)
             }
+            if hasScrollableComposerContext {
+                ScrollView(.vertical, showsIndicators: true) {
+                    composerContext
+                }
+                .frame(maxHeight: 220)
+                .fixedSize(horizontal: false, vertical: true)
+                .scrollBounceBehavior(.basedOnSize)
+            }
+
+            HStack(alignment: .bottom, spacing: 10) {
+                composerButton(
+                    systemImage: "plus",
+                    accessibilityLabel: "Add",
+                    action: { showingActions = true }
+                )
+                .disabled(isSending)
+
+                textEntry
+
+                trailingControl
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 10)
+            .padding(.bottom, 5)
+            .offset(y: 10)
+        }
+    }
+
+    private var composerContext: some View {
+        VStack(alignment: .leading, spacing: 0) {
             if pendingStore.pending.isEmpty == false || pendingStore.voicePreparations.isEmpty == false {
                 PendingEmissionList(
                     emissions: pendingStore.pending,
@@ -229,20 +267,56 @@ struct NativeComposerView: View {
     }
 
     private var visibleStatusText: String? {
-        dictation.errorMessage
+        // Batch progress outranks the rest while it is live: a 70-photo upload
+        // takes real time, and a silent composer during it reads as a hang —
+        // which is how the original failure looked to the boxholder.
+        batchProgressText
+            ?? voiceStateOverrideMessage
+            ?? dictation.errorMessage
             ?? dictation.preparationMessage
             ?? statusText
             ?? draftStore.restoreNotice
             ?? pendingStore.notice
     }
 
-    private var hasComposerContext: Bool {
-        visibleStatusText != nil
-            || pendingStore.pending.isEmpty == false
-            || pendingStore.voicePreparations.isEmpty == false
-            || draftStore.draft.images.isEmpty == false
-            || draftStore.draft.files.isEmpty == false
-            || draftStore.draft.selections.isEmpty == false
+    private var batchProgressText: String? {
+        guard let batchProgress, batchProgress.isFinished == false else {
+            return nil
+        }
+        let done = batchProgress.uploaded + batchProgress.failed
+        let base = "Uploading photos — \(done) of \(batchProgress.total)"
+        return batchProgress.failed > 0 ? "\(base) (\(batchProgress.failed) failed)" : base
+    }
+
+    private var voiceStateOverrideMessage: String? {
+        guard case .failed(let message) = voiceStateOverride else {
+            return nil
+        }
+        return message
+    }
+
+    private var hasScrollableComposerContext: Bool {
+        Self.contextNeedsScrolling(
+            pendingCount: pendingStore.pending.count,
+            voicePreparationCount: pendingStore.voicePreparations.count,
+            imageCount: draftStore.draft.images.count,
+            fileCount: draftStore.draft.files.count,
+            selectionCount: draftStore.draft.selections.count
+        )
+    }
+
+    static func contextNeedsScrolling(
+        pendingCount: Int,
+        voicePreparationCount: Int,
+        imageCount: Int,
+        fileCount: Int,
+        selectionCount: Int
+    ) -> Bool {
+        pendingCount > 0
+            || voicePreparationCount > 0
+            || imageCount > 0
+            || fileCount > 0
+            || selectionCount > 0
     }
 
     private var textEntry: some View {
@@ -267,7 +341,7 @@ struct NativeComposerView: View {
         .layoutPriority(1)
         .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
         .clipShape(RoundedRectangle(cornerRadius: 8))
-        .allowsHitTesting(isSending == false)
+        .allowsHitTesting(isTextEntryLocked == false)
     }
 
     @ViewBuilder
@@ -276,12 +350,12 @@ struct NativeComposerView: View {
             ProgressView()
                 .frame(width: 58, height: 58)
                 .background(.quaternary, in: Circle())
-        } else if isVoiceRecording {
+        } else if voiceTurn.isActive || isVoiceRecording {
             composerButton(
                 systemImage: "stop.fill",
-                accessibilityLabel: "Stop dictation",
+                accessibilityLabel: "Stop continuous dictation",
                 foregroundStyle: .red,
-                action: { dictation.stop() }
+                action: stopMicrophoneWithEarcon
             )
         } else if hasTextContent {
             composerButton(
@@ -313,7 +387,7 @@ struct NativeComposerView: View {
         composerButton(
             systemImage: "mic.fill",
             accessibilityLabel: "Start dictation",
-            action: { dictation.toggle(currentText: text) }
+            action: requestMicrophone
         )
     }
 
@@ -325,7 +399,7 @@ struct NativeComposerView: View {
         guard captureAvailable else {
             return
         }
-        dictation.stop()
+        applyVoiceTurn(.microphoneStopped)
         focused = false
         showingActions = false
         DispatchQueue.main.async {
@@ -356,29 +430,50 @@ struct NativeComposerView: View {
         guard sendDisabled == false else {
             return
         }
-        dictation.stop()
+        if voiceTurn.isActive || isVoiceRecording {
+            stopMicrophoneWithEarcon()
+        } else {
+            applyVoiceTurn(.microphoneStopped)
+        }
         let origin: NativeChatEmission.Origin = dictation.hasDictatedText ? .voice : .typed
         enqueueMessage(text: message, origin: origin, diarized: false)
     }
 
     private func handleKeywordIntent(_ intent: SpeechKeywordResult) {
         dictation.clearKeywordIntent()
+        // Spoken commands go through the same in-flight lock as the buttons.
+        // Without this the visible controls are disabled during a batch upload
+        // while "send" still enqueues an overlapping message and "cancel"/"erase"
+        // still discard the draft — including the text the running batch took as
+        // its introduction. A voice path that can do what a disabled button
+        // cannot is worse than no lock, because nothing on screen explains it.
+        if isSending {
+            statusText = batchProgress == nil
+                ? "Still sending — try again in a moment."
+                : "Photos are still uploading — try again when they finish."
+            applyEarcon(.microphoneStopped)
+            applyVoiceTurn(.microphoneStopped)
+            return
+        }
         switch intent.action {
-        case .send, .sendClose:
+        case .send, .sendHq, .sendClose:
             sendKeywordIntent(intent)
         case .cancel:
             selectedPhotoItems = []
+            applyVoiceTurn(.microphoneStopped)
             dictation.resetDictationState()
             statusText = "Message cancelled."
             Task {
                 await draftStore.discardCurrentDraft()
             }
         case .micOff:
-            dictation.stop()
+            applyEarcon(.microphoneStopped)
+            applyVoiceTurn(.microphoneStopped)
             statusText = "Microphone off."
         case .erase:
             selectedPhotoItems = []
             dictation.resetDictationState()
+            applyVoiceTurn(.draftErased)
             statusText = "Message erased."
             Task {
                 await draftStore.discardCurrentDraft()
@@ -387,16 +482,26 @@ struct NativeComposerView: View {
     }
 
     private func sendKeywordIntent(_ intent: SpeechKeywordResult) {
+        applyEarcon(.voiceMessageSent(responseAlreadyActive: responseActive))
+        if intent.action == .sendClose {
+            applyVoiceTurn(.voiceMessageSent(closeMicrophone: true))
+        }
         let audioURL = dictation.consumeRecordedAudioURL()
         switch NativeVoiceKeywordSendPlan.make(
             liveTranscript: intent.processedTranscript,
+            action: intent.action,
             narrationEnabled: narrationEnabled
         ) {
         case .live(let text):
             if let audioURL {
                 try? FileManager.default.removeItem(at: audioURL)
             }
-            enqueueMessage(text: text, origin: .voice, diarized: false)
+            enqueueMessage(
+                text: text,
+                origin: .voice,
+                diarized: false,
+                voiceKeywordAction: intent.action
+            )
             return
         case .hq:
             break
@@ -426,8 +531,10 @@ struct NativeComposerView: View {
                 focused = false
                 isPreparingSend = false
                 statusText = nil
+                applyVoiceTurn(.voiceMessageSent(closeMicrophone: intent.action == .sendClose))
                 resumeVoicePreparation(preparation, box: sendingBox)
             } catch {
+                applyEarcon(.cancelWaiting)
                 isPreparingSend = false
                 let message = "The voice message could not be saved."
                 statusText = message
@@ -485,7 +592,8 @@ struct NativeComposerView: View {
     private func enqueueMessage(
         text: String,
         origin: NativeChatEmission.Origin,
-        diarized: Bool
+        diarized: Bool,
+        voiceKeywordAction: SpeechKeywordAction? = nil
     ) {
         let snapshot = draftStore.draft
         let sendingBoxID = box.id
@@ -506,15 +614,58 @@ struct NativeComposerView: View {
                 focused = false
                 isPreparingSend = false
                 statusText = nil
+                if let voiceKeywordAction {
+                    applyVoiceTurn(.voiceMessageSent(closeMicrophone: voiceKeywordAction == .sendClose))
+                }
             } catch {
+                if voiceKeywordAction != nil {
+                    applyEarcon(.cancelWaiting)
+                }
                 isPreparingSend = false
                 statusText = "An attachment could not be read."
             }
         }
     }
 
+    /// Gates the SEND path (button, voice "send", overlapping submits).
+    ///
+    /// A running batch counts, so a spoken or tapped send can't race it — but it
+    /// deliberately does NOT gate the text field. Typing while photos upload is
+    /// the normal way to caption a batch: the introduction is read at finalize,
+    /// so whatever is typed during the upload becomes the batch's note.
     private var isSending: Bool {
+        isPreparingSend || batchProgress != nil || draftStore.isReady == false
+    }
+
+    /// Gates only the TEXT SURFACE. A batch in flight must not lock it — the user
+    /// is expected to be writing the caption while it uploads.
+    private var isTextEntryLocked: Bool {
         isPreparingSend || draftStore.isReady == false
+    }
+
+    private func applyVoiceTurn(_ event: NativeVoiceTurnEvent) {
+        switch voiceTurn.handle(event) {
+        case .none:
+            break
+        case .startDictation:
+            dictation.startIfNeeded(currentText: text)
+        case .stopDictation:
+            dictation.stop()
+        }
+    }
+
+    private func applyEarcon(_ event: NativeEarconEvent) {
+        NativeEarconPlayer.shared.execute(earconState.handle(event))
+    }
+
+    private func requestMicrophone() {
+        applyEarcon(.microphoneRequested)
+        applyVoiceTurn(.microphoneStarted)
+    }
+
+    private func stopMicrophoneWithEarcon() {
+        applyEarcon(.microphoneStopped)
+        applyVoiceTurn(.microphoneStopped)
     }
 
     private var hasSendableContent: Bool {
@@ -602,6 +753,16 @@ struct NativeComposerView: View {
         guard items.isEmpty == false else {
             return
         }
+        // Too many to ride inline: base64-ing this many photos into one
+        // /chat/send is the failure this branch exists to prevent. Upload them
+        // and let the agent file them instead. Mirrors the web composer's
+        // `shouldBatchPhotos` — see docs/mobile-contract.md §8, INLINE_PHOTO_LIMIT.
+        if BulkPhotoThreshold.shouldBatch(existingInline: draftStore.draft.images.count, incoming: items.count) {
+            selectedPhotoItems = []
+            await uploadPhotoBatch(items)
+            return
+        }
+
         for item in items {
             guard let sourceData = try? await item.loadTransferable(type: Data.self) else {
                 continue
@@ -613,6 +774,171 @@ struct NativeComposerView: View {
         selectedPhotoItems = []
     }
 
+    /// Stage a large photo selection to disk, upload it as a bulk batch, and let
+    /// the box deliver an `<upload>` message the agent files. The composer text
+    /// rides along as the batch's introduction and is cleared once the box
+    /// confirms delivery — the same "consumed on send" semantics as an ordinary
+    /// message.
+    private func uploadPhotoBatch(_ items: [PhotosPickerItem]) async {
+        // The batch binds to a specific chat, and only the webview knows which one
+        // is visible (it arrives here as the composer box's session id). Without
+        // it there is nothing to deliver into, so say so rather than silently
+        // falling back to the inline path that cannot carry this many.
+        guard let targetSessionID = box.sessionID, targetSessionID.isEmpty == false else {
+            statusText = "Send a message first, then add these photos."
+            return
+        }
+
+        batchProgress = BulkUploadProgress(total: items.count, uploaded: 0, failed: 0)
+        statusText = "Preparing \(items.count) photos…"
+
+        let uploadedAt = ISO8601DateFormatter().string(from: Date())
+        // NOTE deliberately not read here. It is read at finalize (below), so the
+        // caption the user types WHILE the photos upload is the one that ships.
+        // Photos already in the composer join this batch. Leaving them behind
+        // would split one intended message: the batch would carry the whole
+        // composer text as its introduction while the older photos sat in the
+        // composer with nothing describing them.
+        let foldedIn = await stageComposerImages(uploadedAt: uploadedAt)
+
+        var staged = await BulkPhotoStaging.stage(
+            items: items,
+            uploadedAt: uploadedAt,
+            onProgress: { count in
+                statusText = "Preparing \(count) of \(items.count) photos…"
+            }
+        )
+        staged.prepared.insert(contentsOf: foldedIn.prepared, at: 0)
+        staged.failures.append(contentsOf: foldedIn.failures)
+        // No early return when nothing staged: if photos FAILED to import, the
+        // box still needs to hear about them, otherwise the user is told "none
+        // could be read" and no card, message or record of the attempt exists
+        // anywhere. Only a genuinely empty selection (nothing staged AND nothing
+        // failed) has nothing to report.
+        guard staged.prepared.isEmpty == false || staged.failures.isEmpty == false else {
+            batchProgress = nil
+            statusText = "None of those photos could be read."
+            return
+        }
+
+        let coordinator = BulkUploadCoordinator(
+            api: BulkUploadAPI(box: box),
+            onProgress: { progress in
+                Task { @MainActor in batchProgress = progress }
+            }
+        )
+        // Photos that failed to import are reported to the box too. They were
+        // never registered, so without this the batch card would simply not
+        // mention them and the user would be told "69 uploaded" with no sign the
+        // 70th ever existed.
+        // The introduction is whatever is in the composer when the batch seals —
+        // read on the main actor at that moment, not captured up front.
+        var consumedNote = ""
+        let outcome = await coordinator.run(
+            items: staged.prepared,
+            targetSessionID: targetSessionID,
+            note: { @MainActor in
+                let text = draftStore.draft.text
+                consumedNote = text
+                return text.isEmpty ? nil : text
+            },
+            importFailures: staged.failures
+        )
+
+        batchProgress = nil
+
+        switch outcome {
+        case .delivered(let uploaded, let failed), .accepted(let uploaded, let failed):
+            // Sealed either way, so the box holds the bytes AND the note: the
+            // staged copies are redundant and the text has been carried away.
+            // If delivery ultimately fails, the box surfaces it to the chat agent
+            // rather than this client retrying — see `notifyStranded`.
+            BulkPhotoStaging.discard(staged.prepared)
+            clearComposerTextIfUnchanged(from: consumedNote)
+            if case .accepted = outcome {
+                statusText = "\(uploaded) photos sent — the box is still processing them."
+            } else {
+                statusText = failed == 0
+                    ? "\(uploaded) photos uploaded."
+                    : "\(uploaded) photos uploaded, \(failed) failed."
+            }
+        case .failed(let message):
+            // Never sealed, so the box does NOT have this batch. Drop the staged
+            // copies (nothing can use them) but keep the text, so the user can
+            // simply try again.
+            BoxLog.error(
+                "photo batch never sealed photos=\(staged.prepared.count)"
+                    + " bytes=\(staged.prepared.reduce(0) { $0 + $1.size })"
+                    + " importFailures=\(staged.failures.count): \(message)",
+                category: .upload
+            )
+            BulkPhotoStaging.discard(staged.prepared)
+            statusText = "\(message) Your message was kept — try again."
+        }
+    }
+
+    /// Move the composer's existing inline photos into the batch being started,
+    /// clearing only the ones that actually made it to disk.
+    ///
+    /// Two things are deliberate. An image whose bytes can't be read, or whose
+    /// staging write fails (disk full), is LEFT IN THE COMPOSER and reported as a
+    /// failure — removing it would delete the only remaining copy, since
+    /// `removeImage` drops the draft's payload. And an image still `.uploading`
+    /// is skipped entirely: it has no final bytes yet, so staging it would ship a
+    /// half-processed image and bypass the upright re-encode.
+    private func stageComposerImages(uploadedAt: String) async -> (prepared: [PreparedBulkItem], failures: [BulkUploadAPI.FailedItem]) {
+        let existing = draftStore.draft.images
+        guard existing.isEmpty == false else { return ([], []) }
+        var staged: [PreparedBulkItem] = []
+        var failures: [BulkUploadAPI.FailedItem] = []
+        var stagedImageIDs: [Int] = []
+
+        for (index, image) in existing.enumerated() {
+            if case .uploading = image.state { continue }
+            let displayName = "pasted-image-\(String(format: "%03d", index + 1))"
+            guard let data = await draftStore.imageData(for: image, boxID: box.id) else {
+                failures.append(BulkUploadAPI.FailedItem(
+                    id: nil, name: displayName, reason: "The image data could not be read."
+                ))
+                continue
+            }
+            guard let item = BulkPhotoStaging.stageComposerImage(
+                data: data,
+                mimeType: image.mimeType,
+                index: index,
+                uploadedAt: uploadedAt
+            ) else {
+                failures.append(BulkUploadAPI.FailedItem(
+                    id: nil, name: displayName, reason: "The image could not be written to disk."
+                ))
+                continue
+            }
+            staged.append(item)
+            stagedImageIDs.append(image.id)
+        }
+
+        // Remove ONLY what is safely on disk; anything skipped or failed stays in
+        // the composer so the user still has it.
+        for id in stagedImageIDs {
+            await draftStore.removeImage(id: id)
+        }
+        return (staged, failures)
+    }
+
+
+    /// Clear the composer only if it still holds the text the batch took as its
+    /// introduction.
+    ///
+    /// A batch can take a long time, and the composer is locked while it runs —
+    /// but a queued keystroke, a restored draft, or a dictation commit can still
+    /// land in between. Blindly clearing would delete a message the user wrote
+    /// after the batch started, which is the same silent-loss failure this whole
+    /// feature exists to remove.
+    private func clearComposerTextIfUnchanged(from snapshot: String) {
+        guard draftStore.draft.text == snapshot else { return }
+        draftStore.setText("")
+    }
+
     private func dismissPresentedContentForLock() {
         showingActions = false
         showingPairing = false
@@ -622,7 +948,7 @@ struct NativeComposerView: View {
         detailedSelection = nil
         focused = false
         selectedPhotoItems = []
-        dictation.stop()
+        applyVoiceTurn(.microphoneStopped)
         draftStore.setVoiceSelectionContext(transcript: "", active: false)
     }
 

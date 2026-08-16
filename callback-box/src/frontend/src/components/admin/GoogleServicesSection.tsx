@@ -2,8 +2,14 @@
  * Google OAuth connection + per-service toggles (Calendar/Gmail/Drive).
  * The OAuth link itself is server-wide; which services are enabled is
  * per-box. Only renders if the server has Google OAuth configured.
+ *
+ * `?reconnect=google` is the deep link the health warning and the proactive
+ * "your Google connection died" notification both point at — it scrolls this
+ * section into view so the boxholder lands on the Re-authorize button rather
+ * than on the top of a long admin page.
  */
 
+import { useEffect, useRef } from "react";
 import { CheckboxField } from "../ui/fields";
 import { Button } from "../ui/Button";
 import { useGoogleServices } from "./useGoogleServices";
@@ -28,6 +34,14 @@ export function GoogleServicesSection() {
     handleServiceToggle,
   } = useGoogleServices();
 
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const arrivedToReconnect = new URLSearchParams(window.location.search).get("reconnect") === "google";
+
+  useEffect(() => {
+    if (!arrivedToReconnect || loading) return;
+    sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [arrivedToReconnect, loading]);
+
   if (loading) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
@@ -42,7 +56,7 @@ export function GoogleServicesSection() {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div ref={sectionRef} className="bg-white rounded-lg shadow p-6">
       <div className="flex items-center gap-2 mb-2">
         <h2 className="text-lg font-semibold text-warm-800">Google Services</h2>
         <span className="text-xs bg-warm-200 text-warm-600 px-2 py-0.5 rounded">Server-wide</span>
@@ -59,9 +73,19 @@ export function GoogleServicesSection() {
 
       {status && status.hasTokens ? (
         <>
-          <div className="mb-4 p-3 bg-success-50 border border-success-100 rounded text-sm">
-            <span className="font-medium text-success-dark">Connected</span>
-          </div>
+          {status.needsReauthSince ? (
+            <div className="mb-4 p-3 bg-danger-50 border border-danger-100 rounded text-sm text-danger-dark">
+              <span className="font-medium">Needs re-authorization</span>
+              <p>
+                Google rejected the stored authorization — it expired or was revoked. Calendar,
+                Gmail and Drive sync are paused until you re-authorize.
+              </p>
+            </div>
+          ) : (
+            <div className="mb-4 p-3 bg-success-50 border border-success-100 rounded text-sm">
+              <span className="font-medium text-success-dark">Connected</span>
+            </div>
+          )}
 
           <div className="mb-4">
             <h3 className="text-sm font-medium text-warm-700 mb-2">Enabled for this box:</h3>
@@ -80,7 +104,7 @@ export function GoogleServicesSection() {
 
           <div className="flex gap-3">
             <Button
-              intent="secondary"
+              intent={status.needsReauthSince ? "primary" : "secondary"}
               onClick={handleAuthorize}
               loading={connecting}
               loadingLabel="Redirecting…"

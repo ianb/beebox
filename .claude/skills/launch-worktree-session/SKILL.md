@@ -46,7 +46,7 @@ like:
 > commit to a plan.
 
 Adjust the wording to fit the conversation, but the spirit is constant:
-*understanding first, plan second, work third.*
+_understanding first, plan second, work third._
 
 ## How the briefing reaches the new session
 
@@ -69,28 +69,45 @@ briefing.
    `fix-timezone-parsing`, `gcal-service-injection`, `chat-route-cleanup`.
    Ask the human if a good name isn't obvious from the discussion.
 
-3. **Pick a model, and say which.** Match the model to the scope of the work,
-   and always pass `--model` explicitly — omitting it inherits whatever the
-   boxholder's saved default happens to be, which decides this by accident.
+   If this work takes ownership of an existing public or private issue, pass its
+   repo-relative path with `--issue`. The launcher updates that issue's
+   `workstream:` field inside the new checkout, so the issue immediately appears
+   as work owned by the workstream, and the assignment lands with the eventual
+   work. This is responsibility, not discovery provenance. Omit `--issue` when
+   the discussion is not taking on a specific filed issue.
 
-   - **Fable** (`claude-fable-5`) — larger, more ambiguous, or harder work: a
-     feature, a refactor with design choices left open, anything spanning
-     several subsystems, anything where the right approach isn't settled yet.
-     Security and data-shape changes usually land here.
-   - **Opus** (`opus`) — unambiguous or clerical work: a known fix with a known
-     shape, a mechanical pass, cleanup, a change whose scope the briefing can
-     already state completely.
+3. **Pick an agent and model — and when it isn't clear, ASK rather than
+   assume.** This is the boxholder's call, not a scope calculation you perform
+   on their behalf. Getting it wrong wastes a launch and, on the Claude side,
+   quota they may be conserving.
 
-   Judge by how much is *undecided*, not by how many files move. A ten-file
-   rename is clerical; a two-file change resting on an unresolved design
-   question is not. When it's genuinely borderline, say which way you're
-   leaning and why — the boxholder cares about reserving Fable for work that
-   needs it.
+   **Codex is the default.** `--agent codex`, no `--model` (the launcher pins
+   `gpt-5.6-sol` rather than inheriting stale CLI state). It is the option
+   least likely to run into quota trouble, so it is where work goes unless
+   there's a reason otherwise.
+
+   - **Opus** (`--model opus`) — for somewhat harder work. The boxholder will
+     usually ask for this explicitly; don't reach for it on your own.
+   - **Fable** (`--model claude-fable-5`) — genuinely hard work, big
+     architecture questions, and decisions that need user empathy to get right.
+     Usually specified directly. **If you think something deserves Fable, ask
+     — don't just launch it there.**
+
+   **The rule when you're unsure: ask.** A one-line question ("Codex, or does
+   this want Fable?") costs nothing. The exception is a standing instruction
+   already given in this conversation — e.g. "I'm low on Claude quota, open
+   everything in codex" — which you follow without re-asking until it's
+   withdrawn.
+
+   Judge difficulty by how much is _undecided_, not by how many files move: a
+   ten-file rename is clerical; a two-file change resting on an unresolved
+   design question is not. But use that to shape the question you ask, not to
+   decide silently.
 
 4. **Draft the briefing and launch it.** Write the briefing directly and
    invoke the command — don't pre-review the briefing with the human in
    the current session. The whole point of the launched session is that
-   *it* is where discussion, clarification, and approval happen. Pre-
+   _it_ is where discussion, clarification, and approval happen. Pre-
    reviewing here just duplicates that work in the wrong place. Trust the
    briefing to be good enough; it explicitly invites the new agent to push
    back, ask questions, and propose its own approach before acting.
@@ -103,10 +120,20 @@ briefing.
    quoting issues:
 
    ```bash
-   bin/launch-worktree-session --model <model> <worktree-name> - <<'EOF'
+   # The default: Codex.
+   bin/launch-worktree-session --agent codex [--issue issues/<category>/<file>.md] <worktree-name> - <<'EOF'
    <briefing text — see "What the briefing is" above>
    EOF
+
+   # When the boxholder has asked for a Claude model.
+   bin/launch-worktree-session --model <model> <worktree-name> - <<'EOF'
+   …
+   EOF
    ```
+
+   Write the briefing for the agent that will read it. A Codex session reads
+   AGENTS.md mirrors rather than CLAUDE.md, and its cross-model review command
+   is `$cross-model`, not `/cross-model`.
 
    Use the repo-relative `bin/launch-worktree-session` path, NOT the bare
    `launch-worktree-session` — see Script details for why (the agent Bash
@@ -116,7 +143,8 @@ briefing.
    briefing. Use `<<EOF` (unquoted) only if you intentionally want to
    interpolate variables.
 
-5. **Tell the human what happened.** One line: worktree name, **which model**,
+5. **Tell the human what happened.** One line: worktree name, **which agent and
+   model**,
    where it opened (new tab in Terminal.app), and that they can now switch
    over. Naming the model lets them redirect before the session gets far.
 
@@ -141,7 +169,21 @@ bin/launch-worktree-session <worktree-name> -            # stdin (heredoc)
 bin/launch-worktree-session <worktree-name> @<file>      # from a file
 bin/launch-worktree-session --model <model> <name> @<file>   # run on a specific model
 bin/launch-worktree-session --no-remote-control <name> -     # opt out of Remote Control
+bin/launch-worktree-session --agent codex [--model gpt-5.6-sol] <name> -  # OpenAI Codex session
 ```
+
+**`--agent codex`** launches OpenAI's codex CLI instead of Claude Code: same
+worktree + box clone + installs (both launch paths call the agent-neutral
+`bin/workstreams create` command), plus generated AGENTS.md
+mirrors of every CLAUDE.md so codex gets the repo docs (mechanism:
+`bin/CLAUDE.md` → "Codex worktree sessions"). With codex, `--model` takes
+OpenAI names. If it is omitted, the launcher explicitly uses `gpt-5.6-sol`
+rather than inheriting potentially stale Codex CLI state; an explicit model
+still wins. Remote Control doesn't exist for codex and the flag is ignored; the
+briefing wrapper works the same. **This is the default agent** — see "Pick an
+agent and model". Cleanup also differs: no
+hook fires on codex exit, so the worktree lingers until `bin/workstreams sweep`
+collects it once merged + clean.
 
 **Remote Control is on by default** — the launcher passes
 `claude --remote-control <worktree-name>`, so a launched session can be steered
@@ -149,19 +191,21 @@ from elsewhere (these run unattended in background tabs, and much of the
 manual testing they generate happens on a phone). The session is named after the
 worktree so concurrent ones stay tellable apart. `--no-remote-control` opts out.
 
-Pass `--model <model>` (e.g. `claude-fable-5`, `opus`, `sonnet`) to spin the
-worktree up on a specific model. **Always pass it** — see "Pick a model" in the
-Flow. Omitting it silently inherits the boxholder's saved default, which is how
-a big ambiguous task ends up on a clerical-work model.
+Pass `--model <model>` (e.g. `claude-fable-5`, `opus`, `sonnet`) to spin a
+Claude worktree up on a specific model — never omit it on the Claude path,
+where omitting silently inherits the boxholder's saved default. On the Codex
+path omitting `--model` is correct: the launcher pins `gpt-5.6-sol` itself.
 
 A Fable session then follows the delegate-and-Codex-review guidance in the root
 CLAUDE.md, so `claude-fable-5` buys orchestration and cross-model review, not
 just a stronger single pass.
 
-It opens a new tab in the front Terminal.app window (or a new window if
-none is open), `cd`s into the monorepo, and runs `claude --worktree <name>
---name <name> --dangerously-skip-permissions "<briefing>"`. The WorktreeCreate
-hook handles git worktree setup, the cloned test box, and pnpm installs.
+It opens a new tab in the front Terminal.app window (or a new window if none is
+open), calls `bin/workstreams create <name>`, `cd`s into that checkout, and runs
+`claude --name <name> --dangerously-skip-permissions "<briefing>"`. The launcher
+deliberately omits Claude's native `--worktree`: the repository's SessionEnd
+hook and sweep own cleanup, so exiting a named session does not ask the human to
+keep or remove the worktree.
 
 First-time macOS will prompt for Accessibility permission for Terminal
 control. Mention that to the human if it happens.
@@ -188,7 +232,7 @@ what you see and which approach the existing structure prefers; then
 we'll decide together.
 ```
 
-Notice: it conveys what we *understood* together, points at the relevant
+Notice: it conveys what we _understood_ together, points at the relevant
 prior thinking (an issues/ entry), and explicitly invites the new agent to
 think first, not act.
 
@@ -203,6 +247,10 @@ think first, not act.
   new agent treats the briefing as a go-signal.
 - **Launching before the human confirms.** Even if the discussion clearly
   pointed at "spin this off", wait for the explicit cue.
-- **Omitting `--model`.** The launched session then inherits whatever default
-  is saved, so the scope-to-model match happens by luck. Choose, pass it, and
-  name it in the handoff line.
+- **Deciding the model yourself when it isn't obvious.** Codex is the default;
+  Opus and Fable are the boxholder's calls. Ask — don't infer one from how hard
+  the work looks and launch on it.
+- **Omitting `--model` on the Claude path.** The session then inherits whatever
+  default is saved. (On the Codex path, omitting it is correct.)
+- **Launching a Claude session by habit.** The old default was Claude; it is
+  now Codex. A session opened on the wrong agent has to be closed and redone.

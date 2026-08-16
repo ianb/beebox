@@ -4,7 +4,11 @@
  */
 
 import { useState } from "react";
-import { invariant } from "@shared/invariant";
+import { assertNever, invariant } from "@shared/invariant";
+import {
+  parseDeliveredUserMessageParts,
+  type DeliveredUserMessagePart,
+} from "@shared/delivered-user-message";
 import { Image } from "../ui/Image";
 import { Pre } from "../ui/Pre";
 import { getApiBase } from "../../api";
@@ -20,9 +24,10 @@ import {
   stripUserDisplayTags,
   type TaskNotification,
 } from "./message-parsing";
-import { parseCaptureWrapper } from "./capture-message";
 import { CaptureChip } from "./CaptureChip";
+import { UploadChip } from "./UploadChip";
 import { UserMessageText } from "./user-message-text";
+import { isOtherChatUser } from "./chat-message-sender";
 
 /**
  * Map a settled task's status to its dot color and an optional label. The SDK's
@@ -125,6 +130,35 @@ function MessageFileChip({ name }: { name: string }) {
   );
 }
 
+function DeliveredMessagePart({ part, attachedFileIds }: { part: DeliveredUserMessagePart; attachedFileIds: ReadonlySet<number> }) {
+  switch (part.kind) {
+    case "text":
+      if (stripUserDisplayTags(part.text, { attachedFileIds }).trim() === "") return null;
+      return (
+        <div className="text-sm whitespace-pre-wrap">
+          <UserMessageText text={part.text} attachedFileIds={attachedFileIds} />
+        </div>
+      );
+    case "capture":
+      return <CaptureChip model={part} />;
+    case "upload":
+      return <UploadChip model={part} />;
+    default:
+      return assertNever(part);
+  }
+}
+
+function DeliveredMessageParts({ text, attachedFileIds }: { text: string; attachedFileIds: ReadonlySet<number> }) {
+  const parts = parseDeliveredUserMessageParts(text);
+  return (
+    <>
+      {parts.map((part, index) => (
+        <DeliveredMessagePart key={`${part.kind}-${String(index)}`} part={part} attachedFileIds={attachedFileIds} />
+      ))}
+    </>
+  );
+}
+
 /**
  * Render a user entry's content blocks: text blocks go through the normal
  * tag-stripping display, image blocks render as clickable thumbnails. File
@@ -134,6 +168,10 @@ function UserEntryContent({ entry, debugView }: { entry: SessionEntry; debugView
   const fileRefs = entry.content
     .filter((b) => b.type === "text")
     .flatMap((b) => extractFileAttachments(b.text ?? ""));
+  // Entry-level, not per-block: `[imageN]` expansion splits a sent message
+  // into several text blocks, and a file token can sit in an earlier block
+  // than the `<attachments>` declaration it resolves through.
+  const attachedFileIds = new Set(fileRefs.map((f) => f.id));
   return (
     <>
       {entry.content.map((block, i) => {
@@ -144,17 +182,7 @@ function UserEntryContent({ entry, debugView }: { entry: SessionEntry; debugView
               <Pre key={key} size="xs">{block.text ?? ""}</Pre>
             );
           }
-          // A delivered capture is a `<capture …>` wrapper — render it as a
-          // compact chip linking to the capture document, not as raw markup.
-          const capture = parseCaptureWrapper(block.text ?? "");
-          if (capture) {
-            return <CaptureChip key={key} model={capture} />;
-          }
-          return (
-            <div key={key} className="text-sm whitespace-pre-wrap">
-              <UserMessageText text={block.text ?? ""} />
-            </div>
-          );
+          return <DeliveredMessageParts key={key} text={block.text ?? ""} attachedFileIds={attachedFileIds} />;
         }
         if (block.type === "image") {
           const src = imageBlockSrc(block);
@@ -178,22 +206,29 @@ function UserEntryContent({ entry, debugView }: { entry: SessionEntry; debugView
  * Render a user message bubble.
  * When currentUserEmail is provided, messages from other users are styled differently.
  */
-export function UserMessage({ entries, debugView, currentUserEmail, acks, onZoomView }: { entries: SessionEntry[]; debugView?: boolean; currentUserEmail?: string; acks?: AckIndication[]; onZoomView?: OnZoomView }) {
+export function UserMessage({ entries, debugView, currentUserEmail, currentUserName, acks, onZoomView }: { entries: SessionEntry[]; debugView?: boolean; currentUserEmail?: string; currentUserName?: string; acks?: AckIndication[]; onZoomView?: OnZoomView }) {
   const allTexts = entries.flatMap((e) =>
     e.content.filter((b) => b.type === "text").map((b) => b.text ?? "")
   );
   const hasImages = entries.some((e) => e.content.some((b) => b.type === "image"));
-  const hasFiles = allTexts.some((t) => extractFileAttachments(t).length > 0);
+  const allFileIds = new Set(allTexts.flatMap((t) => extractFileAttachments(t).map((r) => r.id)));
+  const hasFiles = allFileIds.size > 0;
 
   // Hide schedule-fired messages entirely in normal view (they're system-injected)
   if (!debugView) {
-    const allEmpty = allTexts.every((t) => stripUserDisplayTags(t).trim() === "");
+    const allEmpty = allTexts.every((t) => stripUserDisplayTags(t, { attachedFileIds: allFileIds }).trim() === "");
     if (allEmpty && !hasImages && !hasFiles) return null;
   }
 
-  // Show task-notification messages as collapsed system info
+  // Show task-notification messages as collapsed system info — but only when
+  // there's something to report. A background command that finished cleanly
+  // ("completed", exit 0) is a non-event; success doesn't need noting, so we
+  // render nothing and keep the transcript quiet. Only non-success terminal
+  // states (failed/stopped/killed) get a marker. (Debug view still shows the
+  // raw text via the normal path below, so nothing is lost for inspection.)
   const taskNotification = parseTaskNotification(allTexts.join("\n"));
   if (taskNotification && !debugView) {
+    if (taskNotification.status === "completed") return null;
     return <TaskNotificationMessage notification={taskNotification} />;
   }
 
@@ -202,9 +237,13 @@ export function UserMessage({ entries, debugView, currentUserEmail, acks, onZoom
   const senderName = getUserName(firstEntry);
   const senderEmail = firstEntry.userEmail;
   // Compare by email if available (same user across devices), fall back to name
-  const isOtherUser = currentUserEmail
-    ? senderEmail ? senderEmail !== currentUserEmail : senderName ? senderName !== currentUserEmail : false
-    : false;
+  const isOtherUser = isOtherChatUser({
+    locallyAuthored: firstEntry.reconcileKnownUuids !== undefined,
+    senderEmail,
+    senderName,
+    currentUserEmail,
+    currentUserName,
+  });
 
   const isPending = entries.every((e) => e.pending === true);
   const pendingClass = isPending ? " opacity-60" : "";

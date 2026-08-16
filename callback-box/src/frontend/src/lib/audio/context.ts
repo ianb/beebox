@@ -18,7 +18,75 @@
 import { withBase } from "../../api";
 import { logSpeechEvent } from "./speech-test-log";
 
+class BufferedSpeechPlaybackError extends Error {
+  constructor() {
+    super("Buffered speech audio failed during playback");
+    this.name = "BufferedSpeechPlaybackError";
+  }
+}
+
+class StreamingSpeechPlaybackError extends Error {
+  constructor() {
+    super("Streaming speech audio failed during playback");
+    this.name = "StreamingSpeechPlaybackError";
+  }
+}
+
 let sharedAudio: HTMLAudioElement | null = null;
+
+type MediaOperation = "unlock" | "url" | "blob" | "stream";
+
+interface MediaDiagnosticState {
+  error: { code: number } | null;
+  networkState: number;
+  readyState: number;
+}
+
+const MEDIA_ERROR_NAMES: Record<number, string> = {
+  1: "MEDIA_ERR_ABORTED",
+  2: "MEDIA_ERR_NETWORK",
+  3: "MEDIA_ERR_DECODE",
+  4: "MEDIA_ERR_SRC_NOT_SUPPORTED",
+};
+
+const NETWORK_STATE_NAMES: Record<number, string> = {
+  0: "NETWORK_EMPTY",
+  1: "NETWORK_IDLE",
+  2: "NETWORK_LOADING",
+  3: "NETWORK_NO_SOURCE",
+};
+
+const READY_STATE_NAMES: Record<number, string> = {
+  0: "HAVE_NOTHING",
+  1: "HAVE_METADATA",
+  2: "HAVE_CURRENT_DATA",
+  3: "HAVE_FUTURE_DATA",
+  4: "HAVE_ENOUGH_DATA",
+};
+
+function labeledMediaValue(value: number, names: Record<number, string>): string {
+  return `${names[value] ?? "UNKNOWN"}(${value})`;
+}
+
+export function formatMediaElementFailure(
+  operation: MediaOperation,
+  state: MediaDiagnosticState,
+): string {
+  const mediaError = state.error
+    ? labeledMediaValue(state.error.code, MEDIA_ERROR_NAMES)
+    : "none";
+  return `[audio] operation=${operation} mediaError=${mediaError}`
+    + ` networkState=${labeledMediaValue(state.networkState, NETWORK_STATE_NAMES)}`
+    + ` readyState=${labeledMediaValue(state.readyState, READY_STATE_NAMES)}`;
+}
+
+export function formatPlaybackRejection(operation: MediaOperation, error: unknown): string {
+  return `[audio] operation=${operation} play() rejected ${formatThrownError(error)}`;
+}
+
+export function formatThrownError(error: unknown): string {
+  return error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+}
 
 export function isIOS(): boolean {
   return /iP(ad|hone|od)/.test(navigator.userAgent);
@@ -57,7 +125,7 @@ export function unlockAudioContext(): void {
   const audio = new Audio(withBase("/earcons/silence.mp3"));
   audio.preload = "auto";
   audio.play().catch((e) => {
-    console.warn("[audio] Failed to unlock audio:", e);
+    console.warn(formatPlaybackRejection("unlock", e));
   });
   sharedAudio = audio;
 }
@@ -96,12 +164,12 @@ export function playAudioUrl(url: string, opts?: { volume?: number; label?: stri
     audio.volume = volume;
     audio.onplaying = () => logSpeechEvent("audio.start", { label });
     audio.onended = () => { logSpeechEvent("audio.end", { label }); resolve(); };
-    audio.onerror = (e) => {
-      console.error("[audio] playAudioUrl error:", e);
+    audio.onerror = () => {
+      console.error(formatMediaElementFailure("url", audio));
       resolve();
     };
     audio.play().catch((e) => {
-      console.warn("[audio] playAudioUrl play() rejected:", e);
+      console.warn(formatPlaybackRejection("url", e));
       resolve();
     });
   });
@@ -123,7 +191,10 @@ export function playAudioUrl(url: string, opts?: { volume?: number; label?: stri
  * response). Creates a blob URL and plays through the shared element on iOS.
  * `finished` resolves on natural end OR when stop() is called.
  */
-export function playAudioBlob(buffer: ArrayBuffer, opts?: { mimeType?: string; label?: string }): Playback {
+export function playAudioBlob(
+  buffer: ArrayBuffer,
+  opts?: { mimeType?: string; label?: string; onPlaying?: () => void },
+): Playback {
   const mimeType = opts && opts.mimeType ? opts.mimeType : "audio/mpeg";
   const label = opts ? opts.label : undefined;
   const blob = new Blob([buffer], { type: mimeType });
@@ -132,26 +203,29 @@ export function playAudioBlob(buffer: ArrayBuffer, opts?: { mimeType?: string; l
   let stopped = false;
   let settle: () => void = () => {};
 
-  const finished = new Promise<void>((resolve) => {
+  const finished = new Promise<void>((resolve, reject) => {
     settle = resolve;
     try { audio.pause(); } catch (_e) { /* ignore */ }
-    audio.onplaying = () => logSpeechEvent("audio.start", { label });
+    audio.onplaying = () => {
+      logSpeechEvent("audio.start", { label });
+      opts?.onPlaying?.();
+    };
     audio.onended = () => {
       URL.revokeObjectURL(url);
       logSpeechEvent("audio.end", { label });
       resolve();
     };
-    audio.onerror = (e) => {
+    audio.onerror = () => {
       URL.revokeObjectURL(url);
-      console.error("[audio] playAudioBlob error:", e);
-      resolve();
+      console.error(formatMediaElementFailure("blob", audio));
+      reject(new BufferedSpeechPlaybackError());
     };
     audio.src = url;
     audio.volume = 1;
     audio.play().catch((e) => {
       URL.revokeObjectURL(url);
-      console.error("[audio] playAudioBlob play() rejected:", e);
-      resolve();
+      console.error(formatPlaybackRejection("blob", e));
+      reject(e instanceof Error ? e : new Error(String(e)));
     });
   });
 
@@ -206,7 +280,7 @@ function appendChunk(sourceBuffer: SourceBuffer, chunk: Uint8Array): Promise<voi
  */
 export function playAudioStream(
   stream: ReadableStream<Uint8Array>,
-  opts?: { mimeType?: string; label?: string },
+  opts?: { mimeType?: string; label?: string; onPlaying?: () => void },
 ): StreamPlayback {
   const mimeType = opts && opts.mimeType ? opts.mimeType : "audio/mpeg";
   const label = opts ? opts.label : undefined;
@@ -219,8 +293,12 @@ export function playAudioStream(
   let stopped = false;
 
   let settleFinished: () => void = () => {};
+  let rejectFinished: (error: Error) => void = () => {};
   let settleBuffer: (b: ArrayBuffer | null) => void = () => {};
-  const finished = new Promise<void>((resolve) => { settleFinished = resolve; });
+  const finished = new Promise<void>((resolve, reject) => {
+    settleFinished = resolve;
+    rejectFinished = reject;
+  });
   const buffer = new Promise<ArrayBuffer | null>((resolve) => { settleBuffer = resolve; });
 
   function assemble(): ArrayBuffer {
@@ -237,17 +315,20 @@ export function playAudioStream(
     try { URL.revokeObjectURL(url); } catch (_e) { /* ignore */ }
   }
 
-  audio.onplaying = () => logSpeechEvent("audio.start", { label, streaming: true });
+  audio.onplaying = () => {
+    logSpeechEvent("audio.start", { label, streaming: true });
+    opts?.onPlaying?.();
+  };
   audio.onended = () => {
     cleanup();
     logSpeechEvent("audio.end", { label });
     settleFinished();
   };
-  audio.onerror = (e) => {
+  audio.onerror = () => {
     cleanup();
-    console.error("[audio] playAudioStream audio error:", e);
+    console.error(formatMediaElementFailure("stream", audio));
     settleBuffer(null);
-    settleFinished();
+    rejectFinished(new StreamingSpeechPlaybackError());
   };
 
   mediaSource.addEventListener(
@@ -257,9 +338,9 @@ export function playAudioStream(
       try {
         sourceBuffer = mediaSource.addSourceBuffer(mimeType);
       } catch (e) {
-        console.error("[audio] addSourceBuffer failed:", e);
+        console.error(`[audio] addSourceBuffer failed ${formatThrownError(e)}`);
         settleBuffer(null);
-        settleFinished();
+        rejectFinished(e instanceof Error ? e : new Error(String(e)));
         cleanup();
         return;
       }
@@ -280,8 +361,9 @@ export function playAudioStream(
             try { mediaSource.endOfStream(); } catch (_e) { /* ignore */ }
           }
         } catch (e) {
-          console.error("[audio] playAudioStream pump error:", e);
+          console.error(`[audio] playAudioStream pump error ${formatThrownError(e)}`);
           settleBuffer(null);
+          rejectFinished(e instanceof Error ? e : new Error(String(e)));
         }
       })();
     },
@@ -291,9 +373,9 @@ export function playAudioStream(
   audio.src = url;
   audio.volume = 1;
   audio.play().catch((e) => {
-    console.warn("[audio] playAudioStream play() rejected:", e);
+    console.warn(formatPlaybackRejection("stream", e));
     settleBuffer(null);
-    settleFinished();
+    rejectFinished(e instanceof Error ? e : new Error(String(e)));
   });
 
   return {

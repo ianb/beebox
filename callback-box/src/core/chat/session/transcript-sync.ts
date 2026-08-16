@@ -21,6 +21,8 @@ import { open, type FileHandle } from "node:fs/promises";
 import { setTimeout as sleep } from "node:timers/promises";
 import { resolveSessionLogPath } from "./history.js";
 import type { ChatMessage } from "./messages.js";
+import { resolveChatEngine } from "./engine.js";
+import { loadSessionHistory } from "./load-history.js";
 
 /** How long past `result` we'll wait for the flush before giving up. The
  *  measured lag is ~150ms; the cap only bites if the CLI misbehaves. */
@@ -67,6 +69,19 @@ export async function waitForTranscriptEntry(
     timeoutMs?: number;
   },
 ): Promise<boolean> {
+  if (await resolveChatEngine(boxRoot, sessionId) === "codex") {
+    const deadline = Date.now() + (timeoutMs ?? WAIT_TIMEOUT_MS);
+    for (;;) {
+      const { entries } = await loadSessionHistory(boxRoot, {
+        sessionId,
+        slice: { mode: "tail", tail: 100 },
+        fresh: true,
+      });
+      if (entries.some((entry) => entry.uuid === uuid)) return true;
+      if (Date.now() >= deadline) return false;
+      await sleep(POLL_INTERVAL_MS);
+    }
+  }
   const logPath = await resolveSessionLogPath(boxRoot, sessionId);
   const needle = `"uuid":"${uuid}"`;
   const deadline = Date.now() + (timeoutMs ?? WAIT_TIMEOUT_MS);

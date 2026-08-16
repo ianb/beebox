@@ -39,6 +39,7 @@ import { stageAll, getLog, getStatus, isRepo, initRepo } from "../../../src/lib/
 import { getBoxShape } from "../../../src/lib/box-shape.js";
 import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
 import { loadBoxSchemas, invalidateBoxSchemas } from "../../../src/schemas/registry.js";
+import { parseFrontmatterObject } from "../../../src/cards/frontmatter.js";
 
 const execFileP = promisify(execFile);
 
@@ -126,6 +127,51 @@ boxRoot
 
 packageRoot === target
 => true
+```
+
+Fresh boxes keep map refresh and run cleanup enabled, while connector sync and
+agent-driven review jobs are opt-in:
+
+```ts continue
+const seededScheduleNames = (await fs.readdir(path.join(boxRoot, "config/schedules")))
+  .filter((name) => name.endsWith(".scheduled-script.card"))
+  .map((name) => name.slice(0, -".scheduled-script.card".length))
+  .sort();
+const enabledScheduleNames = [];
+const disabledScheduleNames = [];
+for (const name of seededScheduleNames) {
+  const content = await fs.readFile(path.join(boxRoot, "config/schedules", `${name}.scheduled-script.card`), "utf8");
+  const fields = parseFrontmatterObject(content);
+  if (fields === null) throw new Error(`Could not parse seeded schedule ${name}`);
+  if (fields.enabled === false) disabledScheduleNames.push(name);
+  else enabledScheduleNames.push(name);
+}
+```
+
+```ts continue
+`count=${seededScheduleNames.length}; enabled=${enabledScheduleNames.join(",")}; disabled=${disabledScheduleNames.join(",")}`
+=> count=6; enabled=gc-procedure-runs,refresh-maps; disabled=chat-review,check-calendar,check-email,process-retrospective
+```
+
+Reinstalling the templates does not undo a boxholder's explicit opt-in:
+
+```ts continue
+const retroPath = path.join(boxRoot, "config/schedules/process-retrospective.scheduled-script.card");
+const retroContent = await fs.readFile(retroPath, "utf8");
+await fs.writeFile(retroPath, retroContent.replace("enabled: false", "enabled: true"));
+let reinstall: string[] = [];
+let preservedRetroEnabled: unknown = null;
+try {
+  reinstall = await installSchedules(boxRoot);
+  preservedRetroEnabled = parseFrontmatterObject(await fs.readFile(retroPath, "utf8"))?.enabled;
+} finally {
+  await fs.writeFile(retroPath, retroContent);
+}
+```
+
+```ts continue
+`reinstall=${reinstall.join("|") || "none"}; retro=${String(preservedRetroEnabled)}`
+=> reinstall=none; retro=true
 ```
 
 The marker at `content/.cb-box` declares `shapeVersion: 2`:
@@ -449,4 +495,3 @@ schemas.cardSchemas.map((s) => s.type)
 ```ts cleanup
 await fs.rm(target, { recursive: true, force: true });
 ```
-

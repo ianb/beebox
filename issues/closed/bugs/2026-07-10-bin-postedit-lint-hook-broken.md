@@ -1,8 +1,10 @@
 ---
 title: "PostToolUse lint hook errors on every bin/ edit (can't find eslint config)"
+workstream: chat-steering
 area: router
 filed-by: agent
 discovered-in: worktree-chat-steering — editing bin/update-agent-sdk.ts
+resolution: implemented
 ---
 
 **Closed 2026-07-11:** duplicate of the already-closed

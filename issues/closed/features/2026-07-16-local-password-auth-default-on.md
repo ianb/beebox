@@ -1,6 +1,7 @@
 ---
 title: "Username/password login + forced account creation (even in dev) so a box is never accidentally open"
-design: ../../callback-box/docs/implemented-plans/local-password-auth.md
+workstream: unknown
+design: ../../../callback-box/docs/implemented-plans/local-password-auth.md
 resolution: implemented
 filed-by: agent
 discovered-in: main session — boxholder asked for a local-first, default-secure auth path
@@ -21,7 +22,7 @@ doctest suite green. Plan + review:
 
 The human-only verification (real login/setup/WS/browse flows + prod hardening)
 lives in its own tracker:
-[manually-verify-local-password-auth](../../docs-and-chores/2026-07-19-manually-verify-local-password-auth.md).
+[manually-verify-local-password-auth](../docs-and-chores/2026-07-19-manually-verify-local-password-auth.md).
 
 ---
 

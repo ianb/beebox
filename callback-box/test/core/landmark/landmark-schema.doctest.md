@@ -122,6 +122,7 @@ const navigation = {
 };
 const { links } = await resolveLandmark(navigation, {
   landmarkDir: box.path("store/recipes"),
+  landmarkPath: "store/recipes/Recipes.landmark.card",
   boxRoot: box.root,
 });
 
@@ -162,6 +163,7 @@ const navigation = {
 };
 const { links } = await resolveLandmark(navigation, {
   landmarkDir: box.path("store/recipes"),
+  landmarkPath: "store/recipes/Recipes.landmark.card",
   boxRoot: box.root,
 });
 
@@ -197,6 +199,7 @@ await box.write("store/recipes/Carrot.recipe.card", "---\ntitle: Carrot\n---\n")
 const navigation = { label: "Recipes", expand: [{ query: "*.recipe.card" }] };
 const { links } = await resolveLandmark(navigation, {
   landmarkDir: box.path("store/recipes"),
+  landmarkPath: "store/recipes/Recipes.landmark.card",
   boxRoot: box.root,
 });
 
@@ -205,6 +208,41 @@ links.map((l) => l.ref).join("\n")
 store/recipes/Apple.recipe.card
 store/recipes/Bread.recipe.card
 store/recipes/Carrot.recipe.card
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Expand: generated refs are box paths
+
+The default (no `template-ref`) emits the match's **box path** — the canonical
+leading-`/` form — instead of the landmark-dir-relative path the glob returns,
+so a generated ref means the same thing wherever it is read. It is resolved as
+a literal path, so a directory literally named `attach/` is itself, not the
+landmark's own attach scope (the `attach/` virtual prefix is for *authored*
+refs). An authored `template-ref` keeps `${path}` dir-relative.
+
+```ts
+const box = await makeTmpBox();
+await box.write("store/recipes/attach/Filed.recipe.card", "---\ntitle: Filed\n---\n");
+await box.write("store/recipes/Recipes.attach/Trap.recipe.card", "---\ntitle: Trap\n---\n");
+
+const navigation = { label: "Recipes", expand: [{ query: "attach/*.recipe.card" }] };
+const { links } = await resolveLandmark(navigation, {
+  landmarkDir: box.path("store/recipes"),
+  landmarkPath: "store/recipes/Recipes.landmark.card",
+  boxRoot: box.root,
+});
+
+JSON.stringify(links.map((l) => ({ ref: l.ref, exists: l.exists })), null, 2)
+=>
+[
+  {
+    "ref": "store/recipes/attach/Filed.recipe.card",
+    "exists": true
+  }
+]
 ```
 
 ```ts cleanup
@@ -229,6 +267,7 @@ const navigation = {
 };
 const { links } = await resolveLandmark(navigation, {
   landmarkDir: box.path("store/recipes"),
+  landmarkPath: "store/recipes/Recipes.landmark.card",
   boxRoot: box.root,
 });
 
@@ -267,6 +306,7 @@ const navigation = {
 };
 const { links } = await resolveLandmark(navigation, {
   landmarkDir: box.path("store/recipes"),
+  landmarkPath: "store/recipes/Recipes.landmark.card",
   boxRoot: box.root,
 });
 
@@ -307,6 +347,7 @@ const navigation = {
 };
 const resolved = await resolveLandmark(navigation, {
   landmarkDir: box.path("store/recipes"),
+  landmarkPath: "store/recipes/Recipes.landmark.card",
   boxRoot: box.root,
 });
 
@@ -356,6 +397,7 @@ await box.write("store/recipes/B.recipe.card", "---\ntitle: B\n---\n");
 const navigation = { label: "Recipes", expand: [{ query: "*.recipe.card", order: "modified-desc" }] };
 const { links } = await resolveLandmark(navigation, {
   landmarkDir: box.path("store/recipes"),
+  landmarkPath: "store/recipes/Recipes.landmark.card",
   boxRoot: box.root,
 });
 
@@ -388,6 +430,7 @@ const navigation = {
 };
 const { links } = await resolveLandmark(navigation, {
   landmarkDir: box.path("store/recipes"),
+  landmarkPath: "store/recipes/Recipes.landmark.card",
   boxRoot: box.root,
 });
 
@@ -403,6 +446,57 @@ JSON.stringify(links.map((l) => ({ ref: l.ref, label: l.label, exists: l.exists 
     "ref": "docs/About.doc.card",
     "label": "about",
     "exists": true
+  }
+]
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Box-root refs render; escaping refs are missing
+
+A leading-`/` ref means the box root — the same form `cb validate` and `cb mv`
+understand (the render layer used to resolve it against the OS filesystem root
+and report every such link missing). A ref that climbs out of the box resolves
+to nothing and is reported `exists: false`, never clamped to some other file.
+
+```ts
+const box = await makeTmpBox();
+await box.write("store/recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
+await box.write("docs/About.doc.card", "---\ntitle: About\n---\n");
+
+const navigation = {
+  label: "Recipes",
+  links: [
+    { ref: "/docs/About.doc.card", label: "about" },
+    { ref: "/store/recipes/Gone.recipe.card" },
+    { ref: "../../../../etc/hosts", label: "escape" },
+  ],
+};
+const { links } = await resolveLandmark(navigation, {
+  landmarkDir: box.path("store/recipes"),
+  landmarkPath: "store/recipes/Recipes.landmark.card",
+  boxRoot: box.root,
+});
+
+JSON.stringify(links.map((l) => ({ ref: l.ref, label: l.label, exists: l.exists })), null, 2)
+=>
+[
+  {
+    "ref": "docs/About.doc.card",
+    "label": "about",
+    "exists": true
+  },
+  {
+    "ref": "store/recipes/Gone.recipe.card",
+    "label": null,
+    "exists": false
+  },
+  {
+    "ref": "../../../../etc/hosts",
+    "label": "escape",
+    "exists": false
   }
 ]
 ```

@@ -60,14 +60,14 @@ function DeviceRow({ device }: { device: MobileDevice }) {
   });
   return (
     <Row justify="between" align="center" className="py-2">
-      <Stack gap="none">
-        <Text weight="medium">{device.label}</Text>
-        <Text size="xs" tone="muted">
+      <Text as="div">
+        <Text weight="medium">{device.label}</Text>{" "}
+        <Text size="xs" tone="muted" className="ml-1">
           Paired {formatDate(device.createdAt)}
           {device.lastUsedAt ? ` - last used ${formatDate(device.lastUsedAt)}` : ""}
           {device.revokedAt ? ` - revoked ${formatDate(device.revokedAt)}` : ""}
         </Text>
-      </Stack>
+      </Text>
       {!device.revokedAt ? (
         <Button
           intent="destructive"

@@ -14,6 +14,8 @@ struct RootView: View {
     @State private var locationShareResult: NativeLocationShareResult?
     @State private var locationSharingEnabled = false
     @State private var narrationEnabled = false
+    @State private var speechPlaybackActive = false
+    @State private var responseActive = false
     @State private var screenshotRequest: NativeScreenshotRequest?
     @State private var screenshotResult: NativeScreenshotResult?
     @State private var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = []
@@ -66,6 +68,13 @@ struct RootView: View {
             PairBoxView()
         }
         .onChange(of: store.selectedBox?.id) { _, newBoxID in
+            if let newBoxID {
+                BoxLog.info(
+                    "selected box id=\(newBoxID.uuidString)",
+                    category: .lifecycle,
+                    targetBoxID: newBoxID
+                )
+            }
             resignProtectedFirstResponder()
             boxLockManager.relock()
             visibleChatBoxID = newBoxID
@@ -74,6 +83,8 @@ struct RootView: View {
             locationShareResult = nil
             locationSharingEnabled = false
             narrationEnabled = false
+            speechPlaybackActive = false
+            responseActive = false
             screenshotRequest = nil
             screenshotResult = nil
             composerCommandAcknowledgements = []
@@ -87,9 +98,23 @@ struct RootView: View {
             await pendingEmissionStore.activate(boxID: boxID)
         }
         .onChange(of: scenePhase) { _, phase in
+            if let boxID = store.selectedBox?.id {
+                BoxLog.info(
+                    "scene phase=\(scenePhaseName(phase))",
+                    category: .lifecycle,
+                    targetBoxID: boxID
+                )
+            }
+            if phase == .active {
+                Task {
+                    await LogForwarder.shared.setActive(true)
+                    await LogForwarder.shared.flush()
+                }
+            }
             guard phase == .background else {
                 return
             }
+            LogFlushBackgroundTask().begin()
             if store.selectedBox?.requiresDeviceUnlock == true {
                 showingPairSheet = false
                 resignProtectedFirstResponder()
@@ -120,6 +145,8 @@ struct RootView: View {
             onSessionChange: { sessionID in
                 if visibleChatSessionID != sessionID {
                     narrationEnabled = false
+                    speechPlaybackActive = false
+                    responseActive = false
                 }
                 visibleChatBoxID = box.id
                 visibleChatSessionID = sessionID
@@ -150,6 +177,26 @@ struct RootView: View {
             onNarrationStateChange: { enabled in
                 narrationEnabled = enabled
             },
+            onSpeechPlaybackStateChange: { playing in
+                if speechPlaybackActive != playing {
+                    BoxLog.info(
+                        "speech playback active=\(playing)",
+                        category: .audio,
+                        targetBoxID: box.id
+                    )
+                }
+                speechPlaybackActive = playing
+            },
+            onResponseStateChange: { active in
+                if responseActive != active {
+                    BoxLog.info(
+                        "response active=\(active)",
+                        category: .lifecycle,
+                        targetBoxID: box.id
+                    )
+                }
+                responseActive = active
+            },
             onScreenshotResult: { result in
                 guard result.requestID == screenshotRequest?.id else {
                     return
@@ -172,6 +219,8 @@ struct RootView: View {
                 pendingStore: pendingEmissionStore,
                 captureAvailable: visibleChatBoxID == box.id && visibleChatSessionID?.isEmpty == false,
                 narrationEnabled: narrationEnabled,
+                speechPlaybackActive: speechPlaybackActive,
+                responseActive: responseActive,
                 locationSharingEnabled: locationSharingEnabled,
                 locationShareResult: locationShareResult,
                 screenshotResult: screenshotResult,
@@ -199,6 +248,54 @@ struct RootView: View {
             composerCommandAcknowledgements.removeAll { $0.id == acknowledgement.id }
             composerCommandAcknowledgements.append(acknowledgement)
         }
+    }
+
+    private func scenePhaseName(_ phase: ScenePhase) -> String {
+        switch phase {
+        case .active:
+            "active"
+        case .inactive:
+            "inactive"
+        case .background:
+            "background"
+        @unknown default:
+            "unknown"
+        }
+    }
+}
+
+/// One best-effort log flush as the app backgrounds, held open by a UIKit
+/// background-task assertion.
+///
+/// The entries are already on disk, so this is opportunistic: expiration
+/// cancels the flush and ends the assertion rather than racing the watchdog.
+/// The running `Task` keeps this object alive for its own lifetime.
+@MainActor
+private final class LogFlushBackgroundTask {
+    private var identifier = UIBackgroundTaskIdentifier.invalid
+    private var work: Task<Void, Never>?
+
+    func begin() {
+        identifier = UIApplication.shared.beginBackgroundTask(withName: "callbackbox.log-flush") {
+            MainActor.assumeIsolated {
+                self.end()
+            }
+        }
+        work = Task {
+            await LogForwarder.shared.setActive(false)
+            await LogForwarder.shared.flush()
+            self.end()
+        }
+    }
+
+    private func end() {
+        work?.cancel()
+        work = nil
+        guard identifier != .invalid else {
+            return
+        }
+        UIApplication.shared.endBackgroundTask(identifier)
+        identifier = .invalid
     }
 }
 

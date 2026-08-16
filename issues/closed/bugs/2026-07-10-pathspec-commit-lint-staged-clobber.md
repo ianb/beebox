@@ -1,5 +1,6 @@
 ---
 title: "`git commit -- <pathspec>` + lint-staged silently clobbers concurrent uncommitted edits"
+workstream: architectural-review
 area: bin
 filed-by: agent
 discovered-in: worktree-architectural-review — as-ban wave 2, multiple concurrent agents committing to one worktree

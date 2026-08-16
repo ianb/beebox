@@ -11,6 +11,12 @@
 # Safe by construction: we only act when ahead==0 AND dirty==0. Anything
 # else (work not yet merged, uncommitted files) gets left alone.
 #
+# The guards and the removal itself live in bin/lib/worktree-teardown.sh,
+# shared with bin/codex-session-end (codex sessions fire no hooks, so their
+# teardown is driven by the launcher instead). This file holds what's specific
+# to Claude Code: the stdin JSON, resolving which worktree the session belonged
+# to, and the unconditional sweep trigger.
+#
 # Stdin: JSON { cwd, session_id, hook_event_name, ... }
 # Failures are non-blocking; logged in debug mode only.
 
@@ -21,164 +27,113 @@ input=$(cat)
 mkdir -p "$HOME/.cache/callback-box"
 printf '%s\n' "$input" > "$HOME/.cache/callback-box/last-session-end-input.json"
 
-# ── Append-only lifecycle log ───────────────────────────────────────────
-# Diagnostic for the recurring "worktrees don't get cleaned up" problem. It
-# records, for EVERY invocation, whether this hook fired and what it decided
-# (cleaned / skipped-why). Deliberately at a FIXED top-level path — never a
-# per-worktree/per-name subdir — so it lives OUTSIDE everything this hook
-# deletes (the worktree, the box clone at ~/src/box-worktrees/$name, and the
-# ~/.cache/callback-box/{logs,browse,pids}/$name state). A cleanup therefore
-# can't erase the record of itself. `sweep`/`panic` don't touch this file
-# either. Never fails the hook (|| true). If a lingering worktree has NO line
-# here, the hook never fired for it (e.g. tab-kill sends no SessionEnd).
-WORKTREE_LOG="$HOME/.cache/callback-box/worktree-cleanup.log"
-wlog() { printf '%s pid=%s SessionEnd %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$$" "$*" >> "$WORKTREE_LOG" 2>/dev/null || true; }
+WT_LOG_LABEL="SessionEnd"
+WT_SAY_PREFIX="[session-end]   "
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/bin/lib/worktree-teardown.sh"
+# shellcheck source=../../bin/lib/session-workstream.sh
+. "$WT_MONO/bin/lib/session-workstream.sh"
+
+# Managed Claude runs inside the worktree, so it loads that checkout's hook.
+# Re-exec the main checkout's copy before teardown: cleanup must not remove the
+# directory its script and caller are still executing from. The marker prevents
+# a loop if path resolution is ever unusual.
+hook_repo=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
+if [ "$hook_repo" != "$WT_MONO" ] && [ "${CB_SESSION_END_MAIN_REEXEC:-0}" != "1" ]; then
+  cd "$WT_MONO"
+  CB_SESSION_END_MAIN_REEXEC=1 exec "$WT_MONO/.claude/hooks/session-end.sh" <<<"$input"
+fi
 
 cwd=$(printf '%s' "$input" | jq -r '.cwd // empty')
 session_id=$(printf '%s' "$input" | jq -r '.session_id // empty')
 reason=$(printf '%s' "$input" | jq -r '.reason // empty')
-wlog "event: session=$session_id reason=$reason cwd=$cwd"
+wt_log "event: session=$session_id reason=$reason cwd=$cwd"
 
 # Trigger a sweep on EVERY session end, before the per-worktree logic below
-# runs (which mostly can't resolve its own worktree — see next comment). Must
+# runs. Must
 # be here, above the early `exit 0`s, or it never fires in the common case.
 #
-# Why: the per-session cleanup below identifies its worktree from cwd or
-# transcript_path, and BOTH are the main checkout when the session was started
-# by `bin/launch-worktree-session` (it runs `claude --worktree <name>` from the
-# monorepo root, so Claude Code files the session under main's project dir).
-# So this hook logs `skip:not-a-worktree-session` and cleans nothing. The sweep
-# doesn't care whose session ended — it removes every worktree that is merged,
-# clean, and has no live `claude` — so it covers this case and tab-kills alike.
-# Previously the sweep only ran at SessionStart, which meant a long-lived main
-# session accumulated finished worktrees all day with nothing to collect them
-# (2026-07-19: nine piled up in one session).
+# The sweep does not care which session ended: it removes every eligible
+# worktree with no live agent, covering tab-kills and older native `--worktree`
+# sessions whose final cwd/transcript could not be resolved here. Previously it
+# ran only at SessionStart, so a long-lived main session accumulated finished
+# worktrees all day (2026-07-19: nine piled up in one session).
 #
-# Absolute path to the MAIN checkout's copy deliberately: auto-sweep.sh gates
-# itself out when its own REPO is a worktree, so invoking a worktree's copy
-# would no-op.
-"$HOME/src/callback-box/.claude/hooks/auto-sweep.sh" session-end 2>/dev/null || true
+# The MAIN checkout's copy deliberately: auto-sweep.sh gates itself out when its
+# own REPO is a worktree, so invoking a worktree's copy would no-op.
+"$WT_MONO/.claude/hooks/auto-sweep.sh" session-end 2>/dev/null || true
 
 # Determine the worktree directory. cwd is the obvious signal, but Claude
 # Code reports the session's *final* cwd — an agent that cd'd to the main
 # checkout (e.g. to run a cross-tree git command) before exiting would
 # defeat a cwd-only check and leak the worktree. transcript_path is the
 # durable signal: it encodes the directory the session was launched in,
-# embedded as `-Users-ianbicking-src-callback-worktrees-<name>` in
+# embedded as `-src-callback-worktrees-<name>` in
 # `~/.claude/projects/<encoded-path>/<uuid>.jsonl`.
 worktree_path=""
 case "$cwd" in
-  "$HOME/src/callback-worktrees/"*) worktree_path="$cwd" ;;
+  "$WT_ROOT/"*) worktree_path="$cwd" ;;
 esac
 
 if [ -z "$worktree_path" ]; then
   tpath=$(printf '%s' "$input" | jq -r '.transcript_path // empty')
-  case "$tpath" in
-    *"-src-callback-worktrees-"*)
-      name=$(printf '%s' "$tpath" | sed -E 's|.*-src-callback-worktrees-([^/]+)/.*|\1|')
-      candidate="$HOME/src/callback-worktrees/$name"
-      if [ -d "$candidate" ]; then
-        echo "[session-end] cwd is '$cwd'; using worktree '$candidate' derived from transcript_path"
-        worktree_path="$candidate"
-      fi
-      ;;
-  esac
+  if wt_session_workstream_from_transcript "$tpath"; then
+    candidate="$WT_ROOT/$WT_SESSION_WORKSTREAM"
+    echo "[session-end] cwd is '$cwd'; using worktree '$candidate' derived from transcript_path"
+    worktree_path="$candidate"
+  fi
 fi
 
 if [ -z "$worktree_path" ] || [ ! -d "$worktree_path" ]; then
-  wlog "decision=skip:not-a-worktree-session resolved='$worktree_path'"
+  wt_log "decision=skip:not-a-worktree-session resolved='$worktree_path'"
   exit 0
 fi
-wlog "resolved worktree=$worktree_path"
+wt_log "resolved worktree=$worktree_path"
 
-cd "$worktree_path" || { wlog "decision=skip:cd-failed wt=$worktree_path"; exit 0; }
+# Another live agent still working here? Then this is NOT the last session in
+# the worktree, and cleaning would pull the rug out from under it. This hook is
+# a descendant of the ending agent, so exclude the nearest agent ancestor —
+# that one is the session that's ending. Fail closed on `unknown`.
+wt_other_agent_live "$worktree_path" --exclude-self-ancestor
+case "$WT_AGENT_STATE" in
+  live)
+    echo "[session-end] another live claude/codex session belongs to $worktree_path ($WT_AGENT_REASON) — leaving alone"
+    wt_log "decision=skip:other-agent-live $WT_AGENT_REASON self=$WT_AGENT_SELF wt=$worktree_path"
+    exit 0 ;;
+  none) ;;
+  *)
+    echo "[session-end] cannot rule out a live agent ($WT_AGENT_REASON) — refusing to clean $worktree_path"
+    wt_log "decision=skip:$WT_AGENT_REASON self=$WT_AGENT_SELF wt=$worktree_path"
+    exit 0 ;;
+esac
 
-branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
-if [ -z "$branch" ] || [ "$branch" = "main" ] || [ "$branch" = "HEAD" ]; then
-  echo "[session-end] branch=$branch, not eligible for auto-cleanup"
-  wlog "decision=skip:branch-ineligible branch='$branch' wt=$worktree_path"
+wt_work_state "$worktree_path"
+if [ -z "$WT_BRANCH" ] || [ "$WT_BRANCH" = "main" ] || [ "$WT_BRANCH" = "HEAD" ]; then
+  echo "[session-end] branch=$WT_BRANCH, not eligible for auto-cleanup"
+  wt_log "decision=skip:branch-ineligible branch='$WT_BRANCH' wt=$worktree_path"
   exit 0
 fi
 
-ahead=$(git rev-list --count main..HEAD 2>/dev/null || echo "?")
-# Deletion-only entries (` D ` unstaged / `D  ` staged) don't count as dirt:
-# a cleanup killed mid-removal (hook timeout) leaves a half-deleted tree
-# whose only changes are phantom deletions of tracked files — content that
-# all exists in git. Counting those as dirty made one interrupted cleanup
-# poison the worktree against every future cleanup. Anything that isn't a
-# pure deletion (modified, untracked, renamed, conflicted) still blocks.
-dirty=$(git status --porcelain 2>/dev/null | grep -cvE '^( D|D ) ' || true)
-
-if [ "$ahead" != "0" ] || [ "$dirty" != "0" ]; then
-  echo "[session-end] worktree '$branch' not fully merged (ahead=$ahead, non-deletion dirty=$dirty) — leaving alone"
-  # Capture WHICH entries block it — untracked file vs unmerged commit is the
-  # whole diagnosis (e.g. review-ios lingered on one untracked doc).
-  blockers=$(git status --porcelain 2>/dev/null | grep -vE '^( D|D ) ' | head -6 | tr '\n' ';' || true)
-  wlog "decision=skip:unmerged branch=$branch ahead=$ahead dirty=$dirty blockers=[$blockers] wt=$worktree_path"
+if [ "$WT_AHEAD" != "0" ] || [ "$WT_DIRTY" != "0" ]; then
+  echo "[session-end] worktree '$WT_BRANCH' not fully merged (ahead=$WT_AHEAD, non-deletion dirty=$WT_DIRTY) — leaving alone"
+  # WT_BLOCKERS captures WHICH entries block it — untracked file vs unmerged
+  # commit is the whole diagnosis (e.g. review-ios lingered on one untracked doc).
+  wt_log "decision=skip:unmerged branch=$WT_BRANCH ahead=$WT_AHEAD dirty=$WT_DIRTY blockers=[$WT_BLOCKERS] wt=$worktree_path"
   exit 0
 fi
-wlog "decision=clean branch=$branch ahead=0 dirty=0 wt=$worktree_path"
-
-# IMPORTANT: derive the name from $worktree_path, not $cwd. When the
-# session ends with cwd = main (the original bug that motivated the
-# transcript-path fallback above), $cwd is the main checkout, so
-# basename($cwd) = "callback-box" — wrong name, wrong target for the
-# removal step below.
+. "$WT_MONO/bin/lib/workstream-box-state.sh"
 name=$(basename "$worktree_path")
-MONO="$HOME/src/callback-box"
-
-echo "[session-end] worktree '$branch' is fully merged into main and clean — cleaning up"
-
-# Tell the dev router to stop this worktree's processes immediately so
-# there's nothing left binding the cloned-box files when we delete them.
-if curl -fsS -X POST -m 5 "http://127.0.0.1:3210/__router/stop/$name" >/dev/null 2>&1; then
-  echo "[session-end]   told router to stop $name"
+if pin_reason=$(workstream_cull_pin_reason "$name"); then
+  echo "[session-end] worktree '$WT_BRANCH' is pinned ($pin_reason) — leaving alone"
+  wt_log "decision=skip:pinned reason=$pin_reason branch=$WT_BRANCH wt=$worktree_path"
+  exit 0
 fi
+wt_log "decision=clean branch=$WT_BRANCH ahead=0 dirty=0 wt=$worktree_path"
 
-# Deleting ~1GB of worktree + box synchronously here used to blow the hook
-# timeout: the kill landed mid-`git worktree remove`, leaving a half-deleted
-# but still-registered worktree (the accumulation bug of 2026-06). Instead:
-# rename everything into a trash dir (instant), do the cheap git bookkeeping,
-# and let a detached background process do the slow delete — it survives
-# both this hook and the session.
-TRASH="$HOME/.cache/callback-box/trash"
-mkdir -p "$TRASH"
-ts=$(date +%s)
+# IMPORTANT: the name derives from $worktree_path, not $cwd. When the session
+# ends with cwd = main (the original bug that motivated the transcript-path
+# fallback above), basename($cwd) = "callback-box" — wrong name, wrong target.
+echo "[session-end] worktree '$WT_BRANCH' is fully merged into main and clean — cleaning up"
+wt_remove_now "$worktree_path" "$WT_BRANCH"
 
-# Trash the cloned box tree ($name/, which contains test1/).
-BOX_DEST="$HOME/src/box-worktrees/$name"
-if [ -d "$BOX_DEST" ]; then
-  mv "$BOX_DEST" "$TRASH/box-$name-$ts"
-  echo "[session-end]   trashed $BOX_DEST"
-fi
-
-# Move out of the worktree dir before removing it.
-cd "$MONO"
-
-# Trash the worktree directory, then prune the now-dangling registration.
-if mv "$worktree_path" "$TRASH/wt-$name-$ts" 2>/dev/null; then
-  echo "[session-end]   trashed worktree $worktree_path"
-fi
-git worktree prune 2>/dev/null || true
-
-# Delete the branch.
-if git branch -D "$branch" >/dev/null 2>&1; then
-  echo "[session-end]   deleted branch $branch"
-fi
-
-# Slow delete, detached. Clears earlier leftovers too.
-nohup rm -rf "$TRASH" >/dev/null 2>&1 &
-disown 2>/dev/null || true
-
-# Cache state: browse profile + socket dir, router log, pid file.
-# These don't show up in any UI, but they accumulate, and if the session
-# ended cleanly there's no reason to leave them behind.
-BROWSE_DIR="$HOME/.cache/callback-box/browse/$name"
-LOG_FILE="$HOME/.cache/callback-box/logs/$name.log"
-PID_FILE="$HOME/.cache/callback-box/pids/$name.json"
-[ -d "$BROWSE_DIR" ] && rm -rf "$BROWSE_DIR" && echo "[session-end]   removed $BROWSE_DIR"
-[ -f "$LOG_FILE" ]   && rm -f  "$LOG_FILE"   && echo "[session-end]   removed $LOG_FILE"
-[ -f "$PID_FILE" ]   && rm -f  "$PID_FILE"   && echo "[session-end]   removed $PID_FILE"
-
-wlog "done: cleaned branch=$branch name=$name (box+worktree trashed, branch deleted)"
+wt_log "done: cleaned branch=$WT_BRANCH name=$(basename "$worktree_path") (box+worktree trashed, branch deleted)"
 echo "[session-end] done"

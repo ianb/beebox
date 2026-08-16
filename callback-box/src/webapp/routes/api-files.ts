@@ -20,6 +20,7 @@ import { boxRelativePath } from "../../shared/box-path.js";
 import { extensionToMimetype } from "../../lib/mimetype.js";
 import { dangerousRenderableDisposition } from "../serving-security.js";
 import { errnoCode } from "../../lib/error-guards.js";
+import { probePointer } from "../../lib/asset-content.js";
 
 // Injected into frozen pages at serve time so a hot-linked image that fails
 // (hot-link blockers, auth, dead origin) retries once through the box image
@@ -106,6 +107,23 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
         const stat = await fs.stat(resolved);
         if (!stat.isFile()) {
           return reply.status(404).send({ error: "Not found" });
+        }
+
+        // An annexed asset whose content isn't present holds a ~100-byte
+        // pointer. Bail HERE, before any header, ETag, or Range work: every
+        // one of those would otherwise describe the pointer as if it were the
+        // file — a 200 with Content-Length 101 and Content-Type image/jpeg,
+        // or a Range slice of the pointer text. 409, not 404: the file exists
+        // and is tracked; its bytes are elsewhere.
+        const pointer = await probePointer(resolved, { knownSize: stat.size });
+        if (pointer !== null) {
+          return reply.status(409).send({
+            error: "Content not present locally",
+            key: pointer.key,
+            size: pointer.size,
+            sha256: pointer.sha256,
+            hint: `Fetch it with \`git annex get ${reqPath}\``,
+          });
         }
 
         // Infer MIME type from extension. `.frozen` is served as HTML for the

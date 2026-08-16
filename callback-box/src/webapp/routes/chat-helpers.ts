@@ -14,6 +14,8 @@ import { getLocalUser } from "../local-users.js";
 import { AuthStoreUnavailableError } from "../local-users-errors.js";
 import { resolveMobileRequestAuth } from "../../core/mobile/request-auth.js";
 import { resolveSessionLogPath } from "../../core/chat/session/history.js";
+import { resolveChatEngine } from "../../core/chat/session/engine.js";
+import { loadSessionHistory } from "../../core/chat/session/load-history.js";
 import {
   SUPPORTED_IMAGE_MEDIA_TYPES,
   isSupportedImageMediaType,
@@ -49,6 +51,8 @@ export const sendBodySchema = z.object({
   session: z
     .string({ error: "session is required (id or 'new')" })
     .min(1, "session is required (id or 'new')"),
+  /** Require the named existing session; never create or fall back. */
+  exactSession: z.boolean().optional(),
   /**
    * Optional image attachments referenced by `[imageN]` tokens in `message`.
    * Tokens are replaced with the image block in the content array sent to
@@ -270,6 +274,13 @@ export async function readSessionLogTail(
   sessionId: string,
 ): Promise<string> {
   try {
+    if (await resolveChatEngine(boxRoot, sessionId) === "codex") {
+      const { entries } = await loadSessionHistory(boxRoot, {
+        sessionId,
+        slice: { mode: "tail", tail: 100 },
+      });
+      return JSON.stringify(entries);
+    }
     const logPath = await resolveSessionLogPath(boxRoot, sessionId);
     const handle = await fs.open(logPath, "r");
     try {

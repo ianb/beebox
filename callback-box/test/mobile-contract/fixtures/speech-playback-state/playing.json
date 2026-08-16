@@ -1,0 +1,8 @@
+{
+  "input": {
+    "playing": true
+  },
+  "expected": {
+    "playing": true
+  }
+}

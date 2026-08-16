@@ -1,0 +1,515 @@
+#!/usr/bin/env bash
+# Shared worktree-teardown machinery. SOURCE this file; don't execute it.
+#
+#   . "<repo>/bin/lib/worktree-teardown.sh"
+#
+# One implementation of the destructive path, used by every caller that can
+# remove a worktree on its own initiative:
+#   - .claude/hooks/session-end.sh   (Claude Code SessionEnd)
+#   - bin/codex-session-end          (codex tab exit, via launch-worktree-session)
+#
+# `bin/workstreams` (create excepted) is a caller too: `sweep` and `remove` both
+# use wt_other_agent_live and wt_remove_now from here, and `list` uses the guard
+# alone. Sweep keeps its ONE system-wide process snapshot across N worktrees via
+# wt_agent_snapshot_capture rather than a private copy of the guard.
+#
+# Everything here stands in front of an irreversible delete, so every "can't
+# tell" answer resolves to "don't delete". A worktree that lingers is collected
+# by the next `bin/workstreams sweep`; a worktree deleted under live work is gone.
+
+# Locations — WT_MONO (where the git bookkeeping runs), WT_BOX_ROOT, and
+# WT_STATE_DIR all come from the shared derivation, so this file makes no $HOME
+# assumption of its own. Better than the old `$HOME/src/callback-box` fallback,
+# which could point the destructive path at a checkout that isn't the one in
+# play.
+#
+# On derivation failure the four repo-relative roots are cleared, so nothing
+# outside WT_STATE_DIR is reachable: the box trash is guarded on a non-empty
+# WT_BOX_ROOT and `cd "$WT_MONO"` fails before the worktree trash-mv and the
+# branch delete. WT_STATE_DIR is NOT cleared — it comes from $CALLBACK_STATE_DIR
+# or the fixed cache path, neither of which depends on the derivation — so
+# router-stop and browse/log/pid cleanup still run. That is deliberate: those
+# are this tool's own regenerable cache, not anybody's work.
+# shellcheck source=worktree-paths.sh
+. "$(dirname "${BASH_SOURCE[0]}")/worktree-paths.sh"
+# shellcheck source=session-registry.sh
+. "$(dirname "${BASH_SOURCE[0]}")/session-registry.sh"
+if ! wt_paths_init "$(dirname "${BASH_SOURCE[0]}")/.."; then
+  # Leave every derived location empty rather than half-set: `cd ""` and
+  # `[ -d "" ]` both fail, so each destructive step declines on its own.
+  WT_MONO=""
+  WT_ROOT=""
+  WT_BOX_ROOT=""
+  WT_BOX_SRC=""
+fi
+
+# ── Append-only lifecycle log ───────────────────────────────────────────
+# Diagnostic for the recurring "worktrees don't get cleaned up" problem. It
+# records, for EVERY invocation, whether a teardown fired and what it decided
+# (cleaned / skipped-why). Deliberately at a FIXED top-level path — never a
+# per-worktree/per-name subdir — so it lives OUTSIDE everything a teardown
+# deletes (the worktree, the box clone at ~/src/box-worktrees/$name, and the
+# state/{logs,browse,pids}/$name dirs). A cleanup therefore can't erase the
+# record of itself. `sweep`/`panic` don't touch this file either. Never fails
+# the caller (|| true). If a lingering worktree has NO line here, no teardown
+# ever fired for it (e.g. a tab-kill, which sends no exit signal at all).
+#
+# WT_LOG_LABEL names the caller (SessionEnd / CodexExit) so one file covers
+# both agents.
+WT_LOG_FILE="$WT_STATE_DIR/worktree-cleanup.log"
+WT_LOG_LABEL="${WT_LOG_LABEL:-Teardown}"
+wt_log() {
+  printf '%s pid=%s %s %s\n' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$$" "$WT_LOG_LABEL" "$*" \
+    >> "$WT_LOG_FILE" 2>/dev/null || true
+}
+
+# Progress line for the human. WT_SAY_PREFIX lets a caller keep its own tag on
+# every line it emits (the hooks prefix "[session-end]").
+wt_say() { printf '%s%s\n' "${WT_SAY_PREFIX:-  }" "$*"; }
+
+# ── Is another agent still working in this worktree? ────────────────────
+#
+# wt_other_agent_live <worktree_path> [--exclude-self-ancestor]
+#
+# Always returns 0; the answer is in WT_AGENT_STATE (`none` | `live` |
+# `unknown`) with detail in WT_AGENT_REASON. Callers MUST treat `unknown` the
+# same as `live` — that's the fail-closed half of this guard.
+#
+# Cleaning a worktree that still has a live agent pulls the rug out from under
+# it. `bin/workstreams sweep` has always checked; session-end.sh did not, and that
+# gap had teeth: a nested `claude -p` (the /cross-model skill's Codex→Claude
+# reviewer) run from inside a worktree ends its own session, fires the hook, and
+# — seeing a merged, clean branch — deletes the worktree out from under the
+# session that spawned it. Verified 2026-08-04; recorded in the log above.
+#
+# --exclude-self-ancestor is for a caller that runs as a DESCENDANT of the agent
+# that's ending (a SessionEnd hook): walk up the ppid chain and exclude the
+# NEAREST claude/codex ancestor, since that one is the session on its way out.
+# In the nested case the outer session is a *farther* ancestor, so it survives
+# the exclusion and blocks the cleanup. A caller that runs AFTER its agent has
+# already exited (bin/codex-session-end) must omit the flag: there is no self to
+# exclude, and excluding an ancestor would be wrong if the script were ever run
+# by hand from inside a live session.
+#
+# Two independent liveness signals, mirroring sweep:
+#   1. argv — `claude --worktree <name>` for direct native sessions, or
+#      `claude --name <name>` for managed sessions.
+#   2. process cwd — an independent signal for managed claude/codex sessions.
+#
+# NOT `pgrep -x claude`: pgrep matches the 16-char accounting name (`ps ucomm`),
+# and a native-installed Claude Code reports that as its VERSION ("2.1.221"),
+# not "claude" — so pgrep misses live sessions entirely (verified 2026-08-04:
+# 10 of 11 running sessions invisible to it). `ps comm` is the executable path,
+# which is reliable; match on its basename.
+#
+# ── Reusing one snapshot across many worktrees ──────────────────────────
+#
+# wt_agent_snapshot_capture
+#
+# Takes ONE system-wide process + argv + cwd snapshot into WT_SNAP_*, which
+# wt_other_agent_live then uses instead of shelling out per call. This is what
+# lets `bin/workstreams sweep` ask about N worktrees at the cost of one `ps` and
+# one `lsof`, which is the property that kept it on its own two-state copy of
+# this guard until now (and gave it a fail-OPEN hole:
+# issues/bugs/2026-08-04-sweep-live-agent-guard-fails-open.md).
+#
+# WT_SNAP_STATE carries what the snapshot could and could not establish, so the
+# tri-state answer survives the batching:
+#   ok         — processes, argv, and cwds all readable
+#   no-agents  — process list readable, no claude/codex running at all
+#   no-procs   — `ps` could not answer; nothing can be concluded
+#   no-argv    — agents are running but their argv could not be read
+#   no-cwds    — agents are running but `lsof` could not answer for them
+#
+# A snapshot MUST NOT be combined with --exclude-self-ancestor: the snapshot
+# holds every agent's argv and cwd with no way to attribute a cwd line back to
+# the pid it came from, so "everything except me" cannot be expressed. The
+# callers split cleanly along that line anyway — hooks exclude self and take no
+# snapshot, sweep takes a snapshot and has no self to exclude.
+wt_agent_snapshot_capture() {
+  WT_SNAP_STATE=""
+  WT_SNAP_PIDS=""
+  WT_SNAP_ARGS=""
+  WT_SNAP_CWDS=""
+
+  local procs
+  procs=$(ps -axo pid=,comm= 2>/dev/null || true)
+  if [ -z "$procs" ]; then
+    WT_SNAP_STATE="no-procs"
+    return 0
+  fi
+
+  WT_SNAP_PIDS=$(printf '%s\n' "$procs" \
+    | awk '{ n = $2; sub(/.*\//, "", n); if (n == "claude" || n == "codex") print $1 }')
+  if [ -z "$WT_SNAP_PIDS" ]; then
+    WT_SNAP_STATE="no-agents"
+    return 0
+  fi
+
+  local pid_csv
+  pid_csv=$(printf '%s\n' "$WT_SNAP_PIDS" | tr '\n' ',' | sed 's/,$//')
+
+  # argv for exactly those pids, one `pid command...` line each.
+  WT_SNAP_ARGS=$(ps -axo pid=,command= 2>/dev/null \
+    | awk -v csv="$pid_csv" \
+        'BEGIN { n = split(csv, a, ","); for (i = 1; i <= n; i++) want[a[i]] = 1 }
+         want[$1] { line = $0; sub(/^[[:space:]]+/, "", line); print line }' || true)
+  if [ -z "$WT_SNAP_ARGS" ]; then
+    # We know these pids are agents but cannot read their argv. Signal 1 is
+    # therefore unusable, and an unusable signal is not an absent one.
+    WT_SNAP_STATE="no-argv"
+    return 0
+  fi
+
+  WT_SNAP_CWDS=$(lsof -a -d cwd -p "$pid_csv" -Fn 2>/dev/null | sed -n 's/^n//p' | sort -u || true)
+  if [ -z "$WT_SNAP_CWDS" ]; then
+    WT_SNAP_STATE="no-cwds"
+    return 0
+  fi
+
+  WT_SNAP_STATE="ok"
+  return 0
+}
+
+# Discard a snapshot so later calls go back to querying live.
+wt_agent_snapshot_clear() {
+  WT_SNAP_STATE=""
+  WT_SNAP_PIDS=""
+  WT_SNAP_ARGS=""
+  WT_SNAP_CWDS=""
+}
+
+wt_other_agent_live() {
+  local worktree_path="$1" exclude_self=""
+  [ "${2:-}" = "--exclude-self-ancestor" ] && exclude_self=1
+  local wt_name
+  wt_name=$(basename "$worktree_path")
+
+  WT_AGENT_STATE="unknown"
+  WT_AGENT_REASON=""
+  WT_AGENT_SELF=""
+
+  # ── Snapshot path (sweep). See wt_agent_snapshot_capture. ──
+  if [ -n "${WT_SNAP_STATE:-}" ]; then
+    if [ -n "$exclude_self" ]; then
+      # Refuse rather than answer wrongly: excluding self from a snapshot that
+      # can't attribute cwds to pids would silently drop a live sibling too.
+      WT_AGENT_REASON="snapshot-with-exclude-self-unsupported"
+      return 0
+    fi
+    case "$WT_SNAP_STATE" in
+      no-agents) WT_AGENT_STATE="none"; return 0 ;;
+      no-procs)  WT_AGENT_REASON="cannot-enumerate-processes"; return 0 ;;
+      no-argv)   WT_AGENT_REASON="cannot-read-agent-argv"; return 0 ;;
+      no-cwds)   WT_AGENT_REASON="cannot-read-agent-cwds"; return 0 ;;
+    esac
+
+    local snap_line snap_cwd
+    while IFS= read -r snap_line; do
+      [ -n "$snap_line" ] || continue
+      case "$snap_line" in
+        *"claude --worktree $wt_name "*|*"claude --worktree $wt_name"|*"claude --name $wt_name "*|*"claude --name $wt_name")
+          WT_AGENT_STATE="live"
+          WT_AGENT_REASON="signal=argv pid=${snap_line%% *}"
+          return 0 ;;
+      esac
+    done <<EOF
+$WT_SNAP_ARGS
+EOF
+    while IFS= read -r snap_cwd; do
+      [ -n "$snap_cwd" ] || continue
+      case "$snap_cwd" in
+        "$worktree_path"|"$worktree_path"/*)
+          WT_AGENT_STATE="live"
+          WT_AGENT_REASON="signal=cwd"
+          return 0 ;;
+      esac
+    done <<EOF
+$WT_SNAP_CWDS
+EOF
+    WT_AGENT_STATE="none"
+    return 0
+  fi
+
+  if [ -n "$exclude_self" ]; then
+    local probe=$$ pcomm
+    while [ -n "$probe" ] && [ "$probe" != "0" ] && [ "$probe" != "1" ]; do
+      pcomm=$(ps -o comm= -p "$probe" 2>/dev/null || true)
+      case "$(basename "${pcomm:-none}")" in
+        claude|codex) WT_AGENT_SELF="$probe"; break ;;
+      esac
+      probe=$(ps -o ppid= -p "$probe" 2>/dev/null | tr -d ' ' || true)
+    done
+  fi
+
+  local snapshot
+  snapshot=$(ps -axo pid=,comm= 2>/dev/null || true)
+  if [ -z "$snapshot" ]; then
+    WT_AGENT_REASON="cannot-enumerate-processes"
+    return 0
+  fi
+
+  local other_pids
+  other_pids=$(printf '%s\n' "$snapshot" \
+    | awk -v self="${WT_AGENT_SELF:-0}" \
+        '{ n = $2; sub(/.*\//, "", n);
+           if ((n == "claude" || n == "codex") && $1 != self) print $1 }')
+  if [ -z "$other_pids" ]; then
+    WT_AGENT_STATE="none"
+    return 0
+  fi
+
+  # Signal 1: argv. Substring match on a literal, no regex — a worktree name
+  # with a metacharacter must not silently turn the guard off.
+  local pid pargs
+  for pid in $other_pids; do
+    pargs=$(ps -o command= -p "$pid" 2>/dev/null || true)
+    case "$pargs" in
+      *"claude --worktree $wt_name "*|*"claude --worktree $wt_name"|*"claude --name $wt_name "*|*"claude --name $wt_name")
+        WT_AGENT_STATE="live"
+        WT_AGENT_REASON="signal=argv pid=$pid"
+        return 0 ;;
+    esac
+  done
+
+  # Signal 2: process cwd. If lsof tells us nothing about processes we know are
+  # alive, we cannot prove none of them lives here — so the answer is unknown.
+  local pid_csv other_cwds acwd
+  pid_csv=$(printf '%s\n' "$other_pids" | tr '\n' ',' | sed 's/,$//')
+  other_cwds=$(lsof -a -d cwd -p "$pid_csv" -Fn 2>/dev/null | sed -n 's/^n//p' | sort -u || true)
+  if [ -z "$other_cwds" ]; then
+    WT_AGENT_REASON="cannot-read-agent-cwds others=[$pid_csv]"
+    return 0
+  fi
+  # Literal prefix match, not a regex, for the same reason as signal 1.
+  while IFS= read -r acwd; do
+    [ -n "$acwd" ] || continue
+    case "$acwd" in
+      "$worktree_path"|"$worktree_path"/*)
+        WT_AGENT_STATE="live"
+        WT_AGENT_REASON="signal=cwd others=[$pid_csv]"
+        return 0 ;;
+    esac
+  done <<EOF
+$other_cwds
+EOF
+
+  WT_AGENT_STATE="none"
+  return 0
+}
+
+# ── How much unlanded work does this worktree hold? ─────────────────────
+#
+# wt_work_state <worktree_path>
+#
+# Sets WT_BRANCH, WT_AHEAD (commits not in main; "?" if git can't say),
+# WT_DIRTY (count of non-deletion working-tree entries) and WT_BLOCKERS (the
+# first few of those entries, for the log — untracked file vs unmerged commit
+# is the whole diagnosis).
+#
+# Deletion-only entries (` D ` unstaged / `D  ` staged) don't count as dirt: a
+# cleanup killed mid-removal (hook timeout) leaves a half-deleted tree whose
+# only changes are phantom deletions of tracked files — content that all exists
+# in git. Counting those as dirty made one interrupted cleanup poison the
+# worktree against every future cleanup. Anything that isn't a pure deletion
+# (modified, untracked, renamed, conflicted) still blocks.
+wt_work_state() {
+  local d="$1"
+  WT_BRANCH=$(git -C "$d" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+  WT_AHEAD=$(git -C "$d" rev-list --count main..HEAD 2>/dev/null || echo "?")
+
+  # `git status` failing must NOT read as "clean". Piping it straight into
+  # `grep -c` loses that distinction: a status that errors out with no output
+  # yields a count of 0, i.e. exactly the value that authorizes a delete. So
+  # capture it, keep git's exit status, and report "?" — which every caller
+  # compares against "0" and therefore treats as blocking.
+  local status_out
+  if status_out=$(git -C "$d" status --porcelain 2>/dev/null); then
+    if [ -z "$status_out" ]; then
+      WT_DIRTY=0
+      WT_BLOCKERS=""
+    else
+      WT_DIRTY=$(printf '%s\n' "$status_out" | grep -cvE '^( D|D ) ' || true)
+      WT_BLOCKERS=$(printf '%s\n' "$status_out" | grep -vE '^( D|D ) ' | head -6 | tr '\n' ';' || true)
+    fi
+  else
+    WT_DIRTY="?"
+    WT_BLOCKERS="git-status-failed"
+  fi
+  [ -n "$WT_DIRTY" ] || WT_DIRTY="?"
+}
+
+# ── Remove the worktree, the box clone, and the router/cache state ──────
+#
+# wt_remove_now <worktree_path> <branch> [--keep-branch]
+#
+# CHANGES THE CALLER'S CWD to $WT_MONO — it has to, since the directory it
+# deletes may be the shell's cwd. Callers must not assume where they are
+# afterwards. Progress goes to stdout (both current callers route stdout to
+# stderr or to a terminal).
+#
+# --keep-branch leaves the branch in place. Used when the caller is removing a
+# worktree that still has unmerged commits on explicit human say-so: the tree
+# and its uncommitted changes go, but `git branch -D` on unmerged commits is a
+# different order of loss for no benefit — the branch costs nothing and
+# `git worktree add` resurrects the work.
+
+# ── The satellites: everything a worktree owns OUTSIDE its own directory ─
+#
+# wt_remove_satellites <name>
+#
+# The box clone, the router's processes, and the browse/log/pid cache state.
+# Split out because the WorktreeRemove hook needs exactly this and nothing more
+# — Claude Code removes the git worktree itself there, and deleting its branch
+# would be a different and much less recoverable act. Before this split, that
+# hook carried its own copy of all of it.
+#
+# Sets WT_TRASH so the caller can add to the same batch before reaping it.
+wt_remove_satellites() {
+  local name="$1"
+
+  # Tell the dev router to stop this worktree's processes immediately so
+  # there's nothing left binding the cloned-box files when we delete them.
+  # Over the Unix-domain socket: the router's TCP listener authenticates every
+  # request (it's exposable over Tailscale) and a hook carries no session
+  # cookie, so a TCP call just 401s. The UDS is the trusted-local channel every
+  # other CLI caller uses. TCP stays as a fallback for a router old enough not
+  # to have the socket.
+  local router_port="${ROUTER_PORT:-3210}"
+  if curl -fsS -X POST -m 5 --unix-socket "$WT_STATE_DIR/router.sock" \
+       "http://router/__router/stop/$name" >/dev/null 2>&1 \
+     || curl -fsS -X POST -m 5 "http://127.0.0.1:$router_port/__router/stop/$name" >/dev/null 2>&1; then
+    wt_say "told router to stop $name"
+  fi
+
+  # Deleting ~1GB of worktree + box synchronously used to blow the hook
+  # timeout: the kill landed mid-`git worktree remove`, leaving a half-deleted
+  # but still-registered worktree (the accumulation bug of 2026-06). Instead:
+  # rename everything into a trash dir (instant), do the cheap git bookkeeping,
+  # and let a detached background process do the slow delete — it survives both
+  # the caller and the session.
+  WT_TRASH="$WT_STATE_DIR/trash"
+  mkdir -p "$WT_TRASH"
+  local ts
+  ts=$(date +%s)
+
+  # Trash the cloned box tree ($name/, which contains test1/).
+  local box_dest="$WT_BOX_ROOT/$name"
+  if [ -n "$WT_BOX_ROOT" ] && [ -d "$box_dest" ]; then
+    mv "$box_dest" "$WT_TRASH/box-$name-$ts"
+    wt_say "trashed $box_dest"
+  fi
+
+  # Cache state: browse profile + socket dir, router log, pid file.
+  # These don't show up in any UI, but they accumulate, and there's no reason
+  # to leave them behind.
+  local browse_dir="$WT_STATE_DIR/browse/$name"
+  local log_file="$WT_STATE_DIR/logs/$name.log"
+  local pid_file="$WT_STATE_DIR/pids/$name.json"
+  [ -d "$browse_dir" ] && rm -rf "$browse_dir" && wt_say "removed $browse_dir"
+  [ -f "$log_file" ]   && rm -f  "$log_file"   && wt_say "removed $log_file"
+  [ -f "$pid_file" ]   && rm -f  "$pid_file"   && wt_say "removed $pid_file"
+
+  return 0
+}
+
+# Kick the detached delete of everything trashed so far. Clears earlier
+# leftovers too. git-annex locks its object tree read-only, so unlock it first
+# or macOS leaves annex remnants.
+#
+# It deletes the trash dir's ENTRIES, never the trash dir itself, and it snapshots
+# the entry list here rather than globbing inside the detached shell. Both matter
+# once a caller removes several worktrees in a row: `bin/workstreams sweep` calls
+# wt_remove_now per eligible worktree, so a reaper from removal N-1 is still
+# running when removal N does its `mv` into the same directory. Deleting the root
+# would make that `mv` fail — leaving a worktree half-removed, its box and cache
+# already gone — and a glob expanded inside the reaper could sweep up an entry
+# that was moved in after it started.
+wt_trash_reap() {
+  local trash="${WT_TRASH:-$WT_STATE_DIR/trash}"
+  [ -d "$trash" ] || return 0
+  local entries=("$trash"/*)
+  # An unmatched glob stays literal; nothing to reap.
+  [ -e "${entries[0]}" ] || return 0
+  nohup sh -c 'for p in "$@"; do chmod -R u+w "$p" 2>/dev/null || true; rm -rf "$p"; done' \
+    sh "${entries[@]}" >/dev/null 2>&1 &
+  disown 2>/dev/null || true
+  return 0
+}
+
+# The private-issues shadow worktree (bin/private-issues): remove it iff merged
+# into private main AND strictly clean; anything else is preserved as an orphan
+# OUTSIDE this worktree (the mount is only a symlink, so public cleanup cannot
+# touch private files) and re-reported by every sweep until resolved. Must run
+# BEFORE the public trash-mv (it classifies the mount via the symlink). Never
+# blocks public cleanup.
+wt_remove_private_issues() {
+  local worktree_path="$1"
+  local pi_cli pi_result
+  pi_cli="$worktree_path/bin/private-issues"
+  [ -x "$pi_cli" ] || pi_cli="$WT_MONO/bin/private-issues" # worktree predates the CLI
+  [ -x "$pi_cli" ] || return 0
+  pi_result=$("$pi_cli" remove-if-safe "$worktree_path" 2>/dev/null || echo "error")
+  wt_say "private-issues: $pi_result"
+  wt_log "private-issues result=$pi_result wt=$worktree_path"
+  return 0
+}
+
+wt_remove_now() {
+  local worktree_path="$1" branch="$2" keep_branch="" preserve_box="" arg
+  shift 2
+  for arg in "$@"; do
+    [ "$arg" = "--keep-branch" ] && keep_branch=1
+    [ "$arg" = "--preserve-box" ] && preserve_box=1
+  done
+  local name final_sha removed_at removed_merged removed_patch moved=false box_ref=""
+  name=$(basename "$worktree_path")
+  final_sha=$(git -C "$worktree_path" rev-parse HEAD 2>/dev/null || true)
+  removed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  removed_merged=false
+  [ "${WT_AHEAD:-?}" = "0" ] && [ "${WT_DIRTY:-?}" = "0" ] && removed_merged=true
+
+  if [ -n "$preserve_box" ]; then
+    workstream_preserve_keep "$name" \
+      || { wt_say "refusing removal: failed to preserve keep as $WORKSTREAM_PRESERVED_BOX_REF"; return 1; }
+    box_ref="$WORKSTREAM_PRESERVED_BOX_REF"
+  fi
+
+  wt_remove_private_issues "$worktree_path"
+  wt_remove_satellites "$name"
+
+  # Move out of the worktree dir before removing it.
+  cd "$WT_MONO" || return 0
+
+  # Trash the worktree directory, then prune the now-dangling registration.
+  if ! mv "$worktree_path" "$WT_TRASH/wt-$name-$(date +%s)"; then
+    wt_say "refusing branch cleanup: failed to trash worktree $worktree_path"
+    wt_log "trash failed wt=$worktree_path branch=$branch"
+    return 1
+  fi
+  wt_say "trashed worktree $worktree_path"
+  moved=true
+  git worktree prune 2>/dev/null || true
+
+  if [ -n "$keep_branch" ]; then
+    wt_say "kept branch $branch (unmerged work; \`git worktree add\` to resume)"
+  elif [ -n "$branch" ] && git branch -D "$branch" >/dev/null 2>&1; then
+    wt_say "deleted branch $branch"
+  fi
+
+  if [ "$moved" = true ]; then
+    removed_patch=$(jq -n \
+      --arg at "$removed_at" \
+      --arg finalSha "$final_sha" \
+      --arg boxRef "$box_ref" \
+      --argjson merged "$removed_merged" \
+      '{removed: ({at:$at, merged:$merged}
+        + if $finalSha == "" then {} else {finalSha:$finalSha} end
+        + if $boxRef == "" then {} else {boxRef:$boxRef} end)}')
+    session_registry_merge "$name" "$removed_patch" || true
+  fi
+
+  wt_trash_reap
+  return 0
+}

@@ -111,13 +111,11 @@ Each service has a doctest in `test/service-*.doctest.md` demonstrating the fake
 |------|-----------|-------------|-------------|
 | `telegram.ts` | `TelegramService` | `createTelegramService(token)` | `createFakeTelegram({ username })` |
 | `claude-cli.ts` | `ClaudeCliService` | `createClaudeCliService()` | `createFakeClaudeCli({ loggedIn? })` |
-| `google-auth.ts` | `GoogleAuthService` | `createGoogleAuthService(client)` | `createFakeGoogleAuth({ accessToken? })` |
+| `google-auth.ts` | `GoogleAuthService` | `createGoogleAuthService(client, { boxRoot? })` | `createFakeGoogleAuth({ accessToken? })` |
 | `google-calendar.ts` | `GoogleCalendarService` | `createGoogleCalendarService(auth)` | `createFakeGoogleCalendar({ calendars?, events? })` |
-| `google-gmail.ts` | `GoogleGmailService` | `createGoogleGmailService(auth)` | `createFakeGoogleGmail({ messages?, labels?, attachments? })` |
+| `google-gmail.ts` (fake in `google-gmail-fake.ts`) | `GoogleGmailService` | `createGoogleGmailService(auth)` | `createFakeGoogleGmail({ messages?, labels?, attachments?, historyId?, oldestValidHistoryId?, historyRecords? })` |
 | `openai-audio.ts` | `OpenAIAudioService` | `createOpenAIAudioService(apiKey)` | `createFakeOpenAIAudio({ transcriptionText? })` |
 | `openai-embeddings.ts` | `EmbeddingsService` | `createOpenAIEmbeddingsService(apiKey)` | `createFakeEmbeddings({ failTimes? })` |
-| `feed-fetcher.ts` | `FeedFetcherService` | `createFeedFetcherService()` | `createFakeFeedFetcher({ feeds? })` |
-| `article-fetcher.ts` | `ArticleFetcherService` | `createArticleFetcherService()` | `createFakeArticleFetcher(articles?)` |
 | `google-drive.ts` | `GoogleDriveService` | `createGoogleDriveService(auth)` | `createFakeGoogleDrive({ files?, spreadsheets? })` |
 | `claude-chat.ts` | `ChatBackend` | `createChatBackend()` | `createFakeChatBackend()` |
 | `call-log.ts` | — | — | `withCallLog(service)`, `printCalls(log)` |

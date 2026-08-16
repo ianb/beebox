@@ -12,14 +12,14 @@ import { randomUUID } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { isRecord } from "../../lib/is-record.js";
+import { errorMessage } from "../../lib/error-guards.js";
 import { type ChatMessage, type ChatSession } from "../../core/chat/session/index.js";
 import { getMostActive } from "../../core/chat/session/history.js";
-import { readLandmarkFeaturesForDir } from "../../core/landmark/features.js";
-import { mergeSeedFeatures } from "../../core/chat/features.js";
 import { summarizeWhatsChanged } from "../../core/chat/whats-changed.js";
 import { createTurnBuffer, removeTurnBuffer, scheduleTurnCleanup } from "../../core/chat/turn-buffer.js";
 import { getSessionUser } from "../auth.js";
 import type { ChatRoutesContext } from "./chat-context.js";
+import { resolveSendTargetForRoute } from "./chat-send-target.js";
 import {
   type SendBody,
   type SelfNoteBody,
@@ -36,7 +36,7 @@ import {
   warnOnUnnormalizedImageOrientation,
 } from "./chat-helpers.js";
 
-const MESSAGE_ID_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const MESSAGE_ID_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 /**
  * Capture an in-flight turn's messages into a resumable buffer keyed by
@@ -51,10 +51,7 @@ const MESSAGE_ID_TTL_MS = 5 * 60 * 1000; // 5 minutes
  * the turn runs — it detaches the listeners and forgets the buffer so a never-
  * starting turn doesn't leak a buffer or capture the next turn's output.
  */
-function captureTurn(
-  chatSession: ChatSession,
-  { turnId, releasePin }: { turnId: string; releasePin: () => void },
-): { cancel: () => void } {
+function captureTurn(chatSession: ChatSession, { turnId, releasePin }: { turnId: string; releasePin: () => void }): { cancel: () => void } {
   const buffer = createTurnBuffer(turnId);
 
   let settled = false;
@@ -106,42 +103,15 @@ function captureTurn(
   return { cancel };
 }
 
-/**
- * Resolve the request's `session` param to a `ChatSession`. Handles the
- * "new" sentinel by constructing a pending session and arranging for
- * promotion when its real id arrives.
- *
- * Returns the session and its current id (`null` for a still-pending new
- * session).
- */
-async function resolveSendTarget(
-  ctx: ChatRoutesContext,
-  { sessionParam, contextDir, requestSeedFeatures }: {
-    sessionParam: string;
-    contextDir: string | undefined;
-    requestSeedFeatures: Record<string, string> | undefined;
-  },
-): Promise<{ session: ChatSession; id: string | null }> {
-  const { registry, boxRoot, wireSession } = ctx;
-  if (sessionParam === "new") {
-    // Layer the client's pre-session choices (e.g. narration toggled on
-    // before the first message) over any landmark defaults — the explicit
-    // choice wins. The merged map seeds createNew so the very first user
-    // message's <chat-app> snapshot reflects it.
-    const landmark = contextDir !== undefined && contextDir !== ""
-      ? await readLandmarkFeaturesForDir(boxRoot, contextDir)
-      : null;
-    const seedFeatures = mergeSeedFeatures({ landmark, request: requestSeedFeatures });
-    const session = registry.createNew({
-      ...(contextDir !== undefined ? { contextDir } : {}),
-      ...(Object.keys(seedFeatures).length > 0 ? { seedFeatures } : {}),
-    });
-    wireSession(session);
-    return { session, id: null };
-  }
-  const session = registry.getOrCreate(sessionParam);
-  wireSession(session);
-  return { session, id: sessionParam };
+function validateInboundImages(images: SendBody["images"]): { error: string; status: number } | null {
+  if (images === undefined || images.length === 0) return null;
+  const invalid = validateImages(images);
+  if (invalid !== null) return invalid;
+  // Contract check: images should arrive orientation-normalized (see
+  // shared/image-orientation.ts). Log, don't reject — there is no server
+  // codec to correct it, and rejecting a real photo would be user-hostile.
+  warnOnUnnormalizedImageOrientation(images);
+  return null;
 }
 
 function pruneMessageIds(processedMessageIds: Map<string, number>): void {
@@ -190,26 +160,31 @@ function persistProcessedMessageIds(boxRoot: string, processedMessageIds: Map<st
 
 export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
   const { server, boxRoot, eventBus, registry, scheduleManager, processedMessageIds } = ctx;
-
   // POST /api/chat/send - Send a message and stream the response
   server.post<{ Body: SendBody | undefined }>("/api/chat/send", async (request, reply) => {
     const parsed = sendBodySchema.safeParse(request.body ?? {});
     if (!parsed.success) {
-      return reply.status(400).send({ error: parsed.error.issues[0]?.message ?? "invalid request body" });
+      return reply.status(400).send({
+        error: parsed.error.issues[0]?.message ?? "invalid request body",
+      });
     }
     const { message, messageId, images, session: sessionParam, contextDir, seedFeatures } = parsed.data;
     const body = parsed.data;
+    const invalid = validateInboundImages(images);
+    if (invalid !== null) return reply.status(invalid.status).send({ error: invalid.error });
 
-    if (images && images.length > 0) {
-      const invalid = validateImages(images);
-      if (invalid) return reply.status(invalid.status).send({ error: invalid.error });
-      // Contract check: images should arrive orientation-normalized (see
-      // shared/image-orientation.ts). Log, don't reject — there is no server
-      // codec to correct it, and rejecting a real photo would be user-hostile.
-      warnOnUnnormalizedImageOrientation(images);
-    }
-
-    const { session: chatSession, id: knownId } = await resolveSendTarget(ctx, { sessionParam, contextDir, requestSeedFeatures: seedFeatures });
+    const target = await resolveSendTargetForRoute({
+      ctx,
+      reply,
+      args: {
+        sessionParam,
+        contextDir,
+        requestSeedFeatures: seedFeatures,
+        exactSession: parsed.data.exactSession ?? false,
+      },
+    });
+    if (target === null) return;
+    const { session: chatSession, id: knownId } = target;
 
     // Identify the sender. A cookie session is the desktop/web path; a paired
     // mobile device authenticates with a bearer token or cb_mobile cookie and
@@ -226,6 +201,9 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
 
     // Deduplicate retries: if we've already processed this messageId, report it
     // as already-done so the client finishes the turn (it will refresh history).
+    // Claiming the id here (rather than after the send) makes it a genuine
+    // in-flight guard against a double-submit; `releaseMessageId` gives it back
+    // if the send never lands, so a retry carrying the same id isn't swallowed.
     if (messageId) {
       pruneMessageIds(processedMessageIds);
       if (processedMessageIds.has(messageId)) {
@@ -235,16 +213,29 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
       processedMessageIds.set(messageId, Date.now());
       persistProcessedMessageIds(boxRoot, processedMessageIds);
     }
+    const releaseMessageId = (): void => {
+      if (!messageId) return;
+      processedMessageIds.delete(messageId);
+      persistProcessedMessageIds(boxRoot, processedMessageIds);
+    };
 
-    // Broadcast the user message to other clients via the event bus.
+    // Broadcast the user message to other clients via the event bus. Emitted
+    // only once the message is genuinely on its way (queued or sent) — this is
+    // a *persisted* event, so emitting it before the send meant a failed run
+    // start left a message in the conversation history that the agent never
+    // received, while the client treated the 500 as "unsent" and offered the
+    // text back for a retry that then recorded it twice
+    // (issues/bugs/2026-08-03-intermittent-spawn-ebadf-sdk-chat-run.md).
     // For pending-new sessions, sessionId is still unknown; subscribers will
     // see it once `session-assigned` fires.
-    eventBus.emit("chat-user-message", {
-      sessionId: knownId,
-      message: attributed,
-      user: user ? { email: user.email, name: user.name } : null,
-      timestamp: new Date().toISOString(),
-    });
+    const recordUserMessage = (): void => {
+      eventBus.emit("chat-user-message", {
+        sessionId: knownId,
+        message: attributed,
+        user: user ? { email: user.email, name: user.name } : null,
+        timestamp: new Date().toISOString(),
+      });
+    };
 
     // Where the user is sending from, for the snapshot's `channel` attr.
     const channel = classifyChannel(request.headers["user-agent"]);
@@ -263,15 +254,14 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
         ...(channel !== undefined ? { channel } : {}),
         ...cardFields,
       });
+      recordUserMessage();
       return reply.send({ queued: true });
     }
 
     // Append active schedule info so the agent knows what's pending.
     // Skip for slash commands so they remain at the start of the text.
     const pendingInfo = isSlashCommand ? "" : scheduleManager.formatPendingForPrompt();
-    const fullMessage = pendingInfo
-      ? attributed + "\n<pending-schedules>" + pendingInfo + "</pending-schedules>"
-      : attributed;
+    const fullMessage = pendingInfo ? attributed + "\n<pending-schedules>" + pendingInfo + "</pending-schedules>" : attributed;
 
     // Touch + enforce the live cap + mark most-active for an already-known
     // session. (A pending "new" session has no id yet for these.)
@@ -294,18 +284,35 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
     const turnId = randomUUID();
     const capture = captureTurn(chatSession, { turnId, releasePin });
 
-    const sent = await chatSession.send({
-      text: fullMessage,
-      ...(images ? { images } : {}),
-      ...(channel !== undefined ? { channel } : {}),
-      ...cardFields,
-    });
+    // `send()` can also *throw*: a run that fails to start (an FD-exhausted SDK
+    // spawn is the case we've seen) rejects rather than returning false. It
+    // unwinds like `sent === false` because both mean the same thing here —
+    // `send()` only throws before it reaches the backend, so nothing was
+    // dispatched. Without this the turn buffer and the session pin leak, and
+    // the messageId stays claimed against the client's own retry.
+    let sent: boolean;
+    try {
+      sent = await chatSession.send({
+        text: fullMessage,
+        ...(images ? { images } : {}),
+        ...(channel !== undefined ? { channel } : {}),
+        ...cardFields,
+      });
+    } catch (e) {
+      capture.cancel();
+      releasePin();
+      releaseMessageId();
+      console.error("[chat] send failed to start a run:", e);
+      return reply.status(500).send({ error: errorMessage(e) });
+    }
     if (!sent) {
       capture.cancel();
       releasePin();
+      releaseMessageId();
       return reply.status(500).send({ error: "Failed to send message" });
     }
 
+    recordUserMessage();
     return reply.send({ turnId });
   });
 
@@ -313,7 +320,9 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
   server.post<{ Body: SelfNoteBody | undefined }>("/api/chat/self-note", async (request, reply) => {
     const parsed = selfNoteBodySchema.safeParse(request.body ?? {});
     if (!parsed.success) {
-      return reply.status(400).send({ error: parsed.error.issues[0]?.message ?? "invalid request body" });
+      return reply.status(400).send({
+        error: parsed.error.issues[0]?.message ?? "invalid request body",
+      });
     }
     const { body, ref, commit, session: requestedSession } = parsed.data;
 
@@ -325,9 +334,7 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
     const target = registry.get(targetId);
     if (!target) {
       return reply.status(404).send({
-        error: requestedSession
-          ? `session "${requestedSession}" is not live`
-          : "no live chat session",
+        error: requestedSession ? `session "${requestedSession}" is not live` : "no live chat session",
       });
     }
 
@@ -359,7 +366,9 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
   server.post<{ Body: WhatsChangedBody | undefined }>("/api/chat/whats-changed", async (request, reply) => {
     const parsed = whatsChangedBodySchema.safeParse(request.body ?? {});
     if (!parsed.success) {
-      return reply.status(400).send({ error: parsed.error.issues[0]?.message ?? "invalid request body" });
+      return reply.status(400).send({
+        error: parsed.error.issues[0]?.message ?? "invalid request body",
+      });
     }
     const { session: requestedSession, card } = parsed.data;
     const sessionId = requestedSession ?? (await getMostActive(boxRoot));

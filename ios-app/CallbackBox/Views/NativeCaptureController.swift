@@ -34,7 +34,7 @@ final class NativeCaptureController: ObservableObject {
 
     func start() async {
         guard box.sessionID?.isEmpty == false else {
-            surfaceState.phase = .failed(message: "Send a message before starting a capture.")
+            fail("Send a message before starting a capture.", operation: "start")
             return
         }
         surfaceState.phase = .starting
@@ -58,12 +58,12 @@ final class NativeCaptureController: ObservableObject {
             case .success:
                 await createNewSession()
             case .retryable(let retry):
-                surfaceState.phase = .failed(message: retry.message)
+                fail(retry.message, operation: "start")
             case .rejected(let rejection):
-                surfaceState.phase = .failed(message: rejection.message)
+                fail(rejection.message, operation: "start")
             }
         } catch {
-            surfaceState.phase = .failed(message: error.localizedDescription)
+            fail(error.localizedDescription, operation: "start")
         }
     }
 
@@ -80,31 +80,40 @@ final class NativeCaptureController: ObservableObject {
             }
             await beginActiveSession()
         } catch {
-            surfaceState.phase = .failed(message: error.localizedDescription)
+            fail(error.localizedDescription, operation: "resume", session: capture.id)
         }
     }
 
     func discardResumable(_ capture: ResumableCapture) async {
         switch await CaptureAPI(box: box).cancel(sessionID: capture.id) {
         case .success, .rejected(.sessionGone):
-            try? await store.deleteCapture(boxID: box.id, sessionID: capture.id)
+            await attempt("delete-capture", session: capture.id) {
+                try await store.deleteCapture(boxID: box.id, sessionID: capture.id)
+            }
             await createNewSession()
         case .retryable(let retry):
-            surfaceState.phase = .failed(message: "Could not discard: \(retry.message)")
+            fail("Could not discard: \(retry.message)", operation: "discard-resumable", session: capture.id)
         case .rejected(let rejection):
-            surfaceState.phase = .failed(message: rejection.message)
+            fail(rejection.message, operation: "discard-resumable", session: capture.id)
         }
     }
 
     func submitResumable(_ capture: ResumableCapture) async {
         sessionID = capture.id
         surfaceState.phase = .sealing
+        // Stop this capture's background uploads before sealing. The runtime
+        // reschedules leftover tasks at launch, so a resumable capture can have
+        // transfers in flight right now — they would spend the uplink on bytes
+        // the sealed session rejects with a 409.
+        await uploadRuntime.cancel(boxID: box.id, sessionID: capture.id)
         switch await CaptureAPI(box: box).finalize(sessionID: capture.id) {
         case .success:
-            try? await store.deleteCapture(boxID: box.id, sessionID: capture.id)
+            await attempt("delete-capture", session: capture.id) {
+                try await store.deleteCapture(boxID: box.id, sessionID: capture.id)
+            }
             isFinished = true
         case .retryable(let retry):
-            surfaceState.phase = .failed(message: retry.message)
+            fail(retry.message, operation: "submit-resumable", session: capture.id)
         case .rejected(let rejection):
             handleLifecycleRejection(rejection)
         }
@@ -113,10 +122,12 @@ final class NativeCaptureController: ObservableObject {
     func takePhoto() async {
         guard sessionID != nil else { return }
         do {
-            _ = try await camera.capturePhoto(into: acquisitionSink)
+            _ = try await camera.capturePhoto(into: acquisitionSink) { [weak self] in
+                self?.surfaceState.captureFeedbackSequence += 1
+            }
             await refreshSurface()
         } catch {
-            showError(error.localizedDescription, retryable: false)
+            showError(error.localizedDescription, retryable: false, operation: "take-photo")
         }
     }
 
@@ -124,7 +135,7 @@ final class NativeCaptureController: ObservableObject {
         do {
             try await camera.switchCamera()
         } catch {
-            showError(error.localizedDescription, retryable: false)
+            showError(error.localizedDescription, retryable: false, operation: "switch-camera")
         }
     }
 
@@ -159,78 +170,105 @@ final class NativeCaptureController: ObservableObject {
                 do {
                     try await uploadRuntime.schedule(candidate)
                 } catch {
-                    try? await store.transition(
-                        boxID: candidate.boxID,
-                        sessionID: candidate.sessionID,
-                        itemID: candidate.itemID,
-                        to: .failed(message: error.localizedDescription)
-                    )
-                    showError(error.localizedDescription, retryable: true)
+                    await attempt("mark-item-failed", session: candidate.sessionID) {
+                        try await store.transition(
+                            boxID: candidate.boxID,
+                            sessionID: candidate.sessionID,
+                            itemID: candidate.itemID,
+                            to: .failed(message: error.localizedDescription)
+                        )
+                    }
+                    showError(error.localizedDescription, retryable: true, operation: "retry-upload-schedule")
                 }
             }
             await refreshSurface()
         } catch {
-            showError(error.localizedDescription, retryable: true)
+            showError(error.localizedDescription, retryable: true, operation: "retry-uploads")
         }
     }
 
+    /// Guards against a second `finish()` running while one is already waiting
+    /// — two concurrent waits would each call finalize.
+    private var isFinishing = false
+
+    /// Set by ``skipPendingUploads`` to break ``finish``'s wait. A capture on a
+    /// weak uplink can legitimately take many minutes, so the wait has no
+    /// deadline of its own — the user's explicit skip is the only thing that
+    /// cuts it short.
+    ///
+    /// Sticky across a failed finalize. Cancelling an upload returns its item to
+    /// `.local`, which `retryFailedUploads` does not pick up (it selects
+    /// `.failed`), so clearing the flag on every `finish()` would leave a second
+    /// Done waiting forever on items the user already chose to abandon. It is
+    /// cleared when new media arrives instead — that media has not been skipped.
+    private var skipPendingRequested = false
+
     func finish() async {
-        guard let sessionID else { return }
+        guard let sessionID, isFinishing == false else { return }
+        isFinishing = true
+        defer { isFinishing = false }
         if audioRecorder.isRecording {
             await audioRecorder.stop()
         }
         surfaceState.phase = .sealing
         await refreshSurface(preservingPhase: true)
 
-        for _ in 0..<120 {
-            guard let manifest = try? await store.loadManifest(boxID: box.id, sessionID: sessionID) else {
+        // Wait for outstanding uploads with NO fixed deadline. The old version
+        // gave up after 120 × 250ms and told the user "Try Done again in a
+        // moment" — but on the slow link that causes the wait in the first
+        // place, that moment never arrives, so Done became unpressable
+        // forever. Now the wait persists (with a live count on screen) and
+        // ``skipPendingUploads`` is the escape.
+        while skipPendingRequested == false {
+            guard let manifest = await loadedManifest(for: sessionID, operation: "finish") else {
+                fail("The local capture record could not be read.", operation: "finish")
+                return
+            }
+            if manifest.pendingItemCount == 0 {
                 break
             }
-            let pending = manifest.items.contains { item in
-                switch item.state {
-                case .local, .uploading, .recording:
-                    true
-                case .uploaded, .failed:
-                    false
-                }
-            }
-            if pending == false {
-                break
-            }
+            await refreshSurface(preservingPhase: true)
             try? await Task.sleep(nanoseconds: 250_000_000)
         }
 
-        guard let manifest = try? await store.loadManifest(boxID: box.id, sessionID: sessionID) else {
-            surfaceState.phase = .failed(message: "The local capture record could not be read.")
+        if skipPendingRequested {
+            // Stop the transfers before sealing: a background task still
+            // uploading into a sealed session gets a 409 and its bytes are
+            // wasted — on exactly the constrained link the user is escaping.
+            await uploadRuntime.cancel(boxID: box.id, sessionID: sessionID)
+        }
+
+        guard let manifest = await loadedManifest(for: sessionID, operation: "finish") else {
+            fail("The local capture record could not be read.", operation: "finish")
             return
         }
-        let stillPending = manifest.items.contains { item in
-            switch item.state {
-            case .local, .uploading, .recording:
-                true
-            case .uploaded, .failed:
-                false
-            }
-        }
-        if stillPending {
+        // A skip deliberately seals with failures present, so only an
+        // unsolicited failure sends the user back to decide.
+        if skipPendingRequested == false,
+           manifest.items.contains(where: { if case .failed = $0.state { true } else { false } }) {
             surfaceState.phase = .active
-            showError("Uploads are still finishing. Try Done again in a moment.", retryable: false)
-            await refreshSurface(preservingPhase: true)
-            return
-        }
-        if manifest.items.contains(where: { if case .failed = $0.state { true } else { false } }) {
-            surfaceState.phase = .active
-            showError("Some items did not upload.", retryable: true)
+            showError("Some items did not upload.", retryable: true, operation: "finish")
             await refreshSurface()
             return
         }
         await finalize(sessionID: sessionID)
     }
 
+    /// Abandon whatever is still uploading and seal with what the box already
+    /// has. Mirrors the web capture surface's "Skip them".
+    func skipPendingUploads() {
+        skipPendingRequested = true
+    }
+
     func submitUploadedItems() async {
         guard let sessionID, surfaceState.counts.uploaded > 0 else { return }
+        // Same reasoning as the skip path above — cancel before sealing so the
+        // in-flight tasks don't keep spending the uplink on bytes the sealed
+        // session will reject.
+        await uploadRuntime.cancel(boxID: box.id, sessionID: sessionID)
         await finalize(sessionID: sessionID)
     }
+
 
     func cancel() async {
         guard let sessionID else {
@@ -244,10 +282,12 @@ final class NativeCaptureController: ObservableObject {
         await uploadRuntime.cancel(boxID: box.id, sessionID: sessionID)
         switch await CaptureAPI(box: box).cancel(sessionID: sessionID) {
         case .success, .rejected(.sessionGone):
-            try? await store.deleteCapture(boxID: box.id, sessionID: sessionID)
+            await attempt("delete-capture", session: sessionID) {
+                try await store.deleteCapture(boxID: box.id, sessionID: sessionID)
+            }
             isFinished = true
         case .retryable(let retry):
-            showError("Could not cancel: \(retry.message)", retryable: true)
+            showError("Could not cancel: \(retry.message)", retryable: true, operation: "cancel")
             await beginActiveSession()
         case .rejected(let rejection):
             handleLifecycleRejection(rejection)
@@ -278,20 +318,25 @@ final class NativeCaptureController: ObservableObject {
                 storedAudioRecorder = nil
                 await beginActiveSession()
             } catch {
-                surfaceState.phase = .failed(message: error.localizedDescription)
+                fail(error.localizedDescription, operation: "send-follow-up")
             }
         case .success:
-            surfaceState.phase = .failed(message: "The box must be updated before it can receive native captures.")
+            fail(
+                "The box must be updated before it can receive native captures.",
+                operation: "send-follow-up"
+            )
         case .retryable(let retry):
-            surfaceState.phase = .failed(message: retry.message)
+            fail(retry.message, operation: "send-follow-up")
         case .rejected(let rejection):
-            surfaceState.phase = .failed(message: rejection.message)
+            fail(rejection.message, operation: "send-follow-up")
         }
     }
 
     func discardRemaining() async {
         guard let sessionID else { return }
-        try? await store.deleteCapture(boxID: box.id, sessionID: sessionID)
+        await attempt("delete-capture", session: sessionID) {
+            try await store.deleteCapture(boxID: box.id, sessionID: sessionID)
+        }
         isFinished = true
     }
 
@@ -351,15 +396,18 @@ final class NativeCaptureController: ObservableObject {
                 )
                 await beginActiveSession()
             } catch {
-                surfaceState.phase = .failed(message: error.localizedDescription)
+                fail(error.localizedDescription, operation: "create-session", session: newSessionID)
             }
         case .success(let response):
             _ = await CaptureAPI(box: box).cancel(sessionID: CaptureSessionID(rawValue: response.sessionId))
-            surfaceState.phase = .failed(message: "The box must be updated before it can receive native captures.")
+            fail(
+                "The box must be updated before it can receive native captures.",
+                operation: "create-session"
+            )
         case .retryable(let retry):
-            surfaceState.phase = .failed(message: retry.message)
+            fail(retry.message, operation: "create-session")
         case .rejected(let rejection):
-            surfaceState.phase = .failed(message: rejection.message)
+            fail(rejection.message, operation: "create-session")
         }
     }
 
@@ -373,7 +421,7 @@ final class NativeCaptureController: ObservableObject {
             }
             try await uploadRuntime.start()
         } catch {
-            showError(error.localizedDescription, retryable: true)
+            showError(error.localizedDescription, retryable: true, operation: "begin-active-session")
         }
         surfaceState.phase = .active
         await refreshSurface()
@@ -383,7 +431,7 @@ final class NativeCaptureController: ObservableObject {
         } catch {
             surfaceState.cameraAvailable = false
             surfaceState.canOpenSettings = error as? CaptureAcquisitionError == .cameraPermissionDenied
-            showError(error.localizedDescription, retryable: false)
+            showError(error.localizedDescription, retryable: false, operation: "camera-start")
         }
     }
 
@@ -392,11 +440,13 @@ final class NativeCaptureController: ObservableObject {
         switch await CaptureAPI(box: box).finalize(sessionID: sessionID) {
         case .success:
             await camera.stop()
-            try? await store.deleteCapture(boxID: box.id, sessionID: sessionID)
+            await attempt("delete-capture", session: sessionID) {
+                try await store.deleteCapture(boxID: box.id, sessionID: sessionID)
+            }
             isFinished = true
         case .retryable(let retry):
             surfaceState.phase = .active
-            showError(retry.message, retryable: true)
+            showError(retry.message, retryable: true, operation: "finalize")
         case .rejected(let rejection):
             handleLifecycleRejection(rejection)
         }
@@ -415,7 +465,7 @@ final class NativeCaptureController: ObservableObject {
                 message: "This capture was submitted while the phone was away."
             )
         default:
-            surfaceState.phase = .failed(message: rejection.message)
+            fail(rejection.message, operation: "lifecycle")
         }
     }
 
@@ -429,7 +479,7 @@ final class NativeCaptureController: ObservableObject {
         case .retryScheduled(_, let seconds):
             surfaceState.banner = "Upload interrupted. Retrying in \(seconds) seconds."
         case .failed(_, let message):
-            showError(message, retryable: true)
+            showError(message, retryable: true, operation: "upload")
         case .recovery(.sessionGone):
             surfaceState.phase = .recovery(
                 title: "Capture no longer available",
@@ -458,11 +508,13 @@ final class NativeCaptureController: ObservableObject {
         case .starting, .choosingResume, .recovery, .failed:
             return
         }
+        // New media is not covered by an earlier skip.
+        skipPendingRequested = false
         let candidate = CaptureUploadCandidate(boxID: box.id, sessionID: sessionID, itemID: itemID)
         do {
             try await uploadRuntime.schedule(candidate)
         } catch {
-            showError(error.localizedDescription, retryable: true)
+            showError(error.localizedDescription, retryable: true, operation: "enqueue-upload")
         }
     }
 
@@ -486,9 +538,16 @@ final class NativeCaptureController: ObservableObject {
         case .closed(_, let reason):
             elapsedTask?.cancel()
             switch surfaceState.phase {
-            case .recovery, .failed:
+            // `.sealing` must survive. `finish()` stops the recorder and THEN
+            // enters `.sealing`, but this event is delivered on its own
+            // `@MainActor` task, so it routinely lands afterwards. Resetting to
+            // `.active` there put the Done button back mid-seal (inviting a
+            // re-entrant finish), reopened acquisition, and hid the "waiting for
+            // N uploads / Skip Them" banner — removing the user's only escape
+            // from the wait.
+            case .recovery, .failed, .sealing:
                 break
-            case .starting, .choosingResume, .active, .recording, .sealing:
+            case .starting, .choosingResume, .active, .recording:
                 surfaceState.phase = .active
             }
             if reason != .user {
@@ -496,8 +555,12 @@ final class NativeCaptureController: ObservableObject {
             }
         case .failed(_, let message):
             elapsedTask?.cancel()
-            surfaceState.phase = .active
-            showError(message, retryable: false)
+            // Same reasoning: surface the error, but don't yank the phase out
+            // from under an in-flight seal.
+            if surfaceState.phase != .sealing {
+                surfaceState.phase = .active
+            }
+            showError(message, retryable: false, operation: "audio")
             surfaceState.canOpenSettings = message == CaptureAcquisitionError.microphonePermissionDenied.localizedDescription
         }
         await refreshSurface(preservingPhase: true)
@@ -506,7 +569,7 @@ final class NativeCaptureController: ObservableObject {
     private func refreshSurface(preservingPhase: Bool = false) async {
         guard
             let sessionID,
-            let manifest = try? await store.loadManifest(boxID: box.id, sessionID: sessionID)
+            let manifest = await loadedManifest(for: sessionID, operation: "refresh-surface")
         else {
             return
         }
@@ -518,10 +581,11 @@ final class NativeCaptureController: ObservableObject {
             case .audio: counts.audioSegments += 1
             }
             switch item.state {
+            case .local: counts.queued += 1
             case .uploading: counts.uploading += 1
             case .uploaded: counts.uploaded += 1
             case .failed: counts.failed += 1
-            case .recording, .local: break
+            case .recording: break
             }
         }
         surfaceState.counts = counts
@@ -544,13 +608,66 @@ final class NativeCaptureController: ObservableObject {
     private func showImportFailures(_ results: [CaptureImportResult]) {
         let messages = results.compactMap(\.error?.localizedDescription)
         if messages.isEmpty == false {
-            showError(messages.joined(separator: "\n"), retryable: false)
+            showError(
+                messages.joined(separator: "\n"),
+                retryable: false,
+                operation: "import (\(messages.count) of \(results.count) failed)"
+            )
         }
     }
 
-    private func showError(_ message: String, retryable: Bool) {
+    /// Surface a failure to the user AND to the box. Every failure on this
+    /// screen used to exist only as a banner on the phone; `operation` is what
+    /// makes the forwarded line diagnosable afterwards.
+    private func showError(_ message: String, retryable: Bool, operation: String) {
+        BoxLog.error("\(operation) failed \(detail()): \(message)", category: .capture)
         surfaceState.banner = message
         surfaceState.canRetry = retryable
+    }
+
+    /// Enter the terminal failure phase, logging the same way `showError` does.
+    private func fail(_ message: String, operation: String, session: CaptureSessionID? = nil) {
+        BoxLog.error("\(operation) failed \(detail(session)): \(message)", category: .capture)
+        surfaceState.phase = .failed(message: message)
+    }
+
+    /// Log-and-continue for the best-effort local-record calls this screen
+    /// deliberately ignores the outcome of. Ignoring the outcome is the intent;
+    /// ignoring the error is how a capture becomes undiagnosable.
+    private func attempt(
+        _ operation: String,
+        session: CaptureSessionID? = nil,
+        _ work: () async throws -> Void
+    ) async {
+        do {
+            try await work()
+        } catch {
+            BoxLog.warn(
+                "\(operation) failed \(detail(session)): \(error.localizedDescription)",
+                category: .capture
+            )
+        }
+    }
+
+    /// The manifest read every caller treats as "no manifest" on failure. The
+    /// read itself is best-effort; the reason it failed is not.
+    private func loadedManifest(
+        for session: CaptureSessionID,
+        operation: String
+    ) async -> CaptureManifest? {
+        do {
+            return try await store.loadManifest(boxID: box.id, sessionID: session)
+        } catch {
+            BoxLog.warn(
+                "load-manifest failed during \(operation) \(detail(session)): \(error.localizedDescription)",
+                category: .capture
+            )
+            return nil
+        }
+    }
+
+    private func detail(_ session: CaptureSessionID? = nil) -> String {
+        "session=\((session ?? sessionID)?.rawValue ?? "none")"
     }
 
     private func startElapsedTimer() {
@@ -595,6 +712,7 @@ struct NativeCaptureScreen: View {
             onOpenSettings: { controller.openSettings() },
             onFinish: { Task { await controller.finish() } },
             onSubmitUploadedItems: { Task { await controller.submitUploadedItems() } },
+            onSkipPendingUploads: { controller.skipPendingUploads() },
             onSendFollowUp: { Task { await controller.sendRemainingAsFollowUp() } },
             onDiscardRemaining: { Task { await controller.discardRemaining() } }
         )

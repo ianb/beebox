@@ -1,9 +1,10 @@
+---
+title: "GitHub Pages front-door site"
+status: partial
+workstream: unknown
+issues: []
+---
 # GitHub Pages front-door site
-
-**Status:** partially implemented 2026-07 — chunks A1/B1/D1 (site package, dev
-router route, inert Pages workflow) and a minimal C1 (single hand-authored
-home page) shipped; tracks E (nugget extraction) and F (fisheye presentation)
-plus the real letter content are still pending.
 
 A static public site for callback-box, generated from repo content, deployed to
 GitHub Pages, and viewable on the dev router. The design principles were settled
@@ -294,7 +295,7 @@ Ordered by implementation dependency, then surface size.
   zero/ambiguous → visible stale marker; missing source or non-allowlisted
   path → **build fails** (fail-closed). This is the same
   committed-input → auditable-artifact shape the
-  [security report](../../../issues/features/2026-07-20-agent-maintained-security-report.md)
+  [security report](../../../issues/closed/features/2026-07-20-agent-maintained-security-report.md)
   *proposes* (that system is designed but not yet built — this site is the
   pattern's first implementation, not its second).
 - **Derivation tiers** (boxholder, 2026-07-21: "Some of the aspects of the

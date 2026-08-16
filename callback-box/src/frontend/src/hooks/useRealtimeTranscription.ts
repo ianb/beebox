@@ -12,10 +12,11 @@
  */
 
 import { useCallback, useEffect, useRef } from "react";
-import { useSSRMachine } from "./useSSRMachine";
+import { useMachine } from "@xstate/react";
 import {
   realtimeTranscriptionMachine,
   type TranscriptionState,
+  type FinalWord,
 } from "../machines/realtimeTranscriptionMachine";
 import { detectKeyword, type KeywordResult } from "../lib/audio/speech-keywords";
 import { stillListening, recordingStart } from "../lib/audio/earcons";
@@ -62,6 +63,15 @@ export interface UseRealtimeTranscriptionResult {
   transcript: string;
   /** Confirmed text only — keyword detection runs against this. */
   finalTranscript: string;
+  /**
+   * Words backing `finalTranscript`, with confidence when the service
+   * reports one. `null` means no confidence data has been captured for
+   * this segment (Voxtral/OpenAI realtime, or nothing finalized yet) —
+   * only Deepgram ever produces an array. Stays aligned with
+   * `finalTranscript` across reconnects; see realtimeTranscriptionMachine's
+   * `finalWords` context field.
+   */
+  finalWords: FinalWord[] | null;
   /** Live, unconfirmed text. May change as the recognizer revises. */
   interimTranscript: string;
   error: string | null;
@@ -73,8 +83,14 @@ export interface UseRealtimeTranscriptionResult {
    * attempt errors out (e.g. permission denied) before recording begins.
    */
   start: (opts?: { earcon?: boolean }) => void;
-  /** Stop recording and wait for final transcript. Returns the final text. */
-  stop: () => Promise<string>;
+  /**
+   * Stop recording and wait for the final transcript. Resolves with the
+   * words backing that text too (Fix D, docs/plans/
+   * transcript-confidence.md) — read inside the hook at the same idle
+   * transition that finalizes them, never from a caller's possibly-stale
+   * closure over the returned handle.
+   */
+  stop: () => Promise<{ text: string; words: FinalWord[] | null }>;
   cancel: () => void;
   dismissError: () => void;
 }
@@ -164,16 +180,25 @@ function dispatchKeyword(
   ctx: {
     send: (event: { type: "STOP" | "CANCEL" | "START" }) => void;
     optionsRef: React.MutableRefObject<UseRealtimeTranscriptionOptions | undefined>;
-    pendingSendRef: React.MutableRefObject<{ processedTranscript: string; matchedPhrase: string; closeMic: boolean } | null>;
+    pendingSendRef: React.MutableRefObject<{ processedTranscript: string; matchedPhrase: string; closeMic: boolean; hq: boolean } | null>;
+    /**
+     * Live-synced snapshot of `finalWords`, read at the same moment the
+     * fast path commits its text (docs/plans/transcript-confidence.md,
+     * Track 3) — a plain state variable would go stale inside this
+     * module-level function, which isn't itself a hook.
+     */
+    finalWordsRef: React.MutableRefObject<FinalWord[] | null>;
   }
 ): void {
-  const { send, optionsRef, pendingSendRef } = ctx;
+  const { send, optionsRef, pendingSendRef, finalWordsRef } = ctx;
   switch (keyword.action) {
     case "send":
+    case "sendHq":
     case "sendClose": {
-      // Both variants run the same send path; the only difference is whether
-      // the mic re-arms afterward, which the chat layer decides off `closeMic`.
+      // All send variants use one path. `closeMic` controls re-arming, while
+      // `hq` asks the chat layer to run HQ even when narration mode is off.
       const closeMic = keyword.action === "sendClose";
+      const hq = keyword.action === "sendHq";
       const wantBlob = optionsRef.current?.wantAudioBlob?.() ?? false;
       if (wantBlob) {
         // Slow path: park the text and STOP so the machine finalizes and
@@ -184,6 +209,7 @@ function dispatchKeyword(
           processedTranscript: keyword.processedTranscript,
           matchedPhrase: keyword.matchedPhrase,
           closeMic,
+          hq,
         };
         send({ type: "STOP" });
       } else {
@@ -197,6 +223,8 @@ function dispatchKeyword(
           matchedPhrase: keyword.matchedPhrase,
           audioBlob: null,
           closeMic,
+          hq,
+          words: finalWordsRef.current,
         });
       }
       break;
@@ -222,19 +250,19 @@ function dispatchKeyword(
 export function useRealtimeTranscription(
   options?: UseRealtimeTranscriptionOptions
 ): UseRealtimeTranscriptionResult {
-  const [snapshot, send] = useSSRMachine(realtimeTranscriptionMachine);
+  const [snapshot, send] = useMachine(realtimeTranscriptionMachine);
   const optionsRef = useRef(options);
   useEffect(() => {
     optionsRef.current = options;
   });
-  const doneResolveRef = useRef<((text: string) => void) | null>(null);
+  const doneResolveRef = useRef<((result: { text: string; words: FinalWord[] | null }) => void) | null>(null);
   /**
    * When a send-keyword fires, we send STOP to the machine and wait for it
    * to transition to idle so the audio blob lands in context. The pending
    * text + matched phrase are parked here in the meantime; the
    * idle-transition effect picks them up and fires onKeywordSend.
    */
-  const pendingSendRef = useRef<{ processedTranscript: string; matchedPhrase: string; closeMic: boolean } | null>(null);
+  const pendingSendRef = useRef<{ processedTranscript: string; matchedPhrase: string; closeMic: boolean; hq: boolean } | null>(null);
   /**
    * Set by `start({ earcon: true })`. The recording-start earcon plays only
    * when the machine actually reaches `recording` — so the "you're recording
@@ -265,8 +293,18 @@ export function useRealtimeTranscription(
           ? "connecting"
           : "idle";
 
-  const { finalTranscript, interimTranscript, error } = snapshot.context;
+  const { finalTranscript, finalWords, interimTranscript, error } = snapshot.context;
   const transcript = combine(finalTranscript, interimTranscript);
+
+  // Live-synced snapshot of finalWords, read by the fast keyword-send path
+  // (dispatchKeyword, a module function outside the render closure) at the
+  // same moment it commits the text (Track 3, docs/plans/
+  // transcript-confidence.md). Declared here — before fireKeyword/keyword
+  // spotting below — so the sync effect runs first within a commit.
+  const finalWordsRef = useRef<FinalWord[] | null>(finalWords);
+  useEffect(() => {
+    finalWordsRef.current = finalWords;
+  });
 
   // Wake-lock used to live here, tied to mic state. It now lives in the
   // chat layer where the broader "voice conversation in progress" signal
@@ -274,7 +312,7 @@ export function useRealtimeTranscription(
   // window where the mic is intentionally paused.
 
   const fireKeyword = useCallback(
-    (keyword: KeywordResult) => dispatchKeyword(keyword, { send, optionsRef, pendingSendRef }),
+    (keyword: KeywordResult) => dispatchKeyword(keyword, { send, optionsRef, pendingSendRef, finalWordsRef }),
     [send]
   );
 
@@ -291,9 +329,13 @@ export function useRealtimeTranscription(
       text: pending.processedTranscript,
       matchedPhrase: pending.matchedPhrase,
       closeMic: pending.closeMic,
+      hq: pending.hq,
       audioBlob: snapshot.context.audioBlob,
+      // Read alongside the parked text at the same idle transition, so the
+      // words are the ones the machine finalized for it (Track 3).
+      words: snapshot.context.finalWords,
     });
-  }, [state, snapshot.context.audioBlob]);
+  }, [state, snapshot.context.audioBlob, snapshot.context.finalWords]);
 
   const keywordSpotting = useKeywordSpotting({ state, finalTranscript, interimTranscript, fireKeyword });
 
@@ -307,14 +349,16 @@ export function useRealtimeTranscription(
     return () => clearInterval(interval);
   }, [state, transcript]);
 
-  // Resolve stop() promise when machine returns to idle
+  // Resolve stop() promise when machine returns to idle — words come from
+  // context at this same idle transition (Fix D), not from a caller's
+  // possibly-stale closure over the returned handle.
   useEffect(() => {
     if (state === "idle" && doneResolveRef.current) {
-      doneResolveRef.current(transcript);
+      doneResolveRef.current({ text: transcript, words: snapshot.context.finalWords });
       doneResolveRef.current = null;
       consumedRef.current = true;
     }
-  }, [state, transcript]);
+  }, [state, transcript, snapshot.context.finalWords]);
 
   // Segment ended with text nobody took (see onUnconsumedTranscript docs).
   // Declared after the keyword-send and stop()-resolve effects so their
@@ -359,18 +403,18 @@ export function useRealtimeTranscription(
     send({ type: "START" });
   }, [send, keywordSpotting]);
 
-  const stop = useCallback((): Promise<string> => {
+  const stop = useCallback((): Promise<{ text: string; words: FinalWord[] | null }> => {
     // A stop during a reconnect blip still ends the segment properly —
     // resolving immediately would leave the machine reconnecting and the
     // expired window would later re-surface the same text as unconsumed.
     if (state !== "recording" && state !== "reconnecting") {
-      return Promise.resolve(transcript);
+      return Promise.resolve({ text: transcript, words: finalWords });
     }
     send({ type: "STOP" });
-    return new Promise<string>((resolve) => {
+    return new Promise((resolve) => {
       doneResolveRef.current = resolve;
     });
-  }, [state, transcript, send]);
+  }, [state, transcript, finalWords, send]);
 
   const cancel = useCallback(() => {
     keywordSpotting.reset();
@@ -410,6 +454,7 @@ export function useRealtimeTranscription(
     state,
     transcript,
     finalTranscript,
+    finalWords,
     interimTranscript,
     error,
     start,

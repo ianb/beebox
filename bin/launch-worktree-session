@@ -4,17 +4,40 @@
 # user message; the agent reads it as context but does NOT auto-implement.
 #
 # Usage:
-#   launch-worktree-session [--model <model>] <worktree-name> "<prompt text>"
+#   launch-worktree-session [--agent claude|codex] [--model <model>] [--issue issues/<path>.md] <worktree-name> "<prompt text>"
 #   launch-worktree-session [--model <model>] <worktree-name> -      # prompt from stdin
 #   launch-worktree-session [--model <model>] <worktree-name> @<file># prompt from a file
+#   launch-worktree-session --help
 #
-# --model passes `claude --model <model>` (e.g. claude-fable-5, opus, sonnet) so a
-# worktree can be spun up on a specific model; omit to use the default.
+# --model passes `claude --model <model>` (e.g. claude-fable-5, opus, sonnet) —
+# or `codex -m <model>` with --agent codex — so a worktree can be spun up on a
+# specific model. Omitted Claude models use Claude's default; omitted Codex
+# models use gpt-5.6-sol.
+#
+# --emoji 🐛 prefixes the Terminal tab title with a glyph, so a wall of tabs is
+# scannable at a glance. Omit it and one is derived
+# from the worktree name — deterministic, so the same worktree always gets the
+# same glyph. The emoji never reaches disk: the worktree dir, branch, router URL
+# prefix, and the argv the sweep's liveness check matches all use the plain
+# `[a-zA-Z0-9_-]+` name. Prefer passing one that fits the task over the derived
+# fallback, which is arbitrary.
+#
+# --agent codex runs OpenAI's codex CLI instead of claude. Both paths call
+# `bin/workstreams create` directly (same worktree + box clone + installs; it
+# also generates the gitignored
+# AGENTS.md/rule/skill mirrors Codex reads — bin/generate-agents-md.ts), then
+# runs codex in the worktree with full access/no-approvals (parity with claude
+# workers, which run unsandboxed). Codex is run, not exec'd, because it fires no
+# hooks: the launcher needs an "after codex exits" moment to run
+# bin/codex-session-end, which gives codex the same teardown SessionEnd gives
+# claude (auto-remove when merged + clean; keep/remove prompt otherwise).
 #
 # Remote Control is enabled by default (`claude --remote-control <worktree>`),
 # so a session started here can be steered from elsewhere — these run unattended
 # in background tabs and much of the testing they generate happens on a phone.
-# Pass --no-remote-control to launch without it.
+# Pass --no-remote-control to launch without it. Claude-only: codex has no
+# per-session remote-control analog (its `codex remote-control` is an
+# app-server pairing daemon), so with --agent codex this flag is ignored.
 #
 # Examples:
 #   launch-worktree-session service-inject-gcal "We discussed switching the gcal connector to use a Service-style injection..."
@@ -22,8 +45,10 @@
 #   launch-worktree-session explore-foo @briefing.md
 #
 # Notes:
-# - Mirrors the existing `cccb` bash function: cd into the monorepo and pass
-#   --worktree/--name/--dangerously-skip-permissions. Adds the initial prompt.
+# - Creates or reattaches through `bin/workstreams create`, cd's into the
+#   managed checkout, and passes --name/--dangerously-skip-permissions. It does
+#   not pass Claude's native --worktree flag: repository hooks and sweep own
+#   cleanup, so Claude must not show its separate keep/remove dialog on exit.
 # - First AppleScript invocation will prompt for Accessibility permission for
 #   Terminal control; macOS only asks once.
 
@@ -38,18 +63,43 @@ set -euo pipefail
 # `--no-remote-control` opts out.
 model=""
 remote_control=1
+agent="claude"
+emoji=""
+issue=""
+
+# `--help` prints this file's own header comment — the usage block, the flag
+# explanations, and the examples are already written there, and a second copy
+# in a heredoc would be the one that goes stale. Reads from the line after the
+# shebang to the first line that isn't a comment, stripping the `# ` prefix.
+usage() {
+  sed -n '2,${/^#/!q;s/^# \{0,1\}//;p;}' "${BASH_SOURCE[0]}"
+}
+
 while [ $# -ge 1 ]; do
   case "$1" in
+    --help|-h) usage; exit 0 ;;
     --model)   [ $# -ge 2 ] || { echo "launch-worktree-session: --model needs a value" >&2; exit 1; }; model="$2"; shift 2 ;;
     --model=*) model="${1#--model=}"; shift ;;
+    --agent)   [ $# -ge 2 ] || { echo "launch-worktree-session: --agent needs a value" >&2; exit 1; }; agent="$2"; shift 2 ;;
+    --agent=*) agent="${1#--agent=}"; shift ;;
+    --emoji)   [ $# -ge 2 ] || { echo "launch-worktree-session: --emoji needs a value" >&2; exit 1; }; emoji="$2"; shift 2 ;;
+    --emoji=*) emoji="${1#--emoji=}"; shift ;;
+    --issue)   [ $# -ge 2 ] || { echo "launch-worktree-session: --issue needs a value" >&2; exit 1; }; issue="$2"; shift 2 ;;
+    --issue=*) issue="${1#--issue=}"; shift ;;
     --no-remote-control) remote_control=0; shift ;;
     --remote-control)    remote_control=1; shift ;;
     *)         break ;;
   esac
 done
 
+case "$agent" in
+  claude|codex) ;;
+  *) echo "launch-worktree-session: --agent must be claude or codex, got: $agent" >&2; exit 1 ;;
+esac
+
 if [ $# -lt 1 ]; then
-  echo "Usage: launch-worktree-session [--model <model>] [--no-remote-control] <worktree-name> [<prompt> | - | @<file>]" >&2
+  echo "Usage: launch-worktree-session [--agent claude|codex] [--model <model>] [--emoji <char>] [--issue <path>] [--no-remote-control] <worktree-name> [<prompt> | - | @<file>]" >&2
+  echo "       launch-worktree-session --help   # full documentation" >&2
   exit 1
 fi
 
@@ -59,6 +109,29 @@ if ! [[ "$wt" =~ ^[a-zA-Z0-9_-]+$ ]]; then
   echo "launch-worktree-session: worktree name must match [a-zA-Z0-9_-]+, got: $wt" >&2
   exit 1
 fi
+
+if [ -n "$issue" ] && ! [[ "$issue" =~ ^(issues|private-issues)/(closed/)?(bugs|features|code-quality|docs-and-chores|decisions|exploration|watch)/[a-zA-Z0-9_-]+\.md$ ]]; then
+  echo "launch-worktree-session: --issue must be a repo-relative issue markdown path, got: $issue" >&2
+  exit 1
+fi
+
+# Session display name: an emoji plus the worktree name. The emoji exists purely
+# so a wall of Terminal tabs is scannable — several concurrent sessions with
+# similar slugs are hard to tell apart at a glance, and a glyph reads faster
+# than a prefix. It goes into the Terminal title and registry presentation;
+# Claude's `--name` remains the plain workstream name as a durable liveness
+# marker. `$wt` stays `[a-zA-Z0-9_-]+` and is what every path, branch, router
+# URL prefix, and liveness check uses.
+#
+# `--emoji 🐛` sets it explicitly — prefer that, chosen for the task at hand.
+# Otherwise derive one from the name: deterministic, so relaunching the same
+# worktree keeps the same glyph and you learn to recognize it.
+if [ -z "$emoji" ]; then
+  # shellcheck source=lib/launch-session.sh
+  . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/launch-session.sh"
+  emoji=$(launch_session_default_emoji "$wt")
+fi
+session_name="$emoji $wt"
 
 # Resolve the prompt source.
 prompt=""
@@ -70,10 +143,35 @@ if [ $# -ge 1 ]; then
   esac
 fi
 
-MONO="$HOME/src/callback-box"
-if [ ! -d "$MONO" ]; then
-  echo "launch-worktree-session: $MONO not found" >&2
+# Self-locate the monorepo from this script's own REAL path (bin/ lives at the
+# repo root; the ~/.local/bin install is a symlink, so follow it first),
+# falling back to the historical location. A worktree checkout resolves to the
+# MAIN checkout via git-common-dir so creation always uses the shared owner.
+self="${BASH_SOURCE[0]}"
+while [ -L "$self" ]; do
+  target=$(readlink "$self")
+  case "$target" in
+    /*) self="$target" ;;
+    *)  self="$(dirname "$self")/$target" ;;
+  esac
+done
+script_dir=$(cd "$(dirname "$self")" && pwd)
+# One derivation, shared with every other piece of worktree tooling. It fails
+# closed rather than falling back to a hardcoded $HOME path — launching a
+# session against the wrong checkout is worse than not launching one.
+# shellcheck source=lib/worktree-paths.sh
+. "$script_dir/lib/worktree-paths.sh"
+if ! wt_paths_init "$script_dir/.."; then
+  echo "launch-worktree-session: cannot locate the monorepo from $script_dir" >&2
   exit 1
+fi
+MONO="$WT_MONO"
+if [ ! -x "$MONO/bin/launch-worktree-session" ]; then
+  echo "launch-worktree-session: resolved monorepo $MONO has no bin/launch-worktree-session" >&2
+  exit 1
+fi
+if [ -n "$issue" ]; then
+  node --import tsx "$MONO/bin/assign-issue-workstream.ts" --check "$MONO/$issue" "$wt"
 fi
 
 # Stash the prompt in a tempfile so the launcher script can splat it back as
@@ -103,48 +201,22 @@ if [ -n "$prompt" ]; then
   } > "$prompt_file"
 fi
 
-# A tiny launcher that the new Terminal tab runs. Keeps AppleScript clear of
-# any quoting hazards.
-model_arg=""
-[ -n "$model" ] && model_arg="--model $model"
+# The shared builder is also used by `bin/workstreams resume`; keep every tab
+# spawn and per-agent script in one implementation.
+# shellcheck source=lib/launch-session.sh
+. "$script_dir/lib/launch-session.sh"
+LS_MONO="$MONO"
+LS_WORKSTREAM="$wt"
+LS_SESSION_NAME="$session_name"
+LS_AGENT="$agent"
+LS_MODEL="$model"
+LS_REMOTE_CONTROL="$remote_control"
+LS_PROMPT_FILE="$prompt_file"
+LS_EMOJI="$emoji"
+LS_LAUNCH_DIR="$launch_dir"
+LS_ISSUE="$issue"
+LS_WORKTREE_PATH=""
+launch_session_build
+result=$(launch_session_open)
 
-# `--remote-control <name>` takes the name inline (it's an optional-value flag,
-# so it must not be left bare before another flag or it would swallow it).
-rc_arg=""
-[ "$remote_control" = "1" ] && rc_arg="--remote-control $wt"
-
-launcher="$launch_dir/launch.sh"
-cat > "$launcher" <<EOF
-#!/usr/bin/env bash
-cd "$MONO"
-if [ -s "$prompt_file" ]; then
-  exec claude --worktree "$wt" --name "$wt" $model_arg $rc_arg --dangerously-skip-permissions "\$(cat "$prompt_file")"
-else
-  exec claude --worktree "$wt" --name "$wt" $model_arg $rc_arg --dangerously-skip-permissions
-fi
-EOF
-chmod +x "$launcher"
-
-# Open the session and run the launcher.
-#
-# Terminal.app has no scriptable "new tab" command — `do script "X"` always
-# creates a new *window* running X. But macOS's "Prefer tabs: always" setting
-# (System Settings → Desktop & Dock → "Prefer tabs when opening documents")
-# folds that new window into a tab of the front window, so a single bare
-# `do script` is exactly one tab for users who prefer tabs, and one window for
-# those who don't — either way, one container.
-#
-# The previous version also sent a Cmd+T keystroke and polled for the new tab.
-# That was redundant (the Cmd+T tab was a stray) AND, under "Prefer tabs",
-# produced TWO tabs per launch — the Cmd+T tab plus the `do script` tab
-# (2026-06-27). It also needed Accessibility permission for the keystroke.
-# Dropping it: `do script` alone is raceless, permission-free, and single.
-result=$(osascript <<APPLESCRIPT 2>/dev/null
-tell application "Terminal"
-  activate
-  do script "$launcher"
-end tell
-APPLESCRIPT
-) && result="new tab/window (per your Terminal tab preference)" || result="FAILED — Terminal not scriptable?"
-
-echo "launch-worktree-session: launched Claude — worktree=$wt ($result)"
+echo "launch-worktree-session: launched $agent — $session_name (worktree=$wt) ($result)"

@@ -21,6 +21,14 @@ import {
   parseSessionLog,
   type SessionEntry,
 } from "../lib/session.js";
+import {
+  codexSessionExists,
+  readCodexSessionHistory,
+} from "../../core/chat/session/codex-transcript.js";
+
+type FeedbackSession =
+  | { engine: "claude"; sessionId: string; logPath: string }
+  | { engine: "codex"; sessionId: string };
 
 const MAX_CONTEXT_ENTRIES = 12;
 
@@ -44,7 +52,7 @@ function formatEntry(entry: SessionEntry): string {
 
 async function resolveSession(
   boxRoot: string
-): Promise<{ sessionId: string; logPath: string } | null> {
+): Promise<FeedbackSession | null> {
   const envSessionId = process.env["CLAUDE_CODE_SESSION_ID"];
   if (envSessionId) {
     // History-aware first, then a probe of every context root — a landmark
@@ -52,27 +60,57 @@ async function resolveSession(
     // path and silently drop its context. On a total miss, fall through to
     // the newest-session fallback below.
     const found = await findSessionLog(boxRoot, envSessionId);
-    if (found.ok) return { sessionId: envSessionId, logPath: found.value };
+    if (found.ok) return { engine: "claude", sessionId: envSessionId, logPath: found.value };
+  }
+  // TODO(env-migration): native harness identity inherited only by this command path.
+  const codexThreadId = process.env["CODEX_THREAD_ID"];
+  if (codexThreadId) {
+    try {
+      if (await codexSessionExists(boxRoot, codexThreadId)) {
+        return { engine: "codex", sessionId: codexThreadId };
+      }
+    } catch (error) {
+      console.warn(
+        `Could not use current Codex session ${codexThreadId}; falling back to Claude history:`,
+        error,
+      );
+    }
   }
   // CLAUDE_CODE_SESSION_ID is not propagated when agents are spawned by the SDK.
   // Fall back to the most recently modified session log across all context roots.
   const sessions = await listSessions(boxRoot);
   const [newest] = sessions;
   if (!newest) return null;
-  return { sessionId: newest.sessionId, logPath: newest.path };
+  return { engine: "claude", sessionId: newest.sessionId, logPath: newest.path };
 }
 
-async function getSessionContext(boxRoot: string): Promise<string | null> {
-  const session = await resolveSession(boxRoot);
+async function getSessionContext(
+  boxRoot: string,
+  session: FeedbackSession | null,
+): Promise<string | null> {
   if (!session) return null;
 
   let entries: SessionEntry[];
   try {
-    const result = await parseSessionLog({ logPath: session.logPath });
-    entries = result.entries;
+    const result = session.engine === "codex"
+      ? await readCodexSessionHistory({
+          boxRoot,
+          sessionId: session.sessionId,
+          slice: { mode: "tail", tail: MAX_CONTEXT_ENTRIES },
+        })
+      : await parseSessionLog({
+          logPath: session.logPath,
+          slice: { mode: "tail", tail: MAX_CONTEXT_ENTRIES },
+        });
+    entries = result.entries.filter(
+      (entry) => entry.type === "user" || entry.type === "assistant"
+    );
   } catch (e) {
-    if (errnoCode(e) !== "ENOENT") {
-      console.warn(`Could not parse session log at ${session.logPath}, no session context available:`, e);
+    if (session.engine === "codex" || errnoCode(e) !== "ENOENT") {
+      console.warn(
+        `Could not read ${session.engine} session ${session.sessionId}, no session context available:`,
+        e,
+      );
     }
     return null;
   }
@@ -115,7 +153,7 @@ export const feedbackCommand = new Command("feedback")
 
       const session = await resolveSession(boxRoot);
       const serverUrl = process.env["CB_SERVER_URL"] ?? null;
-      const context = await getSessionContext(boxRoot);
+      const context = await getSessionContext(boxRoot, session);
 
       const lines: string[] = [
         "# Agent Feedback",

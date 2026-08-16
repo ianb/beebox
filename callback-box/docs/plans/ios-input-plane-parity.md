@@ -1,3 +1,9 @@
+---
+title: "iOS input-plane parity"
+status: partial
+workstream: unknown
+issues: []
+---
 # iOS input-plane parity
 
 This plan brings the native iOS composer to semantic parity with the web input
@@ -5,36 +11,6 @@ plane while preserving native keyboard, camera, picker, and speech behavior. It
 extends the native draft and bridge to carry the complete web `Emission`, makes
 unsent and rejected work durable, and keeps the embedded web chat authoritative
 for target state and final dispatch.
-
-**Status:** partially implemented 2026-07 — Tracks 1-4 are implemented: canonical
-V2 encoding/decoding and shared fixtures; a box-scoped `ComposerDraftStore`;
-atomic, quarantining manifests; one-shot text migration; reducer/token/Unicode-
-caret coverage; a caret-aware, autosizing `UITextView`; and file-backed camera
-and Photos images with stable IDs and no arbitrary count cap. Track 3 also has
-Files import with the existing authenticated upload route, byte progress,
-durable upload failure/retry state, Paste Image, and visible-webview Screenshot
-acquisition. Image source bytes are persisted before processing, interrupted or
-failed processing restores as a retryable chip, and incomplete attachments
-block send. Track 4 adds strict durable companion-selection commands,
-idempotent acknowledgements, typed tokens, active-dictation anchors, native
-detail chips, and complete V2 selection emission. Track 5's pending-send half
-is implemented: sends persist
-before delivery, immediately clear to a fresh editable draft, replay with the
-same ID after relaunch/navigation, accept receipts in any order, and expose
-rejected Retry / Restore / Discard actions without overwriting newer work.
-Track 5 is complete: voice uses an explicit composition state machine, keyword
-sends persist their draft and copied audio before clearing, HQ work resumes
-after relaunch, later drafts remain isolated, and later emissions wait behind
-earlier voice preparation. Track 6 remains; its visual coverage and real-device
-acceptance matrix are required before this plan ships. Track 6's fixture host
-and first simulator sweep are implemented. All thirteen deterministic states
-were captured on iPhone 17 Pro; attachment overflow was also checked on iPhone
-17e in dark mode at Accessibility Large, rejection UI on iPad (A16) at XXXL,
-and the focused editor with the software keyboard. This sweep fixed context
-overflow and long-transcript horizontal expansion. A final lifecycle pass also
-made draft activation generation-safe, disables composition until restoration
-finishes, and accepts startup selection commands only after the target box is
-ready. Landscape and the real-device matrix remain.
 
 ## Stated preferences this plan trades against
 

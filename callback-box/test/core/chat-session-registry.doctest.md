@@ -39,6 +39,15 @@ async function waitFor(cond: () => boolean): Promise<void> {
     await new Promise((r) => setImmediate(r));
   }
 }
+
+function errorName(fn: () => unknown): string {
+  try {
+    fn();
+    return "not blocked";
+  } catch (error) {
+    return error instanceof Error ? error.name : "unknown";
+  }
+}
 ```
 
 ## LRU eviction under the live cap
@@ -151,6 +160,33 @@ clock = 40_000;
 registry.sweepIdle();
 JSON.stringify({ size: registry.size(), s2: registry.get("s2") === null })
 => {"size":0,"s2":true}
+```
+
+```ts cleanup
+registry.shutdown();
+await box.cleanup();
+```
+
+## Deletion reservation stops and tombstones a live session
+
+```ts
+const box = await makeTmpBox();
+const backend = createFakeChatBackend();
+const registry = makeRegistry(box, backend);
+const sessionId = "11111111-1111-4111-8111-111111111111";
+const session = registry.getOrCreate(sessionId);
+await session.send("hello");
+await tick();
+registry.deletion.begin(sessionId);
+await registry.deletion.stopAndRemove(sessionId);
+registry.deletion.finish(sessionId);
+JSON.stringify({ running: session.isRunning(), live: registry.liveCount(), blocked: registry.deletion.isBlocked(sessionId) })
+=> {"running":false,"live":0,"blocked":true}
+```
+
+```ts continue
+errorName(() => registry.getOrCreate(sessionId))
+=> SessionDeletingError
 ```
 
 ```ts cleanup

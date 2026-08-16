@@ -16,7 +16,10 @@ export const ROOT = PACKAGE_ROOT;
 const EMITTER_OUTPUTS = new Set(["docs/doc-graph.md", "docs/doc-graph.html", "docs/prompts.md"]);
 
 const EXCLUDE_DIRS = ["node_modules", ".tap", ".thinking", ".claude", "dist", "src/dev/reports"];
-const EXCLUDE_PATTERNS = [/\.doctest\.md$/];
+// AGENTS.md files are gitignored, generated mirrors of the sibling CLAUDE.md
+// (bin/generate-agents-md.ts, for Codex sessions) — not documents; scanning
+// them would flag every mirror as an orphan and double-count CLAUDE.md refs.
+const EXCLUDE_PATTERNS = [/\.doctest\.md$/, /^AGENTS\.md$/];
 
 export interface Reference {
   from: string;
@@ -24,7 +27,7 @@ export interface Reference {
   resolved: boolean;
   context: string;
   line: number;
-  type: "link" | "at-include" | "mention";
+  type: "link" | "at-include" | "mention" | "frontmatter";
 }
 
 export interface DocInfo {
@@ -148,6 +151,29 @@ interface ResolveContext {
   basenameLookup: Map<string, string[]>;
 }
 
+function extractFrontmatterReferences(params: {
+  filePath: string;
+  content: string;
+  resolve: (ref: string) => [string, boolean];
+}): Reference[] {
+  const { filePath, content, resolve } = params;
+  if (!content.startsWith("---\n")) return [];
+  const refs: Reference[] = [];
+  let issuesList = false;
+  for (const [index, line] of content.split("\n").entries()) {
+    if (index > 0 && line === "---") break;
+    const scalar = /^(design|superseded-by):\s*(\S+\.md)$/.exec(line);
+    if (/^issues:\s*$/.test(line)) issuesList = true;
+    else if (/^\S/.test(line)) issuesList = false;
+    const listItem = issuesList ? /^\s+-\s+(\S+\.md)$/.exec(line) : null;
+    const rawTarget = scalar?.[2] ?? listItem?.[1];
+    if (!rawTarget || hasUriScheme(rawTarget)) continue;
+    const [target, resolved] = resolve(rawTarget);
+    refs.push({ from: filePath, target, resolved, context: line.trim(), line: index + 1, type: "frontmatter" });
+  }
+  return refs;
+}
+
 // URI-scheme targets (https://..., view:...) are not file references.
 function hasUriScheme(ref: string): boolean {
   return /^[a-z][\d+.a-z-]*:/i.test(ref);
@@ -201,6 +227,13 @@ function extractReferences(
   const lines = content.split("\n");
   const seen = new Set<string>();
   const doResolve = resolve ?? ((ref: string) => resolveRef(ref, { fromFile: filePath, allFiles, basenameLookup }));
+  for (const ref of extractFrontmatterReferences({ filePath, content, resolve: doResolve })) {
+    const key = `${filePath}:${ref.target}:frontmatter`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      refs.push(ref);
+    }
+  }
 
   for (const [i, line] of lines.entries()) {
     const lineNum = i + 1;

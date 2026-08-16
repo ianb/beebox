@@ -20,6 +20,7 @@ import { useRef, useCallback, useEffect, useSyncExternalStore } from "react";
 import { processImageBlob } from "../../lib/image-paste";
 import { uploadChatFile } from "../../lib/file-upload";
 import { useEmissionStore } from "./input-store";
+import { shouldBatchPhotos } from "./photo-batch-threshold";
 import type { EmissionStore, ImageItem, FileItem } from "../../input/emission-store";
 
 /**
@@ -68,8 +69,9 @@ export function insertTokensAtCursor(tokens: string, opts: {
  */
 export function useChatAttachmentValues(): { attachments: ImageItem[]; pendingImageCount: number; fileAttachments: FileItem[] } {
   const emissionStore = useEmissionStore();
-  // Third argument (server snapshot) is required for SSR (`cb render` goes
-  // through renderToString) — same convention as useInputValue in input-store.ts.
+  // Third argument is useSyncExternalStore's optional server-snapshot getter;
+  // passing the same getter keeps the store correct if it is ever read outside a
+  // browser — same convention as useInputValue in input-store.ts.
   const getImages = () => emissionStore.get().images;
   const getPendingImages = () => emissionStore.get().pendingImages;
   const getFiles = () => emissionStore.get().files;
@@ -114,13 +116,51 @@ export function useChatAttachments(opts: {
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   /** Opens the mobile typing row when a token insert happens with no visible composer (see useEnsureComposerVisible). */
   ensureComposerVisibleRef: React.MutableRefObject<() => void>;
+  /**
+   * Hand a too-large photo selection to the bulk-upload path instead of inlining
+   * it (see `photo-batch-threshold.ts`). `foldInComposerImages` asks the caller
+   * to sweep the composer's existing inline photos into the same batch, so one
+   * selection act doesn't end up split across two destinations.
+   */
+  onBatchPhotos: (opts: { files: File[]; foldInComposerImages: boolean }) => void;
 }) {
-  const { emissionStore, textareaRef, ensureComposerVisibleRef } = opts;
+  const { emissionStore, textareaRef, ensureComposerVisibleRef, onBatchPhotos } = opts;
   const { editor } = emissionStore;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const addImageFiles = useCallback(async (files: File[]): Promise<number> => {
     if (files.length === 0) return 0;
+    // Too many to ride inline — upload them and let the agent file them, rather
+    // than base64-ing a camera roll into one /chat/send that can't be sent.
+    // Applies to the picker, paste and drop alike: one rule, no per-entry-point
+    // special cases.
+    //
+    // `pendingImages` counts too: encoding is async, so two fast pastes would
+    // otherwise both see zero finished images and both inline.
+    const draft = emissionStore.get();
+    if (shouldBatchPhotos({
+      existingInline: draft.images.length + draft.pendingImages,
+      incoming: files.length,
+    })) {
+      // Hand over the photos ALREADY in the composer as well. Batching only the
+      // new ones would split one intended message in two: the batch would carry
+      // the whole composer text as its introduction while the older photos sat
+      // behind in the composer with nothing describing them, and the agent would
+      // be told about photos it hadn't been given. One selection act, one
+      // destination.
+      // Fold in the finished images — the ones we actually have bytes for.
+      //
+      // Photos still ENCODING cannot be folded (there are no bytes yet) and are
+      // deliberately NOT dropped: they finish and land inline, going out with the
+      // next ordinary send. That leaves a narrow race where one act produces a
+      // batch plus a few inline photos, which is a worse *presentation* than
+      // "one destination" — but discarding them to tidy that up would silently
+      // destroy photos the user picked, and never losing anything outranks
+      // arriving in one piece. The inline bound still holds: those photos were
+      // already counted above.
+      onBatchPhotos({ files, foldInComposerImages: draft.images.length > 0 });
+      return 0;
+    }
     // Show placeholder tiles immediately; each clears as its image finishes
     // encoding, so the gap between cmd-V and the thumbnail isn't a dead beat.
     editor.bumpPendingImages(files.length);
@@ -158,7 +198,7 @@ export function useChatAttachments(opts: {
     // Count actually added — the screenshot path toasts when this is 0
     // (a single-file capture that failed processing).
     return newItems.length;
-  }, [editor, emissionStore, textareaRef, ensureComposerVisibleRef]);
+  }, [editor, emissionStore, textareaRef, ensureComposerVisibleRef, onBatchPhotos]);
 
   const removeAttachment = useCallback((id: number) => {
     const target = emissionStore.get().images.find((a) => a.id === id);

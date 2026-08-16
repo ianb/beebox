@@ -14,8 +14,8 @@
 
 import type { CloudflareProvisioningClient } from "../services/cloudflare-provisioning.js";
 import { listPublications } from "./lifecycle.js";
+import { readPublishConfig } from "./publish-config.js";
 import { localPubWorkerVersion, readPubWorkerConfig } from "./pub-worker-meta.js";
-import { setupCredsFromEnv } from "./setup.js";
 
 /** Probe a URL for a small text body; `null` on any failure (unreachable, non-200). */
 export type ProbeTextFn = (url: string) => Promise<string | null>;
@@ -33,9 +33,7 @@ export const defaultProbeText: ProbeTextFn = async (url) => {
 };
 
 export interface StatusDeps {
-  /** Machine-level env (defaults to `process.env`). */
-  env?: NodeJS.ProcessEnv | undefined;
-  /** The provisioning client, or `null` when creds are absent (report says unconfigured). */
+  /** The provisioning client, or `null` when no Cloudflare login/creds resolve (report says unconfigured). */
   client: CloudflareProvisioningClient | null;
   /** The `GET /__version` probe; defaults to a real fetch. */
   probeText?: ProbeTextFn | undefined;
@@ -52,10 +50,12 @@ export interface LocalPubCounts {
 }
 
 export interface StatusReport {
-  /** False ⇒ no creds; only the local half of the report is populated. */
+  /** False ⇒ no login/creds; only the local half of the report is populated. */
   configured: boolean;
   workerName: string;
   bucket: { name: string; exists: boolean } | null;
+  /** The ingestion bucket (submissions + access logs — the bucket split). */
+  ingestBucket: { name: string; exists: boolean } | null;
   /** Deployed-script facts, or `null` when the script has never been deployed. */
   worker: {
     /** The PUB_STORE R2 binding is present on the deployed script. */
@@ -87,9 +87,31 @@ async function countLocalPubs(boxRoot: string): Promise<LocalPubCounts> {
   return counts;
 }
 
+/**
+ * Diff the deployed Access vars against the persisted `config/publish.json`.
+ * Any asymmetry is a problem: drift redeploys wrong values, a deployed-but-
+ * unpersisted pair would be ERASED by the next plain setup, and a persisted-
+ * but-undeployed pair means the account tiers are 404ing for no reason.
+ */
+async function accessDriftProblems(boxRoot: string, deployed: { teamDomain: string | null; aud: string | null }): Promise<string[]> {
+  const { teamDomain, aud } = deployed;
+  const accessConfigured = teamDomain !== null && teamDomain.length > 0 && aud !== null && aud.length > 0;
+  const persisted = await readPublishConfig(boxRoot);
+  if (persisted === null && accessConfigured) {
+    return [`Access vars are deployed but config/publish.json is missing — the next plain \`cb pub setup\` would ERASE them; persist them: {"accessTeamDomain":"${teamDomain}","accessAud":"${aud}"}`];
+  }
+  if (persisted === null) return [];
+  if (!accessConfigured) {
+    return ["config/publish.json has Access values but the deployed Worker lacks them — re-run `cb pub setup` to redeploy"];
+  }
+  if (teamDomain !== persisted.accessTeamDomain || aud !== persisted.accessAud) {
+    return ["deployed Access vars DIFFER from config/publish.json — re-run `cb pub setup` to redeploy the persisted values (or update the file)"];
+  }
+  return [];
+}
+
 /** Build the deployed-state report. See the module header for the drift/problems semantics. */
 export async function statusPublishing({ boxRoot }: { boxRoot: string }, deps: StatusDeps): Promise<StatusReport> {
-  const env = deps.env ?? process.env;
   const config = await readPubWorkerConfig(deps.pubWorkerDir);
   const localVersion = await localPubWorkerVersion(deps.pubWorkerDir);
   const pubs = await countLocalPubs(boxRoot);
@@ -98,6 +120,7 @@ export async function statusPublishing({ boxRoot }: { boxRoot: string }, deps: S
     configured: false,
     workerName: config.workerName,
     bucket: null,
+    ingestBucket: null,
     worker: null,
     routing: null,
     hostname: null,
@@ -106,20 +129,24 @@ export async function statusPublishing({ boxRoot }: { boxRoot: string }, deps: S
     problems: [],
   };
 
-  const creds = setupCredsFromEnv(env);
-  if (creds === null || deps.client === null) {
-    report.problems.push("publishing is not configured on this machine — run `cb pub setup` (credentials live in ~/.cb-publish.env)");
+  if (deps.client === null) {
+    report.problems.push("publishing is not configured on this machine — run `wrangler login` then `cb pub setup`");
     return report;
   }
   report.configured = true;
   const client = deps.client;
 
-  // Bucket: the name the committed config binds is the one that must exist.
+  // Buckets: both names the committed config binds must exist.
   const bucketExists = await client.bucketExists(config.bucketName);
   report.bucket = { name: config.bucketName, exists: bucketExists };
   if (!bucketExists) report.problems.push(`R2 bucket '${config.bucketName}' does not exist — run \`cb pub setup\``);
+  const ingestExists = await client.bucketExists(config.ingestBucketName);
+  report.ingestBucket = { name: config.ingestBucketName, exists: ingestExists };
+  if (!ingestExists) report.problems.push(`R2 ingestion bucket '${config.ingestBucketName}' does not exist — run \`cb pub setup\``);
 
-  // Deployed script: PUB_STORE binding + Access vars.
+  // Deployed script: PUB_STORE binding + Access vars (diffed against the
+  // persisted `config/publish.json` — a mismatch means the next plain setup
+  // would deploy something other than what's live).
   const settings = await client.getScriptSettings(config.workerName);
   if (settings === null) {
     report.problems.push(`Worker '${config.workerName}' is not deployed — run \`cb pub setup\``);
@@ -136,6 +163,7 @@ export async function statusPublishing({ boxRoot }: { boxRoot: string }, deps: S
     if (!hasStoreBinding) {
       report.problems.push(`deployed Worker lacks the '${config.bucketBinding}' R2 binding — it cannot serve publications; re-run \`cb pub setup\``);
     }
+    report.problems.push(...(await accessDriftProblems(boxRoot, { teamDomain, aud })));
   }
 
   // workers.dev routing: must be enabled, previews must be OFF (leak surface).

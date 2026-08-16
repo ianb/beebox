@@ -11,6 +11,7 @@ import {
   stageAndCommitPaths,
 } from "../../../src/lib/git.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { rename } from "node:fs/promises";
 ```
 
 ## Repository detection
@@ -319,7 +320,7 @@ pass — here we just verify a plain oversized file is left unstaged while a
 normal file alongside it stages fine.
 
 ```ts setup
-import { writeFile as writeFileFs } from "node:fs/promises";
+import { writeFile as writeFileFs, rm as rmFs } from "node:fs/promises";
 import { join as joinPath } from "node:path";
 ```
 
@@ -347,6 +348,44 @@ status.staged.includes("content/big.bin")
 
 ```ts cleanup
 await box.cleanup();
+```
+
+## stageAll stages deletions, and still catches an oversized file alongside one
+
+The size check asks git for each staged path's blob. A staged *deletion* has no
+blob, so it answers "missing" — and that must be a skip, not a failure: a
+deletion is not "adding a big file". The case is worth pinning because the
+check is batched into one `git cat-file --batch-check` call, where a thrown
+error would abandon the whole check and let a genuinely oversized file through
+whenever a deletion happened to be staged in the same sweep.
+
+```ts
+const dbox = await makeTmpBox({ git: true });
+await writeFileFs(joinPath(dbox.root, "doomed.txt"), "delete me");
+await stageAll(dbox.root);
+await commit(dbox.root, { message: "add doomed.txt" });
+
+// Now delete it, and add an oversized file in the same sweep.
+await rmFs(joinPath(dbox.root, "doomed.txt"));
+await writeFileFs(joinPath(dbox.root, "huge.bin"), Buffer.alloc(11 * 1024 * 1024, 1));
+
+const _warn2 = console.warn; console.warn = () => {};
+await stageAll(dbox.root);
+console.warn = _warn2;
+
+const dstatus = await getStatus(dbox.root);
+// The deletion staged normally...
+dstatus.staged.includes("content/doomed.txt")
+=> true
+
+// ...and the oversized file was still caught, which is what would break if a
+// missing blob aborted the check.
+dstatus.staged.includes("content/huge.bin")
+=> false
+```
+
+```ts cleanup
+await dbox.cleanup();
 ```
 
 ## isNothingToCommitError recognizes git's empty-commit message
@@ -420,6 +459,25 @@ JSON.stringify(await stageAndCommitPaths(box.root, { paths: ["scoped.card"], mes
 
 JSON.stringify(await stageAndCommitPaths(box.root, { paths: [], message: "empty" }))
 => null
+```
+
+A rename commits both halves. Rename detection must not collapse the staged
+path list to only the destination and leave the source deletion behind.
+
+```ts continue
+await box.write("before.card", "move me");
+await box.commitAll("add before");
+await rename(box.path("before.card"), box.path("after.card"));
+await stageAndCommitPaths(box.root, { paths: ["before.card", "after.card"], message: "Move card" });
+const renameStatus = await getStatus(box.root);
+const renameDiff = await getCommitDiff(box.root, await getHead(box.root));
+print(`clean: ${renameStatus.clean}`);
+print(`before in commit: ${renameDiff.includes("before.card")}`);
+print(`after in commit: ${renameDiff.includes("after.card")}`);
+=>
+clean: true
+before in commit: true
+after in commit: true
 ```
 
 ```ts cleanup

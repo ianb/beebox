@@ -300,6 +300,32 @@ export function normalizeDnsName(dnsName: string): string {
 }
 
 /**
+ * Derive the box's public `https://…` Tailscale URL from a parsed `serve
+ * status --json` payload, or null when there's no `Web` (HTTPS serve) mapping
+ * at all. `Web` is keyed `<host>:<port>`; the host alone becomes the URL
+ * (Serve's `Web` section is HTTPS-only, so the port suffix is dropped rather
+ * than inspected). With multiple hosts, prefers one whose handlers proxy to a
+ * loopback target (the dev router / this box's own front) — the exposure a
+ * settings page cares about — and otherwise falls back to the first host.
+ * Used by the admin `tailscaleBaseUrl` query, which must never throw: this
+ * helper is pure and total over its input.
+ */
+export function deriveTailscaleBaseUrl(serve: ServeConfigJson): string | null {
+  const hosts = Object.entries(serve.Web ?? {});
+  if (hosts.length === 0) return null;
+  const loopbackHost = hosts.find(([, site]) =>
+    Object.values(site.Handlers ?? {}).some(
+      (h) => h.Proxy !== undefined && loopbackProxyPort(h.Proxy) !== null,
+    ),
+  );
+  const chosen = loopbackHost ?? hosts[0];
+  if (chosen === undefined) return null; // unreachable: hosts.length > 0 was checked above
+  const [hostPort] = chosen;
+  const host = hostPort.slice(0, hostPort.lastIndexOf(":"));
+  return host === "" ? null : `https://${host}`;
+}
+
+/**
  * Extract the port from a serve Proxy target IFF it points at loopback. Accepts
  * a bare port ("3210" ⇒ localhost) or a URL/host:port whose host is a loopback
  * literal. Returns null for a non-loopback target (a drift we must NOT treat as

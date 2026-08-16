@@ -163,6 +163,7 @@ struct VoicePreparation: Codable, Equatable, Identifiable, Sendable {
 
 enum ComposerDraftMutation: Equatable, Sendable {
     case setText(String)
+    case setDictationTranscript(String)
     case setSelection(NSRangeValue)
     case addImage(DraftImage)
     case addFile(DraftFile)
@@ -182,6 +183,9 @@ enum ComposerDraftReducer {
         case .setText(let text):
             draft.text = text
             draft.selection = NSRangeValue(location: min(draft.selection.location, (text as NSString).length), length: 0)
+        case .setDictationTranscript(let text):
+            draft.text = text
+            draft.selection = NSRangeValue(location: (text as NSString).length, length: 0)
         case .setSelection(let selection):
             let range = selection.clamped(to: draft.text)
             draft.selection = NSRangeValue(location: range.location, length: range.length)

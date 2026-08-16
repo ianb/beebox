@@ -38,8 +38,8 @@ navigation:
   label: Recipes
   symbol: 🍳
   links:
-    - { ref: Bread.recipe.card, label: the bread }
-    - { ref: techniques/Knife_Skills.doc.card }
+    - { ref: /store/recipes/Bread.recipe.card, label: the bread }
+    - { ref: /store/recipes/techniques/Knife_Skills.doc.card }
   expand:
     - query: "*.recipe.card"
       order: modified-desc
@@ -58,12 +58,12 @@ All of these live under `navigation`.
 
 ```yaml
 symbol: 🍳                          # emoji or short text
-symbol: { src: images/portrait.webp }   # image
+symbol: { src: /store/recipes/images/portrait.webp }   # image
 ```
 
-For character-driven scenarios where the face is the bookmark, the image form makes the Landmarks page look like a real launcher rather than an emoji grid. Image `src` is a path relative to the landmark's directory; cross-directory paths are allowed. The symbol carries most of the "iconic and unique expression" weight — pick well.
+For character-driven scenarios where the face is the bookmark, the image form makes the Landmarks page look like a real launcher rather than an emoji grid. Image `src` is a box path — write it with a leading `/`, from the box root (a path relative to the landmark's directory still resolves). It is validated: a `src` pointing at nothing is a broken-ref warning at `cb validate`. The symbol carries most of the "iconic and unique expression" weight — pick well.
 
-**`links`** (zero or more `{ ref, label? }`) — pinned references to other cards. `ref` is a literal path to the target (relative to the landmark's directory; may cross directories). It's validated like any other ref — it must point at a real file. Optional `label` is a per-landmark contextual label — call this card "the bread" here even if its real title is "Bread Basics." When omitted, the renderer falls back to the target's own title.
+**`links`** (zero or more `{ ref, label? }`) — pinned references to other cards. `ref` is a box path to the target — leading `/`, from the box root (a path relative to the landmark's directory still resolves). It's validated like any other ref — it must point at a real file. Optional `label` is a per-landmark contextual label — call this card "the bread" here even if its real title is "Bread Basics." When omitted, the renderer falls back to the target's own title.
 
 **`expand`** (zero or more) — templated fan-out. Runs a query, applies a template per match, generates links. See below.
 
@@ -77,11 +77,11 @@ A landmark like Recipes naturally wants to surface "all recipe cards in this dir
 
 ### Query
 
-`query` is a glob pattern, matching `cb ls` conventions (`*.recipe.card`, `**/*.todo-list.card`, etc.). Resolved relative to the landmark's directory.
+`query` is a glob pattern, matching `cb ls` conventions (`*.recipe.card`, `**/*.doc.card`, etc.). Resolved relative to the landmark's directory.
 
 ### Template
 
-`template-ref` / `template-label` are placeholder strings applied to each matched card. When `template-ref` is omitted, the default is `${path}` (a bare link to each match).
+`template-ref` / `template-label` are placeholder strings applied to each matched card. When `template-ref` is omitted, each match links by its **box path** (the canonical leading-`/` form, resolved as a literal path).
 
 `${...}` placeholders interpolate at expand time:
 
@@ -114,30 +114,66 @@ A card appearing both in a hand-listed `links` entry and in an unnamed `expand` 
 
 ## Rendering
 
-### Tile vs. full forms
+Landmarks have three rendering surfaces: the Landmarks page (the full
+picture), and the app bar's two menus (the compact, always-reachable forms).
 
-Each renderable card type defines two display forms:
+### Landmarks page — the merged activity surface
 
-- **Tile** — a bounded form fitting in a list cell. Used in lists.
-- **Full** — natural-size standalone form. Used when a card is shown by itself.
+`/<box>/landmarks` is one section per landmark, each carrying both halves of
+the landmark's activity: its **chats** and its **links**. It absorbed the
+former Chats page (`/chats` redirects here) — the two were the same
+landmark-keyed page projected twice (`docs/implemented-plans/top-nav-ia.md` Track D).
+Implementation: `LandmarksList` + `LandmarkSection` + `LandmarkSessions` in
+`src/frontend/src/components/landmarks/`.
 
-There's no per-`<link>` `display="..."` attribute. The rule is contextual: anything rendered inside a list-shaped surface uses the tile form; anything rendered standalone uses the full form. If a real case demands an override later, the attribute can be added.
+A section renders:
 
-Each card type ships its own tile renderer over time. Until a card type opts in, the fallback tile is title + first-line snippet + (if available) icon.
+- **Header** — symbol + label, and the directory path as a link into Browse.
+- **Chats** — the landmark's sessions as rows, an older-sessions disclosure
+  (`olderSessions` from `chat.byLandmark`), and a "New chat" action bound to
+  the landmark's directory.
+- **Links** — resolved `links` + flat `expand` results as tiles, capped at
+  the first 6 with an inline "Show all N" disclosure. Grouped expands
+  (`group:`) stay collapsed count-chips beside them. A ref pointing at
+  nothing renders as "Missing" rather than vanishing.
 
-### The Landmark tile
+There is **no landmark full form** and no click-through to one: a tile links
+straight to its target card. The caps above are inline disclosures for
+exactly that reason — the section already *is* the landmark's full picture.
+(A tile/full-form renderer pair was designed early on and never built; the
+design is dropped, not deferred.)
 
-A landmark's own tile is symbol + label, plus a count of `<link>`/`<expand>` references. Click the tile and you get the full form: same symbol/label header plus the resolved list of references rendered as tiles.
+Ordering comes from `chat.byLandmark` (latest session activity first, then
+chat-less landmarks with the box root ahead of alphabetical), and the page
+does not re-sort — so the page and the app bar's switch menu agree.
 
-### Landmarks page
+Two things render outside the per-landmark sections:
 
-A new top-level page at `/<box>/landmarks`. Lists every `**/*.landmark.card` in the box as a flat grid of tiles. Click-through opens the landmark's full form; from there, click any referenced card to view it.
+- **Other chats** — a trailing bucket for sessions bound to a directory with
+  no landmark card (the box root without a root landmark, or a
+  deleted-landmark directory). These used to be silently dropped.
+- **Parse warnings** — a row naming any `**/*.landmark.card` whose
+  frontmatter failed to parse (`problems`, carried by both `landmarks.list`
+  and `chat.byLandmark`). A hand-edit that breaks a landmark must not make
+  an activity quietly disappear.
 
-Flat list to start. Tree view (grouped by directory) is a possible later refinement; the schema doesn't preclude it.
+`view: landmarks` cards render this same component, sessions included.
 
-### Browse integration (deferred)
+### App bar — switch menu and here menu
 
-Eventually Browse can surface "the landmark for this directory" as a header crumb when you're inside a directory that has one (or the nearest landmark above when you're not). Out of scope for v1 — Landmarks page first, Browse hook-up later.
+The unified app bar (`docs/implemented-plans/top-nav-ia.md`) is the compact surface:
+
+- **Switch menu** (the place pill's left half) lists every landmark as a row
+  — symbol, label, and its fresh-chat count — plus `All landmarks →` to the
+  page above. Tapping a row resumes the landmark's most recent chat or
+  starts one in its directory. The menu lists landmarks only; the "Other
+  chats" bucket is reachable through the page. Parse problems surface here
+  too. Data is fetched lazily on first open.
+- **Here menu** (the place pill's right half) is the current directory's
+  landmark: Open `<dir>/`, its pinned links at root level (never in a
+  sub-panel), grouped expands as disclosures, and — on chat pages — Recent
+  files. Links open in the companion pane on chat, and navigate normally
+  elsewhere.
 
 ## Implementation outline
 
@@ -146,10 +182,10 @@ Eventually Browse can surface "the landmark for this directory" as a header crum
 | Schema | `src/schemas/landmark.ts` |
 | Schema registration | `src/schemas/registry.ts` |
 | Expand evaluator | `src/core/landmark/` (resolves queries, applies templates, dedups, orders) |
-| Tile-renderer registry | `src/frontend/src/renderers/tile.ts` (mirrors existing renderer registry) |
-| Landmark renderer (tile + full) | `src/frontend/src/renderers/landmark.tsx` |
-| Landmarks page | `src/frontend/src/pages/LandmarksPage.tsx` |
-| Route + nav entry | `src/frontend/src/components/AppNav.tsx` + router |
+| Merged activity surface | `src/frontend/src/components/landmarks/` (`LandmarksList`, `LandmarkSection`, `LandmarkSessions`) |
+| Landmarks page | `src/frontend/src/pages/landmarks/LandmarksPage.tsx` |
+| Chat buckets per landmark | `chat.byLandmark` (`src/webapp/trpc/routers/chat.ts`) |
+| App-bar switch / here menus | `src/frontend/src/components/PlacePill.tsx` + the bar's chrome slots |
 | API endpoint | tRPC procedure under `src/webapp/trpc/routers/` (lists landmark cards + resolves expands server-side) |
 | Doctest coverage | `test/core/landmark/landmark-schema.doctest.md` (schema validation, expand semantics, dedup, order) |
 
@@ -157,7 +193,6 @@ The expand evaluator runs server-side at fetch time so the wire response is a fu
 
 ## Open questions
 
-- **Tile renderer rollout order.** Which card types get bespoke tile renderers first? Recipe and todo-list are obvious early candidates. Most others can live with the fallback indefinitely.
 - **Order options beyond the v1 three.** By-attribute (`order="attr:priority"`) and by-XPath-value (`order="xpath:/yield/@amount"`) are obvious extensions if needed.
 - **`<symbol>` extensions.** Image variant and color/mood styling are deferred until there's a real case for them. The element shape leaves room.
 - **Live fields.** `<status>` or similar live-data slots are explicitly out of scope. The schema can absorb them later as new optional children without breaking existing cards.

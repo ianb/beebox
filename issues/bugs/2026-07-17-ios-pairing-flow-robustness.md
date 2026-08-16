@@ -1,8 +1,10 @@
 ---
 title: "iOS pairing-flow robustness: duplicate redeem, no external-URL confirm, in-memory ticket races idle-stop"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
+priority: backlog
 ---
 
 Several related weaknesses in the `callbackbox://pair` deep-link flow, all still open as of the

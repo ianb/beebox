@@ -6,11 +6,12 @@
  * are safe ordinary functions.
  */
 
-import { interruptChat, type SessionEntry } from "../api";
-import { buildOptimisticContent, reconcilePending } from "./chat-shared";
+import { interruptChat, type PendingSessionEntry, type SessionEntry } from "../api";
+import { buildOptimisticContent, entryText, reconcilePending } from "./chat-shared";
 import { queueMessageToBackend } from "./chat-actors";
 import { toastError } from "../components/ui/toast-store";
 import type { ChatContext, ChatEvent } from "./chat-types";
+import { observeChatSendHistory } from "../lib/chat-send-diagnostics";
 
 type SendEvent = Extract<ChatEvent, { type: "SEND" }>;
 
@@ -38,14 +39,15 @@ export function cardFieldsFromEvent(event: SendEvent): Pick<SendEvent, "openCard
   };
 }
 
-/** Build the optimistic, pending user entry appended when a SEND is queued. */
-function buildPendingEntry(event: SendEvent): SessionEntry {
+/** Build the optimistic user entry appended when a SEND is queued. */
+function buildPendingEntry(event: SendEvent, knownMessages: SessionEntry[]): PendingSessionEntry {
   return {
-    uuid: `user-${Date.now()}`,
+    uuid: event.messageId,
     type: "user",
     timestamp: new Date().toISOString(),
     content: buildOptimisticContent(event.message, event.images),
     pending: true,
+    reconcileKnownUuids: knownMessages.map((message) => message.uuid),
   };
 }
 
@@ -56,7 +58,7 @@ function buildPendingEntry(event: SendEvent): SessionEntry {
 export function appendQueuedSend(
   { context, event }: { context: ChatContext; event: SendEvent },
 ): Pick<ChatContext, "messages" | "pendingMessages"> {
-  const entry = buildPendingEntry(event);
+  const entry = buildPendingEntry(event, context.messages);
   return {
     messages: [...context.messages, entry],
     pendingMessages: [...context.pendingMessages, entry],
@@ -96,9 +98,33 @@ export function appendOtherUserMessage(
 
 /** STREAM_ERROR / STREAM_FAILED: surface the error and clear the live stream. */
 export function applyStreamError(
-  { event }: { event: Extract<ChatEvent, { type: "STREAM_ERROR" | "STREAM_FAILED" }> },
-): Pick<ChatContext, "error" | "streamText" | "streamTools"> {
-  return { error: event.error, streamText: "", streamTools: [] };
+  { context, event }: {
+    context: ChatContext;
+    event: Extract<ChatEvent, { type: "STREAM_ERROR" | "STREAM_FAILED" }>;
+  },
+): Pick<ChatContext, "error" | "streamText" | "streamTools"> & Partial<Pick<ChatContext, "pendingMessages">> {
+  return {
+    error: event.error,
+    streamText: "",
+    streamTools: [],
+    // A failure before startChatTurn accepted the send cannot ever acquire a
+    // durable echo. Stop protecting that optimistic entry so the refresh this
+    // transition enters can truthfully remove it. Post-accept stream failures
+    // retain it because the server may already have persisted the user turn.
+    ...(event.type === "STREAM_FAILED" && !event.accepted
+      ? { pendingMessages: context.pendingMessages.filter((entry) => entry.uuid !== context.liveTurnId) }
+      : {}),
+  };
+}
+
+/** A legacy STREAM_BUSY rejects the active send before it can be persisted. */
+export function untrackLastSend(
+  { context }: { context: ChatContext },
+): Pick<ChatContext, "messages" | "pendingMessages"> {
+  return {
+    messages: context.messages.filter((entry) => entry.uuid !== context.liveTurnId),
+    pendingMessages: context.pendingMessages.filter((entry) => entry.uuid !== context.liveTurnId),
+  };
 }
 
 /**
@@ -114,7 +140,7 @@ export function clearInterrupt(): Pick<ChatContext, "interrupting" | "error"> {
 export function applyServerMessages(
   { context, event }: { context: ChatContext; event: Extract<ChatEvent, { type: "SET_MESSAGES" }> },
 ): Pick<ChatContext, "messages" | "pendingMessages" | "sessionId"> {
-  const reconciled = reconcilePending({
+  const reconciled = reconcilePendingWithDiagnostics({
     serverMessages: event.messages,
     pendingMessages: context.pendingMessages,
   });
@@ -125,20 +151,36 @@ export function applyServerMessages(
   };
 }
 
+/** Reconcile durable history and mark every pending emission it confirmed. */
+export function reconcilePendingWithDiagnostics(params: {
+  serverMessages: SessionEntry[];
+  pendingMessages: PendingSessionEntry[];
+}): ReturnType<typeof reconcilePending> {
+  const reconciled = reconcilePending(params);
+  const stillPending = new Set(reconciled.pendingMessages.map((entry) => entry.uuid));
+  observeChatSendHistory(params.pendingMessages
+    .filter((entry) => entryText(entry).length > 0 && !stillPending.has(entry.uuid))
+    .map((entry) => entry.uuid));
+  return reconciled;
+}
+
 /**
- * STREAM_QUEUED: promote the just-added optimistic user message to pending so
- * reconcile keeps it visible (dimmed) until the server processes the queued
- * turn. No-op if the last message isn't a fresh, unpromoted user message.
+ * STREAM_QUEUED: mark the active optimistic user message as queued so it
+ * stays visible dimmed until the server processes the turn. Ordinary sends
+ * are already tracked for reconciliation without this visual flag.
  */
 export function promoteLastToPending(
   { context }: { context: ChatContext },
 ): Partial<ChatContext> {
-  const last = context.messages.at(-1);
-  if (!last || last.type !== "user") return {};
-  if (context.pendingMessages.some((p) => p.uuid === last.uuid)) return {};
-  const promoted: SessionEntry = { ...last, pending: true };
+  if (context.liveTurnId === null) return {};
+  const active = context.pendingMessages.find((entry) => entry.uuid === context.liveTurnId);
+  if (!active || active.pending === true) return {};
+  const promoted: PendingSessionEntry = { ...active, pending: true };
+  const alreadyTracked = context.pendingMessages.some((entry) => entry.uuid === active.uuid);
   return {
-    messages: [...context.messages.slice(0, -1), promoted],
-    pendingMessages: [...context.pendingMessages, promoted],
+    messages: context.messages.map((entry) => entry.uuid === active.uuid ? promoted : entry),
+    pendingMessages: alreadyTracked
+      ? context.pendingMessages.map((entry) => entry.uuid === active.uuid ? promoted : entry)
+      : [...context.pendingMessages, promoted],
   };
 }

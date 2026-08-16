@@ -1,6 +1,10 @@
+---
+title: "Source Editor Plan"
+status: active
+workstream: unknown
+issues: []
+---
 # Source Editor Plan
-
-**Status:** active
 
 ## Overview
 

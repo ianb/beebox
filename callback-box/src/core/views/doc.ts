@@ -164,7 +164,7 @@ Directory paths work too:
 [Catalog](/store/catalogs/My_Catalog)
 \`\`\`
 
-Write box-root-absolute paths (a leading \`/\`); a bare path resolves against the chat's working directory.`;
+Always write the box path with a leading \`/\` — links and embeds in chat resolve from the box root, never from your working directory.`;
 
 const companionViewsSection = `### Link vs Embed
 

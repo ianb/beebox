@@ -17,10 +17,14 @@
  * overlapping digest (acceptable — the box is the system of record and a
  * duplicate summary is harmless).
  *
- * **Activation.** R2 credentials come from machine-level env
- * (`r2ConfigFromEnv`), never the box repo. Unconfigured → `sync()` is a silent
- * no-op. The `PublishRemoteStore` is injectable so the pull logic is fully
- * doctestable against a fake with no network.
+ * **Activation.** The credential is the per-box secret file
+ * `config/connectors/publish.secret.json` (gitignored via the box scaffold,
+ * same pattern as every other connector secret): an API token scoped to ONLY
+ * the ingestion bucket — it cannot touch publication manifests/content (the
+ * bucket split, `docs/implemented-plans/pub-setup-wrangler.md` amendment 1). The
+ * `CLOUDFLARE_*` env triple stays as a fallback. Neither resolves → `sync()`
+ * is a silent no-op. The `PublishRemoteStore` is injectable so the pull logic
+ * is fully doctestable against a fake with no network.
  */
 
 import path from "node:path";
@@ -41,6 +45,7 @@ import {
   r2ConfigFromEnv,
   type PublishRemoteStore,
 } from "../services/publish-remote-store.js";
+import { readPublishSecret } from "../publish/connector-secret.js";
 
 /** An `any-account` access-log object: `{ ts, pubId, email }` (edge-written). */
 const accessLogEntrySchema = z
@@ -93,10 +98,10 @@ class PublishSubmissionsConnector implements Connector {
     this.deps = deps ?? {};
   }
 
-  /** Resolve the store: injected, else built from env, else null (no-op). */
-  private resolveStore(): PublishRemoteStore | null {
+  /** Resolve the store: injected, else the per-box secret file, else the env fallback, else null (no-op). */
+  private async resolveStore(): Promise<PublishRemoteStore | null> {
     if (this.deps.store) return this.deps.store;
-    const config = r2ConfigFromEnv();
+    const config = (await readPublishSecret(this.boxRoot)) ?? r2ConfigFromEnv();
     if (!config) return null;
     return createR2PublishStore(config);
   }
@@ -122,7 +127,7 @@ class PublishSubmissionsConnector implements Connector {
   }
 
   async sync(): Promise<SyncResult> {
-    const store = this.resolveStore();
+    const store = await this.resolveStore();
     if (!store) {
       // Publishing not configured on this box — nothing to pull.
       return { success: true, created: [], updated: [] };

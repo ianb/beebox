@@ -10,10 +10,9 @@
 
 import { setup, assign } from "xstate";
 import { invariant } from "@shared/invariant";
-import { buildOptimisticContent, reconcilePending } from "./chat-shared";
+import { buildOptimisticContent } from "./chat-shared";
 import {
-  HISTORY_TAIL,
-  MIN_REAL_USER_MESSAGES,
+  chatTailSlice,
   logFsm,
   type ChatContext,
   type ChatEvent,
@@ -33,11 +32,13 @@ import {
   appendOtherUserMessage,
   promoteLastToPending,
   applyStreamError,
+  untrackLastSend,
   clearInterrupt,
   sendInterrupt,
+  reconcilePendingWithDiagnostics,
 } from "./chat-actions";
 
-export { HISTORY_TAIL, MIN_REAL_USER_MESSAGES };
+export { chatTailSlice };
 
 // -- Machine --
 
@@ -72,6 +73,9 @@ export const chatMachine = setup({
     processBusy: false,
     totalEntries: 0,
     liveTurnId: null,
+    // Consumed by `loading` below and cleared on the way out, so nothing can
+    // replay a stale preload if `loading` is ever re-entered.
+    initial: input.initial,
   }),
   on: {
     // Global handler: directly set messages from any state (used by server-push updates)
@@ -127,24 +131,22 @@ export const chatMachine = setup({
     loading: {
       invoke: {
         src: "fetchInitial",
-        input: ({ context }) => ({ sessionInput: context.sessionInput }),
+        input: ({ context }) => ({ sessionInput: context.sessionInput, initial: context.initial }),
+        // `initial` is cleared on the way out either way, so nothing can
+        // replay a stale preload if `loading` is ever re-entered.
         onDone: {
           target: "idle",
           actions: assign(({ event }) => ({
-            messages: event.output.entries,
-            sessionId: event.output.sessionId,
-            processRunning: event.output.running,
-            processBusy: event.output.busy,
-            totalEntries: event.output.total,
+            messages: event.output.entries, sessionId: event.output.sessionId,
+            processRunning: event.output.running, processBusy: event.output.busy,
+            totalEntries: event.output.total, initial: undefined,
           })),
         },
         onError: {
           target: "idle",
           actions: assign(({ event }) => ({
-            error:
-              event.error instanceof Error
-                ? event.error.message
-                : "Failed to load",
+            error: event.error instanceof Error ? event.error.message : "Failed to load",
+            initial: undefined,
           })),
         },
       },
@@ -159,22 +161,27 @@ export const chatMachine = setup({
           target: "streaming",
           actions: [
             ({ event }) => logFsm("send-from-idle", { len: event.message.length }),
-            assign(({ context, event }) => ({
-              error: null,
-              interrupting: false,
-              streamText: "",
-              streamTools: [],
-              liveTurnId: event.messageId, // keys the live bubble across finalize
-              messages: [
-                ...context.messages,
-                {
-                  uuid: `user-${Date.now()}`,
-                  type: "user" as const,
-                  timestamp: new Date().toISOString(),
-                  content: buildOptimisticContent(event.message, event.images),
-                },
-              ],
-            })),
+            assign(({ context, event }) => {
+              const entry = {
+                uuid: event.messageId,
+                type: "user" as const,
+                timestamp: new Date().toISOString(),
+                content: buildOptimisticContent(event.message, event.images),
+                reconcileKnownUuids: context.messages.map((message) => message.uuid),
+              };
+              return {
+                error: null,
+                interrupting: false,
+                streamText: "",
+                streamTools: [],
+                liveTurnId: event.messageId, // keys the live bubble across finalize
+                messages: [...context.messages, entry],
+                // SET_MESSAGES is global and can carry a server snapshot taken
+                // before this send. Track the optimistic entry until history
+                // echoes it so reconcilePending cannot erase it mid-turn.
+                pendingMessages: [...context.pendingMessages, entry],
+              };
+            }),
           ],
         },
         DISMISS_ERROR: { actions: assign({ error: null }) },
@@ -224,7 +231,10 @@ export const chatMachine = setup({
         // refreshing onDone rolls them into a synthetic entry for a still-"new"
         // session whose history is empty, so clearing would lose the only copy
         // of a partial reply. refreshing clears them itself once it's done.
-        STREAM_RECOVER: { target: "refreshing" },
+        // Clear `interrupting` though — the interrupt's own terminal paths do,
+        // and a recovery during an interrupt must not leave the flag latched
+        // into idle.
+        STREAM_RECOVER: { target: "refreshing", actions: assign(clearInterrupt) },
         SEND: {
           // Queue the message — don't interrupt the current stream
           actions: [
@@ -252,17 +262,18 @@ export const chatMachine = setup({
         },
         STREAM_BUSY: {
           target: "idle",
-          actions: assign({
-            error: "Agent is busy with another request",
-          }),
+          actions: [
+            assign(untrackLastSend),
+            assign({ error: "Agent is busy with another request" }),
+          ],
         },
         STREAM_QUEUED: {
           target: "idle",
-          // Backend was busy → this message is queued. Promote the just-added
+          // Backend was busy → this message is queued. Promote the active
           // optimistic user message to pending so reconcile keeps it visible
           // (dimmed) until the server has actually processed the queued turn.
-          // Without this, the optimistic message is unprotected by reconcile
-          // and there's no visible signal that work is still pending.
+          // It is already protected by reconcile; promotion adds the visible
+          // queued state and enables the missed-chat-complete recovery poll.
           actions: assign(promoteLastToPending),
         },
         // A user interrupt ends the turn with is_error — suppress that
@@ -294,6 +305,17 @@ export const chatMachine = setup({
         pending: context.pendingMessages.length,
       }),
       on: {
+        // Ignore REFRESH here for the same reason `streaming` does, one state
+        // later: `chat-complete` (→ REFRESH) lands a beat AFTER STREAM_RESULT
+        // already put us here, and the global handler would clear streamText
+        // mid-flight — unmounting the streamed bubble, so the list collapses to
+        // the user message for a whole roundtrip (the finalize scroll-jump) —
+        // and restart the in-flight fetchHistory, doubling that gap. The fetch
+        // already running is authoritative: waitForTranscriptEntry
+        // (core/chat/session/transcript-sync.ts) holds `result`/`done` until
+        // the turn is durable, and onDone swaps messages in + clears streamText
+        // atomically. See test/frontend/chat-machine-finalize.doctest.md.
+        REFRESH: { actions: () => logFsm("refresh-ignored-refreshing") },
         SEND: {
           actions: [
             ({ event, context }) => logFsm("send-from-refreshing", {
@@ -324,7 +346,7 @@ export const chatMachine = setup({
                 streamTools: [],
               };
             }
-            const reconciled = reconcilePending({
+            const reconciled = reconcilePendingWithDiagnostics({
               serverMessages: event.output.entries,
               pendingMessages: context.pendingMessages,
             });

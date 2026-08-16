@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# SSH into the production callback-box server (with agent forwarding).
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+. "$SCRIPT_DIR/resolve-server-ip.sh"
+
+SERVER_IP=$(resolve_server_ip "$SCRIPT_DIR")
+
+exec ssh -A "root@$SERVER_IP" "$@"

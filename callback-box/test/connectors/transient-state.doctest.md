@@ -13,9 +13,20 @@ import {
   updateTransientState,
   loadTransientState,
   transientStatePath,
+  TransientStateCorruptError,
 } from "../../src/connectors/transient-state.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { readFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import * as path from "node:path";
+
+/** Run `fn`, returning whatever it throws instead of propagating. */
+async function tryCall(fn) {
+  try {
+    return await fn();
+  } catch (e) {
+    return e;
+  }
+}
 
 // A yield inside the critical section widens the window a lost-update bug would
 // exploit — serialization must still hold across it. Kept in setup because the
@@ -135,6 +146,80 @@ const onDisk = await loadTransientState({
 });
 onDisk.count
 => 10
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A corrupt state file fails closed — it is not "missing"
+
+Missing and corrupt mean opposite things here. Missing is first run, and
+`defaultValue` is the correct answer. Corrupt is a damaged file, and resolving it
+to `defaultValue` would silently discard sync tokens and Telegram thread
+mappings — then the very next `updateTransientState` would write that loss back
+over the file.
+
+```ts
+const box = await makeTmpBox();
+const gmailState = transientStatePath(box.root, "gmail");
+await mkdir(path.dirname(gmailState), { recursive: true });
+await writeFile(gmailState, '{"historyId": "trunca');
+
+const readBack = await tryCall(() => loadTransientState({
+  boxRoot: box.root, connectorName: "gmail", defaultValue: { historyId: null },
+}));
+readBack instanceof TransientStateCorruptError
+=> true
+```
+
+The RMW aborts too, so the damaged bytes are still on disk for a human to look
+at rather than replaced by a one-field default.
+
+```ts continue
+const updated = await tryCall(() => updateTransientState({
+  boxRoot: box.root,
+  connectorName: "gmail",
+  defaultValue: { historyId: null },
+  update: (state) => ({ ...state, historyId: "999" }),
+}));
+JSON.stringify({
+  threw: updated instanceof TransientStateCorruptError,
+  onDisk: await readFile(transientStatePath(box.root, "gmail"), "utf-8"),
+})
+=> {"threw":true,"onDisk":"{\"historyId\": \"trunca"}
+```
+
+A genuinely absent file still takes the default — first run is not an error.
+
+```ts continue
+JSON.stringify(await loadTransientState({
+  boxRoot: box.root, connectorName: "never-synced", defaultValue: { historyId: null },
+}))
+=> {"historyId":null}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Saves are crash-safe
+
+`saveTransientState` replaces the file by temp-write + fsync + atomic rename, so
+a kill mid-write can never leave the truncated file that `loadTransientState`
+now refuses to read. Nothing but the state file itself is left behind.
+
+```ts
+const box = await makeTmpBox();
+await updateTransientState({
+  boxRoot: box.root,
+  connectorName: "drive",
+  defaultValue: { count: 0 },
+  update: (state) => ({ count: state.count + 1 }),
+});
+const dir = path.dirname(transientStatePath(box.root, "drive"));
+(await readdir(dir)).filter((f) => f.includes(".tmp-")).length
+=> 0
 ```
 
 ```ts cleanup

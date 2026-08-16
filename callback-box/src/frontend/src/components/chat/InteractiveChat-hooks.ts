@@ -9,8 +9,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { getChatHistory, getChatStatus, setChatModel, getChatFeatures, setChatFeature, type SessionEntry } from "../../api";
 import { trpcClient } from "../../lib/trpc";
-import { HISTORY_TAIL, MIN_REAL_USER_MESSAGES } from "../../machines/chatMachine.js";
-import { MODEL_OPTIONS, type ModelMarker } from "./InteractiveChat-helpers";
+import { chatTailSlice } from "../../machines/chatMachine.js";
+import { type ModelMarker } from "./InteractiveChat-helpers";
+import { chatModelOptions, type ChatAgentEngine } from "@shared/chat-models.js";
 import type { PanelTab } from "./InteractiveChat-controls";
 import type { OnZoomView } from "./ChatMessages";
 import { href, toSearch } from "../../lib/routing";
@@ -119,18 +120,25 @@ interface ChatSendFn {
 export function useChatModelFeatures(opts: { sessionId: string | null; groupCount: number; send: (event: ChatEvent) => void }) {
   const { sessionId, groupCount, send } = opts;
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
+  const [agentEngine, setAgentEngine] = useState<ChatAgentEngine | null>(null);
   const [modelMarkers, setModelMarkers] = useState<ModelMarker[]>([]);
   const [chatFeatures, setChatFeatures] = useState<Record<string, string>>({});
 
-  // Server persists the selection in .callback-box/chat-model.json;
-  // read it on mount so the menu's checkmark reflects server state.
+  // Read the session's engine and per-session model override. For a fresh
+  // chat, status reports the box's configured engine and no override.
   useEffect(() => {
-    if (!sessionId) return;
+    let current = true;
+    setAgentEngine(null);
     getChatStatus({ sessionId })
-      .then((status) => { setSelectedModel(status.model); })
+      .then((status) => {
+        if (!current) return;
+        setSelectedModel(status.model);
+        setAgentEngine(status.engine);
+      })
       .catch((e: unknown) => {
         console.warn(`[chatfsm] get-status (model) failed: ${e instanceof Error ? e.message : String(e)}`);
       });
+    return () => { current = false; };
   }, [sessionId]);
 
   // Chat-feature flags synced via /api/chat/features on mount, then kept
@@ -146,8 +154,19 @@ export function useChatModelFeatures(opts: { sessionId: string | null; groupCoun
 
   const narrationEnabled = chatFeatures.narration === "on";
 
+  // Generation counters so an out-of-order completion (an older toggle/select
+  // resolving after a newer one) can't clobber state a later request already
+  // set — bumped on every call, and a response only applies if it's still the
+  // most recent one in flight.
+  const narrationRequestIdRef = useRef(0);
+  const modelRequestIdRef = useRef(0);
+
   const handleToggleNarration = useCallback(() => {
     const next = narrationEnabled ? "off" : "on";
+    // Rollback target if the request is rejected — the pre-toggle value,
+    // derived the same way `narrationEnabled` is (absent key reads as "off").
+    const previous = narrationEnabled ? "on" : "off";
+    const requestId = ++narrationRequestIdRef.current;
     // Optimistic — server-confirmed value lands via the SSE event handler
     // (or, pre-session, reconciles from the server once the id is assigned).
     setChatFeatures((prev) => ({ ...prev, narration: next }));
@@ -159,22 +178,31 @@ export function useChatModelFeatures(opts: { sessionId: string | null; groupCoun
       return;
     }
     setChatFeature({ sessionId, feature: "narration", value: next })
-      .then((res) => { setChatFeatures(res.features); })
+      .then((res) => {
+        if (narrationRequestIdRef.current !== requestId) return;
+        setChatFeatures(res.features);
+      })
       .catch((e: unknown) => {
         console.warn(`[chatfsm] set-feature narration failed: ${e instanceof Error ? e.message : String(e)}`);
+        toastError("Failed to update narration mode", { cause: e });
+        if (narrationRequestIdRef.current !== requestId) return;
+        // No SSE correction follows a rejected write, so the optimistic flip
+        // must be undone here or the UI shows wrong state indefinitely — but
+        // only when no newer toggle has since taken over.
+        setChatFeatures((prev) => ({ ...prev, narration: previous }));
       });
   }, [sessionId, narrationEnabled, send]);
 
   const handleSelectModel = useCallback((model: string | null) => {
     if (model === selectedModel) return;
-    const label = MODEL_OPTIONS.find((o) => o.model === model)?.label ?? "default";
+    const previous = selectedModel;
+    if (agentEngine === null) return;
+    const label = chatModelOptions(agentEngine).find((o) => o.model === model)?.label ?? "default";
+    const markerId = `model-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const requestId = ++modelRequestIdRef.current;
     setModelMarkers((markers) => [
       ...markers,
-      {
-        id: `model-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-        label: `Switched to ${label}`,
-        afterGroupCount: groupCount,
-      },
+      { id: markerId, label: `Switched to ${label}`, afterGroupCount: groupCount },
     ]);
     setSelectedModel(model);
     if (sessionId) {
@@ -182,6 +210,7 @@ export function useChatModelFeatures(opts: { sessionId: string | null; groupCoun
       setChatModel({ sessionId, model })
         .then((res) => {
           console.debug(`[chatfsm] set-model response model=${res.model ?? "<default>"} ok=${res.ok}`);
+          if (modelRequestIdRef.current !== requestId) return;
           // Re-sync UI to whatever the server actually persisted, in case a
           // race / bug means the request landed differently than expected.
           setSelectedModel(res.model);
@@ -189,13 +218,20 @@ export function useChatModelFeatures(opts: { sessionId: string | null; groupCoun
         .catch((e: unknown) => {
           const msg = e instanceof Error ? e.message : String(e);
           console.warn(`[chatfsm] set-model error: ${msg}`);
+          toastError("Failed to switch model", { cause: e });
+          setModelMarkers((markers) => markers.filter((m) => m.id !== markerId));
+          if (modelRequestIdRef.current !== requestId) return;
+          // Roll back the optimistic selection — but only when no newer
+          // selection has since taken over, so a stale rejection can't
+          // clobber a selection made after it.
+          setSelectedModel(previous);
         });
     } else {
       console.debug("[chatfsm] set-model skipped — sessionId is null");
     }
-  }, [selectedModel, groupCount, sessionId]);
+  }, [selectedModel, groupCount, sessionId, agentEngine]);
 
-  return { selectedModel, modelMarkers, chatFeatures, setChatFeatures, narrationEnabled, handleToggleNarration, handleSelectModel };
+  return { agentEngine, selectedModel, modelMarkers, chatFeatures, setChatFeatures, narrationEnabled, handleToggleNarration, handleSelectModel };
 }
 
 /**
@@ -231,10 +267,12 @@ export function useChatMute() {
  */
 export function useChatSchedules(opts: {
   messages: SessionEntry[];
+  /** False while the chat machine is still loading — `messages` isn't the transcript yet. */
+  loaded: boolean;
   isStreaming: boolean;
   send: ChatSendFn;
 }) {
-  const { messages } = opts;
+  const { messages, loaded } = opts;
   const [activeSchedules, setActiveSchedules] = useState<ChatSchedule[]>([]);
 
   const fetchSchedules = useCallback(() => {
@@ -247,10 +285,24 @@ export function useChatSchedules(opts: {
       });
   }, []);
 
-  // Poll schedules on mount + after each turn completes
+  // Fetch on mount, and whenever a NEW entry lands. Keyed on the newest entry's
+  // uuid, not the array: `messages` gets a fresh identity on every history
+  // fetch (initial load, refresh, server push), which refired this on every one
+  // of them — a duplicate request moments after mount. Schedules are set by
+  // `<schedule>` tags the agent writes, which can only reach the transcript as
+  // a new entry, so a re-read that ends on the same entry can't change them.
+  // (The count would miss the case that matters most for a long chat: at the
+  // HISTORY_TAIL cap, a new turn pushes the oldest entry out and the length
+  // never moves.)
+  //
+  // Skipped while the machine loads: `messages` is the empty pre-load array
+  // then, and fetching on it only to fetch again a tick later when the
+  // transcript lands is the second half of the same duplicate.
+  const newestUuid = messages.at(-1)?.uuid ?? null;
   useEffect(() => {
+    if (!loaded) return;
     fetchSchedules();
-  }, [messages, fetchSchedules]);
+  }, [loaded, newestUuid, fetchSchedules]);
 
   // NOTE: a former "poll /chat/history after a schedule fires" fallback lived
   // here but was inert — it fetched history with no session id, which the
@@ -288,7 +340,7 @@ export function usePendingMessagePoll(opts: {
     if (pendingCount === 0) return;
     if (!sessionId) return;
     const poll = () => {
-      getChatHistory({ sessionId, tail: HISTORY_TAIL, minRealUserMessages: MIN_REAL_USER_MESSAGES })
+      getChatHistory({ sessionId, slice: chatTailSlice() })
         .then((data) => {
           send({ type: "SET_MESSAGES", messages: data.entries, sessionId: data.sessionId });
         })
@@ -303,44 +355,6 @@ export function usePendingMessagePoll(opts: {
     const id = setInterval(poll, 5000);
     return () => clearInterval(id);
   }, [pendingCount, send, sessionId]);
-}
-
-/**
- * Poll status every 5s while the agent is busy with no live stream attached —
- * the reloaded-mid-turn case. That "processing" indicator is otherwise a
- * one-time `busy` snapshot taken at load, cleared only by a pushed
- * chat-complete event; if that event is missed (and the event bus never
- * reconnects to re-fire its onConnect REFRESH), the indicator sticks after the
- * turn has actually finished. Polling actively reconfirms the turn is still
- * running, and dispatches a single REFRESH the moment the server reports it
- * done — pulling the completed response just like chat-complete would.
- *
- * Only `/status` is hit while busy (cheap, no state transition, so the throbber
- * doesn't flicker); REFRESH fires once, on completion. Skipped during a live
- * stream / in-flight refresh (`isStreaming`) — the SSE turn reports its own
- * completion there.
- */
-export function useProcessingStatusPoll(opts: {
-  processBusy: boolean;
-  isStreaming: boolean;
-  sessionId: string | null;
-  send: (event: ChatEvent) => void;
-}) {
-  const { processBusy, isStreaming, sessionId, send } = opts;
-  useEffect(() => {
-    if (!processBusy || isStreaming || !sessionId) return;
-    const poll = () => {
-      getChatStatus({ sessionId })
-        .then((status) => {
-          if (!status.busy) send({ type: "REFRESH" });
-        })
-        .catch((e: unknown) => {
-          console.warn(`[chatfsm] processing-status poll failed: ${e instanceof Error ? e.message : String(e)}`);
-        });
-    };
-    const id = setInterval(poll, 5000);
-    return () => clearInterval(id);
-  }, [processBusy, isStreaming, sessionId, send]);
 }
 
 /**
@@ -386,4 +400,3 @@ export function useChatStallRecovery(opts: {
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [send]);
 }
-

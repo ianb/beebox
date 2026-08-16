@@ -21,7 +21,9 @@ documented compatibility policy — lenient exactly where the contract says so
 that have real web-side code (`emission`, `receipt`, `speech-keywords`) through
 that code, and structurally validates the families that are consumed only by the
 native clients (`location`, `pairing-url`, `redeem`) against their documented
-shapes.
+shapes. One family lives elsewhere on the web side: `debug-log-submit` is POSTed
+verbatim at the real route by `test/webapp/debug-log-submit.doctest.md`, because
+its server-side consumer is an HTTP endpoint rather than a parser.
 
 ```ts setup
 import { readdirSync, readFileSync } from "node:fs";
@@ -340,5 +342,5 @@ re-injection (including XML-escaped phrases).
 
 ```ts
 runFamily("speech-keywords", validateSpeechKeyword)
-=> {"family":"speech-keywords","cases":37,"pass":37}
+=> {"family":"speech-keywords","cases":39,"pass":39}
 ```

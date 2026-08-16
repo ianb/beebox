@@ -69,6 +69,7 @@ const TEMPLATE_MANAGED_PATTERNS: readonly RegExp[] = [
   /^config\/schedules\/.+\.(?:scheduled-script|orig-scheduled-script)\.card$/,
   /^config\/.+\.(?:guide|orig-guide)\.card$/,
   /^config\/.+\.(?:personality|orig-personality)\.card$/,
+  /^store\/plate\.todo-view\.card$/,
   /^config\/_template-updates\/.+$/,
   // The install tracker: installTemplateFile rewrites it when it records a
   // hash, so it commits with the template change instead of leaving dirt.
@@ -94,6 +95,11 @@ const TEMPLATE_MANAGED_PATTERNS: readonly RegExp[] = [
   /^briefing\.md$/,
   /^\.claude\/rules\/.+\.md$/,
   /^\.claude\/settings\.json$/,
+  /^\.\.\/AGENTS\.md$/,
+  /^AGENTS\.md$/,
+  /^.+\/AGENTS\.md$/,
+  /^\.\.\/\.agents\/skills\/.+$/,
+  /^\.\.\/\.codex\/hooks\.json$/,
 ];
 
 /** Whether `relPath` is callback-box template output (see {@link TEMPLATE_MANAGED_PATTERNS}). */
@@ -501,4 +507,3 @@ export async function listParkedTemplateUpdates(boxRoot: string): Promise<string
   }
   return parked.toSorted();
 }
-

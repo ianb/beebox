@@ -1,5 +1,6 @@
 ---
 title: "bin/browse passes the box agent token via child argv/env (readable by other local users) and scopes it to the shared dev origin"
+workstream: local-password-auth
 filed-by: agent
 discovered-in: worktree-local-password-auth — Codex adversarial review of the always-on-auth branch (finding #8, Track E)
 area: callback-box

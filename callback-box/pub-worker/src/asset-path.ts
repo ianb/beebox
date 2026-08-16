@@ -1,9 +1,11 @@
 /**
  * Serve-time path validation (Failure-modes finding — HIGH). R2 keys are FLAT,
  * so the only way an asset path could escape the `pubs/<id>/bundle/` prefix and
- * reach `submissions/`, `access-log/`, or another pub's manifest is the Worker
- * normalizing `..` out of the prefix itself. Therefore this module NEVER
- * normalizes: it rejects any dangerous segment outright and returns 404 upstream.
+ * reach another pub's manifest (or, before the ingestion bucket split, the
+ * `submissions/`/`access-log/` prefixes — now a different bucket entirely and so
+ * out of PUB_STORE's key space by construction) is the Worker normalizing `..`
+ * out of the prefix itself. Therefore this module NEVER normalizes: it rejects
+ * any dangerous segment outright and returns 404 upstream.
  *
  * `URL` parsing already collapses a literal `/../` inside the path (so a plain
  * `..` segment never reaches here as a traversal), but percent-encoded forms

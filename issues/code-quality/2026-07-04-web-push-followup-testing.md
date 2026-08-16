@@ -1,8 +1,9 @@
 ---
 title: "web push followup testing"
+workstream: web-push
 area: callback-box
 needs: [manual-testing]
-design: ../callback-box/docs/implemented-plans/web-push-notifications.md
+design: ../../callback-box/docs/implemented-plans/web-push-notifications.md
 filed-by: agent
 discovered-in: worktree-web-push — while shipping Web Push (tracks A–E)
 ---
@@ -90,3 +91,9 @@ start until the keys exist.
   call); root install works and push is cross-box regardless.
 - **Per-endpoint / per-severity filtering** — today an endpoint opting in gets all
   of that box's alerts; no per-device severity filtering.
+
+## Manual testing
+
+Follow the concrete reproduction or verification steps above. Confirm the
+observed result matches the expected behavior described in this issue before
+clearing the manual-testing flag.

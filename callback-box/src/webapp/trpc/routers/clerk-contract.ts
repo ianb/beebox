@@ -1,6 +1,6 @@
 /**
- * Clerk wire contract — the SINGLE source of truth for the shape of the two
- * clerk tRPC procedures (`clerk.commentary`, `clerk.commentaryDestinations`).
+ * Clerk wire contract — the SINGLE source of truth for the shape of the clerk
+ * tRPC procedures.
  *
  * Self-contained BY DESIGN: this module imports zod and NOTHING else (no fs,
  * git, or landmark graph). That self-containment is load-bearing — it makes
@@ -49,4 +49,48 @@ export const commentaryDestination = z.object({
 /** Result of `clerk.commentaryDestinations`. */
 export const commentaryDestinationsOutput = z.object({
   destinations: z.array(commentaryDestination),
+});
+
+export const tabTransferScope = z.enum(["current-window", "all-windows"]);
+
+export const capturedTab = z.object({
+  id: z.string().uuid(),
+  title: z.string(),
+  url: z.string(),
+  pinned: z.boolean(),
+});
+
+export const capturedTabWindow = z.object({
+  id: z.string().uuid(),
+  tabs: z.array(capturedTab).min(1),
+});
+
+export const capturedTabSet = z.object({
+  windows: z.array(capturedTabWindow).min(1),
+});
+
+export const proposedTabWindow = z.object({
+  id: z.string().uuid(),
+  tabs: z.array(z.string().uuid()).min(1),
+});
+
+export const tabArrangementProposal = z.object({
+  windows: z.array(proposedTabWindow).min(1),
+  close: z.array(z.string().uuid()),
+});
+
+/** Payload used both at intake and as the immutable part of the card. */
+export const tabArrangementPayload = z.object({
+  transferId: z.string().uuid(),
+  scope: tabTransferScope,
+  capturedAt: z.string().datetime(),
+  source: capturedTabSet,
+  proposal: tabArrangementProposal,
+});
+
+/** Result of accepting a tab arrangement into the box inbox. */
+export const tabArrangementOutput = z.object({
+  card: z.string(),
+  open: z.string(),
+  transferId: z.string().uuid(),
 });

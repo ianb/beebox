@@ -20,10 +20,10 @@ import type { EventBus } from "../../core/event-bus.js";
 import {
   createStagingSession,
   readStagingSession,
-  cleanupStagingSession,
   sealStagingSession,
   listStagingSessions,
 } from "../../core/capture/staging-store.js";
+import { cleanupStagingSession } from "../../core/capture/staging-teardown.js";
 import { prepareCaptureSession, markCapturePreparationFailed } from "../../core/capture/prepare.js";
 import { selectResumableCaptures } from "../../core/capture/pending.js";
 import {

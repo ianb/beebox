@@ -49,9 +49,30 @@ import { resolveBoxEntries, type ResolvedBoxEntry } from "./box-entry.js";
 import { authorizeRouterRequest, type RouterAuthDeps, type RouterAuthDecision } from "./router-auth.js";
 import { createRouterAuthDeps } from "./router-auth-deps.js";
 import { rewriteMobileCookiePath } from "./router-cookie.js";
+import {
+  bootstrapMobileSessionCookie,
+  mobileBootstrapTarget,
+  type MobileBootstrapTarget,
+} from "./router-mobile-bootstrap.js";
 import { escapeHtml, serveDev } from "./router-docs.js";
 import { serveSite } from "./router-site.js";
 import { serveStoryEvalSave } from "./router-story-eval.js";
+import {
+  createRealWorkstreamsAppEffects,
+  createWorkstreamsAppSupervisor,
+  WORKSTREAMS_APP_CAPABILITY_HEADER,
+  type WorkstreamsAppState,
+  type WorkstreamsAppSupervisor,
+  type WorkstreamsAppTarget,
+} from "./workstreams-app-supervisor.js";
+
+function legacyIssuesRedirect(afterWorkstream: string): string | null {
+  const pathname = afterWorkstream.split("?")[0] ?? afterWorkstream;
+  if (pathname !== "/dev/issues" && !pathname.startsWith("/dev/issues/"))
+    return null;
+  const suffix = afterWorkstream.slice("/dev/issues".length);
+  return `/workstreams/issues${suffix || "/"}`;
+}
 import {
   type WorktreeHandle,
   type CapturedError,
@@ -69,6 +90,7 @@ import {
   errnoCode,
   httpStatusOf,
   listenLoopback,
+  readEnvFile,
   type RouterCore,
   type RouterEffects,
   type ResolvedWorktree,
@@ -95,7 +117,7 @@ const ROUTER_PID_FILE = path.join(STATE_DIR, "router.pid");
 // The local trust boundary (plan Track B): a SECOND listener on a Unix-domain
 // socket. Requests arriving on it are `trustedLocal` (unauthenticated) because a
 // browser cannot originate a UDS connection — a real capability boundary, not a
-// spoofable header. Local CLI (bin/worktrees) talks to the router through this;
+// spoofable header. Local CLI (bin/workstreams) talks to the router through this;
 // everything on the TCP listener (which Tailscale Serve fronts) must authenticate.
 const ROUTER_SOCK = path.join(STATE_DIR, "router.sock");
 
@@ -458,6 +480,15 @@ function stripClientCbHeaders(headers: http.IncomingHttpHeaders): void {
   }
 }
 
+/** Apply the workstreams app's private hop capability after the spoof wall. */
+export function prepareWorkstreamsAppHeaders(
+  headers: http.IncomingHttpHeaders,
+  capability: string | null,
+): void {
+  stripClientCbHeaders(headers);
+  if (capability !== null) headers[WORKSTREAMS_APP_CAPABILITY_HEADER] = capability;
+}
+
 /** One proxy attempt. Resolves with the proxy error, or undefined on success. */
 function proxyOnce(
   req: http.IncomingMessage,
@@ -473,12 +504,26 @@ function proxyOnce(
   });
 }
 
+/** The resident app does not cold-start or retry request bodies. */
+function proxyWorkstreamsAppOnce(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  target: WorkstreamsAppTarget,
+): Promise<(Error & { code?: string }) | undefined> {
+  prepareWorkstreamsAppHeaders(req.headers, target.kind === "backend" ? target.capability : null);
+  return new Promise((resolve) => {
+    res.on("close", () => resolve(undefined));
+    proxy.web(req, res, { target: `http://127.0.0.1:${target.port}` }, (error) => resolve(error));
+  });
+}
+
 async function proxyWithRetry(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   name: string,
   retriesLeft: number,
   core: RouterCore,
+  mobileBootstrap: MobileBootstrapTarget | null,
 ): Promise<void> {
   const bodyLength = replayableBodyLength(req);
   const body = bodyLength === null ? null : await readBody(req);
@@ -490,6 +535,7 @@ async function proxyWithRetry(
   // strips any client copy of that one header before setting it (Track A).
   stripClientCbHeaders(req.headers);
   injectBasePrefix(req.headers, `/${name}`);
+  let bootstrapPending = mobileBootstrap;
   for (;;) {
     let handle: WorktreeHandle;
     try {
@@ -512,6 +558,27 @@ async function proxyWithRetry(
     const ready = readyLifecycle(handle);
     let err: (Error & { code?: string }) | undefined;
     if (ready) {
+      if (bootstrapPending) {
+        const target = bootstrapPending;
+        bootstrapPending = null;
+        try {
+          const cookies = await bootstrapMobileSessionCookie({
+            ...target,
+            backendPort: ready.backendPort,
+          });
+          if (!cookies) {
+            res.writeHead(401, { "content-type": "text/plain; charset=utf-8" });
+            res.end("Mobile session bootstrap failed.\n");
+            return;
+          }
+          res.setHeader("set-cookie", cookies);
+        } catch (error) {
+          log(`[${name}] mobile session bootstrap failed: ${errMessage(error)}`);
+          res.writeHead(502, { "content-type": "text/plain; charset=utf-8" });
+          res.end("Mobile session bootstrap failed.\n");
+          return;
+        }
+      }
       err = await proxyOnce(req, res, { frontendPort: ready.frontendPort, body });
     } else {
       const notReady: Error & { code?: string } = new Error(`worktree ${name} not ready`);
@@ -578,8 +645,30 @@ async function discoverWorktrees(core: RouterCore): Promise<DiscoveredWorktree[]
   );
 }
 
+// Best-effort "+ins −del vs main" for the worktree list. Uses the merge-base so
+// a worktree that hasn't merged a newer main doesn't count main's own commits as
+// deletions; diffs the WORKING TREE (committed + uncommitted) against it, so the
+// number reflects the tree's current state. Null on any error or no changes.
+async function worktreeDiffStat(name: string): Promise<{ ins: number; del: number } | null> {
+  if (name === "main") return null;
+  try {
+    const cwd = worktreeRoot(name);
+    const base = (await execa("git", ["merge-base", "main", "HEAD"], { cwd })).stdout.trim();
+    if (!base) return null;
+    const { stdout } = await execa("git", ["diff", "--shortstat", base], { cwd });
+    const ins = Number(/(\d+) insertion/.exec(stdout)?.[1] ?? "0");
+    const del = Number(/(\d+) deletion/.exec(stdout)?.[1] ?? "0");
+    return ins === 0 && del === 0 ? null : { ins, del };
+  } catch (_e) {
+    return null; // best-effort: a non-git worktree or transient git error → no stat
+  }
+}
+
 async function renderIndex(core: RouterCore): Promise<string> {
   const list = await discoverWorktrees(core);
+  const diffStats = new Map(
+    await Promise.all(list.map(async (w) => [w.name, await worktreeDiffStat(w.name)] as const)),
+  );
   const rows = list
     .map((w) => {
       const ready = w.handle ? readyLifecycle(w.handle) : null;
@@ -596,13 +685,16 @@ async function renderIndex(core: RouterCore): Promise<string> {
            <button type="submit" title="Tell the router to stop ${escapeHtml(w.name)} now">stop</button>
          </form>`
         : "";
+      const diff = diffStats.get(w.name) ?? null;
+      const diffCell = diff
+        ? `<span class="diffstat" title="changes vs main (committed + uncommitted, since this tree branched)"><span class="ins">+${diff.ins}</span> <span class="del">−${diff.del}</span></span>`
+        : `<span class="diffstat"></span>`;
       return `
       <li>
         <a href="/${escapeHtml(w.name)}/" class="name">${escapeHtml(w.name)}</a>
         <span class="statuscell">${status}</span>
-        ${dashLink}
-        ${devLink}
-        ${stopForm}
+        ${diffCell}
+        <div class="actions">${dashLink}${devLink}${stopForm}</div>
       </li>`;
     })
     .join("");
@@ -615,14 +707,18 @@ async function renderIndex(core: RouterCore): Promise<string> {
 <title>callback-box dev router</title>
 <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAADCUlEQVR4nOyazWsTQRjG3+xOPpsQsa21pAcpeGipIAUp1YNi8aJ4EL17Ebz6J/RP8CoI4kkFxZN6qjcpIhTFYhFBPDRKbCMN+f7Yxic72+lm89F8707Z3yGZTWbmfZ53JzNDdli1WqUWpOKFve185m8xnypXCvs0WlhACUa94VP+EzPBaCzQqpqnqYHEVvrPZrqQKpMzCES90wuRqblI41dWA9nd0q/1f+lEkZxHZMp/Zvnk2ITP/GGdgeTP7I/3u+Rszl6dGJ8dE5dMlKRQD7hI4UHhbxg5UqjnQCoE87JhAOOepEIIrhnAnOPMX20bIBiyiRvAjEkSwmUzrFbOme+7ArIhnmGtJWmBeIadAkkLxLO8nOOHA/Fs9Lu0AQLxzHwdYlt4nfS/OvxE/cYLOW3eKFTmeCGrzYtyn/C4YEwPl22I1QbPlyfvuGihtVtyB052irc7byWSdWRcnjseQnjjoLln78VFGig5052x5NJ8h3vOl4XBGxgxCkmOa8BuXAN24xqwG9eA3bgG7KZuO72pzhgFFrPUW6jEa6/aNg0BEbeHEIw3fuZf0juKtaxo+kNyQYuf08PAVQ+WOox4ZBT0g048l98+p74xB6NmWUQw3NWvuvR2aeog0EGHRieDMWAj7ixkN64Bu3EN2I1rwG5cA3ZzvLbTaj5sFHJ1D/W1kPEQTQtmaDhYQncekfGW3uS0mgu3quRNnjZfaqHMvt4vwvRsScTVRYc7jEgmb7y55/rD79Q3jQGaGoNoJFjRpbfJV1cwGgRQIwRZkjds3FnIbo6BAVXix6wQr/i8OZIWiFemglKe9OBAvLIc85O0QLxyd+WS6pNyFEE2xNdmocXJJEkIl22cWrz16FOpECV58AVSr+9fILEO3DuvklQIwYaBG0uL12Z/kyRAKgTz8uFK/ODmFSk8QCSkikvr0eM3Hzcef9ac+XvAuMfIEbnnND/8vfpybWNnXCuFyBlgxsScs3pnpfErT5vj90/XPqzHi4l8pFQOkealEaOWsVPAWovVCvN9q1r/AQAA//+5h+wYAAAABklEQVQDANbzYY8DPoT1AAAAAElFTkSuQmCC">
 <style>
-  body { font: 14px/1.5 system-ui, sans-serif; max-width: 640px; margin: 2em auto; padding: 0 1em; color: #222; }
+  body { font: 14px/1.5 system-ui, sans-serif; max-width: 900px; margin: 2em auto; padding: 0 1em; color: #222; }
   h1 { font-size: 1.2em; margin-bottom: 0.2em; }
   p.sub { color: #666; margin-top: 0; }
   ul { list-style: none; padding: 0; }
-  li { display: flex; align-items: center; gap: 0.6em; padding: 0.5em 0; border-bottom: 1px solid #eee; }
-  a.name { font-weight: 600; text-decoration: none; color: #2255aa; font-family: ui-monospace, Menlo, monospace; min-width: 12em; }
+  li { display: grid; grid-template-columns: max-content max-content 1fr auto; align-items: center; column-gap: 0.9em; padding: 0.5em 0; border-bottom: 1px solid #eee; }
+  a.name { font-weight: 600; text-decoration: none; color: #2255aa; font-family: ui-monospace, Menlo, monospace; white-space: nowrap; }
   a.name:hover { text-decoration: underline; }
-  .statuscell { flex: 0 0 11em; }
+  .statuscell { white-space: nowrap; }
+  .diffstat { justify-self: end; white-space: nowrap; font-size: 0.8em; font-family: ui-monospace, Menlo, monospace; }
+  .diffstat .ins { color: #2a8a2a; }
+  .diffstat .del { color: #c0392b; }
+  .actions { display: flex; align-items: center; gap: 0.6em; justify-self: end; }
   .badge { font-size: 0.75em; padding: 0.15em 0.5em; border-radius: 4px; }
   .badge.running { background: #d8f0d8; color: #2a6b2a; }
   .badge.cold    { background: #ececec; color: #666; }
@@ -630,7 +726,7 @@ async function renderIndex(core: RouterCore): Promise<string> {
   .badge.failed a { color: #a22; text-decoration: underline; }
   .dash { font-size: 0.8em; color: #2255aa; text-decoration: none; padding: 0.15em 0.5em; border: 1px solid #d0deef; border-radius: 4px; background: #f4f8ff; }
   .dash:hover { background: #e6f0ff; text-decoration: underline; }
-  .stopForm { margin-left: auto; }
+  .stopForm { display: inline-flex; }
   .stopForm button { font-size: 0.75em; padding: 0.15em 0.6em; background: #fff; border: 1px solid #ddd; border-radius: 4px; color: #666; cursor: pointer; }
   .stopForm button:hover { background: #fee; border-color: #faa; color: #a22; }
   .help { margin-top: 2em; padding: 1em; background: #f7f7f7; border-radius: 6px; font-size: 0.9em; }
@@ -638,22 +734,23 @@ async function renderIndex(core: RouterCore): Promise<string> {
   .help code { background: #fff; padding: 0.1em 0.35em; border-radius: 3px; border: 1px solid #ddd; }
   footer { margin-top: 1em; font-size: 0.85em; color: #888; }
   footer a { color: #888; }
-  @media (max-width: 480px) {
-    li { flex-wrap: wrap; row-gap: 0.2em; }
-    a.name { min-width: 0; flex: 1 1 100%; }
-    .statuscell { flex: 0 0 auto; }
+  @media (max-width: 700px) {
+    li { display: flex; flex-wrap: wrap; gap: 0.3em 0.7em; }
+    a.name { white-space: normal; }
+    .diffstat, .actions { justify-self: auto; }
   }
 </style>
 </head>
 <body>
 <h1>callback-box dev router</h1>
 <p class="sub">Click a worktree to open it. Cold worktrees start on first request (~4s); running ones idle-shut-down after ${Math.round(IDLE_TIMEOUT_MS / 1000)}s. <strong>dev ↗</strong> opens that worktree's visualizations &amp; doc browser (served from disk, no start).</p>
+<p><a href="/workstreams/" class="dash" title="Browse workstreams and the issue queue">workstreams ↗</a></p>
 <ul>${rows}</ul>
 
 <div class="help">
   <h2>If something looks wedged</h2>
   <p>
-    Run <code>bin/worktrees panic</code> from a terminal — this kills the
+    Run <code>bin/workstreams panic</code> from a terminal — this kills the
     router plus every child it knows about, wipes <code>~/.cache/callback-box</code>
     state, and frees port ${ROUTER_PORT}. Then start fresh with <code>pnpm dev</code>.
   </p>
@@ -662,7 +759,7 @@ async function renderIndex(core: RouterCore): Promise<string> {
   </p>
   <h2>If the list is too long</h2>
   <p>
-    Run <code>bin/worktrees sweep</code> to remove worktrees that are fully
+    Run <code>bin/workstreams sweep</code> to remove worktrees that are fully
     merged into main, clean, and have no active <code>claude</code> session —
     plus any orphan browse/log/pid state left behind by past cleanups.
     Add <code>--dry-run</code> to preview.
@@ -740,6 +837,39 @@ ${fastifySection}
 `;
 }
 
+export function renderWorkstreamsAppFallback(state: WorkstreamsAppState, logPath: string): string {
+  const detail = state.phase === "failed"
+    ? `<div class="err">${escapeHtml(state.message)}</div>`
+    : `<p>The resident app is currently <strong>${escapeHtml(state.phase)}</strong>.</p>`;
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workstreams app unavailable</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; max-width: 52rem; margin: 3rem auto; padding: 0 1rem; color: #222; }
+  h1 { font-size: 1.35rem; }
+  .err { margin: 1rem 0; padding: 0.8rem 1rem; background: #fff5f5; border-left: 4px solid #b43; white-space: pre-wrap; }
+  .actions { display: flex; gap: 1rem; align-items: center; margin: 1.5rem 0; }
+  button { font: inherit; padding: 0.45rem 0.8rem; }
+  code { background: #f3f3f3; padding: 0.1rem 0.3rem; }
+  a { color: #2456a6; }
+</style>
+</head>
+<body>
+<h1>Workstreams app unavailable</h1>
+${detail}
+<p>The dev router is still healthy. App output is in <code>${escapeHtml(logPath)}</code>.</p>
+<p>If the log reports missing dependencies, run <code>pnpm install</code> in the main checkout, then retry. The router itself does not need a restart.</p>
+<div class="actions">
+  <form method="POST" action="/__router/retry/workstreams-app"><button type="submit">Retry app startup</button></form>
+  <a href="/">Router diagnostics</a>
+</div>
+</body>
+</html>`;
+}
+
 // Per-worktree, just like the box apps: /<name>/dev/ serves <name>'s checkout —
 // its tracked dev/ directory (artifacts) and a markdown doc browser over its own
 // .md files. Served straight from disk, so it never cold-starts the worktree.
@@ -757,7 +887,7 @@ function worktreeRoot(name: string): string {
  */
 function loginWorktree(url: string): string {
   const first = parseWorktreeName(url);
-  if (!first || first === "dev" || first === "__router") return "main";
+  if (!first || first === "dev" || first === "__router" || first === "workstreams") return "main";
   return first;
 }
 
@@ -805,8 +935,17 @@ export function routerGuardHeaders(url: string): Record<string, string> {
  * connection can only reach the handler of the server it landed on, so which
  * listener accepted it is the whole story.
  */
-function createRouterServer(core: RouterCore, gate: { authDeps: RouterAuthDeps; trustedLocal: boolean }): http.Server {
-  const { authDeps, trustedLocal } = gate;
+export interface RouterServerGate {
+  authDeps: RouterAuthDeps;
+  trustedLocal: boolean;
+  workstreamsApp?: {
+    supervisor: WorkstreamsAppSupervisor;
+    displayLogPath: string;
+  };
+}
+
+export function createRouterServer(core: RouterCore, gate: RouterServerGate): http.Server {
+  const { authDeps, trustedLocal, workstreamsApp } = gate;
   const refusedUpgradeLogAt = new Map<string, number>();
 
   // The per-request dispatch. Wrapped below in a `.catch` rejection boundary so
@@ -891,11 +1030,34 @@ function createRouterServer(core: RouterCore, gate: { authDeps: RouterAuthDeps; 
       }
       res.end(
         JSON.stringify(
-          { routerPort: ROUTER_PORT, routerPid: process.pid, idleTimeoutMs: IDLE_TIMEOUT_MS, worktrees: state },
+          {
+            routerPort: ROUTER_PORT,
+            routerPid: process.pid,
+            idleTimeoutMs: IDLE_TIMEOUT_MS,
+            workstreamsApp: workstreamsApp?.supervisor.state() ?? { phase: "disabled" },
+            worktrees: state,
+          },
           null,
           2,
         ),
       );
+      return;
+    }
+
+    if (url === "/__router/retry/workstreams-app" || url === "/__router/retry/workstreams-app/") {
+      if (req.method !== "POST") {
+        res.writeHead(405, { "content-type": "text/plain", allow: "POST" });
+        res.end("retry requires POST\n");
+        return;
+      }
+      if (!workstreamsApp) {
+        res.writeHead(404, { "content-type": "text/plain" });
+        res.end("workstreams app is disabled\n");
+        return;
+      }
+      await workstreamsApp.supervisor.retry();
+      res.writeHead(303, { location: "/workstreams/" });
+      res.end();
       return;
     }
 
@@ -981,6 +1143,47 @@ function createRouterServer(core: RouterCore, gate: { authDeps: RouterAuthDeps; 
       return;
     }
 
+    const requestPathname = url.split("?")[0] ?? url;
+    if (requestPathname === "/workstreams" || requestPathname.startsWith("/workstreams/")) {
+      if (requestPathname === "/workstreams") {
+        res.writeHead(301, { location: `/workstreams/${url.includes("?") ? url.slice(url.indexOf("?")) : ""}` });
+        res.end();
+        return;
+      }
+      if (workstreamsApp) {
+        const target = workstreamsApp.supervisor.targetFor(url);
+        if (!target) {
+          const appState = workstreamsApp.supervisor.state();
+          const wantsJson = requestPathname.startsWith("/workstreams/api/") ||
+            requestPathname.startsWith("/workstreams/__internal/");
+          res.writeHead(503, {
+            "content-type": wantsJson ? "application/json; charset=utf-8" : "text/html; charset=utf-8",
+            "retry-after": "2",
+          });
+          if (req.method === "HEAD") {
+            res.end();
+          } else if (wantsJson) {
+            res.end(`${JSON.stringify({ error: "workstreams-app-unavailable", phase: appState.phase })}\n`);
+          } else {
+            res.end(renderWorkstreamsAppFallback(appState, workstreamsApp.displayLogPath));
+          }
+          return;
+        }
+        const proxyError = await proxyWorkstreamsAppOnce(req, res, target);
+        if (proxyError && !res.headersSent) {
+          res.writeHead(502, { "content-type": "text/plain; charset=utf-8" });
+          res.end(`Workstreams app proxy failed: ${proxyError.message}\n`);
+        }
+        return;
+      }
+      res.writeHead(503, {
+        "content-type": "text/plain; charset=utf-8",
+        "retry-after": "2",
+      });
+      res.end("Workstreams app supervisor is unavailable. Restart the router.\n");
+      return;
+    }
+
     if (url === "/favicon.png" || url === "/favicon.ico") {
       try {
         const buf = await fs.readFile(path.join(REPO_ROOT, "bin", "assets", "favicon.png"));
@@ -1016,6 +1219,12 @@ function createRouterServer(core: RouterCore, gate: { authDeps: RouterAuthDeps; 
     // /<name>/dev/... — the worktree's dev space (artifacts + doc browser),
     // served straight from disk so it never cold-starts the worktree.
     const afterName = url.slice(`/${name}`.length);
+    const issuesRedirect = legacyIssuesRedirect(afterName);
+    if (issuesRedirect) {
+      res.writeHead(301, { location: issuesRedirect });
+      res.end();
+      return;
+    }
     if (afterName.split("?")[0] === "/dev") {
       res.writeHead(301, { location: `/${name}/dev/` });
       res.end();
@@ -1029,7 +1238,7 @@ function createRouterServer(core: RouterCore, gate: { authDeps: RouterAuthDeps; 
       return;
     }
     if (afterName.startsWith("/dev/")) {
-      await serveDev({ name, rest: afterName, res, repoRoot: worktreeRoot(name), mainRoot: MAIN_ROOT, worktreesRoot: WORKTREES_ROOT });
+      await serveDev({ name, rest: afterName, res, repoRoot: worktreeRoot(name) });
       return;
     }
 
@@ -1064,7 +1273,7 @@ function createRouterServer(core: RouterCore, gate: { authDeps: RouterAuthDeps; 
       return;
     }
 
-    await proxyWithRetry(req, res, name, 5, core);
+    await proxyWithRetry(req, res, name, 5, core, mobileBootstrapTarget(req, decision));
   };
 
   const server = http.createServer((req, res) => {
@@ -1107,6 +1316,22 @@ function createRouterServer(core: RouterCore, gate: { authDeps: RouterAuthDeps; 
     }
     if (!decision.allow) {
       socket.destroy();
+      return;
+    }
+    const upgradePathname = reqUrl.split("?")[0] ?? reqUrl;
+    if (workstreamsApp && upgradePathname.startsWith("/workstreams/")) {
+      const target = workstreamsApp.supervisor.targetFor(reqUrl);
+      if (!target || target.kind !== "frontend") {
+        socket.end("HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n");
+        return;
+      }
+      prepareWorkstreamsAppHeaders(req.headers, null);
+      proxy.ws(req, socket, head, { target: `http://127.0.0.1:${target.port}` }, (error: Error | undefined) => {
+        if (error) {
+          log(`[workstreams-app] ws proxy error: ${error.message}`);
+          socket.destroy();
+        }
+      });
       return;
     }
     // The spoof wall on the upgrade path too: strip client `x-cb-*` before the
@@ -1169,7 +1394,7 @@ async function acquireRouterPidFile(): Promise<void> {
     const existing = await fs.readFile(ROUTER_PID_FILE, "utf8");
     const pid = Number(existing.trim());
     if (pid && pidAlive(pid)) {
-      throw new Error(`Another router is already running (pid ${pid}). Run \`bin/worktrees panic\` to clear.`);
+      throw new Error(`Another router is already running (pid ${pid}). Run \`bin/workstreams panic\` to clear.`);
     }
   } catch (e) {
     if (errnoCode(e) !== "ENOENT") {
@@ -1242,6 +1467,37 @@ async function main(): Promise<void> {
   // any descendant — deleting it changes nothing downstream.
   delete process.env.CB_HUB_SECRET;
 
+  // The router's OWN gate reads CB_BROWSE_API_KEY (via core/browse-key.ts), so
+  // the router process needs it too — the per-checkout copy in `childEnv` only
+  // reaches the children it spawns. Load it from the main checkout's `.env`,
+  // the file this router already treats as its config (MAIN_BOX_DEFAULTS above).
+  //
+  // This makes the browse key effectively MACHINE-level, not per-worktree: one
+  // router process fronts every worktree, so its gate has exactly one key to
+  // compare against. Worktree copies of `.env` still matter — the hub and box
+  // children verify independently and are spawned per worktree — but a worktree
+  // that sets a DIFFERENT key would pass its own children and be refused at the
+  // router. One key everywhere is the supported shape.
+  //
+  // Only fills in what isn't already exported, so `CB_BROWSE_API_KEY=… pnpm dev`
+  // still wins.
+  //
+  // The ROUTER takes only the one key it needs, not the whole file — unlike the
+  // children, which get the file wholesale because that is what a dotenv is
+  // for. The router is different: it is the authenticating front door, and its
+  // own resolver is env-driven in ways a dev config file must not reach. A
+  // `CB_HUB_SECRET=` line would flip `isHubMode()` and swing the resolver off
+  // the gen-aware cookie path that the `delete` above exists to guarantee —
+  // silently undoing that hardening from a gitignored file nobody reviews.
+  // An allowlist makes that structurally impossible rather than relying on
+  // nobody ever putting the wrong line in a `.env`.
+  const ROUTER_ENV_FROM_FILE = ["CB_BROWSE_API_KEY"];
+  const fileEnv = await readEnvFile(path.join(MAIN_ROOT, "callback-box", ".env"), log);
+  for (const key of ROUTER_ENV_FROM_FILE) {
+    const value = fileEnv[key];
+    if (process.env[key] === undefined && value !== undefined) process.env[key] = value;
+  }
+
   const effects = createRealEffects();
   const core = createRouterCore(effects, {
     idleTimeoutMs: IDLE_TIMEOUT_MS,
@@ -1259,8 +1515,32 @@ async function main(): Promise<void> {
   // ONE handler-building function and ONE RouterAuthDeps — the only difference is
   // the `trustedLocal` flag baked into each server instance.
   const authDeps = createRouterAuthDeps({ resolveWorktree, resolveBoxEntries });
-  const server = createRouterServer(core, { authDeps, trustedLocal: false });
-  const localServer = createRouterServer(core, { authDeps, trustedLocal: true });
+  const workstreamsAppLogPath = path.join(LOG_DIR, "workstreams-app.log");
+  const workstreamsApp = createWorkstreamsAppSupervisor(
+    createRealWorkstreamsAppEffects(STATE_DIR),
+    {
+      appRoot: path.join(MAIN_ROOT, "workstreams-app"),
+      logPath: workstreamsAppLogPath,
+      log,
+      killGraceMs: KILL_GRACE_MS,
+    },
+  );
+  const workstreamsAppGate = {
+    supervisor: workstreamsApp,
+    displayLogPath: workstreamsAppLogPath.startsWith(`${os.homedir()}${path.sep}`)
+      ? `~${workstreamsAppLogPath.slice(os.homedir().length)}`
+      : workstreamsAppLogPath,
+  };
+  const server = createRouterServer(core, {
+    authDeps,
+    trustedLocal: false,
+    ...(workstreamsAppGate ? { workstreamsApp: workstreamsAppGate } : {}),
+  });
+  const localServer = createRouterServer(core, {
+    authDeps,
+    trustedLocal: true,
+    ...(workstreamsAppGate ? { workstreamsApp: workstreamsAppGate } : {}),
+  });
 
   let shuttingDown = false;
   const shutdown = async (reason: string): Promise<void> => {
@@ -1274,7 +1554,7 @@ async function main(): Promise<void> {
     server.close();
     localServer.close();
     setTimeout(() => process.exit(0), KILL_GRACE_MS + 500).unref();
-    await core.stopAllChildren();
+    await Promise.all([core.stopAllChildren(), workstreamsApp?.shutdown()]);
     await fs.unlink(ROUTER_PID_FILE).catch(() => {});
     await fs.unlink(ROUTER_SOCK).catch(() => {});
     process.exit(0);
@@ -1315,6 +1595,11 @@ async function main(): Promise<void> {
     }
   } catch (err) {
     log(`startup reclaim failed (continuing): ${errMessage(err)}`);
+  }
+  if (workstreamsApp) {
+    // Startup is intentionally not awaited: the authenticated fallback must be
+    // reachable while dependencies are missing or the resident app is slow.
+    void workstreamsApp.start();
   }
   await listenUnixSocket(localServer, ROUTER_SOCK);
   log(`trusted-local socket at ${ROUTER_SOCK} (mode 0600; unauthenticated, local CLI)`);

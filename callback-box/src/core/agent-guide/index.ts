@@ -22,7 +22,8 @@ import {
   cardTypesSection,
   questionsSection,
 } from "./cards.js";
-import { gitHistorySection, whereToRecordSection } from "./behavior.js";
+import { todosSection } from "./todos.js";
+import { gitHistorySection, speakingToUserSection, whereToRecordSection } from "./behavior.js";
 import { landmarksSection } from "./landmarks.js";
 import { secretsSection } from "./secrets.js";
 import { lawsSection } from "./laws.js";
@@ -59,9 +60,11 @@ This guide is for every agent working in this box — chat, background jobs, and
   const sections: string[] = [
     intro,
     lawsSection(),
+    speakingToUserSection(),
     aboutCardsSection(),
     cardTypesSection(allCardSchemas),
     questionsSection(),
+    todosSection(),
     directoryLayoutSection(),
     boxCodeLocationSection(shape),
     landmarksSection(),

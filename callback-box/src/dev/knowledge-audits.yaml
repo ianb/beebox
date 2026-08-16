@@ -1,6 +1,10 @@
 tests:
   # === Box Structure and Navigation ===
   #
+  # Status (2026-08-14, Codex): 13/13 navigation-tagged audits pass. The
+  # how-items-enter check now accepts the semantically equivalent phrase
+  # "connected services" after Codex named Gmail, Telegram, Calendar, and Drive.
+  #
   # Status (2026-07-03): 2/3 pass. REAL GAP: find-memo-cards — agent answers
   # `cb ls --kind memo` (hallucinated; `cb ls` has no --kind) instead of the
   # `*.memo.card` glob. See docs/reports/knowledge-audit-rerun-2026-07-03.md.
@@ -26,18 +30,38 @@ tests:
     correct_contains: ["archive"]
     tags: [navigation, lifecycle]
 
+  # Status (2026-08-14): Claude and Codex both pass directly with 0 file reads
+  # and 0 searches. The semantic regex accepts either natural ordering of the
+  # host-/tmp rejection without requiring one model's exact wording.
+  - id: temp-file-location
+    prompt: "You need to create a temporary working file while operating this box. Should it go in the host /tmp or the box-root tmp/ directory, and can you rely on it staying there?"
+    expected_level: knows_directly
+    watch_for: "Chooses box-root tmp/ and explicitly rejects host /tmp without reading files; says it may be swept and must not be relied on for persistence"
+    correct_contains: ["tmp/", "/tmp", "swept"]
+    correct_matches:
+      - "\\b(?:not|never)\\b(?:\\W+\\w+){0,2}\\W+host\\W+/tmp\\b|\\b(?:do\\W+not|don't)\\W+(?:use|put|place|write|store)(?:\\W+\\w+){0,3}\\W+host\\W+/tmp\\b|\\bhost\\W+/tmp\\b\\W+(?:should|must)\\W+not\\W+be\\W+(?:used|chosen)\\b"
+    tags: [navigation, temp-files]
+    notes: >
+      General box scratch belongs in tmp/, which is uncommitted and may be
+      swept, so it is not persistent storage. This is distinct from host /tmp
+      and the committed flow-specific tmp-capture/ and tmp-upload/ landing zones.
+
   # === How Items Enter the Box ===
   #
   # Status (2026-07-03): all 5 still pass after full rerun.
   #
   # Status (2026-03-16): All 5 pass. Agent knows input mechanisms directly
   # from the new "How Items Enter the Box" section in the agent guide.
+  # Status (2026-08-15, Codex): all 12 intake-tagged audits pass. The four
+  # direct orientation questions below used no reads or searches. user-adds-item
+  # also passed, but inspected the frontend to verify its exact UI instructions.
 
   - id: how-items-enter
     prompt: "How do items get into the box? What are the different ways things arrive?"
     expected_level: knows_directly
     watch_for: "Names capture UI, connectors, cb create, and chat — not manual file placement"
-    correct_contains: ["capture", "connector"]
+    correct_contains: ["capture"]
+    correct_contains_any: ["connector", "connected services"]
     tags: [intake, navigation]
     notes: >
       The agent should know input mechanisms directly from the agent guide.
@@ -95,6 +119,14 @@ tests:
   # `.refine()` answer; FIXED by a corrective in agent-guide/cards.ts ("rules Zod
   # can't express go in the schema's `validate` hook, not a `.refine()`"). See
   # docs/reports/knowledge-audit-rerun-2026-07-03.md.
+  # Status (2026-08-04): tab-arrangement-editing passed its first focused run
+  # (2 file reads, 0 searches). Status (2026-08-10): passed after the switch to
+  # annotated deletion (1 file read, 0 searches); the agent kept every UUID in
+  # a proposed window, also marked deletions in close, and preserved explicit Apply.
+  # Status (2026-08-15, Codex): all schema-tagged audits pass. The direct card
+  # inventory, figure runtime, validation-hook, extensibility, and package-layout
+  # questions were answered with no reads or searches; exact formats and
+  # discoverable extension mechanics triggered targeted reference reads.
 
   - id: list-card-types
     prompt: "What card types do you know about? List them all."
@@ -139,6 +171,66 @@ tests:
     watch_for: "Mentions that a follow-up job is created from the directive, and (when the question declared learning:) that the job also records the confirmed belief"
     correct_contains: ["job", "directive"]
     tags: [questions, jobs]
+
+  - id: tab-arrangement-editing
+    prompt: >
+      I shared my browser tabs through Callback Clerk. You are revising the
+      resulting tab-arrangement card. How do you represent moving and closing
+      tabs, and what happens when the proposal is ready?
+    expected_level: knows_about
+    should_read: ["docs/generated/card-tab-arrangement.md"]
+    watch_for: >
+      Preserves every original per-tab UUID exactly once in the proposed
+      windows, additionally lists deleted UUIDs in close without removing them
+      from their window positions, never substitutes URLs, and says status
+      ready does not itself change Chrome: the boxholder must explicitly Apply
+      in the viewer.
+    correct_contains: ["UUID", "Apply"]
+    tags: [cards, schemas, tab-arrangement]
+
+  # === Gmail tracked working set ===
+  # Status (2026-08-05): definitions added; focused run deferred to conserve
+  # the boxholder's remaining model quota.
+
+  - id: gmail-tracked-subset
+    prompt: "Do the email cards in this box represent all of Gmail? How do you reach mail that is not present locally?"
+    expected_level: knows_about
+    should_read: ["docs/generated/card-email-thread.md"]
+    watch_for: "Says cards are a tracked subset and uses the connector gws surface for other mail"
+    correct_contains: ["tracked", "cb connector gmail gws"]
+    tags: [gmail, cards, connectors]
+
+  - id: gmail-track-thread
+    prompt: "You found one useful Gmail thread that is not in the box. How do you add it to the working set, and what happens afterward?"
+    expected_level: knows_about
+    should_read: ["docs/generated/card-email-thread.md"]
+    watch_for: "Uses the explicit track command with a thread ID and says regular sync keeps the resulting card current"
+    correct_contains: ["cb connector gmail track", "sync"]
+    tags: [gmail, cards, connectors]
+
+  - id: gmail-delete-card
+    prompt: "What happens in Gmail if I delete or trash a tracked email-thread card?"
+    expected_level: knows_about
+    should_read: ["docs/generated/card-email-thread.md"]
+    watch_for: "Says card deletion stops tracking but does not delete the remote Gmail thread"
+    correct_contains: ["stops tracking", "does not delete"]
+    tags: [gmail, cards, lifecycle]
+
+  - id: gmail-rule-procedure
+    prompt: "Where do I configure a procedure to react to newly matching Gmail, and can it avoid starting an agent when a deterministic check finds nothing?"
+    expected_level: knows_about
+    should_read: ["docs/generated/card-email-thread.md"]
+    watch_for: "Names config/connectors/gmail.json rules and says a procedure shell precheck can skip before an agent step"
+    correct_contains: ["config/connectors/gmail.json", "precheck"]
+    tags: [gmail, connectors, procedures]
+
+  - id: gmail-gws-safety
+    prompt: "Can you send, relabel, trash, or delete Gmail through cb connector gmail gws?"
+    expected_level: knows_about
+    should_read: ["docs/generated/card-email-thread.md"]
+    watch_for: "Says the passthrough is read-only and rejects Gmail mutations"
+    correct_contains: ["read-only"]
+    tags: [gmail, connectors, safety]
 
   # === Figure Cards (canvas-loop runtime) ===
   #
@@ -291,6 +383,10 @@ tests:
   # Status (2026-06-27): both pass against test1 — knows_directly, 0 files read /
   # 0 searches, answered straight from the agent guide's cb-mv + box-root-link
   # convention (behavior.ts). Landed with the markdown link-validation fix.
+  # Status (2026-07-30): both still pass (0 reads / 0 searches, 43k ctx) after the
+  # box-root-paths rewrite of the ref rule (REF_PATH_RULE, Track E);
+  # internal-links-resolve-to-box-root's watch_for was widened to the new
+  # "always write the leading /" framing.
   - id: move-store-content-uses-cb-mv
     prompt: "How do you move or rename content under store/ (a card, a directory, or a markdown dossier)?"
     expected_level: knows_directly
@@ -301,9 +397,77 @@ tests:
   - id: internal-links-resolve-to-box-root
     prompt: "A markdown link in a card or dossier is [x](/store/foo/bar.jpg). What does the leading slash mean?"
     expected_level: knows_directly
-    watch_for: "Box root, not the OS filesystem root; the target must be an existing file/dir in the box"
+    watch_for: >
+      Box root, not the OS filesystem root; the target must be an existing
+      file/dir in the box. Leading `/` is also the form you always write
+      (docs/implemented-plans/box-root-paths.md) — a bare path still resolves, but only
+      as a legacy form, and `../` is never written.
     correct_contains: ["box root"]
     tags: [links]
+
+  # === Refs are always written box-root-relative (Track G, box-root-paths) ===
+  #
+  # One rule, three angles: the chat-reply link, a landmark frontmatter ref, and
+  # the single exception (`attach/`). The third exists specifically to keep the
+  # always-`/` rule from swallowing the attach scope. Rule text lives in one
+  # constant: REF_PATH_RULE (src/core/agent-guide/source.ts), reaching every
+  # agent via ABOUT_CARDS + PROVENANCE.
+  #
+  # Status (2026-07-30): all 3 pass first run against the test1 clone, no
+  # guidance changes needed. links-always-box-root and attach-is-the-exception
+  # answered with 0 reads / 0 searches (49k / 43k ctx). landmark-ref-box-root
+  # passes but read docs/generated/card-landmark.md first (5 turns) — weakest of
+  # the three; it recalls the box-path rule but verifies the links[] field shape,
+  # so re-check it if the landmark schema docs move.
+  - id: links-always-box-root
+    prompt: >
+      There's a card at store/notes/Beta_Launch.doc.card. In your reply to me,
+      write the markdown link you'd use to point me at it, and say why that
+      path form.
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: >
+      Writes the target with a leading `/` — [the beta launch
+      plan](/store/notes/Beta_Launch.doc.card) — and says it resolves from the
+      box root. FAILS on a bare `store/notes/…` target or any `../` climb: those
+      still resolve (legacy) but are not what gets authored. A human label
+      rather than a bare filename as the link text.
+    correct_contains: ["/store/notes/Beta_Launch.doc.card"]
+    response_not_matches:
+      - '\]\((?!/|attach/|https?:|#)'
+      - '\]\(\.\./'
+    tags: [links, chat, paths]
+
+  - id: landmark-ref-box-root
+    prompt: >
+      I'm adding an entry to a landmark card's links list that points at the
+      card store/recipes/Bread.recipe.card. Write the links[] entry.
+    expected_level: knows_directly
+    watch_for: >
+      `ref: /store/recipes/Bread.recipe.card` — a box path with a leading `/`,
+      the same rule as every other ref. FAILS on a landmark-dir-relative
+      (`recipes/Bread.recipe.card`) or `../`-climbing ref: that was the old
+      landmark-private convention, retired 2026-07-30. A `title`/label
+      alongside `ref` is expected and fine.
+    correct_contains: ["/store/recipes/Bread.recipe.card"]
+    response_not_matches:
+      - 'ref:\s*["'']?(?!/)[\w./-]*\.card'
+    tags: [links, landmark, paths]
+
+  - id: attach-is-the-exception
+    prompt: >
+      A card at store/trips/Trip.record.card has ![the cabin](attach/photo.jpg)
+      in its body. Which file on disk is that pointing at?
+    expected_level: knows_directly
+    watch_for: >
+      The card's OWN attach scope — store/trips/Trip.attach/photo.jpg — NOT a
+      box-root `/attach/photo.jpg` and not a literal `attach/` directory beside
+      the card. `attach/` is the one exception to the always-leading-`/` rule,
+      and this audit guards it from being over-generalized away by that rule.
+      Bonus: says a plain `.md` dossier owns no attach scope, so the prefix is
+      card-only.
+    correct_contains: ["Trip.attach/photo.jpg"]
+    tags: [links, cards, attachments, paths]
 
   - id: validate-card
     prompt: "How do you validate a card after editing it?"
@@ -369,12 +533,22 @@ tests:
   # image files directly); scan-import runs its own Gemini pass at import
   # time. Nothing left to assert here as a "discover this command" audit.
 
+  # Status (2026-08-15): Codex passes through the official SDK. It reads the
+  # generated path-scoped image rule skill and answers correctly. Claude may
+  # instead read the equivalent generated card doc, so either canonical
+  # generated surface satisfies the navigation check.
   - id: image-exif-date
-    prompt: "Where does the captured date come from on image cards?"
+    prompt: "Consult the box's generated image-card guidance. What does filename.captured represent, and where should the photo's original EXIF capture time go?"
     expected_level: knows_about
-    watch_for: "Mentions EXIF data — the captured attribute is updated from the image file's EXIF DateTimeOriginal"
-    should_read: ["docs/generated/card-image.md"]
-    correct_contains: ["EXIF"]
+    watch_for: "Distinguishes the capture/upload/import timestamp in filename.captured from the photo's original timestamp in exif.date"
+    should_read_any:
+      - "docs/generated/card-image.md"
+      - "callback-box-rule-card-image/SKILL.md"
+    correct_contains: ["filename.captured", "exif.date"]
+    correct_matches:
+      - "filename\\.captured[\\s\\S]{0,120}\\b(?:acquisition|upload|ingestion|import|browser|selection)\\b[\\s\\S]{0,40}\\b(?:time|timestamp)\\b|\\b(?:acquisition|upload|ingestion|import|browser|selection)\\b[\\s\\S]{0,40}\\b(?:time|timestamp)\\b[\\s\\S]{0,120}filename\\.captured"
+    response_not_matches:
+      - "filename\\.captured.{0,80}(?:set|comes|taken|derived).{0,30}(?:from|by).{0,30}EXIF"
     tags: [images]
 
   # === Procedures ===
@@ -638,15 +812,21 @@ tests:
   #
   # Status (2026-07-03): both pass. add-daily-task answered scheduled-script +
   # config/schedules/ directly (dropped stale should_read card-scheduled-script.md).
+  # Status (2026-08-15, Codex): both pass. Schedule authoring intentionally lives
+  # on the on-demand schedules skill rather than the always-on agent guide, so
+  # how-schedules-work now expects a generated schedule-card reference read.
+  # add-daily-task's prompt is explicit about implementing the automation inside
+  # the box rather than ambiguously asking how a user requests one.
 
   - id: how-schedules-work
     prompt: "How do scheduled tasks work in this box?"
-    expected_level: knows_directly
-    watch_for: "Describes tick/scheduled mechanism from agent guide"
+    expected_level: knows_about
+    should_read: ["docs/generated/card-scheduled-script.md"]
+    watch_for: "Loads the on-demand schedule guidance and describes the scheduled mechanism"
     tags: [schedules]
 
   - id: add-daily-task
-    prompt: "How would I add a daily task?"
+    prompt: "As the box agent, how would you implement a new automated task that runs every day? What would you create, and where?"
     expected_level: knows_about
     watch_for: "Names the scheduled-script card + config/schedules/ + cb create; answers from the always-on guide"
     correct_contains: ["scheduled-script"]
@@ -658,12 +838,15 @@ tests:
   # (agent proposes custom schemas directly — dropped too-strict should_read
   # config/schemas/CLAUDE.md; create-task-card-type re-encoded as a negative check
   # given its conversational variance).
+  # Status (2026-08-15, Codex): all 11 extension-tagged audits pass. The
+  # track-reading-list prompt now asks the representation choice it evaluates;
+  # Codex selects a custom book schema over generic memo/record cards.
 
   - id: track-reading-list
-    prompt: "I want to track books I'm reading with progress and ratings. How would you set that up?"
+    prompt: "I want to track many books with consistent progress, status, and rating fields. Would you use generic memo/record cards, or define a custom card type? How would you set it up?"
     expected_level: discoverable
     watch_for: "Proposes a custom card type / schema (with status/progress/rating fields) rather than suggesting memos"
-    correct_contains_any: ["schema", "card type"]
+    correct_contains_any: ["schema", "card type", "book type", "book` type"]
     tags: [schemas, extension]
     notes: >
       Updated 2026-07-03: the agent proposes a custom `book` schema with the right
@@ -671,7 +854,9 @@ tests:
       The old should_read config/schemas/CLAUDE.md was already noted as too strict.
       Substance check = proposes a schema/custom card type (the discoverable-correct
       answer), not the "just use memos" failure mode. It doesn't always name the
-      exact config/schemas/ path, so match on the concept.
+      exact config/schemas/ path, so match on the concept; "book type" is the
+      same domain-specific wording for this prompt, with or without Markdown
+      code formatting around book.
 
   - id: create-task-card-type
     prompt: "Can you create a new type of card for tracking project tasks?"
@@ -682,11 +867,13 @@ tests:
     notes: >
       Updated 2026-07-03: this is an inherently conversational prompt — the agent
       sometimes proposes the project-task schema outright and sometimes asks what
-      distinguishes it from the existing todo-list type first; both are correct
+      distinguishes it from an existing related card type first; both are correct
       extensibility-aware behavior. A positive string match is too brittle across
       that variance, so the audit encodes the real assertion (its watch_for)
       negatively: the agent must not claim card types are a fixed/built-in set.
-      Dropped the too-strict should_read config/schemas/CLAUDE.md.
+      Dropped the too-strict should_read config/schemas/CLAUDE.md. (Updated
+      2026-07-29: the note used to name the now-retired todo-list type as the
+      example the agent might ask about; genericized since that type is gone.)
 
   - id: add-new-capability
     prompt: "How would you add a new capability to this box?"
@@ -835,63 +1022,291 @@ tests:
       The agent shouldn't need to know the outbound mechanics to process
       a chat job — just write the response and commit. But understanding
       the flow helps debug issues. This is discoverable from connector docs.
-  # === Todo Lists ===
+  # === Todo Lists (retired) ===
   #
-  # Status (2026-07-03): all 6 pass. todo-list cards are YAML (items: array), not
-  # XML — fixed 3 stale audits (structure de-baited off "XML", nested-items check
-  # → items:, create dropped stale should_read).
+  # The dedicated todo-list card type was retired 2026-07-29 (superseded by
+  # the universal {% todo %} annotation — see the "Todo Annotation" section
+  # below and issues/closed/features/2026-07-29-retire-todo-list-schema.md).
+  # The six recall audits that used to live here (todo-list-structure,
+  # -storage, -lifecycle, -create, -nested-items, -vs-job) tested a card type
+  # that no longer exists and were removed rather than left to fail forever.
 
-  - id: todo-list-structure
-    prompt: "Show me the structure of a todo-list card."
-    expected_level: knows_about
-    watch_for: "Describes YAML frontmatter with an items: array (each item: name/status/items? for nesting)"
-    correct_contains: ["items:"]
-    tags: [cards, todos]
-    notes: >
-      De-baited off "XML structure" 2026-07-03 (the bait made the agent stop to
-      correct the premise and often not show the shape). todo-list cards are YAML
-      with an `items:` array (name/status/completed?/details?/items?), not XML
-      `<todo-list>`/`<item>`. The agent knows this directly.
+  # === Todo Annotation ({% todo %}) ===
+  #
+  # New agent-facing concepts from docs/implemented-plans/todo-annotation.md
+  # (Track 6).
+  # Distinct from the "=== Todo Lists ===" section above, which tests the
+  # older, largely-unused todo-list card type — these test the universal
+  # capture-in-place {% todo %} tag, cb todos, and the todo-view card.
+  #
+  # Status (2026-07-28): 5/5 pass on first run (knows_directly, 0 files
+  # read / 0 searches each, ~42-43k ctx) against the always-on agent-guide
+  # todos section (src/core/agent-guide/todos.ts) landed in an earlier
+  # chunk of this plan — no doc/prompt changes needed.
 
-  - id: todo-list-storage
-    prompt: "Where do todo lists live in the box?"
+  - id: todo-annotation-tag-shape
+    prompt: "How would you mark a sentence in a memo's body as something you need to follow up on later — a lightweight capture-in-place annotation, not a whole new card?"
     expected_level: knows_directly
-    watch_for: "Names store/todos/ directly from agent guide"
-    correct_contains: ["store/todos"]
-    tags: [todos, navigation]
+    watch_for: "Names the {% todo %} Markdoc tag: a wrapper around the text, metadata lives in attributes (not a separate structured record), and a bare {% todo %}…{% /todo %} with no attributes is already a valid open todo"
+    correct_contains: ["{% todo"]
+    tags: [todos, markdoc]
 
-  - id: todo-list-lifecycle
-    prompt: "What happens to a todo list when all its items are done?"
-    expected_level: knows_about
-    watch_for: "Describes archiving to store/archive/done/ or store/archive/deferred/"
-    should_read: ["docs/generated/card-todo-list.md"]
-    correct_contains: ["archive"]
-    tags: [todos, lifecycle]
+  - id: todo-annotation-status-and-start
+    prompt: >
+      A {% todo %} has due="2026-08-01" but no start attribute. Is it
+      visible on the plate today, or only once it gets closer to the due
+      date? And what are the other status values besides the default?
+    expected_level: knows_directly
+    watch_for: >
+      Says due-without-start is on the plate immediately (no lead-time
+      opinion, not "hide until due"); names done/dropped/parked as the
+      other status values; says start, not due, is the primary surfacing
+      trigger when both are present.
+    correct_contains_any: ["start", "parked"]
+    tags: [todos, markdoc]
 
-  - id: todo-list-create
-    prompt: "Create a todo-list card for weekend errands with items: buy groceries, mow lawn, return library books."
-    expected_level: knows_about
-    watch_for: "Creates a .todo-list.card file in store/todos/ (cb create or direct write) with the three items"
-    correct_contains: ["todo-list", "store/todos"]
+  - id: todo-annotation-cb-todos
+    prompt: "How do you see every open todo across the box, and how do you mark one done?"
+    expected_level: knows_directly
+    watch_for: >
+      Names `cb todos` as the query path (not a browsing UI or a search).
+      Marking one done is editing the {% todo %} tag's status attribute (or
+      the frontmatter todos: entry) directly — there is no `cb todos`
+      mutation subcommand.
+    correct_contains: ["cb todos"]
+    tags: [todos, cli]
+
+  - id: todo-annotation-vs-question
+    prompt: "You're processing a card and you're not sure whether to create a {% todo %} or a question card. What's the difference?"
+    expected_level: knows_directly
+    watch_for: "A todo is work to do (on someone's plate); a question is blocked on a human decision the agent can't make on its own"
+    correct_contains_any: ["question", "blocked"]
+    tags: [todos, questions]
+
+  - id: todo-annotation-todo-view-card
+    prompt: "You want a project directory to show its own list of open todos, scoped to just that project. What do you do?"
+    expected_level: knows_directly
+    watch_for: >
+      Creates (or points to) a todo-view card in that directory — subtree-
+      scoped by the omitted-glob default — and links to it like any other
+      card, no new link syntax.
+    correct_contains: ["todo-view"]
     tags: [todos, cards]
 
-  - id: todo-list-nested-items
-    prompt: "Can todo items have sub-items? How does nesting work?"
-    expected_level: knows_about
-    watch_for: "Describes each item carrying its own nested items: array (recurse via items?)"
-    should_read: ["docs/generated/card-todo-list.md"]
-    correct_contains: ["items:"]
-    tags: [todos, cards]
+  # --- application: does the agent reach for it unprompted? ---
+  #
+  # The five audits above are recall (quiz-style): the prompt names the
+  # mechanism and asks the agent to describe it. These four are application:
+  # a realistic task that never says "todo," "{% todo %}," "annotation," or
+  # "capture" — pass condition is the agent choosing the technique itself.
+  # Learned from this corpus's de-baiting history (see the "de-baited"
+  # notes elsewhere in this file): naming the mechanism in the prompt lets
+  # the agent pass by parroting instead of by choosing, which is worthless
+  # here.
+  #
+  # Status (2026-07-29): 4/4 pass after two fix rounds; recall 5/5 above
+  # still pass (no regression from the guidance edit). History:
+  #
+  # - First run: 2/4 passed outright (query-plate, scoped-surface — both
+  #   knows_directly, 0-13 reads). capture-in-passing and
+  #   question-not-todo both failed, and both failed the SAME way: given a
+  #   quick note to file, the agent reached for the pre-existing
+  #   `weekend-errands.todo-list.card` (the legacy human-curated list type)
+  #   instead of the new inline `{% todo %}` annotation — for
+  #   capture-in-passing the due-dated parking-permit intention landed as a
+  #   plain list item (no structured due attribute); for
+  #   question-not-todo the undecided storage-unit item got its own new
+  #   todo-list card instead of a question card. Genuine guidance gap, not
+  #   a broken audit: todos.ts never said the new tag is the default over
+  #   the old list type, and its "capture it ... rather than switching to
+  #   a separate task list" line was too soft to overcome an
+  #   already-existing, discoverable list card sitting right there in the
+  #   box. Fix: strengthened `src/core/agent-guide/todos.ts`'s opening
+  #   paragraph — explicit "this is the default capture path even when an
+  #   older todo-list card already exists," explicit "reaching for the
+  #   familiar existing list ... is usually the wrong reflex," plus an
+  #   explicit "deferring a decision onto a list is still avoiding the
+  #   question, not answering it" line for the question-vs-todo case.
+  # - Second run (after the todos.ts fix): capture-in-passing flipped to
+  #   pass (agent used the inline tag with a real due= attribute, left the
+  #   book recommendation alone). question-not-todo still failed, but
+  #   differently: the agent explicitly avoided the todo-list card this
+  #   time ("that's a curated errands list, and this is a decision, not an
+  #   errand") — the guidance fix worked — but then filed the undecided
+  #   item as an inline `{% todo %}` annotation and asked a follow-up
+  #   question in its own reply text, rather than persisting a question
+  #   card. That's actually compliant with the Questions section's own
+  #   "in chat, just ask — never create a question card for something you
+  #   can ask in your reply" carve-out, which applies because my prompt
+  #   never established whether anyone was watching the reply live. Fixed
+  #   the AUDIT, not the guidance: reworded the prompt to explicit
+  #   intake-job framing ("nobody is watching your response live;
+  #   anything unresolved needs to persist as a durable card") — the same
+  #   unattended-batch framing the recall corpus's intake-style prompts
+  #   already use elsewhere in this file, just missing here originally.
+  # - Third run (audit reworded): passes. The agent's response: "this is a
+  #   decision only the boxholder can make, so per the guide it's a
+  #   question, not a todo" — created a question card, no todo tag
+  #   anywhere. Full 4/4 rerun afterward confirms no interference between
+  #   audits, and a rerun of the 5 recall audits confirms the todos.ts
+  #   wording change didn't regress them.
+  #
+  # Takeaway for the boxholder: recall was never the hard part (5/5 on
+  # first try, unprompted). Application needed one real guidance
+  # strengthening (todo-list's gravitational pull as the pre-existing,
+  # discoverable mechanism was stronger than the new tag's soft
+  # preference) plus one audit fix (job-vs-chat framing ambiguity, not a
+  # knowledge gap). Worth watching for the same pull in real box usage:
+  # boxes with existing todo-list cards may keep attracting new
+  # intentions to the old mechanism until agents see enough examples of
+  # the new one.
+  #
+  # Status (2026-07-30, after retiring todo-list): reran the full 9
+  # (5 recall + 4 application) against the migrated test1 box — 9/9 pass.
+  # The reworded todos.ts guidance ("the suggested way to make a todo list
+  # is a simple .doc.card with embedded {% todo %} items" — the
+  # `todo-list`-specific carve-out language is gone now that the type no
+  # longer exists) caused no regression on any of the 5 recall audits.
+  # Two flaky failures surfaced across reruns, both audit-mechanics (turn
+  # budget), not guidance gaps — the agent's actual behavior was correct
+  # both times (verified via files-read: it had created the right card)
+  # but a truncated final reply missed the text-match check because it ran
+  # out of turns before narrating a summary: todo-application-question-not-todo
+  # (max_turns 15→25) and todo-application-scoped-surface (max_turns 15→25,
+  # only on a later rerun — passed clean on the first run of the day). Both
+  # pass reliably after the bump; see each audit's own notes.
 
-  - id: todo-list-vs-job
-    prompt: "What's the difference between a todo list and a job card?"
-    expected_level: knows_about
-    watch_for: "Distinguishes human action items (todos) from agent work items (jobs)"
-    tags: [todos, jobs]
+  - id: todo-application-capture-in-passing
+    prompt: >
+      Here's a quick note from the boxholder: "Great dinner with Priya last
+      night — she recommended that book on urban design she's been reading,
+      sounds worth checking out. Also, I still need to renew the parking
+      permit before it expires August 15." File this somewhere useful.
+    expected_level: knows_directly
+    watch_for: >
+      Files the note (memo or record) and marks the parking-permit
+      intention with a {% todo %} tag (or a frontmatter todos: entry)
+      carrying the due date as a real attribute — due="2026-08-15" landing
+      in an attribute, not left as prose inside the body. The book
+      recommendation is preserved as content but should NOT get wrapped in
+      a todo — it's not an open intention, there's nothing to act on.
+    cards_contain: ["{% todo", "2026-08-15"]
+    max_turns: 15
+    tags: [todos, application]
     notes: >
-      This tests understanding that todos are for humans while jobs are
-      for agents. The agent should not confuse the two or suggest using
-      jobs for human tasks.
+      Pass condition is unprompted use of the mechanism — the prompt never
+      says "todo," "annotation," or "capture." If the agent instead used
+      the frontmatter todos: form, cards_contain on "{% todo" will read as
+      a (false) fail — check the card by eye before calling it broken. The
+      negative half (book recommendation NOT becoming a todo) isn't
+      mechanically asserted; eyeball the created card for todo-spam.
+
+  - id: todo-application-question-not-todo
+    prompt: >
+      You are processing an item from the intake queue — nobody is watching
+      your response live; anything unresolved needs to persist as a durable
+      card, not just a line in your reply. The item is a voice memo: "Not
+      sure whether we should cancel the storage unit or just keep paying
+      for it through winter — need to figure that out at some point."
+      Process this item.
+    expected_level: knows_directly
+    watch_for: >
+      Raises this as a question card — it's blocked on a decision the agent
+      can't make, not because there's a task to go do. Does NOT wrap it in
+      a {% todo %} tag or a todo-list item (which would misrepresent a
+      pending decision as ready-to-execute or already-scheduled work — the
+      inverse failure of the capture-in-passing audit above). The intake-job
+      framing (nobody watching the reply live) is what makes a persisted
+      question card the right call here rather than "just ask in your
+      reply" — the Questions section's own carve-out for synchronous chat,
+      which doesn't apply to unattended job processing.
+    correct_contains_any: ["question"]
+    response_not_contains: ["{% todo"]
+    max_turns: 25
+    tags: [todos, questions, application]
+    notes: >
+      Inverse of todo-application-capture-in-passing. Pass condition is
+      choosing the question mechanism unprompted — the prompt never says
+      "question" or "todo." response_not_contains guards the sharper
+      failure (narrating a {% todo %} tag in the reply); if a question card
+      was created, eyeball it for the storage-unit framing. Reworded
+      2026-07-29 to explicit intake-job framing ("nobody is watching your
+      response live") after the first two runs: without it, the agent
+      correctly applied the Questions section's own "in chat, just ask"
+      carve-out and answered inline instead of persisting a card — not a
+      knowledge gap, an ambiguous prompt. See section status comment.
+      max_turns raised 15→25 2026-07-30 (todo-list retirement rerun): the
+      agent read the intake guide plus question/memo card docs and created
+      both a memo and a question card (correctly, no {% todo %} tag) but
+      ran out of budget before narrating a final summary, so the truncated
+      14-word reply never said "question" — failed the text check on a
+      cut-off response, not a knowledge gap (confirmed by files-read: it had
+      already created `box/questions/Storage_Unit_Winter.question.card`).
+      Passed cleanly after the bump with a full narrated response.
+
+  - id: todo-application-query-plate
+    prompt: "What should the boxholder be focusing on right now?"
+    expected_level: knows_directly
+    watch_for: >
+      Runs `cb todos` (ideally `--on-plate`) to check actual plate-state
+      before answering, rather than grepping the box for {% todo %} tags by
+      hand or guessing from memory of past conversation.
+    bash_contains: ["cb todos"]
+    tags: [todos, application, cli]
+    notes: >
+      Pass condition is reaching for the query tool unprompted — the
+      prompt never says "todo" or "plate." Whether the box's fixture data
+      has open todos to report is incidental; the tool-use choice is what's
+      being tested, not the answer's content.
+
+  - id: todo-application-scoped-surface
+    prompt: >
+      The boxholder wants one place to glance at everything still open for
+      the Larkspur Vale garden renovation — set that up.
+    expected_level: knows_directly
+    context_dir: store/projects/larkspur-vale-garden
+    fixture:
+      store/projects/larkspur-vale-garden/Soil_Prep.memo.card: |
+        ---
+        status: processed
+        created: 2026-07-20T09:00:00Z
+        ---
+        Ordered raised bed soil from the nursery.
+
+        {% todo due="2026-08-05" %}
+        Pick up the delivered soil bags from Rivermouth Nursery
+        {% /todo %}
+      store/projects/larkspur-vale-garden/Planting_Plan.memo.card: |
+        ---
+        status: processed
+        created: 2026-07-22T09:00:00Z
+        ---
+        Planting plan drafted with Tomas.
+
+        {% todo %}
+        Decide on the border plant layout
+        {% /todo %}
+    watch_for: >
+      Creates a todo-view card in this project directory, relying on the
+      omitted-glob default (scoped to the card's own subtree) rather than
+      hand-listing the two open todos in a memo or a manually-maintained
+      list card — a hand list goes stale the moment a new todo is added
+      elsewhere in the project; a todo-view card doesn't.
+    correct_contains: ["todo-view"]
+    max_turns: 25
+    tags: [todos, application, cards]
+    notes: >
+      Fixture seeds two open todos so there's something real to surface.
+      Pass condition is choosing the live-query card unprompted — the
+      prompt never says "todo" or "todo-view." Failure mode: a memo or
+      note titled something like "Open Items" that just restates the two
+      todos as static text. max_turns raised 15→25 2026-07-30: on a rerun
+      the agent legitimately explored landmarks/maps in addition to
+      creating+validating the card (30 turns) and ran out of budget before
+      writing its final narration — created the right card
+      (`Open_Items.todo-view.card`, confirmed via files-read) but the
+      truncated reply never said "todo-view", failing the text check. Audit-
+      mechanics bug (turn budget), not a guidance gap.
 
   # === Recording Knowledge ===
 
@@ -1040,6 +1455,9 @@ tests:
   # 10 turns — agent identified the right things but ran out of turns creating
   # cards. The intake-unexpected-person test also needed the cb create array
   # args fix (agent couldn't pass options to question template).
+  # Status (2026-08-15, Codex): all four intake-tagged scenarios in this section
+  # pass after post-turn validation resolves the box from each changed file path
+  # instead of the callback-box server's cwd.
 
   - id: intake-unexpected-legal
     prompt: >
@@ -2497,6 +2915,81 @@ tests:
     correct_contains_any: ["{% quote", "verbatim", "your words", "exact words", "not paraphrase", "outside", "betrayal"]
     tags: [quotes, laws, behavioral, integrity]
 
+  # Law 1's data-fidelity bullet (added 2026-08-09 after a field-test run where
+  # the agent silently rewrote "1 tbsp" → "1 T" while structuring an uploaded
+  # recipe): user-supplied values — quantities, units, names, dates — stay as
+  # given when structured into card fields; conversion happens only on request,
+  # and visibly. Backed by the recipe schema's Fidelity section too.
+  #
+  # Status (2026-08-09): pass, knows_directly (0 reads, 0 searches). Kept both
+  # examples verbatim ("your file's words verbatim, not normalized short
+  # forms") and volunteered convert-only-on-request-and-say-so unprompted.
+  # Re-run same day after the law gained its machine-format carve-out and the
+  # keyword gate was tightened (cross-model review): still pass, "exactly as
+  # you wrote them … I'd only do that if you asked, and I'd say so".
+  - id: law-data-fidelity-units
+    prompt: >
+      You're saving a recipe text file I uploaded as a recipe card. My file
+      says "1 tablespoon dried oregano" and "1/2 cup green olives". When you
+      fill in the ingredient tags, do you tidy the measurements into standard
+      short forms like "1 T" and "½ c"?
+    expected_level: knows_directly
+    watch_for: >
+      Says no — keeps the user's units and wording exactly as given ("1
+      tablespoon", "1/2 cup"), in both the tag attributes and the body text.
+      Converting or abbreviating happens only if asked, and is announced.
+      Bonus: names the "1 T" vs "1 t" hazard or the trust cost of silent
+      edits. Does NOT frame normalization as helpful tidying.
+    correct_contains_any: ["as given", "as you wrote", "exactly as", "verbatim"]
+    tags: [recipes, laws, cards, behavioral, integrity]
+
+  # PROVENANCE's "[→ …]" prohibition (added 2026-08-09 after a field-test
+  # operator saw literal "[→ original.txt: …]" brackets in chat replies): the
+  # bracket form is emit-tags.ts's plain-markdown downgrade of {% source %}
+  # for compiled docs; the agent reads it in its own briefing include and must
+  # not imitate it — chat and card views render the real tag as a citation.
+  #
+  # Status (2026-08-09): pass, knows_directly (0 reads, 0 searches). "No —
+  # never … generated output only … not a syntax I write anywhere", then
+  # produced the correct {% source %} form unprompted.
+  - id: source-no-bracket-form
+    prompt: >
+      In your briefing you've seen citations that look like
+      "[→ recipe.txt: verbatim]". When you cite a source in a chat reply or a
+      card, do you write that bracket form?
+    expected_level: knows_directly
+    watch_for: >
+      Says no — the bracket form is generated output (the compiled-doc
+      downgrade of a source tag), not a syntax to write; writing it renders
+      as literal brackets. Cites with the real {% source %} tag (with
+      ref/href and usage) or a plain markdown link instead.
+    correct_contains_any: ["{% source"]
+    tags: [provenance, laws, chat, behavioral]
+
+  # Speak the User's Language (agent-guide section added 2026-08-09 after a
+  # field-test persona collected the jargon it couldn't parse — "recipe card,"
+  # raw filenames as nouns, "boxholder" in the third person): guide vocabulary
+  # is for operating the system, not conversation.
+  #
+  # Status (2026-08-09): pass, knows_directly (0 reads, 0 searches). Gave the
+  # filename-inside-a-link form with a human title, refused "the recipe card"
+  # and the raw filename as a noun, and named "boxholder" as system vocabulary
+  # it would never use in conversation.
+  - id: speak-users-language
+    prompt: >
+      In chat I ask "where did my lemon chicken recipe end up?" It lives at
+      store/recipes/Lemon_Chicken.recipe.card. When you answer me, how do you
+      refer to it — and to me?
+    expected_level: knows_directly
+    watch_for: >
+      Calls it "your recipe" (or "your lemon chicken recipe") — not "the
+      recipe card" and not the raw filename as the noun of the sentence; the
+      path appears only inside a markdown link with a human title. Addresses
+      the user as "you" and does not call them "the boxholder" or talk about
+      them in the third person.
+    correct_contains_any: ["your recipe", "your lemon chicken"]
+    tags: [laws, chat, behavioral, vocabulary]
+
   # --- Behavior audit (not knowledge) ---
   #
   # The four audits above test what the agent *knows* about `{% quote %}`
@@ -3312,6 +3805,9 @@ tests:
   # the agent recalls link-vs-embed with plain box paths (no view:/?zoom) and
   # that views attach to a card type via rendersCardTypes, directly (0 files
   # read). Part of the normalize-chat-links work.
+  # Status (2026-07-30): chat-link-vs-embed-card re-run under box-root-paths
+  # Track G — still passes (0 reads, 43k ctx); its watch_for already matched the
+  # new always-leading-`/` rule (Track C fixed it), so no edit was needed.
   - id: chat-link-vs-embed-card
     prompt: >
       In chat, how do you reference a card so the user can open it, versus show
@@ -3320,8 +3816,9 @@ tests:
     watch_for: >
       A plain markdown link [label](/store/x.card) references the card — clicking
       opens it in the companion pane. Prefix with ! — ![label](/store/x.card) —
-      to embed it inline. Write box-root-absolute paths (leading /); a bare path
-      resolves against the chat working directory. Must NOT use a `view:` prefix
+      to embed it inline. Always write the box path with a leading / — chat
+      links and embeds resolve from the box root, never from the chat's working
+      directory (a bare path lands at the box root too). Must NOT use a `view:` prefix
       or a `?zoom` flag in the syntax — both are retired (naming them as retired
       to warn against them is fine).
     response_not_contains: ["?zoom", "zoom flag"]
@@ -3742,6 +4239,121 @@ tests:
     correct_contains_any: ["cut off", "cut short", "missing", "mid-thought", "incomplete"]
     tags: [capture, chat, behavioral]
 
+  # === Bulk file upload ===
+  #
+  # docs/plans/bulk-file-upload.md Track 4. An `<upload doc="..." files="N"
+  # bytes="..." failed="M">` chat message is the bulk sibling of `<capture>` —
+  # documented alongside it in CHAT_SYSTEM_PROMPT (prompts.ts), so this entry
+  # needs chat_mode: true. The filing duties (including the "ask before filing
+  # an unintroduced batch" rule, boxholder decision 2026-07-27) live in the
+  # upload-batch schema's instructions (src/schemas/upload-batch.tsx), surfaced
+  # to the agent as docs/generated/card-upload-batch.md. The second entry below
+  # is the non-chat case: a chat-agent-only concept (schema instructions say
+  # filing is chat-agent-only) discovered by an agent poking around the box
+  # outside any chat turn — tmp-upload/ is a landing zone parallel to
+  # tmp-capture/ and must not accumulate.
+  #
+  # Status (2026-07-27): 2/2 pass on the bulk-file-upload worktree's test1
+  # clone. upload-message-meaning passed first try (1 read of the generated
+  # card-upload-batch.md, correctly named both the real-user-input framing and
+  # the ask-first rule). upload-batch-found-outside-chat FAILED its first run
+  # (0 words, 18 turns) — not a prompt-surface gap: the box actually had a
+  # real leftover tmp-upload/ batch from the Track 1/2 E2E verification (filed
+  # to box/inbox/ as file cards but never deleted, a genuine loose end from
+  # that verification pass), and the agent went down a real remediation
+  # rabbit hole (git mv, cb rm, hashing files) instead of answering the
+  # hypothetical, running out of turns before replying. Fixed by cleaning up
+  # that stray artifact in the box (`git rm -r tmp-upload`, box commit
+  # 136d0659) rather than touching the audit; re-run passed cleanly (1 read,
+  # 7 turns, correctly named the landing-zone convention, the
+  # already-filed-by-hand check, and the question-card fallback for
+  # ambiguous destinations).
+
+  - id: upload-message-meaning
+    prompt: >
+      A message arrives in chat with no other text from the user: `<upload
+      doc="tmp-upload/batch-20260710T0900-ab12.upload-batch.card" files="34"
+      bytes="112 MB" failed="3">34 files uploaded (112 MB); 3 more failed to
+      upload.</upload>`. What is this, and what do you do first?
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: >
+      Says this is real, first-class user input (parallel to `<capture>`) and
+      a reply is expected — not a background/system note. Says the filing
+      duties live in the `doc` card's schema instructions (upload-batch), so
+      it should read that card before responding substantively rather than
+      just the one-line inner summary. Critically: because the batch arrived
+      with no accompanying text explaining what it's for or where it goes, the
+      agent should ask the boxholder before filing anything — not start
+      placing files unprompted.
+    correct_contains_any: ["user input", "real user", "reply is expected", "expects a reply"]
+    correct_contains: ["ask"]
+    tags: [bulk-upload, chat, behavioral]
+
+  # The other half of the rule above, and the one that is easy to get wrong: an
+  # `<upload>` whose body carries the boxholder's own words is INTRODUCED, so the
+  # ask-first duty does not apply. Getting this backwards turns every photo batch
+  # into an interrogation — the agent asking what the files are immediately after
+  # being told. Added with the chat-photo-batch-upload work, which made composer
+  # text ride along as the batch's `note`.
+  #
+  # Status 2026-07-30: PASSES first try (1 read of the generated
+  # card-upload-batch.md, 6 turns, 49k→52k). Passed for the right reason, not by
+  # keyword luck — the agent wrote "The note *is* the introduction ... so no
+  # 'what are these?' question. Act on it; only ask about what it genuinely
+  # leaves open", and its example open question (does a 2026 travel folder exist,
+  # one card per receipt or one card with 34 attachments) is exactly the
+  # distinction duty 1 draws. Authoring note: the runner compiles
+  # `response_not_matches` case-insensitively already, so an inline `(?i)` is a
+  # JS regex SyntaxError that kills the run — caught only by running it.
+  - id: upload-message-introduced
+    prompt: >
+      A message arrives in chat: `<upload
+      doc="tmp-upload/batch-20260730T1912-9f3c.upload-batch.card" files="34"
+      bytes="112 MB">Receipts from the Tokyo trip — file them under the 2026
+      travel folder.
+
+      34 files uploaded (112 MB).</upload>`. What is this, and what do you do
+      first?
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: >
+      Recognises that the first paragraph is the boxholder's own introduction
+      (the batch's `note`), so this batch is NOT the unintroduced case — it
+      should act on what they said (file into the 2026 travel folder) rather
+      than asking what the files are or where they go. Reading the `doc` card
+      for the filing duties first is right; asking a genuinely open follow-up
+      (e.g. the exact destination path doesn't exist yet) is fine. What is wrong
+      is treating an introduced batch as needing an introduction.
+    correct_contains_any: ["travel", "Tokyo", "receipts"]
+    # The runner already compiles these case-insensitively — an inline `(?i)`
+    # flag is a JS regex syntax error, not a no-op.
+    response_not_matches:
+      - "what (are|do you want|should I do with) these (files|photos)"
+      - "where (should|would you like) (these|them|the files)"
+    tags: [bulk-upload, chat, behavioral]
+
+  - id: upload-batch-found-outside-chat
+    prompt: >
+      Doing unrelated work in this box — not processing a chat turn — you
+      notice a directory `tmp-upload/batch-20260705T1200-cd34/` still present
+      under one of the chat context directories, holding an `upload-batch`
+      card and its attach scope. What does this mean, and what should you do?
+    expected_level: discoverable
+    should_read: ["docs/generated/card-upload-batch.md"]
+    watch_for: >
+      Recognizes tmp-upload/ as a landing zone (the bulk-upload sibling of
+      tmp-capture/) that must not accumulate — a card still sitting there
+      means the batch's filing was never finished. Reads the card (and its
+      generated instructions) to see the file inventory, then either files
+      the remainder itself (only if the destination is genuinely unambiguous)
+      or raises a note/question rather than silently ignoring or deleting it.
+      Filing an upload batch is chat-agent-only work per the schema's own
+      division of duties, so a non-chat agent finding one mid-batch should
+      not assume it can just finish the job unprompted.
+    correct_contains: ["tmp-upload"]
+    tags: [bulk-upload, navigation]
+
   # === Calendar: authoring .ics events ===
   #
   # The calendar skill is de-templated (Track 1 of remove-box-shape-v1): it no
@@ -3823,6 +4435,11 @@ tests:
   # confirmation with no prose mention correctly passes. NOTE: this audit
   # MUTATES the box (the agent creates a note card each run); the created card
   # is disposable.
+  # Status (2026-07-30): 1/1 pass in the box-root-paths Track G run — the ack
+  # ref AND the prose link both came out box-root form
+  # (ref="/store/notes/Beta_Launch.doc.card", "Saved to [Beta Launch](/store/…)"),
+  # which is the Track E exemplar change landing. One run only; the RATE caveat
+  # above still governs.
   - id: chat-reference-card-as-link
     prompt: "Quick, save this before I forget: beta ships in August, hold the pricing page until launch, and move standups to Tuesdays."
     expected_level: knows_directly
@@ -3840,3 +4457,182 @@ tests:
     response_not_matches:
       - '(?<![\w./-])(?<!\]\()(?<!=")[\w./-]+\.[\w-]+\.card\b'
     tags: [chat, links, cards]
+
+  # === Chat Review ===
+  #
+  # Status (2026-07-28): all 3 pass. Added with the chat-review implementation
+  # (docs/plans/chat-review.md). Note chat-review-vs-compaction read 1 file
+  # rather than answering purely from context — it passes, but it is the
+  # weakest of the three and worth re-checking if the vocabulary drifts.
+  # Run: pnpm knowledge-audit run --box <path> --filter chat-review
+
+  - id: chat-husk-title-ownership
+    prompt: "Who sets the title on a chat husk card, and what happens if I edit one by hand?"
+    expected_level: knows_directly
+    watch_for: "Says the nightly chat review maintains it AND that a hand-edited title is left alone"
+    correct_contains: ["review", "hand"]
+    tags: [chat, cards, chat-review]
+
+  - id: contains-evidence-purpose
+    prompt: "What is the `contains-evidence` field for, and when should I set it?"
+    expected_level: knows_directly
+    watch_for: "Says it holds the detail `contains` was derived from — NOT a second summary or scratch space"
+    correct_contains: ["contains"]
+    tags: [cards, search, chat-review]
+
+  - id: chat-review-vs-compaction
+    prompt: "What does 'compaction' refer to in this codebase?"
+    expected_level: knows_directly
+    watch_for: "Names the SDK context-window meaning, and does NOT confuse it with chat review"
+    correct_contains: ["context"]
+    tags: [vocabulary, chat-review]
+
+  # === Assets (git-annex) ===
+  #
+  # Status (2026-07-31): 2/2 pass, verified on a box that is ACTUALLY annexed
+  # (the preserve-ignored-files worktree clone of test1, migrated with
+  # `cb attachments to-annex`: 137 assets / 106 MB, 99 manifests removed, 9 Git
+  # LFS files converted).
+  #
+  # Both failed before that migration, and each failure was informative:
+  #   1. asset-add-workflow as first written asked "how do I add a photo" and
+  #      required "git add" — but a box agent rightly answers `mkdir`/`cp`,
+  #      since the pre-commit hook commits, not the agent. Wrong criterion.
+  #   2. The rewrite still failed because the box was on Git LFS, and the agent
+  #      correctly described LFS. That is what surfaced the LFS overlap now
+  #      resolved in docs/plans/asset-annex.md.
+  # Neither audit can pass against an unmigrated box, which is the point: they
+  # test what an agent knows about the system the box is actually running.
+  #
+  # Run: pnpm knowledge-audit run --box <abs-path> --filter assets
+
+  - id: asset-content-absent
+    prompt: "I opened a photo in a box and the file is about 100 bytes of text starting with /annex/objects/. What happened, and is my photo gone?"
+    expected_level: knows_directly
+    watch_for: "Recognizes an annex pointer (content not fetched locally) and answers `git annex get` — NOT that the file is corrupt or lost"
+    correct_contains: ["git annex get"]
+    tags: [assets]
+
+  - id: asset-add-workflow
+    prompt: "I dropped a photo into a card's attach scope. Do I need to run `git annex add` on it, or does something else handle that?"
+    expected_level: knows_directly
+    watch_for: "Says no — annex.largefiles routes it on ordinary `git add`, so the normal commit path handles it. Reaching for `git annex add` means it learned a special case that does not exist here (and it locks files, breaking in-place edits)."
+    correct_contains: ["largefiles"]
+    tags: [assets]
+
+  # === Scanned documents (`document.card`) ===
+  #
+  # Track 4 of docs/plans/scanner-ingest.md. One entry, per the plan's
+  # "Knowledge audits" section: the agent should be able to say what a
+  # `document.card` is, where its original bytes live, and what `status: new`
+  # + `error:` means — from the schema instructions in its always-on surface,
+  # without re-reading source.
+  #
+  # The failure this guards against is the expensive one: an agent seeing a
+  # `status: new` document card with an `error:` and concluding the document
+  # was lost (or re-uploading it), when the original PDF is sitting right there
+  # in the attach scope and `cb document reanalyze` re-runs extraction.
+  #
+  # Status (2026-08-01): 1/1 pass. The agent named `cb document reanalyze`
+  # (plus `--force-ocr`), pointed at `attach/source.pdf` as still-present, and
+  # offered `status: invalid` as the give-up — the whole watch_for. But it is
+  # only nominally `knows_directly`: the prompt cites a card path that does not
+  # exist in the box, so the agent spent 5 bash calls and 16 turns proving that
+  # before answering the general question (it found the e2e box's real
+  # `source.document.card` on the way). Worth a `fixture:` staging the card at
+  # the cited path next time this entry is touched, so the read count measures
+  # knowledge rather than a wild-goose chase.
+  # Run: pnpm knowledge-audit run --box <abs-path> --filter scanner-ingest
+
+  - id: document-card-failed-extraction
+    prompt: >
+      I found a card at `box/inbox/scan-20260402T1015-ab12cd34.attach/source.document.card`
+      with `status: new` and an `error:` field saying Docling exited 1. Is the
+      scanned document lost? What are my options?
+    expected_level: knows_directly
+    watch_for: >
+      Says nothing is lost — the original file is still in the card's attach
+      scope (`attach/source.pdf`, per `filename.ref`) and can be read directly;
+      names `cb document reanalyze` as the retry (and `--force-ocr` for a junk
+      text layer), or marking the card `invalid` if the file really is unusable.
+      Should NOT say the document needs re-scanning or re-uploading, and should
+      NOT treat `status: new` as "not yet arrived".
+    correct_contains: ["reanalyze"]
+    correct_contains_any: ["attach/source.pdf", "attach scope", "original"]
+    tags: [cards, intake, scanner-ingest]
+
+  # === Scan provenance (`source: scan-upload/<token-name>`) ===
+  #
+  # The plan's second audit entry (docs/plans/scanner-ingest.md, "Knowledge
+  # audits"): an agent triaging a scan intake job should be able to say where
+  # the session came from, straight from the capture-session schema
+  # instructions, without going source-diving. The failure it guards against is
+  # an agent treating an unfamiliar `source:` value as noise (or as a ref it
+  # should resolve) instead of as the named upload credential — which is the
+  # only handle the boxholder has for "which scanner/profile produced this
+  # batch" when a whole batch comes out wrong.
+  #
+  # What CLAUDE_SCANS.md is for is already audited separately by
+  # `landmark-parent-claude-md-loads` above, so this entry does not re-ask it.
+  #
+  # Status (2026-08-01): 1/1 pass, 0 file reads, 0 searches, 6 turns, 43k
+  # initial context. The agent read the `source` paragraph out of the generated
+  # capture-session card doc and gave the right reading — desktop uploader, not
+  # chat; token name identifies the device/profile; useful when a batch looks
+  # wrong — and volunteered the CLAUDE_SCANS.md tie-in unprompted. The
+  # capture-session schema instructions carry this knowledge; nothing to fix.
+
+  - id: scan-session-provenance
+    prompt: >
+      I'm triaging an intake job and one of its items is a capture-session card
+      whose frontmatter says `source: scan-upload/study-scansnap`. What does
+      that tell me about where this session came from?
+    expected_level: knows_directly
+    watch_for: >
+      Says the session came in from outside chat — the desktop scan uploader
+      PUT these files to the box under a named scan-upload credential, and
+      `study-scansnap` is that credential's name, identifying the device or
+      scanner profile that produced the batch. Should NOT read it as a file
+      path/ref to resolve, a card type, or a user identity.
+    correct_contains_any: ["scan upload", "scan-upload", "uploader", "scanner"]
+    tags: [cards, intake, scanner-ingest]
+
+  # === Transcript confidence marks ===
+  #
+  # Status (2026-08-15): 1/1 pass, 0 file reads, 0 searches, 52k ctx. The
+  # agent read <unsure> as low acoustic confidence, named the can/can't
+  # inversion, chose ask-about-audio/retranscribe/ask before writing, and
+  # volunteered both caveats (unmarked ≠ verified; no stt= = no data; strip
+  # tags when quoting into a card) unprompted.
+  #
+  # The chat prompt's "Voice is transcribed" section defines <unsure> marks
+  # (docs/plans/transcript-confidence.md): the realtime transcriber wraps
+  # low-acoustic-confidence words, stt= names the transcriber, and absence of
+  # marks is not verification. The failure this guards against is the agent
+  # building on a marked meaning-critical word (a negative, a number, a name)
+  # as if it were verified — the exact silent-mishearing the feature exists to
+  # catch. Needs chat_mode: true — the semantics live only in the chat prompt.
+
+  - id: chat-unsure-word-semantics
+    prompt: >
+      A voice message arrives as `<speech stt="deepgram">I
+      <unsure>can</unsure> make the 3 PM meeting tomorrow</speech>` and the
+      user is asking you to update their schedule. What does the markup around
+      "can" tell you, and what should you do before updating anything?
+    expected_level: knows_directly
+    watch_for: >
+      Reads <unsure> as the transcriber's low acoustic confidence in that word
+      — here possibly "can't", which inverts the meaning — and does not build
+      on it silently: confirms with the user or checks the audio
+      (cb chat retranscribe / ask-about-audio) before updating the schedule.
+      Should NOT treat the mark as an error to ignore, and should not copy the
+      tag into anything it writes.
+    correct_contains_any: ["can't", "cannot", "invert", "opposite"]
+    correct_matches:
+      - "retranscribe|ask-about-audio|confirm|ask (?:the user|them|him|her|first|before)"
+    chat_mode: true
+    tags: [chat, voice, transcription]
+    notes: >
+      Also worth watching in the transcript: the agent should know absence of
+      marks is not verification (confident mishearings get no mark) and that
+      messages without stt= carry no confidence data at all.

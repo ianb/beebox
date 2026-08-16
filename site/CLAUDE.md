@@ -59,9 +59,9 @@ writes the input manifest last (so a partial build never masks staleness).
 - `build.ts` — CLI entry: reads content, writes HTML + `.md` twins + `llms.txt`,
   link-checks, resolves the base path.
 - `render.ts` — the local Markdoc pipeline + strict (zod) frontmatter parse +
-  the HTML shell. Deliberately does NOT import `bin/router-docs.ts` (that drags
-  in execa/highlight.js and a router-issues cycle); this package declares
-  `@markdoc/markdoc` itself.
+  the HTML shell. Deliberately does NOT import `bin/router-docs.ts`, whose
+  router/runtime dependencies do not belong in the static-site build; this
+  package declares `@markdoc/markdoc` itself.
 - `links.ts` — base-path handling and internal-link resolution.
 - `sources.ts` — the single definition of the input source set + content-hash
   manifest, shared by `build.ts` (writes `dist/.inputs.json`) and

@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+#
+# prod-browse — open the deployed server as the configured owner in the clean
+# browser profile used by bin/browse. The session cookie reaches that local
+# profile but must never be persisted in the repository.
+#
+# IDENTITY BOUNDARY: this authenticates only as CB_OWNER_EMAIL. Do not alter it
+# to mint a session for another identity without the boxholder's express,
+# in-the-moment permission. See deploy/README.md.
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+. "$SCRIPT_DIR/resolve-server-ip.sh"
+
+SERVER_IP=$(resolve_server_ip "$SCRIPT_DIR")
+if ! PUBLIC_URL_FILE=$(resolve_deploy_file "$SCRIPT_DIR" public-url); then
+  echo "Error: No production public URL found. Restore deploy/public-url in the main checkout." >&2
+  exit 1
+fi
+PUBLIC_URL=$(cat "$PUBLIC_URL_FILE")
+
+[ $# -ge 1 ] || { echo "usage: prod-browse <path>  (e.g. /box-family/)" >&2; exit 2; }
+REQ_PATH="$1"
+
+COOKIE=$(ssh -o ConnectTimeout=12 "root@$SERVER_IP" 'set -a; . /home/callback/.env; set +a; if [[ -z "${CB_OWNER_EMAIL:-}" ]]; then echo "Error: CB_OWNER_EMAIL is unset in /home/callback/.env." >&2; exit 1; fi; export CB_SESSION_SECRET=$(cat /home/callback/.cb-session-secret); node -e "const c=require(\"crypto\");const e=process.env.CB_OWNER_EMAIL;const s=process.env.CB_SESSION_SECRET;const p=JSON.stringify({email:e,name:e,exp:Date.now()+2592000000});const sig=c.createHmac(\"sha256\",s).update(p).digest(\"hex\");process.stdout.write(Buffer.from(p).toString(\"base64url\")+\".\"+sig)"')
+
+"$REPO_ROOT/bin/browse" cookies set cb_session "$COOKIE" --url "$PUBLIC_URL" --httpOnly --secure --sameSite Lax >/dev/null
+echo "opening ${PUBLIC_URL}${REQ_PATH} as owner — follow with: bin/browse screenshot" >&2
+exec "$REPO_ROOT/bin/browse" open "${PUBLIC_URL}${REQ_PATH}"

@@ -1,3 +1,9 @@
+---
+title: "Courseware: the `lesson-plan` card"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Courseware: the `lesson-plan` card
 
 > **Status: implemented** (2026-06-24). The schema lives in

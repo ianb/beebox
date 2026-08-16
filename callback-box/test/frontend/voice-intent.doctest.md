@@ -9,7 +9,7 @@ freeze boundary means composer state added after the snapshot was taken
 never appears here — it belongs to the next message instead.
 
 ```ts setup
-import { buildVoiceSubmitEmission } from "../../src/frontend/src/input/voice-intent.js";
+import { buildVoiceSubmitEmission, prepareVoiceSubmitEmission } from "../../src/frontend/src/input/voice-intent.js";
 ```
 
 ## Prior composer text folds in ahead of the new utterance
@@ -84,4 +84,123 @@ const a = buildVoiceSubmitEmission({ priorInput: "", finalText: "x", selectionsS
 const b = buildVoiceSubmitEmission({ priorInput: "", finalText: "x", selectionsSnapshot: [], imagesSnapshot: [], filesSnapshot: [], diarized: false });
 a.id !== b.id
 => true
+```
+
+## `words: null` (Voxtral/OpenAI-style — Fix A) never reaches the emission as data
+
+A service that never captures confidence (or a segment nothing was
+finalized for) reports `null`, not an empty array — `buildVoiceSubmitEmission`
+collapses that onto `undefined` via `resolveEmissionWords`, so the assembler
+never stamps a false `stt="deepgram"`.
+
+```ts
+buildVoiceSubmitEmission({
+  priorInput: "", finalText: "voxtral said this", selectionsSnapshot: [], imagesSnapshot: [], filesSnapshot: [], diarized: false,
+  words: null,
+}).words
+=> undefined
+```
+
+Belt-and-braces: an array is present but no entry carries a numeric
+`confidence` — equally uninformative, equally `undefined`.
+
+```ts
+buildVoiceSubmitEmission({
+  priorInput: "", finalText: "no scores here", selectionsSnapshot: [], imagesSnapshot: [], filesSnapshot: [], diarized: false,
+  words: [{ word: "no" }, { word: "scores" }],
+}).words
+=> undefined
+```
+
+A real Deepgram capture — even one where every word cleared the
+threshold — rides straight through, so the assembler still stamps `stt`:
+
+```ts
+buildVoiceSubmitEmission({
+  priorInput: "", finalText: "all clear", selectionsSnapshot: [], imagesSnapshot: [], filesSnapshot: [], diarized: false,
+  words: [{ word: "all", confidence: 0.99 }, { word: "clear", confidence: 0.98 }],
+}).words?.length
+=> 2
+```
+
+## Cleanup-send holds this frozen message for HQ
+
+The async HQ result is applied to the composer context captured when the
+keyword fired. Text that appears in the live composer while HQ is pending is
+not part of this emission.
+
+```ts
+const hqIntent = {
+  kind: "submit" as const,
+  text: "rough words <send-message phrase=\"clean up and send\" />",
+  matchedPhrase: "clean up and send",
+  audioBlob: new Blob(["audio"], { type: "audio/wav" }),
+  closeMic: false,
+  hq: true,
+  words: [{ word: "rough", confidence: 0.4 }],
+};
+let finishHq: () => void = () => {};
+const hqGate = new Promise<void>((resolve) => { finishHq = resolve; });
+const pending = prepareVoiceSubmitEmission({
+  intent: hqIntent,
+  priorInput: "frozen draft",
+  selectionsSnapshot: [],
+  imagesSnapshot: [],
+  filesSnapshot: [],
+  runHq: true,
+  transcribe: async () => {
+    await hqGate;
+    return { text: "clean words", diarized: true };
+  },
+});
+const nextComposerText = "belongs to the next message";
+finishHq();
+const prepared = await pending;
+prepared.emission.text
+=> frozen draft clean words <send-message phrase="clean up and send" />
+
+prepared.emission.text.includes(nextComposerText)
+=> false
+
+prepared.emission.diarized
+=> true
+
+prepared.emission.words
+=> undefined
+```
+
+The HQ pass used `hqIntent`'s words to describe text that got replaced —
+`usedHq` is true, so Track 3's HQ-drop rule applies: no `words` (and no
+`stt`/`<unsure>` marks at assemble time) regardless of what the realtime
+pass captured.
+
+## Cleanup-send falls back to the realtime message on HQ failure
+
+```ts continue
+const fallback = await prepareVoiceSubmitEmission({
+  intent: hqIntent,
+  priorInput: "frozen draft",
+  selectionsSnapshot: [],
+  imagesSnapshot: [],
+  filesSnapshot: [],
+  runHq: true,
+  transcribe: async () => { throw new Error("offline"); },
+});
+fallback.usedHq
+=> false
+
+fallback.emission.text
+=> frozen draft rough words <send-message phrase="clean up and send" />
+```
+
+The fallback used the realtime text, so `hqIntent.words` rides straight
+through onto the emission unchanged — `usedHq` is false, so the HQ-drop
+rule doesn't apply:
+
+```ts continue
+fallback.emission.words?.length
+=> 1
+
+fallback.emission.words?.[0]?.word
+=> rough
 ```

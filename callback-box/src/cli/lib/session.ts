@@ -10,8 +10,13 @@ import * as path from "node:path";
 import * as readline from "node:readline";
 import { isRecord } from "../../lib/is-record.js";
 
-import { type SessionEntry, buildEntry } from "./session-entry.js";
-import { stripChatAppTags } from "../../core/chat/features.js";
+import { buildEntry } from "./session-entry.js";
+import { isOversizeLine, oversizeEntry } from "./session-oversize.js";
+import {
+  SessionScan,
+  type SessionLogResult,
+  type SessionLogSlice,
+} from "./session-retention.js";
 import {
   listSessionRoots,
   loadHistoryEntries,
@@ -19,15 +24,18 @@ import {
 } from "../../core/chat/session/history.js";
 import { listSessionFilesInDir } from "../../core/chat/session/transcript-paths.js";
 import { ok, err, type Result } from "../../lib/result.js";
-import {
-  extractSnippet,
-  isCompactionSummary,
-  isPlumbingMessage,
-  parseSelfNote,
-} from "./session-text.js";
-import { invariant } from "../../lib/invariant.js";
+import { extractSnippet } from "./session-text.js";
+import { contentBlocks, parseJsonlLine } from "./session-jsonl.js";
+import { userTurnText } from "./session-snippet.js";
 
 // Re-exported so existing callers of `cli/lib/session` keep their imports.
+export {
+  MAX_RETAINED_BYTES,
+  MAX_SESSION_ENTRIES,
+  type SessionLogResult,
+  type SessionLogSlice,
+} from "./session-retention.js";
+export { isRealUserMessage } from "./session-real-user.js";
 export {
   type SessionContentBlock,
   summarizeToolInput,
@@ -42,6 +50,7 @@ export {
   stripSpeechWrappers,
 } from "./session-text.js";
 export { type SessionEntry } from "./session-entry.js";
+export { MAX_SESSION_LINE_BYTES } from "./session-oversize.js";
 
 /** One session transcript discovered on disk, tagged with its context root. */
 export interface SessionInfo {
@@ -110,29 +119,6 @@ export async function findSessionLog(
 }
 
 /**
- * Parse one JSONL line, returning null for blank lines and unparseable lines
- * (a partial/concurrent write shouldn't abort the whole scan). `where`
- * identifies the caller in the debug log when a line is dropped.
- */
-function parseJsonlLine(line: string, where: string): Record<string, unknown> | null {
-  if (!line.trim()) return null;
-  try {
-    const parsed: unknown = JSON.parse(line);
-    return isRecord(parsed) ? parsed : null;
-  } catch (e) {
-    console.debug(`${where}: skipping unparseable JSONL line:`, e);
-    return null;
-  }
-}
-
-/** Normalize a raw `message.content` field into an array of block records. */
-function contentBlocks(content: unknown): Array<Record<string, unknown>> {
-  if (typeof content === "string") return [{ type: "text", text: content }];
-  if (Array.isArray(content)) return content.filter(isRecord);
-  return [];
-}
-
-/**
  * Summary info for a session — used by --list enrichment and --since filtering.
  */
 export interface SessionMetadata {
@@ -163,13 +149,8 @@ function foldUserMetadata(
   args: { acc: MetadataAccumulator; snippetMaxLen: number | undefined }
 ): boolean {
   const { acc, snippetMaxLen } = args;
-  const textBlocks = blocks.filter(
-    (b) => b.type === "text" && b.text && String(b.text).trim()
-  );
-  if (textBlocks.length === 0) return false;
-  const text = textBlocks.map((b) => String(b.text || "")).join("\n").trim();
-  if (isPlumbingMessage(text) || isCompactionSummary(text)) return false;
-  if (parseSelfNote(text)) return false;
+  const text = userTurnText(blocks);
+  if (text === null) return false;
   acc.userTurns += 1;
   if (acc.firstUserSnippet === null) {
     acc.firstUserSnippet = extractSnippet(text, snippetMaxLen);
@@ -202,7 +183,7 @@ function foldAssistantMetadata(
 
 /**
  * Scan a session log once and compute summary metadata. Turn counts match the
- * semantics used by --tool-report (`generateSessionReport`): user turns count
+ * semantics used by --tool-report (`writeSessionReport`): user turns count
  * entries with real text (not tool_result plumbing); assistant turns count
  * entries with text or tool_use.
  */
@@ -263,84 +244,52 @@ export async function getSessionMetadata(args: {
 }
 
 /**
- * A "real" user message is one the human actually typed or spoke, as opposed
- * to system-injected user entries (tool results, schedule-fired notifications,
- * pending-schedules status, etc.). Real user messages carry a <typed> or
- * <speech> tag since the UI wraps human input in those — possibly preceded
- * by the <chat-app .../> snapshot tag the server prepends to every turn.
- */
-export function isRealUserMessage(entry: SessionEntry): boolean {
-  if (entry.type !== "user") return false;
-  for (const block of entry.content) {
-    if (block.type !== "text") continue;
-    const text = stripChatAppTags((block.text || "").trimStart()).trimStart();
-    if (text.startsWith("<typed") || text.startsWith("<speech")) return true;
-  }
-  return false;
-}
-
-/**
- * Compute the minimum tail size that includes at least `minRealUserMessages`
- * real user messages. Returns the number of entries from the end of the list
- * needed to cover that many — or `entries.length` if fewer real user messages
- * exist than requested.
- */
-export function tailForMinUserMessages(
-  entries: SessionEntry[],
-  minRealUserMessages: number,
-): number {
-  if (minRealUserMessages <= 0) return 0;
-  let count = 0;
-  for (let i = entries.length - 1; i >= 0; i--) {
-    const entry = entries[i];
-    invariant(entry !== undefined, `entries[${i}] must exist for 0 <= i < entries.length`);
-    if (isRealUserMessage(entry)) {
-      count += 1;
-      if (count >= minRealUserMessages) return entries.length - i;
-    }
-  }
-  return entries.length;
-}
-
-/**
- * Parameters for parseSessionLog
+ * Parameters for parseSessionLog. The `slice` is mandatory: a caller must say
+ * how much of the transcript it wants retained, because there is no unbounded
+ * shape to fall back to (see `session-retention.ts`).
  */
 export interface ParseSessionLogParams {
   logPath: string;
-  offset?: number;
-  limit?: number;
+  slice: SessionLogSlice;
 }
 
 /**
- * Parse a session log JSONL file with filtering and pagination.
+ * Parse a session log JSONL file, retaining only what `slice` asks for.
+ *
+ * The scan is forward and single-pass: every displayable entry is counted
+ * (`total` is exact, so paging affordances stay correct) but only the
+ * requested window is kept alive.
  */
 export async function parseSessionLog(
   params: ParseSessionLogParams
-): Promise<{ entries: SessionEntry[]; total: number; hasMore: boolean }> {
-  const { logPath } = params;
-  const offset = params.offset ?? 0;
-  const limit = params.limit ?? 10000;
+): Promise<SessionLogResult> {
+  const { logPath, slice } = params;
   const fileStream = fs.createReadStream(logPath, { encoding: "utf-8" });
   const rl = readline.createInterface({
     input: fileStream,
     crlfDelay: Infinity,
   });
 
-  const filtered: SessionEntry[] = [];
+  const scan = new SessionScan(slice);
 
+  let lineNumber = 0;
   for await (const line of rl) {
+    lineNumber += 1;
+    // A pathologically long line is never parsed — see `session-oversize.ts`.
+    // It is dropped if its head shows plumbing the scan would drop anyway;
+    // otherwise the stub it becomes counts as one displayable entry (so `total`
+    // and `hasMore` stay honest), is never a real user message, and carries no
+    // `tool_use` block for a later `tool_result` to graft onto.
+    if (isOversizeLine(line)) {
+      const stub = oversizeEntry(line, lineNumber);
+      if (stub) scan.record(stub);
+      continue;
+    }
     const raw = parseJsonlLine(line, "parseSessionLog");
     if (!raw) continue;
-    const entry = buildEntry(raw, filtered);
-    if (entry) filtered.push(entry);
+    const entry = buildEntry(raw, scan.recent());
+    if (entry) scan.record(entry);
   }
 
-  const total = filtered.length;
-  const page = filtered.slice(offset, offset + limit);
-
-  return {
-    entries: page,
-    total,
-    hasMore: offset + limit < total,
-  };
+  return scan.result();
 }

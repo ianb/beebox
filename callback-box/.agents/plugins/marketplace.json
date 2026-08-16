@@ -1,0 +1,20 @@
+{
+  "name": "callback-box",
+  "interface": {
+    "displayName": "Callback Box"
+  },
+  "plugins": [
+    {
+      "name": "callback-box-codex",
+      "source": {
+        "source": "local",
+        "path": "./plugins/callback-box-codex"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_USE"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

@@ -1,3 +1,9 @@
+---
+title: "Agent-applied migrations (via procedure checklists)"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Agent-applied migrations (via procedure checklists)
 
 Two layered capabilities, designed together:

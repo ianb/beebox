@@ -1,5 +1,6 @@
 ---
 title: "single-export should not count type/interface (and maybe const) exports"
+workstream: unknown
 area: vibe-check
 filed-by: agent
 discovered-in: main session — while triaging tour-lib-lint-debt, the boxholder reconsidered the rule itself

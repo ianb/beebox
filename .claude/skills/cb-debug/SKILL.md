@@ -30,10 +30,11 @@ disproportionate effort here; be aggressive and creative.
 - **A doctest** — the default, and per `docs/testing.md` it's also your
   regression test (write it first). Pick the tier: pure-function
   (`.doctest.md`), route (`makeTestServer()`), or filesystem (`makeTmpBox()`).
-  See `.claude/rules/doctest.md`, `src/test-lib/`.
+  See `callback-box/.claude/rules/doctest.md`, `callback-box/test/helpers/`.
 - **`cb scenario run <name>`** — multi-step end-to-end (wakeup, connectors,
-  agent runs), with checkpoints to re-run only the expensive tail. `--from`,
-  `--dry-run`. See `docs/testing.md`.
+  agent runs). Runs from the beginning every time (no checkpoint-resume);
+  `--dry-run` only parses the card — it proves nothing about runtime behavior.
+  See `docs/testing.md`.
 - **curl the dev router** — `curl http://localhost:3210/<wt>/<box>/api/...` for a
   backend route, or Fastify `inject()` in a route doctest (no server spin-up).
 - **`bin/browse`** — headless repro of a frontend bug: `snapshot`, `eval`,
@@ -63,7 +64,10 @@ the invocation + its output) that is red-capable (drives the real path, asserts
 the user's exact symptom), deterministic, fast, and agent-runnable. No such
 command → no Phase 2. If you genuinely can't build a loop, say so explicitly,
 list what you tried, and ask for an artifact (the deployed box's debug log, a
-HAR, a captured payload) — do **not** hypothesize without a loop.
+HAR, a captured payload) — do **not** hypothesize without a loop. When the bug
+only manifests on the boxholder's device or in prod, the artifact-gathering
+loop has its own protocol: the **field-probe** skill (deploy gated
+instrumentation, hand the boxholder a headlined script, read the trace back).
 
 ## Phase 2 — Reproduce + minimise
 
@@ -109,8 +113,9 @@ version's reality. This session's bugs were exactly this shape: `canvas.toBlob`
 produces only *lossy* WebP/AVIF, macOS timers advance during sleep (Node ≥20.3),
 and named value imports fail under Node's ESM loader for CJS modules — "someone
 already solved this" searches, not first-principles fights. (For a deep,
-multi-source dig, hand off to `deep-research`; for a quick known-issue check, a
-couple of `WebSearch`/`WebFetch` calls is enough.)
+multi-source dig, spawn a research subagent to sweep issues/changelogs/forums;
+for a quick known-issue check, a couple of `WebSearch`/`WebFetch` calls is
+enough.)
 
 ## Phase 4 — Instrument
 

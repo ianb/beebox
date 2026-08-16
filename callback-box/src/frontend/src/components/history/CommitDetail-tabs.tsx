@@ -3,10 +3,12 @@
  */
 
 import { getApiBase } from "../../api";
+import { ExternalLink } from "../ui/ExternalLink";
 import { Image } from "../ui/Image";
 import { Pre } from "../ui/Pre";
 import type { DiffFile } from "./CommitDetail-diff";
 import { extractNewFileContent } from "./CommitDetail-diff";
+import { buildHistoryBlobUrl } from "./history-blob-url";
 
 // --- Binary file rendering ---
 
@@ -20,7 +22,10 @@ function getFileExt(filePath: string): string {
 
 function BinaryFilePreview({ file, hash }: { file: DiffFile; hash: string }) {
   const ext = getFileExt(file.path);
-  const blobUrl = `${getApiBase()}/history/blob/${hash}/${file.path}`;
+  // A removed file's content only exists at the parent commit; the blob route
+  // accepts a trailing "^" on the hash for exactly this.
+  const blobHash = file.meta.includes("deleted") ? `${hash}^` : hash;
+  const blobUrl = buildHistoryBlobUrl({ apiBase: getApiBase(), hash: blobHash, filePath: file.path });
 
   if (IMAGE_EXTS.includes(ext)) {
     return (
@@ -40,8 +45,13 @@ function BinaryFilePreview({ file, hash }: { file: DiffFile; hash: string }) {
     );
   }
 
+  const basename = file.path.split("/").pop() ?? file.path;
   return (
-    <div className="px-3 py-2 text-xs text-warm-500 italic">Binary file</div>
+    <div className="px-3 py-2">
+      <ExternalLink href={blobUrl} download={basename}>
+        Download {basename}
+      </ExternalLink>
+    </div>
   );
 }
 

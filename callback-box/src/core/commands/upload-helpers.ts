@@ -11,6 +11,8 @@ import * as path from "node:path";
 import { z } from "zod";
 import { invariant } from "../../lib/invariant.js";
 import { errnoCode } from "../../lib/error-guards.js";
+import { withFileLock } from "../../lib/file-lock.js";
+import { withCardLock } from "../../lib/card-lock.js";
 
 export const SUPPORTED_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".tif", ".tiff"];
 export const PDF_EXTENSION = ".pdf";
@@ -183,10 +185,49 @@ export async function loadLedger(boxRoot: string): Promise<UploadLedger> {
 export async function saveLedger(boxRoot: string, ledger: UploadLedger): Promise<void> {
   const ledgerPath = path.join(boxRoot, LEDGER_REL_PATH);
   await fs.mkdir(path.dirname(ledgerPath), { recursive: true });
-  // tmp + rename for atomicity — a crash mid-write can't leave a corrupted ledger.
-  const tmp = `${ledgerPath}.tmp`;
+  // tmp + rename for atomicity — a crash mid-write can't leave a corrupted
+  // ledger. The temp name is per-process-and-call so two writers (which the
+  // lock below should prevent, but which a `--force` CLI run beside the promote
+  // worker could still produce on a stale lock) cannot clobber each other's
+  // half-written file.
+  const tmp = `${ledgerPath}.tmp-${process.pid}-${crypto.randomUUID()}`;
   await fs.writeFile(tmp, `${JSON.stringify(ledger, null, 2)}\n`);
   await fs.rename(tmp, ledgerPath);
+}
+
+/** How long a ledger writer waits for a contending one before failing loudly. */
+const LEDGER_LOCK_WAIT_MS = 10_000;
+
+/**
+ * Read-modify-write the ledger under the cross-process lock, returning the
+ * saved ledger.
+ *
+ * The load/mutate/save span is what makes this necessary: the promote worker
+ * (inside `cb serve`) and a hand-run `cb upload` are different processes, so a
+ * plain load-then-save loses whichever entries the other added in between. The
+ * lock is cross-process, hence `file-lock.ts` and not `withCardLock` — and the
+ * mutation runs against a ledger loaded INSIDE the lock, never a caller's
+ * possibly-stale copy.
+ */
+export async function updateLedger(
+  boxRoot: string,
+  mutate: (ledger: UploadLedger) => void,
+): Promise<UploadLedger> {
+  const lockPath = path.join(boxRoot, ".callback-box", "uploads.lock");
+  // Both layers, in the same order the intake-job helper uses: `withCardLock`
+  // serializes same-process racers (a PID-blind file lock cannot see them),
+  // `withFileLock` serializes across processes.
+  return withCardLock(lockPath, () =>
+    withFileLock(
+      { lockPath, metadata: { purpose: "upload-ledger" }, waitMs: LEDGER_LOCK_WAIT_MS },
+      async () => {
+        const ledger = await loadLedger(boxRoot);
+        mutate(ledger);
+        await saveLedger(boxRoot, ledger);
+        return ledger;
+      },
+    ),
+  );
 }
 
 export async function sha256File(filePath: string): Promise<string> {

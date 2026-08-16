@@ -1,3 +1,9 @@
+---
+title: "REST → tRPC route consolidation"
+status: implemented
+workstream: unknown
+issues: []
+---
 # REST → tRPC route consolidation
 
 ## Status — implemented 2026-07-03

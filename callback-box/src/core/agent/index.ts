@@ -13,6 +13,8 @@ import { toJSONSchema } from "zod";
 import { validateStructuredResult } from "./json.js";
 import { appendSessionManifest } from "./manifest.js";
 import { runAgent, type RunAgentOptions } from "./run.js";
+import { createCodexAgent } from "./codex-agent.js";
+import { loadAgentEngine } from "../box/config.js";
 import type {
   AgentInvokeOptions,
   Agent,
@@ -72,7 +74,7 @@ function makeSessionIdHandler(state: {
  * with that id (the SDK's create-with-id mode), so a caller-minted id — e.g.
  * the chat reactor's per-thread session store — stays valid for later resumes.
  */
-export function createAgent(options: {
+export function createClaudeAgent(options: {
   name: string;
   sessionId?: string;
   /** If true, first invoke() resumes the given sessionId. */
@@ -140,6 +142,49 @@ export function createAgent(options: {
         outputSchema,
       });
       return validateStructuredResult(schema, result);
+    },
+  };
+}
+
+/**
+ * Create an agent that selects the box's configured native harness on first
+ * invocation. The selected delegate remains fixed for this Agent instance.
+ */
+export function createAgent(options: {
+  name: string;
+  sessionId?: string;
+  resume?: boolean;
+  onOutput?: (text: string) => void;
+}): Agent {
+  let delegate: Agent | null = null;
+  let resolving: Promise<Agent> | null = null;
+
+  const resolve = (boxRoot: string): Promise<Agent> => {
+    if (delegate !== null) return Promise.resolve(delegate);
+    resolving ??= loadAgentEngine(boxRoot).then((engine) => {
+      delegate = engine === "codex"
+        ? createCodexAgent(options)
+        : createClaudeAgent(options);
+      return delegate;
+    });
+    return resolving;
+  };
+
+  return {
+    name: options.name,
+    get sessionId() {
+      return delegate?.sessionId ?? options.sessionId ?? null;
+    },
+    async invoke(invokeOptions: AgentInvokeOptions): Promise<AgentResult> {
+      const agent = await resolve(invokeOptions.boxRoot);
+      return agent.invoke(invokeOptions);
+    },
+    async invokeStructured<T>(
+      schema: z.ZodType<T>,
+      invokeOptions: AgentInvokeOptions,
+    ): Promise<StructuredAgentResult<T>> {
+      const agent = await resolve(invokeOptions.boxRoot);
+      return agent.invokeStructured(schema, invokeOptions);
     },
   };
 }

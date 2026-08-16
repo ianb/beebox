@@ -8,7 +8,7 @@
  */
 
 import { EventEmitter } from "node:events";
-import { adaptSdkMessage, type ChatMessage } from "./messages.js";
+import { adaptBackendMessage, type ChatMessage } from "./messages.js";
 import { assertNever, invariant } from "../../../lib/invariant.js";
 import { buildTimezoneContext } from "../../box/config.js";
 import { buildScriptEnv } from "../../script-env.js";
@@ -20,6 +20,7 @@ import {
 import { pumpChatRun } from "./consume.js";
 import { preflightChatBackend } from "../../agent/auth-preflight.js";
 import { IDLE, afterTurnResult, lifecycleBusy, lifecycleRun, nextLifecycle, type ChatLifecycle } from "./lifecycle.js";
+import { resolveChatEngine } from "./engine.js";
 
 function log(context: string, ...args: unknown[]): void {
   console.log(`[ChatThreadSession:${context}]`, ...args);
@@ -63,7 +64,7 @@ export function buildThreadSystemPrompt(opts: {
 This is a Callback Box — an agent-managed personal workspace where the filesystem is state and Git is history. You can read and modify any files in the box, create cards, run \`cb\` commands, etc. Only text inside \`<chat-response>\` tags is sent to the chat — everything else (tool calls, file reads, thinking) happens silently.
 
 MESSAGES:
-- User messages arrive as: \`<chat-message from="Person Name" ref="people/person-slug">their text</chat-message>\`
+- User messages arrive as: \`<chat-message from="Person Name" ref="/people/Person_Name.person.card">their text</chat-message>\`
 - This may be a group chat — multiple people can participate. The \`from\` attribute tells you who is talking. The \`ref\` attribute points to their person card in the box (may be absent for unknown senders).
 - To reply, write: \`<chat-response>your reply text</chat-response>\`
 
@@ -136,7 +137,8 @@ export class ChatThreadSession extends EventEmitter {
 
     // Preflight the real SDK backend's Claude login before we transition; a
     // missing one is emitted as "error" (→ turn buffer). Fakes skip it.
-    if (!(await preflightChatBackend({ backend: this.backend, session: this }))) return;
+    const engine = await resolveChatEngine(this.boxRoot, this.sessionId);
+    if (!(await preflightChatBackend({ backend: this.backend, session: this, engine }))) return;
 
     this.state = nextLifecycle(this.state, { phase: "starting" });
 
@@ -163,6 +165,7 @@ export class ChatThreadSession extends EventEmitter {
     log("start", `Starting run for thread ${this.threadRef}${this.sessionId ? ` (resume ${this.sessionId})` : " (new)"}`);
 
     const run = this.backend.start({
+      engine,
       cwd: this.boxRoot,
       systemPrompt,
       resumeSessionId: this.sessionId ?? undefined,
@@ -176,7 +179,7 @@ export class ChatThreadSession extends EventEmitter {
   private consumeMessages(run: ChatBackendRun): Promise<void> {
     return pumpChatRun({
       run,
-      adapt: adaptSdkMessage,
+      adapt: adaptBackendMessage,
       onMessage: (msg) => this.handleMessage(msg),
       onError: (err) => {
         log("error", `Run errored: ${err.message}`);

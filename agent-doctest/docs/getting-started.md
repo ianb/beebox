@@ -82,6 +82,16 @@ t.checkThrows(
 );
 ```
 
+An async fn works too — a rejection counts as the throw; `await` the call so
+the assertion lands inside the test:
+
+```ts
+await t.checkThrows(
+  async () => fetchDate("bad-url"),
+  { expected: "RangeError", mode: "name" },
+);
+```
+
 In doctests, use the `=> throws` syntax:
 
 ````markdown

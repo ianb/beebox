@@ -8,13 +8,16 @@
  */
 
 import { Command } from "commander";
-import { initBox, installProcedures, installGuides, installSchedules, installPersonality, installBriefing, installRootLandmark, symlinkClaudeMemory } from "../../core/box/index.js";
+import { initBox, installProcedures, installGuides, installSchedules, installPersonality, installBriefing, installTodoView, installRootLandmark, symlinkClaudeMemory } from "../../core/box/index.js";
 import { detectBoxTarget, scaffoldV2Box } from "../../core/box/package.js";
 import { stageAll, commit, initRepo, isRepo } from "../../lib/git.js";
 import { generateRules } from "../../core/init-rules.js";
 import { generateSkills } from "../../core/box/skills.js";
 import { generateDocs, setDocIdDebug } from "../../core/docs-gen/index.js";
 import { installValidationHooks } from "../../core/install-validation-hooks.js";
+import { runAnnexDoctor } from "../../core/annex/doctor.js";
+import { getBoxShape } from "../../lib/box-shape.js";
+import { createGitAnnexService } from "../../services/git-annex.js";
 import { openSearchIndex } from "../../core/search/refresh.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
@@ -129,6 +132,12 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
     console.log("\nInstalled briefing.briefing.card");
   }
 
+  // Install the box-wide todo-view stock instance ("the plate")
+  const todoViewInstalled = await installTodoView(boxRoot);
+  if (todoViewInstalled) {
+    console.log("\nInstalled store/plate.todo-view.card");
+  }
+
   // Install the root landmark so the Landmarks page can offer
   // "chat scoped to the box root." Magical — refilled on wakeup
   // if the user deletes it.
@@ -142,8 +151,9 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   // Install default scheduled scripts
   const schedules = await installSchedules(boxRoot);
   if (schedules.length > 0) {
-    console.log(`\nInstalled ${schedules.length} schedule(s) in config/schedules/ (disabled by default)`);
-    console.log("  Enable by setting enabled=\"true\" after configuring connector secrets.");
+    console.log(`\nInstalled ${schedules.length} schedule(s) in config/schedules/ (map refresh and run cleanup enabled; other seeds disabled)`);
+    console.log("  refresh-maps may invoke a Haiku agent when directory structure changes, including a full map build on a fresh box.");
+    console.log("  Enable an opt-in schedule in the dashboard or by setting enabled: true after reviewing it and configuring any required connector secrets.");
     for (const s of schedules) {
       console.log(`  ${s}`);
     }
@@ -179,6 +189,25 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   // `cb init` after switching cb sources (monorepo migration, new
   // worktree, etc.) wouldn't refresh the hooks via that path alone.
   await installValidationHooks(boxRoot);
+
+  // Bring git-annex configuration up to spec, repairing what it can.
+  //
+  // This belongs in the lifecycle, not only in an explicit `cb doctor annex`
+  // run: a box that is annex-uninitialized, has a stale `annex.largefiles`, or
+  // (most likely) picked up git-annex's default `annex.thin` on clone is a box
+  // whose commits are not protected and whose fsck cannot detect corruption —
+  // and nothing else would say so. Repairs are logged; unfixable conditions are
+  // reported but do not abort init, since the rest of the setup is still worth
+  // doing and `cb health` gates on them.
+  const annexShape = await getBoxShape(boxRoot);
+  const annexResult = await runAnnexDoctor(createGitAnnexService(), {
+    repoRoot: annexShape.packageRoot,
+    boxRoot,
+  });
+  for (const check of annexResult.checks) {
+    if (check.status === "repaired") console.log(`git-annex: ${check.message}`);
+    if (check.status === "failed") console.warn(`git-annex: ${check.message}`);
+  }
 
   // Generate agent documentation (picks up docid-debug from marker file)
   await generateDocs(boxRoot);
@@ -226,4 +255,3 @@ export const initCommand = new Command("init")
       process.exit(1);
     }
   });
-

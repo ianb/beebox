@@ -13,6 +13,7 @@
  * prompt must stay time-invariant.
  */
 
+import { getBoxTime } from "../lib/time.js";
 import { loadBoxTimezone } from "./box/config.js";
 import { getMostActiveSavedAt } from "./chat/session/history.js";
 import { composeChatAppSnapshot, type FeatureMap } from "./chat/features.js";
@@ -20,6 +21,7 @@ import {
   loadScheduleHealth,
   summarizeScheduleHealth,
 } from "./schedule/health-box.js";
+import { computeTodoAmbientLine } from "./todo/ambient-summary.js";
 
 function phaseOfDay(hour: number): string {
   if (hour >= 5 && hour < 12) return "morning";
@@ -124,6 +126,7 @@ interface SnapshotContext {
   localTime: string;
   lastActivity?: string;
   health?: string;
+  todos?: string;
 }
 
 /**
@@ -200,7 +203,12 @@ export async function composeSendSnapshot(
     healthGate?: HealthGate;
   },
 ): Promise<string> {
-  const now = new Date();
+  // Box time, not wall time: the `local-time` tag is what the agent reasons
+  // about "today"/"this weekend" from, and a CB_TIME-frozen box (scenarios,
+  // field tests) must not leak the real clock into that reasoning — field-test
+  // run 2's agent told the operator it was "Sunday" (real time) while the box
+  // clock said Wednesday.
+  const now = getBoxTime(boxRoot);
   const context = await buildSnapshotContext(boxRoot, {
     now,
     sessionStart,
@@ -246,6 +254,19 @@ export async function buildSnapshotContext(
     } catch (e) {
       console.warn(`[session-context] schedule health summary failed: ${e instanceof Error ? e.message : e}`);
     }
+  }
+
+  // Ambient todo count (Track 5a): rides on every message, like health —
+  // unlike health it's not gated/rate-limited, since it's a plain fact
+  // ("N on the plate right now"), not a nag that needs de-duplicating.
+  // Computed fresh each send (never persisted — see ambient-summary.ts);
+  // a collector scan per chat message is the accepted cost for v1 box
+  // sizes, same tradeoff schedule-health already makes for its own scan.
+  try {
+    const todos = await computeTodoAmbientLine(boxRoot);
+    if (todos !== null) out.todos = todos;
+  } catch (e) {
+    console.warn(`[session-context] todo ambient summary failed: ${e instanceof Error ? e.message : e}`);
   }
 
   if (!sessionStart) return out;

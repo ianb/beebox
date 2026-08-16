@@ -11,7 +11,7 @@
  * public command surface still lives in attachments.ts; these helpers are
  * imported back there.
  *
- * See docs/asset-manifests.md.
+ * See docs/implemented-plans/asset-manifests.md.
  */
 
 import * as fs from "node:fs/promises";
@@ -22,6 +22,7 @@ import type { CommandContext, CommandResult } from "../command-runner.js";
 import { type AssetManifest, loadManifest } from "../asset-manifest.js";
 import { invariant } from "../../lib/invariant.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { assetGitignorePatterns, CAPTURE_STAGING_IGNORE_PATTERN } from "../../lib/asset-extensions.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -43,46 +44,23 @@ const GITIGNORE_BLOCK_MARKER = "# cb-assets (managed by cb attachments init-giti
 /** Older marker the box may have if it was initialized before the rename. */
 const LEGACY_GITIGNORE_BLOCK_MARKER = "# cb-attach-binaries (managed by cb attachments init-gitignore)";
 
+// The asset extension list and its renderers moved to src/lib/asset-extensions.ts —
+// they define asset *identity*, not a gitignore detail, and are now shared with
+// the git-annex classifier. Re-exported here for existing importers.
+export { ASSET_EXTENSIONS, assetGitignorePatterns } from "../../lib/asset-extensions.js";
+
 /**
- * Extensions ignored inside `.attach/` scopes. THE list — the box scaffold's
- * `.gitignore` (core/box/index.ts) renders this same array, so a new asset type
- * is added here once rather than in two places that quietly drift.
+ * The managed asset block, verbatim — the manifest scheme's half of the box
+ * `.gitignore`.
  *
- * Nothing keys asset *identity* off this list: `listScopeBinaries` manifests
- * every non-`.card` file in a scope regardless of extension. This only decides
- * what git skips, so an omission here means the bytes get committed directly —
- * which is how frozen web pages (`page.frozen`, up to 41MB apiece) ended up in
- * box history before 2026-07-19.
+ * Exported because `cb init` regenerates the whole file and must emit exactly
+ * this block, not a copy of it: the copy it used to inline is what let the two
+ * drift apart. Pairs with {@link UNIGNORE_BLOCK}, which replaces it on an
+ * annex-converted box.
  */
-export const ASSET_GITIGNORE_EXTENSIONS = [
-  "jpg",
-  "jpeg",
-  "png",
-  "webp",
-  "avif",
-  "heic",
-  "tif",
-  "tiff",
-  "gif",
-  "webm",
-  "mp3",
-  "m4a",
-  "wav",
-  "pdf",
-  "mp4",
-  "mov",
-  // Frozen web-page snapshots captured by callback-clerk.
-  "frozen",
-];
-
-/** The `.gitignore` lines for {@link ASSET_GITIGNORE_EXTENSIONS}. */
-export function assetGitignorePatterns(): string {
-  return ASSET_GITIGNORE_EXTENSIONS.map((ext) => `**/*.attach/**/*.${ext}`).join("\n");
-}
-
-const GITIGNORE_BLOCK = `${GITIGNORE_BLOCK_MARKER}
+export const GITIGNORE_BLOCK = `${GITIGNORE_BLOCK_MARKER}
 # Assets inside .attach/ scopes are tracked via per-dir manifest.json
-# (size + sha256), not committed directly. See docs/asset-manifests.md.
+# (size + sha256), not committed directly. See docs/implemented-plans/asset-manifests.md.
 ${assetGitignorePatterns()}
 `;
 
@@ -102,7 +80,7 @@ function isManagedBlockLine(line: string): boolean {
  * Idempotent, and — unlike the original append-only version — it **replaces a
  * stale block** rather than no-op'ing on the marker. Marker-presence alone was
  * never the right test: adding an extension to
- * {@link ASSET_GITIGNORE_EXTENSIONS} left every already-initialized box on the
+ * {@link ASSET_EXTENSIONS} left every already-initialized box on the
  * old list forever, so a newly-ignored asset type kept getting committed on
  * exactly the boxes that had been running longest. (That's how `page.frozen`
  * stayed tracked after being added.) Creates `.gitignore` if absent.
@@ -141,6 +119,193 @@ async function runInitGitignore(ctx: CommandContext): Promise<CommandResult> {
   await fs.writeFile(gitignorePath, updated);
   ctx.writeLine(`Refreshed asset block in ${path.relative(ctx.boxRoot, gitignorePath) || ".gitignore"}.`);
   return { success: true, data: { changed: true } };
+}
+
+const UNIGNORE_BLOCK_MARKER = "# cb-assets (managed by cb attachments unignore)";
+
+/**
+ * Capture staging contains committed card metadata alongside unannexed media.
+ * Re-include directories first: Git cannot re-include a file while one of its
+ * parent directories remains excluded.
+ */
+const CAPTURE_STAGING_TRACKED_PATTERNS: readonly string[] = [
+  "!**/tmp-capture/**/*.attach/**/",
+  "!**/tmp-capture/**/*.attach/**/*.card",
+  "!**/tmp-capture/**/*.attach/**/manifest.json",
+  "!**/tmp-capture/**/*.attach/**/*.timing.json",
+];
+
+/**
+ * The git-annex block: assets are tracked, only capture staging stays ignored.
+ * The annex-converted counterpart of {@link GITIGNORE_BLOCK}, and likewise
+ * exported so `cb init` writes the identical text rather than a near-copy.
+ */
+export const UNIGNORE_BLOCK = `${UNIGNORE_BLOCK_MARKER}
+# Assets inside .attach/ scopes are tracked by git-annex (annex.largefiles),
+# so they are NOT ignored — git records a pointer, the annex holds the bytes.
+# The one exception is capture staging: a capture is pre-triage and gets
+# renamed, re-encoded, and EXIF-rotated before it is filed, so annexing it on
+# arrival would mint objects for superseded versions. It joins the annex when
+# an agent files it. See docs/plans/asset-annex.md.
+${CAPTURE_STAGING_IGNORE_PATTERN}
+${CAPTURE_STAGING_TRACKED_PATTERNS.join("\n")}
+`;
+
+/**
+ * An asset ignore pattern, wherever it came from — inside the managed block,
+ * hand-written, or left over from a reverted migration.
+ *
+ * Exported for the annex-shape probe (`core/annex/is-annex-box.ts`): "does this
+ * `.gitignore` still hide assets from git" is the same question this asks, and
+ * two spellings of one pattern is how the answer drifts.
+ *
+ * @param line - A single `.gitignore` line
+ */
+export function isAssetIgnoreRule(line: string): boolean {
+  return line.trim().startsWith("**/*.attach/**/*.");
+}
+
+/** Does the box `.gitignore` still hide asset binaries from git? */
+export async function gitignoreIgnoresAssets(boxRoot: string): Promise<boolean> {
+  let text: string;
+  try {
+    text = await fs.readFile(path.join(boxRoot, ".gitignore"), "utf-8");
+  } catch (e) {
+    if (errnoCode(e) === "ENOENT") return false;
+    throw e;
+  }
+  return text.split("\n").some((line) => isAssetIgnoreRule(line));
+}
+
+/** Is `index` inside the managed asset block that starts at `start`? */
+function inManagedBlock(lines: string[], opts: { index: number; start: number }): boolean {
+  const { index, start } = opts;
+  if (start === -1 || index <= start) return false;
+  for (let i = start + 1; i <= index; i += 1) {
+    if (!isManagedBlockLine(lines[i] ?? "")) return false;
+  }
+  return true;
+}
+
+/**
+ * Is this line part of the unignore block's body? Same narrowness as
+ * {@link isManagedBlockLine} — a comment or the capture-staging pattern.
+ */
+function isUnignoreBlockLine(line: string): boolean {
+  const trimmed = line.trim();
+  return (
+    line.startsWith("#") ||
+    trimmed === CAPTURE_STAGING_IGNORE_PATTERN ||
+    CAPTURE_STAGING_TRACKED_PATTERNS.includes(trimmed)
+  );
+}
+
+/**
+ * The inverse of `init-gitignore`, for the git-annex migration: drop the asset
+ * extension block so `git add` can see the assets at all.
+ *
+ * This is a **required** migration step, not a tidy-up. A gitignored file never
+ * reaches the annex — `annex.largefiles` is consulted by `git add`, which never
+ * sees an ignored path — so leaving the block in place would silently produce a
+ * box where no asset is annexed and nothing reports a problem.
+ *
+ * Replaces the asset block with the capture-staging rule rather than deleting
+ * outright, because capture staging must stay ignored (see
+ * {@link CAPTURE_STAGING_IGNORE_PATTERN}). Idempotent: re-running against an
+ * already-converted `.gitignore` reports no change.
+ */
+/** What {@link unignoreGitignore} did. */
+export interface UnignoreOutcome {
+  changed: boolean;
+  /** Asset ignore rules outside the managed block — a hard failure for callers. */
+  strayRules: string[];
+  /** One-line summary for the CLI. */
+  message: string;
+}
+
+/**
+ * The `.gitignore` half of the git-annex migration, callable without a
+ * CommandContext so the migration can sequence it correctly (see
+ * core/annex/to-annex.ts — the ordering relative to `annex.largefiles` is
+ * load-bearing).
+ */
+export async function unignoreGitignore(boxRoot: string): Promise<UnignoreOutcome> {
+  const gitignorePath = path.join(boxRoot, ".gitignore");
+  let existing = "";
+  try {
+    existing = await fs.readFile(gitignorePath, "utf-8");
+  } catch (e) {
+    if (errnoCode(e) !== "ENOENT") throw new GitignoreReadError(gitignorePath, e);
+  }
+
+  const lines = existing.split("\n");
+  const assetBlockAt = lines.findIndex(
+    (l) => l.trim() === GITIGNORE_BLOCK_MARKER || l.trim() === LEGACY_GITIGNORE_BLOCK_MARKER,
+  );
+  const unignoreBlockAt = lines.findIndex((l) => l.trim() === UNIGNORE_BLOCK_MARKER);
+
+  // Asset rules NOT inside a managed block — hand-added, or left by a marker
+  // that got edited away. Marker-presence alone is the wrong test: reporting
+  // success while an `**/*.attach/**/*.jpg` line survives leaves a box where
+  // those assets reach neither git nor the annex, silently.
+  const strayRules = lines
+    .filter((l, i) => isAssetIgnoreRule(l) && !inManagedBlock(lines, { index: i, start: assetBlockAt }))
+    .map((l) => l.trim());
+  if (strayRules.length > 0) {
+    return {
+      changed: false,
+      strayRules,
+      message:
+        ".gitignore still ignores assets outside the managed block:\n" +
+        strayRules.map((l) => `  ${l}`).join("\n") +
+        "\nRemove these by hand — while they are present those assets reach neither " +
+        "git nor the annex, and nothing else reports it.",
+    };
+  }
+
+  if (assetBlockAt === -1 && unignoreBlockAt !== -1) {
+    let end = unignoreBlockAt + 1;
+    while (end < lines.length && isUnignoreBlockLine(lines[end] ?? "")) end += 1;
+    const currentBlock = lines.slice(unignoreBlockAt, end).join("\n") + "\n";
+    if (currentBlock === UNIGNORE_BLOCK) {
+      return { changed: false, strayRules: [], message: "Already converted for git-annex — no change." };
+    }
+    await fs.writeFile(
+      gitignorePath,
+      [...lines.slice(0, unignoreBlockAt), UNIGNORE_BLOCK.trimEnd(), ...lines.slice(end)].join("\n"),
+    );
+    return { changed: true, strayRules: [], message: "Refreshed the git-annex block in .gitignore." };
+  }
+
+  if (assetBlockAt === -1) {
+    const sep = existing === "" || existing.endsWith("\n") ? "\n" : "\n\n";
+    await fs.writeFile(gitignorePath, existing + sep + UNIGNORE_BLOCK);
+    return { changed: true, strayRules: [], message: "No asset block found; added the capture-staging rule." };
+  }
+
+  let blockEnd = assetBlockAt + 1;
+  while (blockEnd < lines.length && isManagedBlockLine(lines[blockEnd] ?? "")) blockEnd += 1;
+  await fs.writeFile(
+    gitignorePath,
+    [...lines.slice(0, assetBlockAt), UNIGNORE_BLOCK.trimEnd(), ...lines.slice(blockEnd)].join("\n"),
+  );
+  return {
+    changed: true,
+    strayRules: [],
+    message:
+      "Removed the asset ignore block from .gitignore; assets are now visible to " +
+      "`git add` and will be annexed. Capture staging stays ignored.",
+  };
+}
+
+/** CLI wrapper: prints the outcome and fails on stray rules. */
+async function runUnignore(ctx: CommandContext): Promise<CommandResult> {
+  const outcome = await unignoreGitignore(ctx.boxRoot);
+  ctx.writeLine(outcome.message);
+  if (outcome.strayRules.length > 0) {
+    return { success: false, error: `${String(outcome.strayRules.length)} unmanaged asset ignore rule(s)` };
+  }
+  return { success: true, data: { changed: outcome.changed } };
 }
 
 /** Tracked-but-now-ignored files, partitioned by whether they're assets. */
@@ -305,4 +470,4 @@ async function runUntrackAssets(ctx: CommandContext): Promise<CommandResult> {
   return { success: true, data: { untracked: inAttach.length } };
 }
 
-export { runInitGitignore, runUntrackAssets };
+export { runInitGitignore, runUnignore, runUntrackAssets };

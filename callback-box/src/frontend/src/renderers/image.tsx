@@ -84,7 +84,10 @@ function ImageCardRenderer({ data, onNavigate, mode, caption }: RendererProps) {
   // prefix (e.g. `attach/photo-001.jpg`) which resolves to the card's
   // `<basename>.attach/` directory.
   const resolvedPath = resolveRelativePath(data.path, card.filename);
-  const imageSrc = `${getApiBase()}/files/${resolvedPath}`;
+  // A filename ref that escapes the box root names no servable file. An empty
+  // src renders as the browser's broken-image affordance with the alt text —
+  // visibly wrong, rather than showing a clamped-to-root image instead.
+  const imageSrc = resolvedPath === null ? "" : `${getApiBase()}/files/${resolvedPath}`;
   const altText = card.description || card.filename;
 
   // Embedded inline (`![caption](…image.card)`): render exactly like a

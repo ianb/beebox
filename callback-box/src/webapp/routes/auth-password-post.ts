@@ -28,7 +28,7 @@ import {
   type SessionUser,
 } from "../auth.js";
 import { readBasePrefix } from "../base-prefix.js";
-import { canonicalizeEmail, createFirstUser, listUsers, verifyPassword } from "../local-users.js";
+import { canonicalizeEmail, createFirstUser, isLocalAuthStoreInitialized, verifyPassword } from "../local-users.js";
 import { AuthStoreUnavailableError, OwnerEmailMismatchError, UserExistsError } from "../local-users-errors.js";
 import { CONCURRENCY_RETRY_MS, loginThrottle } from "../login-throttle.js";
 import { checkSetupToken, clearSetupToken } from "../setup-token.js";
@@ -40,7 +40,7 @@ const loginBodySchema = z.object({ email: z.string().max(254), password: z.strin
 const setupBodySchema = z.object({
   email: z.string().max(254),
   name: z.string().max(200),
-  password: z.string().max(1024),
+  password: z.string().min(8).max(1024),
   token: z.string().max(256),
 });
 
@@ -109,7 +109,7 @@ function readRawBody(raw: IncomingMessage): Promise<string> {
  * hub, the wildcard parser leaves it undefined without draining, so the raw
  * stream is read here. Throws (oversize/invalid JSON) — the caller answers 400.
  */
-async function readJsonBody(request: FastifyRequest): Promise<unknown> {
+export async function readAuthJsonBody(request: FastifyRequest): Promise<unknown> {
   // `request.body !== undefined` — NOT `isRecord(...)` — is the correct test for
   // "a content-type parser already consumed the stream". Standalone, Fastify's
   // JSON parser populates `body` for EVERY valid JSON value; an `isRecord` check
@@ -120,7 +120,7 @@ async function readJsonBody(request: FastifyRequest): Promise<unknown> {
 }
 
 /** Read a urlencoded form body from the (undrained) raw stream. */
-async function readFormBody(request: FastifyRequest): Promise<URLSearchParams> {
+export async function readAuthFormBody(request: FastifyRequest): Promise<URLSearchParams> {
   const raw = await readRawBody(request.raw);
   return new URLSearchParams(raw);
 }
@@ -131,7 +131,7 @@ async function readFormBody(request: FastifyRequest): Promise<URLSearchParams> {
  *  `application/json; x=application/x-www-form-urlencoded` (which Fastify parses
  *  as JSON, consuming the stream) is correctly treated as JSON here rather than
  *  routed to `readFormBody` on an already-drained stream. */
-function isFormRequest(request: FastifyRequest): boolean {
+export function isFormRequest(request: FastifyRequest): boolean {
   const contentType = request.headers["content-type"];
   if (typeof contentType !== "string") return false;
   const essence = contentType.split(";", 1)[0]?.trim().toLowerCase();
@@ -153,7 +153,8 @@ function setupErrorLocation({ prefix, token, kind }: { prefix: string; token: st
 /** Sign a session for `user` and set the `cb_session` cookie — the SAME options
  *  the Google callback uses (`path:/`, httpOnly, `secure` iff https, sameSite
  *  lax, the 30-day max-age). */
-function setSessionCookie(reply: FastifyReply, { request, user }: { request: FastifyRequest; user: SessionUser }): void {
+export function setSessionCookie(reply: FastifyReply, options: { request: FastifyRequest; user: SessionUser }): void {
+  const { request, user } = options;
   reply.setCookie(COOKIE_NAME, signSession(user), {
     path: "/",
     httpOnly: true,
@@ -183,7 +184,7 @@ async function readLoginCredentials({
   if (form) {
     let params: URLSearchParams;
     try {
-      params = await readFormBody(request);
+      params = await readAuthFormBody(request);
     } catch (_e) {
       /* ignore: oversize/unreadable form body is untrusted input — treat as malformed. */
       return null;
@@ -195,7 +196,7 @@ async function readLoginCredentials({
   }
   let body: unknown;
   try {
-    body = await readJsonBody(request);
+    body = await readAuthJsonBody(request);
   } catch (_e) {
     /* ignore: oversize/unparseable JSON body is untrusted input — treat as malformed. */
     return null;
@@ -270,7 +271,7 @@ async function readSetupFields({ request, form }: { request: FastifyRequest; for
   if (form) {
     let params: URLSearchParams;
     try {
-      params = await readFormBody(request);
+      params = await readAuthFormBody(request);
     } catch (_e) {
       /* ignore: oversize/unreadable form body is untrusted input — treat as malformed. */
       return { kind: "bad" };
@@ -288,7 +289,7 @@ async function readSetupFields({ request, form }: { request: FastifyRequest; for
   }
   let body: unknown;
   try {
-    body = await readJsonBody(request);
+    body = await readAuthJsonBody(request);
   } catch (_e) {
     /* ignore: oversize/unparseable JSON body is untrusted input — treat as malformed. */
     return { kind: "bad" };
@@ -315,9 +316,9 @@ export async function handleSetupPost(request: FastifyRequest, reply: FastifyRep
   const failSetup = ({ kind, status, jsonBody }: { kind: SetupErrorKind; status: number; jsonBody: object }): FastifyReply =>
     form ? reply.redirect(setupErrorLocation({ prefix, token: fields.token, kind })) : reply.status(status).send(jsonBody);
 
-  let existingUsers: number;
+  let storeInitialized: boolean;
   try {
-    existingUsers = listUsers().length;
+    storeInitialized = isLocalAuthStoreInitialized();
   } catch (e) {
     if (e instanceof AuthStoreUnavailableError) {
       console.error("[auth] setup failed — credential store unavailable:", e);
@@ -325,8 +326,9 @@ export async function handleSetupPost(request: FastifyRequest, reply: FastifyRep
     }
     throw e;
   }
-  // Once an account exists, setup is permanently closed.
-  if (existingUsers > 0) {
+  // Once local auth has been initialized, setup is permanently closed. An
+  // empty file is the durable tombstone after the last member is removed.
+  if (storeInitialized) {
     return failSetup({
       kind: "exists",
       status: 410,
@@ -384,12 +386,12 @@ export async function handleSetupPost(request: FastifyRequest, reply: FastifyRep
     setSessionCookie(reply, { request, user: { email: owner.email, name: owner.name } });
     return form ? reply.redirect(`${prefix}/`) : reply.status(204).send();
   } catch (e) {
-    // Lost the O_EXCL race (a second setup won): the winner already created it.
-    if (e instanceof UserExistsError) {
-      return failSetup({ kind: "exists", status: 409, jsonBody: { error: "An account already exists" } });
-    }
-    if (e instanceof OwnerEmailMismatchError) {
-      return failSetup({ kind: "generic", status: 400, jsonBody: { error: e.message } });
+    // A second setup won the credential-store lock and created the owner.
+    if (e instanceof UserExistsError) return failSetup({ kind: "exists", status: 409, jsonBody: { error: "An account already exists" } });
+    if (e instanceof OwnerEmailMismatchError) return failSetup({ kind: "generic", status: 400, jsonBody: { error: e.message } });
+    if (e instanceof AuthStoreUnavailableError) {
+      console.error("[auth] setup failed while creating the owner — credential store unavailable:", e);
+      return failSetup({ kind: "generic", status: 503, jsonBody: { error: "Setup temporarily unavailable" } });
     }
     throw e;
   } finally {

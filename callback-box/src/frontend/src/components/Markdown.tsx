@@ -24,13 +24,15 @@
 import { Fragment, useMemo } from "react";
 import * as React from "react";
 import { useParams } from "@tanstack/react-router";
-import Markdoc, { type Config, type RenderableTreeNode } from "@markdoc/markdoc";
+import { transform, renderers, type Config, type RenderableTreeNode } from "@markdoc/markdoc";
 import { markdocConfig, makeHeadingNode } from "@shared/markdoc-config";
 import { makeQuoteComponents } from "./Quote";
 import { makeSourceComponents } from "./Source";
 import { makeBriefingComponents } from "./BriefingTags";
 import { makeRecipeComponents } from "./RecipeTags";
 import { RedactedInline, RedactedBlock } from "./Redacted";
+import { makeTodoComponents } from "./Todo";
+import { makeSeeAlsoComponent } from "./SeeAlso";
 import { Image } from "./ui/Image";
 import { VideoEmbed } from "./ui/VideoEmbed";
 import { detectVideoEmbed } from "../lib/video-url";
@@ -49,13 +51,8 @@ import { parseMarkdown } from "../lib/markdoc-parse";
 import { isRecord } from "@shared/is-record";
 import type { ReactNode } from "react";
 
-// Value named imports (`{ transform, … }`) don't resolve from this CommonJS
-// module under Node's ESM loader (used by `cb render` SSR); Vite tolerates them
-// but the SSR path does not. Destructure off the default import — same pattern
-// and lint exception as `markdoc-config.ts` / `body-refs.ts`. Parsing itself
-// goes through `parseMarkdown` (linkify-enabled) rather than the raw `parse`.
-// eslint-disable-next-line import-x/no-named-as-default-member -- named import fails under Node ESM SSR; default-member access is the runtime-correct form for this CJS module
-const { transform, renderers } = Markdoc;
+// Parsing goes through `parseMarkdown` (linkify-enabled) rather than the raw
+// `parse` — see lib/markdoc-parse.ts.
 
 export interface LinkContext {
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
@@ -102,10 +99,18 @@ function makeLink(ctx: LinkContext): React.ComponentType<{ href?: string; title?
     }
     const classified = classifyMarkdownHref(href);
     if (classified.kind === "legacy-view") {
-      return <LegacyViewLink>{children}</LegacyViewLink>;
+      return (
+        <BrokenLink title="Legacy view: link — needs migration to a plain path">{children}</BrokenLink>
+      );
     }
     if (classified.kind === "relative") {
       const target = resolveContentTarget(ctx.basePath, classified.path);
+      if (target === null) {
+        // The path climbs out of the box root, so it names no file we can open.
+        // Draw the same visibly-broken marker a retired `view:` link gets rather
+        // than linking to a clamped-to-root guess (the pre-2026-07-30 behavior).
+        return <BrokenLink title={`Link escapes the box root: ${href}`}>{children}</BrokenLink>;
+      }
       const resolvedHref = viewHref(ctx.boxSlug, target);
       return (
         <a
@@ -136,17 +141,15 @@ function makeLink(ctx: LinkContext): React.ComponentType<{ href?: string; title?
 }
 
 /**
- * A retired `view:` link. It routes nowhere; it renders as a visibly-disabled
- * marker so un-migrated content reads as broken-on-sight rather than as a
- * silently-inert `<a href="view:…">`. Transitional — removable once all
- * controlled boxes are migrated off the `view:` scheme.
+ * A link that leads nowhere: a retired `view:` link (removable once all
+ * controlled boxes are migrated off the scheme), or a path that escapes the box
+ * root. Renders as a visibly-disabled marker with the reason in its tooltip, so
+ * the content reads as broken-on-sight rather than as a silently-inert
+ * `<a href="view:…">` or a link to some other file.
  */
-function LegacyViewLink({ children }: { children?: ReactNode }) {
+function BrokenLink({ title, children }: { title: string; children?: ReactNode }) {
   return (
-    <span
-      className="cursor-not-allowed text-danger-dark underline decoration-dotted"
-      title="Legacy view: link — needs migration to a plain path"
-    >
+    <span className="cursor-not-allowed text-danger-dark underline decoration-dotted" title={title}>
       {children}
     </span>
   );
@@ -260,6 +263,8 @@ function buildRenderConfig(linkCtx: LinkContext): RenderConfigBundle {
   const { SourceInline, SourceBlock } = makeSourceComponents({ onNavigate: linkCtx.onNavigate, basePath: linkCtx.basePath, onJumpToQuote: linkCtx.onJumpToQuote });
   const briefing = makeBriefingComponents();
   const recipe = makeRecipeComponents({ onNavigate: linkCtx.onNavigate });
+  const { TodoInline, TodoBlock } = makeTodoComponents();
+  const SeeAlso = makeSeeAlsoComponent({ onNavigate: linkCtx.onNavigate, basePath: linkCtx.basePath });
   const Task = ({ done }: { done?: boolean }) => (
     <input
       type="checkbox"
@@ -275,16 +280,21 @@ function buildRenderConfig(linkCtx: LinkContext): RenderConfigBundle {
   const CaptureImage = ({ sourceRef }: { sourceRef?: string }) => {
     const ref = typeof sourceRef === "string" ? sourceRef : "";
     const label = ref.replace(/^attach\//, "").replace(/\.image\.card$/, "");
+    const path = ref === "" ? null : resolveRelativePath(linkCtx.basePath, ref);
+    // An unresolvable marker (empty or box-escaping ref) renders as inert text,
+    // not a button that silently does nothing when clicked.
+    if (path === null) {
+      return (
+        <span className="mx-0.5 align-middle text-xs text-danger-dark" title={`Unresolvable image ref: ${ref}`}>
+          📷 {label === "" ? "image" : label}
+        </span>
+      );
+    }
     return (
       <button
         type="button"
         onClick={() => {
-          if (ref === "") return;
-          const target: ViewTarget = {
-            path: resolveRelativePath(linkCtx.basePath, ref),
-            viewer: null,
-            params: {},
-          };
+          const target: ViewTarget = { path, viewer: null, params: {} };
           linkCtx.onNavigate(target, label === "" ? undefined : { label });
         }}
         className="mx-0.5 rounded bg-warm-100 px-1.5 py-0.5 align-middle text-xs text-warm-700 hover:bg-warm-200"
@@ -330,6 +340,9 @@ function buildRenderConfig(linkCtx: LinkContext): RenderConfigBundle {
     Silence: cast(Silence),
     RedactedInline: cast(RedactedInline),
     RedactedBlock: cast(RedactedBlock),
+    TodoInline: cast(TodoInline),
+    TodoBlock: cast(TodoBlock),
+    SeeAlso: cast(SeeAlso),
   };
   return { config, components };
 }

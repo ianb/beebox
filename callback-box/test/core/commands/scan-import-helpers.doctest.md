@@ -5,11 +5,17 @@ Helpers for the `scan-import` command: sliding-overlap batch planning, pair reco
 ```ts setup
 import {
   planScanBatches,
+  runScanBatches,
   resolveScanPages,
   bundleResolvedPages,
   buildScanPrompt,
   type ScanPageAnalysis,
 } from "../../../src/core/commands/scan-import-helpers.js";
+import type { ScanVisionService } from "../../../src/services/scan-vision.js";
+import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { readFile, stat } from "node:fs/promises";
+import { extname, join } from "node:path";
+import Sharp from "sharp";
 
 function photo(index: number, paired: number | null = null, opts: Partial<ScanPageAnalysis> = {}): ScanPageAnalysis {
   return {
@@ -46,6 +52,59 @@ function back(index: number, paired: number | null = null, text = "", opts: Part
     ...opts,
   };
 }
+```
+
+## Every backend receives the same bounded JPEG
+
+The archive may contain a TIFF or a very large phone original. The shared
+runner applies the former Claude recipe once—EXIF rotation, 2000px long edge,
+JPEG quality 88—before either backend sees a path. Thus Gemini never inlines
+the raw TIFF, while Claude receives the same bytes it did before the hoist.
+
+```ts
+const normalizeBox = await makeTmpBox();
+const originalPath = join(normalizeBox.packageRoot, "oversized-original.tiff");
+await Sharp({
+  create: { width: 3200, height: 1200, channels: 3, background: { r: 30, g: 80, b: 120 } },
+}).tiff({ compression: "none" }).toFile(originalPath);
+
+const expectedBytes = await Sharp(originalPath)
+  .rotate()
+  .resize({ width: 2000, height: 2000, fit: "inside", withoutEnlargement: true })
+  .jpeg({ quality: 88 })
+  .toBuffer();
+const observations = [];
+function recordingVision(backend: "claude" | "gemini"): ScanVisionService {
+  return {
+    backend,
+    batchSize: 8,
+    async analyzeBatch({ imagePaths }) {
+      const imagePath = imagePaths[0];
+      const bytes = await readFile(imagePath);
+      const metadata = await Sharp(bytes).metadata();
+      observations.push({ backend, imagePath, bytes, metadata });
+      return { analyses: [photo(0)], usage: null, costUsd: null };
+    },
+  };
+}
+
+await runScanBatches({ vision: recordingVision("claude"), imagePaths: [originalPath] });
+await runScanBatches({ vision: recordingVision("gemini"), imagePaths: [originalPath] });
+const originalBytes = (await stat(originalPath)).size;
+JSON.stringify({
+  originalOver8MB: originalBytes > 8 * 1024 * 1024,
+  backends: observations.map((item) => item.backend),
+  extensions: observations.map((item) => extname(item.imagePath)),
+  formats: observations.map((item) => item.metadata.format),
+  dimensions: observations.map((item) => [item.metadata.width, item.metadata.height]),
+  exactClaudeRecipe: observations.every((item) => item.bytes.equals(expectedBytes)),
+  smallerThanOriginal: observations.every((item) => item.bytes.length < originalBytes),
+})
+=> {"originalOver8MB":true,"backends":["claude","gemini"],"extensions":[".jpg",".jpg"],"formats":["jpeg","jpeg"],"dimensions":[[2000,750],[2000,750]],"exactClaudeRecipe":true,"smallerThanOriginal":true}
+```
+
+```ts cleanup
+await normalizeBox.cleanup();
 ```
 
 ## Sliding-overlap batch planning
@@ -118,6 +177,23 @@ resolved3[7].pairedWith
 ```
 
 The analyzer that named a partner wins over the one that didn't.
+
+## Pair reconciliation: mutual claims beat unreciprocated ones
+
+When both overlapping batches named a partner for the same page, the claim
+the partner actually reciprocates wins — even when it came from the first
+batch (the old rule arbitrarily took the second):
+
+```ts
+const pages4 = new Map<number, ScanPageAnalysis[]>();
+// Batch A saw 4↔5 mutually; batch B misread page 5 as paired forward with 6.
+pages4.set(4, [photo(4, 5)]);
+pages4.set(5, [back(5, 4, "Lake"), back(5, 6, "Lake")]);
+pages4.set(6, [photo(6, null)]);
+const resolved4 = resolveScanPages(pages4, 8);
+`${resolved4[4].pairedWith}<->${resolved4[5].pairedWith} conflict=${resolved4[5].conflict}`
+=> 5<->4 conflict=true
+```
 
 ## Bundling: photo + back
 

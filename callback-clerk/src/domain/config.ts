@@ -25,11 +25,10 @@ export function emptyConfig(): ClerkConfig {
   return { version: 1, boxes: [], activeBoxUrl: null };
 }
 
-/** Adds (or replaces) a box; the first enabled box becomes active. */
+/** Adds (or replaces) a box and makes it active. */
 export function addBox(config: ClerkConfig, box: EnabledBox): ClerkConfig {
   const others = config.boxes.filter((b) => b.boxUrl !== box.boxUrl);
-  const activeBoxUrl = config.activeBoxUrl === null ? box.boxUrl : config.activeBoxUrl;
-  return { version: 1, boxes: [...others, box], activeBoxUrl };
+  return { version: 1, boxes: [...others, box], activeBoxUrl: box.boxUrl };
 }
 
 /** Removes a box; if it was active, the first remaining box takes over. */
@@ -38,6 +37,24 @@ export function removeBox(config: ClerkConfig, boxUrl: string): ClerkConfig {
   const activeBoxUrl =
     config.activeBoxUrl === boxUrl ? (boxes[0]?.boxUrl ?? null) : config.activeBoxUrl;
   return { version: 1, boxes, activeBoxUrl };
+}
+
+/**
+ * Moves a box one slot up (-1) or down (+1) in the list. The list order is the
+ * user's own, edited from the popup's edit mode; a move past either end is a
+ * no-op rather than a wrap.
+ */
+export function moveBox(config: ClerkConfig, move: { boxUrl: string; delta: -1 | 1 }): ClerkConfig {
+  const { boxUrl, delta } = move;
+  const from = config.boxes.findIndex((b) => b.boxUrl === boxUrl);
+  if (from === -1) return config;
+  const to = from + delta;
+  if (to < 0 || to >= config.boxes.length) return config;
+  const boxes = [...config.boxes];
+  const [moved] = boxes.splice(from, 1);
+  if (moved === undefined) return config;
+  boxes.splice(to, 0, moved);
+  return { ...config, boxes };
 }
 
 /** No-op when boxUrl isn't an enabled box. */

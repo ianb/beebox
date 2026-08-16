@@ -9,6 +9,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { getBoxTime } from "../lib/time.js";
 import { errnoCode, errorMessage } from "../lib/error-guards.js";
+import { boxTmpDir } from "../lib/box-tmp.js";
 
 /**
  * Sweep transient chat-upload files from <boxRoot>/tmp/.
@@ -25,7 +26,7 @@ export async function cleanupOldTmpUploads(
   const now = getBoxTime(boxRoot).getTime();
   const expiryMs = EXPIRY_DAYS * 24 * 60 * 60 * 1000;
 
-  const tmpDir = path.join(boxRoot, "tmp");
+  const tmpDir = boxTmpDir(boxRoot);
   let entries: string[];
   try {
     entries = await fs.readdir(tmpDir);

@@ -181,6 +181,29 @@ export async function unstageFiles(boxRoot: string, paths: string[]): Promise<vo
 }
 
 /**
+ * List which of the given paths actually have staged (index vs HEAD) changes,
+ * as boxRoot-relative paths (`--relative` keeps the output in the caller's
+ * frame even when boxRoot sits below the repo root, as in a v2 package box).
+ *
+ * Exists because `git add <dir>` silently stages nothing when the directory's
+ * contents are all gitignored (post-annex boxes ignore capture staging media),
+ * and a subsequent `git commit -- <dir>` then fails with "pathspec did not
+ * match any file(s) known to git". Committing only what really staged makes
+ * the stage→commit pair safe under ignore rules.
+ *
+ * @param boxRoot - Repository root
+ * @param paths - Paths to inspect (relative to boxRoot)
+ */
+export async function stagedPaths(boxRoot: string, paths: string[]): Promise<string[]> {
+  if (paths.length === 0) return [];
+  // Disable rename pairing: a path-scoped commit needs both the deleted source
+  // and added destination. With rename detection, `--name-only` reports only
+  // the destination and leaves the source deletion staged after the commit.
+  const output = await simpleGit(boxRoot).raw(["diff", "--cached", "--name-only", "--no-renames", "--relative", "--", ...paths]);
+  return output.split("\n").filter((line) => line !== "");
+}
+
+/**
  * Check whether any of the given paths have tracked or untracked changes.
  *
  * @param boxRoot - Repository root
@@ -275,6 +298,12 @@ export async function commitPaths(
  *     (`isNothingToCommitError`) — the paths landed anyway, so that is success,
  *     also `null`.
  *
+ * The commit is scoped to what actually STAGED, not the requested paths: when a
+ * requested directory's contents are all gitignored (post-annex boxes ignore
+ * capture staging media), `git add` stages nothing from it and a commit
+ * pathspec naming it would fail with "pathspec did not match any file(s) known
+ * to git" (the 2026-08-03 box-family capture wedge).
+ *
  * Returns the new commit hash, or `null` when there was nothing to commit.
  */
 export async function stageAndCommitPaths(
@@ -286,8 +315,10 @@ export async function stageAndCommitPaths(
   // empty path list also lands here — nothing to stage or commit).
   if (!(await pathsHaveChanges(boxRoot, paths))) return null;
   await stageFiles(boxRoot, paths);
+  const staged = await stagedPaths(boxRoot, paths);
+  if (staged.length === 0) return null;
   try {
-    return await commitPaths(boxRoot, options);
+    return await commitPaths(boxRoot, { ...options, paths: staged });
   } catch (err) {
     // Residual race: a sweep committed our paths between the check and here.
     // "nothing to commit" means the paths landed — success, not an error.

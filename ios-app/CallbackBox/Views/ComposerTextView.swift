@@ -93,6 +93,9 @@ struct ComposerTextView: UIViewRepresentable {
             let measuredHeight = textView.sizeThatFits(fittingSize).height
             let newHeight = min(parent.maximumHeight, max(parent.minimumHeight, measuredHeight))
             textView.isScrollEnabled = measuredHeight > parent.maximumHeight
+            if textView.isScrollEnabled {
+                textView.scrollRangeToVisible(textView.selectedRange)
+            }
             if abs(parent.height - newHeight) > 0.5 {
                 DispatchQueue.main.async { [weak self] in
                     guard let self, abs(self.parent.height - newHeight) > 0.5 else {

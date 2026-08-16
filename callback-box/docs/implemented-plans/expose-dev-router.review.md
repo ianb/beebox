@@ -133,7 +133,7 @@ accept.** The router-side mobile auth (or `mobile-cookie.ts`) must issue a
 prefix-correct Path. Added to Track B + failure modes.
 
 ### 2.3 (High) — browser HMR can't move to the UDS
-Only CLI (`bin/worktrees`) can use `curl --unix-socket`; browser HMR/WS must stay
+Only CLI (`bin/workstreams`) can use `curl --unix-socket`; browser HMR/WS must stay
 on TCP (`vite.config.ts:48`, `bin/router.ts:896`) and authenticate with the
 local browser session. **Disposition: accept — corrected** (B.1: HMR stays TCP +
 logged-in; only CLI → UDS).

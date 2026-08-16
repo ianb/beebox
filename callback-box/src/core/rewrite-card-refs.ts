@@ -25,11 +25,24 @@
  * Over-matching is safe: a candidate that doesn't resolve to a remapped target
  * is returned unchanged, so scanning the whole text with loose patterns can't
  * corrupt non-ref content.
+ *
+ * Known safe-direction gap: the frontmatter scan is line-based, so YAML
+ * inline-map forms (`- { ref: x }`, `refs: [{ ref: x }]`) are not matched — mv
+ * and the canonical fixer skip them rather than corrupt them. Full YAML
+ * awareness is deliberately out of scope (parse-and-reserialize would reorder
+ * frontmatter keys, which is the whole reason this scan is text-surgical).
+ *
+ * Ref grammar (the 3-form rule, `?query`/`#fragment` splitting, fail-closed
+ * containment) lives in `src/shared/ref-path.ts` — this module only maps its
+ * box-relative answers to/from absolute paths and re-appends the suffix when it
+ * rewrites, so a `?view=`- or `#anchor`-bearing ref both resolves and survives.
  */
 
 import * as path from "node:path";
-import { isAttachRef, resolveAttachRef } from "../shared/attach-path.js";
-import { containWithinBox } from "../lib/box-containment.js";
+import { isAttachRef } from "../shared/attach-path.js";
+import { formatRefSuffix, isExternalRef, parseRef, resolveRefPath } from "../shared/ref-path.js";
+import { inlineLinkPattern } from "./body-refs.js";
+import { rewriteFrontmatter, type RefTransform } from "./rewrite-frontmatter-refs.js";
 import { invariant } from "../lib/invariant.js";
 
 /**
@@ -38,66 +51,64 @@ import { invariant } from "../lib/invariant.js";
  */
 export type Remap = (resolvedAbsPath: string) => string | null;
 
-/** Split a ref's path from a trailing `#fragment` (anchor / message id). */
-function splitFragment(ref: string): { pathPart: string; fragment: string } {
-  const fragmentStart = ref.indexOf("#");
-  if (fragmentStart === -1) return { pathPart: ref, fragment: "" };
-  return { pathPart: ref.slice(0, fragmentStart), fragment: ref.slice(fragmentStart) };
-}
-
 /**
- * Resolve a ref's path part to an absolute filesystem path, using the same
- * rules as the renderer: leading `/` is box-root-absolute, `attach/` resolves
- * into the card's own attach scope, everything else is relative to the card.
- * Returns `null` for refs we don't resolve (empty, protocol URLs).
+ * Resolve a ref's path part to an absolute filesystem path via the shared ref
+ * algebra (`src/shared/ref-path.ts`). Returns `null` for refs that name nothing
+ * in the box — the shared `isExternalRef` test (empty, any `scheme:`, a
+ * protocol-relative `//host`, a bare `#anchor`), so `mailto:`/`view:`/`tel:`
+ * are skipped rather than fed to the resolver — and for refs that escape the
+ * box: an escaping ref can't name an in-box moved card, so it's left untouched,
+ * but never silently.
  */
 function resolveRefToAbs(params: {
   boxRoot: string;
   cardAbsPath: string;
   pathPart: string;
+  fromPath?: string;
 }): string | null {
   const { boxRoot, cardAbsPath, pathPart } = params;
-  if (pathPart === "") return null;
-  if (pathPart.includes("://")) return null;
-  let abs: string;
-  if (pathPart.startsWith("/")) {
-    abs = path.normalize(path.join(boxRoot, pathPart));
-  } else if (isAttachRef(pathPart)) {
-    const resolved = resolveAttachRef(cardAbsPath, pathPart);
-    if (resolved === null) return null;
-    abs = path.normalize(resolved);
-  } else {
-    abs = path.resolve(path.dirname(cardAbsPath), pathPart);
+  if (isExternalRef(pathPart)) return null;
+  const fromPath = params.fromPath ?? boxRelativeFrom(boxRoot, cardAbsPath);
+  if (fromPath === null) {
+    console.warn(`rewrite-card-refs: ${cardAbsPath} is outside ${boxRoot}; leaving its refs unchanged`);
+    return null;
   }
-  // Containment: a ref that escapes the box can't name an in-box moved card, so
-  // leave it untouched (null → no rewrite) — but never silently.
-  if (containWithinBox(boxRoot, abs) === null) {
+  const resolved = resolveRefPath({ fromPath, ref: pathPart, kind: "card" });
+  if (resolved === null) {
     console.warn(`rewrite-card-refs: ref "${pathPart}" in ${cardAbsPath} escapes the box; leaving unchanged`);
     return null;
   }
-  return abs;
+  return path.resolve(boxRoot, resolved);
+}
+
+/**
+ * The referring card's path as the shared algebra wants it: box-relative,
+ * forward slashes. `null` when the card lies outside the box.
+ */
+function boxRelativeFrom(boxRoot: string, cardAbsPath: string): string | null {
+  const rel = path.relative(path.resolve(boxRoot), path.resolve(cardAbsPath));
+  if (rel === "" || rel === ".." || rel.startsWith(".." + path.sep)) return null;
+  return rel.split(path.sep).join("/");
 }
 
 /**
  * Re-express a moved target as a ref string from `cardAbsPath`, preserving the
- * original ref's absolute-vs-relative style and trailing fragment.
+ * original ref's absolute-vs-relative style and its `?query`/`#fragment`.
  */
 function restyleRef(params: {
   boxRoot: string;
   cardAbsPath: string;
   newAbs: string;
   wasAbsolute: boolean;
-  fragment: string;
+  suffix: string;
+  relativeBase?: string;
 }): string {
-  const { boxRoot, cardAbsPath, newAbs, wasAbsolute, fragment } = params;
+  const { boxRoot, cardAbsPath, newAbs, wasAbsolute, suffix } = params;
   const body = wasAbsolute
     ? "/" + path.relative(boxRoot, newAbs)
-    : path.relative(path.dirname(cardAbsPath), newAbs);
-  return body + fragment;
+    : path.relative(params.relativeBase ?? path.dirname(cardAbsPath), newAbs);
+  return body + suffix;
 }
-
-/** A per-ref transform: given a raw ref token, return it unchanged or rewritten. */
-type RefTransform = (rawRef: string) => string;
 
 /**
  * Build the transform used for cards *other* than the one being moved: resolve
@@ -108,11 +119,18 @@ function transformForReferrer(params: {
   boxRoot: string;
   cardAbsPath: string;
   remap: Remap;
+  fromPath?: string;
+  relativeBase?: string;
 }): RefTransform {
   const { boxRoot, cardAbsPath, remap } = params;
   return (rawRef) => {
-    const { pathPart, fragment } = splitFragment(rawRef);
-    const abs = resolveRefToAbs({ boxRoot, cardAbsPath, pathPart });
+    const parsed = parseRef(rawRef);
+    const abs = resolveRefToAbs({
+      boxRoot,
+      cardAbsPath,
+      pathPart: parsed.path,
+      ...(params.fromPath === undefined ? {} : { fromPath: params.fromPath }),
+    });
     if (abs === null) return rawRef;
     const newAbs = remap(abs);
     if (newAbs === null) return rawRef;
@@ -120,8 +138,9 @@ function transformForReferrer(params: {
       boxRoot,
       cardAbsPath,
       newAbs,
-      wasAbsolute: pathPart.startsWith("/"),
-      fragment,
+      wasAbsolute: parsed.path.startsWith("/"),
+      suffix: formatRefSuffix(parsed),
+      ...(params.relativeBase === undefined ? {} : { relativeBase: params.relativeBase }),
     });
   };
 }
@@ -142,139 +161,42 @@ function transformForMovedCard(params: {
 }): RefTransform {
   const { boxRoot, oldCardAbs, newCardAbs, remap } = params;
   return (rawRef) => {
-    const { pathPart, fragment } = splitFragment(rawRef);
-    if (pathPart === "" || pathPart.startsWith("/") || isAttachRef(pathPart)) {
+    const parsed = parseRef(rawRef);
+    if (parsed.path === "" || parsed.path.startsWith("/") || isAttachRef(parsed.path)) {
       return rawRef;
     }
-    const abs = resolveRefToAbs({ boxRoot, cardAbsPath: oldCardAbs, pathPart });
+    const abs = resolveRefToAbs({ boxRoot, cardAbsPath: oldCardAbs, pathPart: parsed.path });
     if (abs === null) return rawRef;
     const remapped = remap(abs);
     const target = remapped === null ? abs : remapped;
-    return path.relative(path.dirname(newCardAbs), target) + fragment;
+    return path.relative(path.dirname(newCardAbs), target) + formatRefSuffix(parsed);
   };
 }
 
-/** Quote-aware unwrap of a YAML scalar value. Returns the inner value + quote char. */
-function unquote(value: string): { inner: string; quote: string } {
-  if (value.length >= 2) {
-    const first = value[0];
-    if ((first === '"' || first === "'") && value[value.length - 1] === first) {
-      return { inner: value.slice(1, -1), quote: first };
-    }
-  }
-  return { inner: value, quote: "" };
-}
 
 /**
- * Rewrite refs inside the frontmatter block (between the leading `---` and the
- * next `---`). It rewrites any `ref:` scalar or `refs:` list at *any* nesting,
- * not just at the top level — a card reference is always stored under a key
- * named exactly `ref` (or `refs`), so a nested `procedure:\n  ref: <path>`,
- * `frozen:\n  ref: <path>`, etc. are rewritten the same as a top-level
- * `ref:`. Returns the text with that region rewritten.
+ * Whether the body scan leaves fenced code blocks alone. The two callers want
+ * opposite things, so it is never defaulted:
+ *  - **`cb mv` passes `false`.** A fenced example that names a card
+ *    (`[x](Sibling.card)`) should stay truthful when that card moves — a doc
+ *    example pointing at a dead path is worse than one edited by the move.
+ *  - **`--canonical --fix` passes `true`.** Its edits are cosmetic, and a
+ *    teaching example may deliberately show the legacy relative form; silently
+ *    normalizing it would erase the very thing the example demonstrates.
+ *
+ * The canonical fixer's collect and replay passes must agree on the flag, or
+ * the replay would rewrite tokens the collect pass never priced.
  */
-function rewriteFrontmatter(text: string, wrap: RefTransform): string {
-  if (!text.startsWith("---\n")) return text;
-  const lines = text.split("\n");
-  let end = -1;
-  for (let i = 1; i < lines.length; i++) {
-    if (lines[i] === "---") {
-      end = i;
-      break;
-    }
-  }
-  if (end === -1) return text;
-
-  const apply = (value: string): string => {
-    const { inner, quote } = unquote(value);
-    return quote + wrap(inner) + quote;
-  };
-
-  let refsIndent = -1; // indentation of an open `refs:` block, or -1
-  for (let i = 1; i < end; i++) {
-    const line = lines[i];
-    if (line === undefined) continue;
-
-    const scalar = /^(\s*ref:\s+)(\S.*?)\s*$/.exec(line);
-    if (scalar !== null) {
-      const [, prefix, value] = scalar;
-      invariant(
-        prefix !== undefined && value !== undefined,
-        "ref: scalar regex has two mandatory capture groups",
-      );
-      lines[i] = prefix + apply(value);
-      refsIndent = -1;
-      continue;
-    }
-
-    const inlineList = /^(\s*refs:\s*\[)(.*)(]\s*)$/.exec(line);
-    if (inlineList !== null) {
-      const [, prefix, itemsRaw, suffix] = inlineList;
-      invariant(
-        prefix !== undefined && itemsRaw !== undefined && suffix !== undefined,
-        "refs: [...] regex has three mandatory capture groups",
-      );
-      const items = itemsRaw
-        .split(",")
-        .map((item) => {
-          const m = /^(\s*)(\S.*?)(\s*)$/.exec(item);
-          if (m === null) return item;
-          const [, lead, core, trail] = m;
-          invariant(
-            lead !== undefined && core !== undefined && trail !== undefined,
-            "inline-list item regex has three mandatory capture groups",
-          );
-          return lead + apply(core) + trail;
-        })
-        .join(",");
-      lines[i] = prefix + items + suffix;
-      refsIndent = -1;
-      continue;
-    }
-
-    const blockOpen = /^(\s*)refs:\s*$/.exec(line);
-    if (blockOpen !== null) {
-      const [, indent] = blockOpen;
-      invariant(indent !== undefined, "refs: block-open regex has one mandatory capture group");
-      refsIndent = indent.length;
-      continue;
-    }
-
-    if (refsIndent !== -1) {
-      const item = /^(\s+-\s+)(\S.*?)\s*$/.exec(line);
-      if (item !== null && line.search(/\S/) > refsIndent) {
-        const [, prefix, value] = item;
-        invariant(
-          prefix !== undefined && value !== undefined,
-          "refs list-item regex has two mandatory capture groups",
-        );
-        lines[i] = prefix + apply(value);
-        continue;
-      }
-      // A line that isn't a deeper list item closes the refs block.
-      if (line.trim() !== "") refsIndent = -1;
-    }
-  }
-
-  return lines.join("\n");
+interface BodyScanOptions {
+  skipFencedCode: boolean;
 }
 
-/**
- * Apply a ref transform to every ref-bearing token in a card's text. Returns
- * the rewritten text and how many tokens actually changed.
- */
-function applyTransform(text: string, transform: RefTransform): { text: string; count: number } {
-  let count = 0;
-  const wrap: RefTransform = (raw) => {
-    const out = transform(raw);
-    if (out !== raw) count++;
-    return out;
-  };
-
-  let updated = rewriteFrontmatter(text, wrap);
-
-  // Inline markdown links and images: [text](path) / ![alt](path).
-  updated = updated.replace(/(!?\[[^\]]*]\(\s*)([^\s()]+)/g, (_m: string, ...g: string[]) => {
+/** The one-line scan for ref-bearing body syntax: `[…](path)` and `ref="…"`. */
+function scanBodyLine(line: string, wrap: RefTransform): string {
+  // Inline markdown links and images: [text](path) / ![alt](path). The pattern
+  // is shared with validate's `extractBodyLinks` so mv rewrites exactly the set
+  // of links validate checks.
+  const linked = line.replace(inlineLinkPattern(), (_m: string, ...g: string[]) => {
     const [prefix, refPart] = g;
     invariant(
       prefix !== undefined && refPart !== undefined,
@@ -282,10 +204,9 @@ function applyTransform(text: string, transform: RefTransform): { text: string; 
     );
     return prefix + wrap(refPart);
   });
-
   // Body `ref="…"` attributes (Markdoc tags; XML attributes pass through
   // harmlessly since remap gates every change).
-  updated = updated.replace(/(\bref=)(["'])([^"']*)\2/g, (_m: string, ...g: string[]) => {
+  return linked.replace(/(\bref=)(["'])([^"']*)\2/g, (_m: string, ...g: string[]) => {
     const [attr, quote, value] = g;
     invariant(
       attr !== undefined && quote !== undefined && value !== undefined,
@@ -293,7 +214,63 @@ function applyTransform(text: string, transform: RefTransform): { text: string; 
     );
     return attr + quote + wrap(value) + quote;
   });
+}
 
+/** The line index the body starts at — past the frontmatter block, or 0. */
+function bodyStartLine(lines: string[]): number {
+  if (lines[0] !== "---") return 0;
+  for (let i = 1; i < lines.length; i++) {
+    if (lines[i] === "---") return i + 1;
+  }
+  return 0;
+}
+
+/**
+ * Run the body scan over every line, optionally skipping fenced code. Fence
+ * state is tracked only from the body's first line, so a ``` inside a
+ * frontmatter block scalar can't flip it (the frontmatter has already been
+ * rewritten by then, and its own lines are scanned as before).
+ */
+function scanBody(text: string, { wrap, skipFencedCode }: { wrap: RefTransform } & BodyScanOptions): string {
+  const lines = text.split("\n");
+  const bodyStart = bodyStartLine(lines);
+  let fence = ""; // the open fence's marker run, or "" outside a fence
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line === undefined) continue;
+    if (skipFencedCode && i >= bodyStart) {
+      const marker = /^\s*(`{3,}|~{3,})/.exec(line)?.[1];
+      if (fence === "") {
+        if (marker !== undefined) {
+          fence = marker[0] ?? "";
+          continue;
+        }
+      } else {
+        if (marker !== undefined && marker[0] === fence) fence = "";
+        continue;
+      }
+    }
+    lines[i] = scanBodyLine(line, wrap);
+  }
+  return lines.join("\n");
+}
+
+/**
+ * Apply a ref transform to every ref-bearing token in a card's text. Returns
+ * the rewritten text and how many tokens actually changed.
+ */
+function applyTransform(
+  text: string,
+  { transform, skipFencedCode }: { transform: RefTransform } & BodyScanOptions
+): { text: string; count: number } {
+  let count = 0;
+  const wrap: RefTransform = (raw) => {
+    const out = transform(raw);
+    if (out !== raw) count++;
+    return out;
+  };
+
+  const updated = scanBody(rewriteFrontmatter(text, wrap), { wrap, skipFencedCode });
   return { text: updated, count };
 }
 
@@ -312,7 +289,23 @@ export function rewriteReferrerRefs(params: {
     cardAbsPath: params.cardAbsPath,
     remap: params.remap,
   });
-  return applyTransform(params.text, transform);
+  return applyTransform(params.text, { transform, skipFencedCode: false });
+}
+
+/** Count refs selected by a remap without changing text; uses the same token scanner as rewrites. */
+export function countReferrerRefs(params: {
+  boxRoot: string;
+  cardAbsPath: string;
+  text: string;
+  remap: Remap;
+  skipFencedCode: boolean;
+}): number {
+  const transform = transformForReferrer({
+    boxRoot: params.boxRoot,
+    cardAbsPath: params.cardAbsPath,
+    remap: params.remap,
+  });
+  return applyTransform(params.text, { transform, skipFencedCode: params.skipFencedCode }).count;
 }
 
 /**
@@ -331,9 +324,16 @@ export function rewriteViewRefs(params: {
     boxRoot: params.boxRoot,
     cardAbsPath: params.viewAbsPath,
     remap: params.remap,
+    fromPath: "",
+    relativeBase: params.boxRoot,
   });
+  return applyViewTransform(params.text, transform);
+}
+
+/** Apply a ref transform to every literal `cardRef="…"` in a view's source. */
+function applyViewTransform(source: string, transform: RefTransform): { text: string; count: number } {
   let count = 0;
-  const text = params.text.replace(/(\bcardRef=)(["'])([^"']*)\2/g, (_m: string, ...g: string[]) => {
+  const text = source.replace(/(\bcardRef=)(["'])([^"']*)\2/g, (_m: string, ...g: string[]) => {
     const [attr, quote, value] = g;
     invariant(
       attr !== undefined && quote !== undefined && value !== undefined,
@@ -344,6 +344,67 @@ export function rewriteViewRefs(params: {
     return attr + quote + out + quote;
   });
   return { text, count };
+}
+
+/**
+ * A rewrite driven by a precomputed `raw ref token → replacement` map instead of
+ * a move remap. The map form exists because deciding a replacement can be
+ * *async* (the `--canonical --fix` normalizer only rewrites refs whose target
+ * exists on disk) while {@link RefTransform} is deliberately sync: the caller
+ * collects the tokens first, resolves them at its leisure, then replays the
+ * decision through the same text-surgical scan.
+ *
+ * A token maps identically wherever it appears in one document — resolution
+ * depends only on the ref and the document holding it — so keying on the raw
+ * token is sound.
+ */
+export type RefReplacements = ReadonlyMap<string, string>;
+
+const collectInto = (out: Set<string>): RefTransform => (raw) => {
+  out.add(raw);
+  return raw;
+};
+
+const replaceFrom = (replacements: RefReplacements): RefTransform => (raw) => {
+  const next = replacements.get(raw);
+  return next === undefined ? raw : next;
+};
+
+/**
+ * Every raw ref token a card's text carries, across all three ref-bearing
+ * forms. `skipFencedCode` must match the replay's — see {@link BodyScanOptions}.
+ */
+export function collectCardRefTokens(params: { text: string } & BodyScanOptions): string[] {
+  const out = new Set<string>();
+  applyTransform(params.text, {
+    transform: collectInto(out),
+    skipFencedCode: params.skipFencedCode,
+  });
+  return [...out];
+}
+
+/** Replay a token→replacement decision over a card's text. */
+export function rewriteCardRefTokens(
+  params: { text: string; replacements: RefReplacements } & BodyScanOptions
+): { text: string; count: number } {
+  return applyTransform(params.text, {
+    transform: replaceFrom(params.replacements),
+    skipFencedCode: params.skipFencedCode,
+  });
+}
+
+/** Every raw `cardRef="…"` token a view's source carries. */
+export function collectViewRefTokens(source: string): string[] {
+  const out = new Set<string>();
+  applyViewTransform(source, collectInto(out));
+  return [...out];
+}
+
+/** Replay a token→replacement decision over a view's source. */
+export function rewriteViewRefTokens(
+  params: { text: string; replacements: RefReplacements }
+): { text: string; count: number } {
+  return applyViewTransform(params.text, replaceFrom(params.replacements));
 }
 
 /**
@@ -363,5 +424,5 @@ export function rewriteMovedCardRefs(params: {
     newCardAbs: params.newCardAbs,
     remap: params.remap,
   });
-  return applyTransform(params.text, transform);
+  return applyTransform(params.text, { transform, skipFencedCode: false });
 }

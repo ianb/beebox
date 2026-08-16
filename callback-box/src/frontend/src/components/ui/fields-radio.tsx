@@ -114,7 +114,14 @@ function RadioCards({ name, value, options, disabled, onChange }: RadioInternalP
       {options.map((opt) => {
         const isSelected = value === opt.value;
         const isDisabled = disabled || opt.disabled === true;
-        const baseClass = "block p-3 border rounded transition-colors";
+        // `relative` is load-bearing, not decoration: the sr-only input below
+        // is `position: absolute`, and with every ancestor static it positions
+        // against the initial containing block — a radio card sitting below
+        // the fold inside a scrolled pane then STRETCHES the document, making
+        // the app's fixed shell window-scrollable (found via a field-test
+        // browse page whose window scrolled 43px). The label as containing
+        // block keeps the input where its card is.
+        const baseClass = "relative block p-3 border rounded transition-colors";
         const stateClass = isDisabled
           ? "border-warm-200 bg-warm-50 opacity-60 cursor-not-allowed"
           : isSelected

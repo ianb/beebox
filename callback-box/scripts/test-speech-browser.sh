@@ -13,6 +13,8 @@
 #   4. Stop ends playback.
 #   5. Replay-from jumps to the chosen segment.
 #   6. Menu disabled states when idle (Stop / Fast-forward greyed).
+#   7. Generation failures remain visible while later segments play.
+#   8. Browser media rejections are reported as failures, not success.
 #
 # Menu items are activated via element.click() rather than synthetic pixel
 # clicks: agent-browser's coordinate click races the dropdown's
@@ -165,6 +167,43 @@ EOF
 )
 echo "  $FROM"
 echo "$FROM" | grep -q '"firstLabel":"Finally' && ok "replay-from jumped to the chosen segment" || bad "replay-from did not start at chosen segment"
+
+echo "=== Phase 3: generation failures remain visible while the queue advances ==="
+open_page "delayMs=2000&chunkMs=8&failText=second"
+"$BROWSE" find text "Play all" click >/dev/null 2>&1
+"$BROWSE" wait --fn "document.querySelector('[data-chunk=\"0\"]')?.dataset.speechState==='waiting'" >/dev/null 2>&1
+ok "head segment shows waiting before audio starts"
+"$BROWSE" wait --fn "document.querySelector('[data-chunk=\"1\"]')?.dataset.speechState==='failed'" >/dev/null 2>&1
+FAILED=$(cat <<'EOF' | bjs
+(() => {
+  const chunks = Array.from(document.querySelectorAll("[data-chunk]"));
+  return JSON.stringify({
+    failed: chunks.filter((el) => el.dataset.speechState === "failed").map((el) => el.dataset.chunk),
+    state: window.__speechState,
+  });
+})()
+EOF
+)
+echo "  $FAILED"
+echo "$FAILED" | grep -q '"failed":\["1"\]' && ok "failed segment remains visibly failed" || bad "failed segment state was lost"
+"$BROWSE" wait --fn "window.__speechState && window.__speechState.isPlaying===false" >/dev/null 2>&1
+FINAL_FAILED=$(cat <<'EOF' | bjs
+JSON.stringify(Array.from(document.querySelectorAll("[data-chunk]")).filter((el) => el.dataset.speechState === "failed").map((el) => el.dataset.chunk))
+EOF
+)
+echo "$FINAL_FAILED" | grep -q '\["1"\]' && ok "failure remains after later speech finishes" || bad "failure did not stick through queue completion"
+
+echo "=== Phase 4: media play rejection is not reported as success ==="
+open_page "delayMs=10&chunkMs=8&rejectPlayback=1"
+"$BROWSE" find text "Play all" click >/dev/null 2>&1
+"$BROWSE" wait --fn "window.__speechState && window.__speechState.isPlaying===false && Object.keys(window.__speechState.segmentStates).length===3" >/dev/null 2>&1
+MEDIA_FAILED=$("$BROWSE" eval "JSON.stringify(window.__speechState.segmentStates)" 2>/dev/null | tr -d '\\')
+echo "  $MEDIA_FAILED"
+echo "$MEDIA_FAILED" | grep -q '"0":"failed"' \
+  && echo "$MEDIA_FAILED" | grep -q '"1":"failed"' \
+  && echo "$MEDIA_FAILED" | grep -q '"2":"failed"' \
+  && ok "media rejections mark every affected segment failed" \
+  || bad "media rejection was mistaken for successful playback"
 
 echo ""
 echo "=== RESULT: $pass passed, $fail failed ==="

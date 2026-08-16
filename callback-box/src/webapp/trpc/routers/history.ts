@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import * as fs from "node:fs";
 import { router, publicProcedure } from "../trpc.js";
 import {
@@ -9,8 +10,13 @@ import {
   getLogPaginated,
   getTrailerFacets,
 } from "../../../lib/git.js";
-import { parseSessionLog } from "../../../cli/lib/session.js";
+import { MAX_SESSION_ENTRIES, parseSessionLog } from "../../../cli/lib/session.js";
 import { resolveSessionLogPath } from "../../../core/chat/session/history.js";
+import { loadSessionHistory } from "../../../core/chat/session/load-history.js";
+import { resolveChatEngine } from "../../../core/chat/session/engine.js";
+import { codexSessionExists } from "../../../core/chat/session/codex-transcript.js";
+import { boxRelativePath } from "../../../shared/box-path.js";
+import * as path from "node:path";
 
 /** Escape values so they can be interpolated into a git --grep ERE pattern. */
 function escapeRegex(value: string): string {
@@ -57,6 +63,7 @@ const filterSchema = z.object({
   touchpoint: z.boolean().optional(),
   feedback: z.boolean().optional(),
   session: z.string().optional(),
+  path: z.string().min(1).optional(),
 });
 
 type HistoryFilter = z.infer<typeof filterSchema>;
@@ -72,11 +79,23 @@ export const historyRouter = router({
     )
     .query(async ({ input, ctx }) => {
       const greps = input.filter ? buildGreps(input.filter) : [];
+      let historyPath: string | undefined;
+      if (input.filter?.path !== undefined) {
+        const candidate = boxRelativePath(input.filter.path);
+        const root = path.resolve(ctx.boxRoot);
+        const resolved = path.resolve(root, candidate);
+        if (candidate.startsWith(":") || (resolved !== root && !resolved.startsWith(root + path.sep))) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid history path" });
+        }
+        historyPath = path.relative(root, resolved).split(path.sep).join("/");
+      }
       const commits = await getLogPaginated({
         boxRoot: ctx.boxRoot,
         count: input.count,
         offset: input.cursor,
-        filter: greps.length > 0 ? { greps } : undefined,
+        filter: greps.length > 0 || historyPath !== undefined
+          ? { greps, ...(historyPath === undefined ? {} : { path: historyPath }) }
+          : undefined,
       });
       const nextCursor =
         commits.length === input.count
@@ -105,10 +124,36 @@ export const historyRouter = router({
       z.object({
         sessionId: z.string().regex(/^[\da-f-]{36}$/i),
         cursor: z.number().int().nonnegative().default(0),
-        limit: z.number().int().positive().default(100),
+        limit: z.number().int().positive().max(MAX_SESSION_ENTRIES).default(100),
       })
     )
     .query(async ({ input, ctx }) => {
+      if (await resolveChatEngine(ctx.boxRoot, input.sessionId) === "codex") {
+        const found = await codexSessionExists(ctx.boxRoot, input.sessionId);
+        if (!found) {
+          return {
+            sessionId: input.sessionId,
+            found: false,
+            entries: [],
+            total: 0,
+            hasMore: false,
+            nextCursor: undefined,
+          };
+        }
+        const result = await loadSessionHistory(ctx.boxRoot, {
+          sessionId: input.sessionId,
+          slice: { mode: "page", offset: input.cursor, limit: input.limit },
+        });
+        const hasMore = input.cursor + result.entries.length < result.total;
+        return {
+          sessionId: input.sessionId,
+          found: true,
+          entries: result.entries,
+          total: result.total,
+          hasMore,
+          nextCursor: hasMore ? input.cursor + result.entries.length : undefined,
+        };
+      }
       const logPath = await resolveSessionLogPath(ctx.boxRoot, input.sessionId);
 
       if (!fs.existsSync(logPath)) {
@@ -124,8 +169,7 @@ export const historyRouter = router({
 
       const result = await parseSessionLog({
         logPath,
-        offset: input.cursor,
-        limit: input.limit,
+        slice: { mode: "page", offset: input.cursor, limit: input.limit },
       });
 
       const nextCursor = result.hasMore

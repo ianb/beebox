@@ -17,8 +17,6 @@ only dispatches and relays the result. **Only invoke when the human asks for it.
    (Track O) over the changed lines for the patterns lint can't yet catch (its
    findings come back in the report). Because it can't ask questions
    mid-run, give it everything it needs up front in the prompt:
-   - any **`cb feedback` item** this work resolves — its file basename and the
-     source box;
    - any **`issues/` item** this work resolves (or partly resolves) — it closes
      what's done and leaves punch-lists open, but it can only judge issues it
      knows about;
@@ -26,24 +24,43 @@ only dispatches and relays the result. **Only invoke when the human asks for it.
    - anything unusual about **scope or verification** its final report should be
      honest about (e.g. "tests pass but I never exercised it in the app").
 
-   Don't ask "close-out vs checkpoint" — it changed nothing the flow does. The
+   If the worktree has a `private-issues/` mount, the subagent lands that
+   repo's branch too (its step 1b detects this itself). Treat its `PRIVATE:`
+   line as an internal status contract: surface actual private changes and any
+   merge/push failure, but omit routine `PRIVATE: no changes` bookkeeping from
+   the human-facing handoff.
+
+   Don't ask "close-out vs checkpoint" — it changes nothing the flow does. The
    subagent's work is identical either way, and cleanup is the SessionEnd hook's
    job: it fires on ANY worktree exit once the branch is merged + clean,
    regardless of intent. So just land the work; the human decides whether to exit
    (clean up) or keep going (keep the worktree) on their own.
 
 2. **Relay its result** to the human — don't re-run its steps here:
-   - **`RESULT: MERGED`** → pass along its report (hash, test counts,
-     scope/verification honesty, any deferred cleanup like an unresolved feedback
-     item). Remind them the worktree + box auto-clean on exit now that it's merged
-     — so exit to clean up, or keep the session going to keep the worktree.
+   - **`RESULT: MERGED`** → give a concise human-facing handoff: what landed,
+     the hash, meaningful verification, and anything still open. Do not dump
+     the subagent's status template or enumerate routine negatives.
+     Treat a merge as a **checkpoint by default**: the conversation and
+     workstream may continue after landing. Do not end every finish with an
+     instruction to exit, clean up, or close the workstream.
+     - Suggest closing/exiting only when the evidence supports it: planned
+       scope is complete, no relevant issue/manual check remains open, and the
+       user's language indicates wrap-up rather than checkpointing. Phrase it
+       as a recommendation, not a ritual sign-off.
+     - If work remains, end with that useful continuation point. If nothing
+       needs saying, simply stop after the landing result; do not manufacture
+       a next step.
+     - If the report carries a **`NEW ISSUES:`** block (issues the finish filed —
+       a flake, a spun-out scope gap, a Track O finding), surface it **prominently
+       at the end**, each as its `issues/…` path + title. The human often wants to
+       continue the session by fixing exactly these, so make them easy to act on —
+       don't fold them into the prose.
    - **`RESULT: BLOCKED`** → it hit something needing a human call (on `main`, a
-     merge conflict, a test failure, ambiguous uncommitted files, missing info,
-     an unclear feedback item). Surface exactly what it reported, resolve it with
+     merge conflict, a test failure, ambiguous uncommitted files, missing info). Surface exactly what it reported, resolve it with
      the human here, then **re-dispatch** the subagent (or, if faster and the
      human agrees, finish the remaining step yourself). Nothing merged if it
      blocked before the merge step — say so.
 
 **Do not execute the merge/test steps yourself in this thread.** That's the
 subagent's job; doing it here defeats the point (keeping this thread clean). Your
-job is: pick the mode, hand off, relay.
+job is: hand off, adjudicate the report, and relay only what matters.

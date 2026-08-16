@@ -17,6 +17,7 @@ import {
   upgradeCommand,
   statusCommand,
   validateCommand,
+  agentContextCommand,
   createCommand,
   serveCommand,
   hubCommand,
@@ -34,21 +35,23 @@ import {
   finishCommand,
   reactorCommand,
   scenarioCommand,
+  fieldTestCommand,
   tickCommand,
   scheduledCommand,
   healthCommand,
+  doctorCommand,
   activityCommand,
   trickCommand,
   finalizeCommand,
   sessionCommand,
   schedulerCommand,
   scanImportCommand,
+  documentCommand,
   uploadCommand,
   attachmentsCommand,
   lsCommand,
   searchCommand,
   containsCommand,
-  renderCommand,
   pubCommand,
   viewCommand,
   usageCommand,
@@ -65,6 +68,8 @@ import {
   locationCommand,
   pushCommand,
   tailscaleCommand,
+  todosCommand,
+  connectorCommand,
 } from "./commands/index.js";
 
 // Validate the environment before any command runs (Track D.8). The CLI
@@ -89,6 +94,8 @@ program.addCommand(migrateCommand);
 program.addCommand(upgradeCommand);
 program.addCommand(statusCommand);
 program.addCommand(validateCommand);
+program.addCommand(agentContextCommand);
+program.addCommand(doctorCommand);
 program.addCommand(createCommand);
 program.addCommand(serveCommand);
 program.addCommand(hubCommand);
@@ -107,6 +114,7 @@ program.addCommand(driveCommand);
 program.addCommand(finishCommand);
 program.addCommand(reactorCommand);
 program.addCommand(scenarioCommand);
+program.addCommand(fieldTestCommand);
 program.addCommand(tickCommand);
 program.addCommand(scheduledCommand);
 program.addCommand(healthCommand);
@@ -116,12 +124,12 @@ program.addCommand(finalizeCommand);
 program.addCommand(sessionCommand);
 program.addCommand(schedulerCommand);
 program.addCommand(scanImportCommand);
+program.addCommand(documentCommand);
 program.addCommand(uploadCommand);
 program.addCommand(attachmentsCommand);
 program.addCommand(lsCommand);
 program.addCommand(searchCommand);
 program.addCommand(containsCommand);
-program.addCommand(renderCommand);
 program.addCommand(pubCommand);
 program.addCommand(viewCommand);
 program.addCommand(usageCommand);
@@ -137,6 +145,8 @@ program.addCommand(extfileCommand);
 program.addCommand(locationCommand);
 program.addCommand(pushCommand);
 program.addCommand(tailscaleCommand);
+program.addCommand(todosCommand);
+program.addCommand(connectorCommand);
 
 // ============================================
 // Inspection commands

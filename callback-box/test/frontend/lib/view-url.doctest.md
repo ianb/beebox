@@ -70,6 +70,19 @@ resolveRelativePath(undefined, "notes.md")
 => notes.md
 ```
 
+The rules themselves live in `src/shared/ref-path.ts` (shared with the backend's
+ref checking), including its fail-closed containment: a path that climbs above
+the box root is `null`, never clamped back to the root. Callers degrade visibly
+— a link renders as a broken marker, an image gets an empty (broken) src.
+
+```ts
+JSON.stringify(resolveRelativePath("store/docs/a.md", "../../../etc/passwd"))
+=> null
+
+JSON.stringify(resolveContentTarget("store/docs/report.md", "../../../etc/passwd?view=source"))
+=> null
+```
+
 ## resolveContentTarget
 
 Turns a markdown link/image href into a `ViewTarget`, splitting the `?view=`/params query off **before** resolving so a leading slash stays meaningful (absolute vs document-relative). This is what the renderers hand to `onNavigate`.
@@ -89,8 +102,8 @@ JSON.stringify(resolveContentTarget("store/docs/report.md", "/store/x.bill.card?
 ```
 
 `basePath` is treated like a containing *file* (its last segment is stripped). A
-directory base (e.g. a chat's cwd) must carry a trailing slash so the strip is a
-no-op and the relative path resolves *inside* it, not its parent:
+directory base must carry a trailing slash so the strip is a no-op and the
+relative path resolves *inside* it, not its parent:
 
 ```ts
 JSON.stringify([
@@ -98,6 +111,34 @@ JSON.stringify([
   resolveContentTarget("store/foo/", "bar.card").path,
 ])
 => ["store/foo/bar.card","store/foo/bar.card"]
+```
+
+### Chat messages pass no base
+
+Chat message markdown (`chat/markdown-rendering.tsx`) renders with
+`basePath: undefined` for links, embeds, and images alike — a chat has no
+"current document," and a directory-bound chat's context directory is the
+agent's *working directory* for its file tools, not a link base. So in a chat
+bound to `notes`, a bare `sibling.card` link and a bare `Foo.doc.card` embed
+both name the box-root file, identically to the leading-`/` form (this is the
+resolution seam; the wiring itself is React rendering, which has no doctest
+tier):
+
+```ts
+JSON.stringify([
+  resolveContentTarget(undefined, "sibling.card").path,
+  resolveContentTarget(undefined, "/sibling.card").path,
+  resolveContentTarget(undefined, "Foo.doc.card").path,
+])
+=> ["sibling.card","sibling.card","Foo.doc.card"]
+```
+
+An image in that same chat message resolves the same way — `basePath: undefined`
+sends a bare `photo.png` to the box root, not to `notes/photo.png`:
+
+```ts
+resolveImageSrc("photo.png", { boxSlug: "test1", basePath: undefined })
+=> /test1/api/image/photo.png
 ```
 
 ## classifyMarkdownHref
@@ -177,6 +218,15 @@ The legacy `api/files/<path>` form (and the `api/image/<path>` form) is accepted
 ```ts
 resolveImageSrc("api/files/store/images/front.png", { boxSlug: "test1", basePath: "store/dossiers/annika.md" })
 => /test1/api/image/store/images/front.png
+```
+
+A src that escapes the box root names no servable file, so it resolves to an
+empty src — the browser draws its broken-image affordance and the alt text
+instead of the clamped-to-root image the old resolver would have shown:
+
+```ts
+JSON.stringify(resolveImageSrc("../../../etc/passwd", { boxSlug: "test1", basePath: "store/dossiers/annika.md" }))
+=> ""
 ```
 
 External URLs pass through untouched:

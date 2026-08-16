@@ -1,23 +1,26 @@
 /**
  * Helpers for the scan-import command.
  *
- * This module owns sliding-overlap batch planning and the batch runner
- * (including transient-error backoff and RECITATION/MAX_TOKENS split-retry).
- * The per-image Gemini analysis lives in `scan-import-gemini.ts`; pair
- * reconciliation and bundling live in `scan-import-reconcile.ts`. Both are
- * re-exported here so the command and its doctest keep importing from one
- * place.
+ * This module owns sliding-overlap batch planning and the backend-agnostic
+ * batch runner: transient-error backoff, overlap-preserving split-retry, and
+ * failure-inclusive usage/cost accounting, all driven by the
+ * `ScanVisionBatchError.retry` classification the ScanVision service attaches
+ * (`src/services/scan-vision.ts`). Pair reconciliation and bundling live in
+ * `scan-import-reconcile.ts`. Both are re-exported here so the command and
+ * its doctest keep importing from one place.
  */
 
 import { invariant } from "../../lib/invariant.js";
 import { sleep } from "../../lib/sleep.js";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+import Sharp from "sharp";
 import {
-  analyzeScanBatchWithGemini,
   type RawScanAnalysis,
   type ScanPageAnalysis,
   type BatchUsage,
 } from "./scan-import-gemini.js";
-import { GeminiEmptyResponseError } from "./describe-images-helpers.js";
+import { ScanVisionBatchError, type ScanVisionService } from "../../services/scan-vision.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
 export { buildScanPrompt } from "./scan-import-gemini.js";
@@ -72,44 +75,101 @@ export function planScanBatches(totalPages: number, batchSize: number): ScanBatc
 }
 
 export interface RunScanBatchesArgs {
-  apiKey: string;
+  vision: ScanVisionService;
   imagePaths: string[];
+  /** Pages per model call; defaults to the backend's own `batchSize`. */
   batchSize?: number;
   log?: (line: string) => void;
-  /** Free-form context (names, eras, places) included in every Gemini call. */
+  /** Free-form context (names, eras, places) included in every model call. */
   boxholderContext?: string | null;
 }
 
 export interface RunScanBatchesResult {
   /** Map from global page index to all analyses produced for that page (1 or 2). */
   pageAnalyses: Map<number, ScanPageAnalysis[]>;
+  /** Includes usage from failed/retried attempts, not just successes. */
   usage: BatchUsage | null;
+  /** Dollars across all attempts, when the backend reports cost (Claude does). */
+  costUsd: number | null;
   failed: number;
 }
 
 /**
- * Run all batches with sliding overlap, retrying RECITATION/MAX_TOKENS by
- * splitting the batch in half (the same retry pattern the retired
- * `cb describe-images` command used).
+ * Re-encode every archived page once before batch planning: honor EXIF
+ * orientation, bound the long edge, and emit JPEG. The originals remain in
+ * the archive for card emission; only these scratch files cross the service
+ * boundary to Claude or Gemini.
+ */
+async function normalizeScanImages(
+  imagePaths: string[],
+): Promise<{ imagePaths: string[]; tempDir: string | null }> {
+  const firstPath = imagePaths[0];
+  if (firstPath === undefined) return { imagePaths: [], tempDir: null };
+
+  const tempDir = await fs.mkdtemp(path.join(path.dirname(firstPath), ".scan-normalized-"));
+  try {
+    const normalizedPaths: string[] = [];
+    for (const [index, imagePath] of imagePaths.entries()) {
+      const outputPath = path.join(tempDir, `page-${String(index + 1).padStart(3, "0")}.jpg`);
+      const buffer = await Sharp(imagePath)
+        .rotate()
+        .resize({
+          width: 2000,
+          height: 2000,
+          fit: "inside",
+          withoutEnlargement: true,
+        })
+        .jpeg({ quality: 88 })
+        .toBuffer();
+      await fs.writeFile(outputPath, buffer);
+      normalizedPaths.push(outputPath);
+    }
+    return { imagePaths: normalizedPaths, tempDir };
+  } catch (error) {
+    await fs.rm(tempDir, { recursive: true, force: true });
+    throw error;
+  }
+}
+
+/**
+ * Run all batches with sliding overlap. Retry policy (per
+ * `docs/plans/scan-vision-claude.md`): `transient` errors get up to 3
+ * attempts with exponential backoff, then the batch fails; `split` errors
+ * re-run as smaller overlap-preserving batches (singletons get one
+ * `lastResort` re-attempt); `batch` errors fail the batch (its pages become
+ * flagged placeholders downstream); `fatal` errors abort the whole run —
+ * the provider/config is broken, and nothing has been staged yet.
  *
  * After a successful batch, batch-relative indices in each analysis (both
  * `index` and `paired_with_index`) are translated to global PDF page indices
  * before storing.
  */
 export async function runScanBatches(args: RunScanBatchesArgs): Promise<RunScanBatchesResult> {
-  const { apiKey, imagePaths } = args;
-  const batchSize = args.batchSize ?? 8;
+  const normalized = await normalizeScanImages(args.imagePaths);
+  try {
+    return await runNormalizedScanBatches({ ...args, imagePaths: normalized.imagePaths });
+  } finally {
+    if (normalized.tempDir !== null) {
+      await fs.rm(normalized.tempDir, { recursive: true, force: true });
+    }
+  }
+}
+
+async function runNormalizedScanBatches(args: RunScanBatchesArgs): Promise<RunScanBatchesResult> {
+  const { vision, imagePaths } = args;
+  const batchSize = args.batchSize ?? vision.batchSize;
   const log = args.log ?? (() => {});
   const plans = planScanBatches(imagePaths.length, batchSize);
 
   const pageAnalyses = new Map<number, ScanPageAnalysis[]>();
   let totalUsage: BatchUsage | null = null;
+  let totalCostUsd: number | null = null;
   let failed = 0;
 
   for (const plan of plans) {
     log(`Analyzing pages ${plan.globalIndices[0]}..${plan.globalIndices[plan.globalIndices.length - 1]} (${plan.globalIndices.length} pages)...`);
     const outcome = await runOneBatch({
-      apiKey,
+      vision,
       plan,
       imagePaths,
       log,
@@ -117,6 +177,7 @@ export async function runScanBatches(args: RunScanBatchesArgs): Promise<RunScanB
     });
     failed += outcome.failed;
     totalUsage = addUsage(totalUsage, outcome.usage);
+    totalCostUsd = addCost(totalCostUsd, outcome.costUsd);
     for (const analysis of outcome.analyses) {
       const list = pageAnalyses.get(analysis.index);
       if (list) {
@@ -127,13 +188,20 @@ export async function runScanBatches(args: RunScanBatchesArgs): Promise<RunScanB
     }
   }
 
-  return { pageAnalyses, usage: totalUsage, failed };
+  return { pageAnalyses, usage: totalUsage, costUsd: totalCostUsd, failed };
 }
 
 interface OneBatchOutcome {
   analyses: ScanPageAnalysis[];
   usage: BatchUsage | null;
+  costUsd: number | null;
   failed: number;
+}
+
+/** Accumulate reported dollars; either side may be null (backend never reports). */
+function addCost(total: number | null, next: number | null): number | null {
+  if (next === null) return total;
+  return (total ?? 0) + next;
 }
 
 /** Accumulate batch token usage; either side may be null. */
@@ -147,29 +215,23 @@ function addUsage(total: BatchUsage | null, next: BatchUsage | null): BatchUsage
   };
 }
 
-/**
- * Detect transient Gemini errors that warrant a backoff-and-retry on the
- * same batch (as opposed to splitting). Covers UNAVAILABLE/503 capacity
- * spikes and RESOURCE_EXHAUSTED/429 quota throttling.
- */
-function isTransientGeminiError(err: unknown): boolean {
-  if (!(err instanceof Error)) return false;
-  const msg = err.message;
-  return (
-    msg.includes('"code":503') ||
-    msg.includes('"code":429') ||
-    msg.includes("UNAVAILABLE") ||
-    msg.includes("RESOURCE_EXHAUSTED")
-  );
+/** Classify an analyzeBatch error; anything that isn't a ScanVisionBatchError
+ *  is an unexpected bug and fails the batch (never silently retried). */
+function retryClassOf(err: unknown): "transient" | "split" | "batch" | "fatal" {
+  return err instanceof ScanVisionBatchError ? err.retry : "batch";
 }
 
+/** Pull the failed attempt's accounting off a ScanVisionBatchError. */
+function errAccounting(err: unknown): { usage: BatchUsage | null; costUsd: number | null } {
+  if (err instanceof ScanVisionBatchError) return { usage: err.usage, costUsd: err.costUsd };
+  return { usage: null, costUsd: null };
+}
 
 interface RunOneBatchArgs {
-  apiKey: string;
+  vision: ScanVisionService;
   plan: ScanBatchPlan;
   imagePaths: string[];
   log: (line: string) => void;
-  thinkingBudget?: number;
   boxholderContext?: string | null;
 }
 
@@ -182,14 +244,26 @@ async function runOneBatch(args: RunOneBatchArgs): Promise<OneBatchOutcome> {
   });
 
   // Transient-error retry: try the same batch up to 3 times with exponential
-  // backoff before giving up or splitting.
+  // backoff before giving up or splitting. Failed attempts still count toward
+  // usage/cost, accumulated here and attached to the outcome.
+  let failedUsage: BatchUsage | null = null;
+  let failedCost: number | null = null;
   let lastErr: unknown = null;
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      return await attemptBatch(args, batchPaths);
+      const outcome = await attemptBatch(args, { batchPaths });
+      return {
+        ...outcome,
+        usage: addUsage(failedUsage, outcome.usage),
+        costUsd: addCost(failedCost, outcome.costUsd),
+      };
     } catch (err) {
+      const accounting = errAccounting(err);
+      failedUsage = addUsage(failedUsage, accounting.usage);
+      failedCost = addCost(failedCost, accounting.costUsd);
       lastErr = err;
-      if (!isTransientGeminiError(err)) break;
+      if (err instanceof ScanVisionBatchError && err.retry === "fatal") throw err;
+      if (retryClassOf(err) !== "transient") break;
       const waitMs = 2000 * 2 ** attempt;
       log(`  Transient error, retrying in ${Math.round(waitMs / 1000)}s (attempt ${attempt + 1}/3)...`);
       await sleep(waitMs);
@@ -197,21 +271,26 @@ async function runOneBatch(args: RunOneBatchArgs): Promise<OneBatchOutcome> {
   }
 
   // Either non-transient failure or 3 transient retries exhausted.
-  return handleBatchFailure(args, { batchPaths, err: lastErr });
+  const failure = await handleBatchFailure(args, { batchPaths, err: lastErr });
+  return {
+    ...failure,
+    usage: addUsage(failedUsage, failure.usage),
+    costUsd: addCost(failedCost, failure.costUsd),
+  };
 }
 
 /**
- * Run one Gemini call and translate batch-relative indices to global ones,
+ * Run one model call and translate batch-relative indices to global ones,
  * dropping (and logging) entries the model invented past the batch end.
  */
 async function attemptBatch(
   args: RunOneBatchArgs,
-  batchPaths: string[]
+  { batchPaths, lastResort }: { batchPaths: string[]; lastResort?: boolean }
 ): Promise<OneBatchOutcome> {
-  const result = await analyzeScanBatchWithGemini(args.apiKey, {
+  const result = await args.vision.analyzeBatch({
     imagePaths: batchPaths,
     boxholderContext: args.boxholderContext ?? null,
-    ...(args.thinkingBudget !== undefined ? { thinkingBudget: args.thinkingBudget } : {}),
+    lastResort: lastResort ?? false,
   });
   const translated: ScanPageAnalysis[] = [];
   let dropped = 0;
@@ -226,13 +305,14 @@ async function attemptBatch(
   if (dropped > 0) {
     args.log(`  Warning: dropped ${dropped} analysis entries with out-of-range indices`);
   }
-  return { analyses: translated, usage: result.usage, failed: 0 };
+  return { analyses: translated, usage: result.usage, costUsd: result.costUsd, failed: 0 };
 }
 
 /**
  * Decide what to do after a batch has failed all its same-batch attempts:
- * give up on non-retryable errors, retry a singleton with thinking disabled,
- * or split a multi-page batch in half and recurse.
+ * abort the run on `fatal`, split on `split` (last-resort re-attempt at
+ * singleton size), and otherwise fail the batch — its pages become flagged
+ * placeholders downstream.
  */
 async function handleBatchFailure(
   args: RunOneBatchArgs,
@@ -241,55 +321,54 @@ async function handleBatchFailure(
   const { plan, log } = args;
   const reason = errorMessage(err);
   log(`  Error: ${reason}`);
-  const retryable =
-    err instanceof GeminiEmptyResponseError &&
-    (err.finishReason === "RECITATION" || err.finishReason === "MAX_TOKENS");
-  if (!retryable) {
-    return { analyses: [], usage: null, failed: plan.globalIndices.length };
+  if (err instanceof ScanVisionBatchError && err.retry === "fatal") throw err;
+  if (retryClassOf(err) !== "split") {
+    return { analyses: [], usage: null, costUsd: null, failed: plan.globalIndices.length };
   }
   if (plan.globalIndices.length === 1) {
-    return retrySingletonWithoutThinking(args, batchPaths);
+    return retrySingletonLastResort(args, batchPaths);
   }
   return splitAndRerun(args);
 }
 
-/** Last-ditch retry of a single page with thinking turned off. */
-async function retrySingletonWithoutThinking(
+/** Last-ditch retry of a single page (Gemini: thinking off; Claude: fresh sample). */
+async function retrySingletonLastResort(
   args: RunOneBatchArgs,
   batchPaths: string[]
 ): Promise<OneBatchOutcome> {
-  const { plan, log } = args;
-  log("  Retrying singleton with thinking disabled...");
+  const { log } = args;
+  log("  Retrying singleton as a last resort...");
   try {
-    const result = await analyzeScanBatchWithGemini(args.apiKey, {
-      imagePaths: batchPaths,
-      thinkingBudget: 0,
-      boxholderContext: args.boxholderContext ?? null,
-    });
-    const translated: ScanPageAnalysis[] = [];
-    for (const raw of result.analyses) {
-      const t = translateIndices(raw, plan.globalIndices);
-      if (t !== null) translated.push(t);
-    }
-    return { analyses: translated, usage: result.usage, failed: 0 };
+    return await attemptBatch(args, { batchPaths, lastResort: true });
   } catch (retryErr) {
+    if (retryErr instanceof ScanVisionBatchError && retryErr.retry === "fatal") throw retryErr;
     log(`  Still failed: ${errorMessage(retryErr)}`);
-    return { analyses: [], usage: null, failed: 1 };
+    const accounting = errAccounting(retryErr);
+    return { analyses: [], usage: accounting.usage, costUsd: accounting.costUsd, failed: 1 };
   }
 }
 
-/** Split a multi-page batch in half, run each side, and merge the outcomes. */
+/**
+ * Split a failed multi-page batch and re-run the halves. The halves SHARE
+ * their boundary page (`[0,1,2]` → `[0,1]` + `[1,2]`) so an adjacent
+ * photo/back pair stays co-visible in one of them — the same property
+ * `planScanBatches` guarantees between planned batches; the reconciliation
+ * layer merges the duplicate analyses of the shared page. A 2-page batch has
+ * no pair-preserving split and falls back to plain singletons.
+ */
 async function splitAndRerun(args: RunOneBatchArgs): Promise<OneBatchOutcome> {
   const { plan, log } = args;
-  const mid = Math.ceil(plan.globalIndices.length / 2);
-  log(`  Splitting into ${mid} + ${plan.globalIndices.length - mid}`);
-  const leftPlan: ScanBatchPlan = { globalIndices: plan.globalIndices.slice(0, mid) };
-  const rightPlan: ScanBatchPlan = { globalIndices: plan.globalIndices.slice(mid) };
-  const left = await runOneBatch({ ...args, plan: leftPlan });
-  const right = await runOneBatch({ ...args, plan: rightPlan });
+  const n = plan.globalIndices.length;
+  const mid = Math.ceil(n / 2);
+  const leftIndices = plan.globalIndices.slice(0, mid);
+  const rightIndices = n >= 3 ? plan.globalIndices.slice(mid - 1) : plan.globalIndices.slice(mid);
+  log(`  Splitting into ${leftIndices.length} + ${rightIndices.length}${n >= 3 ? " (overlapping)" : ""}`);
+  const left = await runOneBatch({ ...args, plan: { globalIndices: leftIndices } });
+  const right = await runOneBatch({ ...args, plan: { globalIndices: rightIndices } });
   return {
     analyses: [...left.analyses, ...right.analyses],
     usage: addUsage(left.usage, right.usage),
+    costUsd: addCost(left.costUsd, right.costUsd),
     failed: left.failed + right.failed,
   };
 }

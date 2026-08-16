@@ -90,6 +90,15 @@ over to the hub by hand (see "Systemd units" below and
 `create-server.sh` run today would need the same by-hand steps repeated
 until this script catches up.
 
+**This script does not run on deploy.** `deploy.sh` never invokes it, so any
+change to the nginx config or systemd units here reaches a live server only on
+a re-provision — or by applying the equivalent change by hand. The most recent
+such change is `proxy_buffering off;` in the app proxy location (added
+2026-08-01 for tRPC streamed batches); an existing server needs that line added
+to `/etc/nginx/sites-available/callback` followed by `nginx -t && systemctl
+reload nginx`. Without it the client still works, it just loses the
+progressive-delivery benefit.
+
 ### `add-box.sh` — Add a box to the server
 
 Clones a box repo, registers it, and restarts the serving process.
@@ -123,17 +132,44 @@ Pulls callback-box, rebuilds, and restarts services.
 ./deploy/rebuild.sh
 ```
 
-### `ssh-server.sh` — SSH into the server
+### `prod-ssh` — SSH into the production server
 
 ```bash
 # Interactive shell
-./deploy/ssh-server.sh
+./deploy/prod-ssh
 
 # Run a command
-./deploy/ssh-server.sh systemctl status cb-hub
+./deploy/prod-ssh systemctl status cb-hub
 ```
 
 Uses agent forwarding (`-A`) so your local SSH key works for GitHub operations on the server.
+In a worktree, the command falls back to the main checkout's gitignored
+`deploy/server-ip`; a non-empty local copy takes precedence. This fallback is
+for diagnostics only: `deploy.sh` intentionally requires `server-ip` in the
+invoking checkout.
+
+### Production app diagnostics
+
+`prod-curl` and `prod-browse` authenticate as the configured owner
+(`CB_OWNER_EMAIL`) to inspect production behind the OAuth wall. This grants no
+new access: both commands require the boxholder's existing root SSH key, and
+must never be modified to mint a session for another identity without the
+boxholder's express, in-the-moment permission.
+
+```bash
+# Fetch HTML or an API response; extra arguments pass through to remote curl.
+./deploy/prod-curl /test1/ -sI
+
+# Open the rendered app in bin/browse's clean browser profile.
+./deploy/prod-browse /test1/
+bin/browse screenshot --slug prod
+```
+
+`prod-curl` keeps the signed session cookie on the server. `prod-browse` puts it
+in the local isolated browser profile and also requires the production base URL
+in gitignored `deploy/public-url`; from a worktree it falls back to the main
+checkout's copy just like `server-ip`. Never print or persist either cookie or
+URL in tracked files.
 
 ## Server layout
 
@@ -268,6 +304,27 @@ Authentication is **on by default** — every box requires a logged-in identity,
   store (`CB_AUTH_FILE`, default `~/.cb-auth.json`, mode 0600).
 - **Google OAuth** (optional additional method, enabled by the `GOOGLE_OAUTH_*` env below).
 
+After the local owner account exists, the owner can create a 15-minute,
+single-use invite from a box's Admin page. An invite can be pinned to a known
+email or left open for its recipient to enter one; accepting it creates a
+member account with the recipient's own password and grants access only to that
+box. Open invites cannot claim an existing local user, the owner identity, or
+an email already authorized for another box. Signed-in local users change their
+own password from Settings. If a member forgets it, the owner can create a
+15-minute reset link beside that member in the box's Allowed Users list; the
+member chooses the new password, and all of their existing sessions are revoked.
+Owner recovery still requires `cb auth set-password` on the host. Local password and Google sign-in share one
+case-insensitive email identity, so a verified Google login with the same email
+uses the same account and box access.
+
+Invite and password-reset capabilities are stored only as SHA-256 hashes in a mode-0600 sibling
+of the global credential store (`CB_AUTH_FILE.invites.json`). If
+`CB_AUTH_FILE` is overridden, the hub passes the same path to every child;
+credential and capability state therefore remain fleet-global.
+The capability file upgrades from version 1 to version 2 on its next mutation.
+Rolling back to a release that predates password resets requires restoring the
+pre-upgrade capability file (or removing it, which invalidates outstanding links).
+
 The hub terminates login and forwards the authenticated identity to each box child over a
 trusted internal header (`x-cb-authenticated-email`, verified by a per-boot `CB_HUB_SECRET`
 — see `src/webapp/auth.ts`); each box still runs its own per-box authorization check
@@ -314,7 +371,7 @@ Per-box secrets go in each box's `config/connectors/` directory:
 
 ```bash
 # SSH in and create secrets
-./deploy/ssh-server.sh
+./deploy/prod-ssh
 cd /home/callback/boxes/hearth/config/connectors/
 echo '{"botToken":"...","webhookSecret":"..."}' > telegram.secret.json
 ```

@@ -5,8 +5,8 @@
  * verify a box is working after setup.
  */
 
+import { z } from "zod";
 import * as fs from "node:fs/promises";
-import { constants as fsConstants } from "node:fs";
 import * as path from "node:path";
 import { PACKAGE_ROOT } from "../../../lib/package-root.js";
 import { createClaudeCliService, type ClaudeCliService } from "../../../services/claude-cli.js";
@@ -17,13 +17,24 @@ import { getDeepgramCredentials } from "../../../core/deepgram-key.js";
 import { loadTranscriptionConfig } from "../../../core/transcription/index.js";
 import { getBoxShape } from "../../../lib/box-shape.js";
 import { isRecord } from "../../../lib/is-record.js";
+import { createGitAnnexService } from "../../../services/git-annex.js";
+import { runAnnexDoctor } from "../../../core/annex/doctor.js";
+import { findStaleTmpCaptureCards, TMP_CAPTURE_STALE_MS } from "../../../core/capture/sweep.js";
 import { engineHealthChecks } from "./health-engine.js";
+import { googleAuthHealthChecks } from "./health-google.js";
+import { getBoxTime } from "../../../lib/time.js";
+import { getHealthSnapshot } from "./health-snapshot.js";
+import { checkSchedulerHeartbeat } from "../../../core/schedule/health-box.js";
+import { boxGrowthHealthCheck } from "../../../core/box-growth/health.js";
+import { acknowledgeBoxGrowthProcedure, expectBoxGrowthRatesProcedure } from "./health-box-growth.js";
+import { isWritable, writability } from "./health-writability.js";
 
 export interface HealthCheck {
   name: string;
   ok: boolean;
   message: string;
   severity: "error" | "warning";
+  actions?: Array<"acknowledge-box-growth" | "expect-box-growth-rates">;
 }
 
 export interface CommitInfo {
@@ -78,24 +89,6 @@ export async function readVersionInfo(): Promise<VersionInfo> {
 }
 
 /**
- * Check that a directory is writable by the current process.
- *
- * Uses `fs.access(..., W_OK)` — a POSIX permission probe that never
- * creates a file. An earlier version wrote and unlinked a `.health-check-*`
- * file, which leaked into watched directories when the unlink failed or
- * a file watcher grabbed the file first.
- */
-async function isWritable(dirPath: string): Promise<boolean> {
-  try {
-    await fs.access(dirPath, fsConstants.W_OK);
-    return true;
-  } catch (_e) {
-    // access(W_OK) throwing IS the answer: not writable (or missing). Return false.
-    return false;
-  }
-}
-
-/**
  * Sweep any leftover `.health-check-*` files from an earlier isWritable
  * implementation that wrote-then-unlinked. Silently ignores failures —
  * this is cleanup, not a hard requirement.
@@ -129,6 +122,98 @@ export interface RunHealthChecksOptions {
 }
 
 /**
+ * Captures still sitting unfiled in `tmp-capture/`.
+ *
+ * Staged captures are deliberately gitignored so a pre-triage photo is not
+ * annexed before an agent files it — it still gets renamed, re-encoded, and
+ * EXIF-rotated, and annexing on arrival would mint immutable objects for
+ * superseded versions. The cost is that a staged capture is in neither git nor
+ * the annex, which is the one window where box content has no second record at
+ * all. Fine for hours, bad for weeks — so make a long window visible.
+ *
+ * `warning`, not `error`: a triage backlog is a nudge, not a defect, and this
+ * must never fail a deploy or take a box offline. It is also deliberately NOT
+ * a `cb doctor annex` check — that one is configuration-only, and a condition
+ * that varies with pending work has no configuration remedy.
+ *
+ * Reuses the abandonment sweep's existing traversal and threshold rather than
+ * walking the tree again with a second notion of "unfiled".
+ */
+async function unfiledCapturesCheck(boxRoot: string): Promise<HealthCheck> {
+  const days = Math.round(TMP_CAPTURE_STALE_MS / (24 * 60 * 60 * 1000));
+  const stale = await findStaleTmpCaptureCards({
+    boxRoot,
+    now: getBoxTime(boxRoot).getTime(),
+  });
+  return {
+    name: "unfiled-captures",
+    ok: stale.length === 0,
+    message:
+      stale.length === 0
+        ? "no captures unfiled past the staging window"
+        : `${String(stale.length)} capture(s) unfiled for over ${String(days)} days ` +
+          `(e.g. ${stale[0] ?? ""}). Their bytes are in neither git nor the annex — file them with cb mv.`,
+    severity: "warning",
+  };
+}
+
+/**
+ * The git-annex conditions `cb doctor annex` cannot repair.
+ *
+ * Only those two: the other five are fixed automatically on `cb serve` /
+ * `cb init`, so surfacing them here would report problems that no longer
+ * exist by the time anyone reads the output. Both are `error` severity so the
+ * deploy runbooks gate on them — the right lever, since refusing to *serve*
+ * would take a box offline for a degradation (missing binary, which already
+ * fails loudly at every read and commit) or for a loss already sustained
+ * (missing content).
+ */
+async function annexHealthChecks(args: { repoRoot: string; boxRoot: string }): Promise<HealthCheck[]> {
+  const result = await runAnnexDoctor(createGitAnnexService(), {
+    repoRoot: args.repoRoot,
+    boxRoot: args.boxRoot,
+    options: { check: true },
+  });
+  const out: HealthCheck[] = [];
+  for (const id of ["binary", "content-present"]) {
+    const check = result.checks.find((c) => c.id === id);
+    // Absent when the run short-circuited on a missing binary, which the
+    // "binary" check itself already reports.
+    if (check === undefined) continue;
+    out.push({
+      name: `annex-${id}`,
+      ok: check.status !== "failed",
+      message: check.message,
+      severity: "error",
+    });
+  }
+  return out;
+}
+
+/**
+ * Gemini key check — the key is optional: it powers audio questions
+ * (ask-about-audio) and scan-import's opt-in Gemini backend
+ * (`CB_SCAN_VISION=gemini`); scan-import defaults to the Claude backend,
+ * which needs no extra key.
+ */
+function geminiKeyCheck(): HealthCheck {
+  const geminiKey = process.env["GEMINI_KEY"] || process.env["SKE_GEMINI_API_KEY"] || null;
+  const geminiSelected = process.env["CB_SCAN_VISION"] === "gemini";
+  const message =
+    geminiKey !== null
+      ? "Gemini API key configured"
+      : geminiSelected
+        ? "CB_SCAN_VISION=gemini but no Gemini API key — scan-import will fail. Set GEMINI_KEY in .env"
+        : "Gemini API key not found (optional) — audio questions will not work; scan-import uses the Claude backend by default";
+  return {
+    name: "gemini-api-key",
+    ok: geminiKey !== null || !geminiSelected,
+    message,
+    severity: "warning",
+  };
+}
+
+/**
  * Run all health checks for a box.
  */
 export async function runHealthChecks(
@@ -159,13 +244,18 @@ export async function runHealthChecks(
   // docs/implemented-plans/boxes-as-packages-v2.md).
   const { packageRoot: gitRoot } = await getBoxShape(boxRoot);
   const gitObjectsDir = path.join(gitRoot, ".git/objects");
-  const gitWritable = await isWritable(gitObjectsDir);
+  const gitWritability = await writability(gitObjectsDir);
+  const gitWritable = gitWritability === "writable";
   checks.push({
     name: "git-writable",
     ok: gitWritable,
-    message: gitWritable
-      ? ".git/objects is writable"
-      : ".git/objects is not writable — all commits will fail (run: chown -R callback:callback " + gitRoot + ")",
+    message:
+      gitWritability === "writable"
+        ? ".git/objects is writable"
+        : gitWritability === "missing"
+          ? ".git/objects is missing — commits will fail; verify the Git repository at " + gitRoot
+          : ".git/objects is not writable in this process — commits will fail; " +
+            "filesystem permissions or an execution sandbox may be preventing writes",
     severity: "error",
   });
 
@@ -193,16 +283,22 @@ export async function runHealthChecks(
     severity: "error",
   });
 
+  checks.push(...(await annexHealthChecks({ repoRoot: gitRoot, boxRoot })));
+  checks.push(await unfiledCapturesCheck(boxRoot));
+  const now = getBoxTime(boxRoot);
+  const scheduler = await checkSchedulerHeartbeat(boxRoot, now);
+  checks.push(await boxGrowthHealthCheck(boxRoot, { now, schedulerStatus: scheduler.status }));
+
   // --- Interface card checks ---
 
   // nav.card, when present, must validate and point at real targets. An
-  // absent card is fine (builtin nav); a broken one silently falls back to
-  // the builtin nav, so this warning is the only place the breakage shows.
+  // absent card is fine (the menu has its builtin rows); a broken one just
+  // renders no section, so this warning is the only place the breakage shows.
   const nav = await resolveNav(boxRoot);
   if (nav.status !== "absent") {
     const navProblem =
       nav.status === "invalid"
-        ? `${NAV_CARD_PATH} is invalid (builtin nav in use): ${nav.error}`
+        ? `${NAV_CARD_PATH} is invalid (its menu section is not rendered): ${nav.error}`
         : nav.problems.length > 0
           ? `${NAV_CARD_PATH}: ${nav.problems.join("; ")}`
           : null;
@@ -265,16 +361,7 @@ export async function runHealthChecks(
     severity: "warning",
   });
 
-  // Gemini key (needed for image description in capture processing)
-  const geminiKey = process.env["GEMINI_KEY"] || process.env["SKE_GEMINI_API_KEY"] || null;
-  checks.push({
-    name: "gemini-api-key",
-    ok: geminiKey !== null,
-    message: geminiKey !== null
-      ? "Gemini API key configured"
-      : "Gemini API key not found — capture image description will not work. Set GEMINI_KEY in .env",
-    severity: "warning",
-  });
+  checks.push(geminiKeyCheck());
 
   // Claude Code auth (needed for agent operations — chat, reactor, procedures).
   // Probe via `claude auth status` through the ClaudeCli service rather than
@@ -294,20 +381,38 @@ export async function runHealthChecks(
     severity: "error",
   });
 
+  checks.push(...(await googleAuthHealthChecks(boxRoot, { now: getBoxTime(boxRoot) })));
+
   checks.push(...(await engineHealthChecks(boxRoot)));
 
   return checks;
 }
 
 export const healthRouter = router({
-  check: publicProcedure.query(async ({ ctx }) => {
-    const [checks, version] = await Promise.all([
-      runHealthChecks(ctx.boxRoot, { claudeCli: ctx.services.claudeCli }),
-      readVersionInfo(),
-    ]);
-    const hasErrors = checks.some((c) => !c.ok && c.severity === "error");
-    const hasWarnings = checks.some((c) => !c.ok && c.severity === "warning");
-    const status = hasErrors ? "unhealthy" : hasWarnings ? "degraded" : "healthy";
-    return { status, checks, version };
-  }),
+  /**
+   * Served from a stale-while-revalidate snapshot (`health-snapshot.ts`) so the
+   * dashboard's batch never waits on the deep probes. `{ fresh: true }` forces a
+   * live run — that's the contract deploy runbooks use through the diag-key
+   * bypass (see docs/health-checks.md). `cb health` and `/api/health` call
+   * `runHealthChecks` directly and are unaffected.
+   */
+  check: publicProcedure
+    .input(z.object({ fresh: z.boolean().optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      return getHealthSnapshot(ctx.boxRoot, {
+        fresh: input?.fresh === true,
+        compute: async () => {
+          const [checks, version] = await Promise.all([
+            runHealthChecks(ctx.boxRoot, { claudeCli: ctx.services.claudeCli }),
+            readVersionInfo(),
+          ]);
+          const hasErrors = checks.some((c) => !c.ok && c.severity === "error");
+          const hasWarnings = checks.some((c) => !c.ok && c.severity === "warning");
+          const status = hasErrors ? "unhealthy" : hasWarnings ? "degraded" : "healthy";
+          return { status, checks, version };
+        },
+      });
+    }),
+  acknowledgeBoxGrowth: acknowledgeBoxGrowthProcedure,
+  expectBoxGrowthRates: expectBoxGrowthRatesProcedure,
 });

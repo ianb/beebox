@@ -9,6 +9,31 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 ```
 
+## Deletion detaches and can restore linked schedules
+
+```ts
+const box = await makeTmpBox();
+const manager = new ChatScheduleManager(box.root, { onFire: () => {} });
+const sessionId = "11111111-1111-4111-8111-111111111111";
+manager.addSchedule({ label: "linked", alarm: false, announce: null, content: "x", durationMs: 60_000, sessionId });
+manager.addSchedule({ label: "other", alarm: false, announce: null, content: "y", durationMs: 60_000, sessionId: "other" });
+manager.blockForDeletion(sessionId);
+const receipt = await manager.detachForSession(sessionId);
+JSON.stringify({ detached: receipt.schedules.map((s) => s.label), active: manager.getActive().map((s) => s.label) })
+=> {"detached":["linked"],"active":["other"]}
+```
+
+```ts continue
+manager.restoreDetachedSchedules(receipt);
+manager.getActive().map((schedule) => schedule.label).sort().join(",")
+=> linked,other
+```
+
+```ts cleanup
+manager.stopAll();
+await box.cleanup();
+```
+
 ## Basic schedule tag
 
 ```ts

@@ -12,7 +12,7 @@ controller), `InteractiveChat-messages.tsx` (the list/button), or the
 
 ## Setup
 
-1. Dev router running (`bin/worktrees serve` / `pnpm dev` at the monorepo root).
+1. Dev router running (`bin/workstreams serve` / `pnpm dev` at the monorepo root).
 2. Open a fresh chat and get the composer's element ref (it changes on reload):
 
    ```bash
@@ -61,8 +61,10 @@ bin/browse eval '(()=>{const s=document.querySelector("[data-testid=chat-scrolle
 ```
 
 ### 3. Scroll-up during streaming must NOT yank back
-**Use a real `WheelEvent`** — a bare `scrollTop` write is intentionally ignored
-(the controller only disengages on genuine wheel/touch/key intent), and
+Dispatch a `WheelEvent` alongside the `scrollTop` write to model a wheel
+scroll. (A bare upward `scrollTop` write also disengages *when it lands well
+above the bottom* — that's the scrollbar-drag rule, scenario 3c — but wheel
+intent is the primary path and also covers small scroll-ups near the bottom.)
 agent-browser's `mouse wheel` doesn't scroll headless Chromium.
 ```bash
 bin/browse fill "@e$CREF" "/fakestream 400 25 25"; bin/browse press Enter
@@ -72,8 +74,35 @@ bin/browse eval '(()=>{const s=document.querySelector("[data-testid=chat-scrolle
 bin/browse eval '(()=>{const s=document.querySelector("[data-testid=chat-scroller]");return Math.round(s.scrollHeight-s.scrollTop-s.clientHeight);})()'
 ```
 
+### 3b. Continuing to scroll while chunks land must NOT saw-tooth
+The mid-stream momentum bug (fixed 2026-08-11): scroll events arriving faster
+than the 80ms anchor recapture (an iOS fling sends scroll events but no
+touchmove) left the anchor frozen at the disengage point, and every chunk
+"corrected" the user back to it. Detach, then keep scrolling in 30ms steps with
+NO further input events; every observed scroll position must move up
+monotonically — zero jumps back down:
+```bash
+bin/browse fill "@e$CREF" "/fakestream 400 25 25"; bin/browse press Enter
+sleep 1.5
+bin/browse eval '(()=>{const s=document.querySelector("[data-testid=chat-scroller]");const ev=[];s.addEventListener("scroll",()=>ev.push(Math.round(s.scrollTop)));s.dispatchEvent(new WheelEvent("wheel",{deltaY:-150,bubbles:true}));s.scrollTop-=400;return new Promise(res=>{setTimeout(()=>{let i=0;const drag=setInterval(()=>{s.scrollTop-=40;if(++i>=50){clearInterval(drag);setTimeout(()=>{let jumps=0;for(let k=1;k<ev.length;k++)if(ev[k]>ev[k-1]+2)jumps++;res(JSON.stringify({events:ev.length,upJumps:jumps}));},300);}},30);},400);});})()'
+# expect upJumps:0
+```
+
+### 3c. A scrollbar-thumb drag must disengage (no input events at all)
+A thumb drag fires only scroll events — no wheel/touch/key. Upward movement
+landing well above the bottom must disengage rather than fight follow-bottom:
+```bash
+bin/browse fill "@e$CREF" "/fakestream 300 25 25"; bin/browse press Enter
+sleep 1.5
+bin/browse eval '(()=>{const s=document.querySelector("[data-testid=chat-scroller]");return new Promise(res=>{let i=0;const drag=setInterval(()=>{s.scrollTop-=60;if(++i>=40){clearInterval(drag);setTimeout(()=>{const b=document.querySelector("button[aria-label=\"Scroll to latest messages\"]");const fb=Math.round(s.scrollHeight-s.scrollTop-s.clientHeight);res(JSON.stringify({detached:!!b,fb,snappedBack:fb<100}));},600);}},30);});})()'
+# expect detached:true, snappedBack:false
+```
+
 ### 4. Scroll-to-bottom button
-While detached (scenario 3), the button must be present and accented; clicking returns.
+While detached (scenario 3), the button must be present and accented; clicking
+returns — **including mid-stream**: the smooth return animation's frames are
+swallowed as programmatic (`smoothTargetRef`), so they must not read as a
+scroll-up and re-detach (the fb≈180-with-button-still-present regression).
 ```bash
 bin/browse eval '(()=>{const b=document.querySelector("button[aria-label=\"Scroll to latest messages\"]");return JSON.stringify({btn:!!b,emph:!!(b&&b.querySelector("span"))});})()'
 # expect {btn:true, emph:true}  (emph = unseen content arrived since detaching)
@@ -128,6 +157,22 @@ Contrast: a genuinely new message arriving while scrolled up *must* still flag �
 re-run scenario 3 to confirm the down-arrow still lights for a real append.
 
 ### 6. Real-turn finalize (no flash)
+The sharpest instrument here is a MutationObserver on the content wrapper, not a
+scroll sample — the failure mode is a *content collapse*, and the scroll jump is
+downstream of it. Record `childList` mutations alongside `scrollHeight` across a
+real turn's completion:
+```bash
+bin/browse eval '(()=>{const s=document.querySelector("[data-testid=chat-scroller]");const c=s.querySelector(".max-w-5xl");window.__m=[];new MutationObserver(rs=>{let a=0,r=0;for(const x of rs){a+=x.addedNodes.length;r+=x.removedNodes.length;}window.__m.push([Math.round(performance.now()),`+${a}-${r}`,c.children.length,s.scrollHeight,Math.round(s.scrollTop)]);}).observe(c,{childList:true});return "watching";})()'
+# send a real message, wait for it to finish, then:
+bin/browse eval 'JSON.stringify(window.__m)'
+```
+Finalize must be ONE mutation that keeps the child count flat and `scrollHeight`
+monotonic (`+1-1`, kids unchanged). A `+0-1` that drops `scrollHeight` — the
+turn briefly gone, leaving the user message at the bottom — is the regression
+`chat-machine-finalize.doctest.md` guards: something cleared `streamText` before
+the finalized entry arrived.
+
+
 Send a real message and watch the streamed bubble become the finalized message
 with no flash/jump. A per-frame recorder helps, but note its `flashed` flag goes
 true on *subsequent* turns from the legitimate turn-start throbber (an empty
@@ -136,13 +181,30 @@ empty frame's content is the `ldrs` Grid spinner, not a real disappearance.
 The machine swaps streamText→entry in one atomic `assign`, so a single-turn
 fresh chat shows no flash.
 
+## `/scrolldebug` — the on-device scroll trace (field probe)
+
+When scroll behavior misbehaves somewhere `bin/browse` can't reach (a real
+iPhone, a prod-only condition), type `/scrolldebug` in the composer to toggle
+a flag-gated trace of the controller (`lib/scroll-diagnostics.ts`): every
+scroll event with its `decideScroll` action, every reconcile cycle with its
+`decideReconcile` action and measured anchor delta, every programmatic write,
+and every input-intent mark. Reproduce for ~20–30s, toggle again to flush;
+batches land in the box's `client-debug.log` tagged `[scroll-trace]`
+(numbers only — safe to quote). Reading one: `write` events are the
+controller acting — a healthy detached/dragging trace has none; `sh` dips in
+`reconcile` events are content collapses. Protocol for running a round with
+the boxholder: the `field-probe` skill.
+
 ## Device-only checklist (real iPhone — Chromium can't emulate these)
 
 - **Keyboard:** focus the composer; it must stay above the on-screen keyboard
   (`.h-app` tracks `visualViewport`), and the list must re-pin to the bottom when
   the keyboard opens/closes if it was pinned.
 - **Momentum fling:** flick-scroll up during streaming — must not fight the
-  finger or snap back (fling-safety is not yet implemented; watch for jumps).
+  finger or snap back. Scenario 3b models this (scroll events with no input
+  events), but only a real fling proves it: the fix keeps the reading anchor
+  in step inside the scroll handler, so chunk resizes measure zero shift and
+  write nothing during the fling.
 - **Rubber-band:** overscroll at top/bottom must not scroll the page behind
   (`overscroll-behavior: contain`, iOS 16+).
 - **Retina:** confirm "at bottom" still registers at `devicePixelRatio` 2

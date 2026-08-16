@@ -1,5 +1,6 @@
 ---
 title: "Hub login page is unusable behind the dev router prefix"
+workstream: lightbox-gestures
 area: router
 filed-by: agent
 discovered-in: worktree-lightbox-gestures — smoke-testing the lightbox needed auth and the login page couldn't render

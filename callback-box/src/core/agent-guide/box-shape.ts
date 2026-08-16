@@ -4,10 +4,10 @@
  *
  * This is the in-box agent-facing summary — a curated subset of directories,
  * some collapsed together (all of `store/archive/*` reads as one row here).
- * Path and description text come from the single `BOX_LAYOUT` spec
- * (`src/cli/lib/box-layout-spec.ts`); this file only owns which rows appear,
- * in what order, and the `store/archive/` rollup row that spec doesn't
- * itself model. Add, remove, or rename a directory in the spec, not here.
+ * Canonical directory path and description text come from the single
+ * `BOX_LAYOUT` spec (`src/lib/box-layout-spec.ts`); this file owns which rows
+ * appear, in what order, plus the agent-only `tmp/` scratch guidance and
+ * `store/archive/` rollup that the spec doesn't itself model.
  */
 
 import { boxLayoutEntry, type BoxDirs } from "../../lib/paths.js";
@@ -43,6 +43,7 @@ export function directoryLayoutSection(): string {
     row("people"),
     row("places"),
     row("config"),
+    "| `tmp/` | General scratch space for temporary files. Use this box-root directory, never the host `/tmp`; it is uncommitted and may be swept, so never rely on persistence. |",
   ].join("\n");
 
   return `## Directory Layout

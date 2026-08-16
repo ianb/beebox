@@ -18,10 +18,10 @@
  * **Module layout.** The recursive node walker lives in
  * `markdoc/emit-nodes.ts`; per-tag rendering for the briefing vocabulary
  * (`purpose`, `key-person`, `correction`, `property`, `project-phase`),
- * the recipe vocabulary, and the universal `quote`/`source` tags lives in
- * `markdoc/emit-tags.ts`. Unknown tags fall back to "emit inner text +
- * stderr warning" (the documented default in Track 2). This file keeps the
- * single public entry point.
+ * the recipe vocabulary, and the universal `quote`/`source`/`todo`/
+ * `see-also` tags lives in `markdoc/emit-tags.ts`. Unknown tags fall back
+ * to "emit inner text + stderr warning" (the documented default in
+ * Track 2). This file keeps the single public entry point.
  *
  * Walks the AST directly (pre-transform). Tag names are the canonical
  * authored names (`quote`, `key-person`, etc.), not the post-transform

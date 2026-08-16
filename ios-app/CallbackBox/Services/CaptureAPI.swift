@@ -2,11 +2,28 @@ import Foundation
 
 protocol CaptureTransport: Sendable {
     func data(for request: URLRequest) async throws -> (Data, URLResponse)
+    /// Send a request whose body is a file on disk, streamed rather than read
+    /// into memory. Bulk photo batches depend on this: a 70-item batch that
+    /// buffered each body would not survive import, let alone upload.
+    func upload(_ request: URLRequest, fromFile fileURL: URL) async throws -> (Data, URLResponse)
+}
+
+extension CaptureTransport {
+    /// Test-stub default: stubs answer from canned responses and have no file to
+    /// read, so this just forwards. Any transport that really talks to a box must
+    /// override it — the forwarding version sends no body at all.
+    func upload(_ request: URLRequest, fromFile fileURL: URL) async throws -> (Data, URLResponse) {
+        try await data(for: request)
+    }
 }
 
 struct URLSessionCaptureTransport: CaptureTransport {
     func data(for request: URLRequest) async throws -> (Data, URLResponse) {
         try await URLSession.shared.data(for: request)
+    }
+
+    func upload(_ request: URLRequest, fromFile fileURL: URL) async throws -> (Data, URLResponse) {
+        try await URLSession.shared.upload(for: request, fromFile: fileURL)
     }
 }
 
@@ -248,12 +265,7 @@ struct CaptureAPI: Sendable {
     }
 
     private func authenticatedRequest(url: URL) -> URLRequest {
-        var request = URLRequest(url: url)
-        request.setValue("CallbackBox-iOS/0.1", forHTTPHeaderField: "User-Agent")
-        if let token = box.authToken, token.isEmpty == false {
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
-        return request
+        BoxRequest.authenticated(url: url, box: box)
     }
 
     private func perform<Value: Decodable>(
@@ -285,7 +297,10 @@ struct CaptureAPI: Sendable {
         }
     }
 
-    private static func classify<Value>(
+    /// Map an HTTP response to the box's shared request-outcome vocabulary.
+    /// Internal rather than private because `BulkUploadAPI` classifies the same
+    /// way — this is generic box-HTTP handling, not capture-specific.
+    static func classify<Value>(
         response: HTTPURLResponse,
         data: Data,
         decode: (Data) throws -> Value

@@ -9,6 +9,8 @@
  */
 
 import { loadBoxConfig } from "../core/box/config.js";
+import { canonicalizeEmail } from "./local-users.js";
+import { normalizeAllowedEmails } from "./box-config-write.js";
 
 /**
  * True when `email` may access the box at `boxRoot`: always true for the
@@ -25,9 +27,11 @@ export async function canAccessBox({
   email: string;
   ownerEmail: string | null;
 }): Promise<boolean> {
-  if (ownerEmail && email === ownerEmail) return true;
+  const canonicalEmail = canonicalizeEmail(email);
+  if (ownerEmail && canonicalEmail === canonicalizeEmail(ownerEmail)) return true;
   const config = await loadBoxConfig(boxRoot);
-  return !!(config.allowedEmails?.length && config.allowedEmails.includes(email));
+  const allowedEmails = normalizeAllowedEmails(config.allowedEmails ?? []);
+  return allowedEmails.includes(canonicalEmail);
 }
 
 /**

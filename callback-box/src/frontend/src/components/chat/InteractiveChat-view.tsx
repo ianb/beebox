@@ -10,10 +10,10 @@ import { useCallback, type ReactNode } from "react";
 import { CompanionViewPanel } from "./InteractiveChat-controls";
 import type { NavigateHint, ViewTarget } from "../../lib/view-url";
 import { MessageList } from "./InteractiveChat-messages";
-import { ChatContextDirProvider } from "./chat-context-dir";
 import {
-  ChatView, ChatHeader, ChatDebugMenu, ChatStatusBanners, ChatComposerSection, ChatInputArea, MobileTextareaRow,
+  ChatView, ChatStatusBanners, ChatComposerSection, ChatInputArea, MobileTextareaRow,
 } from "./InteractiveChat-layout";
+import { ChatBarChrome } from "./ChatBarChrome";
 import { TargetStrip } from "./TargetStrip";
 import { chatTargetStatus } from "../../input/targets/chat-target";
 import { DebugLogPanel } from "../DebugLog";
@@ -23,7 +23,7 @@ import type { ScreenshotRequestController } from "./screenshot-request-handler";
 import type { LiveTask } from "./background-tasks";
 import type { SessionEntry, SessionContentBlock } from "../../api";
 import type { MessageGroup } from "./ChatMessages";
-import type { ModelMarker } from "./InteractiveChat-helpers";
+import type { ModelMarker, VoiceSegmentSend } from "./InteractiveChat-helpers";
 import type { useChatTabs, useChatModelFeatures, useChatMute, useChatSchedules } from "./InteractiveChat-hooks";
 import type { useChatVoice } from "./InteractiveChat-voice";
 import { useChatAttachmentValues, type useChatAttachments } from "./InteractiveChat-attachments";
@@ -48,6 +48,8 @@ interface ChatBodyProps {
   schedules: ReturnType<typeof useChatSchedules>;
   effectiveContextDir: string | null;
   boxSlug: string | undefined;
+  /** The session's display name (`chat.bootstrap`'s `label`) — the session chip's face. */
+  sessionLabel: string | null;
   messages: SessionEntry[];
   groups: MessageGroup[];
   backgroundTasks: LiveTask[];
@@ -55,12 +57,15 @@ interface ChatBodyProps {
   streamText: string;
   streamTools: SessionContentBlock[];
   processBusy: boolean;
+  /** Confirmed display state; raw processBusy still owns queue affordances. */
+  showAgentWorking: boolean;
   processRunning: boolean;
   sessionId: string | null;
   totalEntries: number;
   pendingCount: number;
   error: string | null | undefined;
   currentUserEmail: string | undefined;
+  currentUserName: string | undefined;
   modelMarkers: ModelMarker[];
   loadingOlder: boolean;
   scrollToBottomTrigger: number;
@@ -75,7 +80,7 @@ interface ChatBodyProps {
   setTypingMode: React.Dispatch<React.SetStateAction<boolean>>;
   typingLocked: boolean;
   setTypingLocked: React.Dispatch<React.SetStateAction<boolean>>;
-  onVoiceSegmentSend: (text: string) => void;
+  onVoiceSegmentSend: VoiceSegmentSend;
   send: (event: { type: "DISMISS_ERROR" }) => void;
   /** Report user activity on the open companion card (scrolled/navigated/…). */
   reportCardActivity: (kind: ActivityKind, detail?: string) => void;
@@ -99,44 +104,52 @@ interface ChatBodyProps {
    * a capture can't misdirect into another chat (X1).
    */
   captureDisabledReason?: string | undefined;
+  /** Open the bulk file-upload overlay; the reason (when set) disables the menu item (no session id yet). */
+  onUploadFiles: () => void;
+  uploadFilesDisabledReason?: string | undefined;
   /** Agent-initiated screenshot requests: FIFO consent popup + ephemeral indicator rows. */
   screenshots: ScreenshotRequestController;
 }
 
-function HeaderRegion(props: ChatBodyProps) {
-  const { tabs, model, mute, voice, actions, effectiveContextDir, boxSlug, messages, sessionId, processRunning, isStreaming, debugView, setDebugView, showDebugLog, setShowDebugLog } = props;
+/**
+ * The chat's app-bar publications (Track C2). Renders only portals — the
+ * chips land in the bar's chip slots, the here menu in the pill's dropdown.
+ * Every prop below is a primitive or a stable callback so the memoized
+ * children don't reconcile per streaming token.
+ */
+function BarChromeRegion(props: ChatBodyProps) {
+  const {
+    tabs, model, mute, voice, actions, effectiveContextDir, boxSlug, sessionLabel, messages,
+    sessionId, processRunning, isStreaming, debugView, setDebugView, showDebugLog, setShowDebugLog,
+  } = props;
   const { onZoomView } = tabs;
-  const { selectedModel, narrationEnabled, handleToggleNarration, handleSelectModel } = model;
+  const { agentEngine, selectedModel, narrationEnabled, handleToggleNarration, handleSelectModel } = model;
   return (
-    <ChatHeader
-      effectiveContextDir={effectiveContextDir}
+    <ChatBarChrome
+      contextDir={effectiveContextDir}
       boxSlug={boxSlug}
-      narrationEnabled={narrationEnabled}
-      hqInFlight={voice.hqInFlight}
-      onToggleNarration={handleToggleNarration}
-      muted={mute.muted}
-      onToggleMute={mute.handleToggleMute}
+      sessionLabel={sessionLabel}
       messages={messages}
       onZoomView={onZoomView}
+      muted={mute.muted}
+      onToggleMute={mute.handleToggleMute}
+      narrationEnabled={narrationEnabled}
+      onToggleNarration={handleToggleNarration}
+      hqInFlight={voice.hqInFlight}
       onNewSession={actions.handleNewSession}
-      debugMenu={
-        <ChatDebugMenu
-          onStopProcess={actions.handleStopProcess}
-          onRestartProcess={actions.handleRestartProcess}
-          onCompactSession={actions.handleCompactSession}
-          sessionId={sessionId}
-          running={processRunning}
-          busy={isStreaming}
-          debugView={debugView}
-          onToggleDebugView={() => setDebugView((v) => !v)}
-          showDebugLog={showDebugLog}
-          onToggleDebugLog={() => setShowDebugLog((v) => !v)}
-          selectedModel={selectedModel}
-          onSelectModel={handleSelectModel}
-          narrationEnabled={narrationEnabled}
-          onToggleNarration={handleToggleNarration}
-        />
-      }
+      selectedModel={selectedModel}
+      agentEngine={agentEngine}
+      onSelectModel={handleSelectModel}
+      onStopProcess={actions.handleStopProcess}
+      onRestartProcess={actions.handleRestartProcess}
+      onCompactSession={actions.handleCompactSession}
+      sessionId={sessionId}
+      running={processRunning}
+      busy={isStreaming}
+      debugView={debugView}
+      setDebugView={setDebugView}
+      showDebugLog={showDebugLog}
+      setShowDebugLog={setShowDebugLog}
     />
   );
 }
@@ -144,14 +157,13 @@ function HeaderRegion(props: ChatBodyProps) {
 function MessageListRegion(props: ChatBodyProps) {
   const {
     tabs, model, voice, actions, messages, groups, modelMarkers, isStreaming, streamText, streamTools,
-    processBusy, debugView, currentUserEmail, snapshot, totalEntries, loadingOlder, scrollToBottomTrigger, liveTurnId,
-    effectiveContextDir, captureBubbles, onCaptureRetry,
+    debugView, currentUserEmail, currentUserName, snapshot, totalEntries, loadingOlder, scrollToBottomTrigger, liveTurnId,
+    captureBubbles, onCaptureRetry,
   } = props;
   const { onZoomView } = tabs;
   const { speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, pendingHqDraft } = voice;
   const { handleLoadOlder } = actions;
   return (
-    <ChatContextDirProvider value={effectiveContextDir ?? undefined}>
     <MessageList
       messages={messages}
       groups={groups}
@@ -159,9 +171,9 @@ function MessageListRegion(props: ChatBodyProps) {
       isStreaming={isStreaming}
       streamText={streamText}
       streamTools={streamTools}
-      processingShown={Boolean(processBusy) && !isStreaming}
       debugView={debugView}
       currentUserEmail={currentUserEmail}
+      currentUserName={currentUserName}
       speechPlayback={speechPlayback}
       handleStopSpeech={handleStopSpeech}
       handleSkipSpeech={handleSkipSpeech}
@@ -178,7 +190,6 @@ function MessageListRegion(props: ChatBodyProps) {
       captureBubbles={captureBubbles}
       onCaptureRetry={onCaptureRetry}
     />
-    </ChatContextDirProvider>
   );
 }
 
@@ -186,7 +197,7 @@ function ComposerRegion(props: ChatBodyProps) {
   const {
     model, voice, recoveredDictation, expiredAttachmentsNotice, attach, selections, actions, isStreaming, processBusy, textareaRef,
     typingMode, setTypingMode, typingLocked, setTypingLocked, onVoiceSegmentSend, onEnterCapture, captureEnabled,
-    captureDisabledReason,
+    captureDisabledReason, onUploadFiles, uploadFilesDisabledReason,
   } = props;
   const { transcription, isTranscribing, voicePaused, stopDictation, clearDraft, handleCancelTranscription, startVoice, unpauseVoice } = voice;
   const { fileInputRef, removeAttachment, removeFileAttachment, handleAttachFiles, handleFileInputChange, addImageFiles } = attach;
@@ -239,6 +250,7 @@ function ComposerRegion(props: ChatBodyProps) {
           onEnterCapture={onEnterCapture}
           captureEnabled={captureEnabled}
           captureDisabledReason={captureDisabledReason}
+          onUploadFiles={onUploadFiles} uploadFilesDisabledReason={uploadFilesDisabledReason}
           narrationEnabled={model.narrationEnabled}
         />
       }
@@ -261,7 +273,7 @@ function ComposerRegion(props: ChatBodyProps) {
 }
 
 export function InteractiveChatBody(props: ChatBodyProps) {
-  const { tabs, voice, selections, schedules, error, pendingCount, isStreaming, processBusy, actions, showDebugLog, setShowDebugLog, send, embedded, nativeComposer } = props;
+  const { tabs, voice, selections, schedules, error, pendingCount, showAgentWorking, actions, showDebugLog, setShowDebugLog, send, embedded, nativeComposer } = props;
   const { panel, activeView, onZoomView, onSelectTab, onCloseTab, onClosePanel } = tabs;
   const {
     handleAddSelection,
@@ -297,7 +309,7 @@ export function InteractiveChatBody(props: ChatBodyProps) {
           />
         ) : null
       }
-      header={embedded ? null : <HeaderRegion {...props} />}
+      barChrome={embedded ? null : <BarChromeRegion {...props} />}
       messageList={<MessageListRegion {...props} />}
       statusBanners={
         <>
@@ -318,9 +330,9 @@ export function InteractiveChatBody(props: ChatBodyProps) {
             onCancelSchedule={schedules.handleCancelSchedule}
           />
           <TargetStrip
-            status={chatTargetStatus({ isStreaming, processBusy })}
+            status={chatTargetStatus({ isStreaming: showAgentWorking, processBusy: false })}
             pendingCount={pendingCount}
-            isStreaming={isStreaming}
+            isStreaming={showAgentWorking}
             onInterrupt={actions.handleInterrupt}
             speechPlaying={voice.speechPlayback.isPlaying}
             onStopSpeech={voice.handleStopSpeech}

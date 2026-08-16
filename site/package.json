@@ -22,7 +22,7 @@
     "@ianbicking/personal-vibe-check": "workspace:*",
     "@types/node": "^24.0.0",
     "eslint": "^9.39.2",
-    "tsx": "^4.21.0",
+    "tsx": "^4.23.1",
     "typescript": "^5.7.0"
   }
 }

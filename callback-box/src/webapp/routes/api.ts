@@ -36,6 +36,14 @@ export async function registerApiRoutes(
   options: RegisterApiRoutesOptions,
 ): Promise<void> {
   const { boxRoot, eventBus } = options;
+  // Cheap lifecycle signal for a visible browser tab. This route deliberately
+  // lives inside the box scope: reaching it through a lazy hub starts the box
+  // child (or refreshes its idle timer) without running the full health checks
+  // below. Hidden tabs send no heartbeat, so abandoned tabs still idle out.
+  server.head("/api/keepalive", (_request, reply) =>
+    reply.header("Cache-Control", "no-store").status(204).send(),
+  );
+
   // GET /api/health - Health check (permissions, API keys). Stays raw: hit by
   // infra/uptime monitors that aren't tRPC clients. The summary endpoints
   // (status/inbox/questions/activity/context) moved to the `status` tRPC router.

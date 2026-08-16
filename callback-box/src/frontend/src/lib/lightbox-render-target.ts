@@ -32,6 +32,14 @@ export interface LightboxElements {
   figure: HTMLElement;
   wrapper: HTMLElement;
   img: HTMLImageElement;
+  /**
+   * The prev/next peer layer, translated alongside the figure during a swipe.
+   * Resolved on every write rather than captured once: the layer is mounted
+   * only while the lightbox holds more than one image, so a list that GROWS
+   * from one entry to several would otherwise leave this permanently null and
+   * the neighbours frozen while the figure slid.
+   */
+  peers: () => HTMLElement | null;
 }
 
 function prefersReducedMotion(): boolean {
@@ -53,10 +61,12 @@ export class LightboxRenderTarget {
   private readonly els: LightboxElements;
   private transform: Transform = { scale: 1, x: 0, y: 0 };
   private dismissY = 0;
+  private swipeX = 0;
   private frame: Frame = { fit: { width: 0, height: 0 }, container: { width: 0, height: 0 } };
   private containerCenter: Point = { x: 0, y: 0 };
   private transformSpring: SpringHandle | null = null;
   private dismissSpring: SpringHandle | null = null;
+  private swipeSpring: SpringHandle | null = null;
   /** The active settle's completion callback, kept so a mid-flight re-measure
    *  can restart the spring toward the new bounds with the same completion. */
   private settleOnDone: (() => void) | null = null;
@@ -71,6 +81,14 @@ export class LightboxRenderTarget {
 
   getDismissY(): number {
     return this.dismissY;
+  }
+
+  getSwipeX(): number {
+    return this.swipeX;
+  }
+
+  getViewportWidth(): number {
+    return this.frame.container.width;
   }
 
   getFrame(): Frame {
@@ -96,7 +114,16 @@ export class LightboxRenderTarget {
 
   setDismissY(dismissY: number): void {
     this.dismissY = dismissY;
-    this.writeDismiss();
+    this.writeFigure();
+  }
+
+  setSwipeX(swipeX: number): void {
+    this.swipeX = swipeX;
+    this.writeFigure();
+  }
+
+  isSwipeSettling(): boolean {
+    return this.swipeSpring !== null;
   }
 
   private writeTransform(): void {
@@ -104,23 +131,32 @@ export class LightboxRenderTarget {
     this.els.wrapper.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${scale})`;
   }
 
-  private writeDismiss(): void {
+  /**
+   * The figure carries BOTH offsets — the dismiss drag's `translateY` and the
+   * swipe's `translateX` — so they share one writer; writing either axis alone
+   * would drop the other. The peer layer takes only the horizontal offset: the
+   * neighbours slide with the swipe but must not follow a dismiss.
+   */
+  private writeFigure(): void {
     const progress = dismissProgress(this.dismissY, this.frame.container.height);
-    this.els.figure.style.transform = `translateY(${this.dismissY}px)`;
+    this.els.figure.style.transform = `translate3d(${this.swipeX}px, ${this.dismissY}px, 0)`;
     this.els.figure.style.opacity = String(1 - progress);
     this.els.root.style.backgroundColor = `rgba(0, 0, 0, ${BASE_BACKDROP_OPACITY * (1 - progress)})`;
+    const peers = this.els.peers();
+    if (peers) peers.style.transform = `translate3d(${this.swipeX}px, 0, 0)`;
   }
 
   restoreBackdrop(): void {
     this.dismissY = 0;
-    this.els.figure.style.transform = "translateY(0px)";
     this.els.figure.style.opacity = "1";
     this.els.root.style.backgroundColor = "";
+    this.writeFigure();
   }
 
   reset(): void {
     this.cancelSprings();
     this.transform = { scale: 1, x: 0, y: 0 };
+    this.swipeX = 0;
     this.clearTransition();
     this.writeTransform();
     this.restoreBackdrop();
@@ -181,6 +217,8 @@ export class LightboxRenderTarget {
     this.settleOnDone = null;
     this.dismissSpring?.cancel();
     this.dismissSpring = null;
+    this.swipeSpring?.cancel();
+    this.swipeSpring = null;
   }
 
   /** CSS-transition zoom toggle: fit ↔ ZOOM_SCALE anchored at `anchor`. */
@@ -206,7 +244,7 @@ export class LightboxRenderTarget {
     this.clearTransition();
     const from = this.transform;
     const target = settleTarget(from, this.frame);
-    this.transformSpring = animateSpring({
+    const handle = animateSpring({
       channels: [
         { from: from.x, to: target.x, velocity: velocity.x },
         { from: from.y, to: target.y, velocity: velocity.y },
@@ -227,19 +265,20 @@ export class LightboxRenderTarget {
         onDone();
       },
     });
+    this.transformSpring = handle;
   }
 
   /** Spring the dismiss offset back to zero, carrying release velocity (px/s). */
   springDismiss({ velocity, onDone }: { velocity: number; onDone: () => void }): void {
     this.dismissSpring?.cancel();
-    this.dismissSpring = animateSpring({
+    const handle = animateSpring({
       channels: [{ from: this.dismissY, to: 0, velocity }],
       omega: SPRING_OMEGA,
       reducedMotion: prefersReducedMotion(),
       timing: springTiming(),
       onFrame: ([y]) => {
         this.dismissY = y ?? 0;
-        this.writeDismiss();
+        this.writeFigure();
       },
       onDone: () => {
         this.restoreBackdrop();
@@ -247,5 +286,33 @@ export class LightboxRenderTarget {
         onDone();
       },
     });
+    this.dismissSpring = handle;
+  }
+
+  /**
+   * Spring the swipe offset to `to`, carrying release velocity (px/s). `to` is
+   * 0 for a snap-back and ±viewport width for a commit — a commit lands with
+   * the figure fully off-screen and the incoming peer exactly centred, so the
+   * index change that follows swaps identical pixels.
+   */
+  springSwipe({ to, velocity, onDone }: { to: number; velocity: number; onDone: () => void }): void {
+    this.swipeSpring?.cancel();
+    const handle = animateSpring({
+      channels: [{ from: this.swipeX, to, velocity }],
+      omega: SPRING_OMEGA,
+      reducedMotion: prefersReducedMotion(),
+      timing: springTiming(),
+      onFrame: ([x]) => {
+        this.swipeX = x ?? to;
+        this.writeFigure();
+      },
+      onDone: () => {
+        this.swipeX = to;
+        this.writeFigure();
+        this.swipeSpring = null;
+        onDone();
+      },
+    });
+    this.swipeSpring = handle;
   }
 }

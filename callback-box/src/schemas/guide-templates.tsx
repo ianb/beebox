@@ -140,6 +140,33 @@ const DOMAIN_SEEDS: Record<string, GuideSeed> = {
     },
     reactions: [],
   },
+  scan: {
+    // Consumed by the scan-import photo flow, which compiles this guide
+    // in-memory into the per-page vision prompt (scan-guide-context.ts) —
+    // no job-card type, so no job-types routing.
+    jobTypes: "",
+    appliesTo: "Scanner priors for cb scan-import photo extraction — people, places, vendors, and handwriting clues used to disambiguate names and dates on scanned photos and documents",
+    actions: [
+      {
+        name: "Ask User",
+        when: "An identification or date on a scanned page is ambiguous and these priors don't resolve it",
+        instructions: "Create a question card in box/questions/",
+      },
+    ],
+    triageRules: [
+      "Use these priors for disambiguation only — never invent an identification without strong visual or textual evidence",
+    ],
+    defaultAction: {
+      action: "Ask User",
+      text: "When a prior is missing or contradicted by what's on the page, ask rather than guess",
+    },
+    experiment: {
+      id: "exp-scan-initial",
+      hypothesis: "Priors listed here reduce misread names and dates in scan extraction",
+      approach: "Record durable identifications from answered scan questions as triage rules; verify low-confidence priors with the boxholder",
+    },
+    reactions: [],
+  },
   chat: {
     jobTypes: "chat-job",
     appliesTo: "Use when processing chat messages from messaging connectors (Telegram, etc.)",

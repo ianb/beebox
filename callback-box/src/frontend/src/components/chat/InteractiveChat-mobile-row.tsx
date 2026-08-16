@@ -7,7 +7,7 @@
 import { useRef } from "react";
 import TextareaAutosize from "react-textarea-autosize";
 import { useTranscriptAutoscroll } from "../../hooks/useTranscriptAutoscroll";
-import { composerTextareaClasses, joinTranscript } from "./InteractiveChat-helpers";
+import { composerTextareaClasses, joinTranscript, spokenTextStart, type VoiceSegmentSend } from "./InteractiveChat-helpers";
 import { useInputValue, useInputStore } from "./input-store";
 import type { TranscriptionHandle } from "./InteractiveChat-composer";
 
@@ -29,7 +29,7 @@ export function MobileTextareaRow({
   /** Drops the persisted dictation draft when transcript is moved to input or sent. */
   clearDraft: () => void;
   onStopDictation: () => void;
-  onVoiceSegmentSend: (text: string) => void;
+  onVoiceSegmentSend: VoiceSegmentSend;
   onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
 }) {
@@ -52,7 +52,7 @@ export function MobileTextareaRow({
         onDrop={onDrop}
         readOnly={isTranscribing}
         enterKeyHint="enter"
-        placeholder={isTranscribing ? "Listening..." : "Type or paste an image..."}
+        placeholder={isTranscribing ? "Listening..." : "Type a message..."}
         className={composerTextareaClasses({ mobile: true, isTranscribing })}
         minRows={2}
         maxRows={8}
@@ -93,10 +93,14 @@ export function MobileTextareaRow({
               // transcription.stop() only ever resolves; nothing here can
               // reject, so the wrapper just satisfies onClick's void type.
               void (async () => {
-                const finalText = await transcription.stop();
+                // Read words from the resolved stop() result, not from the
+                // `transcription` prop after the await — that closure is
+                // frozen at click time and would be stale by the time the
+                // machine actually finalizes (Fix D).
+                const { text: finalText, words } = await transcription.stop();
                 // Continue from any prior composer text so it isn't dropped.
                 const text = joinTranscript(input, finalText).trim();
-                if (text) onVoiceSegmentSend(text);
+                if (text) onVoiceSegmentSend(text, { words, spokenStart: spokenTextStart(input) });
                 setInput("");
                 // Segment committed — drop the persisted dictation draft.
                 clearDraft();

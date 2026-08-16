@@ -21,18 +21,37 @@ const MAX_ENTRIES = 100;
 const logEntries: LogEntry[] = [];
 const listeners: Set<() => void> = new Set();
 let patched = false;
-let sendBuffer: Array<{ level: string; message: string }> = [];
+let sendBuffer: Array<{ level: LogEntry["level"]; message: string }> = [];
 let sendTimer: ReturnType<typeof setTimeout> | null = null;
 let verboseForwarding = false;
 let errorCount = 0;
 const errorCountListeners: Set<() => void> = new Set();
+
+/**
+ * Mirrors `debugLog.submit`'s server caps (trpc/routers/debugLog.ts). The server
+ * rejects an oversized message or an over-long batch outright — and this buffer
+ * is already cleared by then, so an unenforced cap here is silent loss.
+ */
+const MAX_SERVER_MESSAGE_LENGTH = 4000;
+const MAX_SERVER_BATCH = 100;
+
+/** Zod's `.max()` counts UTF-16 units, which is exactly what `String.length` is. */
+function truncateForServer(message: string): string {
+  if (message.length <= MAX_SERVER_MESSAGE_LENGTH) return message;
+  // codePointAt returns a >0xffff value only when this index is the lead half of
+  // a pair, i.e. exactly when the cut would split one.
+  const splitsSurrogatePair = (message.codePointAt(MAX_SERVER_MESSAGE_LENGTH - 1) ?? 0) > 0xffff;
+  return message.slice(0, splitsSurrogatePair ? MAX_SERVER_MESSAGE_LENGTH - 1 : MAX_SERVER_MESSAGE_LENGTH);
+}
 
 function flushToServer() {
   if (sendBuffer.length === 0) return;
   const batch = sendBuffer;
   sendBuffer = [];
   sendTimer = null;
-  trpcClient.debugLog.submit.mutate({ entries: batch }).catch(() => {});
+  for (let i = 0; i < batch.length; i += MAX_SERVER_BATCH) {
+    trpcClient.debugLog.submit.mutate({ entries: batch.slice(i, i + MAX_SERVER_BATCH) }).catch(() => {});
+  }
 }
 
 function isNetworkNoise(message: string): boolean {
@@ -42,12 +61,12 @@ function isNetworkNoise(message: string): boolean {
     /\b\[sse] Diagnostic fetch\b/.test(message);
 }
 
-function queueForServer(level: string, message: string) {
+function queueForServer(level: LogEntry["level"], message: string) {
   // Always forward errors and warnings; forward log/info only in verbose mode
   if (level !== "error" && level !== "warn" && !verboseForwarding) return;
   // Don't forward SSE/network errors — they're expected during deploys
   if (isNetworkNoise(message)) return;
-  sendBuffer.push({ level, message });
+  sendBuffer.push({ level, message: truncateForServer(message) });
   if (!sendTimer) {
     sendTimer = setTimeout(flushToServer, 500);
   }
@@ -99,9 +118,10 @@ function patchConsole() {
 
 /** Call at app init to start capturing logs. Always captures errors/warns to server. */
 export function enableDebugLogCapture() {
-  // No-op under SSR (`cb render`): patchConsole adds window error listeners and
-  // its patched console forwards to the debug endpoint — both browser-only, and
-  // app-shell.tsx calls this at module top-level where SSR's window is undefined.
+  // No-op outside a browser: patchConsole adds window error listeners and its
+  // patched console forwards to the debug endpoint — both browser-only, and
+  // app-shell.tsx calls this at module top-level, so a non-browser evaluation
+  // would hit it on import.
   if (typeof window === "undefined") return;
   patchConsole();
 }

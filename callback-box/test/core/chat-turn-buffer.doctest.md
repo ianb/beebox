@@ -14,6 +14,10 @@ import type { ChatMessage } from "../../src/core/chat/session/messages.js";
 function msg(type: ChatMessage["type"]): ChatMessage {
   return { type };
 }
+
+function msgWithPayload(size: number): ChatMessage {
+  return Object.assign(msg("assistant"), { payload: "x".repeat(size) });
+}
 ```
 
 ## Frames get monotonic seqs; framesAfter resumes from a seq
@@ -73,25 +77,52 @@ complete: true
 errored: subprocess crashed
 ```
 
-## Overflow evicts the head and reports a gap for evicted seqs
+## The frame-count cap retains 4,000 small frames, then evicts the head
 
-The ring keeps the most recent frames. Once the head is evicted, a resume from
-before the eviction point is a gap (→ the client resyncs from history).
+Small frames do not trip the byte budget. Once the count cap is exceeded, the
+oldest frame is evicted and a resume from before it reports a gap (→ the client
+resyncs from history).
 
 ```ts
 const b = new TurnBuffer("t5");
-for (let i = 0; i < 4001; i++) b.push(msg("stream_event"));
+for (let i = 0; i < 4000; i++) b.push(msg("stream_event"));
+print(`at limit: ${b.framesAfter(0).length}`);
+print(`gap at limit: ${b.hasGapAfter(0)}`);
+b.push(msg("stream_event"));
 print(`retained: ${b.framesAfter(0).length}`);
 print(`first seq: ${b.framesAfter(0)[0].seq}`);
 print(`gap after 0: ${b.hasGapAfter(0)}`);
 print(`gap after 1: ${b.hasGapAfter(1)}`);
 print(`gap after 4001: ${b.hasGapAfter(4001)}`)
 =>
+at limit: 4000
+gap at limit: false
 retained: 4000
 first seq: 2
 gap after 0: true
 gap after 1: false
 gap after 4001: false
+```
+
+## The byte cap evicts large frames before the count cap
+
+Three roughly 3 MiB messages exceed the 8 MiB budget. The oldest is evicted,
+leaving the two newest messages and reporting the resulting replay gap.
+
+```ts
+const b = new TurnBuffer("t6");
+b.push(msgWithPayload(3 * 1024 * 1024));
+b.push(msgWithPayload(3 * 1024 * 1024));
+b.push(msgWithPayload(3 * 1024 * 1024));
+print(`retained: ${b.framesAfter(0).length}`);
+print(`first seq: ${b.framesAfter(0)[0].seq}`);
+print(`gap after 0: ${b.hasGapAfter(0)}`);
+print(`gap after 1: ${b.hasGapAfter(1)}`)
+=>
+retained: 2
+first seq: 2
+gap after 0: true
+gap after 1: false
 ```
 
 ## waitForChange resolves immediately when the version moved (no missed wakeup)
@@ -101,7 +132,7 @@ so the subsequent `waitForChange` returns at once rather than sleeping on a fram
 that's already buffered.
 
 ```ts
-const b = new TurnBuffer("t6");
+const b = new TurnBuffer("t7");
 const v = b.versionSnapshot();
 b.push(msg("assistant")); // happens "during" a drain
 await b.waitForChange(undefined, v);
@@ -113,7 +144,7 @@ resolved-on-change
 ## waitForChange resolves immediately once complete
 
 ```ts
-const b = new TurnBuffer("t7");
+const b = new TurnBuffer("t8");
 const v = b.versionSnapshot();
 b.finish();
 await b.waitForChange(undefined, v);

@@ -27,7 +27,7 @@ import { useRef } from "react";
 import { ChatInputArea, type TranscriptionHandle } from "../../../components/chat/InteractiveChat-composer";
 import { MobileTextareaRow } from "../../../components/chat/InteractiveChat-mobile-row";
 import { ChatComposerSection } from "../../../components/chat/InteractiveChat-layout";
-import { NarrationStatusBadge, MuteButton } from "../../../components/chat/InteractiveChat-controls";
+import { VoiceChipFace } from "../../../components/chat/VoiceChip";
 import { TargetStrip } from "../../../components/chat/TargetStrip";
 import { chatTargetStatus } from "../../../input/targets/chat-target";
 import { InputStoreProvider, type InputStore } from "../../../components/chat/input-store";
@@ -138,8 +138,9 @@ function StateBlock({ spec }: { spec: Spec }) {
   const transcription: TranscriptionHandle = {
     state: spec.isTranscribing ? "recording" : "idle",
     transcript: spec.transcript,
+    finalWords: null,
     start: noop,
-    stop: () => Promise.resolve(spec.transcript),
+    stop: () => Promise.resolve({ text: spec.transcript, words: null }),
     cancel: noop,
   };
   const targetBusy = chatTargetStatus({ isStreaming: spec.isStreaming, processBusy: false }).state === "busy";
@@ -164,6 +165,7 @@ function StateBlock({ spec }: { spec: Spec }) {
       addImageFiles={() => Promise.resolve(0)}
       onEnterCapture={noop}
       captureEnabled
+      onUploadFiles={noop}
       narrationEnabled={spec.narrationEnabled}
     />
   );
@@ -192,12 +194,11 @@ function StateBlock({ spec }: { spec: Spec }) {
   return (
     <InputStoreProvider value={inputStore}>
     <div className="w-full max-w-5xl mx-auto">
-      {/* Faux header strip so narration badge / mute icon read in context. */}
+      {/* Faux header strip so the voice chip face reads in context. */}
       <header className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-accent via-coral to-primary">
         <h1 className="text-sm font-semibold text-white tracking-wide">Chat</h1>
-        <NarrationStatusBadge enabled={spec.badge} hqInFlight={false} onToggle={noop} />
         <div className="flex-1" />
-        <MuteButton muted={spec.muted} onToggle={noop} />
+        <VoiceChipFace muted={spec.muted} narrationEnabled={spec.badge} hqInFlight={false} />
       </header>
       {targetStrip}
       <ChatComposerSection

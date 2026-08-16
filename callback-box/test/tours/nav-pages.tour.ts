@@ -1,14 +1,15 @@
 /**
- * Visit every link in the primary nav, checkpoint each. The cheapest way
- * to get a full-app a11y survey + screenshot set in one pass.
+ * Visit every routed page, checkpoint each. The cheapest way to get a
+ * full-app a11y survey + screenshot set in one pass. Not every page is
+ * reachable from the app bar any more (`docs/plans/top-nav-ia.md`) — the
+ * list is the route set, not the menu.
  */
 
 import { tour } from "./tour-lib/index.js";
 
 const PAGES = [
-  { path: "/", label: "Dashboard" },
-  { path: "/chat", label: "Recent" },
-  { path: "/chats", label: "Chats" },
+  { path: "/chat", label: "Chat" },
+  { path: "/dashboard", label: "Dashboard" },
   { path: "/questions", label: "Questions" },
   { path: "/news", label: "News" },
   { path: "/browse", label: "Browse" },

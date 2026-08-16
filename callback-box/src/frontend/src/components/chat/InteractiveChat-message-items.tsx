@@ -1,15 +1,13 @@
 /**
- * The per-item building blocks for InteractiveChat's virtualized list: the
- * streaming-tail presentational pieces (live text, throbber, processing
- * placeholder, pending-HQ bubble), the `DataItem` union and the pure
- * helpers that assemble and key the data array, plus the per-group
- * renderer. Split out of InteractiveChat-messages.tsx so the list shell
- * stays focused on virtualization/scroll mechanics.
+ * The per-item building blocks for InteractiveChat's message list: the
+ * streaming-tail presentational pieces (live text, pending-HQ bubble), the
+ * `DataItem` union and the pure helpers that assemble and key the data
+ * array, plus the per-group renderer. Split out of
+ * InteractiveChat-messages.tsx so the list shell stays focused on scroll
+ * mechanics.
  */
 
 import { type ReactNode } from "react";
-import { Grid } from "ldrs/react";
-import "ldrs/react/Grid.css";
 import { MessageErrorBoundary } from "./MessageErrorBoundary";
 import { UserMessage, AssistantMessage, CompactionMessage, InterruptedMessage, SelfNoteMessage, UserMessageText, type MessageGroup, type OnZoomView, type ReplaySpeechOptions } from "./ChatMessages";
 import { isNoResponseOnly, parseAcks, type AckIndication } from "../../lib/structured-output-parsing";
@@ -18,6 +16,7 @@ import { buildStreamEntry } from "../../lib/stream-entry";
 import type { ModelMarker } from "./InteractiveChat-helpers";
 import { CaptureBubbleView, type CaptureBubbleModel } from "./capture-bubble";
 import { invariant } from "@shared/invariant";
+import type { SpeechSegmentState } from "../../machines/speechPlaybackMachine";
 
 /**
  * Trim a streaming text buffer to the last safe boundary. Either a
@@ -72,27 +71,9 @@ function PendingHqMessage({ text }: { text: string }) {
   );
 }
 
-/**
- * The agent-working throbber. Shown both below the live streaming text/tools
- * (during an active SSE turn) and on its own when a reloaded page learns the
- * agent is mid-turn but has no live stream attached — so the indicator looks
- * the same whether the turn is being streamed or just resumed after reload.
- * The optional caption labels the standalone (reload) case, where there's no
- * surrounding streamed text to give it context.
- */
-function StreamingThrobber({ caption }: { caption?: string }) {
-  return (
-    <div className="flex flex-col items-center gap-2 my-6">
-      <Grid size={40} color="#D4845A" speed={1.5} /> {/* coral */}
-      {caption ? <div className="text-sm text-warm-500 italic">{caption}</div> : null}
-    </div>
-  );
-}
-
 export type DataItem =
-  | { kind: "group"; group: MessageGroup; groupIndex: number; acks?: AckIndication[]; streaming?: boolean }
+  | { kind: "group"; group: MessageGroup; groupIndex: number; acks?: AckIndication[] }
   | { kind: "marker"; marker: ModelMarker }
-  | { kind: "processing" }
   | { kind: "pendingHq"; text: string }
   | { kind: "captureBubble"; model: CaptureBubbleModel };
 
@@ -106,7 +87,6 @@ function assistantGroupText(group: MessageGroup): string {
 export function dataItemKey(d: DataItem): string {
   switch (d.kind) {
     case "marker": return `marker-${d.marker.id}`;
-    case "processing": return "processing";
     case "pendingHq": return "pendingHq";
     case "captureBubble": return `capture-${d.model.id}`;
     case "group": {
@@ -120,6 +100,8 @@ export function dataItemKey(d: DataItem): string {
 export interface SpeechPlaybackState {
   isPlaying: boolean;
   playingMessageId: string | null;
+  statusMessageId: string | null;
+  segmentStates: Record<number, SpeechSegmentState>;
   playingSegmentIndex: number | null;
   remainingCount: number;
 }
@@ -141,12 +123,11 @@ export function buildDataItems(opts: {
   streamText: string;
   streamTools: SessionContentBlock[];
   liveTurnId: string | null;
-  processingShown: boolean;
   pendingHqDraft: string | null;
   captureBubbles: CaptureBubbleModel[];
   debugView: boolean;
 }): DataItem[] {
-  const { groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, processingShown, pendingHqDraft, captureBubbles, debugView } = opts;
+  const { groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, pendingHqDraft, captureBubbles, debugView } = opts;
   const items: DataItem[] = [];
   for (const m of modelMarkers) {
     if (m.afterGroupCount === 0) items.push({ kind: "marker", marker: m });
@@ -192,8 +173,8 @@ export function buildDataItems(opts: {
       streamText: chunkOnParagraphs(streamText),
       streamTools,
     });
-    items.push({ kind: "group", group: { type: "assistant", entries: [entry] }, groupIndex: groups.length, streaming: true });
-  } else if (processingShown) items.push({ kind: "processing" });
+    items.push({ kind: "group", group: { type: "assistant", entries: [entry] }, groupIndex: groups.length });
+  }
   return items;
 }
 
@@ -202,6 +183,7 @@ export interface RenderItemContext {
   streamTools: SessionContentBlock[];
   debugView: boolean;
   currentUserEmail: string | undefined;
+  currentUserName: string | undefined;
   speechPlayback: SpeechPlaybackState;
   handleStopSpeech: () => void;
   handleSkipSpeech: () => void;
@@ -218,15 +200,14 @@ export interface RenderItemContext {
  * assistant), wrapped in an error boundary keyed by group identity.
  */
 function GroupItem({
-  group, groupIndex, acks, streaming, ctx,
+  group, groupIndex, acks, ctx,
 }: {
   group: MessageGroup;
   groupIndex: number;
   acks?: AckIndication[];
-  streaming?: boolean;
   ctx: RenderItemContext;
 }) {
-  const { debugView, currentUserEmail, speechPlayback, lastAssistantGroupIndex, onZoomView, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, proseEnabled } = ctx;
+  const { debugView, currentUserEmail, currentUserName, speechPlayback, lastAssistantGroupIndex, onZoomView, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, proseEnabled } = ctx;
   const boundaryLabel = `${group.type}#${groupIndex}:${group.entries[0]?.uuid ?? ""}`;
   let body: ReactNode;
   if (group.type === "compaction") {
@@ -242,7 +223,7 @@ function GroupItem({
       </div>
     );
   } else if (group.type === "user") {
-    body = <div className="py-0.5"><UserMessage entries={group.entries} debugView={debugView} currentUserEmail={currentUserEmail} acks={acks} onZoomView={onZoomView} /></div>;
+    body = <div className="py-0.5"><UserMessage entries={group.entries} debugView={debugView} currentUserEmail={currentUserEmail} currentUserName={currentUserName} acks={acks} onZoomView={onZoomView} /></div>;
   } else {
     // "This message is playing" matches either an explicit replay
     // (playingMessageId is this group's uuid) or auto-played speech
@@ -253,6 +234,10 @@ function GroupItem({
     const isStreamId = typeof pid === "string" && pid.startsWith("stream");
     const playingThis = speechPlayback.isPlaying &&
       (pid === groupUuid || (isStreamId && groupIndex === lastAssistantGroupIndex));
+    const statusId = speechPlayback.statusMessageId;
+    const statusIsStream = typeof statusId === "string" && statusId.startsWith("stream");
+    const statusThis = statusId === groupUuid
+      || (statusIsStream && groupIndex === lastAssistantGroupIndex);
     body = (
       <div className="py-0.5">
         <AssistantMessage
@@ -260,6 +245,7 @@ function GroupItem({
           debugView={debugView}
           speechPlaying={playingThis}
           speechActiveIndex={playingThis ? speechPlayback.playingSegmentIndex : null}
+          speechSegmentStates={statusThis ? speechPlayback.segmentStates : {}}
           anySpeechPlaying={speechPlayback.isPlaying}
           speechCanSkip={Boolean(speechPlayback.isPlaying && speechPlayback.remainingCount > 1)}
           onStopSpeech={handleStopSpeech}
@@ -267,7 +253,6 @@ function GroupItem({
           onReplaySpeech={handleReplaySpeech}
           onZoomView={onZoomView}
           proseEnabled={proseEnabled}
-          isStreaming={streaming}
         />
       </div>
     );
@@ -289,14 +274,11 @@ export function renderDataItem(item: DataItem, ctx: RenderItemContext): ReactNod
       </div>
     );
   }
-  if (item.kind === "processing") {
-    return <StreamingThrobber caption="Agent is processing…" />;
-  }
   if (item.kind === "pendingHq") {
     return <PendingHqMessage text={item.text} />;
   }
   if (item.kind === "captureBubble") {
     return <CaptureBubbleView model={item.model} onRetry={ctx.handleCaptureRetry} />;
   }
-  return <GroupItem group={item.group} groupIndex={item.groupIndex} acks={item.acks} streaming={item.streaming} ctx={ctx} />;
+  return <GroupItem group={item.group} groupIndex={item.groupIndex} acks={item.acks} ctx={ctx} />;
 }

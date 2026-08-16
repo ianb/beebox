@@ -1,3 +1,9 @@
+---
+title: "Chat scroll redesign: remove virtualization, single scroll controller"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Chat scroll redesign: remove virtualization, single scroll controller
 
 The InteractiveChat message list has persistent scroll defects: it doesn't

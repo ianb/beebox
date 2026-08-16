@@ -1,9 +1,11 @@
 ---
 title: "Admin landmark that owns box maintenance (health checks + housekeeping)"
+workstream: unknown
 needs: [design]
 filed-by: agent
 discovered-in: main session — after a local test-box health-check triage, the boxholder wanted a single home for maintenance
 area: callback-box
+priority: important
 ---
 
 Right now box maintenance has no single owner. When the health monitor surfaces a

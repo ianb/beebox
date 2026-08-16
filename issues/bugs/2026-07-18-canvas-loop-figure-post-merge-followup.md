@@ -1,8 +1,10 @@
 ---
 title: "canvas-loop figure runtime: post-merge follow-up — responsive overflow + verification punch-list"
+workstream: quick-seeing-p5js
 area: callback-box
 filed-by: agent
 discovered-in: worktree-quick-seeing-p5js — after merging the canvas-loop library + figure runtime to main (f57eb12c)
+priority: backlog
 ---
 
 The canvas-loop library + figure runtime landed on `main` (merge `f57eb12c`,
@@ -57,7 +59,7 @@ The demo `Orbit.figure.card` (in the test box at
 `~/src/box-worktrees/…/test1/content/store/figures/`) was verified at the DOM
 level only — canvas mounted at declared size, generated controls present, no
 error state — because the browse screenshot op flaked
-([agent-browser-screenshot-flake](2026-07-10-agent-browser-screenshot-flake.md),
+([agent-browser-screenshot-flake](../watch/2026-07-10-agent-browser-screenshot-flake.md),
 [browse-daemon-wedges-on-animated-canvas](2026-07-14-browse-daemon-wedges-on-animated-canvas.md)).
 Its rendered frames were checked separately via the headless CLI. **To close:**
 open the card in a real browser and eyeball it — sun + 3 planets animate, the
@@ -72,7 +74,7 @@ Never done — codex was provider-throttled during the build, so only *targeted*
 reviews ran (plan, mount lifecycle, schema contract, route security, handled-ness
 fold; all findings applied) plus the finish agent's Track O diff pass. Codex now
 appears usable again (`~/.codex` updated 2026-07-16; the `-m gpt-5.5` + fenced-
-embed recipe worked — see `.claude/skills/codex/SKILL.md`). **Optional but
+embed recipe worked — see `.claude/skills/cross-model/SKILL.md`). **Optional but
 cheap:** a full `f57eb12c` vs the pre-branch base diff review now that it's on
 main, focused on the merge-reconciliation commit (figure-starters split ×
 container-fit rework) which no single reviewer saw whole.

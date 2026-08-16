@@ -1,17 +1,13 @@
 /**
  * Pure helpers and shared constants for InteractiveChat and its sibling
- * modules. No JSX, no React hooks — just string/number formatting, id
- * minting, and the model-option table. Kept separate so the controls,
+ * modules. No JSX, no React hooks — just string/number formatting and id
+ * minting. Kept separate so the controls,
  * composer, and message-list siblings can share them without a value
  * import cycle through the main component.
  */
 
 import { applySelections, type SelectionItem } from "../../lib/selection/serialize";
-// Raw relative (not `@shared/…`): this module is transitively loaded by the
-// tap/tsx doctest runner (via input/emission + input/voice-intent), which uses
-// the root tsconfig where @shared doesn't resolve. Exempted from the
-// shared-alias lint rule in eslint.config.mjs.
-import { MODEL_ID } from "../../../../shared/model-ids.js";
+import type { FinalWord } from "../../machines/transcription-events";
 
 /**
  * Format the current local time as HH:MM for the typed/speech tag.
@@ -52,6 +48,30 @@ export function joinTranscript(priorInput: string, transcript: string): string {
   return `${priorInput} ${transcript}`;
 }
 
+/**
+ * Char offset in `joinTranscript(priorInput, transcript)` where the spoken
+ * portion begins — the boundary the Track 3 aligner (`markUnsureWords`,
+ * `input/unsure-words.ts`) must never wrap before, so a low-confidence
+ * spoken word can't land a mark on typed composer text that merely
+ * normalizes the same way (review Fix B).
+ */
+export function spokenTextStart(priorInput: string): number {
+  return priorInput ? priorInput.length + 1 : 0;
+}
+
+/**
+ * A stop-and-send / keyword-submit callback's voice metadata: the realtime
+ * words backing the sent text (`null` = none captured) and where the spoken
+ * portion begins within it (see `spokenTextStart`).
+ */
+export interface VoiceSegmentMeta {
+  words: readonly FinalWord[] | null;
+  spokenStart: number;
+}
+
+/** Shared shape for every `onVoiceSegmentSend`-style prop (composer, mobile row). */
+export type VoiceSegmentSend = (text: string, meta: VoiceSegmentMeta) => void;
+
 // Minted at SEND-dispatch time and threaded through to /chat/send so the
 // backend's processedMessageIds dedupe (chat.ts:269-284) catches the case
 // where the streamActor body runs twice for one logical send (StrictMode
@@ -81,26 +101,6 @@ export function formatTimePassed(ms: number): string | null {
   const hours = totalHours % 24;
   return hours > 0 ? `${days}d${hours}h` : `${days}d`;
 }
-
-/**
- * Model options surfaced in the chat debug menu. `null` = CLI default.
- * Ordered as presented to the user.
- *
- * The model-ID strings come from the canonical `MODEL_ID` source (`core/model-ids.ts`)
- * that the procedure engine's MODEL_MAP also uses — one place to bump a model
- * version. This UI list is a superset of MODEL_MAP's short names (it also
- * offers fable and the 1M-context variants), so it stays its own list keyed on
- * shared IDs rather than being derived from MODEL_MAP.
- */
-export const MODEL_OPTIONS: ReadonlyArray<{ label: string; model: string | null }> = [
-  { label: "Default (Opus)", model: null },
-  { label: "Sonnet 5", model: MODEL_ID.sonnet },
-  { label: "Opus 4.8", model: MODEL_ID.opus },
-  { label: "Fable 5", model: MODEL_ID.fable },
-  { label: "Haiku 4.5", model: MODEL_ID.haiku },
-  { label: "Opus 4.8 (1M context)", model: MODEL_ID.opus1m },
-  { label: "Fable 5 (1M context)", model: MODEL_ID.fable1m },
-];
 
 /**
  * Ephemeral marker shown in the message stream when the user switches models.

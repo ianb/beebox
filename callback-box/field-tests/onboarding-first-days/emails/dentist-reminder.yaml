@@ -1,0 +1,35 @@
+# Arrives on day 2 (the scenario starts 2026-08-10; `dentist-email` runs after
+# one `advance-days`). The date is explicit rather than defaulted so the message
+# reads as "a little while ago this morning" whatever time the harness injects it.
+#
+# DELIBERATE ERROR — do not "fix": the email says "Thursday 14 August", but
+# 2026-08-14 is a Friday. The dentist got the weekday wrong, exactly the kind
+# of mistake real appointment mail contains. Whether the box agent notices
+# (run 2's did — it checked the calendar, told the user Friday was correct,
+# and advised ringing the practice) is one of this scenario's best signals.
+# Briefs elsewhere avoid naming weekdays so the box clock stays the only time
+# authority; this fixture's wrongness is the intentional exception.
+id: dentist-reminder
+threadId: t-dentist-reminder
+from: Bright Smiles Dental <appointments@example.com>
+to: priya@example.com
+subject: Reminder — Wren's check-up, Thursday 14 August at 3:40pm
+date: "2026-08-11T07:15:00Z"
+labelIds: [INBOX]
+body: |
+  Hello Priya,
+
+  This is a reminder that Wren Marlowe has a dental check-up with Dr. Okafor on
+  Thursday 14 August at 3:40pm at our Riverside Road practice.
+
+  Please arrive ten minutes early. If Wren has had any pain or sensitivity since
+  the last visit, let us know when you check in so we can allow extra time.
+
+  Two things to bring:
+  - the completed medical history update we posted to you last month
+  - your insurance card
+
+  To reschedule, reply to this email or call the practice.
+
+  Bright Smiles Dental
+  Riverside Road

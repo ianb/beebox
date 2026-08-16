@@ -20,60 +20,14 @@ import { makeLog } from "./log.js";
 import { checkInvariant } from "../../../lib/invariant.js";
 import { EventEmitter } from "node:events";
 import { ChatSession, type ChatSessionOptions } from "./index.js";
-import {
-  appendHistory,
-  setMostActive,
-  updateFeaturesForSession,
-} from "./history.js";
+import { appendHistory, setMostActive, updateFeaturesForSession } from "./history.js";
 import { ensureChatHusk } from "../husk.js";
 import { createChatBackend, type ChatBackend } from "../../../services/claude-chat.js";
+import { RegistryDeletionCoordinator } from "./registry-deletion.js";
+import type { ChatSessionRegistryOptions, RegistryEntry } from "./registry-options.js";
 
-interface RegistryEntry {
-  session: ChatSession;
-  /** Last access (any API call). Used for idle cleanup. */
-  lastActivity: number;
-  /** Last time the subprocess was actually used. Used for LRU eviction. */
-  lastSubprocessUse: number;
-  /** Number of in-flight SSE listeners pinning this entry. */
-  refCount: number;
-}
-
-export interface ChatSessionRegistryOptions {
-  /**
-   * Maximum number of subprocesses live at once. When exceeded, the LRU
-   * subprocess is `stop()`-ed (the registry entry stays so the id can be
-   * re-spawned later). Default: 2.
-   */
-  maxLiveProcesses?: number;
-  /**
-   * How long an entry can sit untouched (no requests, no SSE listeners)
-   * before it gets dropped from the registry entirely. Default: 10 min.
-   */
-  idleTimeoutMs?: number;
-  /**
-   * Tick interval for the idle sweep. Default: 60s.
-   */
-  cleanupIntervalMs?: number;
-  /**
-   * Factory for the underlying ChatSession. Override for tests so that
-   * backend / systemPrompt / etc. can be injected. The registry adds
-   * `initialSessionId`, `sessionFile: null`, and `onSessionIdAssigned`
-   * on top of whatever this returns.
-   */
-  buildSessionOptions?: (sessionId: string | null) => ChatSessionOptions;
-  /**
-   * Shared backend for every ChatSession this registry creates. Lets
-   * sessions share a warm-pool slot. Default: a fresh `createChatBackend()`.
-   * Tests pass a fake backend here.
-   */
-  backend?: ChatBackend;
-  /**
-   * Clock for idle/LRU bookkeeping. Default: `Date.now`. This is DEADLINE
-   * time (the two-clock taxonomy) — it must never be frozen via `CB_TIME`;
-   * tests that exercise idle sweeps / LRU ordering inject a fake here.
-   */
-  now?: () => number;
-}
+export { SessionDeletingError } from "./deletion-state.js";
+export type { ChatSessionRegistryOptions } from "./registry-options.js";
 
 const DEFAULT_MAX_LIVE = 2;
 const DEFAULT_IDLE_TIMEOUT_MS = 10 * 60 * 1000;
@@ -113,6 +67,16 @@ export class ChatSessionRegistry extends EventEmitter {
    * turn can't be LRU-evicted in the window between send and id assignment.
    */
   private readonly pendingPins = new Map<ChatSession, number>();
+  readonly deletion = new RegistryDeletionCoordinator({
+    find: (sessionId) => this.entries.get(sessionId)?.session ?? null,
+    findPending: (sessionId) => [...this.pending].find((session) => session.getSessionId() === sessionId) ?? null,
+    remove: (sessionId, session) => {
+      const entry = this.entries.get(sessionId);
+      if (entry?.session === session) this.entries.delete(sessionId);
+      this.pending.delete(session);
+      this.pendingPins.delete(session);
+    },
+  });
 
   constructor(boxRoot: string, options?: ChatSessionRegistryOptions) {
     super();
@@ -184,13 +148,17 @@ export class ChatSessionRegistry extends EventEmitter {
     return this.entries.size;
   }
 
+  /** Running/busy snapshot of every session held — entries plus the pre-id
+   *  `pending` ones, which a single-session `status` query cannot name. Touches
+   *  nothing: an observer that kept sessions warm would change what it measures. */
+  snapshotAll(): { sessionId: string | null; running: boolean; busy: boolean }[] {
+    const held = [...[...this.entries.values()].map((e) => e.session), ...this.pending];
+    return held.map((s) => ({ sessionId: s.getSessionId(), running: s.isRunning(), busy: s.isBusy() }));
+  }
+
   /** Number of entries with a live subprocess. */
   liveCount(): number {
-    let n = 0;
-    for (const e of this.entries.values()) {
-      if (e.session.isRunning()) n += 1;
-    }
-    return n;
+    return [...this.entries.values()].filter((e) => e.session.isRunning()).length;
   }
 
   /**
@@ -198,6 +166,7 @@ export class ChatSessionRegistry extends EventEmitter {
    * lazily create — callers that need creation use `getOrCreate`.
    */
   get(sessionId: string): ChatSession | null {
+    if (this.deletion.isBlocked(sessionId)) return null;
     const entry = this.entries.get(sessionId);
     if (!entry) return null;
     entry.lastActivity = this.now();
@@ -210,6 +179,7 @@ export class ChatSessionRegistry extends EventEmitter {
    * the on-disk JSONL on first send).
    */
   getOrCreate(sessionId: string): ChatSession {
+    this.deletion.assertResumable(sessionId);
     this.noteActivity();
     const existing = this.entries.get(sessionId);
     if (existing) {
@@ -266,8 +236,7 @@ export class ChatSessionRegistry extends EventEmitter {
       }),
     });
     this.pending.add(session);
-    const seedSummary = seedFeatures && Object.keys(seedFeatures).length > 0
-      ? `, seedFeatures=${JSON.stringify(seedFeatures)}` : "";
+    const seedSummary = seedFeatures && Object.keys(seedFeatures).length > 0 ? `, seedFeatures=${JSON.stringify(seedFeatures)}` : "";
     log("create-new", `Pending new session created (pending=${this.pending.size}${contextDir ? `, contextDir=${contextDir}` : ""}${seedSummary})`);
     return session;
   }
@@ -480,5 +449,4 @@ export class ChatSessionRegistry extends EventEmitter {
     for (const s of this.pending) s.stop();
     this.pending.clear();
   }
-
 }

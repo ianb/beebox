@@ -24,7 +24,7 @@ import {
   type SDKUserMessage,
   type WarmQuery,
 } from "@anthropic-ai/claude-agent-sdk";
-import { cardValidatorHook, gitMvNudgeHook } from "../core/sdk-hooks.js";
+import { gitMvNudgeHook } from "../core/sdk-hooks.js";
 import { resolveClaudeCodeBinary } from "../core/sdk-binary-path.js";
 import { dropUndefined } from "../lib/drop-undefined.js";
 import { createAsyncIterableQueue } from "./claude-chat-queue.js";
@@ -36,6 +36,8 @@ import {
   writeSessionIdFile,
 } from "../core/chat/session/session-id-file.js";
 import { toSdkUserContent } from "./claude-chat-content.js";
+import { resolveHarnessPluginPath } from "../core/agent/plugin-paths.js";
+import { createCodexChatBackend } from "./codex-chat.js";
 import type {
   ChatBackend,
   ChatBackendRun,
@@ -113,7 +115,15 @@ function buildQueryOptions(
   if (opts.model !== undefined) {
     queryOptions.model = opts.model;
   }
-  queryOptions.hooks = { PreToolUse: [gitMvNudgeHook()], PostToolUse: [cardValidatorHook()] };
+  if (opts.tools !== undefined) {
+    queryOptions.tools = opts.tools;
+  }
+  queryOptions.hooks = { PreToolUse: [gitMvNudgeHook()] };
+  queryOptions.plugins = [{
+    type: "local",
+    path: resolveHarnessPluginPath("claude"),
+    skipMcpDiscovery: true,
+  }];
   if (opts.includePartialMessages === true) {
     queryOptions.includePartialMessages = true;
   }
@@ -135,6 +145,19 @@ function warmCompatible(
   if (warm.systemPrompt !== next.systemPrompt) return false;
   if ((warm.model ?? null) !== (next.model ?? null)) return false;
   if (warm.includePartialMessages !== next.includePartialMessages) return false;
+  // The tool set is baked into the warm subprocess, so a slot warmed with a
+  // different one would silently widen (or narrow) the next session. Absent and
+  // empty are compared as different things on purpose: omitting the option
+  // means "all built-in tools", `[]` means none.
+  const wt = warm.tools;
+  const nt = next.tools;
+  if ((wt === undefined) !== (nt === undefined)) return false;
+  if (wt !== undefined && nt !== undefined) {
+    if (wt.length !== nt.length) return false;
+    for (const [i, tool] of wt.entries()) {
+      if (tool !== nt[i]) return false;
+    }
+  }
   const wd = warm.additionalDirectories ?? [];
   const nd = next.additionalDirectories ?? [];
   if (wd.length !== nd.length) return false;
@@ -144,7 +167,7 @@ function warmCompatible(
   return true;
 }
 
-export function createChatBackend(): ChatBackend {
+export function createClaudeChatBackend(): ChatBackend {
   let warmSlot:
     | { warmQuery: WarmQuery; opts: ChatBackendStartOptions; sessionIdFilePath: string | null }
     | null = null;
@@ -303,5 +326,20 @@ export function createChatBackend(): ChatBackend {
       });
       return buildRunFromQuery({ q, opts, inputQueue, messageQueue, sessionIdFilePath });
     },
+  };
+}
+
+/** Dispatch each engine-pinned chat to its native harness backend. */
+export function createChatBackend(): ChatBackend {
+  const claude = createClaudeChatBackend();
+  const codex = createCodexChatBackend();
+  return {
+    requiresClaudeAuth: true,
+    start: (opts) => opts.engine === "codex" ? codex.start(opts) : claude.start(opts),
+    prewarm: async (opts) => {
+      if (opts.engine !== "codex") await claude.prewarm?.(opts);
+    },
+    closeWarm: () => claude.closeWarm?.(),
+    hasWarm: () => claude.hasWarm?.() ?? false,
   };
 }

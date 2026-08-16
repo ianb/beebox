@@ -11,6 +11,7 @@ import { getApiBase } from "../api";
 import { isRecord } from "@shared/is-record";
 import { deepgramKeyManager } from "../lib/audio/deepgram-key";
 import { openaiRealtimeKeyManager } from "../lib/audio/openai-realtime-key";
+import type { FinalWord } from "./transcription-events";
 
 export interface ConnectionHandle {
   ws: WebSocket;
@@ -20,8 +21,19 @@ export interface ConnectionHandle {
   endStream: () => void;
 }
 
+export interface TextUpdate {
+  finalText: string;
+  interimText: string;
+  /**
+   * Mirrors `finalText`: the current connection's accumulated finalized
+   * words, snapshotted at the same call as the text it describes. Only
+   * Deepgram passes it; Voxtral/OpenAI omit it (equivalent to `[]`).
+   */
+  finalWords?: FinalWord[];
+}
+
 export interface ServiceCallbacks {
-  onTextUpdate: (finalText: string, interimText: string) => void;
+  onTextUpdate: (update: TextUpdate) => void;
   onDone: (text?: string) => void;
   onServerError: (message: string) => void;
 }
@@ -49,6 +61,50 @@ export function socketFinalText(ws: WebSocket): (() => string) | undefined {
   return finalTextAccessors.get(ws);
 }
 
+/**
+ * Accumulated-finalized-words accessors, mirroring {@link finalTextAccessors}.
+ * Only Deepgram registers one; a socket with no entry has no word data.
+ */
+const finalWordsAccessors = new WeakMap<WebSocket, () => FinalWord[]>();
+
+/** The accumulated-finalized-words accessor registered for a socket, if any. */
+export function socketFinalWords(ws: WebSocket): (() => FinalWord[]) | undefined {
+  return finalWordsAccessors.get(ws);
+}
+
+/**
+ * Read `words[]` off a Deepgram `is_final` Results message, guarding at the
+ * boundary since the WS success payload is raw `JSON.parse`, not
+ * zod-validated. Prefers `punctuated_word` (matches how `accumulatedFinal`
+ * is built from the smart-formatted transcript); falls back to `word`.
+ * `confidence` is attached only when it's a real number. A malformed entry
+ * (no usable string word) is skipped rather than failing the whole message —
+ * fewer confidence entries is an acceptable degradation, a wrong one isn't.
+ */
+export function extractFinalWords(msg: unknown): FinalWord[] {
+  if (!isRecord(msg)) return [];
+  const channel = msg.channel;
+  if (!isRecord(channel)) return [];
+  const alternatives = channel.alternatives;
+  if (!Array.isArray(alternatives)) return [];
+  const first: unknown = alternatives[0];
+  if (!isRecord(first)) return [];
+  const words = first.words;
+  if (!Array.isArray(words)) return [];
+
+  const result: FinalWord[] = [];
+  for (const entry of words) {
+    if (!isRecord(entry)) continue;
+    const punctuated = entry.punctuated_word;
+    const raw = entry.word;
+    const word = typeof punctuated === "string" ? punctuated : typeof raw === "string" ? raw : null;
+    if (word === null) continue;
+    const confidence = typeof entry.confidence === "number" ? entry.confidence : undefined;
+    result.push(confidence === undefined ? { word } : { word, confidence });
+  }
+  return result;
+}
+
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
   let binary = "";
@@ -71,7 +127,7 @@ export function startVoxtralConnection(callbacks: ServiceCallbacks): ConnectionH
         const delta = msg.delta ?? msg.text ?? "";
         if (delta) {
           accumulated += delta;
-          callbacks.onTextUpdate(accumulated, "");
+          callbacks.onTextUpdate({ finalText: accumulated, interimText: "" });
         }
       } else if (msg.type === "transcription.done") {
         const text = typeof msg.text === "string" && msg.text ? msg.text : accumulated;
@@ -125,6 +181,7 @@ export async function startDeepgramConnection(callbacks: ServiceCallbacks): Prom
   const wsUrl = `wss://api.deepgram.com/v1/listen?${params.toString()}`;
   const ws = new WebSocket(wsUrl, ["token", tempKey]);
   let accumulatedFinal = "";
+  let accumulatedWords: FinalWord[] = [];
 
   // Keep the socket alive across silent gaps; self-clears once the socket is
   // closing/closed so a discarded (reconnect) or finished socket leaves no
@@ -144,16 +201,20 @@ export async function startDeepgramConnection(callbacks: ServiceCallbacks): Prom
         const transcript: string = msg.channel?.alternatives?.[0]?.transcript ?? "";
         const isFinal: boolean = !!msg.is_final;
         if (isFinal) {
+          // Words are appended in lockstep with accumulatedFinal — both only
+          // change on the same non-empty-transcript branch — so the two
+          // stay aligned for the reconnect merge in transcription-actor.ts.
           if (transcript.trim()) {
             accumulatedFinal = (accumulatedFinal + " " + transcript).trim();
+            accumulatedWords = accumulatedWords.concat(extractFinalWords(msg));
           }
-          callbacks.onTextUpdate(accumulatedFinal, "");
+          callbacks.onTextUpdate({ finalText: accumulatedFinal, interimText: "", finalWords: accumulatedWords });
         } else {
-          callbacks.onTextUpdate(accumulatedFinal, transcript);
+          callbacks.onTextUpdate({ finalText: accumulatedFinal, interimText: transcript, finalWords: accumulatedWords });
         }
       } else if (msg.type === "UtteranceEnd") {
         // Drop any stray interim
-        callbacks.onTextUpdate(accumulatedFinal, "");
+        callbacks.onTextUpdate({ finalText: accumulatedFinal, interimText: "", finalWords: accumulatedWords });
       } else if (msg.type === "Metadata") {
         // Sent at session end — ignore here, onclose drives done
       } else if (msg.type === "Error" || msg.type === "error") {
@@ -169,6 +230,7 @@ export async function startDeepgramConnection(callbacks: ServiceCallbacks): Prom
   // CloseStream — wire it via the actor's onclose handler below by stashing
   // the accumulated-text accessor beside the socket (see finalTextAccessors).
   finalTextAccessors.set(ws, () => accumulatedFinal);
+  finalWordsAccessors.set(ws, () => accumulatedWords);
 
   return {
     ws,
@@ -250,12 +312,12 @@ export async function startOpenAIRealtimeConnection(callbacks: ServiceCallbacks)
         const delta: string = msg.delta ?? "";
         if (delta) {
           accumulatedFinal = accumulatedFinal + delta;
-          callbacks.onTextUpdate(accumulatedFinal, "");
+          callbacks.onTextUpdate({ finalText: accumulatedFinal, interimText: "" });
         }
       } else if (msg.type === "conversation.item.input_audio_transcription.completed") {
         // Deltas already streamed the full text into accumulatedFinal; the
         // completed event is just a segment marker. Nothing to append.
-        callbacks.onTextUpdate(accumulatedFinal, "");
+        callbacks.onTextUpdate({ finalText: accumulatedFinal, interimText: "" });
       } else if (msg.type === "conversation.item.input_audio_transcription.failed") {
         const errMsg = msg.error?.message || "Transcription failed";
         callbacks.onServerError(String(errMsg));

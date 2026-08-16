@@ -24,16 +24,13 @@
 import type { FastifyInstance } from "fastify";
 import { type ChatSession, type TaskEvent } from "../../core/chat/session/index.js";
 import { ChatSessionRegistry } from "../../core/chat/session/registry.js";
+import type { ChatBackend } from "../../services/claude-chat-types.js";
 import { getMostActive } from "../../core/chat/session/history.js";
 import { runBackfillIfNeeded } from "../../core/chat/session/backfill.js";
-import { backfillChatHusks } from "../../core/chat/husk.js";
+import { reconcileChatHusks } from "../../core/chat/husk.js";
 import type { EventBus } from "../../core/event-bus.js";
 import type { OpenAIAudioService } from "../../services/openai-audio.js";
-import {
-  ChatScheduleManager,
-  parseScheduleTags,
-  parseCancelScheduleTags,
-} from "../../core/chat/schedules.js";
+import { ChatScheduleManager, parseScheduleTags, parseCancelScheduleTags } from "../../core/chat/schedules.js";
 import { fireChatSchedule } from "./chat-schedule-fire.js";
 import { registerChatUploadRoutes } from "./chat-uploads.js";
 import type { ChatRoutesContext } from "./chat-context.js";
@@ -42,6 +39,7 @@ import { registerChatSendRoutes, loadProcessedMessageIds } from "./chat-send-rou
 import { registerChatAudioRoutes } from "./chat-audio-routes.js";
 import { registerChatLastAudioRoutes } from "./chat-last-audio-routes.js";
 import { registerChatScreenshotRoutes } from "./chat-screenshot-routes.js";
+import { chatModelFileForSession, DEFAULT_MODEL_FILE } from "../../core/chat/session/state.js";
 
 interface RegisterChatRoutesOptions {
   server: FastifyInstance;
@@ -55,37 +53,49 @@ interface RegisterChatRoutesOptions {
    * hold the test runner open.
    */
   prewarmChat?: boolean | undefined;
+  /** Backend for every session this box creates; production omits it. */
+  chatBackend?: ChatBackend | undefined;
 }
 
 /**
  * Register chat routes on the Fastify server.
  */
-export async function registerChatRoutes(
-  options: RegisterChatRoutesOptions
-): Promise<void> {
-  const { server, boxRoot, eventBus, openaiAudio, prewarmChat } = options;
+export async function registerChatRoutes(options: RegisterChatRoutesOptions): Promise<void> {
+  const { server, boxRoot, eventBus, openaiAudio, prewarmChat, chatBackend } = options;
 
   // File-upload endpoint for chat attachments (writes to <boxRoot>/tmp/).
   await registerChatUploadRoutes({ server, boxRoot });
 
-  // One-shot backfill of pre-existing chat sessions into the history file.
-  // Idempotent — returns early on subsequent boots.
-  void runBackfillIfNeeded(boxRoot).catch((e: unknown) => {
-    console.error("[chat] backfill failed:", e instanceof Error ? e.message : e);
+  // One-shot backfill of pre-existing chat sessions into the history file,
+  // then the husk reconcile that gives each of them a card. Husks are what the
+  // picker and the history dropdown enumerate, so the reconcile must run AFTER
+  // the history backfill — run concurrently it can read a history the backfill
+  // hasn't finished writing and leave those sessions card-less. Both stay off
+  // the boot critical path; the reconcile is idempotent and repeats each boot,
+  // so a session that misses this pass is picked up by the next one.
+  // See docs/plans/chat-husks.md.
+  const maintenance = runBackfillIfNeeded(boxRoot).then(() => reconcileChatHusks(boxRoot)).catch((e: unknown) => {
+    console.error("[chat] session backfill failed:", e instanceof Error ? e.message : e);
   });
-
-  // One-shot husk-card backfill for pre-husk sessions (marker-gated; ghosts
-  // whose transcript is gone are skipped). See docs/plans/chat-husks.md.
-  void backfillChatHusks(boxRoot).catch((e: unknown) => {
-    console.error("[chat] husk backfill failed:", e instanceof Error ? e.message : e);
-  });
+  // Registration starts maintenance in the background, but shutdown still owns
+  // its lifetime. Tests and production teardown may remove the box immediately
+  // after Fastify closes; wait here so the task cannot write into a disappearing
+  // directory after `server.close()` has resolved.
+  server.addHook("onClose", () => maintenance);
 
   // Per-box registry of ChatSession instances, keyed by sessionId.
   // Turn on partial-message streaming so the per-turn SSE feed delivers
   // token-level text deltas to the frontend; the chat machine and the
   // speech queue pick them up live.
   const registry = new ChatSessionRegistry(boxRoot, {
-    buildSessionOptions: () => ({ includePartialMessages: true }),
+    ...(chatBackend !== undefined ? { backend: chatBackend } : {}),
+    buildSessionOptions: (sessionId) => ({
+      includePartialMessages: true,
+      // A fresh session inherits the legacy default once (field tests use it),
+      // then promotes that value into its native session-specific file.
+      modelFile: sessionId === null ? DEFAULT_MODEL_FILE : chatModelFileForSession(sessionId),
+      modelFileForSession: chatModelFileForSession,
+    }),
   });
   registry.startCleanup();
   if (prewarmChat === true) {
@@ -155,8 +165,7 @@ export async function registerChatRoutes(
   // (see chat-schedule-fire.ts); legacy entries without a session id fall back
   // to the most-active one.
   const scheduleManager = new ChatScheduleManager(boxRoot, {
-    onFire: ({ schedule }) =>
-      fireChatSchedule({ boxRoot, registry, eventBus, wireSession }, schedule),
+    onFire: ({ schedule }) => fireChatSchedule({ boxRoot, registry, eventBus, wireSession }, schedule),
   });
 
   // Shared context handed to each route module.
@@ -176,7 +185,12 @@ export async function registerChatRoutes(
 
   // Expose the live registry + schedule manager to the chat tRPC procedures
   // (session controls live in tRPC; see webapp/chat-runtime.ts).
-  setChatRuntime(boxRoot, { registry, scheduleManager, wireSession });
+  setChatRuntime(boxRoot, {
+    registry,
+    scheduleManager,
+    wireSession,
+    maintenance,
+  });
 
   server.get("/api/chat/default", async () => {
     const sessionId = await getMostActive(boxRoot);

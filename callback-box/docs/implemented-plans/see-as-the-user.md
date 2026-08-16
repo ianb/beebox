@@ -1,8 +1,10 @@
+---
+title: "See as the user — screenshots of the live box UI for the chat agent"
+status: implemented
+workstream: unknown
+issues: []
+---
 # See as the user — screenshots of the live box UI for the chat agent
-
-**Status:** implemented 2026-07 — both entry points (composer "Send
-screenshot" and agent-initiated `cb chat screenshot`) shipped; see
-`see-as-the-user.review.md` for the incorporated cross-model review.
 
 Give the chat agent a way to see what the user currently sees in the box UI —
 true rendered pixels, not a DOM reconstruction — in two entry points: a

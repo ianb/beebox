@@ -4,8 +4,9 @@
  */
 
 import { useEffect, useCallback, useRef, useMemo } from "react";
-import { useSSRMachine } from "./useSSRMachine";
+import { useMachine } from "@xstate/react";
 import { speechPlaybackMachine } from "../machines/speechPlaybackMachine";
+import type { SpeechSegmentState } from "../machines/speechPlaybackMachine";
 import { getTTSClient } from "../lib/audio/tts-client";
 import { logSpeechEvent } from "../lib/audio/speech-test-log";
 import type { SpeechSegment } from "../lib/audio/speech-parsing";
@@ -27,6 +28,10 @@ interface ReplayOptions {
 export interface SpeechPlayback {
   isPlaying: boolean;
   playingMessageId: string | null;
+  /** Message whose segment states should remain visible after a failure. */
+  statusMessageId: string | null;
+  /** Absolute segment index → generation/playback/failure progress. */
+  segmentStates: Record<number, SpeechSegmentState>;
   /** Absolute index of the segment currently playing, or null when idle. */
   playingSegmentIndex: number | null;
   /** Segments still queued, including the one currently playing. */
@@ -46,12 +51,13 @@ export interface SpeechPlaybackOptions {
 
 export function useSpeechPlayback(options?: SpeechPlaybackOptions): SpeechPlayback {
   const input = useMemo(() => ({ onComplete: options?.onComplete }), [options?.onComplete]);
-  const [snapshot, send] = useSSRMachine(speechPlaybackMachine, { input });
+  const [snapshot, send] = useMachine(speechPlaybackMachine, { input });
   const playedMessagesRef = useRef<Set<string>>(new Set());
   const ttsClient = getTTSClient();
 
   const isPlaying = snapshot.matches("playing");
   const { playingMessageId } = snapshot.context;
+  const { statusMessageId, segmentStates } = snapshot.context;
   const remainingCount = snapshot.context.queue.length;
   const head = snapshot.context.queue.at(0);
   const playingSegmentIndex = head !== undefined ? head.index : null;
@@ -109,7 +115,31 @@ export function useSpeechPlayback(options?: SpeechPlaybackOptions): SpeechPlayba
   // callbacks are already useCallback-stable; the scalars change only on actual
   // playback transitions.
   return useMemo(
-    () => ({ isPlaying, playingMessageId, playingSegmentIndex, remainingCount, playSegments, skip, replay, stop, markAsPlayed }),
-    [isPlaying, playingMessageId, playingSegmentIndex, remainingCount, playSegments, skip, replay, stop, markAsPlayed],
+    () => ({
+      isPlaying,
+      playingMessageId,
+      statusMessageId,
+      segmentStates,
+      playingSegmentIndex,
+      remainingCount,
+      playSegments,
+      skip,
+      replay,
+      stop,
+      markAsPlayed,
+    }),
+    [
+      isPlaying,
+      playingMessageId,
+      statusMessageId,
+      segmentStates,
+      playingSegmentIndex,
+      remainingCount,
+      playSegments,
+      skip,
+      replay,
+      stop,
+      markAsPlayed,
+    ],
   );
 }

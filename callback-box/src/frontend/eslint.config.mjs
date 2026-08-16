@@ -16,12 +16,6 @@ import { vibeCheck } from "@ianbicking/personal-vibe-check/eslint";
 // can't resolve; with this repo's broken frontend ts-resolver an alias import
 // would pass by accident, not design. The raw spellings are banned; the alias
 // spellings are legal, which is honest about intent.
-const XSTATE_USE_MACHINE = {
-  name: "@xstate/react",
-  importNames: ["useMachine"],
-  message:
-    "Import `useSSRMachine` from src/hooks/useSSRMachine.ts instead of `useMachine` from @xstate/react — the wrapper hydrates the machine snapshot from SSRStateContext so SSR is safe; a bare useMachine only works client-side.",
-};
 // Backend source directories that DO NOT exist as frontend subdirs, so any raw
 // relative path with the segment (at any climb-out depth) is an escape. The
 // alias `@core/…` etc. is a distinct segment (`@core` ≠ `core`) and stays legal.
@@ -56,30 +50,29 @@ const BOUNDARY_PATTERNS = [
     // The @core/@schemas/@backend aliases are TYPE-ONLY (deliberately unaliased
     // in vite.config.ts). Ban VALUE imports through them — `allowTypeImports`
     // keeps `import type …` legal. Without this, a value import through the
-    // alias passes lint AND resolves under tsx / `cb render` (both run with the
-    // frontend tsconfig, which honors these paths — verified 2026-07-12), so it
-    // would execute a backend graph in the SSR/doctest path even though the
-    // Vite client build rejects it. Needs @typescript-eslint/no-restricted-
+    // alias passes lint AND resolves under tsx (which runs with the frontend
+    // tsconfig, honoring these paths — verified 2026-07-12), so it would execute
+    // a backend graph in a tsx path even though the Vite client build rejects
+    // it. Needs @typescript-eslint/no-restricted-
     // imports (the base ESLint rule has no `allowTypeImports`).
     group: ["@core/**", "@schemas/**", "@backend/**"],
     allowTypeImports: true,
     message:
-      "@core/@schemas/@backend are TYPE-ONLY aliases (no Vite alias). Import only types (`import type …`). A value import executes under tsx/`cb render` and pulls backend source into that graph — relocate the value into src/shared/ and import via @shared.",
+      "@core/@schemas/@backend are TYPE-ONLY aliases (no Vite alias). Import only types (`import type …`). A value import executes under tsx and pulls backend source into that graph — relocate the value into src/shared/ and import via @shared.",
   },
 ];
 // src/shared/ is bundler-safe, so a raw `../shared/…` bundles nothing harmful —
 // but the convention is the @shared alias. Banned raw EXCEPT for modules that
 // run OUTSIDE Vite where @shared can't resolve: the tap/tsx DOCTEST runner uses
 // the ROOT tsconfig (no @shared path), and the view-widgets esbuild bundle
-// externalizes packages and can't resolve the alias. (`cb render` is NOT such a
-// context — it runs tsx with the frontend tsconfig, which resolves @shared.)
+// externalizes packages and can't resolve the alias.
 // Those files — proven by the 2026-07-12 probe — must import shared by raw
 // relative path and are exempted from THIS pattern below (they still carry the
 // core/webapp/… ban).
 const SHARED_ALIAS_PATTERN = {
   group: ["**/shared/**"],
   message:
-    "Import shared modules via the @shared/* alias, not a raw relative path. (Raw relative is reserved for the few modules that run outside Vite — doctests, `cb render`, the view-widgets bundle — where @shared can't resolve; those are exempted in eslint.config.mjs.)",
+    "Import shared modules via the @shared/* alias, not a raw relative path. (Raw relative is reserved for the few modules that run outside Vite — doctests and the view-widgets bundle — where @shared can't resolve; those are exempted in eslint.config.mjs.)",
 };
 // Modules exercised outside the Vite bundler that legitimately import src/shared/
 // by raw relative path (@shared unresolvable there — see SHARED_ALIAS_PATTERN).
@@ -101,40 +94,25 @@ const OUTSIDE_VITE_SHARED_RAW = [
   "src/lib/location-share.ts",
   "src/components/chat/native-emission.ts",
   "src/machines/chat-actors.ts",
+  // Loaded outside Vite by its own doctest (root tsconfig, no @shared
+  // resolution): imports @shared/todo-model by raw relative path.
+  "src/components/todo-view-card-logic.ts",
+  // Loaded outside Vite by its own doctest (root tsconfig, no @shared
+  // resolution): imports @shared/invariant by raw relative path.
+  "src/components/history/CommitDetail-diff.ts",
 ];
 
 export default [
   ...vibeCheck({ react: true }),
-  // Base import-boundary + useMachine ban: every frontend source file except
-  // src/ssr/** (quasi-backend `cb render` entry — exempt) and the wrapper
-  // itself. no-restricted-imports does NOT merge across flat configs (last
-  // match wins), so useMachine + the boundary patterns are declared together.
+  // Base import-boundary ban: every frontend source file. no-restricted-imports
+  // does NOT merge across flat configs (last match wins), so any later block
+  // that sets this rule must restate every pattern it still wants — see the
+  // outside-Vite block below, which drops SHARED_ALIAS_PATTERN deliberately.
   // Uses @typescript-eslint/no-restricted-imports (for `allowTypeImports` on the
   // alias-value ban); the base rule is turned off here so the two don't
   // double-report on these files.
   {
     files: ["src/**/*.{ts,tsx}"],
-    ignores: ["src/ssr/**", "src/hooks/useSSRMachine.ts"],
-    rules: {
-      "no-restricted-imports": "off",
-      "@typescript-eslint/no-restricted-imports": [
-        "error",
-        { paths: [XSTATE_USE_MACHINE], patterns: [...BOUNDARY_PATTERNS, SHARED_ALIAS_PATTERN] },
-      ],
-    },
-  },
-  // src/ssr/** — quasi-backend: keep the useMachine ban, drop the boundary ban.
-  {
-    files: ["src/ssr/**/*.{ts,tsx}"],
-    rules: {
-      "no-restricted-imports": "off",
-      "@typescript-eslint/no-restricted-imports": ["error", { paths: [XSTATE_USE_MACHINE] }],
-    },
-  },
-  // The useSSRMachine wrapper: boundary ban applies, useMachine allowed (it IS
-  // the sanctioned wrapper around useMachine).
-  {
-    files: ["src/hooks/useSSRMachine.ts"],
     rules: {
       "no-restricted-imports": "off",
       "@typescript-eslint/no-restricted-imports": [
@@ -149,10 +127,7 @@ export default [
     files: OUTSIDE_VITE_SHARED_RAW,
     rules: {
       "no-restricted-imports": "off",
-      "@typescript-eslint/no-restricted-imports": [
-        "error",
-        { paths: [XSTATE_USE_MACHINE], patterns: [...BOUNDARY_PATTERNS] },
-      ],
+      "@typescript-eslint/no-restricted-imports": ["error", { patterns: [...BOUNDARY_PATTERNS] }],
     },
   },
   {

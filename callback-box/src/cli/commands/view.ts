@@ -100,7 +100,7 @@ function buildProps(opts: {
   };
 }
 
-/** Strip <script>/<style> from rendered HTML (mirrors `cb render`); --raw keeps them. */
+/** Strip <script>/<style> from rendered HTML; --raw keeps them. */
 function postProcess(html: string, { raw }: { raw: boolean }): string {
   if (raw) return html;
   const $ = cheerioLoad(html);

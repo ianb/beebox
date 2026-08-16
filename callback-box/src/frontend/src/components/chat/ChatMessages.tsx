@@ -3,8 +3,6 @@
  */
 
 import { useMemo } from "react";
-import { Grid } from "ldrs/react";
-import "ldrs/react/Grid.css";
 import { Pre } from "../ui/Pre";
 import type { SessionEntry } from "../../api";
 import { hasAssistantSpeech, parseAllSpeechTags, splitSpeechParts, type SpeechSegment } from "../../lib/audio/speech-parsing";
@@ -15,6 +13,7 @@ import { CalloutStack } from "./CalloutBlock";
 import { ActivityGroup, ThinkingCornerMark } from "./activity-rendering";
 import { MarkdownContent, type OnZoomView } from "./markdown-rendering";
 import { countSpeech, groupIntoParts, type SelfNoteInfo } from "./message-parsing";
+import type { SpeechSegmentState } from "../../machines/speechPlaybackMachine";
 
 export interface ReplaySpeechOptions {
   messageId: string;
@@ -33,11 +32,13 @@ export function AssistantSpeechText({
   text,
   indexOffset,
   activeIndex,
+  segmentStates,
   onZoomView,
 }: {
   text: string;
   indexOffset: number;
   activeIndex: number | null;
+  segmentStates: Record<number, SpeechSegmentState>;
   onZoomView?: OnZoomView;
 }) {
   const parts = useMemo(() => splitSpeechParts(text), [text]);
@@ -50,7 +51,12 @@ export function AssistantSpeechText({
           <SpeechChunk
             key={i}
             name={part.segment.name}
-            active={activeIndex !== null && indexOffset + part.index === activeIndex}
+            state={
+              segmentStates[indexOffset + part.index]
+                ?? (activeIndex !== null && indexOffset + part.index === activeIndex
+                  ? "playing"
+                  : undefined)
+            }
           >
             <MarkdownContent text={part.segment.displayText} onZoomView={onZoomView} />
           </SpeechChunk>
@@ -65,6 +71,7 @@ export function AssistantMessage({
   debugView,
   speechPlaying,
   speechActiveIndex,
+  speechSegmentStates,
   anySpeechPlaying,
   speechCanSkip,
   onStopSpeech,
@@ -72,7 +79,6 @@ export function AssistantMessage({
   onReplaySpeech,
   onZoomView,
   proseEnabled,
-  isStreaming,
 }: {
   entries: SessionEntry[];
   debugView?: boolean;
@@ -80,6 +86,8 @@ export function AssistantMessage({
   speechPlaying?: boolean;
   /** Absolute index of the segment currently playing in this message, or null. */
   speechActiveIndex?: number | null;
+  /** Per-segment progress, including failures that remain after playback advances. */
+  speechSegmentStates?: Record<number, SpeechSegmentState>;
   /** Some speech (this message or another) is currently playing. */
   anySpeechPlaying?: boolean;
   /** A next segment exists in the currently-playing queue. */
@@ -90,8 +98,6 @@ export function AssistantMessage({
   onZoomView?: OnZoomView;
   /** When false, untagged prose hides; only callouts and acks render. Default true. */
   proseEnabled?: boolean;
-  /** This group is the live, still-streaming turn — show a cursor/working state. */
-  isStreaming?: boolean;
 }) {
   const grouped = groupIntoParts(entries);
   const allText = entries.flatMap((e) =>
@@ -110,6 +116,7 @@ export function AssistantMessage({
   const callouts = useMemo(() => parseCallouts(allText), [allText]);
   const showProse = proseEnabled !== false;
   const activeIndex = speechActiveIndex === undefined ? null : speechActiveIndex;
+  const segmentStates = speechSegmentStates ?? {};
 
   // Absolute speech-segment index at the start of each group, so a chunk's
   // highlight index stays correct even when tool activity splits the message
@@ -168,6 +175,7 @@ export function AssistantMessage({
                 text={group.text}
                 indexOffset={groupSpeechOffsets[i] ?? 0}
                 activeIndex={activeIndex}
+                segmentStates={segmentStates}
                 onZoomView={onZoomView}
               />
             )
@@ -176,13 +184,6 @@ export function AssistantMessage({
           )
         ) : null}
         {!debugView ? <CalloutStack callouts={callouts} onZoomView={onZoomView} /> : null}
-        {isStreaming ? (
-          // The "agent is working" progress animation, shown below the streamed
-          // content for the whole turn (matches the pre-unification throbber).
-          <div className="flex flex-col items-center gap-2 my-6">
-            <Grid size={40} color="#D4845A" speed={1.5} />
-          </div>
-        ) : null}
       </div>
     </div>
   );

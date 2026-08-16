@@ -6,12 +6,13 @@
 
 import { useState, useEffect, useRef, useCallback, type Dispatch, type SetStateAction } from "react";
 import { ChunkedRecorder, type ChunkCallbackParams } from "../../lib/audio/recorder";
-import { loadDevicePrefs, saveResumeSessionId, clearResumeSessionId, type UploadState } from "./capture-api";
+import { loadDevicePrefs, saveResumeSessionId, type UploadState } from "./capture-api";
 import { useCaptureApi } from "./capture-api-context";
 import { useCaptureDevices } from "./useCaptureDevices";
 import { useCaptureUploads } from "./useCaptureUploads";
 import { useCaptureInputs } from "./useCaptureInputs";
 import { useCaptureCamera } from "./useCaptureCamera";
+import { useCaptureFinish } from "./useCaptureFinish";
 
 /**
  * Capture-mode recorder timeslice: 5s (vs the recorder's 20s default) shortens
@@ -56,7 +57,6 @@ export function useCaptureSession(opts: {
   const [recording, setRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [finalizing, setFinalizing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const isMobile = "ontouchstart" in window;
 
@@ -64,7 +64,7 @@ export function useCaptureSession(opts: {
   const uploads = useCaptureUploads();
   const { videoDevices, devicePrefs, refreshDevices, setVideoDevices, setAudioDevices } = devices;
   const { setPhotoStates, setFileStates, uploadPhoto, uploadFile, handleChunk } = uploads;
-  const { awaitPending, clearPendingAndFailed } = uploads;
+  const { awaitPending, abortPending, clearPendingAndFailed } = uploads;
 
   const camera = useCaptureCamera({
     videoDeviceId: devicePrefs.videoDeviceId, videoDevices, isMobile, setError, refreshDevices,
@@ -78,6 +78,27 @@ export function useCaptureSession(opts: {
   // Seeded from a resumed session's existing segment count so new recordings
   // don't reuse an on-disk segment index.
   const segmentCountRef = useRef<number>(resume ? resume.segmentCount : 0);
+
+  // Stops the recorder and awaits the final `dataavailable`, so the tail chunk
+  // is enqueued before anything waits on the upload queue.
+  const stopRecorder = useCallback(async () => {
+    if (recorderRef.current) {
+      await recorderRef.current.stopAsync();
+      recorderRef.current = null;
+    }
+    setRecording(false);
+  }, []);
+
+  const { finalizing, handleDone, handleCancel, skipPendingUploads } = useCaptureFinish({
+    sessionId, recording, stopRecorder,
+    readFailureSeq: uploads.readFailureSeq,
+    closeForSealing: uploads.closeForSealing,
+    reopenAfterSealing: uploads.reopenAfterSealing,
+    awaitPending, abortPending, clearPendingAndFailed,
+    stopCamera: camera.stopCamera,
+    finalizeCaptureSession, cancelCaptureSession,
+    setError, onExit,
+  });
 
   // Adopt (resume) or create the staging session on mount, then enumerate
   // devices. On resume, seed the upload-count arrays so new media numbers above
@@ -100,6 +121,9 @@ export function useCaptureSession(opts: {
   }, [recording]);
 
   const toggleRecording = useCallback(async () => {
+    // Gated here, not only on the button: the space/R shortcuts below call this
+    // directly, and a recorder started after Done would outlive the seal.
+    if (finalizing) return;
     if (recording) {
       // Await the final dataavailable so the tail chunk uploads before the
       // segment closes (a bare stop() would drop it — Track 5 loss window).
@@ -130,11 +154,11 @@ export function useCaptureSession(opts: {
         setError(`Microphone access failed: ${err instanceof Error ? err.message : "unknown"}`);
       }
     }
-  }, [recording, sessionId, handleChunk, refreshDevices]);
+  }, [recording, finalizing, sessionId, handleChunk, refreshDevices]);
 
   const photoTotal = uploads.counts.photoTotal;
   const takePhoto = useCallback(async () => {
-    if (!sessionId) return;
+    if (!sessionId || finalizing) return;
     if (!cameraOn) { await startCamera(); return; }
     triggerFlash();
     const { blob: blobPromise, source } = camera.takePhoto();
@@ -144,7 +168,7 @@ export function useCaptureSession(opts: {
     const startedAt = new Date().toISOString();
     setPhotoStates((prev) => [...prev, "uploading"]);
     uploadPhoto({ sessionId, index, blob, startedAt, source });
-  }, [sessionId, cameraOn, photoTotal, startCamera, triggerFlash, camera, uploadPhoto, setPhotoStates]);
+  }, [sessionId, finalizing, cameraOn, photoTotal, startCamera, triggerFlash, camera, uploadPhoto, setPhotoStates]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -165,43 +189,6 @@ export function useCaptureSession(opts: {
     if (sessionId) uploads.retryFailedUploads(sessionId);
   }, [sessionId, uploads]);
 
-  // Seal the staging session (fires background preparation → delivery) and exit
-  // capture mode. A server-derived pending bubble takes over from here.
-  const handleDone = useCallback(async () => {
-    if (!sessionId || finalizing) return;
-    setFinalizing(true);
-    try {
-      // Stop recorder and wait for the final dataavailable event to fire
-      if (recording && recorderRef.current) {
-        await recorderRef.current.stopAsync();
-        recorderRef.current = null;
-        setRecording(false);
-      }
-      await awaitPending();
-      await finalizeCaptureSession(sessionId);
-      clearResumeSessionId(); // sealed — no longer resumable
-      camera.stopCamera();
-      clearPendingAndFailed();
-      onExit();
-    } catch (err) { setError(`Finalize failed: ${err instanceof Error ? err.message : "unknown"}`); setFinalizing(false); }
-  }, [sessionId, finalizing, recording, awaitPending, finalizeCaptureSession, camera, clearPendingAndFailed, onExit]);
-
-  const handleCancel = useCallback(async () => {
-    // Await the tail chunk even on cancel: it may become a resumable session.
-    if (recording && recorderRef.current) { await recorderRef.current.stopAsync(); recorderRef.current = null; setRecording(false); }
-    clearPendingAndFailed();
-    camera.stopCamera();
-    if (sessionId) {
-      try {
-        await cancelCaptureSession(sessionId);
-        clearResumeSessionId(); // discarded — no longer resumable
-      } catch (err) {
-        console.error("Cancel failed:", err);
-      }
-    }
-    onExit();
-  }, [sessionId, recording, camera, cancelCaptureSession, clearPendingAndFailed, onExit]);
-
   return {
     state: { sessionId, recording, recordingTime, error, finalizing, showSettings },
     devices, uploads, inputs, camera,
@@ -209,7 +196,7 @@ export function useCaptureSession(opts: {
     actions: {
       setShowSettings, setError,
       toggleRecording, takePhoto,
-      retryFailedUploads, handleDone, handleCancel,
+      retryFailedUploads, skipPendingUploads, handleDone, handleCancel,
     },
   };
 }

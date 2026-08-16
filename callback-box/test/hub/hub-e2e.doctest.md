@@ -21,12 +21,19 @@ import * as path from "node:path";
 import * as os from "node:os";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { t as tap } from "tap";
 import { detectBoxTarget, scaffoldPackageRoot } from "../../src/core/box/package.js";
 import { initBox, installProcedures, installGuides, installSchedules, installPersonality } from "../../src/core/box/index.js";
 import { PACKAGE_ROOT } from "../../src/lib/package-root.js";
 import { signSession } from "../../src/webapp/auth.js";
 
 const execFileP = promisify(execFile);
+
+// This file builds the CLI and boots two real processes. Under parallel suite
+// load that setup can exceed the suite's default five-minute per-file timeout.
+tap.setTimeout(600_000);
+
+const STARTUP_TIMEOUT_MS = 120_000;
 
 // Auth is always-on now — there is no open-mode opt-out anymore, so the spawned
 // `cb hub` always enforces the wall. This e2e therefore authenticates for real:
@@ -56,14 +63,43 @@ function pidAlive(pid) {
   }
 }
 
-async function waitFor(check, { timeoutMs, intervalMs }) {
+async function waitFor(check, { timeoutMs, intervalMs, label }) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     const result = await check();
     if (result) return result;
     await new Promise((r) => setTimeout(r, intervalMs));
   }
-  throw new Error("waitFor: timed out");
+  // Name what was being awaited. A bare "timed out" is reported against the
+  // enclosing test's FIRST block (the CLI build, line 116) because every step
+  // below shares one test via `continue`, so without a label the diagnostic
+  // points at code that already succeeded.
+  throw new Error(`waitFor: timed out after ${timeoutMs}ms waiting for ${label}`);
+}
+
+/**
+ * Claim a currently-free loopback port for the hub.
+ *
+ * The hub otherwise falls back to `DEFAULT_HUB_PORT` (4310), and several
+ * worktree sessions run `pnpm test` concurrently on one machine as a matter of
+ * course — so two runs would fight over one port and the loser would hang for
+ * the full startup timeout. Nothing this test proves needs a well-known port.
+ *
+ * Binding then closing leaves a small window before the hub binds; that is
+ * acceptable only because the readiness wait below now fails immediately, with
+ * the hub's own output, when the hub exits instead of listening.
+ */
+async function pickFreePort() {
+  const net = await import("node:net");
+  return new Promise((resolve, reject) => {
+    const probe = net.createServer();
+    probe.once("error", reject);
+    probe.listen(0, "127.0.0.1", () => {
+      const address = probe.address();
+      const port = typeof address === "object" && address !== null ? address.port : 0;
+      probe.close(() => (port > 0 ? resolve(port) : reject(new Error("no ephemeral port available"))));
+    });
+  });
 }
 
 /** Same fixture recipe as test/cli/lib/init-v2.doctest.md's `fullInit`,
@@ -120,27 +156,44 @@ if (!frontendBuilt) {
 ```ts continue
 const fixture = await makeV2Fixture();
 const hubConfigPath = path.join(fixture.target, "..", `hub-e2e-config-${path.basename(fixture.target)}.json`);
+const requestedPort = await pickFreePort();
 await fs.writeFile(
   hubConfigPath,
-  JSON.stringify({ boxes: { fixture: { path: fixture.packageRoot } } }, null, 2)
+  JSON.stringify({ port: requestedPort, boxes: { fixture: { path: fixture.packageRoot } } }, null, 2)
 );
 
 const hubBin = path.join(PACKAGE_ROOT, "bin", "cb");
 const hubProcess = execFile(hubBin, ["hub", "--config", hubConfigPath], { cwd: PACKAGE_ROOT });
 let hubStdout = "";
+let hubStderr = "";
+let hubExited = null;
 hubProcess.stdout.on("data", (d) => (hubStdout += d.toString()));
+hubProcess.stderr.on("data", (d) => (hubStderr += d.toString()));
+hubProcess.on("exit", (code, signal) => (hubExited = `code=${code} signal=${signal}`));
 
 const hubPort = await waitFor(() => {
+  // A hub that cannot bind exits within milliseconds. Waiting out the full
+  // startup timeout for it teaches nothing and hides the cause: the hub's own
+  // stderr names the port conflict, and nothing surfaced it before.
+  if (hubExited !== null) {
+    throw new Error(
+      `hub exited before it listened (${hubExited})\n--- hub stdout ---\n${hubStdout}\n--- hub stderr ---\n${hubStderr}`,
+    );
+  }
   const m = /Hub running at http:\/\/127\.0\.0\.1:(\d+)/.exec(hubStdout);
   return m ? Number(m[1]) : null;
-}, { timeoutMs: 30000, intervalMs: 200 });
+}, { timeoutMs: STARTUP_TIMEOUT_MS, intervalMs: 200, label: "the hub to report its listening port" });
+
+// Also the assertion that `hub.json`'s `port` is honored at all.
+hubPort === requestedPort
+=> true
 
 const health = await waitFor(async () => {
   const res = await fetch(`http://127.0.0.1:${hubPort}/healthz`, diagAuth);
   const body = await res.json();
   const box = body.boxes.find((b) => b.slug === "fixture");
   return box && box.status === "running" ? box : null;
-}, { timeoutMs: 30000, intervalMs: 300 });
+}, { timeoutMs: STARTUP_TIMEOUT_MS, intervalMs: 300, label: "the fixture box to report status=running via /healthz" });
 
 health.status
 => running
@@ -191,8 +244,8 @@ proxiedBody.toLowerCase().includes("<!doctype html>")
 
 ```ts continue
 hubProcess.kill("SIGTERM");
-await waitFor(() => (pidAlive(hubProcess.pid) ? null : true), { timeoutMs: 5000, intervalMs: 100 });
-await waitFor(() => (pidAlive(childPid) ? null : true), { timeoutMs: 5000, intervalMs: 100 });
+await waitFor(() => (pidAlive(hubProcess.pid) ? null : true), { timeoutMs: 5000, intervalMs: 100, label: "the hub process to exit after SIGTERM" });
+await waitFor(() => (pidAlive(childPid) ? null : true), { timeoutMs: 5000, intervalMs: 100, label: "the cb serve child to exit with its hub" });
 
 pidAlive(hubProcess.pid)
 => false
@@ -202,6 +255,19 @@ pidAlive(childPid)
 ```
 
 ```ts cleanup
+// The SIGTERM section above is an assertion, not a teardown: any failure before
+// it leaves this hub — and the `cb serve` grandchild it supervises — running and
+// holding the port. One such orphan sat on 4310 for 25 minutes on 2026-08-14 and
+// made every later run in every worktree look like a regression. SIGTERM first
+// so the hub stops its own child; SIGKILL only if it will not go.
+if (hubProcess.pid !== undefined && pidAlive(hubProcess.pid)) {
+  hubProcess.kill("SIGTERM");
+  await waitFor(() => (pidAlive(hubProcess.pid) ? null : true), {
+    timeoutMs: 5000,
+    intervalMs: 100,
+    label: "the hub to exit during cleanup",
+  }).catch(() => hubProcess.kill("SIGKILL"));
+}
 await fs.rm(fixture.target, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
 await fs.rm(hubConfigPath, { force: true });
 ```

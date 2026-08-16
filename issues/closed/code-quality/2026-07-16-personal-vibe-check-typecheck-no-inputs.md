@@ -1,5 +1,6 @@
 ---
 title: personal-vibe-check `typecheck` fails — tsconfig includes src/** but package has no src/
+workstream: unknown
 resolution: implemented
 ---
 

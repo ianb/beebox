@@ -1,5 +1,6 @@
 ---
 title: "Vector-bearing search index restores in seconds per search — wait for upstream, cache in-process, or restructure?"
+workstream: orama-semantic-search
 needs: [decision]
 area: callback-box
 filed-by: agent

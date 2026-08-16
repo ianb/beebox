@@ -16,6 +16,7 @@ import { createInitialGuideTemplate } from "../../schemas/guide.js";
 import { createScheduledScriptTemplate, ScheduledScriptSchema } from "../../schemas/scheduled-script.js";
 import { createInitialPersonalityTemplate } from "../../schemas/personality.js";
 import { createBriefingTemplate } from "../../schemas/briefing.js";
+import { createTodoViewTemplate } from "../../schemas/todo-view.js";
 import { createLandmarkTemplate, parseLandmarkFields } from "../../schemas/landmark.js";
 import { installTemplateFile, type InstallResult } from "../install-template-file.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
@@ -187,6 +188,25 @@ export async function installBriefing(boxRoot: string): Promise<boolean> {
   return result.outcome === "fresh";
 }
 
+/**
+ * Install the box-wide `todo-view` stock instance if missing
+ * (`docs/implemented-plans/todo-annotation.md` Track 4's "provisioned, not just
+ * templated" pin): `store/plate.todo-view.card`, explicit `glob: "**"` so
+ * it stays box-wide even though it doesn't live at the box root (an omitted
+ * `glob` would scope to `store/**` per `todos.list`'s directory-subtree
+ * resolution rule — this card wants the whole box).
+ *
+ * @returns Whether a new template was installed
+ */
+export async function installTodoView(boxRoot: string): Promise<boolean> {
+  const result = await installTemplateFile({
+    boxRoot,
+    relPath: "store/plate.todo-view.card",
+    templateContent: createTodoViewTemplate({ glob: "**", title: "The Plate" }),
+  });
+  return result.outcome === "fresh";
+}
+
 // ============================================
 // Default scheduled scripts
 // ============================================
@@ -201,7 +221,8 @@ interface DefaultSchedule {
   source: string;
   createAfterSuccess?: Array<{ path: string; args: Record<string, string> }>;
   lockGroup?: string;
-  enabled?: boolean;
+  /** Every seeded schedule declares its initial state; true is omitted from cards. */
+  enabled: boolean;
   requires?: string[];
 }
 
@@ -256,19 +277,28 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     cron: "0 7 * * 1",
     notBefore: "3d",
     onWakeup: false,
-    // Ships ENABLED for ALL boxes, deliberately. generateDocs() re-syncs
-    // templates on every reactor cycle and chat-session start, so this flips
-    // retro on for every box (overwriting unmodified disabled cards, installing
-    // it fresh-and-enabled where absent). It's a weekly no-op on boxes with no
-    // qualifying chat sessions — both the scan and integrate prechecks hit
-    // CHECK_SKIP and invoke no agent — and only edits belief cards (a reviewable
-    // Retro-Run commit) when there's real signal. medium is the inferred
-    // ceiling; user-stated beliefs, speaking-voice, and the briefing body are
-    // never direct-edited.
-    enabled: true,
+    // Seeded disabled: retrospective learning is opt-in because it can spend
+    // the boxholder's agent quota and edit belief cards.
+    enabled: false,
     lockGroup: "retro",
     runs: "cb procedure run process-retrospective",
     source: "Weekly Monday-morning sweep; enable per box once trialed",
+  },
+  {
+    name: "chat-review",
+    description:
+      "Nightly chat review: title and summarize chat sessions that have grown enough to be worth re-reading",
+    cron: "0 4 * * *",
+    notBefore: "20h",
+    onWakeup: false,
+    // Seeded disabled: chat review scans transcripts and writes generated
+    // prose to git-tracked cards, so it must be explicitly opted into.
+    enabled: false,
+    // Shares retro's group: both walk every transcript under ~/.claude, and
+    // there is no reason to have them do it concurrently.
+    lockGroup: "retro",
+    runs: "cb chat review run",
+    source: "Nightly sweep; opt in per box",
   },
 ];
 

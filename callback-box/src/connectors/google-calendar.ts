@@ -86,7 +86,7 @@ class GoogleCalendarConnector implements Connector {
     if (this.injectedService) return this.injectedService;
     const auth = await getGoogleAuth(this.boxRoot);
     if (!auth) return null;
-    return createGoogleCalendarService(createGoogleAuthService(auth));
+    return createGoogleCalendarService(createGoogleAuthService(auth, { boxRoot: this.boxRoot }));
   }
 
   private statePath(): string {

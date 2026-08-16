@@ -9,9 +9,10 @@
  *    one if none exists yet.
  *  - **New** — always starts a fresh session bound to the same directory.
  *
- * Mirrors the landmark page's ChatButton (LandmarkSection.tsx) but adds the
- * card-path resolver, the attached card, the "new" affordance, and — unlike
- * that precedent — a visible error state when the resolve/navigate fails.
+ * Mirrors the switch menu's resume-or-start action (`useOpenLandmarkChat`) but
+ * adds the card-path resolver, the attached card, the "new" affordance, and —
+ * unlike that precedent — a visible error state when the resolve/navigate
+ * fails.
  */
 
 import { useState } from "react";

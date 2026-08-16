@@ -27,7 +27,9 @@ Keep entries short. One paragraph max. Link to deeper docs rather than restating
 
 **asset** — The subset of attachments whose bytes live on disk only, not in git. Tracked via the asset manifest. Photos, PDFs, audio, video, gzipped data — anything in the gitignored extensions list. Every asset is an attachment; not every attachment is an asset.
 
-**asset manifest** — `manifest.json` inside each `.attach/` directory recording every asset's size, mtime, and sha256. Commits to git; the assets themselves don't. Kept in sync by the pre-commit hook. See `docs/asset-manifests.md`.
+**asset** — a photo, scan, audio, or video file inside a `.attach/` directory, tracked by git-annex: git records a small pointer, git-annex holds the bytes keyed by SHA-256. See `docs/assets.md`.
+
+**asset manifest** — the *superseded* mechanism: a `manifest.json` in each `.attach/` directory recording every asset's size, mtime, and sha256, with the assets themselves gitignored. Still on disk in any box not yet migrated with `cb attachments to-annex`. See `docs/implemented-plans/asset-manifests.md`.
 
 ## System concepts
 

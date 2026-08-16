@@ -1,9 +1,33 @@
 /**
- * General agent behavior: the role of git history, and a guide to choosing
- * where to record discovered information.
+ * General agent behavior: how to speak to the user, the role of git history,
+ * and a guide to choosing where to record discovered information.
  */
 
 import { SECTION, xref } from "./sections.js";
+
+export function speakingToUserSection(): string {
+  return `## Speak the User's Language
+
+The vocabulary in this guide — box, card, ref, landmark, view, triage, wakeup,
+"the boxholder" — is for operating the system, not for conversation. To the
+user these are implementation details; a reply built from them reads like a
+waiter reciting the kitchen's ticket codes.
+
+When you talk to the user — in chat, in a question card, in a todo you write
+for them, in anything a user-facing surface renders:
+
+- **Call their things what they call them.** They saved a recipe: say "your
+  recipe," not "the recipe card" and never \`Lemon_Chicken.recipe.card\`.
+  Filenames and paths go inside links with a human title as the text
+  (\`[your lemon chicken recipe](/store/recipes/…)\`) — never as the noun of
+  a sentence.
+- **Address the user as "you."** "Boxholder" is this guide's word *about*
+  them; never say it to them, and never refer to them in the third person.
+- **Introduce a system term only when they need it to act**, and explain it in
+  the same breath the first time: "I put it on your Landmarks page — the
+  quick-jump list in the sidebar."
+`;
+}
 
 export function gitHistorySection(): string {
   return `## Git History
@@ -61,7 +85,7 @@ Where each kind of thing goes:
   situational context, the box's purpose, or facts about people (those are the
   briefing).
 
-**Retrospective-inferred beliefs.** The weekly \`process-retrospective\` mines past
+**Retrospective-inferred beliefs.** When enabled, the weekly \`process-retrospective\` mines past
 chat sessions and writes what it learned into personality/guide cards as
 \`source: inferred\` entries — treat those as the agent's own working hypotheses:
 don't promote them past \`medium\`, and don't use them to contradict a

@@ -6,18 +6,35 @@ stage as raw files; audio chunks group under their recording segment. The
 lifecycle is `open → sealed → …` and a cancel tears the directory down.
 
 ```ts setup
+import { Readable } from "node:stream";
 import {
   createStagingSession,
   readStagingSession,
   addAudioChunk,
   addPhoto,
   addFile,
+  registerBulkItems,
   setStagingState,
   sealStagingSession,
-  cleanupStagingSession,
   stagingSessionIsEmpty,
 } from "../../../src/core/capture/staging-store.js";
+import { cleanupStagingSession } from "../../../src/core/capture/staging-teardown.js";
+import { addFileStreamed } from "../../../src/core/capture/staging-stream.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+
+async function streamOrThrow(boxRoot, opts) {
+  try {
+    await addFileStreamed({
+      boxRoot, id: opts.id, filename: opts.filename,
+      uploadedAt: "2026-07-27T14:00:00.000Z", originalName: opts.filename,
+      mimeType: "application/octet-stream", itemId: opts.itemId,
+      source: Readable.from([Buffer.from(opts.bytes ?? "DATA")]),
+    });
+    return "ok";
+  } catch (error) {
+    return error.name;
+  }
+}
 ```
 
 ## Create → upload segments → seal lifecycle
@@ -230,17 +247,266 @@ await setStagingState({ boxRoot: box.root, id: session.id, state: "delivering" }
 => true
 ```
 
+The uploader's failed-item report rides in the SAME atomic seal write — a fresh
+session seals to `sealed` and records `failedItems` in one mutation (no window
+where a sealed batch lacks its failed list):
+
+```ts continue
+const withFailed = await createStagingSession({
+  boxRoot: box.root, targetSessionId: null, createdBy: null, kind: "bulk",
+  contextDir: "", expectedItems: [{ id: "a", name: "a.bin" }],
+});
+await sealStagingSession({ boxRoot: box.root, id: withFailed.id, failedItems: [{ id: "a", name: "a.bin", reason: "timed out" }] });
+const sealedWithFailed = await readStagingSession({ boxRoot: box.root, id: withFailed.id });
+JSON.stringify({ state: sealedWithFailed.state, failed: sealedWithFailed.failedItems })
+=> {"state":"sealed","failed":[{"id":"a","name":"a.bin","reason":"timed out"}]}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## The seal is a barrier: a commit racing finalize is rejected, temp file cleaned
+
+A streamed upload re-checks the session state AND item registration *under the
+lock* at commit time. A finalize that sealed the session between the route's
+pre-lock check and the commit can't slip bytes into a sealed batch — the commit
+throws, no file is added, and the streaming temp file is cleaned up (no
+`.upload-tmp-*` leak):
+
+```ts
+const box = await makeTmpBox();
+const session = await createStagingSession({
+  boxRoot: box.root, targetSessionId: "chat-1", createdBy: null, kind: "bulk",
+  contextDir: "", expectedItems: [{ id: "a", name: "x.bin" }],
+});
+
+// Seal (as a concurrent finalize would), then attempt the commit.
+await setStagingState({ boxRoot: box.root, id: session.id, state: "sealed" });
+const sealedResult = await streamOrThrow(box.root, { id: session.id, filename: "s-a.bin", itemId: "a" });
+const after = await readStagingSession({ boxRoot: box.root, id: session.id });
+const dirFiles = await box.list(`tmp/capture-staging/${session.id}`);
+const landed = dirFiles.includes(`tmp/capture-staging/${session.id}/s-a.bin`);
+const tmpLeak = dirFiles.includes(".upload-tmp-");
+JSON.stringify({ sealedResult, files: after.files.length, landed, tmpLeak })
+=> {"sealedResult":"StagingSessionNotOpenError","files":0,"landed":false,"tmpLeak":false}
+```
+
+An unregistered `itemId` is likewise rejected under the lock (registration is
+the record of what may arrive):
+
+```ts continue
+const openBox = await createStagingSession({
+  boxRoot: box.root, targetSessionId: "chat-1", createdBy: null, kind: "bulk",
+  contextDir: "", expectedItems: [{ id: "a", name: "x.bin" }],
+});
+const ghostResult = await streamOrThrow(box.root, { id: openBox.id, filename: "s-g.bin", itemId: "ghost" });
+ghostResult
+=> StagingItemNotRegisteredError
+```
+
+Registration itself is frozen by the seal — appending an item to a sealed
+session throws rather than mutating the frozen registry:
+
+```ts continue
+let registerResult = "ok";
+try {
+  await registerBulkItems({ boxRoot: box.root, id: session.id, items: [{ id: "late", name: "late.bin" }] });
+} catch (error) {
+  registerResult = error.name;
+}
+const registerOutcome = registerResult;
+registerOutcome
+=> StagingSessionNotOpenError
+```
+
 ```ts cleanup
 await box.cleanup();
 ```
 
 ## Reading an unknown session returns null
 
+Missing (ENOENT) is a silently-absent session — no quarantine, no log:
+
 ```ts
 const box = await makeTmpBox();
 const missing = await readStagingSession({ boxRoot: box.root, id: "does-not-exist" });
 missing
 => null
+
+(await box.list("tmp/capture-staging").catch(() => "")).includes(".corrupt")
+=> false
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## `session.json` is written atomically (temp-file + rename)
+
+A write never leaves a bare `session.json.tmp-*` file behind — only the
+final `session.json`, holding valid JSON that reads back as the same session:
+
+```ts
+const box = await makeTmpBox();
+const session = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1", createdBy: null });
+const entries = await box.list(`tmp/capture-staging/${session.id}`);
+JSON.stringify({
+  onlyFinalManifest: entries === `tmp/capture-staging/${session.id}/session.json`,
+  noLeftoverTmp: !entries.includes(".tmp-"),
+})
+=> {"onlyFinalManifest":true,"noLeftoverTmp":true}
+
+const reread = await readStagingSession({ boxRoot: box.root, id: session.id });
+reread.id === session.id
+=> true
+
+reread.targetSessionId
+=> chat-1
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A corrupt manifest is quarantined, logged, and read as null
+
+Invalid JSON in `session.json` is not indistinguishable from an absent
+session: the read logs a `console.error`, renames the bad file to
+`session.json.corrupt` (preserving it for inspection), and returns `null`
+rather than silently stranding the staged bytes next to it:
+
+```ts
+const box = await makeTmpBox();
+const session = await createStagingSession({ boxRoot: box.root, targetSessionId: null, createdBy: null });
+await box.write(`tmp/capture-staging/${session.id}/session.json`, "{ not valid json");
+const errors: string[] = [];
+const originalError = console.error;
+console.error = (...args: unknown[]) => { errors.push(args.join(" ")); };
+const result = await readStagingSession({ boxRoot: box.root, id: session.id });
+console.error = originalError;
+result
+=> null
+
+errors.length
+=> 1
+
+errors[0].includes(session.id)
+=> true
+
+const fileLines = (await box.list(`tmp/capture-staging/${session.id}`)).split("\n");
+JSON.stringify({
+  corruptExists: fileLines.includes(`tmp/capture-staging/${session.id}/session.json.corrupt`),
+  originalExists: fileLines.includes(`tmp/capture-staging/${session.id}/session.json`),
+})
+=> {"corruptExists":true,"originalExists":false}
+```
+
+A schema-invalid manifest (valid JSON, wrong shape) quarantines the same way,
+and a repeated read against the already-quarantined session doesn't blow up
+on a missing file — it's ENOENT again, silent:
+
+```ts continue
+await box.write(`tmp/capture-staging/${session.id}/session.json.corrupt`, "");
+await box.write(`tmp/capture-staging/${session.id}/session.json`, JSON.stringify({ not: "a session" }));
+console.error = (...args: unknown[]) => { errors.push(args.join(" ")); };
+const schemaResult = await readStagingSession({ boxRoot: box.root, id: session.id });
+console.error = originalError;
+schemaResult
+=> null
+
+errors.length
+=> 2
+
+const filesAfter = await box.list(`tmp/capture-staging/${session.id}`);
+filesAfter.includes(`tmp/capture-staging/${session.id}/session.json.corrupt`)
+=> true
+
+const secondRead = await readStagingSession({ boxRoot: box.root, id: session.id });
+secondRead
+=> null
+
+errors.length
+=> 2
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A sealed session refuses new media
+
+The upload route checks `state === "open"` before it reads the request body, so a
+finalize can seal the session while the bytes are still arriving — and aborting
+the client's request cannot help, because the server may already hold the whole
+body. Without a barrier the media would append after preparation had already
+snapshotted the manifest, and then be discarded along with the staging directory.
+
+So the store re-asserts it under the lock. A sealed session rejects every kind of
+media add:
+
+```ts
+const box = await makeTmpBox();
+const session = await createStagingSession({
+  boxRoot: box.root, targetSessionId: "chat-1", createdBy: null,
+});
+await addPhoto({
+  boxRoot: box.root, id: session.id, filename: "photo-001.jpg",
+  capturedAt: "2026-07-29T12:00:00.000Z", source: "camera-user",
+  buffer: Buffer.from("BEFORE"),
+});
+const seal = await sealStagingSession({ boxRoot: box.root, id: session.id });
+[seal.sealed, seal.alreadySealed].join("/")
+=> true/false
+```
+
+```ts continue
+async function addOrFail(fn) {
+  try { await fn(); return "accepted"; } catch (error) { return error.name; }
+}
+
+const photo = await addOrFail(() => addPhoto({
+  boxRoot: box.root, id: session.id, filename: "photo-002.jpg",
+  capturedAt: "2026-07-29T12:00:01.000Z", source: "camera-user",
+  buffer: Buffer.from("LATE"),
+}));
+const audio = await addOrFail(() => addAudioChunk({
+  boxRoot: box.root, id: session.id, segmentId: "seg-1",
+  segmentStartedAt: "2026-07-29T12:00:00.000Z", filename: "audio-0-001.webm",
+  buffer: Buffer.from("LATE"),
+}));
+const file = await addOrFail(() => addFile({
+  boxRoot: box.root, id: session.id, filename: "file-001-notes.txt",
+  uploadedAt: "2026-07-29T12:00:02.000Z", originalName: "notes.txt",
+  mimeType: "text/plain", buffer: Buffer.from("LATE"),
+}));
+[photo, audio, file].join(",")
+=> StagingSessionNotOpenError,StagingSessionNotOpenError,StagingSessionNotOpenError
+```
+
+The manifest is untouched by the rejected adds — it still holds only the photo
+that landed while the session was open, and no stray bytes were written:
+
+```ts continue
+const after = await readStagingSession({ boxRoot: box.root, id: session.id });
+[after.photos.length, after.segments.length, after.files.length].join("/")
+=> 1/0/0
+```
+
+```ts continue
+const staged = await box.list(`tmp/capture-staging/${session.id}`);
+staged.includes("photo-002.jpg")
+=> false
+```
+
+Lifecycle transitions themselves still work on a sealed session — the barrier is
+specific to *media*, so preparation can keep moving the state forward:
+
+```ts continue
+await setStagingState({ boxRoot: box.root, id: session.id, state: "delivered" });
+const delivered = await readStagingSession({ boxRoot: box.root, id: session.id });
+delivered.state
+=> delivered
 ```
 
 ```ts cleanup

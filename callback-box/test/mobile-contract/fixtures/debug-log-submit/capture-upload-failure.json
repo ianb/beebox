@@ -1,0 +1,21 @@
+{
+  "variant": "submit",
+  "input": [
+    {
+      "level": "error",
+      "category": "capture",
+      "message": "upload failed permanently session=cap-3f2 item=9a1 attempt=4 bytes=1048576 status=500 kind=photo: The box is unavailable.",
+      "at": "2026-08-03T12:00:00.000Z"
+    }
+  ],
+  "expected": {
+    "source": "ios",
+    "entries": [
+      {
+        "level": "error",
+        "message": "capture: upload failed permanently session=cap-3f2 item=9a1 attempt=4 bytes=1048576 status=500 kind=photo: The box is unavailable.",
+        "at": "2026-08-03T12:00:00.000Z"
+      }
+    ]
+  }
+}

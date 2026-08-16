@@ -24,8 +24,14 @@ controller depends on:
   scroller's `clientHeight` without changing content height; a content-only
   observer silently drifts off the bottom.
 - User vs. programmatic scroll is told apart by recording the last `scrollTop`
-  the controller wrote (not `event.isTrusted`), and a scroll-up only disengages
-  when a real wheel/touch/key intent fired recently.
+  the controller wrote (not `event.isTrusted`), plus the in-flight smooth-scroll
+  target (the button's return animation frames are ours too). A scroll-up
+  disengages on recent wheel/touch/key intent, or — with no intent — when it
+  lands well above the bottom: scrollbar-thumb drags fire no input events, while
+  the layout clamps the intent gate ignores land at the bottom. While detached,
+  the reading anchor's offset is updated inside the scroll handler itself, so a
+  resize mid-fling measures only reflow — never the user's own scrolling (the
+  pure rules: `decideScroll`/`decideReconcile` in `scroll-reconcile.ts`).
 
 **After changing scroll code, run the manual procedure in
 `docs/chat-scroll-testing.md`** (drives the app via `bin/browse`; layout
@@ -40,6 +46,23 @@ is a *provisional* assistant group (built by `buildStreamEntry`, appended in
 `buildDataItems`) keyed by `liveTurnId` (chat-machine context, set on send), and
 `MessageList` keys the newest assistant group by that same `liveTurnId`. So
 finalize is an in-place props update, not a remount.
+
+The other half of "in place" is that `streamText` must survive until the
+authoritative history lands. `streamingShown` keeps the provisional bubble up
+through `refreshing` (the post-turn `fetchHistory` roundtrip), and `refreshing`'s
+`onDone` swaps messages in and clears the stream in ONE `assign`. **Invariant:
+no other transition may clear `streamText` while a turn is finalizing.** Both
+`streaming` and `refreshing` therefore ignore `REFRESH` — the backend broadcasts
+`chat-complete` the moment a turn ends and `InteractiveChat-ws.ts` turns that
+into a `REFRESH` that lands just after `STREAM_RESULT`. When `refreshing` lacked
+that guard, the global handler blanked `streamText` mid-flight: the bubble
+unmounted, the list collapsed to the user message for a full roundtrip, and the
+scroll controller rode the shrink up to the top of the turn (the "finalize jumps
+back to my message" bug, fixed 2026-07-29). The extra fetch bought nothing —
+`waitForTranscriptEntry` (`core/chat/session/transcript-sync.ts`) holds
+`result`/`done` until the turn is durable, so the in-flight read is already
+authoritative. Locked down in
+`test/frontend/chat-machine-finalize.doctest.md`.
 
 **Invariant: don't render the streaming turn as a separate bubble/component and
 swap in the finalized one** — that remount is the "shudder" this design removed

@@ -1,3 +1,9 @@
+---
+title: "Remove the cardworks package"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Remove the cardworks package
 
 Delete the `cardworks` package from the monorepo. All six card schemas are

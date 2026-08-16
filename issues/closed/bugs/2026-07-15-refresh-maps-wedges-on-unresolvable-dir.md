@@ -1,14 +1,16 @@
 ---
 title: "refresh-maps wedges permanently when a directory can't be resolved at the asOf ref"
+workstream: unknown
 filed-by: agent
 discovered-in: main session — investigating a test box's stuck refresh-maps health flag
 area: callback-box
+resolution: implemented
 ---
 
 `refresh-maps` can enter an **unrecoverable deadlock** when the box contains a
 directory that doesn't resolve at the map-state `asOf` commit. Observed on a box
 carrying migration-doubled subtrees (see
-[box-packageify doubled subtrees](../../bugs/2026-07-15-box-packageify-doubled-subtrees.md)),
+[box-packageify doubled subtrees](2026-07-15-box-packageify-doubled-subtrees.md)),
 but the failure mode is general — any directory present on disk but absent from
 git at the stored `asOf` triggers it.
 

@@ -22,6 +22,7 @@ import { boxEntryToArg, type ResolvedBoxEntry } from "./box-entry.js";
 import { createWriteStream } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { parseEnv } from "node:util";
 import type { Readable } from "node:stream";
 import type { PidStore, PidExpectation } from "./router-pidfile.js";
 import {
@@ -210,6 +211,42 @@ export interface RouterCore {
  * Fixed-size ring buffer capturing the tail of a child's interleaved
  * stdout+stderr, surfaced on the failed-startup page. `write` is byte-counted.
  */
+/**
+ * Read a checkout's `callback-box/.env` into a plain object.
+ *
+ * Deliberately does NOT mutate the router's own `process.env`: the router
+ * serves many checkouts, and one worktree's file must not leak into another's
+ * children (or into the router itself). `util.parseEnv` is Node's own dotenv
+ * parser, so this adds no dependency and follows the same syntax `--env-file`
+ * does.
+ *
+ * A missing file is the normal case (a checkout need not have one) and reads
+ * as empty. Any other read/parse failure is logged and treated as empty rather
+ * than failing the worktree start: dev config is an enhancement, and refusing
+ * to start the whole worktree over a malformed line would be a worse failure
+ * than running without it.
+ */
+export async function readEnvFile(
+  envPath: string,
+  log: (msg: string) => void,
+): Promise<NodeJS.Dict<string>> {
+  let text: string;
+  try {
+    text = await fs.readFile(envPath, "utf8");
+  } catch (e) {
+    if (errnoCode(e) !== "ENOENT") {
+      log(`[env] ignoring unreadable ${envPath}: ${errMessage(e)}`);
+    }
+    return {};
+  }
+  try {
+    return parseEnv(text);
+  } catch (e) {
+    log(`[env] ignoring unparseable ${envPath}: ${errMessage(e)}`);
+    return {};
+  }
+}
+
 function makeOutputRing(maxBytes: number): { write: (s: string) => void; read: () => string } {
   let buf = "";
   return {
@@ -349,6 +386,13 @@ export function createRouterCore(effects: RouterEffects, config: RouterCoreConfi
     // transitive deps (ajv@6, node-fetch 2) trigger on every node start.
     const nodeOptions = [process.env.NODE_OPTIONS, "--disable-warning=DEP0040"].filter(Boolean).join(" ");
     const childEnv: NodeJS.ProcessEnv = {
+      // This checkout's own `callback-box/.env` is local dev config for the
+      // processes we spawn (CB_BROWSE_API_KEY, …), not just the `BOXES=` line
+      // the router greps out of it elsewhere. A real exported variable wins
+      // over the file, so `FOO=x pnpm dev` still overrides — standard dotenv
+      // precedence. Worktrees get their copy from the WorktreeCreate hook;
+      // nothing here reaches into another checkout.
+      ...(await readEnvFile(path.join(wt.root, "callback-box", ".env"), config.log)),
       ...process.env,
       FRONTEND_PORT: String(frontendPort),
       BACKEND_PORT: String(backendPort),

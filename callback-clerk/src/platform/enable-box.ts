@@ -1,4 +1,4 @@
-import { addBox, removeBox, setActiveBox, type ClerkConfig, type EnabledBox } from "../domain/config.js";
+import { addBox, moveBox, removeBox, setActiveBox, type ClerkConfig, type EnabledBox } from "../domain/config.js";
 import { loadConfig, saveConfig } from "../platform/config-storage.js";
 import { syncRelayRegistration } from "../platform/relay-registration.js";
 
@@ -35,6 +35,13 @@ export async function disableBox(boxUrl: string): Promise<ClerkConfig> {
 
 export async function activateBox(boxUrl: string): Promise<ClerkConfig> {
   const config = setActiveBox(await loadConfig(), boxUrl);
+  await saveConfig(config);
+  return config;
+}
+
+/** Reorders the box list (popup edit mode). No relay change — same boxes. */
+export async function reorderBox(move: { boxUrl: string; delta: -1 | 1 }): Promise<ClerkConfig> {
+  const config = moveBox(await loadConfig(), move);
   await saveConfig(config);
   return config;
 }

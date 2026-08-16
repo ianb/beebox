@@ -70,13 +70,14 @@ src/frontend/     React UI (Vite, separate tsconfig)
   src/lib/            Helpers, grouped: audio/ (recorder, mic, tts, speech),
                       patmatch/ (lexer/compiler), selection/, trpc/; plus loose
                       helpers (cn, source-tag, view-url, ...)
-  src/ssr/            Server-side rendering setup for `cb render`
 src/schemas/      Card type definitions (Zod + `cardSchema` from src/cards/)
 src/services/     Service interfaces, real + fake implementations
 src/scenario/     Scenario loader/runner (multi-step end-to-end fixtures)
 src/dev/          Dev tools (knowledge audits, doc image generation)
 src/lib/          THE single home for generic cross-cutting helpers (no core/
-                  deps) — check here before writing your own. content-hash,
+                  deps) — check here before writing your own. atomic-write
+                  (writeFileAtomic — the crash-safe whole-file replace every
+                  small state/credential store uses), content-hash,
                   mimetype, filename, file-exists, public-url, awake-timeout,
                   sleep, git*/paths/box-shape/box-layout* (promoted from
                   cli/lib), time (getBoxTime), format (chalk), box-config.
@@ -109,11 +110,13 @@ There's no `src/test-lib/`. Doctest infrastructure is the monorepo-level `agent-
 - **HTTP endpoints go in tRPC by default.** Add a procedure under `src/webapp/trpc/routers/`, validate input with Zod, call from the frontend via `trpc.<router>.<procedure>`. Real-time/streaming also lives in tRPC now — **subscriptions over the WebSocket** (`useWSS` on the per-box plugin; `events.subscribe` is the global event-bus stream, `events.turnStream` the resumable per-turn chat stream; client routes subscriptions through `wsLink` via the `splitLink` in `lib/trpc.ts`). Raw Fastify routes in `src/webapp/routes/` are only for things that don't fit the tRPC request/response shape: file upload/download, OAuth redirects, webhooks, and the `/chat/send` POST (it needs the request's user + the session registry). Older raw routes are tech debt — migrate when you touch the area.
 - **Frontend uses UI primitives and a semantic palette.** Read frontend.md before writing UI — covers the primitive reference, color roles, and the `className`-only-for-outer-layout rule (enforced by `restrict-component-classes`).
 - **Git trailers are structured metadata.** Commits use trailers like `Created-By: connector-name`. Commits go through plain `git commit`; the per-box `.git/hooks/pre-commit` (installed by `cb init`) runs `cb validate --staged` and blocks invalid card commits.
+- **All box ref/path parsing and resolution goes through `src/shared/ref-path.ts`** (`parseRef` + `resolveRefPath`) — never hand-roll a `path.resolve`, a segment split, or a `#`/`?` strip on a ref. It owns the 3-form rule (leading `/` → box root; `attach/` → the card's own attach scope; else document-relative) and fails closed: a `..` that escapes the box root is `null` everywhere, never clamped.
 - **Time discipline.** Get timestamps via `getBoxTime`/`getBoxTimeISO` (`src/lib/time.ts`), not plain `new Date()` — it honors `CB_TIME`/scenario-frozen time for tests. Long-running timeouts must count only awake time via `startAwakeTimeout` (`src/lib/awake-timeout.ts`) — a plain `setTimeout` fires instantly on wake because its underlying clock advances during macOS sleep.
 - **All cross-process locks go through `src/lib/file-lock.ts`.** It is now implemented on top of `proper-lockfile` (atomic guard-dir `mkdir`, mtime-freshness stale/crash recovery) — but callers still go through `file-lock.ts`, never `proper-lockfile` directly, and never hand-built `.lock` files. In-process async serialization (e.g. a `Map<id, Promise>` chain — see `card-lock.ts`) is a different problem and stays separate.
-- **Check client debug logs when debugging frontend issues.** The browser forwards console errors to the server (now via the `debugLog.submit` tRPC mutation). Read them from the rolling file `.callback-box/client-debug.log` in the box directory. See `docs/client-debug-log.md`.
+- **Check client debug logs when debugging frontend or iOS issues.** Browser errors and native iOS diagnostics share the `debugLog.submit` sink. Read the rolling `.callback-box/client-debug.log` in the box directory; `[ios]` tags native entries. See `docs/client-debug-log.md`.
+- **Never change credentials to unblock yourself.** If you hit a login wall while testing, **ask the boxholder** — needing credentials you weren't given is a question for a human, not an obstacle to engineer around. The local credential store is `~/.cb-auth.json` (override `CB_AUTH_FILE`), and it is **global**: one file behind every local box on the machine, *not* per-box like the rest of a box's state, so "it's just a disposable worktree box clone" is not a reason it's safe. `cb auth set-password` also revokes the user's live sessions, and the old password survives only as a scrypt hash — the change cannot be undone. The mutating `cb auth` subcommands now refuse in an agent session unless passed `--agent-confirmed` (`src/lib/agent-context.ts`); that flag asserts *a human explicitly asked for this*, not *I decided it was fine*. Generalize it: before running any command that writes credentials, tokens, or keys, check what file it actually touches — and if a tool tells you it revoked, rotated, or invalidated something, stop and verify the scope instead of reading it as success. (This is written from a real incident, 2026-07-30.)
 - **Leave the repo clean when committing.** Fix any lint/type/test errors you encounter (even pre-existing ones) and make enough commits that nothing half-done is left lying around.
-- **Keep source and docs generic — never hardcode personal names.** This is a generic tool; any box can be adopted by any user. Refer to "the user" or "the boxholder" in shared text (source, prompts, schemas, docs, rules). Names are only fine in per-box config, throwaway replies, and personal memory. When an example genuinely needs named people, boxes, or places, draw from the canonical fictional roster in `docs/example-names.md` rather than inventing one (which risks using a real name).
+- **Keep source and docs generic — never hardcode personal names.** This is a generic tool; any box can be adopted by any user. Refer to "the user" or "the boxholder" in shared text (source, prompts, schemas, docs, rules). Names are only fine in per-box config, throwaway replies, personal memory, and **metadata fields where the name is the data** (`discovered-by:`, `reviewed-by:`, a commit author) — not in prose describing a role. If a sentence still reads correctly with "the boxholder" substituted in, it should have said that; naming the person there bakes one individual into text about a general relationship. When an example genuinely needs named people, boxes, or places, draw from the canonical fictional roster in `docs/example-names.md` rather than inventing one (which risks using a real name).
 
 ## Improving These Instructions
 
@@ -142,6 +145,7 @@ The same duty applies at creation time: **new infrastructure isn't done until it
 | Cross-platform mobile contract (iOS/Android ↔ box) | `docs/mobile-contract.md` |
 | Image orientation (EXIF) contract | `docs/image-orientation.md` |
 | Mobile parity matrix (iOS vs Android capabilities) | `docs/mobile-parity.md` |
+| Assets (git-annex) | `docs/assets.md` |
 | Card validation hooks | `docs/card-validation.md` |
 | Adding API endpoints | `docs/adding-api-endpoints.md` |
 | Connectors | `docs/connectors.md` |
@@ -150,6 +154,7 @@ The same duty applies at creation time: **new infrastructure isn't done until it
 | Deployed-server health-check runbooks | `docs/health-checks.md` |
 | Agent-set chat timers (`<schedule>` tag) | `docs/chat-schedules.md` |
 | Capturing full agent-invocation API traffic | `docs/prompt-logging.md` |
+| Prompt-surface review workflow | `docs/prompt-surface-review.md` (lens catalog: `docs/prompt-audits.md`) |
 | Triage pipeline design | `docs/triage.md` |
 | Questions subsystem design | `docs/questions.md` |
 | Deployment | `deploy/README.md` |
@@ -159,10 +164,10 @@ The same duty applies at creation time: **new infrastructure isn't done until it
 | Landmarks (navigation surface) | `docs/landmarks.md` |
 | Client debug log | `docs/client-debug-log.md` |
 | Chat session lifecycle | `docs/chat-session-lifecycle.md` |
+| Chat review (nightly titles + summaries) | `docs/chat-review.md` |
 | Content-Security-Policy | `docs/content-security-policy.md` |
 | Periodic maintenance | `docs/maintenance.md` |
 | Knowledge audits | `docs/knowledge-audits.md` |
-| SSR page rendering (`cb render`) | `docs/ssr-render-testing.md` |
 | Calendar integration | `docs/calendar.md` |
 | PDF intake design | `docs/plans/pdf-intake-design.md` |
 | Source editor plan | `docs/plans/source-editor.md` |

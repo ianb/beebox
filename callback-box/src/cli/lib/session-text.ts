@@ -45,6 +45,11 @@ export function stripSpeechWrappers(text: string): string {
   out = stripChatAppTags(out);
   // Unwrap outer <speech>/<typed> shells, keeping their text content
   out = out.replace(/<\/?(?:speech|typed)\b[^>]*>/g, "");
+  // Unwrap <unsure>word</unsure> low-confidence marks (Track 4,
+  // docs/plans/transcript-confidence.md) to the plain word — this reader
+  // (retro, chat review, --dialogue-only) wants clean human text, not the
+  // agent-facing marker.
+  out = out.replace(/<\/?unsure\b[^>]*>/g, "");
   return out;
 }
 

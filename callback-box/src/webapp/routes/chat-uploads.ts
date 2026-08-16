@@ -13,6 +13,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { FastifyInstance } from "fastify";
+import { ensureBoxTmpDir } from "../../lib/box-tmp.js";
 
 interface RegisterChatUploadRoutesOptions {
   server: FastifyInstance;
@@ -53,8 +54,7 @@ export async function registerChatUploadRoutes(
     }
 
     const buffer = await data.toBuffer();
-    const tmpDir = path.join(boxRoot, "tmp");
-    await fs.mkdir(tmpDir, { recursive: true });
+    const tmpDir = await ensureBoxTmpDir(boxRoot);
 
     const originalName = data.filename || "upload";
     const safeName = sanitizeFilename(originalName);

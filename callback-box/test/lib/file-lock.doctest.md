@@ -4,8 +4,8 @@ Machine-local cross-process file lock, implemented on `proper-lockfile`.
 Mutual exclusion is a single atomic `mkdir` of a guard directory
 (`<path>.guard`); a diagnostic sidecar file at `<path>` carries the holder's
 identity but never participates in the acquire decision. Stale/crashed holders
-are reclaimed via `proper-lockfile`'s mtime freshness (`stale` = 5 min), never
-by an unconditional unlink-by-path.
+are reclaimed via `proper-lockfile`'s mtime freshness — 5 min by default, 15 s
+for request-scoped locks — never by an unconditional unlink-by-path.
 
 ```ts setup
 import {
@@ -14,20 +14,44 @@ import {
   inspectLock,
   forceAcquireLock,
   scanLocks,
+  withFileLock,
+  requestScopedLock,
+  LOCK_STALE_MS,
   LockHeldError,
 } from "../../src/lib/file-lock.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { spawn } from "node:child_process";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import { join } from "node:path";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// The stale window in file-lock.ts is 5 min; "well past stale" backdates a
+// The default profile's stale window is 5 min; "well past stale" backdates a
 // guard dir's mtime beyond it to simulate a crashed holder.
-const STALE_MS = 5 * 60 * 1000;
 function backdatedPast() {
-  return new Date(Date.now() - STALE_MS - 60 * 1000);
+  return new Date(Date.now() - LOCK_STALE_MS.default - 60 * 1000);
+}
+
+const PACKAGE_ROOT = join(import.meta.dirname, "../..");
+const CHILD_SCRIPT = join(PACKAGE_ROOT, "test/helpers/file-lock-child.ts");
+
+// Spawn a real child process that takes `lockPath` (request profile) and holds
+// it, then SIGKILL it mid-hold — a genuine crashed holder, guard dir and all.
+async function crashedHolder(lockPath) {
+  const child = spawn(process.execPath, ["--import", "tsx", CHILD_SCRIPT, lockPath], {
+    cwd: PACKAGE_ROOT,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  let stderr = "";
+  child.stderr.on("data", (chunk) => { stderr += String(chunk); });
+  await new Promise((resolve, reject) => {
+    child.stdout.on("data", (chunk) => { if (String(chunk).includes("acquired")) resolve(); });
+    child.once("error", reject);
+    child.once("exit", (code) => reject(new Error(`child exited early (${code}): ${stderr}`)));
+  });
+  child.kill("SIGKILL");
+  await new Promise((resolve) => child.once("exit", resolve));
 }
 
 // Write a diagnostic sidecar as if another process had published it.
@@ -245,6 +269,91 @@ await releaseLock(path);
 await box.cleanup();
 ```
 
+## Stale profiles
+
+Request-scoped locks (mobile device store, local users, connector token
+stores, ...) declare the `request` profile via `requestScopedLock(path)`, which
+shortens the stale window from 5 min to 15 s so a crashed holder can't wedge an
+HTTP path for minutes. Locks passed as a plain path keep the default profile.
+
+### The profile constants
+
+A non-sleeping check on the real constants: the request profile must stay
+inside the stated post-crash recovery SLO (≤ 30 s), and the default profile
+stays at 5 min (sized for `cb tick`'s long-held script locks).
+
+```ts
+print(`request: ${LOCK_STALE_MS.request}`);
+print(`request within SLO: ${LOCK_STALE_MS.request > 0 && LOCK_STALE_MS.request <= 30_000}`);
+print(`default: ${LOCK_STALE_MS.default}`);
+=>
+request: 15000
+request within SLO: true
+default: 300000
+```
+
+### A SIGKILL'd request-scoped holder recovers within the request stale window
+
+A real child process takes the lock and is killed mid-hold, leaving its guard
+directory behind. Immediately afterwards the lock still reads as held — callers
+with a ~5 s retry budget fail *loud* rather than block, which is by design. Once
+the request stale window has elapsed the next acquirer reclaims it.
+
+Rather than sleeping 15 s, we backdate the dead holder's guard mtime to
+simulate that much time passing — and check the same instant through both
+profiles: the default profile (5 min) still sees a live holder, the request
+profile reclaims.
+
+```ts
+const box = await makeTmpBox();
+const lockPath = join(box.root, "devices.lock");
+await crashedHolder(lockPath);
+
+const justAfter = await acquireLock(requestScopedLock(lockPath), { who: "b" }).then(() => "acquired", (e) => e.name);
+print(`immediately after crash: ${justAfter}`);
+
+const aged = new Date(Date.now() - LOCK_STALE_MS.request - 1000);
+await fs.utimes(lockPath + ".guard", aged, aged);
+
+const asDefault = await acquireLock(lockPath, { who: "d" }).then(() => "acquired", (e) => e.name);
+print(`default profile at +16s: ${asDefault}`);
+const holder = await acquireLock(requestScopedLock(lockPath), { who: "recovered" });
+print(`request profile at +16s: ${holder.metadata.who}`);
+=>
+immediately after crash: LockHeldError
+default profile at +16s: LockHeldError
+request profile at +16s: recovered
+```
+
+```ts cleanup
+await releaseLock(lockPath);
+await box.cleanup();
+```
+
+### Diagnostics use the same profile as acquisition
+
+`inspectLock` must not disagree with `acquireLock` about staleness: at +16s the
+same dead holder reads as gone through the request profile and as live through
+the default one.
+
+```ts
+const box = await makeTmpBox();
+const lockPath = join(box.root, "devices.lock");
+await crashedHolder(lockPath);
+const aged = new Date(Date.now() - LOCK_STALE_MS.request - 1000);
+await fs.utimes(lockPath + ".guard", aged, aged);
+
+print(`request profile: ${await inspectLock(requestScopedLock(lockPath))}`);
+print(`default profile: ${(await inspectLock(lockPath)).metadata.purpose}`);
+=>
+request profile: null
+default profile: file-lock-doctest-child
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
 ### releaseLock never deletes a foreign holder's lock
 
 Releasing a path this process never acquired (no recorded release) is a no-op —
@@ -347,7 +456,7 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox();
-const map = await scanLocks(join(box.root, "nope"), ".lock");
+const map = await scanLocks(join(box.root, "nope"), { suffix: ".lock", profile: "default" });
 map.size
 => 0
 ```
@@ -365,7 +474,7 @@ await fs.mkdir(dir, { recursive: true });
 await acquireLock(join(dir, "alpha.lock"), { who: "a" });
 await acquireLock(join(dir, "beta.lock"), { who: "b" });
 
-const map = await scanLocks(dir, ".lock");
+const map = await scanLocks(dir, { suffix: ".lock", profile: "default" });
 print(`size: ${map.size}`);
 print(`alpha: ${map.get("alpha").metadata.who}`);
 print(`beta: ${map.get("beta").metadata.who}`);
@@ -400,7 +509,7 @@ const past = backdatedPast();
 await fs.utimes(deadPath + ".guard", past, past);
 await fs.writeFile(deadPath, foreignSidecar("ghost", 999999));
 
-const map = await scanLocks(dir, ".lock");
+const map = await scanLocks(dir, { suffix: ".lock", profile: "default" });
 const deadGuardGone = await fs.access(deadPath + ".guard").then(() => false).catch(() => true);
 const deadSidecarGone = await fs.access(deadPath).then(() => false).catch(() => true);
 print(`size: ${map.size}`);
@@ -428,12 +537,36 @@ await fs.mkdir(dir, { recursive: true });
 await acquireLock(join(dir, "real.lock"), {});
 await fs.writeFile(join(dir, "real.json"), `{"pid":${process.pid}}`);
 
-const map = await scanLocks(dir, ".lock");
+const map = await scanLocks(dir, { suffix: ".lock", profile: "default" });
 map.size
 => 1
 ```
 
 ```ts cleanup
 await releaseLock(join(dir, "real.lock"));
+await box.cleanup();
+```
+
+## withFileLock preserves a request-scoped target
+
+The blocking wrapper accepts the same profiled target as the lower-level lock
+operations, so short request-bound state updates retain their crash-recovery
+window.
+
+```ts
+const box = await makeTmpBox();
+const path = join(box.root, "request-state.lock");
+const result = await withFileLock(
+  { lockPath: requestScopedLock(path), metadata: { who: "wrapper" }, waitMs: 100 },
+  async () => (await inspectLock(requestScopedLock(path)))?.metadata.who,
+);
+print(result);
+print(await inspectLock(requestScopedLock(path)));
+=>
+wrapper
+null
+```
+
+```ts cleanup
 await box.cleanup();
 ```

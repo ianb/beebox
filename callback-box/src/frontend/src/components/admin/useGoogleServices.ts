@@ -10,6 +10,12 @@ import { trpcClient } from "../../lib/trpc";
 export interface GoogleStatus {
   available: boolean;
   hasTokens: boolean;
+  /**
+   * When Google rejected the stored authorization (expired or revoked), or null
+   * while it works. Tokens can be present AND dead, so this is what decides
+   * between "Connected" and "Needs re-authorization".
+   */
+  needsReauthSince: string | null;
   scopes: string[];
   enabledServices: Record<string, boolean>;
 }

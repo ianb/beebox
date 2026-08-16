@@ -239,13 +239,16 @@ JSON.stringify(await loadHistoryEntries(box3.root), null, 2)
 [
   {
     "id": "aaaa0000-0000-0000-0000-000000000001",
+    "engine": "claude",
     "contextDir": "store/bunker"
   },
   {
-    "id": "cccc0000-0000-0000-0000-000000000003"
+    "id": "cccc0000-0000-0000-0000-000000000003",
+    "engine": "claude"
   },
   {
     "id": "bbbb0000-0000-0000-0000-000000000002",
+    "engine": "claude",
     "contextDir": "store/bunker"
   }
 ]

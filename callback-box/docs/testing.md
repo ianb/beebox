@@ -196,9 +196,7 @@ await box.cleanup();
 
 ### Doctest limitations
 
-- **No `import type`** in setup blocks — the loader doesn't support it. Import value exports only.
-- **No `!.`** (non-null assertion) — use `?.` instead.
-- **No TypeScript type annotations** in test blocks — only in setup blocks.
+Doctest blocks are full TypeScript (compiled via esbuild's `ts` loader) — `import type`, non-null assertions, and type annotations all work, in setup and test blocks alike. The real limitations are structural: assertions compare serialized output (see the string-comparison rules in `.claude/rules/doctest.md`), and code blocks can't express trailing newlines.
 
 ## 2. Traditional TAP Tests
 
@@ -552,6 +550,46 @@ agent reviewing UI work, not pass/fail facts. Full reference —
 running, reviewing artifacts, writing conventions, and when NOT to use
 them: [tours.md](tours.md).
 
+## Field Tests (agent-operator, expensive, not a gate)
+
+**Location:** `src/field-test/`, scenarios in `field-tests/<scenario>/`
+**Run:** `cb field-test run <scenario>` (e.g. `cb field-test run onboarding-first-days`)
+
+A persistent Opus "operator" with a persona works through a scenario's
+checklist against a fresh, disposable box through the real web UI and real box
+agents — not scripted steps, but goals ("save this recipe photo"), so a
+feature that's possible but hidden reads as a finding rather than a pass. Real
+Opus, a real headless browser (`bin/browse`), and real agent processing make
+this the most expensive tier by design: it runs weekly or on demand, **never
+as a CI gate**. Design rationale, the run lifecycle, and the scenario format
+live in [`docs/implemented-plans/agent-field-tests.md`](implemented-plans/agent-field-tests.md).
+
+```bash
+cb field-test list                        # scenarios in the corpus
+cb field-test run onboarding-first-days    # a full run (expensive — real Opus)
+cb field-test report <run-dir>             # regenerate report.md from results.json
+```
+
+**Where results land:** `~/src/boxes/field-runs/<scenario>-<timestamp>/` —
+`results.json` (raw, machine-readable, written after every checklist item so a
+run that dies partway still leaves evidence), `report.md` (the rollup: a
+per-item table, findings from failed checks and harness events, and a harness
+event log), `questionnaires/<item-id>.md` (each debrief's answers, verbatim),
+`activities/<item-id>.md` (the operator's closing note per item), and
+`screenshots/<item-id>/`.
+
+**The "Visual flags (unvetted)" section of `report.md` is not vetted.** It is
+the operator's own free-text answer to "did anything look visually off,"
+shown as-is with screenshot links — the operator's visual judgment is
+explicitly not trusted, so every flag there needs a human to actually look at
+the screenshot before it means anything. Findings elsewhere in the report come
+only from structured signals — failed checks, harness events, and the
+questionnaire's own bookkeeping (unanswered questions, unresolved screenshot
+refs) — never from paraphrasing the operator's free-text prose.
+
+Findings are triaged by a human (or a triage agent) into `issues/` — a field
+run never auto-files.
+
 ## Choosing the Right Approach
 
 | Question | Approach |
@@ -564,6 +602,7 @@ them: [tours.md](tours.md).
 | Does the streaming UI scroll/reflow correctly? | Frontend dev stub (`/fakestream` + `bin/browse`) |
 | Does this page render sane at both viewports / pass axe? | Tour (`bin/tour <name>` — see [tours.md](tours.md); review instrument, not a gate) |
 | Is every state of this component reachable and right? | Dev harness route (`/dev/…`, real components over injected fakes) |
+| Is this realistically discoverable/usable end-to-end, through the real UI? | Field test (`cb field-test run <scenario>` — expensive, weekly/manual, never a gate) |
 
 **Overlap:** Some things could be tested at multiple levels. Prefer the lowest level that catches the bug:
 - A template generating bad XML → unit test (fast, deterministic)

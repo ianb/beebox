@@ -26,14 +26,22 @@ export interface TurnFrame {
   msg: ChatMessage;
 }
 
-/** Bounded ring size — enough for a long turn's deltas without unbounded memory. */
+/** Frame-count co-limit — enough for a long turn's small deltas. */
 const MAX_FRAMES = 4000;
+/**
+ * Serialized payload co-limit. Eight MiB preserves ordinary delta-heavy turns
+ * while bounding large tool inputs and images to a single-digit MiB per turn.
+ */
+const MAX_BYTES = 8 * 1024 * 1024;
 /** How long a finished turn stays resumable for a reconnecting client. */
 const FINISHED_TTL_MS = 60_000;
 
 export class TurnBuffer {
   readonly turnId: string;
   private frames: TurnFrame[] = [];
+  /** Serialized UTF-8 size for each frame at the matching array index. */
+  private frameBytes: number[] = [];
+  private bufferedBytes = 0;
   private seqCounter = 0;
   /** Highest seq dropped from the ring head; a resume at ≤ this has a gap. */
   private evictedThrough = 0;
@@ -56,8 +64,13 @@ export class TurnBuffer {
   push(msg: ChatMessage): void {
     this.seqCounter += 1;
     this.frames.push({ seq: this.seqCounter, msg });
-    if (this.frames.length > MAX_FRAMES) {
+    const bytes = Buffer.byteLength(JSON.stringify(msg), "utf8");
+    this.frameBytes.push(bytes);
+    this.bufferedBytes += bytes;
+    while (this.frames.length > MAX_FRAMES || this.bufferedBytes > MAX_BYTES) {
       const dropped = this.frames.shift();
+      const droppedBytes = this.frameBytes.shift();
+      if (droppedBytes !== undefined) this.bufferedBytes -= droppedBytes;
       if (dropped) this.evictedThrough = dropped.seq;
     }
     this.bump();

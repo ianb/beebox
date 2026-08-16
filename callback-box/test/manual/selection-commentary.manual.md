@@ -14,7 +14,7 @@ end-to-end through the actual UI.
 
 ## Setup
 
-1. `pnpm dev` (or `bin/worktrees serve`) and open the chat for the test box.
+1. `pnpm dev` (or `bin/workstreams serve`) and open the chat for the test box.
 2. Open a document in the companion pane (click a `[label](/store/…)` file link
    in a message). Use a Phase-2 card with frontmatter, headings, and several
    paragraphs.

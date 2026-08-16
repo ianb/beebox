@@ -112,3 +112,58 @@ pathA !== pathB
 ```ts cleanup
 await box.cleanup();
 ```
+## Concurrent appends to one source keep every item
+
+The find/read/append/write span is a read-modify-write of one card that two
+*processes* genuinely race: the scan promote worker appends a `scan` job from
+inside `cb serve` while a wakeup's connector sync appends its own. An unlocked
+append re-renders the whole card, so the loser's items would simply vanish.
+Serializing per source (cross-process file lock, plus the in-process card lock a
+PID-blind file lock cannot substitute for) is what keeps all eight here.
+
+```ts
+const box = await makeTmpBox();
+const paths = await Promise.all(
+  Array.from({ length: 8 }, (_, i) =>
+    createOrAppendIntakeJob({
+      boxRoot: box.root,
+      source: "scan",
+      items: [`box/inbox/scan-${String(i)}.capture-session.card`],
+      description: "Concurrent scan batch",
+    })
+  )
+);
+const card = await box.read(paths[0]);
+JSON.stringify({
+  jobs: new Set(paths).size,
+  items: card.split("\n").filter((line) => line.startsWith("  - ref:")).length,
+})
+=> {"jobs":1,"items":8}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Different sources don't wait on each other
+
+The lock is per source, so a `gmail` sync and a `scan` import proceed in
+parallel and neither lands in the other's job card.
+
+```ts
+const box = await makeTmpBox();
+const [scanJob, gmailJob] = await Promise.all([
+  createOrAppendIntakeJob({ boxRoot: box.root, source: "scan", items: ["box/inbox/a.memo.card"], description: "Scan" }),
+  createOrAppendIntakeJob({ boxRoot: box.root, source: "gmail", items: ["box/inbox/b.memo.card"], description: "Mail" }),
+]);
+JSON.stringify({
+  distinct: scanJob !== gmailJob,
+  scan: (await box.read(scanJob)).includes("ref: box/inbox/a.memo.card"),
+  gmail: (await box.read(gmailJob)).includes("ref: box/inbox/b.memo.card"),
+})
+=> {"distinct":true,"scan":true,"gmail":true}
+```
+
+```ts cleanup
+await box.cleanup();
+```

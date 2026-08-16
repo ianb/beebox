@@ -55,8 +55,11 @@ import { isPairingRedeemUrl } from "../webapp/routes/pairing.js";
 import { isApiUrl } from "../webapp/server-box-scope.js";
 import { listAccessibleBoxes } from "../webapp/server-root.js";
 import { canAccessBox } from "../webapp/box-access.js";
+import { HASHED_ASSET_CACHE_OPTIONS } from "../webapp/static-cache.js";
 import { loginRedirect, injectBasePrefix } from "../webapp/base-prefix.js";
 import { verifyMobileRequest } from "../core/mobile/request-auth.js";
+import { hasScanAuth } from "./scan-gate.js";
+import { verifyBrowseKey } from "../core/browse-key.js";
 import type { BoxSpec } from "../webapp/server-types.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import {
@@ -69,6 +72,7 @@ import {
 import { invariant } from "../lib/invariant.js";
 import type { HubVerdict } from "./hub-health.js";
 import { registerHealthRoutes } from "./hub-health-routes.js";
+import { registerHubErrorHandler } from "./hub-http-error.js";
 
 export interface HubHealth {
   /** Derived in `cli/commands/hub.ts` via `hubVerdict()` — `"unhealthy"`
@@ -149,6 +153,13 @@ async function hasMobileAuth(opts: {
   headers: http.IncomingHttpHeaders;
 }): Promise<boolean> {
   if (opts.boxRoot === undefined) return false;
+  // The local-dev browser key rides alongside the device credentials: same
+  // "this request carries per-box auth, let it through to the box" question,
+  // and the box's own wall verifies it again. Absent CB_BROWSE_API_KEY this
+  // is a constant false, so nothing changes where it isn't configured — that
+  // opt-in is the whole reason this gate may accept it at all. See
+  // core/browse-key.ts.
+  if (verifyBrowseKey(opts.headers)) return true;
   return verifyMobileRequest(opts.boxRoot, opts.headers);
 }
 
@@ -174,6 +185,14 @@ async function respondHubBoxes(opts: {
 }): Promise<{ boxes: Array<{ slug: string; name: string }>; authRequired?: boolean } | FastifyReply> {
   const { boxes, request, reply } = opts;
   if (request.server.openAccess) return { boxes: boxes.map((b) => ({ slug: b.slug, name: b.slug })) };
+  // The local-dev browse key is machine-level rather than per-box (one dev
+  // router fronts every box), so it lists them all. This gate is separate from
+  // the proxy gate on purpose, and the SPA depends on it: it resolves the box
+  // in the URL against this list, and an empty list renders "Box not found"
+  // even though every other request authenticates fine.
+  if (verifyBrowseKey(request.headers)) {
+    return { boxes: boxes.map((b) => ({ slug: b.slug, name: b.slug })) };
+  }
   const mobileBoxes = await listMobileAuthorizedBoxes({ boxes, headers: request.headers });
   if (mobileBoxes.length > 0) return { boxes: mobileBoxes };
   const identity = resolveRequestIdentity(request, { openAccess: request.server.openAccess });
@@ -292,6 +311,8 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   // per-instance flag instead of the environment. No CLI path sets it.
   app.decorate("openAccess", openAccess);
 
+  registerHubErrorHandler(app);
+
   // The hub's login routes (routes/auth.ts) read the session cookie via
   // @fastify/cookie's request decoration, same as a standalone box server.
   await app.register(fastifyCookie);
@@ -343,8 +364,22 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   // the "/*" proxy wildcard regardless of registration order. (frontendDist is
   // computed above, where the box picker also uses it.)
   if (fs.existsSync(path.join(frontendDist, "index.html"))) {
-    // assets first — its default decorateReply provides reply.sendFile below.
-    await app.register(fastifyStatic, { root: path.join(frontendDist, "assets"), prefix: "/assets/" });
+    // Decorator-only registration (`serve: false` adds no routes): it provides
+    // `reply.sendFile` for the manifest/sw.js handlers below, with DEFAULT cache
+    // options. The decorator is installed by the first registration and carries
+    // that registration's options, so this must come before the immutable
+    // `/assets/` mount — otherwise sw.js would inherit a year-long cache and
+    // strand browsers on a dead service worker.
+    await app.register(fastifyStatic, { root: frontendDist, serve: false });
+    // Everything under assets/ is content-hashed by Vite, so it gets the
+    // year-long immutable policy (see static-cache.ts); the icons/earcons/
+    // manifest/sw.js registrations below deliberately do NOT.
+    await app.register(fastifyStatic, {
+      root: path.join(frontendDist, "assets"),
+      prefix: "/assets/",
+      decorateReply: false,
+      ...HASHED_ASSET_CACHE_OPTIONS,
+    });
     for (const dir of ["icons", "earcons"]) {
       const root = path.join(frontendDist, dir);
       if (fs.existsSync(root)) await app.register(fastifyStatic, { root, prefix: `/${dir}/`, decorateReply: false });
@@ -460,16 +495,22 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     const slug = slugForPath(reqPath);
     const mobileAuthed = slug !== null
       && await hasMobileAuth({ boxRoot: boxRootBySlug.get(slug), headers: request.headers });
+    // A scan-upload bearer authorizes ONLY `/<slug>/api/scan/…` (see
+    // ./scan-gate.ts); on any other path this is false and the request falls
+    // through to the wall below, which 401s it.
+    const scanAuthed = slug !== null
+      && await hasScanAuth({ boxRoot: boxRootBySlug.get(slug), headers: request.headers, reqPath, slug });
+    const perBoxAuthed = mobileAuthed || scanAuthed;
 
     stripHubHeaders(request.raw.headers);
     const decision = decideHubAuth({ cookieHeader: request.headers.cookie, isWebhook, hubSecret, openAccess });
-    if (!isMobilePairingRedeem && !mobileAuthed && !decision.authorized) {
+    if (!isMobilePairingRedeem && !perBoxAuthed && !decision.authorized) {
       if (isApiUrl(reqPath)) {
         return reply.status(401).send({ error: "Not authenticated" });
       }
       return loginRedirect(request, reply);
     }
-    if (!isMobilePairingRedeem && !mobileAuthed) {
+    if (!isMobilePairingRedeem && !perBoxAuthed) {
       Object.assign(request.raw.headers, decision.headersToSet);
       // Tell the child which path prefix fronts it, so its own login-SPA asset
       // rewrite (Track A chunk 2) can rebuild absolute asset paths. The hub

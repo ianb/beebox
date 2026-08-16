@@ -10,12 +10,14 @@
 import { fmt } from "../../lib/format.js";
 import { buildTimezoneContext } from "../box/config.js";
 import { buildScriptEnv } from "../script-env.js";
-import { cardValidatorHook, gitMvNudgeHook } from "../sdk-hooks.js";
+import { gitMvNudgeHook } from "../sdk-hooks.js";
 import { resolveClaudeCodeBinary } from "../sdk-binary-path.js";
 import { startPromptLogger, type PromptLogger } from "./prompt-logger.js";
 import { consumeAgentStream, type RunStreamOutcome } from "./stream.js";
 import { checkClaudeAuth, ClaudeAuthError } from "./auth-preflight.js";
 import { dropUndefined } from "../../lib/drop-undefined.js";
+import { normalizeModelId } from "../../shared/model-ids.js";
+import { resolveHarnessPluginPath } from "./plugin-paths.js";
 import type { AgentResult, AgentResultBase } from "./types.js";
 
 export interface RunAgentOptions {
@@ -72,7 +74,7 @@ function buildQueryOptions(
     maxTurns,
     ...(binaryPath !== null && { pathToClaudeCodeExecutable: binaryPath }),
     ...(options.maxBudgetUsd !== undefined && { maxBudgetUsd: options.maxBudgetUsd }),
-    ...(options.model !== undefined && { model: options.model }),
+    ...(options.model !== undefined && { model: normalizeModelId(options.model) }),
     ...(options.resumeSessionId !== undefined && { resume: options.resumeSessionId }),
     // Create-with-id: only valid on a fresh session (the SDK rejects
     // `sessionId` combined with `resume` unless forking).
@@ -84,7 +86,12 @@ function buildQueryOptions(
     ...(options.additionalDirectories && options.additionalDirectories.length > 0 && {
       additionalDirectories: options.additionalDirectories,
     }),
-    hooks: { PreToolUse: [gitMvNudgeHook()], PostToolUse: [cardValidatorHook()] },
+    hooks: { PreToolUse: [gitMvNudgeHook()] },
+    plugins: [{
+      type: "local" as const,
+      path: resolveHarnessPluginPath("claude"),
+      skipMcpDiscovery: true,
+    }],
     // settingSources defaults to ["user", "project"] which auto-loads
     // CLAUDE.md, .claude/settings.json, .claude/rules/, etc.
     ...(appendedSystem !== "" && {

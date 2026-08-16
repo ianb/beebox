@@ -25,6 +25,8 @@ Agent and contributor build/test guidance lives in [`CLAUDE.md`](CLAUDE.md).
   and `SFSpeechRecognizer` remains the iOS 17–25 fallback. The first use of a
   locale may download its system-managed model. A recorded WAV is still kept in
   parallel for the box's HQ transcription and diarization pass at send time.
+- Native speech uses the web chat's earcon files, volumes, and timing for
+  recording start/stop/failure, send/wait feedback, and idle listening.
 
 Once Xcode is installed, open:
 
@@ -69,3 +71,13 @@ ios-app/scripts/capture-composer-fixtures booted /tmp/composer-fixtures
 
 The full state list and simulator/device verification boundary are documented
 in [`CLAUDE.md`](CLAUDE.md#native-testing-boundary).
+
+## Runtime Diagnostics
+
+Native failures and selected state transitions are regularly uploaded to the
+paired box's `.callback-box/client-debug.log`, alongside browser diagnostics.
+Entries tagged `[ios]` came from the native app; `[ios@<timestamp>]` records the
+device event time when an offline queue arrived later. See
+[`client-debug-log.md`](../callback-box/docs/client-debug-log.md) for log
+locations and interpretation. Contributor requirements for instrumenting new
+iOS features live in [`CLAUDE.md`](CLAUDE.md#runtime-diagnostics).

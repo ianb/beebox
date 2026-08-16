@@ -1,0 +1,17 @@
+{
+  "description": "Validate Callback Box files after Claude Code edits them.",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cb validate --hook",
+            "statusMessage": "Validating box files"
+          }
+        ]
+      }
+    ]
+  }
+}

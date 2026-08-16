@@ -10,6 +10,16 @@
  */
 
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+import type { AgentEngine } from "../core/box/config.js";
+import type { ChatMessage } from "../core/chat/message-types.js";
+
+/** A provider-normalized event emitted by a non-Claude chat backend. */
+export interface NativeChatBackendMessage {
+  provider: "codex";
+  message: ChatMessage;
+}
+
+export type ChatBackendMessage = SDKMessage | NativeChatBackendMessage;
 
 /** Content blocks accepted by `ChatBackendRun.send()`. */
 export type ChatContentBlock =
@@ -25,12 +35,16 @@ export type ChatContentBlock =
     };
 
 export interface ChatBackendStartOptions {
+  /** Native harness selected for this chat's complete lifetime. */
+  engine?: AgentEngine;
   /** Working directory for the underlying SDK subprocess. */
   cwd: string;
   /**
    * Extra directories the agent can read/write beyond `cwd`. Equivalent to
-   * the CLI's `--add-dir`. Landmark sessions set `cwd` to the landmark dir
-   * and add the box root here so the agent retains full box access.
+   * the Claude CLI's `--add-dir`. Landmark sessions set `cwd` to the landmark
+   * dir and add the box root here. Codex box turns run with full access because
+   * its narrower sandbox force-mounts `.git` read-only, so the field is
+   * intentionally redundant for that provider.
    */
   additionalDirectories?: string[] | undefined;
   /** Appended to the `claude_code` system-prompt preset. */
@@ -39,6 +53,15 @@ export interface ChatBackendStartOptions {
   resumeSessionId?: string | undefined;
   /** Pin to a specific model; omit for SDK default. */
   model?: string | undefined;
+  /**
+   * The built-in tools available to the session (the SDK's `tools` option).
+   * Omit for the SDK default (all of them). This is availability, not
+   * permission: `allowedTools` only pre-approves permission prompts, which
+   * `bypassPermissions` never raises, so it would not restrict anything. Box
+   * chat sessions leave this unset; the field-test operator sets it so its
+   * "browser only" boundary is enforced by the SDK, not only by instruction.
+   */
+  tools?: string[] | undefined;
   /**
    * If true, the SDK emits `stream_event` (`SDKPartialAssistantMessage`)
    * messages as the model streams its response. Off by default to keep
@@ -53,7 +76,7 @@ export interface ChatBackendRun {
   /** Push a user message into the running query. */
   send(content: ChatContentBlock[]): void;
   /** Async iterable of SDK message events. Iterate exactly once per run. */
-  messages: AsyncIterable<SDKMessage>;
+  messages: AsyncIterable<ChatBackendMessage>;
   /** Interrupt the in-progress turn, if any. */
   interrupt(): Promise<void>;
   /**

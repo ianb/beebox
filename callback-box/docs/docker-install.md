@@ -5,8 +5,9 @@ box locally as a developer install and, unchanged, on a cheap VPS as the cloud
 install. Everything lives in `callback-box/docker/`.
 
 The image bakes in the host requirements that make a from-source install
-fiddly: Node 24, the four system binaries the agent expects (`pandoc`,
-`imagemagick`/`magick`, `poppler-utils`, plus `git`/`git-lfs`), the native
+fiddly: Node 24, the system binaries the agent expects (`pandoc`,
+`imagemagick`/`magick`, `poppler-utils`, the Excel reader `python3-openpyxl` +
+`xlsx2csv`, plus `git`/`git-lfs`), the native
 Claude Code CLI, and the callback-box engine itself. You supply a box (a git
 repo you own, bind-mounted at `./data/box`) and a Claude login.
 
@@ -199,6 +200,16 @@ The box requires a login. Create the first (owner) account with
 URL the server prints to its log. This uses the built-in local password method —
 no external service. Credentials are scrypt-hashed in `~/.cb-auth.json` (mode
 0600) inside the box volume.
+
+Once that owner exists, use a box's Admin page to create a 15-minute,
+single-use member invite. It can be pinned to an email or left open for the
+recipient to enter one, and the recipient sets their own password. Signed-in
+local users can change their password from Settings. If a member forgets it,
+the owner can issue a reset link beside that member in Allowed Users; the member
+chooses the replacement and their existing sessions are revoked. Owner recovery
+still uses `cb auth set-password` in the container. Invites, resets, and credentials
+are global to this installation, while each accepted invite grants access only
+to the box that issued it.
 
 **Google OAuth (optional additional method).** To also allow Google sign-in
 (e.g. from more than one device), set a Google OAuth client:

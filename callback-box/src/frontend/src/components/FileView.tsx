@@ -25,8 +25,10 @@ import { useState, useCallback, useMemo, useRef } from "react";
 import { useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { trpc } from "../lib/trpc";
+import { displayName } from "../lib/display-name";
 import { getApiBase, withBase } from "../api";
 import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
+import { useDeferredResync } from "../hooks/useDeferredResync";
 import { getRenderers, type FileData, type FileRenderer } from "../renderers";
 import type { NavigateHint, ViewTarget } from "../lib/view-url";
 import type { ActivityKind } from "@core/chat/card-activity.js";
@@ -42,6 +44,8 @@ import { useCardViewBinding } from "../lib/view-bindings";
 import { ExternalIconLink } from "./ui/ExternalIconLink";
 import { OpenInPanelButton } from "./ui/OpenInPanelButton";
 import { StatusBadge } from "./ui/StatusBadge";
+import { CardActions } from "./card-actions/CardActions";
+import { MissingCardState } from "./card-actions/MissingCardState";
 
 export type FileViewMode = "page" | "chat" | "companion" | "embed";
 
@@ -50,6 +54,14 @@ interface FileViewProps {
   mode?: FileViewMode;
   /** Force a specific renderer by name (e.g. from a `?view=X` param). */
   rendererName?: string | null;
+  /**
+   * Optional. When provided, the renderer toggle reports the chosen name here
+   * instead of keeping it in local state — the host owns the choice and is
+   * expected to feed it back as `rendererName`. Browse passes this so the
+   * active renderer lives in the URL (`?view=`) and survives back/forward and
+   * a shared link. Absent elsewhere, where the toggle stays view-local.
+   */
+  onSelectRenderer?: (name: string) => void;
   /**
    * Required. Called when a link inside this view wants to open a different
    * file. The surrounding context decides what that means — pushing a URL,
@@ -85,6 +97,7 @@ interface FileViewProps {
    * an embedded image/figure card shows it like a normal captioned image.
    */
   caption?: string;
+  onClose?: () => void;
 }
 
 /* ---------- path classification ---------- */
@@ -161,6 +174,11 @@ function useFileData(path: string): LoadResult {
   // Skip the very first connect — the queries already load on mount, so a resync
   // there is a redundant refetch (and FileView is mounted many-at-once in chat).
   const connectedOnceRef = useRef(false);
+  // Reconnect-driven resync is per-instance (one per mounted FileView, i.e.
+  // per path), coalesced same-tick and deferred while the tab is hidden — a
+  // chat with many embedded files all reconnecting at once shouldn't each
+  // fire their own refetch, and a backgrounded tab shouldn't fetch at all.
+  const triggerResync = useDeferredResync(resync);
   useBusSubscription({
     onEvent: useCallback((event: RealtimeEvent) => {
       const fileChange = busEventData(event, "file-change");
@@ -175,8 +193,8 @@ function useFileData(path: string): LoadResult {
         connectedOnceRef.current = true;
         return;
       }
-      resync();
-    }, [resync]),
+      triggerResync();
+    }, [triggerResync]),
   });
 
   return useMemo<LoadResult>(() => {
@@ -209,10 +227,10 @@ function useFileData(path: string): LoadResult {
 
 /* ---------- chrome helpers ---------- */
 
-function displayName(path: string): string {
-  const base = path.split("/").pop();
-  if (!base) return path;
-  return base.endsWith(".card") ? base.slice(0, -5) : base;
+/** The card's own display title, when its frontmatter carries one. */
+function cardTitle(data: FileData): string | null {
+  const title = data.frontmatter?.title;
+  return typeof title === "string" && title.trim() !== "" ? title : null;
 }
 
 function RendererToggle({
@@ -243,23 +261,26 @@ function RendererToggle({
 
 /** Chat-mode header: name + full path (truncated, hover for full), open-in-sidebar + open-in-browse icons. */
 function ChatHeader({
-  path, renderers, active, onSelect, onOpenInPanel,
+  path, title, renderers, active, onSelect, onOpenInPanel, onTrashed,
 }: {
   path: string;
+  /** The card's frontmatter title, when it has one — wins over the filename. */
+  title: string | null;
   renderers: FileRenderer[];
   active: FileRenderer;
   onSelect: (name: string) => void;
-  onOpenInPanel?: () => void;
+  onOpenInPanel?: () => void; onTrashed?: (() => void) | undefined;
 }) {
   const { boxSlug } = useParams({ strict: false });
   const browseHref = withBase(`/${boxSlug}/browse/${path}`);
   return (
     <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2 border-b border-warm-300 bg-warm-50">
       <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium truncate">{displayName(path)}</div>
+        <div className="text-sm font-medium truncate">{title ?? displayName(path)}</div>
         <div className="text-xs text-warm-500 truncate" title={path}>{path}</div>
       </div>
       <RendererToggle renderers={renderers} active={active} onSelect={onSelect} compact />
+      <CardActions path={path} onTrashed={onTrashed} />
       {onOpenInPanel ? (
         <OpenInPanelButton onClick={onOpenInPanel} label="Open in sidebar" size="sm" />
       ) : null}
@@ -268,27 +289,29 @@ function ChatHeader({
   );
 }
 
-/** Page-mode header: path as title, metadata (type/status), renderer toggle. */
 function PageHeader({
-  data, renderers, active, onSelect,
+  data, renderers, active, onSelect, onTrashed,
 }: {
   data: FileData;
   renderers: FileRenderer[];
   active: FileRenderer;
   onSelect: (name: string) => void;
+  onTrashed?: (() => void) | undefined;
 }) {
   const status = typeof data.frontmatter?.status === "string" ? data.frontmatter.status : null;
   return (
     <div className="p-4 pb-0">
       <div className="flex items-center justify-between mb-2 gap-4">
         <div className="min-w-0 flex-1">
-          <h1 className="text-lg font-bold text-warm-900 truncate" title={data.path}>{data.path}</h1>
+          <h1 className="text-lg font-bold text-warm-900 truncate" title={data.path}>
+            {cardTitle(data) ?? displayName(data.path)}
+          </h1>
           <div className="flex items-center gap-2 mt-1">
-            {data.type ? <span className="text-sm text-warm-600">Type: {data.type}</span> : null}
+            <span className="text-xs text-warm-500 truncate" title={data.path}>{data.path}</span>
             {status ? <StatusBadge status={status} /> : null}
           </div>
         </div>
-        <RendererToggle renderers={renderers} active={active} onSelect={onSelect} />
+        <div className="flex items-center gap-1"><RendererToggle renderers={renderers} active={active} onSelect={onSelect} />{isCardPath(data.path) ? <CardActions path={data.path} onTrashed={onTrashed} /> : null}</div>
       </div>
     </div>
   );
@@ -296,7 +319,7 @@ function PageHeader({
 
 /* ---------- main component ---------- */
 
-export function FileView({ path, mode: modeProp, rendererName, onNavigate, onAddSelection, reportActivity, onOpenInPanel, params, caption }: FileViewProps) {
+export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer, onNavigate, onAddSelection, reportActivity, onOpenInPanel, params, caption, onClose }: FileViewProps) {
   const mode = modeProp ?? "page";
   const { data, loading, error } = useFileData(path);
 
@@ -306,19 +329,18 @@ export function FileView({ path, mode: modeProp, rendererName, onNavigate, onAdd
     onAddSelection({ ref, text: selection.text, position: selection.position });
   }, [onAddSelection, path]);
 
-  // Track user's toggle selection scoped to the current path. When the path
-  // changes, the stored path no longer matches so selection resets without
-  // needing an effect.
   const [userSelection, setUserSelection] = useState<{ path: string; name: string } | null>(null);
   const selectForPath = useCallback((name: string) => {
-    setUserSelection({ path, name });
     // Switching how the same card is viewed (Sandbox/Card Tree/XML/…) is an
     // "explored" action. No-op outside the companion pane (reportActivity unset).
     reportActivity?.("explored", `viewing as ${name}`);
-  }, [path, reportActivity]);
+    if (onSelectRenderer) {
+      onSelectRenderer(name);
+      return;
+    }
+    setUserSelection({ path, name });
+  }, [onSelectRenderer, path, reportActivity]);
 
-  // A box view exporting `rendersCardTypes` becomes this card type's
-  // default renderer; the built-ins stay available through the toggle.
   const binding = useCardViewBinding(data?.type);
   const renderers: FileRenderer[] = useMemo(() => {
     const base = data ? getRenderers(path, data) : [];
@@ -339,7 +361,7 @@ export function FileView({ path, mode: modeProp, rendererName, onNavigate, onAdd
   }, [path, data, binding, mode, reportActivity, onNavigate, params]);
 
   if (loading) return <div className="p-4 text-warm-600">Loading...</div>;
-  if (error) {
+  if (error && !(isCardPath(path) && error.startsWith("Card not found:"))) {
     return (
       <div className="p-4 text-danger-dark">
         <p className="font-medium">Error loading {path}</p>
@@ -347,7 +369,7 @@ export function FileView({ path, mode: modeProp, rendererName, onNavigate, onAdd
       </div>
     );
   }
-  if (!data) return <div className="p-4 text-warm-600">File not found: {path}</div>;
+  if (!data) return isCardPath(path) ? <MissingCardState path={path} onClose={onClose} /> : <div className="p-4 text-warm-600">File not found: {path}</div>;
 
   const userName = userSelection && userSelection.path === path ? userSelection.name : null;
   const requested = userName ?? rendererName ?? null;
@@ -375,7 +397,7 @@ export function FileView({ path, mode: modeProp, rendererName, onNavigate, onAdd
   if (mode === "chat") {
     return (
       <div className="border rounded-lg overflow-hidden bg-white">
-        <ChatHeader path={path} renderers={renderers} active={active} onSelect={selectForPath} onOpenInPanel={onOpenInPanel} />
+        <ChatHeader path={path} title={cardTitle(data)} renderers={renderers} active={active} onSelect={selectForPath} onOpenInPanel={onOpenInPanel} onTrashed={onClose} />
         <div className="max-h-96 overflow-auto">{body}</div>
       </div>
     );
@@ -386,9 +408,10 @@ export function FileView({ path, mode: modeProp, rendererName, onNavigate, onAdd
     // compact toggle row if there are alternates.
     return (
       <div>
-        {renderers.length > 1 ? (
-          <div className="flex justify-end px-3 py-2 border-b border-warm-200 print:hidden">
+        {renderers.length > 1 || isCardPath(data.path) ? (
+          <div className="flex items-center justify-end gap-1 px-3 py-2 border-b border-warm-200 print:hidden">
             <RendererToggle renderers={renderers} active={active} onSelect={selectForPath} compact />
+            {isCardPath(data.path) ? <CardActions path={data.path} onTrashed={onClose} /> : null}
           </div>
         ) : null}
         {body}
@@ -396,10 +419,9 @@ export function FileView({ path, mode: modeProp, rendererName, onNavigate, onAdd
     );
   }
 
-  // page mode
   return (
     <div>
-      <PageHeader data={data} renderers={renderers} active={active} onSelect={selectForPath} />
+      <PageHeader data={data} renderers={renderers} active={active} onSelect={selectForPath} onTrashed={onClose} />
       {body}
     </div>
   );

@@ -43,6 +43,17 @@ function reqWithCookie(cookieValue) {
 }
 ```
 
+## Session email is canonical across login methods
+
+New cookies canonicalize at signing, so password and Google identities use the
+same key even if the provider supplied mixed case and surrounding space.
+
+```ts
+const canonicalCookie = signSession({ email: " Person@Example.COM ", name: "Person" });
+verifySession(canonicalCookie)?.email
+=> person@example.com
+```
+
 ## Login mints a `gen`-bearing cookie for an email with a local record
 
 ```ts

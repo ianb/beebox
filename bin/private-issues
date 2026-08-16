@@ -1,0 +1,574 @@
+#!/usr/bin/env bash
+# CLI for the private-issues shadow repo (see
+# callback-box/docs/implemented-plans/private-issues-shadow-repo.md).
+#
+# A separate, per-developer git repo holds issues that must not enter this
+# source-available repo. Its checkouts mirror callback-box's: the main
+# checkout mounts the repo's primary tree at <main>/private-issues (symlink),
+# and each public worktree mounts a private worktree (branch worktree-<name>,
+# living OUTSIDE the disposable public worktree) at <wt>/private-issues
+# (symlink). Deleting a public worktree therefore only ever deletes a
+# symlink — private work is structurally out of blast radius.
+#
+# Locations are DERIVED from the checkout, never hardcoded: the private repo
+# and private-worktree root are peers of the main checkout's parent dir.
+# Every command takes an explicit checkout path as its anchor.
+#
+# Commands (stdout is machine-readable one-liners; logs go to stderr):
+#   init <checkout>            Create the private repo + main-checkout
+#                              symlink. Idempotent; refuses to adopt an
+#                              existing dir that lacks our identity marker.
+#   mount <worktree-path>      Ensure private worktree + symlink for a
+#                              public worktree (5-state machine; fail-closed).
+#   status <checkout>          Print mount state + ahead/dirty counts.
+#   remove-if-safe <worktree-path>
+#                              Remove private worktree + branch iff merged
+#                              into private main AND strictly clean; else
+#                              leave it as a reported orphan. Never forces.
+#   report-orphans <checkout>  List private worktrees with no live public
+#                              worktree, and unmerged worktree-* branches
+#                              (read-only; sweep-orphans is the mutating one).
+#   sweep-orphans <checkout>   Prune stale registrations, remove orphaned
+#                              private worktrees that are merged + clean,
+#                              report the rest.
+#   with-lock <checkout> <cmd...>  Run cmd under the mutation lock.
+#   prune <checkout>           git worktree prune (under the mutation lock).
+#
+# Exit codes: 0 for every handled outcome (callers are non-blocking hooks
+# that branch on stdout), 1 only for usage errors / unexpected git failures.
+
+set -euo pipefail
+
+log() { echo "[private-issues] $*" >&2; }
+
+# Shared append-only lifecycle log (same file the worktree hooks use), so
+# private-side decisions are traceable next to the public ones. Best-effort.
+WORKTREE_LOG="$HOME/.cache/callback-box/worktree-cleanup.log"
+wlog() { printf '%s pid=%s private-issues %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$$" "$*" >> "$WORKTREE_LOG" 2>/dev/null || true; }
+
+# --- location derivation (the one place it lives) ---------------------------
+
+# pi_derive <checkout-path>: sets PI_MAIN (main checkout), PI_REPO (private
+# repo), PI_WT_ROOT (private worktrees dir). The git common dir lives in the
+# main checkout, so this anchors correctly from main or any linked worktree.
+pi_derive() {
+  local checkout="$1" common
+  common=$(git -C "$checkout" rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || {
+    log "not a git checkout: $checkout"
+    return 1
+  }
+  PI_MAIN=$(dirname "$common")
+  PI_REPO="$(dirname "$PI_MAIN")/callback-private-issues"
+  PI_WT_ROOT="$(dirname "$PI_MAIN")/private-issues-worktrees"
+}
+
+# Resolve the public worktree root through the shared lifecycle helper. The
+# basename is configurable, so deriving it again here would make orphan reports
+# disagree with the create/remove commands when CALLBACK_WORKTREE_ROOT is set.
+pi_public_worktree_root() {
+  local checkout="$1" paths_lib="$PI_MAIN/bin/lib/worktree-paths.sh"
+  [ -f "$paths_lib" ] || paths_lib="$(dirname "$0")/lib/worktree-paths.sh"
+  # shellcheck source=lib/worktree-paths.sh
+  . "$paths_lib"
+  wt_paths_init "$checkout"
+}
+
+# Identity check: never mutate (or adopt) a directory that merely sits at the
+# expected path — it must carry the marker init writes. A same-named
+# unrelated repo is refused, not silently used.
+pi_repo_valid() {
+  [ -f "$PI_REPO/.callback-private-issues" ] &&
+    [ "$(git -C "$PI_REPO" config --get callback.privateIssues 2>/dev/null || true)" = "true" ]
+}
+
+# --- mutation lock ----------------------------------------------------------
+
+# Every private-repo mutation (worktree add/remove, branch delete, prune —
+# and finish's merges, via the `with-lock` command) serializes through one
+# mkdir lock. session-end fires auto-sweep in the background and then keeps
+# cleaning, so two writers are a real, routine race — and concurrent
+# `git worktree prune` is a known corrupter (see auto-sweep.sh). Callers
+# re-run their safety checks after acquiring (check-then-act lives inside
+# the lock in this file's own commands).
+#
+# Ownership is pid-based: the holder records $$ inside the lock; takeover
+# happens only when that pid is provably dead (kill -0 fails), and release
+# only when the pid is our own — a process that lost its lock to takeover
+# can't rmdir the new holder's lock on exit.
+PI_LOCK=""
+pi_lock() {
+  PI_LOCK="$PI_REPO/.git/private-issues.lock"
+  local tries=0 owner now mtime
+  while ! mkdir "$PI_LOCK" 2>/dev/null; do
+    tries=$((tries + 1))
+    if [ "$tries" -gt 50 ]; then
+      owner=$(cat "$PI_LOCK/pid" 2>/dev/null || true)
+      if [ -n "$owner" ] && ! kill -0 "$owner" 2>/dev/null; then
+        log "taking over lock from dead owner (pid $owner)"
+        rm -rf "$PI_LOCK"
+        tries=0
+        continue
+      fi
+      if [ -z "$owner" ]; then
+        # No pid yet: either a holder mid-acquire (mkdir done, pid not
+        # written — a sub-millisecond window) or a crash in that window.
+        # Only treat as dead once the dir has sat pid-less for >60s.
+        now=$(date +%s)
+        mtime=$(stat -f %m "$PI_LOCK" 2>/dev/null || stat -c %Y "$PI_LOCK" 2>/dev/null || echo "$now")
+        if [ $((now - mtime)) -gt 60 ]; then
+          log "taking over pid-less stale lock"
+          rm -rf "$PI_LOCK"
+          tries=0
+          continue
+        fi
+      fi
+      log "could not acquire mutation lock at $PI_LOCK (held by pid ${owner:-unknown})"
+      return 1
+    fi
+    sleep 0.2
+  done
+  echo "$$" > "$PI_LOCK/pid"
+  trap pi_unlock EXIT
+}
+pi_unlock() {
+  [ -n "$PI_LOCK" ] || return 0
+  if [ "$(cat "$PI_LOCK/pid" 2>/dev/null || true)" = "$$" ]; then
+    rm -rf "$PI_LOCK"
+  fi
+}
+
+# --- state inspection -------------------------------------------------------
+
+# Canonicalize for comparisons (worktree list prints resolved paths).
+canon() { realpath "$1" 2>/dev/null || echo "$1"; }
+
+pi_registered_at() {
+  # Is $1 a registered worktree of the private repo?
+  git -C "$PI_REPO" worktree list --porcelain 2>/dev/null | grep -qxF "worktree $(canon "$1")"
+}
+
+pi_branch_of() { git -C "$1" rev-parse --abbrev-ref HEAD 2>/dev/null || true; }
+
+pi_branch_checkout_path() {
+  # Where (if anywhere) is branch $1 checked out in the private repo?
+  git -C "$PI_REPO" worktree list --porcelain 2>/dev/null |
+    awk -v b="refs/heads/$1" '$1=="worktree"{w=$2} $1=="branch"&&$2==b{print w}'
+}
+
+# pi_mount_state <worktree-path>: classifies the mount into PI_STATE — one of
+#   no-repo | valid | relink | attach-branch | create | invalid
+# and sets PI_TARGET / PI_BRANCH / PI_NAME. Must be CALLED DIRECTLY (never in
+# a $() subshell) so the variables reach the caller.
+pi_mount_state() {
+  local wt link
+  # Canonicalize first: a caller may pass "." (finish's `status .`), and
+  # basename(".") is "." — that would derive a bogus PI_NAME/PI_TARGET and
+  # misreport a perfectly valid mount as "invalid". Resolving to an absolute
+  # path here means every downstream basename/comparison sees the real name.
+  wt=$(canon "$1")
+  PI_NAME=$(basename "$wt")
+  PI_BRANCH="worktree-$PI_NAME"
+  PI_TARGET="$PI_WT_ROOT/$PI_NAME"
+
+  if [ ! -d "$PI_REPO" ]; then
+    PI_STATE="no-repo" # not opted in
+    return 0
+  fi
+  if ! pi_repo_valid; then
+    # Present but failing the identity check: a damaged marker or an
+    # unrelated same-named dir. NOT opt-out — fail closed and say so, or an
+    # opted-in developer's work silently vanishes from all tooling.
+    PI_STATE="repo-invalid"
+    return 0
+  fi
+
+  if [ "$wt" = "$(canon "$PI_MAIN")" ]; then
+    # The main checkout mounts the private repo's primary tree, not a
+    # worktree-<name> branch under PI_WT_ROOT.
+    PI_TARGET="$PI_REPO"
+    PI_BRANCH=$(pi_branch_of "$PI_REPO")
+    if [ -L "$wt/private-issues" ] && [ "$(canon "$wt/private-issues")" = "$(canon "$PI_REPO")" ]; then
+      PI_STATE="valid"
+    else
+      PI_STATE="invalid"
+    fi
+    return 0
+  fi
+
+  if [ -L "$wt/private-issues" ]; then
+    link=$(canon "$wt/private-issues")
+    if [ "$link" = "$(canon "$PI_TARGET")" ] && pi_registered_at "$PI_TARGET" &&
+      [ "$(pi_branch_of "$PI_TARGET")" = "$PI_BRANCH" ]; then
+      PI_STATE="valid"
+    else
+      PI_STATE="invalid"
+    fi
+    return 0
+  fi
+  if [ -e "$wt/private-issues" ]; then
+    # Present but not a symlink — a plain dir/file where the mount belongs.
+    PI_STATE="invalid"
+    return 0
+  fi
+
+  # No mount. What does the private side already have for this name?
+  if [ -d "$PI_TARGET" ]; then
+    if pi_registered_at "$PI_TARGET" && [ "$(pi_branch_of "$PI_TARGET")" = "$PI_BRANCH" ]; then
+      PI_STATE="relink" # preserved orphan (or crash between add and ln)
+    else
+      PI_STATE="invalid" # dir exists but isn't our registered worktree
+    fi
+    return 0
+  fi
+  local elsewhere
+  elsewhere=$(pi_branch_checkout_path "$PI_BRANCH")
+  if [ -n "$elsewhere" ]; then
+    PI_STATE="invalid" # branch is checked out at some other path
+    return 0
+  fi
+  if git -C "$PI_REPO" show-ref --verify --quiet "refs/heads/$PI_BRANCH"; then
+    PI_STATE="attach-branch"
+  else
+    PI_STATE="create"
+  fi
+}
+
+pi_dirty_count() {
+  # STRICT: any porcelain output is dirt. No deletion-only exemption here —
+  # deleting a private issue is intentional work, not the public tree's
+  # interrupted-cleanup phantom (see the plan's topology section).
+  git -C "$1" status --porcelain 2>/dev/null | grep -c . || true
+}
+
+pi_ahead_count() { git -C "$1" rev-list --count main..HEAD 2>/dev/null || echo "?"; }
+
+# --- commands ---------------------------------------------------------------
+
+cmd_init() {
+  local checkout="${1:?usage: private-issues init <checkout>}"
+  pi_derive "$checkout" || exit 1
+
+  if [ -d "$PI_REPO" ]; then
+    if ! pi_repo_valid; then
+      log "REFUSING: $PI_REPO exists but lacks the private-issues identity marker — not adopting an unrelated directory"
+      echo "refused"
+      exit 0
+    fi
+    log "private repo already initialized at $PI_REPO"
+  else
+    log "creating private repo at $PI_REPO"
+    git init -q -b main "$PI_REPO"
+    git -C "$PI_REPO" config callback.privateIssues true
+    touch "$PI_REPO/.callback-private-issues"
+    local cat
+    for cat in bugs features code-quality docs-and-chores decisions exploration watch; do
+      mkdir -p "$PI_REPO/$cat" "$PI_REPO/closed/$cat"
+      touch "$PI_REPO/$cat/.gitkeep" "$PI_REPO/closed/$cat/.gitkeep"
+    done
+    cat > "$PI_REPO/README.md" <<'EOF'
+# callback-private-issues
+
+Private issues for a callback-box developer. **This is a SEPARATE git repo**
+from the callback-box monorepo — it only *mounts* into callback-box checkouts
+at `<checkout>/private-issues/` (always via symlink; the path is gitignored
+there).
+
+Rules that keep it private and safe:
+
+- **Commit from INSIDE `private-issues/`.** In the callback-box repo the
+  mount is gitignored: `git add -A` there stages nothing from here — that is
+  the leak guard working, not a bug.
+- **Links are one-way.** Issues here may link to public repo files; public
+  files must NEVER link here (enforced by the public repo's doc-check).
+- **Category layout mirrors the public `issues/`** (bugs/, features/,
+  code-quality/, docs-and-chores/, decisions/, exploration/, watch/,
+  closed/<category>/), same file conventions (issues/CLAUDE.md over there).
+- **Nothing here is ever force-deleted.** If a public worktree goes away
+  with private work unmerged, the private worktree and its
+  `worktree-<name>` branch survive as an orphan; `bin/workstreams sweep`
+  reports it until you either resume it (recreate a worktree with the same
+  name) or merge it: `git merge worktree-<name>` from this directory.
+- **Remote is yours to wire** (`git remote add …`); until then finish
+  reports "not pushed (no remote)".
+EOF
+    git -C "$PI_REPO" add -A
+    git -C "$PI_REPO" commit -q -m "Initialize private issues repo"
+    wlog "init: created $PI_REPO"
+  fi
+
+  if [ -L "$PI_MAIN/private-issues" ]; then
+    log "main-checkout symlink already present"
+  elif [ -e "$PI_MAIN/private-issues" ]; then
+    log "REFUSING: $PI_MAIN/private-issues exists and is not a symlink"
+    echo "refused"
+    exit 0
+  else
+    ln -s "$PI_REPO" "$PI_MAIN/private-issues"
+    log "linked $PI_MAIN/private-issues -> $PI_REPO"
+  fi
+  echo "ok"
+}
+
+cmd_mount() {
+  local wt="${1:?usage: private-issues mount <worktree-path>}"
+  pi_derive "$wt" || exit 1
+  pi_mount_state "$wt"
+  case "$PI_STATE" in
+    no-repo)
+      log "no private repo at $PI_REPO — skipping (opt in with: bin/private-issues init <checkout>)"
+      echo "no-repo"
+      ;;
+    valid)
+      echo "valid"
+      ;;
+    relink)
+      ln -s "$PI_TARGET" "$wt/private-issues"
+      local ahead
+      ahead=$(pi_ahead_count "$PI_TARGET")
+      log "RE-ATTACHED preserved private worktree $PI_TARGET ($ahead commits unmerged) — inherited work resumes here"
+      wlog "mount: relink name=$PI_NAME ahead=$ahead"
+      echo "relinked"
+      ;;
+    attach-branch | create)
+      pi_lock || exit 1
+      # Re-check under the lock (a concurrent mount may have won).
+      pi_mount_state "$wt"
+      case "$PI_STATE" in
+        attach-branch)
+          git -C "$PI_REPO" worktree add "$PI_TARGET" "$PI_BRANCH" >&2
+          local ahead
+          ahead=$(pi_ahead_count "$PI_TARGET")
+          log "ATTACHED existing private branch $PI_BRANCH ($ahead commits unmerged) — inherited work resumes here"
+          wlog "mount: attach-branch name=$PI_NAME ahead=$ahead"
+          ;;
+        create)
+          git -C "$PI_REPO" worktree add -b "$PI_BRANCH" "$PI_TARGET" main >&2
+          wlog "mount: create name=$PI_NAME"
+          ;;
+        valid | relink | no-repo | invalid | repo-invalid)
+          log "state changed under lock to '$PI_STATE' — deferring to it"
+          cmd_mount "$wt"
+          return
+          ;;
+      esac
+      ln -s "$PI_TARGET" "$wt/private-issues"
+      echo "mounted"
+      ;;
+    invalid | repo-invalid)
+      log "FAIL-CLOSED: mount for $wt is in an unexpected state ($PI_STATE) — not touching it; session runs without private issues"
+      wlog "mount: $PI_STATE name=$PI_NAME"
+      echo "$PI_STATE"
+      ;;
+  esac
+}
+
+cmd_status() {
+  local checkout="${1:?usage: private-issues status <checkout>}"
+  pi_derive "$checkout" || exit 1
+  pi_mount_state "$checkout"
+  case "$PI_STATE" in
+    valid | relink)
+      echo "state=$PI_STATE target=$PI_TARGET branch=$PI_BRANCH ahead=$(pi_ahead_count "$PI_TARGET") dirty=$(pi_dirty_count "$PI_TARGET") repo=$PI_REPO"
+      ;;
+    *)
+      echo "state=$PI_STATE repo=$PI_REPO"
+      ;;
+  esac
+}
+
+cmd_remove_if_safe() {
+  local wt="${1:?usage: private-issues remove-if-safe <worktree-path>}"
+  pi_derive "$wt" || exit 1
+  if [ "$(canon "$wt")" = "$(canon "$PI_MAIN")" ]; then
+    echo "nothing"
+    return
+  fi
+  pi_mount_state "$wt"
+  case "$PI_STATE" in
+    no-repo | create | attach-branch)
+      echo "nothing"
+      return
+      ;;
+    invalid | repo-invalid)
+      log "FAIL-CLOSED: not removing anything private for $wt (mount state $PI_STATE)"
+      wlog "remove-if-safe: $PI_STATE name=$(basename "$wt")"
+      echo "$PI_STATE"
+      return
+      ;;
+    valid | relink) ;;
+  esac
+
+  pi_lock || exit 1
+  # Re-check everything under the lock — check-then-act must be atomic
+  # relative to other mutators.
+  pi_mount_state "$wt"
+  case "$PI_STATE" in
+    valid | relink) ;;
+    no-repo | create | attach-branch | invalid | repo-invalid)
+      log "state changed under lock to '$PI_STATE' — leaving alone"
+      echo "nothing"
+      return
+      ;;
+  esac
+  local ahead dirty
+  ahead=$(pi_ahead_count "$PI_TARGET")
+  dirty=$(pi_dirty_count "$PI_TARGET")
+  if [ "$ahead" != "0" ] || [ "$dirty" != "0" ]; then
+    log "private worktree $PI_TARGET has unmerged work (ahead=$ahead dirty=$dirty) — preserving as orphan; recover by recreating worktree '$PI_NAME' or: git -C $PI_REPO merge $PI_BRANCH"
+    wlog "remove-if-safe: orphaned name=$PI_NAME branch=$PI_BRANCH ahead=$ahead dirty=$dirty"
+    echo "orphaned ahead=$ahead dirty=$dirty"
+    return
+  fi
+  if ! git -C "$PI_REPO" worktree remove "$PI_TARGET" >&2; then
+    # A refusal means the state changed under us (new dirt?) — never
+    # escalate a safety refusal into force/deletion.
+    log "worktree remove refused for $PI_TARGET — preserving as orphan"
+    wlog "remove-if-safe: remove-refused name=$PI_NAME"
+    echo "orphaned refused=1"
+    return
+  fi
+  if ! git -C "$PI_REPO" branch -d "$PI_BRANCH" >&2; then
+    # -d (not -D): if it refuses, our merged check was wrong — keep the branch.
+    log "branch -d refused for $PI_BRANCH (not merged?) — keeping the branch"
+    wlog "remove-if-safe: branch-kept name=$PI_NAME"
+    echo "removed branch-kept=1"
+    return
+  fi
+  wlog "remove-if-safe: removed name=$PI_NAME"
+  echo "removed"
+}
+
+# Guard shared by the orphan commands: absent repo → quiet no-op; present
+# but identity-invalid → one loud line (never silence — see repo-invalid).
+pi_orphan_precheck() {
+  if [ ! -d "$PI_REPO" ]; then return 1; fi
+  if ! pi_repo_valid; then
+    echo "repo-invalid path=$PI_REPO (identity marker missing — fix or move it; tooling will not touch it)"
+    return 1
+  fi
+  return 0
+}
+
+# Branch orphans: worktree-* branches not merged into private main and not
+# checked out anywhere (a preserved branch whose directory was removed by
+# hand). Run AFTER `worktree prune` when possible — a stale registration
+# makes a branch look attached and hides it from this report.
+pi_report_branch_orphans() {
+  local b attached
+  for b in $(git -C "$PI_REPO" for-each-ref --format='%(refname:short)' 'refs/heads/worktree-*' 2>/dev/null); do
+    attached=$(pi_branch_checkout_path "$b")
+    [ -n "$attached" ] && continue
+    if [ "$(git -C "$PI_REPO" rev-list --count "main..$b" 2>/dev/null || echo "?")" != "0" ]; then
+      echo "orphan-branch branch=$b unmerged=$(git -C "$PI_REPO" rev-list --count "main..$b") recover='git -C $PI_REPO merge $b'"
+    fi
+  done
+}
+
+# Read-only listing (dry-run / status surfaces). Doesn't prune first, so a
+# branch behind a stale registration can hide until a mutating sweep runs.
+cmd_report_orphans() {
+  local checkout="${1:?usage: private-issues report-orphans <checkout>}"
+  pi_derive "$checkout" || exit 1
+  pi_orphan_precheck || return 0
+  local wt_root d name
+  pi_public_worktree_root "$checkout" || exit 1
+  wt_root="$WT_ROOT"
+
+  for d in "$PI_WT_ROOT"/*; do
+    [ -d "$d" ] || continue
+    name=$(basename "$d")
+    [ -d "$wt_root/$name" ] && continue
+    echo "orphan-worktree name=$name ahead=$(pi_ahead_count "$d") dirty=$(pi_dirty_count "$d") path=$d"
+  done
+  pi_report_branch_orphans
+}
+
+# Mutating sweep: prune stale registrations first (under the lock), remove
+# orphaned private worktrees that are merged + strictly clean (same rule as
+# remove-if-safe), and report everything that remains. This is what makes
+# "a clean orphan is collected, an unmerged one is re-announced every sweep"
+# true — report-orphans alone never removes.
+cmd_sweep_orphans() {
+  local checkout="${1:?usage: private-issues sweep-orphans <checkout>}"
+  pi_derive "$checkout" || exit 1
+  pi_orphan_precheck || return 0
+  local wt_root d name ahead dirty branch
+  pi_public_worktree_root "$checkout" || exit 1
+  wt_root="$WT_ROOT"
+
+  pi_lock || exit 1
+  git -C "$PI_REPO" worktree prune
+
+  for d in "$PI_WT_ROOT"/*; do
+    [ -d "$d" ] || continue
+    name=$(basename "$d")
+    [ -d "$wt_root/$name" ] && continue
+    ahead=$(pi_ahead_count "$d")
+    dirty=$(pi_dirty_count "$d")
+    branch="worktree-$name"
+    if [ "$ahead" = "0" ] && [ "$dirty" = "0" ] && pi_registered_at "$d" &&
+      [ "$(pi_branch_of "$d")" = "$branch" ]; then
+      if git -C "$PI_REPO" worktree remove "$d" >&2; then
+        git -C "$PI_REPO" branch -d "$branch" >&2 || true
+        wlog "sweep-orphans: removed name=$name"
+        echo "removed-orphan name=$name"
+        continue
+      fi
+      # Refusal = state changed under us; fall through to reporting.
+    fi
+    wlog "sweep-orphans: kept name=$name ahead=$ahead dirty=$dirty"
+    echo "orphan-worktree name=$name ahead=$ahead dirty=$dirty path=$d"
+  done
+  pi_report_branch_orphans
+}
+
+# Run an arbitrary command while holding the mutation lock — the finish
+# agent wraps its private-main merge in this so it can't interleave with a
+# concurrent sweep/cleanup mutating the same repo.
+cmd_with_lock() {
+  local checkout="${1:?usage: private-issues with-lock <checkout> <command...>}"
+  shift
+  [ "$#" -gt 0 ] || {
+    echo "usage: private-issues with-lock <checkout> <command...>" >&2
+    exit 1
+  }
+  pi_derive "$checkout" || exit 1
+  pi_repo_valid || {
+    log "no valid private repo at $PI_REPO"
+    exit 1
+  }
+  pi_lock || exit 1
+  "$@"
+}
+
+cmd_prune() {
+  local checkout="${1:?usage: private-issues prune <checkout>}"
+  pi_derive "$checkout" || exit 1
+  pi_repo_valid || {
+    echo "no-repo"
+    return
+  }
+  pi_lock || exit 1
+  git -C "$PI_REPO" worktree prune
+  echo "pruned"
+}
+
+cmd="${1:-}"
+shift || true
+case "$cmd" in
+  init) cmd_init "$@" ;;
+  mount) cmd_mount "$@" ;;
+  status) cmd_status "$@" ;;
+  remove-if-safe) cmd_remove_if_safe "$@" ;;
+  report-orphans) cmd_report_orphans "$@" ;;
+  sweep-orphans) cmd_sweep_orphans "$@" ;;
+  with-lock) cmd_with_lock "$@" ;;
+  prune) cmd_prune "$@" ;;
+  help | -h | --help | "")
+    awk 'NR==1 { next } !/^#/ { exit } { sub(/^# ?/, ""); print }' "$0"
+    ;;
+  *)
+    echo "unknown command: $cmd" >&2
+    exit 1
+    ;;
+esac

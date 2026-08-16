@@ -1,5 +1,6 @@
 ---
 title: "cb render ssr window undefined"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — while debugging the prod blank-page outage, tried `cb render` on the server to inspect a box page past the OAuth wall
@@ -11,7 +12,7 @@ at `AgentViewRenderer.tsx` is guarded (`typeof window !== "undefined"`), and the
 same commit swept the other module-scope browser-global reads. Verified: `cb
 render <box> /chat` renders full HTML with no ReferenceError. The remaining
 empty-`<body>` on `/` is the known Suspense/`renderToString` limitation tracked
-in [cb-render-vs-bin-browse](../../decisions/2026-07-07-cb-render-vs-bin-browse.md).
+in [cb-render-vs-bin-browse](../decisions/2026-07-07-cb-render-vs-bin-browse.md).
 No lint rule guards module-scope browser globals (would need a custom rule —
 deliberately not filed; four guarded precedents exist and this was caught
 same-day).

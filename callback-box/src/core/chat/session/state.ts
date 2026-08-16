@@ -13,46 +13,12 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { randomBytes } from "node:crypto";
 import { acquireChatActiveLock, releaseChatActiveLock } from "../../schedule/state.js";
-import { resolveSessionLogPath } from "./history.js";
-import { parseSessionLog, type SessionEntry } from "../../../cli/lib/session.js";
-import { effectiveTailSize } from "./messages.js";
 import type { ChatImage, ChatMessage, ChatSendInput } from "./messages.js";
 import { unionActivityKinds, mergeCardStateDetails } from "../card-activity.js";
 import { errorMessage } from "../../../lib/error-guards.js";
 import { isRecord } from "../../card-io.js";
-
-export interface SessionHistory {
-  sessionId: string | null;
-  entries: SessionEntry[];
-  total: number;
-}
-
-/**
- * Load conversation history from the session log for `sessionId`, applying
- * the tail / minimum-user-message trimming. Returns an empty result when the
- * session has no id yet or no log on disk.
- */
-export async function loadSessionHistory(
-  boxRoot: string,
-  { sessionId, params }: {
-    sessionId: string | null;
-    params?: { tail?: number; minRealUserMessages?: number } | undefined;
-  },
-): Promise<SessionHistory> {
-  if (!sessionId) {
-    return { sessionId: null, entries: [], total: 0 };
-  }
-  const logPath = await resolveSessionLogPath(boxRoot, sessionId);
-  if (!fs.existsSync(logPath)) {
-    return { sessionId, entries: [], total: 0 };
-  }
-  const { entries, total } = await parseSessionLog({ logPath });
-  const effectiveTail = effectiveTailSize(entries, params);
-  if (effectiveTail !== null && effectiveTail < entries.length) {
-    return { sessionId, entries: entries.slice(entries.length - effectiveTail), total };
-  }
-  return { sessionId, entries, total };
-}
+import { chatModelForEngine } from "../../../shared/chat-models.js";
+import type { AgentEngine } from "../../box/config.js";
 
 const log = makeLog("ChatSession");
 
@@ -94,6 +60,11 @@ export async function releaseRunLock(lockPath: string): Promise<void> {
  */
 export const DEFAULT_MODEL_FILE = ".callback-box/chat-model.json";
 
+/** Per-session model override used by the web chat registry. */
+export function chatModelFileForSession(sessionId: string): string {
+  return `.callback-box/chat-models/${encodeURIComponent(sessionId)}.json`;
+}
+
 /** Read the box's persisted chat-model override from the default file. */
 export function loadPersistedChatModel(boxRoot: string): string | null {
   return loadCurrentModel(boxRoot, DEFAULT_MODEL_FILE);
@@ -114,6 +85,14 @@ export function loadCurrentModel(boxRoot: string, modelFile: string): string | n
     log("model", `Failed to load model file: ${e}`);
   }
   return null;
+}
+
+/** Read a model override only when it belongs to the session's engine. */
+export function loadCurrentModelForEngine(
+  boxRoot: string,
+  { modelFile, engine }: { modelFile: string; engine: AgentEngine },
+): string | null {
+  return chatModelForEngine(engine, loadCurrentModel(boxRoot, modelFile));
 }
 
 /**

@@ -16,7 +16,10 @@ echo "=== Callback Box Server Setup ==="
 echo "Installing system packages..."
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
-apt-get install -y -qq git git-lfs curl nginx build-essential ca-certificates gnupg poppler-utils pandoc imagemagick
+# qpdf is the scan-upload PDF structure validator (src/core/scan/validate.ts).
+# Without it the scan routes refuse PDFs with a 503 rather than quarantine
+# unvalidated bytes, so it is a hard requirement, not a nice-to-have.
+apt-get install -y -qq git git-lfs curl nginx build-essential ca-certificates gnupg poppler-utils pandoc imagemagick python3-openpyxl xlsx2csv qpdf ffmpeg
 
 # Ubuntu 24.04 ships ImageMagick 6 (`convert`); homebrew + IM7 use `magick`.
 # Symlink so scripts written for `magick` work on prod without branching.
@@ -35,6 +38,10 @@ echo "Node.js $(node -v)"
 # Enable corepack so pnpm is available (ships with Node 24, no install needed).
 corepack enable pnpm
 echo "pnpm $(pnpm -v)"
+
+# AVIF encoding for page renders and figures needs no system package: `sharp`
+# ships a prebuilt libvips with AVIF (libheif/aom) support, verified below so a
+# platform without a prebuild fails here rather than at the first scan.
 
 # ── Git config (root, for cloning repos) ─────────────────────────────
 git config --global user.email "callback-box@box.example.com"
@@ -69,6 +76,34 @@ for repo in "${REPOS[@]}"; do
   fi
 done
 
+# ── uv + Docling (document extraction) ──────────────────────────────
+# `cb scan-import`'s document mode shells out to `uvx docling` (see
+# src/services/docling.ts). uv is installed for the callback user because
+# that is who runs the box children, and uv caches its environments and
+# Docling caches its model weights under the invoking user's home — one
+# install serves every box on the host, since they all run as this user.
+# This runs after the clone because the pinned version is read out of the
+# checkout, and after the user exists because everything here runs as them.
+echo "Installing uv for $CB_USER..."
+su - "$CB_USER" -c 'command -v uv >/dev/null 2>&1 || curl -LsSf https://astral.sh/uv/install.sh | sh'
+su - "$CB_USER" -c 'grep -q "/.local/bin" ~/.bashrc || echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >> ~/.bashrc'
+
+# Pre-fetch exactly the model weights document mode uses, so the first scanned
+# PDF does not hang for minutes downloading them. OCR weights are deliberately
+# NOT fetched: extraction runs with do_ocr=False (the scanner supplies the text
+# layer), and textless PDFs go to the Gemini photo flow instead — see
+# docs/plans/scanner-ingest-docling-decisions.md (D1, D11). `layout` covers
+# reading order; `tableformer` covers both fast and accurate table modes.
+# The version comes from the one place that holds it, so this can never pin a
+# different Docling than the extractor asks `uvx` for.
+DOCLING_VERSION="$(sed -n 's/^export const DOCLING_VERSION = "\([^"]*\)";$/\1/p' "$INSTALL_DIR/callback-box/src/services/docling-version.ts")"
+if [[ -z "$DOCLING_VERSION" ]]; then
+  echo "Could not read DOCLING_VERSION from src/services/docling-version.ts" >&2
+  exit 1
+fi
+echo "Pre-fetching Docling $DOCLING_VERSION models (layout + tableformer)..."
+su - "$CB_USER" -c "export PATH=\"\$HOME/.local/bin:\$PATH\"; uvx --from docling==$DOCLING_VERSION docling-tools models download layout tableformer"
+
 # ── Install and build ───────────────────────────────────────────────
 echo "Installing callback-box..."
 cd "$INSTALL_DIR/callback-box"
@@ -84,6 +119,14 @@ echo "Symlinking cb CLI..."
 ln -sf "$INSTALL_DIR/callback-box/bin/cb" /usr/local/bin/cb
 cb --help >/dev/null 2>&1 && echo "cb CLI is working" || echo "WARNING: cb CLI test failed"
 
+# ── Verify AVIF encoding ────────────────────────────────────────────
+# Document mode re-encodes every page render and figure to AVIF via sharp. A
+# libvips build without AVIF would fail on the first scanned PDF instead, so
+# prove it here.
+echo "Verifying sharp AVIF encoding..."
+cd "$INSTALL_DIR/callback-box"
+node -e 'const S=require("sharp");if(!S.format.heif.output.file){console.error("sharp has no AVIF output support");process.exit(1)}S({create:{width:8,height:8,channels:3,background:{r:0,g:0,b:0}}}).avif().toBuffer().then(()=>console.log("sharp AVIF encoding OK")).catch(e=>{console.error(e.message);process.exit(1)})'
+
 # ── Install Claude Code CLI ─────────────────────────────────────────
 # Native installer auto-updates in the background, unlike npm global
 # install. Install for BOTH root (manual admin use) and the callback
@@ -93,6 +136,21 @@ curl -fsSL https://claude.ai/install.sh | bash
 su - "$CB_USER" -c 'curl -fsSL https://claude.ai/install.sh | bash'
 # Add native install location to callback user's PATH
 su - "$CB_USER" -c 'grep -q "/.local/bin" ~/.bashrc || echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >> ~/.bashrc'
+
+# Transcript retention. Claude Code prunes ~/.claude/projects/**/*.jsonl on a
+# timer whose default is 30 days. Transcripts are the raw material the nightly
+# chat review mines into husk cards (docs/chat-review.md) — once one expires the
+# conversation is unrecoverable, so a session not reviewed inside the window is
+# never reviewable. 60 days doubles the margin for a box that goes quiet.
+echo "Setting Claude Code transcript retention for $CB_USER..."
+su - "$CB_USER" -c 'mkdir -p ~/.claude && python3 - <<'"'"'PY'"'"'
+import json, os, pathlib
+p = pathlib.Path(os.path.expanduser("~/.claude/settings.json"))
+d = json.loads(p.read_text()) if p.exists() else {}
+d["cleanupPeriodDays"] = 60
+p.write_text(json.dumps(d, indent=2) + "\n")
+PY'
+
 
 # ── Code directory permissions ───────────────────────────────────────
 echo "Setting read permissions on $INSTALL_DIR for $CB_USER..."
@@ -312,6 +370,15 @@ server {
     location / {
         proxy_pass http://127.0.0.1:3210;
         proxy_http_version 1.1;
+        # The tRPC client uses httpBatchStreamLink: the server writes each
+        # procedure's result as a JSONL line the moment it resolves, so a fast
+        # query renders without waiting for a slow batch-mate. nginx buffers
+        # proxied responses by default, which would re-couple the batch by
+        # holding every line until the response completed. There is only this
+        # one location (everything is proxied to the hub), so the whole app
+        # opts out; responses here are dynamic API/HTML, never large static
+        # files where buffering would earn its keep.
+        proxy_buffering off;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
         proxy_set_header Host $host;

@@ -1,12 +1,10 @@
+---
+title: "Mobile parity & contract-sync discipline"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Mobile parity & contract-sync discipline
-
-**Status:** implemented 2026-07-17 — all five artifacts/mechanisms below have
-shipped (see Implementation order); the standing procedures they establish
-(the contract-change checklist, the periodic parity audit) continue to run
-going forward as ordinary process, not as open plan work. Keeps the iOS app,
-the planned Android app (`docs/plans/android-companion-app.md`), and the
-box-side mobile contract in lockstep. This plan created artifacts and
-procedures, not features.
 
 Two native apps against one web/server contract will drift unless drift is made
 mechanically visible. This plan layers five mechanisms, cheapest-first: a

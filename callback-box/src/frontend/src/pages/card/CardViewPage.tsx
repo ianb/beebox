@@ -4,7 +4,7 @@
  * off to FileView inside a Card shell.
  */
 
-import { useParams } from "@tanstack/react-router";
+import { useNavigate, useParams } from "@tanstack/react-router";
 import { href } from "../../lib/routing";
 import { useViewNavigate } from "../../hooks/useViewNavigate";
 import { FileView } from "../../components/FileView";
@@ -19,16 +19,17 @@ import { OpenChatControl } from "./components/OpenChatControl";
 export function CardViewPage() {
   const { boxSlug, _splat: cardPath } = useParams({ strict: false });
   const handleNavigate = useViewNavigate();
+  const navigate = useNavigate();
 
   if (!cardPath) {
     return <Text as="div" tone="subtle" className="p-8">No card path specified</Text>;
   }
 
   return (
-    <Column overflow="auto" className="h-full">
+    <Column overflow="auto" focusable className="h-full">
       <Stack gap="md" className="max-w-4xl mx-auto py-8 px-4 w-full">
         <Row gap="md" align="center" justify="between">
-          <TextLink to={href(`/${boxSlug}`)} underline={false}>
+          <TextLink to={href(`/${boxSlug}/dashboard`)} underline={false}>
             {"\u2190 Back to Dashboard"}
           </TextLink>
           {boxSlug !== undefined ? (
@@ -36,7 +37,7 @@ export function CardViewPage() {
           ) : null}
         </Row>
         <Card padding="none" shadow>
-          <FileView path={cardPath} onNavigate={handleNavigate} />
+          <FileView path={cardPath} onNavigate={handleNavigate} onClose={() => void navigate({ to: href(`/${boxSlug}/dashboard`), replace: true })} />
         </Card>
       </Stack>
     </Column>

@@ -1,11 +1,26 @@
 ---
 title: "Serve scripted /dev/ apps from a separate origin (proper isolation)"
+workstream: github-pages-site
 needs: [design]
 area: router
 filed-by: agent
 discovered-in: worktree-github-pages-site — Codex review of the dev sandbox-exemption
 labels: [security]
 ---
+
+> **Checked 2026-08-14 — still valid.** Tagged `invalid`; removed, and the
+> issue stays open. The scripted-app CSP exemption is live and unchanged, and
+> the code points back at this issue by name:
+> `bin/router-docs.ts:49-59` records the accepted limitation and says "the safe
+> long-term fix is a separate content origin for scripted apps — filed as
+> issues/features/2026-07-24-dev-scripted-apps-separate-origin.md". The
+> hardened-but-still-origin-wide grant is at `router-docs.ts:104` and `:762-884`,
+> `dev/tools.json` still lists the same trusted app, and `bin/router.ts:1279`
+> is still the only `http.createServer` — no second origin exists.
+>
+> The broader [router architecture](../closed/code-quality/2026-08-13-router-architecture.md)
+> item filed the same week does not subsume this: it covers splitting
+> `/workstreams/` out, and never touches scripted-app origin isolation.
 
 The dev router serves `/dev/` HTML with a bare `sandbox` CSP because it shares
 an authenticated origin with the mutating `/__router/{stop,retry}` control

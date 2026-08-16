@@ -187,14 +187,14 @@ authenticated-but-unattributed behavior.
 ### 3.1 The URL the app loads
 
 - **Wire shape:** `<baseURL>/chat?nativeComposer=1[&session=<id>][&mobileToken=<token>]`.
-- **Contract param:** `nativeComposer=1` (NOT the legacy `embed=1` — see §9). Mirrored: native
+- **Contract param:** `nativeComposer=1`. Mirrored: native
   `PairedBox.chatURL` builds `nativeComposer=1` (with an in-code "keep in sync" comment); web
   `ChatPage` reads it and the router schema declares it.
 - **Anchors:**
   | side | anchor |
   |---|---|
   | native URL build | `ios-app/CallbackBox/Models/PairedBox.swift` — `PairedBox.chatURL`; `ios-app/CallbackBox/Views/ChatWebView.swift` — `authenticatedChatURL` (appends `&mobileToken=`) |
-  | web parse | `src/frontend/src/pages/ChatPage.tsx` (reads `embed` + `nativeComposer`); `src/frontend/src/router.tsx` (route schema `nativeComposer`) |
+  | web parse | `src/frontend/src/pages/ChatPage.tsx` (reads `nativeComposer`); `src/frontend/src/router.tsx` (route schema `nativeComposer`) |
 - **Drift:** SILENT (wrong/missing param → web composer not suppressed, bridges never enabled).
 
 ### 3.2 What `nativeComposer` changes web-side
@@ -305,16 +305,20 @@ the contract.
 - **Anchors:**
   | side | anchor |
   |---|---|
-  | web post | `src/frontend/src/components/chat/use-native-bridge.ts` — `postNativeReceipt`; `src/frontend/src/input/targets/receipts.ts` — `Receipt` union, `expectReceipt` (30s backstop) |
+  | web post | `src/frontend/src/components/chat/use-native-bridge.ts` — `postNativeReceipt`; `src/frontend/src/input/targets/receipts.ts` — `Receipt` union, `expectReceipt` |
   | native decode | `ios-app/CallbackBox/Views/ChatWebView.swift` — `receiveEmissionReceipt`, `NativeEmissionReceipt.Disposition { sent, queued, rejected }` |
 - **Ack/dedup semantics:** native `deliver` only sends emissions not already in
-  `inflightEmissionIDs`, marks inflight, starts a **35s** receipt timeout, and on an
-  `evaluateJavaScript` error reports a synthetic `rejected` immediately. Delivery is gated on
+  `inflightEmissionIDs`, marks them inflight, and on an `evaluateJavaScript` error reports a
+  synthetic `rejected` immediately. Delivery is gated on
   `pageLoaded` (items typed during nav are held, re-delivered on `didFinish`). On any receipt
   (real, timeout, or error) `RootView` clears the emission from `pendingNativeEmissions`;
-  `NativeComposerView` restores text+images on `rejected`. Native 35s > web 30s deliberately (web
-  reports first).
-- **Drift:** SILENT→LOUD (no receipt → native 35s timeout → user sees "not confirmed").
+  `NativeComposerView` restores text+images on `rejected`. Neither web nor native manufactures a
+  rejection from elapsed time: cold agent startup can keep `/chat/send` pending for several
+  minutes. Transport, bridge-evaluation, malformed-response, and backend failures still reject
+  explicitly. Navigation clears native inflight state and redelivers the same persisted emission ID;
+  server dedup retains the claimed ID for seven days, which makes normal
+  navigation and crash-recovery retries safe.
+- **Drift:** a missing outcome remains visibly pending; navigation retries the same emission ID.
 - **Benign field drift:** native ignores `deduplicated` on `sent` receipts.
 
 ### 4.3 Location preference toggle (native → web) + state/result (web → native)
@@ -341,15 +345,41 @@ the contract.
 
 - **Wire shape:** `{ enabled: boolean }` on `callbackboxNarrationState`.
 - **Semantics:** the web chat posts the current session's narration flag whenever it changes. Native
-  defaults to off. A native voice keyword send uses its Apple live transcript directly while off;
-  only narration-on sends enter durable HQ audio preparation.
+  defaults to off. A normal native voice keyword send uses its Apple live transcript directly while
+  off; the explicit `clean up and send` / `send and clean up` keyword enters durable HQ audio
+  preparation regardless of narration state.
 - **Anchors:** web `use-native-bridge.ts` — `useNativeNarrationBridge`; native
   `Views/ChatWebView.swift` — `receiveNarrationState`; `Views/NativeComposerView.swift` —
   `sendKeywordIntent`.
 - **Drift:** fail-local — absent or malformed state leaves native narration off, avoiding an
   unintended audio upload.
 
-### 4.5 Companion selection command (web → native) + durability acknowledgement
+### 4.5 Speech playback state (web → native)
+
+- **Wire shape:** `{ playing: boolean }` on `callbackboxSpeechPlaybackState`.
+- **Semantics:** the web posts changes to its actual speech playback state. An active native
+  continuous-dictation turn pauses while `playing:true` and resumes when the final queued speech
+  segment reports `playing:false`. The microphone remains active while waiting for speech to begin;
+  an explicit stop or `send and close` prevents the later resume.
+- **Anchors:** web `use-native-bridge.ts` — `useNativeSpeechPlaybackBridge`; native
+  `Views/ChatWebView.swift` — `receiveSpeechPlaybackState`; `Views/NativeComposerView.swift` —
+  `applyVoiceTurn`.
+- **Drift:** fail-local — absent or malformed state does not alter native microphone state.
+
+### 4.6 Response generation state (web → native)
+
+- **Wire shape:** `{ active: boolean }` on `callbackboxResponseState`.
+- **Semantics:** `active:true` means the chat machine is streaming an agent response;
+  `active:false` means it is not. Native starts its send/wait earcon loop locally, ignores a stale
+  initial false, observes the following true, and stops the loop when streaming transitions to
+  refreshing and the web posts false. This matches the web voice composer's tick boundary.
+- **Anchors:** web `use-native-bridge.ts` — `useNativeResponseBridge`; native
+  `Views/ChatWebView.swift` — `receiveResponseState`; `Services/NativeEarcons.swift` —
+  `NativeEarconState`.
+- **Drift:** fail-local — absent or malformed state leaves the bounded 30-second tick loop to stop
+  itself.
+
+### 4.7 Companion selection command (web → native) + durability acknowledgement
 
 - **Command wire shape** (web posts on `callbackboxComposerCommand`):
   ```json
@@ -385,8 +415,8 @@ the contract.
 
 ## 5. Direct HTTP calls from native code
 
-Only four endpoints are hit by native code. (`/chat/send` is called by the **web layer inside the
-webview**, not natively — §6.)
+The main app and its Share Extension use the endpoints below. Ordinarily `/chat/send` is called by
+the **web layer inside the webview**; the Share Extension is the deliberate native exception.
 
 ### 5.1 `POST /api/pairing/redeem`
 
@@ -406,7 +436,8 @@ See §1.3 (full request/response/errors).
   |---|---|
   | native caller | `ios-app/CallbackBox/Services/ChatAPI.swift` — `ChatAPI.transcribeAudio(fileURL:)`, `applyAuth`, `HqTranscriptionResult { text, diarized }` |
   | box handler | `src/webapp/routes/chat-audio-routes.ts` — `POST /api/chat/transcribe-audio` (→ `transcribeAudioHq({ audioBuffer, filename, boxRoot })`) |
-- **Drift:** LOUD (5xx surfaced) / SILENT if a float-format WAV is mis-decoded — see §9 (I8, needs verify).
+- **Drift:** LOUD for provider rejection (5xx surfaced). A provider HTTP 200 with unusable text would
+  be SILENT. Float32 WAV compatibility was verified against every selectable HQ path on 2026-08-06.
 
 ### 5.3 `GET /api/chat/default` — session resolution
 
@@ -417,8 +448,8 @@ See §1.3 (full request/response/errors).
   |---|---|
   | native caller | `ios-app/CallbackBox/Services/ChatAPI.swift` — `ChatAPI.resolvedSession()`, `DefaultSessionResult { sessionId? }` |
   | box handler | `src/webapp/routes/chat.ts` — `GET /api/chat/default` (→ `getMostActive(boxRoot)`) |
-- **Drift:** SILENT (on any non-2xx `resolvedSession` returns `"new"` — a transient 5xx silently
-  forks a new session).
+- **Drift:** LOUD (non-2xx `resolvedSession` throws; a transient 5xx does not silently fork a new
+  session).
 
 ### 5.4 `POST /api/chat/upload-file` — composer file upload
 
@@ -450,6 +481,174 @@ See §1.3 (full request/response/errors).
   | web caller | `src/frontend/src/api-chat.ts` (`chatTurnStartSchema`, `ChatImageAttachment`) |
   | box handler | `src/webapp/routes/chat-send-routes.ts`; `src/webapp/routes/chat-helpers.ts` — `sendBodySchema`, `validateImages` |
 - **Drift:** LOUD (400) / SILENT dedup.
+
+### 5.6 Bulk file-upload batch (`/api/bulk/...`)
+
+- **Direction:** native → box (also driven by the web overlay). The server contract is
+  uploader-agnostic and carries bearer auth like every other native call; there are now two
+  implementations of these rows — the web overlay and the iOS uploader
+  (`docs/plans/chat-photo-batch-upload.md`, the Track 3 that
+  `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
+  client. Auth: cookie OR `Authorization: Bearer
+  <token>`, owner-scoped per session (same `authorizeCaptureSessionOwner` ownership as capture).
+- **Endpoints:**
+  - `POST /api/bulk/sessions` — create a batch. Req `{ targetSessionId: string /* required */,
+    items?: BulkItem[] }` where `BulkItem = { id: string, name: string, size?:
+    number, mimetype?: string }`. Res `{ sessionId, startedAt, capabilities: { acceptedUploadEncodings:
+    ["raw-body-v1"] } }`. A missing/empty `targetSessionId` is **400** (a batch with no chat to
+    deliver into is invalid at creation). The batch's context dir is derived **server-side** from
+    `targetSessionId` (via the session→directory history binding) — the client never supplies a box
+    path (a client-supplied dir would be a path-traversal vector), and any `contextDir` in the body is
+    ignored. Item id/name/mimetype are length-capped (512); a duplicate id in the request, or more
+    than 500 items, is **400**.
+  - `POST /api/bulk/sessions/:id/items` — append to the item registry. Req `{ items: BulkItem[] }`.
+    Res `{ registered: number }`. A duplicate id in the request, a new id colliding with one already
+    registered, or exceeding the 500-item registry cap is **400**. **409** once the session is sealed
+    (finalize froze the registry). Re-sending an existing id is idempotent.
+  - `POST /api/bulk/sessions/:id/items/:itemId/upload` — stream one item's bytes. `Content-Type:
+    application/octet-stream` (raw body, **streamed** to disk — never multipart); headers
+    `X-Upload-Filename` (required; the staged idempotency key), `X-Upload-Original-Name`,
+    `X-Upload-Mime-Type`, `X-Upload-Uploaded-At`. Res `{ success, filename, itemId, size, sha256 }`
+    (size + sha256 **server-computed** while streaming). An unregistered `itemId` is **400**; a byte
+    over the staging cap **413**; a same-filename/different-bytes retry **409**; a commit that races
+    finalize (session sealed under the lock, or an item unregistered under the lock) **409**; a second
+    concurrent stream for the same item, or more than 8 concurrent streams for the session, **409**
+    (retry shortly).
+  - `GET /api/bulk/sessions/:id` — resume/status: `{ sessionId, state, targetSessionId, registered:
+    BulkItem[], received: [{ itemId, name, size }] }`.
+  - `DELETE /api/bulk/sessions/:id` — cancel and discard the batch. Accepted only while the batch is
+    `open` (still uploading) or `failed:*` (dead, retryable); **409** once finalize has sealed it,
+    because the background worker owns it from then on and deleting the staging directory under that
+    worker makes it read `null` and silently return — no `<upload>` message, while the client that
+    already saw finalize succeed reports success. The state check and the delete run together under
+    the staging lock, so a cancel cannot race the seal. Uploaders must disable their cancel/close
+    affordances once finalize is in flight.
+  - `POST /api/bulk/sessions/:id/finalize` — seal + fire the background prepare→deliver worker. Req
+    `{ failedItems?: [{ id?, name, reason }], note?: string }`. Res `{ sessionId, staged: true }`.
+    **503** if the box has no chat runtime. Returns immediately; the batch lands an `upload-batch`
+    card under the chat's `tmp-upload/` and an `<upload>` message is injected.
+    **A 200 here means SEALED, not DELIVERED** — prepare→deliver runs in the background afterwards
+    and can still fail (`failed:prepare` / `failed:deliver`).
+    **The seal is the hand-off.** Before it, the uploader is the only thing that can recover the
+    batch, so a failed finalize means the uploader keeps the user's text and lets them retry. After
+    it, the box holds both the bytes and the `note`, and owns recovery: a batch that ends `failed:*`
+    is surfaced to its chat agent by the sweep (`core/bulk-upload/sweep.ts`, `notifyStranded`) with
+    the introduction and the received/failed/registered counts, so the agent can tell the boxholder
+    and offer to place the files. An uploader therefore **MUST NOT** mount its own retry for a sealed
+    batch — two recovery paths for one batch is how it gets delivered twice — and MAY release its
+    local copies and the composer text once finalize returns 200.
+    Polling `GET /sessions/:id` after the seal is for UX only (reporting success promptly), not
+    correctness. Terminal reads: `delivered`, `delivering` (queued to a busy agent), or **404**
+    (staging is torn down only after delivery) all mean delivered; `failed:*` means the box will hand
+    it to the agent.
+    `note` is the batch's **introduction** — the uploader sends the composer text the user submitted
+    the files with, verbatim. **Read it at finalize time, not when the batch starts.** A large batch
+    takes minutes and the natural way to caption one is to pick the files and then write about them,
+    so an uploader that snapshots the composer up front can only ever carry text typed *before* the
+    picker opened — which is how the first prod run shipped with no note at all (2026-07-31). For the
+    same reason an uploader **must not lock its text surface while a batch uploads**; gate the send
+    action, not typing. It rides in the same atomic seal as `failedItems`, lands in the card's
+    `note` frontmatter, and renders as the first paragraph of the `<upload>` message body (above the
+    generated summary, separated by a blank line). Capped at 10,000 chars (**400** over); a
+    whitespace-only note is stored as absent, and a batch with no note produces an `<upload>` message
+    byte-identical to the pre-`note` form. **An uploader that has composer text MUST send it** —
+    without it every batch is "unintroduced" and the agent asks what the files are instead of filing
+    them (`src/schemas/upload-batch.tsx` duty 1).
+- **Anchors:**
+  | side | anchor |
+  |---|---|
+  | box handler | `src/webapp/routes/bulk-upload.ts` — `registerBulkUploadRoutes`; streaming write in `src/core/capture/staging-stream.ts` — `addFileStreamed` |
+  | native caller | `Services/BulkUploadAPI.swift` — request shaping; `Services/BulkUploadCoordinator.swift` — bounded queue (3 in flight), per-item retry, resume via `GET /sessions/:id` |
+- **Drift:** LOUD (400/409/413/404 all surface; incomplete uploads leave the item in the registry's
+  missing list, which finalize reports).
+
+### 5.7 `POST /api/trpc/debugLog.submit` — native log forwarding
+
+- **Direction:** native → box. Non-batched tRPC mutation: no transformer is configured on the tRPC
+  stack, so per the tRPC v11 HTTP-RPC spec this is a plain `POST <baseURL>/api/trpc/debugLog.submit`
+  with the input object as the raw JSON body (not the batch-link envelope).
+- **Request:** `{ source?: string, entries: [{ level: "error"|"warn"|"log"|"info", message: string,
+  at?: string }] }`. `source` is a slug (`^[a-z][a-z0-9-]{0,15}$`, ≤16 chars); iOS sends `"ios"`.
+  `at` is an RFC 3339 datetime with an offset (`z.string().datetime({ offset: true })`) — the
+  device-side time the entry describes, since a queued entry can flush long after the incident (the
+  forwarder persists entries on-device and only flushes on launch/foreground/best-effort-background).
+  `message` is capped at 4000 chars server-side; iOS enforces the identical cap client-side before
+  persisting, so a conforming client's batch can never 400 for size. Up to 100 entries per batch.
+  Auth: `Authorization: Bearer <device token>` like every other native call (§2).
+- **Native level policy:** iOS sends `error`, `warn`, and selected `info`
+  transitions. Its offline queue evicts the oldest info entry before an
+  error/warn entry at both per-box and global bounds. Info currently covers app
+  scene phase, selected box, web-view navigation, speech/response activity, and
+  audio-session role. This is behavior within the existing wire enum; no request
+  field changed.
+- **Response 200:** the tRPC HTTP-RPC envelope `{"result":{"data":{"ok":true}}}` — the procedure
+  returns `{ ok: true }`, but the raw bytes a native client reads are wrapped (the native side only
+  checks the status code, so it never unwraps this). A 2xx means the batch is **durably written** — the route's file
+  append goes through a strict variant (`appendRollingLogStrict`) that rejects on filesystem failure,
+  unlike the lenient one every other rolling-log writer uses. The forwarder relies on this: it only
+  clears a batch from its local queue once it sees 2xx, so a swallowed disk error would otherwise be
+  a silent, unrecoverable loss of the client's only copy.
+- **Rendering:** appended to `<boxRoot>/.callback-box/client-debug.log` as
+  `<receiptISOTime> [level] message`; a `source` adds a `[source]` tag, and once `at` drifts more than
+  ~5s from receipt time the tag becomes `[source@<at>]` — so a stale-flushed entry still shows the
+  incident's own time. Control characters (including CR/LF) in `message` are normalized to single
+  spaces before the line is written, for every source including web — a crafted or multiline message
+  can't forge extra log lines. The 200-entry in-memory ring (`debugLog.get`) bakes the same tag into
+  its `message` field; its `{ts,level,message}` shape is otherwise unchanged.
+- **Forward-compat:** the input schema is a plain (non-strict) `z.object` — unknown top-level or
+  per-entry keys are stripped rather than rejected, so an old server against a client sending fields
+  it doesn't know yet still accepts the batch (untagged, degrading to today's web-only rendering).
+- **Errors:** 400 (Zod validation — bad `level`, oversized `message`, batch over 100 entries, bad
+  `source` shape); 500 if the strict append itself fails (disk full/permissions — rare, but the point
+  of the strict variant is that it's never silent).
+- **Anchors:**
+  | side | anchor |
+  |---|---|
+  | native caller | `Services/LogForwarder.swift` — `flushBox`/`send` |
+  | box handler | `src/webapp/trpc/routers/debugLog.ts` — `submit` |
+  | box durability | `src/lib/rolling-log.ts` — `appendRollingLogStrict` |
+- **Drift:** fail-local. A forwarding failure must never break the feature it's logging — entries are
+  retained client-side on any network failure or 5xx and simply wait for the next flush trigger; there
+  is no retry loop that could itself become a second unreliable upload. A 401/403 (revoked device)
+  drops that box's queued batch rather than retrying forever against a device that will never regain
+  access.
+
+### 5.8 Share Extension — textual destinations and delivery
+
+- **Shared pairing state:** the main app writes every paired box's non-secret metadata (id, label,
+  base URL, lock requirement), plus its selected box id, to App Group
+  `group.app.callbackbox.ios`. The Share Extension initially selects that box, always names the
+  current box, and offers a box picker when more than one box is paired. Choosing a box in the
+  extension is local to that share action and does not change the main app's selected box. The
+  extension reloads destinations for the chosen box and ignores a stale response from an earlier
+  choice. A protected box's device-owner authentication gate runs before destination loading,
+  which gates submission; provider classification may happen first so unsupported input can fail
+  without an unnecessary authentication prompt. The device token is never written to UserDefaults;
+  it is a generic-password Keychain item shared through access group
+  `44AJ3D25ZD.group.app.callbackbox.ios` (the resolved access group for the app's signing team), service
+  `app.callbackbox.ios.device-token`, account `<box UUID>`. Both targets carry both entitlements.
+- **`GET /api/trpc/share.destinations`:** bearer-authenticated query. The tRPC envelope's `data` is
+  `{ chats, saves }`; `chats` contains at most two fresh resumable landmark chats, each
+  `{sessionId,label,lastActivity,landmark:{dir,label,symbol}}`. `saves` starts with Inbox and then
+  landmarks advertising `destinations: [{for:[share]}]` as
+  `{destination:{kind:"inbox"}|{kind:"landmark",dir},label,symbol}`.
+- **`POST /api/chat/send`:** a URL or text sent to chat uses
+  `{message,messageId,session,exactSession:true}`. Exact mode rejects `new` and missing/archived
+  sessions; it never creates the requested id or falls back to another chat. The URL is the message.
+- **`POST /api/trpc/share.saveTextual`:** input is `{kind:"url",shareId,url,title?,capturedAt,
+  destination}` or `{kind:"text",shareId,text,title?,capturedAt,destination}`. A URL creates one
+  `.webpage.card` with the Clerk-compatible Markdown-link fallback; text creates one `.doc.card`.
+  Both carry optional `share-id` provenance. A retry finds the id even after the card moves and
+  returns that path only for identical immutable content; changed content or card type is 409.
+- **Current native activation:** URL and plain text, one provider at a time. Image, audio, and file
+  activation remains deferred until capture staging supports exact chat and save targets; the
+  extension does not advertise unsupported types.
+- **Anchors:** native `CallbackBoxShareExtension/ShareExtensionAPI.swift`,
+  `ShareViewController.swift`, app `Storage/PairedBoxCredentialStore.swift` and
+  `SharedSelectedBoxSnapshot.swift`; box `trpc/routers/share.ts`, `share-contract.ts`, and
+  `routes/chat-send-routes.ts`.
+- **Drift:** LOUD. Malformed envelopes, stale destinations, stale chats, authentication failure,
+  and conflicting retries remain visible in the sheet and do not dismiss it.
 
 ---
 
@@ -497,11 +696,23 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | B5 | Companion selection command | web→native | V1 `{version:1,id,kind:add-selection,selection:{ref,text,position}}` via `callbackboxComposerCommand` | `Models/NativeComposerContract.swift` · `NativeComposerCommand`; `Views/ChatWebView.swift` · `receiveComposerCommand`; `Storage/ComposerDraftStore.swift` · `applySelectionCommand` | `native-composer-command.ts`; `use-native-composer-commands.ts`; `InteractiveChat-view.tsx` | LOUD |
 | B6 | Composer command acknowledgement | native→web | accepted `{version:1,id,accepted:true}` or rejected `{version:1,id,accepted:false,reason}` via `callbackboxNativeComposerCommandAck`, queue + `callbackbox:native-composer-command-ack` event | `Models/NativeComposerContract.swift` · `NativeComposerCommandAcknowledgement`; `Views/ChatWebView.swift` · `deliverComposerCommandAcknowledgements` | `native-composer-command.ts` · `nativeComposerCommandAcknowledgementFromDetail`; `use-native-composer-commands.ts` | LOUD |
 | B7 | Narration state | web→native | `{enabled}` via `callbackboxNarrationState` | `Views/ChatWebView.swift` · `receiveNarrationState`; `Views/NativeComposerView.swift` · `sendKeywordIntent` | `use-native-bridge.ts` · `useNativeNarrationBridge` | fail-local |
-| H1 | `POST /api/chat/transcribe-audio` | native→box | multipart `session` + `file`(segment.wav, audio/wav); res `{text,diarized}` | `Services/ChatAPI.swift` · `transcribeAudio` | `routes/chat-audio-routes.ts` | LOUD / SILENT if float-WAV mis-decoded — **I8** |
+| B8 | Speech playback state | web→native | `{playing}` via `callbackboxSpeechPlaybackState` | `Views/ChatWebView.swift` · `receiveSpeechPlaybackState`; `Views/NativeComposerView.swift` · `applyVoiceTurn` | `use-native-bridge.ts` · `useNativeSpeechPlaybackBridge` | fail-local |
+| B9 | Response generation state | web→native | `{active}` via `callbackboxResponseState` | `Views/ChatWebView.swift` · `receiveResponseState`; `Services/NativeEarcons.swift` · `NativeEarconState` | `use-native-bridge.ts` · `useNativeResponseBridge` | fail-local |
+| H1 | `POST /api/chat/transcribe-audio` | native→box | multipart `session` + `file`(segment.wav, audio/wav); res `{text,diarized}` | `Services/ChatAPI.swift` · `transcribeAudio` | `routes/chat-audio-routes.ts` | LOUD on rejection / SILENT on HTTP 200 with unusable text; Float32 WAV verified — **I8** |
 | H2 | `GET /api/chat/default` | native→box | res `{sessionId?}` | `Services/ChatAPI.swift` · `resolvedSession` | `routes/chat.ts` · default-session route | SILENT (→ `"new"`) |
 | H3 | `POST /api/chat/send` (web layer) | web→box | `{session,message,messageId,images?,…}`; res `{turnId?}\|{queued}\|{deduplicated}` | `api-chat.ts` | `routes/chat-send-routes.ts`; `routes/chat-helpers.ts` · `sendBodySchema` | LOUD / SILENT dedup |
 | H4 | `POST /api/chat/upload-file` | native→box | multipart `file`; res `{path,originalName,size,mimetype}` | `Services/ChatAPI.swift` · `uploadFile` | `routes/chat-uploads.ts` · `registerChatUploadRoutes` | LOUD |
+| H5 | `POST /api/trpc/debugLog.submit` | native→box | req `{source?,entries:[{level,message,at?}]}`; res `{"result":{"data":{"ok":true}}}` (tRPC envelope) | `Services/LogForwarder.swift` | `trpc/routers/debugLog.ts` · `submit`; `lib/rolling-log.ts` · `appendRollingLogStrict` | fail-local |
+| S1 | `GET /api/trpc/share.destinations` | extension→box | res tRPC `{chats:[…],saves:[…]}` | `CallbackBoxShareExtension/ShareExtensionAPI.swift` · `destinations` | `trpc/routers/share.ts` · `destinations` | LOUD |
+| S2 | `POST /api/trpc/share.saveTextual` | extension→box | URL or text + `shareId`, `capturedAt`, destination; res `{created:[path]}` | `CallbackBoxShareExtension/ShareExtensionAPI.swift` · `save` | `trpc/routers/share.ts` · `saveTextual` | LOUD |
+| S3 | `POST /api/chat/send` exact mode | extension→box | `{message,messageId,session,exactSession:true}` | `CallbackBoxShareExtension/ShareExtensionAPI.swift` · `send` | `routes/chat-send-target.ts` · `assertExactSessionTarget` | LOUD |
 | M1 | Hub mobile-auth wall | box internal | full verification of bearer or `cb_mobile` for the request's slug | — | `hub-server.ts` · `hasMobileAuth` → `core/mobile/request-auth.ts` · `verifyMobileRequest` | LOUD |
+| U1 | `POST /api/bulk/sessions` | native/web→box | req `{targetSessionId,items?}` (context dir derived server-side from `targetSessionId`); res `{sessionId,startedAt,capabilities}` | — (deferred) | `routes/bulk-upload.ts` · `registerBulkUploadRoutes` | LOUD (400 no target) |
+| U2 | `POST /api/bulk/sessions/:id/items` | native/web→box | req `{items:BulkItem[]}`; res `{registered}` | — (deferred) | `routes/bulk-upload.ts` | LOUD |
+| U3 | `POST /api/bulk/sessions/:id/items/:itemId/upload` | native/web→box | octet-stream body, `X-Upload-Filename` + `X-Upload-Original-Name`/`-Mime-Type`; res `{success,filename,itemId,size,sha256}` | — (deferred) | `routes/bulk-upload.ts`; `core/capture/staging-stream.ts` · `addFileStreamed` | LOUD (400/409/413) |
+| U4 | `GET /api/bulk/sessions/:id` | native/web→box | res `{sessionId,state,targetSessionId,registered,received}` | — (deferred) | `routes/bulk-upload.ts` | LOUD |
+| U5 | `DELETE /api/bulk/sessions/:id` | native/web→box | res `{success}` | — (deferred) | `routes/bulk-upload.ts` | LOUD |
+| U6 | `POST /api/bulk/sessions/:id/finalize` | native/web→box | req `{failedItems?}`; res `{sessionId,staged}` | — (deferred) | `routes/bulk-upload.ts`; `core/bulk-upload/worker.ts` · `prepareAndDeliverBulkBatch` | LOUD (503 no runtime) |
 
 ---
 
@@ -529,6 +740,10 @@ without the other is a contract break.
 - **Composer command V1** `{version,id,kind,selection:{ref,text,position}}` and acknowledgement V1
   `{version,id,accepted,reason?}` — `Models/NativeComposerContract.swift` ↔
   `native-composer-command.ts`.
+- **`debugLog.submit` wire keys** `{source?,entries:[{level,message,at?}]}`, `level` closed to
+  `error|warn|log|info`, `source` slug `^[a-z][a-z0-9-]{0,15}$` (iOS always sends `"ios"`), `at` an
+  offset datetime — `Services/LogForwarder.swift` ↔
+  `trpc/routers/debugLog.ts` · `submit`.
 - **Bridge globals** `callbackboxNativeReceive` / `callbackboxNativeQueue` /
   `callbackboxNativeShareLocation` / `callbackboxNativeLocationQueue` /
   `callbackboxNativeComposerCommandAck` / `callbackboxNativeComposerCommandAckQueue` and events
@@ -536,11 +751,35 @@ without the other is a contract break.
   `callbackbox:native-composer-command-ack` — native-authored startup script in
   `Views/ChatWebView.swift` ↔ `use-native-bridge.ts` / `use-native-composer-commands.ts`.
 - **Script-message channel names** `callbackboxSession` / `callbackboxEmissionReceipt` /
-  `callbackboxLocationResult` / `callbackboxComposerCommand` — `Views/ChatWebView.swift`
-  (`userContentController.add`) ↔ `native-post.ts` · `NativeShellChannel`.
+  `callbackboxLocationResult` / `callbackboxLocationState` / `callbackboxNarrationState` /
+  `callbackboxSpeechPlaybackState` / `callbackboxResponseState` /
+  `callbackboxComposerCommand` — `Views/ChatWebView.swift` (`userContentController.add`) ↔
+  `native-post.ts` · `NativeShellChannel`.
 - **Neutral web→native transport** `callbackboxNativePost(channel, payload)` (string payloads) —
   startup script in `Views/ChatWebView.swift` ↔ `native-post.ts` · `postNativeMessage` (with the
   legacy `webkit.messageHandlers` object-form fallback for pre-neutral shells).
+- **Inline photo limit** `4` — `components/chat/photo-batch-threshold.ts` · `INLINE_PHOTO_LIMIT` /
+  `shouldBatchPhotos` ↔ the iOS composer's mirrored constant. **The most photos that may ride
+  inline (base64) in one chat message.** A selection that would put the composer's *total* inline
+  count above the limit is uploaded as a bulk batch (§5.6) instead. Photos **already inline join that
+  batch** and are removed from the composer, so one selection act has one destination — batching only
+  the new photos would send the composer text off as the batch's introduction while the older photos
+  sat behind with nothing describing them. (Photos still *encoding* can't be folded, having no bytes
+  yet; they finish and land inline rather than being discarded — never losing a photo outranks
+  arriving in one piece.) The inline total is bounded by the limit however many separate selections a
+  user makes, counting in-flight encodes. The rule applies identically to the picker, paste, and drop.
+
+  This is a real behavioral contract, not a tuning knob: inlining a camera roll base64-encodes tens
+  of megabytes into a single `/chat/send`, which is what
+  `issues/bugs/2026-07-30-many-photos-to-chat-fails-ios.md` reports failing client-side with no
+  server-side trace. There is **no documented size ceiling** for a WKWebView script message — the
+  failure is memory pressure, not a published limit — so "inline just under the cliff" is not
+  implementable; keeping the inline payload categorically small is the only sound posture. A
+  surface that raises or ignores the limit reintroduces the bug.
+
+  An uploader that routes a selection this way MUST send the composer text as the batch's `note`
+  (§5.6) — otherwise the batch is unintroduced and the agent asks what the files are instead of
+  filing them.
 
 ---
 
@@ -576,17 +815,13 @@ reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.
 - **Token-lifecycle gaps.** Device tokens never expire (`MobileDevice` has no `expiresAt`); pending
   pairings live only in process memory (10-min TTL) and can be lost to a lazy 5-min box idle-stop
   mid-flow.
-- **`isPairingRedeemUrl` unanchored** suffix match (`routes/pairing.ts`) — `/anything/api/pairing/redeem`
-  matches. Low risk (token-gated).
 - **`mobileTokenFromUrl` duplicated 3×** — a security-relevant parser copied verbatim across
   `hub-server.ts` / `server-box-scope.ts` / `server-root.ts`.
 - **Benign field drifts.** Redeem `{boxSlug,label,deviceId,deviceLabel}` ignored by iOS; receipt
   `deduplicated` ignored by iOS; `User-Agent: CallbackBox-iOS/0.1` never branched on server-side.
-- **I8 (needs verify).** Native records WAV in the mic's native format (typically 32-bit float PCM)
-  and uploads as `audio/wav`; if the HQ decoder expects 16-bit int PCM the leg silently no-ops.
-- **Legacy `embed=1` vs `nativeComposer=1` duality.** The web side still reads a legacy `embed=1`
-  (header-suppress) alongside `nativeComposer=1`; both reach the same `usesNativeShell`. iOS uses
-  only `nativeComposer=1`, which is the standard a new platform must adopt.
+- **I8 — float WAV decoder compatibility (RESOLVED 2026-08-06).** Live calls with a 48 kHz mono
+  Float32 WAV returned the expected speech from all OpenAI HQ variants and from Voxtral in both plain
+  and diarized modes. See `issues/closed/bugs/2026-07-17-ios-hq-wav-float-format-needs-verify.md`.
 
 ---
 
@@ -653,6 +888,9 @@ callback-box/src/webapp/mobile-cookie.ts
 callback-box/src/webapp/routes/pairing.ts
 callback-box/src/webapp/routes/chat-audio-routes.ts
 callback-box/src/webapp/routes/chat-uploads.ts
+callback-box/src/webapp/routes/bulk-upload.ts
+callback-box/src/core/capture/staging-stream.ts
+callback-box/src/webapp/trpc/routers/debugLog.ts
 
 # iOS native shell: webview bridge, pairing model, paired-box storage
 ios-app/CallbackBox/Views/ChatWebView.swift
@@ -661,6 +899,7 @@ ios-app/CallbackBox/Storage/ComposerDraftStore.swift
 ios-app/CallbackBox/Services/ChatAPI.swift
 ios-app/CallbackBox/Models/PairedBox.swift
 ios-app/CallbackBox/Storage/PairedBoxStore.swift
+ios-app/CallbackBox/Services/LogForwarder.swift
 
 # Shared golden fixtures — any fixture change is a contract change (directory prefix)
 callback-box/test/mobile-contract/

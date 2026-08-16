@@ -8,7 +8,7 @@
  * Originated in the retired `webapp/routes/capture-finalize.ts`; the
  * preparation worker (prepare.ts) is now the only consumer. Media bytes are
  * gitignored assets
- * tracked via a per-scope `manifest.json` (see docs/asset-manifests.md); we
+ * tracked via a per-scope `manifest.json` (see docs/implemented-plans/asset-manifests.md); we
  * write the media, write its manifest, and stage the *manifest* + card, never
  * the raw bytes.
  */

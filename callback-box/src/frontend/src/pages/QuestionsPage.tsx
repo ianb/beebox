@@ -10,7 +10,7 @@ import { QuestionsList } from "../components/questions/QuestionsList";
 
 export function QuestionsPage() {
   return (
-    <Column overflow="auto" className="h-full">
+    <Column overflow="auto" focusable className="h-full">
       <Stack gap="lg" className="max-w-2xl mx-auto py-8 px-4">
         <Text as="h1" size="2xl" weight="bold">Questions</Text>
         <QuestionsList />

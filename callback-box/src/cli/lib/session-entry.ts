@@ -29,8 +29,12 @@ export interface SessionEntry {
  * onto its matching tool_use block in the prior assistant entries. The chat UI
  * treats tool calls as a single unit (call + response), so results need to ride
  * alongside their tool_use rather than appearing as standalone messages.
+ *
+ * `recent` is the scan's bounded graft window (`session-retention.ts`), not the
+ * whole transcript: only the trailing run of assistant entries is ever walked,
+ * and a result follows its call within a couple of entries in practice.
  */
-function graftToolResults(content: SessionContentBlock[], filtered: SessionEntry[]): void {
+function graftToolResults(content: SessionContentBlock[], recent: SessionEntry[]): void {
   const resultsById = new Map<string, string>();
   for (const block of content) {
     if (block.type === "tool_result" && block.toolUseId) {
@@ -38,8 +42,8 @@ function graftToolResults(content: SessionContentBlock[], filtered: SessionEntry
     }
   }
   if (resultsById.size === 0) return;
-  for (let i = filtered.length - 1; i >= 0; i--) {
-    const prev = filtered[i];
+  for (let i = recent.length - 1; i >= 0; i--) {
+    const prev = recent[i];
     if (!prev || prev.type !== "assistant") break;
     for (const b of prev.content) {
       if (b.type === "tool_use" && b.toolId) {
@@ -51,7 +55,7 @@ function graftToolResults(content: SessionContentBlock[], filtered: SessionEntry
 }
 
 /** Pull a user-message identity attribute (user / user-email) from leading tag text. */
-function userIdentity(content: SessionContentBlock[], attr: "user" | "user-email"): string | undefined {
+export function userIdentity(content: SessionContentBlock[], attr: "user" | "user-email"): string | undefined {
   const firstText = content.find((b) => b.type === "text")?.text || "";
   const re =
     attr === "user"
@@ -102,13 +106,14 @@ function classifyUserEntry(
 }
 
 /**
- * Decide what (if anything) a single raw entry contributes to the filtered
- * list. Returns a SessionEntry to push, or null to skip. `filtered` is read
- * (and tool_use results grafted) for user entries carrying tool_result blocks.
+ * Decide what (if anything) a single raw entry contributes to the scan.
+ * Returns a SessionEntry to record, or null to skip. `recent` is read (and
+ * tool_use results grafted into it) for user entries carrying tool_result
+ * blocks — see {@link graftToolResults}.
  */
 export function buildEntry(
   raw: Record<string, unknown>,
-  filtered: SessionEntry[]
+  recent: SessionEntry[]
 ): SessionEntry | null {
   // Skip compact_boundary system messages — the compaction summary user
   // message that follows is the one we display.
@@ -126,7 +131,7 @@ export function buildEntry(
   if (raw.type === "assistant" && message.model === "<synthetic>") return null;
 
   if (raw.type === "user") {
-    graftToolResults(content, filtered);
+    graftToolResults(content, recent);
     const classified = classifyUserEntry(raw, content);
     if (classified === "skip") return null;
     if (classified !== "keep") return classified;

@@ -128,6 +128,11 @@ final class ComposerDraftStore: ObservableObject {
         scheduleSave()
     }
 
+    func setDictationTranscript(_ text: String) {
+        ComposerDraftReducer.reduce(&draft, .setDictationTranscript(text))
+        scheduleSave()
+    }
+
     func setSelection(_ selection: NSRangeValue) {
         ComposerDraftReducer.reduce(&draft, .setSelection(selection))
         scheduleSave()

@@ -12,7 +12,7 @@
  * still-`open` session (capture mode is live, nothing finalized) is not pending.
  */
 
-import { stagingSessionIsEmpty, type StagingSession, type StagingSessionState } from "./staging-store.js";
+import { stagingSessionIsEmpty, isCaptureSession, type StagingSession, type StagingSessionState } from "./staging-store.js";
 
 /** Media tallies shown in the pending bubble's caption line. */
 export interface PendingCaptureCounts {
@@ -50,6 +50,7 @@ export function selectPendingCaptures(opts: {
 }): PendingCapture[] {
   const { sessions, sessionId } = opts;
   return sessions
+    .filter(isCaptureSession)
     .filter((s) => s.targetSessionId === sessionId && isPendingCaptureState(s.state))
     .toSorted((a, b) => a.createdAt.localeCompare(b.createdAt))
     .map((s) => ({
@@ -90,6 +91,7 @@ export function selectResumableCaptures(opts: {
 }): ResumableCapture[] {
   const { sessions, targetSessionId, clientSessionId, requestingUser } = opts;
   return sessions
+    .filter(isCaptureSession)
     .filter((s) => s.state === "open" && !stagingSessionIsEmpty(s))
     .filter((s) => s.createdBy === requestingUser)
     .filter(

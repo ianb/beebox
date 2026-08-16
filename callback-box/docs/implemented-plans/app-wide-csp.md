@@ -1,3 +1,9 @@
+---
+title: "App-wide Content-Security-Policy"
+status: implemented
+workstream: unknown
+issues: []
+---
 # App-wide Content-Security-Policy
 
 This plan introduces a Content-Security-Policy (CSP) on the callback-box

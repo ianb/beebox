@@ -4,14 +4,15 @@ How to add new API endpoints to callback-box using tRPC. Follow an existing rout
 
 ## When to Use tRPC vs REST
 
-**Use tRPC** for standard request/response endpoints — queries (reads) and mutations (writes). This is the default for all new endpoints.
+**Use tRPC** for standard request/response endpoints — queries (reads) and mutations (writes) — and for real-time/streaming, which is tRPC **subscriptions over the WebSocket** (`events.subscribe` is the global event-bus stream, `events.turnStream` the resumable per-turn chat stream; the client routes subscriptions through `wsLink` via the `splitLink` in `src/frontend/src/lib/trpc/`). This is the default for all new endpoints.
 
-**Keep as REST** when the endpoint uses:
-- SSE streaming (chat responses, command output, file-watcher events)
-- File uploads (`multipart/form-data`)
-- WebSocket connections
+**Keep as REST** (raw Fastify routes in `src/webapp/routes/`) only for what doesn't fit the tRPC shape:
+- File uploads/downloads (`multipart/form-data`, streamed bodies)
 - OAuth redirect flows
 - Webhook receivers (external services POST to us)
+- The `/chat/send` POST (needs the request's user + the session registry)
+
+Older raw routes are tech debt — migrate when you touch the area.
 
 ## Files to Touch
 
@@ -45,7 +46,7 @@ export const myRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       const path = await saveThing(ctx.boxRoot, input);
-      ctx.eventBus.emit("file-change", { path }); // notify SSE clients
+      ctx.eventBus.emit("file-change", { path }); // notify subscribed clients
       return { success: true, path };
     }),
 });
@@ -120,7 +121,7 @@ Every procedure receives `ctx` with:
 |-------|------|-------------|
 | `ctx.boxRoot` | `string` | Absolute path to the box directory |
 | `ctx.boxSlug` | `string` | URL slug for the box (e.g., `"test1"`) |
-| `ctx.eventBus` | `EventBus` | SQLite-backed event bus for SSE notifications (see `src/core/event-bus.ts`) |
+| `ctx.eventBus` | `EventBus` | SQLite-backed event bus feeding `events.subscribe` subscriptions (see `src/core/event-bus.ts`) |
 | `ctx.services` | `Services` | Injected services (calendar, telegram, dropbox, claude CLI) |
 | `ctx.chatSession` | `ChatSession` | Per-box chat session singleton |
 
@@ -191,7 +192,7 @@ return { items };
 
 tRPC manages query keys internally. To trigger refetches, use:
 - `utils.my.getThings.invalidate()` — after a mutation
-- `useEffect` watching a trigger prop — for external signals (like SSE events)
+- `useEffect` watching a trigger prop — for external signals (like subscription events)
 
 ### `exactOptionalPropertyTypes`
 

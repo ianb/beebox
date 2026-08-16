@@ -1,5 +1,6 @@
 ---
 title: "CLI output as structured streams"
+workstream: unknown
 area: callback-box
 ---
 

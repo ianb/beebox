@@ -1,10 +1,13 @@
 ---
 title: "Agent containment: an allowed-directories control plane (box escapes)"
+workstream: open-source-readiness
 needs: [design]
 area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder
 labels: [soft-launch]
+priority: important
+next-action: discuss
 ---
 
 Today the box agent runs with the full Claude Code toolset and no
@@ -42,7 +45,7 @@ So the shape is:
   bare-metal running honest rather than "trust the prompt."
 
 Interlocks: the
-[agent-maintained security report](2026-07-20-agent-maintained-security-report.md)
+[agent-maintained security report](../closed/features/2026-07-20-agent-maintained-security-report.md)
 should *state* the containment model per tier (Docker vs bare) — this
 feature is what makes that section say something real. The
 [git-push-confirmation](../decisions/2026-07-20-git-push-confirmation.md)

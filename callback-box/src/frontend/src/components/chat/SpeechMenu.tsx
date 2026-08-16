@@ -5,7 +5,7 @@
  * Menu, top to bottom:
  *   - A control row of icon buttons on one line:
  *       Stop          — stop the current speech sequence (disabled if nothing
- *                       is playing). Does NOT mute; see MuteButton for that.
+ *                       is playing). Does NOT mute; see VoiceChip for that.
  *       Fast-forward  — abort the current segment and play the next. Only
  *                       shown when this message has multiple segments; disabled
  *                       unless this message is playing and a next segment exists.
@@ -15,7 +15,8 @@
  */
 
 import type { ReactNode } from "react";
-import { Dropdown, MenuItem, MenuDivider, useDropdownClose } from "../ui/Dropdown";
+import { Dropdown, useDropdownClose } from "../ui/Dropdown";
+import { MenuItem, MenuDivider } from "../ui/dropdown-menu-item";
 import type { SpeechSegment } from "../../lib/audio/speech-parsing";
 
 const MAX_LABEL_CHARS = 50;

@@ -23,8 +23,10 @@ import { createRequire } from "node:module";
 import type { FastifyInstance } from "fastify";
 import { scaffoldV2Box } from "../../src/core/box/package.js";
 import { createServer } from "../../src/webapp/server.js";
+import type { ChatBackend } from "../../src/services/claude-chat-types.js";
 import { createEventBus, type EventBus } from "../../src/core/event-bus.js";
 import type { Services } from "../../src/services/index.js";
+import { makeBoxAnnexShaped } from "./annex-box.js";
 
 export const TEST_SLUG = "test";
 
@@ -50,6 +52,23 @@ export interface TestServerOptions {
    * doctest passes `openAccess: false` to turn the wall on.
    */
   openAccess?: boolean | undefined;
+  /**
+   * Serve a box that has been converted to git-annex (assets visible to git,
+   * annex holds the bytes). Defaults to `false` — the template box is on the
+   * manifest scheme, like a box that has not run `cb attachments to-annex`.
+   *
+   * Routes that write asset bytes gate on this shape: the scan-upload routes
+   * refuse with a 503 on a manifest-scheme box, so their doctests declare which
+   * side they are testing rather than inheriting it.
+   */
+  annexBox?: boolean | undefined;
+  /**
+   * Chat backend for every session this server creates. Pass
+   * `createFakeChatBackend()` to exercise the chat-send path (including a run
+   * start that fails) without spawning a real Claude subprocess. Omit and the
+   * server builds the real one — which no route doctest should provoke.
+   */
+  chatBackend?: ChatBackend | undefined;
 }
 
 // Filter chat-history backfill noise: every makeTestServer() boots a fresh
@@ -61,6 +80,18 @@ console.log = (...args: unknown[]) => {
   const first = args[0];
   if (typeof first === "string" && first.startsWith("[chat-history:")) return;
   _origLog(...args);
+};
+
+// Same treatment for the scan-upload routes' registration refusal. Every
+// makeTestServer() boots a manifest-scheme box unless it asks for
+// `annexBox: true`, and the scan routes correctly log one line per boot saying
+// they are disabled. Useful on a real box, pure noise across hundreds of route
+// tests that never touch scan. Narrow on purpose — only this exact message.
+const _origError = console.error;
+console.error = (...args: unknown[]) => {
+  const first = args[0];
+  if (typeof first === "string" && first.startsWith("[scan] Box ") && first.includes("not annex-converted")) return;
+  _origError(...args);
 };
 
 // A fully-initialized box (directories + git repo + initial commit) is
@@ -128,6 +159,12 @@ export async function createTestServer(opts?: TestServerOptions): Promise<TestSe
   await cp(template, tmpDir, { recursive: true });
   const boxRoot = join(tmpDir, "content");
 
+  // Before the server boots: registration-time probes read this shape, so
+  // converting after `createServer` would be too late.
+  if (opts?.annexBox === true) {
+    await makeBoxAnnexShaped({ packageRoot: tmpDir, boxRoot });
+  }
+
   // Build the box's event bus here and inject it so the test holds the SAME
   // instance the routes emit on (transient events never leave the process).
   const eventBus = createEventBus(boxRoot, { pollInterval: 1000 });
@@ -138,6 +175,7 @@ export async function createTestServer(opts?: TestServerOptions): Promise<TestSe
     boxes: [{ slug: TEST_SLUG, boxRoot, eventBus }],
     services: opts?.services,
     openAccess: opts?.openAccess ?? true,
+    ...(opts?.chatBackend !== undefined ? { chatBackend: opts.chatBackend } : {}),
   });
 
   return {

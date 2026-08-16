@@ -1,6 +1,10 @@
+---
+title: "`cb` CLI Restructure — Plan"
+status: active
+workstream: unknown
+issues: []
+---
 # `cb` CLI Restructure — Plan
-
-**Status:** active — proposed, not started
 
 Proposed reorganization of the `cb` CLI surface. **Not yet implemented** beyond a few resolved items below — this doc records the plan so it persists across sessions and we can implement in focused passes.
 
@@ -48,7 +52,6 @@ The agent's daily surface stays flat — frequency wins over taxonomic purity.
 | `cb google-auth` | Set up OAuth |
 | `cb prompt` | Run Claude Code with a custom prompt (dev) |
 | `cb usage` | Token usage report |
-| `cb render <path>` | SSR a page (dev) |
 | `cb format <path>` | Normalize card XML (dev) — verify still useful |
 
 ## `cb connector` group

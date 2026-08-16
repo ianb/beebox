@@ -265,7 +265,7 @@ export async function releaseScriptLock(
  * Stale locks (dead PID, post-reboot) are cleaned up as a side effect.
  */
 export async function loadRunningScripts(boxRoot: string): Promise<Map<string, ScriptLock>> {
-  const holders = await scanLocks(stateDir(boxRoot), LOCK_SUFFIX);
+  const holders = await scanLocks(stateDir(boxRoot), { suffix: LOCK_SUFFIX, profile: "default" });
   const running = new Map<string, ScriptLock>();
   for (const [scriptName, holder] of holders) {
     const triggeredBy = holder.metadata["triggeredBy"];
@@ -330,7 +330,7 @@ export async function releaseChatActiveLock(lockPath: string): Promise<void> {
  * are cleaned up as a side effect.
  */
 export async function loadActiveChats(boxRoot: string): Promise<Map<string, ChatLock>> {
-  const holders = await scanLocks(chatLockDir(boxRoot), CHAT_LOCK_SUFFIX);
+  const holders = await scanLocks(chatLockDir(boxRoot), { suffix: CHAT_LOCK_SUFFIX, profile: "default" });
   const result = new Map<string, ChatLock>();
   for (const [lockId, holder] of holders) {
     const sessionId = holder.metadata["sessionId"];

@@ -1,5 +1,6 @@
 ---
 title: "Structured CLI output with UI rendering"
+workstream: unknown
 area: callback-box
 ---
 

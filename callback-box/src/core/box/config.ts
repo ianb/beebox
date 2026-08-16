@@ -9,6 +9,8 @@ import * as path from "node:path";
 import { errnoCode } from "../../lib/error-guards.js";
 
 export interface BoxConfig {
+  /** Native agent harness used for new box jobs and chats. Missing means Claude. */
+  agentEngine?: "claude" | "codex";
   publicUrl?: string;
   allowedEmails?: string[];
   /** IANA timezone for this box (e.g. "America/Chicago"). Used in all agent prompts. */
@@ -39,9 +41,26 @@ export interface BoxConfig {
   };
 }
 
+export type AgentEngine = "claude" | "codex";
+
+export class InvalidAgentEngineError extends Error {
+  readonly value: unknown;
+
+  constructor(value: unknown) {
+    super("Box config agentEngine must be either claude or codex");
+    this.name = "InvalidAgentEngineError";
+    this.value = value;
+  }
+}
+
 export type GoogleServiceName = "calendar" | "gmail" | "drive";
 
 const cache = new Map<string, { config: BoxConfig; mtime: number }>();
+
+/** Explicit invalidation after a same-process config mutation. */
+export function clearBoxConfigCache(boxRoot: string): void {
+  cache.delete(boxRoot);
+}
 
 /**
  * Check if a Google service is allowed for this box.
@@ -52,12 +71,50 @@ export async function isGoogleServiceAllowed(boxRoot: string, service: GoogleSer
   return config.googleServices?.[service] === true;
 }
 
+/** True when `Intl.DateTimeFormat` accepts `timeZone` as a valid IANA zone — the only reliable way to validate one (no static zone list ships with Node). */
+function isValidTimeZone(timeZone: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone });
+    return true;
+  } catch (_e) {
+    return false;
+  }
+}
+
 /**
- * Load the box timezone (or null if not configured).
+ * Load the box timezone (or null if not configured or malformed).
+ *
+ * A typo'd zone (e.g. `"America/Chciago"`) makes `Intl.DateTimeFormat`
+ * throw `RangeError` the moment anything tries to use it — and every
+ * plate-state/timezone-aware call site in the todo system (the collector,
+ * `cb todos`, `todos.list`, the review sweep, session-context's ambient
+ * timezone line) does exactly that. Validating HERE, at the one place the
+ * raw config value enters the system, means a bad value degrades to the
+ * host's own timezone (still wrong, but visibly so — via the warning below
+ * — and non-fatal) instead of taking down every one of those call sites
+ * with an uncaught `RangeError`. Per the resilient-not-silent boundary rule:
+ * loud + degraded, never silent + crashed.
  */
 export async function loadBoxTimezone(boxRoot: string): Promise<string | null> {
   const config = await loadBoxConfig(boxRoot);
-  return config.timezone ?? null;
+  const timezone = config.timezone;
+  if (timezone === undefined) return null;
+  if (!isValidTimeZone(timezone)) {
+    console.warn(
+      `Box config timezone "${timezone}" is not a valid IANA timezone — falling back to the host timezone.`,
+    );
+    return null;
+  }
+  return timezone;
+}
+
+/** Load the selected native harness. Existing boxes default to Claude. */
+export async function loadAgentEngine(boxRoot: string): Promise<AgentEngine> {
+  const config = await loadBoxConfig(boxRoot);
+  const engine: unknown = config.agentEngine;
+  if (engine === undefined) return "claude";
+  if (engine === "claude" || engine === "codex") return engine;
+  throw new InvalidAgentEngineError(engine);
 }
 
 /**

@@ -71,6 +71,44 @@ export function useNativeNarrationBridge(opts: { enabled: boolean; narrationEnab
   }, [enabled, narrationEnabled]);
 }
 
+export function useNativeSpeechPlaybackBridge(opts: { enabled: boolean; playing: boolean }) {
+  const { enabled, playing } = opts;
+  useEffect(() => {
+    if (!enabled) return;
+    postNativeSpeechPlaybackState(playing, window);
+  }, [enabled, playing]);
+}
+
+export function useNativeResponseBridge(opts: { enabled: boolean; active: boolean }) {
+  const { enabled, active } = opts;
+  useEffect(() => {
+    if (!enabled) return;
+    postNativeResponseState(active, window);
+  }, [enabled, active]);
+}
+
+/**
+ * All five native-shell bridges in one call — InteractiveChat's root has no
+ * per-bridge logic of its own, so grouping them here keeps that function
+ * under the max-lines-per-function budget the same way ChatModeOverlays does
+ * for the composer overlays.
+ */
+export function useNativeBridges(opts: {
+  enabled: boolean;
+  dispatchEmission: (emission: Emission) => Promise<Receipt>;
+  boxSlug: string | undefined;
+  narrationEnabled: boolean;
+  responseActive: boolean;
+  speechPlaying: boolean;
+}) {
+  const { enabled, dispatchEmission, boxSlug, narrationEnabled, responseActive, speechPlaying } = opts;
+  useNativeEmissionBridge({ enabled, dispatchEmission });
+  useNativeLocationBridge({ enabled, boxSlug });
+  useNativeNarrationBridge({ enabled, narrationEnabled });
+  useNativeResponseBridge({ enabled, active: responseActive });
+  useNativeSpeechPlaybackBridge({ enabled, playing: speechPlaying });
+}
+
 async function handleNativeEmission(
   detail: unknown,
   dispatchEmission: (emission: Emission) => Promise<Receipt>
@@ -176,6 +214,14 @@ export function postNativeLocationState(enabled: boolean, shell: NativeShellWind
 
 export function postNativeNarrationState(enabled: boolean, shell: NativeShellWindow): void {
   postNativeMessage(shell, { channel: "callbackboxNarrationState", payload: { enabled } });
+}
+
+export function postNativeSpeechPlaybackState(playing: boolean, shell: NativeShellWindow): void {
+  postNativeMessage(shell, { channel: "callbackboxSpeechPlaybackState", payload: { playing } });
+}
+
+export function postNativeResponseState(active: boolean, shell: NativeShellWindow): void {
+  postNativeMessage(shell, { channel: "callbackboxResponseState", payload: { active } });
 }
 
 function drainNativeEmissionQueue(): unknown[] {

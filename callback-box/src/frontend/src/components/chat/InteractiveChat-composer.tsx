@@ -7,20 +7,24 @@
  */
 
 import TextareaAutosize from "react-textarea-autosize";
-import { Dropdown, MenuItem } from "../ui/Dropdown";
+import { Dropdown } from "../ui/Dropdown";
+import { MenuItem } from "../ui/dropdown-menu-item";
 import { ShareLocationMenuItem } from "./ShareLocationMenuItem";
 import { ScreenshotMenuItem } from "./ScreenshotMenuItem";
 import { VoiceToggleButton } from "./InteractiveChat-voice-button";
 import { MicOverlay } from "./MicOverlay";
-import { composerTextareaClasses, joinTranscript } from "./InteractiveChat-helpers";
+import { composerTextareaClasses, joinTranscript, spokenTextStart, type VoiceSegmentSend } from "./InteractiveChat-helpers";
 import { useInputValue, useInputStore } from "./input-store";
 import type { TranscriptionState } from "../../hooks/useRealtimeTranscription";
+import type { FinalWord } from "../../machines/transcription-events";
 
 export interface TranscriptionHandle {
   state: TranscriptionState;
   transcript: string;
+  /** Words backing `transcript`'s finalized portion (Fix D) — null when none captured. */
+  finalWords: readonly FinalWord[] | null;
   start: () => void;
-  stop: () => Promise<string>;
+  stop: () => Promise<{ text: string; words: readonly FinalWord[] | null }>;
   cancel: () => void;
 }
 
@@ -49,7 +53,7 @@ function DesktopComposerRow({
   handleCancelTranscription: () => void;
   clearDraft: () => void;
   onStopDictation: () => void;
-  onVoiceSegmentSend: (text: string) => void;
+  onVoiceSegmentSend: VoiceSegmentSend;
   onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
 }) {
@@ -65,7 +69,7 @@ function DesktopComposerRow({
         onPaste={onPaste}
         onDrop={onDrop}
         readOnly={isTranscribing}
-        placeholder={isTranscribing ? "Listening..." : "Type or paste an image..."}
+        placeholder={isTranscribing ? "Listening..." : "Type a message..."}
         className={composerTextareaClasses({ mobile: false, isTranscribing })}
         minRows={1}
         maxRows={8}
@@ -101,8 +105,12 @@ function DesktopComposerRow({
             onClick={() => {
               // Continue from any prior composer text so it isn't dropped.
               const text = joinTranscript(input, transcription.transcript).trim();
+              // Read synchronously, same render as `text` — no await between
+              // this and the click, so `transcription.finalWords` can't have
+              // gone stale (Fix D; contrast the mobile row's stop()-await path).
+              const words = transcription.finalWords;
               transcription.cancel();
-              if (text) onVoiceSegmentSend(text);
+              if (text) onVoiceSegmentSend(text, { words, spokenStart: spokenTextStart(input) });
               setInput("");
               // Segment committed — drop the persisted dictation draft.
               clearDraft();
@@ -142,7 +150,8 @@ export function ChatInputArea({
   handleKeyDown, handleSend, handleCancelTranscription, clearDraft,
   onKeyboard, onVoice, onStopDictation, onVoiceSegmentSend,
   voicePaused, onUnpause, hideMobile,
-  onPaste, onDrop, onAttachFiles, addImageFiles, onEnterCapture, captureEnabled, captureDisabledReason, narrationEnabled,
+  onPaste, onDrop, onAttachFiles, addImageFiles, onEnterCapture, captureEnabled, captureDisabledReason,
+  onUploadFiles, uploadFilesDisabledReason, narrationEnabled,
 }: {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   isTranscribing: boolean;
@@ -157,7 +166,7 @@ export function ChatInputArea({
   onKeyboard: () => void;
   onVoice: () => void;
   onStopDictation: () => void;
-  onVoiceSegmentSend: (text: string) => void;
+  onVoiceSegmentSend: VoiceSegmentSend;
   voicePaused: boolean;
   onUnpause: () => void;
   hideMobile?: boolean;
@@ -172,6 +181,10 @@ export function ChatInputArea({
   captureEnabled: boolean;
   /** When set, the capture affordance renders disabled with this tooltip (X1). */
   captureDisabledReason?: string | undefined;
+  /** Open the full-screen bulk file-upload overlay. */
+  onUploadFiles: () => void;
+  /** When set, the "Upload files…" item renders disabled with this reason (no chat session id yet). */
+  uploadFilesDisabledReason?: string | undefined;
   narrationEnabled: boolean;
 }) {
   // Subscribing read of the composer text — this is the component a keystroke
@@ -194,7 +207,10 @@ export function ChatInputArea({
         <Dropdown
           align="left"
           vertical="above"
-          width="w-44"
+          // Wide enough that the "(send a message first)" disabled reasons
+          // stay on one line — at w-44 they wrapped mid-phrase and the menu
+          // read as squashed (field-test run 2 visual flag).
+          width="w-72"
           trigger={({ toggle, ariaProps }) => (
             <button
               type="button"
@@ -216,6 +232,9 @@ export function ChatInputArea({
             </MenuItem>
           ) : null}
           <MenuItem onClick={onAttachFiles}>Attach file…</MenuItem>
+          <MenuItem onClick={onUploadFiles} disabled={uploadFilesDisabledReason !== undefined}>
+            {uploadFilesDisabledReason !== undefined ? `Upload files… (${uploadFilesDisabledReason.toLowerCase()})` : "Upload files…"}
+          </MenuItem>
           <ScreenshotMenuItem addImageFiles={addImageFiles} />
           <ShareLocationMenuItem />
         </Dropdown>

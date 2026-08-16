@@ -12,7 +12,8 @@ import { getBoxShape } from "../../lib/box-shape.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import { claudeProjectsRoot } from "../chat/session/transcript-paths.js";
 import { MIGRATIONS } from "../migrations.js";
-import { assetGitignorePatterns } from "../commands/attachments-gitignore.js";
+import { GITIGNORE_BLOCK, UNIGNORE_BLOCK } from "../commands/attachments-gitignore.js";
+import { isAnnexInitialized } from "../annex/is-annex-box.js";
 import {
   installSchemasGuide,
   installTricksFiles,
@@ -74,7 +75,18 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
   // migration manifest, config, or `.gitignore`. A missing/invalid package
   // half or a stale pre-v2 marker throws here, before any of those mutations
   // land — so a bad init can't leave a half-written box behind.
-  await getBoxShape(resolvedRoot);
+  const shape = await getBoxShape(resolvedRoot);
+
+  // Which asset-tracking scheme is this box on? Every box starts on the
+  // manifest scheme (gitignored asset bytes) and `cb attachments to-annex`
+  // moves it to git-annex (assets un-ignored). `.gitignore` is regenerated on
+  // EVERY init, so writing the manifest form unconditionally silently
+  // de-annexed any converted box on its next `cb init` — assets ignored again
+  // — with nothing reporting it until the first commit or asset write failed.
+  // The probe is repo-level (`.git/annex/`), so it cannot be flipped by the
+  // files this function writes. (`.gitattributes` no longer varies: LFS is
+  // retired, so neither scheme gets filter rules.)
+  const annexed = await isAnnexInitialized(shape.packageRoot);
 
   // Create all standard directories (safe to re-run). `.claude`/`.claude/rules`
   // (BOX_DIRS) are never created under the box root: a box's `.claude/` lives at
@@ -121,30 +133,35 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
     );
   }
 
-  // Always write .gitattributes (LFS rules for binary files)
-  const gitattributes = `# Audio files (voice memos, recordings)
-*.m4a filter=lfs diff=lfs merge=lfs -text
-*.webm filter=lfs diff=lfs merge=lfs -text
-*.wav filter=lfs diff=lfs merge=lfs -text
-*.mp3 filter=lfs diff=lfs merge=lfs -text
-*.ogg filter=lfs diff=lfs merge=lfs -text
+  // Always write .gitattributes. Git LFS is retired: git-annex is the only
+  // asset backend, so no box — annexed or not — gets `filter=lfs` rules any
+  // more. Pre-annex boxes gitignore their asset bytes (GITIGNORE_BLOCK below),
+  // so an LFS filter could never fire on them either; the rules were dead
+  // config that only did harm, by re-LFS-ifying a converted box's new media if
+  // the annex probe ever read false. What stays is the section headers, so the
+  // file is byte-identical to what `cb attachments to-annex` leaves behind and
+  // re-running init is a no-op on every box. `stripLfsFilters` remains the
+  // migration's tool for stripping rules off boxes that still carry them.
+  await fs.writeFile(
+    path.join(resolvedRoot, ".gitattributes"),
+    `# Audio files (voice memos, recordings)
 
 # Images
-*.jpg filter=lfs diff=lfs merge=lfs -text
-*.jpeg filter=lfs diff=lfs merge=lfs -text
-*.png filter=lfs diff=lfs merge=lfs -text
-*.heic filter=lfs diff=lfs merge=lfs -text
 
 # Frozen page captures
-*.frozen filter=lfs diff=lfs merge=lfs -text
-`;
-  await fs.writeFile(path.join(resolvedRoot, ".gitattributes"), gitattributes);
+`,
+  );
 
   // Always write .gitignore (keep in sync with cb version). A box's tricks live
   // at `packageRoot/src/tricks/`, outside `boxRoot` (`content/`) entirely, so no
   // trick-dependencies entry belongs here; that box's `src/tricks/node_modules/`
   // is already covered by the package root's own `.gitignore` (`ROOT_GITIGNORE`
   // in `./box-package.js`).
+  //
+  // The trailing asset block comes from `attachments-gitignore.ts` rather than
+  // being spelled out here — the two must be identical, and an inlined copy is
+  // what let `cb init` keep writing the manifest-scheme block onto boxes that
+  // had migrated to git-annex.
   const gitignore = `# Callback Box .gitignore
 # Lock files
 .cb-lock
@@ -174,11 +191,7 @@ tmp/
 *.swp
 *~
 
-# cb-assets (managed by cb attachments init-gitignore)
-# Assets inside .attach/ scopes are tracked via per-dir manifest.json
-# (size + sha256), not committed directly. See docs/asset-manifests.md.
-${assetGitignorePatterns()}
-`;
+${annexed ? UNIGNORE_BLOCK : GITIGNORE_BLOCK}`;
   await fs.writeFile(path.join(resolvedRoot, ".gitignore"), gitignore);
 
   // Install tricks types.d.ts and CLAUDE.md if missing
@@ -284,6 +297,7 @@ export {
   installPersonality,
   installRootLandmark,
   installBriefing,
+  installTodoView,
   installSchedules,
 } from "./defaults.js";
 

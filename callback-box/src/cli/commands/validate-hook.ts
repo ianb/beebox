@@ -7,6 +7,7 @@
  */
 
 import * as path from "node:path";
+import { existsSync } from "node:fs";
 import { isRecord } from "../../lib/is-record.js";
 import { formatLintResults } from "../../cards/index.js";
 import {
@@ -18,35 +19,129 @@ import { requireBoxRoot, findBoxRoot, isCardFile, isViewFile } from "../../lib/p
 import { lintViewFile } from "../../webapp/views/compiler.js";
 import { lintViewRefs } from "../../core/views/refs.js";
 import { lintCardsDispatch } from "../../core/card-lint.js";
-import { isClaudeMdFile, lintClaudeMdFile } from "../../core/claude-md-lint.js";
+import { isAgentInstructionsFile, lintClaudeMdFile } from "../../core/claude-md-lint.js";
 import { buildLoadContext } from "../../core/load-context.js";
 import { staleContainsWarning } from "../../core/search/contains-state.js";
 import { refreshDerivedRules } from "../../core/refresh-derived-rules.js";
 import { loadValidationIgnore } from "../../core/validation-ignore.js";
 
 /**
- * Read the file path from a Claude Code PostToolUse hook payload on stdin.
- * Returns undefined if stdin isn't JSON or doesn't carry a card path —
- * the hook just exits 0 silently in that case.
+ * Extract edited paths from either harness's PostToolUse input. Claude's
+ * Write/Edit tools provide `file_path`; Codex apply_patch provides the patch
+ * text in `command`.
  */
-async function readHookFilePath(): Promise<string | undefined> {
+export function parseHookFilePaths(parsed: unknown): string[] {
+  if (!isRecord(parsed)) return [];
+  const toolInput = parsed["tool_input"];
+  if (!isRecord(toolInput)) return [];
+  const filePath = toolInput["file_path"];
+  const cwd = typeof parsed["cwd"] === "string" ? parsed["cwd"] : undefined;
+  const resolvePath = (candidate: string): string =>
+    cwd !== undefined && !path.isAbsolute(candidate) ? path.resolve(cwd, candidate) : candidate;
+  if (typeof filePath === "string") return [resolvePath(filePath)];
+  const command = toolInput["command"];
+  if (typeof command !== "string") return [];
+  const paths: string[] = [];
+  const pattern = /^\*\*\* (?:Add|Update|Delete) File: (.+)$/gm;
+  for (const match of command.matchAll(pattern)) {
+    const matchedPath = match[1];
+    if (matchedPath !== undefined) paths.push(resolvePath(matchedPath));
+  }
+  return [...new Set(paths)];
+}
+
+async function readHookFilePaths(): Promise<string[]> {
   const chunks: Buffer[] = [];
   for await (const chunk of process.stdin) {
     if (Buffer.isBuffer(chunk)) chunks.push(chunk);
   }
   const raw = Buffer.concat(chunks).toString("utf-8").trim();
-  if (raw === "") return undefined;
+  if (raw === "") return [];
   try {
     const parsed: unknown = JSON.parse(raw);
-    const toolInput = isRecord(parsed) ? parsed["tool_input"] : undefined;
-    const fp = isRecord(toolInput) ? toolInput["file_path"] : undefined;
-    return typeof fp === "string" ? fp : undefined;
+    return parseHookFilePaths(parsed);
   } catch (_e) {
     // stdin wasn't valid JSON: per this helper's contract the hook just exits 0
     // silently when there's no parseable payload, so the parse error is expected
     // and carries nothing actionable.
-    return undefined;
+    return [];
   }
+}
+
+export interface HookValidationResult {
+  feedback: string | null;
+  hasErrors: boolean;
+}
+
+const CLEAN_HOOK_VALIDATION: HookValidationResult = { feedback: null, hasErrors: false };
+
+async function validateHookPathResult(fp: string): Promise<HookValidationResult> {
+  if (!existsSync(fp)) return CLEAN_HOOK_VALIDATION;
+  if (/tricks\/scripts\/[^/]+\.ts$/.test(fp)) {
+    return {
+      feedback: "Trick scripts must be in a subdirectory: tricks/scripts/<name>/index.ts, not directly in tricks/scripts/",
+      hasErrors: true,
+    };
+  }
+  if (isAgentInstructionsFile(fp)) {
+    const boxRoot = await requireBoxRoot(path.dirname(fp));
+    return { feedback: await lintClaudeMdFile(boxRoot, fp), hasErrors: false };
+  }
+  if (isViewFile(fp)) {
+    const err = await lintViewFile(fp);
+    if (err !== null) return { feedback: `View compile error for ${fp}:\n${err}`, hasErrors: true };
+    const refBoxRoot = await findBoxRoot(path.dirname(fp));
+    const warnings = refBoxRoot === null ? [] : await lintViewRefs(fp, refBoxRoot);
+    return { feedback: warnings.length === 0 ? null : warnings.join("\n"), hasErrors: false };
+  }
+  if (isLintableMarkdown(fp)) {
+    const boxRoot = await requireBoxRoot(path.dirname(fp));
+    if ((await loadValidationIgnore(boxRoot)).isIgnored(fp)) return CLEAN_HOOK_VALIDATION;
+    const summary = await lintMarkdownFiles([fp], { boxRoot });
+    return {
+      feedback: summary.totalErrors === 0 ? null : formatMarkdownResults(summary, { colors: false }),
+      hasErrors: summary.totalErrors > 0,
+    };
+  }
+  if (!isCardFile(fp)) return CLEAN_HOOK_VALIDATION;
+  const boxRoot = await requireBoxRoot(path.dirname(fp));
+  if ((await loadValidationIgnore(boxRoot)).isIgnored(fp)) return CLEAN_HOOK_VALIDATION;
+  const ctx = await buildLoadContext(boxRoot);
+  const summary = await lintCardsDispatch([fp], { boxRoot, ctx });
+  await refreshDerivedRules(boxRoot, fp);
+  const stale = await staleContainsWarning(boxRoot, {
+    relPath: path.relative(boxRoot, fp),
+    ctx,
+  });
+  const parts: string[] = [];
+  if (summary.totalErrors > 0 || summary.totalWarnings > 0) {
+    parts.push(formatLintResults(summary, { colors: false }));
+  }
+  if (stale !== null) parts.push(stale);
+  return { feedback: parts.length === 0 ? null : parts.join("\n"), hasErrors: summary.totalErrors > 0 };
+}
+
+export async function validateHookPath(fp: string): Promise<string | null> {
+  return (await validateHookPathResult(fp)).feedback;
+}
+
+/** Validate paths reported by a harness, preserving warnings versus errors. */
+export async function validateHookPathsResult(paths: string[]): Promise<HookValidationResult> {
+  const feedback: string[] = [];
+  let hasErrors = false;
+  for (const fp of [...new Set(paths)]) {
+    const result = await validateHookPathResult(fp);
+    if (result.feedback !== null) {
+      feedback.push(result.feedback);
+      hasErrors ||= result.hasErrors;
+    }
+  }
+  return { feedback: feedback.length === 0 ? null : feedback.join("\n"), hasErrors };
+}
+
+/** Validate paths reported by a hook and return combined agent feedback. */
+export async function validateHookPaths(paths: string[]): Promise<string | null> {
+  return (await validateHookPathsResult(paths)).feedback;
 }
 
 /**
@@ -55,72 +150,10 @@ async function readHookFilePath(): Promise<string | undefined> {
  * sees feedback. This always exits the process and never returns.
  */
 export async function runHookMode(): Promise<never> {
-  const fp = await readHookFilePath();
-  if (fp === undefined) {
-    process.exit(0);
-  }
-  // CLAUDE.md gets only the soft size lint (it isn't a card and isn't markdown-
-  // validity-checked); a too-large one is surfaced as a warning, never blocked.
-  if (isClaudeMdFile(fp)) {
-    const boxRoot = await requireBoxRoot();
-    const warning = await lintClaudeMdFile(boxRoot, fp);
-    if (warning !== null) {
-      process.stderr.write(`${warning}\n`);
-      process.exit(2);
-    }
-    process.exit(0);
-  }
-  // Agent-authored view: compile-check it (syntax/JSX/imports). Like cards,
-  // a compile failure exits 2 so the agent sees the nudge; no box root needed
-  // (compileView takes the absolute path).
-  if (isViewFile(fp)) {
-    const err = await lintViewFile(fp);
-    if (err !== null) {
-      process.stderr.write(`View compile error for ${fp}:\n${err}\n`);
-      process.exit(2);
-    }
-    // Same broken-`cardRef` nudge cards get (exit 2). Skip when outside a box —
-    // refs need a box root to resolve, and the compile check already stands.
-    const refBoxRoot = await findBoxRoot(process.cwd());
-    const viewRefWarnings = refBoxRoot === null ? [] : await lintViewRefs(fp, refBoxRoot);
-    if (viewRefWarnings.length > 0) {
-      process.stderr.write(`${viewRefWarnings.join("\n")}\n`);
-      process.exit(2);
-    }
-    process.exit(0);
-  }
-  // Agent/human-authored markdown: lint its links (CB001/CB002) so a hand-edit
-  // that breaks a link gets the same write-time nudge cards do. CLAUDE.md is
-  // handled above; .claude/ rule docs are excluded by isLintableMarkdown.
-  if (isLintableMarkdown(fp)) {
-    const boxRoot = await requireBoxRoot();
-    if ((await loadValidationIgnore(boxRoot)).isIgnored(fp)) process.exit(0);
-    const summary = await lintMarkdownFiles([fp], { boxRoot });
-    if (summary.totalErrors > 0) {
-      process.stderr.write(`${formatMarkdownResults(summary, { colors: false })}\n`);
-      process.exit(2);
-    }
-    process.exit(0);
-  }
-  if (!isCardFile(fp)) {
-    process.exit(0);
-  }
-  const boxRoot = await requireBoxRoot();
-  if ((await loadValidationIgnore(boxRoot)).isIgnored(fp)) process.exit(0);
-  const ctx = await buildLoadContext(boxRoot);
-  const summary = await lintCardsDispatch([fp], { boxRoot, ctx });
-  await refreshDerivedRules(boxRoot, fp);
-  const stale = await staleContainsWarning(boxRoot, {
-    relPath: path.relative(boxRoot, fp),
-    ctx,
-  });
-  if (summary.totalErrors > 0 || summary.totalWarnings > 0 || stale !== null) {
-    const parts: string[] = [];
-    if (summary.totalErrors > 0 || summary.totalWarnings > 0) {
-      parts.push(formatLintResults(summary, { colors: false }));
-    }
-    if (stale !== null) parts.push(stale);
-    process.stderr.write(`${parts.join("\n")}\n`);
+  const paths = await readHookFilePaths();
+  const feedback = await validateHookPaths(paths);
+  if (feedback !== null) {
+    process.stderr.write(`${feedback}\n`);
     process.exit(2);
   }
   process.exit(0);

@@ -13,7 +13,7 @@
  * no signal at all.
  */
 
-import { MenuItem } from "../ui/Dropdown";
+import { MenuItem } from "../ui/dropdown-menu-item";
 import { toastError } from "../ui/toast-store";
 import { captureTabScreenshot, isScreenshotSupported } from "./screenshot-capture";
 

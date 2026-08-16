@@ -1,5 +1,6 @@
 onlyBuiltDependencies:
   - "@google/genai"
+  - "@googleworkspace/cli"
   - agent-browser
   - better-sqlite3
   - esbuild
@@ -20,6 +21,8 @@ packages:
   - personal-vibe-check
   - agent-doctest
   - canvas-loop
+  - scan-uploader
+  - workstreams-app
   - site
   - browse
   - browse/packages/agent-browser-typed

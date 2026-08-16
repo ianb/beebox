@@ -9,12 +9,14 @@
  */
 
 import * as fs from "node:fs";
+import { pipeline } from "node:stream/promises";
 import {
   listSessions,
+  MAX_SESSION_ENTRIES,
   parseSessionLog,
 } from "../lib/session.js";
 import { listSessionRoots } from "../../core/chat/session/history.js";
-import { generateSessionReport } from "../../dev/lib/session-report.js";
+import { writeSessionReport } from "../../dev/lib/session-report.js";
 import { parseDuration } from "../../schemas/scheduled-script.js";
 import {
   printListRow,
@@ -23,6 +25,7 @@ import {
   enrichSessions,
   type EnrichedSession,
 } from "./session-format.js";
+import type { SessionEntry } from "../lib/session.js";
 import { fmt } from "../../lib/format.js";
 import { renderEntries, type RenderOptions } from "./session-render.js";
 import { invariant } from "../../lib/invariant.js";
@@ -198,6 +201,59 @@ export async function runListMode(options: {
   await printSearchedRootsFooter(boxRoot);
 }
 
+/**
+ * A transcript bigger than this refuses to print without `--allow-huge`.
+ * Every `cb session` output mode scales with the file (`--raw` is the file,
+ * `--tool-report` exceeds it, render is entry-capped but still huge past
+ * this), and a surprise multi-hundred-MB dump helps nobody — least of all an
+ * agent reading the output. 25 MB is far past any human- or agent-readable
+ * result while letting every ordinary session through.
+ */
+export const HUGE_TRANSCRIPT_BYTES = 25 * 1024 * 1024;
+
+function formatMb(bytes: number): string {
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/**
+ * Fail closed on a huge transcript: true when printing may proceed. When the
+ * file exceeds {@link HUGE_TRANSCRIPT_BYTES} and `--allow-huge` wasn't given,
+ * prints a loud refusal naming the size and the override and returns false.
+ */
+export function transcriptPrintable(options: {
+  logPath: string;
+  sessionId: string;
+  allowHuge: boolean;
+}): boolean {
+  const { logPath, sessionId, allowHuge } = options;
+  if (allowHuge) return true;
+  const { size } = fs.statSync(logPath);
+  if (size <= HUGE_TRANSCRIPT_BYTES) return true;
+  console.error(
+    `Refusing to print session ${sessionId}: its transcript is ${formatMb(size)} ` +
+      `(threshold ${formatMb(HUGE_TRANSCRIPT_BYTES)}). ` +
+      "Re-run with --allow-huge if you really want a result this size.",
+  );
+  return false;
+}
+
+/** Apply the same output guard to a supported-API transcript with no backing file. */
+export function sessionEntriesPrintable(options: {
+  entries: SessionEntry[];
+  sessionId: string;
+  allowHuge: boolean;
+}): boolean {
+  if (options.allowHuge) return true;
+  const bytes = Buffer.byteLength(JSON.stringify(options.entries));
+  if (bytes <= HUGE_TRANSCRIPT_BYTES) return true;
+  console.error(
+    `Refusing to print session ${options.sessionId}: its readable history is ${formatMb(bytes)} ` +
+      `(threshold ${formatMb(HUGE_TRANSCRIPT_BYTES)}). ` +
+      "Re-run with --allow-huge if you really want a result this size.",
+  );
+  return false;
+}
+
 /** Print one windowed session in the active output mode (raw/report/render). */
 async function renderWindowedSession(options: {
   meta: EnrichedSession;
@@ -205,21 +261,41 @@ async function renderWindowedSession(options: {
   renderOptions: RenderOptions;
   raw: boolean;
   toolReport: boolean;
+  allowHuge: boolean;
 }): Promise<void> {
-  const { meta, since, renderOptions, raw, toolReport } = options;
+  const { meta, since, renderOptions, raw, toolReport, allowHuge } = options;
+  // A refused session is loudly skipped (transcriptPrintable prints why);
+  // the other sessions in the window still print.
+  if (!transcriptPrintable({ logPath: meta.path, sessionId: meta.sessionId, allowHuge })) {
+    return;
+  }
   if (raw) {
-    process.stdout.write(fs.readFileSync(meta.path, "utf-8"));
+    // Streamed — a transcript can exceed the heap.
+    await pipeline(fs.createReadStream(meta.path), process.stdout, { end: false });
     return;
   }
   if (toolReport) {
     console.log(sessionDivider(meta));
     console.log();
-    const report = await generateSessionReport({ logPath: meta.path });
-    process.stdout.write(report);
+    await writeSessionReport({
+      logPath: meta.path,
+      rawTranscriptCommand: `cb session ${meta.sessionId} --raw${allowHuge ? " --allow-huge" : ""}`,
+    });
     return;
   }
 
-  const { entries } = await parseSessionLog({ logPath: meta.path });
+  // `--since` is a recency filter, so read the recent end of the transcript:
+  // a first-page read would drop exactly the entries this mode wants once a
+  // session grows past the retention ceiling.
+  const { entries, total } = await parseSessionLog({
+    logPath: meta.path,
+    slice: { mode: "tail", tail: MAX_SESSION_ENTRIES },
+  });
+  if (entries.length < total) {
+    console.warn(
+      `Note: session ${meta.sessionId} has ${String(total)} entries; scanning the most recent ${String(entries.length)}.`,
+    );
+  }
   const inWindowEntries = entries.filter((e) => {
     const ts = new Date(e.timestamp);
     return !isNaN(ts.getTime()) && ts.getTime() >= since.cutoff;
@@ -253,8 +329,9 @@ export async function runSinceMode(options: {
   renderOptions: RenderOptions;
   raw: boolean;
   toolReport: boolean;
+  allowHuge: boolean;
 }): Promise<void> {
-  const { boxRoot, since, renderOptions, raw, toolReport } = options;
+  const { boxRoot, since, renderOptions, raw, toolReport, allowHuge } = options;
   const allSessions = await listSessions(boxRoot);
   const prefiltered = allSessions.filter(
     (s) => s.mtime.getTime() >= since.cutoff
@@ -280,6 +357,7 @@ export async function runSinceMode(options: {
       renderOptions,
       raw,
       toolReport,
+      allowHuge,
     });
   }
 }

@@ -12,6 +12,8 @@ import { errnoCode } from "../../../lib/error-guards.js";
 import { cardFields, parseCardText } from "../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../schemas/registry.js";
 import { QuestionSchema, type QuestionFields } from "../../../schemas/question.js";
+import { getNavCounts } from "../../../core/nav-counts.js";
+import { naturalCompare } from "../../../lib/natural-sort.js";
 import type { CardInfo } from "../../../core/state.js";
 
 /** A question card's answerable/archive-relevant fields, layered onto its `CardInfo`. */
@@ -54,8 +56,24 @@ export interface BrowseFile {
 }
 
 export const statusRouter = router({
+  /**
+   * The counts the app nav renders, and nothing else — the one query every
+   * page mounts, so it computes only what it returns. `status.status` below
+   * is the dashboard's fuller (and far more expensive) payload; the nav does
+   * not use its git/version/inbox fields.
+   */
+  navStatus: publicProcedure.query(async ({ ctx }) => {
+    return { counts: await getNavCounts(ctx.boxRoot) };
+  }),
+
   status: publicProcedure.query(async ({ ctx }) => {
-    const state = await getSystemState(ctx.boxRoot);
+    // The two badge counts come from `getNavCounts`, not from `state`, so the
+    // dashboard and the nav can never report different numbers for the same
+    // thing (they differ on invalid cards — see `core/nav-counts.ts`).
+    const [state, navCounts] = await Promise.all([
+      getSystemState(ctx.boxRoot),
+      getNavCounts(ctx.boxRoot),
+    ]);
     return {
       boxRoot: state.boxRoot,
       boxVersion: state.boxVersion,
@@ -64,7 +82,8 @@ export const statusRouter = router({
       counts: {
         inbox: state.inbox.length,
         questions: state.questions.length,
-        pendingQuestions: state.questions.filter((q) => q.status === "pending").length,
+        pendingQuestions: navCounts.pendingQuestions,
+        onPlateTodos: navCounts.onPlateTodos,
       },
     };
   }),
@@ -215,9 +234,9 @@ export const statusRouter = router({
         files.push({ relativePath, name: entry.name });
       }
 
-      dirs.sort((a, b) => a.name.localeCompare(b.name));
-      cards.sort((a, b) => a.name.localeCompare(b.name));
-      files.sort((a, b) => a.name.localeCompare(b.name));
+      dirs.sort((a, b) => naturalCompare(a.name, b.name));
+      cards.sort((a, b) => naturalCompare(a.name, b.name));
+      files.sort((a, b) => naturalCompare(a.name, b.name));
       return { path: relPath, dirs, cards, files };
     }),
 });

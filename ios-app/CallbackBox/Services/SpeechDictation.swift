@@ -2,6 +2,54 @@ import AVFAudio
 import Foundation
 import Speech
 
+enum NativeVoiceTurnCommand: Equatable {
+    case none
+    case startDictation
+    case stopDictation
+}
+
+enum NativeVoiceTurnEvent: Equatable {
+    case microphoneStarted
+    case microphoneStopped
+    case draftErased
+    case voiceMessageSent(closeMicrophone: Bool)
+    case speechPlaybackChanged(playing: Bool)
+}
+
+struct NativeVoiceTurnState: Equatable {
+    private(set) var isActive = false
+    private var speechPlaybackActive = false
+
+    mutating func handle(_ event: NativeVoiceTurnEvent) -> NativeVoiceTurnCommand {
+        switch event {
+        case .microphoneStarted:
+            isActive = true
+            return speechPlaybackActive ? .none : .startDictation
+        case .microphoneStopped:
+            isActive = false
+            return .stopDictation
+        case .draftErased:
+            return isActive && speechPlaybackActive == false ? .startDictation : .none
+        case .voiceMessageSent(let closeMicrophone):
+            if closeMicrophone {
+                isActive = false
+                return .stopDictation
+            }
+            isActive = true
+            return speechPlaybackActive ? .none : .startDictation
+        case .speechPlaybackChanged(let playing):
+            guard playing != speechPlaybackActive else {
+                return .none
+            }
+            speechPlaybackActive = playing
+            guard isActive else {
+                return .none
+            }
+            return playing ? .stopDictation : .startDictation
+        }
+    }
+}
+
 enum VoiceCompositionState: Equatable {
     case idle
     case requestingPermission
@@ -43,6 +91,7 @@ enum VoiceCompositionReducer {
 @MainActor
 final class SpeechDictation: ObservableObject {
     @Published private(set) var state: VoiceCompositionState = .idle
+    @Published private(set) var interruptionCount = 0
     @Published private(set) var hasDictatedText = false
     @Published private(set) var keywordIntent: SpeechKeywordResult?
     @Published private(set) var preparationMessage: String?
@@ -50,11 +99,15 @@ final class SpeechDictation: ObservableObject {
     @Published var errorMessage: String?
 
     private let audioEngine = AVAudioEngine()
+    private let audioSession: any AudioSessionControlling
+    private let permissionRequester: (@MainActor () async -> Bool)?
+    private let startupDidFinish: @MainActor () -> Void
     private let legacyRecognizer = SFSpeechRecognizer(locale: Locale.current)
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?
     private var analyzerSession: LiveSpeechRecognitionSession?
     private var startTask: Task<Void, Never>?
+    private var startupGeneration: UUID?
     private var recognitionGeneration: UUID?
     private var seedText = ""
     private var firedKeywordKey: String?
@@ -63,8 +116,18 @@ final class SpeechDictation: ObservableObject {
     private var recordingFile: AVAudioFile?
     private var keywordSeedText = ""
     private var interruptionObserver: NSObjectProtocol?
+    private var tapInstalled = false
+    private var holdsAudioSession = false
+    private var configurationChangeObserver: NSObjectProtocol?
 
-    init() {
+    init(
+        permissionRequester: (@MainActor () async -> Bool)? = nil,
+        startupDidFinish: @escaping @MainActor () -> Void = {},
+        audioSession: any AudioSessionControlling = SystemAudioSession()
+    ) {
+        self.audioSession = audioSession
+        self.permissionRequester = permissionRequester
+        self.startupDidFinish = startupDidFinish
         interruptionObserver = NotificationCenter.default.addObserver(
             forName: AVAudioSession.interruptionNotification,
             object: nil,
@@ -74,11 +137,26 @@ final class SpeechDictation: ObservableObject {
                 self?.handleAudioInterruption(notification)
             }
         }
+        // A Bluetooth device connecting or disconnecting mid-dictation changes
+        // the engine's input format, which the tap installed in `start` no
+        // longer matches. Stop and say so rather than run on a broken tap.
+        configurationChangeObserver = NotificationCenter.default.addObserver(
+            forName: .AVAudioEngineConfigurationChange,
+            object: audioEngine,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.handleEngineConfigurationChange()
+            }
+        }
     }
 
     deinit {
         if let interruptionObserver {
             NotificationCenter.default.removeObserver(interruptionObserver)
+        }
+        if let configurationChangeObserver {
+            NotificationCenter.default.removeObserver(configurationChangeObserver)
         }
     }
 
@@ -86,22 +164,36 @@ final class SpeechDictation: ObservableObject {
         state == .recording
     }
 
+    var hasPendingStart: Bool {
+        startTask != nil
+    }
+
     func toggle(currentText: String) {
         if isRecording {
             stop()
             return
         }
+        startIfNeeded(currentText: currentText)
+    }
+
+    func startIfNeeded(currentText: String) {
+        guard isRecording == false else {
+            return
+        }
         guard startTask == nil else {
             return
         }
+        let generation = UUID()
+        startupGeneration = generation
         startTask = Task {
-            await start(currentText: currentText)
+            await start(currentText: currentText, generation: generation)
         }
     }
 
     func stop() {
         startTask?.cancel()
         startTask = nil
+        startupGeneration = nil
         preparationMessage = nil
         endRecording(cancelTranscription: false)
         if state == .requestingPermission {
@@ -112,7 +204,13 @@ final class SpeechDictation: ObservableObject {
     private func endRecording(cancelTranscription: Bool) {
         if audioEngine.isRunning {
             audioEngine.stop()
+        }
+        // Not conditional on `isRunning`: an engine configuration change stops
+        // the engine on its own, and a tap left installed makes the next
+        // `installTap` on this bus a fatal exception.
+        if tapInstalled {
             audioEngine.inputNode.removeTap(onBus: 0)
+            tapInstalled = false
         }
         if currentRecordingURL != nil {
             recordedAudioURL = currentRecordingURL
@@ -138,7 +236,15 @@ final class SpeechDictation: ObservableObject {
                 .recordingStopped(hasText: transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
             )
         }
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        // Only tear down a session this instance actually activated —
+        // `AVAudioSession` is process-global, and `start` calls this before it
+        // acquires anything. Deactivating alone would leave the recording
+        // category installed, so later playback would stay quiet and off
+        // Bluetooth; `deactivate()` also restores the idle configuration.
+        if holdsAudioSession {
+            holdsAudioSession = false
+            audioSession.deactivate()
+        }
     }
 
     func resetDictationState() {
@@ -146,6 +252,8 @@ final class SpeechDictation: ObservableObject {
         analyzerSession?.cancel()
         analyzerSession = nil
         hasDictatedText = false
+        errorMessage = nil
+        preparationMessage = nil
         transcript = ""
         keywordIntent = nil
         firedKeywordKey = nil
@@ -184,24 +292,28 @@ final class SpeechDictation: ObservableObject {
         return value
     }
 
-    private func start(currentText: String) async {
+    private func start(currentText: String, generation startupID: UUID) async {
         defer {
-            startTask = nil
-            preparationMessage = nil
+            if startupGeneration == startupID {
+                startTask = nil
+                startupGeneration = nil
+                preparationMessage = nil
+            }
+            startupDidFinish()
         }
         errorMessage = nil
         keywordIntent = nil
         firedKeywordKey = nil
         endRecording(cancelTranscription: true)
         VoiceCompositionReducer.reduce(&state, .requestPermission)
-        guard await requestPermissions() else {
+        let permissionsGranted = await requestPermissions()
+        guard startupGeneration == startupID, Task.isCancelled == false else {
+            return
+        }
+        guard permissionsGranted else {
             let message = "Enable microphone and speech recognition permissions to dictate."
             errorMessage = message
             VoiceCompositionReducer.reduce(&state, .fail(message: message))
-            return
-        }
-        guard Task.isCancelled == false else {
-            VoiceCompositionReducer.reduce(&state, .reset)
             return
         }
 
@@ -209,21 +321,19 @@ final class SpeechDictation: ObservableObject {
         transcript = currentText
 
         do {
-            let audioSession = AVAudioSession.sharedInstance()
-            try audioSession.setCategory(.record, mode: .measurement, options: [.duckOthers])
-            try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+            try audioSession.activateRecording()
+            holdsAudioSession = true
 
             let inputNode = audioEngine.inputNode
             let format = inputNode.outputFormat(forBus: 0)
-            let generation = UUID()
-            recognitionGeneration = generation
+            let recognitionID = UUID()
+            recognitionGeneration = recognitionID
             let modernSession = await makeAnalyzerSession(
                 naturalFormat: format,
-                generation: generation
+                generation: recognitionID
             )
-            guard Task.isCancelled == false else {
+            guard startupGeneration == startupID, Task.isCancelled == false else {
                 modernSession?.cancel()
-                VoiceCompositionReducer.reduce(&state, .reset)
                 return
             }
 
@@ -242,11 +352,14 @@ final class SpeechDictation: ObservableObject {
                 legacyRequest = request
                 recognitionTask = legacyRecognizer.recognitionTask(with: request) { [weak self] result, error in
                     Task { @MainActor in
-                        guard let self, self.recognitionGeneration == generation else {
+                        guard let self, self.recognitionGeneration == recognitionID else {
                             return
                         }
                         if let result {
-                            self.receiveRecognizedSpeech(result.bestTranscription.formattedString, generation: generation)
+                            self.receiveRecognizedSpeech(
+                                result.bestTranscription.formattedString,
+                                generation: recognitionID
+                            )
                         }
                         if error != nil || result?.isFinal == true {
                             self.endRecording(cancelTranscription: false)
@@ -264,6 +377,7 @@ final class SpeechDictation: ObservableObject {
             let audioFile = try AVAudioFile(forWriting: recordingURL, settings: format.settings)
             currentRecordingURL = recordingURL
             recordingFile = audioFile
+            tapInstalled = true
             inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
                 modernSession?.append(buffer)
                 legacyRequest?.append(buffer)
@@ -274,10 +388,26 @@ final class SpeechDictation: ObservableObject {
             try audioEngine.start()
             VoiceCompositionReducer.reduce(&state, .permissionGranted)
         } catch {
+            guard startupGeneration == startupID else {
+                return
+            }
             endRecording(cancelTranscription: true)
+            if Self.isExpectedCancellation(error, taskWasCancelled: Task.isCancelled) {
+                if state == .requestingPermission {
+                    VoiceCompositionReducer.reduce(&state, .reset)
+                }
+                return
+            }
             errorMessage = error.localizedDescription
             VoiceCompositionReducer.reduce(&state, .fail(message: error.localizedDescription))
         }
+    }
+
+    static func isExpectedCancellation(
+        _ error: Error,
+        taskWasCancelled: Bool
+    ) -> Bool {
+        taskWasCancelled || error is CancellationError
     }
 
     private func receiveRecognizedSpeech(_ spoken: String, generation: UUID) {
@@ -332,6 +462,9 @@ final class SpeechDictation: ObservableObject {
     }
 
     private func requestPermissions() async -> Bool {
+        if let permissionRequester {
+            return await permissionRequester()
+        }
         async let speechAllowed = requestSpeechPermission()
         async let microphoneAllowed = requestMicrophonePermission()
         let permissions = await (speechAllowed, microphoneAllowed)
@@ -347,6 +480,17 @@ final class SpeechDictation: ObservableObject {
             return
         }
         let message = "Dictation was interrupted. Your live transcript is ready to edit or send."
+        endRecording(cancelTranscription: true)
+        errorMessage = message
+        VoiceCompositionReducer.reduce(&state, .fail(message: message))
+        interruptionCount += 1
+    }
+
+    private func handleEngineConfigurationChange() {
+        guard state == .recording else {
+            return
+        }
+        let message = "The audio device changed. Your live transcript is ready to edit or send."
         endRecording(cancelTranscription: true)
         errorMessage = message
         VoiceCompositionReducer.reduce(&state, .fail(message: message))

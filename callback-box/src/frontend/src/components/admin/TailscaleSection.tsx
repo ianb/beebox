@@ -2,12 +2,16 @@
  * Tailscale section: instructions for reaching this box privately over a
  * tailnet. Informational only — `cb tailscale status/setup/stop` run on the
  * server host, not the browser, so this section points at those commands and
- * Tailscale's own docs rather than driving them live. The one dynamic bit: when
- * the page is viewed on a loopback address we fill in `--target` from the URL's
- * own port (see `useLocalTargetPort`).
+ * Tailscale's own docs rather than driving them live. Two dynamic bits: when
+ * the page is viewed on a loopback address we fill in `--target` from the
+ * URL's own port (see `useLocalTargetPort`), and — also loopback-only — we
+ * query the backend for whether the box is currently exposed over Tailscale
+ * and, if so, link straight to it (`admin.tailscaleBaseUrl`).
  */
 
 import { useEffect, useState } from "react";
+import { getApiBase } from "../../api";
+import { trpc } from "../../lib/trpc";
 import { ExternalLink } from "../ui/ExternalLink";
 
 /** The dev router listens here (`bin/router.ts` ROUTER_PORT). We don't pre-fill
@@ -16,6 +20,10 @@ import { ExternalLink } from "../ui/ExternalLink";
  *  explicit dev-machine path (the note at the bottom of this section), not a
  *  single-box setup. */
 const DEV_ROUTER_PORT = "3210";
+
+function isLoopbackHostname(hostname: string): boolean {
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]" || hostname === "::1";
+}
 
 /**
  * The loopback port to pre-fill into `cb tailscale setup --target`, or null.
@@ -32,17 +40,47 @@ function useLocalTargetPort(): string | null {
   const [port, setPort] = useState<string | null>(null);
   useEffect(() => {
     const { hostname, port: locPort } = window.location;
-    const isLoopback =
-      hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]" || hostname === "::1";
-    if (isLoopback && locPort !== "" && locPort !== DEV_ROUTER_PORT) setPort(locPort);
+    if (isLoopbackHostname(hostname) && locPort !== "" && locPort !== DEV_ROUTER_PORT) setPort(locPort);
   }, []);
   return port;
+}
+
+/**
+ * Whether the admin page itself is being viewed on a loopback host — gates
+ * the `tailscaleBaseUrl` query (querying from a deployed/non-local origin
+ * would be asking a remote box about ITS OWN loopback tailscale exposure,
+ * which is a legitimate query but not what this section is for). Same
+ * effect-based SSR-safety shape as `useLocalTargetPort`: false until the
+ * post-mount check runs.
+ */
+function useIsLoopback(): boolean {
+  const [loopback, setLoopback] = useState(false);
+  useEffect(() => {
+    if (isLoopbackHostname(window.location.hostname)) setLoopback(true);
+  }, []);
+  return loopback;
+}
+
+/**
+ * This box's own path prefix (e.g. "/main/test1/" or "/"), derived from the
+ * API base by dropping its trailing "/api" segment — the same prefix this
+ * page is itself served under. Appended to the Tailscale base URL, it links
+ * to this exact box rather than just the tailnet host root.
+ */
+function boxPathPrefix(): string {
+  const apiBase = getApiBase(); // e.g. "/main/test1/api" or "/api"
+  const stripped = apiBase.endsWith("/api") ? apiBase.slice(0, -"/api".length) : apiBase;
+  return stripped === "" ? "/" : `${stripped}/`;
 }
 
 const CODE = "text-xs bg-warm-100 text-warm-800 px-1 py-0.5 rounded";
 
 export function TailscaleSection() {
   const localPort = useLocalTargetPort();
+  const isLoopback = useIsLoopback();
+  const tailscaleUrlQuery = trpc.admin.tailscaleBaseUrl.useQuery(undefined, { enabled: isLoopback });
+  const tailscaleBoxUrl =
+    tailscaleUrlQuery.data?.baseUrl != null ? `${tailscaleUrlQuery.data.baseUrl}${boxPathPrefix()}` : null;
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
@@ -57,6 +95,12 @@ export function TailscaleSection() {
         login, not a replacement: being on the network gets you to the door, but you still
         sign in.
       </p>
+
+      {tailscaleBoxUrl !== null ? (
+        <p className="text-sm text-warm-700 mb-4">
+          This box over Tailscale: <ExternalLink href={tailscaleBoxUrl}>{tailscaleBoxUrl}</ExternalLink>
+        </p>
+      ) : null}
 
       <h3 className="text-sm font-semibold text-warm-800 mb-2">Getting started</h3>
       <ol className="list-decimal list-inside text-sm text-warm-700 space-y-2 mb-4">

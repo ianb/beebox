@@ -1,9 +1,11 @@
 ---
 title: "Mobile: go modal, not split-pane — lean on voice + callouts when a document is open"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder using chat + a document on a phone
 labels: [soft-launch]
+priority: important
 ---
 
 The desktop chat/companion layout is side-by-side: transcript on one side, the
@@ -41,7 +43,7 @@ modal model in the responsive web layout first; the native shells inherit it.
 
 Net: document + composer + callouts, with voice as the default input — the
 "expand the tab" idea from
-[iOS new-tab / focus-a-card](../bugs/2026-07-21-ios-no-new-tab-needs-back-or-overlay.md)
+[iOS new-tab / focus-a-card](../closed/bugs/2026-07-21-ios-no-new-tab-needs-back-or-overlay.md)
 generalized into the mobile layout philosophy. That issue's expand-tab section is
 the seed; this is its proper home.
 
@@ -80,7 +82,7 @@ used — one thing in focus at a time — where desktop rewards side-by-side.
 
 - The composer must not eat the screen in this mode (the fixed grow-on-scroll
   bug, the native iOS composer).
-- Interacts with the [chat history dropdown scoping](../bugs/2026-07-22-chat-history-dropdown-not-landmark-scoped.md)
+- Interacts with the [chat history dropdown scoping](../closed/bugs/2026-07-22-chat-history-dropdown-not-landmark-scoped.md)
   and the whole mobile-nav surface.
 
 Central to a credible mobile/soft-launch experience — the phone is where most

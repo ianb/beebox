@@ -11,10 +11,11 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { writeFileAtomic } from "../lib/atomic-write.js";
 import { errnoCode } from "../lib/error-guards.js";
 
 import { withCardLock } from "../lib/card-lock.js";
-import { acquireLock, releaseLock, LockHeldError } from "../lib/file-lock.js";
+import { acquireLock, releaseLock, requestScopedLock, LockHeldError } from "../lib/file-lock.js";
 
 /**
  * Build the transient state file path for a connector.
@@ -31,20 +32,49 @@ interface LoadOptions<T> {
 }
 
 /**
- * Load transient state, returning defaultValue if file doesn't exist.
+ * Thrown when a state file exists but can't be read or parsed. Fails CLOSED
+ * rather than falling back to `defaultValue`, because for these files "missing"
+ * and "corrupt" mean opposite things. Missing is first run: the default is
+ * correct and the connector legitimately starts from scratch. Corrupt is a
+ * truncated or damaged file — resolving it to the default would silently
+ * discard sync tokens, Telegram thread mappings, and alert latches, and the
+ * very next `updateTransientState` would write that loss back over the file.
+ * A corrupt state file is a human problem: inspect it, or delete it to
+ * deliberately choose the from-scratch resync.
+ */
+export class TransientStateCorruptError extends Error {
+  readonly statePath: string;
+  constructor(filePath: string, options: { cause: unknown }) {
+    super(
+      `Transient state at ${filePath} exists but could not be read or parsed. ` +
+        "Refusing to fall back to defaults — inspect the file, or delete it to resync from scratch.",
+      options,
+    );
+    this.name = "TransientStateCorruptError";
+    this.statePath = filePath;
+  }
+}
+
+/**
+ * Load transient state, returning `defaultValue` when the file doesn't exist.
+ * Any other read failure, and unparseable JSON, throw
+ * {@link TransientStateCorruptError} — see there for why this doesn't degrade.
  */
 export async function loadTransientState<T>(opts: LoadOptions<T>): Promise<T> {
+  const filePath = transientStatePath(opts.boxRoot, opts.connectorName);
+  let content: string;
   try {
-    const content = await fs.readFile(transientStatePath(opts.boxRoot, opts.connectorName), "utf-8");
-    return JSON.parse(content);
+    content = await fs.readFile(filePath, "utf-8");
   } catch (e) {
     // Transient state is gitignored and absent on first run — a missing file is
-    // the normal path to defaultValue. Log so a corrupt/unreadable state file
-    // isn't silently reset to defaults.
-    if (errnoCode(e) !== "ENOENT") {
-      console.warn(`Could not load transient state for ${opts.connectorName}, using default:`, e);
-    }
-    return opts.defaultValue;
+    // the normal path to defaultValue.
+    if (errnoCode(e) === "ENOENT") return opts.defaultValue;
+    throw new TransientStateCorruptError(filePath, { cause: e });
+  }
+  try {
+    return JSON.parse(content);
+  } catch (e) {
+    throw new TransientStateCorruptError(filePath, { cause: e });
   }
 }
 
@@ -55,12 +85,16 @@ interface SaveOptions {
 }
 
 /**
- * Save transient state.
+ * Save transient state, crash-safely (temp file + fsync + atomic rename). A
+ * plain `writeFile` truncates first, so a kill mid-write would leave a
+ * truncated file — which `loadTransientState` now (correctly) refuses to read,
+ * wedging the connector until a human intervenes. Never leave that torn state
+ * reachable in the first place.
  */
 export async function saveTransientState(opts: SaveOptions): Promise<void> {
-  const filePath = transientStatePath(opts.boxRoot, opts.connectorName);
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(filePath, JSON.stringify(opts.data, null, 2) + "\n");
+  await writeFileAtomic(transientStatePath(opts.boxRoot, opts.connectorName), {
+    content: JSON.stringify(opts.data, null, 2) + "\n",
+  });
 }
 
 const LOCK_RETRIES = 50;
@@ -131,6 +165,9 @@ export async function updateTransientState<T>(opts: UpdateOptions<T>): Promise<T
   const { boxRoot, connectorName, defaultValue, update } = opts;
   const statePath = transientStatePath(boxRoot, connectorName);
   const lockPath = `${statePath}.lock`;
+  // Request-scoped: a short critical section whose callers fail fast (~5 s
+  // retry budget), so a crashed holder must clear in seconds, not minutes.
+  const lock = requestScopedLock(lockPath);
 
   // withCardLock is OUTER (see the doc comment): serialize same-process racers
   // before either one reaches the cross-process lock.
@@ -142,7 +179,7 @@ export async function updateTransientState<T>(opts: UpdateOptions<T>): Promise<T
 
     for (let attempt = 0; attempt < LOCK_RETRIES; attempt++) {
       try {
-        await acquireLock(lockPath, { purpose: "transient-state", connectorName });
+        await acquireLock(lock, { purpose: "transient-state", connectorName });
       } catch (e) {
         if (e instanceof LockHeldError) {
           // Held by ANOTHER process (a same-process holder is impossible here —
@@ -158,7 +195,7 @@ export async function updateTransientState<T>(opts: UpdateOptions<T>): Promise<T
         await saveTransientState({ boxRoot, connectorName, data: updated });
         return updated;
       } finally {
-        await releaseLock(lockPath);
+        await releaseLock(lock);
       }
     }
     throw new TransientStateLockError(lockPath);

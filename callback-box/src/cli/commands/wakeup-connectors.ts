@@ -12,8 +12,15 @@ import { createGoogleCalendarConnector } from "../../connectors/google-calendar.
 import { createTelegramConnector } from "../../connectors/telegram.js";
 import { createGoogleDriveConnector } from "../../connectors/google-drive.js";
 import { createPublishSubmissionsConnector } from "../../connectors/publish-submissions.js";
-import { getAllConnectors, type Connector } from "../../connectors/index.js";
+import {
+  ConnectorFatalError,
+  getAllConnectors,
+  type Connector,
+  type ConnectorProcedureTrigger,
+} from "../../connectors/index.js";
 import { errorMessage } from "../../lib/error-guards.js";
+import { createCliContext } from "../../core/commands/index.js";
+import { runConnectorProcedureTriggers } from "../../core/commands/connector-procedure-triggers.js";
 
 /**
  * Run the configured connectors and report results.
@@ -56,6 +63,7 @@ export async function runConnectors(
   let totalPushed = 0;
   let totalJobs = 0;
   let totalErrors = 0;
+  const procedures: ConnectorProcedureTrigger[] = [];
 
   for (const connector of toRun) {
     connector.triggeredBy = "cb wakeup";
@@ -68,11 +76,18 @@ export async function runConnectors(
       totalCreated += counts.created;
       totalJobs += counts.jobs;
       totalErrors += counts.errors;
+      procedures.push(...(result.procedures ?? []));
     } catch (err) {
+      // A misconfiguration is not a sync failure: counting it would let the
+      // wakeup continue into intake, the reactor and push having quietly
+      // decided the box has no new mail. Abort the cycle instead.
+      if (err instanceof ConnectorFatalError) throw err;
       console.error(`  Failed: ${errorMessage(err)}`);
       totalErrors++;
     }
   }
+
+  totalErrors += await runConnectorProcedureTriggers(createCliContext(boxRoot), procedures);
 
   const parts: string[] = [];
   if (totalPushed > 0) parts.push(`${totalPushed} pushed`);

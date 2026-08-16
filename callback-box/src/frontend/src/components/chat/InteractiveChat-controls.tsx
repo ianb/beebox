@@ -1,9 +1,9 @@
 /**
  * Header chrome + control surfaces for InteractiveChat: the schedule
- * countdown pill, narration badge/icon, mute and new-session buttons, the
- * debug dropdown menu, the companion view panel, and the context link.
- * These are presentational/self-contained — they take props and emit
- * callbacks, holding no chat-machine state of their own.
+ * countdown pill, narration badge/icon, mute button, the companion view
+ * panel, and the context link. These are presentational/self-contained —
+ * they take props and emit callbacks, holding no chat-machine state of
+ * their own.
  */
 
 import { useState, useEffect, useRef, useCallback, memo } from "react";
@@ -97,100 +97,6 @@ export function NarrationMicIcon({ className }: { className?: string }) {
         d="M3 14a4.5 4.5 0 009 0M7.5 19v2.5m-2 0h4"
       />
     </svg>
-  );
-}
-
-/**
- * Header toggle for narration mode. Always visible:
- *
- * - **off:** a dim outline pill, the whole pill clickable to turn narration on.
- * - **on:** a filled pill that shows a "transcribing…" sub-label while the HQ
- *   pass is in flight after a send-message checkpoint (so the user can see the
- *   agent isn't ignoring them — it's waiting on the round-trip to the HQ
- *   transcription service), plus an "✕" affordance to turn narration back off.
- */
-export function NarrationStatusBadge({
-  enabled,
-  hqInFlight,
-  onToggle,
-}: {
-  enabled: boolean;
-  hqInFlight: boolean;
-  onToggle: () => void;
-}) {
-  if (!enabled) {
-    return (
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-label="Turn on narration mode"
-        aria-pressed={false}
-        title="Turn on narration mode"
-        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-white/40 text-white/70 text-xs font-medium hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-1 focus-visible:ring-white"
-      >
-        <span aria-hidden>🎙️</span>
-        <span>narration</span>
-      </button>
-    );
-  }
-  return (
-    <span
-      className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-full bg-white/20 text-white text-xs font-medium"
-      title="Narration mode is on — silent responses, structured output, HQ transcription on send"
-    >
-      <span aria-hidden>🎙️</span>
-      <span>narration</span>
-      {hqInFlight ? <span className="opacity-80">· transcribing…</span> : null}
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-label="Turn off narration mode"
-        aria-pressed
-        title="Turn off narration"
-        className="ml-0.5 inline-flex items-center justify-center w-4 h-4 rounded-full hover:bg-white/20 focus:outline-none focus-visible:ring-1 focus-visible:ring-white"
-      >
-        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-        </svg>
-      </button>
-    </span>
-  );
-}
-
-export function MuteButton({ muted, onToggle }: { muted: boolean; onToggle: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      className="p-1.5 rounded hover:bg-white/20 text-white/80 hover:text-white"
-      title={muted ? "Unmute speech" : "Mute speech"}
-      aria-label={muted ? "Unmute speech" : "Mute speech"}
-      aria-pressed={muted}
-    >
-      {muted ? (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5 6 9H3v6h3l5 4V5zM17 9l4 6m0-6-4 6" />
-        </svg>
-      ) : (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5 6 9H3v6h3l5 4V5zM15.54 8.46a5 5 0 0 1 0 7.07M18.36 5.64a9 9 0 0 1 0 12.72" />
-        </svg>
-      )}
-    </button>
-  );
-}
-
-export function NewSessionButton({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="p-1.5 rounded hover:bg-white/20 text-white/80 hover:text-white"
-      title="New Session"
-    >
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-      </svg>
-    </button>
   );
 }
 
@@ -315,6 +221,11 @@ function CompanionViewPanelInner({
               key={tab.target.path}
               role="tabpanel"
               aria-hidden={!isActive}
+              // tabIndex 0: a scrolling tabpanel must be keyboard-focusable
+              // (both the tabpanel ARIA pattern and axe's
+              // scrollable-region-focusable) — the fixed shell's window never
+              // scrolls, so keys only reach a container that can take focus.
+              tabIndex={0}
               className={cn("absolute inset-0 overflow-auto", !isActive && "hidden")}
               // Scrolling the active card reports a quantized read position
               // (nearest tenth); reportScroll de-dupes so a scroll only fires
@@ -346,20 +257,3 @@ function CompanionViewPanelInner({
  * submit; callers pass `useCallback`-stable handlers (see InteractiveChat-view).
  */
 export const CompanionViewPanel = memo(CompanionViewPanelInner);
-
-/**
- * Small "Context: <dir>" link in the chat header for chats that were
- * started from a landmark.
- */
-export function ChatContextLink({ dir, boxSlug }: { dir: string | null; boxSlug: string }) {
-  if (!dir) return null;
-  return (
-    <a
-      href={withBase(`/${boxSlug}/browse/${dir}`)}
-      className="ml-3 text-xs text-white/80 hover:text-white truncate"
-      title={`Context: ${dir}/`}
-    >
-      {dir}/
-    </a>
-  );
-}

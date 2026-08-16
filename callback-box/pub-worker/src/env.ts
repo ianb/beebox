@@ -14,13 +14,25 @@ export interface RateLimiter {
 /** Bindings and vars the Worker runs against (declared in `wrangler.jsonc`). */
 export interface Env {
   /**
-   * The single R2 bucket holding every publication: `pubs/<id>/manifest.json`,
-   * `pubs/<id>/bundle/<path>`, `slugs/<slug>` pointers, and (Tracks D/F)
-   * `submissions/<id>/...` + `access-log/<pub-id>/<id>.json` (Track D). One store,
-   * one consistency model (Track A ⚑ — R2 is strongly consistent, so a revocation
-   * tombstone takes effect on the next read).
+   * The R2 bucket holding publication CONTENT only: `pubs/<id>/manifest.json`,
+   * `pubs/<id>/bundle/<path>`, and `slugs/<slug>` pointers. Laptop-OAuth-written by
+   * `cb pub go`, read-only from the Worker's perspective (Track A ⚑ — R2 is
+   * strongly consistent, so a revocation tombstone takes effect on the next read).
+   * Ingestion data lives in {@link Env.PUB_INGEST} instead — see its doc comment
+   * for why the split exists.
    */
   PUB_STORE: R2Bucket;
+  /**
+   * The R2 bucket holding Worker-WRITTEN ingestion data: `submissions/<id>/...`
+   * (Track F) and `access-log/<pub-id>/<id>.json` (Track D). Split from
+   * {@link Env.PUB_STORE} (Codex cross-review amendment 1, CRITICAL) so the box's
+   * stored connector token can be scoped to this bucket only — R2 tokens scope
+   * per-bucket, not per-prefix, so a token with R2 Edit on a single shared bucket
+   * could rewrite a manifest's `allowedEmails` or replace published content. With
+   * the split, the connector can pull submissions/access-log but can never touch
+   * `pubs/`/`slugs/`.
+   */
+  PUB_INGEST: R2Bucket;
   /**
    * The Cloudflare Access team domain as a full origin, e.g.
    * `https://myteam.cloudflareaccess.com` — also the token `iss`. Typed as

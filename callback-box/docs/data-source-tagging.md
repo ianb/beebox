@@ -12,7 +12,7 @@ Space-separated list of `type:identifier` pairs indicating where the displayed d
 
 | Type | Identifier | Example |
 |------|-----------|---------|
-| `card` | Relative path to the card file | `card:store/todos/Shopping.todo-list.card` |
+| `card` | Relative path to the card file | `card:store/todos/Shopping.doc.card` |
 | `commit` | Git commit hash | `commit:abc1234` |
 | `api` | API endpoint or tRPC procedure name | `api:status.questions` |
 | `dir` | Directory path being browsed | `dir:store/recipes` |
@@ -30,7 +30,7 @@ Multiple sources on one element are space-separated:
 Optional natural-language description of which part of the source this element represents. Use when multiple sibling elements reference the same source but show different parts of it.
 
 ```tsx
-<div data-cb-source="card:store/todos/Shopping.todo-list.card" data-cb-source-item="item: Buy milk">
+<div data-cb-source="card:store/todos/Shopping.doc.card" data-cb-source-item="item: Buy milk">
   <span>Buy milk</span>
 </div>
 ```

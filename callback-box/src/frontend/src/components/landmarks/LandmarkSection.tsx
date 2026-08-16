@@ -1,20 +1,25 @@
 /**
- * One landmark rendered as a section: symbol + label header, plus a
- * grid of resolved link tiles. Click a tile to open the target card.
+ * One landmark rendered as a section of the merged activity surface: symbol
+ * + label header, its chats (rows + older disclosure + New chat), and its
+ * resolved link tiles. Click a tile to open the target card.
  *
- * The "Chat" button opens (or starts) a chat associated with this
- * landmark's directory — see chat-session-history.ts and
- * docs/landmarks.md for the association model.
+ * Links are capped at the first `LINK_CAP` tiles with an inline "Show all"
+ * disclosure — there is no landmark full-form page to click through to
+ * (docs/plans/top-nav-ia.md Track D). Sessions come from `chat.byLandmark`,
+ * joined by directory upstream in `LandmarksList`; see docs/landmarks.md for
+ * the chat/directory association model.
  */
 
 import { useState } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
-import { href, toSearch } from "../../lib/routing";
+import { Link } from "@tanstack/react-router";
+import { href } from "../../lib/routing";
 import { apiFileUrl } from "../../lib/view-url";
-import { trpc } from "../../lib/trpc";
+import type { SessionRowItem } from "../session-pickers/SessionRow";
 import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { ChevronIcon } from "./ChevronIcon";
+import { LandmarkSessions } from "./LandmarkSessions";
 
 interface ResolvedLink {
   ref: string;
@@ -40,7 +45,22 @@ interface Landmark {
   depth: number;
 }
 
+/*
+ * Nesting indent, reduced below `sm`. The desktop steps (8/16/24/32 = up to
+ * 8rem) are unchanged; on a 390px phone that deepest step alone ate a third
+ * of the viewport before any content. Mobile steps are a quarter of
+ * desktop's — still legible as hierarchy, without spending the screen on it.
+ * (Removed with the activity ordering, restored with the directory grouping
+ * — the indent is what makes the grouping legible.)
+ */
+const INDENT_CLASSES = ["", "ml-2 sm:ml-8", "ml-4 sm:ml-16", "ml-6 sm:ml-24", "ml-8 sm:ml-32"];
+
 function PathLink({ dir, boxSlug }: { dir: string; boxSlug: string }) {
+  // The root landmark has no meaningful path — a bare "/" under its title
+  // reads as leftover plumbing (a field-test operator stared at it and
+  // guessed "a separator with the parts missing"). The tile's label carries
+  // its identity; skip the line entirely for root.
+  if (dir === "") return null;
   return (
     <Link
       to={href(`/${boxSlug}/browse/${dir}`)}
@@ -54,21 +74,28 @@ function PathLink({ dir, boxSlug }: { dir: string; boxSlug: string }) {
        * link refs below truncate, but those have a label above them and this
        * doesn't.
        */}
-      <Text as="span" size="xs" tone="muted" breakAll>{dir ? `${dir}/` : "/"}</Text>
+      <Text as="span" size="xs" tone="muted" breakAll>{`${dir}/`}</Text>
     </Link>
   );
 }
 
 /*
- * Nesting indent, reduced below `sm`. The desktop steps (8/16/24/32 = up to
- * 8rem) are unchanged; on a 390px phone that deepest step alone ate a third of
- * the viewport before any content, which compounds with a long path to push the
- * page wide. Mobile steps are a quarter of desktop's — still legible as
- * hierarchy, without spending the screen on it.
+ * How many link tiles show before the "Show all" disclosure. Six fills two
+ * desktop columns three rows deep — enough that most landmarks show whole,
+ * short enough that a link-heavy one doesn't bury the next landmark's chats.
  */
-const INDENT_CLASSES = ["", "ml-2 sm:ml-8", "ml-4 sm:ml-16", "ml-6 sm:ml-24", "ml-8 sm:ml-32"];
+const LINK_CAP = 6;
 
-export function LandmarkSection({ landmark, boxSlug }: { landmark: Landmark; boxSlug: string }) {
+export function LandmarkSection({
+  landmark,
+  boxSlug,
+  sessions,
+}: {
+  landmark: Landmark;
+  boxSlug: string;
+  /** This landmark's chat bucket, or null when the box has no session data. */
+  sessions: { sessions: SessionRowItem[]; olderSessions: SessionRowItem[] } | null;
+}) {
   const labelText = landmark.label || landmark.path;
   const indentClass = INDENT_CLASSES[Math.min(landmark.depth, INDENT_CLASSES.length - 1)];
 
@@ -77,22 +104,24 @@ export function LandmarkSection({ landmark, boxSlug }: { landmark: Landmark; box
       <Stack gap="md">
         <div className="flex items-center gap-3">
           <LandmarkSymbol landmark={landmark} boxSlug={boxSlug} />
-          <Stack gap="xs">
+          {/* min-w-0 flex-1: the path below wraps break-all, so a shrink-to-fit
+              header column would break a short path mid-word. */}
+          <Stack gap="xs" className="min-w-0 flex-1">
             <Text as="h2" size="lg" weight="bold">{labelText}</Text>
             <PathLink dir={landmark.dir} boxSlug={boxSlug} />
           </Stack>
-          <div className="ml-auto">
-            <ChatButton dir={landmark.dir} boxSlug={boxSlug} />
-          </div>
         </div>
 
-        {landmark.links.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {landmark.links.map((link) => (
-              <LinkTile key={link.ref} link={link} boxSlug={boxSlug} />
-            ))}
-          </div>
-        ) : null}
+        <LandmarkSessions
+          bucket={{
+            dir: landmark.dir,
+            sessions: sessions === null ? [] : sessions.sessions,
+            olderSessions: sessions === null ? [] : sessions.olderSessions,
+          }}
+          boxSlug={boxSlug}
+        />
+
+        <LandmarkLinks links={landmark.links} boxSlug={boxSlug} />
 
         {landmark.groups.map((group) => (
           <LandmarkGroup key={group.label} group={group} boxSlug={boxSlug} />
@@ -102,20 +131,36 @@ export function LandmarkSection({ landmark, boxSlug }: { landmark: Landmark; box
   );
 }
 
-function ChevronIcon({ open }: { open: boolean }) {
+/**
+ * The link grid, capped: the first `LINK_CAP` tiles always show, the rest sit
+ * behind an inline disclosure rather than a click-through (no full-form view
+ * exists to click through to).
+ */
+function LandmarkLinks({ links, boxSlug }: { links: ResolvedLink[]; boxSlug: string }) {
+  const [showAll, setShowAll] = useState(false);
+  if (links.length === 0) return null;
+  const visible = showAll ? links : links.slice(0, LINK_CAP);
+
   return (
-    <svg
-      className={`w-4 h-4 transition-transform ${open ? "rotate-90" : ""}`}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M9 6l6 6-6 6" />
-    </svg>
+    <Stack gap="xs">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {visible.map((link) => (
+          <LinkTile key={link.ref} link={link} boxSlug={boxSlug} />
+        ))}
+      </div>
+      {links.length > LINK_CAP ? (
+        <button
+          type="button"
+          onClick={() => setShowAll((v) => !v)}
+          aria-expanded={showAll}
+          className="flex items-center gap-2 self-start px-2 py-1 -mx-2 rounded text-left hover:bg-warm-100"
+        >
+          <ChevronIcon open={showAll} />
+          <Text as="span" size="sm">{showAll ? "Show fewer" : "Show all"}</Text>
+          <Text as="span" size="xs" tone="muted">{links.length}</Text>
+        </button>
+      ) : null}
+    </Stack>
   );
 }
 
@@ -148,47 +193,6 @@ function LandmarkGroup({ group, boxSlug }: { group: ResolvedGroup; boxSlug: stri
         </div>
       ) : null}
     </Stack>
-  );
-}
-
-function ChatButton({ dir, boxSlug }: { dir: string; boxSlug: string }) {
-  const navigate = useNavigate();
-  const utils = trpc.useUtils();
-
-  const onClick = async () => {
-    try {
-      const { sessionId } = await utils.chat.lastSessionForDirectory.fetch({ contextDir: dir });
-      if (sessionId) {
-        // navigate()'s promise only rejects on a superseded/redirected
-        // navigation (not a user-facing failure) -- fire-and-forget.
-        void navigate({
-          to: href(`/${boxSlug}/chat`),
-          search: toSearch({ session: sessionId }),
-        });
-        return;
-      }
-      // No prior chat for this dir — start a new one. The backend reads
-      // `contextDir` off the first send and spawns the SDK with `cwd` at
-      // that directory; the association is persisted on session assignment.
-      void navigate({
-        to: href(`/${boxSlug}/chat`),
-        search: toSearch({ session: "new", contextDir: dir }),
-      });
-    } catch (e) {
-      // User-initiated action (policy rule 5): no toast affordance on this
-      // button today, so log at error level as the interim signal.
-      console.error(`[landmarks] failed to open chat for ${dir}:`, e);
-    }
-  };
-
-  return (
-    <button
-      type="button"
-      onClick={() => void onClick()}
-      className="px-3 py-1 rounded text-sm font-medium bg-info-50 text-info-dark border border-info-200 hover:bg-info-100 transition-colors"
-    >
-      Chat
-    </button>
   );
 }
 

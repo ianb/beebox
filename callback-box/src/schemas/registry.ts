@@ -24,7 +24,9 @@ import { ProcedureRunSchema } from "./procedure-run.js";
 import { ImageSchema } from "./image.js";
 import { AudioSchema } from "./audio.js";
 import { FileSchema } from "./file.js";
+import { DocumentSchema } from "./document.js";
 import { CaptureSessionSchema } from "./capture-session.js";
+import { UploadBatchSchema } from "./upload-batch.js";
 import { RecordSchema } from "./record.js";
 import { RecipeSchema } from "./recipe.js";
 import { EmailThreadSchema } from "./email-thread.js";
@@ -40,9 +42,10 @@ import { ChatSchema } from "./chat.js";
 import { ChatThreadSchema } from "./chat-thread.js";
 import { ChatJobSchema } from "./chat-job.js";
 import { ContainsBackfillJobSchema } from "./contains-backfill-job.js";
+import { TodoReviewJobSchema } from "./todo-review-job.js";
 import { PersonalitySchema } from "./personality.js";
 import { QuestionFollowupJobSchema } from "./question-followup-job.js";
-import { TodoListSchema } from "./todo-list.js";
+import { TodoViewSchema } from "./todo-view.js";
 import { BriefingSchema } from "./briefing.js";
 import { PersonSchema } from "./person.js";
 import { PlaceSchema } from "./place.js";
@@ -61,6 +64,7 @@ import { CourseSchema } from "./course.js";
 import { ExpositionPlanSchema } from "./exposition-plan.js";
 import { LessonPlanSchema } from "./lesson-plan.js";
 import { ProgressSchema } from "./progress.js";
+import { TabArrangementSchema } from "./tab-arrangement.js";
 import { registerBoxTemplate, unregisterBoxTemplates, type TemplateDefinition } from "./templates.js";
 
 /**
@@ -78,7 +82,7 @@ export const cardSchemas: CardSchema[] = [
   MemoSchema,
   PersonSchema,
   PlaceSchema,
-  TodoListSchema,
+  TodoViewSchema,
   QuestionSchema,
   RecipeSchema,
   CommentarySchema,
@@ -108,14 +112,18 @@ export const cardSchemas: CardSchema[] = [
   GsheetSchema,
   WebpageSchema,
   ExtfileSchema,
+  TabArrangementSchema,
   CaptureSessionSchema,
+  UploadBatchSchema,
   ImageSchema,
   AudioSchema,
   FileSchema,
+  DocumentSchema,
   // system bookkeeping
   IntakeJobSchema,
   ChatJobSchema,
   ContainsBackfillJobSchema,
+  TodoReviewJobSchema,
   QuestionFollowupJobSchema,
   ProcedureRunSchema,
   ChatSchema,

@@ -1,265 +1,335 @@
-# Gmail pull sync
+# Gmail tracked-working-set sync
 
-The Gmail connector pulls matching messages into `box/inbox/email/` as
-thread/message cards. Dedup is by Gmail message id (`seenGmailIds` in
-`gmail-state.json`, uncapped), checked **before** fetching, so re-listing a
-mailbox never re-fetches message bodies. Steady-state syncs use the Gmail
-history API from a checkpoint stored in transient state; the full query
-listing only runs on the first sync or when the checkpoint expires.
-
-Note: the fake's `listMessages` evaluates only the `label:` subset of the query
-(see the service doctest), so full-list scenarios below seed messages carrying
-the matching label.
+Regular Gmail sync advances a private history cursor but creates no email
+cards unless a thread is already tracked or a bounded rule selects it.
 
 ```ts setup
+import { readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
-import { readFile } from "node:fs/promises";
-import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { initBox } from "../../src/core/box/index.js";
-import {
-  createFakeGoogleGmail,
-  type GmailMessage,
-} from "../../src/services/google-gmail.js";
-import { withCallLog, printCalls } from "../../src/services/call-log.js";
 import { createGmailConnector } from "../../src/connectors/gmail.js";
-import { buildGmailQuery } from "../../src/connectors/gmail-pull.js";
+import { trackGmailThread } from "../../src/connectors/gmail-track.js";
+import { findTrackedGmailThreads } from "../../src/connectors/gmail-tracking.js";
+import { createFakeGoogleGmail } from "../../src/services/google-gmail-fake.js";
+import type { GmailMessage } from "../../src/services/google-gmail-types.js";
+import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
-function makeGmailMessage(opts: {
+function message(opts: {
   id: string;
+  threadId?: string;
   subject: string;
-  labelIds: string[];
+  labelIds?: string[];
 }): GmailMessage {
   return {
     id: opts.id,
-    threadId: `t-${opts.id}`,
-    labelIds: opts.labelIds,
-    internalDate: "1600000000000",
+    threadId: opts.threadId ?? `t-${opts.id}`,
+    labelIds: opts.labelIds ?? ["INBOX"],
+    internalDate: "1785596400000",
+    snippet: `Snippet ${opts.id}`,
     payload: {
       mimeType: "text/plain",
       headers: [
         { name: "Message-ID", value: `<${opts.id}@example.com>` },
-        { name: "From", value: "alice@example.com" },
-        { name: "To", value: "me@example.com" },
+        { name: "From", value: "sender@example.com" },
+        { name: "To", value: "box@example.com" },
         { name: "Subject", value: opts.subject },
       ],
-      body: { data: "SGVsbG8" },
+      body: { data: Buffer.from(`Body ${opts.id}`).toString("base64url") },
     },
   };
 }
 
-async function readState(root: string) {
-  return JSON.parse(
-    await readFile(join(root, "config/connectors/gmail-state.json"), "utf-8"),
-  );
+async function transientState(root: string) {
+  return JSON.parse(await readFile(join(root, "config/connectors/gmail.state.json"), "utf-8"));
 }
 ```
 
-## Query building
+## A missing config file stops the sync
 
-No date filter anywhere — a configured query or label set is used as-is, and
-the bare default is plain `label:inbox` (history incrementality bounds the
-sync cost instead of an `after:` floor):
-
-```ts
-buildGmailQuery({ query: "from:boss is:starred" })
-=> from:boss is:starred
-
-buildGmailQuery({ labels: ["ledger", "callback"] })
-=> label:ledger OR label:callback
-
-buildGmailQuery({})
-=> label:inbox
-```
-
-## Labels config: first sync imports all labeled mail, regardless of age
-
-A labels config means explicit routing — everything carrying the label flows
-in on the first sync, even messages received years ago (there is no date
-filter to exclude them).
+Gmail is enabled for the box but nothing says what to collect. That is a
+misconfiguration, not a quiet no-op: degrading to "no rules" made a stalled
+connector indistinguishable from a healthy idle one.
 
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
-await box.seed("config/connectors/gmail.json", JSON.stringify({ labels: ["callback"] }));
-box.commitAll("init box");
+box.commitAll("initialize box");
+const result = await createGmailConnector(box.root, createFakeGoogleGmail()).sync();
+JSON.stringify({ success: result.success, created: result.created.length })
+=> {"success":false,"created":0}
 
-const gmail = withCallLog(createFakeGoogleGmail({
-  labels: [{ id: "Label_7", name: "callback", type: "user" }],
-  messages: [
-    makeGmailMessage({ id: "m1", subject: "Old labeled mail", labelIds: ["Label_7"] }),
-  ],
-}));
+result.error?.includes("no configuration")
+=> true
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## An empty config means no automatic cards
+
+An explicit `{}` is the way to say "connected, nothing automatic". The initial
+run establishes a history checkpoint; existing and later mail stay remote.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+await box.seed("config/connectors/gmail.json", "{}\n");
+box.commitAll("initialize box");
+const gmail = createFakeGoogleGmail({
+  labels: [{ id: "INBOX", name: "INBOX", type: "system" }],
+  messages: [message({ id: "old", subject: "Existing mail" })],
+});
 const connector = createGmailConnector(box.root, gmail);
+(await connector.sync()).created.length
+=> 0
+
+gmail.addMessage(message({ id: "new", subject: "New mail" }));
+(await connector.sync()).created.length
+=> 0
+
+(await findTrackedGmailThreads(box.root)).size
+=> 0
+
+(await transientState(box.root)).historyId
+=> 2
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Procedure rules return post-sync requests
+
+A procedure action records a bounded summary and returns one coalesced request;
+it does not create an email card itself.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+await box.seed("config/connectors/gmail.json", JSON.stringify({
+  rules: [{
+    name: "review-mail",
+    query: "label:callback",
+    action: {
+      type: "procedure",
+      ref: "config/procedures/review-mail.procedure.card",
+    },
+  }],
+}));
+box.commitAll("initialize box");
+const gmail = createFakeGoogleGmail({
+  labels: [{ id: "Label_7", name: "callback", type: "user" }],
+});
+const connector = createGmailConnector(box.root, gmail);
+await connector.sync();
+gmail.addMessage(message({ id: "review", subject: "Review", labelIds: ["Label_7"] }));
 const result = await connector.sync();
+result.created.length
+=> 0
+
+JSON.stringify(result.procedures)
+=> [{"procedureRef":"config/procedures/review-mail.procedure.card","directive":"Gmail rule review-mail has new matching mail. Inspect with: cb connector gmail pending review-mail"}]
+
+(await transientState(box.root)).rules["review-mail"].pending[0].threadId
+=> t-review
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Legacy transient state migrates on sync
+
+The obsolete GC timestamp is ignored and removed on the next successful state
+write instead of permanently wedging upgraded connectors.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+await box.seed("config/connectors/gmail.json", "{}\n");
+await box.seed("config/connectors/gmail.state.json", JSON.stringify({
+  historyId: "1",
+  lastReconcileAt: "2026-08-01T00:00:00.000Z",
+}));
+box.commitAll("initialize box");
+const gmail = createFakeGoogleGmail();
+const result = await createGmailConnector(box.root, gmail).sync();
 result.success
 => true
 
-// thread card + message card + body file
-result.created.length
-=> 3
-
-JSON.stringify((await readState(box.root)).seenGmailIds)
-=> ["m1"]
+JSON.stringify(await transientState(box.root))
+=> {"historyId":"1"}
 ```
 
-The second sync goes through the history API: no full re-list, no message
-re-fetch.
-
-```ts continue
-gmail.callLog.length = 0;
-const second = await connector.sync();
-second.created.length
-=> 0
-
-JSON.stringify(printCalls(gmail.callLog, "listMessages"))
-=> ""
-
-JSON.stringify(printCalls(gmail.callLog, "getMessage"))
-=> ""
-
-printCalls(gmail.callLog, "listHistory")
-=> listHistory({"startHistoryId":"1"})
+```ts cleanup
+await box.cleanup();
 ```
 
-New labeled mail arrives — picked up via history, fetching only the one new
-message:
+## Tracked cards refresh automatically
 
-```ts continue
-await gmail.addMessage(makeGmailMessage({ id: "m2", subject: "Fresh mail", labelIds: ["Label_7"] }));
-const third = await connector.sync();
-third.created.length
-=> 3
-
-printCalls(gmail.callLog, "getMessage")
-=> getMessage("m2")
-
-JSON.stringify((await readState(box.root)).seenGmailIds)
-=> ["m1","m2"]
-```
-
-## Labeling an old message routes it into the box
-
-The labeling-as-routing case: a message that never matched (no `callback`
-label) gets the label later. The history API surfaces the labelsAdded change
-— received date is irrelevant.
-
-```ts continue
-await gmail.addMessage(makeGmailMessage({ id: "m3", subject: "Unrelated", labelIds: ["INBOX"] }));
-const fourth = await connector.sync();
-// Not labeled callback — history change filtered out, nothing imported
-fourth.created.length
-=> 0
-
-await gmail.addLabelsToMessage({ id: "m3", labelIds: ["Label_7"] });
-const fifth = await connector.sync();
-fifth.created.length
-=> 3
-
-JSON.stringify((await readState(box.root)).seenGmailIds)
-=> ["m1","m2","m3"]
-```
-
-## Expired history checkpoint falls back to a full list, without duplicates
-
-Gmail only retains history for a limited time. When the stored checkpoint
-404s, the connector re-lists the full query; seen-id dedup keeps the fallback
-from re-importing (note: zero getMessage calls for the three seen messages).
-
-```ts continue
-await gmail.expireHistory();
-await gmail.addMessage(makeGmailMessage({ id: "m4", subject: "Arrived during gap", labelIds: ["Label_7"] }));
-gmail.callLog.length = 0;
-const sixth = await connector.sync();
-sixth.created.length
-=> 3
-
-printCalls(gmail.callLog, "getMessage")
-=> getMessage("m4")
-
-printCalls(gmail.callLog, "listMessages")
-=> listMessages({"q":"label:callback","maxResults":100})
-```
-
-## Bare label:inbox default: baseline sync marks seen without importing
-
-With no connector config at all, the first sync would otherwise import the
-user's entire inbox as cards. Instead it records every current match as seen
-and imports nothing — only mail arriving (or moved to inbox) afterwards flows
-in.
+Once explicitly tracked, a thread is refreshed on regular connector sync. An
+untracked thread arriving in the same history window is not materialized.
 
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
-box.commitAll("init box");
-
+await box.seed("config/connectors/gmail.json", "{}\n");
+box.commitAll("initialize box");
 const gmail = createFakeGoogleGmail({
-  messages: [
-    makeGmailMessage({ id: "old1", subject: "Ancient inbox mail", labelIds: ["INBOX"] }),
-    makeGmailMessage({ id: "old2", subject: "More backlog", labelIds: ["INBOX"] }),
-  ],
+  labels: [{ id: "INBOX", name: "INBOX", type: "system" }],
+  messages: [message({ id: "m1", threadId: "tracked", subject: "Working thread" })],
+});
+await trackGmailThread({
+  boxRoot: box.root,
+  service: gmail,
+  threadId: "tracked",
+  trackedBy: "explicit-command",
 });
 const connector = createGmailConnector(box.root, gmail);
+let fetchedThreads = 0;
+const originalGetThread = gmail.getThread.bind(gmail);
+gmail.getThread = async (id) => {
+  fetchedThreads += 1;
+  return originalGetThread(id);
+};
+await connector.sync();
+fetchedThreads
+=> 0
+
+gmail.addMessage(message({ id: "m2", threadId: "tracked", subject: "Working thread" }));
+gmail.addMessage(message({ id: "other", threadId: "untracked", subject: "Other thread" }));
 const result = await connector.sync();
-result.created.length
-=> 0
+JSON.stringify({ created: result.created.length, updated: result.updated.length })
+=> {"created":2,"updated":1}
 
-JSON.stringify((await readState(box.root)).seenGmailIds)
-=> ["old1","old2"]
+fetchedThreads
+=> 1
+
+JSON.stringify([...await findTrackedGmailThreads(box.root)].map(([id]) => id))
+=> ["tracked"]
 ```
 
-From then on, new inbox mail and re-inboxed old mail both flow in via
-history:
-
-```ts continue
-await gmail.addMessage(makeGmailMessage({ id: "new1", subject: "Just arrived", labelIds: ["INBOX"] }));
-const second = await connector.sync();
-second.created.length
-=> 3
-
-// An archived message (history record exists, but no INBOX label) is ignored
-// until the user moves it back to the inbox.
-await gmail.addMessage(makeGmailMessage({ id: "arch1", subject: "Archived", labelIds: [] }));
-(await connector.sync()).created.length
-=> 0
-
-await gmail.addLabelsToMessage({ id: "arch1", labelIds: ["INBOX"] });
-(await connector.sync()).created.length
-=> 3
+```ts cleanup
+await box.cleanup();
 ```
 
-## Legacy state migration: pre-upgrade boxes don't re-import
+## Automatic rules baseline and cap thread creation
 
-Boxes synced before `seenGmailIds` existed have Message-ID headers in
-`seenMessageIds`. Those are checked after fetch; on a hit the Gmail id is
-recorded so the next sync skips the fetch entirely.
+Enabling a rule reports its existing match count without importing backlog.
+Later matches can create cards, but the rolling cap stops an over-match and
+leaves a visible pending summary in private state.
 
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
-await box.seed("config/connectors/gmail.json", JSON.stringify({ labels: ["callback"] }));
-await box.seed(
-  "config/connectors/gmail-state.json",
-  JSON.stringify({ seenMessageIds: ["<m1@example.com>"] }),
-);
-box.commitAll("init box");
-
-const gmail = withCallLog(createFakeGoogleGmail({
-  labels: [{ id: "Label_7", name: "callback", type: "user" }],
-  messages: [
-    makeGmailMessage({ id: "m1", subject: "Imported pre-upgrade", labelIds: ["Label_7"] }),
-  ],
+await box.seed("config/connectors/gmail.json", JSON.stringify({
+  rules: [{
+    name: "agent-label",
+    query: "label:callback",
+    action: { type: "track", budget: { threads: 1, window: "7d" } },
+  }],
 }));
+box.commitAll("initialize box");
+const gmail = createFakeGoogleGmail({
+  labels: [{ id: "Label_7", name: "callback", type: "user" }],
+  messages: [message({ id: "old", subject: "Old labeled", labelIds: ["Label_7"] })],
+});
 const connector = createGmailConnector(box.root, gmail);
+(await connector.sync()).created.length
+=> 0
+
+(await transientState(box.root)).rules["agent-label"].baselineMatches
+=> 1
+
+gmail.addMessage(message({ id: "first", subject: "First new", labelIds: ["Label_7"] }));
+gmail.addMessage(message({ id: "second", subject: "Second new", labelIds: ["Label_7"] }));
 const result = await connector.sync();
-// Fetched once for the legacy check, but not re-imported
+result.created.length
+=> 3
+
+(await findTrackedGmailThreads(box.root)).size
+=> 1
+
+const state = await transientState(box.root);
+state.rules["agent-label"].pending[0].threadId
+=> t-second
+
+state.rules["agent-label"].additionalMatches
+=> 0
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Expired history never causes backlog materialization
+
+An expired cursor establishes a new checkpoint, leaves tracked cards in place, and
+recounts rule matches. It does not full-list messages into Git.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+await box.seed("config/connectors/gmail.json", JSON.stringify({ labels: ["callback"], action: { type: "track" } }));
+box.commitAll("initialize box");
+const gmail = createFakeGoogleGmail({
+  labels: [{ id: "Label_7", name: "callback", type: "user" }],
+  messages: [message({ id: "old", subject: "Old", labelIds: ["Label_7"] })],
+});
+const connector = createGmailConnector(box.root, gmail);
+await connector.sync();
+gmail.expireHistory();
+gmail.addMessage(message({ id: "gap", subject: "During gap", labelIds: ["Label_7"] }));
+const result = await connector.sync();
 result.created.length
 => 0
 
-JSON.stringify((await readState(box.root)).seenGmailIds)
-=> ["m1"]
+(await transientState(box.root)).rules["shorthand"].baselineMatches
+=> 2
+```
 
-gmail.callLog.length = 0;
+```ts cleanup
+await box.cleanup();
+```
+
+## Deleting a card during refresh does not retrack it
+
+Only an explicit rule selection may create a card. If an already tracked card
+disappears after discovery but before the refreshed snapshot is written, sync
+leaves it untracked.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+await box.seed("config/connectors/gmail.json", "{}\n");
+box.commitAll("initialize box");
+const gmail = createFakeGoogleGmail({
+  labels: [{ id: "INBOX", name: "INBOX", type: "system" }],
+  messages: [message({ id: "m1", threadId: "deleted-during-sync", subject: "Delete me" })],
+});
+const tracked = await trackGmailThread({
+  boxRoot: box.root,
+  service: gmail,
+  threadId: "deleted-during-sync",
+  trackedBy: "explicit-command",
+});
+const connector = createGmailConnector(box.root, gmail);
 await connector.sync();
-JSON.stringify(printCalls(gmail.callLog, "getMessage"))
-=> ""
+gmail.addMessage(message({ id: "m2", threadId: "deleted-during-sync", subject: "Delete me" }));
+const originalGetThread = gmail.getThread.bind(gmail);
+gmail.getThread = async (id) => {
+  await rm(join(box.root, tracked.cardPath), { force: true });
+  return originalGetThread(id);
+};
+const result = await connector.sync();
+JSON.stringify({ created: result.created.length, updated: result.updated.length })
+=> {"created":0,"updated":0}
+
+(await findTrackedGmailThreads(box.root)).size
+=> 0
+```
+
+```ts cleanup
+await box.cleanup();
 ```

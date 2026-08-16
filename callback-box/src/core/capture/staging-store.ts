@@ -14,100 +14,49 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { z } from "zod";
 import { getBoxTimeISO } from "../../lib/time.js";
 import { enforceStagingLimits } from "./staging-limits.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { handleStagingUploadReplay } from "./upload-replay.js";
-import { StagingPathError, StagingSessionGoneError } from "./staging-errors.js";
+import { StagingPathError, StagingSessionGoneError, StagingSessionNotOpenError } from "./staging-errors.js";
+import { M4ASegmentFileCountError, StagingAudioFormatMismatchError, type CaptureAudioFormat } from "./audio-format.js";
+import { readStagingSession, writeStagingSession } from "./staging-manifest-io.js";
 import {
-  CaptureAudioFormatSchema,
-  M4ASegmentFileCountError,
-  StagingAudioFormatMismatchError,
-  type CaptureAudioFormat,
-} from "./audio-format.js";
+  stagingBaseDir, stagingSessionDir, isCaptureSession, isBulkSession,
+  type StagingSession, type StagingSessionState, type StagingSessionKind, type StagingSegment,
+  type StagingPhoto, type StagingFile, type StagingBulkItem, type StagingBulkFailedItem,
+} from "./staging-schema.js";
+
+export {
+  readStagingSession, writeStagingSession, stagingBaseDir, stagingSessionDir,
+  isCaptureSession, isBulkSession,
+  type StagingSession, type StagingSessionState, type StagingSessionKind, type StagingSegment,
+  type StagingPhoto, type StagingFile, type StagingBulkItem, type StagingBulkFailedItem,
+};
 
 /**
- * Preparation/lifecycle state. `failed:<step>` records which preparation step
- * failed (Track 3), kept loud and inspectable on disk.
+ * Reject staged filenames that would collide with the session's own control
+ * files. `session.json` (and its `.corrupt`/`.tmp-*` siblings under the
+ * `session.json.` prefix) is the manifest — letting an upload claim it would
+ * overwrite the manifest with attacker-controlled bytes (silent content
+ * substitution). A batch-local `.gitignore` guards the attach scope, and any
+ * dot-leading name is a hidden/control file with no legitimate staging use.
  */
-const StagingSessionStateSchema = z.union([
-  z.literal("open"), z.literal("sealed"), z.literal("preparing"), z.literal("delivering"), z.literal("delivered"),
-  z.templateLiteral(["failed:", z.string()]),
-]);
-export type StagingSessionState = z.infer<typeof StagingSessionStateSchema>;
-
-/** One recording start. WebM chunks are ordered; M4A has exactly one file. */
-const StagingSegmentSchema = z.object({
-  id: z.string(),
-  startedAt: z.string(),
-  format: CaptureAudioFormatSchema.default("webm-opus"),
-  chunks: z.array(z.string()),
-});
-export type StagingSegment = z.infer<typeof StagingSegmentSchema>;
-
-/**
- * A captured photo. `source` (camera-user/-environment/gallery) is retained
- * beyond the plan's listed shape because finalize needs it to set the image
- * card's `source`.
- */
-const StagingPhotoSchema = z.object({
-  filename: z.string(), capturedAt: z.string(), source: z.string(),
-  originalName: z.string().optional(), mimeType: z.string().optional(),
-});
-export type StagingPhoto = z.infer<typeof StagingPhotoSchema>;
-
-/** A disk-uploaded file. */
-const StagingFileSchema = z.object({
-  filename: z.string(), uploadedAt: z.string(), originalName: z.string(), mimeType: z.string(),
-});
-export type StagingFile = z.infer<typeof StagingFileSchema>;
-
-/**
- * `createdBy` is the identifier (email) of the authenticated user who started
- * the capture, or `null` when unauthenticated (auth-disabled dev). The resume
- * query filters on this so one box user can never resume/submit another's
- * in-flight capture (X4). `null` matches `null` — legacy sessions predating
- * this field read as `null` and stay resumable only by an unauthenticated
- * caller.
- *
- * `totalBytes` accumulates across every staged upload, tracked at add time so
- * the per-session cap (X3) is a cheap running compare rather than a disk walk.
- * Optional for legacy manifests written before the cap existed (read as 0).
- *
- * `partial` is set true only when the abandonment sweep (Track 5) seals a
- * session the user never finalized. It flows through to the capture card's
- * `partial: true` frontmatter and the `<capture partial="1">` wrapper — a
- * deliberate "Submit now" or normal "Done" finalize leaves this unset
- * (partial: false).
- */
-const StagingSessionSchema = z.object({
-  id: z.string(), createdAt: z.string(), lastActivityAt: z.string(),
-  targetSessionId: z.string().nullable(), createdBy: z.string().nullable().default(null),
-  state: StagingSessionStateSchema,
-  segments: z.array(StagingSegmentSchema), photos: z.array(StagingPhotoSchema), files: z.array(StagingFileSchema),
-  totalBytes: z.number().optional(), partial: z.boolean().optional(),
-});
-export type StagingSession = z.infer<typeof StagingSessionSchema>;
-
-export function stagingBaseDir(boxRoot: string): string {
-  return path.join(boxRoot, "tmp", "capture-staging");
-}
-
-export function stagingSessionDir(boxRoot: string, id: string): string {
-  return path.join(stagingBaseDir(boxRoot), id);
-}
-
-function sessionJsonPath(boxRoot: string, id: string): string {
-  return path.join(stagingSessionDir(boxRoot, id), "session.json");
+function assertStagingFilename(filename: string): void {
+  const reserved =
+    filename === "session.json" ||
+    filename.startsWith("session.json.") ||
+    filename.startsWith(".");
+  if (reserved) throw new StagingPathError(filename);
 }
 
 /**
  * Resolve an upload filename inside the session directory, refusing any path
- * that escapes it. The route validates first for a clean 400; this re-guards
- * as a defense-in-depth invariant.
+ * that escapes it OR claims a reserved control-file name. The route validates
+ * first for a clean 400; this re-guards as a defense-in-depth invariant.
  */
 export function resolveStagedFile(opts: { boxRoot: string; id: string; filename: string }): string {
+  assertStagingFilename(opts.filename);
   const dir = path.resolve(stagingSessionDir(opts.boxRoot, opts.id));
   const resolved = path.resolve(dir, opts.filename);
   if (resolved !== dir && !resolved.startsWith(dir + path.sep)) {
@@ -116,32 +65,24 @@ export function resolveStagedFile(opts: { boxRoot: string; id: string; filename:
   return resolved;
 }
 
-export async function readStagingSession(opts: {
-  boxRoot: string;
-  id: string;
-}): Promise<StagingSession | null> {
-  try {
-    const raw = await fs.readFile(sessionJsonPath(opts.boxRoot, opts.id), "utf-8");
-    return StagingSessionSchema.parse(JSON.parse(raw));
-  } catch (_e) {
-    return null;
-  }
-}
-
-export async function writeStagingSession(opts: {
-  boxRoot: string;
-  session: StagingSession;
-}): Promise<void> {
-  const { boxRoot, session } = opts;
-  await fs.writeFile(sessionJsonPath(boxRoot, session.id), JSON.stringify(session, null, 2));
-}
-
+/**
+ * Create a staging session. `kind` defaults to `"capture"` (the recorded
+ * photo/voice batch); pass `kind: "bulk"` plus an initial `expectedItems`
+ * registry for a bulk file-upload batch (`docs/implemented-plans/bulk-file-upload.md`),
+ * whose finalize path reads `files` + `expectedItems` rather than the capture
+ * media arrays.
+ */
 export async function createStagingSession(opts: {
   boxRoot: string;
   targetSessionId: string | null;
   createdBy: string | null;
+  kind?: StagingSessionKind;
+  expectedItems?: StagingBulkItem[];
+  /** Box-relative target-chat context dir (bulk sessions only). */
+  contextDir?: string;
 }): Promise<StagingSession> {
   const { boxRoot, targetSessionId, createdBy } = opts;
+  const kind = opts.kind ?? "capture";
   const id = crypto.randomUUID();
   await fs.mkdir(stagingSessionDir(boxRoot, id), { recursive: true });
   const now = getBoxTimeISO(boxRoot);
@@ -151,14 +92,49 @@ export async function createStagingSession(opts: {
     lastActivityAt: now,
     targetSessionId,
     createdBy,
+    kind,
     state: "open",
     segments: [],
     photos: [],
     files: [],
     totalBytes: 0,
   };
+  if (kind === "bulk") {
+    session.expectedItems = opts.expectedItems ?? [];
+    if (opts.contextDir !== undefined) session.contextDir = opts.contextDir;
+  }
   await writeStagingSession({ boxRoot, session });
   return session;
+}
+
+/**
+ * Append to a bulk session's predeclared item registry (items may be registered
+ * while the picker still streams). Idempotent per `id`: an item whose `id` is
+ * already registered updates in place rather than duplicating.
+ */
+export async function registerBulkItems(opts: {
+  boxRoot: string;
+  id: string;
+  items: StagingBulkItem[];
+}): Promise<void> {
+  const { boxRoot, id, items } = opts;
+  await mutateSession({
+    boxRoot,
+    id,
+    mutate: (session) => {
+      // Registration is a mutation of the batch; the seal freezes it. Assert
+      // `open` under the lock so a finalize racing this append can't slip an item
+      // into a sealed registry (the route pre-checks, this is the barrier).
+      if (session.state !== "open") throw new StagingSessionNotOpenError(id, session.state);
+      const registry = session.expectedItems ?? [];
+      for (const item of items) {
+        const existing = registry.findIndex((r) => r.id === item.id);
+        if (existing !== -1) registry[existing] = item;
+        else registry.push(item);
+      }
+      session.expectedItems = registry;
+    },
+  });
 }
 
 /**
@@ -183,7 +159,7 @@ export async function withStagingLock<T>(id: string, fn: () => Promise<T>): Prom
   return done;
 }
 
-function releaseStagingLock(id: string): void {
+export function releaseStagingLock(id: string): void {
   sessionLocks.delete(id);
 }
 
@@ -195,6 +171,14 @@ function releaseStagingLock(id: string): void {
  * the per-session caps (X3) against the incoming bytes, writes the file, and
  * accumulates `totalBytes` — all under the same lock, so concurrent uploads
  * can't each pass the check and jointly overshoot.
+ *
+ * A media add also re-asserts `state === "open"` INSIDE the lock. The upload
+ * route pre-checks it, but that check happens before the request body is read,
+ * so a finalize can seal the session while the bytes are still arriving. Without
+ * this barrier the media appends to a sealed session — after preparation has
+ * already snapshotted the manifest — and is then silently discarded with the
+ * staging directory. Aborting the client's request cannot prevent it: the server
+ * may already hold the whole body. The seal has to be the authority.
  */
 async function mutateSession(opts: {
   boxRoot: string;
@@ -207,6 +191,7 @@ async function mutateSession(opts: {
     const session = await readStagingSession({ boxRoot, id });
     if (!session) throw new StagingSessionGoneError(id);
     if (media) {
+      if (session.state !== "open") throw new StagingSessionNotOpenError(id, session.state);
       const mediaPath = resolveStagedFile({ boxRoot, id, filename: media.filename });
       if (await handleStagingUploadReplay({ session, mediaPath, ...media })) {
         session.lastActivityAt = getBoxTimeISO(boxRoot);
@@ -294,17 +279,21 @@ export interface AddFileParams {
   uploadedAt: string;
   originalName: string;
   mimeType: string;
+  /** Predeclared bulk-registry item id this file fulfils (bulk sessions only). */
+  itemId?: string | undefined;
   buffer: Buffer;
 }
 
 export async function addFile(params: AddFileParams): Promise<void> {
-  const { boxRoot, id, filename, uploadedAt, originalName, mimeType, buffer } = params;
+  const { boxRoot, id, filename, uploadedAt, originalName, mimeType, itemId, buffer } = params;
   await mutateSession({
     boxRoot,
     id,
     media: { filename, buffer },
     mutate: (session) => {
-      session.files.push({ filename, uploadedAt, originalName, mimeType });
+      const file: StagingFile = { filename, uploadedAt, originalName, mimeType };
+      if (itemId !== undefined) file.itemId = itemId;
+      session.files.push(file);
     },
   });
 }
@@ -365,14 +354,20 @@ export interface SealResult {
  * (Track 5) uses it so a session that raced into `failed:*` between the sweep's
  * list and its seal is NOT auto-retried (the plan bars auto-retrying failures).
  * `partial: true` marks the session partial as part of the same atomic seal.
+ * `failedItems` and `note` (bulk only) are persisted IN the same CAS write, so
+ * the seal, the uploader's failed-item report, and the user's introduction are
+ * one atomic mutation (no crash window in which a resume could rebuild the batch
+ * without them).
  */
 export async function sealStagingSession(opts: {
   boxRoot: string;
   id: string;
   partial?: boolean;
   requireOpen?: boolean;
+  failedItems?: StagingBulkFailedItem[] | undefined;
+  note?: string | undefined;
 }): Promise<SealResult> {
-  const { boxRoot, id, partial, requireOpen } = opts;
+  const { boxRoot, id, partial, requireOpen, failedItems, note } = opts;
   return withStagingLock(id, async () => {
     const session = await readStagingSession({ boxRoot, id });
     if (!session) throw new StagingSessionGoneError(id);
@@ -381,6 +376,8 @@ export async function sealStagingSession(opts: {
     if (!fireEligible) return { sealed: false, alreadySealed: true };
     session.state = "sealed";
     if (partial === true) session.partial = true;
+    if (failedItems !== undefined) session.failedItems = failedItems;
+    if (note !== undefined) session.note = note;
     session.lastActivityAt = getBoxTimeISO(boxRoot);
     await writeStagingSession({ boxRoot, session });
     return { sealed: true, alreadySealed: false };
@@ -410,18 +407,4 @@ export async function listStagingSessions(opts: { boxRoot: string }): Promise<St
 /** True once the session holds at least one piece of media. */
 export function stagingSessionIsEmpty(session: StagingSession): boolean {
   return session.segments.length === 0 && session.photos.length === 0 && session.files.length === 0;
-}
-
-/**
- * Tear down a session: remove its directory and drop its lock-map entry in one
- * step, so the in-process lock can't outlive the session.
- */
-export async function cleanupStagingSession(opts: { boxRoot: string; id: string }): Promise<void> {
-  const { boxRoot, id } = opts;
-  try {
-    await fs.rm(stagingSessionDir(boxRoot, id), { recursive: true, force: true });
-  } catch (e) {
-    console.error(`[capture] Failed to clean up staging session ${id}:`, e);
-  }
-  releaseStagingLock(id);
 }

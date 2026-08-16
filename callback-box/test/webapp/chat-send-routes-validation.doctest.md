@@ -25,6 +25,24 @@ const res = await ctx.request({ method: "POST", url: "/api/chat/send", payload: 
 await ctx.cleanup();
 ```
 
+A concrete session whose local transcript is missing is a named 410, never an
+SDK resume attempt or generic 500:
+
+```ts
+const ctx = await makeTestServer();
+const res = await ctx.request({
+  method: "POST",
+  url: "/api/chat/send",
+  payload: { message: "hi", session: "55555555-5555-4555-8555-555555555555" },
+});
+JSON.stringify({ status: res.statusCode, code: res.body.code })
+=> {"status":410,"code":"CHAT_SESSION_UNAVAILABLE"}
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
 Missing `session` returns 400:
 
 ```ts
@@ -32,6 +50,41 @@ const ctx = await makeTestServer();
 const res = await ctx.request({ method: "POST", url: "/api/chat/send", payload: { message: "hi" } });
 `${res.statusCode} ${res.body.error}`
 => 400 session is required (id or 'new')
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+An exact target must name an existing resumable chat. It never creates the
+requested id through the registry fallback:
+
+```ts
+const ctx = await makeTestServer();
+const res = await ctx.request({
+  method: "POST",
+  url: "/api/chat/send",
+  payload: { message: "https://example.com", session: "missing-session", exactSession: true },
+});
+`${res.statusCode} ${res.body.error}`
+=> 404 Chat session is no longer available: missing-session
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+The `new` sentinel is also invalid in exact mode:
+
+```ts
+const ctx = await makeTestServer();
+const res = await ctx.request({
+  method: "POST",
+  url: "/api/chat/send",
+  payload: { message: "https://example.com", session: "new", exactSession: true },
+});
+`${res.statusCode} ${res.body.error}`
+=> 400 exactSession requires an existing session id
 ```
 
 ```ts cleanup

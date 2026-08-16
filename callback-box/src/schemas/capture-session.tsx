@@ -58,6 +58,9 @@ const captureSessionFields = {
   "audio-clips": z.array(z.string()).optional(),
   /** Manifest of child uploaded-file cards. */
   files: z.array(z.string()).optional(),
+  /** Where the session came from, when something outside chat produced it —
+   *  e.g. `scan-upload/<token-name>` for a file the scan uploader sent. */
+  source: z.string().optional(),
   /** Recording was cut off unexpectedly; the final seconds may be missing. */
   partial: z.boolean().optional(),
   /** One or more clips still need transcription (provider failure at prepare time). */
@@ -80,11 +83,12 @@ Frontmatter:
 - \`session-id\` — links back to the capture session.
 - \`time\` — \`{ start, end?, duration? }\`.
 - \`images\` / \`audio-clips\` / \`files\` — manifests of the child card refs.
+- \`source\` — present when the session came from outside chat: \`scan-upload/<token-name>\` means the desktop scan uploader sent these files under that named credential. It tells you which device/profile produced the scan when a batch looks wrong.
 - \`partial\` — the recording cut off unexpectedly (crash, disconnect, abandonment). Treat the final seconds of transcript as possibly mid-thought — the tail may be missing, not the person trailing off.
 - \`transcription-failed\` — one or more clips still need transcription (the transcription provider was unavailable when this was prepared). The capture was still delivered rather than held hostage to the outage; a later \`cb transcribe\`/HQ pass can fill in the missing text.
 
 Body — the assembled transcript, a timeline of transcribed speech interleaved with:
-- \`{% image ref="photo-001.image.card" /%}\` — where a photo was taken (description/filename come from the referenced image card).
+- \`{% image ref="attach/photo-001.image.card" /%}\` — where a photo was taken (description/filename come from the referenced image card).
 - \`{% silence duration="15s" /%}\` — gaps of 10+ seconds.
 
 This body is generated, not hand-written — don't edit it directly; if something needs correcting, fix the source (a child card's transcript/description) and re-derive, or note the correction in your own annotation instead.
@@ -103,6 +107,7 @@ const CaptureSessionObject = z.object({
   images: z.array(z.string()).optional(),
   "audio-clips": z.array(z.string()).optional(),
   files: z.array(z.string()).optional(),
+  source: z.string().optional(),
   partial: z.boolean().optional(),
   "transcription-failed": z.boolean().optional(),
 });
@@ -151,6 +156,8 @@ export function createCaptureSessionTemplate(options: {
   imageRefs: string[];
   audioRefs: string[];
   fileRefs?: string[];
+  /** Provenance for a session that never touched chat (`scan-upload/<token>`). */
+  source?: string | undefined;
   /** True when the abandonment sweep finalized an unfinished capture. */
   partial?: boolean;
 }): string {
@@ -171,6 +178,7 @@ export function createCaptureSessionTemplate(options: {
   };
   const fileRefs = options.fileRefs ?? [];
   if (fileRefs.length > 0) fields.files = fileRefs.map((ref) => `attach/${ref}`);
+  if (options.source !== undefined) fields.source = options.source;
   if (options.partial === true) fields.partial = true;
 
   return `---\n${stringifyYaml(fields)}---\n`;

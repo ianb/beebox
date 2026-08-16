@@ -3,7 +3,7 @@
 Fake Google Gmail maintains in-memory messages, labels, and attachments.
 
 ```ts setup
-import { createFakeGoogleGmail } from "../../src/services/google-gmail.js";
+import { createFakeGoogleGmail } from "../../src/services/google-gmail-fake.js";
 import { withCallLog, printCalls } from "../../src/services/call-log.js";
 ```
 
@@ -38,6 +38,10 @@ JSON.stringify(inbox.messages.map(m => m.id))
 const labeled = await svc.listMessages({ q: "label:callback" });
 JSON.stringify(labeled.messages.map(m => m.id))
 => ["m2","m3"]
+
+const labeledThreads = await svc.listThreads({ q: "label:callback" });
+JSON.stringify(labeledThreads)
+=> {"threads":[{"id":"t1"},{"id":"t2"}],"resultSizeEstimate":2}
 
 // No label: term — can't evaluate, so everything matches.
 const all = await svc.listMessages({ q: "from:boss" });
@@ -82,6 +86,29 @@ let err = null;
 await svc.getMessage("missing").catch((e) => { err = e.message; });
 err
 => Message not found: missing
+```
+
+## Fetching a complete thread
+
+```ts
+const svc = createFakeGoogleGmail({
+  messages: [
+    { id: "m1", threadId: "t1", snippet: "First" },
+    { id: "m2", threadId: "t1", snippet: "Second" },
+    { id: "m3", threadId: "t2", snippet: "Other" },
+  ],
+});
+const thread = await svc.getThread("t1");
+JSON.stringify(thread.messages.map(message => message.id))
+=> ["m1","m2"]
+```
+
+```ts
+const svc = createFakeGoogleGmail();
+let err = null;
+await svc.getThread("missing").catch((error) => { err = error.message; });
+err
+=> Thread not found: missing
 ```
 
 ## Attachments are keyed by messageId:attachmentId

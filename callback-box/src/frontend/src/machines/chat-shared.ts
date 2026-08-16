@@ -9,6 +9,7 @@
 import { buildChatContentBlocks } from "../../../shared/chat-content-blocks";
 import type {
   SessionEntry,
+  PendingSessionEntry,
   SessionContentBlock,
   ChatImageAttachment,
 } from "../api";
@@ -64,29 +65,42 @@ function normalizeForCompare(text: string): string {
  *
  * The backend's drainQueue() combines multiple queued messages into one turn
  * (joined with \n\n), so we use substring matching: a pending message is
- * considered delivered if its (normalized) text appears as a substring of any
- * recent (normalized) server user message.
+ * considered delivered if its (normalized) text appears as a substring of a
+ * server user message whose UUID was not present when that pending entry was
+ * created. Matches consume one occurrence, so one durable "yes" cannot confirm
+ * two pending "yes" sends while a merged queued turn can confirm both.
  */
 export function reconcilePending(params: {
   serverMessages: SessionEntry[];
-  pendingMessages: SessionEntry[];
-}): { messages: SessionEntry[]; pendingMessages: SessionEntry[] } {
+  pendingMessages: PendingSessionEntry[];
+}): { messages: SessionEntry[]; pendingMessages: PendingSessionEntry[] } {
   const { serverMessages, pendingMessages } = params;
   if (pendingMessages.length === 0) {
     return { messages: serverMessages, pendingMessages: [] };
   }
 
-  const serverUserTexts: string[] = [];
+  const serverUsers: Array<{ uuid: string; remainingText: string }> = [];
   for (const entry of serverMessages.toReversed()) {
-    if (serverUserTexts.length >= pendingMessages.length + 5) break;
+    if (serverUsers.length >= pendingMessages.length + 5) break;
     if (entry.type === "user") {
-      serverUserTexts.push(normalizeForCompare(entryText(entry)));
+      serverUsers.push({
+        uuid: entry.uuid,
+        remainingText: normalizeForCompare(entryText(entry)),
+      });
     }
   }
+  serverUsers.reverse();
 
   const stillPending = pendingMessages.filter((pm) => {
     const pmText = normalizeForCompare(entryText(pm));
-    return !serverUserTexts.some((st) => st === pmText || st.includes(pmText));
+    if (pmText.length === 0) return false;
+    const baseline = new Set(pm.reconcileKnownUuids);
+    const echo = serverUsers.find((server) => {
+      return !baseline.has(server.uuid) && server.remainingText.includes(pmText);
+    });
+    if (!echo) return true;
+    echo.remainingText = echo.remainingText.replace(pmText, "");
+    return false;
   });
 
   return {

@@ -14,12 +14,16 @@ import { parse as parseYaml } from "yaml";
 import { splitCardContent } from "../../cards/index.js";
 import { createChatHuskTemplate } from "../../schemas/chat.js";
 import { loadHistoryEntries, resolveSessionLogPath } from "./session/history.js";
-import { getSessionMetadata } from "../../cli/lib/session.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 import { isRecord } from "../card-io.js";
+import { mapInBatchesSettled } from "../../lib/map-batched.js";
+import { readCodexSessionUpdatedAt } from "./session/codex-transcript.js";
+import { loadSessionHistory } from "./session/load-history.js";
+
+/** Husk cards read at once — see {@link mapInBatchesSettled}. */
+const READ_CONCURRENCY = 64;
 
 export const CHAT_HUSK_DIR = "store/chat/web";
-const BACKFILL_MARKER = ".callback-box/chat-husks-backfilled";
 /** Keep husk titles bookmark-sized, not transcript-sized. */
 const TITLE_MAX_LEN = 80;
 
@@ -55,10 +59,16 @@ export async function findChatHusk(boxRoot: string, sessionId: string): Promise<
 /** Best-effort title from the transcript's first user message; null when unavailable. */
 async function readSnippetTitle(boxRoot: string, sessionId: string): Promise<string | null> {
   try {
-    const logPath = await resolveSessionLogPath(boxRoot, sessionId);
-    const meta = await getSessionMetadata({ sessionId, logPath, snippetMaxLen: TITLE_MAX_LEN });
-    const snippet = meta.firstUserSnippet?.trim();
-    return snippet !== undefined && snippet !== "" ? snippet : null;
+    const { entries } = await loadSessionHistory(boxRoot, {
+      sessionId,
+      slice: { mode: "page", offset: 0, limit: 100 },
+    });
+    const text = entries.find((entry) => entry.type === "user")?.content
+      .filter((block) => block.type === "text")
+      .map((block) => block.text)
+      .join("\n")
+      .trim();
+    return text === undefined || text === "" ? null : text.slice(0, TITLE_MAX_LEN);
   } catch (_e) {
     // No transcript yet (brand-new session) or unreadable — the husk starts
     // untitled; enrichment is editorial, not plumbing.
@@ -71,10 +81,7 @@ async function readSnippetTitle(boxRoot: string, sessionId: string): Promise<str
  * Idempotent. `date` names the file (defaults to now; backfill passes the
  * transcript mtime so old husks sort by when the chat happened).
  */
-export async function ensureChatHusk(
-  boxRoot: string,
-  opts: { sessionId: string; contextDir?: string; date?: Date },
-): Promise<string> {
+export async function ensureChatHusk(boxRoot: string, opts: { sessionId: string; contextDir?: string; date?: Date }): Promise<string> {
   const existing = await findChatHusk(boxRoot, opts.sessionId);
   if (existing !== null) return existing;
 
@@ -126,67 +133,120 @@ export interface ChatHuskEntry {
  * Unparseable or session-less files are skipped with a warning.
  */
 export async function listChatHusks(boxRoot: string): Promise<ChatHuskEntry[]> {
+  return listChatHusksUnder(boxRoot, CHAT_HUSK_DIR);
+}
+
+/** Read chat cards directly under a box-relative directory (active or Trash). */
+export async function listChatHusksUnder(boxRoot: string, relDir: string): Promise<ChatHuskEntry[]> {
   let names: string[];
   try {
-    names = await fs.readdir(path.join(boxRoot, CHAT_HUSK_DIR));
+    names = await fs.readdir(path.join(boxRoot, relDir));
   } catch (e) {
     if (errnoCode(e) === "ENOENT") return [];
     throw e;
   }
+  // Read concurrently: every chat list in the app waits on this, and the husks
+  // are independent files. Bounded, though — a box accumulates one husk per
+  // chat forever, so this list grows without limit and unbounded fan-out here
+  // would eventually exhaust file descriptors. `allSettled` per code-style: an
+  // unreadable husk is already a per-file skip and must not abandon the rest.
+  const settled = await mapInBatchesSettled(
+    names.filter((name) => name.endsWith(".chat.card")),
+    { size: READ_CONCURRENCY, map: (name) => readChatHusk(boxRoot, `${relDir}/${name}`) },
+  );
   const out: ChatHuskEntry[] = [];
-  for (const name of names) {
-    if (!name.endsWith(".chat.card")) continue;
-    const relPath = `${CHAT_HUSK_DIR}/${name}`;
-    let content: string;
-    try {
-      content = await fs.readFile(path.join(boxRoot, relPath), "utf-8");
-    } catch (e) {
-      console.warn(`chat-husk: skipping unreadable ${relPath}: ${errorMessage(e)}`);
+  for (const outcome of settled) {
+    if (outcome.status === "rejected") {
+      console.warn(`chat-husk: skipping a card under ${relDir}:`, outcome.reason);
       continue;
     }
-    const fm = parseHuskFrontmatter(content);
-    if (fm === null) {
-      console.warn(`chat-husk: skipping ${relPath}: no frontmatter mapping`);
-      continue;
-    }
-    const session = fm["session"];
-    if (typeof session !== "string" || session === "") {
-      console.warn(`chat-husk: skipping ${relPath}: no session field`);
-      continue;
-    }
-    const contextDir = fm["context-dir"];
-    const title = fm["title"];
-    out.push({
-      path: relPath,
-      session,
-      ...(typeof contextDir === "string" ? { contextDir } : {}),
-      ...(typeof title === "string" && title !== "" ? { title } : {}),
-    });
+    if (outcome.value !== null) out.push(outcome.value);
   }
   return out;
 }
 
 /**
- * One-shot husk backfill for pre-husk sessions in the history file.
- * Ghost entries (no transcript on disk) are skipped — nothing to point
- * at. Gated by a marker file; safe to call on every server boot.
+ * Read one husk card into its entry, or null (with a warning) when it isn't a
+ * usable husk. The per-file half of `listChatHusks`, split out so a single
+ * session can be resolved without reading every husk in the box.
  */
-export async function backfillChatHusks(boxRoot: string): Promise<void> {
-  const marker = path.join(boxRoot, BACKFILL_MARKER);
+export async function readChatHusk(boxRoot: string, relPath: string): Promise<ChatHuskEntry | null> {
+  let content: string;
   try {
-    await fs.access(marker);
-    return;
-  } catch (_e) {
-    // Marker absent — this is the run.
+    content = await fs.readFile(path.join(boxRoot, relPath), "utf-8");
+  } catch (e) {
+    console.warn(`chat-husk: skipping unreadable ${relPath}: ${errorMessage(e)}`);
+    return null;
   }
-  const entries = await loadHistoryEntries(boxRoot);
+  const fm = parseHuskFrontmatter(content);
+  if (fm === null) {
+    console.warn(`chat-husk: skipping ${relPath}: no frontmatter mapping`);
+    return null;
+  }
+  const session = fm["session"];
+  if (typeof session !== "string" || session === "") {
+    console.warn(`chat-husk: skipping ${relPath}: no session field`);
+    return null;
+  }
+  const contextDir = fm["context-dir"];
+  const title = fm["title"];
+  return {
+    path: relPath,
+    session,
+    ...(typeof contextDir === "string" ? { contextDir } : {}),
+    ...(typeof title === "string" && title !== "" ? { title } : {}),
+  };
+}
+
+/**
+ * The husk for one session, or null when it has none.
+ *
+ * The `session` field is authoritative — a husk can be renamed freely, and the
+ * card enumerations (`listChatHusks` and everything built on it) key on the
+ * field, not the filename. So the filename convention is only a fast path
+ * here: when it misses (or names a card whose `session` says otherwise), fall
+ * back to reading the husks and matching the field, which is what the pickers
+ * would have found.
+ */
+export async function findChatHuskEntry(boxRoot: string, sessionId: string): Promise<ChatHuskEntry | null> {
+  const relPath = await findChatHusk(boxRoot, sessionId);
+  if (relPath !== null) {
+    const entry = await readChatHusk(boxRoot, relPath);
+    if (entry !== null && entry.session === sessionId) return entry;
+  }
+  const husks = await listChatHusks(boxRoot);
+  return husks.find((h) => h.session === sessionId) ?? null;
+}
+
+/**
+ * Give every resumable session in the history file a husk. Ghost entries
+ * (no transcript on disk) are skipped — nothing to point at.
+ *
+ * This **reconciles on every boot** rather than running once behind a marker
+ * file. Husks are the enumeration for both the picker and the history dropdown
+ * (`core/chat/session/list.ts`), so a session with history but no husk is
+ * invisible in the UI — and there are two ways to land there that a one-shot
+ * migration could never repair: the eager `ensureChatHusk` at session-id
+ * assignment is best-effort (`session/registry.ts` logs and continues), and the
+ * history backfill that discovers pre-husk sessions runs concurrently with this
+ * one, so it could still be writing entries when this pass reads them.
+ *
+ * Cheap to repeat: one directory listing plus one history read, and per-session
+ * work only for the sessions actually missing a husk.
+ */
+export async function reconcileChatHusks(boxRoot: string): Promise<void> {
+  const [entries, husks] = await Promise.all([loadHistoryEntries(boxRoot), listChatHusks(boxRoot)]);
+  const husked = new Set(husks.map((h) => h.session));
+
   for (const entry of entries) {
+    if (husked.has(entry.id)) continue;
     let mtime: Date;
     try {
-      const logPath = await resolveSessionLogPath(boxRoot, entry.id);
-      mtime = (await fs.stat(logPath)).mtime;
+      mtime = entry.engine === "codex"
+        ? await readCodexSessionUpdatedAt(boxRoot, entry.id)
+        : (await fs.stat(await resolveSessionLogPath(boxRoot, entry.id))).mtime;
     } catch (_e) {
-      // Ghost entry — transcript gone; no husk.
+      // Ghost entry — transcript gone; nothing to resume, so no husk.
       continue;
     }
     await ensureChatHusk(boxRoot, {
@@ -195,6 +255,4 @@ export async function backfillChatHusks(boxRoot: string): Promise<void> {
       date: mtime,
     });
   }
-  await fs.mkdir(path.dirname(marker), { recursive: true });
-  await fs.writeFile(marker, `${new Date().toISOString()}\n`);
 }

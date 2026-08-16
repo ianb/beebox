@@ -1,4 +1,15 @@
+---
+title: "Plan: Garbage-collect unlabeled Gmail messages"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Plan: Garbage-collect unlabeled Gmail messages
+
+> Superseded 2026-08-05 by [email tracking instead of mailbox mirroring](../plans/email-tracking.md).
+> A live email-thread card is now the tracking registry; labels select bounded
+> new tracking, and removing a label does not delete or trash an existing card.
+> The former `gmail-gc.ts` implementation was removed with that change.
 
 Status: **implemented** (2026-06-27). Decisions: trash to `store/trash/`;
 `gc` defaults on for all modes; keep seen ids (no auto-reimport on relabel).

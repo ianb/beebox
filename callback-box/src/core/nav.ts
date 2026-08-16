@@ -1,8 +1,8 @@
 /**
  * Nav card resolution — loads the box root's `nav.card` and turns it into
- * render-ready entries. Consumed by the nav tRPC router (AppNav) and by
- * the health check (an invalid nav card is a health warning, not a broken
- * nav — the shell falls back to the builtin nav either way).
+ * render-ready entries. Consumed by the nav tRPC router (the app bar's
+ * switch menu) and by the health check (an invalid nav card is a health
+ * warning, not a broken nav — the menu keeps its builtin rows either way).
  * See docs/implemented-plans/nav-card.md.
  */
 
@@ -14,6 +14,7 @@ import { parseNavFields } from "../schemas/nav.js";
 import { navRouteFor } from "../shared/nav-routes.js";
 import { titleFromFilename } from "./file-summary.js";
 import { resolveBoxRelativeRef, realpathContained } from "../lib/box-containment.js";
+import { resolveRefPath } from "../shared/ref-path.js";
 import { errnoCode, errorMessage } from "../lib/error-guards.js";
 import { isRecord } from "./card-io.js";
 
@@ -29,9 +30,9 @@ export interface NavEntryResolved {
 }
 
 export type NavResolution =
-  /** No nav.card — the shell shows the builtin nav; not a problem. */
+  /** No nav.card — the menu shows only its builtin rows; not a problem. */
   | { status: "absent" }
-  /** nav.card exists but doesn't validate — builtin fallback + health warning. */
+  /** nav.card exists but doesn't validate — no section + health warning. */
   | { status: "invalid"; error: string }
   /**
    * Valid card. `problems` lists non-fatal issues (dangling refs) for the
@@ -88,14 +89,12 @@ export async function resolveNav(boxRoot: string): Promise<NavResolution> {
       });
       continue;
     }
-    // Nav refs are box-relative only — a box-root-absolute (`/…`) nav target is
-    // rejected outright; anything that would escape the box via `..` is caught
-    // by the containment resolver.
-    if (entry.ref.startsWith("/")) {
-      problems.push(`ref "${entry.ref}" must be box-relative (no leading /)`);
-      continue;
-    }
-    const contained = resolveBoxRelativeRef(boxRoot, entry.ref);
+    // Nav refs address the box root: `nav.card` sits at the root, so the
+    // canonical leading-`/` form and the bare form name the same file. The
+    // shared algebra normalizes both (`fromPath: undefined` — the root IS the
+    // referring document's directory) and fails closed on a `..` escape.
+    const boxPath = resolveRefPath({ fromPath: undefined, ref: entry.ref, kind: "card" });
+    const contained = boxPath === null ? null : resolveBoxRelativeRef(boxRoot, boxPath);
     if (contained === null) {
       console.warn(`resolveNav: ref "${entry.ref}" escapes the box`);
       problems.push(`ref "${entry.ref}" must be box-relative (must not escape the box via ..)`);
@@ -122,8 +121,11 @@ export async function resolveNav(boxRoot: string): Promise<NavResolution> {
     const title = exists ? await readCardTitle(absPath) : null;
     entries.push({
       kind: "ref",
-      target: entry.ref,
-      label: entry.label ?? title ?? titleFromFilename(entry.ref),
+      // The normalized box-relative form, not the raw ref: the shell builds
+      // `/<box>/browse/<target>` from it, so a leading-`/` ref must arrive
+      // resolved (both authored forms yield the same target).
+      target: safe,
+      label: entry.label ?? title ?? titleFromFilename(safe),
       exists,
     });
   }

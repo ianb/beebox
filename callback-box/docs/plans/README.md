@@ -30,26 +30,32 @@ docs. When a plan ships, either fold its durable "how it works" parts into
 reference docs **and** move the plan to `implemented-plans/`, or just move it if
 the reference material already lives elsewhere.
 
-## Status-header convention
+## Required frontmatter
 
-Every plan's first line (right under the title) must be a status line of the
-form:
+Every plan (including `*.subplan.md`, excluding `README.md` and review
+artifacts) has one machine-readable status and provenance record:
 
+```yaml
+---
+title: "Short plan title"
+status: active
+workstream: seam
+issues:
+  - ../../../issues/features/2026-08-08-example.md
+superseded-by: replacement.md
+---
 ```
-**Status:** <active | implemented YYYY-MM | partially implemented YYYY-MM | parked YYYY-MM> — <one short clause>
-```
 
-- **active** — in `docs/plans/`, not yet (fully) shipped.
-- **implemented YYYY-MM** — shipped; the doc belongs in `implemented-plans/`.
-- **partially implemented YYYY-MM** — some of it shipped, some didn't; stays in
-  `docs/plans/` until the remainder lands or is dropped.
-- **parked YYYY-MM** — shelved without shipping; the doc belongs in
-  `unimplemented-plans/`.
+`status` is one of `draft`, `active`, `partial`, `implemented`, `superseded`,
+or `parked`. Implemented plans live under `implemented-plans/`; superseded and
+parked plans live under `unimplemented-plans/`. `superseded-by` is allowed only
+for a superseded plan. `issues` is required and may be `[]`.
 
-This is what lets an agent tell, from the first line, whether a plan
-describes the present or an intention — the drift that caused the 2026-07
-doc reorg (stale "in progress"/"unmerged branch" headers on plans that had
-actually shipped) is exactly what this convention prevents.
+`workstream` is the bare workstream name, `unattached` for deliberately
+non-workstream work, or `unknown` only when historical provenance is lost.
+New plans never use `unknown`. The body retains its H1 and must not duplicate
+status in a prose `**Status:**` line. `pnpm doc-check` enforces the schema and
+`pnpm doc-check --fix` repairs these paths after moves.
 
 ## Research and competitive corpora live elsewhere
 
@@ -61,7 +67,7 @@ an actual plan in this directory.
 
 ## Wiring
 
-- **`finish`** files shipped plans automatically: step 5 of
+- **`finish`** files shipped plans automatically: step 6 of
   `.claude/agents/finish.md` ("Reconcile planning docs with reality")
   moves implemented plans to `docs/implemented-plans/`, parks abandoned
   ones in `docs/unimplemented-plans/` with a README disposition row, and

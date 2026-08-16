@@ -8,18 +8,14 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
-import {
-  registerCommand,
-  parseCommandArgs,
-  type CommandContext,
-  type CommandResult,
-} from "../command-runner.js";
+import { registerCommand, parseCommandArgs, type CommandContext, type CommandResult } from "../command-runner.js";
 import { getBoxDir, isCardFile, boxPath, parseCardName } from "../../lib/paths.js";
 import { stageAndCommitPaths } from "../../lib/git.js";
 import { attachDirFor } from "../../shared/attach-path.js";
 import { NotFoundError } from "../../lib/errors.js";
 import { invariant } from "../../lib/invariant.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { findInboundCardRefs, type InboundCardRef } from "../find-inbound-card-refs.js";
 
 class NotACardFileError extends Error {
   readonly cardPath: string;
@@ -55,13 +51,62 @@ const TrashArgsSchema = z.object({
 });
 export type TrashArgs = z.infer<typeof TrashArgsSchema>;
 
+export interface TrashMove {
+  sourcePath: string;
+  destPath: string;
+  relatedFiles: string[];
+  fileMoves: Array<{ sourcePath: string; destPath: string }>;
+}
+
+export interface TrashReceipt {
+  moves: TrashMove[];
+  gitPaths: string[];
+}
+
+async function reportInboundRefs(
+  ctx: CommandContext,
+  cardPaths: string[],
+): Promise<Record<string, InboundCardRef[]>> {
+  const inboundRefs: Record<string, InboundCardRef[]> = {};
+  for (const cardPath of cardPaths) {
+    const relPath = path.relative(
+      ctx.boxRoot,
+      path.isAbsolute(cardPath) ? cardPath : boxPath(ctx.boxRoot, cardPath),
+    );
+    const refs = await findInboundCardRefs({ boxRoot: ctx.boxRoot, cardPath: relPath });
+    inboundRefs[relPath] = refs;
+    for (const referrer of refs) {
+      ctx.writeLine(`Inbound ref: ${referrer.path} (${referrer.refs}) → ${relPath}`);
+    }
+  }
+  return inboundRefs;
+}
+
+async function pathExists(target: string): Promise<boolean> {
+  // Deliberately stricter than lib/file-exists: an unreadable destination
+  // cannot safely be treated as absent before a destructive rename.
+  try {
+    await fs.access(target);
+    return true;
+  } catch (error) {
+    if (errnoCode(error) === "ENOENT") return false;
+    throw error;
+  }
+}
+
 /**
  * Trash a single card and its attachments. Returns info about what was moved.
  */
 async function trashOne(
   ctx: CommandContext,
-  cardPath: string
-): Promise<{ relSourcePath: string; relDestPath: string; relatedFiles: string[]; movedFiles: string[] }> {
+  cardPath: string,
+): Promise<{
+  relSourcePath: string;
+  relDestPath: string;
+  relatedFiles: string[];
+  gitPaths: string[];
+  fileMoves: Array<{ sourcePath: string; destPath: string }>;
+}> {
   // Resolve source path
   let sourcePath: string;
   if (path.isAbsolute(cardPath)) {
@@ -97,65 +142,89 @@ async function trashOne(
 
   // Check if destination already exists (add timestamp if so)
   let finalDestPath = destPath;
-  try {
-    await fs.access(destPath);
+  if (await pathExists(destPath)) {
     const timestamp = new Date().toISOString().replace(/[.:]/g, "-");
     const newName = `${parsed.name}_${timestamp}.${parsed.type}.card`;
     finalDestPath = path.join(trashDir, newName);
-  } catch (_e) {
-    // access() throwing means the destination doesn't exist — the normal
-    // case. Nothing to inspect; keep the un-timestamped destination path.
   }
 
   // Ensure trash directory exists
   await fs.mkdir(trashDir, { recursive: true });
 
-  // Move the card file
+  const sourceAttachDir = attachDirFor(sourcePath);
+  const destAttachDir = attachDirFor(finalDestPath);
+  const hasAttachments = await pathExists(sourceAttachDir);
+  let finalAttachDest = destAttachDir;
+  if (hasAttachments && (await pathExists(destAttachDir))) {
+    const timestamp = new Date().toISOString().replace(/[.:]/g, "-");
+    finalAttachDest = `${destAttachDir}_${timestamp}`;
+  }
+
+  // Move the card, then its attachment scope. If the second move fails, put
+  // the card back so callers never lose the receipt for a partial card move.
   await fs.rename(sourcePath, finalDestPath);
+  try {
+    if (hasAttachments) await fs.rename(sourceAttachDir, finalAttachDest);
+  } catch (error) {
+    await fs.rename(finalDestPath, sourcePath);
+    throw error;
+  }
   const relSourcePath = path.relative(ctx.boxRoot, sourcePath);
   const relDestPath = path.relative(ctx.boxRoot, finalDestPath);
   ctx.writeLine(`Trashed: ${relSourcePath} → ${relDestPath}`);
 
   // Move the card's attach scope (if it exists) — the whole directory tree,
   // including nested cards and their attach scopes.
-  const sourceAttachDir = attachDirFor(sourcePath);
-  const destAttachDir = attachDirFor(finalDestPath);
   const relatedFiles: string[] = [];
-  const movedFiles: string[] = [relSourcePath];
+  const fileMoves = [{ sourcePath: relSourcePath, destPath: relDestPath }];
+  const gitPaths: string[] = [relSourcePath, relDestPath];
 
-  try {
-    await fs.access(sourceAttachDir);
-    // Resolve a non-colliding destination (in case the trash already holds one).
-    let finalAttachDest = destAttachDir;
-    try {
-      await fs.access(destAttachDir);
-      const timestamp = new Date().toISOString().replace(/[.:]/g, "-");
-      finalAttachDest = `${destAttachDir}_${timestamp}`;
-    } catch (_e) {
-      // access() throwing means no collision at the attach destination —
-      // the normal case. Nothing to inspect; keep the plain destination.
-    }
-    await fs.rename(sourceAttachDir, finalAttachDest);
+  if (hasAttachments) {
     const relAttachSource = path.relative(ctx.boxRoot, sourceAttachDir);
     const relAttachDest = path.relative(ctx.boxRoot, finalAttachDest);
     relatedFiles.push(path.basename(sourceAttachDir));
-    movedFiles.push(relAttachSource);
+    fileMoves.push({ sourcePath: relAttachSource, destPath: relAttachDest });
+    gitPaths.push(relAttachSource, relAttachDest);
     ctx.writeLine(`  Also moved attach scope: ${relAttachSource} → ${relAttachDest}`);
-  } catch (_e) {
-    // The initial access() throwing means this card has no attach scope —
-    // the common case. Nothing to move and nothing actionable to inspect.
   }
 
-  return { relSourcePath, relDestPath, relatedFiles, movedFiles };
+  return { relSourcePath, relDestPath, relatedFiles, gitPaths, fileMoves };
+}
+
+/** Move cards and attachment scopes, returning a receipt even before git commit. */
+export async function moveCardsToTrash(ctx: CommandContext, cardPaths: string[]): Promise<TrashReceipt> {
+  const moves: TrashMove[] = [];
+  const gitPaths: string[] = [];
+  for (const cardPath of cardPaths) {
+    const result = await trashOne(ctx, cardPath);
+    moves.push({
+      sourcePath: result.relSourcePath,
+      destPath: result.relDestPath,
+      relatedFiles: result.relatedFiles,
+      fileMoves: result.fileMoves,
+    });
+    gitPaths.push(...result.gitPaths);
+  }
+  return { moves, gitPaths };
+}
+
+/** Commit one completed trash move receipt with standard attribution. */
+export async function commitTrashReceipt(boxRoot: string, options: { receipt: TrashReceipt; reason?: string | undefined }): Promise<string | null> {
+  const { receipt, reason } = options;
+  const suffix = reason === undefined ? "" : `: ${reason}`;
+  const message =
+    receipt.moves.length === 1 ? `Trash card: ${path.basename(receipt.moves[0]?.sourcePath ?? "card")}${suffix}` : `Trash ${String(receipt.moves.length)} cards${suffix}`;
+  return stageAndCommitPaths(boxRoot, {
+    paths: receipt.gitPaths,
+    message,
+    trailers: { "Trashed-By": "cb rm" },
+  });
 }
 
 /**
  * Execute the trash command (supports single or multiple paths).
  */
-async function executeTrash(
-  ctx: CommandContext,
-  args: Record<string, unknown>
-): Promise<CommandResult> {
+async function executeTrash(ctx: CommandContext, args: Record<string, unknown>): Promise<CommandResult> {
   const trashArgs = parseCommandArgs(args, TrashArgsSchema);
 
   // Collect all paths (support both single `path` and array `paths`)
@@ -169,6 +238,8 @@ async function executeTrash(
   if (allPaths.length === 0) {
     return { success: false, error: "At least one path is required" };
   }
+
+  const inboundRefs = await reportInboundRefs(ctx, allPaths);
 
   // Dry run: validate each path and report what would move, mutating nothing.
   // (`cb rm --dry-run` advertised this flag but the command never read it —
@@ -198,10 +269,17 @@ async function executeTrash(
     if (wouldTrash.length === 0) {
       return { success: false, error: dryErrors.join("; ") };
     }
-    return { success: true, data: { dryRun: true, wouldTrash, errors: dryErrors } };
+    return {
+      success: true,
+      data: { dryRun: true, wouldTrash, errors: dryErrors, inboundRefs },
+    };
   }
 
-  const results: Array<{ sourcePath: string; destPath: string; relatedFiles: string[] }> = [];
+  const results: Array<{
+    sourcePath: string;
+    destPath: string;
+    relatedFiles: string[];
+  }> = [];
   const allMovedFiles: string[] = [];
   const allAdditions: string[] = [];
   const errors: string[] = [];
@@ -214,12 +292,8 @@ async function executeTrash(
         destPath: result.relDestPath,
         relatedFiles: result.relatedFiles,
       });
-      allMovedFiles.push(...result.movedFiles);
+      allMovedFiles.push(...result.gitPaths);
       allAdditions.push(result.relDestPath);
-      for (const relatedFile of result.relatedFiles) {
-        const trashDir = getBoxDir(ctx.boxRoot, "trash");
-        allAdditions.push(path.relative(ctx.boxRoot, path.join(trashDir, relatedFile)));
-      }
     } catch (err) {
       errors.push(errorMessage(err));
       ctx.writeLine(`Error: ${errorMessage(err)}`);
@@ -257,7 +331,9 @@ async function executeTrash(
 
   return {
     success: true,
-    data: results.length === 1 ? results[0] : { results, errors },
+    data: results.length === 1
+      ? { ...results[0], inboundRefs: inboundRefs[results[0]?.sourcePath ?? ""] ?? [] }
+      : { results, errors, inboundRefs },
   };
 }
 

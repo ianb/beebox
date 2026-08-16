@@ -7,40 +7,43 @@ import { router, ownerProcedure } from "../trpc.js";
 import { loadTelegramConfig } from "../../../connectors/telegram.js";
 import { createTelegramService } from "../../../services/telegram.js";
 import { createClaudeCliService } from "../../../services/claude-cli.js";
-import { stageAndCommitPaths } from "../../../lib/git.js";
 import { resolveBoxPublicUrl } from "../../../lib/public-url.js";
 import { baseServerUrl } from "../../base-server-url.js";
 import { googleAdminProcedures } from "./admin-google.js";
-import { withCardLock } from "../../../lib/card-lock.js";
 import { errnoCode, errorMessage } from "../../../lib/error-guards.js";
+import { createRealTailscaleDeps, deriveTailscaleBaseUrl, parseServeConfig } from "../../../services/tailscale.js";
+import { normalizeAllowedEmails, updateBoxConfigFields } from "../../box-config-write.js";
+import { canonicalizeEmail, getLocalUser } from "../../local-users.js";
+import { gmailAdminProcedures } from "./admin-gmail.js";
+import { inviteAdminProcedures } from "./admin-invites.js";
+import { passwordResetAdminProcedures } from "./admin-password-resets.js";
+import { describeAllowedUsers } from "./admin-user-details.js";
+import { getGoogleClientCreds } from "../../../connectors/google-auth.js";
 
 /**
  * Shape of `config/box.json`, validated on read (config is untrusted input).
  * `.default()` on every field lets a missing file or missing key read as the
  * documented default rather than casting an untyped `JSON.parse` result.
  */
+const googleServicesSchema = z.object({
+  calendar: z.boolean().optional(),
+  gmail: z.boolean().optional(),
+  drive: z.boolean().optional(),
+});
+
 const boxConfigSchema = z.object({
+  agentEngine: z.enum(["claude", "codex"]).default("claude"),
   allowedEmails: z.array(z.string()).default([]),
   publicUrl: z.string().nullable().default(null),
-  googleServices: z
-    .object({
-      calendar: z.boolean().optional(),
-      gmail: z.boolean().optional(),
-      drive: z.boolean().optional(),
-    })
-    .default({}),
+  googleServices: googleServicesSchema.default({}),
 });
 
-/** Shape of `config/connectors/gmail.json`, validated on read. */
-const gmailConfigSchema = z.object({
-  query: z.string().default(""),
-  labels: z.array(z.string()).default([]),
-});
-
-/**
- * Per-box admin router (Telegram, box config).
- */
+/** Per-box admin router (Telegram, box config). */
 export const adminRouter = router({
+  ...inviteAdminProcedures,
+  ...passwordResetAdminProcedures,
+  ...gmailAdminProcedures,
+
   telegramStatus: ownerProcedure.query(async ({ ctx }) => {
     const config = await loadTelegramConfig(ctx.boxRoot);
     if (!config) {
@@ -151,56 +154,40 @@ export const adminRouter = router({
       config = boxConfigSchema.parse(JSON.parse(await fs.readFile(configPath, "utf-8")));
     } catch (e) {
       if (errnoCode(e) !== "ENOENT") {
-        console.debug("box.json missing or unreadable, returning default box config:", e);
+        console.warn("box.json is unreadable; refusing to return fabricated defaults:", e);
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Box configuration is unreadable.",
+        });
       }
       config = boxConfigSchema.parse({});
     }
+    const allowedEmails = normalizeAllowedEmails(config.allowedEmails);
+    const configuredOwnerEmail = process.env.CB_OWNER_EMAIL
+      ? canonicalizeEmail(process.env.CB_OWNER_EMAIL)
+      : null;
+    const userDetails = describeAllowedUsers({ allowedEmails, configuredOwnerEmail });
     return {
       boxSlug: ctx.boxSlug,
-      allowedEmails: config.allowedEmails,
+      allowedEmails,
+      allowedUserDetails: userDetails.allowedUserDetails,
+      localPasswordStatus: userDetails.localPasswordStatus,
+      passwordResetEligibleEmails: userDetails.allowedUserDetails
+        .filter((user) => user.resetEligible)
+        .map((user) => user.email),
       publicUrl: config.publicUrl,
-      ownerEmail: process.env.CB_OWNER_EMAIL || null,
+      ownerEmail: userDetails.ownerEmail,
+      googleLoginConfigured: getGoogleClientCreds() !== null,
       googleServices: config.googleServices,
+      agentEngine: config.agentEngine,
     };
   }),
 
-  gmailConfig: ownerProcedure.query(async ({ ctx }) => {
-    const configPath = path.join(ctx.boxRoot, "config/connectors/gmail.json");
-    let config: z.infer<typeof gmailConfigSchema>;
-    try {
-      config = gmailConfigSchema.parse(JSON.parse(await fs.readFile(configPath, "utf-8")));
-    } catch (e) {
-      if (errnoCode(e) !== "ENOENT") {
-        console.debug("gmail.json missing or unreadable, returning empty Gmail config:", e);
-      }
-      config = gmailConfigSchema.parse({});
-    }
-    return { query: config.query, labels: config.labels };
-  }),
-
-  updateGmailConfig: ownerProcedure
-    .input(
-      z.object({
-        query: z.string(),
-        labels: z.array(z.string()),
-      }),
-    )
-    .mutation(async ({ input, ctx }) => {
-      const next: { query?: string; labels?: string[] } = {};
-      const trimmedQuery = input.query.trim();
-      if (trimmedQuery) next.query = trimmedQuery;
-      const cleanedLabels = input.labels.map((l) => l.trim()).filter((l) => l.length > 0);
-      if (cleanedLabels.length > 0) next.labels = cleanedLabels;
-
-      const configPath = path.join(ctx.boxRoot, "config/connectors/gmail.json");
-      await fs.mkdir(path.dirname(configPath), { recursive: true });
-      await fs.writeFile(configPath, JSON.stringify(next, null, 2) + "\n");
-      await stageAndCommitPaths(ctx.boxRoot, {
-        paths: ["config/connectors/gmail.json"],
-        message: "Update Gmail filter config",
-      });
-
-      return { query: next.query ?? "", labels: next.labels ?? [] };
+  localAccountStatus: ownerProcedure
+    .input(z.object({ email: z.string().max(254) }))
+    .query(({ input }) => {
+      const email = canonicalizeEmail(input.email);
+      return { exists: getLocalUser(email) !== null };
     }),
 
   updateBoxConfig: ownerProcedure
@@ -208,52 +195,31 @@ export const adminRouter = router({
       z
         .object({
           allowedEmails: z.array(z.string()).optional(),
-          googleServices: z.record(z.string(), z.boolean()).optional(),
+          googleServices: googleServicesSchema.optional(),
+          agentEngine: z.enum(["claude", "codex"]).optional(),
         })
-        .refine((v) => v.allowedEmails !== undefined || v.googleServices !== undefined, {
-          message: "At least one of allowedEmails or googleServices is required",
+        .refine((v) => v.allowedEmails !== undefined || v.googleServices !== undefined || v.agentEngine !== undefined, {
+          message: "At least one box configuration field is required",
         }),
     )
     .mutation(async ({ input, ctx }) => {
-      const configPath = path.join(ctx.boxRoot, "config/box.json");
-
-      // Serialize the read-merge-write on box.json so a concurrent
-      // allowedEmails update and a googleServices update can't drop one.
-      return withCardLock(configPath, async () => {
-        let existing: Record<string, unknown> = {};
-        try {
-          existing = JSON.parse(await fs.readFile(configPath, "utf-8"));
-        } catch (e) {
-          if (errnoCode(e) !== "ENOENT") {
-            console.debug("box.json missing or unreadable, starting fresh config:", e);
-          }
-        }
-
-        const changed: string[] = [];
-        if (input.allowedEmails) {
-          existing.allowedEmails = input.allowedEmails.filter(
-            (e) => typeof e === "string" && e.includes("@"),
-          );
-          changed.push("allowedEmails");
-        }
-        if (input.googleServices) {
-          existing.googleServices = input.googleServices;
-          changed.push("googleServices");
-        }
-        await fs.mkdir(path.dirname(configPath), { recursive: true });
-        await fs.writeFile(configPath, JSON.stringify(existing, null, 2) + "\n");
-        await stageAndCommitPaths(ctx.boxRoot, {
-          paths: ["config/box.json"],
-          message: `Update box config: ${changed.join(", ")}`,
-        });
-
-        const saved = boxConfigSchema.parse(existing);
-        return {
-          success: true,
-          allowedEmails: saved.allowedEmails,
-          googleServices: saved.googleServices,
-        };
+      const result = await updateBoxConfigFields({
+        boxRoot: ctx.boxRoot,
+        ...(input.allowedEmails === undefined ? {} : { allowedEmails: input.allowedEmails }),
+        ...(input.googleServices === undefined ? {} : { googleServices: input.googleServices }),
+        ...(input.agentEngine === undefined ? {} : { agentEngine: input.agentEngine }),
       });
+      if (result.commitError) {
+        console.error(`[admin] box config was saved but its Git commit failed for ${ctx.boxRoot}:`, result.commitError);
+      }
+      const saved = boxConfigSchema.parse(result.config);
+      return {
+        success: true,
+        commitWarning: result.commitError === null ? null : "Saved, but the Git commit failed.",
+        allowedEmails: saved.allowedEmails,
+        googleServices: saved.googleServices,
+        agentEngine: saved.agentEngine,
+      };
     }),
 
   ...googleAdminProcedures,
@@ -279,5 +245,26 @@ export const adminRouter = router({
   claudeLogout: ownerProcedure.mutation(async ({ ctx }) => {
     const claude = ctx.services.claudeCli ?? createClaudeCliService();
     return claude.authLogout();
+  }),
+
+  /**
+   * The box's current Tailscale URL, or null when it isn't exposed. Shells
+   * out to `tailscale serve status --json`, so this is fail-safe by design —
+   * every failure mode (CLI absent, nonzero exit, unparseable JSON, no `Web`
+   * mapping) degrades to `{ baseUrl: null }` rather than throwing, since the
+   * settings page must never block on this. Owner-gated: it reveals whether
+   * (and where) the box is reachable off the tailnet.
+   */
+  tailscaleBaseUrl: ownerProcedure.query(async () => {
+    try {
+      const run = await createRealTailscaleDeps().run("tailscale", ["serve", "status", "--json"]);
+      if (!run.spawned || run.code !== 0) return { baseUrl: null };
+      const parsed = parseServeConfig(run.stdout);
+      if (!parsed.ok) return { baseUrl: null };
+      return { baseUrl: deriveTailscaleBaseUrl(parsed.value) };
+    } catch (e) {
+      console.warn("tailscaleBaseUrl: failed to read Tailscale serve status (treating as not exposed):", e);
+      return { baseUrl: null };
+    }
   }),
 });

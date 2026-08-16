@@ -12,7 +12,7 @@ import { join, relative } from "node:path";
 import { execFile } from "node:child_process";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { promisify } from "node:util";
-import { mkdir, writeFile, readFile, readdir, stat } from "node:fs/promises";
+import { mkdir, writeFile, readFile, readdir, unlink, stat } from "node:fs/promises";
 import { z } from "zod";
 import { cardSchemas, loadBoxSchemas } from "../../schemas/registry.js";
 import { generateViewsDoc } from "../views/doc.js";
@@ -48,7 +48,7 @@ import {
 } from "./compile.js";
 import type { ProcedureSummary } from "./compile.js";
 import { compileExpositionRules } from "../compile-exposition-rules.js";
-import { ensureClaudeMdIncludes } from "./claude-md.js";
+import { ensureAgentContext } from "./claude-md.js";
 
 export type { ProcedureSummary, GuideSummary } from "./compile.js";
 
@@ -149,7 +149,6 @@ export async function setDocIdDebug(boxRoot: string, enabled: boolean): Promise<
     await writeFile(markerPath, "");
   } else {
     try {
-      const { unlink } = await import("node:fs/promises");
       await unlink(markerPath);
     } catch (_e) {
       // Already gone — disabling an absent marker is a no-op, nothing to report.
@@ -416,7 +415,7 @@ async function writeStaticDocs(plan: DocWritePlan): Promise<void> {
       withDocId({ relativePath: `${DOCS_DIR}/python-tools.md`, content: generatePythonToolsDoc(), debug })),
     // Per-schema generated docs: each frontmatter schema with an optional
     // `instructions` field gets a `card-<type>.md` doc.
-    ...writeCardDocs({ boxRoot, debug, allCardSchemas }),
+    writeCardDocs({ boxRoot, debug, allCardSchemas }),
   ]);
 }
 
@@ -424,28 +423,34 @@ async function writeStaticDocs(plan: DocWritePlan): Promise<void> {
  * Build the per-schema card-doc writes for every frontmatter schema that
  * supplies `instructions`.
  */
-function writeCardDocs(params: {
+async function writeCardDocs(params: {
   boxRoot: string;
   debug: boolean;
   allCardSchemas: typeof cardSchemas;
-}): Array<Promise<void>> {
+}): Promise<void> {
   const { boxRoot, debug, allCardSchemas } = params;
-  return [
-    ...allCardSchemas.map((s) => ({
+  const currentCardDocs = allCardSchemas
+    .map((s) => ({
       name: s.type,
       // Searchable types get the canonical contains: writing rule appended.
-      instructions:
-        s.instructions !== undefined && s.searchable
-          ? `${s.instructions}\n\n${CONTAINS_DOC_APPENDIX}`
-          : s.instructions,
-    })),
-  ]
-    .filter((s): s is { name: string; instructions: string } => s.instructions !== undefined)
-    .map((s) => {
-      const filename = `card-${s.name}.md`;
-      return writeFile(join(boxRoot, DOCS_DIR, filename),
-        withDocId({ relativePath: `${DOCS_DIR}/${filename}`, content: generateCardDoc(s.name, s.instructions), debug }));
-    });
+      instructions: s.instructions !== undefined && s.searchable ?
+        `${s.instructions}\n\n${CONTAINS_DOC_APPENDIX}` : s.instructions,
+    }))
+    .filter((s): s is { name: string; instructions: string } => s.instructions !== undefined);
+
+  await Promise.all(currentCardDocs.map((s) => {
+    const filename = `card-${s.name}.md`;
+    return writeFile(join(boxRoot, DOCS_DIR, filename),
+      withDocId({ relativePath: `${DOCS_DIR}/${filename}`, content: generateCardDoc(s.name, s.instructions), debug }));
+  }));
+
+  // Prune card-<type>.md docs for schemas that no longer exist, mirroring
+  // init-rules.ts's cleanup of stale .claude/rules/card-<type>.md files.
+  const currentTypes = new Set(currentCardDocs.map((s) => s.name));
+  const isStale = (file: string): boolean =>
+    file.startsWith("card-") && file.endsWith(".md") && !currentTypes.has(file.slice(5, -3));
+  const stale = (await readdir(join(boxRoot, DOCS_DIR))).filter(isStale);
+  await Promise.all(stale.map((file) => unlink(join(boxRoot, DOCS_DIR, file))));
 }
 
 /**
@@ -509,7 +514,7 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
   // Compile briefing cards to .md files
   const briefingPaths = await compileBriefings(boxRoot, debug);
 
-  await ensureClaudeMdIncludes(boxRoot, briefingPaths);
+  await ensureAgentContext(boxRoot, briefingPaths);
 
   // Write marker so next call can skip if nothing changed
   const commitLine = currentCommit ? `\n${currentCommit}` : "";

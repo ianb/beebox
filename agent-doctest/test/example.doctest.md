@@ -129,6 +129,14 @@ null.toString()
 => throws TypeError: Cannot read properties of null (reading 'toString')
 ```
 
+Await-containing expressions work too — a rejected promise counts as the
+throw:
+
+```
+await Promise.reject(new RangeError("out of range"))
+=> throws RangeError: out of range
+```
+
 Non-throwing expressions fail the assertion:
 
 ```ts setup

@@ -13,8 +13,9 @@ export const uploadCommand = new Command("upload")
   .requiredOption("--as <kind>", "Destination kind (currently: scan)")
   .option("--force", "Re-import files already in the ledger")
   .option("--context <text>", "Per-batch context passed to the destination handler")
+  .option("--source <text>", "Provenance recorded on the produced cards (e.g. scan-upload/<token-name>)")
   .option("--limit <n>", "Process at most N files (sorted; useful for smoke tests)")
-  .action(async (files: string[], options: { as: string; force?: boolean; context?: string; limit?: string }) => {
+  .action(async (files: string[], options: { as: string; force?: boolean; context?: string; source?: string; limit?: string }) => {
     try {
       const boxRoot = await requireBoxRoot();
       const ctx = createCliContext(boxRoot);
@@ -25,6 +26,7 @@ export const uploadCommand = new Command("upload")
       };
       if (options.force) args["force"] = true;
       if (options.context) args["context"] = options.context;
+      if (options.source) args["source"] = options.source;
       if (options.limit) args["limit"] = Number(options.limit);
 
       const result = await runCommand({ name: "upload", args, ctx });

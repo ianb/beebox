@@ -1,10 +1,27 @@
 ---
 title: "Pin a model as the box default in the chat selector; chats can follow the default"
+workstream: unknown
 needs: [design]
 filed-by: agent
 discovered-in: main session — boxholder idea while thinking about the chat model selector
 area: callback-box
 ---
+
+> **Checked 2026-08-14 — not a duplicate.** Tagged `duplicate`; nothing
+> subsumes this, so the tag is removed and the issue stays open. Two neighbours
+> exist and the three are worth reading together, but they are different work:
+>
+> - [default model and non-default indicator](2026-08-03-default-model-and-non-default-indicator.md)
+>   wants a settable default plus a glanceable smarter/dumber indicator. It
+>   overlaps on the *concept* of an explicit default, but its own design
+>   questions ("where the default lives") are still open — it specifies no pin
+>   action, no per-chat-vs-box-default split, no warm-up resolution, and no
+>   restart semantics. It sits on top of whatever this issue builds.
+> - [reactor agent model not pinnable](2026-08-08-reactor-agent-model-not-pinnable.md)
+>   is the reactor surface, not interactive chat, with different plumbing
+>   (`createAgent` never passes `model`). It cites chat's pin as precedent.
+>
+> Nothing in `closed/` matches either.
 
 Add a **pin** affordance next to each model in the chat model selector. Two
 distinct actions per row:

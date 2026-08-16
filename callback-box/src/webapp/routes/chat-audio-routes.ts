@@ -46,6 +46,7 @@ interface TtsBody {
   delayMs?: number;
   chunkMs?: number;
   chunkSize?: number;
+  failText?: string;
 }
 
 export function registerChatAudioRoutes(ctx: ChatRoutesContext): void {
@@ -112,12 +113,13 @@ export function registerChatAudioRoutes(ctx: ChatRoutesContext): void {
 
   // POST /api/chat/tts - Proxy TTS requests to OpenAI
   server.post<{ Body: TtsBody }>("/api/chat/tts", async (request, reply) => {
-    const { text, instructions, voice, mock, fixture, delayMs, chunkMs, chunkSize } = request.body;
+    const { text, instructions, voice, mock, fixture } = request.body;
+    const { delayMs, chunkMs, chunkSize, failText } = request.body;
 
     // Serve slow fixture audio instead of calling OpenAI, for the speech
     // browser test. Never reachable in production.
     if (mock && process.env.NODE_ENV !== "production") {
-      return serveMockTts(reply, { text, fixture, delayMs, chunkMs, chunkSize });
+      return serveMockTts(reply, { text, fixture, delayMs, chunkMs, chunkSize, failText });
     }
 
     const resolvedVoice = voice && VOICE_MODEL_SET.has(voice) ? voice : "marin";

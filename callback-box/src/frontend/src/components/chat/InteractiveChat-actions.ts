@@ -145,14 +145,18 @@ export function useChatActions(opts: ChatActionsOpts) {
     if (loadingOlder) return;
     if (!sessionId) return;
     setLoadingOlder(true);
-    // Load all history up to the current start point
+    // One bounded page per click, walking backwards from the current window.
+    // `totalEntries` is exact (the server counts every entry even though it
+    // retains only the window), and a 40-entry page is far under the server's
+    // hard retention ceiling, so every older entry stays reachable — the
+    // affordance can't offer more than it can fetch.
     const currentCount = messages.length;
     const olderCount = totalEntries - currentCount;
     const chunkSize = Math.min(olderCount, 40);
     // Fetch a window ending just before current messages
     const offset = Math.max(0, olderCount - chunkSize);
     const limit = olderCount - offset;
-    getChatHistory({ sessionId, offset, limit })
+    getChatHistory({ sessionId, slice: { mode: "page", offset, limit } })
       .then((result) => {
         send({ type: "PREPEND_MESSAGES", messages: result.entries });
       })

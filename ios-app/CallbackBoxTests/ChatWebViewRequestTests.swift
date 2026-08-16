@@ -63,13 +63,19 @@ final class ChatWebViewRequestTests: XCTestCase {
         XCTAssertEqual(request.url, box.chatURL)
     }
 
+    func testConfigurationAllowsAutomaticSpeechPlayback() {
+        let configuration = ChatWebView.makeConfiguration()
+
+        XCTAssertTrue(configuration.allowsInlineMediaPlayback)
+        XCTAssertEqual(configuration.mediaTypesRequiringUserActionForPlayback, [])
+    }
+
     @MainActor
     func testSameOriginNewWindowLoadsInCurrentContext() {
         let url = URL(string: "https://box.example.com/test1/browse/card")!
         var loadedURL: URL?
         var externalURL: URL?
         let coordinator = makeCoordinator(
-            timeout: 60,
             evaluate: { _, completion in completion(nil) },
             openExternalURL: { externalURL = $0 },
             loadInCurrentContext: { _, request in loadedURL = request.url }
@@ -86,7 +92,6 @@ final class ChatWebViewRequestTests: XCTestCase {
         var loadedURL: URL?
         var externalURL: URL?
         let coordinator = makeCoordinator(
-            timeout: 60,
             evaluate: { _, completion in completion(nil) },
             openExternalURL: { externalURL = $0 },
             loadInCurrentContext: { _, request in loadedURL = request.url }
@@ -116,26 +121,34 @@ final class ChatWebViewRequestTests: XCTestCase {
         XCTAssertNil(ChatWebView.narrationEnabled(from: #"{"enabled":"yes"}"#))
     }
 
+    func testSpeechPlaybackStateDecodesNeutralBridgePayload() {
+        XCTAssertEqual(ChatWebView.speechPlaybackActive(from: #"{"playing":true}"#), true)
+        XCTAssertNil(ChatWebView.speechPlaybackActive(from: #"{"playing":"yes"}"#))
+    }
+
+    func testResponseStateDecodesNeutralBridgePayload() {
+        XCTAssertEqual(ChatWebView.responseActive(from: #"{"active":true}"#), true)
+        XCTAssertNil(ChatWebView.responseActive(from: #"{"active":"yes"}"#))
+    }
+
     @MainActor
-    func testUnacknowledgedEmissionTimesOutAsRejected() async {
+    func testUnacknowledgedEmissionRemainsPending() async {
         let emission = makeEmission()
-        let timedOut = expectation(description: "receipt timeout")
+        let noReceipt = expectation(description: "no fabricated receipt")
+        noReceipt.isInverted = true
         var receipt: NativeEmissionReceipt?
         let coordinator = makeCoordinator(
-            timeout: 0.01,
             onReceipt: {
                 receipt = $0
-                timedOut.fulfill()
+                noReceipt.fulfill()
             },
             evaluate: { _, completion in completion(nil) }
         )
 
         coordinator.deliver([emission], to: WKWebView())
-        await fulfillment(of: [timedOut], timeout: 1)
+        await fulfillment(of: [noReceipt], timeout: 0.05)
 
-        XCTAssertEqual(receipt?.emissionID, emission.id)
-        XCTAssertEqual(receipt?.disposition, .rejected)
-        XCTAssertEqual(receipt?.reason, "The chat did not confirm the message. Try sending it again.")
+        XCTAssertNil(receipt)
     }
 
     @MainActor
@@ -144,7 +157,6 @@ final class ChatWebViewRequestTests: XCTestCase {
         var attempts: [UUID] = []
         var evaluationCount = 0
         let coordinator = makeCoordinator(
-            timeout: 60,
             onAttempt: { attempts.append($0) },
             evaluate: { _, completion in
                 evaluationCount += 1
@@ -156,10 +168,32 @@ final class ChatWebViewRequestTests: XCTestCase {
 
         coordinator.deliver([emission], to: webView)
         coordinator.webView(webView, didStartProvisionalNavigation: nil)
+        coordinator.webView(webView, didCommit: nil)
         coordinator.webView(webView, didFinish: nil)
 
         XCTAssertEqual(attempts, [emission.id, emission.id])
         XCTAssertEqual(evaluationCount, 2)
+    }
+
+    @MainActor
+    func testProvisionalNavigationKeepsOldPageReceiptEligible() {
+        let emission = makeEmission()
+        var receipt: NativeEmissionReceipt?
+        let coordinator = makeCoordinator(
+            onReceipt: { receipt = $0 },
+            evaluate: { _, completion in completion(nil) }
+        )
+        let webView = WKWebView()
+
+        coordinator.deliver([emission], to: webView)
+        coordinator.webView(webView, didStartProvisionalNavigation: nil)
+        coordinator.receiveEmissionReceipt([
+            "emissionId": emission.id.uuidString,
+            "disposition": "sent",
+        ])
+
+        XCTAssertEqual(receipt?.emissionID, emission.id)
+        XCTAssertEqual(receipt?.disposition, .sent)
     }
 
     private func makeEmission() -> NativeChatEmission {
@@ -176,7 +210,6 @@ final class ChatWebViewRequestTests: XCTestCase {
 
     @MainActor
     private func makeCoordinator(
-        timeout: TimeInterval,
         onAttempt: @escaping (UUID) -> Void = { _ in },
         onReceipt: @escaping (NativeEmissionReceipt) -> Void = { _ in },
         evaluate: @escaping (String, @escaping (Error?) -> Void) -> Void,
@@ -184,6 +217,7 @@ final class ChatWebViewRequestTests: XCTestCase {
         loadInCurrentContext: @escaping (WKWebView, URLRequest) -> Void = { _, _ in }
     ) -> ChatWebView.Coordinator {
         ChatWebView.Coordinator(
+            boxID: UUID(),
             allowedOrigin: "https://box.example.com",
             onSessionChange: { _ in },
             onEmissionDeliveryAttempt: onAttempt,
@@ -191,10 +225,11 @@ final class ChatWebViewRequestTests: XCTestCase {
             onLocationShareResult: { _ in },
             onLocationSharingStateChange: { _ in },
             onNarrationStateChange: { _ in },
+            onSpeechPlaybackStateChange: { _ in },
+            onResponseStateChange: { _ in },
             onScreenshotResult: { _ in },
             onComposerCommand: { _ in },
             onComposerCommandAcknowledgementDelivered: { _ in },
-            receiptTimeoutDelay: timeout,
             pageLoaded: true,
             evaluateEmission: evaluate,
             openExternalURL: openExternalURL,

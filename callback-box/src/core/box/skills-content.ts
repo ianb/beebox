@@ -92,7 +92,7 @@ A \`material\` segment must end up either \`ready\` (its card exists) or \`plann
 
 A built course still needs an **entry point** so it can be *taught*. A tutoring session is just a chat **scoped to the course's attach directory** (the folder holding all the components): opening it there makes the exposition rules and a course-local \`CLAUDE.md\` auto-load. Create three files in that attach scope:
 
-1. A **landmark card** (\`<Course>.landmark.card\`) with a \`navigation\` role — this is what turns the course into a **chat destination** on the Landmarks page. Give it a short \`label\` (the course name), a \`symbol\`, and \`links\` to the course guide (\`../<Course>.course.card\`) and the lesson-plan. (See the landmark card-rule for the fields.)
+1. A **landmark card** (\`<Course>.landmark.card\`) with a \`navigation\` role — this is what turns the course into a **chat destination** on the Landmarks page. Give it a short \`label\` (the course name), a \`symbol\`, and \`links\` to the course guide and the lesson-plan, each written as a full box path with a leading \`/\` (the guide is the \`*.course.card\` in the parent directory). (See the landmark card-rule for the fields.)
 2. A thin, **editable \`CLAUDE.md\`** — a line or two naming the course and pointing at \`../<Course>.course.card\` (the guide), then \`@course-runner.md\` to include the generic runner instructions. Keep it minimal so you (or a later session) can amend it with course-specific notes; the boilerplate lives in the included file.
 3. The **\`course-runner.md\`** it includes — the same for every course, so write it verbatim:
 
@@ -131,7 +131,7 @@ Adaptation is expected and a good sign. As you learn more about the learner — 
 - **Be Socratic.** Guide the learner to reason rather than handing them answers — use the answer key to steer your questions, don't just state it. Meet them where they are; build on partial and correct-but-incomplete thinking instead of restarting.
 - **Ground what you teach in sources.** Don't assert facts from memory — especially in answer keys and explanations. Bring the authoritative material into the box (e.g. a \`doc\` or \`webpage\` card) and cite it with the \`{% source %}\` pattern, so the learner can trace what they're told and the content stays trustworthy:
 
-  > Acids {% source ref="material/Acids_Bases.doc.card" %}donate protons{% /source %} in solution.
+  > Acids {% source ref="/store/courses/Acids.attach/material/Acids_Bases.doc.card" %}donate protons{% /source %} in solution.
 
   A bare \`{% source ref="..." %}…{% /source %}\` anchors a span to a cited card; use \`href="..."\` to cite an external URL instead. (See the box's source-tagging convention for the full pattern.)
 - **Classify a claim before you lean on it.** Is it solidly *verified* by the source (cite it), *directional* (the effect holds but the exact figure varies — say so), or only *qualitative*? Cite at the strength the source supports. If a claim is *unsupported*, leave it out or name the uncertainty — **missing or fuzzy data is a fine thing to state plainly; never fabricate to fill a gap or to make two sides look balanced.**

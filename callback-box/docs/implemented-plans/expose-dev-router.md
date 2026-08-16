@@ -1,12 +1,10 @@
+---
+title: "Make the shared dev router safely exposable over Tailscale"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Make the shared dev router safely exposable over Tailscale
-
-**Status:** implemented 2026-07 — the router is now a fail-closed
-authenticating reverse proxy (`bin/router-auth.ts`, `bin/router-auth-deps.ts`,
-the UDS local channel in `bin/router.ts`) and `cb tailscale setup --target
-<routerPort>` exposes it. Verified by the full test suite plus four Codex
-adversarial reviews (GO for a private tailnet); a live end-to-end exposure
-against the real `tailscaled` (including pairing the iOS app over the tailnet)
-is still the boxholder's acceptance test, not yet run.
 
 Turn the `pnpm dev` router into an **authenticating reverse proxy** — the same
 front-door model the prod `cb hub` already runs — so the whole dev environment
@@ -216,7 +214,7 @@ worktree runs its own code so the wall must be at the shared front door.
   listener (Serve-fronted, browsers) and add a UDS listener (e.g.
   `~/.cache/callback-box/router.sock`, 0600). Requests on the **UDS are
   trusted-local, unauthenticated** — but only *non-browser* local tooling can use
-  it: `bin/worktrees` and other CLI move to `curl --unix-socket`. **Browser HMR
+  it: `bin/workstreams` and other CLI move to `curl --unix-socket`. **Browser HMR
   and the tRPC WebSocket stay on TCP** (a browser can't originate a UDS
   connection; HMR rides the page origin through the router, `vite.config.ts:48`,
   `bin/router.ts:896`) and authenticate with the local browser session
@@ -275,10 +273,13 @@ worktree runs its own code so the wall must be at the shared front door.
       webview drops it on reloads + the tRPC WebSocket (initial load sends Bearer;
       everything after depends on the cookie). The box child **only knows its
       slug**, not `/main`, so it cannot fix its own Path — **the router rewrites the
-      `Set-Cookie` Path** on `cb_mobile` (and `cb_session`) to the full
-      `/<worktree>/<slug>` on responses it proxies. This is a hard requirement, not
-      a nice-to-have: without it the paired app works for one request and then
-      silently loses its session.
+      `Set-Cookie` Path** on `cb_mobile` (and `cb_session`) to `/<worktree>`, the
+      Vite base that covers both box pages and worktree-root JavaScript assets.
+      A bearer-authenticated document navigation is itself served by Vite, not
+      the box, so the router first calls the box's existing
+      `POST /api/pairing/session` endpoint and attaches its rewritten cookie to
+      the Vite response. This is a hard requirement: without the exchange the
+      HTML shell loads but its JavaScript assets receive 401.
 
 **iOS pairing over the exposed router — end-to-end requirement (a primary goal
 of this whole plan).** All four legs must hold, verified in the live proof:
@@ -295,10 +296,11 @@ of this whole plan).** All four legs must hold, verified in the live proof:
      current code before proxying; a token for box A is rejected for box B. This
      also covers `POST …/api/pairing/session` (`pairing.ts:55`), the bearer-gated
      cookie-remint endpoint.
-  4. *Session continuity* — the router rewrites the `cb_mobile`/`cb_session`
-     `Set-Cookie` Path to the full `/<worktree>/<slug>` (the box child only knows
-     its slug), so the webview reload → `/api/pairing/session` re-mint → cookie
-     loop actually holds and the WebSocket keeps the session.
+  4. *Session continuity* — for a bearer-authenticated document navigation the
+     router exchanges the bearer through the box-owned `/api/pairing/session`
+     endpoint, attaches the returned cookie to the Vite HTML response, and
+     rewrites its Path to `/<worktree>`. The cookie therefore covers both
+     `/<worktree>/<slug>` box paths and Vite's `/<worktree>/src`/`@vite` assets.
   - **Cold-start happens only after the gate passes** (fixes finding 3's
     pre-auth start).
 - **DoS guard:** wrap the `/<w>/dev/` path decode (`router-docs.ts:690`) and the
@@ -361,7 +363,8 @@ Verified by C's anonymous-denial probe over Serve.
 | Revoked/stale session used at the router | planned | gen-aware `classifyLocalRecord`, not bare verify | clear |
 | Non-owner member reaches control routes | planned | owner-only check | clear |
 | Same-origin CSRF POST to `/__router/stop` from an agent-authored `/dev` page | planned | CSP-sandbox `/dev` content (can't script) + Origin check — OR mutating controls UDS-only (2nd-review 2.1, decision pending) | clear |
-| Webview mobile cookie lost on reload/WS under the `/<w>/<box>/` prefix (paired iOS app silently loses session after one request) | planned | router rewrites `Set-Cookie` Path for `cb_mobile`/`cb_session` to `/<w>/<slug>` (2nd-review 2.2 — hard requirement) | clear |
+| Vite returns the authenticated HTML shell without asking the box to mint `cb_mobile`, so its JavaScript assets 401 and iOS stays on “Loading…” | yes (`router-mobile-bootstrap.test.ts`) | router exchanges document-navigation bearers through the box-owned session endpoint and attaches the cookie to the Vite response | clear |
+| Webview mobile cookie lost on reload/WS or omitted from Vite assets under the worktree prefix | planned | router rewrites `Set-Cookie` Path for `cb_mobile`/`cb_session` to `/<w>` (2nd-review 2.2 — hard requirement) | clear |
 | Paired iOS device token for box A replayed against box B over the router | planned | router validates per-box via `resolveMobileRequestAuth(targetBoxRoot,…)` | clear |
 | Router auths a token for box A while the proxy routes the slug to box B | planned | single slug→box source of truth; duplicate slugs fail closed (2nd-review 2.4) | clear |
 | Malformed `%`-encoding under `/<w>/dev/` crashes the shared router | planned | decode guard + handler rejection boundary | clear |
@@ -470,7 +473,7 @@ exposable; local CLI uses the socket) and the tailscale docs.
    (dup slug → null → 401), per-box `resolveMobileRequestAuth` (+ agent bearer
    folded in), `canAccessBox` session, `Sec-Fetch-Site`/Origin CSRF; single
    chokepoint before all dispatch + the WS `upgrade` (try/catch fail-closed);
-   deny → 302 login / JSON 401·403·404; `bin/worktrees` CLI → UDS. Verified live
+   deny → 302 login / JSON 401·403·404; `bin/workstreams` CLI → UDS. Verified live
    (curl+browser+WS): the full table passes.
    **Two carry-forwards to B.2b/iOS:** (1) *sound deviation, confirmed* — a
    non-box worktree segment (`/<w>/@vite/`, `/src/`) maps to a session-gated
@@ -482,15 +485,20 @@ exposable; local CLI uses the socket) and the tailscale docs.
    worktree-root dev assets** (`@vite`/`src`/`node_modules`/HMR) while keeping
    `/<w>/api/boxes` + the picker session-only. This is required for the paired-iOS
    goal, alongside the cookie-Path rewrite.
-6. **B.2b — DONE (`ec3a0369`), iOS session continuity.** Router rewrites the
-   `cb_mobile` `Set-Cookie` Path `/<slug>`→`/<worktree>/<slug>` via the
+6. **B.2b — DONE (`ec3a0369`, corrected by `74ebdb5d` and the document-bootstrap
+   follow-up), iOS session continuity.** Router rewrites the
+   `cb_mobile` `Set-Cookie` Path `/<slug>`→`/<worktree>` via the
    `proxyRes` hook (`bin/router-cookie.ts`, surgically scoped: only that
    cookie/attr/exact-value; `cb_session` host-wide `Path=/` untouched); a new
    `worktree-asset` route class lets any box credential (mobile-for-any-box or
    session) fetch the Vite dev shell (`@vite`/`@fs`/`@id`/`@react-refresh`/
    `node_modules`/`src`), while `/<w>/api/*` + bare `/<w>/` stay session-only.
-   Verified live (rewritten Set-Cookie, asset-vs-api, cross-worktree denied
-   pre-cold-start). 136 bin tests pass. **Note:** HMR live-reload for a
+   Because Vite serves document HTML without touching the box, the router also
+   exchanges a document-navigation bearer through the box-owned
+   `/api/pairing/session` endpoint and attaches that cookie before proxying the
+   shell. Verified live over Tailscale: the initial chat response carries
+   `Path=/main`, and `@vite/client` plus `src/main.tsx` both return 200.
+   **Note:** HMR live-reload for a
    *mobile-only* webview needs a session (its WS rides bare `/<w>/`, which stays
    session-only) — an accepted dev-nicety limit; the app itself loads + works on
    a mobile token. Future: classify the `vite-hmr` WS upgrade as a dev asset.

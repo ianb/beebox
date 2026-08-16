@@ -1,5 +1,6 @@
 ---
 title: "SessionListButton hand-rolls its dropdown — same latent mobile overflow the header menus had"
+workstream: mobile-chat-layout
 area: callback-box
 filed-by: agent
 discovered-in: worktree-mobile-chat-layout — while fixing the landmark/recent-files menu overflow
@@ -13,8 +14,8 @@ left. No manual-testing gate — it's a positioning dedup verified headless.
 
 ---
 
-While fixing [the landmark menu overflow](../../bugs/2026-07-19-landmark-menu-overflows-mobile.md)
-and [recent-files](../../bugs/2026-07-19-mobile-composer-grows-on-scroll.md)
+While fixing [the landmark menu overflow](../bugs/2026-07-19-landmark-menu-overflows-mobile.md)
+and [recent-files](../bugs/2026-07-19-mobile-composer-grows-on-scroll.md)
 I moved both onto the shared `Dropdown` primitive
 (`components/ui/Dropdown.tsx`), which now clamps its portaled `fixed` menu into
 the viewport (`left`/`right` into `[8px, vw-8px]`, `maxWidth`, `maxHeight` +

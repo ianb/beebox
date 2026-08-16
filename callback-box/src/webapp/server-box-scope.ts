@@ -18,6 +18,8 @@ import { registerTelegramRoutes } from "./routes/telegram.js";
 import { registerViewRoutes } from "./routes/views.js";
 import { registerFigureRoutes } from "./routes/figure.js";
 import { registerCaptureRoutes } from "./routes/capture.js";
+import { registerBulkUploadRoutes } from "./routes/bulk-upload.js";
+import { registerScanUploadRoutes } from "./routes/scan-upload.js";
 import { isPairingRedeemUrl, registerPairingRoutes } from "./routes/pairing.js";
 import { appRouter } from "./trpc/router.js";
 import type { TrpcContext } from "./trpc/context.js";
@@ -28,6 +30,7 @@ import {
   isDiagnosticBypassRequest,
 } from "./auth.js";
 import { verifyAgentBearer } from "../core/agent/token.js";
+import { verifyBrowseKey } from "../core/browse-key.js";
 import { resolveMobileRequestAuth } from "../core/mobile/request-auth.js";
 import { renewMobileSessionCookie } from "./mobile-cookie.js";
 import { canAccessBox } from "./box-access.js";
@@ -35,7 +38,7 @@ import { loginRedirect } from "./base-prefix.js";
 import type { EventBus } from "../core/event-bus.js";
 import { closeBoxWatcher } from "../core/box/file-watcher.js";
 import { ensureSchemaWatcher, closeSchemaWatcher } from "../core/schema-watcher.js";
-import type { BoxSpec, ServerOptions } from "./server-types.js";
+import type { BoxSpec, InternalServerOptions } from "./server-types.js";
 import { assertNever, invariant } from "../lib/invariant.js";
 import { AuthStoreUnavailableAtContextError } from "./local-users-errors.js";
 
@@ -89,6 +92,11 @@ function addBoxAuthHook(instance: FastifyInstance, box: BoxSpec): void {
     if (verifyAgentBearer(box.boxRoot, request.headers["authorization"])) {
       return;
     }
+    // An agent driving a real browser, when the operator has opted in by
+    // setting CB_BROWSE_API_KEY. No-op when unset. See core/browse-key.ts.
+    if (verifyBrowseKey(request.headers)) {
+      return;
+    }
     // Mobile devices authenticate with either the durable device token in an
     // Authorization header or the short-lived cb_mobile cookie; one resolver
     // decides for every gate (see core/mobile/request-auth.ts).
@@ -138,7 +146,7 @@ function addBoxAuthHook(instance: FastifyInstance, box: BoxSpec): void {
 interface BoxScopeDeps {
   box: BoxSpec;
   eventBus: EventBus;
-  options: ServerOptions;
+  options: InternalServerOptions;
   frontendPath: string;
   frontendExists: boolean;
 }
@@ -202,13 +210,19 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
       const identity = resolveRequestIdentity(req, { openAccess: instance.openAccess });
       const bearerOk = verifyAgentBearer(box.boxRoot, req.headers["authorization"]);
       const mobileOk = (await resolveMobileRequestAuth(box.boxRoot, req.headers)) !== null;
+      // The browse key must be recognized HERE too, not only in the preHandler:
+      // a request it let through would otherwise reach a protected procedure
+      // with `authed: false`, so the credential would open every public read
+      // and nothing else — and the WS path has no preHandler at all, so this is
+      // the only place it can be checked there.
+      const browseOk = verifyBrowseKey(req.headers);
       // Fail closed on a corrupt/unreadable credential store (Track D): never
       // build an authed context off an auth store we couldn't verify against.
       // For HTTP the box preHandler already answered 503 before this ran; this
       // is the fail-closed twin for the WS upgrade, which shares this context.
       // Agent- and mobile-authenticated requests don't consult that store, so
       // they stay valid through a store outage (matching the preHandler order).
-      if (identity.source === "unavailable" && !bearerOk && !mobileOk) {
+      if (identity.source === "unavailable" && !bearerOk && !mobileOk && !browseOk) {
         throw new AuthStoreUnavailableAtContextError();
       }
       // One openness signal: the resolver returns `source: "open"` both in
@@ -223,7 +237,10 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
         eventBus,
         services: options.services ?? {},
         user,
-        authed: identityIsOpen || user !== null || bearerOk || mobileOk,
+        // `browseOk` grants `authed`, never `user`/`isOwner`: the key is a
+        // machine credential, not a person, so it must not impersonate the
+        // owner. Same treatment as the agent bearer and mobile auth beside it.
+        authed: identityIsOpen || user !== null || bearerOk || mobileOk || browseOk,
         isOwner: identityIsOpen || (user !== null && user.email === getOwnerEmail()),
       };
     },
@@ -239,12 +256,13 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
   await registerActionRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
   await registerCommandRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
   await registerHistoryRoutes(instance, box.boxRoot);
-  await registerChatRoutes({ server: instance, boxRoot: box.boxRoot, eventBus, openaiAudio: options.services?.openaiAudio, prewarmChat: options.prewarmChat });
+  await registerChatRoutes({ server: instance, boxRoot: box.boxRoot, eventBus, openaiAudio: options.services?.openaiAudio, prewarmChat: options.prewarmChat, chatBackend: options.chatBackend });
   registerPairingRoutes(instance, { boxRoot: box.boxRoot, boxSlug: box.slug });
   // Box admin (telegram/google/box-config) now lives in the `admin` tRPC router
   // behind ownerProcedure; only the OAuth redirect callback stays a raw route
   // (registered at the root, see server.ts).
   await registerCaptureRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
+  await registerBulkUploadRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
   await registerViewRoutes({ server: instance, boxRoot: box.boxRoot });
   registerFigureRoutes({ server: instance, boxRoot: box.boxRoot });
 
@@ -268,6 +286,17 @@ export async function registerBox(server: FastifyInstance, deps: BoxScopeDeps): 
 
   await server.register(async (instance) => {
     await registerBoxRoutes(instance, deps);
+  }, { prefix: `/${box.slug}` });
+
+  // The scan upload routes mount under the SAME `/<slug>` prefix but in their
+  // own sibling scope, deliberately outside `addBoxAuthHook`: that hook runs
+  // before every route in the box scope and knows nothing of scan tokens, so a
+  // scan bearer would be 401'd there before reaching a handler. This scope
+  // installs `makeScanAuthPreHandler` instead — the ONLY gate that reads the
+  // scan-token store — which is what confines that credential to these two
+  // routes. Do not fold this back into registerBoxRoutes.
+  await server.register(async (instance) => {
+    await registerScanUploadRoutes({ server: instance, boxRoot: box.boxRoot });
   }, { prefix: `/${box.slug}` });
 
   // Register webhooks at /webhook/<slug>/ — outside auth so external

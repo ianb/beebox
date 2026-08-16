@@ -185,6 +185,32 @@ final class MobileContractFixtureDecodeTests: XCTestCase {
         }
     }
 
+    func testSpeechPlaybackStateFixturesDecodeThroughNativeSeam() throws {
+        let fixtures = try MobileContractFixtures.load("speech-playback-state")
+        XCTAssertFalse(fixtures.isEmpty, "no speech playback state fixtures found")
+        for (name, fixture) in fixtures {
+            let input = try XCTUnwrap(fixture["input"] as? [String: Any], "\(name): missing input")
+            let expected = try XCTUnwrap(fixture["expected"] as? [String: Any], "\(name): missing expected")
+            let playing = ChatWebView.speechPlaybackActive(
+                from: try MobileContractFixtures.jsonString(from: input)
+            )
+            XCTAssertEqual(playing, expected["playing"] as? Bool, "\(name): playing")
+        }
+    }
+
+    func testResponseStateFixturesDecodeThroughNativeSeam() throws {
+        let fixtures = try MobileContractFixtures.load("response-state")
+        XCTAssertFalse(fixtures.isEmpty, "no response state fixtures found")
+        for (name, fixture) in fixtures {
+            let input = try XCTUnwrap(fixture["input"] as? [String: Any], "\(name): missing input")
+            let expected = try XCTUnwrap(fixture["expected"] as? [String: Any], "\(name): missing expected")
+            let active = ChatWebView.responseActive(
+                from: try MobileContractFixtures.jsonString(from: input)
+            )
+            XCTAssertEqual(active, expected["active"] as? Bool, "\(name): active")
+        }
+    }
+
     func testV2EmissionFixturesDecodeStrictly() throws {
         let fixtures = try MobileContractFixtures.load("emission")
         var decodedV2 = 0
@@ -304,6 +330,16 @@ enum MobileContractFixtures {
 
     static func jsonData(from object: [String: Any]) throws -> Data {
         try JSONSerialization.data(withJSONObject: object)
+    }
+
+    /// Key-sorted JSON text, so two structurally equal payloads compare equal
+    /// however their dictionaries happened to be ordered.
+    static func canonicalJSON(_ object: [String: Any]) throws -> String {
+        let data = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+        guard let string = String(data: data, encoding: .utf8) else {
+            throw FixtureError(message: "could not encode fixture JSON as UTF-8")
+        }
+        return string
     }
 }
 

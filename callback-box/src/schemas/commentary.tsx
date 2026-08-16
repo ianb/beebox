@@ -62,6 +62,10 @@ function validateMarkdocBody(bodyText: string): string[] {
 export const CommentarySchema: CardSchema = cardSchema("commentary", {
   description: "Anchored remarks on a host card (extfile, webpage, or doc) — attach-only, anchor-then-remark body",
   category: "authored",
+  // The generic body-Markdoc pass in card-lint.ts skips a card whose schema
+  // sets this, so `{% source %}` ref-xor-href violations aren't reported
+  // twice (once here at error severity, once again as the generic warning).
+  ownMarkdocValidation: true,
   validate: ({ fields }) => {
     const bodyText = fields["body"];
     return commentaryErrors(typeof bodyText === "string" ? bodyText : "");

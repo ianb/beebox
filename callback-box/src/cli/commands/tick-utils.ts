@@ -32,6 +32,7 @@ import {
   type ExecTiming,
 } from "../../lib/exec-with-timeout.js";
 import { parseCardName } from "../../lib/paths.js";
+import { resolveRefPath } from "../../shared/ref-path.js";
 import { getDefaultTemplate } from "../../schemas/templates.js";
 import { buildScriptEnv } from "../../core/script-env.js";
 
@@ -146,12 +147,23 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
 /**
  * After a script succeeds, create any chained cards declared via <create-after-success>.
  * Skips if the target file already exists (idempotent).
+ *
+ * `chain.path` is card-authored data (a scheduled-script card, which an agent
+ * may write), and this is a *write* path — so it goes through the shared ref
+ * algebra as a `write-target`: leading `/` means the box root, `..` that climbs
+ * out resolves to `null`, and an escaping entry is a logged error that skips
+ * only that chain (matching the per-entry error posture of the rest of the loop).
  */
 export async function handleCreateAfterSuccess(
   { boxRoot, parsed, scriptName }: { boxRoot: string; parsed: ParsedScheduledScript; scriptName: string },
 ): Promise<void> {
   for (const chain of parsed.createAfterSuccess) {
-    const fullPath = path.join(boxRoot, chain.path);
+    const contained = resolveRefPath({ fromPath: undefined, ref: chain.path, kind: "write-target" });
+    if (contained === null || contained === "") {
+      console.error(`  Chain: ${scriptName}: path "${chain.path}" escapes the box — skipping`);
+      continue;
+    }
+    const fullPath = path.join(boxRoot, contained);
 
     // Skip if already exists (idempotent)
     try {
@@ -162,7 +174,7 @@ export async function handleCreateAfterSuccess(
       // access throws when the file doesn't exist — the expected case; proceed to create it
     }
 
-    const basename = path.basename(chain.path);
+    const basename = path.basename(contained);
     const cardName = parseCardName(basename);
     if (!cardName) {
       console.error(`  Chain: cannot parse card name from ${chain.path}`);

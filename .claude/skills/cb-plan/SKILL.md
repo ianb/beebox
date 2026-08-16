@@ -18,6 +18,21 @@ serves both modes:
   a sibling `<plan>.review.md` using the failure-modes + citation
   pattern.
 
+**Write in Simplified Technical English** (ASD-STE100, in spirit): short
+sentences, active voice, one idea per sentence, consistent terminology, no
+ambiguity. A plan is read cold, months later, by whoever picks up the work —
+write for fast, unambiguous parsing over style.
+
+**For user-facing functionality, frame the goal as a Job To Be Done** before the
+means. Use a job story: *"When [situation], I want to [motivation], so I can
+[outcome]."* The point is not the syntax — it is to **situate the job in the real,
+concrete situations the user is in**: their intention in that moment, where their
+attention is, what capacity they have, and how the job fits into the interaction.
+This often needs several situations, not one. Prefer concrete but mundane examples;
+avoid stale clichés like booking a flight or a restaurant reservation. Skip it for
+bugs, refactors, and "work robustly" jobs where JTBD is the wrong lens; don't force
+it.
+
 ## What a plan is
 
 A plan is a complete unit of work — designed end-to-end before
@@ -84,6 +99,20 @@ verbatim. Every section is mandatory; if a section is genuinely empty
 Title and a 1-2 sentence statement of what this plan is and why. Don't
 recap the conversation; state the plan's purpose as if the reader has
 no context.
+
+**Frontmatter.** Start every plan with the schema in `docs/plans/README.md`:
+title, `status: draft`, the current bare `workstream:` name (or `unattached`
+from main), and an `issues:` list. Never use the backfill-only `unknown`
+sentinel for a new plan.
+
+**Issues addressed.** Populate the frontmatter `issues:` list with the
+`issues/<category>/<file>.md` item(s) this plan
+resolves — and any **related or duplicate** issues you turned up (grep the queue
+by slug/keyword/symptom before planning; a fix often closes more than the one you
+started from, and a duplicate left open is wasted future work). This list is
+load-bearing: `/finish` reads it to know which issues to reconcile/close, so an
+issue left off here is an issue that gets forgotten. Say "none" if the work isn't
+tied to a filed issue.
 
 ### Stated preferences this plan trades against
 
@@ -166,6 +195,24 @@ For each track:
   a whole ships when all chunks complete. The chunk should have **no
   open questions inside it** — open questions at the first-chunk level
   mean you're not done designing yet.
+
+### Could this be simpler?
+
+The mandatory complexity challenge. With the tracks sketched, state the
+**simplest version that could plausibly work** — a cruder, smaller, or more
+partial approach, even one you don't intend to ship — then say, concretely, what
+the plan's fuller approach buys over it, traced to a stated preference. "The
+simple version fails on `<specific case>`, per `<principle>`" — never "the simple
+version isn't as clean."
+
+If you can't name what the extra complexity buys, that IS the finding: shrink the
+plan toward the simple version. A plan that never considered a smaller shape
+hasn't earned its size — this section is a gate (like NOT-in-scope) that replaces
+trusting the author to have asked. Watch for the usual over-builds: a new
+abstraction where a caller arg would do, a channel/daemon where a one-shot would
+do, defense against a failure that can't happen (`stop-over-engineering`), a
+generalization with one caller. When reviewing: a missing or hand-wavy version of
+this section is itself a finding.
 
 ### Subplans (when a sub-question needs its own design step)
 
@@ -295,9 +342,8 @@ How the completed plan actually goes out as one unit:
 - Knowledge-audit entries (see the Knowledge audits section above) —
   what lands with the plan vs deferred.
 - Migration approach if the plan changes existing data shape (hand-done
-  by agent, scripted, atomic vs gradual). Note: even a "gradual"
-  migration is part of the plan's completion — partial migration that
-  expects to stop midway is a subplan, not a phase.
+  by agent, scripted, atomic vs gradual). A migration that expects to
+  stop midway is a subplan, not a phase (see "Where the work happens").
 
 ## The discipline rules
 
@@ -357,6 +403,7 @@ Structure:
 ## What already exists
 ## Prior art (external) — verified
 ## Stated preferences this plan trades against
+## Could this be simpler? (verified)
 ## Failure modes
 ## Agent-flow / user-flow edge cases
 ## Findings
@@ -429,8 +476,8 @@ thinking one of them, you're hollowing out the plan, not saving time:
   obvious design has obvious failure modes; surface them anyway.
 - **Shipping a chunk and stopping.** Committing chunks during
   implementation is fine; merging a partial plan to main because "the
-  first part feels done" defeats the no-partial-ship principle. The
-  plan completes before any of it ships.
+  first part feels done" is the violation (see "Where the work
+  happens").
 - **Skipping the Knowledge audits section because no tests are
   written yet.** The section asks "*should* audits land," not "*do*
   they exist." A new agent-facing concept without a single audit is a

@@ -14,7 +14,7 @@
  *   multipart audio upload. tRPC doesn't carry `multipart/form-data` bodies.
  *
  * Already-tRPC, kept as thin wrappers (NOT REST — no fetch(), no HTTP route):
- * `getChatStatus`, `getDefaultChatSession`, `setChatModel`, `getChatFeatures`,
+ * `getChatStatus`, `setChatModel`, `getChatFeatures`,
  * `setChatFeature`, `getChatHistory`, `getChatSessions`, `interruptChat`,
  * `restartChatSubprocess` all call `trpcClient.chat.*` directly. They exist
  * because their callers (xstate actors in `machines/`) invoke them
@@ -30,6 +30,8 @@ import { getApiBase } from "./api-core";
 import { trpcClient } from "./lib/trpc";
 import { mobileAuthHeaders } from "./lib/mobile-auth";
 import type { ActivityKind, CardStateDetails } from "@core/chat/card-activity.js";
+import { chatSendReasonKind, recordChatSendEvent } from "./lib/chat-send-diagnostics";
+import { parseChatAgentEngine, type ChatAgentEngine } from "@shared/chat-models.js";
 
 export interface SessionContentBlock {
   type: "text" | "tool_use" | "tool_result" | "thinking" | "image";
@@ -71,18 +73,25 @@ export interface SessionEntry {
   /**
    * Client-only flag: this entry was queued because the agent was busy
    * and hasn't yet been confirmed by the server as delivered. Rendered
-   * with a "sending" indicator. Cleared when the server history catches
-   * up (see reconcilePending in chatMachine).
+   * with a "sending" indicator. The client entry is replaced when server
+   * history catches up (see reconcilePending in chatMachine).
    */
   pending?: boolean;
+  /**
+   * Client-only UUID baseline captured when an optimistic entry is created.
+   * Reconciliation only treats server entries absent from this baseline as a
+   * possible durable echo, so an older identical message cannot confirm a new
+   * send. Kept on the entry so later snapshots retain the original baseline.
+   */
+  reconcileKnownUuids?: string[];
 }
 
-export async function getChatStatus(params: { sessionId: string | null }): Promise<{ sessionId: string | null; running: boolean; busy: boolean; model: string | null }> {
-  return trpcClient.chat.status.query({ session: params.sessionId ?? undefined });
-}
+/** A client-created entry tracked until authoritative history echoes it. */
+export type PendingSessionEntry = SessionEntry & { reconcileKnownUuids: string[] };
 
-export async function getDefaultChatSession(): Promise<{ sessionId: string | null }> {
-  return trpcClient.chat.defaultSession.query();
+export async function getChatStatus(params: { sessionId: string | null }): Promise<{ sessionId: string | null; running: boolean; busy: boolean; model: string | null; engine: ChatAgentEngine | null }> {
+  const status = await trpcClient.chat.status.query({ session: params.sessionId ?? undefined });
+  return { ...status, engine: parseChatAgentEngine(status.engine) };
 }
 
 export async function setChatModel(params: { sessionId: string; model: string | null }): Promise<{ ok: boolean; model: string | null }> {
@@ -136,13 +145,20 @@ export async function postAudioForHqTranscription(blob: Blob, params: { sessionI
   }
 }
 
-export async function getChatHistory(params: { sessionId: string; tail?: number; offset?: number; limit?: number; minRealUserMessages?: number }): Promise<{ sessionId: string | null; entries: SessionEntry[]; total: number }> {
+/**
+ * How much of a transcript to ask for. Mirrors the server's discriminated
+ * input (`chat-session-procedures.ts`): a tail window for the live chat, a
+ * page window for "load older". There is no unbounded shape — the server
+ * retains only what the slice names.
+ */
+export type HistorySlice =
+  | { mode: "tail"; tail: number; minRealUserMessages?: number }
+  | { mode: "page"; offset: number; limit: number };
+
+export async function getChatHistory(params: { sessionId: string; slice: HistorySlice }): Promise<{ sessionId: string | null; entries: SessionEntry[]; total: number }> {
   return trpcClient.chat.history.query({
     session: params.sessionId,
-    tail: params.tail,
-    offset: params.offset,
-    limit: params.limit,
-    minRealUserMessages: params.minRealUserMessages,
+    slice: params.slice,
   });
 }
 
@@ -152,6 +168,10 @@ export interface ChatSessionInfo {
   label: string;
   lastUsedAt: string;
   isActive: boolean;
+  /** Landmark the session is bound to; "" for root/legacy-unbound. */
+  contextDir: string;
+  /** That landmark's display label ("Root" for the box root). */
+  landmarkLabel: string;
 }
 
 export async function getChatSessions(): Promise<{ sessions: ChatSessionInfo[] }> {
@@ -224,7 +244,10 @@ export async function startChatTurn(params: {
   const { session, message, images, contextDir, seedFeatures, openCard, cardActivity, cardState } = params;
   const messageId = params.messageId ?? `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+  let attemptNumber = 0;
   const attempt = async (): Promise<Response> => {
+    attemptNumber++;
+    recordChatSendEvent(messageId, { event: "post-issued", detail: { attempt: attemptNumber } });
     const response = await fetch(`${getApiBase()}/chat/send`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...mobileAuthHeaders() },
@@ -240,6 +263,7 @@ export async function startChatTurn(params: {
         ...(cardState && Object.keys(cardState).length > 0 ? { cardState } : {}),
       }),
     });
+    recordChatSendEvent(messageId, { event: "post-http-response", detail: { attempt: attemptNumber, status: response.status } });
 
     if (!response.ok) {
       const error = await response
@@ -258,16 +282,20 @@ export async function startChatTurn(params: {
     // Retry once on network errors (not HTTP errors — those already threw above).
     // fetch() throws TypeError on network failure.
     if (err instanceof TypeError) {
+      recordChatSendEvent(messageId, { event: "post-retry-scheduled", detail: { reasonKind: "network", delayMs: 2000 } });
       console.warn("[chat] Send failed with network error, retrying...", err.message);
       await new Promise((r) => setTimeout(r, 2000));
       response = await attempt();
     } else {
+      const reason = err instanceof Error ? err.message : String(err);
+      recordChatSendEvent(messageId, { event: "post-error", detail: { reasonKind: chatSendReasonKind(reason) } });
       throw err instanceof Error ? err : new RequestError(String(err));
     }
   }
 
   const parsed = chatTurnStartSchema.safeParse(await response.json());
   if (!parsed.success) {
+    recordChatSendEvent(messageId, { event: "post-error", detail: { reasonKind: "malformed-response" } });
     const detail = `Chat send returned a malformed response: ${parsed.error.message}`;
     throw new RequestError(detail);
   }

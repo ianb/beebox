@@ -1,3 +1,9 @@
+---
+title: "Markdown link validation — turn it on, make it correct, close the commit-time hole"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Markdown link validation — turn it on, make it correct, close the commit-time hole
 
 The box's broken-internal-link rule (CB002) has never run: it's disabled in

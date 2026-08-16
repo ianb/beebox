@@ -7,6 +7,7 @@
 import { Link } from "@tanstack/react-router";
 import { cardTypeFromName } from "@shared/card-name";
 import { href } from "../../../lib/routing";
+import { displayName } from "../../../lib/display-name";
 import type { NavigateHint, ViewTarget } from "../../../lib/view-url";
 import { FileView } from "../../../components/FileView";
 import { useCardViewBinding } from "../../../lib/view-bindings";
@@ -21,13 +22,13 @@ interface BrowseDetailPanelProps {
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
   /** URL query params, forwarded to the renderer (view-card runtime overrides). */
   params?: Record<string, string>;
+  /** Renderer override from the URL's `?view=`. */
+  rendererName?: string | null;
+  /** Renderer-toggle choice, written back to the URL by the page. */
+  onSelectRenderer: (name: string) => void;
   selectedCard: { relativePath: string } | null;
   selectedFilePath: string;
   selectedRawFile: string | null;
-}
-
-function displayName(path: string): string {
-  return path.split("/").pop() ?? path;
 }
 
 /** Card type from a card path (nominal or positional naming). */
@@ -42,7 +43,9 @@ export function BrowseDetailPanel({
   onBack,
   onDelete,
   onNavigate,
+  onSelectRenderer,
   params,
+  rendererName,
   selectedCard,
   selectedFilePath,
   selectedRawFile,
@@ -102,7 +105,15 @@ export function BrowseDetailPanel({
             ) : null}
           </div>
         </div>
-        <FileView path={selectedFilePath} mode="companion" onNavigate={onNavigate} params={params} />
+        <FileView
+          path={selectedFilePath}
+          mode="companion"
+          onNavigate={onNavigate}
+          onSelectRenderer={onSelectRenderer}
+          params={params}
+          rendererName={rendererName}
+          onClose={onBack}
+        />
       </div>
     </div>
   );

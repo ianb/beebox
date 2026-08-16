@@ -1,5 +1,6 @@
 ---
 title: "Soft-launch posture: decisions made, gates remaining"
+workstream: open-source-readiness
 area: docs
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder
@@ -49,8 +50,8 @@ to people; close when the soft launch happens. Builds on
   section (resolves
   [release-cloud-provider-honesty](../closed/decisions/2026-07-08-release-cloud-provider-honesty.md)).
 - **Auth**: local password stays the default;
-  [invite links](../features/2026-07-20-invite-links.md) and
-  [web password change](../features/2026-07-20-web-password-change.md) are
+  [invite links](../closed/features/2026-07-20-invite-links.md) and
+  [web password change](../closed/features/2026-07-20-web-password-change.md) are
   wanted; GitHub OAuth rejected (first members are developers, their
   collaborators aren't); Tailscale identity rejected (footgun-prone); Google
   OAuth stays the documented optional extra.
@@ -104,7 +105,7 @@ to people; close when the soft launch happens. Builds on
    ([dev-router-lan-exposure](../closed/bugs/2026-07-21-dev-router-lan-exposure.md),
    HIGH — a regression from this session's own dev-router fix; resolution
    decided (dev-never-open), implementation pending).
-2. **[boxes-share-one-origin](2026-07-19-boxes-share-one-origin.md)** —
+2. **[boxes-share-one-origin](../closed/decisions/2026-07-19-boxes-share-one-origin.md)** —
    either fix or stop claiming isolation in `auth.ts`/docs. Honest-docs is
    the acceptable launch answer; the fix can follow.
 3. **README front door** (the release plan's Track E; item 11 in
@@ -112,11 +113,11 @@ to people; close when the soft launch happens. Builds on
    what-is-this / should-you-use-it, the subscription requirement stated
    plainly, what-leaves-your-machine, contribution stance.
 4. **SECURITY.md**, produced as the first run of the
-   [agent-maintained security report](../features/2026-07-20-agent-maintained-security-report.md)
+   [agent-maintained security report](../closed/features/2026-07-20-agent-maintained-security-report.md)
    (seed: [todo-security.md](../../callback-box/docs/todo-security.md)).
 5. **Issues scrub** — done except one open question: whether "the ledger
    box" in
-   [stale-image-refs-after-renames](../bugs/2026-05-14-stale-image-refs-after-renames.md)
+   [stale-image-refs-after-renames](../closed/bugs/2026-05-14-stale-image-refs-after-renames.md)
    is a real box or the example slug (boxholder to confirm).
 6. **Blessed-path bug review** (full ranking 2026-07-20; "high priority
    bugs 100% should be addressed or at least reviewed" — boxholder).
@@ -126,8 +127,8 @@ to people; close when the soft launch happens. Builds on
    [image-orientation-exif-boundaries](../closed/bugs/2026-07-17-image-orientation-exif-boundaries.md),
    and the two landed-but-unverified mobile-web fixes awaiting a real
    phone
-   ([landmark-menu-overflows-mobile](../bugs/2026-07-19-landmark-menu-overflows-mobile.md),
-   [mobile-composer-grows-on-scroll](../bugs/2026-07-19-mobile-composer-grows-on-scroll.md)).
+   ([landmark-menu-overflows-mobile](../closed/bugs/2026-07-19-landmark-menu-overflows-mobile.md),
+   [mobile-composer-grows-on-scroll](../closed/bugs/2026-07-19-mobile-composer-grows-on-scroll.md)).
    Conditional:
    [ios-pairing-flow-robustness](../bugs/2026-07-17-ios-pairing-flow-robustness.md)
    escalates to a gate if the iOS app ships with the release (external-URL
@@ -139,7 +140,7 @@ to people; close when the soft launch happens. Builds on
    (delete is the ask) lands pre-launch; the
    [day-to-day usage docs](../docs-and-chores/2026-07-20-day-to-day-usage-docs.md)
    are the docs half of the same gap.
-8. **[Discussion channel](2026-07-21-discussion-channel.md)** — boxholder
+8. **[Discussion channel](../closed/decisions/2026-07-21-discussion-channel.md)** — boxholder
    wants **live** discussion (not async), disliking Discord; decision
    deferred. Field is Zulip (lead) vs Matrix. Cheap to stand up once picked.
 
@@ -161,9 +162,9 @@ instance).
 
 Filed — features:
 [inline-bug-submission](../features/2026-07-20-inline-bug-submission.md),
-[agent-maintained-security-report](../features/2026-07-20-agent-maintained-security-report.md),
-[web-password-change](../features/2026-07-20-web-password-change.md),
-[invite-links](../features/2026-07-20-invite-links.md),
+[agent-maintained-security-report](../closed/features/2026-07-20-agent-maintained-security-report.md),
+[web-password-change](../closed/features/2026-07-20-web-password-change.md),
+[invite-links](../closed/features/2026-07-20-invite-links.md),
 [github-pages-site](../features/2026-07-20-github-pages-site.md),
 [explicit-api-key-config](../features/2026-07-20-explicit-api-key-config.md),
 [export-md-agent-instructions](../features/2026-07-20-export-md-agent-instructions.md),

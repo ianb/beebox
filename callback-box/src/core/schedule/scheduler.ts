@@ -12,13 +12,16 @@ import { BOX_MARKER } from "../../lib/paths.js";
 import { runTick, type TickResult } from "../../cli/commands/tick.js";
 import { getStatus, isRepo } from "../../lib/git.js";
 import { touchSchedulerHeartbeat } from "./health-box.js";
+import { measureBoxGrowthIfDue } from "../box-growth/health.js";
 import { checkHealthAndAlert } from "./health-alert.js";
+import { checkGoogleAuthAndAlert } from "./google-auth-alert.js";
 import {
   loadBoxesConfig,
   saveBoxesConfig,
   type BoxesConfig,
 } from "../box/boxes-config.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { DEV_BUNDLE_RELOAD_EXIT_CODE, devBundleWasReplaced } from "../../lib/dev-bundle-reload.js";
 
 /** @deprecated — use `BoxesConfig` from `./boxes-config.js`. */
 export type SchedulerConfig = BoxesConfig;
@@ -192,6 +195,39 @@ export async function runScheduler(options?: SchedulerOptions): Promise<never> {
         // daemon is alive (schedule-health reads this file).
         await touchSchedulerHeartbeat(boxPath);
 
+        // Measure growth independently of the tick. A sick or unusually large
+        // box is exactly when this probe may fail, and that must not prevent
+        // scheduled work from getting its turn.
+        try {
+          const growth = await measureBoxGrowthIfDue(boxPath, { now: new Date() });
+          if (growth.status === "failed") {
+            await writeBoxLog(boxPath, {
+              ts: new Date().toISOString(),
+              event: "box-growth-scan",
+              box: boxPath,
+              error: growth.error,
+            });
+          } else if (growth.status === "measured" && growth.notice !== null) {
+            await writeBoxLog(boxPath, {
+              ts: new Date().toISOString(),
+              event: "box-growth-scan",
+              box: boxPath,
+              warning: growth.notice,
+            });
+          }
+        } catch (err) {
+          try {
+            await writeBoxLog(boxPath, {
+              ts: new Date().toISOString(),
+              event: "box-growth-scan",
+              box: boxPath,
+              error: errorMessage(err),
+            });
+          } catch (logError) {
+            console.error(`[${new Date().toISOString()}] ${boxPath}: could not record box growth failure`, logError);
+          }
+        }
+
         const result = await runTick(boxPath, { quiet: true });
         await writeBoxLog(boxPath, {
           ts: new Date().toISOString(),
@@ -232,6 +268,38 @@ export async function runScheduler(options?: SchedulerOptions): Promise<never> {
           error: errorMessage(err),
         });
       }
+
+      // Google grant liveness: refreshes the verdict ~daily and alerts once per
+      // breakage. Separate from the task-health alert above so a failure in
+      // either doesn't suppress the other.
+      try {
+        const alert = await checkGoogleAuthAndAlert(boxPath, { now: new Date() });
+        if (alert) {
+          await writeBoxLog(boxPath, {
+            ts: new Date().toISOString(),
+            event: "google-auth-alert",
+            box: boxPath,
+            since: alert.alertedForSince,
+            delivered: alert.delivered,
+          });
+        }
+      } catch (err) {
+        await writeBoxLog(boxPath, {
+          ts: new Date().toISOString(),
+          event: "google-auth-alert",
+          box: boxPath,
+          error: errorMessage(err),
+        });
+      }
+    }
+
+    // The installed launchd service owns replacement. Exit only between full
+    // passes, and nonzero so KeepAlive restarts through bin/cb with a fresh
+    // artifact stamp. A foreground scheduler exits visibly instead of risking
+    // two concurrent daemons by trying to spawn its own successor.
+    if (await devBundleWasReplaced()) {
+      console.log(`[${new Date().toISOString()}] Development bundle changed; restarting scheduler after completed pass.`);
+      process.exit(DEV_BUNDLE_RELOAD_EXIT_CODE);
     }
 
     await new Promise((resolve) => setTimeout(resolve, interval));

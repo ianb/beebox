@@ -355,6 +355,56 @@ export function checkFrontendBuild(deps: Pick<DoctorDeps, "fileExists" | "repoRo
   return fail(name, `${indexHtml} is missing`, "run `pnpm --dir callback-box build:frontend`");
 }
 
+/**
+ * Is main's HEAD actually live on the server?
+ *
+ * A deploy killed outright — OOM, closed terminal — never runs deploy.sh's EXIT
+ * trap, so it emits no "Deploy failed" line and no notification. Main then sits
+ * undeployed with nothing anywhere saying so (observed 2026-08-10; the run died
+ * during dependency reconciliation under memory pressure and was found only
+ * because someone thought to ask).
+ *
+ * `deploy/.last-deployed-sha` is written by deploy.sh only past the healthcheck,
+ * so it means "this shipped and answered", not "we started shipping it". The
+ * marker lives in the MAIN checkout — worktrees each have their own gitignored
+ * (absent) copy — so resolve it through the shared git dir rather than
+ * `repoRoot`, which is whatever tree doctor was invoked from.
+ *
+ * Reports only on drift from `main`. A checkout sitting on a feature branch is
+ * the normal case and says nothing about what's deployed.
+ */
+export async function checkDeployCurrency(deps: Pick<DoctorDeps, "run" | "fileExists">): Promise<CheckResult> {
+  const name = "Deploy currency";
+  const common = await deps.run("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"]);
+  if (!common.spawned || common.stdout.trim() === "") return pass(name, "not a git checkout — skipped");
+  const mainRoot = path.dirname(common.stdout.trim());
+  const marker = path.join(mainRoot, "callback-box", "deploy", "server-ip");
+  // No server-ip means this machine doesn't deploy at all (a fresh clone, a
+  // contributor's checkout). Nothing to be stale about.
+  if (!deps.fileExists(marker)) return pass(name, "this checkout does not deploy — skipped");
+
+  const shaFile = path.join(mainRoot, "callback-box", "deploy", ".last-deployed-sha");
+  if (!deps.fileExists(shaFile)) {
+    return pass(name, "no completed deploy recorded yet (marker added 2026-08-10)");
+  }
+  const [deployed, head] = await Promise.all([
+    deps.run("cat", [shaFile]),
+    deps.run("git", ["rev-parse", "main"]),
+  ]);
+  const deployedSha = deployed.stdout.trim();
+  const headSha = head.stdout.trim();
+  if (deployedSha === "" || headSha === "") return pass(name, "could not resolve both shas — skipped");
+  if (deployedSha === headSha) return pass(name, `main ${headSha.slice(0, 8)} is live`);
+
+  const behind = await deps.run("git", ["rev-list", "--count", `${deployedSha}..main`]);
+  const count = behind.stdout.trim();
+  return fail(
+    name,
+    `main is ${count === "" ? "ahead" : `${count} commit(s) ahead`} of the last completed deploy (${deployedSha.slice(0, 8)})`,
+    "re-run `callback-box/deploy/deploy.sh --ref $(git rev-parse main)` from the main checkout, then check deploy/.last-deploy.log",
+  );
+}
+
 // ─── Runner ───────────────────────────────────────────────────────────────
 
 export async function runChecks(deps: DoctorDeps): Promise<CheckResult[]> {
@@ -367,6 +417,7 @@ export async function runChecks(deps: DoctorDeps): Promise<CheckResult[]> {
       checkGitLfs(deps),
       checkClaudeAuth(deps),
     ]);
+  const deployResult = await checkDeployCurrency(deps);
   return [
     checkNodeVersion(deps),
     pnpmResult,
@@ -377,6 +428,7 @@ export async function runChecks(deps: DoctorDeps): Promise<CheckResult[]> {
     claudeResult,
     checkSdkBinary(deps),
     checkFrontendBuild(deps),
+    deployResult,
   ];
 }
 

@@ -1,7 +1,10 @@
+---
+title: "Native iOS capture mode"
+status: partial
+workstream: unknown
+issues: []
+---
 # Native iOS capture mode
-
-**Status:** partially implemented 2026-07 — implementation and automated/simulator
-verification are complete; real-device acceptance remains the final gate.
 
 This plan adds a native, full-screen capture mode to the iOS companion app. It
 reuses the box's existing capture staging, preparation, delivery, and pending

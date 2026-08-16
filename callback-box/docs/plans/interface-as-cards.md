@@ -1,6 +1,10 @@
+---
+title: "The interface as cards — design"
+status: active
+workstream: unknown
+issues: []
+---
 # The interface as cards — design
-
-**Status:** active — design exploration 2026-07, no implementation yet
 
 Grew out of the "The interface itself as cards" entry, now
 [issues/closed/exploration/2026-05-11-interface-itself-as-cards.md](../../../issues/closed/exploration/2026-05-11-interface-itself-as-cards.md);

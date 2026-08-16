@@ -7,9 +7,13 @@
  * or a 401 (not signed in, auth required). The `open` case is handled here so a
  * signed-out user isn't misread as signed-in; `useCurrentUser` exposes just the
  * signed-in user.
+ *
+ * It runs as a react-query query so the several call sites (`AppNav`,
+ * `InteractiveChat`, …) share one request per page load instead of each
+ * firing its own `fetch` on mount.
  */
 
-import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { withBase } from "../api";
 
 export interface CurrentUser {
@@ -17,6 +21,7 @@ export interface CurrentUser {
   name: string;
   picture?: string;
   isOwner: boolean;
+  hasPassword: boolean;
 }
 
 interface AuthMeResponse {
@@ -24,36 +29,45 @@ interface AuthMeResponse {
   name?: string;
   picture?: string;
   isOwner?: boolean;
+  hasPassword?: boolean;
   open?: boolean;
+}
+
+/**
+ * "Not signed in" is a normal answer here, not a failure: a 401 and
+ * `{ open: true }` both resolve to `null`. A transport failure is logged and
+ * also resolves to null — the app's signed-out rendering is the right
+ * degradation, and rejecting would only make every consumer handle it.
+ */
+async function fetchCurrentUser(): Promise<CurrentUser | null> {
+  let data: AuthMeResponse | null;
+  try {
+    const resp = await fetch(withBase("/auth/me"));
+    if (!resp.ok) return null;
+    data = await resp.json();
+  } catch (e) {
+    console.warn("[auth] /auth/me request failed; rendering as signed out", e);
+    return null;
+  }
+  // `{ open: true }` (open-access server) and a 401 both mean "no signed-in
+  // user". Only a real user populates the hook.
+  if (!data || data.open || !data.email) return null;
+  return {
+    email: data.email,
+    name: data.name ?? data.email,
+    picture: data.picture,
+    isOwner: data.isOwner ?? false,
+    hasPassword: data.hasPassword ?? false,
+  };
 }
 
 /** The signed-in user, or `null` when signed out (including open mode). */
 export function useCurrentUser(): CurrentUser | null {
-  const [user, setUser] = useState<CurrentUser | null>(null);
+  const query = useCurrentUserQuery();
+  return query.data ?? null;
+}
 
-  useEffect(() => {
-    fetch(withBase("/auth/me"))
-      .then((r) => {
-        if (!r.ok) return null;
-        return r.json();
-      })
-      .then((data: AuthMeResponse | null) => {
-        // `{ open: true }` (open-access server) and a 401 both mean "no
-        // signed-in user" — leave `user` null. Only a real user populates it.
-        if (data?.open) return;
-        if (data?.email) {
-          setUser({
-            email: data.email,
-            name: data.name ?? data.email,
-            picture: data.picture,
-            isOwner: data.isOwner ?? false,
-          });
-        }
-      })
-      .catch(() => {
-        // Auth not enabled or network error — leave as signed-out.
-      });
-  }, []);
-
-  return user;
+/** Full query state for account settings that must distinguish loading from signed out. */
+export function useCurrentUserQuery() {
+  return useQuery({ queryKey: ["auth", "me"], queryFn: fetchCurrentUser });
 }

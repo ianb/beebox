@@ -1,3 +1,9 @@
+---
+title: "`.webpage.card` + commentary-as-attachment"
+status: implemented
+workstream: unknown
+issues: []
+---
 # `.webpage.card` + commentary-as-attachment
 
 **Status: shipped to main 2026-06-16 — this doc is the frozen record.** All six

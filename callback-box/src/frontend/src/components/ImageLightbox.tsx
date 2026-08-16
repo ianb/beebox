@@ -14,6 +14,7 @@ import { createPortal } from "react-dom";
 import { CloseButton } from "./ui/CloseButton";
 import { ExternalIconLink } from "./ui/ExternalIconLink";
 import { useLightboxGestures } from "../hooks/use-lightbox-gestures.js";
+import { SWIPE_GUTTER_PX } from "../lib/lightbox-gesture-math.js";
 
 export interface LightboxImage {
   src: string;
@@ -37,11 +38,16 @@ export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLi
   const current = images.at(safeIndex);
   const hasMany = total > 1;
 
-  // Gesture layer (mobile): double-tap zoom + pan, pinch, swipe-to-dismiss.
-  // Must run before the `!current` early return so hook order stays stable.
-  const { rootRef, figureRef, wrapperRef, imgRef } = useLightboxGestures({
-    src: current?.src ?? "",
+  const step = (by: number) => (total === 0 ? 0 : ((safeIndex + by) % total + total) % total);
+
+  // Gesture layer: double-tap zoom + pan, pinch, swipe-to-dismiss, and
+  // horizontal swipe for prev/next. Must run before the `!current` early
+  // return so hook order stays stable.
+  const { rootRef, figureRef, wrapperRef, imgRef, peersRef } = useLightboxGestures({
+    imageKey: `${safeIndex}:${current?.src ?? ""}`,
     onClose,
+    canSwipe: hasMany,
+    onNavigate: (by) => onIndexChange(step(by)),
   });
 
   useEffect(() => {
@@ -67,9 +73,9 @@ export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLi
 
   if (!current) return null;
 
-  const captionText = current.caption && current.caption.trim() !== "" ? current.caption : null;
-  const goPrev = () => onIndexChange((safeIndex - 1 + total) % total);
-  const goNext = () => onIndexChange((safeIndex + 1) % total);
+  const captionText = captionOf(current);
+  const goPrev = () => onIndexChange(step(-1));
+  const goNext = () => onIndexChange(step(1));
 
   return createPortal(
     <div
@@ -91,6 +97,21 @@ export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLi
       />
       {hasMany ? (
         <NavButton direction="prev" onClick={goPrev} />
+      ) : null}
+      {/* The swipe peers: the neighbouring images parked one viewport to
+          either side, so a horizontal drag reveals a real image rather than
+          bare backdrop. The gesture layer translates THIS element by the same
+          offset it gives the figure, so the three move as one strip. Rendered
+          for the whole time the lightbox is open (not just mid-swipe) so the
+          neighbours are already decoded when the drag starts, and so the drag
+          needs no React state — the offset is written straight to the DOM.
+          aria-hidden: they are decorative duplicates of images the arrows and
+          arrow keys already reach. */}
+      {hasMany ? (
+        <div ref={peersRef} aria-hidden="true" className="pointer-events-none absolute inset-0">
+          <SwipePeer image={images.at(step(-1))} side="prev" />
+          <SwipePeer image={images.at(step(1))} side="next" />
+        </div>
       ) : null}
       {/* Stacking: the figure is z-auto (NOT z-10 — that would open a stacking
           context that traps the controls' z-30 inside it, letting the sibling
@@ -153,6 +174,47 @@ export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLi
       ) : null}
     </div>,
     document.body
+  );
+}
+
+function captionOf(image: LightboxImage): string | null {
+  return image.caption && image.caption.trim() !== "" ? image.caption : null;
+}
+
+/**
+ * One neighbouring image, parked a viewport plus {@link SWIPE_GUTTER_PX} to
+ * the left or right of centre — the exact distance a committed swipe travels,
+ * so the peer lands dead centre and the index change swaps identical pixels
+ * instead of jumping.
+ *
+ * It mirrors the real figure's whole layout, not just the image: same height
+ * cap, and the caption rendered below in the same column. The figure centres
+ * image-plus-caption as a unit, which pushes a captioned image ABOVE the
+ * viewport's middle — a peer that centred only its image would sit lower and
+ * jog vertically the moment the swap happened.
+ */
+function SwipePeer({ image, side }: { image: LightboxImage | undefined; side: "prev" | "next" }) {
+  if (!image) return null;
+  const captionText = captionOf(image);
+  const sign = side === "prev" ? "-" : "";
+  return (
+    <div
+      className="absolute inset-0 flex items-center justify-center"
+      style={{ transform: `translateX(calc(${sign}100% ${side === "prev" ? "-" : "+"} ${SWIPE_GUTTER_PX}px))` }}
+    >
+      <div className="max-w-[95vw] max-h-[95vh] flex flex-col items-center">
+        <img
+          src={image.src}
+          alt=""
+          className={`max-w-full rounded shadow-lg ${captionText ? "max-h-[80vh]" : "max-h-[92vh]"}`}
+        />
+        {captionText ? (
+          <div className="mt-3 max-w-[80ch] text-sm text-white/90 text-center px-4 leading-relaxed">
+            {captionText}
+          </div>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
