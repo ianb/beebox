@@ -34,7 +34,13 @@ function expandInline(label: string, children: RenderableTreeNode[]): Renderable
 }
 
 function expandBlock(label: string, children: RenderableTreeNode[]): RenderableTreeNode {
-  return new Tag("details", { class: "fx" }, [new Tag("summary", {}, [label]), ...children]);
+  // Still a native <details> (free toggle, no script), but the chrome is
+  // erased: the summary reads exactly like an inline trigger sitting in
+  // prose, and the revealed children live in a washed panel (.fx-c).
+  return new Tag("details", { class: "fx" }, [
+    new Tag("summary", {}, [label]),
+    new Tag("div", { class: "fx-c" }, children),
+  ]);
 }
 
 /**
@@ -79,6 +85,7 @@ export const FISHEYE_CSS = `
   cursor: pointer; border-bottom: 1px dotted #8a8a82;
 }
 .fx-t::after { content: "\\2009\\2026"; color: #8a8a82; }
+.fx-t:hover, details.fx > summary:hover { background: #f2f2ee; border-radius: 2px; }
 .fx-t[aria-expanded="true"] { border-bottom-style: solid; }
 .fx-t[aria-expanded="true"]::after { content: ""; }
 .fx-b {
@@ -96,9 +103,22 @@ export const FISHEYE_CSS = `
 }
 .fx-b .fx-b { background: #e9e9e1; }
 .fx-b .fx-b .fx-b { background: #dfdfd6; }
-details.fx { margin: 0.9rem 0 0.9rem 0.1rem; border-left: 2px solid #d8d8d2; padding-left: 0.9rem; }
-details.fx > summary { cursor: pointer; color: #55554f; }
-details.fx[open] > summary { color: #17171a; }
+/* Block folds share the inline trigger's affordance — one vocabulary for
+   "this goes deeper" whatever the scale of the reveal. No marker, no border,
+   no box until opened; then a quiet washed panel. */
+details.fx { margin: 0.9rem 0; }
+details.fx > summary {
+  display: inline; cursor: pointer; list-style: none;
+  border-bottom: 1px dotted #8a8a82;
+}
+details.fx > summary::-webkit-details-marker { display: none; }
+details.fx > summary::after { content: "\\2009\\2026"; color: #8a8a82; }
+details.fx[open] > summary { border-bottom-style: solid; }
+details.fx[open] > summary::after { content: ""; }
+.fx-c { background: #f2f2ee; border-radius: 4px; padding: 0.15rem 0.8rem; margin-top: 0.5rem; }
+.fx-c > p:first-child { margin-top: 0.5rem; }
+.fx-c .fx-c { background: #e9e9e1; }
+.fx-c .fx-c .fx-c { background: #dfdfd6; }
 figure.nugget { margin: 0.9rem 0; padding: 0.8rem 1rem; background: #f7f7f3; border-radius: 4px; }
 figure.nugget > :first-child { margin-top: 0; }
 figure.nugget figcaption { font-size: 0.8rem; color: #55554f; margin-top: 0.5rem; }

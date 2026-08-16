@@ -34,7 +34,7 @@ test("expand inline: button trigger + hidden=until-found span, inside the paragr
 
 test("expand block: native details/summary, no script dependency", () => {
   const { html } = renderBody("{% expand label=\"the fold\" %}\nInside.\n{% /expand %}", RENDER);
-  assert.match(html, /<details class="fx"><summary>the fold<\/summary><p>Inside.<\/p><\/details>/);
+  assert.match(html, /<details class="fx"><summary>the fold<\/summary><div class="fx-c"><p>Inside.<\/p><\/div><\/details>/);
 });
 
 test("expand nests: inline within inline keeps both collapsed layers in the DOM", () => {

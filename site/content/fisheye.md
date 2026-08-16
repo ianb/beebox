@@ -25,12 +25,13 @@ supported, and the plain-markdown twin of this page carries everything flat.
 
 ## Block depth
 
-A paragraph can also end at a threshold, with the deeper material behind a
-plain fold rather than spliced into a sentence.
+A paragraph can also end at a threshold, with the deeper material unfolding
+beneath it rather than spliced into a sentence. The trigger reads the same
+either way — only the scale of the reveal differs.
 
 {% expand label="What the fold holds" %}
-Block depth uses the browser's own disclosure element: no script, indented
-one step behind a hairline, and it nests.
+Block depth still uses the browser's own disclosure element — no script —
+but wears the same face as the inline trigger, and it nests.
 
 {% expand label="A second fold inside the first" %}
 This is where a longer aside would live — a design rationale, a history, an
@@ -49,10 +50,10 @@ provenance attached, never paraphrased by the machine.
 
 ## Questions this page is asking
 
-> **[Scaffold — reaction notes for the boxholder.]** Does the dotted
-> underline read as "this goes deeper" without explanation? Is the wash the
-> right depth cue, or should depth read some other way (indent, rule,
-> typeface)? Is mid-sentence splicing pleasant or disorienting at level
-> three? Should the trigger text stay visible once opened, or be absorbed
-> into the revealed text? Does the block fold's summary line want to read as
-> prose or as apparatus?
+> **[Scaffold — reaction notes for the boxholder.]** Round two: inline and
+> block now share one affordance (dotted underline + ellipsis, hover wash);
+> the reveal's scale is the only difference. Is the unified trigger inviting
+> enough now, or does it need one more notch (a tint, a glyph)? Does the
+> washed panel read lighter than the old bordered fold while staying
+> obvious? Is mid-sentence splicing still right for clause-scale reveals,
+> or should inline triggers also open panels?
