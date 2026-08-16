@@ -85,6 +85,10 @@ there's a diff against `main` → ask review-or-challenge.
    findings to a short phrase when useful. If the human explicitly asked to
    see the independent review itself, provide a concise ranked summary with
    your adjudication; provide verbatim output only when they ask for raw output.
+   **Never editorialize about the review's worth** — no "earned its keep,"
+   "caught real issues," "proved valuable," or any other self-congratulation
+   about having run it. The findings speak for themselves; running the review
+   is baseline process, not an achievement to narrate (boxholder, 2026-08-15).
 9. **Surface failures loudly.** If a run exits non-zero or stalls, say so with
    stderr — a silent reviewer crash reads as "nothing happened" and wastes the
    human's time.
