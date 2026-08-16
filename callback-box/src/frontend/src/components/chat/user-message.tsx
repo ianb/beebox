@@ -165,18 +165,36 @@ export function UserMessage({ entries, debugView, currentUserEmail, currentUserN
   const pendingTitle = isPending ? "Queued — waiting for agent" : undefined;
 
   if (isOtherUser) {
-    // Other user's message: left-aligned with name label
+    // Other user's message: left-aligned with name label. Fix (2026-08,
+    // cross-model review): in a shared session, another user's retranscribed
+    // message must update on THIS viewer's screen too — the overlay isn't
+    // scoped to the sender. Ack badges stay absent here by the existing
+    // deliberate design (this branch never threaded `acks` through); the
+    // audio-overlay cluster still goes on, matching the bubble's own
+    // white-on-`bg-primary` palette (same muted convention as the own-message
+    // bubble's `bg-info`).
     return (
       <div className="pr-12 sm:pr-24 py-1">
         <div className="text-xs text-warm-500 ml-3 sm:ml-6 mb-0.5">{senderName}</div>
-        <div
-          className={"ml-3 sm:ml-6 rounded-r-2xl bg-primary text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] w-fit break-words" + pendingClass}
-          title={pendingTitle}
-        >
-          {entries.map((entry) => (
-            <UserEntryContent key={entry.uuid} entry={entry} debugView={debugView ?? false} />
-          ))}
-          {isPending ? <PendingIndicator /> : null}
+        <div className="relative ml-3 sm:ml-6 w-fit">
+          <span className="absolute -top-1 -left-1 inline-flex items-center gap-0.5">
+            <AudioOverlayBadgeCluster overlay={audioOverlay} originalText={originalDisplayText(firstEntry)} />
+          </span>
+          <div
+            className={"rounded-r-2xl bg-primary text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] w-fit break-words" + pendingClass}
+            title={pendingTitle}
+          >
+            {entries.map((entry) => (
+              <UserEntryContent
+                key={entry.uuid}
+                entry={entry}
+                debugView={debugView ?? false}
+                audioOverlay={audioOverlay}
+                matchesOverlay={entry.uuid === firstEntry.uuid}
+              />
+            ))}
+            {isPending ? <PendingIndicator /> : null}
+          </div>
         </div>
       </div>
     );

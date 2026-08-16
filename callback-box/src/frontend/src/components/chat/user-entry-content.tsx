@@ -134,6 +134,16 @@ export function UserEntryContent({ entry, debugView, audioOverlay, matchesOverla
   );
 }
 
+// Same unwrap `stripSpeechWrappers` does backend-side (`src/cli/lib/session-text.ts`)
+// for a low-confidence-word mark (Track 4, docs/plans/transcript-confidence.md):
+// the popover wants clean human text, not the agent-facing `<unsure>` marker.
+// `stripUserDisplayTags` only strips the `<speech>`/`<typed>` SHELL — an inner
+// mark like `<unsure>` deliberately survives it (see that function's doc) so
+// `UserMessageText` can render it with its dotted-underline styling in the
+// normal bubble path; the popover has no such styling pass, so it unwraps to
+// the bare word instead of leaking the raw tag.
+const UNSURE_MARK_RE = /<\/?unsure\b[^>]*>/g;
+
 /** The entry's original (never-overlaid) text, stripped for the popover's "realtime transcript" body. */
 export function originalDisplayText(entry: SessionEntry): string {
   const fileRefs = entry.content
@@ -142,7 +152,7 @@ export function originalDisplayText(entry: SessionEntry): string {
   const attachedFileIds = new Set(fileRefs.map((f) => f.id));
   return entry.content
     .filter((b) => b.type === "text")
-    .map((b) => stripUserDisplayTags(b.text ?? "", { attachedFileIds }))
+    .map((b) => stripUserDisplayTags(b.text ?? "", { attachedFileIds }).replace(UNSURE_MARK_RE, ""))
     .join("\n")
     .trim();
 }

@@ -80,6 +80,42 @@ result.status
 => audio
 ```
 
+## Registry: production default — a "none" grace is the request's OWN timeoutMs, not a fixed short window
+
+Fix (2026-08): a targeted request fans out to every connected tab, and most
+of them don't hold this exact recording — they answer `none` almost
+instantly. Without a per-request grace, that instant chorus of "none"s used
+to cut the requested wait down to a fixed short grace window (2s), so a
+background-throttled tab that DOES hold the recording could lose even though
+plenty of the caller's requested timeout remained. With no factory-level
+`graceMs` override (the production shape), a "none" arriving well within the
+window still leaves room for a slower correct answer to win.
+
+```ts
+const reg = createLastAudioPending();
+const { requestId, outcome } = reg.create({ timeoutMs: 300, messageId: "msg-slow" });
+reg.reportNone(requestId); // an early "none" from a tab that doesn't hold it
+await new Promise((r) => setTimeout(r, 150)); // 150ms in: past the old fixed grace, still inside this request's own 300ms window
+reg.fulfill(requestId, { audio: Buffer.from("late-but-in-window"), contentType: "audio/wav", recordedAt: null, text: null, messageId: "msg-slow", sessionId: null });
+const result = await outcome;
+print(`status: ${result.status}`);
+print(`audio: ${result.status === "audio" ? result.fulfillment.audio.toString() : "?"}`);
+=>
+status: audio
+audio: late-but-in-window
+```
+
+## Registry: production default — all tabs answering `none` still resolves `none` at the full window's end
+
+```ts
+const reg = createLastAudioPending();
+const { requestId, outcome } = reg.create({ timeoutMs: 60, messageId: "msg-nobody-has-it" });
+reg.reportNone(requestId);
+const result = await outcome;
+result.status
+=> none
+```
+
 ## Registry: a mismatched or missing echoed messageId is ignored, not delivered
 
 Echo-and-verify (Track 1b, load-bearing): a fulfillment whose `messageId`

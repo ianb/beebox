@@ -13,6 +13,7 @@ for badge presence and the text swap.
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { UserMessage } from "../../src/frontend/src/components/chat/user-message.js";
+import { originalDisplayText } from "../../src/frontend/src/components/chat/user-entry-content.js";
 import { buildAudioBadgeSpecs } from "../../src/frontend/src/components/chat/audio-overlay-badge.js";
 import { createAudioOverlayStore } from "../../src/frontend/src/components/chat/audio-overlay-store.js";
 import type { SessionEntry } from "../../src/frontend/src/api.js";
@@ -30,6 +31,24 @@ function voiceEntry(messageId: string, text: string): SessionEntry {
 
 function render(entries: SessionEntry[], audioOverlayStore?: ReturnType<typeof createAudioOverlayStore>): string {
   return renderToStaticMarkup(React.createElement(UserMessage, { entries, audioOverlayStore }));
+}
+
+function otherUserVoiceEntry(messageId: string, text: string): SessionEntry {
+  return {
+    uuid: "sdk-uuid-bob",
+    type: "user",
+    timestamp: "2026-01-01T00:00:00Z",
+    user: "Bob",
+    userEmail: "bob@example.com",
+    content: [{ type: "text", text: `<speech stt="deepgram" message-id="${messageId}">${text}</speech>` }],
+  };
+}
+
+/** Renders as viewed by a DIFFERENT user (Alice) than the message's sender (Bob). */
+function renderAsOtherViewer(entries: SessionEntry[], audioOverlayStore?: ReturnType<typeof createAudioOverlayStore>): string {
+  return renderToStaticMarkup(React.createElement(UserMessage, {
+    entries, audioOverlayStore, currentUserEmail: "alice@example.com", currentUserName: "Alice",
+  }));
 }
 ```
 
@@ -147,4 +166,74 @@ consultedOut.includes("two large legs")
 
 consultedOut.includes('aria-label="The agent analyzed this recording"')
 => true
+```
+
+## Fix (cross-model review): another user's bubble ALSO overlays — not just the sender's own
+
+In a shared session, Bob's retranscribed message must update on a different
+viewer's (Alice's) screen too — the overlay isn't scoped to who's looking.
+
+```ts
+const otherStore = createAudioOverlayStore();
+otherStore.applyRetranscription("msg-bob-1", { newText: "corrected bob text", service: "deepgram-hq", diarized: false });
+const otherOut = renderAsOtherViewer([otherUserVoiceEntry("msg-bob-1", "original bob text")], otherStore);
+otherOut.includes("corrected bob text")
+=> true
+
+otherOut.includes("original bob text")
+=> false
+
+otherOut.includes('aria-label="Retranscribed — deepgram-hq"')
+=> true
+```
+
+## Fix (cross-model review): another user's bubble also shows the consulted badge
+
+```ts
+const otherConsultedStore = createAudioOverlayStore();
+otherConsultedStore.applyConsulted("msg-bob-2");
+const otherConsultedOut = renderAsOtherViewer([otherUserVoiceEntry("msg-bob-2", "bob asked something")], otherConsultedStore);
+otherConsultedOut.includes("bob asked something")
+=> true
+
+otherConsultedOut.includes('aria-label="The agent analyzed this recording"')
+=> true
+```
+
+## Fix (P4): `originalDisplayText` unwraps `<unsure>` marks to plain words
+
+`originalDisplayText` (`user-entry-content.tsx`) feeds the popover's
+"realtime transcript" body — it must read as clean text, not leak the
+agent-facing `<unsure>` tag the normal bubble path styles instead (same
+unwrap `stripSpeechWrappers` does backend-side).
+
+```ts
+const unsureEntry: SessionEntry = {
+  uuid: "sdk-uuid-unsure",
+  type: "user",
+  timestamp: "2026-01-01T00:00:00Z",
+  content: [{ type: "text", text: '<speech stt="deepgram" message-id="msg-5">they\'re all <unsure>cloud</unsure> code in different ways</speech>' }],
+};
+originalDisplayText(unsureEntry)
+=> they're all cloud code in different ways
+```
+
+The popover content itself renders the clean, unwrapped text — never the raw tag:
+
+```ts continue
+const unsureSpecs = buildAudioBadgeSpecs(
+  { retranscription: { newText: "two large eggs", service: "deepgram-hq", diarized: false } },
+  originalDisplayText(unsureEntry),
+);
+const unsurePopover = renderToStaticMarkup(unsureSpecs[0].detail);
+// React-escapes the apostrophe in static markup, so match the unwrapped
+// word's surroundings rather than the raw contraction.
+unsurePopover.includes("all cloud code in different ways")
+=> true
+
+unsurePopover.includes("<unsure")
+=> false
+
+unsurePopover.includes("</unsure>")
+=> false
 ```

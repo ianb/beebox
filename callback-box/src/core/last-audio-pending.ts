@@ -81,7 +81,11 @@ export interface LastAudioPending {
 interface CreateLastAudioPendingOptions {
   /**
    * After a "none" answer, how long to keep waiting for an audio answer from
-   * another tab before resolving `none`.
+   * another tab before resolving `none`. When omitted (the production
+   * shape — `chat-last-audio-routes.ts` passes no options), each request
+   * defaults its OWN grace window to its own `timeoutMs`, not a small fixed
+   * window — see the fix note on `create()` below. Tests pass a short fixed
+   * value here for a fast, deterministic grace window.
    */
   graceMs?: number;
 }
@@ -112,7 +116,21 @@ export function createLastAudioPending(options?: CreateLastAudioPendingOptions):
   const targets = new Map<string, string>();
   return {
     create({ timeoutMs, messageId }) {
-      const { requestId: id, outcome } = inner.create({ timeoutMs });
+      // Fix (2026-08): targeted requests fan out to every connected tab, and
+      // most of them don't hold this exact recording — they answer `none`
+      // almost instantly. With a fixed short default grace (2s), that
+      // instant chorus of "none"s used to cut the CLI's requested
+      // `--timeout <N>` down to ~2s, well before a background-throttled tab
+      // that DOES hold the recording could answer. Defaulting each request's
+      // grace to its OWN timeoutMs (only when the caller hasn't set a
+      // factory-level override, e.g. for fast tests) means "no-audio" is
+      // only returned once the full requested window has actually elapsed —
+      // scoped to last-audio only; `createPendingBrowserRequests`'s own
+      // default (used by the screenshot flow) is untouched.
+      const { requestId: id, outcome } = inner.create({
+        timeoutMs,
+        graceMs: options?.graceMs ?? timeoutMs,
+      });
       targets.set(id, messageId);
       return {
         requestId: id,

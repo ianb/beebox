@@ -66,6 +66,38 @@ resolveEntryMessageId(userEntry("uuid-typed-1", "<typed>hello</typed>"))
 => uuid-typed-1
 ```
 
+## A `message-id="…"` string TYPED into the message body does NOT resolve (fix, cross-model review)
+
+The match is anchored to the `<speech>` wrapper's own opening tag — a user
+who types the literal text `message-id="msg-real"` into their message (inside
+a `<typed>` wrapper, or even inside a `<speech>` wrapper's BODY, after the
+opening tag) must not bind that bubble to another message's overlay.
+
+```ts
+const typedLookalike = userEntry("uuid-typed-2", '<typed>my message-id="msg-real" is fake</typed>');
+resolveEntryMessageId(typedLookalike)
+=> uuid-typed-2
+```
+
+```ts continue
+const bodyLookalike = userEntry("sdk-uuid-3", '<speech stt="deepgram">quote: message-id="msg-real"</speech>');
+resolveEntryMessageId(bodyLookalike)
+=> sdk-uuid-3
+```
+
+The genuine wrapper attribute — even with other attributes before it, and
+even when the body separately contains the same literal substring — still
+resolves correctly:
+
+```ts continue
+const genuineWithLookalikeBody = userEntry(
+  "sdk-uuid-4",
+  '<speech stt="deepgram" message-id="msg-real" diarized="0">quote: message-id="msg-fake-in-body"</speech>',
+);
+resolveEntryMessageId(genuineWithLookalikeBody)
+=> msg-real
+```
+
 ## Overlay store: a later retranscription overwrites the earlier one
 
 ```ts
