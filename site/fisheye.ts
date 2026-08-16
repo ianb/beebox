@@ -26,9 +26,10 @@ import type { Config, Node, RenderableTreeNode } from "@markdoc/markdoc";
 const { Tag } = Markdoc;
 
 function expandInline(label: string, children: RenderableTreeNode[]): RenderableTreeNode {
+  // The leading space keeps revealed text from running into the trigger word.
   return new Tag("span", { class: "fx" }, [
     new Tag("button", { type: "button", class: "fx-t", "aria-expanded": "false" }, [label]),
-    new Tag("span", { class: "fx-b", hidden: "until-found" }, children),
+    new Tag("span", { class: "fx-b", hidden: "until-found" }, [" ", ...children]),
   ]);
 }
 
@@ -83,6 +84,15 @@ export const FISHEYE_CSS = `
 .fx-b {
   background: #f2f2ee; border-radius: 2px; padding: 0 0.15em;
   -webkit-box-decoration-break: clone; box-decoration-break: clone;
+}
+/* hidden=until-found hides via content-visibility, which does NOT apply to
+   non-atomic inlines — without this rule the "collapsed" text renders fully
+   visible. Collapse for real: an atomic zero-size inline-block, explicit
+   content-visibility for the until-found search/beforematch path, and
+   width/overflow as the fallback where content-visibility is unsupported. */
+.fx-b[hidden="until-found"] {
+  display: inline-block; content-visibility: hidden;
+  width: 0; height: 0; padding: 0; overflow: clip; vertical-align: baseline;
 }
 .fx-b .fx-b { background: #e9e9e1; }
 .fx-b .fx-b .fx-b { background: #dfdfd6; }

@@ -29,7 +29,7 @@ test("expand inline: button trigger + hidden=until-found span, inside the paragr
   const { html } = renderBody("Before {% expand label=\"more\" %}hidden text{% /expand %} after.", RENDER);
   assert.match(html, /<p>Before <span class="fx">/);
   assert.match(html, /<button type="button" class="fx-t" aria-expanded="false">more<\/button>/);
-  assert.match(html, /<span class="fx-b" hidden="until-found">hidden text<\/span>/);
+  assert.match(html, /<span class="fx-b" hidden="until-found"> hidden text<\/span>/);
 });
 
 test("expand block: native details/summary, no script dependency", () => {
