@@ -12,11 +12,14 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { baseFromBranch, normalizeBase } from "./links.js";
+import { isRenderable, loadNuggets, renderNugget, type Nugget } from "./nuggets.js";
 import { parseSource, renderBody, pageShell, type PageFrontmatter } from "./render.js";
 import { writeManifest } from "./sources.js";
 
 const SITE_DIR = import.meta.dirname;
 const CONTENT_DIR = path.join(SITE_DIR, "content");
+const NUGGETS_DIR = path.join(SITE_DIR, "nuggets");
+const REPO_ROOT = path.resolve(SITE_DIR, "..");
 const DIST_DIR = path.join(SITE_DIR, "dist");
 
 class BuildError extends Error {
@@ -98,6 +101,30 @@ function renderLlmsTxt(params: { home: PageFrontmatter; pages: BuiltPage[]; base
   return `${lines.join("\n")}\n`;
 }
 
+// Nugget enforcement at build: `proposed` nuggets are refused (never rendered,
+// always listed by slug — the AI-words rule is code, not convention), and every
+// publishable one is rendered here so a nugget that cannot render fails the
+// build now rather than on the page that later embeds it. Span drift is not a
+// failure: it renders with a stale marker and is counted in the summary.
+function checkNuggets(nuggets: readonly Nugget[], base: string): string[] {
+  const refused = nuggets.filter((n) => !isRenderable(n));
+  const publishable = nuggets.filter((n) => isRenderable(n));
+  const stale: string[] = [];
+  for (const nugget of publishable) {
+    renderNugget(nugget, { base, pageSitePath: "index.html" });
+    if (nugget.spanState !== "current") stale.push(`${nugget.slug} (${nugget.spanState} in ${nugget.source})`);
+  }
+  const lines: string[] = [];
+  if (nuggets.length > 0) {
+    lines.push(`site: ${publishable.length} nugget(s) publishable, ${refused.length} refused, ${stale.length} stale`);
+  }
+  if (refused.length > 0) {
+    lines.push(`site: refused (status proposed, never published): ${refused.map((n) => n.slug).join(", ")}`);
+  }
+  for (const line of stale) lines.push(`site: nugget span drifted — ${line}`);
+  return lines;
+}
+
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
   const base = resolveBase(args);
@@ -143,6 +170,8 @@ async function main(): Promise<void> {
     throw new BuildError(`broken internal link(s):\n  ${broken.join("\n  ")}`);
   }
 
+  const nuggetSummary = checkNuggets(await loadNuggets({ nuggetsDir: NUGGETS_DIR, repoRoot: REPO_ROOT }), base);
+
   const home = built.find((p) => p.stem === "index");
   if (!home) throw new BuildError("no index.md — the site needs a home page");
   await fs.writeFile(
@@ -156,7 +185,9 @@ async function main(): Promise<void> {
   // build never leaves a manifest that could mask staleness.
   await writeManifest(SITE_DIR, DIST_DIR);
 
-  process.stdout.write(`site: built ${built.length} page(s) → dist/ (base ${base})\n`);
+  process.stdout.write(
+    [`site: built ${built.length} page(s) → dist/ (base ${base})`, ...nuggetSummary].join("\n") + "\n",
+  );
 }
 
 main().catch((e: unknown) => {

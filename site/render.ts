@@ -40,8 +40,17 @@ interface ParsedSource {
   body: string;
 }
 
-/** Split and strictly validate frontmatter. `file` is used only for error messages. */
-export function parseSource(src: string, file: string): ParsedSource {
+/**
+ * Split and strictly validate a frontmatter block against `schema`. The single
+ * frontmatter parse for the whole generator (pages and nuggets alike), so every
+ * publish-boundary error reads the same: one line, naming file and line number,
+ * no stack noise. `file` is used only for those messages.
+ */
+export function parseFrontmatter<T>(src: string, params: { file: string; schema: z.ZodType<T> }): {
+  frontmatter: T;
+  body: string;
+} {
+  const { file, schema } = params;
   const match = FRONTMATTER_RE.exec(src);
   if (!match) {
     throw new FrontmatterError(`${file}:1 missing frontmatter block (expected a leading "---" fence)`);
@@ -56,13 +65,18 @@ export function parseSource(src: string, file: string): ParsedSource {
     // +1: frontmatter body starts on the line after the opening fence.
     throw new FrontmatterError(`${file}:${line + 1} invalid frontmatter YAML: ${detail}`);
   }
-  const parsed = pageFrontmatterSchema.safeParse(data);
+  const parsed = schema.safeParse(data);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
     const field = issue?.path.join(".") || "(root)";
     throw new FrontmatterError(`${file}:1 frontmatter field "${field}": ${issue?.message ?? "invalid"}`);
   }
   return { frontmatter: parsed.data, body: src.slice(match[0].length) };
+}
+
+/** Split and strictly validate a content page's frontmatter. */
+export function parseSource(src: string, file: string): ParsedSource {
+  return parseFrontmatter(src, { file, schema: pageFrontmatterSchema });
 }
 
 interface RewriteContext {
@@ -105,7 +119,7 @@ export function renderBody(body: string, params: { pageSitePath: string; base: s
   return { html: renderers.html(content), linkTargets: targets };
 }
 
-function escapeHtml(s: string): string {
+export function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 

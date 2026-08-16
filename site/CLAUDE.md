@@ -68,6 +68,18 @@ writes the input manifest last (so a partial build never masks staleness).
   `bin/router-site.ts` (compares it to decide whether to auto-rebuild). One
   enumeration, so the two sides can't drift.
 - `content/` — markdown sources (frontmatter: `title`, `summary`).
+- `nuggets/<slug>.md` — committed excerpts of repo content: frontmatter `source`
+  (repo-relative, restricted to `issues/`, `callback-box/docs/`, `research/`,
+  root `README.md`), `span` (a verbatim excerpt of that source), and
+  `status: proposed | reinterpreted | excerpt`; the body is the publishable text
+  (empty only for `excerpt`, where the span is the content).
+- `nuggets.ts` — the nugget loader and its enforcement: `proposed` (agent words
+  the boxholder hasn't reinterpreted) never renders and the build lists the
+  refused slugs; each span is re-located in its source at build — exactly one
+  verbatim match is current, zero or many render a visible stale marker; a
+  missing or non-allowlisted source fails the build. `sources.ts` folds both the
+  nugget files and every source they cite into the input manifest, so editing a
+  cited doc rebuilds and the stale marker can actually appear.
 - `story/ingest.ts` — story-extraction ingest CLI (`pnpm --dir site ingest`,
   `--help`): validates raw extraction JSON (strict zod), verifies every span
   appears verbatim in its source (fabrication = hard error), and writes the
