@@ -1,6 +1,6 @@
 ---
 title: "Show retranscriptions and audio consultations on the chat message"
-status: draft
+status: implemented
 workstream: transcript-confidence
 issues:
   - ../../../issues/features/2026-08-12-show-retranscription-in-chat.md
