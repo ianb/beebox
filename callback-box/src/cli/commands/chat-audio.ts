@@ -1,10 +1,11 @@
 /**
  * cb chat — audio subcommands.
  *
- * - `cb chat get-last-audio` fetches the original recording of the user's
- *   most recent voice message from the connected browser tab and writes it
- *   to a temp file (the browser caches the last segment's WAV; the server
- *   relays the request over the event bus — see chat-last-audio-routes.ts).
+ * - `cb chat get-last-audio` fetches the original recording of the voice
+ *   message addressed by `--message <id>` from the connected browser tab and
+ *   writes it to a temp file (the browser caches recent segments' WAVs; the
+ *   server relays the request over the event bus — see
+ *   chat-last-audio-routes.ts).
  * - `cb chat ask-about-audio "<question>"` goes one step further: fetch the
  *   recording (or take `--file`) and put the question to an audio-capable
  *   model (Claude cannot listen to audio; Gemini can — see

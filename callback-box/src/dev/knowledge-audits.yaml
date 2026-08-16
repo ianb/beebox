@@ -3502,20 +3502,36 @@ tests:
   # bullet, after that sentence was reworked to lead with ask-about-audio.
   # An earlier action-shaped phrasing failed only on the literal
   # contains-check (see notes).
+  #
+  # Status (2026-08-15, --message targeting): the original "how would you
+  # do it" phrasing now FAILS — the agent answered fluently (named
+  # re-transcribe / ask-the-audio, even said "works per-message") but never
+  # wrote `--message` or `message-id` literally, since the question doesn't
+  # ask for CLI syntax. Reworded to ask "what command... and what do you
+  # need from my message to point it at the right recording" — 1/1 passes:
+  # the agent named `cb chat ask-about-audio "<question>" --message <id>`
+  # and `cb chat retranscribe --message <id>`, explained the id is
+  # system-written and read off the message (never supplied by the user,
+  # never fabricated). 0 reads, 0 searches, 52k ctx.
 
   - id: chat-last-audio-when
     prompt: >
       My dictated messages sometimes come out mangled. If a transcription
-      were important to get exactly right, do you have a way to check the
-      actual audio of what I said — and how would you do it?
+      were important to get exactly right, what command would you run to
+      check the actual audio of what I said, and what do you need from my
+      message to point it at the right recording?
     expected_level: knows_directly
     chat_mode: true
     watch_for: >
       Names `cb chat ask-about-audio` (or `get-last-audio`) as the way to
-      get at the original recording of the latest voice message, rather
-      than claiming the transcript is all it has or asking the user to
-      repeat everything.
+      get at the original recording of a voice message, rather than
+      claiming the transcript is all it has or asking the user to repeat
+      everything. Should also know the command needs `--message <id>` —
+      the id comes from the `message-id="…"` attribute on the message's
+      `<speech>` wrapper, never fabricated — not a bare invocation.
     correct_contains_any: ["retranscribe", "ask-about-audio", "get-last-audio"]
+    correct_matches:
+      - "--message|message-id"
     tags: [chat, voice, last-audio]
     notes: >
       Phrased as "how would you" deliberately: an action-shaped prompt
@@ -4612,24 +4628,36 @@ tests:
   # building on a marked meaning-critical word (a negative, a number, a name)
   # as if it were verified — the exact silent-mishearing the feature exists to
   # catch. Needs chat_mode: true — the semantics live only in the chat prompt.
+  #
+  # Status (2026-08-15, --message targeting): example <speech> tag gained a
+  # message-id="msg-7f2a" attribute (voice messages carry one for real now);
+  # watch_for/correct_matches extended to require the agent target
+  # retranscribe/ask-about-audio with `--message msg-7f2a` rather than
+  # invoking either bare. 1/1 passes: the agent wrote both commands with
+  # `--message msg-7f2a` and noted the id "comes off the wrapper — never
+  # fabricated." 0 reads, 0 searches, 51k ctx.
 
   - id: chat-unsure-word-semantics
     prompt: >
-      A voice message arrives as `<speech stt="deepgram">I
-      <unsure>can</unsure> make the 3 PM meeting tomorrow</speech>` and the
-      user is asking you to update their schedule. What does the markup around
-      "can" tell you, and what should you do before updating anything?
+      A voice message arrives as `<speech stt="deepgram"
+      message-id="msg-7f2a">I <unsure>can</unsure> make the 3 PM meeting
+      tomorrow</speech>` and the user is asking you to update their
+      schedule. What does the markup around "can" tell you, and what
+      should you do before updating anything?
     expected_level: knows_directly
     watch_for: >
       Reads <unsure> as the transcriber's low acoustic confidence in that word
       — here possibly "can't", which inverts the meaning — and does not build
       on it silently: confirms with the user or checks the audio
-      (cb chat retranscribe / ask-about-audio) before updating the schedule.
-      Should NOT treat the mark as an error to ignore, and should not copy the
-      tag into anything it writes.
+      (cb chat retranscribe / ask-about-audio, targeted with
+      `--message msg-7f2a` read off the wrapper) before updating the
+      schedule. Should NOT treat the mark as an error to ignore, should not
+      copy the tag into anything it writes, and should not invoke either
+      command bare (no `--message`).
     correct_contains_any: ["can't", "cannot", "invert", "opposite"]
     correct_matches:
       - "retranscribe|ask-about-audio|confirm|ask (?:the user|them|him|her|first|before)"
+      - "--message|msg-7f2a"
     chat_mode: true
     tags: [chat, voice, transcription]
     notes: >
