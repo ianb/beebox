@@ -13,6 +13,7 @@ import path from "node:path";
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
 
 import { DOC_FILE, MANIFEST_FILE, type ExhibitBoot } from "../../shared/exhibits.js";
+import { exhibitsApiPlugin } from "./api.js";
 import type { ExhibitsAssets } from "./assets.js";
 import { registerExhibitsAuth } from "./auth.js";
 import {
@@ -205,6 +206,9 @@ export async function buildExhibitsApp(options: BuildExhibitsAppOptions): Promis
   app.addHook("preClose", async () => rawServer.closeAllConnections());
   app.addHook("onClose", () => assets.close());
   registerExhibitsAuth(app, options.token);
+  // On this instance, so the API inherits the auth hook above: a separately
+  // built instance would be an unauthenticated write surface.
+  await app.register(exhibitsApiPlugin, { prefix: "/api", storeRoot: options.storeRoot });
 
   /** Every store route fails closed on an unmarked root (marker discipline). */
   async function requireStore(reply: FastifyReply): Promise<boolean> {
