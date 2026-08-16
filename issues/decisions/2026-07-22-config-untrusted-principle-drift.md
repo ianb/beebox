@@ -1,6 +1,6 @@
 ---
 title: "\"Config is untrusted content too\" — boxholder no longer believes it"
-workstream: github-pages-site
+workstream: public-site
 needs: [decision]
 area: callback-box
 filed-by: agent

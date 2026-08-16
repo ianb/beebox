@@ -8,9 +8,10 @@ discovered-in: main session — boxholder reports it happening commonly across n
 priority: important
 ---
 
-> **⏳ Awaiting manual testing** — fix landed through `3ef82d85`; after a box/server restart,
-> send the first message from the native composer and confirm it receives a sent/queued
-> receipt rather than returning as rejected. Only the developer clears this.
+> **⏳ Awaiting manual testing** — the outcome-driven fix landed through
+> `ef20af7f`; repeat the cold Codex send from the native composer and confirm it
+> remains pending until the real sent/queued outcome instead of restoring the
+> message after an elapsed-time rejection. Only the developer clears this.
 
 > **Job to be done:** *When I send a message and then lock my phone / switch apps /
 > background the tab before the reply starts — or my connection blips for a
@@ -71,7 +72,7 @@ the agent cold, so it walks straight into this bug — a fix that makes restarts
 *more* frequent will make this fire *more* often. These two should know about
 each other.
 
-## Fixed through `3ef82d85` (2026-08-15)
+## Attempted fix through `3ef82d85` (2026-08-15)
 
 The cold-start timing exposed a frontend lifecycle hole rather than a missing
 server receipt channel. The streaming actor discarded a completed
@@ -86,6 +87,43 @@ already-open tab returned HTTP 200 and settled after 5.287 seconds; this proved
 the cold path is slower, but also showed that raising the 30/35-second web/iOS
 backstops would only delay a lifecycle bug rather than fix it. Focused doctests
 cover accepted and rejected POST outcomes after actor cancellation.
+
+The developer's subsequent manual test failed. The first send from a fresh
+Codex session still ran without returning its receipt.
+
+## Browser reproduction attempts (2026-08-15)
+
+The isolated browser loop has not reproduced the missing receipt on current
+`main`. Three Codex sends succeeded after a cold start: two brand-new sessions
+after stopping the worktree children, and one existing session after using
+**Stop Process** to kill only its Codex subprocess. The measured anomaly trace
+for one new-session send recorded HTTP 200 and local receipt settlement after
+5.325 seconds. Each message ran once and the composer stayed clear.
+
+This is a red-capable loop, but it is missing a condition from the developer's
+failure. Do not use these green controls to close the issue. Compare the failing
+client's diagnostic timeline with this control before making another fix.
+
+## Outcome-driven fix through `ef20af7f` (2026-08-15)
+
+Metadata-only field diagnostics supplied the missing condition: the old web
+receipt timeout rejected a still-running send, then `/api/chat/send` returned
+success after that rejection. The receipt was not lost; the client manufactured
+a failure from elapsed time while cold Codex startup was still legitimately
+pending.
+
+Web and native delivery now wait for an actual send outcome. Duplicate
+expectations for the same emission ID share that outcome rather than rejecting
+one another. Native provisional navigation preserves receipts from the old
+document until the replacement commits, then redelivers the same persisted ID;
+content-process termination follows the same recovery path. Server dedup retains
+claimed message IDs for seven days so those navigation and recovery redeliveries
+remain idempotent. A 30-second metadata-only diagnostic records that a receipt is
+still pending without changing its disposition.
+
+Focused web receipt tests, the full callback-box suite, and simulator request
+tests cover these paths. Cold Codex browser controls are green. Physical-device
+confirmation remains the final gate.
 
 ## Manual testing
 
@@ -120,16 +158,18 @@ client but the server already ran the turn. It is likely **not iOS-only** — th
 native emission path mirrors the web one (`components/chat/native-emission.ts`), so
 the web composer is exposed to the same lost-receipt window.
 
-## Fix direction
+## Superseded fix direction
 
 Same principle the reload-time banner issue lands on, extended to the **live** send
-path: **reconcile against durable chat history, not just the ephemeral receipt.**
+path was to **reconcile against durable chat history, not just the ephemeral receipt.**
 Before declaring a send failed (receipt timeout / WS drop), check whether the
 message is already present in the conversation history; if it is, confirm it
 **silently** — no error, no composer-restore, no Retry. Treat the receipt as an
 optimization and history as the source of truth. Only a pending emission with **no**
 corresponding history entry is a real failure worth surfacing (and Retry should be
-safe only then).
+safe only then). Field diagnostics instead showed that the actual outcome was
+still pending, so removing elapsed-time verdicts is both narrower and avoids
+guessing from possibly stale history.
 
 ## Research (2026-08-11)
 

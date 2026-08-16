@@ -53,6 +53,34 @@ unusual twist, force, or consequence), **span sprawl** (grabbing whole
 sections when a sentence carries the idea), and **misreading** (a gloss the
 span doesn't support).
 
+**Deficiency-restated-as-significance** (the most important false positive).
+Much of this repo is an *issue tracker*: documents that describe gaps, bugs,
+and rough edges the project hasn't polished yet. The distinction that matters
+is **deficiency vs. tension** — and it is NOT the same as resolved vs.
+unresolved:
+
+- **A deficiency is not a nugget.** "X doesn't work well," "X is missing,"
+  "X fails silently," "we haven't built X" — a thing that is merely
+  incomplete or broken. Dressing it in a gloss that calls it "notable" or
+  spins it against the project's usual stance is a false positive. (E.g.
+  "new boxes have no secrets and features fail silently, with no provisioning
+  mechanism" — that's a to-do, not story.)
+- **A genuine tension IS a nugget**, even unresolved, even from in-progress
+  work. A tension is a real conflict between goods — two things the project
+  wants that pull against each other, a tradeoff with no clean answer, a
+  design pressure it is actively holding. In-progress work often *exposes*
+  tensions worth discussing (criterion 8, and often 2/3). "We want boxes
+  isolated but they share one origin"; "automatic X would fight the
+  never-ambient stance" — these are story. The test: is there a real
+  competing-goods conflict here, or is this just something that isn't
+  finished?
+
+So: a decision made with reasoning (criterion 2), a stated future direction,
+or a genuine live tension (criterion 8) are all story. A plain "doesn't work
+yet" is not. When a document is only an unpolished-deficiency report with no
+decision, direction, or real tension in it, the honest result is few nuggets
+or none — don't manufacture significance the document doesn't carry.
+
 ## What an item is
 
 One idea per nugget. Fields:

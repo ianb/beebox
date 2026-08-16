@@ -49,7 +49,7 @@ content at scale comes after the rubric earns trust.
 - **Nugget schema (parent plan Track E)**: `source` + verbatim `span` +
   `status: proposed` + tags — extraction output here is exactly `proposed`
   nuggets, so this subplan reuses that shape rather than inventing an eval-only
-  format ([github-pages-site.md](github-pages-site.md), Track E). Eval runs add
+  format ([public-site.md](public-site.md), Track E). Eval runs add
   wrapper metadata (which prompt variant, which run) around that shape.
 - **`dev/` static serving** (`bin/router-docs.ts:609-663`, served from disk,
   no cold start): the review app's natural home — `dev/story-eval/` with the

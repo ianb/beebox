@@ -1,6 +1,6 @@
 {
   "note": "Coverage ledger for story extraction: which repo docs have been scanned, in which runs/variants, and whether the scanned content still matches disk. The runs themselves (dev/story-eval/runs/) are gitignored — this ledger is the only tracked record. Regenerate with `pnpm --dir site coverage`; find docs needing a re-scan with `pnpm --dir site coverage --check`.",
-  "generatedAt": "2026-07-22T20:46:13.651Z",
+  "generatedAt": "2026-07-24T13:20:29.407Z",
   "docs": [
     {
       "doc": "callback-box/docs/activities-design.md",
@@ -163,13 +163,14 @@
     {
       "doc": "issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md",
       "runs": [
-        "run-004"
+        "run-004",
+        "run-006"
       ],
       "variants": [
         "v1",
         "v2"
       ],
-      "nuggetCount": 16,
+      "nuggetCount": 24,
       "scannedContentHash": "1bf8d4c0eccf5d43",
       "hashSource": "scanned-text",
       "current": true
@@ -177,13 +178,14 @@
     {
       "doc": "issues/closed/decisions/2026-07-07-categorize-issues-into-subdirectories.md",
       "runs": [
-        "run-004"
+        "run-004",
+        "run-006"
       ],
       "variants": [
         "v1",
         "v2"
       ],
-      "nuggetCount": 10,
+      "nuggetCount": 18,
       "scannedContentHash": "8dbf793db1419c25",
       "hashSource": "scanned-text",
       "current": true
@@ -206,13 +208,14 @@
     {
       "doc": "issues/closed/decisions/2026-07-15-single-export-should-ignore-types.md",
       "runs": [
-        "run-004"
+        "run-004",
+        "run-006"
       ],
       "variants": [
         "v1",
         "v2"
       ],
-      "nuggetCount": 9,
+      "nuggetCount": 15,
       "scannedContentHash": "e4c67640c6e17f88",
       "hashSource": "scanned-text",
       "current": true
@@ -220,13 +223,14 @@
     {
       "doc": "issues/decisions/2026-03-15-per-box-secret-management.md",
       "runs": [
-        "run-004"
+        "run-004",
+        "run-006"
       ],
       "variants": [
         "v1",
         "v2"
       ],
-      "nuggetCount": 4,
+      "nuggetCount": 6,
       "scannedContentHash": "b11781460f93e240",
       "hashSource": "scanned-text",
       "current": true
@@ -234,13 +238,14 @@
     {
       "doc": "issues/decisions/2026-05-21-glossary-proper-nouns.md",
       "runs": [
-        "run-004"
+        "run-004",
+        "run-006"
       ],
       "variants": [
         "v1",
         "v2"
       ],
-      "nuggetCount": 2,
+      "nuggetCount": 4,
       "scannedContentHash": "30914f39deee2904",
       "hashSource": "scanned-text",
       "current": true
@@ -248,13 +253,14 @@
     {
       "doc": "issues/decisions/2026-05-27-bin-browse-wrapper-future.md",
       "runs": [
-        "run-004"
+        "run-004",
+        "run-006"
       ],
       "variants": [
         "v1",
         "v2"
       ],
-      "nuggetCount": 6,
+      "nuggetCount": 11,
       "scannedContentHash": "f277d881a05fe2d6",
       "hashSource": "scanned-text",
       "current": true
@@ -262,13 +268,14 @@
     {
       "doc": "issues/decisions/2026-07-04-box-registry-manifests.md",
       "runs": [
-        "run-004"
+        "run-004",
+        "run-006"
       ],
       "variants": [
         "v1",
         "v2"
       ],
-      "nuggetCount": 4,
+      "nuggetCount": 8,
       "scannedContentHash": "4fdda6fc4c25ba43",
       "hashSource": "scanned-text",
       "current": true
@@ -276,13 +283,14 @@
     {
       "doc": "issues/decisions/2026-07-07-cb-render-vs-bin-browse.md",
       "runs": [
-        "run-004"
+        "run-004",
+        "run-006"
       ],
       "variants": [
         "v1",
         "v2"
       ],
-      "nuggetCount": 7,
+      "nuggetCount": 16,
       "scannedContentHash": "054f4b69b940755c",
       "hashSource": "scanned-text",
       "current": true
@@ -290,13 +298,14 @@
     {
       "doc": "issues/decisions/2026-07-10-boxes-dead-callback-box-symlinks.md",
       "runs": [
-        "run-004"
+        "run-004",
+        "run-006"
       ],
       "variants": [
         "v1",
         "v2"
       ],
-      "nuggetCount": 9,
+      "nuggetCount": 15,
       "scannedContentHash": "feb9f43cea49d322",
       "hashSource": "scanned-text",
       "current": true
@@ -304,13 +313,14 @@
     {
       "doc": "issues/decisions/2026-07-10-orama-vector-index-restore-cost.md",
       "runs": [
-        "run-004"
+        "run-004",
+        "run-006"
       ],
       "variants": [
         "v1",
         "v2"
       ],
-      "nuggetCount": 10,
+      "nuggetCount": 18,
       "scannedContentHash": "c639182e477a9041",
       "hashSource": "scanned-text",
       "current": true
@@ -318,13 +328,14 @@
     {
       "doc": "issues/decisions/2026-07-19-boxes-share-one-origin.md",
       "runs": [
-        "run-004"
+        "run-004",
+        "run-006"
       ],
       "variants": [
         "v1",
         "v2"
       ],
-      "nuggetCount": 9,
+      "nuggetCount": 14,
       "scannedContentHash": "61152b1ab58b79ac",
       "hashSource": "scanned-text",
       "current": true
@@ -332,13 +343,14 @@
     {
       "doc": "issues/decisions/2026-07-20-git-push-confirmation.md",
       "runs": [
-        "run-004"
+        "run-004",
+        "run-006"
       ],
       "variants": [
         "v1",
         "v2"
       ],
-      "nuggetCount": 5,
+      "nuggetCount": 9,
       "scannedContentHash": "34e283b542c6696b",
       "hashSource": "scanned-text",
       "current": true
@@ -346,13 +358,14 @@
     {
       "doc": "issues/decisions/2026-07-20-release-discipline-and-update-story.md",
       "runs": [
-        "run-004"
+        "run-004",
+        "run-006"
       ],
       "variants": [
         "v1",
         "v2"
       ],
-      "nuggetCount": 6,
+      "nuggetCount": 10,
       "scannedContentHash": "a7507be6cc7442da",
       "hashSource": "scanned-text",
       "current": true
@@ -360,13 +373,14 @@
     {
       "doc": "issues/decisions/2026-07-20-soft-launch-posture.md",
       "runs": [
-        "run-004"
+        "run-004",
+        "run-006"
       ],
       "variants": [
         "v1",
         "v2"
       ],
-      "nuggetCount": 24,
+      "nuggetCount": 43,
       "scannedContentHash": "08ecfa9f0faff174",
       "hashSource": "scanned-text",
       "current": true
@@ -374,13 +388,14 @@
     {
       "doc": "issues/decisions/2026-07-21-discussion-channel.md",
       "runs": [
-        "run-004"
+        "run-004",
+        "run-006"
       ],
       "variants": [
         "v1",
         "v2"
       ],
-      "nuggetCount": 8,
+      "nuggetCount": 16,
       "scannedContentHash": "749229799de74102",
       "hashSource": "scanned-text",
       "current": true
@@ -388,13 +403,14 @@
     {
       "doc": "issues/decisions/2026-07-22-config-untrusted-principle-drift.md",
       "runs": [
-        "run-004"
+        "run-004",
+        "run-006"
       ],
       "variants": [
         "v1",
         "v2"
       ],
-      "nuggetCount": 4,
+      "nuggetCount": 8,
       "scannedContentHash": "3a761ca97947441e",
       "hashSource": "scanned-text",
       "current": true
