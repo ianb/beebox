@@ -242,7 +242,12 @@ export async function buildExhibitsApp(options: BuildExhibitsAppOptions): Promis
       body: renderExhibitList({
         heading: "Committed apps",
         basePath: "/apps/",
-        exhibits: await listExhibits(options.appsRoot, { requireAsk: false }),
+        // A committed app's code is tracked in the checkout; its documents —
+        // including any disposition — live in the store's reserved namespace.
+        exhibits: await listExhibits(options.appsRoot, {
+          requireAsk: false,
+          dataRoot: path.join(options.storeRoot, APPS_SEGMENT),
+        }),
       }),
     }));
 

@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 
+import { DispositionForm } from "./DispositionForm.js";
 import { askTypeLabels, type AskType, type ExhibitBoot } from "../../shared/exhibits.js";
 
 const askBadgeClasses: Record<AskType, string> = {
@@ -51,9 +52,12 @@ export class ExhibitErrorBoundary extends Component<{ children: ReactNode }, Bou
 }
 
 /**
- * The shell every exhibit gets: breadcrumb back to its list, title, and the
- * ask header. A page that overrides the default renderer still renders inside
- * this, so the ask travels with the exhibit rather than with the renderer.
+ * The shell every exhibit gets: breadcrumb back to its list, title, the ask
+ * header, and — below whatever the page rendered — the control that answers the
+ * ask. A page that overrides the default renderer still renders inside this, so
+ * both halves of the ask (the question and the answer) travel with the exhibit
+ * rather than with the renderer: an instrument is answerable without writing a
+ * line of form code.
  */
 export function ExhibitContainer({ boot, children }: { boot: ExhibitBoot; children: ReactNode }): ReactNode {
   const { ask } = boot.manifest;
@@ -78,8 +82,14 @@ export function ExhibitContainer({ boot, children }: { boot: ExhibitBoot; childr
           <p className="m-0 text-sm text-stone-500">Committed app — {boot.scope}</p>
         )}
       </header>
-      <main className="flex flex-col gap-6">
+      <main className="flex min-w-0 flex-col gap-6">
         <ExhibitErrorBoundary>{children}</ExhibitErrorBoundary>
+        {ask ? (
+          <section className="flex flex-col gap-3 rounded-lg border border-dashed border-stone-400 p-4">
+            <h2 className="m-0 text-base font-bold">Your answer</h2>
+            <DispositionForm ask={ask} />
+          </section>
+        ) : null}
       </main>
     </div>
   );

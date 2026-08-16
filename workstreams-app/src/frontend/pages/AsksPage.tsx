@@ -17,16 +17,18 @@ function entryHref(queue: AskQueue, entry: AskQueueEntry): string {
 
 function AskItem({ queue, entry }: { queue: AskQueue; entry: AskQueueEntry }) {
   return (
-    <li>
-      {/* No token in the link: the browser may already hold the exhibits
-          cookie, and a 401 that prints the bin/exhibits hint is safer than
-          copying the token into this page. */}
-      <a href={entryHref(queue, entry)}>{entry.title ?? entry.slug}</a>
-      <span className="muted">{entry.workstream}/{entry.slug}</span>
-      {entry.permanent ? <Pill tone="info">app</Pill> : null}
-      {entry.ask ? <span>{entry.ask.prose}</span> : null}
-      {entry.ask?.options ? <span className="muted">{entry.ask.options.join(" · ")}</span> : null}
-      {entry.problem === null ? null : <span className="action-error" role="alert">{entry.problem}</span>}
+    <li className="ask-item">
+      <div className="ask-item-head">
+        {/* No token in the link: the browser may already hold the exhibits
+            cookie, and a 401 that prints the bin/exhibits hint is safer than
+            copying the token into this page. */}
+        <a href={entryHref(queue, entry)}>{entry.title ?? entry.slug}</a>
+        {entry.permanent ? <Pill tone="info">app</Pill> : null}
+        <span className="muted ask-item-scope">{entry.workstream}/{entry.slug}</span>
+      </div>
+      {entry.ask ? <p className="ask-item-prose">{entry.ask.prose}</p> : null}
+      {entry.ask?.options ? <p className="muted ask-item-options">{entry.ask.options.join(" · ")}</p> : null}
+      {entry.problem === null ? null : <p className="action-error" role="alert">{entry.problem}</p>}
     </li>
   );
 }
@@ -54,7 +56,7 @@ export function AskQueueView({ queue }: { queue: AskQueue }) {
       ))}
       {waitingCount === 0 ? <p className="empty-state">Nothing waiting on you.</p> : null}
       {fyi.length > 0 ? (
-        <details>
+        <details className="ask-fyi">
           <summary>{askTypeLabels.fyi} <small>{fyi.length}</small></summary>
           <ul className="document-list">
             {fyi.map((entry) => <AskItem key={entry.path} queue={queue} entry={entry} />)}

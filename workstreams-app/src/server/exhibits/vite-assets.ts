@@ -19,8 +19,9 @@ import type http from "node:http";
 
 import viteReact from "@vitejs/plugin-react";
 import autoprefixer from "autoprefixer";
-import tailwindcss from "tailwindcss";
-import { createServer as createViteServer, type ViteDevServer } from "vite";
+import tailwindcss, { type Config } from "tailwindcss";
+import typography from "@tailwindcss/typography";
+import { createServer as createViteServer, type InlineConfig, type ViteDevServer } from "vite";
 
 import type { ExhibitsAssets } from "./assets.js";
 
@@ -37,8 +38,12 @@ export interface ViteAssetsOptions {
   contentRoots: string[];
 }
 
-function tailwindPlugin(options: ViteAssetsOptions) {
-  return tailwindcss({
+/**
+ * The Tailwind config this origin compiles with. Exported so a test can hold it
+ * to the classes the container actually emits without booting a dev server.
+ */
+export function exhibitsTailwindConfig(options: ViteAssetsOptions): Config {
+  return {
     content: [
       path.join(options.frontendRoot, "**/*.{ts,tsx}"),
       path.join(options.packageRoot, "src/frontend/components/**/*.tsx"),
@@ -46,27 +51,48 @@ function tailwindPlugin(options: ViteAssetsOptions) {
     ],
     corePlugins: { preflight: false },
     theme: { extend: {} },
-  });
+    // Markdown.tsx renders doc.md as `prose prose-sm`; without the plugin those
+    // classes generate nothing and every rendered document loses its typography
+    // (and its <pre> scrolling). Same dependency the package's tailwind.config.js
+    // uses for the workstreams origin.
+    plugins: [typography],
+  };
 }
 
 /** Long enough for an ordinary close, short enough not to stall a restart. */
 const CLOSE_TIMEOUT_MS = 1_000;
 
-export async function createViteAssets(options: ViteAssetsOptions): Promise<ExhibitsAssets> {
-  const stylesheet = path.join(options.frontendRoot, "styles.css");
-  const vite: ViteDevServer = await createViteServer({
+/**
+ * The dev-server config for this origin. Exported for the same reason as the
+ * Tailwind config: the two settings that keep React single-copy are invisible
+ * at runtime until a page throws "Invalid hook call".
+ */
+export function exhibitsViteConfig(options: ViteAssetsOptions): InlineConfig {
+  return {
     configFile: false,
     root: options.frontendRoot,
     base: "/",
     appType: "custom",
+    // Two Vite servers run in this package (the /workstreams/ one and this
+    // one). They default to the same node_modules/.vite/deps, and because
+    // their configs differ each invalidates the other's optimized deps on
+    // start — which hands out a second copy of React and every page dies on
+    // "Invalid hook call" until a cache happens to be warm. A private cacheDir
+    // keeps them apart; dedupe keeps one React inside this one.
+    cacheDir: path.join(options.packageRoot, "node_modules/.vite-exhibits"),
     plugins: [viteReact()],
     // Store pages live outside the repo, so the container's typed client is
     // reachable by name rather than by a relative path into the package.
-    resolve: { alias: { "@exhibits/client": path.join(options.frontendRoot, "client.ts") } },
+    resolve: {
+      alias: { "@exhibits/client": path.join(options.frontendRoot, "client.ts") },
+      // Store pages are imported from outside the root through /@fs; dedupe
+      // guarantees they and the container share one React instance.
+      dedupe: ["react", "react-dom"],
+    },
     optimizeDeps: {
       include: ["react", "react-dom/client", "react/jsx-dev-runtime", "@markdoc/markdoc"],
     },
-    css: { postcss: { plugins: [tailwindPlugin(options), autoprefixer()] } },
+    css: { postcss: { plugins: [tailwindcss(exhibitsTailwindConfig(options)), autoprefixer()] } },
     server: {
       middlewareMode: true,
       hmr: { server: options.server },
@@ -78,7 +104,12 @@ export async function createViteAssets(options: ViteAssetsOptions): Promise<Exhi
       // insurance: an instrument writing captures must never drive the dev loop.
       watch: { ignored: ["**/data/**", "**/captures/**", "**/events.jsonl"] },
     },
-  });
+  };
+}
+
+export async function createViteAssets(options: ViteAssetsOptions): Promise<ExhibitsAssets> {
+  const stylesheet = path.join(options.frontendRoot, "styles.css");
+  const vite: ViteDevServer = await createViteServer(exhibitsViteConfig(options));
 
   const seen = new Set<string>();
   return {

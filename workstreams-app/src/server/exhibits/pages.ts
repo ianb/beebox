@@ -22,6 +22,8 @@ a:hover { text-decoration: underline; }
 .badge-confirm { background: #fbeab8; color: #765300; }
 .badge-react { background: #eee4fb; color: #6543ac; }
 .badge-fyi { background: #edf0f4; color: #586678; }
+.state { color: #8a3a24; font-size: .78rem; font-weight: 650; text-transform: uppercase; letter-spacing: .03em; }
+.state-answered { color: #28633b; }
 .problem { color: #84351f; }
 pre { padding: 1rem; overflow: auto; border: 1px solid #e4c5bd; border-radius: .4rem; background: #fff5f2; color: #84351f; }
 code { font-size: .95em; }
@@ -79,7 +81,15 @@ export function renderExhibitList(options: { heading: string; basePath: string; 
         exhibit.error === null
           ? escapeHtml(exhibit.title ?? exhibit.name)
           : `<span class="problem">${escapeHtml(exhibit.error)}</span>`;
-      return `<li><a href="${escapeHtml(href)}">${escapeHtml(exhibit.name)}</a>${badge} <span>${detail}</span></li>`;
+      // Answered state is the reason to open the list at all: it says which
+      // asks are still costing the developer something.
+      const state =
+        exhibit.answered === null
+          ? ""
+          : ` <span class="state${exhibit.answered ? " state-answered" : ""}">${exhibit.answered ? "answered" : "waiting"}</span>`;
+      const problem =
+        exhibit.problem === null ? "" : ` <span class="problem">${escapeHtml(exhibit.problem)}</span>`;
+      return `<li><a href="${escapeHtml(href)}">${escapeHtml(exhibit.name)}</a>${badge}${state} <span>${detail}</span>${problem}</li>`;
     })
     .join("\n      ");
   const body =

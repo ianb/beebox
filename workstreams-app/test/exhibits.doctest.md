@@ -154,6 +154,30 @@ JSON.stringify({
 => {"status":200,"decide":true,"title":true,"malformed":true}
 ```
 
+The listing also says which asks are still costing the developer something. It
+reads the disposition through the same helper the ask queue uses, so a
+half-written answer is "waiting" plus a stated problem on both surfaces rather
+than "answered" on one and not the other.
+
+```ts continue
+const waiting = await app.inject({ method: "GET", url: "/demo-ws/", headers: authorized });
+await writeFile(
+  path.join(store, "demo-ws/passive/data/disposition.json"),
+  JSON.stringify({ askType: "decide", choice: "A", decidedAt: "2026-08-15T12:00:00Z" }),
+);
+await writeFile(path.join(store, "demo-ws/instrument/data/disposition.json"), '{"askType":"fyi","dec');
+const answered = await app.inject({ method: "GET", url: "/demo-ws/", headers: authorized });
+const rowFor = (body: string, name: string): string =>
+  body.split("<li>").find((row) => row.includes(`/${name}/`)) ?? "";
+JSON.stringify({
+  before: rowFor(waiting.body, "passive").includes(">waiting<"),
+  after: rowFor(answered.body, "passive").includes(">answered<"),
+  truncatedStaysWaiting: rowFor(answered.body, "instrument").includes(">waiting<"),
+  truncatedIsNamed: rowFor(answered.body, "instrument").includes("disposition is not valid JSON"),
+})
+=> {"before":true,"after":true,"truncatedStaysWaiting":true,"truncatedIsNamed":true}
+```
+
 ## Page tiers
 
 `index.tsx` gets the container shell booting the module through `/@fs`;
@@ -340,4 +364,36 @@ JSON.stringify({ status: apps.statusCode, empty: apps.body.includes("No exhibits
 ```ts cleanup
 await refusing.close();
 await fs.rm(unmarked, { recursive: true, force: true });
+```
+
+## The dev server's two invisible settings
+
+Both Vite servers in this package would otherwise share
+`node_modules/.vite/deps` with different configs, and each start invalidates the
+other's optimized deps — which hands a page a second copy of React and kills it
+with "Invalid hook call" until a cache happens to be warm. And `doc.md` renders
+with `prose` classes that generate nothing unless the typography plugin is in
+the inline Tailwind config. Neither is visible at runtime until a page breaks,
+so both are asserted here.
+
+```ts
+const http = await import("node:http");
+const typography = (await import("@tailwindcss/typography")).default;
+const { exhibitsTailwindConfig, exhibitsViteConfig } = await import("../src/server/exhibits/vite-assets.js");
+
+const assetOptions = {
+  server: http.createServer(),
+  frontendRoot: "/pkg/src/frontend/exhibits",
+  packageRoot: "/pkg",
+  repoRoot: "/repo",
+  contentRoots: ["/store", "/repo/dev/apps"],
+};
+const viteConfig = exhibitsViteConfig(assetOptions);
+JSON.stringify({
+  cacheDir: viteConfig.cacheDir,
+  sharedWithTheOtherServer: viteConfig.cacheDir === undefined || viteConfig.cacheDir.endsWith("node_modules/.vite"),
+  dedupe: viteConfig.resolve?.dedupe,
+  typography: exhibitsTailwindConfig(assetOptions).plugins?.includes(typography),
+})
+=> {"cacheDir":"/pkg/node_modules/.vite-exhibits","sharedWithTheOtherServer":false,"dedupe":["react","react-dom"],"typography":true}
 ```

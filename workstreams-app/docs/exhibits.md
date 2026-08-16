@@ -83,10 +83,8 @@ feedback in chat can address them precisely.
 
 One mechanism, three levels of effort:
 
-1. **No `index.tsx` / `index.html`** — the default renderer: the ask header,
-   `doc.md`, the manifest's figures as labeled images, and a working
-   disposition control (it writes `data/disposition.json` and appends an
-   event). Most exhibits want exactly this.
+1. **No `index.tsx` / `index.html`** — the default renderer: `doc.md` and the
+   manifest's figures as labeled images. Most exhibits want exactly this.
 2. **`index.html`** — served as-is, scripts allowed. Sibling files (`data.json`,
    images) are served from the directory, so relative `fetch` works. Namespace
    your `localStorage` keys: the whole origin shares them.
@@ -94,6 +92,15 @@ One mechanism, three levels of effort:
    container (shell, breadcrumb, ask header), with React 18, Tailwind, and the
    client below already provided. Drop the file in; no build step, no
    registration, HMR picks up edits.
+
+**The container answers the ask, not the page.** Whenever the manifest states an
+ask, the disposition control is appended *below* the page's own content — for
+every tier, custom pages included. It writes `data/disposition.json` and appends
+a `disposition` event, so an instrument is answerable without writing a line of
+form code. A manifest with no `ask` (only a committed app may omit it) gets no
+control, because nothing is waiting on an answer. A page that wants its own
+richer interaction still writes through the client below; the container's
+control is what guarantees there is always *some* way to reply.
 
 Page *source* is never served as content: `.ts`/`.tsx`/`.jsx` requests are
 refused, and paths cannot leave the exhibit directory.

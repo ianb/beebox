@@ -21,6 +21,7 @@ import {
   exhibitSegmentSchema,
   type ExhibitManifest,
 } from "../../shared/exhibits.js";
+import { readDisposition } from "./disposition.js";
 
 /** Written by bin/lib/exhibits-store.sh when the store root is created. */
 export const STORE_MARKER = ".workstream-exhibits";
@@ -216,23 +217,46 @@ export interface ExhibitListing {
   name: string;
   title: string | null;
   askType: string | null;
+  /** Null when the exhibit states no ask; otherwise whether it was answered. */
+  answered: boolean | null;
+  /** A disposition that exists but cannot be read as one. */
+  problem: string | null;
   error: string | null;
 }
 
-export async function listExhibits(root: string, options: { requireAsk: boolean }): Promise<ExhibitListing[]> {
+export interface ListExhibitsOptions {
+  requireAsk: boolean;
+  /**
+   * Where each exhibit's runtime data lives, when that is not the same tree as
+   * its manifest — a committed app's code is tracked in the checkout while its
+   * documents stay in the store.
+   */
+  dataRoot?: string;
+}
+
+/**
+ * The listing a developer scans to find what still needs them, so it carries
+ * answered state — read through the same helper the ask queue uses, because two
+ * definitions of "answered" would drift the moment one of them was wrong.
+ */
+export async function listExhibits(root: string, options: ListExhibitsOptions): Promise<ExhibitListing[]> {
   const listings: ExhibitListing[] = [];
   for (const name of await listRoutableDirs(root)) {
-    const manifest = await readManifest(path.join(root, name), options);
-    listings.push(
-      manifest.ok
-        ? {
-            name,
-            title: manifest.manifest.title,
-            askType: manifest.manifest.ask?.type ?? null,
-            error: null,
-          }
-        : { name, title: null, askType: null, error: manifest.issues.join("; ") },
-    );
+    const manifest = await readManifest(path.join(root, name), { requireAsk: options.requireAsk });
+    if (!manifest.ok) {
+      listings.push({ name, title: null, askType: null, answered: null, problem: null, error: manifest.issues.join("; ") });
+      continue;
+    }
+    const ask = manifest.manifest.ask ?? null;
+    const disposition = ask === null ? null : await readDisposition(path.join(options.dataRoot ?? root, name));
+    listings.push({
+      name,
+      title: manifest.manifest.title,
+      askType: ask?.type ?? null,
+      answered: disposition?.answered ?? null,
+      problem: disposition?.problem ?? null,
+      error: null,
+    });
   }
   return listings;
 }
