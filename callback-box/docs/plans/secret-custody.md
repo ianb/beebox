@@ -286,6 +286,21 @@ settled in review):
 
 - **Named secrets, one copy.** Sharing between boxes is a grant, not a file
   copy. Rotation updates one entry.
+- **Add and grant are separate acts — the sharing semantics, stated
+  precisely** (boxholder confirmation, 2026-08-17): *adding* a secret
+  (from any box's admin page, the chat widget, or the CLI) creates it in
+  the **machine-level namespace**, which makes it *grantable* to every box
+  on the machine — and available to none until granted. *Granting* is the
+  per-box opt-in, performed by the boxholder from that box's admin page
+  (or the CLI plumbing). Adding on box A never empowers box B silently.
+  Visibility follows the same split: the owner-gated admin page on any box
+  lists machine-level **names** (never values) so grants can be made from
+  there — names are therefore owner-visible across boxes and must not
+  themselves carry sensitive content; an **agent's** `status`/`list` view
+  is scoped to its own box's grants and declared slots, not the machine
+  namespace (a compromised box gets no inventory of what exists to hunt
+  for). `name/<box>` instances are by convention per-box and not intended
+  for sharing.
 - **Grants are fail-closed.** A resolver call for an ungranted secret returns
   the same "not configured" answer the current missing-file path produces
   (`requirements.ts:46-56` shape) — the *per-secret* degradation matches
