@@ -351,6 +351,28 @@ settled in review):
   running `set`. Declaring creates an empty, ungranted entry — the agent
   can never supply, read back, or grant. Grants and tiers are
   boxholder-only decisions.
+- **Guided entry + validation** (boxholder direction, 2026-08-17: keys are
+  complicated; users need help and mistakes need surfacing). Three layers,
+  all value-redacted toward agents:
+  - *Guidance*: the capture widget's `description` carries an
+    agent-written walkthrough (where to obtain the key, what it looks
+    like, what it will be used for).
+  - *Soft validation (format)*: a small per-provider **format registry**
+    (prefix, length range, charset — OpenAI `sk-`, Anthropic `sk-ant-`,
+    Telegram `\d+:...`, …) drives live hints in the input field. **Warn,
+    never block** — provider formats drift, and a hard format gate would
+    brick key entry on a prefix change; a submitted mismatch is recorded
+    as entry metadata. Ad-hoc slots may carry an agent-supplied format
+    hint in the declaration.
+  - *Hard validation (probe)*: after save, the server calls a cheap
+    harmless endpoint (models list; Telegram `getMe` — the pattern
+    `telegramSetup` already uses, `admin.ts:83-90`) and stores
+    `verified: ok | failed(reason) | unchecked` + timestamp on the entry.
+    The agent receives only that status ("saved; probe failed: 401") and
+    can re-request; the admin Secrets section shows it, along with a
+    "last use failed auth" suspect flag set when a real call 401s. An
+    access log + probe state nobody surfaces is theatre; these land with
+    the widget/admin chunks, not later.
 - **Lifecycle CLI.** `cb secrets set <name>` (value via stdin or prompt,
   never argv), `rm`, `list` (names + metadata only), `grant <box> <name>`,
   `revoke <box> <name>`, `declare <name>`, `status <box>` (what's granted
