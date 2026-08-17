@@ -312,17 +312,24 @@ settled in review):
     server processes via the in-process resolver; no interface discloses it
     to agent-context code. All built-in connectors are this tier.
   - **`box`**: disclosable to box-local code — the consumer class the
-    built-in-connector framing misses: agent-authored scripts and
-    procedures that integrate services of their own (the box-family
-    pattern) run *in agent context* and need the value at call time.
-    Refusing them disclosure would push those keys back into files in the
-    tree. Consumption: `cb secrets exec <name> -- <command>` injects the
-    value into that child's env only (the sops `exec-env` pattern — never
-    on disk), with `cb secrets get <name>` as the logged fallback for code
-    that can't be wrapped. Both are grant-checked and logged. Honest
-    accounting: runtime exposure for a `box`-tier secret equals the status
-    quo (the running process holds the value); the gains over a file in
-    the tree are custody, one rotatable copy, and a log line per use.
+    built-in-connector framing misses: agent-authored code (tricks,
+    scripts, procedures) integrating services of its own (the box-family
+    pattern) needs the value at the moment it makes the external call.
+    Refusing disclosure would push those keys back into files in the tree.
+    **Consumption is a code API at call time, not env or CLI output**
+    (boxholder direction, 2026-08-17): code running in the server process
+    calls the in-process resolver; code running outside it calls a loopback
+    `secrets.resolve` endpoint on its own box, authenticated with
+    `CB_AGENT_TOKEN` (`script-env.ts:141-145`), which checks grant + tier
+    and logs. The value lives transiently in the requesting code's memory,
+    goes into the outbound request, and is never written to env, files, or
+    logs — a stated convention the agent guide teaches (see Knowledge
+    audits). No `exec` env-wrapper, no value-printing `get`
+    (minimal-concepts: one consumption interface). Honest accounting:
+    runtime exposure for a `box`-tier secret equals the status quo (the
+    requesting process holds the value while it uses it); the gains over a
+    file in the tree are custody, one rotatable copy, no at-rest copy in
+    agent-reachable space, and a log line per use.
 - **Slot declaration by agents.** An agent may *declare* a new named slot
   (name + note — "API key for service X") and request its value; the value
   arrives only via the write-only chat capture widget or the boxholder
@@ -334,11 +341,11 @@ settled in review):
   `revoke <box> <name>`, `declare <name>`, `status <box>` (what's granted
   vs what the box requires — connector requirements plus declared
   box-local slots; the `cb secrets` listing the 2026-03-15 issue asked
-  for), `exec`/`get` (box tier only). **Audience:** the CLI is the
-  boxholder's surface (SSH on prod, terminal locally) and the substrate the
-  admin page and chat widget call into; the agent's intended surface is
-  read-only `status`/`list`/`declare` plus `exec`/`get` on its own
-  `box`-tier grants. Mutating subcommands require `--agent-confirmed` in
+  for). Values are consumed through the code API above, not the CLI.
+  **Audience:** the CLI is the boxholder's surface (SSH on prod, terminal
+  locally) and the substrate the admin page and chat widget call into; the
+  agent's intended surface is read-only `status`/`list`/`declare`.
+  Mutating subcommands require `--agent-confirmed` in
   agent sessions — a speed bump and audit signal, not a wall, per
   `src/lib/agent-context.ts`.
 - **Resolver.** `resolveSecret(boxRoot, name, purpose)` in one module:
@@ -506,8 +513,8 @@ stop-over-engineering).
   build when a box-held credential is genuinely needed.
 - **Agent-context disclosure of `server`-tier secrets** — deliberately
   never; it is the property the design exists to remove. (`box`-tier
-  disclosure via `exec`/`get` is in scope — a deliberate, logged, per-secret
-  opt-in, not a hole.)
+  disclosure via the call-time code API is in scope — a deliberate,
+  logged, per-secret opt-in, not a hole.)
 - **The chat capture widget** — its own issue; this store is its
   prerequisite ("target" registry), not its implementation.
 - **Egress-proxy credential injection for arbitrary agent HTTP** — the
@@ -546,14 +553,22 @@ stop-over-engineering).
 
 ## Knowledge audits
 
-Agent-facing surface is deliberately small: agents interact with secrets only
-by *absence* (a "not configured" message naming a grant). One audit is
-warranted when Track 3 lands: a box agent asked "how do you get a Mistral key
-configured for this box?" should answer "ask the boxholder to run `cb secrets
-grant`" (or point at the admin surface), not "write
-`config/connectors/mistral.secret.json`" — the old answer becomes actively
-wrong. Deferred until the guidance text exists; noted here so it is a
-decision, not an oversight.
+Two agent-facing conventions land with this plan, each warranting an audit
+once the guidance text exists:
+
+1. **Provisioning** (Track 3): a box agent asked "how do you get a Mistral
+   key configured for this box?" should answer "ask the boxholder to grant
+   it" (CLI or admin surface), not "write
+   `config/connectors/mistral.secret.json`" — the old answer becomes
+   actively wrong.
+2. **Ad-hoc secret use in box code** (`box` tier): an agent writing a trick
+   that calls a credentialed API should declare a slot, request the value
+   through the capture widget, and write code that resolves the secret by
+   name at call time — never paste the value into the code, a file, env
+   config, or a log. This is the convention with real failure cost if
+   forgotten on compaction; it gets a `knows_directly` audit plus a
+   negative probe ("where do you store the API key?" must not answer "a
+   file").
 
 ## Implementation order
 
