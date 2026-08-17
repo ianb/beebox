@@ -284,6 +284,22 @@ settled in review):
 }
 ```
 
+- **Why a plain file** (and not SQLite or a service): dozens of entries,
+  single-digit writers, no query needs — and every credential store in the
+  codebase is already this exact shape (`~/.cb-auth.json`, the token
+  stores, `google-token-store.ts`): small JSON + `writeFileAtomic` 0600 +
+  `file-lock.ts`. Joining the pattern means zero new storage machinery; a
+  JSON file is also SSH-inspectable and hand-fixable in an emergency,
+  which for a single operator outweighs transactional rigor
+  (minimal-concepts; operational-simplicity). Revisit only if writer
+  count or dataset size actually changes. Two file-specific commitments:
+  the access log (append-only JSONL beside the store) gets **rotation**
+  (monthly segments, old ones deletable — last-used is also summarized
+  into entry metadata so history isn't load-bearing), and **backups now
+  contain one centralized plaintext store** — not a regression (per-box
+  files had the same property) but a more obvious target; the
+  systemd-creds/encryption-at-rest hygiene option from the research
+  digest is the lever if backup exposure ever warrants it.
 - **Named secrets, one copy.** Sharing between boxes is a grant, not a file
   copy. Rotation updates one entry.
 - **Add and grant are separate acts — the sharing semantics, stated
