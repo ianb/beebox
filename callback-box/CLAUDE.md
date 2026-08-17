@@ -149,6 +149,7 @@ The same duty applies at creation time: **new infrastructure isn't done until it
 | Card validation hooks | `docs/card-validation.md` |
 | Adding API endpoints | `docs/adding-api-endpoints.md` |
 | Connectors | `docs/connectors.md` |
+| Secrets (machine-level store, grants, `cb secrets`) | `docs/secrets.md` |
 | Procedures | `docs/procedure-implementation.md` |
 | Scheduler daemon (`cb tick`) | `docs/scheduler.md` |
 | Deployed-server health-check runbooks | `docs/health-checks.md` |

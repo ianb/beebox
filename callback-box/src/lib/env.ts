@@ -112,6 +112,9 @@ export const baseEnvSchema = z.object({
   // Global local-user store; the invite store is its 0600 sibling file. The
   // hub passes this path to children so minting and acceptance share state.
   CB_AUTH_FILE: optionalString,
+  // Machine-level secret store (see core/secrets/store.ts). Like CB_AUTH_FILE,
+  // one file behind every box on the machine — not per-box state.
+  CB_SECRETS_FILE: optionalString,
   // Public base URL cascade (see lib/public-url.ts). Both are optional; the
   // resolver picks CB_PUBLIC_URL over PUBLIC_URL over a caller fallback.
   CB_PUBLIC_URL: optionalString,
