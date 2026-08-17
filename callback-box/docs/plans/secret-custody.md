@@ -342,12 +342,25 @@ settled in review):
   vs what the box requires — connector requirements plus declared
   box-local slots; the `cb secrets` listing the 2026-03-15 issue asked
   for). Values are consumed through the code API above, not the CLI.
-  **Audience:** the CLI is the boxholder's surface (SSH on prod, terminal
-  locally) and the substrate the admin page and chat widget call into; the
-  agent's intended surface is read-only `status`/`list`/`declare`.
-  Mutating subcommands require `--agent-confirmed` in
-  agent sessions — a speed bump and audit signal, not a wall, per
-  `src/lib/agent-context.ts`.
+  **Audience (boxholder direction, 2026-08-17): the boxholder does not
+  really use the CLI — the web UI and chat are their actual surfaces.** So
+  the CLI is *plumbing*: for deploy scripts (`add-box`), the migration,
+  agents (`status`/`list`/`declare`), and emergencies. Mutating subcommands
+  require `--agent-confirmed` in agent sessions — a speed bump and audit
+  signal, not a wall, per `src/lib/agent-context.ts`.
+- **The boxholder's management surface is the admin page + chat widget,
+  in-plan, not deferred.** The admin page (which already owns
+  credential-adjacent config — Telegram setup, Google connect,
+  `AdminPage.tsx` + the admin tRPC router) gains a Secrets section:
+  this box's required-vs-granted status, grant/revoke, set/rotate a value
+  (masked input, direct to the store, never through chat), tier display,
+  and last-used from the access log. The chat secret-request widget (the
+  write-only-secret-capture issue) is the conversational entry point for
+  the same writes. Both ride the same store code as the CLI. Open design
+  point: the store is machine-level while admin pages are per-box —
+  each box's page shows and manages *its own* grants; whether a
+  machine-wide all-boxes view is needed (and where it lives) is open
+  question 8.
 - **Resolver.** `resolveSecret(boxRoot, name, purpose)` in one module:
   grant-check → log → return value. Per-connector readers call it; the
   legacy per-box file remains a fallback (with a deprecation warning) for
@@ -550,6 +563,12 @@ stop-over-engineering).
    per-box per-hour cap surfaced in the access log — bounded misuse is the
    one thing a broker can actually promise; but the cap number is the
    boxholder's call.
+8. **Machine-wide secrets view.** Per-box admin pages manage per-box
+   grants; does the boxholder need one all-boxes view (which names exist,
+   who holds what, last-used), and where does it live given admin is
+   per-box? Lean: defer — per-box status covers the common cases; add the
+   fleet view only if managing five boxes one page at a time actually
+   chafes.
 
 ## Knowledge audits
 
@@ -582,11 +601,15 @@ once the guidance text exists:
    by surface size; telegram chunk includes the status-redaction and
    store-write changes; google env client creds; publish's minted-token
    write path.
-4. `add-box.sh`/docs; child-env allowlist drops connector entries; env
+4. The admin-page Secrets section (the boxholder's actual management
+   surface) — status, grant/revoke, set/rotate — lands as soon as the
+   second consumer migrates, not at the end; the chat capture widget can
+   follow as its own chunk (it has its own issue).
+5. `add-box.sh`/docs; child-env allowlist drops connector entries; env
    fallback removal; stray-file flagging; then the access-log surfacing and
    `cb secrets status` polish.
-5. Track 4 rides the containment issue's build.
-6. File-modes bug: superseded for connector secrets by the migration (files
+6. Track 4 rides the containment issue's build.
+7. File-modes bug: superseded for connector secrets by the migration (files
    retired); telegram's writer is fixed by moving into the store.
 
 ## Rollout shape
