@@ -45,6 +45,15 @@ async function makeFixture() {
   return { tmp, configPath };
 }
 
+async function tryApply(plan) {
+  try {
+    await applyAddBoxPlan(plan);
+    return null;
+  } catch (e) {
+    return e;
+  }
+}
+
 async function tryPlan(configPath, slug, boxPath) {
   try {
     return await planAddBoxToHubConfig({ configPath, slug, boxPath });
@@ -170,6 +179,47 @@ missing instanceof HubConfigEditError
 
 missing.message.includes("No hub config at")
 => true
+```
+
+## A config the hub would refuse is caught on EVERY path, including the no-op one
+
+The caller restarts the hub after this command succeeds, so "already
+registered, nothing to do" against a config the hub cannot load would take the
+fleet down at the restart. The current config is validated before the addition
+is even considered.
+
+```ts continue
+const brokenConfigPath = path.join(tmp.root, "hand-broken.json");
+await fs.writeFile(
+  brokenConfigPath,
+  JSON.stringify({ boxes: { hearth: { path: "./boxes/hearth" }, api: { path: "./boxes/lighthouse" } } }),
+);
+// "hearth" is already registered there at the same path — the idempotent path.
+const onBroken = await tryPlan(brokenConfigPath, "hearth", path.join(tmp.root, "boxes/hearth"));
+onBroken instanceof HubConfigError
+=> true
+
+onBroken.message.includes("reserved")
+=> true
+```
+
+## Applying a plan refuses if the file changed underneath it
+
+```ts continue
+const racePath = path.join(tmp.root, "race.json");
+await fs.writeFile(racePath, JSON.stringify({ boxes: {} }, null, 2) + "\n");
+const racePlan = await tryPlan(racePath, "lighthouse", path.join(tmp.root, "boxes/lighthouse"));
+racePlan.action
+=> added
+
+// Someone else edits the file between the plan and the write.
+await fs.writeFile(racePath, JSON.stringify({ boxes: { beacon: { path: "./boxes/hearth" } } }, null, 2) + "\n");
+(await tryApply(racePlan)) instanceof HubConfigEditError
+=> true
+
+// The other writer's version survives.
+Object.keys((await loadHubConfig(racePath)).boxes).join(",")
+=> beacon
 ```
 
 ## An unparseable config is an error, not a clobber

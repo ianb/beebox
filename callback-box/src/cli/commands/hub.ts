@@ -59,7 +59,10 @@ function registerAddBoxSubcommand(parent: Command): void {
   // options are enabled program-wide, so `cb hub add-box … --config X` lands
   // on `hub`, not on `add-box`. Both spellings mean the same file, so taking
   // whichever one holds a value is correct — and it avoids silently falling
-  // back to the default config when the operator clearly named one.
+  // back to the default config when the operator clearly named one. Passing it
+  // twice resolves last-wins, since both land on the parent; that is ordinary
+  // CLI behavior, and the command prints the config path it acted on either
+  // way, so the operator sees which file was edited.
   addBox.action(async (slug: string, boxPath: string) => {
     const options = addBox.opts<{ config?: string; dryRun?: boolean }>();
     const parentOptions = parent.opts<{ config?: string }>();

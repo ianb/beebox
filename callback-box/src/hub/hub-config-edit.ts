@@ -50,8 +50,12 @@ export interface AddBoxToHubPlan {
   /** Absolute box path as it would be written into the config. */
   boxPath: string;
   configPath: string;
-  /** Exact bytes the config file should hold afterwards. Equal to the current
-   *  contents when `action` is `"unchanged"`. */
+  /** Exact bytes the config file held when the plan was made. `applyAddBoxPlan`
+   *  refuses to write if the file no longer matches, so a concurrent edit is
+   *  reported rather than silently overwritten. */
+  baseText: string;
+  /** Exact bytes the config file should hold afterwards. Equal to `baseText`
+   *  when `action` is `"unchanged"`. */
   nextText: string;
 }
 
@@ -106,6 +110,13 @@ export async function planAddBoxToHubConfig(opts: {
     );
   }
 
+  // Validate what is ALREADY there before considering the addition. A config
+  // the hub would refuse to boot must fail here, on every path including the
+  // idempotent one — the caller (`deploy/add-box.sh`) restarts the hub after
+  // this command succeeds, so "already registered, nothing to do" on a broken
+  // config would take the whole fleet down at the restart.
+  await parseHubConfig(current, configPath);
+
   const existing = current.boxes[slug];
   if (existing !== undefined) {
     if (!isRecord(existing) || typeof existing.path !== "string") {
@@ -120,7 +131,14 @@ export async function planAddBoxToHubConfig(opts: {
       canonicalBoxKey(boxPath),
     ]);
     if (existingKey === requestedKey) {
-      return { action: "unchanged", slug, boxPath: existingPath, configPath, nextText: currentText };
+      return {
+        action: "unchanged",
+        slug,
+        boxPath: existingPath,
+        configPath,
+        baseText: currentText,
+        nextText: currentText,
+      };
     }
     throw new HubConfigEditError(
       `Hub config at ${configPath}: slug "${slug}" already routes to ${existingPath}, not ${boxPath}. ` +
@@ -135,12 +153,33 @@ export async function planAddBoxToHubConfig(opts: {
   // all fail here with the live file untouched.
   await parseHubConfig(next, configPath);
 
-  return { action: "added", slug, boxPath, configPath, nextText: JSON.stringify(next, null, 2) + "\n" };
+  return {
+    action: "added",
+    slug,
+    boxPath,
+    configPath,
+    baseText: currentText,
+    nextText: JSON.stringify(next, null, 2) + "\n",
+  };
 }
 
-/** Write a plan produced by `planAddBoxToHubConfig`. A no-op for `"unchanged"`. */
+/**
+ * Write a plan produced by `planAddBoxToHubConfig`. A no-op for `"unchanged"`.
+ *
+ * Re-reads the file first and refuses if it changed since the plan was made.
+ * The gap is small (a plan is applied immediately after it is built), but this
+ * is the fleet's routing table and the alternative to noticing is silently
+ * discarding whatever the other writer did.
+ */
 export async function applyAddBoxPlan(plan: AddBoxToHubPlan): Promise<void> {
   if (plan.action === "unchanged") return;
+  const nowText = await readConfigText(plan.configPath);
+  if (nowText !== plan.baseText) {
+    throw new HubConfigEditError(
+      `Hub config at ${plan.configPath} changed while this edit was being prepared. ` +
+        "Nothing was written — re-run the command against the current file.",
+    );
+  }
   await writeFileAtomic(plan.configPath, { content: plan.nextText });
 }
 

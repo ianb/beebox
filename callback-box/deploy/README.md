@@ -135,12 +135,17 @@ and hyphens. Two manifests are written, and both are live:
 
 Neither hot-reloads, so the script restarts `callback-hub` and
 `callback-scheduler`. It then drives the hub's canary for the new slug, which
-cold-starts the box and requires the box's own `/healthz` to answer — so a
-successful run means the box really serves, not just that files were written.
+cold-starts the box and requires the box's own `/healthz` to answer through the
+hub — so a successful run means the box process really came up and served, not
+just that files were written. (It is a loopback check: nginx, TLS, the public
+URL, and per-user access are not exercised.)
 
-**Order of operations:** the slug is validated, and the hub edit is
-`--dry-run`ed against the live config, *before* anything is cloned. A run that
-will fail should fail before it touches the server's state.
+**Order of operations:** every argument's shape is validated, and the hub edit
+is `--dry-run`ed against the live config, *before* anything is cloned — which
+is where the failures this script used to hit at the very end now surface. It
+is not a transaction, though: a failure in the clone, the `cb init`, the
+manifests, or the restart leaves the earlier steps done. The script names the
+step that failed, and re-running is safe.
 
 Re-running is idempotent: pull + re-init, both manifest steps no-op, access
 config left alone.

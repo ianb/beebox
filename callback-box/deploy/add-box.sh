@@ -32,9 +32,13 @@ set -euo pipefail
 # leaves both manifests and the access config as they are. (Edit box.json by
 # hand to change access.)
 #
-# Failure order matters: everything that can be checked without touching the
-# server's state is checked FIRST — the slug's shape, and a `--dry-run` of the
-# hub-config edit. A run that is going to fail should fail before it clones.
+# Failure order matters. Everything checkable without touching the server's
+# state is checked FIRST: every argument's shape, and a `--dry-run` of the
+# hub-config edit against the live config. That covers the failures this script
+# used to hit at the very end (a bad slug, a slug already taken, a config the
+# hub would refuse). It is NOT a transaction — a failure in the clone, the
+# `cb init`, the manifests, or the restart still leaves the earlier steps done.
+# The script says which step failed, and re-running is safe.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CB_USER="callback"
@@ -93,6 +97,26 @@ if ! [[ "$BOX_NAME" =~ ^[0-9a-z]([0-9a-z-]*[0-9a-z])?$ ]]; then
   exit 1
 fi
 
+# Every remaining value is interpolated into shell that runs as root on the
+# production server (see the heredoc note below), so each one is constrained to
+# a shape that cannot carry a quote, a `$(...)`, a `;`, a newline, or a glob.
+# Cheaper and more legible than escaping, and a name that needs those
+# characters is a mistake worth stopping on anyway.
+if ! [[ "$REPO" =~ ^[A-Za-z0-9@:/_.-]+$ ]]; then
+  echo "Error: repo '$REPO' contains characters this script will not send to the server."
+  exit 1
+fi
+if [[ -n "$SECRETS_FROM" ]] && ! [[ "$SECRETS_FROM" =~ ^[0-9A-Za-z._-]+$ ]]; then
+  echo "Error: --secrets-from '$SECRETS_FROM' must be a plain box directory name."
+  exit 1
+fi
+for email in ${ALLOW_EMAILS[@]+"${ALLOW_EMAILS[@]}"}; do
+  if ! [[ "$email" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]]; then
+    echo "Error: --allow '$email' is not a plain email address."
+    exit 1
+  fi
+done
+
 # Comma-join allowed emails for the remote python one-liner.
 ALLOW_CSV=""
 if [[ ${#ALLOW_EMAILS[@]} -gt 0 ]]; then
@@ -136,8 +160,8 @@ if [[ -n "$DRY_RUN" ]]; then
   if [[ -n "$SECRETS_FROM" ]]; then
     echo "  - copy connector secrets from box '$SECRETS_FROM'"
   fi
-  echo "  - register with the scheduler manifest (cb boxes add)"
   echo "  - register with the hub (cb hub add-box, per the plan above)"
+  echo "  - register with the scheduler manifest (cb boxes add)"
   echo "  - systemctl restart callback-hub callback-scheduler"
   echo "  - verify with the hub's canary for this box"
   echo ""
@@ -172,17 +196,39 @@ fi
 # Run cb init to ensure all standard directories exist (e.g., people/)
 # and agent docs are up to date. Run as callback user so files get
 # correct ownership. Must chown first so callback can write.
+#
+# A failure here is fatal: everything below (access config, secrets, both
+# manifest registrations, the restart) would otherwise register a box whose
+# structure is not known-good, and the restart would put it in front of users.
 chown -R $CB_USER:$CB_USER "$BOX_PATH"
 echo "Running cb init to update box structure..."
-su - $CB_USER -c "cd '$BOX_PATH' && cb init . --skip-git" 2>&1 || echo "Warning: cb init failed (non-fatal)"
+if ! su - $CB_USER -c "cd '$BOX_PATH' && cb init . --skip-git" 2>&1; then
+  echo "cb init FAILED for $BOX_PATH — stopping before the box is registered."
+  echo "The repo is cloned; fix the box and re-run this script."
+  exit 1
+fi
+
+# A v2 box is a package whose operational content lives in content/ — so
+# config/ is under content/, not at the package root. Resolve it the same way
+# the hub does (.cb-box marks the content dir; see src/hub/child-spawn.ts's
+# resolveBoxRoot), instead of assuming either layout.
+if [[ -f "$BOX_PATH/content/.cb-box" ]]; then
+  CONTENT_DIR="$BOX_PATH/content"
+elif [[ -f "$BOX_PATH/.cb-box" ]]; then
+  CONTENT_DIR="$BOX_PATH"
+else
+  echo "Could not find .cb-box in $BOX_PATH or $BOX_PATH/content — is this a box?"
+  exit 1
+fi
 
 # Access config: only write for a brand-new box, never clobber an
 # existing one (re-deploys keep their hand-tuned access).
 if [[ -n "$ALLOW_CSV" ]]; then
-  if [[ -f "$BOX_PATH/config/box.json" ]]; then
+  if [[ -f "\$CONTENT_DIR/config/box.json" ]]; then
     echo "Access: box.json exists — leaving it unchanged (add by hand: $ALLOW_CSV)"
   else
-    python3 -c "import json; json.dump({'allowedEmails': '$ALLOW_CSV'.split(',')}, open('$BOX_PATH/config/box.json','w'), indent=2)"
+    mkdir -p "\$CONTENT_DIR/config"
+    python3 -c "import json,sys; json.dump({'allowedEmails': '$ALLOW_CSV'.split(',')}, open(sys.argv[1],'w'), indent=2)" "\$CONTENT_DIR/config/box.json"
     echo "Access: wrote config/box.json (allowedEmails: $ALLOW_CSV)"
   fi
 fi
@@ -190,9 +236,11 @@ fi
 # Seed connector secrets from a reference box (the shared Mistral key,
 # etc.) so transcription and connectors work without a manual copy.
 if [[ -n "$SECRETS_FROM" ]]; then
-  mkdir -p "$BOX_PATH/config/connectors"
-  if cp $BOXES_DIR/$SECRETS_FROM/config/connectors/*.secret.json "$BOX_PATH/config/connectors/" 2>/dev/null; then
-    chmod 600 "$BOX_PATH/config/connectors/"*.secret.json
+  SRC_DIR="$BOXES_DIR/$SECRETS_FROM/content/config/connectors"
+  [[ -d "\$SRC_DIR" ]] || SRC_DIR="$BOXES_DIR/$SECRETS_FROM/config/connectors"
+  mkdir -p "\$CONTENT_DIR/config/connectors"
+  if cp "\$SRC_DIR"/*.secret.json "\$CONTENT_DIR/config/connectors/" 2>/dev/null; then
+    chmod 600 "\$CONTENT_DIR/config/connectors/"*.secret.json
     echo "Secrets: copied from '$SECRETS_FROM'"
   else
     echo "Secrets: none found on '$SECRETS_FROM' (nothing copied)"
@@ -209,19 +257,17 @@ chown -R $CB_USER:$CB_USER "$BOX_PATH"
 #   ~/.config/cb/hub.json   — the hub's routing table: which URL slug maps to
 #                             which box. This is what makes the box reachable.
 # Neither is hot-reloaded, hence the restart below.
-# Both commands are idempotent and print what they did (or found already done).
-su - $CB_USER -c "cb boxes add '$BOX_PATH'"
+#
+# The hub goes first: it is the step with real validation behind it, so if
+# anything is going to be refused it is refused while boxes.json is still
+# untouched. Both commands are idempotent and print what they did.
 su - $CB_USER -c "cb hub add-box '$BOX_NAME' '$BOX_PATH'"
+su - $CB_USER -c "cb boxes add '$BOX_PATH'"
 
 # Restart both services LAST, so they pick up the box, its access config,
 # and its secrets in a single restart.
 systemctl restart callback-hub callback-scheduler
-
-echo ""
-echo "Box '$BOX_NAME' added."
-echo "  Path: $BOX_PATH"
-echo "  URL:  https://box.example.com/$BOX_NAME"
-echo "  Services restarted (callback-hub, callback-scheduler)."
+echo "Registered and restarted (callback-hub, callback-scheduler)."
 REMOTE
 
 # ── Verify the box actually serves ──────────────────────────────────
@@ -269,3 +315,10 @@ fi
 echo "  Canary OK: \$(cat /tmp/add-box-canary.out)"
 rm -f /tmp/add-box-canary.out
 VERIFY
+
+# Only now — past the registration, the restart, and a box that answered its
+# own health endpoint through the hub — is this a success.
+echo ""
+echo "Box '$BOX_NAME' added."
+echo "  Path: $BOX_PATH"
+echo "  URL:  https://box.example.com/$BOX_NAME"
