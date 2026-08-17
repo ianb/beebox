@@ -82,13 +82,40 @@ shows the fork mostly does not apply here, because of who asks:
   that needs a transcription asks its own box's HTTP API; the server process
   resolves the key.
 
-So the design is: **a vault whose only clients are server processes, which
-makes it a broker from the agent's point of view.** Agents are never a party
-to disclosure at all — not "may ask and be logged," but "cannot ask." The
-store's disclosure interface is an in-process resolver call made by connector
-code on behalf of a box, not an agent-facing endpoint. This gets the broker's
-agent-facing property at near-zero call-site churn, because the call sites
-are already on the right side of the line.
+So the design is: **a vault whose intended clients are server processes,
+with no agent-facing disclosure interface.** The store's disclosure interface
+is an in-process resolver call made by connector code on behalf of a box,
+not an endpoint agents are given. This gets most of the broker's agent-facing
+property at near-zero call-site churn, because the call sites are already on
+the right side of the line.
+
+**Stated precisely, because the claim is easy to overread:** "no interface"
+is not "no access." The resolver is ordinary project code and the store is a
+same-user 0600 file; an agent that executes arbitrary code can import the
+resolver with a forged `boxRoot`, run `node -e 'fs.readFileSync(...)'` on
+the store, or read `/proc/<pid>/environ` of same-user server processes. The
+`--agent-confirmed` gate is explicitly a speed bump against accidental agent
+mistakes, not an authorization boundary (`src/lib/agent-context.ts:5-17`).
+What this design removes is the *trivial and incidental* paths (a file in
+the agent's own cwd; inherited env); what makes out-of-tree access *denied*
+rather than merely deliberate is the containment interlock (Track 4); and
+what would make it *impossible* is OS-user separation, which is out of
+scope. The plan claims hygiene, blast-radius bounding, attribution, and
+rotation — not a wall.
+
+**The operation surface is part of the custody question.** Agents (and the
+frontend) already reach secret-*spending* operations through box-auth'd
+endpoints, and two of them hand back derived credentials today:
+`deepgramTempKey` (`src/webapp/trpc/routers/transcription.ts:38`) mints a
+TTL'd usage-scoped Deepgram key — the derived-credential pattern, already
+live — and the OpenAI realtime path mints client secrets; both are
+`publicProcedure` behind box auth, with no rate limit and no audit, and
+`setService`/`setHqService` mutations let any box-auth'd caller repoint
+which backend future flows spend. A custody design that logs value
+*resolution* but not these operation/minting endpoints audits the door and
+ignores the window: Track 3 brings them under the same access-log `purpose`
+posture (log each mint/spend with box + purpose), and their rate posture is
+an open question (7) rather than silently unbounded.
 
 The *full* broker shape — per-provider derived credentials, an egress proxy
 that injects keys — remains the escalation path where it pays (see "Broker
@@ -222,6 +249,15 @@ The strip-four-names comment block (`script-env.ts:106-127`) shows the
 posture is already deny-by-name for hub secrets; connector keys were simply
 never added.
 
+**Scope of the claim:** this closes *inheritance into the agent's own env*,
+nothing more. Hub-spawned `cb serve` children still legitimately carry
+connector keys in their env (`child-env.ts:57-93` allowlists them), and a
+same-user agent can read `/proc/<pid>/environ` on Linux. The endgame is that
+Track 3 retires the env-var credential path entirely (readers resolve from
+the store), at which point the connector entries come *out of the child-env
+allowlist too* and no long-running process carries connector keys in env.
+That removal is a named Track 3 chunk, not a side effect.
+
 **Direction.** One allowlist constant, shared derivation with
 `child-env.ts` where the entries overlap, plus a doctest asserting a
 poisoned `process.env` does not reach the agent env.
@@ -252,8 +288,18 @@ settled in review):
   copy. Rotation updates one entry.
 - **Grants are fail-closed.** A resolver call for an ungranted secret returns
   the same "not configured" answer the current missing-file path produces
-  (`requirements.ts:46-56` shape) — boxes degrade exactly as they do today,
-  loudly, not fatally.
+  (`requirements.ts:46-56` shape) — the *per-secret* degradation matches
+  today. Two honest differences from today: (a) current readers disagree
+  about fallback order and strictness (mistral swallows a corrupt file and
+  falls to env, `mistral-key.ts:22-26`; newer readers throw) — the resolver
+  unifies this, which is a behavior change for the strict ones; (b) a
+  corrupt *store file* is a machine-wide event — every grant on the machine
+  reads as absent at once, a blast radius no per-box file has. Mitigation:
+  `writeFileAtomic` + schema validation on every write makes on-disk
+  corruption reachable only by hand-edit; on parse failure the resolver
+  fails closed and `cb health` flags "secret store unreadable" on every box.
+  Accepted as a documented trade, not gold-plated further
+  (stop-over-engineering).
 - **Access log.** Append-only JSONL beside the store: `{ts, box, secret,
   purpose}` where `purpose` is a short caller-supplied string
   ("transcription", "telegram-sync"). Values never logged; if a value must
@@ -287,10 +333,20 @@ questions inside it.
 
 ### Track 3 — move the six locations onto the store
 
-**What.** Rewire readers in dependency order: mistral → deepgram →
-openai/thinking → telegram → google (legacy branch only —
-`CB_GOOGLE_TOKENS_FILE` is already centralized and stays) →
-`publish.secret.json`. Update `deploy/add-box.sh`: `--secrets-from` becomes
+**What.** Rewire every secret consumer onto the resolver. "Six locations"
+was the umbrella issue's storage inventory; the *reader* inventory is
+larger and must be enumerated as Track 3's first act, not discovered
+mid-migration. Known today: mistral (`src/core/mistral-key.ts`), deepgram
+(`src/core/deepgram-key.ts` + the temp-key minting in
+`trpc/routers/transcription.ts`), openai/thinking + realtime
+(`routes/chat-audio-routes.ts`, `routes/api-adapters.ts`), embeddings
+(`src/core/search/embeddings-key.ts`), telegram
+(`connectors/telegram-helpers.ts`, `trpc/routers/admin.ts`), google legacy
+branch (`CB_GOOGLE_TOKENS_FILE` stays; env client creds in
+`connectors/google-auth.ts` move), publish
+(`src/publish/connector-secret.ts` — which also *writes* a minted
+Cloudflare token). Order: mistral first as template, then by surface size.
+Update `deploy/add-box.sh`: `--secrets-from` becomes
 "copy the grant list", not the files. Update `docs/adding-a-box.md`. New-box
 provisioning becomes: `cb secrets status <box>` names what's missing;
 granting is one command — resolving the 2026-03-15 decision issue.
@@ -325,9 +381,14 @@ makes it effective.
 
 Where the full never-discloses broker pays, per provider:
 
-- **Telegram** — no scoping primitive exists; the hub already terminates the
-  webhook and sync paths, so Telegram is *already* effectively brokered;
-  keep it that way and never expose the bot token outside the store.
+- **Telegram** — no scoping primitive exists, so the server must keep
+  terminating the webhook and sync paths, and the token must never leave the
+  store. That is *not* the current state: `telegramStatus` returns the raw
+  `botToken` to the admin frontend (`src/webapp/trpc/routers/admin.ts:65,71`),
+  and `telegramSetup` writes the secret file with no `mode: 0o600`
+  (`admin.ts:92-98`). Track 3's telegram chunk redacts the status response
+  (a deliberate admin-UI behavior change — show configured/username only),
+  moves the write into the store, and makes disconnect revoke the grant.
 - **Google** — already refresh→short-lived-access shaped; the
   [google-auth-policy-proxy](../../../issues/features/2026-07-28-google-auth-policy-proxy.md)
   issue (Nango Tier 1 + policy Tier 2) is the full build and stays open,
@@ -369,7 +430,7 @@ stop-over-engineering).
 | Resolver asked for an ungranted secret | planned (doctest) | returns not-configured; connector degrades as today | clear — `cb health` names the missing grant |
 | Store file missing/corrupt at read | planned | fail-closed: treat as no grants; warn once per process | clear (console.warn) |
 | Concurrent store writes (CLI + admin route) | planned | `file-lock.ts` + atomic replace | clear |
-| Access log unwritable (disk full) | planned | resolution proceeds; warn — availability beats audit for a personal system; the trade is explicit | clear (warn) |
+| Access log unwritable (disk full) | planned | resolution proceeds; warn + `cb health` flags "audit currently broken" — the log is best-effort by declaration, availability wins; the claim in this plan is attribution, not tamper-proof audit | clear (warn + health) |
 | Legacy per-box file and store disagree during transition | planned | store wins; fallback only when store has no entry; deprecation warning names the stray file | clear |
 | Agent invokes `cb secrets set/grant` | exists-pattern (`agent-context.ts`) | refused without `--agent-confirmed` | clear |
 | Box renamed/recloned (worktree clones) → grant key mismatch | no | **open question 2** | currently unhandled |
@@ -439,6 +500,16 @@ stop-over-engineering).
    credentials as hygiene? Lean: yes, as a final chore, honestly labeled.
 5. **Threat-model sign-off** — the recommendation above is the planner's;
    the boxholder decides (`needs: [decision]` energy on the umbrella issue).
+6. **Auth tier for backend-repointing mutations.** `setService`/`setHqService`
+   are `publicProcedure` behind box auth
+   (`trpc/routers/transcription.ts:23-34`); should repointing which backend
+   spends credentials require owner auth instead? Lean: yes, cheap and
+   strict.
+7. **Rate posture for minting/spending endpoints.** `deepgramTempKey` and
+   the realtime client-secret mints are unlimited today. Lean: a simple
+   per-box per-hour cap surfaced in the access log — bounded misuse is the
+   one thing a broker can actually promise; but the cap number is the
+   boxholder's call.
 
 ## Knowledge audits
 
@@ -454,13 +525,21 @@ decision, not an oversight.
 ## Implementation order
 
 1. Track 1 (env allowlist) — independent, closes the critical gap.
-2. Track 2 (store + CLI) — no consumers yet.
-3. Track 3, mistral first, then the remaining readers; then
-   `add-box.sh`/docs; then fallback removal as its own chunk.
-4. Track 4 rides the containment issue's build.
-5. File-modes bug: superseded for connector secrets by Track 3 (files
-   retired); the telegram-writer mode fix lands trivially inside Track 3's
-   telegram chunk.
+2. Thin slice through Tracks 2+3: the minimal store (read/write/lock,
+   `set`/`grant`/`list`) **and mistral end-to-end in the same chunk** —
+   resolver, fallback, health, doctests. No second secret system exists
+   without a real consumer; the slice proves the migration shape before the
+   store grows audit/status polish.
+3. Reader inventory (Track 3's enumeration), then the remaining consumers
+   by surface size; telegram chunk includes the status-redaction and
+   store-write changes; google env client creds; publish's minted-token
+   write path.
+4. `add-box.sh`/docs; child-env allowlist drops connector entries; env
+   fallback removal; stray-file flagging; then the access-log surfacing and
+   `cb secrets status` polish.
+5. Track 4 rides the containment issue's build.
+6. File-modes bug: superseded for connector secrets by the migration (files
+   retired); telegram's writer is fixed by moving into the store.
 
 ## Rollout shape
 
@@ -474,6 +553,9 @@ decision, not an oversight.
   write grants, leave originals in place during the fallback window, then a
   removal pass. Prod migration is operator-run over `deploy/prod-ssh` with
   the boxholder present; no unattended prod mutation.
-- **Done-when**: `grep`ing a box tree for `*.secret.json` finds nothing;
-  `cb secrets status <box>` accounts for every connector requirement;
-  the access log shows real entries from a wakeup cycle.
+- **Done-when**: the Track 3 reader inventory is enumerated in the plan and
+  every entry is checked off; `grep`ing a box tree for `*.secret.json` finds
+  nothing AND `grep -rn "secret.json" src/` finds no box-tree readers
+  outside the resolver + deprecation flagger; `cb secrets status <box>`
+  accounts for every connector requirement; the access log shows real
+  entries (resolutions *and* temp-key mints) from a wakeup cycle.
