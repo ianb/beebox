@@ -1,6 +1,6 @@
 ---
 title: "Secret custody: a hub-owned store with per-box grants, access levels, and audit"
-status: draft
+status: active
 workstream: secret-custody
 issues:
   - ../../../issues/features/2026-08-17-secret-custody-broker.md
@@ -16,9 +16,9 @@ machine-level store owned by the server processes, with per-box grants (each
 carrying an access level: `server` — never reaches agent context; `agent` —
 box code may resolve the value by name at call time, logged), an access log,
 and a full lifecycle — set, grant, revoke, rotate — managed from the admin
-page and chat widget, with `cb secrets` as the plumbing underneath. It is a
-design proposal for discussion — nothing here is built, and the threat-model
-section needs the boxholder's sign-off before implementation starts.
+page and chat widget, with `cb secrets` as the plumbing underneath. Nothing
+here is built yet; the design and its open questions were settled with the
+boxholder 2026-08-17 (see Decisions).
 
 The one-sentence thesis: **the built-in connectors already use secrets only
 in server processes, so for them the fix is placement and inheritance (out
@@ -26,7 +26,7 @@ of the box tree, out of the agent's env) plus grants, audit, and rotation on
 the one copy that remains; the only new disclosure surface is a deliberate,
 logged, per-grant opt-in for agent-authored integrations.**
 
-## Threat model (previously unwritten — decide this first)
+## Threat model (signed off by the boxholder, 2026-08-17)
 
 Three candidate adversaries, from the umbrella issue:
 
@@ -129,8 +129,10 @@ live — and the OpenAI realtime path mints client secrets; both are
 which backend future flows spend. A custody design that logs value
 *resolution* but not these operation/minting endpoints audits the door and
 ignores the window: Track 3 brings them under the same access-log `purpose`
-posture (log each mint/spend with box + purpose), and their rate posture is
-an open question (7) rather than silently unbounded.
+posture (log each mint/spend with box + purpose). They stay **deliberately
+uncapped** (boxholder decision, 2026-08-17: a hit rate limit is more
+annoying and harder to understand than the risk it would bound) — the
+posture is logged-and-visible, not throttled.
 
 The *full* broker shape — per-provider derived credentials, an egress proxy
 that injects keys — remains the escalation path where it pays (see "Broker
@@ -480,11 +482,14 @@ settled in review):
   display and raise/lower,
   and last-used from the access log. The chat secret-request widget (the
   write-only-secret-capture issue) is the conversational entry point for
-  the same writes. Both ride the same store code as the CLI. Open design
-  point: the store is machine-level while admin pages are per-box —
-  each box's page shows and manages *its own* grants; whether a
-  machine-wide all-boxes view is needed (and where it lives) is open
-  question 8.
+  the same writes. Both ride the same store code as the CLI. The store is
+  machine-level and gets a **machine-wide view** (boxholder decision,
+  2026-08-17: a machine-wide situation should have a machine-wide
+  interface): every name, its grants across boxes, `shareable` flags, and
+  last-used — owner-gated, reachable from any box's admin Secrets section
+  (there is no separate hub UI to put it in; exact placement is a build
+  detail). Each box's page still leads with its own
+  required-vs-granted view for the common case.
 - **Resolver.** `resolveSecret(boxRoot, name, purpose)` in one module:
   grant-check → log → return value. Per-connector readers call it; the
   legacy per-box file remains a fallback (with a deprecation warning) for
@@ -616,7 +621,7 @@ stop-over-engineering).
 | Access log unwritable (disk full) | planned | resolution proceeds; warn + `cb health` flags "audit currently broken" — the log is best-effort by declaration, availability wins; the claim in this plan is attribution, not tamper-proof audit | clear (warn + health) |
 | Legacy per-box file and store disagree during transition | planned | store wins; fallback only when store has no entry; deprecation warning names the stray file | clear |
 | Agent invokes `cb secrets set/grant` | exists-pattern (`agent-context.ts`) | refused without `--agent-confirmed` | clear |
-| Box renamed/recloned (worktree clones) → grant key mismatch | no | **open question 2** | currently unhandled |
+| Box renamed/recloned (worktree clones) → grant key mismatch | planned | grants are slug-keyed (Decision 2), so clones sharing a slug inherit; a renamed box shows as ungranted in `status`, which names the fix | clear |
 | Secret value passed via argv (leaks to `ps`) | planned | `set` reads stdin/prompt only; argv form rejected | clear |
 
 ## Agent-flow / user-flow edge cases
@@ -667,41 +672,30 @@ stop-over-engineering).
   Docker/nono shape; revisit only if agent-side code ever legitimately needs
   to call a credentialed API directly.
 
-## Open design questions
+## Decisions (settled with the boxholder, 2026-08-17)
 
-1. **Store granularity: one machine file vs per-box files under one
-   directory.** Lean: one file + grants table (sharing and rotation are the
-   point; per-box files re-create the copy problem for shared keys).
-2. **Grant keying for clones and worktrees.** Worktree test boxes are clones
-   of `test1`; should a clone inherit `test1`'s grants (lean: yes, keyed by
-   box slug not path — this also fixes the "worktrees need secrets copied
-   in" recurring annoyance), and does prod need path-keying to distinguish
-   same-slug boxes? Needs the boxholder's read on how slugs collide in
-   practice.
-3. **Does the admin tRPC write path (telegram setup) write to the store or
-   keep per-box placement for per-box secrets?** Lean: store, under
-   `telegram-bot/<box>` naming — per-box *instance*, machine-level custody.
-4. **`/home/callback/.env` endgame.** After Track 3, which env entries remain
-   (VAPID? OAuth client id?) and does the remainder move to systemd
-   credentials as hygiene? Lean: yes, as a final chore, honestly labeled.
-5. **Threat-model sign-off** — the recommendation above is the planner's;
-   the boxholder decides (`needs: [decision]` energy on the umbrella issue).
-6. **Auth tier for backend-repointing mutations.** `setService`/`setHqService`
-   are `publicProcedure` behind box auth
-   (`trpc/routers/transcription.ts:23-34`); should repointing which backend
-   spends credentials require owner auth instead? Lean: yes, cheap and
-   strict.
-7. **Rate posture for minting/spending endpoints.** `deepgramTempKey` and
-   the realtime client-secret mints are unlimited today. Lean: a simple
-   per-box per-hour cap surfaced in the access log — bounded misuse is the
-   one thing a broker can actually promise; but the cap number is the
-   boxholder's call.
-8. **Machine-wide secrets view.** Per-box admin pages manage per-box
-   grants; does the boxholder need one all-boxes view (which names exist,
-   who holds what, last-used), and where does it live given admin is
-   per-box? Lean: defer — per-box status covers the common cases; add the
-   fleet view only if managing five boxes one page at a time actually
-   chafes.
+Formerly the open-questions list; every item has an answer.
+
+1. **Store granularity**: one file per machine.
+2. **Grant keying**: by box slug — clones and worktree boxes sharing a slug
+   inherit the grants. Dev-only concern; slug collisions on prod are not a
+   worry, so no path-keying.
+3. **Telegram setup writes to the store** (as `telegram-bot/<box>`,
+   `shareable: false`) — no per-box stores; one custody location.
+4. **`.env` endgame**: after migration, moving the remainder (VAPID, OAuth
+   client id, …) to systemd credentials is a hygiene chore, honestly
+   labeled — do it as the final Track 3 chunk's follow-up.
+5. **Threat model signed off**: prompt-injected agent as the driver; box
+   server processes inside the trust boundary; root/hub compromise
+   declined.
+6. **Backend-repointing mutations** (`setService`/`setHqService`) move to
+   owner auth.
+7. **No rate caps on minting/spending endpoints** — `deepgramTempKey` etc.
+   stay uncapped; a hit limit is more annoying and harder to understand
+   than the risk it would bound. Posture is logged-and-visible only.
+8. **Machine-wide secrets view is in scope** — a machine-wide situation
+   gets a machine-wide interface (see the management-surface bullet in
+   Track 2).
 
 ## Knowledge audits
 

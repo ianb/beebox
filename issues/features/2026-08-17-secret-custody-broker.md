@@ -2,7 +2,6 @@
 title: "Secret custody: hold secrets somewhere that discloses on request, logs access, and can share between boxes"
 workstream: secret-custody
 area: callback-box
-needs: [design, decision]
 design: ../../callback-box/docs/plans/secret-custody.md
 labels: [security, secrets, hub, connectors]
 filed-by: agent
