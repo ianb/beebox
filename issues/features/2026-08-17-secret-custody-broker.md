@@ -1,8 +1,9 @@
 ---
 title: "Secret custody: hold secrets somewhere that discloses on request, logs access, and can share between boxes"
-workstream: unattached
+workstream: secret-custody
 area: callback-box
-needs: [design]
+needs: [design, decision]
+design: ../../callback-box/docs/plans/secret-custody.md
 labels: [security, secrets, hub, connectors]
 filed-by: agent
 discovered-by: Ian
@@ -112,4 +113,55 @@ The boxholder explicitly asked for best practices rather than invention:
 - **Degradation.** Boxes must still work when the store is unavailable, or the
   whole system becomes a single point of failure for every connector.
 
-## Research (incomplete)
+## Research (2026-08-17)
+
+Full digest with sources lives in the design doc
+(`callback-box/docs/plans/secret-custody.md`, "Prior art" section). The
+findings that shape the design:
+
+**Codebase fact that dissolves the vault-vs-broker fork:** every
+secret-using API call already runs in a server process (`cb serve` child,
+`cb wakeup`, webhook routes) — no agent-invoked code path reads a connector
+secret today. So agents never need a disclosure interface at all; the gap is
+placement (secrets sit inside the agent's cwd) and env inheritance
+(`buildScriptEnv` spreads the full server env into agent subprocesses,
+stripping only the hub-trust secrets — env-var-configured connector keys
+reach every agent's environment today).
+
+**Prior art:**
+
+- The hub-holds-keys, agent-holds-sentinel shape is shipped practice for
+  exactly this threat:
+  [Docker Sandboxes credential injection](https://docs.docker.com/ai/sandboxes/security/credentials/),
+  [nono credential injection](https://nono.sh/credential-injection),
+  [Envoy Gateway credential injection](https://gateway.envoyproxy.io/docs/tasks/security/credential-injection/).
+  All state the same honest limit: stops exfiltration; does not stop misuse
+  through the broker while access lasts.
+- Vault/OpenBao machinery fails the constraints (seal-on-reboot vs
+  unattended restart; upgrade cadence for one operator), but its
+  audit-device rule transfers: log HMAC'd values, never plaintext
+  ([Vault audit devices](https://developer.hashicorp.com/vault/docs/audit)).
+- systemd `LoadCredentialEncrypted=` is hygiene against incidental leakage
+  only; on a TPM-less VPS the host key shares the disk, and same-user
+  processes read the decrypted credential regardless
+  ([systemd credentials](https://systemd.io/CREDENTIALS/)).
+- sops/age with a same-user local key protects backups and repo leaks, not
+  a compromised local agent — declined as a mechanism, stated honestly.
+- Derived/scoped credentials are natively available from Cloudflare,
+  Mistral, Deepgram, Google (already refresh→short-lived shaped), and
+  Anthropic; OpenAI scopes but has no native TTL; **Telegram has nothing**
+  (one all-powerful bot token, revoke-only), so Telegram blast-radius
+  reduction requires the hub to keep terminating those calls — which it
+  already does.
+
+**Design direction (for discussion):** a machine-level store outside every
+box tree with per-box grants, an access log, and a `cb secrets` lifecycle —
+a vault whose only clients are server processes, which makes it a broker
+from the agent's point of view. Sharing becomes a grant instead of a file
+copy; rotation touches one entry. Composes with
+[agent containment](2026-07-20-agent-containment-allowed-directories.md)
+(deny-outside-box-dir now covers the store) and subsumes the provisioning
+question in
+[per-box secret management](../decisions/2026-03-15-per-box-secret-management.md);
+the [Google policy proxy](2026-07-28-google-auth-policy-proxy.md) stays open
+as the Google-specific broker escalation.
