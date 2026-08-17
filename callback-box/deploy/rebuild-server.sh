@@ -32,8 +32,8 @@ pnpm install
 pnpm build
 
 echo "=== Restarting services ==="
-systemctl restart callback-serve callback-scheduler
+systemctl restart callback-hub callback-scheduler
 
 echo "=== Done ==="
-systemctl is-active callback-serve || true
+systemctl is-active callback-hub || true
 systemctl is-active callback-scheduler || true

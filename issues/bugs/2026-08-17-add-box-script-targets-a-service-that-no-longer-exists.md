@@ -1,6 +1,6 @@
 ---
 title: "`add-box.sh` restarts a service that no longer exists and never registers the box with the hub"
-workstream: unattached
+workstream: add-box-process
 area: callback-box
 labels: [deploy, provisioning, hub]
 filed-by: agent

@@ -1,14 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Add a box to the server: clone its repo, register with the scheduler,
-# seed access + connector secrets, and restart so it's served.
+# Add a box to the server: clone its repo, register it with the hub (routing)
+# and the scheduler (periodic tasks), seed access + connector secrets, restart
+# the services, and verify the new box actually serves.
+#
+# This is the whole process — there is no by-hand `hub.json` step left. The
+# hub edit goes through `cb hub add-box`, which validates the resulting config
+# with the hub's own loader before writing it (`src/hub/hub-config-edit.ts`).
 #
 # Usage (run locally):
-#   ./deploy/add-box.sh <repo> [box-name] [--allow EMAIL]... [--secrets-from BOX]
+#   ./deploy/add-box.sh <repo> [box-name] [--allow EMAIL]... [--secrets-from BOX] [--dry-run]
 #
 #   <repo>           GitHub URL, SSH URL, or owner/repo shorthand
-#   [box-name]       directory/slug override (default: repo basename)
+#   [box-name]       directory name AND URL slug (default: repo basename).
+#                    Must be lowercase letters, digits, and hyphens.
 #   --allow EMAIL    grant an extra user access (repeatable). The owner
 #                    always has access; this is only for ADDITIONAL users.
 #                    Written to config/box.json, new boxes only — never
@@ -16,11 +22,19 @@ set -euo pipefail
 #   --secrets-from BOX  copy config/connectors/*.secret.json from another
 #                    box (e.g. the shared Mistral key). Avoids the
 #                    "API key not configured" health warning.
+#   --dry-run        run the preflight checks against the live server and
+#                    print what would change. Nothing is cloned, written, or
+#                    restarted. Read-only on the server.
 #
 #   ./deploy/add-box.sh ianb/box-birch birch --allow user@gmail.com --secrets-from personal
 #
-# Re-running on an existing box pulls latest + re-inits (idempotent); it
-# leaves access config untouched (edit box.json by hand to change access).
+# Re-running on an existing box is idempotent: it pulls latest, re-inits, and
+# leaves both manifests and the access config as they are. (Edit box.json by
+# hand to change access.)
+#
+# Failure order matters: everything that can be checked without touching the
+# server's state is checked FIRST — the slug's shape, and a `--dry-run` of the
+# hub-config edit. A run that is going to fail should fail before it clones.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CB_USER="callback"
@@ -32,6 +46,7 @@ REPO=""
 BOX_NAME=""
 ALLOW_EMAILS=()
 SECRETS_FROM=""
+DRY_RUN=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -41,6 +56,8 @@ while [[ $# -gt 0 ]]; do
     --secrets-from)
       [[ $# -ge 2 ]] || { echo "Error: --secrets-from needs a box name"; exit 1; }
       SECRETS_FROM="$2"; shift 2 ;;
+    --dry-run)
+      DRY_RUN="1"; shift ;;
     -*)
       echo "Error: unknown flag '$1'"; exit 1 ;;
     *)
@@ -52,7 +69,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$REPO" ]]; then
-  echo "Usage: $0 <repo> [box-name] [--allow EMAIL]... [--secrets-from BOX]"
+  echo "Usage: $0 <repo> [box-name] [--allow EMAIL]... [--secrets-from BOX] [--dry-run]"
   exit 1
 fi
 
@@ -63,6 +80,18 @@ fi
 
 [[ -n "$BOX_NAME" ]] || BOX_NAME=$(basename "$REPO" .git)
 BOX_PATH="$BOXES_DIR/$BOX_NAME"
+
+# The box name is also its URL slug, so it must satisfy the hub's slug rule
+# (SLUG_PATTERN in src/hub/hub-config.ts). Checked locally so a repo whose
+# basename isn't slug-shaped fails before we open an SSH connection; the
+# server-side preflight below re-checks it (along with the reserved names)
+# against the real config.
+if ! [[ "$BOX_NAME" =~ ^[0-9a-z]([0-9a-z-]*[0-9a-z])?$ ]]; then
+  echo "Error: box name '$BOX_NAME' is not a valid URL slug."
+  echo "       Use lowercase letters, digits, and hyphens (no leading/trailing hyphen)."
+  echo "       Pass an explicit name: $0 <repo> <box-name>"
+  exit 1
+fi
 
 # Comma-join allowed emails for the remote python one-liner.
 ALLOW_CSV=""
@@ -83,6 +112,38 @@ if [[ -z "$SERVER_IP" ]]; then
 fi
 
 SSH_OPTS="-A -o StrictHostKeyChecking=no"
+
+# ── Preflight (read-only on the server) ─────────────────────────────
+# `cb hub add-box --dry-run` validates the slug against the LIVE hub.json:
+# reserved names, slug already taken by another box, and a config the hub
+# would refuse to load. It writes nothing. Running it before the clone is the
+# point — the previous version of this script failed at the very end, after
+# it had already cloned, inited, and written config, leaving the operator
+# unsure how much had landed.
+echo "Preflight: validating slug '$BOX_NAME' against the live hub config..."
+# shellcheck disable=SC2029
+ssh $SSH_OPTS "root@$SERVER_IP" \
+  "su - $CB_USER -c \"cb hub add-box '$BOX_NAME' '$BOX_PATH' --dry-run\""
+
+if [[ -n "$DRY_RUN" ]]; then
+  echo ""
+  echo "[dry-run] Would then, on the server:"
+  echo "  - clone $REPO to $BOX_PATH (or pull, if it exists)"
+  echo "  - run 'cb init' in it as $CB_USER"
+  if [[ -n "$ALLOW_CSV" ]]; then
+    echo "  - write config/box.json with allowedEmails: $ALLOW_CSV (new boxes only)"
+  fi
+  if [[ -n "$SECRETS_FROM" ]]; then
+    echo "  - copy connector secrets from box '$SECRETS_FROM'"
+  fi
+  echo "  - register with the scheduler manifest (cb boxes add)"
+  echo "  - register with the hub (cb hub add-box, per the plan above)"
+  echo "  - systemctl restart callback-hub callback-scheduler"
+  echo "  - verify with the hub's canary for this box"
+  echo ""
+  echo "[dry-run] Nothing was changed."
+  exit 0
+fi
 
 echo "Adding box '$BOX_NAME' from $REPO..."
 
@@ -141,37 +202,70 @@ fi
 # Re-chown everything (cb init / the writes above ran as root in places).
 chown -R $CB_USER:$CB_USER "$BOX_PATH"
 
-# Register with the shared box manifest (used by both serve and scheduler).
-su - $CB_USER -c "cb boxes add '$BOX_PATH'" 2>/dev/null && echo "Registered with manifest" || echo "Already in manifest"
+# ── Register the box with both manifests ────────────────────────────
+# They are separate on purpose and BOTH are live:
+#   ~/.config/cb/boxes.json — the scheduler's box list (cb scheduler start /
+#                             cb tick). See src/core/box/boxes-config.ts.
+#   ~/.config/cb/hub.json   — the hub's routing table: which URL slug maps to
+#                             which box. This is what makes the box reachable.
+# Neither is hot-reloaded, hence the restart below.
+# Both commands are idempotent and print what they did (or found already done).
+su - $CB_USER -c "cb boxes add '$BOX_PATH'"
+su - $CB_USER -c "cb hub add-box '$BOX_NAME' '$BOX_PATH'"
 
-# Restart services LAST, so they pick up the box, its access config, and
-# its secrets in a single restart. (cb serve reads ~/.config/cb/boxes.json
-# at startup — no unit rewrite needed.)
-systemctl restart callback-serve callback-scheduler
+# Restart both services LAST, so they pick up the box, its access config,
+# and its secrets in a single restart.
+systemctl restart callback-hub callback-scheduler
 
 echo ""
 echo "Box '$BOX_NAME' added."
 echo "  Path: $BOX_PATH"
 echo "  URL:  https://box.example.com/$BOX_NAME"
-echo "  Services restarted."
-
-# Wait for server to be ready, then run health check
-sleep 2
-HEALTH=\$(curl -sf "http://localhost:3210/$BOX_NAME/api/health" 2>/dev/null)
-if [ -z "\$HEALTH" ]; then
-  echo "  Health check: could not reach server (may still be starting)"
-elif echo "\$HEALTH" | grep -q '"status":"healthy"'; then
-  echo "  Health check: OK"
-else
-  echo "  Health check: issues detected"
-  # Show failed check messages
-  echo "\$HEALTH" | python3 -c "
-import sys, json
-data = json.load(sys.stdin)
-for c in data.get('checks', []):
-    if not c.get('ok'):
-        sev = 'ERROR' if c.get('severity') == 'error' else 'WARN'
-        print(f'    [{sev}] {c[\"message\"]}')
-" 2>/dev/null || echo "    (could not parse health response)"
-fi
+echo "  Services restarted (callback-hub, callback-scheduler)."
 REMOTE
+
+# ── Verify the box actually serves ──────────────────────────────────
+# The hub's canary cold-starts THIS box and requires the box's own /healthz to
+# answer 200 — the same check the deploy runs, targeted at the new slug. The
+# box's app routes can't be curled directly: the hub puts them behind the
+# session-cookie auth wall, so a plain request just redirects to login and
+# proves nothing.
+echo "Verifying the new box serves..."
+# shellcheck disable=SC2029
+ssh $SSH_OPTS "root@$SERVER_IP" bash -s <<VERIFY
+set -euo pipefail
+KEY=\$(grep -E '^CB_DIAG_API_KEY=' $CB_HOME/.env 2>/dev/null | cut -d= -f2- || true)
+if [ -z "\$KEY" ]; then
+  echo "  Could not verify: CB_DIAG_API_KEY not set in $CB_HOME/.env."
+  echo "  The box is registered; check it by hand."
+  exit 1
+fi
+CURL="curl -s --connect-timeout 5 --max-time 60"
+
+# The hub was just restarted; poll until it answers before judging the canary.
+for _ in \$(seq 1 60); do
+  code=\$(\$CURL -o /dev/null -w '%{http_code}' -H "Authorization: Bearer \$KEY" \
+    http://localhost:3210/healthz 2>/dev/null || echo "000")
+  # 200 (ok) or 503 (a verdict of unhealthy) both mean the hub is answering;
+  # only a connection failure (000) means it is still booting.
+  if [ "\$code" = "200" ] || [ "\$code" = "503" ]; then break; fi
+  sleep 1
+done
+
+ccode=\$(\$CURL -o /tmp/add-box-canary.out -w '%{http_code}' \
+  -H "Authorization: Bearer \$KEY" \
+  "http://localhost:3210/healthz/canary?box=$BOX_NAME" 2>/dev/null || echo "000")
+cstatus=\$(node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync("/tmp/add-box-canary.out","utf8")).status)' 2>/dev/null || echo "unparseable")
+if [ "\$ccode" != "200" ] || [ "\$cstatus" != "ok" ]; then
+  echo "  Canary FAILED for '$BOX_NAME' (code: \$ccode, status: \$cstatus) — it is registered but does not serve:"
+  [ -f /tmp/add-box-canary.out ] && cat /tmp/add-box-canary.out
+  echo ""
+  echo "  Current /healthz:"
+  \$CURL -H "Authorization: Bearer \$KEY" http://localhost:3210/healthz 2>/dev/null || true
+  echo ""
+  rm -f /tmp/add-box-canary.out
+  exit 1
+fi
+echo "  Canary OK: \$(cat /tmp/add-box-canary.out)"
+rm -f /tmp/add-box-canary.out
+VERIFY

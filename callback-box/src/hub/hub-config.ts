@@ -154,7 +154,7 @@ export function defaultHubConfigPath(): string {
  * only matters for a path that doesn't exist at all, which can't collide
  * with anything real anyway.
  */
-async function canonicalBoxKey(resolvedPath: string): Promise<string> {
+export async function canonicalBoxKey(resolvedPath: string): Promise<string> {
   try {
     const boxRoot = await resolveBoxRoot(resolvedPath);
     return await fs.realpath(boxRoot);
@@ -202,6 +202,20 @@ export async function loadHubConfig(configPath: string): Promise<HubConfig> {
     );
   }
 
+  return parseHubConfig(json, configPath);
+}
+
+/**
+ * Validate an already-parsed `hub.json` value. Split out of `loadHubConfig`
+ * so `hub-config-edit.ts` can run a *candidate* config through the exact
+ * validator the hub itself will apply, before that candidate is written to
+ * disk — a proposed edit that the hub would refuse to load must fail while
+ * it is still an in-memory object, not after it has replaced the live file.
+ *
+ * `configPath` is where the config lives (or would live): it anchors relative
+ * box paths and names the file in every error message. It is not read here.
+ */
+export async function parseHubConfig(json: unknown, configPath: string): Promise<HubConfig> {
   const result = hubConfigFileSchema.safeParse(json);
   if (!result.success) {
     const issueLines = result.error.issues
