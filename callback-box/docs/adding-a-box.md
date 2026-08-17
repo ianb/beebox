@@ -127,7 +127,10 @@ paths and service names for your own hub host, not copy them verbatim.
 - On that deployment the whole of this document is one command:
   `deploy/add-box.sh <repo> [name]` does the clone, the `cb init`, the access
   config, the secrets, both manifest registrations, the restart, and a canary
-  check that the new box serves. See [`deploy/README.md`](../deploy/README.md).
+  check that the new box serves. For a box that does not exist yet,
+  `deploy/add-box.sh --create <name>` covers step 1 as well — it scaffolds the
+  box, pushes it to a private repo, and then does all of the above. See
+  [`deploy/README.md`](../deploy/README.md).
   (`deploy/setup-server.sh`, which provisions a *bare* server, still generates
   the pre-hub `callback-serve` unit — that gap is separate, and described in
   that same doc.)

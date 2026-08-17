@@ -120,6 +120,24 @@ services, and verify the new box actually serves. There is no by-hand
 ./deploy/add-box.sh ianb/hearth --dry-run
 ```
 
+**A brand-new box** (no repo yet) uses `--create`, which scaffolds the box with
+`cb init`, pushes it to a private GitHub repo, and then adds it exactly as
+above:
+
+```bash
+./deploy/add-box.sh --create hearth --allow someone@example.com --secrets-from lighthouse
+
+# Into a repo you already made in the web UI (it must still be empty):
+./deploy/add-box.sh --create hearth --repo ianb/hearth
+```
+
+The repo defaults to `<your gh login>/<box-name>` and is created private. An
+existing **empty** repo is adopted; one that already has commits is refused,
+because pushing a fresh scaffold over it would either do nothing or clobber it
+— add that one with the plain form instead. The scaffold happens in a temp
+directory and is not kept locally: the box's homes are its repo and the server.
+Needs the `gh` CLI, authenticated.
+
 Each box is served at `https://box.example.com/<box-name>/`.
 
 The box name doubles as the URL slug, so it must be lowercase letters, digits,

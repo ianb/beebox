@@ -9,12 +9,27 @@ set -euo pipefail
 # hub edit goes through `cb hub add-box`, which validates the resulting config
 # with the hub's own loader before writing it (`src/hub/hub-config-edit.ts`).
 #
-# Usage (run locally):
-#   ./deploy/add-box.sh <repo> [box-name] [--allow EMAIL]... [--secrets-from BOX] [--dry-run]
+# Usage (run locally) — two forms:
+#
+#   Add a box that already has a repo:
+#     ./deploy/add-box.sh <repo> [box-name] [options]
+#
+#   Create a brand-new box, repo and all:
+#     ./deploy/add-box.sh --create <box-name> [--repo <owner/repo>] [options]
 #
 #   <repo>           GitHub URL, SSH URL, or owner/repo shorthand
 #   [box-name]       directory name AND URL slug (default: repo basename).
 #                    Must be lowercase letters, digits, and hyphens.
+#   --create         scaffold a new box locally (`cb init`), push it to a
+#                    PRIVATE GitHub repo, and then add it as normal. The box
+#                    name is the positional argument in this form. Needs the
+#                    `gh` CLI, authenticated. The repo may already exist as
+#                    long as it is EMPTY (a repo you just created in the web
+#                    UI is the common case); it is created if absent. A repo
+#                    that already has commits is refused — that is the plain
+#                    form above, without --create.
+#   --repo OWNER/NAME  with --create, the repo to create (default:
+#                    <your-gh-login>/<box-name>).
 #   --allow EMAIL    grant an extra user access (repeatable). The owner
 #                    always has access; this is only for ADDITIONAL users.
 #                    Written to config/box.json, new boxes only — never
@@ -51,6 +66,8 @@ BOX_NAME=""
 ALLOW_EMAILS=()
 SECRETS_FROM=""
 DRY_RUN=""
+CREATE=""
+CREATE_REPO=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -60,20 +77,53 @@ while [[ $# -gt 0 ]]; do
     --secrets-from)
       [[ $# -ge 2 ]] || { echo "Error: --secrets-from needs a box name"; exit 1; }
       SECRETS_FROM="$2"; shift 2 ;;
+    --create)
+      CREATE="1"; shift ;;
+    --repo)
+      [[ $# -ge 2 ]] || { echo "Error: --repo needs owner/name"; exit 1; }
+      CREATE_REPO="$2"; shift 2 ;;
     --dry-run)
       DRY_RUN="1"; shift ;;
     -*)
       echo "Error: unknown flag '$1'"; exit 1 ;;
     *)
-      if [[ -z "$REPO" ]]; then REPO="$1"
+      # With --create the sole positional is the box name; without it, the
+      # first positional is the repo and the second an optional name.
+      if [[ -n "$CREATE" && -z "$BOX_NAME" ]]; then BOX_NAME="$1"
+      elif [[ -n "$CREATE" ]]; then echo "Error: unexpected argument '$1' (--create takes just the box name)"; exit 1
+      elif [[ -z "$REPO" ]]; then REPO="$1"
       elif [[ -z "$BOX_NAME" ]]; then BOX_NAME="$1"
       else echo "Error: unexpected argument '$1'"; exit 1; fi
       shift ;;
   esac
 done
 
-if [[ -z "$REPO" ]]; then
+if [[ -z "$CREATE" && -n "$CREATE_REPO" ]]; then
+  echo "Error: --repo only applies with --create (otherwise pass the repo positionally)."
+  exit 1
+fi
+
+if [[ -n "$CREATE" ]]; then
+  if [[ -z "$BOX_NAME" ]]; then
+    echo "Usage: $0 --create <box-name> [--repo OWNER/NAME] [--allow EMAIL]... [--secrets-from BOX] [--dry-run]"
+    exit 1
+  fi
+  # Default the repo to <your gh login>/<box-name>. Resolved here rather than
+  # left to `gh repo create`'s own default so the name is visible in the
+  # dry-run output and in every error message below.
+  if [[ -z "$CREATE_REPO" ]]; then
+    GH_LOGIN=$(gh api user --jq .login 2>/dev/null || true)
+    if [[ -z "$GH_LOGIN" ]]; then
+      echo "Error: could not determine your GitHub login (is 'gh' installed and authenticated?)."
+      echo "       Pass --repo OWNER/NAME explicitly."
+      exit 1
+    fi
+    CREATE_REPO="$GH_LOGIN/$BOX_NAME"
+  fi
+  REPO="$CREATE_REPO"
+elif [[ -z "$REPO" ]]; then
   echo "Usage: $0 <repo> [box-name] [--allow EMAIL]... [--secrets-from BOX] [--dry-run]"
+  echo "       $0 --create <box-name> [--repo OWNER/NAME] [options]"
   exit 1
 fi
 
@@ -93,7 +143,9 @@ BOX_PATH="$BOXES_DIR/$BOX_NAME"
 if ! [[ "$BOX_NAME" =~ ^[0-9a-z]([0-9a-z-]*[0-9a-z])?$ ]]; then
   echo "Error: box name '$BOX_NAME' is not a valid URL slug."
   echo "       Use lowercase letters, digits, and hyphens (no leading/trailing hyphen)."
-  echo "       Pass an explicit name: $0 <repo> <box-name>"
+  if [[ -z "$CREATE" ]]; then
+    echo "       Pass an explicit name: $0 <repo> <box-name>"
+  fi
   exit 1
 fi
 
@@ -149,8 +201,40 @@ echo "Preflight: validating slug '$BOX_NAME' against the live hub config..."
 ssh $SSH_OPTS "root@$SERVER_IP" \
   "su - $CB_USER -c \"cb hub add-box '$BOX_NAME' '$BOX_PATH' --dry-run\""
 
+# ── Preflight for --create (local + GitHub, still no mutation) ──────
+# Deliberately after the hub preflight: a name the hub would refuse must never
+# get as far as becoming a repo.
+if [[ -n "$CREATE" ]]; then
+  command -v gh >/dev/null || { echo "Error: --create needs the 'gh' CLI on PATH."; exit 1; }
+  CB_BIN="$SCRIPT_DIR/../bin/cb"
+  [[ -x "$CB_BIN" ]] || { echo "Error: could not find this checkout's cb at $CB_BIN"; exit 1; }
+
+  # An EMPTY repo is fine (creating one in the web UI first is the common
+  # case). One with commits is not: pushing a fresh scaffold over it is either
+  # a no-op or a clobber, and neither is something to guess at.
+  REPO_EXISTS=""
+  if REPO_JSON=$(gh repo view "$CREATE_REPO" --json isEmpty 2>/dev/null); then
+    REPO_EXISTS="1"
+    if [[ "$REPO_JSON" != *'"isEmpty":true'* ]]; then
+      echo "Error: $CREATE_REPO already has commits."
+      echo "       Drop --create and add it directly: $0 $CREATE_REPO $BOX_NAME"
+      exit 1
+    fi
+  fi
+fi
+
 if [[ -n "$DRY_RUN" ]]; then
   echo ""
+  if [[ -n "$CREATE" ]]; then
+    echo "[dry-run] Would first, locally:"
+    if [[ -n "$REPO_EXISTS" ]]; then
+      echo "  - use the existing EMPTY repo $CREATE_REPO"
+    else
+      echo "  - create a PRIVATE GitHub repo $CREATE_REPO"
+    fi
+    echo "  - scaffold a new box with 'cb init' and push its initial commit"
+    echo ""
+  fi
   echo "[dry-run] Would then, on the server:"
   echo "  - clone $REPO to $BOX_PATH (or pull, if it exists)"
   echo "  - run 'cb init' in it as $CB_USER"
@@ -167,6 +251,35 @@ if [[ -n "$DRY_RUN" ]]; then
   echo ""
   echo "[dry-run] Nothing was changed."
   exit 0
+fi
+
+# ── Create the box and its repo (local + GitHub) ────────────────────
+# Scaffolds into a temp directory and pushes. Nothing is left behind locally:
+# the box's homes are its GitHub repo and the server. Clone it if you want to
+# work on it here.
+if [[ -n "$CREATE" ]]; then
+  STAGING=$(mktemp -d)
+  trap 'rm -rf "$STAGING"' EXIT
+  BOX_STAGE="$STAGING/$BOX_NAME"
+
+  echo "Scaffolding a new box in a temp directory..."
+  # `cb init` scaffolds the v2 package (content/, .cb-box, package.json, ...)
+  # AND makes the initial git commit — no --skip-git here, that commit is what
+  # gets pushed.
+  "$CB_BIN" init "$BOX_STAGE"
+
+  if [[ -z "$REPO_EXISTS" ]]; then
+    echo "Creating PRIVATE GitHub repo $CREATE_REPO..."
+    gh repo create "$CREATE_REPO" --private
+  else
+    echo "Using the existing empty repo $CREATE_REPO."
+  fi
+
+  echo "Pushing the initial commit..."
+  git -C "$BOX_STAGE" remote add origin "$REPO"
+  git -C "$BOX_STAGE" push -u origin HEAD
+
+  echo "Box repo ready: $CREATE_REPO"
 fi
 
 echo "Adding box '$BOX_NAME' from $REPO..."
