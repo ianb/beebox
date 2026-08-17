@@ -6,7 +6,13 @@ labels: [deploy, provisioning, hub]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder asked what the process is for adding a box
+needs: [manual-testing]
 ---
+
+> **⏳ Awaiting manual testing** — the fix landed on `worktree-add-box-process`
+> (`d72111bb` + `fe30d4d5`). Everything reachable without production is
+> verified; the one thing that is not is a real run against the live server.
+> Only the boxholder clears this — see [Manual testing](#manual-testing).
 
 Adding a box to the deployed server is a half-automated process where the
 automated half fails silently-ish and the manual half is only described in a
@@ -91,3 +97,61 @@ detail belongs in this repo** — commit messages, test fixtures, and docs
 included. Structural facts (`/home/callback/boxes/<name>`, unit names, config
 shape) are fine; the names of what is actually deployed are not. Use invented
 slugs in fixtures and examples.
+
+## What was built (2026-08-17)
+
+`deploy/add-box.sh` is now the whole process. New `cb hub add-box <slug>
+<path>` (`callback-box/src/hub/hub-config-edit.ts`) writes the `hub.json`
+entry: it plans the edit, validates the candidate through the hub's own loader
+(`parseHubConfig`, extracted from `loadHubConfig`), and only then writes it
+atomically. The script validates every argument locally, `--dry-run`s the hub
+edit against the live config before it clones, registers with the hub and then
+the scheduler, restarts `callback-hub` + `callback-scheduler`, and drives the
+hub's canary for the new slug.
+
+`boxes.json` is **not** residue — it is the scheduler's live manifest (checked
+on the server: both manifests hold the same box count). Only the comment
+claiming `cb serve` reads it was wrong.
+
+Docs now match: the "known gap" note is gone, the unit is `callback-hub`
+throughout the live runbooks, and `rebuild-server.sh` no longer restarts the
+dead unit either. `setup-server.sh`'s separate pre-hub provisioning gap is
+unchanged and still documented in `deploy/README.md`.
+
+A cross-model review found a bug the rewrite had inherited: `--allow` and
+`--secrets-from` wrote to `$BOX_PATH/config/`, but a v2 box keeps `config/`
+under `content/` — so `--allow` on a new box crashed the remote script. Fixed,
+along with validating `hub.json` on the idempotent path (the script restarts
+the hub afterwards), making a `cb init` failure fatal, and printing success
+only after the canary.
+
+## Verification
+
+Done: the config-edit module is a doctest against fixture configs with invented
+slugs (`test/hub/hub-config-edit.doctest.md`, 25 assertions — add, idempotence,
+package-root-vs-`content/`, reserved slug, malformed slug, duplicate box,
+slug-repoint, missing config, unparseable config, concurrent-edit refusal); the
+CLI was exercised end to end against a scratch hub config; the full suite passes
+(7087). Read-only inspection of the server confirmed the unit names, that both
+manifests are live and consistent, and the `content/config/` layout.
+
+Not done: a real box added on the live server. That was deliberately not
+attempted from an agent session.
+
+## Manual testing
+
+The server's `cb` needs this code first, so this can only be tested after the
+branch merges to `main` and deploys.
+
+1. `./deploy/add-box.sh <repo> <name> --dry-run` — expect the planned hub entry
+   and the list of steps, with nothing changed. Re-running `cb hub add-box` for
+   a box that is already registered should say "Already registered".
+2. Try a bad slug (`--dry-run` with a name containing an uppercase letter or an
+   underscore, and with the name `api`) — both should fail immediately, before
+   any SSH work.
+3. A real add: `./deploy/add-box.sh <repo> <name> --secrets-from <box>`. Expect
+   it to end with "Canary OK" and the box to load at
+   `https://box.example.com/<name>/`. Check that `content/config/connectors/`
+   in the new box has the copied secrets (not a stray package-root `config/`).
+4. Re-run the same command — expect a pull, both manifest steps reporting
+   already-present, and a second "Canary OK".
