@@ -43,7 +43,16 @@ Three candidate adversaries, from the umbrella issue:
    contains `config/connectors/*.secret.json`.
 
 **Recommendation: design for (3) as the driver, take (1) and incidental
-leakage as secondary, and explicitly decline (root/hub compromise).** A
+leakage as secondary, and explicitly decline root/hub compromise — and,
+stated because it is easy to miss: box *server* processes are inside the
+trust boundary.** A `cb serve` child is a custody principal by design: it
+holds `CB_HUB_SECRET` (`src/hub/supervisor.ts:428`), resolves
+`server`-access secrets in-process, and its admin surface can reach the
+store — so a compromised box server process defeats this design the same
+way a compromised hub does, and the design does not claim otherwise. The
+defended line is agent-vs-server: agents are spawned *without* the hub
+trust secrets (`script-env.ts:106-127`) and without any store interface
+beyond their own `agent`-access grants. A
 same-user agent that can execute arbitrary code can eventually obtain anything
 the box can *use*; no store changes that. What custody buys against (3) is:
 
@@ -333,8 +342,14 @@ settled in review):
   themselves carry sensitive content; an **agent's** `status`/`list` view
   is scoped to its own box's grants and declared slots, not the machine
   namespace (a compromised box gets no inventory of what exists to hunt
-  for). `name/<box>` instances are by convention per-box and not intended
-  for sharing.
+  for). **Single-box secrets are enforced, not conventional** (boxholder
+  direction, 2026-08-17): some keys are structurally per-box — a Telegram
+  bot token binds to one webhook URL, so a second grant is not merely
+  unwise, it breaks routing. Such entries carry `owningBox` +
+  `shareable: false` (set automatically by per-box flows like telegram
+  setup); a grant to any other box is refused with an explained error, and
+  other boxes' admin pickers hide them. `name/<box>` naming remains the
+  convention for these entries' identifiers.
 - **Grants are fail-closed.** A resolver call for an ungranted secret returns
   the same "not configured" answer the current missing-file path produces
   (`requirements.ts:46-56` shape) — the *per-secret* degradation matches
@@ -372,7 +387,16 @@ settled in review):
     running outside it calls a loopback `secrets.resolve` endpoint on its
     own box, authenticated with `CB_AGENT_TOKEN`
     (`script-env.ts:141-145`), which checks the grant's access level and
-    logs. The value lives transiently in the requesting code's memory, goes
+    logs. Two implementation constraints from review: the endpoint must
+    require the **agent auth source specifically** — today's tRPC context
+    collapses every auth source into one `authed` flag
+    (`server-box-scope.ts:210-244`), so this is a raw route or a context
+    extension carrying `authSource`, never a plain `authedProcedure`. And
+    "own box only" is only as strong as containment: the agent token is
+    itself a 0600 file in the box tree (`src/core/agent/token.ts:11-15`),
+    so box A reading box B's token is exactly the out-of-tree act Track
+    4's deny rules exist to stop — same honesty as everywhere else here.
+    The value lives transiently in the requesting code's memory, goes
     into the outbound request, and is never written to env, files, or logs
     — a stated convention the agent guide teaches (see Knowledge audits).
     No `exec` env-wrapper, no value-printing `get` (minimal-concepts: one
@@ -392,14 +416,22 @@ settled in review):
   problem; tell the boxholder, nothing the agent can fix), plus a
   `suspect` annotation on success when the last probe or real use failed
   auth ("this key may be expired"). Each carries a short human-readable
-  message written for relay to the boxholder. These are error *types*
-  (custom error classes per `code-style.md`), not string matching.
+  message written for relay to the boxholder. A `dangling-grant` type
+  covers a grant whose secret entry was removed — distinct from
+  `unknown-secret`, because the remediation differs (the grant is stale,
+  not missing). These are error *types* (custom error classes per
+  `code-style.md`), not string matching.
 - **Slot declaration by agents.** An agent may *declare* a new named slot
   (name + note — "API key for service X") and request its value; the value
   arrives only via the write-only chat capture widget or the boxholder
   running `set`. Declaring creates an empty, ungranted entry — the agent
   can never supply, read back, or grant. Grants and their access levels are
-  boxholder-only decisions.
+  boxholder-only decisions. **No dead-end (review finding):** filling a
+  requested slot must not strand the agent with a value it can't use — the
+  widget's submit step includes the grant decision explicitly ("save and
+  grant to this box: server / agent access"), defaulting to the level the
+  request declared it needs, shown — never silently chosen — so one
+  boxholder action completes the flow.
 - **Guided entry + validation** (boxholder direction, 2026-08-17: keys are
   complicated; users need help and mistakes need surfacing). Three layers,
   all value-redacted toward agents:
@@ -415,7 +447,12 @@ settled in review):
     hint in the declaration.
   - *Hard validation (probe)*: after save, the server calls a cheap
     harmless endpoint (models list; Telegram `getMe` — the pattern
-    `telegramSetup` already uses, `admin.ts:83-90`) and stores
+    `telegramSetup` already uses, `admin.ts:83-90`). **Probes are
+    server-owned registry entries only** (review finding): an
+    agent-supplied probe URL would be an SSRF/exfiltration path — the
+    probe would send the fresh secret wherever the agent pointed it.
+    Ad-hoc slots with no registry probe stay `unchecked`; agents may
+    supply format *hints*, never probe targets. The probe stores
     `verified: ok | failed(reason) | unchecked` + timestamp on the entry.
     The agent receives only that status ("saved; probe failed: 401") and
     can re-request; the admin Secrets section shows it, along with a
@@ -466,7 +503,9 @@ instances use `name/<box>`; `grants` maps box slug → names; disclosure
 grant access levels are `server` | `agent` (`agent` includes server). The
 `purpose` string vocabulary stays freeform but short. Resolver error types:
 `unknown-secret` | `empty-slot` | `not-granted` | `agent-access-not-granted`
-| `store-unreadable`, plus the `suspect` success annotation.
+| `dangling-grant` | `store-unreadable`, plus the `suspect` success
+annotation. Entry flags: `owningBox` + `shareable: false` for single-box
+secrets.
 
 **First implementation chunk.** The thin slice shared with Track 3: the
 minimal store module (read/write/lock/schema) + `set`/`grant`/`list` +
@@ -587,8 +626,9 @@ stop-over-engineering).
   allowlist is the store's name registry. DEFERRED to that issue, which this
   store unblocks.
 - **Stale ref** — grants name secrets that may have been `rm`'d: resolver
-  treats as ungranted (fail-closed); `cb secrets status` shows dangling
-  grants. ADDRESSED (Track 2).
+  fails closed with the `dangling-grant` error type (naming the stale
+  grant, not "ungranted" — the remediations differ); `cb secrets status`
+  shows dangling grants. ADDRESSED (Track 2).
 - **Two agents touching the same card** — store is not card data; concurrent
   mutation is the file-lock row above. ADDRESSED.
 - **Hand-edit drift** — operator hand-edits `secrets.json`: schema-validated
