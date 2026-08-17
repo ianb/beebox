@@ -27,7 +27,7 @@ import type {
 import { execWithTimeout, SCRIPT_TIMEOUT } from "../../lib/exec-with-timeout.js";
 import { fallbackTiming, handleCreateAfterSuccess } from "./tick-utils.js";
 import { stageAll, commit, getStatus } from "../../lib/git.js";
-import { buildScriptEnv } from "../../core/script-env.js";
+import { buildToolingScriptEnv } from "../../core/script-env.js";
 import type { TickOptions, ScriptResult } from "./tick.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 
@@ -242,7 +242,9 @@ export async function executeScript(args: ExecuteScriptArgs): Promise<ScriptResu
   await acquireScriptLock({ boxRoot, scriptName, triggeredBy: "schedule", ...(parsed.lockGroup ? { lockGroup: parsed.lockGroup } : {}) });
   const windowMs = parsed.budget?.windowMs ?? DEFAULT_RUN_WINDOW_MS;
   try {
-    const scriptEnv = await buildScriptEnv(boxRoot, {
+    // Tooling profile: scheduled `runs:` commands are box tooling (mostly
+    // `cb wakeup`, which syncs the connectors).
+    const scriptEnv = await buildToolingScriptEnv(boxRoot, {
       CB_TRIGGERED_BY: "schedule",
     });
     const { durationMs, sleepAffected } = await execWithTimeout(parsed.runs, {

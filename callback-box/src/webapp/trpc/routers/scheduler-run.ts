@@ -11,7 +11,7 @@ import {
 } from "../../../core/schedule/state.js";
 import { execWithTimeout, SCRIPT_TIMEOUT } from "../../../lib/exec-with-timeout.js";
 import { fallbackTiming, handleCreateAfterSuccess } from "../../../cli/commands/tick-utils.js";
-import { buildScriptEnv } from "../../../core/script-env.js";
+import { buildToolingScriptEnv } from "../../../core/script-env.js";
 import { checkMissingConnectors } from "../../../connectors/requirements.js";
 import { errorMessage } from "../../../lib/error-guards.js";
 
@@ -84,7 +84,8 @@ export async function runScheduledScript(options: RunOptions): Promise<{ success
   });
 
   try {
-    const scriptEnv = await buildScriptEnv(boxRoot, {
+    // Tooling profile: same scheduled scripts as the `cb tick` path.
+    const scriptEnv = await buildToolingScriptEnv(boxRoot, {
       CB_TRIGGERED_BY: "webapp-trigger",
     });
     const { durationMs, sleepAffected } = await execWithTimeout(parsed.runs, {

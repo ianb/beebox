@@ -12,7 +12,7 @@ import {
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
-import { buildScriptEnv } from "../script-env.js";
+import { buildToolingScriptEnv } from "../script-env.js";
 import { runCollectedChild } from "../../lib/run-child.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
@@ -39,7 +39,8 @@ export async function runCbWakeup(opts: {
   onChunk?: ((text: string) => void) | undefined;
 }): Promise<{ ok: boolean; detail: string; output: string }> {
   const cbPath = resolveCbPath();
-  const env = await buildScriptEnv(opts.boxRoot, { CB_TRIGGERED_BY: opts.triggeredBy });
+  // Tooling profile: `cb wakeup` runs the connectors themselves.
+  const env = await buildToolingScriptEnv(opts.boxRoot, { CB_TRIGGERED_BY: opts.triggeredBy });
   try {
     const { code, output } = await runCollectedChild({
       command: cbPath,
