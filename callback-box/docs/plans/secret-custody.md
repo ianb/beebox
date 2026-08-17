@@ -1,5 +1,5 @@
 ---
-title: "Secret custody: a hub-owned store with grants, access logging, and no agent disclosure"
+title: "Secret custody: a hub-owned store with grants, access logging, and tiered disclosure"
 status: draft
 workstream: secret-custody
 issues:
@@ -11,17 +11,20 @@ issues:
 
 # Secret custody
 
-This plan moves connector secrets out of every box's content tree into one
+This plan moves secrets out of every box's content tree into one
 machine-level store owned by the server processes, with per-box grants, an
-access log, and a `cb secrets` lifecycle (set, grant, revoke, rotate). It is a
+access log, two disclosure tiers (`server`: never reaches agent context;
+`box`: agent-authored code resolves the value by name at call time, logged),
+and a full lifecycle — set, grant, revoke, rotate — managed from the admin
+page and chat widget, with `cb secrets` as the plumbing underneath. It is a
 design proposal for discussion — nothing here is built, and the threat-model
 section needs the boxholder's sign-off before implementation starts.
 
-The one-sentence thesis: **the codebase already uses secrets only in server
-processes, so the missing piece is not a new disclosure protocol — it is
-getting the secrets out of the places agents can trivially reach (the box
-content tree and the agent's inherited env), plus grants, audit, and rotation
-on the one copy that remains.**
+The one-sentence thesis: **the built-in connectors already use secrets only
+in server processes, so for them the fix is placement and inheritance (out
+of the box tree, out of the agent's env) plus grants, audit, and rotation on
+the one copy that remains; the only new disclosure surface is a deliberate,
+logged, per-secret opt-in for agent-authored integrations.**
 
 ## Threat model (previously unwritten — decide this first)
 
@@ -82,12 +85,15 @@ shows the fork mostly does not apply here, because of who asks:
   that needs a transcription asks its own box's HTTP API; the server process
   resolves the key.
 
-So the design is: **a vault whose intended clients are server processes,
-with no agent-facing disclosure interface.** The store's disclosure interface
-is an in-process resolver call made by connector code on behalf of a box,
-not an endpoint agents are given. This gets most of the broker's agent-facing
-property at near-zero call-site churn, because the call sites are already on
-the right side of the line.
+So the design is: **a vault whose default clients are server processes.**
+For `server`-tier secrets (all built-in connectors) there is no agent-facing
+disclosure interface at all — the store's interface is an in-process
+resolver call made by connector code on behalf of a box. This gets most of
+the broker's agent-facing property at near-zero call-site churn, because the
+call sites are already on the right side of the line. The one agent-facing
+disclosure interface in the design is the `box` tier's call-time resolve
+(Track 2) — an explicit, logged, per-secret opt-in for agent-authored
+integrations, not a general channel.
 
 **Stated precisely, because the claim is easy to overread:** "no interface"
 is not "no access." The resolver is ordinary project code and the store is a
@@ -275,8 +281,16 @@ settled in review):
 ```jsonc
 {
   "secrets": {
-    "mistral": { "value": "…", "updated": "2026-08-17T…", "note": "transcription" },
-    "telegram-bot/<box>": { "value": "…", "updated": "…" }
+    "mistral": {
+      "value": "…",
+      "tier": "server",              // "server" | "box" — see Disclosure tiers
+      "note": "transcription",
+      "updated": "2026-08-17T…",
+      "verified": { "status": "ok", "at": "2026-08-17T…" },  // probe result; "failed" carries a reason
+      "formatHint": "openai",        // format-registry key or inline hint; drives soft validation
+      "lastUsed": { "<box-slug>": "2026-08-17T…" }           // summarized from the access log
+    },
+    "telegram-bot/<box>": { "value": "…", "tier": "server", "updated": "…" }
   },
   "grants": {
     "<box-slug>": ["mistral", "deepgram", "telegram-bot/<box>"]
@@ -422,20 +436,24 @@ settled in review):
 
 **Why.** This is the umbrella issue's four asks — holds, requires asking,
 logs access, shares in limited ways — implemented with the smallest new
-machinery: one file, one resolver, one CLI. "Requires asking" is satisfied at
-the *box* granularity (grant-checked resolution by server code on behalf of a
-box); agents cannot ask at all (see the vault-or-broker section).
+machinery: one file, one resolver, one CLI. "Requires asking" is satisfied
+per box and per secret: `server`-tier values are resolved by server code on
+behalf of a box (agents cannot ask); `box`-tier values are asked for by
+box code at call time, grant- and tier-checked, and logged.
 
 **Vocabulary lock-ins.** Secret *names* are flat identifiers, per-box
 instances use `name/<box>`; `grants` maps box slug → names; disclosure
 tiers are `server` | `box`. The `purpose` string vocabulary stays freeform
 but short.
 
-**First implementation chunk.** The store module (read/write/lock/schema) +
-`cb secrets set/list/grant` + doctests, with no connector wired yet. No open
-questions inside it.
+**First implementation chunk.** The thin slice shared with Track 3: the
+minimal store module (read/write/lock/schema) + `set`/`grant`/`list` +
+mistral end-to-end (resolver, fallback, health, doctests) in one chunk — no
+second secret system exists without a real consumer. Tiers, probe, log
+surfacing, and the admin section follow as later chunks. No open questions
+inside it.
 
-### Track 3 — move the six locations onto the store
+### Track 3 — move every secret consumer onto the store
 
 **What.** Rewire every secret consumer onto the resolver. "Six locations"
 was the umbrella issue's storage inventory; the *reader* inventory is
@@ -531,7 +549,7 @@ stop-over-engineering).
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| Resolver asked for an ungranted secret | planned (doctest) | returns not-configured; connector degrades as today | clear — `cb health` names the missing grant |
+| Resolver asked for an ungranted or wrong-tier secret (in-process or loopback `secrets.resolve`) | planned (doctest) | returns not-configured / 403; connector degrades as today; refusal logged | clear — `cb health` names the missing grant |
 | Store file missing/corrupt at read | planned | fail-closed: treat as no grants; warn once per process | clear (console.warn) |
 | Concurrent store writes (CLI + admin route) | planned | `file-lock.ts` + atomic replace | clear |
 | Access log unwritable (disk full) | planned | resolution proceeds; warn + `cb health` flags "audit currently broken" — the log is best-effort by declaration, availability wins; the claim in this plan is attribution, not tamper-proof audit | clear (warn + health) |
