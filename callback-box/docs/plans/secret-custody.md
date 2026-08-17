@@ -306,11 +306,41 @@ settled in review):
   ever appear in diagnostics, HMAC it (Vault's audit-device rule). Surfaced
   in `cb health` / the admin page as "last used per secret per box" —
   pairing the log with a reader, so it is not theatre.
+- **Disclosure tiers.** Every secret carries a tier, boxholder-set at
+  creation:
+  - **`server`** (the default — bias toward strict): resolved only inside
+    server processes via the in-process resolver; no interface discloses it
+    to agent-context code. All built-in connectors are this tier.
+  - **`box`**: disclosable to box-local code — the consumer class the
+    built-in-connector framing misses: agent-authored scripts and
+    procedures that integrate services of their own (the box-family
+    pattern) run *in agent context* and need the value at call time.
+    Refusing them disclosure would push those keys back into files in the
+    tree. Consumption: `cb secrets exec <name> -- <command>` injects the
+    value into that child's env only (the sops `exec-env` pattern — never
+    on disk), with `cb secrets get <name>` as the logged fallback for code
+    that can't be wrapped. Both are grant-checked and logged. Honest
+    accounting: runtime exposure for a `box`-tier secret equals the status
+    quo (the running process holds the value); the gains over a file in
+    the tree are custody, one rotatable copy, and a log line per use.
+- **Slot declaration by agents.** An agent may *declare* a new named slot
+  (name + note — "API key for service X") and request its value; the value
+  arrives only via the write-only chat capture widget or the boxholder
+  running `set`. Declaring creates an empty, ungranted entry — the agent
+  can never supply, read back, or grant. Grants and tiers are
+  boxholder-only decisions.
 - **Lifecycle CLI.** `cb secrets set <name>` (value via stdin or prompt,
   never argv), `rm`, `list` (names + metadata only), `grant <box> <name>`,
-  `revoke <box> <name>`, `status <box>` (what's granted vs what the box's
-  schedules require — the `cb secrets` listing the 2026-03-15 issue asked
-  for). Mutating subcommands require `--agent-confirmed` in agent sessions.
+  `revoke <box> <name>`, `declare <name>`, `status <box>` (what's granted
+  vs what the box requires — connector requirements plus declared
+  box-local slots; the `cb secrets` listing the 2026-03-15 issue asked
+  for), `exec`/`get` (box tier only). **Audience:** the CLI is the
+  boxholder's surface (SSH on prod, terminal locally) and the substrate the
+  admin page and chat widget call into; the agent's intended surface is
+  read-only `status`/`list`/`declare` plus `exec`/`get` on its own
+  `box`-tier grants. Mutating subcommands require `--agent-confirmed` in
+  agent sessions — a speed bump and audit signal, not a wall, per
+  `src/lib/agent-context.ts`.
 - **Resolver.** `resolveSecret(boxRoot, name, purpose)` in one module:
   grant-check → log → return value. Per-connector readers call it; the
   legacy per-box file remains a fallback (with a deprecation warning) for
@@ -324,8 +354,9 @@ the *box* granularity (grant-checked resolution by server code on behalf of a
 box); agents cannot ask at all (see the vault-or-broker section).
 
 **Vocabulary lock-ins.** Secret *names* are flat identifiers, per-box
-instances use `name/<box>`; `grants` maps box slug → names. The `purpose`
-string vocabulary stays freeform but short.
+instances use `name/<box>`; `grants` maps box slug → names; disclosure
+tiers are `server` | `box`. The `purpose` string vocabulary stays freeform
+but short.
 
 **First implementation chunk.** The store module (read/write/lock/schema) +
 `cb secrets set/list/grant` + doctests, with no connector wired yet. No open
@@ -473,8 +504,10 @@ stop-over-engineering).
   to the Google proxy issue only.
 - **Per-provider derived-credential minting** — no current consumer;
   build when a box-held credential is genuinely needed.
-- **An agent-facing "request a secret value" endpoint** — deliberately never;
-  it is the property the design exists to remove.
+- **Agent-context disclosure of `server`-tier secrets** — deliberately
+  never; it is the property the design exists to remove. (`box`-tier
+  disclosure via `exec`/`get` is in scope — a deliberate, logged, per-secret
+  opt-in, not a hole.)
 - **The chat capture widget** — its own issue; this store is its
   prerequisite ("target" registry), not its implementation.
 - **Egress-proxy credential injection for arbitrary agent HTTP** — the
