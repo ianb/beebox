@@ -1,5 +1,5 @@
 ---
-title: "Secret custody: a hub-owned store with grants, access logging, and tiered disclosure"
+title: "Secret custody: a hub-owned store with per-box grants, access levels, and audit"
 status: draft
 workstream: secret-custody
 issues:
@@ -12,9 +12,9 @@ issues:
 # Secret custody
 
 This plan moves secrets out of every box's content tree into one
-machine-level store owned by the server processes, with per-box grants, an
-access log, two disclosure tiers (`server`: never reaches agent context;
-`box`: agent-authored code resolves the value by name at call time, logged),
+machine-level store owned by the server processes, with per-box grants (each
+carrying an access level: `server` — never reaches agent context; `agent` —
+box code may resolve the value by name at call time, logged), an access log,
 and a full lifecycle — set, grant, revoke, rotate — managed from the admin
 page and chat widget, with `cb secrets` as the plumbing underneath. It is a
 design proposal for discussion — nothing here is built, and the threat-model
@@ -24,7 +24,7 @@ The one-sentence thesis: **the built-in connectors already use secrets only
 in server processes, so for them the fix is placement and inheritance (out
 of the box tree, out of the agent's env) plus grants, audit, and rotation on
 the one copy that remains; the only new disclosure surface is a deliberate,
-logged, per-secret opt-in for agent-authored integrations.**
+logged, per-grant opt-in for agent-authored integrations.**
 
 ## Threat model (previously unwritten — decide this first)
 
@@ -86,13 +86,13 @@ shows the fork mostly does not apply here, because of who asks:
   resolves the key.
 
 So the design is: **a vault whose default clients are server processes.**
-For `server`-tier secrets (all built-in connectors) there is no agent-facing
+For `server`-access grants (all built-in connectors) there is no agent-facing
 disclosure interface at all — the store's interface is an in-process
 resolver call made by connector code on behalf of a box. This gets most of
 the broker's agent-facing property at near-zero call-site churn, because the
 call sites are already on the right side of the line. The one agent-facing
-disclosure interface in the design is the `box` tier's call-time resolve
-(Track 2) — an explicit, logged, per-secret opt-in for agent-authored
+disclosure interface in the design is the `agent`-access call-time resolve
+(Track 2) — an explicit, logged, per-grant opt-in for agent-authored
 integrations, not a general channel.
 
 **Stated precisely, because the claim is easy to overread:** "no interface"
@@ -283,17 +283,21 @@ settled in review):
   "secrets": {
     "mistral": {
       "value": "…",
-      "tier": "server",              // "server" | "box" — see Disclosure tiers
+      // no access level here — that lives on each grant (see below)
       "note": "transcription",
       "updated": "2026-08-17T…",
       "verified": { "status": "ok", "at": "2026-08-17T…" },  // probe result; "failed" carries a reason
       "formatHint": "openai",        // format-registry key or inline hint; drives soft validation
       "lastUsed": { "<box-slug>": "2026-08-17T…" }           // summarized from the access log
     },
-    "telegram-bot/<box>": { "value": "…", "tier": "server", "updated": "…" }
+    "telegram-bot/<box>": { "value": "…", "updated": "…" }
   },
   "grants": {
-    "<box-slug>": ["mistral", "deepgram", "telegram-bot/<box>"]
+    "<box-slug>": {
+      "mistral": "server",           // access level: "server" | "agent"
+      "deepgram": "server",          // ("agent" includes server access)
+      "weatherapi": "agent"          // an agent-authored trick resolves this at call time
+    }
   }
 }
 ```
@@ -351,35 +355,50 @@ settled in review):
   ever appear in diagnostics, HMAC it (Vault's audit-device rule). Surfaced
   in `cb health` / the admin page as "last used per secret per box" —
   pairing the log with a reader, so it is not theatre.
-- **Disclosure tiers.** Every secret carries a tier, boxholder-set at
-  creation:
+- **Access levels on grants** (boxholder direction, 2026-08-17: the level
+  lives on the grant, not the secret — the same secret can be server-only
+  for one box and agent-resolvable for another, and the decision happens at
+  the natural moment, granting):
   - **`server`** (the default — bias toward strict): resolved only inside
     server processes via the in-process resolver; no interface discloses it
-    to agent-context code. All built-in connectors are this tier.
-  - **`box`**: disclosable to box-local code — the consumer class the
-    built-in-connector framing misses: agent-authored code (tricks,
-    scripts, procedures) integrating services of its own (the box-family
-    pattern) needs the value at the moment it makes the external call.
-    Refusing disclosure would push those keys back into files in the tree.
-    **Consumption is a code API at call time, not env or CLI output**
-    (boxholder direction, 2026-08-17): code running in the server process
-    calls the in-process resolver; code running outside it calls a loopback
-    `secrets.resolve` endpoint on its own box, authenticated with
-    `CB_AGENT_TOKEN` (`script-env.ts:141-145`), which checks grant + tier
-    and logs. The value lives transiently in the requesting code's memory,
-    goes into the outbound request, and is never written to env, files, or
-    logs — a stated convention the agent guide teaches (see Knowledge
-    audits). No `exec` env-wrapper, no value-printing `get`
-    (minimal-concepts: one consumption interface). Honest accounting:
-    runtime exposure for a `box`-tier secret equals the status quo (the
-    requesting process holds the value while it uses it); the gains over a
-    file in the tree are custody, one rotatable copy, no at-rest copy in
-    agent-reachable space, and a log line per use.
+    to agent-context code. All built-in connectors need only this.
+  - **`agent`** (includes server access): disclosable to box-local code —
+    the consumer class the built-in-connector framing misses: agent-authored
+    code (tricks, scripts, procedures) integrating services of its own (the
+    box-family pattern) needs the value at the moment it makes the external
+    call. Refusing disclosure would push those keys back into files in the
+    tree. **Consumption is a code API at call time, not env or CLI output**:
+    code running in the server process calls the in-process resolver; code
+    running outside it calls a loopback `secrets.resolve` endpoint on its
+    own box, authenticated with `CB_AGENT_TOKEN`
+    (`script-env.ts:141-145`), which checks the grant's access level and
+    logs. The value lives transiently in the requesting code's memory, goes
+    into the outbound request, and is never written to env, files, or logs
+    — a stated convention the agent guide teaches (see Knowledge audits).
+    No `exec` env-wrapper, no value-printing `get` (minimal-concepts: one
+    consumption interface). Honest accounting: runtime exposure for an
+    `agent`-access secret equals the status quo (the requesting process
+    holds the value while it uses it); the gains over a file in the tree
+    are custody, one rotatable copy, no at-rest copy in agent-reachable
+    space, and a log line per use.
+- **Resolver failures are typed and agent-explainable** (boxholder
+  direction, 2026-08-17). Every refusal names its exact condition so the
+  agent can explain it and route the fix rather than guessing: `unknown-secret`
+  (no such name — declare it?), `empty-slot` (declared, value never
+  supplied — re-request via the widget), `not-granted` (exists; this box
+  has no grant — ask the boxholder to grant it), `agent-access-not-granted`
+  (granted `server`-only; box code asked — ask the boxholder to raise the
+  grant to `agent` on the admin page), `store-unreadable` (machine-level
+  problem; tell the boxholder, nothing the agent can fix), plus a
+  `suspect` annotation on success when the last probe or real use failed
+  auth ("this key may be expired"). Each carries a short human-readable
+  message written for relay to the boxholder. These are error *types*
+  (custom error classes per `code-style.md`), not string matching.
 - **Slot declaration by agents.** An agent may *declare* a new named slot
   (name + note — "API key for service X") and request its value; the value
   arrives only via the write-only chat capture widget or the boxholder
   running `set`. Declaring creates an empty, ungranted entry — the agent
-  can never supply, read back, or grant. Grants and tiers are
+  can never supply, read back, or grant. Grants and their access levels are
   boxholder-only decisions.
 - **Guided entry + validation** (boxholder direction, 2026-08-17: keys are
   complicated; users need help and mistakes need surfacing). Three layers,
@@ -420,7 +439,8 @@ settled in review):
   credential-adjacent config — Telegram setup, Google connect,
   `AdminPage.tsx` + the admin tRPC router) gains a Secrets section:
   this box's required-vs-granted status, grant/revoke, set/rotate a value
-  (masked input, direct to the store, never through chat), tier display,
+  (masked input, direct to the store, never through chat), access-level
+  display and raise/lower,
   and last-used from the access log. The chat secret-request widget (the
   write-only-secret-capture issue) is the conversational entry point for
   the same writes. Both ride the same store code as the CLI. Open design
@@ -437,14 +457,16 @@ settled in review):
 **Why.** This is the umbrella issue's four asks — holds, requires asking,
 logs access, shares in limited ways — implemented with the smallest new
 machinery: one file, one resolver, one CLI. "Requires asking" is satisfied
-per box and per secret: `server`-tier values are resolved by server code on
-behalf of a box (agents cannot ask); `box`-tier values are asked for by
-box code at call time, grant- and tier-checked, and logged.
+per box and per grant: `server`-access values are resolved by server code on
+behalf of a box (agents cannot ask); `agent`-access values are asked for by
+box code at call time, checked against the grant's level, and logged.
 
 **Vocabulary lock-ins.** Secret *names* are flat identifiers, per-box
 instances use `name/<box>`; `grants` maps box slug → names; disclosure
-tiers are `server` | `box`. The `purpose` string vocabulary stays freeform
-but short.
+grant access levels are `server` | `agent` (`agent` includes server). The
+`purpose` string vocabulary stays freeform but short. Resolver error types:
+`unknown-secret` | `empty-slot` | `not-granted` | `agent-access-not-granted`
+| `store-unreadable`, plus the `suspect` success annotation.
 
 **First implementation chunk.** The thin slice shared with Track 3: the
 minimal store module (read/write/lock/schema) + `set`/`grant`/`list` +
@@ -549,7 +571,7 @@ stop-over-engineering).
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| Resolver asked for an ungranted or wrong-tier secret (in-process or loopback `secrets.resolve`) | planned (doctest) | returns not-configured / 403; connector degrades as today; refusal logged | clear — `cb health` names the missing grant |
+| Resolver refusal (unknown secret, empty slot, not granted, agent access not granted, store unreadable — in-process or loopback) | planned (doctest per type) | typed error with a relay-ready message; connector degrades as today; refusal logged | clear — the agent can explain the exact condition; `cb health` names it too |
 | Store file missing/corrupt at read | planned | fail-closed: treat as no grants; warn once per process | clear (console.warn) |
 | Concurrent store writes (CLI + admin route) | planned | `file-lock.ts` + atomic replace | clear |
 | Access log unwritable (disk full) | planned | resolution proceeds; warn + `cb health` flags "audit currently broken" — the log is best-effort by declaration, availability wins; the claim in this plan is attribution, not tamper-proof audit | clear (warn + health) |
@@ -595,10 +617,10 @@ stop-over-engineering).
   to the Google proxy issue only.
 - **Per-provider derived-credential minting** — no current consumer;
   build when a box-held credential is genuinely needed.
-- **Agent-context disclosure of `server`-tier secrets** — deliberately
-  never; it is the property the design exists to remove. (`box`-tier
+- **Agent-context disclosure of `server`-access grants** — deliberately
+  never; it is the property the design exists to remove. (`agent`-access
   disclosure via the call-time code API is in scope — a deliberate,
-  logged, per-secret opt-in, not a hole.)
+  logged, per-grant opt-in, not a hole.)
 - **The chat capture widget** — its own issue; this store is its
   prerequisite ("target" registry), not its implementation.
 - **Egress-proxy credential injection for arbitrary agent HTTP** — the
@@ -651,7 +673,7 @@ once the guidance text exists:
    it" (CLI or admin surface), not "write
    `config/connectors/mistral.secret.json`" — the old answer becomes
    actively wrong.
-2. **Ad-hoc secret use in box code** (`box` tier): an agent writing a trick
+2. **Ad-hoc secret use in box code** (`agent`-access grants): an agent writing a trick
    that calls a credentialed API should declare a slot, request the value
    through the capture widget, and write code that resolves the secret by
    name at call time — never paste the value into the code, a file, env
