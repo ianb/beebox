@@ -364,18 +364,25 @@ fi
 chown -R $CB_USER:$CB_USER "$BOX_PATH"
 
 # ── Register the box with both manifests ────────────────────────────
-# They are separate on purpose and BOTH are live:
-#   ~/.config/cb/boxes.json — the scheduler's box list (cb scheduler start /
-#                             cb tick). See src/core/box/boxes-config.ts.
+# They are separate on purpose, BOTH are live, and they take DIFFERENT paths:
 #   ~/.config/cb/hub.json   — the hub's routing table: which URL slug maps to
-#                             which box. This is what makes the box reachable.
-# Neither is hot-reloaded, hence the restart below.
+#                             which box. Takes the PACKAGE ROOT (the hub
+#                             resolves either form itself). This is what makes
+#                             the box reachable.
+#   ~/.config/cb/boxes.json — the scheduler's box list (cb scheduler start /
+#                             cb tick). Takes the BOX ROOT, i.e. content/ —
+#                             that is where .cb-box lives and what every
+#                             existing entry holds. See
+#                             src/core/box/boxes-config.ts.
+# Passing the package root to `cb boxes add` fails its .cb-box check, so use
+# the content dir resolved above. Neither file is hot-reloaded, hence the
+# restart below.
 #
 # The hub goes first: it is the step with real validation behind it, so if
 # anything is going to be refused it is refused while boxes.json is still
 # untouched. Both commands are idempotent and print what they did.
 su - $CB_USER -c "cb hub add-box '$BOX_NAME' '$BOX_PATH'"
-su - $CB_USER -c "cb boxes add '$BOX_PATH'"
+su - $CB_USER -c "cb boxes add '\$CONTENT_DIR'"
 
 # Restart both services LAST, so they pick up the box, its access config,
 # and its secrets in a single restart.
