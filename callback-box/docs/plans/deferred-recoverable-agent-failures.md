@@ -158,7 +158,7 @@ exactly.
 ### The store (crossing the process boundary)
 
 `cb tick` runs scheduled scripts as subprocesses
-(`tick-helpers.ts:249`: `execWithTimeout(parsed.runs, ...)`), so the typed
+(`tick-helpers.ts:250`: `execWithTimeout(parsed.runs, ...)`), so the typed
 field cannot reach `recordOutcome` in-process. And quota is account-scoped:
 one box's failure should inform every box on the machine.
 
@@ -168,7 +168,7 @@ Both problems have the same answer: a machine-level advisory store,
 by provider:
 
 ```ts
-{ codex?: EngineUnavailability & { notifiedAt: string | null }, claude?: ... }
+{ codex?: EngineUnavailability & { episodeStartedAt: string; notifiedAt: string | null; notifiedRetryAt: string | null }, claude?: ... }
 ```
 
 - **Written** at the moment of classification (inside the engine layer, so
@@ -177,7 +177,9 @@ by provider:
 - **Advisory and fail-open**: a corrupt or unreadable store logs a warning and
   is treated as "no record" — an availability *hint* must never block agent
   work (contrast `transient-state.ts`, which fails closed because its data is
-  authoritative; this data is re-derivable from the next failure).
+  authoritative; this data is re-derivable from the next failure). The
+  degraded mode is itself observable: with no record, runs fail noisily
+  exactly as they do today, so a broken store cannot hide anything.
 - **Self-expiring**: a record whose `retryAt` is in the past is dead; readers
   ignore it and the next writer replaces it. No sweeper needed.
 
@@ -191,30 +193,47 @@ by provider:
    `waiting on codex quota until <t>`. `lastRun` is untouched, so the script
    stays due and runs on the first tick after reset.
 2. `executeScript`'s catch (`tick-helpers.ts:263`) consults the store: if a
-   live record exists for the box's provider, record the outcome as
-   `"deferred"` — `recordOutcome` gains that result value; it sets
+   live record exists for the box's provider **and its `detectedAt` falls
+   within this run's span** (snapshot the start time before
+   `execWithTimeout`), record the outcome as `"deferred"`. The freshness
+   requirement is what stops the store from laundering unrelated failures: a
+   script that dies of its own bug during someone else's quota episode fails
+   normally, because no record was written during *its* run. (A stale-but-live
+   record doesn't need the deferred outcome anyway — the skip gate stops the
+   *next* run before it starts.) `recordOutcome` gains the result value; it
+   sets
    `lastResult: "deferred"`, sets `lastError` to the informative message, and
    **neither increments nor resets** `consecutiveFailures` (a genuinely broken
    task must not have its counter laundered by a quota episode).
    `ScriptState`/`ScriptStatePartialSchema` (`schedule/state.ts:35-71`) extend
    accordingly.
 
-**Health — waiting is not failing.** `cb health` adds a box-level check row
-when the box's engine provider has a live record: `engine: waiting on codex
+**Health — waiting is not failing.** The `waiting` state joins the core
+`TaskHealth` status union in `src/core/schedule/health.ts` (computed where
+`failing`/`overdue` are computed today, `health.ts:111`, consulting the
+store), NOT bolted onto the CLI renderer — both consumers of task health
+derive from that one computation: the `cb health` renderer
+(`health.ts:44-58`, new glyph in `STATUS_GLYPHS` at `:31-38`, excluded from
+the exit-code-1 path at `:148-151`) and the proactive alert selection
+(`health-alert.ts:64-65` via `loadScheduleHealth`), which therefore suppresses
+`overdue`/`failing` alerts during an episode with no separate logic. `cb
+health` additionally adds a box-level check row: `engine: waiting on codex
 quota until <t>` (via the existing `printBoxChecks` surface,
-`health.ts:112-126`). Task-level: a task whose `lastResult` is `"deferred"`,
-or whose computed status is `failing`/`overdue` while the provider record is
-live, renders as `waiting` (new glyph in `STATUS_GLYPHS`, `health.ts:31-38`)
-and does not trip the exit-code-1 path (`health.ts:148-151`). The health-alert
-path (`health-alert.ts:65`) must not alert `overdue` for a task suppressed by
-a live record.
+`health.ts:112-126`).
 
-**Procedures — abort cleanly, never retry into a dead engine.** In
-`runAndValidate` (`engine-run-phase.ts:257-291`), when the run agent's
-`AgentResult` carries `unavailability`, skip the `severity: review`
-retry loop and fail the step with the informative message. Validation of
-whatever partial work exists still runs once (it is a shell, not an agent);
-the agent-driven retry is what cannot succeed.
+**Procedures — abort cleanly, never retry into a dead engine.** The right
+choke point is `runRunAgents`, not the retry loop: today a failed run agent is
+only *logged* (`engine-run-phase.ts:104-106` and `:143-145` — `Agent failed:
+...` then execution continues), so a step whose agent died still runs its
+shells, and with no validate block reports **completed**
+(`engine-step.ts:215` fails only on `runFailure`/`validationGated`/
+`reviewExhausted`). Under quota exhaustion that is a silently-successful
+no-op step. Change: `runRunAgents` returns the failed `AgentResult`'s
+`unavailability` when present, and `runAndValidate` then fails the step
+immediately with the informative message — no run shells, no validation, no
+`severity: review` retry (`engine-run-phase.ts:274-289` never entered). The
+broader question — whether a *generic* agent failure should ever leave a step
+"completed" — is adjacent pre-existing behavior, noted but out of scope.
 
 **Chat — say what happened.** No frontend change needed: the session-wrapper
 fix means `completed.error` (`codex-chat.ts:140`) now carries the real
@@ -228,17 +247,26 @@ fail identically and burn log noise); leave jobs pending for the next cycle.
 Chat-jobs' existing `resetSession()` on failure
 (`reactor/chat-jobs.ts:88-89`) stays.
 
-**Notification — once per episode, with the reset time.** After writing a
-record whose `notifiedAt` is null (or whose `retryAt` differs from the
-previously notified episode), send one `notifyBoxholder` (`deliver: true`)
+**Notification — once per episode, with the reset time.** When a written
+record starts a new episode (continuity rule below), send one
+`notifyBoxholder` (`deliver: true`)
 from the box whose run triggered classification: `Codex is out of usage quota
 until <t>. Scheduled work is deferred until then; chat on Codex-engine boxes
 will fail. No action needed unless this recurs.` Then stamp `notifiedAt`.
 This is `google-auth-alert.ts`'s latch shape with the latch in the machine
-store instead of per-box transient state — episode identity is `retryAt`, so
-a *new* exhaustion after reset (the escalation case: still broken past the
-promised time) notifies again. That re-notification per episode IS the
-escalation mechanism; deferral itself is always time-bounded by `retryAt`.
+store instead of per-box transient state. Episode identity needs a
+**continuity rule**, not raw `retryAt` equality — the 1-hour parse-failure
+holds would otherwise mint a "new episode" (and a notification) every hour of
+one real outage. Rule: the store record carries `episodeStartedAt` and
+`notifiedRetryAt`; a new classification written while the previous record is
+still live, or within a 30-minute grace after its `retryAt`, **extends** the
+episode (carries both fields forward, no notification). A notification fires
+only when (a) no episode is being extended — a genuinely new exhaustion,
+including one recurring after the promised reset, which is the escalation
+case — or (b) a *parsed* `retryAt` moves later than `notifiedRetryAt` by more
+than an hour (the provider moved the goalposts; the operator's expectation is
+stale). Fallback-hold records can extend an episode but never trigger (b).
+Deferral itself is always time-bounded by `retryAt`.
 
 ### Reset-time parsing
 
@@ -291,7 +319,8 @@ in scope); any UI beyond existing text surfaces.
 | Date parsed wrong (AM/PM, year) → absurd `retryAt` | Doctest for clamp | Yes: past/-7d clamp to 1-hour hold | Clear |
 | Store corrupt/unreadable | Doctest | Yes: fail-open (treated as absent), `console.warn` | Clear |
 | Two boxes classify concurrently — store write race | No (accepted) | `writeFileAtomic`, last-write-wins; both records describe the same episode | Silent, harmless |
-| Genuinely broken task fails *during* a quota episode — misattributed as deferred | Doctest for counter behavior | Partially: `consecutiveFailures` is frozen, not reset; the real failure resumes counting after reset. Accepted: during an episode the engine failure masks the task failure by construction | Clear once episode ends |
+| Genuinely broken task fails *during* a quota episode — misattributed as deferred | Doctest for counter behavior + freshness rule | Two guards: the deferred outcome requires a record written during *this run's* span (an unrelated failure defers nothing), and `consecutiveFailures` is frozen, not reset. Residual: a task whose own run both hits quota AND has a real bug is masked until the episode ends | Clear once episode ends |
+| Parse-failure 1-hour holds re-notify hourly through one outage | Doctest for episode continuity | Episode continuity rule: a record extending a live-or-just-expired episode carries the latch forward; fallback holds never re-trigger notification | Clear |
 | Quota returns early (credits purchased) while records says unavailable | No | Skip gate holds until `retryAt`; worst case = the wasted window the operator already knew about. `--force` bypasses the gate like other schedule gates | Clear (`cb health` shows why) |
 | Claude recognizer wrong (unverified live) | Doctest against known strings only | Scoped to SDK result-error text; unmatched → status quo | Clear |
 | Chat during episode — user sends messages that all fail | Covered by wrapper fix doctest | Message now names cause + reset time; no auto-block (human is present and informed) | Clear |
@@ -310,13 +339,15 @@ in scope); any UI beyond existing text surfaces.
   no agent authors it. N/A.
 - **Validation error UX** — the rewritten error line is the UX; it names
   cause, scope, and reset time in one sentence. ADDRESSED (Design → type).
-- **Partial migration / transition state** — old `ScriptState` files lack
-  `"deferred"`; `normalizeScriptState` already tolerates missing/unknown via
-  the partial schema, and `"deferred"` only appears in new writes. A rolled-
-  back binary reading a new state file: `lastResult: "deferred"` fails the old
-  enum → the existing catch in `loadScriptState` (`state.ts:131-136`) falls
-  back to empty state with a warning. Accepted: state is machine-local,
-  advisory, and rebuilt by the next run. ADDRESSED.
+- **Partial migration / transition state** — `"deferred"` only appears in new
+  writes; the partial schema tolerates missing *fields*, but its `lastResult`
+  enum (`state.ts:61`) is strict, so a **rolled-back** binary reading
+  `lastResult: "deferred"` Zod-rejects the file and the catch in
+  `loadScriptState` (`state.ts:131-136`) resets to empty state with a
+  warning. Concretely that resets cadence and budget gates: the task is
+  immediately due, runs once, and fails the way it does today (pre-plan
+  behavior). Accepted: machine-local, self-healing on the next write, and the
+  degraded mode is the status quo. ADDRESSED.
 
 ## NOT in scope
 
