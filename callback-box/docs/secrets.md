@@ -7,10 +7,11 @@ rationale: [`plans/secret-custody.md`](plans/secret-custody.md). This page is
 the operational reference for what exists today.
 
 Built so far: the store, the resolver, `cb secrets`, **every connector reader**
-migrated (see "Secret names" below), and the loopback resolve endpoint that
-box code uses for `agent`-access grants. The admin Secrets section, the chat
-capture widget, the probe/format registry, and the removal of the legacy
-file/env fallbacks are later chunks.
+migrated (see "Secret names" below), the loopback resolve endpoint that box code
+uses for `agent`-access grants, the probe + format registries, and the **admin
+page's Secrets section** (this box's grants plus a machine-wide view). The chat
+capture widget and the removal of the legacy file/env fallbacks are later
+chunks.
 
 ## The shape
 
@@ -171,6 +172,58 @@ forgetting it is how a credential ends up committed):
 3. Never write it anywhere: not a card, not a config file, not an env var, not a
    log line, not the code. There is one copy, in the store, and rotation is
    supposed to touch only that copy.
+
+## Verification: the probe and format registries
+
+Two server-owned registries help the boxholder get a key in correctly, and both
+are **advisory toward the value and authoritative about who decides**:
+
+- **Format** (`src/core/secrets/format-registry.ts`) — per-name prefix/length
+  heuristics behind the admin input's live hints. They **warn and never block**:
+  provider formats drift, and a hard gate would brick key entry the day a prefix
+  changes. An entry's `formatHint` may name a registry key; an agent may supply
+  one.
+- **Probe** (`src/core/secrets/probe-registry.ts`) — after a value is stored, one
+  cheap harmless authenticated call decides `verified: ok | failed | unchecked`
+  on the entry. `mistral`/`openai`/`openai-thinking`/`gemini`/`deepgram` use a
+  models-or-projects listing; `telegram-bot/<box>` uses `getMe`; `publish/<box>`
+  has none (an R2 check is neither free of side effects nor cheap) and stays
+  `unchecked`, as does any name with no entry.
+
+**Probe targets are server-owned and nothing else can name one.** An
+agent-supplied probe URL would send the freshly-saved secret wherever the agent
+pointed it — agents supply format hints, never probe targets.
+
+Only an auth rejection (401/403; 400 as well for Google, which answers a bad key
+that way) records `failed`; a 500, a timeout, or DNS failure records `unchecked`
+with a reason, so a provider outage never flags a working key as expired. A
+`failed` verification is what makes a later `resolveSecret` return
+`suspect: true`, and `markSecretVerificationFailed(name, reason)` is how a
+consumer reports a real 401 — wired into the Mistral and Deepgram transcription
+paths, which is stronger evidence than any probe.
+
+Probes run fire-and-forget after `set`/`setAndGrant`, and are awaited by the
+admin page's save so the boxholder sees the verdict in the same interaction (one
+request either way — an in-flight probe for the same value is joined, not
+duplicated). Tests set `CB_SECRET_PROBES=off`, which suppresses only the real
+network path; an injected `fetch` still runs.
+
+## The admin page
+
+The owner-only **Secrets** section on any box's admin page is the boxholder's
+surface (`src/frontend/src/components/admin/SecretsSection*.tsx`):
+
+- **This box** — every granted name with its access level, verification badge,
+  note and last-used; set/rotate a value (masked input, soft format warnings);
+  raise/lower access; revoke; supply values for slots the agent declared; revoke
+  stale grants; grant an existing machine-level name (the picker hides names
+  another box owns exclusively).
+- **Machine-wide** (Decision 8) — every name on the machine, its grants across
+  every box, `shareable` flags, last-used, and removal. Reachable from any box's
+  page, since the store is machine-level and there is no separate hub UI.
+
+No procedure in `trpc/routers/secrets.ts` returns a value — not on a read, not
+as an echo after a write, not in an error.
 
 ## `cb secrets`
 

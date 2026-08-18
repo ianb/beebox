@@ -25,7 +25,7 @@ import { z } from "zod";
 import { resolveSecret } from "./secrets/resolve.js";
 
 /** The store name this connector's key lives under. */
-const SECRET_NAME = "mistral";
+export const MISTRAL_SECRET_NAME = "mistral";
 
 const mistralSecretSchema = z.object({ apiKey: z.string().optional() });
 
@@ -58,7 +58,7 @@ async function readLegacySecretFile(boxRoot: string): Promise<string | null> {
     warnedAboutLegacyFile = true;
     console.warn(
       `[mistral-key] using the deprecated in-tree secret file ${secretPath}. ` +
-        `Move it into the machine store (cb secrets set ${SECRET_NAME}, then ` +
+        `Move it into the machine store (cb secrets set ${MISTRAL_SECRET_NAME}, then ` +
         "cb secrets grant <box> mistral) and delete the file.",
     );
   }
@@ -69,7 +69,7 @@ export async function getMistralApiKey(boxRoot?: string): Promise<string | null>
   if (boxRoot !== undefined) {
     const resolved = await resolveSecret({
       boxRoot,
-      name: SECRET_NAME,
+      name: MISTRAL_SECRET_NAME,
       purpose: "transcription",
       access: "server",
     });

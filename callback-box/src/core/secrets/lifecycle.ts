@@ -21,6 +21,7 @@ import {
   SecretNotShareableError,
   SecretStoreAccessError,
 } from "./errors.js";
+import { probeSecretInBackground } from "./probe-registry.js";
 import {
   loadSecretStore,
   mutateSecretStore,
@@ -98,6 +99,7 @@ export async function setSecret(opts: {
       verified: undefined,
     };
   });
+  probeSecretInBackground(opts.name);
 }
 
 /**
@@ -203,6 +205,7 @@ export async function setAndGrantSecret(opts: {
     boxGrants[opts.name] = opts.access;
     store.grants[opts.slug] = boxGrants;
   });
+  probeSecretInBackground(opts.name);
 }
 
 /**

@@ -8,7 +8,8 @@ import type {
   TranscriptionResult,
   DetailedTranscriptionResult,
 } from "./index.js";
-import { getMistralApiKey } from "../mistral-key.js";
+import { getMistralApiKey, MISTRAL_SECRET_NAME } from "../mistral-key.js";
+import { isAuthRejection, markSecretVerificationFailed } from "../secrets/probe-registry.js";
 import {
   MissingMistralKeyError,
   VoxtralNetworkError,
@@ -85,6 +86,18 @@ export async function transcribeAudioVoxtral(
 
     // ky HTTPError — parse the response for error details
     if (isHTTPError(error)) {
+      // A real use rejected for auth is the strongest evidence there is that
+      // the stored key is expired or revoked — stronger than any probe, since
+      // it is the actual call the box needs. Flagging it here is what makes
+      // the admin page say "this key may be expired" instead of the boxholder
+      // discovering it from a failed transcription card
+      // (`docs/plans/secret-custody.md`, "Guided entry + validation").
+      if (isAuthRejection(error.response.status)) {
+        await markSecretVerificationFailed(
+          MISTRAL_SECRET_NAME,
+          `a transcription request was rejected with HTTP ${error.response.status}`,
+        );
+      }
       const parsed = await parseErrorResponse(error.response);
       throw parsed;
     }
