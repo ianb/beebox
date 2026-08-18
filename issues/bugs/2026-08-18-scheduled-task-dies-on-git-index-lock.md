@@ -57,21 +57,67 @@ is writing to a box, because the competing holder may not be quick:
   `install-validation-hooks.ts`, …). Concurrency here is normal operation, not
   an edge case.
 
-## Fix directions
+## The structural fix
 
-- **Raise the retry budget where the caller is unattended** — bounded backoff
-  rather than a single immediate retry. Smallest change, and it addresses the
-  observed failure directly.
-- **Serialize box-repo writes through the existing lock.**
-  `src/lib/file-lock.ts` (on `proper-lockfile`, with stale/crash recovery) is
-  already the house mechanism for cross-process locks and is not used for box
-  git operations. The closed audit judged a mutex unnecessary; that judgment
-  predates this evidence and is worth revisiting rather than assumed.
-- **Distinguish "lost a lock race" from "the task failed" in health.** A task
-  that never ran is not a task that ran and broke, and the scheduler currently
-  reports both as `exit code 1`. Compare
-  [health masks a review-step turn cap](2026-08-12-health-masks-review-step-turn-cap.md),
-  which is the same complaint about a different collapsed distinction.
+The framing that matters: **git's index is a single repo-wide mutex, and we
+treat commits as independent per-path operations.** `stageAndCommitPaths` made
+commits path-*scoped*, which fixed attribution — which changes land together —
+but did nothing about concurrency, because only one process can hold
+`.git/index.lock` no matter how narrow its pathspec. Retrying is a way of
+pretending the mutex isn't there.
+
+Both pieces of the real answer already exist in this codebase, applied to other
+resources:
+
+**1. Hold a lock across the whole stage-and-commit span.**
+`stageAndCommitPaths` (`src/lib/git.ts:309`) is already the single door every
+in-repo writer goes through. Wrapping its body in `src/lib/file-lock.ts` (on
+`proper-lockfile`, with mtime-freshness stale recovery — the house mechanism
+for exactly this) turns contention into *queueing* instead of failure.
+
+This also closes a defect the closed audit explicitly deferred rather than
+solved. Its Track H note: `stageFiles` + `commit` are "two non-atomic git ops
+sharing one `.git/index.lock`", so two mutations on *different* files can
+interleave staging and get co-committed under the wrong attribution. One lock
+around the span fixes the contention and that interleaving together — they are
+the same bug seen from two sides.
+
+**2. Wait, then fail — and mean it.** A bounded wait distinguishes "another
+process is committing" (normal, wait for it) from "something is wedged" (real,
+report it). Today those are the same immediate error. The one-retry budget is
+not a smaller version of this; it is a different thing that happens to
+sometimes work.
+
+**3. Defer unattended work instead of racing it.** The precedent is right
+there: chat sessions take a lock under `.callback-box/active-chats/` precisely
+so "other processes (notably `cb tick`) can detect a chat is actively producing
+a response and defer housekeeping work that would otherwise race with
+mid-response writes" (`src/core/schedule/state.ts:283-289`). That is this exact
+problem, already recognised and solved — for one writer. A scheduled task that
+commits should defer on the same signal.
+
+**4. Commit less casually.** Contention is proportional to commit count, and
+several paths commit per *event* rather than per unit of work — `cb feedback`
+commits on every call, which produced an observed commit storm on 2026-08-14.
+Batching those is a reduction in the problem rather than a mitigation of it.
+
+### The limit worth stating
+
+**Box agents shell out to raw `git` and cannot be made to take the lock.** A
+wrapped command they are told to use is possible, but it is guidance, not a
+guarantee. That is survivable, and it is why the lock belongs on *our* writers
+rather than only on the agent's: locking our side does not stop an agent from
+holding the index, but it makes every one of our writers **wait** for it rather
+than die. The unlockable writer is exactly the one the others must be patient
+with.
+
+## Also worth fixing
+
+**Distinguish "lost a lock race" from "the task failed" in health.** A task that
+never ran is not a task that ran and broke, and the scheduler reports both as
+`exit code 1`. Compare
+[health masks a review-step turn cap](2026-08-12-health-masks-review-step-turn-cap.md),
+the same complaint about a different collapsed distinction.
 
 ## Note on scope
 
