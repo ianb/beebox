@@ -156,9 +156,12 @@ struct NativeComposerFixtureScreen: View {
     private var fixturePending: [PendingEmission] {
         switch fixture {
         case "sending":
-            [pending(index: 1, state: .awaitingReceipt(attempt: 1, sentAt: Date()))]
+            [pending(index: 1, state: .pending(deliveryAttempts: 1, lastAttemptAt: Date()))]
         case "two-pending":
-            [pending(index: 1, state: .awaitingReceipt(attempt: 1, sentAt: Date())), pending(index: 2, state: .awaitingWebView)]
+            [
+                pending(index: 1, state: .pending(deliveryAttempts: 1, lastAttemptAt: Date())),
+                pending(index: 2, state: .pending(deliveryAttempts: 0, lastAttemptAt: nil))
+            ]
         case "rejected-send":
             [pending(index: 1, state: .rejected(reason: "The target rejected this message while offline."))]
         default:

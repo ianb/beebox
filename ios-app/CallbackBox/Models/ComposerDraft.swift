@@ -132,10 +132,91 @@ struct ComposerDraft: Codable, Equatable, Sendable {
     }
 }
 
-enum PendingEmissionState: Codable, Equatable, Sendable {
-    case awaitingWebView
-    case awaitingReceipt(attempt: Int, sentAt: Date)
+/// Durable state of a pending native emission.
+///
+/// `pending` covers everything before a receipt settles it: `deliveryAttempts == 0`
+/// with a nil `lastAttemptAt` means the emission has never been handed to the
+/// webview; a positive count with a date means it has been delivered at least once
+/// and the receipt has not arrived yet. Whether the webview currently holds it is
+/// session state (`inflightEmissionIDs`), not a durable distinction.
+enum PendingEmissionState: Equatable, Sendable {
+    case pending(deliveryAttempts: Int, lastAttemptAt: Date?)
     case rejected(reason: String)
+}
+
+extension PendingEmissionState: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case pending
+        case rejected
+        // Legacy cases, decoded only. `awaitingWebView` and `awaitingReceipt`
+        // were collapsed into `pending`; entries persisted before that change
+        // still carry these keys.
+        case awaitingWebView
+        case awaitingReceipt
+    }
+
+    private enum PendingKeys: String, CodingKey {
+        case deliveryAttempts
+        case lastAttemptAt
+    }
+
+    private enum RejectedKeys: String, CodingKey {
+        case reason
+    }
+
+    private enum LegacyAwaitingReceiptKeys: String, CodingKey {
+        case attempt
+        case sentAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        if container.contains(.pending) {
+            let nested = try container.nestedContainer(keyedBy: PendingKeys.self, forKey: .pending)
+            self = .pending(
+                deliveryAttempts: try nested.decode(Int.self, forKey: .deliveryAttempts),
+                lastAttemptAt: try nested.decodeIfPresent(Date.self, forKey: .lastAttemptAt)
+            )
+            return
+        }
+        if container.contains(.rejected) {
+            let nested = try container.nestedContainer(keyedBy: RejectedKeys.self, forKey: .rejected)
+            self = .rejected(reason: try nested.decode(String.self, forKey: .reason))
+            return
+        }
+        if container.contains(.awaitingWebView) {
+            self = .pending(deliveryAttempts: 0, lastAttemptAt: nil)
+            return
+        }
+        if container.contains(.awaitingReceipt) {
+            let nested = try container.nestedContainer(
+                keyedBy: LegacyAwaitingReceiptKeys.self,
+                forKey: .awaitingReceipt
+            )
+            self = .pending(
+                deliveryAttempts: try nested.decode(Int.self, forKey: .attempt),
+                lastAttemptAt: try nested.decode(Date.self, forKey: .sentAt)
+            )
+            return
+        }
+        throw DecodingError.dataCorrupted(DecodingError.Context(
+            codingPath: container.codingPath,
+            debugDescription: "Unrecognized PendingEmissionState case."
+        ))
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .pending(let deliveryAttempts, let lastAttemptAt):
+            var nested = container.nestedContainer(keyedBy: PendingKeys.self, forKey: .pending)
+            try nested.encode(deliveryAttempts, forKey: .deliveryAttempts)
+            try nested.encodeIfPresent(lastAttemptAt, forKey: .lastAttemptAt)
+        case .rejected(let reason):
+            var nested = container.nestedContainer(keyedBy: RejectedKeys.self, forKey: .rejected)
+            try nested.encode(reason, forKey: .reason)
+        }
+    }
 }
 
 struct PendingEmission: Codable, Equatable, Identifiable, Sendable {

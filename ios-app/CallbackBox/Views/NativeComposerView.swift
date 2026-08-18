@@ -1389,7 +1389,7 @@ private struct PendingEmissionList: View {
             }
             ForEach(emissions) { emission in
                 switch emission.state {
-                case .awaitingWebView, .awaitingReceipt:
+                case .pending:
                     HStack(spacing: 8) {
                         ProgressView()
                         Text("Sending message…")
