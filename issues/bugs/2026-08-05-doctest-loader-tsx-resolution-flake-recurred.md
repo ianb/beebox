@@ -13,16 +13,35 @@ discovered-in: worktree-load-older-label — full finish-suite verification
 > doctest. No commit has touched the doctest/tsx loader since the test was
 > added.
 >
-> **But the environment was wrong for it.** This issue's own record says it only
-> reproduced at load average ~18 with ~37 concurrent Claude/Codex processes.
-> The investigation ran on a quiet machine, so the contention level that
-> produces the failure was never reached — a clean result here is close to
-> meaningless.
+> **Correction — the contention regime *was* reached.** A first pass concluded
+> the machine had been too quiet for the result to mean anything. A fuller run
+> then exceeded this issue's own recorded trigger conditions (load ~18, ~37
+> concurrent agent processes) and still saw nothing:
 >
-> What would settle it: a run during genuinely heavy concurrent-agent load on
-> the real machine. That is not something a clean single-session investigation
-> can manufacture, so this stays open until it happens to be observed rather
-> than until someone tries harder in isolation.
+> | batch | load avg | result |
+> |---|---|---|
+> | quiet baseline | ~3–6 | 10/10 pass |
+> | organic agent load | 18.3–27.8 | 10/10 pass |
+> | concurrent with full suite | 62–74 | 9/10 pass, 1 unrelated harness crash |
+> | tail | 28–40 | 10/10 pass |
+>
+> 40 stress invocations, ~468 child imports resolved, with 51–57 live
+> Claude/Codex processes measured. Plus two complete `pnpm test` runs, both
+> 7315/7315, 79/79 frontend doctest files, **zero** `1..0 # no tests found`.
+> (The single non-pass was `ENOTEMPTY` on `.tap/processinfo` — two concurrent
+> `tap` invocations sharing one `.tap` dir, an artifact of how the load was
+> induced, carrying none of this bug's signature.)
+>
+> `agent-doctest/src/doctest-loader.ts` has **zero commits since 2026-08-05** —
+> byte-identical to when the flake last fired — and `tsx` is still pinned
+> `^4.23.1`. So there is no candidate fix to credit, and non-reproduction of a
+> rare startup race is not evidence of one.
+>
+> **What this changes for the next person:** stop mounting dedicated attempts.
+> Two have now failed to force it under conditions that should have worked. The
+> useful move is opportunistic — re-check this test during future genuinely
+> loaded full-suite runs, and treat a sighting as the event that reopens
+> investigation.
 
 The full parallel `callback-box` suite still intermittently resolves an
 extensionless frontend import to a missing module. This recurred after the fix
