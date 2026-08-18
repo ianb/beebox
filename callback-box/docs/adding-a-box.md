@@ -106,14 +106,30 @@ services (Telegram, etc.) can reach them.
 
 ## 4. Connector secrets
 
-Per-box secrets go in the box's own `content/config/connectors/`:
+Secrets are **not** files in the box. They live in one machine-level store
+(`~/.config/cb/secrets.json`, 0600, outside every box tree) and a box reaches
+one through a **grant** — see [`docs/secrets.md`](secrets.md) for the full
+model. Provisioning a box is therefore granting, never copying:
 
 ```bash
-echo '{"botToken":"...","webhookSecret":"..."}' > config/connectors/telegram.secret.json
+cb secrets status <box>                 # what this box is granted, and what it still needs
+printf %s "$KEY" | cb secrets set mistral   # store or rotate the one copy (stdin, never argv)
+cb secrets grant <box> mistral          # the per-box opt-in
+cb secrets copy-grants <from-box> <box> # give a new box the same grants a reference box holds
 ```
 
-Without a key, the affected connector emits a health warning but the box
-still runs.
+`copy-grants` is what `deploy/add-box.sh --secrets-from` runs. It skips
+secrets that bind structurally to one box — a Telegram bot token routes to a
+single webhook URL — and names each skip: that box needs its own, connected
+from its admin page.
+
+Without a granted key the affected connector emits a health warning but the box
+still runs; `cb secrets status` names exactly which grant is missing.
+
+Legacy `config/connectors/*.secret.json` files still work as a deprecated
+fallback during the transition, and `cb health` flags any it finds. Don't
+create new ones — move a machine's existing files into the store once with
+`cb secrets migrate` (`--dry-run` prints the plan first).
 
 ## Example deployment: box.example.com
 
@@ -145,7 +161,9 @@ before assuming the box process itself is at fault — a box missing from
 
 ### "API key not configured" warnings
 
-The box is missing a connector secret (see step 4 above).
+The box has no grant for that connector's secret (see step 4 above).
+`cb secrets status <box>` says which — a missing grant, a granted name whose
+value was never supplied, or a grant whose secret was removed.
 
 ### Permission denied writing to box directories
 

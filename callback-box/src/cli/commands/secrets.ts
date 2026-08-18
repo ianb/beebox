@@ -24,13 +24,8 @@
  */
 
 import { Command } from "commander";
-import * as fs from "node:fs/promises";
-import * as path from "node:path";
 import { boxSlug } from "../../lib/box-slug.js";
 import { findBoxRoot } from "../../lib/paths.js";
-import { detectAgentContext } from "../../lib/agent-context.js";
-import { errorMessage } from "../../lib/error-guards.js";
-import { SecretLifecycleError } from "../../core/secrets/errors.js";
 import {
   boxSecretStatus,
   declareSecret,
@@ -40,38 +35,10 @@ import {
   revokeSecret,
   setSecret,
 } from "../../core/secrets/lifecycle.js";
-import { secretAccessLevelSchema, secretsFilePath, type SecretAccessLevel } from "../../core/secrets/store.js";
+import { secretAccessLevelSchema, type SecretAccessLevel } from "../../core/secrets/store.js";
 import { promptHidden } from "../lib/prompt-hidden.js";
-
-/** Refuse a store mutation from an agent session unless a human sanctioned it. */
-function refuseIfUnconfirmedAgent(opts: { action: string; agentConfirmed: boolean | undefined }): void {
-  if (opts.agentConfirmed === true) return;
-  const context = detectAgentContext();
-  if (!context.isAgent) return;
-  console.error(
-    [
-      `Refusing to ${opts.action}: this looks like an agent session (${context.reason}).`,
-      "",
-      `The secret store (${secretsFilePath()}) is MACHINE-LEVEL — one file behind every box`,
-      "on this machine, not just the box you are standing in. Granting a secret hands another",
-      "box a live credential; setting one rotates the single copy every box shares.",
-      "",
-      "If the person you are working for explicitly asked you to do this, re-run with",
-      "--agent-confirmed.",
-      "",
-      "If you need a secret for work you are doing: `cb secrets declare <name> --note ...`",
-      "names the slot, and the boxholder supplies and grants the value. Needing a credential",
-      "you were not given is a question for a human, not an obstacle to work around.",
-    ].join("\n"),
-  );
-  process.exit(1);
-}
-
-/** Fail the process with a clean line for a known lifecycle error, a message otherwise. */
-function failWith(e: unknown): never {
-  console.error(e instanceof SecretLifecycleError ? e.message : errorMessage(e));
-  process.exit(1);
-}
+import { failWith, refuseIfUnconfirmedAgent, resolveSlugArgument } from "../lib/secrets-guard.js";
+import { copyGrantsCommand, migrateCommand } from "./secrets-migrate.js";
 
 /** Read a piped value from stdin (everything up to EOF, one trailing newline stripped). */
 async function readStdinValue(): Promise<string> {
@@ -90,18 +57,6 @@ async function readSecretValue(name: string): Promise<string> {
     label: `Value for "${name}" (input hidden): `,
     noTtyMessage: "stdin is not an interactive terminal; pipe the value in instead.",
   });
-}
-
-/** A `<box-or-boxRoot>` argument: an existing directory resolves to its slug, anything else IS the slug. */
-async function resolveSlugArgument(boxOrRoot: string): Promise<string> {
-  const candidate = path.resolve(boxOrRoot);
-  try {
-    const stat = await fs.stat(candidate);
-    if (stat.isDirectory()) return await boxSlug(candidate);
-  } catch (_e) {
-    // Not a path on this machine — treat the argument as a literal slug.
-  }
-  return boxOrRoot;
 }
 
 function parseAccess(raw: string | undefined): SecretAccessLevel {
@@ -369,3 +324,8 @@ secretsCommand
   .action(async (boxOrRoot: string) => {
     await runSecretsStatus({ boxOrRoot });
   });
+
+// The two bulk/provisioning subcommands live in their own module (the file-size
+// rule, and they share only the guards in `cli/lib/secrets-guard.ts`).
+secretsCommand.addCommand(copyGrantsCommand);
+secretsCommand.addCommand(migrateCommand);

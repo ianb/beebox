@@ -2,7 +2,14 @@
  * The boxholder's management surface for the machine secret store
  * (`docs/plans/secret-custody.md`, Track 2's management-surface bullet).
  *
- * Owner-gated throughout, and **no procedure here returns a secret value** —
+ * Gated by `authenticatedOwnerProcedure`, not the ordinary `ownerProcedure`:
+ * `ctx.isOwner` also passes an OPEN-ACCESS box, and every other owner surface is
+ * box-scoped, so that is fine for them — but this store is machine-level. One
+ * box whose boxholder opted out of the auth wall must not become a management
+ * surface for every other box's credentials on the same host. Open access does
+ * not qualify here; a real signed-in owner identity does.
+ *
+ * Otherwise owner-gated throughout, and **no procedure here returns a secret value** —
  * not on a read, not as an echo after a write, not in an error message. Every
  * shape below is metadata: whether a slot holds a value, when it was last used,
  * what the last verification concluded. That is the whole point of a custody
@@ -32,7 +39,7 @@ import {
 import { describeSecretProbe, probeSecret, type SecretVerified } from "../../../core/secrets/probe-registry.js";
 import { loadSecretStore, secretAccessLevelSchema } from "../../../core/secrets/store.js";
 import { boxSlug } from "../../../lib/box-slug.js";
-import { router, ownerProcedure } from "../trpc.js";
+import { authenticatedOwnerProcedure, router } from "../trpc.js";
 
 /** Store names are flat identifiers; `name/<box>` is the per-box form. */
 const secretNameSchema = z.string().min(1).max(200);
@@ -69,7 +76,7 @@ export const secretsRouter = router({
    * state that means "act now": the last probe or the last real use was
    * rejected, so this key is probably expired.
    */
-  boxStatus: ownerProcedure.query(async ({ ctx }) => {
+  boxStatus: authenticatedOwnerProcedure.query(async ({ ctx }) => {
     const slug = await boxSlug(ctx.boxRoot);
     const status = await boxSecretStatus(slug);
     const listings = new Map((await listSecrets()).map((entry) => [entry.name, entry]));
@@ -101,7 +108,7 @@ export const secretsRouter = router({
    * grant has to be makeable from somewhere), which is exactly why a name must
    * never itself carry sensitive content.
    */
-  machineView: ownerProcedure.query(async ({ ctx }) => {
+  machineView: authenticatedOwnerProcedure.query(async ({ ctx }) => {
     const slug = await boxSlug(ctx.boxRoot);
     const secrets = (await listSecrets()).map(machineRow);
     const store = await loadSecretStore();
@@ -110,7 +117,7 @@ export const secretsRouter = router({
   }),
 
   /** The soft-format registry, fetched once so the UI can warn as the user types. */
-  formatHints: ownerProcedure.query(() => listSecretFormats()),
+  formatHints: authenticatedOwnerProcedure.query(() => listSecretFormats()),
 
   /**
    * Store or rotate a value, then verify it.
@@ -122,7 +129,7 @@ export const secretsRouter = router({
    * path uses — so the boxholder finds out in the same interaction whether the
    * key they just pasted actually works.
    */
-  setValue: ownerProcedure
+  setValue: authenticatedOwnerProcedure
     .input(
       z.object({
         name: secretNameSchema,
@@ -146,7 +153,7 @@ export const secretsRouter = router({
     }),
 
   /** Grant a name to a box, or raise/lower an existing grant's access level. */
-  grant: ownerProcedure
+  grant: authenticatedOwnerProcedure
     .input(z.object({ box: z.string().min(1), name: secretNameSchema, access: secretAccessLevelSchema }))
     .mutation(async ({ input }) => {
       await lifecycle(() => grantSecret({ slug: input.box, name: input.name, access: input.access }));
@@ -159,7 +166,7 @@ export const secretsRouter = router({
    * decision from making a box able to resolve a secret at all, and a "raise"
    * that silently created a grant would be the wrong kind of surprise.
    */
-  setAccess: ownerProcedure
+  setAccess: authenticatedOwnerProcedure
     .input(z.object({ box: z.string().min(1), name: secretNameSchema, access: secretAccessLevelSchema }))
     .mutation(async ({ input }) => {
       const store = await loadSecretStore();
@@ -176,7 +183,7 @@ export const secretsRouter = router({
       return { success: true };
     }),
 
-  revoke: ownerProcedure
+  revoke: authenticatedOwnerProcedure
     .input(z.object({ box: z.string().min(1), name: secretNameSchema }))
     .mutation(async ({ input }) => {
       await lifecycle(() => revokeSecret({ slug: input.box, name: input.name }));
@@ -185,7 +192,7 @@ export const secretsRouter = router({
 
   /** Drop an entry machine-wide. Grants naming it survive as dangling grants,
    *  which every view reports as such — a removal the boxholder can see. */
-  remove: ownerProcedure.input(z.object({ name: secretNameSchema })).mutation(async ({ input }) => {
+  remove: authenticatedOwnerProcedure.input(z.object({ name: secretNameSchema })).mutation(async ({ input }) => {
     await lifecycle(() => removeSecret(input.name));
     return { success: true };
   }),

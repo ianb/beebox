@@ -243,6 +243,10 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
         // owner. Same treatment as the agent bearer and mobile auth beside it.
         authed: identityIsOpen || user !== null || bearerOk || mobileOk || browseOk,
         isOwner: identityIsOpen || (user !== null && user.email === getOwnerEmail()),
+        // Deliberately NOT folding in open access: the machine-level secret
+        // store is the one owner surface where "the box opted out of the auth
+        // wall" must not read as "the boxholder is here" (secret-custody plan).
+        isAuthenticatedOwner: user !== null && user.email === getOwnerEmail(),
       };
     },
   };

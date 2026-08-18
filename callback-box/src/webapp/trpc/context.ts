@@ -32,4 +32,16 @@ export interface TrpcContext {
    * caller is the owner.
    */
   isOwner: boolean;
+  /**
+   * The request carries a REAL authenticated owner identity — an actual signed-in
+   * user whose email is the owner's. Unlike {@link isOwner} it does not fold in
+   * open access, because "nobody had to prove anything" is not an owner.
+   *
+   * Almost every owner surface is box-scoped, so open access (a box whose
+   * boxholder deliberately opted out of the auth wall) passing them is correct.
+   * The secret store is the exception: it is MACHINE-level, spanning every box
+   * on the host, so one box's opt-out must not become a grant surface for its
+   * neighbours' credentials (`docs/plans/secret-custody.md`, bias toward strict).
+   */
+  isAuthenticatedOwner: boolean;
 }

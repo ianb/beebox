@@ -34,9 +34,17 @@ set -euo pipefail
 #                    always has access; this is only for ADDITIONAL users.
 #                    Written to config/box.json, new boxes only — never
 #                    clobbers an existing config.
-#   --secrets-from BOX  copy config/connectors/*.secret.json from another
-#                    box (e.g. the shared Mistral key). Avoids the
-#                    "API key not configured" health warning.
+#   --secrets-from BOX  give the new box the same secret GRANTS another box
+#                    holds (e.g. the shared Mistral key), via
+#                    `cb secrets copy-grants`. Avoids the "API key not
+#                    configured" health warning. Nothing is copied into the
+#                    box tree: there is one copy of each secret in the
+#                    machine store and this adds a grant to it, so rotation
+#                    still touches one place (docs/secrets.md). Secrets that
+#                    bind to one box (a Telegram bot token) are skipped and
+#                    named. If the source box predates the store — it still
+#                    has *.secret.json files and no grants — the old file
+#                    copy runs instead, with a deprecation warning.
 #   --dry-run        run the preflight checks against the live server and
 #                    print what would change. Nothing is cloned, written, or
 #                    restarted. Read-only on the server.
@@ -242,7 +250,7 @@ if [[ -n "$DRY_RUN" ]]; then
     echo "  - write config/box.json with allowedEmails: $ALLOW_CSV (new boxes only)"
   fi
   if [[ -n "$SECRETS_FROM" ]]; then
-    echo "  - copy connector secrets from box '$SECRETS_FROM'"
+    echo "  - copy box '$SECRETS_FROM's secret grants (cb secrets copy-grants; no files move)"
   fi
   echo "  - register with the hub (cb hub add-box, per the plan above)"
   echo "  - register with the scheduler manifest (cb boxes add)"
@@ -346,17 +354,36 @@ if [[ -n "$ALLOW_CSV" ]]; then
   fi
 fi
 
-# Seed connector secrets from a reference box (the shared Mistral key,
-# etc.) so transcription and connectors work without a manual copy.
+# Seed connector secrets from a reference box (the shared Mistral key, etc.) so
+# transcription and connectors work without a manual step.
+#
+# This copies GRANTS, not files: each secret has one copy in the machine store
+# and the new box gets a grant to it, so rotating a key later touches one entry
+# instead of every box that was ever seeded from this one (the rotation hazard
+# the secret-custody plan exists to end — docs/secrets.md). Secrets that bind
+# structurally to one box (a Telegram bot token routes to one webhook URL) are
+# skipped by the command and named in its output.
+#
+# `--agent-confirmed` is correct here and not a rubber stamp: the operator
+# explicitly passed --secrets-from. Without it the command would refuse, since
+# stdin over `ssh`/`su -c` is not a TTY and therefore reads as an agent session.
 if [[ -n "$SECRETS_FROM" ]]; then
+  COPY_OUT=\$(su - $CB_USER -c "cb secrets copy-grants '$SECRETS_FROM' '$BOX_NAME' --agent-confirmed" 2>&1) || true
+  echo "\$COPY_OUT"
+
+  # Legacy path, for a machine that has not run \`cb secrets migrate\` yet: the
+  # source box has no grants but still holds in-tree secret files. Copy them so
+  # provisioning still works, and say plainly that this is the deprecated shape.
   SRC_DIR="$BOXES_DIR/$SECRETS_FROM/content/config/connectors"
   [[ -d "\$SRC_DIR" ]] || SRC_DIR="$BOXES_DIR/$SECRETS_FROM/config/connectors"
-  mkdir -p "\$CONTENT_DIR/config/connectors"
-  if cp "\$SRC_DIR"/*.secret.json "\$CONTENT_DIR/config/connectors/" 2>/dev/null; then
+  if echo "\$COPY_OUT" | grep -q "Nothing copied" && compgen -G "\$SRC_DIR/*.secret.json" >/dev/null; then
+    echo "Secrets: '$SECRETS_FROM' has no grants but still has in-tree secret files — falling back to the OLD file copy."
+    echo "         DEPRECATED: run 'cb secrets migrate' on this server (with the boxholder) to move them into the"
+    echo "         machine store, then re-run this with --secrets-from to grant instead of copy."
+    mkdir -p "\$CONTENT_DIR/config/connectors"
+    cp "\$SRC_DIR"/*.secret.json "\$CONTENT_DIR/config/connectors/"
     chmod 600 "\$CONTENT_DIR/config/connectors/"*.secret.json
-    echo "Secrets: copied from '$SECRETS_FROM'"
-  else
-    echo "Secrets: none found on '$SECRETS_FROM' (nothing copied)"
+    echo "Secrets: copied files from '$SECRETS_FROM'"
   fi
 fi
 

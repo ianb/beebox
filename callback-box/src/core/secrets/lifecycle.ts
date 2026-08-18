@@ -225,6 +225,55 @@ export async function forgetBoxSecret(opts: { name: string; slug: string }): Pro
   });
 }
 
+/** What {@link copyBoxGrants} did, per name — never a value. */
+export interface CopiedGrants {
+  copied: { name: string; access: SecretAccessLevel }[];
+  /** Names deliberately not copied, each with the reason to print. */
+  skipped: { name: string; reason: string }[];
+}
+
+/**
+ * Give one box the same grants another box already holds — what
+ * `deploy/add-box.sh --secrets-from` does now that provisioning a box is a
+ * grant, not a file copy. Access levels come across unchanged: a source box's
+ * `agent` grant was a deliberate disclosure decision, and silently downgrading
+ * it would leave the new box's code failing with `agent-access-not-granted`
+ * for no visible reason.
+ *
+ * Single-box secrets (`shareable: false` — a Telegram bot token, a bucket-scoped
+ * R2 token) are SKIPPED rather than refused: a whole provisioning run must not
+ * fail because the reference box happens to have a Telegram bot, and copying one
+ * would break the box already using it. Each skip is reported so the operator
+ * sees what the new box still needs of its own.
+ */
+export async function copyBoxGrants(opts: { fromSlug: string; toSlug: string }): Promise<CopiedGrants> {
+  return mutateSecretStore({ purpose: "copy-grants" }, (store) => {
+    const result: CopiedGrants = { copied: [], skipped: [] };
+    const source = store.grants[opts.fromSlug] ?? {};
+    const target = store.grants[opts.toSlug] ?? {};
+    for (const name of Object.keys(source).toSorted()) {
+      const access = source[name];
+      if (access === undefined) continue;
+      const entry = store.secrets[name];
+      if (entry === undefined) {
+        result.skipped.push({ name, reason: `"${opts.fromSlug}" holds a stale grant for it (no such secret)` });
+        continue;
+      }
+      if (entry.shareable === false) {
+        result.skipped.push({
+          name,
+          reason: `single-box secret (belongs to "${entry.owningBox ?? opts.fromSlug}") — set this box up with its own`,
+        });
+        continue;
+      }
+      target[name] = access;
+      result.copied.push({ name, access });
+    }
+    if (result.copied.length > 0) store.grants[opts.toSlug] = target;
+    return result;
+  });
+}
+
 /** Withdraw a box's grant. Removing the last one drops the box's whole map. */
 export async function revokeSecret(opts: { slug: string; name: string }): Promise<void> {
   await mutateSecretStore({ purpose: "revoke" }, (store) => {

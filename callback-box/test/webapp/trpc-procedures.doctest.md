@@ -7,12 +7,13 @@ authenticated request. The context booleans (`authed`, `isOwner`) are computed
 in `createContext` (`server-box-scope.ts`) so these gates are pure checks.
 
 ```ts setup
-import { router, publicProcedure, authedProcedure, ownerProcedure } from "../../src/webapp/trpc/trpc.js";
+import { router, publicProcedure, authedProcedure, ownerProcedure, authenticatedOwnerProcedure } from "../../src/webapp/trpc/trpc.js";
 
 const testRouter = router({
   pub: publicProcedure.query(() => "pub-ok"),
   authed: authedProcedure.query(() => "authed-ok"),
   owner: ownerProcedure.query(() => "owner-ok"),
+  strictOwner: authenticatedOwnerProcedure.query(() => "strict-owner-ok"),
 });
 
 // Full context with the gate booleans defaulting to denied; override per case.
@@ -25,6 +26,7 @@ function caller(over) {
     user: null,
     authed: false,
     isOwner: false,
+    isAuthenticatedOwner: false,
     ...over,
   };
   return testRouter.createCaller(ctx);
@@ -80,4 +82,32 @@ await attempt(() => caller({ authed: false }).authed())
 ```ts
 await attempt(() => caller({ authed: true }).authed())
 => authed-ok
+```
+
+## authenticatedOwnerProcedure refuses open access, where ownerProcedure admits it
+
+`ctx.isOwner` deliberately folds open access in, and for box-scoped owner
+surfaces that is right. The machine-level secret store is the exception — its
+router is the only user of the strict gate — so an open-access box reaches every
+other owner surface and none of the secrets ones
+(`docs/plans/secret-custody.md`).
+
+```ts
+const open = caller({ authed: true, isOwner: true, isAuthenticatedOwner: false });
+print(`owner: ${await attempt(() => open.owner())}`);
+print(`strictOwner: ${await attempt(() => open.strictOwner())}`);
+=>
+owner: owner-ok
+strictOwner: THREW:FORBIDDEN
+```
+
+A real signed-in owner passes both:
+
+```ts continue
+const owner = caller({ authed: true, isOwner: true, isAuthenticatedOwner: true });
+print(`owner: ${await attempt(() => owner.owner())}`);
+print(`strictOwner: ${await attempt(() => owner.strictOwner())}`);
+=>
+owner: owner-ok
+strictOwner: strict-owner-ok
 ```

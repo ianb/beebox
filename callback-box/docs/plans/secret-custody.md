@@ -741,6 +741,28 @@ once the guidance text exists:
 
 ## Rollout shape
 
+**Migration status (2026-08-17).** Everything in this section is BUILT except
+the operational acts, which are deliberately not code:
+
+- Built: `cb secrets migrate [--root <dir>] [--dry-run]`
+  (`src/core/secrets/migrate.ts`) — enumerates boxes, maps filenames to store
+  names per `docs/secrets.md`'s table, dedupes shared values into one entry with
+  a grant per box, parks conflicting values as `<name>/<slug>`, leaves every
+  original file in place; `cb secrets copy-grants <from> <to>` and
+  `deploy/add-box.sh --secrets-from` on top of it (grants, not a file copy, with
+  a legacy file-copy fallback for a box that predates the store); the strict
+  owner gate on the secrets router (`authenticatedOwnerProcedure`).
+- **Not code, and deliberately so — running the migration.** `cb secrets
+  migrate` has to be *run*: on each dev machine, and on prod over
+  `deploy/prod-ssh` with the boxholder present. Nothing in this repo does that
+  unattended.
+- **Not yet, and blocked on that run:** removing the env-var fallbacks from the
+  readers, dropping the connector entries from `child-env.ts`'s allowlist, and
+  removing the legacy in-tree file fallback (plus the `cb health`
+  stray-file flagger's promotion from warning to error). Each of those breaks a
+  box that has not migrated, so they are a named later chunk that follows the
+  operational step, not a side effect of this one.
+
 - **Tests first as design tool**: doctests named per chunk above — env
   allowlist (poisoned-env), store module (grant-check, corrupt-file,
   concurrent-write via lock), resolver fallback ordering, `cb secrets` CLI

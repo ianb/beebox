@@ -3792,6 +3792,36 @@ test1:
       peak: 51364
       added: 0
       turns: 2
+  secrets-provisioning:
+    - date: 2026-08-18T01:31:04.241Z
+      boxCommit: 9e0a78f2811de86e947189f93f96b95999386198
+      repoCommit: 83d6953ad62d29c2a8a4a93aac11bee588888f80
+      initial: 46295
+      peak: 48338
+      added: 2043
+      turns: 9
+    - date: 2026-08-18T01:33:17.907Z
+      boxCommit: 8326a7a29d0614396325a76756dd55f55222d687
+      repoCommit: 83d6953ad62d29c2a8a4a93aac11bee588888f80
+      initial: 46257
+      peak: 46937
+      added: 680
+      turns: 5
+  secrets-adhoc-use:
+    - date: 2026-08-18T01:31:04.241Z
+      boxCommit: 9e0a78f2811de86e947189f93f96b95999386198
+      repoCommit: 83d6953ad62d29c2a8a4a93aac11bee588888f80
+      initial: 46221
+      peak: 46221
+      added: 0
+      turns: 2
+    - date: 2026-08-18T01:33:17.907Z
+      boxCommit: 8326a7a29d0614396325a76756dd55f55222d687
+      repoCommit: 83d6953ad62d29c2a8a4a93aac11bee588888f80
+      initial: 46221
+      peak: 46221
+      added: 0
+      turns: 2
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

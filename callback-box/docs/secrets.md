@@ -235,6 +235,18 @@ surface (`src/frontend/src/components/admin/SecretsSection*.tsx`):
 No procedure in `trpc/routers/secrets.ts` returns a value — not on a read, not
 as an echo after a write, not in an error.
 
+**It is the one router behind `authenticatedOwnerProcedure`** (`trpc/trpc.ts`),
+the strict variant of the usual `ownerProcedure`. `ctx.isOwner` also passes an
+**open-access** box — one whose boxholder opted out of the auth wall — and for
+every other owner surface that is right, because those surfaces are box-scoped.
+This store is machine-level, so one box served openly must not become a
+management surface for its neighbours' credentials. A real signed-in owner
+identity qualifies; open access does not, and the refusal says so:
+`secrets management requires an authenticated owner session — open-access does
+not qualify`. The consequence to know: on a box you run open (a dev box, a
+deliberate opt-out), the admin Secrets section refuses — manage those secrets
+from a box you sign in to, or with `cb secrets`.
+
 ## `cb secrets`
 
 Plumbing for deploy scripts, the migration, agents, and emergencies — the
@@ -250,11 +262,49 @@ and never taken from argv.
 | `cb secrets grant <box> <name> [--access server\|agent]` | Per-box opt-in; refuses for a `shareable: false` secret. |
 | `cb secrets revoke <box> <name>` | Withdraw a grant. |
 | `cb secrets status <box>` | One box's grants, empty slots, and dangling grants. |
+| `cb secrets copy-grants <from> <to>` | Give one box the same grants another holds — what `deploy/add-box.sh --secrets-from` runs. Access levels carry over; `shareable: false` entries are skipped and named. |
+| `cb secrets migrate [--root <dir>] [--dry-run]` | The one-time move of every box's legacy `config/connectors/*.secret.json` into the store. |
 
-`<box>` is a slug or a box root path. `set`/`rm`/`grant`/`revoke` refuse in an
+`<box>` is a slug or a box root path. `set`/`rm`/`grant`/`revoke`/`copy-grants`
+and a non-dry-run `migrate` refuse in an
 agent session without `--agent-confirmed` (the `cb auth` pattern) — a speed bump
 and an audit signal, not an authorization boundary. `declare` is exempt: an
 agent naming a slot it needs can neither disclose nor empower anything.
+
+## Migrating a machine: `cb secrets migrate`
+
+One command per machine moves every box's legacy files into the store
+(`src/core/secrets/migrate.ts`). It maps each filename to the store name its
+**reader** asks for — the table above is the contract — dedupes identical values
+across boxes into one entry with a grant per box, and writes every grant at
+`server` access (raising one to `agent` is a boxholder decision, never a
+migration's).
+
+```bash
+cb secrets migrate --root /home/callback/boxes --dry-run   # print the plan, write nothing
+cb secrets migrate --root /home/callback/boxes --agent-confirmed
+```
+
+With no `--root` it migrates the machine's registered boxes
+(`~/.config/cb/boxes.json`). Four properties worth knowing before running it:
+
+- **The original files stay.** Every reader still falls back to them, so a
+  mis-migrated box keeps working; deleting them is a separate later pass.
+- **Existing store entries are never overwritten** — re-running is a no-op, and
+  a key rotated in the store is not reverted to what a stale file holds.
+- **Boxes that disagree** about a shared name (two different Mistral keys) do
+  not collapse: the alphabetically-first slug keeps the plain name and each
+  other box's value is parked as `<name>/<slug>` with a printed CONFLICT line.
+  A parked entry is *not* what its reader looks up — that box keeps running on
+  its legacy file until the boxholder reconciles it.
+- **Unrecognized files are reported, not imported.** `google.secret.json` and
+  `gmail.secret.json` hold OAuth *tokens* (`google-token-store.ts` keeps them);
+  a guessed store name would create an entry no reader asks for.
+
+Nothing it prints is ever a value — names, slugs, and counts only.
+
+Prod runs operator-side over `deploy/prod-ssh`, with the boxholder present; no
+unattended prod mutation.
 
 ## Migrating a connector
 
