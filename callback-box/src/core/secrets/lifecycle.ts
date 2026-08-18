@@ -40,6 +40,8 @@ export interface SecretListing {
   verified: SecretEntry["verified"];
   owningBox: string | undefined;
   shareable: boolean | undefined;
+  /** The box whose agent declared this slot, when one did (attribution only). */
+  declaredBy: string | undefined;
   /** Box slug → access level, across every box on the machine. */
   grants: Record<string, SecretAccessLevel>;
   lastUsed: Record<string, string> | undefined;
@@ -53,6 +55,13 @@ export interface BoxSecretStatus {
   emptySlots: string[];
   /** Granted names whose entry no longer exists. */
   danglingGrants: string[];
+  /**
+   * Slots this box's agent declared that it holds no grant for — what it asked
+   * for and is still waiting on. Without this a declared slot vanishes from the
+   * box's own view the moment it is created (declaring grants nothing), which
+   * is exactly the state an agent needs to be able to report.
+   */
+  declaredHere: { name: string; hasValue: boolean }[];
 }
 
 function requireEntry(store: SecretStoreData, name: string): SecretEntry {
@@ -101,6 +110,8 @@ export async function declareSecret(opts: {
   name: string;
   note?: string | undefined;
   formatHint?: string | undefined;
+  /** Slug of the box that asked for the slot, for `status` attribution. */
+  declaredBy?: string | undefined;
 }): Promise<{ created: boolean }> {
   return mutateSecretStore({ purpose: "declare" }, (store) => {
     const existing = store.secrets[opts.name];
@@ -110,6 +121,7 @@ export async function declareSecret(opts: {
       updated: existing?.updated ?? getBoxTimeISO(),
       note: opts.note ?? existing?.note,
       formatHint: opts.formatHint ?? existing?.formatHint,
+      declaredBy: opts.declaredBy ?? existing?.declaredBy,
     };
     return { created: existing === undefined };
   });
@@ -247,6 +259,7 @@ export async function listSecrets(): Promise<SecretListing[]> {
         verified: entry.verified,
         owningBox: entry.owningBox,
         shareable: entry.shareable,
+        declaredBy: entry.declaredBy,
         grants,
         lastUsed: entry.lastUsed,
       };
@@ -262,7 +275,7 @@ export async function listSecrets(): Promise<SecretListing[]> {
 export async function boxSecretStatus(slug: string): Promise<BoxSecretStatus> {
   const store = await loadOrThrow();
   const boxGrants = store.grants[slug] ?? {};
-  const status: BoxSecretStatus = { slug, granted: [], emptySlots: [], danglingGrants: [] };
+  const status: BoxSecretStatus = { slug, granted: [], emptySlots: [], danglingGrants: [], declaredHere: [] };
   for (const name of Object.keys(boxGrants).toSorted()) {
     const access = boxGrants[name];
     if (access === undefined) continue;
@@ -274,6 +287,12 @@ export async function boxSecretStatus(slug: string): Promise<BoxSecretStatus> {
     const hasValue = entry.value !== undefined && entry.value !== "";
     status.granted.push({ name, access, hasValue });
     if (!hasValue) status.emptySlots.push(name);
+  }
+  for (const name of Object.keys(store.secrets).toSorted()) {
+    const entry = store.secrets[name];
+    if (entry?.declaredBy !== slug) continue;
+    if (boxGrants[name] !== undefined) continue; // already reported as granted
+    status.declaredHere.push({ name, hasValue: entry.value !== undefined && entry.value !== "" });
   }
   return status;
 }

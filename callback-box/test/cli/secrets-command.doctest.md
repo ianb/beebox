@@ -11,7 +11,7 @@ Values below are obvious placeholders.
 ```ts setup
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import {
   runDeclareSecret,
   runGrantSecret,
@@ -153,6 +153,53 @@ print(revoked.logs.join("\n"));
 
 ```ts cleanup
 await rm(dir, { recursive: true, force: true });
+```
+
+## `declare` attributes the slot to the declaring box
+
+Declaring grants nothing, so without attribution the slot would vanish from the
+box's own view the moment it was created — and an agent that declared something
+last week could not report what it was still waiting on. `declaredBy` is
+recorded from the box the command ran in (here passed explicitly; the CLI finds
+it from the working directory), and `status` shows it back.
+
+```ts
+const dir = await useTempStore();
+const boxDir = await mkdtemp(join(tmpdir(), "weather-box-"));
+
+const declared = await runCaptured(() =>
+  runDeclareSecret({ name: "weatherapi", note: "for the forecast trick", boxRoot: boxDir }),
+);
+print(declared.logs.join("\n").replaceAll(basename(boxDir), "<box>"));
+
+const status = await runCaptured(() => runSecretsStatus({ boxOrRoot: boxDir }));
+print(status.logs.join("\n").replaceAll(basename(boxDir), "<box>"));
+=>
+Declared "weatherapi" — an empty, ungranted slot. Ask the boxholder to supply the value and grant it.
+Attributed to box "<box>" — it shows up in `cb secrets status <box>`.
+Box: <box>
+  granted: none
+  declared here: weatherapi — no value yet, not granted to this box
+```
+
+Once the boxholder supplies the value and grants it, it reports as a grant
+instead — a declared slot is only news while it is still waiting:
+
+```ts continue
+await setSecret({ name: "weatherapi", value: "placeholder-value-4" });
+const granted = await runCaptured(() =>
+  runGrantSecret({ boxOrRoot: boxDir, name: "weatherapi", access: "agent", agentConfirmed: true }),
+);
+const after = await runCaptured(() => runSecretsStatus({ boxOrRoot: boxDir }));
+print(after.logs.join("\n").replaceAll(basename(boxDir), "<box>"));
+=>
+Box: <box>
+  granted: weatherapi (agent)
+```
+
+```ts cleanup
+await rm(dir, { recursive: true, force: true });
+await rm(boxDir, { recursive: true, force: true });
 ```
 
 ## `list` prints names and metadata, never values

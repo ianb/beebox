@@ -134,8 +134,12 @@ print(JSON.stringify(status));
 =>
 created: true
 again: false
-{"slug":"demo-box","granted":[{"name":"mistral","access":"server","hasValue":true},{"name":"weatherapi","access":"agent","hasValue":false}],"emptySlots":["weatherapi"],"danglingGrants":[]}
+{"slug":"demo-box","granted":[{"name":"mistral","access":"server","hasValue":true},{"name":"weatherapi","access":"agent","hasValue":false}],"emptySlots":["weatherapi"],"danglingGrants":[],"declaredHere":[]}
 ```
+
+`declaredHere` is the other half of a box's view: slots that box declared and
+holds no grant for yet — empty here because nothing recorded a `declaredBy`
+(`cb secrets declare` does; see the CLI doctest).
 
 Removing a secret deliberately leaves its grants behind, so the resolver can
 report a *stale grant* rather than the misleading "no such secret":

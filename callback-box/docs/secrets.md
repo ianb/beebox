@@ -6,11 +6,11 @@ every box tree — with a per-box grant deciding who may resolve what. Design an
 rationale: [`plans/secret-custody.md`](plans/secret-custody.md). This page is
 the operational reference for what exists today.
 
-Built so far: the store, the resolver, `cb secrets`, and **every connector
-reader** migrated (see "Secret names" below). The loopback `secrets.resolve`
-endpoint, the admin Secrets section, the chat capture widget, the
-probe/format registry, and the removal of the legacy file/env fallbacks are
-later chunks.
+Built so far: the store, the resolver, `cb secrets`, **every connector reader**
+migrated (see "Secret names" below), and the loopback resolve endpoint that
+box code uses for `agent`-access grants. The admin Secrets section, the chat
+capture widget, the probe/format registry, and the removal of the legacy
+file/env fallbacks are later chunks.
 
 ## The shape
 
@@ -24,6 +24,7 @@ later chunks.
       "verified": { "status": "ok", "at": "…" },   // set by a later chunk's probe
       "formatHint": "openai",
       "lastUsed": { "<box-slug>": "…" },           // stamped hourly at most
+      "declaredBy": "<box-slug>",                   // which box asked for the slot
       "owningBox": "…", "shareable": false          // structurally per-box secrets
     }
   },
@@ -118,6 +119,59 @@ uncapped — the posture is logged-and-visible, not throttled. It is best-effort
 cannot be written warns once and the resolve proceeds. Old segments are
 deletable; `lastUsed` on the entry is the summary that survives them.
 
+## Box code: `POST /api/secrets/resolve`
+
+Code running *outside* a server process — a trick, a scheduled script, a
+procedure step written by the box's agent — cannot call `resolveSecret`
+in-process, so it asks its own box over the loopback API
+(`src/webapp/routes/secrets.ts`). This is the only interface that discloses a
+stored value to box code, and it resolves at `agent` access: the grant must say
+`agent`, not `server`.
+
+```bash
+curl -sS -X POST "$CB_SERVER_URL/$CB_BOX_NAME/api/secrets/resolve" \
+  -H "Authorization: Bearer $CB_AGENT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"weatherapi","purpose":"forecast-trick"}'
+# -> {"value":"…","suspect":false}
+```
+
+`suspect: true` means the entry's last probe or real use failed auth — the key
+may be expired; use it, but say so if the call fails.
+
+**It requires the agent auth source specifically.** The route calls
+`verifyAgentBearer` itself and accepts nothing else: a session cookie, the hub's
+identity header, a mobile device token, or the browse key all get 401, even on a
+box served in open-access mode. That is why it is a raw Fastify route and not a
+tRPC procedure — the tRPC context folds every credential into one `authed` flag
+(`server-box-scope.ts`), so an `authedProcedure` would hand `agent`-granted
+values to any browser session that can reach the box.
+
+Refusals come back as `{ kind, message }` with the resolver's own kinds and
+relay-ready messages (the point: the agent explains the exact condition and the
+boxholder knows which action fixes it):
+
+| Status | Kinds | Why that status |
+|---|---|---|
+| 401 | `not-agent-authenticated` | The credential was not this box's agent token. |
+| 400 | `bad-request` | The body was not `{name, purpose}`. |
+| 403 | `not-granted`, `agent-access-not-granted` | The secret exists; a boxholder decision stands between you and it. |
+| 404 | `unknown-secret`, `empty-slot`, `dangling-grant` | There is no value to be had under that name — missing, empty, or stale. |
+| 503 | `store-unreadable` | The machine's store could not be read; not the caller's to fix. |
+
+**The convention for using one** (a `knows_directly` knowledge-audit item —
+forgetting it is how a credential ends up committed):
+
+1. `cb secrets declare <name> --note "what it is, where to get it"` names the
+   slot. The declaring box is recorded, so `cb secrets status <box>` shows what
+   it is still waiting on. An agent can declare; only the boxholder can supply a
+   value or grant it (at `agent` access, for this endpoint to work).
+2. Resolve it **at call time**, every time. Hold the value in a local variable
+   for the length of the outbound request.
+3. Never write it anywhere: not a card, not a config file, not an env var, not a
+   log line, not the code. There is one copy, in the store, and rotation is
+   supposed to touch only that copy.
+
 ## `cb secrets`
 
 Plumbing for deploy scripts, the migration, agents, and emergencies — the
@@ -128,7 +182,7 @@ and never taken from argv.
 |---|---|
 | `printf %s "$KEY" \| cb secrets set <name>` | Store or rotate a value (stdin, or a hidden prompt). A value in argument position is refused. |
 | `cb secrets rm <name>` | Remove an entry; grants naming it become dangling grants. |
-| `cb secrets declare <name> --note …` | Create an empty, ungranted slot — the **agent-facing** subcommand. |
+| `cb secrets declare <name> --note …` | Create an empty, ungranted slot — the **agent-facing** subcommand. Records the declaring box (`declaredBy`) for `status`. |
 | `cb secrets list` | Names + metadata across the machine, never values. |
 | `cb secrets grant <box> <name> [--access server\|agent]` | Per-box opt-in; refuses for a `shareable: false` secret. |
 | `cb secrets revoke <box> <name>` | Withdraw a grant. |

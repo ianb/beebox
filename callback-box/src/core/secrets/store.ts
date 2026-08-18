@@ -54,6 +54,11 @@ const secretEntrySchema = z.object({
   formatHint: z.string().optional(),
   /** Box slug → last resolve time, summarized from the access log (hourly). */
   lastUsed: z.record(z.string(), z.string()).optional(),
+  /** The slug of the box whose agent DECLARED this slot, when one did.
+   *  Attribution only — it confers no access (a declared slot is ungranted
+   *  until the boxholder grants it), but without it `cb secrets status <box>`
+   *  cannot show a box the slots it asked for and is still waiting on. */
+  declaredBy: z.string().optional(),
   /** Set for structurally per-box secrets (a Telegram bot token binds to one
    *  webhook URL), together with `shareable: false`. */
   owningBox: z.string().optional(),

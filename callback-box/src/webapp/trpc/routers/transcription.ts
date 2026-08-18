@@ -1,6 +1,6 @@
 import { z } from "zod";
 import ky, { HTTPError } from "ky";
-import { router, publicProcedure } from "../trpc.js";
+import { router, ownerProcedure, publicProcedure } from "../trpc.js";
 import { TRPCError } from "@trpc/server";
 import {
   loadTranscriptionConfig,
@@ -22,14 +22,22 @@ export const transcriptionRouter = router({
     return { service: cfg.service, hqService: cfg.hqService };
   }),
 
-  setService: publicProcedure
+  /**
+   * Repointing which backend future transcriptions spend against is a
+   * credential-adjacent decision, so it is the BOXHOLDER's (secret-custody plan,
+   * Decision 6): any box-auth'd caller could otherwise switch the box onto a
+   * different provider's key. Reading the config stays public — the chat UI
+   * shows the current service to everyone who can see the chat.
+   */
+  setService: ownerProcedure
     .input(z.object({ service: serviceSchema }))
     .mutation(async ({ ctx, input }) => {
       const cfg = await updateTranscriptionConfig(ctx.boxRoot, { service: input.service });
       return { service: cfg.service };
     }),
 
-  setHqService: publicProcedure
+  /** Same reasoning as `setService` (Decision 6): owner-only. */
+  setHqService: ownerProcedure
     .input(z.object({ hqService: hqServiceSchema }))
     .mutation(async ({ ctx, input }) => {
       const cfg = await updateTranscriptionConfig(ctx.boxRoot, { hqService: input.hqService });

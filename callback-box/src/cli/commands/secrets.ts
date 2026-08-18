@@ -27,6 +27,7 @@ import { Command } from "commander";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { boxSlug } from "../../lib/box-slug.js";
+import { findBoxRoot } from "../../lib/paths.js";
 import { detectAgentContext } from "../../lib/agent-context.js";
 import { errorMessage } from "../../lib/error-guards.js";
 import { SecretLifecycleError } from "../../core/secrets/errors.js";
@@ -161,14 +162,29 @@ export async function runDeclareSecret(opts: {
   name: string;
   note?: string | undefined;
   formatHint?: string | undefined;
+  /** The declaring box; omitted, it is found from the working directory. */
+  boxRoot?: string | undefined;
 }): Promise<void> {
   try {
-    const { created } = await declareSecret({ name: opts.name, note: opts.note, formatHint: opts.formatHint });
+    // Attribution, not access: recording which box asked is what lets
+    // `cb secrets status <box>` show the slot back. Best-effort — `cb secrets
+    // declare` run from outside a box still declares, just anonymously.
+    const boxRoot = opts.boxRoot ?? (await findBoxRoot(process.cwd()));
+    const declaredBy = boxRoot === null ? undefined : await boxSlug(boxRoot);
+    const { created } = await declareSecret({
+      name: opts.name,
+      note: opts.note,
+      formatHint: opts.formatHint,
+      declaredBy,
+    });
     console.log(
       created
         ? `Declared "${opts.name}" — an empty, ungranted slot. Ask the boxholder to supply the value and grant it.`
         : `"${opts.name}" already exists; its note and format hint were refreshed.`,
     );
+    if (declaredBy !== undefined) {
+      console.log(`Attributed to box "${declaredBy}" — it shows up in \`cb secrets status ${declaredBy}\`.`);
+    }
   } catch (e) {
     failWith(e);
   }
@@ -250,6 +266,11 @@ export async function runSecretsStatus(opts: { boxOrRoot: string }): Promise<voi
     }
     for (const name of status.danglingGrants) {
       console.log(`  dangling grant: ${name} — the secret it names no longer exists`);
+    }
+    for (const slot of status.declaredHere) {
+      console.log(
+        `  declared here: ${slot.name} — ${slot.hasValue ? "has a value" : "no value yet"}, not granted to this box`,
+      );
     }
   } catch (e) {
     failWith(e);
