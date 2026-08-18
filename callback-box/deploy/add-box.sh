@@ -485,11 +485,20 @@ if [ "\$ccode" != "200" ] || [ "\$cstatus" != "ok" ]; then
 fi
 echo "  Canary OK: \$(cat /tmp/add-box-canary.out)"
 rm -f /tmp/add-box-canary.out
+
+# Report the URL the box is ACTUALLY reachable at. The server knows it
+# (CB_PUBLIC_URL is what the hub itself builds login redirects from), so read
+# it here rather than printing a guess — a success line ending in a hostname
+# that doesn't resolve is worse than no URL at all.
+PUBLIC_URL=\$(grep -E '^CB_PUBLIC_URL=' $CB_HOME/.env 2>/dev/null | cut -d= -f2- || true)
+if [ -n "\$PUBLIC_URL" ]; then
+  echo "  URL: \${PUBLIC_URL%/}/$BOX_NAME/"
+else
+  echo "  URL: (CB_PUBLIC_URL not set in $CB_HOME/.env — path is /$BOX_NAME/)"
+fi
 VERIFY
 
 # Only now — past the registration, the restart, and a box that answered its
 # own health endpoint through the hub — is this a success.
 echo ""
-echo "Box '$BOX_NAME' added."
-echo "  Path: $BOX_PATH"
-echo "  URL:  https://box.example.com/$BOX_NAME"
+echo "Box '$BOX_NAME' added at $BOX_PATH."
