@@ -29,7 +29,12 @@ import { fallbackTiming, handleCreateAfterSuccess } from "./tick-utils.js";
 import { stageAll, commit, getStatus } from "../../lib/git.js";
 import { buildToolingScriptEnv } from "../../core/script-env.js";
 import type { TickOptions, ScriptResult } from "./tick.js";
-import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { errnoCode } from "../../lib/error-guards.js";
+import {
+  boxEngineUnavailability,
+  classifyScheduleFailure,
+  engineWaitReason,
+} from "../../core/schedule/engine-wait.js";
 
 type RunningScripts = Awaited<ReturnType<typeof loadRunningScripts>>;
 type ScriptState = Awaited<ReturnType<typeof loadScriptState>>;
@@ -118,6 +123,17 @@ export async function evaluateSkip(ctx: SkipContext): Promise<string | null> {
     }
   } else if (!isDue(parsed, { lastRun: state.lastRun, now })) {
     return "";
+  }
+
+  // Engine unavailable (e.g. quota-exhausted): running would burn an attempt
+  // that cannot succeed. `lastRun` stays untouched, so the script remains due
+  // and runs on the first tick after the reset. `--force` bypasses this like
+  // the other schedule gates.
+  if (!options.force) {
+    const engineWait = await boxEngineUnavailability(boxRoot);
+    if (engineWait !== null) {
+      return options.quiet ? "" : `  Skipping ${scriptName}: ${engineWaitReason(engineWait)}`;
+    }
   }
 
   if (parsed.requires) {
@@ -262,10 +278,13 @@ export async function executeScript(args: ExecuteScriptArgs): Promise<ScriptResu
     return { name: scriptName, status: "ran", command: parsed.runs, durationMs };
   } catch (err) {
     const { durationMs, sleepAffected } = fallbackTiming(err);
-    recordOutcome(state, { result: "failure", error: errorMessage(err), durationMs, sleepAffected, windowMs, now });
+    const outcome = await classifyScheduleFailure({ boxRoot, runStartedAt: now, error: err });
+    recordOutcome(state, { result: outcome.result, error: outcome.error, durationMs, sleepAffected, windowMs, now });
     await saveScriptState({ boxRoot, scriptName, state });
-    if (!options.quiet) console.error(`  Failed: ${errorMessage(err)}`);
-    return { name: scriptName, status: "error", command: parsed.runs, durationMs, error: errorMessage(err) };
+    if (!options.quiet) {
+      console.error(`  ${outcome.result === "deferred" ? "Deferred" : "Failed"}: ${outcome.error}`);
+    }
+    return { name: scriptName, status: "error", command: parsed.runs, durationMs, error: outcome.error };
   } finally {
     await releaseScriptLock({ boxRoot, scriptName });
   }

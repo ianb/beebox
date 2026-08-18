@@ -35,6 +35,11 @@ import { parseCardName } from "../../lib/paths.js";
 import { resolveRefPath } from "../../shared/ref-path.js";
 import { getDefaultTemplate } from "../../schemas/templates.js";
 import { buildToolingScriptEnv } from "../../core/script-env.js";
+import {
+  boxEngineUnavailability,
+  classifyScheduleFailure,
+  engineWaitReason,
+} from "../../core/schedule/engine-wait.js";
 
 /** Timing for a run that failed outside execWithTimeout (e.g. spawn error):
  * no measurement exists, so record zero rather than invent one. */
@@ -62,6 +67,10 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
 
   let ranCount = 0;
   const running = await loadRunningScripts(boxRoot);
+  // Engine unavailable (e.g. quota-exhausted): running would burn attempts
+  // that cannot succeed. `lastRun` stays untouched, so scripts stay due and
+  // run on the first wakeup after the reset.
+  const engineWait = await boxEngineUnavailability(boxRoot);
 
   for (const file of files) {
     const scriptName = file.replace(".scheduled-script.card", "");
@@ -79,6 +88,11 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
 
     const state = await loadScriptState(boxRoot, scriptName);
     if (!isDueForWakeup(parsed, { lastRun: state.lastRun, now })) {
+      continue;
+    }
+
+    if (engineWait !== null) {
+      console.log(`  Skipping ${scriptName}: ${engineWaitReason(engineWait)}`);
       continue;
     }
 
@@ -135,9 +149,10 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
     } catch (err) {
       const { durationMs, sleepAffected } = fallbackTiming(err);
 
-      recordOutcome(state, { result: "failure", error: errorMessage(err), durationMs, sleepAffected, windowMs, now });
+      const outcome = await classifyScheduleFailure({ boxRoot, runStartedAt: now, error: err });
+      recordOutcome(state, { result: outcome.result, error: outcome.error, durationMs, sleepAffected, windowMs, now });
       await saveScriptState({ boxRoot, scriptName, state });
-      console.error(`  Failed: ${errorMessage(err)}`);
+      console.error(`  ${outcome.result === "deferred" ? "Deferred" : "Failed"}: ${outcome.error}`);
     } finally {
       await releaseScriptLock({ boxRoot, scriptName });
     }
