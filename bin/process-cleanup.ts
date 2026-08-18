@@ -20,7 +20,8 @@
 //      whole reason they otherwise pile up.
 //
 //      Liveness is TRI-STATE — none / live / unknown — and `unknown` counts as
-//      live, because this guard stands in front of an irreversible kill. The
+//      live (in fact stricter — see classifyAgentBrowser), because this guard
+//      stands in front of an irreversible kill. The
 //      answer comes from `bin/workstreams agent-liveness`, i.e. from
 //      `wt_other_agent_live` in bin/lib/worktree-teardown.sh, the single shared
 //      implementation. This module used to carry its own two-state copy that
@@ -230,12 +231,21 @@ export async function agentLivenessByWorktree(worktrees: string[]): Promise<Map<
  * - `none`    — nothing is using this worktree; every daemon there is reapable.
  * - `live`    — spare the daemon the socket dir vouches for; superseded orphans
  *               still go (they never exit on their own).
- * - `unknown` — treated exactly as `live`. Fail-closed.
+ * - `unknown` — spare unconditionally, vouched or not. This is stricter than
+ *               "treat unknown as live", deliberately: reaping a superseded
+ *               orphan rests entirely on the socket dir's pidfiles, and with the
+ *               liveness answer already unavailable there is no second signal
+ *               left to be wrong about. Two silent failures at once — an oracle
+ *               that won't run and a pidfile that can't be read — would
+ *               otherwise kill the daemon of a session that is very much alive.
+ *               The cost is the opposite failure, a lingering daemon, which the
+ *               next sweep collects once the oracle answers again.
  */
 export function classifyAgentBrowser(session: AgentState, vouched: boolean): { kill: boolean; reason: string } {
   if (session === "none") return { kill: true, reason: "no live session" };
-  if (!vouched) return { kill: true, reason: `superseded orphan (session ${session})` };
-  return { kill: false, reason: `current daemon (session ${session})` };
+  if (session === "unknown") return { kill: false, reason: "session liveness unknown" };
+  if (!vouched) return { kill: true, reason: "superseded orphan" };
+  return { kill: false, reason: "current daemon" };
 }
 
 /** All project-scoped vite / fastify / agent-browser processes. */
@@ -300,9 +310,10 @@ function sleep(ms: number): Promise<void> {
  *   parentage (the router is being nuked anyway, which orphans them).
  *
  * agent-browser daemons are reaped the same way in both modes: spared only when
- * their worktree has a live (or unknown — see agentLivenessByWorktree) session
- * AND their pid is the one its socket dir currently vouches for (a `*.pid`
- * entry). A worktree with no session at all has every daemon reaped; a live
+ * their worktree has a live session AND their pid is the one its socket dir
+ * currently vouches for (a `*.pid` entry) — or when liveness is unknown, which
+ * spares regardless. A worktree with no session at all has every daemon
+ * reaped; a live
  * worktree keeps its current daemon + dashboard but sheds superseded orphans
  * (which never exit on their own). The hard rule — never kill a daemon a live
  * session is actually using — is preserved, just sharpened from "any daemon of
@@ -327,6 +338,13 @@ export async function reclaimOrphans(opts: {
     agentLivenessByWorktree(abWorktrees),
     Promise.all(abWorktrees.map(async (wt) => { currentByWt.set(wt, await currentDaemonPids(wt)); })),
   ]);
+
+  // An unknown answer spares daemons, so it must not be silent: a permanently
+  // broken oracle would otherwise look exactly like a quiet, healthy sweep while
+  // the daemons pile up.
+  for (const [wt, liveness] of sessions) {
+    if (liveness.state === "unknown") log(`liveness unknown for ${wt} (${liveness.reason}) — sparing its daemons`);
+  }
 
   const killed: ProjectProc[] = [];
   const spared: ProjectProc[] = [];

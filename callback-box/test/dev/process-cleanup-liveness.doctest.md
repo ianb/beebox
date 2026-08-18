@@ -74,11 +74,11 @@ function alive(pid: number) {
   }
 }
 
-async function sweep() {
+async function sweep(env: Record<string, string> = {}) {
   const { stdout } = await execFileAsync(
     join(repoRoot, "node_modules/.bin/tsx"),
     [join(repoRoot, "bin/process-cleanup.ts")],
-    { env: { ...process.env, HOME: home } },
+    { env: { ...process.env, HOME: home, ...env } },
   );
   return stdout;
 }
@@ -114,7 +114,7 @@ JSON.stringify({
 })
 => {"codexCurrent":true,"claudeCurrent":true,"codexSuperseded":false,"deadDaemon":false}
 
-log.includes(`spare agent-browser pid ${codexCurrent} (codex-wt, current daemon (session live))`)
+log.includes(`spare agent-browser pid ${codexCurrent} (codex-wt, current daemon)`)
 => true
 
 log.includes(`reclaim agent-browser pid ${deadDaemon} (dead-wt, no live session)`)
@@ -132,22 +132,38 @@ alive(orphan)
 => false
 ```
 
-## `unknown` liveness is `live`
+## `unknown` liveness spares everything
 
 The guard answers `none` / `live` / `unknown`, and a caller standing in front of
 a kill must not read "could not tell" as "nothing is running" — that is the
-fail-open shape that bit `bin/workstreams sweep` in 2026-08. So an unreadable
-process table, or a liveness oracle that cannot be run at all, spares exactly
-what a live session would.
+fail-open shape that bit `bin/workstreams sweep` in 2026-08. `unknown` is
+handled harder than `live` here: reaping a superseded orphan rests entirely on
+the socket dir's pidfiles, and once the liveness answer is already unavailable
+there is no second signal left to be wrong about.
 
 ```ts
 JSON.stringify([
   classifyAgentBrowser("unknown", true),
   classifyAgentBrowser("unknown", false),
   classifyAgentBrowser("live", true),
+  classifyAgentBrowser("live", false),
   classifyAgentBrowser("none", true),
 ])
-=> [{"kill":false,"reason":"current daemon (session unknown)"},{"kill":true,"reason":"superseded orphan (session unknown)"},{"kill":false,"reason":"current daemon (session live)"},{"kill":true,"reason":"no live session"}]
+=> [{"kill":false,"reason":"session liveness unknown"},{"kill":false,"reason":"session liveness unknown"},{"kill":false,"reason":"current daemon"},{"kill":true,"reason":"superseded orphan"},{"kill":true,"reason":"no live session"}]
+```
+
+That holds end to end, not just in the classifier. Break the liveness oracle —
+here by shadowing the `jq` it serializes its answer with, so it exits non-zero
+and reports nothing at all — and a daemon every other signal calls an orphan
+survives anyway.
+
+```ts
+await mkdir(join(home, "brokenbin"), { recursive: true });
+await symlink("/usr/bin/false", join(home, "brokenbin/jq"));
+const unknowable = await browserFor("dead-wt");
+const brokenLog = await sweep({ PATH: `${join(home, "brokenbin")}:${process.env.PATH}` });
+JSON.stringify({ alive: alive(unknowable), warned: brokenLog.includes("liveness unknown for dead-wt") })
+=> {"alive":true,"warned":true}
 ```
 
 ```ts cleanup
