@@ -1,6 +1,6 @@
 ---
 title: "Codex quota exhaustion surfaces as \"exited with code 1: Reading prompt from stdin…\" — we discard the real reason"
-workstream: unattached
+workstream: deferred-recoverable
 area: callback-box
 labels: [codex, agent, error-messages, scheduler]
 filed-by: agent
