@@ -43,6 +43,47 @@ The blast radius was reduced without touching the cause:
 
 Both are about how the failure *reads*. The recording is still missing.
 
+## Research (2026-08-18)
+
+Traced the answer path. Retranscription is served by a **per-tab, memory-only
+retention store**: `src/frontend/src/lib/audio/last-audio.ts:10-12` —
+"Recordings live only in this tab's memory (gone on reload)", capacity 5
+(`RETENTION_CAPACITY`, line 33). `cb chat get-last-audio` long-polls
+(`src/webapp/routes/chat-last-audio-routes.ts`), the server broadcasts a bus
+event, and connected tabs answer from that store. Two distinct mechanisms
+fall out:
+
+1. **Native iOS voice sends can never be retranscribed.** The recording is
+   captured natively, HQ-transcribed through the stateless
+   `/api/chat/transcribe-audio` endpoint (nothing retains the upload —
+   `src/webapp/routes/chat-audio-routes.ts`), and the native audio file is
+   then deleted (`ios-app/CallbackBox/Views/NativeComposerView.swift:496-498,
+   525-527`). The emission crosses the bridge as text (Emission V2 has no
+   audio field), so the web tab's retention store never holds the blob — and
+   never even gets a tombstone. Every native voice message answers
+   `no-audio`, with a message that wrongly suggests "it was typed" or a
+   reload is to blame. This is not a first-message quirk; it is the whole
+   native composer.
+2. **Web voice sends lose retention on any document reload.** The store is
+   module-level page memory. The cold-start first send, provisional
+   navigation churn, and the iOS content-process-termination reload
+   (`ChatWebView.swift` — `webViewWebContentProcessDidTerminate` calls
+   `webView.reload()`) all wipe it. This produces exactly the
+   "first message fails, later ones work" pattern, and ties this issue to
+   the same cold-start/navigation transition as
+   [chat send receipts fail](2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md).
+
+So "first message" is a proxy axis: the real axes are *which composer
+recorded it* (native = always lost today) and *whether the document reloaded
+since* (web = lost on reload). A fix direction worth designing rather than
+patching: the pending-emission ID exists **before** HQ transcription
+(`stageVoicePreparation` creates it), so the transcribe upload could carry
+the emission ID and the server could retain the recording keyed by message
+ID for a bounded window — making retranscription server-answerable and
+removing the tab-lifetime dependency for both composers. That is a
+mobile-contract change and belongs with the emission-model plan
+(`../../callback-box/docs/plans/emission-model.md`), not a drive-by.
+
 ## What to actually investigate
 
 - **Where the first message's audio is supposed to be cached**, and whether it

@@ -337,10 +337,14 @@ term.
   first send) remains; Track A changes what the tester should see — the plan
   updates the issue's Manual testing section when A lands (expected: composer
   clears in ~a second even on a cold agent).
-- **First-message audio** (2026-08-18): stays a lead, not a member. The
-  investigation from the issue (is the axis tab-reload rather than message
-  ordering?) is cheap to run alongside Track B's simulator work; no design
-  here depends on its answer.
+- **First-message audio** (2026-08-18): investigated — the issue's Research
+  section now records two mechanisms: native voice sends are *never*
+  retranscribable (the recording is deleted after HQ transcription and the
+  tab retention store never holds it), and web voice retention is page
+  memory wiped by any reload — the same cold-start/navigation transition as
+  the receipts family. Whether to fix it here (server-side retention keyed
+  by emission ID, carried on the transcribe upload) is a scope decision for
+  the developer; the plan takes no dependency on it either way.
 
 ### Contract and docs
 
