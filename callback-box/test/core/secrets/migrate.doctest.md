@@ -11,11 +11,12 @@ Values are obvious placeholders, and the point of several assertions is that
 none of them appears in the output.
 
 ```ts setup
+import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runCopyGrants, runMigrateSecrets } from "../../../src/cli/commands/secrets-migrate.js";
-import { listSecrets } from "../../../src/core/secrets/lifecycle.js";
+import { listSecrets, setSecret } from "../../../src/core/secrets/lifecycle.js";
 import { loadSecretStore } from "../../../src/core/secrets/store.js";
 
 /** A minimal v2 box whose slug is its package directory name. */
@@ -107,10 +108,13 @@ is reported rather than imported under a guessed name: an entry no reader ever
 asks for would be a credential moved for nothing.
 
 ```ts continue
-const store = await loadSecretStore();
-print(`wrote nothing: ${JSON.stringify(store.value)}`);
-=> wrote nothing: {"secrets":{},"grants":{}}
+print(`store file exists: ${existsSync(process.env.CB_SECRETS_FILE)}`);
+=> store file exists: false
 ```
+
+Not merely "an empty store" — the file itself must not appear. Planning reads
+lock-free rather than going through `mutateSecretStore`, which always writes
+back what its callback saw.
 
 ## Applying it
 
@@ -120,9 +124,10 @@ so two boxes holding one credential dedupe instead of differing by key order.
 
 ```ts continue
 const applied = await runCaptured(() => runMigrateSecrets({ root: boxes, agentConfirmed: true }));
-print(applied.logs.slice(-3).join("\n"));
+print(applied.logs.slice(-4).join("\n"));
 =>
 Created 4 entries, wrote 5 grants, left 0 existing entries untouched.
+1 box/name pair(s) held a conflicting value and were parked — see the CONFLICT lines above.
 The original files are LEFT IN PLACE — readers still fall back to them during the transition.
 Check each box with `cb secrets status <box>`, then delete the files in a separate pass.
 ```
@@ -166,7 +171,7 @@ the stale file still holds.
 
 ```ts continue
 const again = await runCaptured(() => runMigrateSecrets({ root: boxes, agentConfirmed: true }));
-print(again.logs.slice(-3)[0]);
+print(again.logs.find((line) => line.startsWith("Created")));
 => Created 0 entries, wrote 0 grants, left 4 existing entries untouched.
 ```
 
@@ -186,6 +191,22 @@ Skipped "telegram-bot/alpha" — single-box secret (belongs to "alpha") — set 
 delta now: {"mistral":"server"}
 ```
 
+Two ways to copy nothing are deliberately worded differently, because
+`deploy/add-box.sh` reads them: a source with **no grants at all** is a machine
+that predates the store, and the script falls back to the old file copy; a
+source whose grants are **all single-box** must NOT trigger that fallback, or
+the new box would be handed the very Telegram token the skip just refused.
+
+```ts continue
+const noGrants = await runCaptured(() => runCopyGrants({ fromBoxOrRoot: "zeta", toBoxOrRoot: "delta", agentConfirmed: true }));
+const onlySingle = await runCaptured(() => runCopyGrants({ fromBoxOrRoot: "gamma", toBoxOrRoot: "delta", agentConfirmed: true }));
+print(noGrants.logs[0]);
+print(onlySingle.logs[0]);
+=>
+Nothing copied: "zeta" has no grants at all.
+Nothing copied: every grant "gamma" holds is single-box.
+```
+
 And the store still holds one copy of the shared key, now granted to three
 boxes — which is the whole point of the exercise:
 
@@ -201,4 +222,51 @@ telegram-bot/alpha: alpha
 
 ```ts cleanup
 await rm(dir, { recursive: true, force: true });
+```
+
+## A value already in the store wins its name
+
+The dangerous case: the store already holds `mistral`, and a box's legacy file
+holds a *different* key. Granting that box `mistral` would silently switch it
+onto another box's credential — silently, because the grant succeeds and the
+legacy fallback then never runs. So the stored value keeps the name, only boxes
+whose file matches it are granted, and every other distinct value is parked:
+ONE entry per distinct value, not one per box, so two boxes that agree with each
+other still share an entry.
+
+```ts
+const machine = await makeMachine();
+await setSecret({ name: "mistral", value: JSON.parse(MISTRAL_SHARED).apiKey + "-rotated" });
+
+const planned = await runCaptured(() => runMigrateSecrets({ root: machine.boxes, dryRun: true }));
+print(planned.logs.filter((line) => line.includes("mistral")).join("\n"));
+=>
+  mistral — already in the store (left as it is); grants: 
+  mistral/alpha — new entry, single-box; grants: alpha, beta
+  mistral/gamma — new entry, single-box; grants: gamma
+  CONFLICT: "alpha" holds a different value for "mistral" than the box that kept that name. Its value is parked as "mistral/alpha".
+            Readers ask for "mistral", so "alpha" keeps working through its legacy file until you decide which key it should use.
+  CONFLICT: "beta" holds a different value for "mistral" than the box that kept that name. Its value is parked as "mistral/alpha".
+            Readers ask for "mistral", so "beta" keeps working through its legacy file until you decide which key it should use.
+  CONFLICT: "gamma" holds a different value for "mistral" than the box that kept that name. Its value is parked as "mistral/gamma".
+            Readers ask for "mistral", so "gamma" keeps working through its legacy file until you decide which key it should use.
+```
+
+Applying it grants nobody the rotated key they do not have:
+
+```ts continue
+const applied = await runCaptured(() => runMigrateSecrets({ root: machine.boxes, agentConfirmed: true }));
+print(applied.logs.slice(-4).join("\n"));
+const grants = (await loadSecretStore()).value.grants;
+print(`alpha: ${JSON.stringify(grants["alpha"])}`);
+=>
+Created 4 entries, wrote 5 grants, left 1 existing entry untouched.
+3 box/name pair(s) held a conflicting value and were parked — see the CONFLICT lines above.
+The original files are LEFT IN PLACE — readers still fall back to them during the transition.
+Check each box with `cb secrets status <box>`, then delete the files in a separate pass.
+alpha: {"mistral/alpha":"server","telegram-bot/alpha":"server"}
+```
+
+```ts cleanup
+await rm(machine.dir, { recursive: true, force: true });
 ```

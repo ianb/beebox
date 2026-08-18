@@ -16,7 +16,12 @@
 
 import { Command } from "commander";
 import { copyBoxGrants } from "../../core/secrets/lifecycle.js";
-import { applySecretMigration, planSecretMigration, type MigrationPlan } from "../../core/secrets/migrate.js";
+import {
+  applySecretMigration,
+  enumerateLegacySecrets,
+  planSecretMigration,
+  type MigrationPlan,
+} from "../../core/secrets/migrate.js";
 import { failWith, refuseIfUnconfirmedAgent, resolveSlugArgument } from "../lib/secrets-guard.js";
 
 const AGENT_CONFIRMED_HELP =
@@ -60,18 +65,23 @@ export async function runMigrateSecrets(opts: {
     });
   }
   try {
-    const plan = await planSecretMigration({ root: opts.root });
-    printPlan(plan);
+    const inventory = await enumerateLegacySecrets({ root: opts.root });
+    printPlan(await planSecretMigration(inventory));
     if (opts.dryRun === true) {
       console.log("");
       console.log("Dry run — nothing was written.");
       return;
     }
-    const result = await applySecretMigration(plan);
+    // Apply re-plans under the lock; its conflict list, not the preview's, is
+    // what actually happened.
+    const result = await applySecretMigration(inventory);
     console.log("");
     console.log(`Created ${result.created.length} entr${result.created.length === 1 ? "y" : "ies"}, ` +
       `wrote ${result.granted.length} grant${result.granted.length === 1 ? "" : "s"}, ` +
       `left ${result.untouched.length} existing entr${result.untouched.length === 1 ? "y" : "ies"} untouched.`);
+    if (result.conflicts.length > 0) {
+      console.log(`${result.conflicts.length} box/name pair(s) held a conflicting value and were parked — see the CONFLICT lines above.`);
+    }
     console.log("The original files are LEFT IN PLACE — readers still fall back to them during the transition.");
     console.log("Check each box with `cb secrets status <box>`, then delete the files in a separate pass.");
   } catch (e) {
@@ -93,8 +103,12 @@ export async function runCopyGrants(opts: {
       process.exit(1);
     }
     const result = await copyBoxGrants({ fromSlug, toSlug });
-    if (result.copied.length === 0) {
-      console.log(`Nothing copied: "${fromSlug}" has no shareable grants.`);
+    if (!result.sourceHadGrants) {
+      // The exact phrase `deploy/add-box.sh` greps for to decide whether this
+      // machine predates the store. Keep the two in step.
+      console.log(`Nothing copied: "${fromSlug}" has no grants at all.`);
+    } else if (result.copied.length === 0) {
+      console.log(`Nothing copied: every grant "${fromSlug}" holds is single-box.`);
     }
     for (const grant of result.copied) {
       console.log(`Granted "${grant.name}" to "${toSlug}" with ${grant.access} access (from "${fromSlug}").`);

@@ -368,22 +368,46 @@ fi
 # explicitly passed --secrets-from. Without it the command would refuse, since
 # stdin over `ssh`/`su -c` is not a TTY and therefore reads as an agent session.
 if [[ -n "$SECRETS_FROM" ]]; then
-  COPY_OUT=\$(su - $CB_USER -c "cb secrets copy-grants '$SECRETS_FROM' '$BOX_NAME' --agent-confirmed" 2>&1) || true
+  # A failure here is fatal on purpose: an unreadable store, a missing cb, or a
+  # crash would otherwise register a box with NO credentials and restart the
+  # services in front of users, with the reason scrolled off the operator's
+  # screen. The box is cloned and inited; fix the cause and re-run.
+  if ! COPY_OUT=\$(su - $CB_USER -c "cb secrets copy-grants '$SECRETS_FROM' '$BOX_NAME' --agent-confirmed" 2>&1); then
+    echo "\$COPY_OUT"
+    echo "Secrets: 'cb secrets copy-grants $SECRETS_FROM $BOX_NAME' FAILED — stopping before the box is registered."
+    exit 1
+  fi
   echo "\$COPY_OUT"
 
   # Legacy path, for a machine that has not run \`cb secrets migrate\` yet: the
-  # source box has no grants but still holds in-tree secret files. Copy them so
-  # provisioning still works, and say plainly that this is the deprecated shape.
+  # source box has NO GRANTS AT ALL but still holds in-tree secret files. Copy
+  # them so provisioning still works, and say plainly that this is deprecated.
+  #
+  # The phrase below is the one copy-grants prints only for that case — a source
+  # whose grants are all single-box copies nothing either, and must NOT land
+  # here: falling back would hand this box the very Telegram token the command
+  # just refused to share.
   SRC_DIR="$BOXES_DIR/$SECRETS_FROM/content/config/connectors"
   [[ -d "\$SRC_DIR" ]] || SRC_DIR="$BOXES_DIR/$SECRETS_FROM/config/connectors"
-  if echo "\$COPY_OUT" | grep -q "Nothing copied" && compgen -G "\$SRC_DIR/*.secret.json" >/dev/null; then
+  if echo "\$COPY_OUT" | grep -q "has no grants at all" && compgen -G "\$SRC_DIR/*.secret.json" >/dev/null; then
     echo "Secrets: '$SECRETS_FROM' has no grants but still has in-tree secret files — falling back to the OLD file copy."
     echo "         DEPRECATED: run 'cb secrets migrate' on this server (with the boxholder) to move them into the"
     echo "         machine store, then re-run this with --secrets-from to grant instead of copy."
     mkdir -p "\$CONTENT_DIR/config/connectors"
-    cp "\$SRC_DIR"/*.secret.json "\$CONTENT_DIR/config/connectors/"
-    chmod 600 "\$CONTENT_DIR/config/connectors/"*.secret.json
-    echo "Secrets: copied files from '$SECRETS_FROM'"
+    for secret_file in "\$SRC_DIR"/*.secret.json; do
+      # Same rule as the grant path, applied to files: a Telegram bot token
+      # routes to ONE webhook URL and a publish token is scoped to one bucket,
+      # so copying either would break the box already using it. (The old
+      # version of this script copied them, which was the bug.)
+      case "\$(basename "\$secret_file")" in
+        telegram.secret.json|publish.secret.json|google.secret.json|gmail.secret.json)
+          echo "Secrets: NOT copying \$(basename "\$secret_file") — it belongs to '$SECRETS_FROM' alone."
+          continue ;;
+      esac
+      cp "\$secret_file" "\$CONTENT_DIR/config/connectors/"
+      chmod 600 "\$CONTENT_DIR/config/connectors/\$(basename "\$secret_file")"
+      echo "Secrets: copied \$(basename "\$secret_file") from '$SECRETS_FROM'"
+    done
   fi
 fi
 

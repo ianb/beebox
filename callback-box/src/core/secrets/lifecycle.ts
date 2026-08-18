@@ -230,6 +230,14 @@ export interface CopiedGrants {
   copied: { name: string; access: SecretAccessLevel }[];
   /** Names deliberately not copied, each with the reason to print. */
   skipped: { name: string; reason: string }[];
+  /**
+   * Did the source box hold ANY grant at all? Distinct from "copied nothing":
+   * a source whose only grants are single-box copies nothing either, and
+   * `deploy/add-box.sh` must not read that as "this machine predates the store"
+   * and fall back to copying secret FILES — which would hand the new box the
+   * very Telegram token the skip just refused.
+   */
+  sourceHadGrants: boolean;
 }
 
 /**
@@ -248,8 +256,8 @@ export interface CopiedGrants {
  */
 export async function copyBoxGrants(opts: { fromSlug: string; toSlug: string }): Promise<CopiedGrants> {
   return mutateSecretStore({ purpose: "copy-grants" }, (store) => {
-    const result: CopiedGrants = { copied: [], skipped: [] };
     const source = store.grants[opts.fromSlug] ?? {};
+    const result: CopiedGrants = { copied: [], skipped: [], sourceHadGrants: Object.keys(source).length > 0 };
     const target = store.grants[opts.toSlug] ?? {};
     for (const name of Object.keys(source).toSorted()) {
       const access = source[name];

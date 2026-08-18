@@ -292,11 +292,16 @@ With no `--root` it migrates the machine's registered boxes
   mis-migrated box keeps working; deleting them is a separate later pass.
 - **Existing store entries are never overwritten** — re-running is a no-op, and
   a key rotated in the store is not reverted to what a stale file holds.
-- **Boxes that disagree** about a shared name (two different Mistral keys) do
-  not collapse: the alphabetically-first slug keeps the plain name and each
-  other box's value is parked as `<name>/<slug>` with a printed CONFLICT line.
-  A parked entry is *not* what its reader looks up — that box keeps running on
-  its legacy file until the boxholder reconciles it.
+- **A value already in the store wins its name**, and boxes that disagree with
+  it are never granted it — a grant to a box holding a different key would
+  silently switch that box onto another box's credential, silently because the
+  grant succeeds and the legacy fallback then never runs. Each other distinct
+  value is parked as `<name>/<first-holder-slug>` (one entry per distinct value,
+  so boxes that agree with each other still share one) with a printed CONFLICT
+  line. With nothing stored yet, the alphabetically-first slug's value wins, so
+  the choice is stable across runs. A parked entry is *not* what its reader
+  looks up — those boxes keep running on their legacy files until the boxholder
+  reconciles them.
 - **Unrecognized files are reported, not imported.** `google.secret.json` and
   `gmail.secret.json` hold OAuth *tokens* (`google-token-store.ts` keeps them);
   a guessed store name would create an entry no reader asks for.

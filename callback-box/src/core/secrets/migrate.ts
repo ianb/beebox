@@ -35,7 +35,8 @@ import { boxSlug } from "../../lib/box-slug.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import { loadBoxesConfig } from "../box/boxes-config.js";
-import { mutateSecretStore, type SecretStoreData } from "./store.js";
+import { SecretStoreAccessError } from "./errors.js";
+import { loadSecretStore, mutateSecretStore, secretsFilePath, type SecretStoreData } from "./store.js";
 
 /** Where a legacy file's contents belong in the store. */
 interface LegacyMapping {
@@ -225,17 +226,33 @@ async function readBoxSecrets(opts: {
   return found;
 }
 
+/** Does an entry hold a usable value? (An empty string is a declared slot.) */
+function hasValue(store: SecretStoreData, name: string): boolean {
+  const value = store.secrets[name]?.value;
+  return value !== undefined && value !== "";
+}
+
 /**
- * Group the found files into store entries.
+ * Group the found files into store entries, against the store as it is NOW.
  *
  * Boxes sharing one value share one entry — the whole point of the store, and
- * what makes rotation touch one place. Boxes whose values DISAGREE under the
- * same name cannot: the first slug (alphabetically, so the choice is stable
- * across runs) keeps the plain name every reader asks for, and each other box's
- * value is parked under `name/<slug>` and reported as a conflict. A parked
- * entry is not what its reader looks up — that box keeps working through its
- * legacy file, which this migration leaves in place, until the boxholder
- * decides which key that box should actually use.
+ * what makes rotation touch one place. Two things decide the rest:
+ *
+ * - **A value already in the store wins the name.** If `mistral` is already
+ *   stored, that value is what every reader resolving `mistral` gets, so only
+ *   boxes whose legacy file matches it may be granted that name. Granting the
+ *   name to a box holding a *different* key would silently switch that box onto
+ *   another box's credential — and worse, silently, since the grant succeeds and
+ *   the legacy-file fallback never runs.
+ * - **Every other distinct value is parked**, one entry per distinct value (not
+ *   per box — two boxes that agree with each other but not with the winner still
+ *   share one entry), named `<name>/<first-holder-slug>` and granted to its
+ *   holders. A parked entry is not what its reader looks up: those boxes keep
+ *   working through the legacy files this migration leaves in place, until the
+ *   boxholder decides which key each should use. Every one is reported.
+ *
+ * With no stored value, the alphabetically-first slug's value wins, so the
+ * choice is stable across runs.
  */
 function planEntries(found: FoundSecret[], store: SecretStoreData): { entries: PlannedEntry[]; conflicts: MigrationConflict[] } {
   const byName = new Map<string, FoundSecret[]>();
@@ -251,36 +268,54 @@ function planEntries(found: FoundSecret[], store: SecretStoreData): { entries: P
     const holders = (byName.get(name) ?? []).toSorted((a, b) => a.slug.localeCompare(b.slug));
     const first = holders[0];
     if (first === undefined) continue;
-    const agreeing = holders.filter((holder) => holder.value === first.value);
-    const disagreeing = holders.filter((holder) => holder.value !== first.value);
+    const stored = hasValue(store, name) ? store.secrets[name]?.value : undefined;
+    const winning = stored ?? first.value;
 
+    const agreeing = holders.filter((holder) => holder.value === winning);
     entries.push({
       name,
       grants: agreeing.map((holder) => holder.slug),
       singleBox: first.singleBox,
       owningBox: first.singleBox ? first.slug : undefined,
-      alreadyInStore: store.secrets[name]?.value !== undefined,
-      value: first.value,
+      alreadyInStore: stored !== undefined,
+      value: winning,
     });
 
-    for (const holder of disagreeing) {
-      const parkedAs = `${name}/${holder.slug}`;
-      conflicts.push({ contestedName: name, slug: holder.slug, parkedAs });
+    // One parked entry per distinct losing value, in first-holder order.
+    const losing = new Map<string, FoundSecret[]>();
+    for (const holder of holders) {
+      if (holder.value === winning) continue;
+      const group = losing.get(holder.value) ?? [];
+      group.push(holder);
+      losing.set(holder.value, group);
+    }
+    for (const group of losing.values()) {
+      const owner = group[0];
+      if (owner === undefined) continue;
+      const parkedAs = `${name}/${owner.slug}`;
+      for (const holder of group) conflicts.push({ contestedName: name, slug: holder.slug, parkedAs });
       entries.push({
         name: parkedAs,
-        grants: [holder.slug],
+        grants: group.map((holder) => holder.slug),
         singleBox: true,
-        owningBox: holder.slug,
-        alreadyInStore: store.secrets[parkedAs]?.value !== undefined,
-        value: holder.value,
+        owningBox: owner.slug,
+        alreadyInStore: hasValue(store, parkedAs),
+        value: owner.value,
       });
     }
   }
   return { entries, conflicts };
 }
 
-/** Build the plan without writing anything — what `--dry-run` prints. */
-export async function planSecretMigration(opts: { root: string | undefined }): Promise<MigrationPlan> {
+/** Every box's legacy files, read and mapped — the input both halves share. */
+export interface LegacyInventory {
+  boxes: { slug: string; boxRoot: string }[];
+  found: FoundSecret[];
+  skipped: MigrationSkip[];
+}
+
+/** Read every box's connector directory. Touches no store. */
+export async function enumerateLegacySecrets(opts: { root: string | undefined }): Promise<LegacyInventory> {
   const roots = await migrationBoxRoots({ root: opts.root });
   const skipped: MigrationSkip[] = [];
   const boxes: { slug: string; boxRoot: string }[] = [];
@@ -290,10 +325,23 @@ export async function planSecretMigration(opts: { root: string | undefined }): P
     boxes.push({ slug, boxRoot });
     found.push(...(await readBoxSecrets({ boxRoot, slug, skipped })));
   }
-  // Planning reads the store so an already-migrated name is reported rather
-  // than rewritten; applying re-reads it under the lock and decides again.
-  const plan = await mutateSecretStore({ purpose: "migrate-plan" }, (store) => planEntries(found, store));
-  return { boxes, entries: plan.entries, conflicts: plan.conflicts, skipped };
+  return { boxes, found, skipped };
+}
+
+/**
+ * Build the plan without writing anything — what `--dry-run` prints. The read is
+ * lock-free and deliberately NOT a `mutateSecretStore` pass: that helper always
+ * writes back, so planning through it would create or rewrite the store file on
+ * a dry run. `apply` re-plans under the lock, so a preview that goes stale
+ * between the two is a stale preview, never a wrong write.
+ */
+export async function planSecretMigration(inventory: LegacyInventory): Promise<MigrationPlan> {
+  const loaded = await loadSecretStore();
+  if (!loaded.ok) {
+    throw new SecretStoreAccessError({ storePath: secretsFilePath(), detail: loaded.error, refusingWrite: false });
+  }
+  const plan = planEntries(inventory.found, loaded.value);
+  return { boxes: inventory.boxes, entries: plan.entries, conflicts: plan.conflicts, skipped: inventory.skipped };
 }
 
 /** What {@link applySecretMigration} actually wrote. */
@@ -303,20 +351,27 @@ export interface MigrationResult {
   untouched: string[];
   /** `<slug>:<name>` pairs newly granted. */
   granted: string[];
+  /** Conflicts as decided under the lock — the preview's may have been stale. */
+  conflicts: MigrationConflict[];
 }
 
 /**
- * Write the plan: one locked pass, entries then grants. An existing entry is
- * never rewritten (its grants still are — a box added later must be able to
- * join a name that is already in the store).
+ * Plan and write in ONE locked pass. Planning happens inside the lock rather
+ * than being handed in from the preview, so the decision that matters — which
+ * boxes may be granted the plain name, given what the store already holds — is
+ * made against the store actually being written, not a snapshot taken earlier.
+ *
+ * An existing entry is never rewritten; its grants still are, because a box
+ * added later must be able to join a name already in the store.
  */
-export async function applySecretMigration(plan: MigrationPlan): Promise<MigrationResult> {
+export async function applySecretMigration(inventory: LegacyInventory): Promise<MigrationResult> {
   return mutateSecretStore({ purpose: "migrate" }, (store) => {
-    const result: MigrationResult = { created: [], untouched: [], granted: [] };
+    const planned = planEntries(inventory.found, store);
+    const result: MigrationResult = { created: [], untouched: [], granted: [], conflicts: planned.conflicts };
     const now = getBoxTimeISO();
-    for (const entry of plan.entries) {
+    for (const entry of planned.entries) {
       const existing = store.secrets[entry.name];
-      if (existing?.value !== undefined && existing.value !== "") {
+      if (hasValue(store, entry.name)) {
         result.untouched.push(entry.name);
       } else {
         store.secrets[entry.name] = {
