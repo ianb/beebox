@@ -297,6 +297,12 @@ the contract.
 
 ### 4.2 Emission receipt (web → native)
 
+- **What a receipt means:** durable acceptance — the box has recorded the message and will run it.
+  `/api/chat/send` responds when the message and its dedup claim persist, before the engine spawns;
+  a run that then fails to start reports on the turn stream, never by revoking the receipt.
+- **Ownership:** native owns the durable pre-POST queue and redelivery (`PendingEmissionStore`);
+  web owns dispatch and settles receipts from the POST outcome; the server owns acceptance, the
+  claim registry, and delivery to the engine.
 - **Wire shape** (web posts the dispatch `Receipt` verbatim on the `callbackboxEmissionReceipt`
   channel):
   ```
