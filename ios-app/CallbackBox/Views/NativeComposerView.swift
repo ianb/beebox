@@ -508,7 +508,15 @@ struct NativeComposerView: View {
             )
             return
         }
-        dictation.commitKeywordSubstitution()
+        // Accepting the command is not permission to leave its control tag in
+        // the composer. Only an action that hands the draft off as a message
+        // commits the held substitution; the rest keep the pre-keyword
+        // transcript — see `SpeechKeywordAction.commitsKeywordSubstitution`.
+        if intent.action.commitsKeywordSubstitution {
+            dictation.commitKeywordSubstitution()
+        } else {
+            dictation.discardKeywordSubstitution()
+        }
         switch intent.action {
         case .send, .sendHq, .sendClose:
             sendKeywordIntent(intent)

@@ -138,7 +138,7 @@ struct ComposerDraft: Codable, Equatable, Sendable {
 /// with a nil `lastAttemptAt` means the emission has never been handed to the
 /// webview; a positive count with a date means it has been delivered at least once
 /// and the receipt has not arrived yet. Whether the webview currently holds it is
-/// session state (`inflightEmissionIDs`), not a durable distinction.
+/// session state (`inflightEmissionGenerations`), not a durable distinction.
 enum PendingEmissionState: Equatable, Sendable {
     case pending(deliveryAttempts: Int, lastAttemptAt: Date?)
     case rejected(reason: String)

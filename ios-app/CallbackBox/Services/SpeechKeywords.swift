@@ -9,6 +9,28 @@ enum SpeechKeywordAction: String, Codable, Sendable {
     case erase
 }
 
+extension SpeechKeywordAction {
+    /// Whether accepting this action may publish the held keyword tag
+    /// substitution into the composer draft.
+    ///
+    /// The substitution replaces the spoken command words with a control tag
+    /// (`<mic-off phrase="Mic off" />`). That tag is message content once it is
+    /// in the draft, so only an action that immediately hands the draft off as
+    /// a message may commit it. Everything else discards the hold and keeps the
+    /// pre-keyword transcript: mic-off leaves the composer standing, so a
+    /// committed tag would sit there as text the user can later send, and
+    /// cancel/erase clear the draft moments later anyway — discarding is what
+    /// they mean.
+    var commitsKeywordSubstitution: Bool {
+        switch self {
+        case .send, .sendHq, .sendClose:
+            return true
+        case .cancel, .micOff, .erase:
+            return false
+        }
+    }
+}
+
 struct SpeechKeywordResult: Equatable {
     var action: SpeechKeywordAction
     var processedTranscript: String

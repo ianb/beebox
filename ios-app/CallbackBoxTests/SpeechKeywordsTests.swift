@@ -145,8 +145,25 @@ final class SpeechKeywordsTests: XCTestCase {
         XCTAssertFalse(dictation.transcript.contains("erase-message"))
     }
 
+    /// Only an action that hands the draft off as a message may leave its
+    /// control tag behind: the tag is message content the moment it lands in
+    /// the composer.
+    func testOnlySendingActionsCommitTheKeywordSubstitution() {
+        for action in [SpeechKeywordAction.send, .sendHq, .sendClose] {
+            XCTAssertTrue(action.commitsKeywordSubstitution, "\(action) stages the draft as a message")
+        }
+        for action in [SpeechKeywordAction.cancel, .micOff, .erase] {
+            XCTAssertFalse(action.commitsKeywordSubstitution, "\(action) must not leave a tag in the composer")
+        }
+    }
+
+    /// An accepted mic-off stops dictation and leaves the composer standing, so
+    /// a committed `<mic-off …/>` would sit in the draft as text the user can
+    /// later send as content. (The composer's own microphone stop is the
+    /// `.micOff` branch's voice-turn/earcon work; what is checkable here is
+    /// that recognition ended and the draft text never moved.)
     @MainActor
-    func testAcceptedKeywordCommitsTheTagSubstitution() throws {
+    func testAcceptedMicOffLeavesTheComposerAtThePreKeywordTranscript() throws {
         let dictation = SpeechDictation()
         dictation.transcript = "Remind me about the dentist"
 
@@ -154,10 +171,32 @@ final class SpeechKeywordsTests: XCTestCase {
 
         let intent = try XCTUnwrap(dictation.keywordIntent)
         XCTAssertEqual(intent.action, .micOff)
+        XCTAssertFalse(intent.action.commitsKeywordSubstitution)
+
+        // What the composer does for an accepted, non-sending action.
+        dictation.discardKeywordSubstitution()
+
+        XCTAssertEqual(dictation.transcript, "Remind me about the dentist")
+        XCTAssertFalse(dictation.transcript.contains("<mic-off"))
+        XCTAssertTrue(dictation.hasDictatedText)
+        XCTAssertFalse(dictation.isRecording)
+        XCTAssertEqual(dictation.state, .preparingHQ)
+    }
+
+    @MainActor
+    func testAcceptedSendCommitsTheTagSubstitution() throws {
+        let dictation = SpeechDictation()
+        dictation.transcript = "Remind me about the dentist"
+
+        dictation.ingestRecognizedSpeechForTesting("Remind me about the dentist send message")
+
+        let intent = try XCTUnwrap(dictation.keywordIntent)
+        XCTAssertEqual(intent.action, .send)
+        XCTAssertTrue(intent.action.commitsKeywordSubstitution)
 
         dictation.commitKeywordSubstitution()
         XCTAssertEqual(dictation.transcript, intent.processedTranscript)
-        XCTAssertTrue(dictation.transcript.contains("<mic-off phrase="))
+        XCTAssertTrue(dictation.transcript.contains("<send-message phrase="))
 
         // A second commit is inert: the hold is consumed, not sticky.
         dictation.commitKeywordSubstitution()

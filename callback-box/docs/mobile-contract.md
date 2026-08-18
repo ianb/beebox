@@ -316,8 +316,11 @@ the contract.
   | web post | `src/frontend/src/components/chat/use-native-bridge.ts` — `postNativeReceipt`; `src/frontend/src/input/targets/receipts.ts` — `Receipt` union, `expectReceipt` |
   | native decode | `ios-app/CallbackBox/Views/ChatWebView.swift` — `receiveEmissionReceipt`, `NativeEmissionReceipt.Disposition { sent, queued, rejected }` |
 - **Ack/dedup semantics:** native `deliver` only sends emissions not already in
-  `inflightEmissionIDs`, marks them inflight, and on an `evaluateJavaScript` error reports a
-  synthetic `rejected` immediately. Delivery is gated on
+  the inflight map (`inflightEmissionGenerations` — id → per-attempt generation), marks them
+  inflight, and on an `evaluateJavaScript` error reports a synthetic `rejected` — but only when the
+  erroring attempt's generation is still current, so a stale completion from an abandoned attempt
+  cannot reject a fresh one. Receipts stay ID-only by design: the dedup registry answers any
+  attempt truthfully, so whichever attempt provoked a receipt, it settles the emission. Delivery is gated on
   `pageLoaded` (items typed during nav are held, re-delivered on `didFinish`). On any receipt
   `RootView` clears the emission from `pendingNativeEmissions`;
   `NativeComposerView` restores text+images on `rejected`. Neither web nor native manufactures a
@@ -328,7 +331,7 @@ the contract.
 - **In-session redelivery (native):** a `pending` emission whose receipt has not arrived
   redelivers on a wall-clock backoff (10s/30s/60s after attempts 1-3, then every 120s, no cap):
   `RootView` publishes a `NativeEmissionRedeliveryRequest`, the coordinator abandons the inflight
-  attempt (removes the ID from `inflightEmissionIDs`) and delivers again. A late receipt from an
+  attempt (drops its inflight generation) and delivers again. A late receipt from an
   abandoned attempt is dropped by the inflight guard; the new attempt's receipt settles. Past 30s
   pending, the composer row offers Restore/Discard — the state stays `pending`; no verdict is
   manufactured. Re-evaluation runs only while the scene is active (5s ticker + foregrounding).
