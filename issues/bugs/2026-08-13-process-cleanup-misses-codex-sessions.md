@@ -1,6 +1,6 @@
 ---
 title: "Router startup cleanup does not recognize live Codex sessions"
-workstream: unattached
+workstream: codex-cleanup-guard
 area: router
 labels: [router, agents, lifecycle]
 filed-by: agent
