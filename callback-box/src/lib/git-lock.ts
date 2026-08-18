@@ -71,13 +71,24 @@
  *
  * ## Two invariants callers must keep
  *
- * 1. **Do not acquire another lock, and do not run an agent or any other
+ * 1. **Do not BLOCK on another lock, and do not run an agent or any other
  *    unbounded work, while holding this lock.** The established order is
  *    `withCardLock` → box git lock, and `question-transition.ts`'s file lock →
- *    box git lock. Nothing goes the other way, so there is no cycle; keep it
+ *    box git lock. Nothing blocks the other way, so there is no cycle; keep it
  *    that way. `core/agent/commit.ts` is the concrete trap — its
  *    status-check-through-commit span contains a full `agent.invoke`, so only
  *    its `stageAll` + `commit` tail goes inside the lock.
+ *
+ *    A NON-blocking probe of another lock is fine, and there is one:
+ *    `cb tick`'s housekeeping span calls `loadActiveChats` inside this lock to
+ *    re-check for a live chat immediately before sweeping the tree
+ *    (`cli/commands/tick-helpers.ts`). That reads chat locks through
+ *    `scanLocks`, which acquires with proper-lockfile's default `retries: 0`
+ *    and returns at once. The reverse edge does exist — a chat session holds
+ *    its `active-chats` lock while its agent's `cb` calls take this one — so
+ *    the ordering is only acyclic BECAUSE that probe never waits. Keep it
+ *    non-blocking, and move the probe out of the span rather than making it
+ *    wait.
  * 2. **Nothing invoked from a git hook may take this lock.** A hook runs as a
  *    child of the `git commit` we are holding the lock across. True today: the
  *    installed pre-commit hook runs `git annex pre-commit`, `cb validate`, and

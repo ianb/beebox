@@ -233,8 +233,14 @@ our control holds it, and in that case waiting longer does not help.
 
 **A.5 — Two documented invariants**, in the module comment:
 
-1. *Do not acquire any other lock, and do not run an agent or any other
-   unbounded work, while holding the box git lock.* The existing order is
+1. *Do not BLOCK on another lock, and do not run an agent or any other
+   unbounded work, while holding the box git lock.* A non-blocking probe of
+   another lock is fine, and one exists: `cb tick`'s span calls
+   `loadActiveChats` inside the lock, which reads chat locks through
+   `scanLocks` (proper-lockfile `retries: 0`, returns at once). The reverse
+   edge is real — a chat session holds its `active-chats` lock while its
+   agent's `cb` calls take the git lock — so the ordering is acyclic only
+   because that probe never waits. The existing order is
    `withCardLock` → box git lock (`card-lock.ts:33-38` already tells callers to
    wrap the git commit inside the card lock), and `question-transition.ts`'s
    file lock → box git lock. Nothing goes the other way, so there is no cycle;

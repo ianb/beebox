@@ -34,6 +34,11 @@ await new Promise<void>((resolve) => {
     resolve();
   });
 });
+// Release stdin so the process can exit on its own once the work is done.
+// Exiting via `process.exitCode` rather than `process.exit()` matters here:
+// `process.exit` can truncate a not-yet-flushed pipe write, and the parent
+// reads its verdict from exactly that write.
+process.stdin.pause();
 
 try {
   const hash = await stageAndCommitPaths(boxRoot, {
@@ -42,8 +47,7 @@ try {
     trailers: { "Committed-By": name },
   });
   process.stdout.write(`committed ${hash ?? "null"}\n`);
-  process.exit(0);
 } catch (e) {
   process.stdout.write(`failed ${errorMessage(e)}\n`);
-  process.exit(1);
+  process.exitCode = 1;
 }
