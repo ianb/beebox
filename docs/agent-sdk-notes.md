@@ -21,18 +21,82 @@ break this repo — v2.1.218's worktree git isolation silently broke `/finish`'s
 merge step for days. Claude Code versions that move harness behavior get their
 own entries here, labeled as such, with no pin to apply.
 
-- **Current pin:** `0.3.231` (in `callback-box/package.json` — see the split-pin
+- **Current pin:** `0.3.233` (in `callback-box/package.json` — see the split-pin
   note below; the monorepo root still carries a second, unmanaged pin at
   `0.3.226`)
-- **Latest reviewed upstream version:** `0.3.233` (SDK), `2.1.233` (Claude Code)
+- **Latest reviewed upstream version:** `0.3.234` (SDK), `2.1.234` (Claude Code)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** `0.3.232` clears the 48h window within hours and
-  `0.3.233` tomorrow; take them on the normal settled path. Nothing act-now on
-  either channel.
+- **Current recommendation:** `0.3.234` clears the 48h window within hours; take
+  it on the normal settled path. Nothing act-now on either channel, and its one
+  breaking type change is already confirmed inert here.
 
 ## Release ledger
 
-### 0.3.233 — pending
+### 0.3.234 — pending
+
+- **Upstream (SDK):** Removed the unused `bypass_permissions_disabled` member
+  from the `ExitReason` type — the value was never emitted, and upstream warns
+  that **TypeScript consumers with an explicit `case` branch for it get a
+  compile error on upgrade** (runtime unaffected). Corrected the `ApiKeySource`
+  type to the values `system/init` actually reports (`ANTHROPIC_API_KEY`,
+  `apiKeyHelper`, `/login managed key`, `none`). `vcs_state_changed` now reports
+  the directory the shell finished in (an inner `cd` is reflected). A peer
+  `origin` injected by the host may declare the sending session's permission
+  class (`fromMode`). `SDKSystemMessage` (`system`/`init`) gains an optional
+  `effort` field, set on Remote Control bridge init frames.
+- **Callback-box applicability (runtime):** **The breaking change does not bite
+  here** — checked before bumping rather than after: `ExitReason`,
+  `bypass_permissions_disabled`, and `ApiKeySource` appear nowhere in
+  `callback-box/src`, `callback-box/scripts`, or `bin/`. The rest is inert too:
+  `vcs_state_changed` is unconsumed, `fromMode` rides cross-session messaging
+  callback-box does not use, and the new `effort` field on `system`/`init` is
+  additive — `adaptSdkMessage` (`src/core/chat/session/messages.ts`) forwards
+  only `session_id` from an init message. So `0.3.234` should be an ordinary
+  settled bump next turn.
+- **Callback-box applicability (harness) — one item worth keeping:**
+  **`CLAUDE_CODE_PROJECT_DIR_NAME`** (new in 2.1.234) lets a host choose a short
+  name for the per-project transcript directory. Callback-box *derives* that
+  directory name itself: `encodeProjectDir`
+  (`src/core/chat/session/transcript-paths.ts`) reproduces Claude Code's
+  "replace every non-alphanumeric with `-`" encoding of the cwd, and
+  `history.ts` enumerates the candidate directories from it. If that env var is
+  ever set — by callback-box, or by a host wrapping it — the directory name
+  stops being a function of the cwd and callback-box's session discovery would
+  look in the wrong place. Nothing sets it today. This is the same fragile
+  assumption the 0.3.224 entry flagged from the other direction (the >200-char
+  sanitized-prefix collision); the file already has a `CB_CLAUDE_PROJECTS_DIR`
+  override for the root, but no equivalent for the per-project directory name.
+- **Other 2.1.234 harness items:** A fix landed for **accepting the "Try the new
+  fullscreen renderer?" prompt restarting the session without its permission
+  mode** (e.g. `--dangerously-skip-permissions`), tool allow/deny rules, model
+  or effort flags. That is the flag every worker session in this repo launches
+  with (`bin/CLAUDE.md`), so pre-fix a worker that accepted that prompt would
+  silently drop to a permission-prompting session it cannot answer — the
+  2.1.218 failure shape. Fixed upstream; no repo change needed. Also: session
+  titles now read as short names, `/permissions` and `/add-dir` work mid-turn,
+  the built-in `claude-api` skill's context cost dropped from ~200k to ~25k
+  tokens, teammates now inherit the leader's model (the "Default teammate
+  model" setting is gone), and the stale-`CLAUDE_CODE_OAUTH_TOKEN` reminder no
+  longer leaks into a resumed turn — the continuing thread on callback-box's
+  documented server auth path. The NT-namespace (`\??\`) path hardening is
+  Windows-only.
+- **Action:** Published 2026-08-17T18:20Z, ~22h old, inside the settling window.
+  The boxholder's harness is already on 2.1.234 independently.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03234), [Claude Code 2.1.234](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21234)
+
+### Monitor gap — two turns lost to a working-tree collision
+
+The 2026-08-16 and 2026-08-17 turns both stopped at the precondition check: a
+tracked file (`issues/bugs/2026-08-09-transcript-flush-wait-full-timeout-real-sdk.md`)
+carried an uncommitted edit both days, so the monitor reported the collision and
+made no changes. Recorded because it explains why `0.3.232` and `0.3.233` sat
+settled-but-unapplied for three days rather than being taken the morning each
+cleared. Nothing was missed on the act-now axis — both were reviewed on
+2026-08-15 and neither carried a callback-box-relevant security, memory, or
+correctness fix — but the lesson is that this monitor's liveness depends on a
+clean tree, and a single long-lived uncommitted file stalls it indefinitely.
+
+### 0.3.233 — applied
 
 - **Upstream (SDK):** Notification hooks now fire for pending permission prompts
   on the SDK path, matching the interactive REPL. Todo/task-tracking tools
@@ -66,11 +130,14 @@ own entries here, labeled as such, with no pin to apply.
   local skill set that could shadow bundled aliases. The Linux CPU-pinning fix
   and Bash memory cgroups are prod-side opportunities (`cb hub` runs Linux),
   though sandboxing is not enabled for box agents.
-- **Action:** Published 2026-08-14T18:52Z, ~21h old, inside the settling window.
-  The boxholder's harness is already on 2.1.233 independently.
+- **Action:** Published 2026-08-14T18:52Z. Applied 2026-08-18 via
+  `pnpm update-agent-sdk` at ~93h as the newest settled version — later than the
+  usual two days because the monitor was blocked for two turns (see the gap note
+  above). Verified: typecheck clean, `pnpm -C callback-box test` 7201/7201 pass,
+  and `scripts/sdk-steering-probe.ts` holds all four steering behaviors.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03233), [Claude Code 2.1.233](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21233)
 
-### 0.3.232 — pending (parity content from Claude Code 2.1.232)
+### 0.3.232 — applied (parity content from Claude Code 2.1.232)
 
 - **Upstream (SDK):** Subagent MCP `tool_result` frames whose result carries
   `_meta` now emit `tool_use_result` as `{ content, _meta }` instead of a bare
@@ -117,8 +184,10 @@ own entries here, labeled as such, with no pin to apply.
   - Also here: a fix for a startup race that could silently unregister a plugin
     marketplace via concurrent `known_marketplaces.json` writes — the third
     plugin-integrity fix in four releases, and this monorepo ships plugins.
-- **Action:** Published 2026-08-13T21:31Z, ~42h old — inside the window at this
-  turn, clears within hours.
+- **Action:** Published 2026-08-13T21:31Z. Applied 2026-08-18, carried in by the
+  settled bump to `0.3.233`. The subagent-forking default and the nested-repo
+  trust change noted above have therefore been live in the bundled CLI since
+  this bump.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03232), [Claude Code 2.1.232](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21232)
 
 ### Validation note — the 0.3.228 test failure did not reproduce
