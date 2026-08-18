@@ -11,13 +11,12 @@
 import { randomUUID } from "node:crypto";
 import type { FastifyReply } from "fastify";
 import { errorMessage } from "../../lib/error-guards.js";
-import { type ChatMessage, type ChatSendInput, type ChatSession } from "../../core/chat/session/index.js";
 import { getMostActive } from "../../core/chat/session/history.js";
 import { summarizeWhatsChanged } from "../../core/chat/whats-changed.js";
-import { createTurnBuffer, scheduleTurnCleanup } from "../../core/chat/turn-buffer.js";
 import { getSessionUser } from "../auth.js";
 import type { ChatRoutesContext } from "./chat-context.js";
 import { resolveSendTargetForRoute } from "./chat-send-target.js";
+import { type TurnCapture, captureTurn, startAckedRun } from "./chat-send-run.js";
 import {
   type SendOutcome,
   claimMessageId,
@@ -31,6 +30,7 @@ import {
   sendBodySchema,
   selfNoteBodySchema,
   whatsChangedBodySchema,
+  buildSendInput,
   classifyChannel,
   extractCardFields,
   escapeXmlAttr,
@@ -39,99 +39,6 @@ import {
   validateImages,
   warnOnUnnormalizedImageOrientation,
 } from "./chat-helpers.js";
-
-/**
- * Capture an in-flight turn's messages into a resumable buffer keyed by
- * `turnId`, instead of piping them to one client socket. The turn now outlives
- * any single connection: the client subscribes to `chat.turnStream` for the
- * output and can drop/reconnect without losing it. The pin is released and the
- * buffer scheduled for GC once the turn settles (done / error / session close).
- *
- * Wired up *before* the send so no early frame (system/init, an immediate
- * result, a fast subprocess) is dropped between send-resolves and listener-
- * attach. Returns `fail`, which the caller invokes when the run never starts —
- * the client already has its `{turnId}` and is subscribed, so the failure is
- * delivered as the buffer's error frame rather than discarded with the buffer.
- */
-function captureTurn(chatSession: ChatSession, { turnId, releasePin }: { turnId: string; releasePin: () => void }): { fail: (reason: string) => void } {
-  const buffer = createTurnBuffer(turnId);
-
-  let settled = false;
-  const detach = (): void => {
-    chatSession.removeListener("message", onMessage);
-    chatSession.removeListener("done", onDone);
-    chatSession.removeListener("error", onError);
-    chatSession.removeListener("close", onClose);
-  };
-  const settle = (): void => {
-    if (settled) return;
-    settled = true;
-    detach();
-    releasePin();
-    scheduleTurnCleanup(turnId);
-  };
-
-  const onMessage = (msg: ChatMessage): void => buffer.push(msg);
-  const onDone = (): void => {
-    buffer.finish();
-    settle();
-  };
-  const onError = (err: Error): void => {
-    buffer.fail(err.message);
-    settle();
-  };
-  // The subprocess exited without a `done` (crash / intentional stop). Mark the
-  // turn complete so a resuming subscriber stops waiting and falls back to
-  // history rather than hanging.
-  const onClose = (): void => {
-    buffer.finish();
-    settle();
-  };
-
-  chatSession.on("message", onMessage);
-  chatSession.on("done", onDone);
-  chatSession.on("error", onError);
-  chatSession.on("close", onClose);
-
-  // The run never started. The buffer is kept, not removed: it is where the
-  // subscribed client learns the turn died, and an empty removed buffer would
-  // read as "resync" — a silent history refresh with no error shown. Settles
-  // like any other terminal state (detach + release pin + GC). No-op once
-  // settled, so a late `close` can't overwrite the error.
-  const fail = (reason: string): void => {
-    if (settled) return;
-    buffer.fail(reason);
-    settle();
-  };
-
-  return { fail };
-}
-
-/**
- * Start the run for a send that has already been acked.
- *
- * Nothing awaits this. The client holds its `{turnId}` and is subscribed to the
- * turn stream, so a run that fails to start reports there rather than in an
- * HTTP status. `send()` can *reject* (an FD-exhausted SDK spawn is the case
- * we've seen) or return false; both mean the same thing — it only fails before
- * reaching the backend, so nothing was dispatched — and both fail the capture,
- * which releases the pin and marks the turn errored for every subscriber.
- *
- * The durable claim is deliberately left alone: the user message is already in
- * history, so a redelivery of this id must still be answered `deduplicated`,
- * not recorded a second time.
- */
-function startAckedRun(chatSession: ChatSession, { input, capture }: { input: ChatSendInput; capture: { fail: (reason: string) => void } }): void {
-  void chatSession
-    .send(input)
-    .then((sent) => {
-      if (!sent) capture.fail("Failed to send message");
-    })
-    .catch((e: unknown) => {
-      console.error("[chat] send failed to start a run:", e);
-      capture.fail(errorMessage(e));
-    });
-}
 
 function validateInboundImages(images: SendBody["images"]): { error: string; status: number } | null {
   if (images === undefined || images.length === 0) return null;
@@ -208,99 +115,109 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
       return reply.status(outcome.status).send(outcome.body);
     };
 
-    // Broadcast the user message to other clients via the event bus. This is a
-    // *persisted* event — the user's turn in the conversation history — and
-    // recording it IS acceptance: it happens on both paths immediately before
-    // the ack, whether the message was queued or is about to be handed to the
-    // engine. A run that then fails to start no longer contradicts it: the
-    // failure reaches the client on the turn stream instead of as a 500 that
-    // invited a retry which recorded the message a second time
-    // (issues/bugs/2026-08-03-intermittent-spawn-ebadf-sdk-chat-run.md).
-    // For pending-new sessions, sessionId is still unknown; subscribers will
-    // see it once `session-assigned` fires.
-    //
-    // The durable claim is taken here and nowhere else, so acceptance has ONE
-    // durability point: a crash before this loses the claim and the message
-    // together (the client's retry runs it once), a crash after loses neither
-    // (the retry is answered `deduplicated: true` and history really has it).
-    // Message first, claim second — the millisecond between them can only cost
-    // a duplicate, never a message the client was told the box had.
-    const recordUserMessage = (): void => {
-      eventBus.emit("chat-user-message", {
-        sessionId: knownId,
-        message: attributed,
-        user: user ? { email: user.email, name: user.name } : null,
-        timestamp: new Date().toISOString(),
-      });
-      if (messageId) recordDurableClaim(boxRoot, { messageId, processedMessageIds });
-    };
+    // Everything from here to the ack runs under the volatile claim, so an
+    // unexpected throw (a bus listener, a registry call) must settle it before
+    // it escapes — otherwise every duplicate and retry POST for this id parks
+    // on a promise nobody resolves, which is worse than the 500 itself. The
+    // capture is failed too when one exists: the pin it holds would otherwise
+    // keep the session alive with no turn to finish.
+    let capture: TurnCapture | null = null;
+    try {
+      // Broadcast the user message to other clients via the event bus. This is a
+      // *persisted* event — the user's turn in the conversation history — and
+      // recording it IS acceptance: it happens on both paths immediately before
+      // the ack, whether the message was queued or is about to be handed to the
+      // engine. A run that then fails to start no longer contradicts it: the
+      // failure reaches the client on the turn stream instead of as a 500 that
+      // invited a retry which recorded the message a second time
+      // (issues/bugs/2026-08-03-intermittent-spawn-ebadf-sdk-chat-run.md).
+      // For pending-new sessions, sessionId is still unknown; subscribers will
+      // see it once `session-assigned` fires.
+      //
+      // The durable claim is taken here and nowhere else, so acceptance has ONE
+      // durability point: a crash before this loses the claim and the message
+      // together (the client's retry runs it once), a crash after loses neither
+      // (the retry is answered `deduplicated: true` and history really has it).
+      // Message first, claim second — the millisecond between them can only cost
+      // a duplicate, never a message the client was told the box had.
+      const recordUserMessage = (): void => {
+        eventBus.emit("chat-user-message", {
+          sessionId: knownId,
+          message: attributed,
+          user: user ? { email: user.email, name: user.name } : null,
+          timestamp: new Date().toISOString(),
+        });
+        if (messageId) recordDurableClaim(boxRoot, { messageId, processedMessageIds });
+      };
 
-    // Where the user is sending from, for the snapshot's `channel` attr.
-    const channel = classifyChannel(request.headers["user-agent"]);
+      // Where the user is sending from, for the snapshot's `channel` attr.
+      const channel = classifyChannel(request.headers["user-agent"]);
 
-    // Companion-pane state for the `open-card`/`card-activity`/`card-state`
-    // snapshot attrs, normalized + filtered at this parse boundary. Rides
-    // enqueue and send like `channel`.
-    const cardFields = extractCardFields(body);
+      // Companion-pane state for the `open-card`/`card-activity`/`card-state`
+      // snapshot attrs, normalized + filtered at this parse boundary. Rides
+      // enqueue and send like `channel`.
+      const cardFields = extractCardFields(body);
 
-    // If busy, queue and return — the queue drains on the next "done", and the
-    // completed turn surfaces via the chat-complete event → history refresh.
-    if (chatSession.isBusy()) {
-      chatSession.enqueue({
-        text: attributed,
-        ...(images ? { images } : {}),
-        ...(channel !== undefined ? { channel } : {}),
-        ...cardFields,
-      });
+      // If busy, record and queue — the queue drains on the next "done", and the
+      // completed turn surfaces via the chat-complete event → history refresh.
+      // Record first, enqueue second: a throw while recording then leaves nothing
+      // queued, so the retry that follows the 500 runs the message once instead
+      // of delivering the copy this request already handed to the session.
+      if (chatSession.isBusy()) {
+        recordUserMessage();
+        chatSession.enqueue(buildSendInput({ text: attributed, images, channel, cardFields }));
+        return respond({ status: 200, body: { queued: true } });
+      }
+
+      // Append active schedule info so the agent knows what's pending.
+      // Skip for slash commands so they remain at the start of the text.
+      const pendingInfo = isSlashCommand ? "" : scheduleManager.formatPendingForPrompt();
+      const fullMessage = pendingInfo ? attributed + "\n<pending-schedules>" + pendingInfo + "</pending-schedules>" : attributed;
+
+      // Touch + enforce the live cap + mark most-active for an already-known
+      // session. (A pending "new" session has no id yet for these.)
+      if (knownId !== null) {
+        registry.touch(knownId, { subprocessUse: true });
+        registry.enforceLiveCap(knownId);
+        void registry.markMostActive(knownId).catch((e: unknown) => {
+          console.error(`[chat] markMostActive(${knownId}) failed:`, e);
+        });
+      }
+      // Pin the session for the turn's lifetime so it survives the idle sweep and
+      // a concurrent send's LRU eviction. pinSession works for a pending "new"
+      // session too (it carries into the entry's refCount on id promotion), which
+      // a by-id pin couldn't. Released when the turn settles (see captureTurn).
+      const releasePin = registry.pinSession(chatSession);
+
+      // Wire the session's output into a resumable buffer *before* sending, so a
+      // frame emitted before send() resolves (e.g. a prewarmed subprocess) isn't
+      // dropped. The output flows over chat.turnStream, resumable by this turnId.
+      const turnId = randomUUID();
+      capture = captureTurn(chatSession, { turnId, releasePin });
+
+      // Record, ack, THEN start the run — the busy path's shape, extended to the
+      // idle one. The response means "the box durably has your message", not "the
+      // engine started": a cold spawn takes minutes, and waiting for it left every
+      // client (and every retry timer) parked in a pending state for that whole
+      // window. The turn buffer is already wired, so no frame the run emits is
+      // lost between the ack and the client's subscribe, and a start failure
+      // surfaces on that stream instead of as an HTTP status
+      // (see startAckedRun; docs/plans/emission-model.md, Track A).
       recordUserMessage();
-      return respond({ status: 200, body: { queued: true } });
-    }
-
-    // Append active schedule info so the agent knows what's pending.
-    // Skip for slash commands so they remain at the start of the text.
-    const pendingInfo = isSlashCommand ? "" : scheduleManager.formatPendingForPrompt();
-    const fullMessage = pendingInfo ? attributed + "\n<pending-schedules>" + pendingInfo + "</pending-schedules>" : attributed;
-
-    // Touch + enforce the live cap + mark most-active for an already-known
-    // session. (A pending "new" session has no id yet for these.)
-    if (knownId !== null) {
-      registry.touch(knownId, { subprocessUse: true });
-      registry.enforceLiveCap(knownId);
-      void registry.markMostActive(knownId).catch((e: unknown) => {
-        console.error(`[chat] markMostActive(${knownId}) failed:`, e);
+      startAckedRun(chatSession, {
+        input: buildSendInput({ text: fullMessage, images, channel, cardFields }),
+        capture,
       });
+      return respond({ status: 200, body: { turnId } });
+    } catch (e) {
+      console.error("[chat] send failed after the message id was claimed:", e);
+      capture?.fail(errorMessage(e));
+      if (settleInFlight !== null) {
+        settleInFlight({ status: 500, body: { error: errorMessage(e) } });
+        settleInFlight = null;
+      }
+      throw e;
     }
-    // Pin the session for the turn's lifetime so it survives the idle sweep and
-    // a concurrent send's LRU eviction. pinSession works for a pending "new"
-    // session too (it carries into the entry's refCount on id promotion), which
-    // a by-id pin couldn't. Released when the turn settles (see captureTurn).
-    const releasePin = registry.pinSession(chatSession);
-
-    // Wire the session's output into a resumable buffer *before* sending, so a
-    // frame emitted before send() resolves (e.g. a prewarmed subprocess) isn't
-    // dropped. The output flows over chat.turnStream, resumable by this turnId.
-    const turnId = randomUUID();
-    const capture = captureTurn(chatSession, { turnId, releasePin });
-
-    // Record, ack, THEN start the run — the busy path's shape, extended to the
-    // idle one. The response means "the box durably has your message", not "the
-    // engine started": a cold spawn takes minutes, and waiting for it left every
-    // client (and every retry timer) parked in a pending state for that whole
-    // window. The turn buffer is already wired, so no frame the run emits is
-    // lost between the ack and the client's subscribe, and a start failure
-    // surfaces on that stream instead of as an HTTP status
-    // (see startAckedRun; docs/plans/emission-model.md, Track A).
-    recordUserMessage();
-    startAckedRun(chatSession, {
-      input: {
-        text: fullMessage,
-        ...(images ? { images } : {}),
-        ...(channel !== undefined ? { channel } : {}),
-        ...cardFields,
-      },
-      capture,
-    });
-    return respond({ status: 200, body: { turnId } });
   });
 
   // POST /api/chat/self-note — inject a self-note into a session transcript.

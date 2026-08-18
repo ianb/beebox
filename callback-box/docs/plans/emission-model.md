@@ -415,6 +415,19 @@ subplan rather than an inline improvisation.
 | Unmount flush writes a stale draft over a newer one (Track C) | planned (scheduler doctest) | flush executes the *latest* scheduled write only | clear |
 | Keyword refusal leaves partial transcript mutation (Track D) | planned (XCTest on SpeechKeywords) | substitution gated/undone atomically | clear |
 | Receipt for an emission the store no longer holds (redelivery races Discard) | exists (`receipts.doctest.md` shares outcomes; iOS `handleReceipt` no-ops on unknown ID) | yes | silent by design (correct) |
+| `send()` never resolves *or* rejects (wedged run lock, spawn that never returns) | exists (`chat-send-wedge-guards.doctest.md`) | 10-minute awake-time watchdog fails the captured turn, releasing the pin; cleared as soon as `send()` settles | clear (turn stream shows failure) |
+| A throw between taking the volatile claim and the ack (bus listener, registry call) | exists (`chat-send-wedge-guards.doctest.md`) | the claim is settled with the 500 and the capture failed before the error escapes, so retries re-run instead of parking forever | clear (500, then a clean retry) |
+
+**Accepted risk — the durable claim's disk write is best-effort behind the
+ack.** `recordDurableClaim` sets the in-memory claim and then writes
+`message-dedup.json`; a write failure is logged (`console.error`) and nothing
+else. So a failed write *plus* a process restart before the client's retry
+means the retry re-runs a message the box already accepted — a duplicate turn,
+not a lost one. Accepted: the `chat-user-message` event is already emitted and
+cannot be unwound by the time the write is attempted, the failure is loud in
+the logs, and making acceptance transactional (message + claim in one atomic
+store) is out of scope for this plan — it is the durable-outbox rewrite
+rejected above, at a smaller scale.
 
 ## Agent-flow / user-flow edge cases
 
