@@ -63,7 +63,7 @@ A worktree whose frontend port is taken at spawn still fails to start.
   turned this incident into a hiccup nobody noticed.
 - **Frequency is about to rise.** Long-lived processes now re-exec themselves
   when the bundle changes
-  ([stale bundle reload](2026-08-15-long-lived-processes-never-reload-the-rebuilt-bundle.md)),
+  ([stale bundle reload](../closed/bugs/2026-08-15-long-lived-processes-never-reload-the-rebuilt-bundle.md)),
   so restarts — and therefore port allocations — are more common than when this
   code was written.
 

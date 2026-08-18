@@ -1,9 +1,9 @@
 ---
 title: "Box git lock — serialize our writers on the repo-wide git index"
-status: active
+status: implemented
 workstream: box-git-lock
 issues:
-  - ../../../issues/bugs/2026-08-18-scheduled-task-dies-on-git-index-lock.md
+  - ../../../issues/closed/bugs/2026-08-18-scheduled-task-dies-on-git-index-lock.md
 ---
 
 # Box git lock — serialize our writers on the repo-wide git index
