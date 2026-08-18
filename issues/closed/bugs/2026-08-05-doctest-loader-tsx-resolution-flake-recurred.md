@@ -4,7 +4,33 @@ workstream: load-older-label
 area: callback-box
 filed-by: agent
 discovered-in: worktree-load-older-label — full finish-suite verification
+resolution: wontfix
 ---
+
+**Closed 2026-08-18 — real, but not actionable.** Boxholder's call: an
+unreproducible flake shouldn't sit open indefinitely.
+
+Closed `wontfix` rather than `invalid` deliberately — the premise held. This
+fired, with a recorded signature (`1..0 # no tests found` from a failed
+extensionless-directory import). It is being closed because two campaigns
+could not reproduce it, not because it never happened.
+
+The evidence is in the note below: 40 stress invocations at load 18–74 with
+51–57 live agent processes — above this issue's own recorded trigger — plus two
+full suites at 7315/7315, zero occurrences. And nothing has been fixed:
+`agent-doctest/src/doctest-loader.ts` is byte-identical to when the flake last
+fired, `tsx` still pinned `^4.23.1`.
+
+**This record stays searchable on purpose.** `/finish`'s tracked-flake protocol
+(`.claude/agents/finish.md`) greps `issues/` for a flake matching the failing
+test and signature, and `issues/closed/` is inside that path — so a future
+finish that hits this still finds the history rather than treating it as a new
+regression. A sighting is what reopens it; re-file with the run's output rather
+than reviving this one blind.
+
+Same disposition as the sibling
+[flaky mobile SPA fallback doctest](2026-07-10-flaky-mobile-spa-fallback-doctest.md),
+closed `wontfix` after a comparable no-repro campaign.
 
 > **Checked 2026-08-18 — could not reproduce, and the reason matters.** Tagged
 > `reconfirm`; removed. `test/frontend/trpc-directory-resolution.test.ts` passed
@@ -46,7 +72,7 @@ discovered-in: worktree-load-older-label — full finish-suite verification
 The full parallel `callback-box` suite still intermittently resolves an
 extensionless frontend import to a missing module. This recurred after the fix
 documented in
-[the earlier loader issue](../closed/bugs/2026-08-05-doctest-loader-tsx-resolution-under-parallel-load.md).
+[the earlier loader issue](2026-08-05-doctest-loader-tsx-resolution-under-parallel-load.md).
 
 One run failed 12 frontend doctest files. Each child ended with
 `1..0 # no tests found`. The underlying error tried to load

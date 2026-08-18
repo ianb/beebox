@@ -1,5 +1,5 @@
 export { run, runPassthrough, AgentBrowserError } from "./runner.js";
-export type { RunResult } from "./runner.js";
+export type { RunResult, RunOptions } from "./runner.js";
 
 export { open } from "./commands/open.js";
 export { snapshot } from "./commands/snapshot.js";
