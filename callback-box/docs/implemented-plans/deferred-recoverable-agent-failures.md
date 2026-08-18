@@ -22,7 +22,7 @@ Three failure kinds, for vocabulary:
 
 - **Transient** — retry now, it may work (an `index.lock` race). Exists today
   as one-off retries; owned by
-  [scheduled task dies on git index.lock](../../../issues/bugs/2026-08-18-scheduled-task-dies-on-git-index-lock.md).
+  [scheduled task dies on git index.lock](../../../issues/closed/bugs/2026-08-18-scheduled-task-dies-on-git-index-lock.md).
 - **Deferred-recoverable** — will not work now, will work later, often with a
   known-by time; account/service-scoped, not task-scoped. Missing today. This
   plan.
@@ -352,7 +352,7 @@ in scope); any UI beyond existing text surfaces.
 ## NOT in scope
 
 - **Transient-failure handling** (index-lock queueing/locking): owned by
-  [its own issue](../../../issues/bugs/2026-08-18-scheduled-task-dies-on-git-index-lock.md);
+  [its own issue](../../../issues/closed/bugs/2026-08-18-scheduled-task-dies-on-git-index-lock.md);
   this plan only reserves the vocabulary so the kinds stay distinct.
 - **Proactive quota checking before unattended work** (the
   `bin/agent-quotas.ts` lever): the passive store already reduces the cost of
