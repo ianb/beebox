@@ -13,11 +13,12 @@ issues:
 
 # Emission model: durable acceptance, no sticky pending states
 
-Six filed bugs are one model problem: a chat send can sit in a pending state
-for minutes (or forever), and several of those pending states have no exit.
-This plan changes the model so acceptance is fast and durable, every remaining
-pending state has a bounded exit, and the client-side machinery shrinks
-instead of growing timeout rules.
+Six filed bugs cluster around one model problem — a chat send can sit in a
+pending state for minutes (or forever), and several of those pending states
+have no exit — plus two satellite defects with their own causes (the draft
+clear, the keyword substitution). This plan changes the model so acceptance
+is fast and durable, every remaining pending state has a bounded exit, and
+the client-side machinery shrinks instead of growing timeout rules.
 
 ## The diagnosis (what the code says today)
 
@@ -110,8 +111,8 @@ remaining pending states bounded exits.
   preservative.
 - Memory/feedback: bias-toward-strict, but stop over-engineering rare
   failures (bounds Track A's crash-recovery scope); minimize invented
-  concepts — reuse the existing `queued` disposition rather than minting a
-  new one.
+  concepts — keep the existing `{turnId}`/`{queued}` response shapes rather
+  than minting new dispositions.
 
 ## What already exists
 
@@ -175,17 +176,38 @@ not "the engine started." Concretely:
   message). The current 7-day false-"already sent" window
   (claim persisted at :214, message recorded at :315, minutes apart on a cold
   spawn) closes.
-- Idle path: record + ack `{queued: true}` (existing disposition, existing
-  client handling), then `void chatSession.send(...)` with the same
-  error-on-session reporting `drainQueue()` already uses
-  (`session/index.ts:293-300`). A spawn failure surfaces in-band on the
-  session/turn stream — where the user is already looking — instead of an
-  HTTP 500 that bounces their text back into the composer minutes later.
-- The `{turnId}` response goes away with the code that waits for it; turn
-  attachment already works event-driven for the busy path today ("the queue
-  drains on the next done… surfaces via chat-complete → history refresh",
-  `chat-send-routes.ts:249`). Client code that branched on
-  `turnId` vs `queued` collapses to one path.
+- **A duplicate POST must not settle from a volatile claim** (cross-model
+  finding): if request A holds only the in-memory claim and request B answers
+  `deduplicated: true`, a crash of A before the durable write leaves B's
+  client believing a send that never landed. So a volatile claim carries the
+  in-flight request's outcome promise, and a duplicate POST awaits and
+  returns *that* outcome (the server-side mirror of the client's shared
+  receipt expectations in `receipts.ts`). `deduplicated: true` is answered
+  only from a durable claim.
+- Idle path: mint `turnId` + wire `captureTurn` exactly as today
+  (`chat-send-routes.ts:284-285` — both already happen *before* `send()`),
+  persist the record, and **respond `{turnId}` immediately**; `send()`
+  continues async. The response shape does not change, so turn-stream
+  attachment and receipt settlement in the frontend are untouched — only the
+  wait for engine spawn is removed. This dissolves what an earlier draft
+  left open (how clients attach under an always-`queued` ack): they attach
+  the way they always have.
+- A spawn failure after the ack surfaces **in the turn stream the client is
+  already attached to**: the async continuation catches `send()`
+  rejection/false, fails the capture with an error frame (new small API on
+  `captureTurn` — today it only has `cancel()`, `chat-send-routes.ts:285`),
+  releases the pin, and does **not** release the durable claim (the client
+  was told success; history has the message; releasing would let a
+  redelivery duplicate the history record). `ChatSession.send()` itself does
+  not emit session errors on start failure (`session/index.ts:311+` — only
+  `drainQueue()` wraps it, :293-300), so this plumbing is explicit new work,
+  not free reuse; the doctest for it uses a fake engine whose spawn rejects.
+- The busy path keeps `{queued: true}` unchanged. Note honestly: idle sends
+  include **new-session** sends (`knownId === null`), which the busy path
+  never sees — `recordUserMessage()` already emits with a null sessionId and
+  subscribers pick it up on `session-assigned` (`chat-send-routes.ts:229-237`),
+  and `pinSession`/`captureTurn` already support a pending session (:275-285),
+  but the A2 doctests must cover the new-session case explicitly.
 
 **Why.** Every symptom in the cluster needs a minutes-long pending window to
 manifest. Shrinking acceptance to ~one disk write removes the window itself,
@@ -195,8 +217,9 @@ milliseconds, and the cold-agent trigger disappears entirely.
 
 **Semantics to state honestly** (this is the decision the developer must
 ratify): after Track A, a receipt no longer implies the engine ran — it
-implies the message is durably recorded and will be delivered. That is
-already true of every `{queued:true}` ack today, including its failure mode:
+implies the message is durably recorded and will be delivered (the `{turnId}`
+response arrives before the spawn finishes, possibly before it starts). That
+is already true of every `{queued:true}` ack today, including its failure mode:
 a crash after ack loses the *delivery* while history keeps the message
 (`session/index.ts` — `messageQueue` is in-memory; drain failures deliberately
 do not re-queue, :293-300). Track A extends existing semantics to the idle
@@ -204,10 +227,12 @@ path; it does not invent them. What it adds for that failure mode: an
 accepted-but-undelivered message must be *visible* — see failure modes.
 
 **First chunk.** Move the persisted-claim write to sit beside
-`recordUserMessage()` (both paths), with a route doctest asserting: crash
-simulation between in-memory claim and durable record → retry with same ID
-runs the message exactly once; crash after durable record → retry gets
-`deduplicated: true`.
+`recordUserMessage()` (both paths) and make duplicate POSTs share the
+in-flight outcome instead of answering from a volatile claim. Route doctests
+assert: crash simulation between in-memory claim and durable record → retry
+with same ID runs the message exactly once; crash after durable record →
+retry gets `deduplicated: true`; concurrent duplicate POST → both responses
+report the same real outcome.
 
 ### Track B — iOS: two pending states become one, and every state has an exit
 
@@ -221,9 +246,17 @@ runs the message exactly once; crash after durable record → retry gets
   today's split is two names for "not yet confirmed."
 - **In-session redelivery**: a `pending` emission whose receipt has not
   arrived redelivers on a gentle backoff (awake-time, not wall-clock —
-  `CLAUDE.md` time discipline). Redelivery is the *same* idempotent
-  delivery, so this is a retry loop, not a timeout verdict. With Track A the
-  loop almost never fires past the first attempt.
+  `CLAUDE.md` time discipline). Redelivery must first *abandon the inflight
+  attempt*: `deliver()` skips any ID in `inflightEmissionIDs`
+  (`ChatWebView.swift:422`) and nothing clears that set while a POST hangs,
+  so the backoff step removes the ID and delivers again. A late receipt from
+  the abandoned attempt is dropped by the `inflightEmissionIDs.contains`
+  guard (`ChatWebView.swift:450`) — harmless, because the new attempt
+  re-asks the server and the claim registry answers idempotently; on the web
+  side, duplicate expectations for one ID already share the real outcome
+  (`receipts.ts`). Redelivery is the *same* idempotent delivery, so this is
+  a retry loop, not a timeout verdict. With Track A the loop almost never
+  fires past the first attempt.
 - **User exit on long-pending**: a `pending` emission older than a threshold
   renders differently ("Still waiting for the box to confirm — Discard /
   Restore") reusing the `.rejected` presentation shape without becoming
@@ -240,7 +273,10 @@ anywhere). This gives it an exit (redeliver → server answers) and a user
 override, while *removing* a durable state rather than adding an expiry rule.
 
 **First chunk.** The state collapse + persistence migration of stored
-entries (old enum cases decode into `pending`), with XCTest coverage in
+entries: old enum cases decode into `pending`, **preserving**
+`.awaitingReceipt`'s `attempt` and `sentAt` as `deliveryAttempts` and
+`lastAttemptAt` (a lossy decode would reset a long-stuck row to "fresh" and
+delay its long-pending affordance). XCTest coverage in
 `ChatWebViewRequestTests`/store tests. No behavior change yet.
 
 ### Track C — web: the draft clear on send is synchronous
@@ -309,7 +345,9 @@ term.
 ### Contract and docs
 
 `docs/mobile-contract.md` §4.2 semantics update (receipt = durable
-acceptance), §3.4 correction (it still describes pre-`ef20af7f`
+acceptance; also fix its internal staleness — it still says a "timeout"
+receipt clears pending state while elsewhere denying elapsed-time verdicts),
+§3.4 correction (it still describes pre-`ef20af7f`
 provisional-nav clearing; the code moved to `didCommit`), and an explicit
 ownership statement: **iOS owns the durable pre-POST queue and redelivery;
 web owns dispatch and settles receipts from the POST outcome; the server owns
@@ -343,10 +381,10 @@ that?" or re-sending is safe under dedup only if the user chooses it).
 
 ## Subplans
 
-None. Track A's open questions resolve by reading (`captureTurn`, client
-`queued` handling), not by separate design. If the client's queued-path
-stream attachment turns out to need real design (see open questions), that
-becomes a subplan rather than an inline improvisation.
+None. Track A keeps the `{turnId}` response and the existing turn-stream
+attachment, so no client-attachment design remains open. If the
+`captureTurn` error-frame API turns out to need real design, that becomes a
+subplan rather than an inline improvisation.
 
 ## Failure modes
 
@@ -363,7 +401,7 @@ becomes a subplan rather than an inline improvisation.
 |---|---|---|---|
 | Crash between in-memory claim and durable record+message | planned (A chunk 1 doctest) | retry re-runs once (claim was volatile) | clear |
 | Crash after durable record | planned (A chunk 1 doctest) | retry → `deduplicated: true`; history has message | clear |
-| Spawn fails after `{queued}` ack | planned (A doctest via fake engine) | in-band session `error` event; text preserved in history | clear (turn stream shows failure) — must verify the web UI actually renders session `error` events; if it drops them this is silent and A is not done |
+| Spawn fails after the `{turnId}` ack | planned (A doctest via fake engine) | error frame into the captured turn stream; text preserved in history | clear (turn stream shows failure) — must verify the web UI actually renders a turn-stream error frame; if it drops it this is silent and A is not done |
 | iOS redelivery loops against an unreachable box | planned (XCTest) | backoff + long-pending affordance (Discard/Restore) | clear |
 | Old persisted `PendingEmissionState` cases after Track B's migration | planned (XCTest decode test) | decode legacy cases into `pending` | clear |
 | Unmount flush writes a stale draft over a newer one (Track C) | planned (scheduler doctest) | flush executes the *latest* scheduled write only | clear |
@@ -385,7 +423,7 @@ mostly do not apply. The ones that do:
   tag**: ADDRESSED by Track D (tags never reach the composer; detection
   rejects tagged input as a backstop).
 - **Partial rollout — new app build against old server or vice versa**:
-  ADDRESSED — `queued` is an existing disposition both sides already handle;
+  ADDRESSED — the response shapes (`{turnId}`/`{queued}`) are unchanged;
   Track B's state collapse is iOS-internal; no wire shape changes. The one
   ordering rule: Track A (server) may land before any iOS build; nothing in
   A requires a client change.
@@ -404,23 +442,16 @@ mostly do not apply. The ones that do:
   filing batch, different subsystem.
 - **Voice-output-suppression symptom** (keyword issue's third report) —
   deferred until Track D's instrumentation names the wedged term.
-- **`{turnId}` removal beyond the send path** — if other consumers of the
-  send response's `turnId` exist beyond receipt settlement, they are
-  migrated only as far as the send path requires; a broader turn-stream
-  refactor is not this plan.
+- **Turn-stream refactor** — Track A keeps the `{turnId}` response and the
+  existing attachment mechanics; any broader turn-stream rework is out of
+  scope.
 
 ## Open design questions
 
-1. **How does the web client attach to the turn stream under an always-`queued`
-   ack?** Today the busy path relies on `chat-complete` → history refresh —
-   acceptable but less live than `turnId` streaming. Lean: have the server
-   emit the turnId on the event bus when the async run starts
-   (`session-assigned`-style), and let the client attach late. Needs a read
-   of `captureTurn` + client turn-stream code before A's second chunk.
-2. **Long-pending threshold for the iOS affordance.** Lean: show the
+1. **Long-pending threshold for the iOS affordance.** Lean: show the
    affordance after ~30s awake-time pending (post-A this is already
    anomalous), with no automatic state change ever.
-3. **Does the web composer need the same long-pending affordance as iOS?**
+2. **Does the web composer need the same long-pending affordance as iOS?**
    Post-A the web pending window is milliseconds; lean no — the existing
    error-path restore covers rejects. Revisit if Track E's field testing
    disagrees.
@@ -435,8 +466,10 @@ and contract documentation. Box agents never see emissions or receipts.
 
 1. **A1** — claim-write reorder + crash-window doctests (server only, safe
    alone).
-2. **A2** — idle path acks `{queued}`; spawn failures go in-band; verify/fix
-   web rendering of session `error` events; update receipts doctests.
+2. **A2** — idle path responds `{turnId}` before `send()` settles; spawn
+   failures become turn-stream error frames (`captureTurn` fail API);
+   verify/fix web rendering of that error frame; new-session-send doctest;
+   update receipts doctests.
 3. **C** — synchronous draft clear + scheduler flush semantics + doctest
    (independent; can land any time).
 4. **B1** — iOS state collapse + decode migration + tests.
