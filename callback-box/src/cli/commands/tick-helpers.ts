@@ -35,6 +35,7 @@ import {
   classifyScheduleFailure,
   engineWaitReason,
 } from "../../core/schedule/engine-wait.js";
+import { getBoxTime } from "../../lib/time.js";
 
 type RunningScripts = Awaited<ReturnType<typeof loadRunningScripts>>;
 type ScriptState = Awaited<ReturnType<typeof loadScriptState>>;
@@ -257,6 +258,10 @@ export async function executeScript(args: ExecuteScriptArgs): Promise<ScriptResu
   }
   await acquireScriptLock({ boxRoot, scriptName, triggeredBy: "schedule", ...(parsed.lockGroup ? { lockGroup: parsed.lockGroup } : {}) });
   const windowMs = parsed.budget?.windowMs ?? DEFAULT_RUN_WINDOW_MS;
+  // This script's own span, not the tick's — the deferred classification must
+  // not attribute an unavailability detected by an EARLIER script in this
+  // tick to this script's unrelated failure.
+  const scriptStartedAt = getBoxTime(boxRoot);
   try {
     // Tooling profile: scheduled `runs:` commands are box tooling (mostly
     // `cb wakeup`, which syncs the connectors).
@@ -278,7 +283,7 @@ export async function executeScript(args: ExecuteScriptArgs): Promise<ScriptResu
     return { name: scriptName, status: "ran", command: parsed.runs, durationMs };
   } catch (err) {
     const { durationMs, sleepAffected } = fallbackTiming(err);
-    const outcome = await classifyScheduleFailure({ boxRoot, runStartedAt: now, error: err });
+    const outcome = await classifyScheduleFailure({ boxRoot, runStartedAt: scriptStartedAt, error: err });
     recordOutcome(state, { result: outcome.result, error: outcome.error, durationMs, sleepAffected, windowMs, now });
     await saveScriptState({ boxRoot, scriptName, state });
     if (!options.quiet) {

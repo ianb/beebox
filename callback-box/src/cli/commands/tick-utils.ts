@@ -40,6 +40,7 @@ import {
   classifyScheduleFailure,
   engineWaitReason,
 } from "../../core/schedule/engine-wait.js";
+import { getBoxTime } from "../../lib/time.js";
 
 /** Timing for a run that failed outside execWithTimeout (e.g. spawn error):
  * no measurement exists, so record zero rather than invent one. */
@@ -67,10 +68,6 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
 
   let ranCount = 0;
   const running = await loadRunningScripts(boxRoot);
-  // Engine unavailable (e.g. quota-exhausted): running would burn attempts
-  // that cannot succeed. `lastRun` stays untouched, so scripts stay due and
-  // run on the first wakeup after the reset.
-  const engineWait = await boxEngineUnavailability(boxRoot);
 
   for (const file of files) {
     const scriptName = file.replace(".scheduled-script.card", "");
@@ -91,6 +88,12 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
       continue;
     }
 
+    // Engine unavailable (e.g. quota-exhausted): running would burn attempts
+    // that cannot succeed. Re-checked per script — an earlier script in this
+    // same pass may have just detected the episode. `lastRun` stays
+    // untouched, so scripts stay due and run on the first wakeup after the
+    // reset.
+    const engineWait = await boxEngineUnavailability(boxRoot);
     if (engineWait !== null) {
       console.log(`  Skipping ${scriptName}: ${engineWaitReason(engineWait)}`);
       continue;
@@ -128,6 +131,10 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
     console.log(`  Running ${scriptName}...`);
     await acquireScriptLock({ boxRoot, scriptName, triggeredBy: "wakeup", ...(parsed.lockGroup ? { lockGroup: parsed.lockGroup } : {}) });
     const windowMs = parsed.budget?.windowMs ?? DEFAULT_RUN_WINDOW_MS;
+    // This script's own span, not the pass's — the deferred classification
+    // must not attribute an unavailability detected by an EARLIER script in
+    // this pass to this script's unrelated failure.
+    const scriptStartedAt = getBoxTime(boxRoot);
     try {
       // Tooling profile: on-wakeup `runs:` commands are box tooling (mostly
       // `cb` invocations that sync connectors).
@@ -149,7 +156,7 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
     } catch (err) {
       const { durationMs, sleepAffected } = fallbackTiming(err);
 
-      const outcome = await classifyScheduleFailure({ boxRoot, runStartedAt: now, error: err });
+      const outcome = await classifyScheduleFailure({ boxRoot, runStartedAt: scriptStartedAt, error: err });
       recordOutcome(state, { result: outcome.result, error: outcome.error, durationMs, sleepAffected, windowMs, now });
       await saveScriptState({ boxRoot, scriptName, state });
       console.error(`  ${outcome.result === "deferred" ? "Deferred" : "Failed"}: ${outcome.error}`);
