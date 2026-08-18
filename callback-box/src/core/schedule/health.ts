@@ -23,6 +23,7 @@ import {
   type ParsedScheduledScript,
 } from "../../schemas/scheduled-script.js";
 import type { ScriptState } from "./state.js";
+import { isContendedFailure } from "../../lib/git.js";
 
 const { rrulestr } = rrulePkg;
 
@@ -120,7 +121,14 @@ export function evaluateTaskHealth(input: EvaluateTaskInput): TaskHealth {
   }
 
   if (state.consecutiveFailures >= 1) {
-    return { ...base, status: "failing", ...(blockedReason ? { reason: blockedReason } : {}) };
+    // A task that lost a git-index race never got to run its own work, so the
+    // reader should not go debugging the task. Contention still counts as a
+    // failure (four in a row is worth surfacing), but it says what it is.
+    const contended = state.lastError !== null && isContendedFailure(state.lastError);
+    const failureReason = contended
+      ? "contended — another process held the box's git index"
+      : blockedReason;
+    return { ...base, status: "failing", ...(failureReason ? { reason: failureReason } : {}) };
   }
   if (blockedReason) {
     return { ...base, status: "blocked", reason: blockedReason };

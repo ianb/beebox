@@ -1,6 +1,6 @@
 ---
 title: "Chat sends often show 'failed'/stay in the composer though the message actually sent — receipts are unreliable"
-workstream: send-receipt-logging
+workstream: emission-model
 needs: [manual-testing]
 area: callback-box
 filed-by: agent
@@ -8,10 +8,12 @@ discovered-in: main session — boxholder reports it happening commonly across n
 priority: important
 ---
 
-> **⏳ Awaiting manual testing** — the outcome-driven fix landed through
-> `ef20af7f`; repeat the cold Codex send from the native composer and confirm it
-> remains pending until the real sent/queued outcome instead of restoring the
-> message after an elapsed-time rejection. Only the developer clears this.
+> **⏳ Awaiting manual testing** — superseding fix landed in the
+> emission-model workstream (`6e928be6`): the server now acks a send the
+> moment it is durably recorded, before the engine spawns, so the cold-Codex
+> first send should confirm in about a second instead of remaining pending
+> for the spawn. Repeat the cold send and confirm the composer clears
+> immediately and the turn still streams. Only the developer clears this.
 
 > **Job to be done:** *When I send a message and then lock my phone / switch apps /
 > background the tab before the reply starts — or my connection blips for a
@@ -130,8 +132,13 @@ confirmation remains the final gate.
 1. Open an existing Codex conversation in the iOS app and let it become idle.
 2. Restart the box/server so the webview and Codex process are cold.
 3. Send one message immediately from the native composer.
-4. Confirm the message receives a sent or queued receipt, does not return to the
-   composer or show “The chat did not confirm the message,” and runs exactly once.
+4. Confirm the message confirms within a second or two (no minutes-long
+   "Sending message…"), does not return to the composer, and runs exactly
+   once — the engine spawn now happens after the ack, so cold start should be
+   invisible to the send.
+5. If the run fails to start (kill the engine to force it), the failure must
+   appear as an error on the turn in chat — never as the text bouncing back
+   into the composer.
 
 ## Why it matters
 

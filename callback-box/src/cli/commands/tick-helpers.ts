@@ -26,7 +26,7 @@ import type {
 } from "../../core/schedule/state.js";
 import { execWithTimeout, SCRIPT_TIMEOUT } from "../../lib/exec-with-timeout.js";
 import { fallbackTiming, handleCreateAfterSuccess } from "./tick-utils.js";
-import { stageAll, commit, getStatus } from "../../lib/git.js";
+import { stageAll, commit, getStatus, withBoxGitLock } from "../../lib/git.js";
 import { buildToolingScriptEnv } from "../../core/script-env.js";
 import type { TickOptions, ScriptResult } from "./tick.js";
 import { errnoCode } from "../../lib/error-guards.js";
@@ -209,8 +209,14 @@ async function handlePostSuccess(args: PostSuccessArgs): Promise<void> {
   // bypasses the at-rest gate for chat blockers) and also closes the race
   // where a chat starts during a long script run. Deferred changes sit
   // uncommitted until the next at-rest tick sweeps them.
-  const postStatus = await getStatus(boxRoot);
-  if (!postStatus.clean) {
+  // One locked span from the status read through the commit: the read decides
+  // whether to sweep, and stageAll sweeps the WHOLE tree, so another writer
+  // landing in between would either be swept into this commit or make the
+  // decision stale.
+  await withBoxGitLock(boxRoot, async () => {
+    const postStatus = await getStatus(boxRoot);
+    if (postStatus.clean) return;
+
     const activeChats = await loadActiveChats(boxRoot);
     if (activeChats.size > 0) {
       if (!options.quiet) {
@@ -226,7 +232,7 @@ async function handlePostSuccess(args: PostSuccessArgs): Promise<void> {
       message: `Tick: ${parts.join(", ") || "housekeeping"}`,
       trailers: { "Triggered-By": "cb tick" },
     });
-  }
+  });
 }
 
 interface ExecuteScriptArgs {

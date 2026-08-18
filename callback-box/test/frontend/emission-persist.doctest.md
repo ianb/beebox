@@ -11,6 +11,8 @@ import {
   parsePersistedEmission,
   loadPersistedEmission,
   savePersistedEmission,
+  commitPersistedEmission,
+  isEmptyEmissionDraft,
   adoptLegacyComposerDrafts,
   partitionFiles,
   PERSIST_BYTE_BUDGET,
@@ -54,6 +56,41 @@ emissionKey("test1")
 
 emissionKey(undefined)
 => cb-input-emission:default
+```
+
+## A send empties the composer, and the key goes with it
+
+`commitPersistedEmission` is what the persistence hook runs on every store
+change. An empty draft — what every send site leaves behind once text,
+attachments, and selections are cleared — REMOVES the key rather than
+rewriting it empty, and the hook runs this synchronously instead of on the
+400ms debounce. That is the fix for
+issues/bugs/2026-07-23-voice-send-lingers-as-unsent-recovery-draft.md: a
+debounced clear lost its race with an in-app navigation, so the pre-send
+draft survived and was offered back as "unsent".
+
+```ts
+const s = fakeStorage();
+const empty = { text: "", images: [], files: [], selections: [] };
+
+// Dictating persists a draft…
+commitPersistedEmission(s, { boxSlug: "test1", draft: { ...draft, text: "send this please" }, updatedAt: 1000 });
+Object.keys(s.dump()).join(",")
+=> cb-input-emission:test1
+
+// …and the send that empties the store takes the key with it. No window.
+commitPersistedEmission(s, { boxSlug: "test1", draft: empty, updatedAt: 2000 });
+Object.keys(s.dump()).length + " keys | recovery offers: " + JSON.stringify(loadPersistedEmission(s, "test1"))
+=> 0 keys | recovery offers: null
+
+// Emptiness is all four slices, not just the text.
+isEmptyEmissionDraft(empty) + "," + isEmptyEmissionDraft({ ...empty, text: "x" }) + "," + isEmptyEmissionDraft(draft)
+=> true,false,false
+
+// A non-empty draft still saves normally (that's the debounced typing path).
+commitPersistedEmission(s, { boxSlug: "test1", draft, updatedAt: 3000 });
+loadPersistedEmission(s, "test1")?.text
+=> half a thought [file1]
 ```
 
 ## Oversized images are dropped from persistence, not from memory

@@ -1,12 +1,27 @@
 ---
 title: "A scheduled task fails outright on `.git/index.lock` — the one-retry budget is too small for unattended work"
-workstream: unattached
+workstream: box-git-lock
 area: callback-box
 labels: [scheduler, git, procedures]
 filed-by: agent
 discovered-by: agent
 discovered-in: main session — investigating scheduled-task failures on a local box
+resolution: implemented
 ---
+
+Closed by `worktree-box-git-lock`, landed through commit `3a0e88a3` (branch tip;
+see `docs/implemented-plans/box-git-lock.md` for the full plan). `withBoxGitLock`
+(`src/lib/git-lock.ts`) now serializes every in-repo git-index mutator and holds
+one lock across each multi-operation span (structural fix parts 1 and 2). `cb
+health` distinguishes a lost lock race from a broken task ("Also worth fixing").
+Part 3 (deferring scheduled work on the active-chats signal) was deliberately
+**not** implemented — the plan's "NOT in scope" section explains why: it's
+already built for the case it fits, and it would not have prevented this
+specific failure, which arose mid-run rather than pre-run. Part 4 (commit less
+casually) shipped only for `cb feedback` (one span instead of two); broader
+commit-volume reduction is explicitly out of scope. This also resolves the
+Track H deferral recorded in the already-closed
+[git commit race audit](2026-07-05-git-commit-race-audit.md).
 
 A scheduled procedure failed with:
 
@@ -24,7 +39,7 @@ lock race.
 
 ## This is a known, deliberate trade-off that is now visibly too thin
 
-[git commit race audit](../closed/bugs/2026-07-05-git-commit-race-audit.md)
+[git commit race audit](2026-07-05-git-commit-race-audit.md)
 converted 33 sites to `stageAndCommitPaths` and closed with an explicit
 decision:
 
@@ -116,7 +131,7 @@ with.
 **Distinguish "lost a lock race" from "the task failed" in health.** A task that
 never ran is not a task that ran and broke, and the scheduler reports both as
 `exit code 1`. Compare
-[health masks a review-step turn cap](2026-08-12-health-masks-review-step-turn-cap.md),
+[health masks a review-step turn cap](../../bugs/2026-08-12-health-masks-review-step-turn-cap.md),
 the same complaint about a different collapsed distinction.
 
 The *deferred-recoverable* sibling of this distinction now exists: engine

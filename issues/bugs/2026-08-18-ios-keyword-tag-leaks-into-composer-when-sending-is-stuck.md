@@ -1,12 +1,28 @@
 ---
 title: "iOS: a voice keyword leaves its tag in the composer when the send lock is stuck, and repeats nest the tags"
-workstream: unattached
+workstream: emission-model
+needs: [manual-testing]
 area: callback-box
 labels: [ios, voice, chat]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder report from the iOS app
+design: ../../callback-box/docs/implemented-plans/emission-model.md
 ---
+
+> **⏳ Awaiting manual testing** — fix landed in `cba769df` (requires a fresh
+> app install): a refused keyword now leaves the composer exactly as it was
+> (tag AND spoken command dropped), detection refuses to match inside an
+> existing tag, and the refusal message names what is actually blocking.
+> Live-mic behavior is simulator-unverified. See Manual testing. Only the
+> developer clears this.
+>
+> One correction to this issue's mechanism: `isSending` cannot be jammed by a
+> stuck pending emission — none of its three terms (`isPreparingSend`,
+> `batchProgress`, `draftStore.isReady`) spans the awaiting-receipt window.
+> Whatever wedged it is one of those terms sticking; `cba769df` adds BoxLog
+> transition + 60s-wedge instrumentation so the next field occurrence names
+> its term in `client-debug.log`.
 
 Saying **"clear message"** on iOS puts the literal text
 `<erase-message phrase="Clear message" />` into the composer instead of erasing
@@ -81,6 +97,19 @@ defect is what happens to the *text* when the lock refuses, not the refusal.
   `src/frontend/src/lib/audio/speech-keywords.ts` and `input/voice-intent.ts`
   are a parallel implementation; if it has an equivalent in-flight guard placed
   after substitution, it has this bug too and nobody has hit it yet.
+
+## Manual testing
+
+1. Start a photo batch upload (or otherwise hold the send lock), then say
+   "clear message": the composer text must be unchanged — no
+   `<erase-message …/>` tag, and no literal "clear message" words — with a
+   status naming what's blocking (e.g. photos still uploading).
+2. Repeat the keyword: still no tag, no nesting.
+3. With the lock free, say "clear message": the draft clears as before
+   (the accepted path must still work).
+4. If a stuck `isSending` recurs in normal use, pull
+   `.callback-box/client-debug.log` — the new `[ios]` send-lock entries name
+   the wedged term; report it on this issue.
 
 ## Also reported, likely separate
 

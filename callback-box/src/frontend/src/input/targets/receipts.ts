@@ -35,9 +35,12 @@ const pending = new Map<string, PendingReceipt>();
 /**
  * Register interest in a send's outcome BEFORE dispatching it. Exactly one
  * settle wins. There is deliberately no elapsed-time verdict: `/chat/send`
- * resolves only after the backend accepts the turn, and cold startup can take
- * several minutes. Transport and backend failures settle explicitly; treating
- * a still-pending POST as rejected restores a message the server may later run.
+ * resolves once the backend has durably recorded the message — since the
+ * emission-model Track A reorder that is one disk write, not the engine's
+ * (possibly minutes-long) cold start, so a POST still pending at
+ * PENDING_DIAGNOSTIC_MS below is genuinely anomalous rather than an ordinary
+ * cold spawn. Transport and backend failures settle explicitly; treating a
+ * still-pending POST as rejected restores a message the server may later run.
  */
 export function expectReceipt(emissionId: string): Promise<Receipt> {
   return new Promise((resolve) => {

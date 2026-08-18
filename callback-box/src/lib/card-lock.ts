@@ -61,6 +61,13 @@
  * function that its callers invoke without re-locking. (Locking a
  * *different* file from within a locked `fn` is fine.)
  *
+ * `withBoxGitLock` (`git-lock.ts`) makes the opposite call — it passes
+ * through on reentrancy — because it protects a RESOURCE (the repository
+ * index) where nesting is ordinary composition, not a SEMANTIC RMW where
+ * nesting means the caller is doing two overlapping updates. Wrapping a card
+ * RMW's git commit inside the card lock is the intended order and is fine:
+ * the two locks are different mechanisms for different problems.
+ *
  * ## Drain semantics
  *
  * Map entries are removed when the chain drains (compare-and-delete of the

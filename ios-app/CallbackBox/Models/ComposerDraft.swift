@@ -132,10 +132,91 @@ struct ComposerDraft: Codable, Equatable, Sendable {
     }
 }
 
-enum PendingEmissionState: Codable, Equatable, Sendable {
-    case awaitingWebView
-    case awaitingReceipt(attempt: Int, sentAt: Date)
+/// Durable state of a pending native emission.
+///
+/// `pending` covers everything before a receipt settles it: `deliveryAttempts == 0`
+/// with a nil `lastAttemptAt` means the emission has never been handed to the
+/// webview; a positive count with a date means it has been delivered at least once
+/// and the receipt has not arrived yet. Whether the webview currently holds it is
+/// session state (`inflightEmissionGenerations`), not a durable distinction.
+enum PendingEmissionState: Equatable, Sendable {
+    case pending(deliveryAttempts: Int, lastAttemptAt: Date?)
     case rejected(reason: String)
+}
+
+extension PendingEmissionState: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case pending
+        case rejected
+        // Legacy cases, decoded only. `awaitingWebView` and `awaitingReceipt`
+        // were collapsed into `pending`; entries persisted before that change
+        // still carry these keys.
+        case awaitingWebView
+        case awaitingReceipt
+    }
+
+    private enum PendingKeys: String, CodingKey {
+        case deliveryAttempts
+        case lastAttemptAt
+    }
+
+    private enum RejectedKeys: String, CodingKey {
+        case reason
+    }
+
+    private enum LegacyAwaitingReceiptKeys: String, CodingKey {
+        case attempt
+        case sentAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        if container.contains(.pending) {
+            let nested = try container.nestedContainer(keyedBy: PendingKeys.self, forKey: .pending)
+            self = .pending(
+                deliveryAttempts: try nested.decode(Int.self, forKey: .deliveryAttempts),
+                lastAttemptAt: try nested.decodeIfPresent(Date.self, forKey: .lastAttemptAt)
+            )
+            return
+        }
+        if container.contains(.rejected) {
+            let nested = try container.nestedContainer(keyedBy: RejectedKeys.self, forKey: .rejected)
+            self = .rejected(reason: try nested.decode(String.self, forKey: .reason))
+            return
+        }
+        if container.contains(.awaitingWebView) {
+            self = .pending(deliveryAttempts: 0, lastAttemptAt: nil)
+            return
+        }
+        if container.contains(.awaitingReceipt) {
+            let nested = try container.nestedContainer(
+                keyedBy: LegacyAwaitingReceiptKeys.self,
+                forKey: .awaitingReceipt
+            )
+            self = .pending(
+                deliveryAttempts: try nested.decode(Int.self, forKey: .attempt),
+                lastAttemptAt: try nested.decode(Date.self, forKey: .sentAt)
+            )
+            return
+        }
+        throw DecodingError.dataCorrupted(DecodingError.Context(
+            codingPath: container.codingPath,
+            debugDescription: "Unrecognized PendingEmissionState case."
+        ))
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .pending(let deliveryAttempts, let lastAttemptAt):
+            var nested = container.nestedContainer(keyedBy: PendingKeys.self, forKey: .pending)
+            try nested.encode(deliveryAttempts, forKey: .deliveryAttempts)
+            try nested.encodeIfPresent(lastAttemptAt, forKey: .lastAttemptAt)
+        case .rejected(let reason):
+            var nested = container.nestedContainer(keyedBy: RejectedKeys.self, forKey: .rejected)
+            try nested.encode(reason, forKey: .reason)
+        }
+    }
 }
 
 struct PendingEmission: Codable, Equatable, Identifiable, Sendable {
@@ -147,6 +228,82 @@ struct PendingEmission: Codable, Equatable, Identifiable, Sendable {
     var diarized: Bool
     var state: PendingEmissionState
     var createdAt: Date
+}
+
+/// When a `pending` emission is redelivered, and when it has waited long enough
+/// to deserve a user exit.
+///
+/// Redelivery is the *same* idempotent delivery of the same emission ID: the
+/// server's claim registry answers a repeat POST idempotently, so this is a
+/// retry loop and never a timeout verdict. There is deliberately no attempt
+/// cap — the long-pending affordance (Discard / Restore) is the exit, not an
+/// expiry rule that manufactures a failure.
+///
+/// Both decisions use wall-clock elapsed time on purpose: an emission stuck
+/// since before the device slept should retry immediately on wake rather than
+/// wait out the remainder of a monotonic budget.
+enum EmissionRedeliveryPolicy {
+    /// Wait after the 1st, 2nd, and 3rd delivery attempt.
+    static let backoffSchedule: [TimeInterval] = [10, 30, 60]
+    /// Wait after every attempt beyond the schedule.
+    static let steadyStateInterval: TimeInterval = 120
+    /// Age at which a `pending` emission stops rendering as a plain
+    /// "Sending message…" row and offers Discard / Restore.
+    static let longPendingThreshold: TimeInterval = 30
+
+    /// Wait before the next redelivery, given how many attempts have been made.
+    static func retryDelay(afterDeliveryAttempts attempts: Int) -> TimeInterval {
+        guard attempts >= 1 else {
+            return 0
+        }
+        let index = attempts - 1
+        return index < backoffSchedule.count ? backoffSchedule[index] : steadyStateInterval
+    }
+
+    /// True when a delivered-but-unconfirmed emission is due for another
+    /// delivery. An emission that has never been delivered is left to the
+    /// ordinary delivery path, which is not gated on a backoff.
+    static func shouldRedeliver(
+        deliveryAttempts: Int,
+        lastAttemptAt: Date?,
+        now: Date
+    ) -> Bool {
+        guard deliveryAttempts >= 1, let lastAttemptAt else {
+            return false
+        }
+        let elapsed = now.timeIntervalSince(lastAttemptAt)
+        guard elapsed >= 0 else {
+            // The wall clock moved backwards; wait rather than storm the box.
+            return false
+        }
+        return elapsed >= retryDelay(afterDeliveryAttempts: deliveryAttempts)
+    }
+
+    static func shouldRedeliver(state: PendingEmissionState, now: Date) -> Bool {
+        switch state {
+        case .pending(let deliveryAttempts, let lastAttemptAt):
+            return shouldRedeliver(
+                deliveryAttempts: deliveryAttempts,
+                lastAttemptAt: lastAttemptAt,
+                now: now
+            )
+        case .rejected:
+            return false
+        }
+    }
+
+    /// True when a still-`pending` emission has waited long enough that the
+    /// user gets a decision. The state does not change; only the presentation.
+    static func isLongPending(createdAt: Date, now: Date) -> Bool {
+        now.timeIntervalSince(createdAt) >= longPendingThreshold
+    }
+
+    static func isLongPending(_ emission: PendingEmission, now: Date) -> Bool {
+        guard case .pending = emission.state else {
+            return false
+        }
+        return isLongPending(createdAt: emission.createdAt, now: now)
+    }
 }
 
 struct VoicePreparation: Codable, Equatable, Identifiable, Sendable {

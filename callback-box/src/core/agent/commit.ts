@@ -7,7 +7,7 @@
  */
 
 import { fmt } from "../../lib/format.js";
-import { getStatus, stageAll, commit, type GitStatus } from "../../lib/git.js";
+import { getStatus, stageAll, commit, withBoxGitLock, type GitStatus } from "../../lib/git.js";
 import type { Agent } from "./types.js";
 
 export const COMMIT_NUDGE_PROMPT = `IMPORTANT: You have uncommitted changes in the working directory. Please:
@@ -80,9 +80,15 @@ export async function ensureAgentCommitted(options: EnsureCommittedOptions): Pro
 
   // Final fallback: commit with Fallback trailer
   onOutput?.(fmt.warn("  Agent failed to commit after retry — creating fallback commit\n"));
-  await stageAll(boxRoot);
-  await commit(boxRoot, {
-    message: fallbackMessage,
-    trailers: { ...fallbackTrailers, Fallback: "true" },
+  // Only the stage+commit tail goes inside the lock. The span above it
+  // contains `agent.invoke`, and holding the box's git lock across a whole
+  // agent turn would block every other writer for minutes — the one thing
+  // `withBoxGitLock` tells callers never to do.
+  await withBoxGitLock(boxRoot, async () => {
+    await stageAll(boxRoot);
+    await commit(boxRoot, {
+      message: fallbackMessage,
+      trailers: { ...fallbackTrailers, Fallback: "true" },
+    });
   });
 }

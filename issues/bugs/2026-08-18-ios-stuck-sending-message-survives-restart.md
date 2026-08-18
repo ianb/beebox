@@ -1,12 +1,19 @@
 ---
 title: "iOS: a stuck \"Sending message…\" persists across app restarts and doubles on a real send"
-workstream: unattached
+workstream: emission-model
+needs: [manual-testing]
 area: callback-box
 labels: [ios, chat, emissions]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder report from the iOS app
+design: ../../callback-box/docs/implemented-plans/emission-model.md
 ---
+
+> **⏳ Awaiting manual testing** — fixes landed in `d641042c`/`c296b95f`
+> (state collapse + in-session redelivery + a Restore/Discard affordance
+> after 30s pending; requires a fresh app install). See Manual testing.
+> Only the developer clears this.
 
 The iOS app shows **"Sending message…"** for a message that is not being sent.
 It survives quitting and relaunching the app, and when a real message is then
@@ -69,3 +76,36 @@ pending into `.rejected` would reuse that instead of inventing new UI, and turns
 Not yet established deliberately. Given the receipt bug's trigger, the path to
 try is: cold box/agent, send from the native composer, and see whether the
 resulting emission ever leaves `.awaitingReceipt`.
+
+## What landed (2026-08-18, emission-model workstream)
+
+- The two non-terminal states collapsed to one `pending(deliveryAttempts,
+  lastAttemptAt)` (`d641042c`) — persisted legacy entries migrate, keeping
+  their attempt count and timestamp.
+- A pending emission whose receipt hasn't arrived now **redelivers on
+  backoff** (10s/30s/60s, then every 120s) within a live session; the server
+  answers idempotently from its dedup claim, so a message that already ran
+  resolves as `sent` on the next attempt (`c296b95f`).
+- Past 30 seconds pending, the row swaps "Sending message…" for "Still
+  waiting for the box to confirm this message." with **Restore / Discard** —
+  a user exit that never manufactures a failure verdict.
+- Separately, the server now acks a send when it is durably recorded, before
+  the engine spawns (`6e928be6`), so the minutes-long cold-start window that
+  produced these wedges is gone at the source.
+
+One thing to check **first**: whether the installed phone build predates
+`ef20af7f` (2026-08-15) — its relaunch-redelivery alone should have cured a
+stuck entry on restart, so a report of one surviving restarts on a current
+build would point somewhere new.
+
+## Manual testing
+
+1. Install the current app build.
+2. If a stuck "Sending message…" from the old build is still present, it
+   should resolve itself (redelivery + dedup) within seconds of opening the
+   box, or offer Restore/Discard after 30s.
+3. Fresh wedge attempt: put the phone in airplane mode, send from the native
+   composer, keep the app open — after ~30s the row must offer
+   Restore/Discard; on restoring connectivity the send must complete exactly
+   once and the row clear.
+4. Confirm no doubled rows when sending a new message while one is pending.

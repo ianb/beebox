@@ -3,7 +3,7 @@
  * shells), validation, git-clean enforcement, and result recording.
  */
 
-import { stageAll, commit } from "../../lib/git.js";
+import { stageAll, commit, withBoxGitLock } from "../../lib/git.js";
 import { fmt } from "../../lib/format.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import type { CommandContext } from "../command-runner.js";
@@ -145,10 +145,12 @@ async function runPrecheck(params: ExecuteStepParams): Promise<PrecheckOutcome> 
         completedAt: getBoxTimeISO(boxRoot),
       },
     });
-    await stageAll(boxRoot);
-    await commit(boxRoot, {
-      message: `[procedure] Failed step: ${step.id} (precheck)`,
-      trailers: { Procedure: procedure.name, Step: step.id },
+    await withBoxGitLock(boxRoot, async () => {
+      await stageAll(boxRoot);
+      await commit(boxRoot, {
+        message: `[procedure] Failed step: ${step.id} (precheck)`,
+        trailers: { Procedure: procedure.name, Step: step.id },
+      });
     });
     ctx.writeLine("");
     return { outcome: "failed" };
@@ -175,10 +177,12 @@ async function recordNoRunPhase(params: ExecuteStepParams): Promise<void> {
       completedAt: getBoxTimeISO(boxRoot),
     },
   });
-  await stageAll(boxRoot);
-  await commit(boxRoot, {
-    message: `[procedure] Complete step: ${step.id}`,
-    trailers: { Procedure: procedure.name, Step: step.id },
+  await withBoxGitLock(boxRoot, async () => {
+    await stageAll(boxRoot);
+    await commit(boxRoot, {
+      message: `[procedure] Complete step: ${step.id}`,
+      trailers: { Procedure: procedure.name, Step: step.id },
+    });
   });
   ctx.writeLine("");
 }
@@ -261,10 +265,12 @@ async function recordStepResults(
   const succeeded = stepUpdate.status !== "failed";
 
   await updateStepInRunCard({ runCardPath, stepId: step.id, update: stepUpdate });
-  await stageAll(boxRoot);
-  await commit(boxRoot, {
-    message: `[procedure] ${succeeded ? "Complete" : "Failed"} step: ${step.id}`,
-    trailers: { Procedure: procedure.name, Step: step.id },
+  await withBoxGitLock(boxRoot, async () => {
+    await stageAll(boxRoot);
+    await commit(boxRoot, {
+      message: `[procedure] ${succeeded ? "Complete" : "Failed"} step: ${step.id}`,
+      trailers: { Procedure: procedure.name, Step: step.id },
+    });
   });
 
   if (succeeded) {
