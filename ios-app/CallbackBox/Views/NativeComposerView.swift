@@ -48,6 +48,13 @@ struct NativeComposerView: View {
     @State private var pendingClockTicker = Timer
         .publish(every: 5, on: .main, in: .common)
         .autoconnect()
+    /// When each `isSending` term became true. Wall-clock `Date` rather than a
+    /// monotonic reading: a term still held after the phone slept for an hour has
+    /// been held for an hour, and that is what the log should say.
+    @State private var sendBlockerSince: [ComposerSendBlocker: Date] = [:]
+    /// Terms already reported as wedged, so the ticker warns once per hold
+    /// instead of every five seconds.
+    @State private var warnedSendBlockers: Set<ComposerSendBlocker> = []
 
     var body: some View {
         presentedComposer
@@ -60,10 +67,14 @@ struct NativeComposerView: View {
             .background(.regularMaterial)
             .ignoresSafeArea(.container, edges: .bottom)
             .onReceive(pendingClockTicker) { date in
+                reportWedgedSendBlockers(now: date)
                 guard scenePhase == .active, hasUnconfirmedPendingEmission else {
                     return
                 }
                 pendingReferenceDate = date
+            }
+            .onChange(of: sendBlockers) { previous, current in
+                noteSendBlockerChange(from: previous, to: current)
             }
             .onChange(of: scenePhase) { _, phase in
                 guard phase == .active else {
@@ -113,6 +124,10 @@ struct NativeComposerView: View {
         }
         .onAppear {
             pendingReferenceDate = Date()
+            // `draftNotReady` is true before the first render, so its hold has no
+            // transition to observe — seed it here or a draft load that never
+            // completes is the one wedge the instrumentation cannot name.
+            noteSendBlockerChange(from: [], to: sendBlockers)
             applyVoiceTurn(.speechPlaybackChanged(playing: speechPlaybackActive))
             applyEarcon(.responseActiveChanged(responseActive))
             if initiallyFocused {
@@ -475,14 +490,25 @@ struct NativeComposerView: View {
         // still discard the draft — including the text the running batch took as
         // its introduction. A voice path that can do what a disabled button
         // cannot is worse than no lock, because nothing on screen explains it.
-        if isSending {
-            statusText = batchProgress == nil
-                ? "Still sending — try again in a moment."
-                : "Photos are still uploading — try again when they finish."
+        let blockers = sendBlockers
+        if blockers.isEmpty == false {
+            // The tag substitution is still held inside `dictation` — nothing of
+            // this command has touched the composer, and dropping it here is what
+            // keeps `<erase-message …/>` (and the spoken words that produced it)
+            // out of a draft whose command never ran.
+            dictation.discardKeywordSubstitution()
+            statusText = ComposerSendBlocker.voiceRefusalStatus(for: blockers)
             applyEarcon(.microphoneStopped)
             applyVoiceTurn(.microphoneStopped)
+            BoxLog.info(
+                "voice keyword refused action=\(intent.action.rawValue)"
+                    + " blockers=\(ComposerSendBlocker.logLabel(for: blockers))",
+                category: .composer,
+                targetBoxID: box.id
+            )
             return
         }
+        dictation.commitKeywordSubstitution()
         switch intent.action {
         case .send, .sendHq, .sendClose:
             sendKeywordIntent(intent)
@@ -662,7 +688,18 @@ struct NativeComposerView: View {
     /// the normal way to caption a batch: the introduction is read at finalize,
     /// so whatever is typed during the upload becomes the batch's note.
     private var isSending: Bool {
-        isPreparingSend || batchProgress != nil || draftStore.isReady == false
+        sendBlockers.isEmpty == false
+    }
+
+    /// The lock's terms, individually named. `isSending` is their disjunction;
+    /// the refusal copy and the wedge diagnostics both need the terms, not the
+    /// verdict.
+    private var sendBlockers: [ComposerSendBlocker] {
+        ComposerSendBlocker.blockers(
+            isPreparingSend: isPreparingSend,
+            isUploadingPhotoBatch: batchProgress != nil,
+            isDraftReady: draftStore.isReady
+        )
     }
 
     /// Gates only the TEXT SURFACE. A batch in flight must not lock it — the user
@@ -670,6 +707,78 @@ struct NativeComposerView: View {
     private var isTextEntryLocked: Bool {
         isPreparingSend || draftStore.isReady == false
     }
+
+    /// Records when each lock term engaged and logs the transitions.
+    ///
+    /// The field report this instrumentation answers said only "it stays in
+    /// Sending" — with no way to tell which of the three terms was held, the
+    /// filed mechanism was a guess (and the code contradicts it). These entries
+    /// name the term and its age, which is the whole point.
+    private func noteSendBlockerChange(
+        from previous: [ComposerSendBlocker],
+        to current: [ComposerSendBlocker]
+    ) {
+        let now = Date()
+        let previousSet = Set(previous)
+        let currentSet = Set(current)
+        let heldSince = sendBlockerSince.values.min()
+        for blocker in currentSet.subtracting(previousSet) {
+            sendBlockerSince[blocker] = now
+        }
+        for blocker in previousSet.subtracting(currentSet) {
+            sendBlockerSince[blocker] = nil
+            warnedSendBlockers.remove(blocker)
+        }
+        if previous.isEmpty, current.isEmpty == false {
+            BoxLog.info(
+                "send lock engaged terms=\(ComposerSendBlocker.logLabel(for: current))",
+                category: .composer,
+                targetBoxID: box.id
+            )
+            return
+        }
+        if previous.isEmpty == false, current.isEmpty {
+            let heldMs = heldSince.map { String(Int(now.timeIntervalSince($0) * 1000)) } ?? "unknown"
+            BoxLog.info(
+                "send lock cleared lastTerms=\(ComposerSendBlocker.logLabel(for: previous)) heldMs=\(heldMs)",
+                category: .composer,
+                targetBoxID: box.id
+            )
+            return
+        }
+        guard previous != current else {
+            return
+        }
+        BoxLog.info(
+            "send lock terms changed from=\(ComposerSendBlocker.logLabel(for: previous))"
+                + " to=\(ComposerSendBlocker.logLabel(for: current))",
+            category: .composer,
+            targetBoxID: box.id
+        )
+    }
+
+    /// Warns once per term that has been held past `sendBlockerWedgeSeconds`.
+    /// `preparingSend` is the loudest of these: it spans a single enqueue call,
+    /// so a minute of it means a staging or clear-for-sending call never
+    /// returned, and the composer is wedged rather than busy.
+    private func reportWedgedSendBlockers(now: Date) {
+        for (blocker, since) in sendBlockerSince
+        where warnedSendBlockers.contains(blocker) == false
+            && now.timeIntervalSince(since) >= Self.sendBlockerWedgeSeconds {
+            warnedSendBlockers.insert(blocker)
+            BoxLog.warn(
+                "send lock term stuck term=\(blocker.rawValue)"
+                    + " heldSeconds=\(Int(now.timeIntervalSince(since)))"
+                    + " terms=\(ComposerSendBlocker.logLabel(for: sendBlockers))",
+                category: .composer,
+                targetBoxID: box.id
+            )
+        }
+    }
+
+    /// A term held this long is no longer "in flight". One enqueue, one staging
+    /// write, or one draft load has no legitimate reason to take a minute.
+    private static let sendBlockerWedgeSeconds: TimeInterval = 60
 
     private func applyVoiceTurn(_ event: NativeVoiceTurnEvent) {
         switch voiceTurn.handle(event) {
@@ -1174,6 +1283,63 @@ struct NativeComposerView: View {
             fileExtension: encoded.fileExtension,
             boxID: box.id
         )
+    }
+}
+
+/// The individual terms of the composer's `isSending` lock, named.
+///
+/// Two callers need the same classification and neither can work from a single
+/// boolean: the spoken-command refusal has to say what is actually blocking
+/// (only the photo-batch term is reliably transient), and the diagnostics have
+/// to name the stuck term after the phone is disconnected — the raw `isSending`
+/// bool told an earlier field report nothing, which is why this exists.
+enum ComposerSendBlocker: String, CaseIterable, Hashable {
+    /// A send/stage call is in flight. It should span one enqueue.
+    case preparingSend
+    /// A bulk photo batch is uploading. The one term with a real, visible
+    /// end — progress is on screen and the network drives it.
+    case photoBatchUploading
+    /// The draft store has not finished loading this box's draft. True from
+    /// launch until activation completes, so it is also the default state.
+    case draftNotReady
+
+    static func blockers(
+        isPreparingSend: Bool,
+        isUploadingPhotoBatch: Bool,
+        isDraftReady: Bool
+    ) -> [ComposerSendBlocker] {
+        var blockers: [ComposerSendBlocker] = []
+        if isPreparingSend {
+            blockers.append(.preparingSend)
+        }
+        if isUploadingPhotoBatch {
+            blockers.append(.photoBatchUploading)
+        }
+        if isDraftReady == false {
+            blockers.append(.draftNotReady)
+        }
+        return blockers
+    }
+
+    /// What a refused spoken command says. Only the photo term promises the
+    /// wait is short, because only it has a visible endpoint: "try again in a
+    /// moment" was previously said for every term, including ones that in the
+    /// field never cleared at all.
+    static func voiceRefusalStatus(for blockers: [ComposerSendBlocker]) -> String {
+        if blockers.contains(.photoBatchUploading) {
+            return "Photos are still uploading — try again when they finish."
+        }
+        if blockers.contains(.preparingSend) {
+            return "Still saving the last message — voice commands stay off until it finishes."
+        }
+        if blockers.contains(.draftNotReady) {
+            return "The draft has not finished loading — voice commands stay off until it does."
+        }
+        return "Voice commands are unavailable right now."
+    }
+
+    static func logLabel(for blockers: [ComposerSendBlocker]) -> String {
+        blockers.isEmpty ? "none" : blockers.map(\.rawValue).joined(separator: ",")
     }
 }
 

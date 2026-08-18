@@ -70,6 +70,21 @@ enum BoxLog {
         }
     }
 
+    /// Fire-and-forget a warning for a known box. Same identity reasoning as the
+    /// targeted `info` overload: a warning about a wedged state is worthless if a
+    /// box switch reattributes it.
+    static func warn(_ message: String, category: BoxLogCategory, targetBoxID: UUID) {
+        logger(for: category).warning("\(message, privacy: .public)")
+        Task {
+            await LogForwarder.shared.record(
+                level: .warn,
+                category: category,
+                message: message,
+                boxID: targetBoxID
+            )
+        }
+    }
+
     static func logger(for category: BoxLogCategory) -> Logger {
         loggers[category] ?? Logger(subsystem: subsystem, category: category.rawValue)
     }

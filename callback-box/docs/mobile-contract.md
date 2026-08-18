@@ -362,6 +362,14 @@ the contract.
   `sendKeywordIntent`.
 - **Drift:** fail-local — absent or malformed state leaves native narration off, avoiding an
   unintended audio upload.
+- **Keyword detection is per-side, not bridged.** Each surface detects spoken keywords over its own
+  transcript (`Services/SpeechKeywords.swift` natively; `lib/audio/speech-keywords.ts` +
+  `input/voice-intent.ts` on web) and only the resulting tagged text crosses the bridge as ordinary
+  emission content. The implementations deliberately diverge where their pipelines differ: native
+  holds a detected keyword's tag substitution until the composer's send lock accepts it (a refusal
+  restores the pre-keyword transcript) and refuses to match inside an existing markup tag; web never
+  re-feeds composer text to detection, so it needs neither guard. Neither side may assume the
+  other's detector fired.
 
 ### 4.5 Speech playback state (web → native)
 
