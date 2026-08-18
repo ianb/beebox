@@ -6,6 +6,7 @@ labels: [chat, voice, transcription]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder noticed retranscribe failing on first messages
+next-action: reconfirm
 ---
 
 Retranscription appears to fail on the **first message sent to a chat**, while

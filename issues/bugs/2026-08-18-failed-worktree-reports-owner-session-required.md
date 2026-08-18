@@ -6,6 +6,7 @@ labels: [router, auth, error-messages]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — iOS reported an auth error for what was a crashed worktree
+priority: normal
 ---
 
 When a worktree is in state `failed`, a client asking for a box inside it gets

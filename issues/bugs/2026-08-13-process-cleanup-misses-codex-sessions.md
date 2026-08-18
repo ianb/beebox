@@ -6,6 +6,7 @@ labels: [router, agents, lifecycle]
 filed-by: agent
 discovered-by: agent
 discovered-in: workstreams — isolated resident-app router rehearsal
+priority: important
 ---
 
 An isolated router startup ran `process-cleanup.ts` and reclaimed an

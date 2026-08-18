@@ -6,6 +6,7 @@ labels: [process-lifecycle, agent-browser]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder noticed a Chrome helper eating a core
+priority: normal
 ---
 
 The boxholder noticed a "Chrome for Testing Helper (Renderer)" pegging a core.

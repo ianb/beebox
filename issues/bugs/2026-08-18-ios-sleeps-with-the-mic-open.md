@@ -6,6 +6,7 @@ labels: [ios, voice, capture]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder report from the iOS app
+priority: important
 ---
 
 The phone sleeps while the app is in the foreground and doing something. Most

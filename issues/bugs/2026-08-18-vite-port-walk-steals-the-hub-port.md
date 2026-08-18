@@ -6,6 +6,8 @@ labels: [router, dev-server, lifecycle]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — iOS couldn't reach a box; `main` had been down for ~45 minutes
+priority: normal
+next-action: fixed
 ---
 
 A worktree can fail to start because **Vite takes the port the hub was going to

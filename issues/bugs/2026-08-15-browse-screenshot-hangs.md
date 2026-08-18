@@ -6,6 +6,7 @@ labels: [browse, dev-tooling]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-dev-docs-workflow — exhibits browser-pass verification
+priority: important
 ---
 
 During a browser verification pass, `bin/browse screenshot` timed out (exit

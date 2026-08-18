@@ -5,6 +5,7 @@ area: router
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-codex-engine-plan — verifying a fresh Codex chat after landing
+priority: important
 ---
 
 The main checkout can rebuild `callback-box/dist/cli.mjs` without replacing an
