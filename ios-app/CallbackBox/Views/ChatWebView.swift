@@ -38,6 +38,14 @@ struct NativeLocationShareResult: Equatable {
     var message: String
 }
 
+/// A request to abandon the in-flight delivery attempt for these emissions so
+/// the next `deliver` pass hands them to the page again. Identified so the
+/// coordinator acts once per request instead of on every SwiftUI update.
+struct NativeEmissionRedeliveryRequest: Equatable, Identifiable {
+    var id = UUID()
+    var emissionIDs: Set<NativeChatEmission.ID>
+}
+
 struct NativeScreenshotRequest: Equatable, Identifiable {
     var id = UUID()
 }
@@ -61,6 +69,7 @@ struct ChatWebView: UIViewRepresentable {
 
     var box: PairedBox
     var pendingEmissions: [NativeChatEmission]
+    var emissionRedeliveryRequest: NativeEmissionRedeliveryRequest?
     var locationShareRequest: NativeLocationShareRequest?
     var screenshotRequest: NativeScreenshotRequest?
     var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement]
@@ -79,6 +88,7 @@ struct ChatWebView: UIViewRepresentable {
     init(
         box: PairedBox,
         pendingEmissions: [NativeChatEmission] = [],
+        emissionRedeliveryRequest: NativeEmissionRedeliveryRequest? = nil,
         locationShareRequest: NativeLocationShareRequest? = nil,
         screenshotRequest: NativeScreenshotRequest? = nil,
         composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = [],
@@ -96,6 +106,7 @@ struct ChatWebView: UIViewRepresentable {
     ) {
         self.box = box
         self.pendingEmissions = pendingEmissions
+        self.emissionRedeliveryRequest = emissionRedeliveryRequest
         self.locationShareRequest = locationShareRequest
         self.screenshotRequest = screenshotRequest
         self.composerCommandAcknowledgements = composerCommandAcknowledgements
@@ -156,12 +167,14 @@ struct ChatWebView: UIViewRepresentable {
         context.coordinator.boxID = box.id
         context.coordinator.allowedOrigin = Self.origin(from: box.baseURL)
         context.coordinator.pendingEmissions = pendingEmissions
+        context.coordinator.emissionRedeliveryRequest = emissionRedeliveryRequest
         context.coordinator.locationShareRequest = locationShareRequest
         context.coordinator.screenshotRequest = screenshotRequest
         context.coordinator.composerCommandAcknowledgements = composerCommandAcknowledgements
         if webView.url == nil {
             webView.load(request())
         }
+        context.coordinator.abandonRequestedInflightEmissions()
         context.coordinator.deliver(pendingEmissions, to: webView)
         context.coordinator.deliverLocationRequest(to: webView)
         context.coordinator.captureScreenshot(from: webView)
@@ -201,10 +214,12 @@ struct ChatWebView: UIViewRepresentable {
         var onComposerCommand: (NativeComposerCommandDelivery) -> Void
         var onComposerCommandAcknowledgementDelivered: (String) -> Void
         var pendingEmissions: [NativeChatEmission] = []
+        var emissionRedeliveryRequest: NativeEmissionRedeliveryRequest?
         var locationShareRequest: NativeLocationShareRequest?
         var screenshotRequest: NativeScreenshotRequest?
         var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = []
         private var inflightEmissionIDs = Set<NativeChatEmission.ID>()
+        private var handledRedeliveryRequestID: NativeEmissionRedeliveryRequest.ID?
         private var inflightLocationRequestID: NativeLocationShareRequest.ID?
         private var locationRequestTimeout: DispatchWorkItem?
         private var inflightScreenshotRequestID: NativeScreenshotRequest.ID?
@@ -413,6 +428,22 @@ struct ChatWebView: UIViewRepresentable {
                 return
             }
             onSessionChange(ChatWebView.visibleSessionID(from: url))
+        }
+
+        /// Drop the in-flight attempt for the requested emissions so the next
+        /// `deliver` pass hands them to the page again. A receipt that arrives
+        /// late from the abandoned attempt is dropped by the inflight guard in
+        /// `receiveEmissionReceipt`; the fresh attempt re-asks the box, whose
+        /// claim registry answers the repeated emission ID idempotently.
+        func abandonRequestedInflightEmissions() {
+            guard
+                let request = emissionRedeliveryRequest,
+                request.id != handledRedeliveryRequestID
+            else {
+                return
+            }
+            handledRedeliveryRequestID = request.id
+            inflightEmissionIDs.subtract(request.emissionIDs)
         }
 
         func deliver(_ emissions: [NativeChatEmission], to webView: WKWebView) {

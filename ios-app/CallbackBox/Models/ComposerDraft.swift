@@ -230,6 +230,82 @@ struct PendingEmission: Codable, Equatable, Identifiable, Sendable {
     var createdAt: Date
 }
 
+/// When a `pending` emission is redelivered, and when it has waited long enough
+/// to deserve a user exit.
+///
+/// Redelivery is the *same* idempotent delivery of the same emission ID: the
+/// server's claim registry answers a repeat POST idempotently, so this is a
+/// retry loop and never a timeout verdict. There is deliberately no attempt
+/// cap — the long-pending affordance (Discard / Restore) is the exit, not an
+/// expiry rule that manufactures a failure.
+///
+/// Both decisions use wall-clock elapsed time on purpose: an emission stuck
+/// since before the device slept should retry immediately on wake rather than
+/// wait out the remainder of a monotonic budget.
+enum EmissionRedeliveryPolicy {
+    /// Wait after the 1st, 2nd, and 3rd delivery attempt.
+    static let backoffSchedule: [TimeInterval] = [10, 30, 60]
+    /// Wait after every attempt beyond the schedule.
+    static let steadyStateInterval: TimeInterval = 120
+    /// Age at which a `pending` emission stops rendering as a plain
+    /// "Sending message…" row and offers Discard / Restore.
+    static let longPendingThreshold: TimeInterval = 30
+
+    /// Wait before the next redelivery, given how many attempts have been made.
+    static func retryDelay(afterDeliveryAttempts attempts: Int) -> TimeInterval {
+        guard attempts >= 1 else {
+            return 0
+        }
+        let index = attempts - 1
+        return index < backoffSchedule.count ? backoffSchedule[index] : steadyStateInterval
+    }
+
+    /// True when a delivered-but-unconfirmed emission is due for another
+    /// delivery. An emission that has never been delivered is left to the
+    /// ordinary delivery path, which is not gated on a backoff.
+    static func shouldRedeliver(
+        deliveryAttempts: Int,
+        lastAttemptAt: Date?,
+        now: Date
+    ) -> Bool {
+        guard deliveryAttempts >= 1, let lastAttemptAt else {
+            return false
+        }
+        let elapsed = now.timeIntervalSince(lastAttemptAt)
+        guard elapsed >= 0 else {
+            // The wall clock moved backwards; wait rather than storm the box.
+            return false
+        }
+        return elapsed >= retryDelay(afterDeliveryAttempts: deliveryAttempts)
+    }
+
+    static func shouldRedeliver(state: PendingEmissionState, now: Date) -> Bool {
+        switch state {
+        case .pending(let deliveryAttempts, let lastAttemptAt):
+            return shouldRedeliver(
+                deliveryAttempts: deliveryAttempts,
+                lastAttemptAt: lastAttemptAt,
+                now: now
+            )
+        case .rejected:
+            return false
+        }
+    }
+
+    /// True when a still-`pending` emission has waited long enough that the
+    /// user gets a decision. The state does not change; only the presentation.
+    static func isLongPending(createdAt: Date, now: Date) -> Bool {
+        now.timeIntervalSince(createdAt) >= longPendingThreshold
+    }
+
+    static func isLongPending(_ emission: PendingEmission, now: Date) -> Bool {
+        guard case .pending = emission.state else {
+            return false
+        }
+        return isLongPending(createdAt: emission.createdAt, now: now)
+    }
+}
+
 struct VoicePreparation: Codable, Equatable, Identifiable, Sendable {
     var id: UUID
     var boxID: UUID

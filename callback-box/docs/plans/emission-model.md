@@ -245,8 +245,12 @@ report the same real outcome.
   (`inflightEmissionIDs` in `ChatWebView.swift`), not a durable distinction —
   today's split is two names for "not yet confirmed."
 - **In-session redelivery**: a `pending` emission whose receipt has not
-  arrived redelivers on a gentle backoff (awake-time, not wall-clock —
-  `CLAUDE.md` time discipline). Redelivery must first *abandon the inflight
+  arrived redelivers on a gentle backoff. The backoff decision uses
+  wall-clock elapsed time deliberately — an emission stuck since before a
+  sleep should retry immediately on wake, which an awake-time budget would
+  delay; the time-discipline rule guards *timers*, so re-evaluation is
+  driven by scene-phase activation plus a foreground-only ticker, never a
+  timer expected to survive background. Redelivery must first *abandon the inflight
   attempt*: `deliver()` skips any ID in `inflightEmissionIDs`
   (`ChatWebView.swift:422`) and nothing clears that set while a POST hangs,
   so the backoff step removes the ID and delivers again. A late receipt from

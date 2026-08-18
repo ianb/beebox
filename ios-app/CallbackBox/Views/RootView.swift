@@ -19,6 +19,16 @@ struct RootView: View {
     @State private var screenshotRequest: NativeScreenshotRequest?
     @State private var screenshotResult: NativeScreenshotResult?
     @State private var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = []
+    @State private var emissionRedeliveryRequest: NativeEmissionRedeliveryRequest?
+    /// Emission IDs already logged as redelivered / long-pending, so the
+    /// forwarded log carries one line per transition instead of one per tick.
+    @State private var redeliveryLoggedIDs: Set<UUID> = []
+    @State private var longPendingLoggedIDs: Set<UUID> = []
+    /// Drives redelivery re-evaluation while the scene is active. Foregrounding
+    /// re-evaluates directly, so a suspended timer costs nothing.
+    @State private var emissionRedeliveryTicker = Timer
+        .publish(every: 5, on: .main, in: .common)
+        .autoconnect()
 
     var body: some View {
         Group {
@@ -110,6 +120,7 @@ struct RootView: View {
                     await LogForwarder.shared.setActive(true)
                     await LogForwarder.shared.flush()
                 }
+                evaluatePendingEmissionRedelivery()
             }
             guard phase == .background else {
                 return
@@ -124,6 +135,65 @@ struct RootView: View {
                 await composerDraftStore.flush()
             }
         }
+        .onReceive(emissionRedeliveryTicker) { _ in
+            guard scenePhase == .active else {
+                return
+            }
+            evaluatePendingEmissionRedelivery()
+        }
+    }
+
+    /// Redeliver pending emissions whose receipt has not arrived within the
+    /// backoff, and log the two transitions worth diagnosing later.
+    private func evaluatePendingEmissionRedelivery(now: Date = Date()) {
+        guard let boxID = store.selectedBox?.id else {
+            return
+        }
+        let pending = pendingEmissionStore.pending.filter { $0.boxID == boxID }
+        let liveIDs = Set(pending.map(\.id))
+        redeliveryLoggedIDs.formIntersection(liveIDs)
+        longPendingLoggedIDs.formIntersection(liveIDs)
+
+        for emission in pending {
+            guard case .pending(let attempts, _) = emission.state else {
+                continue
+            }
+            guard
+                EmissionRedeliveryPolicy.isLongPending(createdAt: emission.createdAt, now: now),
+                longPendingLoggedIDs.contains(emission.id) == false
+            else {
+                continue
+            }
+            longPendingLoggedIDs.insert(emission.id)
+            BoxLog.info(
+                "emission long pending attempts=\(attempts)"
+                    + " age=\(Int(now.timeIntervalSince(emission.createdAt)))s",
+                category: .webview,
+                targetBoxID: boxID
+            )
+        }
+
+        let due = pending.filter {
+            EmissionRedeliveryPolicy.shouldRedeliver(state: $0.state, now: now)
+        }
+        guard due.isEmpty == false else {
+            return
+        }
+        for emission in due where redeliveryLoggedIDs.contains(emission.id) == false {
+            redeliveryLoggedIDs.insert(emission.id)
+            guard case .pending(let attempts, let lastAttemptAt) = emission.state else {
+                continue
+            }
+            let waited = lastAttemptAt.map { Int(now.timeIntervalSince($0)) } ?? 0
+            BoxLog.info(
+                "emission redelivery started attempts=\(attempts) waited=\(waited)s",
+                category: .webview,
+                targetBoxID: boxID
+            )
+        }
+        emissionRedeliveryRequest = NativeEmissionRedeliveryRequest(
+            emissionIDs: Set(due.map(\.id))
+        )
     }
 
     private func resignProtectedFirstResponder() {
@@ -139,6 +209,7 @@ struct RootView: View {
         ChatWebView(
             box: box,
             pendingEmissions: pendingEmissionStore.deliveries,
+            emissionRedeliveryRequest: emissionRedeliveryRequest,
             locationShareRequest: locationShareRequest,
             screenshotRequest: screenshotRequest,
             composerCommandAcknowledgements: composerCommandAcknowledgements,

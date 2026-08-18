@@ -21,6 +21,7 @@ struct NativeComposerView: View {
     var initiallyFocused = false
     var initialDetailedSelection: DraftSelection?
 
+    @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var store: PairedBoxStore
     @EnvironmentObject private var boxLockManager: BoxLockManager
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
@@ -40,15 +41,40 @@ struct NativeComposerView: View {
     @State private var voiceTurn = NativeVoiceTurnState()
     @State private var earconState = NativeEarconState()
     @StateObject private var dictation = SpeechDictation()
+    /// Wall-clock reference for pending-emission age. Refreshed while the scene
+    /// is active and on every foregrounding, so a message that stayed pending
+    /// across a sleep shows its long-pending affordance immediately on wake.
+    @State private var pendingReferenceDate = Date()
+    @State private var pendingClockTicker = Timer
+        .publish(every: 5, on: .main, in: .common)
+        .autoconnect()
 
     var body: some View {
         presentedComposer
     }
 
-    private var composerLifecycle: some View {
+    /// Split from `composerLifecycle` so the modifier chain stays inside the
+    /// Swift type checker's budget.
+    private var composerClock: some View {
         composerSurface
-        .background(.regularMaterial)
-        .ignoresSafeArea(.container, edges: .bottom)
+            .background(.regularMaterial)
+            .ignoresSafeArea(.container, edges: .bottom)
+            .onReceive(pendingClockTicker) { date in
+                guard scenePhase == .active, hasUnconfirmedPendingEmission else {
+                    return
+                }
+                pendingReferenceDate = date
+            }
+            .onChange(of: scenePhase) { _, phase in
+                guard phase == .active else {
+                    return
+                }
+                pendingReferenceDate = Date()
+            }
+    }
+
+    private var composerLifecycle: some View {
+        composerClock
         .onChange(of: draftStore.draft.text) { _, newValue in
             dictation.noteManualTextChange(newValue)
         }
@@ -86,6 +112,7 @@ struct NativeComposerView: View {
             }
         }
         .onAppear {
+            pendingReferenceDate = Date()
             applyVoiceTurn(.speechPlaybackChanged(playing: speechPlaybackActive))
             applyEarcon(.responseActiveChanged(responseActive))
             if initiallyFocused {
@@ -228,6 +255,7 @@ struct NativeComposerView: View {
                 PendingEmissionList(
                     emissions: pendingStore.pending,
                     voicePreparations: pendingStore.voicePreparations,
+                    referenceDate: pendingReferenceDate,
                     canRestore: draftIsEmpty,
                     onRetry: retryPendingEmission,
                     onRestore: restorePendingEmission,
@@ -692,6 +720,15 @@ struct NativeComposerView: View {
     private var hasIncompleteFiles: Bool {
         draftStore.draft.files.contains { file in
             guard case .uploaded = file.state else {
+                return true
+            }
+            return false
+        }
+    }
+
+    private var hasUnconfirmedPendingEmission: Bool {
+        pendingStore.pending.contains { emission in
+            if case .pending = emission.state {
                 return true
             }
             return false
@@ -1371,6 +1408,8 @@ private struct FileAttachmentList: View {
 private struct PendingEmissionList: View {
     var emissions: [PendingEmission]
     var voicePreparations: [VoicePreparation]
+    /// Wall clock the pending rows age against; the owner refreshes it.
+    var referenceDate: Date
     var canRestore: Bool
     var onRetry: (PendingEmission) -> Void
     var onRestore: (PendingEmission) -> Void
@@ -1389,6 +1428,29 @@ private struct PendingEmissionList: View {
             }
             ForEach(emissions) { emission in
                 switch emission.state {
+                case .pending where EmissionRedeliveryPolicy.isLongPending(
+                    createdAt: emission.createdAt,
+                    now: referenceDate
+                ):
+                    // Still `pending` — redelivery keeps retrying underneath.
+                    // The user gets a decision, not a manufactured failure, so
+                    // Retry is deliberately absent.
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label(
+                            "Still waiting for the box to confirm this message.",
+                            systemImage: "clock.badge.exclamationmark"
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        HStack(spacing: 12) {
+                            Button("Restore") { onRestore(emission) }
+                                .disabled(canRestore == false)
+                                .frame(minHeight: 44)
+                            Button("Discard", role: .destructive) { onDiscard(emission) }
+                                .frame(minHeight: 44)
+                        }
+                        .font(.caption.weight(.semibold))
+                    }
                 case .pending:
                     HStack(spacing: 8) {
                         ProgressView()

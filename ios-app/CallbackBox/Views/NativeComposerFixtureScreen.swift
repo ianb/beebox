@@ -162,6 +162,17 @@ struct NativeComposerFixtureScreen: View {
                 pending(index: 1, state: .pending(deliveryAttempts: 1, lastAttemptAt: Date())),
                 pending(index: 2, state: .pending(deliveryAttempts: 0, lastAttemptAt: nil))
             ]
+        case "stuck-pending":
+            // Older than the long-pending threshold, still `pending`: the
+            // affordance the user sees while redelivery keeps retrying.
+            [pending(
+                index: 1,
+                state: .pending(
+                    deliveryAttempts: 3,
+                    lastAttemptAt: Date().addingTimeInterval(-40)
+                ),
+                age: 180
+            )]
         case "rejected-send":
             [pending(index: 1, state: .rejected(reason: "The target rejected this message while offline."))]
         default:
@@ -261,7 +272,11 @@ struct NativeComposerFixtureScreen: View {
         return value
     }
 
-    private func pending(index: Int, state: PendingEmissionState) -> PendingEmission {
+    private func pending(
+        index: Int,
+        state: PendingEmissionState,
+        age: TimeInterval = 0
+    ) -> PendingEmission {
         PendingEmission(
             id: UUID(),
             boxID: box.id,
@@ -270,7 +285,7 @@ struct NativeComposerFixtureScreen: View {
             origin: .typed,
             diarized: false,
             state: state,
-            createdAt: Date().addingTimeInterval(Double(index))
+            createdAt: Date().addingTimeInterval(Double(index) - age)
         )
     }
 

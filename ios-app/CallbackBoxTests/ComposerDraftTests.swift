@@ -1125,6 +1125,112 @@ final class ComposerDraftRepositoryTests: XCTestCase {
         await store.retry(id: emission.id)
         XCTAssertEqual(store.pending.first?.state, .pending(deliveryAttempts: 0, lastAttemptAt: nil))
     }
+
+    func testRedeliveryBackoffLengthensWithAttemptsAndNeverCaps() {
+        XCTAssertEqual(EmissionRedeliveryPolicy.retryDelay(afterDeliveryAttempts: 1), 10)
+        XCTAssertEqual(EmissionRedeliveryPolicy.retryDelay(afterDeliveryAttempts: 2), 30)
+        XCTAssertEqual(EmissionRedeliveryPolicy.retryDelay(afterDeliveryAttempts: 3), 60)
+        XCTAssertEqual(EmissionRedeliveryPolicy.retryDelay(afterDeliveryAttempts: 4), 120)
+        XCTAssertEqual(EmissionRedeliveryPolicy.retryDelay(afterDeliveryAttempts: 99), 120)
+        // Never delivered: the ordinary delivery path handles it, unthrottled.
+        XCTAssertEqual(EmissionRedeliveryPolicy.retryDelay(afterDeliveryAttempts: 0), 0)
+    }
+
+    func testRedeliveryWaitsOutTheBackoffThenFiresAtEachThreshold() {
+        let sent = Date(timeIntervalSince1970: 1_000)
+        XCTAssertFalse(EmissionRedeliveryPolicy.shouldRedeliver(
+            deliveryAttempts: 1,
+            lastAttemptAt: sent,
+            now: sent.addingTimeInterval(9)
+        ))
+        XCTAssertTrue(EmissionRedeliveryPolicy.shouldRedeliver(
+            deliveryAttempts: 1,
+            lastAttemptAt: sent,
+            now: sent.addingTimeInterval(10)
+        ))
+        XCTAssertFalse(EmissionRedeliveryPolicy.shouldRedeliver(
+            deliveryAttempts: 2,
+            lastAttemptAt: sent,
+            now: sent.addingTimeInterval(29)
+        ))
+        XCTAssertTrue(EmissionRedeliveryPolicy.shouldRedeliver(
+            deliveryAttempts: 2,
+            lastAttemptAt: sent,
+            now: sent.addingTimeInterval(30)
+        ))
+        XCTAssertFalse(EmissionRedeliveryPolicy.shouldRedeliver(
+            deliveryAttempts: 7,
+            lastAttemptAt: sent,
+            now: sent.addingTimeInterval(119)
+        ))
+        XCTAssertTrue(EmissionRedeliveryPolicy.shouldRedeliver(
+            deliveryAttempts: 7,
+            lastAttemptAt: sent,
+            now: sent.addingTimeInterval(120)
+        ))
+    }
+
+    func testRedeliveryIgnoresUndeliveredAndRejectedAndBackwardsClocks() {
+        let sent = Date(timeIntervalSince1970: 1_000)
+        XCTAssertFalse(EmissionRedeliveryPolicy.shouldRedeliver(
+            state: .pending(deliveryAttempts: 0, lastAttemptAt: nil),
+            now: sent.addingTimeInterval(10_000)
+        ))
+        XCTAssertFalse(EmissionRedeliveryPolicy.shouldRedeliver(
+            state: .rejected(reason: "offline"),
+            now: sent.addingTimeInterval(10_000)
+        ))
+        XCTAssertFalse(EmissionRedeliveryPolicy.shouldRedeliver(
+            deliveryAttempts: 1,
+            lastAttemptAt: sent,
+            now: sent.addingTimeInterval(-600)
+        ))
+    }
+
+    func testEmissionStuckSinceBeforeASleepRedeliversImmediatelyOnWake() {
+        let attemptedBeforeSleep = Date(timeIntervalSince1970: 1_000)
+        let wake = attemptedBeforeSleep.addingTimeInterval(8 * 60 * 60)
+        XCTAssertTrue(EmissionRedeliveryPolicy.shouldRedeliver(
+            state: .pending(deliveryAttempts: 5, lastAttemptAt: attemptedBeforeSleep),
+            now: wake
+        ))
+        XCTAssertTrue(EmissionRedeliveryPolicy.isLongPending(
+            createdAt: attemptedBeforeSleep,
+            now: wake
+        ))
+    }
+
+    func testLongPendingAgeAppliesOnlyToPendingEmissions() {
+        let created = Date(timeIntervalSince1970: 1_000)
+        XCTAssertFalse(EmissionRedeliveryPolicy.isLongPending(
+            createdAt: created,
+            now: created.addingTimeInterval(29)
+        ))
+        XCTAssertTrue(EmissionRedeliveryPolicy.isLongPending(
+            createdAt: created,
+            now: created.addingTimeInterval(30)
+        ))
+
+        var emission = PendingEmission(
+            id: UUID(),
+            boxID: UUID(),
+            draft: .empty,
+            text: "hello",
+            origin: .typed,
+            diarized: false,
+            state: .pending(deliveryAttempts: 1, lastAttemptAt: created),
+            createdAt: created
+        )
+        XCTAssertTrue(EmissionRedeliveryPolicy.isLongPending(
+            emission,
+            now: created.addingTimeInterval(120)
+        ))
+        emission.state = .rejected(reason: "offline")
+        XCTAssertFalse(EmissionRedeliveryPolicy.isLongPending(
+            emission,
+            now: created.addingTimeInterval(120)
+        ))
+    }
 }
 
 private func XCTAssertThrowsErrorAsync(

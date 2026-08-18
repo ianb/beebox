@@ -242,8 +242,10 @@ the contract.
 - `ChatWebView.swift` — `decidePolicyFor`: main-frame loads off `allowedOrigin` (and not `about:`)
   are cancelled and handed to `UIApplication.shared.open` (external browser).
   `allowsBackForwardNavigationGestures = true`.
-- On provisional nav start, all inflight emission/location state clears and `pageLoaded=false`; a
-  mid-flight nav re-arms delivery on the next `didFinish`.
+- On provisional nav start, inflight location/screenshot/composer-command state clears and
+  `pageLoaded=false`. Inflight *emission* IDs clear later, on `didCommit` — the old document can
+  still deliver a real receipt while a provisional navigation is pending — and `didFinish`
+  redelivers the same persisted emission IDs into the new page.
 
 ---
 
@@ -311,14 +313,21 @@ the contract.
   `inflightEmissionIDs`, marks them inflight, and on an `evaluateJavaScript` error reports a
   synthetic `rejected` immediately. Delivery is gated on
   `pageLoaded` (items typed during nav are held, re-delivered on `didFinish`). On any receipt
-  (real, timeout, or error) `RootView` clears the emission from `pendingNativeEmissions`;
+  `RootView` clears the emission from `pendingNativeEmissions`;
   `NativeComposerView` restores text+images on `rejected`. Neither web nor native manufactures a
-  rejection from elapsed time: cold agent startup can keep `/chat/send` pending for several
-  minutes. Transport, bridge-evaluation, malformed-response, and backend failures still reject
-  explicitly. Navigation clears native inflight state and redelivers the same persisted emission ID;
-  server dedup retains the claimed ID for seven days, which makes normal
-  navigation and crash-recovery retries safe.
-- **Drift:** a missing outcome remains visibly pending; navigation retries the same emission ID.
+  rejection from elapsed time. Transport, bridge-evaluation, malformed-response, and backend
+  failures still reject explicitly. Navigation clears native inflight state (`didCommit`, §3.4)
+  and redelivers the same persisted emission ID; server dedup retains the claimed ID for seven
+  days, which makes navigation, crash-recovery, and backoff retries safe.
+- **In-session redelivery (native):** a `pending` emission whose receipt has not arrived
+  redelivers on a wall-clock backoff (10s/30s/60s after attempts 1-3, then every 120s, no cap):
+  `RootView` publishes a `NativeEmissionRedeliveryRequest`, the coordinator abandons the inflight
+  attempt (removes the ID from `inflightEmissionIDs`) and delivers again. A late receipt from an
+  abandoned attempt is dropped by the inflight guard; the new attempt's receipt settles. Past 30s
+  pending, the composer row offers Restore/Discard — the state stays `pending`; no verdict is
+  manufactured. Re-evaluation runs only while the scene is active (5s ticker + foregrounding).
+- **Drift:** a missing outcome remains visibly pending (with a user exit after 30s); retries
+  always carry the same emission ID.
 - **Benign field drift:** native ignores `deduplicated` on `sent` receipts.
 
 ### 4.3 Location preference toggle (native → web) + state/result (web → native)

@@ -196,6 +196,79 @@ final class ChatWebViewRequestTests: XCTestCase {
         XCTAssertEqual(receipt?.disposition, .sent)
     }
 
+    @MainActor
+    func testRedeliveryRequestAbandonsInflightAttemptAndDeliversTheSameIDAgain() {
+        let emission = makeEmission()
+        var attempts: [UUID] = []
+        var evaluationCount = 0
+        let coordinator = makeCoordinator(
+            onAttempt: { attempts.append($0) },
+            evaluate: { _, completion in
+                evaluationCount += 1
+                completion(nil)
+            }
+        )
+        coordinator.pendingEmissions = [emission]
+        let webView = WKWebView()
+
+        coordinator.deliver([emission], to: webView)
+        // No request yet: the inflight guard still suppresses redelivery.
+        coordinator.abandonRequestedInflightEmissions()
+        coordinator.deliver([emission], to: webView)
+        XCTAssertEqual(evaluationCount, 1)
+
+        let request = NativeEmissionRedeliveryRequest(emissionIDs: [emission.id])
+        coordinator.emissionRedeliveryRequest = request
+        coordinator.abandonRequestedInflightEmissions()
+        coordinator.deliver([emission], to: webView)
+
+        XCTAssertEqual(attempts, [emission.id, emission.id])
+        XCTAssertEqual(evaluationCount, 2)
+
+        // The same request must not redeliver again on later view updates.
+        coordinator.abandonRequestedInflightEmissions()
+        coordinator.deliver([emission], to: webView)
+        XCTAssertEqual(evaluationCount, 2)
+
+        coordinator.emissionRedeliveryRequest = NativeEmissionRedeliveryRequest(
+            emissionIDs: [emission.id]
+        )
+        coordinator.abandonRequestedInflightEmissions()
+        coordinator.deliver([emission], to: webView)
+        XCTAssertEqual(evaluationCount, 3)
+    }
+
+    @MainActor
+    func testLateReceiptFromAnAbandonedAttemptIsDroppedButTheNewAttemptSettles() {
+        let emission = makeEmission()
+        var receipts: [NativeEmissionReceipt] = []
+        let coordinator = makeCoordinator(
+            onReceipt: { receipts.append($0) },
+            evaluate: { _, completion in completion(nil) }
+        )
+        coordinator.pendingEmissions = [emission]
+        let webView = WKWebView()
+
+        coordinator.deliver([emission], to: webView)
+        coordinator.emissionRedeliveryRequest = NativeEmissionRedeliveryRequest(
+            emissionIDs: [emission.id]
+        )
+        coordinator.abandonRequestedInflightEmissions()
+        // The abandoned attempt's receipt lands before the new delivery.
+        coordinator.receiveEmissionReceipt([
+            "emissionId": emission.id.uuidString,
+            "disposition": "sent",
+        ])
+        XCTAssertTrue(receipts.isEmpty)
+
+        coordinator.deliver([emission], to: webView)
+        coordinator.receiveEmissionReceipt([
+            "emissionId": emission.id.uuidString,
+            "disposition": "sent",
+        ])
+        XCTAssertEqual(receipts.map(\.emissionID), [emission.id])
+    }
+
     private func makeEmission() -> NativeChatEmission {
         NativeChatEmission(
             id: UUID(),
