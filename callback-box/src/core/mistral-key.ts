@@ -17,11 +17,16 @@
  * Store WINS over the file (the plan's transition rule), and the return stays
  * `string | null`: a box with no key configured degrades exactly as before,
  * through the caller's existing "not configured" path.
+ *
+ * The fall-through is NARROW: only an `unknown-secret` refusal reaches steps 2
+ * and 3. A revoked, withheld, empty, or unreadable-store refusal is "not
+ * configured" — `secrets/legacy-fallback.ts` has the argument.
  */
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
+import { refusalAllowsLegacyFallback } from "./secrets/legacy-fallback.js";
 import { resolveSecret } from "./secrets/resolve.js";
 
 /** The store name this connector's key lives under. */
@@ -79,9 +84,10 @@ export async function getMistralApiKey(boxRoot?: string): Promise<string | null>
       }
       return resolved.value.value;
     }
-    // Every refusal degrades to the next source, then to "not configured" —
-    // the same surface this function has always presented. The refusal itself
-    // is already in the access log with its exact condition.
+    // Only "no such secret on this machine" degrades to the legacy sources;
+    // every other refusal is "not configured" (see
+    // `secrets/legacy-fallback.ts` for why revocation demands that).
+    if (!refusalAllowsLegacyFallback({ reader: "mistral-key", refusal: resolved.error })) return null;
     const legacy = await readLegacySecretFile(boxRoot);
     if (legacy !== null) return legacy;
   }

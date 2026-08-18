@@ -6,10 +6,10 @@
  * chat capture widget are where a person manages secrets, and they ride the
  * same `core/secrets/lifecycle.ts` code. This CLI exists for deploy scripts,
  * the migration, emergencies, and for AGENTS — whose intended subcommands are
- * the read-only `list`/`status` and the write-nothing `declare` (name a slot
- * you need; only the boxholder can fill or grant it).
+ * `status` for their OWN box and the write-nothing `declare` (name a slot you
+ * need; only the boxholder can fill or grant it).
  *
- * Two hard rules live here rather than in the store:
+ * Three hard rules live here rather than in the store:
  *
  * - **A value never comes from argv.** `ps`, shell history, and any process
  *   listing would carry it. `set` reads stdin (piped) or prompts with no echo;
@@ -18,6 +18,11 @@
  *   `cb auth` pattern (`lib/agent-context.ts`) — a speed bump and an audit
  *   signal, never an authorization boundary. `declare` is exempt: it is the
  *   agent's own surface and can neither disclose nor empower anything.
+ * - **An agent sees its own box, not the machine.** `list` is the machine-wide
+ *   inventory of names and grants, so it carries the same agent refusal as the
+ *   mutations; `status <box>` refuses in an agent session for any box but the
+ *   one the command is standing in. Neither discloses a value, but a map of
+ *   every credential on the machine is not an agent's view of the store.
  *
  * Each subcommand body is an exported plain function so doctests call it
  * directly instead of spawning the CLI (the `cb auth` precedent).
@@ -37,7 +42,12 @@ import {
 } from "../../core/secrets/lifecycle.js";
 import { secretAccessLevelSchema, type SecretAccessLevel } from "../../core/secrets/store.js";
 import { promptHidden } from "../lib/prompt-hidden.js";
-import { failWith, refuseIfUnconfirmedAgent, resolveSlugArgument } from "../lib/secrets-guard.js";
+import {
+  failWith,
+  refuseIfAgentAskingAboutAnotherBox,
+  refuseIfUnconfirmedAgent,
+  resolveSlugArgument,
+} from "../lib/secrets-guard.js";
 import { copyGrantsCommand, migrateCommand } from "./secrets-migrate.js";
 
 /** Read a piped value from stdin (everything up to EOF, one trailing newline stripped). */
@@ -145,7 +155,11 @@ export async function runDeclareSecret(opts: {
   }
 }
 
-export async function runListSecrets(): Promise<void> {
+export async function runListSecrets(opts?: { agentConfirmed?: boolean | undefined }): Promise<void> {
+  // `list` is the machine-wide inventory — every secret name on the box's
+  // machine, and which boxes hold them. That is the boxholder's view, not an
+  // agent's: an agent's is its own box (`cb secrets status <its own box>`).
+  refuseIfUnconfirmedAgent({ action: "list every secret on this machine", agentConfirmed: opts?.agentConfirmed });
   try {
     const listing = await listSecrets();
     if (listing.length === 0) {
@@ -204,9 +218,16 @@ export async function runRevokeSecret(opts: {
   }
 }
 
-export async function runSecretsStatus(opts: { boxOrRoot: string }): Promise<void> {
+export async function runSecretsStatus(opts: {
+  boxOrRoot: string;
+  /** The box the command ran in; omitted, it is found from the working directory. */
+  boxRoot?: string | null | undefined;
+}): Promise<void> {
+  const slug = await resolveSlugArgument(opts.boxOrRoot);
+  // Outside the try: the guard ends the process itself, and the lifecycle catch
+  // below would reprint its exit as an error.
+  await refuseIfAgentAskingAboutAnotherBox({ slug, boxRoot: opts.boxRoot });
   try {
-    const slug = await resolveSlugArgument(opts.boxOrRoot);
     const status = await boxSecretStatus(slug);
     console.log(`Box: ${status.slug}`);
     if (status.granted.length === 0) {
@@ -289,9 +310,10 @@ secretsCommand
 
 secretsCommand
   .command("list")
-  .description("List secret names and metadata (never values)")
-  .action(async () => {
-    await runListSecrets();
+  .description("List secret names and metadata across the machine (never values)")
+  .option("--agent-confirmed", AGENT_CONFIRMED_HELP)
+  .action(async (options: { agentConfirmed?: boolean }) => {
+    await runListSecrets(options);
   });
 
 const grantCmd = secretsCommand

@@ -22,6 +22,7 @@ import * as path from "node:path";
 import { isRecord } from "../../lib/is-record.js";
 import { Readable } from "node:stream";
 import { errorMessage } from "../../lib/error-guards.js";
+import { refusalAllowsLegacyFallback } from "../../core/secrets/legacy-fallback.js";
 import { resolveSecret } from "../../core/secrets/resolve.js";
 
 /** Adapters already warned about a stray legacy file, once per process each. */
@@ -148,6 +149,9 @@ async function readAdapterKey(boxRoot: string, adapterName: string): Promise<str
     access: "server",
   });
   if (resolved.ok) return resolved.value.value;
+  // Only "no such secret on this machine" degrades to the legacy file; every
+  // other refusal is "not configured" (`core/secrets/legacy-fallback.ts`).
+  if (!refusalAllowsLegacyFallback({ reader: `api-adapters/${adapterName}`, refusal: resolved.error })) return null;
 
   const secretPath = path.join(boxRoot, "config", "connectors", `${adapterName}.secret.json`);
   let content: string;

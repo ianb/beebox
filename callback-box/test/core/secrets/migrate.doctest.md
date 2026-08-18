@@ -83,8 +83,11 @@ async function makeMachine() {
 hold the same Mistral key, so it becomes ONE entry with two grants — the
 property the file-copy status quo could not offer, since rotation now touches
 one place. Gamma's differing key is parked under `mistral/gamma`: readers ask
-for `mistral`, so gamma keeps working through its legacy file (left in place)
-until the boxholder decides which key it should use.
+for `mistral`, which gamma is not granted, so gamma's Mistral connector reads as
+not configured until the boxholder decides which key it should use. Its legacy
+file is left in place but is no longer a fallback — a name that exists in the
+store fails closed on a refusal (`src/core/secrets/legacy-fallback.ts`), which
+is what makes a revoked grant actually revoke.
 
 ```ts
 const { dir, boxes } = await makeMachine();
@@ -97,7 +100,7 @@ Boxes examined: alpha, beta, gamma
   mistral/gamma — new entry, single-box; grants: gamma
   telegram-bot/alpha — new entry, single-box; grants: alpha
   CONFLICT: "gamma" holds a different value for "mistral" than the box that kept that name. Its value is parked as "mistral/gamma".
-            Readers ask for "mistral", so "gamma" keeps working through its legacy file until you decide which key it should use.
+            Readers ask for "mistral" and "gamma" holds no grant for it, so that connector reads as NOT CONFIGURED — a name that exists in the store no longer falls back to a legacy file. Decide which key the box should use, then grant it.
   skipped <boxes>/gamma/content/config/connectors/google.secret.json — no store name is defined for "google" — left in place
   skipped <boxes>/gamma/content/config/connectors/openai.secret.json — unreadable or not valid JSON («*»)
 Dry run — nothing was written.
@@ -245,11 +248,11 @@ print(planned.logs.filter((line) => line.includes("mistral")).join("\n"));
   mistral/alpha — new entry, single-box; grants: alpha, beta
   mistral/gamma — new entry, single-box; grants: gamma
   CONFLICT: "alpha" holds a different value for "mistral" than the box that kept that name. Its value is parked as "mistral/alpha".
-            Readers ask for "mistral", so "alpha" keeps working through its legacy file until you decide which key it should use.
+            Readers ask for "mistral" and "alpha" holds no grant for it, so that connector reads as NOT CONFIGURED — a name that exists in the store no longer falls back to a legacy file. Decide which key the box should use, then grant it.
   CONFLICT: "beta" holds a different value for "mistral" than the box that kept that name. Its value is parked as "mistral/alpha".
-            Readers ask for "mistral", so "beta" keeps working through its legacy file until you decide which key it should use.
+            Readers ask for "mistral" and "beta" holds no grant for it, so that connector reads as NOT CONFIGURED — a name that exists in the store no longer falls back to a legacy file. Decide which key the box should use, then grant it.
   CONFLICT: "gamma" holds a different value for "mistral" than the box that kept that name. Its value is parked as "mistral/gamma".
-            Readers ask for "mistral", so "gamma" keeps working through its legacy file until you decide which key it should use.
+            Readers ask for "mistral" and "gamma" holds no grant for it, so that connector reads as NOT CONFIGURED — a name that exists in the store no longer falls back to a legacy file. Decide which key the box should use, then grant it.
 ```
 
 Applying it grants nobody the rotated key they do not have:

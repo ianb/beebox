@@ -106,10 +106,24 @@ if (result.ok) use(result.value.value);   // result.value.suspect: last probe fa
 else console.warn(result.error.message);  // relay-ready; result.error.kind is the condition
 ```
 
+`purpose` is a short label — `^[a-z0-9][a-z0-9-]{0,39}$`, e.g. `transcription`,
+`google-oauth`, `weather-trick`. It goes verbatim into the access log, so it is
+constrained rather than free text: the loopback route answers `bad-request` for
+a violation, and an in-process caller (our own code) trips an invariant.
+
 Refusal kinds, each with a distinct remediation: `unknown-secret`, `empty-slot`,
 `not-granted`, `agent-access-not-granted`, `dangling-grant`, `store-unreadable`
 (`src/core/secrets/errors.ts`). Connectors degrade to their existing "not
 configured" path on any of them.
+
+**Only `unknown-secret` falls through to a legacy file or env var**
+(`src/core/secrets/legacy-fallback.ts`, shared by every migrated reader): that
+kind means no entry of the name exists on this machine at all, which is the
+unmigrated-box case the transition window is for. Every other refusal is "not
+configured", with one warning per reader per kind. Falling through on
+`not-granted` would make `cb secrets revoke` a no-op wherever a legacy file or
+an exported env var still exists — the boxholder would withdraw a grant, see it
+succeed, and the connector would keep working.
 
 Every resolve and refusal appends a line to the access log —
 `~/.config/cb/secrets-log/YYYY-MM.jsonl`, `{ts, box, secret, purpose, event,
@@ -155,7 +169,7 @@ boxholder knows which action fixes it):
 | Status | Kinds | Why that status |
 |---|---|---|
 | 401 | `not-agent-authenticated` | The credential was not this box's agent token. |
-| 400 | `bad-request` | The body was not `{name, purpose}`. |
+| 400 | `bad-request` | The body was not `{name, purpose}`, or `purpose` was not a short label. |
 | 403 | `not-granted`, `agent-access-not-granted` | The secret exists; a boxholder decision stands between you and it. |
 | 404 | `unknown-secret`, `empty-slot`, `dangling-grant` | There is no value to be had under that name — missing, empty, or stale. |
 | 503 | `store-unreadable` | The machine's store could not be read; not the caller's to fix. |
@@ -258,18 +272,23 @@ and never taken from argv.
 | `printf %s "$KEY" \| cb secrets set <name>` | Store or rotate a value (stdin, or a hidden prompt). A value in argument position is refused. |
 | `cb secrets rm <name>` | Remove an entry; grants naming it become dangling grants. |
 | `cb secrets declare <name> --note …` | Create an empty, ungranted slot — the **agent-facing** subcommand. Records the declaring box (`declaredBy`) for `status`. |
-| `cb secrets list` | Names + metadata across the machine, never values. |
+| `cb secrets list` | Names + metadata across the machine, never values. The machine-wide view, so it carries the agent refusal. |
 | `cb secrets grant <box> <name> [--access server\|agent]` | Per-box opt-in; refuses for a `shareable: false` secret. |
 | `cb secrets revoke <box> <name>` | Withdraw a grant. |
-| `cb secrets status <box>` | One box's grants, empty slots, and dangling grants. |
+| `cb secrets status <box>` | One box's grants, empty slots, and dangling grants. In an agent session, only the box the command runs in. |
 | `cb secrets copy-grants <from> <to>` | Give one box the same grants another holds — what `deploy/add-box.sh --secrets-from` runs. Access levels carry over; `shareable: false` entries are skipped and named. |
 | `cb secrets migrate [--root <dir>] [--dry-run]` | The one-time move of every box's legacy `config/connectors/*.secret.json` into the store. |
 
-`<box>` is a slug or a box root path. `set`/`rm`/`grant`/`revoke`/`copy-grants`
-and a non-dry-run `migrate` refuse in an
+`<box>` is a slug or a box root path. `set`/`rm`/`grant`/`revoke`/`copy-grants`,
+`list`, and a non-dry-run `migrate` refuse in an
 agent session without `--agent-confirmed` (the `cb auth` pattern) — a speed bump
 and an audit signal, not an authorization boundary. `declare` is exempt: an
 agent naming a slot it needs can neither disclose nor empower anything.
+
+An agent's view of the store is its OWN box: `list` is the machine's whole
+inventory of names and grants, and `status` refuses in an agent session for any
+box other than the one the command is standing in. Neither discloses a value —
+what is withheld is the map of which credentials exist and who holds them.
 
 ## Migrating a machine: `cb secrets migrate`
 
@@ -288,8 +307,10 @@ cb secrets migrate --root /home/callback/boxes --agent-confirmed
 With no `--root` it migrates the machine's registered boxes
 (`~/.config/cb/boxes.json`). Four properties worth knowing before running it:
 
-- **The original files stay.** Every reader still falls back to them, so a
-  mis-migrated box keeps working; deleting them is a separate later pass.
+- **The original files stay.** A reader still falls back to them when the store
+  has no entry of that name, so a mis-migrated box keeps working; deleting them
+  is a separate later pass. (A box that is granted nothing is a *refusal*, not a
+  missing entry — that fails closed rather than reading the file.)
 - **Existing store entries are never overwritten** — re-running is a no-op, and
   a key rotated in the store is not reverted to what a stale file holds.
 - **A value already in the store wins its name**, and boxes that disagree with
@@ -300,8 +321,10 @@ With no `--root` it migrates the machine's registered boxes
   so boxes that agree with each other still share one) with a printed CONFLICT
   line. With nothing stored yet, the alphabetically-first slug's value wins, so
   the choice is stable across runs. A parked entry is *not* what its reader
-  looks up — those boxes keep running on their legacy files until the boxholder
-  reconciles them.
+  looks up, and the contested name now EXISTS in the store — so a parked box
+  gets `not-granted` and reads as not configured (the legacy file is no longer
+  a fallback once the name exists). Reconcile those boxes promptly: pick the key
+  each should use and grant it.
 - **Unrecognized files are reported, not imported.** `google.secret.json` and
   `gmail.secret.json` hold OAuth *tokens* (`google-token-store.ts` keeps them);
   a guessed store name would create an entry no reader asks for.
@@ -314,8 +337,10 @@ unattended prod mutation.
 ## Migrating a connector
 
 Mistral is the template (`src/core/mistral-key.ts`): resolve from the store
-first, fall back to the legacy in-tree `config/connectors/<name>.secret.json`
-with a once-per-process deprecation warning naming the stray file, then the env
+first, and on an `unknown-secret` refusal — and only that one, via
+`refusalAllowsLegacyFallback` — fall back to the legacy in-tree
+`config/connectors/<name>.secret.json` with a once-per-process deprecation
+warning naming the stray file, then the env
 var. The fallbacks are removed in a later chunk; until then `cb health` flags
 any surviving `config/connectors/*.secret.json` as a warning
 (`legacy-secret-files`), because a file that still exists is a live credential

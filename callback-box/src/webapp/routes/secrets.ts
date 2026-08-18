@@ -37,17 +37,25 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { verifyAgentBearer } from "../../core/agent/token.js";
-import { resolveSecret } from "../../core/secrets/resolve.js";
+import { resolveSecret, SECRET_PURPOSE_PATTERN } from "../../core/secrets/resolve.js";
 import type { SecretRefusalKind } from "../../core/secrets/errors.js";
 import { assertNever } from "../../lib/invariant.js";
 
 /**
  * Both fields are required and bounded: `purpose` is written verbatim into the
- * access log, so it is a short label ("weather-trick"), never a payload.
+ * access log, so it is constrained to a short label ("weather-trick") — never a
+ * payload. The pattern is the resolver's own
+ * ({@link SECRET_PURPOSE_PATTERN}); rejecting here means the internal
+ * invariant behind it is never the thing that fails on caller input.
  */
 const resolveBodySchema = z.object({
   name: z.string().min(1).max(200),
-  purpose: z.string().min(1).max(100),
+  purpose: z
+    .string()
+    .regex(
+      SECRET_PURPOSE_PATTERN,
+      "purpose must be a short label: lowercase letters, digits and dashes, 40 characters max, e.g. weather-trick",
+    ),
 });
 
 /**

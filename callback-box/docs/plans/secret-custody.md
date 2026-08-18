@@ -16,9 +16,11 @@ machine-level store owned by the server processes, with per-box grants (each
 carrying an access level: `server` — never reaches agent context; `agent` —
 box code may resolve the value by name at call time, logged), an access log,
 and a full lifecycle — set, grant, revoke, rotate — managed from the admin
-page and chat widget, with `cb secrets` as the plumbing underneath. Nothing
-here is built yet; the design and its open questions were settled with the
-boxholder 2026-08-17 (see Decisions).
+page and chat widget, with `cb secrets` as the plumbing underneath. The
+design and its open questions were settled with the boxholder 2026-08-17
+(see Decisions); the code shipped the same day (see the migration-status
+note under Rollout shape for what remains operational — running the data
+migration, then the post-migration fallback removals).
 
 The one-sentence thesis: **the built-in connectors already use secrets only
 in server processes, so for them the fix is placement and inheritance (out
@@ -755,7 +757,11 @@ the operational acts, which are deliberately not code:
 - **Not code, and deliberately so — running the migration.** `cb secrets
   migrate` has to be *run*: on each dev machine, and on prod over
   `deploy/prod-ssh` with the boxholder present. Nothing in this repo does that
-  unattended.
+  unattended. One named driver for running it promptly: the scheduled-script
+  tooling-env residual — an arbitrary `runs:` command still inherits the
+  transition-window connector env (accepted per the Track 1 record, no code
+  change) — closes once the data migration is done and the connector entries
+  leave the tooling allowlist.
 - **Not yet, and blocked on that run:** removing the env-var fallbacks from the
   readers, dropping the connector entries from `child-env.ts`'s allowlist, and
   removing the legacy in-tree file fallback (plus the `cb health`

@@ -14,6 +14,7 @@
  * No legacy per-box file arm: Gemini never had one.
  */
 
+import { refusalAllowsLegacyFallback } from "./secrets/legacy-fallback.js";
 import { resolveSecret } from "./secrets/resolve.js";
 
 /** The store name this key lives under. */
@@ -38,8 +39,10 @@ export async function getGeminiApiKey(boxRoot?: string): Promise<string | null> 
       }
       return resolved.value.value;
     }
-    // Refusals degrade to the env vars, then to "not configured" — the callers'
-    // existing optional-key path.
+    // Only "no such secret on this machine" degrades to the env vars; a
+    // revoked, withheld, empty, or unreadable-store refusal is "not configured"
+    // (`secrets/legacy-fallback.ts`) — the callers' existing optional-key path.
+    if (!refusalAllowsLegacyFallback({ reader: "gemini-key", refusal: resolved.error })) return null;
   }
   return geminiKeyFromEnv();
 }

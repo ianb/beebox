@@ -19,6 +19,7 @@
  */
 
 import { boxSlug } from "../../lib/box-slug.js";
+import { invariant } from "../../lib/invariant.js";
 import { err, ok, type Result } from "../../lib/result.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import { appendSecretAccessEvent, stampSecretLastUsed } from "./access-log.js";
@@ -32,6 +33,20 @@ import {
   type SecretRefusal,
 } from "./errors.js";
 import { loadSecretStore, secretsFilePath, type SecretAccessLevel } from "./store.js";
+
+/**
+ * What a `purpose` may look like: a short lowercase label, `transcription`,
+ * `google-oauth`, `forecast-trick`.
+ *
+ * It is written VERBATIM into the access log and comes, on the loopback route,
+ * from agent-authored code — so it is constrained to a label rather than
+ * accepted as free text. An unbounded string there is a log-injection and
+ * log-bloat surface (newlines, JSON, a whole prompt), and the log is the record
+ * a boxholder reads to answer "what used this key". The loopback route rejects a
+ * violation with 400; in-process callers are our own code, so the resolver
+ * treats one as a broken invariant.
+ */
+export const SECRET_PURPOSE_PATTERN = /^[\da-z][\da-z-]{0,39}$/;
 
 /** A resolved value, plus whether the entry's last probe failed auth. */
 export interface ResolvedSecret {
@@ -61,6 +76,11 @@ export interface ResolveSecretOptions {
  */
 export async function resolveSecret(opts: ResolveSecretOptions): Promise<Result<ResolvedSecret, SecretRefusal>> {
   const { boxRoot, name, purpose, access } = opts;
+  invariant(
+    SECRET_PURPOSE_PATTERN.test(purpose),
+    `Secret resolve purpose ${JSON.stringify(purpose)} is not a short label ` +
+      "(lowercase letters, digits and dashes, 40 characters max) — it goes verbatim into the access log",
+  );
   const slug = opts.slug ?? (await boxSlug(boxRoot));
   const ts = getBoxTimeISO(boxRoot);
 

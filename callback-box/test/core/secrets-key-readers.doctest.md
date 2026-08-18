@@ -17,13 +17,14 @@ transcription key was never consent to pay for embeddings.
 Every value below is an obvious placeholder.
 
 ```ts setup
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { getGeminiApiKey } from "../../src/core/gemini-key.js";
 import { getOpenAiThinkingKey } from "../../src/core/openai-thinking-key.js";
 import { getOpenAiEmbeddingsKey, resetEmbeddingsLegacyWarning } from "../../src/core/search/embeddings-key.js";
-import { grantSecret, setSecret } from "../../src/core/secrets/lifecycle.js";
+import { grantSecret, revokeSecret, setSecret } from "../../src/core/secrets/lifecycle.js";
+import { resetLegacyFallbackWarnings } from "../../src/core/secrets/legacy-fallback.js";
 import { boxSlug } from "../../src/lib/box-slug.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
@@ -66,20 +67,27 @@ process.env.GEMINI_KEY = "placeholder-env-key";
 print(`both env vars: ${await getGeminiApiKey(box.root)}`);
 
 await setSecret({ name: "gemini", value: "placeholder-store-key" });
-print(`stored but ungranted: ${await getGeminiApiKey(box.root)}`);
+const [ungranted, refusalWarnings] = await withWarnings(() => getGeminiApiKey(box.root));
+print(`stored but ungranted: ${ungranted}`);
+print(`named the refusal: ${refusalWarnings.join("\n").includes("not-granted")}`);
 
 await grantSecret({ slug, name: "gemini", access: "server" });
 print(`store granted: ${await getGeminiApiKey(box.root)}`);
 =>
 legacy env only: placeholder-legacy-env-key
 both env vars: placeholder-env-key
-stored but ungranted: placeholder-env-key
+stored but ungranted: null
+named the refusal: true
 store granted: placeholder-store-key
 ```
 
 A grant is the per-box opt-in, so a secret merely *present* on the machine
-changes nothing for a box — the "stored but ungranted" line above is the
-fail-closed property, not an accident of ordering.
+changes nothing for a box. Note *which* nothing: an ungranted box reads as **not
+configured**, not as "fall back to the env var it used to use". Only
+`unknown-secret` — no entry of that name anywhere on the machine — reaches the
+legacy sources (`src/core/secrets/legacy-fallback.ts`). If `not-granted` fell
+through, `cb secrets revoke` would be a no-op on every box that still has a
+stale file or an exported variable.
 
 ## The thinking key is its own name
 
@@ -123,6 +131,43 @@ second call warned: false
 store present: placeholder-embeddings-store-key
 ```
 
+## A refusal is not a fall-through
+
+The legacy file and env var exist for ONE case: the machine has no entry of that
+name yet (`unknown-secret`). Every other refusal is not configured, with a
+warning that names the kind — otherwise revoking a grant would leave the box
+running on whatever stale copy is still lying around.
+
+```ts continue
+// The store still holds "openai", granted to this box, and the stray
+// openai.secret.json from the section above is still on disk.
+process.env.CALLBACK_OPENAI_API_KEY = "placeholder-fallback-env-key";
+await revokeSecret({ slug, name: "openai" });
+resetLegacyFallbackWarnings();
+const [afterRevoke, revokeWarnings] = await withWarnings(() => getOpenAiEmbeddingsKey(box.root));
+print(`revoked, file and env still present: ${afterRevoke}`);
+print(`names the kind: ${revokeWarnings.join("\n").includes("not-granted")}`);
+
+// A store that cannot be read at all is a machine fault, not a licence to read
+// the credentials it was meant to supersede.
+const corruptStore = join(dir, "corrupt-store.json");
+await writeFile(corruptStore, "{ this is not json");
+process.env.CB_SECRETS_FILE = corruptStore;
+const [afterCorrupt, corruptWarnings] = await withWarnings(() => getOpenAiEmbeddingsKey(box.root));
+print(`corrupt store, file and env still present: ${afterCorrupt}`);
+print(`names the kind: ${corruptWarnings.join("\n").includes("store-unreadable")}`);
+
+// And the case the fallback is FOR: no store, so no entry of that name.
+process.env.CB_SECRETS_FILE = join(dir, "no-store-here.json");
+print(`no entry anywhere: ${await getOpenAiEmbeddingsKey(box.root)}`);
+=>
+revoked, file and env still present: null
+names the kind: true
+corrupt store, file and env still present: null
+names the kind: true
+no entry anywhere: placeholder-file-key
+```
+
 Nothing configured anywhere is `null` for all three — the callers' existing
 "not configured" path, never a throw:
 
@@ -132,6 +177,7 @@ await rm(join(box.root, "config/connectors/openai.secret.json"));
 delete process.env.GEMINI_KEY;
 delete process.env.SKE_GEMINI_API_KEY;
 delete process.env.THINKING_OPENAI_API_KEY;
+delete process.env.CALLBACK_OPENAI_API_KEY;
 JSON.stringify([
   await getGeminiApiKey(box.root),
   await getOpenAiThinkingKey(box.root),
@@ -144,6 +190,7 @@ JSON.stringify([
 delete process.env.GEMINI_KEY;
 delete process.env.SKE_GEMINI_API_KEY;
 delete process.env.THINKING_OPENAI_API_KEY;
+delete process.env.CALLBACK_OPENAI_API_KEY;
 await box.cleanup();
 await rm(dir, { recursive: true, force: true });
 ```

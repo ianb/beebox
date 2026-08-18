@@ -24,6 +24,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
 import { parseJsonSecret } from "./secrets/json-secret.js";
+import { refusalAllowsLegacyFallback } from "./secrets/legacy-fallback.js";
 import { resolveSecret } from "./secrets/resolve.js";
 
 /** The store name this connector's credentials live under. */
@@ -105,8 +106,9 @@ export async function getDeepgramCredentials(boxRoot?: string): Promise<Deepgram
       if (fields !== null) return completeOrNull(fields);
       return null;
     }
-    // Every refusal degrades to the next source, then to "not configured" —
-    // the refusal itself is already in the access log with its exact condition.
+    // Only "no such secret on this machine" degrades to the legacy sources;
+    // every other refusal is "not configured" (`secrets/legacy-fallback.ts`).
+    if (!refusalAllowsLegacyFallback({ reader: "deepgram-key", refusal: resolved.error })) return null;
     const legacy = await readLegacySecretFile(boxRoot);
     if (legacy !== null) return legacy;
   }

@@ -24,6 +24,7 @@ import { z } from "zod";
 
 import { parseJsonSecret } from "../core/secrets/json-secret.js";
 import { setAndGrantSecret } from "../core/secrets/lifecycle.js";
+import { refusalAllowsLegacyFallback } from "../core/secrets/legacy-fallback.js";
 import { resolveSecret } from "../core/secrets/resolve.js";
 import { boxSlug } from "../lib/box-slug.js";
 import { staticBearer } from "../services/cloudflare-bearer.js";
@@ -78,6 +79,10 @@ export async function readPublishSecret(boxRoot: string): Promise<R2PublishStore
     if (fields === null) return null;
     return { accountId: fields.accountId, bucket: fields.bucket, bearer: staticBearer(fields.apiToken) };
   }
+
+  // Only "no such secret on this machine" degrades to the legacy file; every
+  // other refusal is "not configured" (`core/secrets/legacy-fallback.ts`).
+  if (!refusalAllowsLegacyFallback({ reader: "publish", refusal: resolved.error })) return null;
 
   let raw: string;
   try {

@@ -27,6 +27,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { refusalAllowsLegacyFallback } from "../secrets/legacy-fallback.js";
 import { resolveSecret } from "../secrets/resolve.js";
 
 /** The store name this key lives under — matches the legacy file's basename. */
@@ -70,8 +71,10 @@ export async function getOpenAiEmbeddingsKey(boxRoot: string): Promise<string | 
     }
     return resolved.value.value;
   }
-  // Every refusal degrades to the legacy sources below; the refusal is already
-  // in the access log with its exact condition.
+  // Only "no such secret on this machine" degrades to the legacy sources
+  // below; every other refusal is "not configured"
+  // (`secrets/legacy-fallback.ts`).
+  if (!refusalAllowsLegacyFallback({ reader: "embeddings-key", refusal: resolved.error })) return null;
   const secretPath = path.join(boxRoot, SECRET_RELATIVE_PATH);
   let content: string;
   try {

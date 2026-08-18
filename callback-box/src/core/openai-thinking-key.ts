@@ -16,6 +16,7 @@
  * consent to pay for embeddings, and boxes may hold different keys for each.
  */
 
+import { refusalAllowsLegacyFallback } from "./secrets/legacy-fallback.js";
 import { resolveSecret } from "./secrets/resolve.js";
 
 /** The store name this key lives under. */
@@ -35,8 +36,10 @@ export async function getOpenAiThinkingKey(boxRoot?: string): Promise<string | n
       }
       return resolved.value.value;
     }
-    // Refusals degrade to the env var, then to "not configured" — the same
-    // surface these call sites have always presented.
+    // Only "no such secret on this machine" degrades to the env var; every
+    // other refusal is "not configured" (`secrets/legacy-fallback.ts`) — the
+    // same surface these call sites have always presented.
+    if (!refusalAllowsLegacyFallback({ reader: "openai-thinking-key", refusal: resolved.error })) return null;
   }
   return process.env["THINKING_OPENAI_API_KEY"] ?? null;
 }

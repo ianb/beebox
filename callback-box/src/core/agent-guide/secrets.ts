@@ -17,7 +17,7 @@ export function secretsSection(): string {
 
 Credentials live in a machine-level store outside this box, one copy each, granted per box by the boxholder — never in a card, a config file, an env var, a log, or any committed file.
 
-- **Need a key for something you are building?** \`cb secrets declare <name> --note "what it is and where to get it"\` names the slot; the boxholder supplies the value and grants it. \`cb secrets status <box>\` shows what this box has and what it is still waiting on. Needing a credential you were not given is a question for a human, not an obstacle to work around.
+- **Need a key for something you are building?** \`cb secrets declare <name> --note "what it is and where to get it"\` names the slot; the boxholder supplies the value and grants it. \`cb secrets status <this box>\` shows what this box has and what it is still waiting on (your own box only — the machine's other boxes are the boxholder's business). Needing a credential you were not given is a question for a human, not an obstacle to work around.
 - **Using one from box code** (a trick, a script) — resolve it at call time, every time, and hold it only for that one outbound request:
   \`\`\`
   POST $CB_SERVER_URL/$CB_BOX_NAME/api/secrets/resolve   (header: Authorization: Bearer $CB_AGENT_TOKEN)

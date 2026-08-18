@@ -44,8 +44,9 @@ function printPlan(plan: MigrationPlan): void {
         `kept that name. Its value is parked as "${conflict.parkedAs}".`,
     );
     console.log(
-      `            Readers ask for "${conflict.contestedName}", so "${conflict.slug}" keeps working through its ` +
-        "legacy file until you decide which key it should use.",
+      `            Readers ask for "${conflict.contestedName}" and "${conflict.slug}" holds no grant for it, so ` +
+        "that connector reads as NOT CONFIGURED — a name that exists in the store no longer falls back to a " +
+        "legacy file. Decide which key the box should use, then grant it.",
     );
   }
   for (const skip of plan.skipped) {

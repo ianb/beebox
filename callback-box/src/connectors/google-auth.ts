@@ -8,6 +8,7 @@
  */
 
 import { OAuth2Client } from "google-auth-library";
+import { refusalAllowsLegacyFallback } from "../core/secrets/legacy-fallback.js";
 import { resolveSecret } from "../core/secrets/resolve.js";
 import {
   loadGoogleTokens,
@@ -75,6 +76,15 @@ export async function getGoogleClientCreds(
       resolveSecret({ boxRoot, name: GOOGLE_CLIENT_SECRET_SECRET_NAME, purpose: "google-oauth", access: "server" }),
     ]);
     if (id.ok && secret.ok) return { clientId: id.value.value, clientSecret: secret.value.value };
+    // Only "no such secret on this machine" degrades to the env vars — for
+    // EITHER half, since a partial store answer must not mix sources. Any other
+    // refusal (revoked, withheld, empty, unreadable store) is "not configured";
+    // falling through would let a stale export outlive a revoked grant
+    // (`core/secrets/legacy-fallback.ts`).
+    const blocked = [id, secret].some(
+      (result) => !result.ok && !refusalAllowsLegacyFallback({ reader: "google-auth", refusal: result.error }),
+    );
+    if (blocked) return null;
   }
   // TODO(env-migration): GOOGLE_OAUTH_* are validated + redacted at startup
   // (lib/env.ts server/hub schemas); reads stay direct — creds are read lazily

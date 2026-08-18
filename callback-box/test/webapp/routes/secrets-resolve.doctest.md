@@ -157,6 +157,33 @@ print(`status: ${bad.statusCode} ${bad.body.kind}`);
 => status: 400 bad-request
 ```
 
+`purpose` is constrained to that label shape — `^[a-z0-9][a-z0-9-]{0,39}$` — so
+agent-authored callers cannot write a newline, a JSON blob, or a whole prompt
+into the boxholder's access log:
+
+```ts continue
+async function badPurpose(purpose) {
+  const reply = await ctx.request({
+    method: "POST",
+    url: "/api/secrets/resolve",
+    payload: { name: "weatherapi", purpose },
+    headers: agentAuth,
+  });
+  return `${reply.statusCode} ${reply.body.kind}`;
+}
+print(`newline: ${await badPurpose("weather\ntrick")}`);
+print(`uppercase: ${await badPurpose("WeatherTrick")}`);
+print(`empty: ${await badPurpose("")}`);
+print(`too long: ${await badPurpose("a".repeat(41))}`);
+print(`still logged nothing new: ${(await accessLog()).length}`);
+=>
+newline: 400 bad-request
+uppercase: 400 bad-request
+empty: 400 bad-request
+too long: 400 bad-request
+still logged nothing new: 3
+```
+
 ```ts cleanup
 await ctx.cleanup();
 await rm(storeDir, { recursive: true, force: true });

@@ -20,6 +20,7 @@ import {
   listSecrets,
   removeSecret,
   revokeSecret,
+  setAndGrantSecret,
   setSecret,
 } from "../../../src/core/secrets/lifecycle.js";
 
@@ -194,6 +195,41 @@ entry:
 ```ts continue
 await grantSecret({ slug: "demo-box", name: "nonexistent", access: "server" });
 => throws SecretNotFoundError
+```
+
+`setAndGrantSecret` reads ownership off the STORE, never off its own arguments:
+a flow that passes an `owningBox` naming itself cannot take over an entry
+another box owns, and cannot hand an entry it does own to a third box.
+
+```ts continue
+await setAndGrantSecret({
+  name: "telegram-bot/demo-box",
+  value: "placeholder-value-5",
+  slug: "other-box",
+  access: "server",
+  owningBox: "other-box",
+  shareable: false,
+});
+=> throws SecretNotShareableError: The secret "telegram-bot/demo-box" is marked single-box (it belongs to "demo-box") and cannot also be granted to "other-box". Some credentials bind to one box structurally — a Telegram bot token routes to a single webhook URL — so sharing one would break the box already using it. Create a separate secret for this box.
+
+await setAndGrantSecret({
+  name: "telegram-bot/demo-box",
+  value: "placeholder-value-6",
+  slug: "demo-box",
+  access: "server",
+  owningBox: "third-box",
+});
+=> throws SecretNotShareableError
+
+// The owner rotating its own value is the case this call exists for.
+await setAndGrantSecret({
+  name: "telegram-bot/demo-box",
+  value: "placeholder-value-7",
+  slug: "demo-box",
+  access: "server",
+});
+JSON.stringify((await listSecrets()).map((entry) => [entry.name, entry.owningBox, Object.keys(entry.grants)]))
+=> [["telegram-bot/demo-box","demo-box",["demo-box"]]]
 ```
 
 ```ts cleanup

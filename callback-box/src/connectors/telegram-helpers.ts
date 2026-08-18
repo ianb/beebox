@@ -7,6 +7,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
 import { parseJsonSecret } from "../core/secrets/json-secret.js";
+import { refusalAllowsLegacyFallback } from "../core/secrets/legacy-fallback.js";
 import { resolveSecret } from "../core/secrets/resolve.js";
 import { boxSlug } from "../lib/box-slug.js";
 import { errnoCode } from "../lib/error-guards.js";
@@ -91,6 +92,10 @@ export async function loadTelegramConfig(boxRoot: string): Promise<TelegramConfi
   if (resolved.ok) {
     return parseJsonSecret({ name, value: resolved.value.value, schema: telegramSecretSchema });
   }
+
+  // Only "no such secret on this machine" degrades to the legacy file; every
+  // other refusal is "not configured" (`core/secrets/legacy-fallback.ts`).
+  if (!refusalAllowsLegacyFallback({ reader: "telegram", refusal: resolved.error })) return null;
 
   let content: string;
   const legacyPath = telegramLegacySecretPath(boxRoot);

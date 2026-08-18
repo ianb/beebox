@@ -169,7 +169,9 @@ export async function grantSecret(opts: { slug: string; name: string; access: Se
  * bucket) and the grant follows automatically. `grantSecret` would refuse the
  * second step on its own `shareable: false` check if the entry already existed
  * for a different box — the ownership check runs here too, so a flow can never
- * quietly steal another box's entry.
+ * quietly steal another box's entry. That check reads the STORED owner and
+ * ignores what the caller passed: an entry owned by another box is refused even
+ * when `opts.owningBox` claims otherwise.
  *
  * Doing both under ONE lock also means there is no window in which the value
  * exists ungranted: a concurrent resolve either sees the old state or the new
@@ -187,10 +189,20 @@ export async function setAndGrantSecret(opts: {
   if (opts.value === "") throw new EmptySecretValueError();
   await mutateSecretStore({ purpose: "set-and-grant" }, (store) => {
     const existing = store.secrets[opts.name];
-    const owningBox = opts.owningBox ?? existing?.owningBox;
-    if (existing?.shareable === false && owningBox !== undefined && owningBox !== opts.slug) {
-      throw new SecretNotShareableError({ secretName: opts.name, owningBox, boxSlug: opts.slug });
+    // Ownership is read off the STORE, never off the caller's options: an
+    // `opts.owningBox ?? existing?.owningBox` would let a flow name itself the
+    // owner of an entry another box already owns and pass its own check. An
+    // existing owner is therefore decisive — a different caller is refused
+    // outright, and `opts.owningBox` may only introduce ownership on a new
+    // entry (or restate the owner an existing entry already has).
+    const existingOwner = existing?.owningBox;
+    if (existingOwner !== undefined && existingOwner !== opts.slug) {
+      throw new SecretNotShareableError({ secretName: opts.name, owningBox: existingOwner, boxSlug: opts.slug });
     }
+    if (opts.owningBox !== undefined && existingOwner !== undefined && opts.owningBox !== existingOwner) {
+      throw new SecretNotShareableError({ secretName: opts.name, owningBox: existingOwner, boxSlug: opts.owningBox });
+    }
+    const owningBox = existingOwner ?? opts.owningBox;
     store.secrets[opts.name] = {
       ...existing,
       value: opts.value,

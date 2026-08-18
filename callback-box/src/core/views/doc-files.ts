@@ -103,7 +103,7 @@ resolves from the machine-level secret store under the adapter's own name.
 Adapters: \`replicate\`, \`mistral\`, \`anthropic\`, \`openai\`.
 
 A key is never a file you write: the boxholder grants the adapter's secret
-to this box (\`cb secrets status <box>\` shows what is granted and what is
+to this box (\`cb secrets status <this box>\` shows what is granted and what is
 missing; \`cb secrets declare\` names one you need). An in-tree
 \`config/connectors/<adapter>.secret.json\` is a deprecated fallback that is
 being retired — do not create one.

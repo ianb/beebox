@@ -202,3 +202,31 @@ boxes: 1
 await box.cleanup();
 await rm(dir, { recursive: true, force: true });
 ```
+
+## `purpose` is a label, not free text
+
+It is written verbatim into the access log the boxholder reads, so the resolver
+holds callers to `^[a-z0-9][a-z0-9-]{0,39}$`. In-process callers are our own
+code, so a violation is a broken invariant rather than a refusal — the route
+that takes one from agent-authored code (`webapp/routes/secrets.ts`) rejects it
+with `bad-request` first.
+
+```ts
+const dir = await useTempStore();
+const box = await makeTmpBox();
+await resolveSecret({ boxRoot: box.root, name: "anything", purpose: "Not A Label", access: "server" });
+=> throws InvariantError
+```
+
+```ts continue
+await resolveSecret({ boxRoot: box.root, name: "anything", purpose: "with\nnewline", access: "server" });
+=> throws InvariantError
+
+(await resolveSecret({ boxRoot: box.root, name: "anything", purpose: "google-oauth", access: "server" })).error.kind
+=> unknown-secret
+```
+
+```ts cleanup
+await box.cleanup();
+await rm(dir, { recursive: true, force: true });
+```

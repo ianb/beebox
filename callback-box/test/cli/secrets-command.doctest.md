@@ -9,7 +9,7 @@ function, called directly here rather than spawning the CLI.
 Values below are obvious placeholders.
 
 ```ts setup
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import {
@@ -94,12 +94,16 @@ neither disclose nor empower anything, so it runs unguarded.
 ```ts
 const dir = await useTempStore();
 await setSecret({ name: "mistral", value: "placeholder-value-2" });
+// The box these `status` calls run in: its slug is its directory's basename,
+// so this is the "demo-box" they ask about.
+const demoBox = join(dir, "demo-box");
+await mkdir(demoBox);
 
 const blocked = await runCaptured(() => runGrantSecret({ boxOrRoot: "demo-box", name: "mistral" }));
 print(`exit: ${blocked.exitCode}`);
 print(`named the session: ${blocked.errors.join("\n").includes("this looks like an agent session")}`);
 print(`pointed at declare: ${blocked.errors.join("\n").includes("cb secrets declare")}`);
-const after = await runCaptured(() => runSecretsStatus({ boxOrRoot: "demo-box" }));
+const after = await runCaptured(() => runSecretsStatus({ boxOrRoot: "demo-box", boxRoot: demoBox }));
 print(`granted anything: ${!after.logs.join("\n").includes("granted: none")}`);
 
 const declared = await runCaptured(() => runDeclareSecret({ name: "weatherapi", note: "for a trick" }));
@@ -122,7 +126,7 @@ const granted = await runCaptured(() =>
   runGrantSecret({ boxOrRoot: "demo-box", name: "mistral", access: "agent", agentConfirmed: true }),
 );
 print(granted.logs.join("\n"));
-const status = await runCaptured(() => runSecretsStatus({ boxOrRoot: "demo-box" }));
+const status = await runCaptured(() => runSecretsStatus({ boxOrRoot: "demo-box", boxRoot: demoBox }));
 print(status.logs.join("\n"));
 =>
 Granted "mistral" to "demo-box" with agent access.
@@ -172,7 +176,7 @@ const declared = await runCaptured(() =>
 );
 print(declared.logs.join("\n").replaceAll(basename(boxDir), "<box>"));
 
-const status = await runCaptured(() => runSecretsStatus({ boxOrRoot: boxDir }));
+const status = await runCaptured(() => runSecretsStatus({ boxOrRoot: boxDir, boxRoot: boxDir }));
 print(status.logs.join("\n").replaceAll(basename(boxDir), "<box>"));
 =>
 Declared "weatherapi" — an empty, ungranted slot. Ask the boxholder to supply the value and grant it.
@@ -190,7 +194,7 @@ await setSecret({ name: "weatherapi", value: "placeholder-value-4" });
 const granted = await runCaptured(() =>
   runGrantSecret({ boxOrRoot: boxDir, name: "weatherapi", access: "agent", agentConfirmed: true }),
 );
-const after = await runCaptured(() => runSecretsStatus({ boxOrRoot: boxDir }));
+const after = await runCaptured(() => runSecretsStatus({ boxOrRoot: boxDir, boxRoot: boxDir }));
 print(after.logs.join("\n").replaceAll(basename(boxDir), "<box>"));
 =>
 Box: <box>
@@ -207,12 +211,52 @@ await rm(boxDir, { recursive: true, force: true });
 ```ts
 const dir = await useTempStore();
 await setSecret({ name: "mistral", value: "placeholder-value-3", note: "transcription" });
-const listed = await runCaptured(() => runListSecrets());
+const listed = await runCaptured(() => runListSecrets({ agentConfirmed: true }));
 print(`leaks the value: ${listed.logs.join("\n").includes("placeholder-value-3")}`);
 print(listed.logs.join("\n"));
 =>
 leaks the value: false
 mistral	set	updated=«*»	grants=none	note=transcription
+```
+
+## An agent sees its own box, not the machine
+
+`list` is the machine-wide inventory — every secret name and which boxes hold
+them — so it carries the same agent refusal as the mutations. `status` is
+per-box and stays open to an agent, but only for the box the command is
+standing in. Neither discloses a value; what is withheld is the map.
+
+```ts continue
+const listBlocked = await runCaptured(() => runListSecrets());
+print(`list exit: ${listBlocked.exitCode}`);
+print(`named the session: ${listBlocked.errors.join("\n").includes("list every secret on this machine")}`);
+
+const ownBox = join(dir, "own-box");
+const otherBox = join(dir, "other-box");
+await mkdir(ownBox);
+await mkdir(otherBox);
+
+const own = await runCaptured(() => runSecretsStatus({ boxOrRoot: "own-box", boxRoot: ownBox }));
+print(`own box exit: ${own.exitCode}`);
+print(own.logs.join("\n"));
+
+const other = await runCaptured(() => runSecretsStatus({ boxOrRoot: "other-box", boxRoot: ownBox }));
+print(`other box exit: ${other.exitCode}`);
+print(`says which box it is in: ${other.errors.join("\n").includes(`the box you are working in is "own-box"`)}`);
+
+const nowhere = await runCaptured(() => runSecretsStatus({ boxOrRoot: "own-box", boxRoot: null }));
+print(`outside a box exit: ${nowhere.exitCode}`);
+print(`says why: ${nowhere.errors.join("\n").includes("not inside a box")}`);
+=>
+list exit: 1
+named the session: true
+own box exit: undefined
+Box: own-box
+  granted: none
+other box exit: 1
+says which box it is in: true
+outside a box exit: 1
+says why: true
 ```
 
 ```ts cleanup
