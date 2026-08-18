@@ -75,6 +75,20 @@ const ACTION_TAG_NAMES: Record<KeywordAction, string> = {
   erase: "erase-message",
 };
 
+/**
+ * Remove keyword control tags from text headed back into the composer. The
+ * tags are markers for the persisted message record, not composer content —
+ * a rejected send's restore must return the user's words, never raw markup
+ * (the iOS composer holds substitution until its send lock accepts for the
+ * same reason; docs/mobile-contract.md §4.4).
+ */
+export function stripKeywordTags(text: string): string {
+  // Literal alternation of ACTION_TAG_NAMES' values (the lint bans a
+  // constructed RegExp); the doctest strips every action's tag, so a new
+  // action name added without extending this pattern fails there.
+  return text.replace(/\s*<(?:send-message|send-close-message|cancel-message|mic-off|erase-message)\b[^<>]*\/>/g, "").trim();
+}
+
 function keywordTag(action: KeywordAction, phrase: string): string {
   const escaped = phrase.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
   return `<${ACTION_TAG_NAMES[action]} phrase="${escaped}" />`;

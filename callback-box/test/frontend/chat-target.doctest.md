@@ -58,6 +58,35 @@ plan.images.length
 => 1
 ```
 
+## planRestore: keyword control tags never reach the composer
+
+A rejected voice-keyword send carries its control tag in the emission text
+(`<send-message phrase="..." />` and friends). The tag is a marker for the
+persisted message record, not composer content, so the restore strips it —
+every action's tag, which is also what keeps this pattern in sync with
+`ACTION_TAG_NAMES` in `speech-keywords.ts`.
+
+```ts continue
+const tagged = createVoiceEmission({
+  text: 'remember the milk <send-message phrase="Send message" />',
+  selections: [],
+  diarized: false,
+});
+planRestore(emptyDraft, tagged).text
+=> remember the milk
+
+const allTags = [
+  '<send-message phrase="Send message" />',
+  '<send-close-message phrase="Send and close" />',
+  '<cancel-message phrase="Cancel message" />',
+  '<mic-off phrase="Microphone off" />',
+  '<erase-message phrase="Clear &quot;this&quot; message" />',
+].join(" ");
+const swept = createVoiceEmission({ text: `keep this ${allTags}`, selections: [], diarized: false });
+planRestore(emptyDraft, swept).text
+=> keep this
+```
+
 ## planRestore: text already typed appends after a newline instead of clobbering it
 
 ```ts

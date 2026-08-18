@@ -15,6 +15,7 @@
  */
 
 import type { ChatImageAttachment } from "../../api-chat";
+import { stripKeywordTags } from "../../lib/audio/speech-keywords";
 import type { Emission, EmissionFile } from "../emission";
 import type { SelectionItem } from "../../lib/selection/serialize";
 import type { EmissionDraft, EmissionEditor, ImageItem, FileItem } from "../emission-store";
@@ -85,10 +86,14 @@ export interface RestorePlan {
  * tokens, so nothing is re-inserted); a composer the user has since typed
  * into appends the failed text after a newline instead of clobbering it.
  * Attachments/selections are always re-added — they don't collide with
- * anything the user typed in the meantime.
+ * anything the user typed in the meantime. Keyword control tags are stripped
+ * from the restored text: they are message-record markers, not composer
+ * content, and a voice send rejected by the server would otherwise surface
+ * raw markup in the text box.
  */
 export function planRestore(draft: EmissionDraft, emission: Emission): RestorePlan {
-  const text = draft.text.trim().length === 0 ? emission.text : `${draft.text}\n${emission.text}`;
+  const restored = stripKeywordTags(emission.text);
+  const text = draft.text.trim().length === 0 ? restored : `${draft.text}\n${restored}`;
   return { text, images: emission.images, files: emission.files, selections: emission.selections };
 }
 
