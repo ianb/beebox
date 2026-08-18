@@ -87,6 +87,21 @@ planRestore(emptyDraft, swept).text
 => keep this
 ```
 
+Only voice emissions strip — the keyword pipeline is the only thing that
+puts a tag into voice text. A TYPED message restores verbatim, so someone
+literally typing a tag (discussing the markup) keeps their text:
+
+```ts continue
+const typed = createTypedEmission({
+  text: 'the composer leaked <erase-message phrase="Clear message" /> today',
+  images: [],
+  files: [],
+  selections: [],
+});
+planRestore(emptyDraft, typed).text
+=> the composer leaked <erase-message phrase="Clear message" /> today
+```
+
 ## planRestore: text already typed appends after a newline instead of clobbering it
 
 ```ts

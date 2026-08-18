@@ -111,7 +111,7 @@ export function useEmissionPersistence(opts: {
     [persistNow],
   );
 
-  const { schedule, cancel } = usePersistScheduler({ debounceMs: PERSIST_DEBOUNCE_MS, onHide: flushOnHide });
+  const { schedule, cancel, flush } = usePersistScheduler({ debounceMs: PERSIST_DEBOUNCE_MS, onHide: flushOnHide });
 
   const dismissExpiredAttachments = useCallback(() => {
     setExpiredAttachments([]);
@@ -214,11 +214,17 @@ export function useEmissionPersistence(opts: {
     }
     const unsubscribe = emissionStore.subscribe(scheduleWrite);
     scheduleWrite();
-    // No `cancel()` here: the scheduler flushes its pending write on unmount,
-    // and this cleanup also runs on a dep change, where dropping the last
-    // observed state would be the same silent loss.
-    return unsubscribe;
-  }, [emissionStore, schedule, cancel, persistNow]);
+    // Flush, never cancel, on the way out. Unmount is covered by the
+    // scheduler's own dependency-free effect, but a BOX SWITCH re-runs this
+    // cleanup without unmounting — the pending write's closure still points
+    // at the old store and key, so flushing here is the only way the old
+    // box's last ≤400ms of typing reaches disk before the new box's writes
+    // supersede it.
+    return () => {
+      flush();
+      unsubscribe();
+    };
+  }, [emissionStore, schedule, cancel, persistNow, flush]);
 
   // The expired-attachments notice self-dismisses once the composer empties
   // out again (a send, or the user clearing everything) — the "next send"

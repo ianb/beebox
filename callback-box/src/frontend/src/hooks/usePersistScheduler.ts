@@ -30,6 +30,13 @@ export interface PersistScheduler {
   schedule: (write: () => void) => void;
   /** Cancel a pending scheduled write without running it. */
   cancel: () => void;
+  /**
+   * Run the pending scheduled write now (no-op when nothing is pending). For
+   * caller cleanups that re-run on a dependency change — a box switch swaps
+   * the store/key mid-session without unmounting, so only the caller, whose
+   * old closure still writes under the old key, can flush that boundary.
+   */
+  flush: () => void;
 }
 
 /**
@@ -70,6 +77,10 @@ export function usePersistScheduler(opts: {
     [getCore],
   );
 
+  const flush = useCallback(() => {
+    getCore().flush();
+  }, [getCore]);
+
   useEffect(() => {
     function handleVisibilityChange(): void {
       if (document.visibilityState === "hidden") onHide(cancel);
@@ -91,5 +102,5 @@ export function usePersistScheduler(opts: {
     };
   }, []);
 
-  return { schedule, cancel };
+  return { schedule, cancel, flush };
 }

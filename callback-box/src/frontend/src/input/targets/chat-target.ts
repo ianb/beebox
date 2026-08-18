@@ -86,13 +86,14 @@ export interface RestorePlan {
  * tokens, so nothing is re-inserted); a composer the user has since typed
  * into appends the failed text after a newline instead of clobbering it.
  * Attachments/selections are always re-added — they don't collide with
- * anything the user typed in the meantime. Keyword control tags are stripped
- * from the restored text: they are message-record markers, not composer
- * content, and a voice send rejected by the server would otherwise surface
- * raw markup in the text box.
+ * anything the user typed in the meantime. For a VOICE emission, keyword
+ * control tags are stripped from the restored text: they are message-record
+ * markers the keyword pipeline substituted, not composer content. Typed
+ * emissions restore verbatim — someone who literally typed a tag (discussing
+ * the markup, say) gets their text back untouched.
  */
 export function planRestore(draft: EmissionDraft, emission: Emission): RestorePlan {
-  const restored = stripKeywordTags(emission.text);
+  const restored = emission.origin === "voice" ? stripKeywordTags(emission.text) : emission.text;
   const text = draft.text.trim().length === 0 ? restored : `${draft.text}\n${restored}`;
   return { text, images: emission.images, files: emission.files, selections: emission.selections };
 }
