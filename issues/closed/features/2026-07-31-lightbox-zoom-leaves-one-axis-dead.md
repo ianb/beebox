@@ -4,8 +4,36 @@ workstream: lightbox-horizontal-pan
 area: callback-box
 filed-by: agent
 discovered-in: worktree-lightbox-horizontal-pan — measured while chasing a different (mis-stated) bug
-next-action: discuss
+resolution: wontfix
 ---
+
+**Closed 2026-08-18 — the boxholder can't perceive it on the device that should
+show it worst.** *"I have a small phone and it works fine."* A small phone is
+exactly where the numbers below predict the most dead axes, so that is the
+strongest available evidence against acting.
+
+Neither candidate fix landed and neither should: verified 2026-08-18 that
+`toggleZoom` still uses the constant `ZOOM_SCALE = 2.5`
+(`lightbox-render-target.ts:224-230`) and `rubberBandPan` still has no
+zero-bound short-circuit (`lightbox-gesture-math.ts:143-150`).
+
+**The title oversells the finding, which is worth recording so nobody re-files
+it.** "Zero pan travel on one axis" is geometry, not a defect: when a
+2.5×-zoomed image still doesn't fill an axis, there is nothing hidden on that
+axis to pan to, so refusing to move is correct. Nothing is unreachable.
+
+The only genuine defect was cosmetic — a drag on the pinned axis moves ~80% of
+finger travel and springs back, implying somewhere to go that does not exist.
+Fix (2) below (return the value unchanged when `bound === 0`) remains a valid
+three-line polish if the tell is ever noticed in practice. Fix (1) — zoom to
+fill rather than a constant — would redesign double-tap for every image to serve
+an axis with nothing to show, and is the one to leave alone.
+
+**Correction to the last section:** it says the swipe-commit spring defect was
+"left alone deliberately", which went stale within hours — `aa8d9330`
+("lightbox: fix swipe commit defects found by Codex review") landed the same
+evening. Whether it covered that exact retarget case is unconfirmed;
+`measure()` still only cancels `swipeSpring` rather than retargeting it.
 
 Double-tap zoom is a constant 2.5× (`ZOOM_SCALE`). Pan travel per axis is
 `panBound = max(0, (fit·scale − container) / 2)`, so **whichever axis is
