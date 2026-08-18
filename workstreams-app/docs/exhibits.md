@@ -200,3 +200,11 @@ Point an editor at `workstreams-app/exhibits-page.tsconfig.json` (extend it by
 absolute path from a `tsconfig.json` in your page directory) to get the same
 compiler settings the container compiles pages with, including the
 `@exhibits/client` mapping.
+
+Committed apps (`dev/apps/`) get exactly one check more, because they merge to
+main and live forever: a **this-will-build gate**. When a commit stages
+`dev/apps/**/*.ts(x)`, pre-commit runs `pnpm dev-apps-typecheck` — `tsc
+--noEmit` under `dev/apps/tsconfig.json`, which extends the same fragment the
+container serves with. No lint, no style rules; a page that compiles passes.
+`index.html`-tier apps never trigger it, and editors pick up
+`dev/apps/tsconfig.json` automatically (no per-page config needed there).

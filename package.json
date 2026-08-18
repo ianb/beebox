@@ -14,6 +14,7 @@
     "path-leak-check": "node --import tsx bin/path-leak-check.ts",
     "commit-blocklist-check": "node --import tsx bin/commit-blocklist-check.ts",
     "mobile-contract-check": "node --import tsx bin/mobile-contract-check.ts",
+    "dev-apps-typecheck": "bash bin/dev-apps-typecheck",
     "security:opengrep": "bash security/opengrep/run.sh",
     "update-agent-sdk": "node --import tsx bin/update-agent-sdk.ts",
     "check-docling-update": "node --import tsx bin/check-docling-update.ts",
