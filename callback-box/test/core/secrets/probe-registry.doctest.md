@@ -22,7 +22,13 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { boxSlug } from "../../../src/lib/box-slug.js";
-import { grantSecret, listSecrets, setSecret } from "../../../src/core/secrets/lifecycle.js";
+import {
+  declareSecret,
+  grantSecret,
+  listSecrets,
+  setAndGrantSecret,
+  setSecret,
+} from "../../../src/core/secrets/lifecycle.js";
 import {
   describeSecretProbe,
   isAuthRejection,
@@ -114,8 +120,8 @@ const adhoc = await probeSecret({ name: "weatherapi", deps: { fetch: recordingFe
 print(`verdict: ${adhoc.status}`);
 print(`reason: ${adhoc.reason}`);
 print(`entry left unverified: ${(await storedVerified("weatherapi")) === undefined}`);
-print(`no probe described: ${describeSecretProbe("weatherapi")}`);
-print(`mistral has one: ${describeSecretProbe("mistral")}`);
+print(`no probe described: ${describeSecretProbe({ name: "weatherapi" })}`);
+print(`mistral has one: ${describeSecretProbe({ name: "mistral" })}`);
 =>
 verdict: unchecked
 reason: no verification is available for this credential
@@ -124,20 +130,47 @@ no probe described: null
 mistral has one: lists Mistral models
 ```
 
-## Per-box families match by prefix
+## Per-box families match by prefix — but only for connector-created entries
 
 `telegram-bot/<box>` is one entry per box, so the registry matches the family
-rather than every slug. The value is the multi-field JSON the connector stores.
+rather than every slug. The connector flow that creates one marks it
+`owningBox` + `shareable: false`, and **the family probe requires those marks**:
+an agent can declare a slot with any name it likes, so matching on the name
+alone would let it pick which provider a value the boxholder pasted gets sent to.
 
 ```ts continue
 const tgCalls = [];
-await setSecret({ name: "telegram-bot/somebox", value: JSON.stringify({ botToken: "111111:placeholder", webhookSecret: "x" }) });
+await setAndGrantSecret({
+  name: "telegram-bot/somebox",
+  value: JSON.stringify({ botToken: "111111:placeholder", webhookSecret: "x" }),
+  slug: "somebox",
+  access: "server",
+  owningBox: "somebox",
+  shareable: false,
+});
 const tg = await probeSecret({ name: "telegram-bot/somebox", deps: { fetch: recordingFetch(200, tgCalls) } });
 print(`verdict: ${tg.status}`);
 print(`called: ${tgCalls[0]?.url}`);
 =>
 verdict: ok
 called: https://api.telegram.org/bot111111:placeholder/getMe
+```
+
+A look-alike name an agent declared gets no probe at all — nothing leaves the
+machine.
+
+```ts continue
+const impostorCalls = [];
+await declareSecret({ name: "telegram-bot/impostor", note: "an agent asked for this", declaredBy: "somebox" });
+await setSecret({ name: "telegram-bot/impostor", value: JSON.stringify({ botToken: "222222:placeholder", webhookSecret: "x" }) });
+const impostor = await probeSecret({ name: "telegram-bot/impostor", deps: { fetch: recordingFetch(200, impostorCalls) } });
+print(`verdict: ${impostor.status} — ${impostor.reason}`);
+print(`requests made: ${impostorCalls.length}`);
+print(`nothing described either: ${describeSecretProbe({ name: "telegram-bot/impostor" })}`);
+=>
+verdict: unchecked — no verification is available for this credential
+requests made: 0
+nothing described either: null
 ```
 
 A value that is not the shape the credential needs is a `failed` verification —
@@ -150,6 +183,28 @@ const malformed = await probeSecret({ name: "telegram-bot/somebox", deps: { fetc
 print(`verdict: ${malformed.status} — ${malformed.reason}`);
 =>
 verdict: failed — the stored value is not in the shape this credential needs
+```
+
+## A probe that outlives its value never stamps the new one
+
+A slow probe against the old key must not land on the rotated one: it would
+either hide a bad rotation behind `ok` or mark a fresh key as expired. The write
+is a compare-and-set on the entry's `updated` stamp.
+
+```ts continue
+let release;
+const slowFetch = async () => {
+  await new Promise((resolve) => { release = resolve; });
+  return new Response("{}", { status: 401 });
+};
+const slow = probeSecret({ name: "mistral", deps: { fetch: slowFetch } });
+await setSecret({ name: "mistral", value: "placeholder-mistral-key-2" });
+release();
+print(`the stale probe still reports: ${(await slow).status}`);
+print(`but the rotated entry is untouched: ${(await storedVerified("mistral")) === undefined}`);
+=>
+the stale probe still reports: failed
+but the rotated entry is untouched: true
 ```
 
 ## Suspect round-trip: a real 401 makes every later resolve say so

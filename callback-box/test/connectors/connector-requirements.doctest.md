@@ -71,14 +71,23 @@ granted, no value yet: ["someservice"]
 The store says what the credential *is* (`telegram-bot/<box>`, one per box); the
 requirement says what *syncs* (`telegram`). The mapping is stated, not derived.
 
+Only the per-box form counts: the connector resolves exactly
+`telegram-bot/<slug>`, so a flat `telegram-bot` grant would make a script run
+and fail rather than skip cleanly.
+
 ```ts continue
+await setSecret({ name: "telegram-bot", value: JSON.stringify({ botToken: "111111:placeholder", webhookSecret: "x" }) });
+await grantSecret({ slug, name: "telegram-bot", access: "server" });
+print(`a flat grant does not count: ${await missing(box.root, "telegram")}`);
+
 await setSecret({ name: `telegram-bot/${slug}`, value: JSON.stringify({ botToken: "111111:placeholder", webhookSecret: "x" }) });
-print(`before the grant: ${await missing(box.root, "telegram")}`);
+print(`stored per-box, not granted: ${await missing(box.root, "telegram")}`);
 await grantSecret({ slug, name: `telegram-bot/${slug}`, access: "server" });
-print(`after the grant: ${await missing(box.root, "telegram")}`);
+print(`granted per-box: ${await missing(box.root, "telegram")}`);
 =>
-before the grant: ["telegram"]
-after the grant: []
+a flat grant does not count: ["telegram"]
+stored per-box, not granted: ["telegram"]
+granted per-box: []
 ```
 
 ## The legacy in-tree file still satisfies it

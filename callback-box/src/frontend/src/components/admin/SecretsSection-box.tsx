@@ -61,7 +61,7 @@ function GrantedRow({
         </Text>
         <Row gap="sm" wrap>
           <Button intent="secondary" onClick={() => setRotating(!rotating)}>
-            {rotating ? "Cancel" : secret.hasValue ? "Rotate value" : "Set value"}
+            {rotating ? "Close" : secret.hasValue ? "Rotate value" : "Set value"}
           </Button>
           <Button
             intent="secondary"
@@ -80,16 +80,8 @@ function GrantedRow({
             Revoke
           </Button>
         </Row>
-        {rotating ? (
-          <SecretValueForm
-            fixedName={secret.name}
-            hints={hints}
-            onSaved={() => {
-              setRotating(false);
-              refresh();
-            }}
-          />
-        ) : null}
+        {/* Left open after a save — the verification verdict renders inside it. */}
+        {rotating ? <SecretValueForm fixedName={secret.name} hints={hints} onSaved={refresh} /> : null}
         {setAccess.error ? <div role="alert"><Text size="sm" tone="danger">{setAccess.error.message}</Text></div> : null}
         {revoke.error ? <div role="alert"><Text size="sm" tone="danger">{revoke.error.message}</Text></div> : null}
       </Stack>
@@ -161,18 +153,9 @@ function DeclaredRow({
           <Badge tone={hasValue ? "info" : "warning"}>{hasValue ? "has a value, not granted" : "empty slot"}</Badge>
         </Row>
         <Row gap="sm" wrap>
-          <Button intent="secondary" onClick={() => setFilling(!filling)}>{filling ? "Cancel" : "Supply value"}</Button>
+          <Button intent="secondary" onClick={() => setFilling(!filling)}>{filling ? "Close" : "Supply value"}</Button>
         </Row>
-        {filling ? (
-          <SecretValueForm
-            fixedName={name}
-            hints={hints}
-            onSaved={() => {
-              setFilling(false);
-              refresh();
-            }}
-          />
-        ) : null}
+        {filling ? <SecretValueForm fixedName={name} hints={hints} onSaved={refresh} /> : null}
       </Stack>
     </Card>
   );

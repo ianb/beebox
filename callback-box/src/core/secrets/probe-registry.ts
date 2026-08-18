@@ -38,7 +38,7 @@
  */
 
 import { z } from "zod";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errnoCode, toError } from "../../lib/error-guards.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import { parseJsonSecret } from "./json-secret.js";
 import { lookupByName } from "./name-match.js";
@@ -129,9 +129,44 @@ export type SecretVerified = NonNullable<SecretEntry["verified"]>;
 /** In-process probes by `<name>@<updated>`, so one write means one request. */
 const inFlight = new Map<string, Promise<SecretVerified>>();
 
-/** What the probe registry offers for a name, for the admin UI to explain. */
-export function describeSecretProbe(name: string): string | null {
-  return lookupByName(probes, name)?.entry.describe ?? null;
+/** The provenance fields a per-box family probe requires. See {@link probeEntryFor}. */
+export interface SecretProvenance {
+  owningBox?: string | undefined;
+  shareable?: boolean | undefined;
+}
+
+/**
+ * The probe for one entry, or `null`.
+ *
+ * A `family/` prefix entry (`telegram-bot/`) additionally requires that the
+ * entry was created by the connector flow that owns that family — it carries
+ * `owningBox` + `shareable: false`. Without that check, an agent could DECLARE a
+ * slot named `telegram-bot/anything`, and whatever value the boxholder then
+ * pasted in would be sent to api.telegram.org by a probe the agent effectively
+ * chose. Exact names are safe by construction: an agent cannot make `mistral`
+ * mean something else.
+ */
+function probeEntryFor(opts: { name: string } & SecretProvenance): { key: string; entry: ProbeEntry } | null {
+  const found = lookupByName(probes, opts.name);
+  if (found === null) return null;
+  if (!found.key.endsWith("/")) return found;
+  if (opts.shareable === false && opts.owningBox !== undefined) return found;
+  return null;
+}
+
+/** What the probe registry offers for an entry, for the admin UI to explain. */
+export function describeSecretProbe(opts: { name: string } & SecretProvenance): string | null {
+  return probeEntryFor(opts)?.entry.describe ?? null;
+}
+
+/**
+ * The kind of failure, with no message text. `AbortError` for a timeout,
+ * `TypeError` for a connection failure, and the `code` where one exists.
+ */
+function errorClass(e: unknown): string {
+  const error = toError(e);
+  const code = errnoCode(e);
+  return code === undefined ? error.name : `${error.name}/${code}`;
 }
 
 function isAuthFailure(entry: ProbeEntry, status: number): boolean {
@@ -154,7 +189,12 @@ async function runProbe(opts: { entry: ProbeEntry; value: string; at: string; do
   } catch (e) {
     // A network failure says nothing about the credential — recording `failed`
     // here would flag a good key as suspect every time the provider blipped.
-    return { status: "unchecked", at: opts.at, reason: `could not reach the provider (${errorMessage(e)})` };
+    //
+    // Only the error's CLASS is recorded, never its message: fetch and proxy
+    // errors routinely quote the request URL, and Telegram's probe URL contains
+    // the bot token, so a stored-and-displayed message could publish the secret
+    // into the admin page. A class name is enough to tell a timeout from DNS.
+    return { status: "unchecked", at: opts.at, reason: `could not reach the provider (${errorClass(e)})` };
   }
   if (response.ok) return { status: "ok", at: opts.at };
   if (isAuthFailure(opts.entry, response.status)) {
@@ -163,12 +203,22 @@ async function runProbe(opts: { entry: ProbeEntry; value: string; at: string; do
   return { status: "unchecked", at: opts.at, reason: `the check was inconclusive (HTTP ${response.status})` };
 }
 
-/** Write a verification result onto the entry, if it still exists. */
-async function storeVerified(name: string, verified: SecretVerified): Promise<void> {
+/**
+ * Write a verification result onto the entry — but only if the entry is still
+ * the one that was probed.
+ *
+ * A probe can outlive the value it checked: a slow request against the old key
+ * finishing after a rotation would stamp the old verdict onto the new value,
+ * either hiding a bad rotation behind `ok` or flagging a fresh key as expired.
+ * `updated` is the store's own version marker, so comparing it under the lock
+ * makes the write a compare-and-set.
+ */
+async function storeVerified(opts: { name: string; probedUpdated: string; verified: SecretVerified }): Promise<void> {
   await mutateSecretStore({ purpose: "verify" }, (store) => {
-    const entry = store.secrets[name];
+    const entry = store.secrets[opts.name];
     if (entry === undefined) return;
-    entry.verified = verified;
+    if (entry.updated !== opts.probedUpdated) return;
+    entry.verified = opts.verified;
   });
 }
 
@@ -183,10 +233,6 @@ async function storeVerified(name: string, verified: SecretVerified): Promise<vo
  */
 export async function probeSecret(opts: { name: string; deps?: { fetch?: FetchLike | undefined } }): Promise<SecretVerified> {
   const at = getBoxTimeISO();
-  const found = lookupByName(probes, opts.name);
-  if (found === null) {
-    return { status: "unchecked", at, reason: "no verification is available for this credential" };
-  }
   // `CB_SECRET_PROBES=off` suppresses the REAL network path only — the test
   // harness sets it for every test process so a doctest storing a placeholder
   // key can never send it to a live provider, while a caller that injected its
@@ -198,6 +244,10 @@ export async function probeSecret(opts: { name: string; deps?: { fetch?: FetchLi
   const loaded = await loadSecretStore();
   if (!loaded.ok) return { status: "unchecked", at, reason: `the secret store could not be read (${loaded.error})` };
   const entry = loaded.value.secrets[opts.name];
+  const found = probeEntryFor({ name: opts.name, owningBox: entry?.owningBox, shareable: entry?.shareable });
+  if (found === null) {
+    return { status: "unchecked", at, reason: "no verification is available for this credential" };
+  }
   const value = entry?.value;
   if (entry === undefined || value === undefined || value === "") {
     return { status: "unchecked", at, reason: "this slot has no value yet" };
@@ -206,12 +256,13 @@ export async function probeSecret(opts: { name: string; deps?: { fetch?: FetchLi
   // background probe AND the admin surface awaits one for immediate feedback,
   // and those two must be one request, while a rotation an instant later must
   // still get its own (it is a different value).
-  const key = `${opts.name}@${entry.updated}`;
+  const probedUpdated = entry.updated;
+  const key = `${opts.name}@${probedUpdated}`;
   const running = inFlight.get(key);
   if (running !== undefined) return running;
   const probe = runProbe({ entry: found.entry, value, at, doFetch: doFetch ?? fetch })
     .then(async (verified) => {
-      await storeVerified(opts.name, verified);
+      await storeVerified({ name: opts.name, probedUpdated, verified });
       return verified;
     })
     .finally(() => inFlight.delete(key));
@@ -232,7 +283,14 @@ export async function probeSecret(opts: { name: string; deps?: { fetch?: FetchLi
  */
 export async function markSecretVerificationFailed(name: string, reason: string): Promise<void> {
   try {
-    await storeVerified(name, { status: "failed", at: getBoxTimeISO(), reason });
+    await mutateSecretStore({ purpose: "verify" }, (store) => {
+      const entry = store.secrets[name];
+      // No version check here, unlike a probe: the caller just used whatever
+      // value the store holds right now, so "the current value was rejected" is
+      // exactly the claim being recorded.
+      if (entry === undefined) return;
+      entry.verified = { status: "failed", at: getBoxTimeISO(), reason };
+    });
   } catch (e) {
     console.warn(`[secrets] could not flag "${name}" as failing authentication:`, e);
   }

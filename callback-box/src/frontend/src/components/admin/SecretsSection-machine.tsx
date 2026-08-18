@@ -9,6 +9,7 @@
  * anything sensitive.
  */
 
+import { useState } from "react";
 import { trpc, type RouterOutput } from "../../lib/trpc";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
@@ -35,6 +36,9 @@ function lastUsedSummary(secret: MachineSecret): string {
 }
 
 function MachineRow({ secret, refresh }: { secret: MachineSecret; refresh: () => void }) {
+  // Removal is machine-wide and unrecoverable — the value is gone and every
+  // box's grant for it goes stale — so it takes two deliberate clicks.
+  const [confirming, setConfirming] = useState(false);
   const remove = trpc.secrets.remove.useMutation({ onSuccess: refresh });
   return (
     <Card border="subtle" padding="sm">
@@ -52,10 +56,25 @@ function MachineRow({ secret, refresh }: { secret: MachineSecret; refresh: () =>
           {lastUsedSummary(secret)}
           {secret.declaredBy === undefined ? "" : ` · declared by ${secret.declaredBy}`}
         </Text>
-        <Row gap="sm" wrap>
-          <Button intent="destructive" loading={remove.isPending} loadingLabel="Removing…" onClick={() => remove.mutate({ name: secret.name })}>
-            Remove from machine
-          </Button>
+        <Row gap="sm" wrap align="center">
+          {confirming ? (
+            <>
+              <Text size="sm" tone="danger">
+                Remove <Text mono>{secret.name}</Text> for every box? Its value is gone and each grant becomes stale.
+              </Text>
+              <Button
+                intent="destructive"
+                loading={remove.isPending}
+                loadingLabel="Removing…"
+                onClick={() => remove.mutate({ name: secret.name })}
+              >
+                Yes, remove
+              </Button>
+              <Button intent="secondary" onClick={() => setConfirming(false)}>Keep it</Button>
+            </>
+          ) : (
+            <Button intent="destructive" onClick={() => setConfirming(true)}>Remove from machine</Button>
+          )}
         </Row>
         {remove.error ? <div role="alert"><Text size="sm" tone="danger">{remove.error.message}</Text></div> : null}
       </Stack>

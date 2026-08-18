@@ -78,18 +78,15 @@ export function SecretsSection() {
             ) : null}
             <Row gap="sm" wrap>
               <Button intent="secondary" onClick={() => setAdding(!adding)}>
-                {adding ? "Cancel" : "Add a new secret"}
+                {adding ? "Close" : "Add a new secret"}
               </Button>
             </Row>
             {adding ? (
-              <SecretValueForm
-                fixedName={null}
-                hints={hints.data}
-                onSaved={() => {
-                  setAdding(false);
-                  refresh();
-                }}
-              />
+              // The form stays open after a save: it is where the verification
+              // verdict ("the provider rejected this credential") is shown, and
+              // closing it on success would hide exactly the answer the
+              // boxholder was waiting for.
+              <SecretValueForm fixedName={null} hints={hints.data} onSaved={refresh} />
             ) : null}
           </Stack>
         )}

@@ -192,7 +192,11 @@ are **advisory toward the value and authoritative about who decides**:
 
 **Probe targets are server-owned and nothing else can name one.** An
 agent-supplied probe URL would send the freshly-saved secret wherever the agent
-pointed it — agents supply format hints, never probe targets.
+pointed it — agents supply format hints, never probe targets. A `family/` probe
+additionally requires the entry to carry `owningBox` + `shareable: false`, which
+only the connector flow that owns the family sets: without that, an agent could
+declare `telegram-bot/anything` and choose where a value the boxholder pasted
+gets sent.
 
 Only an auth rejection (401/403; 400 as well for Google, which answers a bad key
 that way) records `failed`; a 500, a timeout, or DNS failure records `unchecked`
@@ -201,6 +205,12 @@ with a reason, so a provider outage never flags a working key as expired. A
 `suspect: true`, and `markSecretVerificationFailed(name, reason)` is how a
 consumer reports a real 401 — wired into the Mistral and Deepgram transcription
 paths, which is stronger evidence than any probe.
+
+A stored reason is assembled from the status code, fixed prose, and (for a
+network failure) the error's *class* only — never a message, since fetch and
+proxy errors quote the request URL and Telegram's probe URL contains the token.
+A verdict is written back only if the entry's `updated` stamp still matches the
+value that was probed, so a slow probe cannot land on a rotated key.
 
 Probes run fire-and-forget after `set`/`setAndGrant`, and are awaited by the
 admin page's save so the boxholder sees the verdict in the same interaction (one

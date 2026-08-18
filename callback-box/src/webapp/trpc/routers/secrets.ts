@@ -56,7 +56,10 @@ async function lifecycle<T>(operation: () => Promise<T>): Promise<T> {
 
 /** One row of the machine-wide table — metadata only, never a value. */
 function machineRow(listing: SecretListing): SecretListing & { probe: string | null } {
-  return { ...listing, probe: describeSecretProbe(listing.name) };
+  return {
+    ...listing,
+    probe: describeSecretProbe({ name: listing.name, owningBox: listing.owningBox, shareable: listing.shareable }),
+  };
 }
 
 export const secretsRouter = router({
@@ -83,7 +86,7 @@ export const secretsRouter = router({
           lastUsed: listing?.lastUsed?.[slug] ?? undefined,
           shareable: listing?.shareable ?? undefined,
           owningBox: listing?.owningBox ?? undefined,
-          probe: describeSecretProbe(grant.name),
+          probe: describeSecretProbe({ name: grant.name, owningBox: listing?.owningBox, shareable: listing?.shareable }),
         };
       }),
       emptySlots: status.emptySlots,
