@@ -7,7 +7,7 @@ labels: [ios, voice, chat]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder report from the iOS app
-design: ../../callback-box/docs/plans/emission-model.md
+design: ../../callback-box/docs/implemented-plans/emission-model.md
 ---
 
 > **⏳ Awaiting manual testing** — fix landed in `cba769df` (requires a fresh

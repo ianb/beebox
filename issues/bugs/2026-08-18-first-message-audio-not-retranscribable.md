@@ -82,7 +82,7 @@ the emission ID and the server could retain the recording keyed by message
 ID for a bounded window — making retranscription server-answerable and
 removing the tab-lifetime dependency for both composers. That is a
 mobile-contract change and belongs with the emission-model plan
-(`../../callback-box/docs/plans/emission-model.md`), not a drive-by.
+(`../../callback-box/docs/implemented-plans/emission-model.md`), not a drive-by.
 
 ## What to actually investigate
 

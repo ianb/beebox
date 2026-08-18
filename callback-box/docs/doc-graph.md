@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-08-18T22:02:02Z
+Generated: 2026-08-18T22:21:42Z
 Total documents: 277
 
 ## Issues
@@ -1054,6 +1054,7 @@ Referenced by:
 - docs/implemented-plans/chat-review.md:42 (mention) — - **`docs/engineering-principles.md`** — findings trace to:
 - docs/implemented-plans/codex-sdk-backend.md:44 (mention) — (`docs/engineering-principles.md:12`).
 - docs/implemented-plans/delivered-user-message-codec.md:18 (mention) — - Engineering principle 1, Types are structure. `docs/engineering-principles.md:12-18` says: *"Prefer types that make il
+- docs/implemented-plans/emission-model.md:102 (mention) — - `docs/engineering-principles.md` — resilient-not-silent (wedges must
 - docs/implemented-plans/expose-dev-router.md:27 (mention) — - `docs/engineering-principles.md` — **fail-closed / resilient-not-silent** is
 - docs/implemented-plans/hub-healthz-box-aggregation.md:32 (mention) — - **Principle 1, types are structure** (`docs/engineering-principles.md:12`):
 - docs/implemented-plans/ios-audio-session-routing.md:31 (mention) — - `callback-box/docs/engineering-principles.md:49` — **4. Resilient AND never
@@ -1087,7 +1088,6 @@ Referenced by:
 - docs/plans/chat-photo-batch-upload.md:25 (link) — - [`docs/engineering-principles.md`](../engineering-principles.md) — chiefly
 - docs/plans/chat-session-delete.md:58 (mention) — - **`docs/engineering-principles.md`:**
 - docs/plans/clerk-tab-arrangements.md:65 (mention) — - Engineering principle 1, **Types are structure**, applies to transfer IDs, tab UUIDs, proposal states, and apply resul
-- docs/plans/emission-model.md:102 (mention) — - `docs/engineering-principles.md` — resilient-not-silent (wedges must
 - docs/plans/google-owner-member-credentials.md:23 (mention) — `docs/engineering-principles.md:14` says: *"Prefer types that make illegal
 - docs/plans/installation-story.md:43 (mention) — - `docs/engineering-principles.md` #4 (validate at boundaries) and #6
 - docs/plans/invite-links-and-password-change.md:36 (mention) — - `docs/engineering-principles.md:37-47`: validate disk, form, OAuth, and config
@@ -1423,6 +1423,7 @@ Title: "Cross-Platform Mobile Contract" | 933 lines
 Referenced by:
 - CLAUDE.md:145 (mention) — | Cross-platform mobile contract (iOS/Android ↔ box) | `docs/mobile-contract.md` |
 - docs/client-debug-log.md:54 (mention) — timestamp (that's still receipt time). See `docs/mobile-contract.md` §5.7 for the
+- docs/implemented-plans/emission-model.md:30 (mention) — verdict from elapsed time (`docs/mobile-contract.md` §4.2).
 - docs/implemented-plans/ios-log-forwarding.md:56 (mention) — machinery); the mobile-contract sync rule (`docs/mobile-contract.md` header).
 - docs/implemented-plans/ios-per-box-device-lock.md:262 (mention) — no `docs/mobile-contract.md` change because nothing crosses the wire. Commits
 - docs/implemented-plans/mobile-parity-sync.md:34 (mention) — ### 1. `docs/mobile-contract.md` — the canonical contract (exists)
@@ -1431,7 +1432,6 @@ Referenced by:
 - docs/plans/android-companion-app.md:14 (mention) — implements **exactly** the contract in `docs/mobile-contract.md`; it adds no new
 - docs/plans/capture-fast-landing.md:293 (mention) — (`docs/mobile-contract.md` unaffected).
 - docs/plans/chat-photo-batch-upload.md:65 (link) — [`docs/mobile-contract.md`](../mobile-contract.md):479 §5.6, which already
-- docs/plans/emission-model.md:30 (mention) — verdict from elapsed time (`docs/mobile-contract.md` §4.2).
 - docs/plans/invite-links-and-password-change.md:126 (mention) — `mobile-contract.md` change is required.
 - docs/plans/ios-input-plane-parity.md:95 (mention) — | Bridge contract | Web `Emission` supports files and selections | Native payload carries only text/origin/diarized/imag
 - docs/plans/ios-share-extension-capture.md:52 (mention) — - Swift already demonstrates direct non-batched tRPC calls. `ios-app/CallbackBox/Services/LogForwarder.swift:283` posts 
@@ -2683,6 +2683,27 @@ References:
 - → docs/cards-as-markdown.md (mention)
 - → docs/implemented-plans/asset-manifests.md (mention)
 - → docs/design/trust.md (mention)
+
+#### docs/implemented-plans/emission-model.md
+
+Title: "Emission model: durable acceptance, no sticky pending states" | 522 lines
+
+Referenced by:
+- ../issues/bugs/2026-07-23-voice-send-lingers-as-unsent-recovery-draft.md:9 (frontmatter) — design: ../../callback-box/docs/implemented-plans/emission-model.md
+- ../issues/bugs/2026-08-03-ios-stale-unconfirmed-emission-banner.md:9 (frontmatter) — design: ../../callback-box/docs/implemented-plans/emission-model.md
+- ../issues/bugs/2026-08-18-first-message-audio-not-retranscribable.md:85 (mention) — (`../../callback-box/docs/implemented-plans/emission-model.md`), not a drive-by.
+- ../issues/bugs/2026-08-18-ios-keyword-tag-leaks-into-composer-when-sending-is-stuck.md:10 (frontmatter) — design: ../../callback-box/docs/implemented-plans/emission-model.md
+- ../issues/bugs/2026-08-18-ios-stuck-sending-message-survives-restart.md:10 (frontmatter) — design: ../../callback-box/docs/implemented-plans/emission-model.md
+
+References:
+- → ../issues/bugs/2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md (frontmatter)
+- → ../issues/bugs/2026-08-18-ios-stuck-sending-message-survives-restart.md (frontmatter)
+- → ../issues/bugs/2026-08-18-ios-keyword-tag-leaks-into-composer-when-sending-is-stuck.md (frontmatter)
+- → ../issues/bugs/2026-08-03-ios-stale-unconfirmed-emission-banner.md (frontmatter)
+- → ../issues/bugs/2026-07-23-voice-send-lingers-as-unsent-recovery-draft.md (frontmatter)
+- → ../issues/bugs/2026-08-18-first-message-audio-not-retranscribable.md (frontmatter)
+- → docs/mobile-contract.md (mention)
+- → docs/engineering-principles.md (mention)
 
 #### docs/implemented-plans/engine-aware-chat-models.md **[ORPHAN]**
 
@@ -4051,27 +4072,6 @@ References:
 - → docs/plans/cli-restructure.md (mention)
 - → docs/connectors.md (mention)
 - → docs/gmail-setup.md (mention)
-
-#### docs/plans/emission-model.md
-
-Title: "Emission model: durable acceptance, no sticky pending states" | 522 lines
-
-Referenced by:
-- ../issues/bugs/2026-07-23-voice-send-lingers-as-unsent-recovery-draft.md:9 (frontmatter) — design: ../../callback-box/docs/plans/emission-model.md
-- ../issues/bugs/2026-08-03-ios-stale-unconfirmed-emission-banner.md:9 (frontmatter) — design: ../../callback-box/docs/plans/emission-model.md
-- ../issues/bugs/2026-08-18-first-message-audio-not-retranscribable.md:85 (mention) — (`../../callback-box/docs/plans/emission-model.md`), not a drive-by.
-- ../issues/bugs/2026-08-18-ios-keyword-tag-leaks-into-composer-when-sending-is-stuck.md:10 (frontmatter) — design: ../../callback-box/docs/plans/emission-model.md
-- ../issues/bugs/2026-08-18-ios-stuck-sending-message-survives-restart.md:10 (frontmatter) — design: ../../callback-box/docs/plans/emission-model.md
-
-References:
-- → ../issues/bugs/2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md (frontmatter)
-- → ../issues/bugs/2026-08-18-ios-stuck-sending-message-survives-restart.md (frontmatter)
-- → ../issues/bugs/2026-08-18-ios-keyword-tag-leaks-into-composer-when-sending-is-stuck.md (frontmatter)
-- → ../issues/bugs/2026-08-03-ios-stale-unconfirmed-emission-banner.md (frontmatter)
-- → ../issues/bugs/2026-07-23-voice-send-lingers-as-unsent-recovery-draft.md (frontmatter)
-- → ../issues/bugs/2026-08-18-first-message-audio-not-retranscribable.md (frontmatter)
-- → docs/mobile-contract.md (mention)
-- → docs/engineering-principles.md (mention)
 
 #### docs/plans/google-owner-member-credentials.md **[ORPHAN]**
 

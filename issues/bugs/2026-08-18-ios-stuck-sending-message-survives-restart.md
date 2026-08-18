@@ -7,7 +7,7 @@ labels: [ios, chat, emissions]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder report from the iOS app
-design: ../../callback-box/docs/plans/emission-model.md
+design: ../../callback-box/docs/implemented-plans/emission-model.md
 ---
 
 > **⏳ Awaiting manual testing** — fixes landed in `d641042c`/`c296b95f`

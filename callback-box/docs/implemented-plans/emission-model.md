@@ -1,6 +1,6 @@
 ---
 title: "Emission model: durable acceptance, no sticky pending states"
-status: draft
+status: implemented
 workstream: emission-model
 issues:
   - ../../../issues/bugs/2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md

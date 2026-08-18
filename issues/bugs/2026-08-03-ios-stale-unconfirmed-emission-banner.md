@@ -6,7 +6,7 @@ area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder saw the banner without composing anything
 priority: important
-design: ../../callback-box/docs/plans/emission-model.md
+design: ../../callback-box/docs/implemented-plans/emission-model.md
 ---
 
 > **⏳ Awaiting manual testing** — resolved by the emission-model workstream

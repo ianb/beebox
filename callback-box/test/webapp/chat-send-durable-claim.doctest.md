@@ -114,7 +114,7 @@ async function restartOver(boxRoot: string, chatBackend: ChatBackend): Promise<R
 
 Nothing between taking the volatile claim and answering the request is
 awaited: the route records the message and responds in one synchronous span,
-and only *then* starts the run (`docs/plans/emission-model.md`, Track A). So a
+and only *then* starts the run (`docs/implemented-plans/emission-model.md`, Track A). So a
 duplicate — even one fired the instant the first request enters
 `chatSession.send()`, which is what the gate below arranges — arrives after the
 durable write and is answered `deduplicated: true`: the strongest answer, and a
@@ -181,7 +181,7 @@ the HTTP outcome, and the id had to be released for the retry that invitation
 implied.
 
 It no longer can. The route records the message and answers `{turnId}` before
-the run starts (`docs/plans/emission-model.md`, Track A), so by the time a spawn
+the run starts (`docs/implemented-plans/emission-model.md`, Track A), so by the time a spawn
 fails both clients have been told — truthfully — that the box has the message.
 The duplicate and the later retry are both answered `deduplicated: true`: the id
 stays claimed, because a redelivery must not append the message twice. The

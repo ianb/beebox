@@ -2,7 +2,7 @@
 
 The idle path acks the way the busy path always has: persist the user message
 and the message-id claim, answer, *then* start the run
-(`docs/plans/emission-model.md`, Track A). `{turnId}` means "the box durably has
+(`docs/implemented-plans/emission-model.md`, Track A). `{turnId}` means "the box durably has
 your message and this is where its output will appear", not "the engine
 started" — starting it can take minutes on a cold agent, and the client (plus
 every retry timer behind it) used to spend that whole window pending.

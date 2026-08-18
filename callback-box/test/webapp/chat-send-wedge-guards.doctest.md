@@ -1,7 +1,7 @@
 # `POST /api/chat/send` — the two ways an acked send could wedge, bounded
 
 Acceptance is the durable record, not the engine spawn
-(`docs/plans/emission-model.md`, Track A), which leaves two silent wedges to
+(`docs/implemented-plans/emission-model.md`, Track A), which leaves two silent wedges to
 close. Both are *silent* in the same way: the client keeps waiting and every
 retry of its message id is answered from a claim nobody will ever settle.
 

@@ -6,7 +6,7 @@ area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder, repeatedly, sending voice messages
 priority: important
-design: ../../callback-box/docs/plans/emission-model.md
+design: ../../callback-box/docs/implemented-plans/emission-model.md
 ---
 
 > **⏳ Awaiting manual testing** — fix landed in the emission-model
