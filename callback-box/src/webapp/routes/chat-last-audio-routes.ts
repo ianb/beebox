@@ -92,13 +92,20 @@ export function registerChatLastAudioRoutes(ctx: ChatRoutesContext): void {
       if (result.status === "timeout") {
         return reply.status(504).send({
           error: "no-client",
-          message: "No chat tab answered — the chat may not be open in a browser right now.",
+          message:
+            "No chat tab answered — the chat may not be open in a browser right now. This is a transient condition, not a missing capability: the same request can succeed later once a tab is connected.",
         });
       }
       if (result.status === "none") {
+        // Phrased per-MESSAGE, and explicitly forward-looking. An agent that
+        // reads a bare "no recording" as "audio retranscription doesn't work
+        // here" stops trying for the rest of the conversation — and the most
+        // likely message to fail is the FIRST one, so one early miss would
+        // teach it to give up on every later message that would have worked.
         return reply.status(404).send({
           error: "no-audio",
-          message: "No recording is cached for the last message — it was typed, or recorded before the chat tab was last loaded.",
+          message:
+            "No recording is cached for this message — it was typed, or its audio predates the chat tab's current load. This is about this one message, not the box: other messages in this conversation may still have audio, so try again on a later one rather than giving up.",
         });
       }
       const { audio, contentType, recordedAt, text, messageId: answeredMessageId, sessionId } = result.fulfillment;
