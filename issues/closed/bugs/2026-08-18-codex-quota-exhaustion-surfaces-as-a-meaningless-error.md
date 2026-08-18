@@ -4,9 +4,22 @@ workstream: deferred-recoverable
 area: callback-box
 labels: [codex, agent, error-messages, scheduler]
 filed-by: agent
+resolution: implemented
 discovered-by: Ian
 discovered-in: main session — persistent chat and scheduled-task failures on a Codex-engine box
 ---
+
+> **Closed (2026-08-18):** implemented by the deferred-recoverable plan
+> (`../../../callback-box/docs/plans/deferred-recoverable-agent-failures.md`).
+> Quota exhaustion is now recognized as a deferred-recoverable engine
+> unavailability: the informative message (with reset time) reaches chat,
+> `lastError`, and procedure output; scheduled work skips instead of burning
+> attempts; `consecutiveFailures` freezes; `cb health` shows `waiting`; the
+> boxholder is notified once per episode. The loss point was refined during
+> design: the semantic event was already captured in
+> `src/services/codex-sdk-session.ts` — the rethrow discarded it. Verified
+> live against the real exhausted account (Claude-side recognizer ships
+> provisional, unverifiable until a live Claude exhaustion).
 
 Every agent turn on a Codex-engine box fails with:
 
@@ -86,5 +99,5 @@ presents as a crash sends every investigation — this one included — toward
 code that changed, engines that switched, and processes that might be stale,
 when the answer was an account limit with a published reset time.
 
-Related: [Codex has no update monitor, notes, or cadence](../docs-and-chores/2026-08-08-maintenance-cadence-framework.md)
+Related: [Codex has no update monitor, notes, or cadence](../../docs-and-chores/2026-08-08-maintenance-cadence-framework.md)
 records the same theme — Codex is load-bearing and unwatched.

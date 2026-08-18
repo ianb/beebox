@@ -119,6 +119,14 @@ never ran is not a task that ran and broke, and the scheduler reports both as
 [health masks a review-step turn cap](2026-08-12-health-masks-review-step-turn-cap.md),
 the same complaint about a different collapsed distinction.
 
+The *deferred-recoverable* sibling of this distinction now exists: engine
+quota exhaustion records a `deferred` outcome (freezing `consecutiveFailures`)
+and renders as `waiting` in `cb health`
+(`../closed/bugs/2026-08-18-codex-quota-exhaustion-surfaces-as-a-meaningless-error.md`,
+design in `../../callback-box/docs/plans/deferred-recoverable-agent-failures.md`
+— which reserves the **transient** vocabulary this issue owns: retry-now
+failures like this lock race, distinct from retry-later and permanent).
+
 ## Note on scope
 
 Found while investigating scheduled failures on a box that had recently

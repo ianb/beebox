@@ -12,6 +12,18 @@ The hub exposes two diagnostic endpoints, both requiring the `CB_DIAG_API_KEY` b
 
 Why the canary exists at all: during the 2026-07-16 Node 22→24 upgrade every box child crash-looped on a better-sqlite3 ABI mismatch while the old `/healthz` returned a constant 200 — the deploy verified "healthy" while no box could serve a request. The passive verdict now catches a crash-looping box; the canary catches a break on boxes that were never started.
 
+## Engine quota (`waiting` is not `failing`)
+
+When `cb health` shows tasks as `waiting` plus an `engine: waiting on
+<provider> quota until <t>` line, the box's agent engine (Claude or Codex) is
+out of usage quota — a deferred-recoverable condition, not a fault. Nothing
+needs fixing: scheduled work skips until the reset time, `consecutiveFailures`
+does not accrue, and the boxholder was notified once with the reset time. The
+machine-level record lives at `~/.local/share/cb/engine-availability.json` and
+self-expires at the reset. Investigate only if `waiting` persists well past
+the stated time (the store then shows a fresh episode — quota was exhausted
+again immediately, which is a capacity problem, not a code problem).
+
 ## `health.check` snapshot vs fresh
 
 The box-level checks (`runHealthChecks` — permissions, API keys, annex, nav card, engine) are deep and slow: a subprocess `claude auth status`, the git-annex doctor over the attachment trees, a `tmp-capture/` walk, a dozen serial fs probes. Measured 580–650 ms on prod, and they rode in the dashboard's tRPC batch, so every dashboard load waited on them.

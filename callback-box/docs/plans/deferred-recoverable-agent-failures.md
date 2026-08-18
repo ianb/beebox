@@ -1,9 +1,9 @@
 ---
 title: "Deferred-recoverable agent failures: engine unavailability as a first-class condition"
-status: draft
+status: implemented
 workstream: deferred-recoverable
 issues:
-  - ../../../issues/bugs/2026-08-18-codex-quota-exhaustion-surfaces-as-a-meaningless-error.md
+  - ../../../issues/closed/bugs/2026-08-18-codex-quota-exhaustion-surfaces-as-a-meaningless-error.md
 ---
 
 # Deferred-recoverable agent failures
