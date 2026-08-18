@@ -3,11 +3,13 @@
  *
  * Not a connector — just builds the OAuth2Client all Google connectors
  * (calendar, gmail API, drive) share. The token record it reads and writes
- * lives in `google-token-store.ts`; client credentials always come from the
- * GOOGLE_OAUTH_CLIENT_ID/SECRET env vars.
+ * lives in `google-token-store.ts`; client credentials come from the machine
+ * secret store, falling back to the GOOGLE_OAUTH_CLIENT_ID/SECRET env vars.
  */
 
 import { OAuth2Client } from "google-auth-library";
+import { refusalAllowsLegacyFallback } from "../core/secrets/legacy-fallback.js";
+import { resolveSecret } from "../core/secrets/resolve.js";
 import {
   loadGoogleTokens,
   saveGoogleTokens,
@@ -42,10 +44,48 @@ export type GoogleServiceName = "calendar" | "gmail" | "drive";
 /** Per-box policy: which Google services this box is allowed to use. */
 export type GoogleServicesPolicy = Partial<Record<GoogleServiceName, boolean>>;
 
+/** The store names the OAuth app's client credentials live under. */
+export const GOOGLE_CLIENT_ID_SECRET_NAME = "google-oauth-client-id";
+export const GOOGLE_CLIENT_SECRET_SECRET_NAME = "google-oauth-client-secret";
+
 /**
- * Get Google OAuth client credentials from env vars.
+ * Get Google OAuth client credentials: the machine store first (names
+ * `google-oauth-client-id` / `google-oauth-client-secret`, `server` access),
+ * then the `GOOGLE_OAUTH_CLIENT_ID`/`_SECRET` env vars
+ * (`docs/plans/secret-custody.md`, Track 3). Never had a per-box file, so there
+ * is no legacy-file arm.
+ *
+ * These are the OAuth *app's* identity, not a user's tokens — the token record
+ * (`google-token-store.ts`, `CB_GOOGLE_TOKENS_FILE`) is untouched by this
+ * migration and stays where it is.
+ *
+ * `boxRoot` is optional because two callers are box-less: the hub's
+ * login-config surface asks "is Google login configured at all?" before any box
+ * is in play. Those keep the env-only answer.
+ *
+ * Both halves must come from the SAME source: a store id paired with an env
+ * secret would be a silent cross-app mismatch, so a partial store answer falls
+ * through to env rather than mixing.
  */
-export function getGoogleClientCreds(): { clientId: string; clientSecret: string } | null {
+export async function getGoogleClientCreds(
+  boxRoot?: string,
+): Promise<{ clientId: string; clientSecret: string } | null> {
+  if (boxRoot !== undefined) {
+    const [id, secret] = await Promise.all([
+      resolveSecret({ boxRoot, name: GOOGLE_CLIENT_ID_SECRET_NAME, purpose: "google-oauth", access: "server" }),
+      resolveSecret({ boxRoot, name: GOOGLE_CLIENT_SECRET_SECRET_NAME, purpose: "google-oauth", access: "server" }),
+    ]);
+    if (id.ok && secret.ok) return { clientId: id.value.value, clientSecret: secret.value.value };
+    // Only "no such secret on this machine" degrades to the env vars — for
+    // EITHER half, since a partial store answer must not mix sources. Any other
+    // refusal (revoked, withheld, empty, unreadable store) is "not configured";
+    // falling through would let a stale export outlive a revoked grant
+    // (`core/secrets/legacy-fallback.ts`).
+    const blocked = [id, secret].some(
+      (result) => !result.ok && !refusalAllowsLegacyFallback({ reader: "google-auth", refusal: result.error }),
+    );
+    if (blocked) return null;
+  }
   // TODO(env-migration): GOOGLE_OAUTH_* are validated + redacted at startup
   // (lib/env.ts server/hub schemas); reads stay direct — creds are read lazily
   // per-connector and may be unset (auth simply disabled).
@@ -60,12 +100,12 @@ export function getGoogleClientCreds(): { clientId: string; clientSecret: string
  * Returns null if not configured or missing refresh token.
  *
  * Loads tokens from centralized storage (or legacy per-box fallback).
- * Client credentials always come from env vars.
+ * Client credentials come from the store, then env.
  */
 export async function getGoogleAuth(
   boxRoot?: string,
 ): Promise<OAuth2Client | null> {
-  const creds = getGoogleClientCreds();
+  const creds = await getGoogleClientCreds(boxRoot);
   if (!creds) return null;
 
   const tokens = await loadGoogleTokens(boxRoot);

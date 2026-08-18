@@ -30,6 +30,7 @@ import {
   migrateViewLinksCommand,
   procedureCommand,
   authCommand,
+  secretsCommand,
   googleAuthCommand,
   calendarCommand,
   finishCommand,
@@ -108,6 +109,7 @@ program.addCommand(relinkCommand);
 program.addCommand(migrateViewLinksCommand);
 program.addCommand(procedureCommand);
 program.addCommand(authCommand);
+program.addCommand(secretsCommand);
 program.addCommand(googleAuthCommand);
 program.addCommand(calendarCommand);
 program.addCommand(driveCommand);

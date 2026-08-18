@@ -36,7 +36,7 @@ export const googleAuthCommand = new Command("google-auth")
       const boxRoot = await requireBoxRoot();
 
       // Client credentials from env vars or CLI flags
-      const envCreds = getGoogleClientCreds();
+      const envCreds = await getGoogleClientCreds(boxRoot);
       const clientId = options.clientId || envCreds?.clientId;
       const clientSecret = options.clientSecret || envCreds?.clientSecret;
 

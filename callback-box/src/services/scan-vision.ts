@@ -88,20 +88,29 @@ export interface ScanVisionService {
 export type ScanVisionSelection = { backend: "claude" } | { backend: "gemini"; apiKey: string };
 
 /**
- * Resolve which backend `cb scan-import` should use from the environment.
+ * Resolve which backend `cb scan-import` should use. `env` selects the backend;
+ * `geminiKey` is the ALREADY-RESOLVED key from `core/gemini-key.ts` (store,
+ * then `GEMINI_KEY`/`SKE_GEMINI_API_KEY`) — this function no longer reads a
+ * credential out of the environment itself, so there is exactly one Gemini
+ * resolution order in the codebase (`docs/plans/secret-custody.md`, Track 3).
+ *
  * Fail-closed: an explicit `CB_SCAN_VISION=gemini` without a key is an error,
  * never a silent fallback to Claude; so is an unknown value.
  */
-export function selectScanVisionBackend(env: NodeJS.ProcessEnv): Result<ScanVisionSelection> {
+export function selectScanVisionBackend(
+  env: NodeJS.ProcessEnv,
+  geminiKey: string | null,
+): Result<ScanVisionSelection> {
   // TODO(env-migration): long-tail feature-gate var, direct read per src/lib/env.ts.
   const selected = env["CB_SCAN_VISION"] ?? "claude";
   if (selected === "claude") return ok({ backend: "claude" });
   if (selected === "gemini") {
-    const apiKey = env["GEMINI_KEY"] || env["SKE_GEMINI_API_KEY"];
-    if (!apiKey) {
-      return err("CB_SCAN_VISION=gemini but GEMINI_KEY (or SKE_GEMINI_API_KEY) is not set");
+    if (geminiKey === null || geminiKey === "") {
+      return err(
+        'CB_SCAN_VISION=gemini but no Gemini key is available — grant the "gemini" secret to this box, or set GEMINI_KEY (or SKE_GEMINI_API_KEY)',
+      );
     }
-    return ok({ backend: "gemini", apiKey });
+    return ok({ backend: "gemini", apiKey: geminiKey });
   }
   return err(`CB_SCAN_VISION=${selected} is not a valid backend (valid: claude, gemini)`);
 }

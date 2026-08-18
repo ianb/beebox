@@ -5,8 +5,8 @@
  *   ANY /api/adapters/:adapter/<path>  →  <provider base>/<path>
  *
  * The adapter injects the provider's auth header server-side, reading the
- * key from the box's existing connector-secret convention
- * (`config/connectors/<adapter>.secret.json`, `{"apiKey": "..."}`). The
+ * key from the machine secret store under the adapter's own name (falling
+ * back to the legacy `config/connectors/<adapter>.secret.json`). The
  * key never reaches the browser, and providers that (correctly) refuse
  * CORS become callable from views. Adapters may grow other behaviors
  * (header shaping, path restrictions); v1 is auth + forwarding.
@@ -22,6 +22,11 @@ import * as path from "node:path";
 import { isRecord } from "../../lib/is-record.js";
 import { Readable } from "node:stream";
 import { errorMessage } from "../../lib/error-guards.js";
+import { refusalAllowsLegacyFallback } from "../../core/secrets/legacy-fallback.js";
+import { resolveSecret } from "../../core/secrets/resolve.js";
+
+/** Adapters already warned about a stray legacy file, once per process each. */
+const warnedAboutLegacyAdapter = new Set<string>();
 
 interface AdapterDef {
   /** Default upstream base URL; CB_ADAPTER_BASE_<NAME> overrides (tests). */
@@ -75,8 +80,9 @@ export function registerApiAdapterRoutes(options: RegisterApiAdapterRoutesOption
       if (key === null) {
         return reply.status(503).send({
           error:
-            `No API key for "${adapterName}" — create ` +
-            `config/connectors/${adapterName}.secret.json with {"apiKey": "..."}`,
+            `No API key for "${adapterName}" — ask the boxholder to grant the ` +
+            `"${adapterName}" secret to this box (cb secrets set ${adapterName}; ` +
+            `cb secrets grant <box> ${adapterName})`,
         });
       }
 
@@ -123,14 +129,53 @@ function singleHeader(request: FastifyRequest, name: string): string | undefined
   return Array.isArray(value) ? value[0] : value;
 }
 
-/** Key from config/connectors/<adapter>.secret.json ({"apiKey": "..."}). */
+/**
+ * The adapter's key: the machine store's entry of the SAME NAME as the adapter
+ * (`mistral`, `openai`, `anthropic`, `replicate`) at `server` access — the key
+ * never reaches the browser, so `server` is the right level — then the legacy
+ * `config/connectors/<adapter>.secret.json` file it is migrating from
+ * (`docs/plans/secret-custody.md`, Track 3).
+ *
+ * Store name == adapter name == legacy file basename, deliberately: these are
+ * the same credentials the dedicated readers use (`core/mistral-key.ts`,
+ * `core/search/embeddings-key.ts`), so one entry serves both and rotation
+ * touches one place.
+ */
 async function readAdapterKey(boxRoot: string, adapterName: string): Promise<string | null> {
+  const resolved = await resolveSecret({
+    boxRoot,
+    name: adapterName,
+    purpose: "api-adapter",
+    access: "server",
+  });
+  if (resolved.ok) return resolved.value.value;
+  // Only "no such secret on this machine" degrades to the legacy file; every
+  // other refusal is "not configured" (`core/secrets/legacy-fallback.ts`).
+  if (!refusalAllowsLegacyFallback({ reader: `api-adapters/${adapterName}`, refusal: resolved.error })) return null;
+
   const secretPath = path.join(boxRoot, "config", "connectors", `${adapterName}.secret.json`);
+  let content: string;
   try {
-    const parsed: unknown = JSON.parse(await fs.readFile(secretPath, "utf8"));
-    const apiKey = isRecord(parsed) ? parsed["apiKey"] : undefined;
-    return typeof apiKey === "string" && apiKey !== "" ? apiKey : null;
+    content = await fs.readFile(secretPath, "utf8");
   } catch (_e) {
     return null;
   }
+  let apiKey: unknown;
+  try {
+    const parsed: unknown = JSON.parse(content);
+    apiKey = isRecord(parsed) ? parsed["apiKey"] : undefined;
+  } catch (e) {
+    console.warn(`[api-adapters] ignoring unreadable legacy secret file ${secretPath}:`, e);
+    return null;
+  }
+  if (typeof apiKey !== "string" || apiKey === "") return null;
+  if (!warnedAboutLegacyAdapter.has(adapterName)) {
+    warnedAboutLegacyAdapter.add(adapterName);
+    console.warn(
+      `[api-adapters] using the deprecated in-tree secret file ${secretPath}. ` +
+        `Move it into the machine store (cb secrets set ${adapterName}, then ` +
+        `cb secrets grant <box> ${adapterName}) and delete the file.`,
+    );
+  }
+  return apiKey;
 }

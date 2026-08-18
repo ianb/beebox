@@ -113,10 +113,16 @@ normally changes nothing, but the agent can append recovery evidence to a
 relevant open issue. The agent can only edit open `issues/` Markdown files: it
 cannot run commands, edit code, commit, push, fix defects, close issues, or read
 private issue data. Private-issue tool paths are denied as an additional guard.
-Its changes remain uncommitted for human review. Before triage, the runner saves
-a local snapshot of every open issue. An existing issue passes validation only
-when the agent appended to its exact prior contents; the snapshot is also the
-recovery copy if validation fails. Every scheduled run makes one Sonnet triage
+Before triage, the runner saves a local snapshot of every open issue. An
+existing issue passes validation only when the agent appended to its exact prior
+contents; the snapshot is also the recovery copy if validation fails. **Once
+validation passes, the runner commits those exact paths** (path-scoped, never
+`add -A`, never a push) — the agent still cannot commit, but leaving the edits
+in the working tree meant they went unnoticed until someone ran `git status`,
+risked being swept into an unrelated `git add -A`, and left `main` dirty enough
+to block `bin/land`. A commit that fails (a rejecting pre-commit hook, or a run
+from somewhere that isn't the main checkout) degrades to the old behavior — the
+edit stays in the working tree — and says so in the notification. Every scheduled run makes one Sonnet triage
 call with a $2 maximum budget, in addition to any API use inside the manual
 tests themselves. Failures and issue changes raise a macOS notification that
 points to the agent-selected issue and exact run log.

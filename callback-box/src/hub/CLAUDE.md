@@ -25,6 +25,12 @@ one for a sibling box). A box needing to read a new env var requires adding
 it to `CHILD_ENV_ALLOWLIST`/`CHILD_ENV_PREFIX_ALLOWLIST` with a reasoned
 comment — never widen this by reverting to a `process.env` spread.
 
+The same posture applies one level down: what a box's *own* subprocesses
+(agents, tricks, scheduled scripts) inherit from the `cb serve` child is
+`src/core/script-env-allowlist.ts`, whose agent profile additionally withholds
+every connector credential. Keep the two lists' overlapping entries in sync by
+hand.
+
 ## Lazy mode
 
 `hub.json`'s `lazy: true` flag makes every configured box start "stopped";

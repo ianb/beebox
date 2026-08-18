@@ -104,7 +104,7 @@ it open this box — and Tailscale answers only the first.
   already added a divergent one (`~/.cb-publish.env`) that fits neither
   `config/connectors/*.secret.json` nor anything else, and left its connector
   with no credential path on the server. Join
-  [per-box secret management](../../decisions/2026-03-15-per-box-secret-management.md)
+  [per-box secret management](../decisions/2026-03-15-per-box-secret-management.md)
   rather than adding to the pile.
 - Fail-closed by default; a machine that isn't on the tailnet should be
   unreachable, not quietly public.

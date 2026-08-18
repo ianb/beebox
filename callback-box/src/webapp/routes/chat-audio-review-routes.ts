@@ -36,6 +36,7 @@ const retranscriptionBodySchema = z.object({
 
 const consultedBodySchema = z.object({
   kind: z.literal("consulted"),
+  question: z.string().min(1),
   sessionId: z.string().min(1),
   messageId: z.string().min(1),
   command: z.literal("ask-about-audio"),
@@ -73,8 +74,8 @@ export function registerChatAudioReviewRoutes(ctx: ChatRoutesContext): void {
         break;
       }
       case "consulted": {
-        const { sessionId, messageId, command } = body;
-        eventBus.emitTransient("chat-audio-consulted", { sessionId, messageId, command });
+        const { sessionId, messageId, command, question } = body;
+        eventBus.emitTransient("chat-audio-consulted", { sessionId, messageId, command, question });
         break;
       }
       default:

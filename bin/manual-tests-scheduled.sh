@@ -7,7 +7,10 @@
 #
 # Runs Sunday at 11:17 machine-local. Every run is reviewed by a constrained
 # triage agent. The agent may create or append to open issues, but it cannot run
-# commands, edit code, commit, push, or close issues.
+# commands, edit code, commit, push, or close issues. The RUNNER commits the
+# agent's issue edits afterwards (never pushes), but only the exact paths the
+# agent reported and only once `validate_triage_result` has confirmed each one
+# is an append to a real issue file.
 # Logs: <main checkout>/logs/manual-tests/latest.log
 set -euo pipefail
 
@@ -84,6 +87,49 @@ validate_triage_result() {
       fi
     fi
   done
+}
+
+# Commit the issue edits the triage agent just made. The AGENT still cannot
+# commit — this runs after `validate_triage_result` has proved every claimed
+# path is a real issue file, actually changed, and changed only by APPENDING
+# (the pre-existing bytes must still match as a prefix). So what gets committed
+# here is bounded by that check, not by trusting the agent's report.
+#
+# Left uncommitted, these edits rot in the main checkout's working tree: nobody
+# sees them until they happen to run `git status`, an unrelated `git add -A`
+# sweeps them into the wrong commit, and a dirty main blocks `bin/land`.
+#
+# Path-scoped `add`/`commit` (the convention in bin/CLAUDE.md) so a concurrent
+# agent's staged work can't be swept in under this message. Never pushes.
+# A failed commit is reported but does not fail the run — the tests already
+# passed and the note is already written, so the honest degradation is the old
+# behavior (edit left in the working tree) plus a notification.
+commit_triage_result() {
+  local triage_line="$1" listed raw issue_path
+  local issue_paths=()
+  [ "$triage_line" = "TRIAGE: clean" ] && return 0
+  if [ "$(git -C "$REPO_ROOT" rev-parse --git-dir)" != "$(git -C "$REPO_ROOT" rev-parse --git-common-dir)" ]; then
+    echo "Not the main checkout — leaving triage edits uncommitted." >&2
+    return 1
+  fi
+  listed="${triage_line#TRIAGE: }"
+  IFS=',' read -r -a issue_paths <<< "$listed"
+  local trimmed=()
+  for raw in "${issue_paths[@]}"; do
+    issue_path="${raw# }"
+    trimmed+=("$issue_path")
+  done
+  git -C "$REPO_ROOT" add -- "${trimmed[@]}" || return 1
+  # `-m` MUST precede `--`: everything after `--` is a pathspec, so putting the
+  # message there makes git look for a file named after the commit message.
+  git -C "$REPO_ROOT" commit --quiet -m "docs(issues): weekly manual-test triage $RUN_ID
+
+Written by the scheduled manual-test triage agent (append-only; verified by
+validate_triage_result before commit). Run log:
+logs/manual-tests/$RUN_ID.log
+
+Updated: ${listed}" -- "${trimmed[@]}" || return 1
+  echo "Committed triage edits: $listed"
 }
 
 setup_run_log() {
@@ -255,17 +301,24 @@ if [ "$triage_status" -ne 0 ] || [ -z "$triage_line" ] || ! validate_triage_resu
   exit 1
 fi
 
+# Commit before notifying, so the notification's claim ("agent updated X") is
+# already true in git rather than pending in a working tree.
+commit_note=""
+if ! commit_triage_result "$triage_line"; then
+  commit_note=" (commit failed — edits left uncommitted)"
+fi
+
 if [ "$test_status" -ne 0 ]; then
   trap - EXIT
   if [ "$triage_line" = "TRIAGE: clean" ]; then
     notify "Weekly manual tests failed, but agent triage created no issue. See logs/manual-tests/$RUN_ID.log."
     exit 1
   fi
-  notify "Weekly manual tests failed; agent triage completed: ${triage_line#TRIAGE: }. Log: logs/manual-tests/$RUN_ID.log."
+  notify "Weekly manual tests failed; agent triage completed: ${triage_line#TRIAGE: }$commit_note. Log: logs/manual-tests/$RUN_ID.log."
   exit "$test_status"
 fi
 
 if [ "$triage_line" != "TRIAGE: clean" ]; then
-  notify "Weekly manual-test agent updated: ${triage_line#TRIAGE: }. Log: logs/manual-tests/$RUN_ID.log."
+  notify "Weekly manual-test agent updated: ${triage_line#TRIAGE: }$commit_note. Log: logs/manual-tests/$RUN_ID.log."
 fi
 trap - EXIT

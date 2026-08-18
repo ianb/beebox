@@ -38,8 +38,8 @@ ssh callback@$(cat deploy/server-ip)
 | Box data | `/home/callback/boxes/<box>/` |
 | Hub routing table (which boxes `cb hub` serves, and at what slug) | `/home/callback/.config/cb/hub.json` |
 | Box manifest (which boxes the scheduler still sees — retirement deferred, see `docs/implemented-plans/boxes-as-packages-v2.md`'s "H4 deletions") | `/home/callback/.config/cb/boxes.json` |
-| Service logs | `journalctl -u cb-hub -n 200 --no-pager` / `journalctl -u callback-scheduler -n 200 --no-pager` |
-| Service status | `systemctl status cb-hub callback-scheduler --no-pager` |
+| Service logs | `journalctl -u callback-hub -n 200 --no-pager` / `journalctl -u callback-scheduler -n 200 --no-pager` |
+| Service status | `systemctl status callback-hub callback-scheduler --no-pager` |
 | Client debug log per box | `/home/callback/boxes/<box>/content/.callback-box/client-debug.log` |
 | Procedure runs | `/home/callback/boxes/<box>/content/procedure/runs/` |
 | Claude Code update log | `/home/callback/claude-update.log` |
@@ -79,11 +79,14 @@ su - callback -c "cd /home/callback/boxes/<box> && cb validate"
 **Restart services after deploying or after manual config changes:**
 
 ```bash
-deploy/prod-ssh "systemctl restart cb-hub callback-scheduler"
+deploy/prod-ssh "systemctl restart callback-hub callback-scheduler"
 ```
 
-`hub.json` doesn't hot-reload — adding, removing, or re-pointing a box entry needs a `cb-hub`
-restart, not just a config edit.
+`hub.json` doesn't hot-reload — adding, removing, or re-pointing a box entry needs a `callback-hub`
+restart, not just a config edit. To *add* a box, run `deploy/add-box.sh` rather than editing
+`hub.json`: it does the clone, both manifest registrations, the restart, and a canary check
+([`deploy/README.md`](../deploy/README.md)). To register a box that is already on disk,
+`cb hub add-box <slug> <path>` is the validated single step.
 
 For IP-resolution details, see `deploy/README.md`.
 
@@ -351,7 +354,7 @@ ssh callback@$(cat deploy/server-ip) "cd /home/callback/boxes/<box>/content && g
 
 There is no per-box stop command today — `Supervisor.stopBox` is private and
 only fires from the lazy-mode idle timer (`src/hub/supervisor.ts`). The
-supported lever is a full `cb-hub` stop, which SIGTERMs the hub process,
+supported lever is a full `callback-hub` stop, which SIGTERMs the hub process,
 whose `SIGTERM` handler (`src/cli/commands/hub.ts`) calls
 `supervisor.stopAll()` and cleanly tears down every box child before
 exiting — this briefly wedges **every** box on the server, not just the one
@@ -359,7 +362,7 @@ being migrated, so coordinate timing with the boxholder as the plan calls
 for:
 
 ```bash
-ssh root@$(cat deploy/server-ip) "systemctl stop cb-hub"
+ssh root@$(cat deploy/server-ip) "systemctl stop callback-hub"
 ```
 
 (A future improvement — a targeted `cb hub stop <slug>` or admin endpoint —
@@ -422,7 +425,7 @@ Checklist — all must hold before calling the box converted:
 **5. Restart**
 
 ```bash
-ssh root@$(cat deploy/server-ip) "systemctl start cb-hub"
+ssh root@$(cat deploy/server-ip) "systemctl start callback-hub"
 ```
 
 Confirm both `/healthz` and the migrated box's `health.check` (see

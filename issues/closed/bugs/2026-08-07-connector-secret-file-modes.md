@@ -1,12 +1,23 @@
 ---
 title: "Connector secret files written/placed without mode 0600"
-workstream: security-report
+workstream: secret-custody
 area: callback-box
 labels: [soft-launch]
 filed-by: agent
 discovered-in: worktree-security-report — credential inventory for the security report
 priority: important
+resolution: implemented
 ---
+
+**Closed 2026-08-17** — superseded by the secret-custody store
+(`docs/implemented-plans/secret-custody.md`), not fixed the way this issue
+proposed. Telegram's writer (`src/webapp/trpc/routers/admin.ts`) now writes
+into the machine store, which enforces `mode: 0o600` centrally
+(`src/core/secrets/store.ts`), rather than getting its own targeted fix. The
+remaining per-box `*.secret.json` files (mistral, deepgram, openai, …) are
+now a deprecated transition surface the store supersedes — see the plan's
+Rollout-shape migration-status note for the pending removal of that fallback,
+after which this class of file stops being written at all.
 
 Every bespoke credential store in the codebase writes with an explicit
 `mode: 0o600` (`~/.cb-auth.json`, token stores, google tokens,

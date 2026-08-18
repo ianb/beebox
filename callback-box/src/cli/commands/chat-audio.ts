@@ -22,7 +22,8 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { Command } from "commander";
-import { askAudioQuestion, resolveGeminiKey } from "../../core/audio-question.js";
+import { askAudioQuestion } from "../../core/audio-question.js";
+import { getGeminiApiKey } from "../../core/gemini-key.js";
 import {
   transcribeAudioHq,
   HQ_TRANSCRIPTION_SERVICES,
@@ -108,9 +109,12 @@ export const askAboutAudioCommand = new Command("ask-about-audio")
       process.exit(1);
     }
     // Fail before bothering the browser when the model isn't reachable anyway.
-    const apiKey = resolveGeminiKey();
+    const questionBoxRoot = await findBoxRoot(process.cwd());
+    const apiKey = await getGeminiApiKey(questionBoxRoot ?? undefined);
     if (!apiKey) {
-      console.error(`${label}: GEMINI_KEY is not set — the audio model is not configured`);
+      console.error(
+        `${label}: no Gemini key — the audio model is not configured. Ask the boxholder to grant the "gemini" secret to this box, or set GEMINI_KEY`,
+      );
       process.exit(1);
     }
 
@@ -171,7 +175,7 @@ export const askAboutAudioCommand = new Command("ask-about-audio")
 
       // Best-effort trace that the recording was consulted — skips silently
       // for --file runs or old tabs that never echoed an id.
-      const report = buildConsultedReport({ sessionId: fetchedSessionId, messageId: fetchedMessageId });
+      const report = buildConsultedReport({ sessionId: fetchedSessionId, messageId: fetchedMessageId, question });
       if (report !== null) await postAudioReviewReport(report);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);

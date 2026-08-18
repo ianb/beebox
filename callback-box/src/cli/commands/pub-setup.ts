@@ -82,9 +82,9 @@ function printSetupSuccess(result: Extract<Awaited<ReturnType<typeof setupPublis
   if (result.connectorSecret !== null) {
     const c = result.connectorSecret;
     if (c.minted) {
-      console.log(`  connector: minted ingestion-scoped token '${c.tokenName ?? ""}' and wrote ${c.relativePath} (mode 600)`);
+      console.log(`  connector: minted ingestion-scoped token '${c.tokenName ?? ""}' and stored it as '${c.storeName}', granted to this box`);
     } else {
-      console.log(`  connector: ${c.relativePath} already exists — nothing minted (reruns never duplicate tokens)`);
+      console.log(`  connector: '${c.storeName}' already resolves — nothing minted (reruns never duplicate tokens)`);
     }
   }
   if (opts.bootstrapRan) {
@@ -95,8 +95,12 @@ function printSetupSuccess(result: Extract<Awaited<ReturnType<typeof setupPublis
     console.log("To turn them on: re-run `cb pub setup --access` with a setup-only bootstrap token.");
   }
   if (result.connectorSecret?.minted === true && result.connectorSecret.json !== null) {
-    console.log("\nIf this box also wakes on a server, place the same secret file there (it is gitignored and does not sync):");
-    console.log(`  <box>/${result.connectorSecret.relativePath}:`);
+    // Cloudflare never shows a minted token's value again, so this one-time
+    // display is the operator's only chance to place the same credential on a
+    // second machine. Store-bound instructions, not a file copy.
+    console.log("\nIf this box also wakes on a server, put the same credential in that machine's secret store:");
+    console.log(`  cb secrets set ${result.connectorSecret.storeName}   # paste the JSON below on stdin`);
+    console.log(`  cb secrets grant <box> ${result.connectorSecret.storeName}`);
     for (const line of result.connectorSecret.json.split("\n")) console.log(`    ${line}`);
   } else if (result.connectorSecret === null) {
     console.log("\nOPTIONAL — pulling submissions and view logs into the box: the connector needs its own");

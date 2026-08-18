@@ -19,28 +19,35 @@ import {
 
 Default (no `CB_SCAN_VISION`) is Claude — the zero-setup path. Gemini is
 explicit opt-in and fails closed without a key; unknown values are errors,
-never silent fallbacks.
+never silent fallbacks. The env selects the *backend*; the key itself arrives
+already resolved from `core/gemini-key.ts` (store, then `GEMINI_KEY` /
+`SKE_GEMINI_API_KEY`), so there is one Gemini resolution order in the codebase.
 
 ```ts
-const claude = selectScanVisionBackend({});
+const claude = selectScanVisionBackend({}, null);
 JSON.stringify(claude)
 => {"ok":true,"value":{"backend":"claude"}}
 
-const gemini = selectScanVisionBackend({ CB_SCAN_VISION: "gemini", GEMINI_KEY: "k-123" });
+const gemini = selectScanVisionBackend({ CB_SCAN_VISION: "gemini" }, "placeholder-gemini-key");
 JSON.stringify(gemini)
-=> {"ok":true,"value":{"backend":"gemini","apiKey":"k-123"}}
+=> {"ok":true,"value":{"backend":"gemini","apiKey":"placeholder-gemini-key"}}
 
-const noKey = selectScanVisionBackend({ CB_SCAN_VISION: "gemini" });
+const noKey = selectScanVisionBackend({ CB_SCAN_VISION: "gemini" }, null);
 noKey.ok ? "ok" : noKey.error
-=> CB_SCAN_VISION=gemini but GEMINI_KEY (or SKE_GEMINI_API_KEY) is not set
+=> CB_SCAN_VISION=gemini but no Gemini key is available — grant the "gemini" secret to this box, or set GEMINI_KEY (or SKE_GEMINI_API_KEY)
 
-const typo = selectScanVisionBackend({ CB_SCAN_VISION: "gemnii" });
+const typo = selectScanVisionBackend({ CB_SCAN_VISION: "gemnii" }, "placeholder-gemini-key");
 typo.ok ? "ok" : typo.error
 => CB_SCAN_VISION=gemnii is not a valid backend (valid: claude, gemini)
 
-const legacyKey = selectScanVisionBackend({ CB_SCAN_VISION: "gemini", SKE_GEMINI_API_KEY: "sk-9" });
-legacyKey.ok && legacyKey.value.backend === "gemini" ? legacyKey.value.apiKey : "?"
-=> sk-9
+```
+
+A key present but empty is still "no key" — the same fail-closed answer:
+
+```ts continue
+const emptyKey = selectScanVisionBackend({ CB_SCAN_VISION: "gemini" }, "");
+emptyKey.ok
+=> false
 ```
 
 ## The fake: default photo/back alternation

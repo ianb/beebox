@@ -76,9 +76,9 @@ export async function registerGoogleServicesCallback(server: FastifyInstance, { 
       return reply.redirect(`${returnUrl}?google=error&message=No+code+received`);
     }
 
-    const creds = getGoogleClientCreds();
+    const creds = await getGoogleClientCreds(box.boxRoot);
     if (!creds) {
-      console.log("[google-oauth] OAuth not configured (no env vars)");
+      console.log("[google-oauth] OAuth not configured (no store grant, no env vars)");
       return reply.redirect(`${returnUrl}?google=error&message=OAuth+not+configured`);
     }
 

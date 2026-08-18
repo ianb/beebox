@@ -138,7 +138,7 @@ function handleSecondaryEvent(event: RealtimeEvent, deps: SecondaryEventDeps): v
   const audioConsulted = busEventData(event, "chat-audio-consulted");
   if (audioConsulted) {
     if (matchesOwnSession(sessionId, audioConsulted.sessionId)) {
-      audioOverlayStore.applyConsulted(audioConsulted.messageId);
+      audioOverlayStore.applyConsulted(audioConsulted.messageId, audioConsulted.question);
     }
     return;
   }

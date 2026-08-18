@@ -11,6 +11,11 @@ How to add new API endpoints to callback-box using tRPC. Follow an existing rout
 - OAuth redirect flows
 - Webhook receivers (external services POST to us)
 - The `/chat/send` POST (needs the request's user + the session registry)
+- An endpoint that must gate on **which** credential authenticated the request. The
+  tRPC context collapses cookie, hub header, mobile token, browse key and agent
+  bearer into one `authed` flag, so `POST /api/secrets/resolve`
+  (`routes/secrets.ts`) checks the agent bearer itself — it is the only interface
+  that discloses a stored secret to box code (`secrets.md`).
 
 Older raw routes are tech debt — migrate when you touch the area.
 

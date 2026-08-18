@@ -5,8 +5,9 @@ box-scoped subprocess spawn site runs to get `CB_BOX_NAME` and
 `CB_SERVER_URL` (plus any caller-specific additions).
 
 ```ts setup
-import { buildScriptEnv, parsePublicUrl, registerBoxPublicUrl, unregisterBoxPublicUrl } from "../../src/core/script-env.js";
+import { buildScriptEnv, buildToolingScriptEnv, parsePublicUrl, registerBoxPublicUrl, unregisterBoxPublicUrl } from "../../src/core/script-env.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { PACKAGE_ROOT } from "../../src/lib/package-root.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 ```
@@ -206,40 +207,105 @@ env.SHOULD_VANISH === undefined
 await box.cleanup();
 ```
 
-## buildScriptEnv — strips the hub's cross-box trust secrets
+## buildScriptEnv — inherits only allowlisted names
 
-The child (`cb serve`) holds `CB_HUB_SECRET` and `CB_DIAG_API_KEY` to verify
-hub-proxied requests, but a box agent spawned under it must NOT inherit them —
-with either an agent could forge hub headers (`x-cb-hub-authenticated-email`,
-`x-cb-hub-auth: off`) or the diag bearer straight to a sibling box's loopback
-port and bypass identity + box ACLs. `CB_SESSION_SECRET` is the symmetric
-cookie-signing key (verify == forge) — an agent holding it could mint a valid
-`cb_session` for anyone. `ANTHROPIC_API_KEY` is stripped for the same
-don't-inherit-power reason.
+The subprocess env is a fail-closed allowlist, not a `process.env` spread with
+a few names deleted. The hub's cross-box trust secrets (`CB_HUB_SECRET`,
+`CB_DIAG_API_KEY`) would let an agent forge hub headers
+(`x-cb-hub-authenticated-email`, `x-cb-hub-auth: off`) or the diag bearer at a
+sibling box's loopback port; `CB_SESSION_SECRET` is the symmetric
+cookie-signing key (verify == forge), so an agent holding it could mint a
+`cb_session` for anyone; `ANTHROPIC_API_KEY` would silently bill the API
+instead of the boxholder's subscription. Connector credentials
+(`CALLBACK_MISTRAL_API_KEY`, `CALLBACK_DEEPGRAM_*`, `GEMINI_KEY`,
+`GOOGLE_OAUTH_CLIENT_SECRET`, …) are withheld from agents too — and so is any
+name nobody thought to list, which is the point of an allowlist.
 
 ```ts
 const box = await makeTmpBox();
-process.env.CB_HUB_SECRET = "hub-secret-should-not-leak";
-process.env.CB_DIAG_API_KEY = "diag-key-should-not-leak";
-process.env.CB_SESSION_SECRET = "session-secret-should-not-leak";
-process.env.ANTHROPIC_API_KEY = "sk-should-not-leak";
+const poisoned = {
+  CB_HUB_SECRET: "hub-secret-should-not-leak",
+  CB_DIAG_API_KEY: "diag-key-should-not-leak",
+  CB_SESSION_SECRET: "session-secret-should-not-leak",
+  CB_BROWSE_API_KEY: "browse-key-should-not-leak",
+  ANTHROPIC_API_KEY: "sk-should-not-leak",
+  CALLBACK_MISTRAL_API_KEY: "mistral-should-not-leak",
+  CALLBACK_DEEPGRAM_API_KEY: "deepgram-should-not-leak",
+  GEMINI_KEY: "gemini-should-not-leak",
+  SKE_GEMINI_API_KEY: "ske-gemini-should-not-leak",
+  THINKING_OPENAI_API_KEY: "openai-should-not-leak",
+  GOOGLE_OAUTH_CLIENT_ID: "google-id-should-not-leak",
+  GOOGLE_OAUTH_CLIENT_SECRET: "google-secret-should-not-leak",
+  SOME_RANDOM_SECRET: "unknown-name-should-not-leak",
+};
+Object.assign(process.env, poisoned);
 const env = await buildScriptEnv(box.root);
-delete process.env.CB_HUB_SECRET;
-delete process.env.CB_DIAG_API_KEY;
-delete process.env.CB_SESSION_SECRET;
-delete process.env.ANTHROPIC_API_KEY;
+for (const key of Object.keys(poisoned)) delete process.env[key];
+Object.keys(poisoned).filter((key) => env[key] !== undefined)
+=> []
+```
+
+The essentials a spawned process actually needs are there: `PATH` (with
+callback-box's own `bin/` prepended so `cb` resolves), `HOME`, and the
+loopback `CB_AGENT_TOKEN` provisioned for this box.
+
+```ts continue
+const cbBin = path.join(PACKAGE_ROOT, "bin");
 [
-  env.CB_HUB_SECRET === undefined,
-  env.CB_DIAG_API_KEY === undefined,
-  env.CB_SESSION_SECRET === undefined,
-  env.ANTHROPIC_API_KEY === undefined,
+  env.PATH!.startsWith(`${cbBin}:`),
+  env.HOME === process.env.HOME,
+  typeof env.CB_AGENT_TOKEN === "string" && env.CB_AGENT_TOKEN.length > 0,
 ]
 => [
   true,
   true,
-  true,
   true
 ]
+```
+
+`additions` are applied after the allowlist, so a caller can still hand a
+subprocess a value the allowlist would have withheld:
+
+```ts continue
+const withAddition = await buildScriptEnv(box.root, { SOME_RANDOM_SECRET: "explicitly passed" });
+withAddition.SOME_RANDOM_SECRET
+=> explicitly passed
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## buildToolingScriptEnv — the `cb`-tooling profile adds connector credentials
+
+Spawning the box's own tooling (`cb wakeup`, `cb finalize`, scheduled `runs:`
+commands) means spawning the process that runs the connectors, so that profile
+inherits the connector credentials — and nothing else the agent profile
+withholds: the hub trust secrets and unknown names stay out.
+
+```ts
+const box = await makeTmpBox();
+const vars = {
+  CALLBACK_MISTRAL_API_KEY: "mistral-key",
+  CALLBACK_DEEPGRAM_PROJECT: "deepgram-project",
+  GOOGLE_OAUTH_CLIENT_SECRET: "google-secret",
+  CB_HUB_SECRET: "hub-secret-should-not-leak",
+  SOME_RANDOM_SECRET: "unknown-name-should-not-leak",
+};
+Object.assign(process.env, vars);
+const env = await buildToolingScriptEnv(box.root);
+for (const key of Object.keys(vars)) delete process.env[key];
+print(`mistral: ${env.CALLBACK_MISTRAL_API_KEY}`);
+print(`deepgram: ${env.CALLBACK_DEEPGRAM_PROJECT}`);
+print(`google: ${env.GOOGLE_OAUTH_CLIENT_SECRET}`);
+print(`hub secret: ${env.CB_HUB_SECRET ?? "(unset)"}`);
+print(`random: ${env.SOME_RANDOM_SECRET ?? "(unset)"}`);
+=>
+mistral: mistral-key
+deepgram: deepgram-project
+google: google-secret
+hub secret: (unset)
+random: (unset)
 ```
 
 ```ts cleanup

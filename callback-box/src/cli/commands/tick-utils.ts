@@ -34,7 +34,7 @@ import {
 import { parseCardName } from "../../lib/paths.js";
 import { resolveRefPath } from "../../shared/ref-path.js";
 import { getDefaultTemplate } from "../../schemas/templates.js";
-import { buildScriptEnv } from "../../core/script-env.js";
+import { buildToolingScriptEnv } from "../../core/script-env.js";
 
 /** Timing for a run that failed outside execWithTimeout (e.g. spawn error):
  * no measurement exists, so record zero rather than invent one. */
@@ -115,7 +115,9 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
     await acquireScriptLock({ boxRoot, scriptName, triggeredBy: "wakeup", ...(parsed.lockGroup ? { lockGroup: parsed.lockGroup } : {}) });
     const windowMs = parsed.budget?.windowMs ?? DEFAULT_RUN_WINDOW_MS;
     try {
-      const scriptEnv = await buildScriptEnv(boxRoot, {
+      // Tooling profile: on-wakeup `runs:` commands are box tooling (mostly
+      // `cb` invocations that sync connectors).
+      const scriptEnv = await buildToolingScriptEnv(boxRoot, {
         CB_TRIGGERED_BY: "wakeup",
       });
       const { durationMs, sleepAffected } = await execWithTimeout(parsed.runs, {

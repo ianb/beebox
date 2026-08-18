@@ -11,6 +11,7 @@ import { AllowedEmailsSection } from "../components/admin/AllowedEmailsSection";
 import { GoogleServicesSection } from "../components/admin/GoogleServicesSection";
 import { GmailFiltersSection } from "../components/admin/GmailFiltersSection";
 import { TelegramSection } from "../components/admin/TelegramSection";
+import { SecretsSection } from "../components/admin/SecretsSection";
 import { NotificationsSection } from "../components/admin/NotificationsSection";
 import { TailscaleSection } from "../components/admin/TailscaleSection";
 import { InviteSection } from "../components/admin/InviteSection";
@@ -39,6 +40,7 @@ export function AdminPage() {
           <GoogleServicesSection />
           <GmailFiltersSection />
           <TelegramSection />
+          <SecretsSection />
           <NotificationsSection />
           <TailscaleSection />
         </Stack>

@@ -16,6 +16,12 @@ import {
   DEFAULT_HUB_PORT,
   DEFAULT_HUB_HOST,
 } from "../../hub/hub-config.js";
+import {
+  planAddBoxToHubConfig,
+  applyAddBoxPlan,
+  describeAddBoxPlan,
+  HubConfigEditError,
+} from "../../hub/hub-config-edit.js";
 import { Supervisor } from "../../hub/supervisor.js";
 import { resolveBoxRoot } from "../../hub/child-spawn.js";
 import { createHubServer, type HubHealth } from "../../hub/hub-server.js";
@@ -27,6 +33,65 @@ import type { BoxSpec } from "../../webapp/server-types.js";
 
 function describeError(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
+}
+
+/**
+ * `cb hub add-box <slug> <path>` — register a box with the hub's routing
+ * table. This is the supported alternative to hand-editing `hub.json`; see
+ * `src/hub/hub-config-edit.ts` for why the edit is planned-then-written.
+ * `deploy/add-box.sh` drives it (twice: `--dry-run` as a preflight before it
+ * clones anything, then for real).
+ */
+function registerAddBoxSubcommand(parent: Command): void {
+  const addBox = parent
+    .command("add-box")
+    .description("Register a box with the hub's routing table (hub.json)")
+    .argument("<slug>", "URL prefix the box is served under")
+    .argument("<path>", "Path to the box (package root or content dir)")
+    .option("-c, --config <path>", "Path to hub.json (default: ~/.config/cb/hub.json)")
+    .option("--dry-run", "Validate and print what would change, without writing");
+
+  // Options come from `.opts()` rather than the action's third parameter:
+  // the ruleset caps a function at two positional parameters.
+  //
+  // `--config` is read from BOTH commands because `cb hub` declares the same
+  // flag: commander binds a repeated option to the PARENT unless positional
+  // options are enabled program-wide, so `cb hub add-box … --config X` lands
+  // on `hub`, not on `add-box`. Both spellings mean the same file, so taking
+  // whichever one holds a value is correct — and it avoids silently falling
+  // back to the default config when the operator clearly named one. Passing it
+  // twice resolves last-wins, since both land on the parent; that is ordinary
+  // CLI behavior, and the command prints the config path it acted on either
+  // way, so the operator sees which file was edited.
+  addBox.action(async (slug: string, boxPath: string) => {
+    const options = addBox.opts<{ config?: string; dryRun?: boolean }>();
+    const parentOptions = parent.opts<{ config?: string }>();
+    const configPath = options.config ?? parentOptions.config ?? defaultHubConfigPath();
+    let plan;
+    try {
+      plan = await planAddBoxToHubConfig({ configPath, slug, boxPath });
+    } catch (e) {
+      if (e instanceof HubConfigEditError || e instanceof HubConfigError) {
+        console.error(e.message);
+        process.exit(1);
+      }
+      throw e;
+    }
+
+    if (options.dryRun) {
+      console.log(`[dry-run] ${describeAddBoxPlan(plan)}`);
+      if (plan.action === "added") {
+        console.log("[dry-run] Then: systemctl restart callback-hub (hub.json does not hot-reload)");
+      }
+      return;
+    }
+
+    await applyAddBoxPlan(plan);
+    console.log(describeAddBoxPlan(plan));
+    if (plan.action === "added") {
+      console.log("Restart the hub to serve it: systemctl restart callback-hub");
+    }
+  });
 }
 
 export const hubCommand = new Command("hub")
@@ -121,3 +186,5 @@ export const hubCommand = new Command("hub")
       console.log(`  ${slug}: http://${host}:${port}/${slug}/`);
     }
   });
+
+registerAddBoxSubcommand(hubCommand);

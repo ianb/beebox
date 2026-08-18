@@ -13,6 +13,7 @@ import { transcribeAudioFake } from "./fake.js";
 import { withCardLock } from "../../lib/card-lock.js";
 import { buildMultipartForm, type MultipartPart } from "../../lib/multipart.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { getOpenAiThinkingKey } from "../openai-thinking-key.js";
 
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/audio/transcriptions";
 
@@ -20,7 +21,10 @@ class MissingWhisperKeyError extends Error implements TranscriptionError {
   readonly permanent = true;
   readonly code = "missing_api_key";
   constructor() {
-    super("THINKING_OPENAI_API_KEY environment variable is required for transcription");
+    super(
+      'No OpenAI key for transcription — ask the boxholder to grant the "openai-thinking" ' +
+        "secret to this box, or set THINKING_OPENAI_API_KEY",
+    );
     this.name = "MissingWhisperKeyError";
   }
 }
@@ -287,7 +291,11 @@ async function transcribeAudioWhisper(
 ): Promise<TranscriptionResult | DetailedTranscriptionResult> {
   opts = opts ?? { variant: "whisper" };
   const { audioBuffer, filename, prompt, options } = params;
-  const apiKey = process.env["THINKING_OPENAI_API_KEY"];
+  // The same `openai-thinking` resolver its siblings use (voxtral, deepgram):
+  // the machine secret store first, then the env var. `boxRoot` is optional on
+  // `TranscribeAudioParams`, and a caller that omits it gets the env path only
+  // — there is no box to check grants for.
+  const apiKey = await getOpenAiThinkingKey(params.boxRoot);
   if (!apiKey) {
     throw new MissingWhisperKeyError();
   }

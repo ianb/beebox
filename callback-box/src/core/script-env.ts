@@ -17,12 +17,19 @@
  * When `publicUrl` is not configured the env vars are left unset —
  * child processes that need them will fail cleanly with a
  * "CB_SERVER_URL is not set" error.
+ *
+ * What a subprocess inherits from the spawning server process is a
+ * fail-closed ALLOWLIST (`script-env-allowlist.ts`), not a `process.env`
+ * spread: a box agent must not inherit the server's credentials. Two
+ * profiles — `buildScriptEnv` (agent-safe) and `buildToolingScriptEnv`
+ * (adds connector credentials, for spawning the box's own `cb` tooling).
  */
 
 import * as path from "node:path";
 import { loadBoxConfig } from "./box/config.js";
 import { getOrCreateAgentToken } from "./agent/token.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
+import { pickBoxSubprocessEnv } from "./script-env-allowlist.js";
 
 // Path to callback-box's own bin/ so subprocesses can find `cb`.
 // Prepended to PATH inside buildScriptEnv so every box-spawned subprocess
@@ -80,51 +87,18 @@ export function parsePublicUrl(publicUrl: string | undefined | null): BoxEnvPiec
   };
 }
 
-/**
- * Build a process environment for a subprocess spawned from this box.
- *
- * - Starts from `process.env`.
- * - Adds `CB_BOX_NAME` and `CB_SERVER_URL` when derivable from
- *   `config/box.json#publicUrl` (or `PUBLIC_URL` env fallback).
- * - Applies any caller-provided `additions` last (callers can override
- *   or explicitly unset — pass `undefined` to delete a key).
- */
-export async function buildScriptEnv(
+async function buildEnv(
   boxRoot: string,
-  additions?: Record<string, string | undefined>
+  { additions, connectorCreds }: {
+    additions: Record<string, string | undefined> | undefined;
+    connectorCreds: boolean;
+  }
 ): Promise<NodeJS.ProcessEnv> {
-  const env: NodeJS.ProcessEnv = { ...process.env };
+  const env = pickBoxSubprocessEnv(process.env, { connectorCreds });
 
   // Prepend callback-box's bin/ so scripts can find `cb` regardless of
   // how the parent process's PATH was set up.
   env.PATH = `${CB_BIN_DIR}:${env.PATH ?? ""}`;
-
-  // Force Claude to use subscription auth, never an API key. The Claude
-  // Agent SDK and CLI both pick up ANTHROPIC_API_KEY if present and silently
-  // bill it instead of the user's subscription. Strip it from every
-  // box-spawned subprocess so it can't leak in by accident.
-  delete env.ANTHROPIC_API_KEY;
-
-  // Strip the hub's cross-box trust secrets. The child (`cb serve`) needs
-  // CB_HUB_SECRET / CB_DIAG_API_KEY to verify hub-proxied requests, but a box
-  // AGENT spawned under that child must not inherit them: with CB_HUB_SECRET an
-  // agent could forge `x-cb-hub-authenticated-email: <anyone>` (or
-  // `x-cb-hub-auth: off`) straight to a sibling box's loopback port and bypass
-  // identity + box ACLs; CB_DIAG_API_KEY would forge the diagnostic bearer the
-  // same way. Agents authenticate to their OWN box via CB_AGENT_TOKEN (below),
-  // never these — so removing them here closes the escalation with no loss.
-  delete env.CB_HUB_SECRET;
-  delete env.CB_DIAG_API_KEY;
-
-  // Strip the session-cookie SIGNING secret too. It's symmetric HMAC (verify ==
-  // forge, see webapp/auth.ts), so an agent that inherited it could mint a valid
-  // `cb_session` for ANY user and bypass login on any box. Server processes read
-  // it from `~/.cb-session-secret` (or their own env), never needing it in an
-  // agent subprocess. (Partial: a same-user agent can still read the 0600 file
-  // directly — true containment is an agent-sandboxing question — but stripping
-  // the env var closes the trivial-inheritance path, consistent with the two
-  // secrets above.)
-  delete env.CB_SESSION_SECRET;
 
   // Priority: live ambient (running server) > box.json publicUrl > PUBLIC_URL env.
   // The live ambient lets a local dev server supply the env vars without
@@ -155,4 +129,45 @@ export async function buildScriptEnv(
   }
 
   return env;
+}
+
+/**
+ * Build a process environment for a subprocess spawned from this box —
+ * agents, tricks, procedure shell steps, and anything else running
+ * agent-authored code.
+ *
+ * - Starts from `SCRIPT_ENV_ALLOWLIST` applied to `process.env`; nothing else
+ *   is inherited, connector credentials included.
+ * - Adds `CB_BOX_NAME` and `CB_SERVER_URL` when derivable from
+ *   `config/box.json#publicUrl` (or `PUBLIC_URL` env fallback).
+ * - Adds `CB_AGENT_TOKEN` so the subprocess's `cb chat …` calls get through
+ *   its own box's auth wall.
+ * - Applies any caller-provided `additions` last (callers can override
+ *   or explicitly unset — pass `undefined` to delete a key).
+ */
+export async function buildScriptEnv(
+  boxRoot: string,
+  additions?: Record<string, string | undefined>
+): Promise<NodeJS.ProcessEnv> {
+  return buildEnv(boxRoot, { additions, connectorCreds: false });
+}
+
+/**
+ * `buildScriptEnv` plus `CONNECTOR_ENV_ALLOWLIST` — for spawn sites that run
+ * the box's own tooling (`cb wakeup`, `cb finalize`, scheduled `runs:`
+ * commands, which are overwhelmingly `cb` invocations). Those children run the
+ * connectors, so on an env-var-configured server they need the connector
+ * credentials the agent profile withholds.
+ *
+ * Honest scope, per `docs/plans/secret-custody.md`: a scheduled-script card is
+ * agent-authorable, so this profile is agent-*reachable* by writing a script
+ * card and waiting for it to fire. What Track 1 closes is the trivial path —
+ * the agent's own process env — not every path; Track 3 closes this one by
+ * retiring env-var credentials for the store.
+ */
+export async function buildToolingScriptEnv(
+  boxRoot: string,
+  additions?: Record<string, string | undefined>
+): Promise<NodeJS.ProcessEnv> {
+  return buildEnv(boxRoot, { additions, connectorCreds: true });
 }

@@ -18,6 +18,7 @@ import { registerTelegramRoutes } from "./routes/telegram.js";
 import { registerViewRoutes } from "./routes/views.js";
 import { registerFigureRoutes } from "./routes/figure.js";
 import { registerCaptureRoutes } from "./routes/capture.js";
+import { registerSecretsRoutes } from "./routes/secrets.js";
 import { registerBulkUploadRoutes } from "./routes/bulk-upload.js";
 import { registerScanUploadRoutes } from "./routes/scan-upload.js";
 import { isPairingRedeemUrl, registerPairingRoutes } from "./routes/pairing.js";
@@ -242,6 +243,10 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
         // owner. Same treatment as the agent bearer and mobile auth beside it.
         authed: identityIsOpen || user !== null || bearerOk || mobileOk || browseOk,
         isOwner: identityIsOpen || (user !== null && user.email === getOwnerEmail()),
+        // Deliberately NOT folding in open access: the machine-level secret
+        // store is the one owner surface where "the box opted out of the auth
+        // wall" must not read as "the boxholder is here" (secret-custody plan).
+        isAuthenticatedOwner: user !== null && user.email === getOwnerEmail(),
       };
     },
   };
@@ -262,6 +267,11 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
   // behind ownerProcedure; only the OAuth redirect callback stays a raw route
   // (registered at the root, see server.ts).
   await registerCaptureRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
+  // The loopback secret resolver. It sits in the box scope like every other
+  // route, but does its OWN auth: the box auth hook above accepts five
+  // credentials and this interface accepts exactly one of them (the agent
+  // bearer), because it is the only one that discloses a stored value.
+  registerSecretsRoutes({ server: instance, boxRoot: box.boxRoot, boxSlug: box.slug });
   await registerBulkUploadRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
   await registerViewRoutes({ server: instance, boxRoot: box.boxRoot });
   registerFigureRoutes({ server: instance, boxRoot: box.boxRoot });

@@ -15,7 +15,8 @@ import type {
   TranscriptionError,
   WordTimestamp,
 } from "./index.js";
-import { getDeepgramCredentials } from "../deepgram-key.js";
+import { DEEPGRAM_SECRET_NAME, getDeepgramCredentials } from "../deepgram-key.js";
+import { isAuthRejection, markSecretVerificationFailed } from "../secrets/probe-registry.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
 const DEEPGRAM_ENDPOINT = "https://api.deepgram.com/v1/listen";
@@ -163,6 +164,14 @@ export async function transcribeAudioDeepgram(
       throw error;
     }
     if (isHTTPError(error)) {
+      // See the same branch in `voxtral.ts`: a real call rejected for auth is
+      // the evidence that turns into the admin page's "may be expired" flag.
+      if (isAuthRejection(error.response.status)) {
+        await markSecretVerificationFailed(
+          DEEPGRAM_SECRET_NAME,
+          `a transcription request was rejected with HTTP ${error.response.status}`,
+        );
+      }
       const parsed = await parseErrorResponse(error.response);
       throw parsed;
     }

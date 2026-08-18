@@ -90,22 +90,30 @@ noServiceSpecs.map((s) => s.label).join(", ")
 => Retranscribed
 ```
 
-## Consulted: fixed label, no detail body
+## Consulted: fixed label; detail carries the question(s) asked
 
 ```ts
-const consultedSpecs = buildAudioBadgeSpecs({ consulted: true }, "irrelevant");
+const consultedSpecs = buildAudioBadgeSpecs({ consulted: { questions: ["did I sound annoyed?"] } }, "irrelevant");
 consultedSpecs.map((s) => s.label).join(", ")
 => The agent analyzed this recording
 
-consultedSpecs[0].detail
-=> null
+const detailHtml = renderToStaticMarkup(consultedSpecs[0].detail);
+print(`heading: ${detailHtml.includes("question asked")}`);
+print(`question: ${detailHtml.includes("did I sound annoyed?")}`);
+=>
+heading: true
+question: true
+
+const multi = buildAudioBadgeSpecs({ consulted: { questions: ["q one?", "q two?"] } }, "x");
+renderToStaticMarkup(multi[0].detail).includes("questions asked")
+=> true
 ```
 
 ## Both present: retranscription badge first, consulted appended after
 
 ```ts
 const bothSpecs = buildAudioBadgeSpecs(
-  { retranscription: { newText: "x", diarized: false }, consulted: true },
+  { retranscription: { newText: "x", diarized: false }, consulted: { questions: ["did I sound annoyed?"] } },
   "y",
 );
 bothSpecs.map((s) => s.kind).join(", ")
@@ -159,7 +167,7 @@ untouchedOut.includes("aria-haspopup")
 
 ```ts
 const consultedStore = createAudioOverlayStore();
-consultedStore.applyConsulted("msg-4");
+consultedStore.applyConsulted("msg-4", "did I sound annoyed?");
 const consultedOut = render([voiceEntry("msg-4", "two large legs")], consultedStore);
 consultedOut.includes("two large legs")
 => true
@@ -191,7 +199,7 @@ otherOut.includes('aria-label="Retranscribed — deepgram-hq"')
 
 ```ts
 const otherConsultedStore = createAudioOverlayStore();
-otherConsultedStore.applyConsulted("msg-bob-2");
+otherConsultedStore.applyConsulted("msg-bob-2", "was that sarcasm?");
 const otherConsultedOut = renderAsOtherViewer([otherUserVoiceEntry("msg-bob-2", "bob asked something")], otherConsultedStore);
 otherConsultedOut.includes("bob asked something")
 => true

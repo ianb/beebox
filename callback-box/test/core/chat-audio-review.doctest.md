@@ -64,6 +64,7 @@ const res = await ctx.request({
     sessionId: "sess-2",
     messageId: "msg-2",
     command: "ask-about-audio",
+    question: "did I say can or cannot?",
   },
 });
 print(`status: ${res.statusCode}`);
@@ -72,7 +73,7 @@ print(`event: ${JSON.stringify(await gotEvent)}`);
 =>
 status: 200
 body: {"ok":true}
-event: {"sessionId":"sess-2","messageId":"msg-2","command":"ask-about-audio"}
+event: {"sessionId":"sess-2","messageId":"msg-2","command":"ask-about-audio","question":"did I say can or cannot?"}
 ```
 
 ```ts cleanup
@@ -167,11 +168,11 @@ null message: null
 ## `buildConsultedReport`: present ids build the report; absent ones skip
 
 ```ts
-print(JSON.stringify(buildConsultedReport({ sessionId: "sess-1", messageId: "msg-1" })));
-print(`${buildConsultedReport({ sessionId: null, messageId: "msg-1" })}`);
-print(`${buildConsultedReport({ sessionId: "sess-1", messageId: null })}`);
+print(JSON.stringify(buildConsultedReport({ sessionId: "sess-1", messageId: "msg-1", question: "was I whispering?" })));
+print(`${buildConsultedReport({ sessionId: null, messageId: "msg-1", question: "q" })}`);
+print(`${buildConsultedReport({ sessionId: "sess-1", messageId: null, question: "q" })}`);
 =>
-{"kind":"consulted","sessionId":"sess-1","messageId":"msg-1","command":"ask-about-audio"}
+{"kind":"consulted","sessionId":"sess-1","messageId":"msg-1","command":"ask-about-audio","question":"was I whispering?"}
 null
 null
 ```

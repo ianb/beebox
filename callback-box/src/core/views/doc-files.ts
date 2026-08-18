@@ -98,9 +98,15 @@ export default function Notes({ files, readFile, writeFile, commitFile }) {
 Browsers can't call provider APIs directly: providers (correctly) refuse
 CORS so API keys never live in pages. Views go through the box's **API
 adapters** instead — \`adapterFetch(adapter, {path, ...init})\` hits
-\`/api/adapters/<adapter>/<path>\`, where the server injects the key from
-\`config/connectors/<adapter>.secret.json\` (\`{"apiKey": "..."}\`).
+\`/api/adapters/<adapter>/<path>\`, where the server injects the key it
+resolves from the machine-level secret store under the adapter's own name.
 Adapters: \`replicate\`, \`mistral\`, \`anthropic\`, \`openai\`.
+
+A key is never a file you write: the boxholder grants the adapter's secret
+to this box (\`cb secrets status <this box>\` shows what is granted and what is
+missing; \`cb secrets declare\` names one you need). An in-tree
+\`config/connectors/<adapter>.secret.json\` is a deprecated fallback that is
+being retired — do not create one.
 
 \`\`\`tsx
 const resp = await adapterFetch("replicate", {

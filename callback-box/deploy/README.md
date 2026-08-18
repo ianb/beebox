@@ -101,7 +101,10 @@ progressive-delivery benefit.
 
 ### `add-box.sh` — Add a box to the server
 
-Clones a box repo, registers it, and restarts the serving process.
+The whole process, in one command: clone the box repo, `cb init` it, seed
+access + connector secrets, register it with **both** manifests, restart the
+services, and verify the new box actually serves. There is no by-hand
+`hub.json` step.
 
 ```bash
 # Using owner/repo shorthand
@@ -110,19 +113,64 @@ Clones a box repo, registers it, and restarts the serving process.
 # Using full SSH URL
 ./deploy/add-box.sh git@github.com:ianb/hearth.git
 
-# With custom local name
+# With custom local name (this is also the URL slug)
 ./deploy/add-box.sh ianb/hearth my-family
+
+# See what it would do, without changing anything (read-only on the server)
+./deploy/add-box.sh ianb/hearth --dry-run
 ```
+
+**A brand-new box** (no repo yet) uses `--create`, which scaffolds the box with
+`cb init`, pushes it to a private GitHub repo, and then adds it exactly as
+above:
+
+```bash
+./deploy/add-box.sh --create hearth --allow someone@example.com --secrets-from lighthouse
+
+# Into a repo you already made in the web UI (it must still be empty):
+./deploy/add-box.sh --create hearth --repo ianb/hearth
+```
+
+The repo defaults to `<your gh login>/<box-name>` and is created private. An
+existing **empty** repo is adopted; one that already has commits is refused,
+because pushing a fresh scaffold over it would either do nothing or clobber it
+— add that one with the plain form instead. The scaffold happens in a temp
+directory and is not kept locally: the box's homes are its repo and the server.
+Needs the `gh` CLI, authenticated.
 
 Each box is served at `https://box.example.com/<box-name>/`.
 
-**Known gap:** this script still targets the pre-hub shape — it clones the
-box, runs `cb init`, writes `config/box.json`, and restarts
-`callback-serve`/`callback-scheduler`. On the live hub-based server, adding a
-box additionally means writing an entry to `hub.json` and restarting the hub
-(see [`docs/adding-a-box.md`](../docs/adding-a-box.md)); this script doesn't
-do that yet. Until it's updated, add a box by hand: clone + `cb init` as this
-script does, then edit `hub.json` and restart the hub.
+The box name doubles as the URL slug, so it must be lowercase letters, digits,
+and hyphens. Two manifests are written, and both are live:
+
+- `~/.config/cb/hub.json` — the hub's routing table (which slug serves which
+  box). Written by `cb hub add-box`, which validates the resulting config with
+  the hub's own loader *before* replacing the file, so a reserved slug
+  (`healthz`/`auth`/`webhook`/`api`) or a second slug for an already-registered
+  box fails with nothing changed.
+- `~/.config/cb/boxes.json` — the scheduler's box list. Written by
+  `cb boxes add`.
+
+Neither hot-reloads, so the script restarts `callback-hub` and
+`callback-scheduler`. It then drives the hub's canary for the new slug, which
+cold-starts the box and requires the box's own `/healthz` to answer through the
+hub — so a successful run means the box process really came up and served, not
+just that files were written. (It is a loopback check: nginx, TLS, the public
+URL, and per-user access are not exercised.)
+
+**Order of operations:** every argument's shape is validated, and the hub edit
+is `--dry-run`ed against the live config, *before* anything is cloned — which
+is where the failures this script used to hit at the very end now surface. It
+is not a transaction, though: a failure in the clone, the `cb init`, the
+manifests, or the restart leaves the earlier steps done. The script names the
+step that failed, and re-running is safe.
+
+Re-running is idempotent: pull + re-init, both manifest steps no-op, access
+config left alone.
+
+`--dry-run` still needs a `cb` on the server that has `cb hub add-box` — i.e.
+a deploy from 2026-08 or later. On an older build the preflight fails with an
+unknown-command error.
 
 ### `rebuild.sh` — Pull latest code and rebuild
 
@@ -139,7 +187,7 @@ Pulls callback-box, rebuilds, and restarts services.
 ./deploy/prod-ssh
 
 # Run a command
-./deploy/prod-ssh systemctl status cb-hub
+./deploy/prod-ssh systemctl status callback-hub
 ```
 
 Uses agent forwarding (`-A`) so your local SSH key works for GitHub operations on the server.
@@ -194,7 +242,7 @@ old single shared `callback-serve` process — one hub process routes
 (so each box can pin its own engine version independently). The scheduler is
 unaffected by this change and still runs as a separate unit.
 
-- `cb-hub` — the hub: reads `hub.json`, spawns/routes/health-checks each
+- `callback-hub` — the hub: reads `hub.json`, spawns/routes/health-checks each
   box's own `cb serve` child.
 - `callback-scheduler` — scheduler daemon for periodic tasks (still reads
   `~/.config/cb/boxes.json`, the older manifest — see
@@ -203,21 +251,21 @@ unaffected by this change and still runs as a separate unit.
 
 ```bash
 # Check status
-systemctl status cb-hub
+systemctl status callback-hub
 systemctl status callback-scheduler
 
 # View logs
-journalctl -u cb-hub -f
+journalctl -u callback-hub -f
 journalctl -u callback-scheduler -f
 
 # Restart after config changes (hub.json doesn't hot-reload — a box add/remove needs this)
-systemctl restart cb-hub
+systemctl restart callback-hub
 ```
 
 **Rollback lever:** the old `callback-serve.service` unit is stopped and
 disabled, not deleted — it stays on disk as `callback-serve-disabled-on-disk`
 (masked, not purged) so a bad hub rollout can be rolled back with
-`systemctl disable --now cb-hub && systemctl enable --now callback-serve`.
+`systemctl disable --now callback-hub && systemctl enable --now callback-serve`.
 **Never run both at once** — two engines serving the same box against its
 one `events.db` is a corrupting state, not just a wasteful one (the plan's
 Failure modes section calls this out as an accepted, operator-driven risk
@@ -273,7 +321,7 @@ THINKING_OPENAI_API_KEY=sk-...
 CALLBACK_MISTRAL_API_KEY=...
 ```
 
-After editing `.env`, restart services: `systemctl restart cb-hub callback-scheduler`
+After editing `.env`, restart services: `systemctl restart callback-hub callback-scheduler`
 
 ### Web Push (VAPID) keys
 
@@ -346,7 +394,7 @@ independently (next section).
    GOOGLE_OAUTH_CLIENT_SECRET=...
    CB_PUBLIC_URL=https://box.example.com
    ```
-5. Restart services: `systemctl restart cb-hub`
+5. Restart services: `systemctl restart callback-hub`
 
 ### Per-box access control
 

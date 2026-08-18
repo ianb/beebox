@@ -7,7 +7,7 @@
  * callback for visibility.
  */
 
-import { buildScriptEnv } from "../script-env.js";
+import { buildToolingScriptEnv } from "../script-env.js";
 import { runCollectedChild } from "../../lib/run-child.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
@@ -21,7 +21,9 @@ async function runCbSubcommand(
   boxRoot: string,
   { command, label, onLog }: { command: string; label: string; onLog: ((text: string) => void) | undefined }
 ): Promise<boolean> {
-  const env = await buildScriptEnv(boxRoot);
+  // Tooling profile: this child IS `cb wakeup`/`cb finalize` — it runs the
+  // connectors, so it needs the connector credentials an agent must not see.
+  const env = await buildToolingScriptEnv(boxRoot);
   try {
     const { code } = await runCollectedChild({
       command: "cb",

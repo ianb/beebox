@@ -17,7 +17,7 @@ design:
   [web-password-reset-account-recovery](../../issues/closed/features/2026-08-07-web-password-reset-account-recovery.md).
   The old "File permissions" section was fixed outright (0600 across the
   credential stores; two residual exceptions tracked in
-  [connector-secret-file-modes](../../issues/bugs/2026-08-07-connector-secret-file-modes.md)).
+  [connector-secret-file-modes](../../issues/closed/bugs/2026-08-07-connector-secret-file-modes.md)).
 
 Nothing accumulates here anymore — file security tensions as issues, and
 posture changes flow into the report via `/security-report`.

@@ -115,19 +115,20 @@ store.getEntry("msg-1")
 }
 ```
 
-## Overlay store: `consulted` is sticky — a repeat consult is a no-op
+## Overlay store: consults accumulate questions; identical re-asks dedupe
 
 ```ts
 const consultStore = createAudioOverlayStore();
 let notifyCount = 0;
 consultStore.subscribe("msg-2", () => { notifyCount += 1; });
-consultStore.applyConsulted("msg-2");
-consultStore.applyConsulted("msg-2");
+consultStore.applyConsulted("msg-2", "did I say can or cannot?");
+consultStore.applyConsulted("msg-2", "did I say can or cannot?");
+consultStore.applyConsulted("msg-2", "how did I pronounce Bicking?");
 print(`entry: ${JSON.stringify(consultStore.getEntry("msg-2"))}`);
 print(`notified: ${notifyCount}`);
 =>
-entry: {"consulted":true}
-notified: 1
+entry: {"consulted":{"questions":["did I say can or cannot?","how did I pronounce Bicking?"]}}
+notified: 3
 ```
 
 ## Overlay store: subscriptions are keyed — an unrelated message never notifies
@@ -149,7 +150,7 @@ same message.
 ```ts
 const bothStore = createAudioOverlayStore();
 bothStore.applyRetranscription("msg-3", { newText: "corrected text", diarized: false });
-bothStore.applyConsulted("msg-3");
+bothStore.applyConsulted("msg-3", "background noise?");
 bothStore.getEntry("msg-3")
 =>
 {
@@ -157,7 +158,11 @@ bothStore.getEntry("msg-3")
     "newText": "corrected text",
     "diarized": false
   },
-  "consulted": true
+  "consulted": {
+    "questions": [
+      "background noise?"
+    ]
+  }
 }
 ```
 
