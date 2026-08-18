@@ -29,6 +29,7 @@ import { simpleGit, CleanOptions } from "simple-git";
 import {
   GitCommandError,
   NoPathsError,
+  GitIndexLockError,
   isIndexLockError,
   isNothingToCommitError,
   unstageOversizedBlobs,
@@ -45,7 +46,7 @@ export {
   TOUCHPOINT_TRAILER_KEYS,
   FEEDBACK_TRAILER_KEYS,
 } from "./git-trailers.js";
-export { isNothingToCommitError } from "./git-internal.js";
+export { isNothingToCommitError, isContendedFailure, GitIndexLockError } from "./git-internal.js";
 export { withBoxGitLock } from "./git-lock.js";
 export { getLogPaginated, getTrailerFacets } from "./git-log.js";
 export type {
@@ -164,11 +165,17 @@ async function withIndexLockRetry<T>(op: () => Promise<T>): Promise<T> {
   try {
     return await op();
   } catch (err) {
-    if (isIndexLockError(err)) {
-      await sleep(2000);
-      return op();
+    if (!isIndexLockError(err)) throw new GitCommandError(err);
+    await sleep(2000);
+    try {
+      return await op();
+    } catch (retryErr) {
+      // Still contended after the retry, so the holder is not one of ours —
+      // the box git lock only serializes writers that take it. Report that
+      // specifically: a task that lost a race is not a task that is broken.
+      if (isIndexLockError(retryErr)) throw new GitIndexLockError(retryErr);
+      throw new GitCommandError(retryErr);
     }
-    throw new GitCommandError(err);
   }
 }
 
@@ -355,16 +362,10 @@ export async function stageAndCommitPaths(
 }
 
 function buildCommitMessage(options: GitCommitOptions): string {
-  let message = options.message;
-
-  if (options.trailers && Object.keys(options.trailers).length > 0) {
-    message += "\n";
-    for (const [key, value] of Object.entries(options.trailers)) {
-      message += `\n${key}: ${value}`;
-    }
-  }
-
-  return message;
+  const entries = Object.entries(options.trailers ?? {});
+  if (entries.length === 0) return options.message;
+  const trailers = entries.map(([key, value]) => `${key}: ${value}`).join("\n");
+  return `${options.message}\n\n${trailers}`;
 }
 
 /**
