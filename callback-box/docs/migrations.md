@@ -85,6 +85,17 @@ If a migration fails, the manifest is **not** updated for the failing entry and 
 
 6. **Test it.** Run dry-run against a real box you can reset; then `--apply` and validate with `cb validate`. Confirm the manifest got an entry. If you have a noisy-mode warning, decide explicitly whether to handle it or accept the loss — and document the call.
 
+7. **File an issue to remove the legacy support.** A migration almost always leaves code behind that exists only to tolerate the *old* shape — a fallback branch, a lenient parse, a compatibility field, a "both spellings accepted" reader. That code should not live forever, and **you are the last person who can name it precisely**: months later nobody can tell which branches are legacy tolerance and which are load-bearing. Write the issue now, while you can list them.
+
+   File it under `issues/code-quality/` (it is tech debt, not an upstream `watch/` item — the trigger is internal). It should name:
+
+   - **The exact code that exists only for the old shape** — `file:line` for each fallback, not "legacy handling in the loader."
+   - **The migration's manifest name**, since that is how the trigger gets checked.
+   - **What makes it safe to remove** — normally "every box that matters has this migration in its `config/migrations.jsonl`." Include the boxes that aren't yours to migrate on demand: prod boxes and any box a developer hasn't run `cb migrate` on yet lag behind, so a green local sweep is not the signal.
+   - **What breaks if it's removed too early** — usually an un-migrated box failing to load rather than anything loud, which is why the trigger has to be checked rather than assumed.
+
+   Don't set `priority:` (that is the developer's call), and don't wait for the removal to be scheduled — the issue exists so the debt is *recorded* at the moment it is created, not so it gets done next.
+
 Migrations are written for cards that already exist on disk; you almost never need to think about schema-level migrations (the schema files in `src/schemas/` evolve freely as long as old data still parses, or has a migrator to bring it forward).
 
 ## Writing an agent-applied (procedure) migration
