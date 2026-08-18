@@ -4,8 +4,25 @@ workstream: load-older-label
 area: callback-box
 filed-by: agent
 discovered-in: worktree-load-older-label — full finish-suite verification
-next-action: reconfirm
 ---
+
+> **Checked 2026-08-18 — could not reproduce, and the reason matters.** Tagged
+> `reconfirm`; removed. `test/frontend/trpc-directory-resolution.test.ts` passed
+> 10/10 consecutive runs plus 3/3 concurrent with itself, and a full-suite pass
+> produced zero `1..0 # no tests found` occurrences across every frontend
+> doctest. No commit has touched the doctest/tsx loader since the test was
+> added.
+>
+> **But the environment was wrong for it.** This issue's own record says it only
+> reproduced at load average ~18 with ~37 concurrent Claude/Codex processes.
+> The investigation ran on a quiet machine, so the contention level that
+> produces the failure was never reached — a clean result here is close to
+> meaningless.
+>
+> What would settle it: a run during genuinely heavy concurrent-agent load on
+> the real machine. That is not something a clean single-session investigation
+> can manufacture, so this stays open until it happens to be observed rather
+> than until someone tries harder in isolation.
 
 The full parallel `callback-box` suite still intermittently resolves an
 extensionless frontend import to a missing module. This recurred after the fix

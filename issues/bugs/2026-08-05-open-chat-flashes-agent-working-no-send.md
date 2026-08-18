@@ -4,8 +4,27 @@ workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder opened a landmark's most-recent chat
-next-action: reconfirm
 ---
+
+> **Checked 2026-08-18 — half fixed; the half that isn't cosmetic is still
+> live.** Tagged `reconfirm`; removed.
+>
+> **Fixed:** the visible flash, in `988b2014` (2026-08-06, "confirm busy before
+> showing status") — present in current `chat-actors.ts` /
+> `processing-status-display.ts`.
+>
+> **Still live:** the delivery fork this issue calls out as *not* purely
+> cosmetic. `lifecycleBusy()`
+> (`src/core/chat/session/lifecycle.ts:113-118`) still counts the `starting`
+> phase as busy, and `deliver-user-message.ts:184-185` still branches on
+> `session.isBusy()` to `enqueue()` rather than `send()`. So a session that is
+> merely *attaching* still routes a delivered message — a capture, for instance
+> — into the in-memory queue instead of sending it. Nothing since 2026-08-06
+> touches `lifecycle.ts` or that branch (`deliver-user-message.ts` has only
+> unrelated Codex-history routing, `aabd91e1`).
+>
+> Worth narrowing the issue's title/scope on the next pass: what remains is a
+> delivery-routing bug, not a UI flash.
 
 > **Job to be done:** *When I open a chat I was already in — to read it or pick it
 > back up — I want it to just show me the conversation, not a false "Agent is
