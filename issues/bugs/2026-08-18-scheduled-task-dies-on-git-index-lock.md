@@ -1,6 +1,6 @@
 ---
 title: "A scheduled task fails outright on `.git/index.lock` — the one-retry budget is too small for unattended work"
-workstream: unattached
+workstream: box-git-lock
 area: callback-box
 labels: [scheduler, git, procedures]
 filed-by: agent
