@@ -7,6 +7,21 @@
  * the trailer-key vocabulary in `git-trailers.ts`, and shared error/retry
  * internals in `git-internal.ts`. This file re-exports the public surface of
  * those siblings so callers keep importing everything from "lib/git".
+ *
+ * ## Every index mutation runs under the box git lock
+ *
+ * A repository's index is one repo-wide mutex, so the mutators below wrap
+ * themselves in `withBoxGitLock` (`git-lock.ts`) and our writers queue instead
+ * of racing. The lock is reentrant, so a span that holds it — most importantly
+ * `stageAndCommitPaths`, whose check-then-stage-then-commit is only atomic as a
+ * whole — passes straight through the inner calls.
+ *
+ * Readers (`getStatus`, `getLog`, `getDiff`, `stagedPaths`, `pathsHaveChanges`,
+ * `getHead`, ...) are deliberately NOT locked: serializing them would serialize
+ * the whole system for no correctness gain. A reader that must sit inside a
+ * span gets the lock from its caller — `withBoxGitLock` is exported for exactly
+ * the multi-operation call sites (`getStatus` → `stageAll` → `commit`) that
+ * need one.
  */
 
 import { simpleGit, CleanOptions } from "simple-git";
@@ -19,6 +34,7 @@ import {
   unstageOversizedBlobs,
   LOG_FORMAT,
 } from "./git-internal.js";
+import { withBoxGitLock } from "./git-lock.js";
 import { sleep } from "./sleep.js";
 import { errorMessage } from "./error-guards.js";
 import type { GitLogFormat } from "./git-internal.js";
@@ -30,6 +46,7 @@ export {
   FEEDBACK_TRAILER_KEYS,
 } from "./git-trailers.js";
 export { isNothingToCommitError } from "./git-internal.js";
+export { withBoxGitLock } from "./git-lock.js";
 export { getLogPaginated, getTrailerFacets } from "./git-log.js";
 export type {
   FileStat,
@@ -156,6 +173,18 @@ async function withIndexLockRetry<T>(op: () => Promise<T>): Promise<T> {
 }
 
 /**
+ * Run an index mutation that creates a commit, under the box git lock, and
+ * return the resulting HEAD. HEAD is read INSIDE the lock: read outside it, a
+ * queued writer's commit could land first and we would report its hash as ours.
+ */
+async function commitAndReadHead(boxRoot: string, op: () => Promise<unknown>): Promise<string> {
+  return withBoxGitLock(boxRoot, async () => {
+    await withIndexLockRetry(op);
+    return (await simpleGit(boxRoot).revparse(["HEAD"])).trim();
+  });
+}
+
+/**
  * Stage files for commit.
  *
  * @param boxRoot - Repository root
@@ -163,7 +192,7 @@ async function withIndexLockRetry<T>(op: () => Promise<T>): Promise<T> {
  */
 export async function stageFiles(boxRoot: string, paths: string[]): Promise<void> {
   if (paths.length === 0) return;
-  await withIndexLockRetry(() => simpleGit(boxRoot).add(paths));
+  await withBoxGitLock(boxRoot, () => withIndexLockRetry(() => simpleGit(boxRoot).add(paths)));
 }
 
 /**
@@ -177,7 +206,8 @@ export async function stageFiles(boxRoot: string, paths: string[]): Promise<void
  */
 export async function unstageFiles(boxRoot: string, paths: string[]): Promise<void> {
   if (paths.length === 0) return;
-  await withIndexLockRetry(() => simpleGit(boxRoot).raw(["reset", "--quiet", "--", ...paths]));
+  const reset = (): Promise<string> => simpleGit(boxRoot).raw(["reset", "--quiet", "--", ...paths]);
+  await withBoxGitLock(boxRoot, () => withIndexLockRetry(reset));
 }
 
 /**
@@ -223,8 +253,10 @@ export async function pathsHaveChanges(boxRoot: string, paths: string[]): Promis
  * next git operation — common in boxes that track images/audio via LFS.
  */
 export async function stageAll(boxRoot: string): Promise<void> {
-  await withIndexLockRetry(() => simpleGit(boxRoot).raw(["add", "-A"]));
-  await unstageOversizedBlobs(boxRoot);
+  await withBoxGitLock(boxRoot, async () => {
+    await withIndexLockRetry(() => simpleGit(boxRoot).raw(["add", "-A"]));
+    await unstageOversizedBlobs(boxRoot);
+  });
 }
 
 /**
@@ -243,11 +275,7 @@ export async function commit(
   const git = simpleGit(boxRoot);
   const commitArgs = options.amend ? ["--amend"] : [];
   if (options.noVerify) commitArgs.push("--no-verify");
-  await withIndexLockRetry(() => git.commit(message, commitArgs));
-
-  // Get the commit hash
-  const hash = await git.revparse(["HEAD"]);
-  return hash.trim();
+  return commitAndReadHead(boxRoot, () => git.commit(message, commitArgs));
 }
 
 /**
@@ -275,10 +303,7 @@ export async function commitPaths(
   }
   commitArgs.push("--", ...paths);
 
-  await withIndexLockRetry(() => git.raw(commitArgs));
-
-  const hash = await git.revparse(["HEAD"]);
-  return hash.trim();
+  return commitAndReadHead(boxRoot, () => git.raw(commitArgs));
 }
 
 /**
@@ -311,20 +336,22 @@ export async function stageAndCommitPaths(
   options: GitPathCommitOptions,
 ): Promise<string | null> {
   const { paths } = options;
-  // Fast path: the box's auto-sweep may already have committed these paths (an
-  // empty path list also lands here — nothing to stage or commit).
-  if (!(await pathsHaveChanges(boxRoot, paths))) return null;
-  await stageFiles(boxRoot, paths);
-  const staged = await stagedPaths(boxRoot, paths);
-  if (staged.length === 0) return null;
-  try {
-    return await commitPaths(boxRoot, { ...options, paths: staged });
-  } catch (err) {
-    // Residual race: a sweep committed our paths between the check and here.
-    // "nothing to commit" means the paths landed — success, not an error.
-    if (isNothingToCommitError(err)) return null;
-    throw err;
-  }
+  return withBoxGitLock(boxRoot, async () => {
+    // Fast path: the box's auto-sweep may already have committed these paths (an
+    // empty path list also lands here — nothing to stage or commit).
+    if (!(await pathsHaveChanges(boxRoot, paths))) return null;
+    await stageFiles(boxRoot, paths);
+    const staged = await stagedPaths(boxRoot, paths);
+    if (staged.length === 0) return null;
+    try {
+      return await commitPaths(boxRoot, { ...options, paths: staged });
+    } catch (err) {
+      // Residual race: a sweep committed our paths between the check and here.
+      // "nothing to commit" means the paths landed — success, not an error.
+      if (isNothingToCommitError(err)) return null;
+      throw err;
+    }
+  });
 }
 
 function buildCommitMessage(options: GitCommitOptions): string {
@@ -466,14 +493,16 @@ export async function pushToRemote(boxRoot: string): Promise<PushResult> {
  * Create and switch to a new branch.
  */
 export async function createBranch(boxRoot: string, name: string): Promise<void> {
-  await simpleGit(boxRoot).checkoutLocalBranch(name);
+  // `checkout` rewrites the index and the working tree, so it contends with
+  // every commit — locked like the other index mutators.
+  await withBoxGitLock(boxRoot, () => simpleGit(boxRoot).checkoutLocalBranch(name));
 }
 
 /**
  * Switch to an existing branch.
  */
 export async function checkoutBranch(boxRoot: string, name: string): Promise<void> {
-  await simpleGit(boxRoot).checkout(name);
+  await withBoxGitLock(boxRoot, () => simpleGit(boxRoot).checkout(name));
 }
 
 /**
@@ -537,7 +566,7 @@ export async function getHead(boxRoot: string): Promise<string> {
  * against a `sha` captured before the changes being discarded.
  */
 export async function resetHard(boxRoot: string, sha: string): Promise<void> {
-  await simpleGit(boxRoot).raw(["reset", "--hard", sha]);
+  await withBoxGitLock(boxRoot, () => simpleGit(boxRoot).raw(["reset", "--hard", sha]));
 }
 
 /**
@@ -551,7 +580,7 @@ export async function clean(
   const modes: CleanOptions[] = [CleanOptions.FORCE];
   if (opts.gitignored) modes.push(CleanOptions.IGNORED_ONLY);
   if (opts.directories) modes.push(CleanOptions.RECURSIVE);
-  await simpleGit(boxRoot).clean(modes);
+  await withBoxGitLock(boxRoot, () => simpleGit(boxRoot).clean(modes));
 }
 
 /**
@@ -567,6 +596,9 @@ export async function clean(
  * Ghost-CLI lesson: code and data revert together, as one unit.
  */
 export async function revertToSnapshot(boxRoot: string, sha: string): Promise<void> {
-  await resetHard(boxRoot, sha);
-  await clean(boxRoot, { directories: true });
+  // One span: a writer must not slip a commit between the reset and the clean.
+  await withBoxGitLock(boxRoot, async () => {
+    await resetHard(boxRoot, sha);
+    await clean(boxRoot, { directories: true });
+  });
 }
