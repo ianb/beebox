@@ -23,8 +23,14 @@ const READY_TIMEOUT_MS_DEFAULT = 15_000;
 function readyTimeoutMs(): number {
   const raw = process.env["BROWSE_READY_TIMEOUT_MS"];
   if (raw === undefined || raw === "") return READY_TIMEOUT_MS_DEFAULT;
+  // Whole string or nothing. `parseInt` alone reads "15,000" as 15 and "1e4"
+  // as 1 — a typo that silently shortens the wait instead of announcing
+  // itself, which is the failure mode this whole change exists to remove.
+  if (!/^\d+$/.test(raw)) {
+    throw new BrowseConfigError(`BROWSE_READY_TIMEOUT_MS is not a positive integer: ${raw}`);
+  }
   const parsed = Number.parseInt(raw, 10);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
+  if (parsed <= 0) {
     throw new BrowseConfigError(`BROWSE_READY_TIMEOUT_MS is not a positive integer: ${raw}`);
   }
   return parsed;
@@ -41,17 +47,16 @@ const WAIT_BEFORE = new Set(["snapshot", "screenshot"]);
  * in question is this worktree's own app, since nothing else sets the marker
  * and off-origin pages would just burn the whole timeout on every capture.
  *
- * `url` is the caller's already-rewritten navigation target where one is
- * known (`open`); pass undefined to ask the browser what page is loaded.
+ * The browser is asked what page it is on rather than trusting a navigation
+ * target: `open /` lands on `/chat`, and a redirect across origins in either
+ * direction would otherwise decide the wait on a URL nobody is looking at.
  */
-async function waitForReady(url: string | undefined, ctx: WorktreeContext): Promise<void> {
-  let target = url;
-  if (target === undefined) {
-    try {
-      target = await getUrl();
-    } catch (_e) {
-      return; // No page to read; nothing to settle.
-    }
+async function waitForReady(ctx: WorktreeContext): Promise<void> {
+  let target: string;
+  try {
+    target = await getUrl();
+  } catch (_e) {
+    return; // No page to read; nothing to settle.
   }
   if (!isOwnOrigin(target, ctx)) return;
   const timeout = readyTimeoutMs();
@@ -112,7 +117,7 @@ async function main(): Promise<number> {
   const sub = args[0] === undefined ? "" : args[0];
 
   if (!skipWait && WAIT_BEFORE.has(sub)) {
-    await waitForReady(undefined, ctx);
+    await waitForReady(ctx);
   }
 
   if (sub === "open") {
@@ -124,7 +129,7 @@ async function main(): Promise<number> {
     }
     const passArgs = url === undefined ? ["open"] : ["open", url, ...rest.slice(1)];
     const code = await runPassthrough(passArgs);
-    if (code === 0 && !skipWait && WAIT_AFTER.has(sub)) await waitForReady(url, ctx);
+    if (code === 0 && !skipWait && WAIT_AFTER.has(sub)) await waitForReady(ctx);
     return code;
   }
 

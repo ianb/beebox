@@ -49,13 +49,21 @@ The name becomes a path segment, so it is sanitized rather than trusted: a
 traversal attempt lands inside the base like any other name, and a name with
 nothing usable left is refused instead of silently becoming the base itself.
 
+Sanitizing is lossy, so a rewritten name also carries a digest of the original.
+Otherwise `a/b` and `a-b` would both reduce to `a-b` and share one profile —
+reintroducing the collision this exists to prevent.
+
 ```ts
 const escaped = await sessionProfileDir("../../escape");
+const slashed = await sessionProfileDir("a/b");
+const dashed = await sessionProfileDir("a-b");
 JSON.stringify({
-  contained: escaped === join(base, "profiles", "escape"),
+  contained: escaped.startsWith(join(base, "profiles", "escape-")),
+  dashedIsVerbatim: dashed === join(base, "profiles", "a-b"),
+  noCollision: slashed !== dashed,
   empty: await refused(async () => sessionProfileDir("///")),
 })
-=> {"contained":true,"empty":"--session name has no usable characters for a profile directory: ///"}
+=> {"contained":true,"dashedIsVerbatim":true,"noCollision":true,"empty":"--session name has no usable characters for a profile directory: ///"}
 ```
 
 Invoked outside `bin/browse` there is no base to put profiles under, and that

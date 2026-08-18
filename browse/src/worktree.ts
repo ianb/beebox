@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -183,7 +184,11 @@ export function authCookieArgs(url: string, ctx: WorktreeContext): string[] {
  * removes every profile in one sweep.
  *
  * The name is sanitized, not merely validated: it becomes a path segment, and
- * `--session ../../x` must not escape the base.
+ * `--session ../../x` must not escape the base. Sanitizing alone would be
+ * lossy enough to break the very isolation this exists for — `a/b` and `a-b`
+ * both reduce to `a-b`, and two sessions sharing a profile is exactly the
+ * SingletonLock collision — so a name that had to be rewritten also carries a
+ * digest of the original, which makes the mapping one-to-one again.
  */
 export async function sessionProfileDir(name: string): Promise<string> {
   const base = process.env["BROWSE_PROFILE_BASE"];
@@ -194,7 +199,8 @@ export async function sessionProfileDir(name: string): Promise<string> {
   if (safe === "") {
     throw new BrowseConfigError(`--session name has no usable characters for a profile directory: ${name}`);
   }
-  const dir = join(base, "profiles", safe);
+  const segment = safe === name ? name : `${safe}-${createHash("sha256").update(name).digest("hex").slice(0, 8)}`;
+  const dir = join(base, "profiles", segment);
   await mkdir(dir, { recursive: true });
   return dir;
 }
