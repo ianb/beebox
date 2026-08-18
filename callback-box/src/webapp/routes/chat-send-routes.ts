@@ -11,10 +11,10 @@
 import { randomUUID } from "node:crypto";
 import type { FastifyReply } from "fastify";
 import { errorMessage } from "../../lib/error-guards.js";
-import { type ChatMessage, type ChatSession } from "../../core/chat/session/index.js";
+import { type ChatMessage, type ChatSendInput, type ChatSession } from "../../core/chat/session/index.js";
 import { getMostActive } from "../../core/chat/session/history.js";
 import { summarizeWhatsChanged } from "../../core/chat/whats-changed.js";
-import { createTurnBuffer, removeTurnBuffer, scheduleTurnCleanup } from "../../core/chat/turn-buffer.js";
+import { createTurnBuffer, scheduleTurnCleanup } from "../../core/chat/turn-buffer.js";
 import { getSessionUser } from "../auth.js";
 import type { ChatRoutesContext } from "./chat-context.js";
 import { resolveSendTargetForRoute } from "./chat-send-target.js";
@@ -49,11 +49,11 @@ import {
  *
  * Wired up *before* the send so no early frame (system/init, an immediate
  * result, a fast subprocess) is dropped between send-resolves and listener-
- * attach. Returns `cancel`, which the caller invokes if the send fails before
- * the turn runs — it detaches the listeners and forgets the buffer so a never-
- * starting turn doesn't leak a buffer or capture the next turn's output.
+ * attach. Returns `fail`, which the caller invokes when the run never starts —
+ * the client already has its `{turnId}` and is subscribed, so the failure is
+ * delivered as the buffer's error frame rather than discarded with the buffer.
  */
-function captureTurn(chatSession: ChatSession, { turnId, releasePin }: { turnId: string; releasePin: () => void }): { cancel: () => void } {
+function captureTurn(chatSession: ChatSession, { turnId, releasePin }: { turnId: string; releasePin: () => void }): { fail: (reason: string) => void } {
   const buffer = createTurnBuffer(turnId);
 
   let settled = false;
@@ -93,16 +93,44 @@ function captureTurn(chatSession: ChatSession, { turnId, releasePin }: { turnId:
   chatSession.on("error", onError);
   chatSession.on("close", onClose);
 
-  // Send failed before the turn ran: detach and forget the buffer. Leaves the
-  // pin to the caller (it releases on the failure path). No-op once settled.
-  const cancel = (): void => {
+  // The run never started. The buffer is kept, not removed: it is where the
+  // subscribed client learns the turn died, and an empty removed buffer would
+  // read as "resync" — a silent history refresh with no error shown. Settles
+  // like any other terminal state (detach + release pin + GC). No-op once
+  // settled, so a late `close` can't overwrite the error.
+  const fail = (reason: string): void => {
     if (settled) return;
-    settled = true;
-    detach();
-    removeTurnBuffer(turnId);
+    buffer.fail(reason);
+    settle();
   };
 
-  return { cancel };
+  return { fail };
+}
+
+/**
+ * Start the run for a send that has already been acked.
+ *
+ * Nothing awaits this. The client holds its `{turnId}` and is subscribed to the
+ * turn stream, so a run that fails to start reports there rather than in an
+ * HTTP status. `send()` can *reject* (an FD-exhausted SDK spawn is the case
+ * we've seen) or return false; both mean the same thing — it only fails before
+ * reaching the backend, so nothing was dispatched — and both fail the capture,
+ * which releases the pin and marks the turn errored for every subscriber.
+ *
+ * The durable claim is deliberately left alone: the user message is already in
+ * history, so a redelivery of this id must still be answered `deduplicated`,
+ * not recorded a second time.
+ */
+function startAckedRun(chatSession: ChatSession, { input, capture }: { input: ChatSendInput; capture: { fail: (reason: string) => void } }): void {
+  void chatSession
+    .send(input)
+    .then((sent) => {
+      if (!sent) capture.fail("Failed to send message");
+    })
+    .catch((e: unknown) => {
+      console.error("[chat] send failed to start a run:", e);
+      capture.fail(errorMessage(e));
+    });
 }
 
 function validateInboundImages(images: SendBody["images"]): { error: string; status: number } | null {
@@ -180,12 +208,13 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
       return reply.status(outcome.status).send(outcome.body);
     };
 
-    // Broadcast the user message to other clients via the event bus. Emitted
-    // only once the message is genuinely on its way (queued or sent) — this is
-    // a *persisted* event, so emitting it before the send meant a failed run
-    // start left a message in the conversation history that the agent never
-    // received, while the client treated the 500 as "unsent" and offered the
-    // text back for a retry that then recorded it twice
+    // Broadcast the user message to other clients via the event bus. This is a
+    // *persisted* event — the user's turn in the conversation history — and
+    // recording it IS acceptance: it happens on both paths immediately before
+    // the ack, whether the message was queued or is about to be handed to the
+    // engine. A run that then fails to start no longer contradicts it: the
+    // failure reaches the client on the turn stream instead of as a 500 that
+    // invited a retry which recorded the message a second time
     // (issues/bugs/2026-08-03-intermittent-spawn-ebadf-sdk-chat-run.md).
     // For pending-new sessions, sessionId is still unknown; subscribers will
     // see it once `session-assigned` fires.
@@ -253,35 +282,24 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
     const turnId = randomUUID();
     const capture = captureTurn(chatSession, { turnId, releasePin });
 
-    // `send()` can also *throw*: a run that fails to start (an FD-exhausted SDK
-    // spawn is the case we've seen) rejects rather than returning false. It
-    // unwinds like `sent === false` because both mean the same thing here —
-    // `send()` only throws before it reaches the backend, so nothing was
-    // dispatched. Without this the turn buffer and the session pin leak. The
-    // volatile claim is given back with the failure, so the client's own retry
-    // re-runs the message instead of being swallowed — and a duplicate parked
-    // on this id mirrors the 500 rather than hearing a success.
-    let sent: boolean;
-    try {
-      sent = await chatSession.send({
+    // Record, ack, THEN start the run — the busy path's shape, extended to the
+    // idle one. The response means "the box durably has your message", not "the
+    // engine started": a cold spawn takes minutes, and waiting for it left every
+    // client (and every retry timer) parked in a pending state for that whole
+    // window. The turn buffer is already wired, so no frame the run emits is
+    // lost between the ack and the client's subscribe, and a start failure
+    // surfaces on that stream instead of as an HTTP status
+    // (see startAckedRun; docs/plans/emission-model.md, Track A).
+    recordUserMessage();
+    startAckedRun(chatSession, {
+      input: {
         text: fullMessage,
         ...(images ? { images } : {}),
         ...(channel !== undefined ? { channel } : {}),
         ...cardFields,
-      });
-    } catch (e) {
-      capture.cancel();
-      releasePin();
-      console.error("[chat] send failed to start a run:", e);
-      return respond({ status: 500, body: { error: errorMessage(e) } });
-    }
-    if (!sent) {
-      capture.cancel();
-      releasePin();
-      return respond({ status: 500, body: { error: "Failed to send message" } });
-    }
-
-    recordUserMessage();
+      },
+      capture,
+    });
     return respond({ status: 200, body: { turnId } });
   });
 

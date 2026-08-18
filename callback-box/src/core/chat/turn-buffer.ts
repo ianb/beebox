@@ -137,11 +137,6 @@ export function createTurnBuffer(turnId: string): TurnBuffer {
   return buffer;
 }
 
-/** Forget a turn immediately (e.g. its send failed before the turn ran). */
-export function removeTurnBuffer(turnId: string): void {
-  turns.delete(turnId);
-}
-
 export function getTurnBuffer(turnId: string): TurnBuffer | undefined {
   return turns.get(turnId);
 }

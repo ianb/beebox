@@ -12,12 +12,19 @@ answered `deduplicated: true`. It waits for that request's real outcome and
 answers with it, the way the frontend's receipt expectations share one outcome
 for one id (`src/frontend/src/lib/receipts.ts`).
 
+That window is now hard to be in at all: since Track A the route claims,
+records and responds without an await between them, so a duplicate reaches the
+claim registry after the durable write, not during it. The shared-outcome path
+stays as the guard for the day an await returns; it is pinned directly on the
+registry below.
+
 ```ts setup
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { FastifyInstance } from "fastify";
 import { makeTestServer, TEST_SLUG } from "../helpers/doctest-server.js";
 import { createFakeChatBackend } from "../../src/services/claude-chat.js";
+import { createInFlightSends } from "../../src/webapp/routes/chat-send-dedup.js";
 import type { ChatBackend } from "../../src/services/claude-chat-types.js";
 import { createEventBus, type BusEvent } from "../../src/core/event-bus.js";
 import { createServer } from "../../src/webapp/server.js";
@@ -103,11 +110,18 @@ async function restartOver(boxRoot: string, chatBackend: ChatBackend): Promise<R
 }
 ```
 
-## A duplicate arriving in flight gets the first request's real outcome
+## A duplicate is answered from the durable claim, because the record beats it
 
-Both clients are told the same true thing — one turn, one recorded message —
-rather than the second being told the send was already handled by a request
-that had not yet handled anything.
+Nothing between taking the volatile claim and answering the request is
+awaited: the route records the message and responds in one synchronous span,
+and only *then* starts the run (`docs/plans/emission-model.md`, Track A). So a
+duplicate — even one fired the instant the first request enters
+`chatSession.send()`, which is what the gate below arranges — arrives after the
+durable write and is answered `deduplicated: true`: the strongest answer, and a
+true one.
+
+Before Track A the same gate parked the first request for the whole engine
+spawn, and this section asserted the two clients sharing one `{turnId}`.
 
 ```ts
 const backend = createFakeChatBackend();
@@ -128,14 +142,12 @@ const send = () => ctx.request({
 const first = send();
 await gate.entered;
 const second = send();
-// The first request is parked, so this wait can only be spent by the second —
-// it reaches the claim and parks on the shared outcome.
 await delay(50);
 gate.release();
 const [a, b] = await Promise.all([first, second]);
 
-`${a.statusCode} | ${b.statusCode} | identical=${JSON.stringify(a.body) === JSON.stringify(b.body)} | turn=${typeof a.body.turnId} | recorded=${recorded.length}`
-=> 200 | 200 | identical=true | turn=string | recorded=1
+`${a.statusCode} | ${b.statusCode} | turn=${typeof a.body.turnId} | second=${JSON.stringify(b.body)} | recorded=${recorded.length}`
+=> 200 | 200 | turn=string | second={"deduplicated":true} | recorded=1
 ```
 
 ```ts cleanup
@@ -143,11 +155,38 @@ gate.restore();
 await ctx.cleanup();
 ```
 
-## A failing send hands the failure to the duplicate too
+## The shared-outcome path still holds the line if that window ever reopens
 
-The first request releases its volatile claim on the way out, so the duplicate
-mirrors the 500 instead of hearing a success — and the id is free for the retry
-both clients are now being invited to make.
+The volatile claim is no longer reachable from a duplicate POST — that is the
+point of the reorder — so its behavior is pinned at the registry it lives in.
+A duplicate that finds a request in flight waits for that request's *real*
+outcome; it is never told `deduplicated: true`, because a request that has
+recorded nothing yet may still die.
+
+```ts
+const sends = createInFlightSends();
+const settle = sends.begin("in-flight-1");
+const waiting = sends.pending("in-flight-1");
+settle({ status: 200, body: { turnId: "t-1" } });
+
+`${JSON.stringify(await waiting)} | afterSettle=${sends.pending("in-flight-1")}`
+=> {"status":200,"body":{"turnId":"t-1"}} | afterSettle=null
+```
+
+## A send whose run fails to start is still accepted, for the duplicate too
+
+This section used to assert a shared **500**, and a freed id: the route awaited
+`chatSession.send()`, so a run that failed to start could still be reported as
+the HTTP outcome, and the id had to be released for the retry that invitation
+implied.
+
+It no longer can. The route records the message and answers `{turnId}` before
+the run starts (`docs/plans/emission-model.md`, Track A), so by the time a spawn
+fails both clients have been told — truthfully — that the box has the message.
+The duplicate and the later retry are both answered `deduplicated: true`: the id
+stays claimed, because a redelivery must not append the message twice. The
+failure reaches the client on the turn stream it is already subscribed to —
+covered by `chat-send-run-start-failure.doctest.md`.
 
 ```ts
 const backend = createFakeChatBackend();
@@ -180,22 +219,29 @@ const retry = await ctx.request({
   payload: { session: "new", message: "water the plants", messageId: "dup-2" },
 });
 
-`${a.statusCode} | ${b.statusCode} | identical=${JSON.stringify(a.body) === JSON.stringify(b.body)} | retry=${retry.statusCode} | recorded=${recorded.length}`
-=> 500 | 500 | identical=true | retry=200 | recorded=1
+`${a.statusCode} | turn=${typeof a.body.turnId} | second=${JSON.stringify(b.body)} | retry=${retry.statusCode} | dedup=${retry.body.deduplicated} | recorded=${recorded.length}`
+=> 200 | turn=string | second={"deduplicated":true} | retry=200 | dedup=true | recorded=1
 ```
 
 ```ts cleanup
 await ctx.cleanup();
 ```
 
-## Nothing durable survives a request that never recorded anything
+## The claim and the record cross the restart together
 
-A request that dies before the durable point — here, one whose run fails to
-start — leaves the box exactly as it found it: no dedup file, no message. The
-restart over the same box directory is the crash; the retry that follows runs
-the message, exactly once. This is what the reorder buys: the claim used to be
-persisted minutes before the message it stood for, so a crash in that window
-turned the client's retry into a false "already sent."
+Nothing awaits between taking the volatile claim and `recordUserMessage()` —
+the claim, the persisted message event and the durable write are one
+synchronous span on both the busy and the idle path — so a crash can no longer
+land between them. That window used to be the whole engine spawn: the claim was
+persisted minutes before the message it stood for, and a crash inside it turned
+the client's retry into a false "already sent."
+
+What a restart can still see is a message whose run failed to start. Here the
+record and the claim are both on disk, so the retry is answered
+`deduplicated: true` by a process that never saw the original request — the
+right answer, because history really does have the message. (Its *delivery* was
+lost with the failed run; that is what the turn stream's error frame tells the
+client, and what Track A's failure-mode work covers.)
 
 ```ts
 const backend = createFakeChatBackend();
@@ -215,8 +261,8 @@ await crashed.server.close();
 const restarted = await restartOver(crashed.boxRoot, createFakeChatBackend());
 const retry = await restarted.post({ session: "new", message: "buy milk", messageId: "restart-1" });
 
-`${failed.statusCode} | persisted=${persisted} | retry=${retry.statusCode} | turn=${typeof retry.body.turnId} | recorded=${restarted.recorded.length}`
-=> 500 | persisted=(no file) | retry=200 | turn=string | recorded=1
+`${failed.statusCode} | turn=${typeof failed.body.turnId} | persisted=${persisted.includes("restart-1")} | retry=${retry.statusCode} | dedup=${retry.body.deduplicated} | recorded=${restarted.recorded.length}`
+=> 200 | turn=string | persisted=true | retry=200 | dedup=true | recorded=0
 ```
 
 ```ts cleanup
