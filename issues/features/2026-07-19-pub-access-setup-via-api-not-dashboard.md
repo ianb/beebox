@@ -134,7 +134,7 @@ That's a third pattern, matching neither of the two we already have:
 
 - Per-box connector secrets live in **`config/connectors/*.secret.json`**
   (gitignored via the box scaffold, `src/core/box/index.ts:154`).
-- The open decision [per-box secret management](../decisions/2026-03-15-per-box-secret-management.md)
+- The open decision [per-box secret management](../closed/decisions/2026-03-15-per-box-secret-management.md)
   is already about how boxes get provisioned with API keys — publishing quietly
   added a fourth answer instead of joining that conversation.
 
@@ -180,7 +180,7 @@ Two boundaries it does NOT cross:
 Net target: **`cb pub setup` provisions via `wrangler login` (no token, no
 dotfile); account-tier Access via the CF API (no dashboard); the runtime
 submission connector draws its credential from the resolved
-[per-box secret-management](../decisions/2026-03-15-per-box-secret-management.md)
+[per-box secret-management](../closed/decisions/2026-03-15-per-box-secret-management.md)
 decision.** That collapses the chaotic dashboard to, at most, one browser approve
 for setup — and zero dashboard for `public`/`secret` tiers.
 

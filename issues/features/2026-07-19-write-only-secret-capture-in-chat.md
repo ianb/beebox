@@ -79,7 +79,7 @@ backends, the model provider). This feature closes that hole.
     with `sk-`"); **hard validation** via a server-side probe after save,
     stored as `verified: ok|failed|unchecked` metadata the agent and admin
     page see redacted. See
-    `callback-box/docs/plans/secret-custody.md` ("Guided entry +
+    `callback-box/docs/implemented-plans/secret-custody.md` ("Guided entry +
     validation"); the widget writes into that plan's store, and its target
     grammar is the store's name registry.
 - **Scope + gating.** Admin-privileged — only in the `/admin` landmark chat, not

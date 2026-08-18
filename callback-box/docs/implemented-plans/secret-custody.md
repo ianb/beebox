@@ -1,11 +1,11 @@
 ---
 title: "Secret custody: a hub-owned store with per-box grants, access levels, and audit"
-status: active
+status: implemented
 workstream: secret-custody
 issues:
-  - ../../../issues/features/2026-08-17-secret-custody-broker.md
-  - ../../../issues/decisions/2026-03-15-per-box-secret-management.md
-  - ../../../issues/bugs/2026-08-07-connector-secret-file-modes.md
+  - ../../../issues/closed/features/2026-08-17-secret-custody-broker.md
+  - ../../../issues/closed/decisions/2026-03-15-per-box-secret-management.md
+  - ../../../issues/closed/bugs/2026-08-07-connector-secret-file-modes.md
   - ../../../issues/features/2026-07-19-write-only-secret-capture-in-chat.md
 ---
 
@@ -37,7 +37,7 @@ Three candidate adversaries, from the umbrella issue:
    directory and of `/home/callback/.env`.
 2. **Another user on the machine.** Minor on a single-operator server; file
    modes are the whole answer
-   ([connector-secret-file-modes](../../../issues/bugs/2026-08-07-connector-secret-file-modes.md)).
+   ([connector-secret-file-modes](../../../issues/closed/bugs/2026-08-07-connector-secret-file-modes.md)).
 3. **A compromised or prompt-injected box agent.** The recommended primary
    driver. The agent runs with `permissionMode: "bypassPermissions"`
    (`src/core/agent/run.ts:73`) as the same OS user as the hub, with `cwd`

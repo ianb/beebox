@@ -2,12 +2,24 @@
 title: "Secret custody: hold secrets somewhere that discloses on request, logs access, and can share between boxes"
 workstream: secret-custody
 area: callback-box
-design: ../../callback-box/docs/plans/secret-custody.md
+design: ../../../callback-box/docs/implemented-plans/secret-custody.md
 labels: [security, secrets, hub, connectors]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder asking where secrets should live
+resolution: implemented
 ---
+
+**Closed 2026-08-17** — implemented on `worktree-secret-custody`, merged to
+`main` (see `docs/implemented-plans/secret-custody.md`): the machine-level
+store, per-box slug-keyed grants, `server`/`agent` access levels, typed
+refusals, access log, probe/format registries, admin Secrets UI, agent
+loopback resolve route, `cb secrets` CLI (incl. `migrate`), env allowlists for
+agent subprocesses, and all nine secret readers migrated onto the store with a
+fail-closed legacy fallback. **Still operational, not code:** running `cb
+secrets migrate` on each dev machine and on prod, and the follow-up removal of
+the legacy env/file fallbacks and allowlist entries once every box has
+migrated — see the plan's Rollout-shape migration-status note.
 
 Secrets currently sit at rest, in the clear, wherever the code that needs them
 can read them. The boxholder wants something better: a place that **holds**
@@ -72,7 +84,7 @@ Candidates, which imply very different systems:
   and probably the real driver. The box agent runs with the full toolset and no
   mechanical floor — it can read any file the OS user can, which today includes
   every secret above. Related and coupled:
-  [agent containment: allowed directories](2026-07-20-agent-containment-allowed-directories.md).
+  [agent containment: allowed directories](../../features/2026-07-20-agent-containment-allowed-directories.md).
 
 **An honest constraint to state up front:** an agent that can execute arbitrary
 code as the box user can eventually obtain anything that box can use. So
@@ -127,7 +139,7 @@ The boxholder explicitly asked for best practices rather than invention:
   which already tracks the options and records that the publishing divergence
   was resolved 2026-07-31.
 - **Getting secrets in.** Complementary and already filed:
-  [write-only secret capture in chat](2026-07-19-write-only-secret-capture-in-chat.md)
+  [write-only secret capture in chat](../../features/2026-07-19-write-only-secret-capture-in-chat.md)
   — the model requests a credential and never sees the value.
 - **Degradation.** Boxes must still work when the store is unavailable, or the
   whole system becomes a single point of failure for every connector.
@@ -178,9 +190,9 @@ box tree with per-box grants, an access log, and a `cb secrets` lifecycle —
 a vault whose only clients are server processes, which makes it a broker
 from the agent's point of view. Sharing becomes a grant instead of a file
 copy; rotation touches one entry. Composes with
-[agent containment](2026-07-20-agent-containment-allowed-directories.md)
+[agent containment](../../features/2026-07-20-agent-containment-allowed-directories.md)
 (deny-outside-box-dir now covers the store) and subsumes the provisioning
 question in
 [per-box secret management](../decisions/2026-03-15-per-box-secret-management.md);
-the [Google policy proxy](2026-07-28-google-auth-policy-proxy.md) stays open
+the [Google policy proxy](../../features/2026-07-28-google-auth-policy-proxy.md) stays open
 as the Google-specific broker escalation.

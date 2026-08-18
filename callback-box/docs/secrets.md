@@ -3,7 +3,7 @@
 Connector credentials live in ONE file per machine —
 `~/.config/cb/secrets.json` (override `$CB_SECRETS_FILE`), mode 0600, outside
 every box tree — with a per-box grant deciding who may resolve what. Design and
-rationale: [`plans/secret-custody.md`](plans/secret-custody.md). This page is
+rationale: [`plans/secret-custody.md`](implemented-plans/secret-custody.md). This page is
 the operational reference for what exists today.
 
 Built so far: the store, the resolver, `cb secrets`, **every connector reader**
