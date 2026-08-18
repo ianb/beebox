@@ -39,6 +39,26 @@ another. That is the "sharing" mechanism, and it means N boxes hold N copies of
 the same key, with no record of which boxes hold what and no way to rotate one
 without finding all of them.
 
+**And the copy is indiscriminate, which makes it worse than N copies.** The
+flag's own documentation describes it as a way to seed "the shared Mistral key",
+but it is a glob: it copies *every* `*.secret.json` the source box has. Observed
+provisioning a new box on 2026-08-17 — asking for the transcription key also
+delivered a Telegram bot token and two media-database keys, none of them wanted.
+
+That matters because secrets are not interchangeable in how they tolerate
+duplication. An API key is fine to hold twice — the two copies do not interfere.
+A **bot token is exclusive**: the Telegram webhook is registered per bot and
+points at one URL, so a second box holding the token can, if that connector is
+ever enabled there, re-register the webhook and silently take the integration
+away from the box that owns it. Copying it is not just untidy, it is a live
+foot-gun sitting in the new box.
+
+So whatever this becomes, two properties are worth carrying from this
+observation: **grants should name the secret**, not sweep a directory; and the
+model needs a notion of a secret that **cannot be shared**, distinct from one
+that merely *is* shared. (Interim mitigation, if the broker is far off: make
+`--secrets-from` take the connector names to copy.)
+
 ## The question to settle first: what is this defending against?
 
 The design follows from the threat model, and it has not been written down.
