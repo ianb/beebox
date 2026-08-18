@@ -9,9 +9,7 @@
  */
 
 import { randomUUID } from "node:crypto";
-import * as fs from "node:fs";
-import * as path from "node:path";
-import { isRecord } from "../../lib/is-record.js";
+import type { FastifyReply } from "fastify";
 import { errorMessage } from "../../lib/error-guards.js";
 import { type ChatMessage, type ChatSession } from "../../core/chat/session/index.js";
 import { getMostActive } from "../../core/chat/session/history.js";
@@ -20,6 +18,12 @@ import { createTurnBuffer, removeTurnBuffer, scheduleTurnCleanup } from "../../c
 import { getSessionUser } from "../auth.js";
 import type { ChatRoutesContext } from "./chat-context.js";
 import { resolveSendTargetForRoute } from "./chat-send-target.js";
+import {
+  type SendOutcome,
+  claimMessageId,
+  createInFlightSends,
+  recordDurableClaim,
+} from "./chat-send-dedup.js";
 import {
   type SendBody,
   type SelfNoteBody,
@@ -35,8 +39,6 @@ import {
   validateImages,
   warnOnUnnormalizedImageOrientation,
 } from "./chat-helpers.js";
-
-const MESSAGE_ID_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 /**
  * Capture an in-flight turn's messages into a resumable buffer keyed by
@@ -114,52 +116,11 @@ function validateInboundImages(images: SendBody["images"]): { error: string; sta
   return null;
 }
 
-function pruneMessageIds(processedMessageIds: Map<string, number>): void {
-  const cutoff = Date.now() - MESSAGE_ID_TTL_MS;
-  for (const [id, ts] of processedMessageIds) {
-    if (ts < cutoff) processedMessageIds.delete(id);
-  }
-}
-
-function dedupStatePath(boxRoot: string): string {
-  return path.join(boxRoot, ".callback-box", "message-dedup.json");
-}
-
-/**
- * Hydrate the message-dedup map from disk so a server restart between a
- * successful send and the client's retry still suppresses the duplicate.
- * Expired entries (older than the TTL) are dropped on load.
- */
-export function loadProcessedMessageIds(boxRoot: string): Map<string, number> {
-  const map = new Map<string, number>();
-  try {
-    const obj: unknown = JSON.parse(fs.readFileSync(dedupStatePath(boxRoot), "utf-8"));
-    const cutoff = Date.now() - MESSAGE_ID_TTL_MS;
-    if (isRecord(obj)) {
-      for (const [id, ts] of Object.entries(obj)) {
-        if (typeof ts === "number" && ts >= cutoff) map.set(id, ts);
-      }
-    }
-  } catch (_e) {
-    // No prior dedup file (fresh box / first run) — start empty.
-  }
-  return map;
-}
-
-function persistProcessedMessageIds(boxRoot: string, processedMessageIds: Map<string, number>): void {
-  try {
-    const obj: Record<string, number> = {};
-    for (const [id, ts] of processedMessageIds) obj[id] = ts;
-    const file = dedupStatePath(boxRoot);
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(file, JSON.stringify(obj));
-  } catch (e) {
-    console.error("[chat] failed to persist message-dedup state:", e);
-  }
-}
-
 export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
   const { server, boxRoot, eventBus, registry, scheduleManager, processedMessageIds } = ctx;
+  // Volatile claims live for one request each, so they belong to this box's
+  // route registration — not to the persisted map, which outlives the process.
+  const inFlightSends = createInFlightSends();
   // POST /api/chat/send - Send a message and stream the response
   server.post<{ Body: SendBody | undefined }>("/api/chat/send", async (request, reply) => {
     const parsed = sendBodySchema.safeParse(request.body ?? {});
@@ -199,24 +160,24 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
     const isSlashCommand = message.startsWith("/");
     const attributed = user && !isSlashCommand ? injectUserAttr(message, user) : message;
 
-    // Deduplicate retries: if we've already processed this messageId, report it
-    // as already-done so the client finishes the turn (it will refresh history).
-    // Claiming the id here (rather than after the send) makes it a genuine
-    // in-flight guard against a double-submit; `releaseMessageId` gives it back
-    // if the send never lands, so a retry carrying the same id isn't swallowed.
-    if (messageId) {
-      pruneMessageIds(processedMessageIds);
-      if (processedMessageIds.has(messageId)) {
-        console.log(`[chat] Duplicate message ${messageId}, skipping`);
-        return reply.send({ deduplicated: true });
-      }
-      processedMessageIds.set(messageId, Date.now());
-      persistProcessedMessageIds(boxRoot, processedMessageIds);
+    // Deduplicate retries: a duplicate either shares the in-flight request's
+    // outcome or is answered `deduplicated: true` from the durable claim —
+    // never from this process's volatile claim alone (see chat-send-dedup.ts).
+    const claim = messageId ? claimMessageId({ messageId, processedMessageIds, inFlightSends }) : null;
+    if (claim !== null && claim.kind === "duplicate") {
+      const shared = await claim.outcome;
+      return reply.status(shared.status).send(shared.body);
     }
-    const releaseMessageId = (): void => {
-      if (!messageId) return;
-      processedMessageIds.delete(messageId);
-      persistProcessedMessageIds(boxRoot, processedMessageIds);
+    // `respond` gives the volatile claim back with this request's real outcome.
+    // EVERY exit below goes through it — a claim left unsettled would park each
+    // duplicate POST for this id until its client gave up.
+    let settleInFlight = claim === null ? null : claim.settle;
+    const respond = (outcome: SendOutcome): FastifyReply => {
+      if (settleInFlight !== null) {
+        settleInFlight(outcome);
+        settleInFlight = null;
+      }
+      return reply.status(outcome.status).send(outcome.body);
     };
 
     // Broadcast the user message to other clients via the event bus. Emitted
@@ -228,6 +189,13 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
     // (issues/bugs/2026-08-03-intermittent-spawn-ebadf-sdk-chat-run.md).
     // For pending-new sessions, sessionId is still unknown; subscribers will
     // see it once `session-assigned` fires.
+    //
+    // The durable claim is taken here and nowhere else, so acceptance has ONE
+    // durability point: a crash before this loses the claim and the message
+    // together (the client's retry runs it once), a crash after loses neither
+    // (the retry is answered `deduplicated: true` and history really has it).
+    // Message first, claim second — the millisecond between them can only cost
+    // a duplicate, never a message the client was told the box had.
     const recordUserMessage = (): void => {
       eventBus.emit("chat-user-message", {
         sessionId: knownId,
@@ -235,6 +203,7 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
         user: user ? { email: user.email, name: user.name } : null,
         timestamp: new Date().toISOString(),
       });
+      if (messageId) recordDurableClaim(boxRoot, { messageId, processedMessageIds });
     };
 
     // Where the user is sending from, for the snapshot's `channel` attr.
@@ -255,7 +224,7 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
         ...cardFields,
       });
       recordUserMessage();
-      return reply.send({ queued: true });
+      return respond({ status: 200, body: { queued: true } });
     }
 
     // Append active schedule info so the agent knows what's pending.
@@ -288,8 +257,10 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
     // spawn is the case we've seen) rejects rather than returning false. It
     // unwinds like `sent === false` because both mean the same thing here —
     // `send()` only throws before it reaches the backend, so nothing was
-    // dispatched. Without this the turn buffer and the session pin leak, and
-    // the messageId stays claimed against the client's own retry.
+    // dispatched. Without this the turn buffer and the session pin leak. The
+    // volatile claim is given back with the failure, so the client's own retry
+    // re-runs the message instead of being swallowed — and a duplicate parked
+    // on this id mirrors the 500 rather than hearing a success.
     let sent: boolean;
     try {
       sent = await chatSession.send({
@@ -301,19 +272,17 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
     } catch (e) {
       capture.cancel();
       releasePin();
-      releaseMessageId();
       console.error("[chat] send failed to start a run:", e);
-      return reply.status(500).send({ error: errorMessage(e) });
+      return respond({ status: 500, body: { error: errorMessage(e) } });
     }
     if (!sent) {
       capture.cancel();
       releasePin();
-      releaseMessageId();
-      return reply.status(500).send({ error: "Failed to send message" });
+      return respond({ status: 500, body: { error: "Failed to send message" } });
     }
 
     recordUserMessage();
-    return reply.send({ turnId });
+    return respond({ status: 200, body: { turnId } });
   });
 
   // POST /api/chat/self-note — inject a self-note into a session transcript.
