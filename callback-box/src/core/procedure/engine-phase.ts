@@ -6,7 +6,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { getStatus, stageAll, commit, getHead } from "../../lib/git.js";
+import { getStatus, stageAll, commit, getHead, withBoxGitLock } from "../../lib/git.js";
 import { getRangeDiff } from "../../lib/git-range.js";
 import { fmt } from "../../lib/format.js";
 import { getBoxTime } from "../../lib/time.js";
@@ -168,9 +168,17 @@ export interface EnsureGitCleanParams {
  */
 export async function ensureGitClean(params: EnsureGitCleanParams): Promise<string> {
   const { boxRoot, stepId, procedureName, sessionId } = params;
-  const gitStatus = await getStatus(boxRoot);
+  // The status read decides whether to commit at all, so it belongs inside the
+  // lock with the commit it gates — read outside, another writer could commit
+  // between the check and the stage and we would attribute its work to this
+  // step (or report a stale HEAD as this step's ref).
+  return withBoxGitLock(boxRoot, async () => {
+    const gitStatus = await getStatus(boxRoot);
+    if (gitStatus.clean) {
+      // Git is clean — get the latest commit ref
+      return getHead(boxRoot);
+    }
 
-  if (!gitStatus.clean) {
     // Fallback commit — the agent didn't commit its own work
     await stageAll(boxRoot);
     const trailers: Record<string, string> = {
@@ -190,10 +198,7 @@ export async function ensureGitClean(params: EnsureGitCleanParams): Promise<stri
       message: `[procedure] ${stepId}: ${summary}`,
       trailers,
     });
-  }
-
-  // Git is clean — get the latest commit ref
-  return getHead(boxRoot);
+  });
 }
 
 /**

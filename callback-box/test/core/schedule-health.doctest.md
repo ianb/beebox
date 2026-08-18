@@ -63,6 +63,33 @@ print(`${h.status}, failures: ${h.consecutiveFailures}, lastSuccess: ${h.lastSuc
 => failing, failures: 3, lastSuccess: 2026-06-06T05:00:10Z
 ```
 
+A task that lost a race for the box's git index never got to run its own work.
+It still counts as failing — four in a row is worth hearing about — but the
+reason says what actually happened, so nobody debugs a task that is fine:
+
+```ts
+const h = evaluate({
+  fields: { cron: "0 5 * * *" },
+  state: {
+    lastRun: "2026-06-09T05:00:10Z", lastResult: "failure", consecutiveFailures: 4,
+    lastError: "Command failed with exit code 1\nstderr:\nError: fatal: Unable to create '/box/.git/index.lock': File exists.",
+  },
+});
+h.reason
+=> contended — another process held the box's git index
+```
+
+An ordinary failure carries no such reason — the distinction is the point:
+
+```ts
+const h = evaluate({
+  fields: { cron: "0 5 * * *" },
+  state: { lastRun: "2026-06-09T05:00:10Z", lastResult: "failure", lastError: "boom", consecutiveFailures: 1 },
+});
+JSON.stringify(h.reason ?? null)
+=> null
+```
+
 ## Overdue
 
 (Cron expressions evaluate in server-local time, same as `isDue` — the

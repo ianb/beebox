@@ -10,7 +10,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parseProcedureRun } from "../../schemas/procedure-run.js";
-import { stageAll, commit } from "../../lib/git.js";
+import { stageAll, commit, withBoxGitLock } from "../../lib/git.js";
 import { fmt } from "../../lib/format.js";
 import { getBoxTime, getBoxTimeISO } from "../../lib/time.js";
 import { okVoid, err, type Result } from "../../lib/result.js";
@@ -154,10 +154,14 @@ export async function startProcedure(
   const ensureMaterialized = async (): Promise<void> => {
     if (materialized) return;
     materialized = true;
-    await stageAll(boxRoot);
-    await commit(boxRoot, {
-      message: `Start procedure: ${procedureName}`,
-      trailers: { Procedure: procedureName },
+    // One locked span: a writer must not stage between our stageAll and our
+    // commit, or its files land under this procedure's attribution.
+    await withBoxGitLock(boxRoot, async () => {
+      await stageAll(boxRoot);
+      await commit(boxRoot, {
+        message: `Start procedure: ${procedureName}`,
+        trailers: { Procedure: procedureName },
+      });
     });
   };
 
