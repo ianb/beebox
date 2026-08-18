@@ -8,9 +8,19 @@
  * storage key, and the guard on whether a flush should actually happen right
  * now (e.g. "only while transcribing", "not mid-restore") — stays with each
  * caller; this controller only owns the timer and the visibility subscription.
+ *
+ * On unmount the pending write is FLUSHED, not dropped. A tab-hide is only one
+ * of the two ways a scheduled write can lose its window: an in-app navigation
+ * (a route change, a session switch) unmounts the hook with the tab still
+ * visible, and canceling the pending write there is how a send's
+ * persisted-draft clear went missing and resurfaced as an "unsent" recovery
+ * draft (issues/bugs/2026-07-23-voice-send-lingers-as-unsent-recovery-draft.md).
+ * The debounce machine itself is `lib/persist-scheduler.ts` — pure, timers
+ * injected, doctested.
  */
 
 import { useCallback, useEffect, useRef } from "react";
+import { createPersistScheduler, browserTimers, type PersistSchedulerCore } from "../lib/persist-scheduler";
 
 /** The shared debounce delay for continuous draft persistence. */
 export const PERSIST_DEBOUNCE_MS = 400;
@@ -29,30 +39,35 @@ export interface PersistScheduler {
  * current value synchronously). `onHide` receives this same `cancel` so a
  * caller can cancel-then-flush without closing over the controller's own
  * return value (which would create a definition-order cycle).
+ *
+ * `debounceMs` is read once, when the controller is created — both callers
+ * pass the module constant, and a live delay change has no meaning here.
  */
 export function usePersistScheduler(opts: {
   debounceMs: number;
   onHide: (cancel: () => void) => void;
 }): PersistScheduler {
   const { debounceMs, onHide } = opts;
-  const timerRef = useRef<number | null>(null);
+  // One controller per mount, created on first use. It lives in a ref and is
+  // only ever touched from callbacks and effects — never during render.
+  const coreRef = useRef<PersistSchedulerCore | null>(null);
+  const getCore = useCallback((): PersistSchedulerCore => {
+    const existing = coreRef.current;
+    if (existing !== null) return existing;
+    const created = createPersistScheduler({ debounceMs, timers: browserTimers });
+    coreRef.current = created;
+    return created;
+  }, [debounceMs]);
 
   const cancel = useCallback(() => {
-    if (timerRef.current !== null) {
-      window.clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-  }, []);
+    getCore().cancel();
+  }, [getCore]);
 
   const schedule = useCallback(
     (write: () => void) => {
-      cancel();
-      timerRef.current = window.setTimeout(() => {
-        timerRef.current = null;
-        write();
-      }, debounceMs);
+      getCore().schedule(write);
     },
-    [cancel, debounceMs],
+    [getCore],
   );
 
   useEffect(() => {
@@ -62,6 +77,19 @@ export function usePersistScheduler(opts: {
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [onHide, cancel]);
+
+  // Deliberately its own, dependency-free effect: `onHide` changes on every
+  // keystroke/transcript tick for some callers, so sharing the effect above
+  // would flush on each of those re-subscriptions instead of on unmount —
+  // which is to say, no debounce at all. It also has to be registered here,
+  // inside this hook, so React tears it down BEFORE the caller's own effects
+  // (destroy runs in creation order) — a caller cleanup that calls `cancel`
+  // would otherwise empty the queue before this ever saw it.
+  useEffect(() => {
+    return () => {
+      coreRef.current?.flush();
+    };
+  }, []);
 
   return { schedule, cancel };
 }

@@ -145,6 +145,41 @@ export function savePersistedEmission(
   }
 }
 
+/** True when a draft holds nothing worth persisting or recovering. */
+export function isEmptyEmissionDraft(
+  draft: Pick<EmissionDraft, "text" | "images" | "files" | "selections">,
+): boolean {
+  return draft.text === "" && draft.images.length === 0 && draft.files.length === 0 && draft.selections.length === 0;
+}
+
+/**
+ * The persist decision for a whole draft: an EMPTY draft removes the key,
+ * anything else saves.
+ *
+ * "Empty" is what a send leaves behind (the send sites clear text,
+ * attachments, and selections), so this is the definitive
+ * nothing-to-recover event — and the caller runs it synchronously rather
+ * than on the debounce. Saving an empty payload instead would be nearly
+ * equivalent on restore, but it leaves the key sitting there, and the
+ * recovery bug this fixes was diagnosed by looking for exactly that key
+ * (issues/bugs/2026-07-23-voice-send-lingers-as-unsent-recovery-draft.md):
+ * gone means gone.
+ */
+export function commitPersistedEmission(
+  storage: KeyValueStorage,
+  input: {
+    boxSlug: string | undefined;
+    draft: Pick<EmissionDraft, "text" | "images" | "files" | "selections">;
+    updatedAt: number;
+  },
+): void {
+  if (isEmptyEmissionDraft(input.draft)) {
+    removePersistedEmission(storage, input.boxSlug);
+    return;
+  }
+  savePersistedEmission(storage, input);
+}
+
 export function removePersistedEmission(storage: KeyValueStorage, boxSlug: string | undefined): void {
   try {
     storage.removeItem(emissionKey(boxSlug));

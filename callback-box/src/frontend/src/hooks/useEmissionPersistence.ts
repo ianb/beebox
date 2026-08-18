@@ -30,6 +30,13 @@
  *     from it. Logged via `console.info` — a named behavior change (other
  *     sessions' drafts are discarded, not merged).
  *
+ * Writes are debounced while the composer has content, but an EMPTY store is
+ * committed synchronously (the key is removed, not rewritten empty). Emptiness
+ * is what a send leaves behind, and it is a definitive event rather than a
+ * keystroke — debouncing it let an in-app navigation cancel the clear and
+ * resurface the just-sent draft as "unsent"
+ * (issues/bugs/2026-07-23-voice-send-lingers-as-unsent-recovery-draft.md).
+ *
  * A restore in progress (the file-existence check is a network round trip)
  * suppresses the debounced persist so a slow check can't have its
  * in-flight write clobbered by a premature save of the still-empty draft.
@@ -39,7 +46,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { EmissionStore, ImageItem } from "../input/emission-store";
 import {
   loadPersistedEmission,
-  savePersistedEmission,
+  commitPersistedEmission,
+  isEmptyEmissionDraft,
   adoptLegacyComposerDrafts,
   partitionFiles,
   type PersistedEmission,
@@ -78,10 +86,6 @@ function maxId(items: readonly { id: number }[]): number | undefined {
   return items.reduce((max, item) => (item.id > max ? item.id : max), first.id);
 }
 
-function isEmptyDraft(draft: { text: string; images: unknown[]; files: unknown[]; selections: unknown[] }): boolean {
-  return draft.text === "" && draft.images.length === 0 && draft.files.length === 0 && draft.selections.length === 0;
-}
-
 export function useEmissionPersistence(opts: {
   boxSlug: string | undefined;
   emissionStore: EmissionStore;
@@ -93,7 +97,7 @@ export function useEmissionPersistence(opts: {
 
   const persistNow = useCallback(() => {
     if (restoringRef.current) return;
-    savePersistedEmission(window.localStorage, { boxSlug, draft: emissionStore.get(), updatedAt: Date.now() });
+    commitPersistedEmission(window.localStorage, { boxSlug, draft: emissionStore.get(), updatedAt: Date.now() });
   }, [boxSlug, emissionStore]);
 
   // Flush synchronously when the tab hides (the sleep / app-switch moment),
@@ -121,7 +125,7 @@ export function useEmissionPersistence(opts: {
     if (typeof window === "undefined") return;
     if (restoreAttempted.has(emissionStore)) return;
     restoreAttempted.add(emissionStore);
-    if (!isEmptyDraft(emissionStore.get())) return;
+    if (!isEmptyEmissionDraft(emissionStore.get())) return;
 
     const persisted = loadPersistedEmission(window.localStorage, boxSlug);
     if (persisted === null) {
@@ -146,7 +150,7 @@ export function useEmissionPersistence(opts: {
       // the user may have started typing during it. Their live composition
       // wins — abort rather than clobber (the persisted draft is then
       // superseded by the next debounced save of what they typed).
-      if (!isEmptyDraft(emissionStore.get())) {
+      if (!isEmptyEmissionDraft(emissionStore.get())) {
         console.warn("[input-persist] composer used before restore finished — persisted draft discarded");
         return;
       }
@@ -194,14 +198,26 @@ export function useEmissionPersistence(opts: {
   useEffect(() => {
     function scheduleWrite(): void {
       if (restoringRef.current) return;
+      // An EMPTY store is the definitive nothing-to-recover event — it is
+      // what a send leaves behind (every send site clears text, attachments,
+      // and selections), and it is not keystroke-frequency. Clear the key
+      // NOW rather than on the debounce: a debounced clear loses its race
+      // with an in-app navigation, and the pre-send draft then comes back as
+      // an "unsent" recovery offer
+      // (issues/bugs/2026-07-23-voice-send-lingers-as-unsent-recovery-draft.md).
+      if (isEmptyEmissionDraft(emissionStore.get())) {
+        cancel();
+        persistNow();
+        return;
+      }
       schedule(persistNow);
     }
     const unsubscribe = emissionStore.subscribe(scheduleWrite);
     scheduleWrite();
-    return () => {
-      unsubscribe();
-      cancel();
-    };
+    // No `cancel()` here: the scheduler flushes its pending write on unmount,
+    // and this cleanup also runs on a dep change, where dropping the last
+    // observed state would be the same silent loss.
+    return unsubscribe;
   }, [emissionStore, schedule, cancel, persistNow]);
 
   // The expired-attachments notice self-dismisses once the composer empties
@@ -211,7 +227,7 @@ export function useEmissionPersistence(opts: {
   useEffect(() => {
     function onChange(): void {
       if (expiredAttachments.length === 0) return;
-      if (isEmptyDraft(emissionStore.get())) setExpiredAttachments([]);
+      if (isEmptyEmissionDraft(emissionStore.get())) setExpiredAttachments([]);
     }
     return emissionStore.subscribe(onChange);
   }, [emissionStore, expiredAttachments.length]);
