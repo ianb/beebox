@@ -21,6 +21,7 @@ import {
   nextSpeakerLetter,
   relabelDiarizedSpeakers,
 } from "../../core/transcription/voxtral.js";
+import { getOpenAiThinkingKey } from "../../core/openai-thinking-key.js";
 import { getMistralApiKey } from "../../core/mistral-key.js";
 import {
   VOICE_MODELS,
@@ -132,7 +133,7 @@ export function registerChatAudioRoutes(ctx: ChatRoutesContext): void {
       return reply.send(result.audio);
     }
 
-    const apiKey = process.env.THINKING_OPENAI_API_KEY;
+    const apiKey = await getOpenAiThinkingKey(boxRoot);
     if (!apiKey) {
       return reply.status(500).send({ error: "TTS API key not configured" });
     }

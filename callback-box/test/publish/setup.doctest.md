@@ -182,8 +182,8 @@ await box.cleanup();
 ## `--mint-connector-token`: the connector credential is minted, not hand-assembled
 
 The fake tokens client carries the two R2 bucket-item permission groups; setup
-mints an account-owned token scoped to exactly the ingestion bucket and writes
-the secret file (mode 600) into the box:
+mints an account-owned token scoped to exactly the ingestion bucket and stores
+it in the machine secret store, granted to this box:
 
 ```ts
 const box = await makeTmpBox();
@@ -198,7 +198,7 @@ const result = await setupPublishing(
 JSON.stringify(tokens.minted)
 => [{"name":"callback-box publish connector (pub-ingest)","bucketName":"pub-ingest","groups":["Workers R2 Storage Bucket Item Read","Workers R2 Storage Bucket Item Write"]}]
 
-// The secret file is in place and parses — the connector can pull with it.
+// The credential resolves back out of the store — the connector can pull with it.
 const secret = await readPublishSecret(box.root);
 [secret.accountId, secret.bucket].join(" ")
 => test-account pub-ingest
@@ -208,7 +208,7 @@ result.connectorSecret.json.includes("minted-secret-1")
 => true
 ```
 
-A rerun mints NOTHING — the existing secret file wins (no duplicate tokens):
+A rerun mints NOTHING — the stored credential wins (no duplicate tokens):
 
 ```ts continue
 const again = await setupPublishing(

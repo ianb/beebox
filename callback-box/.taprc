@@ -7,6 +7,10 @@ node-arg:
   - --import=tsx
   - --import=agent-doctest/tap
   - --import=agent-doctest/loader
+  # Point CB_SECRETS_FILE at a throwaway path in every test process, so nothing
+  # a test resolves or writes can reach the developer's real
+  # ~/.config/cb/secrets.json. See the module for why this is process-level.
+  - --import=./test/helpers/isolate-secret-store.ts
 include:
   - test/**/*.test.ts
   - test/**/*.doctest.md

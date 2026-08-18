@@ -14,6 +14,8 @@ import { router, publicProcedure } from "../trpc.js";
 import { getMistralApiKey } from "../../../core/mistral-key.js";
 import { resolveNav, NAV_CARD_PATH } from "../../../core/nav.js";
 import { getDeepgramCredentials } from "../../../core/deepgram-key.js";
+import { getGeminiApiKey } from "../../../core/gemini-key.js";
+import { getOpenAiThinkingKey } from "../../../core/openai-thinking-key.js";
 import { loadTranscriptionConfig } from "../../../core/transcription/index.js";
 import { getBoxShape } from "../../../lib/box-shape.js";
 import { isRecord } from "../../../lib/is-record.js";
@@ -28,6 +30,7 @@ import { checkSchedulerHeartbeat } from "../../../core/schedule/health-box.js";
 import { boxGrowthHealthCheck } from "../../../core/box-growth/health.js";
 import { acknowledgeBoxGrowthProcedure, expectBoxGrowthRatesProcedure } from "./health-box-growth.js";
 import { isWritable, writability } from "./health-writability.js";
+import { legacySecretFilesCheck } from "./health-secrets.js";
 
 export interface HealthCheck {
   name: string;
@@ -196,14 +199,14 @@ async function annexHealthChecks(args: { repoRoot: string; boxRoot: string }): P
  * (`CB_SCAN_VISION=gemini`); scan-import defaults to the Claude backend,
  * which needs no extra key.
  */
-function geminiKeyCheck(): HealthCheck {
-  const geminiKey = process.env["GEMINI_KEY"] || process.env["SKE_GEMINI_API_KEY"] || null;
+async function geminiKeyCheck(boxRoot: string): Promise<HealthCheck> {
+  const geminiKey = await getGeminiApiKey(boxRoot);
   const geminiSelected = process.env["CB_SCAN_VISION"] === "gemini";
   const message =
     geminiKey !== null
       ? "Gemini API key configured"
       : geminiSelected
-        ? "CB_SCAN_VISION=gemini but no Gemini API key — scan-import will fail. Set GEMINI_KEY in .env"
+        ? 'CB_SCAN_VISION=gemini but no Gemini API key — scan-import will fail. Grant the "gemini" secret to this box, or set GEMINI_KEY'
         : "Gemini API key not found (optional) — audio questions will not work; scan-import uses the Claude backend by default";
   return {
     name: "gemini-api-key",
@@ -336,32 +339,33 @@ export async function runHealthChecks(
       severity: "warning",
     });
   } else if (transcriptionConfig.service === "openai-realtime") {
-    const hasKey = !!process.env["THINKING_OPENAI_API_KEY"];
+    const hasKey = (await getOpenAiThinkingKey(boxRoot)) !== null;
     checks.push({
       name: "openai-api-key",
       ok: hasKey,
       message: hasKey
         ? "OpenAI API key configured (gpt-realtime-whisper)"
-        : "THINKING_OPENAI_API_KEY not set — OpenAI realtime transcription will not work.",
+        : 'No OpenAI key — realtime transcription will not work. Grant the "openai-thinking" secret to this box, or set THINKING_OPENAI_API_KEY.',
       severity: "warning",
     });
   }
 
   // OpenAI / Whisper key (needed for TTS, and Whisper transcription if selected)
-  const openaiKey = process.env["THINKING_OPENAI_API_KEY"] ?? null;
+  const openaiKey = await getOpenAiThinkingKey(boxRoot);
   const openaiRequired = transcriptionConfig.service === "whisper";
   checks.push({
     name: "openai-api-key",
     ok: openaiKey !== null,
     message: openaiKey !== null
-      ? "OpenAI API key configured (THINKING_OPENAI_API_KEY)"
+      ? 'OpenAI API key configured ("openai-thinking")'
       : openaiRequired
-        ? "OpenAI API key not found — Whisper transcription and TTS will not work. Set THINKING_OPENAI_API_KEY in .env"
-        : "OpenAI API key not found — TTS will not work. Set THINKING_OPENAI_API_KEY in .env",
+        ? 'OpenAI API key not found — Whisper transcription and TTS will not work. Grant the "openai-thinking" secret to this box, or set THINKING_OPENAI_API_KEY'
+        : 'OpenAI API key not found — TTS will not work. Grant the "openai-thinking" secret to this box, or set THINKING_OPENAI_API_KEY',
     severity: "warning",
   });
 
-  checks.push(geminiKeyCheck());
+  checks.push(await geminiKeyCheck(boxRoot));
+  checks.push(await legacySecretFilesCheck(boxRoot));
 
   // Claude Code auth (needed for agent operations — chat, reactor, procedures).
   // Probe via `claude auth status` through the ClaudeCli service rather than

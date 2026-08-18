@@ -121,6 +121,7 @@ const CONNECTOR_ENV_ALLOWLIST: readonly string[] = [
   "GOOGLE_OAUTH_CLIENT_ID", // src/connectors/google-auth.ts getGoogleClientCreds().
   "GOOGLE_OAUTH_CLIENT_SECRET", // ditto.
   "CB_GOOGLE_TOKENS_FILE", // src/connectors/google-token-store.ts -- a path, but to the OAuth token store.
+  "CB_SECRETS_FILE", // src/core/secrets/store.ts -- the machine secret store's path. Tooling ONLY: a spawned `cb wakeup` runs the connectors, which now resolve their keys from the store. Deliberately absent from the agent profile — an agent has no store interface yet, and pointing it at the file is the opposite of what Track 4 is for.
   "CALLBACK_MISTRAL_API_KEY", // src/core/mistral-key.ts -- transcription key fallback.
   "THINKING_OPENAI_API_KEY", // src/core/transcription/index.ts -- transcription key.
   "CALLBACK_OPENAI_API_KEY", // src/core/search/embeddings-key.ts -- embeddings key.

@@ -115,16 +115,18 @@ function computeSetupRequired(request: FastifyRequest): boolean {
 }
 
 /** Assemble the bare login page's server-rendered state from a GET request. */
-function loginPageState(
+async function loginPageState(
   request: FastifyRequest,
   query: { returnTo?: string; error?: string; passwordReset?: string },
-): LoginPageState {
+): Promise<LoginPageState> {
   const prefix = readBasePrefix(request.headers);
   return {
     prefix,
     returnTo: sanitizeReturnTo({ raw: query.returnTo, prefix }),
     error: query.error === "1",
-    googleConfigured: getGoogleClientCreds() !== null,
+    // Box-less surface: this asks whether Google login is configured for the
+    // process at all, before any box is in play, so it reads the env fallback.
+    googleConfigured: (await getGoogleClientCreds()) !== null,
     setupRequired: computeSetupRequired(request),
     passwordReset: query.passwordReset === "1",
   };
@@ -147,7 +149,7 @@ async function registerPasswordRoutes(server: FastifyInstance, options: AuthRout
   invariant(!isHubMode(), "registerPasswordRoutes must never run in hub mode — the hub owns fleet login");
 
   server.get<{ Querystring: { returnTo?: string; error?: string; passwordReset?: string } }>("/auth/login", async (request, reply) => {
-    return reply.type("text/html").send(renderLoginPage(loginPageState(request, request.query)));
+    return reply.type("text/html").send(renderLoginPage(await loginPageState(request, request.query)));
   });
   server.get<{ Querystring: { token?: string; error?: string } }>("/auth/setup", async (request, reply) => {
     const prefix = readBasePrefix(request.headers);
@@ -164,7 +166,7 @@ async function registerPasswordRoutes(server: FastifyInstance, options: AuthRout
   server.get("/auth/methods", async (request) => {
     return {
       password: true,
-      google: getGoogleClientCreds() !== null,
+      google: (await getGoogleClientCreds()) !== null,
       setupRequired: !request.server.openAccess && listUsers().length === 0,
     };
   });

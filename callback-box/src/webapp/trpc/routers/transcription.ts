@@ -6,7 +6,9 @@ import {
   loadTranscriptionConfig,
   updateTranscriptionConfig,
 } from "../../../core/transcription/index.js";
-import { getDeepgramCredentials } from "../../../core/deepgram-key.js";
+import { DEEPGRAM_SECRET_NAME, getDeepgramCredentials } from "../../../core/deepgram-key.js";
+import { getOpenAiThinkingKey, OPENAI_THINKING_SECRET_NAME } from "../../../core/openai-thinking-key.js";
+import { recordSecretMint } from "../../../core/secrets/access-log.js";
 import { errorMessage } from "../../../lib/error-guards.js";
 
 const TEMP_KEY_TTL_SECONDS = 20 * 60; // 20 minutes
@@ -34,15 +36,28 @@ export const transcriptionRouter = router({
       return { hqService: cfg.hqService };
     }),
 
+  /**
+   * Mint a TTL'd, usage-scoped Deepgram key for the browser. This SPENDS the
+   * box's stored management key without disclosing it — the derived-credential
+   * pattern — so it is logged to the secrets access log as a `mint` event
+   * (`docs/plans/secret-custody.md`, "operation surface"). Deliberately
+   * uncapped (Decision 7): logged-and-visible, not throttled.
+   */
   deepgramTempKey: publicProcedure.mutation(async ({ ctx }) => {
     const creds = await getDeepgramCredentials(ctx.boxRoot);
     if (!creds) {
       throw new TRPCError({
         code: "PRECONDITION_FAILED",
         message:
-          "Deepgram not configured (need apiKey + projectId in config/connectors/deepgram.secret.json or CALLBACK_DEEPGRAM_API_KEY + CALLBACK_DEEPGRAM_PROJECT)",
+          'Deepgram not configured — ask the boxholder to grant the "deepgram" secret to this box, or set CALLBACK_DEEPGRAM_API_KEY + CALLBACK_DEEPGRAM_PROJECT',
       });
     }
+    await recordSecretMint({
+      boxRoot: ctx.boxRoot,
+      slug: ctx.boxSlug,
+      secret: DEEPGRAM_SECRET_NAME,
+      purpose: "deepgram-temp-key",
+    });
     try {
       const result = await ky
         .post(
@@ -82,15 +97,23 @@ export const transcriptionRouter = router({
     }
   }),
 
-  openaiRealtimeKey: publicProcedure.mutation(async () => {
-    const apiKey = process.env["THINKING_OPENAI_API_KEY"];
+  /** Mints an OpenAI realtime client secret for the browser — the same
+   *  spend-without-disclosing shape as `deepgramTempKey`, logged the same way. */
+  openaiRealtimeKey: publicProcedure.mutation(async ({ ctx }) => {
+    const apiKey = await getOpenAiThinkingKey(ctx.boxRoot);
     if (!apiKey) {
       throw new TRPCError({
         code: "PRECONDITION_FAILED",
         message:
-          "OpenAI not configured (THINKING_OPENAI_API_KEY env var is required for openai-realtime transcription)",
+          'OpenAI not configured — ask the boxholder to grant the "openai-thinking" secret to this box, or set THINKING_OPENAI_API_KEY',
       });
     }
+    await recordSecretMint({
+      boxRoot: ctx.boxRoot,
+      slug: ctx.boxSlug,
+      secret: OPENAI_THINKING_SECRET_NAME,
+      purpose: "openai-realtime-client-secret",
+    });
     const requestBody = {
       session: {
         type: "transcription",

@@ -5,6 +5,9 @@ import * as path from "node:path";
 import { TRPCError } from "@trpc/server";
 import { router, ownerProcedure } from "../trpc.js";
 import { loadTelegramConfig } from "../../../connectors/telegram.js";
+import { telegramLegacySecretPath, telegramSecretName } from "../../../connectors/telegram-helpers.js";
+import { forgetBoxSecret, setAndGrantSecret } from "../../../core/secrets/lifecycle.js";
+import { boxSlug } from "../../../lib/box-slug.js";
 import { createTelegramService } from "../../../services/telegram.js";
 import { createClaudeCliService } from "../../../services/claude-cli.js";
 import { resolveBoxPublicUrl } from "../../../lib/public-url.js";
@@ -44,6 +47,16 @@ export const adminRouter = router({
   ...passwordResetAdminProcedures,
   ...gmailAdminProcedures,
 
+  /**
+   * Telegram's configured state — deliberately WITHOUT the bot token.
+   *
+   * It used to return `botToken` on both arms, which handed a live,
+   * unscopable, all-powerful credential to the admin frontend on every page
+   * load. Telegram has no derived-credential primitive at all (no scoping, no
+   * TTL, revoke-only via BotFather), so the token must terminate in the server
+   * process (`docs/plans/secret-custody.md`, "Broker escalations"). Callers
+   * that want to identify the bot use `botUsername`.
+   */
   telegramStatus: ownerProcedure.query(async ({ ctx }) => {
     const config = await loadTelegramConfig(ctx.boxRoot);
     if (!config) {
@@ -62,13 +75,11 @@ export const adminRouter = router({
         botUsername: me.username,
         botFirstName: me.first_name,
         webhookUrl: webhookInfo.url || null,
-        botToken: config.botToken,
         boxSlug: ctx.boxSlug,
       };
     } catch (err) {
       return {
         configured: true,
-        botToken: config.botToken,
         error: errorMessage(err),
         boxSlug: ctx.boxSlug,
       };
@@ -90,12 +101,24 @@ export const adminRouter = router({
       }
 
       const webhookSecret = crypto.randomBytes(32).toString("hex");
-      const configDir = path.join(ctx.boxRoot, "config/connectors");
-      await fs.mkdir(configDir, { recursive: true });
-      await fs.writeFile(
-        path.join(configDir, "telegram.secret.json"),
-        JSON.stringify({ botToken: input.botToken, webhookSecret }, null, 2) + "\n",
-      );
+      // Into the machine store, never a file in the box tree (Decision 3). The
+      // entry is this box's alone — a bot token routes to a single webhook URL,
+      // so `shareable: false` makes a grant to any other box an explained
+      // refusal rather than a silently broken integration.
+      // Keyed by the DISK-derived slug, which is what every telegram reader
+      // (the connector, the webhook route, notify-boxholder) resolves under —
+      // `ctx.boxSlug` can differ under `cb serve --slug`, and a grant written
+      // under one and read under the other would silently never resolve.
+      const secretSlug = await boxSlug(ctx.boxRoot);
+      await setAndGrantSecret({
+        name: telegramSecretName(secretSlug),
+        value: JSON.stringify({ botToken: input.botToken, webhookSecret }),
+        slug: secretSlug,
+        access: "server",
+        note: "Telegram bot token + webhook secret",
+        owningBox: ctx.boxSlug,
+        shareable: false,
+      });
 
       const publicUrl = await resolveBoxPublicUrl(ctx.boxRoot);
 
@@ -135,7 +158,14 @@ export const adminRouter = router({
       } catch (e) { console.warn("Failed to delete Telegram webhook during disconnect (continuing):", e); }
     }
 
-    const configPath = path.join(ctx.boxRoot, "config/connectors/telegram.secret.json");
+    // Revoke the grant and drop the store entry: disconnect must leave nothing
+    // resolvable behind, not merely stop using it. Idempotent either way.
+    const secretSlug = await boxSlug(ctx.boxRoot);
+    await forgetBoxSecret({ name: telegramSecretName(secretSlug), slug: secretSlug });
+
+    // The legacy in-tree file is still deleted, for a box that was configured
+    // before the migration and never reconnected.
+    const configPath = telegramLegacySecretPath(ctx.boxRoot);
     try {
       await fs.unlink(configPath);
     } catch (e) {
@@ -177,7 +207,7 @@ export const adminRouter = router({
         .map((user) => user.email),
       publicUrl: config.publicUrl,
       ownerEmail: userDetails.ownerEmail,
-      googleLoginConfigured: getGoogleClientCreds() !== null,
+      googleLoginConfigured: (await getGoogleClientCreds(ctx.boxRoot)) !== null,
       googleServices: config.googleServices,
       agentEngine: config.agentEngine,
     };

@@ -21,20 +21,32 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { boxSlug } from "../../lib/box-slug.js";
 import { errorMessage } from "../../lib/error-guards.js";
+import { getBoxTimeISO } from "../../lib/time.js";
 import type { SecretRefusalKind } from "./errors.js";
 import { loadSecretStore, mutateSecretStore, secretsLogDir } from "./store.js";
 
 /** Minimum gap between `lastUsed` stamps for one (box, secret) pair. */
 const LAST_USED_THROTTLE_MS = 60 * 60 * 1000;
 
-/** One access-log line. */
+/**
+ * One access-log line.
+ *
+ * `mint` is the operation-endpoint counterpart of `resolve` (the plan's
+ * "operation surface" paragraph): an endpoint that spends a stored key to mint
+ * a short-lived derived credential for a browser — `deepgramTempKey`, the
+ * OpenAI realtime client secret — never discloses the stored value, so a log
+ * that recorded only resolutions would audit the door and ignore the window.
+ * Deliberately uncapped (Decision 7): the posture is logged-and-visible, not
+ * throttled.
+ */
 export interface SecretAccessEvent {
   ts: string;
   box: string;
   secret: string;
   purpose: string;
-  event: "resolve" | "refuse";
+  event: "resolve" | "refuse" | "mint";
   refusal?: SecretRefusalKind;
 }
 
@@ -66,6 +78,31 @@ export async function appendSecretAccessEvent(event: SecretAccessEvent): Promise
   } catch (e) {
     warnOnce(`access log unwritable at ${segment}: ${errorMessage(e)} (resolution proceeded)`);
   }
+}
+
+/**
+ * Record that an operation endpoint SPENT a secret to mint a derived credential
+ * for a client. The stored value never leaves the server here — what is audited
+ * is the act, with the box that asked and what for.
+ *
+ * Same best-effort contract as the rest of the log: a mint is never blocked by
+ * an unwritable log, and never rate-limited (Decision 7).
+ */
+export async function recordSecretMint(opts: {
+  boxRoot: string;
+  secret: string;
+  purpose: string;
+  /** The authoritative slug where one is threaded (`ctx.boxSlug`). */
+  slug?: string;
+}): Promise<void> {
+  const slug = opts.slug ?? (await boxSlug(opts.boxRoot));
+  await appendSecretAccessEvent({
+    ts: getBoxTimeISO(opts.boxRoot),
+    box: slug,
+    secret: opts.secret,
+    purpose: opts.purpose,
+    event: "mint",
+  });
 }
 
 /**

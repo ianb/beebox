@@ -61,6 +61,7 @@ const CHILD_ENV_ALLOWLIST: readonly string[] = [
   "CB_AUTH_FILE", // src/webapp/local-users.ts + auth-capabilities.ts -- shared credential/capability store path, not a credential.
   "CB_DIAG_API_KEY", // src/webapp/auth.ts verifyDiagBearerKey -- shared read-only diag bearer key.
   "CB_GOOGLE_TOKENS_FILE", // src/connectors/google-auth.ts, requirements.ts -- a path, not a credential.
+  "CB_SECRETS_FILE", // src/core/secrets/store.ts -- the machine secret store's path, not a credential. A child that missed it would read the DEFAULT store while the hub read the override, so every grant would silently vanish for served boxes.
   "GOOGLE_OAUTH_CLIENT_ID", // src/connectors/google-auth.ts getGoogleClientCreds() -- app identity, shared per-box by design (see block comment above).
   "GOOGLE_OAUTH_CLIENT_SECRET", // ditto -- connector OAuth stays per-box; the box owns its tokens.
   "CB_LOG_PROMPTS", // src/core/agent-run.ts -- debug flag.
