@@ -78,7 +78,7 @@ export async function executeStep(
   }
 
   // ── Run + validate (with severity:review auto-retry) ──
-  const { gitRef, sessionId, runStdout, validateResult, reviewExhausted, runFailure } =
+  const { gitRef, sessionId, runStdout, validateResult, reviewExhausted, runFailure, engineUnavailable } =
     await runAndValidate({
       ...params,
       precheckOutput: precheck.output,
@@ -93,6 +93,7 @@ export async function executeStep(
     validateResult,
     reviewExhausted,
     runFailure,
+    engineUnavailable,
   });
 }
 
@@ -195,6 +196,9 @@ interface RecordStepResultsParams {
   reviewExhausted: boolean;
   /** A non-zero exit from a run-phase shell — fails the step objectively. */
   runFailure: RunShellFailure | undefined;
+  /** A deferred-recoverable engine failure (quota exhausted) — fails the
+   * step with the informative message; retrying later can succeed. */
+  engineUnavailable: string | undefined;
 }
 
 /**
@@ -203,16 +207,19 @@ interface RecordStepResultsParams {
 async function recordStepResults(
   args: RecordStepResultsParams
 ): Promise<"completed" | "failed"> {
-  const { params, gitRef, sessionId, runStdout, validateResult, reviewExhausted, runFailure } = args;
+  const { params, gitRef, sessionId, runStdout, validateResult, reviewExhausted, runFailure, engineUnavailable } = args;
   const { ctx, boxRoot, step, procedure, runCardPath } = params;
 
   // A step fails when a run shell exited non-zero, when an `abort` validation
-  // failed, or when a `review` failure exhausted its retries (the auto-retry in
-  // runAndValidate makes review gate).
+  // failed, when a `review` failure exhausted its retries (the auto-retry in
+  // runAndValidate makes review gate), or when the engine was unavailable
+  // (deferred-recoverable — the step can succeed on a later run).
   const validationGated =
     validateResult?.status === "fail" && step.validate?.severity === "abort";
+  const failed =
+    runFailure !== undefined || validationGated || reviewExhausted || engineUnavailable !== undefined;
   const stepUpdate: StepUpdate = {
-    status: runFailure !== undefined || validationGated || reviewExhausted ? "failed" : "completed",
+    status: failed ? "failed" : "completed",
     completedAt: getBoxTimeISO(boxRoot),
   };
 
@@ -232,6 +239,9 @@ async function recordStepResults(
     // `cb procedure status` and later inspection show why the step failed.
     const detail = [runFailure.stdout, runFailure.stderr].filter(Boolean).join("\n");
     runResult.stdout = `Shell command failed (exit ${runFailure.exitCode})${detail ? `:\n${detail}` : ""}`;
+  }
+  if (engineUnavailable !== undefined) {
+    runResult.stdout = engineUnavailable;
   }
   stepUpdate.run = runResult;
 
