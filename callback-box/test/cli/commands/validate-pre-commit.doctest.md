@@ -48,6 +48,21 @@ const clean = await runPreCommitChecks(box.root, { colors: false });
 ]
 ```
 
+Schemas stranded in the legacy `config/schemas/` location block here too — the
+same gate every other validate scope applies (`checkLegacySchemaPath` in
+`validate.ts`), since the hook is the surface most likely to catch a misplaced
+schema before anything else loads the box:
+
+```ts continue
+await box.write("config/schemas/memo.ts", "export {};\n");
+const legacy = await runPreCommitChecks(box.root, { colors: false });
+[legacy.errorCount, legacy.report.includes("legacy location")]
+=> [
+  1,
+  true
+]
+```
+
 ```ts cleanup
 await box.cleanup();
 ```

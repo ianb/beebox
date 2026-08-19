@@ -39,9 +39,12 @@ const SKIP_DIRS = new Set([".git", "node_modules", ".callback-box", ".scan-archi
  * unlisted-binary guard classifies staged paths, which may not resemble the
  * working tree (a staged delete, a path already replaced on disk), so it
  * decides membership from the path alone rather than by walking directories.
+ * Honors the same {@link SKIP_DIRS} the walk never descends into, so the two
+ * agree on what counts as a scope.
  */
 export function isInAttachScope(relPath: string): boolean {
   const segments = relPath.split(/[/\\]/);
+  if (segments.some((segment) => SKIP_DIRS.has(segment))) return false;
   return segments.slice(0, -1).some((segment) => segment.endsWith(".attach"));
 }
 

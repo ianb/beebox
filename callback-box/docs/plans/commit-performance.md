@@ -74,6 +74,13 @@ New mode on `cb validate` that does, in one process:
    pointer files and catches an allowlisted extension staged raw through an
    annex misconfiguration — a case the extension-allowlist walk let through.
 
+It also keeps the legacy-schema-path gate (`checkLegacySchemaPath`) that every
+other validate scope applies. Cross-model review findings folded in
+(2026-08-19): the diff filter includes `T` (a symlink replaced by a real >1MB
+file stages an embedding blob git reports as a typechange), and
+`isInAttachScope` honors the walk's skip-directory set so the two guards agree
+on what counts as a scope.
+
 Exit non-zero iff step 1 or step 3 found errors. The hook template in
 `install-validation-hooks.ts` becomes a single `"$CB" validate --pre-commit`
 call (annex pre-commit, the `cd`, and the cb-not-found fallback are

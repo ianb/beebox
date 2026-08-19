@@ -30,6 +30,7 @@ import {
   findStagedUnlistedBinaries,
 } from "../../core/annex/staged-unlisted.js";
 import { listStagedCards, listStagedRelPaths } from "../../lib/staged-files.js";
+import { getBoxShape, findLegacySchemaFiles, describeLegacySchemaFiles } from "../../lib/box-shape.js";
 import {
   boxWideLinkWarnings,
   formatMarkdownResults,
@@ -91,6 +92,17 @@ export async function runPreCommitChecks(
   if (unlisted.length > 0) {
     errorCount += unlisted.length;
     sections.push(describeStagedUnlistedBinaries(unlisted));
+  }
+
+  // Misplaced legacy `config/schemas/*.ts` blocks here just as it does in every
+  // other validate scope (see `checkLegacySchemaPath` in `validate.ts`) — the
+  // hook is the surface most likely to catch it before anything else loads the
+  // box. One readdir; negligible on the commit path.
+  const shape = await getBoxShape(boxRoot);
+  const legacySchemaFiles = await findLegacySchemaFiles(shape);
+  if (legacySchemaFiles.length > 0) {
+    errorCount += legacySchemaFiles.length;
+    sections.push(describeLegacySchemaFiles(shape, legacySchemaFiles));
   }
 
   const removals = await listStagedRelPaths(boxRoot, { diffFilter: "DR" });

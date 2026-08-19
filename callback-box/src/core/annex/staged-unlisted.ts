@@ -63,7 +63,10 @@ export interface StagedUnlistedBinary extends UnlistedBinary {
  * throwing so the caller picks the severity.
  */
 export async function findStagedUnlistedBinaries(boxRoot: string): Promise<StagedUnlistedBinary[]> {
-  const candidates = (await listStagedRelPaths(boxRoot, { diffFilter: "ACMR" })).filter(
+  // `T` (typechange) included alongside ACMR: replacing a symlink with a real
+  // >1MB file stages a blob whose bytes would enter history exactly like an
+  // addition, but git reports it as a type change, not an A or M.
+  const candidates = (await listStagedRelPaths(boxRoot, { diffFilter: "ACMRT" })).filter(
     (rel) => isInAttachScope(rel) && !isControlFile(path.basename(rel))
   );
   if (candidates.length === 0) return [];
