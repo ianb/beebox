@@ -98,9 +98,16 @@ Retention happens on both send shapes, replacing today's deletes:
   preparation id is already the emission id, so no new identity plumbing.
 
 Retention outliving the pending emission is the point, so the sweep on receipt
-(`removePayloads`) stays as it is and does not touch the retention store.
+(`removePayloads`) stays as it is and does not touch the retention store. It must
+not outlive the *message*, though — a discarded send, or one pulled back into the
+composer, drops its recording. A **rejected** send keeps its recording, because
+`retry` can still send it.
 
-Unpairing a box removes its retention directory — the recordings are that box's.
+Unpairing a box removes its retention directory — the recordings are that box's —
+and does so **synchronously**, on the same path that drops the pairing. Handing
+it to a task would let the app be suspended in between, leaving audio on disk for
+a box the user has just removed. (Both lifecycle points came from cross-model
+review.)
 
 ## Track 3 — native answers
 
@@ -108,16 +115,21 @@ Unpairing a box removes its retention directory — the recordings are that box'
 routes it, like the existing composer-command channel, out to the app. The
 answer is a direct HTTP call (`ChatAPI.answerLastAudio`), not a bridge round
 trip: multipart to `/api/chat/last-audio/:requestId` with `file`, `recordedAt`,
-`text`, `messageId`, and the relayed `sessionId` — or `{"none": true}` as JSON
+`text`, `messageId`, and a `sessionId` (see below) — or `{"none": true}` as JSON
 when the store doesn't hold that id.
 
 The phone answers `none` rather than staying silent when it doesn't hold the
 recording. Silence would be indistinguishable from a phone that is asleep, and
 the `none` costs nothing given it cannot settle the request early.
 
-`sessionId` is the *web tab's* session id, relayed through and echoed back
-unchanged. The phone has no session identity of its own, and inventing one would
-put a second answer to "which session is this" into the contract.
+`sessionId` needs care. It addresses the retranscription report — the CLI passes
+the echoed value to `buildRetranscriptionReport`, whose bus event the web matches
+against its own session — so answering with the phone's *currently visible*
+session would post the correction to whichever conversation the user happens to
+be looking at, not the one the message is in. Native therefore stores the session
+each recording was dictated into (`box.sessionID` at send time, which is the
+visible chat session) and echoes that, falling back to the relayed tab's session
+when it has none. Raised by cross-model review.
 
 ## What this does not fix
 
@@ -136,7 +148,8 @@ Stated plainly so it isn't discovered as a surprise:
 Automatable, and expected of this change:
 
 - XCTest over the retention store: retain/evict at capacity, survive relaunch,
-  answer shape for a hit and for a miss, per-box isolation.
+  answer shape for a hit and for a miss, per-box isolation, and the session
+  precedence above.
 - The existing mobile-contract fixture discipline for the new channel.
 - A frontend doctest that the relay fires in a native shell and not otherwise.
 

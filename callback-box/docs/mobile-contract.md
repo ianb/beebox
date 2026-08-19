@@ -455,7 +455,12 @@ The relay that lets a box agent retranscribe a message dictated in the **native*
   ```
   Both ids are required and non-blank. `requestId` is the answer's URL segment; `messageId` must be
   echoed on the answer or the server discards it (see below). `sessionId` is the **relaying tab's**
-  own — the shell has no session identity — and is null before the tab has been assigned one.
+  own, and is null before the tab has been assigned one — but it is a **fallback**, not the answer:
+  native stores the session each recording was dictated INTO and echoes that instead when it has
+  one. The echoed session addresses the retranscription report
+  (`cli/commands/chat-audio-report.ts` → the `chat-retranscription` bus event, which the web
+  matches against its own session), so answering with the phone's currently-visible session would
+  post the correction to whichever conversation the user happens to be looking at.
 - **No acknowledgement channel.** Native answers the box directly over HTTP:
   `POST /api/chat/last-audio/:requestId`, multipart with `file` (audio/wav), `recordedAt` (ISO 8601),
   `text` (the committed transcript, capped — §8), `messageId`, and `sessionId` when non-null; or
@@ -822,6 +827,9 @@ without the other is a contract break.
   (`file`,`recordedAt`,`text`,`messageId`,`sessionId`) are mirrored a THIRD time, by the web
   answerer — `Services/ChatAPI.swift` · `multipartLastAudioBody` ↔
   `lib/audio/last-audio.ts` · `fulfillLastAudioRequest` ↔ `routes/chat-last-audio-routes.ts`.
+- **Retained-recording record** `{emissionID,recordedAt,text,sessionID?}` — device-local, so it is
+  not a wire shape, but `sessionID` and `text` both leave the device on the answer and must keep
+  meaning what §4.8 says: the session dictated into, and the transcript the message committed with.
 - **Voice-recording retention bound** 5, and the answer's transcript cap 1500 characters —
   `Storage/VoiceAudioRetentionStore.swift` · `defaultCapacity` / `Services/ChatAPI.swift` ·
   `maximumAnswerTextCharacters` ↔ `lib/audio/last-audio.ts` · `RETENTION_CAPACITY` /

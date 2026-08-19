@@ -7,6 +7,11 @@ struct RetainedVoiceAudio: Codable, Equatable, Sendable {
     var emissionID: String
     var recordedAt: Date
     var text: String
+    /// The chat session this was dictated INTO, not whichever session happens
+    /// to be on screen when an agent asks for it. The answer carries it back so
+    /// the retranscription lands on the right conversation even if the phone
+    /// has since navigated elsewhere. Nil when the tab had no session yet.
+    var sessionID: String?
 }
 
 private struct VoiceAudioRetentionManifest: Codable, Equatable {
@@ -53,6 +58,29 @@ actor VoiceAudioRetentionStore {
     private let fileManager: FileManager
     private let capacity: Int
 
+    /// Where the shared store keeps its recordings. Exposed because unpairing
+    /// deletes a box's recordings synchronously, on a non-async path — see
+    /// `forgetSynchronously`.
+    nonisolated static var defaultRootURL: URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("voice-retention", isDirectory: true)
+    }
+
+    nonisolated static func boxDirectory(boxID: UUID, in root: URL) -> URL {
+        root.appendingPathComponent(boxID.uuidString.lowercased(), isDirectory: true)
+    }
+
+    /// Delete a box's recordings without awaiting an actor.
+    ///
+    /// Unpairing runs on a synchronous path, and handing the deletion to a
+    /// detached task would let the app be suspended between dropping the
+    /// pairing and dropping the audio — leaving recordings on disk for a box
+    /// the user has removed. Deleting a directory is one filesystem call, so
+    /// there is nothing to gain by deferring it.
+    nonisolated static func forgetSynchronously(boxID: UUID) {
+        try? FileManager.default.removeItem(at: boxDirectory(boxID: boxID, in: defaultRootURL))
+    }
+
     init(
         rootURL: URL? = nil,
         fileManager: FileManager = .default,
@@ -60,8 +88,7 @@ actor VoiceAudioRetentionStore {
     ) {
         self.fileManager = fileManager
         self.capacity = capacity
-        self.rootURL = rootURL ?? fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("voice-retention", isDirectory: true)
+        self.rootURL = rootURL ?? Self.defaultRootURL
     }
 
     /// Take ownership of a recording, moving it out of wherever it was staged.
@@ -73,24 +100,42 @@ actor VoiceAudioRetentionStore {
     /// agent-visible outcome of a lost recording is the same "no recording is
     /// cached" it already handles.
     func retain(_ audio: RetainedVoiceAudio, movingFrom sourceURL: URL, boxID: UUID) {
+        let destination = audioURL(emissionID: audio.emissionID, boxID: boxID)
         do {
-            let directory = boxDirectory(boxID: boxID)
-            try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
-            let destination = audioURL(emissionID: audio.emissionID, boxID: boxID)
+            try fileManager.createDirectory(at: boxDirectory(boxID: boxID), withIntermediateDirectories: true)
             if fileManager.fileExists(atPath: destination.path) {
                 try fileManager.removeItem(at: destination)
             }
             try fileManager.moveItem(at: sourceURL, to: destination)
             var entries = load(boxID: boxID).filter { $0.emissionID != audio.emissionID }
             entries.append(audio)
-            try save(evicting(entries, boxID: boxID), boxID: boxID)
+            let (kept, evicted) = overCapacity(entries)
+            // Save FIRST, delete the evicted bytes after. The other order can
+            // fail between the two and leave the manifest naming audio that is
+            // already gone.
+            try save(kept, boxID: boxID)
+            for entry in evicted {
+                try? fileManager.removeItem(at: audioURL(emissionID: entry.emissionID, boxID: boxID))
+            }
         } catch {
             BoxLog.error(
                 "voice retention failed for emission \(audio.emissionID): \(error.localizedDescription)",
                 category: .composer
             )
+            // Both ends: the source if the move never happened, the destination
+            // if it did and the manifest save is what failed. Either one left
+            // behind is bytes no manifest will ever name again.
             try? fileManager.removeItem(at: sourceURL)
+            try? fileManager.removeItem(at: destination)
         }
+    }
+
+    /// Forget one recording — used when a send is discarded or pulled back into
+    /// the composer, so audio does not outlive the message it belongs to.
+    func forget(emissionID: String, boxID: UUID) {
+        let remaining = load(boxID: boxID).filter { $0.emissionID != emissionID }
+        try? save(remaining, boxID: boxID)
+        try? fileManager.removeItem(at: audioURL(emissionID: emissionID, boxID: boxID))
     }
 
     /// Replace a retained recording's transcript, leaving the bytes alone.
@@ -123,7 +168,7 @@ actor VoiceAudioRetentionStore {
         return (entry, url)
     }
 
-    /// Drop every recording for a box — used when the box is unpaired.
+    /// Drop every recording for a box.
     func forget(boxID: UUID) {
         try? fileManager.removeItem(at: boxDirectory(boxID: boxID))
     }
@@ -133,10 +178,12 @@ actor VoiceAudioRetentionStore {
         load(boxID: boxID).count
     }
 
-    /// Trim to `capacity`, deleting the evicted recordings' bytes. Ordering is
-    /// by `recordedAt`, so a recording staged for a slow HQ pass and retained
-    /// late still sorts by when it was actually spoken.
-    private func evicting(_ entries: [RetainedVoiceAudio], boxID: UUID) -> [RetainedVoiceAudio] {
+    /// Split into the `capacity` most recent and the ones falling off the end.
+    /// Ordering is by `recordedAt`, so a recording staged for a slow HQ pass and
+    /// retained late still sorts by when it was actually spoken.
+    private func overCapacity(
+        _ entries: [RetainedVoiceAudio]
+    ) -> (kept: [RetainedVoiceAudio], evicted: [RetainedVoiceAudio]) {
         let sorted = entries.sorted { first, second in
             if first.recordedAt == second.recordedAt {
                 return first.emissionID < second.emissionID
@@ -144,13 +191,9 @@ actor VoiceAudioRetentionStore {
             return first.recordedAt < second.recordedAt
         }
         guard sorted.count > capacity else {
-            return sorted
+            return (sorted, [])
         }
-        let evicted = sorted.prefix(sorted.count - capacity)
-        for entry in evicted {
-            try? fileManager.removeItem(at: audioURL(emissionID: entry.emissionID, boxID: boxID))
-        }
-        return Array(sorted.suffix(capacity))
+        return (Array(sorted.suffix(capacity)), Array(sorted.prefix(sorted.count - capacity)))
     }
 
     /// A corrupt or foreign-box manifest reads as empty rather than throwing:
@@ -175,7 +218,7 @@ actor VoiceAudioRetentionStore {
     }
 
     private func boxDirectory(boxID: UUID) -> URL {
-        rootURL.appendingPathComponent(boxID.uuidString.lowercased(), isDirectory: true)
+        Self.boxDirectory(boxID: boxID, in: rootURL)
     }
 
     private func manifestURL(boxID: UUID) -> URL {

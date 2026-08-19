@@ -18,7 +18,7 @@ final class VoiceAudioRetentionTests: XCTestCase {
         let source = try writeRecording("hello")
 
         await store.retain(
-            RetainedVoiceAudio(emissionID: "EMISSION-1", recordedAt: Date(timeIntervalSince1970: 10), text: "hello"),
+            RetainedVoiceAudio(emissionID: "EMISSION-1", recordedAt: Date(timeIntervalSince1970: 10), text: "hello", sessionID: nil),
             movingFrom: source,
             boxID: boxID
         )
@@ -48,7 +48,8 @@ final class VoiceAudioRetentionTests: XCTestCase {
                 RetainedVoiceAudio(
                     emissionID: "EMISSION-\(index)",
                     recordedAt: Date(timeIntervalSince1970: TimeInterval(index)),
-                    text: "message \(index)"
+                    text: "message \(index)",
+                    sessionID: nil
                 ),
                 movingFrom: try writeRecording("audio \(index)"),
                 boxID: boxID
@@ -71,7 +72,7 @@ final class VoiceAudioRetentionTests: XCTestCase {
         let dictatedInto = UUID()
         let otherBox = UUID()
         await store.retain(
-            RetainedVoiceAudio(emissionID: "EMISSION-1", recordedAt: Date(), text: "private"),
+            RetainedVoiceAudio(emissionID: "EMISSION-1", recordedAt: Date(), text: "private", sessionID: nil),
             movingFrom: try writeRecording("private"),
             boxID: dictatedInto
         )
@@ -88,7 +89,7 @@ final class VoiceAudioRetentionTests: XCTestCase {
     func testRetentionSurvivesANewStoreOverTheSameRoot() async throws {
         let boxID = UUID()
         await makeStore().retain(
-            RetainedVoiceAudio(emissionID: "EMISSION-1", recordedAt: Date(), text: "durable"),
+            RetainedVoiceAudio(emissionID: "EMISSION-1", recordedAt: Date(), text: "durable", sessionID: nil),
             movingFrom: try writeRecording("durable"),
             boxID: boxID
         )
@@ -103,7 +104,7 @@ final class VoiceAudioRetentionTests: XCTestCase {
         let store = makeStore()
         let boxID = UUID()
         await store.retain(
-            RetainedVoiceAudio(emissionID: "EMISSION-1", recordedAt: Date(), text: "rough draft"),
+            RetainedVoiceAudio(emissionID: "EMISSION-1", recordedAt: Date(), text: "rough draft", sessionID: nil),
             movingFrom: try writeRecording("audio"),
             boxID: boxID
         )
@@ -114,11 +115,53 @@ final class VoiceAudioRetentionTests: XCTestCase {
         XCTAssertEqual(found?.audio.text, "polished transcript")
     }
 
+    /// Retention outlives delivery on purpose — that is what makes
+    /// retranscription work — but must not outlive a message the user withdrew.
+    func testForgettingOneRecordingLeavesTheRest() async throws {
+        let store = makeStore()
+        let boxID = UUID()
+        for id in ["EMISSION-1", "EMISSION-2"] {
+            await store.retain(
+                RetainedVoiceAudio(emissionID: id, recordedAt: Date(), text: id, sessionID: nil),
+                movingFrom: try writeRecording(id),
+                boxID: boxID
+            )
+        }
+
+        await store.forget(emissionID: "EMISSION-1", boxID: boxID)
+
+        let discarded = await store.retained(emissionID: "EMISSION-1", boxID: boxID)
+        let kept = await store.retained(emissionID: "EMISSION-2", boxID: boxID)
+        XCTAssertNil(discarded)
+        XCTAssertNotNil(kept)
+        let bytes = root.appendingPathComponent(boxID.uuidString.lowercased())
+            .appendingPathComponent("EMISSION-1.wav")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: bytes.path))
+    }
+
+    /// The relayed session is the fallback, not the answer, and is used when a
+    /// recording predates this field or was made before the tab had a session.
+    func testAnswerFallsBackToTheRelayedSession() async throws {
+        let transport = RecordingTransport()
+        let request = NativeLastAudioRequest(requestID: "req-1", messageID: "EMISSION-1", sessionID: "session-9")
+
+        try await ChatAPI(box: makeBox(), transport: transport).answerLastAudio(
+            request,
+            retained: (
+                audio: RetainedVoiceAudio(emissionID: "EMISSION-1", recordedAt: Date(), text: "hi", sessionID: nil),
+                url: try writeRecording("bytes")
+            )
+        )
+
+        let body = try XCTUnwrap(transport.request?.httpBody.flatMap { String(data: $0, encoding: .utf8) })
+        XCTAssertTrue(body.contains("name=\"sessionId\"\r\n\r\nsession-9"))
+    }
+
     func testForgettingABoxDropsItsRecordings() async throws {
         let store = makeStore()
         let boxID = UUID()
         await store.retain(
-            RetainedVoiceAudio(emissionID: "EMISSION-1", recordedAt: Date(), text: "gone"),
+            RetainedVoiceAudio(emissionID: "EMISSION-1", recordedAt: Date(), text: "gone", sessionID: nil),
             movingFrom: try writeRecording("gone"),
             boxID: boxID
         )
@@ -142,7 +185,8 @@ final class VoiceAudioRetentionTests: XCTestCase {
                 audio: RetainedVoiceAudio(
                     emissionID: "EMISSION-1",
                     recordedAt: Date(timeIntervalSince1970: 0),
-                    text: "what was said"
+                    text: "what was said",
+                    sessionID: "session-dictated-into"
                 ),
                 url: audio
             )
@@ -155,7 +199,10 @@ final class VoiceAudioRetentionTests: XCTestCase {
         // Load-bearing: the server discards any answer that does not echo the
         // id it asked for, silently rather than as an error.
         XCTAssertTrue(body.contains("name=\"messageId\"\r\n\r\nEMISSION-1"))
-        XCTAssertTrue(body.contains("name=\"sessionId\"\r\n\r\nsession-9"))
+        // The session the recording was DICTATED into wins over the relaying
+        // tab's current one: the phone may have navigated since.
+        XCTAssertTrue(body.contains("name=\"sessionId\"\r\n\r\nsession-dictated-into"))
+        XCTAssertFalse(body.contains("session-9"))
         XCTAssertTrue(body.contains("name=\"text\"\r\n\r\nwhat was said"))
         XCTAssertTrue(body.contains("1970-01-01T00:00:00Z"))
         XCTAssertTrue(body.contains("wav bytes"))
@@ -170,7 +217,7 @@ final class VoiceAudioRetentionTests: XCTestCase {
         try await ChatAPI(box: makeBox(), transport: transport).answerLastAudio(
             request,
             retained: (
-                audio: RetainedVoiceAudio(emissionID: "EMISSION-1", recordedAt: Date(), text: "hi"),
+                audio: RetainedVoiceAudio(emissionID: "EMISSION-1", recordedAt: Date(), text: "hi", sessionID: nil),
                 url: try writeRecording("bytes")
             )
         )

@@ -14,9 +14,11 @@
  * channel. That keeps the audio out of the webview entirely rather than
  * base64-ing megabytes of WAV through a script message.
  *
- * `sessionId` is the relaying tab's own chat session id, passed through for the
- * shell to echo back on its answer — the phone has no session identity of its
- * own. Null before the tab has been assigned one.
+ * `sessionId` is the relaying tab's own chat session id. The shell echoes it
+ * back only as a fallback: it stores the session each recording was dictated
+ * into and prefers that, since the echoed session is what addresses the
+ * retranscription report and the phone may have navigated to another
+ * conversation since. Null before this tab has been assigned one.
  *
  * Contract: docs/mobile-contract.md §4.8. Fixture family: `last-audio-request`.
  */

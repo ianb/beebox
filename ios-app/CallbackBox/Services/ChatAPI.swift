@@ -221,6 +221,18 @@ struct ChatAPI: Sendable {
             )
             throw ChatAPIError.server(message)
         }
+        // The one drift this path can suffer silently: a `200 {ok:false,
+        // ignored:true}` means the server threw the answer away because the
+        // echoed messageId did not match what it asked for. Nothing else
+        // reports it — the agent just waits out to "no recording is cached" —
+        // so name it here or the phone looks healthy while answering nothing.
+        if let outcome = try? JSONDecoder().decode(LastAudioAnswerOutcome.self, from: data),
+           outcome.ignored == true {
+            BoxLog.error(
+                "last-audio answer was ignored by the box (echoed messageId did not match the request)",
+                category: .composer
+            )
+        }
     }
 
     func uploadFile(
@@ -396,7 +408,10 @@ struct ChatAPI: Sendable {
             boundary: boundary
         )
         body.appendMultipartField(name: "messageId", value: request.messageID, boundary: boundary)
-        if let sessionID = request.sessionID {
+        // The session the recording was dictated into wins over the relaying
+        // tab's current one: the retranscription report is addressed with this,
+        // and the phone may have navigated to another conversation since.
+        if let sessionID = retained.audio.sessionID ?? request.sessionID {
             body.appendMultipartField(name: "sessionId", value: sessionID, boundary: boundary)
         }
         body.appendMultipartFile(
@@ -425,6 +440,11 @@ private struct DefaultSessionResult: Decodable {
 
 private struct ErrorBody: Decodable {
     var error: String?
+}
+
+/// The non-error half of an answer response: `{ok, ignored?}`.
+private struct LastAudioAnswerOutcome: Decodable {
+    var ignored: Bool?
 }
 
 private extension Data {

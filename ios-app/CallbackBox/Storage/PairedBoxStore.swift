@@ -198,15 +198,12 @@ final class PairedBoxStore: ObservableObject {
 
         try deleteTokensFirst(for: boxesToRemove)
         // Retained voice recordings belong to the box they were dictated into,
-        // so unpairing takes them with it. Fire-and-forget: the tokens are
-        // already gone by here, and a leftover recording must not fail the
-        // unpair — it is unreachable either way, since answering requires a
-        // paired box.
-        let retentionIDs = boxesToRemove.map(\.id)
-        Task {
-            for boxID in retentionIDs {
-                await VoiceAudioRetentionStore.shared.forget(boxID: boxID)
-            }
+        // so unpairing takes them with it — synchronously, before the pairing
+        // itself is dropped. Deferring it to a task would let the app be
+        // suspended in between, leaving audio on disk for a box the user has
+        // just removed.
+        for box in boxesToRemove {
+            VoiceAudioRetentionStore.forgetSynchronously(boxID: box.id)
         }
         let removing = Set(boxesToRemove.map(\.id))
         boxes.removeAll { removing.contains($0.id) }

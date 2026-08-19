@@ -597,7 +597,8 @@ struct NativeComposerView: View {
                         RetainedVoiceAudio(
                             emissionID: preparation.id.uuidString,
                             recordedAt: preparation.createdAt,
-                            text: intent.processedTranscript
+                            text: intent.processedTranscript,
+                            sessionID: sendingBox.sessionID
                         ),
                         movingFrom: audioURL,
                         boxID: sendingBox.id
@@ -688,6 +689,7 @@ struct NativeComposerView: View {
     ) {
         let snapshot = draftStore.draft
         let sendingBoxID = box.id
+        let sendingSessionID = box.sessionID
         isPreparingSend = true
         statusText = "Preparing attachments..."
         Task {
@@ -704,7 +706,11 @@ struct NativeComposerView: View {
                         RetainedVoiceAudio(
                             emissionID: emission.id.uuidString,
                             recordedAt: emission.createdAt,
-                            text: text
+                            text: text,
+                            // The session being composed into, captured now:
+                            // the phone may have navigated elsewhere by the
+                            // time an agent asks for this recording.
+                            sessionID: sendingSessionID
                         ),
                         movingFrom: audioURL,
                         boxID: sendingBoxID
