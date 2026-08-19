@@ -155,8 +155,19 @@ const LOCK_FILE_NAME = "callback-box-index.lock";
  * else uses `boxRoot` — so keying the lock on the caller's directory string
  * would hand one index two locks. Resolving to the git directory collapses
  * them.
+ *
+ * The cache holds the in-flight PROMISE, not just the settled value, so
+ * concurrent first callers on one repository share a single `git rev-parse`
+ * instead of each spawning their own. That is what makes the queue's arrival
+ * order the callers' own order: with a value-only cache every one of them
+ * missed, and which reached {@link enqueue} first was decided by which
+ * subprocess happened to exit first — reordering the queue relative to the
+ * order the callers were created (reproduced ~1 round in 30, and far more
+ * often on a loaded machine; it is why `git-lock.doctest.md`'s FIFO case
+ * flaked). Sharing one promise means every caller resumes from the same
+ * `await` in the order it attached.
  */
-const lockPathCache = new Map<string, string>();
+const lockPathCache = new Map<string, Promise<string | null>>();
 
 /** Lock paths held by the current async context. Detects nesting; carries no
  *  other state. */
@@ -171,25 +182,34 @@ const chains = new Map<string, Promise<void>>();
  * in one (there is then no index to serialize on, and git itself will report
  * whatever is actually wrong).
  */
-async function resolveLockPath(dir: string): Promise<string | null> {
+function resolveLockPath(dir: string): Promise<string | null> {
   const key = path.resolve(dir);
   const cached = lockPathCache.get(key);
   if (cached !== undefined) return cached;
 
+  const pending = computeLockPath(key);
+  lockPathCache.set(key, pending);
+  // A null result is deliberately NOT cached: `initRepo` creates a repository
+  // where none was, and the commit that follows must find the lock. Evicting
+  // after the fact (rather than not inserting) is what lets concurrent callers
+  // share the one in-flight resolution.
+  void pending.then((lockPath) => {
+    if (lockPath === null && lockPathCache.get(key) === pending) lockPathCache.delete(key);
+  });
+  return pending;
+}
+
+/** The resolution itself. Never rejects: "not a repository" is a null. */
+async function computeLockPath(key: string): Promise<string | null> {
   let gitDir: string;
   try {
     gitDir = (await simpleGit(key).revparse(["--absolute-git-dir"])).trim();
   } catch (_e) {
-    // Not a repository, or the directory does not exist. Deliberately NOT
-    // cached: `initRepo` creates a repository where none was, and the commit
-    // that follows must find the lock.
+    // Not a repository, or the directory does not exist.
     return null;
   }
   if (gitDir === "") return null;
-
-  const lockPath = path.join(gitDir, LOCK_FILE_NAME);
-  lockPathCache.set(key, lockPath);
-  return lockPath;
+  return path.join(gitDir, LOCK_FILE_NAME);
 }
 
 /** Run `task` after everything already queued for `lockPath`. */
