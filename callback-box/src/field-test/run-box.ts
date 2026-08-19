@@ -97,6 +97,15 @@ export async function createFieldBox(runDir: string): Promise<FieldBox> {
     cwd: runDir,
     reject: false,
     all: true,
+    // Pin the box's git hooks to THIS checkout's `cb`. Without the override,
+    // `resolveCbBin()` deliberately routes a linked worktree's hooks at the
+    // MAIN checkout's `cb` (worktrees are ephemeral; a stamped path that
+    // vanishes silently disables validation) — but a field box is created by
+    // this checkout to exercise this checkout, and init's own baseline commit
+    // runs the hook immediately. A `main` that predates a flag the new hook
+    // uses would fail that commit and take the whole run down with it.
+    env: { CB_HOOK_BIN: cbBinary() },
+    extendEnv: true,
   });
   if (result.exitCode !== 0) {
     // `all` interleaves stdout+stderr: `cb init` reports its failures on both

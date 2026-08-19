@@ -32,6 +32,7 @@ import {
   GitIndexLockError,
   isIndexLockError,
   isNothingToCommitError,
+  CommitDidNotLandError,
   unstageOversizedBlobs,
   LOG_FORMAT,
 } from "./git-internal.js";
@@ -46,7 +47,7 @@ export {
   TOUCHPOINT_TRAILER_KEYS,
   FEEDBACK_TRAILER_KEYS,
 } from "./git-trailers.js";
-export { isNothingToCommitError, isContendedFailure, GitIndexLockError } from "./git-internal.js";
+export { isNothingToCommitError, isContendedFailure, GitIndexLockError, CommitDidNotLandError } from "./git-internal.js";
 export { withBoxGitLock } from "./git-lock.js";
 export { getLogPaginated, getTrailerFacets } from "./git-log.js";
 export type {
@@ -183,11 +184,23 @@ async function withIndexLockRetry<T>(op: () => Promise<T>): Promise<T> {
  * Run an index mutation that creates a commit, under the box git lock, and
  * return the resulting HEAD. HEAD is read INSIDE the lock: read outside it, a
  * queued writer's commit could land first and we would report its hash as ours.
+ *
+ * **HEAD is compared, not just read.** simple-git's `.commit()` does NOT reject
+ * when a hook rejects the commit — it resolves with an empty result
+ * (`commit: ""`), and this function would then return the PREVIOUS head as
+ * though it were the new commit. Every caller reads that as success. Verified
+ * against simple-git with a `pre-commit` hook that exits 1; boxes run hooks on
+ * every commit, so this is the ordinary failure path, not an exotic one.
  */
 async function commitAndReadHead(boxRoot: string, op: () => Promise<unknown>): Promise<string> {
+  const head = async (): Promise<string | null> =>
+    (await hasCommits(boxRoot)) ? (await simpleGit(boxRoot).revparse(["HEAD"])).trim() : null;
   return withBoxGitLock(boxRoot, async () => {
+    const before = await head();
     await withIndexLockRetry(op);
-    return (await simpleGit(boxRoot).revparse(["HEAD"])).trim();
+    const after = await head();
+    if (after === null || after === before) throw new CommitDidNotLandError(boxRoot);
+    return after;
   });
 }
 
@@ -424,14 +437,6 @@ export async function getDiff(
 }
 
 /**
- * Get the current branch name.
- */
-export async function getCurrentBranch(boxRoot: string): Promise<string> {
-  const branch = await simpleGit(boxRoot).branch();
-  return branch.current;
-}
-
-/**
  * Check if there are any commits in the repository.
  */
 export async function hasCommits(boxRoot: string): Promise<boolean> {
@@ -490,35 +495,7 @@ export async function pushToRemote(boxRoot: string): Promise<PushResult> {
   }
 }
 
-/**
- * Create and switch to a new branch.
- */
-export async function createBranch(boxRoot: string, name: string): Promise<void> {
-  // `checkout` rewrites the index and the working tree, so it contends with
-  // every commit — locked like the other index mutators.
-  await withBoxGitLock(boxRoot, () => simpleGit(boxRoot).checkoutLocalBranch(name));
-}
 
-/**
- * Switch to an existing branch.
- */
-export async function checkoutBranch(boxRoot: string, name: string): Promise<void> {
-  await withBoxGitLock(boxRoot, () => simpleGit(boxRoot).checkout(name));
-}
-
-/**
- * Create a lightweight tag.
- */
-export async function createTag(boxRoot: string, name: string): Promise<void> {
-  await simpleGit(boxRoot).tag([name]);
-}
-
-/**
- * Delete a tag.
- */
-export async function deleteTag(boxRoot: string, name: string): Promise<void> {
-  await simpleGit(boxRoot).tag(["-d", name]);
-}
 
 /**
  * Get the diff for a specific commit.

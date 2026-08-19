@@ -4,6 +4,8 @@ How box data migrations work, how to apply them, and how to write new ones.
 
 A migration is a one-shot transformation of card data on disk — schema renames, field strips, layout flips, refactors. The system tracks which migrations a box has had applied so future runs only do the missing work.
 
+**Box configuration counts too.** `annex-config-2026-08` re-applies `annex.largefiles` and `.git/info/attributes` from the current renderings; it transforms no cards and leaves the working tree untouched. Config written once at `cb init` goes stale whenever the code's idea of it changes, and a migration is the one mechanism that records per box whether the convergence happened. The catch is in the name: a manifest key runs once, so **the next rendering change needs a new dated entry** — forgetting to add one is silent. Whether something should re-apply box configuration without being asked is open (`issues/bugs/2026-08-18-stale-annex-largefiles-never-reapplies.md`).
+
 ## `cb migrate` is the entry point
 
 Each box has `config/migrations.jsonl` — append-only JSONL, one `{name, applied-at}` per line — recording which migrations it's seen. `cb migrate` compares against the canonical ordered list in `src/core/migrations.ts` and runs anything missing in order, appending an entry after each success.
@@ -21,6 +23,43 @@ cb migrate --mark-applied bill  # record ONE migration as applied without runnin
 `--mark-applied <name>` is the single-entry escape hatch: it records one migration as applied **without running it**, for a box already in that migration's post-state that never got the manifest line. The motivating case is a **retired migrator** — e.g. `bill` (the cardworks XML→frontmatter conversion) always exits non-zero now that the `cardworks` parser is gone, so a box already in frontmatter shape but missing the `bill` entry would halt `cb migrate --apply` on it forever. Marking it applied unblocks the sweep. It refuses an unknown name or a manifest-less box (use `--mark-all-applied` for the latter), and is an idempotent no-op if the migration is already recorded. Like the other write paths it leaves the manifest edit uncommitted for review.
 
 If a migration fails, the manifest is **not** updated for the failing entry and subsequent migrations are not attempted. Fix the underlying problem and re-run; the loop picks up where it stopped.
+
+## The deploy sweep runs them automatically
+
+`deploy/deploy.sh` runs `cb migrate --sweep` for every box on the server after
+shipping new engine code, in the at-rest window between `cb-wait-quiet` and the
+service restart. A box with nothing pending prints nothing; anything else prints
+one line into the deploy log. **The sweep never fails the deploy** — a box that
+needs a human is a box to look at, not a reason to abandon a shipped release.
+
+`--sweep` is deliberately narrower than `--apply`, because nobody is watching:
+
+| | `cb migrate --apply` | `cb migrate --sweep` |
+|---|---|---|
+| dirty tree | refuses | skips the box, reports, retries next deploy |
+| procedure-kind (agent) migrations | runs them | stops there and reports |
+| provisioning | runs `cb init` first | does not |
+| result | left uncommitted for review | one commit per migration, `Created-By: migration-sweep` |
+
+The commit is the notable difference. Leaving changes uncommitted is right for a
+human at a terminal and wrong unattended: a dirty box is exactly what the next
+sweep skips, so one un-reviewed migration would silently stop every later one.
+The manifest entry and the changes it describes land in the **same** commit, so
+a box can never claim a migration whose effects are not in its history. When the
+commit fails — the box's own pre-commit hook rejecting a card a migrator
+produced, say — the manifest entry is rolled back and the migrator's changes are
+left in the tree for review.
+
+The whole sweep runs under the box git lock (`withBoxGitLock`), because
+`stageAll` is `git add -A`: without it, a connector or wakeup committing between
+the clean check and the commit would have its files swept into a
+`migration-sweep` commit. That guarantee is **cooperative** — a box agent
+shelling out to raw `git` is outside it, which is why the deploy runs the sweep
+in the at-rest window rather than at an arbitrary moment.
+
+A box left behind — dirty tree, pending procedure migration — is reported by
+`cb health` as `box-migrations` (warning), so the drift is visible after the
+deploy log scrolls away.
 
 ## Writing a new migration
 

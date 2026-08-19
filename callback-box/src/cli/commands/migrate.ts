@@ -15,7 +15,6 @@ import * as path from "node:path";
 import { spawn } from "node:child_process";
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths.js";
-import { isRecord } from "../../lib/is-record.js";
 import { detectBoxTarget } from "../../core/box/package.js";
 import {
   MIGRATIONS,
@@ -27,7 +26,16 @@ import {
 import { parseProcedureDefinition } from "../../schemas/procedure.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { getStatus, stageAll, commit } from "../../lib/git.js";
-import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../lib/error-guards.js";
+import {
+  appendManifestEntry,
+  computePending,
+  readManifest,
+  runMigrationScript,
+  writeManifest,
+} from "../../core/migration-run.js";
+import { sweepMigrations, type SweepResult, type SweptMigration } from "../../core/migration-sweep.js";
+import { assertNever } from "../../lib/invariant.js";
 
 const CALLBACK_BOX_ROOT = PACKAGE_ROOT;
 const CB_BIN = path.join(CALLBACK_BOX_ROOT, "bin", "cb");
@@ -43,56 +51,6 @@ class ProcedureGateError extends Error {
     );
     this.name = "ProcedureGateError";
   }
-}
-
-class ManifestReadError extends Error {
-  readonly manifestPath: string;
-  constructor(manifestPath: string, cause: unknown) {
-    super(`failed to read migration manifest: ${manifestPath}`, { cause });
-    this.name = "ManifestReadError";
-    this.manifestPath = manifestPath;
-  }
-}
-
-/** A manifest line is a valid {@link ManifestEntry} with string `name` + `applied-at`. */
-function isManifestEntry(value: unknown): value is ManifestEntry {
-  return isRecord(value) && typeof value["name"] === "string" && typeof value["applied-at"] === "string";
-}
-
-async function readManifest(boxRoot: string): Promise<ManifestEntry[] | null> {
-  const abs = path.join(boxRoot, MANIFEST_PATH);
-  try {
-    const text = await fs.readFile(abs, "utf-8");
-    const entries: ManifestEntry[] = [];
-    for (const line of text.split("\n")) {
-      const trimmed = line.trim();
-      if (trimmed === "") continue;
-      const parsed: unknown = JSON.parse(trimmed);
-      if (isManifestEntry(parsed)) entries.push(parsed);
-    }
-    return entries;
-  } catch (e) {
-    if (errnoCode(e) === "ENOENT") return null;
-    throw new ManifestReadError(abs, e);
-  }
-}
-
-async function appendManifestEntry(boxRoot: string, entry: ManifestEntry): Promise<void> {
-  const abs = path.join(boxRoot, MANIFEST_PATH);
-  await fs.mkdir(path.dirname(abs), { recursive: true });
-  await fs.appendFile(abs, `${JSON.stringify(entry)}\n`);
-}
-
-async function writeManifest(boxRoot: string, entries: ManifestEntry[]): Promise<void> {
-  const abs = path.join(boxRoot, MANIFEST_PATH);
-  await fs.mkdir(path.dirname(abs), { recursive: true });
-  const text = entries.map((e) => JSON.stringify(e)).join("\n") + (entries.length > 0 ? "\n" : "");
-  await fs.writeFile(abs, text);
-}
-
-function computePending(applied: ManifestEntry[]): Migration[] {
-  const seen = new Set(applied.map((e) => e.name));
-  return MIGRATIONS.filter((m) => !seen.has(m.name));
 }
 
 export type MarkAppliedResult =
@@ -117,19 +75,6 @@ export async function markMigrationApplied(args: { boxRoot: string; name: string
   if (existing.some((e) => e.name === args.name)) return { status: "already-applied" };
   await appendManifestEntry(args.boxRoot, { name: args.name, "applied-at": new Date().toISOString() });
   return { status: "marked" };
-}
-
-function runScript(args: { script: string; boxRoot: string }): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const scriptPath = path.join(CALLBACK_BOX_ROOT, args.script);
-    const child = spawn(
-      "npx",
-      ["tsx", scriptPath, args.boxRoot, "--apply"],
-      { cwd: CALLBACK_BOX_ROOT, stdio: "inherit" }
-    );
-    child.on("error", reject);
-    child.on("close", (code) => resolve(code ?? 1));
-  });
 }
 
 /**
@@ -191,6 +136,53 @@ interface MigrateOptions {
   status?: boolean;
   markAllApplied?: boolean;
   markApplied?: string;
+  sweep?: boolean;
+}
+
+/**
+ * `--sweep`: report the outcome and pick an exit code.
+ *
+ * Quiet on the ordinary path — a box with nothing pending prints nothing, since
+ * this runs across every box on every deploy and routine success is noise. The
+ * exit code distinguishes "a human needs to look" (non-zero) from "converged or
+ * legitimately nothing to do" (zero), so `deploy.sh` can report without failing
+ * the deploy over one box.
+ */
+async function runSweep(boxRoot: string): Promise<number> {
+  const result: SweepResult = await sweepMigrations({ boxRoot });
+  switch (result.status) {
+    case "current":
+      return 0;
+    case "no-manifest":
+      console.warn(`No migration manifest at ${MANIFEST_PATH}; not migrating. Seed it with \`cb migrate --mark-all-applied\` after confirming the box is up to date.`);
+      return 1;
+    case "skipped-dirty":
+      console.warn(`Working tree is not clean; skipped ${String(result.pending.length)} pending migration(s): ${result.pending.join(", ")}. Commit or stash, and the next deploy will apply them.`);
+      return 1;
+    case "needs-procedure":
+      reportApplied(result.applied);
+      console.warn(`Stopped at "${result.procedure}": procedure-kind migrations drive an agent and are not run unattended. Apply it with \`cb migrate --apply\`.`);
+      return 1;
+    case "failed":
+      reportApplied(result.applied);
+      console.error(`Migration "${result.failed}" failed hard (exit ${String(result.exitCode)}). Its manifest entry was not written; later migrations did not run.`);
+      return 1;
+    case "commit-failed":
+      reportApplied(result.applied);
+      console.error(`Migration "${result.failed}" ran but could not be committed (${result.error}). Its manifest entry was rolled back and its changes are left in the working tree — review them, commit or discard, and the next sweep retries.`);
+      return 1;
+    case "applied":
+      reportApplied(result.applied);
+      return 0;
+    default:
+      return assertNever(result);
+  }
+}
+
+function reportApplied(applied: SweptMigration[]): void {
+  for (const m of applied) {
+    console.log(`Applied migration: ${m.name}${m.partial ? " (some cards could not be converted — see above)" : ""}`);
+  }
 }
 
 export const migrateCommand = new Command("migrate")
@@ -199,6 +191,7 @@ export const migrateCommand = new Command("migrate")
   .option("--status", "Show applied + pending lists (default when no flag given)")
   .option("--mark-all-applied", "Seed the manifest as if every known migration ran. Use only for legacy boxes that were already fully migrated before this command existed; new boxes get their manifest seeded automatically by `cb init`.")
   .option("--mark-applied <name>", "Record a single migration as applied WITHOUT running it. For a box already in that migration's post-state (e.g. a retired migrator) that never got the manifest entry. Refuses an unknown name or a manifest-less box.")
+  .option("--sweep", "Unattended mode, for `deploy.sh`: apply pending SCRIPT migrations and commit each one. Skips a dirty box, stops at a procedure-kind migration, prints nothing when the box is already current. Exits non-zero only when something needs a human.")
   .action(async (options: MigrateOptions) => {
     // `topPath` is the stable top-level directory `requireBoxRoot` found —
     // it never moves. `boxRoot` (the operational root) is re-resolved from it
@@ -208,6 +201,10 @@ export const migrateCommand = new Command("migrate")
     // moves the operational root.
     const topPath = await requireBoxRoot();
     let boxRoot = topPath;
+
+    if (options.sweep === true) {
+      process.exit(await runSweep(boxRoot));
+    }
 
     if (options.markApplied !== undefined) {
       const name = options.markApplied;
@@ -329,7 +326,7 @@ export const migrateCommand = new Command("migrate")
         code = await runProcedure({ procedure: m.procedure, boxRoot });
       } else {
         console.log(`=== ${m.name} (${m.script}) ===`);
-        code = await runScript({ script: m.script, boxRoot });
+        code = await runMigrationScript({ script: m.script, boxRoot });
       }
       if (code !== 0 && code !== 2) {
         console.error(`\nMigration "${m.name}" failed hard (exit code ${String(code)}). Manifest not updated for this entry. Subsequent migrations not run.`);

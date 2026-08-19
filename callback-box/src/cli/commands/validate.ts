@@ -2,9 +2,7 @@
  * cb validate - Validate cards and markdown against schemas/rules
  */
 
-import { execFile } from "node:child_process";
 import * as path from "node:path";
-import { promisify } from "node:util";
 import { Command } from "commander";
 import { formatLintResults, countBrokenRefs, type LintSummary } from "../../cards/index.js";
 import {
@@ -15,6 +13,8 @@ import {
   type MarkdownLintSummary,
 } from "./validate-markdown.js";
 import { requireBoxRoot, isCardFile, isMarkdownFile, isTrashedCard, isViewFile } from "../../lib/paths.js";
+import { listStagedCards } from "../../lib/staged-files.js";
+import { runPreCommitChecks, rejectUnsupportedPreCommitScope } from "./validate-pre-commit.js";
 import { collectDossierCanonicalWarnings, collectViewCanonicalWarnings } from "../../core/canonical-refs.js";
 import {
   canonicalCounts,
@@ -36,8 +36,6 @@ import type { LoadCardContext } from "../../core/card-io.js";
 import { getBoxShape, findLegacySchemaFiles, describeLegacySchemaFiles } from "../../lib/box-shape.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
-const execFileP = promisify(execFile);
-
 /**
  * Whether to emit ANSI color. `cb` run interactively by a human is the rare
  * case where color matters; the common case is output being piped or pasted,
@@ -46,23 +44,6 @@ const execFileP = promisify(execFile);
  */
 export function useColor(): boolean {
   return process.stdout.isTTY === true && process.env.NO_COLOR === undefined;
-}
-
-async function listStagedCards(boxRoot: string): Promise<string[]> {
-  // `--relative` reports paths relative to cwd (and scoped to it) instead of
-  // the repo root — needed because a v2 box's `boxRoot` (`content/`) isn't
-  // the repo root (the package root is; see "THE TRAP" in
-  // `../../core/install-validation-hooks.js`). A no-op for a legacy box,
-  // where the two already coincide.
-  const { stdout } = await execFileP(
-    "git",
-    ["diff", "--cached", "--name-only", "--diff-filter=ACMR", "--relative"],
-    { cwd: boxRoot, maxBuffer: 10 * 1024 * 1024 }
-  );
-  return stdout
-    .split("\n")
-    .filter((line) => line.endsWith(".card") && !isTrashedCard(line))
-    .map((rel) => path.join(boxRoot, rel));
 }
 
 function formatAttachLintErrors(errors: AttachLintError[], { colors }: { colors: boolean }): string {
@@ -157,6 +138,19 @@ async function runUrlCheck(
     console.log(text ?? `Checked ${String(report.checked)} external URL(s); none broken.`);
   }
   process.exit(report.broken.length > 0 ? 1 : 0);
+}
+
+/**
+ * `cb validate --pre-commit`: the per-box pre-commit hook's single invocation.
+ * Blocking findings go to stdout, the warn-only link scan to stderr, and only
+ * the former decides the exit code. Always exits the process.
+ */
+async function runPreCommit(): Promise<never> {
+  const boxRoot = await requireBoxRoot();
+  const outcome = await runPreCommitChecks(boxRoot, { colors: useColor() });
+  if (outcome.report !== "") console.log(outcome.report);
+  if (outcome.linkWarnings !== null) process.stderr.write(`${outcome.linkWarnings}\n`);
+  process.exit(outcome.errorCount > 0 ? 1 : 0);
 }
 
 interface CollectArgs {
@@ -318,6 +312,7 @@ export const validateCommand = new Command("validate")
   .option("--all", "Validate all files in the box (default when no path given)")
   .option("--staged", "Validate the cards currently staged in git")
   .option("--hook", "Hook mode: read Claude Code PostToolUse JSON payload from stdin, validate the touched card. Errors go to stderr with exit code 2 so the agent sees feedback; non-card paths exit 0 silently.")
+  .option("--pre-commit", "The whole commit-time suite in one process: staged card/markdown validation (blocking), a box-wide link scan (warn-only, and only when the staged diff deletes or renames something), and the index-based unlisted-binary guard (blocking). Used by the per-box pre-commit hook; not combinable with another scope.")
   .option("--links", "Warn-only box-wide broken-link scan (link rules only). Always exits 0 — used by the pre-commit hook to surface dangling links in unstaged referrers without blocking the commit.")
   .option("--urls", "Check EXTERNAL http(s) URLs that are new since the base version (HEAD by default). Network pass — never run in the sync hooks. Pair with --all (full box sweep), --staged, or --urls-since <ref>.")
   .option("--urls-since <ref>", "With --urls: treat URLs absent at <ref> as new (used by the non-blocking post-commit trigger, e.g. --urls-since HEAD~1).")
@@ -328,11 +323,16 @@ export const validateCommand = new Command("validate")
   .action(
     async (
       targetPaths: string[],
-      options: { all?: boolean; staged?: boolean; hook?: boolean; links?: boolean; urls?: boolean; urlsSince?: string; canonical?: boolean; fix?: boolean; json?: boolean; committed?: boolean }
+      options: { all?: boolean; staged?: boolean; hook?: boolean; links?: boolean; preCommit?: boolean; urls?: boolean; urlsSince?: string; canonical?: boolean; fix?: boolean; json?: boolean; committed?: boolean }
     ) => {
       try {
         const canonical = options.canonical === true;
         rejectUnsupportedCanonicalScope({ canonical, options, targetPaths });
+        rejectUnsupportedPreCommitScope({ preCommit: options.preCommit === true, options, targetPaths });
+
+        if (options.preCommit === true) {
+          await runPreCommit();
+        }
 
         if (canonical && options.fix === true) {
           await runCanonicalFix({ json: options.json === true });
