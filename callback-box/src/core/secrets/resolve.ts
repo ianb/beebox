@@ -22,7 +22,7 @@ import { boxSlug } from "../../lib/box-slug.js";
 import { invariant } from "../../lib/invariant.js";
 import { err, ok, type Result } from "../../lib/result.js";
 import { getBoxTimeISO } from "../../lib/time.js";
-import { appendSecretAccessEvent, stampSecretLastUsed } from "./access-log.js";
+import { appendSecretAccessEvent, stampSecretUse } from "./access-log.js";
 import {
   DanglingSecretGrantError,
   EmptySecretSlotError,
@@ -115,6 +115,6 @@ export async function resolveSecret(opts: ResolveSecretOptions): Promise<Result<
   }
 
   await appendSecretAccessEvent({ ts, box: slug, secret: name, purpose, event: "resolve" });
-  await stampSecretLastUsed({ slug, name, nowIso: ts });
+  await stampSecretUse({ slug, name, nowIso: ts, purpose });
   return ok({ value: entry.value, suspect: entry.verified?.status === "failed" });
 }
