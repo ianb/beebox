@@ -23,6 +23,7 @@ is stuck.
 |---|---|---|
 | [expressing-content.md](expressing-content.md) | Filters, the list widget, transclusion, cascades, grouping/labels, WikiText as a whole | 9 dispositions: 3 adopt, 3 adapt, 2 later, 3 reject |
 | [plugins.md](plugins.md) | Plugin structure, module types, wikitext-level extension, sharing and installation | 5 dispositions: 2 adopt, 2 adapt, 2 reject, 1 open |
+| [side-by-side.md](side-by-side.md) | Seven jobs a box already does, in TiddlyWiki markup and in ours: links, embeds, live-query cards, grouped collections, card-type interfaces, chrome, search | reference |
 
 ## The three findings that matter most
 
