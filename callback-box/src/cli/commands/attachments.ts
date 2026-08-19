@@ -9,7 +9,7 @@
  *   cb attachments unignore       # drop the asset gitignore block (annex migration)
  *   cb attachments annex-attributes # print the scoped .git/info/attributes
  *   cb attachments to-annex       # migrate this box onto git-annex
- *   cb attachments check-unlisted # block unlisted large binaries (pre-commit)
+ *   cb attachments check-unlisted # block unlisted large binaries, box-wide
  *   cb attachments add PATH       # explicitly claim a file (rarely needed;
  *                                   the pre-commit hook auto-claims)
  */

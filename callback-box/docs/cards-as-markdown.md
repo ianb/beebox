@@ -123,7 +123,7 @@ sources:
 
 ## Validation
 
-Cards validate on load (a Zod parse failure is a hard error — the card can't be used) and again at commit time via the per-box pre-commit hook (`cb validate --staged`, installed by `cb init`; see `docs/card-validation.md` for the hook mechanics). Beyond the Zod frontmatter shape, `cb validate` also runs: the schema's own `validate` hook (self-contained, cross-field checks), box-aware ref-existence resolution, and the `.attach/` layout lint above.
+Cards validate on load (a Zod parse failure is a hard error — the card can't be used) and again at commit time via the per-box pre-commit hook (`cb validate --pre-commit`, installed by `cb init`; see `docs/card-validation.md` for the hook mechanics). Beyond the Zod frontmatter shape, `cb validate` also runs: the schema's own `validate` hook (self-contained, cross-field checks), box-aware ref-existence resolution, and the `.attach/` layout lint above.
 
 ## Why markdown over XML
 

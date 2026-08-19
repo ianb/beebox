@@ -5,8 +5,10 @@
  *     on any `.card` file the agent writes or edits. Hook output goes to
  *     the agent (warnings are visible; they don't block the tool call).
  *
- *  2. `.git/hooks/pre-commit` — runs `cb validate --staged` and exits
- *     non-zero if any staged card fails validation. Blocks the commit.
+ *  2. `.git/hooks/pre-commit` — runs `cb validate --pre-commit` (staged
+ *     validation + a gated box-wide link warning + the index-based
+ *     unlisted-binary guard, in one process) and exits non-zero if any of the
+ *     blocking checks failed. Blocks the commit.
  *
  *  3. `.git/hooks/post-commit` — a marker-delimited managed block that
  *     fires `cb validate --urls --urls-since HEAD~1` in the background.
@@ -35,7 +37,7 @@
  * relative path from the package root — safe, since that cwd guarantee is
  * unconditional) before invoking `cb`, so `requireBoxRoot()` resolves
  * correctly and `git diff --cached --name-only --relative` (see
- * `listStagedCards`/`listStagedMarkdown` in `../cli/commands/validate*.ts`)
+ * `listStagedRelPaths` in `../lib/staged-files.ts`)
  * reports box-relative paths instead of package-root-relative ones. `.claude/
  * settings.json`'s PostToolUse hook needs no such fix — Claude Code invokes
  * it with cwd = the operating agent's own cwd (`content/` or a subdirectory),
@@ -268,21 +270,19 @@ if [ ! -x "$CB" ]; then
   fi
 fi
 
-# Validate staged cards/markdown only when there are any (blocks on errors).
-staged=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\\.(card|md)$' || true)
-if [ -n "$staged" ]; then
-  "$CB" validate --staged
-fi
-
-# Box-wide broken-link scan: a move can break links in files that aren't
-# staged (the referrers), which --staged never sees. Warn-only (always exits
-# 0) so it never blocks — it surfaces dangling links to fix with cb mv.
-"$CB" validate --links || true
-
-# Large files in attach scopes whose extension git-annex is not configured to
-# annex would be committed as raw bytes — the class of bug that put 41MB
-# .frozen pages into box history. Blocks rather than advises.
-"$CB" attachments check-unlisted
+# All three commit-time checks in ONE cb invocation (see
+# \`docs/plans/commit-performance.md\`): this used to be three, and each paid the
+# full CLI startup floor for a fraction of a second of actual work.
+#
+#  1. staged cards/markdown validated against their schemas — blocks on errors;
+#  2. a box-wide broken-link scan, warn-only on stderr, run only when the staged
+#     diff deletes or renames something (only that can dangle a link in a file
+#     that isn't staged — an add/modify can break only its own links, which 1
+#     already checks);
+#  3. staged files in attach scopes whose blob exceeds 1MB and whose extension
+#     git-annex is not configured to annex — the class of bug that put 41MB
+#     .frozen pages into box history. Blocks rather than advises.
+"$CB" validate --pre-commit
 `;
 }
 

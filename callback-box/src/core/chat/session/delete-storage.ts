@@ -1,4 +1,3 @@
-import { deleteSession as deleteSdkSession } from "@anthropic-ai/claude-agent-sdk";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -109,7 +108,11 @@ export async function deleteSdkSessionStorage(options: DeleteStorageOptions): Pr
   const jsonlSize = jsonlExists ? (await fs.stat(options.targets.jsonlPath)).size : 0;
   if (jsonlSize > 0) {
     try {
-      await (options.sdkDelete ?? deleteSdkSession)(sessionId, {
+      // Dynamic — see `core/agent/stream.ts`: the Agent SDK is heavy, and a
+      // session delete is a rare path that shouldn't put it in every `cb`
+      // invocation's startup graph.
+      const sdkDelete = options.sdkDelete ?? (await import("@anthropic-ai/claude-agent-sdk")).deleteSession;
+      await sdkDelete(sessionId, {
         dir: options.targets.cwd,
       });
     } catch (error) {

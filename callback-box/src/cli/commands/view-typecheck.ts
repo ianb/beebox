@@ -11,7 +11,7 @@ import * as os from "node:os";
 import { promises as fs } from "node:fs";
 import { createRequire } from "node:module";
 import { randomUUID } from "node:crypto";
-import * as ts from "typescript";
+import type * as ts from "typescript";
 import { listViews, resolveViewsDir } from "../../webapp/views/compiler.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 
@@ -36,6 +36,11 @@ export interface ViewTypecheckResult {
  */
 async function typecheckOneView(args: { viewPath: string; slug: string }): Promise<ViewTypecheckResult> {
   const { viewPath, slug } = args;
+  // Loaded here, not at module scope: the whole TypeScript compiler is ~8 MB of
+  // JS, and `cli/index.ts` imports every command module eagerly — so a static
+  // import made EVERY `cb` invocation, `--version` included, pay for it. Only
+  // this command needs it. (docs/plans/commit-performance.md, phase 1b.)
+  const ts = await import("typescript");
   const reactNodeModules = path.dirname(
     path.dirname(
       createRequire(path.join(PACKAGE_ROOT, "package.json")).resolve("react/package.json"),

@@ -134,7 +134,12 @@ async function runToAnnex(ctx: CommandContext, opts: { dryRun: boolean }): Promi
 }
 
 /**
- * Block a commit that would put large unannexed bytes into git history.
+ * Report large unannexed bytes sitting in attach scopes, box-wide.
+ *
+ * The commit path no longer runs this: the pre-commit hook checks the *staged
+ * blobs* instead (`core/annex/staged-unlisted.ts`), which fires at exactly the
+ * commit that would embed the bytes rather than re-walking the tree. This walk
+ * stays as the on-demand sweep, alongside `cb doctor annex`.
  *
  * The allowlist's failure mode is omission, and it has failed that way before:
  * `page.frozen` snapshots reached box history because nothing noticed a new

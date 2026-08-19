@@ -17,6 +17,11 @@
  * Deliberately size-gated rather than extension-blind: attach scopes hold
  * plenty of small committed text (cards, manifests, email bodies, `.csv`
  * exports), and flagging those would train everyone to ignore the check.
+ *
+ * This is the box-wide *walk*, behind `cb attachments check-unlisted` and
+ * `cb doctor annex`. The commit-time guard is `staged-unlisted.ts`, which asks
+ * the same question of the git index — see its header for why that is both
+ * cheaper and better targeted.
  */
 
 import * as fs from "node:fs/promises";
@@ -61,8 +66,13 @@ export interface UnlistedBinary {
   extension: string;
 }
 
-/** Files this scan never considers, regardless of size. */
-function isControlFile(name: string): boolean {
+/**
+ * Files this scan never considers, regardless of size. Exported so the
+ * index-based staged variant (`staged-unlisted.ts`) skips exactly the same set
+ * — a card or manifest belongs in git however large it grows, and the two
+ * checks disagreeing about that would be a confusing split.
+ */
+export function isControlFile(name: string): boolean {
   return name.endsWith(".card") || name === "manifest.json" || name === ".gitattributes";
 }
 
@@ -70,8 +80,9 @@ function isControlFile(name: string): boolean {
  * Walk every attach scope and report large files whose extension is not in the
  * asset allowlist. Read-only.
  *
- * Returns them rather than throwing so callers choose the severity: the
- * pre-commit hook blocks, `cb doctor annex` reports.
+ * Returns them rather than throwing so callers choose the severity:
+ * `attachments check-unlisted` blocks, `cb doctor annex` reports. The commit
+ * path uses the index-based `staged-unlisted.ts` instead of this walk.
  */
 export async function findUnlistedBinaries(boxRoot: string): Promise<UnlistedBinary[]> {
   const found: UnlistedBinary[] = [];

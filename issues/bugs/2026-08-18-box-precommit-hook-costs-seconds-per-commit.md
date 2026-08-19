@@ -1,6 +1,7 @@
 ---
 title: "The box pre-commit hook costs seconds per commit — three `cb` cold starts plus two box-wide scans"
-workstream: unattached
+workstream: commit-performance
+design: ../../callback-box/docs/plans/commit-performance.md
 area: callback-box
 labels: [performance, validation, boxes]
 priority: important
@@ -12,6 +13,14 @@ discovered-in: main session — boxholder saw 6.63s reported for git commit/hook
 A commit on a large box reported **6.63s** in git + hooks. Measured
 2026-08-18, the cost is two separable things, and both are worth fixing
 independently.
+
+> **Update 2026-08-19:** full attribution measured on a test1 clone (1,815
+> files): git's own commit work + post-commit hook ~0.08s, `git annex
+> pre-commit` ~0.11s, and ~2.2s is the three `cb` boots (~0.7s each, ~0.1s of
+> real check work each) — commit total 2.3s. The startup floor is bundle eval
+> plus eager loading of heavy externals (agent SDK, typescript, sharp) that
+> the validate path never uses. Design and fix plan:
+> [commit-performance plan](../../callback-box/docs/plans/commit-performance.md).
 
 ## A fixed cost that every box pays
 

@@ -16,7 +16,6 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { gzip } from "node:zlib";
 import { promisify } from "node:util";
-import Sharp from "sharp";
 import { checkExtractionBounds, type DoclingImage, type DoclingService } from "../../services/docling.js";
 import { extractPdfText } from "./pdf-probe.js";
 import { err, ok, type Result } from "../../lib/result.js";
@@ -82,6 +81,9 @@ async function encodeImages(
 ): Promise<{ names: string[]; refs: Map<string, string> }> {
   const names: string[] = [];
   const refs = new Map<string, string>();
+  // Dynamic — see `core/scan/validate.ts`: keeps the native `sharp` binding out
+  // of the startup graph of every `cb` invocation that touches no images.
+  const { default: Sharp } = await import("sharp");
   for (const [index, image] of images.entries()) {
     const name = assetName(options.prefix, index);
     await Sharp(image.filePath)

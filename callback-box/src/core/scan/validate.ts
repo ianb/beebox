@@ -23,7 +23,6 @@
 import * as path from "node:path";
 import { execa } from "execa";
 import { fileTypeFromFile } from "file-type";
-import Sharp from "sharp";
 import { PDF_EXTENSION, SUPPORTED_IMAGE_EXTENSIONS } from "../commands/upload-helpers.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
@@ -112,6 +111,10 @@ async function checkPdf(filePath: string): Promise<ScanValidation> {
  */
 async function checkImage(filePath: string): Promise<ScanValidation> {
   try {
+    // Dynamic — `sharp` loads a native binding and is one of the heaviest
+    // modules in the graph; only the image paths need it, and every `cb`
+    // invocation was paying for it (docs/plans/commit-performance.md, 1b).
+    const { default: Sharp } = await import("sharp");
     await Sharp(filePath, { failOn: "error" }).resize({ width: 32, height: 32, fit: "inside" }).toBuffer();
     return { status: "valid" };
   } catch (e) {
