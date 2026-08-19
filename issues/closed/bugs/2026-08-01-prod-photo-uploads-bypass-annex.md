@@ -5,15 +5,19 @@ priority: important
 resolution: wontfix
 ---
 
-**Closed 2026-08-18 — the annex-bypass premise does not hold.** Photo batches
-annex correctly, and did so from the first post-conversion batch onward. The two
-findings that survived the investigation are split out as their own items:
-[retire the remaining asset-manifest writers](../../code-quality/2026-08-18-retire-remaining-asset-manifest-writers.md)
-and [stale `annex.largefiles` never re-applies](../../bugs/2026-08-18-stale-annex-largefiles-never-reapplies.md).
+**Closed 2026-08-18 — the photo-batch premise does not hold.** Photo batches
+annex correctly, and did so from the first post-conversion batch onward. Scope
+the claim carefully: this closes *photos bypassing annex*, not *nothing bypasses
+annex*. A cross-model review found two reachable raw-blob paths that this
+investigation had missed, both since verified — non-asset file types inside a
+bulk batch, and mixed-case extensions anywhere. Three items carry the live work:
+[the filter-scope / largefiles disagreement](../../bugs/2026-08-18-annex-filter-scope-and-largefiles-disagree.md),
+[stale `annex.largefiles` never re-applies](../../bugs/2026-08-18-stale-annex-largefiles-never-reapplies.md),
+and [retire the remaining asset-manifest writers](../../code-quality/2026-08-18-retire-remaining-asset-manifest-writers.md).
 
 ## What was checked, and how (2026-08-18)
 
-**1. A batch prepared today annexes.** `prepareBulkBatch` was driven against a
+**1. A batch of photos prepared today annexes.** `prepareBulkBatch` was driven against a
 real annex box (`annex.version 10`, current `cb doctor annex` clean) with a 3 MB
 JPEG. The committed git object is a 102-byte `/annex/objects/SHA256E-s3145728--…`
 pointer, not the bytes. Reproduction: stage a bulk session, call
@@ -39,12 +43,21 @@ working correctly, and it looks exactly like a raw blob to `file` or `xxd`.
 
 ## What would make this wrong
 
-A raw asset blob appearing in a *new* commit. The census command above is cheap
-to re-run. The one live path by which that could still happen is the stale
-`annex.largefiles` issue linked at the top: it does not affect bulk batches
-(their batch-local `.gitattributes` sets `* annex.largefiles=anything`), but it
-does affect assets written anywhere else on a box that has not had
-`cb doctor annex` re-run since 2026-08-05.
+Two things, and the second is the one the first pass got wrong.
+
+**A raw asset blob appearing in a *new* commit.** The census is cheap to re-run.
+Two live paths can still produce one, both filed: a mixed-case extension, and a
+non-asset file type inside a bulk batch (the batch-local `annex.largefiles=anything`
+does not survive the scoped `.git/info/attributes`, so a `.zip` in a batch
+commits raw). Neither involves a photo, which is why they did not show up in this
+investigation's evidence and why the census found nothing — the boxes hold no
+mixed-case assets and no non-photo batches.
+
+**A card describing bytes that reached neither git nor the annex.** Every check
+here was commit-object-centric, so it could not have seen this. `prepare.ts:119`
+stages the whole attach directory specifically to prevent it, and
+`docs/plans/asset-annex.md` names it as the silent bulk failure mode. It is not
+covered by the evidence below.
 
 ## Disposed of separately
 

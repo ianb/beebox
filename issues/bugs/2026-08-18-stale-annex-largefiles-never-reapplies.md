@@ -35,10 +35,15 @@ attach scope:
 
 **Not yet fired in production.** A census of all four annexed boxes finds zero
 tracked assets with an uppercase extension, so no raw blob has landed this way.
-Bulk upload batches are immune regardless: their batch-local `.gitattributes`
-sets `* annex.largefiles=anything`, which overrides the config expression. The
-exposure is every other write path — capture filing, `cb scan-import`, clerk
-frozen pages, an agent moving an asset into `store/`.
+Bulk batches are unaffected by *this* issue: their batch-local `.gitattributes`
+sets `* annex.largefiles=anything`, which overrides the stale config expression
+for any path the filter runs on. The exposure is every other write path —
+capture filing, `cb scan-import`, clerk frozen pages, an agent moving an asset
+into `store/`.
+
+Related but distinct:
+[the filter-scope / largefiles disagreement](2026-08-18-annex-filter-scope-and-largefiles-disagree.md)
+is a gap in the *current* expressions that repairing a box does not close.
 
 **The fix is really two questions.** Repairing today's boxes is one
 `cb doctor annex` run each. The durable question is what re-applies box-level
