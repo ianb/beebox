@@ -105,11 +105,23 @@ assigned: agent
 ---
 ```
 
-**We already built a filtered transclusion; we built exactly one of them.**
-`todo-view`'s three fields are a query, the renderer runs it on every open, and
-omitting `glob` scopes it to the card's own subtree. That is a collection view
-with a shipped built-in query — the issue's own "cheapest coherent version",
-already working, for one card type.
+**We built two of the three halves, once.** `todo-view`'s three fields are a
+query (the filter half), and `TodoViewCard` runs it on every open and iterates
+the results (the iterate half). The **template half is hardcoded** — group
+order, badges, and the link back to the source card all live in
+`TodoViewCard.tsx`, and nothing in the card can change how an item renders.
+`||TemplateTitle` is the entire point of the TiddlyWiki form, and it is the
+part we do not have.
+
+That is not a small omission; it is the reason this is a *card type* rather
+than a *mechanism*. A collection whose item rendering is fixed in a React
+component can only ever serve the one collection it was written for, which is
+why `todo-view`, `nav` and `tab-arrangement` are three components instead of
+three cards.
+
+It does earn the word transclusion, though: the todo items are authored as
+`{% todo %}` tags inside other cards' bodies, and they appear rendered here,
+live, by reference.
 
 The difference is generality, and it cuts both ways. Theirs is one mechanism for
 every collection; ours is one card type per collection shape, which is precisely
