@@ -165,6 +165,62 @@ Xanadu's contribution is adjacent rather than central — **transclusion**
 in two places at once, not about selecting a set. Worth knowing, not the model
 to copy.
 
+### The particulars, since the shapes matter
+
+**XLink** builds a multi-ended link out of three element roles. Locators name
+the endpoints and give each a label; arcs connect labels; the whole thing sits
+in one container element:
+
+```xml
+<courseload>
+  <person xlink:href="students/patjones62.xml" xlink:label="student62" />
+  <course xlink:href="courses/cs101.xml"       xlink:label="CS-101"   />
+  <go     xlink:from="student62" xlink:to="CS-101" xlink:title="Course enrollment" />
+</courseload>
+```
+
+`xlink:type` takes `extended` (the container), `locator` (a remote endpoint),
+`arc` (a traversal rule), `resource` (a local endpoint), `title`, and `simple`
+(the two-ended shorthand HTML's `<a>` falls into). The useful move for us:
+**endpoints are labelled, and the relation between them is a separate element**
+— when several locators share a label, one arc creates several traversals. That
+is a set-valued link built out of naming rather than out of a query, and it is a
+different way to reach the same place.
+
+**Microcosm** graded links by *how much of the anchor is bound*:
+
+- **specific** — from an object at a particular point in a particular document
+- **local** — from an object at *any* point in a particular document
+- **generic** — from an object at any position in *any* document
+
+The generic link is the one to steal: authored once from a string, followable
+from every occurrence anywhere, including in documents imported later. That is
+a rule rather than a pointer, and it is the same instinct as
+`**/*.image.card` matching whatever exists — a link whose extent is determined
+at read time rather than write time. Alongside these it had **computed links**
+(content-based retrieval). All link information lived in a linkbase separate
+from the documents, which stayed in their native formats.
+
+Not found: Microcosm's actual linkbase record fields. The taxonomy and
+architecture are well documented; the concrete on-disk record format is not on
+the open web, so it is deliberately not reproduced here rather than guessed at.
+
+### Link or transclude — the same reference, two verbs
+
+Boxholder's observation: Notion is as much about transclusion as about
+collection linking, and if there is a collection link then
+`![...](collection-link)` is its transcluded form.
+
+That is a clean way to keep the two apart without inventing a second syntax.
+Markdown already distinguishes *refer to* from *embed* by one character, and
+readers already know it. A collection reference could inherit exactly that: the
+link form navigates to the collection, the embed form renders it inline where
+it is written.
+
+It also localizes the label question — an inline collection is written in a
+document, so it has somewhere natural to carry its heading, which the
+free-standing case does not.
+
 The consistent lesson across all four: **the query, the rendering, and the
 labelling are three separate things**, and systems that fuse them get stuck.
 TiddlyWiki keeps filter / widget / template apart; Notion keeps source /
