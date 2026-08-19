@@ -116,6 +116,83 @@ If that holds, the first shippable slice is small: a view that declares the
 types it accepts and a built-in convention query, appearing only when the box
 has matching cards.
 
+## Eclectic collections: the label is part of the thing (2026-08-19)
+
+> How do I say "here's some images untriaged, here's some other images" and have
+> that idea show up in the render? Not necessarily that triage/untriaged is
+> something the image collection has any concept of, but bare collections
+> aren't that interesting, everything can use a label.
+
+This is the sharpest constraint yet, and it changes the model. A collection is
+not a query — it is **(label, query, view)**, and several of them compose on one
+surface. The label carries the meaning the query cannot: *untriaged* need not be
+a concept the image collection knows about, it is what **this instance** of the
+collection is for.
+
+That also means the same query can appear twice with different labels and
+different filters, and that is a normal thing to want rather than a degenerate
+case.
+
+## Prior art — query-as-link is a real tradition, mostly outside HTML
+
+The boxholder's guess (`<a collection-href="**/*.image.card">`, "an alternate
+hypertext from HTML", "Xanadu?") is well-founded. Four strands worth reading:
+
+- **[XLink extended links and linkbases](https://www.w3.org/TR/xlink11/)** — a
+  link may connect an *arbitrary number* of resources rather than two, and the
+  links can live in a **linkbase** separate from the documents. The conceptual
+  move is exactly the one here: a link stops being a pointer at one place and
+  becomes a relation over a set.
+- **[Microcosm / open hypermedia](https://mprove.de/visionreality/text/2.1.13_microcosm.html)**
+  (Southampton, 1990s) — the closest match to the instinct. It has **generic
+  links** (a link from a string *wherever it appears*) and **computed links**
+  (content-based retrieval), with all link information held in a separate link
+  service while documents stay in their native formats. A link that is a query,
+  built and shipped thirty years ago.
+- **[TiddlyWiki filters](https://tiddlywiki.com/static/Filters.html) with the
+  [list widget](https://tiddlywiki.com/static/ListWidget.html) and
+  [transclusion](https://tiddlywiki.com/static/TranscludeWidget.html)** — the
+  living, working version of the proposed markup: a filter expression selects
+  tiddlers, the list widget renders them, a template controls how each item
+  looks. This is very nearly `<a collection-href>` with the render half solved.
+- **Obsidian Dataview and Notion linked database views** — the mainstream
+  instances. Notion is the direct answer to the labelling question: one page
+  holds several *filtered views of the same source*, each with its own title and
+  display type, which is precisely "untriaged images, then other images".
+
+Xanadu's contribution is adjacent rather than central — **transclusion**
+(content included by reference rather than copied) is about how an item appears
+in two places at once, not about selecting a set. Worth knowing, not the model
+to copy.
+
+The consistent lesson across all four: **the query, the rendering, and the
+labelling are three separate things**, and systems that fuse them get stuck.
+TiddlyWiki keeps filter / widget / template apart; Notion keeps source /
+view-type / view-title apart.
+
+## Mixed types, and "I can't render this"
+
+> Mixed type content is often interesting and good. A directory is one form of
+> it. Maybe every collection view should accept every type, and just try its
+> best (with a genuine capability to say "I can't render this", like if there's
+> zero images).
+
+This softens the typing constraint from the section above, and the two reconcile
+into something better than either: a collection view **accepts anything**,
+declares what it renders *well*, degrades per item, and can say honestly that it
+has nothing to show.
+
+That is already how single-card rendering works here — renderers register with a
+priority and `renderers/builtins.tsx` is the low-priority fallback that shows
+raw source for anything unclaimed. So per-item graceful degradation is the
+established pattern, not a new mechanism. A collection view refusing the whole
+set (zero images for an image-shaped view) is the one genuinely new signal, and
+it connects to the "does an empty result hide the view" question below.
+
+Worth noting a directory is the existing proof that mixed-type collections are
+useful — it is a collection view that accepts everything and renders each item
+by whatever knows how.
+
 ## Open questions this raises
 
 - **Where does a conventional collection live in the URL space**, given views
