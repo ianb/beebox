@@ -201,9 +201,61 @@ at read time rather than write time. Alongside these it had **computed links**
 (content-based retrieval). All link information lived in a linkbase separate
 from the documents, which stayed in their native formats.
 
-Not found: Microcosm's actual linkbase record fields. The taxonomy and
-architecture are well documented; the concrete on-disk record format is not on
-the open web, so it is deliberately not reproduced here rather than guessed at.
+**How it actually expressed a link: not as syntax at all.** From the 1992 report
+(Davis, Hall, Heath, Hill, Wilkins — CSTR 92-15, fetched via a browser; the
+eprints host blocks plain fetches):
+
+> No mark-up is imposed on the information, so that all data is accessible to,
+> and editable by, the application that created it. Instead all information
+> concerning links is stored in link databases or **linkbases**.
+
+A link is resolved by **message passing through a filter chain**. A viewer sends
+a tagged message ("the user selected this, and chose this action"); the message
+passes through a chain of independent filter processes, each of which may block
+it, pass it, modify it, or add new messages; whatever survives reaches the **Link
+Dispatcher**, which offers the available actions to the user. **Linkbases are
+themselves filters in that chain** — a linkbase receiving a follow-link message
+looks the source up and returns destination details.
+
+The message format is the part worth stealing:
+
+> we have adopted a **tagged ASCII message format**. Any viewer or filter may
+> introduce any tag and data it likes into the message, and any filter will
+> respond to the tags it knows and **ignore the rest**.
+
+Extensible by construction, and tolerant by default — a new participant adds
+tags without coordinating with anyone. (Transport was DDE on Windows, Apple
+events on the Mac, sockets on Unix.)
+
+Three further details that bear directly on this issue:
+
+- **Computed links could be materialized.** They ranged "from simple string
+  search techniques through to full information retrieval", and once computed
+  you could follow one immediately *or* write it into the linkbase, after which
+  it was "subsequently indistinguishable from a manually created link". A query
+  that can be frozen into an explicit link — which is exactly the
+  conventional-versus-reified pair from the section above, with a documented
+  path between them.
+- **Several linkbases at once.** A common setup was one author-supplied linkbase
+  over a document set plus a personal linkbase per user for their own links and
+  annotations, extensible to shared workspaces, with access control left to the
+  OS.
+- **Link scope was editable as an operation.** They shipped a tool to merge
+  linkbases, drop references to deleted files, and *change the scope of links* —
+  i.e. promote a specific link to local or generic after the fact.
+
+Still not found, and not guessed at: the on-disk record layout of a linkbase.
+The paper specifies the *message* format and the architecture, not the storage
+schema.
+
+**The tension worth noticing.** Microcosm put every link out-of-band precisely
+so documents stayed untouched and editable by their native applications.
+TiddlyWiki and the `![...](collection-link)` idea put them inline. Both are
+coherent; they trade differently. Inline is legible in the source and travels
+with the document; out-of-band lets the same content carry different link sets
+for different readers, and lets links exist over files you cannot annotate —
+which for a box would mean collections over cards *and* over ordinary files it
+merely holds.
 
 ### Link or transclude — the same reference, two verbs
 
