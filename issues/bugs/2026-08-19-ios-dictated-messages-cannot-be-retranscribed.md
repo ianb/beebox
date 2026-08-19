@@ -3,7 +3,8 @@ title: "Messages dictated in the iOS app can never be retranscribed"
 workstream: ios-retranscribe
 area: callback-box
 labels: [chat, voice, transcription, ios]
-needs: [decision, design]
+needs: [design]
+design: ../../callback-box/docs/plans/ios-audio-retranscription.md
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-ios-retranscribe — spun off to make retranscription work on iOS
@@ -94,7 +95,13 @@ does not survive a native shell. Three directions, materially different:
    server-side fallback for the asleep-phone case.
 
 Whether durable server-side audio is *wanted* is a real question with privacy and
-storage consequences, not an implementation detail — hence `needs: decision`.
+storage consequences, not an implementation detail.
+
+**Decided 2026-08-19 (boxholder): option 1.** Audio stays on the device and is
+handed over only when an agent asks; nothing sits at rest on the box. The at-rest
+question is parked rather than settled — option 2 remains available later for the
+asleep-phone case without invalidating option 1. Design:
+[iOS audio retranscription](../../callback-box/docs/plans/ios-audio-retranscription.md).
 
 ## Testing reality
 

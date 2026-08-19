@@ -209,7 +209,7 @@ authenticated-but-unattributed behavior.
 
 ### 3.3 Script-message channels (web → native)
 
-Four channels, all web→native. On iOS they are `WKScriptMessageHandler` names registered on the
+Five channels, all web→native. On iOS they are `WKScriptMessageHandler` names registered on the
 `userContentController`; the transport is platform glue (§10), the channel names and payloads are
 the contract.
 
@@ -219,8 +219,9 @@ the contract.
 | `callbackboxEmissionReceipt` | `Receipt` object (§4.2) | → `receiveEmissionReceipt` |
 | `callbackboxLocationResult` | `{ id, success, message }` | → `receiveLocationResult` |
 | `callbackboxComposerCommand` | V1 composer command (§4.4) | → `receiveComposerCommand` |
+| `callbackboxLastAudioRequest` | V1 last-audio request (§4.8) | → `receiveLastAudioRequest` |
 
-- Native-side registration: `ChatWebView.swift` (`userContentController.add(_, name:)` for all four).
+- Native-side registration: `ChatWebView.swift` (`userContentController.add(_, name:)` for all five).
 - Session reporting: the native-authored startup script wraps `history.pushState`/`replaceState` +
   `popstate` and posts `location.href` on every nav; native extracts `?session=` via
   `visibleSessionID`. Origin-checked at both post and receipt time.
@@ -436,6 +437,53 @@ the contract.
   | web command + ack | `src/frontend/src/components/chat/native-composer-command.ts`; `use-native-composer-commands.ts`; `use-companion-selection.ts`; `InteractiveChat-view.tsx` |
   | native decode + durable mutation | `ios-app/CallbackBox/Models/NativeComposerContract.swift` — `NativeComposerCommand`, `NativeComposerCommandAcknowledgement`; `Storage/ComposerDraftStore.swift` — `applySelectionCommand`; `Views/ChatWebView.swift` — `receiveComposerCommand` |
 - **Drift:** LOUD (native rejection or web 15s timeout is user-visible).
+
+### 4.8 Last-audio request (web → native), answered by direct HTTP
+
+The relay that lets a box agent retranscribe a message dictated in the **native** composer. Design:
+`docs/plans/ios-audio-retranscription.md`.
+
+- **Why it exists:** `cb chat retranscribe --message <id>` is answered by whoever holds the
+  recording. Web tabs answer from an in-memory store keyed by emission id
+  (`src/frontend/src/lib/audio/last-audio.ts`). A natively-dictated recording never enters the page,
+  so without this relay the phone's recordings are unreachable and every such message answers
+  `no-audio`.
+- **Request wire shape** (web posts on `callbackboxLastAudioRequest`):
+  ```json
+  { "version": 1, "requestId": "<pending request id>", "messageId": "<emission id>",
+    "sessionId": "<relaying tab's session id, or null>" }
+  ```
+  Both ids are required and non-blank. `requestId` is the answer's URL segment; `messageId` must be
+  echoed on the answer or the server discards it (see below). `sessionId` is the **relaying tab's**
+  own — the shell has no session identity — and is null before the tab has been assigned one.
+- **No acknowledgement channel.** Native answers the box directly over HTTP:
+  `POST /api/chat/last-audio/:requestId`, multipart with `file` (audio/wav), `recordedAt` (ISO 8601),
+  `text` (the committed transcript, capped — §8), `messageId`, and `sessionId` when non-null; or
+  `Content-Type: application/json` with `{"none": true}` when this device does not hold that
+  recording. Device-token auth as §2. Megabytes of WAV would have to be base64-ed to come back
+  across a script message, so they do not.
+- **Two server properties this depends on** (`src/core/last-audio-pending.ts`), both load-bearing:
+  **(1)** a `none` answer does not settle the request — each request's grace window defaults to its
+  own `timeoutMs`, so an instant chorus of "none" from tabs that lack the recording cannot cut off a
+  slower answerer, which is exactly what the phone is; **(2)** echo-and-verify — an answer whose
+  echoed `messageId` does not match the target is ignored without settling, so a phone holding a
+  different recording cannot win. A `404` back to the phone is the ordinary multi-answerer outcome
+  (another answer won, or the request timed out) and is not an error.
+- **Both answer.** In a native shell the tab relays AND answers from its own store: a recording made
+  by the *web* composer inside the same webview is legitimately the page's.
+- **Retention:** native keeps the last five recordings per box on disk, keyed by emission id
+  (`Storage/VoiceAudioRetentionStore.swift`) — the same bound as the web store (§8), but durable
+  across app relaunch and the WKWebView content-process reload. Unpairing a box drops its
+  recordings.
+- **Anchors:**
+  | side | anchor |
+  |---|---|
+  | web relay | `src/frontend/src/components/chat/native-last-audio-request.ts`; `src/frontend/src/lib/audio/last-audio.ts` — `fulfillLastAudioRequest` |
+  | box server | `src/webapp/routes/chat-last-audio-routes.ts`; `src/core/last-audio-pending.ts` |
+  | native decode, retention, answer | `ios-app/CallbackBox/Models/NativeComposerContract.swift` — `NativeLastAudioRequest`; `Storage/VoiceAudioRetentionStore.swift`; `Services/ChatAPI.swift` — `answerLastAudio`; `Views/ChatWebView.swift` — `receiveLastAudioRequest`; `Views/RootView.swift` — `answerLastAudioRequest` |
+- **Drift:** QUIET — a phone that stops answering looks identical to a phone that is asleep, and the
+  agent sees the same "no recording is cached" either way. The fixture family `last-audio-request`
+  and `VoiceAudioRetentionTests` are what catch it.
 
 ---
 
@@ -721,10 +769,12 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | B4 | Location state/result | web→native | state `{enabled}` via `callbackboxLocationState`; result `{id,success,enabled,message}` via `callbackboxLocationResult` | `Views/ChatWebView.swift` · `receiveLocationState`, `receiveLocationResult` | `use-native-bridge.ts` · `postNativeLocationState`, `postNativeLocationResult` → `native-post.ts` · `postNativeMessage` | LOUD |
 | B5 | Companion selection command | web→native | V1 `{version:1,id,kind:add-selection,selection:{ref,text,position}}` via `callbackboxComposerCommand` | `Models/NativeComposerContract.swift` · `NativeComposerCommand`; `Views/ChatWebView.swift` · `receiveComposerCommand`; `Storage/ComposerDraftStore.swift` · `applySelectionCommand` | `native-composer-command.ts`; `use-native-composer-commands.ts`; `InteractiveChat-view.tsx` | LOUD |
 | B6 | Composer command acknowledgement | native→web | accepted `{version:1,id,accepted:true}` or rejected `{version:1,id,accepted:false,reason}` via `callbackboxNativeComposerCommandAck`, queue + `callbackbox:native-composer-command-ack` event | `Models/NativeComposerContract.swift` · `NativeComposerCommandAcknowledgement`; `Views/ChatWebView.swift` · `deliverComposerCommandAcknowledgements` | `native-composer-command.ts` · `nativeComposerCommandAcknowledgementFromDetail`; `use-native-composer-commands.ts` | LOUD |
+| B10 | Last-audio request relay | web→native | V1 `{version:1,requestId,messageId,sessionId\|null}` via `callbackboxLastAudioRequest`; answered by H6, not by an ack | `Models/NativeComposerContract.swift` · `NativeLastAudioRequest`; `Views/ChatWebView.swift` · `receiveLastAudioRequest`; `Views/RootView.swift` · `answerLastAudioRequest` | `native-last-audio-request.ts`; `lib/audio/last-audio.ts` · `fulfillLastAudioRequest` | QUIET (asleep phone is indistinguishable) |
 | B7 | Narration state | web→native | `{enabled}` via `callbackboxNarrationState` | `Views/ChatWebView.swift` · `receiveNarrationState`; `Views/NativeComposerView.swift` · `sendKeywordIntent` | `use-native-bridge.ts` · `useNativeNarrationBridge` | fail-local |
 | B8 | Speech playback state | web→native | `{playing}` via `callbackboxSpeechPlaybackState` | `Views/ChatWebView.swift` · `receiveSpeechPlaybackState`; `Views/NativeComposerView.swift` · `applyVoiceTurn` | `use-native-bridge.ts` · `useNativeSpeechPlaybackBridge` | fail-local |
 | B9 | Response generation state | web→native | `{active}` via `callbackboxResponseState` | `Views/ChatWebView.swift` · `receiveResponseState`; `Services/NativeEarcons.swift` · `NativeEarconState` | `use-native-bridge.ts` · `useNativeResponseBridge` | fail-local |
 | H1 | `POST /api/chat/transcribe-audio` | native→box | multipart `session` + `file`(segment.wav, audio/wav); res `{text,diarized}` | `Services/ChatAPI.swift` · `transcribeAudio` | `routes/chat-audio-routes.ts` | LOUD on rejection / SILENT on HTTP 200 with unusable text; Float32 WAV verified — **I8** |
+| H6 | `POST /api/chat/last-audio/:requestId` | native→box | multipart `file`(last-message.wav, audio/wav) + `recordedAt`,`text`,`messageId`,`sessionId?`; or JSON `{"none":true}`; res `{ok}` / `404` when already settled | `Services/ChatAPI.swift` · `answerLastAudio`; `Storage/VoiceAudioRetentionStore.swift` | `routes/chat-last-audio-routes.ts`; `core/last-audio-pending.ts` · `fulfill`/`reportNone` | QUIET — a missing echo is IGNORED, not rejected |
 | H2 | `GET /api/chat/default` | native→box | res `{sessionId?}` | `Services/ChatAPI.swift` · `resolvedSession` | `routes/chat.ts` · default-session route | SILENT (→ `"new"`) |
 | H3 | `POST /api/chat/send` (web layer) | web→box | `{session,message,messageId,images?,…}`; res `{turnId?}\|{queued}\|{deduplicated}` | `api-chat.ts` | `routes/chat-send-routes.ts`; `routes/chat-helpers.ts` · `sendBodySchema` | LOUD / SILENT dedup |
 | H4 | `POST /api/chat/upload-file` | native→box | multipart `file`; res `{path,originalName,size,mimetype}` | `Services/ChatAPI.swift` · `uploadFile` | `routes/chat-uploads.ts` · `registerChatUploadRoutes` | LOUD |
@@ -766,6 +816,16 @@ without the other is a contract break.
 - **Composer command V1** `{version,id,kind,selection:{ref,text,position}}` and acknowledgement V1
   `{version,id,accepted,reason?}` — `Models/NativeComposerContract.swift` ↔
   `native-composer-command.ts`.
+- **Last-audio request V1** `{version,requestId,messageId,sessionId}` —
+  `Models/NativeComposerContract.swift` · `NativeLastAudioRequest` ↔
+  `native-last-audio-request.ts`. Its answer's multipart field names
+  (`file`,`recordedAt`,`text`,`messageId`,`sessionId`) are mirrored a THIRD time, by the web
+  answerer — `Services/ChatAPI.swift` · `multipartLastAudioBody` ↔
+  `lib/audio/last-audio.ts` · `fulfillLastAudioRequest` ↔ `routes/chat-last-audio-routes.ts`.
+- **Voice-recording retention bound** 5, and the answer's transcript cap 1500 characters —
+  `Storage/VoiceAudioRetentionStore.swift` · `defaultCapacity` / `Services/ChatAPI.swift` ·
+  `maximumAnswerTextCharacters` ↔ `lib/audio/last-audio.ts` · `RETENTION_CAPACITY` /
+  `MAX_TEXT_CHARS` ↔ `routes/chat-last-audio-routes.ts` · `MAX_TEXT_HEADER_CHARS`.
 - **`debugLog.submit` wire keys** `{source?,entries:[{level,message,at?}]}`, `level` closed to
   `error|warn|log|info`, `source` slug `^[a-z][a-z0-9-]{0,15}$` (iOS always sends `"ios"`), `at` an
   offset datetime — `Services/LogForwarder.swift` ↔
@@ -779,7 +839,8 @@ without the other is a contract break.
 - **Script-message channel names** `callbackboxSession` / `callbackboxEmissionReceipt` /
   `callbackboxLocationResult` / `callbackboxLocationState` / `callbackboxNarrationState` /
   `callbackboxSpeechPlaybackState` / `callbackboxResponseState` /
-  `callbackboxComposerCommand` — `Views/ChatWebView.swift` (`userContentController.add`) ↔
+  `callbackboxComposerCommand` / `callbackboxLastAudioRequest` —
+  `Views/ChatWebView.swift` (`userContentController.add`) ↔
   `native-post.ts` · `NativeShellChannel`.
 - **Neutral web→native transport** `callbackboxNativePost(channel, payload)` (string payloads) —
   startup script in `Views/ChatWebView.swift` ↔ `native-post.ts` · `postNativeMessage` (with the
@@ -901,6 +962,7 @@ callback-box/src/frontend/src/components/chat/native-post.ts
 callback-box/src/frontend/src/components/chat/use-native-bridge.ts
 callback-box/src/frontend/src/components/chat/native-emission.ts
 callback-box/src/frontend/src/components/chat/native-composer-command.ts
+callback-box/src/frontend/src/components/chat/native-last-audio-request.ts
 callback-box/src/frontend/src/components/chat/use-native-composer-commands.ts
 callback-box/src/frontend/src/components/chat/use-companion-selection.ts
 callback-box/src/frontend/src/lib/mobile-auth.ts
@@ -913,6 +975,7 @@ callback-box/src/core/mobile/request-auth.ts
 callback-box/src/webapp/mobile-cookie.ts
 callback-box/src/webapp/routes/pairing.ts
 callback-box/src/webapp/routes/chat-audio-routes.ts
+callback-box/src/webapp/routes/chat-last-audio-routes.ts
 callback-box/src/webapp/routes/chat-uploads.ts
 callback-box/src/webapp/routes/bulk-upload.ts
 callback-box/src/core/capture/staging-stream.ts
@@ -923,6 +986,7 @@ ios-app/CallbackBox/Views/ChatWebView.swift
 ios-app/CallbackBox/Models/NativeComposerContract.swift
 ios-app/CallbackBox/Storage/ComposerDraftStore.swift
 ios-app/CallbackBox/Services/ChatAPI.swift
+ios-app/CallbackBox/Storage/VoiceAudioRetentionStore.swift
 ios-app/CallbackBox/Models/PairedBox.swift
 ios-app/CallbackBox/Storage/PairedBoxStore.swift
 ios-app/CallbackBox/Services/LogForwarder.swift

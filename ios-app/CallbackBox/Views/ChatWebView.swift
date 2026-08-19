@@ -84,6 +84,7 @@ struct ChatWebView: UIViewRepresentable {
     var onScreenshotResult: (NativeScreenshotResult) -> Void
     var onComposerCommand: (NativeComposerCommandDelivery) -> Void
     var onComposerCommandAcknowledgementDelivered: (String) -> Void
+    var onLastAudioRequest: (NativeLastAudioRequest) -> Void
 
     init(
         box: PairedBox,
@@ -102,7 +103,8 @@ struct ChatWebView: UIViewRepresentable {
         onResponseStateChange: @escaping (Bool) -> Void = { _ in },
         onScreenshotResult: @escaping (NativeScreenshotResult) -> Void = { _ in },
         onComposerCommand: @escaping (NativeComposerCommandDelivery) -> Void = { _ in },
-        onComposerCommandAcknowledgementDelivered: @escaping (String) -> Void = { _ in }
+        onComposerCommandAcknowledgementDelivered: @escaping (String) -> Void = { _ in },
+        onLastAudioRequest: @escaping (NativeLastAudioRequest) -> Void = { _ in }
     ) {
         self.box = box
         self.pendingEmissions = pendingEmissions
@@ -121,6 +123,7 @@ struct ChatWebView: UIViewRepresentable {
         self.onScreenshotResult = onScreenshotResult
         self.onComposerCommand = onComposerCommand
         self.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
+        self.onLastAudioRequest = onLastAudioRequest
     }
 
     func makeUIView(context: Context) -> WKWebView {
@@ -133,6 +136,7 @@ struct ChatWebView: UIViewRepresentable {
         configuration.userContentController.add(context.coordinator, name: "callbackboxSpeechPlaybackState")
         configuration.userContentController.add(context.coordinator, name: "callbackboxResponseState")
         configuration.userContentController.add(context.coordinator, name: "callbackboxComposerCommand")
+        configuration.userContentController.add(context.coordinator, name: "callbackboxLastAudioRequest")
         if let script = startupScript() {
             configuration.userContentController.addUserScript(script)
         }
@@ -164,6 +168,7 @@ struct ChatWebView: UIViewRepresentable {
         context.coordinator.onScreenshotResult = onScreenshotResult
         context.coordinator.onComposerCommand = onComposerCommand
         context.coordinator.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
+        context.coordinator.onLastAudioRequest = onLastAudioRequest
         context.coordinator.boxID = box.id
         context.coordinator.allowedOrigin = Self.origin(from: box.baseURL)
         context.coordinator.pendingEmissions = pendingEmissions
@@ -195,7 +200,8 @@ struct ChatWebView: UIViewRepresentable {
             onResponseStateChange: onResponseStateChange,
             onScreenshotResult: onScreenshotResult,
             onComposerCommand: onComposerCommand,
-            onComposerCommandAcknowledgementDelivered: onComposerCommandAcknowledgementDelivered
+            onComposerCommandAcknowledgementDelivered: onComposerCommandAcknowledgementDelivered,
+            onLastAudioRequest: onLastAudioRequest
         )
     }
 
@@ -213,6 +219,7 @@ struct ChatWebView: UIViewRepresentable {
         var onScreenshotResult: (NativeScreenshotResult) -> Void
         var onComposerCommand: (NativeComposerCommandDelivery) -> Void
         var onComposerCommandAcknowledgementDelivered: (String) -> Void
+        var onLastAudioRequest: (NativeLastAudioRequest) -> Void
         var pendingEmissions: [NativeChatEmission] = []
         var emissionRedeliveryRequest: NativeEmissionRedeliveryRequest?
         var locationShareRequest: NativeLocationShareRequest?
@@ -257,6 +264,7 @@ struct ChatWebView: UIViewRepresentable {
             onScreenshotResult: @escaping (NativeScreenshotResult) -> Void,
             onComposerCommand: @escaping (NativeComposerCommandDelivery) -> Void,
             onComposerCommandAcknowledgementDelivered: @escaping (String) -> Void,
+            onLastAudioRequest: @escaping (NativeLastAudioRequest) -> Void = { _ in },
             pageLoaded: Bool = false,
             evaluateEmission: ((String, @escaping (Error?) -> Void) -> Void)? = nil,
             openExternalURL: @escaping (URL) -> Void = { UIApplication.shared.open($0) },
@@ -277,6 +285,7 @@ struct ChatWebView: UIViewRepresentable {
             self.onScreenshotResult = onScreenshotResult
             self.onComposerCommand = onComposerCommand
             self.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
+            self.onLastAudioRequest = onLastAudioRequest
             self.pageLoaded = pageLoaded
             self.evaluateEmission = evaluateEmission
             self.openExternalURL = openExternalURL
@@ -427,6 +436,10 @@ struct ChatWebView: UIViewRepresentable {
             }
             if message.name == "callbackboxComposerCommand" {
                 receiveComposerCommand(message.body)
+                return
+            }
+            if message.name == "callbackboxLastAudioRequest" {
+                receiveLastAudioRequest(message.body)
                 return
             }
             guard message.name == "callbackboxSession", let urlString = message.body as? String, let url = URL(string: urlString) else {
@@ -663,6 +676,23 @@ struct ChatWebView: UIViewRepresentable {
                 return
             }
             onComposerCommand(.command(command))
+        }
+
+        /// A box agent asked for one voice message's original recording
+        /// (contract §4.8). There is no acknowledgement channel: the shell
+        /// answers the box directly over HTTP, and a malformed request is
+        /// dropped, because without a usable `requestId` there is nowhere to
+        /// report the problem to.
+        private func receiveLastAudioRequest(_ body: Any) {
+            guard
+                let payload = ChatWebView.dictionaryPayload(from: body),
+                let data = try? JSONSerialization.data(withJSONObject: payload),
+                let request = try? JSONDecoder().decode(NativeLastAudioRequest.self, from: data)
+            else {
+                BoxLog.warn("last-audio request was malformed", category: .webview, targetBoxID: boxID)
+                return
+            }
+            onLastAudioRequest(request)
         }
 
         func deliverComposerCommandAcknowledgements(to webView: WKWebView) {

@@ -56,8 +56,10 @@
 		B72000192C3C000100000001 /* ComposerTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B720001A2C3C000100000001 /* ComposerTextView.swift */; };
 		B720001B2C3C000100000001 /* ChatAPITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B720001C2C3C000100000001 /* ChatAPITests.swift */; };
 		B720001D2C3C000100000001 /* PendingEmissionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B720001E2C3C000100000001 /* PendingEmissionStore.swift */; };
+		B72000C12C3C000100000001 /* VoiceAudioRetentionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000C22C3C000100000001 /* VoiceAudioRetentionStore.swift */; };
 		B720001F2C3C000100000001 /* NativeComposerFixtureScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000202C3C000100000001 /* NativeComposerFixtureScreen.swift */; };
 		B720009A2C3C000100000001 /* BulkUploadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B720009B2C3C000100000001 /* BulkUploadTests.swift */; };
+		B72000C32C3C000100000001 /* VoiceAudioRetentionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000C42C3C000100000001 /* VoiceAudioRetentionTests.swift */; };
 		C83000012C3C000100000001 /* BoxLockManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C83000022C3C000100000001 /* BoxLockManager.swift */; };
 		C83000032C3C000100000001 /* BoxLockTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C83000042C3C000100000001 /* BoxLockTests.swift */; };
 		D94000012C3C000100000001 /* NativeEarcons.swift in Sources */ = {isa = PBXBuildFile; fileRef = D94000112C3C000100000001 /* NativeEarcons.swift */; };
@@ -166,8 +168,10 @@
 		B720001A2C3C000100000001 /* ComposerTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerTextView.swift; sourceTree = "<group>"; };
 		B720001C2C3C000100000001 /* ChatAPITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatAPITests.swift; sourceTree = "<group>"; };
 		B720001E2C3C000100000001 /* PendingEmissionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingEmissionStore.swift; sourceTree = "<group>"; };
+		B72000C22C3C000100000001 /* VoiceAudioRetentionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceAudioRetentionStore.swift; sourceTree = "<group>"; };
 		B72000202C3C000100000001 /* NativeComposerFixtureScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeComposerFixtureScreen.swift; sourceTree = "<group>"; };
 		B720009B2C3C000100000001 /* BulkUploadTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkUploadTests.swift; sourceTree = "<group>"; };
+		B72000C42C3C000100000001 /* VoiceAudioRetentionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceAudioRetentionTests.swift; sourceTree = "<group>"; };
 		C83000022C3C000100000001 /* BoxLockManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoxLockManager.swift; sourceTree = "<group>"; };
 		C83000042C3C000100000001 /* BoxLockTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoxLockTests.swift; sourceTree = "<group>"; };
 		D94000112C3C000100000001 /* NativeEarcons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeEarcons.swift; sourceTree = "<group>"; };
@@ -276,6 +280,7 @@
 				B72000142C3C000100000001 /* ComposerDraftRepository.swift */,
 				B72000162C3C000100000001 /* ComposerDraftStore.swift */,
 				B720001E2C3C000100000001 /* PendingEmissionStore.swift */,
+				B72000C22C3C000100000001 /* VoiceAudioRetentionStore.swift */,
 			);
 			path = Storage;
 			sourceTree = "<group>";
@@ -337,6 +342,7 @@
 				5A1001172C3C000100000001 /* CaptureAcquisitionTests.swift */,
 				B72000182C3C000100000001 /* ComposerDraftTests.swift */,
 				B720009B2C3C000100000001 /* BulkUploadTests.swift */,
+				B72000C42C3C000100000001 /* VoiceAudioRetentionTests.swift */,
 				E1A000072C3C000100000001 /* LogForwarderTests.swift */,
 				B720001C2C3C000100000001 /* ChatAPITests.swift */,
 				E2A000162D7B000100000001 /* ShareExtensionAPITests.swift */,
@@ -535,6 +541,7 @@
 				B72000132C3C000100000001 /* ComposerDraftRepository.swift in Sources */,
 				B72000152C3C000100000001 /* ComposerDraftStore.swift in Sources */,
 				B720001D2C3C000100000001 /* PendingEmissionStore.swift in Sources */,
+				B72000C12C3C000100000001 /* VoiceAudioRetentionStore.swift in Sources */,
 				C83000012C3C000100000001 /* BoxLockManager.swift in Sources */,
 				D94000012C3C000100000001 /* NativeEarcons.swift in Sources */,
 				B72000192C3C000100000001 /* ComposerTextView.swift in Sources */,
@@ -586,6 +593,7 @@
 				5A1001BE2C3C000100000001 /* PairedBoxStoreTests.swift in Sources */,
 				B72000172C3C000100000001 /* ComposerDraftTests.swift in Sources */,
 				B720009A2C3C000100000001 /* BulkUploadTests.swift in Sources */,
+				B72000C32C3C000100000001 /* VoiceAudioRetentionTests.swift in Sources */,
 				E1A000062C3C000100000001 /* LogForwarderTests.swift in Sources */,
 				B720001B2C3C000100000001 /* ChatAPITests.swift in Sources */,
 				C83000032C3C000100000001 /* BoxLockTests.swift in Sources */,

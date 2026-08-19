@@ -155,6 +155,74 @@ struct ChatAPI: Sendable {
         }
     }
 
+    /// Cap on the transcript sent alongside the audio. It rides an HTTP header
+    /// on the way back out to the CLI, so it cannot be unbounded; the value
+    /// matches the web answerer's `MAX_TEXT_CHARS`.
+    static let maximumAnswerTextCharacters = 1500
+
+    /// Answer one `chat-last-audio-request` relayed from the web layer
+    /// (contract §4.8): upload the retained recording for `request.messageID`,
+    /// or report none when this device does not hold it.
+    ///
+    /// `messageID` is echoed as a multipart field because the server discards
+    /// any answer that does not echo the id it asked for — an answer without it
+    /// is silently ignored rather than rejected, so omitting it would look like
+    /// the phone never replied.
+    func answerLastAudio(
+        _ request: NativeLastAudioRequest,
+        retained: (audio: RetainedVoiceAudio, url: URL)?
+    ) async throws {
+        var httpRequest = URLRequest(
+            url: box.apiURL
+                .appendingPathComponent("chat/last-audio")
+                .appendingPathComponent(request.requestID)
+        )
+        httpRequest.httpMethod = "POST"
+        httpRequest.setValue("CallbackBox-iOS/0.1", forHTTPHeaderField: "User-Agent")
+        applyAuth(to: &httpRequest)
+        if let retained {
+            let boundary = "Boundary-\(UUID().uuidString)"
+            httpRequest.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+            httpRequest.httpBody = try multipartLastAudioBody(
+                request: request,
+                retained: retained,
+                boundary: boundary
+            )
+        } else {
+            httpRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            httpRequest.httpBody = try JSONSerialization.data(withJSONObject: ["none": true])
+        }
+
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await transport.data(for: httpRequest)
+        } catch {
+            BoxLog.error(
+                "last-audio answer transport failed urlError=\(Self.urlErrorCode(error)):"
+                    + " \(error.localizedDescription)",
+                category: .composer
+            )
+            throw error
+        }
+        guard let http = response as? HTTPURLResponse else {
+            BoxLog.error("last-audio answer got a non-HTTP response", category: .composer)
+            throw ChatAPIError.invalidResponse
+        }
+        // 404 is the ordinary multi-answerer outcome: a web tab's answer already
+        // won, or the request timed out while the upload was in flight. Not a
+        // failure of this device, and not worth surfacing.
+        guard (200..<300).contains(http.statusCode) || http.statusCode == 404 else {
+            let error = try? JSONDecoder().decode(ErrorBody.self, from: data)
+            let message = error?.error ?? "The recording could not be delivered."
+            BoxLog.error(
+                "last-audio answer failed status=\(http.statusCode): \(message)",
+                category: .composer
+            )
+            throw ChatAPIError.server(message)
+        }
+    }
+
     func uploadFile(
         data: Data,
         filename: String,
@@ -302,6 +370,38 @@ struct ChatAPI: Sendable {
         body.appendMultipartFile(
             name: "file",
             filename: "segment.wav",
+            contentType: "audio/wav",
+            data: audioData,
+            boundary: boundary
+        )
+        body.appendString("--\(boundary)--\r\n")
+        return body
+    }
+
+    private func multipartLastAudioBody(
+        request: NativeLastAudioRequest,
+        retained: (audio: RetainedVoiceAudio, url: URL),
+        boundary: String
+    ) throws -> Data {
+        let audioData = try Data(contentsOf: retained.url)
+        var body = Data()
+        body.appendMultipartField(
+            name: "recordedAt",
+            value: ISO8601DateFormatter().string(from: retained.audio.recordedAt),
+            boundary: boundary
+        )
+        body.appendMultipartField(
+            name: "text",
+            value: String(retained.audio.text.prefix(Self.maximumAnswerTextCharacters)),
+            boundary: boundary
+        )
+        body.appendMultipartField(name: "messageId", value: request.messageID, boundary: boundary)
+        if let sessionID = request.sessionID {
+            body.appendMultipartField(name: "sessionId", value: sessionID, boundary: boundary)
+        }
+        body.appendMultipartFile(
+            name: "file",
+            filename: "last-message.wav",
             contentType: "audio/wav",
             data: audioData,
             boundary: boundary
