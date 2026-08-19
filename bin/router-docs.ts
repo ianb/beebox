@@ -295,74 +295,6 @@ export function renderMarkdownToHtml(src: string, defaultLang = "ts"): string {
   return html.replace(/<h2>Manual testing<\/h2>/g, '<h2 id="manual-testing">Manual testing</h2>');
 }
 
-// Every /dev/ response is served with a bare `sandbox` CSP (see serveDev), which
-// gives rendered pages an OPAQUE origin: their <img> subrequests go out without
-// the session cookie, and the always-on auth gate 401s them — so a relative
-// image in rendered markdown always shows broken, even though navigating to the
-// image URL directly works. Rather than weakening the sandbox (the CSRF fix) or
-// exempting image routes from auth, inline local images into the emitted HTML
-// as data: URIs — the page then carries the bytes and makes no subrequest.
-// Background: issues/bugs/2026-08-19-dev-md-images-broken-opaque-origin.md.
-const INLINE_IMAGE_TYPES: Record<string, string> = {
-  ".svg": "image/svg+xml",
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".gif": "image/gif",
-  ".webp": "image/webp",
-};
-const INLINE_IMAGE_MAX_BYTES = 4 * 1024 * 1024;
-
-/**
- * Rewrite relative `<img src>` in rendered-markdown HTML to data: URIs, reading
- * each image from disk relative to `baseDir` (the source .md file's directory).
- * Only local, relative, image-typed, ≤4MB files whose realpath stays inside
- * `rootDir` are inlined; anything else — external URLs, absolute paths, missing
- * files, oversized files, traversal escapes — is left untouched, which renders
- * as a visibly broken image rather than a silent substitution.
- */
-export async function inlineLocalImages(
-  html: string,
-  { baseDir, rootDir }: { baseDir: string; rootDir: string },
-): Promise<string> {
-  const imgTags = [...html.matchAll(/<img\b[^>]*\bsrc="([^"]+)"[^>]*>/g)];
-  if (imgTags.length === 0) return html;
-  let realRoot: string;
-  try {
-    realRoot = await fs.realpath(rootDir);
-  } catch {
-    /* ignore: root itself unreadable — leave every image as-is */
-    return html;
-  }
-  const dataUris = new Map<string, string>();
-  for (const [, escapedSrc] of imgTags) {
-    if (escapedSrc === undefined || dataUris.has(escapedSrc)) continue;
-    const src = unescapeHtml(escapedSrc);
-    // Relative paths only: skip scheme'd URLs (https:, data:), protocol-relative
-    // (//host), origin-absolute (/...), and fragment-only sources.
-    if (/^[a-z][a-z0-9+.-]*:/i.test(src) || src.startsWith("/") || src.startsWith("#")) continue;
-    const [pathPart] = src.split(/[?#]/);
-    if (!pathPart) continue;
-    const mime = INLINE_IMAGE_TYPES[path.extname(pathPart).toLowerCase()];
-    if (!mime) continue;
-    try {
-      const real = await fs.realpath(path.resolve(baseDir, decodeURIComponent(pathPart)));
-      if (real !== realRoot && !real.startsWith(realRoot + path.sep)) continue;
-      const stat = await fs.stat(real);
-      if (!stat.isFile() || stat.size > INLINE_IMAGE_MAX_BYTES) continue;
-      const buf = await fs.readFile(real);
-      dataUris.set(escapedSrc, `data:${mime};base64,${buf.toString("base64")}`);
-    } catch {
-      /* ignore: unreadable/missing image — the broken-image icon is the signal */
-    }
-  }
-  if (dataUris.size === 0) return html;
-  return html.replace(/(<img\b[^>]*\bsrc=")([^"]+)(")/g, (whole, pre: string, srcAttr: string, post: string) => {
-    const uri = dataUris.get(srcAttr);
-    return uri ? `${pre}${uri}${post}` : whole;
-  });
-}
-
 /**
  * The /dev/ manifest landing: the curated list of what you can view here —
  * built-in tools (the markdown doc browser) plus whatever artifacts the agent
@@ -768,11 +700,7 @@ async function serveDocBrowser(base: string, repoRoot: string, rel: string, sort
       // detection resolves against the doc's own directory instead of an
       // issues-root-relative one.
       const closedHrefs = findClosedIssueLinkHrefs(src, path.posix.dirname(fileRel.split(path.sep).join("/")));
-      const rendered = await inlineLocalImages(renderMarkdownToHtml(src), {
-        baseDir: path.dirname(resolved),
-        rootDir: repoRoot,
-      });
-      contentHtml = `<p style="color:#888;font:12px ui-monospace,monospace;margin-top:0">${escapeHtml(fileRel)}</p>${appendClosedIssuePills(rendered, closedHrefs)}`;
+      contentHtml = `<p style="color:#888;font:12px ui-monospace,monospace;margin-top:0">${escapeHtml(fileRel)}</p>${appendClosedIssuePills(renderMarkdownToHtml(src), closedHrefs)}`;
       title = path.basename(resolved);
     } catch {
       res.writeHead(404, { "content-type": "text/plain" });
@@ -863,12 +791,8 @@ async function serveDevArtifact(
   const ext = path.extname(resolved).toLowerCase();
   if (ext === ".md") {
     const src = await fs.readFile(resolved, "utf8");
-    const rendered = await inlineLocalImages(renderMarkdownToHtml(src), {
-      baseDir: path.dirname(realResolved),
-      rootDir: path.dirname(realDevRoot),
-    });
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-    res.end(renderDevShell(path.basename(resolved), devBreadcrumbs(base, rel), rendered));
+    res.end(renderDevShell(path.basename(resolved), devBreadcrumbs(base, rel), renderMarkdownToHtml(src)));
     return;
   }
   const buf = await fs.readFile(resolved);

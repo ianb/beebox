@@ -1,19 +1,11 @@
 ---
 title: "Images in rendered /dev markdown are broken: sandboxed pages make cookieless subrequests"
-workstream: workstream-story
+workstream: unattached
 area: router
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-workstream-story — relative-path SVGs in a dev/ .md page all rendered broken
 ---
-> **Fix landed in this workstream** (direction 2 below): the dev renderer now
-> inlines relative local images as `data:` URIs at render time
-> (`inlineLocalImages` in `bin/router-docs.ts`, wired into both the direct
-> `dev/*.md` route and the doc browser; doctest at
-> `callback-box/test/dev/router-docs-inline-images.doctest.md`). No CSP or auth
-> change. Takes effect on the live router after main-merge + a boxholder-run
-> `pnpm dev` restart.
-
 Every `/dev/` response carries `Content-Security-Policy: sandbox` (no
 `allow-same-origin`), so a rendered `.md` page has an **opaque origin**. Its
 subresource requests — `<img src="foo/bar.svg">` — are therefore cross-site and
