@@ -167,6 +167,10 @@ async function runSweep(boxRoot: string): Promise<number> {
       reportApplied(result.applied);
       console.error(`Migration "${result.failed}" failed hard (exit ${String(result.exitCode)}). Its manifest entry was not written; later migrations did not run.`);
       return 1;
+    case "commit-failed":
+      reportApplied(result.applied);
+      console.error(`Migration "${result.failed}" ran but could not be committed (${result.error}). Its manifest entry was rolled back and its changes are left in the working tree — review them, commit or discard, and the next sweep retries.`);
+      return 1;
     case "applied":
       reportApplied(result.applied);
       return 0;

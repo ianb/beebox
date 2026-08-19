@@ -50,6 +50,33 @@ export async function readManifest(boxRoot: string): Promise<ManifestEntry[] | n
   }
 }
 
+/**
+ * The manifest file exactly as it is on disk, or null when there is none.
+ *
+ * Raw text rather than parsed entries: this exists to be written back
+ * unchanged after a failed commit, and {@link readManifest} silently drops a
+ * malformed line — round-tripping through it would delete on rollback what it
+ * only meant to ignore on read.
+ */
+export async function snapshotManifest(boxRoot: string): Promise<string | null> {
+  try {
+    return await fs.readFile(path.join(boxRoot, MANIFEST_PATH), "utf-8");
+  } catch (e) {
+    if (errnoCode(e) === "ENOENT") return null;
+    throw e;
+  }
+}
+
+/** Put a {@link snapshotManifest} result back, undoing whatever was appended since. */
+export async function restoreManifest(boxRoot: string, snapshot: string | null): Promise<void> {
+  const abs = path.join(boxRoot, MANIFEST_PATH);
+  if (snapshot === null) {
+    await fs.rm(abs, { force: true });
+    return;
+  }
+  await fs.writeFile(abs, snapshot);
+}
+
 export async function appendManifestEntry(boxRoot: string, entry: ManifestEntry): Promise<void> {
   const abs = path.join(boxRoot, MANIFEST_PATH);
   await fs.mkdir(path.dirname(abs), { recursive: true });

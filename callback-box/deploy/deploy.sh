@@ -554,12 +554,33 @@ if [[ "$SKIP_RESTART" != true ]]; then
   # policy — see src/core/migration-sweep.ts.
   echo "Applying pending box migrations..."
   ssh "root@$SERVER_IP" bash -s <<'REMOTE'
-    for box in /home/callback/boxes/*/content; do
-      [[ -d "$box" ]] || continue   # no content/ dir — not a v2 box
-      name=$(basename "$(dirname "$box")")
-      out=$(sudo -u callback -H bash -lc "set -a; source /home/callback/.env 2>/dev/null; set +a; cd '$box' && cb migrate --sweep" 2>&1) || true
+    for boxdir in /home/callback/boxes/*/; do
+      name=$(basename "$boxdir")
+      box="$boxdir/content"
+      # A box with no content/ is not a v2 package. Say so rather than skipping
+      # in silence — an unmigratable box is exactly what this step exists to
+      # surface, and `cb migrate` treats a manifest-less box as a human decision.
+      if [[ ! -d "$box" ]]; then
+        echo "  $name: no content/ — not a v2 box, skipped"
+        continue
+      fi
+      # The path is passed as an ARGUMENT to `bash -lc`, never interpolated into
+      # the shell source it runs: a box directory name containing a quote would
+      # otherwise break — or escape — that string.
+      # `timeout` sits directly around `cb`, inside the login shell, because
+      # this runs BEFORE the restart and health verification: a migrator that
+      # hangs would wedge the whole deploy in the at-rest window rather than
+      # just failing one box.
+      out=$(sudo -u callback -H bash -lc \
+              'set -a; source /home/callback/.env 2>/dev/null; set +a; cd "$1" && timeout 600 cb migrate --sweep' \
+              cb-sweep "$box" 2>&1)
+      code=$?
+      [[ $code -eq 124 ]] && out="${out}"$'\n'"timed out after 600s — migrations left pending, retried next deploy"
       [[ -n "$out" ]] && echo "$out" | sed "s/^/  $name: /"
     done
+    # Always succeed: `set -euo pipefail` in the outer script would otherwise
+    # abandon a shipped release because one box wants a human.
+    exit 0
 REMOTE
 
   echo "Restarting services..."

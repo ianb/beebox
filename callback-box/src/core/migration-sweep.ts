@@ -26,13 +26,17 @@
  */
 
 import { commit, getStatus, stageAll } from "../lib/git.js";
+import { withBoxGitLock } from "../lib/git-lock.js";
 import { getBoxTimeISO } from "../lib/time.js";
+import { errorMessage } from "../lib/error-guards.js";
 import { isProcedureMigration } from "./migrations.js";
 import {
   appendManifestEntry,
   computePending,
   readManifest,
+  restoreManifest,
   runMigrationScript,
+  snapshotManifest,
   SOFT_FAILURE_EXIT,
 } from "./migration-run.js";
 
@@ -54,6 +58,8 @@ export type SweepResult =
   | { readonly status: "needs-procedure"; readonly procedure: string; readonly applied: SweptMigration[] }
   /** A migration failed hard. Its manifest entry is unwritten; the queue stopped. */
   | { readonly status: "failed"; readonly failed: string; readonly exitCode: number; readonly applied: SweptMigration[] }
+  /** The migration ran but its commit failed; the manifest entry was rolled back. */
+  | { readonly status: "commit-failed"; readonly failed: string; readonly error: string; readonly applied: SweptMigration[] }
   | { readonly status: "applied"; readonly applied: SweptMigration[] };
 
 /**
@@ -67,8 +73,19 @@ export type SweepResult =
  * failing rather than by relying on a side effect of the runner.
  */
 export async function sweepMigrations(opts: { boxRoot: string }): Promise<SweepResult> {
-  const { boxRoot } = opts;
+  // One lock for the whole sweep, not per git call. `getStatus` → migrator →
+  // `stageAll` → `commit` is a single unit: `stageAll` is `git add -A`, so a
+  // cooperating writer that commits between the clean check and the commit
+  // would have its files swept into a `migration-sweep` commit (`git-lock.ts`
+  // names exactly this failure). Safe to hold across the migrator subprocess
+  // because no migrator commits — the runner passes `--apply` without
+  // `--commit`, and migrators leave their work in the tree by design. It stays
+  // a COOPERATIVE guarantee: a box agent shelling out to raw `git` is outside
+  // it, which is why the deploy runs this in the at-rest window.
+  return withBoxGitLock(opts.boxRoot, () => sweepUnderLock(opts.boxRoot));
+}
 
+async function sweepUnderLock(boxRoot: string): Promise<SweepResult> {
   const manifest = await readManifest(boxRoot);
   if (manifest === null) return { status: "no-manifest" };
 
@@ -94,12 +111,24 @@ export async function sweepMigrations(opts: { boxRoot: string }): Promise<SweepR
     // migration whose effects are not in its history (or the reverse). There is
     // always something to commit — the manifest line itself is tracked — even
     // for a migration like `annex-config` that changes no other file.
+    //
+    // The rollback is what makes that true. The entry has to be written before
+    // the commit (it belongs IN that commit), so a commit that then fails —
+    // the box's own pre-commit hook rejects a card the migrator produced, say —
+    // would otherwise leave a manifest claiming a migration that never landed,
+    // and the next sweep would read it and report the box current forever.
+    const snapshot = await snapshotManifest(boxRoot);
     await appendManifestEntry(boxRoot, { name: migration.name, "applied-at": getBoxTimeISO(boxRoot) });
-    await stageAll(boxRoot);
-    await commit(boxRoot, {
-      message: `Apply migration: ${migration.name}`,
-      trailers: { "Created-By": "migration-sweep" },
-    });
+    try {
+      await stageAll(boxRoot);
+      await commit(boxRoot, {
+        message: `Apply migration: ${migration.name}`,
+        trailers: { "Created-By": "migration-sweep" },
+      });
+    } catch (e) {
+      await restoreManifest(boxRoot, snapshot);
+      return { status: "commit-failed", failed: migration.name, error: errorMessage(e), applied };
+    }
     applied.push({ name: migration.name, partial: code === SOFT_FAILURE_EXIT });
   }
 

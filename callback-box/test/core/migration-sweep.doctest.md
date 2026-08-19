@@ -6,6 +6,8 @@ needing a human alone. See `src/core/migration-sweep.ts`.
 
 ```ts setup
 import { execFileSync } from "node:child_process";
+import { chmod, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { MIGRATIONS, MANIFEST_PATH } from "../../src/core/migrations.js";
 import { sweepMigrations } from "../../src/core/migration-sweep.js";
@@ -116,6 +118,47 @@ Nothing was recorded, so the work is still queued rather than silently lost:
 ```ts continue
 (await box.read(MANIFEST_PATH)).includes(PROBE)
 => false
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A commit that fails rolls the manifest entry back
+
+The manifest entry has to be written *before* the commit, because it belongs in
+it. So a commit that fails — the box's own pre-commit hook rejecting a card the
+migrator produced, say — must not leave a manifest claiming a migration that
+never landed: the next sweep would read that line, report the box current, and
+never retry.
+
+Simulated by making the commit fail for a reason the sweep cannot foresee: a
+pre-commit hook that always rejects.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await seedManifest(box, { pending: [PROBE] });
+await box.commitAll("seed migration manifest");
+// The repo root is not necessarily box.root (a v2 box roots at the package
+// dir, one level up), so ask git where its hooks actually live.
+const hookPath = join(git(box, "rev-parse", "--absolute-git-dir"), "hooks", "pre-commit");
+await writeFile(hookPath, "#!/bin/sh\nexit 1\n");
+await chmod(hookPath, 0o755);
+
+const result = await sweepMigrations({ boxRoot: box.root });
+result.status
+=> commit-failed
+```
+
+The manifest is back to what it was, so the migration is still pending and the
+next sweep retries it:
+
+```ts continue
+JSON.stringify({
+  recorded: (await box.read(MANIFEST_PATH)).includes(PROBE),
+  head: git(box, "log", "-1", "--format=%s"),
+})
+=> {"recorded":false,"head":"seed migration manifest"}
 ```
 
 ```ts cleanup

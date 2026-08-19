@@ -45,7 +45,17 @@ The commit is the notable difference. Leaving changes uncommitted is right for a
 human at a terminal and wrong unattended: a dirty box is exactly what the next
 sweep skips, so one un-reviewed migration would silently stop every later one.
 The manifest entry and the changes it describes land in the **same** commit, so
-a box can never claim a migration whose effects are not in its history.
+a box can never claim a migration whose effects are not in its history. When the
+commit fails — the box's own pre-commit hook rejecting a card a migrator
+produced, say — the manifest entry is rolled back and the migrator's changes are
+left in the tree for review.
+
+The whole sweep runs under the box git lock (`withBoxGitLock`), because
+`stageAll` is `git add -A`: without it, a connector or wakeup committing between
+the clean check and the commit would have its files swept into a
+`migration-sweep` commit. That guarantee is **cooperative** — a box agent
+shelling out to raw `git` is outside it, which is why the deploy runs the sweep
+in the at-rest window rather than at an arbitrary moment.
 
 A box left behind — dirty tree, pending procedure migration — is reported by
 `cb health` as `box-migrations` (warning), so the drift is visible after the
