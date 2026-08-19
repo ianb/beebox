@@ -47,18 +47,36 @@ Now closing a tab costs nothing. The tab bar goes back to being a tab bar.
 
 ## Issues had to grow up at the same time
 
-None of the above works if findings still live in sessions. So the to-do database became an actual database: one small markdown file per issue, category directories, machine-readable frontmatter.
+None of the above works if findings still live in sessions. Before: the developer's head, plus one giant unevenly-detailed TODO file. After: one small markdown file per issue, **inside the repo** — filed by any session the moment it notices something, categorized by directory (`bugs/`, `features/`, `decisions/`, `exploration/`, …), with machine-readable frontmatter.
 
 ```yaml
 ---
 title: "Sweep's live-agent guard fails open"
 workstream: unattached        # who OWNS resolving it
 discovered-in: worktree-importer — while testing sync
-needs: [manual-testing]
+next-action: discuss          # the developer's note to the next agent
 ---
 ```
 
 Two separate fields, on purpose: **ownership** (`workstream:`) and **provenance** (`discovered-in:`). A session can notice something outside its own job, file it, and move on — the finding outlives the worktree that found it. Filing is not a mandate: most items are *tensions, not resolutions*, waiting for the developer to pick them.
+
+## The tree is the tracker
+
+There is no external issue tracker. The queue lives in git, so it gets git's whole toolkit for free — and agents can maintain it the same way they maintain code:
+
+- **The directory is the state.** `bugs/` → open bug; `closed/bugs/` → done. Changing state is `git mv`; a link checker heals every reference after a move; git history is the archive.
+- **Grep is the query engine.** "What's waiting on me?" is a grep for `manual-testing`. "What does this workstream own?" is a grep for its name.
+- **Triage is frontmatter.** The developer reads the queue and writes `priority:` and `next-action:` tags (`discuss`, `reconfirm`, `fixed?`…) — notes-to-the-next-agent, written at the one moment the whole queue was in view. Working those tags off is itself agent work.
+- **It merges with the code.** An issue filed in a worktree rides the same branch, lands in the same merge, and is validated by the same pre-commit hooks as everything else.
+
+## The life of an issue
+
+![One issue file moving from filed to adopted to closed](workstream-story/issue-life.svg)
+
+The two ends of that pipeline are where issues and workstreams lock together:
+
+- **In:** every workstream's plan lists the issues it intends to resolve — picking up an issue means grepping for its siblings first, so a fix takes the whole cluster.
+- **Out:** `/finish` closes what actually landed, stamps the resolving workstream onto each issue, and tags anything only a human can verify with `manual-testing` — which *pins* the workstream's test setup so the repro is still there when the developer gets to it, days later, long after the worktree itself was culled.
 
 Worktrees, workstreams, and the issue queue co-evolved. None of the three stands alone.
 
