@@ -835,8 +835,11 @@ export async function serveDev(params: {
   // plan, "same-origin worktree frontends", accepted 2026-08-09; the router
   // is only exposed on localhost or the owner's tailnet). Sandboxing /dev/
   // alone therefore blocked normal pages without narrowing the actual attack
-  // surface. Mutating router routes remain POST-only + CSRF-classified
-  // (`control` in router-auth.ts). Background:
+  // surface. The destructive control verbs (`/__router/{stop,retry}`,
+  // `/workstreams/action/*`) remain POST-only + CSRF-classified (`control` in
+  // router-auth.ts); GETs behind the router can still lazy-start processes
+  // (`/__router/dashboard/<name>`, any worktree path) — that is the router's
+  // core design, not a mutation this change exposes. Background:
   // issues/bugs/2026-08-19-dev-md-images-broken-opaque-origin.md.
   const base = `/${name}/dev`;
   const devRoot = path.join(repoRoot, "dev");
