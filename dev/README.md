@@ -25,12 +25,12 @@ checkout or the worktree's short name for an isolated checkout.
   `{"tools":[{"emoji":"🔎","title":"…","href":"dev/foo/index.html","desc":"…"}]}`
   — `href` is worktree-root-relative (or a full `https://` URL); `emoji`/`desc`
   optional. (The universal doc/issue/site cards stay in router code.)
-  - **Scripts in `dev/` pages are off, with no exemption.** The router serves
-    every `/dev/` HTML response with a bare `sandbox` CSP (no JS, no same-origin
-    requests) — it shares an authenticated origin with worktree control routes,
-    so agent-authored HTML must not be able to script them. A page that needs to
-    run JS is an exhibit or a committed app (below), served on the isolated
-    exhibits origin. The old `tools.json` `scripted` allowlist is gone.
+  - **Normal HTML and markdown just work** — inline JS, relative images in
+    `.md` files, canvas, SVG. The bare `sandbox` CSP that used to cover `/dev/`
+    (blocking scripts and, less obviously, breaking every image in rendered
+    markdown) was removed 2026-08-19; the rationale lives in the decision
+    comment in `bin/router-docs.ts` `serveDev`. The old `tools.json`
+    `scripted` allowlist stays gone — nothing needs a grant any more.
 - **Not this directory: exhibits.** Something built to ask the developer one
   question — labeled screenshots, a decision page — is an *exhibit*, not a
   `dev/` view: `bin/exhibits add` puts it in the per-workstream store (it

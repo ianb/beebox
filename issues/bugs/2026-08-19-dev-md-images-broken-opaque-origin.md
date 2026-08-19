@@ -1,39 +1,49 @@
 ---
 title: "Images in rendered /dev markdown are broken: sandboxed pages make cookieless subrequests"
-workstream: unattached
+workstream: workstream-story
 area: router
+needs: [manual-testing]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-workstream-story — relative-path SVGs in a dev/ .md page all rendered broken
 ---
-Every `/dev/` response carries `Content-Security-Policy: sandbox` (no
-`allow-same-origin`), so a rendered `.md` page has an **opaque origin**. Its
-subresource requests — `<img src="foo/bar.svg">` — are therefore cross-site and
-the browser does not attach the session cookie. The router's always-on auth
-gate 401s them, and every image in every rendered dev markdown page shows as
-broken. Loading the same image URL directly works (top-level navigation carries
-the cookie), which makes the failure look mysterious.
+> **⏳ Awaiting manual testing** — fix landed in `worktree-workstream-story`
+> (the `/dev/` sandbox CSP is removed); after merge + router restart, open a
+> dev `.md` with relative images and confirm they render. Only the developer
+> clears this.
 
-Reproduce: any `dev/*.md` with a relative image, viewed at
-`/<worktree>/dev/<file>.md` while logged in.
+Every `/dev/` response carried `Content-Security-Policy: sandbox` (no
+`allow-same-origin`), so a rendered `.md` page had an **opaque origin**. Its
+subresource requests — `<img src="foo/bar.svg">` — were therefore cross-site
+and the browser did not attach the session cookie. The router's always-on auth
+gate 401'd them, and every image in every rendered dev markdown page showed as
+broken. Loading the same image URL directly worked (top-level navigation
+carries the cookie), which made the failure look mysterious.
 
-Compounding it: Markdoc does not parse `data:` URLs in image syntax (verified —
-`![a](data:image/svg+xml;base64,…)` renders as literal text), so images cannot
-be inlined in markdown as a workaround. The only current workaround is shipping
-a page as `.html` with SVGs inlined as literal markup (done for
-`dev/workstream-story.html`, 2026-08-19).
+**Resolution (2026-08-19, boxholder decision): the sandbox CSP is removed
+outright** — normal HTML and markdown in `dev/` should just work, no
+workarounds. The threat the sandbox addressed (agent-authored pages scripting
+same-origin requests at router control routes) is already an accepted residual
+for this router: every worktree frontend is agent-authored JS running
+unsandboxed on the same origin (workstreams plan, "same-origin worktree
+frontends" acceptance, 2026-08-09), and the router is only exposed on
+localhost or the owner's tailnet. Mutating router routes remain POST-only and
+CSRF-classified. The decision comment lives in `bin/router-docs.ts` `serveDev`;
+`bin/router-docs.test.ts` pins the header's absence.
 
-Same root as
+Two rejected fixes, for the record: exempting image routes from auth (weakens
+the every-TCP-request-authenticates invariant), and render-time inlining of
+images as `data:` URIs (implemented, then reverted — the boxholder wants
+normal markdown to work, not a rewrite pass).
+
+This also resolves
 [quick-open dead under the sandbox CSP](2026-08-19-dev-docs-quickopen-dead-under-sandbox-csp.md)
-— the B.2c hardening's bare `sandbox` — but a different mechanism (cookieless
-subrequests vs blocked scripts) and a different fix space. Directions:
+— same root cause, scripts instead of images.
 
-1. Serve `/dev/` static artifacts (images at least) without the auth gate —
-   they are tracked repo files, but the repo is source-available anyway; the
-   gate protects liveness/actions, not these bytes. Scope carefully: only
-   safe if limited to non-HTML content types.
-2. Have the markdown renderer inline small local images itself (read the file,
-   emit a `data:` URI in the HTML — the renderer emits HTML, so Markdoc's
-   parser limitation doesn't apply).
-3. `allow-same-origin` is NOT an option on its own terms (it would re-enable
-   the CSRF vector the sandbox exists to close).
+## Manual testing
+
+After this lands on main and the router is restarted (`pnpm dev`): open any
+dev markdown page with a relative image — e.g.
+`/main/dev/workstream-story.md` — and confirm the diagrams render instead of
+broken-image icons. While there, Cmd-P in `/main/dev/docs/` should open the
+quick-open palette again (the sibling issue).

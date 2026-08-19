@@ -1,11 +1,18 @@
 ---
 title: "Doc browser's Cmd-P quick-open is dead under the /dev sandbox CSP"
-workstream: unattached
+workstream: workstream-story
 area: router
+needs: [manual-testing]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-workstream-story — a blocked-script console error while viewing a dev/ page
 ---
+> **⏳ Awaiting manual testing** — fix landed in `worktree-workstream-story`:
+> the `/dev/` sandbox CSP was removed entirely (boxholder decision, see
+> [dev md images broken](2026-08-19-dev-md-images-broken-opaque-origin.md)),
+> which un-blocks the quick-open script. After merge + router restart, Cmd-P
+> in `/main/dev/docs/` should open the palette. Only the developer clears this.
+
 The `/dev/docs/` doc browser ships its quick-open palette as an inline
 `<script>` (`bin/router-docs.ts` `renderDocQuickOpen`, included on every doc
 browser page). The B.2c hardening (commit `dd3cc9ee`, 2026-07-21) serves every
@@ -36,3 +43,14 @@ Resolution is not obvious — three directions, security call first:
 (Separate, non-bug observation from the same investigation: browser extensions
 also trigger this console message on plain rendered `.md` pages — that part is
 noise outside our control, not this issue.)
+
+**Resolution taken (2026-08-19):** none of the three directions above — the
+boxholder removed the sandbox CSP from `/dev/` entirely (rationale in the
+sibling issue and in `bin/router-docs.ts` `serveDev`), which un-blocks the
+quick-open script as-is. No code change to the doc browser was needed.
+
+## Manual testing
+
+After merge + router restart: open `/main/dev/docs/`, press Cmd-P (Ctrl-P),
+confirm the quick-open palette appears and navigates, and confirm the console
+no longer logs the blocked-script error.
