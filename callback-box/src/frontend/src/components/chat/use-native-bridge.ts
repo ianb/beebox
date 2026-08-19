@@ -9,6 +9,7 @@ import {
   type LocationShareState,
 } from "../../lib/location-share";
 import { parseNativeEmissionDetail } from "./native-emission";
+import { createNativeDispatchRegistry, resolveNativeDispatch } from "./native-emission-redelivery";
 import type { NativeShellChannel, NativeShellWindow } from "./native-post";
 import { postNativeMessage } from "./native-post";
 
@@ -109,6 +110,11 @@ export function useNativeBridges(opts: {
   useNativeSpeechPlaybackBridge({ enabled, playing: speechPlaying });
 }
 
+// Page-lifetime: the shell redelivers ids until a receipt lands; a
+// redelivered id shares its original outcome instead of dispatching again
+// (see native-emission-redelivery.ts).
+const dispatchedNativeEmissions = createNativeDispatchRegistry();
+
 async function handleNativeEmission(
   detail: unknown,
   dispatchEmission: (emission: Emission) => Promise<Receipt>
@@ -121,8 +127,12 @@ async function handleNativeEmission(
     return;
   }
   const { emission } = parsed;
+  const { outcome } = resolveNativeDispatch(emission.id, {
+    registry: dispatchedNativeEmissions,
+    dispatch: () => dispatchEmission(emission),
+  });
   try {
-    postNativeReceipt(await dispatchEmission(emission));
+    postNativeReceipt(await outcome);
   } catch (error) {
     const reason = error instanceof Error ? error.message : "Native message dispatch failed";
     postNativeReceipt({ disposition: "rejected", emissionId: emission.id, reason });
