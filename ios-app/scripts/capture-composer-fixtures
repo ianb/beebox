@@ -18,6 +18,7 @@ states=(
   sending
   two-pending
   rejected-send
+  stuck-pending
   expired-attachment
   keyboard-shown
 )

@@ -19,6 +19,7 @@ import { dropUndefined } from "../../lib/drop-undefined.js";
 import { normalizeModelId } from "../../shared/model-ids.js";
 import { resolveHarnessPluginPath } from "./plugin-paths.js";
 import type { AgentResult, AgentResultBase } from "./types.js";
+import { applyEngineUnavailability } from "./engine-unavailability-apply.js";
 
 export interface RunAgentOptions {
   boxRoot: string;
@@ -262,5 +263,8 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
     logger,
   });
 
-  return buildAgentResult(outcome, options.resumeSessionId);
+  return applyEngineUnavailability(buildAgentResult(outcome, options.resumeSessionId), {
+    provider: "claude",
+    boxRoot,
+  });
 }

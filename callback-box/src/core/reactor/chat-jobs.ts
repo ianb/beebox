@@ -89,6 +89,12 @@ export async function processChatJobs(opts: ProcessJobsOptions): Promise<boolean
       // Failed — reset so next message starts fresh
       resetSession(sessions, sessionKey);
       allSuccess = false;
+      if (agentResult.unavailability !== undefined) {
+        // Deferred-recoverable (engine quota exhausted): every remaining
+        // thread would fail identically — leave them for a later cycle.
+        onLog?.(fmt.warn("Engine unavailable — leaving remaining chat jobs for a later cycle.\n"));
+        break;
+      }
     }
   }
 

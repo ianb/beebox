@@ -443,7 +443,16 @@ export function createRouterCore(effects: RouterEffects, config: RouterCoreConfi
     // at the workspace root's node_modules/.bin — per-package node_modules/.bin
     // dirs aren't populated. Resolve vite from the worktree's monorepo root.
     const viteBin = path.join(wt.root, "node_modules", ".bin", "vite");
-    const vite = effects.spawn(viteBin, ["dev", "--port", String(frontendPort)], {
+    // `--strictPort` because Vite's default is to walk to the NEXT port when the
+    // requested one is taken — and the next port is, structurally, the hub's.
+    // The three getPort() probes above run in parallel, so the OS hands back
+    // sequential ephemeral ports; a frontend port stolen between probe and bind
+    // sends Vite onto `backendPort`, which it wins because the hub binds later.
+    // The hub then dies with EADDRINUSE and the worktree is `failed` with the
+    // cause 30 lines up its log (observed on `main`, 2026-08-18).
+    // Failing loudly here is strictly better: same failure, correct attribution,
+    // retryable through the router's existing failed-state path.
+    const vite = effects.spawn(viteBin, ["dev", "--port", String(frontendPort), "--strictPort"], {
       cwd: wt.frontendCwd,
       env: childEnv,
       stdio: ["ignore", "pipe", "pipe"],

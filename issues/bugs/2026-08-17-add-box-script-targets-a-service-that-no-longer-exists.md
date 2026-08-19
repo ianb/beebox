@@ -7,6 +7,7 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder asked what the process is for adding a box
 needs: [manual-testing]
+priority: normal
 ---
 
 > **⏳ Awaiting manual testing** — the fix landed on `worktree-add-box-process`

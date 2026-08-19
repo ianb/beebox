@@ -95,6 +95,144 @@ final class SpeechKeywordsTests: XCTestCase {
         }
     }
 
+    func testKeywordTagsAreNotValidKeywordInput() {
+        let tagged = "<erase-message phrase=\"Clear message\" />"
+        XCTAssertNil(
+            SpeechKeywords.detect(tagged),
+            "a tag the app wrote must not match as a spoken command"
+        )
+
+        // The nesting the field report saw: saying the phrase again re-ran
+        // detection over the previous substitution.
+        var text = "Clear message"
+        for _ in 0..<3 {
+            guard let result = SpeechKeywords.detect(text) else {
+                break
+            }
+            text = result.processedTranscript
+        }
+        XCTAssertEqual(text, tagged)
+        XCTAssertEqual(text.components(separatedBy: "<erase-message").count - 1, 1)
+    }
+
+    func testKeywordsStillMatchAlongsideAnExistingTag() {
+        let seeded = "<mic-off phrase=\"Mic off\" /> buy milk send message"
+        let result = SpeechKeywords.detect(seeded)
+
+        XCTAssertEqual(result?.action, .send)
+        XCTAssertEqual(result?.matchedPhrase, "send message")
+        XCTAssertEqual(
+            result?.processedTranscript,
+            "<mic-off phrase=\"Mic off\" /> buy milk <send-message phrase=\"send message\" />"
+        )
+    }
+
+    @MainActor
+    func testRefusedKeywordLeavesComposerTextUnchanged() throws {
+        let dictation = SpeechDictation()
+        dictation.transcript = "Remind me about the dentist"
+
+        dictation.ingestRecognizedSpeechForTesting("Remind me about the dentist clear message")
+
+        let intent = try XCTUnwrap(dictation.keywordIntent)
+        XCTAssertEqual(intent.action, .erase)
+        // The composer reads `transcript`. Until the command is accepted it must
+        // show neither the tag nor the spoken command words.
+        XCTAssertEqual(dictation.transcript, "Remind me about the dentist")
+
+        dictation.discardKeywordSubstitution()
+        XCTAssertEqual(dictation.transcript, "Remind me about the dentist")
+        XCTAssertFalse(dictation.transcript.contains("erase-message"))
+    }
+
+    /// Only an action that hands the draft off as a message may leave its
+    /// control tag behind: the tag is message content the moment it lands in
+    /// the composer.
+    func testOnlySendingActionsCommitTheKeywordSubstitution() {
+        for action in [SpeechKeywordAction.send, .sendHq, .sendClose] {
+            XCTAssertTrue(action.commitsKeywordSubstitution, "\(action) stages the draft as a message")
+        }
+        for action in [SpeechKeywordAction.cancel, .micOff, .erase] {
+            XCTAssertFalse(action.commitsKeywordSubstitution, "\(action) must not leave a tag in the composer")
+        }
+    }
+
+    /// An accepted mic-off stops dictation and leaves the composer standing, so
+    /// a committed `<mic-off …/>` would sit in the draft as text the user can
+    /// later send as content. (The composer's own microphone stop is the
+    /// `.micOff` branch's voice-turn/earcon work; what is checkable here is
+    /// that recognition ended and the draft text never moved.)
+    @MainActor
+    func testAcceptedMicOffLeavesTheComposerAtThePreKeywordTranscript() throws {
+        let dictation = SpeechDictation()
+        dictation.transcript = "Remind me about the dentist"
+
+        dictation.ingestRecognizedSpeechForTesting("Remind me about the dentist mic off")
+
+        let intent = try XCTUnwrap(dictation.keywordIntent)
+        XCTAssertEqual(intent.action, .micOff)
+        XCTAssertFalse(intent.action.commitsKeywordSubstitution)
+
+        // What the composer does for an accepted, non-sending action.
+        dictation.discardKeywordSubstitution()
+
+        XCTAssertEqual(dictation.transcript, "Remind me about the dentist")
+        XCTAssertFalse(dictation.transcript.contains("<mic-off"))
+        XCTAssertTrue(dictation.hasDictatedText)
+        XCTAssertFalse(dictation.isRecording)
+        XCTAssertEqual(dictation.state, .preparingHQ)
+    }
+
+    @MainActor
+    func testAcceptedSendCommitsTheTagSubstitution() throws {
+        let dictation = SpeechDictation()
+        dictation.transcript = "Remind me about the dentist"
+
+        dictation.ingestRecognizedSpeechForTesting("Remind me about the dentist send message")
+
+        let intent = try XCTUnwrap(dictation.keywordIntent)
+        XCTAssertEqual(intent.action, .send)
+        XCTAssertTrue(intent.action.commitsKeywordSubstitution)
+
+        dictation.commitKeywordSubstitution()
+        XCTAssertEqual(dictation.transcript, intent.processedTranscript)
+        XCTAssertTrue(dictation.transcript.contains("<send-message phrase="))
+
+        // A second commit is inert: the hold is consumed, not sticky.
+        dictation.commitKeywordSubstitution()
+        XCTAssertEqual(dictation.transcript, intent.processedTranscript)
+    }
+
+    func testSendBlockersNameTheTermAndRefuseHonestly() {
+        XCTAssertEqual(
+            ComposerSendBlocker.blockers(isPreparingSend: false, isUploadingPhotoBatch: false, isDraftReady: true),
+            []
+        )
+        XCTAssertEqual(
+            ComposerSendBlocker.blockers(isPreparingSend: true, isUploadingPhotoBatch: false, isDraftReady: false),
+            [.preparingSend, .draftNotReady]
+        )
+        XCTAssertEqual(
+            ComposerSendBlocker.logLabel(for: [.preparingSend, .draftNotReady]),
+            "preparingSend,draftNotReady"
+        )
+        XCTAssertEqual(
+            ComposerSendBlocker.voiceRefusalStatus(for: [.photoBatchUploading]),
+            "Photos are still uploading — try again when they finish."
+        )
+        // Only the photo term promises a short wait.
+        for blockers in [[ComposerSendBlocker.preparingSend], [.draftNotReady], [.preparingSend, .draftNotReady]] {
+            XCTAssertFalse(
+                ComposerSendBlocker.voiceRefusalStatus(for: blockers).contains("try again in a moment"),
+                "\(blockers) must not promise a transient wait"
+            )
+        }
+        XCTAssertNotEqual(
+            ComposerSendBlocker.voiceRefusalStatus(for: [.preparingSend]),
+            ComposerSendBlocker.voiceRefusalStatus(for: [.draftNotReady])
+        )
+    }
+
     private func assertDetectFixture(name: String, input: [String: Any], expected: Any?) throws {
         let transcript = try XCTUnwrap(input["transcript"] as? String, "\(name): missing transcript")
         let atStart = (input["atStart"] as? Bool) ?? false

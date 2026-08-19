@@ -10,7 +10,7 @@
  * scheduler's timeout eventually SIGKILLs the whole tree.
  */
 
-import { query, type Query, type SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+import type { Query, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import { fmt } from "../../lib/format.js";
 import { renderSdkMessage } from "./render.js";
 import { stopPromptLogger, type PromptLogger } from "./prompt-logger.js";
@@ -105,6 +105,12 @@ export async function consumeAgentStream(
   };
 
   try {
+    // Dynamic: the SDK is a heavy module, and this file sits behind the
+    // `core/commands` graph that nearly every `cb` command pulls in — so a
+    // static import made the SDK load for commands that never run an agent
+    // (the pre-commit hook among them). Node caches the module, so a real
+    // agent run pays the load once. (docs/plans/commit-performance.md, 1b.)
+    const { query } = await import("@anthropic-ai/claude-agent-sdk");
     const q = query({
       prompt: options.prompt,
       options: options.queryOptions,

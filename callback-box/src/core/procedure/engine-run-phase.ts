@@ -57,6 +57,10 @@ export interface RunAndValidateResult {
   reviewExhausted: boolean;
   /** Set when a run-phase shell exited non-zero — the step fails objectively. */
   runFailure?: RunShellFailure;
+  /** Set when a run agent failed deferred-recoverably (engine quota
+   * exhausted): the informative message. The step fails immediately —
+   * no shells, no validation, no review-retry into a dead engine. */
+  engineUnavailable?: string;
 }
 
 type RunPhaseParams = ExecuteStepParams & {
@@ -70,7 +74,9 @@ type RunPhaseParams = ExecuteStepParams & {
  * run agent's session with the validation-failure context instead of starting
  * fresh; review-retry is only reached for single-agent run phases.
  */
-async function runRunAgents(params: RunPhaseParams): Promise<{ sessionId: string | undefined }> {
+async function runRunAgents(
+  params: RunPhaseParams,
+): Promise<{ sessionId: string | undefined; engineUnavailable?: string }> {
   const { ctx, boxRoot, step, procedure, procedureCardPath, runCardPath, relProcedurePath } =
     params;
   invariant(step.run, "runRunAgents requires a run phase (checked by executeStep before invoking)");
@@ -103,6 +109,9 @@ async function runRunAgents(params: RunPhaseParams): Promise<{ sessionId: string
     const agentResult = await agent.invoke(invokeOpts);
     if (!agentResult.success) {
       ctx.writeLine(fmt.fail(`Agent failed: ${agentResult.error}`));
+      if (agentResult.unavailability !== undefined) {
+        return { sessionId: agent.sessionId ?? params.retry.sessionId, engineUnavailable: agentResult.error };
+      }
     }
     return { sessionId: agent.sessionId ?? params.retry.sessionId };
   }
@@ -142,6 +151,11 @@ async function runRunAgents(params: RunPhaseParams): Promise<{ sessionId: string
     sessionId = agent.sessionId ?? undefined;
     if (!agentResult.success) {
       ctx.writeLine(fmt.fail(`Agent failed: ${agentResult.error}`));
+      if (agentResult.unavailability !== undefined) {
+        // Deferred-recoverable: every further agent in this step would fail
+        // the same way — stop here and let the step fail with the cause.
+        return { sessionId, engineUnavailable: agentResult.error };
+      }
     }
   }
 
@@ -221,7 +235,27 @@ export async function runAndValidate(
   // instruction validation judges the whole step (all commits), not just the last.
   const baseline = await getHead(boxRoot);
 
-  let { sessionId } = await runRunAgents({ ...params });
+  const firstRun = await runRunAgents({ ...params });
+  let { sessionId } = firstRun;
+  if (firstRun.engineUnavailable !== undefined) {
+    // Deferred-recoverable engine failure: fail the step immediately. Run
+    // shells and validation would only produce a second, misleading error,
+    // and a review-retry into a dead engine cannot succeed.
+    const gitRefNow = await ensureGitClean({
+      boxRoot,
+      stepId: step.id,
+      procedureName: procedure.name,
+      ...(sessionId && { sessionId }),
+    });
+    return {
+      gitRef: gitRefNow,
+      sessionId,
+      runStdout: undefined,
+      validateResult: undefined,
+      reviewExhausted: false,
+      engineUnavailable: firstRun.engineUnavailable,
+    };
+  }
   const { runStdout, runFailure } = await runRunShells(params);
   let gitRef = await ensureGitClean({
     boxRoot,
@@ -278,6 +312,16 @@ export async function runAndValidate(
     const retried = await runRunAgents({ ...params, retry: { sessionId, failureContext } });
     if (retried.sessionId !== undefined) {
       sessionId = retried.sessionId;
+    }
+    if (retried.engineUnavailable !== undefined) {
+      return {
+        gitRef,
+        sessionId,
+        runStdout,
+        validateResult,
+        reviewExhausted: false,
+        engineUnavailable: retried.engineUnavailable,
+      };
     }
     gitRef = await ensureGitClean({
       boxRoot,

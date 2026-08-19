@@ -3,8 +3,8 @@
 `prepareBulkBatch` turns a bulk staging session into a committed
 `upload-batch` document under a chat's `tmp-upload/`: it copies the staged
 files into the batch's attach scope, writes that scope's asset `manifest.json`,
-writes the summary card, and commits the card + manifest (blobs stay out of
-git). Staging is not deleted. Everything runs at the `makeTmpBox()` filesystem
+writes the summary card, and commits the card, the manifest, and the blobs.
+Staging is not deleted. Everything runs at the `makeTmpBox()` filesystem
 tier — no chat runtime, no delivery (that is a later chunk).
 
 ```ts setup
@@ -53,11 +53,13 @@ async function stageBulk(boxRoot, opts) {
 }
 ```
 
-## Happy path: card + attach manifest + commit, blobs untracked
+## Happy path: card + attach manifest + commit, blobs staged
 
 Two registered items, both uploaded. The batch lands as a card + attach scope;
-the manifest records each blob's server-computed size + sha256; the card + the
-manifest commit, and the blobs themselves are never staged.
+the manifest records each blob's server-computed size + sha256; the card, the
+manifest, and the blobs all commit. Whether the blobs land as annex pointers
+rather than bytes is what `prepare-annex.doctest.md` covers — this tier runs on
+a plain git box and cannot tell the two apart.
 
 ```ts
 const box = await makeTmpBox({ git: true });

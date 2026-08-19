@@ -14,8 +14,16 @@ Three hooks are installed per box:
   after Edit/Write/MultiEdit. On a card path with errors it exits 2 with
   the error on stderr so Claude Code surfaces it to the agent (warning,
   not blocking).
-- `.git/hooks/pre-commit` — runs `cb validate --staged`; blocks commits
-  that include cards failing validation.
+- `.git/hooks/pre-commit` — runs `cb validate --pre-commit`; blocks commits
+  that include cards failing validation. That one invocation is the whole
+  commit-time suite (it replaced three separate `cb` calls, each of which
+  paid the CLI startup cost — see `docs/plans/commit-performance.md`):
+  staged card/markdown validation (blocking, same as `--staged`); a
+  box-wide broken-link scan (warn-only on stderr, and only when the staged
+  diff deletes or renames a path — nothing else can dangle a link in a file
+  that isn't staged); and the unlisted-binary guard, read from the index
+  rather than by walking the box (`cb attachments check-unlisted` remains
+  for on-demand use, as does `cb validate --links`).
 - `.git/hooks/post-commit` — fires `cb validate --urls --urls-since
   HEAD~1` in the background (non-blocking) to HEAD-check *external*
   http(s) URLs the first time they appear. Warning-only, never gates;

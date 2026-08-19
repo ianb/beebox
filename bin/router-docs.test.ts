@@ -56,9 +56,8 @@ function fakeRes(): { csp: () => string | undefined; codes: number[]; res: http.
   return { csp: () => headers["content-security-policy"], codes, res: res as unknown as http.ServerResponse };
 }
 
-// A worktree with an interactive-looking app dir and a sibling payload.html.
-// Nothing here can win a scripting grant any more — the exemption is gone — so
-// this fixture exists to prove exactly that.
+// A worktree with an interactive-looking app dir and a sibling payload.html,
+// for exercising serveDev's serving, containment, and header behavior.
 async function mkAppishRepo(): Promise<string> {
   const repo = await fs.mkdtemp(path.join(os.tmpdir(), "repo-"));
   const dev = path.join(repo, "dev");
@@ -73,6 +72,12 @@ async function cspFor(repo: string, rest: string): Promise<string | undefined> {
   const { csp, res } = fakeRes();
   await serveDev({ name: "wt", rest, res, repoRoot: repo });
   return csp();
+}
+
+async function codesFor(repo: string, rest: string): Promise<number[]> {
+  const { codes, res } = fakeRes();
+  await serveDev({ name: "wt", rest, res, repoRoot: repo });
+  return codes;
 }
 
 test("no tools.json → no cards", async () => {
@@ -121,43 +126,41 @@ test("tools.json carrying the retired `scripted` key is rejected (strict)", asyn
   assert.equal(await renderWorktreeToolCards("wt", dev), "");
 });
 
-test("serveDev always sends the bare sandbox CSP — there is no exemption", async () => {
+test("serveDev sets no Content-Security-Policy — normal HTML and markdown just work", async () => {
+  // The B.2c bare-sandbox CSP was removed 2026-08-19 (boxholder decision): it
+  // broke images in rendered markdown (opaque origin → cookieless subrequests)
+  // and scripts in plain HTML, while the same-origin-scripting threat it
+  // addressed is already an accepted residual for worktree frontends. This
+  // test pins the absence so a future hardening pass reads the decision
+  // comment in serveDev before re-adding one.
   const repo = await mkAppishRepo();
-  // An interactive app dir gets no grant: scripting pages live on the exhibits
-  // origin now, which holds no router authority.
-  assert.equal(await cspFor(repo, "/dev/story-eval/index.html"), "sandbox");
-  assert.equal(await cspFor(repo, "/dev/story-eval/"), "sandbox");
-  assert.equal(await cspFor(repo, "/dev/payload.html"), "sandbox");
-  assert.equal(await cspFor(repo, "/dev/"), "sandbox"); // manifest
-  assert.equal(await cspFor(repo, "/dev/docs/"), "sandbox");
-  assert.equal(await cspFor(repo, "/dev/nope.html"), "sandbox"); // 404
-  assert.equal(await cspFor(repo, "/dev/%zz"), "sandbox"); // malformed escape
+  assert.equal(await cspFor(repo, "/dev/story-eval/index.html"), undefined);
+  assert.equal(await cspFor(repo, "/dev/story-eval/"), undefined);
+  assert.equal(await cspFor(repo, "/dev/payload.html"), undefined);
+  assert.equal(await cspFor(repo, "/dev/"), undefined); // manifest
+  assert.equal(await cspFor(repo, "/dev/docs/"), undefined);
+  assert.equal(await cspFor(repo, "/dev/nope.html"), undefined); // 404
+  assert.equal(await cspFor(repo, "/dev/%zz"), undefined); // malformed escape
 });
 
-test("serveDev: encoded traversal stays contained and stays sandboxed", async () => {
+test("serveDev: encoded traversal stays contained", async () => {
   const repo = await mkAppishRepo();
   // Decodes to /story-eval/../payload.html → resolves to dev/payload.html:
-  // inside devRoot, so it is served, and sandboxed like everything else.
-  assert.equal(await cspFor(repo, "/dev/story-eval%2F..%2Fpayload.html"), "sandbox");
+  // inside devRoot, so it is served.
+  assert.equal((await codesFor(repo, "/dev/story-eval%2F..%2Fpayload.html"))[0], 200);
   // Above devRoot → refused outright.
-  const { res, csp, codes } = fakeRes();
-  await serveDev({ name: "wt", rest: "/dev/..%2F..%2Fetc%2Fpasswd", res, repoRoot: repo });
-  assert.deepEqual(codes, [403]);
-  assert.equal(csp(), "sandbox");
+  assert.deepEqual(await codesFor(repo, "/dev/..%2F..%2Fetc%2Fpasswd"), [403]);
 });
 
-test("serveDev: a symlink out of the app dir is contained, and still sandboxed", async () => {
+test("serveDev: a symlink out of the app dir is contained", async () => {
   const repo = await mkAppishRepo();
   const link = path.join(repo, "dev", "story-eval", "link.html");
   // Symlink inside the app dir pointing at a sibling still inside dev/.
   await fs.symlink(path.join(repo, "dev", "payload.html"), link);
-  assert.equal(await cspFor(repo, "/dev/story-eval/link.html"), "sandbox");
+  assert.deepEqual(await codesFor(repo, "/dev/story-eval/link.html"), [200]);
   // A symlink whose real path leaves dev/ is refused by the realpath re-check.
   const escape = path.join(repo, "dev", "escape.html");
   await fs.writeFile(path.join(repo, "outside.html"), "<h1>outside</h1>");
   await fs.symlink(path.join(repo, "outside.html"), escape);
-  const { res, csp, codes } = fakeRes();
-  await serveDev({ name: "wt", rest: "/dev/escape.html", res, repoRoot: repo });
-  assert.deepEqual(codes, [403]);
-  assert.equal(csp(), "sandbox");
+  assert.deepEqual(await codesFor(repo, "/dev/escape.html"), [403]);
 });

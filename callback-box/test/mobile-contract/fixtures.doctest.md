@@ -31,6 +31,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { nativeEmissionFromDetail, parseNativeEmissionDetail } from "../../src/frontend/src/components/chat/native-emission.js";
 import { nativeComposerCommandAcknowledgementFromDetail, nativeComposerCommandFromDetail } from "../../src/frontend/src/components/chat/native-composer-command.js";
+import { nativeLastAudioRequestFromDetail } from "../../src/frontend/src/components/chat/native-last-audio-request.js";
 import { detectKeyword, appendSendKeywordTag } from "../../src/frontend/src/lib/audio/speech-keywords.js";
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
@@ -113,6 +114,14 @@ function validateComposerCommand(fx) {
 // ── composer-command-ack: strict native→web mutation result ──
 function validateComposerCommandAcknowledgement(fx) {
   const out = nativeComposerCommandAcknowledgementFromDetail(fx.input);
+  return deepEqual(out, fx.expected)
+    ? { ok: true }
+    : { ok: false, detail: `got ${JSON.stringify(out)}` };
+}
+
+// ── last-audio-request: strict web→native retranscription relay ──
+function validateLastAudioRequest(fx) {
+  const out = nativeLastAudioRequestFromDetail(fx.input);
   return deepEqual(out, fx.expected)
     ? { ok: true }
     : { ok: false, detail: `got ${JSON.stringify(out)}` };
@@ -282,6 +291,19 @@ durable; rejection always carries a user-visible reason.
 ```ts
 runFamily("composer-command-ack", validateComposerCommandAcknowledgement)
 => {"family":"composer-command-ack","cases":3,"pass":3}
+```
+
+## last-audio-request
+
+The relay that lets the phone answer an agent's retranscription request. Both
+ids are required: without `requestId` there is no URL to answer at, and without
+`messageId` the answer cannot satisfy the server's echo-and-verify check, so
+either one missing is a rejection rather than a best-effort send. `sessionId` is
+the relaying tab's own, and is null before the tab has been assigned one.
+
+```ts
+runFamily("last-audio-request", validateLastAudioRequest)
+=> {"family":"last-audio-request","cases":5,"pass":5}
 ```
 
 ## receipt

@@ -13,6 +13,7 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { CODEX_BOX_SANDBOX } from "./codex-sandbox.js";
+import { toError } from "../lib/error-guards.js";
 import type { ChatContentBlock } from "./claude-chat-types.js";
 
 export type CodexSdkItem = ThreadItem;
@@ -90,6 +91,28 @@ function abortOutcome(options: {
     return { status: "interrupted", error: "Codex turn was interrupted" };
   }
   return null;
+}
+
+/**
+ * Resolve a throw out of the event stream. Aborts map to their outcome. When
+ * the stream already carried the semantic failure (a `turn.failed` or `error`
+ * event), the SDK's process-exit throw that follows is only stderr startup
+ * chatter ("Reading prompt from stdin...") — keep the informative message.
+ * Anything else rethrows.
+ */
+function settleStreamThrow(options: {
+  cause: unknown;
+  timedOut: boolean;
+  interrupted: boolean;
+  capturedError: string | null;
+  status: CodexSdkTurnResult["status"];
+}): Pick<CodexSdkTurnResult, "status" | "error"> {
+  const aborted = abortOutcome({ timedOut: options.timedOut, interrupted: options.interrupted });
+  if (aborted !== null) return aborted;
+  if (options.capturedError !== null && options.status !== "completed") {
+    return { status: "failed", error: options.capturedError };
+  }
+  throw toError(options.cause);
 }
 
 export function codexSdkThreadOptions(options: CodexSdkSessionOptions): ThreadOptions {
@@ -210,12 +233,13 @@ export class CodexSdkSession {
         ({ status, error } = aborted);
       }
     } catch (cause) {
-      const aborted = abortOutcome({
+      ({ status, error } = settleStreamThrow({
+        cause,
         timedOut: timeoutController.signal.aborted,
         interrupted: options.signal?.aborted === true,
-      });
-      if (aborted === null) throw cause;
-      ({ status, error } = aborted);
+        capturedError: error,
+        status,
+      }));
     } finally {
       clearTimeout(timeout);
       await materialized.cleanup();

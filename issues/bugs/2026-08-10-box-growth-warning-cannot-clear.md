@@ -50,7 +50,7 @@ takes it, also silently blesses whatever the baseline happened to catch.
 `node_modules`. On the observed box `.callback-box` is 193 MB against 415 MB of
 content — the single largest thing in the box, and entirely invisible to the
 growth check. 165 MB of it is one stale `search-index.json` (see
-[low-priority-jobs-wedge-wakeup-forever](2026-08-10-low-priority-jobs-wedge-wakeup-forever.md)).
+[low-priority-jobs-wedge-wakeup-forever](../closed/bugs/2026-08-10-low-priority-jobs-wedge-wakeup-forever.md)).
 
 Related: the measurement has no byte dimension at all. It counts files,
 directories, commits and git object bytes, but never content bytes, so a box

@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-workstreams — full finish verification
+priority: backlog
 ---
 
 The full callback-box suite intermittently fails the cancellation case in

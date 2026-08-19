@@ -76,6 +76,127 @@ JSON.stringify({ ...skipped, invoked })
 await box.cleanup();
 ```
 
+## …but only until the wait deadline: an overdue low-priority job runs on its own
+
+`skipLowPriority` buys "an idle box doesn't spend an agent turn every tick on
+optional filler". It used to buy "or never" as well — a box whose `box/jobs`
+held nothing but low-priority cards skipped every cycle forever, and a
+`contains-backfill` card in that state suppressed its own successor too
+(observed on a production box at 85, 52 and 40 days). Low priority now means
+*may wait*, not *may wait forever*: past 24h pending, the job earns a cycle.
+
+Age comes from the filename's timestamp prefix, which every job-card writer
+stamps — no card mutation, and nothing to keep in sync. The block above uses
+an unstamped filename, whose age falls back to the mtime and so reads as
+young; this one is dated 2020.
+
+```ts
+const boxOld = await makeTmpBox({ git: true });
+await boxOld.write("box/jobs/2020-01-01T00-00-00-stale.intake.job.card", intakeJob("Long overdue", { priority: "low" }));
+boxOld.commitAll("add an overdue low-prio job");
+
+let oldInvoked = 0;
+const oldFactory = (opts) => {
+  oldInvoked += 1;
+  return createFakeAgent({ name: opts.name, act: async ({ boxRoot }) => {
+    await finishJob({ boxRoot, jobRelPath: "box/jobs/2020-01-01T00-00-00-stale.intake.job.card" });
+    return { success: true };
+  } });
+};
+const drained = await runOneCycle({ ...cycleParams(boxOld.root, oldFactory), skipLowPriority: true });
+JSON.stringify({ ...drained, invoked: oldInvoked })
+=> {"success":true,"jobsProcessed":1,"jobsRemaining":0,"invoked":1}
+```
+
+```ts cleanup
+await boxOld.cleanup();
+```
+
+## A deadline-triggered cycle takes a bounded batch, oldest first
+
+A box coming out of a long wedge can hold months of deferred work, and every
+pending job goes into one agent prompt. Dumping the whole backlog into a
+single turn is its own incident, so a cycle that runs *because* of the
+deadline admits at most the five oldest overdue jobs; the rest are still
+overdue on the next wakeup, so the queue drains at a pace rather than in one
+gulp.
+
+```ts
+const boxMany = await makeTmpBox({ git: true });
+for (let i = 1; i <= 7; i++) {
+  const day = String(i).padStart(2, "0");
+  await boxMany.write(`box/jobs/2020-01-${day}T00-00-00-b.intake.job.card`, intakeJob(`Overdue ${String(i)}`, { priority: "low" }));
+}
+boxMany.commitAll("add seven overdue low-prio jobs");
+
+// The agent finishes exactly the jobs its prompt named.
+const manyFactory = (opts) => createFakeAgent({ name: opts.name, act: async ({ boxRoot, prompt }) => {
+  for (const file of await fs.readdir(path.join(boxRoot, "box/jobs"))) {
+    if (prompt.includes(file)) await finishJob({ boxRoot, jobRelPath: `box/jobs/${file}` });
+  }
+  return { success: true };
+} });
+const capped = await runOneCycle({ ...cycleParams(boxMany.root, manyFactory), skipLowPriority: true });
+JSON.stringify(capped)
+=> {"success":true,"jobsProcessed":5,"jobsRemaining":2}
+```
+
+Oldest first, so the tail of a backlog can't be starved by newer arrivals —
+days 01–05 went, 06 and 07 wait.
+
+```ts continue
+JSON.stringify((await fs.readdir(path.join(boxMany.root, "box/jobs"))).toSorted())
+=> ["2020-01-06T00-00-00-b.intake.job.card","2020-01-07T00-00-00-b.intake.job.card"]
+```
+
+The next cycle finds them overdue and takes them.
+
+```ts continue
+const second = await runOneCycle({ ...cycleParams(boxMany.root, manyFactory), skipLowPriority: true });
+JSON.stringify(second)
+=> {"success":true,"jobsProcessed":2,"jobsRemaining":0}
+```
+
+```ts cleanup
+await boxMany.cleanup();
+```
+
+## Normal work is never delayed by a low-priority backlog
+
+The cap applies only to the deadline path. As soon as any normal-priority job
+is pending the cycle runs on everything, as it always did — a pile of overdue
+low-priority cards must not push the normal job to a later wakeup.
+
+```ts
+const boxMixed = await makeTmpBox({ git: true });
+for (let i = 1; i <= 7; i++) {
+  const day = String(i).padStart(2, "0");
+  await boxMixed.write(`box/jobs/2020-01-${day}T00-00-00-b.intake.job.card`, intakeJob(`Overdue ${String(i)}`, { priority: "low" }));
+}
+await boxMixed.write("box/jobs/2026-06-01T00-00-00-now.intake.job.card", intakeJob("Real work"));
+boxMixed.commitAll("add a normal job among the backlog");
+
+let mixedPrompt = "";
+const mixedFactory = (opts) => createFakeAgent({ name: opts.name, act: async ({ prompt }) => {
+  mixedPrompt = prompt;
+  return { success: true };
+} });
+const mixed = await runOneCycle({ ...cycleParams(boxMixed.root, mixedFactory), skipLowPriority: true });
+JSON.stringify({ ...mixed, hasNormal: mixedPrompt.includes("2026-06-01T00-00-00-now.intake.job.card") })
+=> {"success":true,"jobsProcessed":0,"jobsRemaining":8,"hasNormal":true}
+```
+
+All eight are offered, and the normal job is listed first.
+
+```ts continue
+mixedPrompt.indexOf("2026-06-01T00-00-00-now") < mixedPrompt.indexOf("2020-01-01T00-00-00-b")
+=> true
+```
+
+```ts cleanup
+await boxMixed.cleanup();
+```
+
 ## A `todo-review-job` alone is processed under `skipLowPriority`, not stuck forever
 
 The wakeup `todo-review` sweep (`docs/implemented-plans/todo-annotation.md` Track 5b) is

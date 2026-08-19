@@ -31,6 +31,7 @@ import {
   resetAllSessions,
 } from "../chat/reactor-sessions.js";
 import { runOneCycle, type RunCycleParams } from "./cycle.js";
+import { boxEngineUnavailability, engineWaitReason } from "../schedule/engine-wait.js";
 import { runSync as realRunSync, runFinalize as realRunFinalize } from "./subprocess.js";
 
 export interface ReactorOptions {
@@ -152,6 +153,13 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
 
     if (!result.success) {
       success = false;
+      const wait = await boxEngineUnavailability(boxRoot);
+      if (wait !== null) {
+        // Deferred-recoverable: further cycles would burn attempts that
+        // cannot succeed. Jobs stay pending for a cycle after the reset.
+        onLog?.(fmt.warn(`Stopping cycles: ${engineWaitReason(wait)}\n`));
+        break;
+      }
     }
 
     // Stop if no jobs remain or if we didn't process any (stuck)

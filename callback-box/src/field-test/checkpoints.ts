@@ -35,7 +35,8 @@
 
 import { rm } from "node:fs/promises";
 import { assertNever } from "../lib/invariant.js";
-import { commit, createTag, getHead, getStatus, revertToSnapshot, stageAll } from "../lib/git.js";
+import { commit, getHead, getStatus, revertToSnapshot, stageAll } from "../lib/git.js";
+import { createTag } from "../lib/git-refs.js";
 import { stagingBaseDir } from "../core/capture/staging-schema.js";
 import type { FieldCleanupPolicy } from "./scenario.js";
 

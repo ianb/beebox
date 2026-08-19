@@ -10,9 +10,19 @@
  * anything — `latest()` is well-defined by construction. Recordings live
  * only in this tab's memory (gone on reload); the server treats a "none"
  * answer as tentative, since another tab may still hold one.
+ *
+ * Inside a native shell this tab is not the only answerer: recordings made by
+ * the NATIVE composer never enter the page, so the request is also relayed to
+ * the shell, which holds them on disk and answers the server itself
+ * (`native-last-audio-request.ts`, docs/mobile-contract.md §4.8).
  */
 
 import { getApiBase } from "../../api-core";
+import {
+  createNativeLastAudioRequest,
+  postNativeLastAudioRequest,
+} from "../../components/chat/native-last-audio-request";
+import { isNativeShell } from "../../components/chat/native-post";
 import { createRetentionStore } from "../../input/retention";
 
 export interface VoiceAudioPayload {
@@ -68,6 +78,16 @@ export async function fulfillLastAudioRequest(
   opts: { messageId: string; sessionId: string | null }
 ): Promise<void> {
   const { messageId, sessionId } = opts;
+  // In a native shell, the recording may have been made by the NATIVE composer,
+  // in which case these bytes never entered the page at all. Hand the request
+  // to the shell, which answers the server directly over HTTP. This tab still
+  // answers below from its own store: a web-composer recording inside the same
+  // webview is legitimately ours, and a "none" cannot settle the request early
+  // (the server's grace window runs the full requested timeout), so the two
+  // answers never race destructively. See docs/mobile-contract.md §4.8.
+  if (isNativeShell()) {
+    postNativeLastAudioRequest(window, createNativeLastAudioRequest({ requestId, messageId, sessionId }));
+  }
   const url = `${getApiBase()}/chat/last-audio/${encodeURIComponent(requestId)}`;
   const audio = retention.get(messageId);
   try {

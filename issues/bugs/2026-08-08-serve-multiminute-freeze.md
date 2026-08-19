@@ -5,8 +5,31 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test operator prototype (Priya, activity 2)
 labels: [field-test-findings, code-error]
-next-action: reconfirm
 ---
+
+> **Checked 2026-08-18 — still live, and today's git-lock work argues *against*
+> this issue's leading hypothesis.** Tagged `reconfirm`; removed.
+>
+> `0a9b0be5` (today) takes the box git lock in every index mutator, replacing
+> the old best-effort single 2s retry — which is exactly hypothesis (a), index
+> contention between a chat-turn commit and `stageAndCommitPaths`. It is gated
+> by a 5-writer race test (`test/lib/git-concurrent-commit.doctest.md`).
+>
+> **That fix probably does not explain the freeze**, though it fixes a real
+> correctness bug (dropped commits). `src/lib/git-lock.ts` states its design
+> goal outright — the lock "can never wedge a box": on expiry it logs loudly and
+> proceeds unserialized rather than blocking. A mechanism that deliberately
+> refuses to block is a poor candidate for a multi-minute stall, so hypothesis
+> (a) looks weaker after this landed, not stronger.
+>
+> Hypothesis (b) — server hang versus tab hang — remains completely
+> unexercised, and it is now the more likely one.
+>
+> **This needs a credentialed human step, as the issue already anticipated.**
+> Reproducing it wants a boxholder-authorized test identity to drive the
+> bulk-upload panel concurrently with a real chat turn, plus `node --cpu-prof`
+> on the server and a parallel curl heartbeat to tell "server dead" from "tab
+> dead". A test identity was deliberately not minted for this investigation.
 
 During the field-test prototype, the served app stopped responding entirely:
 no clicks landed, and two successive page navigations each hung for ~2 minutes

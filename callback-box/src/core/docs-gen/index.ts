@@ -34,7 +34,7 @@ import { pruneStaleTemplateUpdates, isTemplateManagedPath } from "../install-tem
 import { generateRules } from "../init-rules.js";
 import { installValidationHooks } from "../install-validation-hooks.js";
 import { getBoxShape, type BoxShape } from "../../lib/box-shape.js";
-import { isRepo, hasCommits, getStatus, stageFiles, commitPaths } from "../../lib/git.js";
+import { isRepo, hasCommits, getStatus, stageFiles, commitPaths, withBoxGitLock } from "../../lib/git.js";
 import { AGENT_GUIDE_DIR, AGENT_GUIDE_FILE, DOCS_DIR, withDocId } from "./shared.js";
 import { generateCbCommands } from "./cb-commands.js";
 import { generateCardDoc, generateConnectorsDocs } from "./content.js";
@@ -328,25 +328,26 @@ export async function commitTemplateSyncChanges(boxRoot: string): Promise<void> 
   if (!(await isRepo(packageRoot))) return;
   if (!(await hasCommits(packageRoot))) return;
 
-  const status = await getStatus(packageRoot);
-  const candidates = [
-    ...status.staged,
-    ...status.modified,
-    ...status.untracked,
-  ];
-  // Filter against the box-root-relative form (what isTemplateManagedPath's
-  // patterns are written against), but keep the original git-reported paths
-  // in `toCommit` — stageFiles/commitPaths run with cwd=packageRoot, so they
-  // need the packageRoot-relative form git itself understands.
-  const toCommit = candidates.filter((p) => isTemplateManagedPath(toBoxRelativePath(p, shape)));
-  if (toCommit.length === 0) return;
+  // Locked from the status read through the commit. Note the lock is taken on
+  // `packageRoot` while every other writer takes it on `boxRoot` (`content/`) —
+  // both resolve to the same git directory, so they are the same lock.
+  await withBoxGitLock(packageRoot, async () => {
+    const status = await getStatus(packageRoot);
+    const candidates = [...status.staged, ...status.modified, ...status.untracked];
+    // Filter against the box-root-relative form (what isTemplateManagedPath's
+    // patterns are written against), but keep the original git-reported paths
+    // in `toCommit` — stageFiles/commitPaths run with cwd=packageRoot, so they
+    // need the packageRoot-relative form git itself understands.
+    const toCommit = candidates.filter((p) => isTemplateManagedPath(toBoxRelativePath(p, shape)));
+    if (toCommit.length === 0) return;
 
-  // Stage explicitly so untracked files are picked up by `commit -- <paths>`.
-  await stageFiles(packageRoot, toCommit);
-  await commitPaths(packageRoot, {
-    paths: toCommit,
-    message: "Sync templates from upstream",
-    trailers: { "Triggered-By": "generateDocs" },
+    // Stage explicitly so untracked files are picked up by `commit -- <paths>`.
+    await stageFiles(packageRoot, toCommit);
+    await commitPaths(packageRoot, {
+      paths: toCommit,
+      message: "Sync templates from upstream",
+      trailers: { "Triggered-By": "generateDocs" },
+    });
   });
 }
 

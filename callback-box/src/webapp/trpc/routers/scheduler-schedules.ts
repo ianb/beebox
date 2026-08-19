@@ -28,7 +28,7 @@ export interface ScheduleEntry {
   until: string | undefined;
   runs: string;
   lastRun: string | null;
-  lastResult: "success" | "failure" | null;
+  lastResult: "success" | "failure" | "deferred" | null;
   lastError: string | null;
   runCount: number;
   once: boolean;

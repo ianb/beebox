@@ -11,6 +11,7 @@
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { fmt } from "../../lib/format.js";
+import { getBoxTime } from "../../lib/time.js";
 import type { createAgent as realCreateAgent } from "../agent/index.js";
 import type { generateDocs as realGenerateDocs } from "../docs-gen/index.js";
 import { findJobCards } from "./job-discovery.js";
@@ -39,9 +40,10 @@ type JobCardInfo = Awaited<ReturnType<typeof findJobCards>>[number];
  * Outcome of the discovery stage. A discriminated result so the cycle can
  * dispatch exhaustively instead of threading sentinel counts:
  * - `none` — no pending jobs at all.
- * - `skipped` — jobs exist but all low-priority and `skipLowPriority` is set;
- *   they stay pending (`remaining`).
- * - `ready` — jobs to process this cycle.
+ * - `skipped` — jobs exist but all low-priority, none past the wait deadline,
+ *   and `skipLowPriority` is set; they stay pending (`remaining`).
+ * - `ready` — jobs to process this cycle (not necessarily every pending job:
+ *   a deadline-triggered cycle admits only a bounded batch of the overdue).
  */
 type DiscoverResult =
   | { kind: "none" }
@@ -103,6 +105,27 @@ async function refreshDocsStage(params: RunCycleParams): Promise<void> {
   await generateDocs(boxRoot);
 }
 
+/**
+ * How long a low-priority job may sit pending before it earns a cycle of its
+ * own. `skipLowPriority` (which `cb wakeup` always sets) exists so an
+ * otherwise-idle box doesn't spend an agent turn every tick on optional
+ * filler — but before this deadline existed it also meant "or never": a box
+ * whose `box/jobs` held nothing but low-priority cards skipped every cycle
+ * forever, and one such card (`contains-backfill`) suppressed its own
+ * successor as well. Low priority means *may wait*, not *may wait forever*.
+ */
+const LOW_PRIORITY_MAX_WAIT_MS = 24 * 60 * 60 * 1000;
+const LOW_PRIORITY_MAX_WAIT_LABEL = "24h";
+
+/**
+ * How many overdue low-priority jobs one deadline-triggered cycle admits.
+ * A box coming out of a long wedge can hold months of them; draining the
+ * whole backlog into a single agent prompt is its own incident, so the
+ * oldest few go per cycle (they're sorted oldest-first) and the rest wait
+ * for the next wakeup, which will find them overdue again.
+ */
+const OVERDUE_LOW_PRIORITY_PER_CYCLE = 5;
+
 /** Stage 3: find job cards and decide whether this cycle has work to do. */
 async function discoverStage(opts: {
   jobsDir: string;
@@ -111,7 +134,7 @@ async function discoverStage(opts: {
   params: RunCycleParams;
 }): Promise<DiscoverResult> {
   const { jobsDir, typeFilter, sourceFilter, params } = opts;
-  const { skipLowPriority, onLog } = params;
+  const { boxRoot, skipLowPriority, onLog } = params;
 
   const jobCards = await findJobCards(jobsDir, { typeFilter, sourceFilter });
   if (jobCards.length === 0) {
@@ -120,18 +143,37 @@ async function discoverStage(opts: {
   }
 
   const hasNormalPriority = jobCards.some((j) => j.priority === "normal");
+  let selected = jobCards;
   if (skipLowPriority && !hasNormalPriority) {
-    onLog?.(fmt.dim(`Only ${jobCards.length} low-priority job(s), skipping.\n`));
-    return { kind: "skipped", remaining: jobCards.length };
+    // Nothing but low-priority work. Run only for the jobs past the deadline,
+    // and only a bounded batch of them; everything else keeps waiting for a
+    // free ride alongside normal work.
+    const now = getBoxTime(boxRoot).getTime();
+    const overdue = jobCards.filter(
+      (j) => j.createdAt !== null && now - j.createdAt.getTime() >= LOW_PRIORITY_MAX_WAIT_MS,
+    );
+    if (overdue.length === 0) {
+      onLog?.(fmt.dim(`Only ${jobCards.length} low-priority job(s), skipping.\n`));
+      return { kind: "skipped", remaining: jobCards.length };
+    }
+    selected = overdue.slice(0, OVERDUE_LOW_PRIORITY_PER_CYCLE);
+    const deferred = jobCards.length - selected.length;
+    onLog?.(
+      fmt.warn(
+        `${overdue.length} low-priority job(s) pending over ${LOW_PRIORITY_MAX_WAIT_LABEL}; processing ${selected.length}.\n`,
+      ),
+    );
+    if (deferred > 0) onLog?.(fmt.dim(`  ${deferred} other low-priority job(s) wait for the next cycle.\n`));
   }
 
-  onLog?.(fmt.header(`Found ${jobCards.length} job(s):\n`));
-  for (const card of jobCards) {
+  onLog?.(fmt.header(`Found ${selected.length} job(s):\n`));
+  for (const card of selected) {
     const label = card.priority === "low" ? " (low priority)" : "";
     onLog?.(`  - box/jobs/${card.file}${label}\n`);
   }
-  return { kind: "ready", jobCards };
+  return { kind: "ready", jobCards: selected };
 }
+
 
 /**
  * Stage 4: read job content, run the agents, and count what was consumed.

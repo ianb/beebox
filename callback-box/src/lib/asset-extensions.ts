@@ -68,15 +68,17 @@ export function assetGitignorePatterns(): string {
  * already kept out of git's object database, just by a different tool that does
  * not verify content.
  *
- * git-annex matches these globs case-sensitively. Emit the ordinary lowercase
- * spelling and the all-uppercase spelling used by cameras (not every mixed-case
- * permutation). The attributes renderer below deliberately remains wider:
- * routing an extra mixed-case path through the filter is harmless.
+ * git-annex matches these globs case-sensitively, so each extension renders
+ * through {@link anyCaseGlob} — the same per-character rendering the attributes
+ * file uses. The two lists agreeing exactly is the point: a case this expression
+ * misses does not fail safe. The filter still runs (the attributes side matches
+ * any case), declines to annex, and the bytes commit as a raw git blob, which is
+ * the outcome the annex migration exists to prevent. Verified 2026-08-18: under
+ * a lowercase-and-uppercase-only expression `Mixed.Jpg` committed as a 1.5 MB
+ * blob while `upper.JPG` and `lower.jpg` became pointers.
  */
 export function assetLargefilesExpression(): string {
-  return ASSET_EXTENSIONS.flatMap((ext) => [ext, ext.toUpperCase()])
-    .map((ext) => `include=*.${ext}`)
-    .join(" or ");
+  return ASSET_EXTENSIONS.map((ext) => `include=*.${anyCaseGlob(ext)}`).join(" or ");
 }
 
 /**
@@ -87,15 +89,14 @@ export const ANNEX_ATTRIBUTES_MARKER = "# Managed by callback-box — do not edi
 
 /**
  * One glob segment matching `ext` in any case: `heic` → `[hH][eE][iI][cC]`.
+ * Used by both renderings above and below, which is what keeps them in step.
  *
  * gitattributes patterns are matched case-sensitively (wildmatch), and so is
  * `annex.largefiles` — verified with git-annex 10.20260717: `git annex
- * matchexpression "include=*.jpg" --largefiles --file UPPER.JPG` exits 1. So a
- * lower-and-uppercase attribute list would already cover everything largefiles
- * annexes. It is widened to mixed case anyway because the two lists fail
- * asymmetrically: an over-wide attribute line only runs a filter that then
- * declines to annex, while a missing one leaves an annexed pointer unsmudged
- * and the file reads back as `/annex/objects/…` text.
+ * matchexpression "include=*.jpg" --largefiles --file UPPER.JPG` exits 1, and
+ * the same expression written `include=*.[jJ][pP][gG]` matches all three of
+ * `lower.jpg`, `UPPER.JPG`, and `Mixed.Jpg`. Both renderings use this, so
+ * neither can miss a case the other covers.
  */
 function anyCaseGlob(ext: string): string {
   return ext
@@ -103,6 +104,25 @@ function anyCaseGlob(ext: string): string {
     .map((ch) => (ch.toUpperCase() === ch ? ch : `[${ch}${ch.toUpperCase()}]`))
     .join("");
 }
+
+/**
+ * A bulk-upload batch's attach scope — the one place a NON-asset extension
+ * still belongs in the annex.
+ *
+ * A batch lands whatever the boxholder picked (`.zip`, `.csv`, extensionless),
+ * so `core/bulk-upload/prepare.ts` writes a batch-local `.gitattributes` setting
+ * `* annex.largefiles=anything` over the scope. That override is inert on its
+ * own: `annex.largefiles` is only consulted for a path the filter-process
+ * actually sees, and the extension lines above were the whole of what it saw.
+ * Between 2026-08-04 (when this file was scoped) and 2026-08-18 a batch's
+ * non-asset files therefore committed as raw git blobs — verified at 1.5 MB
+ * each — while its photos annexed correctly. This line makes the batch-local
+ * override reachable.
+ *
+ * Unanchored for the same reason as {@link CAPTURE_STAGING_IGNORE_PATTERN}: a
+ * batch lands under `<contextDir>/tmp-upload/`, not only the box root.
+ */
+export const BULK_BATCH_ATTACH_PATTERN = "**/*.upload-batch.attach/**";
 
 /**
  * {@link ASSET_EXTENSIONS} as the contents of `.git/info/attributes` — which
@@ -118,10 +138,13 @@ function anyCaseGlob(ext: string): string {
  * nothing about what gets annexed and takes text-only commits (cards,
  * manifests — every capture commit) off the filter path entirely.
  *
- * This must stay a SUPERSET of {@link assetLargefilesExpression}'s matches:
- * anything largefiles annexes needs the filter to smudge its pointer back into
- * bytes on checkout. `cb doctor annex` enforces both halves — the file matching
- * this rendering, and every already-annexed path being covered by it.
+ * This must stay a SUPERSET of everything that can be annexed — both
+ * {@link assetLargefilesExpression} and any per-directory `.gitattributes` a
+ * write path lays down, which is why {@link BULK_BATCH_ATTACH_PATTERN} is here.
+ * A path largefiles annexes but the filter never sees is a raw blob; a path the
+ * annex holds but the filter no longer covers reads back as `/annex/objects/…`
+ * text. `cb doctor annex` enforces both halves — the file matching this
+ * rendering, and every already-annexed path being covered by it.
  */
 export function assetAnnexAttributes(): string {
   return [
@@ -130,6 +153,9 @@ export function assetAnnexAttributes(): string {
     "# Replaces git-annex's default `* filter=annex`, which puts every text commit",
     "# through the annex filter-process for ~0.3s of nothing.",
     ...ASSET_EXTENSIONS.map((ext) => `*.${anyCaseGlob(ext)} filter=annex`),
+    "# A bulk batch holds arbitrary types and widens largefiles itself; the",
+    "# filter has to reach those paths for that to mean anything.",
+    `${BULK_BATCH_ATTACH_PATTERN} filter=annex`,
     "",
   ].join("\n");
 }

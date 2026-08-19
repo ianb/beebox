@@ -1,11 +1,30 @@
 ---
 title: "Submitting a voice message leaves it behind as an 'unsent' recoverable draft"
-workstream: unknown
+workstream: emission-model
+needs: [manual-testing]
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder, repeatedly, sending voice messages
 priority: important
+design: ../../callback-box/docs/implemented-plans/emission-model.md
 ---
+
+> **⏳ Awaiting manual testing** — fix landed in the emission-model
+> workstream (track C): an emptied composer now removes the persisted draft
+> synchronously (no 400ms debounce window), and the persist scheduler
+> flushes instead of dropping a pending write on unmount. See Manual
+> testing. Only the developer clears this.
+
+## Manual testing
+
+1. Dictate a message and send it.
+2. Immediately (within half a second) switch session/landmark/route.
+3. Return: no unsent-message recovery may be offered.
+4. Stronger check: right after the send, read
+   `localStorage["cb-input-emission:<box>"]` in devtools — the key must be
+   gone, not merely blanked.
+5. Confirm ordinary draft persistence still works: type without sending,
+   reload the tab, and the draft is offered back.
 
 > **Checked 2026-08-14 — not a duplicate.** Tagged `duplicate`; removed, and
 > the issue stays open. The nearest neighbour,

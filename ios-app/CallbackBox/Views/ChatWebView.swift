@@ -38,6 +38,14 @@ struct NativeLocationShareResult: Equatable {
     var message: String
 }
 
+/// A request to abandon the in-flight delivery attempt for these emissions so
+/// the next `deliver` pass hands them to the page again. Identified so the
+/// coordinator acts once per request instead of on every SwiftUI update.
+struct NativeEmissionRedeliveryRequest: Equatable, Identifiable {
+    var id = UUID()
+    var emissionIDs: Set<NativeChatEmission.ID>
+}
+
 struct NativeScreenshotRequest: Equatable, Identifiable {
     var id = UUID()
 }
@@ -61,6 +69,7 @@ struct ChatWebView: UIViewRepresentable {
 
     var box: PairedBox
     var pendingEmissions: [NativeChatEmission]
+    var emissionRedeliveryRequest: NativeEmissionRedeliveryRequest?
     var locationShareRequest: NativeLocationShareRequest?
     var screenshotRequest: NativeScreenshotRequest?
     var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement]
@@ -75,10 +84,12 @@ struct ChatWebView: UIViewRepresentable {
     var onScreenshotResult: (NativeScreenshotResult) -> Void
     var onComposerCommand: (NativeComposerCommandDelivery) -> Void
     var onComposerCommandAcknowledgementDelivered: (String) -> Void
+    var onLastAudioRequest: (NativeLastAudioRequest) -> Void
 
     init(
         box: PairedBox,
         pendingEmissions: [NativeChatEmission] = [],
+        emissionRedeliveryRequest: NativeEmissionRedeliveryRequest? = nil,
         locationShareRequest: NativeLocationShareRequest? = nil,
         screenshotRequest: NativeScreenshotRequest? = nil,
         composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = [],
@@ -92,10 +103,12 @@ struct ChatWebView: UIViewRepresentable {
         onResponseStateChange: @escaping (Bool) -> Void = { _ in },
         onScreenshotResult: @escaping (NativeScreenshotResult) -> Void = { _ in },
         onComposerCommand: @escaping (NativeComposerCommandDelivery) -> Void = { _ in },
-        onComposerCommandAcknowledgementDelivered: @escaping (String) -> Void = { _ in }
+        onComposerCommandAcknowledgementDelivered: @escaping (String) -> Void = { _ in },
+        onLastAudioRequest: @escaping (NativeLastAudioRequest) -> Void = { _ in }
     ) {
         self.box = box
         self.pendingEmissions = pendingEmissions
+        self.emissionRedeliveryRequest = emissionRedeliveryRequest
         self.locationShareRequest = locationShareRequest
         self.screenshotRequest = screenshotRequest
         self.composerCommandAcknowledgements = composerCommandAcknowledgements
@@ -110,6 +123,7 @@ struct ChatWebView: UIViewRepresentable {
         self.onScreenshotResult = onScreenshotResult
         self.onComposerCommand = onComposerCommand
         self.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
+        self.onLastAudioRequest = onLastAudioRequest
     }
 
     func makeUIView(context: Context) -> WKWebView {
@@ -122,6 +136,7 @@ struct ChatWebView: UIViewRepresentable {
         configuration.userContentController.add(context.coordinator, name: "callbackboxSpeechPlaybackState")
         configuration.userContentController.add(context.coordinator, name: "callbackboxResponseState")
         configuration.userContentController.add(context.coordinator, name: "callbackboxComposerCommand")
+        configuration.userContentController.add(context.coordinator, name: "callbackboxLastAudioRequest")
         if let script = startupScript() {
             configuration.userContentController.addUserScript(script)
         }
@@ -153,15 +168,18 @@ struct ChatWebView: UIViewRepresentable {
         context.coordinator.onScreenshotResult = onScreenshotResult
         context.coordinator.onComposerCommand = onComposerCommand
         context.coordinator.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
+        context.coordinator.onLastAudioRequest = onLastAudioRequest
         context.coordinator.boxID = box.id
         context.coordinator.allowedOrigin = Self.origin(from: box.baseURL)
         context.coordinator.pendingEmissions = pendingEmissions
+        context.coordinator.emissionRedeliveryRequest = emissionRedeliveryRequest
         context.coordinator.locationShareRequest = locationShareRequest
         context.coordinator.screenshotRequest = screenshotRequest
         context.coordinator.composerCommandAcknowledgements = composerCommandAcknowledgements
         if webView.url == nil {
             webView.load(request())
         }
+        context.coordinator.abandonRequestedInflightEmissions()
         context.coordinator.deliver(pendingEmissions, to: webView)
         context.coordinator.deliverLocationRequest(to: webView)
         context.coordinator.captureScreenshot(from: webView)
@@ -182,7 +200,8 @@ struct ChatWebView: UIViewRepresentable {
             onResponseStateChange: onResponseStateChange,
             onScreenshotResult: onScreenshotResult,
             onComposerCommand: onComposerCommand,
-            onComposerCommandAcknowledgementDelivered: onComposerCommandAcknowledgementDelivered
+            onComposerCommandAcknowledgementDelivered: onComposerCommandAcknowledgementDelivered,
+            onLastAudioRequest: onLastAudioRequest
         )
     }
 
@@ -200,11 +219,22 @@ struct ChatWebView: UIViewRepresentable {
         var onScreenshotResult: (NativeScreenshotResult) -> Void
         var onComposerCommand: (NativeComposerCommandDelivery) -> Void
         var onComposerCommandAcknowledgementDelivered: (String) -> Void
+        var onLastAudioRequest: (NativeLastAudioRequest) -> Void
         var pendingEmissions: [NativeChatEmission] = []
+        var emissionRedeliveryRequest: NativeEmissionRedeliveryRequest?
         var locationShareRequest: NativeLocationShareRequest?
         var screenshotRequest: NativeScreenshotRequest?
         var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = []
-        private var inflightEmissionIDs = Set<NativeChatEmission.ID>()
+        /// The delivery attempt currently in flight for each emission ID, keyed
+        /// by ID and valued by the attempt's generation. Redelivery abandons an
+        /// attempt and starts a new one under the SAME emission ID, so an ID
+        /// alone cannot tell the abandoned attempt's late callback apart from
+        /// the live one — see `deliver`.
+        private var inflightEmissionGenerations: [NativeChatEmission.ID: Int] = [:]
+        /// Monotonic across every emission; only equality against the stored
+        /// generation is ever asked, so one counter is enough.
+        private var lastEmissionGeneration = 0
+        private var handledRedeliveryRequestID: NativeEmissionRedeliveryRequest.ID?
         private var inflightLocationRequestID: NativeLocationShareRequest.ID?
         private var locationRequestTimeout: DispatchWorkItem?
         private var inflightScreenshotRequestID: NativeScreenshotRequest.ID?
@@ -234,6 +264,7 @@ struct ChatWebView: UIViewRepresentable {
             onScreenshotResult: @escaping (NativeScreenshotResult) -> Void,
             onComposerCommand: @escaping (NativeComposerCommandDelivery) -> Void,
             onComposerCommandAcknowledgementDelivered: @escaping (String) -> Void,
+            onLastAudioRequest: @escaping (NativeLastAudioRequest) -> Void = { _ in },
             pageLoaded: Bool = false,
             evaluateEmission: ((String, @escaping (Error?) -> Void) -> Void)? = nil,
             openExternalURL: @escaping (URL) -> Void = { UIApplication.shared.open($0) },
@@ -254,6 +285,7 @@ struct ChatWebView: UIViewRepresentable {
             self.onScreenshotResult = onScreenshotResult
             self.onComposerCommand = onComposerCommand
             self.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
+            self.onLastAudioRequest = onLastAudioRequest
             self.pageLoaded = pageLoaded
             self.evaluateEmission = evaluateEmission
             self.openExternalURL = openExternalURL
@@ -290,7 +322,7 @@ struct ChatWebView: UIViewRepresentable {
             // provisional navigation is pending. Only clear its inflight IDs
             // once the replacement document commits; didFinish then redelivers
             // the same persisted IDs into the new page.
-            inflightEmissionIDs.removeAll()
+            inflightEmissionGenerations.removeAll()
         }
 
         func webView(
@@ -326,11 +358,11 @@ struct ChatWebView: UIViewRepresentable {
         func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
             BoxLog.error(
                 "web content process terminated pendingEmissions=\(pendingEmissions.count)"
-                    + " inflight=\(inflightEmissionIDs.count)",
+                    + " inflight=\(inflightEmissionGenerations.count)",
                 category: .webview
             )
             pageLoaded = false
-            inflightEmissionIDs.removeAll()
+            inflightEmissionGenerations.removeAll()
             webView.reload()
         }
 
@@ -406,6 +438,10 @@ struct ChatWebView: UIViewRepresentable {
                 receiveComposerCommand(message.body)
                 return
             }
+            if message.name == "callbackboxLastAudioRequest" {
+                receiveLastAudioRequest(message.body)
+                return
+            }
             guard message.name == "callbackboxSession", let urlString = message.body as? String, let url = URL(string: urlString) else {
                 return
             }
@@ -415,23 +451,63 @@ struct ChatWebView: UIViewRepresentable {
             onSessionChange(ChatWebView.visibleSessionID(from: url))
         }
 
+        /// Drop the in-flight attempt for the requested emissions so the next
+        /// `deliver` pass hands them to the page again. A receipt that arrives
+        /// late from the abandoned attempt is dropped by the inflight guard in
+        /// `receiveEmissionReceipt`; the fresh attempt re-asks the box, whose
+        /// claim registry answers the repeated emission ID idempotently. A late
+        /// evaluate FAILURE from the abandoned attempt is dropped by the
+        /// generation guard in `deliver`.
+        func abandonRequestedInflightEmissions() {
+            guard
+                let request = emissionRedeliveryRequest,
+                request.id != handledRedeliveryRequestID
+            else {
+                return
+            }
+            handledRedeliveryRequestID = request.id
+            for emissionID in request.emissionIDs {
+                inflightEmissionGenerations.removeValue(forKey: emissionID)
+            }
+        }
+
         func deliver(_ emissions: [NativeChatEmission], to webView: WKWebView) {
             guard pageLoaded else {
                 return
             }
-            for emission in emissions where inflightEmissionIDs.contains(emission.id) == false {
+            for emission in emissions where inflightEmissionGenerations[emission.id] == nil {
                 guard let detail = Self.javascriptDetail(for: emission) else {
                     continue
                 }
                 onEmissionDeliveryAttempt(emission.id)
-                inflightEmissionIDs.insert(emission.id)
+                lastEmissionGeneration += 1
+                let generation = lastEmissionGeneration
+                inflightEmissionGenerations[emission.id] = generation
                 let script = "window.callbackboxNativeReceive(\(detail));"
                 evaluate(script, in: webView) { [weak self] error in
                     guard error != nil else {
                         return
                     }
-                    self?.finishInflightEmission(emission.id)
-                    self?.onEmissionReceipt(NativeEmissionReceipt(
+                    guard let self else {
+                        return
+                    }
+                    // This failure is a fact about THIS evaluate call, not about
+                    // the emission: it says the script never reached the page.
+                    // Redelivery (or a navigation) can have abandoned this
+                    // attempt and started another under the same ID, and that
+                    // one may already be sending or sent — rejecting it here
+                    // would show the user a failure that did not happen.
+                    guard self.inflightEmissionGenerations[emission.id] == generation else {
+                        BoxLog.info(
+                            "abandoned emission delivery error ignored generation=\(generation)"
+                                + " current=\(self.inflightEmissionGenerations[emission.id].map(String.init) ?? "none")",
+                            category: .webview,
+                            targetBoxID: self.boxID
+                        )
+                        return
+                    }
+                    self.finishInflightEmission(emission.id)
+                    self.onEmissionReceipt(NativeEmissionReceipt(
                         emissionID: emission.id,
                         disposition: .rejected,
                         reason: "The chat page could not receive the message."
@@ -440,6 +516,15 @@ struct ChatWebView: UIViewRepresentable {
             }
         }
 
+        /// Receipts are matched by emission ID only, deliberately — they carry
+        /// no generation and do not need one. A receipt is the box's answer
+        /// about the EMISSION (its claim registry answers a repeated ID
+        /// idempotently), so whichever attempt provoked it, it settles the
+        /// emission truthfully. The two orderings both come out right: a late
+        /// receipt from an abandoned attempt that lands before the next
+        /// delivery finds no inflight entry and is dropped, and the box answers
+        /// the fresh attempt again; one that lands after settles the current
+        /// attempt, which is the same emission and the same answer.
         func receiveEmissionReceipt(_ body: Any) {
             guard
                 let payload = ChatWebView.dictionaryPayload(from: body),
@@ -447,7 +532,7 @@ struct ChatWebView: UIViewRepresentable {
                 let emissionID = UUID(uuidString: idString),
                 let dispositionString = payload["disposition"] as? String,
                 let disposition = NativeEmissionReceipt.Disposition(rawValue: dispositionString),
-                inflightEmissionIDs.contains(emissionID)
+                inflightEmissionGenerations[emissionID] != nil
             else {
                 return
             }
@@ -474,7 +559,7 @@ struct ChatWebView: UIViewRepresentable {
         }
 
         private func finishInflightEmission(_ emissionID: NativeChatEmission.ID) {
-            inflightEmissionIDs.remove(emissionID)
+            inflightEmissionGenerations.removeValue(forKey: emissionID)
         }
 
         func deliverLocationRequest(to webView: WKWebView) {
@@ -591,6 +676,23 @@ struct ChatWebView: UIViewRepresentable {
                 return
             }
             onComposerCommand(.command(command))
+        }
+
+        /// A box agent asked for one voice message's original recording
+        /// (contract §4.8). There is no acknowledgement channel: the shell
+        /// answers the box directly over HTTP, and a malformed request is
+        /// dropped, because without a usable `requestId` there is nowhere to
+        /// report the problem to.
+        private func receiveLastAudioRequest(_ body: Any) {
+            guard
+                let payload = ChatWebView.dictionaryPayload(from: body),
+                let data = try? JSONSerialization.data(withJSONObject: payload),
+                let request = try? JSONDecoder().decode(NativeLastAudioRequest.self, from: data)
+            else {
+                BoxLog.warn("last-audio request was malformed", category: .webview, targetBoxID: boxID)
+                return
+            }
+            onLastAudioRequest(request)
         }
 
         func deliverComposerCommandAcknowledgements(to webView: WKWebView) {
