@@ -129,6 +129,6 @@ On boxes with no connectors configured (like test boxes), both commands graceful
 
 - **Finalize runs unconditionally** after all cycles, even if no outbound items were created. This is cheap (just scans `box/output/`) but could be skipped if no agent work happened.
 
-- **Job priority** is limited to "normal" and "low". The `--skip-low-priority` flag lets scheduled runs skip low-priority jobs (e.g., digest summaries) while still processing urgent items.
+- **Job priority** is limited to "normal" and "low". The `--skip-low-priority` flag lets scheduled runs skip low-priority jobs (e.g., digest summaries) while still processing urgent items — `cb wakeup` always sets it, so an idle box doesn't spend an agent turn every tick on optional filler. Skipping is bounded: a low-priority job pending longer than 24h earns a cycle of its own (oldest first, at most five per cycle), because "may wait" must not mean "may wait forever". Age comes from the job filename's timestamp prefix; see `discoverStage` in `cycle.ts`.
 
 - **Error handling** is optimistic — a failed agent invocation doesn't prevent subsequent jobs from being processed in the next cycle. Failed chat sessions are reset so the next message starts fresh.

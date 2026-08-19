@@ -21,7 +21,6 @@ import { getBoxShape } from "../../../lib/box-shape.js";
 import { isRecord } from "../../../lib/is-record.js";
 import { createGitAnnexService } from "../../../services/git-annex.js";
 import { runAnnexDoctor } from "../../../core/annex/doctor.js";
-import { findStaleTmpCaptureCards, TMP_CAPTURE_STALE_MS } from "../../../core/capture/sweep.js";
 import { engineHealthChecks } from "./health-engine.js";
 import { googleAuthHealthChecks } from "./health-google.js";
 import { getBoxTime } from "../../../lib/time.js";
@@ -31,6 +30,7 @@ import { boxGrowthHealthCheck } from "../../../core/box-growth/health.js";
 import { acknowledgeBoxGrowthProcedure, expectBoxGrowthRatesProcedure } from "./health-box-growth.js";
 import { isWritable, writability } from "./health-writability.js";
 import { legacySecretFilesCheck } from "./health-secrets.js";
+import { unfiledCapturesCheck, stalledJobsCheck } from "./health-stale.js";
 
 export interface HealthCheck {
   name: string;
@@ -124,41 +124,6 @@ export interface RunHealthChecksOptions {
   claudeCli?: ClaudeCliService | undefined;
 }
 
-/**
- * Captures still sitting unfiled in `tmp-capture/`.
- *
- * Staged captures are deliberately gitignored so a pre-triage photo is not
- * annexed before an agent files it — it still gets renamed, re-encoded, and
- * EXIF-rotated, and annexing on arrival would mint immutable objects for
- * superseded versions. The cost is that a staged capture is in neither git nor
- * the annex, which is the one window where box content has no second record at
- * all. Fine for hours, bad for weeks — so make a long window visible.
- *
- * `warning`, not `error`: a triage backlog is a nudge, not a defect, and this
- * must never fail a deploy or take a box offline. It is also deliberately NOT
- * a `cb doctor annex` check — that one is configuration-only, and a condition
- * that varies with pending work has no configuration remedy.
- *
- * Reuses the abandonment sweep's existing traversal and threshold rather than
- * walking the tree again with a second notion of "unfiled".
- */
-async function unfiledCapturesCheck(boxRoot: string): Promise<HealthCheck> {
-  const days = Math.round(TMP_CAPTURE_STALE_MS / (24 * 60 * 60 * 1000));
-  const stale = await findStaleTmpCaptureCards({
-    boxRoot,
-    now: getBoxTime(boxRoot).getTime(),
-  });
-  return {
-    name: "unfiled-captures",
-    ok: stale.length === 0,
-    message:
-      stale.length === 0
-        ? "no captures unfiled past the staging window"
-        : `${String(stale.length)} capture(s) unfiled for over ${String(days)} days ` +
-          `(e.g. ${stale[0] ?? ""}). Their bytes are in neither git nor the annex — file them with cb mv.`,
-    severity: "warning",
-  };
-}
 
 /**
  * The git-annex conditions `cb doctor annex` cannot repair.
@@ -288,6 +253,7 @@ export async function runHealthChecks(
 
   checks.push(...(await annexHealthChecks({ repoRoot: gitRoot, boxRoot })));
   checks.push(await unfiledCapturesCheck(boxRoot));
+  checks.push(await stalledJobsCheck(boxRoot));
   const now = getBoxTime(boxRoot);
   const scheduler = await checkSchedulerHeartbeat(boxRoot, now);
   checks.push(await boxGrowthHealthCheck(boxRoot, { now, schedulerStatus: scheduler.status }));

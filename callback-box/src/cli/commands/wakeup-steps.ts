@@ -368,17 +368,51 @@ const CONTAINS_BACKFILL_BATCH = 25;
 const CONTAINS_BACKFILL_SOURCE = "contains-backfill";
 
 /**
+ * Reconcile the box's search index with the card tree.
+ *
+ * This is the only *scheduled* refresh. Queries refresh lazily too
+ * (`core/search/query.ts`), so a box that is searched often stays current on
+ * its own — but a box that isn't accumulates a persisted index full of cards
+ * that no longer exist, and the next query pays the whole reconciliation at
+ * once. It also populates the `contains` state that
+ * {@link createContainsBackfillJob} reads, which is why wakeup runs this
+ * first.
+ *
+ * It used to run *inside* `createContainsBackfillJob`, below that function's
+ * "a backfill job is already pending" early return — so a single undrainable
+ * job card silently took the scheduled refresh out of the wakeup path for
+ * good. A refresh whose execution is incidental to an unrelated guard breaks
+ * again the next time that guard moves; it belongs on its own footing.
+ *
+ * Returns false when the refresh failed, so the caller can skip work that
+ * would otherwise act on stale state.
+ */
+export async function refreshSearchIndex(boxRoot: string): Promise<boolean> {
+  try {
+    const { warnings } = await openSearchIndex(boxRoot);
+    for (const warning of warnings) console.warn(`  search index: ${warning}`);
+    return true;
+  } catch (e) {
+    console.error("  Search index refresh failed:", e);
+    return false;
+  }
+}
+
+/**
  * Queue one generic job card asking a background agent to write `contains:`
  * for cards missing it. One batch per wakeup; drains until
  * `cb contains list --missing` is empty. No-op while a previous backfill
  * job is still pending.
+ *
+ * Reads the `contains` state as {@link refreshSearchIndex} last left it —
+ * call that first, or this decides against state that predates the current
+ * card tree.
  */
 export async function createContainsBackfillJob(boxRoot: string): Promise<number> {
   const jobsDir = path.join(boxRoot, "box/jobs");
   const pending = await findJobCards(jobsDir, { sourceFilter: CONTAINS_BACKFILL_SOURCE });
   if (pending.length > 0) return 0;
 
-  await openSearchIndex(boxRoot);
   const missing = listMissing(await loadContainsState(boxRoot));
   if (missing.length === 0) return 0;
 

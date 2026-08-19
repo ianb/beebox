@@ -15,6 +15,37 @@ import { readCardFrontmatter } from "../card-io.js";
 import type { JobCardInfo } from "./types.js";
 import { errnoCode } from "../../lib/error-guards.js";
 
+/**
+ * Recover when a job card was queued, from its filename's timestamp prefix.
+ *
+ * Every writer stamps one: `timestampedJobFilename` (intake, chat) emits
+ * `YYYY-MM-DDTHH-MM-SS-<stem>.…`, while the contains-backfill and todo-review
+ * sweeps emit a minute-resolution `YYYY-MM-DDTHH-MM.…`. Both are UTC, so the
+ * parse rebuilds the instant in UTC. A hand-written or legacy filename with no
+ * stamp returns `null` and falls back to the mtime.
+ */
+const FILENAME_STAMP = /^(\d{4})-(\d{2})-(\d{2})T(\d{2})-(\d{2})(?:-(\d{2}))?(?=[.-])/;
+
+function createdAtFromFilename(file: string): Date | null {
+  const m = FILENAME_STAMP.exec(path.basename(file));
+  if (!m) return null;
+  const [, y, mo, d, h, min, sec] = m;
+  const ms = Date.UTC(Number(y), Number(mo) - 1, Number(d), Number(h), Number(min), Number(sec ?? "0"));
+  return Number.isNaN(ms) ? null : new Date(ms);
+}
+
+async function readCreatedAt(jobPath: string, file: string): Promise<Date | null> {
+  const stamped = createdAtFromFilename(file);
+  if (stamped !== null) return stamped;
+  try {
+    return (await fs.stat(jobPath)).mtime;
+  } catch (e) {
+    // Unreadable stat: age is unknown, which the deadline treats as "young".
+    console.debug(`findJobCards: cannot stat ${file}:`, e);
+    return null;
+  }
+}
+
 export async function findJobCards(
   jobsDir: string,
   options?: { typeFilter?: string | undefined; sourceFilter?: string | undefined }
@@ -38,10 +69,11 @@ export async function findJobCards(
   const results: JobCardInfo[] = [];
 
   for (const file of jobFiles) {
+    const jobPath = path.join(jobsDir, file);
     let priority: "normal" | "low" = "normal";
     let source: string | undefined;
     try {
-      const content = await fs.readFile(path.join(jobsDir, file), "utf-8");
+      const content = await fs.readFile(jobPath, "utf-8");
       const fm = readCardFrontmatter(content);
       if (fm) {
         if (fm["priority"] === "low") priority = "low";
@@ -53,13 +85,15 @@ export async function findJobCards(
       console.debug(`findJobCards: cannot read ${file}, using defaults:`, e);
     }
     if (sourceFilter !== undefined && source !== sourceFilter) continue;
-    results.push({ file, priority });
+    results.push({ file, priority, createdAt: await readCreatedAt(jobPath, file) });
   }
 
-  // Sort: normal-priority first, low-priority last
+  // Sort: normal-priority first, low-priority last; within a priority,
+  // oldest first, so any cap on how many jobs a cycle admits is FIFO and
+  // the tail of a backlog can't be starved by newer arrivals.
   results.sort((a, b) => {
-    if (a.priority === b.priority) return 0;
-    return a.priority === "normal" ? -1 : 1;
+    if (a.priority !== b.priority) return a.priority === "normal" ? -1 : 1;
+    return (a.createdAt?.getTime() ?? 0) - (b.createdAt?.getTime() ?? 0);
   });
 
   return results;
