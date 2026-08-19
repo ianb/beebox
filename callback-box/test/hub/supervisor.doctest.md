@@ -139,7 +139,14 @@ const config = {
   boxes: { fixture: { path: fixture.root } },
   configPath: fixture.path("hub.json"),
 };
-const supervisor = new Supervisor({ config, hubSecret: "test-hub-secret", spawnChild, checkReady });
+// A long backoff, because this section is about what the readiness-timeout
+// path RECORDS, not about the retry itself. At the production 1s base, the
+// scheduled retry fires while the assertions below are still running whenever
+// anything here takes a second (a slow `makeTmpBox`, a loaded machine) — it
+// relaunches, readiness rejects again, and `restarts` becomes 2 under a test
+// that never asked about the second attempt. That is a live timer racing the
+// assertions, and it is what made this file flake in the full parallel suite.
+const supervisor = new Supervisor({ config, hubSecret: "test-hub-secret", spawnChild, checkReady, baseBackoffMs: 600_000 });
 await supervisor.startAll();
 ```
 

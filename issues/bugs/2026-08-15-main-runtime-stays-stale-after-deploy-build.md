@@ -25,7 +25,7 @@ timeline was:
 
 > **Checked 2026-08-18 — the box-child half is solved; the hub half is not.**
 > The invalidation contract this issue asks for now exists, from
-> [long-lived processes never reload the rebuilt bundle](2026-08-15-long-lived-processes-never-reload-the-rebuilt-bundle.md):
+> [long-lived processes never reload the rebuilt bundle](../closed/bugs/2026-08-15-long-lived-processes-never-reload-the-rebuilt-bundle.md):
 > `bin/cb` stamps `CB_DEV_BUNDLE_PATH`/`CB_DEV_BUNDLE_ID` at spawn, identifying
 > the exact artifact loaded by *identity* rather than mtime ordering, and
 > `src/webapp/server.ts:359-383` polls for a replacement.
