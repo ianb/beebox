@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-08-19T06:07:00Z
+Generated: 2026-08-19T06:32:56Z
 Total documents: 279
 
 ## Issues
@@ -3955,16 +3955,16 @@ References:
 
 #### docs/plans/commit-performance.md
 
-Title: "Commit performance: make box commits fast" | 141 lines
+Title: "Commit performance: make box commits fast" | 148 lines
 
 Referenced by:
 - docs/card-validation.md:20 (mention) — paid the CLI startup cost — see `docs/plans/commit-performance.md`):
-- ../issues/bugs/2026-08-18-box-precommit-hook-costs-seconds-per-commit.md:4 (frontmatter) — design: ../../callback-box/docs/plans/commit-performance.md
-- ../issues/bugs/2026-08-18-box-precommit-hook-costs-seconds-per-commit.md:23 (link) — > [commit-performance plan](../../callback-box/docs/plans/commit-performance.md).
+- ../issues/closed/bugs/2026-08-18-box-precommit-hook-costs-seconds-per-commit.md:4 (frontmatter) — design: ../../../callback-box/docs/plans/commit-performance.md
+- ../issues/closed/bugs/2026-08-18-box-precommit-hook-costs-seconds-per-commit.md:20 (link) — > [the plan doc](../../../callback-box/docs/plans/commit-performance.md),
 
 References:
-- → ../issues/bugs/2026-08-18-box-precommit-hook-costs-seconds-per-commit.md (frontmatter)
-- → ../issues/bugs/2026-08-18-box-precommit-hook-costs-seconds-per-commit.md (link)
+- → ../issues/closed/bugs/2026-08-18-box-precommit-hook-costs-seconds-per-commit.md (frontmatter)
+- → ../issues/closed/bugs/2026-08-18-box-precommit-hook-costs-seconds-per-commit.md (link)
 
 #### docs/plans/design-reconciliation.md
 

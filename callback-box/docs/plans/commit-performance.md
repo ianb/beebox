@@ -3,11 +3,11 @@ title: "Commit performance: make box commits fast"
 status: active
 workstream: commit-performance
 issues:
-  - ../../../issues/bugs/2026-08-18-box-precommit-hook-costs-seconds-per-commit.md
+  - ../../../issues/closed/bugs/2026-08-18-box-precommit-hook-costs-seconds-per-commit.md
 ---
 # Commit performance: make box commits fast
 
-**Issues addressed:** [box pre-commit costs seconds per commit](../../../issues/bugs/2026-08-18-box-precommit-hook-costs-seconds-per-commit.md)
+**Issues addressed:** [box pre-commit costs seconds per commit](../../../issues/closed/bugs/2026-08-18-box-precommit-hook-costs-seconds-per-commit.md)
 
 **Goal:** minimize total `git commit` time on a box. Commit duration is now
 also lock-hold duration (`withBoxGitLock` serializes every writer on a box),
