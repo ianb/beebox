@@ -248,6 +248,31 @@ Still not found, and not guessed at: the on-disk record layout of a linkbase.
 The paper specifies the *message* format and the architecture, not the storage
 schema.
 
+**Two empirical findings from the same paper, both awkward and both useful:**
+
+- **People navigated by directory anyway.** "Even when using a heavily linked
+  set of documents with many buttons, users still tended to use the directory
+  structure as a significant method of accessing information." Their response
+  was a file browser with user-defined keyword attributes. For a system whose
+  substrate *is* a filesystem, that is worth sitting with: the tree is not a
+  fallback people abandon once given links.
+- **Out-of-band links are invisible, and finding them is the hard part.** With
+  no markup there is no bold text to signal that something is live. Their
+  working answer to `show-links`: the user selects a region, and the filter
+  **splits it into words and word-pairs and fans them out as follow-link
+  messages**; the linkbases answer, and every hit appears in the dispatcher
+  *alongside the source text that matched*. A search implemented as many small
+  queries rather than one.
+
+**Materialization is lossy in one direction.** A computed link written into the
+linkbase becomes indistinguishable from an authored one — which also means it
+stops tracking its query. Freeze `**/*.image.card` into an explicit set and
+images created afterwards do not join it. So conventional and reified are not
+merely two authoring conveniences: they differ in whether the collection keeps
+answering the question. Any "save this collection" affordance should be honest
+about which one it produces, and ideally allow the reverse (loosen a frozen set
+back into the rule that made it).
+
 **The tension worth noticing.** Microcosm put every link out-of-band precisely
 so documents stayed untouched and editable by their native applications.
 TiddlyWiki and the `![...](collection-link)` idea put them inline. Both are
