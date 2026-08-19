@@ -1,11 +1,12 @@
 ---
 title: "Low-priority job cards never drain, and one wedges the search index indefinitely"
-workstream: box-family-email
+workstream: low-priority-jobs
 area: callback-box
 filed-by: agent
 discovered-in: worktree-box-family-email — investigating growth on a production box
 labels: [code-error]
 priority: important
+resolution: implemented
 ---
 
 `cb wakeup` runs its reactor cycle with `skipLowPriority: true`
@@ -52,7 +53,7 @@ tree.
 ## Relationship to the closed intake-job issue
 
 This is a sibling of
-[gmail-intake-job-never-drains-quiescence](../closed/bugs/2026-08-08-gmail-intake-job-never-drains-quiescence.md),
+[gmail-intake-job-never-drains-quiescence](2026-08-08-gmail-intake-job-never-drains-quiescence.md),
 not a recurrence of it. Same class — a card left in `box/jobs` that the
 reactor as actually invoked never clears — but a different filter (priority,
 not connector scope), a different job kind, and it bites production rather than
@@ -65,17 +66,55 @@ The hazard is already half-documented in-tree:
 happens when such a job is queued anyway and no one ever runs an unfiltered
 reactor.
 
-## Directions (unsettled)
+## Resolved
 
-- Age out low-priority jobs: after N wakeups (or N days) pending, promote to
-  normal so they get processed, or expire the card.
-- Run an unfiltered reactor on a slower cadence (e.g. the daily housekeeping
-  tick) so low-priority work drains eventually.
-- Separately, and independently worth doing: move the `openSearchIndex` call
-  in `createContainsBackfillJob` above the pending-job early return. Refreshing
-  the index is not conditional on wanting to queue a backfill — it is what
-  tells you whether one is needed. This alone unwedges search without deciding
-  the priority question.
-- Decide whether a stale search index deserves a health check. Today nothing
-  reports it; the index's own staleness is invisible until someone compares
-  mtimes.
+Fixed in `worktree-low-priority-jobs`, 2026-08-18.
+
+**Low priority now means "may wait", not "may wait forever".** A low-priority
+job pending longer than 24h earns a cycle of its own; a cycle triggered that
+way admits at most the five oldest overdue jobs, so a box coming out of a long
+wedge drains at a pace instead of dumping months of deferred work into one
+agent prompt. What `skipLowPriority` was protecting still holds: an idle box
+does not spend an agent turn every tick on filler, and normal work is never
+delayed by a low-priority backlog. Age comes from the timestamp prefix every
+job-card writer stamps into the filename — no card mutation, nothing to keep
+in sync; an unstamped name falls back to mtime, and an age that can't be
+established reads as young. See `discoverStage` in
+`callback-box/src/core/reactor/cycle.ts`.
+
+**The index refresh has its own footing.** Rather than hoisting the one line,
+`openSearchIndex` moved out of `createContainsBackfillJob` entirely and became
+a `cb wakeup` step (`refreshSearchIndex`), run unconditionally ahead of the
+backfill step that reads the `contains` state it writes. A refresh whose
+execution is incidental to an unrelated guard breaks again the next time that
+guard grows a return. It returns false when it did not actually reconcile —
+it threw, or it lost the search lock to another process and served the last
+persisted index untouched — and the backfill step is skipped in that case
+rather than choosing a batch from state that predates the card tree.
+
+**Something complains now.** `cb health` reports any job pending over 7 days as
+a warning (`stalled-jobs`, in `health-stale.ts`). It reports the fact — a job
+is old — independent of the reason, because the next instance of this class
+will stall for a reason we haven't met: a failing agent, a connector-scoped
+wakeup that never sees that job's source, a hand-written card.
+
+## One correction to the diagnosis above
+
+The wedge is narrower than "disables the search index". Search *queries* call
+`openSearchIndex` too (`core/search/query.ts`), so a query refreshes the index
+lazily on its own. What the stuck card removed was the only *scheduled*
+refresh: the persisted index rots and bloats, and the next query pays the whole
+reconciliation at once (and concurrent queries during that slow refresh take
+the stale path). The observed box's index was six days behind because nothing
+had searched it in six days, not because search was answering from a stale
+tree.
+
+## Deploy note
+
+Prod boxes have accumulated these cards. The first full `cb wakeup` after this
+ships will do two things at once on such a box: process up to five long-overdue
+low-priority jobs, and run the first index reconciliation in months — which on
+the observed box means restoring a 165 MB index to drop ~141,000 deleted
+documents, under the search lock. It is a one-time cost (the index shrinks to
+its real size and every later refresh is cheap) and a query would have paid the
+same cost, but it is worth watching rather than discovering.
