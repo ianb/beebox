@@ -93,3 +93,50 @@ dependency), so it is more foundation than conflict.
 - **Migration.** Moving a schema out of core changes where existing cards'
   definitions come from. `docs/migrations.md` step 7 applies: whatever moves,
   file the legacy-removal issue at the same time.
+
+## Read: TiddlyWiki's plugin system (2026-08-19)
+
+Reviewed against the source — [`research/tiddlywiki/plugins.md`](../../research/tiddlywiki/plugins.md).
+Three findings bear on the open questions above.
+
+**"What a plugin can extend" has a good answer: an enumerated vocabulary, at two
+tiers.** TiddlyWiki names 30 module types, and the extension surface reaches all
+the way down — `filteroperator` adds an operator to the query language, `widget`
+adds a rendering primitive, `wikirule` adds markup syntax. The core is itself a
+plugin. So the question this issue is stuck on ("does the extension surface
+reach query and rendering?") has a demonstrated yes.
+
+The more useful half is the second tier: the *same* extension points are
+reachable without JavaScript. `\function my.op(...)` is callable as a filter
+operator `[my.op[x]]` alongside the built-ins; `\widget $my.widget` is callable
+as `<$my.widget/>` and may override a built-in widget, reaching the original
+through `<$genesis>`. Loading follows the split — non-code plugins hot-load,
+code-bearing plugins need a restart — which is the split we already have
+(`src/core/schema-watcher.ts` hot-reloads box-local schemas). That is the shape
+for "a box starts with its own plugin": the box's plugin should be authorable in
+the box's own materials and reach the same extension points that code does, with
+code as the escalation rather than the entry fee.
+
+**The extraction path has a mechanism, and it is overlay rather than fork.**
+Plugin constituents load as *shadow tiddlers*: any of them can be overridden by
+creating an ordinary tiddler of the same title, and deleting that tiddler
+restores the shipped version. Local customisation is therefore already a
+separable set of records — "what has this wiki changed?" is a listing, not a
+diff, and extracting personal work is packaging rather than archaeology. Our
+nearest existing thing is template stock tracking
+(`config/template-versions.json`), which detects divergence rather than layering
+over it. Worth deciding whether a box's own plugin *shadows* engine defaults by
+identity.
+
+**One question this reopens: is a plugin a unit of content as well as code?**
+The docs are explicit that plugins "can also be used to distribute ordinary
+text, images or any other content", and editions ship as plugin bundles — one
+packaging mechanism carrying either. That draws the medium/content line in a
+different place from this issue's framing. If a callback-box plugin can ship
+cards, "an education plugin" means something quite different from "a plugin that
+adds education card types", and that should be decided rather than defaulted.
+
+What does not transfer: no isolation and no dependency resolution (a `dependents`
+list, a `core-version`, a numeric priority, and later-wins precedence is the
+whole system). The public-specifier boundary — `callback-box/{cards,schema,view-widgets}`
+— is already a stronger contract and should stay the plugin API.

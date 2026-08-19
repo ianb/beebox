@@ -209,3 +209,50 @@ by whatever knows how.
 
 Related: [plugins and the medium/content line](../exploration/2026-08-19-plugins-and-the-medium-content-line.md),
 which is where this came up and which is blocked on it for the "views" half.
+
+## Read: TiddlyWiki, in full (2026-08-19)
+
+The TiddlyWiki strand above was researched properly against the source —
+[`research/tiddlywiki/`](../../research/tiddlywiki/README.md). Four findings
+change what this issue should decide.
+
+**A collection is not an object there, and the sugar proves it.** The docs give
+the desugaring explicitly: `{{{ [tag[mechanism]]||TemplateTitle }}}` expands to
+`<$list filter="[tag[mechanism]]"><$transclude tiddler="TemplateTitle"/></$list>`.
+Selection, iteration, and per-item rendering compose; nothing named "collection"
+exists anywhere in the system. That is direct support for the cheapest version
+already proposed here — a view that ships its own queries — and an argument
+against introducing a stored collection object before one ships.
+
+**Per-item type dispatch belongs below the collection.** The list widget knows
+nothing about item types. Type dispatch is a separate mechanism (a *cascade*)
+reached through the item template. So "accepts everything, degrades per item"
+is not a softening of the typing constraint, it is what falls out of keeping
+type knowledge in the renderer chain — which is where ours already lives
+(`file-type-registry.ts`). The typing that stays useful is the view declaring
+what it renders *well*, which is `rendersCardTypes` widened, exactly as guessed
+above.
+
+**The conventional/static query already exists there, and the label comes free.**
+`$:/core/ui/MoreSideBar/Types` is one nested pair of list widgets: an outer list
+over distinct values of the `type` field, a label that is the group key
+rendered, an inner list re-querying members of that group. Groups that occur,
+exist; no configuration anywhere. Group-by-a-field is a smaller and
+better-defined first feature than a query language, and it yields the label as a
+by-product. It does not solve the *authored* label ("untriaged") — for that
+TiddlyWiki makes you write two sibling list blocks by hand, and nothing in the
+system knows they are two views of one source. The `(label, query, view)` triple
+in this issue is a stronger claim than TiddlyWiki makes; the gap is real and
+ours to fill.
+
+**Neighbour-relative ordering instead of priority numbers.** TiddlyWiki's rule
+chains are ordered by per-item `list-before` / `list-after` fields naming a
+*neighbour*, over a derived default order. Worth taking for the renderer chain
+(where `priority: 50` is currently a guess) and for hand-arranging a
+mostly-derived collection without it becoming a hand-authored list.
+
+Two things explicitly do not transfer: a collection there has no address (it is
+markup inside whatever tiddler contains it), and nothing can be checked before
+it runs. Our card-anchored `?view=foo` invariant is the better choice and should
+hold — which leaves the open question above unchanged and unhelped: where a
+conventional collection lives in URL space when there is no card to hang it off.
