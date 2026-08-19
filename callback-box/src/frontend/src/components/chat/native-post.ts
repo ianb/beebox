@@ -16,6 +16,7 @@ export type NativeShellChannel =
   | "callbackboxSpeechPlaybackState"
   | "callbackboxResponseState"
   | "callbackboxComposerCommand"
+  | "callbackboxLastAudioRequest"
   | "callbackboxSession";
 
 export interface NativeShellWindow {

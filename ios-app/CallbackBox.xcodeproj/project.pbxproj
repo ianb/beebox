@@ -13,32 +13,10 @@
 		5A1000042C3C000100000001 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000142C3C000100000001 /* RootView.swift */; };
 		5A1000052C3C000100000001 /* PairBoxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000152C3C000100000001 /* PairBoxView.swift */; };
 		5A1000062C3C000100000001 /* ChatWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000162C3C000100000001 /* ChatWebView.swift */; };
-		B72000012C3C000100000001 /* NativeComposerContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000022C3C000100000001 /* NativeComposerContract.swift */; };
-		B72000112C3C000100000001 /* ComposerDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000122C3C000100000001 /* ComposerDraft.swift */; };
-		B72000132C3C000100000001 /* ComposerDraftRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000142C3C000100000001 /* ComposerDraftRepository.swift */; };
-		B72000152C3C000100000001 /* ComposerDraftStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000162C3C000100000001 /* ComposerDraftStore.swift */; };
-		B72000172C3C000100000001 /* ComposerDraftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000182C3C000100000001 /* ComposerDraftTests.swift */; };
-		B72000192C3C000100000001 /* ComposerTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B720001A2C3C000100000001 /* ComposerTextView.swift */; };
-		B720009A2C3C000100000001 /* BulkUploadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B720009B2C3C000100000001 /* BulkUploadTests.swift */; };
-		B720001B2C3C000100000001 /* ChatAPITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B720001C2C3C000100000001 /* ChatAPITests.swift */; };
-		B720001D2C3C000100000001 /* PendingEmissionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B720001E2C3C000100000001 /* PendingEmissionStore.swift */; };
-		B720001F2C3C000100000001 /* NativeComposerFixtureScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000202C3C000100000001 /* NativeComposerFixtureScreen.swift */; };
-		C83000012C3C000100000001 /* BoxLockManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C83000022C3C000100000001 /* BoxLockManager.swift */; };
-		C83000032C3C000100000001 /* BoxLockTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C83000042C3C000100000001 /* BoxLockTests.swift */; };
-		D94000012C3C000100000001 /* NativeEarcons.swift in Sources */ = {isa = PBXBuildFile; fileRef = D94000112C3C000100000001 /* NativeEarcons.swift */; };
-		D94000022C3C000100000001 /* beeprising.wav in Resources */ = {isa = PBXBuildFile; fileRef = D94000122C3C000100000001 /* beeprising.wav */; };
-		D94000032C3C000100000001 /* tick2.wav in Resources */ = {isa = PBXBuildFile; fileRef = D94000132C3C000100000001 /* tick2.wav */; };
-		D94000042C3C000100000001 /* book-close.wav in Resources */ = {isa = PBXBuildFile; fileRef = D94000142C3C000100000001 /* book-close.wav */; };
-		D94000052C3C000100000001 /* recording-start.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = D94000152C3C000100000001 /* recording-start.mp3 */; };
-		D94000062C3C000100000001 /* recording-stop.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = D94000162C3C000100000001 /* recording-stop.mp3 */; };
-		D94000072C3C000100000001 /* recording-error.wav in Resources */ = {isa = PBXBuildFile; fileRef = D94000172C3C000100000001 /* recording-error.wav */; };
-		D94000082C3C000100000001 /* krell-alarm-7.wav in Resources */ = {isa = PBXBuildFile; fileRef = D94000182C3C000100000001 /* krell-alarm-7.wav */; };
 		5A1000072C3C000100000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5A1000182C3C000100000001 /* Assets.xcassets */; };
 		5A1000082C3C000100000001 /* ChatAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000192C3C000100000001 /* ChatAPI.swift */; };
 		5A1000092C3C000100000001 /* NativeComposerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001A2C3C000100000001 /* NativeComposerView.swift */; };
-		5A100AA02C3C000100000001 /* AudioSessionRouting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A100AB02C3C000100000001 /* AudioSessionRouting.swift */; };
 		5A10000A2C3C000100000001 /* SpeechDictation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001B2C3C000100000001 /* SpeechDictation.swift */; };
-		5A1000962C3C000100000001 /* BulkPhotoThreshold.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000972C3C000100000001 /* BulkPhotoThreshold.swift */; };
 		5A10000D2C3C000100000001 /* ChatImageAttachment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001E2C3C000100000001 /* ChatImageAttachment.swift */; };
 		5A10000E2C3C000100000001 /* SpeechKeywords.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001F2C3C000100000001 /* SpeechKeywords.swift */; };
 		5A10000F2C3C000100000001 /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000212C3C000100000001 /* QRScannerView.swift */; };
@@ -49,30 +27,54 @@
 		5A10002B2C3C000100000001 /* CaptureModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10002E2C3C000100000001 /* CaptureModels.swift */; };
 		5A10002C2C3C000100000001 /* CaptureAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10002F2C3C000100000001 /* CaptureAPI.swift */; };
 		5A10002D2C3C000100000001 /* CaptureStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000332C3C000100000001 /* CaptureStore.swift */; };
-		5A1000902C3C000100000001 /* BulkUploadAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000912C3C000100000001 /* BulkUploadAPI.swift */; };
-		E1A000002C3C000100000001 /* BoxRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A000012C3C000100000001 /* BoxRequest.swift */; };
-		E1A000022C3C000100000001 /* BoxLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A000032C3C000100000001 /* BoxLog.swift */; };
-		E1A000042C3C000100000001 /* LogForwarder.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A000052C3C000100000001 /* LogForwarder.swift */; };
-		E1A000062C3C000100000001 /* LogForwarderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A000072C3C000100000001 /* LogForwarderTests.swift */; };
-		5A1000922C3C000100000001 /* BulkUploadCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000932C3C000100000001 /* BulkUploadCoordinator.swift */; };
-		5A1000942C3C000100000001 /* BulkPhotoStaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000952C3C000100000001 /* BulkPhotoStaging.swift */; };
 		5A1000342C3C000100000001 /* CaptureUploadCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000352C3C000100000001 /* CaptureUploadCoordinator.swift */; };
 		5A1000362C3C000100000001 /* CaptureAcquisition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10003A2C3C000100000001 /* CaptureAcquisition.swift */; };
 		5A1000372C3C000100000001 /* NativeCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10003B2C3C000100000001 /* NativeCaptureView.swift */; };
 		5A1000382C3C000100000001 /* NativeCaptureController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10003C2C3C000100000001 /* NativeCaptureController.swift */; };
-		5A100AC02C3C000100000001 /* AudioSessionRoutingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A100AD02C3C000100000001 /* AudioSessionRoutingTests.swift */; };
+		5A1000902C3C000100000001 /* BulkUploadAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000912C3C000100000001 /* BulkUploadAPI.swift */; };
+		5A1000922C3C000100000001 /* BulkUploadCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000932C3C000100000001 /* BulkUploadCoordinator.swift */; };
+		5A1000942C3C000100000001 /* BulkPhotoStaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000952C3C000100000001 /* BulkPhotoStaging.swift */; };
+		5A1000962C3C000100000001 /* BulkPhotoThreshold.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000972C3C000100000001 /* BulkPhotoThreshold.swift */; };
 		5A1001012C3C000100000001 /* SpeechKeywordsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001112C3C000100000001 /* SpeechKeywordsTests.swift */; };
 		5A1001022C3C000100000001 /* CaptureModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001132C3C000100000001 /* CaptureModelsTests.swift */; };
-		5A100F012D7A000100000001 /* NativeCaptureFinishTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A100F022D7A000100000001 /* NativeCaptureFinishTests.swift */; };
 		5A1001032C3C000100000001 /* CaptureAPITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001142C3C000100000001 /* CaptureAPITests.swift */; };
-		5A1001042C3C000100000002 /* ChatWebViewRequestTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001152C3C000100000002 /* ChatWebViewRequestTests.swift */; };
 		5A1001042C3C000100000001 /* CaptureStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001152C3C000100000001 /* CaptureStoreTests.swift */; };
+		5A1001042C3C000100000002 /* ChatWebViewRequestTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001152C3C000100000002 /* ChatWebViewRequestTests.swift */; };
 		5A1001052C3C000100000001 /* CaptureUploadCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001162C3C000100000001 /* CaptureUploadCoordinatorTests.swift */; };
 		5A1001062C3C000100000001 /* CaptureAcquisitionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001172C3C000100000001 /* CaptureAcquisitionTests.swift */; };
 		5A1001BC2C3C000100000001 /* PairedBoxCredentialStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001B92C3C000100000001 /* PairedBoxCredentialStore.swift */; };
 		5A1001BD2C3C000100000001 /* SharedSelectedBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001BA2C3C000100000001 /* SharedSelectedBoxSnapshot.swift */; };
 		5A1001BE2C3C000100000001 /* PairedBoxStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001BB2C3C000100000001 /* PairedBoxStoreTests.swift */; };
-		E2A000012D7B000100000001 /* CallbackBoxShareExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = E2A000102D7B000100000001 /* CallbackBoxShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		5A100AA02C3C000100000001 /* AudioSessionRouting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A100AB02C3C000100000001 /* AudioSessionRouting.swift */; };
+		5A100AC02C3C000100000001 /* AudioSessionRoutingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A100AD02C3C000100000001 /* AudioSessionRoutingTests.swift */; };
+		5A100F012D7A000100000001 /* NativeCaptureFinishTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A100F022D7A000100000001 /* NativeCaptureFinishTests.swift */; };
+		B72000012C3C000100000001 /* NativeComposerContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000022C3C000100000001 /* NativeComposerContract.swift */; };
+		B72000112C3C000100000001 /* ComposerDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000122C3C000100000001 /* ComposerDraft.swift */; };
+		B72000132C3C000100000001 /* ComposerDraftRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000142C3C000100000001 /* ComposerDraftRepository.swift */; };
+		B72000152C3C000100000001 /* ComposerDraftStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000162C3C000100000001 /* ComposerDraftStore.swift */; };
+		B72000172C3C000100000001 /* ComposerDraftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000182C3C000100000001 /* ComposerDraftTests.swift */; };
+		B72000192C3C000100000001 /* ComposerTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B720001A2C3C000100000001 /* ComposerTextView.swift */; };
+		B720001B2C3C000100000001 /* ChatAPITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B720001C2C3C000100000001 /* ChatAPITests.swift */; };
+		B720001D2C3C000100000001 /* PendingEmissionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B720001E2C3C000100000001 /* PendingEmissionStore.swift */; };
+		B72000C12C3C000100000001 /* VoiceAudioRetentionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000C22C3C000100000001 /* VoiceAudioRetentionStore.swift */; };
+		B720001F2C3C000100000001 /* NativeComposerFixtureScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000202C3C000100000001 /* NativeComposerFixtureScreen.swift */; };
+		B720009A2C3C000100000001 /* BulkUploadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B720009B2C3C000100000001 /* BulkUploadTests.swift */; };
+		B72000C32C3C000100000001 /* VoiceAudioRetentionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000C42C3C000100000001 /* VoiceAudioRetentionTests.swift */; };
+		C83000012C3C000100000001 /* BoxLockManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C83000022C3C000100000001 /* BoxLockManager.swift */; };
+		C83000032C3C000100000001 /* BoxLockTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C83000042C3C000100000001 /* BoxLockTests.swift */; };
+		D94000012C3C000100000001 /* NativeEarcons.swift in Sources */ = {isa = PBXBuildFile; fileRef = D94000112C3C000100000001 /* NativeEarcons.swift */; };
+		D94000022C3C000100000001 /* beeprising.wav in Resources */ = {isa = PBXBuildFile; fileRef = D94000122C3C000100000001 /* beeprising.wav */; };
+		D94000032C3C000100000001 /* tick2.wav in Resources */ = {isa = PBXBuildFile; fileRef = D94000132C3C000100000001 /* tick2.wav */; };
+		D94000042C3C000100000001 /* book-close.wav in Resources */ = {isa = PBXBuildFile; fileRef = D94000142C3C000100000001 /* book-close.wav */; };
+		D94000052C3C000100000001 /* recording-start.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = D94000152C3C000100000001 /* recording-start.mp3 */; };
+		D94000062C3C000100000001 /* recording-stop.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = D94000162C3C000100000001 /* recording-stop.mp3 */; };
+		D94000072C3C000100000001 /* recording-error.wav in Resources */ = {isa = PBXBuildFile; fileRef = D94000172C3C000100000001 /* recording-error.wav */; };
+		D94000082C3C000100000001 /* krell-alarm-7.wav in Resources */ = {isa = PBXBuildFile; fileRef = D94000182C3C000100000001 /* krell-alarm-7.wav */; };
+		E1A000002C3C000100000001 /* BoxRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A000012C3C000100000001 /* BoxRequest.swift */; };
+		E1A000022C3C000100000001 /* BoxLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A000032C3C000100000001 /* BoxLog.swift */; };
+		E1A000042C3C000100000001 /* LogForwarder.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A000052C3C000100000001 /* LogForwarder.swift */; };
+		E1A000062C3C000100000001 /* LogForwarderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A000072C3C000100000001 /* LogForwarderTests.swift */; };
+		E2A000012D7B000100000001 /* CallbackBoxShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E2A000102D7B000100000001 /* CallbackBoxShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		E2A000022D7B000100000001 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2A000112D7B000100000001 /* ShareViewController.swift */; };
 		E2A000032D7B000100000001 /* ShareExtensionAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2A000122D7B000100000001 /* ShareExtensionAPI.swift */; };
 		E2A000042D7B000100000001 /* PairedBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000122C3C000100000001 /* PairedBox.swift */; };
@@ -100,15 +102,15 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		E2A000402D7B000100000001 /* Embed App Extensions */ = {
+		E2A000402D7B000100000001 /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				E2A000012D7B000100000001 /* CallbackBoxShareExtension.appex in Embed App Extensions */,
+				E2A000012D7B000100000001 /* CallbackBoxShareExtension.appex in Embed Foundation Extensions */,
 			);
-			name = "Embed App Extensions";
+			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -121,35 +123,11 @@
 		5A1000142C3C000100000001 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		5A1000152C3C000100000001 /* PairBoxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairBoxView.swift; sourceTree = "<group>"; };
 		5A1000162C3C000100000001 /* ChatWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatWebView.swift; sourceTree = "<group>"; };
-		5A1001B92C3C000100000001 /* PairedBoxCredentialStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairedBoxCredentialStore.swift; sourceTree = "<group>"; };
-		5A1001BA2C3C000100000001 /* SharedSelectedBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedSelectedBoxSnapshot.swift; sourceTree = "<group>"; };
-		B72000022C3C000100000001 /* NativeComposerContract.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeComposerContract.swift; sourceTree = "<group>"; };
-		B72000122C3C000100000001 /* ComposerDraft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerDraft.swift; sourceTree = "<group>"; };
-		B72000142C3C000100000001 /* ComposerDraftRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerDraftRepository.swift; sourceTree = "<group>"; };
-		B72000162C3C000100000001 /* ComposerDraftStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerDraftStore.swift; sourceTree = "<group>"; };
-		B72000182C3C000100000001 /* ComposerDraftTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerDraftTests.swift; sourceTree = "<group>"; };
-		B720001A2C3C000100000001 /* ComposerTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerTextView.swift; sourceTree = "<group>"; };
-		B720009B2C3C000100000001 /* BulkUploadTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkUploadTests.swift; sourceTree = "<group>"; };
-		B720001C2C3C000100000001 /* ChatAPITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatAPITests.swift; sourceTree = "<group>"; };
-		B720001E2C3C000100000001 /* PendingEmissionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingEmissionStore.swift; sourceTree = "<group>"; };
-		B72000202C3C000100000001 /* NativeComposerFixtureScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeComposerFixtureScreen.swift; sourceTree = "<group>"; };
-		C83000022C3C000100000001 /* BoxLockManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoxLockManager.swift; sourceTree = "<group>"; };
-		C83000042C3C000100000001 /* BoxLockTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoxLockTests.swift; sourceTree = "<group>"; };
-		D94000112C3C000100000001 /* NativeEarcons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeEarcons.swift; sourceTree = "<group>"; };
-		D94000122C3C000100000001 /* beeprising.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = beeprising.wav; sourceTree = "<group>"; };
-		D94000132C3C000100000001 /* tick2.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = tick2.wav; sourceTree = "<group>"; };
-		D94000142C3C000100000001 /* book-close.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "book-close.wav"; sourceTree = "<group>"; };
-		D94000152C3C000100000001 /* recording-start.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "recording-start.mp3"; sourceTree = "<group>"; };
-		D94000162C3C000100000001 /* recording-stop.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "recording-stop.mp3"; sourceTree = "<group>"; };
-		D94000172C3C000100000001 /* recording-error.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "recording-error.wav"; sourceTree = "<group>"; };
-		D94000182C3C000100000001 /* krell-alarm-7.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "krell-alarm-7.wav"; sourceTree = "<group>"; };
 		5A1000172C3C000100000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		5A1000182C3C000100000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		5A1000192C3C000100000001 /* ChatAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatAPI.swift; sourceTree = "<group>"; };
 		5A10001A2C3C000100000001 /* NativeComposerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeComposerView.swift; sourceTree = "<group>"; };
-		5A100AB02C3C000100000001 /* AudioSessionRouting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioSessionRouting.swift; sourceTree = "<group>"; };
 		5A10001B2C3C000100000001 /* SpeechDictation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechDictation.swift; sourceTree = "<group>"; };
-		5A1000972C3C000100000001 /* BulkPhotoThreshold.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkPhotoThreshold.swift; sourceTree = "<group>"; };
 		5A10001E2C3C000100000001 /* ChatImageAttachment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatImageAttachment.swift; sourceTree = "<group>"; };
 		5A10001F2C3C000100000001 /* SpeechKeywords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechKeywords.swift; sourceTree = "<group>"; };
 		5A1000212C3C000100000001 /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerView.swift; sourceTree = "<group>"; };
@@ -160,28 +138,54 @@
 		5A10002E2C3C000100000001 /* CaptureModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureModels.swift; sourceTree = "<group>"; };
 		5A10002F2C3C000100000001 /* CaptureAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureAPI.swift; sourceTree = "<group>"; };
 		5A1000332C3C000100000001 /* CaptureStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureStore.swift; sourceTree = "<group>"; };
-		5A1000912C3C000100000001 /* BulkUploadAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkUploadAPI.swift; sourceTree = "<group>"; };
-		E1A000012C3C000100000001 /* BoxRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoxRequest.swift; sourceTree = "<group>"; };
-		E1A000032C3C000100000001 /* BoxLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoxLog.swift; sourceTree = "<group>"; };
-		E1A000052C3C000100000001 /* LogForwarder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogForwarder.swift; sourceTree = "<group>"; };
-		E1A000072C3C000100000001 /* LogForwarderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogForwarderTests.swift; sourceTree = "<group>"; };
-		5A1000932C3C000100000001 /* BulkUploadCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkUploadCoordinator.swift; sourceTree = "<group>"; };
-		5A1000952C3C000100000001 /* BulkPhotoStaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkPhotoStaging.swift; sourceTree = "<group>"; };
 		5A1000352C3C000100000001 /* CaptureUploadCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureUploadCoordinator.swift; sourceTree = "<group>"; };
 		5A10003A2C3C000100000001 /* CaptureAcquisition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureAcquisition.swift; sourceTree = "<group>"; };
 		5A10003B2C3C000100000001 /* NativeCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeCaptureView.swift; sourceTree = "<group>"; };
 		5A10003C2C3C000100000001 /* NativeCaptureController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeCaptureController.swift; sourceTree = "<group>"; };
+		5A1000912C3C000100000001 /* BulkUploadAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkUploadAPI.swift; sourceTree = "<group>"; };
+		5A1000932C3C000100000001 /* BulkUploadCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkUploadCoordinator.swift; sourceTree = "<group>"; };
+		5A1000952C3C000100000001 /* BulkPhotoStaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkPhotoStaging.swift; sourceTree = "<group>"; };
+		5A1000972C3C000100000001 /* BulkPhotoThreshold.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkPhotoThreshold.swift; sourceTree = "<group>"; };
 		5A1001102C3C000100000001 /* CallbackBoxTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CallbackBoxTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		5A100AD02C3C000100000001 /* AudioSessionRoutingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioSessionRoutingTests.swift; sourceTree = "<group>"; };
 		5A1001112C3C000100000001 /* SpeechKeywordsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechKeywordsTests.swift; sourceTree = "<group>"; };
 		5A1001132C3C000100000001 /* CaptureModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureModelsTests.swift; sourceTree = "<group>"; };
-		5A100F022D7A000100000001 /* NativeCaptureFinishTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeCaptureFinishTests.swift; sourceTree = "<group>"; };
 		5A1001142C3C000100000001 /* CaptureAPITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureAPITests.swift; sourceTree = "<group>"; };
-		5A1001152C3C000100000002 /* ChatWebViewRequestTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatWebViewRequestTests.swift; sourceTree = "<group>"; };
 		5A1001152C3C000100000001 /* CaptureStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureStoreTests.swift; sourceTree = "<group>"; };
+		5A1001152C3C000100000002 /* ChatWebViewRequestTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatWebViewRequestTests.swift; sourceTree = "<group>"; };
 		5A1001162C3C000100000001 /* CaptureUploadCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureUploadCoordinatorTests.swift; sourceTree = "<group>"; };
 		5A1001172C3C000100000001 /* CaptureAcquisitionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureAcquisitionTests.swift; sourceTree = "<group>"; };
+		5A1001B92C3C000100000001 /* PairedBoxCredentialStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairedBoxCredentialStore.swift; sourceTree = "<group>"; };
+		5A1001BA2C3C000100000001 /* SharedSelectedBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedSelectedBoxSnapshot.swift; sourceTree = "<group>"; };
 		5A1001BB2C3C000100000001 /* PairedBoxStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairedBoxStoreTests.swift; sourceTree = "<group>"; };
+		5A100AB02C3C000100000001 /* AudioSessionRouting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioSessionRouting.swift; sourceTree = "<group>"; };
+		5A100AD02C3C000100000001 /* AudioSessionRoutingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioSessionRoutingTests.swift; sourceTree = "<group>"; };
+		5A100F022D7A000100000001 /* NativeCaptureFinishTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeCaptureFinishTests.swift; sourceTree = "<group>"; };
+		B72000022C3C000100000001 /* NativeComposerContract.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeComposerContract.swift; sourceTree = "<group>"; };
+		B72000122C3C000100000001 /* ComposerDraft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerDraft.swift; sourceTree = "<group>"; };
+		B72000142C3C000100000001 /* ComposerDraftRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerDraftRepository.swift; sourceTree = "<group>"; };
+		B72000162C3C000100000001 /* ComposerDraftStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerDraftStore.swift; sourceTree = "<group>"; };
+		B72000182C3C000100000001 /* ComposerDraftTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerDraftTests.swift; sourceTree = "<group>"; };
+		B720001A2C3C000100000001 /* ComposerTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerTextView.swift; sourceTree = "<group>"; };
+		B720001C2C3C000100000001 /* ChatAPITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatAPITests.swift; sourceTree = "<group>"; };
+		B720001E2C3C000100000001 /* PendingEmissionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingEmissionStore.swift; sourceTree = "<group>"; };
+		B72000C22C3C000100000001 /* VoiceAudioRetentionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceAudioRetentionStore.swift; sourceTree = "<group>"; };
+		B72000202C3C000100000001 /* NativeComposerFixtureScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeComposerFixtureScreen.swift; sourceTree = "<group>"; };
+		B720009B2C3C000100000001 /* BulkUploadTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkUploadTests.swift; sourceTree = "<group>"; };
+		B72000C42C3C000100000001 /* VoiceAudioRetentionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceAudioRetentionTests.swift; sourceTree = "<group>"; };
+		C83000022C3C000100000001 /* BoxLockManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoxLockManager.swift; sourceTree = "<group>"; };
+		C83000042C3C000100000001 /* BoxLockTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoxLockTests.swift; sourceTree = "<group>"; };
+		D94000112C3C000100000001 /* NativeEarcons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeEarcons.swift; sourceTree = "<group>"; };
+		D94000122C3C000100000001 /* beeprising.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = beeprising.wav; sourceTree = "<group>"; };
+		D94000132C3C000100000001 /* tick2.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = tick2.wav; sourceTree = "<group>"; };
+		D94000142C3C000100000001 /* book-close.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "book-close.wav"; sourceTree = "<group>"; };
+		D94000152C3C000100000001 /* recording-start.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "recording-start.mp3"; sourceTree = "<group>"; };
+		D94000162C3C000100000001 /* recording-stop.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "recording-stop.mp3"; sourceTree = "<group>"; };
+		D94000172C3C000100000001 /* recording-error.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "recording-error.wav"; sourceTree = "<group>"; };
+		D94000182C3C000100000001 /* krell-alarm-7.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "krell-alarm-7.wav"; sourceTree = "<group>"; };
+		E1A000012C3C000100000001 /* BoxRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoxRequest.swift; sourceTree = "<group>"; };
+		E1A000032C3C000100000001 /* BoxLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoxLog.swift; sourceTree = "<group>"; };
+		E1A000052C3C000100000001 /* LogForwarder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogForwarder.swift; sourceTree = "<group>"; };
+		E1A000072C3C000100000001 /* LogForwarderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogForwarderTests.swift; sourceTree = "<group>"; };
 		E2A000102D7B000100000001 /* CallbackBoxShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CallbackBoxShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		E2A000112D7B000100000001 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		E2A000122D7B000100000001 /* ShareExtensionAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareExtensionAPI.swift; sourceTree = "<group>"; };
@@ -236,7 +240,7 @@
 				5A1000432C3C000100000001 /* Services */,
 				5A1000422C3C000100000001 /* Views */,
 				5A1000182C3C000100000001 /* Assets.xcassets */,
-				D94000202C3C000100000001 /* Earcons */,
+				D94000202C3C000100000001 /* ../../callback-box/src/frontend/public/earcons */,
 				5A1000172C3C000100000001 /* Info.plist */,
 				E2A000152D7B000100000001 /* CallbackBox.entitlements */,
 			);
@@ -276,6 +280,7 @@
 				B72000142C3C000100000001 /* ComposerDraftRepository.swift */,
 				B72000162C3C000100000001 /* ComposerDraftStore.swift */,
 				B720001E2C3C000100000001 /* PendingEmissionStore.swift */,
+				B72000C22C3C000100000001 /* VoiceAudioRetentionStore.swift */,
 			);
 			path = Storage;
 			sourceTree = "<group>";
@@ -321,20 +326,6 @@
 			path = Services;
 			sourceTree = "<group>";
 		};
-		D94000202C3C000100000001 /* Earcons */ = {
-			isa = PBXGroup;
-			children = (
-				D94000122C3C000100000001 /* beeprising.wav */,
-				D94000132C3C000100000001 /* tick2.wav */,
-				D94000142C3C000100000001 /* book-close.wav */,
-				D94000152C3C000100000001 /* recording-start.mp3 */,
-				D94000162C3C000100000001 /* recording-stop.mp3 */,
-				D94000172C3C000100000001 /* recording-error.wav */,
-				D94000182C3C000100000001 /* krell-alarm-7.wav */,
-			);
-			path = ../../callback-box/src/frontend/public/earcons;
-			sourceTree = "<group>";
-		};
 		5A1001122C3C000100000001 /* CallbackBoxTests */ = {
 			isa = PBXGroup;
 			children = (
@@ -351,11 +342,26 @@
 				5A1001172C3C000100000001 /* CaptureAcquisitionTests.swift */,
 				B72000182C3C000100000001 /* ComposerDraftTests.swift */,
 				B720009B2C3C000100000001 /* BulkUploadTests.swift */,
+				B72000C42C3C000100000001 /* VoiceAudioRetentionTests.swift */,
 				E1A000072C3C000100000001 /* LogForwarderTests.swift */,
 				B720001C2C3C000100000001 /* ChatAPITests.swift */,
 				E2A000162D7B000100000001 /* ShareExtensionAPITests.swift */,
 			);
 			path = CallbackBoxTests;
+			sourceTree = "<group>";
+		};
+		D94000202C3C000100000001 /* ../../callback-box/src/frontend/public/earcons */ = {
+			isa = PBXGroup;
+			children = (
+				D94000122C3C000100000001 /* beeprising.wav */,
+				D94000132C3C000100000001 /* tick2.wav */,
+				D94000142C3C000100000001 /* book-close.wav */,
+				D94000152C3C000100000001 /* recording-start.mp3 */,
+				D94000162C3C000100000001 /* recording-stop.mp3 */,
+				D94000172C3C000100000001 /* recording-error.wav */,
+				D94000182C3C000100000001 /* krell-alarm-7.wav */,
+			);
+			path = "../../callback-box/src/frontend/public/earcons";
 			sourceTree = "<group>";
 		};
 		E2A000602D7B000100000001 /* CallbackBoxShareExtension */ = {
@@ -379,7 +385,7 @@
 				5A1000602C3C000100000001 /* Sources */,
 				5A1000202C3C000100000001 /* Frameworks */,
 				5A1000612C3C000100000001 /* Resources */,
-				E2A000402D7B000100000001 /* Embed App Extensions */,
+				E2A000402D7B000100000001 /* Embed Foundation Extensions */,
 				B41DC0DE2D8CAFE100000001 /* Stamp git commit into Info.plist */,
 			);
 			buildRules = (
@@ -435,7 +441,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1600;
-				LastUpgradeCheck = 1600;
+				LastUpgradeCheck = 2660;
 				TargetAttributes = {
 					5A1000502C3C000100000001 = {
 						CreatedOnToolsVersion = 16.0;
@@ -535,6 +541,7 @@
 				B72000132C3C000100000001 /* ComposerDraftRepository.swift in Sources */,
 				B72000152C3C000100000001 /* ComposerDraftStore.swift in Sources */,
 				B720001D2C3C000100000001 /* PendingEmissionStore.swift in Sources */,
+				B72000C12C3C000100000001 /* VoiceAudioRetentionStore.swift in Sources */,
 				C83000012C3C000100000001 /* BoxLockManager.swift in Sources */,
 				D94000012C3C000100000001 /* NativeEarcons.swift in Sources */,
 				B72000192C3C000100000001 /* ComposerTextView.swift in Sources */,
@@ -586,6 +593,7 @@
 				5A1001BE2C3C000100000001 /* PairedBoxStoreTests.swift in Sources */,
 				B72000172C3C000100000001 /* ComposerDraftTests.swift in Sources */,
 				B720009A2C3C000100000001 /* BulkUploadTests.swift in Sources */,
+				B72000C32C3C000100000001 /* VoiceAudioRetentionTests.swift in Sources */,
 				E1A000062C3C000100000001 /* LogForwarderTests.swift in Sources */,
 				B720001B2C3C000100000001 /* ChatAPITests.swift in Sources */,
 				C83000032C3C000100000001 /* BoxLockTests.swift in Sources */,
@@ -677,6 +685,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -731,6 +740,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				VALIDATE_PRODUCT = YES;

@@ -76,7 +76,11 @@ A path glob would have turned every one of those cards into a pointer.
 omission means the bytes get committed to git directly, permanently. That has
 happened before (41 MB `page.frozen` snapshots, 2026-07), so a commit-time
 guard now blocks any file over 1 MB in an attach scope whose extension is not
-listed — `cb attachments check-unlisted`, run from the pre-commit hook.
+listed. The pre-commit hook checks the *staged blobs* (inside `cb validate
+--pre-commit`), so it fires at exactly the commit that would embed the bytes and
+also catches an allowlisted extension staged raw through a broken annex filter;
+`cb attachments check-unlisted` walks the whole box for the same problem on
+demand.
 
 Two deliberate exceptions:
 
@@ -88,7 +92,13 @@ Two deliberate exceptions:
   window is the one place box content has no second record.
 - **Bulk upload batches** carry a batch-local `.gitattributes` setting
   `annex.largefiles=anything`, because a batch really does hold arbitrary
-  types. Control files are exempted.
+  types. Control files are exempted. That file needs a partner: `largefiles` is
+  consulted only for paths the filter-process sees, so `.git/info/attributes`
+  carries one non-extension line (`**/*.upload-batch.attach/**`) putting batch
+  scopes on the filter's path. Without it the batch-local setting is inert for
+  exactly the extensions it exists to cover — that was the state between
+  2026-08-04 and 2026-08-18, when a batch's `.zip` committed as raw bytes while
+  its photos annexed.
 
 ## Absent content
 
@@ -122,7 +132,7 @@ as much a stand-in as a `SHA256E` one.
 | `annex.largefiles` | rendered from `ASSET_EXTENSIONS` | `git annex config` | **yes** |
 | `annex.thin` | `false` | `git config` | **no** |
 | `numcopies` | 1 | `git annex numcopies` | yes |
-| `.git/info/attributes` | rendered from `ASSET_EXTENSIONS` | repository file | **no** |
+| `.git/info/attributes` | rendered from `ASSET_EXTENSIONS` + the bulk-batch scope | repository file | **no** |
 
 `.git/info/attributes` is which paths git hands to the git-annex
 filter-process. `git annex init` writes `* filter=annex` there — the whole
@@ -137,9 +147,12 @@ the list: one that does not keeps its pointer in git but loses the smudge
 filter, so the next checkout writes `/annex/objects/…` text where the bytes
 were. `cb doctor annex` checks that (`annexed-coverage`) before it writes the
 scoped file, and refuses to scope while any path is uncovered. The attribute
-lines use case-insensitive character classes (`*.[hH][eE][iI][cC]`) — an
-over-wide line only starts a filter that then declines to annex, while a
-missing one strands a pointer.
+lines use case-insensitive character classes (`*.[hH][eE][iI][cC]`), and so
+does the `annex.largefiles` expression — the two are rendered from one function
+so neither can match a path the other misses. Getting that wrong is not
+symmetric but both directions are real: a path largefiles annexes that the
+filter never sees commits as raw bytes, and a path the annex holds that the
+filter no longer covers strands a pointer.
 
 `git annex init` reinstates its unscoped default, including in every fresh
 clone, so this drift recurs; `cb doctor annex` (and therefore `cb init`)
@@ -162,7 +175,7 @@ repairing takes both `git config annex.thin false` **and** `git annex fix`
 | `cb doctor annex` | Check and repair the box's annex configuration. Most checks self-heal. `--check` for read-only. |
 | `cb doctor annex-fsck` | Verify content against keys, incrementally. Read-only; run from a schedule. |
 | `cb attachments to-annex` | One-way migration from the manifest model. Verifies before and after. |
-| `cb attachments check-unlisted` | Block unlisted large binaries. Runs from the pre-commit hook. |
+| `cb attachments check-unlisted` | Block unlisted large binaries, box-wide. (The pre-commit hook runs the staged-blob equivalent inside `cb validate --pre-commit`.) |
 | `cb attachments largefiles-expr` | Print the `annex.largefiles` expression. |
 | `cb attachments annex-attributes` | Print the scoped `.git/info/attributes` contents. |
 

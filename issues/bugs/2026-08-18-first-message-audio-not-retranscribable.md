@@ -8,6 +8,23 @@ discovered-by: Ian
 discovered-in: main session — boxholder noticed retranscribe failing on first messages
 ---
 
+> **Checked 2026-08-18 — could not settle from here; worth a re-test.** Tagged
+> `reconfirm`; removed. Confirming or refuting this needs someone to dictate a
+> first message and try retranscribing it — an agent cannot produce speech into
+> a live box, so this is genuinely a human check rather than one nobody has got
+> to.
+>
+> What changed since filing, and why a re-test is worth doing rather than
+> assuming: the cold-start handoff this issue blames has been substantially
+> rebuilt. `6e928be6` now acknowledges a send **when it is durably recorded,
+> rather than when the engine starts**, and `1110b7b5` gave send acceptance one
+> durability point. If the recording was being lost in the gap between
+> composing and an established session, that gap is materially different now.
+>
+> The audio-cache path itself is untouched apart from `a988e2aa` (the error
+> wording), so nothing has *deliberately* fixed this — but the surrounding
+> transition has moved enough that the old observation may no longer hold.
+
 Retranscription appears to fail on the **first message sent to a chat**, while
 later messages in the same conversation work. The boxholder's read: the audio is
 "probably lost in the transition" — the handoff from composing/sending into an

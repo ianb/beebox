@@ -6,6 +6,7 @@ labels: [chat, cards]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-transcript-confidence — adversarial review of the <unsure> marking branch
+priority: normal
 ---
 
 `readSnippetTitle` (`callback-box/src/core/chat/husk.ts:60-77`) builds a chat

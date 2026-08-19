@@ -207,9 +207,18 @@ agent-browser daemons, the startup sweep also pattern-matches
 project-scoped orphans (`process-cleanup.ts`, shared with `panic`):
 vite/fastify orphaned to PID 1 (a live router — incl. an isolated test
 one — keeps its children, so they're spared) and agent-browsers whose
-worktree has no active `claude` session. The generation leak that made
+worktree has no live agent session. The generation leak that made
 this necessary (concurrent cold requests racing to spawn duplicate
 vite+fastify pairs) is fixed at the source in `ensureRunning`.
+
+That liveness answer comes from `bin/workstreams agent-liveness`, i.e. from
+`wt_other_agent_live` — the same tri-state guard everything else uses, so
+`unknown` spares the daemon and a codex session counts exactly as a claude one.
+`process-cleanup.ts` carried its own two-state copy until 2026-08-18; it knew
+only `claude --worktree <name>` argv plus `pgrep -x claude`, which meant it was
+blind to codex (now the default worker agent) and — per the pgrep note below —
+to most claude sessions too, and it reclaimed a live Codex worktree's browser
+mid-session.
 
 ## `bin/workstreams` is the agent-neutral control surface
 
@@ -263,6 +272,10 @@ combination rather than answering wrongly.
 merged and dirty checks only. Unmerged commits are recoverable from a branch; a
 running session's working directory is not.
 
+The same rule reaches beyond worktree removal: `bin/process-cleanup.ts` asks
+through `bin/workstreams agent-liveness` and spares an agent-browser on
+`unknown`, including when the oracle itself can't be run.
+
 ## Lifecycle commands
 
 - `bin/workstreams list [--json]` — every worktree joined across all three
@@ -305,10 +318,15 @@ running session's working directory is not.
   code is merged, clean, and no agent is live
 - `bin/workstreams status` — raw router status JSON (PIDs, ports, idle ms)
 - `bin/workstreams down <name>` — stop one worktree's processes now
+- `bin/workstreams agent-liveness <path>...` — tri-state claude/codex liveness
+  per absolute path, as JSON, from the one shared guard. Takes paths rather
+  than names so a caller with its own notion of where checkouts live needs no
+  agreement about roots. For tooling that stands in front of something
+  destructive; `process-cleanup.ts` is the caller.
 - `bin/workstreams panic` — kill router + all known children + wipe state,
   then reclaim project-scoped agent-browsers and any stray vite/fastify
   the pidfiles never tracked (use if you suspect orphans). Spares
-  processes owned by an active sibling `claude` session.
+  processes owned by a live sibling `claude` or `codex` session.
 
 Sweep treats an open issue whose `workstream:` matches and whose `needs:` still
 contains `manual-testing` as a cull pin. Once released or confirmed, an

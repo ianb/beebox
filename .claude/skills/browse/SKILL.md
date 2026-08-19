@@ -112,6 +112,12 @@ bin/browse get text "[role=menu]"         # what's on screen RIGHT NOW
 You still need `snapshot -i` to *discover* refs — take it before the click,
 while the page is idle, then act and read with `get`.
 
+The wait is bounded and app-only: it runs only when the page is this
+worktree's own origin (nothing else sets the `data-cb-loading` marker), gives
+up after 15s with a note on stderr and captures anyway, and `--no-wait` skips
+it outright. `BROWSE_READY_TIMEOUT_MS` raises the ceiling for a genuinely slow
+page.
+
 A corollary worth internalizing: if you are timing something and every arm of
 your experiment comes back looking identical and suspiciously settled, suspect
 the instrument before the code. Confirm your probe can produce a negative
@@ -215,6 +221,13 @@ bin/browse --session b open /
 bin/browse --session a fill @e3 "alice@test.com"
 bin/browse --session b fill @e3 "bob@test.com"
 ```
+
+Each session gets its own Chrome profile under this worktree's browse cache
+(`profiles/<name>`), so sessions really do run at the same time — Chrome holds
+an exclusive lock on a profile and refuses to open one another instance owns.
+A new session therefore starts with an empty cookie jar; the browse key is
+re-seeded on its first own-origin `open`, but any login or app state you set up
+in one session is not visible in another.
 
 ## Common failure modes
 

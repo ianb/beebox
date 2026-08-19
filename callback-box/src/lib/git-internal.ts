@@ -233,6 +233,22 @@ export async function unstageOversizedBlobs(boxRoot: string): Promise<void> {
   }
 }
 
+/**
+ * A commit operation reported success but HEAD did not move.
+ *
+ * Almost always a hook: `git commit` exits non-zero when `pre-commit` or
+ * `commit-msg` rejects, and boxes install both (`cb validate --staged`,
+ * `git annex pre-commit`).
+ */
+export class CommitDidNotLandError extends Error {
+  constructor(boxRoot: string) {
+    super(
+      `commit reported success but HEAD did not move in ${boxRoot} — a pre-commit or commit-msg hook most likely rejected it. Run \`git commit\` by hand to see the hook's output.`,
+    );
+    this.name = "CommitDidNotLandError";
+  }
+}
+
 /** Shape of our custom git log format. */
 export interface GitLogFormat {
   hash: string;

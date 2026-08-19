@@ -1,0 +1,14 @@
+{
+  "input": {
+    "version": 1,
+    "requestId": "req-7f3c",
+    "messageId": "emission-9a21",
+    "sessionId": "session-42"
+  },
+  "expected": {
+    "version": 1,
+    "requestId": "req-7f3c",
+    "messageId": "emission-9a21",
+    "sessionId": "session-42"
+  }
+}

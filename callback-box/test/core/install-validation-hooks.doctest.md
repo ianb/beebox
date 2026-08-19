@@ -3,7 +3,7 @@
 `installValidationHooks` writes two managed hooks into a box:
 
 - `.claude/settings.json` — a `PostToolUse` entry that runs `cb validate --hook` after Edit/Write/MultiEdit on `.card` files (warns the agent, doesn't block)
-- `.git/hooks/pre-commit` — runs `cb validate --staged` and blocks the commit if any staged card fails validation
+- `.git/hooks/pre-commit` — runs `cb validate --pre-commit` (the whole commit-time suite in one process) and blocks the commit if any blocking check fails
 - `.git/hooks/post-commit` — a marker-delimited managed block that fires `cb validate --urls --urls-since HEAD~1` in the background (non-blocking external-URL check)
 
 Both writes are idempotent and merge-aware. The settings file preserves unrelated keys and unrelated `PostToolUse` entries. A foreign pre-commit hook (one we didn't write) is left alone with a warning. The post-commit block is spliced into whatever already exists there (e.g. a git-lfs hook), preserving it.
@@ -115,12 +115,33 @@ const fatalWhenAnnexed = hookBody.includes("this repo uses git-annex but git-ann
 => true true
 ```
 
-The manifest-era `cb attachments verify` call is gone — git-annex is the
-integrity mechanism now — replaced by the unlisted-binary guard:
+The three `cb` invocations the hook used to make — `validate --staged`,
+`validate --links`, and `attachments check-unlisted` — are one. Each paid the
+full CLI startup floor for a fraction of a second of work, and commit duration
+is also git-lock hold duration for a box (see `docs/plans/commit-performance.md`).
+The manifest-era `cb attachments verify` call is gone too — git-annex is the
+integrity mechanism now:
 
 ```ts continue
-`verify=${hookBody.includes("attachments verify")} unlisted=${hookBody.includes("attachments check-unlisted")}`
-=> verify=false unlisted=true
+const cbCalls = hookBody.split("\n").filter((l) => l.startsWith('"$CB" '));
+cbCalls
+=>
+[
+  "\"$CB\" validate --pre-commit"
+]
+```
+
+```ts continue
+[
+  hookBody.includes("attachments verify"),
+  hookBody.includes("attachments check-unlisted"),
+  hookBody.includes("validate --links"),
+]
+=> [
+  false,
+  false,
+  false
+]
 ```
 
 ## Idempotent — second run changes nothing
@@ -306,7 +327,7 @@ const again = await installValidationHooks(box.root);
   changed.includes(".git/hooks/pre-commit"),
   body.includes("# callback-box validation hook (managed)"),
   body.includes("git annex pre-commit"),
-  body.includes('"$CB" validate --staged'),
+  body.includes('"$CB" validate --pre-commit'),
   again.length,
 ]
 =>

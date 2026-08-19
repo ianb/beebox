@@ -12,6 +12,7 @@ import {
   assetAnnexAttributes,
   assetGitignorePatterns,
   assetLargefilesExpression,
+  BULK_BATCH_ATTACH_PATTERN,
   CAPTURE_STAGING_IGNORE_PATTERN,
 } from "../../src/lib/asset-extensions.js";
 ```
@@ -24,7 +25,7 @@ history came from exactly that kind of split:
 assetGitignorePatterns().split("\n").length === ASSET_EXTENSIONS.length
 => true
 
-assetLargefilesExpression().split(" or ").length === ASSET_EXTENSIONS.length * 2
+assetLargefilesExpression().split(" or ").length === ASSET_EXTENSIONS.length
 => true
 ```
 
@@ -34,29 +35,33 @@ LFS, which was itself unscoped, and anchoring to `.attach/` would strand LFS's
 content (legacy captures under `box/inbox/`) with no mechanism at all.
 
 ```ts
-assetLargefilesExpression().startsWith("include=*.jpg or include=*.JPG or include=*.jpeg")
+assetLargefilesExpression().startsWith("include=*.[jJ][pP][gG] or include=*.[jJ][pP][eE][gG]")
 => true
 
-assetLargefilesExpression().includes("include=*.frozen")
+assetLargefilesExpression().includes("include=*.[fF][rR][oO][zZ][eE][nN]")
 => true
 
 assetLargefilesExpression().includes(".attach/")
 => false
 ```
 
-git-annex's globs are case-sensitive, while cameras commonly produce
-all-uppercase extensions. Each asset extension therefore gets its lowercase
-and uppercase spelling. Mixed case is deliberately left to the wider
-attributes filter below rather than multiplying the largefiles expression:
+git-annex's globs are case-sensitive, and cameras produce all-uppercase
+extensions while file managers and scanner apps produce mixed ones. Every
+extension therefore renders through the same per-character any-case glob the
+attributes file uses, so the two lists match exactly the same paths.
+
+An earlier version emitted only the lowercase and all-uppercase spellings and
+left mixed case to the wider attributes filter, on the reasoning that an
+over-wide attribute line is harmless. It is not: the filter runs, finds no
+largefiles match, and the bytes commit as a raw git blob. Verified 2026-08-18 on
+a real annex box — `Mixed.Jpg` landed as a 1.5 MB blob beside 102-byte pointers
+for `lower.jpg` and `upper.JPG`.
 
 ```ts
-ASSET_EXTENSIONS.every((ext) => assetLargefilesExpression().includes(`include=*.${ext}`))
+assetLargefilesExpression().includes("include=*.[hH][eE][iI][cC]")
 => true
 
-ASSET_EXTENSIONS.every((ext) => assetLargefilesExpression().includes(`include=*.${ext.toUpperCase()}`))
-=> true
-
-assetLargefilesExpression().includes("include=*.HeIc")
+["include=*.heic", "include=*.HEIC"].some((s) => assetLargefilesExpression().includes(s))
 => false
 ```
 
@@ -107,13 +112,16 @@ assetAnnexAttributes()
 *.[mM][pP]4 filter=annex
 *.[mM][oO][vV] filter=annex
 *.[fF][rR][oO][zZ][eE][nN] filter=annex
+# A bulk batch holds arbitrary types and widens largefiles itself; the
+# filter has to reach those paths for that to mean anything.
+**/*.upload-batch.attach/** filter=annex
 ```
 
-Every extension gets a line, and the marker names the owner so drift from
-git-annex's own file is visible without a diff:
+Every extension gets a line, plus the one path line, and the marker names the
+owner so drift from git-annex's own file is visible without a diff:
 
 ```ts
-assetAnnexAttributes().split("\n").filter((l) => l.endsWith("filter=annex")).length === ASSET_EXTENSIONS.length
+assetAnnexAttributes().split("\n").filter((l) => l.endsWith("filter=annex")).length === ASSET_EXTENSIONS.length + 1
 => true
 
 assetAnnexAttributes().startsWith(ANNEX_ATTRIBUTES_MARKER)
@@ -125,11 +133,10 @@ assetAnnexAttributes().includes("\n* filter=annex")
 
 The character classes are deliberate. gitattributes globs are case-sensitive,
 and so is `annex.largefiles` (verified with git-annex 10.20260717: `include=*.jpg`
-does not match `UPPER.JPG`). Largefiles explicitly covers lowercase and
-uppercase; attributes additionally cover mixed case. That wider list is the
-safe side of an asymmetry — an over-wide attribute line runs a filter that then
-declines to annex, while a missing one strands a pointer and the file reads back
-as `/annex/objects/…` text:
+does not match `UPPER.JPG`). Both renderings use the same classes, so a file
+cannot match one list and miss the other in either direction — a path largefiles
+annexes but the filter never sees is a raw blob, and a path the annex holds but
+the filter no longer covers reads back as `/annex/objects/…` text:
 
 ```ts
 assetAnnexAttributes().includes("*.[hH][eE][iI][cC] filter=annex")
@@ -145,6 +152,21 @@ the unscoped `annex.largefiles` safe:
 ```ts
 ["card", "json", "md", "txt"].some((e) => assetAnnexAttributes().includes(`*.${e}`))
 => false
+```
+
+The batch line is the only non-extension entry, and it is what makes the
+batch-local `.gitattributes` (`* annex.largefiles=anything`, written by
+`core/bulk-upload/prepare.ts`) mean anything: largefiles is only consulted for a
+path the filter-process sees. Without this line a batch's `.zip` and
+extensionless files commit as raw blobs while its photos annex — verified at
+1.5 MB each before it was added.
+
+```ts
+assetAnnexAttributes().includes(`${BULK_BATCH_ATTACH_PATTERN} filter=annex`)
+=> true
+
+BULK_BATCH_ATTACH_PATTERN.startsWith("**/")
+=> true
 ```
 
 Capture staging stays gitignored so pre-triage captures are never annexed. The

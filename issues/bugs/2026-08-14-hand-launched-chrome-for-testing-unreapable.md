@@ -6,6 +6,7 @@ labels: [process-lifecycle, agent-browser]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder noticed a Chrome helper eating a core
+priority: normal
 ---
 
 The boxholder noticed a "Chrome for Testing Helper (Renderer)" pegging a core.
@@ -26,6 +27,12 @@ codex  (workstreams worktree)
 A codex worker scraped the issues page with a throwaway headless Chrome and the
 browser never exited. A second one from the same session, a minute earlier, was
 still alive too (idle). Both survived until killed by hand.
+
+The mirror-image bug in the same matcher —
+[cleanup does not recognize live Codex sessions](../closed/bugs/2026-08-13-process-cleanup-misses-codex-sessions.md),
+which reclaimed a live session's browser — is fixed. It was landed separately on
+purpose: that fix widens what the sweep *spares*, this one widens what it
+*kills*, and a mistake in either is destructive.
 
 ## The reapability gap
 

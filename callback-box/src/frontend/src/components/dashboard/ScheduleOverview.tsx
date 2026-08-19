@@ -200,9 +200,21 @@ function RunningIndicator({ running }: { running: { startedAt: string; triggered
   );
 }
 
-function StatusIndicator({ lastResult, lastError, onToggleError }: { lastResult: "success" | "failure" | null; lastError: string | null; onToggleError?: () => void }) {
+function StatusIndicator({ lastResult, lastError, onToggleError }: { lastResult: "success" | "failure" | "deferred" | null; lastError: string | null; onToggleError?: () => void }) {
   if (lastResult === "success") {
     return <span className="text-success text-xs">&#10003;</span>;
+  }
+  if (lastResult === "deferred") {
+    return (
+      <InlineAction
+        intent="subtle"
+        onClick={() => { if (onToggleError) onToggleError(); }}
+        title={lastError ? "Click to expand detail" : undefined}
+        className="text-xs text-left"
+      >
+        &#9203; {lastError ? <span className="text-warm-600">{lastError.substring(0, 60)}&#8230;</span> : null}
+      </InlineAction>
+    );
   }
   if (lastResult === "failure") {
     return (

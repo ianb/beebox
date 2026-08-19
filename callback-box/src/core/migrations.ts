@@ -119,6 +119,12 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // Converts every *.todo-list.card into a sibling *.doc.card with items
   // rendered as {% todo %}-wrapped markdown, and rewrites inbound refs.
   { name: "todo-list-to-doc", script: "scripts/migrate/todo-list-to-doc-run.ts" },
+  // Re-apply annex.largefiles + .git/info/attributes from the current
+  // renderings. Unlike everything above it transforms no card data — it
+  // converges box CONFIGURATION that is written once and then goes stale
+  // whenever src/lib/asset-extensions.ts changes. A later rendering change
+  // needs a new dated entry; see the script's module comment.
+  { name: "annex-config-2026-08", script: "scripts/migrate/annex-config.ts" },
 ];
 
 export const MANIFEST_PATH = "config/migrations.jsonl";

@@ -6,10 +6,12 @@ Tests for the git helper functions in `src/lib/git.ts`.
 import {
   initRepo, isRepo, getStatus, stageFiles, stageAll,
   commit, getLog, getLogPaginated, getDiff, getCommitDiff,
-  getCurrentBranch, hasCommits, createBranch, checkoutBranch,
-  createTag, deleteTag, getHead, clean, isNothingToCommitError,
+  hasCommits, getHead, clean, isNothingToCommitError,
   stageAndCommitPaths,
 } from "../../../src/lib/git.js";
+import {
+  getCurrentBranch, createBranch, checkoutBranch, createTag, deleteTag,
+} from "../../../src/lib/git-refs.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { rename } from "node:fs/promises";
 ```

@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-in: weekly manual-test triage — 2026-08-09T151705Z run, repo 508f42cc
 labels: [manual-tests]
+priority: normal
 ---
 
 `test/manual/chat-queue-real.doctest.md` (real `claude` SDK process, not the

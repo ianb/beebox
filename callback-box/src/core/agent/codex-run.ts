@@ -10,6 +10,7 @@ import { expandClaudeIncludes } from "../agent-context-includes.js";
 import { getBoxShape } from "../../lib/box-shape.js";
 import { validateHookPathsResult } from "../../cli/commands/validate-hook.js";
 import { codexRunErrorText, resultFromCodexTurn } from "./codex-run-result.js";
+import { applyEngineUnavailability } from "./engine-unavailability-apply.js";
 import { recordCodexAgentUsage } from "./codex-run-usage.js";
 import { codexUsageDelta, totalCodexSessionUsage } from "../codex-usage.js";
 import {
@@ -137,18 +138,24 @@ export async function runCodexAgent(
     if (options.outputSchema !== undefined && completed.status === "completed") {
       structuredOutput = JSON.parse(completed.resultText);
     }
-    return resultFromCodexTurn({
-      ...completed,
-      threadId: completed.sessionId,
-      structuredOutput,
-    });
+    return await applyEngineUnavailability(
+      resultFromCodexTurn({
+        ...completed,
+        threadId: completed.sessionId,
+        structuredOutput,
+      }),
+      { provider: "codex", boxRoot: options.boxRoot },
+    );
   } catch (error) {
-    return {
-      success: false,
-      output: "",
-      error: codexRunErrorText(error),
-      exitCode: -1,
-      sessionId: options.resumeSessionId ?? "",
-    };
+    return applyEngineUnavailability(
+      {
+        success: false,
+        output: "",
+        error: codexRunErrorText(error),
+        exitCode: -1,
+        sessionId: options.resumeSessionId ?? "",
+      },
+      { provider: "codex", boxRoot: options.boxRoot },
+    );
   }
 }

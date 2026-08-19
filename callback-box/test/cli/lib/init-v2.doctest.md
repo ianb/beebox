@@ -413,7 +413,7 @@ await fs.rm(partialDir, { recursive: true, force: true });
 
 `.git` sits at the package root, but git always invokes hooks with cwd = the
 package root too (regardless of where `git commit` was run from) — so a hook
-that just ran `cb validate --staged` without first `cd`-ing into `content/`
+that just ran `cb validate --pre-commit` without first `cd`-ing into `content/`
 would never find `content/.cb-box` (`requireBoxRoot()` only walks UP). Both
 the pre-commit and post-commit hooks bake in an explicit `cd "content"`
 before invoking `cb`:

@@ -280,6 +280,9 @@ struct RootView: View {
             },
             onComposerCommandAcknowledgementDelivered: { id in
                 composerCommandAcknowledgements.removeAll { $0.id == id }
+            },
+            onLastAudioRequest: { request in
+                answerLastAudioRequest(request, box: box)
             }
         )
         .id(box.id)
@@ -304,6 +307,32 @@ struct RootView: View {
                     screenshotRequest = NativeScreenshotRequest()
                 }
             )
+        }
+    }
+
+    /// Answer a box agent's request for one voice message's recording. The
+    /// answer goes straight to the box over HTTP rather than back through the
+    /// page — see the contract note on `NativeLastAudioRequest`.
+    ///
+    /// A device that does not hold the recording still answers, with "none":
+    /// staying silent would be indistinguishable from a phone that is asleep,
+    /// and a "none" cannot settle the request early, so it costs the agent
+    /// nothing while a tab that DOES hold the audio keeps its chance to answer.
+    private func answerLastAudioRequest(_ request: NativeLastAudioRequest, box: PairedBox) {
+        Task {
+            let retained = await VoiceAudioRetentionStore.shared.retained(
+                emissionID: request.messageID,
+                boxID: box.id
+            )
+            do {
+                try await ChatAPI(box: box).answerLastAudio(request, retained: retained)
+            } catch {
+                BoxLog.warn(
+                    "last-audio answer failed: \(error.localizedDescription)",
+                    category: .composer,
+                    targetBoxID: box.id
+                )
+            }
         }
     }
 

@@ -118,6 +118,10 @@ no errors in the log:
 
 1. Try `-m gpt-5.5` (or whatever older model the account allows;
    `gpt-5.1-codex-mini` is rejected on ChatGPT accounts).
+   **When the ChatGPT account is quota-exhausted** ("You've hit your usage
+   limit"), `-m gpt-5.3-codex-spark` still works — spark has its own quota
+   pool (verified 2026-08-18). The bare name `spark` is rejected on ChatGPT
+   accounts; use the full id.
 2. Re-check the fencing (shared rule 3).
 3. Kill orphaned `codex exec` processes from failed runs by PID (never
    `pkill -f codex` — it matches Codex.app and sibling sessions); orphans wedge

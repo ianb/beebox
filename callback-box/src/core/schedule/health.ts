@@ -29,6 +29,7 @@ const { rrulestr } = rrulePkg;
 
 export type TaskHealthStatus =
   | "ok"
+  | "waiting"   // engine unavailable (e.g. quota-exhausted); deferred, not failing
   | "failing"   // last run(s) failed
   | "overdue"   // a due occurrence has gone unattempted past grace
   | "blocked"   // unrunnable for a declared reason (budget, connector)
@@ -71,11 +72,18 @@ export interface EvaluateTaskInput {
   /** Connectors the task requires that aren't configured (precomputed
    * by the caller — connector config lookup is I/O). */
   missingConnectors: string[];
+  /** Set when the box's engine is unavailable (quota-exhausted): the
+   * waiting phrase, precomputed once per box by the caller (store lookup
+   * is I/O). Suppresses failing/overdue for the episode's duration —
+   * a task the engine can't serve is deferred, not unhealthy. */
+  engineWaitReason?: string | undefined;
 }
 
 /**
  * Classify one task. Precedence: disabled > invalid-input states the
- * caller handles > failing > blocked > overdue > ok. "Failing" wins
+ * caller handles > waiting > failing > blocked > overdue > ok. "Waiting"
+ * wins over "failing"/"overdue" per the trust rule above: during an engine
+ * outage the task is deferred by the system, not broken. "Failing" wins
  * over "blocked" because failures are what consumed the budget; the
  * blocked reason still rides along in `reason`.
  */
@@ -97,6 +105,9 @@ export function evaluateTaskHealth(input: EvaluateTaskInput): TaskHealth {
   }
   if (parsed.until && now > new Date(parsed.until)) {
     return { ...base, status: "disabled", reason: `expired (until ${parsed.until})` };
+  }
+  if (input.engineWaitReason !== undefined) {
+    return { ...base, status: "waiting", reason: input.engineWaitReason };
   }
 
   let blockedReason: string | undefined;

@@ -10,6 +10,7 @@ import type {
   NativeChatBackendMessage,
 } from "./claude-chat-types.js";
 import { ensureCodexPluginInstalled } from "../core/agent/ensure-codex-plugin.js";
+import { noteEngineUnavailability } from "../core/agent/engine-unavailability-apply.js";
 import { expandClaudeIncludes } from "../core/agent-context-includes.js";
 import { getBoxShape } from "../lib/box-shape.js";
 import { findBoxRoot } from "../lib/paths.js";
@@ -136,8 +137,17 @@ function createRun(opts: ChatBackendStartOptions, createSession: CodexSdkSession
             console.warn(`[CodexChat:usage] Could not record token usage: ${errorText(error)}`);
           }
         }
+        let turnError = completed.error;
+        if (turnError !== null && boxRoot !== null) {
+          const described = await noteEngineUnavailability({
+            provider: "codex",
+            message: turnError,
+            boxRoot,
+          });
+          if (described !== null) turnError = described;
+        }
         const failure = [
-          completed.error,
+          turnError,
           validation.hasErrors ? `Callback Box validation failed:\n${validation.feedback ?? "Unknown validation error"}` : null,
         ].filter((detail): detail is string => detail !== null).join("\n\n");
         queue.push(event({

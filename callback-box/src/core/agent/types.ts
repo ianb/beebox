@@ -7,6 +7,7 @@
  */
 
 import type { z } from "zod";
+import type { EngineUnavailability } from "./engine-unavailability.js";
 
 /**
  * Options passed to Agent.invoke() by the calling code.
@@ -73,7 +74,17 @@ export interface AgentResultBase {
  */
 export type AgentResult =
   | (AgentResultBase & { success: true })
-  | (AgentResultBase & { success: false; error: string });
+  | (AgentResultBase & {
+      success: false;
+      error: string;
+      /**
+       * Present when the failure is deferred-recoverable: the engine is
+       * unavailable (e.g. quota-exhausted) and will work again at `retryAt`.
+       * Callers branch on this to defer instead of retrying or counting the
+       * failure against the task. Absent = ordinary failure.
+       */
+      unavailability?: EngineUnavailability;
+    });
 
 /**
  * Result of `Agent.invokeStructured`. The transport fields plus the parsed

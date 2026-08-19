@@ -6,7 +6,25 @@ labels: [router, dev-server, lifecycle]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — iOS couldn't reach a box; `main` had been down for ~45 minutes
+priority: normal
 ---
+
+> **Checked 2026-08-18 — not fixed, on two counts.** Tagged `fixed`; removed.
+> `--strictPort` landed in `c1c19dbd` at 14:23, and it is **partial by design**
+> (see "Partially fixed" below): it stops the *wrong process* dying, and a
+> worktree whose frontend port is taken at spawn still fails to start.
+>
+> Second, and more immediately: **the fix is not running.** The shared router
+> process started Sun Aug 16 05:32 — two days before the commit — and it loads
+> `bin/router-core.ts` at its own startup, so every worktree it spawns still
+> uses the old arguments. Verified on the live process: the currently-running
+> vite for `main` (spawned 17:58 today, *after* the commit) has no
+> `--strictPort` in its argv. Picking it up needs a `pnpm dev` router restart,
+> which is the boxholder's call — not something a session should do to the
+> shared router.
+>
+> So the observable behavior is unchanged so far, and the remaining work in
+> "What's left" is untouched.
 
 A worktree can fail to start because **Vite takes the port the hub was going to
 bind**. Observed on `main`, 2026-08-18 13:30:06, which then sat `failed` until

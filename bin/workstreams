@@ -24,6 +24,10 @@
 #   list [--json]      Every worktree, joined across git, runtime, agent,
 #                      session-registry, and test1-clone state. Add
 #                      --include-removed with --json for registry ghost rows.
+#   agent-liveness <path>...
+#                      Per-path claude/codex liveness (none|live|unknown) as
+#                      JSON, from the one shared guard. For tooling that must
+#                      not act on a live session's resources.
 #   quotas --json      Claude and Codex account quota windows and reset times.
 #   unset-claude-quota Remove the retired Claude quota status-line collector.
 #   archive <name>     Keep a workstream but move it into the archived section.
@@ -56,6 +60,36 @@ cmd="${1:-status}"
 shift || true
 
 case "$cmd" in
+  agent-liveness)
+    # Per-path agent liveness for tooling that stands in front of something
+    # destructive — today `bin/process-cleanup.ts`, which must not reclaim an
+    # agent-browser a live session is using. Takes ABSOLUTE PATHS, not names, so
+    # a caller with its own notion of where checkouts live (process-cleanup
+    # scopes by path prefix) needs no agreement with this script about roots,
+    # and the main checkout is just another path.
+    #
+    # Same reason `list` is bash: the answer comes from wt_other_agent_live and
+    # nowhere else. A second implementation of a guard this destructive is the
+    # duplication that produced the fail-open sweep bug of 2026-08-04.
+    [ $# -ge 1 ] || { echo "usage: workstreams agent-liveness <worktree-path>..." >&2; exit 1; }
+    # shellcheck source=lib/worktree-teardown.sh
+    . "$REPO_DIR/bin/lib/worktree-teardown.sh"
+    WT_LOG_LABEL="AgentLiveness"
+    # One system-wide ps/lsof snapshot reused across every path asked about.
+    wt_agent_snapshot_capture
+    liveness_paths="{}"
+    for wt_path in "$@"; do
+      wt_other_agent_live "$wt_path"
+      liveness_paths=$(jq -c -n \
+        --argjson paths "$liveness_paths" \
+        --arg path "$wt_path" \
+        --arg state "$WT_AGENT_STATE" \
+        --arg reason "$WT_AGENT_REASON" \
+        '$paths + {($path): {state: $state, reason: $reason}}')
+    done
+    jq -c -n --argjson paths "$liveness_paths" '{ok: true, paths: $paths}'
+    ;;
+
   quotas)
     [ "${1:-}" = "--json" ] && [ $# -eq 1 ] || { echo "usage: workstreams quotas --json" >&2; exit 1; }
     exec node --import tsx "$REPO_DIR/bin/agent-quotas.ts"
