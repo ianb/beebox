@@ -16,7 +16,7 @@ real-git-annex doctests cover it — `test/core/annex/largefiles-matching.doctes
 and `test/core/bulk-upload/prepare-annex.doctest.md` — and both were confirmed
 to fail against the unfixed source. Existing boxes pick the change up on
 `cb doctor annex`; that rollout is the separate
-[stale `annex.largefiles`](../../bugs/2026-08-18-stale-annex-largefiles-never-reapplies.md)
+[stale `annex.largefiles`](2026-08-18-stale-annex-largefiles-never-reapplies.md)
 issue, and it now covers this change too.
 
 Whether a file is annexed was decided by **two independent lists**, and a file is

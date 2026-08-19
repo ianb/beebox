@@ -1,10 +1,31 @@
 ---
 title: A stale annex.largefiles is never re-applied, so uppercase-extension assets commit as raw blobs
-workstream: unattached
+workstream: annex-bypass-check
 area: callback-box
+resolution: implemented
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-annex-bypass-check — investigating the photo-batch annex-bypass report
+---
+
+**Closed 2026-08-19 — box convergence now runs on its own.** `deploy.sh` runs
+`cb migrate --sweep` per box after shipping code, and box configuration is
+expressible as a migration (`annex-config-2026-08` runs the `cb doctor annex`
+repair pass). A box the sweep cannot converge — dirty tree, or a pending
+agent-driven procedure migration — is reported by `cb health` as
+`box-migrations`, so it is visible after the deploy log scrolls away.
+
+**The residual, stated plainly:** a manifest key runs once, so the next change to
+`ASSET_EXTENSIONS` or either rendering needs a NEW dated migration entry, and
+forgetting to add one is silent. That is a discipline cost, not a mechanism gap,
+and it is written down in `docs/migrations.md` and in the migration script's own
+comment. If it bites anyway, the fix is a convergence step that is not keyed on
+a one-shot name — re-running the annex doctor unconditionally at box startup was
+the alternative considered here (`docs/plans/asset-annex.md:458` specifies it and
+it was never built).
+
+The original tension follows.
+
 ---
 
 `annex.largefiles` is written into a box once, at conversion or at `cb init`.
@@ -42,7 +63,7 @@ capture filing, `cb scan-import`, clerk frozen pages, an agent moving an asset
 into `store/`.
 
 Related but distinct:
-[the filter-scope / largefiles disagreement](../closed/bugs/2026-08-18-annex-filter-scope-and-largefiles-disagree.md)
+[the filter-scope / largefiles disagreement](2026-08-18-annex-filter-scope-and-largefiles-disagree.md)
 is a gap in the *current* expressions that repairing a box does not close.
 
 **The fix is really two questions.** Repairing today's boxes is one

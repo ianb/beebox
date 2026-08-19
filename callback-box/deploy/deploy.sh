@@ -545,6 +545,23 @@ if [[ "$SKIP_RESTART" != true ]]; then
   echo "Waiting for boxes to be at rest (best-effort)..."
   ssh "root@$SERVER_IP" 'test -x /usr/local/bin/cb-wait-quiet && /usr/local/bin/cb-wait-quiet || echo "  (cb-wait-quiet not installed; re-run setup-server.sh to enable)"'
 
+  # Converge each box onto the code that just shipped, in the at-rest window —
+  # after cb-wait-quiet, before the restart brings box children back up. A box
+  # whose migrations are current prints nothing; anything else prints one line
+  # and the deploy continues. This never fails the deploy: a box that needs a
+  # human (dirty tree, agent-driven migration, hard failure) is a box to look
+  # at, not a reason to abandon a shipped release. `cb migrate --sweep` owns the
+  # policy — see src/core/migration-sweep.ts.
+  echo "Applying pending box migrations..."
+  ssh "root@$SERVER_IP" bash -s <<'REMOTE'
+    for box in /home/callback/boxes/*/content; do
+      [[ -d "$box" ]] || continue   # no content/ dir — not a v2 box
+      name=$(basename "$(dirname "$box")")
+      out=$(sudo -u callback -H bash -lc "set -a; source /home/callback/.env 2>/dev/null; set +a; cd '$box' && cb migrate --sweep" 2>&1) || true
+      [[ -n "$out" ]] && echo "$out" | sed "s/^/  $name: /"
+    done
+REMOTE
+
   echo "Restarting services..."
   ssh "root@$SERVER_IP" 'systemctl restart callback-hub callback-scheduler && echo "Services restarted"'
 

@@ -24,6 +24,33 @@ cb migrate --mark-applied bill  # record ONE migration as applied without runnin
 
 If a migration fails, the manifest is **not** updated for the failing entry and subsequent migrations are not attempted. Fix the underlying problem and re-run; the loop picks up where it stopped.
 
+## The deploy sweep runs them automatically
+
+`deploy/deploy.sh` runs `cb migrate --sweep` for every box on the server after
+shipping new engine code, in the at-rest window between `cb-wait-quiet` and the
+service restart. A box with nothing pending prints nothing; anything else prints
+one line into the deploy log. **The sweep never fails the deploy** — a box that
+needs a human is a box to look at, not a reason to abandon a shipped release.
+
+`--sweep` is deliberately narrower than `--apply`, because nobody is watching:
+
+| | `cb migrate --apply` | `cb migrate --sweep` |
+|---|---|---|
+| dirty tree | refuses | skips the box, reports, retries next deploy |
+| procedure-kind (agent) migrations | runs them | stops there and reports |
+| provisioning | runs `cb init` first | does not |
+| result | left uncommitted for review | one commit per migration, `Created-By: migration-sweep` |
+
+The commit is the notable difference. Leaving changes uncommitted is right for a
+human at a terminal and wrong unattended: a dirty box is exactly what the next
+sweep skips, so one un-reviewed migration would silently stop every later one.
+The manifest entry and the changes it describes land in the **same** commit, so
+a box can never claim a migration whose effects are not in its history.
+
+A box left behind — dirty tree, pending procedure migration — is reported by
+`cb health` as `box-migrations` (warning), so the drift is visible after the
+deploy log scrolls away.
+
 ## Writing a new migration
 
 1. **Write the script** at `scripts/migrate/<name>.ts`. New migrators should use the shared harness (`scripts/migrate/_harness.ts`), which handles arg parsing, the file walk, dry-run/apply, per-file error collection, and the final warning dump:
