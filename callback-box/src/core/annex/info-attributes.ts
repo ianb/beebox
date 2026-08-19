@@ -54,8 +54,16 @@ export async function writeAnnexInfoAttributes(repoRoot: string): Promise<void> 
  *
  * Extension test rather than a glob match against the rendered lines: the
  * rendered lines ARE the extension list, and re-implementing wildmatch to check
- * them would be a second classifier to drift from the first.
+ * them would be a second classifier to drift from the first. The one line that
+ * is not an extension gets the same treatment — a substring test for the bulk
+ * batch scope, matching what `BULK_BATCH_ATTACH_PATTERN` renders — so
+ * a batch's `.zip` counts as covered instead of reading as a gap.
  */
 export function uncoveredAnnexedPaths(annexedPaths: string[]): string[] {
-  return annexedPaths.filter((p) => !isAssetExtension(p));
+  return annexedPaths.filter((p) => !isAssetExtension(p) && !isBulkBatchAttachPath(p));
+}
+
+/** Is this path inside a bulk-upload batch's attach scope? */
+function isBulkBatchAttachPath(filePath: string): boolean {
+  return filePath.includes(".upload-batch.attach/");
 }

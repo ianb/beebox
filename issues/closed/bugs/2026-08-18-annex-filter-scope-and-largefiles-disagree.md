@@ -1,13 +1,25 @@
 ---
 title: Assets commit as raw blobs where the filter scope and annex.largefiles disagree (bulk non-asset files, mixed-case extensions)
-workstream: unattached
+workstream: annex-bypass-check
 area: callback-box
+resolution: implemented
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-annex-bypass-check — cross-model review of the photo-batch annex investigation
 ---
 
-Whether a file is annexed is decided by **two independent lists**, and a file is
+**Closed 2026-08-18 — fixed by making the two lists one rendering.**
+`assetLargefilesExpression()` now renders every extension through the same
+any-case glob the attributes file uses, and `assetAnnexAttributes()` carries
+`BULK_BATCH_ATTACH_PATTERN` so a batch scope reaches the filter at all. Two new
+real-git-annex doctests cover it — `test/core/annex/largefiles-matching.doctest.md`
+and `test/core/bulk-upload/prepare-annex.doctest.md` — and both were confirmed
+to fail against the unfixed source. Existing boxes pick the change up on
+`cb doctor annex`; that rollout is the separate
+[stale `annex.largefiles`](../../bugs/2026-08-18-stale-annex-largefiles-never-reapplies.md)
+issue, and it now covers this change too.
+
+Whether a file is annexed was decided by **two independent lists**, and a file is
 annexed only if both agree:
 
 1. `.git/info/attributes` — which paths reach the git-annex filter-process at
@@ -58,14 +70,13 @@ any-case globs (`[jJ][pP][gG]`). In an ordinary attach scope, three 1.5 MB files
 **Not yet fired in production.** No box has a tracked mixed-case asset, and no
 batch of a non-asset type has been committed. Every asset-extension photo batch
 annexed correctly — see the closed
-[photo-batch annex-bypass investigation](../closed/bugs/2026-08-01-prod-photo-uploads-bypass-annex.md).
+[photo-batch annex-bypass investigation](2026-08-01-prod-photo-uploads-bypass-annex.md).
 
-**Unresolved.** The fix could be to derive one list from the other so they cannot
-drift (largefiles matching case-insensitively, and the filter scope covering
-whatever a batch-local `.gitattributes` can widen to), or to accept that a batch
-scope needs its paths in `.git/info/attributes` too, or to drop the perf scoping
-for `.attach/` paths. Whatever the shape, the invariant worth encoding is that
-`assetAnnexAttributes()` must be a superset of *everything any largefiles
-expression in the repo can match* — `asset-extensions.ts:122` already states the
-superset rule, but only against the box-wide expression, not a batch-local one.
-Also worth a test on a real annex box: today's bulk doctest cannot catch this.
+**How it was fixed.** Both halves derive from one rendering rather than being
+kept in step by hand. The superset rule in `asset-extensions.ts` now states the
+obligation against *everything that can be annexed*, including what a
+per-directory `.gitattributes` widens to — not only the box-wide expression,
+which is the wording that let the batch case slip through.
+
+The perf scoping is kept: it is worth ~2.3s per 15 text commits, and one path
+line buys back the batch case without reopening that cost.

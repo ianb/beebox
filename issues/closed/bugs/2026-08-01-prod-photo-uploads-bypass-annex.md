@@ -11,7 +11,7 @@ the claim carefully: this closes *photos bypassing annex*, not *nothing bypasses
 annex*. A cross-model review found two reachable raw-blob paths that this
 investigation had missed, both since verified — non-asset file types inside a
 bulk batch, and mixed-case extensions anywhere. Three items carry the live work:
-[the filter-scope / largefiles disagreement](../../bugs/2026-08-18-annex-filter-scope-and-largefiles-disagree.md),
+[the filter-scope / largefiles disagreement](2026-08-18-annex-filter-scope-and-largefiles-disagree.md),
 [stale `annex.largefiles` never re-applies](../../bugs/2026-08-18-stale-annex-largefiles-never-reapplies.md),
 and [retire the remaining asset-manifest writers](../../code-quality/2026-08-18-retire-remaining-asset-manifest-writers.md).
 

@@ -42,7 +42,7 @@ capture filing, `cb scan-import`, clerk frozen pages, an agent moving an asset
 into `store/`.
 
 Related but distinct:
-[the filter-scope / largefiles disagreement](2026-08-18-annex-filter-scope-and-largefiles-disagree.md)
+[the filter-scope / largefiles disagreement](../closed/bugs/2026-08-18-annex-filter-scope-and-largefiles-disagree.md)
 is a gap in the *current* expressions that repairing a box does not close.
 
 **The fix is really two questions.** Repairing today's boxes is one
