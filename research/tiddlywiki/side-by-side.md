@@ -78,7 +78,8 @@ on it.
 
 ## 3. A card whose content is a live query
 
-This is the closest correspondence in the whole review, and we already have it.
+The closest correspondence in the whole review, and the one place our claim
+needs care.
 
 TiddlyWiki:
 
@@ -123,11 +124,9 @@ It does earn the word transclusion, though: the todo items are authored as
 `{% todo %}` tags inside other cards' bodies, and they appear rendered here,
 live, by reference.
 
-The difference is generality, and it cuts both ways. Theirs is one mechanism for
-every collection; ours is one card type per collection shape, which is precisely
-why `todo-view`, `nav` and `tab-arrangement` all exist separately. Theirs pays
-for it in the other direction: `[tag[todo]]` is unvalidated text, and a typo
-gives an empty list.
+Theirs pays in the other direction: `[tag[todo]]` is unvalidated text, and a
+typo gives an empty list that looks exactly like a correct query over an empty
+wiki.
 
 ---
 
