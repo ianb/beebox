@@ -126,6 +126,41 @@ cards[2].priority
 await box.cleanup();
 ```
 
+### Age comes from the filename stamp, and a stamp that isn't a date is no stamp
+
+`createdAt` is what the reactor's low-priority deadline and the stalled-jobs
+health check both read. Every job-card writer stamps the filename, in UTC; an
+unstamped name falls back to the file's mtime. A stamp that only looks like a
+date is rejected rather than normalized — `Date.UTC` would happily roll month
+99 into a later year and hand a mangled filename a real, wrong age.
+
+```ts
+const box = await makeTmpBox({ git: true });
+const jobsDir = path.join(box.root, "box/jobs");
+await box.write("box/jobs/2026-08-18T09-30-00-gmail.intake.job.card", `---\n---\nStamped to the second`);
+await box.write("box/jobs/2026-08-18T09-30.contains-backfill.job.card", `---\n---\nStamped to the minute`);
+await box.write("box/jobs/2026-99-99T99-99-bad.intake.job.card", `---\n---\nNot a date`);
+await box.write("box/jobs/handwritten.job.card", `---\n---\nNo stamp at all`);
+
+const byFile = new Map((await findJobCards(jobsDir)).map((c) => [c.file, c.createdAt]));
+byFile.get("2026-08-18T09-30-00-gmail.intake.job.card")?.toISOString()
+=> 2026-08-18T09:30:00.000Z
+
+byFile.get("2026-08-18T09-30.contains-backfill.job.card")?.toISOString()
+=> 2026-08-18T09:30:00.000Z
+```
+
+The two that carry no usable stamp fall back to the mtime, so they read as
+newly written rather than as ancient or as unknown.
+
+```ts continue
+const fallbacks = ["2026-99-99T99-99-bad.intake.job.card", "handwritten.job.card"];
+fallbacks.every((f) => Date.now() - (byFile.get(f)?.getTime() ?? 0) < 60_000)
+=> true
+
+await box.cleanup();
+```
+
 ### Type filter only matches typed suffix
 
 ```ts

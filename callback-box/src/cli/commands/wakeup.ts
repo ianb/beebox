@@ -235,13 +235,14 @@ export const wakeupCommand = new Command("wakeup")
     // it also produces the `contains` state step 4d reads.
     console.log("[Refreshing search index]");
     const indexFresh = await refreshSearchIndex(boxRoot);
-    console.log(indexFresh ? "  Index up to date" : "  Index refresh failed");
+    console.log(indexFresh ? "  Index up to date" : "  Index not refreshed this cycle");
     console.log("");
 
     // Step 4d: Queue a contains-backfill batch when searchable cards lack
     // the field (one low-priority job per wakeup; drains gradually). Skipped
-    // when the refresh above failed: the `contains` state it reads would
-    // predate the current tree, and a wrong batch is worse than a late one.
+    // when the refresh above didn't reconcile — it threw, or lost the search
+    // lock to another process: the `contains` state it reads would predate
+    // the current tree, and a wrong batch is worse than a late one.
     if (indexFresh) {
       const backfill = await createContainsBackfillJob(boxRoot);
       if (backfill > 0) {

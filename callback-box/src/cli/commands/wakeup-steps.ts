@@ -22,6 +22,7 @@ import { resolveBoxRelativeRef, realpathContained } from "../../lib/box-containm
 import { findJobCards } from "../../core/reactor/job-discovery.js";
 import { openSearchIndex } from "../../core/search/refresh.js";
 import { loadContainsState, listMissing } from "../../core/search/contains-state.js";
+import { getBoxTimeISO } from "../../lib/time.js";
 
 /**
  * Run preprocessors on all inbox items (transcription, etc.).
@@ -384,14 +385,21 @@ const CONTAINS_BACKFILL_SOURCE = "contains-backfill";
  * good. A refresh whose execution is incidental to an unrelated guard breaks
  * again the next time that guard moves; it belongs on its own footing.
  *
- * Returns false when the refresh failed, so the caller can skip work that
- * would otherwise act on stale state.
+ * Returns false when the index was not actually reconciled — the refresh threw,
+ * or another process held the search lock and this call served the last
+ * persisted index untouched — so the caller can skip work that would otherwise
+ * act on stale state.
  */
 export async function refreshSearchIndex(boxRoot: string): Promise<boolean> {
   try {
-    const { warnings } = await openSearchIndex(boxRoot);
+    const { warnings, stale } = await openSearchIndex(boxRoot);
     for (const warning of warnings) console.warn(`  search index: ${warning}`);
-    return true;
+    // `stale` means another process held the search lock and this call served
+    // the last persisted index without reconciling anything. Nothing was
+    // refreshed, so it does not count as one — the contract this returns is
+    // "the index and the contains state now match the card tree", and under
+    // contention they don't. The next wakeup retries.
+    return !stale;
   } catch (e) {
     console.error("  Search index refresh failed:", e);
     return false;
@@ -417,7 +425,12 @@ export async function createContainsBackfillJob(boxRoot: string): Promise<number
   if (missing.length === 0) return 0;
 
   const batch = missing.slice(0, CONTAINS_BACKFILL_BATCH);
-  const created = new Date().toISOString();
+  // Box time, not wall time: the reactor's low-priority deadline and the
+  // stalled-jobs health check both read this stamp back as the card's age and
+  // compare it against `getBoxTime`. A wall-time stamp under a `CB_TIME` stub
+  // dates the card in the box's future, and a job that is never old is a job
+  // that is never overdue.
+  const created = getBoxTimeISO(boxRoot);
   const stamp = created.slice(0, 16).replaceAll(":", "-");
   const jobFilename = `${stamp}.contains-backfill.job.card`;
   const card = createContainsBackfillJobTemplate({

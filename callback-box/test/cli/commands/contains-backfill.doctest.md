@@ -17,6 +17,8 @@ refresh indefinitely. The last section here pins them apart.
 import { createContainsBackfillJob, refreshSearchIndex } from "../../../src/cli/commands/wakeup-steps.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { searchBox } from "../../../src/core/search/query.js";
+import { acquireLock, releaseLock } from "../../../src/lib/file-lock.js";
+import { searchLockPath } from "../../../src/core/search/search-store.js";
 
 const MEMO = (text: string) =>
   "---\ncreated: 2026-05-22T10:00:00Z\n---\n" + text + "\n";
@@ -115,4 +117,61 @@ hits.results.some((r) => r.path === "store/notes/Later.memo.card")
 
 ```ts cleanup
 await box3.cleanup();
+```
+
+## A refresh that lost the search lock is not a refresh
+
+`openSearchIndex` degrades under contention: it retries for a few seconds and
+then serves the last persisted index *without reconciling anything*, flagged
+`stale`. That is the right call for a query — slightly stale beats broken —
+but it is not a refresh, and `cb wakeup` skips the backfill step on a false
+return precisely so a batch is never chosen from `contains` state that
+predates the card tree. Losing the lock is likeliest exactly when this matters
+most: the first run after deploy, when the reconciliation is large and slow.
+
+```ts
+const box4 = await makeTmpBox({ git: true });
+await box4.write("store/notes/A.memo.card", MEMO("alpha notes"));
+box4.commitAll("seed");
+
+// Hold the search lock, as a concurrent query or a second wakeup would.
+await acquireLock(searchLockPath(box4.root), { purpose: "doctest" });
+await refreshSearchIndex(box4.root)
+=> false
+
+// Released, the same call reconciles and reports success.
+await releaseLock(searchLockPath(box4.root));
+await refreshSearchIndex(box4.root)
+=> true
+```
+
+```ts cleanup
+await box4.cleanup();
+```
+
+## The job filename is stamped in box time
+
+The stamp is not decoration: the reactor reads it back as the card's age to
+decide when this low-priority job has waited long enough, and `cb health`
+reads it to report a job that never drained. Both compare against
+`getBoxTime`, so the stamp has to come from the same clock — a wall-time stamp
+under a frozen test clock dates the card in the box's own future, and a job
+that is never old is a job that is never overdue.
+
+```ts
+process.env.CB_TIME = "2026-03-04T05:06:07Z";
+const box5 = await makeTmpBox({ git: true });
+await box5.write("store/notes/A.memo.card", MEMO("alpha notes"));
+box5.commitAll("seed");
+await refreshSearchIndex(box5.root);
+await createContainsBackfillJob(box5.root);
+
+const queuedName = (await box5.list("box/jobs")).split("\n").find((f) => f.includes("contains-backfill"));
+queuedName
+=> box/jobs/2026-03-04T05-06.contains-backfill.job.card
+```
+
+```ts cleanup
+delete process.env.CB_TIME;
+await box5.cleanup();
 ```

@@ -30,8 +30,17 @@ function createdAtFromFilename(file: string): Date | null {
   const m = FILENAME_STAMP.exec(path.basename(file));
   if (!m) return null;
   const [, y, mo, d, h, min, sec] = m;
-  const ms = Date.UTC(Number(y), Number(mo) - 1, Number(d), Number(h), Number(min), Number(sec ?? "0"));
-  return Number.isNaN(ms) ? null : new Date(ms);
+  const parts = [Number(y), Number(mo), Number(d), Number(h), Number(min), Number(sec ?? "0")] as const;
+  const date = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2], parts[3], parts[4], parts[5]));
+  // `Date.UTC` normalizes rather than rejects — month 99 rolls into a later
+  // year, giving a mangled filename a real (and wrong) age. Since this age is
+  // now control flow, a stamp that doesn't survive the round trip is treated
+  // as no stamp at all.
+  const roundTrip = [
+    date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate(),
+    date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds(),
+  ];
+  return roundTrip.every((v, i) => v === parts[i]) ? date : null;
 }
 
 async function readCreatedAt(jobPath: string, file: string): Promise<Date | null> {
@@ -57,9 +66,12 @@ export async function findJobCards(
     entries = await fs.readdir(jobsDir, { recursive: true });
   } catch (e) {
     // jobs/ may not exist yet (fresh box, or no jobs produced) — treat as
-    // no pending jobs rather than an error.
+    // no pending jobs rather than an error. Any other failure is different in
+    // kind: the queue may be full of work nobody can see, and every caller
+    // (the reactor, the stalled-jobs health check, field-test quiescence)
+    // reads the empty result as "nothing pending". Say so.
     if (errnoCode(e) !== "ENOENT") {
-      console.debug(`findJobCards: cannot read ${jobsDir}, treating as empty:`, e);
+      console.warn(`findJobCards: cannot read ${jobsDir}, treating as empty:`, e);
     }
     return [];
   }
