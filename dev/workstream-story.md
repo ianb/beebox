@@ -16,7 +16,7 @@ Meanwhile the to-do list was: the developer's head, plus one giant TODO file whe
 
 ## Worktrees, and one router to serve them all
 
-Every session gets its own checkout (`git worktree`) and its own clone of the test data. One dev router serves all of them by URL prefix — a worktree cold-starts on the first request and stops after 5 idle minutes.
+Every line of work gets its own checkout (`git worktree`) and its own clone of the test data. One dev router serves all of them by URL prefix — a worktree cold-starts on the first request and stops after 5 idle minutes.
 
 ![One router serving main and worktrees by URL prefix](workstream-story/router.svg)
 
@@ -39,7 +39,7 @@ Close a tab and you lose the record. Keep the record in the tab and you can neve
 - A **workstream** is the durable unit: a named line of work, its conversation, its plan, its issues.
 - A **worktree** is just the checkout currently attached to it. A cache.
 
-Merged and clean? The worktree gets *culled* — that detaches storage, it doesn't end the workstream. Resume later and the checkout is recreated, with a note about what landed on main in the meantime.
+Merged, clean, no agent inside, nothing waiting on a human test? The worktree gets *culled* — that detaches storage, it doesn't end the workstream. Resume later and the checkout is recreated, with a note about what landed on main in the meantime.
 
 ![Workstream timeline with worktrees attaching and detaching](workstream-story/lifecycle.svg)
 
