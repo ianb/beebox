@@ -155,6 +155,37 @@ what I have" operators inherits this problem.
 > Note that these special brackets cannot be nested. It is not possible for
 > example to write `[search{<currentTiddler>}]`.
 
+The four parameter forms, from `Filter Parameter`, are delimiters around a name
+— closer to quote marks than to tags, and none of them close:
+
+```
+[like this]     hard      — the literal text between the brackets
+{like this}     indirect  — a TextReference: a field of a tiddler
+<like this>     variable  — the current value of that variable
+(like this)     5.4.0     — a multi-valued variable, all values
+```
+
+**The same characters mean different things inside a filter than outside it,
+and nothing marks the boundary.** This is the concrete source of the
+readability cost catalogued in §6 — not density, but unannounced context
+switching:
+
+| Form | In wikitext | In a filter |
+|---|---|---|
+| `<name>` | — | variable parameter |
+| `<<name>>` | transclude a variable's value | — |
+| `<$list …>` | widget element (closes) | — |
+| `[[Foo]]` | a link | a title, short for `[title[Foo]]` |
+| `{X}` | — | TextReference parameter |
+| `{{X}}` | transclusion | — |
+| `{{{X}}}` | filtered transclusion (all results) or filtered attribute value (first result), by position | — |
+
+So `[<currentTiddler>]` is one step with no operator and a variable parameter,
+which — per `Filter Step`, *"If a step's operator and suffix are omitted
+altogether, it defaults to the title operator"* — means
+`[title<currentTiddler>]`: the tiddler whose title is the current value of that
+variable. It reads like an unclosed tag and is neither a tag nor unclosed.
+
 Curly and angle brackets are what make a filter a *live* query rather than a
 frozen one: the parameter is read at evaluation time from wiki state. A saved
 filter tiddler plus a parameter tiddler is a parameterised saved query, with no
