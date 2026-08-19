@@ -4,6 +4,8 @@ How box data migrations work, how to apply them, and how to write new ones.
 
 A migration is a one-shot transformation of card data on disk — schema renames, field strips, layout flips, refactors. The system tracks which migrations a box has had applied so future runs only do the missing work.
 
+**Box configuration counts too.** `annex-config-2026-08` re-applies `annex.largefiles` and `.git/info/attributes` from the current renderings; it transforms no cards and leaves the working tree untouched. Config written once at `cb init` goes stale whenever the code's idea of it changes, and a migration is the one mechanism that records per box whether the convergence happened. The catch is in the name: a manifest key runs once, so **the next rendering change needs a new dated entry** — forgetting to add one is silent. Whether something should re-apply box configuration without being asked is open (`issues/bugs/2026-08-18-stale-annex-largefiles-never-reapplies.md`).
+
 ## `cb migrate` is the entry point
 
 Each box has `config/migrations.jsonl` — append-only JSONL, one `{name, applied-at}` per line — recording which migrations it's seen. `cb migrate` compares against the canonical ordered list in `src/core/migrations.ts` and runs anything missing in order, appending an entry after each success.
