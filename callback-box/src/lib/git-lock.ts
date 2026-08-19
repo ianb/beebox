@@ -91,9 +91,9 @@
  *    wait.
  * 2. **Nothing invoked from a git hook may take this lock.** A hook runs as a
  *    child of the `git commit` we are holding the lock across. True today: the
- *    installed pre-commit hook runs `git annex pre-commit`, `cb validate`, and
- *    `cb attachments check-unlisted`, and of those only `validate` touches git,
- *    only to read. If this is ever broken the consequence is a 60 s stall and a
+ *    installed pre-commit hook runs `git annex pre-commit` and `cb validate
+ *    --pre-commit`, and of those only `validate` touches git, only to read
+ *    (`git diff --cached`, `git cat-file`). If this is ever broken the consequence is a 60 s stall and a
  *    loud log, not a deadlock — that is the fail-open backstop earning its keep,
  *    not a licence to break it.
  *

@@ -13,7 +13,7 @@
  * are never trusted. Rotation is best-effort (measured inconsistent).
  */
 
-import { query, type SDKUserMessage, type SDKResultMessage } from "@anthropic-ai/claude-agent-sdk";
+import type { SDKUserMessage, SDKResultMessage } from "@anthropic-ai/claude-agent-sdk";
 import * as fs from "node:fs/promises";
 import { z } from "zod";
 import { MODEL_ID } from "../shared/model-ids.js";
@@ -327,6 +327,9 @@ async function runScanQuery({
   }
 
   try {
+    // Dynamic — see `core/agent/stream.ts`: keeps the Agent SDK out of the
+    // startup graph of every `cb` invocation that never asks for vision.
+    const { query } = await import("@anthropic-ai/claude-agent-sdk");
     const q = query({
       prompt: prompt(),
       options: {

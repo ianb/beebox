@@ -76,7 +76,11 @@ A path glob would have turned every one of those cards into a pointer.
 omission means the bytes get committed to git directly, permanently. That has
 happened before (41 MB `page.frozen` snapshots, 2026-07), so a commit-time
 guard now blocks any file over 1 MB in an attach scope whose extension is not
-listed — `cb attachments check-unlisted`, run from the pre-commit hook.
+listed. The pre-commit hook checks the *staged blobs* (inside `cb validate
+--pre-commit`), so it fires at exactly the commit that would embed the bytes and
+also catches an allowlisted extension staged raw through a broken annex filter;
+`cb attachments check-unlisted` walks the whole box for the same problem on
+demand.
 
 Two deliberate exceptions:
 
@@ -171,7 +175,7 @@ repairing takes both `git config annex.thin false` **and** `git annex fix`
 | `cb doctor annex` | Check and repair the box's annex configuration. Most checks self-heal. `--check` for read-only. |
 | `cb doctor annex-fsck` | Verify content against keys, incrementally. Read-only; run from a schedule. |
 | `cb attachments to-annex` | One-way migration from the manifest model. Verifies before and after. |
-| `cb attachments check-unlisted` | Block unlisted large binaries. Runs from the pre-commit hook. |
+| `cb attachments check-unlisted` | Block unlisted large binaries, box-wide. (The pre-commit hook runs the staged-blob equivalent inside `cb validate --pre-commit`.) |
 | `cb attachments largefiles-expr` | Print the `annex.largefiles` expression. |
 | `cb attachments annex-attributes` | Print the scoped `.git/info/attributes` contents. |
 

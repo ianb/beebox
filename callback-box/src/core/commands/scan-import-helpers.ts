@@ -14,7 +14,6 @@ import { invariant } from "../../lib/invariant.js";
 import { sleep } from "../../lib/sleep.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import Sharp from "sharp";
 import {
   type RawScanAnalysis,
   type ScanPageAnalysis,
@@ -106,6 +105,9 @@ async function normalizeScanImages(
   const firstPath = imagePaths[0];
   if (firstPath === undefined) return { imagePaths: [], tempDir: null };
 
+  // Dynamic — see `core/scan/validate.ts`: keeps the native `sharp` binding
+  // out of the startup graph of every `cb` invocation that touches no images.
+  const { default: Sharp } = await import("sharp");
   const tempDir = await fs.mkdtemp(path.join(path.dirname(firstPath), ".scan-normalized-"));
   try {
     const normalizedPaths: string[] = [];
