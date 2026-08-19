@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-08-19T06:32:56Z
-Total documents: 279
+Generated: 2026-08-19T12:28:36Z
+Total documents: 280
 
 ## Issues
 
@@ -537,14 +537,14 @@ References:
 Title: "Deploy" | 56 lines
 
 Referenced by:
-- deploy/README.md:57 (mention) — (see `deploy/CLAUDE.md` for the wait/poll pattern).
+- deploy/README.md:63 (mention) — (see `deploy/CLAUDE.md` for the wait/poll pattern).
 
 References:
 - → deploy/README.md (mention)
 
 #### deploy/README.md
 
-Title: "Deploy" | 431 lines
+Title: "Deploy" | 437 lines
 
 Referenced by:
 - CLAUDE.md:19 (mention) — **Deploy** — auto-deploys on `main` commits only (root CLAUDE.md). Prod runs a resident `cb hub` routing `/<slug>/...` t
@@ -571,6 +571,7 @@ Referenced by:
 - ../research/openclaw-hermes/deep-installation.md:96 (mention) — and `callback-box/deploy/README.md`.
 
 References:
+- → docs/migrations.md (link)
 - → docs/health-checks.md (link)
 - → deploy/CLAUDE.md (mention)
 - → docs/implemented-plans/boxes-as-packages-v2.md (mention)
@@ -680,7 +681,7 @@ Referenced by:
 - docs/implemented-plans/remove-cardworks-deletion.md:461 (mention) — `CLAUDE.md:87`/`docs/adding-schemas.md` (the cardworks bullet → `src/cards/`),
 - docs/implemented-plans/remove-cardworks-package.md:329 (mention) — `CLAUDE.md:39`/`docs/adding-schemas.md` (drop "from cardworks" phrasing where
 - docs/implemented-plans/schema-validate-hook.md:10 (mention) — > convention lives in `docs/adding-schemas.md`, the box-local schema guide
-- docs/migrations.md:315 (mention) — - `docs/adding-schemas.md` — when a *schema* change (not a data shape change) is the right move instead of a migrator
+- docs/migrations.md:354 (mention) — - `docs/adding-schemas.md` — when a *schema* change (not a data shape change) is the right move instead of a migrator
 - docs/plans/docs-reorg.gap-analysis.md:47 (mention) — prime retrieval field. `docs/adding-schemas.md` never mentions it and
 - docs/plans/docs-reorg.md:88 (mention) — (`box-layout.md`, `testing.md`, `migrations.md`, `adding-schemas.md`,
 - docs/reports/user-stories-audit-2026-06-26.md:764 (mention) — Files: `src/cards/schema.ts`, `src/schemas/audio.tsx`, `src/schemas/memo.ts`, `docs/adding-schemas.md`
@@ -712,7 +713,7 @@ References:
 
 #### docs/assets.md
 
-Title: "Assets" | 232 lines
+Title: "Assets" | 241 lines
 
 Referenced by:
 - CLAUDE.md:148 (mention) — | Assets (git-annex) | `docs/assets.md` |
@@ -815,7 +816,7 @@ Referenced by:
 - docs/implemented-plans/mvp-implementation-guide.md:13 (mention) — > markdown now, `../cards-as-markdown.md`), the "tailing phase" / `cb tail`
 - docs/implemented-plans/remove-cardworks-and-xml.md:423 (mention) — `docs/cards-as-markdown.md`, `docs/adding-schemas.md`.
 - docs/implemented-plans/todo-annotation.md:436 (mention) — `docs/cards-as-markdown.md` gains the tag reference; the issue file closes
-- docs/migrations.md:313 (mention) — - `docs/cards-as-markdown.md` — living reference for the YAML-frontmatter format these migrators target; `docs/implement
+- docs/migrations.md:352 (mention) — - `docs/cards-as-markdown.md` — living reference for the YAML-frontmatter format these migrators target; `docs/implement
 - docs/plans/docs-reorg.md:110 (mention) — 7. `cards-as-markdown.md` — 2,552 lines of resolved RFC with ~50
 - docs/stack-decisions.md:18 (mention) — | 15 | [Markdoc](#decision-15-markdown-parsing--markdoc) | Frontend renders markdown via `@markdoc/markdoc` (replaced re
 - docs/unimplemented-plans/boxes-as-packages-v1-superseded.md:703 (mention) — - **Interaction with the [Markdown cards idea](../../../issues/closed/features/2026-03-21-markdown-cards-replacing-xml.m
@@ -1228,7 +1229,7 @@ Title: "Health Checks" | 194 lines
 
 Referenced by:
 - CLAUDE.md:155 (mention) — | Deployed-server health-check runbooks | `docs/health-checks.md` |
-- deploy/README.md:38 (link) — localhost (see [`../docs/health-checks.md`](../docs/health-checks.md)): it polls
+- deploy/README.md:44 (link) — localhost (see [`../docs/health-checks.md`](../docs/health-checks.md)): it polls
 - docs/implemented-plans/box-growth-health-checks.md:451 (mention) — **What.** Extend `docs/health-checks.md` and `docs/box-layout.md` with the scan
 - docs/implemented-plans/deferred-recoverable-agent-failures.md:415 (mention) — 8. **Docs + issue reconciliation** — `docs/scheduler.md`, `docs/health-checks.md`
 - docs/implemented-plans/google-auth-reauth-health.md:129 (mention) — 7. **Docs** — `docs/google-setup.md` troubleshooting, `docs/health-checks.md`.
@@ -1356,7 +1357,7 @@ Referenced by:
 - docs/implemented-plans/box-retrospectives.md:419 (mention) — (`enabled="false"`), `docs/box-layout.md` + `docs/maintenance.md` +
 - docs/implemented-plans/mobile-parity-sync.md:178 (mention) — After any burst of mobile work, and otherwise on the `docs/maintenance.md`
 - docs/knowledge-audits.md:22 (mention) — `docs/maintenance.md` lists this alongside the other periodic tasks.
-- docs/migrations.md:314 (mention) — - `docs/maintenance.md` — where `cb migrate` and `clean-broken-refs.ts` sit in the broader maintenance surface
+- docs/migrations.md:353 (mention) — - `docs/maintenance.md` — where `cb migrate` and `clean-broken-refs.ts` sit in the broader maintenance surface
 - docs/plans/cli-restructure.md:141 (mention) — - **Card normalization story.** `cb format` was deleted (80-line one-off normalizer that re-serialized cards to flat XML
 - docs/plans/docs-reorg.md:390 (mention) — belongs in the maintenance cadence (it is listed in docs/maintenance.md).
 - src/dev/CLAUDE.md:8 (mention) — | `prompt-report.ts` | Generates `docs/prompts.md` (system-wide prompt inventory) | `docs/maintenance.md` |
@@ -1383,11 +1384,12 @@ References:
 
 #### docs/migrations.md
 
-Title: "Box Migrations" | 328 lines
+Title: "Box Migrations" | 367 lines
 
 Referenced by:
 - CLAUDE.md:144 (mention) — | Box migration runbook | `docs/migrations.md` |
 - README.md:96 (link) — - [`docs/migrations.md`](docs/migrations.md) — the data-migration runbook
+- deploy/README.md:41 (link) — [`../docs/migrations.md`](../docs/migrations.md).
 - docs/design/representation.md:65 (link) — controlled migration ([`../migrations.md`](../migrations.md)), not silent
 - docs/implemented-plans/agent-applied-migrations.md:39 (mention) — `docs/migrations.md` ("Writing an agent-applied (procedure) migration").
 - docs/implemented-plans/box-migration.subplan.md:54 (mention) — - **`docs/migrations.md`** — the established migration framework: `cb migrate`
@@ -1407,6 +1409,7 @@ Referenced by:
 - docs/plans/scan-guide-card.md:88 (mention) — script + procedure kinds; `docs/migrations.md`). NOT used — see
 - ../.claude/skills/cb-migration/SKILL.md:12 (mention) — lives in **`callback-box/docs/migrations.md`** — read it before writing one.
 - ../issues/closed/bugs/2026-07-11-pre-v2-session-resume-broken.md:40 (mention) — migration script territory (`docs/migrations.md`).
+- ../issues/closed/bugs/2026-08-18-stale-annex-largefiles-never-reapplies.md:21 (mention) — and it is written down in `docs/migrations.md` and in the migration script's own
 - ../issues/closed/features/2026-07-29-retire-todo-list-schema.md:19 (mention) — test1 via `cb migrate --apply` (see `docs/migrations.md`'s `todo-list-to-doc`
 - ../issues/decisions/2026-07-20-release-discipline-and-update-story.md:25 (mention) — (`docs/migrations.md` is currently a maintainer runbook, not an
 - ../issues/docs-and-chores/2026-07-19-questions-end-to-end-followups.md:15 (mention) — `~/src/boxes/test1`** per `callback-box/docs/migrations.md`
@@ -1422,7 +1425,7 @@ References:
 
 #### docs/mobile-contract.md
 
-Title: "Cross-Platform Mobile Contract" | 933 lines
+Title: "Cross-Platform Mobile Contract" | 1005 lines
 
 Referenced by:
 - CLAUDE.md:145 (mention) — | Cross-platform mobile contract (iOS/Android ↔ box) | `docs/mobile-contract.md` |
@@ -1444,6 +1447,7 @@ Referenced by:
 - ../issues/bugs/2026-08-03-ios-stale-unconfirmed-emission-banner.md:81 (mention) — `docs/mobile-contract.md` governs the receipt contract.
 - ../issues/bugs/2026-08-05-open-chat-flashes-agent-working-no-send.md:85 (mention) — - `docs/mobile-contract.md` / cb-ios-overlap — both platforms, shared surface.
 - ../issues/bugs/2026-08-18-ios-sleeps-with-the-mic-open.md:59 (mention) — - The mobile contract (`docs/mobile-contract.md`) is where a native/web
+- ../issues/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md:120 (mention) — - `callback-box/docs/mobile-contract.md` — where a new native duty gets written
 - ../issues/closed/bugs/2026-07-17-mobile-device-store-unlocked-rmw.md:18 (mention) — `async`. Tests: `test/core/mobile/pairing-store-concurrency.doctest.md`; doc: `docs/mobile-contract.md`
 - ../issues/closed/bugs/2026-07-21-device-store-crash-safety-and-renewal-race.md:21 (mention) — `docs/mobile-contract.md` § Cookie lifetime and revocation (decision: documented
 - ../issues/closed/bugs/2026-07-21-ios-location-always-shared-no-toggle.md:107 (link) — [mobile contract](../../../callback-box/docs/mobile-contract.md).
@@ -1463,6 +1467,7 @@ Referenced by:
 References:
 - → docs/implemented-plans/mobile-parity-sync.md (mention)
 - → docs/plans/android-companion-app.md (mention)
+- → docs/implemented-plans/ios-audio-retranscription.md (mention)
 - → docs/plans/chat-photo-batch-upload.md (mention)
 - → docs/implemented-plans/bulk-file-upload.md (mention)
 - → docs/plans/ios-companion-review-2026-07-17.md (mention)
@@ -2366,7 +2371,7 @@ Title: "Boxes as Packages v2 — callback-box as a library" | 720 lines
 
 Referenced by:
 - README.md:25 (link) — live yet — see [`docs/implemented-plans/boxes-as-packages-v2.md`](docs/implemented-plans/boxes-as-packages-v2.md)
-- deploy/README.md:89 (mention) — `docs/implemented-plans/boxes-as-packages-v2.md`'s "Post-cutover state" section); a fresh
+- deploy/README.md:95 (mention) — `docs/implemented-plans/boxes-as-packages-v2.md`'s "Post-cutover state" section); a fresh
 - docs/adding-a-box.md:4 (link) — see "Serving" in [`docs/implemented-plans/boxes-as-packages-v2.md`](implemented-plans/boxes-as-packages-v2.md)
 - docs/box-layout.md:15 (mention) — repository" in `docs/implemented-plans/boxes-as-packages-v2.md` for the full design.
 - docs/design/identity.md:45 (mention) — (`../implemented-plans/boxes-as-packages-v2.md`, including the
@@ -2402,7 +2407,7 @@ Title: "Bulk file upload" | 461 lines
 
 Referenced by:
 - docs/box-layout.md:103 (mention) — `docs/implemented-plans/bulk-file-upload.md`; agent duties:
-- docs/mobile-contract.md:517 (mention) — `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
+- docs/mobile-contract.md:570 (mention) — `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
 - docs/plans/chat-photo-batch-upload.md:15 (link) — [bulk-file-upload](../implemented-plans/bulk-file-upload.md) — the iOS native
 - ../issues/closed/bugs/2026-07-27-bulk-upload-arbitrary-ext-gitignore.md:16 (mention) — Surfaced building Track 1 chunk 1 of `docs/plans/bulk-file-upload.md`.
 
@@ -2472,7 +2477,7 @@ Referenced by:
 - docs/card-validation.md:74 (mention) — Format reference: `docs/cards-as-markdown.md`; design history and migration phases: `docs/implemented-plans/cards-as-mar
 - docs/cards-as-markdown.md:5 (mention) — This is the living reference for the card *file format* — filenames, frontmatter/body split, attachments, and refs. For 
 - docs/implemented-plans/remove-cardworks-and-xml.md:123 (mention) — production migration"* (`docs/implemented-plans/cards-as-markdown-rfc.md`). **Reuse:** the
-- docs/migrations.md:313 (mention) — - `docs/cards-as-markdown.md` — living reference for the YAML-frontmatter format these migrators target; `docs/implement
+- docs/migrations.md:352 (mention) — - `docs/cards-as-markdown.md` — living reference for the YAML-frontmatter format these migrators target; `docs/implement
 - docs/plans/public-site-story-extraction.subplan.md:184 (mention) — `callback-box/docs/implemented-plans/cards-as-markdown-rfc.md` (2555-line
 - docs/stack-decisions.md:804 (mention) — > **Superseded in practice (2026-05).** The frontend no longer uses react-markdown / remark / rehype — it renders via Ma
 - ../issues/features/2026-07-22-embed-json-schema-in-card-docs.md:6 (mention) — discovered-in: worktree-github-pages-site — story-extraction triage of cards-as-markdown-rfc.md
@@ -2870,6 +2875,20 @@ Title: "Plan Engineering Review — input-extraction (codex cross-model pass)" |
 
 No references in or out.
 
+#### docs/implemented-plans/ios-audio-retranscription.md
+
+Title: "iOS audio retranscription" | 166 lines
+
+Referenced by:
+- docs/mobile-contract.md:444 (mention) — `docs/plans/ios-audio-retranscription.md`.
+- ../issues/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md:7 (frontmatter) — design: ../../callback-box/docs/implemented-plans/ios-audio-retranscription.md
+- ../issues/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md:104 (link) — [iOS audio retranscription](../../callback-box/docs/implemented-plans/ios-audio-retranscription.md).
+
+References:
+- → ../issues/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md (frontmatter)
+- → ../issues/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md (link)
+- → ../issues/bugs/2026-08-18-first-message-audio-not-retranscribable.md (link)
+
 #### docs/implemented-plans/ios-audio-session-routing.md
 
 Title: "iOS audio-session routing" | 619 lines
@@ -3057,7 +3076,7 @@ References:
 Title: "Mobile device token: replace `?mobileToken=` with a box-scoped session cookie" | 510 lines
 
 Referenced by:
-- docs/mobile-contract.md:821 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
+- docs/mobile-contract.md:890 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
 - ../issues/closed/bugs/2026-07-17-mobile-token-in-url-query.md:11 (mention) — `../../../callback-box/docs/implemented-plans/mobile-token-handshake.md`. The query-param carrier is gone: the
 - ../issues/closed/code-quality/2026-07-17-mobile-auth-parser-plumbing-cleanups.md:13 (mention) — `../../../callback-box/docs/implemented-plans/mobile-token-handshake.md`; the single resolver every mobile
 - ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:40 (mention) — The mobile-token work (`docs/implemented-plans/mobile-token-handshake.md`) ran into this and deliberately
@@ -3176,7 +3195,7 @@ References:
 Title: "Questions, end-to-end" | 664 lines
 
 Referenced by:
-- docs/migrations.md:211 (mention) — `question-lifecycle` (`scripts/migrate/question-lifecycle-run.ts`, pure transform in `scripts/migrate/question-lifecycle
+- docs/migrations.md:250 (mention) — `question-lifecycle` (`scripts/migrate/question-lifecycle-run.ts`, pure transform in `scripts/migrate/question-lifecycle
 - docs/questions.md:6 (mention) — Design and implementation history: `docs/implemented-plans/questions-end-to-end.md`.
 - docs/triage.md:133 (mention) — The rule-update-plus-placement evolution landed: `learning:` (`docs/questions.md`, `docs/implemented-plans/questions-end
 - ../issues/closed/features/2026-05-19-questions-aging-policy.md:9 (mention) — aging sweep, Track D of `docs/implemented-plans/questions-end-to-end.md`) — nudge once
@@ -3252,7 +3271,7 @@ Title: "Remove box-shape v1 (legacy) + de-template box skills" | 358 lines
 Referenced by:
 - docs/implemented-plans/boxes-as-packages-v2.md:490 (mention) — resolve-hook machinery are now removed (`docs/implemented-plans/remove-box-shape-v1.md`); see the rewritten
 - docs/implemented-plans/remove-box-shape-v1.review.md:3 (mention) — Cross-model review of the draft `remove-box-shape-v1.md`. Findings verbatim
-- docs/migrations.md:221 (mention) — `docs/implemented-plans/remove-box-shape-v1.md`).
+- docs/migrations.md:260 (mention) — `docs/implemented-plans/remove-box-shape-v1.md`).
 - docs/testing.md:316 (mention) — The existing scenarios in the table above (`intake-basic`, `tick-basic`, `tick-chain`) predate this and are still flat o
 - ../issues/code-quality/2026-07-11-v1-removal-residue-src-comments-and-scenario-boxes.md:8 (mention) — Fallout from the box-shape v1 removal (`docs/plans/remove-box-shape-v1.md`,
 
@@ -3591,7 +3610,7 @@ Title: "`{% todo %}` — universal todo annotation" | 596 lines
 
 Referenced by:
 - docs/cards-as-markdown.md:89 (mention) — record: `docs/implemented-plans/todo-annotation.md`.
-- docs/migrations.md:306 (mention) — annotation (`docs/implemented-plans/todo-annotation.md`); see
+- docs/migrations.md:345 (mention) — annotation (`docs/implemented-plans/todo-annotation.md`); see
 - ../issues/closed/features/2026-07-28-todo-markdoc-annotation.md:8 (frontmatter) — design: ../../../callback-box/docs/implemented-plans/todo-annotation.md
 - ../issues/closed/features/2026-07-28-todo-markdoc-annotation.md:13 (link) — > [todo-annotation](../../../callback-box/docs/implemented-plans/todo-annotation.md)
 - ../issues/closed/features/2026-07-29-retire-todo-list-schema.md:7 (frontmatter) — design: ../../../callback-box/docs/implemented-plans/todo-annotation.md
@@ -3766,7 +3785,7 @@ Title: "Native Android companion app" | 761 lines
 
 Referenced by:
 - docs/implemented-plans/mobile-token-handshake.md:346 (mention) — - **Android.** No Android client exists yet; `docs/plans/android-companion-app.md` describes
-- docs/mobile-contract.md:228 (mention) — 2026-07-17, Track 0 of `docs/plans/android-companion-app.md`): each shell's document-start script
+- docs/mobile-contract.md:229 (mention) — 2026-07-17, Track 0 of `docs/plans/android-companion-app.md`): each shell's document-start script
 - docs/mobile-parity.md:9 (mention) — Android columns reflect `docs/plans/android-companion-app.md` — a plan, not
 - ../issues/features/2026-07-18-android-companion-track1-unblocked.md:7 (mention) — `callback-box/docs/plans/android-companion-app.md` is build-ready and its
 
@@ -3787,6 +3806,9 @@ Title: "Assets on git-annex" | 1076 lines
 Referenced by:
 - docs/implemented-plans/asset-manifests.md:17 (link) — [`../plans/asset-annex.md`](../plans/asset-annex.md); the short version is that
 - docs/plans/asset-offbox-storage.md:9 (link) — **Status: SUPERSEDED by [`asset-annex.md`](asset-annex.md).** Nothing
+- ../issues/closed/bugs/2026-08-01-prod-photo-uploads-bypass-annex.md:59 (mention) — `docs/plans/asset-annex.md` names it as the silent bulk failure mode. It is not
+- ../issues/closed/bugs/2026-08-18-stale-annex-largefiles-never-reapplies.md:24 (mention) — the alternative considered here (`docs/plans/asset-annex.md:458` specifies it and
+- ../issues/code-quality/2026-08-18-retire-remaining-asset-manifest-writers.md:10 (mention) — `docs/plans/asset-annex.md` retires the asset-manifest system: *"**Retired**,
 
 References:
 - → docs/implemented-plans/asset-manifests.md (mention)
@@ -3806,7 +3828,7 @@ References:
 Title: "Off-Box Asset Storage — Content-Addressable Backup to R2" | 589 lines
 
 Referenced by:
-- docs/assets.md:228 (link) — [`plans/asset-offbox-storage.md`](plans/asset-offbox-storage.md).
+- docs/assets.md:237 (link) — [`plans/asset-offbox-storage.md`](plans/asset-offbox-storage.md).
 - docs/plans/asset-annex.md:43 (mention) — The earlier plan (`asset-offbox-storage.md`) proposed keeping manifests
 
 References:
@@ -3886,7 +3908,7 @@ Referenced by:
 Title: "Chat photo batch upload" | 494 lines
 
 Referenced by:
-- docs/mobile-contract.md:516 (mention) — (`docs/plans/chat-photo-batch-upload.md`, the Track 3 that
+- docs/mobile-contract.md:569 (mention) — (`docs/plans/chat-photo-batch-upload.md`, the Track 3 that
 - ../issues/bugs/2026-07-30-capture-teardown-race.md:12 (link) — [chat-photo-batch-upload](../../callback-box/docs/plans/chat-photo-batch-upload.md)):
 - ../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md:8 (frontmatter) — design: ../../../callback-box/docs/plans/chat-photo-batch-upload.md
 - ../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md:23 (link) — [chat-photo-batch-upload](../../../callback-box/docs/plans/chat-photo-batch-upload.md)).
@@ -4230,7 +4252,7 @@ References:
 Title: "iOS Companion — follow-up code review (2026-07-17)" | 155 lines
 
 Referenced by:
-- docs/mobile-contract.md:815 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
+- docs/mobile-contract.md:884 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
 - docs/plans/android-companion-app.md:38 (mention) — `docs/plans/ios-companion-review-2026-07-17.md`. This plan ports the iOS
 - docs/plans/ios-companion-review-2026-07-09.md:9 (mention) — **Superseded:** follow-up review at `ios-companion-review-2026-07-17.md` (2026-07-17) — most iOS findings closed by the 
 - ../issues/bugs/2026-07-17-ios-pairing-flow-robustness.md:6 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md

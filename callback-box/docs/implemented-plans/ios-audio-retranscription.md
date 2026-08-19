@@ -1,6 +1,6 @@
 ---
 title: "iOS audio retranscription"
-status: active
+status: implemented
 workstream: ios-retranscribe
 issues:
   - ../../../issues/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md

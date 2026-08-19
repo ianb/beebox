@@ -3,8 +3,8 @@ title: "Messages dictated in the iOS app can never be retranscribed"
 workstream: ios-retranscribe
 area: callback-box
 labels: [chat, voice, transcription, ios]
-needs: [design]
-design: ../../callback-box/docs/plans/ios-audio-retranscription.md
+needs: [manual-testing]
+design: ../../callback-box/docs/implemented-plans/ios-audio-retranscription.md
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-ios-retranscribe — spun off to make retranscription work on iOS
@@ -101,13 +101,32 @@ storage consequences, not an implementation detail.
 handed over only when an agent asks; nothing sits at rest on the box. The at-rest
 question is parked rather than settled — option 2 remains available later for the
 asleep-phone case without invalidating option 1. Design:
-[iOS audio retranscription](../../callback-box/docs/plans/ios-audio-retranscription.md).
+[iOS audio retranscription](../../callback-box/docs/implemented-plans/ios-audio-retranscription.md).
 
 ## Testing reality
 
 An agent cannot produce speech into a live box. Confirming the failure, and any
 fix, needs someone to dictate a message on a phone and run one retranscribe.
 Everything above is read off the code; nothing here has been observed running.
+
+## Manual testing
+
+The fix (Track 1-3 of the design doc) is implemented, typechecked, linted, and
+covered by XCTest + doctest + simulator UI tests — all green. None of that
+exercises a real device.
+
+**What to try:** on a phone with this build installed, dictate one message in
+the iOS composer with narration off (an ordinary `.live` send, not the HQ
+variant), then run `cb chat retranscribe --message <id>` against it from an
+agent or the CLI.
+
+**Expected:** a transcript comes back. **Today's failure mode:** "No recording
+is cached for this message."
+
+Known, deliberate limits (not bugs to chase if hit): a phone unreachable within
+the long-poll window (10s default, 30s max) still can't answer; recordings made
+before this ships are unrecoverable; this does nothing on an already-installed
+build that predates it.
 
 ## Related
 
