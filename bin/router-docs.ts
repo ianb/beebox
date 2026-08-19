@@ -833,7 +833,13 @@ export async function serveDev(params: {
   // already an accepted residual for this router: every worktree frontend is
   // agent-authored JS running unsandboxed on this same origin (workstreams
   // plan, "same-origin worktree frontends", accepted 2026-08-09; the router
-  // is only exposed on localhost or the owner's tailnet). Sandboxing /dev/
+  // is only exposed on localhost or the owner's tailnet). The boxholder's
+  // sharper framing (2026-08-19): the dev agent authors the router's own
+  // code, so sandboxing its HTML output guards nothing — an agent that
+  // wanted to misbehave "could do bad things everywhere". An independent
+  // origin for agent-authored surfaces stays the ideal if that trust
+  // assumption ever weakens (see
+  // issues/exploration/2026-08-19-independent-origin-for-dev-surfaces.md). Sandboxing /dev/
   // alone therefore blocked normal pages without narrowing the actual attack
   // surface. The destructive control verbs (`/__router/{stop,retry}`,
   // `/workstreams/action/*`) remain POST-only + CSRF-classified (`control` in
