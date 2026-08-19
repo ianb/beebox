@@ -151,7 +151,11 @@ Automatable, and expected of this change:
   answer shape for a hit and for a miss, per-box isolation, and the session
   precedence above.
 - The existing mobile-contract fixture discipline for the new channel.
-- A frontend doctest that the relay fires in a native shell and not otherwise.
+- A frontend doctest of the relay module — channel, wire shape, and strict
+  parsing (`test/frontend/native-last-audio-relay.doctest.md`). Note what it
+  does NOT cover: `fulfillLastAudioRequest` itself reads `import.meta.env` and
+  `window.location`, so the "relays only inside a native shell" branch has no
+  unit harness here and rides on the device check below.
 
 Not automatable — **one narrow device check, for the boxholder**: dictate one
 message in the iOS composer with narration off, then run
