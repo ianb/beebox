@@ -67,5 +67,68 @@ the selection is authored by hand rather than derived, and it goes stale.
   general thing, in which case this is a consolidation rather than an addition —
   and that is the version worth wanting.
 
+## Design direction (boxholder, 2026-08-19)
+
+**Two kinds of query, not one.**
+
+- **Conventional / static** — a shape you don't author: *all `**/*.image.card`,
+  anywhere in the box, so long as any exist*. Zero configuration; the collection
+  simply exists when the box has content for it, and doesn't when it doesn't.
+- **Reified** — a query you create and keep: a union of directories, or
+  something fancier, fed into a collection view.
+
+The first covers the common case for free and is the one that makes a card type
+feel first-class the moment it appears. The second is the escape hatch for a
+collection nobody could have anticipated.
+
+**The view is typed, and the query has to satisfy it.**
+
+> The collection view would need to be typed as to what it could accept (if your
+> query gave unrenderable items, that's not very helpful).
+
+This is the load-bearing constraint, and it is what stops the feature becoming
+"arbitrary query, arbitrary render, hope for the best". A collection view
+declares what it can display; a query that would feed it something else is an
+error at authoring time, not a broken page.
+
+**Worth knowing: the vocabulary for this already exists.** Box-local views
+already declare `export const rendersCardTypes = ["<type>"]`, and
+`useCardViewBinding` (`src/frontend/src/lib/view-bindings.ts`, used from
+`FileView.tsx:344-360`) binds them ahead of the built-in renderers — with
+`cb view-lint` enforcing that every view attaches to a type. So single-card
+views are already typed and already pluggable. A collection view is plausibly
+the same declaration widened from "the type I render" to "the types I accept a
+set of", which would make this an extension of a working mechanism rather than
+a new one.
+
+**Maybe the view ships its own queries.**
+
+> Maybe the collection view just ships with its own built-in queries.
+
+This is the cheapest coherent version and worth trying first: a collection view
+carries the queries it knows how to satisfy, so the type contract is trivially
+held (the view wrote the query), and there is no separate query object to
+design, address, or store. Authored queries then become a later addition for the
+cases the shipped ones miss — rather than the foundation everything else waits
+on.
+
+If that holds, the first shippable slice is small: a view that declares the
+types it accepts and a built-in convention query, appearing only when the box
+has matching cards.
+
+## Open questions this raises
+
+- **Where does a conventional collection live in the URL space**, given views
+  attach to cards? "All images anywhere" has no card to hang off. This is the
+  crux from the section above, and the conventional-query case makes it
+  unavoidable rather than theoretical.
+- **What is the query language?** `cb search` already selects cards (Orama,
+  full-text plus vector). A glob over card types is a different axis from a
+  text query, and "union of directories" is a third. Whether these are one
+  language or three matters more for the reified case than the conventional one.
+- **Does an empty result hide the view or show an empty state?** The
+  "so long as any exist" phrasing suggests hide — which is a real behavioral
+  choice, and different from how single-card views work.
+
 Related: [plugins and the medium/content line](../exploration/2026-08-19-plugins-and-the-medium-content-line.md),
 which is where this came up and which is blocked on it for the "views" half.
