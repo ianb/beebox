@@ -273,6 +273,25 @@ answering the question. Any "save this collection" affordance should be honest
 about which one it produces, and ideally allow the reverse (loosen a frozen set
 back into the rule that made it).
 
+**A framing worth keeping (boxholder): Microcosm has a COME FROM.** The document
+never declares itself a link source; a linkbase elsewhere declares "I come from
+that string." Control lives at the destination, and a generic link is the
+wildcard form — come from any occurrence, in any document, including ones not
+yet written.
+
+That is why `show-links` was their hardest UI problem rather than an
+afterthought: you cannot read a document and know what is live, so they had to
+build a tool that asks *does anyone come from here?* It also names the price
+they were paying it for — principle (d), no distinction between readers and
+authors. COME FROM is what lets a reader add links to documents they cannot
+edit.
+
+Which turns into a decision procedure here. `![...](collection-link)` written in
+a card is GOTO: legible on sight, travels with the document, requires write
+access to it. An out-of-band collection is COME FROM: works over files nobody
+can annotate, survives content it does not own, and is invisible until
+something asks.
+
 **The tension worth noticing.** Microcosm put every link out-of-band precisely
 so documents stayed untouched and editable by their native applications.
 TiddlyWiki and the `![...](collection-link)` idea put them inline. Both are
