@@ -3,6 +3,7 @@ title: "The box pre-commit hook costs seconds per commit — three `cb` cold sta
 workstream: unattached
 area: callback-box
 labels: [performance, validation, boxes]
+priority: important
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder saw 6.63s reported for git commit/hooks on a box
