@@ -73,7 +73,10 @@ writes the input manifest last (so a partial build never masks staleness).
   `{% expand label="…" %}` Markdoc tag (inline → button + `hidden=until-found`
   span; block → native `<details>`) and the `{% nugget slug="…" /%}` embed
   placeholder that `embedNuggets()` (nuggets.ts) substitutes at build, failing
-  on unknown slugs. `content/fisheye.md` is the unlisted prototype page.
+  on unknown slugs — plus `{% aside kind="bee|author|generated" label="…" %}`,
+  a categorized aside whose kind is a voice with visible provenance (`author`
+  content is the boxholder's words only). `content/fisheye.md` and
+  `content/walkthrough.md` are the unlisted prototype pages.
 - `nuggets/<slug>.md` — committed excerpts of repo content: frontmatter `source`
   (repo-relative, restricted to `issues/`, `callback-box/docs/`, `research/`,
   root `README.md`), `span` (a verbatim excerpt of that source), and

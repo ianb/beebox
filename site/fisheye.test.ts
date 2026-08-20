@@ -81,3 +81,14 @@ test("nugget tag refuses inline position — a figure cannot live mid-sentence",
     /mid-sentence/,
   );
 });
+
+test("aside tag: kind class, marker, content, and provenance footer", () => {
+  const { html } = renderBody("{% aside kind=\"generated\" label=\"how it works\" %}\nMachine text.\n{% /aside %}", RENDER);
+  assert.match(html, /<details class="fx aside-generated"><summary><span class="aside-m" aria-hidden="true">⚙️ <\/span>how it works<\/summary>/);
+  assert.match(html, /<p>Machine text.<\/p>/);
+  assert.match(html, /<p class="aside-prov">generated from the repository<\/p>/);
+});
+
+test("aside tag: unknown kind fails the build", () => {
+  assert.throws(() => renderBody("{% aside kind=\"narrator\" label=\"x\" %}\ny\n{% /aside %}", RENDER), /unknown kind "narrator"/);
+});

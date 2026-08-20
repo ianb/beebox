@@ -43,11 +43,48 @@ function expandBlock(label: string, children: RenderableTreeNode[]): RenderableT
   ]);
 }
 
+// Categorized asides: each kind is a voice with visible provenance. The
+// marker emoji are placeholders for character drawings. `author` content is
+// the boxholder's words only (a marked placeholder until real words arrive);
+// `bee` frames a naive question whose answer, like `generated`, is machine
+// text that regenerates and grows over time.
+const ASIDE_KINDS = {
+  bee: { marker: "🐝", provenance: "generated" },
+  author: { marker: "✍️", provenance: "the author's words" },
+  generated: { marker: "⚙️", provenance: "generated from the repository" },
+} as const;
+
+type AsideKind = keyof typeof ASIDE_KINDS;
+
+function isAsideKind(kind: string): kind is AsideKind {
+  return kind in ASIDE_KINDS;
+}
+
 /**
  * Markdoc tag definitions for the fisheye vocabulary — merged into the
  * transform config by render.ts.
  */
 export const fisheyeTags: NonNullable<Config["tags"]> = {
+  aside: {
+    attributes: { kind: { type: String, required: true }, label: { type: String, required: true } },
+    selfClosing: false,
+    transform(node: Node, config: Config): RenderableTreeNode {
+      const attrs = node.transformAttributes(config);
+      const kind = String(attrs["kind"] ?? "");
+      const label = String(attrs["label"] ?? "");
+      if (!isAsideKind(kind)) {
+        throw new Error(`aside "${label}" has unknown kind "${kind}" (expected ${Object.keys(ASIDE_KINDS).join("/")})`);
+      }
+      const spec = ASIDE_KINDS[kind];
+      return new Tag("details", { class: `fx aside-${kind}` }, [
+        new Tag("summary", {}, [new Tag("span", { class: "aside-m", "aria-hidden": "true" }, [`${spec.marker} `]), label]),
+        new Tag("div", { class: "fx-c" }, [
+          ...node.transformChildren(config),
+          new Tag("p", { class: "aside-prov" }, [spec.provenance]),
+        ]),
+      ]);
+    },
+  },
   expand: {
     attributes: { label: { type: String, required: true } },
     selfClosing: false,
@@ -116,6 +153,8 @@ details.fx > summary::after { content: "\\2009\\2026"; color: #8a8a82; }
 details.fx[open] > summary { border-bottom-style: solid; }
 details.fx[open] > summary::after { content: ""; }
 .fx-c { background: #f2f2ee; border-radius: 4px; padding: 0.15rem 0.8rem; margin-top: 0.5rem; }
+.aside-m { display: inline-block; }
+.aside-prov { font-size: 0.75rem; color: #8a8a82; margin: 0.6rem 0 0.4rem; }
 .fx-c > p:first-child { margin-top: 0.5rem; }
 .fx-c .fx-c { background: #e9e9e1; }
 .fx-c .fx-c .fx-c { background: #dfdfd6; }
