@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-08-19T12:28:36Z
-Total documents: 280
+Generated: 2026-08-20T19:57:53Z
+Total documents: 281
 
 ## Issues
 
@@ -138,7 +138,7 @@ Referenced by:
 - docs/implemented-plans/view-render-testing.md:264 (mention) — of the orphan-prone dev machinery in CLAUDE.md — no router, no Vite, no Fastify,
 - docs/implemented-plans/web-push-notifications.md:198 (mention) — prune both write it; CLAUDE.md *"All cross-process locks go through ...file-lock.ts"*).
 - docs/implemented-plans/websocket-chat-transport.md:236 (mention) — and it reuses the framework we're already deep in (CLAUDE.md's "tRPC by
-- docs/implemented-plans/workstreams.md:738 (mention) — root CLAUDE.md "Commit docs WITH hooks"), so schema enforcement lands in
+- docs/implemented-plans/workstreams.md:745 (mention) — root CLAUDE.md "Commit docs WITH hooks"), so schema enforcement lands in
 - docs/knowledge-audits.md:19 (mention) — - After touching CLAUDE.md, schemas, prompts, or anything that changes what an agent should know.
 - docs/knowledge-taxonomy.md:7 (mention) — 1. **Knows directly** — Can answer without investigation. The information is directly in the agent's loaded context: `CL
 - docs/maintenance.md:7 (mention) — The system carries a lot of agent-facing surface: CLAUDE.md and rule files, schemas with embedded `instructions`, prompt
@@ -179,7 +179,7 @@ Referenced by:
 - ../.claude/skills/cross-model/SKILL.md:38 (mention) — - Root `CLAUDE.md` mandates it for anything bigger than a small-scope bug fix,
 - ../.claude/skills/doctest/SKILL.md:19 (mention) — test, per `callback-box/CLAUDE.md`). Write prose, then fenced examples.
 - ../.claude/skills/knowledge-audit/SKILL.md:3 (mention) — description: Explains callback-box's knowledge-audit harness — YAML-defined tests that prompt a real box agent and check
-- ../.claude/skills/launch-worktree-session/SKILL.md:135 (mention) — AGENTS.md mirrors rather than CLAUDE.md, and its cross-model review command
+- ../.claude/skills/launch-worktree-session/SKILL.md:158 (mention) — AGENTS.md mirrors rather than CLAUDE.md, and its cross-model review command
 - ../CLAUDE.md:5 (mention) — - **callback-box/** — Main system. See its CLAUDE.md for details. (Card primitives that used to live in the separate `ca
 - ../bin/CLAUDE.md:5 (mention) — always-relevant summary lives in the root CLAUDE.md; this file is the mechanism.
 - ../issues/CLAUDE.md:125 (mention) — said that. This restates the broader rule in `callback-box/CLAUDE.md` ("Keep
@@ -472,7 +472,7 @@ Referenced by:
 - docs/implemented-plans/cards-as-markdown-rfc.md:79 (mention) — - `README.md` — plain markdown, not a card
 - docs/implemented-plans/courseware-lesson-plan.md:19 (mention) — the material convention (proper presentational cards, not a stray `README.md`).
 - docs/implemented-plans/private-issues-shadow-repo.md:157 (mention) — `.gitkeep`; `README.md` (loud "separate repo" note, one-way link rule,
-- docs/implemented-plans/workstreams.md:742 (mention) — — `README.md` and `*.review.md` are exempt (reviews are artifacts about
+- docs/implemented-plans/workstreams.md:749 (mention) — — `README.md` and `*.review.md` are exempt (reviews are artifacts about
 - ../.claude/skills/security-report/SKILL.md:330 (mention) — `callback-box/README.md` keeps a short "What leaves your machine" section
 - ../issues/closed/docs-and-chores/2026-07-21-community-forum-zulip.md:18 (mention) — the root `README.md` under Community. This is a small **findability** chore, not a
 - ../issues/code-quality/2026-08-08-audit-cb-subcommand-surface.md:86 (mention) — - `README.md:3` — "the `cb` CLI is the interface"
@@ -904,6 +904,7 @@ Referenced by:
 - docs/implemented-plans/remove-cb-render.md:552 (mention) — errors (`docs/client-debug-log.md`).
 - docs/server-operations.md:232 (link) — For SSH-only debugging: `ssh root@<server> tail /home/callback/boxes/<box>/.callback-box/client-debug.log`. See [`client
 - ../.claude/skills/cb-guide-api/SKILL.md:38 (mention) — misbehaves (`docs/client-debug-log.md`).
+- ../issues/bugs/2026-08-20-cannot-switch-landmarks-from-chat.md:77 (mention) — entries land in the same sink tagged `[ios]` (`docs/client-debug-log.md`). If
 
 References:
 - → docs/mobile-contract.md (mention)
@@ -1083,6 +1084,7 @@ Referenced by:
 - docs/implemented-plans/todo-annotation.md:51 (mention) — - `callback-box/docs/engineering-principles.md` — especially
 - docs/implemented-plans/top-nav-ia.md:114 (mention) — - `callback-box/docs/engineering-principles.md` — reuse-over-rebuild,
 - docs/implemented-plans/transcript-confidence.md:65 (mention) — - `docs/engineering-principles.md` — #1 (types are structure: confidence rides
+- docs/implemented-plans/workstream-routing.md:39 (mention) — (`callback-box/docs/engineering-principles.md:49`): *"Degradation is allowed
 - docs/implemented-plans/workstreams.md:58 (mention) — - `docs/engineering-principles.md` §4 (resilient AND never silent — the
 - docs/plans/android-companion-app.md:22 (mention) — - `docs/engineering-principles.md`: **#1 types are structure** (bridge messages,
 - docs/plans/asset-annex.md:65 (mention) — - `docs/engineering-principles.md` **#4** (resilient AND never silent),
@@ -1269,7 +1271,7 @@ Title: "Knowledge Audits" | 113 lines
 Referenced by:
 - CLAUDE.md:171 (mention) — | Knowledge audits | `docs/knowledge-audits.md` |
 - docs/engineering-principles.md:159 (link) — ([`docs/knowledge-audits.md`](knowledge-audits.md)).
-- docs/implemented-plans/workstreams.md:1224 (mention) — box agents, whom knowledge audits test (`docs/knowledge-audits.md`). The
+- docs/implemented-plans/workstreams.md:1231 (mention) — box agents, whom knowledge audits test (`docs/knowledge-audits.md`). The
 - docs/maintenance.md:136 (mention) — **Full guide:** `docs/knowledge-audits.md` (test structure, recording results, interpreting failures).
 - docs/plans/docs-reorg.md:117 (mention) — policy — `.gitignore` and `knowledge-audits.md` both say reports are
 - docs/plans/public-site-story-extraction.subplan.md:183 (mention) — `callback-box/docs/knowledge-audits.md` (distinctive-practice doc),
@@ -1413,6 +1415,7 @@ Referenced by:
 - ../issues/closed/features/2026-07-29-retire-todo-list-schema.md:19 (mention) — test1 via `cb migrate --apply` (see `docs/migrations.md`'s `todo-list-to-doc`
 - ../issues/decisions/2026-07-20-release-discipline-and-update-story.md:25 (mention) — (`docs/migrations.md` is currently a maintainer runbook, not an
 - ../issues/docs-and-chores/2026-07-19-questions-end-to-end-followups.md:15 (mention) — `~/src/boxes/test1`** per `callback-box/docs/migrations.md`
+- ../issues/exploration/2026-08-19-plugins-and-the-medium-content-line.md:94 (mention) — definitions come from. `docs/migrations.md` step 7 applies: whatever moves,
 
 References:
 - → docs/implemented-plans/questions-end-to-end.md (mention)
@@ -1447,13 +1450,13 @@ Referenced by:
 - ../issues/bugs/2026-08-03-ios-stale-unconfirmed-emission-banner.md:81 (mention) — `docs/mobile-contract.md` governs the receipt contract.
 - ../issues/bugs/2026-08-05-open-chat-flashes-agent-working-no-send.md:85 (mention) — - `docs/mobile-contract.md` / cb-ios-overlap — both platforms, shared surface.
 - ../issues/bugs/2026-08-18-ios-sleeps-with-the-mic-open.md:59 (mention) — - The mobile contract (`docs/mobile-contract.md`) is where a native/web
-- ../issues/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md:120 (mention) — - `callback-box/docs/mobile-contract.md` — where a new native duty gets written
 - ../issues/closed/bugs/2026-07-17-mobile-device-store-unlocked-rmw.md:18 (mention) — `async`. Tests: `test/core/mobile/pairing-store-concurrency.doctest.md`; doc: `docs/mobile-contract.md`
 - ../issues/closed/bugs/2026-07-21-device-store-crash-safety-and-renewal-race.md:21 (mention) — `docs/mobile-contract.md` § Cookie lifetime and revocation (decision: documented
 - ../issues/closed/bugs/2026-07-21-ios-location-always-shared-no-toggle.md:107 (link) — [mobile contract](../../../callback-box/docs/mobile-contract.md).
 - ../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md:79 (mention) — to the mobile contract (`docs/mobile-contract.md`) and the iOS composer
 - ../issues/closed/bugs/2026-08-04-ios-landmark-opens-new-session-not-most-recent.md:67 (mention) — - `docs/mobile-contract.md` / cb-ios-overlap — this is a web/iOS parity gap on a
 - ../issues/closed/bugs/2026-08-06-ios-webview-box-switcher-dead-ends.md:54 (mention) — - `docs/mobile-contract.md` / cb-ios-overlap — web/iOS shared surface; the gate is a
+- ../issues/closed/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md:144 (mention) — - `callback-box/docs/mobile-contract.md` — where a new native duty gets written
 - ../issues/closed/code-quality/2026-07-19-mobile-contract-small-cleanups.md:14 (mention) — silently falling back to `"new"`. Docs (`docs/mobile-contract.md`) and tests updated to match.
 - ../issues/closed/features/2026-08-03-ios-self-screenshot.md:66 (mention) — into the native bridge + `docs/mobile-contract.md`.
 - ../issues/code-quality/2026-07-19-mobile-device-token-no-expiry.md:30 (mention) — web (`docs/mobile-contract.md` §2).
@@ -1656,7 +1659,7 @@ References:
 
 #### docs/secrets.md
 
-Title: "Secrets: the machine-level store" | 353 lines
+Title: "Secrets: the machine-level store" | 435 lines
 
 Referenced by:
 - CLAUDE.md:152 (mention) — | Secrets (machine-level store, grants, `cb secrets`) | `docs/secrets.md` |
@@ -2877,16 +2880,16 @@ No references in or out.
 
 #### docs/implemented-plans/ios-audio-retranscription.md
 
-Title: "iOS audio retranscription" | 166 lines
+Title: "iOS audio retranscription" | 170 lines
 
 Referenced by:
 - docs/mobile-contract.md:444 (mention) — `docs/plans/ios-audio-retranscription.md`.
-- ../issues/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md:7 (frontmatter) — design: ../../callback-box/docs/implemented-plans/ios-audio-retranscription.md
-- ../issues/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md:104 (link) — [iOS audio retranscription](../../callback-box/docs/implemented-plans/ios-audio-retranscription.md).
+- ../issues/closed/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md:6 (frontmatter) — design: ../../../callback-box/docs/implemented-plans/ios-audio-retranscription.md
+- ../issues/closed/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md:104 (link) — [iOS audio retranscription](../../../callback-box/docs/implemented-plans/ios-audio-retranscription.md).
 
 References:
-- → ../issues/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md (frontmatter)
-- → ../issues/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md (link)
+- → ../issues/closed/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md (frontmatter)
+- → ../issues/closed/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md (link)
 - → ../issues/bugs/2026-08-18-first-message-audio-not-retranscribable.md (link)
 
 #### docs/implemented-plans/ios-audio-session-routing.md
@@ -3160,7 +3163,7 @@ References:
 Title: "Private issues: a shadow repo mounted at `<checkout>/private-issues/`" | 444 lines
 
 Referenced by:
-- ../bin/CLAUDE.md:483 (mention) — `callback-box/docs/implemented-plans/private-issues-shadow-repo.md`). Design invariants,
+- ../bin/CLAUDE.md:499 (mention) — `callback-box/docs/implemented-plans/private-issues-shadow-repo.md`). Design invariants,
 
 References:
 - → README.md (mention)
@@ -3751,9 +3754,22 @@ References:
 - → code-style.md (mention)
 - → CLAUDE.md (mention)
 
+#### docs/implemented-plans/workstream-routing.md
+
+Title: "Route new work to an existing workstream" | 415 lines
+
+Referenced by:
+- ../issues/closed/bugs/2026-08-19-one-bad-workstream-row-blanks-the-issues-page.md:5 (frontmatter) — design: ../../../callback-box/docs/implemented-plans/workstream-routing.md
+- ../issues/closed/features/2026-08-20-no-way-to-know-what-a-workstream-covers.md:5 (frontmatter) — design: ../../../callback-box/docs/implemented-plans/workstream-routing.md
+
+References:
+- → ../issues/closed/features/2026-08-20-no-way-to-know-what-a-workstream-covers.md (frontmatter)
+- → ../issues/closed/bugs/2026-08-19-one-bad-workstream-row-blanks-the-issues-page.md (frontmatter)
+- → docs/engineering-principles.md (mention)
+
 #### docs/implemented-plans/workstreams.md
 
-Title: "The /workstreams/ app and disposable sessions" | 1338 lines
+Title: "The /workstreams/ app and disposable sessions" | 1345 lines
 
 Referenced by:
 - ../issues/closed/docs-and-chores/2026-08-08-plan-lifecycle-frontmatter-and-issue-mapping.md:5 (frontmatter) — design: ../../../callback-box/docs/implemented-plans/workstreams.md
@@ -4464,7 +4480,7 @@ Title: "docs/plans/ — proposals and in-flight plans" | 114 lines
 
 Referenced by:
 - docs/README.md:13 (mention) — opens with a `**Status:**` line; see `docs/plans/README.md` for the full
-- docs/implemented-plans/workstreams.md:693 (mention) — status encodings would drift (§8). `docs/plans/README.md` is rewritten to
+- docs/implemented-plans/workstreams.md:700 (mention) — status encodings would drift (§8). `docs/plans/README.md` is rewritten to
 - docs/plans/README.md:35 (mention) — Every plan (including `*.subplan.md`, excluding `README.md` and review
 - docs/plans/asset-annex.md:1071 (mention) — the server. See that directory's `README.md` for the restore
 - docs/plans/public-site.md:270 (mention) — `research/`, root `README.md` — enforced by the generator), `span` (a
