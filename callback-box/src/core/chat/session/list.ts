@@ -52,7 +52,11 @@ export interface ChatSessionEntry {
   logPath: string;
   /** The husk's editorial `title`, when it has one. Free — it rode the husk. */
   title: string | undefined;
-  /** Native first-message preview used only for Codex picker labels. */
+  /**
+   * The Codex thread's verbatim first user message, envelope and all, as
+   * `thread/list` reports it. Free — one list call already carries it for every
+   * thread — and it's what stands in for a transcript scan when labelling.
+   */
   nativePreview?: string | undefined;
 }
 
@@ -120,9 +124,15 @@ export async function loadAllSessions(boxRoot: string): Promise<ChatSessionRow[]
     size: READ_CONCURRENCY,
     map: async (entry) => ({
       ...entry,
-      label: entry.engine === "codex"
-        ? codexSessionLabel(entry)
-        : await resolveSessionLabel({ sessionId: entry.sessionId, logPath: entry.logPath, title: entry.title }),
+      label: await resolveSessionLabel({
+        sessionId: entry.sessionId,
+        title: entry.title,
+        // The engine picks where the first user message is read from; the
+        // order and the wrapper-stripping are the resolver's, for both.
+        source: entry.engine === "codex"
+          ? { kind: "preview", text: entry.nativePreview }
+          : { kind: "transcript", logPath: entry.logPath },
+      }),
     }),
   });
 }
@@ -166,11 +176,6 @@ async function loadSessionEntry(options: {
     title: husk.title,
     ...(codexMetadata === undefined ? {} : { nativePreview: codexMetadata.preview }),
   };
-}
-
-function codexSessionLabel(entry: ChatSessionEntry): string {
-  if (entry.title !== undefined && entry.title !== "") return entry.title;
-  return entry.nativePreview?.slice(0, 400) || entry.sessionId.slice(0, 8);
 }
 
 /**
