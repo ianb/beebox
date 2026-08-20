@@ -45,17 +45,17 @@ const box = await makeTmpBox();
 const slug = await boxSlug(box.root);
 process.env.CALLBACK_MISTRAL_API_KEY = "placeholder-env-key";
 
-print(`env only: ${await getMistralApiKey(box.root)}`);
+print(`env only: ${await getMistralApiKey(box.root, { observe: true })}`);
 
 await box.write("config/connectors/mistral.secret.json", JSON.stringify({ apiKey: "placeholder-file-key" }));
 resetMistralLegacyWarning();
-const [fromFile, warnings] = await withWarnings(() => getMistralApiKey(box.root));
+const [fromFile, warnings] = await withWarnings(() => getMistralApiKey(box.root, { observe: true }));
 print(`file present: ${fromFile}`);
 print(`warned about the stray file: ${warnings.some((w) => w.includes("config/connectors/mistral.secret.json"))}`);
 
 await setSecret({ name: "mistral", value: "placeholder-store-key" });
 await grantSecret({ slug, name: "mistral", access: "server" });
-print(`store granted: ${await getMistralApiKey(box.root)}`);
+print(`store granted: ${await getMistralApiKey(box.root, { observe: true })}`);
 =>
 env only: placeholder-env-key
 file present: placeholder-file-key
@@ -68,8 +68,8 @@ The deprecation warning is once per process, not once per transcription:
 ```ts continue
 process.env.CB_SECRETS_FILE = join(dir, "no-store-here.json");
 resetMistralLegacyWarning();
-const [, first] = await withWarnings(() => getMistralApiKey(box.root));
-const [, second] = await withWarnings(() => getMistralApiKey(box.root));
+const [, first] = await withWarnings(() => getMistralApiKey(box.root, { observe: true }));
+const [, second] = await withWarnings(() => getMistralApiKey(box.root, { observe: true }));
 print(`first call warned: ${first.length > 0}`);
 print(`second call warned: ${second.length > 0}`);
 =>
@@ -82,7 +82,7 @@ Nothing configured at all is `null`, not a throw:
 ```ts continue
 delete process.env.CALLBACK_MISTRAL_API_KEY;
 await rm(join(box.root, "config/connectors/mistral.secret.json"));
-await getMistralApiKey(box.root);
+await getMistralApiKey(box.root, { observe: true });
 => null
 ```
 
@@ -90,7 +90,7 @@ A caller with no box root at all (the env-only path) still works:
 
 ```ts continue
 process.env.CALLBACK_MISTRAL_API_KEY = "placeholder-env-key";
-await getMistralApiKey();
+await getMistralApiKey(undefined, { observe: true });
 => placeholder-env-key
 ```
 

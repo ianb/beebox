@@ -136,6 +136,9 @@ export const secretsRouter = router({
         value: z.string().min(1),
         note: z.string().max(500).optional(),
         formatHint: z.string().max(100).optional(),
+        /** Reasons this secret exists — APPENDED to whatever it already states,
+         *  so rotating a key never quietly erases why it was granted. */
+        uses: z.array(z.string().min(1).max(200)).max(12).optional(),
       }),
     )
     .mutation(async ({ input }): Promise<{ warnings: string[]; verified: SecretVerified }> => {
@@ -146,6 +149,7 @@ export const secretsRouter = router({
           value: input.value,
           note: input.note,
           formatHint: input.formatHint,
+          uses: input.uses,
         }),
       );
       const verified = await probeSecret({ name: input.name });

@@ -41,6 +41,8 @@ import {
   setSecret,
 } from "../../core/secrets/lifecycle.js";
 import { secretAccessLevelSchema, type SecretAccessLevel } from "../../core/secrets/store.js";
+import { formatSecretUsesLines } from "../../core/secrets/uses.js";
+import { describeCommand } from "./secrets-describe.js";
 import { promptHidden } from "../lib/prompt-hidden.js";
 import {
   failWith,
@@ -127,6 +129,8 @@ export async function runDeclareSecret(opts: {
   name: string;
   note?: string | undefined;
   formatHint?: string | undefined;
+  /** Why the slot is wanted — appended to whatever the entry already says. */
+  uses?: string[] | undefined;
   /** The declaring box; omitted, it is found from the working directory. */
   boxRoot?: string | undefined;
 }): Promise<void> {
@@ -140,6 +144,7 @@ export async function runDeclareSecret(opts: {
       name: opts.name,
       note: opts.note,
       formatHint: opts.formatHint,
+      uses: opts.uses,
       declaredBy,
     });
     console.log(
@@ -176,6 +181,7 @@ export async function runListSecrets(opts?: { agentConfirmed?: boolean | undefin
           `grants=${grants.length === 0 ? "none" : grants.join(",")}`,
           entry.shareable === false ? `single-box=${entry.owningBox ?? "unnamed"}` : undefined,
           entry.note === undefined ? undefined : `note=${entry.note}`,
+          ...formatSecretUsesLines(entry.uses),
         ]
           .filter((part) => part !== undefined)
           .join("\t"),
@@ -235,6 +241,7 @@ export async function runSecretsStatus(opts: {
     } else {
       for (const grant of status.granted) {
         console.log(`  granted: ${grant.name} (${grant.access}${grant.hasValue ? "" : ", NO VALUE YET"})`);
+        for (const line of formatSecretUsesLines(grant.uses)) console.log(`    ${line}`);
       }
     }
     for (const name of status.emptySlots) {
@@ -247,6 +254,7 @@ export async function runSecretsStatus(opts: {
       console.log(
         `  declared here: ${slot.name} — ${slot.hasValue ? "has a value" : "no value yet"}, not granted to this box`,
       );
+      for (const line of formatSecretUsesLines(slot.uses)) console.log(`    ${line}`);
     }
   } catch (e) {
     failWith(e);
@@ -298,15 +306,20 @@ secretsCommand
     await runRemoveSecret({ name, ...options });
   });
 
-secretsCommand
+const declareCmd = secretsCommand
   .command("declare")
   .description("Create an empty, ungranted slot for a secret you need (the agent-facing surface)")
   .argument("<name>", "Secret name")
   .option("--note <note>", "What this secret is for, and where to obtain it")
   .option("--format-hint <hint>", "Expected shape of the value, e.g. a prefix")
-  .action(async (name: string, options: { note?: string; formatHint?: string }) => {
-    await runDeclareSecret({ name, ...options });
-  });
+  // Repeatable and additive: one key usually earns its grant several times over,
+  // and a second trick's reason must not overwrite the first's.
+  .option("--use <reason>", "Why you need it, repeatable", (value: string, previous: string[]) => [...previous, value], []);
+
+declareCmd.action(async (name: string) => {
+  const options = declareCmd.opts<{ note?: string; formatHint?: string; use?: string[] }>();
+  await runDeclareSecret({ name, note: options.note, formatHint: options.formatHint, uses: options.use });
+});
 
 secretsCommand
   .command("list")
@@ -349,5 +362,6 @@ secretsCommand
 
 // The two bulk/provisioning subcommands live in their own module (the file-size
 // rule, and they share only the guards in `cli/lib/secrets-guard.ts`).
+secretsCommand.addCommand(describeCommand);
 secretsCommand.addCommand(copyGrantsCommand);
 secretsCommand.addCommand(migrateCommand);

@@ -20,7 +20,8 @@ import {
   runSecretsStatus,
   runSetSecret,
 } from "../../src/cli/commands/secrets.js";
-import { setSecret } from "../../src/core/secrets/lifecycle.js";
+import { runDescribeSecret } from "../../src/cli/commands/secrets-describe.js";
+import { grantSecret, setSecret } from "../../src/core/secrets/lifecycle.js";
 
 // The guard is deliberately loose — a non-TTY stdin alone reads as "agent".
 // Pinning both signals keeps these cases deterministic wherever the suite runs.
@@ -132,7 +133,12 @@ print(status.logs.join("\n"));
 Granted "mistral" to "demo-box" with agent access.
 Box: demo-box
   granted: mistral (agent)
+    used for: audio transcription (Voxtral — recordings and live chat dictation); Mistral API calls from box views, through the server-side adapter
 ```
+
+The `used for` line is the built-in registry's (`src/core/secrets/uses.ts`) — the
+boxholder sees what the engine will actually spend a key on without having to
+read the code that spends it.
 
 An unknown access level is refused rather than silently downgraded:
 
@@ -206,6 +212,134 @@ await rm(dir, { recursive: true, force: true });
 await rm(boxDir, { recursive: true, force: true });
 ```
 
+## `declare --use` and `describe --add-use` say why a secret exists
+
+Reasons are additive: a second trick spending the same key appends its own
+rather than overwriting the first's. Adding one is agent-facing (an agent should
+say why it now needs a key); removing one carries the agent guard, because
+deleting the line that justified a grant is a human's decision.
+
+```ts
+const dir = await useTempStore();
+const boxDir = await mkdtemp(join(tmpdir(), "weather-box-"));
+
+await runCaptured(() =>
+  runDeclareSecret({ name: "weatherapi", uses: ["forecasts in the morning brief"], boxRoot: boxDir }),
+);
+const described = await runCaptured(() =>
+  runDescribeSecret({ name: "weatherapi", addUses: ["the umbrella reminder trick"], boxRoot: boxDir }),
+);
+print(described.logs.join("\n"));
+
+const status = await runCaptured(() => runSecretsStatus({ boxOrRoot: boxDir, boxRoot: boxDir }));
+print(status.logs.join("\n").replaceAll(basename(boxDir), "<box>"));
+=>
+"weatherapi" is used for:
+  - forecasts in the morning brief
+  - the umbrella reminder trick
+Box: <box>
+  granted: none
+  declared here: weatherapi — no value yet, not granted to this box
+    also declared: forecasts in the morning brief; the umbrella reminder trick
+```
+
+Dropping a reason in an agent session is refused without `--agent-confirmed`:
+
+```ts continue
+const blocked = await runCaptured(() =>
+  runDescribeSecret({ name: "weatherapi", clearUses: true, boxRoot: boxDir }),
+);
+print(`exit: ${blocked.exitCode}`);
+print(`named the action: ${blocked.errors.join("\n").includes("remove a secret's stated uses")}`);
+
+const cleared = await runCaptured(() =>
+  runDescribeSecret({ name: "weatherapi", clearUses: true, agentConfirmed: true }),
+);
+print(cleared.logs.join("\n"));
+=>
+exit: 1
+named the action: true
+"weatherapi" now states no uses of its own.
+```
+
+```ts cleanup
+await rm(dir, { recursive: true, force: true });
+await rm(boxDir, { recursive: true, force: true });
+```
+
+## `describe --add-use` is scoped to the agent's own box
+
+Adding a reason is unguarded *for the box the agent is standing in* — its own
+grants, and the slots it declared and is still waiting on. Anything else is
+refused, because an unguarded write that succeeded for a real name and errored
+for an invented one would enumerate the machine's secrets one guess at a time.
+So the refusal is uniform: another box's secret and a name that does not exist
+get the same words.
+
+```ts
+const dir = await useTempStore();
+const ownBox = join(dir, "own-box");
+await mkdir(ownBox);
+await setSecret({ name: "weatherapi", value: "placeholder-value-5" });
+await grantSecret({ slug: "own-box", name: "weatherapi", access: "agent" });
+await setSecret({ name: "someone-elses", value: "placeholder-value-6" });
+
+const mine = await runCaptured(() =>
+  runDescribeSecret({ name: "weatherapi", addUses: ["the umbrella reminder trick"], boxRoot: ownBox }),
+);
+print(`own-box exit: ${mine.exitCode}`);
+print(mine.logs.join("\n"));
+=>
+own-box exit: undefined
+"weatherapi" is used for:
+  - the umbrella reminder trick
+```
+
+A secret this box holds no grant on, and a name nobody ever declared, are
+answered identically — the only difference between the two messages is the name
+the caller supplied:
+
+```ts continue
+const foreign = await runCaptured(() =>
+  runDescribeSecret({ name: "someone-elses", addUses: ["curiosity"], boxRoot: ownBox }),
+);
+const unknown = await runCaptured(() =>
+  runDescribeSecret({ name: "no-such-secret", addUses: ["curiosity"], boxRoot: ownBox }),
+);
+print(`exits: ${foreign.exitCode} ${unknown.exitCode}`);
+print(`same words: ${foreign.errors.join("\n").replaceAll("someone-elses", "X") === unknown.errors.join("\n").replaceAll("no-such-secret", "X")}`);
+print(`names the scoping: ${foreign.errors.join("\n").includes(`the box you are working in ("own-box")`)}`);
+=>
+exits: 1 1
+same words: true
+names the scoping: true
+```
+
+`--agent-confirmed` — a human explicitly asked — carries it through, and outside
+a box there is no own-box view at all:
+
+```ts continue
+const confirmed = await runCaptured(() =>
+  runDescribeSecret({ name: "someone-elses", addUses: ["the boxholder asked"], boxRoot: ownBox, agentConfirmed: true }),
+);
+print(confirmed.logs.join("\n"));
+
+const nowhere = await runCaptured(() =>
+  runDescribeSecret({ name: "weatherapi", addUses: ["curiosity"], boxRoot: null }),
+);
+print(`outside a box exit: ${nowhere.exitCode}`);
+print(`says why: ${nowhere.errors.join("\n").includes("not inside a box")}`);
+=>
+"someone-elses" is used for:
+  - the boxholder asked
+outside a box exit: 1
+says why: true
+```
+
+```ts cleanup
+await rm(dir, { recursive: true, force: true });
+```
+
 ## `list` prints names and metadata, never values
 
 ```ts
@@ -216,7 +350,7 @@ print(`leaks the value: ${listed.logs.join("\n").includes("placeholder-value-3")
 print(listed.logs.join("\n"));
 =>
 leaks the value: false
-mistral	set	updated=«*»	grants=none	note=transcription
+mistral	set	updated=«*»	grants=none	note=transcription	used for: audio transcription (Voxtral — recordings and live chat dictation); Mistral API calls from box views, through the server-side adapter
 ```
 
 ## An agent sees its own box, not the machine

@@ -113,7 +113,7 @@ export async function transcribeAudioDeepgram(
   params: TranscribeAudioParams
 ): Promise<TranscriptionResult | DetailedTranscriptionResult> {
   const { audioBuffer, filename, options, boxRoot } = params;
-  const creds = await getDeepgramCredentials(boxRoot);
+  const creds = await getDeepgramCredentials(boxRoot, { observe: true });
   if (!creds) {
     throw new MissingDeepgramKeyError();
   }

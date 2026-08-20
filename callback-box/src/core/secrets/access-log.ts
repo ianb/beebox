@@ -30,6 +30,9 @@ import { loadSecretStore, mutateSecretStore, secretsLogDir } from "./store.js";
 /** Minimum gap between `lastUsed` stamps for one (box, secret) pair. */
 const LAST_USED_THROTTLE_MS = 60 * 60 * 1000;
 
+/** How many distinct observed `purpose` labels one entry keeps. */
+const MAX_OBSERVED_PURPOSES = 16;
+
 /**
  * One access-log line.
  *
@@ -106,21 +109,51 @@ export async function recordSecretMint(opts: {
 }
 
 /**
- * Stamp `lastUsed[slug]` on the entry, at most once an hour. Reads lock-free
- * first so the throttled-away common case costs one file read and no lock;
- * also best-effort, for the same reason the log is.
+ * Stamp `lastUsed[slug]` on the entry, at most once an hour — and record the
+ * resolve's `purpose` on `purposes` the FIRST time each distinct label is seen.
+ *
+ * The two have different throttles on purpose. "When was this last used" is a
+ * clock reading that only needs to be roughly current, so it is hourly; "what
+ * is this used for" is a small set that changes only when a new caller appears,
+ * so a purpose that is already recorded costs nothing and a new one is written
+ * immediately rather than waiting out the hour (a trick added at 12:05 would
+ * otherwise be invisible on the admin page until 13:00, and possibly never — it
+ * may only ever run once). Both decisions come from the same lock-free read, so
+ * the steady state is still one file read and no lock.
+ *
+ * {@link MAX_OBSERVED_PURPOSES} bounds the list: an entry resolved under many
+ * labels stops collecting rather than growing the store without limit. The
+ * access log keeps the full history either way.
+ *
+ * Best-effort, for the same reason the log is — a store that cannot be written
+ * must never fail a transcription.
  */
-export async function stampSecretLastUsed(opts: { slug: string; name: string; nowIso: string }): Promise<void> {
-  const { slug, name, nowIso } = opts;
+export async function stampSecretUse(opts: {
+  slug: string;
+  name: string;
+  nowIso: string;
+  purpose: string;
+}): Promise<void> {
+  const { slug, name, nowIso, purpose } = opts;
   try {
     const loaded = await loadSecretStore();
     if (!loaded.ok) return;
-    const previous = loaded.value.secrets[name]?.lastUsed?.[slug];
-    if (previous !== undefined && Date.parse(nowIso) - Date.parse(previous) < LAST_USED_THROTTLE_MS) return;
+    const entry = loaded.value.secrets[name];
+    const previous = entry?.lastUsed?.[slug];
+    const stampDue = previous === undefined || Date.parse(nowIso) - Date.parse(previous) >= LAST_USED_THROTTLE_MS;
+    const observed = entry?.purposes ?? [];
+    const purposeIsNew = !observed.includes(purpose) && observed.length < MAX_OBSERVED_PURPOSES;
+    if (!stampDue && !purposeIsNew) return;
     await mutateSecretStore({ purpose: "last-used" }, (store) => {
-      const entry = store.secrets[name];
-      if (entry === undefined) return;
-      entry.lastUsed = { ...entry.lastUsed, [slug]: nowIso };
+      const current = store.secrets[name];
+      if (current === undefined) return;
+      if (stampDue) current.lastUsed = { ...current.lastUsed, [slug]: nowIso };
+      // Re-checked under the lock: two boxes resolving under the same new label
+      // at once both saw it as new, and the loser would otherwise duplicate it.
+      const already = current.purposes ?? [];
+      if (!already.includes(purpose) && already.length < MAX_OBSERVED_PURPOSES) {
+        current.purposes = [...already, purpose].toSorted((a, b) => a.localeCompare(b));
+      }
     });
   } catch (e) {
     warnOnce(`could not record last-used for "${name}": ${errorMessage(e)} (resolution proceeded)`);
