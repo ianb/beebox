@@ -27,6 +27,7 @@ import {
   type ScanVisionService,
 } from "../../services/scan-vision.js";
 import { createClaudeScanVision } from "../../services/scan-vision-claude.js";
+import { getGeminiApiKey } from "../gemini-key.js";
 import { checkClaudeAuth, ClaudeAuthError } from "../agent/auth-preflight.js";
 import { ScanVisionBatchError } from "../../services/scan-vision.js";
 import { runScanBatches, type RunScanBatchesResult } from "./scan-import-helpers.js";
@@ -154,7 +155,7 @@ export async function resolveScanInputs(
 export async function resolveScanVision(
   boxRoot: string
 ): Promise<{ vision: ScanVisionService } | { error: string }> {
-  const selection = selectScanVisionBackend(process.env);
+  const selection = selectScanVisionBackend(process.env, await getGeminiApiKey(boxRoot, { purpose: "gemini-vision", observe: true }));
   if (!selection.ok) return { error: selection.error };
   if (selection.value.backend === "gemini") {
     return { vision: createGeminiScanVision({ apiKey: selection.value.apiKey }) };

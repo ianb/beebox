@@ -162,6 +162,14 @@ export async function prepareBulkBatch(opts: {
  * genuinely does hold arbitrary types, unlike an ordinary attach scope where
  * cards and manifests sit beside the assets. The control files are exempted so
  * they stay ordinary git objects.
+ *
+ * **It takes two files to annex a `.zip`.** This one widens what git-annex
+ * *would* annex; `.git/info/attributes` decides what the filter-process ever
+ * *sees*, and it is scoped to the asset extensions. `BULK_BATCH_ATTACH_PATTERN`
+ * (`lib/asset-extensions.ts`) is the line over there that puts this scope on the
+ * filter's path. Without it this file is inert for exactly the extensions it
+ * exists to cover, which is how batch `.zip`s committed as raw blobs between
+ * 2026-08-04 and 2026-08-18.
  */
 const ATTACH_GITATTRIBUTES = `# Managed by cb bulk-upload. A batch holds arbitrary file types, so annex
 # everything in this scope except the control files. See docs/plans/asset-annex.md.

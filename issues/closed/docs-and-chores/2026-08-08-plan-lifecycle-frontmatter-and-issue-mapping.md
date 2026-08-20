@@ -41,7 +41,7 @@ remaining work never becomes a tracked item. It's visible only to whoever next
 reads the whole document.
 
 **No worktree/branch association.** Same gap the
-[worktree/session workflow redesign](../../features/2026-08-08-worktree-session-workflow-redesign.md)
+[worktree/session workflow redesign](../features/2026-08-08-worktree-session-workflow-redesign.md)
 describes for issues: `discovered-in:` is free text there, and plans have
 nothing at all. A plan produced by `worktree-foo` doesn't say so, so you can't
 get from a plan back to the work in flight on it.

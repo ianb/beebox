@@ -1,0 +1,5 @@
+{
+  "//": "The this-will-build gate for committed exhibit apps (boxholder, 2026-08-17): the same compiler settings the exhibits container serves with, so `tsc -p dev/apps` (pnpm dev-apps-typecheck, run by pre-commit when app source is staged) proves a page compiles before it merges. Path-based options in the extended fragment resolve relative to the fragment's own directory, so @exhibits/client points at the real client. Editors pick this config up automatically — no per-page tsconfig needed.",
+  "extends": "../../workstreams-app/exhibits-page.tsconfig.json",
+  "include": ["**/*.ts", "**/*.tsx"]
+}

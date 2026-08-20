@@ -8,9 +8,9 @@
  * Voice turn-taking coordination stays in the component layer.
  */
 
-import { setup, assign } from "xstate";
+import { setup, assign, enqueueActions } from "xstate";
 import { invariant } from "@shared/invariant";
-import { buildOptimisticContent, reconcilePending } from "./chat-shared";
+import { buildOptimisticContent } from "./chat-shared";
 import {
   chatTailSlice,
   logFsm,
@@ -35,6 +35,7 @@ import {
   untrackLastSend,
   clearInterrupt,
   sendInterrupt,
+  reconcilePendingWithDiagnostics,
 } from "./chat-actions";
 
 export { chatTailSlice };
@@ -46,6 +47,26 @@ export const chatMachine = setup({
     context: {} as ChatContext,
     events: {} as ChatEvent,
     input: {} as ChatMachineInput,
+  },
+  actions: {
+    // The queue-don't-interrupt SEND handling shared by `loading`,
+    // `streaming`, and `refreshing`: the POST goes out now (the server
+    // queues or dedups) and the receipt settles from the outcome; the
+    // optimistic entry stays visible through `pendingMessages`
+    // reconciliation. `loading` matters most: the iOS shell delivers
+    // pending emissions on `didFinish`, before `fetchInitial` resolves,
+    // and a swallowed SEND there meant no receipt and a shell redelivery
+    // loop painting duplicate rows (the 2026-08-19 voice-duplicate
+    // regression).
+    queueSend: enqueueActions(({ enqueue, context, event }, params: { from: "loading" | "streaming" | "refreshing" }) => {
+      invariant(event.type === "SEND", "queueSend only fires on SEND");
+      logFsm(`send-from-${params.from}`, {
+        len: event.message.length,
+        pending: context.pendingMessages.length,
+      });
+      enqueue.assign(appendQueuedSend({ context, event }));
+      dispatchQueuedSend({ context, event });
+    }),
   },
   actors: {
     fetchInitial: fetchInitialActor,
@@ -128,6 +149,9 @@ export const chatMachine = setup({
   },
   states: {
     loading: {
+      on: {
+        SEND: { actions: { type: "queueSend", params: { from: "loading" } } },
+      },
       invoke: {
         src: "fetchInitial",
         input: ({ context }) => ({ sessionInput: context.sessionInput, initial: context.initial }),
@@ -135,11 +159,17 @@ export const chatMachine = setup({
         // replay a stale preload if `loading` is ever re-entered.
         onDone: {
           target: "idle",
-          actions: assign(({ event }) => ({
-            messages: event.output.entries, sessionId: event.output.sessionId,
-            processRunning: event.output.running, processBusy: event.output.busy,
-            totalEntries: event.output.total, initial: undefined,
-          })),
+          // Reconcile rather than overwrite: a SEND that arrived during this
+          // fetch appended a pending entry, and the fetched history predates
+          // it — a plain overwrite would blank the row until the next refresh.
+          actions: assign(({ context, event }) => {
+            const { messages, pendingMessages } = reconcilePendingWithDiagnostics({ serverMessages: event.output.entries, pendingMessages: context.pendingMessages });
+            return {
+              messages, pendingMessages, sessionId: event.output.sessionId,
+              processRunning: event.output.running, processBusy: event.output.busy,
+              totalEntries: event.output.total, initial: undefined,
+            };
+          }),
         },
         onError: {
           target: "idle",
@@ -234,17 +264,7 @@ export const chatMachine = setup({
         // and a recovery during an interrupt must not leave the flag latched
         // into idle.
         STREAM_RECOVER: { target: "refreshing", actions: assign(clearInterrupt) },
-        SEND: {
-          // Queue the message — don't interrupt the current stream
-          actions: [
-            ({ event, context }) => logFsm("send-from-streaming", {
-              len: event.message.length,
-              pending: context.pendingMessages.length,
-            }),
-            assign(appendQueuedSend),
-            dispatchQueuedSend,
-          ],
-        },
+        SEND: { actions: { type: "queueSend", params: { from: "streaming" } } },
         STREAM_TEXT: {
           actions: assign(({ context, event }) => ({
             streamText: context.streamNeedsSeparator && context.streamText
@@ -315,16 +335,7 @@ export const chatMachine = setup({
         // the turn is durable, and onDone swaps messages in + clears streamText
         // atomically. See test/frontend/chat-machine-finalize.doctest.md.
         REFRESH: { actions: () => logFsm("refresh-ignored-refreshing") },
-        SEND: {
-          actions: [
-            ({ event, context }) => logFsm("send-from-refreshing", {
-              len: event.message.length,
-              pending: context.pendingMessages.length,
-            }),
-            assign(appendQueuedSend),
-            dispatchQueuedSend,
-          ],
-        },
+        SEND: { actions: { type: "queueSend", params: { from: "refreshing" } } },
       },
       invoke: {
         src: "fetchHistory",
@@ -345,7 +356,7 @@ export const chatMachine = setup({
                 streamTools: [],
               };
             }
-            const reconciled = reconcilePending({
+            const reconciled = reconcilePendingWithDiagnostics({
               serverMessages: event.output.entries,
               pendingMessages: context.pendingMessages,
             });

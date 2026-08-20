@@ -12,6 +12,7 @@ import { makeLog } from "./log.js";
 import * as path from "node:path";
 import { getDirectoryForSession } from "./history.js";
 import { buildTimezoneContext } from "../../box/config.js";
+import { resolveChatEngine } from "./engine.js";
 import { buildScriptEnv } from "../../script-env.js";
 import { composeSendSnapshot, type HealthGate } from "../../session-context.js";
 import { renderActivityChildren } from "../card-activity.js";
@@ -112,6 +113,7 @@ export async function buildBackendStartOptions(
     ? baseSystemPrompt + buildLandmarkSessionNote(contextDir)
     : baseSystemPrompt;
   const cwd = contextDir ? path.join(ctx.boxRoot, contextDir) : ctx.boxRoot;
+  const engine = await resolveChatEngine(ctx.boxRoot, ctx.sessionId);
   const baseEnv = await buildScriptEnv(ctx.boxRoot, {
     CLAUDECODE: undefined,
     // Only when a real id exists — a pending-new session must not advertise a
@@ -125,6 +127,7 @@ export async function buildBackendStartOptions(
     ...(ctx.options.extraEnv ?? {}),
   };
   const startOpts: ChatBackendStartOptions = {
+    engine,
     cwd,
     systemPrompt,
     includePartialMessages: ctx.options.includePartialMessages === true,

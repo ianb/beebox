@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-todo-annotation — designing the todo-view card surface
 needs: [design]
+priority: normal
 ---
 
 Two related wants surfaced while designing the

@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-in: weekly manual-test triage — 2026-08-09T151705Z run, repo 508f42cc
 labels: [manual-tests]
+priority: normal
 ---
 
 `test/manual/chat-queue-real.doctest.md` (real `claude` SDK process, not the
@@ -50,3 +51,15 @@ This is the first logged run of the new weekly manual-test job (prior
 `logs/manual-tests/launchd.log` is empty), so there's no baseline to say
 whether this is new or has always been the case on this machine. Re-check
 next week's log for recurrence before assuming a regression.
+
+## 2026-08-16 recurrence
+
+Same warning fired on both turns again, in the same doctest, still on exit
+status 0 (test still passes). Run log:
+`logs/manual-tests/2026-08-16T151700Z-53382.log` (lines 35, 39), repo
+`39752043`. `WAIT_TIMEOUT_MS` is still 5s and the warning text is unchanged
+in `callback-box/src/core/chat/session/transcript-sync.ts:29,129`. Two
+separate weekly runs, both two-for-two on the full timeout, rules out a
+one-off fluke — this now looks like a standing condition on this machine
+rather than an isolated slow poll. Still unconfirmed which of the two
+candidate explanations above applies.

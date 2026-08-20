@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test onboarding-first-days (multiple activities)
 labels: [soft-launch, field-test-findings, ui-error]
+priority: important
 ---
 
 > **Re-attributed 2026-08-09 — neither symptom is a markdown-rendering bug.**

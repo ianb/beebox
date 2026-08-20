@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder wants a concrete demo box
 labels: [soft-launch]
+priority: normal
 ---
 
 Build a second standing box alongside `test1` — **a real, fully-formed fictional
@@ -63,7 +64,7 @@ be the right builder.
 
 - The [regenerable app demo video](2026-07-17-regenerable-app-demo-video.md) — a
   real family gives the video real content.
-- The [GitHub Pages site](2026-07-20-github-pages-site.md) — "the system
+- The [GitHub Pages site](2026-07-20-public-site.md) — "the system
   demonstrating itself" needs a believable box to show.
 - General [demo readiness](../docs-and-chores/2026-05-22-demo-readiness.md).
 - Testing/knowledge-audits that want realistic, coherent box content rather than

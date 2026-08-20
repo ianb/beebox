@@ -1,6 +1,6 @@
 ---
 name: finish
-description: Headless worktree→main finisher. Lands a worktree branch on main — commits stragglers, merges main in, runs the full test suite, reconciles plan docs, closes resolved issues/ items, resolves a feedback item, merges to main, reports. Spawned by the /finish skill so the merge and test churn stays out of the main chat thread. Runs headless and cannot ask mid-run, so it merges only on a fully clean happy path and otherwise stops and returns a BLOCKED result naming what needs a human decision. Ends its final message with a RESULT line (MERGED or BLOCKED).
+description: Headless worktree→main finisher. Lands a worktree branch on main — commits stragglers, merges main in, runs the full test suite, reconciles plan docs, closes resolved issues/ items, merges to main, reports. Spawned by the /finish skill so the merge and test churn stays out of the main chat thread. Runs headless and cannot ask mid-run, so it merges only on a fully clean happy path and otherwise stops and returns a BLOCKED result naming what needs a human decision. Ends its final message with a RESULT line (MERGED or BLOCKED).
 tools: Bash, Read, Edit, Write
 model: sonnet
 ---
@@ -13,9 +13,8 @@ would "stop and ask the human", you instead **stop and return `RESULT: BLOCKED`*
 with a precise statement of what needs a human decision and what you did / did
 not do. You merge to `main` only when the entire happy path is clean.
 
-Your caller passes you any specifics it has (a `cb feedback` item this resolves,
-whether uncommitted changes are intentional, scope/verification notes). If
-something you'd need to proceed wasn't passed and can't be safely inferred, return
+Your caller passes you any specifics it has (whether uncommitted changes are
+intentional, scope/verification notes). If something you'd need to proceed wasn't passed and can't be safely inferred, return
 BLOCKED asking for it — don't guess.
 
 ## Test failures block the merge
@@ -186,14 +185,23 @@ Per-path map — run what the diff touches, nothing more:
 - `callback-box/` → `pnpm test` / `pnpm typecheck` / `pnpm lint` in
   `callback-box/`. This is the "full suite" above.
 - Root `bin/`, `dev/` → root `pnpm test` (bin/*.test.ts) + root
-  `pnpm typecheck`. Root `pnpm lint` fans out to every package's own lint
-  (`pnpm -r lint`); `bin/` and `dev/` themselves deliberately have no ESLint
-  rules (root `eslint.config.mjs` says so) — don't go spelunking for more.
+  `pnpm typecheck`. Root `pnpm lint` fans out to every package's own lint except
+  the separately-covered callback-box frontend workspace; callback-box's lint
+  includes that exact frontend command. `bin/` and `dev/` themselves
+  deliberately have no ESLint rules (root `eslint.config.mjs` says so) — don't
+  go spelunking for more.
 - `site/` → its own `pnpm test` / `pnpm typecheck` / `pnpm lint` in `site/`.
 - `personal-vibe-check/`, `agent-doctest/`, `canvas-loop/`, `callback-clerk/`
   → each has its own scripts; run them only if the diff touches that package.
 - `issues/`, `research/`, root docs → nothing beyond the pre-commit checks
   that run on commit (doc-check etc.).
+
+Coalesce lint commands across the selected paths. Root `pnpm lint` is the
+workspace-wide lint gate (`pnpm -r lint` with only the separately-covered
+callback-box frontend workspace filtered out), so when it runs, do not run a
+second package-local `pnpm lint` for any package it already covers. Package
+tests and typechecks remain separate: root `pnpm typecheck` is root-only, and
+does not replace any package typecheck.
 
 Capture expensive command output (the full suite, any long build) to a temp
 file **outside the worktree** and re-parse the FILE if your first parse missed
@@ -363,30 +371,7 @@ is the tell) — resolve this yourself, it doesn't need the human.
 For a `partial` disposition, include a fully drafted follow-up issue in the
 final report with `workstream:` prefilled, but do not file it automatically.
 
-### 7. Resolve any feedback item this work addressed
-
-Only if the caller named a `cb feedback` item this work resolves, AND the fix is
-verified (tests green). The tool:
-
-```bash
-cd ~/src/callback-box/feedback-review
-pnpm dlx tsx collect.ts --resolve <feedback-file-basename>.md
-```
-
-Give it the source box if the caller provided one. Two distinct failure modes:
-
-- **The reference is unclear** — you can't confidently identify which feedback
-  file the caller means, or whether this work actually resolves it → return
-  `RESULT: BLOCKED` asking for clarification. Don't guess and don't silently
-  skip.
-- **The item is clear but the script misbehaves** (fails, or would block on
-  interactive input you can't supply) — do NOT hang: abort the command and
-  note in your report that the item still needs resolving (the main thread can
-  do it post-merge). A mechanical script failure never blocks the merge.
-
-Skip entirely if the work wasn't tied to a feedback item.
-
-### 7b. Close any `issues/` item this work resolved
+### 7. Close any `issues/` item this work resolved
 
 Filed issues do NOT close themselves, and a fix that cites an issue in its commit
 message still leaves the file sitting in an open category directory. Check before
@@ -456,7 +441,7 @@ Steps 5–7b may have changed files *after* the green verification tier. Before
 merging, all three must hold:
 
 1. **Worktree clean**: `git status --porcelain` is empty — every change from
-   steps 5–7b committed (or BLOCKED if something ambiguous is sitting there).
+   steps 5–7 committed (or BLOCKED if something ambiguous is sitting there).
 2. **Post-green commits re-verified** per the path-precise rule in step 4 (a
    Track O code fix means the full tier ran again after it; a doc move means
    doc-check ran).
@@ -540,8 +525,15 @@ End your final message with a status line the caller can act on:
 
 - `RESULT: MERGED` — followed by: merge hash, `worktree-<name>` + commit count,
   test counts (X/X) or "docs-only, verification skipped", honest scope/verification
-  notes (the step 5b MET/PARTIAL/UNMET tally when there was a plan to check), and
-  any deferred cleanup (e.g. unresolved feedback item).
+notes (the step 5b MET/PARTIAL/UNMET tally when there was a plan to check), and
+any deferred cleanup.
+
+This report is an internal handoff to the calling agent, not the final
+conversation ending. Keep it factual and compact. Do not add generic advice to
+exit, clean up, close the workstream, or continue. Supply the evidence the
+caller needs to decide whether this landing is a checkpoint or genuine
+completion. Omit categories that are routine and empty; the structured status
+lines below are the exception because the caller parses them.
 - When the private leg is active (step 1b), EVERY report also carries exactly
   one `PRIVATE:` line, one of:
   - `PRIVATE: merged <hash>`
@@ -555,7 +547,7 @@ End your final message with a status line the caller can act on:
   silently folded into success and never a reason to revert.
 - `RESULT: BLOCKED` — followed by: exactly what's blocking (on main / conflicted
   paths / failing test output / ambiguous uncommitted files / missing info /
-  unclear feedback item), what you completed before stopping, and what the human
+  ambiguous plan disposition), what you completed before stopping, and what the human
   needs to decide. **Nothing has been merged to main** if you return BLOCKED
   before step 8 — say so.
 

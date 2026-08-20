@@ -1,11 +1,12 @@
 ---
 title: "Detect dead Google auth in health + notify the user with a clear re-authorize CTA"
-workstream: unknown
+workstream: google-reauth-health
 area: callback-box
 filed-by: agent
 needs: [manual-testing]
 design: ../../callback-box/docs/implemented-plans/google-auth-reauth-health.md
 discovered-in: main session — boxholder, after the Google OAuth thread
+priority: important
 ---
 
 **Implemented** on `worktree-google-reauth-health` — design and the decisions

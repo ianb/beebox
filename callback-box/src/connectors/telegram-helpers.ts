@@ -5,6 +5,11 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { z } from "zod";
+import { parseJsonSecret } from "../core/secrets/json-secret.js";
+import { refusalAllowsLegacyFallback } from "../core/secrets/legacy-fallback.js";
+import { resolveSecret } from "../core/secrets/resolve.js";
+import { boxSlug } from "../lib/box-slug.js";
 import { errnoCode } from "../lib/error-guards.js";
 import { safeFilename } from "./chat-utils.js";
 import {
@@ -43,21 +48,80 @@ export async function loadPublicUrl(boxRoot: string): Promise<string | null> {
   return process.env.PUBLIC_URL ?? null;
 }
 
+/** The store name a box's Telegram bot credentials live under. */
+export function telegramSecretName(slug: string): string {
+  return `telegram-bot/${slug}`;
+}
+
+/** The legacy in-tree secret file's path — still deleted on disconnect. */
+export function telegramLegacySecretPath(boxRoot: string): string {
+  return path.join(boxRoot, "config/connectors/telegram.secret.json");
+}
+
+/** Both the store's JSON-string value and the legacy file share this shape. */
+const telegramSecretSchema = z.object({
+  botToken: z.string().min(1),
+  webhookSecret: z.string().min(1),
+});
+
+let warnedAboutLegacyFile = false;
+
+/** Reset the once-per-process deprecation latch (tests only). */
+export function resetTelegramLegacyWarning(): void {
+  warnedAboutLegacyFile = false;
+}
+
 /**
- * Load telegram config from the secret file. Returns null if not configured.
+ * Load a box's Telegram credentials: the machine store's `telegram-bot/<slug>`
+ * entry (a JSON string `{botToken, webhookSecret}`) at `server` access, then
+ * the deprecated in-tree `config/connectors/telegram.secret.json`
+ * (`docs/plans/secret-custody.md`, Track 3). `null` when neither exists —
+ * Telegram is simply not configured for this box, a normal state.
+ *
+ * The entry is single-box by construction (`owningBox` + `shareable: false`):
+ * a bot token binds to ONE webhook URL, so a second box holding it would break
+ * routing, not merely be unwise. Telegram also has no scoping primitive at all
+ * (no derived or TTL'd credentials — revoke-only via BotFather), which is why
+ * the token must stay server-side and the admin status response no longer
+ * returns it.
  */
 export async function loadTelegramConfig(boxRoot: string): Promise<TelegramConfig | null> {
+  const slug = await boxSlug(boxRoot);
+  const name = telegramSecretName(slug);
+  const resolved = await resolveSecret({ boxRoot, name, purpose: "telegram", access: "server" });
+  if (resolved.ok) {
+    return parseJsonSecret({ name, value: resolved.value.value, schema: telegramSecretSchema });
+  }
+
+  // Only "no such secret on this machine" degrades to the legacy file; every
+  // other refusal is "not configured" (`core/secrets/legacy-fallback.ts`).
+  if (!refusalAllowsLegacyFallback({ reader: "telegram", refusal: resolved.error })) return null;
+
+  let content: string;
+  const legacyPath = telegramLegacySecretPath(boxRoot);
   try {
-    const configPath = path.join(boxRoot, "config/connectors/telegram.secret.json");
-    const content = await fs.readFile(configPath, "utf-8");
-    const parsed = JSON.parse(content);
-    if (parsed.botToken && parsed.webhookSecret) return parsed;
-    return null;
+    content = await fs.readFile(legacyPath, "utf-8");
   } catch (_e) {
-    // Secret file absent or unreadable — Telegram is simply not configured
-    // for this box, which is a normal, expected state (not an error).
+    // No stray file: the common case now. Silent by design.
     return null;
   }
+  let json: unknown;
+  try {
+    json = JSON.parse(content);
+  } catch (e) {
+    console.warn(`[telegram] ignoring unreadable legacy secret file ${legacyPath}:`, e);
+    return null;
+  }
+  const parsed = telegramSecretSchema.safeParse(json);
+  if (!parsed.success) return null;
+  if (!warnedAboutLegacyFile) {
+    warnedAboutLegacyFile = true;
+    console.warn(
+      `[telegram] using the deprecated in-tree secret file ${legacyPath}. ` +
+        "Reconnect Telegram from the admin page to move it into the machine store, then delete the file.",
+    );
+  }
+  return parsed.data;
 }
 
 /**

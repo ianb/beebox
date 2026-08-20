@@ -18,11 +18,53 @@ import { simpleGit } from "simple-git";
  */
 export class GitCommandError extends Error {
   readonly cause: unknown;
-  constructor(cause: unknown) {
-    super(cause instanceof Error ? cause.message : String(cause));
+  /** `message` overrides the cause's own wording — subclasses use it to say
+   *  what KIND of failure this is while keeping the original text. */
+  constructor(cause: unknown, message?: string) {
+    super(message ?? causeMessage(cause));
     this.name = "GitCommandError";
     this.cause = cause;
   }
+}
+
+function causeMessage(cause: unknown): string {
+  return cause instanceof Error ? cause.message : String(cause);
+}
+
+/**
+ * The marker every contended-git failure message carries.
+ *
+ * A scheduled task usually runs as a CHILD PROCESS, so a JS error subclass
+ * never reaches the scheduler that records the failure — only the child's
+ * captured output does. A stable token in the message is what survives that
+ * boundary. Detecting a condition by message match is a deliberate choice
+ * here, following `isIndexLockError` below, and cheaper than giving the whole
+ * CLI an exit-code vocabulary for one diagnostic.
+ */
+export const GIT_CONTENDED_MARKER = "[git-contended]";
+
+/**
+ * A git index mutation failed because another process held `.git/index.lock`
+ * and would not release it — the box git lock could not wait it out and the
+ * one-shot retry did not clear it either. Distinct from a generic
+ * {@link GitCommandError} so a scheduled task that LOST A RACE stops reading
+ * like a scheduled task that is BROKEN.
+ */
+export class GitIndexLockError extends GitCommandError {
+  constructor(cause: unknown) {
+    super(cause, `${GIT_CONTENDED_MARKER} another process holds the git index: ${causeMessage(cause)}`);
+    this.name = "GitIndexLockError";
+  }
+}
+
+/**
+ * Whether a recorded failure message describes git-index contention rather
+ * than broken work. Matches our own marker AND git's raw `index.lock` wording,
+ * so a box agent's own `git` failing inside a scheduled script is recognised
+ * too — that writer never runs our code and cannot carry our marker.
+ */
+export function isContendedFailure(message: string): boolean {
+  return message.includes(GIT_CONTENDED_MARKER) || message.includes("index.lock");
 }
 
 /**
@@ -188,6 +230,22 @@ export async function unstageOversizedBlobs(boxRoot: string): Promise<void> {
     }
   } catch (err) {
     console.warn(`[git] Oversized-blob guard failed (proceeding): ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
+
+/**
+ * A commit operation reported success but HEAD did not move.
+ *
+ * Almost always a hook: `git commit` exits non-zero when `pre-commit` or
+ * `commit-msg` rejects, and boxes install both (`cb validate --staged`,
+ * `git annex pre-commit`).
+ */
+export class CommitDidNotLandError extends Error {
+  constructor(boxRoot: string) {
+    super(
+      `commit reported success but HEAD did not move in ${boxRoot} — a pre-commit or commit-msg hook most likely rejected it. Run \`git commit\` by hand to see the hook's output.`,
+    );
+    this.name = "CommitDidNotLandError";
   }
 }
 

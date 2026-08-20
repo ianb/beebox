@@ -6,16 +6,13 @@
  * linted.
  */
 
-import { execFile } from "node:child_process";
 import * as path from "node:path";
-import { promisify } from "node:util";
 import { lint as markdownlint } from "markdownlint/promise";
 import type { LintError } from "markdownlint";
 import { customLinkRules, linkRuleConfig } from "../../core/markdown-lint-rules.js";
 import { listBoxMarkdownFiles, isBuiltinLintableMarkdown } from "../../core/list-cards.js";
 import { loadValidationIgnore } from "../../core/validation-ignore.js";
-
-const execFileP = promisify(execFile);
+import { listStagedRelPaths } from "../../lib/staged-files.js";
 
 // Opt-in validity rules: a few markdownlint style rules plus the box's custom
 // link rules (CB001/CB002). `default: false` keeps everything else off. CB002
@@ -49,18 +46,8 @@ export function isLintableMarkdown(filePath: string): boolean {
  * staged dossier edit the way it already covers staged cards.
  */
 export async function listStagedMarkdown(boxRoot: string): Promise<string[]> {
-  // `--relative` (see `listStagedCards` in `validate.ts` for why): reports
-  // paths relative to and scoped to `boxRoot`, which matters once `boxRoot`
-  // (a v2 box's `content/`) isn't the repo root.
-  const { stdout } = await execFileP(
-    "git",
-    ["diff", "--cached", "--name-only", "--diff-filter=ACMR", "--relative"],
-    { cwd: boxRoot, maxBuffer: 10 * 1024 * 1024 }
-  );
-  return stdout
-    .split("\n")
-    .filter((rel) => rel !== "" && isLintableMarkdown(rel))
-    .map((rel) => path.join(boxRoot, rel));
+  const staged = await listStagedRelPaths(boxRoot, { diffFilter: "ACMR" });
+  return staged.filter(isLintableMarkdown).map((rel) => path.join(boxRoot, rel));
 }
 
 export interface MarkdownLintSummary {

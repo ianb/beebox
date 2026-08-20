@@ -23,7 +23,7 @@ import type { ScreenshotRequestController } from "./screenshot-request-handler";
 import type { LiveTask } from "./background-tasks";
 import type { SessionEntry, SessionContentBlock } from "../../api";
 import type { MessageGroup } from "./ChatMessages";
-import type { ModelMarker } from "./InteractiveChat-helpers";
+import type { ModelMarker, VoiceSegmentSend } from "./InteractiveChat-helpers";
 import type { useChatTabs, useChatModelFeatures, useChatMute, useChatSchedules } from "./InteractiveChat-hooks";
 import type { useChatVoice } from "./InteractiveChat-voice";
 import { useChatAttachmentValues, type useChatAttachments } from "./InteractiveChat-attachments";
@@ -31,6 +31,7 @@ import type { useChatSelections } from "./InteractiveChat-selections";
 import type { useChatActions } from "./InteractiveChat-actions";
 import type { ActivityKind } from "@core/chat/card-activity.js";
 import type { CaptureBubbleModel } from "./capture-bubble";
+import type { AudioOverlayStore } from "./audio-overlay-store";
 import { useCompanionSelection } from "./use-companion-selection";
 
 interface ChatBodyProps {
@@ -60,11 +61,9 @@ interface ChatBodyProps {
   /** Confirmed display state; raw processBusy still owns queue affordances. */
   showAgentWorking: boolean;
   processRunning: boolean;
-  sessionId: string | null;
-  totalEntries: number;
-  pendingCount: number;
-  error: string | null | undefined;
-  currentUserEmail: string | undefined;
+  sessionId: string | null; totalEntries: number;
+  pendingCount: number; error: string | null | undefined;
+  currentUserEmail: string | undefined; currentUserName: string | undefined;
   modelMarkers: ModelMarker[];
   loadingOlder: boolean;
   scrollToBottomTrigger: number;
@@ -79,7 +78,7 @@ interface ChatBodyProps {
   setTypingMode: React.Dispatch<React.SetStateAction<boolean>>;
   typingLocked: boolean;
   setTypingLocked: React.Dispatch<React.SetStateAction<boolean>>;
-  onVoiceSegmentSend: (text: string) => void;
+  onVoiceSegmentSend: VoiceSegmentSend;
   send: (event: { type: "DISMISS_ERROR" }) => void;
   /** Report user activity on the open companion card (scrolled/navigated/…). */
   reportCardActivity: (kind: ActivityKind, detail?: string) => void;
@@ -108,6 +107,7 @@ interface ChatBodyProps {
   uploadFilesDisabledReason?: string | undefined;
   /** Agent-initiated screenshot requests: FIFO consent popup + ephemeral indicator rows. */
   screenshots: ScreenshotRequestController;
+  audioOverlayStore: AudioOverlayStore; // written by the audio-review events; read by UserMessage's badges
 }
 
 /**
@@ -122,7 +122,7 @@ function BarChromeRegion(props: ChatBodyProps) {
     sessionId, processRunning, isStreaming, debugView, setDebugView, showDebugLog, setShowDebugLog,
   } = props;
   const { onZoomView } = tabs;
-  const { selectedModel, narrationEnabled, handleToggleNarration, handleSelectModel } = model;
+  const { agentEngine, selectedModel, narrationEnabled, handleToggleNarration, handleSelectModel } = model;
   return (
     <ChatBarChrome
       contextDir={effectiveContextDir}
@@ -137,6 +137,7 @@ function BarChromeRegion(props: ChatBodyProps) {
       hqInFlight={voice.hqInFlight}
       onNewSession={actions.handleNewSession}
       selectedModel={selectedModel}
+      agentEngine={agentEngine}
       onSelectModel={handleSelectModel}
       onStopProcess={actions.handleStopProcess}
       onRestartProcess={actions.handleRestartProcess}
@@ -155,8 +156,8 @@ function BarChromeRegion(props: ChatBodyProps) {
 function MessageListRegion(props: ChatBodyProps) {
   const {
     tabs, model, voice, actions, messages, groups, modelMarkers, isStreaming, streamText, streamTools,
-    debugView, currentUserEmail, snapshot, totalEntries, loadingOlder, scrollToBottomTrigger, liveTurnId,
-    captureBubbles, onCaptureRetry,
+    debugView, currentUserEmail, currentUserName, snapshot, totalEntries, loadingOlder, scrollToBottomTrigger, liveTurnId,
+    captureBubbles, onCaptureRetry, audioOverlayStore,
   } = props;
   const { onZoomView } = tabs;
   const { speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, pendingHqDraft } = voice;
@@ -171,6 +172,7 @@ function MessageListRegion(props: ChatBodyProps) {
       streamTools={streamTools}
       debugView={debugView}
       currentUserEmail={currentUserEmail}
+      currentUserName={currentUserName}
       speechPlayback={speechPlayback}
       handleStopSpeech={handleStopSpeech}
       handleSkipSpeech={handleSkipSpeech}
@@ -186,6 +188,7 @@ function MessageListRegion(props: ChatBodyProps) {
       pendingHqDraft={pendingHqDraft}
       captureBubbles={captureBubbles}
       onCaptureRetry={onCaptureRetry}
+      audioOverlayStore={audioOverlayStore}
     />
   );
 }

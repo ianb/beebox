@@ -10,14 +10,16 @@
 import { fmt } from "../../lib/format.js";
 import { buildTimezoneContext } from "../box/config.js";
 import { buildScriptEnv } from "../script-env.js";
-import { cardValidatorHook, gitMvNudgeHook } from "../sdk-hooks.js";
+import { gitMvNudgeHook } from "../sdk-hooks.js";
 import { resolveClaudeCodeBinary } from "../sdk-binary-path.js";
 import { startPromptLogger, type PromptLogger } from "./prompt-logger.js";
 import { consumeAgentStream, type RunStreamOutcome } from "./stream.js";
 import { checkClaudeAuth, ClaudeAuthError } from "./auth-preflight.js";
 import { dropUndefined } from "../../lib/drop-undefined.js";
 import { normalizeModelId } from "../../shared/model-ids.js";
+import { resolveHarnessPluginPath } from "./plugin-paths.js";
 import type { AgentResult, AgentResultBase } from "./types.js";
+import { applyEngineUnavailability } from "./engine-unavailability-apply.js";
 
 export interface RunAgentOptions {
   boxRoot: string;
@@ -85,7 +87,12 @@ function buildQueryOptions(
     ...(options.additionalDirectories && options.additionalDirectories.length > 0 && {
       additionalDirectories: options.additionalDirectories,
     }),
-    hooks: { PreToolUse: [gitMvNudgeHook()], PostToolUse: [cardValidatorHook()] },
+    hooks: { PreToolUse: [gitMvNudgeHook()] },
+    plugins: [{
+      type: "local" as const,
+      path: resolveHarnessPluginPath("claude"),
+      skipMcpDiscovery: true,
+    }],
     // settingSources defaults to ["user", "project"] which auto-loads
     // CLAUDE.md, .claude/settings.json, .claude/rules/, etc.
     ...(appendedSystem !== "" && {
@@ -256,5 +263,8 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
     logger,
   });
 
-  return buildAgentResult(outcome, options.resumeSessionId);
+  return applyEngineUnavailability(buildAgentResult(outcome, options.resumeSessionId), {
+    provider: "claude",
+    boxRoot,
+  });
 }

@@ -8,14 +8,14 @@
  * scaffolding, which was duplicated verbatim.
  */
 
-import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import type { ChatBackendRun } from "../../../services/claude-chat.js";
-import { adaptSdkMessage, type ChatMessage } from "./messages.js";
+import { adaptBackendMessage, type ChatMessage } from "./messages.js";
+import type { ChatBackendMessage } from "../../../services/claude-chat-types.js";
 
 export interface PumpChatRunOptions {
   run: ChatBackendRun;
   /** Adapt a raw SDK message; returning null drops it (partial/internal event). */
-  adapt: (sdkMsg: SDKMessage) => ChatMessage | null;
+  adapt: (sdkMsg: ChatBackendMessage) => ChatMessage | null;
   /** Handle one adapted message. May be async (e.g. await durability). */
   onMessage: (msg: ChatMessage) => Promise<void> | void;
   /** The run's messages iterator threw. */
@@ -71,7 +71,7 @@ export interface ChatRunPumpHost {
 export function pumpSessionRun(run: ChatBackendRun, host: ChatRunPumpHost): Promise<void> {
   return pumpChatRun({
     run,
-    adapt: adaptSdkMessage,
+    adapt: adaptBackendMessage,
     onMessage: async (msg) => {
       host.durability.observe(msg);
       // Hold `result` until the transcript is flushed: consumers refetch history

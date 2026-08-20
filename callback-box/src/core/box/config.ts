@@ -9,6 +9,8 @@ import * as path from "node:path";
 import { errnoCode } from "../../lib/error-guards.js";
 
 export interface BoxConfig {
+  /** Native agent harness used for new box jobs and chats. Missing means Claude. */
+  agentEngine?: "claude" | "codex";
   publicUrl?: string;
   allowedEmails?: string[];
   /** IANA timezone for this box (e.g. "America/Chicago"). Used in all agent prompts. */
@@ -37,6 +39,18 @@ export interface BoxConfig {
     /** Telegram chat id to send alerts to (the boxholder's DM chat). */
     telegramChat?: string;
   };
+}
+
+export type AgentEngine = "claude" | "codex";
+
+export class InvalidAgentEngineError extends Error {
+  readonly value: unknown;
+
+  constructor(value: unknown) {
+    super("Box config agentEngine must be either claude or codex");
+    this.name = "InvalidAgentEngineError";
+    this.value = value;
+  }
 }
 
 export type GoogleServiceName = "calendar" | "gmail" | "drive";
@@ -92,6 +106,15 @@ export async function loadBoxTimezone(boxRoot: string): Promise<string | null> {
     return null;
   }
   return timezone;
+}
+
+/** Load the selected native harness. Existing boxes default to Claude. */
+export async function loadAgentEngine(boxRoot: string): Promise<AgentEngine> {
+  const config = await loadBoxConfig(boxRoot);
+  const engine: unknown = config.agentEngine;
+  if (engine === undefined) return "claude";
+  if (engine === "claude" || engine === "codex") return engine;
+  throw new InvalidAgentEngineError(engine);
 }
 
 /**

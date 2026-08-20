@@ -81,4 +81,4 @@ recovery half of the same auth lifecycle that
 [web-password-change](2026-07-20-web-password-change.md) and
 [invite-links](2026-07-20-invite-links.md) opened; it feeds the
 identity/credentials section of the
-[agent-maintained security report](../../features/2026-07-20-agent-maintained-security-report.md).
+[agent-maintained security report](2026-07-20-agent-maintained-security-report.md).

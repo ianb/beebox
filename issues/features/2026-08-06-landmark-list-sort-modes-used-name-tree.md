@@ -4,6 +4,7 @@ workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder
+priority: normal
 ---
 
 > **Job to be done:** *When I open the place menu to jump to another landmark's

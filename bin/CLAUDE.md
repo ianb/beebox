@@ -4,6 +4,17 @@ Detail for the tooling in this directory (`router.ts`, `workstreams`,
 `process-cleanup.ts`, `browse`, `box-entry.ts`, `path-leak-check.ts`). The
 always-relevant summary lives in the root CLAUDE.md; this file is the mechanism.
 
+## Tests for `bin/` tooling
+
+New tests for root dev infrastructure use the repository's primary doctest
+format. Put them in `callback-box/test/dev/*.doctest.md`, importing the `bin/`
+module or invoking the CLI from there. Pure logic, temporary-filesystem tests,
+shell-script fixtures, and CLI behavior all fit doctests; `.test.ts` is not a
+separate integration tier. Existing `bin/*.test.ts` files predate this rule and
+are not precedent. Add a traditional test only when using a doctest would be
+circular (for example, testing the doctest harness itself), and document that
+exception in the file.
+
 ## Home-directory leak guard (`path-leak-check.ts`)
 
 `pnpm path-leak-check` fails if any tracked file contains a real personal home
@@ -72,6 +83,22 @@ hub then lazily spawns/idle-collects a `cb serve` child per box within
 that worktree, so boxes cold-start and idle-stop independently of the
 worktree they live in. `CB_DEV_NO_HUB=1` reverts to the router spawning
 a single legacy `server-main.ts` Fastify process per worktree instead.
+
+In a development checkout, `callback-box/bin/cb` stamps the exact CLI bundle
+artifact it execs. A hub-spawned `cb serve` child watches that identity; when a
+later build replaces it, the child stops admitting mutations, finishes active
+requests, chat turns, and scheduled-chat deliveries, then exits with the
+expected reload code. The hub supervisor respawns it without consuming the
+crash-loop budget. Schedule timers pause during the drain and re-arm from their
+persisted entries after replacement. A drain that cannot reach a safe boundary
+within ten minutes reopens mutations and keeps the loaded code, with a warning,
+rather than wedging the box read-only. The global scheduler uses the same
+identity but checks only
+between complete all-box passes; its launchd `KeepAlive` service performs the
+replacement. Packed installs and `CB_CLI_PREBUILT` production checkouts never
+opt into this dev behavior. A standalone foreground `cb serve`/scheduler has no
+safe owner to replace it and exits or remains visible rather than self-spawning
+an overlapping successor.
 
 `router.ts` holds the process-supervision/proxying machinery only; the
 `/<worktree>/dev/` HTML rendering (manifest, markdown doc browser, static
@@ -180,9 +207,18 @@ agent-browser daemons, the startup sweep also pattern-matches
 project-scoped orphans (`process-cleanup.ts`, shared with `panic`):
 vite/fastify orphaned to PID 1 (a live router — incl. an isolated test
 one — keeps its children, so they're spared) and agent-browsers whose
-worktree has no active `claude` session. The generation leak that made
+worktree has no live agent session. The generation leak that made
 this necessary (concurrent cold requests racing to spawn duplicate
 vite+fastify pairs) is fixed at the source in `ensureRunning`.
+
+That liveness answer comes from `bin/workstreams agent-liveness`, i.e. from
+`wt_other_agent_live` — the same tri-state guard everything else uses, so
+`unknown` spares the daemon and a codex session counts exactly as a claude one.
+`process-cleanup.ts` carried its own two-state copy until 2026-08-18; it knew
+only `claude --worktree <name>` argv plus `pgrep -x claude`, which meant it was
+blind to codex (now the default worker agent) and — per the pgrep note below —
+to most claude sessions too, and it reclaimed a live Codex worktree's browser
+mid-session.
 
 ## `bin/workstreams` is the agent-neutral control surface
 
@@ -207,6 +243,15 @@ wrong root means lifecycle operations on a checkout that isn't the one in play,
 which is silent when it happens. Override the basenames with
 `CALLBACK_WORKTREE_ROOT` / `CALLBACK_BOX_ROOT` / `CALLBACK_BOX_SRC`.
 
+**Post-merge dependency sync is checkout-local.** `.husky/post-merge` runs
+`bin/post-merge-install.sh` before deploy or extension rebuild work. When the
+merge changed `pnpm-lock.yaml`, it runs one root `pnpm install
+--frozen-lockfile` in the checkout whose hook fired. This applies to main and
+worktrees: either checkout can otherwise rebuild the externalized `cb` CLI
+against packages its old `node_modules` does not contain. Install failure does
+not suppress an eligible server deploy. The hook warns on stderr with the
+manual-install remedy; Git does not propagate a post-merge hook's exit status.
+
 **`bin/workstreams create` owns stdout.** Exactly one line — the worktree path —
 because Claude Code's WorktreeCreate contract requires it. This is enforced
 structurally (the command stashes real stdout on fd 3 and points fd 1 at stderr),
@@ -227,6 +272,10 @@ combination rather than answering wrongly.
 merged and dirty checks only. Unmerged commits are recoverable from a branch; a
 running session's working directory is not.
 
+The same rule reaches beyond worktree removal: `bin/process-cleanup.ts` asks
+through `bin/workstreams agent-liveness` and spares an agent-browser on
+`unknown`, including when the oracle itself can't be run.
+
 ## Lifecycle commands
 
 - `bin/workstreams list [--json]` — every worktree joined across all three
@@ -239,9 +288,16 @@ running session's working directory is not.
   `wt_other_agent_live` and not a second copy of it.
 - `bin/workstreams quotas --json` — normalized Claude and Codex account quota
   windows for the owner dashboard. Codex is read through its app-server
-  protocol. Claude is read from a passive status-line cache; run
-  `bin/workstreams setup-claude-quota` once after landing to install that
-  collector. It consumes no API tokens and updates after Claude responses.
+  protocol. Claude is read through the Agent SDK's experimental structured
+  usage control request. Claude results are cached for ten minutes and fetched
+  only when the dashboard or CLI requests quotas; this consumes no model turn
+  or API quota. Machines that installed the retired status-line collector can
+  remove its user setting with `bin/workstreams unset-claude-quota`; the command
+  refuses to touch an unrelated status line.
+- `bin/workstreams archive <name>` / `unarchive <name>` — set or clear a
+  presentation-only registry marker. Archiving does not close a session,
+  remove a worktree, change its branch, or affect sweep eligibility; it only
+  moves the row into the dashboard's archived section.
 - `bin/workstreams create <name> [--base-ref <ref>] [--box-ref <ref>]` — create
   or re-attach (idempotent); prints the path on stdout, logs on stderr. A
   recorded `keep/*` box ref restores the isolated test1 clone during a culled
@@ -262,10 +318,15 @@ running session's working directory is not.
   code is merged, clean, and no agent is live
 - `bin/workstreams status` — raw router status JSON (PIDs, ports, idle ms)
 - `bin/workstreams down <name>` — stop one worktree's processes now
+- `bin/workstreams agent-liveness <path>...` — tri-state claude/codex liveness
+  per absolute path, as JSON, from the one shared guard. Takes paths rather
+  than names so a caller with its own notion of where checkouts live needs no
+  agreement about roots. For tooling that stands in front of something
+  destructive; `process-cleanup.ts` is the caller.
 - `bin/workstreams panic` — kill router + all known children + wipe state,
   then reclaim project-scoped agent-browsers and any stray vite/fastify
   the pidfiles never tracked (use if you suspect orphans). Spares
-  processes owned by an active sibling `claude` session.
+  processes owned by a live sibling `claude` or `codex` session.
 
 Sweep treats an open issue whose `workstream:` matches and whose `needs:` still
 contains `manual-testing` as a cull pin. Once released or confirmed, an
@@ -273,11 +334,15 @@ unmerged `keep` branch in the workstream's test1 clone is pushed into the source
 test1 repository as `keep/<workstream>-<date>` before deletion; a failed push
 refuses the cull. The `test-setup` branch is the repeatable reset baseline.
 
-The authenticated top-level `/workstreams/` app exposes the joined status and
-safe POST actions, with `/workstreams/issues/`, `/workstreams/plans/`, and
-`/workstreams/testing/` beneath it. Router code ships dark from a worktree: the
-shared router sees these routes only after merge and a boxholder-run `pnpm dev`
-restart. Never restart that shared router from a worktree session.
+The authenticated top-level `/workstreams/` surface is a resident Fastify +
+Vite app in the top-level `workstreams-app/` package. The router authenticates,
+supervises, and proxies it; the app invokes the stable `bin/workstreams` CLI
+instead of reimplementing lifecycle guards. It exposes joined status and safe
+actions, with `/workstreams/issues/`, `/workstreams/plans/`, and
+`/workstreams/testing/` beneath it. App source changes landed in main reload the
+app child without restarting the router. Router or supervisor changes still
+require one boxholder-run `pnpm dev` restart after merge. Never restart the
+shared router from a worktree session.
 
 Isolated router testing: `CALLBACK_STATE_DIR` + `ROUTER_PORT` run a
 second router without touching the live one (which only picks up
@@ -292,26 +357,30 @@ the monorepo so the box doesn't inherit monorepo CLAUDE.md; basename
 stays `test1` so URL slugs match across worktrees and links like
 `/<wt>/test1/...` swap cleanly), runs `pnpm install` at every level, and
 generates the gitignored AGENTS.md mirrors (next section).
-On session exit with no changes the worktree is auto-removed and the
-`WorktreeRemove` hook deletes the cloned box and tells the router to stop
-the worktree's dev server. With uncommitted changes, Claude Code prompts
-to keep or remove.
+Direct native sessions retain Claude's own exit behavior. Managed sessions from
+`bin/launch-worktree-session` deliberately do not pass `--worktree`: they call
+`bin/workstreams create`, change into the resulting checkout, and let the
+repository's SessionEnd hook plus later sweeps own cleanup. This avoids asking
+the boxholder to keep or remove a worktree when the registry can safely retain
+it and cull it later.
 
 ## Codex worktree sessions
 
 `bin/launch-worktree-session --agent codex` spins up an OpenAI Codex CLI
-session in a fresh worktree the same way the default claude path does. Codex
-has no `--worktree`, so the launcher's generated launch script calls
-`bin/workstreams create <name>` directly (worktree path on stdout; idempotent — a
-relaunch re-attaches) — the same command Claude Code reaches through its hook
-adapter, so both agents get identical setup — then execs `codex` in
+session in a fresh worktree the same way the default Claude path does. Both
+generated launch scripts call `bin/workstreams create <name>` directly
+(worktree path on stdout; idempotent — a relaunch re-attaches), so both agents
+get identical setup. The Codex path then execs `codex` in
 the worktree with full access (`-s danger-full-access -a never`) — parity with
 claude workers, which run unsandboxed via `--dangerously-skip-permissions` (a
 `workspace-write` sandbox can't commit/`/finish` in a linked worktree, since codex
 force-mounts `.git` read-only). Launch-scoped `-c` overrides pre-trust the worktree
 and raise `project_doc_max_bytes`; nothing is persisted to `~/.codex/config.toml`.
-`--model` maps to `codex -m` (OpenAI model names). Remote Control is claude-only
-and ignored for codex.
+`--model` maps to `codex -m` (OpenAI model names). When it is omitted, the
+launcher explicitly uses `gpt-5.6-sol` rather than inheriting Codex CLI state;
+this keeps a stale or unavailable saved default from breaking the first turn.
+An explicit model still wins, including the model recorded for a resumed
+workstream. Remote Control is claude-only and ignored for codex.
 
 Codex's `workspace-write` sandbox confines **writes** (workspace + the `--add-dir`
 roots) and network, but **reads are global** — verified empirically 2026-08-04: a
@@ -394,10 +463,10 @@ process belongs to the worktree. `session-end.sh` passes
 hook (that one is the session that's ending); `bin/codex-session-end` does not,
 because codex has already exited by the time it runs — there is no self to
 exclude, and not excluding one is the conservative answer for a hand-run.
-It checks the same two signals sweep
-does — `claude --worktree <name>` in argv, and process cwd inside the worktree —
-because a session launched by `bin/launch-worktree-session` runs claude from the
-main checkout, so cwd alone misses it. It **fails closed**: if `ps` or `lsof`
+It checks the same two signals sweep does — `claude --worktree <name>` for
+direct native sessions or the managed `claude --name <name>` marker in argv,
+plus process cwd inside the worktree for managed Claude and Codex sessions. It
+**fails closed**: if `ps` or `lsof`
 can't answer, it skips the cleanup, since a lingering worktree is collected by
 the next sweep and a deleted one is gone. Without this, a nested headless
 `claude -p` — what the `cross-model` skill runs for its Codex→Claude review —

@@ -182,7 +182,7 @@ remainingAutomaticTrackingBudget({
 => 2
 ```
 
-## Gmail rules are validated and legacy queries become bounded
+## Gmail rules are validated and the shorthand becomes bounded
 
 No configuration means no rule can create a card.
 
@@ -212,22 +212,72 @@ JSON.stringify(config.rules)
 => [{"name":"send-to-agent","query":"label:callback-box","action":{"type":"track","budget":{"threads":10,"windowMs":1209600000}}},{"name":"review-inbox","query":"label:inbox is:unread","action":{"type":"procedure","ref":"config/procedures/review-email.procedure.card"}}]
 ```
 
-A legacy label configuration keeps its intentional routing behavior, but it
-immediately gains the default 25-thread rolling seven-day budget.
+The `labels`/`query` shorthand expands to one rule carrying its own action, and
+a `track` action gains the default 25-thread rolling seven-day budget.
 
 ```ts
-const legacy = parseGmailConnectorConfig({ labels: ["callback"] });
-legacy.legacy
-=> true
+const shorthand = parseGmailConnectorConfig({
+  labels: ["callback"],
+  action: { type: "track" },
+});
+shorthand.rules[0]?.name
+=> shorthand
 
-legacy.rules[0]?.name
-=> legacy-import
-
-legacy.rules[0]?.query
+shorthand.rules[0]?.query
 => label:callback
 
-JSON.stringify(legacy.rules[0]?.action)
+JSON.stringify(shorthand.rules[0]?.action)
 => {"type":"track","budget":{"threads":25,"windowMs":604800000}}
+```
+
+`stage` is the third action: record the match and do nothing else.
+
+```ts
+const staged = parseGmailConnectorConfig({
+  labels: ["callback"],
+  action: { type: "stage" },
+});
+JSON.stringify(staged.rules)
+=> [{"name":"shorthand","query":"label:callback","action":{"type":"stage"}}]
+```
+
+The shorthand can route to a procedure instead, which creates no cards.
+
+```ts
+const routed = parseGmailConnectorConfig({
+  query: "label:inbox is:unread",
+  action: { type: "procedure", ref: "config/procedures/review-email.procedure.card" },
+});
+JSON.stringify(routed.rules)
+=> [{"name":"shorthand","query":"label:inbox is:unread","action":{"type":"procedure","ref":"config/procedures/review-email.procedure.card"}}]
+```
+
+The action is required, never implied. A shorthand without one is an error
+rather than a silent `track` — the whole point, since tracking creates cards.
+
+```ts
+parseGmailConnectorConfig({ labels: ["callback"] })
+=> throws MissingGmailActionError
+```
+
+An action with nothing to match is equally an error, so a stray action cannot
+sit in a config doing nothing.
+
+`query` and `labels` are two spellings of the same shorthand. Setting both is an
+error rather than a precedence rule, because the losing one would sit in the
+file looking effective while matching nothing.
+
+```ts
+parseGmailConnectorConfig({ query: "is:unread", labels: ["a"], action: { type: "track" } })
+=> throws AmbiguousGmailShorthandError
+```
+
+```ts
+parseGmailConnectorConfig({ action: { type: "track" } })
+=> throws StrayGmailActionError
+
+parseGmailConnectorConfig({ rules: [{ name: "a", query: "label:x", action: { type: "track" } }], action: { type: "track" } })
+=> throws StrayGmailActionError
 ```
 
 Invalid actions and duplicate rule names fail at the config boundary.
@@ -326,7 +376,7 @@ const gmail = createFakeGoogleGmail({
     { ...gmailMessage({ id: "old", threadId: "old-thread", subject: "Old", body: "Old" }), labelIds: ["Label_7"] },
   ],
 });
-const config = parseGmailConnectorConfig({ labels: ["callback"] });
+const config = parseGmailConnectorConfig({ labels: ["callback"], action: { type: "track" } });
 const baseline = await evaluateGmailRules({
   service: gmail,
   config,
@@ -339,10 +389,10 @@ const baseline = await evaluateGmailRules({
 baseline.trackRequests.length
 => 0
 
-baseline.state.rules?.["legacy-import"]?.additionalMatches
+baseline.state.rules?.["shorthand"]?.additionalMatches
 => undefined
 
-baseline.state.rules?.["legacy-import"]?.baselineMatches
+baseline.state.rules?.["shorthand"]?.baselineMatches
 => 1
 ```
 
@@ -362,9 +412,9 @@ const selected = await evaluateGmailRules({
   now: new Date("2026-08-05T13:00:00.000Z"),
 });
 JSON.stringify(selected.trackRequests)
-=> [{"threadId":"new-thread","ruleName":"legacy-import"}]
+=> [{"threadId":"new-thread","ruleName":"shorthand"}]
 
-selected.state.rules?.["legacy-import"]?.automaticTrackingEvents?.length
+selected.state.rules?.["shorthand"]?.automaticTrackingEvents?.length
 => 1
 ```
 
@@ -433,6 +483,48 @@ JSON.stringify(procedureResult.procedures)
 => [{"procedureRef":"config/procedures/review-mail.procedure.card","directive":"Gmail rule review-mail has new matching mail. Inspect with: cb connector gmail pending review-mail"}]
 
 procedureResult.state.rules?.["review-mail"]?.pending?.length
+=> 1
+```
+
+A `stage` rule records the same summary and stops there: no card is requested
+and nothing is woken. That is the state a rule sits in while its procedure is
+still being written.
+
+```ts continue
+const stageConfig = parseGmailConnectorConfig({
+  rules: [{ name: "watch-mail", query: "label:callback", action: { type: "stage" } }],
+});
+const stageResult = await evaluateGmailRules({
+  service: gmail,
+  config: stageConfig,
+  state: { rules: { "watch-mail": { baselineAt: "2026-08-01T00:00:00.000Z" } } },
+  candidates: [fresh],
+  trackedThreadIds: new Set(),
+  labelMap: new Map([["Label_7", "callback"]]),
+  now: new Date("2026-08-05T13:00:00.000Z"),
+});
+JSON.stringify({ tracked: stageResult.trackRequests.length, procedures: stageResult.procedures.length })
+=> {"tracked":0,"procedures":0}
+
+stageResult.state.rules?.["watch-mail"]?.pending?.length
+=> 1
+```
+
+New mail on a thread the box already holds is still staged. `stage` records
+whatever the eventual procedure would have seen — skipping tracked threads
+(as `track` does) would drop that mail from the backlog for good.
+
+```ts continue
+const alreadyTracked = await evaluateGmailRules({
+  service: gmail,
+  config: stageConfig,
+  state: { rules: { "watch-mail": { baselineAt: "2026-08-01T00:00:00.000Z" } } },
+  candidates: [fresh],
+  trackedThreadIds: new Set([fresh.threadId]),
+  labelMap: new Map([["Label_7", "callback"]]),
+  now: new Date("2026-08-05T13:00:00.000Z"),
+});
+alreadyTracked.state.rules?.["watch-mail"]?.pending?.length ?? 0
 => 1
 ```
 

@@ -9,6 +9,28 @@ enum SpeechKeywordAction: String, Codable, Sendable {
     case erase
 }
 
+extension SpeechKeywordAction {
+    /// Whether accepting this action may publish the held keyword tag
+    /// substitution into the composer draft.
+    ///
+    /// The substitution replaces the spoken command words with a control tag
+    /// (`<mic-off phrase="Mic off" />`). That tag is message content once it is
+    /// in the draft, so only an action that immediately hands the draft off as
+    /// a message may commit it. Everything else discards the hold and keeps the
+    /// pre-keyword transcript: mic-off leaves the composer standing, so a
+    /// committed tag would sit there as text the user can later send, and
+    /// cancel/erase clear the draft moments later anyway — discarding is what
+    /// they mean.
+    var commitsKeywordSubstitution: Bool {
+        switch self {
+        case .send, .sendHq, .sendClose:
+            return true
+        case .cancel, .micOff, .erase:
+            return false
+        }
+    }
+}
+
 struct SpeechKeywordResult: Equatable {
     var action: SpeechKeywordAction
     var processedTranscript: String
@@ -20,6 +42,10 @@ private struct InputWord {
     var original: String
     var leading: String
     var trailing: String
+    /// True when the word sits inside a keyword tag this app wrote earlier
+    /// (`<erase-message phrase="Clear message" />`). Such words are reproduced
+    /// verbatim but may never take part in a match — see `keywordTagPattern`.
+    var isProtected: Bool = false
 }
 
 private struct InputMatch {
@@ -69,6 +95,10 @@ private struct InputMatch {
 /// `callback-box/test/frontend/lib/speech-keywords.doctest.md`. The Swift app
 /// owns native dictation, but the persisted chat text is still read by the same
 /// box-side prompt/display code as web voice input, so drift here is user-visible.
+///
+/// One deliberate divergence: this port refuses to match inside an existing
+/// keyword tag (`isProtected`), so its own output can never be re-consumed as
+/// input. Vocabulary and tag shape are unchanged; only nesting is bounded.
 enum SpeechKeywords {
     private static let sendHqPatterns = [
         ["clean", "up", "and", "send"],
@@ -192,6 +222,13 @@ enum SpeechKeywords {
                     continue
                 }
                 let candidates = Array(rest.prefix(pattern.count))
+                // A tag's own words ("erase-message", and the phrase it quotes)
+                // read as the very command that produced them. Matching them
+                // would substitute inside the previous substitution, so each
+                // repeat would nest a tag inside a tag.
+                if candidates.contains(where: \.isProtected) {
+                    continue
+                }
                 if zip(pattern, candidates).allSatisfy({ wordsEqual($0.1.normalized, normalize($0.0)) }) {
                     return InputMatch(
                         leading: Array(words[..<startIndex]),
@@ -238,6 +275,22 @@ enum SpeechKeywords {
         return false
     }
 
+    /// Matches a markup tag, which for this input means a keyword tag this app
+    /// already wrote. The whole tag — name, attribute, quoted phrase — is
+    /// off-limits to matching. Deliberately loose (any `<name …>`): the point is
+    /// to fence off text the app generated, not to validate it. A phrase
+    /// containing `>` would end the fence early; dictation does not produce
+    /// angle brackets, and `keywordTag` escapes `&` and `"` already.
+    private static let keywordTagPattern = #"<\s*/?\s*[A-Za-z][^<>]*>"#
+
+    private static func protectedRanges(in text: String) -> [NSRange] {
+        guard let regex = try? NSRegularExpression(pattern: keywordTagPattern) else {
+            return []
+        }
+        let nsText = text as NSString
+        return regex.matches(in: text, range: NSRange(location: 0, length: nsText.length)).map(\.range)
+    }
+
     private static func tokenize(_ text: String) -> [InputWord] {
         let nsText = text as NSString
         guard let regex = try? NSRegularExpression(pattern: #"[\p{L}\p{N}]+(?:'[\p{L}\p{N}]+)?"#) else {
@@ -247,13 +300,20 @@ enum SpeechKeywords {
         guard matches.isEmpty == false else {
             return []
         }
+        let fenced = protectedRanges(in: text)
         var words: [InputWord] = []
         var cursor = 0
         for match in matches {
             let leading = nsText.substring(with: NSRange(location: cursor, length: match.range.location - cursor))
             let original = nsText.substring(with: match.range)
             cursor = match.range.location + match.range.length
-            words.append(InputWord(normalized: normalize(original), original: original, leading: leading, trailing: ""))
+            words.append(InputWord(
+                normalized: normalize(original),
+                original: original,
+                leading: leading,
+                trailing: "",
+                isProtected: fenced.contains { NSIntersectionRange($0, match.range).length > 0 }
+            ))
         }
         for index in words.indices {
             let nextStart = index == words.index(before: words.endIndex)

@@ -14,11 +14,14 @@ import { getLocalUser } from "../local-users.js";
 import { AuthStoreUnavailableError } from "../local-users-errors.js";
 import { resolveMobileRequestAuth } from "../../core/mobile/request-auth.js";
 import { resolveSessionLogPath } from "../../core/chat/session/history.js";
+import { resolveChatEngine } from "../../core/chat/session/engine.js";
+import { loadSessionHistory } from "../../core/chat/session/load-history.js";
 import {
   SUPPORTED_IMAGE_MEDIA_TYPES,
   isSupportedImageMediaType,
 } from "../../services/claude-chat-content.js";
 import { isActivityKind, type ActivityKind, type CardStateDetails } from "../../core/chat/card-activity.js";
+import type { ChatSendInput } from "../../core/chat/session/index.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { readJpegOrientation, ORIENTATION_NORMAL } from "../../shared/image-orientation.js";
 
@@ -148,6 +151,27 @@ export function extractCardFields(
   return out;
 }
 
+/**
+ * Assemble the turn input both send paths hand the session — the queued copy
+ * and the one dispatched to the engine differ only in their text, so the
+ * optional-field filtering lives here once rather than at each call site.
+ */
+export function buildSendInput(
+  { text, images, channel, cardFields }: {
+    text: string;
+    images: SendBody["images"];
+    channel: string | undefined;
+    cardFields: { openCard?: string; cardActivity?: ActivityKind[]; cardState?: CardStateDetails };
+  },
+): ChatSendInput {
+  return {
+    text,
+    ...(images ? { images } : {}),
+    ...(channel !== undefined ? { channel } : {}),
+    ...cardFields,
+  };
+}
+
 export function escapeXmlAttr(v: string): string {
   return v
     .replace(/&/g, "&amp;")
@@ -272,6 +296,13 @@ export async function readSessionLogTail(
   sessionId: string,
 ): Promise<string> {
   try {
+    if (await resolveChatEngine(boxRoot, sessionId) === "codex") {
+      const { entries } = await loadSessionHistory(boxRoot, {
+        sessionId,
+        slice: { mode: "tail", tail: 100 },
+      });
+      return JSON.stringify(entries);
+    }
     const logPath = await resolveSessionLogPath(boxRoot, sessionId);
     const handle = await fs.open(logPath, "r");
     try {

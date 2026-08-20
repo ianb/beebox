@@ -5,6 +5,7 @@ needs: [design]
 filed-by: agent
 discovered-in: main session — boxholder wants a shareable demo video an agent can keep current
 area: callback-box
+priority: backlog
 ---
 
 Produce a **shareable video of interacting with the app** — for demo/marketing —
@@ -76,6 +77,11 @@ narrative* + a *determinism decision*.
   never a real box — a hard guard, given the app renders whatever box is running.
 - Cadence/trigger: on-demand, on UI-affecting merges, or scheduled.
 - How far to take Tier B here vs. deferring the polish to a separate item.
+
+Prior art to evaluate before building the capture layer:
+[proving-it-works](../exploration/2026-08-14-proving-it-works-demo-video-plugin.md)
+— a Claude Code plugin that records narrated demos and verifies them
+mechanically.
 
 Related surfaces: `docs/tours.md`, `test/tours/tour-lib/`, `bin/tour`,
 `src/scenario/`, `src/lib/time.ts`, agent-browser (`get cdp-url`). A concrete build

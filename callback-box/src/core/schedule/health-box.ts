@@ -25,6 +25,7 @@ import { checkMissingConnectors } from "../../connectors/requirements.js";
 import { loadScriptState } from "./state.js";
 import { evaluateTaskHealth, type TaskHealth } from "./health.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { boxEngineUnavailability, engineWaitReason } from "./engine-wait.js";
 
 const HEARTBEAT_FILE = ".callback-box/scheduler-heartbeat";
 const HEARTBEAT_STALE_MS = 5 * 60 * 1000;
@@ -39,6 +40,9 @@ export interface SchedulerHeartbeat {
 export interface BoxScheduleHealth {
   tasks: TaskHealth[];
   scheduler: SchedulerHeartbeat;
+  /** The waiting phrase when the box's engine is unavailable
+   * (quota-exhausted), else null. Box-level: one fact, not per-task. */
+  engineWait: string | null;
 }
 
 /** Record that the scheduler daemon is alive for this box. */
@@ -80,6 +84,8 @@ export async function checkSchedulerHeartbeat(
  */
 export async function loadScheduleHealth(boxRoot: string, now: Date): Promise<BoxScheduleHealth> {
   const scheduler = await checkSchedulerHeartbeat(boxRoot, now);
+  const engineUnavailable = await boxEngineUnavailability(boxRoot);
+  const engineWait = engineUnavailable === null ? null : engineWaitReason(engineUnavailable);
   const schedulesDir = path.join(boxRoot, "config/schedules");
   let files: string[];
   try {
@@ -88,7 +94,7 @@ export async function loadScheduleHealth(boxRoot: string, now: Date): Promise<Bo
     if (errnoCode(e) !== "ENOENT") {
       console.warn(`Could not read schedules directory ${schedulesDir}:`, e);
     }
-    return { tasks: [], scheduler };
+    return { tasks: [], scheduler, engineWait };
   }
 
   const tasks: TaskHealth[] = [];
@@ -105,7 +111,10 @@ export async function loadScheduleHealth(boxRoot: string, now: Date): Promise<Bo
       const missingConnectors = parsed.requires
         ? await checkMissingConnectors(boxRoot, parsed.requires)
         : [];
-      tasks.push(evaluateTaskHealth({ name, parsed, state, now, cardMtime, missingConnectors }));
+      tasks.push(evaluateTaskHealth({
+        name, parsed, state, now, cardMtime, missingConnectors,
+        engineWaitReason: engineWait ?? undefined,
+      }));
     } catch (err) {
       tasks.push({
         name,
@@ -121,7 +130,7 @@ export async function loadScheduleHealth(boxRoot: string, now: Date): Promise<Bo
       });
     }
   }
-  return { tasks, scheduler };
+  return { tasks, scheduler, engineWait };
 }
 
 /** Short duration for summaries: 45m, 26h, 3d. */
@@ -153,6 +162,9 @@ export function describeUnhealthyTask(task: TaskHealth, now: Date): string {
  */
 export function summarizeScheduleHealth(health: BoxScheduleHealth, now: Date): string | null {
   const parts: string[] = [];
+  if (health.engineWait !== null) {
+    parts.push(health.engineWait);
+  }
   if (health.scheduler.status === "stale") {
     parts.push(
       `scheduler not running (last tick ${formatDurationShort(health.scheduler.ageMs ?? 0)} ago)`,

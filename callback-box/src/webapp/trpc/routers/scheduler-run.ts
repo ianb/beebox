@@ -11,9 +11,9 @@ import {
 } from "../../../core/schedule/state.js";
 import { execWithTimeout, SCRIPT_TIMEOUT } from "../../../lib/exec-with-timeout.js";
 import { fallbackTiming, handleCreateAfterSuccess } from "../../../cli/commands/tick-utils.js";
-import { buildScriptEnv } from "../../../core/script-env.js";
+import { buildToolingScriptEnv } from "../../../core/script-env.js";
 import { checkMissingConnectors } from "../../../connectors/requirements.js";
-import { errorMessage } from "../../../lib/error-guards.js";
+import { classifyScheduleFailure } from "../../../core/schedule/engine-wait.js";
 
 type ParsedScript = ReturnType<typeof parseScheduledScript>;
 
@@ -84,7 +84,8 @@ export async function runScheduledScript(options: RunOptions): Promise<{ success
   });
 
   try {
-    const scriptEnv = await buildScriptEnv(boxRoot, {
+    // Tooling profile: same scheduled scripts as the `cb tick` path.
+    const scriptEnv = await buildToolingScriptEnv(boxRoot, {
       CB_TRIGGERED_BY: "webapp-trigger",
     });
     const { durationMs, sleepAffected } = await execWithTimeout(parsed.runs, {
@@ -105,15 +106,19 @@ export async function runScheduledScript(options: RunOptions): Promise<{ success
     return { success: true, durationMs };
   } catch (err) {
     const { durationMs, sleepAffected } = fallbackTiming(err);
+    // A manual run bypasses the engine-wait skip gate (the human asked), but
+    // the outcome still classifies: an engine-unavailable failure must not
+    // count against the task.
+    const outcome = await classifyScheduleFailure({ boxRoot, runStartedAt: now, error: err });
     recordOutcome(state, {
-      result: "failure", error: errorMessage(err), durationMs, sleepAffected,
+      result: outcome.result, error: outcome.error, durationMs, sleepAffected,
       windowMs: parsed.budget?.windowMs ?? DEFAULT_RUN_WINDOW_MS, now,
     });
     await saveScriptState({ boxRoot, scriptName: name, state });
 
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
-      message: errorMessage(err),
+      message: outcome.error,
     });
   } finally {
     await releaseScriptLock({ boxRoot, scriptName: name });

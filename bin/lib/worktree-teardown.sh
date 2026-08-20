@@ -34,6 +34,8 @@
 . "$(dirname "${BASH_SOURCE[0]}")/worktree-paths.sh"
 # shellcheck source=session-registry.sh
 . "$(dirname "${BASH_SOURCE[0]}")/session-registry.sh"
+# shellcheck source=exhibits-store.sh
+. "$(dirname "${BASH_SOURCE[0]}")/exhibits-store.sh"
 if ! wt_paths_init "$(dirname "${BASH_SOURCE[0]}")/.."; then
   # Leave every derived location empty rather than half-set: `cd ""` and
   # `[ -d "" ]` both fail, so each destructive step declines on its own.
@@ -93,11 +95,9 @@ wt_say() { printf '%s%s\n' "${WT_SAY_PREFIX:-  }" "$*"; }
 # by hand from inside a live session.
 #
 # Two independent liveness signals, mirroring sweep:
-#   1. argv — `claude --worktree <name>`. Required because a session launched by
-#      bin/launch-worktree-session runs claude from the MAIN checkout, so its
-#      process cwd is main, not the worktree.
-#   2. process cwd — resumed claude sessions and all codex sessions carry no
-#      --worktree argv, but their cwd is inside the worktree.
+#   1. argv — `claude --worktree <name>` for direct native sessions, or
+#      `claude --name <name>` for managed sessions.
+#   2. process cwd — an independent signal for managed claude/codex sessions.
 #
 # NOT `pgrep -x claude`: pgrep matches the 16-char accounting name (`ps ucomm`),
 # and a native-installed Claude Code reports that as its VERSION ("2.1.221"),
@@ -211,7 +211,7 @@ wt_other_agent_live() {
     while IFS= read -r snap_line; do
       [ -n "$snap_line" ] || continue
       case "$snap_line" in
-        *"claude --worktree $wt_name "*|*"claude --worktree $wt_name")
+        *"claude --worktree $wt_name "*|*"claude --worktree $wt_name"|*"claude --name $wt_name "*|*"claude --name $wt_name")
           WT_AGENT_STATE="live"
           WT_AGENT_REASON="signal=argv pid=${snap_line%% *}"
           return 0 ;;
@@ -268,7 +268,7 @@ EOF
   for pid in $other_pids; do
     pargs=$(ps -o command= -p "$pid" 2>/dev/null || true)
     case "$pargs" in
-      *"claude --worktree $wt_name "*|*"claude --worktree $wt_name")
+      *"claude --worktree $wt_name "*|*"claude --worktree $wt_name"|*"claude --name $wt_name "*|*"claude --name $wt_name")
         WT_AGENT_STATE="live"
         WT_AGENT_REASON="signal=argv pid=$pid"
         return 0 ;;
@@ -479,16 +479,33 @@ wt_remove_now() {
   fi
 
   wt_remove_private_issues "$worktree_path"
+
+  # Exhibits: the mount is a symlink, so the trash-mv below only ever takes
+  # the link. A REAL directory here means the mount failed and something
+  # wrote exhibit content into the doomed tree — rescue it into the store
+  # first, and refuse the removal if the rescue fails (a lingering worktree
+  # is collected by the next sweep; trashed exhibit content is gone).
+  if [ -d "$worktree_path/exhibits" ] && [ ! -L "$worktree_path/exhibits" ]; then
+    if ! wt_exhibits_rescue "$worktree_path" "$name"; then
+      wt_say "refusing removal: real exhibits/ dir could not be rescued into the store"
+      wt_log "exhibits rescue failed wt=$worktree_path"
+      return 1
+    fi
+  fi
+
   wt_remove_satellites "$name"
 
   # Move out of the worktree dir before removing it.
   cd "$WT_MONO" || return 0
 
   # Trash the worktree directory, then prune the now-dangling registration.
-  if mv "$worktree_path" "$WT_TRASH/wt-$name-$(date +%s)" 2>/dev/null; then
-    wt_say "trashed worktree $worktree_path"
-    moved=true
+  if ! mv "$worktree_path" "$WT_TRASH/wt-$name-$(date +%s)"; then
+    wt_say "refusing branch cleanup: failed to trash worktree $worktree_path"
+    wt_log "trash failed wt=$worktree_path branch=$branch"
+    return 1
   fi
+  wt_say "trashed worktree $worktree_path"
+  moved=true
   git worktree prune 2>/dev/null || true
 
   if [ -n "$keep_branch" ]; then

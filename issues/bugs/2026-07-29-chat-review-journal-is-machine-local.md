@@ -4,6 +4,7 @@ workstream: compacting
 area: callback-box
 filed-by: agent
 discovered-in: worktree-compacting — checking prod retention after shipping chat review
+priority: backlog
 ---
 
 [Chat review](../../callback-box/docs/chat-review.md) keeps two pieces of state

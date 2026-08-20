@@ -4,6 +4,7 @@ workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder asked for it
+priority: normal
 ---
 
 When the deployed server updates while a client (web tab or iOS webview) is

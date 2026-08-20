@@ -1,3 +1,7 @@
+import { createHash } from "node:crypto";
+import { mkdir } from "node:fs/promises";
+import { join } from "node:path";
+
 /**
  * Must match `BROWSE_KEY_COOKIE` in `callback-box/src/core/browse-key.ts`.
  * Restated rather than imported: `browse/` has no dependency on callback-box
@@ -168,6 +172,37 @@ export function authCookieArgs(url: string, ctx: WorktreeContext): string[] {
     "--sameSite", "Strict",
     "--expires", String(expires),
   ];
+}
+
+/**
+ * The Chrome profile directory a named `--session` gets, created if absent.
+ *
+ * Chrome holds an exclusive `SingletonLock` on a profile and aborts rather
+ * than open one another instance owns, so sessions must not share a profile
+ * dir or only one can be live at a time. Sibling of the default session's
+ * profile inside `bin/browse`'s per-worktree base, so worktree teardown still
+ * removes every profile in one sweep.
+ *
+ * The name is sanitized, not merely validated: it becomes a path segment, and
+ * `--session ../../x` must not escape the base. Sanitizing alone would be
+ * lossy enough to break the very isolation this exists for — `a/b` and `a-b`
+ * both reduce to `a-b`, and two sessions sharing a profile is exactly the
+ * SingletonLock collision — so a name that had to be rewritten also carries a
+ * digest of the original, which makes the mapping one-to-one again.
+ */
+export async function sessionProfileDir(name: string): Promise<string> {
+  const base = process.env["BROWSE_PROFILE_BASE"];
+  if (base === undefined || base === "") {
+    throw new BrowseConfigError("BROWSE_PROFILE_BASE is not set. Invoke via bin/browse, not directly.");
+  }
+  const safe = name.replace(/[^\w.-]+/g, "-").replace(/^[.-]+|[.-]+$/g, "");
+  if (safe === "") {
+    throw new BrowseConfigError(`--session name has no usable characters for a profile directory: ${name}`);
+  }
+  const segment = safe === name ? name : `${safe}-${createHash("sha256").update(name).digest("hex").slice(0, 8)}`;
+  const dir = join(base, "profiles", segment);
+  await mkdir(dir, { recursive: true });
+  return dir;
 }
 
 export class BrowseConfigError extends Error {

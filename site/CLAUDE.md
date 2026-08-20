@@ -4,8 +4,8 @@ The generated public front-door site for callback-box. A spare static site
 built from `site/content/*.md` to gitignored `site/dist/`, deployed to GitHub
 Pages and viewable on the dev router at `/<worktree>/site/`.
 
-- Principles (settled with the boxholder): `issues/features/2026-07-20-github-pages-site.md`
-- Full plan / tracks: `../callback-box/docs/plans/github-pages-site.md`
+- Principles (settled with the boxholder): `issues/features/2026-07-20-public-site.md`
+- Full plan / tracks: `../callback-box/docs/plans/public-site.md`
 
 ## Hard constraint: static output only
 
@@ -59,9 +59,9 @@ writes the input manifest last (so a partial build never masks staleness).
 - `build.ts` — CLI entry: reads content, writes HTML + `.md` twins + `llms.txt`,
   link-checks, resolves the base path.
 - `render.ts` — the local Markdoc pipeline + strict (zod) frontmatter parse +
-  the HTML shell. Deliberately does NOT import `bin/router-docs.ts` (that drags
-  in execa/highlight.js and a router-issues cycle); this package declares
-  `@markdoc/markdoc` itself.
+  the HTML shell. Deliberately does NOT import `bin/router-docs.ts`, whose
+  router/runtime dependencies do not belong in the static-site build; this
+  package declares `@markdoc/markdoc` itself.
 - `links.ts` — base-path handling and internal-link resolution.
 - `sources.ts` — the single definition of the input source set + content-hash
   manifest, shared by `build.ts` (writes `dist/.inputs.json`) and
@@ -71,7 +71,7 @@ writes the input manifest last (so a partial build never masks staleness).
 - `story/ingest.ts` — story-extraction ingest CLI (`pnpm --dir site ingest`,
   `--help`): validates raw extraction JSON (strict zod), verifies every span
   appears verbatim in its source (fabrication = hard error), and writes the
-  review app's run files into `dev/story-eval/runs/<run>/` with `docText`
+  review app's run files into `dev/apps/story-eval/runs/<run>/` with `docText`
   embedded. See the story-extraction subplan, Track B.
 - `story/coverage.ts` — coverage-ledger CLI (`pnpm --dir site coverage`,
   `--check`): scans the (gitignored) run dirs and regenerates the tracked

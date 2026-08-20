@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder using chat + a document on a phone
 labels: [soft-launch]
+priority: important
 ---
 
 The desktop chat/companion layout is side-by-side: transcript on one side, the

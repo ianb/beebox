@@ -45,7 +45,7 @@ Several **judgment-heavy periodic tasks have no scheduled runner** and rely on
 human memory, with inconsistent (or no) reporting:
 
 - **SECURITY.md regeneration** — designed with git-rev-anchored, diff-driven
-  updates ([agent-maintained-security-report](../features/2026-07-20-agent-maintained-security-report.md)),
+  updates ([agent-maintained-security-report](../closed/features/2026-07-20-agent-maintained-security-report.md)),
   but no cadence home decides *when* it re-runs or where.
 - **Knowledge-audit revisit** — `pnpm knowledge-audit` exists and the doc says
   "monthly is probably enough," but **nothing runs it on a cadence** — it waits
@@ -55,6 +55,29 @@ human memory, with inconsistent (or no) reporting:
   adjudication) and the prompt-report/prompt-viewer drift catchers.
 - **Feedback collection** — [feedback-collection-cadence](2026-07-14-feedback-collection-cadence.md)
   ("items rot before review").
+- **Codex — nothing at all** (added 2026-08-15). Grep the repo: Codex appears
+  in neither `docs/maintenance.md` nor this issue, and no version of it is
+  pinned anywhere. The Anthropic side has a daily monitor, a filtered ledger
+  (`docs/agent-sdk-notes.md`), and auto-bump after a settling window; the OpenAI
+  side has none of those. The boxholder's ask is explicit: **whatever we do for
+  Claude Code and the Agent SDK — update, notes, cadence — we need the same for
+  Codex.**
+
+  The asymmetry has stopped being cosmetic. Codex is now the default agent for
+  worker sessions and is being trialled as a box engine, so an unwatched Codex
+  is unwatched infrastructure. The concrete cost showed up the same day this
+  was written: a Codex update landed mid-session, took down a live worktree
+  agent with no warning, and — because the branch was merged and clean — the
+  exit hook then garbage-collected the whole worktree. A release monitor would
+  not have prevented the update, but it would have made it a known event rather
+  than a mystery.
+
+  Two things make Codex *harder* than the SDK case, and the design should say
+  so rather than assuming symmetry: it is a CLI installed outside this repo's
+  lockfile (so "pin and bump" has no obvious lever the way a package dependency
+  does), and its release notes are not in the same place or format the SDK
+  monitor already parses. Worth checking whether the existing monitor generalizes
+  or whether this is a second job that merely reports the same way.
 
 And reporting/issue-raising is a grab-bag across the tasks that *do* run: a ledger
 doc, a log + notification, in-place status comments, or plain console.
@@ -89,7 +112,7 @@ and standardize report + issue-raising across all of them.
 
 ## Related
 
-- [agent-maintained-security-report](../features/2026-07-20-agent-maintained-security-report.md)
+- [agent-maintained-security-report](../closed/features/2026-07-20-agent-maintained-security-report.md)
   — the SECURITY.md regen that needs a cadence home; its git-rev-anchored update
   model is one concrete task this framework would schedule.
 - [doc-refresh-cadence](2026-07-04-doc-refresh-cadence.md),

@@ -545,6 +545,44 @@ if [[ "$SKIP_RESTART" != true ]]; then
   echo "Waiting for boxes to be at rest (best-effort)..."
   ssh "root@$SERVER_IP" 'test -x /usr/local/bin/cb-wait-quiet && /usr/local/bin/cb-wait-quiet || echo "  (cb-wait-quiet not installed; re-run setup-server.sh to enable)"'
 
+  # Converge each box onto the code that just shipped, in the at-rest window —
+  # after cb-wait-quiet, before the restart brings box children back up. A box
+  # whose migrations are current prints nothing; anything else prints one line
+  # and the deploy continues. This never fails the deploy: a box that needs a
+  # human (dirty tree, agent-driven migration, hard failure) is a box to look
+  # at, not a reason to abandon a shipped release. `cb migrate --sweep` owns the
+  # policy — see src/core/migration-sweep.ts.
+  echo "Applying pending box migrations..."
+  ssh "root@$SERVER_IP" bash -s <<'REMOTE'
+    for boxdir in /home/callback/boxes/*/; do
+      name=$(basename "$boxdir")
+      box="$boxdir/content"
+      # A box with no content/ is not a v2 package. Say so rather than skipping
+      # in silence — an unmigratable box is exactly what this step exists to
+      # surface, and `cb migrate` treats a manifest-less box as a human decision.
+      if [[ ! -d "$box" ]]; then
+        echo "  $name: no content/ — not a v2 box, skipped"
+        continue
+      fi
+      # The path is passed as an ARGUMENT to `bash -lc`, never interpolated into
+      # the shell source it runs: a box directory name containing a quote would
+      # otherwise break — or escape — that string.
+      # `timeout` sits directly around `cb`, inside the login shell, because
+      # this runs BEFORE the restart and health verification: a migrator that
+      # hangs would wedge the whole deploy in the at-rest window rather than
+      # just failing one box.
+      out=$(sudo -u callback -H bash -lc \
+              'set -a; source /home/callback/.env 2>/dev/null; set +a; cd "$1" && timeout 600 cb migrate --sweep' \
+              cb-sweep "$box" 2>&1)
+      code=$?
+      [[ $code -eq 124 ]] && out="${out}"$'\n'"timed out after 600s — migrations left pending, retried next deploy"
+      [[ -n "$out" ]] && echo "$out" | sed "s/^/  $name: /"
+    done
+    # Always succeed: `set -euo pipefail` in the outer script would otherwise
+    # abandon a shipped release because one box wants a human.
+    exit 0
+REMOTE
+
   echo "Restarting services..."
   ssh "root@$SERVER_IP" 'systemctl restart callback-hub callback-scheduler && echo "Services restarted"'
 
@@ -656,6 +694,18 @@ HEALTHCHECK
 fi
 
 echo "Deploy complete."
+# Truthful "what is actually live" marker, written ONLY here — past the upload,
+# the restart, and the health verification. Nothing else in this script is a
+# safe proxy: `.deploy-last-sha` is written right after `pnpm install` (it is a
+# node_modules cache key, not a success record), so a run that dies during the
+# build or the upload leaves it claiming a sha that never shipped.
+#
+# Why it exists: a deploy killed outright (OOM, terminal closed) never runs the
+# EXIT trap, so it prints no "Deploy failed", sends no notification, and leaves
+# main silently undeployed — observed 2026-08-10, caught only because someone
+# happened to ask. `bin/doctor.ts` compares this against main's HEAD so the
+# gap becomes visible instead of waiting for the next question.
+echo "$SHA" > "$SCRIPT_DIR/.last-deployed-sha"
 # Show what shipped (hash + commit subject) rather than the — frankly boring —
 # server IP. Both vars are computed above for deploy-info.json.
 notify "✅ callback-box deployed" "$CALLBACK_BOX_HASH $CALLBACK_BOX_SUBJECT"

@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder chose this after Echo Show research
 needs: [design]
+priority: normal
 ---
 
 The buildable feature that came out of the

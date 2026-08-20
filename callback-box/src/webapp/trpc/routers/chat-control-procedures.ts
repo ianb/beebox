@@ -10,7 +10,10 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { ownerProcedure, publicProcedure } from "../trpc.js";
 import { getChatRuntime, type ChatRuntime } from "../../chat-runtime.js";
-import { loadPersistedChatModel } from "../../../core/chat/session/state.js";
+import { chatModelFileForSession, loadCurrentModelForEngine } from "../../../core/chat/session/state.js";
+import { resolveChatEngine } from "../../../core/chat/session/engine.js";
+import type { AgentEngine } from "../../../core/box/config.js";
+import { chatModelForEngine, isChatModelAllowed } from "../../../shared/chat-models.js";
 import { deleteChatSession, ChatSessionNotFoundError, SessionStorageContextMismatchError } from "../../../core/chat/session/delete.js";
 import { sdkSessionIdSchema } from "../../../core/chat/session/session-id.js";
 import { SessionDeletingError } from "../../../core/chat/session/registry.js";
@@ -33,6 +36,7 @@ export interface ChatSessionStatus {
   running: boolean;
   busy: boolean;
   model: string | null;
+  engine: AgentEngine;
 }
 
 /**
@@ -41,26 +45,34 @@ export interface ChatSessionStatus {
  * so an idle-evicted session still reports its pinned model. Shared by
  * `chat.status` and `chat.bootstrap`.
  */
-export function readSessionStatus(boxRoot: string, sessionId: string | null): ChatSessionStatus {
+export async function readSessionStatus(boxRoot: string, sessionId: string | null): Promise<ChatSessionStatus> {
   const { registry } = requireRuntime(boxRoot);
-  const persistedModel = loadPersistedChatModel(boxRoot);
+  const engine = await resolveChatEngine(boxRoot, sessionId);
   if (!sessionId) {
     return {
       sessionId: null,
       running: false,
       busy: false,
-      model: persistedModel,
+      model: null,
+      engine,
     };
   }
   const target = registry.get(sessionId);
   if (!target) {
-    return { sessionId, running: false, busy: false, model: persistedModel };
+    return {
+      sessionId,
+      running: false,
+      busy: false,
+      model: loadCurrentModelForEngine(boxRoot, { modelFile: chatModelFileForSession(sessionId), engine }),
+      engine,
+    };
   }
   return {
     sessionId: target.getSessionId(),
     running: target.isRunning(),
     busy: target.isBusy(),
-    model: target.getCurrentModel(),
+    model: chatModelForEngine(engine, target.getCurrentModel()),
+    engine,
   };
 }
 
@@ -136,7 +148,14 @@ export const chatControlProcedures = {
   // Change a session's active model. getOrCreate re-registers an evicted session
   // rather than 404'ing; the live subprocess is restarted so the next turn picks
   // up the new model (a live `set_model` control request isn't honored).
-  setModel: publicProcedure.input(z.object({ session: z.string().min(1), model: z.string().nullable() })).mutation(({ input, ctx }) => {
+  setModel: publicProcedure.input(z.object({ session: z.string().min(1), model: z.string().nullable() })).mutation(async ({ input, ctx }) => {
+    const engine = await resolveChatEngine(ctx.boxRoot, input.session);
+    if (!isChatModelAllowed(engine, input.model)) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: `Model ${input.model ?? "default"} is unavailable for ${engine} chats`,
+      });
+    }
     const { registry, wireSession } = requireRuntime(ctx.boxRoot);
     const target = registry.getOrCreate(input.session);
     wireSession(target);

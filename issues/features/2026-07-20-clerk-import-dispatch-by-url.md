@@ -7,6 +7,15 @@ filed-by: agent
 discovered-in: main session — boxholder proposed reframing the clerk's primary action
 ---
 
+> **Checked 2026-08-14 — not started.** Tagged `fixed`; the tag was wrong and
+> is removed. Nothing here is implemented: `extractDriveFileId`, the named
+> foundation hook, does not exist anywhere in the tree (`git log -S` finds no
+> commit that ever added it), `clerk.ts:35-98` still calls `writeWebpageCard`
+> unconditionally for every URL with no branching on document type, and
+> `callback-clerk/src/` has no dispatch, import, or handler-registry concept.
+> `callback-clerk/` commits since the filing date touch tab arrangement and UI
+> only. The `needs: [design]` questions below are all still open.
+
 The clerk's main action today is essentially **"capture this web page"**: freeze
 the DOM, render readable markdown, write a `webpage` card
 (`callback-box/src/webapp/trpc/routers/clerk.ts`, extension side in

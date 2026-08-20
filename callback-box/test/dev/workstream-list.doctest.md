@@ -51,7 +51,7 @@ await writeFile(join(stateDir, "workstreams/culled.json"), JSON.stringify({
 
 const rows = await list(stateDir, worktreeRoot, true);
 JSON.stringify(rows[0])
-=> {"name":"culled","branch":"worktree-culled","path":null,"box":null,"url":null,"git":null,"runtime":{"state":"absent"},"agent":{"state":"none","reason":"no-worktree"},"session":{"agent":"claude","hasSession":true,"tty":null,"emoji":"🧵","baseSha":null,"removed":{"at":"2026-08-09T00:00:00Z","finalSha":"abc","merged":true}},"boxState":{"testSetup":false,"keepUnmerged":false,"pristine":null}}
+=> {"name":"culled","branch":"worktree-culled","path":null,"box":null,"url":null,"git":null,"runtime":{"state":"absent"},"agent":{"state":"none","reason":"no-worktree"},"session":{"agent":"claude","hasSession":true,"tty":null,"emoji":"🧵","baseSha":null,"removed":{"at":"2026-08-09T00:00:00Z","finalSha":"abc","merged":true},"archived":null},"boxState":{"testSetup":false,"keepUnmerged":false,"pristine":null}}
 ```
 
 ```ts cleanup

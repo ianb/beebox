@@ -25,6 +25,16 @@ Key behaviors:
 - **Error isolation** — One box failing doesn't affect others
 - **Sleep recovery** — If the computer sleeps through a scheduled window, scripts fire on the next tick after wake (cron evaluation checks if the last scheduled time is after the last run)
 - **Auto-restart** — launchd `KeepAlive: true` restarts the daemon if it crashes
+- **Engine unavailability (deferred-recoverable)** — When the box's agent
+  engine is out of quota, the failure is recognized from the provider's
+  message and recorded in a machine-level store
+  (`~/.local/share/cb/engine-availability.json`). Due scripts then *skip*
+  with `waiting on <provider> quota until <t>` instead of burning attempts
+  (`--force` overrides), a run that failed because of the episode records a
+  `deferred` outcome that neither increments nor resets
+  `consecutiveFailures`, and `cb health` shows `waiting`, not `failing`.
+  The boxholder is notified once per episode with the reset time. Design:
+  `docs/plans/deferred-recoverable-agent-failures.md`.
 
 ## Configuration
 

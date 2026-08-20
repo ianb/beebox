@@ -3,7 +3,7 @@ title: "The /workstreams/ app and disposable sessions"
 status: implemented
 workstream: workstreams
 issues:
-  - ../../../issues/features/2026-08-08-worktree-session-workflow-redesign.md
+  - ../../../issues/closed/features/2026-08-08-worktree-session-workflow-redesign.md
   - ../../../issues/decisions/2026-07-29-manual-testing-flag-overuse.md
 ---
 
@@ -20,7 +20,7 @@ checkout currently attached to it. See Vocabulary lock-ins.)
 
 **Issues addressed:**
 
-- [worktree/session workflow redesign](../../../issues/features/2026-08-08-worktree-session-workflow-redesign.md)
+- [worktree/session workflow redesign](../../../issues/closed/features/2026-08-08-worktree-session-workflow-redesign.md)
   — the primary item; this plan is the workflow change its enabling refactor
   ([the worktree control surface](../plans/worktree-control-surface.md)) deferred.
 - [plans need frontmatter and issue mapping](../../../issues/closed/docs-and-chores/2026-08-08-plan-lifecycle-frontmatter-and-issue-mapping.md)
@@ -140,7 +140,11 @@ session — a valid, non-revoked cookie for `getOwnerEmail()`,
 `bin/router-auth-deps.ts:85-90`) and `control` (owner session + CSRF via
 Sec-Fetch-Site/Origin, `bin/router-auth.ts:331-343`) — `/__router/stop` and
 `/retry` are the mutating-POST precedent. All `/dev/` content is served with
-`Content-Security-Policy: sandbox` (`bin/router-docs.ts:859`) — no JS. The
+`Content-Security-Policy: sandbox` (`bin/router-docs.ts:859`) — no JS.
+*(Update 2026-08-19: that sandbox CSP was later removed — it broke images and
+scripts in ordinary dev pages; see the decision comment in
+`bin/router-docs.ts` `serveDev`. `/dev/` pages are now explicitly inside the
+Track D "same-origin worktree frontends" acceptance below.)* The
 issues browser is server-rendered HTML with `<a href>` facets and no client
 JS (`bin/router-issues.ts:768-959`), mounted inside `serveDev`
 (`bin/router-docs.ts:898-905`) but always reading main's issues. The router
@@ -596,7 +600,10 @@ style-src 'unsafe-inline'` to start; no scripts needed).
   boxholder, 2026-08-09**: the router is only ever exposed on localhost or
   the owner's tailnet, both trusted-device surfaces; the acceptance covers
   every `/workstreams/action/*` verb including `confirm-tested`'s
-  commit-to-main.
+  commit-to-main. *(Extended 2026-08-19: `/dev/` pages are in the same
+  scope — their sandbox CSP was removed, so agent-authored dev artifacts run
+  same-origin JS exactly like worktree frontends do. Same rationale, same
+  escalation path.)*
 - **The workstream detail page — `/workstreams/<name>/` — is the
   integration hub.** Everything about a workstream joins here (boxholder
   requirement: issues and plans fully integrated): registry + git + runtime

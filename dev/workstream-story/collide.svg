@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 200" font-family="-apple-system, 'Segoe UI', sans-serif">
+  <!-- main checkout -->
+  <rect x="270" y="55" width="180" height="90" rx="10" fill="#fff7ed" stroke="#d97706" stroke-width="2"/>
+  <text x="360" y="90" text-anchor="middle" font-size="16" font-weight="600" fill="#1f2933">main checkout</text>
+  <text x="360" y="112" text-anchor="middle" font-size="12" fill="#6b7280">one branch, one dir</text>
+
+  <!-- agents -->
+  <g font-size="14" fill="#1f2933">
+    <text x="60" y="40">🤖 agent A</text>
+    <text x="60" y="105">🤖 agent B</text>
+    <text x="60" y="170">🤖 agent C</text>
+  </g>
+
+  <!-- arrows -->
+  <g stroke="#2563eb" stroke-width="2" fill="none" marker-end="url(#arr)">
+    <path d="M150 36 C 210 40, 230 60, 266 72"/>
+    <path d="M150 100 L 266 100"/>
+    <path d="M150 166 C 210 162, 230 140, 266 128"/>
+  </g>
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0 0 L8 4 L0 8 z" fill="#2563eb"/>
+    </marker>
+  </defs>
+
+  <!-- collision burst -->
+  <g transform="translate(272,100)">
+    <path d="M0 -18 L5 -6 L18 -8 L9 2 L15 14 L2 8 L-6 18 L-7 5 L-19 3 L-9 -5 L-14 -16 L-3 -9 Z"
+          fill="#dc2626" opacity="0.85" transform="translate(0,0) scale(1.1)"/>
+  </g>
+  <text x="490" y="80" font-size="13" fill="#dc2626" font-weight="600">"whose edit is this?"</text>
+  <text x="490" y="100" font-size="13" fill="#dc2626" font-weight="600">"why is the test box weird?"</text>
+  <text x="490" y="120" font-size="13" fill="#dc2626" font-weight="600">"who restarted the server?"</text>
+</svg>

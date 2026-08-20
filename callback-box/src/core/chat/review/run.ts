@@ -29,6 +29,7 @@ import { contentHash } from "../../../lib/content-hash.js";
 import { resolveTitleOwner } from "./husk-write.js";
 import { loadReviewState, MAX_REVIEW_ATTEMPTS, METADATA_CONSUMER, saveReviewState, sessionState, type ReviewState } from "./state.js";
 import { LockHeldError, withChatReviewLock } from "./lock.js";
+import { readCodexSessionUpdatedAt } from "../session/codex-transcript.js";
 
 export interface RunOptions {
   reviewer: ChatReviewer;
@@ -113,7 +114,9 @@ async function reviewOne(
   // than summarize a conversation back in progress.
   let mtime: Date;
   try {
-    mtime = (await fs.stat(session.logPath)).mtime;
+    mtime = session.engine === "codex"
+      ? await readCodexSessionUpdatedAt(boxRoot, session.sessionId)
+      : (await fs.stat(session.logPath)).mtime;
   } catch (e) {
     if (errnoCode(e) !== "ENOENT") throw e;
     summary.missingTranscripts += 1;
@@ -134,6 +137,7 @@ async function reviewOne(
     sessionId: session.sessionId,
     logPath: session.logPath,
     state,
+    ...(session.engine === "codex" ? { boxRoot } : {}),
   });
   if (transcript === null) {
     // Vanished between discovery and now. Nothing to fold in; the husk stands.

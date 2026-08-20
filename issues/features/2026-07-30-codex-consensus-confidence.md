@@ -4,6 +4,7 @@ workstream: elixir-skills-review
 area: callback-box
 filed-by: agent
 discovered-in: worktree-elixir-skills-review — reviewing claude-elixir-phoenix
+next-action: discuss
 ---
 
 `.claude/skills/cross-model/` runs a cross-model review as a standalone manual pass.

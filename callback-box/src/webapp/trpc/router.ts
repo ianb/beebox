@@ -25,6 +25,8 @@ import { pairingRouter } from "./routers/pairing.js";
 import { captureRouter } from "./routers/capture.js";
 import { scanTokensRouter } from "./routers/scan-tokens.js";
 import { shareRouter } from "./routers/share.js";
+import { inventoryRouter } from "./routers/inventory.js";
+import { secretsRouter } from "./routers/secrets.js";
 
 export const appRouter = router({
   history: historyRouter,
@@ -53,6 +55,8 @@ export const appRouter = router({
   capture: captureRouter,
   scanTokens: scanTokensRouter,
   share: shareRouter,
+  inventory: inventoryRouter,
+  secrets: secretsRouter,
 });
 
 export type AppRouter = typeof appRouter;

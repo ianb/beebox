@@ -14,6 +14,7 @@ export const EMPTY_FILTER: HistoryFilterState = {
   touchpoint: false,
   feedback: false,
   session: null,
+  path: null,
 };
 
 /** The History page's URL search-param shape. */
@@ -23,6 +24,7 @@ export interface HistorySearch {
   touchpoint?: boolean;
   feedback?: boolean;
   session?: string;
+  path?: string;
 }
 
 export function searchToFilter(search: HistorySearch): HistoryFilterState {
@@ -32,6 +34,7 @@ export function searchToFilter(search: HistorySearch): HistoryFilterState {
     touchpoint: search.touchpoint ?? false,
     feedback: search.feedback ?? false,
     session: search.session ?? null,
+    path: search.path ?? null,
   };
 }
 
@@ -42,6 +45,7 @@ export function filterToSearch(filter: HistoryFilterState): HistorySearch {
   if (filter.touchpoint) search.touchpoint = true;
   if (filter.feedback) search.feedback = true;
   if (filter.session !== null) search.session = filter.session;
+  if (filter.path !== null) search.path = filter.path;
   return search;
 }
 
@@ -53,6 +57,7 @@ export function paramsToFilter(params: HistoryViewParams): HistoryFilterState {
     touchpoint: params.touchpoint ?? false,
     feedback: params.feedback ?? false,
     session: params.session ?? null,
+    path: null,
   };
 }
 
@@ -64,5 +69,6 @@ export function describeFilter(filter: HistoryFilterState): string {
   if (filter.touchpoint) parts.push("touchpoint");
   if (filter.feedback) parts.push("feedback");
   if (filter.session !== null) parts.push(`session: ${filter.session.slice(0, 8)}`);
+  if (filter.path !== null) parts.push(`path: ${filter.path}`);
   return parts.length > 0 ? parts.join(" · ") : "all commits";
 }

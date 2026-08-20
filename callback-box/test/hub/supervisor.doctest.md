@@ -139,7 +139,14 @@ const config = {
   boxes: { fixture: { path: fixture.root } },
   configPath: fixture.path("hub.json"),
 };
-const supervisor = new Supervisor({ config, hubSecret: "test-hub-secret", spawnChild, checkReady });
+// A long backoff, because this section is about what the readiness-timeout
+// path RECORDS, not about the retry itself. At the production 1s base, the
+// scheduled retry fires while the assertions below are still running whenever
+// anything here takes a second (a slow `makeTmpBox`, a loaded machine) — it
+// relaunches, readiness rejects again, and `restarts` becomes 2 under a test
+// that never asked about the second attempt. That is a live timer racing the
+// assertions, and it is what made this file flake in the full parallel suite.
+const supervisor = new Supervisor({ config, hubSecret: "test-hub-secret", spawnChild, checkReady, baseBackoffMs: 600_000 });
 await supervisor.startAll();
 ```
 
@@ -168,6 +175,41 @@ JSON.stringify({ status: afterExit.status, restarts: afterExit.restarts })
 ```ts cleanup
 await supervisor.stopAll();
 await fixture.cleanup();
+```
+
+## A development reload exit restarts cleanly without consuming crash budget
+
+```ts continue
+const reloadFixture = await makeTmpBox();
+const reloadChildren = [];
+function reloadSpawnChild() {
+  const child = makeFakeChild(905000 + reloadChildren.length);
+  reloadChildren.push(child);
+  return child;
+}
+const reloadConfig = {
+  port: undefined,
+  host: undefined,
+  boxes: { fixture: { path: reloadFixture.root } },
+  configPath: reloadFixture.path("hub.json"),
+};
+const reloadSupervisor = new Supervisor({
+  config: reloadConfig,
+  hubSecret: "test-hub-secret",
+  spawnChild: reloadSpawnChild,
+  checkReady: () => Promise.resolve(),
+});
+await reloadSupervisor.startAll();
+reloadChildren[0].fireExit(75, null);
+await new Promise((resolve) => setTimeout(resolve, 20));
+const reloadStatus = reloadSupervisor.getStatuses()[0];
+JSON.stringify({ status: reloadStatus.status, pid: reloadStatus.pid, restarts: reloadStatus.restarts, failures: reloadStatus.consecutiveFailures })
+=> {"status":"running","pid":905001,"restarts":1,"failures":0}
+```
+
+```ts cleanup
+await reloadSupervisor.stopAll();
+await reloadFixture.cleanup();
 ```
 
 ## Lazy mode: `startAll` spawns nothing, `ensureRunning` cold-starts on first call, idle collection returns it to "stopped"

@@ -7,6 +7,11 @@ Key files:
   build checkout (`<main-repo-root>/.deploy-checkout`, a detached git worktree)
   and rsyncs FROM there — never from anyone's working tree. `--ref <ref>`
   selects the commit (default HEAD); concurrent runs collapse latest-wins.
+- `add-box.sh` — add a box to the live server: clone, `cb init`, access +
+  secrets, register with the hub (`cb hub add-box` → `hub.json`) and the
+  scheduler (`cb boxes add` → `boxes.json`), restart both units, then canary
+  the new slug. Preflight-validates the slug before it clones; `--dry-run`
+  prints the plan without touching anything.
 - `create-server.sh` — provision a Hetzner box
 - `setup-server.sh` — install software, create `callback` user, clone repos
 - `server-ip` — target server IP (not committed)

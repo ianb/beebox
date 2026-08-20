@@ -4,25 +4,27 @@
 # user message; the agent reads it as context but does NOT auto-implement.
 #
 # Usage:
-#   launch-worktree-session [--agent claude|codex] [--model <model>] <worktree-name> "<prompt text>"
+#   launch-worktree-session [--agent claude|codex] [--model <model>] [--issue issues/<path>.md] <worktree-name> "<prompt text>"
 #   launch-worktree-session [--model <model>] <worktree-name> -      # prompt from stdin
 #   launch-worktree-session [--model <model>] <worktree-name> @<file># prompt from a file
+#   launch-worktree-session --help
 #
 # --model passes `claude --model <model>` (e.g. claude-fable-5, opus, sonnet) —
-# or `codex -m <model>` (e.g. gpt-5.5) with --agent codex — so a worktree can
-# be spun up on a specific model; omit to use the agent's default.
+# or `codex -m <model>` with --agent codex — so a worktree can be spun up on a
+# specific model. Omitted Claude models use Claude's default; omitted Codex
+# models use gpt-5.6-sol.
 #
-# --emoji 🐛 prefixes the SESSION name (and so the Terminal tab title) with a
-# glyph, so a wall of tabs is scannable at a glance. Omit it and one is derived
+# --emoji 🐛 prefixes the Terminal tab title with a glyph, so a wall of tabs is
+# scannable at a glance. Omit it and one is derived
 # from the worktree name — deterministic, so the same worktree always gets the
 # same glyph. The emoji never reaches disk: the worktree dir, branch, router URL
 # prefix, and the argv the sweep's liveness check matches all use the plain
 # `[a-zA-Z0-9_-]+` name. Prefer passing one that fits the task over the derived
 # fallback, which is arbitrary.
 #
-# --agent codex runs OpenAI's codex CLI instead of claude. Codex has no
-# --worktree, so this path calls `bin/workstreams create` directly (same
-# worktree + box clone + installs; it also generates the gitignored
+# --agent codex runs OpenAI's codex CLI instead of claude. Both paths call
+# `bin/workstreams create` directly (same worktree + box clone + installs; it
+# also generates the gitignored
 # AGENTS.md/rule/skill mirrors Codex reads — bin/generate-agents-md.ts), then
 # runs codex in the worktree with full access/no-approvals (parity with claude
 # workers, which run unsandboxed). Codex is run, not exec'd, because it fires no
@@ -43,8 +45,10 @@
 #   launch-worktree-session explore-foo @briefing.md
 #
 # Notes:
-# - Mirrors the existing `cccb` bash function: cd into the monorepo and pass
-#   --worktree/--name/--dangerously-skip-permissions. Adds the initial prompt.
+# - Creates or reattaches through `bin/workstreams create`, cd's into the
+#   managed checkout, and passes --name/--dangerously-skip-permissions. It does
+#   not pass Claude's native --worktree flag: repository hooks and sweep own
+#   cleanup, so Claude must not show its separate keep/remove dialog on exit.
 # - First AppleScript invocation will prompt for Accessibility permission for
 #   Terminal control; macOS only asks once.
 
@@ -61,14 +65,27 @@ model=""
 remote_control=1
 agent="claude"
 emoji=""
+issue=""
+
+# `--help` prints this file's own header comment — the usage block, the flag
+# explanations, and the examples are already written there, and a second copy
+# in a heredoc would be the one that goes stale. Reads from the line after the
+# shebang to the first line that isn't a comment, stripping the `# ` prefix.
+usage() {
+  sed -n '2,${/^#/!q;s/^# \{0,1\}//;p;}' "${BASH_SOURCE[0]}"
+}
+
 while [ $# -ge 1 ]; do
   case "$1" in
+    --help|-h) usage; exit 0 ;;
     --model)   [ $# -ge 2 ] || { echo "launch-worktree-session: --model needs a value" >&2; exit 1; }; model="$2"; shift 2 ;;
     --model=*) model="${1#--model=}"; shift ;;
     --agent)   [ $# -ge 2 ] || { echo "launch-worktree-session: --agent needs a value" >&2; exit 1; }; agent="$2"; shift 2 ;;
     --agent=*) agent="${1#--agent=}"; shift ;;
     --emoji)   [ $# -ge 2 ] || { echo "launch-worktree-session: --emoji needs a value" >&2; exit 1; }; emoji="$2"; shift 2 ;;
     --emoji=*) emoji="${1#--emoji=}"; shift ;;
+    --issue)   [ $# -ge 2 ] || { echo "launch-worktree-session: --issue needs a value" >&2; exit 1; }; issue="$2"; shift 2 ;;
+    --issue=*) issue="${1#--issue=}"; shift ;;
     --no-remote-control) remote_control=0; shift ;;
     --remote-control)    remote_control=1; shift ;;
     *)         break ;;
@@ -81,7 +98,8 @@ case "$agent" in
 esac
 
 if [ $# -lt 1 ]; then
-  echo "Usage: launch-worktree-session [--agent claude|codex] [--model <model>] [--emoji <char>] [--no-remote-control] <worktree-name> [<prompt> | - | @<file>]" >&2
+  echo "Usage: launch-worktree-session [--agent claude|codex] [--model <model>] [--emoji <char>] [--issue <path>] [--no-remote-control] <worktree-name> [<prompt> | - | @<file>]" >&2
+  echo "       launch-worktree-session --help   # full documentation" >&2
   exit 1
 fi
 
@@ -92,12 +110,18 @@ if ! [[ "$wt" =~ ^[a-zA-Z0-9_-]+$ ]]; then
   exit 1
 fi
 
+if [ -n "$issue" ] && ! [[ "$issue" =~ ^(issues|private-issues)/(closed/)?(bugs|features|code-quality|docs-and-chores|decisions|exploration|watch)/[a-zA-Z0-9_-]+\.md$ ]]; then
+  echo "launch-worktree-session: --issue must be a repo-relative issue markdown path, got: $issue" >&2
+  exit 1
+fi
+
 # Session display name: an emoji plus the worktree name. The emoji exists purely
 # so a wall of Terminal tabs is scannable — several concurrent sessions with
 # similar slugs are hard to tell apart at a glance, and a glyph reads faster
-# than a prefix. It goes ONLY into the agent's session name (and thus the tab
-# title); `$wt` stays `[a-zA-Z0-9_-]+` and is what every path, branch, router
-# URL prefix, and liveness check uses. Nothing on disk ever sees the emoji.
+# than a prefix. It goes into the Terminal title and registry presentation;
+# Claude's `--name` remains the plain workstream name as a durable liveness
+# marker. `$wt` stays `[a-zA-Z0-9_-]+` and is what every path, branch, router
+# URL prefix, and liveness check uses.
 #
 # `--emoji 🐛` sets it explicitly — prefer that, chosen for the task at hand.
 # Otherwise derive one from the name: deterministic, so relaunching the same
@@ -122,7 +146,7 @@ fi
 # Self-locate the monorepo from this script's own REAL path (bin/ lives at the
 # repo root; the ~/.local/bin install is a symlink, so follow it first),
 # falling back to the historical location. A worktree checkout resolves to the
-# MAIN checkout via git-common-dir so `claude --worktree` runs there.
+# MAIN checkout via git-common-dir so creation always uses the shared owner.
 self="${BASH_SOURCE[0]}"
 while [ -L "$self" ]; do
   target=$(readlink "$self")
@@ -145,6 +169,9 @@ MONO="$WT_MONO"
 if [ ! -x "$MONO/bin/launch-worktree-session" ]; then
   echo "launch-worktree-session: resolved monorepo $MONO has no bin/launch-worktree-session" >&2
   exit 1
+fi
+if [ -n "$issue" ]; then
+  node --import tsx "$MONO/bin/assign-issue-workstream.ts" --check "$MONO/$issue" "$wt"
 fi
 
 # Stash the prompt in a tempfile so the launcher script can splat it back as
@@ -187,6 +214,8 @@ LS_REMOTE_CONTROL="$remote_control"
 LS_PROMPT_FILE="$prompt_file"
 LS_EMOJI="$emoji"
 LS_LAUNCH_DIR="$launch_dir"
+LS_ISSUE="$issue"
+LS_WORKTREE_PATH=""
 launch_session_build
 result=$(launch_session_open)
 

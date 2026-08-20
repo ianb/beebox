@@ -26,10 +26,16 @@ import type {
 } from "../../core/schedule/state.js";
 import { execWithTimeout, SCRIPT_TIMEOUT } from "../../lib/exec-with-timeout.js";
 import { fallbackTiming, handleCreateAfterSuccess } from "./tick-utils.js";
-import { stageAll, commit, getStatus } from "../../lib/git.js";
-import { buildScriptEnv } from "../../core/script-env.js";
+import { stageAll, commit, getStatus, withBoxGitLock } from "../../lib/git.js";
+import { buildToolingScriptEnv } from "../../core/script-env.js";
 import type { TickOptions, ScriptResult } from "./tick.js";
-import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { errnoCode } from "../../lib/error-guards.js";
+import {
+  boxEngineUnavailability,
+  classifyScheduleFailure,
+  engineWaitReason,
+} from "../../core/schedule/engine-wait.js";
+import { getBoxTime } from "../../lib/time.js";
 
 type RunningScripts = Awaited<ReturnType<typeof loadRunningScripts>>;
 type ScriptState = Awaited<ReturnType<typeof loadScriptState>>;
@@ -120,6 +126,17 @@ export async function evaluateSkip(ctx: SkipContext): Promise<string | null> {
     return "";
   }
 
+  // Engine unavailable (e.g. quota-exhausted): running would burn an attempt
+  // that cannot succeed. `lastRun` stays untouched, so the script remains due
+  // and runs on the first tick after the reset. `--force` bypasses this like
+  // the other schedule gates.
+  if (!options.force) {
+    const engineWait = await boxEngineUnavailability(boxRoot);
+    if (engineWait !== null) {
+      return options.quiet ? "" : `  Skipping ${scriptName}: ${engineWaitReason(engineWait)}`;
+    }
+  }
+
   if (parsed.requires) {
     const missing = await checkMissingConnectors(boxRoot, parsed.requires);
     if (missing.length > 0) {
@@ -192,8 +209,14 @@ async function handlePostSuccess(args: PostSuccessArgs): Promise<void> {
   // bypasses the at-rest gate for chat blockers) and also closes the race
   // where a chat starts during a long script run. Deferred changes sit
   // uncommitted until the next at-rest tick sweeps them.
-  const postStatus = await getStatus(boxRoot);
-  if (!postStatus.clean) {
+  // One locked span from the status read through the commit: the read decides
+  // whether to sweep, and stageAll sweeps the WHOLE tree, so another writer
+  // landing in between would either be swept into this commit or make the
+  // decision stale.
+  await withBoxGitLock(boxRoot, async () => {
+    const postStatus = await getStatus(boxRoot);
+    if (postStatus.clean) return;
+
     const activeChats = await loadActiveChats(boxRoot);
     if (activeChats.size > 0) {
       if (!options.quiet) {
@@ -209,7 +232,7 @@ async function handlePostSuccess(args: PostSuccessArgs): Promise<void> {
       message: `Tick: ${parts.join(", ") || "housekeeping"}`,
       trailers: { "Triggered-By": "cb tick" },
     });
-  }
+  });
 }
 
 interface ExecuteScriptArgs {
@@ -241,8 +264,14 @@ export async function executeScript(args: ExecuteScriptArgs): Promise<ScriptResu
   }
   await acquireScriptLock({ boxRoot, scriptName, triggeredBy: "schedule", ...(parsed.lockGroup ? { lockGroup: parsed.lockGroup } : {}) });
   const windowMs = parsed.budget?.windowMs ?? DEFAULT_RUN_WINDOW_MS;
+  // This script's own span, not the tick's — the deferred classification must
+  // not attribute an unavailability detected by an EARLIER script in this
+  // tick to this script's unrelated failure.
+  const scriptStartedAt = getBoxTime(boxRoot);
   try {
-    const scriptEnv = await buildScriptEnv(boxRoot, {
+    // Tooling profile: scheduled `runs:` commands are box tooling (mostly
+    // `cb wakeup`, which syncs the connectors).
+    const scriptEnv = await buildToolingScriptEnv(boxRoot, {
       CB_TRIGGERED_BY: "schedule",
     });
     const { durationMs, sleepAffected } = await execWithTimeout(parsed.runs, {
@@ -260,10 +289,13 @@ export async function executeScript(args: ExecuteScriptArgs): Promise<ScriptResu
     return { name: scriptName, status: "ran", command: parsed.runs, durationMs };
   } catch (err) {
     const { durationMs, sleepAffected } = fallbackTiming(err);
-    recordOutcome(state, { result: "failure", error: errorMessage(err), durationMs, sleepAffected, windowMs, now });
+    const outcome = await classifyScheduleFailure({ boxRoot, runStartedAt: scriptStartedAt, error: err });
+    recordOutcome(state, { result: outcome.result, error: outcome.error, durationMs, sleepAffected, windowMs, now });
     await saveScriptState({ boxRoot, scriptName, state });
-    if (!options.quiet) console.error(`  Failed: ${errorMessage(err)}`);
-    return { name: scriptName, status: "error", command: parsed.runs, durationMs, error: errorMessage(err) };
+    if (!options.quiet) {
+      console.error(`  ${outcome.result === "deferred" ? "Deferred" : "Failed"}: ${outcome.error}`);
+    }
+    return { name: scriptName, status: "error", command: parsed.runs, durationMs, error: outcome.error };
   } finally {
     await releaseScriptLock({ boxRoot, scriptName });
   }

@@ -68,8 +68,7 @@ dev/prompts/data.json
 # committed (promoted nuggets in site/, rubric/prompt revisions, distilled
 # learnings folded into the subplan). The app + prompts + ingest tool stay
 # tracked as real code.
-dev/story-eval/runs/
-dev/story-eval/verdicts/
+dev/apps/story-eval/runs/
 
 # OpenGrep SARIF/JSON scan output
 .opengrep-out/
@@ -77,3 +76,7 @@ dev/story-eval/verdicts/
 # Private-issues shadow-repo mount (a SYMLINK in every checkout — no trailing
 # slash: dir-only patterns do not match symlinks). See issues/CLAUDE.md.
 /private-issues
+
+# Exhibit-store mount (same symlink rule — bin/lib/exhibits-store.sh; design
+# in callback-box/docs/plans/workstream-exhibits.md).
+/exhibits

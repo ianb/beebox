@@ -213,6 +213,12 @@ export async function evaluateGmailRules(opts: {
     invariant(first !== undefined, "a candidate thread has at least one message");
     for (const rule of activeRules) {
       let ruleState = stateForRule(state, rule.name);
+      // Only `track` skips a thread the box already holds — tracking it again
+      // is a no-op. `stage` deliberately does NOT skip: it is the holding state
+      // for a rule whose procedure is still being written, so it must record
+      // everything that procedure would have seen, including new mail on an
+      // already-tracked thread. Treating it as a to-promote list instead would
+      // silently drop exactly that mail from the backlog.
       if (rule.action.type === "track" && opts.trackedThreadIds.has(first.threadId)) continue;
       const match = await matchThreadRule({ service: opts.service, messages, rule });
       if (match.result === "no-match") continue;
@@ -263,6 +269,18 @@ export async function evaluateGmailRules(opts: {
             }),
           });
           procedures.set(rule.name, procedureTrigger(rule));
+          break;
+        case "stage":
+          // Same summary a procedure rule records, without waking anything.
+          // The list waits for `cb connector gmail pending`.
+          ruleState = addPending({
+            ruleState,
+            summary: pendingSummary({
+              message: match.message,
+              labelMap: opts.labelMap,
+              nowIso: opts.now.toISOString(),
+            }),
+          });
           break;
         default:
           assertNever(rule.action);

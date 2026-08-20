@@ -7,6 +7,21 @@ filed-by: agent
 discovered-in: worktree-backend-research — deep-pass backend-alternatives research
 ---
 
+> **Checked 2026-08-14 — still valid.** Tagged `invalid`; the premise holds, so
+> the tag is removed and the issue stays open. Both technical claims are
+> unchanged in code: `src/core/script-env.ts:103-106` still deletes
+> `env.ANTHROPIC_API_KEY` to force subscription auth, and `src/core/agent/run.ts:196`
+> still documents that. The spike it depends on,
+> [model backend pluggability](../exploration/2026-07-18-model-backend-pluggability.md),
+> still carries an unfilled `## Research (incomplete)`.
+>
+> Checked specifically whether the Codex-engine work superseded it. It does not:
+> Codex is Shape B — a different *harness* — while this is Shape A, a different
+> *model provider* under Claude Code via `ANTHROPIC_BASE_URL`. The Codex
+> decision doc draws that line itself. This issue's own motivations (billing
+> diversity, vision-capable non-China models, self-hosted vLLM) are independent
+> of the vendor-independence goal Codex addressed, and remain unaddressed.
+
 The ADOPT recommendation from the backend deep pass
 ([synthesis](../../research/backend-alternatives/2026-07-18-synthesis.md)): a
 per-box or install-time provider setting — base URL, auth token, model-id map —

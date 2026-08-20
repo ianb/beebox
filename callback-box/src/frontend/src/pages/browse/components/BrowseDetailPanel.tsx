@@ -7,6 +7,7 @@
 import { Link } from "@tanstack/react-router";
 import { cardTypeFromName } from "@shared/card-name";
 import { href } from "../../../lib/routing";
+import { displayName } from "../../../lib/display-name";
 import type { NavigateHint, ViewTarget } from "../../../lib/view-url";
 import { FileView } from "../../../components/FileView";
 import { useCardViewBinding } from "../../../lib/view-bindings";
@@ -28,10 +29,6 @@ interface BrowseDetailPanelProps {
   selectedCard: { relativePath: string } | null;
   selectedFilePath: string;
   selectedRawFile: string | null;
-}
-
-function displayName(path: string): string {
-  return path.split("/").pop() ?? path;
 }
 
 /** Card type from a card path (nominal or positional naming). */
@@ -115,6 +112,7 @@ export function BrowseDetailPanel({
           onSelectRenderer={onSelectRenderer}
           params={params}
           rendererName={rendererName}
+          onClose={onBack}
         />
       </div>
     </div>

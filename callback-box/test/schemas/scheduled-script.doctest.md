@@ -11,7 +11,16 @@ import {
   isDueForWakeup,
   isWithinBudget,
   createScheduledScriptTemplate,
+  ScheduledScriptSchema,
 } from "../../src/schemas/scheduled-script.js";
+
+function baseCardFields(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    type: "scheduled-script",
+    runs: "echo test",
+    ...overrides,
+  };
+}
 
 function makeScript(overrides) {
   return {
@@ -76,6 +85,96 @@ parseScheduledScript({ type: "scheduled-script", runs: "echo hi", timeout: "25m"
 
 parseScheduledScript({ type: "scheduled-script", runs: "echo hi" }).timeoutMs
 => undefined
+```
+
+## Schema: `at`/`until` must be parseable datetimes
+
+A malformed date used to pass validation and then silently never fire at
+runtime (see issues/bugs/2026-08-10-invalid-schedule-dates-silently-inert.md).
+Now it's a card validation error.
+
+```ts
+ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ at: "not-a-date" })).success
+=> false
+
+ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ until: "not-a-date" })).success
+=> false
+
+ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ at: "2026-09-01T14:30:00Z" })).success
+=> true
+
+ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ until: "2026-09-01T14:30:00Z" })).success
+=> true
+```
+
+`new Date()` alone would accept strings like "5" (May 2001) or "0" (Jan
+2000) — the ISO-shape requirement rejects those:
+
+```ts
+ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ at: "5" })).success
+=> false
+
+ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ at: "May 5 2026" })).success
+=> false
+
+ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ until: "2026-13-45" })).success
+=> false
+
+ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ until: "2026-12-31" })).success
+=> true
+```
+
+The error names the expected form:
+
+```ts
+const badAt = ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ at: "not-a-date" }));
+badAt.success ? undefined : badAt.error.issues[0].message
+=> must be an ISO 8601 datetime (e.g. 2026-09-01T14:30:00)
+```
+
+## Schema: `cron` must be a valid cron expression
+
+```ts
+ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ cron: "not a cron" })).success
+=> false
+
+ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ cron: "0 6 * * *" })).success
+=> true
+
+const badCron = ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ cron: "not a cron" }));
+badCron.success ? undefined : badCron.error.issues[0].message
+=> invalid cron expression
+```
+
+## Schema: `rrule` must be a valid RRULE
+
+```ts
+ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ rrule: "not an rrule" })).success
+=> false
+
+ScheduledScriptSchema.frontmatterSchema.safeParse(
+  baseCardFields({ rrule: "FREQ=WEEKLY;BYDAY=MO" })
+).success
+=> true
+
+const badRrule = ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ rrule: "not an rrule" }));
+badRrule.success ? undefined : badRrule.error.issues[0].message
+=> invalid RRULE
+```
+
+## Schema: cron/at/rrule are mutually exclusive
+
+```ts
+ScheduledScriptSchema.frontmatterSchema.safeParse(
+  baseCardFields({ cron: "0 6 * * *", at: "2026-09-01T14:30:00Z" })
+).success
+=> false
+
+ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ cron: "0 6 * * *" })).success
+=> true
+
+ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ at: "2026-09-01T14:30:00Z" })).success
+=> true
 ```
 
 ## isDue
@@ -247,6 +346,21 @@ once: true
 runs: scripts/remind.sh
 ---
 
+```
+
+The template is validated against the schema before it's returned — a
+programmatic caller fails fast instead of writing a card that can't load:
+
+```ts
+createScheduledScriptTemplate({ cron: "not a cron", runs: "echo hi" })
+=> throws InvalidScheduledScriptTemplateError
+
+createScheduledScriptTemplate({
+  cron: "0 6 * * *",
+  at: "2026-03-01T09:00:00Z",
+  runs: "echo hi",
+})
+=> throws InvalidScheduledScriptTemplateError
 ```
 
 Minimal wakeup-only script:

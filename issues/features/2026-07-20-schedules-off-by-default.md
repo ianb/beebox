@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — first-run UX audit for the soft launch
 labels: [soft-launch]
+next-action: discuss
 ---
 
 > **Decision recorded 2026-08-07** — Fresh boxes enable `refresh-maps` and

@@ -1,10 +1,47 @@
 ---
 title: "Submitting a voice message leaves it behind as an 'unsent' recoverable draft"
-workstream: unknown
+workstream: emission-model
+needs: [manual-testing]
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder, repeatedly, sending voice messages
+priority: important
+design: ../../callback-box/docs/implemented-plans/emission-model.md
 ---
+
+> **⏳ Awaiting manual testing** — fix landed in the emission-model
+> workstream (track C): an emptied composer now removes the persisted draft
+> synchronously (no 400ms debounce window), and the persist scheduler
+> flushes instead of dropping a pending write on unmount. See Manual
+> testing. Only the developer clears this.
+
+## Manual testing
+
+1. Dictate a message and send it.
+2. Immediately (within half a second) switch session/landmark/route.
+3. Return: no unsent-message recovery may be offered.
+4. Stronger check: right after the send, read
+   `localStorage["cb-input-emission:<box>"]` in devtools — the key must be
+   gone, not merely blanked.
+5. Confirm ordinary draft persistence still works: type without sending,
+   reload the tab, and the draft is offered back.
+
+> **Checked 2026-08-14 — not a duplicate.** Tagged `duplicate`; removed, and
+> the issue stays open. The nearest neighbour,
+> [chat send receipts fail often](2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md),
+> already cross-links this one as a *sibling* rather than the same bug, and the
+> root causes differ: that one is the live-send receipt model (WS drop,
+> reconnect churn, `/api/chat/send` settling); this one is the recovery-draft
+> feature's persistence race.
+> [iOS stale unconfirmed emission banner](2026-08-03-ios-stale-unconfirmed-emission-banner.md)
+> is the same receipt family again but native `PendingEmissionStore`, unrelated
+> to the web `usePersistScheduler` path.
+> `closed/bugs/2026-08-05-recovered-dictation-needs-minimum-size.md` touches the
+> same component but fixed a different defect (no size floor), in `efbf701a`.
+>
+> The mechanism described below was re-verified as still present:
+> `usePersistScheduler.ts:60-66` flushes only on `visibilitychange → hidden`,
+> and its effect cleanup removes the listener without flushing.
 
 After submitting a voice message, it still shows up as an unsent message offered
 for recovery. Repeated / reliable, not a one-off.

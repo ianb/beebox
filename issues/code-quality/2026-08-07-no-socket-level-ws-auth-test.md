@@ -33,7 +33,7 @@ calls `socket.destroy()` on deny — no status, no close frame), so realtime is
 dead with **zero client-side signal**: no `[events-sub]` error, no console
 warning, `wsLink` just backs off and retries forever. This masked the
 first-message-redirect reproduction (see
-[new-chat-first-message-blank-until-agent-works](../bugs/2026-08-08-new-chat-first-message-blank-until-agent-works.md)).
+[new-chat-first-message-blank-until-agent-works](../closed/bugs/2026-08-08-new-chat-first-message-blank-until-agent-works.md)).
 When adding the socket-level test, also consider whether the router/box should
 refuse the upgrade with a readable 401 response (as the hub already does)
 rather than a bare TCP reset, and/or whether the client should surface a
@@ -42,4 +42,4 @@ persistent-reconnect-failure signal after N attempts.
 Broken out of `callback-box/docs/todo-security.md` ("No true socket-level WS-auth
 integration test"), where it was recorded as a residual accepted for now — this
 makes it a tracked coverage gap. Feeds the internal-security-practices section of
-the [agent-maintained security report](../features/2026-07-20-agent-maintained-security-report.md).
+the [agent-maintained security report](../closed/features/2026-07-20-agent-maintained-security-report.md).

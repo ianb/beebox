@@ -9,6 +9,7 @@
  */
 
 import { makeLog } from "./log.js";
+import { chatModelForEngine } from "../../../shared/chat-models.js";
 import { errorMessage } from "../../../lib/error-guards.js";
 import { openChatRun } from "./start-run.js";
 import { EventEmitter } from "node:events";
@@ -21,10 +22,7 @@ import {
   type ChatBackendRun,
   type ChatBackendStartOptions,
 } from "../../../services/claude-chat.js";
-import {
-  CHAT_SYSTEM_PROMPT,
-  NARRATION_OVERLAY,
-} from "./prompts.js";
+import { CHAT_SYSTEM_PROMPT, NARRATION_OVERLAY } from "./prompts.js";
 import {
   accumulateAssistantText,
   buildContentBlocks,
@@ -75,10 +73,10 @@ export class ChatSession extends EventEmitter {
   private turnText = "";
   /** Per-session gate keeping schedule-health a rare reminder (see `admitHealth`). */
   private readonly healthGate = createHealthGate();
-  private messageQueue: ChatSendInput[] = [];
+  private messageQueue: ChatSendInput[] = []; private preparingTurn = false;
   private readonly options: ChatSessionOptions;
   private readonly sessionFile: string | null;
-  private readonly modelFile: string;
+  private modelFile: string | null;
   private readonly backend: ChatBackend;
   private currentModel: string | null = null;
   /** Chat-feature flag state: lazy-loaded map plus persistence + change events. */
@@ -100,14 +98,14 @@ export class ChatSession extends EventEmitter {
     this.boxRoot = boxRoot;
     this.options = options;
     this.sessionFile = options.sessionFile === undefined ? DEFAULT_SESSION_FILE : options.sessionFile;
-    this.modelFile = options.modelFile ?? DEFAULT_MODEL_FILE;
+    this.modelFile = options.modelFile === undefined ? DEFAULT_MODEL_FILE : options.modelFile;
     this.backend = options.backend ?? createChatBackend();
     if (options.initialSessionId !== undefined) {
       this.sessionId = options.initialSessionId;
     } else {
       this.sessionId = loadSessionId(this.boxRoot, this.sessionFile);
     }
-    this.currentModel = loadCurrentModel(this.boxRoot, this.modelFile);
+    this.currentModel = this.modelFile === null ? null : loadCurrentModel(this.boxRoot, this.modelFile);
     this.features = new FeatureStore({
       boxRoot: this.boxRoot,
       getSessionId: () => this.sessionId,
@@ -166,10 +164,11 @@ export class ChatSession extends EventEmitter {
       return;
     }
 
-    // Preflight the real SDK backend's Claude login before we transition or
-    // lock; a missing one is emitted as "error" (→ turn buffer). Fakes skip it.
-    if (!(await preflightChatBackend({ backend: this.backend, session: this }))) return;
-
+    // Preflight login before transitioning or locking; fakes skip this.
+    const preview = await this.buildBackendStartOptions();
+    if (!(await preflightChatBackend({ backend: this.backend, session: this, engine: preview.engine }))) return;
+    const compatibleModel = chatModelForEngine(preview.engine ?? "claude", this.currentModel);
+    this.currentModel = compatibleModel;
     this.transition({ phase: "starting" });
 
     // `openChatRun` either returns a live run or unwinds (lock released,
@@ -179,9 +178,9 @@ export class ChatSession extends EventEmitter {
       backend: this.backend,
       boxRoot: this.boxRoot,
       skipBootstrap: this.options.skipBootstrap === true,
-      buildStartOptions: () => this.buildBackendStartOptions(),
+      startOptions: preview,
       resumeSessionId: this.sessionId ?? undefined,
-      model: this.currentModel ?? undefined,
+      model: compatibleModel ?? undefined,
       acquireLock: () => this.acquireRunLock(),
       releaseLock: () => this.releaseRunLock(),
       onFailed: () => this.abandonStart(),
@@ -240,6 +239,8 @@ export class ChatSession extends EventEmitter {
     const assigned = captureAssignedSessionId({ msg, current: this.sessionId, sessionFile: this.sessionFile, boxRoot: this.boxRoot, onAssigned: this.options.onSessionIdAssigned });
     if (assigned !== null) {
       this.sessionId = assigned;
+      this.modelFile = this.options.modelFileForSession?.(assigned) ?? this.modelFile;
+      if (this.modelFile !== null && this.currentModel !== null) saveCurrentModel(this.boxRoot, { modelFile: this.modelFile, model: this.currentModel });
       log("session", `Got session ID: ${assigned}`);
     }
     // Background-task events fire between turns (no per-turn SSE attached), so
@@ -313,7 +314,7 @@ export class ChatSession extends EventEmitter {
       return false;
     }
 
-    const rawInput: ChatSendInput = typeof message === "string" ? { text: message } : message;
+    const rawInput: ChatSendInput = typeof message === "string" ? { text: message } : message; this.preparingTurn = true; try {
 
     // Composed BEFORE the run starts (it does filesystem I/O), and awaited
     // before run creation: observers of "a run exists" (drain-path tests,
@@ -350,6 +351,7 @@ export class ChatSession extends EventEmitter {
       throw e;
     }
     return true;
+    } finally { this.preparingTurn = false; }
   }
 
   /**
@@ -374,7 +376,7 @@ export class ChatSession extends EventEmitter {
    */
   setModel(model: string | null): void {
     this.currentModel = model;
-    saveCurrentModel(this.boxRoot, { modelFile: this.modelFile, model });
+    if (this.modelFile !== null) saveCurrentModel(this.boxRoot, { modelFile: this.modelFile, model });
   }
 
   getCurrentModel(): string | null {
@@ -417,7 +419,7 @@ export class ChatSession extends EventEmitter {
   }
 
   isBusy(): boolean {
-    return lifecycleBusy(this.state);
+    return this.preparingTurn || lifecycleBusy(this.state);
   }
 
   /**

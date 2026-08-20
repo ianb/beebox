@@ -10,7 +10,11 @@ import YAML from "yaml";
 import { assertStandaloneBox } from "./box-guard.js";
 import { testSuiteSchema, type AuditTest, type TestSuite } from "./test-suite-schema.js";
 import { errnoCode } from "../../lib/error-guards.js";
-import { createAgent } from "../../core/agent/index.js";
+import { createClaudeAgent } from "../../core/agent/index.js";
+import type { AgentInvokeOptions } from "../../core/agent/types.js";
+import { createCodexAgent } from "../../core/agent/codex-agent.js";
+import type { CodexObservedActivity } from "../../core/agent/codex-run.js";
+import { loadAgentEngine, type AgentEngine } from "../../core/box/config.js";
 import { type KnownToolName, isKnownTool } from "../../shared/known-tools.js";
 import { CHAT_SYSTEM_PROMPT, NARRATION_OVERLAY } from "../../core/chat/session/index.js";
 import {
@@ -24,6 +28,10 @@ import {
   summarizeContextUsage,
   type ContextStats,
 } from "./context-usage.js";
+import { codexBehaviorFromActivity } from "./codex-audit-behavior.js";
+import { shellCommandConsultsFiles, shellCommandSearches } from "./shell-command-observation.js";
+import { runChecks } from "./audit-checks.js";
+import { generateAgentContextMirrors } from "../../core/agent-context-mirrors.js";
 
 export type { AuditTest, TestSuite };
 
@@ -41,20 +49,30 @@ export interface AgentBehavior {
 
 export interface AutomatedChecks {
   containsChecks: Array<{ expected: string; found: boolean }>;
+  matchesChecks: Array<{ pattern: string; found: boolean; matched?: string }>;
   notContainsChecks: Array<{ forbidden: string; found: boolean }>;
   notMatchesChecks: Array<{ pattern: string; found: boolean; matched?: string }>;
   containsAnyCheck?: { options: string[]; found: boolean; matched?: string | undefined } | undefined;
   cardsContainChecks: Array<{ expected: string; found: boolean; foundIn?: string }>;
   shouldReadChecks: Array<{ file: string; wasRead: boolean }>;
+  shouldReadAnyCheck?: { files: string[]; wasRead: boolean; matched?: string | undefined } | undefined;
   shouldNotReadChecks: Array<{ file: string; wasRead: boolean }>;
   bashContainsChecks: Array<{ expected: string; found: boolean; matchedCommand?: string }>;
 }
 
 export interface TestResult {
   test: AuditTest;
+  engine: AgentEngine;
   sessionId: string;
   behavior: AgentBehavior;
   checks: AutomatedChecks;
+}
+
+class KnowledgeAuditAgentError extends Error {
+  constructor(engine: AgentEngine, detail: string) {
+    super(`${engine} knowledge-audit agent failed: ${detail}`);
+    this.name = "KnowledgeAuditAgentError";
+  }
 }
 
 /**
@@ -78,6 +96,7 @@ export function getTestsPath(scenarioDir: string): string {
 export interface RunTestOptions {
   test: AuditTest;
   boxRoot: string;
+  engine?: AgentEngine;
   onOutput?: (text: string) => void;
 }
 
@@ -91,6 +110,7 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
 
   // Save git state so we can restore after the test
   const headBefore = execSync("git rev-parse HEAD", { cwd: boxRoot, encoding: "utf-8" }).trim();
+  const engine = options.engine ?? await loadAgentEngine(boxRoot);
 
   // Clean any leftover memory files from previous runs
   const memoryDir = path.join(boxRoot, ".claude", "memory");
@@ -100,54 +120,58 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
   // audits). Tracked here so post-test cleanup runs even if the agent
   // throws, since `git clean -fd` won't touch gitignored paths.
   const fixturePaths = await writeFixtures(boxRoot, test.fixture);
-
-  // Snapshot card files before the agent runs (for cards_contain checks)
-  const cardsBefore = test.cards_contain ? await snapshotCardFiles(boxRoot) : new Map();
-
-  // In chat mode, mirror what ChatSession.resolveSystemPrompt builds:
-  // base prompt + NARRATION_OVERLAY (always included; rules gated on the
-  // per-turn <chat-app> snapshot inside the user message).
-  const systemPrompt = test.chat_mode
-    ? `${CHAT_SYSTEM_PROMPT}${NARRATION_OVERLAY}\n\nWORKING DIRECTORY: ${boxRoot}`
-    : `WORKING DIRECTORY: ${boxRoot}`;
-  const invokeOpts: Parameters<ReturnType<typeof createAgent>["invoke"]>[0] = {
-    boxRoot,
-    systemPrompt,
-    prompt,
-    maxTurns: test.max_turns ?? 10,
-  };
-  if (test.context_dir) {
-    invokeOpts.cwd = path.join(boxRoot, test.context_dir);
-    invokeOpts.additionalDirectories = [boxRoot];
-  }
-
-  const agent = createAgent({
-    name: "knowledge-audit",
-    ...(onOutput && { onOutput }),
-  });
-  let result;
   try {
-    result = await agent.invoke(invokeOpts);
+    if (engine === "codex" && test.fixture !== undefined) {
+      await generateAgentContextMirrors(boxRoot);
+      for (const fixturePath of [...fixturePaths]) {
+        if (path.basename(fixturePath) === "CLAUDE.md") {
+          fixturePaths.push(path.join(path.dirname(fixturePath), "AGENTS.md"));
+        }
+      }
+    }
+    const cardsBefore = test.cards_contain ? await snapshotCardFiles(boxRoot) : new Map();
+    // In chat mode, mirror what ChatSession.resolveSystemPrompt builds.
+    const systemPrompt = test.chat_mode
+      ? `${CHAT_SYSTEM_PROMPT}${NARRATION_OVERLAY}\n\nWORKING DIRECTORY: ${boxRoot}`
+      : `WORKING DIRECTORY: ${boxRoot}`;
+    const invokeOpts: AgentInvokeOptions = {
+      boxRoot,
+      systemPrompt,
+      prompt,
+      maxTurns: test.max_turns ?? 10,
+    };
+    if (test.context_dir) {
+      invokeOpts.cwd = path.join(boxRoot, test.context_dir);
+      invokeOpts.additionalDirectories = [boxRoot];
+    }
+    const codexActivity: CodexObservedActivity[] = [];
+    const agentOptions = {
+      name: "knowledge-audit",
+      ...(onOutput && { onOutput }),
+    };
+    const agent = engine === "claude"
+      ? createClaudeAgent(agentOptions)
+      : createCodexAgent({
+        ...agentOptions,
+        onActivity: (activity) => codexActivity.push(activity),
+      });
+    const result = await agent.invoke(invokeOpts);
+    if (!result.success) throw new KnowledgeAuditAgentError(engine, result.error);
+    const cardsAfter = test.cards_contain ? await snapshotCardFiles(boxRoot) : new Map();
+    // Claude Code stores session logs keyed by the SDK's cwd. Codex activity
+    // comes from the validated live stream captured by its adapter above.
+    const logDir = invokeOpts.cwd ?? boxRoot;
+    const behavior = engine === "codex"
+      ? codexBehaviorFromActivity(codexActivity, result.resultText ?? result.output)
+      : await extractBehavior(logDir, result.sessionId);
+    const newOrModifiedCards = findNewOrModifiedCards(cardsBefore, cardsAfter);
+    const checks = runChecks(test, { behavior, newOrModifiedCards });
+    return { test, engine, sessionId: result.sessionId, behavior, checks };
   } finally {
     await removeFixtures(fixturePaths);
+    execSync(`git reset --hard ${headBefore}`, { cwd: boxRoot, encoding: "utf-8" });
+    execSync("git clean -fd", { cwd: boxRoot, encoding: "utf-8" });
   }
-
-  // Snapshot card files after the agent runs
-  const cardsAfter = test.cards_contain ? await snapshotCardFiles(boxRoot) : new Map();
-
-  // Claude Code stores session logs keyed by the SDK's cwd — for
-  // landmark-style audits the log lives under the subdirectory's
-  // encoded path, not the box root's.
-  const logDir = invokeOpts.cwd ?? boxRoot;
-  const behavior = await extractBehavior(logDir, result.sessionId);
-  const newOrModifiedCards = findNewOrModifiedCards(cardsBefore, cardsAfter);
-  const checks = runChecks(test, { behavior, newOrModifiedCards });
-
-  // Restore box to pre-test state: reset commits and clean untracked files
-  execSync(`git reset --hard ${headBefore}`, { cwd: boxRoot, encoding: "utf-8" });
-  execSync("git clean -fd", { cwd: boxRoot, encoding: "utf-8" });
-
-  return { test, sessionId: result.sessionId, behavior, checks };
 }
 
 /**
@@ -288,7 +312,11 @@ const TOOL_USE_CATEGORIZERS: Partial<Record<KnownToolName, (ctx: ToolUseContext)
     if (summary) acc.bashCommands.push(summary);
     if (block.input) {
       const cmd = String(block.input.command ?? "");
-      if (cmd) acc.bashRawCommands.push(cmd);
+      if (cmd) {
+        acc.bashRawCommands.push(cmd);
+        if (shellCommandConsultsFiles(cmd)) acc.filesRead.push(cmd);
+        if (shellCommandSearches(cmd)) acc.searches.push({ tool: "Bash", summary: cmd });
+      }
     }
   },
 } satisfies Partial<Record<KnownToolName, (ctx: ToolUseContext) => void>>;
@@ -344,65 +372,4 @@ function findNewOrModifiedCards(
     }
   }
   return result;
-}
-
-/**
- * Run automated checks against the agent's behavior.
- */
-interface RunChecksContext {
-  behavior: AgentBehavior;
-  newOrModifiedCards: Map<string, string>;
-}
-
-function runChecks(test: AuditTest, { behavior, newOrModifiedCards }: RunChecksContext): AutomatedChecks {
-  const containsChecks = (test.correct_contains ?? []).map((expected) => ({
-    expected,
-    found: behavior.responseText.toLowerCase().includes(expected.toLowerCase()),
-  }));
-
-  const notContainsChecks = (test.response_not_contains ?? []).map((forbidden) => ({
-    forbidden,
-    found: behavior.responseText.toLowerCase().includes(forbidden.toLowerCase()),
-  }));
-
-  const notMatchesChecks = (test.response_not_matches ?? []).map((pattern) => {
-    // eslint-disable-next-line security/detect-non-literal-regexp -- pattern is authored in the committed knowledge-audits.yaml, not runtime input
-    const match = new RegExp(pattern, "i").exec(behavior.responseText);
-    return { pattern, found: match !== null, ...(match && { matched: match[0] }) };
-  });
-
-  let containsAnyCheck: AutomatedChecks["containsAnyCheck"];
-  if (test.correct_contains_any) {
-    const lowerText = behavior.responseText.toLowerCase();
-    const matched = test.correct_contains_any.find((opt) => lowerText.includes(opt.toLowerCase()));
-    containsAnyCheck = { options: test.correct_contains_any, found: !!matched, matched: matched ?? undefined };
-  }
-
-  const cardsContainChecks = (test.cards_contain ?? []).map((expected) => {
-    const lowerExpected = expected.toLowerCase();
-    for (const [filePath, content] of newOrModifiedCards) {
-      if (content.toLowerCase().includes(lowerExpected)) {
-        return { expected, found: true, foundIn: filePath };
-      }
-    }
-    return { expected, found: false };
-  });
-
-  const shouldReadChecks = (test.should_read ?? []).map((file) => ({
-    file,
-    wasRead: behavior.filesRead.some((f) => f.endsWith(file) || f.includes(file)),
-  }));
-
-  const shouldNotReadChecks = (test.should_not_read ?? []).map((file) => ({
-    file,
-    wasRead: behavior.filesRead.some((f) => f.endsWith(file) || f.includes(file)),
-  }));
-
-  const bashContainsChecks = (test.bash_contains ?? []).map((expected) => {
-    const lowerExpected = expected.toLowerCase();
-    const matched = behavior.bashRawCommands.find((cmd) => cmd.toLowerCase().includes(lowerExpected));
-    return { expected, found: !!matched, ...(matched && { matchedCommand: matched }) };
-  });
-
-  return { containsChecks, notContainsChecks, notMatchesChecks, containsAnyCheck, cardsContainChecks, shouldReadChecks, shouldNotReadChecks, bashContainsChecks };
 }

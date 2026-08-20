@@ -6,11 +6,14 @@ Tests for the git helper functions in `src/lib/git.ts`.
 import {
   initRepo, isRepo, getStatus, stageFiles, stageAll,
   commit, getLog, getLogPaginated, getDiff, getCommitDiff,
-  getCurrentBranch, hasCommits, createBranch, checkoutBranch,
-  createTag, deleteTag, getHead, clean, isNothingToCommitError,
+  hasCommits, getHead, clean, isNothingToCommitError,
   stageAndCommitPaths,
 } from "../../../src/lib/git.js";
+import {
+  getCurrentBranch, createBranch, checkoutBranch, createTag, deleteTag,
+} from "../../../src/lib/git-refs.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { rename } from "node:fs/promises";
 ```
 
 ## Repository detection
@@ -458,6 +461,25 @@ JSON.stringify(await stageAndCommitPaths(box.root, { paths: ["scoped.card"], mes
 
 JSON.stringify(await stageAndCommitPaths(box.root, { paths: [], message: "empty" }))
 => null
+```
+
+A rename commits both halves. Rename detection must not collapse the staged
+path list to only the destination and leave the source deletion behind.
+
+```ts continue
+await box.write("before.card", "move me");
+await box.commitAll("add before");
+await rename(box.path("before.card"), box.path("after.card"));
+await stageAndCommitPaths(box.root, { paths: ["before.card", "after.card"], message: "Move card" });
+const renameStatus = await getStatus(box.root);
+const renameDiff = await getCommitDiff(box.root, await getHead(box.root));
+print(`clean: ${renameStatus.clean}`);
+print(`before in commit: ${renameDiff.includes("before.card")}`);
+print(`after in commit: ${renameDiff.includes("after.card")}`);
+=>
+clean: true
+before in commit: true
+after in commit: true
 ```
 
 ```ts cleanup

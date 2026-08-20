@@ -276,6 +276,7 @@ export function SwitchMenuBody(props: SwitchMenuProps): ReactNode {
           <MenuItem to={href(`/${boxSlug}/dashboard`)}>Dashboard</MenuItem>
           <MenuItem to={href(`/${boxSlug}/browse`)}>Browse</MenuItem>
           <MenuItem to={href(`/${boxSlug}/history`)}>History</MenuItem>
+          <MenuItem to={href(`/${boxSlug}/inventory`)}>Inventory summary</MenuItem>
           {boxSwitchingAvailable ? (
             <>
               <MenuDivider />

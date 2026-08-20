@@ -5,7 +5,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { stageAll, commit } from "../../lib/git.js";
+import { stageAll, commit, withBoxGitLock } from "../../lib/git.js";
 import { fmt } from "../../lib/format.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import { okVoid, err, type Result } from "../../lib/result.js";
@@ -97,10 +97,12 @@ export async function finalizeRun(args: {
     completedAt,
     expires: computeRunExpires({ status, completedAt, procedure }),
   });
-  await stageAll(boxRoot);
-  await commit(boxRoot, {
-    message: `${allSucceeded ? "Complete" : "Failed"} procedure: ${procedureName}`,
-    trailers: { Procedure: procedureName },
+  await withBoxGitLock(boxRoot, async () => {
+    await stageAll(boxRoot);
+    await commit(boxRoot, {
+      message: `${allSucceeded ? "Complete" : "Failed"} procedure: ${procedureName}`,
+      trailers: { Procedure: procedureName },
+    });
   });
 
   if (allSucceeded) {

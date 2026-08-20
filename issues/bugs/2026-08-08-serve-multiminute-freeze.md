@@ -7,6 +7,30 @@ discovered-in: worktree-integration-tests — field-test operator prototype (Pri
 labels: [field-test-findings, code-error]
 ---
 
+> **Checked 2026-08-18 — still live, and today's git-lock work argues *against*
+> this issue's leading hypothesis.** Tagged `reconfirm`; removed.
+>
+> `0a9b0be5` (today) takes the box git lock in every index mutator, replacing
+> the old best-effort single 2s retry — which is exactly hypothesis (a), index
+> contention between a chat-turn commit and `stageAndCommitPaths`. It is gated
+> by a 5-writer race test (`test/lib/git-concurrent-commit.doctest.md`).
+>
+> **That fix probably does not explain the freeze**, though it fixes a real
+> correctness bug (dropped commits). `src/lib/git-lock.ts` states its design
+> goal outright — the lock "can never wedge a box": on expiry it logs loudly and
+> proceeds unserialized rather than blocking. A mechanism that deliberately
+> refuses to block is a poor candidate for a multi-minute stall, so hypothesis
+> (a) looks weaker after this landed, not stronger.
+>
+> Hypothesis (b) — server hang versus tab hang — remains completely
+> unexercised, and it is now the more likely one.
+>
+> **This needs a credentialed human step, as the issue already anticipated.**
+> Reproducing it wants a boxholder-authorized test identity to drive the
+> bulk-upload panel concurrently with a real chat turn, plus `node --cpu-prof`
+> on the server and a parallel curl heartbeat to tell "server dead" from "tab
+> dead". A test identity was deliberately not minted for this investigation.
+
 During the field-test prototype, the served app stopped responding entirely:
 no clicks landed, and two successive page navigations each hung for ~2 minutes
 before timing out with no response. On the third attempt the app loaded
@@ -41,6 +65,36 @@ restored responsiveness briefly. The operator noted the seizures happened
 more than once, not proven causal. First concrete lead: profile the
 bulk-upload overlay's open path (and whatever `browse`-route work it
 triggers) against the candidate stall sites below.
+
+## Investigation (2026-08-10) — candidates exonerated, suspicion moved
+
+Served a copy of run 2's actual box and drove every candidate below hard
+(5,700+ requests over ~6 min with a 500ms stall detector): **no stall
+reproduced**, and code reading confirms all the listed request-path
+candidates are async / bounded-concurrency (`fs.promises`, `mapInBatches`,
+`simple-git` async spawns; the `execSync("which cb")` is unreachable from
+read routes). Consider `landmarks.list`, `navStatus`, `status.browse`,
+`status.activity`/`getLog`, and the wakeup `execSync` **exonerated**.
+
+Not exercised, still suspect: the bulk-upload create→register→upload→
+finalize→git-commit path (`src/webapp/routes/bulk-upload.ts`,
+`src/core/bulk-upload/worker.ts`) — needs a cookie-authenticated local user
+the browse key doesn't grant, and minting one needs `--agent-confirmed`
+(correctly not done unilaterally). Nothing sync-CPU-heavy found by reading.
+
+Reframed hypotheses, from the original transcript: every freeze coincided
+with a long-running chat turn, and a page reload always restored
+responsiveness with state intact. So either (a) git-index contention
+between the chat turn's commits and the upload worker's
+`stageAndCommitPaths` (`withIndexLockRetry` in `src/lib/git.ts` retries
+once after 2s — check whether real contention cascades), or (b) the
+"freeze" is partly a FRONTEND/tab hang, not the server at all — total
+non-response to snapshot/screenshot with reload-fixes-it fits a blocked
+page as well as a blocked server. Next repro attempt should watch both:
+`node --cpu-prof` on the server AND a parallel curl heartbeat that
+distinguishes "server dead" from "this tab dead", while a real chat turn
+runs concurrently with upload-panel use (needs a boxholder-authorized test
+identity for the upload half).
 
 ## Research (2026-08-09)
 

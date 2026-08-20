@@ -5,6 +5,7 @@ needs: [design]
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder wants to see what the AI actually edited
+priority: normal
 ---
 
 A mode or toggle on a card that **highlights the diff as the card changes** — so

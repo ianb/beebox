@@ -17,7 +17,6 @@ import {
   type SessionContentBlock,
   type ChatImageAttachment,
 } from "../api";
-import type { ChatTurnStart } from "../api-chat";
 import { trpcClient } from "../lib/trpc";
 // Raw relative (not `@shared/…`): loaded outside Vite by the tap/tsx doctest
 // runner (root tsconfig, no @shared resolution) — see OUTSIDE_VITE_SHARED_RAW.
@@ -34,7 +33,9 @@ import {
   type InitialSessionInput,
   type SessionInput,
 } from "./chat-types";
-import { runFakeStream } from "./chat-actors-fakestream";
+import { runFakeStream, runScrollDebugToggle } from "./chat-actors-fakestream";
+import { settleFromTurnStart, settleRejectedTurnStart } from "./chat-receipt-settlement";
+import { recordChatSendEvent } from "../lib/chat-send-diagnostics";
 
 export const fetchInitialActor = fromPromise<
   { entries: SessionEntry[]; total: number; sessionId: string | null; running: boolean; busy: boolean },
@@ -198,28 +199,6 @@ export function handleTurnMessage(
   }
 }
 
-/**
- * Map a `startChatTurn` result onto a receipt settlement, shared by the
- * idle-path send (`streamActor`) and the mid-turn queued send
- * (`queueMessageToBackend`) — both report the same three shapes
- * (deduplicated / queued / turnId) plus the no-turnId failure.
- */
-function settleFromTurnStart(messageId: string, result: ChatTurnStart): void {
-  if (result.deduplicated) {
-    settleReceipt({ disposition: "sent", emissionId: messageId, deduplicated: true });
-    return;
-  }
-  if (result.queued) {
-    settleReceipt({ disposition: "queued", emissionId: messageId });
-    return;
-  }
-  if (result.turnId) {
-    settleReceipt({ disposition: "sent", emissionId: messageId, deduplicated: false });
-    return;
-  }
-  settleReceipt({ disposition: "rejected", emissionId: messageId, reason: "Send returned no turn id" });
-}
-
 /** A frame yielded by events.turnStream, possibly still inside a tracked envelope. */
 type TurnStreamWire =
   | { t: "msg"; msg: ChatMessage }
@@ -256,10 +235,16 @@ export const streamActor = fromCallback(
     });
 
     const unwrapped = input.message.replace(/^<typed[^>]*>/, "").replace(/<\/typed>$/, "");
+    if (unwrapped.startsWith("/scrolldebug")) {
+      // Frontend-only toggle for the scroll-controller trace — reachable on
+      // devices with no devtools. Same receipt handling as /fakestream.
+      settleReceipt({ disposition: "sent", emissionId: input.messageId, deduplicated: false });
+      return runScrollDebugToggle({ sendBack, terminal });
+    }
     if (unwrapped.startsWith("/fakestream")) {
       // The fake stream never reaches startChatTurn, so settle the receipt
-      // here — otherwise it times out to `rejected` 30s in and the dispatcher
-      // "restores" the already-running prompt into the composer.
+      // here — otherwise the dispatcher remains pending even though the fake
+      // stream is already running.
       settleReceipt({ disposition: "sent", emissionId: input.messageId, deduplicated: false });
       return runFakeStream(unwrapped, { sendBack, terminal });
     }
@@ -279,10 +264,12 @@ export const streamActor = fromCallback(
       ...(input.cardState && Object.keys(input.cardState).length > 0 ? { cardState: input.cardState } : {}),
     })
       .then((result) => {
-        if (cancelled) return;
         // Settle the receipt (acceptance-level, BEFORE the stream runs for a
         // turnId result — see settleFromTurnStart) up front for every shape.
-        settleFromTurnStart(input.messageId, result);
+        // Settlement belongs to the POST, not this actor's lifetime: a route
+        // change or machine transition can cancel streaming while the server
+        // still accepts the in-flight message.
+        if (!settleFromTurnStart({ messageId: input.messageId, result, actorCancelled: cancelled })) return;
         // Queued / deduplicated finish the turn without a stream — the chat
         // machine refreshes history from these terminal states.
         if (result.deduplicated) {
@@ -309,6 +296,7 @@ export const streamActor = fromCallback(
             onData: (data: TurnStreamWire) => {
               msgCount++;
               const frame = unwrapTurnFrame(data);
+              recordChatSendEvent(input.messageId, { event: "turn-stream-frame", detail: { frame: frame.t, frameNumber: msgCount } });
               if (frame.t === "resync") {
                 // Buffer gone / reconnect past evicted frames → silent recover
                 // to a history refresh (the durable transcript floor).
@@ -326,11 +314,13 @@ export const streamActor = fromCallback(
               handleTurnMessage(frame.msg, { sessionInput: input.sessionInput, sendBack, terminal, state });
             },
             onError: (err: { message: string }) => {
+              recordChatSendEvent(input.messageId, { event: "turn-stream-error", detail: { errorLength: err.message.length } });
               console.error(`[chat] turn stream subscription failed: ${err.message}`);
               logFsm("stream-throw", { msg: err.message, msgCount });
               if (!terminalFired) sendBack({ type: "STREAM_FAILED", error: err.message, accepted: true });
             },
             onComplete: () => {
+              recordChatSendEvent(input.messageId, { event: "turn-stream-complete", detail: { terminalFired } });
               // The subscription ended without a terminal (turn closed without a
               // result frame) — fall back to a history refresh.
               if (!terminalFired) {
@@ -343,11 +333,10 @@ export const streamActor = fromCallback(
         unsubscribe = () => sub.unsubscribe();
       })
       .catch((err: unknown) => {
-        if (cancelled) return;
         const msg = err instanceof Error ? err.message : "Send failed";
+        if (!settleRejectedTurnStart({ messageId: input.messageId, reason: msg, actorCancelled: cancelled })) return;
         console.error(`[chat] send failed: ${msg}`);
         logFsm("stream-throw", { msg, msgCount });
-        settleReceipt({ disposition: "rejected", emissionId: input.messageId, reason: msg });
         sendBack({ type: "STREAM_FAILED", error: msg, accepted: false });
       });
 
@@ -390,9 +379,9 @@ export function queueMessageToBackend(opts: { session: string; message: string; 
     ...(cardActivity && cardActivity.length > 0 ? { cardActivity } : {}),
     ...(cardState && Object.keys(cardState).length > 0 ? { cardState } : {}),
   })
-    .then((result) => settleFromTurnStart(messageId, result))
+    .then((result) => settleFromTurnStart({ messageId, result }))
     .catch((err: unknown) => {
       const msg = err instanceof Error ? err.message : "Send failed";
-      settleReceipt({ disposition: "rejected", emissionId: messageId, reason: msg });
+      settleRejectedTurnStart({ messageId, reason: msg });
     });
 }

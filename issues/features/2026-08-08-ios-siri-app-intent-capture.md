@@ -4,6 +4,7 @@ workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder asked whether we can be a Siri intent
+priority: important
 ---
 
 > **Job to be done:** *When my hands are busy — driving, walking the dog, mid-task

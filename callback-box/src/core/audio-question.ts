@@ -58,11 +58,6 @@ export function buildAudioQuestionPrompt(opts: {
   return lines.join("\n");
 }
 
-/** Resolve the Gemini API key from env (same vars scan-import's Gemini pass uses). */
-export function resolveGeminiKey(): string | null {
-  return process.env["GEMINI_KEY"] || process.env["SKE_GEMINI_API_KEY"] || null;
-}
-
 export async function askAudioQuestion(
   apiKey: string,
   { audio, mimeType, question, context, transcript }: {

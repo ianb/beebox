@@ -18,7 +18,7 @@ import { resolveBoxPublicUrl } from "../../../lib/public-url.js";
 
 export const googleAdminProcedures = {
   googleStatus: ownerProcedure.query(async ({ ctx }) => {
-    const creds = getGoogleClientCreds();
+    const creds = await getGoogleClientCreds(ctx.boxRoot);
     if (!creds) {
       const enabledServices: Record<string, boolean> = {};
       return {
@@ -49,11 +49,12 @@ export const googleAdminProcedures = {
   googleSetup: ownerProcedure
     .input(z.object({ returnPath: z.string().optional(), origin: z.string().optional() }))
     .mutation(async ({ input, ctx }) => {
-      const creds = getGoogleClientCreds();
+      const creds = await getGoogleClientCreds(ctx.boxRoot);
       if (!creds) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Google OAuth not configured. Set GOOGLE_OAUTH_CLIENT_ID/SECRET env vars.",
+          message:
+            'Google OAuth not configured. Grant the "google-oauth-client-id" and "google-oauth-client-secret" secrets to this box, or set GOOGLE_OAUTH_CLIENT_ID/SECRET.',
         });
       }
       // Prefer the browser origin; fall back to box.json publicUrl, then env.

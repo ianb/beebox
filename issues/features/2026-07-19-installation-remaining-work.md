@@ -1,8 +1,9 @@
 ---
 title: "Installation: what's verified, what still needs testing, what's not built yet"
-workstream: unknown
+workstream: installation-process
 design: ../../callback-box/docs/plans/installation-story.md
 needs: [manual-testing]
+priority: important
 ---
 
 Leave-off marker for the installation effort (2026-07, the

@@ -96,7 +96,10 @@ The image file itself lives in the card's attach scope, pointed to by
 
 Frontmatter fields:
 - \`filename:\` — \`{ref, captured, source}\` for the attached image
-  file. \`captured\` is set from EXIF when available.
+  file. \`captured\` is the acquisition timestamp supplied by the
+  capture/upload/import flow (for example, camera shutter time,
+  gallery selection time, or import-session start). It is not
+  derived from EXIF.
 - \`description:\` — one sentence describing what the image *looks
   like* (filled during analysis) — the visual field, used as alt text.
 - \`contains:\` — one sentence stating what someone could *learn* from
@@ -110,7 +113,9 @@ Frontmatter fields:
   text content from the image, if any. \`source\` describes what the
   text is on ("whiteboard", "business card", "printed page",
   "screen").
-- \`exif:\` — EXIF metadata extracted from the image file.
+- \`exif:\` — EXIF metadata extracted from the image file. Put the
+  camera's original photographic timestamp in \`exif.date\` when
+  available; it may differ from \`filename.captured\`.
 - \`subject-bbox:\` — bounding box of the main subject on a 0-1000
   scale (\`{y1, x1, y2, x2}\`). Present when the subject doesn't fill
   the entire frame.

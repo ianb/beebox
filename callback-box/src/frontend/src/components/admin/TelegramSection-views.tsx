@@ -12,7 +12,6 @@ export interface TelegramStatus {
   botUsername?: string;
   botFirstName?: string;
   webhookUrl?: string | null;
-  botToken?: string;
   publicUrl?: string;
   boxSlug?: string;
   error?: string;
@@ -36,13 +35,10 @@ export function TelegramConnectedView({
         ) : null}
       </div>
 
-      {status.botToken ? (
-        <div className="mb-4 p-3 bg-warm-50 border border-warm-200 rounded text-sm text-warm-700">
-          <span className="font-medium">Token:</span>{" "}
-          <code className="bg-warm-200 px-1 rounded text-xs break-all select-all">{status.botToken}</code>
-        </div>
-      ) : null}
-
+      {/* The bot token is deliberately NOT shown or returned by the API — it
+          lives in the machine secret store and terminates in the server
+          process (docs/plans/secret-custody.md). The bot's @username above is
+          the identifying detail this panel needs. */}
       {status.webhookUrl ? (
         <div className="mb-4 p-3 bg-warm-50 border border-warm-200 rounded text-sm text-warm-700">
           <span className="font-medium">Webhook:</span>{" "}

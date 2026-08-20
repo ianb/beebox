@@ -8,7 +8,28 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import http from "node:http";
-import { renderMarkdownToHtml, renderWorktreeToolCards, readDevTools, isPathInScriptedApp, serveDev } from "./router-docs.js";
+import {
+  appendClosedIssuePills,
+  findClosedIssueLinkHrefs,
+  readDevTools,
+  renderMarkdownToHtml,
+  renderWorktreeToolCards,
+  serveDev,
+} from "./router-docs.js";
+
+test("closed issue links in docs receive a status pill", () => {
+  const markdown =
+    "[closed](../issues/closed/bugs/example.md) [open](../issues/bugs/example.md)";
+  const hrefs = findClosedIssueLinkHrefs(markdown, "docs");
+  assert.deepEqual([...hrefs], ["../issues/closed/bugs/example.md"]);
+  assert.equal(
+    appendClosedIssuePills(
+      '<a href="../issues/closed/bugs/example.md">closed</a> <a href="../issues/bugs/example.md">open</a>',
+      hrefs,
+    ),
+    '<a href="../issues/closed/bugs/example.md">closed</a><span class="chip chip-closed-link">closed</span> <a href="../issues/bugs/example.md">open</a>',
+  );
+});
 
 test("manual testing headings get a stable anchor", () => {
   assert.match(renderMarkdownToHtml("## Manual testing\n\nTry it."), /<h2 id="manual-testing">/);
@@ -23,23 +44,25 @@ async function mkDevRoot(toolsJson?: string): Promise<string> {
 // Minimal ServerResponse stand-in that records the final Content-Security-Policy
 // (setHeader value survives writeHead in real Node unless writeHead re-sets it,
 // which serveDev never does for CSP — so last setHeader wins).
-function fakeRes(): { csp: () => string | undefined; res: http.ServerResponse } {
+function fakeRes(): { csp: () => string | undefined; codes: number[]; res: http.ServerResponse } {
   const headers: Record<string, string> = {};
+  const codes: number[] = [];
   const res = {
     setHeader(k: string, v: string) { headers[k.toLowerCase()] = v; },
     getHeader(k: string) { return headers[k.toLowerCase()]; },
-    writeHead(_c: number, h?: Record<string, string>) { if (h) for (const [k, v] of Object.entries(h)) headers[k.toLowerCase()] = v; return this; },
+    writeHead(c: number, h?: Record<string, string>) { codes.push(c); if (h) for (const [k, v] of Object.entries(h)) headers[k.toLowerCase()] = v; return this; },
     end() {},
   };
-  return { csp: () => headers["content-security-policy"], res: res as unknown as http.ServerResponse };
+  return { csp: () => headers["content-security-policy"], codes, res: res as unknown as http.ServerResponse };
 }
 
-// A worktree with a scripted story-eval app and a sibling payload.html.
-async function mkScriptedRepo(): Promise<string> {
+// A worktree with an interactive-looking app dir and a sibling payload.html,
+// for exercising serveDev's serving, containment, and header behavior.
+async function mkAppishRepo(): Promise<string> {
   const repo = await fs.mkdtemp(path.join(os.tmpdir(), "repo-"));
   const dev = path.join(repo, "dev");
   await fs.mkdir(path.join(dev, "story-eval"), { recursive: true });
-  await fs.writeFile(path.join(dev, "tools.json"), JSON.stringify({ tools: [], scripted: ["story-eval"] }));
+  await fs.writeFile(path.join(dev, "tools.json"), JSON.stringify({ tools: [] }));
   await fs.writeFile(path.join(dev, "story-eval", "index.html"), "<h1>app</h1>");
   await fs.writeFile(path.join(dev, "payload.html"), "<h1>evil</h1>");
   return repo;
@@ -49,6 +72,12 @@ async function cspFor(repo: string, rest: string): Promise<string | undefined> {
   const { csp, res } = fakeRes();
   await serveDev({ name: "wt", rest, res, repoRoot: repo });
   return csp();
+}
+
+async function codesFor(repo: string, rest: string): Promise<number[]> {
+  const { codes, res } = fakeRes();
+  await serveDev({ name: "wt", rest, res, repoRoot: repo });
+  return codes;
 }
 
 test("no tools.json → no cards", async () => {
@@ -89,62 +118,49 @@ test("card content is HTML-escaped", async () => {
   assert.match(html, /A &amp; B &lt;x&gt;/);
 });
 
-test("readDevTools returns the scripted allowlist; defaults to empty", async () => {
-  const withList = await mkDevRoot(JSON.stringify({ tools: [], scripted: ["story-eval"] }));
-  assert.deepEqual((await readDevTools("wt", withList)).scripted, ["story-eval"]);
-  const noList = await mkDevRoot(JSON.stringify({ tools: [] }));
-  assert.deepEqual((await readDevTools("wt", noList)).scripted, []);
-  const absent = await mkDevRoot();
-  assert.deepEqual((await readDevTools("wt", absent)).scripted, []);
-  const malformed = await mkDevRoot("{ not json");
-  assert.deepEqual((await readDevTools("wt", malformed)).scripted, []);
+test("tools.json carrying the retired `scripted` key is rejected (strict)", async () => {
+  // The exemption is gone: a stale allowlist is an unknown key, so the whole
+  // file degrades to no cards rather than being silently half-honored.
+  const dev = await mkDevRoot(JSON.stringify({ tools: [{ title: "X", href: "dev/x" }], scripted: ["story-eval"] }));
+  assert.deepEqual((await readDevTools("wt", dev)).tools, []);
+  assert.equal(await renderWorktreeToolCards("wt", dev), "");
 });
 
-test("readDevTools rejects unsafe scripted entries (whole file → empty)", async () => {
-  for (const bad of ["..", ".", "", "a/b", "a\\b", "/abs"]) {
-    const dev = await mkDevRoot(JSON.stringify({ tools: [], scripted: [bad] }));
-    assert.deepEqual((await readDevTools("wt", dev)).scripted, [], `entry ${JSON.stringify(bad)} must be rejected`);
-  }
+test("serveDev sets no Content-Security-Policy — normal HTML and markdown just work", async () => {
+  // The B.2c bare-sandbox CSP was removed 2026-08-19 (boxholder decision): it
+  // broke images in rendered markdown (opaque origin → cookieless subrequests)
+  // and scripts in plain HTML, while the same-origin-scripting threat it
+  // addressed is already an accepted residual for worktree frontends. This
+  // test pins the absence so a future hardening pass reads the decision
+  // comment in serveDev before re-adding one.
+  const repo = await mkAppishRepo();
+  assert.equal(await cspFor(repo, "/dev/story-eval/index.html"), undefined);
+  assert.equal(await cspFor(repo, "/dev/story-eval/"), undefined);
+  assert.equal(await cspFor(repo, "/dev/payload.html"), undefined);
+  assert.equal(await cspFor(repo, "/dev/"), undefined); // manifest
+  assert.equal(await cspFor(repo, "/dev/docs/"), undefined);
+  assert.equal(await cspFor(repo, "/dev/nope.html"), undefined); // 404
+  assert.equal(await cspFor(repo, "/dev/%zz"), undefined); // malformed escape
 });
 
-test("isPathInScriptedApp matches by resolved path, not URL segment", () => {
-  const devRoot = "/dev";
-  const list = ["story-eval"];
-  assert.equal(isPathInScriptedApp("/dev/story-eval", devRoot, list), true);
-  assert.equal(isPathInScriptedApp("/dev/story-eval/index.html", devRoot, list), true);
-  assert.equal(isPathInScriptedApp("/dev/story-eval/runs/x.json", devRoot, list), true);
-  assert.equal(isPathInScriptedApp("/dev/story-eval-evil/index.html", devRoot, list), false); // no prefix bleed
-  assert.equal(isPathInScriptedApp("/dev/payload.html", devRoot, list), false); // traversal target
-  assert.equal(isPathInScriptedApp("/dev/docs/foo", devRoot, list), false);
-  assert.equal(isPathInScriptedApp("/dev/story-eval/x", devRoot, []), false); // empty allowlist
+test("serveDev: encoded traversal stays contained", async () => {
+  const repo = await mkAppishRepo();
+  // Decodes to /story-eval/../payload.html → resolves to dev/payload.html:
+  // inside devRoot, so it is served.
+  assert.equal((await codesFor(repo, "/dev/story-eval%2F..%2Fpayload.html"))[0], 200);
+  // Above devRoot → refused outright.
+  assert.deepEqual(await codesFor(repo, "/dev/..%2F..%2Fetc%2Fpasswd"), [403]);
 });
 
-test("serveDev grants relaxed CSP only for real files inside a scripted app", async () => {
-  const repo = await mkScriptedRepo();
-  const RELAXED = "sandbox allow-scripts allow-same-origin";
-  // The app itself → relaxed.
-  assert.equal(await cspFor(repo, "/dev/story-eval/index.html"), RELAXED);
-  assert.equal(await cspFor(repo, "/dev/story-eval/"), RELAXED); // dir listing inside app, harmless
-  // Everything else → bare sandbox.
-  assert.equal(await cspFor(repo, "/dev/payload.html"), "sandbox");
-  assert.equal(await cspFor(repo, "/dev/"), "sandbox"); // manifest
-  assert.equal(await cspFor(repo, "/dev/docs/"), "sandbox");
-});
-
-test("serveDev: encoded traversal cannot steal the grant (Codex #2)", async () => {
-  const repo = await mkScriptedRepo();
-  // Decodes to /story-eval/../payload.html → resolves to dev/payload.html, which
-  // is NOT inside the app dir, so it must stay bare sandbox even though the raw
-  // first URL segment is "story-eval".
-  assert.equal(await cspFor(repo, "/dev/story-eval%2F..%2Fpayload.html"), "sandbox");
-});
-
-test("serveDev: a symlink out of the app dir gets neither the grant nor escape (Codex #4)", async () => {
-  const repo = await mkScriptedRepo();
+test("serveDev: a symlink out of the app dir is contained", async () => {
+  const repo = await mkAppishRepo();
   const link = path.join(repo, "dev", "story-eval", "link.html");
-  // Symlink inside the app dir pointing at a sibling outside it.
+  // Symlink inside the app dir pointing at a sibling still inside dev/.
   await fs.symlink(path.join(repo, "dev", "payload.html"), link);
-  // Real path is dev/payload.html (inside devRoot → served, 200) but outside the
-  // app dir → bare sandbox, not relaxed.
-  assert.equal(await cspFor(repo, "/dev/story-eval/link.html"), "sandbox");
+  assert.deepEqual(await codesFor(repo, "/dev/story-eval/link.html"), [200]);
+  // A symlink whose real path leaves dev/ is refused by the realpath re-check.
+  const escape = path.join(repo, "dev", "escape.html");
+  await fs.writeFile(path.join(repo, "outside.html"), "<h1>outside</h1>");
+  await fs.symlink(path.join(repo, "outside.html"), escape);
+  assert.deepEqual(await codesFor(repo, "/dev/escape.html"), [403]);
 });

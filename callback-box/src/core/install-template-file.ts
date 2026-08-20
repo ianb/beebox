@@ -95,6 +95,11 @@ const TEMPLATE_MANAGED_PATTERNS: readonly RegExp[] = [
   /^briefing\.md$/,
   /^\.claude\/rules\/.+\.md$/,
   /^\.claude\/settings\.json$/,
+  /^\.\.\/AGENTS\.md$/,
+  /^AGENTS\.md$/,
+  /^.+\/AGENTS\.md$/,
+  /^\.\.\/\.agents\/skills\/.+$/,
+  /^\.\.\/\.codex\/hooks\.json$/,
 ];
 
 /** Whether `relPath` is callback-box template output (see {@link TEMPLATE_MANAGED_PATTERNS}). */
@@ -502,4 +507,3 @@ export async function listParkedTemplateUpdates(boxRoot: string): Promise<string
   }
   return parked.toSorted();
 }
-

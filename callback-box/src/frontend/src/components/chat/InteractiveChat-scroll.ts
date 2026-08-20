@@ -18,9 +18,17 @@
  *    so a content-only observer silently drifts off the bottom.
  *  - User vs. programmatic scroll is told apart by recording the scrollTop we
  *    last wrote; an incoming scroll within a pixel or two of that is our own
- *    write and is ignored. A genuine upward scroll only disengages when a real
- *    wheel/touch/key input fired recently — layout-driven scrolls (mobile
- *    keyboard dismiss clamping scrollTop down) carry no such input.
+ *    write and is ignored. A genuine upward scroll disengages when a real
+ *    wheel/touch/key input fired recently, OR when it lands well above the
+ *    bottom — a scrollbar-thumb drag fires no input events but is still the
+ *    user, while the layout-driven scrolls the intent gate must ignore
+ *    (mobile keyboard dismiss clamping scrollTop down) land AT the bottom.
+ *    The pure rules live in `decideScroll` (scroll-reconcile.ts).
+ *  - While detached, the reading-position anchor's recorded offset is kept in
+ *    step with user scrolling inside the scroll handler itself (not just the
+ *    paused-scroll recapture), so a stream chunk landing mid-fling measures
+ *    only genuine reflow — never the user's own scrolling — and momentum is
+ *    never "corrected" back to the disengage point.
  *  - A generous near-bottom margin re-engages following; never exact equality
  *    (sub-pixel/retina rounding makes `=== 0` unreachable — assistant-ui PR
  *    #4141 is the cautionary tale).
@@ -32,7 +40,9 @@
  */
 
 import { useRef, useState, useCallback, useEffect } from "react";
-import { decideReconcile } from "./scroll-reconcile";
+import type { MutableRefObject } from "react";
+import { decideReconcile, decideScroll, type ReconcileAction } from "./scroll-reconcile";
+import { recordScrollTrace } from "../../lib/scroll-diagnostics";
 
 // Re-engage following once the user scrolls back within this many px of the
 // bottom. Generous on purpose, and never exact equality.
@@ -51,6 +61,26 @@ const USER_INTENT_WINDOW_MS = 250;
 
 const SCROLL_KEYS = new Set(["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "]);
 
+interface ScrollerHandlers {
+  onScroll: () => void;
+  onIntent: () => void;
+  onKeyIntent: (e: KeyboardEvent) => void;
+}
+
+function addScrollerListeners(el: HTMLDivElement, h: ScrollerHandlers): void {
+  el.addEventListener("scroll", h.onScroll, { passive: true });
+  el.addEventListener("wheel", h.onIntent, { passive: true });
+  el.addEventListener("touchmove", h.onIntent, { passive: true });
+  el.addEventListener("keydown", h.onKeyIntent);
+}
+
+function removeScrollerListeners(el: HTMLDivElement, h: ScrollerHandlers): void {
+  el.removeEventListener("scroll", h.onScroll);
+  el.removeEventListener("wheel", h.onIntent);
+  el.removeEventListener("touchmove", h.onIntent);
+  el.removeEventListener("keydown", h.onKeyIntent);
+}
+
 // The topmost child still (partly) visible in the scroller, with its offset
 // from the viewport top — the anchor used to hold a detached view steady when
 // content above it changes size.
@@ -62,6 +92,42 @@ function topVisibleChild(scroller: HTMLDivElement | null, content: HTMLDivElemen
     if (r.bottom > scTop + 1) return { el: child, top: r.top - scTop };
   }
   return null;
+}
+
+// Applies the effect a reconcile cycle decided on. Split out of the
+// `useStickToBottom` hook body purely to keep that function under the
+// max-lines-per-function budget — it has no state of its own, just the refs
+// and callbacks the caller already holds.
+function applyReconcileAction(action: ReconcileAction, opts: {
+  el: HTMLDivElement;
+  anchorDelta: number;
+  prependGapRef: MutableRefObject<number | null>;
+  anchorRef: MutableRefObject<{ el: Element; top: number } | null>;
+  contentElRef: MutableRefObject<HTMLDivElement | null>;
+  writeTop: (top: number, behavior: ScrollBehavior) => void;
+  writeToBottom: (behavior: ScrollBehavior) => void;
+  setUnseen: (v: boolean) => void;
+}): void {
+  const { el, anchorDelta, prependGapRef, anchorRef, contentElRef, writeTop, writeToBottom, setUnseen } = opts;
+  if (action === "hold-prepend") {
+    // Restore the captured bottom-gap so inserting older messages above
+    // doesn't move the view, then re-anchor to a now-visible message: the
+    // older block (with its late-decoding images/embeds) is above the
+    // viewport, so subsequent growth there compensates against this anchor
+    // instead of being misread as new content below (the false-"new messages"
+    // bug this path fixes).
+    const gap = prependGapRef.current ?? 0;
+    prependGapRef.current = null;
+    writeTop(el.scrollHeight - gap, "instant");
+    anchorRef.current = topVisibleChild(el, contentElRef.current);
+  } else if (action === "follow-bottom") {
+    writeToBottom("instant");
+  } else if (action === "hold-anchor") {
+    // Existing content above reflowed — compensate; not new, don't flag.
+    writeTop(el.scrollTop + anchorDelta, "instant");
+  } else if (action === "flag-unseen") {
+    setUnseen(true);
+  }
 }
 
 export interface StickToBottom {
@@ -83,16 +149,24 @@ export interface StickToBottom {
   captureForPrepend: () => void;
 }
 
+// A boolean flag kept in a ref (the source of truth, read synchronously in
+// event handlers) with a state mirror that drives rendering of the button.
+function useMirroredFlag(initial: boolean): { ref: MutableRefObject<boolean>; value: boolean; set: (v: boolean) => void } {
+  const ref = useRef(initial);
+  const [value, setValue] = useState(initial);
+  const set = useCallback((v: boolean) => {
+    ref.current = v;
+    setValue((prev) => (prev === v ? prev : v));
+  }, []);
+  return { ref, value, set };
+}
+
 export function useStickToBottom(): StickToBottom {
   const scrollerElRef = useRef<HTMLDivElement | null>(null);
   const contentElRef = useRef<HTMLDivElement | null>(null);
 
-  // Refs are the source of truth (read synchronously in event handlers); the
-  // state mirrors drive rendering of the button.
-  const pinnedRef = useRef(true);
-  const [isPinned, setIsPinned] = useState(true);
-  const unseenRef = useRef(false);
-  const [hasUnseenContent, setHasUnseenContent] = useState(false);
+  const { ref: pinnedRef, value: isPinned, set: setPinned } = useMirroredFlag(true);
+  const { value: hasUnseenContent, set: setUnseen } = useMirroredFlag(false);
 
   const lastScrollTopRef = useRef(0);
   const lastUserIntentAtRef = useRef(0);
@@ -111,30 +185,29 @@ export function useStickToBottom(): StickToBottom {
     scroller: null,
   });
 
-  const setPinned = useCallback((v: boolean) => {
-    pinnedRef.current = v;
-    setIsPinned((prev) => (prev === v ? prev : v));
-  }, []);
-
-  const setUnseen = useCallback((v: boolean) => {
-    unseenRef.current = v;
-    setHasUnseenContent((prev) => (prev === v ? prev : v));
-  }, []);
+  // Target of an in-flight `behavior: "smooth"` write (the button's return-to-
+  // bottom). Its intermediate animation frames arrive as ordinary scroll events
+  // below the target and must be swallowed as programmatic, not read as the
+  // user scrolling up.
+  const smoothTargetRef = useRef<number | null>(null);
 
   // Write scrollTop directly to a known offset and remember it, so the scroll
   // event it triggers is recognized as ours.
   const writeTop = useCallback((top: number, behavior: ScrollBehavior) => {
     const el = scrollerElRef.current;
     if (!el) return;
+    recordScrollTrace("write", { top: Math.round(top), b: behavior });
     lastProgrammaticTopRef.current = top;
+    smoothTargetRef.current = behavior === "smooth" ? top : null;
     el.scrollTo({ top, behavior });
-    lastScrollTopRef.current = top;
+    // For a smooth write this is the (unchanged) start position — the animation
+    // frames update it as they're swallowed in the scroll handler.
+    lastScrollTopRef.current = el.scrollTop;
   }, []);
 
   const writeToBottom = useCallback((behavior: ScrollBehavior) => {
     const el = scrollerElRef.current;
-    if (!el) return;
-    writeTop(el.scrollHeight - el.clientHeight, behavior);
+    if (el) writeTop(el.scrollHeight - el.clientHeight, behavior);
   }, [writeTop]);
 
   const scrollToBottom = useCallback((opts?: { behavior?: ScrollBehavior }) => {
@@ -151,6 +224,7 @@ export function useStickToBottom(): StickToBottom {
 
   const markUserIntent = useCallback(() => {
     lastUserIntentAtRef.current = performance.now();
+    recordScrollTrace("intent", {});
   }, []);
 
   const handleKeyIntent = useCallback((e: KeyboardEvent) => {
@@ -164,7 +238,7 @@ export function useStickToBottom(): StickToBottom {
     anchorTimerRef.current = window.setTimeout(() => {
       anchorRef.current = pinnedRef.current ? null : topVisibleChild(scrollerElRef.current, contentElRef.current);
     }, 80);
-  }, []);
+  }, [pinnedRef]);
 
   const handleScroll = useCallback(() => {
     const el = scrollerElRef.current;
@@ -172,29 +246,57 @@ export function useStickToBottom(): StickToBottom {
     const top = el.scrollTop;
     // Our own programmatic write — don't reinterpret it as user intent.
     if (Math.abs(top - lastProgrammaticTopRef.current) <= PROGRAMMATIC_EPSILON) {
+      recordScrollTrace("scroll", { top: Math.round(top), act: "own" });
+      smoothTargetRef.current = null;
       lastScrollTopRef.current = top;
       return;
     }
-    const fromBottom = el.scrollHeight - top - el.clientHeight;
-    const scrolledUp = top < lastScrollTopRef.current - PROGRAMMATIC_EPSILON;
     const recentIntent = performance.now() - lastUserIntentAtRef.current < USER_INTENT_WINDOW_MS;
-    if (scrolledUp && recentIntent) {
+    // Frames of our own smooth animation: still moving toward the target with
+    // no fresh user input — ours. A genuine input, or movement away from the
+    // target, means the user took over (or the animation was superseded).
+    const smoothTarget = smoothTargetRef.current;
+    const towardSmooth = smoothTarget !== null && Math.abs(smoothTarget - top) < Math.abs(smoothTarget - lastScrollTopRef.current);
+    if (towardSmooth && !recentIntent) {
+      recordScrollTrace("scroll", { top: Math.round(top), act: "smooth-own" });
+      lastScrollTopRef.current = top;
+      return;
+    }
+    smoothTargetRef.current = null;
+    // Keep the detached anchor's recorded offset in step with the scroll
+    // itself, so a resize landing mid-scroll measures only genuine reflow.
+    // Without this, a momentum fling (scroll events but no touchmove, so the
+    // debounced recapture never runs) leaves the anchor frozen at the
+    // disengage point, and every stream chunk "corrects" the user's own
+    // scrolling by yanking them back there — the mid-stream scroll sawtooth.
+    const liveAnchor = anchorRef.current;
+    if (!pinnedRef.current && liveAnchor) liveAnchor.top += lastScrollTopRef.current - top;
+    // The disengage/re-engage rules (scrollbar drags, clamps, the near-bottom
+    // margin) live in the pure `decideScroll` — see its doc comment.
+    // fromBottom uses the smaller of the live and last-reconciled scrollHeight:
+    // a clamp's scroll event can be raced by stream growth landing before this
+    // handler runs, and measuring against the grown height would misread that
+    // clamp as an intent-less scroll-up far from the bottom (a "drag").
+    // Not-yet-reconciled growth is exactly the raced amount, so exclude it.
+    const fromBottom = Math.min(el.scrollHeight, prevScrollHeightRef.current) - top - el.clientHeight;
+    const action = decideScroll({
+      scrolledUp: top < lastScrollTopRef.current - PROGRAMMATIC_EPSILON,
+      recentIntent,
+      fromBottom,
+      nearBottomPx: NEAR_BOTTOM_PX,
+    });
+    recordScrollTrace("scroll", { top: Math.round(top), fb: Math.round(fromBottom), act: action, intent: recentIntent, pin: pinnedRef.current });
+    if (action === "disengage") {
       setPinned(false);
       anchorRef.current = topVisibleChild(el, contentElRef.current);
-    } else if (!scrolledUp && fromBottom <= NEAR_BOTTOM_PX) {
-      // Re-engage only on a genuine downward (or stationary) scroll that lands
-      // near the bottom. A browser *clamp* — when content shrinks below the
-      // user's position (e.g. a turn finalizing shorter than its streamed form)
-      // — fires a scroll event that DECREASES scrollTop (scrolledUp) to the new
-      // bottom; that must NOT re-pin, or the next growth (a late image/embed)
-      // would follow and yank a scrolled-up reader to the bottom.
+    } else if (action === "re-engage") {
       setPinned(true);
       setUnseen(false);
       anchorRef.current = null;
     }
     if (!pinnedRef.current) scheduleAnchorCapture();
     lastScrollTopRef.current = top;
-  }, [setPinned, setUnseen, scheduleAnchorCapture]);
+  }, [pinnedRef, setPinned, setUnseen, scheduleAnchorCapture]);
 
   // Both ResizeObservers funnel here. The pure `decideReconcile` classifies the
   // cycle; this function measures the DOM facts it needs and applies the
@@ -223,46 +325,24 @@ export function useStickToBottom(): StickToBottom {
     }
 
     const action = decideReconcile({ source, grew, pinned: pinnedRef.current, prepend, anchorMoved: Math.abs(anchorDelta) > 1 });
+    recordScrollTrace("reconcile", { src: source, grew, ad: Math.round(anchorDelta), act: action, sh: el.scrollHeight, ch: el.clientHeight, st: Math.round(el.scrollTop) });
     prevScrollHeightRef.current = el.scrollHeight;
 
-    if (action === "hold-prepend") {
-      // Restore the captured bottom-gap so inserting older messages above
-      // doesn't move the view, then re-anchor to a now-visible message: the
-      // older block (with its late-decoding images/embeds) is above the
-      // viewport, so subsequent growth there compensates against this anchor
-      // instead of being misread as new content below (the false-"new messages"
-      // bug this path fixes).
-      const gap = prependGapRef.current ?? 0;
-      prependGapRef.current = null;
-      writeTop(el.scrollHeight - gap, "instant");
-      anchorRef.current = topVisibleChild(el, contentElRef.current);
-    } else if (action === "follow-bottom") {
-      writeToBottom("instant");
-    } else if (action === "hold-anchor") {
-      // Existing content above reflowed — compensate; not new, don't flag.
-      writeTop(el.scrollTop + anchorDelta, "instant");
-    } else if (action === "flag-unseen") {
-      setUnseen(true);
-    }
-  }, [writeTop, writeToBottom, setUnseen]);
+    applyReconcileAction(action, { el, anchorDelta, prependGapRef, anchorRef, contentElRef, writeTop, writeToBottom, setUnseen });
+  }, [pinnedRef, writeTop, writeToBottom, setUnseen]);
 
   const scrollerRef = useCallback((el: HTMLDivElement | null) => {
+    const handlers: ScrollerHandlers = { onScroll: handleScroll, onIntent: markUserIntent, onKeyIntent: handleKeyIntent };
     const prev = scrollerElRef.current;
     if (prev) {
-      prev.removeEventListener("scroll", handleScroll);
-      prev.removeEventListener("wheel", markUserIntent);
-      prev.removeEventListener("touchmove", markUserIntent);
-      prev.removeEventListener("keydown", handleKeyIntent);
+      removeScrollerListeners(prev, handlers);
       if (observersRef.current.scroller) observersRef.current.scroller.disconnect();
     }
     scrollerElRef.current = el;
     if (el) {
       lastScrollTopRef.current = el.scrollTop;
       prevScrollHeightRef.current = el.scrollHeight;
-      el.addEventListener("scroll", handleScroll, { passive: true });
-      el.addEventListener("wheel", markUserIntent, { passive: true });
-      el.addEventListener("touchmove", markUserIntent, { passive: true });
-      el.addEventListener("keydown", handleKeyIntent);
+      addScrollerListeners(el, handlers);
       const ro = new ResizeObserver(() => reconcile("scroller"));
       ro.observe(el);
       observersRef.current.scroller = ro;

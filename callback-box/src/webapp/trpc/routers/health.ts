@@ -7,7 +7,6 @@
 
 import { z } from "zod";
 import * as fs from "node:fs/promises";
-import { constants as fsConstants } from "node:fs";
 import * as path from "node:path";
 import { PACKAGE_ROOT } from "../../../lib/package-root.js";
 import { createClaudeCliService, type ClaudeCliService } from "../../../services/claude-cli.js";
@@ -15,12 +14,11 @@ import { router, publicProcedure } from "../trpc.js";
 import { getMistralApiKey } from "../../../core/mistral-key.js";
 import { resolveNav, NAV_CARD_PATH } from "../../../core/nav.js";
 import { getDeepgramCredentials } from "../../../core/deepgram-key.js";
+import { getGeminiApiKey } from "../../../core/gemini-key.js";
+import { getOpenAiThinkingKey } from "../../../core/openai-thinking-key.js";
 import { loadTranscriptionConfig } from "../../../core/transcription/index.js";
 import { getBoxShape } from "../../../lib/box-shape.js";
 import { isRecord } from "../../../lib/is-record.js";
-import { createGitAnnexService } from "../../../services/git-annex.js";
-import { runAnnexDoctor } from "../../../core/annex/doctor.js";
-import { findStaleTmpCaptureCards, TMP_CAPTURE_STALE_MS } from "../../../core/capture/sweep.js";
 import { engineHealthChecks } from "./health-engine.js";
 import { googleAuthHealthChecks } from "./health-google.js";
 import { getBoxTime } from "../../../lib/time.js";
@@ -28,6 +26,11 @@ import { getHealthSnapshot } from "./health-snapshot.js";
 import { checkSchedulerHeartbeat } from "../../../core/schedule/health-box.js";
 import { boxGrowthHealthCheck } from "../../../core/box-growth/health.js";
 import { acknowledgeBoxGrowthProcedure, expectBoxGrowthRatesProcedure } from "./health-box-growth.js";
+import { isWritable, writability } from "./health-writability.js";
+import { legacySecretFilesCheck } from "./health-secrets.js";
+import { pendingMigrationsCheck } from "./health-migrations.js";
+import { annexHealthChecks } from "./health-annex.js";
+import { unfiledCapturesCheck, stalledJobsCheck } from "./health-stale.js";
 
 export interface HealthCheck {
   name: string;
@@ -89,24 +92,6 @@ export async function readVersionInfo(): Promise<VersionInfo> {
 }
 
 /**
- * Check that a directory is writable by the current process.
- *
- * Uses `fs.access(..., W_OK)` — a POSIX permission probe that never
- * creates a file. An earlier version wrote and unlinked a `.health-check-*`
- * file, which leaked into watched directories when the unlink failed or
- * a file watcher grabbed the file first.
- */
-async function isWritable(dirPath: string): Promise<boolean> {
-  try {
-    await fs.access(dirPath, fsConstants.W_OK);
-    return true;
-  } catch (_e) {
-    // access(W_OK) throwing IS the answer: not writable (or missing). Return false.
-    return false;
-  }
-}
-
-/**
  * Sweep any leftover `.health-check-*` files from an earlier isWritable
  * implementation that wrote-then-unlinked. Silently ignores failures —
  * this is cleanup, not a hard requirement.
@@ -139,74 +124,6 @@ export interface RunHealthChecksOptions {
   claudeCli?: ClaudeCliService | undefined;
 }
 
-/**
- * Captures still sitting unfiled in `tmp-capture/`.
- *
- * Staged captures are deliberately gitignored so a pre-triage photo is not
- * annexed before an agent files it — it still gets renamed, re-encoded, and
- * EXIF-rotated, and annexing on arrival would mint immutable objects for
- * superseded versions. The cost is that a staged capture is in neither git nor
- * the annex, which is the one window where box content has no second record at
- * all. Fine for hours, bad for weeks — so make a long window visible.
- *
- * `warning`, not `error`: a triage backlog is a nudge, not a defect, and this
- * must never fail a deploy or take a box offline. It is also deliberately NOT
- * a `cb doctor annex` check — that one is configuration-only, and a condition
- * that varies with pending work has no configuration remedy.
- *
- * Reuses the abandonment sweep's existing traversal and threshold rather than
- * walking the tree again with a second notion of "unfiled".
- */
-async function unfiledCapturesCheck(boxRoot: string): Promise<HealthCheck> {
-  const days = Math.round(TMP_CAPTURE_STALE_MS / (24 * 60 * 60 * 1000));
-  const stale = await findStaleTmpCaptureCards({
-    boxRoot,
-    now: getBoxTime(boxRoot).getTime(),
-  });
-  return {
-    name: "unfiled-captures",
-    ok: stale.length === 0,
-    message:
-      stale.length === 0
-        ? "no captures unfiled past the staging window"
-        : `${String(stale.length)} capture(s) unfiled for over ${String(days)} days ` +
-          `(e.g. ${stale[0] ?? ""}). Their bytes are in neither git nor the annex — file them with cb mv.`,
-    severity: "warning",
-  };
-}
-
-/**
- * The git-annex conditions `cb doctor annex` cannot repair.
- *
- * Only those two: the other five are fixed automatically on `cb serve` /
- * `cb init`, so surfacing them here would report problems that no longer
- * exist by the time anyone reads the output. Both are `error` severity so the
- * deploy runbooks gate on them — the right lever, since refusing to *serve*
- * would take a box offline for a degradation (missing binary, which already
- * fails loudly at every read and commit) or for a loss already sustained
- * (missing content).
- */
-async function annexHealthChecks(args: { repoRoot: string; boxRoot: string }): Promise<HealthCheck[]> {
-  const result = await runAnnexDoctor(createGitAnnexService(), {
-    repoRoot: args.repoRoot,
-    boxRoot: args.boxRoot,
-    options: { check: true },
-  });
-  const out: HealthCheck[] = [];
-  for (const id of ["binary", "content-present"]) {
-    const check = result.checks.find((c) => c.id === id);
-    // Absent when the run short-circuited on a missing binary, which the
-    // "binary" check itself already reports.
-    if (check === undefined) continue;
-    out.push({
-      name: `annex-${id}`,
-      ok: check.status !== "failed",
-      message: check.message,
-      severity: "error",
-    });
-  }
-  return out;
-}
 
 /**
  * Gemini key check — the key is optional: it powers audio questions
@@ -214,14 +131,14 @@ async function annexHealthChecks(args: { repoRoot: string; boxRoot: string }): P
  * (`CB_SCAN_VISION=gemini`); scan-import defaults to the Claude backend,
  * which needs no extra key.
  */
-function geminiKeyCheck(): HealthCheck {
-  const geminiKey = process.env["GEMINI_KEY"] || process.env["SKE_GEMINI_API_KEY"] || null;
+async function geminiKeyCheck(boxRoot: string): Promise<HealthCheck> {
+  const geminiKey = await getGeminiApiKey(boxRoot, { purpose: "health-check", observe: false });
   const geminiSelected = process.env["CB_SCAN_VISION"] === "gemini";
   const message =
     geminiKey !== null
       ? "Gemini API key configured"
       : geminiSelected
-        ? "CB_SCAN_VISION=gemini but no Gemini API key — scan-import will fail. Set GEMINI_KEY in .env"
+        ? 'CB_SCAN_VISION=gemini but no Gemini API key — scan-import will fail. Grant the "gemini" secret to this box, or set GEMINI_KEY'
         : "Gemini API key not found (optional) — audio questions will not work; scan-import uses the Claude backend by default";
   return {
     name: "gemini-api-key",
@@ -262,13 +179,18 @@ export async function runHealthChecks(
   // docs/implemented-plans/boxes-as-packages-v2.md).
   const { packageRoot: gitRoot } = await getBoxShape(boxRoot);
   const gitObjectsDir = path.join(gitRoot, ".git/objects");
-  const gitWritable = await isWritable(gitObjectsDir);
+  const gitWritability = await writability(gitObjectsDir);
+  const gitWritable = gitWritability === "writable";
   checks.push({
     name: "git-writable",
     ok: gitWritable,
-    message: gitWritable
-      ? ".git/objects is writable"
-      : ".git/objects is not writable — all commits will fail (run: chown -R callback:callback " + gitRoot + ")",
+    message:
+      gitWritability === "writable"
+        ? ".git/objects is writable"
+        : gitWritability === "missing"
+          ? ".git/objects is missing — commits will fail; verify the Git repository at " + gitRoot
+          : ".git/objects is not writable in this process — commits will fail; " +
+            "filesystem permissions or an execution sandbox may be preventing writes",
     severity: "error",
   });
 
@@ -297,7 +219,9 @@ export async function runHealthChecks(
   });
 
   checks.push(...(await annexHealthChecks({ repoRoot: gitRoot, boxRoot })));
+  checks.push(await pendingMigrationsCheck(boxRoot));
   checks.push(await unfiledCapturesCheck(boxRoot));
+  checks.push(await stalledJobsCheck(boxRoot));
   const now = getBoxTime(boxRoot);
   const scheduler = await checkSchedulerHeartbeat(boxRoot, now);
   checks.push(await boxGrowthHealthCheck(boxRoot, { now, schedulerStatus: scheduler.status }));
@@ -324,12 +248,18 @@ export async function runHealthChecks(
   }
 
   // --- API key checks ---
+  //
+  // Every key read below passes `observe: false` (`core/secrets/resolve.ts`):
+  // these resolves answer "is this configured?" and never spend the key. The
+  // access log still records them — a probe did read the value — but the
+  // entry's `lastUsed`/`purposes` do not move, so a dashboard polling health
+  // cannot make an unused grant look busy.
 
   // Transcription service (Voxtral / Deepgram / Whisper). Only require the
   // key for the configured service; the others are optional.
   const transcriptionConfig = await loadTranscriptionConfig(boxRoot);
   if (transcriptionConfig.service === "voxtral") {
-    const mistralKey = await getMistralApiKey(boxRoot);
+    const mistralKey = await getMistralApiKey(boxRoot, { observe: false });
     checks.push({
       name: "mistral-api-key",
       ok: mistralKey !== null,
@@ -339,7 +269,7 @@ export async function runHealthChecks(
       severity: "warning",
     });
   } else if (transcriptionConfig.service === "deepgram") {
-    const deepgramCreds = await getDeepgramCredentials(boxRoot);
+    const deepgramCreds = await getDeepgramCredentials(boxRoot, { observe: false });
     checks.push({
       name: "deepgram-credentials",
       ok: deepgramCreds !== null,
@@ -349,32 +279,33 @@ export async function runHealthChecks(
       severity: "warning",
     });
   } else if (transcriptionConfig.service === "openai-realtime") {
-    const hasKey = !!process.env["THINKING_OPENAI_API_KEY"];
+    const hasKey = (await getOpenAiThinkingKey(boxRoot, { observe: false })) !== null;
     checks.push({
       name: "openai-api-key",
       ok: hasKey,
       message: hasKey
         ? "OpenAI API key configured (gpt-realtime-whisper)"
-        : "THINKING_OPENAI_API_KEY not set — OpenAI realtime transcription will not work.",
+        : 'No OpenAI key — realtime transcription will not work. Grant the "openai-thinking" secret to this box, or set THINKING_OPENAI_API_KEY.',
       severity: "warning",
     });
   }
 
   // OpenAI / Whisper key (needed for TTS, and Whisper transcription if selected)
-  const openaiKey = process.env["THINKING_OPENAI_API_KEY"] ?? null;
+  const openaiKey = await getOpenAiThinkingKey(boxRoot, { observe: false });
   const openaiRequired = transcriptionConfig.service === "whisper";
   checks.push({
     name: "openai-api-key",
     ok: openaiKey !== null,
     message: openaiKey !== null
-      ? "OpenAI API key configured (THINKING_OPENAI_API_KEY)"
+      ? 'OpenAI API key configured ("openai-thinking")'
       : openaiRequired
-        ? "OpenAI API key not found — Whisper transcription and TTS will not work. Set THINKING_OPENAI_API_KEY in .env"
-        : "OpenAI API key not found — TTS will not work. Set THINKING_OPENAI_API_KEY in .env",
+        ? 'OpenAI API key not found — Whisper transcription and TTS will not work. Grant the "openai-thinking" secret to this box, or set THINKING_OPENAI_API_KEY'
+        : 'OpenAI API key not found — TTS will not work. Grant the "openai-thinking" secret to this box, or set THINKING_OPENAI_API_KEY',
     severity: "warning",
   });
 
-  checks.push(geminiKeyCheck());
+  checks.push(await geminiKeyCheck(boxRoot));
+  checks.push(await legacySecretFilesCheck(boxRoot));
 
   // Claude Code auth (needed for agent operations — chat, reactor, procedures).
   // Probe via `claude auth status` through the ClaudeCli service rather than

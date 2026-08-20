@@ -17,6 +17,7 @@ import {
   upgradeCommand,
   statusCommand,
   validateCommand,
+  agentContextCommand,
   createCommand,
   serveCommand,
   hubCommand,
@@ -29,6 +30,7 @@ import {
   migrateViewLinksCommand,
   procedureCommand,
   authCommand,
+  secretsCommand,
   googleAuthCommand,
   calendarCommand,
   finishCommand,
@@ -93,6 +95,7 @@ program.addCommand(migrateCommand);
 program.addCommand(upgradeCommand);
 program.addCommand(statusCommand);
 program.addCommand(validateCommand);
+program.addCommand(agentContextCommand);
 program.addCommand(doctorCommand);
 program.addCommand(createCommand);
 program.addCommand(serveCommand);
@@ -106,6 +109,7 @@ program.addCommand(relinkCommand);
 program.addCommand(migrateViewLinksCommand);
 program.addCommand(procedureCommand);
 program.addCommand(authCommand);
+program.addCommand(secretsCommand);
 program.addCommand(googleAuthCommand);
 program.addCommand(calendarCommand);
 program.addCommand(driveCommand);

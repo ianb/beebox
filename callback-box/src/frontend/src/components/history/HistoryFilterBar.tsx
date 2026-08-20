@@ -17,6 +17,7 @@ export interface HistoryFilterState {
   touchpoint: boolean;
   feedback: boolean;
   session: string | null;
+  path: string | null;
 }
 
 export interface HistoryFilterFacets {
@@ -36,7 +37,8 @@ export function HistoryFilterBar({ filter, facets, onChange }: HistoryFilterBarP
     filter.workflows.length +
     (filter.touchpoint ? 1 : 0) +
     (filter.feedback ? 1 : 0) +
-    (filter.session ? 1 : 0);
+    (filter.session ? 1 : 0) +
+    (filter.path ? 1 : 0);
 
   const clearAll = () => {
     onChange({
@@ -45,6 +47,7 @@ export function HistoryFilterBar({ filter, facets, onChange }: HistoryFilterBarP
       touchpoint: false,
       feedback: false,
       session: null,
+      path: null,
     });
   };
 
@@ -103,6 +106,14 @@ export function HistoryFilterBar({ filter, facets, onChange }: HistoryFilterBarP
             >
               ×
             </button>
+          </Badge>
+        </div>
+      ) : null}
+      {filter.path ? (
+        <div className="mt-2">
+          <Badge tone="accent" size="sm">
+            <span className="font-mono">Path {filter.path}</span>
+            <button type="button" onClick={() => onChange({ ...filter, path: null })} className="ml-1 text-primary-dark hover:text-danger" aria-label="Clear path filter">×</button>
           </Badge>
         </div>
       ) : null}

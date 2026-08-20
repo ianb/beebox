@@ -7,6 +7,12 @@
  * the `name` is the manifest key and reordering would change which
  * migrations a box thinks it has applied.
  *
+ * Adding an entry here? File the legacy-removal issue too — whatever code now
+ * exists only to tolerate the pre-migration shape should be named, with
+ * `file:line`, while you still know which branches those are (step 7 of
+ * "Writing a new migration" in docs/migrations.md). Applies to both kinds
+ * below.
+ *
  * A migration is one of two kinds:
  *   - script:    a deterministic migrator under `scripts/` invoked with the box
  *                root and `--apply`. Idempotent, noisy about data loss (see
@@ -113,6 +119,12 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // Converts every *.todo-list.card into a sibling *.doc.card with items
   // rendered as {% todo %}-wrapped markdown, and rewrites inbound refs.
   { name: "todo-list-to-doc", script: "scripts/migrate/todo-list-to-doc-run.ts" },
+  // Re-apply annex.largefiles + .git/info/attributes from the current
+  // renderings. Unlike everything above it transforms no card data — it
+  // converges box CONFIGURATION that is written once and then goes stale
+  // whenever src/lib/asset-extensions.ts changes. A later rendering change
+  // needs a new dated entry; see the script's module comment.
+  { name: "annex-config-2026-08", script: "scripts/migrate/annex-config.ts" },
 ];
 
 export const MANIFEST_PATH = "config/migrations.jsonl";

@@ -27,7 +27,7 @@ session_registry_summary() {
   local name="$1" record
   record=$(session_registry_read "$name" || true)
   if [ -z "$record" ]; then
-    printf '%s\n' '{"agent":null,"hasSession":false,"tty":null,"emoji":null,"baseSha":null,"removed":null}'
+    printf '%s\n' '{"agent":null,"hasSession":false,"tty":null,"emoji":null,"baseSha":null,"removed":null,"archived":null}'
     return 0
   fi
   printf '%s' "$record" | jq -c '
@@ -37,7 +37,8 @@ session_registry_summary() {
       tty: (.tty // null),
       emoji: (.emoji // null),
       baseSha: (.baseSha // null),
-      removed: (.removed // null)
+      removed: (.removed // null),
+      archived: (.archived // null)
     }'
 }
 

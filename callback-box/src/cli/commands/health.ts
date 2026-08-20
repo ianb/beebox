@@ -30,6 +30,7 @@ import { runHealthChecks, type HealthCheck } from "../../webapp/trpc/routers/hea
 
 const STATUS_GLYPHS: Record<TaskHealth["status"], string> = {
   ok: "✓",
+  waiting: "◷",
   failing: "✗",
   overdue: "✗",
   blocked: "◷",
@@ -48,6 +49,7 @@ function describeStatus(task: TaskHealth): string {
     case "overdue":
       return `overdue ${formatDurationShort(task.pendingMs ?? 0)}`;
     case "ok":
+    case "waiting":
     case "blocked":
     case "invalid":
     case "disabled":
@@ -99,6 +101,9 @@ function printHealth(
     console.log(`  ▶ ${scriptName.padEnd(22)} ${"running".padEnd(14)} PID ${lock.pid}, triggered by ${lock.triggeredBy}`);
   }
 
+  if (health.engineWait !== null) {
+    console.log(`  engine: ${health.engineWait}`);
+  }
   const { scheduler } = health;
   if (scheduler.status === "running") {
     console.log(`  scheduler: running (last tick ${formatDurationShort(scheduler.ageMs ?? 0)} ago)`);

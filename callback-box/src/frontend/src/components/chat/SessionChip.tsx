@@ -30,7 +30,7 @@ import { useNavigate, useParams } from "@tanstack/react-router";
 import { href, toSearch } from "../../lib/routing";
 import { ModelPanel } from "./SessionChip-model-panel";
 import { SessionListPanel } from "./SessionListPanel";
-import { MODEL_OPTIONS } from "./InteractiveChat-helpers";
+import { chatModelOptions, type ChatAgentEngine } from "@shared/chat-models.js";
 
 // Single-panel submenu pattern: the dropdown swaps which set of rows it
 // renders rather than spawning a flyout. Better on touch and avoids
@@ -60,12 +60,14 @@ function RootPanel({
   onNewSession,
   onOpenSessions,
   currentModelLabel,
+  modelSelectionDisabled,
   onOpenModel,
   onOpenAdvanced,
 }: {
   onNewSession: () => void;
   onOpenSessions: () => void;
   currentModelLabel: string;
+  modelSelectionDisabled: boolean;
   onOpenModel: () => void;
   onOpenAdvanced: () => void;
 }) {
@@ -78,7 +80,7 @@ function RootPanel({
           <span className="text-warm-500">›</span>
         </span>
       </MenuItem>
-      <MenuItem onClick={onOpenModel} keepOpen>
+      <MenuItem onClick={onOpenModel} keepOpen disabled={modelSelectionDisabled}>
         <span className="flex justify-between gap-2 w-full">
           <span>Model</span>
           <span className="text-warm-500 truncate">{currentModelLabel} ›</span>
@@ -114,8 +116,10 @@ interface SessionChipBodyProps {
   contextDir: string | null;
   onOpenSessions: () => void;
   currentModelLabel: string;
+  modelSelectionDisabled: boolean;
   onOpenModel: () => void;
   selectedModel: string | null;
+  agentEngine: ChatAgentEngine | null;
   onSelectModel: (model: string | null) => void;
   onOpenAdvanced: () => void;
   onBackToRoot: () => void;
@@ -129,14 +133,14 @@ interface SessionChipBodyProps {
  * `SessionChipPanel` member at compile time without one).
  */
 function SessionChipBody(props: SessionChipBodyProps): ReactNode {
-  const { panel, onNewSession, contextDir, onOpenSessions, currentModelLabel, onOpenModel, selectedModel, onSelectModel, onOpenAdvanced, onBackToRoot, advancedProps } = props;
+  const { panel, onNewSession, contextDir, onOpenSessions, currentModelLabel, modelSelectionDisabled, onOpenModel, selectedModel, agentEngine, onSelectModel, onOpenAdvanced, onBackToRoot, advancedProps } = props;
   switch (panel) {
     case "root":
-      return <RootPanel onNewSession={onNewSession} onOpenSessions={onOpenSessions} currentModelLabel={currentModelLabel} onOpenModel={onOpenModel} onOpenAdvanced={onOpenAdvanced} />;
+      return <RootPanel onNewSession={onNewSession} onOpenSessions={onOpenSessions} currentModelLabel={currentModelLabel} modelSelectionDisabled={modelSelectionDisabled} onOpenModel={onOpenModel} onOpenAdvanced={onOpenAdvanced} />;
     case "sessions":
       return <SessionsPanel onBack={onBackToRoot} contextDir={contextDir} />;
     case "model":
-      return <ModelPanel onBack={onBackToRoot} selectedModel={selectedModel} onSelectModel={onSelectModel} />;
+      return agentEngine === null ? null : <ModelPanel onBack={onBackToRoot} selectedModel={selectedModel} agentEngine={agentEngine} onSelectModel={onSelectModel} />;
     case "advanced":
       return <AdvancedPanel onBack={onBackToRoot} {...advancedProps} />;
   }
@@ -149,6 +153,7 @@ export interface SessionChipProps {
   contextDir: string | null;
   onNewSession: () => void;
   selectedModel: string | null;
+  agentEngine: ChatAgentEngine | null;
   onSelectModel: (model: string | null) => void;
   onStopProcess: () => void;
   onRestartProcess: () => void;
@@ -168,6 +173,7 @@ export const SessionChip = memo(function SessionChip(props: SessionChipProps) {
     contextDir,
     onNewSession,
     selectedModel,
+    agentEngine,
     onSelectModel,
     onStopProcess,
     onRestartProcess,
@@ -184,7 +190,9 @@ export const SessionChip = memo(function SessionChip(props: SessionChipProps) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const navigate = useNavigate();
   const { boxSlug } = useParams({ strict: false });
-  const currentModelLabel = MODEL_OPTIONS.find((o) => o.model === selectedModel)?.label ?? "Default";
+  const currentModelLabel = agentEngine === null
+    ? "Unavailable"
+    : chatModelOptions(agentEngine).find((o) => o.model === selectedModel)?.label ?? "Unavailable";
   // Editorial title or nothing: `label` is the husk's `title` (null until
   // the nightly chat review or a hand edit names the session). With no real
   // title the face is the sliders icon at every width — never a fabricated
@@ -231,8 +239,10 @@ export const SessionChip = memo(function SessionChip(props: SessionChipProps) {
           contextDir={contextDir}
           onOpenSessions={() => setPanel("sessions")}
           currentModelLabel={currentModelLabel}
+          modelSelectionDisabled={sessionId === null || agentEngine === null}
           onOpenModel={() => setPanel("model")}
           selectedModel={selectedModel}
+          agentEngine={agentEngine}
           onSelectModel={onSelectModel}
           onOpenAdvanced={() => setPanel("advanced")}
           onBackToRoot={() => setPanel("root")}

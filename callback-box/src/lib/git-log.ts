@@ -9,6 +9,8 @@
  */
 
 import { simpleGit } from "simple-git";
+import { existsSync } from "node:fs";
+import * as pathModule from "node:path";
 
 import type { GitLogFormat } from "./git-internal.js";
 import { LOG_FORMAT } from "./git-internal.js";
@@ -53,6 +55,8 @@ export interface GetLogPaginatedParams {
  */
 export interface LogFilter {
   greps?: string[];
+  /** One box-relative path. `--follow` preserves history across renames. */
+  path?: string;
 }
 
 /**
@@ -150,8 +154,18 @@ export async function getLogPaginated(
 ): Promise<GitLogEntryExtended[]> {
   const { boxRoot, count = 50, offset = 0, filter } = params;
 
-  if (filter && filter.greps && filter.greps.length > 0) {
-    return getLogFiltered({ boxRoot, count, offset, greps: filter.greps });
+  if (filter && ((filter.greps?.length ?? 0) > 0 || filter.path !== undefined)) {
+    const greps = filter.greps ?? [];
+    if (filter.path !== undefined && !existsSync(pathModule.join(boxRoot, filter.path))) {
+      const fetchCount = count + offset;
+      const [direct, followed] = await Promise.all([
+        getLogFiltered({ boxRoot, count: fetchCount, offset: 0, greps, path: filter.path, followPath: false }),
+        getLogFiltered({ boxRoot, count: fetchCount, offset: 0, greps, path: filter.path, followPath: true }),
+      ]);
+      const unique = new Map([...direct, ...followed].map((entry) => [entry.hash, entry]));
+      return [...unique.values()].toSorted((a, b) => Date.parse(b.date) - Date.parse(a.date)).slice(offset, offset + count);
+    }
+    return getLogFiltered({ boxRoot, count, offset, greps, path: filter.path, followPath: filter.path !== undefined });
   }
 
   try {
@@ -240,6 +254,8 @@ interface GetLogFilteredParams {
   count: number;
   offset: number;
   greps: string[];
+  path?: string | undefined;
+  followPath?: boolean | undefined;
 }
 
 /** Attach per-commit file stats (filtered page) to the given entries. */
@@ -248,11 +264,15 @@ async function attachFilteredStats(
   { logArgs, entries }: { logArgs: string[]; entries: GitLogEntryExtended[] }
 ): Promise<void> {
   try {
+    const separator = logArgs.indexOf("--");
+    const withStat = (statArg: string): string[] => separator === -1
+      ? [...logArgs, "--format=%H", statArg]
+      : [...logArgs.slice(0, separator), "--format=%H", statArg, ...logArgs.slice(separator)];
     const statusByHash = parseHashGrouped(
-      await git.raw(["log", ...logArgs, "--format=%H", "--name-status"])
+      await git.raw(["log", ...withStat("--name-status")])
     );
     const numstatByHash = parseHashGrouped(
-      await git.raw(["log", ...logArgs, "--format=%H", "--numstat"])
+      await git.raw(["log", ...withStat("--numstat")])
     );
     for (const entry of entries) {
       const stat = emptyFileStat();
@@ -270,7 +290,7 @@ async function attachFilteredStats(
 async function getLogFiltered(
   params: GetLogFilteredParams
 ): Promise<GitLogEntryExtended[]> {
-  const { boxRoot, count, offset, greps } = params;
+  const { boxRoot, count, offset, greps, path, followPath = false } = params;
   const git = simpleGit(boxRoot);
 
   const grepArgs = [
@@ -282,6 +302,7 @@ async function getLogFiltered(
     `--max-count=${count}`,
     ...(offset > 0 ? [`--skip=${offset}`] : []),
   ];
+  const pathArgs = path === undefined ? [] : [...(followPath ? ["--follow"] : []), "--", path];
 
   // ASCII record/field separators keep the format unambiguous against
   // commit messages that contain newlines, colons, or arbitrary text.
@@ -295,6 +316,7 @@ async function getLogFiltered(
       ...grepArgs,
       ...pageArgs,
       `--format=${FS}%H${FS}%aI${FS}%s${FS}%b${RS}`,
+      ...pathArgs,
     ]);
   } catch (_e) {
     // A filtered log over a repo with no matching/any commits throws — an
@@ -327,7 +349,7 @@ async function getLogFiltered(
 
   // Stats fetch applies the same grep filter + pagination so the hashes
   // line up with `entries`.
-  await attachFilteredStats(git, { logArgs: [...grepArgs, ...pageArgs], entries });
+  await attachFilteredStats(git, { logArgs: [...grepArgs, ...pageArgs, ...pathArgs], entries });
 
   return entries;
 }

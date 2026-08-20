@@ -11,6 +11,7 @@ enum NativeVoiceTurnCommand: Equatable {
 enum NativeVoiceTurnEvent: Equatable {
     case microphoneStarted
     case microphoneStopped
+    case draftErased
     case voiceMessageSent(closeMicrophone: Bool)
     case speechPlaybackChanged(playing: Bool)
 }
@@ -27,6 +28,8 @@ struct NativeVoiceTurnState: Equatable {
         case .microphoneStopped:
             isActive = false
             return .stopDictation
+        case .draftErased:
+            return isActive && speechPlaybackActive == false ? .startDictation : .none
         case .voiceMessageSent(let closeMicrophone):
             if closeMicrophone {
                 isActive = false
@@ -112,6 +115,9 @@ final class SpeechDictation: ObservableObject {
     private var recordedAudioURL: URL?
     private var recordingFile: AVAudioFile?
     private var keywordSeedText = ""
+    /// The tag-substituted transcript of a detected keyword, withheld from
+    /// `transcript` until the composer accepts the command.
+    private var heldKeywordTranscript: String?
     private var interruptionObserver: NSObjectProtocol?
     private var tapInstalled = false
     private var holdsAudioSession = false
@@ -253,6 +259,7 @@ final class SpeechDictation: ObservableObject {
         preparationMessage = nil
         transcript = ""
         keywordIntent = nil
+        heldKeywordTranscript = nil
         firedKeywordKey = nil
         recordedAudioURL = nil
         keywordSeedText = ""
@@ -271,6 +278,35 @@ final class SpeechDictation: ObservableObject {
     func clearKeywordIntent() {
         keywordIntent = nil
     }
+
+    /// Publish the tag substitution for a keyword the composer accepted. Until
+    /// this is called the tag exists only inside the intent, so a refused
+    /// command leaves the composer exactly as it was.
+    func commitKeywordSubstitution() {
+        guard let held = heldKeywordTranscript else {
+            return
+        }
+        heldKeywordTranscript = nil
+        transcript = held
+        hasDictatedText = held.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+    }
+
+    /// Drop a held substitution because the command was refused. The composer
+    /// keeps its pre-keyword text; the spoken command words never land in it.
+    func discardKeywordSubstitution() {
+        heldKeywordTranscript = nil
+    }
+
+    #if DEBUG
+    /// Test seam: deliver a recognizer result without a live audio session, the
+    /// way `start`'s recognition callbacks do. The keyword hold/commit/discard
+    /// behaviour is otherwise only reachable through the microphone.
+    func ingestRecognizedSpeechForTesting(_ spoken: String) {
+        let generation = recognitionGeneration ?? UUID()
+        recognitionGeneration = generation
+        receiveRecognizedSpeech(spoken, generation: generation)
+    }
+    #endif
 
     func failPreparation(_ message: String) {
         errorMessage = message
@@ -300,6 +336,7 @@ final class SpeechDictation: ObservableObject {
         }
         errorMessage = nil
         keywordIntent = nil
+        heldKeywordTranscript = nil
         firedKeywordKey = nil
         endRecording(cancelTranscription: true)
         VoiceCompositionReducer.reduce(&state, .requestPermission)
@@ -417,8 +454,14 @@ final class SpeechDictation: ObservableObject {
             if key != firedKeywordKey {
                 firedKeywordKey = key
                 keywordSeedText = seedText
-                transcript = keyword.processedTranscript
-                hasDictatedText = true
+                // The tag is HELD, not published. `transcript` drives the
+                // composer, and the composer must not show a control tag for a
+                // command that has not been accepted yet — the in-flight lock in
+                // the composer can still refuse it. Leaving `transcript` at its
+                // pre-keyword value also keeps the spoken command words out of
+                // the draft. The composer commits or discards it below.
+                heldKeywordTranscript = keyword.processedTranscript
+                hasDictatedText = transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
                 VoiceCompositionReducer.reduce(&state, .keywordDetected)
                 keywordIntent = keyword
                 endRecording(cancelTranscription: true)
