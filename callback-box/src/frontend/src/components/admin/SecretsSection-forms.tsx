@@ -84,6 +84,9 @@ export function SecretValueForm({
   const [name, setName] = useState(fixedName ?? "");
   const [value, setValue] = useState("");
   const [note, setNote] = useState("");
+  // One reason, appended rather than replacing — a rotation must never erase why
+  // the key was granted, and further reasons accumulate as callers appear.
+  const [use, setUse] = useState("");
   const setValueMutation = trpc.secrets.setValue.useMutation();
   const entry = formatHintFor(hints, name);
   const warnings = liveWarnings(entry, value);
@@ -96,8 +99,10 @@ export function SecretValueForm({
         name: name.trim(),
         value,
         ...(note.trim() === "" ? {} : { note: note.trim() }),
+        ...(use.trim() === "" ? {} : { uses: [use.trim()] }),
       });
       setValue("");
+      setUse("");
       onSaved();
     } catch (_error) {
       // The mutation's error state renders below the button.
@@ -126,6 +131,14 @@ export function SecretValueForm({
           {fixedName === null ? (
             <TextField label="Note (optional)" value={note} onChange={setNote} placeholder="What it is for" />
           ) : null}
+          <TextField
+            label="Used for (optional)"
+            value={use}
+            onChange={setUse}
+            placeholder="e.g. weather forecasts in the morning brief"
+            helper="Why this secret exists. Added to the reasons it already lists, never replacing them."
+          />
+
           <WarningList warnings={warnings} />
           <Row gap="sm" wrap>
             <Button type="submit" intent="primary" loading={setValueMutation.isPending} loadingLabel="Saving…">

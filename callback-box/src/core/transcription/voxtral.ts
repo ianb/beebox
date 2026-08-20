@@ -51,7 +51,7 @@ export async function transcribeAudioVoxtral(
   opts = opts ?? {};
   const { boxRoot, options } = params;
   const diarization = opts.diarization === true;
-  const apiKey = await getMistralApiKey(boxRoot);
+  const apiKey = await getMistralApiKey(boxRoot, { observe: true });
   if (!apiKey) {
     throw new MissingMistralKeyError();
   }

@@ -165,6 +165,158 @@ Xanadu's contribution is adjacent rather than central — **transclusion**
 in two places at once, not about selecting a set. Worth knowing, not the model
 to copy.
 
+### The particulars, since the shapes matter
+
+**XLink** builds a multi-ended link out of three element roles. Locators name
+the endpoints and give each a label; arcs connect labels; the whole thing sits
+in one container element:
+
+```xml
+<courseload>
+  <person xlink:href="students/patjones62.xml" xlink:label="student62" />
+  <course xlink:href="courses/cs101.xml"       xlink:label="CS-101"   />
+  <go     xlink:from="student62" xlink:to="CS-101" xlink:title="Course enrollment" />
+</courseload>
+```
+
+`xlink:type` takes `extended` (the container), `locator` (a remote endpoint),
+`arc` (a traversal rule), `resource` (a local endpoint), `title`, and `simple`
+(the two-ended shorthand HTML's `<a>` falls into). The useful move for us:
+**endpoints are labelled, and the relation between them is a separate element**
+— when several locators share a label, one arc creates several traversals. That
+is a set-valued link built out of naming rather than out of a query, and it is a
+different way to reach the same place.
+
+**Microcosm** graded links by *how much of the anchor is bound*:
+
+- **specific** — from an object at a particular point in a particular document
+- **local** — from an object at *any* point in a particular document
+- **generic** — from an object at any position in *any* document
+
+The generic link is the one to steal: authored once from a string, followable
+from every occurrence anywhere, including in documents imported later. That is
+a rule rather than a pointer, and it is the same instinct as
+`**/*.image.card` matching whatever exists — a link whose extent is determined
+at read time rather than write time. Alongside these it had **computed links**
+(content-based retrieval). All link information lived in a linkbase separate
+from the documents, which stayed in their native formats.
+
+**How it actually expressed a link: not as syntax at all.** From the 1992 report
+(Davis, Hall, Heath, Hill, Wilkins — CSTR 92-15, fetched via a browser; the
+eprints host blocks plain fetches):
+
+> No mark-up is imposed on the information, so that all data is accessible to,
+> and editable by, the application that created it. Instead all information
+> concerning links is stored in link databases or **linkbases**.
+
+A link is resolved by **message passing through a filter chain**. A viewer sends
+a tagged message ("the user selected this, and chose this action"); the message
+passes through a chain of independent filter processes, each of which may block
+it, pass it, modify it, or add new messages; whatever survives reaches the **Link
+Dispatcher**, which offers the available actions to the user. **Linkbases are
+themselves filters in that chain** — a linkbase receiving a follow-link message
+looks the source up and returns destination details.
+
+The message format is the part worth stealing:
+
+> we have adopted a **tagged ASCII message format**. Any viewer or filter may
+> introduce any tag and data it likes into the message, and any filter will
+> respond to the tags it knows and **ignore the rest**.
+
+Extensible by construction, and tolerant by default — a new participant adds
+tags without coordinating with anyone. (Transport was DDE on Windows, Apple
+events on the Mac, sockets on Unix.)
+
+Three further details that bear directly on this issue:
+
+- **Computed links could be materialized.** They ranged "from simple string
+  search techniques through to full information retrieval", and once computed
+  you could follow one immediately *or* write it into the linkbase, after which
+  it was "subsequently indistinguishable from a manually created link". A query
+  that can be frozen into an explicit link — which is exactly the
+  conventional-versus-reified pair from the section above, with a documented
+  path between them.
+- **Several linkbases at once.** A common setup was one author-supplied linkbase
+  over a document set plus a personal linkbase per user for their own links and
+  annotations, extensible to shared workspaces, with access control left to the
+  OS.
+- **Link scope was editable as an operation.** They shipped a tool to merge
+  linkbases, drop references to deleted files, and *change the scope of links* —
+  i.e. promote a specific link to local or generic after the fact.
+
+Still not found, and not guessed at: the on-disk record layout of a linkbase.
+The paper specifies the *message* format and the architecture, not the storage
+schema.
+
+**Two empirical findings from the same paper, both awkward and both useful:**
+
+- **People navigated by directory anyway.** "Even when using a heavily linked
+  set of documents with many buttons, users still tended to use the directory
+  structure as a significant method of accessing information." Their response
+  was a file browser with user-defined keyword attributes. For a system whose
+  substrate *is* a filesystem, that is worth sitting with: the tree is not a
+  fallback people abandon once given links.
+- **Out-of-band links are invisible, and finding them is the hard part.** With
+  no markup there is no bold text to signal that something is live. Their
+  working answer to `show-links`: the user selects a region, and the filter
+  **splits it into words and word-pairs and fans them out as follow-link
+  messages**; the linkbases answer, and every hit appears in the dispatcher
+  *alongside the source text that matched*. A search implemented as many small
+  queries rather than one.
+
+**Materialization is lossy in one direction.** A computed link written into the
+linkbase becomes indistinguishable from an authored one — which also means it
+stops tracking its query. Freeze `**/*.image.card` into an explicit set and
+images created afterwards do not join it. So conventional and reified are not
+merely two authoring conveniences: they differ in whether the collection keeps
+answering the question. Any "save this collection" affordance should be honest
+about which one it produces, and ideally allow the reverse (loosen a frozen set
+back into the rule that made it).
+
+**A framing worth keeping (boxholder): Microcosm has a COME FROM.** The document
+never declares itself a link source; a linkbase elsewhere declares "I come from
+that string." Control lives at the destination, and a generic link is the
+wildcard form — come from any occurrence, in any document, including ones not
+yet written.
+
+That is why `show-links` was their hardest UI problem rather than an
+afterthought: you cannot read a document and know what is live, so they had to
+build a tool that asks *does anyone come from here?* It also names the price
+they were paying it for — principle (d), no distinction between readers and
+authors. COME FROM is what lets a reader add links to documents they cannot
+edit.
+
+Which turns into a decision procedure here. `![...](collection-link)` written in
+a card is GOTO: legible on sight, travels with the document, requires write
+access to it. An out-of-band collection is COME FROM: works over files nobody
+can annotate, survives content it does not own, and is invisible until
+something asks.
+
+**The tension worth noticing.** Microcosm put every link out-of-band precisely
+so documents stayed untouched and editable by their native applications.
+TiddlyWiki and the `![...](collection-link)` idea put them inline. Both are
+coherent; they trade differently. Inline is legible in the source and travels
+with the document; out-of-band lets the same content carry different link sets
+for different readers, and lets links exist over files you cannot annotate —
+which for a box would mean collections over cards *and* over ordinary files it
+merely holds.
+
+### Link or transclude — the same reference, two verbs
+
+Boxholder's observation: Notion is as much about transclusion as about
+collection linking, and if there is a collection link then
+`![...](collection-link)` is its transcluded form.
+
+That is a clean way to keep the two apart without inventing a second syntax.
+Markdown already distinguishes *refer to* from *embed* by one character, and
+readers already know it. A collection reference could inherit exactly that: the
+link form navigates to the collection, the embed form renders it inline where
+it is written.
+
+It also localizes the label question — an inline collection is written in a
+document, so it has somewhere natural to carry its heading, which the
+free-standing case does not.
+
 The consistent lesson across all four: **the query, the rendering, and the
 labelling are three separate things**, and systems that fuse them get stuck.
 TiddlyWiki keeps filter / widget / template apart; Notion keeps source /

@@ -61,18 +61,18 @@ delete process.env.THINKING_OPENAI_API_KEY;
 delete process.env.CALLBACK_OPENAI_API_KEY;
 
 process.env.SKE_GEMINI_API_KEY = "placeholder-legacy-env-key";
-print(`legacy env only: ${await getGeminiApiKey(box.root)}`);
+print(`legacy env only: ${await getGeminiApiKey(box.root, { purpose: "gemini-vision", observe: true })}`);
 
 process.env.GEMINI_KEY = "placeholder-env-key";
-print(`both env vars: ${await getGeminiApiKey(box.root)}`);
+print(`both env vars: ${await getGeminiApiKey(box.root, { purpose: "gemini-vision", observe: true })}`);
 
 await setSecret({ name: "gemini", value: "placeholder-store-key" });
-const [ungranted, refusalWarnings] = await withWarnings(() => getGeminiApiKey(box.root));
+const [ungranted, refusalWarnings] = await withWarnings(() => getGeminiApiKey(box.root, { purpose: "gemini-vision", observe: true }));
 print(`stored but ungranted: ${ungranted}`);
 print(`named the refusal: ${refusalWarnings.join("\n").includes("not-granted")}`);
 
 await grantSecret({ slug, name: "gemini", access: "server" });
-print(`store granted: ${await getGeminiApiKey(box.root)}`);
+print(`store granted: ${await getGeminiApiKey(box.root, { purpose: "gemini-vision", observe: true })}`);
 =>
 legacy env only: placeholder-legacy-env-key
 both env vars: placeholder-env-key
@@ -97,11 +97,11 @@ Granting `openai` does not configure `openai-thinking`, and vice versa.
 process.env.THINKING_OPENAI_API_KEY = "placeholder-thinking-env-key";
 await setSecret({ name: "openai", value: "placeholder-embeddings-store-key" });
 await grantSecret({ slug, name: "openai", access: "server" });
-print(`thinking key with only "openai" granted: ${await getOpenAiThinkingKey(box.root)}`);
+print(`thinking key with only "openai" granted: ${await getOpenAiThinkingKey(box.root, { observe: true })}`);
 
 await setSecret({ name: "openai-thinking", value: "placeholder-thinking-store-key" });
 await grantSecret({ slug, name: "openai-thinking", access: "server" });
-print(`thinking key granted: ${await getOpenAiThinkingKey(box.root)}`);
+print(`thinking key granted: ${await getOpenAiThinkingKey(box.root, { observe: true })}`);
 print(`embeddings key still: ${await getOpenAiEmbeddingsKey(box.root)}`);
 =>
 thinking key with only "openai" granted: placeholder-thinking-env-key
@@ -179,8 +179,8 @@ delete process.env.SKE_GEMINI_API_KEY;
 delete process.env.THINKING_OPENAI_API_KEY;
 delete process.env.CALLBACK_OPENAI_API_KEY;
 JSON.stringify([
-  await getGeminiApiKey(box.root),
-  await getOpenAiThinkingKey(box.root),
+  await getGeminiApiKey(box.root, { purpose: "gemini-vision", observe: true }),
+  await getOpenAiThinkingKey(box.root, { observe: true }),
   await getOpenAiEmbeddingsKey(box.root),
 ])
 => [null,null,null]

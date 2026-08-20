@@ -110,7 +110,10 @@ export const askAboutAudioCommand = new Command("ask-about-audio")
     }
     // Fail before bothering the browser when the model isn't reachable anyway.
     const questionBoxRoot = await findBoxRoot(process.cwd());
-    const apiKey = await getGeminiApiKey(questionBoxRoot ?? undefined);
+    const apiKey = await getGeminiApiKey(questionBoxRoot ?? undefined, {
+      purpose: "gemini-audio-question",
+      observe: true,
+    });
     if (!apiKey) {
       console.error(
         `${label}: no Gemini key — the audio model is not configured. Ask the boxholder to grant the "gemini" secret to this box, or set GEMINI_KEY`,

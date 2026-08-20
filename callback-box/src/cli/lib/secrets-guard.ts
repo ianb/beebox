@@ -12,7 +12,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { SecretLifecycleError } from "../../core/secrets/errors.js";
-import { secretsFilePath } from "../../core/secrets/store.js";
+import { loadSecretStore, secretsFilePath } from "../../core/secrets/store.js";
 import { detectAgentContext } from "../../lib/agent-context.js";
 import { boxSlug } from "../../lib/box-slug.js";
 import { errorMessage } from "../../lib/error-guards.js";
@@ -75,6 +75,71 @@ export async function refuseIfAgentAskingAboutAnotherBox(opts: {
       "An agent's view of the secret store is its own box's grants and declared slots. The",
       "machine's other boxes are the boxholder's business, not something to enumerate from here.",
       ownSlug === null ? "Run this from inside a box." : `Try: cb secrets status ${ownSlug}`,
+    ].join("\n"),
+  );
+  process.exit(1);
+}
+
+/**
+ * Refuse `cb secrets describe --add-use` from an agent for a secret that is not
+ * its own box's.
+ *
+ * Adding a reason is the agent-facing half of `describe` and stays unguarded
+ * *for the box the agent is standing in* — an agent teaching its box a new
+ * trick should say why it now spends a key. What it must not do is annotate
+ * OTHER boxes' secrets: writing a reason onto a machine-wide entry it has no
+ * grant on is an edit to somebody else's record, and — worse — an unguarded
+ * write is a probe. `describe` on an existing name succeeds; on a name nobody
+ * declared it throws `SecretNotFoundError`. That difference alone enumerates
+ * every secret on the machine, one guess at a time, which is exactly the map
+ * `list` and `status` already refuse to draw
+ * (`docs/plans/secret-custody.md`, "name visibility scoping").
+ *
+ * So the refusal is UNIFORM: out-of-scope and nonexistent read identically,
+ * and it fires before the store lookup that would tell them apart. In scope
+ * means granted to the box's slug, or declared by it (a slot the agent itself
+ * named and is still waiting on — it must be able to add reasons to that).
+ *
+ * `boxRoot` follows {@link refuseIfAgentAskingAboutAnotherBox}: `undefined`
+ * means "find it from the working directory", `null` means "there is none".
+ */
+export async function refuseIfAgentDescribingOtherBoxSecret(opts: {
+  name: string;
+  boxRoot: string | null | undefined;
+  agentConfirmed: boolean | undefined;
+}): Promise<void> {
+  if (opts.agentConfirmed === true) return;
+  const context = detectAgentContext();
+  if (!context.isAgent) return;
+  const boxRoot = opts.boxRoot === undefined ? await findBoxRoot(process.cwd()) : opts.boxRoot;
+  const ownSlug = boxRoot === null ? null : await boxSlug(boxRoot);
+  if (ownSlug !== null) {
+    const loaded = await loadSecretStore();
+    // An unreadable store fails CLOSED: without the grants there is no way to
+    // tell an own-box secret from another box's, and guessing wrong here is
+    // the disclosure this guard exists to prevent.
+    if (loaded.ok) {
+      const granted = loaded.value.grants[ownSlug]?.[opts.name] !== undefined;
+      const declaredHere = loaded.value.secrets[opts.name]?.declaredBy === ownSlug;
+      if (granted || declaredHere) return;
+    }
+  }
+  console.error(
+    [
+      `Refusing to describe "${opts.name}": this looks like an agent session (${context.reason}), and`,
+      ownSlug === null
+        ? "the working directory is not inside a box, so there is no own-box secret this could be."
+        : `"${opts.name}" is not granted to — or declared by — the box you are working in ("${ownSlug}").`,
+      "",
+      "An agent may say why ITS OWN box spends a key. The rest of the machine's secrets are the",
+      "boxholder's record, and this command deliberately answers the same way whether the name",
+      "belongs to another box or does not exist at all — a reply that told them apart would let",
+      "this command enumerate the machine's secrets one guess at a time.",
+      "",
+      ownSlug === null
+        ? "Run this from inside a box."
+        : `To name a slot this box needs: cb secrets declare ${opts.name} --note ...`,
+      "If the person you are working for explicitly asked for this edit, re-run with --agent-confirmed.",
     ].join("\n"),
   );
   process.exit(1);

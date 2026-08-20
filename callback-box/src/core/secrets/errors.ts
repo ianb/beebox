@@ -170,6 +170,43 @@ export class EmptySecretValueError extends SecretLifecycleError {
   }
 }
 
+/**
+ * A `uses` reason was empty, too long, or carried a line break.
+ *
+ * Uses are free prose (unlike a resolve `purpose`, which is a label) — they are
+ * written by an agent and read by the boxholder on the admin page, so the only
+ * constraints are the ones that keep the store and the page readable: one line,
+ * and short enough to be a reason rather than a document.
+ */
+export class InvalidSecretUseError extends SecretLifecycleError {
+  constructor(opts: { detail: string }) {
+    super(`That is not a usable reason: ${opts.detail}. A use is one short line, e.g. "audio transcription".`);
+    this.name = "InvalidSecretUseError";
+  }
+}
+
+/** An entry's `uses` list is full — the reasons stopped being a short list. */
+export class TooManySecretUsesError extends SecretLifecycleError {
+  constructor(opts: { secretName: string; limit: number }) {
+    super(
+      `The secret "${opts.secretName}" already carries ${opts.limit} declared reasons, which is the limit. ` +
+        "Replace one with `--remove-use` first, or fold several into a shorter line — this is a list a person reads.",
+    );
+    this.name = "TooManySecretUsesError";
+  }
+}
+
+/** `--remove-use` named a reason the entry does not carry. */
+export class SecretUseNotFoundError extends SecretLifecycleError {
+  constructor(opts: { secretName: string; use: string }) {
+    super(
+      `The secret "${opts.secretName}" carries no declared reason "${opts.use}". ` +
+        "It must match an existing line exactly; built-in reasons come from the engine and cannot be removed.",
+    );
+    this.name = "SecretUseNotFoundError";
+  }
+}
+
 /** A grant was attempted on a structurally single-box secret. */
 export class SecretNotShareableError extends SecretLifecycleError {
   constructor(opts: { secretName: string; owningBox: string | undefined; boxSlug: string }) {

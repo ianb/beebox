@@ -197,6 +197,46 @@ after revoking the stale grant: []
 revoking again: BAD_REQUEST
 ```
 
+## Every view carries what a secret is used for
+
+The admin page is where a boxholder decides whether a grant still earns its
+keep, so both views answer "what breaks if I revoke this?" — the built-in
+registry's reasons where the engine reads the name itself, plus whatever a save
+declared, plus (once resolves happen) the purposes actually observed. Still no
+value, on either view.
+
+```ts continue
+const withUse = await owner.secrets.setValue({
+  name: "weatherapi",
+  value: "placeholder-weather-key",
+  uses: ["forecasts in the morning brief"],
+});
+await owner.secrets.setValue({ name: "mistral", value: "placeholder-mistral-key" });
+await owner.secrets.grant({ box: slug, name: "weatherapi", access: "agent" });
+await owner.secrets.grant({ box: slug, name: "mistral", access: "server" });
+const granted = (await owner.secrets.boxStatus()).granted;
+print(`mistral built-in: ${granted.find((s) => s.name === "mistral")?.uses.builtin.join(" | ")}`);
+print(`weatherapi: ${JSON.stringify(granted.find((s) => s.name === "weatherapi")?.uses)}`);
+print(`saving one carries no value back: ${!JSON.stringify(withUse).includes("placeholder-weather-key")}`);
+=>
+mistral built-in: audio transcription (Voxtral — recordings and live chat dictation) | Mistral API calls from box views, through the server-side adapter
+weatherapi: {"builtin":[],"declared":["forecasts in the morning brief"],"observed":[]}
+saving one carries no value back: true
+```
+
+A rotation appends rather than replaces — the reasons outlive the key, which is
+the point of writing them down:
+
+```ts continue
+await owner.secrets.setValue({ name: "weatherapi", value: "placeholder-weather-key-2", uses: ["tide times"] });
+const machine2 = await owner.secrets.machineView();
+print(JSON.stringify(machine2.secrets.find((s) => s.name === "weatherapi")?.uses.declared));
+print(`still no values: ${!JSON.stringify(machine2).includes("placeholder-weather-key")}`);
+=>
+["forecasts in the morning brief","tide times"]
+still no values: true
+```
+
 ```ts cleanup
 await box.cleanup();
 await rm(dir, { recursive: true, force: true });

@@ -16,6 +16,7 @@ import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 import { SecretValueForm } from "./SecretsSection-forms";
+import { SecretUsesBlock } from "./SecretsSection-uses";
 
 type BoxStatus = RouterOutput["secrets"]["boxStatus"];
 type FormatHints = RouterOutput["secrets"]["formatHints"];
@@ -54,6 +55,7 @@ function GrantedRow({
           {secret.shareable === false ? <Badge tone="neutral">single-box</Badge> : null}
         </Row>
         {secret.note === undefined ? null : <Text size="sm" tone="muted">{secret.note}</Text>}
+        <SecretUsesBlock uses={secret.uses} />
         <Text size="xs" tone="muted">
           {secret.lastUsed === undefined ? "Never used by this box" : `Last used ${new Date(secret.lastUsed).toLocaleString()}`}
           {secret.verified?.reason === undefined ? "" : ` · ${secret.verified.reason}`}
@@ -113,7 +115,7 @@ export function BoxSecretsView({ status, hints, refresh }: { status: BoxStatus; 
             Declared slots waiting on a value and a grant — the agent named what it needs and can do nothing more.
           </Text>
           {status.declaredHere.map((slot) => (
-            <DeclaredRow key={slot.name} name={slot.name} hasValue={slot.hasValue} hints={hints} refresh={refresh} />
+            <DeclaredRow key={slot.name} slot={slot} hints={hints} refresh={refresh} />
           ))}
         </Stack>
       )}
@@ -134,13 +136,11 @@ export function BoxSecretsView({ status, hints, refresh }: { status: BoxStatus; 
 }
 
 function DeclaredRow({
-  name,
-  hasValue,
+  slot,
   hints,
   refresh,
 }: {
-  name: string;
-  hasValue: boolean;
+  slot: BoxStatus["declaredHere"][number];
   hints: FormatHints | undefined;
   refresh: () => void;
 }) {
@@ -149,13 +149,18 @@ function DeclaredRow({
     <Card border="subtle" padding="sm">
       <Stack gap="sm">
         <Row gap="sm" wrap align="center">
-          <Text mono size="sm">{name}</Text>
-          <Badge tone={hasValue ? "info" : "warning"}>{hasValue ? "has a value, not granted" : "empty slot"}</Badge>
+          <Text mono size="sm">{slot.name}</Text>
+          <Badge tone={slot.hasValue ? "info" : "warning"}>
+            {slot.hasValue ? "has a value, not granted" : "empty slot"}
+          </Badge>
         </Row>
+        {/* The reasons matter most here: this is a slot the agent asked for, and
+            the boxholder is deciding whether to supply a key at all. */}
+        <SecretUsesBlock uses={slot.uses} />
         <Row gap="sm" wrap>
           <Button intent="secondary" onClick={() => setFilling(!filling)}>{filling ? "Close" : "Supply value"}</Button>
         </Row>
-        {filling ? <SecretValueForm fixedName={name} hints={hints} onSaved={refresh} /> : null}
+        {filling ? <SecretValueForm fixedName={slot.name} hints={hints} onSaved={refresh} /> : null}
       </Stack>
     </Card>
   );

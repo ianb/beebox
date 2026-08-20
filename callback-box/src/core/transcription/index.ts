@@ -295,7 +295,7 @@ async function transcribeAudioWhisper(
   // the machine secret store first, then the env var. `boxRoot` is optional on
   // `TranscribeAudioParams`, and a caller that omits it gets the env path only
   // — there is no box to check grants for.
-  const apiKey = await getOpenAiThinkingKey(params.boxRoot);
+  const apiKey = await getOpenAiThinkingKey(params.boxRoot, { observe: true });
   if (!apiKey) {
     throw new MissingWhisperKeyError();
   }
