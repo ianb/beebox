@@ -103,3 +103,27 @@ export async function listSessionFilesInDir(dir: string): Promise<SessionFileInf
   sessions.sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
   return sessions;
 }
+
+/**
+ * Whether a session's transcript already exists, for a caller that knows the
+ * chat's landmark binding without consulting history.
+ *
+ * `resolveSessionLogPath` reads the binding from `chat-session-history`, which
+ * a coined session does not have an entry in until its first run — so for that
+ * session it would answer for the box-root path and miss a landmark chat's
+ * transcript entirely. Passing the binding in is what makes the answer correct
+ * during the window that matters.
+ */
+export async function transcriptExistsForContext(
+  boxRoot: string,
+  opts: { sessionId: string; contextDir: string | null },
+): Promise<boolean> {
+  const dir = opts.contextDir === null || opts.contextDir === "" ? boxRoot : path.join(boxRoot, opts.contextDir);
+  try {
+    await fs.promises.access(getSessionLogPath(dir, opts.sessionId));
+    return true;
+  } catch (e) {
+    if (errnoCode(e) !== "ENOENT") throw e;
+    return false;
+  }
+}

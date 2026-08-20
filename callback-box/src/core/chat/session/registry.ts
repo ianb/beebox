@@ -20,10 +20,13 @@ import { makeLog } from "./log.js";
 import { checkInvariant } from "../../../lib/invariant.js";
 import { EventEmitter } from "node:events";
 import { ChatSession, type ChatSessionOptions } from "./index.js";
-import { appendHistory, setMostActive, updateFeaturesForSession } from "./history.js";
-import { ensureChatHusk } from "../husk.js";
+import { setMostActive } from "./history.js";
 import { createChatBackend, type ChatBackend } from "../../../services/claude-chat.js";
 import { RegistryDeletionCoordinator } from "./registry-deletion.js";
+import { ChatReservationStore, reserveChatSession, type ChatReservation, type ReserveResult } from "./reserve.js";
+import { recordSessionStart } from "./session-start-record.js";
+import { prewarmBackend } from "./registry-warm.js";
+import { enforceLiveCap } from "./registry-cap.js";
 import type { ChatSessionRegistryOptions, RegistryEntry } from "./registry-options.js";
 
 export { SessionDeletingError } from "./deletion-state.js";
@@ -67,6 +70,13 @@ export class ChatSessionRegistry extends EventEmitter {
    * turn can't be LRU-evicted in the window between send and id assignment.
    */
   private readonly pendingPins = new Map<ChatSession, number>();
+  /**
+   * Coined chat ids this box has accepted but whose conversations do not exist
+   * yet. Held here rather than as registry entries because `sweepIdle` drops
+   * entries after ten minutes and a reserved chat must stay addressable for as
+   * long as the user might come back to it with a capture.
+   */
+  private readonly reservations = new ChatReservationStore(() => this.now());
   readonly deletion = new RegistryDeletionCoordinator({
     find: (sessionId) => this.entries.get(sessionId)?.session ?? null,
     findPending: (sessionId) => [...this.pending].find((session) => session.getSessionId() === sessionId) ?? null,
@@ -103,28 +113,47 @@ export class ChatSessionRegistry extends EventEmitter {
   }
 
   /**
-   * Pre-warm a Claude subprocess against the registry's default session
-   * options so the next "new chat" send doesn't pay spawn + initialize
-   * latency. Best-effort: failures are swallowed and the next send falls
-   * back to a cold spawn.
+   * Pre-warm a subprocess against the registry's default session options so
+   * the next "new chat" send doesn't pay spawn + initialize latency.
    */
   async prewarm(): Promise<void> {
     this.prewarmRequested = true;
     this.lastUse = this.now();
-    if (this.backend.prewarm === undefined) return;
-    try {
-      const baseOpts = this.buildSessionOptions(null);
-      const probe = new ChatSession(this.boxRoot, {
-        ...baseOpts,
-        backend: this.backend,
-        sessionFile: null,
-        skipBootstrap: true,
-      });
-      const startOpts = await probe.buildBackendStartOptions();
-      await this.backend.prewarm(startOpts);
-    } catch (e) {
-      log("prewarm", `Prewarm failed: ${e instanceof Error ? e.message : String(e)}`);
-    }
+    await prewarmBackend({
+      boxRoot: this.boxRoot,
+      backend: this.backend,
+      baseOptions: this.buildSessionOptions(null),
+    });
+  }
+
+  /**
+   * Accept a client-coined chat id so the chat becomes addressable before its
+   * first message. Idempotent by id — see `reserve.ts`.
+   */
+  async reserve(opts: {
+    sessionId: string;
+    contextDir: string | null;
+    seedFeatures: Record<string, string>;
+  }): Promise<ReserveResult> {
+    this.noteActivity();
+    const result = await reserveChatSession({ boxRoot: this.boxRoot, store: this.reservations, ...opts });
+    if (result.kind === "reserved") log("reserve", `Reserved ${result.sessionId} (held=${this.reservations.size()})`);
+    return result;
+  }
+
+  /** The reservation for this id, or null. */
+  getReservation(sessionId: string): ChatReservation | null {
+    return this.reservations.get(sessionId);
+  }
+
+  /**
+   * Whether this box can address the id at all — a live entry or a
+   * reservation. The existence gates (send availability, capture and bulk
+   * delivery targets) ask this instead of proving a chat exists by finding its
+   * transcript, which a reserved chat has not written yet.
+   */
+  isKnownSession(sessionId: string): boolean {
+    return this.entries.has(sessionId) || this.reservations.has(sessionId);
   }
 
   /** Begin the periodic idle-cleanup tick. Caller is responsible for `stopCleanup()`. */
@@ -187,11 +216,27 @@ export class ChatSessionRegistry extends EventEmitter {
       return existing.session;
     }
     const baseOpts = this.buildSessionOptions(sessionId);
+    // A reserved id names a conversation the harness has not created yet: the
+    // run is told to *use* this id, and the landmark binding and feature seeds
+    // captured at reserve time ride with it (nothing else carries them — the
+    // send only forwards those for a `"new"` session).
+    const reservation = this.reservations.get(sessionId);
     const session = new ChatSession(this.boxRoot, {
       ...baseOpts,
       backend: baseOpts.backend ?? this.backend,
       sessionFile: null,
       initialSessionId: sessionId,
+      ...(reservation !== null
+        ? {
+            coinedSessionId: sessionId,
+            ...(reservation.contextDir !== null ? { contextDir: reservation.contextDir } : {}),
+            ...(Object.keys(reservation.seedFeatures).length > 0 ? { seedFeatures: reservation.seedFeatures } : {}),
+            onFirstRunStart: (id: string) => this.recordSessionStart(id, {
+              ...(reservation.contextDir !== null ? { contextDir: reservation.contextDir } : {}),
+              seedFeatures: reservation.seedFeatures,
+            }),
+          }
+        : {}),
       onSessionIdAssigned: this.makeOnAssigned({
         knownId: sessionId,
         chained: baseOpts.onSessionIdAssigned,
@@ -254,36 +299,10 @@ export class ChatSessionRegistry extends EventEmitter {
   }): (sessionId: string) => Promise<void> {
     const { knownId, chained, contextDir, seedFeatures } = params;
     return async (sessionId: string): Promise<void> => {
-      try {
-        await appendHistory(this.boxRoot, {
-          sessionId,
-          ...(contextDir !== undefined ? { contextDir } : {}),
-        });
-        // Persist landmark feature seeds alongside the new history entry so
-        // a future resume of this session (or a fresh server boot) still
-        // sees the seed as the session's starting state. User toggles
-        // afterward overwrite specific keys via updateFeaturesForSession.
-        if (seedFeatures && Object.keys(seedFeatures).length > 0) {
-          await updateFeaturesForSession(this.boxRoot, {
-            sessionId,
-            updates: seedFeatures,
-          });
-        }
-        await setMostActive(this.boxRoot, sessionId);
-      } catch (e) {
-        log("on-assigned", `History/most-active write failed: ${e instanceof Error ? e.message : e}`);
-      }
-
-      // Husk card for the session (docs/plans/chat-husks.md) — the box-side
-      // noun for this chat. Its own catch: a husk failure never blocks chat.
-      try {
-        await ensureChatHusk(this.boxRoot, {
-          sessionId,
-          ...(contextDir !== undefined ? { contextDir } : {}),
-        });
-      } catch (e) {
-        log("on-assigned", `Chat husk write failed: ${e instanceof Error ? e.message : e}`);
-      }
+      await this.recordSessionStart(sessionId, {
+        ...(contextDir !== undefined ? { contextDir } : {}),
+        ...(seedFeatures !== undefined ? { seedFeatures } : {}),
+      });
 
       // Re-key pending "new" sessions into the entries map under the real id.
       if (knownId === null) {
@@ -311,6 +330,20 @@ export class ChatSessionRegistry extends EventEmitter {
         await chained(sessionId);
       }
     };
+  }
+
+  /**
+   * Record a chat's first real start (history, seeds, most-active, husk) and
+   * retire its reservation — the chat is real now, so nothing is left for the
+   * reservation to answer for. See `session-start-record.ts` for why both the
+   * assigned-id and coined-id paths land here.
+   */
+  private async recordSessionStart(
+    sessionId: string,
+    params: { contextDir?: string | undefined; seedFeatures?: Record<string, string> | undefined },
+  ): Promise<void> {
+    this.reservations.release(sessionId);
+    await recordSessionStart(this.boxRoot, { sessionId, ...params });
   }
 
   /**
@@ -385,33 +418,11 @@ export class ChatSessionRegistry extends EventEmitter {
   }
 
   /**
-   * Enforce the live-subprocess cap. Called before starting a subprocess
-   * (which means: any time `send()` is about to spawn). If we're at the
-   * cap, the LRU entry's subprocess is stopped (entry stays).
+   * Enforce the live-subprocess cap before a send spawns a subprocess —
+   * see `registry-cap.ts`.
    */
   enforceLiveCap(currentSessionId: string): void {
-    const live: Array<{ id: string; entry: RegistryEntry }> = [];
-    for (const [id, entry] of this.entries) {
-      if (entry.session.isRunning()) {
-        live.push({ id, entry });
-      }
-    }
-    // The session that's about to start is presumably already in `entries`
-    // (getOrCreate ran), but it may or may not have a subprocess yet. The
-    // cap counts processes about to exist.
-    if (live.length < this.maxLive) return;
-
-    // Sort live entries by lastSubprocessUse ascending; evict the oldest
-    // one that isn't the current session and has no in-flight listeners.
-    live.sort((a, b) => a.entry.lastSubprocessUse - b.entry.lastSubprocessUse);
-    for (const candidate of live) {
-      if (candidate.id === currentSessionId) continue;
-      if (candidate.entry.refCount > 0) continue;
-      log("evict", `Stopping subprocess for ${candidate.id} (LRU under cap)`);
-      candidate.entry.session.stop();
-      return;
-    }
-    log("evict", `Live cap reached but no evictable candidate (refcounts: ${live.map((l) => `${l.id}=${l.entry.refCount}`).join(", ")})`);
+    enforceLiveCap(this.entries, { maxLive: this.maxLive, currentSessionId });
   }
 
   /**
@@ -428,6 +439,7 @@ export class ChatSessionRegistry extends EventEmitter {
       entry.session.stop();
       this.entries.delete(id);
     }
+    this.reservations.sweepExpired();
     // Reap the warm slot once chat has gone quiet, so an idle box doesn't hold
     // a Claude subprocess around the clock. The next accessor re-warms it.
     if (this.backend.closeWarm !== undefined && this.now() - this.lastUse > this.idleTimeoutMs) {

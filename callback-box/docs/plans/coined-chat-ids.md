@@ -211,15 +211,14 @@ TTL, the run-start bookkeeping, and the `sessionId` passthrough in
 `buildQueryOptions` (`claude-chat.ts:86-131`), with doctests. Nothing calls the
 reservation yet.
 
-**Per-chat prewarm is the last chunk, and it is droppable.** The backend holds
+**Per-chat prewarm is the last chunk, and it is in scope.** The backend holds
 exactly one `warmSlot` and one `warming` promise (`claude-chat.ts:171-203`), and
 `hasWarm()` is a boolean (`registry.ts:102`), so keying the pool by session id
 is a real change to that module rather than a parameter. It buys the 0.6–2.0 s
-measured above and nothing else — correctness does not depend on it. It is
-sequenced last so the plan can complete without it if it looks expensive once
-Chunk 1 is real; dropping it means a coined chat cold-spawns on its first
-message, which is the state every chat is in today anyway when the single slot
-is already spent.
+measured above and nothing else — correctness does not depend on it, so it is
+sequenced last, after every correctness chunk is real. The boxholder weighed the
+measurement against the module change on 2026-08-20 and kept it: the first
+message of a new chat is the most latency-visible moment in the product.
 
 ### Track B — one target resolver
 
@@ -496,7 +495,7 @@ Skipping audits deliberately.
 4. **Chunk 4 (Track D)** — the gates deleted. Depends on 3.
 5. **Chunk 5** — the session-id-file deletion for coined sessions, once nothing
    reads it on that path. Depends on 1 and 3.
-6. **Chunk 6 (Track A, droppable)** — per-chat prewarm keyed by the coined id,
+6. **Chunk 6 (Track A)** — per-chat prewarm keyed by the coined id,
    replacing the box-wide slot; the cap and the sweep interaction. Last because
    it is latency, not correctness.
 

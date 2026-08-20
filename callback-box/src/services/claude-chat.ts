@@ -88,6 +88,10 @@ function buildQueryOptions(
 ): { queryOptions: Options; sessionIdFilePath: string | null } {
   const env = dropUndefined(opts.env);
   let sessionIdFilePath: string | null = null;
+  // A coined id is known before the spawn, so it rides `CB_CHAT_SESSION_ID`
+  // like a resume does (`core/chat/session/start.ts` sets it) and needs no
+  // post-spawn file. The file exists only for the case it was built for: an
+  // id that does not exist until the harness reports it.
   if (opts.resumeSessionId === undefined && env[CB_CHAT_SESSION_ID_ENV] === undefined) {
     sessionIdFilePath = allocateSessionIdFilePath();
     env[CB_CHAT_SESSION_ID_FILE_ENV] = sessionIdFilePath;
@@ -111,6 +115,9 @@ function buildQueryOptions(
   }
   if (opts.resumeSessionId !== undefined) {
     queryOptions.resume = opts.resumeSessionId;
+  }
+  if (opts.coinedSessionId !== undefined) {
+    queryOptions.sessionId = opts.coinedSessionId;
   }
   if (opts.model !== undefined) {
     queryOptions.model = opts.model;
@@ -141,6 +148,10 @@ function warmCompatible(
   next: ChatBackendStartOptions,
 ): boolean {
   if (next.resumeSessionId !== undefined) return false;
+  // A warm slot's session id is baked into its subprocess at spawn, so a slot
+  // may only serve the chat it was warmed for — and a slot warmed with no id
+  // may only serve a chat that brings none.
+  if ((warm.coinedSessionId ?? null) !== (next.coinedSessionId ?? null)) return false;
   if (warm.cwd !== next.cwd) return false;
   if (warm.systemPrompt !== next.systemPrompt) return false;
   if ((warm.model ?? null) !== (next.model ?? null)) return false;
