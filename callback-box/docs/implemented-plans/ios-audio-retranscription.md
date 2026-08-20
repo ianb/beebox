@@ -3,7 +3,7 @@ title: "iOS audio retranscription"
 status: implemented
 workstream: ios-retranscribe
 issues:
-  - ../../../issues/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md
+  - ../../../issues/closed/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md
 ---
 # iOS audio retranscription
 
@@ -11,7 +11,7 @@ issues:
 every message dictated in the native iOS composer, because nothing on the iOS
 send path leaves the recording anywhere the retranscribe path can reach. The
 failure and its trace are recorded in
-[the issue](../../../issues/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md);
+[the issue](../../../issues/closed/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md);
 this plan is the fix.
 
 **Decision taken (2026-08-19, boxholder).** Of the three directions the issue
@@ -156,6 +156,10 @@ Automatable, and expected of this change:
   does NOT cover: `fulfillLastAudioRequest` itself reads `import.meta.env` and
   `window.location`, so the "relays only inside a native shell" branch has no
   unit harness here and rides on the device check below.
+
+Not automatable — **one narrow device check, for the boxholder**, DONE 2026-08-19:
+the boxholder reinstalled the app, dictated in the native composer, and
+retranscription returned a transcript. The original wording follows.
 
 Not automatable — **one narrow device check, for the boxholder**: dictate one
 message in the iOS composer with narration off, then run
