@@ -63,7 +63,23 @@ keep/drop, destined to become his-voice content on the page:
   away very big ideas with much less regret"). The note field is quietly
   becoming the interview. This shapes the elicit step below.
 
-## The open fork — what to do next (boxholder chooses)
+## Direction shift (2026-08-19)
+
+The fork below is now historical: (d) was chosen and prototyped (fisheye →
+three-voice categorized asides; unlisted pages `fisheye.md` and
+`walkthrough.md`), and the design moved again in conversation — **a box
+authors the site** (box-defined page/aside card types + views as the CMS; a
+separate ad hoc React/Tailwind static builder with cards as source; publish
+as its own path). See the "Direction shift" section of
+[the site plan](public-site.md), the
+[box-CMS exploration issue](../../../issues/exploration/2026-08-19-site-authored-in-a-box.md),
+and the [Bee Box rename decision](../../../issues/decisions/2026-08-19-bee-box-rename.md)
+(character/mascot direction: Brown Paper School register, wordless bee = the
+agent, the boxholder as a voice strictly in his own words). Next experiment:
+a `page` schema in a test box, the walkthrough authored as a card, a crude
+export.
+
+## The open fork — superseded (kept for history)
 
 The back half of the pipeline, and the site itself, are undesigned. Pick one:
 
