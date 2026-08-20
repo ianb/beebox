@@ -14,6 +14,15 @@ to dismiss it.
 
 > Not sure what to do with it. There's no discard option.
 
+**Confirmed on the live box (2026-08-20).** `capture.pendingSessions` returns it
+as a real staging session in state **`failed:prepare`**, counts
+`{photos: 7, files: 0, audioSegments: 1}`, `startedAt` **2026-08-04** — so it
+has been surfacing an unactionable retry prompt for **16 days**. This is a
+genuine stuck capture, not a display artifact, and it is the *only* durable
+capture state the UI has: a delivered capture drops out of this same query and
+leaves nothing behind (see
+[capture success is invisible](2026-08-20-capture-success-is-invisible.md)).
+
 ## Two defects in one small control
 
 **Retry is the only verb.** `CaptureCaption`
