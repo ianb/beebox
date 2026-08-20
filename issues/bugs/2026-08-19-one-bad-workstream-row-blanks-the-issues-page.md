@@ -1,7 +1,9 @@
 ---
 title: "One malformed workstream row blanks the whole issues page, and a stray directory is enough to cause it"
-workstream: unattached
+workstream: streams-and-issues
 area: router
+needs: [design]
+design: ../../callback-box/docs/plans/workstream-routing.md
 labels: [workstreams-app, robustness, dev-tooling]
 filed-by: agent
 discovered-by: Ian

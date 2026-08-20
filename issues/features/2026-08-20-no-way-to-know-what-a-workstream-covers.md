@@ -1,8 +1,9 @@
 ---
 title: "No way to find which workstream should own a new issue — names carry no scope, and the field is mostly empty"
-workstream: unattached
+workstream: streams-and-issues
 area: monorepo
 needs: [design]
+design: ../../callback-box/docs/plans/workstream-routing.md
 labels: [workstreams, issues, discovery]
 filed-by: agent
 discovered-by: Ian
