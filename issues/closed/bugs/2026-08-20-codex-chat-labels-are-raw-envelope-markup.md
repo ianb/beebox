@@ -1,12 +1,40 @@
 ---
 title: "Every Codex chat is labelled with raw `<chat-app>` envelope markup, so Recent chats shows a wall of identical rows"
-workstream: unattached
+workstream: codex-chat-labels
 area: callback-box
 labels: [chat, codex, ui]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder could not find a recent Codex session in Recent chats
+resolution: implemented
 ---
+
+**Closed 2026-08-20 by commit `8416f7ba`** ("Label Codex chats by what the
+person typed, not the envelope"). Both engines now share `resolveSessionLabel`,
+which owns the order and the wrapper-stripping; an engine supplies only a
+`SessionLabelSource` — a transcript scan or the app-server `preview`.
+Regression coverage: `test/core/chat/session-label.doctest.md`.
+
+Two things the fix decided differently from the direction sketched below:
+
+- The label does **not** come from `entriesFromThread`. The `preview` field is
+  the thread's verbatim first user message, untruncated (checked against a real
+  Codex state DB: `preview` equals `first_user_message`, up to 181k chars), and
+  `thread/list` already carries it for every thread in the one call the
+  enumeration makes. Rebuilding labels from parsed entries would have cost one
+  `thread/read` per row, serialized on the shared app-server, to reach the same
+  string. The app-server protocol has no batch read and our Codex plugin is
+  hooks-only, so that cost could not be removed.
+- The shared step is the *cleaning*, not an entries abstraction. Both sources
+  run through `snippetFromUserText`/`snippetFromUserBlocks`, and `labelSource`
+  is a `switch` with `assertNever` so a third engine must state its own source
+  rather than inherit one.
+
+One behavior stays per-engine and is documented at the seam: the transcript
+reader keeps scanning when a turn strips to nothing; `preview` is only the first
+message, so a Codex opener with no text left falls back to the id prefix.
+
+The landmark parent/child binding question below is untouched and still open.
 
 A Codex chat's row label is the raw `<chat-app narration="off" prose="on"
 local-time="…"` envelope instead of the user's first message. Claude chats in

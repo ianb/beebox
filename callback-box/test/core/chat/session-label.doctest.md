@@ -18,6 +18,7 @@ that evening.
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { resolveSessionLabel } from "../../../src/core/chat/session-label.js";
+import { labelSource } from "../../../src/core/chat/session/list.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 
 /** The features snapshot the composer prepends to a session's first message. */
@@ -34,12 +35,24 @@ function firstMessage(text: string) {
     `local-time="16:47">${text}</typed>`;
 }
 
+/** A list row as the enumeration builds it, minus the fields labelling ignores. */
+function entry(engine: "claude" | "codex", fields: { preview?: string; logPath?: string }) {
+  return {
+    sessionId: engine === "codex" ? "01a0023e-9c1f" : "claude01-9c1f",
+    engine,
+    contextDir: "",
+    mtime: new Date("2026-08-14T21:47:00Z"),
+    huskPath: "store/chat/web/2026-08-14_chat.chat.card",
+    logPath: fields.logPath ?? "/nonexistent/log.jsonl",
+    title: undefined,
+    ...(fields.preview === undefined ? {} : { nativePreview: fields.preview }),
+  };
+}
+
+/** Names a Codex row exactly as `loadAllSessions` does — selector included. */
 function codexLabel(preview: string | undefined, title?: string) {
-  return resolveSessionLabel({
-    sessionId: "01a0023e-9c1f",
-    title,
-    source: { kind: "preview", text: preview },
-  });
+  const row = entry("codex", preview === undefined ? {} : { preview });
+  return resolveSessionLabel({ sessionId: row.sessionId, title, source: labelSource(row) });
 }
 ```
 
@@ -100,6 +113,19 @@ await codexLabel(undefined)
 ```ts continue
 await codexLabel('<chat-app narration="off" prose="on"/>')
 => 01a0023e
+```
+
+The engine picks the source and nothing else. `labelSource` is that pick, and
+it is a `switch` with `assertNever`, so a third engine can't quietly inherit
+whichever branch a ternary happened to fall through to — which is how Codex
+came to skip the cleaning in the first place.
+
+```ts continue
+JSON.stringify([
+  labelSource(entry("codex", { preview: "hi" })),
+  labelSource(entry("claude", { logPath: "/box/log.jsonl" })),
+])
+=> [{"kind":"preview","text":"hi"},{"kind":"transcript","logPath":"/box/log.jsonl"}]
 ```
 
 A Claude chat reaches the same answers through its transcript.
