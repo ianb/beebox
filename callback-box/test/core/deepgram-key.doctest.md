@@ -49,14 +49,14 @@ const slug = await boxSlug(box.root);
 process.env.CALLBACK_DEEPGRAM_API_KEY = "placeholder-env-key";
 process.env.CALLBACK_DEEPGRAM_PROJECT = "placeholder-env-project";
 
-print(`env only: ${JSON.stringify(await getDeepgramCredentials(box.root))}`);
+print(`env only: ${JSON.stringify(await getDeepgramCredentials(box.root, { observe: true }))}`);
 
 await box.write(
   "config/connectors/deepgram.secret.json",
   JSON.stringify({ apiKey: "placeholder-file-key", projectId: "placeholder-file-project" }),
 );
 resetDeepgramLegacyWarning();
-const [fromFile, warnings] = await withWarnings(() => getDeepgramCredentials(box.root));
+const [fromFile, warnings] = await withWarnings(() => getDeepgramCredentials(box.root, { observe: true }));
 print(`file present: ${JSON.stringify(fromFile)}`);
 print(`warned about the stray file: ${warnings.some((w) => w.includes("config/connectors/deepgram.secret.json"))}`);
 
@@ -65,7 +65,7 @@ await setSecret({
   value: JSON.stringify({ apiKey: "placeholder-store-key", projectId: "placeholder-store-project" }),
 });
 await grantSecret({ slug, name: "deepgram", access: "server" });
-print(`store granted: ${JSON.stringify(await getDeepgramCredentials(box.root))}`);
+print(`store granted: ${JSON.stringify(await getDeepgramCredentials(box.root, { observe: true }))}`);
 =>
 env only: {"apiKey":"placeholder-env-key","projectId":"placeholder-env-project"}
 file present: {"apiKey":"placeholder-file-key","projectId":"placeholder-file-project"}
@@ -82,12 +82,12 @@ secret; the connector sees the "not configured" it already handles.
 
 ```ts continue
 await setSecret({ name: "deepgram", value: "not-json-at-all" });
-const [bad, badWarnings] = await withWarnings(() => getDeepgramCredentials(box.root));
+const [bad, badWarnings] = await withWarnings(() => getDeepgramCredentials(box.root, { observe: true }));
 print(`not JSON: ${bad}`);
 print(`warned: ${badWarnings.some((w) => w.includes('"deepgram" is not valid JSON'))}`);
 
 await setSecret({ name: "deepgram", value: JSON.stringify({ apiKey: 42 }) });
-const [wrongShape, shapeWarnings] = await withWarnings(() => getDeepgramCredentials(box.root));
+const [wrongShape, shapeWarnings] = await withWarnings(() => getDeepgramCredentials(box.root, { observe: true }));
 print(`wrong shape: ${wrongShape}`);
 print(`warned: ${shapeWarnings.some((w) => w.includes("does not match the shape"))}`);
 =>
@@ -104,7 +104,7 @@ so it reads as not configured rather than half-working.
 
 ```ts continue
 await setSecret({ name: "deepgram", value: JSON.stringify({ apiKey: "placeholder-store-key" }) });
-await getDeepgramCredentials(box.root);
+await getDeepgramCredentials(box.root, { observe: true });
 => null
 ```
 
@@ -115,7 +115,7 @@ delete process.env.CALLBACK_DEEPGRAM_API_KEY;
 delete process.env.CALLBACK_DEEPGRAM_PROJECT;
 process.env.CB_SECRETS_FILE = join(dir, "no-store-here.json");
 await rm(join(box.root, "config/connectors/deepgram.secret.json"));
-await getDeepgramCredentials(box.root);
+await getDeepgramCredentials(box.root, { observe: true });
 => null
 ```
 

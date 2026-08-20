@@ -133,7 +133,7 @@ export function registerChatAudioRoutes(ctx: ChatRoutesContext): void {
       return reply.send(result.audio);
     }
 
-    const apiKey = await getOpenAiThinkingKey(boxRoot);
+    const apiKey = await getOpenAiThinkingKey(boxRoot, { observe: true });
     if (!apiKey) {
       return reply.status(500).send({ error: "TTS API key not configured" });
     }
@@ -157,7 +157,7 @@ export function registerChatAudioRoutes(ctx: ChatRoutesContext): void {
 
   // GET /api/chat/transcribe-ws - WebSocket proxy to Mistral Voxtral Realtime
   server.get("/api/chat/transcribe-ws", { websocket: true }, async (socket) => {
-    const apiKey = await getMistralApiKey(boxRoot);
+    const apiKey = await getMistralApiKey(boxRoot, { observe: true });
     if (!apiKey) {
       console.error("[transcribe-ws] Mistral API key not found");
       socket.send(JSON.stringify({ type: "error", error: "Mistral API key not configured" }));

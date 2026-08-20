@@ -15,7 +15,7 @@
  */
 
 import { refusalAllowsLegacyFallback } from "./secrets/legacy-fallback.js";
-import { resolveSecret } from "./secrets/resolve.js";
+import { resolveSecret, type SecretRead } from "./secrets/resolve.js";
 
 /** The store name this key lives under. */
 export const GEMINI_SECRET_NAME = "gemini";
@@ -25,13 +25,26 @@ export function geminiKeyFromEnv(): string | null {
   return process.env["GEMINI_KEY"] || process.env["SKE_GEMINI_API_KEY"] || null;
 }
 
-export async function getGeminiApiKey(boxRoot?: string): Promise<string | null> {
+/**
+ * How a caller is spending this key. The `purpose` is stated by the CALLER
+ * rather than fixed here because this key has two genuinely different spends —
+ * describing a scan and answering a question about a recording — and a single
+ * hardcoded label made the access log claim every audio question was vision
+ * work. `observe: false` is the status-only probe (see `resolveSecret`).
+ */
+export interface GeminiKeyRead extends SecretRead {
+  /** Matches `SECRET_PURPOSE_PATTERN` — it goes verbatim into the access log. */
+  purpose: string;
+}
+
+export async function getGeminiApiKey(boxRoot: string | undefined, read: GeminiKeyRead): Promise<string | null> {
   if (boxRoot !== undefined) {
     const resolved = await resolveSecret({
       boxRoot,
       name: GEMINI_SECRET_NAME,
-      purpose: "gemini-vision",
+      purpose: read.purpose,
       access: "server",
+      observe: read.observe,
     });
     if (resolved.ok) {
       if (resolved.value.suspect) {

@@ -114,6 +114,27 @@ shown separately in both the CLI and the admin page: a key nothing claims to use
 but something resolves hourly is worth a look, and so is a declared reason that
 never shows up as a resolve.
 
+**A status probe is logged, but is not a use.** Reading a key to answer "is this
+configured?" — what every API-key check in `runHealthChecks` does — resolves the
+value without spending it, and passes `observe: false` to `resolveSecret`. The
+two records then part company, deliberately:
+
+- the **access log** keeps its `resolve` line, because a probe really did read
+  the value and the log is attribution — omitting it would put a hole in the one
+  record that answers "what touched this key";
+- the entry's **`lastUsed` and `purposes` do not move**, because those answer "is
+  this grant still earning its keep". A dashboard polling health every minute
+  would otherwise pin a long-dead key's last-use to *now*, forever, and the one
+  source that can contradict a declared reason would be reporting the monitoring,
+  not the work.
+
+The per-key readers (`core/mistral-key.ts` and its siblings) take the flag as an
+argument rather than defaulting it, so each call site says which it is. Gemini's
+reader takes its `purpose` the same way — that key has two genuinely different
+spends (`gemini-vision` for scan import, `gemini-audio-question` for
+`cb chat ask-about-audio`), and one hardcoded label had the log claiming every
+audio question was vision work.
+
 ```bash
 cb secrets declare weatherapi --note "…" --use "forecasts in the morning brief"
 cb secrets describe weatherapi --add-use "the umbrella reminder trick"
@@ -322,7 +343,7 @@ and never taken from argv.
 | `printf %s "$KEY" \| cb secrets set <name>` | Store or rotate a value (stdin, or a hidden prompt). A value in argument position is refused. |
 | `cb secrets rm <name>` | Remove an entry; grants naming it become dangling grants. |
 | `cb secrets declare <name> --note …` | Create an empty, ungranted slot — the **agent-facing** subcommand. Records the declaring box (`declaredBy`) for `status`. |
-| `cb secrets describe <name> --add-use …` | Say why a secret exists — repeatable and additive. Agent-facing; `--remove-use`/`--clear-uses` need `--agent-confirmed`. |
+| `cb secrets describe <name> --add-use …` | Say why a secret exists — repeatable and additive. Agent-facing, scoped to the box's own grants and declared slots; `--remove-use`/`--clear-uses` need `--agent-confirmed`. |
 | `cb secrets list` | Names + metadata across the machine, never values. The machine-wide view, so it carries the agent refusal. |
 | `cb secrets grant <box> <name> [--access server\|agent]` | Per-box opt-in; refuses for a `shareable: false` secret. |
 | `cb secrets revoke <box> <name>` | Withdraw a grant. |
@@ -341,6 +362,15 @@ An agent's view of the store is its OWN box: `list` is the machine's whole
 inventory of names and grants, and `status` refuses in an agent session for any
 box other than the one the command is standing in. Neither discloses a value —
 what is withheld is the map of which credentials exist and who holds them.
+
+`describe --add-use` is scoped the same way, for the same reason. It stays
+unguarded for a name the box holds a grant on or declared itself, but in an
+agent session any other name is refused — including one that does not exist, in
+*exactly* the same words. An unguarded write that succeeded for a real name and
+errored (`SecretNotFoundError`) for an invented one would enumerate the machine's
+secrets one guess at a time, which is the map the paragraph above withholds. A
+person at a terminal is unaffected, and `--agent-confirmed` carries it through
+when the boxholder asked for the edit.
 
 ## Migrating a machine: `cb secrets migrate`
 

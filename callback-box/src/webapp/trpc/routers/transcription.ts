@@ -52,7 +52,7 @@ export const transcriptionRouter = router({
    * uncapped (Decision 7): logged-and-visible, not throttled.
    */
   deepgramTempKey: publicProcedure.mutation(async ({ ctx }) => {
-    const creds = await getDeepgramCredentials(ctx.boxRoot);
+    const creds = await getDeepgramCredentials(ctx.boxRoot, { observe: true });
     if (!creds) {
       throw new TRPCError({
         code: "PRECONDITION_FAILED",
@@ -108,7 +108,7 @@ export const transcriptionRouter = router({
   /** Mints an OpenAI realtime client secret for the browser — the same
    *  spend-without-disclosing shape as `deepgramTempKey`, logged the same way. */
   openaiRealtimeKey: publicProcedure.mutation(async ({ ctx }) => {
-    const apiKey = await getOpenAiThinkingKey(ctx.boxRoot);
+    const apiKey = await getOpenAiThinkingKey(ctx.boxRoot, { observe: true });
     if (!apiKey) {
       throw new TRPCError({
         code: "PRECONDITION_FAILED",

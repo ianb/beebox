@@ -11,7 +11,10 @@
  *
  * ADDING is agent-facing and unguarded, like `declare`: an agent that teaches
  * the box a new trick spending an already-granted key SHOULD append why, and a
- * reason can neither disclose a value nor widen an access level. REMOVING and
+ * reason can neither disclose a value nor widen an access level. It is scoped
+ * to the agent's OWN box, though — an unguarded write that succeeds for a real
+ * name and errors for an invented one would enumerate the machine's secrets by
+ * guessing, so `secrets-guard.ts` answers both cases identically. REMOVING and
  * CLEARING carry the agent guard — deleting the line that justified a grant is
  * precisely the edit a human has to be behind, and an agent tidying away its own
  * stated reasons would quietly undo the record this feature exists to keep.
@@ -22,7 +25,7 @@
 
 import { Command } from "commander";
 import { describeSecret } from "../../core/secrets/uses.js";
-import { failWith, refuseIfUnconfirmedAgent } from "../lib/secrets-guard.js";
+import { failWith, refuseIfAgentDescribingOtherBoxSecret, refuseIfUnconfirmedAgent } from "../lib/secrets-guard.js";
 
 export async function runDescribeSecret(opts: {
   name: string;
@@ -30,12 +33,22 @@ export async function runDescribeSecret(opts: {
   removeUses?: string[] | undefined;
   clearUses?: boolean | undefined;
   agentConfirmed?: boolean | undefined;
+  /** The box the command ran in — `undefined` finds it from the working
+   *  directory, `null` says there is none (tests state both). */
+  boxRoot?: string | null | undefined;
 }): Promise<void> {
   const removing = (opts.removeUses ?? []).length > 0 || opts.clearUses === true;
-  // Outside the try: the guard ends the process itself, and the lifecycle catch
-  // below would reprint its exit as an error message.
+  // Outside the try: the guards end the process themselves, and the lifecycle
+  // catch below would reprint an exit as an error message.
   if (removing) {
     refuseIfUnconfirmedAgent({ action: "remove a secret's stated uses", agentConfirmed: opts.agentConfirmed });
+  } else if ((opts.addUses ?? []).length > 0) {
+    // Adding stays open to an agent, but only for its own box's secrets.
+    await refuseIfAgentDescribingOtherBoxSecret({
+      name: opts.name,
+      boxRoot: opts.boxRoot,
+      agentConfirmed: opts.agentConfirmed,
+    });
   }
   try {
     const { uses } = await describeSecret({

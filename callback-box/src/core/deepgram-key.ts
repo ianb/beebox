@@ -25,7 +25,7 @@ import * as path from "node:path";
 import { z } from "zod";
 import { parseJsonSecret } from "./secrets/json-secret.js";
 import { refusalAllowsLegacyFallback } from "./secrets/legacy-fallback.js";
-import { resolveSecret } from "./secrets/resolve.js";
+import { resolveSecret, type SecretRead } from "./secrets/resolve.js";
 
 /** The store name this connector's credentials live under. */
 export const DEEPGRAM_SECRET_NAME = "deepgram";
@@ -83,13 +83,17 @@ async function readLegacySecretFile(boxRoot: string): Promise<DeepgramCredential
   return creds;
 }
 
-export async function getDeepgramCredentials(boxRoot?: string): Promise<DeepgramCredentials | null> {
+export async function getDeepgramCredentials(
+  boxRoot: string | undefined,
+  read: SecretRead,
+): Promise<DeepgramCredentials | null> {
   if (boxRoot !== undefined) {
     const resolved = await resolveSecret({
       boxRoot,
       name: DEEPGRAM_SECRET_NAME,
       purpose: "transcription",
       access: "server",
+      observe: read.observe,
     });
     if (resolved.ok) {
       if (resolved.value.suspect) {

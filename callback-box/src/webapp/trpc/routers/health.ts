@@ -132,7 +132,7 @@ export interface RunHealthChecksOptions {
  * which needs no extra key.
  */
 async function geminiKeyCheck(boxRoot: string): Promise<HealthCheck> {
-  const geminiKey = await getGeminiApiKey(boxRoot);
+  const geminiKey = await getGeminiApiKey(boxRoot, { purpose: "health-check", observe: false });
   const geminiSelected = process.env["CB_SCAN_VISION"] === "gemini";
   const message =
     geminiKey !== null
@@ -248,12 +248,18 @@ export async function runHealthChecks(
   }
 
   // --- API key checks ---
+  //
+  // Every key read below passes `observe: false` (`core/secrets/resolve.ts`):
+  // these resolves answer "is this configured?" and never spend the key. The
+  // access log still records them — a probe did read the value — but the
+  // entry's `lastUsed`/`purposes` do not move, so a dashboard polling health
+  // cannot make an unused grant look busy.
 
   // Transcription service (Voxtral / Deepgram / Whisper). Only require the
   // key for the configured service; the others are optional.
   const transcriptionConfig = await loadTranscriptionConfig(boxRoot);
   if (transcriptionConfig.service === "voxtral") {
-    const mistralKey = await getMistralApiKey(boxRoot);
+    const mistralKey = await getMistralApiKey(boxRoot, { observe: false });
     checks.push({
       name: "mistral-api-key",
       ok: mistralKey !== null,
@@ -263,7 +269,7 @@ export async function runHealthChecks(
       severity: "warning",
     });
   } else if (transcriptionConfig.service === "deepgram") {
-    const deepgramCreds = await getDeepgramCredentials(boxRoot);
+    const deepgramCreds = await getDeepgramCredentials(boxRoot, { observe: false });
     checks.push({
       name: "deepgram-credentials",
       ok: deepgramCreds !== null,
@@ -273,7 +279,7 @@ export async function runHealthChecks(
       severity: "warning",
     });
   } else if (transcriptionConfig.service === "openai-realtime") {
-    const hasKey = (await getOpenAiThinkingKey(boxRoot)) !== null;
+    const hasKey = (await getOpenAiThinkingKey(boxRoot, { observe: false })) !== null;
     checks.push({
       name: "openai-api-key",
       ok: hasKey,
@@ -285,7 +291,7 @@ export async function runHealthChecks(
   }
 
   // OpenAI / Whisper key (needed for TTS, and Whisper transcription if selected)
-  const openaiKey = await getOpenAiThinkingKey(boxRoot);
+  const openaiKey = await getOpenAiThinkingKey(boxRoot, { observe: false });
   const openaiRequired = transcriptionConfig.service === "whisper";
   checks.push({
     name: "openai-api-key",
