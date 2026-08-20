@@ -21,18 +21,92 @@ break this repo — v2.1.218's worktree git isolation silently broke `/finish`'s
 merge step for days. Claude Code versions that move harness behavior get their
 own entries here, labeled as such, with no pin to apply.
 
-- **Current pin:** `0.3.233` (in `callback-box/package.json` — see the split-pin
+- **Current pin:** `0.3.234` (in `callback-box/package.json` — see the split-pin
   note below; the monorepo root still carries a second, unmanaged pin at
   `0.3.226`)
-- **Latest reviewed upstream version:** `0.3.235` (SDK), `2.1.235` (Claude Code)
+- **Latest reviewed upstream version:** `0.3.237` (SDK), `2.1.237` (Claude Code)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** No bump was due this turn — at 2026-08-19T16:04Z
-  `0.3.234` was ~46h old, about two hours short of the 48h window, and `0.3.235`
-  ~22h. Both should be settled by the next turn; take the newer on the normal
-  settled path. Nothing act-now on either channel, and `0.3.234`'s breaking type
-  change is already confirmed inert here.
+- **Current recommendation:** `0.3.235` was ~46h at this turn (two hours short,
+  for the second day running) and `0.3.236`/`0.3.237` are ~21h/~16h. All three
+  should be settled next turn; take the newest on the normal settled path.
+  Nothing act-now on either channel. Two items to carry forward: `0.3.236`'s
+  `classifierContext` is an addition to a hook shape callback-box already
+  builds, and 2.1.236 fixed SIGTERM in SDK mode recording synthetic tool denials
+  into transcripts callback-box parses.
 
 ## Release ledger
+
+### 0.3.237 — pending (parity with Claude Code 2.1.237)
+
+- **Upstream:** The SDK entry is only "Updated to parity with Claude Code
+  v2.1.237". Claude Code 2.1.237 is two items: prompt caching fixed for sessions
+  using an LLM gateway or custom base URL, and a new built-in "Concise" output
+  style that leads with results and skips preamble.
+- **Callback-box applicability:** Nothing on either channel. Callback-box talks
+  to the Anthropic API directly, with no gateway or custom base URL, so the
+  caching fix does not apply; the output style is an interactive `/config`
+  preference with no SDK or repo surface. **Published 2026-08-19T23:58Z, only
+  ~5h after `0.3.236`** — a fast-follow worth noting mainly because a same-day
+  successor is usually a hotfix, but 2.1.237 reads as ordinary work rather than
+  a repair of anything in `0.3.236`.
+- **Action:** ~16h old, inside the settling window.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03237), [Claude Code 2.1.237](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21237)
+
+### 0.3.236 — pending
+
+- **Upstream (SDK):** One real API item: `PostToolUse` hooks can return
+  `hookSpecificOutput.classifierContext`, a short host-asserted note about a tool
+  call's result that the auto mode permission classifier reads alongside that
+  result. The bundled Claude Code 2.1.236 is large; its relevant items are below.
+- **Callback-box applicability (runtime):**
+  - **`classifierContext` lands on a shape callback-box already builds.**
+    `src/core/sdk-hooks.ts` returns `hookSpecificOutput` with
+    `hookEventName: "PostToolUse"` today (the card-validator hook, registered in
+    `buildQueryOptions` alongside the git-mv nudge). So this is a one-field
+    addition to an object callback-box already constructs, not new plumbing.
+    It is **inert at present** — the field feeds the auto mode permission
+    classifier, and every callback-box query runs `permissionMode:
+    "bypassPermissions"`, where no classification happens. Recorded as a genuine
+    opportunity rather than a change: if callback-box ever runs box agents under
+    auto mode, the card validator could assert *why* a card write was
+    invalid/valid straight into the classifier's view.
+  - **`SIGTERM in print/SDK mode no longer records an interrupted turn or
+    synthetic tool denials before exiting` (2.1.236) — the most callback-box-
+    shaped item in this batch.** SIGTERM to an SDK session is routine here, not
+    exceptional: `src/core/agent/stream.ts:66` documents the SDK transport
+    SIGTERMing the CLI with a SIGKILL fallback, `cb serve` forwards SIGTERM
+    (`src/cli/commands/serve.ts:162`), `cb hub` idle-collects children, and the
+    dev router stops worktrees after five minutes. Pre-fix, each of those wrote
+    an interrupted turn plus synthetic tool denials into the transcript — and
+    callback-box *reads* those transcripts (`src/cli/lib/session-entry.ts`
+    grafts `tool_result` blocks onto their `tool_use`, and sessions resume from
+    them). So this is a real correctness improvement to transcript fidelity.
+    **Not marked act-now**: the damage is polluted transcript content, not a
+    hang, crash, or leak, and `0.3.236` settles within a day. If a resumed box
+    agent is ever seen reacting to tool denials that never happened, this is the
+    cause.
+  - Two fixes in 2.1.236 repair regressions that are **live at the current
+    pin**, both dating to 2.1.229 (bundled in `0.3.229`, applied here 2026-08-15):
+    clipboard copy, background housekeeping, background sessions, and local MCP
+    logs breaking after a session's working directory is removed; and skills
+    hot-reload in SDK sessions erroring on every skills change after the
+    session's cwd was deleted. Callback-box deletes box directories out from
+    under sessions in exactly one place — worktree teardown removing the cloned
+    box (`bin/lib/worktree-teardown.sh`, `bin/worktrees sweep`) — so the
+    exposure is dev-environment only; prod box directories are not deleted.
+  - Not applicable: the `ANTHROPIC_DEFAULT_MODEL` env var (callback-box sets
+    `model` explicitly per run via `normalizeModelId`), `notify_when_idle` on
+    cross-session `SendMessage` (unused), the macOS sandbox wildcard read-deny
+    precedence fix (no sandbox rules configured), and the WSL/`powershell.exe`
+    subprocess fix (a 2.1.234 regression, Windows-only).
+- **Callback-box applicability (harness):** Mostly TUI. Worth knowing:
+  auto mode now sets aside `Monitor` allow rules so Monitor commands are
+  reviewed like Bash; the auto mode git-status check can no longer be fooled by
+  `status.showUntrackedFiles=no` into reporting a clean tree; a slash-command
+  typo now reports instead of running the closest fuzzy match; and session
+  recaps are capped at 400 characters. None requires a repo change.
+- **Action:** Published 2026-08-19T18:49Z, ~21h old, inside the settling window.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03236), [Claude Code 2.1.236](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21236)
 
 ### 0.3.235 — pending (parity content from Claude Code 2.1.235)
 
@@ -77,11 +151,14 @@ own entries here, labeled as such, with no pin to apply.
   this repo's `/code-review ultra` usage. The `subagent_type` error-listing fix
   lands on the dev repo's custom `.claude/agents/finish.md`, making an
   unavailable-agent spawn fail legibly instead of silently defaulting.
-- **Action:** Published 2026-08-18T18:25Z, ~22h old, inside the settling window.
-  The boxholder's harness is already on 2.1.235 independently.
+- **Action:** Published 2026-08-18T18:25Z. Still pending. Re-reviewed
+  2026-08-20 at ~46h — two hours short of the window, the same near-miss as
+  `0.3.234` hit the day before, since this monitor runs at a fixed hour and
+  upstream publishes slightly later in the day. Upstream text unchanged, still
+  nothing act-now.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03235), [Claude Code 2.1.235](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21235)
 
-### 0.3.234 — pending
+### 0.3.234 — applied
 
 - **Upstream (SDK):** Removed the unused `bypass_permissions_disabled` member
   from the `ExitReason` type — the value was never emitted, and upstream warns
@@ -129,10 +206,12 @@ own entries here, labeled as such, with no pin to apply.
   longer leaks into a resumed turn — the continuing thread on callback-box's
   documented server auth path. The NT-namespace (`\??\`) path hardening is
   Windows-only.
-- **Action:** Published 2026-08-17T18:20Z. Still pending. Re-reviewed
-  2026-08-19 at ~46h — roughly two hours short of the 48h window, upstream text
-  unchanged, still nothing act-now, so it waits one more turn. The boxholder's
-  harness has moved on to 2.1.235 independently.
+- **Action:** Published 2026-08-17T18:20Z; held one extra turn on 2026-08-19 at
+  ~46h. Applied 2026-08-20 via `pnpm update-agent-sdk` at ~70h as the newest
+  settled version. The `ExitReason` breaking change predicted inert here did in
+  fact land clean — typecheck passed with no `case`-branch fallout. Verified:
+  `pnpm -C callback-box test` 7415/7415 pass, and
+  `scripts/sdk-steering-probe.ts` holds all four steering behaviors.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03234), [Claude Code 2.1.234](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21234)
 
 ### Monitor gap — two turns lost to a working-tree collision
