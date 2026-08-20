@@ -97,16 +97,19 @@ export function renderAside(aside: AsideCard, params: { pageSitePath: string; ba
   // The schema's enum and the renderer's kinds are declared separately; this
   // keeps a drift between them a build failure rather than a broken class name.
   if (!isAsideKind(kind)) throw new AsideError(`${aside.file}: unknown aside kind "${kind}"`);
-  const { content, linkTargets } = transformBody(asidePublishedBody(aside), {
+  const body = asidePublishedBody(aside);
+  // Checked on the raw body, before transform, so it catches EVERY authoring
+  // form — inline {% aside kind label %} blocks included, which transform
+  // straight to <details> markup and would slip past a placeholder check.
+  if (/{%\s*\/?aside/.test(body)) {
+    throw new AsideError(`${aside.file}: aside body contains an {% aside %} tag — asides do not nest`);
+  }
+  const { content, linkTargets } = transformBody(body, {
     file: aside.file,
     pageSitePath: params.pageSitePath,
     base: params.base,
   });
-  const html = renderNode(asideTag({ kind, label, children: bodyChildren(content) }));
-  if (html.includes("<x-aside")) {
-    throw new AsideError(`${aside.file}: aside body references another aside — asides do not nest`);
-  }
-  return { html, linkTargets };
+  return { html: renderNode(asideTag({ kind, label, children: bodyChildren(content) })), linkTargets };
 }
 
 const ASIDE_PLACEHOLDER_RE = /<x-aside slug="([^"]*)"><\/x-aside>/g;

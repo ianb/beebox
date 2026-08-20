@@ -94,3 +94,8 @@ test("flatAside carries label and body into the flat text", () => {
   assert.match(flat, /how it works/);
   assert.match(flat, /Machine text\./);
 });
+
+test("aside body containing an inline aside tag is rejected — asides do not nest in any form", () => {
+  const card = aside({}, "before\n\n{% aside kind=\"bee\" label=\"smuggled\" %}\ninner\n{% /aside %}\n");
+  assert.throws(() => renderAside(card, EMBED), (e: unknown) => e instanceof AsideError && /do not nest/.test(e.message));
+});

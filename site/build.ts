@@ -12,6 +12,7 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { embedAsides, flatAside, loadAsides, renderAside, type AsideCard } from "./asides.js";
 import { listCardFiles } from "./cards.js";
 import { baseFromBranch, normalizeBase } from "./links.js";
@@ -83,7 +84,7 @@ function flatNugget(slug: string, nuggets: readonly Nugget[]): string {
   return `${quoted}\n> — from ${nugget.source}`;
 }
 
-function twinMarkdown(
+export function twinMarkdown(
   body: string,
   refs: { nuggets: readonly Nugget[]; asides: ReadonlyMap<string, AsideCard> },
 ): string {
@@ -91,9 +92,12 @@ function twinMarkdown(
     .split(/(```[\S\s]*?```)/g)
     .map((part, i) => {
       if (i % 2 === 1) return part; // inside a code fence: literal content
+      // Asides flatten FIRST: flatAside splices in the aside's published body,
+      // which may itself carry a {% nugget %} tag — the nugget pass must run
+      // after it, or the catch-all strip below silently deletes that nugget.
       return part
-        .replace(/{%\s*nugget\s+slug="([^"]*)"\s*\/%}/g, (_m, slug: string) => flatNugget(slug, refs.nuggets))
         .replace(/{%\s*aside\s+ref="([^"]*)"\s*\/%}/g, (_m, slug: string) => flatAside(slug, refs.asides))
+        .replace(/{%\s*nugget\s+slug="([^"]*)"\s*\/%}/g, (_m, slug: string) => flatNugget(slug, refs.nuggets))
         .replace(/{%[\S\s]*?%}/g, "");
     })
     .join("");
@@ -204,8 +208,12 @@ async function main(): Promise<void> {
   );
 }
 
-main().catch((e: unknown) => {
-  const message = e instanceof Error ? e.message : String(e);
-  process.stderr.write(`site build failed: ${message}\n`);
-  process.exitCode = 1;
-});
+// Run only when invoked as the CLI — the test file imports twinMarkdown and
+// must not trigger a build.
+if (process.argv[1] !== undefined && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url) {
+  main().catch((e: unknown) => {
+    const message = e instanceof Error ? e.message : String(e);
+    process.stderr.write(`site build failed: ${message}\n`);
+    process.exitCode = 1;
+  });
+}
