@@ -5,6 +5,12 @@ import Speech
 enum NativeVoiceTurnCommand: Equatable {
     case none
     case startDictation
+    /// Start dictating AND tell the page to stop speaking (contract §4.9).
+    /// Only an explicit press produces this: the user talking over the box is
+    /// barge-in, while every automatic reopen — after speech ends, after a
+    /// send, after an erase — is the system resuming and must not cut the box
+    /// off mid-sentence.
+    case startDictationInterruptingSpeech
     case stopDictation
 }
 
@@ -19,24 +25,36 @@ enum NativeVoiceTurnEvent: Equatable {
 struct NativeVoiceTurnState: Equatable {
     private(set) var isActive = false
     private var speechPlaybackActive = false
+    /// Set while this turn's microphone is held closed *because* the box is
+    /// speaking, so the `playing:false` edge resumes exactly the mic it
+    /// deferred. Without it a barge-in resumes itself: stopping the speech
+    /// produces that same edge, and the resume would race the start the press
+    /// already commanded.
+    private var waitingForSpeech = false
 
     mutating func handle(_ event: NativeVoiceTurnEvent) -> NativeVoiceTurnCommand {
         switch event {
         case .microphoneStarted:
             isActive = true
-            return speechPlaybackActive ? .none : .startDictation
+            waitingForSpeech = false
+            return speechPlaybackActive ? .startDictationInterruptingSpeech : .startDictation
         case .microphoneStopped:
             isActive = false
+            waitingForSpeech = false
             return .stopDictation
         case .draftErased:
-            return isActive && speechPlaybackActive == false ? .startDictation : .none
+            guard isActive else {
+                return .none
+            }
+            return deferUnlessSilent(.startDictation)
         case .voiceMessageSent(let closeMicrophone):
             if closeMicrophone {
                 isActive = false
+                waitingForSpeech = false
                 return .stopDictation
             }
             isActive = true
-            return speechPlaybackActive ? .none : .startDictation
+            return deferUnlessSilent(.startDictation)
         case .speechPlaybackChanged(let playing):
             guard playing != speechPlaybackActive else {
                 return .none
@@ -45,8 +63,27 @@ struct NativeVoiceTurnState: Equatable {
             guard isActive else {
                 return .none
             }
-            return playing ? .stopDictation : .startDictation
+            if playing {
+                waitingForSpeech = true
+                return .stopDictation
+            }
+            guard waitingForSpeech else {
+                return .none
+            }
+            waitingForSpeech = false
+            return .startDictation
         }
+    }
+
+    /// Issue `command` if the box is silent; otherwise record that this turn is
+    /// waiting on the speech it must not talk over. Only the automatic reopens
+    /// go through here — an explicit press interrupts instead.
+    private mutating func deferUnlessSilent(_ command: NativeVoiceTurnCommand) -> NativeVoiceTurnCommand {
+        guard speechPlaybackActive else {
+            return command
+        }
+        waitingForSpeech = true
+        return .none
     }
 }
 
@@ -169,6 +206,15 @@ final class SpeechDictation: ObservableObject {
 
     var hasPendingStart: Bool {
         startTask != nil
+    }
+
+    /// The recognizer is being brought up — permissions, the on-device analyzer
+    /// session, the audio engine — so a turn is under way but nothing is being
+    /// heard yet. `state` is published; `hasPendingStart` is not, and the two
+    /// only differ inside one synchronous hop, so the composer keys its pending
+    /// microphone affordance on this.
+    var isStarting: Bool {
+        state == .requestingPermission
     }
 
     func toggle(currentText: String) {

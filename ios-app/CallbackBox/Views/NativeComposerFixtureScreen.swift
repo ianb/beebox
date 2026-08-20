@@ -202,6 +202,8 @@ struct NativeComposerFixtureScreen: View {
         switch fixture {
         case "recording":
             return .recording
+        case "starting-dictation":
+            return .requestingPermission
         case "interrupted":
             return .failed(
                 message: "Dictation was interrupted. Your live transcript is ready to edit or send."

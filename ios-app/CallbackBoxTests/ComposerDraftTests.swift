@@ -86,13 +86,50 @@ final class NativeVoiceTurnTests: XCTestCase {
         XCTAssertFalse(turn.isActive)
     }
 
-    func testStartingDuringSpeechWaitsForPlaybackToFinish() {
+    /// Pressing record while the box is talking is barge-in: the turn listens
+    /// immediately and the speech is cut off, matching the web composer's
+    /// `START_DICTATION`. Waiting instead is what made the button look broken
+    /// with the volume down.
+    func testPressingRecordDuringSpeechInterruptsInsteadOfWaiting() {
         var turn = NativeVoiceTurnState()
 
         XCTAssertEqual(turn.handle(.speechPlaybackChanged(playing: true)), .none)
-        XCTAssertEqual(turn.handle(.microphoneStarted), .none)
+        XCTAssertEqual(turn.handle(.microphoneStarted), .startDictationInterruptingSpeech)
+        XCTAssertTrue(turn.isActive)
+    }
+
+    /// The `playing:false` a barge-in causes must not restart the dictation the
+    /// press already started: only a mic that was deferred *for* the speech
+    /// resumes when it ends.
+    func testBargeInDoesNotRestartItselfWhenTheSpeechReportsStopped() {
+        var turn = NativeVoiceTurnState()
+        _ = turn.handle(.speechPlaybackChanged(playing: true))
+        _ = turn.handle(.microphoneStarted)
+
+        XCTAssertEqual(turn.handle(.speechPlaybackChanged(playing: false)), .none)
+        XCTAssertTrue(turn.isActive)
+    }
+
+    /// The automatic reopen after a send is the system resuming, not the user
+    /// talking, so it keeps waiting for the box to finish its reply.
+    func testSendingWhileTheBoxSpeaksStillWaitsForTheReplyToEnd() {
+        var turn = NativeVoiceTurnState()
+        _ = turn.handle(.microphoneStarted)
+        _ = turn.handle(.speechPlaybackChanged(playing: true))
+
+        XCTAssertEqual(turn.handle(.voiceMessageSent(closeMicrophone: false)), .none)
         XCTAssertEqual(turn.handle(.speechPlaybackChanged(playing: false)), .startDictation)
         XCTAssertTrue(turn.isActive)
+    }
+
+    /// Erasing a draft mid-speech is also automatic; it may not cut the box off.
+    func testErasingDraftDuringSpeechWaitsRatherThanInterrupting() {
+        var turn = NativeVoiceTurnState()
+        _ = turn.handle(.microphoneStarted)
+        _ = turn.handle(.speechPlaybackChanged(playing: true))
+
+        XCTAssertEqual(turn.handle(.draftErased), .none)
+        XCTAssertEqual(turn.handle(.speechPlaybackChanged(playing: false)), .startDictation)
     }
 
     func testErasingDraftKeepsActiveVoiceTurnListening() {

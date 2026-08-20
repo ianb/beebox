@@ -9,6 +9,7 @@ import {
   type LocationShareState,
 } from "../../lib/location-share";
 import { parseNativeEmissionDetail } from "./native-emission";
+import { nativeSpeechCommandFromDetail } from "./native-speech-command";
 import { createNativeDispatchRegistry, resolveNativeDispatch } from "./native-emission-redelivery";
 import type { NativeShellChannel, NativeShellWindow } from "./native-post";
 import { postNativeMessage } from "./native-post";
@@ -80,6 +81,29 @@ export function useNativeSpeechPlaybackBridge(opts: { enabled: boolean; playing:
   }, [enabled, playing]);
 }
 
+/**
+ * Native barge-in (contract §4.9). The native record button opens its mic at
+ * once and asks this page to stop talking; the page is the speaker, so only it
+ * can. Deliberately `STOP_SPEECH` and not `START_DICTATION` — the web event
+ * would also `beginTurn` and `startMic`, opening the *web* microphone inside a
+ * native shell and leaving web turn-taking to reopen it after the next speech.
+ * The turn belongs to native.
+ */
+export function useNativeSpeechCommandBridge(opts: { enabled: boolean; stopSpeech: () => void }) {
+  const { enabled, stopSpeech } = opts;
+  useEffect(() => {
+    if (!enabled) return;
+    const run = () => {
+      for (const detail of drainNativeSpeechCommandQueue()) {
+        if (nativeSpeechCommandFromDetail(detail) !== null) stopSpeech();
+      }
+    };
+    run();
+    window.addEventListener("callbackbox:native-speech-command", run);
+    return () => window.removeEventListener("callbackbox:native-speech-command", run);
+  }, [enabled, stopSpeech]);
+}
+
 export function useNativeResponseBridge(opts: { enabled: boolean; active: boolean }) {
   const { enabled, active } = opts;
   useEffect(() => {
@@ -89,7 +113,7 @@ export function useNativeResponseBridge(opts: { enabled: boolean; active: boolea
 }
 
 /**
- * All five native-shell bridges in one call — InteractiveChat's root has no
+ * All six native-shell bridges in one call — InteractiveChat's root has no
  * per-bridge logic of its own, so grouping them here keeps that function
  * under the max-lines-per-function budget the same way ChatModeOverlays does
  * for the composer overlays.
@@ -101,13 +125,15 @@ export function useNativeBridges(opts: {
   narrationEnabled: boolean;
   responseActive: boolean;
   speechPlaying: boolean;
+  stopSpeech: () => void;
 }) {
-  const { enabled, dispatchEmission, boxSlug, narrationEnabled, responseActive, speechPlaying } = opts;
+  const { enabled, dispatchEmission, boxSlug, narrationEnabled, responseActive, speechPlaying, stopSpeech } = opts;
   useNativeEmissionBridge({ enabled, dispatchEmission });
   useNativeLocationBridge({ enabled, boxSlug });
   useNativeNarrationBridge({ enabled, narrationEnabled });
   useNativeResponseBridge({ enabled, active: responseActive });
   useNativeSpeechPlaybackBridge({ enabled, playing: speechPlaying });
+  useNativeSpeechCommandBridge({ enabled, stopSpeech });
 }
 
 // Page-lifetime: the shell redelivers ids until a receipt lands; a
@@ -243,5 +269,11 @@ function drainNativeEmissionQueue(): unknown[] {
 function drainNativeLocationQueue(): unknown[] {
   const queued = window.callbackboxNativeLocationQueue ?? [];
   window.callbackboxNativeLocationQueue = [];
+  return queued;
+}
+
+function drainNativeSpeechCommandQueue(): unknown[] {
+  const queued = window.callbackboxNativeSpeechCommandQueue ?? [];
+  window.callbackboxNativeSpeechCommandQueue = [];
   return queued;
 }

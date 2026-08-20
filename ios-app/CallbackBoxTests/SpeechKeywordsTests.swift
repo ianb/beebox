@@ -349,6 +349,35 @@ final class MobileContractFixtureDecodeTests: XCTestCase {
         }
     }
 
+    /// Native is the *encoder* for the barge-in command (contract §4.9), so the
+    /// fixture pins what this app puts on the wire; the web doctest checks its
+    /// decoder against the same file. The rejected fixtures exist for the web
+    /// side — native has no way to emit them — so they are only asserted to be
+    /// unlike what we send.
+    func testSpeechCommandEncodesTheValidFixtureAndNothingElse() throws {
+        let fixtures = try MobileContractFixtures.load("speech-command")
+        XCTAssertFalse(fixtures.isEmpty, "no speech-command fixtures found")
+        let encoded = try XCTUnwrap(
+            try JSONSerialization.jsonObject(
+                with: try JSONEncoder().encode(NativeSpeechCommand.stop)
+            ) as? [String: Any],
+            "NativeSpeechCommand.stop did not encode to an object"
+        )
+        var matched = 0
+        for (name, fixture) in fixtures {
+            let input = try XCTUnwrap(fixture["input"] as? [String: Any], "\(name): missing input")
+            let sameShape = (input["version"] as? Int) == (encoded["version"] as? Int)
+                && (input["action"] as? String) == (encoded["action"] as? String)
+            if fixture["expected"] is [String: Any] {
+                XCTAssertTrue(sameShape, "\(name): native encodes \(encoded), fixture says \(input)")
+                matched += 1
+            } else {
+                XCTAssertFalse(sameShape, "\(name): a rejected fixture matches what native sends")
+            }
+        }
+        XCTAssertEqual(matched, 1, "exactly one speech-command fixture is the shape native sends")
+    }
+
     func testV2EmissionFixturesDecodeStrictly() throws {
         let fixtures = try MobileContractFixtures.load("emission")
         var decodedV2 = 0

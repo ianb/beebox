@@ -236,7 +236,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
   useNativeBridges({
     enabled: usesNativeShell, dispatchEmission: dispatchNativeEmission, boxSlug,
     narrationEnabled: model.narrationEnabled, responseActive: snapshot.value === "streaming",
-    speechPlaying: voice.speechPlayback.isPlaying });
+    speechPlaying: voice.speechPlayback.isPlaying, stopSpeech: voice.handleStopSpeech });
   useEnsureComposerVisible({ ensureComposerVisibleRef, isTranscribing: voice.isTranscribing, setTypingMode, textareaRef });
 
   // Persisted in-flight transcript recovery widget; see InteractiveChat-recovery.tsx.

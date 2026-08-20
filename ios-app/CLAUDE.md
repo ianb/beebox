@@ -166,7 +166,7 @@ keyboard/safe-area behavior until it passes on a real phone.
 For deterministic composer layout checks, launch a DEBUG build with
 `--composer-fixture=<state>`. Supported states are `empty`, `typing`,
 `multiline`, `many-attachments`, `uploading`, `failed-upload`,
-`selection-detail`, `recording`, `hq-preparation`, `two-pending`,
+`selection-detail`, `recording`, `starting-dictation`, `hq-preparation`, `two-pending`,
 `sending`, `interrupted`, `rejected-send`, `stuck-pending`,
 `expired-attachment`, and `keyboard-shown`. The fixture uses
 the production composer with isolated stores and no web/server dependency.
