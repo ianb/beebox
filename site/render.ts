@@ -26,6 +26,8 @@ export const pageFrontmatterSchema = z
     summary: z.string().min(1),
     /** Unlisted pages build and serve but stay out of llms.txt (prototypes). */
     unlisted: z.boolean().optional(),
+    /** Set by import-box.ts on files it writes; marks the file importer-owned. */
+    "imported-from": z.string().optional(),
   })
   .strict();
 
