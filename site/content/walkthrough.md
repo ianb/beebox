@@ -1,5 +1,5 @@
 ---
-title: "Walkthrough prototype"
+title: Walkthrough prototype
 summary: "Unlisted round-3 prototype: a morning with the box told through real user stories, with categorized asides in three voices."
 unlisted: true
 ---

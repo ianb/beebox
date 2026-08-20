@@ -62,6 +62,13 @@ writes the input manifest last (so a partial build never masks staleness).
   the HTML shell. Deliberately does NOT import `bin/router-docs.ts`, whose
   router/runtime dependencies do not belong in the static-site build; this
   package declares `@markdoc/markdoc` itself.
+- `import-box.ts` — box → site importer (`pnpm --dir site import-box --box
+  <box-content-root>`, no default box). The first slice of the "box authors the
+  site" direction: reads a box's `site-page` / `site-aside` cards (strict zod,
+  errors name file:line), inlines each `{% aside ref="slug" /%}` as a plain
+  `{% aside kind label %}` block — crude on purpose, so the generator needs no
+  new tag — and writes `content/<slug>.md`. Fail-closed: a missing aside card,
+  or an empty aside that isn't a pending `author` elicitation, stops the import.
 - `links.ts` — base-path handling and internal-link resolution.
 - `sources.ts` — the single definition of the input source set + content-hash
   manifest, shared by `build.ts` (writes `dist/.inputs.json`) and

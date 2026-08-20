@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "node --import tsx --test *.test.ts story/*.test.ts",
+    "import-box": "tsx import-box.ts",
     "ingest": "tsx story/ingest.ts",
     "coverage": "tsx story/coverage.ts"
   },
