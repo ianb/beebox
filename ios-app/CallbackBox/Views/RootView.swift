@@ -100,6 +100,7 @@ struct RootView: View {
             responseActive = false
             screenshotRequest = nil
             screenshotResult = nil
+            speechStopRequest = nil
             composerCommandAcknowledgements = []
             pendingEmissionStore.deactivate()
         }
@@ -222,6 +223,7 @@ struct RootView: View {
                     narrationEnabled = false
                     speechPlaybackActive = false
                     responseActive = false
+                    speechStopRequest = nil
                 }
                 visibleChatBoxID = box.id
                 visibleChatSessionID = sessionID
@@ -288,7 +290,7 @@ struct RootView: View {
             onLastAudioRequest: { request in
                 answerLastAudioRequest(request, box: box)
             },
-            onSpeechStopRequestDelivered: { id in
+            onSpeechStopRequestSettled: { id in
                 guard speechStopRequest?.id == id else {
                     return
                 }

@@ -93,7 +93,7 @@ struct ChatWebView: UIViewRepresentable {
     var onComposerCommand: (NativeComposerCommandDelivery) -> Void
     var onComposerCommandAcknowledgementDelivered: (String) -> Void
     var onLastAudioRequest: (NativeLastAudioRequest) -> Void
-    var onSpeechStopRequestDelivered: (NativeSpeechStopRequest.ID) -> Void
+    var onSpeechStopRequestSettled: (NativeSpeechStopRequest.ID) -> Void
 
     init(
         box: PairedBox,
@@ -115,7 +115,7 @@ struct ChatWebView: UIViewRepresentable {
         onComposerCommand: @escaping (NativeComposerCommandDelivery) -> Void = { _ in },
         onComposerCommandAcknowledgementDelivered: @escaping (String) -> Void = { _ in },
         onLastAudioRequest: @escaping (NativeLastAudioRequest) -> Void = { _ in },
-        onSpeechStopRequestDelivered: @escaping (NativeSpeechStopRequest.ID) -> Void = { _ in }
+        onSpeechStopRequestSettled: @escaping (NativeSpeechStopRequest.ID) -> Void = { _ in }
     ) {
         self.box = box
         self.pendingEmissions = pendingEmissions
@@ -136,7 +136,7 @@ struct ChatWebView: UIViewRepresentable {
         self.onComposerCommand = onComposerCommand
         self.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
         self.onLastAudioRequest = onLastAudioRequest
-        self.onSpeechStopRequestDelivered = onSpeechStopRequestDelivered
+        self.onSpeechStopRequestSettled = onSpeechStopRequestSettled
     }
 
     func makeUIView(context: Context) -> WKWebView {
@@ -182,7 +182,7 @@ struct ChatWebView: UIViewRepresentable {
         context.coordinator.onComposerCommand = onComposerCommand
         context.coordinator.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
         context.coordinator.onLastAudioRequest = onLastAudioRequest
-        context.coordinator.onSpeechStopRequestDelivered = onSpeechStopRequestDelivered
+        context.coordinator.onSpeechStopRequestSettled = onSpeechStopRequestSettled
         context.coordinator.boxID = box.id
         context.coordinator.allowedOrigin = Self.origin(from: box.baseURL)
         context.coordinator.pendingEmissions = pendingEmissions
@@ -218,7 +218,7 @@ struct ChatWebView: UIViewRepresentable {
             onComposerCommand: onComposerCommand,
             onComposerCommandAcknowledgementDelivered: onComposerCommandAcknowledgementDelivered,
             onLastAudioRequest: onLastAudioRequest,
-            onSpeechStopRequestDelivered: onSpeechStopRequestDelivered
+            onSpeechStopRequestSettled: onSpeechStopRequestSettled
         )
     }
 
@@ -237,7 +237,7 @@ struct ChatWebView: UIViewRepresentable {
         var onComposerCommand: (NativeComposerCommandDelivery) -> Void
         var onComposerCommandAcknowledgementDelivered: (String) -> Void
         var onLastAudioRequest: (NativeLastAudioRequest) -> Void
-        var onSpeechStopRequestDelivered: (NativeSpeechStopRequest.ID) -> Void
+        var onSpeechStopRequestSettled: (NativeSpeechStopRequest.ID) -> Void
         var pendingEmissions: [NativeChatEmission] = []
         var emissionRedeliveryRequest: NativeEmissionRedeliveryRequest?
         var locationShareRequest: NativeLocationShareRequest?
@@ -285,7 +285,7 @@ struct ChatWebView: UIViewRepresentable {
             onComposerCommand: @escaping (NativeComposerCommandDelivery) -> Void,
             onComposerCommandAcknowledgementDelivered: @escaping (String) -> Void,
             onLastAudioRequest: @escaping (NativeLastAudioRequest) -> Void = { _ in },
-            onSpeechStopRequestDelivered: @escaping (NativeSpeechStopRequest.ID) -> Void = { _ in },
+            onSpeechStopRequestSettled: @escaping (NativeSpeechStopRequest.ID) -> Void = { _ in },
             pageLoaded: Bool = false,
             evaluateEmission: ((String, @escaping (Error?) -> Void) -> Void)? = nil,
             openExternalURL: @escaping (URL) -> Void = { UIApplication.shared.open($0) },
@@ -307,7 +307,7 @@ struct ChatWebView: UIViewRepresentable {
             self.onComposerCommand = onComposerCommand
             self.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
             self.onLastAudioRequest = onLastAudioRequest
-            self.onSpeechStopRequestDelivered = onSpeechStopRequestDelivered
+            self.onSpeechStopRequestSettled = onSpeechStopRequestSettled
             self.pageLoaded = pageLoaded
             self.evaluateEmission = evaluateEmission
             self.openExternalURL = openExternalURL
@@ -324,7 +324,6 @@ struct ChatWebView: UIViewRepresentable {
             deliverLocationRequest(to: webView)
             captureScreenshot(from: webView)
             deliverComposerCommandAcknowledgements(to: webView)
-            deliverSpeechStopRequest(to: webView)
         }
 
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
@@ -337,7 +336,16 @@ struct ChatWebView: UIViewRepresentable {
             locationRequestTimeout?.cancel()
             locationRequestTimeout = nil
             inflightScreenshotRequestID = nil
+            // A barge-in is aimed at the utterance a specific document is
+            // playing. The replacement document is not playing it, so the
+            // request is abandoned rather than re-armed — stopping speech the
+            // new page just started is worse than the press already being
+            // honoured natively (the microphone opened on the press).
             inflightSpeechStopRequestID = nil
+            if let request = speechStopRequest {
+                speechStopRequest = nil
+                onSpeechStopRequestSettled(request.id)
+            }
             inflightComposerCommandAcknowledgementIDs.removeAll()
         }
 
@@ -745,12 +753,19 @@ struct ChatWebView: UIViewRepresentable {
         /// Tell the page to stop speaking. Unacknowledged by design (contract
         /// §4.9): the microphone is already open, and the speech-playback state
         /// the page posts anyway reports whether the speech actually stopped.
+        /// Settled either way — a delivered request and an abandoned one both
+        /// clear, so a press can never queue behind a page load and fire into
+        /// whatever the next document is saying.
         func deliverSpeechStopRequest(to webView: WKWebView) {
-            guard
-                pageLoaded,
-                let request = speechStopRequest,
-                request.id != inflightSpeechStopRequestID
-            else {
+            guard let request = speechStopRequest, request.id != inflightSpeechStopRequestID else {
+                return
+            }
+            guard pageLoaded else {
+                // No document to speak, so nothing to stop. Settled now rather
+                // than parked: a request that waited for a load would fire into
+                // whatever the freshly-loaded page says next.
+                speechStopRequest = nil
+                onSpeechStopRequestSettled(request.id)
                 return
             }
             guard let detail = Self.javascriptDetail(for: NativeSpeechCommand.stop) else {
@@ -772,7 +787,7 @@ struct ChatWebView: UIViewRepresentable {
                         targetBoxID: self.boxID
                     )
                 }
-                self.onSpeechStopRequestDelivered(request.id)
+                self.onSpeechStopRequestSettled(request.id)
             }
         }
 

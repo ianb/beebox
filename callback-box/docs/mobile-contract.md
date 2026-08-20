@@ -518,7 +518,11 @@ plays that (`lib/audio/tts-client.ts`), so only the page can stop it.
 - **Web handling:** `use-native-bridge.ts` · `useNativeSpeechCommandBridge` drains the queue and
   sends the composer machine `STOP_SPEECH` — deliberately not `START_DICTATION`, whose `beginTurn` +
   `startMic` would open the *web* microphone inside a native shell and leave web turn-taking to
-  reopen it after the next speech. The page is the speaker; native is the listener.
+  reopen it after the next speech. The page is the speaker; native is the listener. One transition
+  is worth knowing: `STOP_SPEECH` in the machine's `pausedForSpeech` state also `resumeMic`s, which
+  would open the web microphone. It is unreachable in a native shell — that state is entered only
+  from web recording, and the web composer is suppressed under `nativeComposer` (§3.2) — but a
+  surface that ever starts the web mic inside the native shell would make this row unsafe.
 - **No acknowledgement channel.** §4.5's `{playing:false}` already reports the stop, and native does
   not wait for it: the microphone opens on the press. A command that never lands costs the tail of
   one utterance overheard by the mic, which is strictly better than the turn it would otherwise cost.
@@ -528,9 +532,11 @@ plays that (`lib/audio/tts-client.ts`), so only the page can stop it.
   | native decide + send | `ios-app/CallbackBox/Services/SpeechDictation.swift` — `NativeVoiceTurnState`, `NativeVoiceTurnCommand.startDictationInterruptingSpeech`; `ios-app/CallbackBox/Views/NativeComposerView.swift` — `applyVoiceTurn`; `ios-app/CallbackBox/Views/ChatWebView.swift` — `deliverSpeechStopRequest`; `ios-app/CallbackBox/Models/NativeComposerContract.swift` — `NativeSpeechCommand` |
   | web handle | `src/frontend/src/components/chat/native-speech-command.ts` — `nativeSpeechCommandFromDetail`; `src/frontend/src/components/chat/use-native-bridge.ts` — `useNativeSpeechCommandBridge`; `src/frontend/src/machines/composerMachine.ts` — `STOP_SPEECH` |
 - **Drift:** SILENT-degraded — against a web build without the handler the microphone still opens and
-  the speech keeps playing into it. The page reloading mid-command is the same outcome; the request
-  is dropped on a provisional navigation rather than replayed at the new document, because a stop
-  aimed at speech that no longer exists is noise.
+  the speech keeps playing into it. A page load is the same outcome: a request is **settled on the
+  spot** if no document is loaded, and **abandoned** on a provisional navigation or a box/session
+  change, never parked and replayed. A stop aimed at an utterance that no longer exists would land
+  on whatever the next document says next, which is worse than the press already being honoured
+  natively — the microphone opened on the press regardless.
 
 ---
 

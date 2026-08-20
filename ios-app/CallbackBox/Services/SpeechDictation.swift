@@ -208,13 +208,16 @@ final class SpeechDictation: ObservableObject {
         startTask != nil
     }
 
-    /// The recognizer is being brought up — permissions, the on-device analyzer
-    /// session, the audio engine — so a turn is under way but nothing is being
-    /// heard yet. `state` is published; `hasPendingStart` is not, and the two
-    /// only differ inside one synchronous hop, so the composer keys its pending
-    /// microphone affordance on this.
+    /// The recognizer is being brought up — the scheduled start, permissions,
+    /// the on-device analyzer session, the audio engine — so a turn is under way
+    /// but nothing is being heard yet. `hasPendingStart` covers the hop between
+    /// `startIfNeeded` scheduling the task and the task reaching
+    /// `.requestingPermission`; without it the composer would wear its recording
+    /// face for that frame. Reading an unpublished value is safe here because
+    /// the same user action mutates the composer's own turn state, which is what
+    /// drives the render.
     var isStarting: Bool {
-        state == .requestingPermission
+        state == .requestingPermission || hasPendingStart
     }
 
     func toggle(currentText: String) {
