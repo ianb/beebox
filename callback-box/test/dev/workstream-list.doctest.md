@@ -27,6 +27,12 @@ async function list(stateDir: string, worktreeRoot: string, includeRemoved: bool
   });
   return JSON.parse(result.stdout);
 }
+
+async function listResult(stateDir: string, worktreeRoot: string) {
+  return execFileAsync(workstreams, ["list", "--json"], {
+    env: { ...process.env, CALLBACK_BOX_ROOT: join(stateDir, "boxes"), CALLBACK_STATE_DIR: stateDir, CALLBACK_WORKTREE_ROOT: worktreeRoot },
+  });
+}
 ```
 
 ## Removed records appear only when requested
@@ -51,7 +57,16 @@ await writeFile(join(stateDir, "workstreams/culled.json"), JSON.stringify({
 
 const rows = await list(stateDir, worktreeRoot, true);
 JSON.stringify(rows[0])
-=> {"name":"culled","branch":"worktree-culled","path":null,"box":null,"url":null,"git":null,"runtime":{"state":"absent"},"agent":{"state":"none","reason":"no-worktree"},"session":{"agent":"claude","hasSession":true,"tty":null,"emoji":"🧵","baseSha":null,"removed":{"at":"2026-08-09T00:00:00Z","finalSha":"abc","merged":true},"archived":null},"boxState":{"testSetup":false,"keepUnmerged":false,"pristine":null}}
+=> {"name":"culled","branch":"worktree-culled","path":null,"box":null,"url":null,"git":null,"runtime":{"state":"absent"},"agent":{"state":"none","reason":"no-worktree"},"session":{"agent":"claude","hasSession":true,"tty":null,"emoji":"🧵","baseSha":null,"removed":{"at":"2026-08-09T00:00:00Z","finalSha":"abc","merged":true},"archived":null,"description":null},"routing":{"state":"removed","action":"resume-with-briefing","lastActivityAt":"2026-08-09T00:00:00Z"},"boxState":{"testSetup":false,"keepUnmerged":false,"pristine":null}}
+```
+
+## Stray directories are visible anomalies, not rows
+
+```ts continue
+await mkdir(join(worktreeRoot, "scratch"));
+const stray = await listResult(stateDir, worktreeRoot);
+JSON.stringify({ rows: JSON.parse(stray.stdout).length, warned: stray.stderr.includes("ignoring non-worktree directory") })
+=> {"rows":0,"warned":true}
 ```
 
 ```ts cleanup

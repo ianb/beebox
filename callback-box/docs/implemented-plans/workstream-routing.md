@@ -1,13 +1,18 @@
 ---
 title: "Route new work to an existing workstream"
-status: draft
+status: implemented
 workstream: streams-and-issues
 issues:
-  - ../../../issues/features/2026-08-20-no-way-to-know-what-a-workstream-covers.md
-  - ../../../issues/bugs/2026-08-19-one-bad-workstream-row-blanks-the-issues-page.md
+  - ../../../issues/closed/features/2026-08-20-no-way-to-know-what-a-workstream-covers.md
+  - ../../../issues/closed/bugs/2026-08-19-one-bad-workstream-row-blanks-the-issues-page.md
 ---
 
 # Route new work to an existing workstream
+
+> **Implemented 2026-08-20.** Automated shell, server, schema, and UI tests
+> cover the inventory, routing, description, and briefing boundaries. The app
+> was inspected in an isolated desktop and mobile browser environment. No
+> shared-router restart or disposable live-agent round trip was performed.
 
 Make a clerical agent able to inspect existing workstreams, choose one by eye,
 and hand it a new briefing without pretending that every harness has the same
@@ -38,7 +43,7 @@ resume-with-context path, and an explicit manual fallback.
 - Principle 5, **failure paths visible in signatures where callers branch**
   (`callback-box/docs/engineering-principles.md:64`): *"When callers genuinely
   dispatch on why something failed, return a discriminated Result."* Routing
-  routing state and next action are closed enums in JSON, not prose inferred by
+  state and next action are closed enums in JSON, not prose inferred by
   each consumer.
 - Principle 8, **one way to do each thing**
   (`callback-box/docs/engineering-principles.md:95`): *"Competing idioms are
@@ -253,7 +258,7 @@ Tests first:
 Update the `launch-worktree-session` skill and `bin/CLAUDE.md` with one decision
 sequence:
 
-1. Run `bin/workstreams list` and inspect description, state, delivery, and age.
+1. Run `bin/workstreams list` and inspect description, state, action, and age.
 2. Prefer a matching recent live/dormant workstream; prefer a new workstream
    when the candidate is stale (14 days) unless the boxholder explicitly wants
    its history.
@@ -402,8 +407,8 @@ cannot use end to end.
      than delivered, and forward each unique temporary file.
   5. Create a stray directory and a malformed registry fixture; confirm the app
      still renders valid workstreams with a visible warning.
-- No data migration is required. Existing registry records parse with null
-  description/manual capability and gain new fields on their next launch.
+- No data migration is required. Existing registry records parse with a null
+  description and gain one on their next skill-driven launch.
 - No shared-router restart is performed from this worktree. If app changes need
   the resident supervisor reloaded for manual acceptance, ask the boxholder to
   restart it from main after landing.

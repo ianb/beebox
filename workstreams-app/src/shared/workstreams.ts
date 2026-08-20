@@ -35,6 +35,15 @@ const sessionStateSchema = z.object({
   baseSha: z.string().min(1).nullable(),
   removed: removedStateSchema.nullable(),
   archived: archivedStateSchema.nullable(),
+  description: z.string().min(1).nullable(),
+});
+
+export const routingStateSchema = z.enum(["live", "dormant", "stale", "removed", "uncertain"]);
+export const routingActionSchema = z.enum(["resume-with-briefing", "manual-forward", "new-stream-preferred", "investigate"]);
+const routingSchema = z.object({
+  state: routingStateSchema,
+  action: routingActionSchema,
+  lastActivityAt: z.iso.datetime().nullable(),
 });
 
 const boxStateSchema = z.object({
@@ -53,6 +62,7 @@ export const workstreamsCliRowSchema = z.object({
   runtime: runtimeStateSchema,
   agent: agentStateSchema,
   session: sessionStateSchema,
+  routing: routingSchema,
   boxState: boxStateSchema,
 });
 
@@ -65,6 +75,12 @@ export const workstreamSummarySchema = workstreamsCliRowSchema.omit({
 
 export const workstreamListResultSchema = z.object({
   items: z.array(workstreamSummarySchema),
+  warnings: z.array(z.object({
+    row: z.number().int().nonnegative().nullable(),
+    name: z.string().min(1).nullable(),
+    fields: z.array(z.string()),
+    message: z.string().min(1),
+  })),
 });
 
 export const workstreamIssueSchema = z.object({
@@ -81,6 +97,7 @@ export const workstreamDetailSchema = z.object({
 
 export const dashboardSchema = z.object({
   workstreams: z.array(workstreamSummarySchema),
+  workstreamWarnings: workstreamListResultSchema.shape.warnings,
   issues: z.array(issueSchema),
   plans: z.array(planSchema),
   quotas: z.array(quotaSchema),

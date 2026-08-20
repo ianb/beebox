@@ -2,13 +2,17 @@
 title: "No way to find which workstream should own a new issue — names carry no scope, and the field is mostly empty"
 workstream: streams-and-issues
 area: monorepo
-needs: [design]
-design: ../../callback-box/docs/plans/workstream-routing.md
+design: ../../../callback-box/docs/implemented-plans/workstream-routing.md
 labels: [workstreams, issues, discovery]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — trying to place a new capture issue
+resolution: implemented
 ---
+
+Implemented by the workstream-routing plan: launch records now carry concise
+descriptions, the CLI and app expose routing state/action/age, and the launch
+skill routes related work before creating a new stream.
 
 > I think there's a workstream that *should* own this (one that already exists),
 > but I'm not sure.

@@ -1,4 +1,4 @@
-import type { WorkstreamIssue, WorkstreamSummary } from "../shared/workstreams.js";
+import type { WorkstreamIssue, WorkstreamListResult } from "../shared/workstreams.js";
 import type {
   Issue,
   IssueChange,
@@ -14,7 +14,7 @@ import type {
 import type { AskQueue } from "../shared/exhibits.js";
 
 export interface WorkstreamsService {
-  list(): Promise<WorkstreamSummary[]>;
+  list(): Promise<WorkstreamListResult>;
 }
 
 export interface AppServices {

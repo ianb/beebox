@@ -2,13 +2,17 @@
 title: "One malformed workstream row blanks the whole issues page, and a stray directory is enough to cause it"
 workstream: streams-and-issues
 area: router
-needs: [design]
-design: ../../callback-box/docs/plans/workstream-routing.md
+design: ../../../callback-box/docs/implemented-plans/workstream-routing.md
 labels: [workstreams-app, robustness, dev-tooling]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — the issues browser refused to load
+resolution: implemented
 ---
+
+Implemented by the workstream-routing plan: the CLI admits only Git-recognized
+worktrees, and the app retains valid rows while surfacing bounded, visible
+warnings for malformed rows and inventory anomalies.
 
 The issues browser showed only:
 

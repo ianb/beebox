@@ -163,7 +163,7 @@ JSON.stringify({
 ```ts
 const fixture = await makeFixture();
 const services = {
-  workstreams: { list: async () => [] },
+  workstreams: { list: async () => ({ items: [], warnings: [] }) },
   documents: {
     listIssues: async () => [],
     issueDetail: async () => { throw new Error("not configured"); },

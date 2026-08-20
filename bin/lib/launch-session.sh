@@ -39,9 +39,11 @@ launch_patch=\$(jq -n \
   --arg model "$LS_MODEL" \
   --arg tty "\$(tty 2>/dev/null || true)" \
   --arg baseSha "\$(git -C "\$wt_path" merge-base main HEAD 2>/dev/null || true)" \
-  --arg launchedAt "\$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-  '{branch:\$branch, emoji:\$emoji, agent:\$agent, tty:\$tty, baseSha:\$baseSha, launchedAt:\$launchedAt}
-   + if \$model == "" then {} else {model:\$model} end')
+    --arg launchedAt "\$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    --arg description "\$(if [ -n \"${LS_DESCRIPTION_FILE:-}\" ]; then cat \"${LS_DESCRIPTION_FILE:-}\"; fi)" \
+    '{branch:\$branch, emoji:\$emoji, agent:\$agent, tty:\$tty, baseSha:\$baseSha, launchedAt:\$launchedAt}
+     + if \$model == "" then {} else {model:\$model} end
+     + if \$description == "" then {} else {description:\$description} end')
 session_registry_merge "$LS_WORKSTREAM" "\$launch_patch" --preserve-base-sha || true
 cd "\$wt_path"
 if [ -s "$LS_PROMPT_FILE" ]; then
@@ -77,9 +79,11 @@ launch_patch=\$(jq -n \
   --arg model "$LS_MODEL" \
   --arg tty "\$(tty 2>/dev/null || true)" \
   --arg baseSha "\$(git -C "\$wt_path" rev-parse HEAD 2>/dev/null || true)" \
-  --arg launchedAt "\$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-  '{branch:\$branch, emoji:\$emoji, agent:\$agent, tty:\$tty, baseSha:\$baseSha, launchedAt:\$launchedAt}
-   + if \$model == "" then {} else {model:\$model} end')
+    --arg launchedAt "\$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    --arg description "\$(if [ -n \"${LS_DESCRIPTION_FILE:-}\" ]; then cat \"${LS_DESCRIPTION_FILE:-}\"; fi)" \
+    '{branch:\$branch, emoji:\$emoji, agent:\$agent, tty:\$tty, baseSha:\$baseSha, launchedAt:\$launchedAt}
+     + if \$model == "" then {} else {model:\$model} end
+     + if \$description == "" then {} else {description:\$description} end')
 session_registry_merge "$LS_WORKSTREAM" "\$launch_patch" --preserve-base-sha || true
 for claude_skill in "\$wt_path"/.claude/skills/*/SKILL.md; do
   [ -f "\$claude_skill" ] || continue
@@ -100,7 +104,11 @@ $model_line
 trap 'true' INT
 codex_status=0
 if [ "${LS_CODEX_RESUME:-0}" = "1" ]; then
-  codex resume --last "\${codex_args[@]}" || codex_status=\$?
+  if [ -s "$LS_PROMPT_FILE" ]; then
+    codex resume --last "\${codex_args[@]}" "\$(cat "$LS_PROMPT_FILE")" || codex_status=\$?
+  else
+    codex resume --last "\${codex_args[@]}" || codex_status=\$?
+  fi
 elif [ -s "$LS_PROMPT_FILE" ]; then
   codex "\${codex_args[@]}" "\$(cat "$LS_PROMPT_FILE")" || codex_status=\$?
 else

@@ -56,6 +56,11 @@ baseRecord.baseSha
 const codexSummary = await registryShell(stateDir, `session_registry_merge codex-only '{"agent":"codex"}'; session_registry_summary codex-only`);
 JSON.parse(codexSummary.stdout).hasSession
 => true
+
+await registryShell(stateDir, `session_registry_merge described '{"description":"Workstream routing"}'`);
+await registryShell(stateDir, `session_registry_merge described '{"agent":"codex"}'`);
+JSON.parse((await registryShell(stateDir, `session_registry_summary described`)).stdout).description
+=> Workstream routing
 ```
 
 ```ts cleanup
