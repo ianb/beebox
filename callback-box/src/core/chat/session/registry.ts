@@ -23,7 +23,8 @@ import { ChatSession, type ChatSessionOptions } from "./index.js";
 import { setMostActive } from "./history.js";
 import { createChatBackend, type ChatBackend } from "../../../services/claude-chat.js";
 import { RegistryDeletionCoordinator } from "./registry-deletion.js";
-import { ChatReservationStore, reserveChatSession, type ChatReservation, type ReserveResult } from "./reserve.js";
+import { ChatReservationStore, type ChatReservation, type ReserveResult } from "./reserve.js";
+import { reserveAndWarm } from "./registry-reservations.js";
 import { recordSessionStart } from "./session-start-record.js";
 import { prewarmBackend } from "./registry-warm.js";
 import { enforceLiveCap } from "./registry-cap.js";
@@ -128,7 +129,8 @@ export class ChatSessionRegistry extends EventEmitter {
 
   /**
    * Accept a client-coined chat id so the chat becomes addressable before its
-   * first message. Idempotent by id — see `reserve.ts`.
+   * first message, and warm a subprocess for it — see
+   * `registry-reservations.ts`. Idempotent by id.
    */
   async reserve(opts: {
     sessionId: string;
@@ -136,9 +138,13 @@ export class ChatSessionRegistry extends EventEmitter {
     seedFeatures: Record<string, string>;
   }): Promise<ReserveResult> {
     this.noteActivity();
-    const result = await reserveChatSession({ boxRoot: this.boxRoot, store: this.reservations, ...opts });
-    if (result.kind === "reserved") log("reserve", `Reserved ${result.sessionId} (held=${this.reservations.size()})`);
-    return result;
+    return reserveAndWarm({
+      boxRoot: this.boxRoot,
+      store: this.reservations,
+      backend: this.backend,
+      baseOptions: this.buildSessionOptions(null),
+      ...opts,
+    });
   }
 
   /** The reservation for this id, or null. */

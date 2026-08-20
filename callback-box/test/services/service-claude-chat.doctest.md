@@ -11,7 +11,7 @@ Use the fake to test anything that drives a chat session — no
 subprocess, no network, fully deterministic.
 
 ```ts setup
-import { createFakeChatBackend } from "../../src/services/claude-chat.js";
+import { createFakeChatBackend, warmSlotKey, warmCompatible } from "../../src/services/claude-chat.js";
 ```
 
 ## Starting a run and inspecting options
@@ -258,3 +258,32 @@ const installed = backend.settleWarm();
   usually need to wait for ticks. When working through `ChatSession`
   (which has an internal async loop) you may still need a
   `setImmediate` tick to flush queued event handlers.
+
+## A warm subprocess only ever serves the chat it was warmed for
+
+A warm slot has its session id baked in at spawn (`--session-id`), so the pool
+is keyed by chat. The unkeyed slot — `""` — is the speculative one, for a send
+that brings no id of its own.
+
+```ts
+const base = { cwd: "/tmp", systemPrompt: "x", env: {} };
+const forChatA = { ...base, coinedSessionId: "aaaaaaaa-1111-4111-8111-111111111111" };
+const forChatB = { ...base, coinedSessionId: "bbbbbbbb-2222-4222-8222-222222222222" };
+
+JSON.stringify({ speculative: warmSlotKey(base), chatA: warmSlotKey(forChatA) })
+=> {"speculative":"","chatA":"aaaaaaaa-1111-4111-8111-111111111111"}
+```
+
+A slot warmed for one chat is refused for another, and the speculative slot is
+refused for a chat that brought its own id — it would start the conversation
+under the wrong one:
+
+```ts continue
+JSON.stringify({
+  sameChat: warmCompatible(forChatA, forChatA),
+  otherChat: warmCompatible(forChatA, forChatB),
+  speculativeForCoined: warmCompatible(base, forChatA),
+  coinedForSpeculative: warmCompatible(forChatA, base),
+})
+=> {"sameChat":true,"otherChat":false,"speculativeForCoined":false,"coinedForSpeculative":false}
+```

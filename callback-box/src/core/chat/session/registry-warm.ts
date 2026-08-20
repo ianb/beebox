@@ -43,6 +43,31 @@ export async function probeStartOptions(opts: {
 }
 
 /**
+ * Warm a subprocess for one specific chat. A warm slot bakes its session id in
+ * at spawn, so a reservation is the only moment a chat's own warm start can be
+ * arranged — and it is better targeted than the speculative slot it shares a
+ * budget with, because this chat is open on someone's screen.
+ *
+ * Fire-and-forget: warming is best-effort, and a chat that misses it just
+ * cold-spawns on its first message.
+ */
+export function prewarmReservedChat(opts: {
+  boxRoot: string;
+  backend: ChatBackend;
+  baseOptions: ChatSessionOptions;
+  sessionId: string;
+  contextDir: string | null;
+}): void {
+  void prewarmBackend({
+    boxRoot: opts.boxRoot,
+    backend: opts.backend,
+    baseOptions: opts.baseOptions,
+    coinedSessionId: opts.sessionId,
+    ...(opts.contextDir !== null ? { contextDir: opts.contextDir } : {}),
+  });
+}
+
+/**
  * Pre-warm a subprocess. Best-effort: a failure is logged and the next send
  * falls back to a cold spawn.
  */
