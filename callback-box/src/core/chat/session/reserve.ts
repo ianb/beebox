@@ -25,6 +25,7 @@
 import { loadHistoryEntries } from "./history.js";
 import { transcriptExistsForContext } from "./transcript-paths.js";
 import { loadAgentEngine, type AgentEngine } from "../../box/config.js";
+import { sdkSessionIdSchema } from "./session-id.js";
 
 /** How long an unused reservation stays addressable. */
 export const RESERVATION_TTL_MS = 6 * 60 * 60 * 1000;
@@ -53,11 +54,9 @@ export type ReserveResult =
   /** This box's engine cannot be told an id; the caller uses the "new" path. */
   | { kind: "unsupported" };
 
-/** UUID shape the harness requires of a coined id (any version). */
-const UUID_RE = /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i;
-
+/** The harness requires a coined id to be a UUID — the same shape it assigns. */
 export function isCoinedIdShape(sessionId: string): boolean {
-  return UUID_RE.test(sessionId);
+  return sdkSessionIdSchema.safeParse(sessionId).success;
 }
 
 /**

@@ -130,6 +130,8 @@ const session = { isBusy: () => false, enqueue: () => {}, send: async () => fals
 const registry = {
   getOrCreate: () => session, createNew: () => session, get: () => session,
   enforceLiveCap: () => {}, touch: () => {}, markMostActive: async () => {},
+  // No chat here was coined and reserved (chat/session/reserve.ts).
+  getReservation: () => null,
 };
 
 const caught = await deliverCaptureMessage({ boxRoot: box.root, registry, eventBus, target: { sessionId: null, contextDir: null }, message: W }).then(() => "no throw", (e) => e.name);

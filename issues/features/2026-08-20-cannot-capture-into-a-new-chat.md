@@ -1,6 +1,6 @@
 ---
 title: "You can't capture into a new chat — \"send a message first\" blocks the most natural way to start one"
-workstream: unattached
+workstream: new-chat-first-emission
 area: callback-box
 needs: [design]
 labels: [capture, chat]

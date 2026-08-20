@@ -16,6 +16,10 @@ export type SessionAvailability =
 
 /** Resolve whether an existing id can safely reach the SDK resume path. */
 export async function resolveSessionAvailability(args: { boxRoot: string; sessionId: string; registry: ChatSessionRegistry }): Promise<SessionAvailability> {
+  // A reserved chat (`reserve.ts`) is addressable before it has written
+  // anything, so the transcript checks below would call it a ghost and the
+  // first send into a coined chat would 410.
+  if (args.registry.getReservation(args.sessionId) !== null) return { kind: "resumable" };
   if (args.registry.deletion.isBlocked(args.sessionId)) {
     const husk = await findChatHuskEntry(args.boxRoot, args.sessionId);
     return { kind: "unavailable", reason: "deletion-in-progress", huskPath: husk?.path ?? null };

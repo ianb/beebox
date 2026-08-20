@@ -23,6 +23,7 @@ import { resolveSessionLogPath } from "./history.js";
 import { getBoxTimeISO } from "../../../lib/time.js";
 import { errnoCode } from "../../../lib/error-guards.js";
 import { resolveChatEngine } from "./engine.js";
+import { resolveChatTarget } from "./target.js";
 import { loadSessionHistory } from "./load-history.js";
 import { MAX_SESSION_ENTRIES } from "../../../cli/lib/session.js";
 
@@ -136,16 +137,13 @@ export async function deliverUserMessage(opts: {
   const { boxRoot, registry, eventBus, wireSession, target, message, onSessionResolved } = opts;
   const logPrefix = opts.logPrefix ?? "chat";
 
-  let session: ChatSession;
-  let id: string | null;
-  if (target.sessionId !== null) {
-    session = registry.getOrCreate(target.sessionId);
-    id = target.sessionId;
-  } else {
-    session = registry.createNew(
-      target.contextDir !== null && target.contextDir !== "" ? { contextDir: target.contextDir } : {},
-    );
-    id = null;
+  const bound = target.contextDir !== null && target.contextDir !== "" ? target.contextDir : undefined;
+  const resolved = await resolveChatTarget({ boxRoot, registry }, target.sessionId !== null
+    ? { kind: "existing", sessionId: target.sessionId }
+    : { kind: "fresh", ...(bound !== undefined ? { contextDir: bound } : {}) });
+  const session: ChatSession = resolved.session;
+  const id: string | null = resolved.sessionId;
+  if (id === null) {
     // The fresh session's id arrives asynchronously via the registry's
     // `session-assigned` event; persist it the moment it matches this exact
     // session object (guarded so duck-typed test-double registries without an

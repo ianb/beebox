@@ -74,9 +74,20 @@ export type CaptureDeliveryTarget = DeliveryTarget;
 export async function resolveCaptureDeliveryTarget(opts: {
   boxRoot: string;
   targetSessionId: string | null;
+  /** Consulted so a chat that is reserved but has not run yet still counts. */
+  registry?: ChatSessionRegistry | undefined;
 }): Promise<CaptureDeliveryTarget> {
-  const { boxRoot, targetSessionId } = opts;
+  const { boxRoot, targetSessionId, registry } = opts;
   if (targetSessionId !== null) {
+    // A chat whose id was coined and reserved (`chat/session/reserve.ts`) has
+    // no history entry until its first turn — which, for a capture opened as
+    // the first thing in a new chat, is this delivery. Without this the
+    // capture would fall through to the most-active chat: the misdirection the
+    // composer's "send a message first" gate used to prevent.
+    const reservation = registry?.getReservation(targetSessionId) ?? null;
+    if (reservation !== null) {
+      return { sessionId: targetSessionId, contextDir: reservation.contextDir };
+    }
     const known = await loadHistory(boxRoot);
     if (known.includes(targetSessionId)) {
       return { sessionId: targetSessionId, contextDir: await getDirectoryForSession(boxRoot, targetSessionId) };
@@ -85,11 +96,10 @@ export async function resolveCaptureDeliveryTarget(opts: {
       `[capture] Target chat ${targetSessionId} no longer exists; falling back to the most-active session for box=${boxRoot}`,
     );
   } else {
-    // A null target means the capture was started before its chat had a
-    // server-assigned id. Delivering to the most-active session can misdirect it
-    // to a different chat — log so that misdirection is observable (X1). The
-    // client disables the capture affordance until a session exists, so this
-    // should only fire for the `/capture` deep link (most-active is expected there).
+    // A null target means the capture has no chat to go to at all — the
+    // `/capture` deep link, where most-active is the expected answer. A chat
+    // opened in the browser now coins its id before the capture starts, so the
+    // composer path never lands here.
     console.warn(
       `[capture] Capture has no target session; falling back to the most-active session for box=${boxRoot}`,
     );

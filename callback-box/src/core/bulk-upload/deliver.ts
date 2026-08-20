@@ -9,6 +9,7 @@
  * heterogeneous file dump misdirected into "whatever chat was most active".
  */
 
+import type { ChatSessionRegistry } from "../chat/session/registry.js";
 import { loadHistory } from "../chat/session/history.js";
 import type { DeliveryTarget } from "../chat/session/deliver-user-message.js";
 
@@ -33,7 +34,16 @@ export async function resolveBulkDeliveryTarget(opts: {
   boxRoot: string;
   targetSessionId: string;
   contextDir: string;
+  /** Consulted so a chat that is reserved but has not run yet still counts. */
+  registry?: ChatSessionRegistry | undefined;
 }): Promise<DeliveryTarget | null> {
+  // A reserved chat (`chat/session/reserve.ts`) has no history entry until its
+  // first turn, which for a batch dropped into a brand-new chat is this
+  // delivery. Unlike capture there is still no most-active fallback: a batch
+  // either reaches the chat it was launched from or stays retryable.
+  if (opts.registry?.getReservation(opts.targetSessionId) != null) {
+    return { sessionId: opts.targetSessionId, contextDir: opts.contextDir };
+  }
   const known = await loadHistory(opts.boxRoot);
   if (!known.includes(opts.targetSessionId)) return null;
   return { sessionId: opts.targetSessionId, contextDir: opts.contextDir };
