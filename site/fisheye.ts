@@ -54,10 +54,30 @@ const ASIDE_KINDS = {
   generated: { marker: "⚙️", provenance: "generated from the repository" },
 } as const;
 
-type AsideKind = keyof typeof ASIDE_KINDS;
+export type AsideKind = keyof typeof ASIDE_KINDS;
 
-function isAsideKind(kind: string): kind is AsideKind {
+export function isAsideKind(kind: string): kind is AsideKind {
   return kind in ASIDE_KINDS;
+}
+
+export const ASIDE_KIND_NAMES = Object.keys(ASIDE_KINDS);
+
+/**
+ * The one place an aside's HTML shape is defined. Both authoring forms go
+ * through it — the inline `{% aside kind label %}…{% /aside %}` tag below, and
+ * a `{% aside ref="slug" /%}` resolved from a `site-aside` card by asides.ts —
+ * so the two cannot drift into different markup.
+ */
+export function asideTag(params: {
+  kind: AsideKind;
+  label: string;
+  children: RenderableTreeNode[];
+}): RenderableTreeNode {
+  const spec = ASIDE_KINDS[params.kind];
+  return new Tag("details", { class: `fx aside-${params.kind}` }, [
+    new Tag("summary", {}, [new Tag("span", { class: "aside-m", "aria-hidden": "true" }, [`${spec.marker} `]), params.label]),
+    new Tag("div", { class: "fx-c" }, [...params.children, new Tag("p", { class: "aside-prov" }, [spec.provenance])]),
+  ]);
 }
 
 /**
@@ -65,24 +85,35 @@ function isAsideKind(kind: string): kind is AsideKind {
  * transform config by render.ts.
  */
 export const fisheyeTags: NonNullable<Config["tags"]> = {
+  // Two mutually exclusive forms: the inline one carries `kind` + `label` and
+  // its own body; the reference one carries only `ref` and resolves against a
+  // `site-aside` card (substituted by embedAsides in asides.ts, same shape as
+  // the nugget placeholder below). Attributes are optional at the Markdoc level
+  // because which are required depends on the form; the transform enforces it.
   aside: {
-    attributes: { kind: { type: String, required: true }, label: { type: String, required: true } },
+    attributes: { kind: { type: String }, label: { type: String }, ref: { type: String } },
     selfClosing: false,
     transform(node: Node, config: Config): RenderableTreeNode {
       const attrs = node.transformAttributes(config);
+      const ref = attrs["ref"];
       const kind = String(attrs["kind"] ?? "");
       const label = String(attrs["label"] ?? "");
-      if (!isAsideKind(kind)) {
-        throw new Error(`aside "${label}" has unknown kind "${kind}" (expected ${Object.keys(ASIDE_KINDS).join("/")})`);
+      if (typeof ref === "string") {
+        if (kind !== "" || label !== "") {
+          throw new Error(`aside ref="${ref}" also carries kind/label — a referenced aside takes its kind and label from its card`);
+        }
+        // An aside renders as <details>; splicing one into a sentence would put
+        // block content inside <p>, which browsers repair unpredictably.
+        if (node.inline) {
+          throw new Error(`aside ref="${ref}" is embedded mid-sentence — place {% aside ref="…" /%} on its own line`);
+        }
+        return new Tag("x-aside", { slug: ref }, []);
       }
-      const spec = ASIDE_KINDS[kind];
-      return new Tag("details", { class: `fx aside-${kind}` }, [
-        new Tag("summary", {}, [new Tag("span", { class: "aside-m", "aria-hidden": "true" }, [`${spec.marker} `]), label]),
-        new Tag("div", { class: "fx-c" }, [
-          ...node.transformChildren(config),
-          new Tag("p", { class: "aside-prov" }, [spec.provenance]),
-        ]),
-      ]);
+      if (!isAsideKind(kind)) {
+        throw new Error(`aside "${label}" has unknown kind "${kind}" (expected ${ASIDE_KIND_NAMES.join("/")})`);
+      }
+      if (label === "") throw new Error(`aside kind="${kind}" is missing its label`);
+      return asideTag({ kind, label, children: node.transformChildren(config) });
     },
   },
   expand: {

@@ -2,9 +2,7 @@
 title: Walkthrough prototype
 summary: "Unlisted round-3 prototype: a morning with the box told through real user stories, with categorized asides in three voices."
 unlisted: true
-imported-from: store/site/walkthrough.site-page.card
 ---
-
 # A morning with the box
 
 > **[EDITORIAL PLACEHOLDER — prototype scaffold, not the boxholder's words.]**
@@ -49,11 +47,7 @@ So it stops, writes a question card, and moves on. The question waits on the
 dashboard until you answer it — and the answer teaches the box what to do
 next time.
 
-{% aside kind="author" label="why it asks instead of guessing" %}
-> **[PLACEHOLDER — the author's words go here.]** This panel renders only
-> the boxholder's own writing. Until that exists, it stays visibly empty —
-> nothing here will be ghostwritten.
-{% /aside %}
+{% aside ref="why-it-asks" /%}
 
 ## Questions this page is asking
 

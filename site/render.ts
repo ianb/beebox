@@ -16,7 +16,7 @@ import { classifyHref, resolveInternalHref } from "./links.js";
 // @markdoc/markdoc is CommonJS: at runtime the ESM named exports don't exist,
 // only the default namespace, so its parts are destructured off the default here.
 // eslint-disable-next-line import-x/no-named-as-default-member -- CJS interop: only the default namespace carries these at runtime
-const { parse: markdocParse, transform: markdocTransform, renderers, Tag } = Markdoc;
+const { parse: markdocParse, transform: markdocTransform, validate: markdocValidate, renderers, Tag } = Markdoc;
 
 const FRONTMATTER_RE = /^---\r?\n([\S\s]*?)\r?\n---\r?\n?/;
 
@@ -26,8 +26,12 @@ export const pageFrontmatterSchema = z
     summary: z.string().min(1),
     /** Unlisted pages build and serve but stay out of llms.txt (prototypes). */
     unlisted: z.boolean().optional(),
-    /** Set by import-box.ts on files it writes; marks the file importer-owned. */
-    "imported-from": z.string().optional(),
+    /**
+     * Tolerated, never published: every card type in a box carries `contains`
+     * as the agent-written retrieval summary, so a page card transferred out of
+     * a box arrives with one. Accepting it keeps the strict schema honest.
+     */
+    contains: z.string().optional(),
   })
   .strict();
 
@@ -79,9 +83,17 @@ export function parseFrontmatter<T>(src: string, params: { file: string; schema:
   return { frontmatter: parsed.data, body: src.slice(match[0].length) };
 }
 
-/** Split and strictly validate a content page's frontmatter. */
+/** Split and strictly validate a `site-page` card's frontmatter. */
 export function parseSource(src: string, file: string): ParsedSource {
   return parseFrontmatter(src, { file, schema: pageFrontmatterSchema });
+}
+
+/** A body whose Markdoc markup is malformed — a publish-boundary hard failure. */
+export class MarkupError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "MarkupError";
+  }
 }
 
 interface RewriteContext {
@@ -115,13 +127,58 @@ export interface RenderedPage {
   linkTargets: string[];
 }
 
-/** Render a markdown body to HTML, rewriting/collecting internal links. */
-export function renderBody(body: string, params: { pageSitePath: string; base: string }): RenderedPage {
+export interface RenderParams {
+  /** Path used in error messages (site/-relative for cards, repo-relative for nuggets). */
+  file: string;
+  pageSitePath: string;
+  base: string;
+}
+
+export interface TransformedBody {
+  content: RenderableTreeNode;
+  linkTargets: string[];
+}
+
+/**
+ * Parse + validate + transform a markdown body, rewriting/collecting internal
+ * links. Returns the renderable tree so callers that need to re-wrap it (the
+ * aside substitution) share this exact pipeline instead of a second one.
+ *
+ * The validation pass is load-bearing, not hygiene: Markdoc's transform never
+ * throws on a malformed tag — it silently drops the whole block. A mistyped
+ * `{% aside ref … %}` would then vanish from the page with nothing to see. Any
+ * error- or critical-level diagnostic fails the build instead.
+ */
+export function transformBody(body: string, params: RenderParams): TransformedBody {
   const ast = markdocParse(body);
+  const first = markdocValidate(ast, { tags: fisheyeTags }).find(
+    (entry) => entry.error.level === "error" || entry.error.level === "critical",
+  );
+  if (first) {
+    // `lines` is 0-based and may be empty on a parse error at the very top.
+    const line = (first.lines[0] ?? 0) + 1;
+    throw new MarkupError(`${params.file}:${line} malformed markup: ${first.error.message}`);
+  }
   const content = markdocTransform(ast, { tags: fisheyeTags });
   const targets: string[] = [];
   rewriteLinks(content, { pageSitePath: params.pageSitePath, base: params.base, targets });
-  return { html: renderers.html(content), linkTargets: targets };
+  return { content, linkTargets: targets };
+}
+
+/** Render a markdown body to HTML, rewriting/collecting internal links. */
+export function renderBody(body: string, params: RenderParams): RenderedPage {
+  const { content, linkTargets } = transformBody(body, params);
+  return { html: renderers.html(content), linkTargets };
+}
+
+/** Render an already-transformed node to HTML (the one renderer, shared). */
+export function renderNode(node: RenderableTreeNode): string {
+  return renderers.html(node);
+}
+
+/** The block children of a transformed body, with its `<article>` wrapper dropped. */
+export function bodyChildren(content: RenderableTreeNode): RenderableTreeNode[] {
+  return Tag.isTag(content) ? content.children : [content];
 }
 
 export function escapeHtml(s: string): string {

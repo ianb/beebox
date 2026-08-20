@@ -210,7 +210,7 @@ export function renderNugget(nugget: Nugget, params: { base: string; pageSitePat
     throw new NuggetError(`nugget "${nugget.slug}" has status "proposed" and must not be rendered`);
   }
   const text = nugget.body === "" ? nugget.span : nugget.body;
-  const { html } = renderBody(text, { pageSitePath: params.pageSitePath, base: params.base });
+  const { html } = renderBody(text, { file: nugget.file, pageSitePath: params.pageSitePath, base: params.base });
   // A nugget body embedding another nugget would ship an inert <x-nugget>
   // that bypassed the unknown-slug check. Refuse until nesting is a designed
   // feature rather than an accident.

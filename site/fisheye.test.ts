@@ -8,7 +8,7 @@ import { test } from "node:test";
 import { embedNuggets, NuggetError, type Nugget } from "./nuggets.js";
 import { renderBody } from "./render.js";
 
-const RENDER = { pageSitePath: "fisheye.html", base: "/x/site/" };
+const RENDER = { file: "cards/fisheye.site-page.card", pageSitePath: "fisheye.html", base: "/x/site/" };
 
 function nugget(overrides: Partial<Nugget>): Nugget {
   return {

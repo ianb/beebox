@@ -1,8 +1,16 @@
 # site/
 
 The generated public front-door site for callback-box. A spare static site
-built from `site/content/*.md` to gitignored `site/dist/`, deployed to GitHub
+built from `site/cards/*.card` to gitignored `site/dist/`, deployed to GitHub
 Pages and viewable on the dev router at `/<worktree>/site/`.
+
+**Cards are the native source format.** A page is a callback-box card
+(`<slug>.site-page.card` — YAML frontmatter + markdown body, type carried by
+the filename) in exactly the shape a box authors it, so a page moves box → repo
+as a verbatim file copy. There is no importer and no conversion step; the box →
+repo transfer is a plain file copy today, and *where* these cards should live
+long-term (repo, box export, something else) is an open question — see the
+"Direction shift (2026-08-19)" section of the plan.
 
 - Principles (settled with the boxholder): `issues/features/2026-07-20-public-site.md`
 - Full plan / tracks: `../callback-box/docs/plans/public-site.md`
@@ -56,34 +64,46 @@ writes the input manifest last (so a partial build never masks staleness).
 
 ## Layout
 
-- `build.ts` — CLI entry: reads content, writes HTML + `.md` twins + `llms.txt`,
-  link-checks, resolves the base path.
+- `build.ts` — CLI entry: reads the page cards, writes HTML + `.md` twins +
+  `llms.txt`, link-checks, resolves the base path.
 - `render.ts` — the local Markdoc pipeline + strict (zod) frontmatter parse +
   the HTML shell. Deliberately does NOT import `bin/router-docs.ts`, whose
   router/runtime dependencies do not belong in the static-site build; this
-  package declares `@markdoc/markdoc` itself.
-- `import-box.ts` — box → site importer (`pnpm --dir site import-box --box
-  <box-content-root>`, no default box). The first slice of the "box authors the
-  site" direction: reads a box's `site-page` / `site-aside` cards (strict zod,
-  errors name file:line), inlines each `{% aside ref="slug" /%}` as a plain
-  `{% aside kind label %}` block — crude on purpose, so the generator needs no
-  new tag — and writes `content/<slug>.md`. Fail-closed: a missing aside card,
-  or an empty aside that isn't a pending `author` elicitation, stops the import.
+  package declares `@markdoc/markdoc` itself. Every body goes through Markdoc's
+  `validate` before transform: a malformed tag is otherwise dropped *silently*,
+  so this pass is what makes a mistyped `{% aside ref … %}` a build failure
+  instead of a paragraph that quietly disappeared.
+- `cards.ts` — enumerates `cards/`, split by type. Fail-closed: a `.card` of a
+  type the site doesn't build, or a stray non-card file, is a named error, never
+  a silently unpublished page.
+- `asides.ts` — the `site-aside` registry, the `{% aside ref="slug" /%}`
+  substitution, and the author-voice enforcement: a `pending` `author` aside
+  publishes the standard placeholder and NEVER its own body (agent prose in an
+  open elicitation cannot ship); any other empty-bodied aside, an unknown ref,
+  or an aside body that refs another aside fails the build. Referenced and
+  inline asides render through the one shared `asideTag` helper in `fisheye.ts`,
+  so the two forms cannot drift into different markup.
 - `links.ts` — base-path handling and internal-link resolution.
 - `sources.ts` — the single definition of the input source set + content-hash
   manifest, shared by `build.ts` (writes `dist/.inputs.json`) and
   `bin/router-site.ts` (compares it to decide whether to auto-rebuild). One
   enumeration, so the two sides can't drift.
-- `content/` — markdown sources (frontmatter: `title`, `summary`, optional
-  `unlisted` to keep a page out of llms.txt).
+- `cards/` — the page and aside sources. `<slug>.site-page.card` builds
+  `<slug>.html` (fields: `title`, `summary`, optional `unlisted` to keep a page
+  out of llms.txt, optional `contains` tolerated as a box-global field and never
+  published); `<slug>.site-aside.card` is the registry `{% aside ref %}`
+  resolves against (fields: `kind` bee/author/generated, `label`, `status`
+  pending/ready, optional `generated-from`, optional `contains`).
 - `fisheye.ts` — the expand-in-place vocabulary (plan Track F): the
   `{% expand label="…" %}` Markdoc tag (inline → button + `hidden=until-found`
   span; block → native `<details>`) and the `{% nugget slug="…" /%}` embed
   placeholder that `embedNuggets()` (nuggets.ts) substitutes at build, failing
   on unknown slugs — plus `{% aside kind="bee|author|generated" label="…" %}`,
   a categorized aside whose kind is a voice with visible provenance (`author`
-  content is the boxholder's words only). `content/fisheye.md` and
-  `content/walkthrough.md` are the unlisted prototype pages.
+  content is the boxholder's words only) in either of two mutually exclusive
+  forms — `kind` + `label` + an inline body, or a bare `ref` resolved from a
+  card. `cards/fisheye.site-page.card` and `cards/walkthrough.site-page.card`
+  are the unlisted prototype pages.
 - `nuggets/<slug>.md` — committed excerpts of repo content: frontmatter `source`
   (repo-relative, restricted to `issues/`, `callback-box/docs/`, `research/`,
   root `README.md`), `span` (a verbatim excerpt of that source), and

@@ -99,14 +99,14 @@ test("parseSource: missing required field is named", () => {
 
 test("renderBody: internal links rewrite against base and are collected; externals open in a new tab", () => {
   const body = "See [about](/about.md) and [gh](https://github.com/x).";
-  const underPages = renderBody(body, { pageSitePath: "index.html", base: "/callback-box/" });
+  const underPages = renderBody(body, { file: "cards/index.site-page.card", pageSitePath: "index.html", base: "/callback-box/" });
   assert.match(underPages.html, /href="\/callback-box\/about\.html"/);
   assert.match(underPages.html, /href="https:\/\/github\.com\/x" target="_blank" rel="noopener noreferrer"/);
   assert.match(underPages.html, /href="\/callback-box\/about\.html"(?![^>]*target=)/);
   assert.deepEqual(underPages.linkTargets, ["about.html"]);
 
   // Same source under the router base: identical target, base-shifted href.
-  const underRouter = renderBody(body, { pageSitePath: "index.html", base: "/wt/site/" });
+  const underRouter = renderBody(body, { file: "cards/index.site-page.card", pageSitePath: "index.html", base: "/wt/site/" });
   assert.match(underRouter.html, /href="\/wt\/site\/about\.html"/);
   assert.deepEqual(underRouter.linkTargets, ["about.html"]);
 });

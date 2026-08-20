@@ -2,22 +2,25 @@
 //   pnpm --dir site build            # base derived from the git branch
 //   pnpm --dir site build --base /callback-box/   # GitHub Pages
 //
-// Reads site/content/*.md, renders each through the local Markdoc pipeline,
-// writes HTML + a machine-facing .md twin to site/dist/, generates llms.txt,
-// and link-checks every internal link against the emitted output. Any broken
-// internal link, malformed frontmatter, or missing source fails the build.
-// On success it prints one summary line — routine noise is a bug.
+// Reads site/cards/*.site-page.card, renders each through the local Markdoc
+// pipeline (resolving `{% aside ref %}` against the site-aside cards beside
+// them), writes HTML + a machine-facing .md twin to site/dist/, generates
+// llms.txt, and link-checks every internal link against the emitted output. Any
+// broken internal link, malformed frontmatter, unknown ref, or missing source
+// fails the build. On success it prints one summary line — noise is a bug.
 
 import { execFileSync } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { embedAsides, flatAside, loadAsides, renderAside, type AsideCard } from "./asides.js";
+import { listCardFiles } from "./cards.js";
 import { baseFromBranch, normalizeBase } from "./links.js";
 import { embedNuggets, isRenderable, loadNuggets, renderNugget, type Nugget } from "./nuggets.js";
 import { parseSource, renderBody, pageShell, type PageFrontmatter } from "./render.js";
 import { writeManifest } from "./sources.js";
 
 const SITE_DIR = import.meta.dirname;
-const CONTENT_DIR = path.join(SITE_DIR, "content");
+const CARDS_DIR = path.join(SITE_DIR, "cards");
 const NUGGETS_DIR = path.join(SITE_DIR, "nuggets");
 const REPO_ROOT = path.resolve(SITE_DIR, "..");
 const DIST_DIR = path.join(SITE_DIR, "dist");
@@ -58,28 +61,6 @@ function resolveBase(args: CliArgs): string {
   return baseFromBranch(branch);
 }
 
-interface ContentFile {
-  /** Absolute source path. */
-  abs: string;
-  /** Site-root-relative path without extension, e.g. "index" or "sub/about". */
-  stem: string;
-}
-
-async function collectContent(dir: string, prefix: string): Promise<ContentFile[]> {
-  const entries = await fs.readdir(dir, { withFileTypes: true });
-  const out: ContentFile[] = [];
-  for (const entry of entries.toSorted((a, b) => a.name.localeCompare(b.name))) {
-    if (entry.name.startsWith(".")) continue;
-    const abs = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      out.push(...(await collectContent(abs, `${prefix}${entry.name}/`)));
-    } else if (entry.name.endsWith(".md")) {
-      out.push({ abs, stem: `${prefix}${entry.name.slice(0, -".md".length)}` });
-    }
-  }
-  return out;
-}
-
 interface BuiltPage {
   stem: string;
   frontmatter: PageFrontmatter;
@@ -102,13 +83,17 @@ function flatNugget(slug: string, nuggets: readonly Nugget[]): string {
   return `${quoted}\n> — from ${nugget.source}`;
 }
 
-function twinMarkdown(body: string, nuggets: readonly Nugget[]): string {
+function twinMarkdown(
+  body: string,
+  refs: { nuggets: readonly Nugget[]; asides: ReadonlyMap<string, AsideCard> },
+): string {
   const flat = body
     .split(/(```[\S\s]*?```)/g)
     .map((part, i) => {
       if (i % 2 === 1) return part; // inside a code fence: literal content
       return part
-        .replace(/{%\s*nugget\s+slug="([^"]*)"\s*\/%}/g, (_m, slug: string) => flatNugget(slug, nuggets))
+        .replace(/{%\s*nugget\s+slug="([^"]*)"\s*\/%}/g, (_m, slug: string) => flatNugget(slug, refs.nuggets))
+        .replace(/{%\s*aside\s+ref="([^"]*)"\s*\/%}/g, (_m, slug: string) => flatAside(slug, refs.asides))
         .replace(/{%[\S\s]*?%}/g, "");
     })
     .join("");
@@ -151,8 +136,8 @@ async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
   const base = resolveBase(args);
 
-  const content = await collectContent(CONTENT_DIR, "");
-  if (content.length === 0) throw new BuildError(`no .md sources found in ${CONTENT_DIR}`);
+  const cards = await listCardFiles({ cardsDir: CARDS_DIR, siteDir: SITE_DIR });
+  if (cards.pages.length === 0) throw new BuildError(`no *.site-page.card sources found in ${CARDS_DIR}`);
 
   await fs.rm(DIST_DIR, { recursive: true, force: true });
   await fs.mkdir(DIST_DIR, { recursive: true });
@@ -160,25 +145,29 @@ async function main(): Promise<void> {
   const emitted = new Set<string>();
   const built: BuiltPage[] = [];
   const nuggets = await loadNuggets({ nuggetsDir: NUGGETS_DIR, repoRoot: REPO_ROOT });
+  const asides = await loadAsides(cards.asides);
+  // Render every aside once up front, referenced or not: an empty ready aside
+  // or a nested ref fails the build here rather than only on the page that
+  // happens to embed it.
+  for (const aside of asides.values()) renderAside(aside, { pageSitePath: "index.html", base });
 
-  for (const file of content) {
-    const src = await fs.readFile(file.abs, "utf8");
-    const relForErrors = path.relative(SITE_DIR, file.abs);
-    const { frontmatter, body } = parseSource(src, relForErrors);
-    const pageSitePath = `${file.stem}.html`;
-    const rendered = renderBody(body, { pageSitePath, base });
-    const html = embedNuggets(rendered.html, { nuggets, base, pageSitePath });
-    const { linkTargets } = rendered;
+  for (const card of cards.pages) {
+    const src = await fs.readFile(card.abs, "utf8");
+    const { frontmatter, body } = parseSource(src, card.file);
+    const pageSitePath = `${card.slug}.html`;
+    const rendered = renderBody(body, { file: card.file, pageSitePath, base });
+    const withAsides = embedAsides(rendered.html, { asides, base, pageSitePath });
+    const html = embedNuggets(withAsides.html, { nuggets, base, pageSitePath });
+    const linkTargets = [...rendered.linkTargets, ...withAsides.linkTargets];
 
     const htmlOut = path.join(DIST_DIR, pageSitePath);
-    const twinOut = path.join(DIST_DIR, `${file.stem}.md`);
-    await fs.mkdir(path.dirname(htmlOut), { recursive: true });
+    const twinOut = path.join(DIST_DIR, `${card.slug}.md`);
     await fs.writeFile(htmlOut, pageShell({ title: frontmatter.title, bodyHtml: html, base }), "utf8");
-    await fs.writeFile(twinOut, twinMarkdown(body, nuggets), "utf8");
+    await fs.writeFile(twinOut, twinMarkdown(body, { nuggets, asides }), "utf8");
 
     emitted.add(pageSitePath);
     built.push({
-      stem: file.stem,
+      stem: card.slug,
       frontmatter,
       linkTargets: linkTargets.map((target) => ({ target, href: target })),
     });
@@ -198,7 +187,7 @@ async function main(): Promise<void> {
   const nuggetSummary = checkNuggets(nuggets, base);
 
   const home = built.find((p) => p.stem === "index");
-  if (!home) throw new BuildError("no index.md — the site needs a home page");
+  if (!home) throw new BuildError("no cards/index.site-page.card — the site needs a home page");
   await fs.writeFile(
     path.join(DIST_DIR, "llms.txt"),
     renderLlmsTxt({ home: home.frontmatter, pages: built, base }),

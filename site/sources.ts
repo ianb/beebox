@@ -29,7 +29,7 @@ const manifestSchema = z.object({
 
 /**
  * The input source set the generator reads, as site/-relative posix paths,
- * sorted: package.json, every top-level *.ts, everything under content/ and
+ * sorted: package.json, every top-level *.ts, everything under cards/ and
  * nuggets/, and every repo file a nugget cites (as `../<repo-relative path>`).
  * dist/ and node_modules/ are excluded by construction (never descended into).
  *
@@ -44,7 +44,7 @@ export async function listSourceRelPaths(siteDir: string): Promise<string[]> {
   for (const entry of top) {
     if (entry.isFile() && entry.name.endsWith(".ts")) rels.push(entry.name);
   }
-  for (const dir of ["content", "nuggets"]) {
+  for (const dir of ["cards", "nuggets"]) {
     for (const entry of await readdirDirents(path.join(siteDir, dir))) {
       if (!entry.isFile() || entry.name.startsWith(".")) continue;
       const rel = path.relative(siteDir, path.join(entry.parentPath, entry.name));
@@ -61,7 +61,7 @@ async function readdirDirents(dir: string): Promise<Dirent[]> {
   try {
     return await fs.readdir(dir, { recursive: true, withFileTypes: true });
   } catch (_err) {
-    return []; // no content/ dir → nothing to add
+    return []; // no such dir → nothing to add
   }
 }
 
