@@ -6,6 +6,21 @@ export function quotaWindowsForDisplay(quota: Quota): Quota["windows"] {
     Number(left.durationMinutes === 300) - Number(right.durationMinutes === 300));
 }
 
+export function quotaSummaryText(quota: Quota, now?: Date): string {
+  const general = quota.windows.find((window) =>
+    window.durationMinutes === 10_080 && window.label === "7-day window");
+  const generalPace = general ? quotaPace(general, now) : null;
+  if (!generalPace) return "weekly pace unavailable";
+  const generalText = generalPace.onTrack ? "on track" : "over pace";
+  if (quota.provider !== "claude") return generalText;
+
+  const fable = quota.windows.find((window) =>
+    window.durationMinutes === 10_080 && window.label === "Fable · 7-day window");
+  const fablePace = fable ? quotaPace(fable, now) : null;
+  if (!fablePace || fablePace.onTrack === generalPace.onTrack) return generalText;
+  return `general ${generalText}, Fable ${fablePace.onTrack ? "on track" : "over pace"}`;
+}
+
 export function relativeTime(value: string, now?: Date): string {
   const reference = now ?? new Date();
   const time = new Date(value).getTime();
