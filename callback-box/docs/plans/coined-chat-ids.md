@@ -65,13 +65,17 @@ creates a second chat.
   one. Must be a valid UUID."* The SDK passes it through as `--session-id`.
   Verified by spike, 2026-08-20 — see Prior art. Reused; this is the plan's
   foundation.
-- **The assignment callback still fires with the coined id.**
+- **The assignment callback's bookkeeping — but NOT its trigger.**
   `makeOnAssigned` (`src/core/chat/session/registry.ts:249-313`) writes the
-  history entry, the feature seeds, the most-active pointer, and the husk card
-  when the harness reports an id. A coined id is still reported on the init
-  message, so all of that keeps working unchanged; only the pending-to-entries
-  promotion (`:288-304`) becomes a no-op because the entry is already keyed.
-  Reused as-is.
+  history entry, the feature seeds, the most-active pointer, and the husk card,
+  then emits `session-assigned`. It will **not** fire for a coined session:
+  `captureAssignedSessionId` returns early when the session already knows its id
+  (`src/core/chat/session/state.ts:183`, `if (current !== null) return null;`),
+  and a session constructed with a known id sets `initialSessionId`
+  (`registry.ts:194`). So the bookkeeping is reused as a function, but the plan
+  must call it explicitly at first run start. Treating this as free reuse was
+  the plan's most serious error before review; every downstream claim about
+  "the chat already exists" depended on it.
 - **The client already makes a mount-time round trip.**
   `chatBootstrapProcedure` (`src/webapp/trpc/routers/chat-bootstrap-procedure.ts:58-78`)
   resolves the session and returns its history. Reused as the reservation point.
@@ -147,39 +151,75 @@ issue follows from that.
 
 ```ts
 // src/core/chat/session/reserve.ts
+export interface ChatReservation {
+  sessionId: string;
+  engine: AgentEngine;              // pinned at reserve time — see below
+  contextDir: string | null;        // landmark binding, captured here
+  seedFeatures: Record<string, string>;
+  createdAt: number;
+}
+
 export type ReserveResult =
   | { kind: "reserved"; sessionId: string }
   | { kind: "taken" }        // the id already has history or a transcript
   | { kind: "unsupported" }; // engine cannot be told an id (Codex)
 
-export async function reserveChatSession(ctx: ChatTargetContext, sessionId: string): Promise<ReserveResult>;
+export async function reserveChatSession(ctx: ChatTargetContext, req: ReserveRequest): Promise<ReserveResult>;
 ```
 
+- **The reservation is a record, not a registry entry.** It must outlive the
+  live session object, because `sweepIdle` (`registry.ts:422-440`) deletes
+  entries with no recent activity, and a chat the user opened and left for ten
+  minutes before capturing must still be addressable. Sweeping stops the
+  subprocess; it does not cancel the reservation. The record is small and
+  in-memory, with its own TTL.
 - Idempotent by id: reserving an id already reserved by this box returns
-  `reserved` again. This is what makes it safe under a StrictMode double-invoke
-  or a retried request — the reason the client mints and the server reserves,
-  rather than the server coining and the client adopting.
+  `reserved` again — safe under a StrictMode double-invoke or a retried request.
+  This is why the client mints and the server reserves, rather than the server
+  coining and the client adopting.
 - `taken` is decided from `loadHistoryEntries` plus a stat of
-  `resolveSessionLogPath` — the same pair `isResumableSession` already uses.
-  The harness's own "already in use" is the backstop, not the check (#6).
-- The reserved entry's backend options carry `sessionId`, and `CB_CHAT_SESSION_ID`
-  goes straight into the subprocess env, so `cb chat screenshot` and friends
-  resolve without the session-id file.
-- Reservation triggers a **per-chat prewarm** keyed by that id, replacing the
-  box-wide speculative slot. Capped (start at 2 concurrent reserved-but-unsent
-  chats; beyond the cap a reservation is still made, just not warmed) and reaped
-  by the existing idle sweep (`registry.ts:422-440`). A reaped reservation costs
-  nothing: the spike shows an abandoned warm slot writes no transcript and does
-  not burn the id, so the first send simply cold-spawns with the same id.
+  `resolveSessionLogPath` — the pair `isResumableSession` already uses. The
+  harness's own "already in use" is the backstop, not the check (#6).
+- **The engine is pinned at reserve time.** `resolveChatEngine`
+  (`engine.ts:6-13`) returns `"claude"` for any id it has no history entry for,
+  so a reserved id on a Codex box would otherwise be routed to Claude. The
+  reservation calls `loadAgentEngine(boxRoot)` and refuses with `unsupported`
+  when it is not Claude.
+- **`contextDir` and `seedFeatures` are captured at reserve time.** Today they
+  ride the send only when `sessionInput === "new"` (`chatMachine.ts:239-242`,
+  applied at `chat-send-target.ts:19-24`, passed by `ChatPage.tsx:305`). A
+  coined chat is not `"new"`, so a landmark binding would be silently dropped —
+  the reservation is where that data now lives, and `resolveChatTarget` reads it
+  from there.
+- **The durable bookkeeping fires at first run start, not at reserve.** Because
+  `captureAssignedSessionId` (`state.ts:183`) will not fire for a session that
+  already knows its id, the run-start path calls the same work `makeOnAssigned`
+  does — history append, feature seeds, most-active, husk, `session-assigned`.
+  Doing it at reserve time instead would leave a husk and a history entry for
+  every abandoned new chat; doing it at first run keeps durable state tied to a
+  real turn.
+- The reserved session's backend options carry `sessionId`, and
+  `CB_CHAT_SESSION_ID` goes straight into the subprocess env, so `cb chat
+  screenshot` and friends resolve without the session-id file.
 
 **Vocabulary lock-ins.** "Coin" (the client mints), "reserve" (the server
 accepts), `reserveChatSession`, `ReserveResult` kinds `reserved` / `taken` /
 `unsupported`.
 
-**First implementation chunk.** `reserve.ts` plus the registry's reserved-entry
-support and the `sessionId` passthrough in `buildQueryOptions`
-(`claude-chat.ts:86-131`), with doctests. Per-chat prewarm lands in the same
-track but a separate commit; nothing calls the reservation yet.
+**First implementation chunk.** `reserve.ts`, the reservation record and its
+TTL, the run-start bookkeeping, and the `sessionId` passthrough in
+`buildQueryOptions` (`claude-chat.ts:86-131`), with doctests. Nothing calls the
+reservation yet.
+
+**Per-chat prewarm is the last chunk, and it is droppable.** The backend holds
+exactly one `warmSlot` and one `warming` promise (`claude-chat.ts:171-203`), and
+`hasWarm()` is a boolean (`registry.ts:102`), so keying the pool by session id
+is a real change to that module rather than a parameter. It buys the 0.6–2.0 s
+measured above and nothing else — correctness does not depend on it. It is
+sequenced last so the plan can complete without it if it looks expensive once
+Chunk 1 is real; dropping it means a coined chat cold-spawns on its first
+message, which is the state every chat is in today anyway when the single slot
+is already spent.
 
 ### Track B — one target resolver
 
@@ -209,9 +249,24 @@ not the four an alias design would need — a reserved chat is just `existing`.
 Route-layer concerns (availability, the 410 mapping at
 `chat-send-target.ts:59-75`, `assertExactSessionTarget`) stay in the route.
 
-`resolveSessionAvailability` (`availability.ts:29`) learns one new answer: an id
-that is reserved in this registry but has no transcript yet is **available**,
-not a ghost. Without this the first send into a coined chat 410s.
+Four existence gates learn about reservations, not one. Each currently proves a
+chat exists by finding a transcript, and a reserved chat has none yet:
+
+- `resolveSessionAvailability` (`availability.ts:29-40`) — `fs.access(logPath)`
+  fails, returning `missing-local-transcript`, so the first send 410s.
+- `assertExactSessionTarget` (`chat-send-target.ts:36-41`) via
+  `isResumableSession` (`recent-landmark.ts:52`) — the exact-session path
+  bypasses availability entirely.
+- `resolveCaptureDeliveryTarget` (`deliver.ts:79-83`) — accepts the target only
+  if `loadHistory()` includes it, else falls back to most-active. **This is the
+  filed bug's actual path**: without this gate knowing about reservations, a
+  capture started as the first action in a coined chat still lands elsewhere.
+- `resolveBulkDeliveryTarget` (`bulk-upload/deliver.ts:38`) — same shape.
+
+All four consult the reservation record through one predicate, `chatExists()`,
+which answers "history, transcript, or live reservation". A fifth gate,
+`loadSessionEntry` (`list.ts:139-157`), deliberately does **not**: a reserved
+chat with no turn yet must not appear in the session list.
 
 **First implementation chunk.** `target.ts`, the four call sites moved onto it,
 the availability case, the lint rule. No wire change.
@@ -223,6 +278,12 @@ and rewrites the URL before the machine mounts.
 
 **Direction.**
 
+- The reservation boundary validates the id with `z.string().uuid()` — the
+  harness requires a UUID, so anything else is rejected before it reaches a
+  spawn. The existing permissive `z.string().min(1)` on the chat URL
+  (`router.tsx:107-108`), bootstrap (`chat-bootstrap-procedure.ts:64-68`), and
+  send (`chat-helpers.ts:48-51`) schemas stays as-is: they must keep accepting
+  historical non-UUID ids, and a bad id there already fails the existence gates.
 - `ChatPage` mints `crypto.randomUUID()` when `search.session === "new"`, calls
   `chat.bootstrap({ session: <id>, reserve: true })`, and on `reserved`
   navigates to `?session=<id>`. The bootstrap input
@@ -255,14 +316,17 @@ there always is one.
 
 **Direction.** `InteractiveChat.tsx:331-332` drop both
 `captureDisabledReason` / `uploadFilesDisabledReason`; `:141` drops the
-`sessionId !== null` condition on the bulk overlay. Nothing else changes:
-`CaptureOverlay` and `BulkUploadOverlay` already take a session id, and
-`resolveCaptureDeliveryTarget` (`deliver.ts:74-102`) already handles the id it
-is given. On a Codex box `sessionId` can still be null at mount, so the gates
-survive as a Codex-only condition rather than the default state.
+`sessionId !== null` condition on the bulk overlay. `CaptureOverlay` and
+`BulkUploadOverlay` already take a session id and need no change. The delivery
+side is **not** free: `resolveCaptureDeliveryTarget` (`deliver.ts:79-83`) admits
+a target only if `loadHistory()` includes it, which a reserved chat is not until
+its first turn — so it must go through Track B's `chatExists()` predicate or the
+gate removal ships the exact misdirection the gate prevents. On a Codex box
+`sessionId` can still be null at mount, so the disabled reasons survive as a
+Codex-only condition rather than the default state.
 
-This is the whole of the filed issue, and it is four lines — because Tracks A–C
-removed the reason for it, rather than adding a mechanism to work around it.
+The UI half of the filed issue is four lines. The delivery half is Track B's
+predicate, which is where the work actually is.
 
 **First implementation chunk.** The four lines plus the tour that proves it.
 
@@ -322,13 +386,18 @@ No critical gaps. Two accepted risks are named below the table.
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
 | A coined id collides with an existing chat | New (Track A doctest) | `reserveChatSession` returns `taken`; the client mints once more. The harness's "already in use" exit is the backstop | Clear |
-| The reservation is reaped before the first send | New (Track A doctest) | The entry is re-created on send with the same id; the spike shows the abandoned warm slot wrote no transcript and did not burn the id | Clear |
+| The live session object is swept before the first send | New (Track A doctest) | The reservation record outlives the entry, so the send re-creates the session with the same id; the spike shows an abandoned warm slot wrote no transcript and did not burn the id | Clear |
 | Two tabs each open a new chat | New (Track A doctest) | Distinct UUIDs → distinct reservations; no shared slot to contend for | Clear |
 | A client reserves ids and never sends (buggy or hostile tab) | New (Track A doctest) | Reservations past the warm cap are registered but not warmed; the idle sweep reaps them | Clear |
 | The first send arrives while the reserved session is `starting` | Existing (`deliver-message.doctest.md`) | `deliverUserMessage` enqueues (`deliver-user-message.ts:183-186`); the queue drains when the starting run's turn completes — deliberate, see `lifecycle.ts:105-118` | Clear |
 | A reserved id is asked for history before any turn | New (bootstrap test) | Availability treats reserved-without-transcript as available-and-empty, not a ghost (Track B) | Clear |
 | The box runs Codex, so the id cannot be coined | New (Track C test) | `reserve` returns `unsupported` and the client uses today's `"new"` path | Clear |
 | A capture is delivered into a coined chat the user abandons | No | The card is committed and the chat is listed | Clear |
+| The server restarts between reserve and first send; the in-memory reservation is gone | New (Track A doctest) | The send's existence check fails and returns the existing 410; the client re-bootstraps, re-reserves the same id (idempotent, and no transcript exists so it is not `taken`), and retries | Clear — one visible retry |
+| A landmark chat is coined, and the binding is lost | New (Track C test) | `contextDir`/`seedFeatures` are captured in the reservation, not carried by the `"new"`-only send fields | Clear |
+| A coined id is reserved on a Codex box | New (Track A doctest) | The engine is pinned at reserve; `unsupported` sends the client down the `"new"` path | Clear |
+| An exact-session send (`exactSession: true`) targets a reserved chat | New (Track B test) | `assertExactSessionTarget` consults `chatExists()` rather than `isResumableSession` alone | Clear |
+| A reserved chat appears in the session picker before it has a turn | New (Track B test) | `loadSessionEntry` (`list.ts:139-157`) keeps requiring a transcript, so it does not | Clear |
 | `sessionId` support is dropped by a future SDK version | No | The spike is encoded as a doctest that fails loudly on an SDK bump | Clear — see below |
 
 Two accepted risks:
@@ -419,16 +488,17 @@ Skipping audits deliberately.
 
 1. **Chunk 1 (Track A)** — `reserve.ts`, reserved registry entries, `sessionId`
    passthrough in `buildQueryOptions`, `CB_CHAT_SESSION_ID` direct injection.
-2. **Chunk 2 (Track A)** — per-chat prewarm keyed by the coined id, replacing
-   the box-wide slot; the cap and the sweep interaction. Depends on 1.
-3. **Chunk 3 (Tracks B + E)** — `target.ts`, the four call sites, the
-   availability case, the lint rule. Independent of 2; do it after so the
-   resolver already knows about reservations.
-4. **Chunk 4 (Track C)** — minting, the `reserve` bootstrap input, the URL
-   rewrite, the Codex fallback. Depends on 1 and 3.
-5. **Chunk 5 (Track D)** — the gates deleted. Depends on 4.
-6. **Chunk 6** — the session-id-file deletion for coined sessions, once nothing
-   reads it on that path. Depends on 1 and 4.
+2. **Chunk 2 (Tracks B + E)** — `target.ts`, the four call sites, the
+   `chatExists()` predicate wired into all four existence gates, the lint rule.
+   Depends on 1.
+3. **Chunk 3 (Track C)** — minting, the `reserve` bootstrap input, the URL
+   rewrite, the Codex fallback. Depends on 1 and 2.
+4. **Chunk 4 (Track D)** — the gates deleted. Depends on 3.
+5. **Chunk 5** — the session-id-file deletion for coined sessions, once nothing
+   reads it on that path. Depends on 1 and 3.
+6. **Chunk 6 (Track A, droppable)** — per-chat prewarm keyed by the coined id,
+   replacing the box-wide slot; the cap and the sweep interaction. Last because
+   it is latency, not correctness.
 
 ## Rollout shape
 
