@@ -41,9 +41,7 @@ import {
   isCaptureSession,
 } from "./staging-store.js";
 import { cleanupStagingSession } from "./staging-teardown.js";
-
-/** No-activity window after which an open capture is swept into a partial finalize. */
-export const ABANDONMENT_WINDOW_MS = 60 * 60 * 1000; // 60 minutes
+import { ABANDONMENT_WINDOW_MS } from "../../shared/capture-staleness.js";
 
 /** Age after which a delivered card still under `tmp-capture/` is flagged unfiled. */
 export const TMP_CAPTURE_STALE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days

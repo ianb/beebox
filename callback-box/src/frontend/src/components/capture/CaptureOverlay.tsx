@@ -107,7 +107,7 @@ function CaptureSurface({ targetSessionId, resume, onExit }: {
   onExit: () => void;
 }) {
   const { state, devices, uploads, inputs, camera, videoRef, actions } = useCaptureSession({ targetSessionId, resume, onExit });
-  const { recording, recordingTime, error, finalizing, showSettings, sessionId } = state;
+  const { recording, recordingTime, error, finalizing, showSettings, sessionId, retryFeedback } = state;
   const { counts } = uploads;
   const { videoDevices, audioDevices, devicePrefs, updateDevicePref } = devices;
   const { galleryRef, uploadRef, pickFromGallery, pickFileToUpload, handleGallerySelect, handleFileSelect } = inputs;
@@ -126,7 +126,7 @@ function CaptureSurface({ targetSessionId, resume, onExit }: {
         finalizing={finalizing}
         showSettings={showSettings}
         onToggleSettings={() => setShowSettings((p) => !p)}
-        onPickGallery={pickFromGallery} onPickFile={pickFileToUpload} onRetryFailed={retryFailedUploads}
+        onPickGallery={pickFromGallery} onPickFile={pickFileToUpload}
       />
 
       {showSettings ? (
@@ -160,7 +160,7 @@ function CaptureSurface({ targetSessionId, resume, onExit }: {
         hasContent={counts.photoTotal > 0 || counts.audioTotal > 0 || counts.fileTotal > 0}
         photosFailed={counts.photosFailed} audioFailed={counts.audioFailed} filesFailed={counts.filesFailed}
         onDone={() => void handleDone()} onCancel={() => void handleCancel()} onToggleRecording={() => void toggleRecording()}
-        onRetryFailed={retryFailedUploads} onSkipPending={skipPendingUploads}
+        onRetryFailed={retryFailedUploads} retryFeedback={retryFeedback} onSkipPending={skipPendingUploads}
       />
     </CaptureShell>
   );
