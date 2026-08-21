@@ -1,6 +1,6 @@
 ---
 title: "A failed capture chip offers only \"tap to retry\" — no discard, and no sense of how old it is"
-workstream: unattached
+workstream: capture-chip-states
 area: callback-box
 labels: [capture, chat, ui]
 filed-by: agent
@@ -72,6 +72,31 @@ grows a second verb.
 - **Whether the chip should persist in the transcript at all** once dismissed,
   or leave a quiet trace ("capture discarded") — a capture that silently
   vanishes is its own kind of confusing.
+
+## Code reading (2026-08-21)
+
+**The discard plumbing is nearly all present.** `cancelCaptureSession` already
+exists client-side (`src/frontend/src/pages/capture/capture-api.ts:300`),
+`DELETE /api/capture/sessions/:id` already exists
+(`src/webapp/routes/capture.ts:185`), and
+`discardStagingSessionIfCancellable` explicitly permits this state — "an `open`
+batch is still uploading and a `failed:*` one is dead, so both may be thrown
+away" (`core/capture/staging-teardown.ts`). Adding the verb is mostly UI.
+
+**But that DELETE route bypasses the guard.** It calls
+`cleanupStagingSession` unconditionally (`routes/capture.ts:198`) rather than
+`discardStagingSessionIfCancellable`, so it will delete a session that is
+mid-`preparing` out from under the background worker — exactly the race the
+guard's own doc comment describes ("the worker reads `null` and silently
+returns … the user gets no message while their client reports success"). This is
+a latent bug independent of the missing discard verb, and the discard work
+should route through the guarded path rather than widen use of the unguarded
+one.
+
+**The age the chip needs is already in hand:** `startedAt` ships in the
+`pendingSessions` payload (`core/capture/pending.ts:34`) and the caption ignores
+it. The fresh/stale line the sweep draws is `ABANDONMENT_WINDOW_MS`
+(`core/capture/sweep.ts`).
 
 Related: [capture upload error/retry affordance is tiny](2026-08-03-capture-upload-error-retry-affordance-weak.md)
 — same family, different surface (that one is the capture overlay's control
