@@ -231,7 +231,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
     snapshot, sessionId, muted: mute.muted, narrationEnabled: model.narrationEnabled,
     selections: selections.selections, resetSelections: selections.resetSelections,
     emissionStore, resetAttachments: attach.resetAttachments,
-    clearDraftRef, inputStore, dispatchEmission: dispatchEmissionVoid,
+    clearDraftRef, inputStore, dispatchEmission: dispatchEmissionVoid, nativeComposer: usesNativeComposer,
   });
   useNativeBridges({
     enabled: usesNativeShell, dispatchEmission: dispatchNativeEmission, boxSlug,

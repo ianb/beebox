@@ -20,6 +20,11 @@ enum NativeVoiceTurnEvent: Equatable {
     case draftErased
     case voiceMessageSent(closeMicrophone: Bool)
     case speechPlaybackChanged(playing: Bool)
+    /// Dictation entered `.failed` — a denied permission, an audio-engine
+    /// failure, a phone call, a route change, a send that could not be saved.
+    /// The microphone is already down in every one of those, so the turn is
+    /// over: it must not sit "active" waiting to reopen on the next silence.
+    case dictationFailed
 }
 
 struct NativeVoiceTurnState: Equatable {
@@ -55,6 +60,12 @@ struct NativeVoiceTurnState: Equatable {
             }
             isActive = true
             return deferUnlessSilent(.startDictation)
+        case .dictationFailed:
+            isActive = false
+            waitingForSpeech = false
+            // No `.stopDictation`: whatever failed already tore the recognizer
+            // down, and re-issuing the command would only re-run that teardown.
+            return .none
         case .speechPlaybackChanged(let playing):
             guard playing != speechPlaybackActive else {
                 return .none
