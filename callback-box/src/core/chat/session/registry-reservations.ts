@@ -14,6 +14,15 @@ import type { ChatSessionOptions } from "./options.js";
 
 const log = makeLog("ChatSessionRegistry");
 
+/**
+ * Expire reservations past their TTL and release what was held for each — a
+ * warm subprocess warmed for a chat nobody is going to start would otherwise
+ * hold one of the very few slots until the whole box went idle.
+ */
+export function sweepExpiredReservations(opts: { store: ChatReservationStore; backend: ChatBackend }): void {
+  for (const expired of opts.store.sweepExpired()) opts.backend.closeWarmFor?.(expired);
+}
+
 export async function reserveAndWarm(opts: {
   boxRoot: string;
   store: ChatReservationStore;

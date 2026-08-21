@@ -316,6 +316,12 @@ export function createClaudeChatBackend(): ChatBackend {
     async prewarm(opts: ChatBackendStartOptions): Promise<void> {
       await startWarming(opts);
     },
+    closeWarmFor(sessionId: string): void {
+      const slot = warmSlots.get(sessionId);
+      if (slot === undefined) return;
+      slot.warmQuery.close();
+      warmSlots.delete(sessionId);
+    },
     closeWarm(): void {
       // Bump the epoch so any in-flight startup() abandons its result when it
       // lands (see startWarming), then drop every slot we're already holding.
@@ -385,6 +391,7 @@ export function createChatBackend(): ChatBackend {
       if (opts.engine !== "codex") await claude.prewarm?.(opts);
     },
     closeWarm: () => claude.closeWarm?.(),
+    closeWarmFor: (sessionId) => claude.closeWarmFor?.(sessionId),
     hasWarm: () => claude.hasWarm?.() ?? false,
   };
 }

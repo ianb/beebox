@@ -19,10 +19,12 @@ import { appendHistory, loadHistoryEntries, getMostActive } from "../../../../sr
  * feature seeds are already durable.
  */
 async function waitForSessionRecorded(box, sessionId) {
-  for (let i = 0; i < 500; i++) {
+  const deadline = Date.now() + 10_000;
+  while (Date.now() < deadline) {
     if (await getMostActive(box.root) === sessionId) return;
-    await new Promise((r) => setImmediate(r));
+    await new Promise((r) => setTimeout(r, 10));
   }
+  throw new Error(`session ${sessionId} was never recorded`);
 }
 
 const COINED = "11111111-2222-4333-8444-555555555555";
@@ -204,6 +206,55 @@ clock += 7 * 60 * 60 * 1000;
 
 registry.isKnownSession(COINED)
 => false
+```
+
+```ts continue cleanup
+registry.shutdown();
+await box.cleanup();
+```
+
+## An expired reservation releases the subprocess warmed for it
+
+A warm slot is warmed for one chat and can serve no other, so a chat nobody
+starts must not keep holding one of the very few slots.
+
+```ts
+const box = await makeTmpBox();
+const backend = createFakeChatBackend();
+let clock = 1_000;
+const registry = makeRegistry(box, backend, { now: () => clock });
+await registry.reserve({ sessionId: COINED, contextDir: null, seedFeatures: {} });
+
+clock += 7 * 60 * 60 * 1000;
+registry.sweepIdle();
+
+backend.closedWarmFor.join(",")
+=> 11111111-2222-4333-8444-555555555555
+```
+
+```ts continue cleanup
+registry.shutdown();
+await box.cleanup();
+```
+
+## The reservation's engine is what the history entry records
+
+`appendHistory` would otherwise fall back to whatever the box is configured with
+at first-run time, which need not be what created the transcript.
+
+```ts
+const box = await makeTmpBox();
+const backend = createFakeChatBackend();
+const registry = makeRegistry(box, backend);
+await registry.reserve({ sessionId: COINED, contextDir: null, seedFeatures: {} });
+
+const session = registry.getOrCreate(COINED);
+await session.send("hello");
+await tick();
+await waitForSessionRecorded(box, COINED);
+
+JSON.stringify((await loadHistoryEntries(box.root)).map((e) => e.engine))
+=> ["claude"]
 ```
 
 ```ts continue cleanup

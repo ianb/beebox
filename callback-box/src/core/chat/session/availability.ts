@@ -16,15 +16,16 @@ export type SessionAvailability =
 
 /** Resolve whether an existing id can safely reach the SDK resume path. */
 export async function resolveSessionAvailability(args: { boxRoot: string; sessionId: string; registry: ChatSessionRegistry }): Promise<SessionAvailability> {
-  // A reserved chat (`reserve.ts`) is addressable before it has written
-  // anything, so the transcript checks below would call it a ghost and the
-  // first send into a coined chat would 410.
-  if (args.registry.getReservation(args.sessionId) !== null) return { kind: "resumable" };
   if (args.registry.deletion.isBlocked(args.sessionId)) {
     const husk = await findChatHuskEntry(args.boxRoot, args.sessionId);
     return { kind: "unavailable", reason: "deletion-in-progress", huskPath: husk?.path ?? null };
   }
   if (args.registry.deletion.hasAssignedSession(args.sessionId)) return { kind: "resumable" };
+  // A reserved chat (`reserve.ts`) is addressable before it has written
+  // anything, so the transcript checks below would call it a ghost and the
+  // first send into a coined chat would 410. Checked after the deletion gates,
+  // never before: a chat being deleted stays refused whatever else is true.
+  if (args.registry.getReservation(args.sessionId) !== null) return { kind: "resumable" };
   if (await resolveChatEngine(args.boxRoot, args.sessionId) === "codex") {
     if (await codexSessionExists(args.boxRoot, args.sessionId)) return { kind: "resumable" };
     const husk = await findChatHuskEntry(args.boxRoot, args.sessionId);

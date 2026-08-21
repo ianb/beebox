@@ -100,12 +100,19 @@ export class ChatReservationStore {
     this.records.delete(sessionId);
   }
 
-  /** Expire reservations past their TTL. Called from the registry's sweep. */
-  sweepExpired(): void {
+  /**
+   * Expire reservations past their TTL, returning the ids dropped so the
+   * caller can release what was held for them (a warm subprocess).
+   */
+  sweepExpired(): string[] {
     const cutoff = this.now() - RESERVATION_TTL_MS;
+    const expired: string[] = [];
     for (const [id, record] of this.records) {
-      if (record.createdAt <= cutoff) this.records.delete(id);
+      if (record.createdAt > cutoff) continue;
+      this.records.delete(id);
+      expired.push(id);
     }
+    return expired;
   }
 
   size(): number {

@@ -34,7 +34,26 @@ const MAX_ATTEMPTS = 2;
 
 export function useCoinedChat(opts: { enabled: boolean; contextDir: string | undefined }): CoinedChat {
   const { enabled, contextDir } = opts;
-  const [result, setResult] = useState<CoinedChat>({ state: "pending" });
+  // `attempt` identifies WHICH new-chat this state describes. The page does not
+  // remount between chats, so without it the hook would hand a second "New
+  // chat" the id it coined for the first, and the page would navigate straight
+  // back into that chat instead of starting one.
+  const [state, setState] = useState<{ enabled: boolean; attempt: number; value: CoinedChat }>({
+    enabled,
+    attempt: 0,
+    value: { state: "pending" },
+  });
+  // Adjusting state during render (the React "derived from props" pattern):
+  // this re-renders immediately with the reset value, so no effect ever sees —
+  // and no consumer ever reads — a stale coined id for a new chat.
+  if (state.enabled !== enabled) {
+    setState({
+      enabled,
+      attempt: enabled ? state.attempt + 1 : state.attempt,
+      value: { state: "pending" },
+    });
+  }
+  const attempt = state.attempt;
   const reserve = trpc.chat.reserveSession.useMutation();
   // `mutateAsync` is stable across renders; naming it separately keeps it out
   // of the effect's dependency list as the whole mutation object would not be.
@@ -48,7 +67,7 @@ export function useCoinedChat(opts: { enabled: boolean; contextDir: string | und
     // narrow — and cancellation is what the primitive is for.
     const abort = new AbortController();
     void (async (): Promise<void> => {
-      for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      for (let tries = 0; tries < MAX_ATTEMPTS; tries++) {
         const sessionId = crypto.randomUUID();
         try {
           const outcome = await mutateAsync({
@@ -57,7 +76,7 @@ export function useCoinedChat(opts: { enabled: boolean; contextDir: string | und
           });
           if (abort.signal.aborted) return;
           if (outcome.kind === "reserved") {
-            setResult({ state: "coined", sessionId: outcome.sessionId });
+            setState({ enabled: true, attempt, value: { state: "coined", sessionId: outcome.sessionId } });
             return;
           }
           if (outcome.kind === "unsupported") break;
@@ -69,12 +88,12 @@ export function useCoinedChat(opts: { enabled: boolean; contextDir: string | und
           break;
         }
       }
-      if (!abort.signal.aborted) setResult({ state: "unavailable" });
+      if (!abort.signal.aborted) setState({ enabled: true, attempt, value: { state: "unavailable" } });
     })();
     return () => {
       abort.abort();
     };
-  }, [enabled, contextDir, mutateAsync]);
+  }, [enabled, contextDir, mutateAsync, attempt]);
 
-  return enabled ? result : { state: "unavailable" };
+  return enabled ? state.value : { state: "unavailable" };
 }

@@ -18,6 +18,7 @@
 import { makeLog } from "./log.js";
 import { appendHistory, setMostActive, updateFeaturesForSession } from "./history.js";
 import { ensureChatHusk } from "../husk.js";
+import type { AgentEngine } from "../../box/config.js";
 
 const log = makeLog("ChatSessionRegistry");
 
@@ -27,13 +28,25 @@ const log = makeLog("ChatSessionRegistry");
  */
 export async function recordSessionStart(
   boxRoot: string,
-  params: { sessionId: string; contextDir?: string | undefined; seedFeatures?: Record<string, string> | undefined },
+  params: {
+    sessionId: string;
+    contextDir?: string | undefined;
+    seedFeatures?: Record<string, string> | undefined;
+    /**
+     * The engine this chat was reserved against. Passed rather than resolved,
+     * because `appendHistory` would otherwise fall back to whatever the box is
+     * configured with *now* — and a coined chat's transcript was created by the
+     * engine that was configured when it was reserved.
+     */
+    engine?: AgentEngine | undefined;
+  },
 ): Promise<void> {
-  const { sessionId, contextDir, seedFeatures } = params;
+  const { sessionId, contextDir, seedFeatures, engine } = params;
   try {
     await appendHistory(boxRoot, {
       sessionId,
       ...(contextDir !== undefined ? { contextDir } : {}),
+      ...(engine !== undefined ? { engine } : {}),
     });
     // Persist landmark feature seeds alongside the new history entry so a
     // future resume of this session (or a fresh server boot) still sees the

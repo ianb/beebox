@@ -17,17 +17,18 @@
  */
 
 import { makeLog } from "./log.js";
-import { checkInvariant } from "../../../lib/invariant.js";
 import { EventEmitter } from "node:events";
 import { ChatSession, type ChatSessionOptions } from "./index.js";
 import { setMostActive } from "./history.js";
 import { createChatBackend, type ChatBackend } from "../../../services/claude-chat.js";
 import { RegistryDeletionCoordinator } from "./registry-deletion.js";
 import { ChatReservationStore, type ChatReservation, type ReserveResult } from "./reserve.js";
-import { reserveAndWarm } from "./registry-reservations.js";
+import type { AgentEngine } from "../../box/config.js";
+import { reserveAndWarm, sweepExpiredReservations } from "./registry-reservations.js";
 import { recordSessionStart } from "./session-start-record.js";
 import { prewarmBackend } from "./registry-warm.js";
 import { enforceLiveCap } from "./registry-cap.js";
+import { pinEntry, pinSessionObject } from "./registry-pins.js";
 import type { ChatSessionRegistryOptions, RegistryEntry } from "./registry-options.js";
 
 export { SessionDeletingError } from "./deletion-state.js";
@@ -240,6 +241,7 @@ export class ChatSessionRegistry extends EventEmitter {
             onFirstRunStart: (id: string) => this.recordSessionStart(id, {
               ...(reservation.contextDir !== null ? { contextDir: reservation.contextDir } : {}),
               seedFeatures: reservation.seedFeatures,
+              engine: reservation.engine,
             }),
           }
         : {}),
@@ -346,7 +348,11 @@ export class ChatSessionRegistry extends EventEmitter {
    */
   private async recordSessionStart(
     sessionId: string,
-    params: { contextDir?: string | undefined; seedFeatures?: Record<string, string> | undefined },
+    params: {
+      contextDir?: string | undefined;
+      seedFeatures?: Record<string, string> | undefined;
+      engine?: AgentEngine | undefined;
+    },
   ): Promise<void> {
     this.reservations.release(sessionId);
     await recordSessionStart(this.boxRoot, { sessionId, ...params });
@@ -364,55 +370,14 @@ export class ChatSessionRegistry extends EventEmitter {
     if (opts?.subprocessUse) entry.lastSubprocessUse = entry.lastActivity;
   }
 
-  /**
-   * Increment the SSE-listener refcount; pins the entry against idle
-   * cleanup while a stream is open. Returns a release function.
-   */
+  /** Pin an entry against idle cleanup while a stream is open (`registry-pins.ts`). */
   pin(sessionId: string): () => void {
-    const entry = this.entries.get(sessionId);
-    if (!entry) return () => {};
-    entry.refCount += 1;
-    let released = false;
-    return () => {
-      if (released) return;
-      released = true;
-      // A release with refCount already 0 means we released more than we
-      // pinned — a real bookkeeping bug. Log loudly, then clamp (don't crash
-      // session cleanup over it) rather than silently masking with Math.max.
-      if (!checkInvariant(entry.refCount > 0, "chat-session pin refCount underflow")) entry.refCount = 0;
-      else entry.refCount -= 1;
-    };
+    return pinEntry(this.entries.get(sessionId));
   }
 
-  /**
-   * Pin a session for the life of a turn, working even for a pending "new"
-   * session whose id hasn't arrived. If the session already has an entry this
-   * is just `pin(id)`; otherwise the pin is tracked on the session and folded
-   * into the entry's refCount on promotion, then released against whichever
-   * place the session lives in when the turn ends. Returns a release function.
-   */
+  /** Pin a session for a turn, id or not (`registry-pins.ts`). */
   pinSession(session: ChatSession): () => void {
-    const id = session.getSessionId();
-    if (id !== null && this.entries.has(id)) {
-      return this.pin(id);
-    }
-    this.pendingPins.set(session, (this.pendingPins.get(session) ?? 0) + 1);
-    let released = false;
-    return () => {
-      if (released) return;
-      released = true;
-      const assignedId = session.getSessionId();
-      const entry = assignedId !== null ? this.entries.get(assignedId) : undefined;
-      if (entry) {
-        // Promoted before release: the pin became part of refCount.
-        if (!checkInvariant(entry.refCount > 0, "chat-session pinSession refCount underflow")) entry.refCount = 0;
-        else entry.refCount -= 1;
-        return;
-      }
-      const remaining = (this.pendingPins.get(session) ?? 1) - 1;
-      if (remaining <= 0) this.pendingPins.delete(session);
-      else this.pendingPins.set(session, remaining);
-    };
+    return pinSessionObject({ session, entries: this.entries, pendingPins: this.pendingPins });
   }
 
   /**
@@ -445,7 +410,7 @@ export class ChatSessionRegistry extends EventEmitter {
       entry.session.stop();
       this.entries.delete(id);
     }
-    this.reservations.sweepExpired();
+    sweepExpiredReservations({ store: this.reservations, backend: this.backend });
     // Reap the warm slot once chat has gone quiet, so an idle box doesn't hold
     // a Claude subprocess around the clock. The next accessor re-warms it.
     if (this.backend.closeWarm !== undefined && this.now() - this.lastUse > this.idleTimeoutMs) {

@@ -67,7 +67,10 @@ export default [
   },
   {
     files: ["src/**/*.ts"],
-    ignores: ["src/core/chat/session/target.ts", "src/core/chat/session/registry.ts"],
+    // Only the owner is exempt. `registry.ts` defines `createNew` but no longer
+    // calls it, and a method definition is not a member access — so it needs no
+    // exemption, and a future `this.createNew()` there is caught like any other.
+    ignores: ["src/core/chat/session/target.ts"],
     rules: {
       "no-restricted-properties": ["error", noDirectCreateNew],
     },

@@ -192,7 +192,10 @@ export async function reserveChatSession(ctx: ChatTargetContext, req: ReserveReq
   coined chat is not `"new"`, so a landmark binding would be silently dropped —
   the reservation is where that data now lives, and `resolveChatTarget` reads it
   from there.
-- **The durable bookkeeping fires at first run start, not at reserve.** Because
+- **The durable bookkeeping fires at first run start, not at reserve** (with one
+  exception found in review: a pre-first-message feature toggle now writes a
+  history entry, because the chat has an id for the server to record against —
+  see the failure-modes table). Because
   `captureAssignedSessionId` (`state.ts:183`) will not fire for a session that
   already knows its id, the run-start path calls the same work `makeOnAssigned`
   does — history append, feature seeds, most-active, husk, `session-assigned`.
@@ -399,6 +402,7 @@ No critical gaps. Two accepted risks are named below the table.
 | A reserved id is asked for history before any turn | New (bootstrap test) | Availability treats reserved-without-transcript as available-and-empty, not a ghost (Track B) | Clear |
 | The box runs Codex, so the id cannot be coined | New (Track C test) | `reserve` returns `unsupported` and the client uses today's `"new"` path | Clear |
 | A capture is delivered into a coined chat the user abandons | No | The card is committed and the chat is listed | Clear |
+| A feature is toggled in a coined chat that is then abandoned | No | The toggle goes through the server now that the chat has an id, and `updateFeaturesForSession` (`history.ts:361-370`) creates a history entry if none exists — so an abandoned chat can leave a history row with no transcript. Accepted: the row is skipped as a ghost by `getLastSessionForDirectory` and never listed (`list.ts` requires a husk), and reaping it would mean a sweep for a case that needs a toggle-then-abandon | Logged as a ghost skip when a landmark resolves |
 | The server restarts between reserve and first send; the in-memory reservation is gone | New (Track A doctest) | The send's existence check fails and returns the existing 410; the client re-bootstraps, re-reserves the same id (idempotent, and no transcript exists so it is not `taken`), and retries | Clear — one visible retry |
 | A landmark chat is coined, and the binding is lost | New (Track C test) | `contextDir`/`seedFeatures` are captured in the reservation, not carried by the `"new"`-only send fields | Clear |
 | A coined id is reserved on a Codex box | New (Track A doctest) | The engine is pinned at reserve; `unsupported` sends the client down the `"new"` path | Clear |

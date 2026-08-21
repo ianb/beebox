@@ -133,6 +133,14 @@ export interface ChatBackend {
    * Idempotent and cheap when there's nothing to close. Optional — fakes and
    * backends without a warm pool don't have to implement it.
    */
+  /**
+   * Close the warm subprocess held for one chat (a coined session id), if any.
+   * Called when that chat's reservation expires — otherwise an abandoned chat's
+   * subprocess would hold one of the very few warm slots until the whole box
+   * went idle.
+   */
+  closeWarmFor?(sessionId: string): void;
+
   closeWarm?(): void;
   /**
    * Whether a warm slot is currently held OR a warm-up is in flight. Callers

@@ -327,7 +327,10 @@ export class ChatSession extends EventEmitter {
     const content = await composeTurnContent(this.boxRoot, {
       rawInput,
       features: this.features,
-      sessionStart: this.sessionId === null,
+      // "First message of this conversation", not "no id yet": a coined chat
+      // has its id from mount, and its first turn still deserves the
+      // first-message-only context (last activity, calendar, health).
+      sessionStart: this.sessionId === null || this.coined.pending,
       healthGate: this.healthGate,
     });
 
