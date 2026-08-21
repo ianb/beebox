@@ -16,7 +16,8 @@
 import * as fs from "node:fs/promises";
 import { findChatHuskEntry, listChatHusks, type ChatHuskEntry } from "../husk.js";
 import { huskTranscriptPath } from "../husk-transcript.js";
-import { resolveSessionLabel } from "../session-label.js";
+import { resolveSessionLabel, type SessionLabelSource } from "../session-label.js";
+import { assertNever } from "../../../lib/invariant.js";
 import { errnoCode } from "../../../lib/error-guards.js";
 import { mapInBatches, mapInBatchesSettled } from "../../../lib/map-batched.js";
 import { loadHistoryEntries, type SessionHistoryEntry } from "./history.js";
@@ -52,7 +53,11 @@ export interface ChatSessionEntry {
   logPath: string;
   /** The husk's editorial `title`, when it has one. Free — it rode the husk. */
   title: string | undefined;
-  /** Native first-message preview used only for Codex picker labels. */
+  /**
+   * The Codex thread's verbatim first user message, envelope and all, as
+   * `thread/list` reports it. Free — one list call already carries it for every
+   * thread — and it's what stands in for a transcript scan when labelling.
+   */
   nativePreview?: string | undefined;
 }
 
@@ -120,11 +125,35 @@ export async function loadAllSessions(boxRoot: string): Promise<ChatSessionRow[]
     size: READ_CONCURRENCY,
     map: async (entry) => ({
       ...entry,
-      label: entry.engine === "codex"
-        ? codexSessionLabel(entry)
-        : await resolveSessionLabel({ sessionId: entry.sessionId, logPath: entry.logPath, title: entry.title }),
+      label: await resolveSessionLabel({
+        sessionId: entry.sessionId,
+        title: entry.title,
+        source: labelSource(entry),
+      }),
     }),
   });
+}
+
+/**
+ * Where this chat's first user message is read from — the only per-engine part
+ * of naming a chat (the order and the wrapper-stripping are the resolver's).
+ *
+ * A `switch` over the engine rather than a boolean: a third engine must fail to
+ * compile here and state its own source, instead of silently inheriting
+ * whichever branch the ternary fell through to. That silent inheritance is the
+ * shape of the bug this replaced.
+ */
+export function labelSource(entry: ChatSessionEntry): SessionLabelSource {
+  switch (entry.engine) {
+    case "codex":
+      // Present whenever the enumeration kept the chat: a Codex husk whose
+      // thread metadata is missing is dropped above, before labelling.
+      return { kind: "preview", text: entry.nativePreview };
+    case "claude":
+      return { kind: "transcript", logPath: entry.logPath };
+    default:
+      return assertNever(entry.engine);
+  }
 }
 
 /** One husk's entry, or null when there's no transcript left to resume. */
@@ -166,11 +195,6 @@ async function loadSessionEntry(options: {
     title: husk.title,
     ...(codexMetadata === undefined ? {} : { nativePreview: codexMetadata.preview }),
   };
-}
-
-function codexSessionLabel(entry: ChatSessionEntry): string {
-  if (entry.title !== undefined && entry.title !== "") return entry.title;
-  return entry.nativePreview?.slice(0, 400) || entry.sessionId.slice(0, 8);
 }
 
 /**
