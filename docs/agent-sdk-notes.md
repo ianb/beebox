@@ -21,20 +21,99 @@ break this repo — v2.1.218's worktree git isolation silently broke `/finish`'s
 merge step for days. Claude Code versions that move harness behavior get their
 own entries here, labeled as such, with no pin to apply.
 
-- **Current pin:** `0.3.234` (in `callback-box/package.json` — see the split-pin
+- **Current pin:** `0.3.235` (in `callback-box/package.json` — see the split-pin
   note below; the monorepo root still carries a second, unmanaged pin at
   `0.3.226`)
-- **Latest reviewed upstream version:** `0.3.237` (SDK), `2.1.237` (Claude Code)
+- **Latest reviewed upstream version:** `0.3.238` (SDK), `2.1.238` (Claude Code)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** `0.3.235` was ~46h at this turn (two hours short,
-  for the second day running) and `0.3.236`/`0.3.237` are ~21h/~16h. All three
-  should be settled next turn; take the newest on the normal settled path.
-  Nothing act-now on either channel. Two items to carry forward: `0.3.236`'s
-  `classifierContext` is an addition to a hook shape callback-box already
-  builds, and 2.1.236 fixed SIGTERM in SDK mode recording synthetic tool denials
-  into transcripts callback-box parses.
+- **Current recommendation:** `0.3.236` was ~45h at this turn — short by under
+  three hours, the third consecutive day a release has just missed the window
+  (see the cadence note below). `0.3.237`/`0.3.238` are ~40h/~22h. Take the
+  newest settled next turn. Nothing act-now on either channel.
 
 ## Release ledger
+
+### Cadence note — the fixed check hour costs a day per release
+
+Three turns running, the newest release has been 2–3 hours short of the 48h
+window at check time: `0.3.234` at ~46h on 08-19, `0.3.235` at ~46h on 08-20,
+`0.3.236` at ~45h on 08-21. The cause is structural, not upstream flakiness —
+this monitor runs at a fixed hour (~16:04Z) and the SDK has been publishing at
+roughly 18:00–19:00Z, so a release is always ~2h shy on its second morning and
+gets taken on its third. The effect is a consistent one-day lag between "settled"
+and "applied", not a correctness problem: nothing act-now has been delayed by it,
+since an act-now finding bypasses the window entirely. Recorded so the pattern
+reads as a known property of the schedule rather than a series of coincidences.
+Moving the run ~3h later, or treating the window as 45h, would close it.
+
+### 0.3.238 — pending
+
+- **Upstream (SDK):** Added `is_backgrounded` and `spawn_depth` to
+  `task_started` events for subagent tasks (`is_backgrounded` also on background
+  Bash tasks). Added `suppressOriginalPrompt` to `UserPromptExpansion` hook
+  output. Added a `command_lifecycle` state `refused` for cross-session peer
+  messages a receive-side policy declines. **Fixed SDK hook callbacks silently
+  not applying after a host re-sends `initialize` to an already-running CLI**;
+  the response now reports `hooks_applied`. Fixed
+  `CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION` near-limit behavior. Changed
+  `vcs_state_changed` push events to emit one event per pushed branch.
+- **Callback-box applicability (runtime):**
+  - **The hook-callbacks-after-re-`initialize` fix is the one worth thinking
+    about, and it looks inert here — but the reasoning is worth writing down
+    because the blast radius would be large if wrong.** Callback-box registers
+    hooks on every query: `PreToolUse: [gitMvNudgeHook()]` plus the local
+    harness plugin in `src/services/claude-chat.ts`, and
+    `PreToolUse`/`PostToolUse` (git-mv nudge + card validator) in
+    `src/core/agent/run.ts`. It also runs a warm-subprocess pool — `startup({
+    options: queryOptions })` spawns and initializes a CLI ahead of time, and
+    `warmCompatible`/`warmSlotKey` decide whether a later `start()` may consume
+    that slot. Crucially, the consuming path hands the **already-initialized
+    `Query` straight to `buildRunFromQuery`**; callback-box never re-sends
+    `initialize` with a fresh options object to a running CLI, and
+    `warmCompatible` exists precisely so a slot is only reused when its baked
+    options already match. So the host-side pattern the fix describes is not one
+    callback-box performs. **If that inference is wrong** — i.e. if the SDK's own
+    warm-start path re-initializes internally — the symptom would be the git-mv
+    `PreToolUse` nudge and the card-validator `PostToolUse` hook silently not
+    firing on warm-started chats, which is exactly the kind of failure that
+    leaves no trace. The new `hooks_applied` field in the initialize response is
+    the thing that would make it observable; worth wiring into a chat-backend
+    assertion if hook silence is ever suspected.
+  - `is_backgrounded` / `spawn_depth` on `task_started` are additive on a shape
+    callback-box already adapts — `adaptTaskMessage`
+    (`src/core/chat/session/messages.ts`) normalizes `task_started` into the
+    wire `task` message, switching on `subtype` with an `assertNever`
+    terminator, so new *fields* pass through harmlessly. A genuine UI
+    opportunity: the chat companion pane could distinguish a backgrounded
+    subagent from a foreground one, and show nesting depth.
+  - Inert: `suppressOriginalPrompt` (callback-box registers no
+    `UserPromptExpansion` hook), `command_lifecycle: refused` (no cross-session
+    messaging), `vcs_state_changed` per-branch push events (still unconsumed
+    anywhere in `src/`), and the prompt-suggestion env var (unused).
+- **Callback-box applicability (harness):**
+  - **`Fixed unbounded memory growth in long interactive sessions: subagent tool
+    results are now released once they leave the recent display window`** — the
+    headline memory item, but it is scoped to *interactive* sessions and a
+    *display* window, i.e. renderer retention, so it should not touch headless
+    box agents. It does apply to the boxholder's own long sessions and to
+    worker sessions. Noted rather than dismissed because this repo has prior
+    heap-OOM history in prod; if resident memory ever regresses, confirm whether
+    the release applies to SDK mode before ruling it in.
+  - `Fixed leftover /tmp/claude-*-cwd files when a Bash command is killed, times
+    out, or is interrupted` — small, but box agents run many Bash commands that
+    get killed or time out, so the leak accumulates steadily on a long-lived
+    deployment. Worth knowing when auditing temp-file growth.
+  - `Fixed worktree-isolation Bash refusals telling you to remove a redirect
+    when the command had none` — message quality only, but it confirms
+    worktree-isolation refusals (the v2.1.218 mechanism that broke `/finish`)
+    remain live and are still being tuned. Nothing to change.
+  - Not applicable: plugin-marketplace `headersHelper` (this monorepo ships
+    plugins from local paths, not url marketplaces), all `self-hosted-runner`
+    flags, the MCP `server/discover` ordering fix (no MCP servers configured),
+    and the Remote Control and cross-session messaging fixes.
+- **Action:** Published 2026-08-20T18:02Z, ~22h old, inside the settling window.
+  The boxholder's harness is already on 2.1.238 independently.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03238), [Claude Code 2.1.238](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21238)
 
 ### 0.3.237 — pending (parity with Claude Code 2.1.237)
 
@@ -108,7 +187,7 @@ own entries here, labeled as such, with no pin to apply.
 - **Action:** Published 2026-08-19T18:49Z, ~21h old, inside the settling window.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03236), [Claude Code 2.1.236](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21236)
 
-### 0.3.235 — pending (parity content from Claude Code 2.1.235)
+### 0.3.235 — applied (parity content from Claude Code 2.1.235)
 
 - **Upstream:** The SDK entry is only "Updated to parity with Claude Code
   v2.1.235". That release is mostly terminal-UI and interactive polish; the
@@ -151,11 +230,12 @@ own entries here, labeled as such, with no pin to apply.
   this repo's `/code-review ultra` usage. The `subagent_type` error-listing fix
   lands on the dev repo's custom `.claude/agents/finish.md`, making an
   unavailable-agent spawn fail legibly instead of silently defaulting.
-- **Action:** Published 2026-08-18T18:25Z. Still pending. Re-reviewed
-  2026-08-20 at ~46h — two hours short of the window, the same near-miss as
-  `0.3.234` hit the day before, since this monitor runs at a fixed hour and
-  upstream publishes slightly later in the day. Upstream text unchanged, still
-  nothing act-now.
+- **Action:** Published 2026-08-18T18:25Z; held an extra turn on 2026-08-20 at
+  ~46h. Applied 2026-08-21 via `pnpm update-agent-sdk` at ~70h as the newest
+  settled version. Verified: typecheck clean, `pnpm -C callback-box test`
+  7460/7460 pass, and `scripts/sdk-steering-probe.ts` holds all four steering
+  behaviors. The embedded-`grep` memory improvement flagged above is therefore
+  now live at the pin.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03235), [Claude Code 2.1.235](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21235)
 
 ### 0.3.234 — applied

@@ -58,6 +58,8 @@ function mockRegistry(session) {
   return {
     getOrCreate: () => session, createNew: () => session, get: () => session,
     enforceLiveCap: () => {}, touch: () => {}, markMostActive: async () => {},
+    // No chat here was coined and reserved (chat/session/reserve.ts).
+    getReservation: () => null,
   };
 }
 ```

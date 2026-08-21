@@ -4,6 +4,7 @@ import { readLandmarkFeaturesForDir } from "../../core/landmark/features.js";
 import { mergeSeedFeatures } from "../../core/chat/features.js";
 import { resolveSessionAvailability } from "../../core/chat/session/availability.js";
 import { isResumableSession } from "../../core/chat/session/recent-landmark.js";
+import { resolveChatTarget, type ChatTargetSpec } from "../../core/chat/session/target.js";
 import type { ChatRoutesContext } from "./chat-context.js";
 
 interface ResolveSendArgs {
@@ -15,29 +16,49 @@ interface ResolveSendArgs {
 
 async function resolveSendTarget(ctx: ChatRoutesContext, args: ResolveSendArgs): Promise<{ session: ChatSession; id: string | null }> {
   const { registry, boxRoot, wireSession } = ctx;
-  if (args.exactSession) await assertExactSessionTarget(boxRoot, args.sessionParam);
-  if (args.sessionParam === "new") {
-    const landmark = args.contextDir !== undefined && args.contextDir !== "" ? await readLandmarkFeaturesForDir(boxRoot, args.contextDir) : null;
-    const seedFeatures = mergeSeedFeatures({ landmark, request: args.requestSeedFeatures });
-    const session = registry.createNew({
-      ...(args.contextDir !== undefined ? { contextDir: args.contextDir } : {}),
-      ...(Object.keys(seedFeatures).length > 0 ? { seedFeatures } : {}),
-    });
-    wireSession(session);
-    return { session, id: null };
+  if (args.exactSession) await assertExactSessionTarget(ctx, args.sessionParam);
+  // `"new"` is the legacy shape: a client that did not coin an id (an older
+  // build, the iOS app, a Codex box) asks the harness to name the chat. A
+  // client that coined one sends the id itself and takes the `existing` path
+  // below, because its reservation is what makes the chat exist.
+  const spec: ChatTargetSpec = args.sessionParam === "new"
+    ? {
+        kind: "fresh",
+        ...(args.contextDir !== undefined ? { contextDir: args.contextDir } : {}),
+        ...(await freshSeedFeatures(boxRoot, args)),
+      }
+    : { kind: "existing", sessionId: args.sessionParam };
+  if (spec.kind === "existing") {
+    const availability = await resolveSessionAvailability({ boxRoot, sessionId: spec.sessionId, registry });
+    if (availability.kind === "unavailable") return Promise.reject(new UnavailableChatSessionError());
   }
-  const availability = await resolveSessionAvailability({ boxRoot, sessionId: args.sessionParam, registry });
-  if (availability.kind === "unavailable") return Promise.reject(new UnavailableChatSessionError());
-  const session = registry.getOrCreate(args.sessionParam);
+  const { session, sessionId } = await resolveChatTarget({ boxRoot, registry }, spec);
   wireSession(session);
-  return { session, id: args.sessionParam };
+  return { session, id: sessionId };
 }
 
-async function assertExactSessionTarget(boxRoot: string, sessionId: string): Promise<void> {
+/** Landmark feature defaults merged with the request's, for a fresh chat. */
+async function freshSeedFeatures(
+  boxRoot: string,
+  args: ResolveSendArgs,
+): Promise<{ seedFeatures?: Record<string, string> }> {
+  const landmark = args.contextDir !== undefined && args.contextDir !== ""
+    ? await readLandmarkFeaturesForDir(boxRoot, args.contextDir)
+    : null;
+  const seedFeatures = mergeSeedFeatures({ landmark, request: args.requestSeedFeatures });
+  return Object.keys(seedFeatures).length > 0 ? { seedFeatures } : {};
+}
+
+async function assertExactSessionTarget(ctx: ChatRoutesContext, sessionId: string): Promise<void> {
   if (sessionId === "new") {
     throw new ExactSessionTargetError(400, "exactSession requires an existing session id");
   }
-  if (!(await isResumableSession(boxRoot, sessionId))) {
+  // `isResumableSession` answers from the session list, which requires a husk
+  // AND a transcript — neither of which a reserved chat has until its first
+  // turn. The exact-session path bypasses `resolveSessionAvailability`, so the
+  // reservation has to be admitted here too.
+  if (ctx.registry.getReservation(sessionId) !== null) return;
+  if (!(await isResumableSession(ctx.boxRoot, sessionId))) {
     throw new ExactSessionTargetError(404, `Chat session is no longer available: ${sessionId}`);
   }
 }

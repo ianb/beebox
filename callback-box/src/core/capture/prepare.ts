@@ -182,7 +182,7 @@ async function runPreparation(deps: PrepareCaptureDeps): Promise<void> {
   // Resolve the delivery target ONCE, before writing cards, so placement
   // (`tmp-capture/` under the target's contextDir) and delivery agree. Persist
   // a concrete resolved id so a retry reuses it rather than re-resolving.
-  const target = await resolveCaptureDeliveryTarget({ boxRoot, targetSessionId: session.targetSessionId });
+  const target = await resolveCaptureDeliveryTarget({ boxRoot, registry, targetSessionId: session.targetSessionId });
   if (target.sessionId !== null && target.sessionId !== session.targetSessionId) {
     await setStagingTargetSessionId({ boxRoot, id, targetSessionId: target.sessionId });
   }

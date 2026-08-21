@@ -36,3 +36,28 @@ export async function releaseSessionRunLock(currentLockPath: string | null): Pro
   await releaseChatRunLock(currentLockPath);
   return null;
 }
+
+/**
+ * The chat-active lock as a small holder, so the ChatSession stores one field
+ * instead of a lock path plus two wrapper methods. Idempotent in both
+ * directions: acquiring while held keeps the held path, releasing while free
+ * is a no-op.
+ */
+export interface RunLockHolder {
+  acquire(): Promise<void>;
+  release(): Promise<void>;
+}
+
+export function createRunLockHolder(
+  context: () => { boxRoot: string; sessionId: string | null },
+): RunLockHolder {
+  let held: string | null = null;
+  return {
+    async acquire(): Promise<void> {
+      held = await acquireSessionRunLock({ ...context(), currentLockPath: held });
+    },
+    async release(): Promise<void> {
+      held = await releaseSessionRunLock(held);
+    },
+  };
+}

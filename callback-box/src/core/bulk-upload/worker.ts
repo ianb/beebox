@@ -105,6 +105,7 @@ async function runBulkPreparation(deps: PrepareBulkDeps): Promise<void> {
       ? null
       : await resolveBulkDeliveryTarget({
           boxRoot,
+          registry,
           targetSessionId: session.targetSessionId,
           contextDir: session.contextDir ?? "",
         });

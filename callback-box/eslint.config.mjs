@@ -6,6 +6,23 @@
 // genuinely wrong, raise it — don't quietly switch it off. Existing debt is
 // tracked and burned down rule-by-rule; see ../docs/eslint-rule-suppression-audit.md.
 import { vibeCheck } from "@ianbicking/personal-vibe-check/eslint";
+
+// Session creation has one owner. Four call sites used to reach
+// `registry.createNew()` independently — the send route, capture and bulk
+// delivery, and both schedule-fire fallbacks — with nothing making them agree,
+// so a capture delivering while the composer sent produced two chats for one
+// intended conversation. `core/chat/session/target.ts` is the only caller now;
+// everything else asks it to resolve a `ChatTargetSpec`.
+//
+// Expressed with `no-restricted-properties` rather than `no-restricted-syntax`
+// on purpose: a second `no-restricted-syntax` entry REPLACES the preset's,
+// which is where the repo-wide `as`-cast ban lives (verified — a bare
+// `v as string` passed lint while this was a syntax rule).
+const noDirectCreateNew = {
+  property: "createNew",
+  message:
+    "Don't call registry.createNew() directly — resolve a ChatTargetSpec through resolveChatTarget() (core/chat/session/target.ts) so one place decides who creates the chat.",
+};
 export default [
   // `roots` extends the reviewed ruleset to first-party tooling under scripts/
   // (migrators etc.), which otherwise falls through to eslint-config-agent's
@@ -49,6 +66,16 @@ export default [
     },
   },
   {
+    files: ["src/**/*.ts"],
+    // Only the owner is exempt. `registry.ts` defines `createNew` but no longer
+    // calls it, and a method definition is not a member access — so it needs no
+    // exemption, and a future `this.createNew()` there is caught like any other.
+    ignores: ["src/core/chat/session/target.ts"],
+    rules: {
+      "no-restricted-properties": ["error", noDirectCreateNew],
+    },
+  },
+  {
     // Box-request handlers must not stash data in the shared host temp dir:
     // multiple boxes on one host collide on a fixed `os.tmpdir()` path, and
     // user content lands outside the box it belongs to. Use the box-scoped,
@@ -61,6 +88,8 @@ export default [
     rules: {
       "no-restricted-properties": [
         "error",
+        // Repeated because this block REPLACES the rule for these files.
+        noDirectCreateNew,
         {
           object: "os",
           property: "tmpdir",

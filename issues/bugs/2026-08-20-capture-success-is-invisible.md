@@ -1,6 +1,6 @@
 ---
 title: "A capture that succeeds says nothing — success is a chip disappearing, so the user assumes it failed and re-captures"
-workstream: unattached
+workstream: capture-chip-states
 area: callback-box
 labels: [capture, chat, ui, feedback]
 filed-by: agent
@@ -44,7 +44,7 @@ The only states with a durable visual identity are the bad ones.
 Reconstructed from a session transcript (structural detail only):
 
 1. The user typed a throwaway greeting to open the chat — required by the
-   ["send a message first" gate](../features/2026-08-20-cannot-capture-into-a-new-chat.md).
+   ["send a message first" gate](../closed/features/2026-08-20-cannot-capture-into-a-new-chat.md).
    That turn was **interrupted** and never answered, so the chat's title became
    the greeting.
 2. **86 minutes later** they typed a single `?` — checking whether anything was
@@ -88,9 +88,37 @@ the moment it lands. Directions worth weighing rather than assuming:
   do — the confirmation needs to reach them somewhere other than a transcript
   they are not watching.
 
+## Code reading (2026-08-21)
+
+Two corrections and one finding, from reading the delivery path.
+
+**The transcript chip is not a minute behind — it is simultaneous.**
+`core/chat/session/deliver-user-message.ts:174` emits `chat-user-message` (which
+renders the transcript chip) inside the same delivery step that
+`core/capture/prepare.ts:355` emits `capture-status: delivered` (which removes
+the pending bubble). There is no interval where nothing is on screen. The
+~1 minute is *preparation* — transcription — during which the bubble correctly
+reads "preparing…"/"transcribing…".
+
+So the defect is not a gap. It is that **the swap is unmarked**: a dimmed
+pending row is deleted and an ordinary-looking transcript message appears, with
+nothing identifying them as the same object. The second half is that the minute
+of preparation is long enough to walk away from.
+
+**The client already receives the success signal and discards it.** The
+`delivered` event carries `docPath` and the resolved `sessionId`
+(`prepare.ts:355`). `useCaptureBubbles.ts:36-44` uses it only to trigger a
+refetch; the row then vanishes because the query no longer returns it. Resolving
+the bubble in place needs no new backend state — only that the hook stop
+dropping what it is already handed.
+
+**`startedAt` is likewise already available** (`core/capture/pending.ts:34`) and
+`captureBubbleCaption` never reads it — which is the whole of the "ageless chip"
+defect in the sibling issue. Both halves are the same two files.
+
 ## Related
 
-- [Cannot capture into a new chat](../features/2026-08-20-cannot-capture-into-a-new-chat.md)
+- [Cannot capture into a new chat](../closed/features/2026-08-20-cannot-capture-into-a-new-chat.md)
   — the gate that produced the throwaway opener in step 1.
 - [Failed capture chip cannot be discarded](2026-08-20-failed-capture-chip-cannot-be-discarded.md)
   — the other half of this asymmetry: failure that never goes away.
