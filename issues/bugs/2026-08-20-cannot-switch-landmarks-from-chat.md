@@ -77,3 +77,27 @@ the `WKWebView` shell. Nothing else narrows this as cheaply.
   entries land in the same sink tagged `[ios]` (`docs/client-debug-log.md`). If
   that line is present the failure is in the fetch; if absent, the navigation
   was issued and the client did not act on it.
+
+## It does reproduce in a desktop browser (2026-08-21)
+
+The question above is answered: yes. Observed three times in the web client on a
+local box, driving `/test1/chat` with the browser.
+
+Opening a landmark-scoped chat — from the Place menu, or from a card page's
+"New" chat button — leaves the header chip reading `Place: Chat` with no `Here:`
+chip, while the URL carries `contextDir=store/courses/Acids_Bases.attach`. A full
+page load of that same URL renders `Place: Acids & Bases` + `Here:
+Acids_Bases.attach` correctly. Everything the landmark menu offers (its
+directory, curated links, Recent files) is therefore unreachable until a reload.
+
+That the same URL is right on a cold load and wrong on a client-side navigation
+points at the props, not the lookups. `ChatPage` passes `contextDir` down only
+while the rendered session is the literal `"new"`
+(`callback-box/src/frontend/src/pages/ChatPage.tsx:327-338`), and the chip is
+published from that prop (`InteractiveChat.tsx:160` →
+`InteractiveChat-view.tsx:127` → `ChatBarChrome.tsx:87` `useAppBarPlace`). On a
+cold load the first paint is `"new"`, so the dir arrives. On a chat→chat
+navigation the coining/latch machinery above that line can hand back a session id
+instead, and the dir is dropped — leaving the chat bound but unlabelled.
+
+So the search is not confined to the iOS shell.

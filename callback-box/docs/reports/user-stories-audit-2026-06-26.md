@@ -1,5 +1,16 @@
 # callback-box — User Stories
 
+> **Superseded — kept for the record.** A regenerated catalog lives at
+> [user-stories-2026-08-21.md](user-stories-2026-08-21.md). This file describes the product as it
+> stood on 2026-06-26, roughly 1,300 `callback-box/src` commits earlier, and is out of date as a
+> description of what callback-box does.
+>
+> It is kept unchanged because
+> [the follow-up plan](../implemented-plans/user-story-audit-followups.md) indexes into it by item
+> number (`[n]`) so every maintainer comment stays traceable to its story. Those numbers refer to
+> this file and nothing else — the 2026-08-21 catalog is numbered independently and its ids do not
+> correspond.
+
 _Auto-generated from the source code by a multi-agent workflow. Stories were discovered by area-scoped reader agents over two loop-until-dry passes (7 rounds total), then each was independently re-checked against the code by a separate adversarial verifier agent. A subset of route-reachable frontend stories were additionally verified by driving the live app with `bin/browse`._
 
 **Generated:** 2026-06-26 · **Scope:** `callback-box/` only · paths are relative to `callback-box/`
