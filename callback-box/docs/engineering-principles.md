@@ -148,6 +148,21 @@ compiler rejects survives a compaction; a paragraph an agent has to remember
 does not. When choosing between "document it" and "make it unrepresentable,"
 prefer unrepresentable.
 
+## 13. A control shows the state the system is in, never the one it intends
+
+An affordance may display only what is actually true. Where intent and state
+differ, the control shows the intent as *pending* — never as achieved, and
+never as nothing. Both failures are the same bug seen from opposite sides: a
+record button wearing its listening face while the recognizer is still starting
+told the boxholder the button was broken
+(`issues/bugs/2026-08-20-ios-record-button-silently-waits-for-speech.md`),
+and a capture that succeeded while the UI said nothing told them it had failed
+(`issues/bugs/2026-08-20-capture-success-is-invisible.md`). This is the UI face
+of principle 4: an unreported state is invisible degradation, and a state
+reported as its own opposite is worse. When a fix removes the wait, the
+affordance still needs the pending face — the wait it removed is rarely the only
+one.
+
 ## Where the mechanical rules live
 
 These principles set direction; the checkable rules that implement them live

@@ -1,22 +1,27 @@
 ---
 title: "iOS: pressing record while the box is speaking starts a turn that doesn't listen — it silently waits instead of interrupting"
-workstream: unattached
+workstream: voice-barge-in
 area: callback-box
+needs: [manual-testing]
 labels: [ios, voice, chat, mobile-contract]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder pressed record during speech playback with the volume down
 ---
 
-On iOS, pressing the record button while speech playback is active starts a
-voice turn that **does not listen**. The microphone UI comes up, nothing is
-transcribed, and dictation only begins once the box finishes talking.
+> **⏳ Awaiting manual testing** — fix landed in `bd8b5bb4`; on a real phone,
+> press record while the box is speaking and check that dictation starts at once
+> and the speech stops. Only the developer clears this.
+
+On iOS, pressing the record button while speech playback is active started a
+voice turn that **did not listen**. The microphone UI came up, nothing was
+transcribed, and dictation only began once the box finished talking.
 
 The boxholder hit this with the device volume turned down, so the speech was
 inaudible and the wait had no visible cause: the record button simply appeared
 not to work.
 
-## The mechanism, exactly
+## The mechanism (before the fix)
 
 `ios-app/CallbackBox/Services/SpeechDictation.swift:27-29`:
 
@@ -74,22 +79,54 @@ depends on: `.microphoneStarted` is the user acting, while
 `.speechPlaybackChanged(playing: false)` is the system resuming. Only the first
 should count as barge-in.
 
-## Two things to settle
+## What landed
 
-- **Does every record press interrupt, or only a deliberate one?** Barge-in is
-  right for a user tapping record. It may be wrong for the resume path, or for
-  a keyword-triggered start, where interrupting the box mid-sentence is not
-  what was asked for.
-- **Should the waiting state ever be visible?** Even if barge-in is adopted,
-  any state where the mic UI is up and nothing is being heard should say so.
-  The current failure is not really the wait — it is that a control reported
-  itself active while doing nothing, which is the same shape as
-  [capture success is invisible](2026-08-20-capture-success-is-invisible.md):
-  the UI's story and the system's state disagree, and the user pays for it.
+Barge-in, plus the honest control the wait exposed:
+
+- **Contract §4.9, a new native→web row.** Native had no way to stop the page's
+  speech, and the page is the speaker (`lib/audio/tts-client.ts`).
+  `window.callbackboxNativeSpeechCommand({version:1,action:"stop"})` with the
+  same queue-plus-wake-event transport as the other native→web rows;
+  `useNativeSpeechCommandBridge` handles it as `STOP_SPEECH`. Not
+  `START_DICTATION` — its `beginTurn`/`startMic` would open the *web*
+  microphone inside a native shell. No acknowledgement channel: §4.5's
+  `{playing:false}` already reports the stop and native does not wait for it, so
+  a lost command costs an overheard utterance rather than the user's turn.
+- **Only an explicit press interrupts.** Every automatic reopen — after speech
+  ends, after a send that keeps the mic, after an erase — still waits;
+  interrupting the box's reply to a message just sent is the opposite of what
+  was asked. `NativeVoiceTurnState` now records whether it deferred a mic *for*
+  the speech, so the `playing:false` edge a barge-in itself produces cannot
+  restart the dictation the press already began. There is no keyword-initiated
+  start to decide about: keywords are only detected over a live recognizer.
+- **A pending control instead of the recording face.** The trailing button
+  showed the red stop whenever the turn was active, including while the
+  recognizer was still starting (permissions, the on-device analyzer session,
+  the audio engine) — the control claiming to listen was the visible defect, and
+  barge-in alone would not have removed it. It now shows a pending face that
+  still stops the turn on tap. A `--composer-fixture=starting-dictation` layout
+  fixture renders it without device timing.
+- **Written up as a principle.** `callback-box/docs/engineering-principles.md`
+  #13 — a control shows the state the system is in, never the one it intends —
+  with this issue and
+  [capture success is invisible](2026-08-20-capture-success-is-invisible.md) as
+  the two halves of the same failure.
+
+Automated coverage: `NativeVoiceTurnTests` (barge-in, no self-restart, both
+automatic-resume paths), the `speech-command` golden fixtures on both sides, and
+a composer-machine doctest pinning that `STOP_SPEECH` opens no web mic and
+leaves `turnTaking` false.
 
 ## Manual testing
 
-Not yet fixed — no label until a fix lands. When one does, the repro is:
-turn the device volume **down**, send something that makes the box speak, and
-press record while it is still talking. Dictation should begin immediately and
-the speech should stop.
+Needs a real device — the simulator does not reproduce the audio routing.
+
+1. Turn the device volume **down**, send something that makes the box speak, and
+   press record while it is still talking. Dictation should begin immediately;
+   turn the volume back up on a second run to hear that the speech stops.
+2. Send a voice message and let the box reply out loud without touching
+   anything. The mic should stay closed until the reply finishes, then reopen —
+   the automatic path must not have become an interruption.
+3. Watch the record button through a cold start (first dictation after launch,
+   or after granting permissions). It should show the pending face, not the red
+   stop, until it is actually listening.

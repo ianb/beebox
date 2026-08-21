@@ -46,6 +46,13 @@ struct NativeEmissionRedeliveryRequest: Equatable, Identifiable {
     var emissionIDs: Set<NativeChatEmission.ID>
 }
 
+/// One press of the record button asking the page to stop speaking (contract
+/// §4.9). Identified so the coordinator sends it once per press rather than on
+/// every SwiftUI update.
+struct NativeSpeechStopRequest: Equatable, Identifiable {
+    var id = UUID()
+}
+
 struct NativeScreenshotRequest: Equatable, Identifiable {
     var id = UUID()
 }
@@ -72,6 +79,7 @@ struct ChatWebView: UIViewRepresentable {
     var emissionRedeliveryRequest: NativeEmissionRedeliveryRequest?
     var locationShareRequest: NativeLocationShareRequest?
     var screenshotRequest: NativeScreenshotRequest?
+    var speechStopRequest: NativeSpeechStopRequest?
     var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement]
     var onSessionChange: (String?) -> Void
     var onEmissionDeliveryAttempt: (NativeChatEmission.ID) -> Void
@@ -85,6 +93,7 @@ struct ChatWebView: UIViewRepresentable {
     var onComposerCommand: (NativeComposerCommandDelivery) -> Void
     var onComposerCommandAcknowledgementDelivered: (String) -> Void
     var onLastAudioRequest: (NativeLastAudioRequest) -> Void
+    var onSpeechStopRequestSettled: (NativeSpeechStopRequest.ID) -> Void
 
     init(
         box: PairedBox,
@@ -92,6 +101,7 @@ struct ChatWebView: UIViewRepresentable {
         emissionRedeliveryRequest: NativeEmissionRedeliveryRequest? = nil,
         locationShareRequest: NativeLocationShareRequest? = nil,
         screenshotRequest: NativeScreenshotRequest? = nil,
+        speechStopRequest: NativeSpeechStopRequest? = nil,
         composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = [],
         onSessionChange: @escaping (String?) -> Void = { _ in },
         onEmissionDeliveryAttempt: @escaping (NativeChatEmission.ID) -> Void = { _ in },
@@ -104,13 +114,15 @@ struct ChatWebView: UIViewRepresentable {
         onScreenshotResult: @escaping (NativeScreenshotResult) -> Void = { _ in },
         onComposerCommand: @escaping (NativeComposerCommandDelivery) -> Void = { _ in },
         onComposerCommandAcknowledgementDelivered: @escaping (String) -> Void = { _ in },
-        onLastAudioRequest: @escaping (NativeLastAudioRequest) -> Void = { _ in }
+        onLastAudioRequest: @escaping (NativeLastAudioRequest) -> Void = { _ in },
+        onSpeechStopRequestSettled: @escaping (NativeSpeechStopRequest.ID) -> Void = { _ in }
     ) {
         self.box = box
         self.pendingEmissions = pendingEmissions
         self.emissionRedeliveryRequest = emissionRedeliveryRequest
         self.locationShareRequest = locationShareRequest
         self.screenshotRequest = screenshotRequest
+        self.speechStopRequest = speechStopRequest
         self.composerCommandAcknowledgements = composerCommandAcknowledgements
         self.onSessionChange = onSessionChange
         self.onEmissionDeliveryAttempt = onEmissionDeliveryAttempt
@@ -124,6 +136,7 @@ struct ChatWebView: UIViewRepresentable {
         self.onComposerCommand = onComposerCommand
         self.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
         self.onLastAudioRequest = onLastAudioRequest
+        self.onSpeechStopRequestSettled = onSpeechStopRequestSettled
     }
 
     func makeUIView(context: Context) -> WKWebView {
@@ -169,12 +182,14 @@ struct ChatWebView: UIViewRepresentable {
         context.coordinator.onComposerCommand = onComposerCommand
         context.coordinator.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
         context.coordinator.onLastAudioRequest = onLastAudioRequest
+        context.coordinator.onSpeechStopRequestSettled = onSpeechStopRequestSettled
         context.coordinator.boxID = box.id
         context.coordinator.allowedOrigin = Self.origin(from: box.baseURL)
         context.coordinator.pendingEmissions = pendingEmissions
         context.coordinator.emissionRedeliveryRequest = emissionRedeliveryRequest
         context.coordinator.locationShareRequest = locationShareRequest
         context.coordinator.screenshotRequest = screenshotRequest
+        context.coordinator.speechStopRequest = speechStopRequest
         context.coordinator.composerCommandAcknowledgements = composerCommandAcknowledgements
         if webView.url == nil {
             webView.load(request())
@@ -184,6 +199,7 @@ struct ChatWebView: UIViewRepresentable {
         context.coordinator.deliverLocationRequest(to: webView)
         context.coordinator.captureScreenshot(from: webView)
         context.coordinator.deliverComposerCommandAcknowledgements(to: webView)
+        context.coordinator.deliverSpeechStopRequest(to: webView)
     }
 
     func makeCoordinator() -> Coordinator {
@@ -201,7 +217,8 @@ struct ChatWebView: UIViewRepresentable {
             onScreenshotResult: onScreenshotResult,
             onComposerCommand: onComposerCommand,
             onComposerCommandAcknowledgementDelivered: onComposerCommandAcknowledgementDelivered,
-            onLastAudioRequest: onLastAudioRequest
+            onLastAudioRequest: onLastAudioRequest,
+            onSpeechStopRequestSettled: onSpeechStopRequestSettled
         )
     }
 
@@ -220,10 +237,12 @@ struct ChatWebView: UIViewRepresentable {
         var onComposerCommand: (NativeComposerCommandDelivery) -> Void
         var onComposerCommandAcknowledgementDelivered: (String) -> Void
         var onLastAudioRequest: (NativeLastAudioRequest) -> Void
+        var onSpeechStopRequestSettled: (NativeSpeechStopRequest.ID) -> Void
         var pendingEmissions: [NativeChatEmission] = []
         var emissionRedeliveryRequest: NativeEmissionRedeliveryRequest?
         var locationShareRequest: NativeLocationShareRequest?
         var screenshotRequest: NativeScreenshotRequest?
+        var speechStopRequest: NativeSpeechStopRequest?
         var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = []
         /// The delivery attempt currently in flight for each emission ID, keyed
         /// by ID and valued by the attempt's generation. Redelivery abandons an
@@ -238,6 +257,7 @@ struct ChatWebView: UIViewRepresentable {
         private var inflightLocationRequestID: NativeLocationShareRequest.ID?
         private var locationRequestTimeout: DispatchWorkItem?
         private var inflightScreenshotRequestID: NativeScreenshotRequest.ID?
+        private var inflightSpeechStopRequestID: NativeSpeechStopRequest.ID?
         private var inflightComposerCommandAcknowledgementIDs = Set<String>()
         private var pageLoaded: Bool
         /// One log line per transition into navigation failure; cleared by the
@@ -265,6 +285,7 @@ struct ChatWebView: UIViewRepresentable {
             onComposerCommand: @escaping (NativeComposerCommandDelivery) -> Void,
             onComposerCommandAcknowledgementDelivered: @escaping (String) -> Void,
             onLastAudioRequest: @escaping (NativeLastAudioRequest) -> Void = { _ in },
+            onSpeechStopRequestSettled: @escaping (NativeSpeechStopRequest.ID) -> Void = { _ in },
             pageLoaded: Bool = false,
             evaluateEmission: ((String, @escaping (Error?) -> Void) -> Void)? = nil,
             openExternalURL: @escaping (URL) -> Void = { UIApplication.shared.open($0) },
@@ -286,6 +307,7 @@ struct ChatWebView: UIViewRepresentable {
             self.onComposerCommand = onComposerCommand
             self.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
             self.onLastAudioRequest = onLastAudioRequest
+            self.onSpeechStopRequestSettled = onSpeechStopRequestSettled
             self.pageLoaded = pageLoaded
             self.evaluateEmission = evaluateEmission
             self.openExternalURL = openExternalURL
@@ -314,6 +336,16 @@ struct ChatWebView: UIViewRepresentable {
             locationRequestTimeout?.cancel()
             locationRequestTimeout = nil
             inflightScreenshotRequestID = nil
+            // A barge-in is aimed at the utterance a specific document is
+            // playing. The replacement document is not playing it, so the
+            // request is abandoned rather than re-armed — stopping speech the
+            // new page just started is worse than the press already being
+            // honoured natively (the microphone opened on the press).
+            inflightSpeechStopRequestID = nil
+            if let request = speechStopRequest {
+                speechStopRequest = nil
+                onSpeechStopRequestSettled(request.id)
+            }
             inflightComposerCommandAcknowledgementIDs.removeAll()
         }
 
@@ -718,6 +750,47 @@ struct ChatWebView: UIViewRepresentable {
             }
         }
 
+        /// Tell the page to stop speaking. Unacknowledged by design (contract
+        /// §4.9): the microphone is already open, and the speech-playback state
+        /// the page posts anyway reports whether the speech actually stopped.
+        /// Settled either way — a delivered request and an abandoned one both
+        /// clear, so a press can never queue behind a page load and fire into
+        /// whatever the next document is saying.
+        func deliverSpeechStopRequest(to webView: WKWebView) {
+            guard let request = speechStopRequest, request.id != inflightSpeechStopRequestID else {
+                return
+            }
+            guard pageLoaded else {
+                // No document to speak, so nothing to stop. Settled now rather
+                // than parked: a request that waited for a load would fire into
+                // whatever the freshly-loaded page says next.
+                speechStopRequest = nil
+                onSpeechStopRequestSettled(request.id)
+                return
+            }
+            guard let detail = Self.javascriptDetail(for: NativeSpeechCommand.stop) else {
+                return
+            }
+            inflightSpeechStopRequestID = request.id
+            let script = "window.callbackboxNativeSpeechCommand(\(detail));"
+            webView.evaluateJavaScript(script) { [weak self] _, error in
+                guard let self else {
+                    return
+                }
+                if let error {
+                    // Nothing is retried: the turn is already listening, and a
+                    // page that cannot be reached will not be reachable a
+                    // moment later either. Say so in the log and move on.
+                    BoxLog.warn(
+                        "speech stop was not delivered: \(error.localizedDescription)",
+                        category: .webview,
+                        targetBoxID: self.boxID
+                    )
+                }
+                self.onSpeechStopRequestSettled(request.id)
+            }
+        }
+
         func captureScreenshot(from webView: WKWebView) {
             guard
                 pageLoaded,
@@ -743,6 +816,13 @@ struct ChatWebView: UIViewRepresentable {
         private static func javascriptDetail(for emission: NativeChatEmission) -> String? {
             let payload = NativeEmissionV2(emission: emission)
             guard let data = try? JSONEncoder().encode(payload) else {
+                return nil
+            }
+            return String(data: data, encoding: .utf8)
+        }
+
+        private static func javascriptDetail(for command: NativeSpeechCommand) -> String? {
+            guard let data = try? JSONEncoder().encode(command) else {
                 return nil
             }
             return String(data: data, encoding: .utf8)
@@ -864,6 +944,7 @@ struct ChatWebView: UIViewRepresentable {
           window.callbackboxNativeQueue = window.callbackboxNativeQueue || [];
           window.callbackboxNativeLocationQueue = window.callbackboxNativeLocationQueue || [];
           window.callbackboxNativeComposerCommandAckQueue = window.callbackboxNativeComposerCommandAckQueue || [];
+          window.callbackboxNativeSpeechCommandQueue = window.callbackboxNativeSpeechCommandQueue || [];
           window.callbackboxNativeReceive = (detail) => {
             window.callbackboxNativeQueue.push(detail);
             window.dispatchEvent(new CustomEvent('callbackbox:native-emission', { detail }));
@@ -872,6 +953,10 @@ struct ChatWebView: UIViewRepresentable {
             const detail = { id, action };
             window.callbackboxNativeLocationQueue.push(detail);
             window.dispatchEvent(new CustomEvent('callbackbox:native-share-location', { detail }));
+          };
+          window.callbackboxNativeSpeechCommand = (detail) => {
+            window.callbackboxNativeSpeechCommandQueue.push(detail);
+            window.dispatchEvent(new CustomEvent('callbackbox:native-speech-command'));
           };
           window.callbackboxNativeComposerCommandAck = (detail) => {
             window.callbackboxNativeComposerCommandAckQueue.push(detail);
