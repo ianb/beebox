@@ -4,10 +4,22 @@ workstream: new-chat-first-emission
 area: callback-box
 needs: [design]
 labels: [capture, chat]
+resolution: implemented
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder noticed capture failing on first messages
 ---
+
+> **Closed 2026-08-20 — implemented.** A new chat now coins its own session id
+> in the browser and the box reserves it before the first message
+> (`callback-box/docs/plans/coined-chat-ids.md`), so capture and bulk upload
+> address an ordinary chat and the gate never fires. The gate itself was not
+> deleted: it reads `sessionId === null`, which is still the true answer on a
+> Codex box, whose harness names its own threads. The delivery-side fix is the
+> substantial half — `resolveCaptureDeliveryTarget` admitted a target only if
+> history included it, and a reserved chat has no history entry until its first
+> turn, so removing the UI gate alone would have shipped the misdirection the
+> gate prevented. Pinned by `test/core/capture/deliver-reserved.doctest.md`.
 
 Capture does not work on the first message of a chat. This is **deliberate, not
 broken**: the affordance is disabled until the chat has a server-assigned
@@ -92,5 +104,5 @@ The web capture affordance is switched off entirely on the native shell
 native path. Whether the same first-message restriction is felt there needs a
 separate check — the gate examined here is the web composer's.
 
-Related: [failed capture chip cannot be discarded](../bugs/2026-08-20-failed-capture-chip-cannot-be-discarded.md)
+Related: [failed capture chip cannot be discarded](../../bugs/2026-08-20-failed-capture-chip-cannot-be-discarded.md)
 — also about capture states the UI won't let the user act on.

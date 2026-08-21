@@ -44,7 +44,7 @@ The only states with a durable visual identity are the bad ones.
 Reconstructed from a session transcript (structural detail only):
 
 1. The user typed a throwaway greeting to open the chat — required by the
-   ["send a message first" gate](../features/2026-08-20-cannot-capture-into-a-new-chat.md).
+   ["send a message first" gate](../closed/features/2026-08-20-cannot-capture-into-a-new-chat.md).
    That turn was **interrupted** and never answered, so the chat's title became
    the greeting.
 2. **86 minutes later** they typed a single `?` — checking whether anything was
@@ -90,7 +90,7 @@ the moment it lands. Directions worth weighing rather than assuming:
 
 ## Related
 
-- [Cannot capture into a new chat](../features/2026-08-20-cannot-capture-into-a-new-chat.md)
+- [Cannot capture into a new chat](../closed/features/2026-08-20-cannot-capture-into-a-new-chat.md)
   — the gate that produced the throwaway opener in step 1.
 - [Failed capture chip cannot be discarded](2026-08-20-failed-capture-chip-cannot-be-discarded.md)
   — the other half of this asymmetry: failure that never goes away.
