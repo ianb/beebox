@@ -36,20 +36,32 @@ const COUNTS = { photos: 2, files: 1, audioSegments: 3 };
  */
 const HARNESS_NOW = Date.parse("2026-08-21T12:00:00Z");
 const minutesAgo = (m: number) => new Date(HARNESS_NOW - m * 60_000).toISOString();
+
+/**
+ * When the capture started, and when it last changed. They differ whenever a
+ * capture was retried — the failed caption ages from the second, so an old
+ * capture that failed again a minute ago reads as a fresh failure.
+ */
+const times = (startedMin: number, activityMin: number) => ({
+  startedAt: minutesAgo(startedMin),
+  lastActivityAt: minutesAgo(activityMin),
+});
+const DAY_MIN = 24 * 60;
 const SECONDS_AGO = new Date(HARNESS_NOW - 10_000).toISOString();
 
 /** Canonical bubble states, one per face the pending bubble can wear. */
 const BUBBLE_STATES: Array<{ label: string; model: CaptureBubbleModel }> = [
-  { label: "preparing", model: { id: "b1", state: "preparing", counts: COUNTS, startedAt: minutesAgo(0) } },
-  { label: "transcribing (live)", model: { id: "b2", state: "preparing", counts: COUNTS, startedAt: minutesAgo(0), liveStatus: "transcribing" } },
-  { label: "queued (delivering)", model: { id: "b3", state: "delivering", counts: COUNTS, startedAt: minutesAgo(0) } },
-  { label: "working, past patience — reports its age", model: { id: "b4", state: "preparing", counts: COUNTS, startedAt: minutesAgo(4) } },
-  { label: "delivered (held 3s in place, then leaves)", model: { id: "b5", state: "delivering", counts: COUNTS, startedAt: minutesAgo(2), resolution: "delivered" } },
-  { label: "discarded (same, after the user discards)", model: { id: "b6", state: "failed:prepare", counts: COUNTS, startedAt: minutesAgo(90), resolution: "discarded" } },
-  { label: "failed, fresh — retry emphasized", model: { id: "b7", state: "failed:deliver", counts: COUNTS, startedAt: minutesAgo(3) } },
-  { label: "failed, aged past the sweep's window — discard emphasized", model: { id: "b8", state: "failed:prepare", counts: { photos: 7, files: 0, audioSegments: 1 }, startedAt: minutesAgo(16 * 24 * 60) } },
-  { label: "a discard that came back with an error", model: { id: "b9", state: "failed:prepare", counts: COUNTS, startedAt: minutesAgo(120), actionError: "couldn't discard — Cancel failed: 409" } },
-  { label: "photos only", model: { id: "b10", state: "preparing", counts: { photos: 3, files: 0, audioSegments: 0 }, startedAt: minutesAgo(0) } },
+  { label: "preparing", model: { id: "b1", state: "preparing", counts: COUNTS, ...times(0, 0) } },
+  { label: "transcribing (live)", model: { id: "b2", state: "preparing", counts: COUNTS, ...times(0, 0), liveStatus: "transcribing" } },
+  { label: "queued (delivering)", model: { id: "b3", state: "delivering", counts: COUNTS, ...times(0, 0) } },
+  { label: "working, past patience — reports its age", model: { id: "b4", state: "preparing", counts: COUNTS, ...times(4, 4) } },
+  { label: "delivered (held 3s in place, then leaves)", model: { id: "b5", state: "delivering", counts: COUNTS, ...times(2, 0), resolution: "delivered" } },
+  { label: "discarded (same, after the user discards)", model: { id: "b6", state: "failed:prepare", counts: COUNTS, ...times(90, 30), resolution: "discarded" } },
+  { label: "failed, fresh — retry emphasized", model: { id: "b7", state: "failed:deliver", counts: COUNTS, ...times(3, 3) } },
+  { label: "old capture, failed again a minute ago — still fresh", model: { id: "b8", state: "failed:deliver", counts: COUNTS, ...times(20 * DAY_MIN, 1) } },
+  { label: "failed, aged past the sweep's window — discard emphasized", model: { id: "b9", state: "failed:prepare", counts: { photos: 7, files: 0, audioSegments: 1 }, ...times(16 * DAY_MIN, 16 * DAY_MIN) } },
+  { label: "a discard that came back with an error", model: { id: "b10", state: "failed:prepare", counts: COUNTS, ...times(120, 120), actionError: "couldn't discard — Cancel failed: 409" } },
+  { label: "photos only", model: { id: "b11", state: "preparing", counts: { photos: 3, files: 0, audioSegments: 0 }, ...times(0, 0) } },
 ];
 
 /** The harness has no backend, so both verbs just announce themselves. */
@@ -149,6 +161,7 @@ function ScriptedBubble() {
     state: status === "failed" ? "failed:deliver" : status === "delivered" ? "delivering" : "preparing",
     counts: COUNTS,
     startedAt: SECONDS_AGO,
+    lastActivityAt: SECONDS_AGO,
     liveStatus: status,
     resolution: status === "delivered" ? "delivered" : undefined,
   };

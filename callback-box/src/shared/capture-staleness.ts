@@ -1,11 +1,13 @@
 /**
  * The staleness line for staged captures, shared by the sweep and the UI.
  *
- * The abandonment sweep uses it to decide that an idle `open` capture has been
- * given up on and a `failed:*` one needs a human rather than another automatic
- * retry (`core/capture/sweep.ts`). The chat's capture chip uses the same line to
+ * The sweep uses it to decide that an idle `open` capture has been given up on,
+ * and that a `failed:*` one needs a human rather than another automatic retry
+ * (`core/capture/sweep.ts`). The chat's capture chip uses the same line to
  * decide whether a failure reads as fresh (retry is the obvious move) or aged
  * (it has been sitting unresolved, and discarding is the likelier answer).
+ * Both measure it against the session's `lastActivityAt`, so the two surfaces
+ * agree on which captures are stale.
  *
  * It lives in `shared/` rather than in the sweep because the sweep imports
  * `node:fs`: a value import from the frontend would drag the filesystem into

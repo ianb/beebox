@@ -6,7 +6,13 @@ labels: [capture, chat, ui, feedback]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder could not tell whether a capture had landed
+needs: [manual-testing]
 ---
+
+> **⏳ Awaiting manual testing** — fix landed in `9e6caef8`. A capture now
+> reports which step it is on and how long it has taken, and resolves in place
+> with a "delivered" face instead of the row vanishing. Only the developer
+> clears this.
 
 > Turns out it actually did go through. I just couldn't tell.
 
@@ -124,3 +130,34 @@ defect in the sibling issue. Both halves are the same two files.
   — the other half of this asymmetry: failure that never goes away.
 - [Capture upload error/retry affordance is weak](2026-08-03-capture-upload-error-retry-affordance-weak.md)
   — same family, on the overlay surface.
+
+## What landed (2026-08-21)
+
+- The working caption names its step and, past 45 seconds, reports how long it
+  has been at it (`still preparing — 2 min`). The minute of preparation is no
+  longer silent.
+- The `delivered` event is no longer discarded. `useCaptureBubbles` holds the
+  row for 3 seconds wearing a resolved face, then lets it go — so the swap from
+  pending row to transcript message is visible as a transition rather than as a
+  disappearance.
+- The same mechanism gives discard a resolved face, so both endings look alike.
+
+Not addressed, deliberately: **reaching a user who has left the chat.** That is
+a notification-channel question, not a chip question, and folding it in would
+have added a delivery path to a UI change. Filed separately as
+[capture confirmation does not reach a user who left the chat](../features/2026-08-21-capture-confirmation-misses-a-user-who-left.md).
+
+One gap remains by design: a capture that delivers *before* its pending row has
+ever been rendered (delivery beating the first query round-trip) still has no
+row to resolve, so it appears only as the transcript message. The hook cannot
+invent a bubble for it — the `capture-status` payload carries no media counts.
+
+## Manual testing
+
+1. From the phone, capture a photo and a short clip into a chat, then **stay in
+   the chat**. The bubble must show `preparing…`, then report its age if
+   preparation runs long, then turn green and read `delivered` for about three
+   seconds before the row leaves and the capture message stands in its place.
+2. Repeat, but leave the chat during preparation and come back. The capture
+   message must be there; nothing should be stuck.
+3. Confirm you no longer feel the need to re-capture to check.

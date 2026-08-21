@@ -21,7 +21,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { trpc } from "../../lib/trpc";
-import { finalizeCaptureSession, cancelCaptureSession } from "../../pages/capture/capture-api";
+import { finalizeCaptureSession, cancelCaptureSession, CaptureAlreadySealedError } from "../../pages/capture/capture-api";
 import { errorMessage } from "@shared/error-guards";
 import type { CaptureBubbleModel, CaptureLiveStatus, CaptureResolution, CaptureVerbs } from "./capture-bubble";
 
@@ -32,6 +32,8 @@ export const RESOLVED_HOLD_MS = 3_000;
 interface ResolvedRow {
   model: CaptureBubbleModel;
   resolution: CaptureResolution;
+  /** Cancels the hold. Replaced (after cancelling) if the same id resolves twice. */
+  timer: number;
 }
 
 export interface CaptureBubbles {
@@ -54,34 +56,48 @@ export function useCaptureBubbles(sessionId: string | null): CaptureBubbles {
   // The rows as last seen, so a capture that has already left the query can
   // still be rendered with its counts while its resolved face is held.
   const latestRows = useRef<CaptureBubbleModel[]>([]);
-  const holdTimers = useRef<number[]>([]);
+
+  // Every scrap of this state is keyed by staging id, and staging ids are not
+  // scoped to a chat — the bus hands us every capture's events regardless of
+  // which chat started it (see `InteractiveChat-ws.ts`, which forwards them all
+  // and relies on this hook to ignore the ones that aren't ours). So switching
+  // chats drops all of it: a row held from the chat we just left must not
+  // reappear over the one we just opened.
+  useEffect(() => {
+    setLiveStatus({});
+    setActionErrors({});
+    setResolved((prev) => {
+      for (const row of Object.values(prev)) clearTimeout(row.timer);
+      return {};
+    });
+    latestRows.current = [];
+  }, [sessionId]);
+
   useEffect(() => () => {
-    for (const timer of holdTimers.current) clearTimeout(timer);
+    for (const row of Object.values(resolvedRef.current)) clearTimeout(row.timer);
   }, []);
 
   const hold = useCallback((id: string, resolution: CaptureResolution) => {
+    // Nothing to hold if the row was never rendered — a capture that resolved
+    // before the query first returned it has no counts to show, and inventing a
+    // bubble for it at the moment it ends would be its own kind of confusing.
+    // That capture still goes without a resolved face; it is the one gap left.
     const model = latestRows.current.find((row) => row.id === id);
     if (!model) return;
-    setResolved((prev) => ({ ...prev, [id]: { model, resolution } }));
     const timer = window.setTimeout(() => {
       setResolved((prev) => {
         const { [id]: _dropped, ...rest } = prev;
         return rest;
       });
     }, RESOLVED_HOLD_MS);
-    holdTimers.current.push(timer);
+    setResolved((prev) => {
+      // A second status for the same id restarts the hold rather than letting
+      // the first timer cut the second face short.
+      const existing = prev[id];
+      if (existing) clearTimeout(existing.timer);
+      return { ...prev, [id]: { model, resolution, timer } };
+    });
   }, []);
-
-  const applyCaptureStatus = useCallback(
-    (data: { stagingId: string; status: CaptureLiveStatus }) => {
-      setLiveStatus((prev) => ({ ...prev, [data.stagingId]: data.status }));
-      if (data.status === "delivered") hold(data.stagingId, "delivered");
-      // The query is the source of truth for which bubbles exist; refetch so a
-      // delivered/failed transition (and its staging cleanup) is reflected.
-      void refetch();
-    },
-    [refetch, hold],
-  );
 
   const clearError = useCallback((id: string) => {
     setActionErrors((prev) => {
@@ -89,6 +105,19 @@ export function useCaptureBubbles(sessionId: string | null): CaptureBubbles {
       return rest;
     });
   }, []);
+
+  const applyCaptureStatus = useCallback(
+    (data: { stagingId: string; status: CaptureLiveStatus }) => {
+      setLiveStatus((prev) => ({ ...prev, [data.stagingId]: data.status }));
+      // The capture moved on; whatever a previous action reported is history.
+      clearError(data.stagingId);
+      if (data.status === "delivered") hold(data.stagingId, "delivered");
+      // The query is the source of truth for which bubbles exist; refetch so a
+      // delivered/failed transition (and its staging cleanup) is reflected.
+      void refetch();
+    },
+    [refetch, hold, clearError],
+  );
 
   const retry = useCallback(
     async (id: string) => {
@@ -111,8 +140,15 @@ export function useCaptureBubbles(sessionId: string | null): CaptureBubbles {
         await cancelCaptureSession(id);
         hold(id, "discarded");
       } catch (e) {
-        console.error(`[capture] Discard of ${id} failed:`, e);
-        setActionErrors((prev) => ({ ...prev, [id]: `couldn't discard — ${errorMessage(e)}` }));
+        // Sealed under us: not a failure to report as one — the refetch below
+        // puts the row back in its working face and it delivers from there.
+        const sealed = e instanceof CaptureAlreadySealedError;
+        if (sealed) console.warn(`[capture] ${e.message}`);
+        else console.error(`[capture] Discard of ${id} failed:`, e);
+        setActionErrors((prev) => ({
+          ...prev,
+          [id]: sealed ? "already being delivered" : `couldn't discard — ${errorMessage(e)}`,
+        }));
       }
       await refetch();
     },
@@ -125,6 +161,7 @@ export function useCaptureBubbles(sessionId: string | null): CaptureBubbles {
     state: p.state,
     counts: p.counts,
     startedAt: p.startedAt,
+    lastActivityAt: p.lastActivityAt,
     liveStatus: liveStatus[p.id],
     actionError: actionErrors[p.id],
   }));
@@ -133,10 +170,16 @@ export function useCaptureBubbles(sessionId: string | null): CaptureBubbles {
   // replace — and keep the whole list in capture order, so a row doesn't jump
   // position on its way out.
   // Recorded after render rather than during it: `hold` reads this when a
-  // status event arrives, which is always after the row it names was rendered.
+  // status event arrives, and reads whatever the last render knew.
   useEffect(() => {
     latestRows.current = live;
   });
+
+  // Read only by the unmount cleanup, which must not re-run per resolved row.
+  const resolvedRef = useRef(resolved);
+  useEffect(() => {
+    resolvedRef.current = resolved;
+  }, [resolved]);
 
   const held = Object.values(resolved)
     .filter((row) => !live.some((p) => p.id === row.model.id))

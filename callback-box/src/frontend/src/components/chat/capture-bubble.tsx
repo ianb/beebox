@@ -50,8 +50,10 @@ export interface CaptureBubbleModel {
   /** Staging lifecycle state from the query (`sealed`/`preparing`/`delivering`/`failed:*`). */
   state: string;
   counts: PendingCaptureCounts;
-  /** When capture started — the age every failed caption reports. */
+  /** When capture started — how long a working capture has been waited on. */
   startedAt: string;
+  /** When the session last changed — what a failed caption reports the age of. */
+  lastActivityAt: string;
   /** Latest `capture-status` event for this staging id, if one arrived this session. */
   liveStatus?: CaptureLiveStatus | undefined;
   /** Set once the capture is done; the row shows this briefly, then leaves. */
@@ -80,15 +82,23 @@ export function captureBubbleFailed(model: CaptureBubbleModel): boolean {
 }
 
 /**
- * Age of the capture in ms, or `null` before the clock is known (first frame)
- * or when `startedAt` is unparseable — both cases fall back to un-aged text
- * rather than inventing a duration.
+ * The age that matters for this face, in ms.
+ *
+ * For a working capture that is how long the user has been waiting, so it runs
+ * from `startedAt`. For a failed one it is how long the failure has sat
+ * unresolved, so it runs from `lastActivityAt` — the same field the abandonment
+ * sweep ages against, and the only one that stays honest across a retry (a
+ * three-week-old capture that failed again a minute ago must not read "failed 3
+ * weeks ago").
+ *
+ * `null` before the clock is known (first frame) or when the timestamp is
+ * unparseable — both fall back to un-aged text rather than inventing a duration.
  */
 export function captureBubbleAgeMs(model: CaptureBubbleModel, nowMs: number): number | null {
   if (nowMs <= 0) return null;
-  const started = Date.parse(model.startedAt);
-  if (Number.isNaN(started)) return null;
-  return Math.max(0, nowMs - started);
+  const from = Date.parse(captureBubbleFailed(model) ? model.lastActivityAt : model.startedAt);
+  if (Number.isNaN(from)) return null;
+  return Math.max(0, nowMs - from);
 }
 
 /** Which face the bubble wears. A failure ages into `failed-aged` at the sweep's line. */

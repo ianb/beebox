@@ -27,6 +27,7 @@ import { CaptureControls } from "./CaptureControls";
 import { CaptureResumeDialog } from "./CaptureResumeDialog";
 import { useCaptureResume, type ResumableCaptureView } from "./useCaptureResume";
 import { useCaptureSession, type CaptureResumeTarget } from "../../pages/capture/useCaptureSession";
+import { CaptureAlreadySealedError } from "../../pages/capture/capture-api";
 
 function formatTime(seconds: number): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
@@ -69,7 +70,11 @@ export function CaptureOverlay({ targetSessionId, onExit }: { targetSessionId: s
     try {
       await discard(id);
     } catch (e) {
-      console.error("[capture] Discard of resumable session failed:", e);
+      // Sealed under us (Done in another tab, or the abandonment sweep) — the
+      // capture delivers into its chat rather than being discarded, and its
+      // bubble there reports it. Moving on to a fresh session is still right.
+      if (e instanceof CaptureAlreadySealedError) console.warn(`[capture] ${e.message}`);
+      else console.error("[capture] Discard of resumable session failed:", e);
     } finally {
       setBusy(false);
       setDecision({ kind: "fresh" });

@@ -28,6 +28,13 @@ export interface PendingCapture {
   counts: PendingCaptureCounts;
   /** When capture started (the staging session's creation time). */
   startedAt: string;
+  /**
+   * When the session last changed — the same field the abandonment sweep ages
+   * against. A failed capture's caption reports its age from this, so a failure
+   * recorded a minute ago doesn't read as weeks old just because the capture
+   * was created then.
+   */
+  lastActivityAt: string;
 }
 
 /**
@@ -58,6 +65,7 @@ export function selectPendingCaptures(opts: {
       state: s.state,
       counts: { photos: s.photos.length, files: s.files.length, audioSegments: s.segments.length },
       startedAt: s.createdAt,
+      lastActivityAt: s.lastActivityAt,
     }));
 }
 

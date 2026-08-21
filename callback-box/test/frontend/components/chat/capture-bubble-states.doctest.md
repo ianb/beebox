@@ -23,9 +23,10 @@ const MINUTE = 60_000;
 const DAY = 24 * 60 * MINUTE;
 const COUNTS = { photos: 2, files: 1, audioSegments: 3 };
 
-// One bubble, `ms` old, in whatever state the caller names.
+// One bubble, `ms` old, in whatever state the caller names. `startedAt` and
+// `lastActivityAt` coincide unless a test says otherwise.
 const bubble = (state, ms, extra) => ({
-  id: "b", state, counts: COUNTS, startedAt: agesAgo(ms), ...extra,
+  id: "b", state, counts: COUNTS, startedAt: agesAgo(ms), lastActivityAt: agesAgo(ms), ...extra,
 });
 const faceOf = (model) => {
   const age = captureBubbleAgeMs(model, NOW);
@@ -88,6 +89,16 @@ faceOf(bubble("failed:prepare", 16 * DAY))
 => failed-aged: failed 16 days ago
 ```
 
+A failure ages from `lastActivityAt`, not from when the capture was created —
+otherwise a weeks-old capture that failed again a minute ago would be
+emphasized for discard on the strength of its age alone, and a retry that just
+failed would report the age of the original attempt:
+
+```ts
+faceOf(bubble("failed:deliver", 20 * DAY, { lastActivityAt: agesAgo(2 * MINUTE) }))
+=> failed-fresh: failed 2 min ago
+```
+
 A live `failed` event counts as failure even while the query still says the
 capture is preparing:
 
@@ -108,7 +119,10 @@ const noClock = bubble("failed:prepare", 16 * DAY);
 `${captureBubblePhase(noClock, null)}: ${captureBubbleCaption(noClock, null)}`
 => failed-fresh: failed
 
-captureBubbleAgeMs({ ...noClock, startedAt: "not a date" }, NOW)
+captureBubbleAgeMs({ ...noClock, lastActivityAt: "not a date" }, NOW)
+=> null
+
+captureBubbleAgeMs({ ...bubble("preparing", MINUTE), startedAt: "not a date" }, NOW)
 => null
 
 captureBubbleAgeMs(noClock, 0)
