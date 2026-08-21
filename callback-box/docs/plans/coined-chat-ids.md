@@ -1,6 +1,6 @@
 ---
 title: "Coined chat ids: a new chat has its real session id before its first message"
-status: draft
+status: active
 workstream: new-chat-first-emission
 issues:
   - ../../../issues/features/2026-08-20-cannot-capture-into-a-new-chat.md
@@ -92,13 +92,14 @@ creates a second chat.
   (`deliver-user-message.ts:145`, `chat-send-target.ts:22`,
   `chat-schedule-fire.ts:141` and `:163`). They are the defect — nothing
   coordinates them and two can run concurrently for one intended chat.
-- **Deleted:** the per-subprocess session-id file
-  (`src/core/chat/session/session-id-file.ts`, minted at
-  `claude-chat.ts:90-93`) for coined sessions. Its own module doc says why it
-  exists: *"the moment the SDK emits the session id, the backend writes it into
-  that file"* — with a coined id there is no such moment, so the id goes in
-  `CB_CHAT_SESSION_ID` directly, which the CLI already prefers
-  (`session-id-file.ts:109`). The file path survives only for Codex and resumes.
+- **Not reached (rather than deleted):** the per-subprocess session-id file
+  (`src/core/chat/session/session-id-file.ts`, minted at `claude-chat.ts:90-98`).
+  Its module doc says why it exists: *"the moment the SDK emits the session id,
+  the backend writes it into that file"* — with a coined id there is no such
+  moment, and `start.ts` already sets `CB_CHAT_SESSION_ID` whenever the session
+  has an id, so the allocation condition (`env[CB_CHAT_SESSION_ID_ENV] ===
+  undefined`) is simply false. No deletion was needed; the file keeps serving
+  the case it was built for. **Implemented, verified by doctest.**
 
 ## Prior art (external)
 
@@ -313,19 +314,25 @@ half-retired sentinel.
 **What.** Capture and bulk upload target an ordinary session id, because by then
 there always is one.
 
-**Direction.** `InteractiveChat.tsx:331-332` drop both
-`captureDisabledReason` / `uploadFilesDisabledReason`; `:141` drops the
-`sessionId !== null` condition on the bulk overlay. `CaptureOverlay` and
-`BulkUploadOverlay` already take a session id and need no change. The delivery
-side is **not** free: `resolveCaptureDeliveryTarget` (`deliver.ts:79-83`) admits
+**Direction.** As implemented, this track needed **no UI change at all** — a
+better outcome than the plan predicted, and worth recording. Both gates are
+written as conditions on `sessionId === null`
+(`InteractiveChat.tsx:331-332`, and `:141` for the bulk overlay) rather than as
+hardcoded disables, so on a box that coins ids the condition is simply never
+true, and on a Codex box the gate still says the true thing. Deleting the lines
+would have *removed* correct Codex behavior. The delivery side is where the work
+actually was, and it is **not** free: `resolveCaptureDeliveryTarget` (`deliver.ts:79-83`) admits
 a target only if `loadHistory()` includes it, which a reserved chat is not until
 its first turn — so it must go through Track B's `chatExists()` predicate or the
 gate removal ships the exact misdirection the gate prevents. On a Codex box
 `sessionId` can still be null at mount, so the disabled reasons survive as a
 Codex-only condition rather than the default state.
 
-The UI half of the filed issue is four lines. The delivery half is Track B's
-predicate, which is where the work actually is.
+Verified in the running app on 2026-08-20: a chat opened at `?session=new`
+navigates to `?session=<uuid>`, the Add menu offers "Capture…" and "Upload
+files…" with no "(send a message first)", and a first message runs against the
+real harness under the coined id — transcript, history entry, husk card, and
+most-active pointer all landing on that id.
 
 **First implementation chunk.** The four lines plus the tour that proves it.
 
@@ -463,15 +470,16 @@ Two accepted risks:
 
 ## Open design questions
 
-- **Should the reservation be exposed as its own mutation rather than a
-  bootstrap flag?** A flag on a query is slightly impure — a query with a side
-  effect. Lean: keep it on bootstrap, because it saves the round trip that is
-  the entire point of bootstrap existing, and the operation is idempotent so it
-  behaves like a query under retry. Revisit if a second caller needs to reserve.
-- **What is the right warm cap?** Starting at 2 is a guess. Lean: ship 2, make
-  it a constant with a comment, and revisit if a box shows subprocess pressure.
+Both questions the plan opened were settled during implementation:
 
-Neither question is inside a first implementation chunk.
+- **Reservation is its own mutation (`chat.reserveSession`), not a bootstrap
+  flag.** The round-trip argument for folding it into bootstrap turned out to be
+  imaginary: the client skips `chat.bootstrap` entirely for `?session=new`
+  (`ChatPage.tsx`, `enabled: !isFreshChat`), so there was no trip to share. A
+  mutation also keeps the query free of side effects.
+- **The warm cap is 2** (`MAX_WARM_SLOTS`, `services/claude-chat.ts`) — one
+  speculative slot plus one open-but-unwritten chat. Revisit if a box shows
+  subprocess pressure.
 
 ## Knowledge audits
 
