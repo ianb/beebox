@@ -1,6 +1,6 @@
 ---
 title: "Coined chat ids: a new chat has its real session id before its first message"
-status: active
+status: implemented
 workstream: new-chat-first-emission
 issues:
   - ../../../issues/closed/features/2026-08-20-cannot-capture-into-a-new-chat.md
