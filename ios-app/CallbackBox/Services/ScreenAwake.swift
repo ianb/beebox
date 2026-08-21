@@ -55,9 +55,17 @@ struct ScreenAwakeState: Equatable {
 /// recomputed from current state rather than incremented and decremented — and
 /// each one folds `scenePhase == .active` into that condition. Backgrounding
 /// therefore releases by the same path as the microphone closing; there is no
-/// separate teardown to forget. A surface releases its own reasons when it
-/// disappears and never the whole set — the composer and native capture are on
-/// screen at the same time, and one tearing down must not unlock the other.
+/// separate teardown to forget — except for the one case re-derivation cannot
+/// cover: a surface that has gone away derives nothing, so each one also
+/// releases its own reasons on disappearance. Its own, never the whole set: the
+/// composer and native capture are on screen at the same time, and one tearing
+/// down must not unlock the other.
+///
+/// A reason is a role, not an instance handle. That is sound only because each
+/// reason has exactly one live surface — one composer for the selected box, one
+/// capture cover — so no second holder of the same reason can be replaced out
+/// from under the first. Two concurrent surfaces sharing a reason would need an
+/// owner token here; two *different* reasons already coexist safely.
 @MainActor
 final class ScreenAwakeHold {
     static let shared = ScreenAwakeHold()

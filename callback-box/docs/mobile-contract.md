@@ -555,15 +555,22 @@ is not a substitute for it.
   - a composer voice turn — the microphone open or opening, *plus* the gaps inside the turn: the
     pause while the box speaks (§4.5) and the reply streaming in before that speech starts. Those
     gaps are exactly when nobody is speaking or touching, and the turn will reopen the microphone at
-    the end of them.
+    the end of them. The turn ends — and the hold with it — when the microphone closes, the message
+    is sent and closed, or dictation fails (denied permission, audio-engine failure, a phone call, a
+    route change), because in each of those the microphone is already down.
   - page speech playing (§4.5 `{playing:true}`), which a screen lock would cut off mid-sentence.
   - native capture recording audio — the same open-microphone break on a different surface.
 - **Native does not hold it for** an idle foregrounded chat, or a turn streaming in outside a voice
   turn. A reader who is not touching the screen is what the idle timer is for.
-- **Release is by re-derivation, not by teardown.** Each holder states its reason as a condition
-  computed from current state — with `scenePhase == .active` folded into that condition — so
-  backgrounding, an error, a dismissal, and the microphone closing all release by the same path. A
-  leaked hold is a phone that never sleeps, which is worse than the bug being fixed.
+- **Release is primarily by re-derivation.** Each holder states its reason as a condition computed
+  from current state — with `scenePhase == .active` folded into that condition — so backgrounding, a
+  failed or interrupted dictation, and the microphone closing all release by the same path rather
+  than by remembering to undo something. The one case re-derivation cannot cover is a surface that
+  has gone away, so each also releases *its own* reasons on disappearance. A leaked hold is a phone
+  that never sleeps, which is worse than the bug being fixed.
+- **A reason is a role, and each has one live surface** — one composer for the selected box, one
+  capture cover. Reasons are not instance-scoped, so a platform that can show two of the same surface
+  at once needs an owner token per hold; two *different* reasons already coexist safely.
 - **Web side: do not claim it under `nativeComposer`.** The page can see only the speech half of a
   native voice turn, so a web wake lock there would hold through the box talking and drop through the
   listening it cannot observe — the shape of the original bug. `useWakeLock` remains correct for the
@@ -868,7 +875,7 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | B7 | Narration state | web→native | `{enabled}` via `callbackboxNarrationState` | `Views/ChatWebView.swift` · `receiveNarrationState`; `Views/NativeComposerView.swift` · `sendKeywordIntent` | `use-native-bridge.ts` · `useNativeNarrationBridge` | fail-local |
 | B8 | Speech playback state | web→native | `{playing}` via `callbackboxSpeechPlaybackState` | `Views/ChatWebView.swift` · `receiveSpeechPlaybackState`; `Views/NativeComposerView.swift` · `applyVoiceTurn` | `use-native-bridge.ts` · `useNativeSpeechPlaybackBridge` | fail-local |
 | B9 | Response generation state | web→native | `{active}` via `callbackboxResponseState` | `Views/ChatWebView.swift` · `receiveResponseState`; `Services/NativeEarcons.swift` · `NativeEarconState` | `use-native-bridge.ts` · `useNativeResponseBridge` | fail-local |
-| R1 | Screen awake (device idle timer) | native-only, no wire | — (a responsibility split, §4.10): held for a voice turn, page speech playing, or capture recording; released by re-derivation incl. `scenePhase` | `Services/ScreenAwake.swift` · `ScreenAwakeHold`; `Views/NativeComposerView.swift` · `screenAwakeReasons`; `Views/NativeCaptureController.swift` · `applyScreenAwake` | `components/chat/InteractiveChat-voice.ts` · `useDebouncedWakeLock` (suppressed under `nativeComposer`); `hooks/useWakeLock.ts` | SILENT both ways |
+| R1 | Screen awake (device idle timer) | native-only, no wire | — (a responsibility split, §4.10): held for a voice turn, page speech playing, or capture recording; released by re-derivation incl. `scenePhase` | `Services/ScreenAwake.swift` · `ScreenAwakeHold`; `Views/NativeComposerView.swift` · `screenAwakeReasons`; `Views/NativeCaptureController.swift` · `applyScreenAwake`; `Services/SpeechDictation.swift` · `NativeVoiceTurnEvent.dictationFailed` | `components/chat/InteractiveChat-voice.ts` · `useDebouncedWakeLock` (suppressed under `nativeComposer`); `hooks/useWakeLock.ts` | SILENT both ways |
 | H1 | `POST /api/chat/transcribe-audio` | native→box | multipart `session` + `file`(segment.wav, audio/wav); res `{text,diarized}` | `Services/ChatAPI.swift` · `transcribeAudio` | `routes/chat-audio-routes.ts` | LOUD on rejection / SILENT on HTTP 200 with unusable text; Float32 WAV verified — **I8** |
 | H6 | `POST /api/chat/last-audio/:requestId` | native→box | multipart `file`(last-message.wav, audio/wav) + `recordedAt`,`text`,`messageId`,`sessionId?`; or JSON `{"none":true}`; res `{ok}` / `404` when already settled | `Services/ChatAPI.swift` · `answerLastAudio`; `Storage/VoiceAudioRetentionStore.swift` | `routes/chat-last-audio-routes.ts`; `core/last-audio-pending.ts` · `fulfill`/`reportNone` | QUIET — a missing echo is IGNORED, not rejected |
 | H2 | `GET /api/chat/default` | native→box | res `{sessionId?}` | `Services/ChatAPI.swift` · `resolvedSession` | `routes/chat.ts` · default-session route | SILENT (→ `"new"`) |

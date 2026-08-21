@@ -107,6 +107,9 @@ struct NativeComposerView: View {
         }
         .onChange(of: dictation.state) { _, state in
             applyEarcon(.dictationStateChanged(state))
+            if case .failed = state {
+                applyVoiceTurn(.dictationFailed)
+            }
         }
         .onChange(of: dictation.interruptionCount) {
             applyEarcon(.recordingInterrupted)

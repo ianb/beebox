@@ -147,6 +147,29 @@ final class NativeVoiceTurnTests: XCTestCase {
         XCTAssertFalse(turn.isActive)
     }
 
+    /// A turn whose dictation died is over. Left "active" it would keep the
+    /// screen awake for a microphone that is not open, and would reopen that
+    /// microphone the next time the box stopped speaking.
+    func testFailedDictationEndsTheTurnWithoutReissuingAStop() {
+        var turn = NativeVoiceTurnState()
+        _ = turn.handle(.microphoneStarted)
+
+        XCTAssertEqual(turn.handle(.dictationFailed), .none)
+        XCTAssertFalse(turn.isActive)
+        XCTAssertEqual(turn.handle(.speechPlaybackChanged(playing: true)), .none)
+        XCTAssertEqual(turn.handle(.speechPlaybackChanged(playing: false)), .none)
+    }
+
+    func testFailureWhileWaitingForSpeechDoesNotLeaveAPendingResume() {
+        var turn = NativeVoiceTurnState()
+        _ = turn.handle(.microphoneStarted)
+        _ = turn.handle(.speechPlaybackChanged(playing: true))
+
+        XCTAssertEqual(turn.handle(.dictationFailed), .none)
+        XCTAssertEqual(turn.handle(.speechPlaybackChanged(playing: false)), .none)
+        XCTAssertFalse(turn.isActive)
+    }
+
     func testMicrophoneOffStillStopsAfterErasingDraft() {
         var turn = NativeVoiceTurnState()
         _ = turn.handle(.microphoneStarted)
