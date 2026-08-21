@@ -85,6 +85,9 @@ struct NativeComposerView: View {
                 }
                 pendingReferenceDate = Date()
             }
+            .onChange(of: screenAwakeReasons) { _, reasons in
+                applyScreenAwake(reasons)
+            }
     }
 
     private var composerLifecycle: some View {
@@ -133,6 +136,7 @@ struct NativeComposerView: View {
             noteSendBlockerChange(from: [], to: sendBlockers)
             applyVoiceTurn(.speechPlaybackChanged(playing: speechPlaybackActive))
             applyEarcon(.responseActiveChanged(responseActive))
+            applyScreenAwake(screenAwakeReasons)
             if initiallyFocused {
                 focused = true
             }
@@ -170,6 +174,7 @@ struct NativeComposerView: View {
             }
         }
         .onDisappear {
+            applyScreenAwake([])
             applyVoiceTurn(.microphoneStopped)
             applyEarcon(.cancelWaiting)
             NativeEarconPlayer.shared.stopAllTimers()
@@ -884,6 +889,36 @@ struct NativeComposerView: View {
         case .stopDictation:
             dictation.stop()
         }
+    }
+
+    /// The reasons this composer is currently holding the screen awake for —
+    /// derived, never accumulated, so every way a turn can end releases by the
+    /// same path. `scenePhase` is part of the derivation: a backgrounded
+    /// composer holds nothing, and returning to the foreground re-derives.
+    private var screenAwakeReasons: Set<ScreenAwakeReason> {
+        guard scenePhase == .active else {
+            return []
+        }
+        var reasons: Set<ScreenAwakeReason> = []
+        // One reason for the whole turn rather than one for the live
+        // microphone: the turn stays open across the pause for the box's speech
+        // and the reply streaming in before that speech starts, and those gaps
+        // — nobody speaking, nobody touching — are precisely when the idle
+        // timer would fire and suspend the app under the microphone it is about
+        // to reopen. `isStarting` covers the permission/engine bring-up for the
+        // same reason the composer wears its pending face there.
+        if voiceTurn.isActive || dictation.isRecording || dictation.isStarting {
+            reasons.insert(.voiceTurn)
+        }
+        if speechPlaybackActive {
+            reasons.insert(.speechPlayback)
+        }
+        return reasons
+    }
+
+    private func applyScreenAwake(_ reasons: Set<ScreenAwakeReason>) {
+        ScreenAwakeHold.shared.set(.voiceTurn, active: reasons.contains(.voiceTurn))
+        ScreenAwakeHold.shared.set(.speechPlayback, active: reasons.contains(.speechPlayback))
     }
 
     private func applyEarcon(_ event: NativeEarconEvent) {

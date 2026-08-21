@@ -210,8 +210,10 @@ export function useChatVoice(opts: {
   /** Composer text store, so a voice-keyword send doesn't drop existing text. */
   inputStore: InputStore;
   dispatchEmission: (emission: Emission) => void;
+  /** Native shell (§3.2): the app owns the microphone, and the screen (§4.10). */
+  nativeComposer: boolean;
 }) {
-  const { snapshot, sessionId, muted, narrationEnabled, selections, resetSelections, emissionStore, resetAttachments, clearDraftRef, inputStore, dispatchEmission } = opts;
+  const { snapshot, sessionId, muted, narrationEnabled, selections, resetSelections, emissionStore, resetAttachments, clearDraftRef, inputStore, dispatchEmission, nativeComposer } = opts;
 
   // Live device handles, in a ref the command subscriber reads at emit time
   // (never during render). Effects below keep its fields current.
@@ -322,8 +324,15 @@ export function useChatVoice(opts: {
   // Screen wake lock — held for the whole voice-conversation window: mic
   // recording, mic paused for speech, or TTS actively playing. Release is
   // debounced so the brief idle gap between narration segments doesn't churn.
+  //
+  // Not under the native composer: there the microphone is native and this hook
+  // can only see the speech half of a turn, so it would hold the screen through
+  // the box talking and drop it through the listening it cannot observe — the
+  // exact shape of the reported bug. Native holds the real iOS idle timer for
+  // the whole turn instead (contract §4.10); a second, partial claimant here
+  // would only make which mechanism is in force harder to reason about.
   const voiceModeActive = [isTranscribing, voicePaused, speechPlayback.isPlaying].some(Boolean);
-  useDebouncedWakeLock(voiceModeActive);
+  useDebouncedWakeLock(nativeComposer ? false : voiceModeActive);
 
   const handleCancelTranscription = useCallback(() => {
     recordingStop.play();
