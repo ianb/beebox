@@ -396,28 +396,36 @@ can already write. Typed capture follows.
 **Why this needs to change.** The boxholder's stated capture situation is reading
 with attention on the document, not on a keyboard.
 
-**Direction.** `MediaRecorder` in the viewer; the audio is base64-encoded into a
-`comments.transcribe` tRPC mutation (raw POST paths are refused by the router —
-see Track 2); the app transcribes it; the transcript becomes `body` with `kind:
-spoken`; the audio is discarded as soon as the transcript returns.
+**Direction — two steps, not one bundled mutation.** `MediaRecorder` in the
+viewer; the audio goes to `comments.transcribe`, which returns **text and nothing
+else**; the client puts that text in the comment composer, where it can be
+edited; submitting goes through the ordinary `comments.add` with `kind: spoken`.
 
-**The size budget is in bytes, and it is not free.** The app builds Fastify with
-only `{ logger }` (`workstreams-app/src/server/app.ts:35`), so it inherits the
-default `bodyLimit` of 1 MiB (`fastify/build/build-validation.js:32`). A
-two-minute cap is not a byte guarantee: `MediaRecorder` at a typical 128 kbps
-produces ~1.9 MB for two minutes, which base64 inflates to ~2.5 MB — over the
-limit, discovered at upload, with the recording already made. So:
+This is the boxholder's shape (2026-08-22): *"It would also be acceptable for the
+client to contact an endpoint to transcribe text, then submit the transcribed
+text. That might result in better UI."* It is better on three counts:
 
-- The recorder requests Opus at a low bitrate (~24 kbps is ample for speech).
-- The client caps on **bytes**, not duration, and stops recording at the cap with
-  the partial recording kept and submittable.
-- The app sets `bodyLimit` explicitly to a value above that cap, so the two
-  numbers are stated together in code rather than one being inherited and
-  invisible.
+- **The transcript is reviewable before it is committed.** Whisper mishears names
+  and jargon; a bundled mutation would write the mishearing into the store and
+  leave the boxholder to correct a file. Here the correction happens in the
+  composer, before anything is stored.
+- **It largely dissolves the critical gap below.** An earlier draft required the
+  audio blob to be held client-side until the *store write* was acknowledged,
+  because a transcription failure would otherwise destroy the comment. Split, the
+  blob only has to survive until the transcript returns; after that the comment
+  is text in a composer, in exactly the state a typed comment is in, with nothing
+  left to lose.
+- **It matches existing precedent.** `POST /api/chat/transcribe-audio`
+  (`callback-box/src/webapp/routes/chat-audio-routes.ts`) is already a stateless
+  "upload audio, get text back" endpoint. This is the same shape, so it is not a
+  new pattern to maintain.
 
-An earlier draft asserted two minutes was "well inside Fastify's body limit even
-with base64's overhead." That was wrong, and the correction is the reason this
-paragraph names both numbers.
+`kind: spoken` records how the text arrived, not that it is verbatim — the
+boxholder may have edited it in the composer, which is the point.
+
+Both steps are tRPC mutations, because `bin/router-auth.ts:238` refuses any
+non-tRPC POST under `/workstreams/`. That constrains the transport, not the
+design.
 
 **The mic control states its own availability.** `navigator.mediaDevices` is
 `undefined` outside a secure context, so on a bare-IP HTTP origin the control
@@ -466,9 +474,8 @@ trade, and it removes the storage and privacy questions entirely. It does mean
 the HQ pass is the only attempt, which is why the seam calls `transcribeAudioHq`
 and not a streaming service.
 
-**The blob is held client-side until the write is acknowledged.** Discarding on
-upload rather than on acknowledgement would make a transcription failure destroy
-the comment. See the critical gap below.
+**The blob is held client-side until the transcript returns** — not until the
+store write, which the split makes unnecessary. See the gap note below.
 
 **First implementation chunk.** The `apiKey` field, the injected service, and the
 `comments.transcribe` mutation with its failure surface — testable with the fake
@@ -634,20 +641,22 @@ was decided rather than deferred.
 
 ## Failure modes
 
-> **Critical gap (resolved in the design, stated here because it is the one that
-> destroys user data):** *the spoken-comment path.* The audio is discarded by
-> design. If the client discarded it on upload and transcription then failed —
-> missing key, API error, network — the boxholder's spoken comment would be
-> gone, with nothing to retry from and no way to reconstruct it. The design
-> requires the blob to be held in the page until the store write is
-> acknowledged, and the failure to be shown with the recording still retryable.
-> Any implementation that releases the blob earlier reintroduces this. Principle
-> 4: resilient and never silent.
+> **The gap that used to be critical, and what shrank it.** The audio is
+> discarded by design, so a transcription failure with the blob already released
+> would destroy a spoken comment outright — nothing to retry from, nothing to
+> reconstruct. Splitting transcription from submission (Track 4) reduces this to
+> a short, ordinary window: the blob must survive until `comments.transcribe`
+> returns, and the failure must be shown with the recording still retryable.
+> After the transcript lands in the composer there is no blob left to lose,
+> because the comment is text like any other. An implementation that releases
+> the blob before the transcript returns reintroduces the original gap.
+> Principle 4: resilient and never silent.
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| Transcription fails after the audio was released | Doctest: fake service forced to fail | Blob retained client-side until write acknowledged; error shown with retry and a fall back to typing | Clear |
-| `CALLBACK_OPENAI_API_KEY` unset | Doctest on the refusal path | The mutation returns a message naming the variable; the comment is not accepted and discarded | Clear |
+| Transcription fails after the audio was released | Doctest: fake service forced to fail | Blob retained until the transcript returns; error shown with retry and a fall back to typing | Clear |
+| The transcript is wrong (misheard name or jargon) | Not automatable | It lands in the composer, editable, before anything is stored — the reason transcription and submission are separate steps | Clear |
+| `CALLBACK_OPENAI_API_KEY` unset | Doctest on the refusal path | `comments.transcribe` returns a message naming the variable; the recording is kept and typing still works | Clear |
 | `getUserMedia` unavailable (insecure context, or permission denied) | Not automatable in a doctest; manual check | The mic control renders disabled with the reason, rather than being absent | Clear |
 | `generateFragment` returns `AMBIGUOUS` or `TIMEOUT` | Doctest over a document with a repeated phrase | `fragment` omitted; `quoted` still written; comment fully usable | Clear |
 | A stored `fragment` no longer resolves (the document changed) | Doctest resolving a fragment against edited text | Comment rendered in the unresolved list with its `quoted` text | Clear |
@@ -842,9 +851,10 @@ draft this replaced.
 - `comments-api.doctest.md` — mutation validation, concurrent writes to one
   document, and the same relative path written from two worktrees.
 - `comments-transcribe.doctest.md` — driven through the **injected** transcribe
-  service, not `transcribeAudioHq` (which has no fake — `index.ts:142`): the
-  success path, the missing-key refusal naming `CALLBACK_OPENAI_API_KEY`, and
-  the transcription-error path that must leave the recording retryable.
+  service, not `transcribeAudioHq` (which has no fake — `index.ts:142`):
+  `comments.transcribe` returning text only, the missing-key refusal naming
+  `CALLBACK_OPENAI_API_KEY`, the transcription-error path leaving the recording
+  retryable, and an over-cap body being refused with the cap named.
 - `comments-anchor.doctest.md` — `generateFragment` `AMBIGUOUS` handling, and
   resolving a stored fragment against edited text.
 
