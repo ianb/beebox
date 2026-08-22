@@ -8,7 +8,7 @@ reviewed-by: Ian Bicking
 
 # Security report — structured version
 
-The exhaustive accounting behind [SECURITY.md](../SECURITY.md). An agent
+The exhaustive accounting behind [security-overview.md](security-overview.md). An agent
 is the primary consumer; updates are adjudicated against
 `generated-at-rev` per the rubric in
 [`.claude/skills/security-report/SKILL.md`](https://github.com/ianb/callback-box/blob/main/.claude/skills/security-report/SKILL.md)

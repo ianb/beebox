@@ -208,7 +208,7 @@ test("prose markdown is out of scope, but a .doctest.md is not", () => {
   assert.deepEqual(
     scopedChanges([
       "callback-box/docs/testing.md",
-      "callback-box/SECURITY.md",
+      "callback-box/docs/security-overview.md",
       "callback-box/src/services/CLAUDE.md",
       "callback-box/test/core/box.doctest.md",
     ]),

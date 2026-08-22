@@ -8,7 +8,7 @@ discovered-in: main session — boxholder wants recurring updates on a cadence
 ---
 
 The boxholder wants a **coherent way to run recurring maintenance/update tasks on
-a cadence** — Agent SDK updates, the SECURITY.md regeneration, manual testing,
+a cadence** — Agent SDK updates, the security-overview.md regeneration, manual testing,
 revisiting knowledge audits — answering three questions consistently: **where they
 run, how they report, and how they raise issues.** Today this is a partial, ad hoc
 mix: some tasks have a full automated cadence, others rely on someone remembering.
@@ -44,7 +44,7 @@ macOS notification; **raise issues** = the constrained agent appends/creates
 Several **judgment-heavy periodic tasks have no scheduled runner** and rely on
 human memory, with inconsistent (or no) reporting:
 
-- **SECURITY.md regeneration** — designed with git-rev-anchored, diff-driven
+- **security-overview.md regeneration** — designed with git-rev-anchored, diff-driven
   updates ([agent-maintained-security-report](../closed/features/2026-07-20-agent-maintained-security-report.md)),
   but no cadence home decides *when* it re-runs or where.
 - **Knowledge-audit revisit** — `pnpm knowledge-audit` exists and the doc says
@@ -89,7 +89,7 @@ doc, a log + notification, in-place status comments, or plain console.
    it's the wrong home for tasks that should track prod. Decide per task among:
    launchd (per-dev-machine, current), the box scheduler (`cb tick` / a scheduled
    routine), CI/GitHub Actions, or a prod-side job. Judgment tasks need an agent
-   with the codebase + git (SECURITY.md regen, knowledge audits), which points at
+   with the codebase + git (security-overview.md regen, knowledge audits), which points at
    the dev-machine/CI lane, not a box.
 2. **How they report.** Standardize the sink instead of the current grab-bag:
    a durable ledger/status note for the record, plus a notification for anything
@@ -106,14 +106,14 @@ doc, a log + notification, in-place status comments, or plain console.
 Design a reusable **scheduled-maintenance-agent harness** that generalizes the two
 working launchd-agent patterns (persistent-session monitor + constrained triager),
 so a new periodic task is *enrolled* (task, cadence, runner home, report sink)
-rather than hand-built. Then enroll the memory-dependent tasks (SECURITY.md regen,
+rather than hand-built. Then enroll the memory-dependent tasks (security-overview.md regen,
 knowledge-audit revisit, doc/prompt refresh, feedback collection) with a cadence,
 and standardize report + issue-raising across all of them.
 
 ## Related
 
 - [agent-maintained-security-report](../closed/features/2026-07-20-agent-maintained-security-report.md)
-  — the SECURITY.md regen that needs a cadence home; its git-rev-anchored update
+  — the security-overview.md regen that needs a cadence home; its git-rev-anchored update
   model is one concrete task this framework would schedule.
 - [doc-refresh-cadence](2026-07-04-doc-refresh-cadence.md),
   [feedback-collection-cadence](2026-07-14-feedback-collection-cadence.md) — two

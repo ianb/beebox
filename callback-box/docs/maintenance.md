@@ -140,7 +140,7 @@ Runs YAML-defined tests against a real box agent, checking responses and tool us
 ### Security report — `/security-report` (skill)
 
 Regenerates the two committed security artifacts: `docs/security-report.md`
-(the structured, per-item accounting) and `SECURITY.md` (the readable
+(the structured, per-item accounting) and `docs/security-overview.md` (the readable
 synthesis). The skill body is the committed rubric — an ordered inventory
 + evaluation process — so a regeneration is auditable as a process. It
 **drafts** for boxholder review and never auto-commits: the provenance

@@ -6,19 +6,23 @@ model: claude-sonnet-5
 reviewed-by: Ian Bicking
 ---
 
-# Security
+# Security overview
 
 callback-box is a personal assistant that a Claude Code agent operates on
 your behalf: it reads your email, listens to your voice memos, edits your
 files, and runs shell commands. A system like that deserves a blunt
 security document, so this one leads with blast radius, not reassurance.
 
+This is the readable overview. The reporting policy is
+[`SECURITY.md`](../../SECURITY.md) at the repo root; the full accounting is
+[`security-report.md`](security-report.md).
+
 This document is **maintained by an agent, reviewed by a human**. The
 process that generates it — an ordered inventory and evaluation rubric —
 is committed at
 [`.claude/skills/security-report/SKILL.md`](https://github.com/ianb/callback-box/blob/main/.claude/skills/security-report/SKILL.md)
 (repo root), and the full accounting it produces is
-[docs/security-report.md](docs/security-report.md): every endpoint and
+[`security-report.md`](security-report.md): every endpoint and
 its auth, every credential and its blast radius, every place data leaves
 the machine. You can't verify a security doc wasn't shaped by error or
 malice, but you can read the rubric that produced it, the diff of every
@@ -28,9 +32,8 @@ verifiable as an artifact.
 
 ## Reporting a vulnerability
 
-Email ianbicking@gmail.com. Please don't open a public issue for
-anything exploitable; everything else about security is welcome in the
-open queue (`issues/`).
+See [`SECURITY.md`](../../SECURITY.md) — the reporting policy lives there so
+it is where GitHub and a first-time reader look for it.
 
 ## Threat model, briefly
 
@@ -49,7 +52,7 @@ your own agent: the agent
 is the product, and it runs with real power (next section). It also does
 not currently treat invited members as adversaries — membership grants
 broad capability short of admin operations
-([details](../issues/code-quality/2026-08-07-member-level-writing-procedures.md)).
+([details](../../issues/code-quality/2026-08-07-member-level-writing-procedures.md)).
 
 ## What the agent can do
 
@@ -83,7 +86,7 @@ actions — publishing, changing credentials — refuse to happen without a
 human present. That's a real posture, but it's mitigation-by-how-you-
 deploy, not a guarantee the agent can't be turned against you. Tighter
 containment is
-[tracked](../issues/features/2026-07-20-agent-containment-allowed-directories.md)
+[tracked](../../issues/features/2026-07-20-agent-containment-allowed-directories.md)
 and not yet built. Until it is, be deliberate about which untrusted
 sources you connect, and don't leave the agent processing them
 unattended in a box that can reach anything you'd mind losing.
@@ -91,7 +94,7 @@ unattended in a box that can reach anything you'd mind losing.
 ## What leaves your machine
 
 The complete inventory is
-[§3 of the structured report](docs/security-report.md#3-data-egress).
+[§3 of the structured report](security-report.md#3-data-egress).
 The summary:
 
 - **Anthropic** — the core engine. Every agent turn sends its context to
@@ -132,7 +135,7 @@ The summary:
 One caveat worth naming: the iOS app's dictation prefers Apple's
 on-device recognizer, but on older systems it falls back to Apple's
 cloud speech service without an app-level opt-out
-([issue](../issues/bugs/2026-08-07-ios-cloud-speech-fallback-no-optout.md)).
+([issue](../../issues/bugs/2026-08-07-ios-cloud-speech-fallback-no-optout.md)).
 
 ## The authentication surface
 
@@ -151,7 +154,7 @@ gated by a token printed only to the server console. Everything else
 that skips the session wall carries its own dedicated credential
 (Telegram webhook secret, diagnostic bearer key, Cloudflare Access JWT).
 The full route-by-route table is
-[§1 of the structured report](docs/security-report.md#1-endpoints-auth-abilities).
+[§1 of the structured report](security-report.md#1-endpoints-auth-abilities).
 
 ## Publishing
 
@@ -171,7 +174,7 @@ with it after loading it.
 ## Known limitations and accepted risks
 
 The full register with rationale is
-[§8 of the structured report](docs/security-report.md#8-accepted-risks-roll-up).
+[§8 of the structured report](security-report.md#8-accepted-risks-roll-up).
 The ones you should actually weigh:
 
 - **First-run window**: until an owner account exists, a box with an
@@ -181,14 +184,14 @@ The ones you should actually weigh:
   their password now gets a self-service reset — the owner mints a
   15-minute link from Allowed Users and the member picks their own new
   password without exposing it
-  ([details](../issues/closed/features/2026-08-07-web-password-reset-account-recovery.md)).
+  ([details](../../issues/closed/features/2026-08-07-web-password-reset-account-recovery.md)).
   The owner's own recovery is still `cb auth set-password` on the host;
   full email self-service reset was rejected as operationally complex,
   and MFA/passkeys are deferred.
 - **One Google token, broad scopes, all boxes**: per-box service policy
   is enforced in application code, not by Google. Compromise of the
   token file is fleet-wide Google access
-  ([hardening direction](../issues/features/2026-07-28-google-auth-policy-proxy.md)).
+  ([hardening direction](../../issues/features/2026-07-28-google-auth-policy-proxy.md)).
 - **Boxes share a browser origin**: scripts in one box can make
   same-origin requests to a sibling box. Fine single-operator; known
   limitation otherwise.

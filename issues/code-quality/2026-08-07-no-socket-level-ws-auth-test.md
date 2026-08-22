@@ -3,7 +3,7 @@ title: "No socket-level integration test for WS tRPC subscription auth"
 workstream: unknown
 area: callback-box
 filed-by: agent
-discovered-in: main session — todo-security breakdown for the SECURITY.md report
+discovered-in: main session — todo-security breakdown for the security-overview.md report
 ---
 
 The tRPC WebSocket adapter (`useWSS`, the per-box plugin) hands `createContext`
