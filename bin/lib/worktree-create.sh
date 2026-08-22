@@ -44,6 +44,8 @@
 . "$(dirname "${BASH_SOURCE[0]}")/worktree-paths.sh"
 # shellcheck source=exhibits-store.sh
 . "$(dirname "${BASH_SOURCE[0]}")/exhibits-store.sh"
+# shellcheck source=comments-store.sh
+. "$(dirname "${BASH_SOURCE[0]}")/comments-store.sh"
 
 # The private-issues shadow-repo mount (bin/private-issues). Runs on BOTH the
 # fresh-create and resume paths (a resume must self-heal a missing mount).
@@ -137,6 +139,10 @@ wt_create() {
     # paths (a resume must self-heal a missing symlink), never blocks a session.
     wt_exhibits_mount "$worktree_path" "$NAME" \
       || echo "[worktree-create] WARNING: exhibit-store mount failed; session runs without exhibits/" >&2
+    # Read convenience only: bin/comments derives the store root itself, so a
+    # failed mount never costs a comment.
+    wt_comments_mount "$worktree_path" \
+      || echo "[worktree-create] WARNING: comment-store mount failed; use bin/comments instead of comments/" >&2
     wt_create_generate_agents_md "$worktree_path" "$NAME"
     return 0
   elif git -C "$WT_MONO" show-ref --verify --quiet "refs/heads/$new_branch"; then
@@ -149,6 +155,8 @@ wt_create() {
   wt_create_mount_private_issues "$worktree_path"
   wt_exhibits_mount "$worktree_path" "$NAME" \
     || echo "[worktree-create] WARNING: exhibit-store mount failed; session runs without exhibits/" >&2
+  wt_comments_mount "$worktree_path" \
+    || echo "[worktree-create] WARNING: comment-store mount failed; use bin/comments instead of comments/" >&2
 
   # 2. Clone the test box if it doesn't already exist (idempotent).
   #

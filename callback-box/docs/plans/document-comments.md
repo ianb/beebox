@@ -625,9 +625,14 @@ outside the checkout is invisible unless something points at it.
 Layer 4 is what makes discovery automatic rather than documented; it is listed as
 an open question because it adds a hook the boxholder may not want.
 
-**First implementation chunk.** The mount, the `.gitignore` entry (`/comments`,
-no trailing slash — the symlink lesson recorded at `workstream-exhibits.md:250`),
-and the `CLAUDE.md` sentence.
+**First implementation chunk — BUILT (2026-08-22).** `bin/lib/comments-store.sh`
+(`wt_comments_mount`, marker discipline mirroring the exhibits store), the
+`WT_COMMENTS_ROOT` derivation in `wt_paths_init`, both call sites in
+`bin/lib/worktree-create.sh` (best-effort, so a failed mount never blocks a
+session), and the `.gitignore` entry `/comments` — no trailing slash, the
+symlink lesson recorded at `workstream-exhibits.md:250`. Covered by
+`callback-box/test/dev/comments-mount.doctest.md`. The `CLAUDE.md` sentence and
+the reference doc are still Track 5 layer 3.
 
 ## Could this be simpler?
 

@@ -18,6 +18,12 @@ dist/
 .env
 .overmind.sock
 
+# Document-comment store mount (docs/plans/document-comments.md). A symlink to
+# the store beside the main checkout; comments are a communication medium and
+# never repository state. NO trailing slash — a dir-only pattern does not match
+# a symlink, which would make the mount stageable.
+/comments
+
 # Personal commit blocklist (the guard's strings live here, never in git).
 # The tracked .commit-blocklist.example documents the format.
 .commit-blocklist
