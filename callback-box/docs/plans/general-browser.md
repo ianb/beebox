@@ -259,8 +259,16 @@ any workstream."* That is a feed, not a listing, and it is a different structure
 from a directory tree — so the browser opens on cross-workstream recent activity,
 with the tree available rather than mandatory. Three views over one dataset:
 
-- **Aggregate** (the default) — what changed recently anywhere, most recent first.
+- **Aggregate** (the default) — what changed recently anywhere, most recent
+  first, with files carrying an open **ask** badged (`document-comments.md`,
+  Track 4b). "This changed" and "someone wants your eyes on this" are different
+  signals and the feed shows both.
 - **Filtered** — the same feed narrowed to one workstream (`?workstream=`).
+  Viewing one workstream on its own is fully supported and is **not** the
+  per-workstream browser the boxholder rejected: the rejection was of entering a
+  workstream as a *mode* you browse inside. A filter over one address space is
+  the opposite of a partition, and the existing `WorkstreamDetailPage` remains
+  the place to see a workstream's issues and state.
 - **Distribution** — how much recent work came from which workstream, answering
   *"an understanding of how much work comes from what workstreams."*
 
@@ -343,6 +351,12 @@ browsers is the state being fixed, not an acceptable end state.
 Each step is a redirect, not a deletion, so a bookmarked URL keeps working.
 
 **First implementation chunk.** Step 1.
+
+**Sequencing note.** The browser is built *beside* the surfaces it will replace,
+and they are retired only as each renderer lands — the boxholder's framing:
+*"do it in parallel to existing work (and later we'll remove some of the existing
+work)."* Nothing in this plan requires an existing surface to be turned off
+before its replacement is usable.
 
 ## Could this be simpler?
 

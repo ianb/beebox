@@ -456,9 +456,14 @@ whole feature exists to remove.
 1. **Viewing through a lens** (`?workstream=X` in the browser) → target `X`.
    Explicit beats inferred.
 2. **The file is modified in exactly one workstream** → that one. Unambiguous.
-3. **Modified in several** → the composer lists them and the boxholder picks.
-   This is the one case that costs a click, and it earns it: choosing silently
-   would send the remark to the wrong agent, which is worse than asking.
+3. **Modified in several** → take the most recent modifier, show which one was
+   picked, and let it be changed. An earlier draft made this a mandatory choice;
+   the boxholder's correction (2026-08-22) is that two workstreams touching one
+   file is *"very uncommon… usually something I'd want to avoid"*, so the case
+   gets a visible default rather than elegant handling. Principle 6, and the
+   `stop-over-engineering-rare-failures` posture: the cost of the rare
+   mis-route is one re-route, and the state is shown rather than assumed
+   (principle 13).
 4. **Modified in none** → `workstream: null`, unrouted. The comment stays on the
    file and any session that opens the file sees it. Commenting on a file nobody
    is working on is how new work starts, not an error.
@@ -489,6 +494,64 @@ the pull: `bin/comments list --workstream`, surfaced by Track 5's guidance.
 **First implementation chunk.** The `workstream` field, the ladder, and
 `bin/comments list --workstream` — routing and the agent read, before any wake
 button exists.
+
+### Track 4b — Asks on files: the agent's direction
+
+**What.** An agent can point at a file it produced and say "this one is for you",
+using the ask vocabulary and the ask queue that already exist.
+
+**Why this needs to change.** The boxholder: *"I wish there was a way for the
+agent to say 'please look at this, I made it for you to look at.'… Lots of code
+changes aren't/shouldn't be like that, mostly stuff that's deliberately for me
+based on discussion."* Today the only way an agent can raise a hand is to build
+an **exhibit** — a directory with a manifest, on a separate origin. That is the
+right weight for a constructed page and the wrong weight for "look at this file
+I already wrote."
+
+**Direction — the lightweight form of a thing that exists.** An ask is already a
+vocabulary (`decide | confirm | react | fyi`, `workstreams-app/src/shared/exhibits.ts:12`),
+a schema (`askSchema:22`), and a queue the app renders (`askQueueSchema:90`,
+`AsksPage.tsx`). This adds a second **subject** for an ask: instead of an exhibit
+scope, a repository-relative file path.
+
+```yaml
+# in the same store, same file-keyed layout as comments
+asks:
+  - id: a-91c2
+    at: 2026-08-22T15:20:00Z
+    type: react                 # decide | confirm | react | fyi
+    prose: "Rewrote the retry loop the way we discussed — does this match what you meant?"
+    workstream: scanner-ingest  # who is asking
+```
+
+`askQueueEntrySchema` gains a discriminated subject (exhibit scope or file path)
+so both kinds land in one queue and `AsksPage` shows them together. One queue is
+the point: the original briefing for this work warned that *"gratuitously
+different vocabulary for 'the developer said something about this' would be a
+shame"*, and two parallel attention queues would be exactly that.
+
+In the browser (`general-browser.md`, Track 3), a file carrying an open ask is
+badged in the recency feed — the difference between "this changed" and "this
+changed and someone wants your eyes on it."
+
+**What must NOT carry an ask, which is most things.** The boxholder drew the line
+and it is the load-bearing part of this track:
+
+| Thing | Ask? | Why |
+|---|---|---|
+| An ordinary code change | **No** | The recency feed already surfaces it; flagging routine work is how the queue rots |
+| Something built deliberately for the boxholder after discussion | **Yes** | This is the case the mechanism exists for |
+| Issues and plans | **No** | *"they don't generally need extra signaling, instead they are always kind of relevant"* — they are standing queues already |
+
+This restraint is not a style preference. `workstreams-app/docs/exhibits.md`
+records what happens without it: *"An over-applied tag rots the queue it feeds —
+the `manual-testing` flag did exactly that… once a marker stops meaning
+anything, the human stops reading it."* The guidance an agent reads must state
+the negative cases, not only the positive one.
+
+**First implementation chunk.** The ask record, the discriminated subject in
+`askQueueEntrySchema`, and `AsksPage` rendering a file ask beside an exhibit ask.
+The browser badge follows.
 
 ### Track 5 — Discoverability and guidance
 
@@ -674,6 +737,10 @@ expensive to prevent. Documented rather than defended — principle 6.
   feature is not the place to invent one.
 - **A separate comments UI for issues.** Issues keep the interface they have; they
   gain source tags and nothing else.
+- **A second attention queue.** File asks join the existing ask queue; they do not
+  get their own page, badge vocabulary, or CLI verb family.
+- **Asks on issues and plans.** Deliberately unavailable, not merely discouraged:
+  they are standing queues already, and an ask on one would dilute the marker.
 - **Multi-user.** One boxholder, one machine, no identity field.
 - **Syncing comments between machines.** Explicitly local.
 
@@ -761,8 +828,11 @@ draft this replaced.
   ordering, `list --workstream` scoping and recency order, `clear` by id, a
   document that no longer exists.
 - `comments-routing.doctest.md` — each rung of the ladder: lens-explicit,
-  single-workstream inference, the ambiguous case refusing to guess, the unrouted
-  case, and a routed comment whose workstream was culled.
+  single-workstream inference, the ambiguous case defaulting visibly to the most
+  recent modifier, the unrouted case, and a routed comment whose workstream was
+  culled.
+- `file-asks.doctest.md` — a file ask and an exhibit ask in one queue, the
+  discriminated subject, and an ask on a file that no longer exists.
 - `documents-read.doctest.md` — tracked and untracked documents, an unknown
   worktree, and each path-escape shape.
 - `comments-api.doctest.md` — mutation validation, concurrent writes to one
@@ -774,7 +844,7 @@ draft this replaced.
 - `comments-anchor.doctest.md` — `generateFragment` `AMBIGUOUS` handling, and
   resolving a stored fragment against edited text.
 
-**Done-when**, as checkable assertions rather than a feeling: those seven suites
+**Done-when**, as checkable assertions rather than a feeling: those eight suites
 pass; `bin/comments list` in a fresh worktree finds a comment written from the
 viewer in a different worktree; a spoken comment survives a forced transcription
 failure and can be retried; a comment left on a file changed in one workstream is
