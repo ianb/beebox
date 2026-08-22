@@ -1,12 +1,16 @@
 ---
 title: "Composer Add menu: 'Attach file…' vs 'Upload files…' are indistinguishable"
 workstream: add-files-menu
-needs: [design]
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder couldn't tell the two apart
 priority: important
+resolution: implemented
 ---
+
+Closed 2026-08-22: resolved by commit 5336b291 ("feat(chat): one 'Add files…'
+menu entry, routed in code") and f8095747 on `worktree-add-files-menu`. See the
+Resolution section below.
 
 The chat composer's Add menu (`InteractiveChat-composer.tsx:224,226`) has two
 items whose labels read as synonyms — **"Attach file…"** and **"Upload files…"** —

@@ -30,4 +30,4 @@ Fix directions:
 - Or defer the removal until finalize succeeds, and reconcile on delivery
   instead — the composer then shows the photos until they've actually landed.
 
-Related: [attach-vs-upload-menu-confusing](../features/2026-08-03-attach-vs-upload-menu-confusing.md).
+Related: [attach-vs-upload-menu-confusing](../closed/features/2026-08-03-attach-vs-upload-menu-confusing.md).
