@@ -68,6 +68,19 @@ existing `config/connectors/*.secret.json` files into exactly these names, so
 | `google-oauth-client-id` / `google-oauth-client-secret` | `connectors/google-auth.ts` | — | `GOOGLE_OAUTH_CLIENT_ID` / `_SECRET` |
 | `anthropic`, `replicate` | `/api/adapters/<name>` | `<name>.secret.json` | — |
 | `telegram-bot/<box>` | `connectors/telegram-helpers.ts`, admin setup | `telegram.secret.json` | — |
+
+**One deliberate reuse outside this table.** The dev repo's document-comment
+surface transcribes spoken comments with `CALLBACK_OPENAI_API_KEY` — the
+`openai` (embeddings) variable above — rather than minting a third name
+(`workstreams-app/src/server/transcribe-openai.ts`). That is a **boxholder
+decision, 2026-08-22**, on the grounds that a dev-surface key on the developer's
+own machine did not earn its own name.
+
+It does **not** relax the box-side rule. `openai` and `openai-thinking` stay
+distinct for boxes, for the reason `core/openai-thinking-key.ts` records: *"a
+transcription key is not consent to pay for embeddings, and boxes may hold
+different keys for each."* Nothing in a box reads `CALLBACK_OPENAI_API_KEY` for
+transcription; only the dev tooling does.
 | `publish/<box>` | `publish/connector-secret.ts` | `publish.secret.json` | — |
 
 `openai` and `openai-thinking` are two names for two keys on purpose: a

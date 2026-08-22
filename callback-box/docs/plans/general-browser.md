@@ -447,7 +447,14 @@ browsers is the state being fixed, not an acceptable end state.
 1b. The app index becomes the universal feed and the workstream list moves to
    its own route — the front-door half of the addressing rule.
 2. `/<worktree>/dev/docs/` redirects to the browser once Track 3 has quick-open
-   and the sidebar — not before.
+   and the sidebar — not before. **DONE (2026-08-22)**, on quick-open; the
+   sidebar did not turn out to be the gate, since the feed plus quick-open cover
+   how the surface is actually reached. The redirect maps
+   `/<w>/dev/docs/<path>` to `/workstreams/browse?file=<path>&workstream=<w>`,
+   which is the address change in miniature: worktree-first becomes
+   file-with-a-lens. The rendering code it left unreachable is filed for
+   deletion (`issues/code-quality/2026-08-22-retire-doc-browser-dead-code.md`),
+   along with the one feature not yet ported — closed-issue pills.
 3. The `/<worktree>/dev/` manifest and directory indexes redirect once Track 2's
    `directory` and `page` renderers land.
 4. `bin/router-docs.ts` shrinks to serving raw artifact files (which the `page`
@@ -455,7 +462,7 @@ browsers is the state being fixed, not an acceptable end state.
 
 Each step is a redirect, not a deletion, so a bookmarked URL keeps working.
 
-**First implementation chunk.** Step 1.
+**First implementation chunk.** Step 1. Steps 1, 1b and 2 are done.
 
 **Sequencing note.** The browser is built *beside* the surfaces it will replace,
 and they are retired only as each renderer lands — the boxholder's framing:
