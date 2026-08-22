@@ -253,6 +253,27 @@ sixth.
 loses quick-open and the grouped sidebar would make finding things *worse* while
 claiming to fix it.
 
+**The front door is recency across all workstreams, not a file tree.** The
+boxholder's rule: *"a file is interesting if it has been modified recently, in
+any workstream."* That is a feed, not a listing, and it is a different structure
+from a directory tree — so the browser opens on cross-workstream recent activity,
+with the tree available rather than mandatory. Three views over one dataset:
+
+- **Aggregate** (the default) — what changed recently anywhere, most recent first.
+- **Filtered** — the same feed narrowed to one workstream (`?workstream=`).
+- **Distribution** — how much recent work came from which workstream, answering
+  *"an understanding of how much work comes from what workstreams."*
+
+The recency computation is a generalization of working code:
+`bin/router-docs.ts:382-400` already derives per-file times from
+`git log --format=%ct --name-only` and falls back to filesystem mtime for
+untracked files, with the reasoning recorded in place — untracked files *"were
+created after the worktree clone, not shared at clone time like tracked files —
+so fall back to it, which floats in-progress docs to the top."* Today it is
+scoped to `.md` in one repository root; this generalizes it to all files across
+every live workstream, and the mtime fallback keeps mattering for exactly the
+same reason.
+
 **Direction.** Port the affordances that work, in React:
 - Quick-open over every browsable path (`renderDocQuickOpen`, `router-docs.ts:519`).
 - A sidebar grouped by area, with path and recently-edited sorts
@@ -261,9 +282,14 @@ claiming to fix it.
   to code and data.
 - Cross-links to the surfaces that stay separate: the exhibits index, the asks
   queue, the site preview.
+- The issues app keeps its own interface and is linked, not absorbed — the
+  boxholder is explicit: *"issues should still be the interface we have now."*
+  What issues gain is source tagging, so the comment capability reaches them
+  (`document-comments.md`, Track 3).
 
-**First implementation chunk.** Quick-open and the file list. It is the smallest
-thing that makes the browser usable as a daily surface.
+**First implementation chunk.** The aggregate recency feed. It is both the front
+door and the smallest thing that makes the browser worth opening daily;
+quick-open and the sidebar follow.
 
 ### Track 4 — `file:` provenance, and the source overlay
 
@@ -394,6 +420,10 @@ defending a failure that cannot currently happen.
   origin separation is deliberate; see the boundary section.
 - **Editing.** The browser reads. Comments are the sibling plan; issue mutations
   already exist elsewhere.
+- **Commenting on diffs, and a diff view generally.** The boxholder expects to
+  want it later and deprioritized it explicitly. The recency feed names what
+  changed; seeing the change itself is a separate piece of work.
+- **Replacing the issues interface.** It stays as it is.
 - **Search over file contents.** Quick-open matches paths. Content search is a
   real want and a different piece of work — see the structured-module-docs issue.
 - **Git history, blame, or diffs.** A code host would have them; nothing in the
@@ -478,11 +508,14 @@ last, after the browser has replaced what they served.
 - `browse-workstream-lens.doctest.md` — file → workstreams for a file changed on
   two branches, the `?workstream=` filter, a failed diff reporting unavailable
   rather than none, and cache invalidation.
+- `browse-recency.doctest.md` — the aggregate feed ordering across two
+  workstreams, the untracked-file mtime fallback, and the per-workstream
+  distribution counts.
 - `browse-source-tags.doctest.md` — `file:` tags emitted by the markdown and code
   renderers, and the overlay's walk-up finding the nearest one.
 - `browse-redirects.doctest.md` — each retired URL lands on a route that renders.
 
-**Done-when:** those six suites pass; every URL retired in Track 5 redirects to
+**Done-when:** those seven suites pass; every URL retired in Track 5 redirects to
 a working route; `PlansPage` no longer links out of the app; a plan, a source
 file, a directory, and a scratch note are all reachable from one quick-open; and
 a file changed on two branches says so when read at its unlensed address.

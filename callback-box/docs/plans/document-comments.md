@@ -8,11 +8,18 @@ issues:
 
 # Document comments
 
-A comment affordance built into the workstreams app: read a repository markdown
-document at `/workstreams/docs/…`, select text or click a block, type or speak a
-remark. Comments are written to a machine-local store outside git and read back
-by agents through `bin/comments`. They are messages, not documents — an agent
-reads them, acts, and clears them.
+A comment **capability** in the workstreams app: on any surface that carries
+`data-cb-source` provenance tags, select text or click a block and leave a
+remark, typed or spoken. Comments are written to a machine-local store outside
+git, routed to the workstream they concern, and read back by that workstream's
+agent through `bin/comments`. They are messages, not documents — an agent reads
+them, acts, and clears them.
+
+It is a capability rather than a page because the boxholder wants it in more
+than one place and wants the existing places kept: *"issues should still be the
+interface we have now. Hopefully we can just use these markup features on the
+issues app!"* A surface gains commenting by tagging its content, not by being
+rebuilt.
 
 ## Job to be done
 
@@ -31,6 +38,10 @@ Two more situations that shape the design:
 - *When an agent picks up work days later, I want it to find my remarks without
   me remembering to paste them.* The agent's discovery path matters as much as
   my capture path.
+
+- *When I have left three remarks across two files, I want to wake the workstream
+  that owns them and talk about them, and I want its agent to already know what I
+  said.* The capture is only half; the delivery is the other half.
 
 Neither situation involves maintaining the comments over time. They are consumed
 and cleared.
@@ -228,14 +239,17 @@ comments:
     body: "This assumes the router restarts, which it doesn't here."
     quoted: "so the router picks this up on reload"
     section: "The write path"
-    origin: dev-comments
+    workstream: scanner-ingest      # routing target; null when unrouted
+    origin: dev-comments            # where it was written
     fragment: ":~:text=so%20the-,router%20picks%20this%20up,-on%20reload"
 ```
 
 `body` is what the boxholder said. `quoted` is the selected text verbatim, and is
 the field that makes the comment legible to an agent reading the file with `cat`.
-`section` is the enclosing heading as plain text. `origin` is the worktree it was
-written in. `fragment` is `generateFragment`'s output serialized, and is
+`section` is the enclosing heading as plain text. `workstream` is the routing
+target — which agent this remark is for — and `origin` is the worktree it was
+written in; they are usually but not always the same, and conflating them would
+lose the case where the boxholder comments from main on another branch's file. `fragment` is `generateFragment`'s output serialized, and is
 **optional**: absent on `AMBIGUOUS` or `TIMEOUT`, and absent for a whole-document
 comment. No `state` field, no `audio` field, no reply threads — see NOT in scope.
 
@@ -332,6 +346,25 @@ cannot be done from a CLI.
   is absent or does not resolve is rendered in a visible list beside the
   document with its `quoted` text, never dropped.
 
+**Comment mode is a toggle, not an always-on click handler.** Selecting text
+never conflicts with a page's own behaviour, but click-to-comment-on-a-block
+does — the issues app has buttons and controls on the very elements that would
+be comment targets. So capture follows the precedent already in the codebase:
+`SourceViewOverlay.tsx` toggles with Ctrl+Shift+S and only then treats tagged
+elements as targets. Off, every surface behaves exactly as it does today.
+
+**Which surfaces gain commenting, and what each costs:**
+
+| Surface | What it needs | Cost |
+|---|---|---|
+| The browser (`general-browser.md`) | `file:` source tags on rendered content | Part of that plan |
+| The issues app | `data-cb-source` on `IssuesPane`'s rendered issue | A few attributes; the interface is unchanged |
+| Exhibits | The header component (`general-browser.md`, exhibits boundary) | Free on two of three tiers |
+
+This is the whole reason the capability hangs off `data-cb-source` rather than
+off a page: a surface opts in by describing where its content came from, which is
+a thing worth doing anyway.
+
 Because this is app code rather than an injected library, isolation is ordinary
 component scoping and a failure is ordinary app error handling. Both were
 separate design problems in the earlier draft.
@@ -408,6 +441,54 @@ the comment. See the critical gap below.
 **First implementation chunk.** The `apiKey` field, the injected service, and the
 `comments.transcribe` mutation with its failure surface — testable with the fake
 before any recording UI exists.
+
+### Track 4a — Routing, and waking the workstream
+
+**What.** Every comment knows which workstream it is for, and the boxholder can
+wake that workstream from the comment.
+
+**Why this needs to change.** A comment that does not reach the agent doing the
+work is a comment the boxholder has to re-explain in chat, which is the cost this
+whole feature exists to remove.
+
+**Direction — the routing ladder, applied at write time, which never guesses:**
+
+1. **Viewing through a lens** (`?workstream=X` in the browser) → target `X`.
+   Explicit beats inferred.
+2. **The file is modified in exactly one workstream** → that one. Unambiguous.
+3. **Modified in several** → the composer lists them and the boxholder picks.
+   This is the one case that costs a click, and it earns it: choosing silently
+   would send the remark to the wrong agent, which is worse than asking.
+4. **Modified in none** → `workstream: null`, unrouted. The comment stays on the
+   file and any session that opens the file sees it. Commenting on a file nobody
+   is working on is how new work starts, not an error.
+
+Step 2 and 3 read the same changed-files data the browser's cross-workstream lens
+computes (`general-browser.md`, Track 3a), so routing adds no new mechanism.
+
+**Two reads, one store.** The store stays keyed by file, and both questions fall
+out of scanning it — the store is small enough that scanning is the right answer:
+
+- `bin/comments show <path>` — what is on this document. The reader's question.
+- `bin/comments list --workstream <name>` — what is addressed to me, newest
+  first. The agent's question, and the answer to *"the workstream agent should be
+  able to easily see what comments I've made, both specifically what I might have
+  touched last, and very possibly there could be multiple comments on multiple
+  things."*
+
+**Waking the workstream.** `focus` is already an action verb
+(`workstreams-app/src/shared/actions.ts:7`; button at `WorkstreamsPage.tsx:40`),
+implemented at `bin/workstreams:267` as bringing the live session's Terminal tab
+to the front, with `resume` for a removed session. The comment UI offers the same
+action against the routed workstream. What it does **not** do is inject text into
+a live session — nothing in the codebase does that, and inventing it here would
+be a large mechanism for a case the boxholder described as *"as simple as the
+focus button already in the workstreams app."* The agent's side of the handoff is
+the pull: `bin/comments list --workstream`, surfaced by Track 5's guidance.
+
+**First implementation chunk.** The `workstream` field, the ladder, and
+`bin/comments list --workstream` — routing and the agent read, before any wake
+button exists.
 
 ### Track 5 — Discoverability and guidance
 
@@ -512,6 +593,9 @@ was decided rather than deferred.
 | The `comments` symlink is missing or broken | Doctest on the mount helper | Reads through the CLI still work (it derives the root itself); the mount self-heals on resume | Clear |
 | Two untracked documents in different worktrees share a repository-relative path | Doctest writing the same path from two worktrees | Keyed under `worktree/<name>/…`, so they never share a file | Clear |
 | A tracked document becomes untracked, or vice versa, after comments exist | Doctest on both transitions | `comments.list` reads both namespaces for a path and shows what it found in each | Clear |
+| A comment routes to a workstream that is culled before its agent reads it | Doctest on a routed comment whose workstream is gone | The comment survives on the file, shown as routed-to-a-gone-workstream and re-routable, never deleted with the tree | Clear |
+| Two workstreams modify a file and the boxholder is not asked | Doctest on the ambiguous branch | Ladder step 3 requires a choice; there is no silent default | Clear |
+| The changed-files data is unavailable when a comment is written | Doctest with the diff failing | The comment is written unrouted rather than mis-routed, and says so | Clear |
 | A recording exceeds the tRPC body limit | Doctest on the client cap | Client caps at two minutes and refuses to start a longer recording | Clear |
 | The workstreams app is down | Existing app-level error handling | The viewer shows the failure; composed text stays in the page rather than being swallowed | Clear |
 | The commented document is later deleted or renamed | Doctest on `bin/comments list` | Listed as pointing at a missing file; not auto-deleted | Clear |
@@ -579,6 +663,17 @@ expensive to prevent. Documented rather than defended — principle 6.
   frontend, not the exhibits origin, not chat, not `/dev/` pages.
 - **Any path to git or to main.** The store never merges. `*.comments.yaml` never
   becomes a tracked pattern.
+- **Commenting on diffs.** The boxholder expects to want this later and said
+  plainly that it is not important yet — *"we don't have to overthink that part."*
+  Designing for it now would put a second addressing scheme (two file versions,
+  not one) into a store that has no need of it. Left out deliberately, and the
+  file-keyed store does not foreclose it.
+- **Injecting text into a live agent session.** Waking a workstream is `focus`;
+  what the agent then reads is `bin/comments list --workstream`. No mechanism for
+  pushing a prompt into a running session exists in this codebase, and this
+  feature is not the place to invent one.
+- **A separate comments UI for issues.** Issues keep the interface they have; they
+  gain source tags and nothing else.
 - **Multi-user.** One boxholder, one machine, no identity field.
 - **Syncing comments between machines.** Explicitly local.
 
@@ -663,7 +758,11 @@ draft this replaced.
   against `..`/absolute/symlink escapes, both namespaces, Zod round-trip,
   malformed-file reporting.
 - `comments-cli.doctest.md` — `show` with all three path spellings, `list`
-  ordering, `clear` by id, a document that no longer exists.
+  ordering, `list --workstream` scoping and recency order, `clear` by id, a
+  document that no longer exists.
+- `comments-routing.doctest.md` — each rung of the ladder: lens-explicit,
+  single-workstream inference, the ambiguous case refusing to guess, the unrouted
+  case, and a routed comment whose workstream was culled.
 - `documents-read.doctest.md` — tracked and untracked documents, an unknown
   worktree, and each path-escape shape.
 - `comments-api.doctest.md` — mutation validation, concurrent writes to one
@@ -675,10 +774,12 @@ draft this replaced.
 - `comments-anchor.doctest.md` — `generateFragment` `AMBIGUOUS` handling, and
   resolving a stored fragment against edited text.
 
-**Done-when**, as checkable assertions rather than a feeling: those six suites
+**Done-when**, as checkable assertions rather than a feeling: those seven suites
 pass; `bin/comments list` in a fresh worktree finds a comment written from the
 viewer in a different worktree; a spoken comment survives a forced transcription
-failure and can be retried; `PlansPage` no longer links out of the app.
+failure and can be retried; a comment left on a file changed in one workstream is
+found by `bin/comments list --workstream <that name>` with no argument beyond the
+name; and an issue can be commented on with the issues interface unchanged.
 
 **Not covered by tests, by decision:** the `getUserMedia` secure-context path and
 the actual microphone, which need a real browser and a real device. Checked by
