@@ -1,6 +1,7 @@
 import type { WorkstreamIssue, WorkstreamListResult } from "../shared/workstreams.js";
 import type {
   BrowsedDocument,
+  RecentFeed,
   WorkstreamChangedFiles,
   Issue,
   IssueChange,
@@ -46,6 +47,8 @@ export interface DocumentsService {
   readDocument(request: { relPath: string; workstream: string | null }): Promise<BrowsedDocument>;
   /** Every path one workstream has changed — the `?workstream=` filter's data. */
   changedFiles(workstream: string): Promise<WorkstreamChangedFiles>;
+  /** What changed recently, anywhere — the browser's front door. */
+  recentFiles(): Promise<RecentFeed>;
 }
 
 export interface QuotasService {

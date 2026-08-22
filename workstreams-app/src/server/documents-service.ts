@@ -15,6 +15,7 @@ import {
 } from "./issue-overlay.js";
 import type {
   BrowsedDocument,
+  RecentFeed,
   WorkstreamChangedFiles,
   Issue,
   Plan,
@@ -26,6 +27,7 @@ import { resolveIssueTarget, saveIssueChanges } from "./issues-mutation-service.
 import { resolveIssuePath } from "./issue-path.js";
 import { readDocument } from "./document-read.js";
 import { collectWorkstreamChanges, type WorkstreamChanges } from "./workstream-changes.js";
+import { collectRecentFiles } from "./recency.js";
 
 const DOCUMENT_CACHE_MS = 60_000;
 
@@ -234,6 +236,20 @@ export function createDocumentsService(options: DocumentsServiceOptions): Docume
         { mainRoot: options.mainRoot, worktreeRoots: state.overlay.worktreeRoots },
         { ...request, changes: state.changes },
       );
+    },
+    async recentFiles(): Promise<RecentFeed> {
+      const state = await snapshot();
+      const feed = await collectRecentFiles({
+        mainRoot: options.mainRoot,
+        worktreeRoots: state.overlay.worktreeRoots,
+      });
+      return {
+        now: feed.now,
+        files: feed.files,
+        distribution: feed.distribution,
+        unavailable: [...feed.unavailable].map(([workstream, problem]) => ({ workstream, problem })),
+        truncated: feed.truncated,
+      };
     },
     async changedFiles(workstream): Promise<WorkstreamChangedFiles> {
       const state = await snapshot();

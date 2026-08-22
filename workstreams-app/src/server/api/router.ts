@@ -8,6 +8,7 @@ import {
 } from "../../shared/workstreams.js";
 import {
   documentSchema,
+  recentFeedSchema,
   workstreamChangesSchema,
   issueChangeSchema,
   issueRelPathSchema,
@@ -81,6 +82,10 @@ const documentsRouter = router({
         throw e;
       }
     }),
+  /** The front door: what changed recently, anywhere. */
+  recent: procedure
+    .output(recentFeedSchema)
+    .query(async ({ ctx }) => ctx.services.documents.recentFiles()),
   /** One workstream's changed paths — the lens read the other way round. */
   changedFiles: procedure
     .input(z.object({ workstream: z.string().regex(/^[a-zA-Z0-9_-]+$/u) }))

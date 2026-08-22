@@ -386,11 +386,15 @@ same reason.
   What issues gain is source tagging, so the comment capability reaches them
   (`document-comments.md`, Track 3).
 
-**First implementation chunk.** The aggregate recency feed, mounted at the app's
-index route. It is both the front door and the smallest thing that makes the
-browser worth opening daily; quick-open and the sidebar follow. The workstream
-list that occupies `/` today (`router.tsx:13`) moves to its own route rather than
-being deleted — it is still how you reach a session to focus or resume.
+**First implementation chunk — BUILT (2026-08-22).**
+`workstreams-app/src/server/recency.ts` and `RecentPage.tsx`, mounted at the
+app's index route with the workstream list moved to `/streams` (still how you
+reach a session to focus or resume). All three views land together: aggregate,
+`?workstream=` filtered, and the distribution. A branch is asked only for
+`main..HEAD` — asking a worktree for "everything recent" returns main's month
+again under the workstream's name, which made every workstream look identically
+busy. Covered by `workstreams-app/test/recency.doctest.md`. Quick-open and the
+sidebar are still to come.
 
 ### Track 4 — `file:` provenance, and the source overlay
 

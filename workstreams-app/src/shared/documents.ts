@@ -153,6 +153,34 @@ export const documentSchema = z.object({
   changesUnavailable: z.array(z.string()),
 });
 
+/** One file in the recency feed — the browser's front door. */
+export const recentFileSchema = z.object({
+  relPath: z.string(),
+  kind: documentKindSchema,
+  /** Epoch seconds. */
+  at: z.number(),
+  /** Which checkout it changed in; null is the main checkout. */
+  workstream: z.string().nullable(),
+  /** Uncommitted or untracked — someone is working on it right now. */
+  inProgress: z.boolean(),
+});
+
+export const recentFeedSchema = z.object({
+  /**
+   * When the feed was computed, epoch seconds. Relative times render against
+   * THIS rather than the client's clock: the feed is a snapshot, and "3m ago"
+   * should mean three minutes before the data, not before the paint. It also
+   * keeps the render pure — no clock read on the render path.
+   */
+  now: z.number(),
+  files: z.array(recentFileSchema),
+  /** How much recent work came from where. */
+  distribution: z.array(z.object({ workstream: z.string().nullable(), count: z.number() })),
+  /** Checkouts whose scan failed, so an incomplete feed cannot look complete. */
+  unavailable: z.array(z.object({ workstream: z.string(), problem: z.string() })),
+  truncated: z.boolean(),
+});
+
 /** One workstream's changed paths, for the `?workstream=` filter. */
 export const workstreamChangesSchema = z.object({
   workstream: z.string(),
@@ -165,3 +193,5 @@ export type DocumentKind = z.infer<typeof documentKindSchema>;
 export type DirectoryEntry = z.infer<typeof directoryEntrySchema>;
 export type BrowsedDocument = z.infer<typeof documentSchema>;
 export type WorkstreamChangedFiles = z.infer<typeof workstreamChangesSchema>;
+export type RecentFile = z.infer<typeof recentFileSchema>;
+export type RecentFeed = z.infer<typeof recentFeedSchema>;
