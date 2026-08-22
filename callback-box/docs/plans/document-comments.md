@@ -235,21 +235,37 @@ version: 1
 comments:
   - id: c-4f2a
     at: 2026-08-22T14:03:11Z
-    kind: spoken            # typed | spoken
+    origin: voice           # typed | voice — rhymes with the box's emission model
     body: "This assumes the router restarts, which it doesn't here."
     quoted: "so the router picks this up on reload"
     section: "The write path"
     workstream: scanner-ingest      # routing target; null when unrouted
-    origin: dev-comments            # where it was written
+    worktree: dev-comments          # where it was written
     fragment: ":~:text=so%20the-,router%20picks%20this%20up,-on%20reload"
 ```
 
 `body` is what the boxholder said. `quoted` is the selected text verbatim, and is
 the field that makes the comment legible to an agent reading the file with `cat`.
 `section` is the enclosing heading as plain text. `workstream` is the routing
-target — which agent this remark is for — and `origin` is the worktree it was
-written in; they are usually but not always the same, and conflating them would
-lose the case where the boxholder comments from main on another branch's file. `fragment` is `generateFragment`'s output serialized, and is
+target — which agent this remark is for — and `worktree` is where it was written;
+they are usually but not always the same, and conflating them would lose the case
+where the boxholder comments from main on another branch's file.
+
+**`origin` deliberately rhymes with callback-box.** The box's interactive input
+carries `origin: "typed" | "voice"` — `src/frontend/src/input/emission.ts:44`,
+mirrored at `components/chat/native-emission.ts:16` and
+`lib/chat-send-diagnostics.ts:150`, and on the wire at `docs/mobile-contract.md:262`
+(*"an unknown/absent `origin` coerces to `typed`"*). This tool is not
+callback-box and does not share its schema, but a developer reading both should
+not have to hold two words for one idea, so the field and its values are the
+same. An earlier draft used `kind: typed | spoken` **and** spent `origin` on the
+worktree — the same name meaning two different things across two related
+systems, which is precisely the drift worth avoiding (boxholder, 2026-08-22).
+
+The box is not perfectly self-consistent here: memo cards use
+`source: text | voice | email` (`src/schemas/memo.ts:55`). The token that holds
+across both is `voice`. This follows the emission model rather than the memo
+card, because a comment is interactive input, not an ingested artifact. `fragment` is `generateFragment`'s output serialized, and is
 **optional**: absent on `AMBIGUOUS` or `TIMEOUT`, and absent for a whole-document
 comment. No `state` field, no `audio` field, no reply threads — see NOT in scope.
 
@@ -274,7 +290,7 @@ into the doomed tree."*
 
 **Vocabulary lock-ins.** The store directory name `dev-comments`; the marker
 `.dev-comments`; the `tracked/` and `worktree/` namespaces; the file suffix
-`.comments.yaml`; the field names above; the `kind` values `typed` and `spoken`.
+`.comments.yaml`; the field names above; the `origin` values `typed` and `voice`, matching the box.
 
 **First implementation chunk.** The store module (root derivation, marker guard,
 path containment, the two namespaces, YAML read/write with a Zod schema) plus
@@ -399,7 +415,7 @@ with attention on the document, not on a keyboard.
 **Direction — two steps, not one bundled mutation.** `MediaRecorder` in the
 viewer; the audio goes to `comments.transcribe`, which returns **text and nothing
 else**; the client puts that text in the comment composer, where it can be
-edited; submitting goes through the ordinary `comments.add` with `kind: spoken`.
+edited; submitting goes through the ordinary `comments.add` with `origin: voice`.
 
 This is the boxholder's shape (2026-08-22): *"It would also be acceptable for the
 client to contact an endpoint to transcribe text, then submit the transcribed
@@ -408,7 +424,10 @@ text. That might result in better UI."* It is better on three counts:
 - **The transcript is reviewable before it is committed.** Whisper mishears names
   and jargon; a bundled mutation would write the mishearing into the store and
   leave the boxholder to correct a file. Here the correction happens in the
-  composer, before anything is stored.
+  composer, before anything is stored. **No preview affordance is built for
+  this** — the boxholder's point (2026-08-22): comment text is not submitted
+  immediately, so the editable composer content already *is* the preview. A
+  separate preview step would be a second thing to dismiss.
 - **It largely dissolves the critical gap below.** An earlier draft required the
   audio blob to be held client-side until the *store write* was acknowledged,
   because a transcription failure would otherwise destroy the comment. Split, the
@@ -420,7 +439,7 @@ text. That might result in better UI."* It is better on three counts:
   "upload audio, get text back" endpoint. This is the same shape, so it is not a
   new pattern to maintain.
 
-`kind: spoken` records how the text arrived, not that it is verbatim — the
+`origin: voice` records how the text arrived, not that it is verbatim — the
 boxholder may have edited it in the composer, which is the point.
 
 Both steps are tRPC mutations, because `bin/router-auth.ts:238` refuses any
