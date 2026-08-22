@@ -158,6 +158,51 @@ mkdir -p "$ROOT"/callback-box/user-stories/work/{areas,verdicts,panel,browser,de
 Every workflow takes `{root}` as an absolute path. They have no filesystem access and every
 subagent prompt needs absolute paths, so it cannot be derived inside the script.
 
+## Keeping it true after a fix
+
+A catalog that is only ever regenerated wholesale starts rotting the day it is committed — the full
+run is ~420 agents and several hours, so nobody does it because one bug got fixed. The loop that
+keeps it honest is per-fix and cheap:
+
+1. Someone fixes a bug. The issue carries `stories: [<id>]` in its frontmatter and ends with a
+   footer spelling this out, so they do not need to know this directory exists.
+2. Re-check just those stories:
+   ```
+   Workflow({scriptPath: "callback-box/user-stories/pipeline/recheck.workflow.mjs",
+             args: {root: "<repo root>", date: "2026-08-21", ids: ["group/slug"]}})
+   ```
+   One adversarial verifier per story, and the three-lens panel on anything still flagged. Four
+   agents per story, not four hundred.
+3. `pnpm exec tsx …/apply-recheck.ts <date>` merges the results into the frozen catalog, stamps
+   `lastChecked`, and clears panel notes from a story that now passes — a cleared story must not
+   keep the accusation explaining why it used to fail.
+4. `pnpm exec tsx …/render.ts > catalog/<date>.md`
+
+**The recheck does not trust the fix.** It re-reads the code with the same refute-when-uncertain
+stance as the full run, so closing an issue is not what clears a story — the code is. A recheck
+that still refutes is telling you something before you call the fix done.
+
+### Identity, and why it is not the finder's id
+
+Stories are keyed `<group>/<title-slug>` — `connectors/calendar-sync-repairs-an-expired-sync-token`
+— derived from the capability. The first run keyed them by provenance instead
+(`seam-connectors-r2-02`: the second story the seam-connectors reader emitted in round 2), which
+encodes which agent happened to find it, in which pass. Those ids do not survive a regeneration, so
+anything citing one silently rots. That is the same trap the 2026-06-26 catalog set for its own
+follow-up plan, which indexes into it by item number; `rekey.ts` and `catalog/<date>.id-map.json`
+record the migration away from it.
+
+A content-derived id is not magic: reword a title and the id changes. But the break is *visible* —
+`apply-recheck.ts` warns when a result matches no story rather than silently dropping it — and the
+old id stays on the record as `discoveredAs`.
+
+### When to regenerate wholesale instead
+
+Rechecking maintains claims that already exist. It cannot find capability that was *added* since the
+run, and it cannot notice a story that should no longer exist. The catalog header reports how many
+commits have landed in `callback-box/src` since it was generated; when that number gets large, or
+before a release, do a full run.
+
 ## Things to change next time
 
 - **Set `model` on the cheap stages.** The 2026-08-21 run left every agent on the inherited session

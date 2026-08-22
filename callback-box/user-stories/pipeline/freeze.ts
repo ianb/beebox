@@ -16,6 +16,7 @@ import { existsSync, readdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 import { readJson } from "./json-io.ts";
+import { assignIds } from "./stable-id.ts";
 
 const BASE = resolve(import.meta.dirname, "../work");
 const CATALOG = resolve(import.meta.dirname, "../catalog");
@@ -88,14 +89,23 @@ eachFile<{ items?: { id: string, classification: string, reasoning: string }[] }
 // noise. Sorted JSONL means one capability is one line: a re-run that changes three stories shows
 // three changed lines, and `git log -p` on this file is a readable history of what the product
 // could do. Each line is valid JSON; the file is valid JSONL.
+// Ids become content-derived here. Everything upstream keys on the provenance id an agent
+// assigned (`seam-connectors-r2-02`), which is fine inside one run but does not survive the next
+// one; the committed artifact is what other things cite, so that is where identity has to settle.
+const stableIds = assignIds(stories);
 const records = stories
-  .map((s) => ({
-    ...s,
-    verdict: verdicts[s.id],
-    panel: panel[s.id],
-    browser: browser[s.id],
-    triage: triage[s.id],
-  }))
+  .map((s) => {
+    const stable = stableIds.get(s);
+    return {
+      ...s,
+      id: stable === undefined ? s.id : stable,
+      discoveredAs: s.id,
+      verdict: verdicts[s.id],
+      panel: panel[s.id],
+      browser: browser[s.id],
+      triage: triage[s.id],
+    };
+  })
   .toSorted((a, b) => a.id.localeCompare(b.id));
 
 const lines = records.map((r) => JSON.stringify(r)).join("\n");

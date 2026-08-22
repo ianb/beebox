@@ -9,6 +9,8 @@
  * Usage: pnpm exec tsx callback-box/user-stories/pipeline/render.ts \
  *           > callback-box/user-stories/catalog/<date>.md
  */
+import { execFileSync } from "node:child_process";
+
 import { loadRun } from "./load-run.ts";
 import type { Story } from "./load-run.ts";
 
@@ -47,6 +49,27 @@ const AUDIENCE_TITLES: Record<string, string> = {
 const AUDIENCE_ORDER = ["web-ui", "agent-scripts", "operator"];
 
 // --- Load ------------------------------------------------------------------
+
+/**
+ * How much the product has moved since this catalog was generated.
+ *
+ * A dated catalog invites being read as current. Counting the commits that landed after it is the
+ * cheapest honest correction — a reader can see at a glance whether they are looking at a
+ * description of today's product or a historical one. Returns undefined outside a git checkout.
+ */
+function commitsSince(date: string): number | undefined {
+  try {
+    const out = execFileSync(
+      "git",
+      ["log", "--oneline", `--since=${date}`, "--", "callback-box/src"],
+      { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+    );
+    return out.split("\n").filter((l) => l.trim() !== "").length;
+  } catch (_e) {
+    return undefined; // not a checkout, or git unavailable: say nothing rather than guess
+  }
+}
+
 const { stories, discovered, verdicts, panelVotes, browser, triage, pageNotes } = loadRun(GENERATED);
 
 // --- Resolve one verdict per story ----------------------------------------
@@ -109,6 +132,13 @@ p("method are in [the pipeline README](../README.md). The underlying");
 p(`records are [\`${DATA_BASENAME}\`](${DATA_BASENAME}) — one JSON object per capability.`);
 p();
 p(`**Generated:** ${GENERATED} · **Scope:** \`callback-box/\` only · paths are relative to the repository root`);
+const drift = commitsSince(GENERATED);
+if (drift !== undefined && drift > 0) {
+  p();
+  p(`> **${drift} commits have landed in \`callback-box/src\` since this was generated.** Individual`);
+  p("> capabilities are re-checked as fixes land (each carries its own last-checked date); the rest");
+  p("> describe the product as of the generated date above.");
+}
 p();
 p("## Summary");
 p();

@@ -307,6 +307,34 @@ is wrong, the user-visible consequence, the files involved, and how it was obser
 
 - **Do NOT set \`priority:\`** — that is the maintainer's call, not yours.
 - Set \`filed-by: agent\` and \`discovered-in: worktree-user-stories-refresh\`.
+- Set \`stories: [<the story id>]\` in the frontmatter, so closing the issue leads back to the
+  claim it invalidates.
+- **End the issue with the catalog-update footer below, filled in with this story's id.** Whoever
+  fixes this will not know the catalog exists; the instruction has to be where they are working.
+
+## The footer (copy verbatim, substituting the id)
+
+\`\`\`markdown
+## Updating the user-story catalog
+
+This issue is why \\\`<STORY-ID>\\\` is currently flagged ❌ in
+[the user-story catalog](../../callback-box/user-stories/catalog/<DATE>.md) — a catalogue of what
+callback-box can actually do, where every claim is checked against the source.
+
+**When you fix this, re-check that story so the catalog stops being wrong.** It is a short agent
+run over just the affected stories, not the full regeneration:
+
+    Workflow({scriptPath: "callback-box/user-stories/pipeline/recheck.workflow.mjs",
+              args: {root: "<repo root>", date: "<DATE>", ids: ["<STORY-ID>"]}})
+
+    pnpm exec tsx callback-box/user-stories/pipeline/apply-recheck.ts <DATE>
+    pnpm exec tsx callback-box/user-stories/pipeline/render.ts \\
+      > callback-box/user-stories/catalog/<DATE>.md
+
+The recheck is adversarial by design: it will not mark the story accurate just because this issue
+was closed — it re-reads the code. If it still refutes, that is worth knowing before you call the
+fix done. Details in [the pipeline README](../../callback-box/user-stories/README.md).
+\`\`\`
 - State the problem; do not propose an implementation plan.
 - Write in the queue's plain register. No drama, no "critical", no severity adjectives.
 - If a defect is really about docs or code quality rather than a bug, use the right category

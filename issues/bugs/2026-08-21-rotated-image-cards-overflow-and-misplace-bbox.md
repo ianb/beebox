@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — driving /browse to check the image-card user stories
+stories: [browse/view-a-photo-card-with-its-analysis]
 ---
 
 An image card whose frontmatter carries `rotation: "90"` or `rotation: "270"`
@@ -44,3 +45,27 @@ correct a wrong value.
 Related: `../closed/bugs/2026-07-17-image-orientation-exif-boundaries.md` covers
 EXIF orientation across upload boundaries. This is the separate `rotation`
 frontmatter field and its rendering.
+
+## Updating the user-story catalog
+
+This issue is why [`browse/view-a-photo-card-with-its-analysis`](../../callback-box/user-stories/catalog/2026-08-21.md#flagged-worth-a-human-glance) is currently
+flagged ❌ in [the user-story catalog](../../callback-box/user-stories/catalog/2026-08-21.md) — a catalogue of what callback-box can
+actually do, where every claim is checked against the source.
+
+**When you fix this, re-check that story so the catalog stops being wrong.** It is a
+short agent run over just the affected stories, not the full regeneration:
+
+```
+Workflow({scriptPath: "callback-box/user-stories/pipeline/recheck.workflow.mjs",
+          args: {root: "<repo root>", date: "2026-08-21",
+                 ids: ["browse/view-a-photo-card-with-its-analysis"]}})
+
+pnpm exec tsx callback-box/user-stories/pipeline/apply-recheck.ts 2026-08-21
+pnpm exec tsx callback-box/user-stories/pipeline/render.ts \
+  > callback-box/user-stories/catalog/2026-08-21.md
+```
+
+The recheck is adversarial by design: it will not mark the story accurate just because
+this issue was closed — it re-reads the code. If it still refutes, that is worth knowing
+before you call the fix done. Details in
+[the pipeline README](../../callback-box/user-stories/README.md).

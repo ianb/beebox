@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — checking the "a broken image says so" user story on /browse
+stories: [browse/images-still-show-when-the-source-blocks]
 ---
 
 An in-box image URL that 404s renders the browser's native broken-image glyph.
@@ -29,3 +30,27 @@ but the observation was of the detail pane.
 
 Reproducing it against a live server and identifying which element renders the
 dead `src` is the first step.
+
+## Updating the user-story catalog
+
+This issue is why [`browse/images-still-show-when-the-source-blocks`](../../callback-box/user-stories/catalog/2026-08-21.md#flagged-worth-a-human-glance) is currently
+flagged ❌ in [the user-story catalog](../../callback-box/user-stories/catalog/2026-08-21.md) — a catalogue of what callback-box can
+actually do, where every claim is checked against the source.
+
+**When you fix this, re-check that story so the catalog stops being wrong.** It is a
+short agent run over just the affected stories, not the full regeneration:
+
+```
+Workflow({scriptPath: "callback-box/user-stories/pipeline/recheck.workflow.mjs",
+          args: {root: "<repo root>", date: "2026-08-21",
+                 ids: ["browse/images-still-show-when-the-source-blocks"]}})
+
+pnpm exec tsx callback-box/user-stories/pipeline/apply-recheck.ts 2026-08-21
+pnpm exec tsx callback-box/user-stories/pipeline/render.ts \
+  > callback-box/user-stories/catalog/2026-08-21.md
+```
+
+The recheck is adversarial by design: it will not mark the story accurate just because
+this issue was closed — it re-reads the code. If it still refutes, that is worth knowing
+before you call the fix done. Details in
+[the pipeline README](../../callback-box/user-stories/README.md).
