@@ -10,7 +10,7 @@
 import { useEffect, useCallback } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { getChatHistory, restartChatSubprocess, type SessionEntry } from "../../api";
-import { extractImageFiles } from "../../lib/image-paste";
+import { extractTransferFiles } from "../../lib/image-paste";
 import { unlockAudioContext } from "../../lib/audio/context";
 import { href, toSearch } from "../../lib/routing";
 import { newMessageId } from "./InteractiveChat-helpers";
@@ -37,7 +37,8 @@ interface ChatActionsOpts {
   selections: SelectionItem[];
   resetAttachments: () => void;
   resetSelections: () => void;
-  addImageFiles: (files: File[]) => void;
+  /** Composer file ingest — routing decides inline vs. batch (`file-routing.ts`). */
+  addFiles: (files: File[]) => void;
   onSend: () => void;
   isTranscribing: boolean;
   textareaRef: React.RefObject<HTMLTextAreaElement>;
@@ -53,7 +54,7 @@ interface ChatActionsOpts {
 export function useChatActions(opts: ChatActionsOpts) {
   const {
     send, sessionId, boxSlug, effectiveContextDir, messages, totalEntries, loadingOlder, setLoadingOlder,
-    inputStore, emissionStore, selections, resetAttachments, resetSelections, addImageFiles,
+    inputStore, emissionStore, selections, resetAttachments, resetSelections, addFiles,
     onSend, isTranscribing, textareaRef, transcriptTick, typingMode, typingLocked, setTypingMode,
     setScrollToBottomTrigger, dispatchEmission,
   } = opts;
@@ -85,19 +86,22 @@ export function useChatActions(opts: ChatActionsOpts) {
     }
   }, [inputStore, emissionStore, selections, dispatchEmission, typingMode, typingLocked, onSend, resetAttachments, resetSelections, setScrollToBottomTrigger, setTypingMode]);
 
+  // Paste and drop take WHATEVER files came with the event, not just images:
+  // routing (`file-routing.ts`) sends a non-image set to the bulk batch, so
+  // filtering here would silently discard a dropped PDF instead of filing it.
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
-    const images = extractImageFiles(e.clipboardData);
-    if (images.length === 0) return;
+    const files = extractTransferFiles(e.clipboardData);
+    if (files.length === 0) return;
     e.preventDefault();
-    void addImageFiles(images);
-  }, [addImageFiles]);
+    void addFiles(files);
+  }, [addFiles]);
 
   const handleDrop = useCallback((e: React.DragEvent<HTMLTextAreaElement>) => {
-    const images = extractImageFiles(e.dataTransfer);
-    if (images.length === 0) return;
+    const files = extractTransferFiles(e.dataTransfer);
+    if (files.length === 0) return;
     e.preventDefault();
-    void addImageFiles(images);
-  }, [addImageFiles]);
+    void addFiles(files);
+  }, [addFiles]);
 
   const handleInterrupt = useCallback(() => {
     send({ type: "INTERRUPT" });

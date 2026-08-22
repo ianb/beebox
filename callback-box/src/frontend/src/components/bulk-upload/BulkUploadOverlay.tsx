@@ -2,7 +2,8 @@
  * Full-screen bulk file-upload overlay (`docs/implemented-plans/bulk-file-upload.md`,
  * Track 2 / Direction §4).
  *
- * Launched from the chat composer's Add menu ("Upload files…") and bound to the
+ * Opened when the chat composer routes a file set to the batch path
+ * (`chat/file-routing.ts`), never chosen from the menu directly, and bound to the
  * launching chat via `targetSessionId` (the batch's context dir is derived
  * server-side from that id), so the delivered `<upload>` message lands in this
  * conversation. Files are picked or dropped,
@@ -122,9 +123,9 @@ function BatchFooter({ counts, exitLabel, doneLabel, finalizing, canFinalize, on
 export function BulkUploadOverlay({ targetSessionId, seedFiles, note, onExit, onDelivered }: {
   targetSessionId: string;
   /**
-   * Files the batch starts with — a photo selection too large to inline
-   * (`chat/photo-batch-threshold.ts`). Empty when launched from the Add menu,
-   * where the user picks inside the overlay instead.
+   * Files the batch starts with — a set routed here rather than inlined
+   * (`chat/file-routing.ts`): a non-image, or more photos than can ride in the
+   * message. Never empty; the overlay is only ever opened with its files.
    */
   seedFiles: File[];
   /** The composer text to send as the batch's introduction (empty when there was none). */

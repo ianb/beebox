@@ -182,24 +182,25 @@ export function base64ToBlob(base64: string, mimeType: string): Blob {
 }
 
 /**
- * Extract image files from a ClipboardEvent / DragEvent data transfer.
- * Returns an empty array if none are present.
+ * Extract EVERY file from a ClipboardEvent / DragEvent data transfer — not just
+ * images. Returns an empty array if there are none.
+ *
+ * It deliberately does not filter by type: the composer routes a whole selection
+ * to one destination (`components/chat/file-routing.ts`), so dropping a PDF next
+ * to a photo must hand both over rather than quietly keeping the photo. Filtering
+ * to images here is what used to make a dropped document vanish.
  */
-export function extractImageFiles(
+export function extractTransferFiles(
   dt: DataTransfer | null | undefined
 ): File[] {
   if (!dt) return [];
+  // Prefer the files array (covers drag-drop cleanly).
+  if (dt.files.length > 0) return Array.from(dt.files);
+  // Fall back to items (covers clipboard paste on Chrome). `kind === "file"`
+  // skips the string entries a text paste carries.
   const out: File[] = [];
-  // Prefer files array (covers drag-drop cleanly)
-  if (dt.files.length > 0) {
-    for (const f of Array.from(dt.files)) {
-      if (f.type.startsWith("image/")) out.push(f);
-    }
-    if (out.length > 0) return out;
-  }
-  // Fallback to items (covers clipboard paste on Chrome)
   for (const item of Array.from(dt.items)) {
-    if (item.kind === "file" && item.type.startsWith("image/")) {
+    if (item.kind === "file") {
       const f = item.getAsFile();
       if (f) out.push(f);
     }

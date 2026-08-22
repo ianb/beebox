@@ -1035,7 +1035,7 @@ struct NativeComposerView: View {
         // Too many to ride inline: base64-ing this many photos into one
         // /chat/send is the failure this branch exists to prevent. Upload them
         // and let the agent file them instead. Mirrors the web composer's
-        // `shouldBatchPhotos` — see docs/mobile-contract.md §8, INLINE_PHOTO_LIMIT.
+        // `routeAddedFiles` — see docs/mobile-contract.md §8, INLINE_PHOTO_LIMIT.
         if BulkPhotoThreshold.shouldBatch(existingInline: draftStore.draft.images.count, incoming: items.count) {
             selectedPhotoItems = []
             await uploadPhotoBatch(items)

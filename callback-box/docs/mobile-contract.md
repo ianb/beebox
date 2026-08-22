@@ -955,16 +955,19 @@ without the other is a contract break.
 - **Neutral web→native transport** `callbackboxNativePost(channel, payload)` (string payloads) —
   startup script in `Views/ChatWebView.swift` ↔ `native-post.ts` · `postNativeMessage` (with the
   legacy `webkit.messageHandlers` object-form fallback for pre-neutral shells).
-- **Inline photo limit** `4` — `components/chat/photo-batch-threshold.ts` · `INLINE_PHOTO_LIMIT` /
-  `shouldBatchPhotos` ↔ the iOS composer's mirrored constant. **The most photos that may ride
+- **Inline photo limit** `3` — `components/chat/file-routing.ts` · `INLINE_PHOTO_LIMIT` /
+  `routeAddedFiles` ↔ the iOS composer's mirrored constant. **The most photos that may ride
   inline (base64) in one chat message.** A selection that would put the composer's *total* inline
-  count above the limit is uploaded as a bulk batch (§5.6) instead. Photos **already inline join that
+  count above the limit is uploaded as a bulk batch (§5.6) instead, and so is any set containing a
+  **non-image** (a document has no inline representation), however few files it holds. Photos **already inline join that
   batch** and are removed from the composer, so one selection act has one destination — batching only
   the new photos would send the composer text off as the batch's introduction while the older photos
   sat behind with nothing describing them. (Photos still *encoding* can't be folded, having no bytes
   yet; they finish and land inline rather than being discarded — never losing a photo outranks
   arriving in one piece.) The inline total is bounded by the limit however many separate selections a
-  user makes, counting in-flight encodes. The rule applies identically to the picker, paste, and drop.
+  user makes, counting in-flight encodes. The rule applies identically to the picker, paste, drop
+  and screenshot grab — on the web the composer's Add menu offers one "Add files…" entry and routing
+  decides the rest, rather than asking the user to pick a path.
 
   This is a real behavioral contract, not a tuning knob: inlining a camera roll base64-encodes tens
   of megabytes into a single `/chat/send`, which is what
