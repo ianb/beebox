@@ -209,10 +209,28 @@ A and C need no assets: they start from what the person knows rather than materi
 realistic in a way an empty box is not — an app with content in it behaves differently from one
 without.
 
-Two things to decide, both in the open questions: how much of `test1`'s existing content is
-*helpful* realism versus noise that answers the journey's question before it is asked; and whether
-journey E's mail fixtures are staged into the box directly or delivered through a real connector
-run.
+**But not its conversations.** The B pilot opened mid-sentence inside a stranger's chemistry
+course, because `chat-session-id.json` is a resume pointer: a fresh visit reopens whatever session
+was last active. The person's first ten seconds were spent reading someone else's chat, containing
+a garbled message and an attachment they could not open. Nothing about that tested this product;
+it tested our fixture.
+
+So a journey box takes `test1`'s *content* and none of its *chat state*:
+
+| Cleared | Why |
+|---|---|
+| `.callback-box/chat-session-id.json` | the resume pointer — leave it and the person lands in an old conversation |
+| `.callback-box/chat-session-history.json` | the session list behind the chat picker |
+| `.callback-box/active-chats/*.lock` | stale locks from another run |
+
+The Claude Code transcripts themselves live outside the box, under `~/.claude/projects/`, keyed by
+the box's path. **Giving each journey box a fresh path isolates them by construction** — no cleanup
+needed, and two journeys can never read each other's conversations. That is the mechanism to lean
+on; clearing the in-box pointers is the belt to its braces.
+
+What remains open is how much of `test1`'s *content* each journey should see — its existing courses
+and people are realistic, but a chemistry journey landing in a box that already has a chemistry
+course is a different test from one that does not.
 
 ## Open questions
 
