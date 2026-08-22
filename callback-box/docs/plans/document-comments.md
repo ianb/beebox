@@ -2,7 +2,8 @@
 title: "Document comments: a communication medium in the workstreams app"
 status: draft
 workstream: dev-comments
-issues: []
+issues:
+  - ../../../issues/code-quality/2026-08-22-rename-drive-comments-sidecar-to-gcomments.md
 ---
 
 # Document comments
