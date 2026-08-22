@@ -23,11 +23,14 @@
  * silently merge their comments.
  *
  * The store is untrusted input (an agent, a human, and an app all write here),
- * so every segment is validated, every resolved path is re-checked after
- * realpath, and a file that does not parse is REPORTED rather than read as
- * empty — claiming "no comments" would hide the boxholder's words.
+ * so every segment is validated, no path component inside the store may be a
+ * symlink (a lexical `..` check alone is not containment — `$store/tracked`
+ * pointing at /tmp would send every write there), and a file that does not
+ * parse is REPORTED rather than read as empty: claiming "no comments" would
+ * hide the boxholder's words.
  */
 
+import { type Dirent } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -128,7 +131,9 @@ function assertRelPath(relPath: string): void {
   if (relPath === "") throw new InvalidCommentPathError("empty path");
   if (path.isAbsolute(relPath)) throw new InvalidCommentPathError(`absolute path: ${relPath}`);
   const normalized = path.normalize(relPath);
-  if (normalized.startsWith("..") || normalized.split(path.sep).includes("..")) {
+  // A SEGMENT of `..`, not a `..` prefix: `..notes.md` is a legal filename and
+  // rejecting it would refuse a real document.
+  if (normalized.split(path.sep).includes("..")) {
     throw new InvalidCommentPathError(`path escapes the repository: ${relPath}`);
   }
   if (normalized !== relPath) {
@@ -175,9 +180,37 @@ export async function initStore(storeRoot: string): Promise<void> {
  * mistyped `CALLBACK_COMMENTS_ROOT` scatters files into an unrelated tree.
  */
 export async function assertStoreInitialized(storeRoot: string): Promise<void> {
-  const marker = path.join(path.resolve(storeRoot), STORE_MARKER);
-  const exists = await fs.stat(marker).then(() => true, () => false);
-  if (!exists) throw new UninitializedCommentStoreError(path.resolve(storeRoot));
+  const root = path.resolve(storeRoot);
+  // lstat + isFile: a DIRECTORY named `.dev-comments`, or a symlink to some
+  // unrelated file, would otherwise adopt an arbitrary directory as the store.
+  const marked = await fs
+    .lstat(path.join(root, STORE_MARKER))
+    .then((stats) => stats.isFile(), () => false);
+  if (!marked) throw new UninitializedCommentStoreError(root);
+}
+
+/**
+ * Containment, the part a lexical `..` check cannot do.
+ *
+ * `commentsFilePath` proves the path is textually inside the root. It does not
+ * prove the FILESYSTEM keeps it there: if `$store/tracked` is a symlink to
+ * /tmp/outside, every write under it lands outside the store and every delete
+ * deletes someone else's file. So each component from the root down to the
+ * file is lstat'd, and an existing symlink anywhere along the way refuses the
+ * operation. Components that do not exist yet are fine — they are about to be
+ * created as real directories.
+ */
+async function assertNoSymlinkedAncestor(storeRoot: string, file: string): Promise<void> {
+  const root = path.resolve(storeRoot);
+  const segments = path.relative(root, file).split(path.sep);
+  let current = root;
+  for (const segment of segments) {
+    current = path.join(current, segment);
+    const isLink = await fs.lstat(current).then((stats) => stats.isSymbolicLink(), () => false);
+    if (isLink) {
+      throw new InvalidCommentPathError(`${current} is a symlink; refusing to follow it out of the store`);
+    }
+  }
 }
 
 /**
@@ -203,8 +236,11 @@ function readProblem(detail: string): CommentsRead {
  */
 export async function readComments(storeRoot: string, subject: Subject): Promise<CommentsRead> {
   const file = commentsFilePath(storeRoot, subject);
-  const isSymlink = await fs.lstat(file).then((stats) => stats.isSymbolicLink(), () => false);
-  if (isSymlink) return readProblem(`${file} is a symlink; refused rather than followed`);
+  try {
+    await assertNoSymlinkedAncestor(storeRoot, file);
+  } catch (e) {
+    return readProblem(errorMessage(e));
+  }
   let raw: string;
   try {
     raw = await fs.readFile(file, "utf8");
@@ -267,6 +303,7 @@ export async function appendComment(
 ): Promise<void> {
   await assertStoreInitialized(storeRoot);
   const file = commentsFilePath(storeRoot, params.subject);
+  await assertNoSymlinkedAncestor(storeRoot, file);
   const parsedComment = commentSchema.parse(params.comment);
   await withFileLock(file, async () => {
     const current = await readComments(storeRoot, params.subject);
@@ -290,6 +327,7 @@ export async function clearComments(
 ): Promise<number> {
   await assertStoreInitialized(storeRoot);
   const file = commentsFilePath(storeRoot, params.subject);
+  await assertNoSymlinkedAncestor(storeRoot, file);
   return withFileLock(file, async () => {
     const current = await readComments(storeRoot, params.subject);
     if (current.problem !== null) {
@@ -309,15 +347,37 @@ export async function clearComments(
   });
 }
 
-/** One document's worth of comments, as a listing reports it. */
+/**
+ * One document's worth of comments, as a listing reports it. `subject` is null
+ * when the file's own path is not a valid subject (a hand-created
+ * `tracked/.comments.yaml`, a worktree segment that is not a worktree name) —
+ * the entry is still reported, with `storePath` as its handle, because a
+ * malformed file is exactly what someone needs to be told about.
+ */
 export interface StoreEntry {
-  subject: Subject;
+  subject: Subject | null;
+  /** Store-relative path. Always present, so a malformed entry is still nameable. */
+  storePath: string;
   comments: Comment[];
   problem: string | null;
 }
 
+/**
+ * `ENOENT` means "no store yet", which is a legitimate empty answer. Anything
+ * else — a permission error, an I/O error — is NOT emptiness, and swallowing it
+ * would report "nothing waiting" for a store we simply could not read.
+ */
+async function readDirOrEmpty(dir: string): Promise<Dirent[]> {
+  try {
+    return await fs.readdir(dir, { withFileTypes: true });
+  } catch (e) {
+    if (errnoCode(e) === "ENOENT") return [];
+    throw e;
+  }
+}
+
 async function walkCommentFiles(dir: string, found: string[]): Promise<void> {
-  const dirents = await fs.readdir(dir, { withFileTypes: true }).catch(() => []);
+  const dirents = await readDirOrEmpty(dir);
   for (const dirent of dirents) {
     const full = path.join(dir, dirent.name);
     if (dirent.isDirectory()) await walkCommentFiles(full, found);
@@ -325,19 +385,31 @@ async function walkCommentFiles(dir: string, found: string[]): Promise<void> {
   }
 }
 
+/**
+ * The inverse of `subjectKey`, and it must be exactly that: a path that does not
+ * round-trip is not a subject. `tracked/.comments.yaml` would otherwise decode
+ * to an empty `relPath`, and `worktree/bad name/x.md.comments.yaml` to a
+ * worktree that is not a worktree name — both of which then blow up downstream
+ * instead of being reported as the malformed files they are.
+ */
 function subjectFromStorePath(storeRelative: string): Subject | null {
   const segments = storeRelative.split(path.sep);
   const [namespace, ...rest] = segments;
   const strip = (parts: string[]): string => path.join(...parts).slice(0, -COMMENTS_SUFFIX.length);
+  let candidate: Subject | null = null;
   if (namespace === "tracked" && rest.length > 0) {
-    return { scope: "tracked", relPath: strip(rest) };
-  }
-  if (namespace === "worktree" && rest.length > 1) {
+    candidate = { scope: "tracked", relPath: strip(rest) };
+  } else if (namespace === "worktree" && rest.length > 1) {
     const [worktree, ...relParts] = rest;
-    if (worktree === undefined) return null;
-    return { scope: "worktree", worktree, relPath: strip(relParts) };
+    if (worktree !== undefined) candidate = { scope: "worktree", worktree, relPath: strip(relParts) };
   }
-  return null;
+  if (candidate === null) return null;
+  try {
+    return subjectKey(candidate) === storeRelative ? candidate : null;
+  } catch {
+    // subjectKey validates; a throw here means the path was never a subject.
+    return null;
+  }
 }
 
 /**
@@ -348,15 +420,37 @@ function subjectFromStorePath(storeRelative: string): Subject | null {
  */
 export async function listAll(storeRoot: string): Promise<StoreEntry[]> {
   const root = path.resolve(storeRoot);
+  // A root that does not exist yet is genuinely empty. A root that EXISTS but
+  // is not a store is refused rather than walked: `CALLBACK_COMMENTS_ROOT=$HOME`
+  // would otherwise recurse through an unrelated tree and report what it found
+  // there as comments.
+  const rootExists = await fs.stat(root).then((stats) => stats.isDirectory(), () => false);
+  if (!rootExists) return [];
+  await assertStoreInitialized(root);
+
   const files: string[] = [];
   await walkCommentFiles(root, files);
   const entries: StoreEntry[] = [];
   for (const file of files.sort()) {
-    const subject = subjectFromStorePath(path.relative(root, file));
-    if (subject === null) continue;
-    const read = await readComments(root, subject);
+    const storePath = path.relative(root, file);
+    const subject = subjectFromStorePath(storePath);
+    if (subject === null) {
+      entries.push({
+        subject: null,
+        storePath,
+        comments: [],
+        problem: `${storePath} is not a valid comment-store path; it is being ignored`,
+      });
+      continue;
+    }
+    // One malformed file must not take the listing down with it — the other
+    // documents' comments are still readable and still waiting.
+    const read = await readComments(root, subject).catch((e: unknown) => ({
+      comments: [] as Comment[],
+      problem: errorMessage(e),
+    }));
     if (read.comments.length === 0 && read.problem === null) continue;
-    entries.push({ subject, comments: read.comments, problem: read.problem });
+    entries.push({ subject, storePath, comments: read.comments, problem: read.problem });
   }
   return entries;
 }

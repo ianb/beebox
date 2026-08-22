@@ -13,7 +13,7 @@ said.
 
 ```ts setup
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, writeFile, readFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, writeFile, readFile, readdir, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -94,6 +94,50 @@ function refusalName(subject: Subject): string {
 const outcomes = escapes.map(refusalName);
 JSON.stringify(outcomes)
 => ["InvalidCommentPathError","InvalidCommentPathError","InvalidCommentPathError","InvalidCommentPathError","InvalidCommentPathError","InvalidCommentPathError","InvalidCommentPathError"]
+```
+
+A **symlinked ancestor** is the escape a lexical check cannot see: if
+`$store/tracked` points somewhere else, every write under it lands outside the
+store and every delete deletes someone else's file. Each component from the root
+down is checked, so this is refused on read, on append, and on clear.
+
+```ts
+const outside = join(root, "outside");
+await mkdir(outside, { recursive: true });
+const linked = join(store, "linked");
+await symlink(outside, linked);
+const viaLink: Subject = { scope: "tracked", relPath: "x.md" };
+
+// Point the `tracked` namespace itself at somewhere else.
+const trackedDir = join(store, "tracked");
+await rm(trackedDir, { recursive: true, force: true });
+await symlink(outside, trackedDir);
+
+const readRefusal = await readComments(store, viaLink);
+const appendRefusal = await appendComment(store, { subject: viaLink, comment: comment({}) })
+  .then(() => "ALLOWED", (e: unknown) => (e instanceof Error ? e.name : "unknown"));
+const clearRefusal = await clearComments(store, { subject: viaLink })
+  .then(() => "ALLOWED", (e: unknown) => (e instanceof Error ? e.name : "unknown"));
+const escaped = await readdir(outside);
+
+await rm(trackedDir);
+await rm(linked);
+const symlinkGuard = {
+  readNamed: readRefusal.problem?.includes("refusing to follow it out of the store") ?? false,
+  append: appendRefusal,
+  clear: clearRefusal,
+  nothingWrittenOutside: escaped.length === 0,
+};
+JSON.stringify(symlinkGuard)
+=> {"readNamed":true,"append":"InvalidCommentPathError","clear":"InvalidCommentPathError","nothingWrittenOutside":true}
+```
+
+A `..` **segment** is an escape; a filename that merely starts with `..` is a
+legal document and must not be refused.
+
+```ts
+subjectKey({ scope: "tracked", relPath: "..notes.md" })
+=> tracked/..notes.md.comments.yaml
 ```
 
 ## Appending, and reading back newest-first
@@ -186,9 +230,30 @@ const unmarked = join(root, "not-a-store");
 await mkdir(unmarked, { recursive: true });
 const refused = await appendComment(unmarked, { subject: tracked, comment: comment({}) })
   .then(() => "ALLOWED", (e: unknown) => (e instanceof Error ? e.name : "unknown"));
-const guard = { refused, marker: STORE_MARKER, suffix: COMMENTS_SUFFIX };
+
+// Listing must refuse it too. Walking an unmarked root would let
+// CALLBACK_COMMENTS_ROOT=$HOME recurse an unrelated tree and report whatever
+// `.comments.yaml` files it found there as waiting comments.
+const listRefused = await listAll(unmarked)
+  .then(() => "ALLOWED", (e: unknown) => (e instanceof Error ? e.name : "unknown"));
+
+// A DIRECTORY named .dev-comments is not a marker.
+const fakeMarker = join(root, "fake-store");
+await mkdir(join(fakeMarker, STORE_MARKER), { recursive: true });
+const fakeRefused = await appendComment(fakeMarker, { subject: tracked, comment: comment({}) })
+  .then(() => "ALLOWED", (e: unknown) => (e instanceof Error ? e.name : "unknown"));
+
+const guard = { refused, listRefused, fakeRefused, marker: STORE_MARKER, suffix: COMMENTS_SUFFIX };
 JSON.stringify(guard)
-=> {"refused":"UninitializedCommentStoreError","marker":".dev-comments","suffix":".comments.yaml"}
+=> {"refused":"UninitializedCommentStoreError","listRefused":"UninitializedCommentStoreError","fakeRefused":"UninitializedCommentStoreError","marker":".dev-comments","suffix":".comments.yaml"}
+```
+
+A store root that does not exist at all is genuinely empty — that is the state
+before anyone has commented, and it is not an error.
+
+```ts
+(await listAll(join(root, "never-created"))).length
+=> 0
 ```
 
 ## Listing answers both questions from one store
@@ -203,13 +268,23 @@ await appendComment(store, {
   comment: comment({ id: "c-ws", workstream: "scanner-ingest", body: "For scanner." }),
 });
 
+// A hand-created file whose path is not a valid subject is REPORTED and skipped,
+// not allowed to take the whole listing down with it.
+await writeFile(join(store, "tracked", COMMENTS_SUFFIX), "version: 1\ncomments: []\n");
+
 const entries = await listAll(store);
 const forScanner = entries.flatMap((entry) =>
   entry.comments.filter((c) => c.workstream === "scanner-ingest").map((c) => c.body),
 );
-const listing = { documents: entries.length, forScanner };
+const malformed = entries.filter((entry) => entry.subject === null);
+const listing = {
+  withComments: entries.filter((e) => e.comments.length > 0).length,
+  forScanner,
+  malformedReported: malformed.length === 1,
+  malformedNamed: malformed[0]?.problem?.includes("not a valid comment-store path") ?? false,
+};
 JSON.stringify(listing)
-=> {"documents":3,"forScanner":["For scanner."]}
+=> {"withComments":3,"forScanner":["For scanner."],"malformedReported":true,"malformedNamed":true}
 ```
 
 ## Clearing is how a comment stops waiting
@@ -223,7 +298,7 @@ const removedOne = await clearComments(store, { subject: tracked, id: "c-0001" }
 const afterOne = (await readComments(store, tracked)).comments.length;
 const removedRest = await clearComments(store, { subject: tracked });
 const listedAfter = await listAll(store);
-const stillListed = listedAfter.some((e) => e.subject.relPath === "callback-box/docs/plans/foo.md");
+const stillListed = listedAfter.some((e) => e.subject?.relPath === "callback-box/docs/plans/foo.md");
 const missingId = await clearComments(store, { subject: scratch, id: "nope" });
 const cleared = { removedOne, afterOne, removedRest, stillListed, missingId };
 JSON.stringify(cleared)

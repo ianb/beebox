@@ -27,6 +27,17 @@ await mkdir(wt, { recursive: true });
 // Run a snippet with the lib sourced and the store root pinned. Returns
 // { code, stderr } — these functions never print to stdout by contract, because
 // wt_create's stdout is a one-line path contract.
+// A guard rather than a cast: `catch` hands back `unknown`, and the house rule
+// treats `as` as unsafe even at a parse boundary (callback-box/code-style.md).
+interface ExecFailure { code?: number; stdout?: string; stderr?: string }
+function isExecFailure(value: unknown): value is ExecFailure {
+  return typeof value === "object" && value !== null;
+}
+function failed(e: unknown) {
+  const err = isExecFailure(e) ? e : {};
+  return { code: err.code ?? 1, stdout: err.stdout ?? "", stderr: err.stderr ?? "" };
+}
+
 async function sh(script: string) {
   try {
     const r = await execFileAsync("bash", ["-c", `set -u; . "$0"; ${script}`, lib], {
@@ -34,8 +45,7 @@ async function sh(script: string) {
     });
     return { code: 0, stdout: r.stdout, stderr: r.stderr };
   } catch (e) {
-    const err = e as { code?: number; stdout?: string; stderr?: string };
-    return { code: err.code ?? 1, stdout: err.stdout ?? "", stderr: err.stderr ?? "" };
+    return failed(e);
   }
 }
 ```
@@ -106,10 +116,7 @@ const refused = await execFileAsync("bash", [
   "-c",
   `set -u; . "$0"; wt_comments_mount "${wt}"`,
   lib,
-], { env: { ...process.env, WT_COMMENTS_ROOT: stranger } }).then(
-  () => ({ code: 0, stderr: "" }),
-  (e: { code?: number; stderr?: string }) => ({ code: e.code ?? 1, stderr: e.stderr ?? "" }),
-);
+], { env: { ...process.env, WT_COMMENTS_ROOT: stranger } }).then(() => ({ code: 0, stderr: "" }), failed);
 JSON.stringify({ code: refused.code, named: refused.stderr.includes("not adopting an unrelated directory") })
 => {"code":1,"named":true}
 ```

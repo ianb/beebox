@@ -92,13 +92,24 @@ function toRepoRelative(context: Context, input: string): string {
   return relative;
 }
 
-async function subjectFor(context: Context, input: string): Promise<Subject> {
+/**
+ * BOTH namespaces a path could hold comments in, current-status-first.
+ *
+ * Tracked status is not stable: a `scratch/notes.md` commented while untracked
+ * and later committed would, if we consulted only its CURRENT namespace, report
+ * "no comments" for remarks sitting on disk — and `clear` could not reach them
+ * by path. So every read and every clear considers both, and the ordering only
+ * decides which one a NEW comment would be written to.
+ */
+async function subjectsFor(context: Context, input: string): Promise<Subject[]> {
   const relPath = toRepoRelative(context, input);
-  if (await isTracked(context.repoRoot, relPath)) return { scope: "tracked", relPath };
-  return { scope: "worktree", worktree: context.worktree, relPath };
+  const tracked: Subject = { scope: "tracked", relPath };
+  const local: Subject = { scope: "worktree", worktree: context.worktree, relPath };
+  return (await isTracked(context.repoRoot, relPath)) ? [tracked, local] : [local, tracked];
 }
 
-function describeSubject(subject: Subject): string {
+function describeSubject(subject: Subject | null, storePath: string): string {
+  if (subject === null) return `${storePath} (unreadable entry)`;
   return subject.scope === "tracked" ? subject.relPath : `${subject.relPath} (${subject.worktree})`;
 }
 
@@ -113,7 +124,7 @@ function renderComment(comment: Comment): string {
 }
 
 function renderEntry(entry: StoreEntry): string {
-  const head = `${describeSubject(entry.subject)}  (${String(entry.comments.length)})`;
+  const head = `${describeSubject(entry.subject, entry.storePath)}  (${String(entry.comments.length)})`;
   const problem = entry.problem === null ? [] : [`  ! ${entry.problem}`];
   return [head, ...problem, ...byNewest(entry.comments).map(renderComment)].join("\n");
 }
@@ -125,19 +136,25 @@ async function commandShow(context: Context, args: string[]): Promise<number> {
     return 2;
   }
   const storeRoot = defaultStoreRoot(context.mainRoot);
-  const subject = await subjectFor(context, target);
-  const read = await readComments(storeRoot, subject);
-  // A file we could not parse is NOT "no comments" — saying so would hide the
-  // boxholder's words behind a shrug.
-  if (read.problem !== null) {
-    process.stderr.write(`comments show: ${read.problem}\n`);
-    return 1;
+  const subjects = await subjectsFor(context, target);
+  const found: StoreEntry[] = [];
+  for (const subject of subjects) {
+    const read = await readComments(storeRoot, subject);
+    // A file we could not parse is NOT "no comments" — saying so would hide the
+    // boxholder's words behind a shrug.
+    if (read.problem !== null) {
+      process.stderr.write(`comments show: ${read.problem}\n`);
+      return 1;
+    }
+    if (read.comments.length > 0) {
+      found.push({ subject, storePath: "", comments: read.comments, problem: null });
+    }
   }
-  if (read.comments.length === 0) {
-    process.stdout.write(`No comments on ${describeSubject(subject)}.\n`);
+  if (found.length === 0) {
+    process.stdout.write(`No comments on ${describeSubject(subjects[0] ?? null, target)}.\n`);
     return 0;
   }
-  process.stdout.write(`${renderEntry({ subject, comments: read.comments, problem: null })}\n`);
+  process.stdout.write(`${found.map(renderEntry).join("\n\n")}\n`);
   return 0;
 }
 
@@ -191,13 +208,20 @@ async function commandClear(context: Context, args: string[]): Promise<number> {
     return 2;
   }
   const storeRoot = defaultStoreRoot(context.mainRoot);
-  const subject = await subjectFor(context, target);
-  const removed = await clearComments(storeRoot, id === undefined ? { subject } : { subject, id });
+  const subjects = await subjectsFor(context, target);
+  let removed = 0;
+  // Both namespaces: a file's tracked status may have changed since the comment
+  // was written, and a comment you cannot clear by path is a comment that waits
+  // forever.
+  for (const subject of subjects) {
+    removed += await clearComments(storeRoot, id === undefined ? { subject } : { subject, id });
+  }
+  const label = describeSubject(subjects[0] ?? null, target);
   if (removed === 0) {
-    process.stdout.write(`Nothing to clear on ${describeSubject(subject)}.\n`);
+    process.stdout.write(`Nothing to clear on ${label}.\n`);
     return 0;
   }
-  process.stdout.write(`Cleared ${String(removed)} on ${describeSubject(subject)}.\n`);
+  process.stdout.write(`Cleared ${String(removed)} on ${label}.\n`);
   return 0;
 }
 
