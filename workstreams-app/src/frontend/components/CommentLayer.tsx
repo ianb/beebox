@@ -51,6 +51,12 @@ function Composer({ anchor, onCancel, onSubmit, pending }: {
   const mic = recorderAvailability();
   const transcribe = trpc.comments.transcribe.useMutation();
 
+  // A microphone left open is a bug people notice by the indicator light rather
+  // than by an error. Every path out of the composer — Cancel, submitting typed
+  // text, toggling commenting off, navigating away — unmounts this component,
+  // so releasing here covers all of them.
+  useEffect(() => () => { session?.cancel(); }, [session]);
+
   async function toggleRecording(): Promise<void> {
     setRecordingProblem(null);
     if (session !== null) {
@@ -112,7 +118,13 @@ function Composer({ anchor, onCancel, onSubmit, pending }: {
               {session !== null ? "Stop" : transcribe.isPending ? "Transcribing…" : "Speak"}
             </Button>
           : <Button type="button" intent="quiet" disabled title={mic.reason}>Speak</Button>}
-        <Button type="button" intent="quiet" onClick={onCancel}>Cancel</Button>
+        <Button
+          type="button"
+          intent="quiet"
+          onClick={() => { session?.cancel(); setSession(null); onCancel(); }}
+        >
+          Cancel
+        </Button>
       </p>
       {/* Disabled AND reasoned: a control that vanishes teaches the wrong
           lesson about why it is missing. */}
@@ -133,16 +145,21 @@ export function CommentLayer({ relPath, workstream, changedIn, contentRef }: {
   const [anchor, setAnchor] = useState<SelectionAnchor | null>(null);
   const [composing, setComposing] = useState(false);
   const utils = trpc.useUtils();
-  const comments = trpc.comments.forDocument.useQuery({ relPath });
+  // `worktree` is the lens being read; `workstream` below is who the remark is
+  // for. Usually the same name, but not always, and conflating them files a
+  // comment where nobody will look for it.
+  const comments = trpc.comments.forDocument.useQuery({ relPath, worktree: workstream });
   const add = trpc.comments.add.useMutation({
     onSuccess: async () => {
       setComposing(false);
       setAnchor(null);
-      await utils.comments.forDocument.invalidate({ relPath });
+      await utils.comments.forDocument.invalidate({ relPath, worktree: workstream });
     },
   });
   const clear = trpc.comments.clear.useMutation({
-    onSuccess: async () => { await utils.comments.forDocument.invalidate({ relPath }); },
+    onSuccess: async () => {
+      await utils.comments.forDocument.invalidate({ relPath, worktree: workstream });
+    },
   });
 
   // Memoized because the highlight effect depends on it: a fresh `[]` every
@@ -170,6 +187,10 @@ export function CommentLayer({ relPath, workstream, changedIn, contentRef }: {
     const root = contentRef.current;
     if (root === null) return;
     const onMouseUp = (): void => {
+      // NOT while a draft is open. Selecting again mid-sentence would silently
+      // re-point the text already typed at a different span — the comment would
+      // be attached to something the boxholder never meant.
+      if (composing) return;
       const captured = captureSelection(root);
       if (captured !== null) {
         setAnchor(captured);
@@ -178,7 +199,7 @@ export function CommentLayer({ relPath, workstream, changedIn, contentRef }: {
     };
     root.addEventListener("mouseup", onMouseUp);
     return () => { root.removeEventListener("mouseup", onMouseUp); };
-  }, [active, contentRef]);
+  }, [active, composing, contentRef]);
 
   /**
    * The routing ladder (`document-comments.md`, Track 4a), which never guesses
@@ -194,6 +215,7 @@ export function CommentLayer({ relPath, workstream, changedIn, contentRef }: {
       body,
       origin,
       workstream: routed,
+      worktree: workstream,
       ...(anchor?.quoted === undefined ? {} : { quoted: anchor.quoted }),
       ...(anchor?.section === undefined ? {} : { section: anchor.section }),
       ...(anchor?.fragment === undefined ? {} : { fragment: anchor.fragment }),
@@ -241,7 +263,7 @@ export function CommentLayer({ relPath, workstream, changedIn, contentRef }: {
               <CommentBody
                 key={comment.id}
                 comment={comment}
-                onClear={() => { clear.mutate({ relPath, id: comment.id }); }}
+                onClear={() => { clear.mutate({ relPath, worktree: workstream, id: comment.id }); }}
               />
             ))}
           </ul>

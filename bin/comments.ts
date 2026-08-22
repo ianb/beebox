@@ -55,8 +55,10 @@ const USAGE = `usage: bin/comments <command>
   clear <path> [--id <id>]        Remove handled comments. Without --id, clears
                                   the document.
   add <path> --body <text>        Write a comment. --origin typed|voice,
-                                  --workstream <name>, --quoted <text>,
-                                  --section <text>, --fragment <text>.
+                                  --workstream <name> (who it is FOR),
+                                  --worktree <name> (which checkout's namespace,
+                                  for untracked files; defaults to this one),
+                                  --quoted/--section/--fragment <text>.
 
   --json                          Machine-readable output (any command).
 
@@ -114,16 +116,29 @@ function toRepoRelative(context: Context, input: string): string {
 /**
  * BOTH namespaces a path could hold comments in, current-status-first.
  *
+ * `worktree` names the UNTRACKED namespace. It defaults to the checkout this
+ * CLI is running in, which is right for an agent at a terminal — but the app
+ * runs from the MAIN checkout while the developer reads another workstream's
+ * file through a lens, so it passes the lens explicitly. Without that, a
+ * comment on `scratch/foo.md` viewed as `dev-comments` would be filed under
+ * `worktree/main/` and the agent in `dev-comments` would never see it.
+ *
  * Tracked status is not stable: a `scratch/notes.md` commented while untracked
  * and later committed would, if we consulted only its CURRENT namespace, report
  * "no comments" for remarks sitting on disk — and `clear` could not reach them
  * by path. So every read and every clear considers both, and the ordering only
  * decides which one a NEW comment would be written to.
  */
-async function subjectsFor(context: Context, input: string): Promise<Subject[]> {
-  const relPath = toRepoRelative(context, input);
+async function subjectsFor(
+  context: Context,
+  target: { path: string; worktree?: string | undefined },
+): Promise<Subject[]> {
+  const relPath = toRepoRelative(context, target.path);
+  const worktree = target.worktree === undefined || target.worktree === ""
+    ? context.worktree
+    : target.worktree;
   const tracked: Subject = { scope: "tracked", relPath };
-  const local: Subject = { scope: "worktree", worktree: context.worktree, relPath };
+  const local: Subject = { scope: "worktree", worktree, relPath };
   return (await isTracked(context.repoRoot, relPath)) ? [tracked, local] : [local, tracked];
 }
 
@@ -148,18 +163,29 @@ function renderEntry(entry: StoreEntry): string {
   return [head, ...problem, ...byNewest(entry.comments).map(renderComment)].join("\n");
 }
 
+/**
+ * Flags that take a value, which they consume UNCONDITIONALLY.
+ *
+ * A parser that skips a value beginning with `--` cannot carry the boxholder's
+ * own words: a comment body of "-- actually, no" would arrive empty. These
+ * values are user text, so the flag name is the only thing that decides.
+ */
+const VALUE_FLAGS = new Set(["body", "origin", "workstream", "worktree", "quoted", "section", "fragment", "id"]);
+
 /** Read `--flag value` pairs without pulling in an argument parser. */
 function flags(args: string[]): Map<string, string> {
   const found = new Map<string, string>();
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i];
     if (arg === undefined || !arg.startsWith("--")) continue;
+    const name = arg.slice(2);
+    if (!VALUE_FLAGS.has(name)) continue;
     const next = args[i + 1];
-    if (next === undefined || next.startsWith("--")) {
-      found.set(arg.slice(2), "");
+    if (next === undefined) {
+      found.set(name, "");
       continue;
     }
-    found.set(arg.slice(2), next);
+    found.set(name, next);
     i += 1;
   }
   return found;
@@ -194,7 +220,7 @@ async function commandAdd(context: Context, args: string[]): Promise<number> {
 
   const storeRoot = defaultStoreRoot(context.mainRoot);
   await initStore(storeRoot);
-  const [subject] = await subjectsFor(context, target);
+  const [subject] = await subjectsFor(context, { path: target, worktree: options.get("worktree") });
   if (subject === undefined) {
     process.stderr.write("comments add: could not resolve a subject\n");
     return 2;
@@ -227,7 +253,7 @@ async function commandShow(context: Context, args: string[]): Promise<number> {
     return 2;
   }
   const storeRoot = defaultStoreRoot(context.mainRoot);
-  const subjects = await subjectsFor(context, target);
+  const subjects = await subjectsFor(context, { path: target, worktree: flags(args).get("worktree") });
   const found: StoreEntry[] = [];
   for (const subject of subjects) {
     const read = await readComments(storeRoot, subject);
@@ -302,19 +328,20 @@ async function commandList(context: Context, args: string[]): Promise<number> {
 }
 
 async function commandClear(context: Context, args: string[]): Promise<number> {
-  const [target, ...rest] = args;
-  if (target === undefined) {
+  const [target] = args;
+  if (target === undefined || target.startsWith("--")) {
     process.stderr.write("comments clear: needs a path\n");
     return 2;
   }
-  const idFlag = rest.indexOf("--id");
-  const id = idFlag === -1 ? undefined : rest[idFlag + 1];
-  if (idFlag !== -1 && id === undefined) {
+  const options = flags(args);
+  const rawId = options.get("id");
+  if (options.has("id") && (rawId === undefined || rawId === "")) {
     process.stderr.write("comments clear: --id needs a value\n");
     return 2;
   }
+  const id = rawId === "" ? undefined : rawId;
   const storeRoot = defaultStoreRoot(context.mainRoot);
-  const subjects = await subjectsFor(context, target);
+  const subjects = await subjectsFor(context, { path: target, worktree: options.get("worktree") });
   let removed = 0;
   // Both namespaces: a file's tracked status may have changed since the comment
   // was written, and a comment you cannot clear by path is a comment that waits

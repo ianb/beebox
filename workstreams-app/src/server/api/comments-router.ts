@@ -40,12 +40,14 @@ async function passingCliErrors<T>(work: () => Promise<T>): Promise<T> {
 export const commentsRouter = router({
   /** Every comment on one document — what the viewer shows beside the text. */
   forDocument: procedure
-    .input(z.object({ relPath: z.string().min(1).max(4096) }))
+    .input(z.object({
+      relPath: z.string().min(1).max(4096),
+      /** The lens being read, so an untracked file resolves in ITS namespace. */
+      worktree: workstreamName.nullable().default(null),
+    }))
     .output(z.object({ comments: z.array(commentSchema) }))
     .query(async ({ input, ctx }) =>
-      passingCliErrors(async () => ({
-        comments: await ctx.services.comments.forDocument(input.relPath),
-      })),
+      passingCliErrors(async () => ({ comments: await ctx.services.comments.forDocument(input) })),
     ),
 
   /** Everything waiting, optionally narrowed to one workstream's mail. */
@@ -68,6 +70,12 @@ export const commentsRouter = router({
       // Null is a real state, not a missing value: commenting on a file nobody
       // is working on is how new work starts.
       workstream: workstreamName.nullable().default(null),
+      /**
+       * Which checkout's namespace an UNTRACKED file belongs to — a different
+       * question from `workstream`, which is who the remark is FOR. The app
+       * runs from main while the developer reads a branch's file.
+       */
+      worktree: workstreamName.nullable().default(null),
       quoted: z.string().max(10_000).optional(),
       section: z.string().max(500).optional(),
       fragment: z.string().max(4096).optional(),
@@ -115,7 +123,11 @@ export const commentsRouter = router({
 
   /** How a comment stops waiting. Nothing expires on its own. */
   clear: procedure
-    .input(z.object({ relPath: z.string().min(1).max(4096), id: z.string().max(200).optional() }))
+    .input(z.object({
+      relPath: z.string().min(1).max(4096),
+      worktree: workstreamName.nullable().default(null),
+      id: z.string().max(200).optional(),
+    }))
     .output(z.object({ cleared: z.literal(true) }))
     .mutation(async ({ input, ctx }) =>
       passingCliErrors(async () => {

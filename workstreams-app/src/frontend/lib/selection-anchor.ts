@@ -103,7 +103,11 @@ export function parseFragment(fragment: string): GeneratedFragment | null {
   const directive: GeneratedFragment = {};
   const rest = [...parts];
   const first = rest[0];
-  if (first !== undefined && first.endsWith("-")) {
+  // `rest.length > 1`: a LONE part ending in `-` is the quoted text itself
+  // (selecting "foo-" is ordinary), not a prefix with nothing to prefix. Without
+  // this the part is shifted away and the whole fragment parses to null, so the
+  // comment silently stops highlighting.
+  if (first !== undefined && first.endsWith("-") && rest.length > 1) {
     directive.prefix = first.slice(0, -1);
     rest.shift();
   }

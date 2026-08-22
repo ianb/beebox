@@ -220,6 +220,53 @@ await Promise.all(
 => 8
 ```
 
+## Concurrent PROCESSES do not lose an update either
+
+The in-process chain above is not enough on its own, and the gap was real: every
+write from the browser is a separate `bin/comments` process, so two tabs
+commenting on one document are two processes reading the same YAML and the
+second `rename` silently discarding the first. The cross-process lock is what
+closes it — this is the only failure in the design that destroys the
+boxholder's words rather than misplacing them.
+
+```ts continue
+const { execFile } = await import("node:child_process");
+const { promisify } = await import("node:util");
+const run = promisify(execFile);
+const repoRoot = join(process.cwd(), "..");
+
+// `--worktree probe` names the namespace explicitly: these paths are not
+// tracked, so they land in the worktree namespace, and pinning the name keeps
+// the test independent of which checkout it runs in.
+const contended: Subject = { scope: "worktree", worktree: "probe", relPath: "contended.md" };
+await Promise.all(
+  Array.from({ length: 6 }, (_unused, i) =>
+    run(join(repoRoot, "bin/comments"), [
+      "add", "contended.md", "--worktree", "probe", "--body", `from process ${String(i)}`,
+    ], {
+      cwd: repoRoot,
+      env: { ...process.env, CALLBACK_COMMENTS_ROOT: store },
+    }),
+  ),
+);
+(await readComments(store, contended)).comments.length
+=> 6
+```
+
+A body that begins with `--` is the boxholder's words, not a flag. A parser that
+skipped it would drop the comment on the floor.
+
+```ts continue
+await run(join(repoRoot, "bin/comments"), [
+  "add", "flagged.md", "--worktree", "probe", "--body", "-- actually, no",
+], {
+  cwd: repoRoot,
+  env: { ...process.env, CALLBACK_COMMENTS_ROOT: store },
+});
+(await readComments(store, { scope: "worktree", worktree: "probe", relPath: "flagged.md" })).comments[0]?.body
+=> -- actually, no
+```
+
 ## An unmarked directory is refused
 
 A mistyped `CALLBACK_COMMENTS_ROOT` would otherwise scatter comment files
@@ -284,7 +331,7 @@ const listing = {
   malformedNamed: malformed[0]?.problem?.includes("not a valid comment-store path") ?? false,
 };
 JSON.stringify(listing)
-=> {"withComments":3,"forScanner":["For scanner."],"malformedReported":true,"malformedNamed":true}
+=> {"withComments":5,"forScanner":["For scanner."],"malformedReported":true,"malformedNamed":true}
 ```
 
 ## Clearing is how a comment stops waiting

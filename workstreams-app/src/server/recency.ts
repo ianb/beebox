@@ -73,7 +73,12 @@ function splitZ(stdout: string): string[] {
  */
 async function committedTimes(root: string, scope: { branchOnly: boolean }): Promise<Map<string, number>> {
   const times = new Map<string, number>();
-  const range = scope.branchOnly ? ["main..HEAD"] : [`--since=${RECENCY_WINDOW}`];
+  // BOTH bounds for a branch. `main..HEAD` keeps it from re-reporting main's
+  // history; `--since` keeps a months-old unmerged worktree from filling a
+  // RECENT feed with commits nobody has touched since. Either alone is wrong.
+  const range = scope.branchOnly
+    ? ["main..HEAD", `--since=${RECENCY_WINDOW}`]
+    : [`--since=${RECENCY_WINDOW}`];
   const { stdout } = await execa(
     "git",
     ["log", ...range, "--format=%ct", "--name-only", "--no-renames"],

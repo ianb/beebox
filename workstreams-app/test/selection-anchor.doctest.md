@@ -43,6 +43,15 @@ JSON.stringify(shapes.map((shape) => JSON.parse(roundTrip(shape))))
 => [{"textStart":"the router restarts"},{"textStart":"the router","textEnd":"restarts"},{"prefix":"so","textStart":"the router restarts"},{"textStart":"the router restarts","suffix":"on reload"}]
 ```
 
+A lone quoted string ending in `-` is the text itself, not a prefix with nothing
+to prefix. Getting this wrong parsed the whole fragment to null, so a comment on
+a hyphen-final selection silently stopped highlighting.
+
+```ts
+JSON.stringify([roundTrip({ textStart: "foo-" }), roundTrip({ prefix: "so", textStart: "bar" })])
+=> ["{\"textStart\":\"foo-\"}","{\"prefix\":\"so\",\"textStart\":\"bar\"}"]
+```
+
 ## Text that would break the encoding survives it
 
 Commas and dashes are the fragment syntax's own separators, so a quote

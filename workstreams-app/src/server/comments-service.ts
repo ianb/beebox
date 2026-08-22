@@ -43,8 +43,15 @@ export class CommentsCliError extends Error {
 }
 
 export interface CommentsService {
-  /** Every comment on one document, newest first, across both namespaces. */
-  forDocument(relPath: string): Promise<Comment[]>;
+  /**
+   * Every comment on one document, newest first, across both namespaces.
+   *
+   * `worktree` names which checkout's untracked namespace to look in. The app
+   * runs from MAIN while the developer reads another workstream's file through
+   * a lens, so without it a comment on an untracked file would be filed and
+   * sought under `main` and the agent who needs it would never see it.
+   */
+  forDocument(input: { relPath: string; worktree: string | null }): Promise<Comment[]>;
   /** Everything waiting, optionally narrowed to what is addressed to one workstream. */
   waiting(workstream: string | null): Promise<Array<{ relPath: string; comments: Comment[] }>>;
   add(input: {
@@ -52,13 +59,15 @@ export interface CommentsService {
     body: string;
     origin: "typed" | "voice";
     workstream: string | null;
+    /** Which checkout's namespace an UNTRACKED file belongs to. */
+    worktree: string | null;
     // `exactOptionalPropertyTypes` is on, so an ABSENT optional and an
     // explicit `undefined` are different types — and Zod hands back the latter.
     quoted?: string | undefined;
     section?: string | undefined;
     fragment?: string | undefined;
   }): Promise<{ id: string }>;
-  clear(input: { relPath: string; id?: string | undefined }): Promise<void>;
+  clear(input: { relPath: string; worktree: string | null; id?: string | undefined }): Promise<void>;
 }
 
 export function createCommentsService(options: { repoRoot: string }): CommentsService {
@@ -80,8 +89,9 @@ export function createCommentsService(options: { repoRoot: string }): CommentsSe
   }
 
   return {
-    async forDocument(relPath): Promise<Comment[]> {
-      const parsed = cliOutputSchema.parse(JSON.parse(await run(["show", relPath, "--json"])));
+    async forDocument({ relPath, worktree }): Promise<Comment[]> {
+      const args = ["show", relPath, "--json", ...optional("worktree", worktree ?? undefined)];
+      const parsed = cliOutputSchema.parse(JSON.parse(await run(args)));
       return parsed.entries.flatMap((entry) => entry.comments);
     },
     async waiting(workstream): Promise<Array<{ relPath: string; comments: Comment[] }>> {
@@ -99,6 +109,7 @@ export function createCommentsService(options: { repoRoot: string }): CommentsSe
         "--origin", input.origin,
         "--json",
         ...optional("workstream", input.workstream ?? undefined),
+        ...optional("worktree", input.worktree ?? undefined),
         ...optional("quoted", input.quoted),
         ...optional("section", input.section),
         ...optional("fragment", input.fragment),
@@ -106,7 +117,12 @@ export function createCommentsService(options: { repoRoot: string }): CommentsSe
       return cliAddSchema.parse(JSON.parse(await run(args)));
     },
     async clear(input): Promise<void> {
-      await run(["clear", input.relPath, ...optional("id", input.id)]);
+      await run([
+        "clear",
+        input.relPath,
+        ...optional("worktree", input.worktree ?? undefined),
+        ...optional("id", input.id),
+      ]);
     },
   };
 }

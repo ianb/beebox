@@ -42,6 +42,10 @@ import { z } from "zod";
 // (`callback-box/code-style.md`). bin/ already imports from callback-box —
 // see bin/router-auth.ts.
 import { errnoCode, errorMessage } from "../../callback-box/src/lib/error-guards.js";
+// The canonical cross-process lock. Its docblock is explicit: "This is the
+// canonical lock for the project... Don't add a new lock surface elsewhere —
+// extend or wrap this instead."
+import { withFileLock as withCrossProcessLock } from "../../callback-box/src/lib/file-lock.js";
 
 /** Written when the store root is created; nothing writes to an unmarked directory. */
 export const STORE_MARKER = ".dev-comments";
@@ -264,17 +268,34 @@ export async function readComments(storeRoot: string, subject: Subject): Promise
 }
 
 /**
- * In-process serialization of read-modify-write on one file. Two browser tabs
- * commenting on one document land in the same process, and a lost update there
- * is invisible to any file lock — the same problem `card-lock.ts` solves in
- * callback-box, kept separate from cross-process locking because it is a
- * different problem.
+ * Serialize read-modify-write on one comments file, ACROSS PROCESSES.
+ *
+ * An in-process chain alone was wrong here, and dangerously so. Every write
+ * from the browser is a separate `bin/comments` process (the app shells out
+ * rather than duplicating the store), so two tabs commenting on one document
+ * are two processes: both read the same YAML, both append one comment, and the
+ * second `rename` silently discards the first. That is the one failure in this
+ * whole design that destroys the boxholder's words rather than merely
+ * misplacing them.
+ *
+ * So the cross-process lock is the outer one, and the in-process chain stays as
+ * the inner: concurrent writes WITHIN a process (the app is one process; two
+ * tabs can reach it at once) never contend for the file lock at all, and would
+ * otherwise deadlock against a lock this module holds for the whole span.
  */
 const writeChains = new Map<string, Promise<unknown>>();
 
+/** Waiting longer than this means something is wedged, not merely busy. */
+const LOCK_WAIT_MS = 5_000;
+
 function withFileLock<T>(file: string, fn: () => Promise<T>): Promise<T> {
+  const guarded = (): Promise<T> =>
+    withCrossProcessLock(
+      { lockPath: `${file}.lock`, metadata: { purpose: "document-comments" }, waitMs: LOCK_WAIT_MS },
+      fn,
+    );
   const previous = writeChains.get(file) ?? Promise.resolve();
-  const next = previous.then(fn, fn);
+  const next = previous.then(guarded, guarded);
   writeChains.set(file, next.catch(() => undefined));
   return next;
 }
