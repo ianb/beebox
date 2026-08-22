@@ -14,9 +14,6 @@ import {
   type OverlayResult,
 } from "./issue-overlay.js";
 import type {
-  BrowsedDocument,
-  RecentFeed,
-  WorkstreamChangedFiles,
   Issue,
   Plan,
   TestingQueue,
@@ -25,9 +22,8 @@ import type { WorkstreamIssue } from "../shared/workstreams.js";
 import type { DocumentsService } from "./services.js";
 import { resolveIssueTarget, saveIssueChanges } from "./issues-mutation-service.js";
 import { resolveIssuePath } from "./issue-path.js";
-import { readDocument } from "./document-read.js";
 import { collectWorkstreamChanges, type WorkstreamChanges } from "./workstream-changes.js";
-import { collectRecentFiles } from "./recency.js";
+import { createBrowseReads } from "./browse-reads.js";
 
 const DOCUMENT_CACHE_MS = 60_000;
 
@@ -227,44 +223,7 @@ export function createDocumentsService(options: DocumentsServiceOptions): Docume
   }
 
   return {
-    async readDocument(request): Promise<BrowsedDocument> {
-      // The overlay already knows every live worktree root; reusing it keeps
-      // one answer to "where is workstream X" rather than a second scan that
-      // could disagree with the issue views.
-      const state = await snapshot();
-      return readDocument(
-        { mainRoot: options.mainRoot, worktreeRoots: state.overlay.worktreeRoots },
-        { ...request, changes: state.changes },
-      );
-    },
-    async recentFiles(): Promise<RecentFeed> {
-      const state = await snapshot();
-      const feed = await collectRecentFiles({
-        mainRoot: options.mainRoot,
-        worktreeRoots: state.overlay.worktreeRoots,
-      });
-      return {
-        now: feed.now,
-        files: feed.files,
-        distribution: feed.distribution,
-        unavailable: [...feed.unavailable].map(([workstream, problem]) => ({ workstream, problem })),
-        truncated: feed.truncated,
-      };
-    },
-    async changedFiles(workstream): Promise<WorkstreamChangedFiles> {
-      const state = await snapshot();
-      const unavailable = state.changes.unavailable.get(workstream);
-      if (unavailable !== undefined) return { workstream, paths: [], problem: unavailable };
-      const paths = state.changes.byWorkstream.get(workstream);
-      // THREE states, not two. A workstream that was scanned and changed
-      // nothing, one whose scan failed, and one that is not a live workstream
-      // at all are different answers — returning an empty list for the third
-      // would report "changed nothing" about something that does not exist.
-      if (paths === undefined) {
-        return { workstream, paths: [], problem: `${workstream} is not a live workstream` };
-      }
-      return { workstream, paths, problem: null };
-    },
+    ...createBrowseReads({ mainRoot: options.mainRoot, snapshot }),
     async listIssues(): Promise<Issue[]> {
       const state = await snapshot();
       return (await currentIssues(state)).map((issue) =>

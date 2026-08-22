@@ -153,6 +153,17 @@ export const documentSchema = z.object({
   changesUnavailable: z.array(z.string()),
 });
 
+/** One entry in the browsable-path index, for quick-open and the sidebar. */
+export const indexedPathSchema = z.object({
+  relPath: z.string(),
+  kind: documentKindSchema,
+});
+
+export const pathIndexSchema = z.object({
+  workstream: z.string().nullable(),
+  paths: z.array(indexedPathSchema),
+});
+
 /** One file in the recency feed — the browser's front door. */
 export const recentFileSchema = z.object({
   relPath: z.string(),
@@ -193,5 +204,7 @@ export type DocumentKind = z.infer<typeof documentKindSchema>;
 export type DirectoryEntry = z.infer<typeof directoryEntrySchema>;
 export type BrowsedDocument = z.infer<typeof documentSchema>;
 export type WorkstreamChangedFiles = z.infer<typeof workstreamChangesSchema>;
+export type IndexedPath = z.infer<typeof indexedPathSchema>;
+export type PathIndex = z.infer<typeof pathIndexSchema>;
 export type RecentFile = z.infer<typeof recentFileSchema>;
 export type RecentFeed = z.infer<typeof recentFeedSchema>;

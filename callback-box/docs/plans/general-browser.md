@@ -373,7 +373,13 @@ scoped to `.md` in one repository root; this generalizes it to all files across
 every live workstream, and the mtime fallback keeps mattering for exactly the
 same reason.
 
-**Direction.** Port the affordances that work, in React:
+**Direction — BUILT (2026-08-22), except the sidebar.** Quick-open is
+`documents.paths` plus `QuickOpen.tsx`, mounted in the app shell so Cmd-P works
+from every page and inherits the current workstream lens. The corpus is fetched
+once per lens and filtered in the browser — a few thousand paths is nothing to
+filter locally, and a round trip per keystroke would feel worse than the surface
+it replaces. Covered by `workstreams-app/test/file-index.doctest.md`. Port the
+affordances that work, in React:
 - Quick-open over every browsable path (`renderDocQuickOpen`, `router-docs.ts:519`).
 - A sidebar grouped by area, with path and recently-edited sorts
   (`renderDocSidebar`, `:434-442`).

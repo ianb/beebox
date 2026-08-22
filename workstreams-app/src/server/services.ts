@@ -1,6 +1,7 @@
 import type { WorkstreamIssue, WorkstreamListResult } from "../shared/workstreams.js";
 import type {
   BrowsedDocument,
+  PathIndex,
   RecentFeed,
   WorkstreamChangedFiles,
   Issue,
@@ -49,6 +50,8 @@ export interface DocumentsService {
   changedFiles(workstream: string): Promise<WorkstreamChangedFiles>;
   /** What changed recently, anywhere — the browser's front door. */
   recentFiles(): Promise<RecentFeed>;
+  /** Every browsable path in one checkout — quick-open's corpus. */
+  pathIndex(workstream: string | null): Promise<PathIndex>;
 }
 
 export interface QuotasService {

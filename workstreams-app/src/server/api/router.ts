@@ -7,9 +7,6 @@ import {
   workstreamListResultSchema,
 } from "../../shared/workstreams.js";
 import {
-  documentSchema,
-  recentFeedSchema,
-  workstreamChangesSchema,
   issueChangeSchema,
   issueRelPathSchema,
   issueSchema,
@@ -25,12 +22,7 @@ import {
   lifecycleJobSchema,
 } from "../../shared/actions.js";
 import { procedure, router } from "./trpc.js";
-import { DocumentNotFoundError, InvalidDocumentPathError, UnknownWorkstreamError } from "../document-read.js";
-
-/** Node's errno on a caught `unknown`, without an `as` cast at the boundary. */
-function errnoCode(e: unknown): string | undefined {
-  return e instanceof Error && "code" in e && typeof e.code === "string" ? e.code : undefined;
-}
+import { documentsRouter } from "./documents-router.js";
 
 const workstreamsRouter = router({
   list: procedure
@@ -48,49 +40,6 @@ const workstreamsRouter = router({
         issues: await ctx.services.documents.issuesForWorkstream(input.name),
       };
     }),
-});
-
-/**
- * The general browser's read side (`docs/plans/general-browser.md`).
- *
- * `relPath` is repository-relative and `workstream` is a LENS over it — the
- * address is the file, never the worktree. Refusals are typed rather than
- * generic so the browser can say which rule refused: a path that escapes the
- * checkout is BAD_REQUEST, an unknown worktree is NOT_FOUND.
- */
-const documentsRouter = router({
-  read: procedure
-    .input(z.object({
-      // `""` is the repository root, which reads as a directory listing.
-      relPath: z.string().max(4096),
-      workstream: z.string().regex(/^[a-zA-Z0-9_-]+$/u).nullable().default(null),
-    }))
-    .output(documentSchema)
-    .query(async ({ input, ctx }) => {
-      try {
-        return await ctx.services.documents.readDocument(input);
-      } catch (e) {
-        if (e instanceof UnknownWorkstreamError || e instanceof DocumentNotFoundError) {
-          throw new TRPCError({ code: "NOT_FOUND", message: e.message });
-        }
-        if (e instanceof InvalidDocumentPathError) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: e.message });
-        }
-        if (errnoCode(e) === "ENOENT" || errnoCode(e) === "ENOTDIR") {
-          throw new TRPCError({ code: "NOT_FOUND", message: `no such path: ${input.relPath}` });
-        }
-        throw e;
-      }
-    }),
-  /** The front door: what changed recently, anywhere. */
-  recent: procedure
-    .output(recentFeedSchema)
-    .query(async ({ ctx }) => ctx.services.documents.recentFiles()),
-  /** One workstream's changed paths — the lens read the other way round. */
-  changedFiles: procedure
-    .input(z.object({ workstream: z.string().regex(/^[a-zA-Z0-9_-]+$/u) }))
-    .output(workstreamChangesSchema)
-    .query(async ({ input, ctx }) => ctx.services.documents.changedFiles(input.workstream)),
 });
 
 const issuesRouter = router({
