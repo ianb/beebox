@@ -362,7 +362,7 @@ new Set(["callback-box/docs/doc-graph.md", …])"*), so `pnpm doc-graph` and
 `pnpm doc-graph-html` must be run as part of this chunk.
 
 Historical records are **not** edited: `docs/implemented-plans/*`,
-`docs/reports/user-stories-audit-2026-06-26.md`, and the closed issues under
+`user-stories/catalog/2026-06-26.md`, and the closed issues under
 `issues/closed/` describe what was true when they were written. They are only
 touched if `doc-check` reports a broken link out of them (the deletion of
 `docs/ssr-render-testing.md` may produce one).

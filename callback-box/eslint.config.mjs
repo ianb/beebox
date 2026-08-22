@@ -34,7 +34,7 @@ export default [
   // harsher unreviewed base, whose extra bans (`??`, inline unions,
   // process.env["X"], fs-filename) are NOT house style and made per-edit hook
   // reports on test files misleading. `pnpm lint` and lint-staged enforce it.
-  ...vibeCheck({ react: false, roots: ["src", "scripts", "test"], ignores: ["src/frontend/**", "**/*.mjs"] }),
+  ...vibeCheck({ react: false, roots: ["src", "scripts", "test", "user-stories"], ignores: ["src/frontend/**", "**/*.mjs"] }),
   {
     rules: {
       "max-params": ["error", 2],
