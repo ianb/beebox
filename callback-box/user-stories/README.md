@@ -161,8 +161,30 @@ subagent prompt needs absolute paths, so it cannot be derived inside the script.
 ## Keeping it true after a fix
 
 A catalog that is only ever regenerated wholesale starts rotting the day it is committed — the full
-run is ~420 agents and several hours, so nobody does it because one bug got fixed. The loop that
-keeps it honest is per-fix and cheap:
+run is ~420 agents and several hours, so nobody does it because one bug got fixed.
+
+### What needs freshening: ask git
+
+Every story records the files that implement it, so git already knows which claims are suspect.
+`stale.ts` intersects the two:
+
+```
+pnpm exec tsx callback-box/user-stories/pipeline/stale.ts 2026-08-21 --limit 20
+```
+
+It ranks stories by how much their cited code has moved since each was last checked, worst first.
+`--ids` prints the same list shaped to paste into a recheck. **This is the primary signal** — it
+needs no bookkeeping and catches drift from any change, including ones nobody filed an issue about.
+The catalog header reports the same count, so a dated document cannot quietly read as current.
+
+It is a prioritizer, not an oracle: `files` is the handful of paths a reader cited rather than the
+whole implementation, so a story can break from a file it never named; and a touched file often
+means a rename or a comment, not a behaviour change. Treat it as "re-read these first".
+
+An issue's `stories: [<id>]` link is the *sharper* signal for one specific fix — it names the claim
+that fix invalidates — but it depends on someone having written it down. The git signal does not.
+
+### The loop
 
 1. Someone fixes a bug. The issue carries `stories: [<id>]` in its frontmatter and ends with a
    footer spelling this out, so they do not need to know this directory exists.
@@ -198,10 +220,10 @@ old id stays on the record as `discoveredAs`.
 
 ### When to regenerate wholesale instead
 
-Rechecking maintains claims that already exist. It cannot find capability that was *added* since the
-run, and it cannot notice a story that should no longer exist. The catalog header reports how many
-commits have landed in `callback-box/src` since it was generated; when that number gets large, or
-before a release, do a full run.
+Rechecking maintains claims that already exist. Neither it nor `stale.ts` can find capability that
+was *added* since the run — nothing is stale about a story that does not exist yet — and neither
+notices a story that should no longer exist at all. When the stale count covers much of the
+catalog, or before a release, do a full run.
 
 ## Things to change next time
 
