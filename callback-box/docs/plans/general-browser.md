@@ -31,19 +31,24 @@ merge conflict.*
 The second situation sets the browser's structure. The unit is the **file**, and
 a workstream is a lens over it — never a partition you enter first.
 
-The failure this addresses is not that any one surface is bad. It is that there
-are five, they are reached differently, they overlap, and none of them holds
-code:
+The failure this addresses is not that any one surface is bad. It is that they
+are reached differently, they overlap, and none of them holds code:
 
 - `/<worktree>/dev/` — the artifact manifest (`bin/router-docs.ts:303-331`).
 - `/<worktree>/dev/docs/` — every `.md` in the worktree, with a grouped sidebar
   and quick-open (`:434-442`, `:519`).
 - `/<worktree>/dev/<subdir>/` — directory indexes (`:788`).
-- `/workstreams/issues` and `/workstreams/plans` — in the app, and plans link
-  *out* to the doc browser to be read (`PlansPage.tsx:9`).
+- `/workstreams/plans` — a list in the app that links *out* to the doc browser
+  to be read (`PlansPage.tsx:9`).
 - The exhibits origin — a separate port with a separate credential.
 
 Nothing browses source code at all.
+
+**One surface is already right, and this plan copies it rather than replacing
+it.** `/workstreams/issues` is universal across workstreams, filtered by search
+params, with the selected item as state rather than a route
+(`IssuesPage.tsx:10`, `router.tsx:15-37`). It is the shape the rest should have
+had; see The addressing rule.
 
 ## Issues addressed
 
@@ -65,8 +70,9 @@ None resolved outright. Related, and worth reading before designing:
   boundaries), **4** (resilient AND never silent), **7** (hierarchy is a
   discoverability contract), **8** (one way to do each thing), **12** (the
   maintainer is usually an agent).
-- Principle **8** is the spine of this plan: five reading surfaces for one job is
-  the violation, and consolidating them is the fix.
+- Principle **8** is the spine of this plan: several reading surfaces for one job
+  is the violation, and consolidating them onto the pattern the issues browser
+  already uses is the fix.
 - `CLAUDE.md` (monorepo root) — the dev-page casualness carve-out applies to
   *pages*, not to app code. Everything here is workstreams-app code and is
   linted and typechecked.
@@ -126,7 +132,7 @@ inventory, and what each surface becomes:
 
 | Surface today | Shape | Becomes |
 |---|---|---|
-| `/<worktree>/dev/…` (`bin/router-docs.ts`) | Worktree is the first path segment | Retired into `/workstreams/browse/$path` (Track 5) |
+| `/<worktree>/dev/…` (`bin/router-docs.ts`) | Worktree is the first path segment | Retired into `/workstreams/browse?file=…` (Track 5) |
 | `/workstreams/` → a list of workstreams (`router.tsx:13`) | You pick a workstream to reach anything | **The universal recency feed** (Track 3); the workstream list becomes one view among others |
 | `/workstreams/$name` (`WorkstreamDetailPage`) | Per-workstream detail | **Kept.** A workstream's issues, git state, and session are legitimately about the workstream itself, not a partition of the files |
 | Exhibits `/:ws/` (`exhibits/app.ts:275`) | Per-workstream exhibit list | A universal exhibit index with a workstream filter; the per-workstream URL keeps working |
@@ -194,16 +200,31 @@ proceeds; it is filed rather than fixed here
 **Why this needs to change.** Five surfaces have five addressing schemes today,
 and two of them (`PlansPage`'s link-out) hardcode `main`.
 
-**Direction.** `/workstreams/browse/$path` addresses everything, where `$path` is
-repository-relative. **The worktree is not in the path.** The canonical reading
-of a file is main's, and a workstream's version is reached by a lens on the same
-address — `?workstream=<name>` — so a link to a file stays valid as workstreams
-come and go, and two people discussing "that file" mean the same URL.
+**Direction.** `/workstreams/browse?file=<repo-relative-path>` addresses
+everything, with `&workstream=<name>` as the lens. Neither the worktree nor the
+selected file is a path segment.
 
-This is the boxholder's constraint, 2026-08-22: *"I don't think I want
-per-workstream views, I'd rather have a view INTO all the workstreams."* An
-address space that put the worktree first would make every link
-workstream-scoped and rebuild the partitioning this browser exists to remove.
+**This follows the issues browser, which already made both decisions.** The
+boxholder named it as the model — *"This is like the issues browser, which also
+isn't per-workstream"* — and the code bears it out twice over:
+
+- It is universal. `issues.list` returns every issue across every workstream
+  (`IssuesPage.tsx:10`), rendered in one pane, with category, priority, needs,
+  status and sort held as Zod-validated **search params** (`router.tsx:15`).
+- It **migrated away from path segments for the selected item.**
+  `legacyIssueRoute` (`router.tsx:18-37`) takes the old
+  `/issues/$category/$filename` shape and redirects it to
+  `/issues?issue=<relPath>`. That is a decision this codebase already made and
+  implemented a migration for; a new browser addressing files by path segment
+  would be re-adopting the shape those redirects exist to retire.
+
+The consequence is that the list is always present and the selection is state on
+top of it, rather than a separate page you navigate into — which is the same
+reason it suits the browser: the recency feed stays visible while you read.
+
+Deep links still work: `?file=src/foo.ts#L12-L20` for code and a
+`#:~:text=` fragment for prose are both unaffected by the selection living in a
+search param.
 
 `documents.read({relPath, workstream?})` returns the content plus a
 discriminated `kind` — `markdown | code | directory | page | data` — whether the
@@ -215,8 +236,9 @@ refusing traversal and symlink escape rather than clamping.
 `kind` is a closed union dispatched with `assertNever`, so adding a renderer is a
 compile error until every switch handles it (principle 2).
 
-**Vocabulary lock-ins.** The route `/workstreams/browse/$path`; `?workstream=` as
-the lens parameter; the `kind` union members.
+**Vocabulary lock-ins.** The route `/workstreams/browse`; `?file=` for the
+selection and `?workstream=` for the lens, matching `?issue=` on the issues
+browser; the `kind` union members.
 
 **First implementation chunk.** `documents.read` plus containment tests. No UI.
 
