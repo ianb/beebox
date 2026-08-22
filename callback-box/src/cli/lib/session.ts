@@ -11,7 +11,7 @@ import * as readline from "node:readline";
 import { isRecord } from "../../lib/is-record.js";
 
 import { buildEntry } from "./session-entry.js";
-import { isOversizeLine, oversizeEntry } from "./session-oversize.js";
+import { isOversizeLine, oversizeEntry, stripInlineMedia } from "./session-oversize.js";
 import {
   SessionScan,
   type SessionLogResult,
@@ -280,12 +280,21 @@ export async function parseSessionLog(
     // otherwise the stub it becomes counts as one displayable entry (so `total`
     // and `hasMore` stay honest), is never a real user message, and carries no
     // `tool_use` block for a later `tool_result` to graft onto.
+    let usable = line;
     if (isOversizeLine(line)) {
-      const stub = oversizeEntry(line, lineNumber);
-      if (stub) scan.record(stub);
-      continue;
+      // Almost every oversize line is oversize because it carries an image. Drop
+      // the payload and the rest of the turn — the person's own text, the
+      // ordering, the identity — parses normally and cheaply. Only a line still
+      // too big without its images falls through to the stub.
+      const stripped = stripInlineMedia(line);
+      if (stripped === null || isOversizeLine(stripped)) {
+        const stub = oversizeEntry(line, lineNumber);
+        if (stub) scan.record(stub);
+        continue;
+      }
+      usable = stripped;
     }
-    const raw = parseJsonlLine(line, "parseSessionLog");
+    const raw = parseJsonlLine(usable, "parseSessionLog");
     if (!raw) continue;
     const entry = buildEntry(raw, scan.recent());
     if (entry) scan.record(entry);

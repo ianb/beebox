@@ -71,6 +71,43 @@ export function isOversizeLine(line: string): boolean {
 }
 
 /**
+ * Base64 payload fields, as they appear in a raw transcript line.
+ *
+ * Two shapes carry image bytes: `source.data` on an inline image content block
+ * (a pasted or attached photo) and `toolUseResult.file.base64` (an image a tool
+ * returned). Both are plain base64 — alphabet `A-Za-z0-9+/=`, which contains no
+ * character JSON escapes — so they can be matched and replaced textually
+ * without the result ceasing to be valid JSON.
+ *
+ * The 1024-character floor keeps the match well clear of any short legitimate
+ * `data` field while sitting far below a real image (the smallest photo through
+ * the chat's own downscale is a few hundred KB).
+ */
+const BASE64_PAYLOAD_RE = /"(data|base64)":"[\d+/=A-Za-z]{1024,}"/g;
+
+/**
+ * Remove image payloads from a raw line, returning null when there were none.
+ *
+ * This is what lets an image-bearing turn be *read* rather than stubbed. A photo
+ * attached in chat produces a line of roughly 0.7-1.3 MB, four to five times
+ * {@link MAX_SESSION_LINE_BYTES}, so before this existed every message carrying
+ * a photo came back from history as a placeholder — the text the person wrote
+ * alongside it included. The bytes are what the guard exists to keep out of the
+ * heap; the rest of the turn is ordinary and small.
+ *
+ * The result is forced through a Buffer for the same reason {@link detachedHead}
+ * does it: a string built from a large parent can keep that parent alive, which
+ * would defeat the whole point of dropping the payload.
+ */
+export function stripInlineMedia(line: string): string | null {
+  BASE64_PAYLOAD_RE.lastIndex = 0;
+  if (!BASE64_PAYLOAD_RE.test(line)) return null;
+  BASE64_PAYLOAD_RE.lastIndex = 0;
+  const stripped = line.replace(BASE64_PAYLOAD_RE, '"$1":""');
+  return Buffer.from(stripped, "utf8").toString("utf8");
+}
+
+/**
  * Copy the head of an oversize line into a *detached* string.
  *
  * `line.slice(0, n)` does not copy: V8 represents the result as a sliced
