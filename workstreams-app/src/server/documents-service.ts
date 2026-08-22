@@ -15,6 +15,7 @@ import {
 } from "./issue-overlay.js";
 import type {
   BrowsedDocument,
+  WorkstreamChangedFiles,
   Issue,
   Plan,
   TestingQueue,
@@ -24,6 +25,7 @@ import type { DocumentsService } from "./services.js";
 import { resolveIssueTarget, saveIssueChanges } from "./issues-mutation-service.js";
 import { resolveIssuePath } from "./issue-path.js";
 import { readDocument } from "./document-read.js";
+import { collectWorkstreamChanges, type WorkstreamChanges } from "./workstream-changes.js";
 
 const DOCUMENT_CACHE_MS = 60_000;
 
@@ -32,6 +34,13 @@ interface DocumentsSnapshot {
   plans: Plan[];
   worktreeIssues: Array<{ worktree: string; issue: IssueRecord }>;
   overlay: OverlayResult;
+  /**
+   * Which workstreams changed which files. It rides the SAME 60-second
+   * snapshot as everything else rather than getting its own cache — one TTL
+   * for the surface means the file view and the issue views can never disagree
+   * about what a workstream has touched.
+   */
+  changes: WorkstreamChanges;
 }
 
 function issueKey(issue: Pick<IssueRecord, "relPath" | "visibility">): string {
@@ -186,12 +195,14 @@ export function createDocumentsService(options: DocumentsServiceOptions): Docume
       listPlans(options.mainRoot),
       collectOverlay(options.worktreesRoot),
     ]);
-    const changes = await worktreeIssueChanges(overlay);
+    const issueChanges = await worktreeIssueChanges(overlay);
+    const changes = await collectWorkstreamChanges(overlay.worktreeRoots);
     const value = {
       issues: [...publicIssues, ...privateIssues],
       plans,
       overlay,
-      ...changes,
+      changes,
+      ...issueChanges,
     };
     cache = { at: now(), value };
     return value;
@@ -221,8 +232,22 @@ export function createDocumentsService(options: DocumentsServiceOptions): Docume
       const state = await snapshot();
       return readDocument(
         { mainRoot: options.mainRoot, worktreeRoots: state.overlay.worktreeRoots },
-        request,
+        { ...request, changes: state.changes },
       );
+    },
+    async changedFiles(workstream): Promise<WorkstreamChangedFiles> {
+      const state = await snapshot();
+      const unavailable = state.changes.unavailable.get(workstream);
+      if (unavailable !== undefined) return { workstream, paths: [], problem: unavailable };
+      const paths = state.changes.byWorkstream.get(workstream);
+      // THREE states, not two. A workstream that was scanned and changed
+      // nothing, one whose scan failed, and one that is not a live workstream
+      // at all are different answers — returning an empty list for the third
+      // would report "changed nothing" about something that does not exist.
+      if (paths === undefined) {
+        return { workstream, paths: [], problem: `${workstream} is not a live workstream` };
+      }
+      return { workstream, paths, problem: null };
     },
     async listIssues(): Promise<Issue[]> {
       const state = await snapshot();

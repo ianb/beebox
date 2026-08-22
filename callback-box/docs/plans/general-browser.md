@@ -324,9 +324,15 @@ cleverer cache.
 **Vocabulary lock-ins.** `?workstream=` means "lens", not "location", everywhere
 in the browser.
 
-**First implementation chunk.** File → workstreams on the code and markdown
-renderers. It is the direction that answers the job story, and the filter falls
-out of the same data.
+**First implementation chunk — BUILT (2026-08-22).**
+`workstreams-app/src/server/workstream-changes.ts` scans every live worktree
+(committed, uncommitted, and untracked, matching `issue-overlay.ts`), rides the
+existing 60-second document snapshot, and reports a failed scan as *unavailable*
+rather than as "changed nothing". `documents.read` carries `changedIn` and
+`changesUnavailable`; `documents.changedFiles` answers the other direction and
+distinguishes a quiet workstream from one that does not exist. The viewer shows
+"changed in …" with each name linking to that workstream's version of the same
+address. Covered by `workstreams-app/test/workstream-changes.doctest.md`.
 
 ### Track 3 — Finding things
 

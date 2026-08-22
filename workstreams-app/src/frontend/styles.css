@@ -60,3 +60,4 @@ h2 small { color: #827d75; font-size: .78em; font-weight: 500; }
   tab-size: 2;
 }
 .code-view code { white-space: pre; }
+.browse-changed-in { display: flex; flex-wrap: wrap; gap: .5rem; align-items: baseline; }

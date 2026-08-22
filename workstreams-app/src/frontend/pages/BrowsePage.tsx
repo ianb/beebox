@@ -25,6 +25,39 @@ function KindPill({ document }: { document: BrowsedDocument }) {
   );
 }
 
+/**
+ * "Is someone else rewriting what I am reading?" — answered at the file, which
+ * is the point of Track 3a. Each name links to that workstream's version of the
+ * SAME address, because a workstream is a lens and not a location.
+ *
+ * `changesUnavailable` is rendered rather than swallowed: an incomplete answer
+ * that looks complete would report nobody touching a file that three people are
+ * touching.
+ */
+function ChangedIn({ document }: { document: BrowsedDocument }) {
+  const others = document.changedIn.filter((name) => name !== document.workstream);
+  if (others.length === 0 && document.changesUnavailable.length === 0) return null;
+  return (
+    <p className="issue-meta browse-changed-in">
+      {others.length === 0 ? null : (
+        <>
+          <span className="muted">changed in</span>
+          {others.map((name) => (
+            <Link key={name} to="/browse" search={{ file: document.relPath, workstream: name }}>
+              {name}
+            </Link>
+          ))}
+        </>
+      )}
+      {document.changesUnavailable.length === 0 ? null : (
+        <span className="action-error" role="status">
+          could not check {document.changesUnavailable.join(", ")}
+        </span>
+      )}
+    </p>
+  );
+}
+
 function DirectoryView({ entries, workstream }: { entries: DirectoryEntry[]; workstream: string | null }) {
   if (entries.length === 0) return <p className="empty-state">Empty directory.</p>;
   return (
@@ -80,6 +113,7 @@ export function BrowseView({ document }: { document: BrowsedDocument }) {
       <header>
         <h1 className="browse-title">{label}</h1>
         <p className="issue-meta"><KindPill document={document} /></p>
+        <ChangedIn document={document} />
       </header>
       <DocumentBody document={document} />
     </main>

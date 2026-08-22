@@ -8,6 +8,7 @@ import {
 } from "../../shared/workstreams.js";
 import {
   documentSchema,
+  workstreamChangesSchema,
   issueChangeSchema,
   issueRelPathSchema,
   issueSchema,
@@ -80,6 +81,11 @@ const documentsRouter = router({
         throw e;
       }
     }),
+  /** One workstream's changed paths — the lens read the other way round. */
+  changedFiles: procedure
+    .input(z.object({ workstream: z.string().regex(/^[a-zA-Z0-9_-]+$/u) }))
+    .output(workstreamChangesSchema)
+    .query(async ({ input, ctx }) => ctx.services.documents.changedFiles(input.workstream)),
 });
 
 const issuesRouter = router({

@@ -20,6 +20,7 @@ import path from "node:path";
 import { execa } from "execa";
 
 import type { BrowsedDocument, DirectoryEntry, DocumentKind } from "../shared/documents.js";
+import { emptyChanges, workstreamsForPath, type WorkstreamChanges } from "./workstream-changes.js";
 
 export class InvalidDocumentPathError extends Error {
   constructor(relPath: string) {
@@ -190,9 +191,14 @@ async function readDirectory(
  */
 export async function readDocument(
   roots: CheckoutRoots,
-  request: { relPath: string; workstream: string | null },
+  request: { relPath: string; workstream: string | null; changes?: WorkstreamChanges },
 ): Promise<BrowsedDocument> {
   const { relPath, workstream } = request;
+  const changes = request.changes ?? emptyChanges();
+  const lens = {
+    changedIn: workstreamsForPath(changes, relPath),
+    changesUnavailable: [...changes.unavailable.keys()],
+  };
   const root = rootForWorkstream(roots, workstream);
   const absolute = await resolveDocumentPath(root, relPath);
   const stats = await fs.stat(absolute);
@@ -207,12 +213,13 @@ export async function readDocument(
       entries: await readDirectory(absolute, { relPath }),
       bytes: 0,
       problem: null,
+      ...lens,
     };
   }
 
   const kind = kindForPath(relPath);
   const tracked = await isTracked(root, relPath);
-  const base = { relPath, workstream, kind, tracked, entries: [], bytes: stats.size };
+  const base = { relPath, workstream, kind, tracked, entries: [], bytes: stats.size, ...lens };
 
   if (stats.size > MAX_TEXT_BYTES) {
     const mb = (stats.size / (1024 * 1024)).toFixed(1);

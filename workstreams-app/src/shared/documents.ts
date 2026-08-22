@@ -139,8 +139,29 @@ export const documentSchema = z.object({
    * and "content we would not read" must not look alike (principle 4).
    */
   problem: z.string().nullable(),
+  /**
+   * Workstreams that have changed this path — the answer to "is someone else
+   * rewriting what I am reading", learned from the file rather than from a
+   * merge conflict.
+   */
+  changedIn: z.array(z.string()),
+  /**
+   * Workstreams whose diff could not be read. NON-EMPTY means `changedIn` is
+   * incomplete, and a reader must not treat it as "nobody else touched this":
+   * unavailable is not none (principle 4).
+   */
+  changesUnavailable: z.array(z.string()),
+});
+
+/** One workstream's changed paths, for the `?workstream=` filter. */
+export const workstreamChangesSchema = z.object({
+  workstream: z.string(),
+  paths: z.array(z.string()),
+  /** Set when this workstream's diff could not be read at all. */
+  problem: z.string().nullable(),
 });
 
 export type DocumentKind = z.infer<typeof documentKindSchema>;
 export type DirectoryEntry = z.infer<typeof directoryEntrySchema>;
 export type BrowsedDocument = z.infer<typeof documentSchema>;
+export type WorkstreamChangedFiles = z.infer<typeof workstreamChangesSchema>;
