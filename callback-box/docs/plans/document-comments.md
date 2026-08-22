@@ -298,10 +298,18 @@ the app needs a document viewer regardless. These are the same piece of work.
   `issue-path.ts:13-39` containment pattern against the worktree root from
   `overlay.worktreeRoots` (`issues-mutation-service.ts:81`), refusing traversal
   and symlink escape rather than clamping.
-- A `/workstreams/docs/$worktree/$path` route rendering through the existing
-  `Markdown` component, with the comment affordance beside it.
-- `PlansPage` links here instead of to `/main/dev/docs/…`, which also fixes the
-  hardcoded worktree in that link.
+- The document viewer route, which is **defined by `general-browser.md`**, not
+  here: `/workstreams/browse?file=<repo-relative>&workstream=<name>`. An earlier
+  draft of this plan specified `/workstreams/docs/$worktree/$path`; that predates
+  the browser plan and contradicts its addressing rule by putting the worktree
+  back in the path. There is one address, and it is the browser's.
+- `PlansPage` links here instead of to `/main/dev/docs/…`. **This fixes less than
+  it looks like:** `listPlans` reads only the main checkout's
+  `callback-box/docs/{plans,implemented-plans,unimplemented-plans}`
+  (`documents-service.ts:149-152`), so a plan authored in a worktree and not yet
+  merged is not in the list at all — including, at the time of writing, this one.
+  The link fix makes listed plans readable in-app; making unmerged plans
+  *appear* is the browser's recency feed, not this chunk.
 - `comments.list` / `comments.add` / `comments.clear` — the tRPC procedures over
   Track 1's store, Zod-validated at the boundary (principle 3).
 
@@ -318,8 +326,8 @@ Writes are read-modify-write under an in-process per-path lock, then an atomic
 temporary-plus-rename (`issues-mutation-service.ts:206`). One process owns
 writing, so an in-process lock is the right size; principle 6.
 
-**Vocabulary lock-ins.** The route shape `/workstreams/docs/$worktree/$path`; the
-tRPC procedure names `documents.read`, `comments.list|add|clear`.
+**Vocabulary lock-ins.** The tRPC procedure names `documents.read`,
+`comments.list|add|clear`. The route shape belongs to `general-browser.md`.
 
 **First implementation chunk.** `documents.read` plus the viewer route rendering
 a plan, with no comment affordance at all. This is independently useful — it
@@ -334,6 +342,15 @@ document.
 cannot be done from a CLI.
 
 **Direction.**
+
+**What `data-cb-source` does here, stated plainly so it is not over-read.** It
+answers *which document this chunk came from* — nothing more. The convention is
+provenance: `data-cb-source-item` is explicitly *"free-form text — not a
+structured identifier"* (`callback-box/docs/data-source-tagging.md:28`), and
+`SourceViewOverlay.tsx:105` does no more than walk up, read the attributes, and
+display them. It is **not** an anchoring system and this plan does not make it
+one. The anchor is the selection: `quoted` plus an optional `fragment`. Source
+tags pick the document; the selection picks the place in it.
 
 - Capture: a selection produces `quoted` from the selection text and `fragment`
   from `generateFragment`. A click on a block produces the block's `innerText` as
@@ -382,10 +399,25 @@ with attention on the document, not on a keyboard.
 **Direction.** `MediaRecorder` in the viewer; the audio is base64-encoded into a
 `comments.transcribe` tRPC mutation (raw POST paths are refused by the router —
 see Track 2); the app transcribes it; the transcript becomes `body` with `kind:
-spoken`; the audio is discarded as soon as the transcript returns. Base64 in a
-tRPC body is acceptable only because these recordings are short — the client caps
-a recording at two minutes and refuses to start a longer one, rather than failing
-at upload.
+spoken`; the audio is discarded as soon as the transcript returns.
+
+**The size budget is in bytes, and it is not free.** The app builds Fastify with
+only `{ logger }` (`workstreams-app/src/server/app.ts:35`), so it inherits the
+default `bodyLimit` of 1 MiB (`fastify/build/build-validation.js:32`). A
+two-minute cap is not a byte guarantee: `MediaRecorder` at a typical 128 kbps
+produces ~1.9 MB for two minutes, which base64 inflates to ~2.5 MB — over the
+limit, discovered at upload, with the recording already made. So:
+
+- The recorder requests Opus at a low bitrate (~24 kbps is ample for speech).
+- The client caps on **bytes**, not duration, and stops recording at the cap with
+  the partial recording kept and submittable.
+- The app sets `bodyLimit` explicitly to a value above that cap, so the two
+  numbers are stated together in code rather than one being inherited and
+  invisible.
+
+An earlier draft asserted two minutes was "well inside Fastify's body limit even
+with base64's overhead." That was wrong, and the correction is the reason this
+paragraph names both numbers.
 
 **The mic control states its own availability.** `navigator.mediaDevices` is
 `undefined` outside a secure context, so on a bare-IP HTTP origin the control
@@ -495,63 +527,35 @@ the pull: `bin/comments list --workstream`, surfaced by Track 5's guidance.
 `bin/comments list --workstream` — routing and the agent read, before any wake
 button exists.
 
-### Track 4b — Asks on files: the agent's direction
+### Track 4b — Asks on files: DEFERRED to its own plan
 
-**What.** An agent can point at a file it produced and say "this one is for you",
-using the ask vocabulary and the ask queue that already exist.
+**The idea, kept because the boxholder asked for it.** An agent should be able to
+point at a file it produced and say *"please look at this, I made it for you to
+look at"* — with the restraint that most changes do not get one, and issues and
+plans never do because they are standing queues already.
 
-**Why this needs to change.** The boxholder: *"I wish there was a way for the
-agent to say 'please look at this, I made it for you to look at.'… Lots of code
-changes aren't/shouldn't be like that, mostly stuff that's deliberately for me
-based on discussion."* Today the only way an agent can raise a hand is to build
-an **exhibit** — a directory with a manifest, on a separate origin. That is the
-right weight for a constructed page and the wrong weight for "look at this file
-I already wrote."
+**Why it left this plan.** The earlier draft claimed a file ask could join the
+existing ask queue by giving `askQueueEntrySchema` a discriminated subject. That
+underestimated the work by enough to be wrong. The queue is exhibit-shaped
+through and through:
 
-**Direction — the lightweight form of a thing that exists.** An ask is already a
-vocabulary (`decide | confirm | react | fyi`, `workstreams-app/src/shared/exhibits.ts:12`),
-a schema (`askSchema:22`), and a queue the app renders (`askQueueSchema:90`,
-`AsksPage.tsx`). This adds a second **subject** for an ask: instead of an exhibit
-scope, a repository-relative file path.
+- `askQueueEntrySchema` (`workstreams-app/src/shared/exhibits.ts:74-89`) requires
+  `slug`, `permanent`, and a `path` documented as *"Path on the exhibits origin,
+  joined to the queue's `origin`"*.
+- `AsksPage` links every row with `queue.origin + entry.path`
+  (`AsksPage.tsx:14-16`) — every row is an exhibits-origin URL.
+- Answering is deliberately not possible from this origin:
+  `workstreams-app/src/server/api/router.ts:71` — *"Read-only: answering an ask
+  happens on the exhibits origin, never here."*
 
-```yaml
-# in the same store, same file-keyed layout as comments
-asks:
-  - id: a-91c2
-    at: 2026-08-22T15:20:00Z
-    type: react                 # decide | confirm | react | fyi
-    prose: "Rewrote the retry loop the way we discussed — does this match what you meant?"
-    workstream: scanner-ingest  # who is asking
-```
+A file ask has no exhibits-origin path, no `disposition.json`, and no way to be
+answered where the queue says answering happens. That is a real design question —
+where a file ask is answered, and what "answered" means for one — not a schema
+tweak. Filed as `issues/features/2026-08-22-file-asks-agent-flagged-attention.md`
+with these three obstacles recorded, so the next session starts from them rather
+than rediscovering them.
 
-`askQueueEntrySchema` gains a discriminated subject (exhibit scope or file path)
-so both kinds land in one queue and `AsksPage` shows them together. One queue is
-the point: the original briefing for this work warned that *"gratuitously
-different vocabulary for 'the developer said something about this' would be a
-shame"*, and two parallel attention queues would be exactly that.
-
-In the browser (`general-browser.md`, Track 3), a file carrying an open ask is
-badged in the recency feed — the difference between "this changed" and "this
-changed and someone wants your eyes on it."
-
-**What must NOT carry an ask, which is most things.** The boxholder drew the line
-and it is the load-bearing part of this track:
-
-| Thing | Ask? | Why |
-|---|---|---|
-| An ordinary code change | **No** | The recency feed already surfaces it; flagging routine work is how the queue rots |
-| Something built deliberately for the boxholder after discussion | **Yes** | This is the case the mechanism exists for |
-| Issues and plans | **No** | *"they don't generally need extra signaling, instead they are always kind of relevant"* — they are standing queues already |
-
-This restraint is not a style preference. `workstreams-app/docs/exhibits.md`
-records what happens without it: *"An over-applied tag rots the queue it feeds —
-the `manual-testing` flag did exactly that… once a marker stops meaning
-anything, the human stops reading it."* The guidance an agent reads must state
-the negative cases, not only the positive one.
-
-**First implementation chunk.** The ask record, the discriminated subject in
-`askQueueEntrySchema`, and `AsksPage` rendering a file ask beside an exhibit ask.
-The browser badge follows.
+Nothing else in this plan depends on it.
 
 ### Track 5 — Discoverability and guidance
 
@@ -657,9 +661,9 @@ was decided rather than deferred.
 | Two untracked documents in different worktrees share a repository-relative path | Doctest writing the same path from two worktrees | Keyed under `worktree/<name>/…`, so they never share a file | Clear |
 | A tracked document becomes untracked, or vice versa, after comments exist | Doctest on both transitions | `comments.list` reads both namespaces for a path and shows what it found in each | Clear |
 | A comment routes to a workstream that is culled before its agent reads it | Doctest on a routed comment whose workstream is gone | The comment survives on the file, shown as routed-to-a-gone-workstream and re-routable, never deleted with the tree | Clear |
-| Two workstreams modify a file and the boxholder is not asked | Doctest on the ambiguous branch | Ladder step 3 requires a choice; there is no silent default | Clear |
+| Two workstreams modify a file | Doctest on the ambiguous branch | Ladder step 3 defaults to the most recent modifier and shows which one it chose, changeable in place | Clear |
 | The changed-files data is unavailable when a comment is written | Doctest with the diff failing | The comment is written unrouted rather than mis-routed, and says so | Clear |
-| A recording exceeds the tRPC body limit | Doctest on the client cap | Client caps at two minutes and refuses to start a longer recording | Clear |
+| A recording exceeds the tRPC body limit | Doctest asserting the client byte cap sits under the app's explicit `bodyLimit` | Client caps on bytes (not duration), stops at the cap and keeps the partial recording submittable; the app sets `bodyLimit` explicitly rather than inheriting Fastify's 1 MiB | Clear |
 | The workstreams app is down | Existing app-level error handling | The viewer shows the failure; composed text stays in the page rather than being swallowed | Clear |
 | The commented document is later deleted or renamed | Doctest on `bin/comments list` | Listed as pointing at a missing file; not auto-deleted | Clear |
 | The CSS Custom Highlight API is unavailable | Existing behavior at `quote-anchor.ts:29` — *"No-op where the API is unavailable"* | Highlighting skipped; comments still listed | Clear |
@@ -722,8 +726,12 @@ expensive to prevent. Documented rather than defended — principle 6.
   resolver. Different persistence class, different vocabulary. This plan
   deliberately does not name its records "annotations" or "questions" to keep
   that space clear.
-- **Comments on any surface but the app's document viewer.** Not the box
-  frontend, not the exhibits origin, not chat, not `/dev/` pages.
+- **Comments outside the three surfaces named in Track 3.** The browser and the
+  issues app are the first two and land with this plan; exhibits are third and
+  depend on the header component in `general-browser.md`. Not the box frontend,
+  not chat, not `/dev/` pages. (An earlier draft said "any surface but the
+  document viewer", which contradicted the capability framing; the capability is
+  real, its rollout is bounded.)
 - **Any path to git or to main.** The store never merges. `*.comments.yaml` never
   becomes a tracked pattern.
 - **Commenting on diffs.** The boxholder expects to want this later and said
@@ -737,10 +745,8 @@ expensive to prevent. Documented rather than defended — principle 6.
   feature is not the place to invent one.
 - **A separate comments UI for issues.** Issues keep the interface they have; they
   gain source tags and nothing else.
-- **A second attention queue.** File asks join the existing ask queue; they do not
-  get their own page, badge vocabulary, or CLI verb family.
-- **Asks on issues and plans.** Deliberately unavailable, not merely discouraged:
-  they are standing queues already, and an ask on one would dilute the marker.
+- **File asks.** Deferred to their own plan (Track 4b) — the ask queue cannot
+  take them without deciding where a file ask is answered.
 - **Multi-user.** One boxholder, one machine, no identity field.
 - **Syncing comments between machines.** Explicitly local.
 
@@ -831,8 +837,6 @@ draft this replaced.
   single-workstream inference, the ambiguous case defaulting visibly to the most
   recent modifier, the unrouted case, and a routed comment whose workstream was
   culled.
-- `file-asks.doctest.md` — a file ask and an exhibit ask in one queue, the
-  discriminated subject, and an ask on a file that no longer exists.
 - `documents-read.doctest.md` — tracked and untracked documents, an unknown
   worktree, and each path-escape shape.
 - `comments-api.doctest.md` — mutation validation, concurrent writes to one
@@ -844,7 +848,7 @@ draft this replaced.
 - `comments-anchor.doctest.md` — `generateFragment` `AMBIGUOUS` handling, and
   resolving a stored fragment against edited text.
 
-**Done-when**, as checkable assertions rather than a feeling: those eight suites
+**Done-when**, as checkable assertions rather than a feeling: those seven suites
 pass; `bin/comments list` in a fresh worktree finds a comment written from the
 viewer in a different worktree; a spoken comment survives a forced transcription
 failure and can be retried; a comment left on a file changed in one workstream is

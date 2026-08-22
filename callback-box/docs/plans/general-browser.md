@@ -39,7 +39,9 @@ are reached differently, they overlap, and none of them holds code:
   and quick-open (`:434-442`, `:519`).
 - `/<worktree>/dev/<subdir>/` — directory indexes (`:788`).
 - `/workstreams/plans` — a list in the app that links *out* to the doc browser
-  to be read (`PlansPage.tsx:9`).
+  to be read (`PlansPage.tsx:9`), and which lists only the **main checkout's**
+  plan directories (`documents-service.ts:149-152`), so a plan written in a
+  worktree does not appear at all until it merges.
 - The exhibits origin — a separate port with a separate credential.
 
 Nothing browses source code at all.
@@ -273,8 +275,7 @@ three branches rewriting it, which is exactly when you would want to know.
 
 **Direction.** Two directions over one piece of data — the set of files each
 workstream branch has changed relative to main (`git diff --name-only
-main...worktree-<name>`, per workstream, cached and invalidated on the same
-signal the workstream list already refreshes on):
+main...worktree-<name>`, per workstream):
 
 - **File → workstreams.** A file view shows "changed in: `scanner-ingest`,
   `dev-comments`", each linking to that workstream's version of the same address
@@ -287,11 +288,29 @@ The app already carries per-workstream git state — `gitStateSchema` with `ahea
 (`workstreams-app/src/shared/workstreams.ts:14-15`) — so this extends an existing
 shape rather than introducing a git dependency.
 
-**Cost to state plainly:** this is one `git diff` per live workstream. It is
-cached, it is invalidated with the workstream list, and a stale entry shows a
-file as changed that no longer is — visible and harmless. A failed diff shows the
-file with no workstream information rather than claiming none exists (principle
-4: the absence of an answer and an answer of "none" must not look alike).
+**Freshness, stated explicitly rather than assumed.** An earlier draft said this
+data would be *"invalidated on the same signal the workstream list already
+refreshes on."* No such shared signal exists: `documents-service` holds a 60-second
+snapshot cache (`DOCUMENT_CACHE_MS`, `documents-service.ts:26`) invalidated only
+after issue saves (`:265`), while the workstream list is a fresh CLI call each
+time (`workstreams-command.ts:160`), and the existing overlay scans only `issues/`
+paths (`issue-overlay.ts:104`). So the model is written down instead:
+
+- Changed-files data joins the **existing 60-second document snapshot**, computed
+  with it and expiring with it. One TTL for the whole surface rather than a
+  second, differently-aged cache.
+- The staleness window is therefore up to 60 seconds, and it over-reports: a file
+  shows as changed slightly after it stops being. That is the harmless direction.
+- An explicit refresh is available, for the case where the developer just
+  committed and wants the feed to agree with them.
+- **A failed or timed-out diff reports the workstream information as
+  unavailable, never as "changed in: none".** The absence of an answer and an
+  answer of "none" must not look alike (principle 4).
+
+**Cost to state plainly:** one `git diff` per live workstream per snapshot
+period, which is a handful of subprocesses a minute at the observed number of
+workstreams. If that ever stops being cheap, the answer is a longer TTL, not a
+cleverer cache.
 
 **Vocabulary lock-ins.** `?workstream=` means "lens", not "location", everywhere
 in the browser.
@@ -316,9 +335,10 @@ from a directory tree — so the browser opens on cross-workstream recent activi
 with the tree available rather than mandatory. Three views over one dataset:
 
 - **Aggregate** (the default) — what changed recently anywhere, most recent
-  first, with files carrying an open **ask** badged (`document-comments.md`,
-  Track 4b). "This changed" and "someone wants your eyes on this" are different
-  signals and the feed shows both.
+  first. If file asks are built
+  (`issues/features/2026-08-22-file-asks-agent-flagged-attention.md`), a flagged
+  file is badged here — "this changed" and "someone wants your eyes on this" are
+  different signals. The feed does not depend on that work landing.
 - **Filtered** — the same feed narrowed to one workstream (`?workstream=`).
   Viewing one workstream on its own is fully supported and is **not** the
   per-workstream browser the boxholder rejected: the rejection was of entering a
