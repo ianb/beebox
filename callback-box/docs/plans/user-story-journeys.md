@@ -56,6 +56,30 @@ Dropped from the earlier draft, per your read: buying duplicate books, tracking 
 saving things read online, "what's on my plate this week" and its siblings, "what even is this",
 "what's already in here". The first-contact ones are worth revisiting once we know how these fare.
 
+## Nowhere to put it yet
+
+The most likely outcome of any of these journeys is not that the box does the wrong thing. It is
+that **data turns up and the box has no shape to put it in** — no schema, no instructions, no
+existing structure the new thing belongs to.
+
+That is how a box normally starts. Journey B has photos of a drawer and no inventory type. Journey
+E has school mail and nothing that models a term, a deadline, or a form that needs returning.
+Neither is an edge case we stumbled into; it is the ordinary condition of a box that has not been
+taught anything yet, and every real box passes through it.
+
+So it is a subject of the journey, not a failure of it. What we are watching:
+
+- Does the box **notice** it has no shape for this, or does it file the thing somewhere generic and
+  consider the matter closed?
+- Does it **ask**? A question back to the person is a strong answer — it is how a box gets taught —
+  and whether one ever appears is worth knowing.
+- Does it **propose a shape**, and is the proposal any good?
+- Does the person find out what happened to their stuff, or does it become sediment?
+
+A box that quietly absorbs everything into an undifferentiated pile is a plausible product, and so
+is one that asks a lot of questions early. Which one this is, is a thing the journeys can answer and
+the capability catalog structurally cannot.
+
 ## Things that happen while you are away
 
 There is no live mail account, so the school mail is injected — but *when* it lands is a design
@@ -138,8 +162,17 @@ says "I saved it" may not have. Everything needed to reconstruct the run is capt
 - **Network activity** — which endpoints were hit, what failed — from the browser side.
 - **The box's own state**: a git snapshot before and after, so what landed on disk is recoverable
   independently of anyone's report.
-- **When anything was injected**, on the same timeline as the person's actions — so "mail arrived
-  at 14:02, they noticed at 14:31, via the dashboard" is answerable, and so is "they never did".
+- **System events on the same timeline as the person's actions** — `email arrived`,
+  `email processed`, `schedule fired`, `question raised` — even though nobody was present for them.
+  Without those entries the log cannot explain itself: a gap is just a gap. With them,
+  "mail arrived 02:14, processed 02:14, noticed 09:31 via the dashboard" is answerable, and so is
+  "never noticed".
+
+**Not all elapsed time is slowness.** A gap that spans a deliberate absence — the person left, mail
+arrived overnight, they came back — is the passage of time, not the product being slow. A gap
+*inside* a sitting, where someone sat waiting on the box to answer, is. Marking each sitting's start
+and end is enough for an analyser to tell them apart, given the system events above; nothing needs
+to be decided while the run is happening.
 
 **Clock time is judged afterwards, not by the walker.** Turn count is the wrong measure — a person
 does not experience turns. What matters is whether a goal took four minutes or forty, and whether
