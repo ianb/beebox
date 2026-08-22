@@ -29,6 +29,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { CLAUDE_MD } from "./agent-instruction-files.js";
 
 /** Soft "getting large" tier — ~200-line target, roughly 3k tokens. */
 export const CLAUDE_MD_WARN_CHARS = 12_000;
@@ -43,13 +44,7 @@ const MOVE_ADVICE =
   "See docs/generated/reducing-claude-md.md for concrete strategies.";
 
 export function isClaudeMdFile(filePath: string): boolean {
-  return path.basename(filePath) === "CLAUDE.md";
-}
-
-/** Either harness's native instruction filename. Box AGENTS.md is a CLAUDE.md symlink. */
-export function isAgentInstructionsFile(filePath: string): boolean {
-  const basename = path.basename(filePath);
-  return basename === "CLAUDE.md" || basename === "AGENTS.md";
+  return path.basename(filePath) === CLAUDE_MD;
 }
 
 /**
@@ -99,7 +94,7 @@ export async function findClaudeMdFiles(dir: string): Promise<string[]> {
         const sub = await findClaudeMdFiles(path.join(dir, entry.name));
         results.push(...sub);
       }
-    } else if (entry.isFile() && entry.name === "CLAUDE.md") {
+    } else if (entry.isFile() && entry.name === CLAUDE_MD) {
       results.push(path.join(dir, entry.name));
     }
   }

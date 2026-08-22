@@ -4,6 +4,7 @@ import { dirname, join, relative } from "node:path";
 import { lstat, mkdir, readFile, readdir, readlink, rm, symlink, writeFile } from "node:fs/promises";
 import { errnoCode } from "../lib/error-guards.js";
 import { getBoxShape } from "../lib/box-shape.js";
+import { AGENTS_MD, CLAUDE_MD } from "./agent-instruction-files.js";
 
 const GENERATED_AGENTS_MARKER = "GENERATED from Claude guidance";
 
@@ -40,22 +41,35 @@ async function findClaudeDocs(root: string): Promise<string[]> {
       if (entry.name === ".git" || entry.name === "node_modules" || entry.name === ".agents") continue;
       const path = join(dir, entry.name);
       if (entry.isDirectory()) await visit(path);
-      else if (entry.isFile() && entry.name === "CLAUDE.md") found.push(path);
+      else if (entry.isFile() && entry.name === CLAUDE_MD) found.push(path);
     }
   };
   await visit(root);
   return found;
 }
 
+/**
+ * Plant (or repair) the `AGENTS.md` symlink beside one `CLAUDE.md`. Returns the
+ * mirror path if it changed, else null.
+ *
+ * Exported for callers that create a single CLAUDE.md and know exactly which
+ * one — the map finalize step, which would otherwise have to re-walk the whole
+ * package and touch every other mirrored surface to link one file.
+ */
+export async function ensureAgentsMirror(claudePath: string): Promise<string | null> {
+  const agentsPath = join(dirname(claudePath), AGENTS_MD);
+  if (await pathKind(agentsPath) === "file") {
+    const content = await readFile(agentsPath, "utf8");
+    if (content.includes(GENERATED_AGENTS_MARKER)) await rm(agentsPath);
+  }
+  return await ensureRelativeSymlink(agentsPath, claudePath) ? agentsPath : null;
+}
+
 async function mirrorClaudeDocs(packageRoot: string): Promise<string[]> {
   const changed: string[] = [];
   for (const claudePath of await findClaudeDocs(packageRoot)) {
-    const agentsPath = join(dirname(claudePath), "AGENTS.md");
-    if (await pathKind(agentsPath) === "file") {
-      const content = await readFile(agentsPath, "utf8");
-      if (content.includes(GENERATED_AGENTS_MARKER)) await rm(agentsPath);
-    }
-    if (await ensureRelativeSymlink(agentsPath, claudePath)) changed.push(agentsPath);
+    const mirror = await ensureAgentsMirror(claudePath);
+    if (mirror !== null) changed.push(mirror);
   }
   return changed;
 }
