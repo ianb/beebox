@@ -80,3 +80,4 @@ dev/apps/story-eval/runs/
 # Exhibit-store mount (same symlink rule — bin/lib/exhibits-store.sh; design
 # in callback-box/docs/plans/workstream-exhibits.md).
 /exhibits
+callback-box/user-stories/work/

@@ -6,7 +6,7 @@ issues: []
 ---
 # User-story audit — follow-up plans
 
-This plan triages the 95 `IAN:` comments left on `docs/reports/user-stories-audit-2026-06-26.md` (the
+This plan triages the 95 `IAN:` comments left on `user-stories/catalog/2026-06-26.md` (the
 auto-generated user-story catalog). Each comment was investigated against the
 **current** code by a read-only agent, classified, and given a concrete action
 grounded in real file paths.
@@ -16,11 +16,11 @@ Four buckets, matching the maintainer's framing:
 - **A — Removals.** Features that were partially removed; the leftover
   pages/components/endpoints are cleanup debt.
 - **B — Doc-only corrections.** The code is right; the *story* (or a real doc)
-  is wrong. Mostly fixing file citations and over-claims in `user-stories-audit-2026-06-26.md`.
+  is wrong. Mostly fixing file citations and over-claims in `user-stories/catalog/2026-06-26.md`.
 - **C — Small fixes.** Real, narrow bugs with a known file and change.
 - **D — Substantial features.** Missing capability that needs design + build.
 
-Item numbers (`[n]`) refer to the order in `user-stories-audit-2026-06-26.md`; they're kept so
+Item numbers (`[n]`) refer to the order in `user-stories/catalog/2026-06-26.md`; they're kept so
 every comment is traceable back to its story.
 
 ## Implementation status (2026-06-26)
@@ -175,7 +175,7 @@ catalog. **Effort:** trivial.
 ## B — Doc-only corrections
 
 The code behaves correctly; the catalog (or, where noted, a real doc) is wrong.
-Most are one-line edits to `docs/reports/user-stories-audit-2026-06-26.md`. Batch them in a single pass.
+Most are one-line edits to `user-stories/catalog/2026-06-26.md`. Batch them in a single pass.
 
 **Wrong file citations** (replace the cited file, no behavior change):
 [14] drop `list-cards.ts` (unrelated to dotted-path query) ·
@@ -232,7 +232,7 @@ are separate ·
 [93] todo template is a flat skeleton; nested/notes via manual edit (controls
 are D2).
 
-**Effort:** the whole bucket is ~1-2 hours of editing `user-stories-audit-2026-06-26.md` plus a
+**Effort:** the whole bucket is ~1-2 hours of editing `user-stories/catalog/2026-06-26.md` plus a
 small `docs/calendar.md` update ([46]).
 
 ---

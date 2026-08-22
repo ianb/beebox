@@ -28,7 +28,7 @@ Google OAuth remains an optional login method for the same email identity.
 - `issues/closed/features/2026-07-20-web-password-change.md`
 
 The stale empty-allowlist copy recorded in
-`docs/reports/user-stories-audit-2026-06-26.md:325-329` is corrected because the
+`user-stories/catalog/2026-06-26.md` is corrected because the
 same Admin component becomes the invite-minting surface.
 
 ## Stated preferences this plan trades against
