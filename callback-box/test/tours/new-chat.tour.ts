@@ -36,7 +36,9 @@ tour(
     // items must never render their disabled form.
     await t.expect.custom("Capture is offered, not deferred to a first message", (snapshot) =>
       snapshot.includes("Capture…") && !snapshot.includes("send a message first"));
-    await t.expect.custom("Upload files is offered too", (snapshot) =>
-      snapshot.includes("Upload files…") && !snapshot.includes("Upload files… (send"));
+    // "Add files…" is never gated — routing decides inline vs. batch, and the
+    // batch path toasts if there's no session yet rather than disabling the item.
+    await t.expect.custom("Add files is offered", (snapshot) =>
+      snapshot.includes("Add files…"));
   },
 );

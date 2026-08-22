@@ -3,8 +3,8 @@ import Foundation
 /// When a photo selection is too big to ride inline in a chat message.
 ///
 /// **Mirrored constant.** The web composer holds the same rule in
-/// `callback-box/src/frontend/src/components/chat/photo-batch-threshold.ts`
-/// (`INLINE_PHOTO_LIMIT` / `shouldBatchPhotos`). Swift cannot import it, so the
+/// `callback-box/src/frontend/src/components/chat/file-routing.ts`
+/// (`INLINE_PHOTO_LIMIT` / `routeAddedFiles`). Swift cannot import it, so the
 /// two are kept honest by `callback-box/docs/mobile-contract.md` §8 — change one,
 /// change both, and change the doc.
 ///
@@ -23,7 +23,7 @@ enum BulkPhotoThreshold {
     /// pressure, not a published limit — so "inline just under the cliff" is not
     /// implementable. Keeping the inline payload categorically small is the sound
     /// posture; the number itself is a product judgment, not a technical maximum.
-    static let inlineLimit = 4
+    static let inlineLimit = 3
 
     /// True when a newly-picked selection should be uploaded as a batch rather
     /// than inlined.

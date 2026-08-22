@@ -1,8 +1,17 @@
 /**
- * Composer attachment bindings for InteractiveChat: pasted/dropped images
- * (downscaled + base64-encoded client-side) and uploaded files (sent to the
- * box tmp/ dir). Each insert drops `[imageN]` / `[fileN]` tokens at the
- * textarea cursor; removal strips the matching tokens back out.
+ * Composer attachment bindings for InteractiveChat: files picked, pasted,
+ * dropped or captured into the composer. Images small enough to ride inline are
+ * downscaled + base64-encoded client-side and drop an `[imageN]` token at the
+ * textarea cursor (removal strips the matching token back out); everything else
+ * goes to the bulk-upload batch — the split is decided by `file-routing.ts`,
+ * never by which entry point the files came from.
+ *
+ * `[fileN]` attachments (a server-side `tmp/` upload referenced by token) are
+ * still carried by the emission format and restored from a persisted draft, but
+ * nothing in this web composer creates them any more: the Add menu's old
+ * "Attach file…" path was the only producer, and it now routes here
+ * (`issues/features/2026-08-03-attach-vs-upload-menu-confusing.md`). The native
+ * iOS composer still uploads and sends them.
  *
  * State itself lives in the emission store (`../../input/emission-store.ts`,
  * docs/implemented-plans/input-extraction.md chunk 2). `useChatAttachments`
@@ -18,9 +27,9 @@
 
 import { useRef, useCallback, useEffect, useSyncExternalStore } from "react";
 import { processImageBlob } from "../../lib/image-paste";
-import { uploadChatFile } from "../../lib/file-upload";
 import { useEmissionStore } from "./input-store";
-import { shouldBatchPhotos } from "./photo-batch-threshold";
+import { toastError } from "../ui/toast-store";
+import { routeAddedFiles } from "./file-routing";
 import type { EmissionStore, ImageItem, FileItem } from "../../input/emission-store";
 
 /**
@@ -111,37 +120,53 @@ export function useEnsureComposerVisible(opts: {
   });
 }
 
+/**
+ * What became of a set of files handed to {@link useChatAttachments}'s
+ * `addFiles`. The route is reported rather than folded into a count because a
+ * batched set adds nothing inline — a caller that toasts on "nothing was
+ * attached" (the screenshot grab) must not read a successful hand-off to the
+ * bulk-upload overlay as a failure.
+ */
+export type AddFilesOutcome =
+  | { route: "batch" }
+  /** `added` counts the images that actually finished; a processing failure adds none. */
+  | { route: "inline"; added: number };
+
+/** The composer's one file-ingest entry point, shared by picker, paste, drop and screenshot. */
+export type AddFiles = (files: File[]) => Promise<AddFilesOutcome>;
+
 export function useChatAttachments(opts: {
   emissionStore: EmissionStore;
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   /** Opens the mobile typing row when a token insert happens with no visible composer (see useEnsureComposerVisible). */
   ensureComposerVisibleRef: React.MutableRefObject<() => void>;
   /**
-   * Hand a too-large photo selection to the bulk-upload path instead of inlining
-   * it (see `photo-batch-threshold.ts`). `foldInComposerImages` asks the caller
-   * to sweep the composer's existing inline photos into the same batch, so one
-   * selection act doesn't end up split across two destinations.
+   * Hand a file set to the bulk-upload path instead of inlining it (see
+   * `file-routing.ts`). `foldInComposerImages` asks the caller to sweep the
+   * composer's existing inline photos into the same batch, so one selection act
+   * doesn't end up split across two destinations.
    */
-  onBatchPhotos: (opts: { files: File[]; foldInComposerImages: boolean }) => void;
+  onBatchFiles: (opts: { files: File[]; foldInComposerImages: boolean }) => void;
 }) {
-  const { emissionStore, textareaRef, ensureComposerVisibleRef, onBatchPhotos } = opts;
+  const { emissionStore, textareaRef, ensureComposerVisibleRef, onBatchFiles } = opts;
   const { editor } = emissionStore;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const addImageFiles = useCallback(async (files: File[]): Promise<number> => {
-    if (files.length === 0) return 0;
-    // Too many to ride inline — upload them and let the agent file them, rather
-    // than base64-ing a camera roll into one /chat/send that can't be sent.
-    // Applies to the picker, paste and drop alike: one rule, no per-entry-point
-    // special cases.
+  const addFiles = useCallback(async (files: File[]): Promise<AddFilesOutcome> => {
+    if (files.length === 0) return { route: "inline", added: 0 };
+    // One routing rule for every entry point — picker, paste, drop, screenshot
+    // — so where a file lands depends on the file set, never on how it arrived
+    // (`file-routing.ts`). Non-images have no in-message representation, and a
+    // photo set too big to ride inline gets uploaded rather than base64-ing a
+    // camera roll into one /chat/send that can't be sent.
     //
     // `pendingImages` counts too: encoding is async, so two fast pastes would
     // otherwise both see zero finished images and both inline.
     const draft = emissionStore.get();
-    if (shouldBatchPhotos({
+    if (routeAddedFiles({
+      files,
       existingInline: draft.images.length + draft.pendingImages,
-      incoming: files.length,
-    })) {
+    }) === "batch") {
       // Hand over the photos ALREADY in the composer as well. Batching only the
       // new ones would split one intended message in two: the batch would carry
       // the whole composer text as its introduction while the older photos sat
@@ -158,8 +183,8 @@ export function useChatAttachments(opts: {
       // destroy photos the user picked, and never losing anything outranks
       // arriving in one piece. The inline bound still holds: those photos were
       // already counted above.
-      onBatchPhotos({ files, foldInComposerImages: draft.images.length > 0 });
-      return 0;
+      onBatchFiles({ files, foldInComposerImages: draft.images.length > 0 });
+      return { route: "batch" };
     }
     // Show placeholder tiles immediately; each clears as its image finishes
     // encoding, so the gap between cmd-V and the thumbnail isn't a dead beat.
@@ -191,14 +216,25 @@ export function useChatAttachments(opts: {
       editor.addImage(item); // also decrements the pending count for this image
       newItems.push(item);
     }
-    if (newItems.length === 0) return 0;
+    // Say so when an image didn't make it. The encoder rejects formats the
+    // browser can't decode (a HEIC straight off a phone, some SVGs), and with
+    // the old explicit attach path gone this is the only path such a file has:
+    // a console-only log would let a picked file vanish with no signal at all
+    // (code-style.md defensiveness rule 5).
+    const failed = files.length - newItems.length;
+    if (failed > 0) {
+      toastError(failed === files.length
+        ? "Those files couldn't be added to the message"
+        : `${String(failed)} of ${String(files.length)} files couldn't be added to the message`);
+    }
+    if (newItems.length === 0) return { route: "inline", added: 0 };
     const tokens = newItems.map((a) => `[image${a.id}]`).join(" ");
     insertTokensAtCursor(tokens, { input: emissionStore.get().text, setInput: editor.setText, textareaRef, alwaysFocus: false });
     ensureComposerVisibleRef.current();
-    // Count actually added — the screenshot path toasts when this is 0
-    // (a single-file capture that failed processing).
-    return newItems.length;
-  }, [editor, emissionStore, textareaRef, ensureComposerVisibleRef, onBatchPhotos]);
+    // Count actually added — the screenshot path toasts when an inline route
+    // adds 0 (a single-file capture that failed processing).
+    return { route: "inline", added: newItems.length };
+  }, [editor, emissionStore, textareaRef, ensureComposerVisibleRef, onBatchFiles]);
 
   const removeAttachment = useCallback((id: number) => {
     const target = emissionStore.get().images.find((a) => a.id === id);
@@ -209,53 +245,22 @@ export function useChatAttachments(opts: {
     editor.removeImage(id);
   }, [editor, emissionStore]);
 
-  const addFileUploads = useCallback(async (files: File[]) => {
-    if (files.length === 0) return;
-    const uploaded = await Promise.all(
-      files.map(async (f) => {
-        try {
-          return await uploadChatFile(f);
-        } catch (e) {
-          console.error("[chat] Failed to upload file:", e);
-          return null;
-        }
-      })
-    );
-    const newItems: FileItem[] = [];
-    for (const u of uploaded) {
-      if (!u) continue;
-      const item: FileItem = {
-        id: editor.nextFileId(),
-        path: u.path,
-        originalName: u.originalName,
-        size: u.size,
-        mimetype: u.mimetype,
-      };
-      editor.addFile(item);
-      newItems.push(item);
-    }
-    if (newItems.length === 0) return;
-    // Always focus the textarea — the upload is triggered from a menu, so
-    // focus is on the menu button, not the composer. The helper pads a
-    // trailing space so the user can keep typing after the token.
-    const tokens = newItems.map((f) => `[file${f.id}]`).join(" ");
-    insertTokensAtCursor(tokens, { input: emissionStore.get().text, setInput: editor.setText, textareaRef, alwaysFocus: true });
-    ensureComposerVisibleRef.current();
-  }, [editor, emissionStore, textareaRef, ensureComposerVisibleRef]);
-
   const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
+    // Clear the input before routing, so picking the same file twice in a row
+    // still fires a change event.
     e.target.value = "";
     if (files.length === 0) return;
-    void addFileUploads(files);
-  }, [addFileUploads]);
+    void addFiles(files);
+  }, [addFiles]);
 
   const removeFileAttachment = useCallback((id: number) => {
     // Strips the matching `[fileN]` token from the text too.
     editor.removeFile(id);
   }, [editor]);
 
-  const handleAttachFiles = useCallback(() => {
+  /** The Add menu's one file entry — opens the hidden picker; routing decides the rest. */
+  const handleAddFiles = useCallback(() => {
     const el = fileInputRef.current;
     if (el !== null) el.click();
   }, []);
@@ -273,7 +278,7 @@ export function useChatAttachments(opts: {
 
   return {
     fileInputRef,
-    addImageFiles, removeAttachment, addFileUploads, removeFileAttachment,
-    handleAttachFiles, handleFileInputChange, resetAttachments,
+    addFiles, removeAttachment, removeFileAttachment,
+    handleAddFiles, handleFileInputChange, resetAttachments,
   };
 }

@@ -124,7 +124,8 @@ interface InteractiveChatProps {
  * The two full-screen composer overlays (capture, bulk upload), grouped so the
  * InteractiveChat body carries one line rather than their gating. Both are
  * suppressed for native shells; bulk additionally requires a server-assigned
- * session id (its batch binds to a target chat).
+ * session id (its batch binds to a target chat) — the launcher already refuses
+ * to open one without it, so this gate is the type-level backstop.
  */
 function ChatModeOverlays({ captureMode, bulkUpload, usesNativeShell, sessionId, onExitCapture, onExitBulkUpload, onBulkUploadDelivered }: {
   captureMode: boolean;
@@ -211,8 +212,8 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
   // delivered batch drops the text it carried away. A ref breaks the
   // voice→draft→voice cycle.
   const clearDraftRef = useRef<() => void>(() => {});
-  const { launch: bulkUploadLaunch, openEmpty: handleOpenBulkUpload, openWithPhotos: handleBatchPhotos, close: handleCloseBulkUpload, onDelivered: handleBulkUploadDelivered } = useBulkUploadLaunch({ emissionStore, clearDraftRef });
-  const attach = useChatAttachments({ emissionStore, textareaRef, ensureComposerVisibleRef, onBatchPhotos: handleBatchPhotos });
+  const { launch: bulkUploadLaunch, openWithFiles: handleBatchFiles, close: handleCloseBulkUpload, onDelivered: handleBulkUploadDelivered } = useBulkUploadLaunch({ emissionStore, clearDraftRef, sessionId });
+  const attach = useChatAttachments({ emissionStore, textareaRef, ensureComposerVisibleRef, onBatchFiles: handleBatchFiles });
   const selections = useChatSelections({ emissionStore, textareaRef });
   const { dispatchEmission, dispatchNativeEmission, sendVoiceSegment, sendStopSend } = useEmissionDispatch({
     send, captureCardSend: cardSend.capture, boxSlug, activeView, messages, emissionStore,
@@ -270,10 +271,10 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
     inputStore, emissionStore,
     selections: selections.selections,
     resetAttachments: attach.resetAttachments, resetSelections: selections.resetSelections,
-    // Both addImageFiles and dispatchEmission already catch their own
-    // errors internally; voided here so useChatActions' option types can
-    // stay honestly void-returning.
-    addImageFiles: (files) => { void attach.addImageFiles(files); },
+    // Both addFiles and dispatchEmission already catch their own errors
+    // internally; voided here so useChatActions' option types can stay
+    // honestly void-returning.
+    addFiles: (files) => { void attach.addFiles(files); },
     onSend: voice.notifySent, isTranscribing: voice.isTranscribing, textareaRef,
     transcriptTick: voice.transcription.transcript, typingMode, typingLocked, setTypingMode,
     setScrollToBottomTrigger, dispatchEmission: dispatchEmissionVoid,
@@ -329,7 +330,6 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
       nativeComposer={usesNativeComposer}
       captureBubbles={captureBubbleList} captureVerbs={captureVerbs}
       onEnterCapture={() => setCaptureMode(true)} captureEnabled={!usesNativeShell} captureDisabledReason={sessionId === null ? "Send a message first" : undefined}
-      onUploadFiles={handleOpenBulkUpload} uploadFilesDisabledReason={sessionId === null ? "Send a message first" : undefined}
       screenshots={screenshots}
       audioOverlayStore={audioOverlayStore}
       />

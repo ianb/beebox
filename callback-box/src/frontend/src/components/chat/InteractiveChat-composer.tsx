@@ -15,6 +15,7 @@ import { VoiceToggleButton } from "./InteractiveChat-voice-button";
 import { MicOverlay } from "./MicOverlay";
 import { composerTextareaClasses, joinTranscript, spokenTextStart, type VoiceSegmentSend } from "./InteractiveChat-helpers";
 import { useInputValue, useInputStore } from "./input-store";
+import type { AddFiles } from "./InteractiveChat-attachments";
 import type { TranscriptionState } from "../../hooks/useRealtimeTranscription";
 import type { FinalWord } from "../../machines/transcription-events";
 
@@ -150,8 +151,8 @@ export function ChatInputArea({
   handleKeyDown, handleSend, handleCancelTranscription, clearDraft,
   onKeyboard, onVoice, onStopDictation, onVoiceSegmentSend,
   voicePaused, onUnpause, hideMobile,
-  onPaste, onDrop, onAttachFiles, addImageFiles, onEnterCapture, captureEnabled, captureDisabledReason,
-  onUploadFiles, uploadFilesDisabledReason, narrationEnabled,
+  onPaste, onDrop, onAddFiles, addFiles, onEnterCapture, captureEnabled, captureDisabledReason,
+  narrationEnabled,
 }: {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   isTranscribing: boolean;
@@ -172,19 +173,16 @@ export function ChatInputArea({
   hideMobile?: boolean;
   onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
-  onAttachFiles: () => void;
-  /** Ingest images into the composer (shared with paste/drop) — feeds the "Send screenshot…" item. */
-  addImageFiles: (files: File[]) => Promise<number>;
+  /** Open the file picker behind the Add menu's one file entry. */
+  onAddFiles: () => void;
+  /** Ingest files into the composer (shared with picker/paste/drop) — feeds the "Send screenshot…" item. */
+  addFiles: AddFiles;
   /** Enter capture mode (full-screen viewfinder / mic). */
   onEnterCapture: () => void;
   /** Whether capture is offered (suppressed for native shells, like the mic). */
   captureEnabled: boolean;
   /** When set, the capture affordance renders disabled with this tooltip (X1). */
   captureDisabledReason?: string | undefined;
-  /** Open the full-screen bulk file-upload overlay. */
-  onUploadFiles: () => void;
-  /** When set, the "Upload files…" item renders disabled with this reason (no chat session id yet). */
-  uploadFilesDisabledReason?: string | undefined;
   narrationEnabled: boolean;
 }) {
   // Subscribing read of the composer text — this is the component a keystroke
@@ -203,7 +201,7 @@ export function ChatInputArea({
             degraded={transcription.state === "reconnecting"}
           />
         ) : null}
-        {/* Add menu: capture mode, attach file, share location. */}
+        {/* Add menu: capture mode, add files, screenshot, share location. */}
         <Dropdown
           align="left"
           vertical="above"
@@ -231,11 +229,11 @@ export function ChatInputArea({
               {captureDisabledReason !== undefined ? `Capture… (${captureDisabledReason.toLowerCase()})` : "Capture…"}
             </MenuItem>
           ) : null}
-          <MenuItem onClick={onAttachFiles}>Attach file…</MenuItem>
-          <MenuItem onClick={onUploadFiles} disabled={uploadFilesDisabledReason !== undefined}>
-            {uploadFilesDisabledReason !== undefined ? `Upload files… (${uploadFilesDisabledReason.toLowerCase()})` : "Upload files…"}
-          </MenuItem>
-          <ScreenshotMenuItem addImageFiles={addImageFiles} />
+          {/* One file entry: where the files land (inline vs. bulk batch) is
+              decided by `file-routing.ts`, not by the user picking a menu item
+              (issues/features/2026-08-03-attach-vs-upload-menu-confusing.md). */}
+          <MenuItem onClick={onAddFiles}>Add files…</MenuItem>
+          <ScreenshotMenuItem addFiles={addFiles} />
           <ShareLocationMenuItem />
         </Dropdown>
 

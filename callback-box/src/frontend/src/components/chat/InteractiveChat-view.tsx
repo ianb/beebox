@@ -101,9 +101,6 @@ interface ChatBodyProps {
    * a capture can't misdirect into another chat (X1).
    */
   captureDisabledReason?: string | undefined;
-  /** Open the bulk file-upload overlay; the reason (when set) disables the menu item (no session id yet). */
-  onUploadFiles: () => void;
-  uploadFilesDisabledReason?: string | undefined;
   /** Agent-initiated screenshot requests: FIFO consent popup + ephemeral indicator rows. */
   screenshots: ScreenshotRequestController;
   audioOverlayStore: AudioOverlayStore; // written by the audio-review events; read by UserMessage's badges
@@ -196,10 +193,10 @@ function ComposerRegion(props: ChatBodyProps) {
   const {
     model, voice, recoveredDictation, expiredAttachmentsNotice, attach, selections, actions, isStreaming, processBusy, textareaRef,
     typingMode, setTypingMode, typingLocked, setTypingLocked, onVoiceSegmentSend, onEnterCapture, captureEnabled,
-    captureDisabledReason, onUploadFiles, uploadFilesDisabledReason,
+    captureDisabledReason,
   } = props;
   const { transcription, isTranscribing, voicePaused, stopDictation, clearDraft, handleCancelTranscription, startVoice, unpauseVoice } = voice;
-  const { fileInputRef, removeAttachment, removeFileAttachment, handleAttachFiles, handleFileInputChange, addImageFiles } = attach;
+  const { fileInputRef, removeAttachment, removeFileAttachment, handleAddFiles, handleFileInputChange, addFiles } = attach;
   // Subscribed here, not at the InteractiveChat root — a paste/upload must
   // only re-render this composer region, not the companion view pane
   // (see InteractiveChat-attachments.ts module doc).
@@ -244,12 +241,11 @@ function ComposerRegion(props: ChatBodyProps) {
           onUnpause={unpauseVoice}
           onPaste={handlePaste}
           onDrop={handleDrop}
-          onAttachFiles={handleAttachFiles}
-          addImageFiles={addImageFiles}
+          onAddFiles={handleAddFiles}
+          addFiles={addFiles}
           onEnterCapture={onEnterCapture}
           captureEnabled={captureEnabled}
           captureDisabledReason={captureDisabledReason}
-          onUploadFiles={onUploadFiles} uploadFilesDisabledReason={uploadFilesDisabledReason}
           narrationEnabled={model.narrationEnabled}
         />
       }

@@ -161,11 +161,10 @@ function StateBlock({ spec }: { spec: Spec }) {
       onVoiceSegmentSend={noop}
       voicePaused={spec.voicePaused}
       onUnpause={noop}
-      onAttachFiles={noop}
-      addImageFiles={() => Promise.resolve(0)}
+      onAddFiles={noop}
+      addFiles={() => Promise.resolve({ route: "inline", added: 0 })}
       onEnterCapture={noop}
       captureEnabled
-      onUploadFiles={noop}
       narrationEnabled={spec.narrationEnabled}
     />
   );
