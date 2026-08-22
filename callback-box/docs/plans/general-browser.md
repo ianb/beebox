@@ -216,7 +216,10 @@ isn't per-workstream"* — and the code bears it out twice over:
   `/issues/$category/$filename` shape and redirects it to
   `/issues?issue=<relPath>`. That is a decision this codebase already made and
   implemented a migration for; a new browser addressing files by path segment
-  would be re-adopting the shape those redirects exist to retire.
+  would be re-adopting the shape those redirects exist to retire. (The redirects
+  themselves are now slated for removal —
+  `issues/code-quality/2026-08-22-remove-legacy-issue-deep-link-routes.md` — which
+  does not weaken the precedent; it completes it.)
 
 The consequence is that the list is always present and the selection is state on
 top of it, rather than a separate page you navigate into — which is the same
