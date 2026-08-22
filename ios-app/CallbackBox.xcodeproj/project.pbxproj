@@ -17,6 +17,7 @@
 		5A1000082C3C000100000001 /* ChatAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000192C3C000100000001 /* ChatAPI.swift */; };
 		5A1000092C3C000100000001 /* NativeComposerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001A2C3C000100000001 /* NativeComposerView.swift */; };
 		5A10000A2C3C000100000001 /* SpeechDictation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001B2C3C000100000001 /* SpeechDictation.swift */; };
+		5A100D012C3C000100000001 /* ScreenAwake.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A100D022C3C000100000001 /* ScreenAwake.swift */; };
 		5A10000D2C3C000100000001 /* ChatImageAttachment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001E2C3C000100000001 /* ChatImageAttachment.swift */; };
 		5A10000E2C3C000100000001 /* SpeechKeywords.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001F2C3C000100000001 /* SpeechKeywords.swift */; };
 		5A10000F2C3C000100000001 /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000212C3C000100000001 /* QRScannerView.swift */; };
@@ -53,6 +54,7 @@
 		B72000132C3C000100000001 /* ComposerDraftRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000142C3C000100000001 /* ComposerDraftRepository.swift */; };
 		B72000152C3C000100000001 /* ComposerDraftStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000162C3C000100000001 /* ComposerDraftStore.swift */; };
 		B72000172C3C000100000001 /* ComposerDraftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000182C3C000100000001 /* ComposerDraftTests.swift */; };
+		B7200D032C3C000100000001 /* ScreenAwakeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7200D042C3C000100000001 /* ScreenAwakeTests.swift */; };
 		B72000192C3C000100000001 /* ComposerTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B720001A2C3C000100000001 /* ComposerTextView.swift */; };
 		B720001B2C3C000100000001 /* ChatAPITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B720001C2C3C000100000001 /* ChatAPITests.swift */; };
 		B720001D2C3C000100000001 /* PendingEmissionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B720001E2C3C000100000001 /* PendingEmissionStore.swift */; };
@@ -128,6 +130,7 @@
 		5A1000192C3C000100000001 /* ChatAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatAPI.swift; sourceTree = "<group>"; };
 		5A10001A2C3C000100000001 /* NativeComposerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeComposerView.swift; sourceTree = "<group>"; };
 		5A10001B2C3C000100000001 /* SpeechDictation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechDictation.swift; sourceTree = "<group>"; };
+		5A100D022C3C000100000001 /* ScreenAwake.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenAwake.swift; sourceTree = "<group>"; };
 		5A10001E2C3C000100000001 /* ChatImageAttachment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatImageAttachment.swift; sourceTree = "<group>"; };
 		5A10001F2C3C000100000001 /* SpeechKeywords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechKeywords.swift; sourceTree = "<group>"; };
 		5A1000212C3C000100000001 /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerView.swift; sourceTree = "<group>"; };
@@ -165,6 +168,7 @@
 		B72000142C3C000100000001 /* ComposerDraftRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerDraftRepository.swift; sourceTree = "<group>"; };
 		B72000162C3C000100000001 /* ComposerDraftStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerDraftStore.swift; sourceTree = "<group>"; };
 		B72000182C3C000100000001 /* ComposerDraftTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerDraftTests.swift; sourceTree = "<group>"; };
+		B7200D042C3C000100000001 /* ScreenAwakeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenAwakeTests.swift; sourceTree = "<group>"; };
 		B720001A2C3C000100000001 /* ComposerTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerTextView.swift; sourceTree = "<group>"; };
 		B720001C2C3C000100000001 /* ChatAPITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatAPITests.swift; sourceTree = "<group>"; };
 		B720001E2C3C000100000001 /* PendingEmissionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingEmissionStore.swift; sourceTree = "<group>"; };
@@ -309,6 +313,7 @@
 				5A1000192C3C000100000001 /* ChatAPI.swift */,
 				5A100AB02C3C000100000001 /* AudioSessionRouting.swift */,
 				5A10001B2C3C000100000001 /* SpeechDictation.swift */,
+				5A100D022C3C000100000001 /* ScreenAwake.swift */,
 				5A1000282C3C000100000001 /* SpeechAnalyzerSession.swift */,
 				5A10001F2C3C000100000001 /* SpeechKeywords.swift */,
 				5A1000252C3C000100000001 /* PairingURLInbox.swift */,
@@ -341,6 +346,7 @@
 				5A1001162C3C000100000001 /* CaptureUploadCoordinatorTests.swift */,
 				5A1001172C3C000100000001 /* CaptureAcquisitionTests.swift */,
 				B72000182C3C000100000001 /* ComposerDraftTests.swift */,
+				B7200D042C3C000100000001 /* ScreenAwakeTests.swift */,
 				B720009B2C3C000100000001 /* BulkUploadTests.swift */,
 				B72000C42C3C000100000001 /* VoiceAudioRetentionTests.swift */,
 				E1A000072C3C000100000001 /* LogForwarderTests.swift */,
@@ -550,6 +556,7 @@
 				B720001F2C3C000100000001 /* NativeComposerFixtureScreen.swift in Sources */,
 				5A100AA02C3C000100000001 /* AudioSessionRouting.swift in Sources */,
 				5A10000A2C3C000100000001 /* SpeechDictation.swift in Sources */,
+				5A100D012C3C000100000001 /* ScreenAwake.swift in Sources */,
 				5A1000962C3C000100000001 /* BulkPhotoThreshold.swift in Sources */,
 				5A10000D2C3C000100000001 /* ChatImageAttachment.swift in Sources */,
 				5A10000E2C3C000100000001 /* SpeechKeywords.swift in Sources */,
@@ -592,6 +599,7 @@
 				5A1001062C3C000100000001 /* CaptureAcquisitionTests.swift in Sources */,
 				5A1001BE2C3C000100000001 /* PairedBoxStoreTests.swift in Sources */,
 				B72000172C3C000100000001 /* ComposerDraftTests.swift in Sources */,
+				B7200D032C3C000100000001 /* ScreenAwakeTests.swift in Sources */,
 				B720009A2C3C000100000001 /* BulkUploadTests.swift in Sources */,
 				B72000C32C3C000100000001 /* VoiceAudioRetentionTests.swift in Sources */,
 				E1A000062C3C000100000001 /* LogForwarderTests.swift in Sources */,

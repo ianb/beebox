@@ -199,3 +199,19 @@ struct NativeLastAudioRequest: Codable, Equatable {
         sessionID = try container.decodeIfPresent(String.self, forKey: .sessionID)
     }
 }
+
+/// The native composer's barge-in, sent to the page when the user presses
+/// record while the box is speaking (contract §4.9). The page owns the speech;
+/// only it can stop it. There is no acknowledgement channel — the speech
+/// playback state the page already posts (§4.5) reports the stop, and native
+/// does not wait for it before opening the microphone.
+struct NativeSpeechCommand: Codable, Equatable {
+    enum Action: String, Codable {
+        case stop
+    }
+
+    var version = 1
+    var action: Action
+
+    static let stop = NativeSpeechCommand(action: .stop)
+}

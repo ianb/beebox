@@ -9,6 +9,7 @@
  */
 
 import { makeLog } from "./log.js";
+import { checkInvariant } from "../../../lib/invariant.js";
 import * as path from "node:path";
 import { getDirectoryForSession } from "./history.js";
 import { buildTimezoneContext } from "../../box/config.js";
@@ -47,6 +48,12 @@ interface StartContext {
    * `CB_CHAT_SESSION_ID_FILE` instead (see `session-id-file.ts`).
    */
   sessionId: string | null;
+  /**
+   * True while this session's coined id names a conversation the harness has
+   * not created yet: the run is told to *use* the id (`coinedSessionId`)
+   * rather than resume it. False once a transcript exists.
+   */
+  coinedRunPending: boolean;
 }
 
 /**
@@ -120,6 +127,8 @@ export async function buildBackendStartOptions(
     // placeholder that a `cb chat screenshot` would then fail to match. A new
     // session's id is instead published post-spawn via the backend's
     // CB_CHAT_SESSION_ID_FILE (services/claude-chat.ts + session-id-file.ts).
+    // A coined id counts as real from the start, so it rides here and the
+    // post-spawn file is never allocated for it.
     ...(ctx.sessionId !== null ? { CB_CHAT_SESSION_ID: ctx.sessionId } : {}),
   });
   const env: Record<string, string | undefined> = {
@@ -133,6 +142,15 @@ export async function buildBackendStartOptions(
     includePartialMessages: ctx.options.includePartialMessages === true,
     env,
   };
+  if (ctx.coinedRunPending && ctx.sessionId !== null) {
+    // Claude-only by construction: the reservation refuses a non-Claude box,
+    // so a coined session cannot reach the Codex backend. Belt-and-braces —
+    // silently dropping the id would start the chat under a different one.
+    if (!checkInvariant(engine === "claude", `coined session ${ctx.sessionId} resolved to engine ${engine}`)) {
+      return { startOpts, resolvedContextDir: contextDir };
+    }
+    startOpts.coinedSessionId = ctx.sessionId;
+  }
   if (contextDir) {
     startOpts.additionalDirectories = [ctx.boxRoot];
   }

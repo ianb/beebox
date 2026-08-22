@@ -1,0 +1,7 @@
+{
+  "input": {
+    "version": 1,
+    "action": "pause"
+  },
+  "expected": null
+}

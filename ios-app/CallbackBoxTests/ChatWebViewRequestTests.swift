@@ -339,10 +339,48 @@ final class ChatWebViewRequestTests: XCTestCase {
     }
 
     @MainActor
+    /// A barge-in aimed at an utterance no document is playing must not wait
+    /// for a page: the microphone opened on the press regardless, and a parked
+    /// request would fire into whatever the freshly-loaded page says next.
+    func testSpeechStopRequestIsSettledRatherThanParkedWhileThePageLoads() {
+        var settled: [UUID] = []
+        let coordinator = makeCoordinator(
+            evaluate: { _, completion in completion(nil) },
+            pageLoaded: false,
+            onSpeechStopSettled: { settled.append($0) }
+        )
+        let request = NativeSpeechStopRequest()
+        coordinator.speechStopRequest = request
+
+        coordinator.deliverSpeechStopRequest(to: WKWebView())
+
+        XCTAssertEqual(settled, [request.id])
+        XCTAssertNil(coordinator.speechStopRequest)
+    }
+
+    /// The replacement document is not playing the utterance the press
+    /// interrupted, so an undelivered request is abandoned, never replayed.
+    func testProvisionalNavigationAbandonsAnUndeliveredSpeechStopRequest() {
+        var settled: [UUID] = []
+        let coordinator = makeCoordinator(
+            evaluate: { _, completion in completion(nil) },
+            onSpeechStopSettled: { settled.append($0) }
+        )
+        let request = NativeSpeechStopRequest()
+        coordinator.speechStopRequest = request
+
+        coordinator.webView(WKWebView(), didStartProvisionalNavigation: nil)
+
+        XCTAssertEqual(settled, [request.id])
+        XCTAssertNil(coordinator.speechStopRequest)
+    }
+
     private func makeCoordinator(
         onAttempt: @escaping (UUID) -> Void = { _ in },
         onReceipt: @escaping (NativeEmissionReceipt) -> Void = { _ in },
         evaluate: @escaping (String, @escaping (Error?) -> Void) -> Void,
+        pageLoaded: Bool = true,
+        onSpeechStopSettled: @escaping (NativeSpeechStopRequest.ID) -> Void = { _ in },
         openExternalURL: @escaping (URL) -> Void = { _ in },
         loadInCurrentContext: @escaping (WKWebView, URLRequest) -> Void = { _, _ in }
     ) -> ChatWebView.Coordinator {
@@ -360,7 +398,8 @@ final class ChatWebViewRequestTests: XCTestCase {
             onScreenshotResult: { _ in },
             onComposerCommand: { _ in },
             onComposerCommandAcknowledgementDelivered: { _ in },
-            pageLoaded: true,
+            onSpeechStopRequestSettled: onSpeechStopSettled,
+            pageLoaded: pageLoaded,
             evaluateEmission: evaluate,
             openExternalURL: openExternalURL,
             loadInCurrentContext: loadInCurrentContext

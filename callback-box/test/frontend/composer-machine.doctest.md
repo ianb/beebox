@@ -187,6 +187,29 @@ calls.join(",")
 => playSpeech,stopSpeech,startMic
 ```
 
+## Native barge-in stops the speech without opening the web mic
+
+The iOS record button opens the *native* microphone itself and asks this page
+only to stop talking (mobile-contract §4.9). That command lands as `STOP_SPEECH`
+rather than `START_DICTATION`: the page is the speaker but not the listener, so
+it must not `startMic`, and `turnTaking` must stay false or the next
+`SPEECH_DONE` would reopen a microphone nobody is watching.
+
+```ts
+const { actor, calls } = mk();
+actor.send(queued);
+actor.send({ type: "STOP_SPEECH" });
+const s = actor.getSnapshot();
+s.matches({ voice: "idle" })
+=> true
+
+s.context.turnTaking
+=> false
+
+calls.join(",")
+=> playSpeech,stopSpeech
+```
+
 ## Manual stop ends the turn
 
 A user-driven `STOP_DICTATION` ends turn-taking (so the agent won't auto-reopen

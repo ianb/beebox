@@ -13,6 +13,7 @@ states=(
   failed-upload
   selection-detail
   recording
+  starting-dictation
   interrupted
   hq-preparation
   sending

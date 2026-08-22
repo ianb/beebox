@@ -327,6 +327,8 @@ const registry = {
   enforceLiveCap: () => {},
   touch: () => {},
   markMostActive: async () => {},
+  // No chat here was coined and reserved (chat/session/reserve.ts).
+  getReservation: () => null,
 };
 
 await prepareCaptureSession({ boxRoot: box.root, id, eventBus, registry });
@@ -476,6 +478,8 @@ const registry = {
   enforceLiveCap: () => {},
   touch: () => {},
   markMostActive: async () => {},
+  // No chat here was coined and reserved (chat/session/reserve.ts).
+  getReservation: () => null,
 };
 
 // First run: send lands the message, then "crashes" before the delivered write.

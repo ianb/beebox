@@ -13,6 +13,7 @@ import { useCaptureUploads } from "./useCaptureUploads";
 import { useCaptureInputs } from "./useCaptureInputs";
 import { useCaptureCamera } from "./useCaptureCamera";
 import { useCaptureFinish } from "./useCaptureFinish";
+import { useRetryFeedback } from "./retry-feedback";
 
 /**
  * Capture-mode recorder timeslice: 5s (vs the recorder's 20s default) shortens
@@ -185,12 +186,21 @@ export function useCaptureSession(opts: {
     setPhotoStates, setFileStates, uploadPhoto, uploadFile,
   });
 
-  const retryFailedUploads = useCallback(() => {
+  const replayFailedUploads = useCallback(() => {
     if (sessionId) uploads.retryFailedUploads(sessionId);
   }, [sessionId, uploads]);
 
+  // The banner's own state: a retry has to show that it started and how it
+  // ended, which the upload counts alone can't say (a replay in flight looks
+  // exactly like a first attempt in flight).
+  const { feedback: retryFeedback, onRetryFailed: retryFailedUploads } = useRetryFeedback({
+    pendingUploads: uploads.counts.pendingUploads,
+    totalFailed: uploads.counts.photosFailed + uploads.counts.audioFailed + uploads.counts.filesFailed,
+    retryFailedUploads: replayFailedUploads,
+  });
+
   return {
-    state: { sessionId, recording, recordingTime, error, finalizing, showSettings },
+    state: { sessionId, recording, recordingTime, error, finalizing, showSettings, retryFeedback },
     devices, uploads, inputs, camera,
     videoRef,
     actions: {

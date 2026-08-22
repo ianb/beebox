@@ -183,7 +183,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
   // subtree. Seeded from the `?capture=1` deep link, consumed once.
   const [captureMode, setCaptureMode] = useState(openCaptureOnMount === true);
   // Server-derived pending capture bubbles (survive reload; refined live below).
-  const { bubbles: captureBubbleList, applyCaptureStatus, retry: handleCaptureRetry } = useCaptureBubbles(sessionId);
+  const { bubbles: captureBubbleList, applyCaptureStatus, verbs: captureVerbs } = useCaptureBubbles(sessionId);
   const screenshots = useScreenshotRequests(sessionId);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -231,12 +231,12 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
     snapshot, sessionId, muted: mute.muted, narrationEnabled: model.narrationEnabled,
     selections: selections.selections, resetSelections: selections.resetSelections,
     emissionStore, resetAttachments: attach.resetAttachments,
-    clearDraftRef, inputStore, dispatchEmission: dispatchEmissionVoid,
+    clearDraftRef, inputStore, dispatchEmission: dispatchEmissionVoid, nativeComposer: usesNativeComposer,
   });
   useNativeBridges({
     enabled: usesNativeShell, dispatchEmission: dispatchNativeEmission, boxSlug,
     narrationEnabled: model.narrationEnabled, responseActive: snapshot.value === "streaming",
-    speechPlaying: voice.speechPlayback.isPlaying });
+    speechPlaying: voice.speechPlayback.isPlaying, stopSpeech: voice.handleStopSpeech });
   useEnsureComposerVisible({ ensureComposerVisibleRef, isTranscribing: voice.isTranscribing, setTypingMode, textareaRef });
 
   // Persisted in-flight transcript recovery widget; see InteractiveChat-recovery.tsx.
@@ -327,7 +327,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
       reportCardActivity={cardSend.report}
       embedded={embedded === true}
       nativeComposer={usesNativeComposer}
-      captureBubbles={captureBubbleList} onCaptureRetry={handleCaptureRetry}
+      captureBubbles={captureBubbleList} captureVerbs={captureVerbs}
       onEnterCapture={() => setCaptureMode(true)} captureEnabled={!usesNativeShell} captureDisabledReason={sessionId === null ? "Send a message first" : undefined}
       onUploadFiles={handleOpenBulkUpload} uploadFilesDisabledReason={sessionId === null ? "Send a message first" : undefined}
       screenshots={screenshots}

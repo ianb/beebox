@@ -5,6 +5,10 @@
  *
  * Patterned after memory-atlas/components/wakelock.ts.
  *
+ * Browser clients only. Inside the iOS native shell (`?nativeComposer=1`) the
+ * microphone is native and the device idle timer is native property — see
+ * mobile-contract.md §4.10 — so this hook is deliberately not requested there.
+ *
  * Usage:
  *   const { requestWakeLock, releaseWakeLock } = useWakeLock();
  *   // ... when starting recording / a long action:

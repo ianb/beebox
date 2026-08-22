@@ -19,6 +19,9 @@ import { sdkSessionIdSchema } from "../../../core/chat/session/session-id.js";
 import { SessionDeletingError } from "../../../core/chat/session/registry.js";
 import { LockHeldError } from "../../../core/chat/review/lock.js";
 import { resolveSessionAvailability } from "../../../core/chat/session/availability.js";
+import type { ReserveResult } from "../../../core/chat/session/reserve.js";
+import { readLandmarkFeaturesForDir } from "../../../core/landmark/features.js";
+import { mergeSeedFeatures } from "../../../core/chat/features.js";
 
 function requireRuntime(boxRoot: string): ChatRuntime {
   const runtime = getChatRuntime(boxRoot);
@@ -211,6 +214,33 @@ export const chatControlProcedures = {
   }),
 
   // Kill the subprocess (preserving session id + queue).
+  /**
+   * Accept a client-coined chat id, so a brand-new chat is addressable before
+   * its first message — capture, bulk upload, and a second quick send all name
+   * the same chat instead of racing to create one
+   * (`core/chat/session/reserve.ts`).
+   *
+   * A mutation, not part of `bootstrap`: `bootstrap` does not even run for a
+   * new chat (the client skips it for `?session=new`), so there is no round
+   * trip to fold this into, and a query with a side effect would be the worse
+   * shape. Idempotent by id, so a retry or a StrictMode double-invoke reserves
+   * the same chat.
+   */
+  reserveSession: publicProcedure
+    .input(z.object({ sessionId: sdkSessionIdSchema, contextDir: z.string().optional() }))
+    .mutation(async ({ input, ctx }): Promise<ReserveResult> => {
+      const { registry } = requireRuntime(ctx.boxRoot);
+      const contextDir = input.contextDir !== undefined && input.contextDir !== "" ? input.contextDir : null;
+      // Landmark feature defaults are captured now because nothing else will:
+      // they only ever ride a `"new"` send, and a coined chat never sends one.
+      const landmark = contextDir !== null ? await readLandmarkFeaturesForDir(ctx.boxRoot, contextDir) : null;
+      return registry.reserve({
+        sessionId: input.sessionId,
+        contextDir,
+        seedFeatures: mergeSeedFeatures({ landmark, request: undefined }),
+      });
+    }),
+
   restart: publicProcedure.input(z.object({ session: z.string().min(1) })).mutation(({ input, ctx }) => {
     const { registry } = requireRuntime(ctx.boxRoot);
     const target = registry.get(input.session);

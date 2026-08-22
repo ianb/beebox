@@ -107,19 +107,3 @@ export function parseDraft(raw: string | null): DictationDraft | null {
 export function serializeDraft(draft: DictationDraft): string {
   return JSON.stringify(draft);
 }
-
-/**
- * Human-readable age of a draft: "just now", "3 min ago", "2 hr ago",
- * "4 days ago". Takes the elapsed milliseconds so the caller owns the clock
- * (and tests stay deterministic).
- */
-export function formatDraftAge(elapsedMs: number): string {
-  const sec = Math.floor(elapsedMs / 1000);
-  if (sec < 45) return "just now";
-  const min = Math.round(sec / 60);
-  if (min < 60) return `${min} min ago`;
-  const hr = Math.round(min / 60);
-  if (hr < 24) return `${hr} hr ago`;
-  const days = Math.round(hr / 24);
-  return `${days} ${days === 1 ? "day" : "days"} ago`;
-}

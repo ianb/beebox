@@ -23,7 +23,8 @@ import {
   sealStagingSession,
   listStagingSessions,
 } from "../../core/capture/staging-store.js";
-import { cleanupStagingSession } from "../../core/capture/staging-teardown.js";
+import { discardStagingSessionIfCancellable, type DiscardResult } from "../../core/capture/staging-teardown.js";
+import { StagingSessionGoneError } from "../../core/capture/staging-errors.js";
 import { prepareCaptureSession, markCapturePreparationFailed } from "../../core/capture/prepare.js";
 import { selectResumableCaptures } from "../../core/capture/pending.js";
 import {
@@ -183,6 +184,13 @@ export async function registerCaptureRoutes(options: RegisterCaptureRoutesOption
   );
 
   // DELETE /api/capture/sessions/:id — cancel and discard the session.
+  //
+  // Goes through the guarded discard, never the unconditional teardown: only an
+  // `open` batch (the uploader's own cancel) or a dead `failed:*` one (the
+  // chat chip's discard) is the client's to delete. Deleting a `preparing` or
+  // `delivering` session would pull the directory out from under the background
+  // worker, which then reads `null` and silently returns — the client reports
+  // success and no message ever arrives.
   server.delete<{ Params: { id: string } }>(
     "/api/capture/sessions/:id",
     async (request: FastifyRequest<{ Params: { id: string } }>, reply) => {
@@ -196,7 +204,18 @@ export async function registerCaptureRoutes(options: RegisterCaptureRoutesOption
       if (authorization.status === "rejected") {
         return reply.status(authorization.statusCode).send({ error: authorization.error });
       }
-      await cleanupStagingSession({ boxRoot, id: session.id });
+      // Gone between the read above and the lock inside — someone else already
+      // tore it down, which is the outcome the caller wanted anyway.
+      const discard = await discardStagingSessionIfCancellable({ boxRoot, id: session.id })
+        .catch((e: unknown): DiscardResult => {
+          if (e instanceof StagingSessionGoneError) return { discarded: true };
+          throw e;
+        });
+      if (!discard.discarded) {
+        return reply.status(409).send({
+          error: `Capture is already ${discard.blockedBy ?? "in flight"} and can no longer be discarded`,
+        });
+      }
       return { success: true };
     },
   );

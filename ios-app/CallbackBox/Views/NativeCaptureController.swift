@@ -724,12 +724,31 @@ struct NativeCaptureScreen: View {
             if phase == .background {
                 Task { await controller.sceneDidEnterBackground() }
             }
+            applyScreenAwake()
+        }
+        // An open microphone in a silent room offers the idle timer no
+        // interaction to reset it, and a screen lock suspends the app and kills
+        // the recording. Derived from current state, and released the same way
+        // on backgrounding and on dismissal.
+        .onChange(of: controller.surfaceState.isRecording) { _, _ in
+            applyScreenAwake()
+        }
+        .onAppear { applyScreenAwake() }
+        .onDisappear {
+            ScreenAwakeHold.shared.set(.captureRecording, active: false)
         }
         .overlay {
             if case .choosingResume(let capture) = controller.surfaceState.phase {
                 resumePanel(capture)
             }
         }
+    }
+
+    private func applyScreenAwake() {
+        ScreenAwakeHold.shared.set(
+            .captureRecording,
+            active: scenePhase == .active && controller.surfaceState.isRecording
+        )
     }
 
     private func resumePanel(_ capture: ResumableCapture) -> some View {

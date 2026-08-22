@@ -1,12 +1,18 @@
 ---
 title: "A capture that succeeds says nothing — success is a chip disappearing, so the user assumes it failed and re-captures"
-workstream: unattached
+workstream: capture-chip-states
 area: callback-box
 labels: [capture, chat, ui, feedback]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder could not tell whether a capture had landed
+needs: [manual-testing]
 ---
+
+> **⏳ Awaiting manual testing** — fix landed in `9e6caef8`. A capture now
+> reports which step it is on and how long it has taken, and resolves in place
+> with a "delivered" face instead of the row vanishing. Only the developer
+> clears this.
 
 > Turns out it actually did go through. I just couldn't tell.
 
@@ -44,7 +50,7 @@ The only states with a durable visual identity are the bad ones.
 Reconstructed from a session transcript (structural detail only):
 
 1. The user typed a throwaway greeting to open the chat — required by the
-   ["send a message first" gate](../features/2026-08-20-cannot-capture-into-a-new-chat.md).
+   ["send a message first" gate](../closed/features/2026-08-20-cannot-capture-into-a-new-chat.md).
    That turn was **interrupted** and never answered, so the chat's title became
    the greeting.
 2. **86 minutes later** they typed a single `?` — checking whether anything was
@@ -88,11 +94,70 @@ the moment it lands. Directions worth weighing rather than assuming:
   do — the confirmation needs to reach them somewhere other than a transcript
   they are not watching.
 
+## Code reading (2026-08-21)
+
+Two corrections and one finding, from reading the delivery path.
+
+**The transcript chip is not a minute behind — it is simultaneous.**
+`core/chat/session/deliver-user-message.ts:174` emits `chat-user-message` (which
+renders the transcript chip) inside the same delivery step that
+`core/capture/prepare.ts:355` emits `capture-status: delivered` (which removes
+the pending bubble). There is no interval where nothing is on screen. The
+~1 minute is *preparation* — transcription — during which the bubble correctly
+reads "preparing…"/"transcribing…".
+
+So the defect is not a gap. It is that **the swap is unmarked**: a dimmed
+pending row is deleted and an ordinary-looking transcript message appears, with
+nothing identifying them as the same object. The second half is that the minute
+of preparation is long enough to walk away from.
+
+**The client already receives the success signal and discards it.** The
+`delivered` event carries `docPath` and the resolved `sessionId`
+(`prepare.ts:355`). `useCaptureBubbles.ts:36-44` uses it only to trigger a
+refetch; the row then vanishes because the query no longer returns it. Resolving
+the bubble in place needs no new backend state — only that the hook stop
+dropping what it is already handed.
+
+**`startedAt` is likewise already available** (`core/capture/pending.ts:34`) and
+`captureBubbleCaption` never reads it — which is the whole of the "ageless chip"
+defect in the sibling issue. Both halves are the same two files.
+
 ## Related
 
-- [Cannot capture into a new chat](../features/2026-08-20-cannot-capture-into-a-new-chat.md)
+- [Cannot capture into a new chat](../closed/features/2026-08-20-cannot-capture-into-a-new-chat.md)
   — the gate that produced the throwaway opener in step 1.
 - [Failed capture chip cannot be discarded](2026-08-20-failed-capture-chip-cannot-be-discarded.md)
   — the other half of this asymmetry: failure that never goes away.
 - [Capture upload error/retry affordance is weak](2026-08-03-capture-upload-error-retry-affordance-weak.md)
   — same family, on the overlay surface.
+
+## What landed (2026-08-21)
+
+- The working caption names its step and, past 45 seconds, reports how long it
+  has been at it (`still preparing — 2 min`). The minute of preparation is no
+  longer silent.
+- The `delivered` event is no longer discarded. `useCaptureBubbles` holds the
+  row for 3 seconds wearing a resolved face, then lets it go — so the swap from
+  pending row to transcript message is visible as a transition rather than as a
+  disappearance.
+- The same mechanism gives discard a resolved face, so both endings look alike.
+
+Not addressed, deliberately: **reaching a user who has left the chat.** That is
+a notification-channel question, not a chip question, and folding it in would
+have added a delivery path to a UI change. Filed separately as
+[capture confirmation does not reach a user who left the chat](../features/2026-08-21-capture-confirmation-misses-a-user-who-left.md).
+
+One gap remains by design: a capture that delivers *before* its pending row has
+ever been rendered (delivery beating the first query round-trip) still has no
+row to resolve, so it appears only as the transcript message. The hook cannot
+invent a bubble for it — the `capture-status` payload carries no media counts.
+
+## Manual testing
+
+1. From the phone, capture a photo and a short clip into a chat, then **stay in
+   the chat**. The bubble must show `preparing…`, then report its age if
+   preparation runs long, then turn green and read `delivered` for about three
+   seconds before the row leaves and the capture message stands in its place.
+2. Repeat, but leave the chat during preparation and come back. The capture
+   message must be there; nothing should be stuck.
+3. Confirm you no longer feel the need to re-capture to check.

@@ -30,7 +30,7 @@ import { useChatAttachmentValues, type useChatAttachments } from "./InteractiveC
 import type { useChatSelections } from "./InteractiveChat-selections";
 import type { useChatActions } from "./InteractiveChat-actions";
 import type { ActivityKind } from "@core/chat/card-activity.js";
-import type { CaptureBubbleModel } from "./capture-bubble";
+import type { CaptureBubbleModel, CaptureVerbs } from "./capture-bubble";
 import type { AudioOverlayStore } from "./audio-overlay-store";
 import { useCompanionSelection } from "./use-companion-selection";
 
@@ -88,10 +88,9 @@ interface ChatBodyProps {
    */
   embedded: boolean;
   nativeComposer: boolean;
-  /** Server-derived pending capture bubbles for this chat (Track 4). */
+  /** Pending capture bubbles (Track 4), and the two verbs a failed one offers. */
   captureBubbles: CaptureBubbleModel[];
-  /** Retry a failed pending capture (re-seals its staging session). */
-  onCaptureRetry: (id: string) => void;
+  captureVerbs: CaptureVerbs;
   /** Enter capture mode (open the full-screen capture overlay). */
   onEnterCapture: () => void;
   /** Whether the capture affordance is offered (suppressed for native shells). */
@@ -157,7 +156,7 @@ function MessageListRegion(props: ChatBodyProps) {
   const {
     tabs, model, voice, actions, messages, groups, modelMarkers, isStreaming, streamText, streamTools,
     debugView, currentUserEmail, currentUserName, snapshot, totalEntries, loadingOlder, scrollToBottomTrigger, liveTurnId,
-    captureBubbles, onCaptureRetry, audioOverlayStore,
+    captureBubbles, captureVerbs, audioOverlayStore,
   } = props;
   const { onZoomView } = tabs;
   const { speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, pendingHqDraft } = voice;
@@ -187,7 +186,7 @@ function MessageListRegion(props: ChatBodyProps) {
       proseEnabled={model.chatFeatures.prose !== "off"}
       pendingHqDraft={pendingHqDraft}
       captureBubbles={captureBubbles}
-      onCaptureRetry={onCaptureRetry}
+      captureVerbs={captureVerbs}
       audioOverlayStore={audioOverlayStore}
     />
   );

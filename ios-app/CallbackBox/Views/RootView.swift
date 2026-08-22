@@ -11,6 +11,9 @@ struct RootView: View {
     @State private var visibleChatSessionID: String?
     @State private var visibleChatBoxID: PairedBox.ID?
     @State private var locationShareRequest: NativeLocationShareRequest?
+    /// One pending barge-in: the record button was pressed while the box was
+    /// speaking, and the page has not been told to stop yet (contract §4.9).
+    @State private var speechStopRequest: NativeSpeechStopRequest?
     @State private var locationShareResult: NativeLocationShareResult?
     @State private var locationSharingEnabled = false
     @State private var narrationEnabled = false
@@ -97,6 +100,7 @@ struct RootView: View {
             responseActive = false
             screenshotRequest = nil
             screenshotResult = nil
+            speechStopRequest = nil
             composerCommandAcknowledgements = []
             pendingEmissionStore.deactivate()
         }
@@ -212,12 +216,14 @@ struct RootView: View {
             emissionRedeliveryRequest: emissionRedeliveryRequest,
             locationShareRequest: locationShareRequest,
             screenshotRequest: screenshotRequest,
+            speechStopRequest: speechStopRequest,
             composerCommandAcknowledgements: composerCommandAcknowledgements,
             onSessionChange: { sessionID in
                 if visibleChatSessionID != sessionID {
                     narrationEnabled = false
                     speechPlaybackActive = false
                     responseActive = false
+                    speechStopRequest = nil
                 }
                 visibleChatBoxID = box.id
                 visibleChatSessionID = sessionID
@@ -283,6 +289,12 @@ struct RootView: View {
             },
             onLastAudioRequest: { request in
                 answerLastAudioRequest(request, box: box)
+            },
+            onSpeechStopRequestSettled: { id in
+                guard speechStopRequest?.id == id else {
+                    return
+                }
+                speechStopRequest = nil
             }
         )
         .id(box.id)
@@ -305,6 +317,9 @@ struct RootView: View {
                 onTakeScreenshot: {
                     screenshotResult = nil
                     screenshotRequest = NativeScreenshotRequest()
+                },
+                onInterruptSpeech: {
+                    speechStopRequest = NativeSpeechStopRequest()
                 }
             )
         }

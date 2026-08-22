@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-08-20T19:57:53Z
-Total documents: 281
+Generated: 2026-08-21T03:10:54Z
+Total documents: 282
 
 ## Issues
 
@@ -340,6 +340,7 @@ Referenced by:
 - docs/implemented-plans/clerk-webpage-capture.md:126 (mention) — - **`callback-box/code-style.md`** — no `any`; no default parameters; max 2
 - docs/implemented-plans/codex-box-engine.md:42 (mention) — - `callback-box/code-style.md` requires errors with recovery paths to remain visible.
 - docs/implemented-plans/codex-diagnostic-parity.md:27 (mention) — - `callback-box/code-style.md` requires narrow typed boundaries and visible recovery
+- docs/implemented-plans/coined-chat-ids.md:55 (mention) — - `code-style.md` exhaustiveness — `switch-exhaustiveness-check` with
 - docs/implemented-plans/companion-pane-card-activity.md:42 (mention) — - `callback-box/code-style.md` — files ≤300 lines, no default parameters, max 2
 - docs/implemented-plans/courseware-lesson-plan.md:29 (mention) — - `callback-box/code-style.md` — no `any`, no default params, max 2 positional params, files ≤300
 - docs/implemented-plans/courseware-phase1.md:104 (mention) — - `callback-box/code-style.md` → **"No default parameters"**, **"Max 2 positional
@@ -1057,6 +1058,7 @@ Referenced by:
 - docs/implemented-plans/chat-header-chips.md:63 (mention) — - `docs/engineering-principles.md` — principle 2 (exhaustiveness; frontend
 - docs/implemented-plans/chat-review.md:42 (mention) — - **`docs/engineering-principles.md`** — findings trace to:
 - docs/implemented-plans/codex-sdk-backend.md:44 (mention) — (`docs/engineering-principles.md:12`).
+- docs/implemented-plans/coined-chat-ids.md:41 (mention) — - `docs/engineering-principles.md` #2 (exhaustiveness is enforced, not hoped
 - docs/implemented-plans/deferred-recoverable-agent-failures.md:62 (mention) — - `docs/engineering-principles.md` #1 (types are structure), #2
 - docs/implemented-plans/delivered-user-message-codec.md:18 (mention) — - Engineering principle 1, Types are structure. `docs/engineering-principles.md:12-18` says: *"Prefer types that make il
 - docs/implemented-plans/emission-model.md:102 (mention) — - `docs/engineering-principles.md` — resilient-not-silent (wedges must
@@ -1450,6 +1452,7 @@ Referenced by:
 - ../issues/bugs/2026-08-03-ios-stale-unconfirmed-emission-banner.md:81 (mention) — `docs/mobile-contract.md` governs the receipt contract.
 - ../issues/bugs/2026-08-05-open-chat-flashes-agent-working-no-send.md:85 (mention) — - `docs/mobile-contract.md` / cb-ios-overlap — both platforms, shared surface.
 - ../issues/bugs/2026-08-18-ios-sleeps-with-the-mic-open.md:59 (mention) — - The mobile contract (`docs/mobile-contract.md`) is where a native/web
+- ../issues/bugs/2026-08-20-ios-record-button-silently-waits-for-speech.md:33 (mention) — This is deliberate and documented — `callback-box/docs/mobile-contract.md` §4.5:
 - ../issues/closed/bugs/2026-07-17-mobile-device-store-unlocked-rmw.md:18 (mention) — `async`. Tests: `test/core/mobile/pairing-store-concurrency.doctest.md`; doc: `docs/mobile-contract.md`
 - ../issues/closed/bugs/2026-07-21-device-store-crash-safety-and-renewal-race.md:21 (mention) — `docs/mobile-contract.md` § Cookie lifetime and revocation (decision: documented
 - ../issues/closed/bugs/2026-07-21-ios-location-always-shared-no-toggle.md:107 (link) — [mobile contract](../../../callback-box/docs/mobile-contract.md).
@@ -1783,6 +1786,7 @@ Referenced by:
 - docs/implemented-plans/chat-header-chips.md:75 (mention) — - `docs/testing.md:13-17` — "Doctests are the default"; frontend doctests cover
 - docs/implemented-plans/chat-scroll-redesign.md:61 (mention) — - `callback-box/docs/testing.md:5-11` — tests force decomposition, document, and
 - docs/implemented-plans/chat-stream-finalize-unify.md:59 (mention) — - `callback-box/docs/testing.md:5-9` + `:474-521` — layout/streaming behavior is
+- docs/implemented-plans/coined-chat-ids.md:516 (mention) — **Test posture**, named as part of the design per `docs/testing.md`:
 - docs/implemented-plans/courseware-lesson-plan.md:332 (mention) — - **Tests** (per `docs/testing.md`, on substantial codepaths): the `lesson-plan` parse doctest
 - docs/implemented-plans/courseware-phase1.md:491 (mention) — - **Tests** (per `docs/testing.md`):
 - docs/implemented-plans/figure-card-type.md:87 (mention) — - **`docs/testing.md`** — tests as a design tool, on substantial codepaths.
@@ -2651,6 +2655,20 @@ Referenced by:
 References:
 - → CLAUDE.md (mention)
 
+#### docs/implemented-plans/coined-chat-ids.md
+
+Title: "Coined chat ids: a new chat has its real session id before its first message" | 545 lines
+
+Referenced by:
+- ../issues/closed/features/2026-08-20-cannot-capture-into-a-new-chat.md:15 (mention) — > (`callback-box/docs/plans/coined-chat-ids.md`), so capture and bulk upload
+
+References:
+- → ../issues/closed/features/2026-08-20-cannot-capture-into-a-new-chat.md (frontmatter)
+- → docs/engineering-principles.md (mention)
+- → code-style.md (mention)
+- → docs/implemented-plans/emission-model.md (mention)
+- → docs/testing.md (mention)
+
 #### docs/implemented-plans/companion-pane-card-activity.md **[ORPHAN]**
 
 Title: "Companion-pane card activity awareness for chat" | 372 lines
@@ -2722,6 +2740,7 @@ References:
 Title: "Emission model: durable acceptance, no sticky pending states" | 522 lines
 
 Referenced by:
+- docs/implemented-plans/coined-chat-ids.md:57 (mention) — - Precedent: `docs/implemented-plans/emission-model.md` — durable acceptance and
 - ../issues/bugs/2026-07-23-voice-send-lingers-as-unsent-recovery-draft.md:9 (frontmatter) — design: ../../callback-box/docs/implemented-plans/emission-model.md
 - ../issues/bugs/2026-08-03-ios-stale-unconfirmed-emission-banner.md:9 (frontmatter) — design: ../../callback-box/docs/implemented-plans/emission-model.md
 - ../issues/bugs/2026-08-18-first-message-audio-not-retranscribable.md:102 (mention) — (`../../callback-box/docs/implemented-plans/emission-model.md`), not a drive-by.
