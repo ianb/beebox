@@ -417,8 +417,13 @@ Because this is app code rather than an injected library, isolation is ordinary
 component scoping and a failure is ordinary app error handling. Both were
 separate design problems in the earlier draft.
 
-**First implementation chunk.** Display only — render the comments Track 1's CLI
-can already write. Typed capture follows.
+**First implementation chunk — BUILT (2026-08-22).** `CommentLayer.tsx` plus
+`lib/selection-anchor.ts`: a toggle, selection capture through Chrome's
+`generateFragment`, resolution through `processTextFragmentDirective`, and
+highlighting via the CSS Custom Highlight API so nothing fights React's
+ownership of the rendered markdown. Comments whose fragment does not resolve are
+listed with their quoted text and counted as "not anchored to a span" — never
+dropped. Covered by `workstreams-app/test/selection-anchor.doctest.md`.
 
 ### Track 4 — Spoken comments
 
@@ -511,9 +516,21 @@ and not a streaming service.
 **The blob is held client-side until the transcript returns** — not until the
 store write, which the split makes unnecessary. See the gap note below.
 
-**First implementation chunk.** The `apiKey` field, the injected service, and the
-`comments.transcribe` mutation with its failure surface — testable with the fake
-before any recording UI exists.
+**First implementation chunk — BUILT (2026-08-22).** `transcribe-contract.ts`
+(input schema, byte cap, three failure classes), `transcribe-openai.ts` (the
+call and its fake), the `comments.transcribe` mutation, and `lib/recorder.ts`
+with the mic control that states its own availability. Covered by
+`workstreams-app/test/transcribe.doctest.md`.
+
+**One deviation from the plan, deliberate.** This does NOT call
+`transcribeAudioHq`, and so does not need the `apiKey` field the plan specified.
+The app imports nothing outside its own package, and callback-box does not
+export transcription — its public specifiers are `cards`, `schema`,
+`view-widgets`, and box code "imports only the public specifiers, never engine
+internals". Making the dev-tooling app depend on the main system, and widening
+that system's public surface for a non-box consumer, is a larger change than the
+one multipart POST it saves. The injected-service half of the plan stands and is
+what makes the route testable.
 
 ### Track 4a — Routing, and waking the workstream
 

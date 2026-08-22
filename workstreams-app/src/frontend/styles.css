@@ -72,3 +72,17 @@ h2 small { color: #827d75; font-size: .78em; font-weight: 500; }
 .quick-open-results { list-style: none; margin: .6rem 0 0; padding: 0; max-height: 50vh; overflow-y: auto; }
 .quick-open-hit { display: block; width: 100%; padding: .35rem .5rem; border: 0; border-radius: 4px; background: none; text-align: left; font: 0.85rem ui-monospace, SFMono-Regular, Menlo, monospace; cursor: pointer; }
 .quick-open-hit:hover, .quick-open-hit.first { background: #eef2f9; }
+
+/* Comments: a communication medium on a rendered document. */
+::highlight(cb-comment-anchor) { background: #fde68a; color: inherit; }
+.comment-layer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #e1ddd7; }
+.comment-toolbar { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; }
+.comment-composer { display: grid; gap: .5rem; margin: .8rem 0; }
+.comment-input { width: 100%; padding: .5rem .6rem; border: 1px solid #d9d3ca; border-radius: 6px; font: inherit; }
+.comment-actions { display: flex; gap: .5rem; margin: 0; }
+.comment-heading { font-size: 1rem; margin: 1.2rem 0 .4rem; }
+.comment-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .8rem; }
+.comment-item { padding: .6rem .7rem; border: 1px solid #e6e2db; border-radius: 8px; background: #fffdf9; }
+.comment-meta { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin: 0 0 .35rem; font-size: .85rem; }
+.comment-quote { margin: .3rem 0; padding-left: .7rem; border-left: 3px solid #d0deef; color: #555; font-size: .9rem; }
+.comment-text { margin: .3rem 0 0; white-space: pre-wrap; }

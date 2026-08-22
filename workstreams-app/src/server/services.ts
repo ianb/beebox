@@ -26,9 +26,21 @@ export interface AppServices {
   workstreams: WorkstreamsService;
   documents: DocumentsService;
   comments: CommentsService;
+  transcribe: TranscribeService;
   quotas: QuotasService;
   actions: ActionsService;
   exhibits: ExhibitsService;
+}
+
+/**
+ * Audio in, text out. Declared here rather than imported from
+ * transcribe-service.ts on purpose: the frontend tsconfig includes THIS file
+ * (for the router's types), and importing the implementation would drag its
+ * Blob/fetch code into a DOM-typed graph where a Node Buffer does not
+ * typecheck. Interfaces here; implementations stay server-only.
+ */
+export interface TranscribeService {
+  transcribe(input: { audio: Buffer; mimeType: string }): Promise<{ text: string }>;
 }
 
 /** Read-only: the workstreams origin never answers an ask (Track E). */

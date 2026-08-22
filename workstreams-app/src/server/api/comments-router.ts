@@ -11,6 +11,13 @@ import { z } from "zod";
 
 import { commentOriginSchema, commentSchema } from "../../shared/comments.js";
 import { CommentsCliError } from "../comments-service.js";
+import {
+  MAX_AUDIO_BYTES,
+  TranscriptionNotConfiguredError,
+  TranscriptionRefusedError,
+  TranscriptionShapeError,
+  transcribeInputSchema,
+} from "../transcribe-contract.js";
 import { procedure, router } from "./trpc.js";
 
 const workstreamName = z.string().regex(/^[a-zA-Z0-9_-]+$/u);
@@ -67,6 +74,44 @@ export const commentsRouter = router({
     }))
     .output(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => passingCliErrors(() => ctx.services.comments.add(input))),
+
+  /**
+   * Audio in, text out — nothing stored, nothing retained.
+   *
+   * The client puts the result in the composer and submits it through `add`,
+   * so the transcript is reviewable before anything is written and the
+   * recording only has to survive until this returns. `origin: voice` then
+   * records how the text ARRIVED, not that it is verbatim: the boxholder may
+   * have corrected it, which is the point.
+   */
+  transcribe: procedure
+    .input(transcribeInputSchema)
+    .output(z.object({ text: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const audio = Buffer.from(input.audio, "base64");
+      // Capped in BYTES, not seconds: a duration cap is not a byte guarantee,
+      // and the app inherits Fastify's 1 MiB body limit. The client caps first
+      // so a recording is refused before it is made, not after.
+      if (audio.byteLength > MAX_AUDIO_BYTES) {
+        throw new TRPCError({
+          code: "PAYLOAD_TOO_LARGE",
+          message: `That recording is ${String(Math.round(audio.byteLength / 1000))} kB; the limit is ${String(Math.round(MAX_AUDIO_BYTES / 1000))} kB.`,
+        });
+      }
+      try {
+        return await ctx.services.transcribe.transcribe({ audio, mimeType: input.mimeType });
+      } catch (e) {
+        // Every one of these leaves the recording in the page, so the message
+        // has to say what to do next rather than just what went wrong.
+        if (e instanceof TranscriptionNotConfiguredError) {
+          throw new TRPCError({ code: "PRECONDITION_FAILED", message: e.message });
+        }
+        if (e instanceof TranscriptionRefusedError || e instanceof TranscriptionShapeError) {
+          throw new TRPCError({ code: "BAD_GATEWAY", message: e.message });
+        }
+        throw e;
+      }
+    }),
 
   /** How a comment stops waiting. Nothing expires on its own. */
   clear: procedure

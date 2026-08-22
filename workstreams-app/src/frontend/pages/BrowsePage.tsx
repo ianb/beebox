@@ -1,4 +1,7 @@
+import { useRef } from "react";
 import { Link } from "@tanstack/react-router";
+
+import { CommentLayer } from "../components/CommentLayer.js";
 
 import { Markdown } from "../components/Markdown.js";
 import { Button, Pill } from "../components/ui.js";
@@ -108,6 +111,9 @@ function DocumentBody({ document }: { document: BrowsedDocument }) {
 
 export function BrowseView({ document }: { document: BrowsedDocument }) {
   const label = document.relPath === "" ? "/" : document.relPath;
+  // The comment layer anchors into THIS element, so a selection is only
+  // captured when it is inside the rendered document.
+  const contentRef = useRef<HTMLDivElement | null>(null);
   return (
     <main className="simple-page">
       <header>
@@ -115,7 +121,16 @@ export function BrowseView({ document }: { document: BrowsedDocument }) {
         <p className="issue-meta"><KindPill document={document} /></p>
         <ChangedIn document={document} />
       </header>
-      <DocumentBody document={document} />
+      <div ref={contentRef}><DocumentBody document={document} /></div>
+      {/* A directory has no text to anchor to, and nothing to say about it. */}
+      {document.kind === "directory" ? null : (
+        <CommentLayer
+          relPath={document.relPath}
+          workstream={document.workstream}
+          changedIn={document.changedIn}
+          contentRef={contentRef}
+        />
+      )}
     </main>
   );
 }
