@@ -1,5 +1,5 @@
 ---
-title: "Remove the legacy /workstreams/issues/<category>/<file> deep-link routes"
+title: "Remove the legacy issue routes: SPA deep links and the /dev/issues router rewrite"
 workstream: dev-comments
 area: monorepo
 filed-by: agent
@@ -39,11 +39,13 @@ These are two different things and only the first is in scope.
   referenced from `issues/CLAUDE.md:180`, `issues/AGENTS.md:181,333`,
   `bin/CLAUDE.md:345`, `bin/AGENTS.md:346` and several plans. It must keep
   working.
-- **Separate question — the router-level rewrite.** `bin/router.ts:70-73` maps
-  `/<worktree>/dev/issues[/…]` to `/workstreams/issues…`. That is a different
-  legacy path with its own rationale (it catches the pre-move location), it
-  lives in the shared router rather than the app, and removing it needs a router
-  restart. Decide it on its own rather than sweeping it in here.
+- **Also in scope — the router-level rewrite.** `bin/router.ts:70-73` maps
+  `/<worktree>/dev/issues[/…]` to `/workstreams/issues…`, catching the pre-move
+  location. The boxholder confirmed 2026-08-22 that this goes as well: *"/workstreams/issues/
+  is NOT legacy, it's current and remains current. All the others can go."*
+  One caveat for whoever does it: this line is in the **shared router**, so it
+  lands only after a merge to main plus a router restart the boxholder performs
+  — unlike the SPA routes, which the app picks up on its own.
 
 ## Check before deleting
 
