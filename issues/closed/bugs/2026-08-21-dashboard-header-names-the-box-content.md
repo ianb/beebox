@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — checking the dashboard's "know which box you are in" user story
+resolution: implemented
 ---
 
 The dashboard's `h1` reads `content` on every box, with the box's absolute

@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — reading the admin page's secrets surface
+resolution: implemented
 ---
 
 The Secrets section runs two queries, `secrets.boxStatus` and
