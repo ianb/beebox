@@ -16,10 +16,11 @@ of the form "the product can do X". It has no notion of a person with a motive. 
 from the product's side and asks whether the code backs it. Nothing in it starts from someone who
 wants to stop losing track of what they lent out and has never heard the word "card".
 
-## The five journeys
+## The journeys
 
 Each is a goal from someone's life with a reason attached, because the reason decides what a good
-outcome looks like.
+outcome looks like. A to E are people who already know what they want; F is the person working out
+whether they want anything.
 
 ### A · "I want to remember who has my stuff"
 
@@ -52,9 +53,31 @@ deadline before the event — arriving across email and calendar. Wants to stop 
 Structurally different from the others: the mail **arrives while the person is not looking**. See
 [Things that happen while you are away](#things-that-happen-while-you-are-away).
 
+### F · "What would I even use this for?"
+
+Someone set it up for you and said it would help you keep track of things. Before committing any of
+your life to it, work out what it is actually for — and come back with a list of things in *your*
+life you would genuinely use it for, and the things you assumed it would do that it apparently
+does not.
+
+This replaces the "what even is this" journey, which was too open-ended to run: told only to
+"work out what this is and do one useful thing", a person wanders and the result is a travelogue.
+A mission fixes that without giving anything away. The person still arrives knowing one sentence
+and no vocabulary; they just have a reason to look, and something to produce.
+
+**The deliverable is the interesting part.** A newcomer's list of "things I'd use this for", written
+after an hour inside the product and before reading a word of documentation, is the most direct
+evidence available of what this product *appears* to be. Gate 3 is the problem of writing an honest
+"what is this / should you use it"; the gap between that list and the real answer is precisely what
+the README has to close. The things they *wrongly* expected are worth as much as the things they
+got right.
+
+**No assets.** This journey is about forming a view, not processing material, and anything handed
+over becomes the task instead (see [Materials](#materials)).
+
 Dropped from the earlier draft, per your read: buying duplicate books, tracking recommendations,
-saving things read online, "what's on my plate this week" and its siblings, "what even is this",
-"what's already in here". The first-contact ones are worth revisiting once we know how these fare.
+saving things read online, and "what's on my plate this week" and its siblings. "What's already in
+here" stays dropped as too unbounded — F covers the useful half of it.
 
 ## Nowhere to put it yet
 
