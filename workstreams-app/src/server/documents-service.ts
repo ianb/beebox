@@ -14,6 +14,7 @@ import {
   type OverlayResult,
 } from "./issue-overlay.js";
 import type {
+  BrowsedDocument,
   Issue,
   Plan,
   TestingQueue,
@@ -22,6 +23,7 @@ import type { WorkstreamIssue } from "../shared/workstreams.js";
 import type { DocumentsService } from "./services.js";
 import { resolveIssueTarget, saveIssueChanges } from "./issues-mutation-service.js";
 import { resolveIssuePath } from "./issue-path.js";
+import { readDocument } from "./document-read.js";
 
 const DOCUMENT_CACHE_MS = 60_000;
 
@@ -212,6 +214,16 @@ export function createDocumentsService(options: DocumentsServiceOptions): Docume
   }
 
   return {
+    async readDocument(request): Promise<BrowsedDocument> {
+      // The overlay already knows every live worktree root; reusing it keeps
+      // one answer to "where is workstream X" rather than a second scan that
+      // could disagree with the issue views.
+      const state = await snapshot();
+      return readDocument(
+        { mainRoot: options.mainRoot, worktreeRoots: state.overlay.worktreeRoots },
+        request,
+      );
+    },
     async listIssues(): Promise<Issue[]> {
       const state = await snapshot();
       return (await currentIssues(state)).map((issue) =>

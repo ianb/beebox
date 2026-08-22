@@ -1,6 +1,6 @@
 ---
 title: "One browser: artifacts, docs, code, plans, and exhibits in one place"
-status: draft
+status: active
 workstream: dev-comments
 issues:
   - ../../../issues/docs-and-chores/2026-08-22-exhibits-doc-overstates-container-chrome.md
@@ -245,7 +245,13 @@ compile error until every switch handles it (principle 2).
 selection and `?workstream=` for the lens, matching `?issue=` on the issues
 browser; the `kind` union members.
 
-**First implementation chunk.** `documents.read` plus containment tests. No UI.
+**First implementation chunk — BUILT (2026-08-22).**
+`workstreams-app/src/server/document-read.ts` (address resolution, the `kind`
+union, containment re-checked after realpath, the text-size and binary
+refusals), wired through `DocumentsService.readDocument` and the
+`documents.read` tRPC query. Covered by
+`workstreams-app/test/document-read.doctest.md` and driven over HTTP against a
+standalone app.
 
 ### Track 2 — Renderers
 
@@ -261,8 +267,11 @@ browser; the `kind` union members.
   origin, never inlined (see the boundary above).
 - `data` — JSON/YAML rendered readably rather than as a wall of text.
 
-**First implementation chunk.** `markdown` and `code`. They cover the two things
-the boxholder named first and prove the address space.
+**First implementation chunk — BUILT (2026-08-22).** `markdown`, `code`,
+`directory`, and `page` render in `BrowsePage.tsx` at
+`/workstreams/browse?file=…&workstream=…`, and `PlansPage` now links there
+instead of out to `/main/dev/docs/…`. Line-addressable code fragments and the
+`data` renderer are still to come.
 
 ### Track 3a — Workstreams as a lens, not a partition
 

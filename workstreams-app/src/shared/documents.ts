@@ -99,3 +99,48 @@ export type Plan = z.infer<typeof planSchema>;
 export type Quota = z.infer<typeof quotaSchema>;
 export type TestingQueue = z.infer<typeof testingQueueSchema>;
 export type IssueChange = z.infer<typeof issueChangeSchema>;
+
+/**
+ * What a browsable path turns out to be. A closed union so a renderer cannot
+ * be silently missing: adding a member is a compile error until every switch
+ * handles it (engineering principle 2).
+ *
+ * `page` is an agent-authored HTML artifact. It is deliberately NOT rendered
+ * into the app document — those run scripts, and the origin separation that
+ * keeps them off this origin is the whole reason the exhibits listener exists
+ * (see `general-browser.md`, "The boundary this plan must not cross").
+ */
+export const documentKindSchema = z.enum(["markdown", "code", "directory", "page", "data"]);
+
+/** One entry in a directory listing. */
+export const directoryEntrySchema = z.object({
+  name: z.string(),
+  relPath: z.string(),
+  kind: documentKindSchema,
+});
+
+export const documentSchema = z.object({
+  /** Repository-relative, always — the address is the file, never the worktree. */
+  relPath: z.string(),
+  /** Which checkout this reading came from: a workstream name, or null for main. */
+  workstream: z.string().nullable(),
+  kind: documentKindSchema,
+  /** Tracked in git. Decides which comment namespace the path belongs to. */
+  tracked: z.boolean(),
+  /** Source text. Null for a directory, and for anything not read as text. */
+  text: z.string().nullable(),
+  /** Populated only for `directory`. */
+  entries: z.array(directoryEntrySchema),
+  /** Bytes on disk, so a caller can explain a refusal rather than hang on it. */
+  bytes: z.number(),
+  /**
+   * Why the content is absent when it is: too large, not text, unreadable.
+   * Null when `text` is present. The pair is the whole point — "no content"
+   * and "content we would not read" must not look alike (principle 4).
+   */
+  problem: z.string().nullable(),
+});
+
+export type DocumentKind = z.infer<typeof documentKindSchema>;
+export type DirectoryEntry = z.infer<typeof directoryEntrySchema>;
+export type BrowsedDocument = z.infer<typeof documentSchema>;

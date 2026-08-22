@@ -45,3 +45,18 @@ h2 small { color: #827d75; font-size: .78em; font-weight: 500; }
 .prose :where(code):not(:where([class~="not-prose"], [class~="not-prose"] *))::after {
   content: none;
 }
+
+/* Browser: one document view for markdown, code, directories, and pages. */
+.browse-title {
+  font: 500 1.05rem/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  overflow-wrap: anywhere;
+}
+.code-view {
+  overflow-x: auto;
+  padding: 0.9em 1em;
+  border-radius: 6px;
+  background: var(--surface-sunken, #f6f6f6);
+  font: 0.85rem/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+  tab-size: 2;
+}
+.code-view code { white-space: pre; }

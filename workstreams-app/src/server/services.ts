@@ -1,5 +1,6 @@
 import type { WorkstreamIssue, WorkstreamListResult } from "../shared/workstreams.js";
 import type {
+  BrowsedDocument,
   Issue,
   IssueChange,
   Plan,
@@ -37,6 +38,11 @@ export interface DocumentsService {
   testingQueue(): Promise<TestingQueue>;
   issuesForWorkstream(name: string): Promise<WorkstreamIssue[]>;
   saveIssueChanges(changes: IssueChange[]): Promise<number>;
+  /**
+   * One browsable path. `workstream` is a LENS, not a location: null reads the
+   * main checkout, a name reads that worktree's copy of the same address.
+   */
+  readDocument(request: { relPath: string; workstream: string | null }): Promise<BrowsedDocument>;
 }
 
 export interface QuotasService {
