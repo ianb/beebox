@@ -186,6 +186,20 @@ for stock images mid-walk, which wastes steps and makes runs irreproducible. Ins
 ships with an asset set and a plain description of what each asset is, and the person is told what
 they have.
 
+**Only what this run needs.** Assets are scoped per journey and nothing else is mentioned. A person
+who is handed two photos will treat the photos as the job — the B pilot did exactly that, and spent
+its evening processing images rather than pursuing the thing it wanted. A journey about getting to
+know the box gets no assets at all; journeys A and C need none either, because they start from what
+the person knows rather than material they hold. An asset that is not needed is not neutral, it is
+a distraction with a claim on the person's attention.
+
+**Assets are an input, not the task.** The photos are what this person happened to have to hand
+tonight; the goal is the thing they want to be true in a month. The prompt should read that way
+round — the situation and the continuing purpose first, the material mentioned late and lightly —
+or the walk becomes an import job. This is an ongoing relationship with a box, not a one-off
+conversion: they will come back, add more, and ask questions over time, and a journey that ends
+when the last photo is processed has tested the wrong thing.
+
 **Voice is not simulated.** Recording is interactive in ways a simulated person cannot drive — the
 keyword system especially — so where a journey would involve speech we inject the transcript
 directly and note that the real path was not exercised. Transcription accuracy is out of scope for
@@ -235,6 +249,10 @@ course is a different test from one that does not.
 ## Open questions
 
 - **The five journeys** — right set? B and C are rewritten from your notes; check I took the point.
+- **Whether a journey should span more than one sitting by default.** E needs two because of the
+  arrival mechanic. But "I will come back and add the other drawers" is the real shape of B as
+  well, and a single sitting cannot show whether the second visit is any good — which is where an
+  organiser either earns its keep or becomes sediment.
 - **How much `test1` content should each journey see?** Its existing courses and people are
   realistic, but a chemistry journey landing in a box that already has a chemistry course is a
   different test from one that does not.
