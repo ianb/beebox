@@ -29,13 +29,10 @@ async function runScreenshotCapture(addFiles: AddFiles): Promise<void> {
   switch (outcome.kind) {
     case "image": {
       const file = new File([outcome.blob], screenshotFilename(), { type: "image/png" });
-      const ingest = await addFiles([file]);
-      // addFiles swallows a per-image processing failure (paste's console-only
-      // contract); zero added on a single file means it failed, and this
-      // menu-driven flow must say so rather than silently no-op. A `batch`
-      // outcome added nothing inline but is a success — the grab went to the
-      // bulk-upload overlay.
-      if (ingest.route === "inline" && ingest.added === 0) toastError("The screenshot couldn't be attached.");
+      // A failed encode is surfaced by `addFiles` itself now, and a `batch`
+      // outcome is a success (the grab went to the bulk-upload overlay), so
+      // there is nothing left for this caller to check.
+      await addFiles([file]);
       break;
     }
     case "declined":
