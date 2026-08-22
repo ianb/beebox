@@ -11,7 +11,17 @@
  *   comments list [--workstream <w>]  what is waiting / what is addressed to me
  *
  * Plus `clear`, which is how a comment stops waiting: an agent reads it, acts,
- * and clears it. Nothing expires on its own.
+ * and clears it. Nothing expires on its own — and `add`, which the workstreams
+ * app calls when the boxholder writes a comment in the browser.
+ *
+ * THIS CLI IS THE ONLY WRITER. The app shells out to it rather than reaching
+ * into the store itself, following the precedent bin/CLAUDE.md records for the
+ * same app: "the app invokes the stable bin/workstreams CLI instead of
+ * reimplementing lifecycle guards." Two implementations of one write protocol —
+ * the same YAML, the same locking, the same containment — is where duplication
+ * stops being controllable, so there is one.
+ *
+ * `--json` on any command emits machine-readable output for that caller.
  *
  * Design: callback-box/docs/plans/document-comments.md
  * Store:  bin/lib/comments-store.ts (root derivation, namespaces, containment)
@@ -21,10 +31,14 @@ import * as path from "node:path";
 import { execa } from "execa";
 
 import {
+  appendComment,
   byNewest,
   clearComments,
+  commentSchema,
   defaultStoreRoot,
+  initStore,
   listAll,
+  newCommentId,
   readComments,
   type Comment,
   type StoreEntry,
@@ -40,6 +54,11 @@ const USAGE = `usage: bin/comments <command>
                                   addressed to that workstream.
   clear <path> [--id <id>]        Remove handled comments. Without --id, clears
                                   the document.
+  add <path> --body <text>        Write a comment. --origin typed|voice,
+                                  --workstream <name>, --quoted <text>,
+                                  --section <text>, --fragment <text>.
+
+  --json                          Machine-readable output (any command).
 
 Comments never reach git. Read them, act, then clear them.
 `;
@@ -129,6 +148,78 @@ function renderEntry(entry: StoreEntry): string {
   return [head, ...problem, ...byNewest(entry.comments).map(renderComment)].join("\n");
 }
 
+/** Read `--flag value` pairs without pulling in an argument parser. */
+function flags(args: string[]): Map<string, string> {
+  const found = new Map<string, string>();
+  for (let i = 0; i < args.length; i += 1) {
+    const arg = args[i];
+    if (arg === undefined || !arg.startsWith("--")) continue;
+    const next = args[i + 1];
+    if (next === undefined || next.startsWith("--")) {
+      found.set(arg.slice(2), "");
+      continue;
+    }
+    found.set(arg.slice(2), next);
+    i += 1;
+  }
+  return found;
+}
+
+function wantsJson(args: string[]): boolean {
+  return args.includes("--json");
+}
+
+/**
+ * Write one comment. The caller supplies what it knows; the store validates.
+ * `--workstream` absent means unrouted, which is a real state — commenting on a
+ * file nobody is working on is how new work starts.
+ */
+async function commandAdd(context: Context, args: string[]): Promise<number> {
+  const [target] = args;
+  if (target === undefined || target.startsWith("--")) {
+    process.stderr.write("comments add: needs a path\n");
+    return 2;
+  }
+  const options = flags(args);
+  const body = options.get("body");
+  if (body === undefined || body === "") {
+    process.stderr.write("comments add: --body is required\n");
+    return 2;
+  }
+  const origin = options.get("origin") ?? "typed";
+  if (origin !== "typed" && origin !== "voice") {
+    process.stderr.write(`comments add: --origin must be typed or voice, got '${origin}'\n`);
+    return 2;
+  }
+
+  const storeRoot = defaultStoreRoot(context.mainRoot);
+  await initStore(storeRoot);
+  const [subject] = await subjectsFor(context, target);
+  if (subject === undefined) {
+    process.stderr.write("comments add: could not resolve a subject\n");
+    return 2;
+  }
+  const workstream = options.get("workstream");
+  const comment = commentSchema.parse({
+    id: newCommentId(),
+    at: new Date().toISOString(),
+    origin,
+    body,
+    workstream: workstream === undefined || workstream === "" ? null : workstream,
+    worktree: context.worktree,
+    ...(options.get("quoted") === undefined ? {} : { quoted: options.get("quoted") }),
+    ...(options.get("section") === undefined ? {} : { section: options.get("section") }),
+    ...(options.get("fragment") === undefined ? {} : { fragment: options.get("fragment") }),
+  });
+  await appendComment(storeRoot, { subject, comment });
+  if (wantsJson(args)) {
+    process.stdout.write(`${JSON.stringify({ id: comment.id, subject })}\n`);
+    return 0;
+  }
+  process.stdout.write(`Added ${comment.id} on ${describeSubject(subject, target)}.\n`);
+  return 0;
+}
+
 async function commandShow(context: Context, args: string[]): Promise<number> {
   const [target] = args;
   if (target === undefined) {
@@ -149,6 +240,10 @@ async function commandShow(context: Context, args: string[]): Promise<number> {
     if (read.comments.length > 0) {
       found.push({ subject, storePath: "", comments: read.comments, problem: null });
     }
+  }
+  if (wantsJson(args)) {
+    process.stdout.write(`${JSON.stringify({ entries: found.map((entry) => ({ subject: entry.subject, comments: byNewest(entry.comments) })) })}\n`);
+    return 0;
   }
   if (found.length === 0) {
     process.stdout.write(`No comments on ${describeSubject(subjects[0] ?? null, target)}.\n`);
@@ -181,6 +276,17 @@ async function commandList(context: Context, args: string[]): Promise<number> {
           comments: entry.comments.filter((comment) => comment.workstream === workstream),
         }))
         .filter((entry) => entry.comments.length > 0 || entry.problem !== null);
+  if (wantsJson(args)) {
+    process.stdout.write(`${JSON.stringify({
+      entries: filtered.map((entry) => ({
+        subject: entry.subject,
+        storePath: entry.storePath,
+        problem: entry.problem,
+        comments: byNewest(entry.comments),
+      })),
+    })}\n`);
+    return 0;
+  }
   if (filtered.length === 0) {
     const scope = workstream === null ? "" : ` for ${workstream}`;
     process.stdout.write(`Nothing waiting${scope}.\n`);
@@ -232,6 +338,7 @@ async function dispatch(): Promise<number> {
     return command === undefined ? 2 : 0;
   }
   const context = await resolveContext();
+  if (command === "add") return commandAdd(context, args);
   if (command === "show") return commandShow(context, args);
   if (command === "list") return commandList(context, args);
   if (command === "clear") return commandClear(context, args);

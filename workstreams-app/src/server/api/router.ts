@@ -22,6 +22,7 @@ import {
   lifecycleJobSchema,
 } from "../../shared/actions.js";
 import { procedure, router } from "./trpc.js";
+import { commentsRouter } from "./comments-router.js";
 import { documentsRouter } from "./documents-router.js";
 
 const workstreamsRouter = router({
@@ -115,6 +116,7 @@ export const appRouter = router({
   dashboard: dashboardRouter,
   workstreams: workstreamsRouter,
   issues: issuesRouter,
+  comments: commentsRouter,
   documents: documentsRouter,
   plans: plansRouter,
   testing: testingRouter,

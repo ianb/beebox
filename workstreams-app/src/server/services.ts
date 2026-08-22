@@ -16,6 +16,7 @@ import type {
   LifecycleJob,
 } from "../shared/actions.js";
 import type { AskQueue } from "../shared/exhibits.js";
+import type { CommentsService } from "./comments-service.js";
 
 export interface WorkstreamsService {
   list(): Promise<WorkstreamListResult>;
@@ -24,6 +25,7 @@ export interface WorkstreamsService {
 export interface AppServices {
   workstreams: WorkstreamsService;
   documents: DocumentsService;
+  comments: CommentsService;
   quotas: QuotasService;
   actions: ActionsService;
   exhibits: ExhibitsService;

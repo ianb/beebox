@@ -8,6 +8,7 @@ import { buildExhibitsApp } from "./exhibits/app.js";
 import { defaultStoreRoot } from "./exhibits/store.js";
 import { createViteAssets } from "./exhibits/vite-assets.js";
 import { createWorkstreamsCommandService } from "./workstreams-command.js";
+import { createCommentsService } from "./comments-service.js";
 import { createDocumentsService } from "./documents-service.js";
 import { createExhibitsQueueService } from "./exhibits-queue-service.js";
 import { createQuotasService } from "./quotas-service.js";
@@ -70,6 +71,7 @@ async function main(): Promise<void> {
   const services = {
     workstreams: createWorkstreamsCommandService({ repoRoot }),
     documents: createDocumentsService({ mainRoot: repoRoot, worktreesRoot }),
+    comments: createCommentsService({ repoRoot }),
     quotas: createQuotasService(),
     actions,
     // The queue reads the same store the exhibits listener serves, and links
