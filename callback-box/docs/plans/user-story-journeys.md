@@ -46,13 +46,46 @@ question is whether any of it is reachable by someone who does not know it exist
 
 ### E · "I can't keep up with the school schedule"
 
-Term dates, a newsletter, a class trip needing a form back, a parents' evening invite, a sports
-fixture change — arriving across email, calendar invites, and PDFs. Wants to stop missing things.
-*(The only journey needing connector fixtures.)*
+Term dates, a newsletter, a class trip needing a form back, a conference sign-up with a booking
+deadline before the event — arriving across email and calendar. Wants to stop missing things.
+
+Structurally different from the others: the mail **arrives while the person is not looking**. See
+[Things that happen while you are away](#things-that-happen-while-you-are-away).
 
 Dropped from the earlier draft, per your read: buying duplicate books, tracking recommendations,
 saving things read online, "what's on my plate this week" and its siblings, "what even is this",
 "what's already in here". The first-contact ones are worth revisiting once we know how these fare.
+
+## Things that happen while you are away
+
+There is no live mail account, so the school mail is injected — but *when* it lands is a design
+choice, and the obvious choice is wrong.
+
+If the mail is sitting in the box when the person first opens it, the journey becomes "find the
+school information", which is a search test. The real situation is that mail arrives overnight,
+while nobody is looking, and the question is **whether you ever find out**. That is a test of what
+the box surfaces on its own, and it cannot be run any other way.
+
+So journey E runs in **two sittings**:
+
+1. The person arrives with their goal and does whatever they do — looks around, asks the assistant,
+   perhaps sets something up.
+2. They leave. The fixtures are injected, and the box is allowed to react exactly as it would to a
+   real sync — intake, triage, whatever it does unprompted. Nothing announces this.
+3. They come back later with no prompt about what happened. What they encounter, and how long it
+   takes them to learn anything arrived, is the finding.
+
+**The injection is not just files on disk.** Dropping cards into the inbox and stopping would test
+nothing — the box would never have reacted. The staging has to run whatever the box runs on new
+mail, so the second sitting meets a box that has genuinely processed the arrival.
+
+**The person may also trigger it.** If they go looking for a way to check for new mail and find
+one, that is a legitimate path and worth recording — it tells us the manual route exists and is
+discoverable. But the default is unattended, because that is the normal case.
+
+This generalises past journey E. Anything the box does on its own — a schedule firing, a scheduled
+review, a question it decides to ask — can be staged the same way, and probably should be. A box
+that only ever acts when watched is a different product from the one described.
 
 ## The simulated user
 
@@ -105,6 +138,8 @@ says "I saved it" may not have. Everything needed to reconstruct the run is capt
 - **Network activity** — which endpoints were hit, what failed — from the browser side.
 - **The box's own state**: a git snapshot before and after, so what landed on disk is recoverable
   independently of anyone's report.
+- **When anything was injected**, on the same timeline as the person's actions — so "mail arrived
+  at 14:02, they noticed at 14:31, via the dashboard" is answerable, and so is "they never did".
 
 **Clock time is judged afterwards, not by the walker.** Turn count is the wrong measure — a person
 does not experience turns. What matters is whether a goal took four minutes or forty, and whether
@@ -152,7 +187,9 @@ run.
 - **How much `test1` content should each journey see?** Its existing courses and people are
   realistic, but a chemistry journey landing in a box that already has a chemistry course is a
   different test from one that does not.
-- **Journey E's fixtures** — staged into the box, or run through the connector properly?
+- **Journey E's fixtures** are written and scrubbed, waiting on your review before they go in the
+  repo. They live in the workstream store for now. What still needs deciding is what the staging
+  should *trigger* — the full intake and triage path, or a narrower slice.
 - **How much the person knows** — one sentence, as written. Less is implausible; more gives away
   the map.
 - **Is the note structure the right set of prompts?** Those five are a guess at what elicits the
