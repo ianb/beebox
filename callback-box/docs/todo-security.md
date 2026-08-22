@@ -7,7 +7,7 @@ design:
 
 - **Current posture, accepted risks, and the full inventory** →
   [docs/security-report.md](security-report.md) (structured accounting)
-  and [SECURITY.md](../SECURITY.md) (the readable report).
+  and [security-overview.md](security-overview.md) (the readable report).
 - **Actionable hardening items** → the issue queue. The items that lived
   here: Google shared-token hardening →
   [google-auth-policy-proxy](../../issues/features/2026-07-28-google-auth-policy-proxy.md);
@@ -26,5 +26,5 @@ Everything the old body of this file tracked (structurally-always-on auth,
 invite onboarding, the setup-token window, the WS-auth test gap, MFA/recovery,
 open-invite email ownership, the cross-process lock lease-steal, and the
 Google OAuth shared-token/file-permissions items) is now current in
-[docs/security-report.md](security-report.md) / [SECURITY.md](../SECURITY.md),
+[docs/security-report.md](security-report.md) / [security-overview.md](security-overview.md),
 tracked via the issue links above.

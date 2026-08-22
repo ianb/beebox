@@ -85,7 +85,7 @@ the box's git history to whatever remote you configured — and nowhere
 else. There is no telemetry or analytics of any kind.
 
 The full accounting — every endpoint, credential, and egress point, and
-what the agent can actually do — is in [SECURITY.md](SECURITY.md).
+what the agent can actually do — is in [the security overview](docs/security-overview.md).
 
 ## Where to go next
 

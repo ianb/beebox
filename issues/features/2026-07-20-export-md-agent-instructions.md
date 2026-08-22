@@ -8,7 +8,7 @@ labels: [soft-launch]
 priority: normal
 ---
 
-Data export on the SECURITY.md pattern (boxholder, 2026-07-20): not a
+Data export on the security-overview.md pattern (boxholder, 2026-07-20): not a
 suite of end-to-end export tools, but an **instruction doc addressed to
 the user's agent** — "your data is cards in a git repo; here is the
 layout; here is how to turn it into <calendar/notes app/plain

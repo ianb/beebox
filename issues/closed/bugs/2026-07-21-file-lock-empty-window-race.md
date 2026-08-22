@@ -32,7 +32,7 @@ isn't the security boundary). Unlike the first two holes, it cannot be
 reached by request flooding. The stricter fixes considered and declined as
 over-engineering: fencing-token CAS on the device-store write; switching to
 `flock` (native addon). Documented as an accepted limitation in
-`callback-box/docs/todo-security.md` for the SECURITY.md security report.
+`callback-box/docs/todo-security.md` for the security-overview.md security report.
 
 ---
 
