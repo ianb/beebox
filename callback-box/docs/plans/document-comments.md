@@ -1,6 +1,6 @@
 ---
 title: "Document comments: a communication medium in the workstreams app"
-status: draft
+status: active
 workstream: dev-comments
 issues:
   - ../../../issues/code-quality/2026-08-22-rename-drive-comments-sidecar-to-gcomments.md
@@ -292,10 +292,12 @@ into the doomed tree."*
 `.dev-comments`; the `tracked/` and `worktree/` namespaces; the file suffix
 `.comments.yaml`; the field names above; the `origin` values `typed` and `voice`, matching the box.
 
-**First implementation chunk.** The store module (root derivation, marker guard,
-path containment, the two namespaces, YAML read/write with a Zod schema) plus
-`bin/comments show` and `bin/comments list`, with a doctest that writes a store
-by hand and reads it back. No UI, no HTTP.
+**First implementation chunk — BUILT (2026-08-22).** `bin/lib/comments-store.ts`
+(root derivation and `CALLBACK_COMMENTS_ROOT` override, marker guard, path
+containment, the two namespaces, YAML read/write behind a Zod schema, in-process
+per-file locking, atomic replace) and `bin/comments` (`show` / `list` /
+`list --workstream` / `clear`), covered by
+`callback-box/test/dev/comments-store.doctest.md`. No UI, no HTTP.
 
 ### Track 2 — The document viewer
 
@@ -851,16 +853,22 @@ boxholder's redirect into the app, and it is worth stating as a property to
 preserve: a change that starts needing router edits has drifted back toward the
 draft this replaced.
 
-**Test posture.** Doctests, named per codepath as part of designing it, in
-`workstreams-app/test/` beside the existing suites (`exhibits-api.doctest.md`,
-`server-boundary.doctest.md`, `markdown.doctest.md`) and in `bin/` for the CLI:
+**Test posture.** Doctests, named per codepath as part of designing it. App
+surfaces go in `workstreams-app/test/` beside the existing suites
+(`exhibits-api.doctest.md`, `server-boundary.doctest.md`, `markdown.doctest.md`).
+**Anything under `bin/` is tested from `callback-box/test/dev/`**, not from a
+`bin/*.test.ts` — `bin/CLAUDE.md` is explicit: *"New tests for root dev
+infrastructure use the repository's primary doctest format… Existing
+`bin/*.test.ts` files predate this rule and are not precedent."*
 
-- `comments-store.doctest.md` — root derivation, marker refusal, containment
-  against `..`/absolute/symlink escapes, both namespaces, Zod round-trip,
-  malformed-file reporting.
-- `comments-cli.doctest.md` — `show` with all three path spellings, `list`
-  ordering, `list --workstream` scoping and recency order, `clear` by id, a
-  document that no longer exists.
+- `callback-box/test/dev/comments-store.doctest.md` — **written; 12 examples
+  passing.** Root derivation and override, marker refusal, both namespaces,
+  every path-escape shape, concurrent appends, malformed-file reporting, refusal
+  to append over an unreadable file, listing, and clearing.
+- `callback-box/test/dev/comments-cli.doctest.md` — `show` with all three path
+  spellings, `list` ordering, `list --workstream` scoping, `clear` by id, a
+  document that no longer exists, and a store refusal reading as one sentence
+  rather than a stack trace.
 - `comments-routing.doctest.md` — each rung of the ladder: lens-explicit,
   single-workstream inference, the ambiguous case defaulting visibly to the most
   recent modifier, the unrouted case, and a routed comment whose workstream was

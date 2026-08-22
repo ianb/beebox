@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Thin shim: bin/comments.ts holds the logic (TypeScript, run via tsx).
+exec node --import tsx "$(dirname "$0")/comments.ts" "$@"
