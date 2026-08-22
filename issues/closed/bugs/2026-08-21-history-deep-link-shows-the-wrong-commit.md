@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — checking the history page's shareable-link user stories
+resolution: implemented
 ---
 
 `/<box>/history/<hash>` selects the right commit only while that commit is in the

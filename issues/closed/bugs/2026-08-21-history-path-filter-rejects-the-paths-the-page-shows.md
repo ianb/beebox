@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — filtering history by a file taken from the diff panel
+resolution: implemented
 ---
 
 The history page shows changed files with a `content/` prefix — for example
