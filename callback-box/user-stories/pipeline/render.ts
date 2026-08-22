@@ -49,36 +49,43 @@ const AUDIENCE_ORDER = ["web-ui", "agent-scripts", "operator"];
 
 // --- Load ------------------------------------------------------------------
 
-const { stories, discovered, verdicts, panelVotes, browser, triage, pageNotes } = loadRun(GENERATED);
+const SOURCE = process.env.CATALOG_SOURCE === "work" ? "work" : (process.env.CATALOG_SOURCE === "frozen" ? "frozen" : undefined);
+const { stories, discovered, verdicts, panelVotes, browser, triage, pageNotes } = loadRun(GENERATED, SOURCE);
 
 // --- Resolve one verdict per story ----------------------------------------
 type Status = "verified" | "cleared" | "flagged" | "unverified"
 
 function statusOf(s: Story): Status {
-  // Triage speaks last because it is the only stage that sees everything at once — the story, the
-  // verifier's note, the three panel notes, and the browser check. It overrules a browser failure
-  // when the check itself was wrong: one story failed in the app only because the test box had no
-  // todos, and the badge it claims renders nothing at zero by design.
+  // FAIL CLOSED. A story is verified only when nothing current refutes it.
+  //
+  // The earlier ordering let a browser `confirmed` return "verified" before the code verdict was
+  // even consulted, on the reasoning that the running app outranks a reading of the code. That is
+  // true for what the app DOES, but a browser agent confirms the part of a story it could see: one
+  // story here was marked confirmed while its own browser note said the "current context" half was
+  // absent, and its code verdict said `inaccurate`. It rendered green. Corroboration must not be
+  // able to outvote a refutation — the same mistake as counting panel votes.
   const t = triage.get(s.id);
-  if (t?.classification === "false-negative") return "cleared";
+  if (t?.classification === "false-negative") return "cleared";  // reviewed, and the flag was wrong
   if (t?.classification === "real-gap") return "flagged";
 
   const b = browser.get(s.id);
-  if (b?.status === "confirmed") return "verified";   // the running app outranks a reading of the code
-  if (b?.status === "failed") return "flagged";
+  if (b?.status === "failed") return "flagged";                  // the app did not do it
 
   const v = verdicts.get(s.id);
   if (v === undefined) return "unverified";
-  if (v.verdict === "accurate") return "verified";
 
-  // Flagged by a verifier, then cleared by the panel before triage ever saw it. Clearing requires
-  // ALL THREE lenses to be satisfied, not a majority: the lenses test separate necessary conditions
-  // (exists / reachable / accurately worded), so one refutation is enough to keep the flag.
-  const votes = panelVotes.get(s.id);
-  if (votes !== undefined && votes.length >= 3 && !votes.some((x) => x.refuted)) {
-    return "cleared";
+  if (v.verdict !== "accurate") {
+    // A verifier refuted it. Only the panel can overturn that, and only unanimously: the lenses
+    // test separate necessary conditions, so one refutation is enough to keep the flag.
+    const votes = panelVotes.get(s.id);
+    if (votes !== undefined && votes.length >= 3 && !votes.some((x) => x.refuted)) return "cleared";
+    return "flagged";
   }
-  return "flagged";
+
+  const votes = panelVotes.get(s.id);
+  if (votes !== undefined && votes.some((x) => x.refuted)) return "flagged";
+
+  return "verified";
 }
 
 const BADGE: Record<Status, string> = {
@@ -137,7 +144,8 @@ p(`| Capability statements discovered by the readers | ${discovered} |`);
 p(`| …merged away as duplicates of another statement | ${discovered - stories.length} |`);
 p(`| …dropped as describing capability the product no longer has | ${stale.length} |`);
 p(`| **Capabilities catalogued here** | **${live.length}** |`);
-p(`| — of those, confirmed against the source | ${counts.verified + counts.cleared} |`);
+p(`| — of those, confirmed against the source with nothing refuting | ${counts.verified} |`);
+p(`| — of those, refuted by a verifier and then cleared on review | ${counts.cleared} |`);
 p(`| — of those, flagged as unconfirmed | ${counts.flagged} |`);
 if (counts.unverified > 0) p(`| — of those, with no verdict recorded | ${counts.unverified} |`);
 p(`| Additionally driven in the running app | ${browser.size} |`);
@@ -145,7 +153,10 @@ p(`| — behaved as described | ${bConfirmed} |`);
 p(`| — did not | ${bFailed} |`);
 p(`| — could not be settled either way | ${bInconclusive} |`);
 p();
-p(`So **${counts.verified + counts.cleared} of ${live.length}** retained statements are source-confirmed.`);
+p(`So **${counts.verified} of ${live.length}** retained statements were confirmed against the source`);
+p(`with nothing refuting them. A further **${counts.cleared}** were refuted by a verifier and then`);
+p("cleared by three independent reviewers — those carry both the refutation and the reasoning that");
+p("overturned it in their verification block, and are worth reading before being relied on.");
 p("That percentage is over what survived merging and dropping, not over everything the readers");
 p(`found: ${discovered - stories.length} statements were folded into another as duplicates before`);
 p("any verification happened, and those are neither confirmed nor flagged — they are simply gone.");

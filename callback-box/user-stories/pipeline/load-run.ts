@@ -124,6 +124,16 @@ function loadWorkDir(): Run {
   return run;
 }
 
-export function loadRun(generated: string): Run {
-  return existsSync(join(CATALOG, `${generated}.jsonl`)) ? loadFrozen(generated) : loadWorkDir();
+/**
+ * `source` forces a choice; by default the frozen file wins when it exists.
+ *
+ * The default is right for reading a committed catalog, and wrong while iterating on a re-run of
+ * an existing date — the render would quietly emit the old frozen content and look like it worked.
+ * Callers re-rendering mid-run pass "work"; freeze first, and the default is correct again.
+ */
+export function loadRun(generated: string, source?: "frozen" | "work"): Run {
+  const frozen = join(CATALOG, `${generated}.jsonl`);
+  if (source === "work") return loadWorkDir();
+  if (source === "frozen") return loadFrozen(generated);
+  return existsSync(frozen) ? loadFrozen(generated) : loadWorkDir();
 }

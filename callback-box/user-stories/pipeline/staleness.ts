@@ -14,6 +14,9 @@
  *    changing behaviour.
  *  - It cannot see capability that was ADDED. Nothing is stale about a story that does not exist
  *    yet; only a full regeneration finds those.
+ *  - `git log --name-only` without `-m` does not list files for merge commits, and a cited file
+ *    that was RENAMED reads as untouched under its old path. Both mean this under-reports; a
+ *    regeneration is the backstop, not this.
  */
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
@@ -82,7 +85,9 @@ export function staleStories(records: StaleInput[], fallbackDate: string): Stale
     for (const f of r.files) {
       const dates = byFile.get(f);
       if (dates === undefined) continue;
-      const after = dates.filter((d) => d > since);
+      // `>=`, not `>`: git dates are day-resolution, so a change made after a same-day recheck
+      // would otherwise be invisible. Over-reporting on the day of a check is the safe direction.
+      const after = dates.filter((d) => d >= since);
       if (after.length > 0) {
         touched.push(f);
         commits += after.length;

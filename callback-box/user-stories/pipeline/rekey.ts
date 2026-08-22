@@ -21,7 +21,7 @@ if (date === undefined || !/^\d{4}-\d{2}-\d{2}$/u.test(date)) {
   process.exit(1);
 }
 
-interface Record { id: string, group: string, title: string, discoveredAs?: string }
+interface Record { id: string, group: string, title: string, discoveredAs?: string, aliases?: string[] }
 
 const path = join(CATALOG, `${date}.jsonl`);
 const records = readFileSync(path, "utf8")
@@ -36,6 +36,12 @@ for (const r of records) {
   const next = ids.get(r);
   if (next === undefined) continue;
   if (r.discoveredAs === undefined) r.discoveredAs = r.id;
+  if (r.id !== next) {
+    // Anything already citing the old id must keep resolving; `resolveId` looks here.
+    const aliases = r.aliases === undefined ? [] : r.aliases;
+    if (!aliases.includes(r.id)) aliases.push(r.id);
+    r.aliases = aliases;
+  }
   mapping.push([r.id, next]);
   r.id = next;
 }

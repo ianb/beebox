@@ -9,9 +9,17 @@
  * number.)
  *
  * A content-derived id survives a regeneration as long as the capability is still described the
- * same way. It is not magic: reword a title and the id changes. But that break is *visible* — the
- * old id disappears from the catalog instead of silently pointing at some unrelated story — and
- * `aliases` carries prior ids forward when a rename is known.
+ * same way. It is not magic: reword a title and the id changes. Two things keep that honest rather
+ * than silent:
+ *
+ *  - `aliases` on a record carries ids the story used to have, so an issue or a recheck citing an
+ *    old id still resolves (see `resolveId`). `rekey.ts` populates it; a future regeneration that
+ *    maps old ids to new should too.
+ *  - A citation that resolves to nothing is REPORTED, not skipped — `apply-recheck.ts` warns by id
+ *    rather than silently updating no story.
+ *
+ * What does not exist: automatic old-to-new mapping across a full regeneration. If a reworded title
+ * changes an id and nobody records the alias, the link breaks and you find out from the warning.
  */
 
 const MAX_SLUG = 50;
@@ -61,4 +69,19 @@ export function assignIds<T extends { group: string, title: string }>(
     out.set(s, id);
   }
   return out;
+}
+
+/** Records a catalog holds, for id resolution. */
+export interface Identified { id: string, aliases?: string[] }
+
+/**
+ * Find a record by its current id or any id it used to have.
+ *
+ * Citations outlive titles: an issue filed today names an id that a later reword may replace, and
+ * resolving only on the current id would make that citation quietly match nothing.
+ */
+export function resolveId<T extends Identified>(records: T[], id: string): T | undefined {
+  const exact = records.find((r) => r.id === id);
+  if (exact !== undefined) return exact;
+  return records.find((r) => r.aliases !== undefined && r.aliases.includes(id));
 }

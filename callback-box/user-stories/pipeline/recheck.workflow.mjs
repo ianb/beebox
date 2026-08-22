@@ -7,7 +7,7 @@ export const meta = {
   ],
 }
 
-// args: { root: string, date: string, ids: string[] }
+// args: { root: string, date: string, ids: string[], run?: string }
 //
 // The full pipeline is a ~3.5 hour, ~420-agent run — nobody re-runs that because one bug got
 // fixed, so without this the catalog rots from the day it is committed. This re-checks only the
@@ -20,7 +20,10 @@ const IDS = (args && args.ids) || []
 if (IDS.length === 0) throw new Error('pass {ids: ["group/slug", ...]} in args')
 
 const CATALOG = `${ROOT}/callback-box/user-stories/catalog`
-const OUT = `${ROOT}/callback-box/user-stories/work/recheck`
+// A per-run directory, not one shared bucket. Leftovers from an earlier recheck sitting in a
+// fixed directory would be merged by the next one, silently updating stories nobody asked about.
+const RUN = (args && args.run) || 'latest'
+const OUT = `${ROOT}/callback-box/user-stories/work/recheck/${RUN}`
 
 /** Ids contain a slash; filenames cannot. */
 const safe = (id) => id.replace(/\//g, '__')
@@ -143,10 +146,13 @@ for (const v of votes) if (!v) panelFailures++
 if (panelFailures) log(`INCOMPLETE: ${panelFailures} panel vote(s) failed`)
 
 return {
+  run: RUN,
+  outDir: OUT,
+  requested: IDS,
   rechecked: IDS.length,
   nowAccurate: accurate,
   stillFlagged,
   verifyFailures: failures,
   panelFailures,
-  next: `pnpm exec tsx callback-box/user-stories/pipeline/apply-recheck.ts ${DATE}`,
+  next: `pnpm exec tsx callback-box/user-stories/pipeline/apply-recheck.ts ${DATE} --run ${RUN}`,
 }

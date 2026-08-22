@@ -175,9 +175,14 @@ const triaged = await parallel(chunks.map((ids, i) => () => {
   return agent(
     `You are triaging user stories that survived a three-lens refutation panel. Repository root: ${ROOT}.
 
-Each story below arrived here one of two ways: an adversarial code verifier flagged it and at
-least two of three independent lens reviewers upheld the flag, OR an agent drove the running app
-and watched it fail to do what the story claims. Your job is to decide what each one MEANS, and
+Each story below arrived here one of two ways: an adversarial code verifier flagged it and AT
+LEAST ONE of three independent lens reviewers upheld that flag, OR an agent drove the running app
+and watched it fail to do what the story claims.
+
+(One refuting lens is enough. The three lenses test separate necessary conditions — the code
+exists, someone can reach it, the wording matches what it does — so a story is true only if all
+three hold. Do not read a single refutation as a weak signal because the other two were satisfied;
+often only one lens is even capable of catching the problem.) Your job is to decide what each one MEANS, and
 what (if anything) a human should do about it.
 
 **A story that failed in the running app is very unlikely to be a \`false-negative\`.** Someone

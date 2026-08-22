@@ -150,10 +150,12 @@ mkdir -p "$ROOT"/callback-box/user-stories/work/{areas,verdicts,panel,browser,de
 5. `Workflow({… verify.workflow.mjs, args: {root: ROOT, batchCount: N}})` — N from make-batches.
 6. `Workflow({… panel.workflow.mjs, args: {root: ROOT, flagged: [...], browserFailed: [...]}})` —
    both lists come from the verify result.
-7. `pnpm exec tsx …/render.ts > callback-box/user-stories/catalog/<date>.md`
-8. `pnpm exec tsx …/freeze.ts <date>` — collapses `work/` into the committed `.jsonl`.
-   **Do this before `work/` is cleaned**, or the catalog stops being reproducible: the verifier
-   notes and panel votes behind every verdict live only in `work/` until it runs.
+7. `pnpm exec tsx …/freeze.ts <date>` — collapses `work/` into the committed `.jsonl` + `.meta.json`.
+   **Freeze before rendering, and before `work/` is cleaned.** The verifier notes and panel votes
+   behind every verdict live only in `work/` until this runs, and `render.ts` prefers the frozen
+   file — so rendering first on a re-run of an existing date quietly emits the *old* catalog.
+   (`CATALOG_SOURCE=work` forces the other choice if you really want it.)
+8. `pnpm exec tsx …/render.ts > callback-box/user-stories/catalog/<date>.md`
 
 Every workflow takes `{root}` as an absolute path. They have no filesystem access and every
 subagent prompt needs absolute paths, so it cannot be derived inside the script.
@@ -191,13 +193,17 @@ that fix invalidates — but it depends on someone having written it down. The g
 2. Re-check just those stories:
    ```
    Workflow({scriptPath: "callback-box/user-stories/pipeline/recheck.workflow.mjs",
-             args: {root: "<repo root>", date: "2026-08-21", ids: ["group/slug"]}})
+             args: {root: "<repo root>", date: "2026-08-21",
+                    ids: ["group/slug"], run: "<a name for this run>"}})
    ```
    One adversarial verifier per story, and the three-lens panel on anything still flagged. Four
    agents per story, not four hundred.
-3. `pnpm exec tsx …/apply-recheck.ts <date>` merges the results into the frozen catalog, stamps
-   `lastChecked`, and clears panel notes from a story that now passes — a cleared story must not
-   keep the accusation explaining why it used to fail.
+3. `pnpm exec tsx …/apply-recheck.ts <date> --run <name>` merges that run's results into the frozen
+   catalog and stamps `lastChecked` with today. It drops **all** prior evidence for a rechecked
+   story — panel votes, triage, and the browser check alike. All of it describes code that has since
+   changed, and carrying any of it forward is how a re-refuted story renders green: a stale
+   `triage: false-negative` outranks a fresh verdict, and a stale all-satisfied panel reads as a
+   clearance. A recheck whose panel came back partial leaves the story flagged and says so.
 4. `pnpm exec tsx …/render.ts > catalog/<date>.md`
 
 **The recheck does not trust the fix.** It re-reads the code with the same refute-when-uncertain
@@ -214,9 +220,13 @@ anything citing one silently rots. That is the same trap the 2026-06-26 catalog 
 follow-up plan, which indexes into it by item number; `rekey.ts` and `catalog/<date>.id-map.json`
 record the migration away from it.
 
-A content-derived id is not magic: reword a title and the id changes. But the break is *visible* —
-`apply-recheck.ts` warns when a result matches no story rather than silently dropping it — and the
-old id stays on the record as `discoveredAs`.
+A content-derived id is not magic: reword a title and the id changes. Two things keep that from
+being silent: a record's `aliases` carries ids it used to have and `resolveId` matches on them, so
+a citation written before a reword still lands; and `apply-recheck.ts` *warns* when a result
+matches no story rather than dropping it. What does not exist is automatic old-to-new mapping
+across a full regeneration — `rekey.ts` records aliases for the migration it performs, but a future
+regeneration that reworded a title needs the mapping recorded deliberately, or the link breaks and
+you learn about it from the warning.
 
 ### When to regenerate wholesale instead
 
