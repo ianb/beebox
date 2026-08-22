@@ -221,6 +221,19 @@ Each record also carries `origin`, the worktree it was written in. For a tracked
 document that is provenance an agent can use ("this objection came from the
 worktree doing the work"); it is not load-bearing for keying.
 
+**What the cull cannot do, and what that costs.** Nothing in the repository knows
+the store exists — no path in `bin/lib/worktree-teardown.sh` or `bin/workstreams`
+references it — so a cull cannot delete a comment. That is the goal, and it has
+two follow-on costs, both filed as
+`issues/features/2026-08-22-orphaned-comment-namespaces-after-a-cull.md`:
+a culled workstream's comments on untracked files outlive both the tree and the
+file they annotated and nothing ever cleans them, and a **recreated** workstream
+of the same name inherits them (`bin/workstreams create` is idempotent, and
+recreation is an expected flow). The second is the one that matters: a stale
+remark presented as current gets acted on. Neither is data loss, and the fix
+direction is the exhibits precedent — report orphans in sweep, never delete them
+at cull time.
+
 This keying removes machinery rather than adding it. Nothing is ever written
 through a checkout, so the exhibits teardown guard — *"if `<worktree>/exhibits`
 exists and is a **real directory**… `wt_remove_now` moves its contents into the
@@ -696,6 +709,8 @@ was decided rather than deferred.
 | A recording exceeds the tRPC body limit | Doctest asserting the client byte cap sits under the app's explicit `bodyLimit` | Client caps on bytes (not duration), stops at the cap and keeps the partial recording submittable; the app sets `bodyLimit` explicitly rather than inheriting Fastify's 1 MiB | Clear |
 | The workstreams app is down | Existing app-level error handling | The viewer shows the failure; composed text stays in the page rather than being swallowed | Clear |
 | The commented document is later deleted or renamed | Doctest on `bin/comments list` | Listed as pointing at a missing file; not auto-deleted | Clear |
+| A workstream is culled, orphaning its untracked-file comments | Not yet | None — they persist and list forever | **Silent** (filed: orphan report in sweep) |
+| A culled workstream name is recreated and inherits the old comments | Not yet | None — old remarks present as current | **Silent** (filed; the sharper half) |
 | The CSS Custom Highlight API is unavailable | Existing behavior at `quote-anchor.ts:29` — *"No-op where the API is unavailable"* | Highlighting skipped; comments still listed | Clear |
 
 **The one accepted silent failure.** An agent hand-editing the YAML at the exact
