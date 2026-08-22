@@ -113,6 +113,37 @@ None resolved outright. Related, and worth reading before designing:
   a static site from a curated subset — the opposite of this browser's premise
   that everything in the tree is browsable live, including untracked files.
 
+## The addressing rule
+
+**Enter a universal view; filter to a workstream if you care to.** The boxholder,
+2026-08-22: *"I want to enter a universal view, then filter by workstream if I
+care to. As opposed to going into a workstream like the current
+`workstream-name/dev/` does."*
+
+This is one rule, and it applies to more than the browse route — the
+workstream-first pattern is currently the app's front door as well. The
+inventory, and what each surface becomes:
+
+| Surface today | Shape | Becomes |
+|---|---|---|
+| `/<worktree>/dev/…` (`bin/router-docs.ts`) | Worktree is the first path segment | Retired into `/workstreams/browse/$path` (Track 5) |
+| `/workstreams/` → a list of workstreams (`router.tsx:13`) | You pick a workstream to reach anything | **The universal recency feed** (Track 3); the workstream list becomes one view among others |
+| `/workstreams/$name` (`WorkstreamDetailPage`) | Per-workstream detail | **Kept.** A workstream's issues, git state, and session are legitimately about the workstream itself, not a partition of the files |
+| Exhibits `/:ws/` (`exhibits/app.ts:275`) | Per-workstream exhibit list | A universal exhibit index with a workstream filter; the per-workstream URL keeps working |
+
+**Storage layout is not navigation, and does not change.** The exhibits store
+stays one directory per workstream (`workstream-exhibits.md:231`) — that layout
+is what makes an exhibit survive a cull, and nothing about a universal *listing*
+requires reorganizing it. The rule is about how the developer reaches things, not
+about where bytes live.
+
+**Why `WorkstreamDetailPage` survives the rule and `/dev/` does not.** The test
+is whether the workstream is the *subject* or merely the *location*. A
+workstream's session state and issue set are about that workstream — there is no
+universal version of "is this session live". A file is not about a workstream; it
+merely sits in one checkout, and treating that as its address is what makes it
+unreachable from anywhere else.
+
 ## The boundary this plan must not cross
 
 **Exhibits keep their own origin.** The exhibits listener exists specifically so
@@ -295,9 +326,11 @@ same reason.
   What issues gain is source tagging, so the comment capability reaches them
   (`document-comments.md`, Track 3).
 
-**First implementation chunk.** The aggregate recency feed. It is both the front
-door and the smallest thing that makes the browser worth opening daily;
-quick-open and the sidebar follow.
+**First implementation chunk.** The aggregate recency feed, mounted at the app's
+index route. It is both the front door and the smallest thing that makes the
+browser worth opening daily; quick-open and the sidebar follow. The workstream
+list that occupies `/` today (`router.tsx:13`) moves to its own route rather than
+being deleted — it is still how you reach a session to focus or resume.
 
 ### Track 4 — `file:` provenance, and the source overlay
 
@@ -341,6 +374,8 @@ browsers is the state being fixed, not an acceptable end state.
 **Direction, in the order the surfaces can safely go:**
 1. `PlansPage`'s link-out becomes an in-app link (this one is pure gain, and can
    land the day Track 2 does).
+1b. The app index becomes the universal feed and the workstream list moves to
+   its own route — the front-door half of the addressing rule.
 2. `/<worktree>/dev/docs/` redirects to the browser once Track 3 has quick-open
    and the sidebar — not before.
 3. The `/<worktree>/dev/` manifest and directory indexes redirect once Track 2's
