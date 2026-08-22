@@ -91,8 +91,13 @@ export function SecretsSection() {
           </Stack>
         )}
 
-        {status.error ? <div role="alert"><Text size="sm" tone="danger">{status.error.message}</Text></div> : null}
-        {machine.error ? <div role="alert"><Text size="sm" tone="danger">{machine.error.message}</Text></div> : null}
+        {/* Both queries fail for the same reasons — no owner session, an unreadable store — so
+            rendering one alert each printed the identical sentence twice. Show each distinct
+            message once, and keep both when they genuinely differ. */}
+        {[...new Set([status.error, machine.error].filter((e) => e !== null).map((e) => e.message))]
+          .map((message) => (
+            <div key={message} role="alert"><Text size="sm" tone="danger">{message}</Text></div>
+          ))}
       </Stack>
     </Card>
   );
