@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-08-23T13:53:48Z
-Total documents: 287
+Generated: 2026-08-23T16:49:25Z
+Total documents: 288
 
 ## Issues
 
@@ -22,6 +22,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/delivered-user-message-codec.md** — "Exhaustive delivered-user-message codec" (168 lines)
 - **docs/implemented-plans/engine-aware-chat-models.md** — "Engine-aware chat model selection" (109 lines)
 - **docs/implemented-plans/extfile-card.md** — "`extfile` Card — an In-Box Pointer to a Live External File" (720 lines)
+- **docs/implemented-plans/first-run-openers.md** — "First-run openers" (117 lines)
 - **docs/implemented-plans/input-extraction.review.md** — "Plan Engineering Review — input-extraction (codex cross-model pass)" (86 lines)
 - **docs/implemented-plans/local-password-auth.review.md** — "Cross-model review — local-password-auth (Codex, 2026-07-19)" (81 lines)
 - **docs/implemented-plans/markdoc-tags-plan.review-adapted-trial.md** — "Plan Engineering Review — Markdoc Tags Design" (135 lines)
@@ -40,7 +41,6 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/schema-validate-hook.md** — "Schema `validate` hook — co-locate non-Zod card validation with its schema" (379 lines)
 - **docs/implemented-plans/view-render-testing.md** — "Plan: testing agent-authored views" (550 lines)
 - **docs/plans/chat-session-delete.review.md** — "Plan Engineering Review — Chat Session Delete" (154 lines)
-- **docs/plans/first-run-openers.md** — "First-run openers" (116 lines)
 - **docs/plans/google-owner-member-credentials.md** — "Google owners can administer local member credentials" (309 lines)
 - **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines)
 - **docs/plans/operator-member-password-reset.md** — "Operator-driven member password reset" (711 lines)
@@ -111,6 +111,7 @@ Referenced by:
 - docs/implemented-plans/courseware-phase1.md:102 (mention) — "filename supplies the type — there is no `type:` field"** (`CLAUDE.md:39`), so templates
 - docs/implemented-plans/delivered-user-message-codec.md:23 (mention) — - Project testing convention. `CLAUDE.md:11-17` says: *"Tests are doctests (`.doctest.md`) in `test/`"* and *"Run tests 
 - docs/implemented-plans/extfile-card.md:45 (mention) — (CLAUDE.md exempts *"per-box config, throwaway replies, and personal
+- docs/implemented-plans/first-run-openers.md:27 (mention) — briefing is already `@`-included into CLAUDE.md, so the agent sees what it
 - docs/implemented-plans/ios-audio-session-routing.md:51 (mention) — - `CLAUDE.md` (monorepo root) — *"Treat noisy command output as a bug."* The
 - docs/implemented-plans/ios-per-box-device-lock.md:25 (mention) — - `CLAUDE.md` requires reading existing formats before writing
 - docs/implemented-plans/link-validation-fix.md:34 (mention) — - User-global rule (project CLAUDE.md) — *"NEVER disable or weaken a lint rule to
@@ -159,7 +160,6 @@ Referenced by:
 - docs/plans/docs-reorg.gap-analysis.md:39 (mention) — `setTimeout` counts macOS sleep. CLAUDE.md covers the analogous
 - docs/plans/docs-reorg.md:13 (mention) — history out of the way but findable, and slim CLAUDE.md files down to
 - docs/plans/document-comments.md:73 (mention) — - `CLAUDE.md` (monorepo root) — "**Treat noisy command output as a bug**" and the
-- docs/plans/first-run-openers.md:26 (mention) — briefing is already `@`-included into CLAUDE.md, so the agent sees what it
 - docs/plans/general-browser.md:78 (mention) — - `CLAUDE.md` (monorepo root) — the dev-page casualness carve-out applies to
 - docs/plans/ios-companion-app.md:29 (mention) — - `callback-box/CLAUDE.md` — the tRPC-vs-raw-Fastify boundary (`CLAUDE.md`: *"Raw Fastify routes … are only for … file u
 - docs/plans/ios-companion-review-2026-07-09.md:62 (mention) — Every successful verify does a full read-modify-write of the shared JSON with no `withCardLock`/`file-lock` — the CLAUDE
@@ -199,6 +199,7 @@ Referenced by:
 - ../issues/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md:50 (mention) — the user (the agent-guide / box CLAUDE.md owns that). The worst single item is
 - ../issues/bugs/2026-08-08-markdown-not-rendering-in-agent-output.md:16 (mention) — > bracket form is the system's own CLAUDE.md-downgrade serialization of
 - ../issues/bugs/2026-08-21-generated-agent-guide-sends-box-agents-to-config-schema.md:14 (mention) — **Supporting stale references in the same family.** `cb init` still creates the decoy directory: `config/schemas` is a B
+- ../issues/bugs/2026-08-23-procedure-model-pins-are-claude-only.md:90 (mention) — [AGENTS.md missing from the CLAUDE.md special-cases](../closed/bugs/2026-08-22-agents-md-missing-from-claude-md-special-
 - ../issues/closed/bugs/2026-07-15-box-packageify-doubled-subtrees.md:12 (mention) — doubling held only empty directory structure, `CLAUDE.md` files byte-identical to
 - ../issues/closed/bugs/2026-08-08-todo-view-dumps-noncard-file-errors.md:23 (mention) — non-card file in the box — `briefing.md`, `CLAUDE.md`, `config/cb-validate.ignore`,
 - ../issues/closed/bugs/2026-08-22-agents-md-missing-from-claude-md-special-cases.md:2 (mention) — title: "`AGENTS.md` is missing from the places that special-case `CLAUDE.md` — refresh-maps fails forever on every codex
@@ -239,7 +240,7 @@ Referenced by:
 - ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:16 (mention) — and what else to sweep. The knowledge is scattered across box CLAUDE.md-equivalents,
 - ../issues/features/2026-07-20-clerk-import-dispatch-by-url.md:65 (mention) — interface (`src/connectors/`, see its CLAUDE.md), or a separate resolver the
 - ../issues/features/2026-07-22-modeled-demo-family-box.md:76 (mention) — so it doesn't inherit the dev CLAUDE.md), like every other box.
-- ../issues/features/2026-08-23-choose-the-engine-for-a-new-chat.md:89 (mention) — Related: [AGENTS.md missing from the CLAUDE.md special-cases](../bugs/2026-08-22-agents-md-missing-from-claude-md-specia
+- ../issues/features/2026-08-23-choose-the-engine-for-a-new-chat.md:89 (mention) — Related: [AGENTS.md missing from the CLAUDE.md special-cases](../closed/bugs/2026-08-22-agents-md-missing-from-claude-md
 - ../research/backend-alternatives/2026-07-18-sdk-coupling-audit.md:132 (mention) — box's CLAUDE.md walk-up, `.claude/rules/`, skills/slash commands
 - ../research/backend-alternatives/2026-07-18-synthesis.md:20 (mention) — CLAUDE.md/rules/skills auto-loading, the `claude_code` system-prompt preset, in-process
 - ../research/claude-elixir-phoenix/README.md:31 (mention) — by a real (if not-checked-in) measurement apparatus, that **skills and CLAUDE.md
@@ -1096,6 +1097,7 @@ Referenced by:
 - docs/plans/document-comments.md:68 (mention) — - `callback-box/docs/engineering-principles.md` — principles traced below by
 - docs/plans/general-browser.md:71 (mention) — - `callback-box/docs/engineering-principles.md` — **3** (validate at
 - docs/plans/google-owner-member-credentials.md:23 (mention) — `docs/engineering-principles.md:14` says: *"Prefer types that make illegal
+- docs/plans/hq-dictation-switch.md:29 (mention) — `docs/engineering-principles.md` #8: no new attribute, no new registry —
 - docs/plans/installation-story.md:43 (mention) — - `docs/engineering-principles.md` #4 (validate at boundaries) and #6
 - docs/plans/invite-links-and-password-change.md:36 (mention) — - `docs/engineering-principles.md:37-47`: validate disk, form, OAuth, and config
 - docs/plans/ios-companion-app.md:23 (mention) — - `callback-box/docs/engineering-principles.md` — the ones this plan leans on:
@@ -2862,6 +2864,14 @@ References:
 - → frontend.md (mention)
 - → docs/testing.md (mention)
 
+#### docs/implemented-plans/first-run-openers.md **[ORPHAN]**
+
+Title: "First-run openers" | 117 lines
+
+References:
+- → ../issues/features/2026-07-20-first-run-experience.md (frontmatter)
+- → CLAUDE.md (mention)
+
 #### docs/implemented-plans/gmail-explicit-action.md
 
 Title: "Gmail config: explicit action, no implicit tracking" | 165 lines
@@ -4238,13 +4248,6 @@ References:
 - → docs/connectors.md (mention)
 - → docs/gmail-setup.md (mention)
 
-#### docs/plans/first-run-openers.md **[ORPHAN]**
-
-Title: "First-run openers" | 116 lines
-
-References:
-- → CLAUDE.md (mention)
-
 #### docs/plans/general-browser.md
 
 Title: "One browser" | 655 lines
@@ -4270,6 +4273,17 @@ Title: "Google owners can administer local member credentials" | 309 lines
 
 References:
 - → ../issues/closed/bugs/2026-08-08-google-owner-invites-require-local-owner.md (link)
+- → docs/engineering-principles.md (mention)
+
+#### docs/plans/hq-dictation-switch.md
+
+Title: "An always-HQ dictation switch, separate from narration mode" | 228 lines
+
+Referenced by:
+- ../issues/features/2026-08-22-hq-dictation-switch-separate-from-narration.md:13 (mention) — > and landed on main (design: `callback-box/docs/plans/hq-dictation-switch.md`;
+
+References:
+- → ../issues/features/2026-08-22-hq-dictation-switch-separate-from-narration.md (frontmatter)
 - → docs/engineering-principles.md (mention)
 
 #### docs/plans/input-widget.md

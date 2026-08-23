@@ -1,8 +1,9 @@
 ---
 title: First-run openers
-status: active
+status: implemented
 workstream: first-run-openers
-issues: []
+issues:
+  - ../../../issues/features/2026-07-20-first-run-experience.md
 ---
 
 # First-run openers

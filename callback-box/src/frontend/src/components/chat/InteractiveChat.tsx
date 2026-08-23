@@ -22,8 +22,8 @@ import { useParams } from "@tanstack/react-router";
 import { trpc } from "../../lib/trpc";
 import { useEmissionDispatch } from "./InteractiveChat-dispatch";
 import { useEmissionPersistence } from "../../hooks/useEmissionPersistence";
-import { useRecoveredDictation } from "./InteractiveChat-recovery";
-import { ChatLoading, ExpiredAttachmentsNotice } from "./InteractiveChat-layout";
+import { useRecoveryWidgets } from "./InteractiveChat-recovery";
+import { ChatLoading } from "./InteractiveChat-layout";
 import { useChatModelFeatures, useChatMute, useChatSchedules, usePendingMessagePoll, useChatStallRecovery, useChatTabs, useCompanionDeepLink } from "./InteractiveChat-hooks";
 import { useProcessingStatusPoll } from "./processing-status-display";
 import { useCompanionCard } from "./InteractiveChat-card-hooks";
@@ -250,8 +250,10 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
     speechPlaying: voice.speechPlayback.isPlaying, stopSpeech: voice.handleStopSpeech });
   useEnsureComposerVisible({ ensureComposerVisibleRef, isTranscribing: voice.isTranscribing, setTypingMode, textareaRef });
 
-  // Persisted in-flight transcript recovery widget; see InteractiveChat-recovery.tsx.
-  const { recoveredDictation } = useRecoveredDictation({
+  // Persisted in-flight transcript recovery widget + the expired-attachments
+  // notice; see InteractiveChat-recovery.tsx (combined there to keep this
+  // component under the line-count limit).
+  const { recoveredDictation, expiredAttachmentsNotice } = useRecoveryWidgets({
     boxSlug,
     transcript: voice.transcription.transcript,
     isTranscribing: voice.isTranscribing,
@@ -262,10 +264,9 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
     inputStore,
     startVoice: voice.startVoice,
     clearDraftRef,
+    expiredAttachments,
+    dismissExpiredAttachments,
   });
-  const expiredAttachmentsNotice = (
-    <ExpiredAttachmentsNotice names={expiredAttachments} onDismiss={dismissExpiredAttachments} />
-  );
 
   useChatWs({
     sessionId, sessionInput, boxSlug, currentUser, isStreaming, send,
