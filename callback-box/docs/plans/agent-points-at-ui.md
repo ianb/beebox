@@ -141,7 +141,7 @@ the page's own JavaScript cannot do.
 (`src/core/session-context.ts`) → `composeChatAppSnapshot`
 (`src/core/chat/features.ts`) emits `<chat-app narration prose local-time
 channel last-activity health todos open-card/>`. **Reused for one attribute
-only** (`surface`, Track 5), not for the dump.
+only** (`channel`, Track 5), not for the dump.
 
 **The iOS bridge has a transport to reuse and a command shape that must
 change.** `NativeComposerContract.swift:65-74` defines
@@ -562,7 +562,7 @@ inventory only exists in the client.
   ordinary authenticated/open-access user must not be able to start a
   request."*
 - `POST /<box>/api/chat/ui/:requestId` — the client's answer, user-session
-  authed. JSON: `{ack:true}` | `{entries, coverage, surface, url}` |
+  authed. JSON: `{ack:true}` | `{entries, coverage, channel, url}` |
   `{failed:"…"}`.
 - The rendezvous is `createPendingBrowserRequests<UiScanFulfillment>` with the
   same 2 s ack window, so `no-client` and `timeout` stay honestly distinct.
@@ -627,7 +627,7 @@ message (`gptserialize.ts:337-352`); we own neither half of that.
 
 The agent does not need a per-turn hint to know the capability exists: the
 prompt tells it, and the command reports `no-client` when nothing is attached.
-The one thing it does need is Track 5's `surface` attribute, because "where is
+The one thing it does need is Track 5's corrected `channel` attribute, because "where is
 the mic" has different answers on web and in the iOS app.
 
 **Vocabulary lock-ins.** The route paths, the fulfillment JSON shape, and the
@@ -699,7 +699,17 @@ so the two kinds of pointing are read as one vocabulary with one rule:
 > button, a menu, a field — run `cb chat ui` and link its `control:` address.
 > You may `point` at a control, `focus` it, or `reveal` what it opens. You
 > never operate it for the user: revealing the attach menu is helping; attaching
-> the file is doing it for them, and is not yours to do.
+> the file is doing it for them, and is not yours to do. **Never name a screen
+> location you have not seen in a dump** — not in passing, not "it's in your
+> sidebar now." If you have not looked, say what the thing is and link it.
+
+The last sentence is the one a user journey on 2026-08-23 showed to matter
+most: a first-time user was told an area was "in your sidebar" on a page with
+no sidebar, by an agent volunteering a location inside a sentence about
+something else. On-demand scanning fixes the case where location *is* the
+question; only the prohibition fixes the case where the agent asserts one
+unasked. It lands early, in the agent guide (`behavior.ts`, committed
+`7d34f0ef`), and this paragraph extends it with the way to look.
 
 A pointer to `cb chat ui` also goes in `src/core/box/skills-content.ts`,
 alongside the existing `cb chat screenshot` sentence
@@ -793,22 +803,31 @@ and `reveal` map onto native focus and sheet presentation where they exist and
 are rejected with a reason where they do not; the web side must not assume
 symmetry.
 
-**Surface reporting.** A new `<chat-app>` attribute `surface="web-desktop" |
-"web-mobile" | "ios-native"`. Today `channel` is classified server-side from
-the user-agent (`chat-send-routes.ts:240` → `chat-helpers.ts` `classifyChannel`),
-which reports the iOS webview as `web-mobile` and hides the one distinction
-that changes the answer. The client must send it instead — only the client
-knows whether the native shell is in effect (`ChatPage.tsx:126-130`).
+**Surface reporting — fix `channel`, don't add a sibling.** The existing
+`<chat-app channel>` attribute already answers "what is the user looking at";
+an earlier draft added a parallel `surface` attribute with an overlapping value
+set, which is two vocabularies for one fact. Instead `channel` changes in
+three ways: its values become a closed union
+`"web-desktop" | "web-mobile" | "ios-native"` (today it is an open `string`,
+`chat-helpers.ts:125`); `"ios-native"` is the new member; and **the client
+sends it** instead of the server guessing it from the user-agent
+(`chat-send-routes.ts:241` → `classifyChannel`), because only the client knows
+whether the native shell is in effect (`ChatPage.tsx:126-130`). The UA
+classification stays as the fallback for a client that sends nothing, so an
+old web bundle keeps reporting what it reports today.
 
-It is one attribute in the dump and five touchpoints in the code, which the
-plan should say out loud rather than call cheap: the send-body Zod schema and
-`extractCardFields`-style filter in `chat-helpers.ts`; a `surface` field on
-`ChatSendInput` (`src/core/chat/session/messages.ts`); latest-wins merging in
-`combineQueuedInputs` (`src/core/chat/session/state.ts`) alongside `channel`;
-`contextAttrs` **and** `READ_ONLY_ATTRS` in `src/core/chat/features.ts` (a
-context attribute the agent must not be able to set via a delta); and the
-client-side send plumbing through `api-chat.ts` and the chat machine. That is
-the same path `openCard` already walks, so it is well-trodden, not novel.
+It is one attribute and five touchpoints in the code, which the plan should
+say out loud rather than call cheap: the send-body Zod schema in
+`chat-helpers.ts`; the `channel` field on `ChatSendInput`
+(`src/core/chat/session/messages.ts`) narrowing from `string` to the union;
+latest-wins merging in `combineQueuedInputs` (`src/core/chat/session/state.ts`),
+already there for `channel`; `contextAttrs` **and** `READ_ONLY_ATTRS` in
+`src/core/chat/features.ts` (a context attribute the agent must not be able
+to set via a delta); and the client-side send plumbing through `api-chat.ts`
+and the chat machine. That is the same path `openCard` already walks, so it is
+well-trodden, not novel. The prompt sentence for `channel`
+(`prompts.ts:103`) gains the third value and what it implies: on `ios-native`
+the composer, mic and capture are native chrome, not in the DOM.
 
 This is also the attribute
 `issues/features/2026-08-13-tell-the-agent-the-screen-is-unfocused.md` will
@@ -833,10 +852,10 @@ implement the same two kinds. Note the asymmetry the Android plan records —
 carry its own sentinel rather than relying on eval failure.
 
 **Vocabulary lock-ins.** `scan-controls`, `point-at-control`, the
-`coverage` union, the `surface` attribute values, and every shared authored id
+`coverage` union, the `channel` attribute values, and every shared authored id
 from Track 4's table.
 
-**First implementation chunk.** The `surface` attribute end to end (client →
+**First implementation chunk.** The `channel` fix end to end (client →
 route → `<chat-app>` → prompt), which is independently useful and is the
 smallest piece that removes the "iOS looks like mobile web" lie.
 
@@ -978,7 +997,7 @@ highlight — the outcome the issue asks for.
   two-sided requirement as
   `issues/features/2026-08-13-tell-the-agent-the-screen-is-unfocused.md`
   ("introduce the fact that supplemental information is there"), and the
-  `surface` attribute added in Track 5 is the shared input both need. **GAP,
+  `channel` attribute fixed in Track 5 is the shared input both need. **GAP,
   narrow**: this plan does not verify how the TTS path renders a `control:`
   link's text, and narration goes through `speech-parsing.ts` /
   `<speech>` rather than the markdown renderer. Recorded in Open design
@@ -1055,7 +1074,9 @@ line. Per the default, each gets at least one entry in
 `src/dev/knowledge-audits.yaml`:
 
 1. `knows_directly` — given "the user asks where the microphone is", does the
-   agent reach for `cb chat ui` rather than describing from memory?
+   agent reach for `cb chat ui` rather than describing from memory? And the
+   negative: told "I've moved your list", does it avoid volunteering a screen
+   location it has not scanned for?
 2. `knows_directly` — can the agent write a correct `control:` link with an
    `action` and a `description`, unprompted, given a dump?
 3. `knows_directly` — asked to "just attach the file for me", does the agent
@@ -1071,7 +1092,7 @@ inside the monorepo.)
 
 ## Implementation order
 
-1. **Track 5 first chunk — `surface` attribute.** Independent, smallest, and
+1. **Track 5 first chunk — `channel` fixed.** Independent, smallest, and
    removes an active lie (iOS reported as `web-mobile`). Client → route →
    `contextAttrs` → prompt sentence → `<chat-app>` doctest.
 2. **Track 1 — scan library.** `accessible-name.ts`,
@@ -1092,9 +1113,17 @@ inside the monorepo.)
    ring, mobile-contract updates and fixtures.** Depends on 2-5 being stable so
    the native side implements a settled contract rather than a moving one.
 
-Chunks 1-6 are commit boundaries within one plan. Nothing ships until 7
-completes; a merged web-only version would be the "quietly lies on the phone"
-outcome the issue warns about.
+Chunks 1-6 are commit boundaries within one plan and **ship without waiting
+for 7**. An earlier draft gated everything on the native half, to avoid the
+"quietly lies on the phone" outcome — but the dump already refuses to lie:
+on `channel="ios-native"` with no native answer it reports
+`coverage: "dom-native-unavailable"` and names the controls it cannot see
+(Track 5, "Merging"). That sentence is what makes a web-only build honest on
+the phone, so it is built in chunk 5, not deferred to 7. The native half is
+wanted and is done next, with the understanding (boxholder, 2026-08-23) that
+it may work somewhat differently and at lower fidelity than the DOM scan — a
+declared registry rather than a walk, and `focus`/`reveal` only where they have
+honest native meanings.
 
 ## Rollout shape
 
@@ -1132,10 +1161,9 @@ and the four knowledge audits pass.
 
 **Knowledge audits.** All four land with the plan, run, with status recorded.
 
-**Migration.** None. No on-disk data shape changes. The `<chat-app>` `surface`
-attribute is additive and read-only, and old clients that do not send it simply
-omit it, which the snapshot composer already handles by dropping absent
-attributes.
+**Migration.** None. No on-disk data shape changes. `channel` is read-only,
+its new value is additive, and an old client that does not send it falls back
+to today's user-agent classification.
 
 **Cross-model review.** Done (Codex, gpt-5.5, plan mode). Eight findings; the
 plan was revised on six of them. The load-bearing ones: the derived-id tier was
