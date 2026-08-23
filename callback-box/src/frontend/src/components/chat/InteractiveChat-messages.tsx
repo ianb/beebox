@@ -8,6 +8,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback, memo } from "react";
+import { ChatOpeners } from "./ChatOpeners";
 import { useParams } from "@tanstack/react-router";
 import type { SessionEntry, SessionContentBlock } from "../../api";
 import { extractChatImages, type MessageGroup, type OnZoomView, type ReplaySpeechOptions } from "./ChatMessages";
@@ -106,7 +107,7 @@ function MessageListInner({
   messages, groups, modelMarkers, isStreaming, streamText, streamTools,
   debugView, currentUserEmail, currentUserName, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, snapshot,
   totalEntries, onLoadOlder, loadingOlder, scrollToBottomTrigger, liveTurnId, proseEnabled, pendingHqDraft,
-  captureBubbles, captureVerbs, audioOverlayStore,
+  captureBubbles, captureVerbs, audioOverlayStore, openers, onSendOpener,
 }: {
   messages: SessionEntry[];
   groups: MessageGroup[];
@@ -133,6 +134,14 @@ function MessageListInner({
   captureBubbles: CaptureBubbleModel[];
   captureVerbs: CaptureVerbs;
   audioOverlayStore: AudioOverlayStore;
+  /**
+   * Suggested opening questions from the bound directory's briefing, shown on
+   * the empty state of a fresh chat. Empty for an established box (the agent
+   * removes them once the box is in regular use) and for a resumed session.
+   */
+  openers: string[];
+  /** Send an opener as the person's message — the typed-and-entered path. */
+  onSendOpener: (text: string) => void;
 }) {
   const { boxSlug } = useParams({ strict: false });
   const hasOlder = totalEntries > messages.length;
@@ -213,8 +222,9 @@ function MessageListInner({
 
   if (messages.length === 0 && !isStreaming) {
     return (
-      <div className="flex-1 flex items-center justify-center text-warm-500 text-sm">
-        Start a conversation with your box assistant.
+      <div className="flex-1 flex flex-col items-center justify-center gap-3 px-4">
+        <ChatOpeners openers={openers} onSendOpener={onSendOpener} />
+        <div className="text-warm-500 text-sm">Start a conversation with your box assistant.</div>
       </div>
     );
   }

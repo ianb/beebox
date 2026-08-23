@@ -17,6 +17,7 @@ import { generateDocs, setDocIdDebug } from "../../core/docs-gen/index.js";
 import { installValidationHooks } from "../../core/install-validation-hooks.js";
 import { runAnnexDoctor } from "../../core/annex/doctor.js";
 import { getBoxShape } from "../../lib/box-shape.js";
+import { boxSlugFromShape } from "../../lib/box-slug.js";
 import { createGitAnnexService } from "../../services/git-annex.js";
 import { openSearchIndex } from "../../core/search/refresh.js";
 import { errorMessage } from "../../lib/error-guards.js";
@@ -199,9 +200,9 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   // and nothing else would say so. Repairs are logged; unfixable conditions are
   // reported but do not abort init, since the rest of the setup is still worth
   // doing and `cb health` gates on them.
-  const annexShape = await getBoxShape(boxRoot);
+  const boxShape = await getBoxShape(boxRoot);
   const annexResult = await runAnnexDoctor(createGitAnnexService(), {
-    repoRoot: annexShape.packageRoot,
+    repoRoot: boxShape.packageRoot,
     boxRoot,
   });
   for (const check of annexResult.checks) {
@@ -237,7 +238,10 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   }
 
   if (isFresh) {
-    console.log("\nRun 'cb status' to see the current state.");
+    // Point at the thing to open, not at another CLI command: the box is a web
+    // app, and a fresh box's chat now opens with suggested questions to start
+    // from. `cb serve` prints the box's URL on startup.
+    console.log(`\nNext: run 'cb serve' and open the ${boxSlugFromShape(boxShape)} URL it prints.`);
   }
 }
 

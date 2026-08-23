@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-08-23T15:42:41Z
-Total documents: 287
+Generated: 2026-08-23T20:15:32Z
+Total documents: 288
 
 ## Issues
 
@@ -110,6 +110,7 @@ Referenced by:
 - docs/implemented-plans/courseware-phase1.md:102 (mention) — "filename supplies the type — there is no `type:` field"** (`CLAUDE.md:39`), so templates
 - docs/implemented-plans/delivered-user-message-codec.md:23 (mention) — - Project testing convention. `CLAUDE.md:11-17` says: *"Tests are doctests (`.doctest.md`) in `test/`"* and *"Run tests 
 - docs/implemented-plans/extfile-card.md:45 (mention) — (CLAUDE.md exempts *"per-box config, throwaway replies, and personal
+- docs/implemented-plans/first-run-openers.md:27 (mention) — briefing is already `@`-included into CLAUDE.md, so the agent sees what it
 - docs/implemented-plans/ios-audio-session-routing.md:51 (mention) — - `CLAUDE.md` (monorepo root) — *"Treat noisy command output as a bug."* The
 - docs/implemented-plans/ios-per-box-device-lock.md:25 (mention) — - `CLAUDE.md` requires reading existing formats before writing
 - docs/implemented-plans/link-validation-fix.md:34 (mention) — - User-global rule (project CLAUDE.md) — *"NEVER disable or weaken a lint rule to
@@ -2862,6 +2863,18 @@ References:
 - → frontend.md (mention)
 - → docs/testing.md (mention)
 
+#### docs/implemented-plans/first-run-openers.md
+
+Title: "First-run openers" | 117 lines
+
+Referenced by:
+- ../issues/features/2026-07-20-first-run-experience.md:19 (mention) — **Update 2026-08-23** (`callback-box/docs/implemented-plans/first-run-openers.md`):
+- ../issues/features/2026-07-20-schedules-off-by-default.md:59 (mention) — (`callback-box/docs/implemented-plans/first-run-openers.md`). This isn't a
+
+References:
+- → ../issues/features/2026-07-20-first-run-experience.md (frontmatter)
+- → CLAUDE.md (mention)
+
 #### docs/implemented-plans/gmail-explicit-action.md
 
 Title: "Gmail config: explicit action, no implicit tracking" | 165 lines
@@ -2911,7 +2924,7 @@ References:
 Title: "An always-HQ dictation switch, separate from narration mode" | 228 lines
 
 Referenced by:
-- ../issues/features/2026-08-22-hq-dictation-switch-separate-from-narration.md:13 (mention) — > and landed on main (design: `callback-box/docs/plans/hq-dictation-switch.md`;
+- ../issues/features/2026-08-22-hq-dictation-switch-separate-from-narration.md:13 (mention) — > and landed on main (design: `callback-box/docs/implemented-plans/hq-dictation-switch.md`;
 
 References:
 - → ../issues/features/2026-08-22-hq-dictation-switch-separate-from-narration.md (frontmatter)

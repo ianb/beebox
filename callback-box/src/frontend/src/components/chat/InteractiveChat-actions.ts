@@ -86,6 +86,15 @@ export function useChatActions(opts: ChatActionsOpts) {
     }
   }, [inputStore, emissionStore, selections, dispatchEmission, typingMode, typingLocked, onSend, resetAttachments, resetSelections, setScrollToBottomTrigger, setTypingMode]);
 
+  // Clicking a suggested opener is typing it and pressing enter: seed the
+  // composer store, then run the exact same send funnel — so an opener carries
+  // any attachment/selection the person had already staged, and the composer is
+  // left empty afterwards like a normal send.
+  const handleSendOpener = useCallback((text: string) => {
+    inputStore.set(text);
+    handleSend();
+  }, [inputStore, handleSend]);
+
   // Paste and drop take WHATEVER files came with the event, not just images:
   // routing (`file-routing.ts`) sends a non-image set to the bulk batch, so
   // filtering here would silently discard a dropped PDF instead of filing it.
@@ -201,7 +210,7 @@ export function useChatActions(opts: ChatActionsOpts) {
   useTextareaFocus({ isTranscribing, typingMode, textareaRef, transcriptTick });
 
   return {
-    handleSend, handlePaste, handleDrop,
+    handleSend, handleSendOpener, handlePaste, handleDrop,
     handleInterrupt, handleNewSession, handleStopProcess, handleRestartProcess,
     handleCompactSession, handleLoadOlder, handleKeyDown,
   };

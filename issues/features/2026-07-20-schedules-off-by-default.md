@@ -52,3 +52,19 @@ their cron scheduling and does not add a lazy execution path.
 This resolution applies only to seeded defaults for **new** boxes. Existing
 boxes are grandfathered: `cb init` and template sync preserve their current
 box-owned `enabled` state rather than retroactively changing it.
+
+## Decision recorded 2026-08-23
+
+`process-retrospective` is now seeded **enabled** on fresh boxes
+(`callback-box/docs/implemented-plans/first-run-openers.md`). This isn't a
+reversal of the reasoning above — it's a narrower read of what the schedule
+actually costs. Retro's discovery step only qualifies **human** chat sessions
+(a transcript carrying `<typed>`/`<speech>`-tagged messages, or a session in
+the chat registry); wakeup/job/procedure transcripts classify as non-chat. On
+a box nobody has chatted with yet, discovery finds nothing to retro over, the
+scan step's precheck reports `CHECK_SKIP`, and no agent runs — so the quota
+worry that kept it off doesn't hold until a human has actually used the box,
+at which point spending quota to curate the box's own chat openers is exactly
+the trade the boxholder wants. `chat-review` remains disabled — it does not
+have an equivalent human-activity gate. Existing boxes keep their box-owned
+`enabled` value; this reaches new boxes only.

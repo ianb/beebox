@@ -21,18 +21,32 @@ break this repo — v2.1.218's worktree git isolation silently broke `/finish`'s
 merge step for days. Claude Code versions that move harness behavior get their
 own entries here, labeled as such, with no pin to apply.
 
-- **Current pin:** `0.3.237` (in `callback-box/package.json` — see the split-pin
+- **Current pin:** `0.3.238` (in `callback-box/package.json` — see the split-pin
   note below; the monorepo root still carries a second, unmanaged pin at
   `0.3.226`)
-- **Latest reviewed upstream version:** `0.3.240` (SDK), `2.1.240` (Claude Code)
+- **Latest reviewed upstream version:** `0.3.241` (SDK), `2.1.241` (Claude Code)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** `0.3.238` was ~46h at this turn, `0.3.239` ~23h,
-  `0.3.240` ~3h. Take the newest settled next turn. Nothing act-now on either
-  channel. **The finding to act on this turn is not an upstream release** — see
-  the project-dir encoding note below, which is a live callback-box bug that
-  reviewing 2.1.239 turned up.
+- **Current recommendation:** `0.3.239` was ~47h at this turn, `0.3.240` ~27h,
+  `0.3.241` ~16h. Take the newest settled next turn. Nothing act-now on either
+  channel. **The open item is still not an upstream release** — the
+  `encodeProjectDir` bug recorded below remains unfixed and unfiled as of this
+  turn (`transcript-paths.ts` last changed 2026-08-20, before the finding).
 
 ## Release ledger
+
+### 0.3.241 — pending (parity with Claude Code 2.1.241)
+
+- **Upstream:** SDK entry is only "Updated to parity with Claude Code v2.1.241",
+  and 2.1.241 itself says only "Bug fixes and reliability improvements" — nothing
+  itemized to assess. This is the second consecutive opaque Claude Code release
+  (2.1.240 said the same), so two pins in a row carry changes this ledger cannot
+  characterize. Not a concern by itself; noted because a run of unitemized
+  releases is exactly when a harness change like v2.1.218's worktree isolation
+  could pass through unremarked, and the only defense is noticing behavior
+  afterward rather than reading about it first.
+- **Callback-box applicability:** Nothing assessable on either channel.
+- **Action:** Published 2026-08-22T23:59Z, ~16h old, inside the settling window.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03241), [Claude Code 2.1.241](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21241)
 
 ### Live bug found while reviewing 2.1.239 — `encodeProjectDir` no longer matches Claude Code
 
@@ -68,7 +82,9 @@ real example on this machine) and any `*.moved-to` box directory.
 **Not fixed here.** This monitor's commit scope is the ledger, the pin, and the
 lockfile; changing `transcript-paths.ts` is application work that wants its own
 change and its own test. Recorded as durable evidence, which is what this file
-is for. The fix is presumably to stop collapsing `_` and `.` — but the exact
+is for. **Status 2026-08-23: still unfixed and unfiled** — `transcript-paths.ts`
+last changed on 2026-08-20 (before this was found) and no issue for it exists
+under `issues/bugs/`. Re-checked each turn until it moves. The fix is presumably to stop collapsing `_` and `.` — but the exact
 upstream rule should be derived from observed directory names rather than
 guessed, and 2.1.239 may have just changed the disambiguation behaviour on top
 of it, so whoever picks this up should re-derive the encoding against a current
@@ -146,7 +162,7 @@ since an act-now finding bypasses the window entirely. Recorded so the pattern
 reads as a known property of the schedule rather than a series of coincidences.
 Moving the run ~3h later, or treating the window as 45h, would close it.
 
-### 0.3.238 — pending
+### 0.3.238 — applied
 
 - **Upstream (SDK):** Added `is_backgrounded` and `spawn_depth` to
   `task_started` events for subagent tasks (`is_backgrounded` also on background
@@ -211,8 +227,13 @@ Moving the run ~3h later, or treating the window as 45h, would close it.
     plugins from local paths, not url marketplaces), all `self-hosted-runner`
     flags, the MCP `server/discover` ordering fix (no MCP servers configured),
     and the Remote Control and cross-session messaging fixes.
-- **Action:** Published 2026-08-20T18:02Z, ~22h old, inside the settling window.
-  The boxholder's harness is already on 2.1.238 independently.
+- **Action:** Published 2026-08-20T18:02Z. Applied 2026-08-23 via
+  `pnpm update-agent-sdk` at ~70h as the newest settled version. Verified:
+  typecheck clean, `pnpm -C callback-box test` 7529/7529 pass, and
+  `scripts/sdk-steering-probe.ts` holds all four steering behaviors. The
+  hook-callbacks-after-re-`initialize` fix analysed above is therefore now live
+  at the pin — no behavior change was observed, consistent with the conclusion
+  that callback-box never performs that re-initialize.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03238), [Claude Code 2.1.238](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21238)
 
 ### 0.3.237 — applied (parity with Claude Code 2.1.237)

@@ -16,6 +16,16 @@ That reframes this issue rather than closing it: the "schedule table is the
 first thing you see" complaint below is gone, and the chat zero-state
 (which had no answer) is now the whole first-run surface.
 
+**Update 2026-08-23** (`callback-box/docs/implemented-plans/first-run-openers.md`):
+the chat zero-state gap is now partly filled — an empty chat on a `"new"`
+session shows agent-curated `openers:` (suggested opening questions) read from
+the bound directory's briefing card, click-to-send. This is deliberately a
+narrow slice, not the menu-of-flows design direction above: no onboarding
+flag, no flow selection, no dashboard first-run state, no role-marked
+instructions. It's still open for all of that — the "menu of flows that just
+work" design direction, the onboarding directory/landmark mechanism, voice
+demonstration, and the rest of this issue's scope remain undone.
+
 Audited 2026-07-20 by code-reading. What a brand-new user sees after
 creating their account on a fresh `cb init` box:
 
