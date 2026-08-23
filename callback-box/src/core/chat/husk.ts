@@ -14,6 +14,7 @@ import { parse as parseYaml } from "yaml";
 import { splitCardContent } from "../../cards/index.js";
 import { createChatHuskTemplate } from "../../schemas/chat.js";
 import { loadHistoryEntries, resolveSessionLogPath } from "./session/history.js";
+import { stripChatAppTags } from "../../shared/chat-tags.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 import { isRecord } from "../card-io.js";
 import { mapInBatchesSettled } from "../../lib/map-batched.js";
@@ -63,12 +64,15 @@ async function readSnippetTitle(boxRoot: string, sessionId: string): Promise<str
       sessionId,
       slice: { mode: "page", offset: 0, limit: 100 },
     });
-    const text = entries.find((entry) => entry.type === "user")?.content
+    const raw = entries.find((entry) => entry.type === "user")?.content
       .filter((block) => block.type === "text")
       .map((block) => block.text)
-      .join("\n")
-      .trim();
-    return text === undefined || text === "" ? null : text.slice(0, TITLE_MAX_LEN);
+      .join("\n");
+    if (raw === undefined) return null;
+    // The stored text starts with the `<chat-app …/>` snapshot prepend; a
+    // title sliced from the raw text would open with the tag, not the message.
+    const text = stripChatAppTags(raw).trim();
+    return text === "" ? null : text.slice(0, TITLE_MAX_LEN);
   } catch (_e) {
     // No transcript yet (brand-new session) or unreadable — the husk starts
     // untitled; enrichment is editorial, not plumbing.

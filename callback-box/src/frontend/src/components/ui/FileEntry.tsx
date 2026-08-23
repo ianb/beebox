@@ -200,7 +200,9 @@ export function FileEntry({ summary, compact, onPanel, className }: FileEntryPro
             onPanel={onPanel}
           />
         </div>
-        <div className="border-t border-warm-200">
+        {/* Peeked card body: user content, excluded from the `cb chat ui` walk
+            (lib/ui-scan/scan.ts). The row's own controls are above it. */}
+        <div data-cb-scan="exclude" className="border-t border-warm-200">
           <FileView path={summary.path} mode="companion" onNavigate={handleNavigate} />
         </div>
       </div>

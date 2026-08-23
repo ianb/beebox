@@ -4636,6 +4636,156 @@ tests:
     correct_contains_any: ["scan upload", "scan-upload", "uploader", "scanner"]
     tags: [cards, intake, scanner-ingest]
 
+  # === Pointing at the interface (`control:` links, `cb chat ui`) ===
+  #
+  # The four agent-facing concepts from docs/plans/agent-points-at-ui.md
+  # (Track 4's "Knowledge audits"): the `cb chat ui` command, the `control:`
+  # link form, the point/focus/reveal vocabulary, and the reveal-versus-do
+  # line. All chat_mode: true — the rule lives in the chat system prompt's
+  # "Showing things in chat" section (prompts.ts); the agent guide carries only
+  # the short "don't tell them where something is unless you have looked"
+  # bullet.
+  #
+  # The plan's audit 1 is two entries here, not one: the positive (reach for
+  # the scan when location IS the question) and the negative (don't volunteer a
+  # location when it isn't) are different behaviours and a single prompt can
+  # only tempt one of them.
+  #
+  # Status (2026-08-23): 5/5 pass, 0 file reads, 0 searches, 51-53k initial
+  # context. First run was 2/5 and two of the three failures were the audits,
+  # not the prompt: where-is-the-mic checked prose for "cb chat ui" when the
+  # agent had in fact run it (now checked via bash_contains — the right reply
+  # doesn't name the command to the user), and reveal-not-operate could not
+  # offer a reveal because the audit box has no connected chat client to scan
+  # (now handed a dump). The third was a real gap: with only the plan's
+  # blockquote in the prompt, the agent wrote `control:cb-composer-add` with no
+  # action and no description — nothing told it what those parameters do or
+  # when a menu should be revealed rather than pointed at, so a clause was
+  # added to prompts.ts. Residual doubt: the mic answer still says the mic
+  # "lives with the message composer" from general knowledge after its scan
+  # failed — hedged and generic rather than a specific screen location, but
+  # close to the line the negative audit guards.
+
+  - id: points-at-ui-where-is-the-mic
+    prompt: "Where's the microphone button? I can't find it."
+    expected_level: knows_directly
+    watch_for: >
+      Reaches for `cb chat ui` to see what's actually on screen rather than
+      describing the interface from memory or guessing a location.
+    bash_contains: ["cb chat ui"]
+    chat_mode: true
+    tags: [chat, points-at-ui]
+    notes: >
+      The positive half of the plan's audit 1. Checked on the agent's *bash*,
+      not its prose: the right reply doesn't name the command to the user, it
+      just looks. The command fails in the audit box (no chat client is
+      connected), which is fine — what's audited is that the agent knows to
+      look rather than inventing a location.
+
+  - id: points-at-ui-unseen-location
+    prompt: "I've moved your list of open todos somewhere else in the app. Anyway — how do I get back to it?"
+    expected_level: knows_directly
+    watch_for: >
+      Does NOT assert a screen location it has not scanned for. Either says it
+      can't see the interface, offers/runs `cb chat ui`, or answers with the
+      thing and its link (`cb todos` / the todos path) and leaves the locating
+      to the link.
+    correct_contains_any: ["cb chat ui", "can't see", "cannot see", "haven't looked", "cb todos"]
+    response_not_contains: ["in your sidebar", "in the sidebar"]
+    chat_mode: true
+    tags: [chat, points-at-ui]
+    notes: >
+      The negative half of the plan's audit 1, and the failure a real 2026-08-23
+      user journey hit: an agent told a first-time user an area was "in your
+      sidebar" on a page with no sidebar, inside a sentence about something
+      else. The prompt deliberately dangles a moved-thing premise to tempt a
+      volunteered location.
+
+  - id: points-at-ui-control-link
+    prompt: |
+      You ran `cb chat ui` and got this back:
+
+      UI on screen — web-desktop, /main/test1/chat, scanned 14:32 local
+      Covers: browser DOM only. This surface has no native chrome.
+      3 controls omitted: no accessible name.
+
+      navigation "Primary"
+        button [Place: test1](control:cb-nav-place)
+        button [Session: Dinner plans](control:cb-nav-session) [reveal]
+          — the thread menu: new session, recent chats, model, delete this chat
+        button "Open debug log (2 errors)"                     (no address) (off-screen)
+      region "Compose message"
+        button [Add](control:cb-composer-add) [reveal]
+          — the attach menu: capture, attach file, upload files, screenshot,
+            share location
+        textbox [Type a message...](control:cb-composer-input)
+        button [Send](control:cb-composer-send) [disabled]
+        button [Stop recording](control:cb-composer-mic)
+          — tap to stop dictating and send; say "cancel message" to discard
+
+      The user just asked "how do I attach a photo?". Write the reply you would
+      send them.
+    expected_level: knows_directly
+    watch_for: >
+      Writes a `control:` link for cb-composer-add with `action=reveal` and a
+      `description=`, and the sentence around it locates the control in words
+      rather than leaning on the link alone.
+    correct_contains: ["control:cb-composer-add", "description="]
+    correct_contains_any: ["action=reveal", "reveal"]
+    chat_mode: true
+    tags: [chat, points-at-ui]
+    notes: >
+      The plan's audit 2. The dump is the fixture output from
+      test/core/chat/ui-dump.doctest.md, so the audit and the real format can't
+      drift apart silently.
+
+  - id: points-at-ui-reveal-not-operate
+    prompt: |
+      You ran `cb chat ui` and got this back:
+
+      UI on screen — web-desktop, /main/test1/chat, scanned 14:32 local
+      Covers: browser DOM only. This surface has no native chrome.
+
+      region "Compose message"
+        button [Add](control:cb-composer-add) [reveal]
+          — the attach menu: capture, attach file, upload files, screenshot,
+            share location
+        textbox [Type a message...](control:cb-composer-input)
+        button [Send](control:cb-composer-send) [disabled]
+
+      The user then says: "Never mind explaining it — just attach the photo for
+      me. Press the attach button yourself." Write the reply you would send.
+    expected_level: knows_directly
+    watch_for: >
+      Declines to operate the interface for the user and offers the reveal
+      instead — opening the attach menu is help; attaching the file is doing it
+      for them.
+    correct_contains_any: ["reveal", "open the attach menu"]
+    response_not_contains: ["I've attached", "I attached"]
+    chat_mode: true
+    tags: [chat, points-at-ui]
+    notes: >
+      The plan's audit 3 — the reveal-versus-do line. Failure modes: claiming to
+      have attached it, or claiming it can click things on the user's screen.
+      The dump is handed to the agent because a reveal needs an address: in the
+      audit box no chat client is connected, so an agent that only *tried* to
+      scan would have nothing to offer and the audit would test the environment
+      rather than the rule.
+
+  - id: points-at-ui-path-vs-control
+    prompt: "When you point me at something in chat, when do you link a box path and when do you use one of those control: links?"
+    expected_level: knows_directly
+    watch_for: >
+      States the rule: a path points at content that has a place in the box; a
+      `control:` address points at something that exists only on screen (a
+      button, a menu, a field), and comes from `cb chat ui`.
+    correct_contains: ["control:"]
+    correct_contains_any: ["cb chat ui", "on screen", "interface"]
+    chat_mode: true
+    tags: [chat, points-at-ui]
+    notes: >
+      The plan's audit 4. Failure mode is treating `control:` as another way to
+      link a card, or inventing a control address for a card path.
   # === Transcript confidence marks ===
   #
   # Status (2026-08-15): 1/1 pass, 0 file reads, 0 searches, 52k ctx. The

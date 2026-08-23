@@ -1,0 +1,16 @@
+{
+  "input": {
+    "version": 2,
+    "id": "scan-command-3",
+    "kind": "scan-controls",
+    "ok": false,
+    "reason": "The composer is not on screen."
+  },
+  "expected": {
+    "version": 2,
+    "id": "scan-command-3",
+    "kind": "scan-controls",
+    "ok": false,
+    "reason": "The composer is not on screen."
+  }
+}

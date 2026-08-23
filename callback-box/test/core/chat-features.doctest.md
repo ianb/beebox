@@ -176,6 +176,19 @@ composeChatAppSnapshot({
 => <chat-app narration="off" prose="on" hq-dictation="off" local-time="Wednesday 2026-05-13 10:00 (morning)" channel="web-mobile" last-activity="3 days ago"/>
 ```
 
+`channel` is a closed union (`shared/chat-channel.ts`), and its third member
+says something the other two don't: in the iOS app the composer, mic and
+capture are native chrome around the page rather than elements of it.
+
+```ts
+composeChatAppSnapshot({
+  features: {},
+  localTime: "Wednesday 2026-05-13 10:00 (morning)",
+  channel: "ios-native",
+})
+=> <chat-app narration="off" prose="on" hq-dictation="off" local-time="Wednesday 2026-05-13 10:00 (morning)" channel="ios-native"/>
+```
+
 The companion-pane `open-card` attribute (box-relative path) rides on every send
 when a card is open. It's omitted when `undefined` — the caller passes
 `undefined`, never `""`, since the pipeline renders empty strings rather than

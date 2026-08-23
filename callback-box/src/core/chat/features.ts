@@ -11,6 +11,8 @@
  * `model="opus"` slot in by adding a registry entry, no shape change.
  */
 
+import type { ChatChannel } from "../../shared/chat-channel.js";
+
 export type FeatureValue = string;
 export type FeatureMap = Record<string, FeatureValue>;
 
@@ -162,7 +164,7 @@ const READ_ONLY_ATTRS = new Set([
 export function composeChatAppSnapshot(input: {
   features: FeatureMap;
   localTime?: string;
-  channel?: string;
+  channel?: ChatChannel;
   lastActivity?: string;
   health?: string;
   todos?: string;

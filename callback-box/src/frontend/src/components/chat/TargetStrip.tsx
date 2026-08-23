@@ -39,6 +39,7 @@ export function TargetStrip(props: {
       </div>
       {speechPlaying ? (
         <button
+          id="cb-chat-stop-speech"
           onClick={onStopSpeech}
           className={`${STRIP_BTN} bg-danger-100 text-danger hover:bg-danger-100 active:bg-danger-light`}
           title="Stop speaking"
@@ -51,6 +52,7 @@ export function TargetStrip(props: {
       ) : null}
       {isStreaming ? (
         <button
+          id="cb-chat-stop-agent"
           onClick={onInterrupt}
           className={`${STRIP_BTN} bg-danger-100 text-danger hover:bg-danger-100 active:bg-danger-light`}
           title="Stop agent"

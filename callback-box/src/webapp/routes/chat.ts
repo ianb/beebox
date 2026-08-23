@@ -41,6 +41,7 @@ import { registerChatAudioRoutes } from "./chat-audio-routes.js";
 import { registerChatLastAudioRoutes } from "./chat-last-audio-routes.js";
 import { registerChatAudioReviewRoutes } from "./chat-audio-review-routes.js";
 import { registerChatScreenshotRoutes } from "./chat-screenshot-routes.js";
+import { registerChatUiRoutes } from "./chat-ui-routes.js";
 import { chatModelFileForSession, DEFAULT_MODEL_FILE } from "../../core/chat/session/state.js";
 
 interface RegisterChatRoutesOptions {
@@ -204,6 +205,7 @@ export async function registerChatRoutes(options: RegisterChatRoutesOptions): Pr
   registerChatLastAudioRoutes(ctx);
   registerChatAudioReviewRoutes(ctx);
   registerChatScreenshotRoutes(ctx);
+  registerChatUiRoutes(ctx);
 
   // Surface session-id assignments as SSE events so a tab waiting on a
   // pending "new" send can pick up the real id and update its URL.

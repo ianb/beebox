@@ -22,6 +22,17 @@ struct RootView: View {
     @State private var screenshotRequest: NativeScreenshotRequest?
     @State private var screenshotResult: NativeScreenshotResult?
     @State private var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = []
+    @State private var composerCommandResults: [NativeComposerCommandResult] = []
+    /// What the native chrome currently on screen has declared about itself, for
+    /// the web's `scan-controls` request. Populated by `.controlAnchor` in the
+    /// composer's own view bodies, so it cannot describe a control that is not
+    /// rendered.
+    @StateObject private var controlRegistry = NativeControlRegistry()
+    /// The native ring a `control:` pointer asked for, if one is on screen. Held
+    /// here rather than in the composer because the ring is drawn over the whole
+    /// app in global coordinates, and the surface it points at may not be the
+    /// composer forever.
+    @State private var controlRing: NativeControlRing?
     @State private var emissionRedeliveryRequest: NativeEmissionRedeliveryRequest?
     /// Emission IDs already logged as redelivered / long-pending, so the
     /// forwarded log carries one line per transition instead of one per tick.
@@ -77,6 +88,14 @@ struct RootView: View {
                 }
             }
         }
+        .overlay {
+            if let controlRing {
+                NativeControlRingView(frame: controlRing.frame) {
+                    self.controlRing = nil
+                }
+                .id(controlRing.id)
+            }
+        }
         .sheet(isPresented: $showingPairSheet) {
             PairBoxView()
         }
@@ -102,6 +121,8 @@ struct RootView: View {
             screenshotResult = nil
             speechStopRequest = nil
             composerCommandAcknowledgements = []
+            composerCommandResults = []
+            controlRing = nil
             pendingEmissionStore.deactivate()
         }
         .task(id: store.selectedBox?.id) {
@@ -218,6 +239,7 @@ struct RootView: View {
             screenshotRequest: screenshotRequest,
             speechStopRequest: speechStopRequest,
             composerCommandAcknowledgements: composerCommandAcknowledgements,
+            composerCommandResults: composerCommandResults,
             onSessionChange: { sessionID in
                 if visibleChatSessionID != sessionID {
                     narrationEnabled = false
@@ -282,10 +304,13 @@ struct RootView: View {
                 screenshotResult = result
             },
             onComposerCommand: { delivery in
-                handleComposerCommand(delivery, boxID: box.id)
+                handleComposerCommand(delivery, box: box)
             },
             onComposerCommandAcknowledgementDelivered: { id in
                 composerCommandAcknowledgements.removeAll { $0.id == id }
+            },
+            onComposerCommandResultDelivered: { id in
+                composerCommandResults.removeAll { $0.id == id }
             },
             onLastAudioRequest: { request in
                 answerLastAudioRequest(request, box: box)
@@ -297,6 +322,7 @@ struct RootView: View {
                 speechStopRequest = nil
             }
         )
+        .environment(\.nativeControlRegistry, controlRegistry)
         .id(box.id)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             NativeComposerView(
@@ -351,18 +377,96 @@ struct RootView: View {
         }
     }
 
-    private func handleComposerCommand(_ delivery: NativeComposerCommandDelivery, boxID: PairedBox.ID) {
+    private func handleComposerCommand(_ delivery: NativeComposerCommandDelivery, box: PairedBox) {
         switch delivery {
         case .command(let command):
-            Task {
-                let acknowledgement = await composerDraftStore.applySelectionCommand(command, boxID: boxID)
-                composerCommandAcknowledgements.removeAll { $0.id == acknowledgement.id }
-                composerCommandAcknowledgements.append(acknowledgement)
+            switch command.payload {
+            case .addSelection:
+                Task {
+                    let acknowledgement = await composerDraftStore.applySelectionCommand(command, boxID: box.id)
+                    acknowledge(acknowledgement)
+                }
+            case .scanControls:
+                // A native surface can cover the chat while the composer under it
+                // stays mounted and therefore stays registered. Answering from the
+                // registry then would describe controls the user cannot see or
+                // reach, and — worse — would report the dump as covering native
+                // chrome while the thing actually on top (the lock screen, the
+                // pairing sheet) is nowhere in it. Refuse instead: the web reads a
+                // refusal exactly like silence and says the native controls are
+                // missing from the list. See mobile-contract.md §4.8.
+                if let reason = obstructedNativeSurface(box: box) {
+                    acknowledge(.accepted(id: command.id))
+                    deliver(.refused(id: command.id, kind: .scanControls, reason: reason))
+                    return
+                }
+                // The registry is the answer, and an EMPTY registry is still an
+                // answer — the web distinguishes "native reported nothing on
+                // screen" from "native never answered", and only the second one
+                // makes the dump say the composer may be missing from it.
+                let controls = controlRegistry.entries
+                BoxLog.info(
+                    "native control scan answered count=\(controls.count)",
+                    category: .webview,
+                    targetBoxID: box.id
+                )
+                acknowledge(.accepted(id: command.id))
+                deliver(.controls(id: command.id, controls))
+            case .pointAtControl(let target):
+                // Same obstruction rule as the scan, for the same reason: a
+                // ring drawn under the unlock screen or the pairing sheet is a
+                // pointer at something the user cannot see, reported as success.
+                if let reason = obstructedNativeSurface(box: box) {
+                    acknowledge(.accepted(id: command.id))
+                    deliver(.refused(id: command.id, kind: .pointAtControl, reason: reason))
+                    return
+                }
+                acknowledge(.accepted(id: command.id))
+                switch controlRegistry.perform(target.action, on: target.id) {
+                case .pointed(let frame):
+                    controlRing = NativeControlRing(frame: frame)
+                    BoxLog.info(
+                        "native control pointed id=\(target.id) action=\(target.action.rawValue)",
+                        category: .webview,
+                        targetBoxID: box.id
+                    )
+                    deliver(.pointed(id: command.id))
+                case .refused(let reason):
+                    BoxLog.warn(
+                        "native control point refused id=\(target.id) action=\(target.action.rawValue)",
+                        category: .webview,
+                        targetBoxID: box.id
+                    )
+                    deliver(.refused(id: command.id, kind: .pointAtControl, reason: reason))
+                }
             }
         case .rejection(let acknowledgement):
-            composerCommandAcknowledgements.removeAll { $0.id == acknowledgement.id }
-            composerCommandAcknowledgements.append(acknowledgement)
+            acknowledge(acknowledgement)
         }
+    }
+
+    /// Why the registry must not be reported as the native surface right now, or
+    /// nil when it may be. Covers the two full-screen natives `RootView` itself
+    /// presents; a sheet a child view raises (the attach menu, capture) is not
+    /// visible from here and is a known imprecision, recorded in §4.8.
+    private func obstructedNativeSurface(box: PairedBox) -> String? {
+        if boxLockManager.isLocked(box) {
+            return "The box is locked, so its native controls are covered by the unlock screen."
+        }
+        if showingPairSheet {
+            return "The box-pairing sheet is covering the app's native controls."
+        }
+        return nil
+    }
+
+    private func acknowledge(_ acknowledgement: NativeComposerCommandAcknowledgement) {
+        composerCommandAcknowledgements.removeAll { $0.id == acknowledgement.id }
+        composerCommandAcknowledgements.append(acknowledgement)
+    }
+
+    private func deliver(_ result: NativeComposerCommandResult) {
+        composerCommandResults.removeAll { $0.id == result.id }
+        composerCommandResults.append(result)
     }
 
     private func scenePhaseName(_ phase: ScenePhase) -> String {
@@ -377,6 +481,14 @@ struct RootView: View {
             "unknown"
         }
     }
+}
+
+/// A ring currently drawn on a native control. The `id` is what restarts the
+/// timer when the same control is pointed at twice in a row: a new value
+/// re-identifies the overlay, which is what remounts it.
+private struct NativeControlRing: Identifiable {
+    var id = UUID()
+    var frame: CGRect
 }
 
 /// One best-effort log flush as the app backgrounds, held open by a UIKit

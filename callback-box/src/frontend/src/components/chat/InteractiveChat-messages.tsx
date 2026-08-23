@@ -247,13 +247,21 @@ function MessageListInner({
             loadingOlder={loadingOlder}
             onLoadOlder={handleLoadOlder}
           />
-          {data.map((item) => {
-            // The live turn's group keeps one key across the streamed→finalized
-            // transition so React reconciles it in place — no remount/flash.
-            const natural = dataItemKey(item);
-            const key = liveKey && liveTargetUuid && natural === liveTargetUuid ? liveKey : natural;
-            return <div key={key}>{renderDataItem(item, renderCtx)}</div>;
-          })}
+          {/* The transcript is user content, so `cb chat ui` does not walk into
+              it (lib/ui-scan/scan.ts, SCAN_BOUNDARY_ATTRIBUTE): the links,
+              buttons and rendered cards inside messages are the conversation,
+              not the app's chrome. The load-older header and the
+              scroll-to-bottom button sit outside this wrapper and stay
+              scannable. */}
+          <div data-cb-scan="exclude">
+            {data.map((item) => {
+              // The live turn's group keeps one key across the streamed→finalized
+              // transition so React reconciles it in place — no remount/flash.
+              const natural = dataItemKey(item);
+              const key = liveKey && liveTargetUuid && natural === liveTargetUuid ? liveKey : natural;
+              return <div key={key}>{renderDataItem(item, renderCtx)}</div>;
+            })}
+          </div>
         </div>
       </div>
       {!isPinned ? (

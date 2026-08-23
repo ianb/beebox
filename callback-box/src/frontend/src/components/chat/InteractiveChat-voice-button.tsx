@@ -26,6 +26,23 @@ export function VoiceToggleButton({
 }) {
   return (
     <button
+      id="cb-composer-mic"
+      // Four states, one address: the description tracks the same four the
+      // `title` below does, so a scan reports what the mic does *now* rather
+      // than a static catalogue entry.
+      data-cb-does={
+        voicePaused
+          ? "resumes dictation — recording is paused while the agent speaks; tap to stop the speech and pick the mic back up"
+          : isTranscribing
+            ? "stops recording and leaves the transcript in the composer to edit"
+            : narrationEnabled
+              // Narration is the *quiet* mode, not a read-aloud one: the
+              // overlay (core/chat/session/prompts.ts NARRATION_OVERLAY)
+              // suspends "voice in implies voice out" and defaults the agent's
+              // turn to an <ack> or a <callout>.
+              ? "starts dictation in narration mode — for talking at length; the agent mostly stays quiet and takes notes rather than answering aloud, unless you ask it to speak; tap again to stop"
+              : "starts dictation — speak, then tap again to stop and edit before sending"
+      }
       onClick={() => {
         if (voicePaused) {
           onUnpause();

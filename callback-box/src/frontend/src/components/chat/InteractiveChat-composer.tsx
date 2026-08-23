@@ -40,6 +40,42 @@ const CIRCLE_BTN = "flex items-center justify-center w-14 h-14 rounded-full flex
 const SEND_PATH = "M5 10l7-7m0 0l7 7m-7-7v18";
 
 /**
+ * The composer's trailing send button, shared by the desktop and mobile rows.
+ *
+ * One `id` covers both of a row's branches — the dictation segment-send and the
+ * plain send are the same role in the interface and are never in the DOM at
+ * once, which is exactly the case an authored address is allowed to span
+ * (docs/plans/agent-points-at-ui.md, "an id names a role in the interface, not
+ * a component"). The two *rows* are a different story: they can coexist in the
+ * DOM, so the mobile row passes its own address.
+ */
+export function ComposerSendButton({
+  id, onClick, disabled, title, size,
+}: {
+  id: string;
+  onClick: () => void;
+  disabled: boolean;
+  title: string;
+  /** `lg` on the button bar (matches the circle controls), `md` on the mobile drop-up row. */
+  size: "lg" | "md";
+}) {
+  const dim = size === "lg" ? "w-14 h-14" : "w-12 h-12";
+  return (
+    <button
+      id={id}
+      onClick={onClick}
+      disabled={disabled}
+      className={`flex items-center justify-center ${dim} rounded-full flex-shrink-0 bg-accent text-white hover:bg-accent-dark disabled:bg-info-muted disabled:text-white/70 disabled:cursor-not-allowed`}
+      title={title}
+    >
+      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={SEND_PATH} />
+      </svg>
+    </button>
+  );
+}
+
+/**
  * Desktop-only inline textarea plus its trailing send / transcription-action
  * buttons. Hidden below the `sm` breakpoint.
  */
@@ -69,6 +105,7 @@ function DesktopComposerRow({
   return (
     <div className="hidden sm:flex flex-1 items-center gap-2 min-w-0">
       <TextareaAutosize
+        id="cb-composer-input"
         ref={textareaRef}
         autoFocus
         enterKeyHint="send"
@@ -110,54 +147,47 @@ function DesktopComposerRow({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
             </svg>
           </button>
-          <button
-            onClick={() => {
-              if (hqDictationEnabled) {
-                // Route through the same finalize→blob→HQ slow path a
-                // spoken send keyword takes (docs/plans/
-                // hq-dictation-switch.md, chunk 2) instead of building the
-                // emission here from the live realtime state — runKeywordSend
-                // (InteractiveChat-voice.ts) picks up the resulting VoiceIntent
-                // and does everything from there (composer + draft clearing,
-                // mic re-arm/close, audio retention) via the shared
-                // onVoiceIntent path, so nothing is duplicated here.
-                if (transcription.submitSegment({ closeMic: true })) return;
-                // Segment already settled (machine idle) — fall through to
-                // the direct-send path below.
-              }
-              // Continue from any prior composer text so it isn't dropped.
-              const text = joinTranscript(input, transcription.transcript).trim();
-              // Read synchronously, same render as `text` — no await between
-              // this and the click, so `transcription.finalWords` can't have
-              // gone stale (Fix D; contrast the mobile row's stop()-await path).
-              const words = transcription.finalWords;
-              transcription.cancel();
-              if (text) onVoiceSegmentSend(text, { words, spokenStart: spokenTextStart(input) });
-              setInput("");
-              // Segment committed — drop the persisted dictation draft.
-              clearDraft();
-            }}
-            disabled={!joinTranscript(input, transcription.transcript).trim()}
-            className={`${CIRCLE_BTN} bg-accent text-white hover:bg-accent-dark disabled:bg-info-muted disabled:text-white/70 disabled:cursor-not-allowed`}
-            title="Send"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={SEND_PATH} />
-            </svg>
-          </button>
         </>
-      ) : (
-        <button
-          onClick={handleSend}
-          disabled={!input.trim()}
-          className={`${CIRCLE_BTN} bg-accent text-white hover:bg-accent-dark disabled:bg-info-muted disabled:text-white/70 disabled:cursor-not-allowed`}
-          title={targetBusy ? "Queue message (agent is busy)" : "Send"}
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={SEND_PATH} />
-          </svg>
-        </button>
-      )}
+      ) : null}
+      {/* One send control, one address: which message it commits depends on
+          whether dictation is in flight, but the role — and the id — is the
+          same either way, so it renders outside the branch. */}
+      <ComposerSendButton
+        id="cb-composer-send"
+        size="lg"
+        onClick={() => {
+          if (!isTranscribing) {
+            handleSend();
+            return;
+          }
+          if (hqDictationEnabled) {
+            // Route through the same finalize→blob→HQ slow path a
+            // spoken send keyword takes (docs/plans/
+            // hq-dictation-switch.md, chunk 2) instead of building the
+            // emission here from the live realtime state — runKeywordSend
+            // (InteractiveChat-voice.ts) picks up the resulting VoiceIntent
+            // and does everything from there (composer + draft clearing,
+            // mic re-arm/close, audio retention) via the shared
+            // onVoiceIntent path, so nothing is duplicated here.
+            if (transcription.submitSegment({ closeMic: true })) return;
+            // Segment already settled (machine idle) — fall through to
+            // the direct-send path below.
+          }
+          // Continue from any prior composer text so it isn't dropped.
+          const text = joinTranscript(input, transcription.transcript).trim();
+          // Read synchronously, same render as `text` — no await between
+          // this and the click, so `transcription.finalWords` can't have
+          // gone stale (Fix D; contrast the mobile row's stop()-await path).
+          const words = transcription.finalWords;
+          transcription.cancel();
+          if (text) onVoiceSegmentSend(text, { words, spokenStart: spokenTextStart(input) });
+          setInput("");
+          // Segment committed — drop the persisted dictation draft.
+          clearDraft();
+        }}
+        disabled={!(isTranscribing ? joinTranscript(input, transcription.transcript) : input).trim()}
+        title={isTranscribing || !targetBusy ? "Send" : "Queue message (agent is busy)"}
+      />
     </div>
   );
 }
@@ -235,6 +265,11 @@ export function ChatInputArea({
           trigger={({ toggle, ariaProps }) => (
             <button
               type="button"
+              id="cb-composer-add"
+              data-cb-reveal
+              // The menu's contents are the whole point of the description —
+              // the scan cannot see inside a closed menu.
+              data-cb-does={`opens the attach menu — ${captureEnabled ? "capture, " : ""}attach file, upload files, send screenshot, share location`}
               onClick={toggle}
               className={`${CIRCLE_BTN} bg-warm-300 text-warm-700 hover:bg-warm-400 active:bg-warm-500`}
               title="Add"
@@ -265,6 +300,7 @@ export function ChatInputArea({
         {captureEnabled ? (
           <button
             type="button"
+            id="cb-composer-capture"
             onClick={onEnterCapture}
             disabled={captureDisabledReason !== undefined}
             className={`${CIRCLE_BTN} sm:hidden bg-warm-300 text-warm-700 hover:bg-warm-400 active:bg-warm-500 disabled:opacity-50 disabled:cursor-not-allowed`}

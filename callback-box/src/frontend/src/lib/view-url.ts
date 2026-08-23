@@ -11,6 +11,7 @@
 // runner's Node resolution too — view-url is unit-doctested outside the bundler.
 import { boxRelativePath } from "../../../shared/box-path.js";
 import { resolveRefPath } from "../../../shared/ref-path.js";
+import type { ControlAction } from "./ui-scan/types.js";
 
 export interface ViewTarget {
   /** File path relative to box root */
@@ -137,11 +138,70 @@ export function resolveRelativePath(basePath: string | undefined, relative: stri
   return resolveRefPath({ fromPath: basePath, ref: relative, kind: "card" });
 }
 
+/** The `control:` scheme: a pointer at a control in the running interface. */
+const CONTROL_SCHEME = "control:";
+
+/**
+ * A `control:` link, parsed. The id is an address into the live DOM
+ * (`src/frontend/src/lib/ui-scan/resolve.ts`); it is NOT validated here, so an
+ * ill-formed one classifies as `control` and renders broken at the point of use
+ * rather than silently becoming an inert `<a href="control:…">`.
+ */
+export interface ControlHref {
+  kind: "control";
+  /** The `cb-`-prefixed DOM id the pointer names. Never empty. */
+  id: string;
+  /** What the pointer asks the app to do. `point` unless another was given. */
+  action: ControlAction;
+  /** Agent-authored line shown beside the link, or null. */
+  description: string | null;
+  /**
+   * The `action` value that was not understood, when one was given and the
+   * pointer degraded to `point`; null when the action was honoured. A typo
+   * degrades the pointer rather than killing the whole link, and the renderer
+   * says so in the tooltip — degraded, but never silently.
+   */
+  unknownAction: string | null;
+}
+
+function isControlAction(value: string): value is ControlAction {
+  return value === "point" || value === "focus" || value === "reveal";
+}
+
+/**
+ * Parse `control:<id>[?action=…&description=…]`. An empty id has nothing to
+ * point at, so it falls through to the existing malformed-input path
+ * (`external`), exactly as an empty href does.
+ */
+function classifyControlHref(href: string): ControlHref | { kind: "external" } {
+  const value = href.slice(CONTROL_SCHEME.length);
+  const qIndex = value.indexOf("?");
+  const id = qIndex === -1 ? value : value.slice(0, qIndex);
+  if (id === "") return { kind: "external" };
+  const params = new URLSearchParams(qIndex === -1 ? "" : value.slice(qIndex + 1));
+  const rawAction = params.get("action");
+  const rawDescription = params.get("description");
+  const known = rawAction !== null && isControlAction(rawAction);
+  return {
+    kind: "control",
+    id,
+    action: known ? rawAction : "point",
+    description: rawDescription === null || rawDescription === "" ? null : rawDescription,
+    unknownAction: rawAction === null || known ? null : rawAction,
+  };
+}
+
 /**
  * Classify a markdown link href. A box file/card is referenced by a plain
  * relative or box-root-absolute path (`store/x.card`, `/store/x.card`); callers
  * `preventDefault` and hand a `relative` result to `onNavigate`. Anything with a
  * URL scheme, an anchor, or empty is `external` (a normal link).
+ *
+ * `control:` points at a control in the running interface rather than at
+ * content — `control:cb-composer-mic?action=point` — and is rendered by
+ * `components/ControlPointer.tsx`. It is checked before the generic scheme test
+ * below, which would otherwise send it down the `external` branch and render a
+ * dead `<a href="control:…">`.
  *
  * `legacy-view` is the retired `view:` scheme. It no longer routes anywhere; it
  * exists only so renderers can draw a visibly-broken "needs migration" marker
@@ -152,9 +212,11 @@ export function classifyMarkdownHref(
   href: string,
 ):
   | { kind: "legacy-view"; raw: string }
+  | ControlHref
   | { kind: "relative"; path: string }
   | { kind: "external" } {
   if (href.startsWith("view:")) return { kind: "legacy-view", raw: href };
+  if (href.startsWith(CONTROL_SCHEME)) return classifyControlHref(href);
   // Protocol-relative (`//host/x`) and any URL scheme (http:, mailto:, tel:,
   // data:, …) are external, not in-box paths.
   if (href.startsWith("//")) return { kind: "external" };

@@ -1,13 +1,23 @@
 ---
 title: "Let the agent see the interface and point at things in it"
-workstream: unattached
+workstream: points-at-ui
 area: callback-box
-needs: [design]
+design: ../../../callback-box/docs/plans/agent-points-at-ui.md
 labels: [chat, ui-sensibility]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder idea, with memory-atlas prior art
+resolution: implemented
 ---
+
+Implemented across the `points-at-ui` workstream (ui-scan library, `cb-`
+ids/annotations on the chat surface, `ControlPointer` + ring, `cb chat ui`
+routes/CLI/dump, prompt text, five passing knowledge audits, and the iOS V2
+bridge envelope with native registry + point/focus/reveal). See the plan's
+Status note (`callback-box/docs/plans/agent-points-at-ui.md`, "Status
+2026-08-23") for the one remaining gap: a `coverage: dom+native` dump has not
+been produced through a real paired WKWebView — that needs the boxholder's
+phone, so the plan itself stays `status: partial` pending that field check.
 
 When the boxholder asks *"where is that"* or *"how do I do X"* — usually by
 voice, phone in hand, not scanning the screen — I want the agent to look at what
@@ -165,13 +175,13 @@ stating in the design so the next reader does not read it as backsliding.
   `test/tours/tour-lib/browse.ts:75-79,130-143` parses refs out of it and clicks
   them. That is a developer instrument run against the dev router; the deployed
   box agent has no browser at all. Closing that gap is already filed as
-  [agent-browser scoped to a box](2026-06-12-agent-browser-scoped-to-box.md) —
+  [agent-browser scoped to a box](../../features/2026-06-12-agent-browser-scoped-to-box.md) —
   the "look at" half of this issue, from the self-verification angle.
 - **A channel for per-turn situational context.** `composeTurnContent`
   (`src/core/chat/session/start.ts:139-160`) already prepends a `<chat-app …/>`
   tag to every user turn. That is the natural place for a UI snapshot to ride,
   and it is the same seam
-  [screen-unfocused](2026-08-13-tell-the-agent-the-screen-is-unfocused.md) wants.
+  [screen-unfocused](../../features/2026-08-13-tell-the-agent-the-screen-is-unfocused.md) wants.
   Both want the client to tell the agent about the viewing situation.
 - **A tag vocabulary and a parser.** `parseTags.ts` is generic — a new tag needs
   only to be listed by its caller. The hand-rolled layer in
@@ -227,7 +237,7 @@ say "that one over there." Worth deciding before either is built.
 - **Voice.** A tappable link is useless to someone not looking. When narration is
   on, the agent needs to be able to *say* where a thing is and still leave the
   tappable reference in the transcript — the same two-sided problem as
-  [screen-unfocused](2026-08-13-tell-the-agent-the-screen-is-unfocused.md).
+  [screen-unfocused](../../features/2026-08-13-tell-the-agent-the-screen-is-unfocused.md).
 - **Staleness.** The snapshot describes the screen at send time. A long turn, or
   a user who navigates mid-answer, leaves the agent pointing at something gone.
   The pointer should fail visibly rather than highlight the wrong element —

@@ -17,6 +17,7 @@ import { getBoxTime } from "../lib/time.js";
 import { loadBoxTimezone } from "./box/config.js";
 import { getMostActiveSavedAt } from "./chat/session/history.js";
 import { composeChatAppSnapshot, type FeatureMap } from "./chat/features.js";
+import type { ChatChannel } from "../shared/chat-channel.js";
 import {
   loadScheduleHealth,
   summarizeScheduleHealth,
@@ -197,7 +198,7 @@ export async function composeSendSnapshot(
   { features, sessionStart, channel, openCard, activityChildren, healthGate }: {
     features: FeatureMap;
     sessionStart: boolean;
-    channel?: string;
+    channel?: ChatChannel;
     openCard?: string;
     activityChildren?: string;
     healthGate?: HealthGate;

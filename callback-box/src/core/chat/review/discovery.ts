@@ -35,6 +35,7 @@ import { resolveChatEngine } from "../session/engine.js";
 import { loadSessionHistory } from "../session/load-history.js";
 import { readCodexSessionUpdatedAt } from "../session/codex-transcript.js";
 import type { AgentEngine } from "../../box/config.js";
+import { stripChatAppTags } from "../../../shared/chat-tags.js";
 
 /**
  * How long a transcript must sit unmodified before it is reviewed — don't
@@ -245,11 +246,12 @@ async function qualifyHusk(
     ? await getSessionMetadata({ sessionId: husk.session, logPath, snippetMaxLen: 80 })
     : {
       userTurns: codexHistory.entries.filter((entry) => entry.type === "user").length,
-      firstUserSnippet: codexHistory.entries.find((entry) => entry.type === "user")?.content
+      // Strip the `<chat-app …/>` prepend before slicing, as the Claude path
+      // does via `getSessionMetadata`'s snippet extraction.
+      firstUserSnippet: stripChatAppTags(codexHistory.entries.find((entry) => entry.type === "user")?.content
         .filter((block) => block.type === "text")
         .map((block) => block.text ?? "")
-        .join("\n")
-        .slice(0, 80),
+        .join("\n") ?? "").trim().slice(0, 80),
     };
   if (meta.userTurns < REVIEW_MIN_USER_TURNS) {
     result.tooFewTurns += 1;

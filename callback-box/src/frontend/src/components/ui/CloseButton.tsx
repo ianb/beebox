@@ -4,6 +4,8 @@ export type CloseButtonSize = "sm" | "md";
 
 export interface CloseButtonProps {
   onClick: () => void;
+  /** DOM id. Set it to publish a `cb-` control address (docs/plans/agent-points-at-ui.md). */
+  id?: string;
   /** Accessible label. Default `"Close"`. Override for specifics ("Dismiss error", "Close preview"). */
   label?: string;
   size?: CloseButtonSize;
@@ -32,7 +34,7 @@ function XIcon({ size }: { size: CloseButtonSize }) {
   );
 }
 
-export function CloseButton({ onClick, label, size, onDark, disabled, className }: CloseButtonProps) {
+export function CloseButton({ onClick, id, label, size, onDark, disabled, className }: CloseButtonProps) {
   label = label ?? "Close";
   size = size ?? "md";
   onDark = onDark ?? false;
@@ -43,6 +45,7 @@ export function CloseButton({ onClick, label, size, onDark, disabled, className 
   return (
     <button
       type="button"
+      id={id}
       onClick={onClick}
       disabled={disabled}
       aria-label={label}

@@ -22,6 +22,7 @@ states=(
   stuck-pending
   expired-attachment
   keyboard-shown
+  control-registry
 )
 
 mkdir -p "$output_dir"

@@ -81,6 +81,7 @@ struct ChatWebView: UIViewRepresentable {
     var screenshotRequest: NativeScreenshotRequest?
     var speechStopRequest: NativeSpeechStopRequest?
     var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement]
+    var composerCommandResults: [NativeComposerCommandResult]
     var onSessionChange: (String?) -> Void
     var onEmissionDeliveryAttempt: (NativeChatEmission.ID) -> Void
     var onEmissionReceipt: (NativeEmissionReceipt) -> Void
@@ -92,6 +93,7 @@ struct ChatWebView: UIViewRepresentable {
     var onScreenshotResult: (NativeScreenshotResult) -> Void
     var onComposerCommand: (NativeComposerCommandDelivery) -> Void
     var onComposerCommandAcknowledgementDelivered: (String) -> Void
+    var onComposerCommandResultDelivered: (String) -> Void
     var onLastAudioRequest: (NativeLastAudioRequest) -> Void
     var onSpeechStopRequestSettled: (NativeSpeechStopRequest.ID) -> Void
 
@@ -103,6 +105,7 @@ struct ChatWebView: UIViewRepresentable {
         screenshotRequest: NativeScreenshotRequest? = nil,
         speechStopRequest: NativeSpeechStopRequest? = nil,
         composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = [],
+        composerCommandResults: [NativeComposerCommandResult] = [],
         onSessionChange: @escaping (String?) -> Void = { _ in },
         onEmissionDeliveryAttempt: @escaping (NativeChatEmission.ID) -> Void = { _ in },
         onEmissionReceipt: @escaping (NativeEmissionReceipt) -> Void = { _ in },
@@ -114,6 +117,7 @@ struct ChatWebView: UIViewRepresentable {
         onScreenshotResult: @escaping (NativeScreenshotResult) -> Void = { _ in },
         onComposerCommand: @escaping (NativeComposerCommandDelivery) -> Void = { _ in },
         onComposerCommandAcknowledgementDelivered: @escaping (String) -> Void = { _ in },
+        onComposerCommandResultDelivered: @escaping (String) -> Void = { _ in },
         onLastAudioRequest: @escaping (NativeLastAudioRequest) -> Void = { _ in },
         onSpeechStopRequestSettled: @escaping (NativeSpeechStopRequest.ID) -> Void = { _ in }
     ) {
@@ -124,6 +128,7 @@ struct ChatWebView: UIViewRepresentable {
         self.screenshotRequest = screenshotRequest
         self.speechStopRequest = speechStopRequest
         self.composerCommandAcknowledgements = composerCommandAcknowledgements
+        self.composerCommandResults = composerCommandResults
         self.onSessionChange = onSessionChange
         self.onEmissionDeliveryAttempt = onEmissionDeliveryAttempt
         self.onEmissionReceipt = onEmissionReceipt
@@ -135,6 +140,7 @@ struct ChatWebView: UIViewRepresentable {
         self.onScreenshotResult = onScreenshotResult
         self.onComposerCommand = onComposerCommand
         self.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
+        self.onComposerCommandResultDelivered = onComposerCommandResultDelivered
         self.onLastAudioRequest = onLastAudioRequest
         self.onSpeechStopRequestSettled = onSpeechStopRequestSettled
     }
@@ -181,6 +187,7 @@ struct ChatWebView: UIViewRepresentable {
         context.coordinator.onScreenshotResult = onScreenshotResult
         context.coordinator.onComposerCommand = onComposerCommand
         context.coordinator.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
+        context.coordinator.onComposerCommandResultDelivered = onComposerCommandResultDelivered
         context.coordinator.onLastAudioRequest = onLastAudioRequest
         context.coordinator.onSpeechStopRequestSettled = onSpeechStopRequestSettled
         context.coordinator.boxID = box.id
@@ -191,6 +198,7 @@ struct ChatWebView: UIViewRepresentable {
         context.coordinator.screenshotRequest = screenshotRequest
         context.coordinator.speechStopRequest = speechStopRequest
         context.coordinator.composerCommandAcknowledgements = composerCommandAcknowledgements
+        context.coordinator.composerCommandResults = composerCommandResults
         if webView.url == nil {
             webView.load(request())
         }
@@ -199,6 +207,7 @@ struct ChatWebView: UIViewRepresentable {
         context.coordinator.deliverLocationRequest(to: webView)
         context.coordinator.captureScreenshot(from: webView)
         context.coordinator.deliverComposerCommandAcknowledgements(to: webView)
+        context.coordinator.deliverComposerCommandResults(to: webView)
         context.coordinator.deliverSpeechStopRequest(to: webView)
     }
 
@@ -217,6 +226,7 @@ struct ChatWebView: UIViewRepresentable {
             onScreenshotResult: onScreenshotResult,
             onComposerCommand: onComposerCommand,
             onComposerCommandAcknowledgementDelivered: onComposerCommandAcknowledgementDelivered,
+            onComposerCommandResultDelivered: onComposerCommandResultDelivered,
             onLastAudioRequest: onLastAudioRequest,
             onSpeechStopRequestSettled: onSpeechStopRequestSettled
         )
@@ -236,6 +246,7 @@ struct ChatWebView: UIViewRepresentable {
         var onScreenshotResult: (NativeScreenshotResult) -> Void
         var onComposerCommand: (NativeComposerCommandDelivery) -> Void
         var onComposerCommandAcknowledgementDelivered: (String) -> Void
+        var onComposerCommandResultDelivered: (String) -> Void
         var onLastAudioRequest: (NativeLastAudioRequest) -> Void
         var onSpeechStopRequestSettled: (NativeSpeechStopRequest.ID) -> Void
         var pendingEmissions: [NativeChatEmission] = []
@@ -244,6 +255,8 @@ struct ChatWebView: UIViewRepresentable {
         var screenshotRequest: NativeScreenshotRequest?
         var speechStopRequest: NativeSpeechStopRequest?
         var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = []
+        var composerCommandResults: [NativeComposerCommandResult] = []
+        private var receiptTimeouts: [NativeChatEmission.ID: DispatchWorkItem] = [:]
         /// The delivery attempt currently in flight for each emission ID, keyed
         /// by ID and valued by the attempt's generation. Redelivery abandons an
         /// attempt and starts a new one under the SAME emission ID, so an ID
@@ -259,6 +272,7 @@ struct ChatWebView: UIViewRepresentable {
         private var inflightScreenshotRequestID: NativeScreenshotRequest.ID?
         private var inflightSpeechStopRequestID: NativeSpeechStopRequest.ID?
         private var inflightComposerCommandAcknowledgementIDs = Set<String>()
+        private var inflightComposerCommandResultIDs = Set<String>()
         private var pageLoaded: Bool
         /// One log line per transition into navigation failure; cleared by the
         /// next successful load.
@@ -284,8 +298,10 @@ struct ChatWebView: UIViewRepresentable {
             onScreenshotResult: @escaping (NativeScreenshotResult) -> Void,
             onComposerCommand: @escaping (NativeComposerCommandDelivery) -> Void,
             onComposerCommandAcknowledgementDelivered: @escaping (String) -> Void,
+            onComposerCommandResultDelivered: @escaping (String) -> Void = { _ in },
             onLastAudioRequest: @escaping (NativeLastAudioRequest) -> Void = { _ in },
             onSpeechStopRequestSettled: @escaping (NativeSpeechStopRequest.ID) -> Void = { _ in },
+            receiptTimeoutDelay: TimeInterval = 35,
             pageLoaded: Bool = false,
             evaluateEmission: ((String, @escaping (Error?) -> Void) -> Void)? = nil,
             openExternalURL: @escaping (URL) -> Void = { UIApplication.shared.open($0) },
@@ -306,8 +322,10 @@ struct ChatWebView: UIViewRepresentable {
             self.onScreenshotResult = onScreenshotResult
             self.onComposerCommand = onComposerCommand
             self.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
+            self.onComposerCommandResultDelivered = onComposerCommandResultDelivered
             self.onLastAudioRequest = onLastAudioRequest
             self.onSpeechStopRequestSettled = onSpeechStopRequestSettled
+            self.receiptTimeoutDelay = receiptTimeoutDelay
             self.pageLoaded = pageLoaded
             self.evaluateEmission = evaluateEmission
             self.openExternalURL = openExternalURL
@@ -324,6 +342,7 @@ struct ChatWebView: UIViewRepresentable {
             deliverLocationRequest(to: webView)
             captureScreenshot(from: webView)
             deliverComposerCommandAcknowledgements(to: webView)
+            deliverComposerCommandResults(to: webView)
         }
 
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
@@ -347,6 +366,7 @@ struct ChatWebView: UIViewRepresentable {
                 onSpeechStopRequestSettled(request.id)
             }
             inflightComposerCommandAcknowledgementIDs.removeAll()
+            inflightComposerCommandResultIDs.removeAll()
         }
 
         func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
@@ -750,6 +770,37 @@ struct ChatWebView: UIViewRepresentable {
             }
         }
 
+        /// Post the answers to V2 commands into the page.
+        ///
+        /// Mirrors the acknowledgement delivery beside it — same inflight set,
+        /// same "clear on delivery" handshake — because it is the same problem:
+        /// `evaluateJavaScript` can be called before the page is ready, twice, or
+        /// against a page that has navigated away. The web side's queue is
+        /// authoritative and the event is only a wake signal, so a result that
+        /// lands before the scan subscribed is still read.
+        func deliverComposerCommandResults(to webView: WKWebView) {
+            guard pageLoaded else {
+                return
+            }
+            for result in composerCommandResults
+            where inflightComposerCommandResultIDs.contains(result.id) == false {
+                guard let detail = Self.javascriptDetail(for: result) else {
+                    continue
+                }
+                inflightComposerCommandResultIDs.insert(result.id)
+                let script = "window.callbackboxNativeCommandResult(\(detail));"
+                webView.evaluateJavaScript(script) { [weak self] _, error in
+                    guard let self else {
+                        return
+                    }
+                    self.inflightComposerCommandResultIDs.remove(result.id)
+                    if error == nil {
+                        self.onComposerCommandResultDelivered(result.id)
+                    }
+                }
+            }
+        }
+
         /// Tell the page to stop speaking. Unacknowledged by design (contract
         /// §4.9): the microphone is already open, and the speech-playback state
         /// the page posts anyway reports whether the speech actually stopped.
@@ -830,6 +881,13 @@ struct ChatWebView: UIViewRepresentable {
 
         private static func javascriptDetail(for acknowledgement: NativeComposerCommandAcknowledgement) -> String? {
             guard let data = try? JSONEncoder().encode(acknowledgement) else {
+                return nil
+            }
+            return String(data: data, encoding: .utf8)
+        }
+
+        private static func javascriptDetail(for result: NativeComposerCommandResult) -> String? {
+            guard let data = try? JSONEncoder().encode(result) else {
                 return nil
             }
             return String(data: data, encoding: .utf8)
@@ -944,6 +1002,7 @@ struct ChatWebView: UIViewRepresentable {
           window.callbackboxNativeQueue = window.callbackboxNativeQueue || [];
           window.callbackboxNativeLocationQueue = window.callbackboxNativeLocationQueue || [];
           window.callbackboxNativeComposerCommandAckQueue = window.callbackboxNativeComposerCommandAckQueue || [];
+          window.callbackboxNativeCommandResultQueue = window.callbackboxNativeCommandResultQueue || [];
           window.callbackboxNativeSpeechCommandQueue = window.callbackboxNativeSpeechCommandQueue || [];
           window.callbackboxNativeReceive = (detail) => {
             window.callbackboxNativeQueue.push(detail);
@@ -961,6 +1020,15 @@ struct ChatWebView: UIViewRepresentable {
           window.callbackboxNativeComposerCommandAck = (detail) => {
             window.callbackboxNativeComposerCommandAckQueue.push(detail);
             window.dispatchEvent(new CustomEvent('callbackbox:native-composer-command-ack'));
+          };
+          // The answer to a V2 command (contract §4.8). Separate from the ack
+          // above: the ack says whether native took the command, this says what
+          // the command produced. Queue is authoritative; the event is a wake
+          // signal. Keep in sync with
+          // callback-box/src/frontend/src/components/chat/native-control-scan.ts.
+          window.callbackboxNativeCommandResult = (detail) => {
+            window.callbackboxNativeCommandResultQueue.push(detail);
+            window.dispatchEvent(new CustomEvent('callbackbox:native-command-result'));
           };
           // Neutral web→native transport shared with the Android shell; the web
           // layer prefers it over direct webkit.messageHandlers access.

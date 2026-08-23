@@ -33,127 +33,22 @@ import { makeRecipeComponents } from "./RecipeTags";
 import { RedactedInline, RedactedBlock } from "./Redacted";
 import { makeTodoComponents } from "./Todo";
 import { makeSeeAlsoComponent } from "./SeeAlso";
+import { makeLink, type LinkContext } from "./markdown-link";
 import { Image } from "./ui/Image";
 import { VideoEmbed } from "./ui/VideoEmbed";
 import { detectVideoEmbed } from "../lib/video-url";
 import {
-  classifyMarkdownHref,
   externalImageProxyUrl,
-  resolveContentTarget,
   resolveImageSrc,
   resolveRelativePath,
-  serializeViewUrl,
   type NavigateHint,
   type ViewTarget,
 } from "../lib/view-url";
-import { withBase } from "../api";
 import { parseMarkdown } from "../lib/markdoc-parse";
-import { isRecord } from "@shared/is-record";
 import type { ReactNode } from "react";
 
 // Parsing goes through `parseMarkdown` (linkify-enabled) rather than the raw
 // `parse` — see lib/markdoc-parse.ts.
-
-export interface LinkContext {
-  onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
-  basePath: string | undefined;
-  boxSlug: string | undefined;
-  /**
-   * Optional: jump to a quoted span in a sibling pane (e.g. the saved page
-   * beside a commentary). Given the verbatim quote text; resolves true if it
-   * found and scrolled to the span, false to fall back to navigation.
-   */
-  onJumpToQuote: ((quoteText: string) => Promise<boolean>) | undefined;
-}
-
-function viewHref(boxSlug: string | undefined, target: ViewTarget): string {
-  return withBase(`/${boxSlug ?? ""}/views/${serializeViewUrl(target)}`);
-}
-
-function flattenText(node: unknown): string {
-  if (typeof node === "string" || typeof node === "number") return String(node);
-  if (node === null || node === undefined || typeof node === "boolean") return "";
-  if (Array.isArray(node)) return node.map(flattenText).join("");
-  if (isRecord(node) && isRecord(node.props) && "children" in node.props) {
-    return flattenText(node.props.children);
-  }
-  return "";
-}
-
-/**
- * Render a markdown link. A box file/card is referenced by a plain relative or
- * box-root-absolute path — resolved against the document's `basePath` and handed
- * to the caller's `onNavigate` (which opens it in the surrounding surface).
- * Everything else opens as a normal external link. A retired `view:` link
- * renders as a visibly-broken "legacy link" marker (see `classifyMarkdownHref`).
- * Empty/non-string hrefs render as a plain anchor (defensive against malformed
- * input).
- */
-function makeLink(ctx: LinkContext): React.ComponentType<{ href?: string; title?: string; children?: ReactNode }> {
-  return function Link({ href, title, children }) {
-    if (typeof href !== "string" || href === "") {
-      // No href to link to (malformed input) — render as inline text, not an
-      // `<a>` with no destination, which is unreachable by keyboard/screen
-      // reader and fails jsx-a11y/anchor-is-valid.
-      return <span title={title}>{children}</span>;
-    }
-    const classified = classifyMarkdownHref(href);
-    if (classified.kind === "legacy-view") {
-      return (
-        <BrokenLink title="Legacy view: link — needs migration to a plain path">{children}</BrokenLink>
-      );
-    }
-    if (classified.kind === "relative") {
-      const target = resolveContentTarget(ctx.basePath, classified.path);
-      if (target === null) {
-        // The path climbs out of the box root, so it names no file we can open.
-        // Draw the same visibly-broken marker a retired `view:` link gets rather
-        // than linking to a clamped-to-root guess (the pre-2026-07-30 behavior).
-        return <BrokenLink title={`Link escapes the box root: ${href}`}>{children}</BrokenLink>;
-      }
-      const resolvedHref = viewHref(ctx.boxSlug, target);
-      return (
-        <a
-          href={resolvedHref}
-          title={title}
-          onClick={(e) => {
-            if (e.defaultPrevented) return;
-            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-            e.preventDefault();
-            const label = flattenText(children).trim();
-            ctx.onNavigate(target, label ? { label } : undefined);
-          }}
-        >
-          {children}
-        </a>
-      );
-    }
-    const isExternal = href.startsWith("http://") || href.startsWith("https://");
-    if (isExternal) {
-      return (
-        <a href={href} title={title} target="_blank" rel="noopener noreferrer">
-          {children}
-        </a>
-      );
-    }
-    return <a href={href} title={title}>{children}</a>;
-  };
-}
-
-/**
- * A link that leads nowhere: a retired `view:` link (removable once all
- * controlled boxes are migrated off the scheme), or a path that escapes the box
- * root. Renders as a visibly-disabled marker with the reason in its tooltip, so
- * the content reads as broken-on-sight rather than as a silently-inert
- * `<a href="view:…">` or a link to some other file.
- */
-function BrokenLink({ title, children }: { title: string; children?: ReactNode }) {
-  return (
-    <span className="cursor-not-allowed text-danger-dark underline decoration-dotted" title={title}>
-      {children}
-    </span>
-  );
-}
 
 export function makeImg(ctx: LinkContext): React.ComponentType<{ src?: string; alt?: string; title?: string }> {
   return function Img({ src, alt, title }) {
