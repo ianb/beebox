@@ -1,4 +1,4 @@
-import { useReducer, useRef, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useReducer, useRef, type CSSProperties, type ReactNode } from "react";
 import { useLightbox } from "../LightboxProvider";
 import { cn } from "../../lib/cn";
 import { useImageRetry } from "../../hooks/use-image-retry";
@@ -300,6 +300,27 @@ export function Image(props: ImageProps) {
     failedImageUrls.add(displaySrc);
     bumpAfterError();
   };
+
+  // A failure that happens BEFORE React attaches `onError` is never delivered:
+  // the synthetic handler is wired after the element exists, and a fast or
+  // cached 404 has already fired `error` by then. The image then sits at the
+  // browser's own broken glyph forever, with no placeholder — which is what an
+  // in-box 404 looked like in practice, including across reloads, because the
+  // second load fails exactly as quickly as the first.
+  //
+  // `complete` with a zero `naturalWidth` is the DOM's record of that: the
+  // browser finished, and there are no pixels. Checking it once on mount
+  // recovers the event React missed.
+  useEffect(() => {
+    const el = imgRef.current;
+    if (el === null || errored) return;
+    if (el.complete && el.naturalWidth === 0 && el.getAttribute("src") !== null) {
+      handleError();
+    }
+    // `displaySrc` so a changed source is re-checked; `errored` so a placeholder
+    // already showing does not re-enter.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- handleError is redefined every render; depending on it would re-run this on every render rather than on a source change.
+  }, [displaySrc, errored]);
 
   const rotationStyle: CSSProperties | undefined =
     rotation !== 0 ? { transform: `rotate(${rotation}deg)` } : undefined;
