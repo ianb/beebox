@@ -30,18 +30,21 @@ console.warn = () => {};
 
 ## Registry lookups
 
-The initial registry has two features. Both are toggle-shaped with
+The initial registry has three features. All are toggle-shaped with
 `on`/`off` values.
 
 ```ts
 listFeatures().map((f) => f.name).join(",")
-=> narration,prose
+=> narration,prose,hq-dictation
 
 getFeature("narration")?.default
 => off
 
 getFeature("prose")?.default
 => on
+
+getFeature("hq-dictation")?.default
+=> off
 
 getFeature("nope")
 => null
@@ -68,7 +71,7 @@ isValidValue("nope", "on")
 
 ```ts
 JSON.stringify(getDefaults())
-=> {"narration":"off","prose":"on"}
+=> {"narration":"off","prose":"on","hq-dictation":"off"}
 ```
 
 `resolveFeatures()` merges stored values over defaults, dropping
@@ -77,13 +80,13 @@ caller can ignore).
 
 ```ts
 JSON.stringify(resolveFeatures())
-=> {"narration":"off","prose":"on"}
+=> {"narration":"off","prose":"on","hq-dictation":"off"}
 
 JSON.stringify(resolveFeatures({ narration: "on" }))
-=> {"narration":"on","prose":"on"}
+=> {"narration":"on","prose":"on","hq-dictation":"off"}
 
 JSON.stringify(resolveFeatures({ narration: "on", bogus: "yes", prose: "wrong" }))
-=> {"narration":"on","prose":"on"}
+=> {"narration":"on","prose":"on","hq-dictation":"off"}
 ```
 
 Null and undefined both mean "no stored values" — the result is pure
@@ -91,7 +94,7 @@ defaults.
 
 ```ts
 JSON.stringify(resolveFeatures(null))
-=> {"narration":"off","prose":"on"}
+=> {"narration":"off","prose":"on","hq-dictation":"off"}
 ```
 
 ## Seeding a new session
@@ -144,7 +147,7 @@ Attributes are emitted in registry order.
 composeChatAppSnapshot({
   features: { narration: "on", prose: "off" },
 })
-=> <chat-app narration="on" prose="off"/>
+=> <chat-app narration="on" prose="off" hq-dictation="off"/>
 ```
 
 Missing keys fall back to defaults — the snapshot always carries every
@@ -154,7 +157,7 @@ registered feature, never a partial map.
 composeChatAppSnapshot({
   features: {},
 })
-=> <chat-app narration="off" prose="on"/>
+=> <chat-app narration="off" prose="on" hq-dictation="off"/>
 ```
 
 The optional context attributes (computed by `session-context.ts`)
@@ -170,7 +173,7 @@ composeChatAppSnapshot({
   channel: "web-mobile",
   lastActivity: "3 days ago",
 })
-=> <chat-app narration="off" prose="on" local-time="Wednesday 2026-05-13 10:00 (morning)" channel="web-mobile" last-activity="3 days ago"/>
+=> <chat-app narration="off" prose="on" hq-dictation="off" local-time="Wednesday 2026-05-13 10:00 (morning)" channel="web-mobile" last-activity="3 days ago"/>
 ```
 
 The companion-pane `open-card` attribute (box-relative path) rides on every send
@@ -183,7 +186,7 @@ composeChatAppSnapshot({
   features: {},
   openCard: "store/notes/Trip.memo.card",
 })
-=> <chat-app narration="off" prose="on" open-card="store/notes/Trip.memo.card"/>
+=> <chat-app narration="off" prose="on" hq-dictation="off" open-card="store/notes/Trip.memo.card"/>
 ```
 
 Companion-pane activity rides as `<card-activity>` child elements (rendered by
@@ -196,7 +199,7 @@ composeChatAppSnapshot({
   openCard: "store/notes/Trip.memo.card",
   activityChildren: '<card-activity kind="scrolled"/>\n<card-activity kind="explored">boat-water+road -> boats</card-activity>',
 })
-=> <chat-app narration="off" prose="on" open-card="store/notes/Trip.memo.card">
+=> <chat-app narration="off" prose="on" hq-dictation="off" open-card="store/notes/Trip.memo.card">
 <card-activity kind="scrolled"/>
 <card-activity kind="explored">boat-water+road -> boats</card-activity>
 </chat-app>

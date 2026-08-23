@@ -141,6 +141,7 @@ function StateBlock({ spec }: { spec: Spec }) {
     finalWords: null,
     start: noop,
     stop: () => Promise.resolve({ text: spec.transcript, words: null }),
+    submitSegment: noop,
     cancel: noop,
   };
   const targetBusy = chatTargetStatus({ isStreaming: spec.isStreaming, processBusy: false }).state === "busy";
@@ -166,6 +167,7 @@ function StateBlock({ spec }: { spec: Spec }) {
       onEnterCapture={noop}
       captureEnabled
       narrationEnabled={spec.narrationEnabled}
+      hqDictationEnabled={false}
     />
   );
   const mobileRow = (
@@ -178,6 +180,7 @@ function StateBlock({ spec }: { spec: Spec }) {
       clearDraft={noop}
       onStopDictation={noop}
       onVoiceSegmentSend={noop}
+      hqDictationEnabled={false}
     />
   );
   const targetStrip = (
