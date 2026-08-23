@@ -2,16 +2,42 @@
 title: "A switch for always-HQ dictation, separate from narration mode"
 workstream: transcript-confidence
 area: callback-box
-needs: [design]
+needs: [manual-testing]
 labels: [voice, transcription, chat]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder wanting HQ dictation without narration mode
 ---
 
+> **⏳ Awaiting manual testing** — implemented on `worktree-transcript-confidence`
+> and landed on main (design: `callback-box/docs/plans/hq-dictation-switch.md`;
+> commits through `082d21f3`); see [Manual testing](#manual-testing). Only the
+> developer clears this.
+
 > There should be a switch, maybe like model selection, to get HQ dictation
 > always. Right now it's conflated with narration mode, but maybe doesn't need
 > to be.
+
+## Manual testing
+
+What shipped: an "HQ dictation" toggle in the voice menu beside Narration mode
+(independent of it); with it on, keyword sends AND tap-sends route through the
+HQ pass (tap-send shows the same pending-draft wait narration does); HQ-text
+messages carry `stt="hq"` on their `<speech>` wrapper, and the chat prompt's
+retranscribe guidance tells the agent to skip retranscription for them.
+
+To try (needs a real microphone):
+
+1. Toggle HQ dictation on (narration OFF). Dictate with a keyword send and
+   with a tap-send — both should commit the HQ text (slower, better words, no
+   `<unsure>` marks) and carry `stt="hq"` in the session JSONL.
+2. Ask the agent to double-check a marked-feeling word on an HQ message — it
+   should decline to retranscribe (or say it's already the best pass) rather
+   than spend the turn; `ask-about-audio` should still work normally.
+3. Toggle off mid-conversation and dictate again — back to realtime text
+   (marks possible, `stt="deepgram"` or absent), confirming the per-message
+   stamp tracks the flip.
+4. Confirm narration mode still behaves as before, on its own switch.
 
 ## The conflation, in one line
 

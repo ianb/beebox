@@ -1,6 +1,6 @@
 ---
 title: "An always-HQ dictation switch, separate from narration mode"
-status: draft
+status: implemented
 workstream: transcript-confidence
 issues:
   - ../../../issues/features/2026-08-22-hq-dictation-switch-separate-from-narration.md
