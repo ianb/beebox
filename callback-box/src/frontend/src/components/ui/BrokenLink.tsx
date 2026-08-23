@@ -14,7 +14,7 @@ import type { ReactNode } from "react";
  */
 export function BrokenLink({ title, children }: { title: string; children?: ReactNode }) {
   return (
-    <span className="cursor-not-allowed text-danger-dark underline decoration-dotted" title={title}>
+    <span className="cursor-not-allowed text-danger-dark line-through decoration-dotted opacity-80" title={title}>
       {children}
     </span>
   );
