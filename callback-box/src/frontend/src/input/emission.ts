@@ -66,6 +66,17 @@ export interface Emission {
    * when `words` is defined.
    */
   readonly spokenStart?: number;
+  /**
+   * Set when the committed text came from an HQ transcription pass — the
+   * always-HQ switch, narration mode, or an explicit "send HQ" keyword
+   * (docs/plans/hq-dictation-switch.md). The assembler stamps `stt="hq"` for
+   * it; mutually exclusive with `words` (an HQ pass always drops the
+   * realtime words it replaced — the pre-existing HQ-drop rule — so a
+   * message is never both `stt="hq"` and `stt="deepgram"`). A minimal typed
+   * bit rather than a string: nothing downstream needs to know which HQ
+   * backend ran, only that retranscription has nothing to add.
+   */
+  readonly hqText?: true;
 }
 
 /**
@@ -120,6 +131,8 @@ interface VoiceEmissionInput {
   words?: readonly FinalWord[];
   /** See `Emission.spokenStart`. */
   spokenStart?: number;
+  /** See `Emission.hqText`. */
+  hqText?: true;
 }
 
 /**
@@ -139,5 +152,6 @@ export function createVoiceEmission(input: VoiceEmissionInput): Emission {
     diarized: input.diarized,
     words: input.words,
     spokenStart: input.spokenStart,
+    hqText: input.hqText,
   };
 }

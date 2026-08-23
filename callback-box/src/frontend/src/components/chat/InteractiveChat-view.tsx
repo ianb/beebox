@@ -118,7 +118,7 @@ function BarChromeRegion(props: ChatBodyProps) {
     sessionId, processRunning, isStreaming, debugView, setDebugView, showDebugLog, setShowDebugLog,
   } = props;
   const { onZoomView } = tabs;
-  const { agentEngine, selectedModel, narrationEnabled, handleToggleNarration, handleSelectModel } = model;
+  const { agentEngine, selectedModel, narrationEnabled, handleToggleNarration, hqDictationEnabled, handleToggleHqDictation, handleSelectModel } = model;
   return (
     <ChatBarChrome
       contextDir={effectiveContextDir}
@@ -130,6 +130,8 @@ function BarChromeRegion(props: ChatBodyProps) {
       onToggleMute={mute.handleToggleMute}
       narrationEnabled={narrationEnabled}
       onToggleNarration={handleToggleNarration}
+      hqDictationEnabled={hqDictationEnabled}
+      onToggleHqDictation={handleToggleHqDictation}
       hqInFlight={voice.hqInFlight}
       onNewSession={actions.handleNewSession}
       selectedModel={selectedModel}
@@ -192,8 +194,7 @@ function MessageListRegion(props: ChatBodyProps) {
 function ComposerRegion(props: ChatBodyProps) {
   const {
     model, voice, recoveredDictation, expiredAttachmentsNotice, attach, selections, actions, isStreaming, processBusy, textareaRef,
-    typingMode, setTypingMode, typingLocked, setTypingLocked, onVoiceSegmentSend, onEnterCapture, captureEnabled,
-    captureDisabledReason,
+    typingMode, setTypingMode, typingLocked, setTypingLocked, onVoiceSegmentSend, onEnterCapture, captureEnabled, captureDisabledReason,
   } = props;
   const { transcription, isTranscribing, voicePaused, stopDictation, clearDraft, handleCancelTranscription, startVoice, unpauseVoice } = voice;
   const { fileInputRef, removeAttachment, removeFileAttachment, handleAddFiles, handleFileInputChange, addFiles } = attach;
@@ -247,6 +248,7 @@ function ComposerRegion(props: ChatBodyProps) {
           captureEnabled={captureEnabled}
           captureDisabledReason={captureDisabledReason}
           narrationEnabled={model.narrationEnabled}
+          hqDictationEnabled={model.hqDictationEnabled}
         />
       }
       mobileRow={
@@ -261,6 +263,7 @@ function ComposerRegion(props: ChatBodyProps) {
           onVoiceSegmentSend={onVoiceSegmentSend}
           onPaste={handlePaste}
           onDrop={handleDrop}
+          hqDictationEnabled={model.hqDictationEnabled}
         />
       }
     />

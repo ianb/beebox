@@ -2794,6 +2794,13 @@ test1:
       peak: 52352
       added: 0
       turns: 2
+    - date: 2026-08-23T14:48:50.848Z
+      boxCommit: ae23e166238856a486c88f8e37200fb05cd27718
+      repoCommit: 5209087612da8caac8ed653066290cd618f9beb6
+      initial: 53620
+      peak: 53620
+      added: 0
+      turns: 1
   views-write-conflict-safe:
     - date: 2026-07-03T12:10:11.783Z
       boxCommit: ace0632a8b2fad06e6e6bd1d312197b3b19c6ff0
@@ -3792,6 +3799,13 @@ test1:
       peak: 51364
       added: 0
       turns: 2
+    - date: 2026-08-23T14:48:37.439Z
+      boxCommit: ae23e166238856a486c88f8e37200fb05cd27718
+      repoCommit: 5209087612da8caac8ed653066290cd618f9beb6
+      initial: 53684
+      peak: 53684
+      added: 0
+      turns: 1
   secrets-provisioning:
     - date: 2026-08-18T01:31:04.241Z
       boxCommit: 9e0a78f2811de86e947189f93f96b95999386198

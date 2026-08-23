@@ -26,6 +26,12 @@ export interface TranscriptionHandle {
   finalWords: readonly FinalWord[] | null;
   start: () => void;
   stop: () => Promise<{ text: string; words: readonly FinalWord[] | null }>;
+  /**
+   * Manual stop-and-send routed through the HQ slow path (see
+   * useRealtimeTranscription). False = nothing to park (segment already
+   * settled) — the caller falls back to its direct-send path.
+   */
+  submitSegment: (opts: { closeMic: boolean }) => boolean;
   cancel: () => void;
 }
 
@@ -40,7 +46,7 @@ const SEND_PATH = "M5 10l7-7m0 0l7 7m-7-7v18";
 function DesktopComposerRow({
   textareaRef, input, setInput, isTranscribing, transcription, targetBusy,
   handleKeyDown, handleSend, handleCancelTranscription, clearDraft,
-  onStopDictation, onVoiceSegmentSend, onPaste, onDrop,
+  onStopDictation, onVoiceSegmentSend, onPaste, onDrop, hqDictationEnabled,
 }: {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   input: string;
@@ -57,6 +63,8 @@ function DesktopComposerRow({
   onVoiceSegmentSend: VoiceSegmentSend;
   onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
+  /** docs/plans/hq-dictation-switch.md, chunk 2: routes stop-and-send through the HQ slow path. */
+  hqDictationEnabled: boolean;
 }) {
   return (
     <div className="hidden sm:flex flex-1 items-center gap-2 min-w-0">
@@ -104,6 +112,19 @@ function DesktopComposerRow({
           </button>
           <button
             onClick={() => {
+              if (hqDictationEnabled) {
+                // Route through the same finalize→blob→HQ slow path a
+                // spoken send keyword takes (docs/plans/
+                // hq-dictation-switch.md, chunk 2) instead of building the
+                // emission here from the live realtime state — runKeywordSend
+                // (InteractiveChat-voice.ts) picks up the resulting VoiceIntent
+                // and does everything from there (composer + draft clearing,
+                // mic re-arm/close, audio retention) via the shared
+                // onVoiceIntent path, so nothing is duplicated here.
+                if (transcription.submitSegment({ closeMic: true })) return;
+                // Segment already settled (machine idle) — fall through to
+                // the direct-send path below.
+              }
               // Continue from any prior composer text so it isn't dropped.
               const text = joinTranscript(input, transcription.transcript).trim();
               // Read synchronously, same render as `text` — no await between
@@ -152,7 +173,7 @@ export function ChatInputArea({
   onKeyboard, onVoice, onStopDictation, onVoiceSegmentSend,
   voicePaused, onUnpause, hideMobile,
   onPaste, onDrop, onAddFiles, addFiles, onEnterCapture, captureEnabled, captureDisabledReason,
-  narrationEnabled,
+  narrationEnabled, hqDictationEnabled,
 }: {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   isTranscribing: boolean;
@@ -184,6 +205,8 @@ export function ChatInputArea({
   /** When set, the capture affordance renders disabled with this tooltip (X1). */
   captureDisabledReason?: string | undefined;
   narrationEnabled: boolean;
+  /** docs/plans/hq-dictation-switch.md, chunk 2: routes stop-and-send through the HQ slow path. */
+  hqDictationEnabled: boolean;
 }) {
   // Subscribing read of the composer text — this is the component a keystroke
   // re-renders (and its small button-bar subtree), not the chat at large.
@@ -270,6 +293,7 @@ export function ChatInputArea({
           onVoiceSegmentSend={onVoiceSegmentSend}
           onPaste={onPaste}
           onDrop={onDrop}
+          hqDictationEnabled={hqDictationEnabled}
         />
 
         {/* Mobile: spacer */}
