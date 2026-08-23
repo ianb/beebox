@@ -13,13 +13,13 @@ import { isRecord } from "@shared/is-record";
 import { type ViewTarget } from "../../lib/view-url";
 import { Sidebar } from "../../components/Sidebar";
 import { trpc } from "../../lib/trpc";
-import { BrowseSidebarList } from "./components/BrowseSidebarList";
 import { BrowseBreadcrumbs } from "./components/BrowseBreadcrumbs";
 import { BrowseDetailPanel } from "./components/BrowseDetailPanel";
 import { BrowseContextMenu } from "./components/BrowseContextMenu";
 import { Row } from "../../components/ui/Row";
 import { Column } from "../../components/ui/Column";
 import { Text } from "../../components/ui/Text";
+import { BrowseSidebarBody } from "./components/BrowseSidebarBody";
 import { useDocumentTitle } from "../../hooks/useDocumentTitle";
 import { RequestError } from "../../lib/errors";
 import { attachDirOwnerBasename, isAttachDirName } from "@shared/attach-path";
@@ -184,7 +184,7 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
     [currentPath, onNavigate, urlParams],
   );
 
-  const { data, isLoading: loading } = trpc.status.browse.useQuery({ path: dirPath });
+  const { data, isLoading: loading, isError, error: browseError, refetch } = trpc.status.browse.useQuery({ path: dirPath });
   useBrowseListLiveRefresh(dirPath);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -282,18 +282,17 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
       <Sidebar title="Browse" subtitle={dirPath || "/"} detailSelected={hasDetail}>
         <Column>
           <BrowseBreadcrumbs dirPath={dirPath} onNavigate={onNavigate} />
-          {data ? (
-            <BrowseSidebarList
-              data={data}
-              dirPath={dirPath}
-              loading={loading}
-              onNavigate={onNavigate}
-              selectedFilePath={selectedFilePath}
-              onFileContextMenu={handleFileContextMenu}
-            />
-          ) : loading ? (
-            <Text as="div" size="sm" tone="subtle" className="p-4">Loading...</Text>
-          ) : null}
+          <BrowseSidebarBody
+            data={data}
+            loading={loading}
+            isError={isError}
+            error={browseError}
+            onRetry={() => { void refetch(); }}
+            dirPath={dirPath}
+            selectedFilePath={selectedFilePath}
+            onNavigate={onNavigate}
+            onFileContextMenu={handleFileContextMenu}
+          />
         </Column>
       </Sidebar>
 
