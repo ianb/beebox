@@ -63,3 +63,14 @@ separate weekly runs, both two-for-two on the full timeout, rules out a
 one-off fluke — this now looks like a standing condition on this machine
 rather than an isolated slow poll. Still unconfirmed which of the two
 candidate explanations above applies.
+
+## 2026-08-23 recurrence
+
+Third consecutive weekly run, same shape: warning on both turns of
+`chat-queue-real.doctest.md`, exit status still 0. Run log:
+`logs/manual-tests/2026-08-23T151704Z-74009.log` (lines 35, 39), repo
+`b6171b95`. Entry UUIDs `e03a5ab0-51a6-49cc-9ea8-a1ef8fe97c04` and
+`85dfeaf2-738a-4251-af2a-92607403b017`, session
+`1a8b1b44-d384-4b56-9be0-fa42c49d0c30`. Three-for-three across three weeks
+confirms this is a standing condition, not noise — still unconfirmed which
+of the two candidate explanations above applies.
