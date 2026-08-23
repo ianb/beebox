@@ -171,6 +171,48 @@ JSON.stringify(classifyMarkdownHref("#anchor"))
 => {"kind":"external"}
 ```
 
+### control: pointers
+
+`control:` points at a control in the running interface rather than at content, so it is recognised before the generic scheme test that would otherwise make it `external`. The address is a `cb-` DOM id; `action` and `description` ride in a query string parsed with `URLSearchParams`.
+
+```ts
+JSON.stringify(classifyMarkdownHref("control:cb-composer-mic"))
+=> {"kind":"control","id":"cb-composer-mic","action":"point","description":null,"unknownAction":null}
+
+JSON.stringify(classifyMarkdownHref("control:cb-composer-mic?action=point&description=Tap%20and%20talk"))
+=> {"kind":"control","id":"cb-composer-mic","action":"point","description":"Tap and talk","unknownAction":null}
+
+JSON.stringify(classifyMarkdownHref("control:cb-composer-add?action=reveal"))
+=> {"kind":"control","id":"cb-composer-add","action":"reveal","description":null,"unknownAction":null}
+
+JSON.stringify(classifyMarkdownHref("control:cb-composer-input?action=focus"))
+=> {"kind":"control","id":"cb-composer-input","action":"focus","description":null,"unknownAction":null}
+```
+
+An action the app does not know degrades to `point` and reports the word it did not understand, so the pointer still works — and says so in its tooltip — rather than the whole link dying over a typo:
+
+```ts
+JSON.stringify(classifyMarkdownHref("control:cb-composer-send?action=jump"))
+=> {"kind":"control","id":"cb-composer-send","action":"point","description":null,"unknownAction":"jump"}
+```
+
+An empty id names nothing to point at, so it falls through to the malformed-input path — `external`, exactly like an empty href:
+
+```ts
+JSON.stringify([
+  classifyMarkdownHref("control:"),
+  classifyMarkdownHref("control:?action=reveal"),
+])
+=> [{"kind":"external"},{"kind":"external"}]
+```
+
+An ill-formed id is *not* rejected here. Classification does not touch the document, and whether an address resolves is live state — `resolveControl` rejects a non-`cb-` id at the point of use and the pointer renders broken with the reason in its tooltip:
+
+```ts
+JSON.stringify(classifyMarkdownHref("control:composer-mic"))
+=> {"kind":"control","id":"composer-mic","action":"point","description":null,"unknownAction":null}
+```
+
 ## isExternalUrl
 
 True for anything with a URL scheme or a protocol-relative `//host` — used to tell an image/external link from an in-box embed path:
