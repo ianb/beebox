@@ -80,9 +80,13 @@ for (const a of assets) {
   }
 }
 
+// Never reuse or overwrite a run directory. The first version refused when one existed
+// and told the operator to move it aside, which just trains them to `rm -rf` the
+// obstacle — and that is exactly how a completed walk's notes and 24 screenshots were
+// destroyed on 2026-08-23. Taking the next free suffix removes the temptation.
 const today = new Date().toISOString().slice(0, 10);
-const runDir = join(WORK, `${journey.id}-${today}`);
-if (existsSync(runDir)) fail(`${runDir} already exists — move it aside or wait a day`);
+let runDir = join(WORK, `${journey.id}-${today}`);
+for (let n = 2; existsSync(runDir); n++) runDir = join(WORK, `${journey.id}-${today}-${n}`);
 mkdirSync(join(runDir, "shots"), { recursive: true });
 mkdirSync(join(runDir, "assets"), { recursive: true });
 
@@ -199,4 +203,4 @@ console.log(`assets   ${assets.length}`);
 console.log(`run      ${runDir}`);
 console.log(`prompt   ${join(runDir, "prompt.md")}`);
 console.log("\nHand that prompt to an agent with browser access. Then:");
-console.log(`  pnpm exec tsx callback-box/user-stories/journeys/collect.ts ${journey.id}-${today}`);
+console.log(`  pnpm exec tsx callback-box/user-stories/journeys/collect.ts ${basename(runDir)}`);
