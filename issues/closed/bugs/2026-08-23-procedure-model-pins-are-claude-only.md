@@ -10,7 +10,7 @@ discovered-by: Ian
 discovered-in: main session — refresh-maps still failing after the AGENTS.md fix landed
 ---
 
-**Closed — implemented.** Procedure cards now express portable intent with
+**Closed — implemented in `8a7dced6`.** Procedure cards now express portable intent with
 `efficient`, `balanced`, `strong`, and `strongest`. The single engine-aware map
 resolves those tiers as follows:
 
@@ -142,7 +142,7 @@ engine can honor.
 
 This is the second instance in two days of a Claude-shaped assumption in code
 that never learned about codex — see
-[AGENTS.md missing from the CLAUDE.md special-cases](../closed/bugs/2026-08-22-agents-md-missing-from-claude-md-special-cases.md),
+[AGENTS.md missing from the CLAUDE.md special-cases](2026-08-22-agents-md-missing-from-claude-md-special-cases.md),
 whose fix landed on 2026-08-22 and demonstrably works (the AGENTS.md entries are
 gone from the precheck's task list). That issue argued for a structural guard so
 the pairing cannot drift again. This one suggests the guard needs to cover more

@@ -93,7 +93,7 @@ materialize. Neither is confirmed. What is confirmed is that the code reads
 
 ## Related
 
-- [Procedure model pins are Claude-only](2026-08-23-procedure-model-pins-are-claude-only.md)
+- [Procedure model pins are Claude-only](../closed/bugs/2026-08-23-procedure-model-pins-are-claude-only.md)
   — filed the same day, also a codex failure that reported nothing usable. That
   one produced an empty agent thread and `exit code 1`; this one produces a
   TypeError. **Both were diagnosable only by reading Codex's thread store
