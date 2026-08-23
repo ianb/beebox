@@ -27,6 +27,14 @@ import type { ScanElement, ScanNode } from "./types.js";
 export interface NameLookup {
   /** The element carrying this DOM id, or null. */
   byId: (id: string) => ScanElement | null;
+  /**
+   * Whether the element's own text content may name it. True for controls (a
+   * button is named by its label). False for landmarks: ARIA does not let a
+   * region be named from its contents, and taking the name from content there
+   * means a `<main>` reports the whole conversation as its "name" — the
+   * transcript, verbatim, in a dump that is supposed to be chrome only.
+   */
+  fromContent: boolean;
 }
 
 /** Tags whose `alt` attribute names them. */
@@ -77,7 +85,10 @@ function nameFrom(element: ScanElement, options: NameOptions): string {
       .map((id) => {
         const target = options.byId(id);
         if (target === null) return "";
-        return nameFrom(target, { byId: options.byId, followLabelledby: false });
+        // A labelledby target names by its own content whatever it labels:
+        // `aria-labelledby="heading-id"` on a region is exactly how a landmark
+        // gets a name from text.
+        return nameFrom(target, { byId: options.byId, fromContent: true, followLabelledby: false });
       })
       .filter((part) => part !== "");
     const joined = flatten(parts.join(" "));
@@ -92,8 +103,10 @@ function nameFrom(element: ScanElement, options: NameOptions): string {
     if (alt !== null && flatten(alt) !== "") return flatten(alt);
   }
 
-  const text = flatten(element.children.map(visibleText).join(""));
-  if (text !== "") return text;
+  if (options.fromContent) {
+    const text = flatten(element.children.map(visibleText).join(""));
+    if (text !== "") return text;
+  }
 
   const title = attr(element, "title");
   if (title !== null && flatten(title) !== "") return flatten(title);
@@ -109,5 +122,5 @@ function nameFrom(element: ScanElement, options: NameOptions): string {
  * in prose and the user could recognise.
  */
 export function computeAccessibleName(element: ScanElement, lookup: NameLookup): string {
-  return nameFrom(element, { byId: lookup.byId, followLabelledby: true });
+  return nameFrom(element, { byId: lookup.byId, fromContent: lookup.fromContent, followLabelledby: true });
 }

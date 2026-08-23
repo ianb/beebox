@@ -23,14 +23,18 @@ function indexIds(root: ScanElement, index: Map<string, ScanElement>): void {
   for (const child of root.children) if (child.kind === "element") indexIds(child, index);
 }
 
-/** Name the first element of an HTML fragment; later siblings are label targets. */
+/**
+ * Name the first element of an HTML fragment; later siblings are label targets.
+ * `fromContent: true` is the control case (a button IS named by its label); the
+ * scan passes false for landmarks, which ARIA never names from their contents.
+ */
 function nameOf(html: string): string {
   const root = fixtureRoot(html);
   const index = new Map<string, ScanElement>();
   indexIds(root, index);
   const first = root.children.find((child) => child.kind === "element");
   if (first === undefined || first.kind !== "element") return "";
-  return computeAccessibleName(first, { byId: (id) => index.get(id) ?? null });
+  return computeAccessibleName(first, { byId: (id) => index.get(id) ?? null, fromContent: true });
 }
 ```
 

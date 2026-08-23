@@ -102,6 +102,17 @@ export const eventSchemas = {
     session: z.string().min(1),
     expiresAt: z.string().datetime(),
   }),
+  /**
+   * The chat agent asked the browser tab holding a specific chat session for
+   * its current control inventory (`cb chat ui`). Transient for the same
+   * reason as `screenshot-request`: a replayed request would describe a screen
+   * the user has since left. `expiresAt` is the ISO deadline.
+   */
+  "ui-scan-request": z.object({
+    requestId: z.string().min(1),
+    session: z.string().min(1),
+    expiresAt: z.string().datetime(),
+  }),
   /** A card was created (optionally with a captured audio attachment). */
   "card-created": z.object({
     path: z.string(),

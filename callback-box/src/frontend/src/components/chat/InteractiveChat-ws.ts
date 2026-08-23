@@ -22,6 +22,7 @@ import { isTTSVoice } from "../../lib/audio/speech-parsing";
 import { href, toSearch } from "../../lib/routing";
 import { applyFeaturesChange } from "./InteractiveChat-helpers";
 import { fulfillLastAudioRequest } from "../../lib/audio/last-audio";
+import { fulfillUiScanRequest } from "./ui-scan-request-handler";
 import { bumpFileVersion } from "../../lib/file-version";
 import type { ChatEvent } from "../../machines/chat-types";
 import type { TaskEvent } from "./background-tasks";
@@ -111,6 +112,17 @@ function handleSecondaryEvent(event: RealtimeEvent, deps: SecondaryEventDeps): v
     // The box agent ran `cb chat screenshot`. The handler matches this view's
     // session EXACTLY (never `forSession`), acks, and runs the consent flow.
     onScreenshotRequest(screenshot);
+    return;
+  }
+  const uiScan = busEventData(event, "ui-scan-request");
+  if (uiScan) {
+    // The box agent ran `cb chat ui`. The handler matches this view's session
+    // EXACTLY (never `forSession`), acks, scans the live document and posts it.
+    // No popup and no state, so it is called directly rather than through a
+    // controller — same shape as `fulfillLastAudioRequest` above.
+    void fulfillUiScanRequest(uiScan, sessionId).catch((e) => {
+      console.warn(`[ui-scan] request handling failed: ${e instanceof Error ? e.message : String(e)}`);
+    });
     return;
   }
   const features = busEventData(event, "chat-features-changed");

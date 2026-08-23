@@ -57,6 +57,15 @@ export interface ScanResult {
   /** Visible controls dropped because they yielded no accessible name. */
   omittedUnnamed: number;
   /**
+   * Visible elements dropped because they carry an explicit `role` the scan
+   * does not report (`dialog`, `list`, an author's typo). Counted rather than
+   * ignored so the dump can say *something* was left out — the same principle
+   * as {@link ScanResult.omittedUnnamed}. `presentation`/`none` are excluded:
+   * those say "this is not a control", which is an author's decision, not an
+   * omission.
+   */
+  omittedUnknownRole: number;
+  /**
    * `cb-` ids carried by more than one element anywhere in the document —
    * including inside hidden subtrees, since a mounted-but-CSS-hidden duplicate
    * breaks `getElementById` just as thoroughly as a visible one.

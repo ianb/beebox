@@ -113,6 +113,7 @@ export function scanControls(root: ScanElement, options: ScanOptions): ScanResul
   const byId = (id: string): ScanElement | null => index.get(id) ?? null;
   const entries: ControlEntry[] = [];
   let omittedUnnamed = 0;
+  let omittedUnknownRole = 0;
   let truncated = false;
 
   function visit(element: ScanElement, container: string | null): void {
@@ -121,12 +122,24 @@ export function scanControls(root: ScanElement, options: ScanOptions): ScanResul
 
     let childContainer = container;
     const classified = classifyElement(element);
-    if (classified !== null) {
+    if (classified === null) {
+      // An explicit role the scan does not report is an omission worth a number
+      // (an author's typo looks exactly like a role we chose not to list).
+      // `presentation`/`none` are the author saying "not a control" — not an
+      // omission. The `rect()` call is confined to this narrow case.
+      const explicitRole = attr(element, "role");
+      if (explicitRole !== null && explicitRole !== "presentation" && explicitRole !== "none") {
+        const rect = element.rect();
+        if (rect.width > 0 && rect.height > 0) omittedUnknownRole += 1;
+      }
+    } else {
       const rect = element.rect();
       // A connected element that measures zero is not on screen in any sense the
       // user would recognise, so it is neither listed nor counted as unnamed.
       if (rect.width > 0 && rect.height > 0) {
-        const name = computeAccessibleName(element, { byId });
+        // A landmark is never named by its contents (see `accessible-name.ts`):
+        // `<main>` would otherwise report the whole transcript as its name.
+        const name = computeAccessibleName(element, { byId, fromContent: classified.kind === "control" });
         if (name === "") {
           // A landmark tag that only becomes one when named (a bare `<section>`)
           // is not a missing label — it is just a box.
@@ -160,5 +173,11 @@ export function scanControls(root: ScanElement, options: ScanOptions): ScanResul
   }
 
   visit(root, null);
-  return { entries, omittedUnnamed, duplicateIds: findDuplicateIds(root), truncated };
+  return {
+    entries,
+    omittedUnnamed,
+    omittedUnknownRole,
+    duplicateIds: findDuplicateIds(root),
+    truncated,
+  };
 }

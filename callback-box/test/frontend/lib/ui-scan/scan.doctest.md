@@ -171,6 +171,68 @@ JSON.stringify(scan(`<section><button title="Send">x</button></section>`).omitte
 => 0
 ```
 
+## A landmark is never named by its contents
+
+ARIA does not let a region take its name from what is inside it, and the scan
+must not either: `<main>` holding the chat transcript would otherwise report the
+whole conversation as its "name" — user content in a dump that is meant to be
+chrome only. An unnamed `<main>` is a real a11y gap, so it lands in the
+omitted-unnamed count instead.
+
+```ts
+const transcript = scan(`
+  <main>
+    <p>Please reply with just the word ok.</p>
+    <button title="Retry"><svg viewBox="0 0 24 24"></svg></button>
+  </main>
+`);
+JSON.stringify({ entries: lines(transcript), omittedUnnamed: transcript.omittedUnnamed })
+=> {"entries":"- / button \"Retry\" (no address)","omittedUnnamed":1}
+```
+
+Labelling it works, and that name is what groups the controls under it:
+
+```ts continue
+lines(scan(`
+  <main aria-label="Chat">
+    <p>Please reply with just the word ok.</p>
+    <button title="Retry"><svg viewBox="0 0 24 24"></svg></button>
+  </main>
+`))
+=>
+- / main "Chat" (no address)
+Chat / button "Retry" (no address)
+```
+
+## An unrecognised explicit role is counted too
+
+Every omission gets a number. An element carrying an explicit `role` the scan
+does not report — a `dialog`, a `list`, or an author's typo, which look identical
+from here — is left out of the entries and counted, so the dump can say the list
+is not everything. `presentation`/`none` are excluded: those are the author
+saying "this is not a control", which is a decision, not an omission.
+
+```ts
+const roles = scan(`
+  <main aria-label="Everything">
+    <button title="Send">x</button>
+    <div role="dialog" aria-label="Settings">…</div>
+    <div role="buton" aria-label="Typo">…</div>
+    <div role="presentation">…</div>
+  </main>
+`);
+JSON.stringify({ entries: roles.entries.length, omittedUnknownRole: roles.omittedUnknownRole })
+=> {"entries":2,"omittedUnknownRole":2}
+```
+
+A zero-sized element with an unknown role is not on screen in any sense the user
+would recognise, so it is not counted either:
+
+```ts continue
+JSON.stringify(scan(`<div role="dialog" data-test-rect="0,0,0,0">…</div>`).omittedUnknownRole)
+=> 0
+```
+
 ## Off-screen but mounted is included, and marked
 
 A control scrolled out of view is exactly what `point` exists to scroll to, so
