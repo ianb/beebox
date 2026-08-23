@@ -26,6 +26,7 @@ import { scanLiveDocument } from "../../lib/ui-scan/live-dom";
 import { currentChatChannel } from "../../lib/chat-channel";
 import { isNativeShell } from "./native-post";
 import { isRequestExpired, matchesRequestSession } from "./screenshot-request-logic";
+import { MAX_SCAN_ENTRIES } from "@shared/ui-scan";
 import type { UiScanCoverage, UiScanEntry, UiScanPayload } from "@shared/ui-scan";
 
 /** A live UI-scan request for this tab — the transient `ui-scan-request` payload. */
@@ -40,22 +41,32 @@ function answerUrl(requestId: string): string {
 }
 
 /**
+ * What became of one POSTed answer. `rejected` is the case that matters: the
+ * request has already been acked, so a silently-dropped rejection leaves the
+ * agent waiting out the clock and reading `timeout` for what was really a
+ * validation failure.
+ */
+type PostOutcome = "delivered" | "settled-elsewhere" | "rejected";
+
+/**
  * POST a JSON answer. A 404 is the normal multi-tab or settled-request outcome
  * (another tab won, or the CLI aborted) — quiet. Never rejects: logs and
- * returns, so callers can fire-and-forget.
+ * reports the outcome, so callers can fire-and-forget or react.
  */
-async function postJson(requestId: string, { body, label }: { body: object; label: string }): Promise<void> {
+async function postJson(requestId: string, { body, label }: { body: object; label: string }): Promise<PostOutcome> {
   try {
     const res = await fetch(answerUrl(requestId), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    if (!res.ok && res.status !== 404) {
-      console.warn(`[ui-scan] ${label} rejected: HTTP ${res.status}`);
-    }
+    if (res.ok) return "delivered";
+    if (res.status === 404) return "settled-elsewhere";
+    console.warn(`[ui-scan] ${label} rejected: HTTP ${res.status}`);
+    return "rejected";
   } catch (e) {
     console.warn(`[ui-scan] ${label} failed: ${e instanceof Error ? e.message : String(e)}`);
+    return "rejected";
   }
 }
 
@@ -87,7 +98,10 @@ function buildPayload(): UiScanPayload {
     entries,
     omittedUnnamed: scan.omittedUnnamed,
     omittedUnknownRole: scan.omittedUnknownRole,
-    duplicateIds: scan.duplicateIds,
+    // The walk finds every duplicate; the wire caps the list at the same size
+    // as the entry cap, so a pathological page reports the first N rather than
+    // producing a payload the route refuses whole.
+    duplicateIds: scan.duplicateIds.slice(0, MAX_SCAN_ENTRIES),
     truncated: scan.truncated,
     coverage: currentCoverage(),
     channel: currentChatChannel(),
@@ -117,5 +131,14 @@ export async function fulfillUiScanRequest(
     await postJson(request.requestId, { body: { failed: reason }, label: "failure" });
     return;
   }
-  await postJson(request.requestId, { body: payload, label: "scan" });
+  const outcome = await postJson(request.requestId, { body: payload, label: "scan" });
+  if (outcome === "rejected") {
+    // The ack already closed the server's `no-client` window, so saying nothing
+    // here would surface as `timeout` — the wrong diagnosis. Tell the agent the
+    // scan was refused instead. (A second rejection has nowhere left to go.)
+    await postJson(request.requestId, {
+      body: { failed: "the server rejected this client's scan payload" },
+      label: "failure",
+    });
+  }
 }

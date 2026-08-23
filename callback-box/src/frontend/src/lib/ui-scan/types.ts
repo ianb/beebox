@@ -23,6 +23,13 @@ export type ControlAction = "point" | "focus" | "reveal";
 /** One control or landmark the scan found on screen. */
 export interface ControlEntry {
   /**
+   * Whether this entry is an operable control or the landmark that groups
+   * them. Carried rather than inferred: the dump groups by it, and inferring
+   * "this is a heading" from a name matching some other entry's container
+   * silently demotes a real control that happens to share the name.
+   */
+  kind: "control" | "landmark";
+  /**
    * The element's `cb-`-prefixed DOM id. Null for a control that is on screen
    * but was never given one — such a control appears in the dump so the agent
    * knows it exists, but cannot be pointed at.

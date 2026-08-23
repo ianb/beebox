@@ -149,6 +149,7 @@ export function scanControls(root: ScanElement, options: ScanOptions): ScanResul
           return;
         } else {
           entries.push({
+            kind: classified.kind,
             id: addressOf(element),
             role: classified.role,
             name,

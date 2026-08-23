@@ -34,15 +34,39 @@ export type UiScanCoverage = (typeof UI_SCAN_COVERAGES)[number];
 /** What a `control:` pointer may ask the app to do with an element. */
 export const controlActionSchema = z.enum(["point", "focus", "reveal"]);
 
+/**
+ * `cb-` plus kebab-case segments — the same address grammar the frontend
+ * resolver enforces (`lib/ui-scan/resolve.ts`), restated here because this is
+ * the boundary. An id that is not a real address must never reach the dump: it
+ * would be printed as a `control:` link the app cannot honour.
+ */
+const CONTROL_ID_PATTERN = /^cb(?:-[\da-z]+)+$/;
+
+/**
+ * Text a client may put in front of the agent. Control characters (newlines
+ * included) are rejected rather than stripped: a scan is machine-generated
+ * from an accessible name, so a newline in one means either a broken client
+ * or an attempt to forge extra dump lines. Brackets are legal — a name may
+ * genuinely contain one — and the dump escapes them where it builds a link.
+ */
+const plainText = (max: number): z.ZodString =>
+  z
+    .string()
+    .min(1)
+    .max(max)
+    // eslint-disable-next-line no-control-regex -- rejecting control characters is the point
+    .regex(/^[^\u0000-\u001F\u007F]+$/, "must be single-line text");
+
 /** One control or landmark, as the client reports it. */
 export const uiScanEntrySchema = z
   .object({
+    kind: z.enum(["control", "landmark"]),
     /** The element's `cb-` DOM id, or null for a control with no address. */
-    id: z.string().min(1).max(120).nullable(),
-    role: z.string().min(1).max(60),
-    name: z.string().min(1).max(300),
-    container: z.string().min(1).max(300).nullable(),
-    does: z.string().min(1).max(600).nullable(),
+    id: z.string().max(120).regex(CONTROL_ID_PATTERN).nullable(),
+    role: plainText(60),
+    name: plainText(300),
+    container: plainText(300).nullable(),
+    does: plainText(600).nullable(),
     actions: z.array(controlActionSchema).max(3),
     disabled: z.boolean(),
     offscreen: z.boolean(),
@@ -52,9 +76,10 @@ export const uiScanEntrySchema = z
 export type UiScanEntry = z.infer<typeof uiScanEntrySchema>;
 
 /**
- * Server-side cap on reported entries, matching the client scan's own
- * `MAX_ENTRIES`. The client truncates and says so; this is the boundary's
- * refusal to accept more than that from a client that didn't.
+ * Server-side cap on reported entries and on the duplicate-address list,
+ * matching the client scan's own `MAX_ENTRIES`. The client truncates and says
+ * so; this is the boundary's refusal to accept more than that from a client
+ * that didn't.
  */
 export const MAX_SCAN_ENTRIES = 200;
 
@@ -67,13 +92,17 @@ export const uiScanPayloadSchema = z
     /** Visible elements dropped because their explicit `role` isn't one we report. */
     omittedUnknownRole: z.number().int().nonnegative(),
     /** `cb-` ids carried by more than one element — `getElementById` picks one. */
-    duplicateIds: z.array(z.string().min(1).max(120)).max(MAX_SCAN_ENTRIES),
+    duplicateIds: z.array(z.string().max(120).regex(CONTROL_ID_PATTERN)).max(MAX_SCAN_ENTRIES),
     /** True when the entry cap stopped the walk before the document ended. */
     truncated: z.boolean(),
     coverage: z.enum(UI_SCAN_COVERAGES),
     channel: z.enum(CHAT_CHANNELS),
-    /** Path + query of the page scanned (never the origin — the agent knows the box). */
-    url: z.string().min(1).max(2000),
+    /**
+     * Path + query of the page scanned. Path-only by construction and by
+     * validation — an absolute URL here would let a client point the agent at
+     * somewhere it never was.
+     */
+    url: plainText(2000).regex(/^\/\S*$/, "must be a path, not an absolute URL"),
     scannedAt: z.string().datetime(),
   })
   .strict();

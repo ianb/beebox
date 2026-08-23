@@ -98,6 +98,16 @@ function wrap(text: string, { indent, continuation }: { indent: string; continua
   return lines;
 }
 
+/**
+ * Markdown link text is delimited by brackets, so a name containing one has to
+ * be escaped or it truncates the link — and the link is what the agent copies
+ * back. The address itself needs no escaping: the wire schema only admits the
+ * `cb-` kebab-case grammar.
+ */
+function escapeLinkText(name: string): string {
+  return name.replace(/[[\]]/g, (bracket) => `\\${bracket}`);
+}
+
 /** The `role [name](control:id)` / `role "name" (no address)` line for one entry. */
 function entryLine(entry: UiScanEntry, indent: string): string {
   const marks = [
@@ -110,7 +120,7 @@ function entryLine(entry: UiScanEntry, indent: string): string {
     const padded = head.padEnd(NO_ADDRESS_COLUMN, " ");
     return [`${padded} (no address)`, ...marks].join(" ").trimEnd();
   }
-  return [`${indent}${entry.role} [${entry.name}](control:${entry.id})`, ...marks].join(" ");
+  return [`${indent}${entry.role} [${escapeLinkText(entry.name)}](control:${entry.id})`, ...marks].join(" ");
 }
 
 /** One entry: its line, plus its wrapped `— does` description when it has one. */
@@ -135,7 +145,12 @@ function entryLines(entries: readonly UiScanEntry[]): string[] {
   );
   const lines: string[] = [];
   for (const entry of entries) {
-    const isHeading = containerNames.has(entry.name) && entry.container !== entry.name;
+    // A heading is a LANDMARK that something else sits in — never merely an
+    // entry whose name matches a container name, which would silently strip a
+    // real control (a button named "Settings" inside a region named the same)
+    // of its address.
+    const isHeading =
+      entry.kind === "landmark" && containerNames.has(entry.name) && entry.container !== entry.name;
     if (isHeading) {
       lines.push(`${entry.role} "${entry.name}"`);
       if (entry.does !== null) lines.push(...wrap(entry.does, { indent: "  — ", continuation: "    " }));
@@ -166,15 +181,17 @@ function breakpointNotes(payload: UiScanPayload): string[] {
     const baseId = id.slice(0, -MOBILE_SUFFIX.length);
     const base = listed.get(baseId);
     if (base === undefined) continue;
-    const reachable = pickReachable({ base, mobile: entry, channel: payload.channel })
-      ? id
-      : baseId;
+    // Both scrolled out of view: the layout has not chosen for us and neither
+    // is on screen, so the note says that rather than naming a "reachable" one.
+    const tail =
+      base.offscreen && entry.offscreen
+        ? "Neither is in view right now."
+        : `At this viewport ${pickReachable({ base, mobile: entry, channel: payload.channel }) ? id : baseId} is the one the user can reach.`;
     notes.push(
-      wrap(
-        `Note: ${baseId} and ${id} are the same control at two breakpoints. ` +
-          `At this viewport ${reachable} is the one the user can reach.`,
-        { indent: "", continuation: "" }
-      ).join("\n")
+      wrap(`Note: ${baseId} and ${id} are the same control at two breakpoints. ${tail}`, {
+        indent: "",
+        continuation: "",
+      }).join("\n")
     );
   }
   return notes;

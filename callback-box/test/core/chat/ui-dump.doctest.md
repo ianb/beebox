@@ -19,6 +19,7 @@ process.env.TZ = "UTC";
 /** One entry with the boring fields filled in, so each case shows only its point. */
 function entry(fields: Partial<UiScanEntry> & { role: string; name: string }): UiScanEntry {
   return {
+    kind: "control",
     id: null,
     container: null,
     does: null,
@@ -62,7 +63,7 @@ const chat = payload({
   omittedUnnamed: 3,
   omittedUnknownRole: 1,
   entries: [
-    entry({ role: "navigation", name: "Primary" }),
+    entry({ role: "navigation", name: "Primary", kind: "landmark" }),
     entry({ role: "button", name: "Place: test1", id: "cb-nav-place", container: "Primary" }),
     entry({
       role: "button",
@@ -73,7 +74,7 @@ const chat = payload({
       does: "the thread menu: new session, recent chats, model, delete this chat",
     }),
     entry({ role: "button", name: "Open debug log (2 errors)", container: "Primary", offscreen: true }),
-    entry({ role: "region", name: "Compose message" }),
+    entry({ role: "region", name: "Compose message", kind: "landmark" }),
     entry({
       role: "button",
       name: "Add",
