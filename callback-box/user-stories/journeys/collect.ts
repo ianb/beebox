@@ -10,9 +10,11 @@
  */
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { join } from "node:path";
 
-import { readJson } from "../pipeline/json-io.ts";
+import { isRecord } from "../../src/lib/is-record.ts";
+import { parseJsonLine, readJson } from "../pipeline/json-io.ts";
 
 const HERE = import.meta.dirname;
 const WORK = join(HERE, "../work/journeys");
@@ -82,6 +84,52 @@ const elapsed = marks.length >= 2
   ? `${spanMinutes.toFixed(1)} min wall clock, ${waits.length} wait(s) over 45s`
   : "no screenshots — timing unavailable";
 
+/**
+ * What the PERSON actually waited on, with the walker subtracted.
+ *
+ * Screenshot gaps include the walker composing prose and appending 500 lines of
+ * notes, which no real person does — measuring those would blame the product for
+ * the instrument. The box's own agent transcripts carry a timestamp per entry, so
+ * a turn's latency is exactly (their message → the reply), and nothing else.
+ *
+ * On the run this was written for: 18 turns, median 10s, slowest 58s, 4.1 min of
+ * agent time inside a 13.7 min session — while the walker, watching a spinner with
+ * no scale, recorded "after about 20 minutes".
+ */
+function agentTurns(boxContent: string): number[] {
+  const encoded = boxContent.replaceAll("/", "-");
+  const dir = join(homedir(), ".claude", "projects", encoded);
+  if (!existsSync(dir)) return [];
+  const out: number[] = [];
+  for (const f of readdirSync(dir).filter((x) => x.endsWith(".jsonl"))) {
+    let started: number | null = null;
+    for (const line of readFileSync(join(dir, f), "utf8").split("\n")) {
+      if (line.trim() === "") continue;
+      let entry: { timestamp?: string, type?: string, message?: { content?: unknown } };
+      try {
+        entry = parseJsonLine(line);
+      } catch (_e) { continue; }
+      const stamp = entry.timestamp;
+      if (stamp === undefined) continue;
+      const at = new Date(stamp).getTime();
+      const content = entry.message?.content;
+      const kinds = Array.isArray(content)
+        ? content.map((b) => (isRecord(b) ? String(b["type"]) : ""))
+        : [];
+      if (entry.type === "user" && !kinds.includes("tool_result")) started = at;
+      else if (entry.type === "assistant" && started !== null && kinds.includes("text")) {
+        out.push((at - started) / 1000);
+        started = null;
+      }
+    }
+  }
+  return out;
+}
+
+const turns = agentTurns(join(before.box, "content"));
+const sorted = turns.toSorted((a, b) => a - b);
+const agentSeconds = turns.reduce((n, t) => n + t, 0);
+
 const after = {
   ...before,
   finishedIso: new Date().toISOString(),
@@ -91,6 +139,10 @@ const after = {
   screenshots: shots.length,
   noteLines: notes === "" ? 0 : notes.split("\n").length,
   spanMinutes: Number(spanMinutes.toFixed(1)),
+  agentTurns: turns.length,
+  agentMinutes: Number((agentSeconds / 60).toFixed(1)),
+  agentMedianSeconds: sorted.length === 0 ? 0 : Math.round(sorted[Math.floor(sorted.length / 2)] ?? 0),
+  agentSlowestSeconds: sorted.length === 0 ? 0 : Math.round(sorted.at(-1) ?? 0),
   waitsOver45s: waits,
 };
 writeFileSync(join(runDir, "after.json"), `${JSON.stringify(after, null, 2)}\n`);
@@ -103,6 +155,10 @@ for (const w of waits.slice(0, 6)) {
 }
 if (waits.length > 0) {
   console.log("  (screenshot sidecars, not the walker's own stamps — it has no sense of duration)");
+}
+if (turns.length > 0) {
+  console.log(`agent       ${turns.length} turns, ${(agentSeconds / 60).toFixed(1)} min total, median ${after.agentMedianSeconds}s, slowest ${after.agentSlowestSeconds}s`);
+  console.log("            (what the person waited on; the rest of the span is the walker)");
 }
 console.log(`notes       ${after.noteLines} lines`);
 console.log(`screenshots ${shots.length}`);
