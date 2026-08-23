@@ -72,8 +72,22 @@ Work for roughly {{BUDGET}} actions. That is a decent evening's poking at a new 
 
 Keep a running log at
 `{{NOTES}}`,
-appending as you go — not written up at the end. **Every entry starts with a UTC timestamp**
-(`date -u +%H:%M:%S`).
+appending as you go — not written up at the end.
+
+**Do not use the wall clock, and do not guess at elapsed time.** Almost all of your session is
+spent writing these notes, which a real person would not do, so `date` will tell you an evening
+has passed when the app has kept you waiting four minutes. Someone doing this before you wrote
+"it answered after about twenty minutes" into a session that had run six.
+
+When you want to know how long you have been kept waiting, ask:
+
+```
+pnpm exec tsx callback-box/user-stories/journeys/clock.ts {{BOX_CONTENT}}
+```
+
+That counts only the time the app kept you waiting — the thing you would actually notice.
+Quote it when you have an opinion about speed, and stamp your entries with it rather than a
+time of day.
 
 Before each thing you try:
 

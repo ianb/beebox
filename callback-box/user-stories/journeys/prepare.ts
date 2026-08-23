@@ -102,7 +102,13 @@ mkdirSync(join(runDir, "assets"), { recursive: true });
 
 // --- the box -------------------------------------------------------------------
 const boxDir = join(BOXES_ROOT, journey.box.slug);
-if (existsSync(boxDir)) rmSync(boxDir, { recursive: true, force: true });
+if (existsSync(boxDir)) {
+  // git-annex stores its objects read-only, and read-only files inside read-only
+  // directories defeat rmSync — so reprovisioning a box that has been annexed once
+  // fails partway and leaves a wreck. Make it writable first.
+  execFileSync("chmod", ["-R", "u+w", boxDir], { stdio: "inherit" });
+  rmSync(boxDir, { recursive: true, force: true });
+}
 
 const base = journey.box.base === "empty" ? join(BOXES_ROOT, "test1") : journey.box.base;
 if (!existsSync(base)) fail(`base box not found: ${base}`);
@@ -196,6 +202,7 @@ const template = readFileSync(join(HERE, "walker-prompt.md"), "utf8")
   .replace("{{ASSETS}}", assetLines)
   .replace("{{BUDGET}}", String(journey.budget_actions ?? 60))
   .replaceAll("{{BOX_SLUG}}", journey.box.slug)
+  .replaceAll("{{BOX_CONTENT}}", content)
   .replace("{{SHOTS}}", join(runDir, "shots"))
   .replace("{{NOTES}}", join(runDir, "notes.md"))
   .replace("{{CLOSING}}", (journey.closing ?? "").trim());
