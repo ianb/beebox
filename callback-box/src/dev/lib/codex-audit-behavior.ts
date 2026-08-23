@@ -2,6 +2,7 @@
 
 import type { CodexObservedActivity } from "../../core/agent/codex-run.js";
 import { shellCommandConsultsFiles, shellCommandSearches } from "./shell-command-observation.js";
+import { AGENTS_MD, CLAUDE_MD } from "../../core/agent-instruction-files.js";
 import type { AgentBehavior } from "./test-runner.js";
 
 /** Pure normalization boundary for fixture tests and provider parity checks. */
@@ -26,7 +27,7 @@ export function codexBehaviorFromActivity(
     // and normalize editable AGENTS.md mirrors to their canonical CLAUDE.md.
     filesRead: commands
       .filter(shellCommandConsultsFiles)
-      .map((command) => command.replaceAll("AGENTS.md", "CLAUDE.md")),
+      .map((command) => command.replaceAll(AGENTS_MD, CLAUDE_MD)),
     searches: [...providerSearches, ...shellSearches],
     bashCommands: commands,
     bashRawCommands: commands,

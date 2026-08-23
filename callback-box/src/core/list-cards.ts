@@ -8,6 +8,7 @@
 import * as path from "node:path";
 import { glob } from "glob";
 import { boxCodePaths, getBoxShape } from "../lib/box-shape.js";
+import { isAgentInstructionsFile } from "./agent-instruction-files.js";
 
 const CARD_GLOB_IGNORE = ["node_modules/**", ".git/**", "tmp/**", ".callback-box/**"];
 
@@ -52,8 +53,7 @@ export function isBuiltinLintableMarkdown(filePath: string): boolean {
   for (let i = 0; i + 1 < parts.length; i++) {
     if (parts[i] === "docs" && parts[i + 1] === "generated") return false;
   }
-  const basename = parts[parts.length - 1];
-  return basename !== "CLAUDE.md" && basename !== "AGENTS.md";
+  return !isAgentInstructionsFile(filePath);
 }
 
 // Heavy dirs pruned during the walk itself (perf — never descend them). The

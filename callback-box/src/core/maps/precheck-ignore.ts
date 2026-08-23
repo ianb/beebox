@@ -11,6 +11,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { MAP_STATE_FILE } from "./state.js";
+import { AGENT_INSTRUCTION_FILES } from "../agent-instruction-files.js";
 
 /**
  * Built-in ignore patterns for directory walking and listing.
@@ -68,6 +69,10 @@ export const SKELETON_HIDDEN_PATHS: readonly string[] = [
   "config/_template-updates/**",
   "config/connectors/**",
   "config/schemas/**",
+  // Machine-owned box config: the admin UI and the invite-accept path rewrite
+  // it behind the agent's back, and its fields are documented in
+  // docs/box-layout.md. A per-box MAP bullet would only go stale.
+  "config/box.json",
   "config/procedures/**",
   "config/schedules/**",
   "docs/generated/**",
@@ -77,8 +82,16 @@ export const SKELETON_HIDDEN_PATHS: readonly string[] = [
 
 const IGNORE_FILE = ".cb-maps-ignore";
 
-/** Names that appear in directories but should never appear in the listing. */
-const META_FILES: readonly string[] = ["MAP.md", "CLAUDE.md", MAP_STATE_FILE];
+/**
+ * Names that appear in directories but should never appear in the listing.
+ *
+ * Both instruction filenames, not just `CLAUDE.md`: every box gets an
+ * `AGENTS.md` symlink beside each `CLAUDE.md`. Listing only one of them left
+ * the precheck demanding that each MAP describe a symlink to the file excluded
+ * beside it — an item no agent could satisfy, so refresh-maps failed on every
+ * run and blocked the real map work in the same run behind it.
+ */
+const META_FILES: readonly string[] = ["MAP.md", ...AGENT_INSTRUCTION_FILES, MAP_STATE_FILE];
 
 export async function loadUserIgnorePatterns(boxRoot: string): Promise<string[]> {
   try {
@@ -150,7 +163,8 @@ interface IsIgnoredOptions {
  * Should this entry be excluded from walking and listing?
  *
  * Always-true cases: dotfiles (we never index `.gitignore`, `.cb-box`, etc.)
- * and meta files (the MAP.md / CLAUDE.md / state file we generate ourselves).
+ * and meta files (the MAP.md, either instruction filename, and the state file
+ * we generate ourselves).
  * Then any matching ignore pattern.
  */
 export function isIgnored(options: IsIgnoredOptions): boolean {
