@@ -213,7 +213,7 @@ struct RootView: View {
                 screenshotResult = result
             },
             onComposerCommand: { delivery in
-                handleComposerCommand(delivery, boxID: box.id)
+                handleComposerCommand(delivery, box: box)
             },
             onComposerCommandAcknowledgementDelivered: { id in
                 composerCommandAcknowledgements.removeAll { $0.id == id }
@@ -248,16 +248,29 @@ struct RootView: View {
         }
     }
 
-    private func handleComposerCommand(_ delivery: NativeComposerCommandDelivery, boxID: PairedBox.ID) {
+    private func handleComposerCommand(_ delivery: NativeComposerCommandDelivery, box: PairedBox) {
         switch delivery {
         case .command(let command):
             switch command.payload {
             case .addSelection:
                 Task {
-                    let acknowledgement = await composerDraftStore.applySelectionCommand(command, boxID: boxID)
+                    let acknowledgement = await composerDraftStore.applySelectionCommand(command, boxID: box.id)
                     acknowledge(acknowledgement)
                 }
             case .scanControls:
+                // A native surface can cover the chat while the composer under it
+                // stays mounted and therefore stays registered. Answering from the
+                // registry then would describe controls the user cannot see or
+                // reach, and — worse — would report the dump as covering native
+                // chrome while the thing actually on top (the lock screen, the
+                // pairing sheet) is nowhere in it. Refuse instead: the web reads a
+                // refusal exactly like silence and says the native controls are
+                // missing from the list. See mobile-contract.md §4.8.
+                if let reason = obstructedNativeSurface(box: box) {
+                    acknowledge(.accepted(id: command.id))
+                    deliver(.refused(id: command.id, kind: .scanControls, reason: reason))
+                    return
+                }
                 // The registry is the answer, and an EMPTY registry is still an
                 // answer — the web distinguishes "native reported nothing on
                 // screen" from "native never answered", and only the second one
@@ -266,7 +279,7 @@ struct RootView: View {
                 BoxLog.info(
                     "native control scan answered count=\(controls.count)",
                     category: .webview,
-                    targetBoxID: boxID
+                    targetBoxID: box.id
                 )
                 acknowledge(.accepted(id: command.id))
                 deliver(.controls(id: command.id, controls))
@@ -274,6 +287,20 @@ struct RootView: View {
         case .rejection(let acknowledgement):
             acknowledge(acknowledgement)
         }
+    }
+
+    /// Why the registry must not be reported as the native surface right now, or
+    /// nil when it may be. Covers the two full-screen natives `RootView` itself
+    /// presents; a sheet a child view raises (the attach menu, capture) is not
+    /// visible from here and is a known imprecision, recorded in §4.8.
+    private func obstructedNativeSurface(box: PairedBox) -> String? {
+        if boxLockManager.isLocked(box) {
+            return "The box is locked, so its native controls are covered by the unlock screen."
+        }
+        if showingPairSheet {
+            return "The box-pairing sheet is covering the app's native controls."
+        }
+        return nil
     }
 
     private func acknowledge(_ acknowledgement: NativeComposerCommandAcknowledgement) {

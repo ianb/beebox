@@ -422,7 +422,10 @@ UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
   `kind` discriminates the payload; a kind that carries none omits `payload`. `id` is required and
   non-empty in **every** version — that is what lets an older build's failed decode answer with a
   rejection (§4.7) instead of returning silently. An unknown `kind` is refused on both sides rather
-  than guessed at. **V1 remains what the web sends for `add-selection`**, because installed iOS
+  than guessed at — and note *how* native refuses it: the kind is a closed enum decoded before a
+  command object exists, so an unknown one fails the whole decode and produces **only** the §4.7
+  rejection acknowledgement, never a result. The web's wait is what covers that case, which is why
+  no-result and refusal must stay indistinguishable to it. **V1 remains what the web sends for `add-selection`**, because installed iOS
   builds decode that shape and nothing else; V2's `add-selection` exists so the migration is
   expressible, not because the web has moved.
 - **Result wire shape** (native → web, on its own global):
@@ -438,8 +441,9 @@ UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
   failure.
 - **Result is separate from the acknowledgement, on purpose.** The ack (§4.7) says whether native
   *took* the command; the result says what the command *answered*. Native emits both for a V2
-  command. Keeping them apart is what makes "refused, and here is why" and "succeeded, and the
-  answer is empty" two different facts.
+  command it could decode; for one it could not (an unknown kind, or an old build meeting V2 at all)
+  only the rejection ack exists to emit. Keeping them apart is what makes "refused, and here is why"
+  and "succeeded, and the answer is empty" two different facts.
 - **Transport globals + event:** `window.callbackboxNativeCommandResult(detail)` pushes onto
   `window.callbackboxNativeCommandResultQueue` and dispatches
   `CustomEvent('callbackbox:native-command-result')`. The queue is authoritative; the event is a
@@ -449,7 +453,22 @@ UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
   screen and deregisters it on disappear, and sets the view's `accessibilityIdentifier` to the same
   `id` in the same call. The `cb-` ids are **shared with the web** (Track 4's table): the same string
   names the same control on both surfaces, so renaming one is a contract migration. Registration is
-  by view-instance token, so the composer's mic → send → stop swap cannot leave a stale entry.
+  by view-instance token, so the composer's mic → send → stop swap cannot leave a stale entry, and
+  the inventory is coalesced by `id` so an in-flight swap cannot report two mutually exclusive
+  controls at once.
+- **Native refuses when its own chrome is covered.** A full-screen native surface (the lock screen,
+  the pairing sheet) can sit over the chat while the composer beneath stays mounted and therefore
+  stays registered. Answering from the registry then would describe controls the user cannot reach
+  *and* claim the dump covers native chrome while the thing actually on top is absent from it, so
+  `RootView.obstructedNativeSurface` refuses with a reason instead. **Known imprecision:** a sheet a
+  child view raises — the attach menu, capture — is not visible to `RootView`, so a scan during one
+  still answers from the composer registry. Bounded: those sheets are composer chrome themselves and
+  the entries under them are real, just occluded. Recorded here rather than fixed, in the same class
+  as the web scan's `offscreen` clipping imprecision.
+- **The result queue is shared and non-destructive.** A subscriber puts back what it did not claim
+  (`native-control-scan.ts` · `windowNativeControlBridge`), so two overlapping scans — or, next, a
+  `point-at-control` answer — cannot swallow each other's results. Unclaimed results are capped at
+  the most recent 10.
 - **Web wait semantics.** The scan waits 1.5s for a result with its own command id. No result, an
   `ok:false` result, and an old build that cannot decode the envelope at all are treated
   **identically**: the dump reports `coverage: "dom-native-unavailable"` and names the native

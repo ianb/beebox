@@ -58,6 +58,19 @@ final class NativeControlRegistryTests: XCTestCase {
         XCTAssertEqual(registry.entries.first?.disabled, true)
     }
 
+    /// Both views can be registered for one runloop turn during a swap. Reporting
+    /// both would tell the agent two mutually exclusive controls are on screen;
+    /// the newest registration is the one that just appeared, so it wins.
+    func testOverlappingRegistrationsForOneAddressCoalesce() {
+        let registry = NativeControlRegistry()
+        registry.register(entry("cb-composer-send", label: "Send"), frame: .zero, token: UUID())
+        let arriving = UUID()
+        registry.register(entry("cb-composer-send", label: "Send photo"), frame: CGRect(x: 1, y: 2, width: 3, height: 4), token: arriving)
+        XCTAssertEqual(registry.entries.count, 1)
+        XCTAssertEqual(registry.entries.first?.label, "Send photo")
+        XCTAssertEqual(registry.frame(of: "cb-composer-send"), CGRect(x: 1, y: 2, width: 3, height: 4))
+    }
+
     func testEntriesAreOrderedByAddress() {
         let registry = NativeControlRegistry()
         for id in ["cb-composer-send", "cb-composer-add", "cb-composer-mic"] {

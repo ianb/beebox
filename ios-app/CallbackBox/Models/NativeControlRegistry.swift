@@ -46,10 +46,21 @@ final class NativeControlRegistry: ObservableObject {
         registrations.removeAll { $0.token == token }
     }
 
-    /// The inventory, sorted by address so two scans of the same screen produce
-    /// the same list regardless of the order SwiftUI ran `onAppear` in.
+    /// The inventory, one entry per address, sorted so two scans of the same
+    /// screen produce the same list regardless of the order SwiftUI ran
+    /// `onAppear` in.
+    ///
+    /// Coalescing by id is not tidiness. During a mic → send swap both views can
+    /// briefly be registered, and reporting both would tell the agent two
+    /// mutually exclusive controls are on screen at once — precisely the kind of
+    /// wrong-but-confident answer this feature exists to prevent. The most recent
+    /// registration wins, because it is the one that just appeared.
     var entries: [NativeControlEntry] {
-        registrations.map(\.entry).sorted { $0.id < $1.id }
+        var latest: [String: NativeControlEntry] = [:]
+        for registration in registrations {
+            latest[registration.entry.id] = registration.entry
+        }
+        return latest.values.sorted { $0.id < $1.id }
     }
 
     /// The on-screen box of one registered control, for drawing a pointer on it.
@@ -57,7 +68,7 @@ final class NativeControlRegistry: ObservableObject {
     /// moved without either is approximate — accepted (`agent-points-at-ui.md`,
     /// Track 5: the native side may work at lower fidelity than the DOM scan).
     func frame(of id: String) -> CGRect? {
-        registrations.first { $0.entry.id == id }?.frame
+        registrations.last { $0.entry.id == id }?.frame
     }
 }
 

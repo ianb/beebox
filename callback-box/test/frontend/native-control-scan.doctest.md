@@ -25,17 +25,21 @@ import {
  * command arrives — `null` for a shell that never answers at all, which is what
  * an installed build too old to decode the V2 envelope looks like from here.
  */
-function fakeBridge(answer: ((id: string) => unknown) | null): NativeControlBridge & { posted: string[] } {
-  const listeners: Array<(detail: unknown) => void> = [];
+function fakeBridge(answer: ((id: string) => unknown) | null): NativeControlBridge & { posted: string[]; unclaimed: unknown[] } {
+  const listeners: Array<(detail: unknown) => boolean> = [];
   const bridge = {
     posted: [] as string[],
+    // What no listener claimed — the real bridge puts these back on the shared
+    // queue rather than dropping them.
+    unclaimed: [] as unknown[],
     post: (id: string) => {
       bridge.posted.push(id);
       if (answer === null) return;
       const detail = answer(id);
-      for (const listener of listeners) listener(detail);
+      const claimed = listeners.map((listener) => listener(detail)).some(Boolean);
+      if (!claimed) bridge.unclaimed.push(detail);
     },
-    subscribe: (listener: (detail: unknown) => void) => {
+    subscribe: (listener: (detail: unknown) => boolean) => {
       listeners.push(listener);
       return () => listeners.splice(listeners.indexOf(listener), 1);
     },
@@ -117,6 +121,10 @@ await requestNativeControls(fakeBridge(null), { commandId: "s", timeoutMs: 50 })
 => null
 ```
 
+A result addressed to a different command is left alone rather than consumed —
+the queue is shared, so swallowing it would strand whoever it belongs to (a
+second scan, or the `point-at-control` answer that comes next).
+
 ```ts
 const other = fakeBridge(() => ({
   version: 2,
@@ -125,8 +133,9 @@ const other = fakeBridge(() => ({
   ok: true,
   controls: [mic],
 }));
-await requestNativeControls(other, { commandId: "s", timeoutMs: 50 })
-=> null
+const missed = await requestNativeControls(other, { commandId: "s", timeoutMs: 50 });
+JSON.stringify({ missed, leftForItsOwner: other.unclaimed.length })
+=> {"missed":null,"leftForItsOwner":1}
 ```
 
 A malformed result is not an answer either — the parser rejects it and the wait

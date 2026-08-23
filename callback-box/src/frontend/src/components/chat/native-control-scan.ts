@@ -45,13 +45,25 @@ export const NATIVE_SCAN_TIMEOUT_MS = 1500;
 export const NATIVE_CONTAINER_ROLE = "native";
 
 /**
+ * How many unconsumed results the queue keeps. A result nobody claims — a late
+ * answer to a scan that already timed out — would otherwise sit there forever,
+ * so the queue keeps the most recent few and drops the rest.
+ */
+const RESULT_QUEUE_LIMIT = 10;
+
+/**
  * The transport this module needs, and nothing else. `subscribe` hands over every
  * result detail the shell has posted (queue first, then live ones) and returns an
  * unsubscribe; `wait` schedules the deadline and returns a cancel.
+ *
+ * The listener returns whether it **consumed** the detail. The queue is shared —
+ * a second scan, or (next) a `point-at-control` answer, reads the same one — so a
+ * subscriber that empties it wholesale would swallow someone else's result. What
+ * one subscriber does not claim stays queued for whoever it belongs to.
  */
 export interface NativeControlBridge {
   post: (id: string) => void;
-  subscribe: (listener: (detail: unknown) => void) => () => void;
+  subscribe: (listener: (detail: unknown) => boolean) => () => void;
   wait: (ms: number, fire: () => void) => () => void;
 }
 
@@ -84,9 +96,13 @@ export function requestNativeControls(
     unsubscribe = bridge.subscribe((detail) => {
       const result = nativeCommandResultFromDetail(detail);
       // A result for another command (or another kind) is not ours to consume;
-      // the shell may be answering a `point-at-control` at the same time.
-      if (result === null || result.id !== commandId || result.kind !== "scan-controls") return;
+      // the shell may be answering a `point-at-control` at the same time, and
+      // leaving it queued is what lets that answer reach its own waiter.
+      if (result === null || result.id !== commandId || result.kind !== "scan-controls") {
+        return false;
+      }
       finish(result.ok ? result.controls : null);
+      return true;
     });
     cancelWait = bridge.wait(timeoutMs, () => finish(null));
     bridge.post(commandId);
@@ -108,7 +124,13 @@ export function windowNativeControlBridge(): NativeControlBridge {
       const drain = (): void => {
         const queue = window.callbackboxNativeCommandResultQueue ?? [];
         window.callbackboxNativeCommandResultQueue = [];
-        for (const detail of queue) listener(detail);
+        const unclaimed = queue.filter((detail) => !listener(detail));
+        // Put back what this subscriber did not claim, newest first past the cap,
+        // and behind anything the shell posted while we were draining.
+        window.callbackboxNativeCommandResultQueue = [
+          ...unclaimed.slice(-RESULT_QUEUE_LIMIT),
+          ...(window.callbackboxNativeCommandResultQueue ?? []),
+        ];
       };
       window.addEventListener("callbackbox:native-command-result", drain);
       drain();
