@@ -186,7 +186,7 @@ composeChatAppSnapshot({
   localTime: "Wednesday 2026-05-13 10:00 (morning)",
   channel: "ios-native",
 })
-=> <chat-app narration="off" prose="on" local-time="Wednesday 2026-05-13 10:00 (morning)" channel="ios-native"/>
+=> <chat-app narration="off" prose="on" hq-dictation="off" local-time="Wednesday 2026-05-13 10:00 (morning)" channel="ios-native"/>
 ```
 
 The companion-pane `open-card` attribute (box-relative path) rides on every send
