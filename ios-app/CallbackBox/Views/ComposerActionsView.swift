@@ -26,6 +26,12 @@ struct ComposerActionsView: View {
                         Label("Capture", systemImage: "viewfinder")
                     }
                     .disabled(canCapture == false)
+                    .controlAnchor(
+                        "cb-composer-capture",
+                        label: "Capture",
+                        does: "opens the capture screen — record photos, audio or video into this chat",
+                        disabled: canCapture == false
+                    )
 
                     if canCapture == false {
                         Text("Send a message first")

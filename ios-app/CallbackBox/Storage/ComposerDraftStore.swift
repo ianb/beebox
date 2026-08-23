@@ -161,7 +161,11 @@ final class ComposerDraftStore: ObservableObject {
         guard activeBoxID == boxID, isReady else {
             return .rejected(id: command.id, reason: "The selected box changed before the selection was saved.")
         }
-        let source = command.selection
+        guard case .addSelection(let source) = command.payload else {
+            // Unreachable through `RootView`, which routes by payload; explicit
+            // so a future kind cannot silently land in the selection path.
+            return .rejected(id: command.id, reason: "That command does not carry a selection.")
+        }
         guard
             source.ref.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false,
             source.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false,

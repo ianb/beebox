@@ -19,7 +19,8 @@ import { requireBoxRoot, findBoxRoot, isCardFile, isViewFile } from "../../lib/p
 import { lintViewFile } from "../../webapp/views/compiler.js";
 import { lintViewRefs } from "../../core/views/refs.js";
 import { lintCardsDispatch } from "../../core/card-lint.js";
-import { isAgentInstructionsFile, lintClaudeMdFile } from "../../core/claude-md-lint.js";
+import { lintClaudeMdFile } from "../../core/claude-md-lint.js";
+import { isAgentInstructionsFile } from "../../core/agent-instruction-files.js";
 import { buildLoadContext } from "../../core/load-context.js";
 import { staleContainsWarning } from "../../core/search/contains-state.js";
 import { refreshDerivedRules } from "../../core/refresh-derived-rules.js";

@@ -78,6 +78,15 @@ export type AgentResult =
       success: false;
       error: string;
       /**
+       * Present when the native harness failed without a usable assistant
+       * response (for example auth/model rejection or an SDK transport
+       * failure). This is different from a started turn ending at its
+       * turn/budget limit: callers
+       * may preserve partial-work behavior for the latter, but must surface and
+       * gate an invocation failure.
+       */
+      invocationFailure?: true;
+      /**
        * Present when the failure is deferred-recoverable: the engine is
        * unavailable (e.g. quota-exhausted) and will work again at `retryAt`.
        * Callers branch on this to defer instead of retrying or counting the
@@ -95,7 +104,12 @@ export type AgentResult =
  */
 export type StructuredAgentResult<T> =
   | (AgentResultBase & { success: true; data: T })
-  | (AgentResultBase & { success: false; error: string; data: null });
+  | (AgentResultBase & {
+      success: false;
+      error: string;
+      data: null;
+      invocationFailure?: true;
+    });
 
 /**
  * A named agent with session lifecycle.

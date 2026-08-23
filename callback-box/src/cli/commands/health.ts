@@ -24,7 +24,7 @@ import {
   formatDurationShort,
   type BoxScheduleHealth,
 } from "../../core/schedule/health-box.js";
-import type { TaskHealth } from "../../core/schedule/health.js";
+import { conciseScheduleError, type TaskHealth } from "../../core/schedule/health.js";
 import { loadRunningScripts, type ScriptLock } from "../../core/schedule/state.js";
 import { runHealthChecks, type HealthCheck } from "../../webapp/trpc/routers/health.js";
 
@@ -88,7 +88,7 @@ function printHealth(
       `  ${lock ? "▶" : STATUS_GLYPHS[task.status]} ${task.name.padEnd(22)} ${describeStatus(task).padEnd(14)} ${detail}`
     );
     if (isUnhealthy(task) && task.lastError) {
-      console.log(`      error: ${task.lastError.split("\n")[0]}`);
+      console.log(`      error: ${conciseScheduleError(task.lastError)}`);
     }
   }
   const hidden = health.tasks.length - tasks.length;

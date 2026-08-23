@@ -86,13 +86,19 @@ function failStatus(severity: ProcedureSeverity): "warn" | "fail" {
  */
 export async function executeValidation(
   params: ExecuteValidationParams
-): Promise<{ status: ValidateStatus; stdout?: string; review?: string }> {
+): Promise<{
+  status: ValidateStatus;
+  stdout?: string;
+  review?: string;
+  invocationFailure?: string;
+}> {
   const { ctx, boxRoot, step, procedureName } = params;
   invariant(step.validate, "executeValidation requires step.validate (checked by callers before invoking)");
   const { phase, severity, model } = step.validate;
   let status: ValidateStatus = "pass";
   let stdout = "";
   let review: string | undefined = undefined;
+  let invocationFailure: string | undefined = undefined;
 
   // Run shell checks
   if (phase.shells.length > 0) {
@@ -128,6 +134,7 @@ export async function executeValidation(
       ...(params.createAgent && { createAgent: params.createAgent }),
     });
     review = verdict.review;
+    invocationFailure = verdict.invocationFailure;
 
     if (!verdict.passed) {
       status = failStatus(severity);
@@ -141,12 +148,20 @@ export async function executeValidation(
     }
   }
 
-  const result: { status: ValidateStatus; stdout?: string; review?: string } = { status };
+  const result: {
+    status: ValidateStatus;
+    stdout?: string;
+    review?: string;
+    invocationFailure?: string;
+  } = { status };
   if (stdout) {
     result.stdout = stdout;
   }
   if (review) {
     result.review = review;
+  }
+  if (invocationFailure !== undefined) {
+    result.invocationFailure = invocationFailure;
   }
   return result;
 }

@@ -30,7 +30,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { nativeEmissionFromDetail, parseNativeEmissionDetail } from "../../src/frontend/src/components/chat/native-emission.js";
-import { nativeComposerCommandAcknowledgementFromDetail, nativeComposerCommandFromDetail } from "../../src/frontend/src/components/chat/native-composer-command.js";
+import { nativeCommandResultFromDetail, nativeComposerCommandAcknowledgementFromDetail, nativeComposerCommandFromDetail } from "../../src/frontend/src/components/chat/native-composer-command.js";
 import { nativeLastAudioRequestFromDetail } from "../../src/frontend/src/components/chat/native-last-audio-request.js";
 import { nativeSpeechCommandFromDetail } from "../../src/frontend/src/components/chat/native-speech-command.js";
 import { detectKeyword, appendSendKeywordTag } from "../../src/frontend/src/lib/audio/speech-keywords.js";
@@ -107,6 +107,14 @@ function validateEmission(fx) {
 // ── composer-command: strict web→native add-selection command ──
 function validateComposerCommand(fx) {
   const out = nativeComposerCommandFromDetail(fx.input);
+  return deepEqual(out, fx.expected)
+    ? { ok: true }
+    : { ok: false, detail: `got ${JSON.stringify(out)}` };
+}
+
+// ── composer-command-result: the native→web answer a V2 command produced ──
+function validateCommandResult(fx) {
+  const out = nativeCommandResultFromDetail(fx.input);
   return deepEqual(out, fx.expected)
     ? { ok: true }
     : { ok: false, detail: `got ${JSON.stringify(out)}` };
@@ -291,7 +299,24 @@ The web-to-native selection command uses one versioned, strict shape.
 
 ```ts
 runFamily("composer-command", validateComposerCommand)
-=> {"family":"composer-command","cases":3,"pass":3}
+=> {"family":"composer-command","cases":8,"pass":8}
+```
+
+V2 adds `kind`-discriminated payloads without disturbing V1, which installed iOS
+builds still decode. An unknown kind — and an unknown `action` inside a
+`point-at-control` payload — is refused rather than guessed at, on both sides:
+acting on the interface on a guess is the one thing a pointer must never do.
+
+The result carries the answer. `scan-controls` returns an inventory (an empty
+one is a real answer); `point-at-control` returns only that it happened, because
+the ring is already drawn on the phone. A control entry from a build older than
+`point-at-control` has no `actions` key at all, and absent reads as **none** —
+such a build can list a control and cannot act on one, so the dump prints it
+without a link rather than promising a pointer that would break on click.
+
+```ts
+runFamily("composer-command-result", validateCommandResult)
+=> {"family":"composer-command-result","cases":7,"pass":7}
 ```
 
 The acknowledgement is emitted only after the native draft mutation is

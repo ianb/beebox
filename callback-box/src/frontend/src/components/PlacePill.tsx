@@ -194,6 +194,7 @@ export function PlacePill({
           // instead of truncating.
           <button
             type="button"
+            id="cb-nav-place"
             onClick={(e) => { if (!open) openSwitchMenu(); toggle(e); }}
             className="min-h-[40px] w-full min-w-0 pl-3 pr-2 flex items-center gap-1.5 hover:bg-white/10 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
             title={title}

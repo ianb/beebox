@@ -10,6 +10,7 @@ import { useCallback, useEffect, type MutableRefObject } from "react";
 import { useDictationDraft } from "../../hooks/useDictationDraft";
 import { RecoveredDictation } from "./RecoveredDictation";
 import { joinTranscript } from "./InteractiveChat-helpers";
+import { ExpiredAttachmentsNotice } from "./InteractiveChat-layout";
 import type { InputStore } from "./input-store";
 
 export const RECOVERED_DICTATION_MIN_CHARACTERS = 20;
@@ -94,4 +95,35 @@ export function useRecoveredDictation(opts: {
   ) : null;
 
   return { recoveredDictation, clearDraft };
+}
+
+/**
+ * Bundles the recovered-dictation widget with the sibling expired-attachments
+ * notice — the two small "startup banners" `InteractiveChat` renders above
+ * the composer. Combined into one hook (rather than each staying a separate
+ * call) purely to keep that root component under the line-count limit.
+ */
+export function useRecoveryWidgets(opts: {
+  boxSlug: string | undefined;
+  transcript: string;
+  isTranscribing: boolean;
+  narrationEnabled: boolean;
+  hqInFlight: boolean;
+  sessionId: string | null;
+  sendVoiceSegment: (text: string) => void;
+  inputStore: InputStore;
+  startVoice: () => void;
+  clearDraftRef: MutableRefObject<() => void>;
+  expiredAttachments: string[];
+  dismissExpiredAttachments: () => void;
+}) {
+  const { expiredAttachments, dismissExpiredAttachments } = opts;
+  const { recoveredDictation } = useRecoveredDictation(opts);
+  const expiredAttachmentsNotice = (
+    <ExpiredAttachmentsNotice
+      names={expiredAttachments}
+      onDismiss={dismissExpiredAttachments}
+    />
+  );
+  return { recoveredDictation, expiredAttachmentsNotice };
 }

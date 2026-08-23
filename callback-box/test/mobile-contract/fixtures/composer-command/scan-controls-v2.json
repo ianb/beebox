@@ -1,0 +1,12 @@
+{
+  "input": {
+    "version": 2,
+    "id": "scan-command-1",
+    "kind": "scan-controls"
+  },
+  "expected": {
+    "version": 2,
+    "id": "scan-command-1",
+    "kind": "scan-controls"
+  }
+}

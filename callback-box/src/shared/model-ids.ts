@@ -1,8 +1,6 @@
 /**
- * Canonical Claude model IDs — the single source for the literal model-ID
- * strings that were otherwise copy-pasted between the procedure engine's
- * short-name map (`procedure/engine-types.ts` MODEL_MAP) and the chat model
- * picker (`frontend/.../InteractiveChat-helpers.ts` MODEL_OPTIONS). A model
+ * Canonical agent model IDs — the single source for literal model-ID strings
+ * shared by engine-aware procedure tiers and the chat model picker. A model
  * version bump now changes one place.
  *
  * `opus` tracks the current Opus flagship — now Opus 5. Older selections that
@@ -19,6 +17,9 @@ export const MODEL_ID = {
   sonnet: "claude-sonnet-5",
   opus: "claude-opus-5",
   fable: "claude-fable-5",
+  luna: "gpt-5.6-luna",
+  terra: "gpt-5.6-terra",
+  sol: "gpt-5.6-sol",
 } as const;
 
 /**

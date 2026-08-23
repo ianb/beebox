@@ -17,6 +17,14 @@ import { errorMessage } from "../../lib/error-guards.js";
 export const procedureCommand = new Command("procedure")
   .description("Manage and run declarative procedures");
 
+/** Flush the diagnostic into scheduler pipes before terminating the CLI. */
+async function exitWithProcedureError(message: string | undefined): Promise<never> {
+  await new Promise<void>((resolve) => {
+    process.stderr.write(`Error: ${message ?? "Unknown procedure error"}\n`, () => resolve());
+  });
+  process.exit(1);
+}
+
 procedureCommand
   .command("run")
   .description("Start a new procedure run")
@@ -43,12 +51,10 @@ procedureCommand
       });
 
       if (!result.success) {
-        console.error(`Error: ${result.error}`);
-        process.exit(1);
+        await exitWithProcedureError(result.error);
       }
     } catch (error) {
-      console.error(`Error: ${errorMessage(error)}`);
-      process.exit(1);
+      await exitWithProcedureError(errorMessage(error));
     }
   });
 
@@ -72,12 +78,10 @@ procedureCommand
       });
 
       if (!result.success) {
-        console.error(`Error: ${result.error}`);
-        process.exit(1);
+        await exitWithProcedureError(result.error);
       }
     } catch (error) {
-      console.error(`Error: ${errorMessage(error)}`);
-      process.exit(1);
+      await exitWithProcedureError(errorMessage(error));
     }
   });
 
@@ -96,12 +100,10 @@ procedureCommand
       });
 
       if (!result.success) {
-        console.error(`Error: ${result.error}`);
-        process.exit(1);
+        await exitWithProcedureError(result.error);
       }
     } catch (error) {
-      console.error(`Error: ${errorMessage(error)}`);
-      process.exit(1);
+      await exitWithProcedureError(errorMessage(error));
     }
   });
 
@@ -120,12 +122,10 @@ procedureCommand
       });
 
       if (!result.success) {
-        console.error(`Error: ${result.error}`);
-        process.exit(1);
+        await exitWithProcedureError(result.error);
       }
     } catch (error) {
-      console.error(`Error: ${errorMessage(error)}`);
-      process.exit(1);
+      await exitWithProcedureError(errorMessage(error));
     }
   });
 
@@ -145,11 +145,9 @@ procedureCommand
       });
 
       if (!result.success) {
-        console.error(`Error: ${result.error}`);
-        process.exit(1);
+        await exitWithProcedureError(result.error);
       }
     } catch (error) {
-      console.error(`Error: ${errorMessage(error)}`);
-      process.exit(1);
+      await exitWithProcedureError(errorMessage(error));
     }
   });

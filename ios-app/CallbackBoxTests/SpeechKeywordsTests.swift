@@ -414,10 +414,13 @@ final class MobileContractFixtureDecodeTests: XCTestCase {
         for (name, fixture) in fixtures {
             let input = try XCTUnwrap(fixture["input"] as? [String: Any], "\(name): missing input")
             let data = try MobileContractFixtures.jsonData(from: input)
-            if fixture["expected"] is [String: Any] {
+            if let expected = fixture["expected"] as? [String: Any] {
+                // Both envelope versions live in this family: V1 with a top-level
+                // `selection`, V2 with a kind-discriminated payload. The fixture
+                // says which, so this asserts what it says rather than pinning V1.
                 let command = try JSONDecoder().decode(NativeComposerCommand.self, from: data)
-                XCTAssertEqual(command.version, 1, "\(name): version")
-                XCTAssertEqual(command.kind, .addSelection, "\(name): kind")
+                XCTAssertEqual(command.version, expected["version"] as? Int, "\(name): version")
+                XCTAssertEqual(command.kind.rawValue, expected["kind"] as? String, "\(name): kind")
                 XCTAssertEqual(command.id, input["id"] as? String, "\(name): id")
                 decoded += 1
             } else {
@@ -425,7 +428,7 @@ final class MobileContractFixtureDecodeTests: XCTestCase {
                 rejected += 1
             }
         }
-        XCTAssertGreaterThan(decoded, 0, "no add-selection command fixture decoded")
+        XCTAssertGreaterThan(decoded, 0, "no command fixture decoded")
         XCTAssertGreaterThan(rejected, 0, "no malformed command fixture rejected")
     }
 

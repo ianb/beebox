@@ -14,8 +14,12 @@
 
 import { z } from "zod";
 import { createAgent as realCreateAgent } from "../agent/index.js";
-import { MODEL_MAP, type AgentFactory } from "./engine-types.js";
-import { MODEL_ID } from "../../shared/model-ids.js";
+import { loadAgentEngine } from "../box/config.js";
+import {
+  resolveProcedureModel,
+  type ProcedureModelName,
+} from "../../shared/agent-models.js";
+import type { AgentFactory } from "./engine-types.js";
 
 /** Structured verdict the review model returns for an instruction check. */
 export const InstructionVerdict = z.object({
@@ -23,8 +27,8 @@ export const InstructionVerdict = z.object({
   reasoning: z.string(),
 });
 
-/** Friendly model name → full id; the judge defaults to sonnet. */
-const DEFAULT_REVIEW_MODEL = "sonnet";
+/** Portable model tier; each box's configured engine resolves it natively. */
+const DEFAULT_REVIEW_MODEL: ProcedureModelName = "balanced";
 
 /** Turn cap for the judge — it reads inline context and returns a verdict. */
 const REVIEW_MAX_TURNS = 8;
@@ -38,8 +42,8 @@ export interface EvaluateInstructionsParams {
   whys: string[];
   /** The step's git diff (`baseline..finalRef` range), the artifact judged. */
   diff: string;
-  /** Friendly model name (haiku/sonnet/opus); defaults to sonnet. */
-  model?: string;
+  /** Portable model tier or legacy alias; defaults to balanced. */
+  model?: ProcedureModelName;
   /** Agent factory override (default: real createAgent). */
   createAgent?: AgentFactory;
   /** Name used for the judge agent's session manifest entry. */
@@ -93,9 +97,10 @@ the diff).`;
  */
 export async function evaluateInstructions(
   params: EvaluateInstructionsParams
-): Promise<{ passed: boolean; review: string }> {
+): Promise<{ passed: boolean; review: string; invocationFailure?: string }> {
   const { boxRoot, instructions, whys, diff, name } = params;
-  const modelId = MODEL_MAP[params.model ?? DEFAULT_REVIEW_MODEL] ?? MODEL_ID.sonnet;
+  const engine = await loadAgentEngine(boxRoot);
+  const modelId = resolveProcedureModel(engine, params.model ?? DEFAULT_REVIEW_MODEL);
 
   const factory = params.createAgent ?? realCreateAgent;
   const agent = factory({ name });
@@ -115,6 +120,7 @@ export async function evaluateInstructions(
     return {
       passed: false,
       review: `Instruction validation could not obtain a verdict: ${result.error}`,
+      ...(result.invocationFailure === true && { invocationFailure: result.error }),
     };
   }
 

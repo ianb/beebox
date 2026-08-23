@@ -35,12 +35,14 @@ interface MutablePhasePrecheck {
 interface MutablePhaseRun {
   "session-id"?: string;
   stdout?: string;
+  error?: string;
   "git-ref"?: string;
 }
 interface MutablePhaseValidate {
   status: string;
   stdout?: string;
   review?: string;
+  error?: string;
 }
 interface MutableStep {
   id: string;
@@ -176,6 +178,7 @@ function applyStepUpdate(prev: MutableStep, update: StepUpdate): MutableStep {
     const run: MutablePhaseRun = {};
     if (update.run.sessionId) run["session-id"] = update.run.sessionId;
     if (update.run.stdout) run.stdout = update.run.stdout;
+    if (update.run.error) run.error = update.run.error;
     if (update.run.gitRef) run["git-ref"] = update.run.gitRef;
     step.run = run;
   }
@@ -183,6 +186,7 @@ function applyStepUpdate(prev: MutableStep, update: StepUpdate): MutableStep {
     step.validate = { status: update.validate.status };
     if (update.validate.stdout) step.validate.stdout = update.validate.stdout;
     if (update.validate.review) step.validate.review = update.validate.review;
+    if (update.validate.error) step.validate.error = update.validate.error;
   }
   return step;
 }

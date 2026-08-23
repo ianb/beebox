@@ -24,6 +24,7 @@ import { isActivityKind, type ActivityKind, type CardStateDetails } from "../../
 import type { ChatSendInput } from "../../core/chat/session/index.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { readJpegOrientation, ORIENTATION_NORMAL } from "../../shared/image-orientation.js";
+import { CHAT_CHANNELS, type ChatChannel } from "../../shared/chat-channel.js";
 
 // Structural shape only (id/mimeType/dataBase64 present with the right
 // primitive types) — the content-level checks (mime prefix, total byte cap)
@@ -92,6 +93,14 @@ export const sendBodySchema = z.object({
    * activity kinds; non-kind keys and non-string values are dropped.
    */
   cardState: z.record(z.string(), z.unknown()).optional(),
+  /**
+   * Where the user is sending from, decided by the client (only it knows
+   * whether the native shell is in effect) and surfaced as the `channel`
+   * snapshot attribute. Absent from an old bundle — and from the iOS share
+   * extension, which posts here without a web client — in which case the
+   * route falls back to classifying the User-Agent (see `resolveChannel`).
+   */
+  channel: z.enum(CHAT_CHANNELS).optional(),
 });
 
 export type SendBody = z.infer<typeof sendBodySchema>;
@@ -122,10 +131,27 @@ export const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
  * the agent can shape output for the device (mobile screens don't render
  * wide tables or long structured output well). Coarse on purpose —
  * phone/tablet vs. everything else; undefined when there's no UA to read.
+ *
+ * The UA can never distinguish the iOS native shell from mobile web (the
+ * WebView carries an ordinary iPhone UA), which is why this is only the
+ * fallback for a client that sends nothing — see `resolveChannel`.
  */
-export function classifyChannel(userAgent: string | undefined): string | undefined {
+export function classifyChannel(userAgent: string | undefined): ChatChannel | undefined {
   if (!userAgent) return undefined;
   return /mobi|android|iphone|ipad/i.test(userAgent) ? "web-mobile" : "web-desktop";
+}
+
+/**
+ * The send's `channel`: what the client declared, else the UA guess. The
+ * client wins because only it knows whether the native shell is in effect
+ * (`ios-native`); an old bundle that declares nothing keeps reporting exactly
+ * what it reported before this field existed.
+ */
+export function resolveChannel(
+  declared: ChatChannel | undefined,
+  userAgent: string | undefined,
+): ChatChannel | undefined {
+  return declared ?? classifyChannel(userAgent);
 }
 
 /**
@@ -160,7 +186,7 @@ export function buildSendInput(
   { text, images, channel, cardFields }: {
     text: string;
     images: SendBody["images"];
-    channel: string | undefined;
+    channel: ChatChannel | undefined;
     cardFields: { openCard?: string; cardActivity?: ActivityKind[]; cardState?: CardStateDetails };
   },
 ): ChatSendInput {

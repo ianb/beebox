@@ -21,17 +21,133 @@ break this repo — v2.1.218's worktree git isolation silently broke `/finish`'s
 merge step for days. Claude Code versions that move harness behavior get their
 own entries here, labeled as such, with no pin to apply.
 
-- **Current pin:** `0.3.235` (in `callback-box/package.json` — see the split-pin
+- **Current pin:** `0.3.238` (in `callback-box/package.json` — see the split-pin
   note below; the monorepo root still carries a second, unmanaged pin at
   `0.3.226`)
-- **Latest reviewed upstream version:** `0.3.238` (SDK), `2.1.238` (Claude Code)
+- **Latest reviewed upstream version:** `0.3.241` (SDK), `2.1.241` (Claude Code)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** `0.3.236` was ~45h at this turn — short by under
-  three hours, the third consecutive day a release has just missed the window
-  (see the cadence note below). `0.3.237`/`0.3.238` are ~40h/~22h. Take the
-  newest settled next turn. Nothing act-now on either channel.
+- **Current recommendation:** `0.3.239` was ~47h at this turn, `0.3.240` ~27h,
+  `0.3.241` ~16h. Take the newest settled next turn. Nothing act-now on either
+  channel. **The open item is still not an upstream release** — the
+  `encodeProjectDir` bug recorded below remains unfixed and unfiled as of this
+  turn (`transcript-paths.ts` last changed 2026-08-20, before the finding).
 
 ## Release ledger
+
+### 0.3.241 — pending (parity with Claude Code 2.1.241)
+
+- **Upstream:** SDK entry is only "Updated to parity with Claude Code v2.1.241",
+  and 2.1.241 itself says only "Bug fixes and reliability improvements" — nothing
+  itemized to assess. This is the second consecutive opaque Claude Code release
+  (2.1.240 said the same), so two pins in a row carry changes this ledger cannot
+  characterize. Not a concern by itself; noted because a run of unitemized
+  releases is exactly when a harness change like v2.1.218's worktree isolation
+  could pass through unremarked, and the only defense is noticing behavior
+  afterward rather than reading about it first.
+- **Callback-box applicability:** Nothing assessable on either channel.
+- **Action:** Published 2026-08-22T23:59Z, ~16h old, inside the settling window.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03241), [Claude Code 2.1.241](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21241)
+
+### Live bug found while reviewing 2.1.239 — `encodeProjectDir` no longer matches Claude Code
+
+Claude Code 2.1.239 lists: *"Fixed `claude -c`/resume picking up sessions from a
+different directory whose path differed only by characters like `_`, `-`, or
+`.`"*. That is exactly the collision callback-box's own code documents, so the
+on-disk encoding was checked rather than assumed — and **callback-box's encoder
+is wrong today, independent of any release in this ledger.**
+
+`encodeProjectDir` (`callback-box/src/core/chat/session/transcript-paths.ts`)
+collapses *every* non-alphanumeric character to `-`:
+
+    return cwd.replace(/[^\dA-Za-z]/g, "-");
+
+with a comment asserting that "paths with `_`, `.`, spaces, etc. all collapse to
+the same shape." **Claude Code does not do that — it preserves `_` and `.`.**
+Verified against the real store: for the box path
+`~/src/box-worktrees/tool_arg_preview/test1`, the directory
+Claude Code actually created keeps the underscores, while the name
+`encodeProjectDir` computes does not exist on disk at all. 27 of the 5,343
+project directories on this machine contain a character callback-box would have
+collapsed, and the oldest dates to 2026-05-12 — so this is long-standing, not a
+regression introduced by 2.1.239 or by any bump this ledger has made.
+
+**Impact:** session discovery silently misses for any box or worktree whose path
+contains `_` or `.`. `getSessionLogPath` resolves to a directory that does not
+exist, and `history.ts`'s candidate enumeration is built from the same encoder,
+so a chat in such a box would find no transcripts rather than fail loudly. Boxes
+under plain `~/src/boxes/<name>/content` are unaffected; the exposure is
+underscore- or dot-named worktrees (`box-worktrees/tool_arg_preview/test1` is a
+real example on this machine) and any `*.moved-to` box directory.
+
+**Not fixed here.** This monitor's commit scope is the ledger, the pin, and the
+lockfile; changing `transcript-paths.ts` is application work that wants its own
+change and its own test. Recorded as durable evidence, which is what this file
+is for. **Status 2026-08-23: still unfixed and unfiled** — `transcript-paths.ts`
+last changed on 2026-08-20 (before this was found) and no issue for it exists
+under `issues/bugs/`. Re-checked each turn until it moves. The fix is presumably to stop collapsing `_` and `.` — but the exact
+upstream rule should be derived from observed directory names rather than
+guessed, and 2.1.239 may have just changed the disambiguation behaviour on top
+of it, so whoever picks this up should re-derive the encoding against a current
+CLI before editing.
+
+### 0.3.240 — pending (parity with Claude Code 2.1.240)
+
+- **Upstream:** SDK entry is only "Updated to parity with Claude Code v2.1.240",
+  and 2.1.240 itself says only "Bug fixes and reliability improvements" — nothing
+  itemized to assess on either channel.
+- **Action:** Published 2026-08-22T13:07Z, ~3h old. Note it landed at 13:07Z
+  rather than the recent 18:00–19:00Z pattern, so the cadence note below may
+  stop applying if publish times keep moving earlier.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03240), [Claude Code 2.1.240](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21240)
+
+### 0.3.239 — pending
+
+- **Upstream (SDK):** `total_cost_usd` / `modelUsage.costUSD` now include the
+  1.1× US-only-inference (data residency) multiplier when the response reports
+  `inference_geo: "us"`. A result held back for background subagents in one-shot
+  mode now reports `total_cost_usd`, `duration_api_ms` and `modelUsage` as of its
+  release rather than the turn-end snapshot. Fixed
+  `SYSTEM_PROMPT_DYNAMIC_BOUNDARY` in an array `systemPrompt` being sent as
+  literal text on Bedrock/Vertex/Foundry/gateway providers. A repeated
+  `initialize` on a running process is now followed by a
+  `background_tasks_changed` snapshot.
+- **Callback-box applicability (runtime):**
+  - **Both cost changes land on a value callback-box records.**
+    `scan-vision-claude.ts` reads `result.total_cost_usd` per scan batch (and
+    `toBatchUsage` reads `result.usage`). The 1.1× data-residency multiplier
+    makes that figure larger but *more accurate* where it applies; the
+    one-shot/background-subagent change makes it correct as of release rather
+    than a turn-end snapshot. Neither breaks anything — but any comparison of
+    scan costs recorded across this pin boundary is apples-to-oranges, which is
+    worth knowing before reading a cost trend as a regression.
+  - `SYSTEM_PROMPT_DYNAMIC_BOUNDARY`: inert. Callback-box passes
+    `systemPrompt: { type: "preset", preset: "claude_code", append: … }`
+    (`src/core/agent/run.ts`), not an array, and talks to the Anthropic API
+    directly rather than through Bedrock/Vertex/Foundry/a gateway.
+  - The `background_tasks_changed`-after-repeated-`initialize` item continues the
+    thread from `0.3.238`: it further confirms the SDK expects hosts that
+    re-`initialize` a running process. Callback-box still is not one — its warm
+    pool hands the already-initialized `Query` to `buildRunFromQuery` — so both
+    items remain inert here for the same reason.
+- **Callback-box applicability (harness):**
+  - `Fixed WebFetch retaining expired page content in memory for the whole
+    session instead of the intended 15 minutes` — a real memory fix in a tool
+    box agents can use, and resident box sessions are exactly where per-session
+    retention accumulates. Not act-now: callback-box fetches most external
+    content server-side through its own connectors (`article-fetcher`,
+    `feed-fetcher`) rather than the agent's WebFetch tool, so agent WebFetch use
+    is incidental, and the fix arrives with the next settled bump anyway.
+  - Checked and clear: this repo has no `.worktreeinclude`, so the `**/`
+    pattern fix does not apply, and no `.md` under `.claude/` or
+    `callback-box/plugins/` starts with a UTF-8 BOM, so the silently-ignored
+    agents/skills/commands fix has nothing to repair here.
+  - `Fixed /resume in all-projects mode telling you to cd into a deleted
+    directory (e.g. a removed worktree)` — this repo removes worktrees
+    routinely, so the improvement is welcome; nothing to change.
+  - Not applicable: the Bedrock/Vertex/proxy fixes, cloud-session plugin sync,
+    Alpine/musl add-ons, and the JetBrains and terminal-rendering items.
+- **Action:** Published 2026-08-21T17:23Z, ~23h old, inside the settling window.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03239), [Claude Code 2.1.239](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21239)
 
 ### Cadence note — the fixed check hour costs a day per release
 
@@ -46,7 +162,7 @@ since an act-now finding bypasses the window entirely. Recorded so the pattern
 reads as a known property of the schedule rather than a series of coincidences.
 Moving the run ~3h later, or treating the window as 45h, would close it.
 
-### 0.3.238 — pending
+### 0.3.238 — applied
 
 - **Upstream (SDK):** Added `is_backgrounded` and `spawn_depth` to
   `task_started` events for subagent tasks (`is_backgrounded` also on background
@@ -111,11 +227,16 @@ Moving the run ~3h later, or treating the window as 45h, would close it.
     plugins from local paths, not url marketplaces), all `self-hosted-runner`
     flags, the MCP `server/discover` ordering fix (no MCP servers configured),
     and the Remote Control and cross-session messaging fixes.
-- **Action:** Published 2026-08-20T18:02Z, ~22h old, inside the settling window.
-  The boxholder's harness is already on 2.1.238 independently.
+- **Action:** Published 2026-08-20T18:02Z. Applied 2026-08-23 via
+  `pnpm update-agent-sdk` at ~70h as the newest settled version. Verified:
+  typecheck clean, `pnpm -C callback-box test` 7529/7529 pass, and
+  `scripts/sdk-steering-probe.ts` holds all four steering behaviors. The
+  hook-callbacks-after-re-`initialize` fix analysed above is therefore now live
+  at the pin — no behavior change was observed, consistent with the conclusion
+  that callback-box never performs that re-initialize.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03238), [Claude Code 2.1.238](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21238)
 
-### 0.3.237 — pending (parity with Claude Code 2.1.237)
+### 0.3.237 — applied (parity with Claude Code 2.1.237)
 
 - **Upstream:** The SDK entry is only "Updated to parity with Claude Code
   v2.1.237". Claude Code 2.1.237 is two items: prompt caching fixed for sessions
@@ -128,10 +249,13 @@ Moving the run ~3h later, or treating the window as 45h, would close it.
   ~5h after `0.3.236`** — a fast-follow worth noting mainly because a same-day
   successor is usually a hotfix, but 2.1.237 reads as ordinary work rather than
   a repair of anything in `0.3.236`.
-- **Action:** ~16h old, inside the settling window.
+- **Action:** Applied 2026-08-22 via `pnpm update-agent-sdk` at ~64h as the
+  newest settled version, carrying `0.3.236` in with it. Verified: typecheck
+  clean, `pnpm -C callback-box test` 7496/7496 pass, and
+  `scripts/sdk-steering-probe.ts` holds all four steering behaviors.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03237), [Claude Code 2.1.237](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21237)
 
-### 0.3.236 — pending
+### 0.3.236 — applied
 
 - **Upstream (SDK):** One real API item: `PostToolUse` hooks can return
   `hookSpecificOutput.classifierContext`, a short host-asserted note about a tool
@@ -184,7 +308,9 @@ Moving the run ~3h later, or treating the window as 45h, would close it.
   `status.showUntrackedFiles=no` into reporting a clean tree; a slash-command
   typo now reports instead of running the closest fuzzy match; and session
   recaps are capped at 400 characters. None requires a repo change.
-- **Action:** Published 2026-08-19T18:49Z, ~21h old, inside the settling window.
+- **Action:** Published 2026-08-19T18:49Z. Applied 2026-08-22, carried in by the
+  settled bump to `0.3.237`. The `classifierContext` opportunity and the SIGTERM
+  transcript-fidelity fix noted above are therefore now live at the pin.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03236), [Claude Code 2.1.236](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21236)
 
 ### 0.3.235 — applied (parity content from Claude Code 2.1.235)

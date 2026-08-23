@@ -16,7 +16,8 @@ import type { ComponentType } from "react";
 import { isExternalUrl, resolveContentTarget } from "../lib/view-url";
 import { isImagePath } from "./chat/message-parsing";
 import { FileView } from "./FileView";
-import { makeImg, type LinkContext, type MarkdownComponentOverrides } from "./Markdown";
+import { makeImg, type MarkdownComponentOverrides } from "./Markdown";
+import type { LinkContext } from "./markdown-link";
 
 // Markdoc's `MarkdownComponentOverrides` map wants one homogeneous
 // `ComponentType<Record<string,unknown>>`, but `Img` below has its own

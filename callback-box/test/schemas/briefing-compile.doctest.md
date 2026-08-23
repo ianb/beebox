@@ -2,13 +2,19 @@
 
 `compileBriefing` produces the markdown that gets `@`-included into
 CLAUDE.md: the body's Markdoc (`{% purpose %}`, `{% correction %}`, prose)
-followed by the frontmatter records (`key-people:`, `properties:`) as
+followed by the frontmatter records (`key-people:`, `properties:`,
+`openers:`) as
 `**Label:** …` lines. The structured records live in frontmatter; only the
 free-text material stays in the body. (Outputs are `JSON.stringify`-ed to
 pin exact whitespace.)
 
 ```ts setup
-import { compileBriefing } from "../../src/schemas/briefing.js";
+import { BriefingSchema, compileBriefing } from "../../src/schemas/briefing.js";
+
+/** Does `openers` pass the schema? */
+function opensOk(openers: string[]): boolean {
+  return BriefingSchema.frontmatterSchema.safeParse({ type: "briefing", openers }).success;
+}
 ```
 
 ## Body-only: the `{% purpose %}` tag compiles to a Purpose line
@@ -65,6 +71,65 @@ const md = compileBriefing({
 });
 JSON.stringify(md)
 => "## Box Briefing\n\n**Purpose:** Learn AI together.\n\n**Key Person:** **Priya**\n"
+```
+
+## `openers` compile to Opener lines
+
+Openers are the suggestions a fresh chat offers; they compile into the
+briefing slice so the agent sees what it is currently suggesting on every
+turn (which is what lets it curate them).
+
+```ts
+const md = compileBriefing({
+  type: "briefing",
+  openers: ["Let me tell you what this box is for.", "What can you do?"],
+  body: "",
+});
+JSON.stringify(md)
+=> "## Box Briefing\n\n**Opener:** Let me tell you what this box is for.\n\n**Opener:** What can you do?\n"
+```
+
+## Blank openers are dropped, and each is trimmed
+
+A stray empty list entry shouldn't emit a bare `**Opener:**` line.
+
+```ts
+JSON.stringify(compileBriefing({ type: "briefing", openers: ["  What can you do?  ", "", "   "], body: "" }))
+=> "## Box Briefing\n\n**Opener:** What can you do?\n"
+```
+
+## An opener must be a single short non-blank line
+
+An opener is agent-written text that compiles into CLAUDE.md and renders as a
+button. A blank, multi-line, or essay-length entry is a card validation error
+the boxholder sees, not something quietly normalized away at render time.
+
+```ts
+opensOk(["What can you do?"])
+=> true
+
+opensOk([""])
+=> false
+
+opensOk(["   "])
+=> false
+
+opensOk(["Tell me about the box.\nAnd the people in it."])
+=> false
+
+opensOk(["x".repeat(120)])
+=> true
+
+opensOk(["x".repeat(121)])
+=> false
+```
+
+Surrounding whitespace doesn't make an otherwise-fine opener fail — the length
+limit is measured on the trimmed text, and `compileBriefing` trims it too.
+
+```ts
+opensOk(["  What can you do?  "])
+=> true
 ```
 
 ## An empty briefing is just the header

@@ -32,6 +32,12 @@ importers:
       http-proxy-3:
         specifier: ^1.23.2
         version: 1.23.2
+      yaml:
+        specifier: ^2.7.0
+        version: 2.9.0
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@types/node':
         specifier: ^24.0.0
@@ -110,8 +116,8 @@ importers:
   callback-box:
     dependencies:
       '@anthropic-ai/claude-agent-sdk':
-        specifier: 0.3.235
-        version: 0.3.235(@anthropic-ai/sdk@0.93.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(zod@4.4.3)
+        specifier: 0.3.238
+        version: 0.3.238(@anthropic-ai/sdk@0.93.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(zod@4.4.3)
       '@fastify/cookie':
         specifier: ^11.0.2
         version: 11.0.2
@@ -737,6 +743,9 @@ importers:
       react-dom:
         specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
+      text-fragments-polyfill:
+        specifier: ^6.7.0
+        version: 6.7.0
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -823,8 +832,8 @@ packages:
     cpu: [arm64]
     os: [darwin]
 
-  '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.235':
-    resolution: {integrity: sha512-15Of0NgAfPgLlKIhSwLL9DUaVkZm4uMSKRUgj8yo4ThEns9Vmq6jYHRZvKE0Gt02ZJMCt7ZFVrOTnpSTfj+qlA==}
+  '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.238':
+    resolution: {integrity: sha512-7KctNItTzHRiDg+jFxTM46o+Y/YS52V6HSopaWPggO6BbR+3MV/rKMmq+zP93If7eVwadW9Yg9vHLjXDKIw9OQ==}
     cpu: [arm64]
     os: [darwin]
 
@@ -838,8 +847,8 @@ packages:
     cpu: [x64]
     os: [darwin]
 
-  '@anthropic-ai/claude-agent-sdk-darwin-x64@0.3.235':
-    resolution: {integrity: sha512-7c3fyKvp37H4ORbIxsN5/+1svq4QNcpty831ZmOyo85+CvXWRskDqu4lnX/a3Hp6vOrdHbsLy+uobeHkuRgGgQ==}
+  '@anthropic-ai/claude-agent-sdk-darwin-x64@0.3.238':
+    resolution: {integrity: sha512-aDt8LXjWISwLzqeCBHxJC5AR1iVYlY5UYIm2VLztjI1U0PCb1BiH/IfyyjjizqRhhEwyQp9YAJeZZq8n/2vQEA==}
     cpu: [x64]
     os: [darwin]
 
@@ -855,8 +864,8 @@ packages:
     os: [linux]
     libc: [musl]
 
-  '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.3.235':
-    resolution: {integrity: sha512-e5yuQieQrIaL6ujcR3KTq698GsscpFDn5U6tQIV6gM3lg0t0b0TVFZHkUVoplGWpNHRTk3ghA+n3ZTV1U8n2gg==}
+  '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.3.238':
+    resolution: {integrity: sha512-ankSEMAMTVulKYg0NT8fZ7a5+q+aIzfiqhcrLe9zYPeuhE+lpNeq0JPMcHyOtUAENxVI0/2J2q5OXGl9O0qWcg==}
     cpu: [arm64]
     os: [linux]
     libc: [musl]
@@ -873,8 +882,8 @@ packages:
     os: [linux]
     libc: [glibc]
 
-  '@anthropic-ai/claude-agent-sdk-linux-arm64@0.3.235':
-    resolution: {integrity: sha512-vODSpOZTyhFRcli+HY56Ezdcou1No7YOsy5qBb9beHlcWi1ESqqXZEnSIq5J+iMjrQfW3DqzBOP/D9ST9LxJEg==}
+  '@anthropic-ai/claude-agent-sdk-linux-arm64@0.3.238':
+    resolution: {integrity: sha512-P7V9TFokcNRdIJPUzDQ0GLBfMuoewWEH4rh6U3e7RaEAxzdeUcdS9P0N4arXqK2YAOtK1o93QSEtiGUF1fTfWw==}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
@@ -891,8 +900,8 @@ packages:
     os: [linux]
     libc: [musl]
 
-  '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.3.235':
-    resolution: {integrity: sha512-JqCSanFyvY+1/yT7qpB+1S8k6D4jX+DRc9Ed97pAyaty5Bn3jLYppJ75umN80BD3CaR1zHvS7ZMEAEOwNkqPdg==}
+  '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.3.238':
+    resolution: {integrity: sha512-buo3IBSd7EmYcQsH+OKARgNNbSF1+l/+z1hDXSXGKzwD1LFioJZ/k9FWWWC166SoQ93jPmN+G/ksTzEUB3zRGQ==}
     cpu: [x64]
     os: [linux]
     libc: [musl]
@@ -909,8 +918,8 @@ packages:
     os: [linux]
     libc: [glibc]
 
-  '@anthropic-ai/claude-agent-sdk-linux-x64@0.3.235':
-    resolution: {integrity: sha512-cFIziPDwJU7xr7mNWlEzEU8mcKT0WJqhSph0ewxLUJOG/R2e1dXW5VfttvavbSmGkeZY5iimpu++CLFFQzpZWA==}
+  '@anthropic-ai/claude-agent-sdk-linux-x64@0.3.238':
+    resolution: {integrity: sha512-/arAOSqtIAWDu7Z4Uf2Un3n+/5Zg3NpxZKzMQEDnYNkbJRhr44sM59TFaEOiWq1FqlUJKi6wHjgm+TW5B8DWWg==}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
@@ -925,8 +934,8 @@ packages:
     cpu: [arm64]
     os: [win32]
 
-  '@anthropic-ai/claude-agent-sdk-win32-arm64@0.3.235':
-    resolution: {integrity: sha512-AykzFEygw2J0Dh5BxnbMoVUR5CPvY2U9vGAbiC6Be0HsuoG1b19b8az8p0fnK8SrTIAw6SvMkTkjMuARD7Lcsw==}
+  '@anthropic-ai/claude-agent-sdk-win32-arm64@0.3.238':
+    resolution: {integrity: sha512-yW8lhV7QgYiNu3NatjgmkhUspgJsG2N2N6lmm/7B99sWFobKTbVLMLsXxj6A46R6qE2C4Zzm6PjxgGaMYOMn0g==}
     cpu: [arm64]
     os: [win32]
 
@@ -940,8 +949,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.235':
-    resolution: {integrity: sha512-ZM5Qe1SFI9Io+o/MtMmXAg70WX57PMjZF65ItG+2CTauZLIkOieqjmbzB3ELU65ByzvZaaea4J/Nyh8v3DOOVg==}
+  '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.238':
+    resolution: {integrity: sha512-6Fb2JRrBci282fBfhCGB0Tpq7N8V5HMMqsO3YGFkc9hhbn/y9G7glNKSNgRtxD5Ujjxj8rhiaYstXW2DJzanzw==}
     cpu: [x64]
     os: [win32]
 
@@ -961,8 +970,8 @@ packages:
       '@modelcontextprotocol/sdk': ^1.29.0
       zod: ^4.0.0
 
-  '@anthropic-ai/claude-agent-sdk@0.3.235':
-    resolution: {integrity: sha512-qnTcUOxi5H18LaXSoIrZN7pmzgfjcbXxQvleb1c3Cr9YCAqMhc9rmKofLTNyYhTntixQFxqpTzAsbujaZNUuVQ==}
+  '@anthropic-ai/claude-agent-sdk@0.3.238':
+    resolution: {integrity: sha512-ppRfbAflZuV7HPqr8BkHPEk8c7gih3PK+GHnZq6zP0Uo7bJHXAJwc4Za8LJRm4hXMixBNMjK1cU/VWfQ9fE2sg==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       '@anthropic-ai/sdk': '>=0.93.0'
@@ -5689,6 +5698,7 @@ packages:
   eslint@9.39.4:
     resolution: {integrity: sha512-XoMjdBOwe/esVgEvLmNsD3IRHkm7fbKIUGvrleloJXUZgDHig2IPWNniv+GwjyJXzuNqVjlr5+4yVUZjycJwfQ==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
     peerDependencies:
       jiti: '*'
@@ -9286,7 +9296,7 @@ snapshots:
   '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.227':
     optional: true
 
-  '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.235':
+  '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.238':
     optional: true
 
   '@anthropic-ai/claude-agent-sdk-darwin-x64@0.3.226':
@@ -9295,7 +9305,7 @@ snapshots:
   '@anthropic-ai/claude-agent-sdk-darwin-x64@0.3.227':
     optional: true
 
-  '@anthropic-ai/claude-agent-sdk-darwin-x64@0.3.235':
+  '@anthropic-ai/claude-agent-sdk-darwin-x64@0.3.238':
     optional: true
 
   '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.3.226':
@@ -9304,7 +9314,7 @@ snapshots:
   '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.3.227':
     optional: true
 
-  '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.3.235':
+  '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.3.238':
     optional: true
 
   '@anthropic-ai/claude-agent-sdk-linux-arm64@0.3.226':
@@ -9313,7 +9323,7 @@ snapshots:
   '@anthropic-ai/claude-agent-sdk-linux-arm64@0.3.227':
     optional: true
 
-  '@anthropic-ai/claude-agent-sdk-linux-arm64@0.3.235':
+  '@anthropic-ai/claude-agent-sdk-linux-arm64@0.3.238':
     optional: true
 
   '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.3.226':
@@ -9322,7 +9332,7 @@ snapshots:
   '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.3.227':
     optional: true
 
-  '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.3.235':
+  '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.3.238':
     optional: true
 
   '@anthropic-ai/claude-agent-sdk-linux-x64@0.3.226':
@@ -9331,7 +9341,7 @@ snapshots:
   '@anthropic-ai/claude-agent-sdk-linux-x64@0.3.227':
     optional: true
 
-  '@anthropic-ai/claude-agent-sdk-linux-x64@0.3.235':
+  '@anthropic-ai/claude-agent-sdk-linux-x64@0.3.238':
     optional: true
 
   '@anthropic-ai/claude-agent-sdk-win32-arm64@0.3.226':
@@ -9340,7 +9350,7 @@ snapshots:
   '@anthropic-ai/claude-agent-sdk-win32-arm64@0.3.227':
     optional: true
 
-  '@anthropic-ai/claude-agent-sdk-win32-arm64@0.3.235':
+  '@anthropic-ai/claude-agent-sdk-win32-arm64@0.3.238':
     optional: true
 
   '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.226':
@@ -9349,7 +9359,7 @@ snapshots:
   '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.227':
     optional: true
 
-  '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.235':
+  '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.238':
     optional: true
 
   '@anthropic-ai/claude-agent-sdk@0.3.226(@anthropic-ai/sdk@0.93.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(zod@4.4.3)':
@@ -9382,20 +9392,20 @@ snapshots:
       '@anthropic-ai/claude-agent-sdk-win32-arm64': 0.3.227
       '@anthropic-ai/claude-agent-sdk-win32-x64': 0.3.227
 
-  '@anthropic-ai/claude-agent-sdk@0.3.235(@anthropic-ai/sdk@0.93.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(zod@4.4.3)':
+  '@anthropic-ai/claude-agent-sdk@0.3.238(@anthropic-ai/sdk@0.93.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(zod@4.4.3)':
     dependencies:
       '@anthropic-ai/sdk': 0.93.0(zod@4.4.3)
       '@modelcontextprotocol/sdk': 1.29.0(zod@4.4.3)
       zod: 4.4.3
     optionalDependencies:
-      '@anthropic-ai/claude-agent-sdk-darwin-arm64': 0.3.235
-      '@anthropic-ai/claude-agent-sdk-darwin-x64': 0.3.235
-      '@anthropic-ai/claude-agent-sdk-linux-arm64': 0.3.235
-      '@anthropic-ai/claude-agent-sdk-linux-arm64-musl': 0.3.235
-      '@anthropic-ai/claude-agent-sdk-linux-x64': 0.3.235
-      '@anthropic-ai/claude-agent-sdk-linux-x64-musl': 0.3.235
-      '@anthropic-ai/claude-agent-sdk-win32-arm64': 0.3.235
-      '@anthropic-ai/claude-agent-sdk-win32-x64': 0.3.235
+      '@anthropic-ai/claude-agent-sdk-darwin-arm64': 0.3.238
+      '@anthropic-ai/claude-agent-sdk-darwin-x64': 0.3.238
+      '@anthropic-ai/claude-agent-sdk-linux-arm64': 0.3.238
+      '@anthropic-ai/claude-agent-sdk-linux-arm64-musl': 0.3.238
+      '@anthropic-ai/claude-agent-sdk-linux-x64': 0.3.238
+      '@anthropic-ai/claude-agent-sdk-linux-x64-musl': 0.3.238
+      '@anthropic-ai/claude-agent-sdk-win32-arm64': 0.3.238
+      '@anthropic-ai/claude-agent-sdk-win32-x64': 0.3.238
 
   '@anthropic-ai/sdk@0.93.0(zod@4.4.3)':
     dependencies:

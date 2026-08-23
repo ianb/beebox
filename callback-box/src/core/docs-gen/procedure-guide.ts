@@ -65,7 +65,7 @@ steps:
         - Explanation of when/why this step should be skipped
     run:
       agents:
-        - model: haiku
+        - model: efficient
           max-turns: 20
           prompt: |
             Agent prompt goes here. The engine prepends context
@@ -108,13 +108,16 @@ Shell scripts run in the box root via \`bash -c\`. Three outcomes:
 
 \`\`\`yaml
 agents:
-  - model: haiku
+  - model: efficient
     max-turns: 25
     prompt: |
       Prompt text here...
 \`\`\`
 
-- \`model\`: \`haiku\` (fast/cheap), \`sonnet\` (balanced), \`opus\` (most capable). Default: sonnet.
+- \`model\`: portable policy tier — \`efficient\`, \`balanced\`, \`strong\`, or
+  \`strongest\`. The box's configured engine maps that tier to its native model
+  family. Existing \`haiku\`/\`sonnet\`/\`opus\`/\`fable\` values remain aliases.
+  Run agents use the engine's default when omitted.
 - \`max-turns\`: Maximum tool-use rounds. Default: 20.
 - The engine injects a context block with the date, run card path, step ID, and procedure source location.
 - Use a YAML block scalar (\`|\`) for the prompt so indentation is preserved.
@@ -125,8 +128,9 @@ agents:
 review model judges against the **step's git diff** (the whole step — every commit
 the run made — not just the last one), with the step's \`whys:\` as context. The
 verdict gates by \`severity\` exactly like a \`shells:\` check. \`validate.model\`
-(haiku/sonnet/opus, default sonnet) picks the judge tier. If the model can't return
-a verdict, the check fails closed (a check you think gates never silently passes).
+uses the same portable tiers and defaults to \`balanced\`. If the model can't
+return a verdict, the check fails closed (a check you think gates never silently
+passes).
 
 Use \`instructions:\` for judgment a shell can't cheaply make ("the summary actually
 reflects the source"); keep objective, deterministic checks in \`shells:\`.
@@ -148,11 +152,11 @@ The agent sees this as a \`<precheck>\` block in its system prompt. Use this to 
 
 Applies to both \`shells:\` and \`instructions:\` failures:
 
-- \`severity="warn"\` — Log the failure and continue.
+- \`severity="warn"\` — Log a completed check's negative result and continue. If the judge engine cannot produce a usable verdict at all, the step fails because validation did not run.
 - \`severity="abort"\` — Fail the step (and, for a procedure-kind migration, block the migration). Hard gate, no retry.
 - \`severity="review"\` — Self-heal: re-invoke the run agent with a \`<validation-failure>\` context block (the failure detail + the step's \`whys:\`) and re-validate, up to the engine's retry cap; if it still fails, the step fails. Requires **exactly one** run agent (the session to resume) — a review phase with zero or multiple agents fails terminally instead.
 
-**A failing \`agents\` invocation does not by itself fail the step** (it's logged). "The agent must have actually done the work" has to be proven by a \`shells\` check or an \`instructions\` verdict — never assume the agent finishing means the step succeeded.
+A started agent turn that ends after partial assistant activity is logged without gating by itself. An engine failure with no usable assistant response (for example auth or model rejection) fails the step and is recorded precisely. "The agent must have actually done the work" still has to be proven by a \`shells\` check or an \`instructions\` verdict — never assume the agent finishing means the step succeeded.
 
 ### Checklists (opt-in thoroughness)
 

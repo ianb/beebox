@@ -167,6 +167,9 @@ prepared.emission.diarized
 
 prepared.emission.words
 => undefined
+
+prepared.emission.hqText
+=> true
 ```
 
 The HQ pass used `hqIntent`'s words to describe text that got replaced —
@@ -203,4 +206,50 @@ fallback.emission.words?.length
 
 fallback.emission.words?.[0]?.word
 => rough
+```
+
+No `hqText` bit either — the fallback never touched the HQ pass:
+
+```ts continue
+fallback.emission.hqText
+=> undefined
+```
+
+## Manual stop-and-send HQ routing (empty `matchedPhrase`)
+
+A manual stop-and-send (docs/implemented-plans/hq-dictation-switch.md, chunk 2 — the
+desktop/mobile Send button with the always-HQ switch on) synthesizes a
+"submit" intent with `matchedPhrase: ""`: nothing was spoken to match, unlike
+a real keyword-fire. When the HQ pass finds no keyword in its own result
+either, the fallback-tag restoration must NOT fire — there's no trigger
+phrase to restore, and an empty `<send-message phrase="" />` would be
+meaningless control markup with no narration-mode guidance to explain it.
+
+```ts
+const manualIntent = {
+  kind: "submit" as const,
+  text: "quick thought before I go",
+  matchedPhrase: "",
+  audioBlob: new Blob(["audio"], { type: "audio/wav" }),
+  closeMic: true,
+  hq: false,
+  words: null,
+};
+const manualPrepared = await prepareVoiceSubmitEmission({
+  intent: manualIntent,
+  priorInput: "",
+  selectionsSnapshot: [],
+  imagesSnapshot: [],
+  filesSnapshot: [],
+  runHq: true,
+  transcribe: async () => ({ text: "quick thought before I go, corrected", diarized: false }),
+});
+manualPrepared.usedHq
+=> true
+
+manualPrepared.emission.text
+=> quick thought before I go, corrected
+
+manualPrepared.emission.hqText
+=> true
 ```

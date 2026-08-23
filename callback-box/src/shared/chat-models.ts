@@ -1,6 +1,7 @@
 import { MODEL_ID } from "./model-ids.js";
+import type { AgentEngine } from "./agent-models.js";
 
-export type ChatAgentEngine = "claude" | "codex";
+export type ChatAgentEngine = AgentEngine;
 
 export interface ChatModelOption {
   label: string;
@@ -22,9 +23,9 @@ const OPTIONS: Record<ChatAgentEngine, readonly ChatModelOption[]> = {
   ],
   codex: [
     { label: "Default (Codex)", model: null },
-    { label: "Sol", model: "gpt-5.6-sol" },
-    { label: "Terra", model: "gpt-5.6-terra" },
-    { label: "Luna", model: "gpt-5.6-luna" },
+    { label: "Sol", model: MODEL_ID.sol },
+    { label: "Terra", model: MODEL_ID.terra },
+    { label: "Luna", model: MODEL_ID.luna },
   ],
 };
 

@@ -868,15 +868,26 @@ export async function serveDev(params: {
     res.end(await renderDevManifest(name, base, devRoot));
     return;
   }
-  if (rel === "/docs") {
-    res.writeHead(301, { location: `${base}/docs/` });
+  // RETIRED into the general browser (docs/plans/general-browser.md, Track 5).
+  //
+  // The doc browser's job — read any markdown in this worktree — is now
+  // `/workstreams/browse?file=…`, which does it for every file kind, with the
+  // cross-workstream lens and commenting attached. Redirecting rather than
+  // deleting keeps every bookmark and every pasted link working.
+  //
+  // Note the address change this encodes: `/<worktree>/dev/docs/<path>` put the
+  // WORKTREE first and the file second. The replacement puts the file in the
+  // address and the worktree in a lens — "enter a universal view, then filter by
+  // workstream if I care to."
+  if (rel === "/docs" || rel === "/docs/" || rel.startsWith("/docs/")) {
+    const file = rel.startsWith("/docs/") ? rel.slice("/docs/".length) : "";
+    const search = new URLSearchParams();
+    if (file !== "") search.set("file", file);
+    // `main` is the unlensed address; any other worktree becomes the lens.
+    if (name !== "main") search.set("workstream", name);
+    const query = search.toString();
+    res.writeHead(301, { location: `/workstreams/browse${query === "" ? "" : `?${query}`}` });
     res.end();
-    return;
-  }
-  if (rel === "/docs/" || rel.startsWith("/docs/")) {
-    const query = rest.includes("?") ? rest.slice(rest.indexOf("?") + 1) : "";
-    const sort = new URLSearchParams(query).get("sort") === "recent" ? "recent" : "path";
-    await serveDocBrowser(base, repoRoot, rel.slice("/docs".length), sort, res);
     return;
   }
   await serveDevArtifact(base, devRoot, rel, pathOnly, res);
