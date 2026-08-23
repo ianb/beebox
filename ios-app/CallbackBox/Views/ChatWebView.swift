@@ -64,6 +64,7 @@ struct ChatWebView: UIViewRepresentable {
     var locationShareRequest: NativeLocationShareRequest?
     var screenshotRequest: NativeScreenshotRequest?
     var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement]
+    var composerCommandResults: [NativeComposerCommandResult]
     var onSessionChange: (String?) -> Void
     var onEmissionDeliveryAttempt: (NativeChatEmission.ID) -> Void
     var onEmissionReceipt: (NativeEmissionReceipt) -> Void
@@ -75,6 +76,7 @@ struct ChatWebView: UIViewRepresentable {
     var onScreenshotResult: (NativeScreenshotResult) -> Void
     var onComposerCommand: (NativeComposerCommandDelivery) -> Void
     var onComposerCommandAcknowledgementDelivered: (String) -> Void
+    var onComposerCommandResultDelivered: (String) -> Void
 
     init(
         box: PairedBox,
@@ -82,6 +84,7 @@ struct ChatWebView: UIViewRepresentable {
         locationShareRequest: NativeLocationShareRequest? = nil,
         screenshotRequest: NativeScreenshotRequest? = nil,
         composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = [],
+        composerCommandResults: [NativeComposerCommandResult] = [],
         onSessionChange: @escaping (String?) -> Void = { _ in },
         onEmissionDeliveryAttempt: @escaping (NativeChatEmission.ID) -> Void = { _ in },
         onEmissionReceipt: @escaping (NativeEmissionReceipt) -> Void = { _ in },
@@ -92,13 +95,15 @@ struct ChatWebView: UIViewRepresentable {
         onResponseStateChange: @escaping (Bool) -> Void = { _ in },
         onScreenshotResult: @escaping (NativeScreenshotResult) -> Void = { _ in },
         onComposerCommand: @escaping (NativeComposerCommandDelivery) -> Void = { _ in },
-        onComposerCommandAcknowledgementDelivered: @escaping (String) -> Void = { _ in }
+        onComposerCommandAcknowledgementDelivered: @escaping (String) -> Void = { _ in },
+        onComposerCommandResultDelivered: @escaping (String) -> Void = { _ in }
     ) {
         self.box = box
         self.pendingEmissions = pendingEmissions
         self.locationShareRequest = locationShareRequest
         self.screenshotRequest = screenshotRequest
         self.composerCommandAcknowledgements = composerCommandAcknowledgements
+        self.composerCommandResults = composerCommandResults
         self.onSessionChange = onSessionChange
         self.onEmissionDeliveryAttempt = onEmissionDeliveryAttempt
         self.onEmissionReceipt = onEmissionReceipt
@@ -110,6 +115,7 @@ struct ChatWebView: UIViewRepresentable {
         self.onScreenshotResult = onScreenshotResult
         self.onComposerCommand = onComposerCommand
         self.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
+        self.onComposerCommandResultDelivered = onComposerCommandResultDelivered
     }
 
     func makeUIView(context: Context) -> WKWebView {
@@ -153,12 +159,14 @@ struct ChatWebView: UIViewRepresentable {
         context.coordinator.onScreenshotResult = onScreenshotResult
         context.coordinator.onComposerCommand = onComposerCommand
         context.coordinator.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
+        context.coordinator.onComposerCommandResultDelivered = onComposerCommandResultDelivered
         context.coordinator.boxID = box.id
         context.coordinator.allowedOrigin = Self.origin(from: box.baseURL)
         context.coordinator.pendingEmissions = pendingEmissions
         context.coordinator.locationShareRequest = locationShareRequest
         context.coordinator.screenshotRequest = screenshotRequest
         context.coordinator.composerCommandAcknowledgements = composerCommandAcknowledgements
+        context.coordinator.composerCommandResults = composerCommandResults
         if webView.url == nil {
             webView.load(request())
         }
@@ -166,6 +174,7 @@ struct ChatWebView: UIViewRepresentable {
         context.coordinator.deliverLocationRequest(to: webView)
         context.coordinator.captureScreenshot(from: webView)
         context.coordinator.deliverComposerCommandAcknowledgements(to: webView)
+        context.coordinator.deliverComposerCommandResults(to: webView)
     }
 
     func makeCoordinator() -> Coordinator {
@@ -182,7 +191,8 @@ struct ChatWebView: UIViewRepresentable {
             onResponseStateChange: onResponseStateChange,
             onScreenshotResult: onScreenshotResult,
             onComposerCommand: onComposerCommand,
-            onComposerCommandAcknowledgementDelivered: onComposerCommandAcknowledgementDelivered
+            onComposerCommandAcknowledgementDelivered: onComposerCommandAcknowledgementDelivered,
+            onComposerCommandResultDelivered: onComposerCommandResultDelivered
         )
     }
 
@@ -200,16 +210,19 @@ struct ChatWebView: UIViewRepresentable {
         var onScreenshotResult: (NativeScreenshotResult) -> Void
         var onComposerCommand: (NativeComposerCommandDelivery) -> Void
         var onComposerCommandAcknowledgementDelivered: (String) -> Void
+        var onComposerCommandResultDelivered: (String) -> Void
         var pendingEmissions: [NativeChatEmission] = []
         var locationShareRequest: NativeLocationShareRequest?
         var screenshotRequest: NativeScreenshotRequest?
         var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = []
+        var composerCommandResults: [NativeComposerCommandResult] = []
         private var inflightEmissionIDs = Set<NativeChatEmission.ID>()
         private var receiptTimeouts: [NativeChatEmission.ID: DispatchWorkItem] = [:]
         private var inflightLocationRequestID: NativeLocationShareRequest.ID?
         private var locationRequestTimeout: DispatchWorkItem?
         private var inflightScreenshotRequestID: NativeScreenshotRequest.ID?
         private var inflightComposerCommandAcknowledgementIDs = Set<String>()
+        private var inflightComposerCommandResultIDs = Set<String>()
         private var pageLoaded: Bool
         /// One log line per transition into navigation failure; cleared by the
         /// next successful load.
@@ -236,6 +249,7 @@ struct ChatWebView: UIViewRepresentable {
             onScreenshotResult: @escaping (NativeScreenshotResult) -> Void,
             onComposerCommand: @escaping (NativeComposerCommandDelivery) -> Void,
             onComposerCommandAcknowledgementDelivered: @escaping (String) -> Void,
+            onComposerCommandResultDelivered: @escaping (String) -> Void = { _ in },
             receiptTimeoutDelay: TimeInterval = 35,
             pageLoaded: Bool = false,
             evaluateEmission: ((String, @escaping (Error?) -> Void) -> Void)? = nil,
@@ -257,6 +271,7 @@ struct ChatWebView: UIViewRepresentable {
             self.onScreenshotResult = onScreenshotResult
             self.onComposerCommand = onComposerCommand
             self.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
+            self.onComposerCommandResultDelivered = onComposerCommandResultDelivered
             self.receiptTimeoutDelay = receiptTimeoutDelay
             self.pageLoaded = pageLoaded
             self.evaluateEmission = evaluateEmission
@@ -274,6 +289,7 @@ struct ChatWebView: UIViewRepresentable {
             deliverLocationRequest(to: webView)
             captureScreenshot(from: webView)
             deliverComposerCommandAcknowledgements(to: webView)
+            deliverComposerCommandResults(to: webView)
         }
 
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
@@ -290,6 +306,7 @@ struct ChatWebView: UIViewRepresentable {
             locationRequestTimeout = nil
             inflightScreenshotRequestID = nil
             inflightComposerCommandAcknowledgementIDs.removeAll()
+            inflightComposerCommandResultIDs.removeAll()
         }
 
         func webView(
@@ -630,6 +647,37 @@ struct ChatWebView: UIViewRepresentable {
             }
         }
 
+        /// Post the answers to V2 commands into the page.
+        ///
+        /// Mirrors the acknowledgement delivery beside it — same inflight set,
+        /// same "clear on delivery" handshake — because it is the same problem:
+        /// `evaluateJavaScript` can be called before the page is ready, twice, or
+        /// against a page that has navigated away. The web side's queue is
+        /// authoritative and the event is only a wake signal, so a result that
+        /// lands before the scan subscribed is still read.
+        func deliverComposerCommandResults(to webView: WKWebView) {
+            guard pageLoaded else {
+                return
+            }
+            for result in composerCommandResults
+            where inflightComposerCommandResultIDs.contains(result.id) == false {
+                guard let detail = Self.javascriptDetail(for: result) else {
+                    continue
+                }
+                inflightComposerCommandResultIDs.insert(result.id)
+                let script = "window.callbackboxNativeCommandResult(\(detail));"
+                webView.evaluateJavaScript(script) { [weak self] _, error in
+                    guard let self else {
+                        return
+                    }
+                    self.inflightComposerCommandResultIDs.remove(result.id)
+                    if error == nil {
+                        self.onComposerCommandResultDelivered(result.id)
+                    }
+                }
+            }
+        }
+
         func captureScreenshot(from webView: WKWebView) {
             guard
                 pageLoaded,
@@ -662,6 +710,13 @@ struct ChatWebView: UIViewRepresentable {
 
         private static func javascriptDetail(for acknowledgement: NativeComposerCommandAcknowledgement) -> String? {
             guard let data = try? JSONEncoder().encode(acknowledgement) else {
+                return nil
+            }
+            return String(data: data, encoding: .utf8)
+        }
+
+        private static func javascriptDetail(for result: NativeComposerCommandResult) -> String? {
+            guard let data = try? JSONEncoder().encode(result) else {
                 return nil
             }
             return String(data: data, encoding: .utf8)
@@ -776,6 +831,7 @@ struct ChatWebView: UIViewRepresentable {
           window.callbackboxNativeQueue = window.callbackboxNativeQueue || [];
           window.callbackboxNativeLocationQueue = window.callbackboxNativeLocationQueue || [];
           window.callbackboxNativeComposerCommandAckQueue = window.callbackboxNativeComposerCommandAckQueue || [];
+          window.callbackboxNativeCommandResultQueue = window.callbackboxNativeCommandResultQueue || [];
           window.callbackboxNativeReceive = (detail) => {
             window.callbackboxNativeQueue.push(detail);
             window.dispatchEvent(new CustomEvent('callbackbox:native-emission', { detail }));
@@ -788,6 +844,15 @@ struct ChatWebView: UIViewRepresentable {
           window.callbackboxNativeComposerCommandAck = (detail) => {
             window.callbackboxNativeComposerCommandAckQueue.push(detail);
             window.dispatchEvent(new CustomEvent('callbackbox:native-composer-command-ack'));
+          };
+          // The answer to a V2 command (contract §4.8). Separate from the ack
+          // above: the ack says whether native took the command, this says what
+          // the command produced. Queue is authoritative; the event is a wake
+          // signal. Keep in sync with
+          // callback-box/src/frontend/src/components/chat/native-control-scan.ts.
+          window.callbackboxNativeCommandResult = (detail) => {
+            window.callbackboxNativeCommandResultQueue.push(detail);
+            window.dispatchEvent(new CustomEvent('callbackbox:native-command-result'));
           };
           // Neutral web→native transport shared with the Android shell; the web
           // layer prefers it over direct webkit.messageHandlers access.

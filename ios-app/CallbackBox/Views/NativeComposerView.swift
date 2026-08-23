@@ -207,6 +207,10 @@ struct NativeComposerView: View {
                 composerButton(
                     systemImage: "plus",
                     accessibilityLabel: "Add",
+                    controlID: "cb-composer-add",
+                    does: "opens the attach menu — capture, take photo, choose photos, "
+                        + "paste an image, choose a file, screenshot the chat, share location, switch box",
+                    controlDisabled: isSending,
                     action: { showingActions = true }
                 )
                 .disabled(isSending)
@@ -335,6 +339,12 @@ struct NativeComposerView: View {
                 isFocused: $focused,
                 height: $editorHeight
             )
+            .controlAnchor(
+                "cb-composer-input",
+                role: .textbox,
+                label: "Type a message",
+                disabled: isTextEntryLocked
+            )
         }
         .frame(height: editorHeight)
         .frame(minWidth: 0, maxWidth: .infinity)
@@ -354,6 +364,8 @@ struct NativeComposerView: View {
             composerButton(
                 systemImage: "stop.fill",
                 accessibilityLabel: "Stop continuous dictation",
+                controlID: "cb-composer-stop-dictation",
+                does: "ends the dictation turn and keeps what was heard in the composer",
                 foregroundStyle: .red,
                 action: stopMicrophoneWithEarcon
             )
@@ -361,6 +373,8 @@ struct NativeComposerView: View {
             composerButton(
                 systemImage: "arrow.up",
                 accessibilityLabel: "Send",
+                controlID: "cb-composer-send",
+                controlDisabled: sendDisabled,
                 foregroundStyle: .white,
                 backgroundStyle: Color.accentColor,
                 action: send
@@ -372,6 +386,8 @@ struct NativeComposerView: View {
                 composerButton(
                     systemImage: "arrow.up",
                     accessibilityLabel: "Send photo",
+                    controlID: "cb-composer-send",
+                    controlDisabled: sendDisabled,
                     foregroundStyle: .white,
                     backgroundStyle: Color.accentColor,
                     action: send
@@ -387,6 +403,8 @@ struct NativeComposerView: View {
         composerButton(
             systemImage: "mic.fill",
             accessibilityLabel: "Start dictation",
+            controlID: "cb-composer-mic",
+            does: "tap to dictate continuously; say a send keyword to send hands-free",
             action: requestMicrophone
         )
     }
@@ -407,9 +425,19 @@ struct NativeComposerView: View {
         }
     }
 
+    /// One composer button, and its native control anchor.
+    ///
+    /// The anchor is applied here rather than at the call sites so the label the
+    /// agent reads is literally the label VoiceOver reads — one string, no way
+    /// for the two to drift. `controlDisabled` is passed explicitly because
+    /// SwiftUI's own `.disabled()` state cannot be read back out of a view; it
+    /// mirrors the `.disabled(...)` each call site applies.
     private func composerButton(
         systemImage: String,
         accessibilityLabel: String,
+        controlID: String,
+        does: String? = nil,
+        controlDisabled: Bool = false,
         foregroundStyle: Color = .primary,
         backgroundStyle: Color = Color(uiColor: .tertiarySystemFill),
         action: @escaping () -> Void
@@ -423,6 +451,12 @@ struct NativeComposerView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(accessibilityLabel)
+        .controlAnchor(
+            controlID,
+            label: accessibilityLabel,
+            does: does,
+            disabled: controlDisabled
+        )
     }
 
     private func send() {

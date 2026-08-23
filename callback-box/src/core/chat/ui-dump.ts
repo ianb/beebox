@@ -115,10 +115,16 @@ function entryLine(entry: UiScanEntry, indent: string): string {
     entry.disabled ? "[disabled]" : "",
     entry.offscreen ? "(off-screen)" : "",
   ].filter((mark) => mark !== "");
-  if (entry.id === null) {
+  // Two ways an entry is listed without a link: it has no address at all, or it
+  // has one this surface cannot act on — a native control, which the shell can
+  // enumerate but (until `point-at-control` lands) cannot point at. Printing the
+  // link anyway would hand the agent a pointer that breaks on click, which is
+  // the same lie as a short list presented as a complete one.
+  if (entry.id === null || entry.actions.length === 0) {
     const head = `${indent}${entry.role} "${entry.name}"`;
     const padded = head.padEnd(NO_ADDRESS_COLUMN, " ");
-    return [`${padded} (no address)`, ...marks].join(" ").trimEnd();
+    const marker = entry.id === null ? "(no address)" : "(not pointable)";
+    return [`${padded} ${marker}`, ...marks].join(" ").trimEnd();
   }
   return [`${indent}${entry.role} [${escapeLinkText(entry.name)}](control:${entry.id})`, ...marks].join(" ");
 }
@@ -220,7 +226,9 @@ const INSTRUCTION = `To point the user at one of these, write its link into your
 \`action\` is \`point\` (default), \`focus\`, or \`reveal\` — \`reveal\` is available
 only on a control marked \`[reveal]\`, and it opens the control; it never acts
 for the user. A control shown as \`(no address)\` is on screen but has no link —
-describe it in words instead of inventing an address for it.`;
+describe it in words instead of inventing an address for it. A control shown as
+\`(not pointable)\` is on screen and named, but this app cannot draw a pointer on
+it; describe that one in words too.`;
 
 /** Render one scan as the text `cb chat ui` prints. */
 export function formatUiDump(payload: UiScanPayload): string {

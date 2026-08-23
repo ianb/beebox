@@ -14,10 +14,12 @@
 		5A1000052C3C000100000001 /* PairBoxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000152C3C000100000001 /* PairBoxView.swift */; };
 		5A1000062C3C000100000001 /* ChatWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000162C3C000100000001 /* ChatWebView.swift */; };
 		B72000012C3C000100000001 /* NativeComposerContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000022C3C000100000001 /* NativeComposerContract.swift */; };
+		B72000F02C3C000100000001 /* NativeControlRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000F12C3C000100000001 /* NativeControlRegistry.swift */; };
 		B72000112C3C000100000001 /* ComposerDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000122C3C000100000001 /* ComposerDraft.swift */; };
 		B72000132C3C000100000001 /* ComposerDraftRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000142C3C000100000001 /* ComposerDraftRepository.swift */; };
 		B72000152C3C000100000001 /* ComposerDraftStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000162C3C000100000001 /* ComposerDraftStore.swift */; };
 		B72000172C3C000100000001 /* ComposerDraftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000182C3C000100000001 /* ComposerDraftTests.swift */; };
+		B72000F22C3C000100000001 /* NativeControlRegistryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000F32C3C000100000001 /* NativeControlRegistryTests.swift */; };
 		B72000192C3C000100000001 /* ComposerTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B720001A2C3C000100000001 /* ComposerTextView.swift */; };
 		B720009A2C3C000100000001 /* BulkUploadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B720009B2C3C000100000001 /* BulkUploadTests.swift */; };
 		B720001B2C3C000100000001 /* ChatAPITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B720001C2C3C000100000001 /* ChatAPITests.swift */; };
@@ -124,10 +126,12 @@
 		5A1001B92C3C000100000001 /* PairedBoxCredentialStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairedBoxCredentialStore.swift; sourceTree = "<group>"; };
 		5A1001BA2C3C000100000001 /* SharedSelectedBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedSelectedBoxSnapshot.swift; sourceTree = "<group>"; };
 		B72000022C3C000100000001 /* NativeComposerContract.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeComposerContract.swift; sourceTree = "<group>"; };
+		B72000F12C3C000100000001 /* NativeControlRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeControlRegistry.swift; sourceTree = "<group>"; };
 		B72000122C3C000100000001 /* ComposerDraft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerDraft.swift; sourceTree = "<group>"; };
 		B72000142C3C000100000001 /* ComposerDraftRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerDraftRepository.swift; sourceTree = "<group>"; };
 		B72000162C3C000100000001 /* ComposerDraftStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerDraftStore.swift; sourceTree = "<group>"; };
 		B72000182C3C000100000001 /* ComposerDraftTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerDraftTests.swift; sourceTree = "<group>"; };
+		B72000F32C3C000100000001 /* NativeControlRegistryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeControlRegistryTests.swift; sourceTree = "<group>"; };
 		B720001A2C3C000100000001 /* ComposerTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerTextView.swift; sourceTree = "<group>"; };
 		B720009B2C3C000100000001 /* BulkUploadTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkUploadTests.swift; sourceTree = "<group>"; };
 		B720001C2C3C000100000001 /* ChatAPITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatAPITests.swift; sourceTree = "<group>"; };
@@ -260,6 +264,7 @@
 				5A1000972C3C000100000001 /* BulkPhotoThreshold.swift */,
 				5A10001E2C3C000100000001 /* ChatImageAttachment.swift */,
 				B72000022C3C000100000001 /* NativeComposerContract.swift */,
+				B72000F12C3C000100000001 /* NativeControlRegistry.swift */,
 				B72000122C3C000100000001 /* ComposerDraft.swift */,
 				5A10002E2C3C000100000001 /* CaptureModels.swift */,
 			);
@@ -350,6 +355,7 @@
 				5A1001162C3C000100000001 /* CaptureUploadCoordinatorTests.swift */,
 				5A1001172C3C000100000001 /* CaptureAcquisitionTests.swift */,
 				B72000182C3C000100000001 /* ComposerDraftTests.swift */,
+				B72000F32C3C000100000001 /* NativeControlRegistryTests.swift */,
 				B720009B2C3C000100000001 /* BulkUploadTests.swift */,
 				E1A000072C3C000100000001 /* LogForwarderTests.swift */,
 				B720001C2C3C000100000001 /* ChatAPITests.swift */,
@@ -531,6 +537,7 @@
 				5A1000052C3C000100000001 /* PairBoxView.swift in Sources */,
 				5A1000062C3C000100000001 /* ChatWebView.swift in Sources */,
 				B72000012C3C000100000001 /* NativeComposerContract.swift in Sources */,
+				B72000F02C3C000100000001 /* NativeControlRegistry.swift in Sources */,
 				B72000112C3C000100000001 /* ComposerDraft.swift in Sources */,
 				B72000132C3C000100000001 /* ComposerDraftRepository.swift in Sources */,
 				B72000152C3C000100000001 /* ComposerDraftStore.swift in Sources */,
@@ -585,6 +592,7 @@
 				5A1001062C3C000100000001 /* CaptureAcquisitionTests.swift in Sources */,
 				5A1001BE2C3C000100000001 /* PairedBoxStoreTests.swift in Sources */,
 				B72000172C3C000100000001 /* ComposerDraftTests.swift in Sources */,
+				B72000F22C3C000100000001 /* NativeControlRegistryTests.swift in Sources */,
 				B720009A2C3C000100000001 /* BulkUploadTests.swift in Sources */,
 				E1A000062C3C000100000001 /* LogForwarderTests.swift in Sources */,
 				B720001B2C3C000100000001 /* ChatAPITests.swift in Sources */,

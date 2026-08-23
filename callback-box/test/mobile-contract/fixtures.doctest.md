@@ -30,7 +30,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { nativeEmissionFromDetail, parseNativeEmissionDetail } from "../../src/frontend/src/components/chat/native-emission.js";
-import { nativeComposerCommandAcknowledgementFromDetail, nativeComposerCommandFromDetail } from "../../src/frontend/src/components/chat/native-composer-command.js";
+import { nativeCommandResultFromDetail, nativeComposerCommandAcknowledgementFromDetail, nativeComposerCommandFromDetail } from "../../src/frontend/src/components/chat/native-composer-command.js";
 import { detectKeyword, appendSendKeywordTag } from "../../src/frontend/src/lib/audio/speech-keywords.js";
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
@@ -105,6 +105,14 @@ function validateEmission(fx) {
 // ── composer-command: strict web→native add-selection command ──
 function validateComposerCommand(fx) {
   const out = nativeComposerCommandFromDetail(fx.input);
+  return deepEqual(out, fx.expected)
+    ? { ok: true }
+    : { ok: false, detail: `got ${JSON.stringify(out)}` };
+}
+
+// ── composer-command-result: the native→web answer a V2 command produced ──
+function validateCommandResult(fx) {
+  const out = nativeCommandResultFromDetail(fx.input);
   return deepEqual(out, fx.expected)
     ? { ok: true }
     : { ok: false, detail: `got ${JSON.stringify(out)}` };
@@ -273,7 +281,16 @@ The web-to-native selection command uses one versioned, strict shape.
 
 ```ts
 runFamily("composer-command", validateComposerCommand)
-=> {"family":"composer-command","cases":3,"pass":3}
+=> {"family":"composer-command","cases":6,"pass":6}
+```
+
+V2 adds `kind`-discriminated payloads without disturbing V1, which installed iOS
+builds still decode. An unknown kind is refused rather than guessed at, on both
+sides.
+
+```ts
+runFamily("composer-command-result", validateCommandResult)
+=> {"family":"composer-command-result","cases":4,"pass":4}
 ```
 
 The acknowledgement is emitted only after the native draft mutation is

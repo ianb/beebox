@@ -1,0 +1,9 @@
+{
+  "input": {
+    "version": 2,
+    "id": "scan-command-4",
+    "kind": "scan-controls",
+    "ok": false
+  },
+  "expected": null
+}

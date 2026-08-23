@@ -28,7 +28,12 @@ struct NativeComposerFixtureScreen: View {
     @StateObject private var pendingStore: PendingEmissionStore
     @StateObject private var pairedBoxStore = PairedBoxStore()
     @StateObject private var boxLockManager = BoxLockManager()
+    @StateObject private var controlRegistry = NativeControlRegistry()
     @State private var seeded = false
+    /// The registry as of the last read, for the `control-registry` fixture. Read
+    /// on demand rather than observed: the registry deliberately publishes
+    /// nothing, so nothing it does can invalidate the view registering into it.
+    @State private var registrySnapshot: [NativeControlEntry] = []
 
     init() {
         let repository = ComposerDraftRepository(rootURL: Self.fixtureRootURL)
@@ -59,6 +64,7 @@ struct NativeComposerFixtureScreen: View {
             }
             .environmentObject(pairedBoxStore)
             .environmentObject(boxLockManager)
+            .environment(\.nativeControlRegistry, controlRegistry)
             .task {
                 await seedFixture()
             }
@@ -68,9 +74,13 @@ struct NativeComposerFixtureScreen: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    fixtureBubble("Fixture conversation", outgoing: false)
-                    fixtureBubble("The native composer stays docked below this web content.", outgoing: true)
-                    fixtureBubble("State: \(fixture)", outgoing: false)
+                    if fixture == "control-registry" {
+                        registryReadout
+                    } else {
+                        fixtureBubble("Fixture conversation", outgoing: false)
+                        fixtureBubble("The native composer stays docked below this web content.", outgoing: true)
+                        fixtureBubble("State: \(fixture)", outgoing: false)
+                    }
                 }
                 .padding()
             }
@@ -78,6 +88,42 @@ struct NativeComposerFixtureScreen: View {
             .navigationTitle("Fixture Box")
             .navigationBarTitleDisplayMode(.inline)
         }
+    }
+
+    /// What `scan-controls` would answer right now, without a server or a
+    /// webview: the same `controlRegistry.entries` the bridge reads, rendered so
+    /// a screenshot of this fixture is a check on the anchors themselves.
+    private var registryReadout: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Button("Read registry") {
+                registrySnapshot = controlRegistry.entries
+            }
+            .buttonStyle(.borderedProminent)
+            .task {
+                // Read once unattended so a plain screenshot of this fixture
+                // shows the inventory; the composer's anchors register during
+                // their own onAppear, which runs after this view's first frame.
+                try? await Task.sleep(nanoseconds: 400_000_000)
+                registrySnapshot = controlRegistry.entries
+            }
+            Text("\(registrySnapshot.count) native control(s) registered")
+                .font(.headline)
+            ForEach(registrySnapshot) { entry in
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(entry.role.rawValue) \(entry.id)")
+                        .font(.system(.footnote, design: .monospaced))
+                    Text("\(entry.label)\(entry.disabled ? " [disabled]" : "")")
+                        .font(.footnote)
+                    if let does = entry.does {
+                        Text(does)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func fixtureBubble(_ text: String, outgoing: Bool) -> some View {

@@ -29,6 +29,13 @@ import { getApiBase } from "../../api-core";
 import { scanLiveDocument } from "../../lib/ui-scan/live-dom";
 import { currentChatChannel } from "../../lib/chat-channel";
 import { isNativeShell } from "./native-post";
+import {
+  NATIVE_SCAN_TIMEOUT_MS,
+  nativeScanEntries,
+  requestNativeControls,
+  windowNativeControlBridge,
+} from "./native-control-scan";
+import type { NativeControlEntry } from "./native-composer-command";
 import { isRequestExpired, matchesRequestSession } from "./screenshot-request-logic";
 import { MAX_SCAN_ENTRIES } from "@shared/ui-scan";
 import type { UiScanCoverage, UiScanEntry, UiScanPayload } from "@shared/ui-scan";
@@ -75,15 +82,16 @@ async function postJson(requestId: string, { body, label }: { body: object; labe
 }
 
 /**
- * How much of the surface this client can actually see. The web page is the
- * whole surface in a browser; inside the native shell the composer, mic,
- * capture and box switcher are native chrome this scan cannot reach, so the
- * dump has to say so rather than imply they do not exist. Track 5 replaces the
- * `dom-native-unavailable` branch with a bridge round-trip that merges the
- * native inventory and reports `dom+native`; this is the seam.
+ * How much of the surface this client saw. The web page is the whole surface in
+ * a browser; inside the native shell the composer, mic, capture and box switcher
+ * are native chrome the DOM walk cannot reach, so either the shell answered and
+ * its controls are in the list, or the dump says out loud that they are missing.
+ * `null` from the bridge covers every failure — no answer, a refusal, or an
+ * installed build too old to decode the request.
  */
-function currentCoverage(): UiScanCoverage {
-  return isNativeShell() ? "dom-native-unavailable" : "dom";
+function coverageFor(native: readonly NativeControlEntry[] | null): UiScanCoverage {
+  if (!isNativeShell()) return "dom";
+  return native === null ? "dom-native-unavailable" : "dom+native";
 }
 
 /** Path + query of the page being scanned — never the origin. */
@@ -91,23 +99,42 @@ function currentUrl(): string {
   return `${window.location.pathname}${window.location.search}`;
 }
 
-/** Scan the live document and shape it as the wire payload. */
-function buildPayload(): UiScanPayload {
+/**
+ * DOM entries plus the native block, capped at what the route accepts.
+ *
+ * The native block wins the cap: on a phone it is the half the agent cannot get
+ * any other way, and the DOM half is a transcript. Dropping DOM entries sets
+ * `truncated`, which the dump prints, so the shortening is stated rather than
+ * silent.
+ */
+function mergeEntries(
+  dom: readonly UiScanEntry[],
+  native: readonly NativeControlEntry[] | null
+): { entries: UiScanEntry[]; truncated: boolean } {
+  const nativeEntries = native === null ? [] : nativeScanEntries(native);
+  const room = Math.max(0, MAX_SCAN_ENTRIES - nativeEntries.length);
+  const kept = dom.slice(0, room);
+  return { entries: [...kept, ...nativeEntries], truncated: kept.length < dom.length };
+}
+
+/** Scan the live document, fold in the native inventory, shape it as the wire payload. */
+function buildPayload(native: NativeControlEntry[] | null): UiScanPayload {
   const scan = scanLiveDocument();
   // The scan's own entry type is assigned into the wire type here, so a drift
   // between `ui-scan/types.ts` and `shared/ui-scan.ts` is a compile error at
   // this line rather than a 400 at the route.
-  const entries: UiScanEntry[] = scan.entries;
+  const domEntries: UiScanEntry[] = scan.entries;
+  const merged = mergeEntries(domEntries, native);
   return {
-    entries,
+    entries: merged.entries,
     omittedUnnamed: scan.omittedUnnamed,
     omittedUnknownRole: scan.omittedUnknownRole,
     // The walk finds every duplicate; the wire caps the list at the same size
     // as the entry cap, so a pathological page reports the first N rather than
     // producing a payload the route refuses whole.
     duplicateIds: scan.duplicateIds.slice(0, MAX_SCAN_ENTRIES),
-    truncated: scan.truncated,
-    coverage: currentCoverage(),
+    truncated: scan.truncated || merged.truncated,
+    coverage: coverageFor(native),
     channel: currentChatChannel(),
     url: currentUrl(),
     scannedAt: new Date().toISOString(),
@@ -126,9 +153,18 @@ export async function fulfillUiScanRequest(
   if (!matchesRequestSession(request.session, viewSession)) return;
   if (isRequestExpired(request.expiresAt, Date.now())) return;
   await postJson(request.requestId, { body: { ack: true }, label: "ack" });
+  // Ask the shell first and let the DOM walk happen after the answer: the walk
+  // is synchronous and would otherwise delay the post by its own duration,
+  // eating into the shell's window.
+  const native = isNativeShell()
+    ? await requestNativeControls(windowNativeControlBridge(), {
+        commandId: crypto.randomUUID(),
+        timeoutMs: NATIVE_SCAN_TIMEOUT_MS,
+      })
+    : null;
   let payload: UiScanPayload;
   try {
-    payload = buildPayload();
+    payload = buildPayload(native);
   } catch (e) {
     const reason = e instanceof Error ? e.message : String(e);
     console.warn(`[ui-scan] scan failed: ${reason}`);

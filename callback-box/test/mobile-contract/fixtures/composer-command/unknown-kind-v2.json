@@ -1,0 +1,9 @@
+{
+  "input": {
+    "version": 2,
+    "id": "future-command-1",
+    "kind": "point-at-control",
+    "payload": { "control": "cb-composer-mic", "action": "point" }
+  },
+  "expected": null
+}

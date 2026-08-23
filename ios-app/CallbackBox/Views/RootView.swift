@@ -19,6 +19,12 @@ struct RootView: View {
     @State private var screenshotRequest: NativeScreenshotRequest?
     @State private var screenshotResult: NativeScreenshotResult?
     @State private var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = []
+    @State private var composerCommandResults: [NativeComposerCommandResult] = []
+    /// What the native chrome currently on screen has declared about itself, for
+    /// the web's `scan-controls` request. Populated by `.controlAnchor` in the
+    /// composer's own view bodies, so it cannot describe a control that is not
+    /// rendered.
+    @StateObject private var controlRegistry = NativeControlRegistry()
 
     var body: some View {
         Group {
@@ -88,6 +94,7 @@ struct RootView: View {
             screenshotRequest = nil
             screenshotResult = nil
             composerCommandAcknowledgements = []
+            composerCommandResults = []
             pendingEmissionStore.deactivate()
         }
         .task(id: store.selectedBox?.id) {
@@ -142,6 +149,7 @@ struct RootView: View {
             locationShareRequest: locationShareRequest,
             screenshotRequest: screenshotRequest,
             composerCommandAcknowledgements: composerCommandAcknowledgements,
+            composerCommandResults: composerCommandResults,
             onSessionChange: { sessionID in
                 if visibleChatSessionID != sessionID {
                     narrationEnabled = false
@@ -209,8 +217,12 @@ struct RootView: View {
             },
             onComposerCommandAcknowledgementDelivered: { id in
                 composerCommandAcknowledgements.removeAll { $0.id == id }
+            },
+            onComposerCommandResultDelivered: { id in
+                composerCommandResults.removeAll { $0.id == id }
             }
         )
+        .environment(\.nativeControlRegistry, controlRegistry)
         .id(box.id)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             NativeComposerView(
@@ -239,15 +251,39 @@ struct RootView: View {
     private func handleComposerCommand(_ delivery: NativeComposerCommandDelivery, boxID: PairedBox.ID) {
         switch delivery {
         case .command(let command):
-            Task {
-                let acknowledgement = await composerDraftStore.applySelectionCommand(command, boxID: boxID)
-                composerCommandAcknowledgements.removeAll { $0.id == acknowledgement.id }
-                composerCommandAcknowledgements.append(acknowledgement)
+            switch command.payload {
+            case .addSelection:
+                Task {
+                    let acknowledgement = await composerDraftStore.applySelectionCommand(command, boxID: boxID)
+                    acknowledge(acknowledgement)
+                }
+            case .scanControls:
+                // The registry is the answer, and an EMPTY registry is still an
+                // answer — the web distinguishes "native reported nothing on
+                // screen" from "native never answered", and only the second one
+                // makes the dump say the composer may be missing from it.
+                let controls = controlRegistry.entries
+                BoxLog.info(
+                    "native control scan answered count=\(controls.count)",
+                    category: .webview,
+                    targetBoxID: boxID
+                )
+                acknowledge(.accepted(id: command.id))
+                deliver(.controls(id: command.id, controls))
             }
         case .rejection(let acknowledgement):
-            composerCommandAcknowledgements.removeAll { $0.id == acknowledgement.id }
-            composerCommandAcknowledgements.append(acknowledgement)
+            acknowledge(acknowledgement)
         }
+    }
+
+    private func acknowledge(_ acknowledgement: NativeComposerCommandAcknowledgement) {
+        composerCommandAcknowledgements.removeAll { $0.id == acknowledgement.id }
+        composerCommandAcknowledgements.append(acknowledgement)
+    }
+
+    private func deliver(_ result: NativeComposerCommandResult) {
+        composerCommandResults.removeAll { $0.id == result.id }
+        composerCommandResults.append(result)
     }
 
     private func scenePhaseName(_ phase: ScenePhase) -> String {

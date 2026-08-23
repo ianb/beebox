@@ -120,7 +120,9 @@ To point the user at one of these, write its link into your reply:
 `action` is `point` (default), `focus`, or `reveal` — `reveal` is available
 only on a control marked `[reveal]`, and it opens the control; it never acts
 for the user. A control shown as `(no address)` is on screen but has no link —
-describe it in words instead of inventing an address for it.
+describe it in words instead of inventing an address for it. A control shown as
+`(not pointable)` is on screen and named, but this app cannot draw a pointer on
+it; describe that one in words too.
 ```
 
 The three `cb-` controls the plan's done-when names are all addressable, and
@@ -223,4 +225,40 @@ formatUiDump(payload({ entries: offscreenDesktop, channel: "web-desktop" }))
   .replace(/\s+/g, " ")
   .includes("At this viewport cb-composer-input-mobile is the one")
 => true
+```
+
+## Native chrome, listed but not pointable
+
+On the phone the shell answers with its own registry, and those entries are
+grouped under the native surface they belong to. They carry their shared `cb-`
+address but no actions, because this build can enumerate a native control and
+cannot yet point at one — so the dump prints the name rather than a `control:`
+link that would break on click.
+
+```ts
+const nativeEntries: UiScanEntry[] = [
+  entry({ kind: "landmark", role: "native", name: "Composer", actions: [] }),
+  entry({
+    role: "button",
+    name: "Start dictation",
+    id: "cb-composer-mic",
+    container: "Composer",
+    does: "hold to dictate; tap for continuous dictation",
+    actions: [],
+  }),
+  entry({ role: "button", name: "Send", id: "cb-composer-send", container: "Composer", actions: [], disabled: true }),
+];
+withoutInstruction(formatUiDump(payload({
+  entries: nativeEntries,
+  coverage: "dom+native",
+  channel: "ios-native",
+})))
+=>
+UI on screen — ios-native, /main/test1/chat, scanned 14:32 local
+Covers: browser DOM and the native app's own controls.
+«blankline»
+native "Composer"
+  button "Start dictation"                               (not pointable)
+    — hold to dictate; tap for continuous dictation
+  button "Send"                                          (not pointable) [disabled]
 ```
