@@ -13,7 +13,7 @@
  * Usage: pnpm exec tsx callback-box/user-stories/journeys/prepare.ts <journey-id>
  */
 import { execFileSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, join, resolve } from "node:path";
 
@@ -28,8 +28,18 @@ const WORKTREE = basename(MONO_ROOT);
 const BOXES_ROOT = join(homedir(), "src", "box-worktrees", WORKTREE);
 const WORK = join(HERE, "../work/journeys");
 
-/** A clone pruned to the package skeleton: the person's box, not a stranger's. */
-const PRUNE_FOR_EMPTY = ["store", "box", "people", "places", "memory", "procedure", "tricks"];
+/**
+ * Emptied for `base: empty` — the person's box, not a stranger's.
+ *
+ * The CONTENTS go; the directories stay. Removing `box/` and `store/` outright left a
+ * box whose own health check reported `box/inbox/ is not writable` and
+ * `store/archive/ is not writable`, and a walker spent an evening typing into an app
+ * that could not accept anything (2026-08-23).
+ */
+const EMPTY_BUT_KEEP = ["store", "box"];
+
+/** Removed outright: pure content, and nothing structural expects them. */
+const PRUNE_ENTIRELY = ["people", "places", "memory", "procedure", "tricks"];
 
 /** Chat state that would otherwise drop the person into an earlier conversation. */
 const CHAT_STATE = ["chat-session-id.json", "chat-session-history.json"];
@@ -100,10 +110,20 @@ cpSync(base, boxDir, { recursive: true, filter: (src) => !src.includes(`${join(b
 
 const content = join(boxDir, "content");
 if (journey.box.base === "empty") {
-  for (const dir of PRUNE_FOR_EMPTY) rmSync(join(content, dir), { recursive: true, force: true });
+  for (const dir of PRUNE_ENTIRELY) rmSync(join(content, dir), { recursive: true, force: true });
+  for (const dir of EMPTY_BUT_KEEP) {
+    const full = join(content, dir);
+    if (!existsSync(full)) continue;
+    for (const entry of readdirSync(full)) rmSync(join(full, entry), { recursive: true, force: true });
+  }
 }
 for (const f of CHAT_STATE) rmSync(join(content, ".callback-box", f), { force: true });
 rmSync(join(content, ".callback-box", "active-chats"), { recursive: true, force: true });
+
+// Emptying `box/` and `store/` removes `box/inbox` and `store/archive` along with the
+// contents, and the box then fails its own health check. `cb init` is the supported way
+// to restore a valid skeleton without reintroducing anyone's data.
+execFileSync(join(MONO_ROOT, "callback-box", "bin", "cb"), ["init"], { cwd: content, stdio: "inherit" });
 
 if (typeof journey.box.setup === "string" && journey.box.setup.trim() !== "") {
   try {
@@ -185,6 +205,39 @@ writeFileSync(join(runDir, "prompt.md"), template);
 // is written beside the run rather than into the prompt.
 if (journey.watch_for !== undefined) {
   writeFileSync(join(runDir, "watch-for.md"), `# ${journey.title} — for the reader\n\n${journey.watch_for.trim()}\n`);
+}
+
+// --- is this box actually usable? ------------------------------------------------
+//
+// Twice now a walk has been spent on a box that could not do the thing the journey
+// needed, and both times the app knew: `cb health` named the blocker in plain English
+// while the person typed into a screen that said nothing. So ask it before handing
+// over, and refuse on a hard failure. `!` warnings (missing optional credentials,
+// pending migrations) are reported and allowed through.
+// `cb health` exits non-zero precisely when it has something to say, so a throwing
+// call would hide the output we came for.
+let health = "";
+try {
+  health = execFileSync(join(MONO_ROOT, "callback-box", "bin", "cb"), ["health"], {
+    cwd: content,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+} catch (e) {
+  health = isRecord(e) && typeof e["stdout"] === "string" ? e["stdout"] : "";
+  if (health === "") fail(`could not read box health: ${errorMessage(e)}`);
+}
+const blockers = health.split("\n").filter((l) => l.trimStart().startsWith("✗"));
+const warnings = health.split("\n").filter((l) => l.trimStart().startsWith("!"));
+if (blockers.length > 0) {
+  console.error("\nthis box fails its own health check — a walk on it would measure the fixture:\n");
+  for (const b of blockers) console.error(b);
+  fail("\nfix provisioning before walking.");
+}
+if (warnings.length > 0) {
+  console.log(`${warnings.length} health warning(s), not blocking:`);
+  for (const w of warnings.slice(0, 4)) console.log(w);
+  console.log("");
 }
 
 // --- the before-snapshot --------------------------------------------------------
