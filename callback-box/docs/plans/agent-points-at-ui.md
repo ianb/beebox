@@ -452,6 +452,33 @@ it looks once opened, the fallback is distinct ids plus a dump note naming
 which is reachable at the current viewport — recorded here so the chunk cannot
 stall on a decision.
 
+**Opened, and the fallback was taken (2026-08-23).** The premise above is wrong
+on the facts, in three ways the plan could not see from the line citations:
+
+- **The rows are not both-always-mounted.** `MobileTextareaRow` mounts only
+  when `typingMode || isTranscribing` (`InteractiveChat-layout.tsx:168`), and
+  it lives *below* the whole `<section aria-label="Compose message">`, inside a
+  conditional wrapper that also carries the lock / close-keyboard overlay.
+  `DesktopComposerRow` lives *inside* that section's flex row, between the
+  capture button and the voice button. One element cannot occupy both parents;
+  a responsive-layout unification would have to restructure the section itself.
+- **They differ in behaviour, not only arrangement.** Desktop's textarea takes
+  `enterKeyHint="send"` and `onKeyDown={handleKeyDown}` (Enter sends) at
+  `minRows={1}`; mobile's takes `enterKeyHint="enter"`, no key handler (Enter
+  inserts a newline) at `minRows={2}`, and owns its own ref plus
+  `useTranscriptAutoscroll` (desktop's autoscroll is wired in `useChatActions`).
+- **The transcription handlers differ.** Desktop's "Edit before sending" and
+  segment-send call `transcription.cancel()` and read
+  `transcription.transcript` synchronously; mobile's call
+  `await transcription.stop()` and send the *returned* final text. Unifying
+  means choosing one, which is a dictation-semantics decision, not a layout one.
+
+So: distinct ids per breakpoint — `cb-composer-input-mobile` and
+`cb-composer-send-mobile` alongside the desktop `cb-composer-input` /
+`cb-composer-send`. The dump note naming which is reachable at the current
+viewport lands with the dump (Track 3). The unification remains worth doing on
+its own merits; it is a separate piece of work with its own decisions to make.
+
 ### Track 2 — The pointer: `control:` links
 
 **What.** `control:` becomes a recognised markdown href kind that renders as an
@@ -660,6 +687,8 @@ Authored ids, chosen so web and native agree (Track 5 uses the same strings):
 | `cb-composer-add` | `InteractiveChat-composer.tsx:208` | `ComposerActionsView` trigger |
 | `cb-composer-input` | `InteractiveChat-composer.tsx:60` | `ComposerTextView.swift:30` |
 | `cb-composer-send` | `InteractiveChat-composer.tsx:121` | `NativeComposerView.swift:361` |
+| `cb-composer-input-mobile` | `InteractiveChat-mobile-row.tsx:47` | — (breakpoint fallback; see Track 1) |
+| `cb-composer-send-mobile` | `InteractiveChat-mobile-row.tsx:116` | — (breakpoint fallback; see Track 1) |
 | `cb-composer-mic` | `InteractiveChat-voice-button.tsx:28` | `NativeComposerView.swift:386` |
 | `cb-composer-capture` | `InteractiveChat-composer.tsx:238` | `NativeCaptureView` entry |
 | `cb-composer-stop-dictation` | — (web has no separate control) | `NativeComposerView.swift:354` "Stop continuous dictation" |
