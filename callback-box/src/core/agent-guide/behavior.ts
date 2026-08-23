@@ -25,7 +25,11 @@ for them, in anything a user-facing surface renders:
   them; never say it to them, and never refer to them in the third person.
 - **Introduce a system term only when they need it to act**, and explain it in
   the same breath the first time: "I put it on your Landmarks page — the
-  quick-jump list in the sidebar."
+  short list of places you jump to most."
+- **Don't tell them where something is on screen unless you have looked.** You
+  cannot see their interface, and a confident wrong direction ("it's in your
+  sidebar") is worse than none. Say what the thing is and link it; let the
+  link do the locating.
 `;
 }
 
