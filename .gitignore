@@ -82,7 +82,8 @@ dev/apps/story-eval/runs/
 /exhibits
 callback-box/user-stories/work/
 
-# Journey assets: real photos and anonymized mail, kept out of the repo until
-# reviewed. The journey.yaml that needs them IS tracked; prepare.ts fails loudly
-# naming any that are absent.
-callback-box/user-stories/journeys/*/assets/
+# Journey assets. Photographs are committed once compressed (a few hundred KB of
+# webp) so a journey is self-contained and runnable from a clean checkout.
+# Anonymized mail stays out until the boxholder has read it, since it is derived
+# from a real family's inbox — prepare.ts fails loudly naming anything absent.
+callback-box/user-stories/journeys/E-school/assets/

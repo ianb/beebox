@@ -21,9 +21,9 @@ box:
   setup: null
 
 assets:
-  - file: IMG_1139.jpg
+  - file: IMG_1139.webp
     described_as: one drawer of the odds-and-ends tray in your workroom
-  - file: IMG_1140.jpg
+  - file: IMG_1140.webp
     described_as: the same tray, the other half
 
 sittings: 1
