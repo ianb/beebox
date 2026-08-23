@@ -204,12 +204,14 @@ authenticated-but-unattributed behavior.
 - `InteractiveChat-view.tsx` — suppresses the web composer when `embedded || nativeComposer`.
 - `InteractiveChat.tsx` — enables `useNativeEmissionBridge({ enabled: usesNativeShell })` and
   `useNativeLocationBridge({ enabled: usesNativeShell, boxSlug })`.
+- `InteractiveChat-voice.ts` — the web screen wake lock (`useDebouncedWakeLock`) is **not** requested;
+  the device idle timer is native property under the native composer (§4.11).
 - **Viewport/safe-area is owned by native, not the web contract** — `NativeComposerView`,
   `RootView` (safe-area insets), `ChatWebView` (inline media playback).
 
 ### 3.3 Script-message channels (web → native)
 
-Four channels, all web→native. On iOS they are `WKScriptMessageHandler` names registered on the
+Five channels, all web→native. On iOS they are `WKScriptMessageHandler` names registered on the
 `userContentController`; the transport is platform glue (§10), the channel names and payloads are
 the contract.
 
@@ -219,8 +221,9 @@ the contract.
 | `callbackboxEmissionReceipt` | `Receipt` object (§4.2) | → `receiveEmissionReceipt` |
 | `callbackboxLocationResult` | `{ id, success, message }` | → `receiveLocationResult` |
 | `callbackboxComposerCommand` | V1 or V2 composer command (§4.7, §4.8) | → `receiveComposerCommand` |
+| `callbackboxLastAudioRequest` | V1 last-audio request (§4.9) | → `receiveLastAudioRequest` |
 
-- Native-side registration: `ChatWebView.swift` (`userContentController.add(_, name:)` for all four).
+- Native-side registration: `ChatWebView.swift` (`userContentController.add(_, name:)` for all five).
 - Session reporting: the native-authored startup script wraps `history.pushState`/`replaceState` +
   `popstate` and posts `location.href` on every nav; native extracts `?session=` via
   `visibleSessionID`. Origin-checked at both post and receipt time.
@@ -242,8 +245,10 @@ the contract.
 - `ChatWebView.swift` — `decidePolicyFor`: main-frame loads off `allowedOrigin` (and not `about:`)
   are cancelled and handed to `UIApplication.shared.open` (external browser).
   `allowsBackForwardNavigationGestures = true`.
-- On provisional nav start, all inflight emission/location state clears and `pageLoaded=false`; a
-  mid-flight nav re-arms delivery on the next `didFinish`.
+- On provisional nav start, inflight location/screenshot/composer-command state clears and
+  `pageLoaded=false`. Inflight *emission* IDs clear later, on `didCommit` — the old document can
+  still deliver a real receipt while a provisional navigation is pending — and `didFinish`
+  redelivers the same persisted emission IDs into the new page.
 
 ---
 
@@ -295,6 +300,12 @@ the contract.
 
 ### 4.2 Emission receipt (web → native)
 
+- **What a receipt means:** durable acceptance — the box has recorded the message and will run it.
+  `/api/chat/send` responds when the message and its dedup claim persist, before the engine spawns;
+  a run that then fails to start reports on the turn stream, never by revoking the receipt.
+- **Ownership:** native owns the durable pre-POST queue and redelivery (`PendingEmissionStore`);
+  web owns dispatch and settles receipts from the POST outcome; the server owns acceptance, the
+  claim registry, and delivery to the engine.
 - **Wire shape** (web posts the dispatch `Receipt` verbatim on the `callbackboxEmissionReceipt`
   channel):
   ```
@@ -305,16 +316,30 @@ the contract.
 - **Anchors:**
   | side | anchor |
   |---|---|
-  | web post | `src/frontend/src/components/chat/use-native-bridge.ts` — `postNativeReceipt`; `src/frontend/src/input/targets/receipts.ts` — `Receipt` union, `expectReceipt` (30s backstop) |
+  | web post | `src/frontend/src/components/chat/use-native-bridge.ts` — `postNativeReceipt`; `src/frontend/src/input/targets/receipts.ts` — `Receipt` union, `expectReceipt` |
   | native decode | `ios-app/CallbackBox/Views/ChatWebView.swift` — `receiveEmissionReceipt`, `NativeEmissionReceipt.Disposition { sent, queued, rejected }` |
 - **Ack/dedup semantics:** native `deliver` only sends emissions not already in
-  `inflightEmissionIDs`, marks inflight, starts a **35s** receipt timeout, and on an
-  `evaluateJavaScript` error reports a synthetic `rejected` immediately. Delivery is gated on
+  the inflight map (`inflightEmissionGenerations` — id → per-attempt generation), marks them
+  inflight, and on an `evaluateJavaScript` error reports a synthetic `rejected` — but only when the
+  erroring attempt's generation is still current, so a stale completion from an abandoned attempt
+  cannot reject a fresh one. Receipts stay ID-only by design: the dedup registry answers any
+  attempt truthfully, so whichever attempt provoked a receipt, it settles the emission. Delivery is gated on
   `pageLoaded` (items typed during nav are held, re-delivered on `didFinish`). On any receipt
-  (real, timeout, or error) `RootView` clears the emission from `pendingNativeEmissions`;
-  `NativeComposerView` restores text+images on `rejected`. Native 35s > web 30s deliberately (web
-  reports first).
-- **Drift:** SILENT→LOUD (no receipt → native 35s timeout → user sees "not confirmed").
+  `RootView` clears the emission from `pendingNativeEmissions`;
+  `NativeComposerView` restores text+images on `rejected`. Neither web nor native manufactures a
+  rejection from elapsed time. Transport, bridge-evaluation, malformed-response, and backend
+  failures still reject explicitly. Navigation clears native inflight state (`didCommit`, §3.4)
+  and redelivers the same persisted emission ID; server dedup retains the claimed ID for seven
+  days, which makes navigation, crash-recovery, and backoff retries safe.
+- **In-session redelivery (native):** a `pending` emission whose receipt has not arrived
+  redelivers on a wall-clock backoff (10s/30s/60s after attempts 1-3, then every 120s, no cap):
+  `RootView` publishes a `NativeEmissionRedeliveryRequest`, the coordinator abandons the inflight
+  attempt (drops its inflight generation) and delivers again. A late receipt from an
+  abandoned attempt is dropped by the inflight guard; the new attempt's receipt settles. Past 30s
+  pending, the composer row offers Restore/Discard — the state stays `pending`; no verdict is
+  manufactured. Re-evaluation runs only while the scene is active (5s ticker + foregrounding).
+- **Drift:** a missing outcome remains visibly pending (with a user exit after 30s); retries
+  always carry the same emission ID.
 - **Benign field drift:** native ignores `deduplicated` on `sent` receipts.
 
 ### 4.3 Location preference toggle (native → web) + state/result (web → native)
@@ -349,14 +374,27 @@ the contract.
   `sendKeywordIntent`.
 - **Drift:** fail-local — absent or malformed state leaves native narration off, avoiding an
   unintended audio upload.
+- **Keyword detection is per-side, not bridged.** Each surface detects spoken keywords over its own
+  transcript (`Services/SpeechKeywords.swift` natively; `lib/audio/speech-keywords.ts` +
+  `input/voice-intent.ts` on web) and only the resulting tagged text crosses the bridge as ordinary
+  emission content. The implementations deliberately diverge where their pipelines differ: native
+  holds a detected keyword's tag substitution until the composer's send lock accepts it (a refusal
+  restores the pre-keyword transcript) and refuses to match inside an existing markup tag; web never
+  re-feeds composer text to detection, so it needs neither guard. Neither side may assume the
+  other's detector fired.
 
 ### 4.5 Speech playback state (web → native)
 
 - **Wire shape:** `{ playing: boolean }` on `callbackboxSpeechPlaybackState`.
 - **Semantics:** the web posts changes to its actual speech playback state. An active native
   continuous-dictation turn pauses while `playing:true` and resumes when the final queued speech
-  segment reports `playing:false`. The microphone remains active while waiting for speech to begin;
-  an explicit stop or `send and close` prevents the later resume.
+  segment reports `playing:false`; an explicit stop or `send and close` prevents the later resume.
+  The pause covers only the **automatic** reopens — after speech ends, after a send that keeps the
+  microphone, after an erase — because none of those is the user asking to speak now. An explicit
+  press of the record button does the opposite: it barges in (§4.10), matching the web composer,
+  where `START_DICTATION` stops speech and opens the microphone at once. Native resumes on
+  `playing:false` only for a microphone it actually deferred, so a barge-in's own stop does not
+  restart the dictation the press already began.
 - **Anchors:** web `use-native-bridge.ts` — `useNativeSpeechPlaybackBridge`; native
   `Views/ChatWebView.swift` — `receiveSpeechPlaybackState`; `Views/NativeComposerView.swift` —
   `applyVoiceTurn`.
@@ -524,6 +562,146 @@ UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
   | native registry + answer | `ios-app/CallbackBox/Models/NativeComposerContract.swift` — `NativeComposerCommand`, `NativeComposerCommandResult`, `NativeControlEntry`; `Models/NativeControlRegistry.swift` — `controlAnchor`, `perform`; `Views/RootView.swift` — `handleComposerCommand`; `Views/NativeControlRingView.swift`; `Views/ChatWebView.swift` — `deliverComposerCommandResults` |
 - **Drift:** LOUD in the dump (a coverage line the agent reads), silent to the user — nothing in the
   UI depends on it.
+### 4.9 Last-audio request (web → native), answered by direct HTTP
+
+The relay that lets a box agent retranscribe a message dictated in the **native** composer. Design:
+`docs/plans/ios-audio-retranscription.md`.
+
+- **Why it exists:** `cb chat retranscribe --message <id>` is answered by whoever holds the
+  recording. Web tabs answer from an in-memory store keyed by emission id
+  (`src/frontend/src/lib/audio/last-audio.ts`). A natively-dictated recording never enters the page,
+  so without this relay the phone's recordings are unreachable and every such message answers
+  `no-audio`.
+- **Request wire shape** (web posts on `callbackboxLastAudioRequest`):
+  ```json
+  { "version": 1, "requestId": "<pending request id>", "messageId": "<emission id>",
+    "sessionId": "<relaying tab's session id, or null>" }
+  ```
+  Both ids are required and non-blank. `requestId` is the answer's URL segment; `messageId` must be
+  echoed on the answer or the server discards it (see below). `sessionId` is the **relaying tab's**
+  own, and is null before the tab has been assigned one — but it is a **fallback**, not the answer:
+  native stores the session each recording was dictated INTO and echoes that instead when it has
+  one. The echoed session addresses the retranscription report
+  (`cli/commands/chat-audio-report.ts` → the `chat-retranscription` bus event, which the web
+  matches against its own session), so answering with the phone's currently-visible session would
+  post the correction to whichever conversation the user happens to be looking at.
+- **No acknowledgement channel.** Native answers the box directly over HTTP:
+  `POST /api/chat/last-audio/:requestId`, multipart with `file` (audio/wav), `recordedAt` (ISO 8601),
+  `text` (the committed transcript, capped — §8), `messageId`, and `sessionId` when non-null; or
+  `Content-Type: application/json` with `{"none": true}` when this device does not hold that
+  recording. Device-token auth as §2. Megabytes of WAV would have to be base64-ed to come back
+  across a script message, so they do not.
+- **Two server properties this depends on** (`src/core/last-audio-pending.ts`), both load-bearing:
+  **(1)** a `none` answer does not settle the request — each request's grace window defaults to its
+  own `timeoutMs`, so an instant chorus of "none" from tabs that lack the recording cannot cut off a
+  slower answerer, which is exactly what the phone is; **(2)** echo-and-verify — an answer whose
+  echoed `messageId` does not match the target is ignored without settling, so a phone holding a
+  different recording cannot win. A `404` back to the phone is the ordinary multi-answerer outcome
+  (another answer won, or the request timed out) and is not an error.
+- **Both answer.** In a native shell the tab relays AND answers from its own store: a recording made
+  by the *web* composer inside the same webview is legitimately the page's.
+- **Retention:** native keeps the last five recordings per box on disk, keyed by emission id
+  (`Storage/VoiceAudioRetentionStore.swift`) — the same bound as the web store (§8), but durable
+  across app relaunch and the WKWebView content-process reload. Unpairing a box drops its
+  recordings.
+- **Anchors:**
+  | side | anchor |
+  |---|---|
+  | web relay | `src/frontend/src/components/chat/native-last-audio-request.ts`; `src/frontend/src/lib/audio/last-audio.ts` — `fulfillLastAudioRequest` |
+  | box server | `src/webapp/routes/chat-last-audio-routes.ts`; `src/core/last-audio-pending.ts` |
+  | native decode, retention, answer | `ios-app/CallbackBox/Models/NativeComposerContract.swift` — `NativeLastAudioRequest`; `Storage/VoiceAudioRetentionStore.swift`; `Services/ChatAPI.swift` — `answerLastAudio`; `Views/ChatWebView.swift` — `receiveLastAudioRequest`; `Views/RootView.swift` — `answerLastAudioRequest` |
+- **Drift:** QUIET — a phone that stops answering looks identical to a phone that is asleep, and the
+  agent sees the same "no recording is cached" either way. The fixture family `last-audio-request`
+  and `VoiceAudioRetentionTests` are what catch it.
+
+### 4.10 Speech control (native → web)
+
+Barge-in. The native composer owns its microphone but not the speech it would talk over — the page
+plays that (`lib/audio/tts-client.ts`), so only the page can stop it.
+
+- **Direction:** native → web.
+- **Wire shape:** `window.callbackboxNativeSpeechCommand(<detail>)` pushes the detail onto
+  `window.callbackboxNativeSpeechCommandQueue` and dispatches
+  `CustomEvent('callbackbox:native-speech-command')`. The queue is authoritative; the event is a
+  wake signal (its detail is never read). Detail:
+  ```json
+  { "version": 1, "action": "stop" }
+  ```
+  V1 is strict: an unversioned payload is a pre-contract sender and an unknown `action` a newer one,
+  and neither may be guessed at — there is no channel to report a guess through, so a payload that
+  does not validate is dropped rather than stopping speech nobody asked to stop.
+- **When native sends it:** on an explicit press of the record button while `playing:true`, and
+  only then. Every automatic reopen (§4.5) keeps waiting instead: interrupting the box's reply to a
+  message the user just sent is the opposite of what was asked. There is no keyword-initiated start
+  to consider — native detects keywords over an already-live recognizer.
+- **Web handling:** `use-native-bridge.ts` · `useNativeSpeechCommandBridge` drains the queue and
+  sends the composer machine `STOP_SPEECH` — deliberately not `START_DICTATION`, whose `beginTurn` +
+  `startMic` would open the *web* microphone inside a native shell and leave web turn-taking to
+  reopen it after the next speech. The page is the speaker; native is the listener. One transition
+  is worth knowing: `STOP_SPEECH` in the machine's `pausedForSpeech` state also `resumeMic`s, which
+  would open the web microphone. It is unreachable in a native shell — that state is entered only
+  from web recording, and the web composer is suppressed under `nativeComposer` (§3.2) — but a
+  surface that ever starts the web mic inside the native shell would make this row unsafe.
+- **No acknowledgement channel.** §4.5's `{playing:false}` already reports the stop, and native does
+  not wait for it: the microphone opens on the press. A command that never lands costs the tail of
+  one utterance overheard by the mic, which is strictly better than the turn it would otherwise cost.
+- **Anchors:**
+  | side | anchor |
+  |---|---|
+  | native decide + send | `ios-app/CallbackBox/Services/SpeechDictation.swift` — `NativeVoiceTurnState`, `NativeVoiceTurnCommand.startDictationInterruptingSpeech`; `ios-app/CallbackBox/Views/NativeComposerView.swift` — `applyVoiceTurn`; `ios-app/CallbackBox/Views/ChatWebView.swift` — `deliverSpeechStopRequest`; `ios-app/CallbackBox/Models/NativeComposerContract.swift` — `NativeSpeechCommand` |
+  | web handle | `src/frontend/src/components/chat/native-speech-command.ts` — `nativeSpeechCommandFromDetail`; `src/frontend/src/components/chat/use-native-bridge.ts` — `useNativeSpeechCommandBridge`; `src/frontend/src/machines/composerMachine.ts` — `STOP_SPEECH` |
+- **Drift:** SILENT-degraded — against a web build without the handler the microphone still opens and
+  the speech keeps playing into it. A page load is the same outcome: a request is **settled on the
+  spot** if no document is loaded, and **abandoned** on a provisional navigation or a box/session
+  change, never parked and replayed. A stop aimed at an utterance that no longer exists would land
+  on whatever the next document says next, which is worse than the press already being honoured
+  natively — the microphone opened on the press regardless.
+
+### 4.11 Screen wake — native owns the idle timer (no wire)
+
+Not a channel: nothing crosses the bridge. It is here because it is a **split of responsibility**
+that both sides must honour, and honouring it web-side means *not* acting.
+
+iOS sleeps the display on a system idle timer that only user interaction resets, and a screen lock
+suspends an app with no background-audio mode — so an open microphone in a silent room looks like an
+abandoned phone, and the recording dies. Only the native layer can prevent that
+(`UIApplication.isIdleTimerDisabled`); the Screen Wake Lock API requested from inside a `WKWebView`
+is not a substitute for it.
+
+- **Native holds the screen awake for**, and only for:
+  - a composer voice turn — the microphone open or opening, *plus* the gaps inside the turn: the
+    pause while the box speaks (§4.5) and the reply streaming in before that speech starts. Those
+    gaps are exactly when nobody is speaking or touching, and the turn will reopen the microphone at
+    the end of them. The turn ends — and the hold with it — when the microphone closes, the message
+    is sent and closed, or dictation fails (denied permission, audio-engine failure, a phone call, a
+    route change), because in each of those the microphone is already down.
+  - page speech playing (§4.5 `{playing:true}`), which a screen lock would cut off mid-sentence.
+  - native capture recording audio — the same open-microphone break on a different surface.
+- **Native does not hold it for** an idle foregrounded chat, or a turn streaming in outside a voice
+  turn. A reader who is not touching the screen is what the idle timer is for.
+- **Release is primarily by re-derivation.** Each holder states its reason as a condition computed
+  from current state — with `scenePhase == .active` folded into that condition — so backgrounding, a
+  failed or interrupted dictation, and the microphone closing all release by the same path rather
+  than by remembering to undo something. The one case re-derivation cannot cover is a surface that
+  has gone away, so each also releases *its own* reasons on disappearance. A leaked hold is a phone
+  that never sleeps, which is worse than the bug being fixed.
+- **A reason is a role, and each has one live surface** — one composer for the selected box, one
+  capture cover. Reasons are not instance-scoped, so a platform that can show two of the same surface
+  at once needs an owner token per hold; two *different* reasons already coexist safely.
+- **Web side: do not claim it under `nativeComposer`.** The page can see only the speech half of a
+  native voice turn, so a web wake lock there would hold through the box talking and drop through the
+  listening it cannot observe — the shape of the original bug. `useWakeLock` remains correct for the
+  ordinary browser client, where the web *does* own the microphone.
+- **Anchors:**
+  | side | anchor |
+  |---|---|
+  | native hold | `ios-app/CallbackBox/Services/ScreenAwake.swift` — `ScreenAwakeReason`, `ScreenAwakeState`, `ScreenAwakeHold`; `ios-app/CallbackBox/Views/NativeComposerView.swift` — `screenAwakeReasons`; `ios-app/CallbackBox/Views/NativeCaptureController.swift` — `NativeCaptureScreen.applyScreenAwake` |
+  | web abstention | `src/frontend/src/components/chat/InteractiveChat-voice.ts` — `useDebouncedWakeLock(nativeComposer ? false : …)`; `src/frontend/src/hooks/useWakeLock.ts` |
+- **Drift:** SILENT both ways. A native build without the hold sleeps under an open microphone (the
+  filed bug); a web build that re-acquires its own lock under the native shell breaks nothing —
+  native still holds the whole turn — but leaves two mechanisms claiming the screen, which is how
+  this stayed confusing. The web half is deliberately **not** in the §11 anchor list for that reason:
+  its failure is comprehensibility, not behaviour.
 
 ---
 
@@ -814,12 +992,16 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | B4 | Location state/result | web→native | state `{enabled}` via `callbackboxLocationState`; result `{id,success,enabled,message}` via `callbackboxLocationResult` | `Views/ChatWebView.swift` · `receiveLocationState`, `receiveLocationResult` | `use-native-bridge.ts` · `postNativeLocationState`, `postNativeLocationResult` → `native-post.ts` · `postNativeMessage` | LOUD |
 | B5 | Companion selection command | web→native | V1 `{version:1,id,kind:add-selection,selection:{ref,text,position}}` via `callbackboxComposerCommand` | `Models/NativeComposerContract.swift` · `NativeComposerCommand`; `Views/ChatWebView.swift` · `receiveComposerCommand`; `Storage/ComposerDraftStore.swift` · `applySelectionCommand` | `native-composer-command.ts`; `use-native-composer-commands.ts`; `InteractiveChat-view.tsx` | LOUD |
 | B6 | Composer command acknowledgement | native→web | accepted `{version:1,id,accepted:true}` or rejected `{version:1,id,accepted:false,reason}` via `callbackboxNativeComposerCommandAck`, queue + `callbackbox:native-composer-command-ack` event | `Models/NativeComposerContract.swift` · `NativeComposerCommandAcknowledgement`; `Views/ChatWebView.swift` · `deliverComposerCommandAcknowledgements` | `native-composer-command.ts` · `nativeComposerCommandAcknowledgementFromDetail`; `use-native-composer-commands.ts` | LOUD |
+| B11 | Speech control (barge-in) | native→web | V1 `{version:1,action:"stop"}` via `callbackboxNativeSpeechCommand`, queue `callbackboxNativeSpeechCommandQueue`, event `callbackbox:native-speech-command`; no ack — §4.5 `{playing:false}` reports the stop | `Models/NativeComposerContract.swift` · `NativeSpeechCommand`; `Services/SpeechDictation.swift` · `NativeVoiceTurnState`; `Views/ChatWebView.swift` · `deliverSpeechStopRequest` | `native-speech-command.ts` · `nativeSpeechCommandFromDetail`; `use-native-bridge.ts` · `useNativeSpeechCommandBridge` | SILENT-degraded (speech plays into an open mic) |
+| B10 | Last-audio request relay | web→native | V1 `{version:1,requestId,messageId,sessionId\|null}` via `callbackboxLastAudioRequest`; answered by H6, not by an ack | `Models/NativeComposerContract.swift` · `NativeLastAudioRequest`; `Views/ChatWebView.swift` · `receiveLastAudioRequest`; `Views/RootView.swift` · `answerLastAudioRequest` | `native-last-audio-request.ts`; `lib/audio/last-audio.ts` · `fulfillLastAudioRequest` | QUIET (asleep phone is indistinguishable) |
 | B7 | Narration state | web→native | `{enabled}` via `callbackboxNarrationState` | `Views/ChatWebView.swift` · `receiveNarrationState`; `Views/NativeComposerView.swift` · `sendKeywordIntent` | `use-native-bridge.ts` · `useNativeNarrationBridge` | fail-local |
 | B8 | Speech playback state | web→native | `{playing}` via `callbackboxSpeechPlaybackState` | `Views/ChatWebView.swift` · `receiveSpeechPlaybackState`; `Views/NativeComposerView.swift` · `applyVoiceTurn` | `use-native-bridge.ts` · `useNativeSpeechPlaybackBridge` | fail-local |
 | B9 | Response generation state | web→native | `{active}` via `callbackboxResponseState` | `Views/ChatWebView.swift` · `receiveResponseState`; `Services/NativeEarcons.swift` · `NativeEarconState` | `use-native-bridge.ts` · `useNativeResponseBridge` | fail-local |
-| B10 | Command envelope V2 | web→native | `{version:2,id,kind,payload?}`, kinds `add-selection`\|`scan-controls`, via `callbackboxComposerCommand` | `Models/NativeComposerContract.swift` · `NativeComposerCommand.Payload`; `Views/RootView.swift` · `handleComposerCommand` | `native-composer-command.ts` · `nativeComposerCommandFromDetail`; `native-control-scan.ts` | LOUD |
-| B11 | Command result | native→web | `{version:2,id,kind,ok:true,controls[]}` or `{…,ok:false,reason}` via `callbackboxNativeCommandResult`, queue + `callbackbox:native-command-result` event | `Models/NativeComposerContract.swift` · `NativeComposerCommandResult`; `Models/NativeControlRegistry.swift` · `controlAnchor`; `Views/ChatWebView.swift` · `deliverComposerCommandResults` | `native-composer-command.ts` · `nativeCommandResultFromDetail`; `native-control-scan.ts` · `requestNativeControls` | LOUD in the dump |
+| B12 | Command envelope V2 | web→native | `{version:2,id,kind,payload?}`, kinds `add-selection`|`scan-controls`, via `callbackboxComposerCommand` | `Models/NativeComposerContract.swift` · `NativeComposerCommand.Payload`; `Views/RootView.swift` · `handleComposerCommand` | `native-composer-command.ts` · `nativeComposerCommandFromDetail`; `native-control-scan.ts` | LOUD |
+| B13 | Command result | native→web | `{version:2,id,kind,ok:true,controls[]}` or `{…,ok:false,reason}` via `callbackboxNativeCommandResult`, queue + `callbackbox:native-command-result` event | `Models/NativeComposerContract.swift` · `NativeComposerCommandResult`; `Models/NativeControlRegistry.swift` · `controlAnchor`; `Views/ChatWebView.swift` · `deliverComposerCommandResults` | `native-composer-command.ts` · `nativeCommandResultFromDetail`; `native-control-scan.ts` · `requestNativeControls` | LOUD in the dump |
+| R1 | Screen awake (device idle timer) | native-only, no wire | — (a responsibility split, §4.11): held for a voice turn, page speech playing, or capture recording; released by re-derivation incl. `scenePhase` | `Services/ScreenAwake.swift` · `ScreenAwakeHold`; `Views/NativeComposerView.swift` · `screenAwakeReasons`; `Views/NativeCaptureController.swift` · `applyScreenAwake`; `Services/SpeechDictation.swift` · `NativeVoiceTurnEvent.dictationFailed` | `components/chat/InteractiveChat-voice.ts` · `useDebouncedWakeLock` (suppressed under `nativeComposer`); `hooks/useWakeLock.ts` | SILENT both ways |
 | H1 | `POST /api/chat/transcribe-audio` | native→box | multipart `session` + `file`(segment.wav, audio/wav); res `{text,diarized}` | `Services/ChatAPI.swift` · `transcribeAudio` | `routes/chat-audio-routes.ts` | LOUD on rejection / SILENT on HTTP 200 with unusable text; Float32 WAV verified — **I8** |
+| H6 | `POST /api/chat/last-audio/:requestId` | native→box | multipart `file`(last-message.wav, audio/wav) + `recordedAt`,`text`,`messageId`,`sessionId?`; or JSON `{"none":true}`; res `{ok}` / `404` when already settled | `Services/ChatAPI.swift` · `answerLastAudio`; `Storage/VoiceAudioRetentionStore.swift` | `routes/chat-last-audio-routes.ts`; `core/last-audio-pending.ts` · `fulfill`/`reportNone` | QUIET — a missing echo is IGNORED, not rejected |
 | H2 | `GET /api/chat/default` | native→box | res `{sessionId?}` | `Services/ChatAPI.swift` · `resolvedSession` | `routes/chat.ts` · default-session route | SILENT (→ `"new"`) |
 | H3 | `POST /api/chat/send` (web layer) | web→box | `{session,message,messageId,images?,channel?,…}`; res `{turnId?}\|{queued}\|{deduplicated}` | `api-chat.ts` | `routes/chat-send-routes.ts`; `routes/chat-helpers.ts` · `sendBodySchema` | LOUD / SILENT dedup |
 | H4 | `POST /api/chat/upload-file` | native→box | multipart `file`; res `{path,originalName,size,mimetype}` | `Services/ChatAPI.swift` · `uploadFile` | `routes/chat-uploads.ts` · `registerChatUploadRoutes` | LOUD |
@@ -873,36 +1055,57 @@ without the other is a contract break.
   view's `accessibilityIdentifier`. They are not anchored file-by-file (they live in ordinary view
   code on both sides); a rename is a contract migration and belongs in a commit that touches this
   document.
+- **Last-audio request V1** `{version,requestId,messageId,sessionId}` —
+  `Models/NativeComposerContract.swift` · `NativeLastAudioRequest` ↔
+  `native-last-audio-request.ts`. Its answer's multipart field names
+  (`file`,`recordedAt`,`text`,`messageId`,`sessionId`) are mirrored a THIRD time, by the web
+  answerer — `Services/ChatAPI.swift` · `multipartLastAudioBody` ↔
+  `lib/audio/last-audio.ts` · `fulfillLastAudioRequest` ↔ `routes/chat-last-audio-routes.ts`.
+- **Retained-recording record** `{emissionID,recordedAt,text,sessionID?}` — device-local, so it is
+  not a wire shape, but `sessionID` and `text` both leave the device on the answer and must keep
+  meaning what §4.9 says: the session dictated into, and the transcript the message committed with.
+- **Voice-recording retention bound** 5, and the answer's transcript cap 1500 characters —
+  `Storage/VoiceAudioRetentionStore.swift` · `defaultCapacity` / `Services/ChatAPI.swift` ·
+  `maximumAnswerTextCharacters` ↔ `lib/audio/last-audio.ts` · `RETENTION_CAPACITY` /
+  `MAX_TEXT_CHARS` ↔ `routes/chat-last-audio-routes.ts` · `MAX_TEXT_HEADER_CHARS`.
 - **`debugLog.submit` wire keys** `{source?,entries:[{level,message,at?}]}`, `level` closed to
   `error|warn|log|info`, `source` slug `^[a-z][a-z0-9-]{0,15}$` (iOS always sends `"ios"`), `at` an
   offset datetime — `Services/LogForwarder.swift` ↔
   `trpc/routers/debugLog.ts` · `submit`.
+- **Speech command V1** `{version,action:"stop"}` — `Models/NativeComposerContract.swift` ·
+  `NativeSpeechCommand` ↔ `native-speech-command.ts` · `nativeSpeechCommandFromDetail`.
 - **Bridge globals** `callbackboxNativeReceive` / `callbackboxNativeQueue` /
   `callbackboxNativeShareLocation` / `callbackboxNativeLocationQueue` /
   `callbackboxNativeComposerCommandAck` / `callbackboxNativeComposerCommandAckQueue` /
-  `callbackboxNativeCommandResult` / `callbackboxNativeCommandResultQueue` and events
+  `callbackboxNativeCommandResult` / `callbackboxNativeCommandResultQueue` /
+  `callbackboxNativeSpeechCommand` / `callbackboxNativeSpeechCommandQueue` and events
   `callbackbox:native-emission` / `callbackbox:native-share-location` /
-  `callbackbox:native-composer-command-ack` / `callbackbox:native-command-result` —
+  `callbackbox:native-composer-command-ack` / `callbackbox:native-command-result` /
+  `callbackbox:native-speech-command` —
   native-authored startup script in `Views/ChatWebView.swift` ↔ `use-native-bridge.ts` /
   `use-native-composer-commands.ts` / `native-control-scan.ts`.
 - **Script-message channel names** `callbackboxSession` / `callbackboxEmissionReceipt` /
   `callbackboxLocationResult` / `callbackboxLocationState` / `callbackboxNarrationState` /
   `callbackboxSpeechPlaybackState` / `callbackboxResponseState` /
-  `callbackboxComposerCommand` — `Views/ChatWebView.swift` (`userContentController.add`) ↔
+  `callbackboxComposerCommand` / `callbackboxLastAudioRequest` —
+  `Views/ChatWebView.swift` (`userContentController.add`) ↔
   `native-post.ts` · `NativeShellChannel`.
 - **Neutral web→native transport** `callbackboxNativePost(channel, payload)` (string payloads) —
   startup script in `Views/ChatWebView.swift` ↔ `native-post.ts` · `postNativeMessage` (with the
   legacy `webkit.messageHandlers` object-form fallback for pre-neutral shells).
-- **Inline photo limit** `4` — `components/chat/photo-batch-threshold.ts` · `INLINE_PHOTO_LIMIT` /
-  `shouldBatchPhotos` ↔ the iOS composer's mirrored constant. **The most photos that may ride
+- **Inline photo limit** `3` — `components/chat/file-routing.ts` · `INLINE_PHOTO_LIMIT` /
+  `routeAddedFiles` ↔ the iOS composer's mirrored constant. **The most photos that may ride
   inline (base64) in one chat message.** A selection that would put the composer's *total* inline
-  count above the limit is uploaded as a bulk batch (§5.6) instead. Photos **already inline join that
+  count above the limit is uploaded as a bulk batch (§5.6) instead, and so is any set containing a
+  **non-image** (a document has no inline representation), however few files it holds. Photos **already inline join that
   batch** and are removed from the composer, so one selection act has one destination — batching only
   the new photos would send the composer text off as the batch's introduction while the older photos
   sat behind with nothing describing them. (Photos still *encoding* can't be folded, having no bytes
   yet; they finish and land inline rather than being discarded — never losing a photo outranks
   arriving in one piece.) The inline total is bounded by the limit however many separate selections a
-  user makes, counting in-flight encodes. The rule applies identically to the picker, paste, and drop.
+  user makes, counting in-flight encodes. The rule applies identically to the picker, paste, drop
+  and screenshot grab — on the web the composer's Add menu offers one "Add files…" entry and routing
+  decides the rest, rather than asking the user to pick a path.
 
   This is a real behavioral contract, not a tuning knob: inlining a camera roll base64-encodes tens
   of megabytes into a single `/chat/send`, which is what
@@ -1014,6 +1217,8 @@ callback-box/src/frontend/src/components/chat/native-command-bridge.ts
 callback-box/src/frontend/src/components/chat/native-control-scan.ts
 callback-box/src/frontend/src/components/chat/native-control-point.ts
 callback-box/src/frontend/src/components/chat/ui-scan-request-handler.ts
+callback-box/src/frontend/src/components/chat/native-last-audio-request.ts
+callback-box/src/frontend/src/components/chat/native-speech-command.ts
 callback-box/src/frontend/src/components/chat/use-native-composer-commands.ts
 callback-box/src/frontend/src/components/chat/use-companion-selection.ts
 callback-box/src/frontend/src/lib/mobile-auth.ts
@@ -1026,6 +1231,7 @@ callback-box/src/core/mobile/request-auth.ts
 callback-box/src/webapp/mobile-cookie.ts
 callback-box/src/webapp/routes/pairing.ts
 callback-box/src/webapp/routes/chat-audio-routes.ts
+callback-box/src/webapp/routes/chat-last-audio-routes.ts
 callback-box/src/webapp/routes/chat-uploads.ts
 callback-box/src/webapp/routes/bulk-upload.ts
 callback-box/src/core/capture/staging-stream.ts
@@ -1035,8 +1241,11 @@ callback-box/src/webapp/trpc/routers/debugLog.ts
 ios-app/CallbackBox/Views/ChatWebView.swift
 ios-app/CallbackBox/Models/NativeComposerContract.swift
 ios-app/CallbackBox/Models/NativeControlRegistry.swift
+ios-app/CallbackBox/Services/SpeechDictation.swift
+ios-app/CallbackBox/Services/ScreenAwake.swift
 ios-app/CallbackBox/Storage/ComposerDraftStore.swift
 ios-app/CallbackBox/Services/ChatAPI.swift
+ios-app/CallbackBox/Storage/VoiceAudioRetentionStore.swift
 ios-app/CallbackBox/Models/PairedBox.swift
 ios-app/CallbackBox/Storage/PairedBoxStore.swift
 ios-app/CallbackBox/Services/LogForwarder.swift

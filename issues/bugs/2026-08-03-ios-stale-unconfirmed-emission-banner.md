@@ -1,11 +1,35 @@
 ---
 title: "iOS: a stale 'chat did not confirm the message' banner (with a duplicating Retry) survives when the send actually went through"
-workstream: unknown
+workstream: emission-model
+needs: [manual-testing]
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder saw the banner without composing anything
 priority: important
+design: ../../callback-box/docs/implemented-plans/emission-model.md
 ---
+
+> **⏳ Awaiting manual testing** — resolved by the emission-model workstream
+> rather than by the history-reconciliation this issue proposed (see the
+> plan's "Why 'reconcile against durable history' is not the design"):
+> history has no message-id to match on; instead the server's durable dedup
+> claim answers redelivery idempotently. Since `ef20af7f` (7-day claim) plus
+> `c296b95f` (automatic redelivery; the long-pending affordance offers
+> Restore/Discard, deliberately no Retry), a replayed pending emission
+> resolves itself against the server, and re-sending an already-run message
+> answers `deduplicated` instead of running the turn twice. The quoted
+> banner string no longer exists in the app (the UI is the generic
+> `.rejected` presentation). See Manual testing. Only the developer clears
+> this.
+
+## Manual testing
+
+1. With a message pending (e.g. sent while offline), quit and relaunch the
+   app, then restore connectivity.
+2. The pending emission must resolve itself without any "not confirmed"
+   presentation — and without the turn running twice.
+3. If a pending row does reach the 30s Restore/Discard affordance, confirm
+   it offers no Retry, and that Discard removes it cleanly.
 
 The iOS banner **"The chat did not confirm the message. Try sending it again."**
 (`ios-app/CallbackBox/Views/ChatWebView.swift:454`, with Retry / Restore / Discard)

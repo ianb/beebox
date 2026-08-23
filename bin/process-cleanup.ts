@@ -8,16 +8,29 @@
 // and reclaims them under two safety rules:
 //
 //   1. Scope. Only ever touch `vite`/`fastify` whose executable or cwd is
-//      under the monorepo (MAIN_ROOT) or ~/src/callback-worktrees, and
+//      under the monorepo (MAIN_ROOT) or the worktrees root, and
 //      `agent-browser` whose binary is under one of those node_modules. Never
 //      a blanket `pkill vite` / `pkill agent-browser`.
-//   2. Active sessions + current-daemon. An agent-browser is left alone only
-//      when its worktree has a live `claude` session AND it's the daemon the
-//      worktree's socket dir currently vouches for (its pid is in a `*.pid`
-//      file). Killing the in-use daemon would sabotage active work; but the
-//      superseded orphans (idle daemons that stopped serving yet never exit —
-//      see below) are reaped even in an active worktree, which is the whole
-//      reason they otherwise pile up.
+//   2. Live sessions + current-daemon. An agent-browser is left alone only
+//      when its worktree has a live agent session (claude OR codex) AND it's
+//      the daemon the worktree's socket dir currently vouches for (its pid is
+//      in a `*.pid` file). Killing the in-use daemon would sabotage active
+//      work; but the superseded orphans (idle daemons that stopped serving yet
+//      never exit — see below) are reaped even in a live worktree, which is the
+//      whole reason they otherwise pile up.
+//
+//      Liveness is TRI-STATE — none / live / unknown — and `unknown` counts as
+//      live (in fact stricter — see classifyAgentBrowser), because this guard
+//      stands in front of an irreversible kill. The
+//      answer comes from `bin/workstreams agent-liveness`, i.e. from
+//      `wt_other_agent_live` in bin/lib/worktree-teardown.sh, the single shared
+//      implementation. This module used to carry its own two-state copy that
+//      knew only `claude --worktree <name>` argv plus `pgrep -x claude`; that
+//      copy was blind to codex sessions entirely (now the default worker agent)
+//      and, because a native-installed Claude Code reports its VERSION as the
+//      accounting name pgrep matches, blind to most claude sessions too. It
+//      reclaimed a live Codex worktree's browser daemon. Extend the shared
+//      guard; never grow a second one here.
 //
 // Why parentage works for vite/fastify but not agent-browser: vite/fastify are
 // only ever spawned by the router, so a project vite/fastify whose parent is
@@ -26,7 +39,7 @@
 // (detached:true changes the process group, not the parent), so they show a
 // live ppid and are skipped. agent-browser daemons, by contrast, detach all the
 // way to PID 1 even while their owning session is alive, so they can't be told
-// apart by parentage — they're gated on the active-session + socket-dir pidfile
+// apart by parentage — they're gated on the live-session + socket-dir pidfile
 // check instead. (The upstream daemon also never exits on idle: it stops
 // serving its socket but lingers at PID 1, so a fresh one spawns on next use
 // and the dead ones accumulate — the pidfile check is what reaps them.)
@@ -37,13 +50,19 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { execa } from "execa";
 
 // Mirror bin/router.ts's roots (including the CALLBACK_MAIN_ROOT override) so
-// scoping stays identical. WORKTREES_ROOT is fixed by convention.
+// scoping stays identical. CALLBACK_WORKTREE_ROOT is the same override
+// bin/lib/worktree-paths.sh honors — the basename under the parent is
+// convention, not something git knows, and a test needs to point both halves at
+// a scratch tree rather than at the developer's real worktrees.
 const MAIN_ROOT = process.env.CALLBACK_MAIN_ROOT || path.join(os.homedir(), "src", "callback-box");
-const WORKTREES_ROOT = path.join(os.homedir(), "src", "callback-worktrees");
+const WORKTREES_ROOT = process.env.CALLBACK_WORKTREE_ROOT || path.join(os.homedir(), "src", "callback-worktrees");
+
+// This file's own directory — where `workstreams` (the liveness oracle) lives.
+const BIN_DIR = path.dirname(fileURLToPath(import.meta.url));
 
 // Per-worktree agent-browser socket dirs, mirroring `bin/browse`
 // (`${HOME}/.cache/callback-box/browse/<worktree>/socket`). Each dir's
@@ -54,6 +73,14 @@ const BROWSE_CACHE_ROOT = path.join(os.homedir(), ".cache", "callback-box", "bro
 const KILL_GRACE_MS = 2000;
 
 export type ProcKind = "vite" | "fastify" | "agent-browser";
+
+/** Tri-state agent liveness, mirroring `wt_other_agent_live`'s WT_AGENT_STATE. */
+export type AgentState = "none" | "live" | "unknown";
+
+export interface AgentLiveness {
+  state: AgentState;
+  reason: string;
+}
 
 export interface ProjectProc {
   pid: number;
@@ -149,36 +176,76 @@ async function cwdOf(pids: number[]): Promise<Map<number, string>> {
   return out;
 }
 
+/** Absolute path of a worktree name as this module attributes them. */
+function pathForWorktree(worktree: string): string {
+  return worktree === "main" ? MAIN_ROOT : path.join(WORKTREES_ROOT, worktree);
+}
+
 /**
- * Worktrees with a live `claude` session, by two signals (mirrors the
- * precedent in `bin/workstreams sweep`):
- *   1. argv — sessions launched as `claude --worktree <name>`.
- *   2. cwd  — sessions resumed in-place lack that argv, but the claude
- *      process's cwd is inside the worktree (or the main checkout).
+ * Tri-state agent liveness per worktree, from `bin/workstreams agent-liveness`
+ * — which is `wt_other_agent_live`, the one shared guard, and therefore knows
+ * about codex sessions and about claude sessions whose argv is `--name`.
+ *
+ * FAILS CLOSED. Every worktree starts at `unknown` (which callers must treat as
+ * live), and only a successful, parseable answer moves it. A missing or broken
+ * oracle therefore spares daemons rather than reclaiming them: the cost of
+ * sparing is a lingering process the next sweep reaps, the cost of reclaiming
+ * is a live session losing its browser mid-task.
  */
-export async function activeSessionWorktrees(): Promise<Set<string>> {
-  const active = new Set<string>();
-  const rows = await psRows();
-  for (const r of rows) {
-    const m = r.command.match(/claude --worktree ([A-Za-z0-9_-]+)/);
-    if (m) active.add(m[1]!);
-  }
-  let pidLines = "";
+export async function agentLivenessByWorktree(worktrees: string[]): Promise<Map<string, AgentLiveness>> {
+  const out = new Map<string, AgentLiveness>(
+    worktrees.map((wt) => [wt, { state: "unknown" as AgentState, reason: "liveness-oracle-unavailable" }]),
+  );
+  if (worktrees.length === 0) return out;
+  let stdout: string;
   try {
-    ({ stdout: pidLines } = await execa("pgrep", ["-x", "claude"]));
+    ({ stdout } = await execa(path.join(BIN_DIR, "workstreams"), [
+      "agent-liveness",
+      ...worktrees.map(pathForWorktree),
+    ]));
   } catch {
-    pidLines = ""; // no claude processes
+    return out;
   }
-  const claudePids = pidLines
-    .split("\n")
-    .map((s) => Number(s.trim()))
-    .filter((n) => Number.isFinite(n) && n > 0);
-  const cwds = await cwdOf(claudePids);
-  for (const cwd of cwds.values()) {
-    const wt = worktreeForPath(cwd);
-    if (wt) active.add(wt);
+  let parsed: { ok?: boolean; paths?: Record<string, { state?: string; reason?: string }> };
+  try {
+    parsed = JSON.parse(stdout) as typeof parsed;
+  } catch {
+    return out;
   }
-  return active;
+  if (parsed.ok !== true || !parsed.paths) return out;
+  for (const wt of worktrees) {
+    const entry = parsed.paths[pathForWorktree(wt)];
+    if (!entry) continue;
+    // Anything that isn't a state we recognize stays `unknown` — a guard must
+    // not read a value it doesn't understand as permission to kill.
+    const state: AgentState = entry.state === "live" || entry.state === "none" ? entry.state : "unknown";
+    out.set(wt, { state, reason: entry.reason ?? "" });
+  }
+  return out;
+}
+
+/**
+ * Should this agent-browser be reclaimed? Split out from the sweep so the
+ * decision is testable without spawning processes.
+ *
+ * - `none`    — nothing is using this worktree; every daemon there is reapable.
+ * - `live`    — spare the daemon the socket dir vouches for; superseded orphans
+ *               still go (they never exit on their own).
+ * - `unknown` — spare unconditionally, vouched or not. This is stricter than
+ *               "treat unknown as live", deliberately: reaping a superseded
+ *               orphan rests entirely on the socket dir's pidfiles, and with the
+ *               liveness answer already unavailable there is no second signal
+ *               left to be wrong about. Two silent failures at once — an oracle
+ *               that won't run and a pidfile that can't be read — would
+ *               otherwise kill the daemon of a session that is very much alive.
+ *               The cost is the opposite failure, a lingering daemon, which the
+ *               next sweep collects once the oracle answers again.
+ */
+export function classifyAgentBrowser(session: AgentState, vouched: boolean): { kill: boolean; reason: string } {
+  if (session === "none") return { kill: true, reason: "no live session" };
+  if (session === "unknown") return { kill: false, reason: "session liveness unknown" };
+  if (!vouched) return { kill: true, reason: "superseded orphan" };
+  return { kill: false, reason: "current daemon" };
 }
 
 /** All project-scoped vite / fastify / agent-browser processes. */
@@ -243,27 +310,41 @@ function sleep(ms: number): Promise<void> {
  *   parentage (the router is being nuked anyway, which orphans them).
  *
  * agent-browser daemons are reaped the same way in both modes: spared only when
- * their worktree has an active session AND their pid is the one its socket dir
- * currently vouches for (a `*.pid` entry). A worktree with no live session has
- * all its daemons reaped; a live worktree keeps its current daemon + dashboard
- * but sheds superseded orphans (which never exit on their own). The hard rule —
- * never kill a daemon an active session is actually using — is preserved, just
- * sharpened from "any daemon of an active worktree" to "the current one."
+ * their worktree has a live session AND their pid is the one its socket dir
+ * currently vouches for (a `*.pid` entry) — or when liveness is unknown, which
+ * spares regardless. A worktree with no session at all has every daemon
+ * reaped; a live
+ * worktree keeps its current daemon + dashboard but sheds superseded orphans
+ * (which never exit on their own). The hard rule — never kill a daemon a live
+ * session is actually using — is preserved, just sharpened from "any daemon of
+ * a live worktree" to "the current one."
  */
 export async function reclaimOrphans(opts: {
   aggressive: boolean;
   log?: (msg: string) => void;
 }): Promise<ReclaimResult> {
   const log = opts.log ?? (() => {});
-  const [procs, active] = await Promise.all([discoverProjectProcs(), activeSessionWorktrees()]);
+  const procs = await discoverProjectProcs();
 
-  // For each worktree that has agent-browser procs, the pids its socket dir
-  // currently vouches for. An agent-browser is live only if its worktree has an
-  // active session AND it's pidfile-referenced; everything else — a whole
-  // worktree that's done, or a superseded orphan in an active one — is reaped.
-  const abWorktrees = new Set(procs.filter((p) => p.kind === "agent-browser").map((p) => p.worktree));
+  // For each worktree that has agent-browser procs: whether an agent is live in
+  // it, and the pids its socket dir currently vouches for. An agent-browser is
+  // spared only if both say so; everything else — a whole worktree that's done,
+  // or a superseded orphan in a live one — is reaped. Only worktrees that
+  // actually own daemons are asked about, so the common (nothing to reap) case
+  // costs no process snapshot at all.
+  const abWorktrees = [...new Set(procs.filter((p) => p.kind === "agent-browser").map((p) => p.worktree))];
   const currentByWt = new Map<string, Set<number>>();
-  await Promise.all([...abWorktrees].map(async (wt) => { currentByWt.set(wt, await currentDaemonPids(wt)); }));
+  const [sessions] = await Promise.all([
+    agentLivenessByWorktree(abWorktrees),
+    Promise.all(abWorktrees.map(async (wt) => { currentByWt.set(wt, await currentDaemonPids(wt)); })),
+  ]);
+
+  // An unknown answer spares daemons, so it must not be silent: a permanently
+  // broken oracle would otherwise look exactly like a quiet, healthy sweep while
+  // the daemons pile up.
+  for (const [wt, liveness] of sessions) {
+    if (liveness.state === "unknown") log(`liveness unknown for ${wt} (${liveness.reason}) — sparing its daemons`);
+  }
 
   const killed: ProjectProc[] = [];
   const spared: ProjectProc[] = [];
@@ -272,23 +353,20 @@ export async function reclaimOrphans(opts: {
     let doKill: boolean;
     let abReason = "";
     if (p.kind === "agent-browser") {
-      if (!active.has(p.worktree)) {
-        doKill = true; abReason = "no active session";
-      } else if (!(currentByWt.get(p.worktree)?.has(p.pid) ?? false)) {
-        doKill = true; abReason = "superseded orphan";
-      } else {
-        doKill = false;
-      }
+      const session = sessions.get(p.worktree)?.state ?? "unknown";
+      const vouched = currentByWt.get(p.worktree)?.has(p.pid) ?? false;
+      ({ kill: doKill, reason: abReason } = classifyAgentBrowser(session, vouched));
     } else {
       doKill = opts.aggressive || p.ppid === 1;
     }
+    const why = p.kind === "agent-browser" ? abReason : `ppid ${p.ppid}`;
     if (!doKill) {
       spared.push(p);
-      log(`spare ${p.kind} pid ${p.pid} (${p.worktree}${p.kind === "agent-browser" ? ", current daemon" : `, ppid ${p.ppid}`})`);
+      log(`spare ${p.kind} pid ${p.pid} (${p.worktree}, ${why})`);
       continue;
     }
     killed.push(p);
-    log(`reclaim ${p.kind} pid ${p.pid} (${p.worktree}, ${p.kind === "agent-browser" ? abReason : `ppid ${p.ppid}`})`);
+    log(`reclaim ${p.kind} pid ${p.pid} (${p.worktree}, ${why})`);
     signal(p.pid, "SIGTERM");
   }
 

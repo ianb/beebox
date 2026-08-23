@@ -58,6 +58,15 @@ function MicIcon() {
   );
 }
 
+/** Sparkle icon representing HQ (high-quality) dictation mode. */
+function HqIcon() {
+  return (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3l1.8 4.6L18 9.4l-4.2 1.8L12 16l-1.8-4.8L6 9.4l4.2-1.8L12 3zM5 15l.8 2.2L8 18l-2.2.8L5 21l-.8-2.2L2 18l2.2-.8L5 15zM19 14l.9 2.4L22 17.3l-2.1.9L19 20.6l-.9-2.4L16 17.3l2.1-.9L19 14z" />
+    </svg>
+  );
+}
+
 export interface VoiceChipFaceState {
   muted: boolean;
   narrationEnabled: boolean;
@@ -97,6 +106,8 @@ interface VoiceChipBodyProps {
   onToggleMute: () => void;
   narrationEnabled: boolean;
   onToggleNarration: () => void;
+  hqDictationEnabled: boolean;
+  onToggleHqDictation: () => void;
   onOpenVoice: () => void;
   onBackToRoot: () => void;
   currentService: string | null;
@@ -113,7 +124,8 @@ interface VoiceChipBodyProps {
  */
 function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
   const {
-    panel, muted, onToggleMute, narrationEnabled, onToggleNarration, onOpenVoice,
+    panel, muted, onToggleMute, narrationEnabled, onToggleNarration,
+    hqDictationEnabled, onToggleHqDictation, onOpenVoice,
     onBackToRoot, currentService, onSelectTranscriptionService, currentHqService,
     onSelectHqTranscriptionService,
   } = props;
@@ -133,6 +145,16 @@ function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
             }
           >
             {narrationEnabled ? "✓ " : ""}Narration mode
+          </MenuItem>
+          <MenuItem
+            onClick={onToggleHqDictation}
+            icon={
+              <span className={hqDictationEnabled ? undefined : "opacity-40"}>
+                <HqIcon />
+              </span>
+            }
+          >
+            {hqDictationEnabled ? "✓ " : ""}HQ dictation
           </MenuItem>
           <MenuDivider />
           <MenuItem onClick={onOpenVoice} keepOpen>
@@ -169,6 +191,8 @@ export interface VoiceChipProps {
   onToggleMute: () => void;
   narrationEnabled: boolean;
   onToggleNarration: () => void;
+  hqDictationEnabled: boolean;
+  onToggleHqDictation: () => void;
   hqInFlight: boolean;
 }
 
@@ -184,6 +208,8 @@ export const VoiceChip = memo(function VoiceChip({
   onToggleMute,
   narrationEnabled,
   onToggleNarration,
+  hqDictationEnabled,
+  onToggleHqDictation,
   hqInFlight,
 }: VoiceChipProps) {
   const utils = trpc.useUtils();
@@ -246,6 +272,8 @@ export const VoiceChip = memo(function VoiceChip({
         onToggleMute={onToggleMute}
         narrationEnabled={narrationEnabled}
         onToggleNarration={onToggleNarration}
+        hqDictationEnabled={hqDictationEnabled}
+        onToggleHqDictation={onToggleHqDictation}
         onOpenVoice={() => setPanel("voice")}
         onBackToRoot={() => setPanel("root")}
         currentService={currentService}

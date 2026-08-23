@@ -14,6 +14,10 @@ meaning "run it".
 ```ts setup
 import { evaluateSkip, effectiveBusyBlockers } from "../../../src/cli/commands/tick-helpers.js";
 
+// Hermetic: the engine-availability skip gate must consult a store under our
+// control, never the developer's real machine-level file.
+process.env.CB_ENGINE_AVAILABILITY_FILE = "/nonexistent/engine-availability.json";
+
 function makeScript(overrides) {
   return {
     cron: undefined,

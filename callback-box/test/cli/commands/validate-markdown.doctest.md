@@ -48,7 +48,7 @@ summary.totalErrors
 await box.cleanup();
 ```
 
-`isLintableMarkdown` accepts box markdown but skips `CLAUDE.md`, `.claude/` rule
+`isLintableMarkdown` accepts box markdown but skips harness instruction files, `.claude/` rule
 docs, and non-markdown:
 
 ```ts
@@ -56,6 +56,9 @@ isLintableMarkdown("store/docs/saoirse.md")
 => true
 
 isLintableMarkdown("CLAUDE.md")
+=> false
+
+isLintableMarkdown("notes/AGENTS.md")
 => false
 
 isLintableMarkdown("store/x/.claude/rules/foo.md")

@@ -74,6 +74,17 @@ renderEntries([userEntry("u2", "<typed user=\"Ian\">plain words</typed>"), userE
 plain words
 ```
 
+`<unsure>` low-confidence marks (Track 4, docs/plans/transcript-confidence.md)
+unwrap to their plain word too — this reader wants clean human text, not the
+agent-facing marker.
+
+```ts continue
+renderEntries([userEntry("u4", "<speech stt=\"deepgram\">they're all <unsure>cloud</unsure> code</speech>")])
+=>
+**User** (2026-07-28T03:00:00Z)
+they're all cloud code
+```
+
 ## `renderEntries` is uncapped — that is the point
 
 `spanSize` gates on this, so it must keep growing past the elision cap.

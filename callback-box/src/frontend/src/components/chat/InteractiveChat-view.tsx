@@ -6,7 +6,7 @@
  * wires them into the layout regions.
  */
 
-import { useCallback, type ReactNode } from "react";
+import { useCallback } from "react";
 import { CompanionViewPanel } from "./InteractiveChat-controls";
 import type { NavigateHint, ViewTarget } from "../../lib/view-url";
 import { MessageList } from "./InteractiveChat-messages";
@@ -19,96 +19,10 @@ import { chatTargetStatus } from "../../input/targets/chat-target";
 import { DebugLogPanel } from "../DebugLog";
 import { BackgroundTasks } from "./BackgroundTasks";
 import { ScreenshotRequestUI } from "./ScreenshotRequestUI";
-import type { ScreenshotRequestController } from "./screenshot-request-handler";
-import type { LiveTask } from "./background-tasks";
-import type { SessionEntry, SessionContentBlock } from "../../api";
-import type { MessageGroup } from "./ChatMessages";
-import type { ModelMarker } from "./InteractiveChat-helpers";
-import type { useChatTabs, useChatModelFeatures, useChatMute, useChatSchedules } from "./InteractiveChat-hooks";
-import type { useChatVoice } from "./InteractiveChat-voice";
-import { useChatAttachmentValues, type useChatAttachments } from "./InteractiveChat-attachments";
-import type { useChatSelections } from "./InteractiveChat-selections";
-import type { useChatActions } from "./InteractiveChat-actions";
-import type { ActivityKind } from "@core/chat/card-activity.js";
-import type { CaptureBubbleModel } from "./capture-bubble";
+import { useChatAttachmentValues } from "./InteractiveChat-attachments";
 import { useCompanionSelection } from "./use-companion-selection";
+import type { ChatBodyProps } from "./InteractiveChat-body-props";
 
-interface ChatBodyProps {
-  tabs: ReturnType<typeof useChatTabs>;
-  model: ReturnType<typeof useChatModelFeatures>;
-  mute: ReturnType<typeof useChatMute>;
-  voice: ReturnType<typeof useChatVoice>;
-  /** Recovery widget for an interrupted dictation, or null when none is pending. */
-  recoveredDictation: ReactNode;
-  /** Dismissible notice for attachments dropped on emission restore, or null when none. */
-  expiredAttachmentsNotice: ReactNode;
-  attach: ReturnType<typeof useChatAttachments>;
-  selections: ReturnType<typeof useChatSelections>;
-  actions: ReturnType<typeof useChatActions>;
-  schedules: ReturnType<typeof useChatSchedules>;
-  effectiveContextDir: string | null;
-  boxSlug: string | undefined;
-  /** The session's display name (`chat.bootstrap`'s `label`) — the session chip's face. */
-  sessionLabel: string | null;
-  messages: SessionEntry[];
-  groups: MessageGroup[];
-  backgroundTasks: LiveTask[];
-  isStreaming: boolean;
-  streamText: string;
-  streamTools: SessionContentBlock[];
-  processBusy: boolean;
-  /** Confirmed display state; raw processBusy still owns queue affordances. */
-  showAgentWorking: boolean;
-  processRunning: boolean;
-  sessionId: string | null;
-  totalEntries: number;
-  pendingCount: number;
-  error: string | null | undefined;
-  currentUserEmail: string | undefined;
-  modelMarkers: ModelMarker[];
-  loadingOlder: boolean;
-  scrollToBottomTrigger: number;
-  liveTurnId: string | null;
-  snapshot: { matches: (state: "loading" | "idle" | "streaming" | "refreshing") => boolean };
-  textareaRef: React.RefObject<HTMLTextAreaElement>;
-  debugView: boolean;
-  setDebugView: React.Dispatch<React.SetStateAction<boolean>>;
-  showDebugLog: boolean;
-  setShowDebugLog: React.Dispatch<React.SetStateAction<boolean>>;
-  typingMode: boolean;
-  setTypingMode: React.Dispatch<React.SetStateAction<boolean>>;
-  typingLocked: boolean;
-  setTypingLocked: React.Dispatch<React.SetStateAction<boolean>>;
-  onVoiceSegmentSend: (text: string) => void;
-  send: (event: { type: "DISMISS_ERROR" }) => void;
-  /** Report user activity on the open companion card (scrolled/navigated/…). */
-  reportCardActivity: (kind: ActivityKind, detail?: string) => void;
-  /**
-   * Native shell modes: embed also suppresses the header, while nativeComposer
-   * keeps the normal web chrome. Both suppress the web input surface.
-   */
-  embedded: boolean;
-  nativeComposer: boolean;
-  /** Server-derived pending capture bubbles for this chat (Track 4). */
-  captureBubbles: CaptureBubbleModel[];
-  /** Retry a failed pending capture (re-seals its staging session). */
-  onCaptureRetry: (id: string) => void;
-  /** Enter capture mode (open the full-screen capture overlay). */
-  onEnterCapture: () => void;
-  /** Whether the capture affordance is offered (suppressed for native shells). */
-  captureEnabled: boolean;
-  /**
-   * When set, the capture affordance is shown but disabled, with this string as
-   * its tooltip — used before a fresh chat has a server-assigned session id, so
-   * a capture can't misdirect into another chat (X1).
-   */
-  captureDisabledReason?: string | undefined;
-  /** Open the bulk file-upload overlay; the reason (when set) disables the menu item (no session id yet). */
-  onUploadFiles: () => void;
-  uploadFilesDisabledReason?: string | undefined;
-  /** Agent-initiated screenshot requests: FIFO consent popup + ephemeral indicator rows. */
-  screenshots: ScreenshotRequestController;
-}
 
 /**
  * The chat's app-bar publications (Track C2). Renders only portals — the
@@ -122,7 +36,7 @@ function BarChromeRegion(props: ChatBodyProps) {
     sessionId, processRunning, isStreaming, debugView, setDebugView, showDebugLog, setShowDebugLog,
   } = props;
   const { onZoomView } = tabs;
-  const { selectedModel, narrationEnabled, handleToggleNarration, handleSelectModel } = model;
+  const { agentEngine, selectedModel, narrationEnabled, handleToggleNarration, hqDictationEnabled, handleToggleHqDictation, handleSelectModel } = model;
   return (
     <ChatBarChrome
       contextDir={effectiveContextDir}
@@ -134,9 +48,12 @@ function BarChromeRegion(props: ChatBodyProps) {
       onToggleMute={mute.handleToggleMute}
       narrationEnabled={narrationEnabled}
       onToggleNarration={handleToggleNarration}
+      hqDictationEnabled={hqDictationEnabled}
+      onToggleHqDictation={handleToggleHqDictation}
       hqInFlight={voice.hqInFlight}
       onNewSession={actions.handleNewSession}
       selectedModel={selectedModel}
+      agentEngine={agentEngine}
       onSelectModel={handleSelectModel}
       onStopProcess={actions.handleStopProcess}
       onRestartProcess={actions.handleRestartProcess}
@@ -155,8 +72,8 @@ function BarChromeRegion(props: ChatBodyProps) {
 function MessageListRegion(props: ChatBodyProps) {
   const {
     tabs, model, voice, actions, messages, groups, modelMarkers, isStreaming, streamText, streamTools,
-    debugView, currentUserEmail, snapshot, totalEntries, loadingOlder, scrollToBottomTrigger, liveTurnId,
-    captureBubbles, onCaptureRetry,
+    debugView, currentUserEmail, currentUserName, snapshot, totalEntries, loadingOlder, scrollToBottomTrigger, liveTurnId,
+    captureBubbles, captureVerbs, audioOverlayStore, openers,
   } = props;
   const { onZoomView } = tabs;
   const { speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, pendingHqDraft } = voice;
@@ -171,6 +88,7 @@ function MessageListRegion(props: ChatBodyProps) {
       streamTools={streamTools}
       debugView={debugView}
       currentUserEmail={currentUserEmail}
+      currentUserName={currentUserName}
       speechPlayback={speechPlayback}
       handleStopSpeech={handleStopSpeech}
       handleSkipSpeech={handleSkipSpeech}
@@ -185,7 +103,10 @@ function MessageListRegion(props: ChatBodyProps) {
       proseEnabled={model.chatFeatures.prose !== "off"}
       pendingHqDraft={pendingHqDraft}
       captureBubbles={captureBubbles}
-      onCaptureRetry={onCaptureRetry}
+      captureVerbs={captureVerbs}
+      audioOverlayStore={audioOverlayStore}
+      openers={openers}
+      onSendOpener={actions.handleSendOpener}
     />
   );
 }
@@ -193,11 +114,10 @@ function MessageListRegion(props: ChatBodyProps) {
 function ComposerRegion(props: ChatBodyProps) {
   const {
     model, voice, recoveredDictation, expiredAttachmentsNotice, attach, selections, actions, isStreaming, processBusy, textareaRef,
-    typingMode, setTypingMode, typingLocked, setTypingLocked, onVoiceSegmentSend, onEnterCapture, captureEnabled,
-    captureDisabledReason, onUploadFiles, uploadFilesDisabledReason,
+    typingMode, setTypingMode, typingLocked, setTypingLocked, onVoiceSegmentSend, onEnterCapture, captureEnabled, captureDisabledReason,
   } = props;
   const { transcription, isTranscribing, voicePaused, stopDictation, clearDraft, handleCancelTranscription, startVoice, unpauseVoice } = voice;
-  const { fileInputRef, removeAttachment, removeFileAttachment, handleAttachFiles, handleFileInputChange, addImageFiles } = attach;
+  const { fileInputRef, removeAttachment, removeFileAttachment, handleAddFiles, handleFileInputChange, addFiles } = attach;
   // Subscribed here, not at the InteractiveChat root — a paste/upload must
   // only re-render this composer region, not the companion view pane
   // (see InteractiveChat-attachments.ts module doc).
@@ -242,13 +162,13 @@ function ComposerRegion(props: ChatBodyProps) {
           onUnpause={unpauseVoice}
           onPaste={handlePaste}
           onDrop={handleDrop}
-          onAttachFiles={handleAttachFiles}
-          addImageFiles={addImageFiles}
+          onAddFiles={handleAddFiles}
+          addFiles={addFiles}
           onEnterCapture={onEnterCapture}
           captureEnabled={captureEnabled}
           captureDisabledReason={captureDisabledReason}
-          onUploadFiles={onUploadFiles} uploadFilesDisabledReason={uploadFilesDisabledReason}
           narrationEnabled={model.narrationEnabled}
+          hqDictationEnabled={model.hqDictationEnabled}
         />
       }
       mobileRow={
@@ -263,6 +183,7 @@ function ComposerRegion(props: ChatBodyProps) {
           onVoiceSegmentSend={onVoiceSegmentSend}
           onPaste={handlePaste}
           onDrop={handleDrop}
+          hqDictationEnabled={model.hqDictationEnabled}
         />
       }
     />

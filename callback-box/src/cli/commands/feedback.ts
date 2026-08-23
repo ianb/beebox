@@ -11,7 +11,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { boxSlug } from "../../lib/box-slug.js";
 import { requireBoxRoot } from "../../lib/paths.js";
-import { stageFiles, commitPaths } from "../../lib/git.js";
+import { stageAndCommitPaths } from "../../lib/git.js";
 import { slugify } from "../../shared/filename.js";
 import { invariant } from "../../lib/invariant.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
@@ -175,9 +175,12 @@ export const feedbackCommand = new Command("feedback")
 
       await fs.promises.writeFile(filePath, lines.join("\n") + "\n", "utf-8");
 
+      // One span, not a stage and a commit taken separately: agents call this
+      // freely mid-conversation, and a rapid conversation produced a commit
+      // storm. `stageAndCommitPaths` takes the box git lock once and keeps
+      // another writer from staging between our two halves.
       const relPath = path.relative(boxRoot, filePath);
-      await stageFiles(boxRoot, [relPath]);
-      await commitPaths(boxRoot, {
+      await stageAndCommitPaths(boxRoot, {
         paths: [relPath],
         message: `agent feedback: ${message.slice(0, 72)}`,
         trailers: { "Feedback-Source": "agent" },

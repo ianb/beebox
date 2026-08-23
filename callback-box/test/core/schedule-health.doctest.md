@@ -1,7 +1,8 @@
 # Scheduled-task health
 
 `evaluateTaskHealth` classifies a scheduled task from its card + run
-state: `ok`, `failing`, `overdue`, `blocked`, `invalid`, or `disabled`.
+state: `ok`, `waiting`, `failing`, `overdue`, `blocked`, `invalid`, or
+`disabled`.
 The trust rule: a deliberate skip (budget, missing connector, disabled)
 must never be reported as overdue or failing.
 
@@ -21,7 +22,7 @@ function makeScript(fields = {}) {
   return parseScheduledScript({ type: "scheduled-script", runs: "true", ...fields });
 }
 
-function evaluate({ fields = {}, state = {}, now = NOW, cardMtime = new Date("2026-06-01T00:00:00Z"), missingConnectors = [] } = {}) {
+function evaluate({ fields = {}, state = {}, now = NOW, cardMtime = new Date("2026-06-01T00:00:00Z"), missingConnectors = [], engineWaitReason = undefined as string | undefined } = {}) {
   return evaluateTaskHealth({
     name: "demo",
     parsed: makeScript(fields),
@@ -29,6 +30,7 @@ function evaluate({ fields = {}, state = {}, now = NOW, cardMtime = new Date("20
     now,
     cardMtime,
     missingConnectors,
+    engineWaitReason,
   });
 }
 ```
@@ -61,6 +63,33 @@ const h = evaluate({
 });
 print(`${h.status}, failures: ${h.consecutiveFailures}, lastSuccess: ${h.lastSuccess}`);
 => failing, failures: 3, lastSuccess: 2026-06-06T05:00:10Z
+```
+
+A task that lost a race for the box's git index never got to run its own work.
+It still counts as failing — four in a row is worth hearing about — but the
+reason says what actually happened, so nobody debugs a task that is fine:
+
+```ts
+const h = evaluate({
+  fields: { cron: "0 5 * * *" },
+  state: {
+    lastRun: "2026-06-09T05:00:10Z", lastResult: "failure", consecutiveFailures: 4,
+    lastError: "Command failed with exit code 1\nstderr:\nError: fatal: Unable to create '/box/.git/index.lock': File exists.",
+  },
+});
+h.reason
+=> contended — another process held the box's git index
+```
+
+An ordinary failure carries no such reason — the distinction is the point:
+
+```ts
+const h = evaluate({
+  fields: { cron: "0 5 * * *" },
+  state: { lastRun: "2026-06-09T05:00:10Z", lastResult: "failure", lastError: "boom", consecutiveFailures: 1 },
+});
+JSON.stringify(h.reason ?? null)
+=> null
 ```
 
 ## Overdue
@@ -219,24 +248,28 @@ const ok = evaluate({
 summarizeScheduleHealth({
   tasks: [ok],
   scheduler: { status: "running", lastTickAt: "2026-06-09T11:59:30Z", ageMs: 30_000 },
+  engineWait: null,
 }, NOW)
 => null
 
 summarizeScheduleHealth({
   tasks: [failing, overdue, ok],
   scheduler: { status: "running", lastTickAt: "2026-06-09T11:59:30Z", ageMs: 30_000 },
+  engineWait: null,
 }, NOW)
 => demo: failing ×3 (last success 3d ago); demo: overdue 2d
 
 summarizeScheduleHealth({
   tasks: [failing, overdue, ok],
   scheduler: { status: "stale", lastTickAt: "2026-06-09T04:00:00Z", ageMs: 28_800_000 },
+  engineWait: null,
 }, NOW)
 => scheduler not running (last tick 8h ago); demo: failing ×3 (last success 3d ago)
 
 summarizeScheduleHealth({
   tasks: [overdue, ok],
   scheduler: { status: "never", lastTickAt: null, ageMs: null },
+  engineWait: null,
 }, NOW)
 => null
 ```
@@ -259,4 +292,54 @@ one failure: 0
 three failures: 1
 overdue: 1
 ok: 0
+```
+
+## Waiting — engine unavailable is deferred, not unhealthy
+
+When the box's engine is out of quota (deferred-recoverable), every
+enabled task renders `waiting` — including one that would otherwise be
+`failing` or `overdue`. The system deferred the work; the task is not
+broken, and the trust rule says never to mislabel a deliberate skip.
+`disabled` still wins: an off task is off, whatever the engine's state.
+
+```ts
+const reason = "waiting on codex quota until Aug 19, 11:34 PM";
+const waitingFailing = evaluate({
+  fields: { cron: "0 5 * * *" },
+  state: {
+    lastRun: "2026-06-09T05:00:10Z", lastResult: "failure", lastError: "boom",
+    lastSuccess: "2026-06-06T05:00:10Z", consecutiveFailures: 3,
+  },
+  engineWaitReason: reason,
+});
+waitingFailing.status
+=> waiting
+
+waitingFailing.reason === reason
+=> true
+
+evaluate({
+  fields: { cron: "0 5 * * *", enabled: false },
+  engineWaitReason: reason,
+}).status
+=> disabled
+```
+
+The waiting state is neither summarized as unhealthy nor alertable —
+the episode itself is the one box-level line the summary leads with:
+
+```ts continue
+summarizeScheduleHealth({
+  tasks: [waitingFailing],
+  scheduler: { status: "running", lastTickAt: "2026-06-09T11:59:30Z", ageMs: 30_000 },
+  engineWait: reason,
+}, NOW)
+=> waiting on codex quota until Aug 19, 11:34 PM
+
+selectAlertableTasks({
+  tasks: [waitingFailing],
+  scheduler: { status: "running", lastTickAt: "2026-06-09T11:59:30Z", ageMs: 30_000 },
+  engineWait: reason,
+}).length
+=> 0
 ```

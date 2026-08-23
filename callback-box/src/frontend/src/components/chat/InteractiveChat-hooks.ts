@@ -10,7 +10,8 @@ import { useNavigate } from "@tanstack/react-router";
 import { getChatHistory, getChatStatus, setChatModel, getChatFeatures, setChatFeature, type SessionEntry } from "../../api";
 import { trpcClient } from "../../lib/trpc";
 import { chatTailSlice } from "../../machines/chatMachine.js";
-import { MODEL_OPTIONS, type ModelMarker } from "./InteractiveChat-helpers";
+import { type ModelMarker } from "./InteractiveChat-helpers";
+import { chatModelOptions, type ChatAgentEngine } from "@shared/chat-models.js";
 import type { PanelTab } from "./InteractiveChat-controls";
 import type { OnZoomView } from "./ChatMessages";
 import { href, toSearch } from "../../lib/routing";
@@ -119,18 +120,25 @@ interface ChatSendFn {
 export function useChatModelFeatures(opts: { sessionId: string | null; groupCount: number; send: (event: ChatEvent) => void }) {
   const { sessionId, groupCount, send } = opts;
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
+  const [agentEngine, setAgentEngine] = useState<ChatAgentEngine | null>(null);
   const [modelMarkers, setModelMarkers] = useState<ModelMarker[]>([]);
   const [chatFeatures, setChatFeatures] = useState<Record<string, string>>({});
 
-  // Server persists the selection in .callback-box/chat-model.json;
-  // read it on mount so the menu's checkmark reflects server state.
+  // Read the session's engine and per-session model override. For a fresh
+  // chat, status reports the box's configured engine and no override.
   useEffect(() => {
-    if (!sessionId) return;
+    let current = true;
+    setAgentEngine(null);
     getChatStatus({ sessionId })
-      .then((status) => { setSelectedModel(status.model); })
+      .then((status) => {
+        if (!current) return;
+        setSelectedModel(status.model);
+        setAgentEngine(status.engine);
+      })
       .catch((e: unknown) => {
         console.warn(`[chatfsm] get-status (model) failed: ${e instanceof Error ? e.message : String(e)}`);
       });
+    return () => { current = false; };
   }, [sessionId]);
 
   // Chat-feature flags synced via /api/chat/features on mount, then kept
@@ -145,12 +153,14 @@ export function useChatModelFeatures(opts: { sessionId: string | null; groupCoun
   }, [sessionId]);
 
   const narrationEnabled = chatFeatures.narration === "on";
+  const hqDictationEnabled = chatFeatures["hq-dictation"] === "on";
 
   // Generation counters so an out-of-order completion (an older toggle/select
   // resolving after a newer one) can't clobber state a later request already
   // set — bumped on every call, and a response only applies if it's still the
   // most recent one in flight.
   const narrationRequestIdRef = useRef(0);
+  const hqDictationRequestIdRef = useRef(0);
   const modelRequestIdRef = useRef(0);
 
   const handleToggleNarration = useCallback(() => {
@@ -185,10 +195,36 @@ export function useChatModelFeatures(opts: { sessionId: string | null; groupCoun
       });
   }, [sessionId, narrationEnabled, send]);
 
+  // Mirrors handleToggleNarration exactly (docs/implemented-plans/hq-dictation-switch.md,
+  // chunk 1) — a separate feature slot, separate request-id generation, same
+  // optimistic-set/rollback shape.
+  const handleToggleHqDictation = useCallback(() => {
+    const next = hqDictationEnabled ? "off" : "on";
+    const previous = hqDictationEnabled ? "on" : "off";
+    const requestId = ++hqDictationRequestIdRef.current;
+    setChatFeatures((prev) => ({ ...prev, "hq-dictation": next }));
+    if (!sessionId) {
+      send({ type: "SET_SEED_FEATURE", feature: "hq-dictation", value: next });
+      return;
+    }
+    setChatFeature({ sessionId, feature: "hq-dictation", value: next })
+      .then((res) => {
+        if (hqDictationRequestIdRef.current !== requestId) return;
+        setChatFeatures(res.features);
+      })
+      .catch((e: unknown) => {
+        console.warn(`[chatfsm] set-feature hq-dictation failed: ${e instanceof Error ? e.message : String(e)}`);
+        toastError("Failed to update HQ dictation", { cause: e });
+        if (hqDictationRequestIdRef.current !== requestId) return;
+        setChatFeatures((prev) => ({ ...prev, "hq-dictation": previous }));
+      });
+  }, [sessionId, hqDictationEnabled, send]);
+
   const handleSelectModel = useCallback((model: string | null) => {
     if (model === selectedModel) return;
     const previous = selectedModel;
-    const label = MODEL_OPTIONS.find((o) => o.model === model)?.label ?? "default";
+    if (agentEngine === null) return;
+    const label = chatModelOptions(agentEngine).find((o) => o.model === model)?.label ?? "default";
     const markerId = `model-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const requestId = ++modelRequestIdRef.current;
     setModelMarkers((markers) => [
@@ -220,9 +256,14 @@ export function useChatModelFeatures(opts: { sessionId: string | null; groupCoun
     } else {
       console.debug("[chatfsm] set-model skipped — sessionId is null");
     }
-  }, [selectedModel, groupCount, sessionId]);
+  }, [selectedModel, groupCount, sessionId, agentEngine]);
 
-  return { selectedModel, modelMarkers, chatFeatures, setChatFeatures, narrationEnabled, handleToggleNarration, handleSelectModel };
+  return {
+    agentEngine, selectedModel, modelMarkers, chatFeatures, setChatFeatures,
+    narrationEnabled, handleToggleNarration,
+    hqDictationEnabled, handleToggleHqDictation,
+    handleSelectModel,
+  };
 }
 
 /**

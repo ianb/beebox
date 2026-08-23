@@ -45,12 +45,12 @@ So the shape is:
   bare-metal running honest rather than "trust the prompt."
 
 Interlocks: the
-[agent-maintained security report](2026-07-20-agent-maintained-security-report.md)
+[agent-maintained security report](../closed/features/2026-07-20-agent-maintained-security-report.md)
 should *state* the containment model per tier (Docker vs bare) — this
 feature is what makes that section say something real. The
 [git-push-confirmation](../decisions/2026-07-20-git-push-confirmation.md)
 question is the network-egress sibling of the same tension. Not a
 launch gate per the
 [posture](../decisions/2026-07-20-soft-launch-posture.md) — launch
-honesty means SECURITY.md describes what IS true today — but it's the
+honesty means security-overview.md describes what IS true today — but it's the
 highest-value post-launch security build.

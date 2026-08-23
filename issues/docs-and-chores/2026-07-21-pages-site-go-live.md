@@ -1,6 +1,6 @@
 ---
 title: "Take the Pages site live once the repo is public"
-workstream: github-pages-site
+workstream: public-site
 area: docs
 filed-by: agent
 discovered-in: worktree-github-pages-site — building the site while the repo is still private
@@ -8,8 +8,8 @@ labels: [soft-launch]
 ---
 
 The front-door site (principles:
-[github-pages-site](../features/2026-07-20-github-pages-site.md); plan:
-[plan doc](../../callback-box/docs/plans/github-pages-site.md)) builds and
+[public-site](../features/2026-07-20-public-site.md); plan:
+[plan doc](../../callback-box/docs/plans/public-site.md)) builds and
 deploys via a GitHub Actions workflow whose **deploy job is gated on the repo
 being public** (`if: !github.event.repository.private` — an ungated deploy
 fails 404 and emails the owner on every push to main, observed 2026-07-21).

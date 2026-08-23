@@ -88,6 +88,10 @@ function buildQueryOptions(
 ): { queryOptions: Options; sessionIdFilePath: string | null } {
   const env = dropUndefined(opts.env);
   let sessionIdFilePath: string | null = null;
+  // A coined id is known before the spawn, so it rides `CB_CHAT_SESSION_ID`
+  // like a resume does (`core/chat/session/start.ts` sets it) and needs no
+  // post-spawn file. The file exists only for the case it was built for: an
+  // id that does not exist until the harness reports it.
   if (opts.resumeSessionId === undefined && env[CB_CHAT_SESSION_ID_ENV] === undefined) {
     sessionIdFilePath = allocateSessionIdFilePath();
     env[CB_CHAT_SESSION_ID_FILE_ENV] = sessionIdFilePath;
@@ -112,6 +116,9 @@ function buildQueryOptions(
   if (opts.resumeSessionId !== undefined) {
     queryOptions.resume = opts.resumeSessionId;
   }
+  if (opts.coinedSessionId !== undefined) {
+    queryOptions.sessionId = opts.coinedSessionId;
+  }
   if (opts.model !== undefined) {
     queryOptions.model = opts.model;
   }
@@ -132,15 +139,22 @@ function buildQueryOptions(
 
 /**
  * Whether a `start()` call's options are compatible with a pre-warmed slot.
+ * Exported for `test/services/service-claude-chat.doctest.md`: this and
+ * `warmSlotKey` are the warm pool's whole decision surface, and getting either
+ * wrong hands a chat a subprocess baked for a different conversation.
  * The warm subprocess has its options baked in, so we only consume it if
  * everything that affects the subprocess (cwd, system prompt, model,
  * partial-messages, no resume) matches.
  */
-function warmCompatible(
+export function warmCompatible(
   warm: ChatBackendStartOptions,
   next: ChatBackendStartOptions,
 ): boolean {
   if (next.resumeSessionId !== undefined) return false;
+  // A warm slot's session id is baked into its subprocess at spawn, so a slot
+  // may only serve the chat it was warmed for — and a slot warmed with no id
+  // may only serve a chat that brings none.
+  if ((warm.coinedSessionId ?? null) !== (next.coinedSessionId ?? null)) return false;
   if (warm.cwd !== next.cwd) return false;
   if (warm.systemPrompt !== next.systemPrompt) return false;
   if ((warm.model ?? null) !== (next.model ?? null)) return false;
@@ -167,11 +181,31 @@ function warmCompatible(
   return true;
 }
 
+/**
+ * A warm subprocess is keyed by the chat it can serve, because the session id
+ * is baked into it at spawn (`--session-id`). The unkeyed slot — `""` — is the
+ * speculative one: it serves whichever chat sends next without bringing an id
+ * of its own (the legacy `"new"` send, or a Codex box).
+ */
+export function warmSlotKey(opts: ChatBackendStartOptions): string {
+  return opts.coinedSessionId ?? "";
+}
+
+/**
+ * How many warm subprocesses to hold at once. One speculative slot plus one
+ * chat the user has open but has not written in yet is the shape this is sized
+ * for; beyond that, an open tab is not worth a subprocess.
+ */
+const MAX_WARM_SLOTS = 2;
+
 export function createClaudeChatBackend(): ChatBackend {
-  let warmSlot:
-    | { warmQuery: WarmQuery; opts: ChatBackendStartOptions; sessionIdFilePath: string | null }
-    | null = null;
-  let warming: Promise<void> | null = null;
+  interface WarmSlot {
+    warmQuery: WarmQuery;
+    opts: ChatBackendStartOptions;
+    sessionIdFilePath: string | null;
+  }
+  const warmSlots = new Map<string, WarmSlot>();
+  const warming = new Map<string, Promise<void>>();
   // Bumped by closeWarm() to abandon an in-flight startup(): the warming
   // continuation installs its fresh WarmQuery only if the epoch is unchanged,
   // otherwise it closes it immediately. Covers the consume-then-re-warm path
@@ -179,10 +213,15 @@ export function createClaudeChatBackend(): ChatBackend {
   let warmEpoch = 0;
 
   function startWarming(opts: ChatBackendStartOptions): Promise<void> {
-    if (warming !== null) return warming;
-    if (warmSlot !== null) return Promise.resolve();
+    const key = warmSlotKey(opts);
+    const inFlight = warming.get(key);
+    if (inFlight !== undefined) return inFlight;
+    if (warmSlots.has(key)) return Promise.resolve();
+    // Over the cap, the chat simply cold-spawns on its first message — the
+    // state every chat was in before warming existed.
+    if (warmSlots.size + warming.size >= MAX_WARM_SLOTS) return Promise.resolve();
     const epochAtStart = warmEpoch;
-    warming = (async (): Promise<void> => {
+    const pending = (async (): Promise<void> => {
       try {
         const { queryOptions, sessionIdFilePath } = buildQueryOptions(opts);
         const wq = await startup({ options: queryOptions });
@@ -191,16 +230,17 @@ export function createClaudeChatBackend(): ChatBackend {
           // than installing a process nobody asked to keep.
           wq.close();
         } else {
-          warmSlot = { warmQuery: wq, opts, sessionIdFilePath };
+          warmSlots.set(key, { warmQuery: wq, opts, sessionIdFilePath });
         }
       } catch (e) {
         // Warming is best-effort; the next start() will fall back to a cold spawn.
         console.warn("Chat backend warm-up failed, will cold-spawn on next start:", e);
       } finally {
-        warming = null;
+        warming.delete(key);
       }
     })();
-    return warming;
+    warming.set(key, pending);
+    return pending;
   }
 
   function buildRunFromQuery(params: {
@@ -276,29 +316,40 @@ export function createClaudeChatBackend(): ChatBackend {
     async prewarm(opts: ChatBackendStartOptions): Promise<void> {
       await startWarming(opts);
     },
+    closeWarmFor(sessionId: string): void {
+      const slot = warmSlots.get(sessionId);
+      if (slot === undefined) return;
+      slot.warmQuery.close();
+      warmSlots.delete(sessionId);
+    },
     closeWarm(): void {
       // Bump the epoch so any in-flight startup() abandons its result when it
-      // lands (see startWarming), then drop a slot we're already holding.
+      // lands (see startWarming), then drop every slot we're already holding.
       warmEpoch += 1;
-      if (warmSlot !== null) {
-        warmSlot.warmQuery.close();
-        warmSlot = null;
-      }
+      for (const slot of warmSlots.values()) slot.warmQuery.close();
+      warmSlots.clear();
     },
     hasWarm(): boolean {
-      return warmSlot !== null || warming !== null;
+      // Answers for the speculative slot specifically: the registry uses this
+      // to decide whether the box still has one to offer the next send, and a
+      // subprocess reserved for one particular chat is not that.
+      return warmSlots.has("") || warming.has("");
     },
     start(opts: ChatBackendStartOptions): ChatBackendRun {
       const inputQueue = createAsyncIterableQueue<SDKUserMessage>();
       const messageQueue = createAsyncIterableQueue<SDKMessage>();
 
-      // Try to consume the warm slot if it matches.
-      if (warmSlot !== null && warmCompatible(warmSlot.opts, opts)) {
-        const consumed = warmSlot;
-        warmSlot = null;
+      // Try to consume the warm slot for this chat, if it matches.
+      const key = warmSlotKey(opts);
+      const slot = warmSlots.get(key);
+      if (slot !== undefined && warmCompatible(slot.opts, opts)) {
+        const consumed = slot;
+        warmSlots.delete(key);
         const q = consumed.warmQuery.query(inputQueue.iterable);
-        // Re-warm in the background using the same options we just consumed.
-        void startWarming(consumed.opts);
+        // Re-warm only the speculative slot. Re-warming a coined one would
+        // spawn a subprocess for a conversation that now exists, and the
+        // harness refuses a session id it has already written.
+        if (key === "") void startWarming(consumed.opts);
         // Use the warm subprocess's OWN baked file path, not this call's opts:
         // warm reuse keeps the prewarmed env, so the consuming session's env
         // never reaches the subprocess (see session-id-file.ts).
@@ -311,12 +362,12 @@ export function createClaudeChatBackend(): ChatBackend {
         });
       }
 
-      // Cold path: drop a stale warm slot if its options don't match this
-      // start (we'd never use it for a different cwd/prompt). Caller can
-      // re-prewarm later if they want another slot.
-      if (warmSlot !== null) {
-        warmSlot.warmQuery.close();
-        warmSlot = null;
+      // Cold path: drop this key's stale slot if its options don't match the
+      // start (we'd never use it for a different cwd/prompt). Only this key's
+      // — another chat's reserved subprocess is still exactly right for it.
+      if (slot !== undefined) {
+        slot.warmQuery.close();
+        warmSlots.delete(key);
       }
 
       const { queryOptions, sessionIdFilePath } = buildQueryOptions(opts);
@@ -340,6 +391,7 @@ export function createChatBackend(): ChatBackend {
       if (opts.engine !== "codex") await claude.prewarm?.(opts);
     },
     closeWarm: () => claude.closeWarm?.(),
+    closeWarmFor: (sessionId) => claude.closeWarmFor?.(sessionId),
     hasWarm: () => claude.hasWarm?.() ?? false,
   };
 }

@@ -10,12 +10,18 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { ownerProcedure, publicProcedure } from "../trpc.js";
 import { getChatRuntime, type ChatRuntime } from "../../chat-runtime.js";
-import { loadPersistedChatModel } from "../../../core/chat/session/state.js";
+import { chatModelFileForSession, loadCurrentModelForEngine } from "../../../core/chat/session/state.js";
+import { resolveChatEngine } from "../../../core/chat/session/engine.js";
+import type { AgentEngine } from "../../../core/box/config.js";
+import { chatModelForEngine, isChatModelAllowed } from "../../../shared/chat-models.js";
 import { deleteChatSession, ChatSessionNotFoundError, SessionStorageContextMismatchError } from "../../../core/chat/session/delete.js";
 import { sdkSessionIdSchema } from "../../../core/chat/session/session-id.js";
 import { SessionDeletingError } from "../../../core/chat/session/registry.js";
 import { LockHeldError } from "../../../core/chat/review/lock.js";
 import { resolveSessionAvailability } from "../../../core/chat/session/availability.js";
+import type { ReserveResult } from "../../../core/chat/session/reserve.js";
+import { readLandmarkFeaturesForDir } from "../../../core/landmark/features.js";
+import { mergeSeedFeatures } from "../../../core/chat/features.js";
 
 function requireRuntime(boxRoot: string): ChatRuntime {
   const runtime = getChatRuntime(boxRoot);
@@ -33,6 +39,7 @@ export interface ChatSessionStatus {
   running: boolean;
   busy: boolean;
   model: string | null;
+  engine: AgentEngine;
 }
 
 /**
@@ -41,26 +48,34 @@ export interface ChatSessionStatus {
  * so an idle-evicted session still reports its pinned model. Shared by
  * `chat.status` and `chat.bootstrap`.
  */
-export function readSessionStatus(boxRoot: string, sessionId: string | null): ChatSessionStatus {
+export async function readSessionStatus(boxRoot: string, sessionId: string | null): Promise<ChatSessionStatus> {
   const { registry } = requireRuntime(boxRoot);
-  const persistedModel = loadPersistedChatModel(boxRoot);
+  const engine = await resolveChatEngine(boxRoot, sessionId);
   if (!sessionId) {
     return {
       sessionId: null,
       running: false,
       busy: false,
-      model: persistedModel,
+      model: null,
+      engine,
     };
   }
   const target = registry.get(sessionId);
   if (!target) {
-    return { sessionId, running: false, busy: false, model: persistedModel };
+    return {
+      sessionId,
+      running: false,
+      busy: false,
+      model: loadCurrentModelForEngine(boxRoot, { modelFile: chatModelFileForSession(sessionId), engine }),
+      engine,
+    };
   }
   return {
     sessionId: target.getSessionId(),
     running: target.isRunning(),
     busy: target.isBusy(),
-    model: target.getCurrentModel(),
+    model: chatModelForEngine(engine, target.getCurrentModel()),
+    engine,
   };
 }
 
@@ -136,7 +151,14 @@ export const chatControlProcedures = {
   // Change a session's active model. getOrCreate re-registers an evicted session
   // rather than 404'ing; the live subprocess is restarted so the next turn picks
   // up the new model (a live `set_model` control request isn't honored).
-  setModel: publicProcedure.input(z.object({ session: z.string().min(1), model: z.string().nullable() })).mutation(({ input, ctx }) => {
+  setModel: publicProcedure.input(z.object({ session: z.string().min(1), model: z.string().nullable() })).mutation(async ({ input, ctx }) => {
+    const engine = await resolveChatEngine(ctx.boxRoot, input.session);
+    if (!isChatModelAllowed(engine, input.model)) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: `Model ${input.model ?? "default"} is unavailable for ${engine} chats`,
+      });
+    }
     const { registry, wireSession } = requireRuntime(ctx.boxRoot);
     const target = registry.getOrCreate(input.session);
     wireSession(target);
@@ -192,6 +214,33 @@ export const chatControlProcedures = {
   }),
 
   // Kill the subprocess (preserving session id + queue).
+  /**
+   * Accept a client-coined chat id, so a brand-new chat is addressable before
+   * its first message — capture, bulk upload, and a second quick send all name
+   * the same chat instead of racing to create one
+   * (`core/chat/session/reserve.ts`).
+   *
+   * A mutation, not part of `bootstrap`: `bootstrap` does not even run for a
+   * new chat (the client skips it for `?session=new`), so there is no round
+   * trip to fold this into, and a query with a side effect would be the worse
+   * shape. Idempotent by id, so a retry or a StrictMode double-invoke reserves
+   * the same chat.
+   */
+  reserveSession: publicProcedure
+    .input(z.object({ sessionId: sdkSessionIdSchema, contextDir: z.string().optional() }))
+    .mutation(async ({ input, ctx }): Promise<ReserveResult> => {
+      const { registry } = requireRuntime(ctx.boxRoot);
+      const contextDir = input.contextDir !== undefined && input.contextDir !== "" ? input.contextDir : null;
+      // Landmark feature defaults are captured now because nothing else will:
+      // they only ever ride a `"new"` send, and a coined chat never sends one.
+      const landmark = contextDir !== null ? await readLandmarkFeaturesForDir(ctx.boxRoot, contextDir) : null;
+      return registry.reserve({
+        sessionId: input.sessionId,
+        contextDir,
+        seedFeatures: mergeSeedFeatures({ landmark, request: undefined }),
+      });
+    }),
+
   restart: publicProcedure.input(z.object({ session: z.string().min(1) })).mutation(({ input, ctx }) => {
     const { registry } = requireRuntime(ctx.boxRoot);
     const target = registry.get(input.session);

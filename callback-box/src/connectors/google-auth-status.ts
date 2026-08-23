@@ -92,7 +92,7 @@ export interface GoogleAuthStatus {
 }
 
 export async function readGoogleAuthStatus(boxRoot?: string): Promise<GoogleAuthStatus> {
-  const configured = getGoogleClientCreds() !== null;
+  const configured = (await getGoogleClientCreds(boxRoot)) !== null;
   const tokens = await loadGoogleTokens(boxRoot);
   return {
     configured,

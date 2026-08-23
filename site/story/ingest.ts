@@ -1,6 +1,6 @@
 // Story-extraction ingest tool (run via tsx: `pnpm --dir site ingest ...`, see
 // --help). Turns the raw JSON an extraction subagent emits ({"nuggets":[...]})
-// into the run files the story-eval review app reads (dev/story-eval/runs/<run>/).
+// into the run files the story-eval review app reads (dev/apps/story-eval/runs/<run>/).
 // It is the honesty boundary of the extraction loop: every nugget is validated
 // against a strict zod schema and every span is verified to appear VERBATIM in
 // its source document. A fabricated span (0 occurrences) is a hard error naming
@@ -12,10 +12,11 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
+import { locateSpan, type SpanCheck } from "./span-locate.js";
 
 // site/story/ingest.ts → repo root is two levels up from site/.
 const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..");
-const DEFAULT_RUNS_DIR = path.join(REPO_ROOT, "dev", "story-eval", "runs");
+const DEFAULT_RUNS_DIR = path.join(REPO_ROOT, "dev", "apps", "story-eval", "runs");
 
 /** A hard, fail-closed ingest failure: bad input, a fabricated span, etc. */
 export class IngestError extends Error {
@@ -51,8 +52,6 @@ export type RawNugget = z.infer<typeof rawNuggetSchema>;
 
 const rawFileSchema = z.strictObject({ nuggets: z.array(rawNuggetSchema) });
 
-type SpanCheck = "ok" | "ambiguous";
-
 /** An output nugget: the raw shape plus the verified spanCheck verdict. */
 export interface OutputNugget extends RawNugget {
   spanCheck: SpanCheck;
@@ -78,18 +77,6 @@ function formatIssuePath(parts: readonly PropertyKey[]): string {
   return out || "(root)";
 }
 
-/** Count VERBATIM occurrences of needle in haystack (overlaps counted). */
-function countOccurrences(haystack: string, needle: string): number {
-  let count = 0;
-  let pos = 0;
-  for (;;) {
-    const idx = haystack.indexOf(needle, pos);
-    if (idx === -1) break;
-    count++;
-    pos = idx + 1;
-  }
-  return count;
-}
 
 /**
  * Validate one raw extraction file and verify every span against its source.
@@ -115,23 +102,23 @@ export function buildRunFile(params: {
 
   const nuggets: OutputNugget[] = [];
   for (const [index, nugget] of parsed.data.nuggets.entries()) {
-    const occurrences = countOccurrences(docText, nugget.span);
-    if (occurrences === 0) {
+    const located = locateSpan(docText, nugget.span);
+    if (located.kind === "missing") {
       throw new IngestError(
-        `${fileName}: nugget "${nugget.slug}" (index ${index}): span not found verbatim in ` +
-          `${doc} — fabricated or mangled span, refusing to write`,
+        `${fileName}: nugget "${nugget.slug}" (index ${index}): span not found in ` +
+          `${doc} (even under whitespace normalization) — fabricated span, refusing to write`,
       );
     }
-    const spanCheck: SpanCheck = occurrences === 1 ? "ok" : "ambiguous";
-    // Explicit key order so output diffs cleanly against committed run files.
+    // Store located.span — the canonical SOURCE substring — never the agent's
+    // copy, so a whitespace-recovered span is still verbatim in the output.
     nuggets.push({
       slug: nugget.slug,
-      span: nugget.span,
+      span: located.span,
       gloss: nugget.gloss,
       tags: nugget.tags,
       criteria: nugget.criteria,
       confidence: nugget.confidence,
-      spanCheck,
+      spanCheck: located.kind,
     });
   }
 
@@ -168,7 +155,7 @@ Manifest:
   --doc <path>    Source doc, repo-root-relative — sticks like --variant.
   --in <raw>      A raw extraction file; flushes one item (variant+doc+input).
   --label <slug>  Output filename slug for the NEXT --in (default: doc basename).
-  --out <dir>     Output directory (default: dev/story-eval/runs/<run-id>).
+  --out <dir>     Output directory (default: dev/apps/story-eval/runs/<run-id>).
   --manifest <f>  JSON {run, out?, inputs:[{variant,doc,input,label?}]}; input
                   and out paths resolve against the manifest's directory.
   --help          Show this help.

@@ -15,7 +15,7 @@
  */
 
 import { useState, useRef, useCallback } from "react";
-import { clearResumeSessionId } from "./capture-api";
+import { clearResumeSessionId, CaptureAlreadySealedError } from "./capture-api";
 
 export interface CaptureFinish {
   finalizing: boolean;
@@ -110,7 +110,12 @@ export function useCaptureFinish(opts: {
         await cancelCaptureSession(sessionId);
         clearResumeSessionId(); // discarded — no longer resumable
       } catch (err) {
-        console.error("[capture] Cancel failed:", err);
+        // A capture the worker already owns is not discardable, and the user
+        // still leaves — but it is not lost either: it delivers into the chat
+        // this capture was started from, where its bubble says so. Anything
+        // else is a real failure.
+        if (err instanceof CaptureAlreadySealedError) console.warn(`[capture] ${err.message}`);
+        else console.error("[capture] Cancel failed:", err);
       }
     }
     onExit();

@@ -92,9 +92,19 @@ Resumed chats use their stored engine regardless of later config changes.
 native process must continue to own tools, approvals, sandboxing, sessions, and auth.
 
 **Direction:** Use JSON-RPC over stdio with Zod-validated responses and notifications.
-Map cwd, writable roots, model, chat images, structured output, resume, interrupt, and
-final status into existing Callback Box contracts. Count completed tool items to approximate
-`maxTurns`. Report that Codex cannot enforce `maxBudgetUsd`.
+Map cwd, model, chat images, structured output, resume, interrupt, and final status into
+existing Callback Box contracts. Count completed tool items to approximate `maxTurns`.
+Report that Codex cannot enforce `maxBudgetUsd`.
+
+**Implemented sandbox correction (2026-08-14):** Box agents run with Codex's
+`danger-full-access` thread and turn policies. A live Codex 0.146.0 probe showed
+that workspace-write force-mounts `.git` read-only even when the v2 package root
+is an explicit writable root, so it cannot support the box's required commit
+state transition. This broadens filesystem access beyond the box, matching the
+existing Claude `bypassPermissions` posture and the Codex worktree launcher;
+the agent instructions and host account remain the boundary. `additionalDirectories`
+stays in the provider-neutral contract but is redundant for Codex while this
+policy is active.
 
 ### Track 3 — Read native transcripts through supported APIs
 
@@ -263,8 +273,9 @@ test box.
   and new batch work.
 - The isolated test box is the runtime rehearsal target. Real capability probes have
   already verified resume after process restart, local images, structured output with
-  tools, sandbox denial, interruption, transcript read/list/delete, context expansion,
-  and token persistence.
+  tools, interruption, transcript read/list/delete, context expansion, and token
+  persistence. The original sandbox-denial probe was superseded by the full-access
+  correction above because Git writes are a required box capability.
 - Rollback changes `agentEngine` back to `claude`. Codex chats remain available through
   their pinned history rows.
 - No approved cross-vendor quality corpus has run. Functional probes used synthetic

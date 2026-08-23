@@ -27,6 +27,7 @@ import type {
   AgentResultBase,
   StructuredAgentResult,
 } from "../../src/core/agent/index.js";
+import type { EngineUnavailability } from "../../src/core/agent/engine-unavailability.js";
 
 export interface FakeAgentInvocation {
   /** System prompt — present on first invoke, null on resume. */
@@ -75,6 +76,8 @@ interface FakeActOutcome {
   error?: string;
   structuredOutput?: unknown;
   resultText?: string;
+  /** Script a deferred-recoverable failure (engine quota exhausted). */
+  unavailability?: EngineUnavailability;
 }
 
 export interface FakeAgentOptions {
@@ -177,7 +180,12 @@ export function createFakeAgent(options: FakeAgentOptions): FakeAgent {
       };
       const result: AgentResult =
         partial.success === false
-          ? { ...base, success: false, error: partial.error !== undefined ? partial.error : "fake agent failure" }
+          ? {
+              ...base,
+              success: false,
+              error: partial.error !== undefined ? partial.error : "fake agent failure",
+              ...(partial.unavailability !== undefined && { unavailability: partial.unavailability }),
+            }
           : { ...base, success: true };
 
       invocations.push({

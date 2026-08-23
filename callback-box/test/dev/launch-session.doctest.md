@@ -26,7 +26,9 @@ async function buildScript(
   options: {
     agent: "claude" | "codex";
     mono?: string;
+    model?: string;
     resume: boolean;
+    description?: string;
     issue?: string;
     worktreePath?: string;
   },
@@ -35,6 +37,8 @@ async function buildScript(
   const launchDir = join(root, `${agent}-${resume ? "resume" : "fresh"}`);
   const promptFile = join(root, "prompt.txt");
   await writeFile(promptFile, "briefing");
+  const descriptionFile = join(root, `${agent}-${resume ? "resume" : "fresh"}-description.txt`);
+  if (options.description !== undefined) await writeFile(descriptionFile, options.description);
   const command = [
     '. "$1"',
     'mkdir -p "$LS_LAUNCH_DIR"',
@@ -52,11 +56,12 @@ async function buildScript(
         LS_CODEX_RESUME: resume ? "1" : "0",
         LS_EMOJI: "🧵",
         LS_LAUNCH_DIR: launchDir,
-        LS_MODEL: agent === "claude" ? "opus" : "gpt-test",
+        LS_MODEL: options.model ?? (agent === "claude" ? "opus" : "gpt-test"),
         LS_MONO: options.mono ?? repoRoot,
         LS_PROMPT_FILE: promptFile,
         LS_REMOTE_CONTROL: "1",
         LS_SESSION_NAME: "🧵 seam",
+        LS_DESCRIPTION_FILE: options.description === undefined ? "" : descriptionFile,
         LS_WORKSTREAM: "seam",
         ...(options.issue !== undefined ? { LS_ISSUE: options.issue } : {}),
         ...(options.worktreePath
@@ -143,17 +148,36 @@ JSON.stringify([
 
 ```ts continue
 const codexScript = await buildScript(root, { agent: "codex", resume: false });
+const defaultCodexScript = await buildScript(root, {
+  agent: "codex",
+  model: "",
+  resume: false,
+});
 JSON.stringify([
   codexScript.includes('./bin/workstreams create "seam"'),
   codexScript.includes('-s danger-full-access -a never'),
   codexScript.includes('-m "gpt-test"'),
   codexScript.includes('bin/codex-session-end'),
+  defaultCodexScript.includes('-m "gpt-5.6-sol"'),
+  defaultCodexScript.includes('--arg model "gpt-5.6-sol"'),
 ])
-=> [true,true,true,true]
+=> [true,true,true,true,true,true]
 
 const codexResumeScript = await buildScript(root, { agent: "codex", resume: true });
-codexResumeScript.includes('codex resume --last "${codex_args[@]}"')
-=> true
+JSON.stringify([
+  codexResumeScript.includes('codex resume --last "${codex_args[@]}" "$(cat'),
+  codexResumeScript.indexOf('codex resume --last') < codexResumeScript.indexOf('codex_status=$?'),
+])
+=> [true,true]
+
+const describedScript = await buildScript(root, { agent: "codex", resume: false, description: "Workstream routing" });
+const undescribedScript = await buildScript(root, { agent: "codex", resume: false });
+JSON.stringify([
+  describedScript.includes('if $description == "" then {} else {description:$description} end'),
+  describedScript.includes("codex-fresh-description.txt"),
+  undescribedScript.includes('if $description == "" then {} else {description:$description} end'),
+])
+=> [true,true,true]
 
 const resolvedCodexScript = await buildScript(root, {
   agent: "codex",

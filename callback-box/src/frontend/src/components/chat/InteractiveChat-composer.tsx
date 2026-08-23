@@ -13,15 +13,25 @@ import { ShareLocationMenuItem } from "./ShareLocationMenuItem";
 import { ScreenshotMenuItem } from "./ScreenshotMenuItem";
 import { VoiceToggleButton } from "./InteractiveChat-voice-button";
 import { MicOverlay } from "./MicOverlay";
-import { composerTextareaClasses, joinTranscript } from "./InteractiveChat-helpers";
+import { composerTextareaClasses, joinTranscript, spokenTextStart, type VoiceSegmentSend } from "./InteractiveChat-helpers";
 import { useInputValue, useInputStore } from "./input-store";
+import type { AddFiles } from "./InteractiveChat-attachments";
 import type { TranscriptionState } from "../../hooks/useRealtimeTranscription";
+import type { FinalWord } from "../../machines/transcription-events";
 
 export interface TranscriptionHandle {
   state: TranscriptionState;
   transcript: string;
+  /** Words backing `transcript`'s finalized portion (Fix D) — null when none captured. */
+  finalWords: readonly FinalWord[] | null;
   start: () => void;
-  stop: () => Promise<string>;
+  stop: () => Promise<{ text: string; words: readonly FinalWord[] | null }>;
+  /**
+   * Manual stop-and-send routed through the HQ slow path (see
+   * useRealtimeTranscription). False = nothing to park (segment already
+   * settled) — the caller falls back to its direct-send path.
+   */
+  submitSegment: (opts: { closeMic: boolean }) => boolean;
   cancel: () => void;
 }
 
@@ -72,7 +82,7 @@ export function ComposerSendButton({
 function DesktopComposerRow({
   textareaRef, input, setInput, isTranscribing, transcription, targetBusy,
   handleKeyDown, handleSend, handleCancelTranscription, clearDraft,
-  onStopDictation, onVoiceSegmentSend, onPaste, onDrop,
+  onStopDictation, onVoiceSegmentSend, onPaste, onDrop, hqDictationEnabled,
 }: {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   input: string;
@@ -86,9 +96,11 @@ function DesktopComposerRow({
   handleCancelTranscription: () => void;
   clearDraft: () => void;
   onStopDictation: () => void;
-  onVoiceSegmentSend: (text: string) => void;
+  onVoiceSegmentSend: VoiceSegmentSend;
   onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
+  /** docs/implemented-plans/hq-dictation-switch.md, chunk 2: routes stop-and-send through the HQ slow path. */
+  hqDictationEnabled: boolean;
 }) {
   return (
     <div className="hidden sm:flex flex-1 items-center gap-2 min-w-0">
@@ -148,10 +160,27 @@ function DesktopComposerRow({
             handleSend();
             return;
           }
+          if (hqDictationEnabled) {
+            // Route through the same finalize→blob→HQ slow path a
+            // spoken send keyword takes (docs/plans/
+            // hq-dictation-switch.md, chunk 2) instead of building the
+            // emission here from the live realtime state — runKeywordSend
+            // (InteractiveChat-voice.ts) picks up the resulting VoiceIntent
+            // and does everything from there (composer + draft clearing,
+            // mic re-arm/close, audio retention) via the shared
+            // onVoiceIntent path, so nothing is duplicated here.
+            if (transcription.submitSegment({ closeMic: true })) return;
+            // Segment already settled (machine idle) — fall through to
+            // the direct-send path below.
+          }
           // Continue from any prior composer text so it isn't dropped.
           const text = joinTranscript(input, transcription.transcript).trim();
+          // Read synchronously, same render as `text` — no await between
+          // this and the click, so `transcription.finalWords` can't have
+          // gone stale (Fix D; contrast the mobile row's stop()-await path).
+          const words = transcription.finalWords;
           transcription.cancel();
-          if (text) onVoiceSegmentSend(text);
+          if (text) onVoiceSegmentSend(text, { words, spokenStart: spokenTextStart(input) });
           setInput("");
           // Segment committed — drop the persisted dictation draft.
           clearDraft();
@@ -173,8 +202,8 @@ export function ChatInputArea({
   handleKeyDown, handleSend, handleCancelTranscription, clearDraft,
   onKeyboard, onVoice, onStopDictation, onVoiceSegmentSend,
   voicePaused, onUnpause, hideMobile,
-  onPaste, onDrop, onAttachFiles, addImageFiles, onEnterCapture, captureEnabled, captureDisabledReason,
-  onUploadFiles, uploadFilesDisabledReason, narrationEnabled,
+  onPaste, onDrop, onAddFiles, addFiles, onEnterCapture, captureEnabled, captureDisabledReason,
+  narrationEnabled, hqDictationEnabled,
 }: {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   isTranscribing: boolean;
@@ -189,26 +218,25 @@ export function ChatInputArea({
   onKeyboard: () => void;
   onVoice: () => void;
   onStopDictation: () => void;
-  onVoiceSegmentSend: (text: string) => void;
+  onVoiceSegmentSend: VoiceSegmentSend;
   voicePaused: boolean;
   onUnpause: () => void;
   hideMobile?: boolean;
   onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
-  onAttachFiles: () => void;
-  /** Ingest images into the composer (shared with paste/drop) — feeds the "Send screenshot…" item. */
-  addImageFiles: (files: File[]) => Promise<number>;
+  /** Open the file picker behind the Add menu's one file entry. */
+  onAddFiles: () => void;
+  /** Ingest files into the composer (shared with picker/paste/drop) — feeds the "Send screenshot…" item. */
+  addFiles: AddFiles;
   /** Enter capture mode (full-screen viewfinder / mic). */
   onEnterCapture: () => void;
   /** Whether capture is offered (suppressed for native shells, like the mic). */
   captureEnabled: boolean;
   /** When set, the capture affordance renders disabled with this tooltip (X1). */
   captureDisabledReason?: string | undefined;
-  /** Open the full-screen bulk file-upload overlay. */
-  onUploadFiles: () => void;
-  /** When set, the "Upload files…" item renders disabled with this reason (no chat session id yet). */
-  uploadFilesDisabledReason?: string | undefined;
   narrationEnabled: boolean;
+  /** docs/implemented-plans/hq-dictation-switch.md, chunk 2: routes stop-and-send through the HQ slow path. */
+  hqDictationEnabled: boolean;
 }) {
   // Subscribing read of the composer text — this is the component a keystroke
   // re-renders (and its small button-bar subtree), not the chat at large.
@@ -226,7 +254,7 @@ export function ChatInputArea({
             degraded={transcription.state === "reconnecting"}
           />
         ) : null}
-        {/* Add menu: capture mode, attach file, share location. */}
+        {/* Add menu: capture mode, add files, screenshot, share location. */}
         <Dropdown
           align="left"
           vertical="above"
@@ -259,11 +287,11 @@ export function ChatInputArea({
               {captureDisabledReason !== undefined ? `Capture… (${captureDisabledReason.toLowerCase()})` : "Capture…"}
             </MenuItem>
           ) : null}
-          <MenuItem onClick={onAttachFiles}>Attach file…</MenuItem>
-          <MenuItem onClick={onUploadFiles} disabled={uploadFilesDisabledReason !== undefined}>
-            {uploadFilesDisabledReason !== undefined ? `Upload files… (${uploadFilesDisabledReason.toLowerCase()})` : "Upload files…"}
-          </MenuItem>
-          <ScreenshotMenuItem addImageFiles={addImageFiles} />
+          {/* One file entry: where the files land (inline vs. bulk batch) is
+              decided by `file-routing.ts`, not by the user picking a menu item
+              (issues/features/2026-08-03-attach-vs-upload-menu-confusing.md). */}
+          <MenuItem onClick={onAddFiles}>Add files…</MenuItem>
+          <ScreenshotMenuItem addFiles={addFiles} />
           <ShareLocationMenuItem />
         </Dropdown>
 
@@ -301,6 +329,7 @@ export function ChatInputArea({
           onVoiceSegmentSend={onVoiceSegmentSend}
           onPaste={onPaste}
           onDrop={onDrop}
+          hqDictationEnabled={hqDictationEnabled}
         />
 
         {/* Mobile: spacer */}

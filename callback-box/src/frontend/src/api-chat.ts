@@ -32,6 +32,7 @@ import { mobileAuthHeaders } from "./lib/mobile-auth";
 import type { ActivityKind, CardStateDetails } from "@core/chat/card-activity.js";
 import { chatSendReasonKind, recordChatSendEvent } from "./lib/chat-send-diagnostics";
 import { currentChatChannel } from "./lib/chat-channel";
+import { parseChatAgentEngine, type ChatAgentEngine } from "@shared/chat-models.js";
 
 export interface SessionContentBlock {
   type: "text" | "tool_use" | "tool_result" | "thinking" | "image";
@@ -89,8 +90,9 @@ export interface SessionEntry {
 /** A client-created entry tracked until authoritative history echoes it. */
 export type PendingSessionEntry = SessionEntry & { reconcileKnownUuids: string[] };
 
-export async function getChatStatus(params: { sessionId: string | null }): Promise<{ sessionId: string | null; running: boolean; busy: boolean; model: string | null }> {
-  return trpcClient.chat.status.query({ session: params.sessionId ?? undefined });
+export async function getChatStatus(params: { sessionId: string | null }): Promise<{ sessionId: string | null; running: boolean; busy: boolean; model: string | null; engine: ChatAgentEngine | null }> {
+  const status = await trpcClient.chat.status.query({ session: params.sessionId ?? undefined });
+  return { ...status, engine: parseChatAgentEngine(status.engine) };
 }
 
 export async function setChatModel(params: { sessionId: string; model: string | null }): Promise<{ ok: boolean; model: string | null }> {

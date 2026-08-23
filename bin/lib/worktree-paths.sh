@@ -15,6 +15,7 @@
 #   WT_ROOT       where worktrees are created
 #   WT_BOX_ROOT   where each worktree's box clone is created
 #   WT_BOX_SRC    the source box cloned into each new worktree
+#   WT_EXHIBITS_ROOT  per-workstream exhibit stores (exhibits-store.sh)
 #   WT_STATE_DIR  router/agent cache + state
 #
 # WHAT IS DERIVED AND WHAT IS CONVENTION. The *parent* is derived — resolved
@@ -72,6 +73,13 @@ wt_paths_init() {
   WT_ROOT="${CALLBACK_WORKTREE_ROOT:-$WT_PARENT/callback-worktrees}"
   WT_BOX_ROOT="${CALLBACK_BOX_ROOT:-$WT_PARENT/box-worktrees}"
   WT_BOX_SRC="${CALLBACK_BOX_SRC:-$WT_PARENT/boxes/test1}"
+  WT_EXHIBITS_ROOT="${CALLBACK_EXHIBITS_ROOT:-$WT_PARENT/workstream-exhibits}"
+  # Document comments (docs/plans/document-comments.md). Unlike the exhibits
+  # root this is NOT per-workstream — one store, mounted whole into every
+  # checkout — and the override name matches what bin/lib/comments-store.ts
+  # reads, so the shell and TypeScript halves cannot disagree about where the
+  # store is.
+  WT_COMMENTS_ROOT="${CALLBACK_COMMENTS_ROOT:-$WT_PARENT/dev-comments}"
 
   # The roots feed paths that get deleted, so an override must not be able to
   # aim them at data that is not a worktree's to lose. The source box is the

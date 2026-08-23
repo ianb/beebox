@@ -9,7 +9,7 @@ import os from "node:os";
 import path from "node:path";
 import { collectAgentQuotas } from "../src/server/quota-collect.js";
 import { parseClaudeQuota, parseCodexQuota } from "../src/server/quota-parse.js";
-import { quotaWindowsForDisplay } from "../src/frontend/lib/format.js";
+import { quotaSummaryText, quotaWindowsForDisplay } from "../src/frontend/lib/format.js";
 
 const fetchedAt = "2026-08-13T12:00:00.000Z";
 ```
@@ -56,6 +56,46 @@ JSON.stringify({
   codex: quotaWindowsForDisplay({ provider: "codex", status: "available", fetchedAt, windows: [short, weekly] }).map((window) => window.label),
 })
 => {"claude":["7-day window","5-hour window"],"codex":["5-hour window","7-day window"]}
+```
+
+## Provider summaries use only meaningful weekly quotas
+
+Short-window tanks and Codex model-specific tanks remain visible in the panel,
+but they cannot mark the provider headline over pace.
+
+```ts
+const summaryNow = new Date("2026-08-20T16:41:00.000Z");
+const codexQuota = {
+  provider: "codex" as const,
+  status: "available" as const,
+  fetchedAt,
+  windows: [
+    { label: "7-day window", usedPercent: 6, resetsAt: "2026-08-27T04:36:00.000Z", durationMinutes: 10_080 },
+    { label: "GPT-5.3-Codex-Spark · 5-hour window", usedPercent: 0, resetsAt: "2026-08-20T21:41:00.000Z", durationMinutes: 300 },
+    { label: "GPT-5.3-Codex-Spark · 7-day window", usedPercent: 69, resetsAt: "2026-08-25T16:37:00.000Z", durationMinutes: 10_080 },
+  ],
+};
+quotaSummaryText(codexQuota, summaryNow)
+=> on track
+```
+
+Claude's general and Fable weekly quotas collapse when they agree and name the
+disagreement when they do not.
+
+```ts
+const claudeSummaryNow = new Date("2026-08-20T16:41:00.000Z");
+const claudeSummaryQuota = {
+  provider: "claude" as const,
+  status: "available" as const,
+  fetchedAt,
+  windows: [
+    { label: "7-day window", usedPercent: 6, resetsAt: "2026-08-27T04:36:00.000Z", durationMinutes: 10_080 },
+    { label: "Fable · 7-day window", usedPercent: 69, resetsAt: "2026-08-25T16:37:00.000Z", durationMinutes: 10_080 },
+  ],
+};
+const agreeingClaude = { ...claudeSummaryQuota, windows: claudeSummaryQuota.windows.map((window) => ({ ...window, usedPercent: 6 })) };
+JSON.stringify({ disagree: quotaSummaryText(claudeSummaryQuota, claudeSummaryNow), agree: quotaSummaryText(agreeingClaude, claudeSummaryNow) })
+=> {"disagree":"general on track, Fable over pace","agree":"on track"}
 ```
 
 ## Collection observes the ten-minute Claude cadence

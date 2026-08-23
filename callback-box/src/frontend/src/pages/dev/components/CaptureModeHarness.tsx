@@ -17,9 +17,12 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { CaptureBubbleView, type CaptureBubbleModel, type CaptureLiveStatus } from "../../../components/chat/capture-bubble";
+import { RESOLVED_HOLD_MS } from "../../../components/chat/useCaptureBubbles";
 import { CaptureChip } from "../../../components/chat/CaptureChip";
 import { UserMessage } from "../../../components/chat/user-message";
 import { CaptureOverlay } from "../../../components/capture/CaptureOverlay";
+import { CaptureControls } from "../../../components/capture/CaptureControls";
+import type { RetryFeedback } from "../../capture/retry-feedback";
 import { CaptureApiProvider, type CaptureApi } from "../../capture/capture-api-context";
 import { parseCaptureWrapper } from "../../../components/chat/capture-message";
 import { UploadAbortedError } from "../../../lib/binary-upload";
@@ -27,14 +30,44 @@ import type { SessionEntry } from "../../../api";
 
 const COUNTS = { photos: 2, files: 1, audioSegments: 3 };
 
-/** Canonical bubble states, one per caption the pending bubble can show. */
+/**
+ * A fixed clock, so the aged faces are reproducible: every model below states
+ * its `startedAt` relative to this rather than to the wall clock.
+ */
+const HARNESS_NOW = Date.parse("2026-08-21T12:00:00Z");
+const minutesAgo = (m: number) => new Date(HARNESS_NOW - m * 60_000).toISOString();
+
+/**
+ * When the capture started, and when it last changed. They differ whenever a
+ * capture was retried — the failed caption ages from the second, so an old
+ * capture that failed again a minute ago reads as a fresh failure.
+ */
+const times = (startedMin: number, activityMin: number) => ({
+  startedAt: minutesAgo(startedMin),
+  lastActivityAt: minutesAgo(activityMin),
+});
+const DAY_MIN = 24 * 60;
+const SECONDS_AGO = new Date(HARNESS_NOW - 10_000).toISOString();
+
+/** Canonical bubble states, one per face the pending bubble can wear. */
 const BUBBLE_STATES: Array<{ label: string; model: CaptureBubbleModel }> = [
-  { label: "preparing", model: { id: "b1", state: "preparing", counts: COUNTS } },
-  { label: "transcribing (live)", model: { id: "b2", state: "preparing", counts: COUNTS, liveStatus: "transcribing" } },
-  { label: "queued (delivering)", model: { id: "b3", state: "delivering", counts: COUNTS } },
-  { label: "failed — tap to retry", model: { id: "b4", state: "failed:deliver", counts: COUNTS } },
-  { label: "photos only", model: { id: "b5", state: "preparing", counts: { photos: 3, files: 0, audioSegments: 0 } } },
+  { label: "preparing", model: { id: "b1", state: "preparing", counts: COUNTS, ...times(0, 0) } },
+  { label: "transcribing (live)", model: { id: "b2", state: "preparing", counts: COUNTS, ...times(0, 0), liveStatus: "transcribing" } },
+  { label: "queued (delivering)", model: { id: "b3", state: "delivering", counts: COUNTS, ...times(0, 0) } },
+  { label: "working, past patience — reports its age", model: { id: "b4", state: "preparing", counts: COUNTS, ...times(4, 4) } },
+  { label: "delivered (held 3s in place, then leaves)", model: { id: "b5", state: "delivering", counts: COUNTS, ...times(2, 0), resolution: "delivered" } },
+  { label: "discarded (same, after the user discards)", model: { id: "b6", state: "failed:prepare", counts: COUNTS, ...times(90, 30), resolution: "discarded" } },
+  { label: "failed, fresh — retry emphasized", model: { id: "b7", state: "failed:deliver", counts: COUNTS, ...times(3, 3) } },
+  { label: "old capture, failed again a minute ago — still fresh", model: { id: "b8", state: "failed:deliver", counts: COUNTS, ...times(20 * DAY_MIN, 1) } },
+  { label: "failed, aged past the sweep's window — discard emphasized", model: { id: "b9", state: "failed:prepare", counts: { photos: 7, files: 0, audioSegments: 1 }, ...times(16 * DAY_MIN, 16 * DAY_MIN) } },
+  { label: "a discard that came back with an error", model: { id: "b10", state: "failed:prepare", counts: COUNTS, ...times(120, 120), actionError: "couldn't discard — Cancel failed: 409" } },
+  { label: "photos only", model: { id: "b11", state: "preparing", counts: { photos: 3, files: 0, audioSegments: 0 }, ...times(0, 0) } },
 ];
+
+/** The harness has no backend, so both verbs just announce themselves. */
+const announce = (verb: string) => async (id: string) => {
+  window.alert(`${verb} ${id}`);
+};
 
 /** How the fake transport behaves — the field conditions worth reproducing. */
 interface FakeUploadBehavior {
@@ -123,12 +156,14 @@ const SCRIPT: CaptureLiveStatus[] = ["preparing", "transcribing", "delivered", "
 
 function ScriptedBubble() {
   const [status, setStatus] = useState<CaptureLiveStatus>("preparing");
-  const delivered = status === "delivered";
   const model: CaptureBubbleModel = {
     id: "scripted",
     state: status === "failed" ? "failed:deliver" : status === "delivered" ? "delivering" : "preparing",
     counts: COUNTS,
+    startedAt: SECONDS_AGO,
+    lastActivityAt: SECONDS_AGO,
     liveStatus: status,
+    resolution: status === "delivered" ? "delivered" : undefined,
   };
   return (
     <div className="border border-warm-300 rounded-lg p-4 bg-warm-50">
@@ -143,11 +178,13 @@ function ScriptedBubble() {
           </button>
         ))}
       </div>
-      {delivered ? (
-        <div className="text-sm text-warm-500 italic">delivered — the bubble drops (the query no longer returns it); the delivered chip appears in history</div>
-      ) : (
-        <CaptureBubbleView model={model} onRetry={(id) => window.alert(`retry ${id}`)} />
-      )}
+      <CaptureBubbleView model={model} now={HARNESS_NOW} onRetry={announce("retry")} onDiscard={announce("discard")} />
+      {status === "delivered" ? (
+        <div className="mt-2 text-xs text-warm-500 italic">
+          the resolved face is held for {String(RESOLVED_HOLD_MS / 1000)}s in place, then the row leaves and the
+          delivered chip stands in history
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -171,6 +208,39 @@ const MIXED_DELIVERED_ENTRY: SessionEntry = {
       "Background material.\n\n3 files uploaded (2 KB).\n</upload>\n\nThen compare the notes.",
   }],
 };
+
+/** The banner is driven by props here, so its buttons have nothing to do. */
+const noop = () => { /* harness: no transport behind these controls */ };
+
+/** Every face the overlay's failed-upload banner can wear, driven by props. */
+const RETRY_FACES: RetryFeedback[] = [
+  { phase: "idle" },
+  { phase: "retrying", count: 3 },
+  { phase: "recovered" },
+  { phase: "failed-again", count: 2 },
+];
+
+function RetryBanners() {
+  return (
+    <div className="space-y-3">
+      {RETRY_FACES.map((feedback) => (
+        <div key={feedback.phase}>
+          <div className="text-xs font-mono text-warm-500">{feedback.phase}</div>
+          <div className="bg-gray-900 text-white rounded-lg overflow-hidden">
+            <CaptureControls
+              sessionId="fake" recording={false} finalizing={false} hasContent
+              pendingUploads={feedback.phase === "retrying" ? 3 : 0}
+              photosFailed={2} audioFailed={1} filesFailed={0}
+              retryFeedback={feedback}
+              onDone={noop} onCancel={noop} onToggleRecording={noop}
+              onRetryFailed={noop} onSkipPending={noop}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function OverlayDemo() {
   const [open, setOpen] = useState(false);
@@ -229,10 +299,15 @@ export function CaptureModeHarness() {
             {BUBBLE_STATES.map(({ label, model }) => (
               <div key={label}>
                 <div className="text-xs font-mono text-warm-500">{label}</div>
-                <CaptureBubbleView model={model} onRetry={(id) => window.alert(`retry ${id}`)} />
+                <CaptureBubbleView model={model} now={HARNESS_NOW} onRetry={announce("retry")} onDiscard={announce("discard")} />
               </div>
             ))}
           </div>
+        </section>
+
+        <section>
+          <h2 className="text-sm font-semibold text-warm-700 mb-2">Failed-upload banner — every retry face</h2>
+          <RetryBanners />
         </section>
 
         <section>

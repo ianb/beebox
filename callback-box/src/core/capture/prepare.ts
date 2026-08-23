@@ -12,12 +12,12 @@
  * the written cards → commit → deliver. Transcription is deterministic in tests
  * via the `fake` service, so the whole worker doctests end-to-end.
  *
- * Two concurrency guards live at module scope:
- * - `inFlightIds` — a set of staging ids currently being prepared in THIS
- *   process, so a startup resume can't race a live finalize's worker.
- * - `commitChain` — serializes the stage→commit span across workers so two
- *   preparations can't interleave `git add`/`git commit` and commit each
- *   other's files; each commit is additionally pathspec-scoped (`commitPaths`).
+ * One concurrency guard lives at module scope: `inFlightIds`, a set of staging
+ * ids currently being prepared in THIS process, so a startup resume can't race
+ * a live finalize's worker. Serializing the stage→commit span used to be this
+ * module's job too (a bespoke promise chain); it now comes from the box git
+ * lock that `stageAndCommitPaths` holds, which covers every writer on the box
+ * rather than only concurrent captures.
  */
 
 import * as fs from "node:fs/promises";
@@ -93,15 +93,6 @@ export interface PrepareCaptureDeps {
 const inFlightIds = new Set<string>();
 
 /**
- * Tail of a promise chain serializing every stage→commit span across workers.
- * Two concurrent captures each stage into the shared git index; without
- * serialization a plain `commit` would sweep the OTHER worker's staged files
- * under the wrong message (and the loser hits "nothing to commit"). We both
- * serialize the span AND scope each commit to its own pathspec.
- */
-let commitChain: Promise<unknown> = Promise.resolve();
-
-/**
  * Wall-clock per-step timing for one preparation run. Marks accumulate as
  * (step, elapsed-since-previous-mark) spans; `report` writes one summary line
  * to `.callback-box/capture-timing.log` under the box (and stdout).
@@ -133,27 +124,22 @@ class StepTimer {
   }
 }
 
-function withCommitLock<T>(fn: () => Promise<T>): Promise<T> {
-  const result = commitChain.then(fn, fn);
-  commitChain = result.then(
-    () => {},
-    () => {},
-  );
-  return result;
-}
-
 /**
- * Stage + commit exactly the given paths, serialized against every other
- * capture commit. `stageAndCommitPaths` supplies the idempotency (no-op when
- * the paths are already clean, "nothing to commit" race treated as success)
- * and the staged-only commit scoping that keeps a fully-gitignored attach
- * scope (post-annex boxes) from failing the commit pathspec.
+ * Stage + commit exactly the given paths. Serialization is no longer this
+ * module's job: `stageAndCommitPaths` holds the box git lock across its whole
+ * span (`lib/git-lock.ts`), which serializes concurrent captures against each
+ * other AND against every other writer on the box — the bespoke promise chain
+ * that used to live here only covered the first. It also supplies the
+ * idempotency (no-op when the paths are already clean, "nothing to commit"
+ * race treated as success) and the staged-only commit scoping that keeps a
+ * fully-gitignored attach scope (post-annex boxes) from failing the commit
+ * pathspec.
  */
 async function commitPathsSerialized(
   boxRoot: string,
   opts: { paths: string[]; message: string; trailers?: Record<string, string> },
 ): Promise<void> {
-  await withCommitLock(() => stageAndCommitPaths(boxRoot, opts));
+  await stageAndCommitPaths(boxRoot, opts);
 }
 
 /**
@@ -196,7 +182,7 @@ async function runPreparation(deps: PrepareCaptureDeps): Promise<void> {
   // Resolve the delivery target ONCE, before writing cards, so placement
   // (`tmp-capture/` under the target's contextDir) and delivery agree. Persist
   // a concrete resolved id so a retry reuses it rather than re-resolving.
-  const target = await resolveCaptureDeliveryTarget({ boxRoot, targetSessionId: session.targetSessionId });
+  const target = await resolveCaptureDeliveryTarget({ boxRoot, registry, targetSessionId: session.targetSessionId });
   if (target.sessionId !== null && target.sessionId !== session.targetSessionId) {
     await setStagingTargetSessionId({ boxRoot, id, targetSessionId: target.sessionId });
   }

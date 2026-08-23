@@ -4,8 +4,9 @@
  * This is the canonical lock for the project. All cross-process locks
  * (wakeup mutex in cli/lib/lock.ts, scheduled-script + lock-group locks
  * in core/schedule/state.ts, reactor mutex in core/reactor/engine.ts, the
- * mobile device-store revoke in core/mobile/pairing.ts, ...) sit on top of
- * it. Don't add a new lock surface elsewhere — extend or wrap this instead.
+ * mobile device-store revoke in core/mobile/pairing.ts, the box git-index
+ * lock in git-lock.ts, ...) sit on top of it. Don't add a new lock surface
+ * elsewhere — extend or wrap this instead.
  *
  * ## How it works — the exclusion invariant
  *
@@ -112,6 +113,19 @@
  * `withCardLock` (`card-lock.ts`), not this. The two layers compose:
  * card-lock serializes same-process racers; file-lock arbitrates across
  * processes. See `card-lock.ts` for the full lock table.
+ *
+ * The three locks and what each is for:
+ *
+ *   - `withCardLock` (`card-lock.ts`) — in-process, one FILE. Protects a
+ *     read-modify-write from a lost update. Throws on reentrancy.
+ *   - `withBoxGitLock` (`git-lock.ts`) — cross-process, one REPOSITORY.
+ *     Protects a span that holds the git index. Reentrant, and fails OPEN so
+ *     it can never wedge a box.
+ *   - `withFileLock` (here) — cross-process, one arbitrary PATH. Everything
+ *     else, and what the other two are built on.
+ *
+ * The established acquisition order is card-lock → box-git-lock. Nothing
+ * takes a card lock while holding the git lock; keep it that way.
  *
  * ## API
  *

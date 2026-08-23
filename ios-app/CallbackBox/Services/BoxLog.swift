@@ -70,9 +70,10 @@ enum BoxLog {
         }
     }
 
-    /// The `warn` counterpart of the targeted `info` above, for a recovered
-    /// failure whose box the call site already knows — a refusal answered to the
-    /// web, say, which is diagnosable only if it is attributed to the right box.
+    /// Fire-and-forget a warning for a known box. Same identity reasoning as the
+    /// targeted `info` overload: a warning about a wedged state is worthless if a
+    /// box switch reattributes it — a refusal answered to the web, say, is
+    /// diagnosable only if it is attributed to the right box.
     static func warn(_ message: String, category: BoxLogCategory, targetBoxID: UUID) {
         logger(for: category).warning("\(message, privacy: .public)")
         Task {

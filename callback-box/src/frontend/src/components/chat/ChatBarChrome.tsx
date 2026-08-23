@@ -34,6 +34,7 @@ import { SessionChip } from "./SessionChip";
 import { VoiceChip } from "./VoiceChip";
 import type { SessionEntry } from "../../api";
 import type { OnZoomView } from "./ChatMessages";
+import type { ChatAgentEngine } from "@shared/chat-models.js";
 
 export interface ChatBarChromeProps {
   /** The session's bound directory: `""` for box root, null for no context. */
@@ -47,9 +48,12 @@ export interface ChatBarChromeProps {
   onToggleMute: () => void;
   narrationEnabled: boolean;
   onToggleNarration: () => void;
+  hqDictationEnabled: boolean;
+  onToggleHqDictation: () => void;
   hqInFlight: boolean;
   onNewSession: () => void;
   selectedModel: string | null;
+  agentEngine: ChatAgentEngine | null;
   onSelectModel: (model: string | null) => void;
   onStopProcess: () => void;
   onRestartProcess: () => void;
@@ -66,8 +70,9 @@ export interface ChatBarChromeProps {
 export function ChatBarChrome(props: ChatBarChromeProps) {
   const {
     contextDir, boxSlug, sessionLabel, messages, onZoomView,
-    muted, onToggleMute, narrationEnabled, onToggleNarration, hqInFlight,
-    onNewSession, selectedModel, onSelectModel, onStopProcess, onRestartProcess, onCompactSession,
+    muted, onToggleMute, narrationEnabled, onToggleNarration,
+    hqDictationEnabled, onToggleHqDictation, hqInFlight,
+    onNewSession, selectedModel, agentEngine, onSelectModel, onStopProcess, onRestartProcess, onCompactSession,
     sessionId, running, busy, debugView, setDebugView, showDebugLog, setShowDebugLog,
   } = props;
 
@@ -103,6 +108,7 @@ export function ChatBarChrome(props: ChatBarChromeProps) {
         contextDir={contextDir}
         onNewSession={onNewSession}
         selectedModel={selectedModel}
+        agentEngine={agentEngine}
         onSelectModel={onSelectModel}
         onStopProcess={onStopProcess}
         onRestartProcess={onRestartProcess}
@@ -120,6 +126,8 @@ export function ChatBarChrome(props: ChatBarChromeProps) {
         onToggleMute={onToggleMute}
         narrationEnabled={narrationEnabled}
         onToggleNarration={onToggleNarration}
+        hqDictationEnabled={hqDictationEnabled}
+        onToggleHqDictation={onToggleHqDictation}
         hqInFlight={hqInFlight}
       />
     </>

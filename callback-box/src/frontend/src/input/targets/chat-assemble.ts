@@ -16,6 +16,7 @@
 import type { ChatImageAttachment } from "../../api-chat";
 import { applySelections } from "../../lib/selection/serialize";
 import type { Emission } from "../emission";
+import { markUnsureWords } from "../unsure-words";
 
 /**
  * Frame state at the moment of sending, pre-formatted as plain values:
@@ -67,7 +68,17 @@ export function assembleChatMessage(
   const text = missingTokens.length === 0
     ? emission.text
     : [emission.text, ...missingTokens].filter((s) => s.length > 0).join(" ");
-  const body = applySelections(text, {
+  // <unsure> marking (Track 3, docs/plans/transcript-confidence.md) runs on
+  // `text` — before selections fold in — so the words-stream alignment never
+  // has to reason about `<user-selection>` markup, and never risks landing a
+  // wrap partway through one. Selection anchor-matching (below) still works
+  // against the marked text; a spoken anchor phrase that happens to include a
+  // marked word is a narrow, accepted trade for keeping the marker placement
+  // itself simple and never XML-corrupting.
+  const markedText = emission.origin === "voice" && emission.words !== undefined
+    ? markUnsureWords(text, { words: emission.words, spokenStart: emission.spokenStart ?? 0 })
+    : text;
+  const body = applySelections(markedText, {
     selections: [...emission.selections],
   });
 
@@ -75,7 +86,8 @@ export function assembleChatMessage(
   // escaped/fenced. It is first-party owner input (the trust root, not an
   // injection vector), and — critically — `applySelections` inserts
   // `<user-selection>` child elements into it that the agent and the display
-  // layer both parse as structure; uniformly escaping the body would launder
+  // layer both parse as structure, and the body may now carry `<unsure>`
+  // marks (Track 3) the same way; uniformly escaping the body would launder
   // those intended tags. The masquerade boundary lives one level down, in
   // selection-serialize's escapeText/escapeAttr on each selection's own
   // text/attrs. Fencing here is reserved for untrusted content (card/job/
@@ -85,7 +97,24 @@ export function assembleChatMessage(
     wrapped = `<typed${attrs}>${body}</typed>`;
   } else {
     const diarizedAttr = emission.diarized ? " diarized=\"1\"" : "";
-    wrapped = `<speech${diarizedAttr}${attrs}>${body}</speech>`;
+    // `stt` is stamped when the message carries transcription provenance —
+    // either captured word-confidence data (`deepgram`) or an HQ pass that
+    // replaced the realtime text (`hq`, docs/implemented-plans/hq-dictation-switch.md).
+    // The two are mutually exclusive: an HQ pass always drops the realtime
+    // words it replaced (the pre-existing HQ-drop rule), so `emission.words`
+    // is never defined on an `hqText` emission. Absence of `stt` means no
+    // provenance data backs this message at all — distinct from "captured,
+    // none unsure" (`deepgram` with no `<unsure>` marks).
+    const sttAttr = emission.hqText === true
+      ? " stt=\"hq\""
+      : emission.words !== undefined ? " stt=\"deepgram\"" : "";
+    // `message-id` (retranscription-in-chat plan, Vocabulary lock-ins) is the
+    // emission id — the same value returned as `messageId` below and the key
+    // the audio retention store uses — stamped on every voice send so the
+    // message stays addressable after the pending→authoritative uuid swap.
+    // Typed sends carry no recording to point back at, so they don't get it.
+    const messageIdAttr = ` message-id="${emission.id}"`;
+    wrapped = `<speech${sttAttr}${diarizedAttr}${messageIdAttr}${attrs}>${body}</speech>`;
   }
 
   // File attachments emit a sibling <attachments> block of markdown-style

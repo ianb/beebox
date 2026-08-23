@@ -6,10 +6,12 @@
 import { useParams } from "@tanstack/react-router";
 import { href } from "../lib/routing";
 import { ClaudeCodeSection } from "../components/admin/ClaudeCodeSection";
+import { AgentEngineSection } from "../components/admin/AgentEngineSection";
 import { AllowedEmailsSection } from "../components/admin/AllowedEmailsSection";
 import { GoogleServicesSection } from "../components/admin/GoogleServicesSection";
 import { GmailFiltersSection } from "../components/admin/GmailFiltersSection";
 import { TelegramSection } from "../components/admin/TelegramSection";
+import { SecretsSection } from "../components/admin/SecretsSection";
 import { NotificationsSection } from "../components/admin/NotificationsSection";
 import { TailscaleSection } from "../components/admin/TailscaleSection";
 import { InviteSection } from "../components/admin/InviteSection";
@@ -31,12 +33,14 @@ export function AdminPage() {
         <Text as="h1" size="2xl" weight="bold">Admin</Text>
 
         <Stack gap="lg">
+          <AgentEngineSection />
           <ClaudeCodeSection />
           <AllowedEmailsSection />
           <InviteSection />
           <GoogleServicesSection />
           <GmailFiltersSection />
           <TelegramSection />
+          <SecretsSection />
           <NotificationsSection />
           <TailscaleSection />
         </Stack>

@@ -39,6 +39,8 @@ interface PendingEntry<TFulfillment> {
   graceTimer: NodeJS.Timeout | null;
   /** Started at create when `ackGraceMs` is set; fires `no-client` if no ack. */
   ackTimer: NodeJS.Timeout | null;
+  /** This entry's grace duration — the per-call override, or the factory default. */
+  graceMs: number;
 }
 
 export interface PendingBrowserRequests<TFulfillment> {
@@ -54,6 +56,15 @@ export interface PendingBrowserRequests<TFulfillment> {
   create(opts: {
     timeoutMs: number;
     ackGraceMs?: number | undefined;
+    /**
+     * Per-call override of the grace window `reportNone` starts (see
+     * {@link CreatePendingBrowserRequestsOptions.graceMs}). Falls back to the
+     * factory default when omitted — every existing consumer (screenshot) is
+     * unaffected. `createLastAudioPending` passes this per request so a
+     * "none" from a tab that doesn't hold a TARGETED recording can't cut a
+     * still-in-flight slower tab's answer down to a fixed short window.
+     */
+    graceMs?: number | undefined;
   }): { requestId: string; outcome: Promise<PendingOutcome<TFulfillment>> };
   /**
    * A client received the request and is handling it. Cancels the ack window
@@ -108,7 +119,7 @@ export function createPendingBrowserRequests<TFulfillment>(
   }
 
   return {
-    create({ timeoutMs, ackGraceMs }) {
+    create({ timeoutMs, ackGraceMs, graceMs: graceMsOverride }) {
       const id = randomUUID();
       let resolve!: (outcome: PendingOutcome<TFulfillment>) => void;
       const outcome = new Promise<PendingOutcome<TFulfillment>>((r) => {
@@ -119,7 +130,13 @@ export function createPendingBrowserRequests<TFulfillment>(
         ackGraceMs === undefined
           ? null
           : setTimeout(() => settle(id, { status: "no-client" }), ackGraceMs);
-      pending.set(id, { resolve, timeoutTimer, graceTimer: null, ackTimer });
+      pending.set(id, {
+        resolve,
+        timeoutTimer,
+        graceTimer: null,
+        ackTimer,
+        graceMs: graceMsOverride ?? graceMs,
+      });
       return { requestId: id, outcome };
     },
     ack(requestId) {
@@ -145,7 +162,7 @@ export function createPendingBrowserRequests<TFulfillment>(
       }
       if (entry.graceTimer === null) {
         clearTimeout(entry.timeoutTimer);
-        entry.graceTimer = setTimeout(() => settle(requestId, { status: "none" }), graceMs);
+        entry.graceTimer = setTimeout(() => settle(requestId, { status: "none" }), entry.graceMs);
       }
       return true;
     },

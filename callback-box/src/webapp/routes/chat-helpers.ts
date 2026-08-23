@@ -21,6 +21,7 @@ import {
   isSupportedImageMediaType,
 } from "../../services/claude-chat-content.js";
 import { isActivityKind, type ActivityKind, type CardStateDetails } from "../../core/chat/card-activity.js";
+import type { ChatSendInput } from "../../core/chat/session/index.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { readJpegOrientation, ORIENTATION_NORMAL } from "../../shared/image-orientation.js";
 import { CHAT_CHANNELS, type ChatChannel } from "../../shared/chat-channel.js";
@@ -174,6 +175,27 @@ export function extractCardFields(
   }
   if (Object.keys(details).length > 0) out.cardState = details;
   return out;
+}
+
+/**
+ * Assemble the turn input both send paths hand the session — the queued copy
+ * and the one dispatched to the engine differ only in their text, so the
+ * optional-field filtering lives here once rather than at each call site.
+ */
+export function buildSendInput(
+  { text, images, channel, cardFields }: {
+    text: string;
+    images: SendBody["images"];
+    channel: ChatChannel | undefined;
+    cardFields: { openCard?: string; cardActivity?: ActivityKind[]; cardState?: CardStateDetails };
+  },
+): ChatSendInput {
+  return {
+    text,
+    ...(images ? { images } : {}),
+    ...(channel !== undefined ? { channel } : {}),
+    ...cardFields,
+  };
 }
 
 export function escapeXmlAttr(v: string): string {

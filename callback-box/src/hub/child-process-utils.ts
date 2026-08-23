@@ -9,6 +9,27 @@
 import http from "node:http";
 import { errnoCode } from "../lib/error-guards.js";
 
+export { DEV_BUNDLE_RELOAD_EXIT_CODE } from "../lib/dev-bundle-reload.js";
+
+export const KILL_GRACE_MS = 2000;
+
+export function restartAfterDevBundleReload(options: {
+  code: number | null;
+  expectedCode: number;
+  box: { child: unknown; port: number | undefined; status: string; restarts: number; restartTimer: NodeJS.Timeout | undefined },
+  launch: () => void;
+}): boolean {
+  const { code, expectedCode, box, launch } = options;
+  if (code !== expectedCode) return false;
+  box.child = undefined;
+  box.port = undefined;
+  box.status = "starting";
+  box.restarts += 1;
+  box.restartTimer = setTimeout(launch, 0);
+  box.restartTimer.unref();
+  return true;
+}
+
 /**
  * HTTP-level readiness probe: TCP-accepting isn't enough, a process can
  * accept connections before its request handlers are wired up. Any HTTP

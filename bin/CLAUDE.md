@@ -84,6 +84,22 @@ that worktree, so boxes cold-start and idle-stop independently of the
 worktree they live in. `CB_DEV_NO_HUB=1` reverts to the router spawning
 a single legacy `server-main.ts` Fastify process per worktree instead.
 
+In a development checkout, `callback-box/bin/cb` stamps the exact CLI bundle
+artifact it execs. A hub-spawned `cb serve` child watches that identity; when a
+later build replaces it, the child stops admitting mutations, finishes active
+requests, chat turns, and scheduled-chat deliveries, then exits with the
+expected reload code. The hub supervisor respawns it without consuming the
+crash-loop budget. Schedule timers pause during the drain and re-arm from their
+persisted entries after replacement. A drain that cannot reach a safe boundary
+within ten minutes reopens mutations and keeps the loaded code, with a warning,
+rather than wedging the box read-only. The global scheduler uses the same
+identity but checks only
+between complete all-box passes; its launchd `KeepAlive` service performs the
+replacement. Packed installs and `CB_CLI_PREBUILT` production checkouts never
+opt into this dev behavior. A standalone foreground `cb serve`/scheduler has no
+safe owner to replace it and exits or remains visible rather than self-spawning
+an overlapping successor.
+
 `router.ts` holds the process-supervision/proxying machinery only; the
 `/<worktree>/dev/` HTML rendering (manifest, markdown doc browser, static
 artifact serving) lives in the sibling `router-docs.ts`, imported one-way
@@ -191,9 +207,18 @@ agent-browser daemons, the startup sweep also pattern-matches
 project-scoped orphans (`process-cleanup.ts`, shared with `panic`):
 vite/fastify orphaned to PID 1 (a live router — incl. an isolated test
 one — keeps its children, so they're spared) and agent-browsers whose
-worktree has no active `claude` session. The generation leak that made
+worktree has no live agent session. The generation leak that made
 this necessary (concurrent cold requests racing to spawn duplicate
 vite+fastify pairs) is fixed at the source in `ensureRunning`.
+
+That liveness answer comes from `bin/workstreams agent-liveness`, i.e. from
+`wt_other_agent_live` — the same tri-state guard everything else uses, so
+`unknown` spares the daemon and a codex session counts exactly as a claude one.
+`process-cleanup.ts` carried its own two-state copy until 2026-08-18; it knew
+only `claude --worktree <name>` argv plus `pgrep -x claude`, which meant it was
+blind to codex (now the default worker agent) and — per the pgrep note below —
+to most claude sessions too, and it reclaimed a live Codex worktree's browser
+mid-session.
 
 ## `bin/workstreams` is the agent-neutral control surface
 
@@ -247,6 +272,10 @@ combination rather than answering wrongly.
 merged and dirty checks only. Unmerged commits are recoverable from a branch; a
 running session's working directory is not.
 
+The same rule reaches beyond worktree removal: `bin/process-cleanup.ts` asks
+through `bin/workstreams agent-liveness` and spares an agent-browser on
+`unknown`, including when the oracle itself can't be run.
+
 ## Lifecycle commands
 
 - `bin/workstreams list [--json]` — every worktree joined across all three
@@ -278,8 +307,12 @@ running session's working directory is not.
 - `bin/workstreams close <name> [--force]` — close a merged, clean live tab;
   force does not override liveness/TTY verification
 - `bin/workstreams resume <name> [--agent claude|codex] [--fresh]
-[--at-final-sha]` — focus, reopen, or recreate according to registry and git
-  state; unknown and unattached names are deliberately refused
+[--at-final-sha] [--] [<briefing> | - | @file]` — focus, reopen, or recreate
+  according to registry and git state; unknown and unattached names are
+  deliberately refused. A dormant session launches with the supplied briefing
+  (including `codex resume --last`); a live session writes a unique local file,
+  focuses its tab when possible, and reports `manual forwarding required`.
+  Use `--` before literal briefing text that begins with `-`.
 - `bin/workstreams reset-test <name>` — hard-reset the isolated test1 clone to
   its `test-setup` branch
 - `bin/workstreams confirm-tested <issue-basename>` — clear a landed issue's
@@ -289,10 +322,15 @@ running session's working directory is not.
   code is merged, clean, and no agent is live
 - `bin/workstreams status` — raw router status JSON (PIDs, ports, idle ms)
 - `bin/workstreams down <name>` — stop one worktree's processes now
+- `bin/workstreams agent-liveness <path>...` — tri-state claude/codex liveness
+  per absolute path, as JSON, from the one shared guard. Takes paths rather
+  than names so a caller with its own notion of where checkouts live needs no
+  agreement about roots. For tooling that stands in front of something
+  destructive; `process-cleanup.ts` is the caller.
 - `bin/workstreams panic` — kill router + all known children + wipe state,
   then reclaim project-scoped agent-browsers and any stray vite/fastify
   the pidfiles never tracked (use if you suspect orphans). Spares
-  processes owned by an active sibling `claude` session.
+  processes owned by a live sibling `claude` or `codex` session.
 
 Sweep treats an open issue whose `workstream:` matches and whose `needs:` still
 contains `manual-testing` as a cull pin. Once released or confirmed, an
@@ -309,6 +347,18 @@ actions, with `/workstreams/issues/`, `/workstreams/plans/`, and
 app child without restarting the router. Router or supervisor changes still
 require one boxholder-run `pnpm dev` restart after merge. Never restart the
 shared router from a worktree session.
+
+`bin/workstreams list` is also the routing inventory. Its JSON and table carry
+an optional one-line session description plus two separate decisions:
+`routing.state` (`live`, `dormant`, `stale`, `removed`, `uncertain`) and
+`routing.action` (`manual-forward`, `resume-with-briefing`,
+`new-stream-preferred`, `investigate`). `stale` means approximately 14 days
+without trustworthy activity and is guidance to start a new stream, not a
+resume prohibition. The liveness input still comes only from
+`wt_other_agent_live`; the app consumes this projection and never reimplements
+the destructive guard. Non-worktree directories under the managed root are
+reported and skipped. The app parses rows independently so one malformed row
+produces a visible warning instead of blanking every view.
 
 Isolated router testing: `CALLBACK_STATE_DIR` + `ROUTER_PORT` run a
 second router without touching the live one (which only picks up
@@ -342,8 +392,11 @@ claude workers, which run unsandboxed via `--dangerously-skip-permissions` (a
 `workspace-write` sandbox can't commit/`/finish` in a linked worktree, since codex
 force-mounts `.git` read-only). Launch-scoped `-c` overrides pre-trust the worktree
 and raise `project_doc_max_bytes`; nothing is persisted to `~/.codex/config.toml`.
-`--model` maps to `codex -m` (OpenAI model names). Remote Control is claude-only
-and ignored for codex.
+`--model` maps to `codex -m` (OpenAI model names). When it is omitted, the
+launcher explicitly uses `gpt-5.6-sol` rather than inheriting Codex CLI state;
+this keeps a stale or unavailable saved default from breaking the first turn.
+An explicit model still wins, including the model recorded for a resumed
+workstream. Remote Control is claude-only and ignored for codex.
 
 Codex's `workspace-write` sandbox confines **writes** (workspace + the `--add-dir`
 roots) and network, but **reads are global** — verified empirically 2026-08-04: a
@@ -438,6 +491,44 @@ the session that spawned it (this happened on 2026-08-04). Callers should
 _also_ pass `--setting-sources user` so the project's hooks never load at all;
 the skill documents that as load-bearing. Two independent guards because the
 failure destroys work.
+
+## Document comments (`bin/comments`)
+
+The boxholder's channel for talking to an agent **about a document**: a remark
+anchored to a span, written in the browser at `/workstreams/browse`, waiting in
+a store until an agent reads it. Design: `callback-box/docs/plans/document-comments.md`.
+
+- **Read them.** `bin/comments show <path>` for one document (any path spelling
+  — absolute, repo-relative, cwd-relative); `bin/comments list` for everything
+  waiting; **`bin/comments list --workstream <name>` for what is addressed to
+  YOUR workstream**, newest first. That last one is the command an agent
+  actually wants.
+- **Clear them when handled.** `bin/comments clear <path> [--id <id>]`. Nothing
+  expires on its own — a comment waits until an agent says it is done with it.
+  Folding a remark into the document itself is the usual resolution; quote it
+  rather than paraphrasing, since the boxholder's words are what the store kept.
+- **`--json` on any command** for a machine reader. `bin/comments add` exists so
+  the app can write through one implementation; a human types in the browser.
+
+**Where they live, and why nothing can delete them.** A store beside the main
+checkout (`<parent>/dev-comments/`, override `CALLBACK_COMMENTS_ROOT`), mounted
+read-only into each checkout as a gitignored `comments` symlink. It is the
+exhibits store's third persistence class: survives a worktree cull, never
+merges, never reaches git. Two namespaces, because a repository-relative path is
+not a unique document — `tracked/<path>` follows a file everywhere, while
+`worktree/<name>/<path>` stays put, since two worktrees routinely hold entirely
+different `scratch/notes.md`.
+
+**The cost of being cull-proof** is that a culled workstream's comments on
+untracked files outlive it, and a recreated workstream of the same name inherits
+them. Filed as
+`issues/features/2026-08-22-orphaned-comment-namespaces-after-a-cull.md`; the fix
+direction is to report orphans, never to delete at cull time.
+
+**The CLI is the only writer.** The workstreams app shells out to it rather than
+reaching into the store, the same way it invokes `bin/workstreams` for lifecycle
+rather than reimplementing the guards. Two writers to one YAML format sharing
+one lock protocol is where duplication stops being controllable.
 
 ## Private-issues shadow repo (`private-issues`)
 

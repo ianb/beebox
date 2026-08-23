@@ -31,6 +31,8 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { nativeEmissionFromDetail, parseNativeEmissionDetail } from "../../src/frontend/src/components/chat/native-emission.js";
 import { nativeCommandResultFromDetail, nativeComposerCommandAcknowledgementFromDetail, nativeComposerCommandFromDetail } from "../../src/frontend/src/components/chat/native-composer-command.js";
+import { nativeLastAudioRequestFromDetail } from "../../src/frontend/src/components/chat/native-last-audio-request.js";
+import { nativeSpeechCommandFromDetail } from "../../src/frontend/src/components/chat/native-speech-command.js";
 import { detectKeyword, appendSendKeywordTag } from "../../src/frontend/src/lib/audio/speech-keywords.js";
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
@@ -121,6 +123,22 @@ function validateCommandResult(fx) {
 // ── composer-command-ack: strict native→web mutation result ──
 function validateComposerCommandAcknowledgement(fx) {
   const out = nativeComposerCommandAcknowledgementFromDetail(fx.input);
+  return deepEqual(out, fx.expected)
+    ? { ok: true }
+    : { ok: false, detail: `got ${JSON.stringify(out)}` };
+}
+
+// ── last-audio-request: strict web→native retranscription relay ──
+function validateLastAudioRequest(fx) {
+  const out = nativeLastAudioRequestFromDetail(fx.input);
+  return deepEqual(out, fx.expected)
+    ? { ok: true }
+    : { ok: false, detail: `got ${JSON.stringify(out)}` };
+}
+
+// ── speech-command: strict native→web barge-in command ──
+function validateSpeechCommand(fx) {
+  const out = nativeSpeechCommandFromDetail(fx.input);
   return deepEqual(out, fx.expected)
     ? { ok: true }
     : { ok: false, detail: `got ${JSON.stringify(out)}` };
@@ -307,6 +325,32 @@ durable; rejection always carries a user-visible reason.
 ```ts
 runFamily("composer-command-ack", validateComposerCommandAcknowledgement)
 => {"family":"composer-command-ack","cases":3,"pass":3}
+```
+
+## last-audio-request
+
+The relay that lets the phone answer an agent's retranscription request. Both
+ids are required: without `requestId` there is no URL to answer at, and without
+`messageId` the answer cannot satisfy the server's echo-and-verify check, so
+either one missing is a rejection rather than a best-effort send. `sessionId` is
+the relaying tab's own, and is null before the tab has been assigned one.
+
+```ts
+runFamily("last-audio-request", validateLastAudioRequest)
+=> {"family":"last-audio-request","cases":5,"pass":5}
+```
+
+## speech-command
+
+The native record button's barge-in. Strict in both directions it can drift: an
+unversioned payload is a pre-contract sender and an unknown `action` is a newer
+one, and neither may be guessed at — there is no acknowledgement channel to
+report a guess through, so a dropped command stays dropped rather than stopping
+speech the sender did not ask to stop.
+
+```ts
+runFamily("speech-command", validateSpeechCommand)
+=> {"family":"speech-command","cases":4,"pass":4}
 ```
 
 ## receipt

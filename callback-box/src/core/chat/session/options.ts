@@ -24,7 +24,9 @@ export interface ChatSessionOptions {
    */
   sessionFile?: string | null;
   /** Path to the current-model pointer, relative to boxRoot. Default: .callback-box/chat-model.json. */
-  modelFile?: string;
+  modelFile?: string | null;
+  /** Select the model file once a native harness assigns a fresh session id. */
+  modelFileForSession?: (sessionId: string) => string;
   /** Extra env vars merged into the SDK subprocess env. */
   extraEnv?: Record<string, string>;
   /** Called once when the SDK assigns a new session ID. Used for per-session bookkeeping. */
@@ -43,6 +45,22 @@ export interface ChatSessionOptions {
    * registry to construct an instance bound to a specific existing session.
    */
   initialSessionId?: string;
+  /**
+   * This session's id was *coined* — reserved before the conversation existed
+   * (`reserve.ts`) rather than assigned by the harness. Its first run starts a
+   * fresh conversation under that id instead of resuming one; once a transcript
+   * exists, later runs resume normally like any other session.
+   */
+  coinedSessionId?: string;
+  /**
+   * Called when a coined session starts its first run. A coined session never
+   * fires `onSessionIdAssigned` — `captureAssignedSessionId` returns early when
+   * the session already knows its id — so this is where the bookkeeping that
+   * assignment used to trigger (history entry, feature seeds, most-active
+   * pointer, husk card) happens instead. Fired at first run rather than at
+   * reserve so an abandoned new chat leaves nothing behind.
+   */
+  onFirstRunStart?: (sessionId: string) => Promise<void> | void;
   /** Injectable backend — real by default; tests inject the fake. */
   backend?: ChatBackend;
   /**

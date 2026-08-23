@@ -8,6 +8,8 @@ import { precheck } from "../../../src/core/maps/precheck.js";
 import { saveMapState } from "../../../src/core/maps/state.js";
 import { getHead } from "../../../src/lib/git.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { symlink } from "node:fs/promises";
+import { join } from "node:path";
 ```
 
 ## Skip reasons
@@ -327,6 +329,76 @@ Notes:
 
 `emails/keep` is mapped because it has two subdirs; `emails/keep/sub` is
 a leaf and skipped under the container rule.
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Instruction files and box config never appear in a listing
+
+Every box gets an `AGENTS.md` symlink beside each `CLAUDE.md` so a Codex
+session finds the same content under the name it reads. Both names are meta —
+listing either one asks the agent to describe an instruction file in a content
+MAP, which it correctly refuses to do, so the precheck never goes quiet and
+every later run fails the same way. `config/box.json` is machine-owned config
+the admin UI rewrites, and is hidden for the same reason.
+
+The mirror is a real symlink (git mode 120000), so this seeds one rather than a
+regular file: `readdir` reports it via `isDirectory() === false` and `ls-tree`
+as a blob, and the fix has to hold on both paths.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("store/notes/a.md", "a\n");
+await box.write("store/refs/b.md", "b\n");
+await box.write("store/CLAUDE.md", "@MAP.md\n");
+await symlink("CLAUDE.md", join(box.root, "store", "AGENTS.md"));
+await box.write("config/box.json", '{"timezone":"UTC"}');
+await box.write("config/a/x.md", "x");
+await box.write("config/b/y.md", "y");
+box.commitAll("seed");
+
+const brief = await precheck({ boxRoot: box.root });
+const children = (dir: string) => brief.tasks.find((t) => t.dir === dir)?.children.join(", ") ?? "(no task)";
+print(`store: ${children("store")}`);
+print(`config: ${children("config")}`);
+=>
+store: notes/, refs/
+config: a/, b/
+```
+
+The git-side listing agrees. This half has to be set up so the mirror appears
+*between* the recorded state and HEAD — `listChildrenAtCommit` compares only the
+immediate children of the mapped directory, so planting the symlink anywhere
+else, or before the state is stamped, asserts nothing:
+
+```ts continue
+await box.write("people/ann/a.md", "a\n");
+await box.write("people/bob/b.md", "b\n");
+await box.write("people/MAP.md", "# Map: people\n");
+box.commitAll("people, no instruction files yet");
+await saveMapState({
+  boxRoot: box.root,
+  state: { maps: { people: { asOf: await getHead(box.root), generatedAt: "t" } } },
+});
+
+const peopleTask = async () => {
+  const task = (await precheck({ boxRoot: box.root })).tasks.find((t) => t.dir === "people");
+  return task === undefined ? "(none)" : `${task.action}:${task.added.join("|")}`;
+};
+
+await box.write("people/CLAUDE.md", "@MAP.md\n");
+await symlink("CLAUDE.md", join(box.root, "people", "AGENTS.md"));
+box.commitAll("plant instruction files");
+print(`after instruction files: ${await peopleTask()}`);
+
+await box.write("people/real.md", "r\n");
+box.commitAll("real file");
+print(`after real file: ${await peopleTask()}`);
+=>
+after instruction files: (none)
+after real file: update:real.md
+```
 
 ```ts cleanup
 await box.cleanup();

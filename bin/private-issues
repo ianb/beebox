@@ -62,6 +62,17 @@ pi_derive() {
   PI_WT_ROOT="$(dirname "$PI_MAIN")/private-issues-worktrees"
 }
 
+# Resolve the public worktree root through the shared lifecycle helper. The
+# basename is configurable, so deriving it again here would make orphan reports
+# disagree with the create/remove commands when CALLBACK_WORKTREE_ROOT is set.
+pi_public_worktree_root() {
+  local checkout="$1" paths_lib="$PI_MAIN/bin/lib/worktree-paths.sh"
+  [ -f "$paths_lib" ] || paths_lib="$(dirname "$0")/lib/worktree-paths.sh"
+  # shellcheck source=lib/worktree-paths.sh
+  . "$paths_lib"
+  wt_paths_init "$checkout"
+}
+
 # Identity check: never mutate (or adopt) a directory that merely sits at the
 # expected path — it must carry the marker init writes. A same-named
 # unrelated repo is refused, not silently used.
@@ -460,7 +471,8 @@ cmd_report_orphans() {
   pi_derive "$checkout" || exit 1
   pi_orphan_precheck || return 0
   local wt_root d name
-  wt_root="$(dirname "$PI_MAIN")/callback-worktrees"
+  pi_public_worktree_root "$checkout" || exit 1
+  wt_root="$WT_ROOT"
 
   for d in "$PI_WT_ROOT"/*; do
     [ -d "$d" ] || continue
@@ -481,7 +493,8 @@ cmd_sweep_orphans() {
   pi_derive "$checkout" || exit 1
   pi_orphan_precheck || return 0
   local wt_root d name ahead dirty branch
-  wt_root="$(dirname "$PI_MAIN")/callback-worktrees"
+  pi_public_worktree_root "$checkout" || exit 1
+  wt_root="$WT_ROOT"
 
   pi_lock || exit 1
   git -C "$PI_REPO" worktree prune

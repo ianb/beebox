@@ -3,7 +3,8 @@
  *
  * Mechanical post-agent work:
  *  1. Ensure each mapped directory has a CLAUDE.md that @-imports MAP.md
- *     (preserves any hand-edited content above/below).
+ *     (preserves any hand-edited content above/below), and an AGENTS.md
+ *     symlink beside it so a Codex session sees the new MAP too.
  *  2. Stamp the state file with the current HEAD for every dir the agent
  *     was asked to update.
  *  3. Prune state entries whose directories no longer exist.
@@ -19,6 +20,8 @@ import { simpleGit } from "simple-git";
 import { getHead } from "../../lib/git.js";
 import { loadMapState, saveMapState, type MapState } from "./state.js";
 import type { MapTask } from "./precheck.js";
+import { CLAUDE_MD } from "../agent-instruction-files.js";
+import { ensureAgentsMirror } from "../agent-context-mirrors.js";
 
 const INCLUDE_LINE = "@MAP.md";
 
@@ -90,11 +93,15 @@ async function mapWasRewritten(options: MapWasRewrittenOptions): Promise<boolean
  * else). If absent, create a minimal one-line file.
  */
 async function ensureClaudeMdInDir(boxRoot: string, dirRel: string): Promise<void> {
-  const claudePath = path.join(boxRoot, dirRel, "CLAUDE.md");
+  const claudePath = path.join(boxRoot, dirRel, CLAUDE_MD);
   const existing = await readFileOrNull(claudePath);
 
   if (existing === null) {
     await fs.writeFile(claudePath, INCLUDE_LINE + "\n");
+    // Codex reads only AGENTS.md, so a CLAUDE.md with no mirror beside it
+    // leaves the directory's new MAP invisible there until some later run of
+    // `generate-docs` happens to plant one.
+    await ensureAgentsMirror(claudePath);
     return;
   }
   if (existing.includes(INCLUDE_LINE)) return;

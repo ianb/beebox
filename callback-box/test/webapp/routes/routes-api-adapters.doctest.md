@@ -1,7 +1,8 @@
 # API adapters — authenticated provider pass-through for the frontend
 
 `/api/adapters/:adapter/<path>` forwards to the provider with the box's
-API key injected server-side (from
+API key injected server-side (the machine secret store's entry of the same
+name, falling back to the legacy
 `config/connectors/<adapter>.secret.json`). Views call providers that
 refuse CORS, and the key never reaches the browser. An adapter
 declaration is a couple of lines (base URL + auth header shape).
@@ -24,7 +25,7 @@ const upstreamUrl = await upstream.listen({ port: 0, host: "127.0.0.1" });
 process.env["CB_ADAPTER_BASE_REPLICATE"] = upstreamUrl;
 ```
 
-## Missing key → clear 503 naming the secret file
+## Missing key → clear 503 naming the grant to ask for
 
 ```ts
 const ctx = await makeTestServer();
@@ -37,7 +38,7 @@ res.statusCode
 => 503
 
 res.body.error
-=> No API key for "replicate" — create config/connectors/replicate.secret.json with {"apiKey": "..."}
+=> No API key for "replicate" — ask the boxholder to grant the "replicate" secret to this box (cb secrets set replicate; cb secrets grant <box> replicate)
 ```
 
 ## With a key: forwarded with auth injected, cookies stripped

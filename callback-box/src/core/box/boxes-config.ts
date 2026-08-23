@@ -16,6 +16,7 @@
 
 import * as fs from "node:fs/promises";
 import { fileExists } from "../../lib/file-exists.js";
+import { writeFileAtomic } from "../../lib/atomic-write.js";
 import * as path from "node:path";
 import * as os from "node:os";
 import { z } from "zod";
@@ -88,16 +89,17 @@ export async function loadBoxesConfig(configPath?: string): Promise<BoxesConfig>
   }
   if (configPath === undefined && (await fileExists(LEGACY_CONFIG_FILE))) {
     const parsed = await readBoxesConfigFile(LEGACY_CONFIG_FILE);
-    await fs.mkdir(CONFIG_DIR, { recursive: true });
-    await fs.writeFile(CONFIG_FILE, JSON.stringify(parsed, null, 2) + "\n");
+    await saveBoxesConfig(parsed);
     return parsed;
   }
   return { boxes: [] };
 }
 
 export async function saveBoxesConfig(config: BoxesConfig): Promise<void> {
-  await fs.mkdir(CONFIG_DIR, { recursive: true });
-  await fs.writeFile(CONFIG_FILE, JSON.stringify(config, null, 2) + "\n");
+  // Atomic: this is the scheduler's live box list, and a torn write leaves the
+  // scheduler unable to parse it at its next start (matching how the hub's own
+  // routing table is written — see src/hub/hub-config-edit.ts).
+  await writeFileAtomic(CONFIG_FILE, { content: JSON.stringify(config, null, 2) + "\n" });
 }
 
 /**

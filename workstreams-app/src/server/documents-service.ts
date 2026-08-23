@@ -22,6 +22,8 @@ import type { WorkstreamIssue } from "../shared/workstreams.js";
 import type { DocumentsService } from "./services.js";
 import { resolveIssueTarget, saveIssueChanges } from "./issues-mutation-service.js";
 import { resolveIssuePath } from "./issue-path.js";
+import { collectWorkstreamChanges, type WorkstreamChanges } from "./workstream-changes.js";
+import { createBrowseReads } from "./browse-reads.js";
 
 const DOCUMENT_CACHE_MS = 60_000;
 
@@ -30,6 +32,13 @@ interface DocumentsSnapshot {
   plans: Plan[];
   worktreeIssues: Array<{ worktree: string; issue: IssueRecord }>;
   overlay: OverlayResult;
+  /**
+   * Which workstreams changed which files. It rides the SAME 60-second
+   * snapshot as everything else rather than getting its own cache — one TTL
+   * for the surface means the file view and the issue views can never disagree
+   * about what a workstream has touched.
+   */
+  changes: WorkstreamChanges;
 }
 
 function issueKey(issue: Pick<IssueRecord, "relPath" | "visibility">): string {
@@ -184,12 +193,14 @@ export function createDocumentsService(options: DocumentsServiceOptions): Docume
       listPlans(options.mainRoot),
       collectOverlay(options.worktreesRoot),
     ]);
-    const changes = await worktreeIssueChanges(overlay);
+    const issueChanges = await worktreeIssueChanges(overlay);
+    const changes = await collectWorkstreamChanges(overlay.worktreeRoots);
     const value = {
       issues: [...publicIssues, ...privateIssues],
       plans,
       overlay,
-      ...changes,
+      changes,
+      ...issueChanges,
     };
     cache = { at: now(), value };
     return value;
@@ -212,6 +223,7 @@ export function createDocumentsService(options: DocumentsServiceOptions): Docume
   }
 
   return {
+    ...createBrowseReads({ mainRoot: options.mainRoot, snapshot }),
     async listIssues(): Promise<Issue[]> {
       const state = await snapshot();
       return (await currentIssues(state)).map((issue) =>

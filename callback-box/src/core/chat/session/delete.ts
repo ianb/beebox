@@ -21,6 +21,9 @@ import { finishDeletedHusks } from "./delete-husks.js";
 import { logDeletePhase } from "./delete-log.js";
 import { codexSessionExists, deleteCodexSession } from "./codex-transcript.js";
 import type { AgentEngine } from "../../box/config.js";
+import { rm } from "node:fs/promises";
+import { join } from "node:path";
+import { chatModelFileForSession } from "./state.js";
 
 async function inspectCodexStorage(boxRoot: string, sessionId: string) {
   const present = await codexSessionExists(boxRoot, sessionId);
@@ -205,6 +208,7 @@ export async function deleteChatSession(options: DeleteChatOptions): Promise<Del
         commitPending: husks.commitPending,
       };
     }
+    await rm(join(options.boxRoot, chatModelFileForSession(sessionId)), { force: true });
     logDeletePhase({ sessionId, phase: "husk", detail: { complete: true } });
     return { status: "deleted", sessionId, schedulesCancelled };
     } catch (error) {

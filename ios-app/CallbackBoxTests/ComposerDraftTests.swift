@@ -86,13 +86,50 @@ final class NativeVoiceTurnTests: XCTestCase {
         XCTAssertFalse(turn.isActive)
     }
 
-    func testStartingDuringSpeechWaitsForPlaybackToFinish() {
+    /// Pressing record while the box is talking is barge-in: the turn listens
+    /// immediately and the speech is cut off, matching the web composer's
+    /// `START_DICTATION`. Waiting instead is what made the button look broken
+    /// with the volume down.
+    func testPressingRecordDuringSpeechInterruptsInsteadOfWaiting() {
         var turn = NativeVoiceTurnState()
 
         XCTAssertEqual(turn.handle(.speechPlaybackChanged(playing: true)), .none)
-        XCTAssertEqual(turn.handle(.microphoneStarted), .none)
+        XCTAssertEqual(turn.handle(.microphoneStarted), .startDictationInterruptingSpeech)
+        XCTAssertTrue(turn.isActive)
+    }
+
+    /// The `playing:false` a barge-in causes must not restart the dictation the
+    /// press already started: only a mic that was deferred *for* the speech
+    /// resumes when it ends.
+    func testBargeInDoesNotRestartItselfWhenTheSpeechReportsStopped() {
+        var turn = NativeVoiceTurnState()
+        _ = turn.handle(.speechPlaybackChanged(playing: true))
+        _ = turn.handle(.microphoneStarted)
+
+        XCTAssertEqual(turn.handle(.speechPlaybackChanged(playing: false)), .none)
+        XCTAssertTrue(turn.isActive)
+    }
+
+    /// The automatic reopen after a send is the system resuming, not the user
+    /// talking, so it keeps waiting for the box to finish its reply.
+    func testSendingWhileTheBoxSpeaksStillWaitsForTheReplyToEnd() {
+        var turn = NativeVoiceTurnState()
+        _ = turn.handle(.microphoneStarted)
+        _ = turn.handle(.speechPlaybackChanged(playing: true))
+
+        XCTAssertEqual(turn.handle(.voiceMessageSent(closeMicrophone: false)), .none)
         XCTAssertEqual(turn.handle(.speechPlaybackChanged(playing: false)), .startDictation)
         XCTAssertTrue(turn.isActive)
+    }
+
+    /// Erasing a draft mid-speech is also automatic; it may not cut the box off.
+    func testErasingDraftDuringSpeechWaitsRatherThanInterrupting() {
+        var turn = NativeVoiceTurnState()
+        _ = turn.handle(.microphoneStarted)
+        _ = turn.handle(.speechPlaybackChanged(playing: true))
+
+        XCTAssertEqual(turn.handle(.draftErased), .none)
+        XCTAssertEqual(turn.handle(.speechPlaybackChanged(playing: false)), .startDictation)
     }
 
     func testErasingDraftKeepsActiveVoiceTurnListening() {
@@ -107,6 +144,29 @@ final class NativeVoiceTurnTests: XCTestCase {
         var turn = NativeVoiceTurnState()
 
         XCTAssertEqual(turn.handle(.draftErased), .none)
+        XCTAssertFalse(turn.isActive)
+    }
+
+    /// A turn whose dictation died is over. Left "active" it would keep the
+    /// screen awake for a microphone that is not open, and would reopen that
+    /// microphone the next time the box stopped speaking.
+    func testFailedDictationEndsTheTurnWithoutReissuingAStop() {
+        var turn = NativeVoiceTurnState()
+        _ = turn.handle(.microphoneStarted)
+
+        XCTAssertEqual(turn.handle(.dictationFailed), .none)
+        XCTAssertFalse(turn.isActive)
+        XCTAssertEqual(turn.handle(.speechPlaybackChanged(playing: true)), .none)
+        XCTAssertEqual(turn.handle(.speechPlaybackChanged(playing: false)), .none)
+    }
+
+    func testFailureWhileWaitingForSpeechDoesNotLeaveAPendingResume() {
+        var turn = NativeVoiceTurnState()
+        _ = turn.handle(.microphoneStarted)
+        _ = turn.handle(.speechPlaybackChanged(playing: true))
+
+        XCTAssertEqual(turn.handle(.dictationFailed), .none)
+        XCTAssertEqual(turn.handle(.speechPlaybackChanged(playing: false)), .none)
         XCTAssertFalse(turn.isActive)
     }
 
@@ -803,14 +863,14 @@ final class ComposerDraftRepositoryTests: XCTestCase {
         XCTAssertEqual(
             relaunched.pending.map(\.state),
             [
-                .awaitingReceipt(attempt: 1, sentAt: Date(timeIntervalSince1970: 10)),
-                .awaitingReceipt(attempt: 1, sentAt: Date(timeIntervalSince1970: 11))
+                .pending(deliveryAttempts: 1, lastAttemptAt: Date(timeIntervalSince1970: 10)),
+                .pending(deliveryAttempts: 1, lastAttemptAt: Date(timeIntervalSince1970: 11))
             ]
         )
         await relaunched.markDeliveryAttempt(id: first.id, at: Date(timeIntervalSince1970: 12))
         XCTAssertEqual(
             relaunched.pending.first?.state,
-            .awaitingReceipt(attempt: 2, sentAt: Date(timeIntervalSince1970: 12))
+            .pending(deliveryAttempts: 2, lastAttemptAt: Date(timeIntervalSince1970: 12))
         )
 
         await relaunched.handleReceipt(NativeEmissionReceipt(
@@ -1001,6 +1061,235 @@ final class ComposerDraftRepositoryTests: XCTestCase {
         await store.flush()
         await store.activate(boxID: firstBox)
         XCTAssertEqual(store.draft.text, "first box")
+    }
+
+    func testLegacyAwaitingWebViewStateDecodesAsNeverAttemptedPending() throws {
+        let json = #"{"awaitingWebView":{}}"#
+        let state = try JSONDecoder().decode(PendingEmissionState.self, from: Data(json.utf8))
+
+        XCTAssertEqual(state, .pending(deliveryAttempts: 0, lastAttemptAt: nil))
+    }
+
+    func testLegacyAwaitingReceiptStateDecodesPreservingAttemptAndDate() throws {
+        let sentAt = Date(timeIntervalSince1970: 1_000)
+        let json = """
+        {"awaitingReceipt":{"attempt":3,"sentAt":\(sentAt.timeIntervalSinceReferenceDate)}}
+        """
+        let state = try JSONDecoder().decode(PendingEmissionState.self, from: Data(json.utf8))
+
+        XCTAssertEqual(state, .pending(deliveryAttempts: 3, lastAttemptAt: sentAt))
+    }
+
+    func testPendingEmissionStateRoundTripsThroughItsNewEncoding() throws {
+        let states: [PendingEmissionState] = [
+            .pending(deliveryAttempts: 0, lastAttemptAt: nil),
+            .pending(deliveryAttempts: 4, lastAttemptAt: Date(timeIntervalSince1970: 2_000)),
+            .rejected(reason: "offline")
+        ]
+
+        for state in states {
+            let encoded = try JSONEncoder().encode(state)
+            XCTAssertEqual(try JSONDecoder().decode(PendingEmissionState.self, from: encoded), state)
+        }
+
+        let neverAttempted = try JSONEncoder().encode(PendingEmissionState.pending(deliveryAttempts: 0, lastAttemptAt: nil))
+        XCTAssertEqual(String(decoding: neverAttempted, as: UTF8.self), #"{"pending":{"deliveryAttempts":0}}"#)
+    }
+
+    @MainActor
+    func testStoredEmissionWithLegacyStateReplaysWithItsOriginalAttemptCount() async throws {
+        let boxID = UUID()
+        let repository = ComposerDraftRepository(rootURL: rootURL)
+        let store = PendingEmissionStore(repository: repository)
+        await store.activate(boxID: boxID)
+        var draft = ComposerDraft.empty
+        ComposerDraftReducer.reduce(&draft, .setText("stuck"))
+        let emission = try await store.enqueue(
+            draft: draft,
+            text: "stuck",
+            origin: .typed,
+            diarized: false,
+            boxID: boxID
+        )
+        let sentAt = Date(timeIntervalSince1970: 1_500)
+        await store.markDeliveryAttempt(id: emission.id, at: sentAt)
+
+        // Rewrite the persisted manifest in the pre-collapse encoding, reusing the
+        // encoder's own numbers so the fixture matches what a real device holds.
+        let url = await repository.pendingManifestURL(boxID: boxID)
+        var manifest = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: try Data(contentsOf: url)) as? [String: Any]
+        )
+        var emissions = try XCTUnwrap(manifest["emissions"] as? [[String: Any]])
+        let state = try XCTUnwrap(emissions[0]["state"] as? [String: Any])
+        let pendingPayload = try XCTUnwrap(state["pending"] as? [String: Any])
+        emissions[0]["state"] = [
+            "awaitingReceipt": [
+                "attempt": try XCTUnwrap(pendingPayload["deliveryAttempts"]),
+                "sentAt": try XCTUnwrap(pendingPayload["lastAttemptAt"])
+            ]
+        ]
+        manifest["emissions"] = emissions
+        try JSONSerialization.data(withJSONObject: manifest).write(to: url)
+
+        let relaunched = PendingEmissionStore(repository: repository)
+        await relaunched.activate(boxID: boxID)
+        XCTAssertEqual(
+            relaunched.pending.map(\.state),
+            [.pending(deliveryAttempts: 1, lastAttemptAt: sentAt)]
+        )
+        XCTAssertEqual(relaunched.deliveries.map(\.id), [emission.id])
+
+        await relaunched.markDeliveryAttempt(id: emission.id, at: Date(timeIntervalSince1970: 1_600))
+        XCTAssertEqual(
+            relaunched.pending.first?.state,
+            .pending(deliveryAttempts: 2, lastAttemptAt: Date(timeIntervalSince1970: 1_600))
+        )
+    }
+
+    @MainActor
+    func testMarkDeliveryAttemptIncrementsPendingAndLeavesRejectedAlone() async throws {
+        let boxID = UUID()
+        let store = PendingEmissionStore(repository: ComposerDraftRepository(rootURL: rootURL))
+        await store.activate(boxID: boxID)
+        var draft = ComposerDraft.empty
+        ComposerDraftReducer.reduce(&draft, .setText("hello"))
+        let emission = try await store.enqueue(
+            draft: draft,
+            text: "hello",
+            origin: .typed,
+            diarized: false,
+            boxID: boxID
+        )
+        XCTAssertEqual(store.pending.first?.state, .pending(deliveryAttempts: 0, lastAttemptAt: nil))
+
+        await store.markDeliveryAttempt(id: emission.id, at: Date(timeIntervalSince1970: 30))
+        XCTAssertEqual(
+            store.pending.first?.state,
+            .pending(deliveryAttempts: 1, lastAttemptAt: Date(timeIntervalSince1970: 30))
+        )
+        await store.markDeliveryAttempt(id: emission.id, at: Date(timeIntervalSince1970: 31))
+        XCTAssertEqual(
+            store.pending.first?.state,
+            .pending(deliveryAttempts: 2, lastAttemptAt: Date(timeIntervalSince1970: 31))
+        )
+
+        await store.handleReceipt(NativeEmissionReceipt(
+            emissionID: emission.id,
+            disposition: .rejected,
+            reason: "offline"
+        ))
+        await store.markDeliveryAttempt(id: emission.id, at: Date(timeIntervalSince1970: 32))
+        XCTAssertEqual(store.pending.first?.state, .rejected(reason: "offline"))
+
+        await store.retry(id: emission.id)
+        XCTAssertEqual(store.pending.first?.state, .pending(deliveryAttempts: 0, lastAttemptAt: nil))
+    }
+
+    func testRedeliveryBackoffLengthensWithAttemptsAndNeverCaps() {
+        XCTAssertEqual(EmissionRedeliveryPolicy.retryDelay(afterDeliveryAttempts: 1), 10)
+        XCTAssertEqual(EmissionRedeliveryPolicy.retryDelay(afterDeliveryAttempts: 2), 30)
+        XCTAssertEqual(EmissionRedeliveryPolicy.retryDelay(afterDeliveryAttempts: 3), 60)
+        XCTAssertEqual(EmissionRedeliveryPolicy.retryDelay(afterDeliveryAttempts: 4), 120)
+        XCTAssertEqual(EmissionRedeliveryPolicy.retryDelay(afterDeliveryAttempts: 99), 120)
+        // Never delivered: the ordinary delivery path handles it, unthrottled.
+        XCTAssertEqual(EmissionRedeliveryPolicy.retryDelay(afterDeliveryAttempts: 0), 0)
+    }
+
+    func testRedeliveryWaitsOutTheBackoffThenFiresAtEachThreshold() {
+        let sent = Date(timeIntervalSince1970: 1_000)
+        XCTAssertFalse(EmissionRedeliveryPolicy.shouldRedeliver(
+            deliveryAttempts: 1,
+            lastAttemptAt: sent,
+            now: sent.addingTimeInterval(9)
+        ))
+        XCTAssertTrue(EmissionRedeliveryPolicy.shouldRedeliver(
+            deliveryAttempts: 1,
+            lastAttemptAt: sent,
+            now: sent.addingTimeInterval(10)
+        ))
+        XCTAssertFalse(EmissionRedeliveryPolicy.shouldRedeliver(
+            deliveryAttempts: 2,
+            lastAttemptAt: sent,
+            now: sent.addingTimeInterval(29)
+        ))
+        XCTAssertTrue(EmissionRedeliveryPolicy.shouldRedeliver(
+            deliveryAttempts: 2,
+            lastAttemptAt: sent,
+            now: sent.addingTimeInterval(30)
+        ))
+        XCTAssertFalse(EmissionRedeliveryPolicy.shouldRedeliver(
+            deliveryAttempts: 7,
+            lastAttemptAt: sent,
+            now: sent.addingTimeInterval(119)
+        ))
+        XCTAssertTrue(EmissionRedeliveryPolicy.shouldRedeliver(
+            deliveryAttempts: 7,
+            lastAttemptAt: sent,
+            now: sent.addingTimeInterval(120)
+        ))
+    }
+
+    func testRedeliveryIgnoresUndeliveredAndRejectedAndBackwardsClocks() {
+        let sent = Date(timeIntervalSince1970: 1_000)
+        XCTAssertFalse(EmissionRedeliveryPolicy.shouldRedeliver(
+            state: .pending(deliveryAttempts: 0, lastAttemptAt: nil),
+            now: sent.addingTimeInterval(10_000)
+        ))
+        XCTAssertFalse(EmissionRedeliveryPolicy.shouldRedeliver(
+            state: .rejected(reason: "offline"),
+            now: sent.addingTimeInterval(10_000)
+        ))
+        XCTAssertFalse(EmissionRedeliveryPolicy.shouldRedeliver(
+            deliveryAttempts: 1,
+            lastAttemptAt: sent,
+            now: sent.addingTimeInterval(-600)
+        ))
+    }
+
+    func testEmissionStuckSinceBeforeASleepRedeliversImmediatelyOnWake() {
+        let attemptedBeforeSleep = Date(timeIntervalSince1970: 1_000)
+        let wake = attemptedBeforeSleep.addingTimeInterval(8 * 60 * 60)
+        XCTAssertTrue(EmissionRedeliveryPolicy.shouldRedeliver(
+            state: .pending(deliveryAttempts: 5, lastAttemptAt: attemptedBeforeSleep),
+            now: wake
+        ))
+        XCTAssertTrue(EmissionRedeliveryPolicy.isLongPending(
+            createdAt: attemptedBeforeSleep,
+            now: wake
+        ))
+    }
+
+    func testLongPendingAgeAppliesOnlyToPendingEmissions() {
+        let created = Date(timeIntervalSince1970: 1_000)
+        XCTAssertFalse(EmissionRedeliveryPolicy.isLongPending(
+            createdAt: created,
+            now: created.addingTimeInterval(29)
+        ))
+        XCTAssertTrue(EmissionRedeliveryPolicy.isLongPending(
+            createdAt: created,
+            now: created.addingTimeInterval(30)
+        ))
+
+        var emission = PendingEmission(
+            id: UUID(),
+            boxID: UUID(),
+            draft: .empty,
+            text: "hello",
+            origin: .typed,
+            diarized: false,
+            state: .pending(deliveryAttempts: 1, lastAttemptAt: created),
+            createdAt: created
+        )
+        XCTAssertTrue(EmissionRedeliveryPolicy.isLongPending(
+            emission,
+            now: created.addingTimeInterval(120)
+        ))
+        emission.state = .rejected(reason: "offline")
+        XCTAssertFalse(EmissionRedeliveryPolicy.isLongPending(
+            emission,
+            now: created.addingTimeInterval(120)
+        ))
     }
 }
 

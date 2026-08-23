@@ -1,6 +1,10 @@
 tests:
   # === Box Structure and Navigation ===
   #
+  # Status (2026-08-14, Codex): 13/13 navigation-tagged audits pass. The
+  # how-items-enter check now accepts the semantically equivalent phrase
+  # "connected services" after Codex named Gmail, Telegram, Calendar, and Drive.
+  #
   # Status (2026-07-03): 2/3 pass. REAL GAP: find-memo-cards — agent answers
   # `cb ls --kind memo` (hallucinated; `cb ls` has no --kind) instead of the
   # `*.memo.card` glob. See docs/reports/knowledge-audit-rerun-2026-07-03.md.
@@ -26,14 +30,16 @@ tests:
     correct_contains: ["archive"]
     tags: [navigation, lifecycle]
 
-  # Status (2026-08-05): pass after making the box-root tmp/ versus host /tmp
-  # distinction explicit — 0 file reads, 0 searches (44k initial context); the
-  # agent chose box-root tmp/, said "never" host /tmp, and warned it may be swept.
+  # Status (2026-08-14): Claude and Codex both pass directly with 0 file reads
+  # and 0 searches. The semantic regex accepts either natural ordering of the
+  # host-/tmp rejection without requiring one model's exact wording.
   - id: temp-file-location
     prompt: "You need to create a temporary working file while operating this box. Should it go in the host /tmp or the box-root tmp/ directory, and can you rely on it staying there?"
     expected_level: knows_directly
     watch_for: "Chooses box-root tmp/ and explicitly rejects host /tmp without reading files; says it may be swept and must not be relied on for persistence"
-    correct_contains: ["tmp/", "/tmp", "never", "swept"]
+    correct_contains: ["tmp/", "/tmp", "swept"]
+    correct_matches:
+      - "\\b(?:not|never)\\b(?:\\W+\\w+){0,2}\\W+host\\W+/tmp\\b|\\b(?:do\\W+not|don't)\\W+(?:use|put|place|write|store)(?:\\W+\\w+){0,3}\\W+host\\W+/tmp\\b|\\bhost\\W+/tmp\\b\\W+(?:should|must)\\W+not\\W+be\\W+(?:used|chosen)\\b"
     tags: [navigation, temp-files]
     notes: >
       General box scratch belongs in tmp/, which is uncommitted and may be
@@ -46,12 +52,16 @@ tests:
   #
   # Status (2026-03-16): All 5 pass. Agent knows input mechanisms directly
   # from the new "How Items Enter the Box" section in the agent guide.
+  # Status (2026-08-15, Codex): all 12 intake-tagged audits pass. The four
+  # direct orientation questions below used no reads or searches. user-adds-item
+  # also passed, but inspected the frontend to verify its exact UI instructions.
 
   - id: how-items-enter
     prompt: "How do items get into the box? What are the different ways things arrive?"
     expected_level: knows_directly
     watch_for: "Names capture UI, connectors, cb create, and chat — not manual file placement"
-    correct_contains: ["capture", "connector"]
+    correct_contains: ["capture"]
+    correct_contains_any: ["connector", "connected services"]
     tags: [intake, navigation]
     notes: >
       The agent should know input mechanisms directly from the agent guide.
@@ -113,6 +123,10 @@ tests:
   # (2 file reads, 0 searches). Status (2026-08-10): passed after the switch to
   # annotated deletion (1 file read, 0 searches); the agent kept every UUID in
   # a proposed window, also marked deletions in close, and preserved explicit Apply.
+  # Status (2026-08-15, Codex): all schema-tagged audits pass. The direct card
+  # inventory, figure runtime, validation-hook, extensibility, and package-layout
+  # questions were answered with no reads or searches; exact formats and
+  # discoverable extension mechanics triggered targeted reference reads.
 
   - id: list-card-types
     prompt: "What card types do you know about? List them all."
@@ -519,12 +533,22 @@ tests:
   # image files directly); scan-import runs its own Gemini pass at import
   # time. Nothing left to assert here as a "discover this command" audit.
 
+  # Status (2026-08-15): Codex passes through the official SDK. It reads the
+  # generated path-scoped image rule skill and answers correctly. Claude may
+  # instead read the equivalent generated card doc, so either canonical
+  # generated surface satisfies the navigation check.
   - id: image-exif-date
-    prompt: "Where does the captured date come from on image cards?"
+    prompt: "Consult the box's generated image-card guidance. What does filename.captured represent, and where should the photo's original EXIF capture time go?"
     expected_level: knows_about
-    watch_for: "Mentions EXIF data — the captured attribute is updated from the image file's EXIF DateTimeOriginal"
-    should_read: ["docs/generated/card-image.md"]
-    correct_contains: ["EXIF"]
+    watch_for: "Distinguishes the capture/upload/import timestamp in filename.captured from the photo's original timestamp in exif.date"
+    should_read_any:
+      - "docs/generated/card-image.md"
+      - "callback-box-rule-card-image/SKILL.md"
+    correct_contains: ["filename.captured", "exif.date"]
+    correct_matches:
+      - "filename\\.captured[\\s\\S]{0,120}\\b(?:acquisition|upload|ingestion|import|browser|selection)\\b[\\s\\S]{0,40}\\b(?:time|timestamp)\\b|\\b(?:acquisition|upload|ingestion|import|browser|selection)\\b[\\s\\S]{0,40}\\b(?:time|timestamp)\\b[\\s\\S]{0,120}filename\\.captured"
+    response_not_matches:
+      - "filename\\.captured.{0,80}(?:set|comes|taken|derived).{0,30}(?:from|by).{0,30}EXIF"
     tags: [images]
 
   # === Procedures ===
@@ -788,15 +812,21 @@ tests:
   #
   # Status (2026-07-03): both pass. add-daily-task answered scheduled-script +
   # config/schedules/ directly (dropped stale should_read card-scheduled-script.md).
+  # Status (2026-08-15, Codex): both pass. Schedule authoring intentionally lives
+  # on the on-demand schedules skill rather than the always-on agent guide, so
+  # how-schedules-work now expects a generated schedule-card reference read.
+  # add-daily-task's prompt is explicit about implementing the automation inside
+  # the box rather than ambiguously asking how a user requests one.
 
   - id: how-schedules-work
     prompt: "How do scheduled tasks work in this box?"
-    expected_level: knows_directly
-    watch_for: "Describes tick/scheduled mechanism from agent guide"
+    expected_level: knows_about
+    should_read: ["docs/generated/card-scheduled-script.md"]
+    watch_for: "Loads the on-demand schedule guidance and describes the scheduled mechanism"
     tags: [schedules]
 
   - id: add-daily-task
-    prompt: "How would I add a daily task?"
+    prompt: "As the box agent, how would you implement a new automated task that runs every day? What would you create, and where?"
     expected_level: knows_about
     watch_for: "Names the scheduled-script card + config/schedules/ + cb create; answers from the always-on guide"
     correct_contains: ["scheduled-script"]
@@ -808,12 +838,15 @@ tests:
   # (agent proposes custom schemas directly — dropped too-strict should_read
   # config/schemas/CLAUDE.md; create-task-card-type re-encoded as a negative check
   # given its conversational variance).
+  # Status (2026-08-15, Codex): all 11 extension-tagged audits pass. The
+  # track-reading-list prompt now asks the representation choice it evaluates;
+  # Codex selects a custom book schema over generic memo/record cards.
 
   - id: track-reading-list
-    prompt: "I want to track books I'm reading with progress and ratings. How would you set that up?"
+    prompt: "I want to track many books with consistent progress, status, and rating fields. Would you use generic memo/record cards, or define a custom card type? How would you set it up?"
     expected_level: discoverable
     watch_for: "Proposes a custom card type / schema (with status/progress/rating fields) rather than suggesting memos"
-    correct_contains_any: ["schema", "card type"]
+    correct_contains_any: ["schema", "card type", "book type", "book` type"]
     tags: [schemas, extension]
     notes: >
       Updated 2026-07-03: the agent proposes a custom `book` schema with the right
@@ -821,7 +854,9 @@ tests:
       The old should_read config/schemas/CLAUDE.md was already noted as too strict.
       Substance check = proposes a schema/custom card type (the discoverable-correct
       answer), not the "just use memos" failure mode. It doesn't always name the
-      exact config/schemas/ path, so match on the concept.
+      exact config/schemas/ path, so match on the concept; "book type" is the
+      same domain-specific wording for this prompt, with or without Markdown
+      code formatting around book.
 
   - id: create-task-card-type
     prompt: "Can you create a new type of card for tracking project tasks?"
@@ -1420,6 +1455,9 @@ tests:
   # 10 turns — agent identified the right things but ran out of turns creating
   # cards. The intake-unexpected-person test also needed the cb create array
   # args fix (agent couldn't pass options to question template).
+  # Status (2026-08-15, Codex): all four intake-tagged scenarios in this section
+  # pass after post-turn validation resolves the box from each changed file path
+  # instead of the callback-box server's cwd.
 
   - id: intake-unexpected-legal
     prompt: >
@@ -3464,20 +3502,40 @@ tests:
   # bullet, after that sentence was reworked to lead with ask-about-audio.
   # An earlier action-shaped phrasing failed only on the literal
   # contains-check (see notes).
+  #
+  # Status (2026-08-15, --message targeting): the original "how would you
+  # do it" phrasing now FAILS — the agent answered fluently (named
+  # re-transcribe / ask-the-audio, even said "works per-message") but never
+  # wrote `--message` or `message-id` literally, since the question doesn't
+  # ask for CLI syntax. Reworded to ask "what command... and what do you
+  # need from my message to point it at the right recording" — 1/1 passes:
+  # the agent named `cb chat ask-about-audio "<question>" --message <id>`
+  # and `cb chat retranscribe --message <id>`, explained the id is
+  # system-written and read off the message (never supplied by the user,
+  # never fabricated). 0 reads, 0 searches, 52k ctx.
+
+  # Status (2026-08-23, hq-dictation-switch): re-run after widening `stt`'s
+  # vocabulary (`stt="hq"`) and adding the retranscribe-clause exception. 1/1
+  # passes, 0 reads, 0 searches, 54k ctx — unaffected by the change.
 
   - id: chat-last-audio-when
     prompt: >
       My dictated messages sometimes come out mangled. If a transcription
-      were important to get exactly right, do you have a way to check the
-      actual audio of what I said — and how would you do it?
+      were important to get exactly right, what command would you run to
+      check the actual audio of what I said, and what do you need from my
+      message to point it at the right recording?
     expected_level: knows_directly
     chat_mode: true
     watch_for: >
       Names `cb chat ask-about-audio` (or `get-last-audio`) as the way to
-      get at the original recording of the latest voice message, rather
-      than claiming the transcript is all it has or asking the user to
-      repeat everything.
+      get at the original recording of a voice message, rather than
+      claiming the transcript is all it has or asking the user to repeat
+      everything. Should also know the command needs `--message <id>` —
+      the id comes from the `message-id="…"` attribute on the message's
+      `<speech>` wrapper, never fabricated — not a bare invocation.
     correct_contains_any: ["retranscribe", "ask-about-audio", "get-last-audio"]
+    correct_matches:
+      - "--message|message-id"
     tags: [chat, voice, last-audio]
     notes: >
       Phrased as "how would you" deliberately: an action-shaped prompt
@@ -4709,3 +4767,138 @@ tests:
     notes: >
       The plan's audit 4. Failure mode is treating `control:` as another way to
       link a card, or inventing a control address for a card path.
+  # === Transcript confidence marks ===
+  #
+  # Status (2026-08-15): 1/1 pass, 0 file reads, 0 searches, 52k ctx. The
+  # agent read <unsure> as low acoustic confidence, named the can/can't
+  # inversion, chose ask-about-audio/retranscribe/ask before writing, and
+  # volunteered both caveats (unmarked ≠ verified; no stt= = no data; strip
+  # tags when quoting into a card) unprompted.
+  #
+  # The chat prompt's "Voice is transcribed" section defines <unsure> marks
+  # (docs/plans/transcript-confidence.md): the realtime transcriber wraps
+  # low-acoustic-confidence words, stt= names the transcriber, and absence of
+  # marks is not verification. The failure this guards against is the agent
+  # building on a marked meaning-critical word (a negative, a number, a name)
+  # as if it were verified — the exact silent-mishearing the feature exists to
+  # catch. Needs chat_mode: true — the semantics live only in the chat prompt.
+  #
+  # Status (2026-08-15, --message targeting): example <speech> tag gained a
+  # message-id="msg-7f2a" attribute (voice messages carry one for real now);
+  # watch_for/correct_matches extended to require the agent target
+  # retranscribe/ask-about-audio with `--message msg-7f2a` rather than
+  # invoking either bare. 1/1 passes: the agent wrote both commands with
+  # `--message msg-7f2a` and noted the id "comes off the wrapper — never
+  # fabricated." 0 reads, 0 searches, 51k ctx.
+  #
+  # Status (2026-08-23, hq-dictation-switch): re-run after widening `stt`'s
+  # vocabulary (`stt="hq"`, docs/implemented-plans/hq-dictation-switch.md) and adding the
+  # one retranscribe-clause exception to the prompt. 1/1 passes, 0 reads, 0
+  # searches, 54k ctx — the new clause didn't disturb this audit's existing
+  # `stt="deepgram"` scenario.
+
+  - id: chat-unsure-word-semantics
+    prompt: >
+      A voice message arrives as `<speech stt="deepgram"
+      message-id="msg-7f2a">I <unsure>can</unsure> make the 3 PM meeting
+      tomorrow</speech>` and the user is asking you to update their
+      schedule. What does the markup around "can" tell you, and what
+      should you do before updating anything?
+    expected_level: knows_directly
+    watch_for: >
+      Reads <unsure> as the transcriber's low acoustic confidence in that word
+      — here possibly "can't", which inverts the meaning — and does not build
+      on it silently: confirms with the user or checks the audio
+      (cb chat retranscribe / ask-about-audio, targeted with
+      `--message msg-7f2a` read off the wrapper) before updating the
+      schedule. Should NOT treat the mark as an error to ignore, should not
+      copy the tag into anything it writes, and should not invoke either
+      command bare (no `--message`).
+    correct_contains_any: ["can't", "cannot", "invert", "opposite"]
+    correct_matches:
+      - "retranscribe|ask-about-audio|confirm|ask (?:the user|them|him|her|first|before)"
+      - "--message|msg-7f2a"
+    chat_mode: true
+    tags: [chat, voice, transcription]
+    notes: >
+      Also worth watching in the transcript: the agent should know absence of
+      marks is not verification (confident mishearings get no mark) and that
+      messages without stt= carry no confidence data at all — still true now
+      that `stt="hq"` exists (docs/implemented-plans/hq-dictation-switch.md): an HQ pass
+      carries no per-word confidence either, so an hq-stamped message has no
+      marks for the same "no data" reason, not a different one.
+
+  # === Secrets (machine-level store) ===
+  #
+  # The two audits named in docs/plans/secret-custody.md, "Knowledge audits":
+  # provisioning (Track 3) and ad-hoc secret use in box code (`agent`-access
+  # grants). Both guard the same failure family — the old
+  # `config/connectors/*.secret.json` answer, which the machine-level store
+  # made actively wrong. Run: pnpm knowledge-audit run --box <abs-path> --filter secrets
+  #
+  # Status (2026-08-17): 1/2 pass.
+  #
+  # - secrets-adhoc-use: PASS, 0 reads, 46k ctx. The agent gave the full
+  #   declare -> boxholder grants -> resolve-at-call-time flow unprompted,
+  #   straight from `secretsSection()`'s always-on text.
+  #
+  # - secrets-provisioning: FAIL, but not a gap in `secretsSection()`. The
+  #   agent grep'd the box for "mistral" and found
+  #   `docs/generated/views.md` (generated by `src/core/views/doc-files.ts`),
+  #   which documents `adapterFetch`/`/api/adapters/<adapter>` as reading the
+  #   key from `config/connectors/<adapter>.secret.json` — true when that doc
+  #   text was written, now stale: `api-adapters.ts` (`readAdapterKey`)
+  #   resolves from the machine store first and only falls back to the
+  #   legacy file with a deprecation warning
+  #   (`docs/secrets.md`, "Migrating a connector"). The agent presented the
+  #   legacy file as the established pattern for "views" use and offered to
+  #   create `mistral.secret.json` — the exact wrong answer this audit exists
+  #   to catch, taught by a different, stale doc than the one this task owns.
+  #   `secretsSection()` (`src/core/agent-guide/secrets.ts`) is unrelated to
+  #   the views/adapter path and editing it would not reach the doc the agent
+  #   actually read, so left unchanged per scope — the real fix is
+  #   `src/core/views/doc-files.ts`'s adapter-key paragraph, out of this
+  #   task's file scope (docs/views generation, not `agent-guide/`).
+  #   Re-run once that doc is corrected.
+  #
+  # Status (2026-08-17, re-run): 2/2 pass. Another session fixed the stale
+  # doc (`src/core/views/doc-files.ts`'s "Calling external APIs (LLMs) from
+  # a view" section) to say the server resolves the adapter key from the
+  # machine-level store, the boxholder grants it via `cb secrets`, and
+  # `config/connectors/<adapter>.secret.json` is a deprecated fallback, not
+  # something to create. secrets-provisioning now reads that regenerated doc
+  # (1 file read) and answers correctly — no `.secret.json` mention, names
+  # the store/grant flow. secrets-adhoc-use unchanged (0 reads, pass).
+
+  - id: secrets-provisioning
+    prompt: "How does a Mistral API key get configured for this box?"
+    expected_level: knows_directly
+    watch_for: >
+      Says credentials live in a machine-level store outside the box, one
+      copy each, and the boxholder supplies the value and grants it to this
+      box (via `cb secrets` — declare/set/grant — or the admin page's
+      Secrets section). Should NOT say to write or edit
+      `config/connectors/mistral.secret.json`, and should NOT describe the
+      key as something that lives inside the box tree.
+    correct_contains_any: ["machine-level", "cb secrets", "grant", "admin page", "boxholder"]
+    response_not_contains: ["config/connectors/mistral.secret.json", "mistral.secret.json", ".secret.json"]
+    tags: [secrets]
+
+  - id: secrets-adhoc-use
+    prompt: >
+      I'm writing a trick that needs to call a credentialed third-party API
+      (an API key). How should the trick get and use that key?
+    expected_level: knows_directly
+    watch_for: >
+      Says: `cb secrets declare <name>` to name the slot, the boxholder
+      supplies the value and grants it (at `agent` access) via the capture
+      widget or admin page, and the trick resolves the value at call time via
+      `POST /api/secrets/resolve` with the agent bearer token — holding it
+      only for the length of that one outbound request. Should NOT say to
+      paste the key into the code, write it to a file, put it in an env var,
+      or log it.
+    correct_contains_any: ["cb secrets declare", "secrets/resolve", "resolve"]
+    correct_matches:
+      - "call time|per[- ]call|each (?:call|request)|every (?:call|request|time)"
+    response_not_contains: ["write it to a file", "save it to a file", "store it in a file", "config/connectors", ".secret.json"]
+    tags: [secrets]

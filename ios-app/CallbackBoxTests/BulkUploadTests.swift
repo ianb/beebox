@@ -9,29 +9,31 @@ import XCTest
 final class BulkUploadTests: XCTestCase {
     // MARK: - The inline/batch threshold
 
-    /// Mirrors `test/frontend/photo-batch-threshold.doctest.md` case for case.
+    /// Mirrors `test/frontend/file-routing.doctest.md`'s photo cases. (The web
+    /// rule also batches any set containing a non-image; the native composer's
+    /// photo picker only ever hands this images, so there is nothing to mirror.)
     /// The two implementations cannot share code across the language boundary, so
     /// the tests are what catch a drift between them (mobile-contract §8).
     func testThresholdMatchesTheWebRule() {
-        XCTAssertEqual(BulkPhotoThreshold.inlineLimit, 4)
+        XCTAssertEqual(BulkPhotoThreshold.inlineLimit, 3)
 
         XCTAssertFalse(BulkPhotoThreshold.shouldBatch(existingInline: 0, incoming: 1))
-        XCTAssertFalse(BulkPhotoThreshold.shouldBatch(existingInline: 0, incoming: 4))
-        XCTAssertTrue(BulkPhotoThreshold.shouldBatch(existingInline: 0, incoming: 5))
+        XCTAssertFalse(BulkPhotoThreshold.shouldBatch(existingInline: 0, incoming: 3))
+        XCTAssertTrue(BulkPhotoThreshold.shouldBatch(existingInline: 0, incoming: 4))
         XCTAssertTrue(BulkPhotoThreshold.shouldBatch(existingInline: 0, incoming: 70))
     }
 
     /// Photos already in the composer count toward the limit, so the inline total
     /// stays bounded however many separate selections a user makes.
     func testThresholdCountsPhotosAlreadyInTheComposer() {
-        XCTAssertFalse(BulkPhotoThreshold.shouldBatch(existingInline: 3, incoming: 1))
-        XCTAssertTrue(BulkPhotoThreshold.shouldBatch(existingInline: 3, incoming: 2))
-        XCTAssertTrue(BulkPhotoThreshold.shouldBatch(existingInline: 4, incoming: 1))
+        XCTAssertFalse(BulkPhotoThreshold.shouldBatch(existingInline: 2, incoming: 1))
+        XCTAssertTrue(BulkPhotoThreshold.shouldBatch(existingInline: 2, incoming: 2))
+        XCTAssertTrue(BulkPhotoThreshold.shouldBatch(existingInline: 3, incoming: 1))
     }
 
     func testEmptySelectionNeverBatches() {
         XCTAssertFalse(BulkPhotoThreshold.shouldBatch(existingInline: 0, incoming: 0))
-        XCTAssertFalse(BulkPhotoThreshold.shouldBatch(existingInline: 4, incoming: 0))
+        XCTAssertFalse(BulkPhotoThreshold.shouldBatch(existingInline: 3, incoming: 0))
     }
 
     // MARK: - Request shaping

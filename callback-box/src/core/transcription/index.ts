@@ -13,6 +13,7 @@ import { transcribeAudioFake } from "./fake.js";
 import { withCardLock } from "../../lib/card-lock.js";
 import { buildMultipartForm, type MultipartPart } from "../../lib/multipart.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { getOpenAiThinkingKey } from "../openai-thinking-key.js";
 
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/audio/transcriptions";
 
@@ -20,7 +21,10 @@ class MissingWhisperKeyError extends Error implements TranscriptionError {
   readonly permanent = true;
   readonly code = "missing_api_key";
   constructor() {
-    super("THINKING_OPENAI_API_KEY environment variable is required for transcription");
+    super(
+      'No OpenAI key for transcription — ask the boxholder to grant the "openai-thinking" ' +
+        "secret to this box, or set THINKING_OPENAI_API_KEY",
+    );
     this.name = "MissingWhisperKeyError";
   }
 }
@@ -76,12 +80,26 @@ export interface TranscriptionResult {
    * was requested but produced no usable speaker ids (e.g. mono speaker).
    */
   diarized?: boolean;
+  /**
+   * The actually-resolved service name that produced this result
+   * (retranscription-in-chat plan, Track 2) — set only by
+   * {@link transcribeAudioHq}, which is the one caller that can resolve
+   * "box default" to a concrete name. The batch `transcribeAudio` dispatch
+   * and the individual per-service functions leave it unset.
+   */
+  service?: string;
 }
 
 export interface WordTimestamp {
   word: string;
   start: number;  // seconds
   end: number;    // seconds
+  /**
+   * Per-word acoustic confidence (0–1), when the backend reports one.
+   * Only Deepgram does; absent means "no confidence data backs this
+   * word" — not "confident" and not "low confidence".
+   */
+  confidence?: number;
 }
 
 export interface DetailedTranscriptionResult extends TranscriptionResult {
@@ -237,6 +255,16 @@ export async function transcribeAudioHq(
   overrides?: { service?: HqTranscriptionService | undefined }
 ): Promise<TranscriptionResult | DetailedTranscriptionResult> {
   const service = overrides?.service ?? (await loadTranscriptionConfig(params.boxRoot)).hqService;
+  const result = await dispatchHqTranscription(params, service);
+  // Stamp the resolved name on the result — the one place that knows it,
+  // since callers only ever pass in the unresolved `overrides?.service`.
+  return { ...result, service };
+}
+
+function dispatchHqTranscription(
+  params: TranscribeAudioParams,
+  service: HqTranscriptionService,
+): Promise<TranscriptionResult | DetailedTranscriptionResult> {
   if (service === "voxtral") {
     return transcribeAudioVoxtral(params);
   }
@@ -263,7 +291,11 @@ async function transcribeAudioWhisper(
 ): Promise<TranscriptionResult | DetailedTranscriptionResult> {
   opts = opts ?? { variant: "whisper" };
   const { audioBuffer, filename, prompt, options } = params;
-  const apiKey = process.env["THINKING_OPENAI_API_KEY"];
+  // The same `openai-thinking` resolver its siblings use (voxtral, deepgram):
+  // the machine secret store first, then the env var. `boxRoot` is optional on
+  // `TranscribeAudioParams`, and a caller that omits it gets the env path only
+  // — there is no box to check grants for.
+  const apiKey = await getOpenAiThinkingKey(params.boxRoot, { observe: true });
   if (!apiKey) {
     throw new MissingWhisperKeyError();
   }

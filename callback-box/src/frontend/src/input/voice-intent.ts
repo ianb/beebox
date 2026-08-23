@@ -18,9 +18,11 @@
 
 import type { ChatImageAttachment } from "../api-chat";
 import type { SelectionItem } from "../lib/selection/serialize";
-import { joinTranscript } from "../components/chat/InteractiveChat-helpers";
+import type { FinalWord } from "../machines/transcription-events";
+import { joinTranscript, spokenTextStart } from "../components/chat/InteractiveChat-helpers";
 import { appendSendKeywordTag, detectKeyword } from "../lib/audio/speech-keywords";
 import { createVoiceEmission, type Emission, type EmissionFile } from "./emission";
+import { resolveEmissionWords } from "./unsure-words";
 
 export type VoiceIntent =
   | {
@@ -35,6 +37,16 @@ export type VoiceIntent =
       closeMic: boolean;
       /** This keyword explicitly requests HQ cleanup, independently of narration mode. */
       hq: boolean;
+      /**
+       * Realtime words backing `text` at commit time (Track 3, docs/plans/
+       * transcript-confidence.md) — fast path: snapshotted at CANCEL; slow
+       * path: the machine's `finalWords` read at its idle transition, which
+       * lands alongside the parked text. `null` means the service captured
+       * no confidence data (Voxtral/OpenAI realtime, or nothing finalized —
+       * Fix A); the HQ-drop decision (words describe discarded text) is the
+       * consumer's job, not this shape's.
+       */
+      words: readonly FinalWord[] | null;
     }
   | { kind: "cancel" }
   | { kind: "mic-off" }
@@ -58,6 +70,17 @@ export function buildVoiceSubmitEmission(opts: {
   imagesSnapshot: readonly ChatImageAttachment[];
   filesSnapshot: readonly EmissionFile[];
   diarized: boolean;
+  /**
+   * Realtime words backing `finalText`, or absent/`null`/`undefined` when
+   * no confidence data applies to the text being sent (HQ replaced it —
+   * Track 3's HQ-drop rule; or the service never captured any — Fix A).
+   * Resolved through `resolveEmissionWords` before landing on the
+   * emission; the assembler does the `<unsure>` marking against the sent
+   * body, since the body isn't final until selections/attachments fold in.
+   */
+  words?: readonly FinalWord[] | null;
+  /** See `Emission.hqText` — set when this text came from an HQ pass. */
+  hqText?: true;
 }): Emission {
   const full = joinTranscript(opts.priorInput, opts.finalText);
   return createVoiceEmission({
@@ -66,6 +89,9 @@ export function buildVoiceSubmitEmission(opts: {
     files: opts.filesSnapshot,
     selections: opts.selectionsSnapshot,
     diarized: opts.diarized,
+    words: resolveEmissionWords(opts.words),
+    spokenStart: spokenTextStart(opts.priorInput),
+    hqText: opts.hqText,
   });
 }
 
@@ -105,12 +131,19 @@ export async function prepareVoiceSubmitEmission(opts: {
     }
     if (hqResult !== null) {
       const keyword = detectKeyword(hqResult.text);
+      // A manual stop-and-send synthesizes this intent with an empty
+      // matchedPhrase (docs/implemented-plans/hq-dictation-switch.md, chunk 2) — nothing
+      // was spoken to match, so there's no trigger phrase to restore as a
+      // tag if the HQ pass doesn't literally reproduce it. Only a real
+      // keyword-fire (non-empty matchedPhrase) gets the fallback tag.
       finalText = keyword
         ? keyword.processedTranscript
-        : appendSendKeywordTag(hqResult.text, {
-          action: intent.closeMic ? "sendClose" : "send",
-          matchedPhrase: intent.matchedPhrase,
-        });
+        : intent.matchedPhrase === ""
+          ? hqResult.text
+          : appendSendKeywordTag(hqResult.text, {
+            action: intent.closeMic ? "sendClose" : "send",
+            matchedPhrase: intent.matchedPhrase,
+          });
       diarized = hqResult.diarized;
       usedHq = true;
     }
@@ -119,6 +152,14 @@ export async function prepareVoiceSubmitEmission(opts: {
   return {
     emission: buildVoiceSubmitEmission({
       priorInput, finalText, selectionsSnapshot, imagesSnapshot, filesSnapshot, diarized,
+      // The HQ pass replaced the realtime text: those words describe
+      // discarded audio content, so drop the entries and `stt` entirely
+      // (Track 3 HQ-drop rule). A fallback to realtime text (!usedHq)
+      // attaches the intent's words like any other realtime send.
+      words: usedHq ? undefined : intent.words,
+      // `stt="hq"` (docs/implemented-plans/hq-dictation-switch.md) stamps only when the
+      // HQ pass actually ran and produced text — never on a fallback.
+      hqText: usedHq ? true : undefined,
     }),
     usedHq,
   };

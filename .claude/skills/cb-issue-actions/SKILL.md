@@ -1,21 +1,30 @@
 ---
 name: cb-issue-actions
-description: Work the issue queue's `next-action:` tags — discussion flags and provisional agent tasks (discuss, reconfirm, duplicate, invalid, fixed). Use when the human says "work the next actions", "go through the reconfirms", "check the issues tagged fixed", "triage the queue", or when you want to find issues that need a disposition. Includes extraction scripts. Conventions in issues/CLAUDE.md.
+description: Work the issue queue's `next-action:` tags — discussion flags, provisional agent tasks, and released manual-testing gates (discuss, reconfirm, duplicate, invalid, fixed, verify-without-me). Use when the human says "work the next actions", "go through the reconfirms", "check the issues tagged fixed", "triage the queue", or when you want to find issues that need a disposition. Includes extraction scripts. Conventions in issues/CLAUDE.md.
 ---
 
 # Working `next-action:` tags
 
 `next-action:` says what must happen before implementation begins. `discuss`
-routes an issue to Ian; the other values are **provisional agent tasks** where
-someone suspects an outcome and is asking the next agent to check it. The whole
-discipline for those provisional values is in one line of `issues/CLAUDE.md`:
+routes an issue to the developer; the other values are **provisional agent tasks** where
+someone suspects an outcome and is asking the next agent to check it.
+
+**The developer writes these tags — effectively all of them.** The field is how they hand
+an idea back: they read the queue, form a suspicion about an item, and leave it
+here for whoever picks it up next. So working this queue is answering them, not
+processing a backlog, and every tag carries the context of the moment they had the
+whole queue in view. Your output goes back to them in the same channel — the note
+you leave on an issue is what they read next time.
+
+The whole discipline for the provisional values is in one line of
+`issues/CLAUDE.md`:
 
 > A matching tag is not permission to close blindly.
 
 Read every provisional value with the question mark the UI shows — **"fixed?"**,
-**"reconfirm?"**. Nothing there is asserted. It is what Ian thinks is *likely*
+**"reconfirm?"**. Nothing there is asserted. It is what the developer thinks is *likely*
 and wants confirmed properly. `discuss` is different: do not investigate toward
-implementation or make the decision yourself. Surface the issue to Ian and
+implementation or make the decision yourself. Surface the issue to the developer and
 record the disposition that comes out of the discussion.
 
 For the provisional values, your job is to **produce evidence**, then act on
@@ -52,7 +61,7 @@ grep -rh "^next-action:" issues --include='*.md' \
 ```
 
 One value only (substitute `discuss` / `reconfirm` / `duplicate` / `invalid` /
-`fixed`):
+`fixed` / `verify-without-me`):
 
 ```bash
 grep -rl "^next-action: *reconfirm" issues --include='*.md' | grep -v CLAUDE.md
@@ -72,7 +81,7 @@ done | sort
 
 ## What each value asks of you
 
-**`discuss` — bring this to Ian before doing the work.** Summarize the decision
+**`discuss` — bring this to the developer before doing the work.** Summarize the decision
 or design tension and the smallest useful set of options. Do not treat this as
 permission to implement, and do not silently convert it into research. After
 the discussion, remove the field and record the resulting disposition or next
@@ -103,11 +112,11 @@ move; a duplicate often carries the better reproduction, the sharper `file:line`
 pointers, or a second sighting that matters as evidence. Losing that is the real
 cost of a careless dedup.
 
-**Ask Ian** when merging looks lossy, or when the merged result would be an
+**Ask the developer** when merging looks lossy, or when the merged result would be an
 oversized issue covering too much. Two focused issues can beat one sprawling
-one, and that is his call rather than yours.
+one, and that is their call rather than yours.
 
-**`invalid` — is this moot?** Mostly Ian asking whether the issue still applies:
+**`invalid` — is this moot?** Mostly the developer asking whether the issue still applies:
 it describes a situation, a file, or a behavior that no longer exists. Check
 whether the thing it is about is still there at all before assessing the claim.
 
@@ -145,15 +154,41 @@ now have. Match the evidence to the claim:
   tracked-flake protocol in `.claude/agents/finish.md`.
 - **Anything needing a real device, a phone, live credentials, or a human eye is
   not yours to confirm.** That is what `needs: [manual-testing]` exists for, and
-  **only Ian clears it.**
+  **only the developer clears it.**
 
-**`needs: [manual-testing]` plus `fixed` or `reconfirm` → check in with Ian.**
+**`needs: [manual-testing]` plus `fixed` or `reconfirm` → check in with the developer.**
 Don't resolve those alone and don't silently skip them. The two tags together
 mean the code side is believed done while the confirming evidence is the kind
-only he can produce, so the useful move is to bring him the specific question:
+only they can produce, so the useful move is to bring them the specific question:
 what you verified, what remains unverifiable from here, and the smallest thing
-he could do to settle it. Narrowing a written multi-step protocol down to one
+they could do to settle it. Narrowing a written multi-step protocol down to one
 action is often the whole contribution.
+
+**`verify-without-me` is their answer when that gate will never close.** It means:
+they can't reproduce the failure on demand, or the test isn't worth their time — so
+stop waiting and settle the issue on evidence reachable without them.
+
+Do the deepest audit you can, then dispose of it:
+
+- **Close it** when code, tests, and a simulator carry the claim, naming what
+  stays unverified and why that's acceptable.
+- **Keep it open, drop `manual-testing`** when they don't, recording exactly
+  what ships unchecked. "Unverified, and here is the residual risk" is a real
+  outcome and beats an item parked forever.
+
+Two things to get right, both learned from the audit that produced this value:
+
+- **It is not an instruction to close.** An audit can find work that was never
+  *built* — that is a live issue needing implementation, not a missing test.
+  Leave it open for the work and say so plainly.
+- **Separate "impossible without a device" from "nobody ran it."** Real camera
+  hardware and an iCloud-backed asset are the first; a landscape screenshot pass
+  a simulator could drive is the second, and the second is often fixable right
+  here. Collapsing them lets buildable work hide behind a device excuse.
+
+Name concrete residual failure modes, not a disclaimer — "the camera
+acquisition call has no automated coverage, so a crash there reaches users
+first" is useful; "not fully tested" is not.
 
 When you cannot settle it, that is a legitimate outcome. Remove the field, write
 what you checked and what would settle it, and move on. An issue that has been

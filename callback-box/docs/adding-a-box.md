@@ -44,13 +44,24 @@ box's normal history — nothing hub-specific here).
 
 ## 2. Register it with the hub
 
-Add an entry to the hub's `hub.json` (default `~/.config/cb/hub.json`, or
-wherever `cb hub --config <path>` points):
+Use `cb hub add-box`, which writes the entry to the hub's `hub.json` (default
+`~/.config/cb/hub.json`, or wherever `cb hub --config <path>` points):
+
+```bash
+cb hub add-box <slug> /path/to/<name>     # package root or content/ — the hub resolves either
+cb hub add-box <slug> /path/to/<name> --dry-run   # print the change, write nothing
+```
+
+Run it as the user that owns the config. It is idempotent: registering a box
+that is already registered under the same slug reports that and leaves the
+file alone.
+
+The resulting entry is just:
 
 ```jsonc
 {
   "boxes": {
-    "<slug>": { "path": "/path/to/<name>" }  // package root or content/ — the hub resolves either
+    "<slug>": { "path": "/path/to/<name>" }
   }
 }
 ```
@@ -58,12 +69,20 @@ wherever `cb hub --config <path>` points):
 The slug becomes the URL prefix (`http://<hub-host>/<slug>/...`); it can't be
 one of the hub's own reserved prefixes (`healthz`, `auth`, `webhook`, `api`),
 and two slugs can't resolve to the same box (the hub refuses to load a config
-that would start two engine processes against one box's `events.db`).
+that would start two engine processes against one box's `events.db`). Both
+rules are enforced by `cb hub add-box` *before* it writes, using the hub's own
+config loader — which is the reason to use it rather than editing the file:
+hand-editing defers those errors to the hub's next startup, after the live
+file has already been replaced.
+
+The command deliberately refuses to create a `hub.json` that doesn't exist —
+a config invented from scratch would drop the `port`/`host`/`lazy` settings
+the running hub depends on. Write the first one by hand.
 
 Restart the hub process to pick up the new entry:
 
 ```bash
-systemctl restart cb-hub   # example deployment: adjust to how you run cb hub
+systemctl restart callback-hub   # example deployment: adjust to how you run cb hub
 ```
 
 ## 3. Access control
@@ -87,14 +106,30 @@ services (Telegram, etc.) can reach them.
 
 ## 4. Connector secrets
 
-Per-box secrets go in the box's own `content/config/connectors/`:
+Secrets are **not** files in the box. They live in one machine-level store
+(`~/.config/cb/secrets.json`, 0600, outside every box tree) and a box reaches
+one through a **grant** — see [`docs/secrets.md`](secrets.md) for the full
+model. Provisioning a box is therefore granting, never copying:
 
 ```bash
-echo '{"botToken":"...","webhookSecret":"..."}' > config/connectors/telegram.secret.json
+cb secrets status <box>                 # what this box is granted, and what it still needs
+printf %s "$KEY" | cb secrets set mistral   # store or rotate the one copy (stdin, never argv)
+cb secrets grant <box> mistral          # the per-box opt-in
+cb secrets copy-grants <from-box> <box> # give a new box the same grants a reference box holds
 ```
 
-Without a key, the affected connector emits a health warning but the box
-still runs.
+`copy-grants` is what `deploy/add-box.sh --secrets-from` runs. It skips
+secrets that bind structurally to one box — a Telegram bot token routes to a
+single webhook URL — and names each skip: that box needs its own, connected
+from its admin page.
+
+Without a granted key the affected connector emits a health warning but the box
+still runs; `cb secrets status` names exactly which grant is missing.
+
+Legacy `config/connectors/*.secret.json` files still work as a deprecated
+fallback during the transition, and `cb health` flags any it finds. Don't
+create new ones — move a machine's existing files into the store once with
+`cb secrets migrate` (`--dry-run` prints the plan first).
 
 ## Example deployment: box.example.com
 
@@ -104,12 +139,17 @@ paths and service names for your own hub host, not copy them verbatim.
 - Boxes live at `/home/callback/boxes/<name>/`, one per directory, each its
   own git repo.
 - `hub.json` lives at `/home/callback/.config/cb/hub.json`.
-- The hub runs as a systemd unit (`cb-hub` in examples above); see
-  [`deploy/README.md`](../deploy/README.md) for the full provisioning story,
-  including the current gap between that design and what the checked-in
-  provisioning scripts (`deploy/add-box.sh`, `deploy/setup-server.sh`)
-  actually automate today (they still target the pre-hub `callback-serve` +
-  manifest shape — see that doc's "Known gaps" section).
+- The hub runs as a systemd unit (`callback-hub` in examples above).
+- On that deployment the whole of this document is one command:
+  `deploy/add-box.sh <repo> [name]` does the clone, the `cb init`, the access
+  config, the secrets, both manifest registrations, the restart, and a canary
+  check that the new box serves. For a box that does not exist yet,
+  `deploy/add-box.sh --create <name>` covers step 1 as well — it scaffolds the
+  box, pushes it to a private repo, and then does all of the above. See
+  [`deploy/README.md`](../deploy/README.md).
+  (`deploy/setup-server.sh`, which provisions a *bare* server, still generates
+  the pre-hub `callback-serve` unit — that gap is separate, and described in
+  that same doc.)
 
 ## Troubleshooting
 
@@ -121,7 +161,9 @@ before assuming the box process itself is at fault — a box missing from
 
 ### "API key not configured" warnings
 
-The box is missing a connector secret (see step 4 above).
+The box has no grant for that connector's secret (see step 4 above).
+`cb secrets status <box>` says which — a missing grant, a granted name whose
+value was never supplied, or a grant whose secret was removed.
 
 ### Permission denied writing to box directories
 

@@ -18,6 +18,12 @@ dist/
 .env
 .overmind.sock
 
+# Document-comment store mount (docs/plans/document-comments.md). A symlink to
+# the store beside the main checkout; comments are a communication medium and
+# never repository state. NO trailing slash — a dir-only pattern does not match
+# a symlink, which would make the mount stageable.
+/comments
+
 # Personal commit blocklist (the guard's strings live here, never in git).
 # The tracked .commit-blocklist.example documents the format.
 .commit-blocklist
@@ -68,8 +74,7 @@ dev/prompts/data.json
 # committed (promoted nuggets in site/, rubric/prompt revisions, distilled
 # learnings folded into the subplan). The app + prompts + ingest tool stay
 # tracked as real code.
-dev/story-eval/runs/
-dev/story-eval/verdicts/
+dev/apps/story-eval/runs/
 
 # OpenGrep SARIF/JSON scan output
 .opengrep-out/
@@ -77,3 +82,8 @@ dev/story-eval/verdicts/
 # Private-issues shadow-repo mount (a SYMLINK in every checkout — no trailing
 # slash: dir-only patterns do not match symlinks). See issues/CLAUDE.md.
 /private-issues
+
+# Exhibit-store mount (same symlink rule — bin/lib/exhibits-store.sh; design
+# in callback-box/docs/plans/workstream-exhibits.md).
+/exhibits
+callback-box/user-stories/work/

@@ -166,8 +166,9 @@ keyboard/safe-area behavior until it passes on a real phone.
 For deterministic composer layout checks, launch a DEBUG build with
 `--composer-fixture=<state>`. Supported states are `empty`, `typing`,
 `multiline`, `many-attachments`, `uploading`, `failed-upload`,
-`selection-detail`, `recording`, `hq-preparation`, `two-pending`,
-`sending`, `interrupted`, `rejected-send`, `expired-attachment`, `keyboard-shown`, and
+`selection-detail`, `recording`, `starting-dictation`, `hq-preparation`, `two-pending`,
+`sending`, `interrupted`, `rejected-send`, `stuck-pending`,
+`expired-attachment`, `keyboard-shown`, and
 `control-registry` (which reads back the native control registry the web's
 `scan-controls` command answers from — see `../callback-box/docs/mobile-contract.md`
 §4.8 — and offers every action per control so the refusals are as visible as the

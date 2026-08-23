@@ -6,25 +6,27 @@
  */
 
 import { MenuItem, MenuDivider } from "../ui/dropdown-menu-item";
-import { MODEL_OPTIONS } from "./InteractiveChat-helpers";
+import { chatModelOptions, type ChatAgentEngine } from "@shared/chat-models.js";
 
 /** "Model" sub-panel. */
 export function ModelPanel({
   onBack,
   selectedModel,
+  agentEngine,
   onSelectModel,
 }: {
   onBack: () => void;
   selectedModel: string | null;
+  agentEngine: ChatAgentEngine;
   onSelectModel: (model: string | null) => void;
 }) {
   return (
     <>
       <MenuItem onClick={onBack} keepOpen>
-        <span className="text-warm-500">‹ Model</span>
+        <span className="text-warm-500">‹ Model · {agentEngine === "claude" ? "Claude" : "Codex"}</span>
       </MenuItem>
       <MenuDivider />
-      {MODEL_OPTIONS.map((opt) => (
+      {chatModelOptions(agentEngine).map((opt) => (
         <MenuItem key={opt.label} onClick={() => onSelectModel(opt.model)}>
           {selectedModel === opt.model ? "✓ " : "  "}{opt.label}
         </MenuItem>

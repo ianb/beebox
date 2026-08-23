@@ -4,6 +4,8 @@ How box data migrations work, how to apply them, and how to write new ones.
 
 A migration is a one-shot transformation of card data on disk — schema renames, field strips, layout flips, refactors. The system tracks which migrations a box has had applied so future runs only do the missing work.
 
+**Box configuration counts too.** `annex-config-2026-08` re-applies `annex.largefiles` and `.git/info/attributes` from the current renderings; it transforms no cards and leaves the working tree untouched. Config written once at `cb init` goes stale whenever the code's idea of it changes, and a migration is the one mechanism that records per box whether the convergence happened. The catch is in the name: a manifest key runs once, so **the next rendering change needs a new dated entry** — forgetting to add one is silent. Whether something should re-apply box configuration without being asked is open (`issues/bugs/2026-08-18-stale-annex-largefiles-never-reapplies.md`).
+
 ## `cb migrate` is the entry point
 
 Each box has `config/migrations.jsonl` — append-only JSONL, one `{name, applied-at}` per line — recording which migrations it's seen. `cb migrate` compares against the canonical ordered list in `src/core/migrations.ts` and runs anything missing in order, appending an entry after each success.
@@ -21,6 +23,43 @@ cb migrate --mark-applied bill  # record ONE migration as applied without runnin
 `--mark-applied <name>` is the single-entry escape hatch: it records one migration as applied **without running it**, for a box already in that migration's post-state that never got the manifest line. The motivating case is a **retired migrator** — e.g. `bill` (the cardworks XML→frontmatter conversion) always exits non-zero now that the `cardworks` parser is gone, so a box already in frontmatter shape but missing the `bill` entry would halt `cb migrate --apply` on it forever. Marking it applied unblocks the sweep. It refuses an unknown name or a manifest-less box (use `--mark-all-applied` for the latter), and is an idempotent no-op if the migration is already recorded. Like the other write paths it leaves the manifest edit uncommitted for review.
 
 If a migration fails, the manifest is **not** updated for the failing entry and subsequent migrations are not attempted. Fix the underlying problem and re-run; the loop picks up where it stopped.
+
+## The deploy sweep runs them automatically
+
+`deploy/deploy.sh` runs `cb migrate --sweep` for every box on the server after
+shipping new engine code, in the at-rest window between `cb-wait-quiet` and the
+service restart. A box with nothing pending prints nothing; anything else prints
+one line into the deploy log. **The sweep never fails the deploy** — a box that
+needs a human is a box to look at, not a reason to abandon a shipped release.
+
+`--sweep` is deliberately narrower than `--apply`, because nobody is watching:
+
+| | `cb migrate --apply` | `cb migrate --sweep` |
+|---|---|---|
+| dirty tree | refuses | skips the box, reports, retries next deploy |
+| procedure-kind (agent) migrations | runs them | stops there and reports |
+| provisioning | runs `cb init` first | does not |
+| result | left uncommitted for review | one commit per migration, `Created-By: migration-sweep` |
+
+The commit is the notable difference. Leaving changes uncommitted is right for a
+human at a terminal and wrong unattended: a dirty box is exactly what the next
+sweep skips, so one un-reviewed migration would silently stop every later one.
+The manifest entry and the changes it describes land in the **same** commit, so
+a box can never claim a migration whose effects are not in its history. When the
+commit fails — the box's own pre-commit hook rejecting a card a migrator
+produced, say — the manifest entry is rolled back and the migrator's changes are
+left in the tree for review.
+
+The whole sweep runs under the box git lock (`withBoxGitLock`), because
+`stageAll` is `git add -A`: without it, a connector or wakeup committing between
+the clean check and the commit would have its files swept into a
+`migration-sweep` commit. That guarantee is **cooperative** — a box agent
+shelling out to raw `git` is outside it, which is why the deploy runs the sweep
+in the at-rest window rather than at an arbitrary moment.
+
+A box left behind — dirty tree, pending procedure migration — is reported by
+`cb health` as `box-migrations` (warning), so the drift is visible after the
+deploy log scrolls away.
 
 ## Writing a new migration
 
@@ -84,6 +123,17 @@ If a migration fails, the manifest is **not** updated for the failing entry and 
 5. **Document it.** Update the migrator table in this file (below) and mention any non-obvious behavior (e.g., the script renames files, deletes orphans, mutates non-card files). Commit migrator + registry entry + doc update together.
 
 6. **Test it.** Run dry-run against a real box you can reset; then `--apply` and validate with `cb validate`. Confirm the manifest got an entry. If you have a noisy-mode warning, decide explicitly whether to handle it or accept the loss — and document the call.
+
+7. **File an issue to remove the legacy support.** A migration almost always leaves code behind that exists only to tolerate the *old* shape — a fallback branch, a lenient parse, a compatibility field, a "both spellings accepted" reader. That code should not live forever, and **you are the last person who can name it precisely**: months later nobody can tell which branches are legacy tolerance and which are load-bearing. Write the issue now, while you can list them.
+
+   File it under `issues/code-quality/` (it is tech debt, not an upstream `watch/` item — the trigger is internal). It should name:
+
+   - **The exact code that exists only for the old shape** — `file:line` for each fallback, not "legacy handling in the loader."
+   - **The migration's manifest name**, since that is how the trigger gets checked.
+   - **What makes it safe to remove** — normally "every box that matters has this migration in its `config/migrations.jsonl`." Include the boxes that aren't yours to migrate on demand: prod boxes and any box a developer hasn't run `cb migrate` on yet lag behind, so a green local sweep is not the signal.
+   - **What breaks if it's removed too early** — usually an un-migrated box failing to load rather than anything loud, which is why the trigger has to be checked rather than assumed.
+
+   Don't set `priority:` (that is the developer's call), and don't wait for the removal to be scheduled — the issue exists so the debt is *recorded* at the moment it is created, not so it gets done next.
 
 Migrations are written for cards that already exist on disk; you almost never need to think about schema-level migrations (the schema files in `src/schemas/` evolve freely as long as old data still parses, or has a migrator to bring it forward).
 

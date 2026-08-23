@@ -52,6 +52,8 @@ export interface FakeChatBackendRun extends ChatBackendRun {
 export interface FakeChatBackend extends ChatBackend {
   /** All runs the fake has produced, in order. */
   runs: FakeChatBackendRun[];
+  /** Session ids whose per-chat warm slot was released, in order. */
+  closedWarmFor: string[];
   /** The most recent run, or null. */
   lastRun(): FakeChatBackendRun | null;
   /** How many times `prewarm()` has been called. */
@@ -105,6 +107,10 @@ export function createFakeChatBackend(): FakeChatBackend {
       backend.prewarmCount += 1;
       if (backend.autoSettleWarm) warmHeld = true;
       else pendingWarms.push(warmEpoch);
+    },
+    closedWarmFor: [],
+    closeWarmFor(sessionId: string): void {
+      backend.closedWarmFor.push(sessionId);
     },
     closeWarm(): void {
       backend.closeWarmCount += 1;

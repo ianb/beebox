@@ -2,12 +2,14 @@
  * Opening (and closing) the chat's bulk-upload overlay
  * (`docs/plans/chat-photo-batch-upload.md`, Track 2).
  *
- * Two things open it: the composer's "Upload files…" menu entry, which opens an
- * empty overlay for the user to pick into; and a photo selection too large to
- * ride inline (`photo-batch-threshold.ts`), which opens one already holding the
- * photos. Both carry the composer text as the batch's introduction — that is
- * what keeps the agent filing against what the boxholder said instead of asking
- * what the files are (`src/schemas/upload-batch.tsx` duty 1).
+ * One thing opens it: a file set that `file-routing.ts` sent to the batch path
+ * — a non-image in the selection, or more photos than can ride inline. The
+ * overlay therefore always opens already holding its files; the menu no longer
+ * offers an empty one to pick into
+ * (`issues/features/2026-08-03-attach-vs-upload-menu-confusing.md`). It carries
+ * the composer text as the batch's introduction — that is what keeps the agent
+ * filing against what the boxholder said instead of asking what the files are
+ * (`src/schemas/upload-batch.tsx` duty 1).
  *
  * Non-reactive by design: like the other composer-adjacent hooks it reads the
  * text with `get()` at call time rather than subscribing, so a keystroke never
@@ -16,11 +18,12 @@
  */
 
 import { useCallback, useState } from "react";
+import { toastError } from "../ui/toast-store";
 import type { EmissionStore } from "../../input/emission-store";
 
 /** An open bulk-upload overlay, and what it was opened with. */
 export interface BulkUploadLaunch {
-  /** Files the batch starts with — empty when opened from the Add menu. */
+  /** Files the batch starts with — never empty; routing only opens it with files. */
   seedFiles: File[];
   /** Composer text at open time, sent as the batch's introduction. */
   note: string;
@@ -28,14 +31,13 @@ export interface BulkUploadLaunch {
 
 export interface BulkUploadLaunchController {
   launch: BulkUploadLaunch | null;
-  /** Open an empty overlay (the Add-menu entry). */
-  openEmpty: () => void;
   /**
-   * Open one seeded with a photo selection too large to inline. When
+   * Open one seeded with a file set routed to the batch path. When
    * `foldInComposerImages` is set, the composer's existing inline photos join
-   * the same batch and are removed from the composer.
+   * the same batch and are removed from the composer. Refuses (with a toast)
+   * while the chat has no session id — see the hook.
    */
-  openWithPhotos: (opts: { files: File[]; foldInComposerImages: boolean }) => void;
+  openWithFiles: (opts: { files: File[]; foldInComposerImages: boolean }) => void;
   close: () => void;
   /** Clear the composer text a delivered batch consumed as its introduction. */
   onDelivered: () => void;
@@ -57,18 +59,27 @@ export function useBulkUploadLaunch(opts: {
   emissionStore: EmissionStore;
   /** Drops the persisted draft too, so the consumed text doesn't come back on reload. */
   clearDraftRef: React.MutableRefObject<() => void>;
+  /**
+   * The chat a batch would bind to. Null until the session exists — a Codex box
+   * names its own thread, so there is no id until the first message lands
+   * (a Claude box coins one in the browser and never sees this).
+   */
+  sessionId: string | null;
 }): BulkUploadLaunchController {
-  const { emissionStore, clearDraftRef } = opts;
+  const { emissionStore, clearDraftRef, sessionId } = opts;
   const [launch, setLaunch] = useState<BulkUploadLaunch | null>(null);
 
-  const openEmpty = useCallback((): void => {
-    setLaunch({ seedFiles: [], note: emissionStore.get().text });
-  }, [emissionStore]);
-
-  const openWithPhotos = useCallback(({ files, foldInComposerImages }: {
+  const openWithFiles = useCallback(({ files, foldInComposerImages }: {
     files: File[];
     foldInComposerImages: boolean;
   }): void => {
+    // No session, no batch target. Say so rather than opening nothing: these
+    // files were pasted, dropped or picked, and dropping them on the floor is
+    // how a paste of six photos used to vanish without a word.
+    if (sessionId === null) {
+      toastError("Send a message first, then add files");
+      return;
+    }
     const draft = emissionStore.get();
     // Existing inline photos come along, so one selection act has one
     // destination and the composer text describes the whole batch rather than
@@ -88,7 +99,7 @@ export function useBulkUploadLaunch(opts: {
     }
     // Read the text AFTER the removals, so the note reflects the stripped tokens.
     setLaunch({ seedFiles: [...folded, ...files], note: emissionStore.get().text });
-  }, [emissionStore]);
+  }, [emissionStore, sessionId]);
 
   const close = useCallback((): void => setLaunch(null), []);
 
@@ -99,5 +110,5 @@ export function useBulkUploadLaunch(opts: {
     clearDraftRef.current();
   }, [emissionStore, clearDraftRef]);
 
-  return { launch, openEmpty, openWithPhotos, close, onDelivered };
+  return { launch, openWithFiles, close, onDelivered };
 }

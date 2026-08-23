@@ -43,7 +43,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/session-end.sh"
+            "command": ".claude/hooks/session-end.sh",
+            "timeout": 300
           }
         ]
       }
@@ -63,7 +64,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/auto-sweep.sh session-start"
+            "command": ".claude/hooks/auto-sweep.sh session-start",
+            "timeout": 300
           }
         ]
       }

@@ -15,23 +15,26 @@ import {
   quotaSchema,
   testingQueueSchema,
 } from "../../shared/documents.js";
+import { askQueueSchema } from "../../shared/exhibits.js";
 import {
   actionResultSchema,
   actionVerbSchema,
   lifecycleJobSchema,
 } from "../../shared/actions.js";
 import { procedure, router } from "./trpc.js";
+import { commentsRouter } from "./comments-router.js";
+import { documentsRouter } from "./documents-router.js";
 
 const workstreamsRouter = router({
   list: procedure
     .output(workstreamListResultSchema)
-    .query(async ({ ctx }) => ({ items: await ctx.services.workstreams.list() })),
+    .query(async ({ ctx }) => ctx.services.workstreams.list()),
   detail: procedure
     .input(z.object({ name: z.string().regex(/^[a-zA-Z0-9_-]+$/u) }))
     .output(workstreamDetailSchema)
     .query(async ({ input, ctx }) => {
       const workstreams = await ctx.services.workstreams.list();
-      const workstream = workstreams.find((candidate) => candidate.name === input.name);
+      const workstream = workstreams.items.find((candidate) => candidate.name === input.name);
       if (!workstream) throw new TRPCError({ code: "NOT_FOUND", message: "Workstream not found" });
       return {
         workstream,
@@ -67,6 +70,11 @@ const testingRouter = router({
     ctx.services.documents.testingQueue()),
 });
 
+/** Read-only: answering an ask happens on the exhibits origin, never here. */
+const exhibitsRouter = router({
+  askQueue: procedure.output(askQueueSchema).query(async ({ ctx }) => ctx.services.exhibits.askQueue()),
+});
+
 const quotasRouter = router({
   get: procedure.output(z.object({ items: z.array(quotaSchema) })).query(async ({ ctx }) => ({
     items: await ctx.services.quotas.get(),
@@ -93,14 +101,14 @@ const actionsRouter = router({
 
 const dashboardRouter = router({
   get: procedure.output(dashboardSchema).query(async ({ ctx }) => {
-    const [workstreams, issues, plans, quotas, testing] = await Promise.all([
+    const [workstreamResult, issues, plans, quotas, testing] = await Promise.all([
       ctx.services.workstreams.list(),
       ctx.services.documents.listIssues(),
       ctx.services.documents.listPlans(),
       ctx.services.quotas.get(),
       ctx.services.documents.testingQueue(),
     ]);
-    return { workstreams, issues, plans, quotas, testing };
+    return { workstreams: workstreamResult.items, workstreamWarnings: workstreamResult.warnings, issues, plans, quotas, testing };
   }),
 });
 
@@ -108,9 +116,12 @@ export const appRouter = router({
   dashboard: dashboardRouter,
   workstreams: workstreamsRouter,
   issues: issuesRouter,
+  comments: commentsRouter,
+  documents: documentsRouter,
   plans: plansRouter,
   testing: testingRouter,
   quotas: quotasRouter,
+  exhibits: exhibitsRouter,
   actions: actionsRouter,
 });
 

@@ -39,6 +39,23 @@ const chatScheduleSchema = z.object({
 
 export type ChatSchedule = z.infer<typeof chatScheduleSchema>;
 
+const liveManagers = new Set<ChatScheduleManager>();
+let developmentDrainPaused = false;
+
+export function pauseChatSchedulesForDevReload(): void {
+  developmentDrainPaused = true;
+  for (const manager of liveManagers) manager.pauseForDevReload();
+}
+
+export function resumeChatSchedulesAfterAbortedDevReload(): void {
+  developmentDrainPaused = false;
+  for (const manager of liveManagers) manager.resumeAfterAbortedDevReload();
+}
+
+export function allChatScheduleDeliveriesAreIdle(): boolean {
+  return [...liveManagers].every((manager) => !manager.hasInFlightDeliveries());
+}
+
 export interface DetachedSchedulesReceipt {
   sessionId: string;
   schedules: ChatSchedule[];
@@ -141,7 +158,8 @@ export class ChatScheduleManager {
     this.schedulesFile = schedulesFile || SCHEDULES_FILE;
     this.onFire = onFire;
     this.loadFromDisk();
-    this.rearmAll();
+    liveManagers.add(this);
+    if (!developmentDrainPaused) this.rearmAll();
   }
 
   addSchedule(opts: {
@@ -172,7 +190,7 @@ export class ChatScheduleManager {
     };
 
     this.schedules.set(id, schedule);
-    this.armTimer(schedule);
+    if (!developmentDrainPaused) this.armTimer(schedule);
     this.saveToDisk();
 
     log(`Scheduled "${schedule.label}" to fire at ${schedule.firesAt} (in ${Math.round(opts.durationMs / 1000)}s)`);
@@ -234,6 +252,18 @@ export class ChatScheduleManager {
   getActive(): ChatSchedule[] {
     const now = Date.now();
     return [...this.schedules.values()].filter((s) => new Date(s.firesAt).getTime() > now);
+  }
+
+  hasInFlightDeliveries(): boolean {
+    return this.inFlight.size > 0;
+  }
+
+  pauseForDevReload(): void {
+    this.stopAll();
+  }
+
+  resumeAfterAbortedDevReload(): void {
+    this.rearmAll();
   }
 
   /**

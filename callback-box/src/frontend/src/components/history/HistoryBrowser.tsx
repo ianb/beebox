@@ -8,7 +8,7 @@
  * into navigation to the History page.
  */
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import type { HistoryCommit } from "../../api";
 import { trpc } from "../../lib/trpc";
 import { Sidebar } from "../Sidebar";
@@ -75,6 +75,11 @@ export function HistoryBrowser({
     [data]
   );
 
+  // A deep link names one commit. Until it is found, nothing else may be selected in its place:
+  // falling back to the newest commit made `/history/<old-hash>` render a DIFFERENT commit with no
+  // error, so a shared link read as though it had resolved.
+  const [deepLinkPending, setDeepLinkPending] = useState(Boolean(initialHash));
+
   // Auto-select when the first page arrives. Re-runs when filter changes
   // because TanStack issues a fresh query (new first page identity).
   const [prevFirstPage, setPrevFirstPage] = useState(data?.pages[0]);
@@ -82,17 +87,31 @@ export function HistoryBrowser({
   if (firstPage !== prevFirstPage) {
     setPrevFirstPage(firstPage);
     const [firstCommit] = firstPage?.commits ?? [];
-    if (firstCommit !== undefined) {
-      if (initialHash) {
-        const match = firstPage?.commits.find((c) => c.hash.startsWith(initialHash));
-        setSelectedCommit(match ?? firstCommit);
-      } else {
-        setSelectedCommit(firstCommit);
+    if (initialHash && deepLinkPending) {
+      // Search everything loaded so far, not just this page — the commit may arrive several
+      // pages in, and the search must not restart from scratch each time one lands.
+      const match = commits.find((c) => c.hash.startsWith(initialHash));
+      if (match !== undefined) {
+        setSelectedCommit(match);
+        setDeepLinkPending(false);
       }
+    } else if (firstCommit !== undefined) {
+      setSelectedCommit(firstCommit);
     } else {
       setSelectedCommit(null);
     }
   }
+
+  // Keep paging until the deep-linked commit turns up or the history runs out. Without this the
+  // hash simply never resolves for anything past the first page.
+  useEffect(() => {
+    if (!deepLinkPending || !initialHash) return;
+    if (commits.some((c) => c.hash.startsWith(initialHash))) return;
+    if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
+  }, [deepLinkPending, initialHash, commits, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  // Ran out of history without finding it: say so rather than showing some other commit.
+  const deepLinkMissing = deepLinkPending && Boolean(initialHash) && !hasNextPage && !isFetchingNextPage && commits.length > 0;
 
   const loading = isLoading || isFetchingNextPage;
 
@@ -165,7 +184,13 @@ export function HistoryBrowser({
           />
         ) : (
           <Row justify="center" align="center" className="h-full">
-            <Text tone="muted">{loading ? "Loading..." : "Select a commit to view details"}</Text>
+            <Text tone={deepLinkMissing ? "danger" : "muted"}>
+              {deepLinkMissing
+                ? `No commit in this box's history starts with ${initialHash}.`
+                : (deepLinkPending && initialHash
+                  ? `Looking for commit ${initialHash}…`
+                  : (loading ? "Loading..." : "Select a commit to view details"))}
+            </Text>
           </Row>
         )}
       </Column>

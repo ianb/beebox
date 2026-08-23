@@ -24,6 +24,12 @@ export interface TemplateStockEntry {
 }
 
 export const TEMPLATE_STOCK_HASHES = {
+  "briefing-seed": {
+    current: "ef850476650452469d989cb94c85d1d8b1fa10eee32d3568930cbb12d15489cc",
+    superseded: [
+      "4e5fc48a9fe8a7e100201b1a3b9efad33fccc1c204334af2543282e13d3bbcfe",
+    ],
+  },
   "schemas-guide-v2": {
     current: "15f7fdb102d01ad5fa68bf2b706d5c2af26cffaff4822e0278620786b39d1bc7",
     superseded: [

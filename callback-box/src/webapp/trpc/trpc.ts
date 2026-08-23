@@ -30,3 +30,22 @@ export const ownerProcedure = t.procedure.use(({ ctx, next }) => {
   }
   return next();
 });
+
+/**
+ * Requires a REAL authenticated owner — the strict variant of
+ * {@link ownerProcedure}, which also passes an open-access box (where nobody
+ * proved anything). Used by the secrets router alone: those procedures read and
+ * mutate the MACHINE-level store, which spans every box on the host, so one
+ * box's opt-out from the auth wall must never become a management surface for
+ * its neighbours' credentials (`docs/plans/secret-custody.md`).
+ */
+export const authenticatedOwnerProcedure = t.procedure.use(({ ctx, next }) => {
+  if (!ctx.isAuthenticatedOwner) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message:
+        "secrets management requires an authenticated owner session — open-access does not qualify (the store is machine-level, spanning every box on this host)",
+    });
+  }
+  return next();
+});

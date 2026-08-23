@@ -6,8 +6,15 @@ labels: [cli, feedback]
 filed-by: agent
 discovered-by: agent
 discovered-in: main session — cb feedback triage from a real box
-next-action: reconfirm
 ---
+
+> **Checked 2026-08-18 — still live, nothing changed.** Tagged `reconfirm`;
+> removed. `src/cli/commands/feedback.ts:173` still does
+> `lines.push("", "## Session Context", "", context)` — the raw transcript,
+> with no per-line normalization, exactly as filed. No commit has touched this
+> file since. The one-line fix the issue asks for (trim trailing whitespace per
+> line on the way in) is unimplemented, and so is the wider sweep for the same
+> shape elsewhere.
 
 `cb feedback` failed on its first invocation because of a trailing space in the
 message it was given. It appends the session transcript verbatim

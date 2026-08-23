@@ -16,11 +16,15 @@ struct NativeComposerView: View {
     var screenshotResult: NativeScreenshotResult?
     var onToggleLocationSharing: () -> Void
     var onTakeScreenshot: () -> Void
+    /// Ask the page to stop speaking (contract §4.9). Defaulted so the preview
+    /// and fixture screens need not supply a webview.
+    var onInterruptSpeech: () -> Void = {}
     var automaticallyResumeVoicePreparations = true
     var voiceStateOverride: VoiceCompositionState?
     var initiallyFocused = false
     var initialDetailedSelection: DraftSelection?
 
+    @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var store: PairedBoxStore
     @EnvironmentObject private var boxLockManager: BoxLockManager
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
@@ -40,15 +44,54 @@ struct NativeComposerView: View {
     @State private var voiceTurn = NativeVoiceTurnState()
     @State private var earconState = NativeEarconState()
     @StateObject private var dictation = SpeechDictation()
+    /// Wall-clock reference for pending-emission age. Refreshed while the scene
+    /// is active and on every foregrounding, so a message that stayed pending
+    /// across a sleep shows its long-pending affordance immediately on wake.
+    @State private var pendingReferenceDate = Date()
+    @State private var pendingClockTicker = Timer
+        .publish(every: 5, on: .main, in: .common)
+        .autoconnect()
+    /// When each `isSending` term became true. Wall-clock `Date` rather than a
+    /// monotonic reading: a term still held after the phone slept for an hour has
+    /// been held for an hour, and that is what the log should say.
+    @State private var sendBlockerSince: [ComposerSendBlocker: Date] = [:]
+    /// Terms already reported as wedged, so the ticker warns once per hold
+    /// instead of every five seconds.
+    @State private var warnedSendBlockers: Set<ComposerSendBlocker> = []
 
     var body: some View {
         presentedComposer
     }
 
-    private var composerLifecycle: some View {
+    /// Split from `composerLifecycle` so the modifier chain stays inside the
+    /// Swift type checker's budget.
+    private var composerClock: some View {
         composerSurface
-        .background(.regularMaterial)
-        .ignoresSafeArea(.container, edges: .bottom)
+            .background(.regularMaterial)
+            .ignoresSafeArea(.container, edges: .bottom)
+            .onReceive(pendingClockTicker) { date in
+                reportWedgedSendBlockers(now: date)
+                guard scenePhase == .active, hasUnconfirmedPendingEmission else {
+                    return
+                }
+                pendingReferenceDate = date
+            }
+            .onChange(of: sendBlockers) { previous, current in
+                noteSendBlockerChange(from: previous, to: current)
+            }
+            .onChange(of: scenePhase) { _, phase in
+                guard phase == .active else {
+                    return
+                }
+                pendingReferenceDate = Date()
+            }
+            .onChange(of: screenAwakeReasons) { _, reasons in
+                applyScreenAwake(reasons)
+            }
+    }
+
+    private var composerLifecycle: some View {
+        composerClock
         .onChange(of: draftStore.draft.text) { _, newValue in
             dictation.noteManualTextChange(newValue)
         }
@@ -64,6 +107,9 @@ struct NativeComposerView: View {
         }
         .onChange(of: dictation.state) { _, state in
             applyEarcon(.dictationStateChanged(state))
+            if case .failed = state {
+                applyVoiceTurn(.dictationFailed)
+            }
         }
         .onChange(of: dictation.interruptionCount) {
             applyEarcon(.recordingInterrupted)
@@ -86,8 +132,14 @@ struct NativeComposerView: View {
             }
         }
         .onAppear {
+            pendingReferenceDate = Date()
+            // `draftNotReady` is true before the first render, so its hold has no
+            // transition to observe — seed it here or a draft load that never
+            // completes is the one wedge the instrumentation cannot name.
+            noteSendBlockerChange(from: [], to: sendBlockers)
             applyVoiceTurn(.speechPlaybackChanged(playing: speechPlaybackActive))
             applyEarcon(.responseActiveChanged(responseActive))
+            applyScreenAwake(screenAwakeReasons)
             if initiallyFocused {
                 focused = true
             }
@@ -125,6 +177,7 @@ struct NativeComposerView: View {
             }
         }
         .onDisappear {
+            applyScreenAwake([])
             applyVoiceTurn(.microphoneStopped)
             applyEarcon(.cancelWaiting)
             NativeEarconPlayer.shared.stopAllTimers()
@@ -233,6 +286,7 @@ struct NativeComposerView: View {
                 PendingEmissionList(
                     emissions: pendingStore.pending,
                     voicePreparations: pendingStore.voicePreparations,
+                    referenceDate: pendingReferenceDate,
                     canRestore: draftIsEmpty,
                     onRetry: retryPendingEmission,
                     onRestore: restorePendingEmission,
@@ -365,15 +419,19 @@ struct NativeComposerView: View {
             ProgressView()
                 .frame(width: 58, height: 58)
                 .background(.quaternary, in: Circle())
-        } else if voiceTurn.isActive || isVoiceRecording {
-            composerButton(
-                systemImage: "stop.fill",
-                accessibilityLabel: "Stop continuous dictation",
-                controlID: "cb-composer-stop-dictation",
-                does: "ends the dictation turn and keeps what was heard in the composer",
-                foregroundStyle: .red,
-                action: stopMicrophoneWithEarcon
-            )
+        } else if voiceTurn.isActive || isVoiceRecording || isVoiceStarting {
+            if isVoiceRecording == false, isVoiceStarting {
+                startingDictationButton
+            } else {
+                composerButton(
+                    systemImage: "stop.fill",
+                    accessibilityLabel: "Stop continuous dictation",
+                    controlID: "cb-composer-stop-dictation",
+                    does: "ends the dictation turn and keeps what was heard in the composer",
+                    foregroundStyle: .red,
+                    action: stopMicrophoneWithEarcon
+                )
+            }
         } else if hasTextContent {
             composerButton(
                 systemImage: "arrow.up",
@@ -416,6 +474,28 @@ struct NativeComposerView: View {
 
     private var isVoiceRecording: Bool {
         voiceStateOverride == .recording || dictation.isRecording
+    }
+
+    /// A turn is under way but the recognizer is not live yet — permissions, the
+    /// on-device analyzer session, the audio engine. The control says so instead
+    /// of wearing the recording face: a button that reports itself listening
+    /// while nothing is being heard is how "record does nothing" looked to the
+    /// boxholder in the first place.
+    private var isVoiceStarting: Bool {
+        voiceStateOverride == .requestingPermission || dictation.isStarting
+    }
+
+    /// The pending face of the stop control. Still stops the turn on tap — the
+    /// user must never have to wait for a start in order to abandon it.
+    private var startingDictationButton: some View {
+        Button(action: stopMicrophoneWithEarcon) {
+            ProgressView()
+                .tint(.red)
+                .frame(width: 58, height: 58)
+                .background(Color(uiColor: .tertiarySystemFill), in: Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Starting dictation — tap to stop")
     }
 
     private func openCapture() {
@@ -488,13 +568,32 @@ struct NativeComposerView: View {
         // still discard the draft — including the text the running batch took as
         // its introduction. A voice path that can do what a disabled button
         // cannot is worse than no lock, because nothing on screen explains it.
-        if isSending {
-            statusText = batchProgress == nil
-                ? "Still sending — try again in a moment."
-                : "Photos are still uploading — try again when they finish."
+        let blockers = sendBlockers
+        if blockers.isEmpty == false {
+            // The tag substitution is still held inside `dictation` — nothing of
+            // this command has touched the composer, and dropping it here is what
+            // keeps `<erase-message …/>` (and the spoken words that produced it)
+            // out of a draft whose command never ran.
+            dictation.discardKeywordSubstitution()
+            statusText = ComposerSendBlocker.voiceRefusalStatus(for: blockers)
             applyEarcon(.microphoneStopped)
             applyVoiceTurn(.microphoneStopped)
+            BoxLog.info(
+                "voice keyword refused action=\(intent.action.rawValue)"
+                    + " blockers=\(ComposerSendBlocker.logLabel(for: blockers))",
+                category: .composer,
+                targetBoxID: box.id
+            )
             return
+        }
+        // Accepting the command is not permission to leave its control tag in
+        // the composer. Only an action that hands the draft off as a message
+        // commits the held substitution; the rest keep the pre-keyword
+        // transcript — see `SpeechKeywordAction.commitsKeywordSubstitution`.
+        if intent.action.commitsKeywordSubstitution {
+            dictation.commitKeywordSubstitution()
+        } else {
+            dictation.discardKeywordSubstitution()
         }
         switch intent.action {
         case .send, .sendHq, .sendClose:
@@ -534,14 +633,16 @@ struct NativeComposerView: View {
             narrationEnabled: narrationEnabled
         ) {
         case .live(let text):
-            if let audioURL {
-                try? FileManager.default.removeItem(at: audioURL)
-            }
+            // The recording used to be deleted here. It is kept instead, so a
+            // box agent can retranscribe this message later — and this is the
+            // path where that matters most: a live send is the narration-off
+            // send, which commits the realtime transcript.
             enqueueMessage(
                 text: text,
                 origin: .voice,
                 diarized: false,
-                voiceKeywordAction: intent.action
+                voiceKeywordAction: intent.action,
+                retainingAudioAt: audioURL
             )
             return
         case .hq:
@@ -563,8 +664,23 @@ struct NativeComposerView: View {
                     audioURL: audioURL,
                     boxID: sendingBox.id
                 )
+                // Same swap as the live path: the temp recording is retained
+                // rather than deleted. `stageVoicePreparation` has already
+                // copied it for the HQ pass, and that copy keeps its own
+                // lifecycle — this move takes the original. The preparation id
+                // IS the emission id, so the recording is keyed correctly
+                // before the message even exists.
                 if let audioURL {
-                    try? FileManager.default.removeItem(at: audioURL)
+                    await VoiceAudioRetentionStore.shared.retain(
+                        RetainedVoiceAudio(
+                            emissionID: preparation.id.uuidString,
+                            recordedAt: preparation.createdAt,
+                            text: intent.processedTranscript,
+                            sessionID: sendingBox.sessionID
+                        ),
+                        movingFrom: audioURL,
+                        boxID: sendingBox.id
+                    )
                 }
                 await draftStore.clearForSending(boxID: sendingBox.id)
                 dictation.resetDictationState()
@@ -603,6 +719,14 @@ struct NativeComposerView: View {
                     text: prepared.text,
                     diarized: prepared.diarized
                 )
+                // The recording was retained at send time with the realtime
+                // transcript, because that was all that existed then; the
+                // message commits with this one.
+                await VoiceAudioRetentionStore.shared.updateText(
+                    emissionID: preparation.id.uuidString,
+                    text: prepared.text,
+                    boxID: preparation.boxID
+                )
             } catch {
                 if pendingStore.voicePreparations.contains(where: { $0.id == preparation.id }) {
                     statusText = "Voice preparation is saved and will retry."
@@ -630,25 +754,46 @@ struct NativeComposerView: View {
         }
     }
 
+    /// `retainingAudioAt` is the just-finished recording, if this send has one.
+    /// The store TAKES the file (moves it), so the caller must not delete it.
+    /// The emission id is generated by `enqueue`, so retention happens after
+    /// the message exists rather than before.
     private func enqueueMessage(
         text: String,
         origin: NativeChatEmission.Origin,
         diarized: Bool,
-        voiceKeywordAction: SpeechKeywordAction? = nil
+        voiceKeywordAction: SpeechKeywordAction? = nil,
+        retainingAudioAt audioURL: URL? = nil
     ) {
         let snapshot = draftStore.draft
         let sendingBoxID = box.id
+        let sendingSessionID = box.sessionID
         isPreparingSend = true
         statusText = "Preparing attachments..."
         Task {
             do {
-                _ = try await pendingStore.enqueue(
+                let emission = try await pendingStore.enqueue(
                     draft: snapshot,
                     text: text,
                     origin: origin,
                     diarized: diarized,
                     boxID: sendingBoxID
                 )
+                if let audioURL {
+                    await VoiceAudioRetentionStore.shared.retain(
+                        RetainedVoiceAudio(
+                            emissionID: emission.id.uuidString,
+                            recordedAt: emission.createdAt,
+                            text: text,
+                            // The session being composed into, captured now:
+                            // the phone may have navigated elsewhere by the
+                            // time an agent asks for this recording.
+                            sessionID: sendingSessionID
+                        ),
+                        movingFrom: audioURL,
+                        boxID: sendingBoxID
+                    )
+                }
                 await draftStore.clearForSending(boxID: sendingBoxID)
                 dictation.resetDictationState()
                 selectedPhotoItems = []
@@ -659,6 +804,11 @@ struct NativeComposerView: View {
                     applyVoiceTurn(.voiceMessageSent(closeMicrophone: voiceKeywordAction == .sendClose))
                 }
             } catch {
+                // The send failed, so no emission id exists to key the
+                // recording under; drop it rather than leave a temp file behind.
+                if let audioURL {
+                    try? FileManager.default.removeItem(at: audioURL)
+                }
                 if voiceKeywordAction != nil {
                     applyEarcon(.cancelWaiting)
                 }
@@ -675,7 +825,18 @@ struct NativeComposerView: View {
     /// the normal way to caption a batch: the introduction is read at finalize,
     /// so whatever is typed during the upload becomes the batch's note.
     private var isSending: Bool {
-        isPreparingSend || batchProgress != nil || draftStore.isReady == false
+        sendBlockers.isEmpty == false
+    }
+
+    /// The lock's terms, individually named. `isSending` is their disjunction;
+    /// the refusal copy and the wedge diagnostics both need the terms, not the
+    /// verdict.
+    private var sendBlockers: [ComposerSendBlocker] {
+        ComposerSendBlocker.blockers(
+            isPreparingSend: isPreparingSend,
+            isUploadingPhotoBatch: batchProgress != nil,
+            isDraftReady: draftStore.isReady
+        )
     }
 
     /// Gates only the TEXT SURFACE. A batch in flight must not lock it — the user
@@ -684,15 +845,124 @@ struct NativeComposerView: View {
         isPreparingSend || draftStore.isReady == false
     }
 
+    /// Records when each lock term engaged and logs the transitions.
+    ///
+    /// The field report this instrumentation answers said only "it stays in
+    /// Sending" — with no way to tell which of the three terms was held, the
+    /// filed mechanism was a guess (and the code contradicts it). These entries
+    /// name the term and its age, which is the whole point.
+    private func noteSendBlockerChange(
+        from previous: [ComposerSendBlocker],
+        to current: [ComposerSendBlocker]
+    ) {
+        let now = Date()
+        let previousSet = Set(previous)
+        let currentSet = Set(current)
+        let heldSince = sendBlockerSince.values.min()
+        for blocker in currentSet.subtracting(previousSet) {
+            sendBlockerSince[blocker] = now
+        }
+        for blocker in previousSet.subtracting(currentSet) {
+            sendBlockerSince[blocker] = nil
+            warnedSendBlockers.remove(blocker)
+        }
+        if previous.isEmpty, current.isEmpty == false {
+            BoxLog.info(
+                "send lock engaged terms=\(ComposerSendBlocker.logLabel(for: current))",
+                category: .composer,
+                targetBoxID: box.id
+            )
+            return
+        }
+        if previous.isEmpty == false, current.isEmpty {
+            let heldMs = heldSince.map { String(Int(now.timeIntervalSince($0) * 1000)) } ?? "unknown"
+            BoxLog.info(
+                "send lock cleared lastTerms=\(ComposerSendBlocker.logLabel(for: previous)) heldMs=\(heldMs)",
+                category: .composer,
+                targetBoxID: box.id
+            )
+            return
+        }
+        guard previous != current else {
+            return
+        }
+        BoxLog.info(
+            "send lock terms changed from=\(ComposerSendBlocker.logLabel(for: previous))"
+                + " to=\(ComposerSendBlocker.logLabel(for: current))",
+            category: .composer,
+            targetBoxID: box.id
+        )
+    }
+
+    /// Warns once per term that has been held past `sendBlockerWedgeSeconds`.
+    /// `preparingSend` is the loudest of these: it spans a single enqueue call,
+    /// so a minute of it means a staging or clear-for-sending call never
+    /// returned, and the composer is wedged rather than busy.
+    private func reportWedgedSendBlockers(now: Date) {
+        for (blocker, since) in sendBlockerSince
+        where warnedSendBlockers.contains(blocker) == false
+            && now.timeIntervalSince(since) >= Self.sendBlockerWedgeSeconds {
+            warnedSendBlockers.insert(blocker)
+            BoxLog.warn(
+                "send lock term stuck term=\(blocker.rawValue)"
+                    + " heldSeconds=\(Int(now.timeIntervalSince(since)))"
+                    + " terms=\(ComposerSendBlocker.logLabel(for: sendBlockers))",
+                category: .composer,
+                targetBoxID: box.id
+            )
+        }
+    }
+
+    /// A term held this long is no longer "in flight". One enqueue, one staging
+    /// write, or one draft load has no legitimate reason to take a minute.
+    private static let sendBlockerWedgeSeconds: TimeInterval = 60
+
     private func applyVoiceTurn(_ event: NativeVoiceTurnEvent) {
         switch voiceTurn.handle(event) {
         case .none:
             break
         case .startDictation:
             dictation.startIfNeeded(currentText: text)
+        case .startDictationInterruptingSpeech:
+            // The microphone opens now, not after the box finishes its sentence
+            // — a person who starts talking over you expects to be heard. The
+            // page owns the speech, so ask it to stop; nothing waits on that
+            // answer, because a lost command must not cost the user their turn.
+            dictation.startIfNeeded(currentText: text)
+            onInterruptSpeech()
         case .stopDictation:
             dictation.stop()
         }
+    }
+
+    /// The reasons this composer is currently holding the screen awake for —
+    /// derived, never accumulated, so every way a turn can end releases by the
+    /// same path. `scenePhase` is part of the derivation: a backgrounded
+    /// composer holds nothing, and returning to the foreground re-derives.
+    private var screenAwakeReasons: Set<ScreenAwakeReason> {
+        guard scenePhase == .active else {
+            return []
+        }
+        var reasons: Set<ScreenAwakeReason> = []
+        // One reason for the whole turn rather than one for the live
+        // microphone: the turn stays open across the pause for the box's speech
+        // and the reply streaming in before that speech starts, and those gaps
+        // — nobody speaking, nobody touching — are precisely when the idle
+        // timer would fire and suspend the app under the microphone it is about
+        // to reopen. `isStarting` covers the permission/engine bring-up for the
+        // same reason the composer wears its pending face there.
+        if voiceTurn.isActive || dictation.isRecording || dictation.isStarting {
+            reasons.insert(.voiceTurn)
+        }
+        if speechPlaybackActive {
+            reasons.insert(.speechPlayback)
+        }
+        return reasons
+    }
+
+    private func applyScreenAwake(_ reasons: Set<ScreenAwakeReason>) {
+        ScreenAwakeHold.shared.set(.voiceTurn, active: reasons.contains(.voiceTurn))
+        ScreenAwakeHold.shared.set(.speechPlayback, active: reasons.contains(.speechPlayback))
     }
 
     private func applyEarcon(_ event: NativeEarconEvent) {
@@ -733,6 +1003,15 @@ struct NativeComposerView: View {
     private var hasIncompleteFiles: Bool {
         draftStore.draft.files.contains { file in
             guard case .uploaded = file.state else {
+                return true
+            }
+            return false
+        }
+    }
+
+    private var hasUnconfirmedPendingEmission: Bool {
+        pendingStore.pending.contains { emission in
+            if case .pending = emission.state {
                 return true
             }
             return false
@@ -797,7 +1076,7 @@ struct NativeComposerView: View {
         // Too many to ride inline: base64-ing this many photos into one
         // /chat/send is the failure this branch exists to prevent. Upload them
         // and let the agent file them instead. Mirrors the web composer's
-        // `shouldBatchPhotos` — see docs/mobile-contract.md §8, INLINE_PHOTO_LIMIT.
+        // `routeAddedFiles` — see docs/mobile-contract.md §8, INLINE_PHOTO_LIMIT.
         if BulkPhotoThreshold.shouldBatch(existingInline: draftStore.draft.images.count, incoming: items.count) {
             selectedPhotoItems = []
             await uploadPhotoBatch(items)
@@ -1181,6 +1460,63 @@ struct NativeComposerView: View {
     }
 }
 
+/// The individual terms of the composer's `isSending` lock, named.
+///
+/// Two callers need the same classification and neither can work from a single
+/// boolean: the spoken-command refusal has to say what is actually blocking
+/// (only the photo-batch term is reliably transient), and the diagnostics have
+/// to name the stuck term after the phone is disconnected — the raw `isSending`
+/// bool told an earlier field report nothing, which is why this exists.
+enum ComposerSendBlocker: String, CaseIterable, Hashable {
+    /// A send/stage call is in flight. It should span one enqueue.
+    case preparingSend
+    /// A bulk photo batch is uploading. The one term with a real, visible
+    /// end — progress is on screen and the network drives it.
+    case photoBatchUploading
+    /// The draft store has not finished loading this box's draft. True from
+    /// launch until activation completes, so it is also the default state.
+    case draftNotReady
+
+    static func blockers(
+        isPreparingSend: Bool,
+        isUploadingPhotoBatch: Bool,
+        isDraftReady: Bool
+    ) -> [ComposerSendBlocker] {
+        var blockers: [ComposerSendBlocker] = []
+        if isPreparingSend {
+            blockers.append(.preparingSend)
+        }
+        if isUploadingPhotoBatch {
+            blockers.append(.photoBatchUploading)
+        }
+        if isDraftReady == false {
+            blockers.append(.draftNotReady)
+        }
+        return blockers
+    }
+
+    /// What a refused spoken command says. Only the photo term promises the
+    /// wait is short, because only it has a visible endpoint: "try again in a
+    /// moment" was previously said for every term, including ones that in the
+    /// field never cleared at all.
+    static func voiceRefusalStatus(for blockers: [ComposerSendBlocker]) -> String {
+        if blockers.contains(.photoBatchUploading) {
+            return "Photos are still uploading — try again when they finish."
+        }
+        if blockers.contains(.preparingSend) {
+            return "Still saving the last message — voice commands stay off until it finishes."
+        }
+        if blockers.contains(.draftNotReady) {
+            return "The draft has not finished loading — voice commands stay off until it does."
+        }
+        return "Voice commands are unavailable right now."
+    }
+
+    static func logLabel(for blockers: [ComposerSendBlocker]) -> String {
+        blockers.isEmpty ? "none" : blockers.map(\.rawValue).joined(separator: ",")
+    }
+}
+
 struct EncodedComposerImage {
     var data: Data
     var mimeType: String
@@ -1412,6 +1748,8 @@ private struct FileAttachmentList: View {
 private struct PendingEmissionList: View {
     var emissions: [PendingEmission]
     var voicePreparations: [VoicePreparation]
+    /// Wall clock the pending rows age against; the owner refreshes it.
+    var referenceDate: Date
     var canRestore: Bool
     var onRetry: (PendingEmission) -> Void
     var onRestore: (PendingEmission) -> Void
@@ -1430,7 +1768,30 @@ private struct PendingEmissionList: View {
             }
             ForEach(emissions) { emission in
                 switch emission.state {
-                case .awaitingWebView, .awaitingReceipt:
+                case .pending where EmissionRedeliveryPolicy.isLongPending(
+                    createdAt: emission.createdAt,
+                    now: referenceDate
+                ):
+                    // Still `pending` — redelivery keeps retrying underneath.
+                    // The user gets a decision, not a manufactured failure, so
+                    // Retry is deliberately absent.
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label(
+                            "Still waiting for the box to confirm this message.",
+                            systemImage: "clock.badge.exclamationmark"
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        HStack(spacing: 12) {
+                            Button("Restore") { onRestore(emission) }
+                                .disabled(canRestore == false)
+                                .frame(minHeight: 44)
+                            Button("Discard", role: .destructive) { onDiscard(emission) }
+                                .frame(minHeight: 44)
+                        }
+                        .font(.caption.weight(.semibold))
+                    }
+                case .pending:
                     HStack(spacing: 8) {
                         ProgressView()
                         Text("Sending message…")

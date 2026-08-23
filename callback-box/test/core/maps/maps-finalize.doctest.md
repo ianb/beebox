@@ -8,6 +8,8 @@ import { finalize } from "../../../src/core/maps/finalize.js";
 import { loadMapState, saveMapState } from "../../../src/core/maps/state.js";
 import { getHead } from "../../../src/lib/git.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { lstat, readlink } from "node:fs/promises";
+import { join } from "node:path";
 ```
 
 ## Creates CLAUDE.md and stamps state for fresh dirs
@@ -51,6 +53,54 @@ print(summary.join("\n"));
 =>
 <root>: at-head
 inbox: at-head
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A fresh CLAUDE.md gets its AGENTS.md mirror
+
+Codex reads `AGENTS.md`, not `CLAUDE.md`. A stub written without the sibling
+symlink leaves the directory's new MAP invisible to a Codex session until some
+later `generate-docs` run happens to plant one — so finalize links the file it
+just created, and only that file.
+
+```ts
+const box = await makeTmpBox({ git: true });
+box.commitAll("seed");
+const head = await getHead(box.root);
+await box.write("store/MAP.md", "");
+
+await finalize({
+  boxRoot: box.root,
+  tasks: [
+    { map: "store/MAP.md", dir: "store", action: "create", head, added: [], deleted: [], children: [] },
+  ],
+});
+
+const mirror = join(box.root, "store", "AGENTS.md");
+print(`symlink: ${(await lstat(mirror)).isSymbolicLink()}`);
+print(`target: ${await readlink(mirror)}`);
+=>
+symlink: true
+target: CLAUDE.md
+```
+
+An existing CLAUDE.md that only needed the include line inserted already has a
+mirror beside it, so nothing is relinked:
+
+```ts continue
+await box.write("people/MAP.md", "");
+await box.write("people/CLAUDE.md", "Hand-written notes.\n");
+await finalize({
+  boxRoot: box.root,
+  tasks: [
+    { map: "people/MAP.md", dir: "people", action: "create", head, added: [], deleted: [], children: [] },
+  ],
+});
+print(JSON.stringify(await box.read("people/CLAUDE.md")));
+=> "@MAP.md\nHand-written notes.\n"
 ```
 
 ```ts cleanup

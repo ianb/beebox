@@ -43,7 +43,7 @@ await setEngine(box.root, "codex");
 const agent = createAgent({ name: "selection-test" });
 const result = await agent.invoke({ boxRoot: box.root, prompt: "hello", dryRun: true });
 
-result.output.startsWith("[DRY RUN] Would run Codex app-server")
+result.output.startsWith("[DRY RUN] Would run Codex SDK")
 => true
 
 await box.cleanup();

@@ -68,6 +68,23 @@ const filterSchema = z.object({
 
 type HistoryFilter = z.infer<typeof filterSchema>;
 
+/**
+ * Accept a path in either the box-relative form the app uses internally or the git-root-relative
+ * form the history UI displays.
+ *
+ * Strips a leading segment equal to the box root's own directory name when doing so names a real
+ * file and the original does not. The as-is form always wins when it exists, so a box that
+ * genuinely contains a `content/` directory of its own is unaffected.
+ */
+export function normalizeHistoryPath(candidate: string, boxRoot: string): string {
+  if (fs.existsSync(path.join(boxRoot, candidate))) return candidate;
+  const prefix = `${path.basename(boxRoot)}/`;
+  if (!candidate.startsWith(prefix)) return candidate;
+  const stripped = candidate.slice(prefix.length);
+  if (stripped !== "" && fs.existsSync(path.join(boxRoot, stripped))) return stripped;
+  return candidate;
+}
+
 export const historyRouter = router({
   list: publicProcedure
     .input(
@@ -81,7 +98,12 @@ export const historyRouter = router({
       const greps = input.filter ? buildGreps(input.filter) : [];
       let historyPath: string | undefined;
       if (input.filter?.path !== undefined) {
-        const candidate = boxRelativePath(input.filter.path);
+        // Tolerate the form the UI displays. A box's git root is the directory ABOVE its box root,
+        // so `git log --name-status` reports `content/config/foo.json` while every internal path
+        // boundary in the app uses the box-relative `config/foo.json`. Copying a path out of the
+        // diff panel into this filter therefore returned an empty result that read as "this file
+        // has no history". Accept either form here, per box-path.ts's consume-boundary rule.
+        const candidate = normalizeHistoryPath(boxRelativePath(input.filter.path), ctx.boxRoot);
         const root = path.resolve(ctx.boxRoot);
         const resolved = path.resolve(root, candidate);
         if (candidate.startsWith(":") || (resolved !== root && !resolved.startsWith(root + path.sep))) {

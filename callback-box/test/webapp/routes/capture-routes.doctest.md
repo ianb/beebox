@@ -454,3 +454,67 @@ res.statusCode
 ```ts cleanup
 await ctx.cleanup();
 ```
+
+## Discard is guarded: the client may only delete what is still its own
+
+`DELETE` is both the overlay's cancel and the chat chip's discard. It used to
+tear the session directory down unconditionally, which meant it could delete a
+capture the background worker was in the middle of preparing — the worker then
+reads `null` and silently returns, so the client reports success and no message
+ever arrives. It now goes through `discardStagingSessionIfCancellable`, which
+takes the per-session lock and re-checks the state inside it.
+
+An `open` session — the uploader's own cancel — is still the client's to delete:
+
+```ts
+const ctx = await makeTestServer();
+const created = await ctx.request({
+  method: "POST", url: "/api/capture/sessions", payload: { targetSessionId: "chat-discard" },
+});
+const sessionId = created.body.sessionId;
+await uploadRaw(ctx, { sessionId, filename: "shot.jpg", kind: "photo", data: Buffer.from("PHOTO") });
+const cancelled = await ctx.request({ method: "DELETE", url: `/api/capture/sessions/${sessionId}` });
+JSON.stringify([cancelled.statusCode, await readStagingSession({ boxRoot: ctx.boxRoot, id: sessionId })])
+=> [200,null]
+```
+
+A session the worker owns is refused, and survives:
+
+```ts continue
+const inFlight = await ctx.request({
+  method: "POST", url: "/api/capture/sessions", payload: { targetSessionId: "chat-discard" },
+});
+const busyId = inFlight.body.sessionId;
+await uploadRaw(ctx, { sessionId: busyId, filename: "busy.jpg", kind: "photo", data: Buffer.from("PHOTO") });
+await setStagingState({ boxRoot: ctx.boxRoot, id: busyId, state: "preparing" });
+const refused = await ctx.request({ method: "DELETE", url: `/api/capture/sessions/${busyId}` });
+JSON.stringify([refused.statusCode, refused.body.error])
+=> [409,"Capture is already preparing and can no longer be discarded"]
+
+const survivor = await readStagingSession({ boxRoot: ctx.boxRoot, id: busyId });
+survivor.state
+=> preparing
+```
+
+A dead `failed:*` session is discardable — this is the verb the chat chip
+needed, and the one the boxholder had no way to reach for sixteen days:
+
+```ts continue
+await setStagingState({ boxRoot: ctx.boxRoot, id: busyId, state: "failed:prepare" });
+const discarded = await ctx.request({ method: "DELETE", url: `/api/capture/sessions/${busyId}` });
+JSON.stringify([discarded.statusCode, await readStagingSession({ boxRoot: ctx.boxRoot, id: busyId })])
+=> [200,null]
+```
+
+Discarding one that is already gone is a 404, as it was before: there is no
+session to authorize the caller against.
+
+```ts continue
+const again = await ctx.request({ method: "DELETE", url: `/api/capture/sessions/${busyId}` });
+again.statusCode
+=> 404
+```
+
+```ts cleanup
+await ctx.cleanup();
+```

@@ -82,7 +82,7 @@ interact like iOS users.
 | Text editing | Autosizing textarea; desktop Enter sends and Shift+Enter inserts a newline; mobile Enter remains a newline (`src/frontend/src/components/chat/InteractiveChat-composer.tsx:35-72`; `InteractiveChat-mobile-row.tsx:45-60`) | Native multiline `TextField`, 1-5 lines (`NativeComposerView.swift:132-142`) | Keep the native keyboard and newline behavior. Wrap `UITextView` for stable caret access and dynamic height; keep the visible send button. |
 | Idle controls | Mobile has add/capture, keyboard, and mic controls (`InteractiveChat-composer.tsx:193-283`) | `+`, always-visible text field, mic/send (`NativeComposerView.swift:42-57,144-187`) | Preserve the current native dock design. Visual identity is an intentional divergence; command availability is not. |
 | Images | Paste/drop/file input, asynchronous processing, thumbnails, remove, and `[imageN]` tokens (`InteractiveChat-attachments.ts:1-17`; `ChatAttachments.tsx:1-12`) | Camera/gallery, thumbnails, remove; four-image cap; base64 held in memory; no tokens (`NativeComposerView.swift:36-40,361-389`; `ComposerActionsView.swift:32-49`) | Keep camera/gallery, add paste and screenshot actions, file-back image data, show processing/failure, and insert stable caret-aware tokens. Remove the arbitrary four-image cap; enforce documented byte/count limits instead. |
-| Files | Arbitrary files upload to `tmp/`, become chips, and insert `[fileN]` tokens (`src/frontend/src/lib/file-upload.ts:1-44`; `src/webapp/routes/chat-uploads.ts:44-82`) | No regular-composer file attachment | Add Files picker, authenticated multipart upload to the same route, progress/retry/remove UI, and full file metadata in the draft. |
+| Files | **No longer a web composer path.** A non-image selection now routes whole to the bulk-upload batch (`components/chat/file-routing.ts`); `[fileN]` tokens survive only in the emission format and in the native composer's use of `POST /api/chat/upload-file` (`src/webapp/routes/chat-uploads.ts:44-82`) | No regular-composer file attachment | Reconsider: either mirror the web routing (non-image → bulk batch) or keep the native `[fileN]` upload path, but the two surfaces no longer share a design here. |
 | Selections | Companion-pane selections become pills plus `[selectionN]`; voice selections use transcript anchors (`InteractiveChat-selections.ts:21-56`; `InteractiveChat-view.tsx:263-307`) | Companion selection mutates the hidden web draft, so it cannot appear in or ship with the native draft | Route selection intents web-to-native in native-shell mode. Native assigns IDs, inserts typed tokens or voice anchors, and displays removable detail chips. |
 | Screenshot | Add menu can acquire a screenshot (`InteractiveChat-composer.tsx:193-221`; `ScreenshotMenuItem.tsx:51-105`) | None | Add “Screenshot” using a visible-content `WKWebView` snapshot. This is the native equivalent, not browser display capture. |
 | Location | Add menu invokes the existing location bridge | Native add sheet invokes that same bridge (`ComposerActionsView.swift:46-48`) | Already semantically aligned. Retain one-shot status/result behavior. |
@@ -107,9 +107,11 @@ interact like iOS users.
   different acknowledgement and cleanup lifecycle, so they get a small
   `ComposerDraftRepository` rather than entering capture staging.
 - **Authenticated chat-file upload — reuse server behavior.** The web helper
-  already applies mobile auth and validates the response
-  (`src/frontend/src/lib/file-upload.ts:10-44`). Extract/share request-building
-  behavior on iOS; do not add another server endpoint.
+  that used to model this was removed with the composer's Add-files merge
+  (`issues/features/2026-08-03-attach-vs-upload-menu-confusing.md`); the route
+  itself (`src/webapp/routes/chat-uploads.ts`) and the native client
+  (`../../../ios-app/CallbackBox/Services/ChatAPI.swift`) are what remain. Do not
+  add another server endpoint.
 - **Pending delivery queue — repair and persist.** `RootView` can hold multiple
   emissions and removes them by receipt ID
   (`../../../ios-app/CallbackBox/Views/RootView.swift:3-11,32-66`). Move this

@@ -111,3 +111,50 @@ const neighborScript = [
 (await execFileAsync("bash", ["-c", neighborScript, "liveness", teardownLib])).stdout
 => none
 ```
+
+## A failed trash move preserves the registered worktree and branch
+
+Removal stops immediately when the worktree directory cannot move into trash.
+It must not prune the registration or delete the branch after that failure.
+
+```ts
+const failureRoot = await mkdtemp(join(tmpdir(), "workstream-cull-failure-doctest-"));
+const failureMono = join(failureRoot, "mono");
+const failureWorktree = join(failureRoot, "worktrees/failure-fixture");
+const failureState = join(failureRoot, "state");
+await execFileAsync("mkdir", ["-p", failureMono, join(failureRoot, "worktrees"), failureState]);
+await git(failureMono, "init", "-b", "main");
+await git(failureMono, "config", "user.email", "test@example.com");
+await git(failureMono, "config", "user.name", "Cull Test");
+await execFileAsync("bash", ["-c", 'printf content > "$1/file.txt"', "fixture", failureMono]);
+await git(failureMono, "add", "file.txt");
+await git(failureMono, "commit", "-m", "fixture");
+await git(failureMono, "worktree", "add", "-b", "worktree-failure-fixture", failureWorktree, "main");
+const failureScript = [
+  '. "$1"',
+  'WT_MONO="$2"',
+  'WT_ROOT="$3"',
+  'WT_BOX_ROOT="$4"',
+  'WT_STATE_DIR="$5"',
+  'WT_LOG_FILE="$5/worktree-cleanup.log"',
+  'WT_AHEAD=0',
+  'WT_DIRTY=0',
+  'FAIL_PATH="$7"',
+  'GIT_CALLS="$6/git-calls"',
+  'mv() { if [ "$1" = "$FAIL_PATH" ]; then echo "simulated move failure" >&2; return 1; fi; command mv "$@"; }',
+  'git() { if { [ "$1" = worktree ] && [ "$2" = prune ]; } || { [ "$1" = branch ] && [ "$2" = -D ]; }; then printf "%s %s\n" "$1" "$2" >> "$GIT_CALLS"; fi; command git "$@"; }',
+  'wt_remove_now "$7" worktree-failure-fixture',
+].join("; ");
+const failure = await execFileAsync("bash", ["-c", failureScript, "failure-test", teardownLib, failureMono, join(failureRoot, "worktrees"), join(failureRoot, "boxes"), failureState, failureRoot, failureWorktree])
+  .catch((error: unknown) => error as { code: number; stderr: string });
+const registered = (await git(failureMono, "worktree", "list", "--porcelain")).stdout.includes("branch refs/heads/worktree-failure-fixture");
+const branchExists = await git(failureMono, "show-ref", "--verify", "refs/heads/worktree-failure-fixture")
+  .then(() => true, () => false);
+const cleanupCalls = await readFile(join(failureRoot, "git-calls"), "utf8").catch(() => "");
+JSON.stringify({ code: failure.code, registered, branchExists, cleanupSkipped: cleanupCalls === "", reported: failure.stdout.includes("refusing branch cleanup") })
+=> {"code":1,"registered":true,"branchExists":true,"cleanupSkipped":true,"reported":true}
+```
+
+```ts cleanup
+await rm(failureRoot, { recursive: true, force: true });
+```

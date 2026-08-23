@@ -35,7 +35,7 @@ export async function registerAuthRoutes(
   server: FastifyInstance,
   options: AuthRoutesOptions,
 ) {
-  const creds = getGoogleClientCreds();
+  const creds = await getGoogleClientCreds();
   if (!creds) throw new MissingOAuthClientSecretError();
   const { clientId, clientSecret } = creds;
   const publicUrl = getPublicUrl(options.publicUrlFallback ?? "http://localhost:3210");

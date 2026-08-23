@@ -21,10 +21,11 @@ import type { HubConfig, BoxEntry } from "./hub-config.js";
 import { HubState } from "./hub-state.js";
 import { invariant } from "../lib/invariant.js";
 import type { Endpoint, EndpointProvider } from "./endpoints.js";
-import { killGroup, sleep, describeError } from "./child-process-utils.js";
+import { killGroup, sleep, describeError, DEV_BUNDLE_RELOAD_EXIT_CODE, KILL_GRACE_MS, restartAfterDevBundleReload } from "./child-process-utils.js";
 import { buildChildEnv } from "./child-env.js";
 import { forwardChildOutput } from "./child-output-log.js";
 import { boxHasPendingSchedules } from "./pending-schedules.js";
+import { MAX_CONSECUTIVE_FAILURES, BASE_BACKOFF_MS, backoffDelayMs } from "./crash-backoff.js";
 // prettier-ignore
 import { type ChildProc, type SpawnChildFn, type CheckReadyFn, defaultSpawnChild, defaultCheckReady, resolveBoxRoot, resolveCbBinary } from "./child-spawn.js";
 
@@ -34,15 +35,6 @@ import { type ChildProc, type SpawnChildFn, type CheckReadyFn, defaultSpawnChild
 // (`test/hub/supervisor.doctest.md`) don't need to change their import path.
 // `resolveBoxRoot` importers point at `./child-spawn.js` directly.
 export { buildChildEnv };
-
-const KILL_GRACE_MS = 2000;
-/** After this many consecutive crash-loop restarts, stop retrying and mark
- *  the box unhealthy until `reloadUnhealthy()` (SIGHUP) is called. No
- *  precedent in router.ts (worktrees don't self-restart) — chosen per the
- *  plan's explicit "pick N=5 unless you find a better precedent" guidance. */
-const MAX_CONSECUTIVE_FAILURES = 5;
-const BASE_BACKOFF_MS = 1000;
-const MAX_BACKOFF_MS = 30_000;
 
 export type BoxRunStatus = "starting" | "running" | "unhealthy" | "stopped";
 
@@ -119,6 +111,17 @@ export interface SupervisorOptions {
    *  doctests can drive idle/keep-set ordering deterministically instead of
    *  waiting out real timers. See `test/hub/supervisor.doctest.md`. */
   now?: () => number;
+  /**
+   * First crash-loop retry delay, defaulting to {@link BASE_BACKOFF_MS}.
+   * Injectable for the same reason as `now`: a doctest that drives a launch
+   * failure has a LIVE retry timer running behind its assertions, and at the
+   * production 1s it only has to spend a second anywhere later in the block —
+   * one slow `makeTmpBox`, one loaded machine — for the retry to land and
+   * change `restarts` out from under it. A test that isn't exercising the
+   * backoff sets this past its own runtime so it isn't racing a timer it
+   * doesn't care about.
+   */
+  baseBackoffMs?: number;
 }
 
 /**
@@ -134,6 +137,7 @@ export class Supervisor implements EndpointProvider {
   private readonly spawnChild: SpawnChildFn;
   private readonly checkReady: CheckReadyFn;
   private readonly now: () => number;
+  private readonly baseBackoffMs: number;
   private readonly hubState: HubState;
 
   constructor(options: SupervisorOptions) {
@@ -142,6 +146,7 @@ export class Supervisor implements EndpointProvider {
     this.spawnChild = options.spawnChild ?? defaultSpawnChild;
     this.checkReady = options.checkReady ?? defaultCheckReady;
     this.now = options.now ?? Date.now;
+    this.baseBackoffMs = options.baseBackoffMs ?? BASE_BACKOFF_MS;
     this.hubState = new HubState({ configPath: options.config.configPath, now: this.now });
     for (const [slug, entry] of Object.entries(options.config.boxes)) {
       this.boxes.set(slug, {
@@ -498,6 +503,7 @@ export class Supervisor implements EndpointProvider {
       box.expectedExitGeneration = undefined;
       return;
     }
+    if (restartAfterDevBundleReload({ code, expectedCode: DEV_BUNDLE_RELOAD_EXIT_CODE, box, launch: () => void this.launch(box) })) return;
     box.lastError = `child exited unexpectedly (code=${String(code)}, signal=${String(signal)})`;
     box.consecutiveFailures += 1;
     box.child = undefined;
@@ -512,7 +518,7 @@ export class Supervisor implements EndpointProvider {
     }
     box.status = "starting";
     box.restarts += 1;
-    const delay = Math.min(MAX_BACKOFF_MS, BASE_BACKOFF_MS * 2 ** (box.consecutiveFailures - 1));
+    const delay = backoffDelayMs(box.consecutiveFailures, this.baseBackoffMs);
     box.restartTimer = setTimeout(() => void this.launch(box), delay);
     box.restartTimer.unref();
   }

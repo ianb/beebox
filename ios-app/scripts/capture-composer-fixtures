@@ -13,11 +13,13 @@ states=(
   failed-upload
   selection-detail
   recording
+  starting-dictation
   interrupted
   hq-preparation
   sending
   two-pending
   rejected-send
+  stuck-pending
   expired-attachment
   keyboard-shown
   control-registry

@@ -5,6 +5,12 @@ import Speech
 enum NativeVoiceTurnCommand: Equatable {
     case none
     case startDictation
+    /// Start dictating AND tell the page to stop speaking (contract §4.9).
+    /// Only an explicit press produces this: the user talking over the box is
+    /// barge-in, while every automatic reopen — after speech ends, after a
+    /// send, after an erase — is the system resuming and must not cut the box
+    /// off mid-sentence.
+    case startDictationInterruptingSpeech
     case stopDictation
 }
 
@@ -14,29 +20,52 @@ enum NativeVoiceTurnEvent: Equatable {
     case draftErased
     case voiceMessageSent(closeMicrophone: Bool)
     case speechPlaybackChanged(playing: Bool)
+    /// Dictation entered `.failed` — a denied permission, an audio-engine
+    /// failure, a phone call, a route change, a send that could not be saved.
+    /// The microphone is already down in every one of those, so the turn is
+    /// over: it must not sit "active" waiting to reopen on the next silence.
+    case dictationFailed
 }
 
 struct NativeVoiceTurnState: Equatable {
     private(set) var isActive = false
     private var speechPlaybackActive = false
+    /// Set while this turn's microphone is held closed *because* the box is
+    /// speaking, so the `playing:false` edge resumes exactly the mic it
+    /// deferred. Without it a barge-in resumes itself: stopping the speech
+    /// produces that same edge, and the resume would race the start the press
+    /// already commanded.
+    private var waitingForSpeech = false
 
     mutating func handle(_ event: NativeVoiceTurnEvent) -> NativeVoiceTurnCommand {
         switch event {
         case .microphoneStarted:
             isActive = true
-            return speechPlaybackActive ? .none : .startDictation
+            waitingForSpeech = false
+            return speechPlaybackActive ? .startDictationInterruptingSpeech : .startDictation
         case .microphoneStopped:
             isActive = false
+            waitingForSpeech = false
             return .stopDictation
         case .draftErased:
-            return isActive && speechPlaybackActive == false ? .startDictation : .none
+            guard isActive else {
+                return .none
+            }
+            return deferUnlessSilent(.startDictation)
         case .voiceMessageSent(let closeMicrophone):
             if closeMicrophone {
                 isActive = false
+                waitingForSpeech = false
                 return .stopDictation
             }
             isActive = true
-            return speechPlaybackActive ? .none : .startDictation
+            return deferUnlessSilent(.startDictation)
+        case .dictationFailed:
+            isActive = false
+            waitingForSpeech = false
+            // No `.stopDictation`: whatever failed already tore the recognizer
+            // down, and re-issuing the command would only re-run that teardown.
+            return .none
         case .speechPlaybackChanged(let playing):
             guard playing != speechPlaybackActive else {
                 return .none
@@ -45,8 +74,27 @@ struct NativeVoiceTurnState: Equatable {
             guard isActive else {
                 return .none
             }
-            return playing ? .stopDictation : .startDictation
+            if playing {
+                waitingForSpeech = true
+                return .stopDictation
+            }
+            guard waitingForSpeech else {
+                return .none
+            }
+            waitingForSpeech = false
+            return .startDictation
         }
+    }
+
+    /// Issue `command` if the box is silent; otherwise record that this turn is
+    /// waiting on the speech it must not talk over. Only the automatic reopens
+    /// go through here — an explicit press interrupts instead.
+    private mutating func deferUnlessSilent(_ command: NativeVoiceTurnCommand) -> NativeVoiceTurnCommand {
+        guard speechPlaybackActive else {
+            return command
+        }
+        waitingForSpeech = true
+        return .none
     }
 }
 
@@ -115,6 +163,9 @@ final class SpeechDictation: ObservableObject {
     private var recordedAudioURL: URL?
     private var recordingFile: AVAudioFile?
     private var keywordSeedText = ""
+    /// The tag-substituted transcript of a detected keyword, withheld from
+    /// `transcript` until the composer accepts the command.
+    private var heldKeywordTranscript: String?
     private var interruptionObserver: NSObjectProtocol?
     private var tapInstalled = false
     private var holdsAudioSession = false
@@ -166,6 +217,18 @@ final class SpeechDictation: ObservableObject {
 
     var hasPendingStart: Bool {
         startTask != nil
+    }
+
+    /// The recognizer is being brought up — the scheduled start, permissions,
+    /// the on-device analyzer session, the audio engine — so a turn is under way
+    /// but nothing is being heard yet. `hasPendingStart` covers the hop between
+    /// `startIfNeeded` scheduling the task and the task reaching
+    /// `.requestingPermission`; without it the composer would wear its recording
+    /// face for that frame. Reading an unpublished value is safe here because
+    /// the same user action mutates the composer's own turn state, which is what
+    /// drives the render.
+    var isStarting: Bool {
+        state == .requestingPermission || hasPendingStart
     }
 
     func toggle(currentText: String) {
@@ -256,6 +319,7 @@ final class SpeechDictation: ObservableObject {
         preparationMessage = nil
         transcript = ""
         keywordIntent = nil
+        heldKeywordTranscript = nil
         firedKeywordKey = nil
         recordedAudioURL = nil
         keywordSeedText = ""
@@ -274,6 +338,35 @@ final class SpeechDictation: ObservableObject {
     func clearKeywordIntent() {
         keywordIntent = nil
     }
+
+    /// Publish the tag substitution for a keyword the composer accepted. Until
+    /// this is called the tag exists only inside the intent, so a refused
+    /// command leaves the composer exactly as it was.
+    func commitKeywordSubstitution() {
+        guard let held = heldKeywordTranscript else {
+            return
+        }
+        heldKeywordTranscript = nil
+        transcript = held
+        hasDictatedText = held.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+    }
+
+    /// Drop a held substitution because the command was refused. The composer
+    /// keeps its pre-keyword text; the spoken command words never land in it.
+    func discardKeywordSubstitution() {
+        heldKeywordTranscript = nil
+    }
+
+    #if DEBUG
+    /// Test seam: deliver a recognizer result without a live audio session, the
+    /// way `start`'s recognition callbacks do. The keyword hold/commit/discard
+    /// behaviour is otherwise only reachable through the microphone.
+    func ingestRecognizedSpeechForTesting(_ spoken: String) {
+        let generation = recognitionGeneration ?? UUID()
+        recognitionGeneration = generation
+        receiveRecognizedSpeech(spoken, generation: generation)
+    }
+    #endif
 
     func failPreparation(_ message: String) {
         errorMessage = message
@@ -303,6 +396,7 @@ final class SpeechDictation: ObservableObject {
         }
         errorMessage = nil
         keywordIntent = nil
+        heldKeywordTranscript = nil
         firedKeywordKey = nil
         endRecording(cancelTranscription: true)
         VoiceCompositionReducer.reduce(&state, .requestPermission)
@@ -420,8 +514,14 @@ final class SpeechDictation: ObservableObject {
             if key != firedKeywordKey {
                 firedKeywordKey = key
                 keywordSeedText = seedText
-                transcript = keyword.processedTranscript
-                hasDictatedText = true
+                // The tag is HELD, not published. `transcript` drives the
+                // composer, and the composer must not show a control tag for a
+                // command that has not been accepted yet — the in-flight lock in
+                // the composer can still refuse it. Leaving `transcript` at its
+                // pre-keyword value also keeps the spoken command words out of
+                // the draft. The composer commits or discards it below.
+                heldKeywordTranscript = keyword.processedTranscript
+                hasDictatedText = transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
                 VoiceCompositionReducer.reduce(&state, .keywordDetected)
                 keywordIntent = keyword
                 endRecording(cancelTranscription: true)

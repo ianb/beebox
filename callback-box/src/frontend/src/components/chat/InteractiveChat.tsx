@@ -11,6 +11,7 @@
  */
 
 import { useState, useRef, useCallback, useMemo } from "react";
+import { createAudioOverlayStore } from "./audio-overlay-store";
 // search params read via window.location — avoids coupling to route definition
 import { useMachine } from "@xstate/react";
 import { chatMachine } from "../../machines/chatMachine.js";
@@ -21,8 +22,8 @@ import { useParams } from "@tanstack/react-router";
 import { trpc } from "../../lib/trpc";
 import { useEmissionDispatch } from "./InteractiveChat-dispatch";
 import { useEmissionPersistence } from "../../hooks/useEmissionPersistence";
-import { useRecoveredDictation } from "./InteractiveChat-recovery";
-import { ChatLoading, ExpiredAttachmentsNotice } from "./InteractiveChat-layout";
+import { useRecoveryWidgets } from "./InteractiveChat-recovery";
+import { ChatLoading } from "./InteractiveChat-layout";
 import { useChatModelFeatures, useChatMute, useChatSchedules, usePendingMessagePoll, useChatStallRecovery, useChatTabs, useCompanionDeepLink } from "./InteractiveChat-hooks";
 import { useProcessingStatusPoll } from "./processing-status-display";
 import { useCompanionCard } from "./InteractiveChat-card-hooks";
@@ -44,21 +45,30 @@ import { useScreenshotRequests } from "./screenshot-request-handler";
 import { useNativeBridges } from "./use-native-bridge";
 
 /**
- * Resolve the directory a chat is bound to. Returns the prop value
- * immediately for fresh "new" landmark chats (server hasn't seen the
- * session id yet) and falls back to the persisted association for
- * resumed sessions.
+ * Everything the chat derives from the directory it is bound to.
+ *
+ * `contextDir` is the prop value immediately for fresh "new" landmark chats
+ * (the server hasn't seen the session id yet), falling back to the persisted
+ * association for resumed sessions. `openers` are the `openers:` listed in
+ * that directory's briefing — the suggestions a fresh chat's empty state
+ * offers. Openers are fetched only for a `"new"` session: an existing session
+ * with no messages is a different state, and offering openers there would read
+ * as an invitation to start over.
  */
-function useEffectiveContextDir(params: {
+function useChatBinding(params: {
   sessionId: string | null;
+  sessionInput: string;
   contextDir: string | undefined;
-}): string | null {
+}): { contextDir: string | null; openers: string[] } {
   const query = trpc.chat.directoryFor.useQuery(
     { sessionId: params.sessionId ?? "" },
     { enabled: Boolean(params.sessionId) },
   );
   const queried = query.data ? query.data.contextDir : undefined;
-  return params.contextDir ?? queried ?? null;
+  const contextDir = params.contextDir ?? queried ?? null;
+  const isNew = params.sessionInput === "new";
+  const openersQuery = trpc.chat.openers.useQuery({ contextDir: contextDir ?? "" }, { enabled: isNew });
+  return { contextDir, openers: isNew && openersQuery.data ? openersQuery.data.openers : [] };
 }
 
 interface InteractiveChatProps {
@@ -123,7 +133,8 @@ interface InteractiveChatProps {
  * The two full-screen composer overlays (capture, bulk upload), grouped so the
  * InteractiveChat body carries one line rather than their gating. Both are
  * suppressed for native shells; bulk additionally requires a server-assigned
- * session id (its batch binds to a target chat).
+ * session id (its batch binds to a target chat) — the launcher already refuses
+ * to open one without it, so this gate is the type-level backstop.
  */
 function ChatModeOverlays({ captureMode, bulkUpload, usesNativeShell, sessionId, onExitCapture, onExitBulkUpload, onBulkUploadDelivered }: {
   captureMode: boolean;
@@ -151,18 +162,16 @@ function ChatModeOverlays({ captureMode, bulkUpload, usesNativeShell, sessionId,
 }
 
 export function InteractiveChat({ sessionInput, contextDir, companion, card, emissionStore, embedded, nativeComposer, openCaptureOnMount, initial, sessionLabel, onSessionAssignment }: InteractiveChatProps) {
-  const usesNativeComposer = nativeComposer === true;
-  const usesNativeShell = embedded === true || usesNativeComposer;
+  const usesNativeComposer = nativeComposer === true; const usesNativeShell = embedded === true || usesNativeComposer;
   const [snapshot, send] = useMachine(chatMachine, {
     input: { sessionInput, contextDir, initial },
   });
   const { messages, pendingMessages, streamText, streamTools, error, sessionId, processRunning, processBusy, totalEntries, liveTurnId } = snapshot.context;
-  const effectiveContextDir = useEffectiveContextDir({ sessionId, contextDir });
-  const isStreaming = snapshot.matches("streaming") || snapshot.matches("refreshing");
-  const isLoading = snapshot.matches("loading");
+  const { contextDir: effectiveContextDir, openers } = useChatBinding({ sessionId, sessionInput, contextDir });
+  const isStreaming = snapshot.matches("streaming") || snapshot.matches("refreshing"); const isLoading = snapshot.matches("loading");
   const currentUser = useCurrentUser();
   const { boxSlug } = useParams({ strict: false });
-  const backgroundTasks = useBackgroundTasks();
+  const backgroundTasks = useBackgroundTasks(); const audioOverlayStore = useMemo(() => createAudioOverlayStore(), []); // see audio-overlay-store.ts
 
   // Composer text lives outside React state, so keystrokes re-render only its textareas.
   // The full emission store is a prop (see above); this derives the
@@ -184,7 +193,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
   // subtree. Seeded from the `?capture=1` deep link, consumed once.
   const [captureMode, setCaptureMode] = useState(openCaptureOnMount === true);
   // Server-derived pending capture bubbles (survive reload; refined live below).
-  const { bubbles: captureBubbleList, applyCaptureStatus, retry: handleCaptureRetry } = useCaptureBubbles(sessionId);
+  const { bubbles: captureBubbleList, applyCaptureStatus, verbs: captureVerbs } = useCaptureBubbles(sessionId);
   const screenshots = useScreenshotRequests(sessionId);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -212,8 +221,8 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
   // delivered batch drops the text it carried away. A ref breaks the
   // voice→draft→voice cycle.
   const clearDraftRef = useRef<() => void>(() => {});
-  const { launch: bulkUploadLaunch, openEmpty: handleOpenBulkUpload, openWithPhotos: handleBatchPhotos, close: handleCloseBulkUpload, onDelivered: handleBulkUploadDelivered } = useBulkUploadLaunch({ emissionStore, clearDraftRef });
-  const attach = useChatAttachments({ emissionStore, textareaRef, ensureComposerVisibleRef, onBatchPhotos: handleBatchPhotos });
+  const { launch: bulkUploadLaunch, openWithFiles: handleBatchFiles, close: handleCloseBulkUpload, onDelivered: handleBulkUploadDelivered } = useBulkUploadLaunch({ emissionStore, clearDraftRef, sessionId });
+  const attach = useChatAttachments({ emissionStore, textareaRef, ensureComposerVisibleRef, onBatchFiles: handleBatchFiles });
   const selections = useChatSelections({ emissionStore, textareaRef });
   const { dispatchEmission, dispatchNativeEmission, sendVoiceSegment, sendStopSend } = useEmissionDispatch({
     send, captureCardSend: cardSend.capture, boxSlug, activeView, messages, emissionStore,
@@ -230,18 +239,21 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
   );
   const voice = useChatVoice({
     snapshot, sessionId, muted: mute.muted, narrationEnabled: model.narrationEnabled,
+    hqDictationEnabled: model.hqDictationEnabled,
     selections: selections.selections, resetSelections: selections.resetSelections,
     emissionStore, resetAttachments: attach.resetAttachments,
-    clearDraftRef, inputStore, dispatchEmission: dispatchEmissionVoid,
+    clearDraftRef, inputStore, dispatchEmission: dispatchEmissionVoid, nativeComposer: usesNativeComposer,
   });
   useNativeBridges({
     enabled: usesNativeShell, dispatchEmission: dispatchNativeEmission, boxSlug,
     narrationEnabled: model.narrationEnabled, responseActive: snapshot.value === "streaming",
-    speechPlaying: voice.speechPlayback.isPlaying });
+    speechPlaying: voice.speechPlayback.isPlaying, stopSpeech: voice.handleStopSpeech });
   useEnsureComposerVisible({ ensureComposerVisibleRef, isTranscribing: voice.isTranscribing, setTypingMode, textareaRef });
 
-  // Persisted in-flight transcript recovery widget; see InteractiveChat-recovery.tsx.
-  const { recoveredDictation } = useRecoveredDictation({
+  // Persisted in-flight transcript recovery widget + the expired-attachments
+  // notice; see InteractiveChat-recovery.tsx (combined there to keep this
+  // component under the line-count limit).
+  const { recoveredDictation, expiredAttachmentsNotice } = useRecoveryWidgets({
     boxSlug,
     transcript: voice.transcription.transcript,
     isTranscribing: voice.isTranscribing,
@@ -252,10 +264,9 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
     inputStore,
     startVoice: voice.startVoice,
     clearDraftRef,
+    expiredAttachments,
+    dismissExpiredAttachments,
   });
-  const expiredAttachmentsNotice = (
-    <ExpiredAttachmentsNotice names={expiredAttachments} onDismiss={dismissExpiredAttachments} />
-  );
 
   useChatWs({
     sessionId, sessionInput, boxSlug, currentUser, isStreaming, send,
@@ -264,16 +275,17 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
     onCaptureStatus: applyCaptureStatus,
     onScreenshotRequest: screenshots.onScreenshotRequest,
     onSessionAssignment,
+    audioOverlayStore,
   });
   const actions = useChatActions({
     send, sessionId, boxSlug, effectiveContextDir, messages, totalEntries, loadingOlder, setLoadingOlder,
     inputStore, emissionStore,
     selections: selections.selections,
     resetAttachments: attach.resetAttachments, resetSelections: selections.resetSelections,
-    // Both addImageFiles and dispatchEmission already catch their own
-    // errors internally; voided here so useChatActions' option types can
-    // stay honestly void-returning.
-    addImageFiles: (files) => { void attach.addImageFiles(files); },
+    // Both addFiles and dispatchEmission already catch their own errors
+    // internally; voided here so useChatActions' option types can stay
+    // honestly void-returning.
+    addFiles: (files) => { void attach.addFiles(files); },
     onSend: voice.notifySent, isTranscribing: voice.isTranscribing, textareaRef,
     transcriptTick: voice.transcription.transcript, typingMode, typingLocked, setTypingMode,
     setScrollToBottomTrigger, dispatchEmission: dispatchEmissionVoid,
@@ -308,7 +320,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
       totalEntries={totalEntries}
       pendingCount={pendingMessages.filter((entry) => entry.pending === true).length}
       error={error}
-      currentUserEmail={currentUser ? currentUser.email : undefined}
+      currentUserEmail={currentUser ? currentUser.email : undefined} currentUserName={currentUser ? currentUser.name : undefined}
       modelMarkers={model.modelMarkers}
       loadingOlder={loadingOlder}
       scrollToBottomTrigger={scrollToBottomTrigger} liveTurnId={liveTurnId}
@@ -327,10 +339,11 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
       reportCardActivity={cardSend.report}
       embedded={embedded === true}
       nativeComposer={usesNativeComposer}
-      captureBubbles={captureBubbleList} onCaptureRetry={handleCaptureRetry}
+      captureBubbles={captureBubbleList} captureVerbs={captureVerbs}
       onEnterCapture={() => setCaptureMode(true)} captureEnabled={!usesNativeShell} captureDisabledReason={sessionId === null ? "Send a message first" : undefined}
-      onUploadFiles={handleOpenBulkUpload} uploadFilesDisabledReason={sessionId === null ? "Send a message first" : undefined}
       screenshots={screenshots}
+      audioOverlayStore={audioOverlayStore}
+      openers={openers}
       />
       <ChatModeOverlays captureMode={captureMode} bulkUpload={bulkUploadLaunch} usesNativeShell={usesNativeShell} sessionId={sessionId} onExitCapture={() => setCaptureMode(false)} onExitBulkUpload={handleCloseBulkUpload} onBulkUploadDelivered={handleBulkUploadDelivered} />
     </InputStoreProvider>

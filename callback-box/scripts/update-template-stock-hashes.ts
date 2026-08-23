@@ -71,7 +71,11 @@ function render(ledger: Record<string, TemplateStockEntry>): string {
     const sup = e.superseded.map((h) => `      "${h}",`).join("\n");
     return `  ${JSON.stringify(k)}: {\n    current: "${e.current}",\n    superseded: [\n${sup}\n    ],\n  },`;
   });
-  return `${HEADER}\nexport const TEMPLATE_STOCK_HASHES: Record<string, TemplateStockEntry> = {\n${entries.join("\n")}\n};\n`;
+  // `satisfies` (not a `Record<string, …>` annotation) so the keys stay
+  // literal: `keyof typeof TEMPLATE_STOCK_HASHES` types MANAGED_STOCK_TEMPLATES'
+  // `name`, and a `TEMPLATE_STOCK_HASHES["x"].superseded` read needs no
+  // undefined-check under `noUncheckedIndexedAccess`.
+  return `${HEADER}\nexport const TEMPLATE_STOCK_HASHES = {\n${entries.join("\n")}\n} satisfies Record<string, TemplateStockEntry>;\n`;
 }
 
 async function main(): Promise<void> {

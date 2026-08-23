@@ -18,6 +18,8 @@ import type { ChatChannel } from "../../../shared/chat-channel.js";
 import { unionActivityKinds, mergeCardStateDetails } from "../card-activity.js";
 import { errorMessage } from "../../../lib/error-guards.js";
 import { isRecord } from "../../card-io.js";
+import { chatModelForEngine } from "../../../shared/chat-models.js";
+import type { AgentEngine } from "../../box/config.js";
 
 const log = makeLog("ChatSession");
 
@@ -59,6 +61,11 @@ export async function releaseRunLock(lockPath: string): Promise<void> {
  */
 export const DEFAULT_MODEL_FILE = ".callback-box/chat-model.json";
 
+/** Per-session model override used by the web chat registry. */
+export function chatModelFileForSession(sessionId: string): string {
+  return `.callback-box/chat-models/${encodeURIComponent(sessionId)}.json`;
+}
+
 /** Read the box's persisted chat-model override from the default file. */
 export function loadPersistedChatModel(boxRoot: string): string | null {
   return loadCurrentModel(boxRoot, DEFAULT_MODEL_FILE);
@@ -79,6 +86,14 @@ export function loadCurrentModel(boxRoot: string, modelFile: string): string | n
     log("model", `Failed to load model file: ${e}`);
   }
   return null;
+}
+
+/** Read a model override only when it belongs to the session's engine. */
+export function loadCurrentModelForEngine(
+  boxRoot: string,
+  { modelFile, engine }: { modelFile: string; engine: AgentEngine },
+): string | null {
+  return chatModelForEngine(engine, loadCurrentModel(boxRoot, modelFile));
 }
 
 /**

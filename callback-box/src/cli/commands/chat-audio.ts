@@ -1,10 +1,11 @@
 /**
  * cb chat — audio subcommands.
  *
- * - `cb chat get-last-audio` fetches the original recording of the user's
- *   most recent voice message from the connected browser tab and writes it
- *   to a temp file (the browser caches the last segment's WAV; the server
- *   relays the request over the event bus — see chat-last-audio-routes.ts).
+ * - `cb chat get-last-audio` fetches the original recording of the voice
+ *   message addressed by `--message <id>` from the connected browser tab and
+ *   writes it to a temp file (the browser caches recent segments' WAVs; the
+ *   server relays the request over the event bus — see
+ *   chat-last-audio-routes.ts).
  * - `cb chat ask-about-audio "<question>"` goes one step further: fetch the
  *   recording (or take `--file`) and put the question to an audio-capable
  *   model (Claude cannot listen to audio; Gemini can — see
@@ -21,14 +22,27 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { Command } from "commander";
-import { resolveAgentToken } from "../../core/agent/token.js";
-import { askAudioQuestion, resolveGeminiKey } from "../../core/audio-question.js";
+import { askAudioQuestion } from "../../core/audio-question.js";
+import { getGeminiApiKey } from "../../core/gemini-key.js";
 import {
   transcribeAudioHq,
   HQ_TRANSCRIPTION_SERVICES,
   type HqTranscriptionService,
 } from "../../core/transcription/index.js";
 import { findBoxRoot } from "../../lib/paths.js";
+import {
+  audioExtension,
+  audioMimeType,
+  fetchLastAudio,
+  requireMessageId,
+} from "./chat-audio-fetch.js";
+import {
+  buildConsultedReport,
+  buildRetranscriptionReport,
+  postAudioReviewReport,
+} from "./chat-audio-report.js";
+
+export { loopbackHeaders, audioMimeType, missingMessageIdError } from "./chat-audio-fetch.js";
 
 const HQ_SERVICE_SET = new Set<string>(HQ_TRANSCRIPTION_SERVICES);
 /** Type guard for the `--service` option against the known HQ services. */
@@ -36,124 +50,24 @@ function isHqTranscriptionService(value: string): value is HqTranscriptionServic
   return HQ_SERVICE_SET.has(value);
 }
 
-/**
- * Request headers for loopback calls to the live server: JSON content type
- * plus the per-box agent bearer when available (required to pass the auth
- * wall in production; harmless when auth is disabled in dev).
- */
-export function loopbackHeaders(): Record<string, string> {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  const token = resolveAgentToken();
-  if (token) headers["Authorization"] = `Bearer ${token}`;
-  return headers;
-}
-
-/** File extension for the audio Content-Type the browser sent. */
-function audioExtension(contentType: string): string {
-  if (contentType.includes("wav")) return "wav";
-  if (contentType.includes("webm")) return "webm";
-  if (contentType.includes("ogg")) return "ogg";
-  if (contentType.includes("mpeg")) return "mp3";
-  if (contentType.includes("mp4")) return "m4a";
-  return "bin";
-}
-
-/** Audio MIME type for a file path's extension, or null when unrecognized. */
-export function audioMimeType(filePath: string): string | null {
-  const ext = path.extname(filePath).toLowerCase();
-  const types: Record<string, string> = {
-    ".wav": "audio/wav",
-    ".webm": "audio/webm",
-    ".ogg": "audio/ogg",
-    ".mp3": "audio/mpeg",
-    ".m4a": "audio/mp4",
-    ".mp4": "audio/mp4",
-    ".flac": "audio/flac",
-    ".aac": "audio/aac",
-  };
-  return types[ext] ?? null;
-}
-
-interface LastAudioFetch {
-  audio: Buffer;
-  contentType: string;
-  recordedAt: string | null;
-  /** Transcript snippet of the message the recording belongs to. */
-  text: string | null;
-}
-
-/**
- * Long-poll the server for the last voice message's recording. Prints a
- * user-facing error and exits the process on any failure — callers only see
- * the success path.
- */
-async function fetchLastAudio(opts: {
-  commandLabel: string;
-  timeoutSeconds: number;
-}): Promise<LastAudioFetch> {
-  const { commandLabel, timeoutSeconds } = opts;
-  const serverUrl = process.env.CB_SERVER_URL;
-  const boxName = process.env.CB_BOX_NAME;
-  if (!serverUrl || !boxName) {
-    console.error(`${commandLabel}: CB_SERVER_URL and CB_BOX_NAME must be set`);
-    process.exit(1);
-  }
-  if (!Number.isFinite(timeoutSeconds) || timeoutSeconds <= 0) {
-    console.error(`${commandLabel}: invalid --timeout ${timeoutSeconds}`);
-    process.exit(1);
-  }
-
-  const url = `${serverUrl.replace(/\/+$/, "")}/${boxName}/api/chat/last-audio/request`;
-  let res: Response;
-  try {
-    res = await fetch(url, {
-      method: "POST",
-      headers: loopbackHeaders(),
-      body: JSON.stringify({ timeoutMs: Math.round(timeoutSeconds * 1000) }),
-    });
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.error(`${commandLabel}: request failed: ${msg}`);
-    process.exit(1);
-  }
-
-  if (!res.ok) {
-    const text = await res.text();
-    let message = text;
-    try {
-      const parsed: unknown = JSON.parse(text);
-      if (parsed !== null && typeof parsed === "object" && "message" in parsed && typeof parsed.message === "string") {
-        message = parsed.message;
-      }
-    } catch (_e) {
-      // Not JSON — report the raw body.
-    }
-    console.error(`${commandLabel}: ${message} (HTTP ${res.status})`);
-    process.exit(1);
-  }
-
-  const encodedText = res.headers.get("x-message-text");
-  return {
-    audio: Buffer.from(await res.arrayBuffer()),
-    contentType: res.headers.get("content-type") ?? "",
-    recordedAt: res.headers.get("x-recorded-at"),
-    text: encodedText !== null ? decodeURIComponent(encodedText) : null,
-  };
-}
-
 interface GetLastAudioOptions {
   out?: string;
   timeout?: string;
+  message?: string;
 }
 
 export const getLastAudioCommand = new Command("get-last-audio")
-  .description("Fetch the recording of the user's most recent voice message from the connected chat tab")
+  .description("Fetch the recording of a specific voice message (--message <id>, required) from the connected chat tab")
   .option("--out <path>", "Write the audio to this path (default: a fresh temp file)")
+  .option("--message <id>", "The message-id (read off message-id=\"…\" on the <speech> wrapper of the message you mean) to fetch the recording for")
   .option("--timeout <seconds>", "How long to wait for a browser tab to answer (default 10)")
   .action(async (options: GetLastAudioOptions) => {
+    const label = "cb chat get-last-audio";
+    const messageId = requireMessageId(label, options.message);
     const fetched = await fetchLastAudio({
-      commandLabel: "cb chat get-last-audio",
+      commandLabel: label,
       timeoutSeconds: options.timeout !== undefined ? Number(options.timeout) : 10,
+      messageId,
     });
 
     let outPath: string;
@@ -177,12 +91,14 @@ interface AskAboutAudioOptions {
   timeout?: string;
   context?: string;
   transcript?: string;
+  message?: string;
 }
 
 export const askAboutAudioCommand = new Command("ask-about-audio")
-  .description("Ask an audio-capable model a question about the user's most recent voice message (or --file)")
+  .description("Ask an audio-capable model a question about a specific voice message (--message <id>, required unless --file is given)")
   .argument("<question>", "Question to answer about the audio (e.g. pronunciation critique, what's said, background sounds)")
-  .option("--file <path>", "Ask about this audio file instead of fetching the last voice message")
+  .option("--file <path>", "Ask about this audio file instead of fetching a voice message")
+  .option("--message <id>", "The message-id (read off message-id=\"…\" on the <speech> wrapper of the message you mean) to fetch the recording for — required unless --file is given")
   .option("--context <text>", "Conversational context for the model — what the recording is in response to, what the user is working on")
   .option("--transcript <text>", "Known transcription of the recording, for the model to verify against the audio (defaults to the system's own transcript when fetching the last voice message)")
   .option("--timeout <seconds>", "How long to wait for a browser tab to answer (default 10)")
@@ -193,9 +109,15 @@ export const askAboutAudioCommand = new Command("ask-about-audio")
       process.exit(1);
     }
     // Fail before bothering the browser when the model isn't reachable anyway.
-    const apiKey = resolveGeminiKey();
+    const questionBoxRoot = await findBoxRoot(process.cwd());
+    const apiKey = await getGeminiApiKey(questionBoxRoot ?? undefined, {
+      purpose: "gemini-audio-question",
+      observe: true,
+    });
     if (!apiKey) {
-      console.error(`${label}: GEMINI_KEY is not set — the audio model is not configured`);
+      console.error(
+        `${label}: no Gemini key — the audio model is not configured. Ask the boxholder to grant the "gemini" secret to this box, or set GEMINI_KEY`,
+      );
       process.exit(1);
     }
 
@@ -203,6 +125,10 @@ export const askAboutAudioCommand = new Command("ask-about-audio")
     let mimeType: string;
     let recordedAt: string | null = null;
     let transcript: string | null = options.transcript ?? null;
+    // Only set when the audio came from a targeted fetch (not --file) — the
+    // consulted report needs both to address the message.
+    let fetchedSessionId: string | null = null;
+    let fetchedMessageId: string | null = null;
     if (options.file !== undefined) {
       const filePath = path.resolve(options.file);
       const mime = audioMimeType(filePath);
@@ -219,9 +145,11 @@ export const askAboutAudioCommand = new Command("ask-about-audio")
         process.exit(1);
       }
     } else {
+      const messageId = requireMessageId(label, options.message);
       const fetched = await fetchLastAudio({
         commandLabel: label,
         timeoutSeconds: options.timeout !== undefined ? Number(options.timeout) : 10,
+        messageId,
       });
       audio = fetched.audio;
       mimeType = fetched.contentType || "audio/wav";
@@ -229,6 +157,8 @@ export const askAboutAudioCommand = new Command("ask-about-audio")
       // The system's own transcript rides along automatically so the model
       // can flag transcription flaws; an explicit --transcript wins.
       transcript = transcript ?? fetched.text;
+      fetchedSessionId = fetched.sessionId;
+      fetchedMessageId = fetched.messageId;
     }
 
     try {
@@ -245,6 +175,11 @@ export const askAboutAudioCommand = new Command("ask-about-audio")
       if (recordedAt !== null) console.log(`recorded-at: ${recordedAt}`);
       if (transcript !== null) console.log(`transcript: ${transcript}`);
       console.log(`model: ${model}`);
+
+      // Best-effort trace that the recording was consulted — skips silently
+      // for --file runs or old tabs that never echoed an id.
+      const report = buildConsultedReport({ sessionId: fetchedSessionId, messageId: fetchedMessageId, question });
+      if (report !== null) await postAudioReviewReport(report);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       console.error(`${label}: audio model request failed: ${msg}`);
@@ -258,13 +193,15 @@ interface RetranscribeOptions {
   timeout?: string;
   diarize?: boolean;
   timestamps?: boolean;
+  message?: string;
 }
 
 export const retranscribeCommand = new Command("retranscribe")
-  .description("Re-run the user's most recent voice message (or --file) through high-quality transcription")
+  .description("Re-run a specific voice message (--message <id>, required unless --file is given) through high-quality transcription")
   .option("--service <name>", `HQ service to use: ${HQ_TRANSCRIPTION_SERVICES.join(", ")} (default: the box's hqService config)`)
   .option("--diarize", "Label speakers in the output (uses Voxtral — the only HQ service with diarization)")
-  .option("--file <path>", "Transcribe this audio file instead of fetching the last voice message")
+  .option("--file <path>", "Transcribe this audio file instead of fetching a voice message")
+  .option("--message <id>", "The message-id (read off message-id=\"…\" on the <speech> wrapper of the message you mean) to fetch the recording for — required unless --file is given")
   .option("--timeout <seconds>", "How long to wait for a browser tab to answer (default 10)")
   .option("--timestamps", "Request word-level timing and write it to a `<audio>.words.json` sidecar (voxtral/whisper/deepgram only)")
   .action(async (options: RetranscribeOptions) => {
@@ -294,6 +231,10 @@ export const retranscribeCommand = new Command("retranscribe")
     let audioPath: string;
     let recordedAt: string | null = null;
     let realtimeTranscript: string | null = null;
+    // Only set when the audio came from a targeted fetch (not --file) — the
+    // retranscription report needs both to address the message.
+    let fetchedSessionId: string | null = null;
+    let fetchedMessageId: string | null = null;
     if (options.file !== undefined) {
       const filePath = path.resolve(options.file);
       try {
@@ -306,15 +247,19 @@ export const retranscribeCommand = new Command("retranscribe")
       filename = path.basename(filePath);
       audioPath = filePath;
     } else {
+      const messageId = requireMessageId(label, options.message);
       const fetched = await fetchLastAudio({
         commandLabel: label,
         timeoutSeconds: options.timeout !== undefined ? Number(options.timeout) : 10,
+        messageId,
       });
       audio = fetched.audio;
       filename = `last-message.${audioExtension(fetched.contentType)}`;
       audioPath = path.resolve(filename);
       recordedAt = fetched.recordedAt;
       realtimeTranscript = fetched.text;
+      fetchedSessionId = fetched.sessionId;
+      fetchedMessageId = fetched.messageId;
     }
 
     const boxRoot = await findBoxRoot(process.cwd());
@@ -350,6 +295,21 @@ export const retranscribeCommand = new Command("retranscribe")
       if (sidecarPath !== null) console.log(`word-timestamps: ${sidecarPath}`);
       if (recordedAt !== null) console.log(`recorded-at: ${recordedAt}`);
       if (realtimeTranscript !== null) console.log(`realtime-transcript: ${realtimeTranscript}`);
+
+      // Best-effort report of the correction — skips silently for --file
+      // runs or old tabs that never echoed an id. `newText` is the exact
+      // string just printed (post relabel/diarization processing);
+      // `result.service` is the actually-resolved HQ service name, never the
+      // unresolved "(box default)" placeholder printed above.
+      const report = buildRetranscriptionReport({
+        sessionId: fetchedSessionId,
+        messageId: fetchedMessageId,
+        newText: result.text.trim(),
+        service: result.service,
+        diarized: result.diarized === true,
+        recordedAt,
+      });
+      if (report !== null) await postAudioReviewReport(report);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       console.error(`${label}: transcription failed: ${msg}`);

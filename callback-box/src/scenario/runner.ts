@@ -11,15 +11,11 @@ import { runShell } from "../core/procedure/shell.js";
 import { createAgent } from "../core/agent/index.js";
 import {
   getStatus,
-  createBranch,
-  checkoutBranch,
-  createTag,
-  deleteTag,
   commit,
   stageAll,
-  getCurrentBranch,
   clean,
 } from "../lib/git.js";
+import { checkoutBranch, createBranch, createTag, deleteTag, getCurrentBranch } from "../lib/git-refs.js";
 import { loadFetchStubs, clearFetchStubs, installStrictFetch, uninstallStrictFetch, type FetchStub } from "../cli/lib/fetch.js";
 import { loadScenario, loadStubs, getScenarioDir, getBoxRoot } from "./loader.js";
 import type { ScenarioStep, ValidationCheck } from "./types.js";

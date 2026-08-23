@@ -419,3 +419,70 @@ struct NativeComposerCommandAcknowledgement: Codable, Equatable, Identifiable {
         NativeComposerCommandAcknowledgement(id: id, accepted: false, reason: reason)
     }
 }
+
+/// A box agent's request for the original recording of one voice message,
+/// relayed to the shell by the web layer (contract §4.8). Native answers the
+/// box directly over HTTP; nothing goes back across the bridge.
+///
+/// Both ids are required and non-blank: `requestId` is the answer's URL
+/// segment, and `messageId` must be echoed on the answer or the server's
+/// echo-and-verify check discards it. `sessionId` is the relaying tab's own
+/// chat session, echoed back unchanged — nil before the tab has one.
+struct NativeLastAudioRequest: Codable, Equatable {
+    enum DecodeError: Error, Equatable {
+        case unsupportedVersion(Int)
+        case emptyRequestID
+        case emptyMessageID
+    }
+
+    var version = 1
+    var requestID: String
+    var messageID: String
+    var sessionID: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case version
+        case requestID = "requestId"
+        case messageID = "messageId"
+        case sessionID = "sessionId"
+    }
+
+    init(requestID: String, messageID: String, sessionID: String?) {
+        self.requestID = requestID
+        self.messageID = messageID
+        self.sessionID = sessionID
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        version = try container.decode(Int.self, forKey: .version)
+        guard version == 1 else {
+            throw DecodeError.unsupportedVersion(version)
+        }
+        requestID = try container.decode(String.self, forKey: .requestID)
+        guard !requestID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw DecodeError.emptyRequestID
+        }
+        messageID = try container.decode(String.self, forKey: .messageID)
+        guard !messageID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw DecodeError.emptyMessageID
+        }
+        sessionID = try container.decodeIfPresent(String.self, forKey: .sessionID)
+    }
+}
+
+/// The native composer's barge-in, sent to the page when the user presses
+/// record while the box is speaking (contract §4.9). The page owns the speech;
+/// only it can stop it. There is no acknowledgement channel — the speech
+/// playback state the page already posts (§4.5) reports the stop, and native
+/// does not wait for it before opening the microphone.
+struct NativeSpeechCommand: Codable, Equatable {
+    enum Action: String, Codable {
+        case stop
+    }
+
+    var version = 1
+    var action: Action
+
+    static let stop = NativeSpeechCommand(action: .stop)
+}

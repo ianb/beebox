@@ -10,9 +10,19 @@
  * anything — `latest()` is well-defined by construction. Recordings live
  * only in this tab's memory (gone on reload); the server treats a "none"
  * answer as tentative, since another tab may still hold one.
+ *
+ * Inside a native shell this tab is not the only answerer: recordings made by
+ * the NATIVE composer never enter the page, so the request is also relayed to
+ * the shell, which holds them on disk and answers the server itself
+ * (`native-last-audio-request.ts`, docs/mobile-contract.md §4.8).
  */
 
 import { getApiBase } from "../../api-core";
+import {
+  createNativeLastAudioRequest,
+  postNativeLastAudioRequest,
+} from "../../components/chat/native-last-audio-request";
+import { isNativeShell } from "../../components/chat/native-post";
 import { createRetentionStore } from "../../input/retention";
 
 export interface VoiceAudioPayload {
@@ -50,23 +60,50 @@ export function markVoiceAudioAbsent(emissionId: string): void {
   retention.retain(emissionId, null);
 }
 
-/** Answer one agent request: upload the most recently retained recording, or report none. */
-export async function fulfillLastAudioRequest(requestId: string): Promise<void> {
+/**
+ * Answer one agent request: upload the recording retained under the
+ * requested `messageId`, or report none when this tab doesn't hold that
+ * exact recording (evicted, never retained here, or a tombstone — no
+ * recording exists for that emission). Every request targets a specific
+ * message (retranscription-in-chat plan, Track 1b — the untargeted "answer
+ * with whatever's latest" mode is gone, since it's how the wrong recording
+ * used to win). The echoed `messageId` lets the server verify this answer
+ * actually addresses the requested message before ever delivering it.
+ * `sessionId` is this tab's own chat session id (the same value
+ * `InteractiveChat-ws.ts` scopes broadcast events by) — `null` when the tab
+ * has no assigned session yet.
+ */
+export async function fulfillLastAudioRequest(
+  requestId: string,
+  opts: { messageId: string; sessionId: string | null }
+): Promise<void> {
+  const { messageId, sessionId } = opts;
+  // In a native shell, the recording may have been made by the NATIVE composer,
+  // in which case these bytes never entered the page at all. Hand the request
+  // to the shell, which answers the server directly over HTTP. This tab still
+  // answers below from its own store: a web-composer recording inside the same
+  // webview is legitimately ours, and a "none" cannot settle the request early
+  // (the server's grace window runs the full requested timeout), so the two
+  // answers never race destructively. See docs/mobile-contract.md §4.8.
+  if (isNativeShell()) {
+    postNativeLastAudioRequest(window, createNativeLastAudioRequest({ requestId, messageId, sessionId }));
+  }
   const url = `${getApiBase()}/chat/last-audio/${encodeURIComponent(requestId)}`;
-  const entry = retention.latest();
+  const audio = retention.get(messageId);
   try {
     let res: Response;
-    if (entry === undefined || entry.audio === null) {
+    if (audio === undefined || audio === null) {
       res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ none: true }),
       });
     } else {
-      const { audio } = entry;
       const form = new FormData();
       form.append("recordedAt", audio.recordedAt);
       form.append("text", audio.text.slice(0, MAX_TEXT_CHARS));
+      form.append("messageId", messageId);
+      if (sessionId !== null) form.append("sessionId", sessionId);
       const ext = audio.blob.type.includes("wav") ? "wav" : "webm";
       form.append("file", audio.blob, `last-message.${ext}`);
       res = await fetch(url, { method: "POST", body: form });

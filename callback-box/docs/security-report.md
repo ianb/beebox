@@ -8,7 +8,7 @@ reviewed-by: Ian Bicking
 
 # Security report — structured version
 
-The exhaustive accounting behind [SECURITY.md](../SECURITY.md). An agent
+The exhaustive accounting behind [security-overview.md](security-overview.md). An agent
 is the primary consumer; updates are adjudicated against
 `generated-at-rev` per the rubric in
 [`.claude/skills/security-report/SKILL.md`](https://github.com/ianb/callback-box/blob/main/.claude/skills/security-report/SKILL.md)
@@ -119,10 +119,10 @@ pub-worker routes are in §6a.
 | Credential | Lives at | Gates (blast radius) | Scope | Lifetime / revocation | State |
 |---|---|---|---|---|---|
 | Local password store — `~/.cb-auth.json` (`local-users.ts:87`) | 0600 self-healing (`:124-127`), symlink-rejected, scrypt N=2^17, atomic writes | Account takeover for stored users | **Machine-global** (all local boxes) | Permanent; password change bumps `gen`, revoking live sessions | ok |
-| Session secret — `~/.cb-session-secret` / `CB_SESSION_SECRET` (`auth.ts:30-59`) | 0600; env preferred | **Forge any user's session** (symmetric HMAC) | Machine/hub only — **not inherited via env** by box children or agent subprocesses; the 0600 file remains readable by any same-OS-user process (`script-env.ts:119-127` concedes this) | Cookie TTL 30 days; revocation via `gen` bump only | ok — env-level control, see the allowlist note below |
+| Session secret — `~/.cb-session-secret` / `CB_SESSION_SECRET` (`auth.ts:30-59`) | 0600; env preferred | **Forge any user's session** (symmetric HMAC) | Machine/hub only — **not inherited via env** by box children or agent subprocesses; the 0600 file remains readable by any same-OS-user process (`script-env-allowlist.ts` concedes this) | Cookie TTL 30 days; revocation via `gen` bump only | ok — env-level control, see the allowlist note below |
 | Invite & password-reset capabilities — `~/.cb-auth.json.invites.json` (`auth-capabilities.ts`, one shared store since `68c5e537`; the file keeps its legacy name, on-disk `version: 2`, auto-upgrades from `version: 1` on first write) | SHA-256 hash at rest, 0600, atomic + locked | Invite: create one member account on one box. Reset: replace one existing member's password on one box | Per-box | 15-min TTL, single-use, 100-live cap shared across both kinds | ok |
 | Setup token (`setup-token.ts`) | Memory only; printed once to console | Claim a zero-user box | Per-process | 15-min TTL, self-disabling | accepted (§8) |
-| `CB_HUB_SECRET` (`supervisor.ts:106,429`) | Env only, minted per hub boot | Impersonate any user to hub-fronted boxes | Hub + direct children; stripped from agent subprocesses (`script-env.ts:116`) | Hub process lifetime | ok |
+| `CB_HUB_SECRET` (`supervisor.ts:106,429`) | Env only, minted per hub boot | Impersonate any user to hub-fronted boxes | Hub + direct children; never allowlisted into box subprocesses (`script-env-allowlist.ts`) | Hub process lifetime | ok |
 | `CB_DIAG_API_KEY` | Server `.env` (0600, `deploy/setup-server.sh:186`) | Read-only: fleet health + debug log (exact-match whitelist, `auth.ts:90-98`) | Fleet-wide | Operator-set, no rotation | ok |
 | `CB_BROWSE_API_KEY` (`browse-key.ts`) | Env only; fail-closed when unset | **Full app access, machine-wide** (every box/worktree on the dev router) | Machine | No expiry | mitigated — dev-only by design, absent on deploys; module warns against public use |
 | Agent loopback token — `.callback-box/agent-token` (`agent/token.ts:26-48`) | 0600, gitignored; injected as `CB_AGENT_TOKEN` into box subprocesses | Call back into its **own** box only | Per-box | Permanent, no rotation | ok — trust boundary is explicit: the agents are the box |
@@ -132,19 +132,25 @@ pub-worker routes are in §6a.
 | Google OAuth client — `GOOGLE_OAUTH_CLIENT_ID/SECRET` (`google-auth.ts:48-52`) | Env; redacted; shared to children by design | OAuth app identity | Fleet | Operator-set | ok |
 | Google tokens — `CB_GOOGLE_TOKENS_FILE` (`google-token-store.ts`) | 0600 atomic, double-locked, fail-closed read-for-update | **All authorized Google services (gmail/calendar/drive), fleet-wide** — one shared refresh token | **Fleet** (legacy per-box fallback exists) | Effectively permanent; dead-grant tracking | accepted (§8) — [google-auth-policy-proxy](../../issues/features/2026-07-28-google-auth-policy-proxy.md) |
 | VAPID keys — `CB_VAPID_*` (`send-push.ts:46-60`) | Env only; redacted | Send push notifications as the box (no data access) | Server-wide | Operator-set | ok |
-| Provider keys — Mistral / Deepgram / OpenAI (`mistral-key.ts`, `deepgram-key.ts`, `embeddings-key.ts`, `THINKING_OPENAI_API_KEY`, `GEMINI_KEY`) | Box `config/connectors/<name>.secret.json` first, env fallback; all in `SECRET_ENV_NAMES` + hub allowlist | Spend/abuse the provider account | Per-box (file) or server (env) | Operator-set | gap — hand-placed files have no mode enforcement: [connector-secret-file-modes](../../issues/bugs/2026-08-07-connector-secret-file-modes.md) |
+| Provider keys — Mistral / Deepgram / OpenAI (`mistral-key.ts`, `deepgram-key.ts`, `embeddings-key.ts`, `THINKING_OPENAI_API_KEY`, `GEMINI_KEY`) | Box `config/connectors/<name>.secret.json` first, env fallback; all in `SECRET_ENV_NAMES` + hub allowlist, and withheld from agent subprocesses (`script-env-allowlist.ts` — the tooling profile only) | Spend/abuse the provider account | Per-box (file) or server (env) | Operator-set | gap — hand-placed files have no mode enforcement: [connector-secret-file-modes](../../issues/closed/bugs/2026-08-07-connector-secret-file-modes.md) |
 | Telegram — `config/connectors/telegram.secret.json` (`routers/admin.ts:96-101`) | Written **without** an explicit 0600 mode | Bot token = full bot control; webhook secret = forge inbound updates | Per-box | Permanent until re-setup | gap — same issue as above |
 | Publish connector — `config/connectors/publish.secret.json` (`connector-secret.ts`) | 0600, strict-Zod, minted scoped | R2 **ingestion bucket only** — cannot touch published content or `allowedEmails` | Per-box, per-bucket | Permanent; revoke via Cloudflare dashboard | ok |
-| `ANTHROPIC_API_KEY` | **Deliberately stripped** (`script-env.ts:106`, `cli/bootstrap.ts`, absent from hub allowlist) | — | — | — | ok — a leak-prevention control forcing subscription auth, not a stored credential |
+| `ANTHROPIC_API_KEY` | **Deliberately withheld** (absent from both the hub and script-env allowlists; also stripped in `cli/bootstrap.ts`) | — | — | — | ok — a leak-prevention control forcing subscription auth, not a stored credential |
 
 **Positive control — the hub child-env allowlist**
 (`src/hub/child-env.ts:42-119`): per-box children receive an exact-name
 allowlist of env vars, never a spread. `CB_SESSION_SECRET` never reaches a
 child (a box that could verify a cookie could forge one for a sibling);
 `ANTHROPIC_API_KEY` is excluded; widening requires a named entry with a
-reasoned comment. `script-env.ts:109-127` additionally strips
-`CB_HUB_SECRET`/`CB_DIAG_API_KEY`/`CB_SESSION_SECRET` from agent
-subprocesses. State: mitigated (this is the named control for
+reasoned comment. `src/core/script-env.ts` applies the same posture one
+level down (Track 1 of `docs/plans/secret-custody.md`, 2026-08-17): a box
+subprocess inherits only `script-env-allowlist.ts`'s named entries, so the
+hub trust secrets, `CB_SESSION_SECRET`, `CB_BROWSE_API_KEY`,
+`ANTHROPIC_API_KEY`, every connector credential, and any unlisted name never
+reach an agent. Connector credentials reach only the `cb`-tooling spawn
+profile (`buildToolingScriptEnv`, used for `cb wakeup`/`cb finalize` and
+scheduled `runs:` commands, which run the connectors); Track 3 retires that
+carve-out with the env-var credential path itself. State: mitigated (this is the named control for
 cross-box credential isolation). Tested in `test/hub/supervisor.doctest.md`.
 **Scope of the control**: env-level, not OS-level. Everything runs as
 one OS user, so file-backed secrets (`~/.cb-session-secret`,

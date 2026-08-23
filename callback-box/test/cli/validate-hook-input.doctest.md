@@ -5,7 +5,9 @@ Write/Edit hooks provide one `file_path`; Codex `apply_patch` hooks provide a
 patch command that can name several files.
 
 ```ts setup
-import { parseHookFilePaths } from "../../src/cli/commands/validate-hook.js";
+import { parseHookFilePaths, validateHookPathsResult } from "../../src/cli/commands/validate-hook.js";
+import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { writeFile } from "node:fs/promises";
 ```
 
 ## Claude file tools
@@ -58,4 +60,18 @@ JSON.stringify(parseHookFilePaths({
   tool_input: { command: "*** Begin Patch\n*** Update File: store/One.memo.card\n*** End Patch" },
 }))
 => ["/box/content/store/One.memo.card"]
+```
+
+## Warning severity is preserved
+
+Harness adapters need to show validation errors as failed turns while keeping
+soft instruction-size feedback as a warning.
+
+```ts
+const box = await makeTmpBox();
+await writeFile(`${box.root}/CLAUDE.md`, "x".repeat(13000));
+const warning = await validateHookPathsResult([`${box.root}/CLAUDE.md`]);
+await box.cleanup();
+JSON.stringify({ hasFeedback: warning.feedback?.includes("claude-md-size"), hasErrors: warning.hasErrors })
+=> {"hasFeedback":true,"hasErrors":false}
 ```

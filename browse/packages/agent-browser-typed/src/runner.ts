@@ -34,16 +34,42 @@ export interface RunResult {
   stderr: string;
 }
 
-export async function run(args: readonly string[]): Promise<RunResult> {
+export interface RunOptions {
+  /** Extra environment for the child, merged over `process.env`. */
+  env?: Readonly<Record<string, string>>;
+  /**
+   * Wall-clock ceiling. The child is killed and the call rejects when it
+   * elapses. A backstop, not a scheduling knob: the upstream binary has its
+   * own per-action timeout, and this exists because a command that ignores it
+   * (`wait --fn` does — measured on 0.27.0) would otherwise hang the wrapper
+   * forever, which is exactly how `screenshot` and `snapshot` became
+   * unusable.
+   */
+  timeoutMs?: number;
+}
+
+export async function run(args: readonly string[], options?: RunOptions): Promise<RunResult> {
   const binary = resolveBinary();
+  const opts: RunOptions = options === undefined ? {} : options;
   return new Promise((resolve, reject) => {
-    const child = spawn("node", [binary, ...args], { stdio: ["ignore", "pipe", "pipe"] });
+    const env = opts.env === undefined ? process.env : { ...process.env, ...opts.env };
+    const child = spawn("node", [binary, ...args], { stdio: ["ignore", "pipe", "pipe"], env });
     let stdout = "";
     let stderr = "";
+    let timedOut = false;
+    const timer = opts.timeoutMs === undefined ? null : setTimeout(() => {
+      timedOut = true;
+      child.kill("SIGKILL");
+    }, opts.timeoutMs);
     child.stdout.on("data", (chunk: Buffer) => { stdout += chunk.toString("utf8"); });
     child.stderr.on("data", (chunk: Buffer) => { stderr += chunk.toString("utf8"); });
-    child.on("error", (e) => reject(e));
+    child.on("error", (e) => { if (timer !== null) clearTimeout(timer); reject(e); });
     child.on("close", (code) => {
+      if (timer !== null) clearTimeout(timer);
+      if (timedOut) {
+        reject(new AgentBrowserError({ code: -1, stderr: `killed after ${String(opts.timeoutMs)}ms`, stdout, args }));
+        return;
+      }
       if (code === 0) {
         resolve({ stdout, stderr });
         return;

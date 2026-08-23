@@ -5,8 +5,14 @@
  * since they don't fit tRPC's shape.
  */
 
+import { readFile } from "node:fs/promises";
+import * as path from "node:path";
 import { z } from "zod";
 import { router, publicProcedure } from "../trpc.js";
+import { cardFields, parseCardText } from "../../../core/card-io.js";
+import { createCardSchemaMap } from "../../../schemas/registry.js";
+import { BriefingSchema } from "../../../schemas/briefing.js";
+import { errnoCode } from "../../../lib/error-guards.js";
 import { chatSessionProcedures } from "./chat-session-procedures.js";
 import { chatControlProcedures } from "./chat-control-procedures.js";
 import { chatBootstrapProcedure } from "./chat-bootstrap-procedure.js";
@@ -75,6 +81,36 @@ export interface PickerUnassigned extends PickerBucket {
   olderSessions: UnassignedSession[];
 }
 
+/**
+ * The `openers:` listed in `<dir>/briefing.briefing.card`, or `null` when that
+ * briefing doesn't exist (the caller's signal to fall back). A briefing that
+ * exists but is malformed reads as an empty list, not a gap — a broken card
+ * shouldn't silently promote another directory's openers into its chat.
+ */
+async function readBriefingOpeners(boxRoot: string, dir: string): Promise<string[] | null> {
+  const relPath = path.posix.join(dir, "briefing.briefing.card");
+  let content: string;
+  try {
+    content = await readFile(path.join(boxRoot, relPath), "utf-8");
+  } catch (e) {
+    // Absent is ordinary; anything else (permissions, a directory in the way)
+    // is worth a log line.
+    if (errnoCode(e) === "ENOENT") return null;
+    console.warn(`[chat.openers] could not read ${relPath}:`, e);
+    return null;
+  }
+  try {
+    const card = parseCardText(content, { source: relPath, schemas: await createCardSchemaMap(boxRoot) });
+    const openers = cardFields(card, BriefingSchema).openers ?? [];
+    return openers.map((o) => o.trim()).filter((o) => o !== "");
+  } catch (e) {
+    // A malformed briefing shouldn't blank the chat — degrade to no openers,
+    // but say so (the boxholder's card needs fixing).
+    console.warn(`[chat.openers] could not parse ${relPath}:`, e);
+    return [];
+  }
+}
+
 export const chatRouter = router({
   ...chatSessionProcedures,
   ...chatControlProcedures,
@@ -111,6 +147,43 @@ export const chatRouter = router({
       const contextDir = await nearestLandmarkDir(ctx.boxRoot, { cardPath: input.cardPath });
       const sessionId = await getLastSessionForDirectory(ctx.boxRoot, contextDir);
       return { contextDir, sessionId };
+    }),
+
+  /**
+   * The `openers:` a directory's briefing currently lists — what an empty
+   * chat bound to that directory shows as clickable openers. `contextDir`
+   * omitted (or `""`) means the box root; a directory with no briefing of its
+   * own inherits the root briefing's openers.
+   *
+   * Openers are briefing content the box agent maintains, so "no openers" is
+   * the normal answer for an established box: a missing briefing, an
+   * unparseable one, or one with no `openers:` all return `[]` and the chat
+   * falls back to its plain empty-state line.
+   */
+  openers: publicProcedure
+    .input(
+      z.object({
+        contextDir: z
+          .string()
+          .optional()
+          .refine(
+            (dir) => dir === undefined || isBoxRelativeCardPath(dir),
+            "contextDir must be box-relative and contain no '..' segments",
+          ),
+      }),
+    )
+    .query(async ({ ctx, input }): Promise<{ openers: string[] }> => {
+      const dir = input.contextDir ?? "";
+      // A directory with no briefing of its own inherits the root briefing's
+      // openers, the same way it inherits the root briefing's context — most
+      // landmark directories never grow a briefing. A briefing that EXISTS and
+      // lists none is an answer, not a gap: that is how a directory turns its
+      // openers off, so it never falls back.
+      for (const candidate of dir === "" ? [""] : [dir, ""]) {
+        const openers = await readBriefingOpeners(ctx.boxRoot, candidate);
+        if (openers !== null) return { openers };
+      }
+      return { openers: [] };
     }),
 
   /**

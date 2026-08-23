@@ -27,6 +27,8 @@ export function generateReport(options: ReportOptions): string {
   lines.push(`# Knowledge Audit Report — ${timestamp}`);
   lines.push("");
   lines.push(`Box: ${boxRoot}`);
+  const engines = [...new Set(results.map((result) => result.engine))];
+  lines.push(`Engine: ${engines.join(", ")}`);
   lines.push(`Tests run: ${results.length}`);
   lines.push("");
 
@@ -201,11 +203,15 @@ function formatResponse(behavior: Behavior): string[] {
   return lines;
 }
 
+function formatShouldReadAny(checks: Checks): string[] {
+  if (checks.shouldReadAnyCheck === undefined) return [];
+  const check = checks.shouldReadAnyCheck;
+  const detail = check.matched === undefined ? "" : ` (matched ${check.matched})`;
+  return [`- ${check.wasRead ? "\u2713" : "\u2717"} Read any of [${check.files.join(", ")}]${detail}`];
+}
+
 function formatCheckLines(checks: Checks): string[] {
-  const checkLines: string[] = [];
-  for (const c of checks.containsChecks) {
-    checkLines.push(`- ${c.found ? "\u2713" : "\u2717"} Response contains "${c.expected}"`);
-  }
+  const checkLines = formatPositiveTextChecks(checks);
   for (const c of checks.notContainsChecks) {
     // Forbidden: pass when *not* found, fail when found.
     checkLines.push(`- ${c.found ? "\u2717" : "\u2713"} Response does NOT contain "${c.forbidden}"`);
@@ -227,6 +233,7 @@ function formatCheckLines(checks: Checks): string[] {
   for (const c of checks.shouldReadChecks) {
     checkLines.push(`- ${c.wasRead ? "\u2713" : "\u2717"} Read ${c.file}`);
   }
+  checkLines.push(...formatShouldReadAny(checks));
   for (const c of checks.shouldNotReadChecks) {
     checkLines.push(`- ${c.wasRead ? "\u2717" : "\u2713"} Did not read ${c.file}`);
   }
@@ -235,4 +242,14 @@ function formatCheckLines(checks: Checks): string[] {
     checkLines.push(`- ${c.found ? "\u2713" : "\u2717"} Bash command contains "${c.expected}"${detail}`);
   }
   return checkLines;
+}
+
+function formatPositiveTextChecks(checks: Checks): string[] {
+  const lines = checks.containsChecks.map((check) =>
+    `- ${check.found ? "✓" : "✗"} Response contains "${check.expected}"`);
+  for (const check of checks.matchesChecks) {
+    const detail = check.found && check.matched ? ` (matched "${check.matched}")` : "";
+    lines.push(`- ${check.found ? "✓" : "✗"} Response matches /${check.pattern}/${detail}`);
+  }
+  return lines;
 }

@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 210" font-family="-apple-system, 'Segoe UI', sans-serif">
+  <!-- terminal window -->
+  <rect x="15" y="15" width="690" height="150" rx="10" fill="#1f2933"/>
+  <circle cx="38" cy="35" r="6" fill="#ef4444"/>
+  <circle cx="58" cy="35" r="6" fill="#f59e0b"/>
+  <circle cx="78" cy="35" r="6" fill="#22c55e"/>
+
+  <!-- tab strip -->
+  <g font-size="11">
+    <g transform="translate(30,52)">
+      <rect width="150" height="40" rx="5" fill="#334155"/>
+      <text x="10" y="17" fill="#e2e8f0" font-weight="600">✳ auth-fix</text>
+      <text x="10" y="32" fill="#94a3b8">merged… scared to close</text>
+    </g>
+    <g transform="translate(190,52)">
+      <rect width="150" height="40" rx="5" fill="#334155"/>
+      <text x="10" y="17" fill="#e2e8f0" font-weight="600">🌀 importer</text>
+      <text x="10" y="32" fill="#94a3b8">was I done here?</text>
+    </g>
+    <g transform="translate(350,52)">
+      <rect width="150" height="40" rx="5" fill="#334155"/>
+      <text x="10" y="17" fill="#e2e8f0" font-weight="600">🔎 search-tuning</text>
+      <text x="10" y="32" fill="#94a3b8">3 weeks old</text>
+    </g>
+    <g transform="translate(510,52)">
+      <rect width="150" height="40" rx="5" fill="#334155"/>
+      <text x="10" y="17" fill="#e2e8f0" font-weight="600">🧪 flaky-test</text>
+      <text x="10" y="32" fill="#94a3b8">must verify on phone</text>
+    </g>
+    <g transform="translate(30,100)">
+      <rect width="150" height="40" rx="5" fill="#334155"/>
+      <text x="10" y="17" fill="#e2e8f0" font-weight="600">🎨 css-polish</text>
+      <text x="10" y="32" fill="#94a3b8">DO NOT CLOSE</text>
+    </g>
+    <g transform="translate(190,100)">
+      <rect width="150" height="40" rx="5" fill="#334155"/>
+      <text x="10" y="17" fill="#e2e8f0" font-weight="600">🏗 big-refactor</text>
+      <text x="10" y="32" fill="#94a3b8">half-merged??</text>
+    </g>
+    <g transform="translate(350,100)">
+      <rect width="150" height="40" rx="5" fill="#334155"/>
+      <text x="10" y="17" fill="#e2e8f0" font-weight="600">❓ untitled-2</text>
+      <text x="10" y="32" fill="#94a3b8">no idea. keeping it.</text>
+    </g>
+    <g transform="translate(510,100)">
+      <rect width="150" height="40" rx="5" fill="#475569"/>
+      <text x="10" y="17" fill="#e2e8f0" font-weight="600">+ 2 more…</text>
+      <text x="10" y="32" fill="#94a3b8">somewhere</text>
+    </g>
+  </g>
+
+  <!-- swap meter -->
+  <text x="15" y="192" font-size="13" fill="#1f2933" font-weight="600">swap:</text>
+  <rect x="65" y="180" width="560" height="16" rx="8" fill="#e5e7eb"/>
+  <rect x="65" y="180" width="560" height="16" rx="8" fill="#dc2626"/>
+  <text x="640" y="193" font-size="13" fill="#dc2626" font-weight="700">20/20 GB</text>
+</svg>

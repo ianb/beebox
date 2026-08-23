@@ -108,3 +108,13 @@ if echo "$staged" | grep -q '^workstreams-app/'; then
   run_in workstreams-app pnpm lint
   run_in workstreams-app pnpm typecheck
 fi
+
+# Committed exhibit apps (dev/apps/) are deliberately outside every package's
+# lint — casual by design — but they merge to main and live forever, so staged
+# app SOURCE gets one bare this-will-build check: tsc with the same settings
+# the exhibits container serves with (dev/apps/tsconfig.json). index.html-tier
+# apps never trigger it.
+if echo "$staged" | grep -qE '^dev/apps/.*\.(ts|tsx)$'; then
+  echo "[pre-commit] .: pnpm dev-apps-typecheck"
+  (cd "$REPO_DIR" && pnpm --silent dev-apps-typecheck)
+fi

@@ -58,6 +58,50 @@ plan.images.length
 => 1
 ```
 
+## planRestore: keyword control tags never reach the composer
+
+A rejected voice-keyword send carries its control tag in the emission text
+(`<send-message phrase="..." />` and friends). The tag is a marker for the
+persisted message record, not composer content, so the restore strips it —
+every action's tag, which is also what keeps this pattern in sync with
+`ACTION_TAG_NAMES` in `speech-keywords.ts`.
+
+```ts continue
+const tagged = createVoiceEmission({
+  text: 'remember the milk <send-message phrase="Send message" />',
+  selections: [],
+  diarized: false,
+});
+planRestore(emptyDraft, tagged).text
+=> remember the milk
+
+const allTags = [
+  '<send-message phrase="Send message" />',
+  '<send-close-message phrase="Send and close" />',
+  '<cancel-message phrase="Cancel message" />',
+  '<mic-off phrase="Microphone off" />',
+  '<erase-message phrase="Clear &quot;this&quot; message" />',
+].join(" ");
+const swept = createVoiceEmission({ text: `keep this ${allTags}`, selections: [], diarized: false });
+planRestore(emptyDraft, swept).text
+=> keep this
+```
+
+Only voice emissions strip — the keyword pipeline is the only thing that
+puts a tag into voice text. A TYPED message restores verbatim, so someone
+literally typing a tag (discussing the markup) keeps their text:
+
+```ts continue
+const typed = createTypedEmission({
+  text: 'the composer leaked <erase-message phrase="Clear message" /> today',
+  images: [],
+  files: [],
+  selections: [],
+});
+planRestore(emptyDraft, typed).text
+=> the composer leaked <erase-message phrase="Clear message" /> today
+```
+
 ## planRestore: text already typed appends after a newline instead of clobbering it
 
 ```ts

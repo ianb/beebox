@@ -138,8 +138,10 @@ function StateBlock({ spec }: { spec: Spec }) {
   const transcription: TranscriptionHandle = {
     state: spec.isTranscribing ? "recording" : "idle",
     transcript: spec.transcript,
+    finalWords: null,
     start: noop,
-    stop: () => Promise.resolve(spec.transcript),
+    stop: () => Promise.resolve({ text: spec.transcript, words: null }),
+    submitSegment: () => false,
     cancel: noop,
   };
   const targetBusy = chatTargetStatus({ isStreaming: spec.isStreaming, processBusy: false }).state === "busy";
@@ -160,12 +162,12 @@ function StateBlock({ spec }: { spec: Spec }) {
       onVoiceSegmentSend={noop}
       voicePaused={spec.voicePaused}
       onUnpause={noop}
-      onAttachFiles={noop}
-      addImageFiles={() => Promise.resolve(0)}
+      onAddFiles={noop}
+      addFiles={() => Promise.resolve({ route: "inline", added: 0 })}
       onEnterCapture={noop}
       captureEnabled
-      onUploadFiles={noop}
       narrationEnabled={spec.narrationEnabled}
+      hqDictationEnabled={false}
     />
   );
   const mobileRow = (
@@ -178,6 +180,7 @@ function StateBlock({ spec }: { spec: Spec }) {
       clearDraft={noop}
       onStopDictation={noop}
       onVoiceSegmentSend={noop}
+      hqDictationEnabled={false}
     />
   );
   const targetStrip = (

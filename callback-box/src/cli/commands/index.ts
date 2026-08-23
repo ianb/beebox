@@ -22,6 +22,7 @@ export { relinkCommand } from "./relink.js";
 export { migrateViewLinksCommand } from "./migrate-view-links.js";
 export { procedureCommand } from "./procedure.js";
 export { authCommand } from "./auth.js";
+export { secretsCommand } from "./secrets.js";
 export { googleAuthCommand } from "./google-auth.js";
 export { calendarCommand } from "./calendar.js";
 export { finishCommand } from "./finish.js";

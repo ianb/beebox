@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 320" font-family="-apple-system, 'Segoe UI', sans-serif">
+  <defs>
+    <marker id="arr8" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0 0 L8 4 L0 8 z" fill="#2563eb"/>
+    </marker>
+    <marker id="arr8w" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0 0 L8 4 L0 8 z" fill="#d97706"/>
+    </marker>
+  </defs>
+
+  <!-- stage labels -->
+  <g font-size="13" font-weight="600" fill="#1f2933" text-anchor="middle">
+    <text x="125" y="30">filed</text>
+    <text x="360" y="30">adopted</text>
+    <text x="595" y="30">closed</text>
+  </g>
+  <g font-size="11" fill="#6b7280" text-anchor="middle">
+    <text x="125" y="46">by any session, mid-task</text>
+    <text x="360" y="46">a workstream takes it</text>
+    <text x="595" y="46">by /finish, when the fix lands</text>
+  </g>
+
+  <!-- card 1: filed -->
+  <g transform="translate(30,60)">
+    <rect width="190" height="130" rx="8" fill="#fff" stroke="#94a3b8" stroke-width="2"/>
+    <rect width="190" height="26" rx="8" fill="#f1f5f9"/>
+    <text x="10" y="17" font-size="10" font-family="ui-monospace, monospace" fill="#334155">issues/bugs/…-sweep.md</text>
+    <g font-size="10" font-family="ui-monospace, monospace" fill="#1f2933">
+      <text x="10" y="46">title: "Sweep fails open"</text>
+      <text x="10" y="64" fill="#2563eb">workstream: unattached</text>
+      <text x="10" y="82" fill="#6b7280">discovered-in:</text>
+      <text x="10" y="96" fill="#6b7280">  worktree-importer — …</text>
+      <text x="10" y="118" fill="#94a3b8"># a tension, not a mandate</text>
+    </g>
+  </g>
+
+  <!-- card 2: adopted -->
+  <g transform="translate(265,60)">
+    <rect width="190" height="130" rx="8" fill="#fff" stroke="#2563eb" stroke-width="2"/>
+    <rect width="190" height="26" rx="8" fill="#eff6ff"/>
+    <text x="10" y="17" font-size="10" font-family="ui-monospace, monospace" fill="#334155">issues/bugs/…-sweep.md</text>
+    <g font-size="10" font-family="ui-monospace, monospace" fill="#1f2933">
+      <text x="10" y="46">title: "Sweep fails open"</text>
+      <text x="10" y="64" fill="#2563eb" font-weight="700">workstream: seam</text>
+      <text x="10" y="82" fill="#6b7280">discovered-in:</text>
+      <text x="10" y="96" fill="#6b7280">  worktree-importer — …</text>
+      <text x="10" y="118" fill="#94a3b8"># same file, new owner</text>
+    </g>
+  </g>
+
+  <!-- card 3: closed -->
+  <g transform="translate(500,60)">
+    <rect width="190" height="130" rx="8" fill="#fff" stroke="#16a34a" stroke-width="2"/>
+    <rect width="190" height="26" rx="8" fill="#f0fdf4"/>
+    <text x="10" y="17" font-size="10" font-family="ui-monospace, monospace" fill="#166534">closed/bugs/…-sweep.md</text>
+    <g font-size="10" font-family="ui-monospace, monospace" fill="#1f2933">
+      <text x="10" y="46">title: "Sweep fails open"</text>
+      <text x="10" y="64" fill="#2563eb">workstream: seam</text>
+      <text x="10" y="82" fill="#16a34a" font-weight="700">resolution: implemented</text>
+      <text x="10" y="104" fill="#94a3b8"># git mv IS the state</text>
+      <text x="10" y="118" fill="#94a3b8"># change; history = archive</text>
+    </g>
+  </g>
+
+  <!-- arrows between cards -->
+  <g stroke="#2563eb" stroke-width="2" fill="none" marker-end="url(#arr8)">
+    <path d="M220 125 L 261 125"/>
+    <path d="M455 125 L 496 125"/>
+  </g>
+  <g font-size="10" fill="#6b7280" text-anchor="middle">
+    <text x="240" y="112">triage</text>
+    <text x="475" y="112">/finish</text>
+  </g>
+
+  <!-- manual-testing detour -->
+  <path d="M595 190 C 595 230, 480 244, 380 244 L 240 244" stroke="#d97706" stroke-width="2" fill="none" stroke-dasharray="6 4" marker-end="url(#arr8w)"/>
+  <text x="420" y="266" text-anchor="middle" font-size="11" fill="#d97706" font-weight="600">needs: [manual-testing] — stays open until the developer tries it;</text>
+  <text x="420" y="282" text-anchor="middle" font-size="11" fill="#d97706" font-weight="600">pins the workstream's test setup so the repro survives</text>
+
+  <!-- bottom note -->
+  <text x="360" y="310" text-anchor="middle" font-size="11" fill="#94a3b8">the whole tracker is files in git — grep is the query engine, commits are the audit log</text>
+</svg>

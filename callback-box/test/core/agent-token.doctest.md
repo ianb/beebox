@@ -94,10 +94,13 @@ const authed = await ctx.request({
   headers: { authorization: `Bearer ${token}` },
 });
 print(`with bearer: ${authed.statusCode} ${authed.body.error}`);
+// messageId is required since the targeted-fetch change
+// (docs/implemented-plans/retranscription-in-chat.md, Track 1b) — this test only
+// exercises the bearer wall, so any id works; no tab answers → 504.
 const audio = await ctx.request({
   method: "POST",
   url: "/api/chat/last-audio/request",
-  payload: { timeoutMs: 1 },
+  payload: { timeoutMs: 1, messageId: "msg-agent-token-test" },
   headers: { authorization: `Bearer ${token}` },
 });
 print(`last-audio with bearer: ${audio.statusCode} ${audio.body.error}`);

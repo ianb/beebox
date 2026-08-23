@@ -128,7 +128,7 @@ final class PendingEmissionStore: ObservableObject {
                 text: text,
                 origin: .voice,
                 diarized: diarized,
-                state: .awaitingWebView,
+                state: .pending(deliveryAttempts: 0, lastAttemptAt: nil),
                 createdAt: preparation.createdAt
             )
             _ = try await nativeEmission(from: emission)
@@ -166,7 +166,7 @@ final class PendingEmissionStore: ObservableObject {
             text: text,
             origin: origin,
             diarized: diarized,
-            state: .awaitingWebView,
+            state: .pending(deliveryAttempts: 0, lastAttemptAt: nil),
             createdAt: Date()
         )
         _ = try await nativeEmission(from: emission)
@@ -187,16 +187,14 @@ final class PendingEmissionStore: ObservableObject {
         guard let index = pending.firstIndex(where: { $0.id == id }) else {
             return
         }
-        let attempt: Int
+        let attempts: Int
         switch pending[index].state {
-        case .awaitingWebView:
-            attempt = 1
-        case .awaitingReceipt(let priorAttempt, _):
-            attempt = priorAttempt + 1
+        case .pending(let priorAttempts, _):
+            attempts = priorAttempts + 1
         case .rejected:
             return
         }
-        pending[index].state = .awaitingReceipt(attempt: attempt, sentAt: date)
+        pending[index].state = .pending(deliveryAttempts: attempts, lastAttemptAt: date)
         try? await persist()
     }
 
@@ -231,7 +229,7 @@ final class PendingEmissionStore: ObservableObject {
         guard let index = pending.firstIndex(where: { $0.id == id }) else {
             return
         }
-        pending[index].state = .awaitingWebView
+        pending[index].state = .pending(deliveryAttempts: 0, lastAttemptAt: nil)
         try? await persist()
         await rebuildDeliveries()
     }
@@ -244,6 +242,7 @@ final class PendingEmissionStore: ObservableObject {
         deliveries.removeAll { $0.id == id }
         do {
             try await persist()
+            await forgetRetainedVoiceAudio(for: restored)
             return restored.draft
         } catch {
             pending.insert(restored, at: min(index, pending.endIndex))
@@ -262,6 +261,7 @@ final class PendingEmissionStore: ObservableObject {
         do {
             try await persist()
             await removePayloads(for: discarded)
+            await forgetRetainedVoiceAudio(for: discarded)
         } catch {
             pending.insert(discarded, at: min(index, pending.endIndex))
             notice = "The message could not be discarded safely."
@@ -354,5 +354,20 @@ final class PendingEmissionStore: ObservableObject {
     private func removePayloads(for emission: PendingEmission) async {
         await repository.removePayloads(for: emission.draft.images, boxID: emission.boxID)
         await repository.removePayloads(for: emission.draft.files, boxID: emission.boxID)
+    }
+
+    /// Drop a voice send's retained recording when the message itself is going
+    /// away — discarded, or pulled back into the composer. Retention outlives
+    /// delivery on purpose (that is what makes retranscription work), but it
+    /// must not outlive a message the user withdrew. A REJECTED emission keeps
+    /// its recording: `retry` can still send it.
+    private func forgetRetainedVoiceAudio(for emission: PendingEmission) async {
+        guard emission.origin == .voice else {
+            return
+        }
+        await VoiceAudioRetentionStore.shared.forget(
+            emissionID: emission.id.uuidString,
+            boxID: emission.boxID
+        )
     }
 }

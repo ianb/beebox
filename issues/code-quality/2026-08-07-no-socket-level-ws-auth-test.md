@@ -3,7 +3,7 @@ title: "No socket-level integration test for WS tRPC subscription auth"
 workstream: unknown
 area: callback-box
 filed-by: agent
-discovered-in: main session — todo-security breakdown for the SECURITY.md report
+discovered-in: main session — todo-security breakdown for the security-overview.md report
 ---
 
 The tRPC WebSocket adapter (`useWSS`, the per-box plugin) hands `createContext`
@@ -42,4 +42,4 @@ persistent-reconnect-failure signal after N attempts.
 Broken out of `callback-box/docs/todo-security.md` ("No true socket-level WS-auth
 integration test"), where it was recorded as a residual accepted for now — this
 makes it a tracked coverage gap. Feeds the internal-security-practices section of
-the [agent-maintained security report](../features/2026-07-20-agent-maintained-security-report.md).
+the [agent-maintained security report](../closed/features/2026-07-20-agent-maintained-security-report.md).

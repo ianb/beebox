@@ -14,9 +14,10 @@ import { isNoResponseOnly, parseAcks, type AckIndication } from "../../lib/struc
 import type { SessionContentBlock } from "../../api";
 import { buildStreamEntry } from "../../lib/stream-entry";
 import type { ModelMarker } from "./InteractiveChat-helpers";
-import { CaptureBubbleView, type CaptureBubbleModel } from "./capture-bubble";
+import { CaptureBubbleView, type CaptureBubbleModel, type CaptureVerbs } from "./capture-bubble";
 import { invariant } from "@shared/invariant";
 import type { SpeechSegmentState } from "../../machines/speechPlaybackMachine";
+import type { AudioOverlayStore } from "./audio-overlay-store";
 
 /**
  * Trim a streaming text buffer to the last safe boundary. Either a
@@ -183,6 +184,7 @@ export interface RenderItemContext {
   streamTools: SessionContentBlock[];
   debugView: boolean;
   currentUserEmail: string | undefined;
+  currentUserName: string | undefined;
   speechPlayback: SpeechPlaybackState;
   handleStopSpeech: () => void;
   handleSkipSpeech: () => void;
@@ -191,7 +193,9 @@ export interface RenderItemContext {
   proseEnabled: boolean;
   lastAssistantGroupIndex: number;
   /** Retry a failed pending capture (re-seals the staging session). */
-  handleCaptureRetry: (id: string) => void;
+  captureVerbs: CaptureVerbs;
+  /** Written by the two audio-review events; read by `UserMessage`'s badges. */
+  audioOverlayStore: AudioOverlayStore;
 }
 
 /**
@@ -206,7 +210,7 @@ function GroupItem({
   acks?: AckIndication[];
   ctx: RenderItemContext;
 }) {
-  const { debugView, currentUserEmail, speechPlayback, lastAssistantGroupIndex, onZoomView, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, proseEnabled } = ctx;
+  const { debugView, currentUserEmail, currentUserName, speechPlayback, lastAssistantGroupIndex, onZoomView, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, proseEnabled, audioOverlayStore } = ctx;
   const boundaryLabel = `${group.type}#${groupIndex}:${group.entries[0]?.uuid ?? ""}`;
   let body: ReactNode;
   if (group.type === "compaction") {
@@ -222,7 +226,7 @@ function GroupItem({
       </div>
     );
   } else if (group.type === "user") {
-    body = <div className="py-0.5"><UserMessage entries={group.entries} debugView={debugView} currentUserEmail={currentUserEmail} acks={acks} onZoomView={onZoomView} /></div>;
+    body = <div className="py-0.5"><UserMessage entries={group.entries} debugView={debugView} currentUserEmail={currentUserEmail} currentUserName={currentUserName} acks={acks} onZoomView={onZoomView} audioOverlayStore={audioOverlayStore} /></div>;
   } else {
     // "This message is playing" matches either an explicit replay
     // (playingMessageId is this group's uuid) or auto-played speech
@@ -277,7 +281,8 @@ export function renderDataItem(item: DataItem, ctx: RenderItemContext): ReactNod
     return <PendingHqMessage text={item.text} />;
   }
   if (item.kind === "captureBubble") {
-    return <CaptureBubbleView model={item.model} onRetry={ctx.handleCaptureRetry} />;
+    const { retry: handleCaptureRetry, discard: handleCaptureDiscard } = ctx.captureVerbs;
+    return <CaptureBubbleView model={item.model} onRetry={handleCaptureRetry} onDiscard={handleCaptureDiscard} />;
   }
   return <GroupItem group={item.group} groupIndex={item.groupIndex} acks={item.acks} ctx={ctx} />;
 }

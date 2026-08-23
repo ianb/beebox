@@ -31,7 +31,7 @@ const MONO_ROOT = path.dirname(ROOT);
 
 // Frozen point-in-time snapshots: their broken/example links are intentional,
 // so --fix must not rewrite them (monorepo-relative prefixes).
-const FROZEN_SCAN_PREFIXES = ["callback-box/docs/reports/"];
+const FROZEN_SCAN_PREFIXES = ["callback-box/docs/reports/", "callback-box/user-stories/catalog/"];
 
 // Generated emitter outputs quote other files' links verbatim (regenerate with
 // pnpm doc-graph / prompt-report); --fix must not touch them.
@@ -48,13 +48,17 @@ const ALLOWED_BROKEN = new Set([
 
 // Frozen point-in-time snapshots: their refs were valid at freeze time and
 // are not maintained.
-const BROKEN_EXEMPT_PREFIXES = ["docs/reports/"];
+const BROKEN_EXEMPT_PREFIXES = ["docs/reports/", "user-stories/catalog/"];
 
 const ORPHAN_EXEMPT_PREFIXES = [
   "docs/plans/",
   "docs/implemented-plans/",
   "docs/unimplemented-plans/",
   "docs/reports/",
+  // Dated user-story catalogs: same frozen-snapshot category as reports/. Their
+  // verification prose quotes code identifiers ("MAP.md", "path.md") that the
+  // ref extractor cannot tell from links.
+  "user-stories/catalog/",
 ];
 
 // Every tracked .md in the monorepo (repo-relative POSIX paths), excluding

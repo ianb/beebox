@@ -22,7 +22,8 @@ import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Button } from "../ui/Button";
 import { cbSource } from "../../lib/source-tag";
-import { formatDraftAge, type DictationDraft } from "../../lib/dictation-draft";
+import { type DictationDraft } from "../../lib/dictation-draft";
+import { formatAgo } from "../../lib/relative-time";
 
 export function RecoveredDictation(props: {
   draft: DictationDraft;
@@ -37,7 +38,7 @@ export function RecoveredDictation(props: {
   // sends or discards promptly — so it needn't tick.
   const [age, setAge] = useState("just now");
   useEffect(() => {
-    setAge(formatDraftAge(Date.now() - draft.updatedAt));
+    setAge(formatAgo(Date.now() - draft.updatedAt));
   }, [draft.updatedAt]);
 
   return (

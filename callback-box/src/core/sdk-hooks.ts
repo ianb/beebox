@@ -18,6 +18,7 @@ import { buildLoadContext } from "./load-context.js";
 import { isViewFile, findBoxRoot } from "../lib/paths.js";
 import { lintViewFile } from "../webapp/views/compiler.js";
 import { isRecord } from "./card-io.js";
+import { isBuiltinLintableMarkdown } from "./list-cards.js";
 
 function markdownConfig(boxRoot: string): Record<string, unknown> {
   return { default: false, MD009: true, MD037: true, MD038: true, MD047: true, ...linkRuleConfig(boxRoot) };
@@ -86,8 +87,10 @@ export function cardValidatorHook(): HookCallbackMatcher {
           };
         }
 
-        const basename = filePath.split("/").pop() ?? "";
-        if (filePath.endsWith(".md") && basename !== "CLAUDE.md" && !filePath.includes("/.claude/")) {
+        // `isBuiltinLintableMarkdown` is the shared skip set (both instruction
+        // filenames, dependency/VCS dirs, cb's own docs/generated/ output). This
+        // used to be a hand-rolled subset that drifted from it.
+        if (isBuiltinLintableMarkdown(filePath)) {
           const additional = await runMarkdownLint(filePath, { startDir: post.cwd });
           if (additional === null) return {};
           return {

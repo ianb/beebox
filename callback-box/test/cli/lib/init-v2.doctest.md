@@ -129,8 +129,10 @@ packageRoot === target
 => true
 ```
 
-Fresh boxes keep map refresh and run cleanup enabled, while connector sync and
-agent-driven review jobs are opt-in:
+Fresh boxes keep map refresh, run cleanup, and the retrospective enabled, while
+connector sync and chat review are opt-in. The retrospective is on by default
+because it only spawns an agent once a human chat session has gone quiet — on a
+box nobody chats with, its scan precheck skips and it costs nothing:
 
 ```ts continue
 const seededScheduleNames = (await fs.readdir(path.join(boxRoot, "config/schedules")))
@@ -150,15 +152,18 @@ for (const name of seededScheduleNames) {
 
 ```ts continue
 `count=${seededScheduleNames.length}; enabled=${enabledScheduleNames.join(",")}; disabled=${disabledScheduleNames.join(",")}`
-=> count=6; enabled=gc-procedure-runs,refresh-maps; disabled=chat-review,check-calendar,check-email,process-retrospective
+=> count=6; enabled=gc-procedure-runs,process-retrospective,refresh-maps; disabled=chat-review,check-calendar,check-email
 ```
 
-Reinstalling the templates does not undo a boxholder's explicit opt-in:
+Reinstalling the templates does not undo a boxholder's explicit choice. `enabled`
+is a box-owned field, so whatever the box has set survives a template update —
+here an explicit opt-OUT of the retrospective, which the seeded default now
+leaves on:
 
 ```ts continue
 const retroPath = path.join(boxRoot, "config/schedules/process-retrospective.scheduled-script.card");
 const retroContent = await fs.readFile(retroPath, "utf8");
-await fs.writeFile(retroPath, retroContent.replace("enabled: false", "enabled: true"));
+await fs.writeFile(retroPath, retroContent.replace("---\n", "---\nenabled: false\n"));
 let reinstall: string[] = [];
 let preservedRetroEnabled: unknown = null;
 try {
@@ -171,7 +176,7 @@ try {
 
 ```ts continue
 `reinstall=${reinstall.join("|") || "none"}; retro=${String(preservedRetroEnabled)}`
-=> reinstall=none; retro=true
+=> reinstall=none; retro=false
 ```
 
 The marker at `content/.cb-box` declares `shapeVersion: 2`:
@@ -413,7 +418,7 @@ await fs.rm(partialDir, { recursive: true, force: true });
 
 `.git` sits at the package root, but git always invokes hooks with cwd = the
 package root too (regardless of where `git commit` was run from) — so a hook
-that just ran `cb validate --staged` without first `cd`-ing into `content/`
+that just ran `cb validate --pre-commit` without first `cd`-ing into `content/`
 would never find `content/.cb-box` (`requireBoxRoot()` only walks UP). Both
 the pre-commit and post-commit hooks bake in an explicit `cd "content"`
 before invoking `cb`:

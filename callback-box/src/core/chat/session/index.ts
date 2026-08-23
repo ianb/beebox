@@ -9,22 +9,21 @@
  */
 
 import { makeLog } from "./log.js";
+import { chatModelForEngine } from "../../../shared/chat-models.js";
 import { errorMessage } from "../../../lib/error-guards.js";
 import { openChatRun } from "./start-run.js";
 import { EventEmitter } from "node:events";
 import { type FeatureMap } from "../features.js";
 import { FeatureStore, applyAgentTurnDeltas } from "./features.js";
 import { loadSessionHistory, type SessionHistoryResult, type SessionLogSlice } from "./load-history.js";
+import { createCoinedRunState, type CoinedRunState } from "./coined-run.js";
 import {
   createChatBackend,
   type ChatBackend,
   type ChatBackendRun,
   type ChatBackendStartOptions,
 } from "../../../services/claude-chat.js";
-import {
-  CHAT_SYSTEM_PROMPT,
-  NARRATION_OVERLAY,
-} from "./prompts.js";
+import { CHAT_SYSTEM_PROMPT, NARRATION_OVERLAY } from "./prompts.js";
 import {
   accumulateAssistantText,
   buildContentBlocks,
@@ -48,7 +47,7 @@ import {
 } from "./state.js";
 import { pumpSessionRun } from "./consume.js";
 import { preflightChatBackend } from "../../agent/auth-preflight.js";
-import { acquireSessionRunLock, releaseSessionRunLock } from "./run-lock.js";
+import { createRunLockHolder } from "./run-lock.js";
 import {
   buildBackendStartOptions as computeBackendStartOptions,
   composeTurnContent,
@@ -70,15 +69,13 @@ export class ChatSession extends EventEmitter {
   private state: ChatLifecycle = IDLE;
   private sessionId: string | null = null;
   private boxRoot: string;
-  /** Path of the chat-active lock held while a run is in flight, or null. */
-  private chatLockPath: string | null = null;
   private turnText = "";
   /** Per-session gate keeping schedule-health a rare reminder (see `admitHealth`). */
   private readonly healthGate = createHealthGate();
-  private messageQueue: ChatSendInput[] = [];
+  private messageQueue: ChatSendInput[] = []; private preparingTurn = false;
   private readonly options: ChatSessionOptions;
   private readonly sessionFile: string | null;
-  private readonly modelFile: string;
+  private modelFile: string | null;
   private readonly backend: ChatBackend;
   private currentModel: string | null = null;
   /** Chat-feature flag state: lazy-loaded map plus persistence + change events. */
@@ -89,6 +86,10 @@ export class ChatSession extends EventEmitter {
    * reused on drain/restart so we don't re-read history every turn.
    */
   private resolvedContextDir: string | null | undefined = undefined;
+  /** Coined-id state: does the next run create this conversation? See `coined-run.ts`. */
+  private readonly coined: CoinedRunState;
+  /** The chat-active lock held while a run is in flight (`run-lock.ts`). */
+  private readonly runLock = createRunLockHolder(() => ({ boxRoot: this.boxRoot, sessionId: this.sessionId }));
   /** Holds each turn's `result` until the transcript flush lands on disk. */
   private readonly durability = createTurnDurabilityGate(
     () => ({ boxRoot: this.boxRoot, sessionId: this.sessionId }),
@@ -99,15 +100,16 @@ export class ChatSession extends EventEmitter {
     options = options ?? {};
     this.boxRoot = boxRoot;
     this.options = options;
+    this.coined = createCoinedRunState(options);
     this.sessionFile = options.sessionFile === undefined ? DEFAULT_SESSION_FILE : options.sessionFile;
-    this.modelFile = options.modelFile ?? DEFAULT_MODEL_FILE;
+    this.modelFile = options.modelFile === undefined ? DEFAULT_MODEL_FILE : options.modelFile;
     this.backend = options.backend ?? createChatBackend();
     if (options.initialSessionId !== undefined) {
       this.sessionId = options.initialSessionId;
     } else {
       this.sessionId = loadSessionId(this.boxRoot, this.sessionFile);
     }
-    this.currentModel = loadCurrentModel(this.boxRoot, this.modelFile);
+    this.currentModel = this.modelFile === null ? null : loadCurrentModel(this.boxRoot, this.modelFile);
     this.features = new FeatureStore({
       boxRoot: this.boxRoot,
       getSessionId: () => this.sessionId,
@@ -139,6 +141,7 @@ export class ChatSession extends EventEmitter {
       options: this.options,
       resolvedContextDir: this.resolvedContextDir,
       sessionId: this.sessionId,
+      coinedRunPending: this.coined.pending,
     });
     this.resolvedContextDir = resolvedContextDir;
     return startOpts;
@@ -166,11 +169,16 @@ export class ChatSession extends EventEmitter {
       return;
     }
 
-    // Preflight the real SDK backend's Claude login before we transition or
-    // lock; a missing one is emitted as "error" (→ turn buffer). Fakes skip it.
+    // A coined session stops being "not created yet" the moment its transcript
+    // exists — from this run or an earlier one — because the harness rejects a
+    // session id it has already written (see reserve.ts).
+    await this.coined.refresh({ boxRoot: this.boxRoot, sessionId: this.sessionId, contextDir: this.options.contextDir ?? null });
+
+    // Preflight login before transitioning or locking; fakes skip this.
     const preview = await this.buildBackendStartOptions();
     if (!(await preflightChatBackend({ backend: this.backend, session: this, engine: preview.engine }))) return;
-
+    const compatibleModel = chatModelForEngine(preview.engine ?? "claude", this.currentModel);
+    this.currentModel = compatibleModel;
     this.transition({ phase: "starting" });
 
     // `openChatRun` either returns a live run or unwinds (lock released,
@@ -180,14 +188,17 @@ export class ChatSession extends EventEmitter {
       backend: this.backend,
       boxRoot: this.boxRoot,
       skipBootstrap: this.options.skipBootstrap === true,
-      buildStartOptions: () => this.buildBackendStartOptions(),
-      resumeSessionId: this.sessionId ?? undefined,
-      model: this.currentModel ?? undefined,
-      acquireLock: () => this.acquireRunLock(),
-      releaseLock: () => this.releaseRunLock(),
+      startOptions: preview,
+      // A coined id names a conversation with nothing to resume; the run
+      // creates it under that id via `startOptions.coinedSessionId` instead.
+      resumeSessionId: this.coined.pending ? undefined : this.sessionId ?? undefined,
+      model: compatibleModel ?? undefined,
+      acquireLock: () => this.runLock.acquire(),
+      releaseLock: () => this.runLock.release(),
       onFailed: () => this.abandonStart(),
     });
     this.transition({ phase: "ready", run });
+    this.coined.noteRunStarted(this.sessionId, this.options);
 
     // Background loop: pump SDK messages into handleMessage. Capture errors
     // and emit as "error" events.
@@ -209,15 +220,6 @@ export class ChatSession extends EventEmitter {
     this.drainQueue();
   }
 
-  private async acquireRunLock(): Promise<void> {
-    const { boxRoot, sessionId, chatLockPath: currentLockPath } = this;
-    this.chatLockPath = await acquireSessionRunLock({ boxRoot, sessionId, currentLockPath });
-  }
-
-  private async releaseRunLock(): Promise<void> {
-    this.chatLockPath = await releaseSessionRunLock(this.chatLockPath);
-  }
-
   private consumeMessages(run: ChatBackendRun): Promise<void> {
     return pumpSessionRun(run, {
       durability: this.durability,
@@ -227,7 +229,7 @@ export class ChatSession extends EventEmitter {
       handleMessage: (msg) => this.handleMessage(msg),
       isStopping: () => this.state.phase === "stopping",
       toIdle: () => { if (this.state.phase !== "idle") this.transition({ phase: "idle" }); },
-      releaseRunLock: () => this.releaseRunLock(),
+      releaseRunLock: () => this.runLock.release(),
       emitError: (err) => { this.emit("error", err); },
       emitClose: (code) => { this.emit("close", code); },
       queueLength: () => this.messageQueue.length,
@@ -241,6 +243,8 @@ export class ChatSession extends EventEmitter {
     const assigned = captureAssignedSessionId({ msg, current: this.sessionId, sessionFile: this.sessionFile, boxRoot: this.boxRoot, onAssigned: this.options.onSessionIdAssigned });
     if (assigned !== null) {
       this.sessionId = assigned;
+      this.modelFile = this.options.modelFileForSession?.(assigned) ?? this.modelFile;
+      if (this.modelFile !== null && this.currentModel !== null) saveCurrentModel(this.boxRoot, { modelFile: this.modelFile, model: this.currentModel });
       log("session", `Got session ID: ${assigned}`);
     }
     // Background-task events fire between turns (no per-turn SSE attached), so
@@ -314,7 +318,7 @@ export class ChatSession extends EventEmitter {
       return false;
     }
 
-    const rawInput: ChatSendInput = typeof message === "string" ? { text: message } : message;
+    const rawInput: ChatSendInput = typeof message === "string" ? { text: message } : message; this.preparingTurn = true; try {
 
     // Composed BEFORE the run starts (it does filesystem I/O), and awaited
     // before run creation: observers of "a run exists" (drain-path tests,
@@ -323,7 +327,10 @@ export class ChatSession extends EventEmitter {
     const content = await composeTurnContent(this.boxRoot, {
       rawInput,
       features: this.features,
-      sessionStart: this.sessionId === null,
+      // "First message of this conversation", not "no id yet": a coined chat
+      // has its id from mount, and its first turn still deserves the
+      // first-message-only context (last activity, calendar, health).
+      sessionStart: this.sessionId === null || this.coined.pending,
       healthGate: this.healthGate,
     });
 
@@ -351,6 +358,7 @@ export class ChatSession extends EventEmitter {
       throw e;
     }
     return true;
+    } finally { this.preparingTurn = false; }
   }
 
   /**
@@ -375,7 +383,7 @@ export class ChatSession extends EventEmitter {
    */
   setModel(model: string | null): void {
     this.currentModel = model;
-    saveCurrentModel(this.boxRoot, { modelFile: this.modelFile, model });
+    if (this.modelFile !== null) saveCurrentModel(this.boxRoot, { modelFile: this.modelFile, model });
   }
 
   getCurrentModel(): string | null {
@@ -418,7 +426,7 @@ export class ChatSession extends EventEmitter {
   }
 
   isBusy(): boolean {
-    return lifecycleBusy(this.state);
+    return this.preparingTurn || lifecycleBusy(this.state);
   }
 
   /**

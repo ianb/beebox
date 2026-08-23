@@ -22,6 +22,7 @@
 import { useCallback } from "react";
 import { Link, useParams, useRouterState } from "@tanstack/react-router";
 import { useCurrentUser, type CurrentUser } from "../hooks/useCurrentUser";
+import { useBoxName } from "../hooks/useBoxName";
 import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
 import { useDeferredResync } from "../hooks/useDeferredResync";
 import { trpc } from "../lib/trpc";
@@ -30,7 +31,6 @@ import { Dropdown } from "./ui/Dropdown";
 import { MenuItem, MenuDivider } from "./ui/dropdown-menu-item";
 import { Avatar } from "./ui/Avatar";
 import { href } from "../lib/routing";
-import { useBoxes } from "../hooks/useBoxes";
 import { withBase } from "../api";
 import { PlacePill } from "./PlacePill";
 import { AppBarChipSlot, useAppBarPublishedPlace } from "./app-bar-chrome";
@@ -90,7 +90,6 @@ function ProfileMenu({ user, boxSlug, onToggleDebugLog, onToggleSourceView }: { 
 export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebugLog: () => void; onToggleSourceView: () => void }) {
   const { boxSlug } = useParams({ strict: false });
   const location = useRouterState({ select: (s) => s.location });
-  const { boxes } = useBoxes();
   const currentUser = useCurrentUser();
 
   const base = `/${boxSlug}`;
@@ -127,7 +126,7 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
     ),
   });
 
-  const boxName = boxes.find((b) => b.slug === boxSlug)?.name ?? boxSlug ?? "";
+  const { boxName } = useBoxName();
   // A page that knows its own place publishes it (chat: the session's context
   // dir — Track C2); every other route falls back to the route-derived map.
   const publishedPlace = useAppBarPublishedPlace();

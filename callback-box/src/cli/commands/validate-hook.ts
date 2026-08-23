@@ -19,7 +19,8 @@ import { requireBoxRoot, findBoxRoot, isCardFile, isViewFile } from "../../lib/p
 import { lintViewFile } from "../../webapp/views/compiler.js";
 import { lintViewRefs } from "../../core/views/refs.js";
 import { lintCardsDispatch } from "../../core/card-lint.js";
-import { isClaudeMdFile, lintClaudeMdFile } from "../../core/claude-md-lint.js";
+import { lintClaudeMdFile } from "../../core/claude-md-lint.js";
+import { isAgentInstructionsFile } from "../../core/agent-instruction-files.js";
 import { buildLoadContext } from "../../core/load-context.js";
 import { staleContainsWarning } from "../../core/search/contains-state.js";
 import { refreshDerivedRules } from "../../core/refresh-derived-rules.js";
@@ -68,33 +69,44 @@ async function readHookFilePaths(): Promise<string[]> {
   }
 }
 
-export async function validateHookPath(fp: string): Promise<string | null> {
-  if (!existsSync(fp)) return null;
+export interface HookValidationResult {
+  feedback: string | null;
+  hasErrors: boolean;
+}
+
+const CLEAN_HOOK_VALIDATION: HookValidationResult = { feedback: null, hasErrors: false };
+
+async function validateHookPathResult(fp: string): Promise<HookValidationResult> {
+  if (!existsSync(fp)) return CLEAN_HOOK_VALIDATION;
   if (/tricks\/scripts\/[^/]+\.ts$/.test(fp)) {
-    return "Trick scripts must be in a subdirectory: tricks/scripts/<name>/index.ts, not directly in tricks/scripts/";
+    return {
+      feedback: "Trick scripts must be in a subdirectory: tricks/scripts/<name>/index.ts, not directly in tricks/scripts/",
+      hasErrors: true,
+    };
   }
-  if (isClaudeMdFile(fp)) {
-    const boxRoot = await requireBoxRoot();
-    return lintClaudeMdFile(boxRoot, fp);
+  if (isAgentInstructionsFile(fp)) {
+    const boxRoot = await requireBoxRoot(path.dirname(fp));
+    return { feedback: await lintClaudeMdFile(boxRoot, fp), hasErrors: false };
   }
   if (isViewFile(fp)) {
     const err = await lintViewFile(fp);
-    if (err !== null) return `View compile error for ${fp}:\n${err}`;
-    const refBoxRoot = await findBoxRoot(process.cwd());
+    if (err !== null) return { feedback: `View compile error for ${fp}:\n${err}`, hasErrors: true };
+    const refBoxRoot = await findBoxRoot(path.dirname(fp));
     const warnings = refBoxRoot === null ? [] : await lintViewRefs(fp, refBoxRoot);
-    return warnings.length === 0 ? null : warnings.join("\n");
+    return { feedback: warnings.length === 0 ? null : warnings.join("\n"), hasErrors: false };
   }
   if (isLintableMarkdown(fp)) {
-    const boxRoot = await requireBoxRoot();
-    if ((await loadValidationIgnore(boxRoot)).isIgnored(fp)) return null;
+    const boxRoot = await requireBoxRoot(path.dirname(fp));
+    if ((await loadValidationIgnore(boxRoot)).isIgnored(fp)) return CLEAN_HOOK_VALIDATION;
     const summary = await lintMarkdownFiles([fp], { boxRoot });
-    return summary.totalErrors === 0
-      ? null
-      : formatMarkdownResults(summary, { colors: false });
+    return {
+      feedback: summary.totalErrors === 0 ? null : formatMarkdownResults(summary, { colors: false }),
+      hasErrors: summary.totalErrors > 0,
+    };
   }
-  if (!isCardFile(fp)) return null;
-  const boxRoot = await requireBoxRoot();
-  if ((await loadValidationIgnore(boxRoot)).isIgnored(fp)) return null;
+  if (!isCardFile(fp)) return CLEAN_HOOK_VALIDATION;
+  const boxRoot = await requireBoxRoot(path.dirname(fp));
+  if ((await loadValidationIgnore(boxRoot)).isIgnored(fp)) return CLEAN_HOOK_VALIDATION;
   const ctx = await buildLoadContext(boxRoot);
   const summary = await lintCardsDispatch([fp], { boxRoot, ctx });
   await refreshDerivedRules(boxRoot, fp);
@@ -107,17 +119,30 @@ export async function validateHookPath(fp: string): Promise<string | null> {
     parts.push(formatLintResults(summary, { colors: false }));
   }
   if (stale !== null) parts.push(stale);
-  return parts.length === 0 ? null : parts.join("\n");
+  return { feedback: parts.length === 0 ? null : parts.join("\n"), hasErrors: summary.totalErrors > 0 };
 }
 
-/** Validate paths reported by a harness and return the combined agent feedback. */
-export async function validateHookPaths(paths: string[]): Promise<string | null> {
+export async function validateHookPath(fp: string): Promise<string | null> {
+  return (await validateHookPathResult(fp)).feedback;
+}
+
+/** Validate paths reported by a harness, preserving warnings versus errors. */
+export async function validateHookPathsResult(paths: string[]): Promise<HookValidationResult> {
   const feedback: string[] = [];
+  let hasErrors = false;
   for (const fp of [...new Set(paths)]) {
-    const result = await validateHookPath(fp);
-    if (result !== null) feedback.push(result);
+    const result = await validateHookPathResult(fp);
+    if (result.feedback !== null) {
+      feedback.push(result.feedback);
+      hasErrors ||= result.hasErrors;
+    }
   }
-  return feedback.length === 0 ? null : feedback.join("\n");
+  return { feedback: feedback.length === 0 ? null : feedback.join("\n"), hasErrors };
+}
+
+/** Validate paths reported by a hook and return combined agent feedback. */
+export async function validateHookPaths(paths: string[]): Promise<string | null> {
+  return (await validateHookPathsResult(paths)).feedback;
 }
 
 /**

@@ -8,6 +8,7 @@
 import * as path from "node:path";
 import { glob } from "glob";
 import { boxCodePaths, getBoxShape } from "../lib/box-shape.js";
+import { isAgentInstructionsFile } from "./agent-instruction-files.js";
 
 const CARD_GLOB_IGNORE = ["node_modules/**", ".git/**", "tmp/**", ".callback-box/**"];
 
@@ -41,7 +42,7 @@ const MARKDOWN_SKIP_DIRS = new Set([
  *    depth (generated trees are nested per-area, e.g.
  *    `store/roadtrip/docs/generated/`, not just at box root; those docs are full
  *    of illustrative example links that never resolve and must not be linted);
- *  - `CLAUDE.md` (instructions, not linkable content).
+ *  - `CLAUDE.md` / `AGENTS.md` (instructions, not linkable content).
  *
  * Accepts a box-relative or absolute path (only the segment sequence matters).
  */
@@ -52,7 +53,7 @@ export function isBuiltinLintableMarkdown(filePath: string): boolean {
   for (let i = 0; i + 1 < parts.length; i++) {
     if (parts[i] === "docs" && parts[i + 1] === "generated") return false;
   }
-  return parts[parts.length - 1] !== "CLAUDE.md";
+  return !isAgentInstructionsFile(filePath);
 }
 
 // Heavy dirs pruned during the walk itself (perf — never descend them). The
