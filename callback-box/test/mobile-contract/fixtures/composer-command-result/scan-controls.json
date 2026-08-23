@@ -11,14 +11,25 @@
         "label": "Start dictation",
         "does": "hold to dictate; tap for continuous dictation",
         "container": "Composer",
-        "disabled": false
+        "disabled": false,
+        "actions": ["point"]
       },
       {
         "id": "cb-composer-input",
         "role": "textbox",
         "label": "Type a message",
         "container": "Composer",
-        "disabled": false
+        "disabled": false,
+        "actions": ["point", "focus"]
+      },
+      {
+        "id": "cb-composer-add",
+        "role": "button",
+        "label": "Add",
+        "does": "opens the attach menu",
+        "container": "Composer",
+        "disabled": false,
+        "actions": ["point", "reveal"]
       }
     ]
   },
@@ -34,7 +45,8 @@
         "label": "Start dictation",
         "does": "hold to dictate; tap for continuous dictation",
         "container": "Composer",
-        "disabled": false
+        "disabled": false,
+        "actions": ["point"]
       },
       {
         "id": "cb-composer-input",
@@ -42,7 +54,17 @@
         "label": "Type a message",
         "does": null,
         "container": "Composer",
-        "disabled": false
+        "disabled": false,
+        "actions": ["point", "focus"]
+      },
+      {
+        "id": "cb-composer-add",
+        "role": "button",
+        "label": "Add",
+        "does": "opens the attach menu",
+        "container": "Composer",
+        "disabled": false,
+        "actions": ["point", "reveal"]
       }
     ]
   }

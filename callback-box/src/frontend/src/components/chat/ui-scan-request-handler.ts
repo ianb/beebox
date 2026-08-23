@@ -29,11 +29,11 @@ import { getApiBase } from "../../api-core";
 import { scanLiveDocument } from "../../lib/ui-scan/live-dom";
 import { currentChatChannel } from "../../lib/chat-channel";
 import { isNativeShell } from "./native-post";
+import { windowNativeControlBridge } from "./native-command-bridge";
 import {
   NATIVE_SCAN_TIMEOUT_MS,
   nativeScanEntries,
   requestNativeControls,
-  windowNativeControlBridge,
 } from "./native-control-scan";
 import type { NativeControlEntry } from "./native-composer-command";
 import { isRequestExpired, matchesRequestSession } from "./screenshot-request-logic";

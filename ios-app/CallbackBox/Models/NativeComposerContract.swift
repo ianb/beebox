@@ -89,6 +89,20 @@ struct NativeComposerCommand: Codable, Equatable, Identifiable {
     enum Kind: String, Codable {
         case addSelection = "add-selection"
         case scanControls = "scan-controls"
+        case pointAtControl = "point-at-control"
+    }
+
+    /// Which native control to act on, and how.
+    ///
+    /// The `id` here is the control's shared `cb-` address, not the command id —
+    /// the envelope carries that separately. `action` is a closed enum decoded
+    /// strictly: the web degrades an unrecognised `action=` in a `control:` href
+    /// to `point` before it ever builds a command, so a fourth value arriving
+    /// here means a bundle skew, and acting on the interface on a guess is
+    /// exactly what this feature must not do.
+    struct PointTarget: Codable, Equatable {
+        var id: String
+        var action: NativeControlEntry.Action
     }
 
     struct Selection: Codable, Equatable {
@@ -102,6 +116,7 @@ struct NativeComposerCommand: Codable, Equatable, Identifiable {
     enum Payload: Equatable {
         case addSelection(Selection)
         case scanControls
+        case pointAtControl(PointTarget)
     }
 
     enum DecodeError: Error, Equatable {
@@ -109,6 +124,8 @@ struct NativeComposerCommand: Codable, Equatable, Identifiable {
         case emptyID
         /// A V1 envelope carrying a kind V1 cannot express.
         case unsupportedKindForVersion(Kind, Int)
+        /// A `point-at-control` naming no control.
+        case emptyControlID
     }
 
     var version: Int
@@ -121,6 +138,8 @@ struct NativeComposerCommand: Codable, Equatable, Identifiable {
             .addSelection
         case .scanControls:
             .scanControls
+        case .pointAtControl:
+            .pointAtControl
         }
     }
 
@@ -160,6 +179,12 @@ struct NativeComposerCommand: Codable, Equatable, Identifiable {
             payload = .addSelection(try container.decode(Selection.self, forKey: .payload))
         case .scanControls:
             payload = .scanControls
+        case .pointAtControl:
+            let target = try container.decode(PointTarget.self, forKey: .payload)
+            guard !target.id.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                throw DecodeError.emptyControlID
+            }
+            payload = .pointAtControl(target)
         }
     }
 
@@ -173,6 +198,8 @@ struct NativeComposerCommand: Codable, Equatable, Identifiable {
             try container.encode(selection, forKey: version == 1 ? .selection : .payload)
         case .scanControls:
             break
+        case .pointAtControl(let target):
+            try container.encode(target, forKey: .payload)
         }
     }
 
@@ -201,6 +228,14 @@ struct NativeControlEntry: Codable, Equatable, Identifiable, Sendable {
         case textbox
     }
 
+    /// What a `control:` pointer may ask this shell to do with a control. The
+    /// same three names the web uses, so one vocabulary spans both surfaces.
+    enum Action: String, Codable, Sendable, CaseIterable {
+        case point
+        case focus
+        case reveal
+    }
+
     var id: String
     var role: Role
     var label: String
@@ -210,6 +245,52 @@ struct NativeControlEntry: Codable, Equatable, Identifiable, Sendable {
     /// The native surface this control belongs to; the dump groups by it.
     var container: String
     var disabled: Bool
+    /// What this control can actually be asked to do here.
+    ///
+    /// Derived from the anchor's handlers rather than declared, so the list
+    /// cannot claim a `focus` the view has no way to perform: `.controlAnchor`
+    /// adds `focus`/`reveal` exactly when it was given something to run for
+    /// them. Every registered control can be pointed at, because the registry
+    /// holds a frame for each.
+    var actions: [Action] = [.point]
+
+    init(
+        id: String,
+        role: Role,
+        label: String,
+        does: String? = nil,
+        container: String,
+        disabled: Bool,
+        actions: [Action] = [.point]
+    ) {
+        self.id = id
+        self.role = role
+        self.label = label
+        self.does = does
+        self.container = container
+        self.disabled = disabled
+        self.actions = actions
+    }
+
+    /// `actions` is decoded leniently — absent means **none**, not "point".
+    ///
+    /// Nothing decodes an entry in production (native is the producer of this
+    /// shape), so this exists to keep the golden fixtures decodable on both
+    /// sides, including the one recording what a build older than
+    /// `point-at-control` puts on the wire. Absent must not become `[.point]`
+    /// there: such a build can list a control and cannot act on one, and the
+    /// dump has to print it without a link rather than promise a pointer that
+    /// would break on click.
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(String.self, forKey: .id)
+        role = try values.decode(Role.self, forKey: .role)
+        label = try values.decode(String.self, forKey: .label)
+        does = try values.decodeIfPresent(String.self, forKey: .does)
+        container = try values.decode(String.self, forKey: .container)
+        disabled = try values.decode(Bool.self, forKey: .disabled)
+        actions = try values.decodeIfPresent([Action].self, forKey: .actions) ?? []
+    }
 }
 
 /// What a V2 command produced, posted to the web on its own channel.
@@ -256,7 +337,9 @@ struct NativeComposerCommandResult: Codable, Equatable, Identifiable {
         ok = try container.decode(Bool.self, forKey: .ok)
         controls = try container.decodeIfPresent([NativeControlEntry].self, forKey: .controls)
         reason = try container.decodeIfPresent(String.self, forKey: .reason)
-        if ok, controls == nil {
+        // Only `scan-controls` has an answer to carry; a successful
+        // `point-at-control` is the fact that it happened and nothing more.
+        if ok, kind == .scanControls, controls == nil {
             throw DecodeError.missingControls
         }
         if !ok, reason?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false {
@@ -267,6 +350,12 @@ struct NativeComposerCommandResult: Codable, Equatable, Identifiable {
     /// The answer to `scan-controls`. An empty array is a real answer.
     static func controls(id: String, _ controls: [NativeControlEntry]) -> NativeComposerCommandResult {
         NativeComposerCommandResult(id: id, kind: .scanControls, ok: true, controls: controls, reason: nil)
+    }
+
+    /// The answer to `point-at-control`: the ring is drawn, and there is nothing
+    /// to return but that.
+    static func pointed(id: String) -> NativeComposerCommandResult {
+        NativeComposerCommandResult(id: id, kind: .pointAtControl, ok: true, controls: nil, reason: nil)
     }
 
     static func refused(

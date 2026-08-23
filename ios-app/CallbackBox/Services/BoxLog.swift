@@ -70,6 +70,21 @@ enum BoxLog {
         }
     }
 
+    /// The `warn` counterpart of the targeted `info` above, for a recovered
+    /// failure whose box the call site already knows — a refusal answered to the
+    /// web, say, which is diagnosable only if it is attributed to the right box.
+    static func warn(_ message: String, category: BoxLogCategory, targetBoxID: UUID) {
+        logger(for: category).warning("\(message, privacy: .public)")
+        Task {
+            await LogForwarder.shared.record(
+                level: .warn,
+                category: category,
+                message: message,
+                boxID: targetBoxID
+            )
+        }
+    }
+
     static func logger(for category: BoxLogCategory) -> Logger {
         loggers[category] ?? Logger(subsystem: subsystem, category: category.rawValue)
     }

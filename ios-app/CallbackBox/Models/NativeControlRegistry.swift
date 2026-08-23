@@ -18,6 +18,42 @@ import SwiftUI
 /// Contract: `callback-box/docs/mobile-contract.md` §4.8. The ids come from
 /// Track 4's table in `docs/plans/agent-points-at-ui.md` and are shared with the
 /// web, so `control:cb-composer-mic` means the same control on both surfaces.
+/// What one anchored view can be asked to do beyond being pointed at.
+///
+/// Held beside the entry rather than inside it because a closure is neither
+/// `Equatable` nor `Codable`, and the entry is both. Presence is what makes an
+/// action supported: `NativeControlEntry.actions` is derived from these, so the
+/// list the agent reads and the dispatch that runs are the same fact.
+struct NativeControlHandlers {
+    /// Make this control the first responder. Only the composer's text field
+    /// has one; everything else refuses rather than pretending.
+    var focus: (() -> Void)?
+    /// Present what this control opens. Only the composer's Add button has one.
+    var reveal: (() -> Void)?
+
+    var actions: [NativeControlEntry.Action] {
+        var actions: [NativeControlEntry.Action] = [.point]
+        if focus != nil {
+            actions.append(.focus)
+        }
+        if reveal != nil {
+            actions.append(.reveal)
+        }
+        return actions
+    }
+}
+
+/// What happened when a `control:` pointer reached a native control.
+///
+/// A refusal always carries a sentence the user reads in the pointer's broken
+/// treatment: the plan forbids a silent no-op here, and "nothing visibly
+/// happened" is the failure the treatment exists to prevent.
+enum NativeControlActionOutcome: Equatable {
+    /// Draw the ring on this box, in global coordinates.
+    case pointed(CGRect)
+    case refused(String)
+}
+
 final class NativeControlRegistry: ObservableObject {
     /// One registration. The token is the *instance* identity: two views can
     /// legitimately carry the same `cb-` id across a state change (the mic and
@@ -28,17 +64,28 @@ final class NativeControlRegistry: ObservableObject {
         var token: UUID
         var entry: NativeControlEntry
         var frame: CGRect
+        var handlers: NativeControlHandlers
     }
 
     private var registrations: [Registration] = []
 
     /// Insert or refresh one anchor's registration.
-    func register(_ entry: NativeControlEntry, frame: CGRect, token: UUID) {
+    ///
+    /// The handlers are re-supplied on every call because they close over the
+    /// registering view's state; refreshing them with the frame is what keeps a
+    /// `focus` running against the composer that is on screen now.
+    func register(
+        _ entry: NativeControlEntry,
+        frame: CGRect,
+        handlers: NativeControlHandlers = NativeControlHandlers(),
+        token: UUID
+    ) {
+        let registration = Registration(token: token, entry: entry, frame: frame, handlers: handlers)
         if let index = registrations.firstIndex(where: { $0.token == token }) {
-            registrations[index] = Registration(token: token, entry: entry, frame: frame)
+            registrations[index] = registration
             return
         }
-        registrations.append(Registration(token: token, entry: entry, frame: frame))
+        registrations.append(registration)
     }
 
     /// Remove the registration made under `token`, if it is still the live one.
@@ -70,6 +117,44 @@ final class NativeControlRegistry: ObservableObject {
     func frame(of id: String) -> CGRect? {
         registrations.last { $0.entry.id == id }?.frame
     }
+
+    /// Act on one control for a `control:` pointer, and say what to draw or why
+    /// nothing was drawn.
+    ///
+    /// The refusals are the point of this method. The plan accepts that the
+    /// native side works at lower fidelity than the DOM one — a declared
+    /// registry rather than a walk, and `focus`/`reveal` only where they have an
+    /// honest meaning — on the condition that the gaps are *stated*. So an
+    /// unregistered address, a control whose frame the registry no longer
+    /// believes, an action this control has no handler for, and an action asked
+    /// of a control that is on screen but not operable each come back with a
+    /// sentence rather than a shrug.
+    func perform(_ action: NativeControlEntry.Action, on controlID: String) -> NativeControlActionOutcome {
+        guard let registration = registrations.last(where: { $0.entry.id == controlID }) else {
+            return .refused("The app has no control \"\(controlID)\" on screen right now.")
+        }
+        guard registration.entry.actions.contains(action) else {
+            return .refused("\(action.rawValue) is not supported for this control on this surface (\(controlID)).")
+        }
+        // A frame this thin is one the registry never got a real layout for —
+        // ringing it would draw a marker somewhere the control is not, which is
+        // worse than saying so.
+        guard registration.frame.width > 0, registration.frame.height > 0 else {
+            return .refused("The app knows \"\(controlID)\" but not where it is on screen right now.")
+        }
+        if registration.entry.disabled, action != .point {
+            return .refused("This control is on screen but not usable right now (\(controlID)).")
+        }
+        switch action {
+        case .point:
+            break
+        case .focus:
+            registration.handlers.focus?()
+        case .reveal:
+            registration.handlers.reveal?()
+        }
+        return .pointed(registration.frame)
+    }
 }
 
 private struct NativeControlRegistryKey: EnvironmentKey {
@@ -93,6 +178,7 @@ extension EnvironmentValues {
 /// the agent reads, and setting them from one call is what stops them drifting.
 private struct ControlAnchorModifier: ViewModifier {
     let entry: NativeControlEntry
+    let handlers: NativeControlHandlers
     @Environment(\.nativeControlRegistry) private var registry
     @State private var token = UUID()
 
@@ -103,13 +189,13 @@ private struct ControlAnchorModifier: ViewModifier {
                 GeometryReader { proxy in
                     Color.clear
                         .onAppear {
-                            registry.register(entry, frame: proxy.frame(in: .global), token: token)
+                            registry.register(entry, frame: proxy.frame(in: .global), handlers: handlers, token: token)
                         }
                         .onChange(of: entry) { _, updated in
-                            registry.register(updated, frame: proxy.frame(in: .global), token: token)
+                            registry.register(updated, frame: proxy.frame(in: .global), handlers: handlers, token: token)
                         }
                         .onChange(of: proxy.frame(in: .global)) { _, frame in
-                            registry.register(entry, frame: frame, token: token)
+                            registry.register(entry, frame: frame, handlers: handlers, token: token)
                         }
                         .onDisappear {
                             registry.unregister(token: token)
@@ -133,22 +219,36 @@ extension View {
     ///   - container: the native surface this control sits in; the dump groups by it.
     ///   - disabled: on screen but not operable. Passed explicitly because
     ///     SwiftUI's `.disabled()` state cannot be read back out of a view.
+    ///   - onFocus: what "focus this" means for this control, or nil where it
+    ///     means nothing — the composer's text field has a first responder to
+    ///     make; a button does not, and pretending otherwise is the silent
+    ///     no-op the plan forbids.
+    ///   - onReveal: what "show me what this opens" means, or nil. Present only
+    ///     on a control that presents a sheet, and it opens that sheet — it
+    ///     never operates the control on the user's behalf.
     func controlAnchor(
         _ id: String,
         role: NativeControlEntry.Role = .button,
         label: String,
         does: String? = nil,
         container: String = NativeControlSurface.composer,
-        disabled: Bool = false
+        disabled: Bool = false,
+        onFocus: (() -> Void)? = nil,
+        onReveal: (() -> Void)? = nil
     ) -> some View {
-        modifier(ControlAnchorModifier(entry: NativeControlEntry(
-            id: id,
-            role: role,
-            label: label,
-            does: does,
-            container: container,
-            disabled: disabled
-        )))
+        let handlers = NativeControlHandlers(focus: onFocus, reveal: onReveal)
+        return modifier(ControlAnchorModifier(
+            entry: NativeControlEntry(
+                id: id,
+                role: role,
+                label: label,
+                does: does,
+                container: container,
+                disabled: disabled,
+                actions: handlers.actions
+            ),
+            handlers: handlers
+        ))
     }
 }
 

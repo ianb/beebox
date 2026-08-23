@@ -281,16 +281,24 @@ The web-to-native selection command uses one versioned, strict shape.
 
 ```ts
 runFamily("composer-command", validateComposerCommand)
-=> {"family":"composer-command","cases":6,"pass":6}
+=> {"family":"composer-command","cases":8,"pass":8}
 ```
 
 V2 adds `kind`-discriminated payloads without disturbing V1, which installed iOS
-builds still decode. An unknown kind is refused rather than guessed at, on both
-sides.
+builds still decode. An unknown kind — and an unknown `action` inside a
+`point-at-control` payload — is refused rather than guessed at, on both sides:
+acting on the interface on a guess is the one thing a pointer must never do.
+
+The result carries the answer. `scan-controls` returns an inventory (an empty
+one is a real answer); `point-at-control` returns only that it happened, because
+the ring is already drawn on the phone. A control entry from a build older than
+`point-at-control` has no `actions` key at all, and absent reads as **none** —
+such a build can list a control and cannot act on one, so the dump prints it
+without a link rather than promising a pointer that would break on click.
 
 ```ts
 runFamily("composer-command-result", validateCommandResult)
-=> {"family":"composer-command-result","cases":4,"pass":4}
+=> {"family":"composer-command-result","cases":7,"pass":7}
 ```
 
 The acknowledgement is emitted only after the native draft mutation is

@@ -996,6 +996,10 @@ plan; both are recorded in the table.
 | A rendered card, embed or transcript message puts its own links and buttons into the dump | Yes — scan doctest over an excluded subtree | Yes — `data-cb-scan="exclude"` prunes content roots; the annotated chrome is all outside them | Clear (by construction — the payload is chrome) |
 | A control is clipped out of view by an `overflow: hidden` ancestor but its own box is inside the viewport | No | Partial — reported as on screen; `point` scrolls it into view regardless | Silent — accepted and documented at the `offscreen` computation |
 | Native bridge does not answer `scan-controls` in time | Yes — route doctest with a fake bridge that never answers | Yes — `coverage: "dom-native-unavailable"` and an explicit sentence in the dump | Clear |
+| Native bridge does not answer `point-at-control` in time | Yes — doctest with a bridge that never answers | Yes — the pointer takes the `BrokenLink` treatment saying the app did not answer in time (not "refused" — the ring may well have been drawn and the reply lost) | Clear |
+| A `control:` link names a native control the shell does not have, or asks it for an action it cannot perform | Yes — doctest for each refusal shape, XCTest for each refusal sentence | Yes — native refuses with a sentence; the pointer becomes broken in place carrying it | Clear |
+| The registry's frame for a control is stale (it moved without an appear or a layout change) | Yes — XCTest over a zero frame | Yes — refused rather than ringing the wrong place, which is the accepted lower-fidelity trade for a declared registry | Clear |
+| A native control inside a child-raised sheet is pointed at, so the ring is drawn under that sheet | No | No — the ring is `RootView`'s, and the sheet is above it | Silent — accepted; the webview holding the link is covered by the same sheet, so the link cannot be tapped then. Recorded in `docs/mobile-contract.md` §4.8 |
 | No client attached when the agent runs `cb chat ui` (phone locked, tab closed) | Yes — route doctest via the existing ack-window path | Yes — `no-client`, distinct from `timeout`, inherited from `pending-browser-request.ts:11-18` | Clear |
 | Accname computation returns empty for a control that is genuinely important | Partly — doctests cover the fallback chain, not "was this one important" | Dropped from the dump, but the drop **count** is printed in the header | Clear (count), silent (which) — accepted; see below |
 | An author puts `data-cb-reveal` on a control that does more than disclose | Yes — a doctest asserting every `data-cb-reveal` element also presents `aria-expanded`/`aria-haspopup`/`role="tab"` | Partial — the doctest catches the missing-semantics case, not a genuinely mislabelled disclosure control | Silent — accepted, and it is why the attribute is opt-in and confined to four menu triggers in this pass |
@@ -1132,11 +1136,23 @@ highlight — the outcome the issue asks for.
   chat-surface controls. Whether every routed page eventually gets the same
   treatment is a scope call, not a design one, and the answer probably depends
   on whether the boxholder finds himself asking "where is that" outside chat.
-- **Whether `focus` and `reveal` have honest native meanings.** `focus` maps to
-  first-responder; `reveal` maps to presenting the sheet a control opens. Both
-  are plausible and neither is verified. The plan requires them to be rejected
-  with a reason rather than silently no-oped where they do not apply, which
-  bounds the risk of getting this wrong.
+- **Whether `focus` and `reveal` have honest native meanings. RESOLVED BY
+  IMPLEMENTATION (Track 5b).** Both do, in exactly two places on this surface,
+  and nowhere else:
+  - `focus` → **`cb-composer-input` only**: make the composer text field first
+    responder, which raises the keyboard exactly as a tap on it would. No other
+    native control has a first responder to make.
+  - `reveal` → **`cb-composer-add` only**: present the actions sheet that button
+    opens. It opens the sheet and stops there — it never picks a row for the
+    user, which is the reveal/do line the rest of the plan draws.
+
+  Every other (control, action) pair is **refused with a reason** the pointer
+  shows in its broken-link tooltip — "`focus` is not supported for this control
+  on this surface (`cb-composer-mic`)" — never silently no-oped. The mechanism
+  is what makes that hold rather than being a rule to remember:
+  `NativeControlEntry.actions` is *derived from* the handlers `.controlAnchor`
+  was given, so a control cannot advertise an action nobody wrote code for, and
+  the dump lists native controls with exactly the actions native will honour.
 
 ## Knowledge audits
 
@@ -1184,6 +1200,13 @@ inside the monorepo.)
 7. **Track 5 remainder — native registry, two command kinds, merge, native
    ring, mobile-contract updates and fixtures.** Depends on 2-5 being stable so
    the native side implements a settled contract rather than a moving one.
+   **IMPLEMENTED** in two commits: 7a (registry, V2 envelope, result channel,
+   `scan-controls`, merge and coverage) and 7b (`point-at-control`, the native
+   ring, `focus`/`reveal`, and native entries becoming real `control:` links in
+   the dump). What 7b left unverified is the round trip in a *real* webview —
+   both halves are exercised by doctests against an injected bridge and by
+   XCTest against the registry, but no web-to-native message has yet crossed a
+   live `WKWebView` on a paired box.
 
 Chunks 1-6 are commit boundaries within one plan and **ship without waiting
 for 7**. An earlier draft gated everything on the native half, to avoid the

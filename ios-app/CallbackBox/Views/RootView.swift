@@ -25,6 +25,11 @@ struct RootView: View {
     /// composer's own view bodies, so it cannot describe a control that is not
     /// rendered.
     @StateObject private var controlRegistry = NativeControlRegistry()
+    /// The native ring a `control:` pointer asked for, if one is on screen. Held
+    /// here rather than in the composer because the ring is drawn over the whole
+    /// app in global coordinates, and the surface it points at may not be the
+    /// composer forever.
+    @State private var controlRing: NativeControlRing?
 
     var body: some View {
         Group {
@@ -70,6 +75,14 @@ struct RootView: View {
                 }
             }
         }
+        .overlay {
+            if let controlRing {
+                NativeControlRingView(frame: controlRing.frame) {
+                    self.controlRing = nil
+                }
+                .id(controlRing.id)
+            }
+        }
         .sheet(isPresented: $showingPairSheet) {
             PairBoxView()
         }
@@ -95,6 +108,7 @@ struct RootView: View {
             screenshotResult = nil
             composerCommandAcknowledgements = []
             composerCommandResults = []
+            controlRing = nil
             pendingEmissionStore.deactivate()
         }
         .task(id: store.selectedBox?.id) {
@@ -283,6 +297,33 @@ struct RootView: View {
                 )
                 acknowledge(.accepted(id: command.id))
                 deliver(.controls(id: command.id, controls))
+            case .pointAtControl(let target):
+                // Same obstruction rule as the scan, for the same reason: a
+                // ring drawn under the unlock screen or the pairing sheet is a
+                // pointer at something the user cannot see, reported as success.
+                if let reason = obstructedNativeSurface(box: box) {
+                    acknowledge(.accepted(id: command.id))
+                    deliver(.refused(id: command.id, kind: .pointAtControl, reason: reason))
+                    return
+                }
+                acknowledge(.accepted(id: command.id))
+                switch controlRegistry.perform(target.action, on: target.id) {
+                case .pointed(let frame):
+                    controlRing = NativeControlRing(frame: frame)
+                    BoxLog.info(
+                        "native control pointed id=\(target.id) action=\(target.action.rawValue)",
+                        category: .webview,
+                        targetBoxID: box.id
+                    )
+                    deliver(.pointed(id: command.id))
+                case .refused(let reason):
+                    BoxLog.warn(
+                        "native control point refused id=\(target.id) action=\(target.action.rawValue)",
+                        category: .webview,
+                        targetBoxID: box.id
+                    )
+                    deliver(.refused(id: command.id, kind: .pointAtControl, reason: reason))
+                }
             }
         case .rejection(let acknowledgement):
             acknowledge(acknowledgement)
@@ -325,6 +366,14 @@ struct RootView: View {
             "unknown"
         }
     }
+}
+
+/// A ring currently drawn on a native control. The `id` is what restarts the
+/// timer when the same control is pointed at twice in a row: a new value
+/// re-identifies the overlay, which is what remounts it.
+private struct NativeControlRing: Identifiable {
+    var id = UUID()
+    var frame: CGRect
 }
 
 /// One best-effort log flush as the app backgrounds, held open by a UIKit

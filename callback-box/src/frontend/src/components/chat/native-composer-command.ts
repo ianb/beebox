@@ -32,9 +32,20 @@
 
 import type { AddSelectionInput } from "../../lib/selection/position";
 import { postNativeMessage, type NativeShellWindow } from "./native-post";
+import type { ControlAction } from "../../lib/ui-scan/types";
 
 /** Command kinds the envelope carries. V1 has only `add-selection`. */
-export type NativeComposerCommandKind = "add-selection" | "scan-controls";
+export type NativeComposerCommandKind = "add-selection" | "scan-controls" | "point-at-control";
+
+/**
+ * Which native control to act on, and how. The envelope's own `id` is the
+ * command id; this `id` is the `cb-` address of the control — the same string
+ * the DOM half would have passed to `getElementById`.
+ */
+export interface NativePointTarget {
+  id: string;
+  action: ControlAction;
+}
 
 /**
  * A command the web posts on `callbackboxComposerCommand`.
@@ -45,7 +56,8 @@ export type NativeComposerCommandKind = "add-selection" | "scan-controls";
 export type NativeComposerCommand =
   | { version: 1; id: string; kind: "add-selection"; selection: AddSelectionInput }
   | { version: 2; id: string; kind: "add-selection"; payload: AddSelectionInput }
-  | { version: 2; id: string; kind: "scan-controls" };
+  | { version: 2; id: string; kind: "scan-controls" }
+  | { version: 2; id: string; kind: "point-at-control"; payload: NativePointTarget };
 
 export type NativeComposerCommandAcknowledgement =
   | { version: 1; id: string; accepted: true }
@@ -65,6 +77,17 @@ export interface NativeControlEntry {
   container: string;
   /** On screen but not operable right now. */
   disabled: boolean;
+  /**
+   * What this control can be asked to do. Every registered control can be
+   * pointed at; `focus` and `reveal` appear only where the shell has an honest
+   * native meaning for them (first responder, and the sheet the control opens).
+   *
+   * An installed build older than `point-at-control` omits the key entirely and
+   * is read as `[]` — it can enumerate a control but cannot act on one, and the
+   * dump prints such an entry without a `control:` link rather than handing out
+   * a pointer that would break on click.
+   */
+  actions: ControlAction[];
 }
 
 /**
@@ -74,6 +97,7 @@ export interface NativeControlEntry {
  */
 export type NativeCommandResult =
   | { version: 2; id: string; kind: "scan-controls"; ok: true; controls: NativeControlEntry[] }
+  | { version: 2; id: string; kind: "point-at-control"; ok: true }
   | { version: 2; id: string; kind: NativeComposerCommandKind; ok: false; reason: string };
 
 declare global {
@@ -95,6 +119,14 @@ export function createNativeAddSelectionCommand(
 /** The V2 request for the native control inventory. Carries no payload. */
 export function createNativeScanControlsCommand(id: string): NativeComposerCommand {
   return { version: 2, id, kind: "scan-controls" };
+}
+
+/** The V2 request to act on one native control — the native half of a `control:` link. */
+export function createNativePointAtControlCommand(
+  id: string,
+  target: NativePointTarget,
+): NativeComposerCommand {
+  return { version: 2, id, kind: "point-at-control", payload: target };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -137,6 +169,10 @@ export function nativeComposerCommandFromDetail(detail: unknown): NativeComposer
     }
     case "scan-controls":
       return createNativeScanControlsCommand(id);
+    case "point-at-control": {
+      const target = pointTargetFrom(detail.payload);
+      return target === null ? null : createNativePointAtControlCommand(id, target);
+    }
     default:
       // An unknown kind is a newer web bundle talking to this parser; refuse it
       // rather than guessing, exactly as the Swift `Kind` decode does.
@@ -155,6 +191,26 @@ export function nativeComposerCommandAcknowledgementFromDetail(
   return reason === null ? null : { version: 1, id, accepted: false, reason };
 }
 
+/** `{id,action}` with a known action — the `point-at-control` payload. */
+function pointTargetFrom(value: unknown): NativePointTarget | null {
+  if (!isRecord(value)) return null;
+  const id = nonEmptyString(value.id);
+  if (id === null) return null;
+  const action = controlActionFrom(value.action);
+  return action === null ? null : { id, action };
+}
+
+/**
+ * One action name, or null for anything else. Strict on the wire on purpose: an
+ * unknown `action=` in a `control:` href degrades to `point` at classification
+ * time, so by the time a command is built the value is one of three — a fourth
+ * reaching here means a bundle skew, and guessing at it would act on the
+ * interface on a guess.
+ */
+function controlActionFrom(value: unknown): ControlAction | null {
+  return value === "point" || value === "focus" || value === "reveal" ? value : null;
+}
+
 /** One registry entry, strictly parsed. A malformed entry voids the whole result. */
 function nativeControlEntryFrom(value: unknown): NativeControlEntry | null {
   if (!isRecord(value)) return null;
@@ -168,7 +224,24 @@ function nativeControlEntryFrom(value: unknown): NativeControlEntry | null {
   // absent and null both mean "no description".
   const does = value.does === undefined || value.does === null ? null : nonEmptyString(value.does);
   if (value.does !== undefined && value.does !== null && does === null) return null;
-  return { id, role: value.role, label, does, container, disabled: value.disabled };
+  // An older build omits `actions` altogether; that build can enumerate a
+  // control but cannot act on one, so absent reads as "none", never as "point".
+  const actions = controlActionsFrom(value.actions);
+  if (actions === null) return null;
+  return { id, role: value.role, label, does, container, disabled: value.disabled, actions };
+}
+
+/** The `actions` list, or null when it is present but malformed. */
+function controlActionsFrom(value: unknown): ControlAction[] | null {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) return null;
+  const actions: ControlAction[] = [];
+  for (const raw of value) {
+    const action = controlActionFrom(raw);
+    if (action === null) return null;
+    actions.push(action);
+  }
+  return actions;
 }
 
 /** Parse a native→web command result. Never throws; returns null for anything unrecognised. */
@@ -176,12 +249,17 @@ export function nativeCommandResultFromDetail(detail: unknown): NativeCommandRes
   if (!isRecord(detail) || detail.version !== 2) return null;
   const id = nonEmptyString(detail.id);
   if (id === null) return null;
-  if (detail.kind !== "add-selection" && detail.kind !== "scan-controls") return null;
+  const kind = detail.kind;
+  if (kind !== "add-selection" && kind !== "scan-controls" && kind !== "point-at-control") return null;
   if (detail.ok === false) {
     const reason = nonEmptyString(detail.reason);
-    return reason === null ? null : { version: 2, id, kind: detail.kind, ok: false, reason };
+    return reason === null ? null : { version: 2, id, kind, ok: false, reason };
   }
-  if (detail.ok !== true || detail.kind !== "scan-controls") return null;
+  if (detail.ok !== true) return null;
+  // A successful `point-at-control` carries nothing: the ring is already drawn
+  // on the phone, so there is no answer to return beyond "it happened".
+  if (kind === "point-at-control") return { version: 2, id, kind, ok: true };
+  if (kind !== "scan-controls") return null;
   if (!Array.isArray(detail.controls)) return null;
   const controls: NativeControlEntry[] = [];
   for (const raw of detail.controls) {

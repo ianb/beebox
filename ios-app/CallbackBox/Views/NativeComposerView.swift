@@ -211,6 +211,7 @@ struct NativeComposerView: View {
                     does: "opens the attach menu — capture, take photo, choose photos, "
                         + "paste an image, choose a file, screenshot the chat, share location, switch box",
                     controlDisabled: isSending,
+                    onReveal: { showingActions = true },
                     action: { showingActions = true }
                 )
                 .disabled(isSending)
@@ -343,7 +344,11 @@ struct NativeComposerView: View {
                 "cb-composer-input",
                 role: .textbox,
                 label: "Type a message",
-                disabled: isTextEntryLocked
+                disabled: isTextEntryLocked,
+                // The one control on this surface with a first responder to
+                // make. `focused` drives `ComposerTextView`'s own focus binding,
+                // so this raises the keyboard exactly as a tap would.
+                onFocus: { focused = true }
             )
         }
         .frame(height: editorHeight)
@@ -440,6 +445,7 @@ struct NativeComposerView: View {
         controlDisabled: Bool = false,
         foregroundStyle: Color = .primary,
         backgroundStyle: Color = Color(uiColor: .tertiarySystemFill),
+        onReveal: (() -> Void)? = nil,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
@@ -455,7 +461,8 @@ struct NativeComposerView: View {
             controlID,
             label: accessibilityLabel,
             does: does,
-            disabled: controlDisabled
+            disabled: controlDisabled,
+            onReveal: onReveal
         )
     }
 

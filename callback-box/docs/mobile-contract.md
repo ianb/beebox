@@ -418,10 +418,18 @@ UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
   { "version": 2, "id": "<UUID string>", "kind": "scan-controls" }
   { "version": 2, "id": "<UUID string>", "kind": "add-selection",
     "payload": { "ref": "…", "text": "…", "position": "…" } }
+  { "version": 2, "id": "<UUID string>", "kind": "point-at-control",
+    "payload": { "id": "cb-composer-mic", "action": "point" } }
   ```
   `kind` discriminates the payload; a kind that carries none omits `payload`. `id` is required and
   non-empty in **every** version — that is what lets an older build's failed decode answer with a
   rejection (§4.7) instead of returning silently. An unknown `kind` is refused on both sides rather
+  In `point-at-control` the payload's `id` is the **control's** `cb-` address, not the command id
+  (the envelope carries that separately), and `action` is closed to `point|focus|reveal`. Both are
+  strict: an empty address and an unrecognised action each fail the whole decode, because the web
+  degrades an unknown `action=` in a `control:` href to `point` before it ever builds a command, so a
+  fourth value arriving here is a bundle skew — and acting on the interface on a guess is the one
+  thing this feature must not do. An unknown `kind` is refused on both sides rather
   than guessed at — and note *how* native refuses it: the kind is a closed enum decoded before a
   command object exists, so an unknown one fails the whole decode and produces **only** the §4.7
   rejection acknowledgement, never a result. The web's wait is what covers that case, which is why
@@ -434,11 +442,19 @@ UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
     "controls": [ { "id": "cb-composer-mic", "role": "button", "label": "Start dictation",
       "does": "…", "container": "Composer", "disabled": false } ] }
   { "version": 2, "id": "<same id>", "kind": "scan-controls", "ok": false, "reason": "<reason>" }
+  { "version": 2, "id": "<same id>", "kind": "point-at-control", "ok": true }
+  { "version": 2, "id": "<same id>", "kind": "point-at-control", "ok": false, "reason": "<reason>" }
   ```
   `role` is closed to `button|textbox`. `does` is **omitted** when absent (Swift's encoder drops a
   nil optional); the web reads absent and null identically. `ok` is the discriminant rather than the
   presence of a field, so a successful **empty** inventory (`controls: []`) cannot be read as a
-  failure.
+  failure. A successful `point-at-control` carries **nothing else**: the ring is already drawn on
+  the phone, so the only thing to return is that it happened.
+  `actions` on a control entry is closed to `point|focus|reveal` and says what the shell can
+  actually do with that control. An installed build older than `point-at-control` **omits the key
+  entirely**, and absent reads as **none** — never as `point` — because such a build can enumerate a
+  control and cannot act on one; the dump then prints it `(not pointable)` rather than handing the
+  agent a link that would break on click.
 - **Result is separate from the acknowledgement, on purpose.** The ack (§4.7) says whether native
   *took* the command; the result says what the command *answered*. Native emits both for a V2
   command it could decode; for one it could not (an unknown kind, or an old build meeting V2 at all)
@@ -456,6 +472,23 @@ UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
   by view-instance token, so the composer's mic → send → stop swap cannot leave a stale entry, and
   the inventory is coalesced by `id` so an in-flight swap cannot report two mutually exclusive
   controls at once.
+- **`point-at-control` semantics.** Native looks the address up in the same registry and answers
+  from it, so the scan and the pointer can never disagree about what exists. `point` draws a ring at
+  the registered frame for ~2s — an overlay with `allowsHitTesting(false)`, no mask and no modal
+  layer, static under Reduce Motion — and that is the *whole* effect: it never scrolls, focuses or
+  operates anything. `focus` and `reveal` run only where the anchor supplied a handler for them, and
+  `NativeControlEntry.actions` is **derived from** those handlers rather than declared beside them,
+  so the list the agent reads cannot promise something the view has no way to do. In this build that
+  is `focus` on `cb-composer-input` (make the composer text field first responder) and `reveal` on
+  `cb-composer-add` (present the actions sheet) — and nothing else.
+  Every gap answers with a sentence rather than doing nothing: an unregistered address, a frame the
+  registry has no real layout for (refused rather than ringing the wrong place — the accepted
+  lower-fidelity trade), an action this control has no handler for, and any non-`point` action asked
+  of a control that is on screen but disabled. The reason crosses back as the refusal's `reason` and
+  the web renders it as the pointer's broken-link tooltip. **Known imprecision:** the ring is drawn
+  by `RootView`, so a control inside a sheet a child view raised (the actions sheet's Capture row)
+  would be ringed *under* that sheet — bounded, because the webview holding the link is covered by
+  the same sheet, so the link cannot be tapped then.
 - **Native refuses when its own chrome is covered.** A full-screen native surface (the lock screen,
   the pairing sheet) can sit over the chat while the composer beneath stays mounted and therefore
   stays registered. Answering from the registry then would describe controls the user cannot reach
@@ -469,15 +502,21 @@ UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
   (`native-control-scan.ts` · `windowNativeControlBridge`), so two overlapping scans — or, next, a
   `point-at-control` answer — cannot swallow each other's results. Unclaimed results are capped at
   the most recent 10.
-- **Web wait semantics.** The scan waits 1.5s for a result with its own command id. No result, an
+- **Web wait semantics.** The scan and the pointer each wait 1.5s for a result matching **both**
+  their command id and their kind — the kind check is not redundant, since a shell answering the
+  wrong question under the right id would otherwise be read as the right answer. No result, an
   `ok:false` result, and an old build that cannot decode the envelope at all are treated
   **identically**: the dump reports `coverage: "dom-native-unavailable"` and names the native
-  controls that are therefore missing from it, rather than presenting a short list as complete.
+  controls that are therefore missing from it, rather than presenting a short list as complete. For
+  a pointer, a refusal and a silence are also one outcome to the person tapping — the link takes the
+  broken treatment either way — but they read differently: a refusal shows the shell's own sentence,
+  a timeout says the app did not answer in time, because the shell may well have drawn the ring and
+  lost the reply.
 - **Anchors:**
   | side | anchor |
   |---|---|
-  | web command + result + merge | `src/frontend/src/components/chat/native-composer-command.ts`; `native-control-scan.ts`; `ui-scan-request-handler.ts` |
-  | native registry + answer | `ios-app/CallbackBox/Models/NativeComposerContract.swift` — `NativeComposerCommand`, `NativeComposerCommandResult`, `NativeControlEntry`; `Models/NativeControlRegistry.swift` — `controlAnchor`; `Views/RootView.swift` — `handleComposerCommand`; `Views/ChatWebView.swift` — `deliverComposerCommandResults` |
+  | web command + result + merge | `src/frontend/src/components/chat/native-composer-command.ts`; `native-command-bridge.ts`; `native-control-scan.ts`; `native-control-point.ts`; `ui-scan-request-handler.ts`; `src/frontend/src/components/ControlPointer.tsx` |
+  | native registry + answer | `ios-app/CallbackBox/Models/NativeComposerContract.swift` — `NativeComposerCommand`, `NativeComposerCommandResult`, `NativeControlEntry`; `Models/NativeControlRegistry.swift` — `controlAnchor`, `perform`; `Views/RootView.swift` — `handleComposerCommand`; `Views/NativeControlRingView.swift`; `Views/ChatWebView.swift` — `deliverComposerCommandResults` |
 - **Drift:** LOUD in the dump (a coverage line the agent reads), silent to the user — nothing in the
   UI depends on it.
 
@@ -966,7 +1005,9 @@ callback-box/src/frontend/src/components/chat/native-post.ts
 callback-box/src/frontend/src/components/chat/use-native-bridge.ts
 callback-box/src/frontend/src/components/chat/native-emission.ts
 callback-box/src/frontend/src/components/chat/native-composer-command.ts
+callback-box/src/frontend/src/components/chat/native-command-bridge.ts
 callback-box/src/frontend/src/components/chat/native-control-scan.ts
+callback-box/src/frontend/src/components/chat/native-control-point.ts
 callback-box/src/frontend/src/components/chat/ui-scan-request-handler.ts
 callback-box/src/frontend/src/components/chat/use-native-composer-commands.ts
 callback-box/src/frontend/src/components/chat/use-companion-selection.ts

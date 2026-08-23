@@ -116,10 +116,11 @@ function entryLine(entry: UiScanEntry, indent: string): string {
     entry.offscreen ? "(off-screen)" : "",
   ].filter((mark) => mark !== "");
   // Two ways an entry is listed without a link: it has no address at all, or it
-  // has one this surface cannot act on — a native control, which the shell can
-  // enumerate but (until `point-at-control` lands) cannot point at. Printing the
-  // link anyway would hand the agent a pointer that breaks on click, which is
-  // the same lie as a short list presented as a complete one.
+  // has one this surface cannot act on. The second is now rare — a native
+  // control reports its own actions and normally offers at least `point` — but
+  // it survives an installed shell too old to act on anything. Printing the link
+  // anyway would hand the agent a pointer that breaks on click, which is the
+  // same lie as a short list presented as a complete one.
   if (entry.id === null || entry.actions.length === 0) {
     const head = `${indent}${entry.role} "${entry.name}"`;
     const padded = head.padEnd(NO_ADDRESS_COLUMN, " ");

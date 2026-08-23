@@ -20,52 +20,21 @@
  * we would only report as "unavailable" buys nothing. The result channel is the
  * only thing this module listens to.
  *
- * Written against an injected {@link NativeControlBridge} rather than `window`,
- * so the whole round trip — answering, never answering, refusing — is exercised
- * by a doctest under plain Node (`test/frontend/native-control-scan.doctest.md`).
+ * The transport itself lives in `native-command-bridge.ts`, shared with the
+ * pointer's `point-at-control` round trip.
  */
 
+import { awaitNativeCommandResult, type NativeControlBridge } from "./native-command-bridge";
 import {
   createNativeScanControlsCommand,
-  nativeCommandResultFromDetail,
-  postNativeComposerCommand,
   type NativeControlEntry,
 } from "./native-composer-command";
 import type { UiScanEntry } from "@shared/ui-scan";
 
-/**
- * How long the scan waits for the shell. Long enough for a main-thread hop and
- * a `evaluateJavaScript` round trip, short enough that the agent's CLI call is
- * not visibly slower for it; the whole request already has a server-side
- * deadline of its own.
- */
 export const NATIVE_SCAN_TIMEOUT_MS = 1500;
 
 /** The name the dump groups native composer chrome under. */
 export const NATIVE_CONTAINER_ROLE = "native";
-
-/**
- * How many unconsumed results the queue keeps. A result nobody claims — a late
- * answer to a scan that already timed out — would otherwise sit there forever,
- * so the queue keeps the most recent few and drops the rest.
- */
-const RESULT_QUEUE_LIMIT = 10;
-
-/**
- * The transport this module needs, and nothing else. `subscribe` hands over every
- * result detail the shell has posted (queue first, then live ones) and returns an
- * unsubscribe; `wait` schedules the deadline and returns a cancel.
- *
- * The listener returns whether it **consumed** the detail. The queue is shared —
- * a second scan, or (next) a `point-at-control` answer, reads the same one — so a
- * subscriber that empties it wholesale would swallow someone else's result. What
- * one subscriber does not claim stays queued for whoever it belongs to.
- */
-export interface NativeControlBridge {
-  post: (id: string) => void;
-  subscribe: (listener: (detail: unknown) => boolean) => () => void;
-  wait: (ms: number, fire: () => void) => () => void;
-}
 
 /**
  * Ask the shell for its control inventory. Resolves with the entries, or null
@@ -73,86 +42,28 @@ export interface NativeControlBridge {
  * command. Never rejects: a scan that cannot reach native is a coverage fact,
  * not an error.
  */
-export function requestNativeControls(
+export async function requestNativeControls(
   bridge: NativeControlBridge,
   { commandId, timeoutMs }: { commandId: string; timeoutMs: number },
 ): Promise<NativeControlEntry[] | null> {
-  return new Promise((resolve) => {
-    let settled = false;
-    // Holders rather than consts: `subscribe` drains the shell's queue
-    // synchronously, so this can in principle settle before either teardown
-    // function exists. (In practice it cannot — `commandId` is fresh, so a
-    // stale queued result never matches — but a `const` here would turn that
-    // reasoning into a TDZ crash if it ever stopped holding.)
-    let cancelWait: (() => void) | null = null;
-    let unsubscribe: (() => void) | null = null;
-    const finish = (entries: NativeControlEntry[] | null): void => {
-      if (settled) return;
-      settled = true;
-      cancelWait?.();
-      unsubscribe?.();
-      resolve(entries);
-    };
-    unsubscribe = bridge.subscribe((detail) => {
-      const result = nativeCommandResultFromDetail(detail);
-      // A result for another command (or another kind) is not ours to consume;
-      // the shell may be answering a `point-at-control` at the same time, and
-      // leaving it queued is what lets that answer reach its own waiter.
-      if (result === null || result.id !== commandId || result.kind !== "scan-controls") {
-        return false;
-      }
-      finish(result.ok ? result.controls : null);
-      return true;
-    });
-    cancelWait = bridge.wait(timeoutMs, () => finish(null));
-    bridge.post(commandId);
-  });
-}
-
-/**
- * The bridge as it exists in a real webview: post through the neutral
- * `callbackboxNativePost`, read the shell-owned result queue, and wake on the
- * event the shell dispatches after pushing to it. The queue is authoritative —
- * a result posted before this subscription existed is still in it — and the
- * event is only a wake signal, which is the same discipline the emission and
- * acknowledgement queues follow.
- */
-export function windowNativeControlBridge(): NativeControlBridge {
-  return {
-    post: (id) => postNativeComposerCommand(window, createNativeScanControlsCommand(id)),
-    subscribe: (listener) => {
-      const drain = (): void => {
-        const queue = window.callbackboxNativeCommandResultQueue ?? [];
-        window.callbackboxNativeCommandResultQueue = [];
-        const unclaimed = queue.filter((detail) => !listener(detail));
-        // Put back what this subscriber did not claim, newest first past the cap,
-        // and behind anything the shell posted while we were draining.
-        window.callbackboxNativeCommandResultQueue = [
-          ...unclaimed.slice(-RESULT_QUEUE_LIMIT),
-          ...(window.callbackboxNativeCommandResultQueue ?? []),
-        ];
-      };
-      window.addEventListener("callbackbox:native-command-result", drain);
-      drain();
-      return () => window.removeEventListener("callbackbox:native-command-result", drain);
-    },
-    wait: (ms, fire) => {
-      const timer = window.setTimeout(fire, ms);
-      return () => window.clearTimeout(timer);
-    },
-  };
+  const command = createNativeScanControlsCommand(commandId);
+  const result = await awaitNativeCommandResult(bridge, { command, timeoutMs });
+  if (result === null || !result.ok) return null;
+  // The kind is already matched by the wait, so this narrowing never fails at
+  // runtime; it is here because the union admits another `ok:true` member.
+  return result.kind === "scan-controls" ? result.controls : null;
 }
 
 /**
  * The native entries as dump entries: one landmark heading the group, then the
  * controls under it.
  *
- * `actions` is **empty**, and that is the honest answer for now: this build can
- * list a native control but cannot point at one — `point-at-control` is the next
- * chunk of Track 5. The dump renders an addressless-action entry without a
- * `control:` link, so the agent describes these in words instead of handing the
- * user a pointer the app would break on. When native pointing lands, these gain
- * `["point"]` and the same entries start rendering as links.
+ * `actions` comes from the shell, which reports what it can actually do with
+ * each control: everything registered can be pointed at, and `focus`/`reveal`
+ * appear only where the shell has an honest native meaning for them. An
+ * installed build too old to point at anything reports no actions at all, and
+ * the dump prints such an entry without a `control:` link rather than handing
+ * out a pointer the app would break on.
  *
  * The group name comes from native (`container`), so a second native surface —
  * a capture screen, a settings sheet — heads its own group without a change
@@ -185,7 +96,7 @@ export function nativeScanEntries(controls: readonly NativeControlEntry[]): UiSc
       name: control.label,
       container: control.container,
       does: control.does,
-      actions: [],
+      actions: control.actions,
       disabled: control.disabled,
       // Native reports what its registry holds, and the registry holds what is
       // on screen — a view that has disappeared has already deregistered — so

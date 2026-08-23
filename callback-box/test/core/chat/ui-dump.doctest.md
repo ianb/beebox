@@ -227,26 +227,40 @@ formatUiDump(payload({ entries: offscreenDesktop, channel: "web-desktop" }))
 => true
 ```
 
-## Native chrome, listed but not pointable
+## Native chrome, pointable like anything else
 
 On the phone the shell answers with its own registry, and those entries are
 grouped under the native surface they belong to. They carry their shared `cb-`
-address but no actions, because this build can enumerate a native control and
-cannot yet point at one — so the dump prints the name rather than a `control:`
-link that would break on click.
+address and the actions the shell says it can perform, so they print as the same
+`control:` links a DOM control does — the composer's text field takes a `focus`,
+the Add button is marked `[reveal]`, and the mic takes neither.
 
 ```ts
 const nativeEntries: UiScanEntry[] = [
   entry({ kind: "landmark", role: "native", name: "Composer", actions: [] }),
   entry({
     role: "button",
+    name: "Add",
+    id: "cb-composer-add",
+    container: "Composer",
+    does: "opens the attach menu",
+    actions: ["point", "reveal"],
+  }),
+  entry({
+    role: "textbox",
+    name: "Type a message",
+    id: "cb-composer-input",
+    container: "Composer",
+    actions: ["point", "focus"],
+  }),
+  entry({
+    role: "button",
     name: "Start dictation",
     id: "cb-composer-mic",
     container: "Composer",
     does: "hold to dictate; tap for continuous dictation",
-    actions: [],
+    actions: ["point"],
   }),
-  entry({ role: "button", name: "Send", id: "cb-composer-send", container: "Composer", actions: [], disabled: true }),
 ];
 withoutInstruction(formatUiDump(payload({
   entries: nativeEntries,
@@ -258,7 +272,29 @@ UI on screen — ios-native, /main/test1/chat, scanned 14:32 local
 Covers: browser DOM and the native app's own controls.
 «blankline»
 native "Composer"
-  button "Start dictation"                               (not pointable)
+  button [Add](control:cb-composer-add) [reveal]
+    — opens the attach menu
+  textbox [Type a message](control:cb-composer-input)
+  button [Start dictation](control:cb-composer-mic)
     — hold to dictate; tap for continuous dictation
+```
+
+An installed shell too old to act on anything reports no actions at all, and the
+dump refuses to hand out a link it knows would break on click.
+
+```ts
+withoutInstruction(formatUiDump(payload({
+  entries: [
+    entry({ kind: "landmark", role: "native", name: "Composer", actions: [] }),
+    entry({ role: "button", name: "Send", id: "cb-composer-send", container: "Composer", actions: [], disabled: true }),
+  ],
+  coverage: "dom+native",
+  channel: "ios-native",
+})))
+=>
+UI on screen — ios-native, /main/test1/chat, scanned 14:32 local
+Covers: browser DOM and the native app's own controls.
+«blankline»
+native "Composer"
   button "Send"                                          (not pointable) [disabled]
 ```

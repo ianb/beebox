@@ -170,7 +170,11 @@ For deterministic composer layout checks, launch a DEBUG build with
 `sending`, `interrupted`, `rejected-send`, `expired-attachment`, `keyboard-shown`, and
 `control-registry` (which reads back the native control registry the web's
 `scan-controls` command answers from — see `../callback-box/docs/mobile-contract.md`
-§4.8). The fixture uses
+§4.8 — and offers every action per control so the refusals are as visible as the
+successes). Add `--composer-point=<control-id>:<action>` beside it to perform one
+pointer action as soon as the anchors have registered, so a plain screenshot
+captures the ring or the refusal without anything having to drive a tap; the ring
+lasts ~2s, so take the screenshot within it. The fixture uses
 the production composer with isolated stores and no web/server dependency.
 After installing the build, `ios-app/scripts/capture-composer-fixtures` captures
 the complete state set for a simulator and restores its status-bar override.

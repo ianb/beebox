@@ -13,15 +13,26 @@
  * a frame ago, gone now) flips this component to broken in place rather than
  * navigating, toasting, or quietly doing nothing.
  *
+ * Inside the native shell the same link points at something the DOM has never
+ * heard of: on iOS the composer, mic and capture are SwiftUI, so a pointer at
+ * one resolves to nothing while the control is plainly on screen. So a failed
+ * DOM resolve there is not a verdict — the pointer stays live and, on click,
+ * hands the address to the shell (`chat/native-control-point.ts`), which draws
+ * the ring itself or refuses with a reason this component then shows. Only a
+ * malformed address is broken on sight on that surface, because that one is
+ * knowably wrong without asking anybody.
+ *
  * The action itself is `lib/ui-scan/actions.ts`; the ring is
  * `ui/ControlRing.tsx`. What lives here is the resolution lifecycle and the two
  * renderings.
  */
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { BrokenLink } from "./ui/BrokenLink";
 import { ControlRing } from "./ui/ControlRing";
 import { isNativeShell } from "./chat/native-post";
+import { windowNativeControlBridge } from "./chat/native-command-bridge";
+import { NATIVE_POINT_TIMEOUT_MS, requestNativePointAtControl } from "./chat/native-control-point";
 import { performControlAction, type ControlTarget } from "../lib/ui-scan/actions";
 import { isRectInViewport } from "../lib/ui-scan/ring";
 import { isElementVisible } from "../lib/ui-scan/live-dom";
@@ -42,24 +53,23 @@ export interface ControlPointerProps {
   children?: ReactNode;
 }
 
-type PointerStatus = { kind: "ok" } | { kind: "broken"; reason: string };
-
 /**
- * Why this address does not name a live control.
+ * What this pointer is right now.
  *
- * The native case is the seam for Track 5: inside the iOS/Android shell the
- * composer is native chrome with no DOM element behind it, so "not found" would
- * be a wrong answer rather than a missing one. Until the bridge can point at a
- * native control, say which of the two it is.
+ * `native` is a real third state, not a flavour of `ok`: the control is not in
+ * this document and only the shell can say whether it exists, so the pointer
+ * renders live, defers the question to click time, and becomes `broken` with
+ * the shell's own words if the answer is no.
  */
+type PointerStatus = { kind: "ok" } | { kind: "native" } | { kind: "broken"; reason: string };
+
+/** Why this address does not name a live control in *this document*. */
 function brokenReason(id: string, failure: ResolveFailure): string {
   switch (failure) {
     case "bad-id":
       return `Not a control address: "${id}"`;
     case "not-found":
-      return isNativeShell()
-        ? `native control — not yet supported (${id})`
-        : `No control "${id}" on this screen`;
+      return `No control "${id}" on this screen`;
     case "hidden":
       return `This control is not currently visible (${id})`;
   }
@@ -77,10 +87,33 @@ const liveLookup = {
   isVisible: isElementVisible,
 };
 
-function currentStatus(id: string): PointerStatus {
-  if (typeof document === "undefined") return { kind: "broken", reason: `No control "${id}" on this screen` };
+/** What the live document says about this address, with no shell involved. */
+function domStatusOf(id: string): { kind: "ok" } | { kind: "broken"; failure: ResolveFailure } {
+  if (typeof document === "undefined") return { kind: "broken", failure: "not-found" };
   const resolved = resolveVisibleControl(id, liveLookup);
-  return resolved.ok ? { kind: "ok" } : { kind: "broken", reason: brokenReason(id, resolved.error) };
+  return resolved.ok ? { kind: "ok" } : { kind: "broken", failure: resolved.error };
+}
+
+/**
+ * The DOM verdict plus what the shell has already said, resolved into what the
+ * pointer renders.
+ *
+ * `nativeReason` outranks the DOM's "not found" because it is a *later* and
+ * better-informed answer to the same question: the shell was asked about this
+ * exact address and said no. It is cleared when the address changes, so a
+ * re-rendered pointer at a different control asks again.
+ */
+function effectiveStatus(
+  id: string,
+  { dom, nativeReason }: { dom: ReturnType<typeof domStatusOf>; nativeReason: string | null },
+): PointerStatus {
+  if (dom.kind === "ok") return { kind: "ok" };
+  // A malformed address is wrong on every surface; a well-formed one the DOM
+  // does not hold may still be the shell's own chrome, and only the shell knows.
+  if (dom.failure === "bad-id" || !isNativeShell()) {
+    return { kind: "broken", reason: brokenReason(id, dom.failure) };
+  }
+  return nativeReason === null ? { kind: "native" } : { kind: "broken", reason: nativeReason };
 }
 
 /** The live-element implementation of what an action needs. */
@@ -130,14 +163,31 @@ function PointerIcon() {
 }
 
 export function ControlPointer({ id, action, description, unknownAction, children }: ControlPointerProps) {
-  const [status, setStatus] = useState<PointerStatus>(() => currentStatus(id));
+  const [dom, setDom] = useState(() => domStatusOf(id));
+  /** The shell's refusal for this address, once it has given one. */
+  const [nativeReason, setNativeReason] = useState<string | null>(null);
+  /** True while a `point-at-control` is in flight, so a second tap does not stack. */
+  const [awaitingNative, setAwaitingNative] = useState(false);
   const [degraded, setDegraded] = useState<string | null>(null);
   // `seq` restarts the ring when the same control is pointed at twice: remounting
   // ControlRing is what resets its timer.
   const [ring, setRing] = useState<{ element: HTMLElement; seq: number } | null>(null);
+  // A `point-at-control` answer can arrive after this pointer has left the
+  // transcript (the user scrolled, or the turn re-rendered); writing state then
+  // is a React warning and, worse, a refusal recorded against a pointer nobody
+  // is looking at.
+  const mounted = useRef(true);
 
   useEffect(() => {
-    setStatus(currentStatus(id));
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    setDom(domStatusOf(id));
+    setNativeReason(null);
     let pending: ReturnType<typeof setTimeout> | null = null;
     // One observer per pointer over the whole document, coalesced: a pointer is
     // rare (one per agent sentence) and the callback does nothing but arm a
@@ -147,7 +197,7 @@ export function ControlPointer({ id, action, description, unknownAction, childre
       if (pending !== null) return;
       pending = setTimeout(() => {
         pending = null;
-        setStatus(currentStatus(id));
+        setDom(domStatusOf(id));
       }, RESOLVE_DEBOUNCE_MS);
     });
     observer.observe(document.documentElement, {
@@ -165,17 +215,54 @@ export function ControlPointer({ id, action, description, unknownAction, childre
     };
   }, [id]);
 
+  const status = effectiveStatus(id, { dom, nativeReason });
+
   if (status.kind === "broken") {
     return <BrokenLink title={status.reason}>{children}</BrokenLink>;
   }
 
+  /**
+   * Hand the address to the shell. Success needs no follow-up — the ring is
+   * already on the phone's own view — and every failure, refusal or silence
+   * alike, turns this pointer broken in place with the shell's own words.
+   */
+  const pointNatively = (): void => {
+    if (awaitingNative) return;
+    setAwaitingNative(true);
+    void requestNativePointAtControl(windowNativeControlBridge(), {
+      commandId: crypto.randomUUID(),
+      controlId: id,
+      action,
+      timeoutMs: NATIVE_POINT_TIMEOUT_MS,
+    })
+      .then((outcome) => {
+        if (!mounted.current) return;
+        setAwaitingNative(false);
+        if (!outcome.ok) setNativeReason(outcome.reason);
+      })
+      .catch((e: unknown) => {
+        // `requestNativePointAtControl` never rejects; a throw here is the
+        // bridge itself failing, which is still a user-visible dead tap.
+        const reason = e instanceof Error ? e.message : String(e);
+        console.warn(`[control-pointer] native point failed: ${reason}`);
+        if (!mounted.current) return;
+        setAwaitingNative(false);
+        setNativeReason(reason);
+      });
+  };
+
   const handleClick = () => {
+    if (status.kind === "native") {
+      pointNatively();
+      return;
+    }
     const resolved = resolveVisibleControl(id, liveLookup);
     if (!resolved.ok) {
       // Resolved a frame ago, gone (or hidden) now. Flip in place; never no-op
-      // silently.
-      setStatus({ kind: "broken", reason: brokenReason(id, resolved.error) });
+      // silently — or, in the shell, ask the shell before declaring it dead.
+      setDom({ kind: "broken", failure: resolved.error });
       setRing(null);
+      if (resolved.error !== "bad-id" && isNativeShell()) pointNatively();
       return;
     }
     const outcome = performControlAction(action, liveTarget(resolved.value));
@@ -187,6 +274,7 @@ export function ControlPointer({ id, action, description, unknownAction, childre
     unknownAction === null
       ? null
       : `the requested action "${unknownAction}" is not one this app knows, so it points instead`,
+    status.kind === "native" ? "this control belongs to the app around the page, which draws the pointer itself" : null,
     degraded,
   ].filter((note) => note !== null);
   const tooltip = [tooltipFor({ id, action }), ...notes].join(" — ");
@@ -197,6 +285,7 @@ export function ControlPointer({ id, action, description, unknownAction, childre
         type="button"
         onClick={handleClick}
         title={tooltip}
+        aria-busy={awaitingNative}
         className="inline-flex items-baseline gap-1 text-primary underline hover:text-primary-dark"
       >
         <PointerIcon />

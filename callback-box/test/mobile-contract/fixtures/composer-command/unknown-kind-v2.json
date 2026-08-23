@@ -2,8 +2,8 @@
   "input": {
     "version": 2,
     "id": "future-command-1",
-    "kind": "point-at-control",
-    "payload": { "control": "cb-composer-mic", "action": "point" }
+    "kind": "dismiss-keyboard",
+    "payload": { "id": "cb-composer-input" }
   },
   "expected": null
 }
