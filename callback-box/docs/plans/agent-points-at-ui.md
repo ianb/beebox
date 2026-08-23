@@ -1,6 +1,6 @@
 ---
 title: "The agent sees the interface and points at controls in it"
-status: draft
+status: partial
 workstream: points-at-ui
 issues:
   - ../../../issues/features/2026-08-14-agent-can-see-and-point-at-the-interface.md
@@ -1253,6 +1253,13 @@ session returns a dump containing `cb-composer-mic`, `cb-composer-send` and
 with a nonexistent id renders as `BrokenLink`; the same dump run from the iOS
 app includes the native composer entries and reports `coverage: dom+native`;
 and the four knowledge audits pass.
+
+Status 2026-08-23: every done-when except the iOS dump is verified live. The
+native half is built and simulator-verified (registry, ring, focus/reveal,
+refusals), but no `coverage: dom+native` dump has been produced through a real
+paired WKWebView — local simulator pairing needs box credentials the session
+correctly declined to mint. That last verification is a field probe with the
+boxholder's phone, or a paired local session.
 
 **Knowledge audits.** All four land with the plan, run, with status recorded.
 
