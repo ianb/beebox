@@ -1,5 +1,5 @@
 ---
-title: "New chats fail with \"Claude Code is not logged in\" when the CLI is merely not on the server's PATH"
+title: "New chats intermittently fail with \"Claude Code is not logged in\" while existing chats keep working"
 workstream: unattached
 area: callback-box
 filed-by: agent
@@ -7,70 +7,59 @@ discovered-in: worktree-user-stories-refresh — a journey walkthrough could not
 stories: [chat/start-a-chat-scoped-to-a-place-in-the-box]
 ---
 
-Every new chat in a box fails immediately with
+Twice in one session, every attempt to start a **new** chat failed instantly with
 
 ```
 Claude Code is not logged in — run `claude auth login` on this machine
 ```
 
-while chats started earlier keep working. Reproduced twice in one session,
-with the older chat answering normally in between.
+while the chat already open kept answering normally throughout. `claude auth status`
+on the machine reported `{"loggedIn": true}` the whole time, so following the
+instruction would have changed nothing.
 
-**The machine is logged in.** `claude auth status` reports
-`{"loggedIn": true, "authMethod": "claude.ai"}`. Following the instruction in
-the error changes nothing, because nothing is wrong with the login.
+**It does not reproduce.** A later walk on a fresh box started new chats without
+trouble, and two direct probes — a new chat each time — were answered normally. So
+this is intermittent and the trigger is not known.
 
-## What is actually happening
+## What is established
 
-`checkClaudeAuth` (`src/core/agent/auth-preflight.ts`) runs before an
-interactive session's first SDK run — which is why an existing chat is
-unaffected and a new one is not. It calls `authStatus()`, which is
+`checkClaudeAuth` (`src/core/agent/auth-preflight.ts`) runs before an interactive
+session's **first** SDK run. That alone explains the shape of the symptom: an
+existing chat is past the check, a new one is not. A confirmed login is cached for a
+generous TTL; a negative is never cached, so a failing probe blocks every new session
+until it starts succeeding again.
 
-```ts
-execFile("claude", ["auth", "status"], { timeout: 10000 }, …)
-```
+The probe is `execFile("claude", ["auth", "status"], …)` (`src/services/claude-cli.ts:27`),
+resolving `claude` from `PATH`. Any failure to run it at all — missing binary, timeout,
+a transient error — lands in the `err` branch and returns `{ loggedIn: false }`. A
+process that could not be spawned is reported as a login that does not exist.
 
-(`src/services/claude-cli.ts:27`) — resolving `claude` from `PATH`. The box
-server's `PATH`, as spawned by the dev router, is:
+## The part worth fixing regardless of the trigger
 
-```
-…/callback-box/bin : …/src/callback-box/node_modules/.bin : …/pnpm/…/node_modules
-```
-
-`claude` is at `~/.local/bin/claude`, which is not on it. `execFile` fails
-ENOENT, the `err` branch returns `{ loggedIn: false, error }`, and the
-preflight raises `ClaudeAuthError`. A missing binary is reported as a missing
-login.
-
-## Why the guard is blocking a working agent
-
-The agent does not use that binary. `src/core/sdk-binary-path.ts` says so
-directly:
+The agent does not use that binary. `src/core/sdk-binary-path.ts` says so plainly:
 
 > The system installer at `~/.local/bin/claude` is *not* what the SDK uses — by
 > Anthropic's design it ignores `$PATH` and looks only at its sub-packages.
 
-So the preflight probes a **different** Claude Code than the one that would
-have served the chat, and refuses on its absence. In the observed session the
-agent was demonstrably fine: the pre-existing chat answered every message
-throughout.
+So the preflight probes a **different** Claude Code than the one that would serve the
+chat, and refuses on its absence or its failure. In the observed sessions the agent was
+demonstrably healthy: the older chat answered every message while new ones were refused.
 
-## Worth deciding rather than assuming
+That makes any failure of this probe a false negative for the thing it guards. Its own
+doc comment says it exists so a missing login is not "an opaque `success: false` from
+the Agent SDK stream" — a good intent that this inverts, turning a working agent into a
+confident wrong diagnosis and unactionable advice.
 
-- Should a `PATH` miss block at all? The thing it predicts — an SDK run failing
-  on auth — is not what a missing CLI implies.
-- If the probe stays, ENOENT should be distinguished from a real logout, since
-  the current advice is unactionable in the ENOENT case.
-- `sdk-binary-path.ts` already resolves the binary the SDK uses. Probing that
-  one would at least make the check ask about the right thing.
+## What would settle it
 
-The preflight's own doc comment says it exists so that a missing login is not
-"an opaque `success: false` from the Agent SDK stream". That intent is good;
-this failure mode inverts it, turning a healthy agent into a confident wrong
-diagnosis.
+- Log the underlying error when `authStatus` takes the `err` branch. Right now a
+  spawn failure, a timeout and a real logout are indistinguishable downstream, which
+  is why this could not be diagnosed from the outside.
+- Distinguish "could not run the check" from "checked, and not logged in" — only the
+  second should say "not logged in", and only the second should advise logging in.
+- Consider probing what the SDK actually resolves (`sdk-binary-path.ts`), or not
+  blocking on this at all.
 
-## Consequence for the product's shape
-
-The journey this surfaced in is "build an inventory up over a month, and come
-back to ask about it". Coming back means a new chat. The one thing that was
-reliably broken is the thing that use case is made of.
+An earlier version of this issue asserted a `PATH` cause from a process inspection
+that, on re-checking, had probably read the wrong process. Recorded here so nobody
+builds on it: the mechanism above is what the code shows, and the trigger is open.

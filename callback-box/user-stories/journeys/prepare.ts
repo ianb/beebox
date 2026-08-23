@@ -188,13 +188,14 @@ for (const a of assets) {
 
 // --- the prompt ----------------------------------------------------------------
 const assetLines = assets.length === 0
-  ? "You have nothing with you. Whatever you do here, you do from what you already know."
+  ? "You have brought nothing with you. Whatever you do here, you do from what you already know."
   : [
     "You have these to hand:",
     "",
     ...assets.map((a) => `- \`${join(runDir, "assets", a.file)}\` — ${a.described_as}`),
     "",
-    "That is a starting point, not the job. The job is the thing above.",
+    "These are yours — treat them the way you would treat your own photos. They are a starting",
+    "point, not the job; the job is the thing above.",
   ].join("\n");
 
 const template = readFileSync(join(HERE, "walker-prompt.md"), "utf8")
