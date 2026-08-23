@@ -3,7 +3,7 @@ title: "The agent sees the interface and points at controls in it"
 status: partial
 workstream: points-at-ui
 issues:
-  - ../../../issues/features/2026-08-14-agent-can-see-and-point-at-the-interface.md
+  - ../../../issues/closed/features/2026-08-14-agent-can-see-and-point-at-the-interface.md
 ---
 
 # The agent sees the interface and points at controls in it
