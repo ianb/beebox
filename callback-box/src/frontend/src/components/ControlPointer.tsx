@@ -42,6 +42,20 @@ import type { ControlAction } from "../lib/ui-scan/types";
 /** How long a burst of DOM mutations settles before the pointer re-resolves. */
 const RESOLVE_DEBOUNCE_MS = 250;
 
+/**
+ * How long a native refusal keeps the pointer visibly broken before it becomes
+ * live again.
+ *
+ * Native refusals are *not* verdicts the way a malformed address is. "No control
+ * on screen right now" is true of the mic the moment the composer swaps it for
+ * the send button, and false again a keystroke later — and none of that touches
+ * the DOM, so the `MutationObserver` cannot see it and the pointer has no way to
+ * re-ask except by being tapped. Caching the refusal forever would kill a link
+ * that is fine again; discarding it instantly would make the tap that produced
+ * it look like nothing happened. So it is shown, and it expires.
+ */
+const NATIVE_REFUSAL_TTL_MS = 15_000;
+
 export interface ControlPointerProps {
   /** The `cb-` address the pointer names. */
   id: string;
@@ -164,7 +178,7 @@ function PointerIcon() {
 
 export function ControlPointer({ id, action, description, unknownAction, children }: ControlPointerProps) {
   const [dom, setDom] = useState(() => domStatusOf(id));
-  /** The shell's refusal for this address, once it has given one. */
+  /** The shell's most recent refusal for this address, until it expires. */
   const [nativeReason, setNativeReason] = useState<string | null>(null);
   /** True while a `point-at-control` is in flight, so a second tap does not stack. */
   const [awaitingNative, setAwaitingNative] = useState(false);
@@ -172,22 +186,33 @@ export function ControlPointer({ id, action, description, unknownAction, childre
   // `seq` restarts the ring when the same control is pointed at twice: remounting
   // ControlRing is what resets its timer.
   const [ring, setRing] = useState<{ element: HTMLElement; seq: number } | null>(null);
-  // A `point-at-control` answer can arrive after this pointer has left the
-  // transcript (the user scrolled, or the turn re-rendered); writing state then
-  // is a React warning and, worse, a refusal recorded against a pointer nobody
-  // is looking at.
-  const mounted = useRef(true);
+  /**
+   * Which request's answer this component still wants.
+   *
+   * A `point-at-control` answer can arrive after the pointer has been unmounted
+   * (the turn re-rendered) or after its props changed — React keeps a component
+   * instance across a re-render at the same position, so the same instance can
+   * outlive the address it asked about. Applying that answer would record a
+   * refusal against a control nobody asked about. The generation is bumped on
+   * unmount and on every `id`/`action` change, and a completion from an older
+   * generation is dropped.
+   */
+  const requestGeneration = useRef(0);
 
   useEffect(() => {
-    mounted.current = true;
     return () => {
-      mounted.current = false;
+      requestGeneration.current += 1;
     };
   }, []);
 
   useEffect(() => {
+    // A different address (or a different action on the same one) is a different
+    // question: drop the previous answer rather than carrying it over.
+    requestGeneration.current += 1;
     setDom(domStatusOf(id));
     setNativeReason(null);
+    setAwaitingNative(false);
+    setDegraded(null);
     let pending: ReturnType<typeof setTimeout> | null = null;
     // One observer per pointer over the whole document, coalesced: a pointer is
     // rare (one per agent sentence) and the callback does nothing but arm a
@@ -213,7 +238,16 @@ export function ControlPointer({ id, action, description, unknownAction, childre
       observer.disconnect();
       if (pending !== null) clearTimeout(pending);
     };
-  }, [id]);
+  }, [id, action]);
+
+  // A refusal is the last thing the shell said, not a permanent fact about the
+  // control, so it stops speaking for the pointer after a while and the link
+  // goes live again. Re-armed by each new refusal, cleared on unmount.
+  useEffect(() => {
+    if (nativeReason === null) return;
+    const timer = setTimeout(() => setNativeReason(null), NATIVE_REFUSAL_TTL_MS);
+    return () => clearTimeout(timer);
+  }, [nativeReason]);
 
   const status = effectiveStatus(id, { dom, nativeReason });
 
@@ -228,6 +262,7 @@ export function ControlPointer({ id, action, description, unknownAction, childre
    */
   const pointNatively = (): void => {
     if (awaitingNative) return;
+    const generation = requestGeneration.current;
     setAwaitingNative(true);
     void requestNativePointAtControl(windowNativeControlBridge(), {
       commandId: crypto.randomUUID(),
@@ -236,7 +271,7 @@ export function ControlPointer({ id, action, description, unknownAction, childre
       timeoutMs: NATIVE_POINT_TIMEOUT_MS,
     })
       .then((outcome) => {
-        if (!mounted.current) return;
+        if (requestGeneration.current !== generation) return;
         setAwaitingNative(false);
         if (!outcome.ok) setNativeReason(outcome.reason);
       })
@@ -245,7 +280,7 @@ export function ControlPointer({ id, action, description, unknownAction, childre
         // bridge itself failing, which is still a user-visible dead tap.
         const reason = e instanceof Error ? e.message : String(e);
         console.warn(`[control-pointer] native point failed: ${reason}`);
-        if (!mounted.current) return;
+        if (requestGeneration.current !== generation) return;
         setAwaitingNative(false);
         setNativeReason(reason);
       });

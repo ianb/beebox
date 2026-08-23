@@ -245,6 +245,24 @@ final class NativeControlPointingTests: XCTestCase {
         XCTAssertEqual(NativeControlHandlers(reveal: {}).actions, [.point, .reveal])
     }
 
+    /// The inventory and the dispatch must agree. A control the registry has no
+    /// usable frame for is still listed — it is on screen — but with no actions,
+    /// so the dump prints it `(not pointable)` instead of handing out a link
+    /// `perform` would refuse a moment later.
+    func testAnUnpointableControlIsListedWithNoActions() {
+        let stale = registry(id: "cb-composer-input", frame: .zero, onFocus: {})
+        XCTAssertEqual(stale.entries.map(\.id), ["cb-composer-input"])
+        XCTAssertEqual(stale.entries.first?.actions, [])
+        guard case .refused = stale.perform(.point, on: "cb-composer-input") else {
+            return XCTFail("expected the dispatch to refuse what the inventory did not advertise")
+        }
+    }
+
+    func testAPointableControlKeepsItsActionsInTheInventory() {
+        let live = registry(id: "cb-composer-input", onFocus: {})
+        XCTAssertEqual(live.entries.first?.actions, [.point, .focus])
+    }
+
     func testPointReturnsTheRegisteredBox() {
         XCTAssertEqual(registry().perform(.point, on: "cb-composer-mic"), .pointed(box))
     }

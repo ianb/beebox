@@ -457,8 +457,11 @@ UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
   agent a link that would break on click.
 - **Result is separate from the acknowledgement, on purpose.** The ack (§4.7) says whether native
   *took* the command; the result says what the command *answered*. Native emits both for a V2
-  command it could decode; for one it could not (an unknown kind, or an old build meeting V2 at all)
-  only the rejection ack exists to emit. Keeping them apart is what makes "refused, and here is why"
+  command that *has* an answer — `scan-controls` and `point-at-control`. V2 `add-selection` is
+  decodable but is **acknowledgement-only**: it has no result member on either side, because the
+  web still sends selections as V1 (§4.7) and the V2 form exists so the migration is expressible,
+  not because anything sends it. For a command native could not decode (an unknown kind, an unknown
+  `action`, or an old build meeting V2 at all) only the rejection ack exists to emit. Keeping them apart is what makes "refused, and here is why"
   and "succeeded, and the answer is empty" two different facts.
 - **Transport globals + event:** `window.callbackboxNativeCommandResult(detail)` pushes onto
   `window.callbackboxNativeCommandResultQueue` and dispatches
@@ -483,7 +486,9 @@ UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
   `cb-composer-add` (present the actions sheet) — and nothing else.
   Every gap answers with a sentence rather than doing nothing: an unregistered address, a frame the
   registry has no real layout for (refused rather than ringing the wrong place — the accepted
-  lower-fidelity trade), an action this control has no handler for, and any non-`point` action asked
+  lower-fidelity trade; such a control is also reported by `scan-controls` with **no actions**, so
+  the inventory never advertises a pointer the dispatch would refuse), an action this control has no
+  handler for, and any non-`point` action asked
   of a control that is on screen but disabled. The reason crosses back as the refusal's `reason` and
   the web renders it as the pointer's broken-link tooltip. **Known imprecision:** the ring is drawn
   by `RootView`, so a control inside a sheet a child view raised (the actions sheet's Capture row)

@@ -102,12 +102,29 @@ final class NativeControlRegistry: ObservableObject {
     /// mutually exclusive controls are on screen at once — precisely the kind of
     /// wrong-but-confident answer this feature exists to prevent. The most recent
     /// registration wins, because it is the one that just appeared.
+    /// A registration whose frame the registry cannot use is reported with **no
+    /// actions at all**, so the dump prints it `(not pointable)` rather than
+    /// handing the agent a `control:` link that `perform` would then refuse.
+    /// Listing the control is still right — it is on screen and the agent should
+    /// know it exists — but promising a pointer we would not honour is the
+    /// short-list-presented-as-complete failure in miniature.
     var entries: [NativeControlEntry] {
         var latest: [String: NativeControlEntry] = [:]
         for registration in registrations {
-            latest[registration.entry.id] = registration.entry
+            var entry = registration.entry
+            if !Self.isPointable(registration.frame) {
+                entry.actions = []
+            }
+            latest[entry.id] = entry
         }
         return latest.values.sorted { $0.id < $1.id }
+    }
+
+    /// Whether a captured frame is a real laid-out box. A registration made
+    /// before SwiftUI has laid the view out carries a zero frame, and ringing
+    /// that would draw a marker where the control is not.
+    private static func isPointable(_ frame: CGRect) -> Bool {
+        frame.width > 0 && frame.height > 0
     }
 
     /// The on-screen box of one registered control, for drawing a pointer on it.
@@ -138,8 +155,9 @@ final class NativeControlRegistry: ObservableObject {
         }
         // A frame this thin is one the registry never got a real layout for —
         // ringing it would draw a marker somewhere the control is not, which is
-        // worse than saying so.
-        guard registration.frame.width > 0, registration.frame.height > 0 else {
+        // worse than saying so. `entries` reports such a control with no actions
+        // for the same reason, so the two answers agree.
+        guard Self.isPointable(registration.frame) else {
             return .refused("The app knows \"\(controlID)\" but not where it is on screen right now.")
         }
         if registration.entry.disabled, action != .point {
