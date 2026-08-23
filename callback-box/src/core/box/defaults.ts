@@ -19,6 +19,7 @@ import { createBriefingTemplate } from "../../schemas/briefing.js";
 import { createTodoViewTemplate } from "../../schemas/todo-view.js";
 import { createLandmarkTemplate, parseLandmarkFields } from "../../schemas/landmark.js";
 import { installTemplateFile, type InstallResult } from "../install-template-file.js";
+import { TEMPLATE_STOCK_HASHES } from "../template-stock-hashes.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 
 /**
@@ -175,7 +176,12 @@ export async function installRootLandmark(boxRoot: string): Promise<string | nul
 /**
  * Install the root briefing card template if missing.
  *
- * Every box gets a briefing.briefing.card at the root.
+ * Every box gets a briefing.briefing.card at the root. It goes through the
+ * template tracker with the stock-hash allowlist, so a box still carrying an
+ * untouched earlier seed (e.g. the pre-`{% opener %}` one) takes the update
+ * instead of parking it, while a briefing the boxholder or an agent has
+ * written into parks as usual — which is the normal case for any box past
+ * its first day.
  *
  * @returns Whether a new template was installed
  */
@@ -184,6 +190,7 @@ export async function installBriefing(boxRoot: string): Promise<boolean> {
     boxRoot,
     relPath: "briefing.briefing.card",
     templateContent: createBriefingTemplate(),
+    priorStockHashes: TEMPLATE_STOCK_HASHES["briefing-seed"].superseded,
   });
   return result.outcome === "fresh";
 }
@@ -277,12 +284,19 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     cron: "0 7 * * 1",
     notBefore: "3d",
     onWakeup: false,
-    // Seeded disabled: retrospective learning is opt-in because it can spend
-    // the boxholder's agent quota and edit belief cards.
-    enabled: false,
+    // Seeded ENABLED. The quota worry that had this off doesn't hold: retro
+    // only spawns an agent once a HUMAN chat session has gone quiet — retro
+    // discovery counts a session only when its transcript carries `<typed>`/
+    // `<speech>`-tagged messages or the session is in the chat registry, so
+    // wakeup, job, and procedure transcripts classify as nonChat — and with
+    // nothing qualifying, the scan step's precheck exits CHECK_SKIP and no
+    // agent runs. On a box nobody chats with, this costs nothing. `enabled` is
+    // a box-owned field (ScheduledScriptSchema.templateMerge), so an existing
+    // box keeps whatever it has set; this default reaches new boxes only.
+    enabled: true,
     lockGroup: "retro",
     runs: "cb procedure run process-retrospective",
-    source: "Weekly Monday-morning sweep; enable per box once trialed",
+    source: "Weekly Monday-morning sweep over any chat sessions that went quiet",
   },
   {
     name: "chat-review",

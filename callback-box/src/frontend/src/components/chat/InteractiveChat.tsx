@@ -45,21 +45,30 @@ import { useScreenshotRequests } from "./screenshot-request-handler";
 import { useNativeBridges } from "./use-native-bridge";
 
 /**
- * Resolve the directory a chat is bound to. Returns the prop value
- * immediately for fresh "new" landmark chats (server hasn't seen the
- * session id yet) and falls back to the persisted association for
- * resumed sessions.
+ * Everything the chat derives from the directory it is bound to.
+ *
+ * `contextDir` is the prop value immediately for fresh "new" landmark chats
+ * (the server hasn't seen the session id yet), falling back to the persisted
+ * association for resumed sessions. `openers` are the `openers:` listed in
+ * that directory's briefing — the suggestions a fresh chat's empty state
+ * offers. Openers are fetched only for a `"new"` session: an existing session
+ * with no messages is a different state, and offering openers there would read
+ * as an invitation to start over.
  */
-function useEffectiveContextDir(params: {
+function useChatBinding(params: {
   sessionId: string | null;
+  sessionInput: string;
   contextDir: string | undefined;
-}): string | null {
+}): { contextDir: string | null; openers: string[] } {
   const query = trpc.chat.directoryFor.useQuery(
     { sessionId: params.sessionId ?? "" },
     { enabled: Boolean(params.sessionId) },
   );
   const queried = query.data ? query.data.contextDir : undefined;
-  return params.contextDir ?? queried ?? null;
+  const contextDir = params.contextDir ?? queried ?? null;
+  const isNew = params.sessionInput === "new";
+  const openersQuery = trpc.chat.openers.useQuery({ contextDir: contextDir ?? "" }, { enabled: isNew });
+  return { contextDir, openers: isNew && openersQuery.data ? openersQuery.data.openers : [] };
 }
 
 interface InteractiveChatProps {
@@ -158,7 +167,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
     input: { sessionInput, contextDir, initial },
   });
   const { messages, pendingMessages, streamText, streamTools, error, sessionId, processRunning, processBusy, totalEntries, liveTurnId } = snapshot.context;
-  const effectiveContextDir = useEffectiveContextDir({ sessionId, contextDir });
+  const { contextDir: effectiveContextDir, openers } = useChatBinding({ sessionId, sessionInput, contextDir });
   const isStreaming = snapshot.matches("streaming") || snapshot.matches("refreshing"); const isLoading = snapshot.matches("loading");
   const currentUser = useCurrentUser();
   const { boxSlug } = useParams({ strict: false });
@@ -332,6 +341,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
       onEnterCapture={() => setCaptureMode(true)} captureEnabled={!usesNativeShell} captureDisabledReason={sessionId === null ? "Send a message first" : undefined}
       screenshots={screenshots}
       audioOverlayStore={audioOverlayStore}
+      openers={openers}
       />
       <ChatModeOverlays captureMode={captureMode} bulkUpload={bulkUploadLaunch} usesNativeShell={usesNativeShell} sessionId={sessionId} onExitCapture={() => setCaptureMode(false)} onExitBulkUpload={handleCloseBulkUpload} onBulkUploadDelivered={handleBulkUploadDelivered} />
     </InputStoreProvider>

@@ -104,6 +104,12 @@ interface ChatBodyProps {
   /** Agent-initiated screenshot requests: FIFO consent popup + ephemeral indicator rows. */
   screenshots: ScreenshotRequestController;
   audioOverlayStore: AudioOverlayStore; // written by the audio-review events; read by UserMessage's badges
+  /**
+   * Suggested opening questions for the empty state of a fresh chat, from the
+   * bound directory's briefing (`chat.openers`). Empty for a resumed session
+   * and for any box whose agent has retired its openers.
+   */
+  openers: string[];
 }
 
 /**
@@ -153,7 +159,7 @@ function MessageListRegion(props: ChatBodyProps) {
   const {
     tabs, model, voice, actions, messages, groups, modelMarkers, isStreaming, streamText, streamTools,
     debugView, currentUserEmail, currentUserName, snapshot, totalEntries, loadingOlder, scrollToBottomTrigger, liveTurnId,
-    captureBubbles, captureVerbs, audioOverlayStore,
+    captureBubbles, captureVerbs, audioOverlayStore, openers,
   } = props;
   const { onZoomView } = tabs;
   const { speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, pendingHqDraft } = voice;
@@ -185,6 +191,8 @@ function MessageListRegion(props: ChatBodyProps) {
       captureBubbles={captureBubbles}
       captureVerbs={captureVerbs}
       audioOverlayStore={audioOverlayStore}
+      openers={openers}
+      onSendOpener={actions.handleSendOpener}
     />
   );
 }
