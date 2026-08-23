@@ -1,0 +1,67 @@
+# A journey is a person with a goal, not a script of steps. Everything here either
+# shapes the world the person arrives in, or is handed to them verbatim.
+#
+# `watch_for` is the one field that must NEVER reach the walker — it is for whoever
+# reads the notes afterwards.
+
+id: B-inventory
+title: I never know what I've got
+
+box:
+  slug: journey-b
+  # `empty` prunes a clone down to the package skeleton: no store, no box content,
+  # no people. Every journey premise is "this is MY box", and a stranger's courses
+  # and inbox read as confusing rather than realistic (observed, 2026-08-22).
+  base: empty
+  # Optional shell, run with $BOX set to the box's content root before the person
+  # arrives. A box is only files, so any starting state can be built from outside —
+  # a few contacts they would already have, a half-finished note, last month's
+  # receipts. This journey wants none: the person is starting from nothing, which
+  # is the point.
+  setup: null
+
+assets:
+  - file: IMG_1139.jpg
+    described_as: one drawer of the odds-and-ends tray in your workroom
+  - file: IMG_1140.jpg
+    described_as: the same tray, the other half
+
+sittings: 1
+budget_actions: 60
+
+# Handed to the person verbatim. Their life and their reason — no product words,
+# no routes, and the material mentioned late, as something they happen to have
+# rather than as the task.
+situation: |
+  Your workroom has a tray of odds and ends — craft bits, small tools, stationery,
+  things accumulated over years. You never know what you have. You bought a glue
+  stick last month and then found three. You spent ten minutes last week hunting
+  for a carabiner you were certain you owned.
+
+  What you want is for that to stop being true. In a month you would like to be
+  standing in a shop, or at your bench, and be able to *check* — do I already have
+  one of these, and where is it.
+
+  That is a thing you will build up over time. There are several drawers, and a
+  shelf, and a box in the basement you would rather not think about. Tonight is the
+  first evening of it: you are finding out whether this is going to be any good for
+  it before you invest more. You expect to come back, add more, and ask it things
+  as you go.
+
+closing: |
+  Getting the photographed drawer in is not the finish line. Once something exists,
+  spend your remaining time on the questions you will actually have in a month: can
+  you ask it something and get a useful answer, can you correct it when it is wrong,
+  and do you believe you could keep this up across several more drawers without it
+  turning into a mess.
+
+# For the reader of the notes. Never shown to the walker.
+watch_for: |
+  There is no inventory or item card type, so this tests whether the box can be bent
+  to a shape the person brought. Watch whether it offers one, invents one, asks, or
+  files the photos somewhere generic and considers the matter closed.
+
+  Whether counts come with any hedging — a confident wrong number is the exact
+  failure this person came to stop suffering.
+
+  Whether they can say where their own list lives by the end.

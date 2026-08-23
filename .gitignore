@@ -81,3 +81,8 @@ dev/apps/story-eval/runs/
 # in callback-box/docs/plans/workstream-exhibits.md).
 /exhibits
 callback-box/user-stories/work/
+
+# Journey assets: real photos and anonymized mail, kept out of the repo until
+# reviewed. The journey.yaml that needs them IS tracked; prepare.ts fails loudly
+# naming any that are absent.
+callback-box/user-stories/journeys/*/assets/
