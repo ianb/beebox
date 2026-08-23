@@ -32,16 +32,19 @@ already the best pass.
 - Boxholder constraint (issue): the agent-facing signal is **one clause**, not
   a third prompt paragraph.
 - Precedents: the `narration` feature entry (`features.ts:31-37`); the
-  `stt="deepgram"` stamp (`chat-assemble.ts`, transcript-confidence plan);
-  the resolved-service name on HQ results (`transcription/index.ts`,
-  retranscription-in-chat plan Track 2).
+  `stt="deepgram"` stamp (`chat-assemble.ts`, transcript-confidence plan).
 
 ## What already exists
 
 - **Feature registry** — `core/chat/features.ts`: `FeatureDescriptor`
   (`allowedValues`/`default`/`uiKind`/`label`), server-authoritative via
-  `ChatSession.setFeature`, rendered into `<chat-app …>` per message, settings
-  UI derives from `uiKind`. Verified 2026-08-23. Reused: one new entry.
+  `ChatSession.setFeature`, rendered into `<chat-app …>` per message.
+  Verified 2026-08-23 — with a correction from cross-model review: the
+  registry covers persistence, validation, and the snapshot attribute, but
+  the **toggle UI is hand-wired per feature** (narration goes through
+  `useChatModelFeatures` → `handleToggleNarration` → `VoiceChip`,
+  `InteractiveChat-hooks.ts:155`, `VoiceChip.tsx:127`); no frontend consumer
+  derives controls from `uiKind`. The new toggle mirrors narration's wiring.
 - **Per-send HQ path** — `prepareVoiceSubmitEmission` with `runHq`
   (`InteractiveChat-voice.ts`), including the pending-draft UI and the
   realtime fallback (`!usedHq`). Reused unchanged; only the `runHq`
@@ -92,27 +95,54 @@ plan.)
 
 ## Tracks / scope
 
-Small enough for one track, in commit-sized chunks:
+One track, in commit-sized chunks (revised after cross-model review):
 
-1. **Feature entry + threading**: `hq-dictation` in `features.ts`; frontend
-   reads it beside `narrationEnabled` (same `useChatFeatures`-style source —
-   find the exact seam `narrationEnabled` uses and mirror it) and `runHq`
-   becomes `hqDictationEnabled || narrationEnabled || intent.hq`. Settings
-   UI comes from the registry; verify the toggle renders without bespoke UI
-   work.
-2. **Provenance stamp**: the emission carries one new bit — `hqText: true`
-   (or equivalent minimal typed shape) set by `prepareVoiceSubmitEmission`
-   when `usedHq`; `chat-assemble.ts` stamps `stt="hq"` for it, keeping
-   `stt="deepgram"` for the captured-words case (the two are mutually
-   exclusive: HQ replacement drops the words). Fallback-to-realtime keeps
-   today's behavior exactly. No route changes.
-3. **Prompt clause + docs-gen touch**: the one clause above; check the
-   generated command guide's retranscribe copy for a one-line alignment.
-4. **Tests**: registry entry round-trip (existing features doctests
-   pattern); pinned assemble serialization for `stt="voxtral"`-style stamps
-   (extend `emission-assemble.doctest.md`); voice-intent doctest for the
-   widened `runHq` and the HQ-service-name pass-through; fallback case pins
-   no-stamp.
+1. **Feature entry + toggle UI + live threading**: `hq-dictation` in
+   `features.ts`; frontend derives `hqDictationEnabled` and hand-wires a
+   toggle mirroring narration's path (`useChatModelFeatures` →
+   `handleToggle…` → the voice/settings chrome beside the narration
+   control), with the optimistic-set/rejection behavior narration's toggle
+   already has. Threading into the keyword path uses an
+   `hqDictationEnabledRef` read at keyword-fire, exactly like
+   `narrationEnabledRef` (`InteractiveChat-voice.ts:72,132` — the intent
+   fires through the transcription hook's ref pattern, so a derived boolean
+   alone would be stale); `runHq` becomes
+   `hqDictationEnabledRef.current || narrationEnabledRef.current ||
+   intent.hq`.
+2. **Stop-and-send honors the switch** (review finding: tap-send builds its
+   emission straight from realtime text and never runs HQ — with the switch
+   on, the most common non-keyword send would silently stay realtime,
+   making "always" a lie). When `hq-dictation` is on, the desktop/mobile
+   stop-and-send path routes through the same finalize→blob→HQ slow path
+   keyword sends use (`prepareVoiceSubmitEmission` + the existing
+   pending-draft UI), falling back to realtime text on HQ failure exactly
+   as keyword sends do. Out of scope and stated so: recovered dictation
+   (no live segment, no audio) and native iOS sends (no web recording) stay
+   realtime and unstamped.
+3. **Provenance stamp**: the emission carries one new bit — `hqText: true`
+   (or equivalent minimal typed shape) set when `usedHq`;
+   `chat-assemble.ts` stamps `stt="hq"` for it, keeping `stt="deepgram"`
+   for the captured-words case (mutually exclusive: HQ replacement drops
+   the words). Fallback-to-realtime keeps today's behavior exactly. No
+   route changes. The bit is a frontend fact (`usedHq`,
+   `voice-intent.ts:95,129`) — no server-side name involved.
+4. **Comment/audit sweep for the widened `stt` vocabulary** (review
+   finding): comments equating `stt` with Deepgram confidence
+   (`emission.ts:51`, `unsure-words.ts:58`,
+   `realtimeTranscriptionMachine.ts:55`, `chat-assemble.ts` stamp comment)
+   get the second value; `knowledge-audits.yaml`'s "messages without stt=
+   carry no confidence data" wording updates to stay true.
+5. **Prompt clause + docs-gen touch**: the one clause, attached to the
+   RETRANSCRIBE half of the sentence only — `ask-about-audio` remains fully
+   applicable to HQ messages (can/can't, tone, background are about the
+   sound, not the transcript). Check the generated command guide's
+   retranscribe copy for a one-line alignment.
+6. **Tests**: registry entry round-trip; pinned assemble serialization for
+   the `stt="hq"` stamp (extend `emission-assemble.doctest.md`, incl.
+   mutual exclusion with `stt="deepgram"`); voice-intent doctest for the
+   widened `runHq`, the `hqText` bit, and the stop-and-send HQ routing;
+   fallback case pins no-stamp. Re-run the two chat audits after the prompt
+   edit.
 
 ## Could this be simpler?
 
@@ -138,7 +168,8 @@ None.
 | HQ pass fails mid-send (`!usedHq` fallback) | exists + extended | realtime text commits, `stt` reflects reality (deepgram or absent), no HQ claim | clear (existing warn) |
 | Agent retranscribes an HQ message anyway | prompt-level | harmless — returns the same text, shows the overlay; the clause exists to make it rare, not impossible | visible, low cost |
 | Feature on + Voxtral realtime configured (no Deepgram) | planned | `runHq` is orthogonal to realtime service; HQ pass runs regardless | clear |
-| Old tabs mid-deploy don't know the feature | exists (registry defaults) | unknown feature names are rejected server-side; defaults apply | clear |
+| New frontend against old server (the risky deploy direction — review finding) | planned | `setFeature` rejects the unknown name (`chat-control-procedures.ts:181`); the toggle surfaces the rejection instead of pretending, and no client-side HQ runs on a value the server refused | clear |
+| Tap-send with the switch on (pre-review gap) | planned (chunk 6) | routed through the HQ slow path; realtime fallback on failure | clear (pending-draft UI shows the wait) |
 
 **Critical gap:** none — every degradation lands on an honest absent-stamp or
 today's behavior.
@@ -148,8 +179,8 @@ today's behavior.
 - **Wrong tag/field** — ADDRESSED: agents never write `stt=`; the existing
   never-fabricate guidance covers the wrapper attributes generally.
 - **Stale ref / two agents / hand-edit** — not applicable.
-- **Fabricated value** — ADDRESSED: the stamp comes from the transcription
-  result server-side name, not agent output.
+- **Fabricated value** — ADDRESSED: the stamp derives from the frontend's
+  own `usedHq` outcome (`voice-intent.ts:95,129`), never from agent output.
 - **Validation UX** — ADDRESSED: feature values validate against
   `allowedValues` in the existing setFeature path.
 - **Transition state** — ADDRESSED: absent stamp = unknown, which is every
