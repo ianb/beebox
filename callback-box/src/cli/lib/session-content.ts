@@ -82,11 +82,13 @@ function imageBlock(block: Record<string, unknown>): SessionContentBlock {
   // filtered at the message level by callers — turns with no text content
   // get dropped entirely, so synthetic image-only plumbing stays hidden.
   const source = isRecord(block["source"]) ? block["source"] : undefined;
-  // A base64 source whose data is gone was stripped by the oversize guard
-  // (`session-oversize.ts`) so the rest of the turn could be read. Say that,
-  // rather than emitting an image block the UI can only render as broken.
+  // A base64 source with no data reaches here two ways: the oversize guard stripped
+  // the payload so the rest of the turn could be read (`session-oversize.ts`), or the
+  // bytes never arrived in the first place. The placeholder states what is observable
+  // and does not claim to know which — an earlier wording said "not retained in
+  // history", which read as a false explanation when an upload had simply failed.
   if (source?.["type"] === "base64" && !source["data"]) {
-    return { type: "text", text: "[image not retained in history]" };
+    return { type: "text", text: "[image unavailable]" };
   }
   const imgBlock: SessionContentBlock = { type: "image" };
   if (source?.["media_type"]) imgBlock.mediaType = String(source["media_type"]);

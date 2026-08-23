@@ -123,6 +123,21 @@ execFileSync("git", ["-C", boxDir, "commit", "-q", "-m", "Box as it was handed o
   stdio: "inherit",
 });
 
+// A real box is annex-converted; a file copy plus `git init` is not, and the box then
+// answers 503 to every upload. The first run on a prepared box hit exactly that and
+// spent an hour on what looked like a product bug — so this is provisioning, not
+// polish. Failing here is better than a walk built on a box that cannot take a photo.
+try {
+  // `cb` finds its box from the working directory, so it runs IN the box — not via
+  // `pnpm --dir`, which moves the cwd to the package and loses it.
+  execFileSync(join(MONO_ROOT, "callback-box", "bin", "cb"), ["attachments", "to-annex"], {
+    cwd: content,
+    stdio: "inherit",
+  });
+} catch (e) {
+  fail(`annex conversion failed for ${boxDir}: ${errorMessage(e)}\nUploads would answer 503; fix before walking.`);
+}
+
 // A box the router does not serve is a box nobody can walk. The worktree's own
 // .env lists what it serves; the router reads it when the worktree next starts.
 const envPath = join(MONO_ROOT, "callback-box", ".env");
@@ -156,6 +171,7 @@ const template = readFileSync(join(HERE, "walker-prompt.md"), "utf8")
   .replace("{{SITUATION}}", journey.situation.trim())
   .replace("{{ASSETS}}", assetLines)
   .replace("{{BUDGET}}", String(journey.budget_actions ?? 60))
+  .replaceAll("{{BOX_SLUG}}", journey.box.slug)
   .replace("{{SHOTS}}", join(runDir, "shots"))
   .replace("{{NOTES}}", join(runDir, "notes.md"))
   .replace("{{CLOSING}}", (journey.closing ?? "").trim());

@@ -28,8 +28,17 @@ bin/browse screenshot <path>  # save a screenshot
 bin/browse eval "<js>"        # read something off the page if you must
 ```
 
-Refs go stale after any page change — re-snapshot before interacting again. The app is at
-`/` (the tool adds the rest). You are already signed in.
+Refs go stale after any page change — re-snapshot before interacting again. You are already
+signed in.
+
+**Run every `bin/browse` command with `BROWSE_BOX={{BOX_SLUG}}` set**, e.g.
+
+```
+BROWSE_BOX={{BOX_SLUG}} bin/browse open /
+```
+
+Without it the tool drives a different box and nothing you do will be about yours. `/` is the
+app's own path — the tool adds the rest.
 
 **Take a screenshot at each meaningful step**, into
 `{{SHOTS}}`,
