@@ -100,6 +100,9 @@ const OUTSIDE_VITE_SHARED_RAW = [
   // Loaded outside Vite by its own doctest (root tsconfig, no @shared
   // resolution): imports @shared/invariant by raw relative path.
   "src/components/history/CommitDetail-diff.ts",
+  // Loaded outside Vite by its own doctest (root tsconfig, no @shared
+  // resolution): imports @shared/result by raw relative path.
+  "src/lib/ui-scan/resolve.ts",
 ];
 
 export default [
