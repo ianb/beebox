@@ -172,7 +172,7 @@ export function cardTypesSection(allCardSchemas: CardSchema[]): string {
     }
     lines.push("");
   }
-  lines.push("When the user wants a collection of repeated items with distinct typed fields or validation, define a new card type instead of using generic memos or records. New card types can be defined in `config/schemas/` using `cardSchema()` (YAML frontmatter + markdown body) + Zod — see `config/schemas/CLAUDE.md` for how. Rules Zod field types can't express (cross-field constraints, body-structure checks) go in the schema's `validate` hook, not a Zod `.refine()`. Run `cb init` after adding a schema to generate rules and docs.");
+  lines.push("When the user wants a collection of repeated items with distinct typed fields or validation, define a new card type instead of using generic memos or records. New card types can be defined in `src/schemas/` at the box's package root using `cardSchema()` (YAML frontmatter + markdown body) + Zod — see `src/schemas/CLAUDE.md` for how. Note this is the package root, beside `content/`, NOT `config/schemas/` inside the box — a schema left there is invisible to the loader. Rules Zod field types can't express (cross-field constraints, body-structure checks) go in the schema's `validate` hook, not a Zod `.refine()`. Run `cb init` after adding a schema to generate rules and docs.");
   return lines.join("\n");
 }
 

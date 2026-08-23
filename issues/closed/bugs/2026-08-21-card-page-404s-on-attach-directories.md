@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — walking card and directory URLs to check the browse user stories
+resolution: implemented
 ---
 
 `/<box>/card/box/inbox/scan-20260429T0322-dbe99514.attach` renders

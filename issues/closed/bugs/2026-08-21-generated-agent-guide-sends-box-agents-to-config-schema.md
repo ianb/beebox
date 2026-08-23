@@ -4,6 +4,7 @@ workstream: unattached
 area: callback-box
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — user-story catalog verification
+resolution: implemented
 stories: [cards/define-box-local-card-types-that-hot-reload]
 ---
 
@@ -19,8 +20,8 @@ stories: [cards/define-box-local-card-types-that-hot-reload]
 
 ## Updating the user-story catalog
 
-This issue is why [`cards/define-box-local-card-types-that-hot-reload`](../../callback-box/user-stories/catalog/2026-08-21.md#flagged-worth-a-human-glance) is currently
-flagged ❌ in [the user-story catalog](../../callback-box/user-stories/catalog/2026-08-21.md) — a catalogue of what callback-box can
+This issue is why [`cards/define-box-local-card-types-that-hot-reload`](../../../callback-box/user-stories/catalog/2026-08-21.md#flagged-worth-a-human-glance) is currently
+flagged ❌ in [the user-story catalog](../../../callback-box/user-stories/catalog/2026-08-21.md) — a catalogue of what callback-box can
 actually do, where every claim is checked against the source.
 
 **When you fix this, re-check that story so the catalog stops being wrong.** It is a
@@ -39,4 +40,4 @@ pnpm exec tsx callback-box/user-stories/pipeline/render.ts \
 The recheck is adversarial by design: it will not mark the story accurate just because
 this issue was closed — it re-reads the code. If it still refutes, that is worth knowing
 before you call the fix done. Details in
-[the pipeline README](../../callback-box/user-stories/README.md).
+[the pipeline README](../../../callback-box/user-stories/README.md).

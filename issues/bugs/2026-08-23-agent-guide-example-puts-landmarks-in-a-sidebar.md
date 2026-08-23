@@ -44,7 +44,7 @@ guide's example was not revisited.
 Fixing the example is worth doing and is not the whole story. The agent's only
 account of the interface is a static document it cannot check against the screen,
 so any drift between the two becomes a confident wrong direction — see
-[let the agent see the interface and point at things in it](../features/2026-08-14-agent-can-see-and-point-at-the-interface.md),
+[let the agent see the interface and point at things in it](../closed/features/2026-08-14-agent-can-see-and-point-at-the-interface.md),
 which this is a symptom of.
 
 ## The general shape

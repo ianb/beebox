@@ -41,7 +41,7 @@ A first-time user was told by the assistant: *"I've set up an Inventory area
 (it's in your sidebar now)"*. There is no sidebar on the page they were looking
 at. They wrote: *"either it's describing a different app or the word is wrong."*
 The phrase traces to an example in the agent guide
-([the sidebar issue](../bugs/2026-08-23-agent-guide-example-puts-landmarks-in-a-sidebar.md)),
+([the sidebar issue](../../bugs/2026-08-23-agent-guide-example-puts-landmarks-in-a-sidebar.md)),
 which is fixable on its own — but the reason a stale example can mislead at all
 is the premise of this issue: **the agent's only account of the interface is a
 static document, and it has no way to check it against the screen.**
