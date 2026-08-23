@@ -70,7 +70,7 @@ function runKeywordSend(opts: {
   composerSend: (event: ComposerEvent) => void;
   sessionId: string | null;
   narrationEnabledRef: React.MutableRefObject<boolean>;
-  /** docs/plans/hq-dictation-switch.md, chunk 1 — read at fire time, same pattern as narrationEnabledRef. */
+  /** docs/implemented-plans/hq-dictation-switch.md, chunk 1 — read at fire time, same pattern as narrationEnabledRef. */
   hqDictationEnabledRef: React.MutableRefObject<boolean>;
   selectionsRef: React.MutableRefObject<SelectionItem[]>;
   resetSelections: () => void;
@@ -202,7 +202,7 @@ export function useChatVoice(opts: {
   sessionId: string | null;
   muted: boolean;
   narrationEnabled: boolean;
-  /** docs/plans/hq-dictation-switch.md — persistent HQ, independent of narration mode. */
+  /** docs/implemented-plans/hq-dictation-switch.md — persistent HQ, independent of narration mode. */
   hqDictationEnabled: boolean;
   selections: SelectionItem[];
   resetSelections: () => void;
@@ -252,7 +252,7 @@ export function useChatVoice(opts: {
   // at fire time.
   const narrationEnabledRef = useRef(narrationEnabled);
   useEffect(() => { narrationEnabledRef.current = narrationEnabled; });
-  // Same pattern for the always-HQ switch (docs/plans/hq-dictation-switch.md).
+  // Same pattern for the always-HQ switch (docs/implemented-plans/hq-dictation-switch.md).
   const hqDictationEnabledRef = useRef(hqDictationEnabled);
   useEffect(() => { hqDictationEnabledRef.current = hqDictationEnabled; });
   const selectionsRef = useRef(selections);

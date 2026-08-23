@@ -69,7 +69,7 @@ export interface Emission {
   /**
    * Set when the committed text came from an HQ transcription pass — the
    * always-HQ switch, narration mode, or an explicit "send HQ" keyword
-   * (docs/plans/hq-dictation-switch.md). The assembler stamps `stt="hq"` for
+   * (docs/implemented-plans/hq-dictation-switch.md). The assembler stamps `stt="hq"` for
    * it; mutually exclusive with `words` (an HQ pass always drops the
    * realtime words it replaced — the pre-existing HQ-drop rule — so a
    * message is never both `stt="hq"` and `stt="deepgram"`). A minimal typed

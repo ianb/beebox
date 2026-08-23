@@ -95,7 +95,7 @@ export interface UseRealtimeTranscriptionResult {
    * End the segment and treat it as a submit — the same finalize→blob path a
    * spoken send keyword takes, but triggered from a manual UI control (the
    * composer's stop-and-send buttons) rather than keyword detection
-   * (docs/plans/hq-dictation-switch.md, chunk 2). Parks the current combined
+   * (docs/implemented-plans/hq-dictation-switch.md, chunk 2). Parks the current combined
    * transcript with an empty `matchedPhrase` (nothing was spoken to match)
    * and STOPs the machine; the same idle-transition effect that fires a
    * keyword-detected "submit" VoiceIntent fires this one too, so callers get

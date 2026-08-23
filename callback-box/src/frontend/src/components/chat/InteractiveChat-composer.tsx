@@ -63,7 +63,7 @@ function DesktopComposerRow({
   onVoiceSegmentSend: VoiceSegmentSend;
   onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
-  /** docs/plans/hq-dictation-switch.md, chunk 2: routes stop-and-send through the HQ slow path. */
+  /** docs/implemented-plans/hq-dictation-switch.md, chunk 2: routes stop-and-send through the HQ slow path. */
   hqDictationEnabled: boolean;
 }) {
   return (
@@ -205,7 +205,7 @@ export function ChatInputArea({
   /** When set, the capture affordance renders disabled with this tooltip (X1). */
   captureDisabledReason?: string | undefined;
   narrationEnabled: boolean;
-  /** docs/plans/hq-dictation-switch.md, chunk 2: routes stop-and-send through the HQ slow path. */
+  /** docs/implemented-plans/hq-dictation-switch.md, chunk 2: routes stop-and-send through the HQ slow path. */
   hqDictationEnabled: boolean;
 }) {
   // Subscribing read of the composer text — this is the component a keystroke

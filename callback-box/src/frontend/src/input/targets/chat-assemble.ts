@@ -99,7 +99,7 @@ export function assembleChatMessage(
     const diarizedAttr = emission.diarized ? " diarized=\"1\"" : "";
     // `stt` is stamped when the message carries transcription provenance —
     // either captured word-confidence data (`deepgram`) or an HQ pass that
-    // replaced the realtime text (`hq`, docs/plans/hq-dictation-switch.md).
+    // replaced the realtime text (`hq`, docs/implemented-plans/hq-dictation-switch.md).
     // The two are mutually exclusive: an HQ pass always drops the realtime
     // words it replaced (the pre-existing HQ-drop rule), so `emission.words`
     // is never defined on an `hqText` emission. Absence of `stt` means no

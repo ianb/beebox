@@ -86,6 +86,6 @@ claude-engine box with none on disk at all), so "not engine-gated" is not the
 same as "always present". Whether a codex chat should ensure its mirrors before
 its first turn is worth a moment's thought rather than an assumption.
 
-Related: [AGENTS.md missing from the CLAUDE.md special-cases](../bugs/2026-08-22-agents-md-missing-from-claude-md-special-cases.md)
+Related: [AGENTS.md missing from the CLAUDE.md special-cases](../closed/bugs/2026-08-22-agents-md-missing-from-claude-md-special-cases.md)
 — the mirrors' current sharp edge, and the reason to be careful about assuming
 where they are.
