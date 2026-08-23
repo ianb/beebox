@@ -18,7 +18,9 @@
 import * as cheerio from "cheerio";
 import type { CheerioAPI } from "cheerio";
 import { invariant } from "../../src/lib/invariant.js";
+import type { VisibleElementLookup } from "../../src/frontend/src/lib/ui-scan/resolve.js";
 import type { ScanElement, ScanNode, ScanRect, ScanStyle } from "../../src/frontend/src/lib/ui-scan/types.js";
+import { isNodeVisible, type VisibilityNode } from "../../src/frontend/src/lib/ui-scan/visibility.js";
 
 /** The parsed-node union, reached through cheerio's own API so `domhandler`
  *  (a transitive dependency) is never imported by name. */
@@ -90,4 +92,35 @@ export function fixtureElement(html: string): ScanElement {
   const element = root.children.find((child) => child.kind === "element");
   invariant(element !== undefined && element.kind === "element", "ui-scan fixture has no element");
   return element;
+}
+
+/**
+ * A fixture standing in for the live `document` at a `control:` pointer's
+ * resolution: `getElementById` over the same markup the scan walks, plus the
+ * visibility rule `live-dom.ts` supplies in the browser.
+ *
+ * Resolution needs the way *up* — an element is hidden when any ancestor hides
+ * it — which the walk never does, so the parsed tree is re-linked here with
+ * parent pointers rather than `ScanElement` growing one.
+ */
+export type VisibleFixtureLookup = VisibleElementLookup<VisibilityNode>;
+
+export function fixtureLookup(html: string): VisibleFixtureLookup {
+  const byId = new Map<string, VisibilityNode>();
+  function link(element: ScanElement, parent: VisibilityNode | null): void {
+    const node: VisibilityNode = {
+      attributes: element.attributes,
+      style: element.style,
+      rect: element.rect,
+      parent: () => parent,
+    };
+    const id = element.attributes["id"];
+    if (id !== undefined && !byId.has(id)) byId.set(id, node);
+    for (const child of element.children) if (child.kind === "element") link(child, node);
+  }
+  link(fixtureRoot(html), null);
+  return {
+    getElementById: (id: string) => byId.get(id) ?? null,
+    isVisible: isNodeVisible,
+  };
 }

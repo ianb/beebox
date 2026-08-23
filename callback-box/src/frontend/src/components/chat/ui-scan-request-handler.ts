@@ -10,7 +10,11 @@
  * content is on screen, this returns chrome: roles, control labels and
  * author-written descriptions, plus the few user-derived strings (session
  * title, box name, open tab labels) the agent already receives through
- * `open-card` and the session it is running in. The plan
+ * `open-card` and the session it is running in. "Chrome" is enforced, not
+ * hoped for: the transcript, the open card and every other content region is
+ * marked `data-cb-scan="exclude"` and pruned from the walk
+ * (`lib/ui-scan/scan.ts`, `SCAN_BOUNDARY_ATTRIBUTE`), so the links and buttons
+ * inside the user's own content never reach this payload. The plan
  * (`docs/plans/agent-points-at-ui.md`, Track 3 "No consent prompt") records
  * this as a judgment call the boxholder should confirm; if the answer comes
  * back the other way, the popup belongs here, queued the way

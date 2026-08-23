@@ -368,12 +368,50 @@ is included** and marked — a control scrolled out of view is exactly what
 `point` exists to scroll to. (memory-atlas excludes it,
 `lib/isvisible.ts`; that is right for its spotlight and wrong for ours.)
 
+**The same rule governs resolution**, not only the scan: the two live in one
+module (`lib/ui-scan/visibility.ts`), applied downward by the walk and upward
+along the ancestor chain by the resolver. An address that matches a mounted but
+hidden element is a *third* resolve failure, `hidden`, rendered as a broken
+pointer reading "this control is not currently visible". This is the everyday
+case, not an edge one: both composer rows are mounted at every width, so
+`cb-composer-send` and `cb-composer-send-mobile` are always one live address and
+one hidden one. Without the check, a phone-width `reveal` of `cb-composer-send`
+would synthetically click a `display:none` button and a `point` would ring
+nothing.
+
+`offscreen` remains viewport-relative only. A control scrolled out of an
+`overflow: hidden` ancestor while its own box still falls inside the viewport
+reports `offscreen: false`, so the dump can understate how hidden it is.
+Testing every clipping ancestor would mean reading each one's overflow and box
+on the way down — the cost the lazy `style()`/`rect()` seam exists to avoid —
+and the consequence is bounded: `point` scrolls the element into view either
+way, so the flag is imprecise, never a pointer that lands nowhere. Documented
+rather than fixed (`scan.ts`, at the `offscreen` computation).
+
 **What is scanned.** Interactive elements and landmarks only: elements matching
 the focusable/widget-role set, plus `nav`/`main`/`header`/`footer`/`aside` and
 anything with a landmark or `region` role. **Content headings and prose are
 not scanned.** This keeps the dump about chrome, and it keeps the payload from
 becoming an oblique copy of whatever card the user is reading — the agent
 already learns that through `open-card`.
+
+Excluding headings and prose is not enough on its own, because user content
+holds *controls* too: the links in a rendered card, the buttons in an embed, a
+custom view's own widgets. So the walk also stops at a **content boundary** —
+`data-cb-scan="exclude"` on an element prunes its subtree exactly the way
+`aria-hidden="true"` does. It goes on content roots and never on the chrome
+around them; today that is the chat transcript (the message list itself, with
+the load-older header and the scroll-to-bottom button outside it), the companion
+pane's tab panels (the tab strip and close button stay in), the zoomed-view
+overlay's body, and the peeked card inside a recent-files row. No `cb-` address
+sits inside an excluded subtree. Excluded controls are **not counted** — an
+omission the dump reports is one the agent could otherwise be misled by, while
+this is a line the design drew, and "42 controls you may not see" would invite
+exactly the guessing the boundary prevents. Duplicate-address detection is the
+one pass that still covers the whole document: a repeated `cb-` id anywhere
+breaks `getElementById` wherever it lives. This boundary is what makes "the
+scan returns chrome" — the reason Track 3 asks for no consent prompt — a
+property of the code rather than of where the user happens to be looking.
 
 **Enrichment.** `data-cb-does="opens the attach menu — capture, file, upload,
 screenshot, share location"`. An attribute on the element, not a registry keyed
@@ -953,6 +991,10 @@ plan; both are recorded in the table.
 |---|---|---|---|
 | Agent writes `control:` with an id that has unmounted or scrolled out of a virtualised list | Yes — `ControlPointer` component doctest for the zero-match path | Yes — resolver returns zero matches → `BrokenLink` with the id in the tooltip | Clear |
 | Two elements carry the same `cb-` id (a component rendered twice, e.g. the desktop and mobile composer rows both mounted) | Yes — axe `duplicate-id` in `bin/tour --all`, which already runs on every routed page; plus a scan doctest asserting the dump header names the duplicate | Partial at runtime — `getElementById` silently returns the first in document order — so this is caught upstream at annotation time, not at resolve time | Clear in the tour report; **silent at click time** — accepted, and it is why the annotation pass ends with a tour run |
+| A `control:` pointer resolves to a mounted-but-CSS-hidden element (the other half of the responsive composer pair, at the wrong width) | Yes — doctests over `resolveVisibleControl` at both widths | Yes — `hidden` resolve failure → `BrokenLink` reading "this control is not currently visible" | Clear |
+| A control becomes hidden without the DOM tree changing (the viewport crosses a breakpoint) while a pointer is on screen | Partly — the resolve+visibility doctests, not the observer | Partial — the `MutationObserver` watches `childList` + `id`, so the pointer keeps reading `ok` until it is clicked, at which point it re-resolves and flips to broken in place | Clear at click, silent until then — accepted; a pointer that acts on a hidden control is what mattered |
+| A rendered card, embed or transcript message puts its own links and buttons into the dump | Yes — scan doctest over an excluded subtree | Yes — `data-cb-scan="exclude"` prunes content roots; the annotated chrome is all outside them | Clear (by construction — the payload is chrome) |
+| A control is clipped out of view by an `overflow: hidden` ancestor but its own box is inside the viewport | No | Partial — reported as on screen; `point` scrolls it into view regardless | Silent — accepted and documented at the `offscreen` computation |
 | Native bridge does not answer `scan-controls` in time | Yes — route doctest with a fake bridge that never answers | Yes — `coverage: "dom-native-unavailable"` and an explicit sentence in the dump | Clear |
 | No client attached when the agent runs `cb chat ui` (phone locked, tab closed) | Yes — route doctest via the existing ack-window path | Yes — `no-client`, distinct from `timeout`, inherited from `pending-browser-request.ts:11-18` | Clear |
 | Accname computation returns empty for a control that is genuinely important | Partly — doctests cover the fallback chain, not "was this one important" | Dropped from the dump, but the drop **count** is printed in the header | Clear (count), silent (which) — accepted; see below |
@@ -1214,3 +1256,19 @@ makes resolution `getElementById`, hands uniqueness enforcement to axe in the
 tours (already running), and surfaced the mounted-but-hidden composer-row
 duplication that a private attribute would have concealed. Re-review is
 warranted if the iOS track's shape changes again.
+
+**Cross-model review of the built web slice.** Done (Codex), after Tracks 1–4
+landed. Five findings, four accepted and fixed in the same pass: the scan walked
+user content as well as chrome (fixed with the `data-cb-scan="exclude"`
+boundary above); `resolveControl` proved only that an id existed, so a pointer
+could ring or `reveal` a CSS-hidden element (fixed with the shared visibility
+predicate and the `hidden` failure); the `offscreen` flag ignores clipping
+ancestors, and the ring's placement after `scrollIntoView` was checked — the
+ring re-measures its target every frame while it is up (`ui/ControlRing.tsx`),
+so a scroll settling under it is already handled, and the clipping limitation is
+documented rather than fixed; and the mic's narration `data-cb-does` described
+narration mode backwards ("the agent speaks its replies back", when the overlay
+makes the agent quieter, not louder). Finding 4 — that the dump should spell out
+the `control:` link form more explicitly — was declined: the dump's trailing
+paragraph shows the full link form and the knowledge audits verify agents write
+`action`/`description`.

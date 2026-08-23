@@ -10,6 +10,7 @@
  */
 
 import { scanControls } from "./scan.js";
+import { isNodeVisible, type VisibilityNode } from "./visibility.js";
 import type { ScanElement, ScanNode, ScanResult } from "./types.js";
 
 function attributesOf(element: Element): Record<string, string> {
@@ -50,6 +51,43 @@ export function domScanElement(element: Element): ScanElement {
       return { top: box.top, left: box.left, width: box.width, height: box.height };
     },
   };
+}
+
+/**
+ * Wrap one live element as a {@link VisibilityNode} — the same style and box
+ * readers as above, plus the way up, which the walk never needs and resolution
+ * always does.
+ */
+function domVisibilityNode(element: Element): VisibilityNode {
+  return {
+    attributes: attributesOf(element),
+    style: () => {
+      const computed = window.getComputedStyle(element);
+      return {
+        display: computed.display,
+        visibility: computed.visibility,
+        opacity: computed.opacity,
+      };
+    },
+    rect: () => {
+      const box = element.getBoundingClientRect();
+      return { top: box.top, left: box.left, width: box.width, height: box.height };
+    },
+    parent: () => {
+      const parent = element.parentElement;
+      return parent === null ? null : domVisibilityNode(parent);
+    },
+  };
+}
+
+/**
+ * Whether the user can see this element right now, by the rules the scan walks
+ * with. What `ControlPointer` passes to `resolveVisibleControl`: an id can match
+ * a mounted-but-CSS-hidden element (both composer rows are mounted at every
+ * width), and a ring around one of those points at nothing.
+ */
+export function isElementVisible(element: Element): boolean {
+  return isNodeVisible(domVisibilityNode(element));
 }
 
 /** Scan what is on screen right now, from `document.body` down. */

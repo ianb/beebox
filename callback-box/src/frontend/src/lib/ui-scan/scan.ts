@@ -8,14 +8,21 @@
  * role, name and container and a null id, so the agent can describe it in words
  * without being handed a link the app cannot honour.
  *
+ * The walk covers chrome, not content: a subtree marked
+ * `data-cb-scan="exclude"` ({@link SCAN_BOUNDARY_ATTRIBUTE}) is pruned the way
+ * an `aria-hidden` one is, which is what keeps the transcript, the open card and
+ * the embeds out of a payload the agent is told is an inventory of controls.
+ *
  * The walk is over {@link ScanElement} rather than `Element` so it can be
  * exercised without a DOM (the frontend doctests run under plain Node);
- * `live-dom.ts` adapts the real document to it.
+ * `live-dom.ts` adapts the real document to it. Visibility itself lives in
+ * `visibility.ts`, shared with the resolver so the two cannot disagree.
  */
 
 import { computeAccessibleName } from "./accessible-name.js";
 import { classifyElement } from "./roles.js";
 import { CONTROL_ID_PREFIX, isControlAddress } from "./resolve.js";
+import { hidesSubtree } from "./visibility.js";
 import type { ControlAction, ControlEntry, ScanElement, ScanResult } from "./types.js";
 
 /**
@@ -36,18 +43,39 @@ function attr(element: ScanElement, name: string): string | null {
 }
 
 /**
- * Hidden for everything inside it, not just itself: these are the conditions the
- * walk stops descending on. A zero-sized box is deliberately not one of them — a
- * wrapper can measure zero and still contain a positioned, visible child.
+ * The value of {@link SCAN_BOUNDARY_ATTRIBUTE} that prunes a subtree: everything
+ * inside is user content, not chrome. Spelled as a value rather than a bare
+ * attribute so the attribute has room to grow another one later.
  */
-function hidesSubtree(element: ScanElement): boolean {
-  if (attr(element, "aria-hidden") === "true") return true;
-  if (attr(element, "hidden") !== null) return true;
-  if (attr(element, "inert") !== null) return true;
-  const style = element.style();
-  if (style.display === "none") return true;
-  if (style.visibility === "hidden") return true;
-  return Number(style.opacity) === 0;
+const SCAN_EXCLUDE = "exclude";
+
+/**
+ * Marks a subtree as user content, pruning it from the walk exactly the way
+ * `aria-hidden` does — the elements inside are still on the user's screen, they
+ * are simply not this payload's business.
+ *
+ * It is what makes "the dump is chrome" true rather than aspirational: without
+ * it the walk reaches every link, button and textbox the user's own cards,
+ * transcript and embeds render, and ships their accessible names to the agent.
+ * That is the content the scan is *not* the way to learn about (the agent reads
+ * a card by opening it), and it is why the request needs no consent prompt
+ * (`components/chat/ui-scan-request-handler.ts`).
+ *
+ * It goes on content roots only, never on the chrome around them: the companion
+ * pane's tab strip and close button stay scannable while the card rendered
+ * below them does not. No `cb-` address sits inside an excluded subtree.
+ *
+ * Excluded controls are not counted. An omission the dump reports is one the
+ * agent might otherwise be misled by; this is a boundary the design drew, and
+ * "42 controls you may not see" would invite exactly the guessing the boundary
+ * exists to prevent. Duplicate-address detection still covers the whole
+ * document — a duplicate `cb-` id anywhere breaks `getElementById`.
+ */
+const SCAN_BOUNDARY_ATTRIBUTE = "data-cb-scan";
+
+/** Whether this element roots a user-content region the scan must not enter. */
+function isContentBoundary(element: ScanElement): boolean {
+  return attr(element, SCAN_BOUNDARY_ATTRIBUTE) === SCAN_EXCLUDE;
 }
 
 /** An attribute present but blank says nothing, so it reads as absent. */
@@ -118,6 +146,7 @@ export function scanControls(root: ScanElement, options: ScanOptions): ScanResul
 
   function visit(element: ScanElement, container: string | null): void {
     if (truncated) return;
+    if (isContentBoundary(element)) return;
     if (hidesSubtree(element)) return;
 
     let childContainer = container;
@@ -157,6 +186,15 @@ export function scanControls(root: ScanElement, options: ScanOptions): ScanResul
             does: nonEmpty(attr(element, "data-cb-does")),
             actions: actionsFor(element),
             disabled: isDisabled(element),
+            // Viewport-relative only. An element scrolled out of an
+            // `overflow: hidden` ancestor while its own box still lands inside
+            // the viewport reports `offscreen: false` — the ring's `point`
+            // scrolls it into view regardless, so the cost is a dump that
+            // undersells how hidden a control is, never a pointer that lands
+            // nowhere. Testing every clipping ancestor would mean reading each
+            // one's overflow and box on the way down, which the lazy `style()`
+            // /`rect()` seam exists to avoid; the limitation is documented
+            // instead (docs/plans/agent-points-at-ui.md, "Visibility").
             offscreen:
               rect.left + rect.width <= 0 ||
               rect.top + rect.height <= 0 ||

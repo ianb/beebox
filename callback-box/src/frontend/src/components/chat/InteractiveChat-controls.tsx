@@ -221,6 +221,11 @@ function CompanionViewPanelInner({
               key={tab.target.path}
               role="tabpanel"
               aria-hidden={!isActive}
+              // The rendered card is user content, out of the `cb chat ui` walk
+              // (lib/ui-scan/scan.ts, SCAN_BOUNDARY_ATTRIBUTE). The pane's own
+              // chrome — the tab strip, the close button — is above this and
+              // stays scannable.
+              data-cb-scan="exclude"
               // tabIndex 0: a scrolling tabpanel must be keyboard-focusable
               // (both the tabpanel ARIA pattern and axe's
               // scrollable-region-focusable) — the fixed shell's window never

@@ -36,7 +36,11 @@ export function VoiceToggleButton({
           : isTranscribing
             ? "stops recording and leaves the transcript in the composer to edit"
             : narrationEnabled
-              ? "starts dictation in narration mode — the agent speaks its replies back; tap again to stop"
+              // Narration is the *quiet* mode, not a read-aloud one: the
+              // overlay (core/chat/session/prompts.ts NARRATION_OVERLAY)
+              // suspends "voice in implies voice out" and defaults the agent's
+              // turn to an <ack> or a <callout>.
+              ? "starts dictation in narration mode — for talking at length; the agent mostly stays quiet and takes notes rather than answering aloud, unless you ask it to speak; tap again to stop"
               : "starts dictation — speak, then tap again to stop and edit before sending"
       }
       onClick={() => {

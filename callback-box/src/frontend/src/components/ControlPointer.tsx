@@ -24,7 +24,8 @@ import { ControlRing } from "./ui/ControlRing";
 import { isNativeShell } from "./chat/native-post";
 import { performControlAction, type ControlTarget } from "../lib/ui-scan/actions";
 import { isRectInViewport } from "../lib/ui-scan/ring";
-import { resolveControl, type ResolveFailure } from "../lib/ui-scan/resolve";
+import { isElementVisible } from "../lib/ui-scan/live-dom";
+import { resolveVisibleControl, type ResolveFailure } from "../lib/ui-scan/resolve";
 import type { ControlAction } from "../lib/ui-scan/types";
 
 /** How long a burst of DOM mutations settles before the pointer re-resolves. */
@@ -59,12 +60,26 @@ function brokenReason(id: string, failure: ResolveFailure): string {
       return isNativeShell()
         ? `native control — not yet supported (${id})`
         : `No control "${id}" on this screen`;
+    case "hidden":
+      return `This control is not currently visible (${id})`;
   }
 }
 
+/**
+ * The live document, plus the visibility rule the scan walks with. Both halves
+ * of the feature must agree about what is on screen: at a phone width the
+ * desktop composer row is still mounted and `display:none`, so `cb-composer-send`
+ * resolves to an element the user cannot see — a ring around nothing, and a
+ * `reveal` that would click a hidden button.
+ */
+const liveLookup = {
+  getElementById: (id: string): HTMLElement | null => document.getElementById(id),
+  isVisible: isElementVisible,
+};
+
 function currentStatus(id: string): PointerStatus {
   if (typeof document === "undefined") return { kind: "broken", reason: `No control "${id}" on this screen` };
-  const resolved = resolveControl<HTMLElement>(id, document);
+  const resolved = resolveVisibleControl(id, liveLookup);
   return resolved.ok ? { kind: "ok" } : { kind: "broken", reason: brokenReason(id, resolved.error) };
 }
 
@@ -139,6 +154,9 @@ export function ControlPointer({ id, action, description, unknownAction, childre
       subtree: true,
       childList: true,
       attributes: true,
+      // Ids only. A control that becomes hidden without the tree changing (a
+      // viewport crossing a breakpoint) is not caught here — the click-time
+      // re-resolve below flips it to broken in place rather than acting on it.
       attributeFilter: ["id"],
     });
     return () => {
@@ -152,9 +170,10 @@ export function ControlPointer({ id, action, description, unknownAction, childre
   }
 
   const handleClick = () => {
-    const resolved = resolveControl<HTMLElement>(id, document);
+    const resolved = resolveVisibleControl(id, liveLookup);
     if (!resolved.ok) {
-      // Resolved a frame ago, gone now. Flip in place; never no-op silently.
+      // Resolved a frame ago, gone (or hidden) now. Flip in place; never no-op
+      // silently.
       setStatus({ kind: "broken", reason: brokenReason(id, resolved.error) });
       setRing(null);
       return;

@@ -16,9 +16,9 @@ is markup copied from `InteractiveChat-composer.tsx`,
 
 ```ts setup
 import { scanControls, MAX_ENTRIES } from "../../../../src/frontend/src/lib/ui-scan/scan.js";
-import { resolveControl } from "../../../../src/frontend/src/lib/ui-scan/resolve.js";
+import { resolveControl, resolveVisibleControl } from "../../../../src/frontend/src/lib/ui-scan/resolve.js";
 import type { ControlEntry, ScanResult } from "../../../../src/frontend/src/lib/ui-scan/types.js";
-import { fixtureRoot } from "../../../helpers/ui-scan-fixture.js";
+import { fixtureLookup, fixtureRoot, type VisibleFixtureLookup } from "../../../helpers/ui-scan-fixture.js";
 
 function scan(html: string): ScanResult {
   return scanControls(fixtureRoot(html), { viewport: { width: 1024, height: 768 } });
@@ -27,6 +27,12 @@ function scan(html: string): ScanResult {
 /** One line per entry, in the tours' `role "name"` idiom the dump also uses. */
 function lines(result: ScanResult): string {
   return result.entries.map(describe).join("\n");
+}
+
+/** One line per address resolved against a fixture document: visible, or why not. */
+function outcome(id: string, lookup: VisibleFixtureLookup): string {
+  const resolved = resolveVisibleControl(id, lookup);
+  return `${id}: ${resolved.ok ? "visible" : resolved.error}`;
 }
 
 function describe(entry: ControlEntry): string {
@@ -169,6 +175,56 @@ so an unnamed one is just a box:
 ```ts
 JSON.stringify(scan(`<section><button title="Send">x</button></section>`).omittedUnnamed)
 => 0
+```
+
+## Content is not chrome
+
+The dump is an inventory of the app's controls, and it is handed to the agent
+without a consent prompt on exactly that basis. A subtree marked
+`data-cb-scan="exclude"` is pruned the way an `aria-hidden` one is — the chat
+transcript, the card open in the companion pane, an embed — so the links and
+buttons inside the user's own content never reach it. The chrome *around* the
+content, including the annotated addresses, is outside the boundary and stays:
+
+```ts
+const boundary = scan(`
+  <main aria-label="Chat">
+    <button title="Show earlier messages"></button>
+    <div data-cb-scan="exclude">
+      <a href="/notes/Rent.card" title="Rent">Rent</a>
+      <button title="Retry this turn"></button>
+      <div><button id="cb-nested-deep" title="Buried three levels down"></button></div>
+    </div>
+    <button id="cb-panel-close" title="Close companion view"></button>
+  </main>
+`);
+lines(boundary)
+=>
+- / main "Chat" (no address)
+Chat / button "Show earlier messages" (no address)
+Chat / button "Close companion view" cb-panel-close
+```
+
+Nothing inside the boundary is counted, either. An omission the dump reports is
+one the agent might otherwise be misled by; this is a line the design drew, and
+"3 controls you may not see" would invite exactly the guessing the boundary
+exists to prevent:
+
+```ts continue
+JSON.stringify({ omittedUnnamed: boundary.omittedUnnamed, omittedUnknownRole: boundary.omittedUnknownRole })
+=> {"omittedUnnamed":0,"omittedUnknownRole":0}
+```
+
+Duplicate detection is the exception: it covers the whole document, excluded
+subtrees included, because a repeated `cb-` id anywhere is a repeated id
+`getElementById` will resolve to the wrong one of.
+
+```ts
+JSON.stringify(scan(`
+  <button id="cb-panel-close" title="Close companion view"></button>
+  <div data-cb-scan="exclude"><button id="cb-panel-close" title="Close"></button></div>
+`).duplicateIds)
+=> ["cb-panel-close"]
 ```
 
 ## A landmark is never named by its contents
@@ -325,4 +381,85 @@ JSON.stringify([
 `bad-id` and `not-found` stay distinct because the two read differently to the
 user: a wrong address is a mistake in the message, while a missing element is
 the *normal* case here — the control unmounted, or the user navigated away.
+
+## Resolving to something the user can actually see
+
+Existing is not enough to act on. Both composer rows are mounted at every
+width — the desktop one is `hidden sm:flex`, the mobile one `sm:hidden` — so at
+a phone width `cb-composer-send` resolves to a `display:none` button. Pointing
+at it would ring a box nobody can see, and `reveal` would synthetically click a
+hidden control. `resolveVisibleControl` applies the same visibility rules the
+scan walks with (`visibility.ts`, shared by both so they cannot disagree) and
+reports a found-but-hidden element as its own failure.
+
+```ts
+/** The document at a phone width: the desktop row is the CSS-hidden one. */
+const mobileViewport = fixtureLookup(`
+  <section aria-label="Compose message">
+    <div data-test-style="display:none">
+      <textarea id="cb-composer-input" placeholder="Type a message..."></textarea>
+      <button id="cb-composer-send" title="Send"></button>
+    </div>
+    <div>
+      <textarea id="cb-composer-input-mobile" placeholder="Type a message..."></textarea>
+      <button id="cb-composer-send-mobile" title="Send"></button>
+    </div>
+  </section>
+`);
+["cb-composer-send", "cb-composer-send-mobile", "cb-composer-gone", "cb-Composer-Send"]
+  .map((id) => outcome(id, mobileViewport)).join("\n")
+=>
+cb-composer-send: hidden
+cb-composer-send-mobile: visible
+cb-composer-gone: not-found
+cb-Composer-Send: bad-id
 ```
+
+`hidden` stays distinct from `not-found` because the two are different answers:
+the control exists, it is simply not on this screen right now, and the pointer
+says so rather than claiming the app has no such control. At a desktop width the
+same document resolves the other way round — the `-mobile` addresses are the
+dead ones, which is the designed behaviour of a pair that is always both
+mounted:
+
+```ts continue
+const desktopViewport = fixtureLookup(`
+  <section aria-label="Compose message">
+    <div>
+      <button id="cb-composer-send" title="Send"></button>
+    </div>
+    <div data-test-style="display:none">
+      <button id="cb-composer-send-mobile" title="Send"></button>
+    </div>
+  </section>
+`);
+["cb-composer-send", "cb-composer-send-mobile"]
+  .map((id) => outcome(id, desktopViewport)).join("\n")
+=>
+cb-composer-send: visible
+cb-composer-send-mobile: hidden
+```
+
+Hiding is inherited, and a zero-sized element is not on screen either — the same
+two rules the walk descends with:
+
+```ts continue
+const kinds = fixtureLookup(`
+  <div aria-hidden="true"><button id="cb-nav-todo" title="To do"></button></div>
+  <button id="cb-nav-errors" title="Errors" data-test-rect="0,0,0,0"></button>
+  <button id="cb-nav-place" title="Place" data-test-style="visibility:hidden"></button>
+  <button id="cb-nav-voice" title="Voice" data-test-rect="10,900,120,32"></button>
+`);
+["cb-nav-todo", "cb-nav-errors", "cb-nav-place", "cb-nav-voice"]
+  .map((id) => outcome(id, kinds)).join("\n")
+=>
+cb-nav-todo: hidden
+cb-nav-errors: hidden
+cb-nav-place: hidden
+cb-nav-voice: visible
+```
+
+The last one is the deliberate case: scrolled below the fold is *visible*. A
+control out of view is what `point` exists to scroll to, so it resolves and the
+pointer scrolls to it — unlike a `display:none` one, which nothing can bring
+into view.
