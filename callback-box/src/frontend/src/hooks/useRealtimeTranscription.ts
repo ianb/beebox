@@ -102,7 +102,7 @@ export interface UseRealtimeTranscriptionResult {
    * identical HQ / audio-blob / fallback handling for free instead of
    * duplicating it. No-op when nothing is recording.
    */
-  submitSegment: (opts: { closeMic: boolean }) => void;
+  submitSegment: (opts: { closeMic: boolean }) => boolean;
   cancel: () => void;
   dismissError: () => void;
 }
@@ -433,8 +433,18 @@ export function useRealtimeTranscription(
     send({ type: "CANCEL" });
   }, [send, keywordSpotting]);
 
-  const submitSegment = useCallback((opts: { closeMic: boolean }) => {
-    if (state !== "recording" && state !== "reconnecting") return;
+  const submitSegment = useCallback((opts: { closeMic: boolean }): boolean => {
+    // A send is already parked (a spoken keyword fired moments before the
+    // tap) — the segment is on its way with the keyword's own bookkeeping
+    // (matchedPhrase restoration, explicit "send HQ"); clobbering it here
+    // would silently drop both. Treat the tap as handled.
+    if (pendingSendRef.current !== null) return true;
+    if (state === "idle") {
+      // Segment fully settled (unconsumed-transcript fold already ran, or
+      // nothing was ever recording) — nothing to park; the caller falls
+      // back to its direct-send path.
+      return false;
+    }
     // Mirrors dispatchKeyword's "send" case (wantBlob branch) — this app
     // always wants the blob, so that branch is the only one manual
     // stop-and-send needs to reach.
@@ -444,7 +454,13 @@ export function useRealtimeTranscription(
       closeMic: opts.closeMic,
       hq: false,
     };
-    send({ type: "STOP" });
+    // `connecting`/`finalizing`: a stop is already in flight or nothing has
+    // started — the idle-transition effect fires the parked send either way;
+    // only a live segment needs the STOP.
+    if (state === "recording" || state === "reconnecting") {
+      send({ type: "STOP" });
+    }
+    return true;
   }, [state, transcript, send]);
 
   // Cross-tab mic mutex: while a recording session is active, claim the mic

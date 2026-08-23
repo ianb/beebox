@@ -97,8 +97,9 @@ export function MobileTextareaRow({
                 // hq-dictation-switch.md, chunk 2): route through the
                 // finalize→blob→HQ slow path instead of building the emission
                 // from `transcription.stop()`'s realtime text here.
-                transcription.submitSegment({ closeMic: true });
-                return;
+                if (transcription.submitSegment({ closeMic: true })) return;
+                // Segment already settled (machine idle) — fall through to
+                // the direct-send path below.
               }
               // transcription.stop() only ever resolves; nothing here can
               // reject, so the wrapper just satisfies onClick's void type.

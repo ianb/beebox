@@ -26,8 +26,12 @@ export interface TranscriptionHandle {
   finalWords: readonly FinalWord[] | null;
   start: () => void;
   stop: () => Promise<{ text: string; words: readonly FinalWord[] | null }>;
-  /** Manual stop-and-send routed through the HQ slow path (see useRealtimeTranscription). */
-  submitSegment: (opts: { closeMic: boolean }) => void;
+  /**
+   * Manual stop-and-send routed through the HQ slow path (see
+   * useRealtimeTranscription). False = nothing to park (segment already
+   * settled) — the caller falls back to its direct-send path.
+   */
+  submitSegment: (opts: { closeMic: boolean }) => boolean;
   cancel: () => void;
 }
 
@@ -117,8 +121,9 @@ function DesktopComposerRow({
                 // and does everything from there (composer + draft clearing,
                 // mic re-arm/close, audio retention) via the shared
                 // onVoiceIntent path, so nothing is duplicated here.
-                transcription.submitSegment({ closeMic: true });
-                return;
+                if (transcription.submitSegment({ closeMic: true })) return;
+                // Segment already settled (machine idle) — fall through to
+                // the direct-send path below.
               }
               // Continue from any prior composer text so it isn't dropped.
               const text = joinTranscript(input, transcription.transcript).trim();

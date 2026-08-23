@@ -171,6 +171,9 @@ None.
 | New frontend against old server (the risky deploy direction — review finding) | planned | `setFeature` rejects the unknown name (`chat-control-procedures.ts:181`); the toggle surfaces the rejection instead of pretending, and no client-side HQ runs on a value the server refused | clear |
 | Tap-send with the switch on (pre-review gap) | planned (chunk 6) | routed through the HQ slow path; realtime fallback on failure | clear (pending-draft UI shows the wait) |
 
+| Mid-deploy: new frontend toggles HQ against an old server that rejects the feature (closing review, accepted) | no | the send still transcribes at HQ client-side and `stt="hq"` stays TRUE (it describes the transcription that ran, not the feature acceptance); only the persistent preference fails to stick, matching narration's existing optimistic-toggle pattern | benign, self-heals on feature reload |
+| Landmark seeds `hq-dictation="on"` (closing review, accepted) | no | the client learns features only after session assignment, so the FIRST dictated message goes realtime; HQ applies from the second. Same latent shape as narration's seed | documented; revisit if landmark-seeded voice defaults matter in practice |
+
 **Critical gap:** none — every degradation lands on an honest absent-stamp or
 today's behavior.
 

@@ -141,7 +141,7 @@ function StateBlock({ spec }: { spec: Spec }) {
     finalWords: null,
     start: noop,
     stop: () => Promise.resolve({ text: spec.transcript, words: null }),
-    submitSegment: noop,
+    submitSegment: () => false,
     cancel: noop,
   };
   const targetBusy = chatTargetStatus({ isStreaming: spec.isStreaming, processBusy: false }).state === "busy";
