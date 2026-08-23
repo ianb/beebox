@@ -21,6 +21,7 @@ export const RunStepPrecheck = z.object({
 export const RunStepRun = z.object({
   "session-id": z.string().optional(),
   stdout: z.string().optional(),
+  error: z.string().optional(),
   "git-ref": z.string().optional(),
 });
 
@@ -29,6 +30,7 @@ export const RunStepValidate = z.object({
   status: z.enum(["pass", "fail", "warn"]),
   stdout: z.string().optional(),
   review: z.string().optional(),
+  error: z.string().optional(),
 });
 
 /** One step's execution record. */
@@ -63,7 +65,7 @@ This card is managed by the procedure engine. Agents should read it to understan
 
 Check the root \`status\` field for overall progress: pending → running → completed/failed. Each entry in \`steps\` also has its own status.
 
-Step statuses: pending → running → completed/skipped/failed. Look at a step's \`precheck.status\` to see why it was skipped, and \`validate.status\` to see if validation passed.
+Step statuses: pending → running → completed/skipped/failed. Look at a step's \`precheck.status\` to see why it was skipped, \`run.error\` for run-agent or shell failures, and \`validate.error\` / \`validate.status\` for validation failures.
 
 The \`expires\` field (stamped by the engine at completion) is when \`cb procedure gc\` may delete this run's directory. Run dirs are a recent cache — git history is the archive. To retain a specific run, set \`expires: never\` or push the date out.
 

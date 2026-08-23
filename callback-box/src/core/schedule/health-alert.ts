@@ -20,7 +20,7 @@ import {
   selectAlertableTasks,
   describeUnhealthyTask,
 } from "./health-box.js";
-import type { TaskHealth } from "./health.js";
+import { conciseScheduleError, type TaskHealth } from "./health.js";
 import { loadScriptState, saveScriptState } from "./state.js";
 import type { TelegramService } from "../../services/telegram.js";
 import type { PushService } from "../../services/push.js";
@@ -36,7 +36,7 @@ export interface HealthAlertResult {
 function alertLine(task: TaskHealth, now: Date): string {
   const line = `- ${describeUnhealthyTask(task, now)}`;
   if (task.status === "failing" && task.lastError) {
-    return `${line} — ${task.lastError.split("\n")[0]}`;
+    return `${line} — ${conciseScheduleError(task.lastError)}`;
   }
   return line;
 }

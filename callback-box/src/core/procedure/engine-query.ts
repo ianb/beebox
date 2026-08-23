@@ -114,6 +114,12 @@ export async function procedureStatus(
                 ? fmt.warn("▸")
                 : fmt.dim("·");
       ctx.writeLine(`  ${icon} ${fmt.strong(step.id)} ${fmt.dim(`(${status})`)}`);
+      if (step.run?.error !== undefined) {
+        ctx.writeLine(fmt.fail(`      ${step.run.error}`));
+      }
+      if (step.validate?.error !== undefined) {
+        ctx.writeLine(fmt.fail(`      ${step.validate.error}`));
+      }
     }
 
     return okVoid;

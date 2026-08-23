@@ -170,7 +170,7 @@ export async function startProcedure(
   ctx.writeLine("");
 
   // Execute steps (optionally filtered to a single step)
-  const { allSucceeded, failedStepId } = await runSteps({
+  const { allSucceeded, failedStepId, failedStepError } = await runSteps({
     ctx,
     boxRoot,
     procedure,
@@ -187,7 +187,7 @@ export async function startProcedure(
     procedure,
     runDir,
     runCardPath,
-    result: { allSucceeded, failedStepId },
+    result: { allSucceeded, failedStepId, failedStepError },
     materialized,
   });
 }
@@ -272,7 +272,7 @@ export async function resumeProcedure(params: {
     resumeOptions.directive = run.directive;
   }
 
-  const { allSucceeded, failedStepId } = await runSteps({
+  const { allSucceeded, failedStepId, failedStepError } = await runSteps({
     ctx,
     boxRoot,
     procedure,
@@ -289,7 +289,7 @@ export async function resumeProcedure(params: {
     procedure,
     runDir,
     runCardPath,
-    result: { allSucceeded, failedStepId },
+    result: { allSucceeded, failedStepId, failedStepError },
     materialized: true,
   });
 }

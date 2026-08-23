@@ -7,7 +7,11 @@ The trust rule: a deliberate skip (budget, missing connector, disabled)
 must never be reported as overdue or failing.
 
 ```ts setup
-import { evaluateTaskHealth, findMissedOccurrence } from "../../src/core/schedule/health.js";
+import {
+  conciseScheduleError,
+  evaluateTaskHealth,
+  findMissedOccurrence,
+} from "../../src/core/schedule/health.js";
 import { parseScheduledScript } from "../../src/schemas/scheduled-script.js";
 import { normalizeScriptState } from "../../src/core/schedule/state.js";
 import {
@@ -90,6 +94,31 @@ const h = evaluate({
 });
 JSON.stringify(h.reason ?? null)
 => null
+```
+
+The concise error shown by `cb health` and proactive alerts prefers the precise
+child-process diagnostic over the generic command wrapper:
+
+```ts
+conciseScheduleError(
+  "Command failed with exit code 1\nstderr:\n" +
+  "…older stderr chatter\n" +
+  "Agent failed: intermediate symptom\n" +
+  "Error: Procedure refresh-maps failed — Agent invocation failed: Model gpt-retired is not supported\n" +
+  "stdout:\nProcedure failed",
+)
+=> Error: Procedure refresh-maps failed — Agent invocation failed: Model gpt-retired is not supported
+```
+
+A timeout without a precise stderr diagnostic keeps its actionable headline
+instead of showing the last progress line:
+
+```ts
+conciseScheduleError(
+  "Command timed out after 1800000ms of awake runtime\n" +
+  "stdout:\nStep: refresh-maps",
+)
+=> Command timed out after 1800000ms of awake runtime
 ```
 
 ## Overdue

@@ -1,12 +1,67 @@
 ---
 title: "A procedure's `model:` pin is a Claude name, so every pinned procedure fails silently on a codex box"
-workstream: unattached
+workstream: codex-model-pins
 area: callback-box
 priority: important
+resolution: implemented
 labels: [codex, procedures, scheduler]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — refresh-maps still failing after the AGENTS.md fix landed
+---
+
+**Closed — implemented.** Procedure cards now express portable intent with
+`efficient`, `balanced`, `strong`, and `strongest`. The single engine-aware map
+resolves those tiers as follows:
+
+| tier | Claude | Codex |
+| --- | --- | --- |
+| `efficient` | Haiku | Luna |
+| `balanced` | Sonnet | Terra |
+| `strong` | Opus | Sol |
+| `strongest` | Fable | Sol |
+
+The old `haiku` / `sonnet` / `opus` / `fable` values remain compatibility
+aliases for the same four rows, resolved through the current box engine. The
+stock `refresh-maps` and `process-pages` cards now use portable tiers, and a
+fresh-init regression test scans **every** stock procedure for provider-shaped
+pins so a newly added template cannot repeat this silently.
+
+**The silence is fixed at the native failure boundary, not only for this one
+model.** A harness failure with no usable assistant activity (auth/model
+rejection, startup/transport failure) is distinct from a started turn that made
+partial progress. Declared run shells still execute because they may be
+finalizers; the step then gates before validation. Run-agent failures land in
+`run.error`; judge invocation failures land in `validate.error`; the exact cause
+continues through the procedure CLI error, scheduler state, `cb health`, health
+alerts, and the dashboard's collapsed schedule row. Procedure CLI errors are
+flushed before exit. Timeouts retain their timeout headline when no more precise
+child diagnostic exists.
+
+**Coverage choice.** A full "run every stock schedule" integration test was not
+added: the stock set deliberately depends on clocks and external connectors, so
+such a test would mostly exercise unrelated fixtures. Instead coverage is split
+at the stable seams: all installed templates are scanned, every tier and legacy
+alias is mapped for both engines, a Codex-configured box runs through the real
+procedure routing path, the default judge resolves to Terra, native
+no-assistant failures and judge failures preserve their causes, and scheduler
+surfaces select the actionable child error. A real `efficient` procedure was
+also run successfully through Codex/Luna in the isolated `test1` clone, and its
+thread contained a normal assistant response. The temporary fixture was
+removed afterward.
+
+No global model allowlist was added to generic `AgentInvokeOptions`: that seam
+intentionally carries native model IDs for callers such as chat. Procedure
+model policy is instead typed and centralized in the shared resolver, covering
+initial agents, review retries, and instruction judges without making native
+callers pretend their IDs are portable tiers.
+
+Independent cross-model review found and drove fixes for the real Codex
+`turn.failed` shape, Claude post-result/partial-work classification, judge-side
+silence, truncated stderr selection, timeout preservation, and the dashboard
+summary. Focused doctests, typecheck, lint, knowledge audit, browser checks, and
+the complete callback-box and root suites are green.
+
 ---
 
 A procedure step can pin a model:

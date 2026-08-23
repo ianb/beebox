@@ -99,6 +99,33 @@ refresh-maps.procedure.card
 view-card-shape.procedure.card
 ```
 
+The stock agent-backed procedures use portable tiers, so a fresh box never
+ships a provider-specific model pin:
+
+```ts continue
+const refreshMaps = await fs.readFile(
+  path.join(boxRoot, "config/procedures/refresh-maps.procedure.card"),
+  "utf8",
+);
+const processPages = await fs.readFile(
+  path.join(boxRoot, "config/procedures/process-pages.procedure.card"),
+  "utf8",
+);
+const procedureDir = path.join(boxRoot, "config/procedures");
+const stockProcedures = await Promise.all(
+  (await fs.readdir(procedureDir))
+    .filter((name) => name.endsWith(".procedure.card"))
+    .map((name) => fs.readFile(path.join(procedureDir, name), "utf8")),
+);
+print(`refresh-maps: ${refreshMaps.includes("model: efficient")}`);
+print(`process-pages: ${processPages.includes("model: balanced")}`);
+print(`provider pins: ${/model: (?:haiku|sonnet|opus|fable)/.test(stockProcedures.join("\n"))}`);
+=>
+refresh-maps: true
+process-pages: true
+provider pins: false
+```
+
 ```ts continue
 await listFiles(boxRoot, "config")
 =>

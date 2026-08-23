@@ -8,6 +8,7 @@ no live model is hit.
 ```ts setup
 import { evaluateInstructions } from "../../../src/core/procedure/engine-validate-model.js";
 import { createFakeAgent } from "../../helpers/fake-agent.js";
+import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 ```
 
 ## A passing verdict
@@ -99,4 +100,40 @@ print(`review mentions failure: ${result.review.includes("could not obtain a ver
 =>
 passed: false
 review mentions failure: true
+```
+
+## Default judge tier follows the box engine
+
+An unpinned instruction judge must not inherit a Claude-only default on a Codex
+box.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("config/box.json", JSON.stringify({ agentEngine: "codex" }));
+box.commitAll("Configure Codex");
+
+let fakeAgent;
+const createAgent = (opts) => {
+  fakeAgent = createFakeAgent({
+    name: opts.name,
+    act: async () => ({ success: true }),
+    structuredResult: () => ({ passed: true, reasoning: "Looks good." }),
+  });
+  return fakeAgent;
+};
+
+await evaluateInstructions({
+  boxRoot: box.root,
+  instructions: ["The change is complete."],
+  whys: [],
+  diff: "+ complete",
+  createAgent,
+  name: "judge",
+});
+fakeAgent.invocations[0].options.model
+=> gpt-5.6-terra
+```
+
+```ts cleanup
+await box.cleanup();
 ```

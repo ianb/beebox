@@ -152,7 +152,7 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   const schedules = await installSchedules(boxRoot);
   if (schedules.length > 0) {
     console.log(`\nInstalled ${schedules.length} schedule(s) in config/schedules/ (map refresh and run cleanup enabled; other seeds disabled)`);
-    console.log("  refresh-maps may invoke a Haiku agent when directory structure changes, including a full map build on a fresh box.");
+    console.log("  refresh-maps may invoke an efficient-tier agent when directory structure changes, including a full map build on a fresh box.");
     console.log("  Enable an opt-in schedule in the dashboard or by setting enabled: true after reviewing it and configuring any required connector secrets.");
     for (const s of schedules) {
       console.log(`  ${s}`);

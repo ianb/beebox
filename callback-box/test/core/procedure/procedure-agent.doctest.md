@@ -8,6 +8,7 @@ import { startProcedure } from "../../../src/core/procedure/engine.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { createFakeAgent } from "../../helpers/fake-agent.js";
 import { execSync } from "node:child_process";
+import { parseProcedureRun } from "../../../src/schemas/procedure-run.js";
 ```
 
 ## Agent step with mock runner
@@ -30,7 +31,7 @@ steps:
           echo "3 items to process"
     run:
       agents:
-        - model: haiku
+        - model: efficient
           prompt: Process the items listed in the precheck output.
 ---
 `);
@@ -82,6 +83,173 @@ has step ref: true
 has agent instructions: true
 model: claude-haiku-4-5-20251001
 agent wrote: processed 3 items
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## The same portable tier resolves for a Codex box
+
+Model resolution happens on the real procedure path before the injected agent
+factory, so a recording fake proves the box engine affects the invocation—not
+only an isolated mapping helper.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("config/box.json", JSON.stringify({ agentEngine: "codex" }));
+await box.write("config/procedures/codex-tier.procedure.card", `---
+name: codex-tier
+steps:
+  - id: work
+    run:
+      agents:
+        - model: efficient
+          prompt: Do routine work.
+---
+`);
+box.commitAll("Add codex procedure");
+
+let fakeAgent;
+const createAgent = (opts) => {
+  fakeAgent = createFakeAgent({
+    name: opts.name,
+    act: async () => ({ success: true }),
+  });
+  return fakeAgent;
+};
+const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
+const result = await startProcedure({
+  ctx,
+  procedureNameOrPath: "codex-tier",
+  options: { createAgent },
+});
+print(`success: ${result.ok}`);
+print(`model: ${fakeAgent.invocations[0].options.model}`);
+=>
+success: true
+model: gpt-5.6-luna
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Invocation rejection stays primary while finalizers still run
+
+A native harness can reject a model or fail without a usable assistant
+response. The procedure runs its declared shells (some are cleanup/finalizers),
+then gates before validation and records the exact agent error.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("config/procedures/rejected.procedure.card", `---
+name: rejected
+steps:
+  - id: work
+    run:
+      agents:
+        - model: balanced
+          prompt: Do work.
+      shells:
+        - echo finalized > box/output/finalized.txt
+    validate:
+      severity: warn
+      shells:
+        - echo validated > box/output/validated.txt
+---
+`);
+await box.write("box/output/.gitkeep", "");
+box.commitAll("Add rejected procedure");
+
+const createAgent = (opts) => createFakeAgent({
+  name: opts.name,
+  act: async () => ({
+    success: false,
+    error: "Model gpt-retired is not supported",
+    invocationFailure: true,
+  }),
+});
+const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
+const result = await startProcedure({
+  ctx,
+  procedureNameOrPath: "rejected",
+  options: { createAgent },
+});
+const runs = await box.list("procedure/runs");
+const runDir = runs.split("\n").find((file) => file.includes("rejected_"));
+const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
+const outputFiles = await box.list("box/output");
+print(`success: ${result.ok}`);
+print(`error returned: ${result.ok ? "" : result.error.message}`);
+print(`step: ${run.steps[0].status}`);
+print(`error recorded: ${run.steps[0].run.error}`);
+print(`finalizer ran: ${outputFiles.includes("finalized.txt")}`);
+print(`validation ran: ${outputFiles.includes("validated.txt")}`);
+=>
+success: false
+error returned: Procedure rejected failed at step: work — Agent invocation failed: Model gpt-retired is not supported
+step: failed
+error recorded: Model gpt-retired is not supported
+finalizer ran: true
+validation ran: false
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Judge invocation rejection is not reduced to a validation symptom
+
+Even a `warn` instruction check cannot claim a usable validation result when
+the native judge harness rejected the invocation. The step fails with the
+engine cause in both the validate record and the CLI result.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("config/procedures/judge-rejected.procedure.card", `---
+name: judge-rejected
+steps:
+  - id: work
+    run:
+      shells:
+        - echo work complete
+    validate:
+      severity: warn
+      instructions:
+        - The work is complete.
+---
+`);
+box.commitAll("Add judge-rejected procedure");
+
+const createAgent = (opts) => createFakeAgent({
+  name: opts.name,
+  act: async () => ({ success: true }),
+  structuredFailure: {
+    error: "Model claude-retired is not supported",
+    invocationFailure: true,
+  },
+});
+const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
+const result = await startProcedure({
+  ctx,
+  procedureNameOrPath: "judge-rejected",
+  options: { createAgent },
+});
+const runs = await box.list("procedure/runs");
+const runDir = runs.split("\n").find((file) => file.includes("judge-rejected_"));
+const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
+print(`success: ${result.ok}`);
+print(`error returned: ${result.ok ? "" : result.error.message}`);
+print(`step: ${run.steps[0].status}`);
+print(`validation status: ${run.steps[0].validate.status}`);
+print(`validation error: ${run.steps[0].validate.error}`);
+=>
+success: false
+error returned: Procedure judge-rejected failed at step: work — Agent invocation failed: Model claude-retired is not supported
+step: failed
+validation status: warn
+validation error: Model claude-retired is not supported
 ```
 
 ```ts cleanup

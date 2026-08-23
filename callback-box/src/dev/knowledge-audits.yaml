@@ -581,6 +581,25 @@ tests:
       scenario-test question, not a knowledge-audit one — this audit only asserts
       the agent knows where procedures live and their phase structure.
 
+  - id: procedure-model-tier
+    prompt: >
+      I'm adding an agent step to a procedure that must work whether the box uses
+      Claude or Codex. What should I put in its `model:` field for a routine,
+      cost-conscious task?
+    expected_level: knows_about
+    watch_for: >
+      Recommends the portable `efficient` tier and explains that the configured
+      agent engine maps it to a native model. Must not recommend a Claude or
+      Codex model id as the portable value.
+    correct_contains: ["efficient"]
+    response_not_matches:
+      - "model:\\s*(?:haiku|sonnet|opus|fable|gpt-|claude-)"
+    tags: [procedures, models]
+    notes: >
+      Status 2026-08-23: PASS on Codex against the isolated test1 clone. The
+      agent recommended `model: efficient`, explained that the box engine maps
+      the tier natively, and did not recommend a provider-specific pin.
+
   - id: procedure-instructions-gate
     prompt: "In a procedure's validate phase, do `instructions:` actually gate the step, or are they just human-readable notes?"
     expected_level: knows_directly

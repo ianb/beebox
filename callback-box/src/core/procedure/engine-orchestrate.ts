@@ -15,6 +15,12 @@ import { updateRunCardStatus } from "./engine-run-card.js";
 import { computeRunExpires } from "./run-expiry.js";
 import { executeStep } from "./engine-step.js";
 
+export interface RunStepsResult {
+  allSucceeded: boolean;
+  failedStepId: string | null;
+  failedStepError: string | null;
+}
+
 /**
  * Run a procedure's steps in sequence, returning the failed step id if any.
  * `options.step` runs exactly one step; `options.fromStep` runs that step and
@@ -29,7 +35,7 @@ export async function runSteps(args: {
   relProcedurePath: string;
   options: ProcedureOptions;
   ensureMaterialized: () => Promise<void>;
-}): Promise<{ allSucceeded: boolean; failedStepId: string | null }> {
+}): Promise<RunStepsResult> {
   const { ctx, boxRoot, procedure, procedureCardPath, runCardPath, relProcedurePath, options } =
     args;
   const stepsToRun = options.step
@@ -54,12 +60,16 @@ export async function runSteps(args: {
       ...(options.createAgent && { createAgent: options.createAgent }),
     });
 
-    if (result === "failed") {
-      return { allSucceeded: false, failedStepId: step.id };
+    if (result.status === "failed") {
+      return {
+        allSucceeded: false,
+        failedStepId: step.id,
+        failedStepError: result.error ?? null,
+      };
     }
   }
 
-  return { allSucceeded: true, failedStepId: null };
+  return { allSucceeded: true, failedStepId: null, failedStepError: null };
 }
 
 /**
@@ -73,13 +83,13 @@ export async function finalizeRun(args: {
   procedure: ParsedProcedure;
   runDir: string;
   runCardPath: string;
-  result: { allSucceeded: boolean; failedStepId: string | null };
+  result: RunStepsResult;
   /** Whether the run dir is committed. A fresh start where every step skipped
    *  is a no-op whose dir is removed; resume always passes true. */
   materialized: boolean;
 }): Promise<Result<void, ProcedureError>> {
   const { ctx, boxRoot, procedure, runDir, runCardPath, result, materialized } = args;
-  const { allSucceeded, failedStepId } = result;
+  const { allSucceeded, failedStepId, failedStepError } = result;
   const procedureName = procedure.name;
 
   if (!materialized) {
@@ -113,6 +123,6 @@ export async function finalizeRun(args: {
   ctx.writeLine(fmt.fail(`Procedure failed: ${procedureName}`));
   return err({
     cause: "step-failed",
-    message: `Procedure ${procedureName} failed at step: ${failedStepId ?? "unknown"}`,
+    message: `Procedure ${procedureName} failed at step: ${failedStepId ?? "unknown"}${failedStepError === null ? "" : ` — ${failedStepError}`}`,
   });
 }

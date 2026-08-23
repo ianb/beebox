@@ -25,6 +25,8 @@ import {
 import type { ScriptState } from "./state.js";
 import { isContendedFailure } from "../../lib/git.js";
 
+export { conciseScheduleError } from "../../shared/schedule-error.js";
+
 const { rrulestr } = rrulePkg;
 
 export type TaskHealthStatus =

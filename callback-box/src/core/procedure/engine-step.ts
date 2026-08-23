@@ -15,7 +15,8 @@ import {
 } from "./engine-types.js";
 import { updateStepInRunCard } from "./engine-run-card.js";
 import { executePhaseShells } from "./engine-phase.js";
-import { runAndValidate, type ValidateOutcome, type RunShellFailure } from "./engine-run-phase.js";
+import { runAndValidate, type ValidateOutcome } from "./engine-run-phase.js";
+import type { RunShellFailure } from "./engine-run-execute.js";
 
 /**
  * Parameters for executeStep
@@ -38,6 +39,12 @@ export interface ExecuteStepParams {
   createAgent?: AgentFactory;
 }
 
+export interface StepExecutionResult {
+  status: "completed" | "skipped" | "failed";
+  /** Root cause to carry through the procedure/CLI boundary when known. */
+  error?: string;
+}
+
 /**
  * Execute a single procedure step.
  *
@@ -45,7 +52,7 @@ export interface ExecuteStepParams {
  */
 export async function executeStep(
   params: ExecuteStepParams
-): Promise<"completed" | "skipped" | "failed"> {
+): Promise<StepExecutionResult> {
   const { ctx, step, runCardPath } = params;
 
   ctx.writeLine(fmt.phase(`Step: ${step.id}`));
@@ -65,7 +72,7 @@ export async function executeStep(
   // ── Precheck ──
   const precheck = await runPrecheck(params);
   if (precheck.outcome !== "continue") {
-    return precheck.outcome;
+    return { status: precheck.outcome };
   }
 
   // This step is going to do something — the run now persists
@@ -74,11 +81,20 @@ export async function executeStep(
   // ── Run ──
   if (!step.run) {
     await recordNoRunPhase(params);
-    return "completed";
+    return { status: "completed" };
   }
 
   // ── Run + validate (with severity:review auto-retry) ──
-  const { gitRef, sessionId, runStdout, validateResult, reviewExhausted, runFailure, engineUnavailable } =
+  const {
+    gitRef,
+    sessionId,
+    runStdout,
+    validateResult,
+    reviewExhausted,
+    runFailure,
+    engineUnavailable,
+    invocationFailure,
+  } =
     await runAndValidate({
       ...params,
       precheckOutput: precheck.output,
@@ -94,6 +110,7 @@ export async function executeStep(
     reviewExhausted,
     runFailure,
     engineUnavailable,
+    invocationFailure,
   });
 }
 
@@ -203,6 +220,50 @@ interface RecordStepResultsParams {
   /** A deferred-recoverable engine failure (quota exhausted) — fails the
    * step with the informative message; retrying later can succeed. */
   engineUnavailable: string | undefined;
+  /** Native harness failed without a usable assistant response. */
+  invocationFailure: string | undefined;
+}
+
+function buildRunUpdate(args: RecordStepResultsParams): NonNullable<StepUpdate["run"]> {
+  const {
+    gitRef,
+    sessionId,
+    runStdout,
+    runFailure,
+    engineUnavailable,
+    invocationFailure,
+    validateResult,
+  } = args;
+  const runResult: NonNullable<StepUpdate["run"]> = { gitRef };
+  if (sessionId) runResult.sessionId = sessionId;
+  if (runStdout) runResult.stdout = runStdout;
+  if (runFailure !== undefined) {
+    const detail = [runFailure.stdout, runFailure.stderr].filter(Boolean).join("\n");
+    runResult.stdout = `Shell command failed (exit ${runFailure.exitCode})${detail ? `:\n${detail}` : ""}`;
+  }
+  if (engineUnavailable !== undefined) runResult.stdout = engineUnavailable;
+
+  const errors: string[] = [];
+  if (invocationFailure !== undefined && validateResult?.invocationFailure === undefined) {
+    errors.push(invocationFailure);
+  }
+  if (engineUnavailable !== undefined && !errors.includes(engineUnavailable)) {
+    errors.push(engineUnavailable);
+  }
+  if (runFailure !== undefined) errors.push(`Shell command failed (exit ${runFailure.exitCode})`);
+  if (errors.length > 0) runResult.error = errors.join("\n");
+  return runResult;
+}
+
+function buildValidateUpdate(
+  result: ValidateOutcome,
+): NonNullable<StepUpdate["validate"]> {
+  return {
+    status: result.status,
+    ...(result.stdout !== undefined && { stdout: result.stdout }),
+    ...(result.review !== undefined && { review: result.review }),
+    ...(result.invocationFailure !== undefined && { error: result.invocationFailure }),
+  };
 }
 
 /**
@@ -210,18 +271,30 @@ interface RecordStepResultsParams {
  */
 async function recordStepResults(
   args: RecordStepResultsParams
-): Promise<"completed" | "failed"> {
-  const { params, gitRef, sessionId, runStdout, validateResult, reviewExhausted, runFailure, engineUnavailable } = args;
+): Promise<StepExecutionResult> {
+  const {
+    params,
+    validateResult,
+    reviewExhausted,
+    runFailure,
+    engineUnavailable,
+    invocationFailure,
+  } = args;
   const { ctx, boxRoot, step, procedure, runCardPath } = params;
 
   // A step fails when a run shell exited non-zero, when an `abort` validation
   // failed, when a `review` failure exhausted its retries (the auto-retry in
   // runAndValidate makes review gate), or when the engine was unavailable
-  // (deferred-recoverable — the step can succeed on a later run).
+  // (deferred-recoverable — the step can succeed on a later run), or when the
+  // harness failed without a usable assistant response.
   const validationGated =
     validateResult?.status === "fail" && step.validate?.severity === "abort";
   const failed =
-    runFailure !== undefined || validationGated || reviewExhausted || engineUnavailable !== undefined;
+    runFailure !== undefined ||
+    validationGated ||
+    reviewExhausted ||
+    engineUnavailable !== undefined ||
+    invocationFailure !== undefined;
   const stepUpdate: StepUpdate = {
     status: failed ? "failed" : "completed",
     completedAt: getBoxTimeISO(boxRoot),
@@ -231,35 +304,10 @@ async function recordStepResults(
     stepUpdate.precheck = { status: "pass", stdout: "" };
   }
 
-  const runResult: NonNullable<StepUpdate["run"]> = { gitRef };
-  if (sessionId) {
-    runResult.sessionId = sessionId;
-  }
-  if (runStdout) {
-    runResult.stdout = runStdout;
-  }
-  if (runFailure) {
-    // Capture the failure detail (exit code + both streams) in the run card so
-    // `cb procedure status` and later inspection show why the step failed.
-    const detail = [runFailure.stdout, runFailure.stderr].filter(Boolean).join("\n");
-    runResult.stdout = `Shell command failed (exit ${runFailure.exitCode})${detail ? `:\n${detail}` : ""}`;
-  }
-  if (engineUnavailable !== undefined) {
-    runResult.stdout = engineUnavailable;
-  }
-  stepUpdate.run = runResult;
+  stepUpdate.run = buildRunUpdate(args);
 
   if (validateResult) {
-    const valUpdate: NonNullable<StepUpdate["validate"]> = {
-      status: validateResult.status,
-    };
-    if (validateResult.stdout) {
-      valUpdate.stdout = validateResult.stdout;
-    }
-    if (validateResult.review) {
-      valUpdate.review = validateResult.review;
-    }
-    stepUpdate.validate = valUpdate;
+    stepUpdate.validate = buildValidateUpdate(validateResult);
   }
 
   const succeeded = stepUpdate.status !== "failed";
@@ -280,5 +328,9 @@ async function recordStepResults(
   }
   ctx.writeLine("");
 
-  return succeeded ? "completed" : "failed";
+  return {
+    status: succeeded ? "completed" : "failed",
+    ...(invocationFailure !== undefined && { error: `Agent invocation failed: ${invocationFailure}` }),
+    ...(engineUnavailable !== undefined && { error: engineUnavailable }),
+  };
 }

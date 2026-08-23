@@ -6,7 +6,7 @@
  */
 
 import { type createAgent as realCreateAgent } from "../agent/index.js";
-import { MODEL_ID } from "../../shared/model-ids.js";
+import type { ProcedureModelName } from "../../shared/agent-models.js";
 import type { RunStepResult, ProcedureRunFields } from "../../schemas/procedure-run.js";
 import type { ProcedureStepDef } from "../../schemas/procedure.js";
 
@@ -73,14 +73,6 @@ export function isLegalRunStatusTransition(from: RunStatus, to: RunStatus): bool
   return RUN_STATUS_TRANSITIONS[from].includes(to);
 }
 
-/** Maps friendly model names to full model IDs (from the canonical
- *  {@link MODEL_ID} source shared with the frontend model picker). */
-export const MODEL_MAP: Record<string, string> = {
-  haiku: MODEL_ID.haiku,
-  sonnet: MODEL_ID.sonnet,
-  opus: MODEL_ID.opus,
-};
-
 /** Agent factory type — matches createAgent() signature */
 export type AgentFactory = typeof realCreateAgent;
 
@@ -101,7 +93,7 @@ export interface ProcedureOptions {
 
 export interface ParsedPhase {
   shells: string[];
-  agents: Array<{ prompt: string; model?: string; maxTurns?: number }>;
+  agents: Array<{ prompt: string; model?: ProcedureModelName; maxTurns?: number }>;
   instructions: string[];
   whys: string[];
 }
@@ -111,7 +103,7 @@ export interface ParsedStep {
   description: string;
   precheck?: ParsedPhase & { passOutput?: boolean };
   run?: ParsedPhase;
-  validate?: { phase: ParsedPhase; severity: ProcedureSeverity; model?: string };
+  validate?: { phase: ParsedPhase; severity: ProcedureSeverity; model?: ProcedureModelName };
 }
 
 export interface ParsedProcedure {
@@ -129,6 +121,6 @@ export interface StepUpdate {
   startedAt?: string;
   completedAt?: string;
   precheck?: { status: PrecheckStatus; stdout?: string };
-  run?: { sessionId?: string; stdout?: string; gitRef?: string };
-  validate?: { status: ValidateStatus; stdout?: string; review?: string };
+  run?: { sessionId?: string; stdout?: string; error?: string; gitRef?: string };
+  validate?: { status: ValidateStatus; stdout?: string; review?: string; error?: string };
 }
