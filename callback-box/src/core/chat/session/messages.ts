@@ -14,6 +14,7 @@ import { buildChatContentBlocks } from "../../../shared/chat-content-blocks.js";
 import type { ChatContentBlock } from "../../../services/claude-chat.js";
 import type { ChatBackendMessage } from "../../../services/claude-chat-types.js";
 import type { ActivityKind, CardStateDetails } from "../card-activity.js";
+import type { ChatChannel } from "../../../shared/chat-channel.js";
 import type {
   SDKMessage,
   SDKTaskNotificationMessage,
@@ -79,12 +80,12 @@ export interface ChatSendInput {
   text: string;
   images?: ChatImage[];
   /**
-   * Where the user is sending from (e.g. "web-desktop", "web-mobile"),
-   * classified per request by the route layer. Surfaces to the agent as
-   * the snapshot's `channel` attribute so it can shape output for the
-   * device. Omitted when the transport doesn't know.
+   * Where the user is sending from: declared by the client, else classified
+   * from the User-Agent by the route layer. Surfaces to the agent as the
+   * snapshot's `channel` attribute so it can shape output for the surface.
+   * Omitted when the transport doesn't know.
    */
-  channel?: string;
+  channel?: ChatChannel;
   /**
    * Box-relative path of the card open in the chat's companion pane when
    * this message was sent. Surfaces to the agent as the read-only

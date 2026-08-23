@@ -10,6 +10,7 @@ field, never a specific message), and unchanged success shapes
 
 ```ts setup
 import { makeTestServer } from "../helpers/doctest-server.js";
+import { resolveChannel } from "../../src/webapp/routes/chat-helpers.js";
 ```
 
 Missing `message` returns 400:
@@ -163,6 +164,51 @@ const empty = await ctx.request({
   payload: { message: "hi", session: "new", images: [{ id: 1, mimeType: "image/png", dataBase64: "" }] },
 });
 empty.statusCode
+=> 400
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+## `channel`
+
+The surface the message was sent from is the client's to declare — only the
+browser can tell the iOS shell from mobile web, since the WebView carries an
+ordinary iPhone UA. What the client sends wins over that UA:
+
+```ts
+[
+  resolveChannel("ios-native", "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)"),
+  resolveChannel("web-desktop", "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)"),
+].join(" ")
+=> ios-native web-desktop
+```
+
+A client that declares nothing — an old web bundle, or the iOS share extension
+posting straight to this route — keeps getting the UA classification it got
+before the field existed, and nothing at all when there is no UA to read:
+
+```ts
+[
+  resolveChannel(undefined, "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)"),
+  resolveChannel(undefined, "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"),
+  String(resolveChannel(undefined, undefined)),
+].join(" ")
+=> web-mobile web-desktop undefined
+```
+
+The value is a closed union at the parse boundary, so an unknown surface is a
+400 rather than a made-up attribute in the agent's context:
+
+```ts
+const ctx = await makeTestServer();
+const res = await ctx.request({
+  method: "POST",
+  url: "/api/chat/send",
+  payload: { message: "hi", session: "new", channel: "smoke-signal" },
+});
+res.statusCode
 => 400
 ```
 

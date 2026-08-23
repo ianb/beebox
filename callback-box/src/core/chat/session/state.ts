@@ -14,6 +14,7 @@ import * as path from "node:path";
 import { randomBytes } from "node:crypto";
 import { acquireChatActiveLock, releaseChatActiveLock } from "../../schedule/state.js";
 import type { ChatImage, ChatMessage, ChatSendInput } from "./messages.js";
+import type { ChatChannel } from "../../../shared/chat-channel.js";
 import { unionActivityKinds, mergeCardStateDetails } from "../card-activity.js";
 import { errorMessage } from "../../../lib/error-guards.js";
 import { isRecord } from "../../card-io.js";
@@ -229,7 +230,7 @@ export function deleteSessionFile(boxRoot: string, sessionFile: string | null): 
 export function combineQueuedInputs(queued: ChatSendInput[]): ChatSendInput {
   const combinedImages: ChatImage[] = [];
   const combinedTextParts: string[] = [];
-  let channel: string | undefined;
+  let channel: ChatChannel | undefined;
   let openCard: string | undefined;
   let idOffset = 0;
   for (const q of queued) {

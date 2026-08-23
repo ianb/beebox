@@ -31,6 +31,7 @@ import { trpcClient } from "./lib/trpc";
 import { mobileAuthHeaders } from "./lib/mobile-auth";
 import type { ActivityKind, CardStateDetails } from "@core/chat/card-activity.js";
 import { chatSendReasonKind, recordChatSendEvent } from "./lib/chat-send-diagnostics";
+import { currentChatChannel } from "./lib/chat-channel";
 
 export interface SessionContentBlock {
   type: "text" | "tool_use" | "tool_result" | "thinking" | "image";
@@ -259,6 +260,10 @@ export async function startChatTurn(params: {
         ...(openCard !== undefined ? { openCard } : {}),
         ...(cardActivity && cardActivity.length > 0 ? { cardActivity } : {}),
         ...(cardState && Object.keys(cardState).length > 0 ? { cardState } : {}),
+        // Ambient, not a caller-supplied field: only the browser can tell the
+        // native shell from mobile web, and it is re-read per send because the
+        // viewport (and, on an in-app navigation, the shell) can change.
+        channel: currentChatChannel(),
       }),
     });
     recordChatSendEvent(messageId, { event: "post-http-response", detail: { attempt: attemptNumber, status: response.status } });

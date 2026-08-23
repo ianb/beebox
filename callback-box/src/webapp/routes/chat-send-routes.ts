@@ -27,7 +27,7 @@ import {
   sendBodySchema,
   selfNoteBodySchema,
   whatsChangedBodySchema,
-  classifyChannel,
+  resolveChannel,
   extractCardFields,
   escapeXmlAttr,
   injectUserAttr,
@@ -237,8 +237,10 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
       });
     };
 
-    // Where the user is sending from, for the snapshot's `channel` attr.
-    const channel = classifyChannel(request.headers["user-agent"]);
+    // Where the user is sending from, for the snapshot's `channel` attr: the
+    // client's own reading (the only one that can see the native shell), with
+    // the User-Agent guess as the fallback for a client that sends nothing.
+    const channel = resolveChannel(body.channel, request.headers["user-agent"]);
 
     // Companion-pane state for the `open-card`/`card-activity`/`card-state`
     // snapshot attrs, normalized + filtered at this parse boundary. Rides
