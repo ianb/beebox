@@ -53,6 +53,9 @@ function ProfileMenu({ user, boxSlug, onToggleDebugLog, onToggleSourceView }: { 
       trigger={({ toggle, ariaProps }) => (
         <button
           type="button"
+          id="cb-nav-profile"
+          data-cb-reveal
+          data-cb-does={`opens the profile menu — settings, admin, source view, debug log, reload${user ? ", sign out" : ""}`}
           onClick={toggle}
           className="flex items-center gap-1.5 rounded-full hover:ring-2 hover:ring-white/30 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
           title={user ? user.name : "Menu"}
@@ -166,6 +169,7 @@ function PlateBadge({ base, count }: { base: string; count: number }) {
   if (count === 0) return null;
   return (
     <Link
+      id="cb-nav-todo"
       to={href(`${base}/browse/store/plate.todo-view.card`)}
       className="flex items-center gap-1 text-xs bg-white/20 text-white px-1.5 py-0.5 rounded-full hover:bg-white/30 transition-colors"
       title={`${count} todo${count !== 1 ? "s" : ""} on the plate`}
@@ -185,6 +189,7 @@ function ErrorBadge({ onToggleDebugLog }: { onToggleDebugLog: () => void }) {
   if (errorCount === 0) return null;
   return (
     <button
+      id="cb-nav-errors"
       onClick={() => { clearErrorCount(); onToggleDebugLog(); }}
       className="flex items-center gap-1 text-xs bg-danger/80 text-white px-1.5 py-0.5 rounded-full hover:bg-danger-dark transition-colors"
       title={`${errorCount} error${errorCount !== 1 ? "s" : ""}`}

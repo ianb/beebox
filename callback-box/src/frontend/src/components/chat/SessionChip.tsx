@@ -205,6 +205,9 @@ export const SessionChip = memo(function SessionChip(props: SessionChipProps) {
         trigger={({ toggle, ariaProps }) => (
           <button
             type="button"
+            id="cb-nav-session"
+            data-cb-reveal
+            data-cb-does="opens the session menu — new session, recent chats, model, advanced"
             onClick={toggle}
             className="min-h-[40px] min-w-[40px] px-2 sm:px-3 flex items-center justify-center gap-1.5 rounded-full bg-white/10 border border-white/15 hover:bg-white/20 text-white/80 hover:text-white text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
             title={accessibleName}

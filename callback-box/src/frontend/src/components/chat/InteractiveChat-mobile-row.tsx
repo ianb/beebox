@@ -9,7 +9,7 @@ import TextareaAutosize from "react-textarea-autosize";
 import { useTranscriptAutoscroll } from "../../hooks/useTranscriptAutoscroll";
 import { composerTextareaClasses, joinTranscript } from "./InteractiveChat-helpers";
 import { useInputValue, useInputStore } from "./input-store";
-import type { TranscriptionHandle } from "./InteractiveChat-composer";
+import { ComposerSendButton, type TranscriptionHandle } from "./InteractiveChat-composer";
 
 /**
  * Mobile-only textarea row shown below the button bar when typing or transcribing.
@@ -35,7 +35,6 @@ export function MobileTextareaRow({
 }) {
   const input = useInputValue();
   const setInput = useInputStore().set;
-  const circleBtn = "flex items-center justify-center w-12 h-12 rounded-full flex-shrink-0";
 
   // This textarea is separate from the desktop composer's (which has its own
   // ref + autoscroll wired in useChatActions), so it needs its own pinning.
@@ -45,6 +44,11 @@ export function MobileTextareaRow({
   return (
     <div className="flex gap-2 items-center">
       <TextareaAutosize
+        // `-mobile`, not the desktop row's address: this row and the button
+        // bar's row can be in the DOM at the same time (the bar stays mounted
+        // under `hidden sm:block` while typing), so they cannot share one id.
+        // Recorded in docs/plans/agent-points-at-ui.md, Track 1.
+        id="cb-composer-input-mobile"
         ref={textareaRef}
         value={isTranscribing ? joinTranscript(input, transcription.transcript) : input}
         onChange={(e) => { if (!isTranscribing) setInput(e.target.value); }}
@@ -88,41 +92,33 @@ export function MobileTextareaRow({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
             </svg>
           </button>
-          <button
-            onClick={() => {
-              // transcription.stop() only ever resolves; nothing here can
-              // reject, so the wrapper just satisfies onClick's void type.
-              void (async () => {
-                const finalText = await transcription.stop();
-                // Continue from any prior composer text so it isn't dropped.
-                const text = joinTranscript(input, finalText).trim();
-                if (text) onVoiceSegmentSend(text);
-                setInput("");
-                // Segment committed — drop the persisted dictation draft.
-                clearDraft();
-              })();
-            }}
-            disabled={!joinTranscript(input, transcription.transcript).trim()}
-            className={`${circleBtn} bg-accent text-white hover:bg-accent-dark disabled:bg-info-muted disabled:text-white/70 disabled:cursor-not-allowed`}
-            title="Send"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-            </svg>
-          </button>
         </>
-      ) : (
-        <button
-          onClick={handleSend}
-          disabled={!input.trim()}
-          className={`${circleBtn} bg-accent text-white hover:bg-accent-dark disabled:bg-info-muted disabled:text-white/70 disabled:cursor-not-allowed`}
-          title={targetBusy ? "Queue message (agent is busy)" : "Send"}
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-          </svg>
-        </button>
-      )}
+      ) : null}
+      {/* One send control for both branches, same as the button bar's row —
+          see ComposerSendButton. */}
+      <ComposerSendButton
+        id="cb-composer-send-mobile"
+        size="md"
+        onClick={() => {
+          if (!isTranscribing) {
+            handleSend();
+            return;
+          }
+          // transcription.stop() only ever resolves; nothing here can
+          // reject, so the wrapper just satisfies onClick's void type.
+          void (async () => {
+            const finalText = await transcription.stop();
+            // Continue from any prior composer text so it isn't dropped.
+            const text = joinTranscript(input, finalText).trim();
+            if (text) onVoiceSegmentSend(text);
+            setInput("");
+            // Segment committed — drop the persisted dictation draft.
+            clearDraft();
+          })();
+        }}
+        disabled={!(isTranscribing ? joinTranscript(input, transcription.transcript) : input).trim()}
+        title={isTranscribing || !targetBusy ? "Send" : "Queue message (agent is busy)"}
+      />
     </div>
   );
 }

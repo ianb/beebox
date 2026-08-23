@@ -227,6 +227,9 @@ export const VoiceChip = memo(function VoiceChip({
       trigger={({ toggle, ariaProps }) => (
         <button
           type="button"
+          id="cb-nav-voice"
+          data-cb-reveal
+          data-cb-does="opens the voice menu — mute, narration mode, transcription services"
           onClick={toggle}
           className="min-h-[40px] px-3 flex items-center justify-center rounded-full bg-white/10 border border-white/15 hover:bg-white/20 text-white/80 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
           title={label}

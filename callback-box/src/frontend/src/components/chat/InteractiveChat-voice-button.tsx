@@ -26,6 +26,19 @@ export function VoiceToggleButton({
 }) {
   return (
     <button
+      id="cb-composer-mic"
+      // Four states, one address: the description tracks the same four the
+      // `title` below does, so a scan reports what the mic does *now* rather
+      // than a static catalogue entry.
+      data-cb-does={
+        voicePaused
+          ? "resumes dictation — recording is paused while the agent speaks; tap to stop the speech and pick the mic back up"
+          : isTranscribing
+            ? "stops recording and leaves the transcript in the composer to edit"
+            : narrationEnabled
+              ? "starts dictation in narration mode — the agent speaks its replies back; tap again to stop"
+              : "starts dictation — speak, then tap again to stop and edit before sending"
+      }
       onClick={() => {
         if (voicePaused) {
           onUnpause();
