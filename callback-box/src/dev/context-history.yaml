@@ -3721,6 +3721,81 @@ test1:
       peak: 44966
       added: 0
       turns: 2
+  points-at-ui-where-is-the-mic:
+    - date: 2026-08-23T17:03:41.065Z
+      boxCommit: 3fac959a06f320bde979022c95f7d99060f90cb6
+      repoCommit: bfc3bcf831649ba283716771bbd6d46a1113b2fe
+      initial: 52394
+      peak: 52752
+      added: 358
+      turns: 7
+    - date: 2026-08-23T17:06:13.163Z
+      boxCommit: 3fac959a06f320bde979022c95f7d99060f90cb6
+      repoCommit: bfc3bcf831649ba283716771bbd6d46a1113b2fe
+      initial: 52439
+      peak: 53710
+      added: 1271
+      turns: 9
+  points-at-ui-unseen-location:
+    - date: 2026-08-23T17:03:41.065Z
+      boxCommit: 3fac959a06f320bde979022c95f7d99060f90cb6
+      repoCommit: bfc3bcf831649ba283716771bbd6d46a1113b2fe
+      initial: 52305
+      peak: 52804
+      added: 499
+      turns: 6
+    - date: 2026-08-23T17:06:13.163Z
+      boxCommit: 3fac959a06f320bde979022c95f7d99060f90cb6
+      repoCommit: bfc3bcf831649ba283716771bbd6d46a1113b2fe
+      initial: 52415
+      peak: 52956
+      added: 541
+      turns: 6
+  points-at-ui-control-link:
+    - date: 2026-08-23T17:03:41.065Z
+      boxCommit: 3fac959a06f320bde979022c95f7d99060f90cb6
+      repoCommit: bfc3bcf831649ba283716771bbd6d46a1113b2fe
+      initial: 52643
+      peak: 52643
+      added: 0
+      turns: 2
+    - date: 2026-08-23T17:06:13.163Z
+      boxCommit: 3fac959a06f320bde979022c95f7d99060f90cb6
+      repoCommit: bfc3bcf831649ba283716771bbd6d46a1113b2fe
+      initial: 52753
+      peak: 52753
+      added: 0
+      turns: 2
+  points-at-ui-reveal-not-operate:
+    - date: 2026-08-23T17:03:41.065Z
+      boxCommit: 3fac959a06f320bde979022c95f7d99060f90cb6
+      repoCommit: bfc3bcf831649ba283716771bbd6d46a1113b2fe
+      initial: 51253
+      peak: 52679
+      added: 1426
+      turns: 4
+    - date: 2026-08-23T17:06:13.163Z
+      boxCommit: 3fac959a06f320bde979022c95f7d99060f90cb6
+      repoCommit: bfc3bcf831649ba283716771bbd6d46a1113b2fe
+      initial: 52600
+      peak: 52600
+      added: 0
+      turns: 2
+  points-at-ui-path-vs-control:
+    - date: 2026-08-23T17:03:41.065Z
+      boxCommit: 3fac959a06f320bde979022c95f7d99060f90cb6
+      repoCommit: bfc3bcf831649ba283716771bbd6d46a1113b2fe
+      initial: 52302
+      peak: 52302
+      added: 0
+      turns: 2
+    - date: 2026-08-23T17:06:13.163Z
+      boxCommit: 3fac959a06f320bde979022c95f7d99060f90cb6
+      repoCommit: bfc3bcf831649ba283716771bbd6d46a1113b2fe
+      initial: 52412
+      peak: 52412
+      added: 0
+      turns: 2
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z
