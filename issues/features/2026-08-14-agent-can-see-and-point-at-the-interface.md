@@ -4,6 +4,7 @@ workstream: unattached
 area: callback-box
 needs: [design]
 labels: [chat, ui-sensibility]
+priority: important
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder idea, with memory-atlas prior art
@@ -19,6 +20,38 @@ prompt, but it cannot see what is rendered, cannot know whether the button it is
 describing is even visible, and has no way to indicate a specific element. The
 answer to "where is that" is prose, and prose about UI location is exactly the
 kind of answer that is worst to receive by ear.
+
+## Why this is important (2026-08-23)
+
+Marked important by the boxholder. The evidence that moved it is that the agent's
+blindness is not only a missing capability — it actively produces wrong answers,
+and a journey walkthrough caught one.
+
+A first-time user was told by the assistant: *"I've set up an Inventory area
+(it's in your sidebar now)"*. There is no sidebar on the page they were looking
+at. They wrote: *"either it's describing a different app or the word is wrong."*
+The phrase traces to an example in the agent guide
+([the sidebar issue](../bugs/2026-08-23-agent-guide-example-puts-landmarks-in-a-sidebar.md)),
+which is fixable on its own — but the reason a stale example can mislead at all
+is the premise of this issue: **the agent's only account of the interface is a
+static document, and it has no way to check it against the screen.**
+
+That reframes the value. This was filed as "let the agent help me find things",
+which reads as a convenience. The walkthrough shows the current state is worse
+than an absence: the agent describes the interface *confidently* from a source
+that cannot go stale loudly, so every drift between the UI and the guide becomes
+a wrong direction delivered with authority, to a person who has no way to tell.
+
+Two further observations from that walk, both bearing on the design questions
+below:
+
+- Everything the person came to understand about the app arrived inside a
+  sentence the assistant wrote — what it was for, where their list lived, what a
+  landmark is. The assistant is already the primary navigation surface whether or
+  not it can see anything, which raises the cost of it being wrong.
+- Their single largest complaint was not being able to say where their own list
+  was, after having built it. That is this feature's use case arriving unprompted
+  in a journey that was not about navigation at all.
 
 ## Shape
 
