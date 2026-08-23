@@ -48,10 +48,39 @@ const shots = existsSync(join(runDir, "shots"))
 const notesPath = join(runDir, "notes.md");
 const notes = existsSync(notesPath) ? readFileSync(notesPath, "utf8") : "";
 
-// Timestamps the walker wrote into its own notes, so wall-clock can be judged from
-// outside rather than asked of someone with no sense of duration.
-const stamps = [...notes.matchAll(/^##\s+(\d{2}:\d{2}(?::\d{2})?)/gmu)].map((m) => m[1] ?? "");
-const elapsed = stamps.length >= 2 ? `${stamps[0]} → ${stamps.at(-1)}` : "not recorded";
+/**
+ * Timing comes from the screenshot sidecars, never from the notes.
+ *
+ * The walker stamps its own entries and has no sense of duration: one wrote "after
+ * about 20 minutes" into a session that had run six and a half, then caught itself
+ * and said every stamp above was a guess. `bin/browse` writes a real UTC timestamp
+ * beside each screenshot, which is a clock the person in character cannot invent.
+ *
+ * Total span is reported but is NOT the product's latency — most of it is the walker
+ * navigating and writing notes, which no real person does. The gaps between
+ * consecutive screenshots are the useful number: a long one is someone waiting.
+ */
+interface Sidecar { timestamp: string, url: string }
+const shotDir = join(runDir, "shots");
+const sidecars = existsSync(shotDir)
+  ? readdirSync(shotDir).filter((f) => f.endsWith(".png.json")).toSorted()
+  : [];
+const marks = sidecars.map((f) => ({
+  name: f.slice(0, -9),
+  at: new Date(readJson<Sidecar>(join(shotDir, f)).timestamp),
+}));
+
+const spanMinutes = marks.length >= 2
+  ? (marks[marks.length - 1]!.at.getTime() - marks[0]!.at.getTime()) / 60000
+  : 0;
+const waits = marks
+  .slice(1)
+  .map((m, i) => ({ from: marks[i]!.name, to: m.name, seconds: (m.at.getTime() - marks[i]!.at.getTime()) / 1000 }))
+  .filter((w) => w.seconds > 45)
+  .toSorted((a, b) => b.seconds - a.seconds);
+const elapsed = marks.length >= 2
+  ? `${spanMinutes.toFixed(1)} min wall clock, ${waits.length} wait(s) over 45s`
+  : "no screenshots — timing unavailable";
 
 const after = {
   ...before,
@@ -61,13 +90,20 @@ const after = {
   untracked,
   screenshots: shots.length,
   noteLines: notes === "" ? 0 : notes.split("\n").length,
-  walkerTimestamps: elapsed,
+  spanMinutes: Number(spanMinutes.toFixed(1)),
+  waitsOver45s: waits,
 };
 writeFileSync(join(runDir, "after.json"), `${JSON.stringify(after, null, 2)}\n`);
 
 console.log(`journey     ${before.journey}`);
 console.log(`box         ${before.box}`);
-console.log(`walked      ${elapsed} (by the walker's own stamps)`);
+console.log(`walked      ${elapsed}`);
+for (const w of waits.slice(0, 6)) {
+  console.log(`  ${String(Math.round(w.seconds)).padStart(4)}s  ${w.from} → ${w.to}`);
+}
+if (waits.length > 0) {
+  console.log("  (screenshot sidecars, not the walker's own stamps — it has no sense of duration)");
+}
 console.log(`notes       ${after.noteLines} lines`);
 console.log(`screenshots ${shots.length}`);
 console.log("");
