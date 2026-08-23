@@ -165,7 +165,9 @@ steps:
               learning: {sink: guide or personality — wherever the belief
               lives, ref: that card, proposal: the conflicting claim}.
             - NEVER touch speaking-voice, and NEVER edit the briefing card body
-              directly — a proposed briefing correction becomes a question card
+              directly (the briefing's `openers:` frontmatter field is the one
+              exception — it is a hint list, not a belief, and the openers step
+              below owns it) — a proposed briefing correction becomes a question card
               quoting the evidence, with learning: {sink: briefing, ref: the
               ROOT briefing card, proposal: the one-sentence belief} declared
               on the question so a confirmed answer records as a
@@ -191,6 +193,8 @@ steps:
             - briefing: NEVER edit the briefing body. A proposed standing briefing
               instruction becomes a question card quoting the evidence, with
               learning: {sink: briefing, ref: root briefing, proposal: ...}.
+              (The `openers:` frontmatter field is not the briefing body and is
+              not a belief — leave it to the openers step.)
             - context-gap: judge it. If it reveals a real missing piece of box
               DATA (e.g. a referenced card that genuinely should exist), you MAY
               create that data card. If it calls for a standing briefing
@@ -259,5 +263,148 @@ steps:
         - |-
           A report left pending means observations were ledgered but never
           weighed — the loop silently stops learning.
+      severity: abort
+  - id: openers
+    description: Curate the chat openers each briefing offers on an empty chat
+    precheck:
+      shells:
+        - |-
+          # Openers are the suggestions shown on an empty chat for a directory;
+          # they live in that directory's briefing under `openers:` and are the
+          # agent's to curate. Two gates. (1) Some briefing still offers
+          # openers — an empty set is the normal end state for a box in regular
+          # use, and this step never re-introduces one. (2) A retro report has
+          # landed since the last curation: that is the "sessions happened"
+          # signal here, because the scan step has already consumed the sessions
+          # `cb retro status --check` counts, so asking it again always says
+          # none. Phases run under set -e -u -o pipefail, so guard every glob
+          # with `|| true` to fall through cleanly when a directory is empty.
+          # File lists go through NUL-delimited find + arrays: a box path may
+          # contain spaces, and word-splitting one would cat the wrong files.
+          briefings=()
+          while IFS= read -r -d '' b; do
+            if grep -q '^openers:' "$b"; then briefings+=("$b"); fi
+          done < <(find . -name briefing.briefing.card -not -path './.callback-box/*' -not -path './config/_template-updates/*' -print0 2>/dev/null || true)
+          if [ ${#briefings[@]} -eq 0 ]; then exit $CHECK_SKIP; fi
+
+          MARKER=.callback-box/retro/openers-last-run
+          if [ -f "$MARKER" ]; then
+            fresh=$(find store/reviews/retro -name '*.md' -newer "$MARKER" -print -quit 2>/dev/null || true)
+          else
+            fresh=$(find store/reviews/retro -name '*.md' -print -quit 2>/dev/null || true)
+          fi
+          if [ -z "$fresh" ]; then exit $CHECK_SKIP; fi
+
+          echo '=== BRIEFINGS OFFERING OPENERS (the `openers:` lists to curate) ==='
+          for b in "${briefings[@]}"; do
+            echo "----- $b -----"
+            cat "$b"
+            echo ""
+          done
+
+          echo "=== WHAT THIS BOX CAN DO (agent guide) ==="
+          cat .callback-box/agent-guide.md 2>/dev/null || echo "(no agent guide)"
+          echo ""
+
+          echo "=== RECENT CHATS — each title and the directory it is bound to ==="
+          echo "(a chat with no context-dir is bound to the box root)"
+          while IFS= read -r c; do
+            title=$(sed -n 's/^title: *//p' "$c" | head -1)
+            dir=$(sed -n 's/^context-dir: *//p' "$c" | head -1)
+            echo "  [${dir:-<root>}] ${title:-(untitled)}  -- $c"
+          done < <(ls -t store/chat/web/*.chat.card 2>/dev/null | head -20 || true)
+          echo ""
+      whys:
+        - |-
+          Nothing to curate when no briefing offers openers, and nothing new to
+          curate from when no chat session has been observed since the last
+          pass. Both are the steady state for an established box, so this step
+          usually skips and invokes no agent.
+      pass-output: true
+    run:
+      agents:
+        - prompt: |-
+            You maintain the suggested openers this box offers on an empty chat.
+            The precheck output above lists every briefing that currently carries
+            an `openers:` list, what this box can do (the agent guide), and the
+            recent chats with the directory each is bound to.
+
+            An opener is one short line in a briefing's `openers:` frontmatter
+            list: a single non-blank line of at most 120 characters (longer or
+            multi-line entries fail card validation). The person sees them as
+            buttons on an empty chat bound to that briefing's directory;
+            clicking one sends it as their message. They are hints, not beliefs
+            — the evidence model does not apply, and this is the one part of a
+            briefing this procedure may edit directly.
+
+            EDIT ONLY the `openers:` list in the briefings above. Do not touch
+            the briefing body, any other frontmatter field, or any other card.
+
+            Openers are per directory. Judge a briefing's openers against the
+            chats bound to THAT directory (the bracketed directory in the recent
+            chats list; the root briefing's openers are judged against
+            root-bound chats). A directory nobody has chatted in yet is not
+            evidence that its openers are working.
+
+            For each briefing with openers:
+            - Drop any opener the person has plainly outgrown — a question the
+              chats bound to that directory show they already know the answer
+              to, or already asked. This is the most common correct action.
+            - Rewrite the rest toward things the person has NOT tried yet,
+              grounded in what this box can do and what they actually use that
+              directory for. Phrase each from the person's side, so you are
+              never asked something you cannot answer. One short line each; at
+              most three.
+            - Remove the `openers:` field entirely once the box is in regular
+              use. An empty set is the normal end state, NOT a regression — an
+              established box offers no openers at all.
+            - Add nothing to a briefing that has no `openers:` field.
+
+            Then commit (REQUIRED — do not skip). Stage ONLY the briefing cards
+            you edited, by explicit path — never `git add -A`. This step runs
+            after integration has already committed its own work, and a blanket
+            stage would sweep unrelated edits into a commit that claims to be
+            about openers. If you made no change, skip the commit and say so
+            instead.
+
+            ```bash
+            git add -- <each briefing path you edited> && git commit -m "$(cat <<'EOF'
+            Retrospective: curate chat openers
+
+            <one line per briefing: what changed and why>
+
+            Created-By: retrospective
+            EOF
+            )"
+            ```
+
+            Do NOT add Co-Authored-By.
+          max-turns: 15
+    validate:
+      shells:
+        - |-
+          # Record this curation pass ONLY when the agent committed its edits.
+          # The marker is what the precheck compares report mtimes against, so
+          # writing it over an uncommitted edit would both lose the work at the
+          # next `git` operation and suppress the retry that would redo it.
+          dirty=$(git status --porcelain -- '*briefing.briefing.card' || true)
+          if [ -n "$dirty" ]; then
+            echo "Briefing changes were left uncommitted:"
+            echo "$dirty"
+            echo "Not recording this openers pass; the next run will retry it."
+            exit 1
+          fi
+          mkdir -p .callback-box/retro
+          : > .callback-box/retro/openers-last-run
+          echo "Openers pass recorded."
+      instructions:
+        - |-
+          The git diff for this step should touch nothing but the `openers:`
+          field of one or more briefing cards — never a briefing body, never
+          another card.
+      whys:
+        - |-
+          The marker is this step's only memory. Writing it for work that never
+          landed would silently skip the retry and drop the curation.
       severity: abort
 ---

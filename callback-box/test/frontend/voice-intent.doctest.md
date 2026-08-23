@@ -217,7 +217,7 @@ fallback.emission.hqText
 
 ## Manual stop-and-send HQ routing (empty `matchedPhrase`)
 
-A manual stop-and-send (docs/plans/hq-dictation-switch.md, chunk 2 — the
+A manual stop-and-send (docs/implemented-plans/hq-dictation-switch.md, chunk 2 — the
 desktop/mobile Send button with the always-HQ switch on) synthesizes a
 "submit" intent with `matchedPhrase: ""`: nothing was spoken to match, unlike
 a real keyword-fire. When the HQ pass finds no keyword in its own result

@@ -32,7 +32,7 @@ export function MobileTextareaRow({
   onVoiceSegmentSend: VoiceSegmentSend;
   onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
-  /** docs/plans/hq-dictation-switch.md, chunk 2: routes stop-and-send through the HQ slow path. */
+  /** docs/implemented-plans/hq-dictation-switch.md, chunk 2: routes stop-and-send through the HQ slow path. */
   hqDictationEnabled: boolean;
 }) {
   const input = useInputValue();

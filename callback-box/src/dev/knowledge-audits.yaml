@@ -4661,7 +4661,7 @@ tests:
   # fabricated." 0 reads, 0 searches, 51k ctx.
   #
   # Status (2026-08-23, hq-dictation-switch): re-run after widening `stt`'s
-  # vocabulary (`stt="hq"`, docs/plans/hq-dictation-switch.md) and adding the
+  # vocabulary (`stt="hq"`, docs/implemented-plans/hq-dictation-switch.md) and adding the
   # one retranscribe-clause exception to the prompt. 1/1 passes, 0 reads, 0
   # searches, 54k ctx — the new clause didn't disturb this audit's existing
   # `stt="deepgram"` scenario.
@@ -4693,7 +4693,7 @@ tests:
       Also worth watching in the transcript: the agent should know absence of
       marks is not verification (confident mishearings get no mark) and that
       messages without stt= carry no confidence data at all — still true now
-      that `stt="hq"` exists (docs/plans/hq-dictation-switch.md): an HQ pass
+      that `stt="hq"` exists (docs/implemented-plans/hq-dictation-switch.md): an HQ pass
       carries no per-word confidence either, so an hq-stamped message has no
       marks for the same "no data" reason, not a different one.
 

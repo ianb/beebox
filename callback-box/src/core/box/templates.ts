@@ -15,6 +15,7 @@ import * as path from "node:path";
 import { installTemplateFile } from "../install-template-file.js";
 import { TEMPLATE_STOCK_HASHES } from "../template-stock-hashes.js";
 import { boxCodePaths, getBoxShape } from "../../lib/box-shape.js";
+import { createBriefingTemplate } from "../../schemas/briefing.js";
 
 const SCHEMAS_CLAUDE_MD = `# Writing Box-Local Schemas
 
@@ -378,6 +379,11 @@ export const MANAGED_STOCK_TEMPLATES: ReadonlyArray<{
   { name: "schemas-guide-v2", relPath: "../src/schemas/CLAUDE.md", content: SCHEMAS_CLAUDE_MD_V2 },
   { name: "views-guide-v2", relPath: "../src/views/CLAUDE.md", content: VIEWS_CLAUDE_MD },
   { name: "tricks-guide-v2", relPath: "../src/tricks/scripts/CLAUDE.md", content: TRICKS_CLAUDE_MD_V2 },
+  // The root briefing seed. Unlike the guides it lives in `src/schemas/`
+  // (it's a card template, `createBriefingTemplate`), but it has the same
+  // rollout problem: when the stock openers change, a box still carrying the
+  // untouched previous seed must take the update rather than park it.
+  { name: "briefing-seed", relPath: "briefing.briefing.card", content: createBriefingTemplate() },
 ];
 
 /**

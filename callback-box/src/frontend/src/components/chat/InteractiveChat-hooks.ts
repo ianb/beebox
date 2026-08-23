@@ -195,7 +195,7 @@ export function useChatModelFeatures(opts: { sessionId: string | null; groupCoun
       });
   }, [sessionId, narrationEnabled, send]);
 
-  // Mirrors handleToggleNarration exactly (docs/plans/hq-dictation-switch.md,
+  // Mirrors handleToggleNarration exactly (docs/implemented-plans/hq-dictation-switch.md,
   // chunk 1) — a separate feature slot, separate request-id generation, same
   // optimistic-set/rollback shape.
   const handleToggleHqDictation = useCallback(() => {

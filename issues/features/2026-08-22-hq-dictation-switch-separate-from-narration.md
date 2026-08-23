@@ -10,7 +10,7 @@ discovered-in: main session — boxholder wanting HQ dictation without narration
 ---
 
 > **⏳ Awaiting manual testing** — implemented on `worktree-transcript-confidence`
-> and landed on main (design: `callback-box/docs/plans/hq-dictation-switch.md`;
+> and landed on main (design: `callback-box/docs/implemented-plans/hq-dictation-switch.md`;
 > commits through `082d21f3`); see [Manual testing](#manual-testing). Only the
 > developer clears this.
 

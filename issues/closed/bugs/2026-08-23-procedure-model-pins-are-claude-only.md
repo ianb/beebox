@@ -142,7 +142,7 @@ engine can honor.
 
 This is the second instance in two days of a Claude-shaped assumption in code
 that never learned about codex — see
-[AGENTS.md missing from the CLAUDE.md special-cases](2026-08-22-agents-md-missing-from-claude-md-special-cases.md),
+[AGENTS.md missing from the CLAUDE.md special-cases](../closed/bugs/2026-08-22-agents-md-missing-from-claude-md-special-cases.md),
 whose fix landed on 2026-08-22 and demonstrably works (the AGENTS.md entries are
 gone from the precheck's task list). That issue argued for a structural guard so
 the pairing cannot drift again. This one suggests the guard needs to cover more

@@ -579,7 +579,7 @@ assembleChatMessage(eNoData, W).message.replace(eNoData.id, "ID")
 
 ## `stt="hq"` — the always-HQ switch's provenance stamp
 
-`hqText: true` (docs/plans/hq-dictation-switch.md) stamps `stt="hq"` instead
+`hqText: true` (docs/implemented-plans/hq-dictation-switch.md) stamps `stt="hq"` instead
 of `stt="deepgram"`, whether or not realtime words happened to be captured —
 the two are mutually exclusive: an HQ pass drops the realtime words it
 replaced, so `words` is never defined alongside `hqText`.
