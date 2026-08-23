@@ -1,6 +1,6 @@
 ---
 title: "A switch for always-HQ dictation, separate from narration mode"
-workstream: unattached
+workstream: transcript-confidence
 area: callback-box
 needs: [design]
 labels: [voice, transcription, chat]
