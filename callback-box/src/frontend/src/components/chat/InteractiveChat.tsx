@@ -239,6 +239,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
   );
   const voice = useChatVoice({
     snapshot, sessionId, muted: mute.muted, narrationEnabled: model.narrationEnabled,
+    hqDictationEnabled: model.hqDictationEnabled,
     selections: selections.selections, resetSelections: selections.resetSelections,
     emissionStore, resetAttachments: attach.resetAttachments,
     clearDraftRef, inputStore, dispatchEmission: dispatchEmissionVoid, nativeComposer: usesNativeComposer,

@@ -97,10 +97,17 @@ export function assembleChatMessage(
     wrapped = `<typed${attrs}>${body}</typed>`;
   } else {
     const diarizedAttr = emission.diarized ? " diarized=\"1\"" : "";
-    // `stt` is stamped only when confidence data was captured and applied
-    // (Track 3 Vocabulary lock-ins) — its absence means no per-word
-    // confidence backs this message, distinct from "captured, none unsure".
-    const sttAttr = emission.words !== undefined ? " stt=\"deepgram\"" : "";
+    // `stt` is stamped when the message carries transcription provenance —
+    // either captured word-confidence data (`deepgram`) or an HQ pass that
+    // replaced the realtime text (`hq`, docs/plans/hq-dictation-switch.md).
+    // The two are mutually exclusive: an HQ pass always drops the realtime
+    // words it replaced (the pre-existing HQ-drop rule), so `emission.words`
+    // is never defined on an `hqText` emission. Absence of `stt` means no
+    // provenance data backs this message at all — distinct from "captured,
+    // none unsure" (`deepgram` with no `<unsure>` marks).
+    const sttAttr = emission.hqText === true
+      ? " stt=\"hq\""
+      : emission.words !== undefined ? " stt=\"deepgram\"" : "";
     // `message-id` (retranscription-in-chat plan, Vocabulary lock-ins) is the
     // emission id — the same value returned as `messageId` below and the key
     // the audio retention store uses — stamped on every voice send so the

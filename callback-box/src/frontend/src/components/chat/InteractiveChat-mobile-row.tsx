@@ -18,7 +18,7 @@ export function MobileTextareaRow({
   isTranscribing, transcription, targetBusy,
   handleSend, handleCancelTranscription, clearDraft,
   onStopDictation, onVoiceSegmentSend,
-  onPaste, onDrop,
+  onPaste, onDrop, hqDictationEnabled,
 }: {
   isTranscribing: boolean;
   transcription: TranscriptionHandle;
@@ -32,6 +32,8 @@ export function MobileTextareaRow({
   onVoiceSegmentSend: VoiceSegmentSend;
   onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
+  /** docs/plans/hq-dictation-switch.md, chunk 2: routes stop-and-send through the HQ slow path. */
+  hqDictationEnabled: boolean;
 }) {
   const input = useInputValue();
   const setInput = useInputStore().set;
@@ -90,6 +92,15 @@ export function MobileTextareaRow({
           </button>
           <button
             onClick={() => {
+              if (hqDictationEnabled) {
+                // Same seam as the desktop composer's Send button (docs/plans/
+                // hq-dictation-switch.md, chunk 2): route through the
+                // finalize→blob→HQ slow path instead of building the emission
+                // from `transcription.stop()`'s realtime text here.
+                if (transcription.submitSegment({ closeMic: true })) return;
+                // Segment already settled (machine idle) — fall through to
+                // the direct-send path below.
+              }
               // transcription.stop() only ever resolves; nothing here can
               // reject, so the wrapper just satisfies onClick's void type.
               void (async () => {

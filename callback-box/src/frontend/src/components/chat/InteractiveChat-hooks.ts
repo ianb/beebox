@@ -153,12 +153,14 @@ export function useChatModelFeatures(opts: { sessionId: string | null; groupCoun
   }, [sessionId]);
 
   const narrationEnabled = chatFeatures.narration === "on";
+  const hqDictationEnabled = chatFeatures["hq-dictation"] === "on";
 
   // Generation counters so an out-of-order completion (an older toggle/select
   // resolving after a newer one) can't clobber state a later request already
   // set — bumped on every call, and a response only applies if it's still the
   // most recent one in flight.
   const narrationRequestIdRef = useRef(0);
+  const hqDictationRequestIdRef = useRef(0);
   const modelRequestIdRef = useRef(0);
 
   const handleToggleNarration = useCallback(() => {
@@ -192,6 +194,31 @@ export function useChatModelFeatures(opts: { sessionId: string | null; groupCoun
         setChatFeatures((prev) => ({ ...prev, narration: previous }));
       });
   }, [sessionId, narrationEnabled, send]);
+
+  // Mirrors handleToggleNarration exactly (docs/plans/hq-dictation-switch.md,
+  // chunk 1) — a separate feature slot, separate request-id generation, same
+  // optimistic-set/rollback shape.
+  const handleToggleHqDictation = useCallback(() => {
+    const next = hqDictationEnabled ? "off" : "on";
+    const previous = hqDictationEnabled ? "on" : "off";
+    const requestId = ++hqDictationRequestIdRef.current;
+    setChatFeatures((prev) => ({ ...prev, "hq-dictation": next }));
+    if (!sessionId) {
+      send({ type: "SET_SEED_FEATURE", feature: "hq-dictation", value: next });
+      return;
+    }
+    setChatFeature({ sessionId, feature: "hq-dictation", value: next })
+      .then((res) => {
+        if (hqDictationRequestIdRef.current !== requestId) return;
+        setChatFeatures(res.features);
+      })
+      .catch((e: unknown) => {
+        console.warn(`[chatfsm] set-feature hq-dictation failed: ${e instanceof Error ? e.message : String(e)}`);
+        toastError("Failed to update HQ dictation", { cause: e });
+        if (hqDictationRequestIdRef.current !== requestId) return;
+        setChatFeatures((prev) => ({ ...prev, "hq-dictation": previous }));
+      });
+  }, [sessionId, hqDictationEnabled, send]);
 
   const handleSelectModel = useCallback((model: string | null) => {
     if (model === selectedModel) return;
@@ -231,7 +258,12 @@ export function useChatModelFeatures(opts: { sessionId: string | null; groupCoun
     }
   }, [selectedModel, groupCount, sessionId, agentEngine]);
 
-  return { agentEngine, selectedModel, modelMarkers, chatFeatures, setChatFeatures, narrationEnabled, handleToggleNarration, handleSelectModel };
+  return {
+    agentEngine, selectedModel, modelMarkers, chatFeatures, setChatFeatures,
+    narrationEnabled, handleToggleNarration,
+    hqDictationEnabled, handleToggleHqDictation,
+    handleSelectModel,
+  };
 }
 
 /**

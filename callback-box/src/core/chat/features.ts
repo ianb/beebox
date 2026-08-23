@@ -42,6 +42,13 @@ const FEATURE_LIST: readonly FeatureDescriptor[] = [
     uiKind: "toggle",
     label: "Show agent prose",
   },
+  {
+    name: "hq-dictation",
+    allowedValues: ["on", "off"],
+    default: "off",
+    uiKind: "toggle",
+    label: "HQ dictation",
+  },
 ] as const;
 
 const FEATURE_INDEX = new Map<string, FeatureDescriptor>(
