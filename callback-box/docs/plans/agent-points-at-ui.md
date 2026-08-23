@@ -1117,10 +1117,11 @@ highlight — the outcome the issue asks for.
   strict: the library is spec-accurate and we would stop maintaining an
   approximation. Decidable cheaply — write the hand-rolled version with
   doctests over the app's real markup first, and swap if it misses.
-- **Consent on `cb chat ui`.** This plan proposes none, on the reasoning in
-  Track 3. It is a privacy judgment about a channel the boxholder built a
-  consent popup for in the adjacent case, so it should be his call, not the
-  plan's.
+- **Consent on `cb chat ui`.** RESOLVED (boxholder, 2026-08-23): none. There
+  is no permission boundary between the agent and the UI — the agent not
+  seeing the screen is a technical limitation being eased, not a privacy line.
+  The chrome-only scan boundary (`data-cb-scan="exclude"`) still stands, as a
+  content-hygiene rule rather than a consent substitute.
 - **Does narration read a `control:` link, and how?** Narration runs through
   `<speech>` and `speech-parsing.ts`, not the markdown renderer, so a pointer
   written inside speech text may be spoken as raw URL text. Needs a look before
