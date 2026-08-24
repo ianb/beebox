@@ -168,6 +168,9 @@ export type RouterAuthDecision =
 function pathnameOf(url: string): string {
   const q = url.indexOf("?");
   const noQuery = q === -1 ? url : url.slice(0, q);
+  // Defence in depth only: `classifyRouterRoute` rejects a `#`-bearing target
+  // outright, so this branch is unreachable from there. Kept so the helper is
+  // still correct for any other caller.
   const h = noQuery.indexOf("#");
   return h === -1 ? noQuery : noQuery.slice(0, h);
 }
@@ -232,6 +235,17 @@ function classifyRouterControl(pathname: string): RouterRoute {
  * resolvers turn the extracted slug into a box root and a decision).
  */
 export function classifyRouterRoute({ method, url }: { method: string; url: string }): RouterRoute {
+  // A raw `#` in the request target is not a legal origin-form URI (RFC 9112:
+  // absolute-path [ "?" query ] — a fragment never travels on the wire, and no
+  // browser sends one). It DID travel through this gate: `pathnameOf` strips
+  // it, while bin/router.ts's dispatch branches match on `split("?")[0]` and do
+  // not — so `GET /main/dev#x` classified as the dev space and then dispatched
+  // as a proxied worktree path instead. Any gate/dispatcher disagreement about
+  // what a URL means is a bypass by construction, so reject the whole class
+  // here rather than teaching each branch to strip one more delimiter
+  // (cross-model review, 2026-08-24). Percent-encoded `%23` is untouched: it is
+  // a legal path byte and neither side decodes before matching.
+  if (url.includes("#")) return { kind: "unknown" };
   const pathname = pathnameOf(url);
 
   // The pre-auth iOS pairing bootstrap. Router-scoped: the router sees the
@@ -402,6 +416,22 @@ export async function authorizeRouterRequest(
       // (router-docs.ts serveDev, boxholder decision 2026-08-19). Being allowed
       // to READ that surface is strictly weaker than being allowed to execute
       // on it.
+      //
+      // "Read" here means "no mutating verb", not "no side effect". Two are
+      // known and accepted, both pre-existing and both already within the
+      // browse key's reach on box routes: a `/<w>/dev/...` or `/workstreams/`
+      // request can lazy-start a worktree's processes (that is the router's
+      // core design), and the `quotas.get` tRPC QUERY makes an outbound quota
+      // request and writes its cache (workstreams-app quota-collect.ts). Every
+      // procedure that changes repo state is a tRPC `.mutation`, hence POST,
+      // hence `control` above — checked procedure by procedure, 2026-08-24.
+      //
+      // A WebSocket upgrade is a GET, so this arm carries upgrades too. That is
+      // required, not incidental: `/workstreams/...` is a Vite-served app, and a
+      // browser cannot render it without its HMR socket — the same argument
+      // already written for `resolveWorktreeAsset` below. It grants no new
+      // reach either, since that resolver already admits the browse key to the
+      // worktree's Vite sockets under `/<w>/@vite/...`.
       //
       // What deliberately does NOT move: `/` (the worktree index), `/__router/*`
       // (both the mutating verbs and `/__router/status`), and every non-GET

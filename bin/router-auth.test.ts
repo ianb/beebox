@@ -190,6 +190,19 @@ test("classifier: exhaustive route-shape mapping", () => {
   });
 });
 
+test("classifier: a raw `#` in the request target is rejected, whatever it precedes", () => {
+  // The gate strips a fragment; bin/router.ts's dispatch branches do not. Any
+  // such disagreement is a bypass, so a `#`-bearing target is `unknown` (404)
+  // for EVERY route class, not just the dev surfaces.
+  const c = (method: string, url: string) => classifyRouterRoute({ method, url });
+  for (const url of ["/main/dev#x", "/dev#x", "/workstreams#x", "/main/test1/#x", "/#x", "/__router/status#x"]) {
+    assert.deepEqual(c("GET", url), { kind: "unknown" }, url);
+  }
+  // A percent-encoded `#` is a legal path byte and is NOT a fragment — neither
+  // the gate nor the dispatcher decodes before matching, so it stays a box path.
+  assert.deepEqual(c("GET", "/main/test1/a%23b"), { kind: "box", targetWorktree: "main", targetBox: "test1" });
+});
+
 test("classifier: query string does not change classification", () => {
   assert.deepEqual(classifyRouterRoute({ method: "GET", url: "/__router/status?x=1" }), {
     kind: "control-read",
@@ -325,6 +338,10 @@ test("dev-read does NOT widen the control surfaces the browse key must stay out 
     ["POST", "/workstreams/issues/action/close"],
     ["POST", "/workstreams/api/trpc/issues.close"],
     ["POST", "/main/dev/x.html"],
+    // The fragment divergence: `dev-read` classification must not survive a
+    // raw `#` that would send the dispatcher somewhere else.
+    ["GET", "/main/dev#x"],
+    ["GET", "/workstreams#x"],
   ];
   for (const [method, url] of owned) {
     const d = await authorizeRouterRequest(req({ method, url, headers: HTML }), deps);

@@ -100,3 +100,32 @@ held by the live router), while `/` and `/__router/status` stayed 401.
 
 The path/credential table in `.claude/skills/browse/SKILL.md` is updated to
 match.
+
+## Cross-model review (2026-08-24)
+
+Three findings; two produced fixes in the same branch.
+
+1. **Raw `#` in the request target split the gate from the dispatcher.** The
+   gate strips a fragment before classifying; `bin/router.ts`'s dispatch
+   branches match on `split("?")[0]` and do not — so `GET /main/dev#x`
+   classified as the dev space and then dispatched as a proxied worktree path.
+   Fixed by rejecting a `#`-bearing target outright (`unknown` → 404) for every
+   route class, rather than teaching each branch one more delimiter. A fragment
+   is not legal in an origin-form URI, so nothing legitimate sends one;
+   percent-encoded `%23` is untouched.
+2. **A WebSocket upgrade is a GET, so `dev-read` carries upgrades.** Real, and
+   required — `/workstreams/` is a Vite-served app and a browser cannot render
+   it without its HMR socket, the same argument already written for
+   `resolveWorktreeAsset`, which already admits the browse key to that
+   worktree's Vite sockets. Documented in the arm rather than changed.
+3. **`serveDev` served dotfiles it hid from its own directory listings.**
+   Containment against escape was airtight (lexical + realpath), but `dev/` is a
+   directory agents write into, so `dev/.env` or `dev/apps/<name>/.git/config`
+   was a plausible accident. Now refused at any depth, checked on the resolved
+   path so legitimate `..` normalization still works.
+
+Separately verified while adjudicating: every workstreams-app procedure that
+changes repo state is a tRPC `.mutation` (POST → `control`). Two side effects do
+ride read paths and are accepted, both already reachable by the browse key on
+box routes: a request can lazy-start a worktree's processes, and the
+`quotas.get` query refreshes its quota cache.
