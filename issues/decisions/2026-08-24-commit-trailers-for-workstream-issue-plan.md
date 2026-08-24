@@ -23,9 +23,9 @@ Trailer keys across the last 400 commits:
   1  Updated
 ```
 
-Two of those are harness boilerplate. `Contract-Unchanged` is the only semantic
-one, and it is read by exactly one thing (`bin/mobile-contract-check.ts`, as a
-boolean gate in `.husky/commit-msg`). Nothing in `bin/` parses the monorepo's own
+Two of those are harness boilerplate. `Contract-Unchanged` is a gate, not a
+facet: it exists only on the commits where `.husky/commit-msg` demanded it, so
+it is not precedent for anything queryable. Nothing in `bin/` parses the monorepo's own
 log or trailers; `bin/workstreams` reads diff/status shape only.
 
 **Nothing records which workstream, issue, or plan a commit belongs to.**
@@ -58,135 +58,76 @@ a card. It is precedent only that trailers + a parser + a faceted reader work
 in this codebase. This issue is about development history: who was working on
 what, and why.
 
-## Design from the questions
+## Decisions (boxholder, 2026-08-24)
 
-Questions people actually asked of development history (observed in a clerical
-session that spent hours on them, not invented here), what answering each
-needs, and what it costs. The boxholder wants to cut this list before any
-format is chosen.
+Design from the questions, and prefer anything that can be filled without a
+human. Settled:
 
-### Q1. "What did workstream X actually do?"
+- **`Workstream:` — automatic.** A `prepare-commit-msg` hook stamps the bare
+  name from the branch (`worktree-<name>` → `<name>`); commits on `main` get
+  none. Nobody writes it, so it does not rot.
+- **`Plan:` — automatic when derivable.** The hook finds plans whose
+  frontmatter `workstream:` equals the branch's stream; if exactly one, stamp
+  its bare name; otherwise omit. Never hand-written.
+- **`Issue:` — optional, hand-written by the agent, bare name.**
+  `Issue: 2026-08-20-slug` — no directory, no `.md` — because issues move
+  between category dirs and into `closed/` and the link must survive that.
+  `commit-msg` rejects a name that matches no file under `issues/**`
+  (typo guard); absence is fine. May repeat for several issues.
+- **`bin/land` switches to `--no-ff`** so `git log --first-parent main` shows
+  one merge per landing and `<m>^1..<m>^2` lists what it brought.
+- **No `/finish` enforcement** — the trailers describe, they do not police.
 
-Today: unanswerable once the branch is culled. **Needs** a durable per-commit
-or per-landing mark on `main`. Two ways to get it, both fully automatic:
+## The questions this answers
 
-- **(a) `Workstream: <name>` trailer via a `prepare-commit-msg` hook.** The
-  branch name `worktree-<name>` *is* the workstream, so the hook fills it with
-  no human in the loop; commits on `main` itself get nothing (or `main`). Cost:
-  one hook; one trailer on every commit; `git log --grep`-able forever.
-- **(b) `bin/land` switches to `--no-ff`.** Then `git log --first-parent main`
-  lists one merge per landing and `git log <m>^1..<m>^2` lists exactly what it
-  brought — git's native answer, no trailer, no hook, retroactively readable
-  for any stream that lands after the switch. Cost: merge commits on `main`
-  (post-merge deploy hook already handles merges); one merge per checkpoint
-  landing, so a stream can produce several.
+- *What did workstream X do?* — `git log --grep='^Workstream: X'`, or the
+  landing merges. Durable after the branch is culled.
+- *Did this fix land?* — `git log --grep='^Issue: <name>'` before falling back
+  to the `git log -S` guess in `cb-issue-actions`. Only catches commits that
+  named the issue; a forgotten trailer degrades to today.
+- *Which commits does this plan account for?* — `Plan:` grep, or via the
+  stream.
+- An open issue named by a landed commit is a closing candidate — the second
+  question run in reverse, useful for queue sweeps.
 
-(a) answers "which stream made *this* commit"; (b) answers "what did *this
-landing* contain". They compose; (a) alone is the smaller change.
+## Cost
 
-### Q2. "Did this fix actually land?"
-
-Asked repeatedly. The `cb-issue-actions` skill's answer is `git log -S` on a
-guessed string, written down as if it were a technique. **Needs** a
-commit→issue link. Not derivable from the branch: the hook does not know which
-issue a commit serves; the agent does (usually). Options:
-
-- `Issue: issues/<cat>/<file>.md` trailer, written by the agent, **optional**,
-  path-validated by `commit-msg` (rejects a path that does not exist — catches
-  typos, costs nothing when absent). A forgotten trailer degrades to today.
-  Cost: an instruction in root `CLAUDE.md`, a ~10-line hook check, and the
-  standing risk that agents tag the wrong issue — permanently, since commits
-  are immutable.
-- Derive it per workstream instead: launcher `--issue` + issue `workstream:`
-  frontmatter + Q1's stream mark. Answers "did the stream that owned this
-  issue land anything" — weaker (72% of issues have no stream), but no new
-  writing.
-
-The failure case that hurt most — "fix landed inside a larger change in a
-stream that never closed the item" — is only caught by the trailer.
-
-### Q3. "Is this issue stale?"
-
-Several old issues described things that had since shipped. **Partly**
-answerable from Q2 (an `Issue:` trailer on any commit while the file is still
-open is a flag). Not fully: work that fixes an issue nobody had in mind carries
-no trailer. Beyond Q2 the honest tool is the heuristic already in the skill
-(`git log --since=<issue date> -- <files the issue names>`). No trailer earns
-its keep for this question alone.
-
-### Q4. "Which commits does this plan account for?"
-
-Plans carry `issues: []` by hand; nothing links either to commits. A plan is
-almost always one workstream's plan, so **derive**: plan `workstream:` → Q1's
-mark → commits. A `Plan:` trailer would be a third hand-written field agreeing
-with two others; do not add it.
-
-### Q5. `/finish` verifying what it merged matches what it claimed
-
-If Q2's trailer exists, `/finish` can list the `Issue:` values across the
-stream's commits and diff them against the plan's `issues:` list and the
-issues it is about to close — surfacing "you committed against X but did not
-close it" and "you are closing Y with no commit naming it". This is the
-consumer that turns the trailer from ceremony into a check. Cost: a step in
-the `finish` agent; a small `bin/` query.
-
-### Cost table
-
-| Question | Mechanism | Who writes | New ceremony per commit | Failure mode |
-|---|---|---|---|---|
-| Q1 stream | `prepare-commit-msg` hook | nobody | none (automatic) | hook not installed → blank, same as today |
-| Q1 landing | `land --no-ff` | nobody | none | merge commits on main |
-| Q2/Q3/Q5 issue | `Issue:` trailer, optional, validated | the agent | one line when relevant | wrong/forgotten tag; wrong is permanent |
-| Q4 plan | derive via workstream | nobody | none | plan `workstream:` wrong |
+| Trailer | Writer | Failure mode |
+|---|---|---|
+| `Workstream:` | hook | hook not installed → blank, same as today |
+| `Plan:` | hook | zero or several plans claim the stream → omitted |
+| `Issue:` | agent, optional | forgotten (no regression) or wrong (permanent — commits are immutable) |
 
 ## Who reads it
 
-Name the consumer before the format. In order of cheapness:
-
-1. `git log --format='%(trailers:key=Issue,valueonly)'` and `--grep` — free;
-   enough for an agent answering Q2.
-2. A `bin/` query (`bin/commits --issue <path>` / `--workstream <name>`) that
-   the `cb-issue-actions` skill calls *before* falling back to `git log -S`.
-3. `/finish` (Q5).
-4. The workstreams app — it shows no commits today (`git.tip` and a
-   `committed` boolean only), so a commit list per stream/issue is a new
-   panel, not a filter on an existing one. Defer until 1–3 exist.
+1. `git log --format='%(trailers:key=Issue,valueonly)'` / `--grep` — free.
+2. A small `bin/` query wrapping those, called by the `cb-issue-actions`
+   `fixed` disposition first.
+3. The workstreams app shows no commits today (`git.tip` plus a `committed`
+   boolean); a per-stream/per-issue commit list is a new panel. Later.
 
 ## Source of truth
 
-Issues, plans, and the registry record association in three unsynchronized
-files. Commits would be a fourth. The fork:
-
-- **Commits become the raw record; files are derived or checked against it.**
-  Q1 is automatic and therefore trustworthy; Q2 is declared and therefore
-  checked (Q5). Issue `workstream:` stops being hand-maintained ownership and
-  becomes "the stream whose commits name this issue" — or stays as intent,
-  with Q5 flagging disagreement.
-- **Files stay canonical; commits are a hint.** Cheaper, and the 72% figure
-  says it does not work.
-
-Recommendation: the first. Commits are immutable, so make the automatic part
-(`Workstream:`) the thing derived fields lean on, and keep the declared part
-(`Issue:`) optional but verified at `/finish`.
+Commits become the raw record for stream and plan (automatic, so
+trustworthy). Issue `workstream:` frontmatter stays as intent/ownership; it is
+no longer the only place the association lives.
 
 ## Retrofit
 
-`git notes` can attach `Workstream:` to past commits without rewriting; the 58
-merge commits and registry `baseSha`/`finalSha` values reconstruct most streams
-since the registry existed. Worth doing only once a reader (above) exists and
-someone asks Q1 about the past. Not part of the first cut.
+`git notes` could attach `Workstream:` to past commits using the 58 merge
+commits and registry `baseSha`/`finalSha`. Only if someone asks about the past
+after a reader exists.
 
-## Not decided here
+## Still open
 
-The trailer names and value shapes (basename vs repo-relative path, one vs
-many `Issue:` per commit) — after the list above is cut. The convention will
-live in root `CLAUDE.md` and every agent thereafter obeys it, so cross-model
-review before it lands.
+- Exact value for `Plan:` (bare filename of the plan doc).
+- Where the hook lives (`.husky/prepare-commit-msg`, TS under `bin/`).
+- Root `CLAUDE.md` wording for `Issue:` — every agent thereafter obeys it, so
+  cross-model review before it lands.
 
 ## Related
 
 - [No way to know what a workstream covers](../features/2026-08-20-no-way-to-know-what-a-workstream-covers.md)
-  — the same missing association from the issue-queue end; Q1 answers it from
-  git.
+  — answered from git by `Workstream:` and the landing merges.
 - `cb-issue-actions` skill, `fixed` disposition — the `git log -S` guess that
-  Q2 replaces.
+  `Issue:` grep precedes.
