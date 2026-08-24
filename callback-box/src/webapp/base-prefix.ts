@@ -20,7 +20,11 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import type { IncomingHttpHeaders } from "node:http";
 
-/** The trusted-proxy prefix header. Lowercase — Node header keys are lowercased. */
+/**
+ * The trusted-proxy prefix header. Lowercase — Node header keys are lowercased.
+ *
+ * @public Imported by `bin/base-prefix-injection.test.ts`, outside this package.
+ */
 export const BASE_PREFIX_HEADER = "x-cb-base-prefix";
 
 /** A single path segment: leading slash then letters, digits, `.`, `_`, `-`

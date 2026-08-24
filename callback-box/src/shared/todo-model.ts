@@ -188,7 +188,7 @@ export function validateTodoAttributes(attrs: TodoAttributes): TodoValidationErr
  * exactly one of `ref` / `href`, plus an optional `note` (the tag's body text
  * has no frontmatter equivalent, so `note` stands in for it).
  */
-export const TodoSeeAlsoEntrySchema = z
+const TodoSeeAlsoEntrySchema = z
   .object({
     ref: z.string().optional(),
     href: z.string().optional(),

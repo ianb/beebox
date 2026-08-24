@@ -146,14 +146,6 @@ export async function resolveMobileBearerIdentity(
   return resolveMobileTokenIdentity(boxRoot, authorization.slice(prefix.length));
 }
 
-export async function verifyMobileBearer(boxRoot: string, authorization: string | undefined): Promise<boolean> {
-  return (await resolveMobileBearerIdentity(boxRoot, authorization)) !== null;
-}
-
-export async function verifyMobileToken(boxRoot: string, token: string | undefined): Promise<boolean> {
-  return (await resolveMobileTokenIdentity(boxRoot, token)) !== null;
-}
-
 async function resolveMobileTokenIdentity(
   boxRoot: string,
   token: string | undefined,

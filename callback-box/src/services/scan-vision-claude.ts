@@ -51,7 +51,7 @@ const slotSchema = z.object({
  * restricted to the four values the image card accepts, and `subject_bbox`
  * forced to null at the schema level (a non-null box fails the parse).
  */
-export const claudeScanAnalysisSchema = rawScanAnalysisSchema.extend({
+const claudeScanAnalysisSchema = rawScanAnalysisSchema.extend({
   index: z.int(),
   paired_with_index: z.int().nullable(),
   rotation: z.union([z.literal(0), z.literal(90), z.literal(180), z.literal(270)]),

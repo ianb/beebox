@@ -48,7 +48,7 @@ export function defaultSpawnChild(params: ChildSpawnParams): ChildProc {
  *  `test/hub/supervisor.doctest.md` runs in milliseconds. */
 export type CheckReadyFn = (params: { port: number; label: string }) => Promise<void>;
 
-export const READY_TIMEOUT_MS = 30_000;
+const READY_TIMEOUT_MS = 30_000;
 
 export function defaultCheckReady(params: { port: number; label: string }): Promise<void> {
   return waitForHttp({ port: params.port, reqPath: "/healthz", timeoutMs: READY_TIMEOUT_MS, label: params.label });

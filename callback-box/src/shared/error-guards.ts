@@ -11,8 +11,6 @@
  * stays bundler-safe for the browser.
  */
 export {
-  errnoCode,
-  isErrnoException,
   toError,
   errorMessage,
   NonError,

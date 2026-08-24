@@ -28,8 +28,8 @@ import { z } from "zod";
 import { type BearerProvider, staticBearer } from "./cloudflare-bearer.js";
 
 /** R2 key prefixes the connector pulls from (plan Track A/F key layout). */
-export const SUBMISSIONS_PREFIX = "submissions/";
-export const ACCESS_LOG_PREFIX = "access-log/";
+const SUBMISSIONS_PREFIX = "submissions/";
+const ACCESS_LOG_PREFIX = "access-log/";
 
 /** One entry of a Cloudflare API JSON error body's `errors` array. */
 export interface CloudflareApiErrorDetail {

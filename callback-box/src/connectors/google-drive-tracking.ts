@@ -29,7 +29,7 @@ export interface DriveCardTracking {
 }
 
 /** Parse the current YAML form and the legacy XML attribute form. */
-export function driveIdFromCardContent(content: string): string | null {
+function driveIdFromCardContent(content: string): string | null {
   const yamlMatch = /^drive-id:\s*"?([^\n"]+?)"?\s*$/m.exec(content);
   if (yamlMatch) {
     invariant(yamlMatch[1] !== undefined, "capture group 1 is non-optional in yamlMatch");

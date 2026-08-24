@@ -85,7 +85,7 @@ class InstalledVersionMissingError extends Error {
  * `error/no-literal-error-message` flags a literal *anywhere* in a `new
  * *Error(...)` call, not just the message position.
  */
-export const UPGRADE_STEPS = {
+const UPGRADE_STEPS = {
   preflightValidate: "preflight-validate",
   pnpmInstall: "pnpm-install",
   cbMigrate: "cb-migrate",

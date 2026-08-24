@@ -28,7 +28,7 @@ const QUARANTINE_DIR_NAME = "scan-quarantine";
 
 /** The sidecar state machine. `pending`/`rejected` are written by the upload
  *  route; `promoting`/`imported` by the promote worker. */
-export const SCAN_QUARANTINE_STATES = ["pending", "promoting", "imported", "rejected"] as const;
+const SCAN_QUARANTINE_STATES = ["pending", "promoting", "imported", "rejected"] as const;
 
 const ScanQuarantineEntrySchema = z.object({
   /** SHA-256 of the stored bytes, lowercase hex — the entry's identity. */

@@ -41,7 +41,7 @@ function causeMessage(cause: unknown): string {
  * here, following `isIndexLockError` below, and cheaper than giving the whole
  * CLI an exit-code vocabulary for one diagnostic.
  */
-export const GIT_CONTENDED_MARKER = "[git-contended]";
+const GIT_CONTENDED_MARKER = "[git-contended]";
 
 /**
  * The marker a failure carries when `.git/index.lock` looks ABANDONED rather
@@ -51,7 +51,7 @@ export const GIT_CONTENDED_MARKER = "[git-contended]";
  * removed. Same message-token reasoning as the contended marker — a scheduled
  * task's failure crosses a process boundary as text.
  */
-export const GIT_STALE_LOCK_MARKER = "[git-stale-lock]";
+const GIT_STALE_LOCK_MARKER = "[git-stale-lock]";
 
 /**
  * A git index mutation failed on `.git/index.lock`.

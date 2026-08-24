@@ -34,7 +34,7 @@ export async function markWakeupPending(boxRoot: string, reason: string): Promis
 }
 
 /** The pending marker's contents, or null when no wakeup is owed. */
-export async function readWakeupMarker(boxRoot: string): Promise<string | null> {
+async function readWakeupMarker(boxRoot: string): Promise<string | null> {
   try {
     return (await fs.readFile(wakeupMarkerPath(boxRoot), "utf-8")).trim();
   } catch (e) {
@@ -43,7 +43,7 @@ export async function readWakeupMarker(boxRoot: string): Promise<string | null> 
   }
 }
 
-export async function clearWakeupMarker(boxRoot: string): Promise<void> {
+async function clearWakeupMarker(boxRoot: string): Promise<void> {
   await fs.rm(wakeupMarkerPath(boxRoot), { force: true });
 }
 

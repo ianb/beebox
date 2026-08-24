@@ -191,7 +191,7 @@ async function materializeInput(
 }
 
 /** One native Codex thread. The SDK owns CLI spawning, protocol parsing, and resume. */
-export class CodexSdkSession {
+class CodexSdkSession {
   private readonly thread: Thread;
   private readonly turnTimeoutMs: number;
 

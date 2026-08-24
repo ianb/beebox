@@ -41,12 +41,12 @@ export interface MechanicsParams {
  * knowledge dial (what this person knows coming in) is exactly what the
  * scenario controls.
  */
-export function personaLayer(persona: string): string {
+function personaLayer(persona: string): string {
   return ["# Who you are", "", persona.trim()].join("\n");
 }
 
 /** Layer 2 — the evaluator mandate. Identical for every run. */
-export function evaluatorMandateLayer(): string {
+function evaluatorMandateLayer(): string {
   return [
     "# What you are doing here",
     "",
@@ -71,7 +71,7 @@ export function evaluatorMandateLayer(): string {
 }
 
 /** Layer 3 — mechanics: how to drive the browser and where your files are. */
-export function mechanicsLayer(params: MechanicsParams): string {
+function mechanicsLayer(params: MechanicsParams): string {
   const { browseCommand, browseSession, appBaseUrl, screenshotsDir, assetsDir } = params;
   const browse = `${browseCommand} --session ${browseSession}`;
   return [
@@ -125,7 +125,7 @@ export function mechanicsLayer(params: MechanicsParams): string {
 }
 
 /** Layer 4 — hard boundaries. Identical for every run. */
-export function boundariesLayer(): string {
+function boundariesLayer(): string {
   return [
     "# Hard boundaries",
     "",

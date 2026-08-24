@@ -27,7 +27,7 @@ import type { FastifyReply } from "fastify";
  * (separate application). `.frozen` is excluded here too — it's api-files.ts's
  * one deliberate inline-preview path, which carries its own sandboxed CSP.
  */
-export const DANGEROUS_RENDERABLE_EXTENSIONS = new Set([
+const DANGEROUS_RENDERABLE_EXTENSIONS = new Set([
   ".html",
   ".htm",
   ".xhtml",

@@ -55,7 +55,7 @@ class ExposureFileCorruptError extends Error {
   }
 }
 
-export function exposureFilePath(): string {
+function exposureFilePath(): string {
   return process.env.CB_TAILSCALE_EXPOSURE_FILE ?? path.join(os.homedir(), ".config", "cb", "tailscale-exposure.json");
 }
 

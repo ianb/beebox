@@ -23,7 +23,6 @@ export {
   ConfidenceLevel,
   BeliefSource,
   ExperimentStatus,
-  ReactionSentiment,
   GuideSchema,
   type Guide,
   type GuideFields,

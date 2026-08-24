@@ -32,7 +32,7 @@ export const UI_SCAN_COVERAGES = ["dom", "dom+native", "dom-native-unavailable"]
 export type UiScanCoverage = (typeof UI_SCAN_COVERAGES)[number];
 
 /** What a `control:` pointer may ask the app to do with an element. */
-export const controlActionSchema = z.enum(["point", "focus", "reveal"]);
+const controlActionSchema = z.enum(["point", "focus", "reveal"]);
 
 /**
  * `cb-` plus kebab-case segments — the same address grammar the frontend

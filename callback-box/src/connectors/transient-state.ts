@@ -91,7 +91,7 @@ interface SaveOptions {
  * wedging the connector until a human intervenes. Never leave that torn state
  * reachable in the first place.
  */
-export async function saveTransientState(opts: SaveOptions): Promise<void> {
+async function saveTransientState(opts: SaveOptions): Promise<void> {
   await writeFileAtomic(transientStatePath(opts.boxRoot, opts.connectorName), {
     content: JSON.stringify(opts.data, null, 2) + "\n",
   });

@@ -96,7 +96,7 @@ export async function readHuskFields(boxRoot: string, relPath: string): Promise<
 }
 
 /** Render the model's kinded notes into the markdown the account field holds. */
-export function renderAccount(notes: ReviewOutput["notes"]): string {
+function renderAccount(notes: ReviewOutput["notes"]): string {
   if (notes.length === 0) return "";
   return notes.map((note) => `- ${note.kind}: ${note.text}`).join("\n");
 }

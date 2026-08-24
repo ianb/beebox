@@ -11,7 +11,7 @@ const changeSchema = z.looseObject({
   kind: z.unknown().optional(),
 });
 
-export const codexToolItemSchema = z.discriminatedUnion("type", [
+const codexToolItemSchema = z.discriminatedUnion("type", [
   z.looseObject({
     id: z.string(),
     type: z.literal("commandExecution"),
@@ -187,18 +187,6 @@ export function normalizeCodexSdkToolItem(item: CodexSdkItem): CodexToolContent 
     case "error":
       return null;
   }
-}
-
-/** Build the provider-neutral assistant frame consumed by live ChatSession. */
-export function codexToolChatMessage(raw: unknown, sessionId: string): ChatMessageAssistant | null {
-  const tool = normalizeCodexToolItem(raw);
-  if (tool === null) return null;
-  return {
-    type: "assistant",
-    session_id: sessionId,
-    uuid: tool.id,
-    message: { role: "assistant", content: [tool] },
-  };
 }
 
 export function codexSdkToolChatMessage(item: CodexSdkItem, sessionId: string): ChatMessageAssistant | null {

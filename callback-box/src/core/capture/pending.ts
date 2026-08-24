@@ -42,7 +42,7 @@ export interface PendingCapture {
  * through preparation/delivery, or has failed and can be retried. Excludes
  * `open` (still capturing) and `delivered` (done, and cleaned up off disk).
  */
-export function isPendingCaptureState(state: StagingSessionState): boolean {
+function isPendingCaptureState(state: StagingSessionState): boolean {
   return state === "sealed" || state === "preparing" || state === "delivering" || state.startsWith("failed:");
 }
 

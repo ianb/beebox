@@ -14,7 +14,7 @@
  */
 
 /** Kebab-case a string: drop parentheticals, lowercase, non-alnum runs → `-`. */
-export function kebab(text: string): string {
+function kebab(text: string): string {
   return text
     .replace(/\([^)]*\)/g, " ")
     .toLowerCase()
@@ -31,7 +31,7 @@ export function inventoryName(title: string): string {
  * Short slug for an assembled layer, keyed off recognizable phrases in the
  * verbose layer name so the resulting `<situation>/<slug>` is terse and stable.
  */
-export function layerSlug(rawLayerName: string): string {
+function layerSlug(rawLayerName: string): string {
   const name = rawLayerName.toLowerCase();
   if (name.includes("user prompt")) return "user-prompt";
   if (name.includes("system prompt")) return "system";

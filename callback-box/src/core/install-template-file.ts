@@ -423,7 +423,7 @@ export async function installTemplateFile(opts: InstallTemplateOptions): Promise
  * case it'll re-park on the next template change). Sweeping prevents
  * `config/_template-updates/` from accumulating cruft indefinitely.
  */
-export const STALE_TEMPLATE_UPDATE_MS = 30 * 24 * 60 * 60 * 1000;
+const STALE_TEMPLATE_UPDATE_MS = 30 * 24 * 60 * 60 * 1000;
 
 /**
  * Delete parked template-update files under `config/_template-updates/` that are

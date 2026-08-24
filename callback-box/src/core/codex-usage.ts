@@ -15,7 +15,7 @@ export const codexTokenUsageSchema = z.object({
   reasoningOutputTokens: z.number().int().nonnegative(),
 });
 
-export const codexTurnUsageSchema = z.object({
+const codexTurnUsageSchema = z.object({
   sessionId: z.string(),
   turnId: z.string(),
   task: z.string(),

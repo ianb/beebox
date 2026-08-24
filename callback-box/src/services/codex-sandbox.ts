@@ -8,20 +8,3 @@
  * backend's `bypassPermissions` posture and the Codex worktree launcher.
  */
 export const CODEX_BOX_SANDBOX = "danger-full-access" as const;
-
-export function codexBoxThreadSettings(): {
-  approvalPolicy: "never";
-  sandbox: typeof CODEX_BOX_SANDBOX;
-} {
-  return { approvalPolicy: "never", sandbox: CODEX_BOX_SANDBOX };
-}
-
-export function codexBoxTurnSettings(): {
-  approvalPolicy: "never";
-  sandboxPolicy: { type: "dangerFullAccess" };
-} {
-  return {
-    approvalPolicy: "never",
-    sandboxPolicy: { type: "dangerFullAccess" },
-  };
-}

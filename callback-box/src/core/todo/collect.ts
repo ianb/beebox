@@ -62,7 +62,7 @@ export function isUnsafeGlobPattern(pattern: string): boolean {
 }
 
 /** Throws {@link UnsafeTodoGlobError} if `pattern` could resolve outside the box root. */
-export function assertSafeGlobPattern(pattern: string): void {
+function assertSafeGlobPattern(pattern: string): void {
   if (isUnsafeGlobPattern(pattern)) throw new UnsafeTodoGlobError(pattern);
 }
 

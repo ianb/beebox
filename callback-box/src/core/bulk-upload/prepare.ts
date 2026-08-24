@@ -312,7 +312,7 @@ export function bulkBatchSlug(opts: { startedAt: string; id: string }): string {
 }
 
 /** Box-relative batch dir: `<contextDir>/tmp-upload/<slug>` (root when contextDir is ""). */
-export function bulkBatchRelDir(opts: { startedAt: string; id: string; contextDir: string }): string {
+function bulkBatchRelDir(opts: { startedAt: string; id: string; contextDir: string }): string {
   const slug = bulkBatchSlug({ startedAt: opts.startedAt, id: opts.id });
   const uploadRelDir = opts.contextDir !== "" ? `${opts.contextDir}/tmp-upload` : "tmp-upload";
   return `${uploadRelDir}/${slug}`;

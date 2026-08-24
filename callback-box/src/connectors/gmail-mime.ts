@@ -254,14 +254,6 @@ export async function parseGmailMessage(
   };
 }
 
-/**
- * Extract a Message-ID header (falling back to the raw API id). Used by the
- * connector to dedup against seenMessageIds before fetching attachments.
- */
-export function messageIdFor(raw: GmailMessage): string {
-  return getHeader(raw.payload, "Message-ID") || raw.id;
-}
-
 /** Return the RFC Message-ID header without substituting Gmail's API id. */
 export function rfc822MessageIdFor(raw: GmailMessage): string | undefined {
   return getHeader(raw.payload, "Message-ID");

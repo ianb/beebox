@@ -21,7 +21,6 @@ import { errnoCode } from "./error-guards.js";
 import {
   ATTACH_SUFFIX,
   cardBasename,
-  isAttachDirName,
   isInsideAttachScope,
   isLiteralAttachName,
 } from "../shared/attach-path.js";
@@ -126,4 +125,3 @@ async function scanDir(ctx: ScanContext, absDir: string): Promise<void> {
 }
 
 /** Re-export so callers can build messages without importing from attach-path. */
-export { isAttachDirName, isInsideAttachScope };

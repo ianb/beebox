@@ -60,6 +60,12 @@ const config: KnipConfig = {
     },
   },
   exclude: ["enumMembers", "duplicates", "types"],
+  // `@public` marks an export consumed from OUTSIDE this package — bin/ and the
+  // other monorepo checkouts import a handful of modules by relative path, and
+  // a package-scoped knip run cannot see those importers. The tag carries the
+  // consumer's name at the declaration, so the exemption is auditable there
+  // rather than accumulating as an opaque list in this file.
+  tags: ["-public"],
   // Doctests are markdown; knip parses TypeScript. Without this every export
   // whose only consumer is a doctest reads as dead. See the module's header.
   compilers: { md: doctestImports },

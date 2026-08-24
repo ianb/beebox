@@ -77,7 +77,7 @@ export interface InitOptions {
  * directly from tests without going through Commander's argv parsing or the
  * process.exit(1)-on-error wrapper below.
  */
-export async function runInit(targetPath: string, options: InitOptions): Promise<void> {
+async function runInit(targetPath: string, options: InitOptions): Promise<void> {
   // Detects what's already at `targetPath`: an existing v2 box (addressed by
   // its operational `content/` root or by its package root), or nothing yet.
   // A fresh init always scaffolds the v2 package layout — see "The box

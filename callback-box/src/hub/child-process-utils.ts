@@ -11,8 +11,6 @@ import { errnoCode } from "../lib/error-guards.js";
 
 export { DEV_BUNDLE_RELOAD_EXIT_CODE } from "../lib/dev-bundle-reload.js";
 
-export const KILL_GRACE_MS = 2000;
-
 /**
  * How long a BOX child gets between SIGTERM and SIGKILL.
  *
@@ -127,7 +125,7 @@ export function describeError(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
-export function sleep(ms: number): Promise<void> {
+function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
@@ -164,7 +162,7 @@ export function pidAlive(pid: number): boolean {
  * is not a group leader has no group of its own, and `-pid` would then answer
  * about some unrelated group (or nothing at all).
  */
-export function groupAlive(pid: number): boolean {
+function groupAlive(pid: number): boolean {
   try {
     process.kill(-pid, 0);
     return true;

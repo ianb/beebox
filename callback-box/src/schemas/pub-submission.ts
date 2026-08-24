@@ -16,7 +16,7 @@
 import { body, cardSchema, renderFrontmatterBlock, type InferCardFields } from "../cards/index.js";
 import { z } from "zod";
 
-export const PubSubmissionStatus = z.enum(["new", "processing", "processed"]);
+const PubSubmissionStatus = z.enum(["new", "processing", "processed"]);
 export type PubSubmissionStatusValue = z.infer<typeof PubSubmissionStatus>;
 
 export const PubSubmissionSchema = cardSchema("pub-submission", {

@@ -112,7 +112,7 @@ async function readBundle(bundleDir: string): Promise<Map<string, string | Uint8
  * false) when stdin is not a TTY — the never-auto-flip guarantee. On a TTY it
  * displays the preview and requires the operator to type the pub-id exactly.
  */
-export const defaultTtyConfirm: ConfirmFn = async (args: ConfirmArgs): Promise<boolean> => {
+const defaultTtyConfirm: ConfirmFn = async (args: ConfirmArgs): Promise<boolean> => {
   if (!process.stdin.isTTY) {
     console.error("cb pub go: refusing to flip live without an interactive terminal (type the pub-id to confirm). No changes made.");
     return false;

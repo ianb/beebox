@@ -26,7 +26,7 @@ interface SelfNotePostResult {
   body: string;
 }
 
-export async function postSelfNote(args: {
+async function postSelfNote(args: {
   serverUrl: string;
   boxName: string;
   body: string;

@@ -45,7 +45,7 @@ class FakeGmailNotPermittedError extends ConnectorFatalError {
 }
 
 /** True when this box carries the field-test marker. */
-export async function isFieldTestBox(boxRoot: string): Promise<boolean> {
+async function isFieldTestBox(boxRoot: string): Promise<boolean> {
   return fileExists(path.join(boxRoot, TEST_BOX_MARKER));
 }
 

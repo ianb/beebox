@@ -13,13 +13,13 @@ import { INCONCLUSIVE_REASONS } from "../shared/inconclusive.js";
 const Iso = z.string().datetime({ offset: true });
 
 /** Precheck phase result. */
-export const RunStepPrecheck = z.object({
+const RunStepPrecheck = z.object({
   status: z.enum(["pass", "fail", "skip"]),
   stdout: z.string().optional(),
 });
 
 /** Run phase result. */
-export const RunStepRun = z.object({
+const RunStepRun = z.object({
   "session-id": z.string().optional(),
   stdout: z.string().optional(),
   error: z.string().optional(),
@@ -37,7 +37,7 @@ export const RunStepRun = z.object({
  * report the same non-verdict without re-deriving it. Additive to the enum:
  * run cards written before it still load.
  */
-export const RunStepValidate = z.object({
+const RunStepValidate = z.object({
   status: z.enum(["pass", "fail", "warn", "inconclusive"]),
   stdout: z.string().optional(),
   review: z.string().optional(),

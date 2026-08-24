@@ -25,15 +25,11 @@ export type { PreAction, PreActionContext, PreActionResult } from "./types.js";
 
 const registry: PreAction[] = [];
 
-export function registerPreAction(action: PreAction): void {
+function registerPreAction(action: PreAction): void {
   registry.push(action);
 }
 
-export function getPreActions(): PreAction[] {
-  return [...registry];
-}
-
-export function getPreActionsForType(cardType: string): PreAction[] {
+function getPreActionsForType(cardType: string): PreAction[] {
   return registry.filter((a) => a.appliesTo.includes(cardType));
 }
 

@@ -81,7 +81,7 @@ export async function resolveSessionStorageTargets(args: { boxRoot: string; cont
   };
 }
 
-export async function inspectSessionStorage(targets: SessionStorageTargets): Promise<SessionStorageState> {
+async function inspectSessionStorage(targets: SessionStorageTargets): Promise<SessionStorageState> {
   return (await inspectSessionStoragePresence(targets)).state;
 }
 
