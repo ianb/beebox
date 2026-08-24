@@ -28,13 +28,17 @@ async function decide(exists: boolean, agentState: string, record: object | unde
 ```ts
 JSON.stringify([
   await decide(true, "live", { agent: "claude" }),
+  await decide(true, "launching", { agent: "claude" }),
   await decide(true, "none", { agent: "codex" }),
   await decide(true, "unknown", { agent: "claude" }),
   await decide(false, "none", { removed: { merged: true } }),
   await decide(false, "none", { removed: { merged: false } }),
+  await decide(false, "launching", { launch: { token: "active" } }),
+  await decide(false, "launch-failed", { agent: "claude", launch: { token: "failed" } }),
+  await decide(false, "unknown", { launch: { token: "broken" } }),
   await decide(false, "none", undefined),
 ])
-=> ["focus","existing","liveness-unknown","culled","removed-unmerged","unknown"]
+=> ["focus","launch-in-progress","existing","liveness-unknown","culled","removed-unmerged","launch-in-progress","launch-retry","liveness-unknown","unknown"]
 ```
 
 ## Routing state and action stay separate
@@ -48,12 +52,15 @@ const recent = 1769900000;
 const old = 1768000000;
 JSON.stringify([
   await route(true, "live", { launchedAt: "2025-01-01T00:00:00Z" }, String(old)),
+  await route(true, "launching", { launch: { token: "a", startedAt: "2026-02-02T02:20:00Z" } }, String(old)),
+  await route(true, "none", { launch: { token: "a", startedAt: "2026-01-01T00:00:00Z" } }, String(recent)),
   await route(true, "none", {}, String(recent)),
   await route(true, "none", {}, String(old)),
   await route(false, "none", { removed: { at: "2025-01-01T00:00:00Z" } }),
   await route(true, "unknown", {}, String(recent)),
+  await route(true, "live", { archived: { at: "2026-01-01T00:00:00Z" } }, String(recent)),
 ].map(({ state, action }) => [state, action]))
-=> [["live","manual-forward"],["dormant","resume-with-briefing"],["stale","new-stream-preferred"],["removed","resume-with-briefing"],["uncertain","investigate"]]
+=> [["live","manual-forward"],["launching","wait-for-launch"],["uncertain","investigate"],["dormant","resume-with-briefing"],["stale","new-stream-preferred"],["removed","resume-with-briefing"],["uncertain","investigate"],["uncertain","investigate"]]
 ```
 
 Directory mtime is a fallback only when registry and commit activity are absent.

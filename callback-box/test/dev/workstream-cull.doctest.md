@@ -112,6 +112,62 @@ const neighborScript = [
 => none
 ```
 
+## A launch lease bridges the process-observation gap
+
+The existing process signals keep precedence. When they prove no agent exists,
+an active registry lease reports `launching`; expired leases stop blocking and
+malformed leases fail closed.
+
+```ts continue
+const leaseStateDir = await mkdtemp(join(tmpdir(), "workstream-launch-lease-doctest-"));
+await execFileAsync("bash", ["-c", '. "$1"; session_registry_begin_launch seam token-a', "lease", join(repoRoot, "bin/lib/session-registry.sh")], {
+  env: { ...process.env, CALLBACK_STATE_DIR: leaseStateDir },
+});
+const launchLeaseScript = [
+  '. "$1"',
+  'WT_SNAP_STATE="no-agents"',
+  'wt_other_agent_live /tmp/seam',
+  'printf "%s|%s" "$WT_AGENT_STATE" "$WT_AGENT_REASON"',
+].join("; ");
+(await execFileAsync("bash", ["-c", launchLeaseScript, "lease", teardownLib], {
+  env: { ...process.env, CALLBACK_STATE_DIR: leaseStateDir },
+})).stdout
+=> launching|signal=launch-lease
+
+const processWinsScript = [
+  '. "$1"',
+  'WT_SNAP_STATE="ok"',
+  'WT_SNAP_ARGS="123 /usr/local/bin/claude --name seam --model opus"',
+  'WT_SNAP_CWDS="/unrelated"',
+  'wt_other_agent_live /tmp/seam',
+  'printf "%s|%s" "$WT_AGENT_STATE" "$WT_AGENT_REASON"',
+].join("; ");
+(await execFileAsync("bash", ["-c", processWinsScript, "lease", teardownLib], {
+  env: { ...process.env, CALLBACK_STATE_DIR: leaseStateDir },
+})).stdout
+=> live|signal=argv pid=123
+
+await execFileAsync("bash", ["-c", `. "$1"; session_registry_merge seam '{"launch":{"token":"old","startedAt":"2026-01-01T00:00:00Z"}}'`, "lease", join(repoRoot, "bin/lib/session-registry.sh")], {
+  env: { ...process.env, CALLBACK_STATE_DIR: leaseStateDir },
+});
+(await execFileAsync("bash", ["-c", launchLeaseScript, "lease", teardownLib], {
+  env: { ...process.env, CALLBACK_STATE_DIR: leaseStateDir },
+})).stdout
+=> none|launch=expired
+
+await execFileAsync("bash", ["-c", `. "$1"; session_registry_merge seam '{"launch":null}'; session_registry_merge seam '{"launch":{"token":"broken"}}'`, "lease", join(repoRoot, "bin/lib/session-registry.sh")], {
+  env: { ...process.env, CALLBACK_STATE_DIR: leaseStateDir },
+});
+(await execFileAsync("bash", ["-c", launchLeaseScript, "lease", teardownLib], {
+  env: { ...process.env, CALLBACK_STATE_DIR: leaseStateDir },
+})).stdout
+=> unknown|invalid-launch-record
+```
+
+```ts cleanup
+await rm(leaseStateDir, { recursive: true, force: true });
+```
+
 ## A failed trash move preserves the registered worktree and branch
 
 Removal stops immediately when the worktree directory cannot move into trash.

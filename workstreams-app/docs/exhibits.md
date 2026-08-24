@@ -23,9 +23,11 @@ Content survives a worktree cull; removing the worktree removes only the link.
 [files…]` does all of that: it derives the workstream from the checkout you run
 it in, copies the files in under names the app can route to (`Screen Shot
 2026-08-15.png` lands as `screen-shot-2026-08-15.png`), labels the figures `A1`,
-`A2`, … in argument order, and prints the URL — one line on stdout, so it pastes straight into chat. Write
-the directory by hand when you want something the CLI does not do; the contract
-is the files, not the tool.
+`A2`, … in argument order, maps one `.md` or `.markdown` argument to the
+renderer-required `doc.md` name (and refuses multiple documents), and prints
+the URL — one line on stdout, so it pastes straight into chat. Write the
+directory by hand when you want something the CLI does not do; the contract is
+the files, not the tool.
 
 `exhibit.json`:
 

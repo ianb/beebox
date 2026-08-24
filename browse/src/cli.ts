@@ -1,4 +1,5 @@
 import { AgentBrowserError, getUrl, run, runPassthrough } from "agent-browser-typed";
+import { reclaimWorktreeBrowsers } from "../../bin/process-cleanup.js";
 import { annotatedSnapshot, checkedAction, getWithTarget } from "./act.js";
 import { TARGET_COMMANDS } from "./controls.js";
 import { runEnhancedScreenshot } from "./screenshot.js";
@@ -76,7 +77,24 @@ async function waitForReady(ctx: WorktreeContext): Promise<void> {
   }
 }
 
+/**
+ * Reap this worktree's superseded agent-browser daemons before running.
+ * Upstream's daemon stops serving its socket on idle but never exits, so
+ * without this they accumulate one per generation.
+ *
+ * Best-effort by construction: a cleanup that cannot run must never fail the
+ * command the user actually asked for.
+ */
+async function reapSupersededDaemons(): Promise<void> {
+  const worktree = process.env["BROWSE_WORKTREE"];
+  if (worktree === undefined || worktree === "") return;
+  try {
+    await reclaimWorktreeBrowsers({ worktree });
+  } catch { /* best-effort */ }
+}
+
 async function main(): Promise<number> {
+  await reapSupersededDaemons();
   let args = process.argv.slice(2);
   // `--session <name>` is agent-browser's global session selector, and callers
   // put it before the subcommand (`bin/browse --session s open /`). Left in
