@@ -1,6 +1,6 @@
 ---
 title: "Enable knip's `exports` check and burn down the backlog"
-workstream: unknown
+workstream: knip-exports
 ---
 
 2026-07-04 · backlog.
