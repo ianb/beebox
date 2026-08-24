@@ -93,3 +93,8 @@ callback-box/user-stories/work/
 # Anonymized mail stays out until the boxholder has read it, since it is derived
 # from a real family's inbox — prepare.ts fails loudly naming anything absent.
 callback-box/user-stories/journeys/E-school/assets/
+
+# Per-machine schedule overrides (callback-box/docs/plans/scheduled-workstreams.md,
+# Track A): same schema as schedule.yaml, every field optional, so a laptop can
+# disable a schedule without a commit.
+schedules/*/local.yaml
