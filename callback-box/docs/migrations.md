@@ -124,6 +124,8 @@ deploy log scrolls away.
 
 6. **Test it.** Run dry-run against a real box you can reset; then `--apply` and validate with `cb validate`. Confirm the manifest got an entry. If you have a noisy-mode warning, decide explicitly whether to handle it or accept the loss — and document the call.
 
+   **A type/schema migration also has to converge each box's generated docs.** `.claude/rules/card-*.md` and `.agents/skills/` are regenerated from the schema registry, but only on `cb init`, a chat-session start, or a `cb wakeup` reactor cycle — the deploy sweep deliberately does not provision, so after the sweep migrates the card data, boxes with no such activity keep rules teaching the retired type (the 2026-08-24 `document`→`pdf` rename left 3 of 6 prod boxes on stale `card-document.md` until a manual `cb init` pass). Plan that regeneration as part of the rollout and verify it (`grep -rl` the old type name across each box, generated docs included), rather than assuming the data migration finished the job.
+
 7. **File an issue to remove the legacy support.** A migration almost always leaves code behind that exists only to tolerate the *old* shape — a fallback branch, a lenient parse, a compatibility field, a "both spellings accepted" reader. That code should not live forever, and **you are the last person who can name it precisely**: months later nobody can tell which branches are legacy tolerance and which are load-bearing. Write the issue now, while you can list them.
 
    File it under `issues/code-quality/` (it is tech debt, not an upstream `watch/` item — the trigger is internal). It should name:

@@ -70,6 +70,14 @@ skip them:
   in `src/core/migrations.ts`. **Never reorder/rename/remove** existing entries —
   the `name` is the per-box manifest key; touching the order silently rewrites
   which migrations a box thinks it ran.
+- **Converge the generated per-box docs too.** A schema/type change leaves every
+  box's generated `.claude/rules/card-*.md` and `.agents/skills/` teaching the
+  old shape — and regeneration is activity-gated (`cb init`, chat start, or a
+  `cb wakeup` cycle; the deploy sweep does not provision). Card data migrating
+  while the box's own rules still describe the retired type is the 2026-08-24
+  `document`→`pdf` scar: 3 of 6 prod boxes kept `card-document.md` until a
+  manual `cb init` pass. Until deploy-time regeneration exists, plan the
+  `cb init` convergence as part of the migration's rollout, not an afterthought.
 - **Cover *every* card that holds the old shape.** The XML-landmark escapee is the
   lesson: a migrator that matches `*.thing.card` but a box has the data under a
   different type/extension/body leaves it behind. Grep the real boxes for the old
@@ -114,11 +122,13 @@ the agent before sweeping the rest.
 | "The procedure ran and the agent said done." | The agent's word isn't the gate. Only `validate.shells`+`abort` is enforced; a render check still misses silent breakage. |
 | "I tested it by reading the diff." | Every scar surfaced from a real run on real data, not review. Run it on a resettable box. |
 | "I'll insert it earlier in the list to keep things ordered." | Reordering `MIGRATIONS` rewrites every box's applied-set. New entries go at the end, always. |
+| "The migration renamed the cards, so the boxes are converged." | Card data is half the state. Generated rules/skills on each box still teach the old type until something regenerates them — check, don't assume. |
 
 ## Red flags — stop
 
 Renaming/removing a card field with no migrator · "old data still parses" as the
 whole safety argument · a migrator with no `_warnings` spec · ignoring a
 field-loss warning against real data · an agent migration with no `severity:
-abort` gate · gating on "it renders" instead of a static check · inserting/reordering
+abort` gate · a type/schema migration with no plan for regenerating per-box
+rules/skills · gating on "it renders" instead of a static check · inserting/reordering
 existing `MIGRATIONS` entries · shipping without a dry-run on a real box.
