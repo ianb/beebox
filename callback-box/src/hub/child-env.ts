@@ -47,7 +47,7 @@ const CHILD_ENV_ALLOWLIST: readonly string[] = [
   "TMPDIR",
   "TEMP",
   "TMP",
-  "NODE_ENV", // src/webapp/routes/api.ts, chat-audio-routes.ts: dev-only branches.
+  "CB_DEV_SURFACES", // Explicit local-only route/test-facility opt-in.
   "TZ",
   "LANG",
   "LC_ALL",

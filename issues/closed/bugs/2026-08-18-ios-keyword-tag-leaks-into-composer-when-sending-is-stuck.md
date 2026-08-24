@@ -1,16 +1,19 @@
 ---
 title: "iOS: a voice keyword leaves its tag in the composer when the send lock is stuck, and repeats nest the tags"
 workstream: emission-model
-needs: [manual-testing]
 area: callback-box
 labels: [ios, voice, chat]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder report from the iOS app
-design: ../../callback-box/docs/implemented-plans/emission-model.md
+design: ../../../callback-box/docs/implemented-plans/emission-model.md
+resolution: implemented
 ---
 
-> **⏳ Awaiting manual testing** — fix landed in `cba769df` (requires a fresh
+> **Closed 2026-08-24** — the boxholder confirms the behavior has not
+> recurred across normal use for a while since the fix landed; calling the
+> manual gate met by field exposure rather than a scripted repro.
+> **The fix** (as it awaited that testing) — fix landed in `cba769df` (requires a fresh
 > app install): a refused keyword now leaves the composer exactly as it was
 > (tag AND spoken command dropped), detection refuses to match inside an
 > existing tag, and the refusal message names what is actually blocking.

@@ -10,6 +10,7 @@ import { z } from "zod";
 import {
   loadEnv,
   serverEnvSchema,
+  hubEnvSchema,
   cliEnvSchema,
   SECRET_ENV_NAMES,
   EnvValidationError,
@@ -87,6 +88,24 @@ SECRET_ENV_NAMES.has("PORT")
 ```
 
 ## Per-entrypoint schemas keep the parsed object narrow
+
+Development surfaces are a positive, server-specific opt-in. Server and hub
+entrypoints accept only literal `1`; unrelated CLI commands ignore the key.
+
+```ts
+loadEnv(serverEnvSchema, { CB_DEV_SURFACES: "1" }).CB_DEV_SURFACES
+=> 1
+
+loadEnv(hubEnvSchema, { CB_DEV_SURFACES: "1" }).CB_DEV_SURFACES
+=> 1
+
+JSON.stringify({
+  serverRejects: loadErr(serverEnvSchema, { CB_DEV_SURFACES: "true" }) !== null,
+  hubRejects: loadErr(hubEnvSchema, { CB_DEV_SURFACES: "development" }) !== null,
+  cliIgnores: loadEnv(cliEnvSchema, { CB_DEV_SURFACES: "not-for-this-command" }),
+})
+=> {"serverRejects":true,"hubRejects":true,"cliIgnores":{}}
+```
 
 `cliEnvSchema` only knows its own keys, so a server-only secret in the source is
 ignored — it never lands in the CLI's typed env.

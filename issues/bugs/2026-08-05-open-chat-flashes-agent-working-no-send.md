@@ -1,10 +1,63 @@
 ---
 title: "Opening an existing chat briefly flashes 'Agent is working' with no message sent (web + iOS)"
-workstream: unknown
+workstream: emission-model
+needs: [manual-testing]
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder opened a landmark's most-recent chat
 ---
+
+> **Root-caused and fixed 2026-08-23 (emission-model).** Reopened by the
+> boxholder the same day: opening a chat still flashed "Agent working" a couple
+> of seconds after load. Not a reconnect, not a busy snapshot, and not the
+> `starting` phase — it reproduces deterministically on an idle local chat:
+> the reconnect-refresh gate (`components/chat/reconnect-refresh-gate.ts`)
+> suppresses the *first* WS connect as "too soon after mount" but arms its
+> trailing timer, which fires a `REFRESH` ~5s after every mount. `REFRESH` is a
+> global handler, so an idle chat enters `refreshing`, and since `988b2014` the
+> strip painted through any `refreshing` (gated only against the
+> `"clearing"` confirmation). Visible duration = the history round-trip, so it
+> reads as a flash on a heavy box and was sub-100ms locally.
+>
+> Fix: the machine now records *why* it is refreshing (`context.refreshCause`,
+> `"turn"` on every `streaming → refreshing` edge, `"resync"` for the global
+> `REFRESH`), and the strip shows through a `turn` refresh only; a `resync`
+> refresh falls back to the confirmed-busy rule like `idle`. The `"clearing"`
+> confirmation value is gone — the status poll's idle read drops its
+> confirmation before sending the (resync) REFRESH. Doctests:
+> `test/frontend/chat-machine-refresh-cause.doctest.md`,
+> `test/frontend/chat/processing-status-display.doctest.md`. Browser probe on
+> the worktree: the ~5s resync still happens, the strip no longer paints.
+>
+> The mount-time trailing REFRESH itself is left alone: it is one redundant
+> history round-trip per open, now invisible, and it incidentally covers
+> events between bootstrap and subscription start.
+>
+> **The delivery fork is not a bug, and this note supersedes the 08-18 read.**
+> `starting` is entered only from `send()` (`lifecycle.ts`: `idle → starting`
+> is "a send with no open run"); opening/attaching a chat never enters it, so
+> "a session that is merely attaching" cannot read busy. The only sends that
+> see `starting` are concurrent ones mid-`startRun`, and `enqueue()` is the
+> right path for those: there is no open run to send onto, and the queue drains
+> when the starting run's first turn completes (the alternative double-started
+> a second run). Nothing to change there.
+
+> Cross-model review (Codex) of the fix surfaced one real edge, now also
+> fixed: the same trailing REFRESH could fire during a >5s `loading` phase,
+> cancelling `fetchInitial` mid-flight and skipping its `initial`-clearing
+> onDone. `loading` now ignores REFRESH like `streaming`/`refreshing` do
+> (pushed history still lands via the global SET_MESSAGES). Its second note —
+> a send queued during `loading`/`refreshing` finishes via a `resync` refresh,
+> so the strip drops when the status poll reads idle rather than after the
+> reconcile — matches pre-fix timing (the old `"clearing"` path hid that
+> refresh too) and the agent genuinely is done then; no change.
+
+## Manual testing
+
+On the box where it was seen (web and iOS): open an existing chat, wait ~10s
+without sending anything. Expected: no "Agent is working…" strip at any point.
+The earlier (2026-08-06) fix was closed on green tests and reopened, so this one
+stays gated until seen on the real box.
 
 > **Checked 2026-08-18 — half fixed; the half that isn't cosmetic is still
 > live.** Tagged `reconfirm`; removed.
@@ -25,6 +78,44 @@ discovered-in: main session — boxholder opened a landmark's most-recent chat
 >
 > Worth narrowing the issue's title/scope on the next pass: what remains is a
 > delivery-routing bug, not a UI flash.
+
+> **REOPENED 2026-08-24 — the flash is back, and the 08-06 fix never covered
+> this path.** Boxholder: opening a chat shows "Agent working" in a flash a
+> couple of seconds after the page loads.
+>
+> **Mechanism, confirmed by reading the code.** `988b2014` gated the strip
+> behind busy-confirmation for the `idle` and `loading` phases, but not for
+> `refreshing` — `processing-status-display.ts` reads:
+>
+> ```ts
+> if (input.phase === "refreshing") return input.confirmation !== "clearing";
+> ```
+>
+> That was defensible when `refreshing` was only reachable from `streaming`
+> (where the agent really is working). It isn't: **`REFRESH` is a *global*
+> handler** (`chatMachine.ts:105-107`, `on: { REFRESH: { target: ".refreshing" } }`),
+> so it fires from `idle` too — and one of its senders is a **reconnect-driven
+> resync** (`InteractiveChat-ws.ts:227-230`, `useDeferredResync`). A WebSocket
+> (re)connect shortly after page load therefore takes an idle chat into
+> `refreshing`, which paints the strip with no confirmation gate, until the
+> refetch settles. Exactly the reported timing.
+>
+> **What is NOT established: why now.** Both ingredients are old — the
+> reconnect-driven REFRESH landed 2026-08-04 (`add0c339`) and the ungated
+> `refreshing` branch 2026-08-06 (`988b2014`). Nothing since has touched either.
+> So either the 08-06 fix was always partial and only became visible when
+> reconnects got more frequent, or something environmental is dropping the
+> socket shortly after load. The box where this was reported has had unrelated
+> instability (intermittent codex thread-start failures, a high chat-session
+> construction rate), which would do it. Worth confirming a reconnect actually
+> occurs before assuming a code regression.
+>
+> **The real defect is that one state means two things.** "Refreshing after a
+> turn" and "refreshing because the socket reconnected" are the same machine
+> state, and only the first is the agent working. Gating `refreshing` the same
+> way as `idle` would suppress the false flash; distinguishing the two causes
+> would be more honest, and would also stop a post-turn refresh from being
+> suppressed when it legitimately should show.
 
 > **Job to be done:** *When I open a chat I was already in — to read it or pick it
 > back up — I want it to just show me the conversation, not a false "Agent is
@@ -59,7 +150,7 @@ was not inspected from this worktree.
 
 1. **Real lingering turn.** The session had a queued/in-flight turn — this box has
    had stuck/duplicate turns from the receipt-failure family
-   ([chat-send-receipts-fail-often…](2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md))
+   ([chat-send-receipts-fail-often…](../closed/bugs/2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md))
    — and opening it shows the tail finishing, so `busy` is technically correct but
    surprising (the user didn't cause it, and no new output appears).
 2. **Spurious starting / status-race flash.** Opening the session momentarily reads

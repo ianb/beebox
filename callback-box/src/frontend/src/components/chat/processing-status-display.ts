@@ -4,16 +4,38 @@ import { useEffect, useRef, useState } from "react";
 import { getChatStatus } from "../../api";
 import type { ChatEvent } from "../../machines/chat-types";
 
-export type ChatMachineDisplayPhase = "loading" | "idle" | "streaming" | "refreshing";
-export type ProcessingBusyConfirmation = "unconfirmed" | "confirmed" | "clearing";
+/**
+ * The chat machine's state, as the strip sees it. `refreshing` is split by
+ * cause (`context.refreshCause` in `chatMachine.ts`): `refreshing-turn` follows a local
+ * stream — the agent just worked and the transcript is being reconciled —
+ * while `refreshing-resync` is the global REFRESH (a WS (re)connect, a
+ * `chat-complete` broadcast on an idle chat, a status poll that read idle).
+ * Only the former is the agent working; a resync on an idle chat is a plain
+ * history round-trip and must never paint the strip. The reported flash
+ * (issues/bugs/2026-08-05-open-chat-flashes-agent-working-no-send.md) was
+ * exactly that: the reconnect gate's trailing timer fires a REFRESH ~5s
+ * after every mount.
+ */
+export type ChatMachineDisplayPhase = "loading" | "idle" | "streaming" | "refreshing-turn" | "refreshing-resync";
+export type ProcessingBusyConfirmation = "unconfirmed" | "confirmed";
+
+/** The chat machine is flat, so its state value is a plain state-name string. */
+export interface ChatSnapshotLike {
+  value: "loading" | "idle" | "streaming" | "refreshing";
+  context: { refreshCause: "turn" | "resync" };
+}
+
+export function chatDisplayPhase(snapshot: ChatSnapshotLike): ChatMachineDisplayPhase {
+  if (snapshot.value !== "refreshing") return snapshot.value;
+  return snapshot.context.refreshCause === "turn" ? "refreshing-turn" : "refreshing-resync";
+}
 
 export function shouldShowAgentWorking(input: {
   phase: ChatMachineDisplayPhase;
   processBusy: boolean;
   confirmation: ProcessingBusyConfirmation;
 }): boolean {
-  if (input.phase === "streaming") return true;
-  if (input.phase === "refreshing") return input.confirmation !== "clearing";
+  if (input.phase === "streaming" || input.phase === "refreshing-turn") return true;
   return input.processBusy && input.confirmation === "confirmed";
 }
 
@@ -56,16 +78,16 @@ export function streamWatchdogAdvance(input: { busy: boolean; idlePolls: number 
  */
 export function useProcessingStatusPoll(opts: {
   processBusy: boolean;
-  isStreaming: boolean;
-  isStreamingState: boolean;
+  snapshot: ChatSnapshotLike;
   sessionId: string | null;
   send: (event: ChatEvent) => void;
 }): boolean {
-  const { processBusy, isStreaming, isStreamingState, sessionId, send } = opts;
-  const [confirmation, setConfirmation] = useState<{
-    sessionId: string;
-    value: Exclude<ProcessingBusyConfirmation, "unconfirmed">;
-  } | null>(null);
+  const { processBusy, snapshot, sessionId, send } = opts;
+  const phase = chatDisplayPhase(snapshot);
+  const isStreamingState = phase === "streaming";
+  /** Any state with a turn's stream or fetch in flight — the confirmation poll stands down. */
+  const isStreaming = isStreamingState || phase === "refreshing-turn" || phase === "refreshing-resync";
+  const [confirmation, setConfirmation] = useState<{ sessionId: string; value: "confirmed" } | null>(null);
   useEffect(() => {
     if (!processBusy || isStreamingState) setConfirmation(null);
   }, [processBusy, isStreamingState, sessionId]);
@@ -79,7 +101,10 @@ export function useProcessingStatusPoll(opts: {
           if (status.busy) {
             setConfirmation({ sessionId, value: "confirmed" });
           } else {
-            setConfirmation({ sessionId, value: "clearing" });
+            // Not busy after all: drop any earlier confirmation and pick up
+            // whatever the turn wrote. The REFRESH is a `resync` refresh —
+            // unconfirmed, so it never paints the strip.
+            setConfirmation(null);
             send({ type: "REFRESH" });
           }
         })
@@ -143,9 +168,5 @@ export function useProcessingStatusPoll(opts: {
     };
   }, [isStreamingState, sessionId, send]);
   const value = confirmation?.sessionId === sessionId ? confirmation.value : "unconfirmed";
-  return shouldShowAgentWorking({
-    phase: isStreamingState ? "streaming" : isStreaming ? "refreshing" : "idle",
-    processBusy,
-    confirmation: value,
-  });
+  return shouldShowAgentWorking({ phase, processBusy, confirmation: value });
 }

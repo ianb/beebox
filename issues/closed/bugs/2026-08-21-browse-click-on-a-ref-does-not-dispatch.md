@@ -43,4 +43,4 @@ report a failure rather than success.
 A silent no-op is the expensive part: a checker reads "clicked" and then
 attributes the unchanged page to the app.
 
-Related: [agent-browser mouse wheel dispatch is flaky](2026-08-09-agent-browser-wheel-dispatch-flaky.md).
+Related: [agent-browser mouse wheel dispatch is flaky](../../bugs/2026-08-09-agent-browser-wheel-dispatch-flaky.md).

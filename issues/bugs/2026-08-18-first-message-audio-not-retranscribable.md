@@ -88,7 +88,7 @@ fall out:
    `webView.reload()`) all wipe it. This produces exactly the
    "first message fails, later ones work" pattern, and ties this issue to
    the same cold-start/navigation transition as
-   [chat send receipts fail](2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md).
+   [chat send receipts fail](../closed/bugs/2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md).
 
 So "first message" is a proxy axis: the real axes are *which composer
 recorded it* (native = always lost today) and *whether the document reloaded
@@ -122,7 +122,7 @@ mobile-contract change and belongs with the emission-model plan
 ## Related
 
 The cold-start family this may belong to:
-[chat send receipts fail](2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md)
+[chat send receipts fail](../closed/bugs/2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md)
 — the first send after a cold agent races its own receipt. If the first
 message's audio is lost during the same transition, these are two symptoms of
 one under-specified handoff, and worth investigating together rather than

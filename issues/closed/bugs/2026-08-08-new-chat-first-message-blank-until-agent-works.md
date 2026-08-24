@@ -167,7 +167,7 @@ works or replacing it speculatively.
   that.
 - [open-chat-flashes-agent-working-no-send](../../bugs/2026-08-05-open-chat-flashes-agent-working-no-send.md)
   — adjacent new/opened-session render glitch.
-- [chat-send-receipts-fail-often](../../bugs/2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md)
+- [chat-send-receipts-fail-often](2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md)
   — different symptom (receipt shows failed), same chat-send surface.
 
 ## Manual testing

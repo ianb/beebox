@@ -268,6 +268,18 @@ journalctl -u callback-scheduler -f
 systemctl restart callback-hub
 ```
 
+### Production-safe webapp defaults
+
+Security-sensitive webapp behavior fails closed when configuration is absent:
+tRPC never sends server stacks, Fastify always serves the built-frontend CSP,
+and `/api/external` plus mock TTS are disabled unless a development launcher
+sets the strict opt-in `CB_DEV_SURFACES=1`. The production systemd units and
+shared `.env` must not set that flag.
+
+`NODE_ENV` is not a webapp security control and is not forwarded to box engine
+children. Do not add it to the production unit or shared `.env`; child tools
+and package managers can interpret it independently.
+
 **Rollback lever:** the old `callback-serve.service` unit is stopped and
 disabled, not deleted — it stays on disk as `callback-serve-disabled-on-disk`
 (masked, not purged) so a bad hub rollout can be rolled back with

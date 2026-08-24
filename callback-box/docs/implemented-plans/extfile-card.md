@@ -94,10 +94,10 @@ each `commentary` card via `defaultHref`.
   through this exact route. The renderer's drift check compares the stored
   `version` hash to the live `markers` hash — both already in the envelope, so
   **no envelope change is needed** (`size`/`mtime` are CLI-stamped, not surfaced
-  live). **Dev-only:** mounted only when
-  `NODE_ENV !== "production"` (`api-external.ts:9-11` doc; gated in `api.ts`), so
-  live file rendering works in dev only — same limitation `commentary` external
-  targets already have.
+  live). **Dev-only:** mounted only when the server explicitly enables
+  development surfaces (`devSurfaces` in `api.ts`), so live file rendering
+  works in dev only — same limitation `commentary` external targets already
+  have. Omission fails closed.
 
 - **`rootsForBox` — REUSE, but EXTRACT.**
   `api-external.ts:72-75` reads the box's `externalRoots` (`box-config.ts:28`)
@@ -311,7 +311,7 @@ metadata must therefore be refreshed by a deliberate command, not a hook.
     `callback-box/CLAUDE.md` Cards).
   - Report per-card: `stamped` / `unchanged` / `unresolved`.
 - Runs locally and calls the resolver/marker helpers **directly** (not via the
-  dev-only `/api/external` route), so it works regardless of `NODE_ENV`.
+  dev-only `/api/external` route), so it works without development surfaces.
 - **`buildVersionMarkers` returns only hash + git today** (`external-ref.ts:135-142`);
   `size`/`mtime` are new. Extend it to also return `size`/`mtime`, or add a thin
   sibling `statExternal(absPath)` — one definition of "the file's stamped state"

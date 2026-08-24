@@ -2,13 +2,13 @@
 title: "Mark low-confidence words in a transcript so a misheard word is visible"
 workstream: transcript-confidence
 area: callback-box
-needs: [manual-testing]
-design: ../../callback-box/docs/implemented-plans/transcript-confidence.md
+design: ../../../callback-box/docs/implemented-plans/transcript-confidence.md
 labels: [transcription, voice, chat]
 priority: important
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder asked whether Deepgram reports confidence
+resolution: implemented
 ---
 
 > **⏳ Awaiting manual testing** — implemented on `worktree-transcript-confidence`
@@ -79,6 +79,8 @@ cannot mark anything" that is not silently pretending everything is confident.
 
 ## Manual testing
 
+> Verified by boxholder 2026-08-24
+
 What shipped (see the linked plan for the design): dictating in the web
 composer with Deepgram realtime now wraps low-confidence **phrase spans** in
 `<unsure>…</unsure>` in the persisted `<speech>` message — a span seeds at a
@@ -111,6 +113,7 @@ To try (needs a real microphone, which no agent has):
 ## Related
 
 Same surface as
-[show a retranscription in chat](2026-08-12-show-retranscription-in-chat.md) —
+[show a retranscription in chat](../../features/2026-08-12-show-retranscription-in-chat.md) —
 both carry transcript provenance and quality into the UI, and they probably
 want one design rather than two.
+

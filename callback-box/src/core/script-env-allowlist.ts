@@ -64,7 +64,6 @@ const SCRIPT_ENV_ALLOWLIST: readonly string[] = [
   "TMP",
   "USER", // git's author fallback in box commits, and ordinary tool expectations.
   "LOGNAME", // same, on systems that prefer it over USER.
-  "NODE_ENV", // src/webapp/routes/api.ts, chat-audio-routes.ts: dev-only branches.
   "TZ",
   "LANG",
   "LC_ALL",

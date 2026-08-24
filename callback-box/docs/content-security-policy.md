@@ -10,16 +10,18 @@ step (below).
 - **`src/lib/csp.ts`** — `buildCspPolicy({ mode, reportPath })` is the single
   source of truth for the directive set. Prod and dev share it so they can't
   drift; only `script-src`/`style-src` and the report path differ by mode.
-- **Prod** — `registerCspReportingHeaders` (`src/webapp/server-root.ts`) adds an
+- **Built webapp** — `registerCspReportingHeaders` (`src/webapp/server-root.ts`) adds an
   `onSend` hook that sets `Content-Security-Policy-Report-Only` +
   `Reporting-Endpoints` on `text/html` responses. It keys on content-type (API
   and asset responses get no CSP) and **yields to any route that already set a
   CSP** — notably the frozen captured-page route (`api-files.ts`), whose strict
-  `sandbox` policy stays authoritative.
+  `sandbox` policy stays authoritative. Fastify always selects the production
+  policy: it serves the built frontend, never Vite's HMR HTML.
 - **Dev** — Vite serves the dev HTML, so `vite.config.ts` sets the same headers
   via `server.headers`, built from `buildCspPolicy({ mode: "dev" })`. Dev relaxes
   `script-src`/`style-src` to `'unsafe-inline' 'unsafe-eval'` for Vite's injected
-  react-refresh + HMR; prod is strict (`script-src 'self'`).
+  react-refresh + HMR; the built webapp is strict (`script-src 'self'`). Neither
+  choice depends on `NODE_ENV`.
 - **Report sink** — `POST /api/csp-report`
   (`src/webapp/routes/api-csp-report.ts`), a root-level, unauthenticated route
   (browsers send reports without credentials). It accepts both

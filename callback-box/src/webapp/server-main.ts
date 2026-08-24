@@ -41,7 +41,7 @@ async function parseBoxArg(arg: string): Promise<BoxSpec> {
 const boxes: BoxSpec[] | undefined =
   boxArgs.length > 0 ? await Promise.all(boxArgs.map(parseBoxArg)) : undefined;
 
-startServer({ port, host, boxes }).catch((err: unknown) => {
+startServer({ port, host, boxes, devSurfaces: env.CB_DEV_SURFACES === "1" }).catch((err: unknown) => {
   console.error("Failed to start server:", err);
   process.exit(1);
 });

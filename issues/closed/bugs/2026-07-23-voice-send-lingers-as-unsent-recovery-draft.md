@@ -1,15 +1,18 @@
 ---
 title: "Submitting a voice message leaves it behind as an 'unsent' recoverable draft"
 workstream: emission-model
-needs: [manual-testing]
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder, repeatedly, sending voice messages
 priority: important
-design: ../../callback-box/docs/implemented-plans/emission-model.md
+design: ../../../callback-box/docs/implemented-plans/emission-model.md
+resolution: implemented
 ---
 
-> **⏳ Awaiting manual testing** — fix landed in the emission-model
+> **Closed 2026-08-24** — the boxholder confirms the behavior has not
+> recurred across normal use for a while since the fix landed; calling the
+> manual gate met by field exposure rather than a scripted repro.
+> **The fix** (as it awaited that testing) — fix landed in the emission-model
 > workstream (track C): an emptied composer now removes the persisted draft
 > synchronously (no 400ms debounce window), and the persist scheduler
 > flushes instead of dropping a pending write on unmount. See Manual
@@ -102,5 +105,5 @@ persistence still work.
 
 Web frontend (persistence + scheduler), not shell-specific — but the recovery
 banner has shown on iOS
-([both-composers regression](../closed/bugs/2026-07-22-ios-both-composers-nativecomposer-flag-lost-on-nav.md)
+([both-composers regression](2026-07-22-ios-both-composers-nativecomposer-flag-lost-on-nav.md)
 screenshot), so verify there too.

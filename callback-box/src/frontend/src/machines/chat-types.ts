@@ -74,6 +74,15 @@ export interface ChatContext {
    */
   interrupting: boolean;
   /**
+   * Why the machine is (or last was) in `refreshing`. `"turn"` is set on every
+   * `streaming → refreshing` edge — the agent just worked; `"resync"` by the
+   * global REFRESH (WS (re)connect, idle-chat `chat-complete`, status poll).
+   * The status strip shows "Agent is working…" through a `turn` refresh only
+   * (`components/chat/processing-status-display.ts`). Meaningful only while
+   * in `refreshing`.
+   */
+  refreshCause: "turn" | "resync";
+  /**
    * What to address backend chat calls by — either an existing session id
    * or `"new"` to start a fresh conversation. Held alongside `sessionId`
    * because for a freshly-created chat the server-assigned id arrives

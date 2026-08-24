@@ -93,6 +93,9 @@ const optionalUrl = z.string().url().optional();
 /** An optional non-empty string. */
 const optionalString = z.string().min(1).optional();
 
+/** Explicit positive opt-in for local-only webapp facilities. */
+const optionalDevSurfaces = z.literal("1").optional();
+
 /**
  * Vars every entrypoint may see. Kept deliberately small — only what's read
  * across CLI, server, and hub alike.
@@ -128,6 +131,7 @@ export const baseEnvSchema = z.object({
  * (and redacts values), it does not force any secret to be present.
  */
 export const serverEnvSchema = baseEnvSchema.extend({
+  CB_DEV_SURFACES: optionalDevSurfaces,
   CB_PUBLIC_URL: optionalUrl,
   PUBLIC_URL: optionalUrl,
   PORT: optionalPort,
@@ -148,6 +152,7 @@ export const serverEnvSchema = baseEnvSchema.extend({
  * mints its own per-boot `CB_HUB_SECRET`. Networking mirrors the server.
  */
 export const hubEnvSchema = baseEnvSchema.extend({
+  CB_DEV_SURFACES: optionalDevSurfaces,
   CB_PUBLIC_URL: optionalUrl,
   PUBLIC_URL: optionalUrl,
   PORT: optionalPort,

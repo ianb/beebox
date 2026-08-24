@@ -1,14 +1,17 @@
 ---
 title: "Chat sends often show 'failed'/stay in the composer though the message actually sent — receipts are unreliable"
 workstream: emission-model
-needs: [manual-testing]
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder reports it happening commonly across normal use
 priority: important
+resolution: implemented
 ---
 
-> **⏳ Awaiting manual testing** — superseding fix landed in the
+> **Closed 2026-08-24** — the boxholder confirms the behavior has not
+> recurred across normal use for a while since the fix landed; calling the
+> manual gate met by field exposure rather than a scripted repro.
+> **The fix** (as it awaited that testing) — superseding fix landed in the
 > emission-model workstream (`6e928be6`): the server now acks a send the
 > moment it is durably recorded, before the engine spawns, so the cold-Codex
 > first send should confirm in about a second instead of remaining pending
@@ -68,7 +71,7 @@ may make the recovery-draft symptom disappear without the draft-persistence race
 being fixed at all — worth not mistaking one for the other.
 
 **Interaction with in-flight work, worth flagging before it bites.**
-[Long-lived processes never reload the rebuilt bundle](../closed/bugs/2026-08-15-long-lived-processes-never-reload-the-rebuilt-bundle.md)
+[Long-lived processes never reload the rebuilt bundle](2026-08-15-long-lived-processes-never-reload-the-rebuilt-bundle.md)
 proposes making stale processes restart themselves. Every such restart leaves
 the agent cold, so it walks straight into this bug — a fix that makes restarts
 *more* frequent will make this fire *more* often. These two should know about

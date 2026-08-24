@@ -257,11 +257,12 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
   });
 
   // Raw routes that can't move to tRPC (byte streaming, file uploads, WebSocket)
-  await registerApiRoutes(instance, { boxRoot: box.boxRoot, eventBus });
+  const devSurfaces = options.devSurfaces === true;
+  await registerApiRoutes(instance, { boxRoot: box.boxRoot, eventBus, devSurfaces });
   await registerActionRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
   await registerCommandRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
   await registerHistoryRoutes(instance, box.boxRoot);
-  await registerChatRoutes({ server: instance, boxRoot: box.boxRoot, eventBus, openaiAudio: options.services?.openaiAudio, prewarmChat: options.prewarmChat, chatBackend: options.chatBackend });
+  await registerChatRoutes({ server: instance, boxRoot: box.boxRoot, eventBus, openaiAudio: options.services?.openaiAudio, prewarmChat: options.prewarmChat, chatBackend: options.chatBackend, devSurfaces });
   registerPairingRoutes(instance, { boxRoot: box.boxRoot, boxSlug: box.slug });
   // Box admin (telegram/google/box-config) now lives in the `admin` tRPC router
   // behind ownerProcedure; only the OAuth redirect callback stays a raw route
