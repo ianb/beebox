@@ -315,7 +315,7 @@ export function encodePathForUrl(path: string): string {
  */
 export function apiFileUrl(boxSlug: string, path: string): string {
   const base = viteBase().replace(/\/$/, "");
-  return `${base}/${boxSlug}/api/files/${path}`;
+  return `${base}/${boxSlug}/api/files/${encodePathForUrl(path)}`;
 }
 
 /**
@@ -327,7 +327,7 @@ export function apiFileUrl(boxSlug: string, path: string): string {
  */
 export function apiImageUrl(boxSlug: string, path: string): string {
   const base = viteBase().replace(/\/$/, "");
-  return `${base}/${boxSlug}/api/image/${path}`;
+  return `${base}/${boxSlug}/api/image/${encodePathForUrl(path)}`;
 }
 
 // Read Vite's base URL. Wrapped so the bare `import.meta.env` access doesn't

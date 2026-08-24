@@ -52,7 +52,7 @@ import {
   partitionFiles,
   type PersistedEmission,
 } from "../input/emission-persist";
-import { getApiBase } from "../api-core";
+import { apiRawFileUrl, getApiBase } from "../api-core";
 import { usePersistScheduler, PERSIST_DEBOUNCE_MS } from "./usePersistScheduler";
 
 // Restore is once per store LIFETIME, not per hook mount: the store is the
@@ -71,7 +71,7 @@ export interface EmissionPersistenceApi {
 
 async function fileExists(path: string): Promise<boolean> {
   try {
-    const response = await fetch(`${getApiBase()}/files/${path}`, { method: "HEAD" });
+    const response = await fetch(apiRawFileUrl(getApiBase(), path), { method: "HEAD" });
     return response.ok;
   } catch (_e) {
     // Network hiccup — treat as gone rather than risk restoring a broken

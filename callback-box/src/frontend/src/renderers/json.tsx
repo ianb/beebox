@@ -10,7 +10,7 @@
 
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getApiBase } from "../api";
+import { apiRawFileUrl, getApiBase } from "../api";
 import { formatBytes } from "../lib/format-bytes";
 import { JsonView } from "../components/ui/JsonView";
 import { Stack } from "../components/ui/Stack";
@@ -33,7 +33,7 @@ interface FileMeta {
 
 function JsonRenderer({ data }: RendererProps) {
   const apiBase = getApiBase();
-  const url = `${apiBase}/files/${data.path}`;
+  const url = apiRawFileUrl(apiBase, data.path);
   const basename = data.path.split("/").pop() ?? data.path;
   const [loadRequested, setLoadRequested] = useState(false);
 

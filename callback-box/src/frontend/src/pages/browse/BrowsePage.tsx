@@ -6,7 +6,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "@tanstack/react-router";
-import { getApiBase } from "../../api";
+import { apiRawFileUrl, getApiBase } from "../../api";
 import { useBusSubscription, type RealtimeEvent } from "../../hooks/useBusSubscription";
 import { busEventData } from "../../lib/bus-events";
 import { isRecord } from "@shared/is-record";
@@ -234,7 +234,7 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
     setDeleteError(null);
     setDeletingPath(path);
     try {
-      const response = await fetch(`${getApiBase()}/files/${path}`, {
+      const response = await fetch(apiRawFileUrl(getApiBase(), path), {
         method: "DELETE",
       });
       if (!response.ok) {

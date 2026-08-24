@@ -12,7 +12,7 @@
  * scope, and without a match it fell through to the binary renderer.
  */
 
-import { getApiBase } from "../api";
+import { apiRawFileUrl, getApiBase } from "../api";
 import { DoclingView } from "../components/DoclingView";
 import { ExternalLink } from "../components/ui/ExternalLink";
 import { Pre } from "../components/ui/Pre";
@@ -20,7 +20,6 @@ import { Stack } from "../components/ui/Stack";
 import { Text } from "../components/ui/Text";
 import { useDoclingDocument } from "../hooks/useDoclingDocument";
 import { isDoclingPath } from "../lib/docling";
-import { encodePathForUrl } from "../lib/view-url";
 import type { RendererProps } from "./index";
 import { registerFileType } from "./index";
 
@@ -44,7 +43,7 @@ const RAW_FETCH_LIMIT = 1_000_000;
 function DoclingRawView({ data }: RendererProps) {
   const { data: loaded, isLoading, error } = useDoclingDocument(data.path);
   const basename = data.path.split("/").pop() ?? data.path;
-  const downloadUrl = `${getApiBase()}/files/${encodePathForUrl(data.path)}`;
+  const downloadUrl = apiRawFileUrl(getApiBase(), data.path);
 
   if (isLoading) return <Text as="div" tone="subtle" className="p-4">Loading extraction…</Text>;
   if (error !== null || loaded === undefined) {
