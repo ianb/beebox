@@ -27,6 +27,7 @@ import { chatHistorySlice } from "../../core/chat/session/load-history.js";
 import type { EventBus } from "../../core/event-bus.js";
 import type { ChatSchedule } from "../../core/chat/schedules.js";
 import { resolveSessionAvailability } from "../../core/chat/session/availability.js";
+import { resolveChatTarget } from "../../core/chat/session/target.js";
 
 export interface ScheduleFireDeps {
   boxRoot: string;
@@ -138,7 +139,7 @@ export async function fireChatSchedule(deps: ScheduleFireDeps, schedule: ChatSch
   });
   if (availability.kind === "unavailable") {
     console.warn(`[schedule] Session ${targetId} is unavailable locally; using a fresh session`);
-    const fresh = registry.createNew();
+    const { session: fresh } = await resolveChatTarget({ boxRoot, registry }, { kind: "fresh" });
     wireSession(fresh);
     await sendFiredTurn({ session: fresh, eventBus, firedMessage });
     return;
@@ -160,7 +161,7 @@ export async function fireChatSchedule(deps: ScheduleFireDeps, schedule: ChatSch
   // unresumable pre-v2 session). Re-send once into a brand-new session so the
   // fired schedule's response is never silently lost.
   console.warn(`[schedule] Fired turn failed for session ${targetId}; retrying in a fresh session`);
-  const fresh = registry.createNew();
+  const { session: fresh } = await resolveChatTarget({ boxRoot, registry }, { kind: "fresh" });
   wireSession(fresh);
   const retried = await sendFiredTurn({
     session: fresh,

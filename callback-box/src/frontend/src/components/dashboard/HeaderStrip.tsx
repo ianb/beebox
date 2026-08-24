@@ -3,6 +3,8 @@
  */
 
 import { useState, useRef, useEffect } from "react";
+
+import { useBoxName } from "../../hooks/useBoxName";
 import type { RouterOutput } from "../../lib/trpc";
 
 type StatusResponse = RouterOutput["status"]["status"];
@@ -47,7 +49,9 @@ export function HeaderStrip({ status, connected }: HeaderStripProps) {
   const [showGit, setShowGit] = useState(false);
   const gitRef = useRef<HTMLDivElement>(null);
   const boxRoot = status?.boxRoot;
-  const boxName = boxRoot?.split("/").pop() ?? "Box";
+  // NOT the last segment of boxRoot — since the operational root moved to <box>/content that is
+  // the literal word "content" on every box, so the largest text on the dashboard named no box.
+  const { boxName } = useBoxName();
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -63,10 +67,14 @@ export function HeaderStrip({ status, connected }: HeaderStripProps) {
     <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-white border-b">
       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         <div className="min-w-0">
-          <h1 className="text-base sm:text-lg font-semibold text-warm-900 truncate">{boxName}</h1>
-          {boxRoot ? (
-            <div className="text-xs text-warm-500 font-mono truncate hidden sm:block">{boxRoot}</div>
-          ) : null}
+          {/* The box root stays reachable on hover; the machine's directory layout is not
+              dashboard content, and printing it under the heading crowded out the box's name. */}
+          <h1
+            className="text-base sm:text-lg font-semibold text-warm-900 truncate"
+            title={boxRoot === undefined ? undefined : boxRoot}
+          >
+            {boxName}
+          </h1>
         </div>
         <span
           className={`w-2 h-2 rounded-full flex-shrink-0 ${connected ? "bg-success" : "bg-danger-light"}`}
@@ -75,6 +83,8 @@ export function HeaderStrip({ status, connected }: HeaderStripProps) {
         {status ? (
           <div className="relative" ref={gitRef}>
             <button
+              id="cb-dashboard-git-status"
+              data-cb-does="opens the box's git status — which files are modified or untracked"
               onClick={() => setShowGit(!showGit)}
               className={`text-sm px-2 py-0.5 rounded hover:bg-warm-100 whitespace-nowrap ${
                 status.git.clean ? "text-success" : "text-warning"

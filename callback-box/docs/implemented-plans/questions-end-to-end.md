@@ -619,7 +619,7 @@ Each chunk is a commit-sized unit with its tests; the plan ships as one unit
   before and after. Small blast radius (a handful of question cards exist).
 - **User-story re-audit**: after implementation, re-run the user-story
   method scoped to questions (reader agents → adversarial verification →
-  `bin/browse` checks, per `docs/reports/user-stories-audit-2026-06-26.md`'s
+  `bin/browse` checks, per `user-stories/catalog/2026-06-26.md`'s
   method note) as the acceptance pass — the subsystem this plan exists to
   fix was flagged by exactly that method.
 

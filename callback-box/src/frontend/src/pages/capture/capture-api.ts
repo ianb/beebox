@@ -297,10 +297,25 @@ export async function finalizeCaptureSession(sessionId: string): Promise<void> {
   }
 }
 
+/**
+ * The box refused a discard because the background worker already owns the
+ * capture — it was sealed (by Done, or by the abandonment sweep) between the
+ * client's decision and its request. Nothing is lost: the capture goes on to
+ * deliver into the chat it was started from, where its bubble reports it. A
+ * distinct type so callers can say that instead of "discard failed".
+ */
+export class CaptureAlreadySealedError extends RequestError {
+  constructor() {
+    super("This capture is already being delivered — it will land in the chat.");
+    this.name = "CaptureAlreadySealedError";
+  }
+}
+
 export async function cancelCaptureSession(sessionId: string): Promise<void> {
   const res = await fetch(`${getApiBase()}/capture/sessions/${sessionId}`, withMobileAuth({
     method: "DELETE",
   }));
+  if (res.status === 409) throw new CaptureAlreadySealedError();
   if (!res.ok) {
     const message = `Cancel failed: ${res.status}`;
     throw new RequestError(message);

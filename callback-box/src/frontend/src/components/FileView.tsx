@@ -26,6 +26,7 @@ import { useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { trpc } from "../lib/trpc";
 import { displayName } from "../lib/display-name";
+import { ATTACH_SUFFIX } from "@shared/attach-path";
 import { getApiBase, withBase } from "../api";
 import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
 import { useDeferredResync } from "../hooks/useDeferredResync";
@@ -107,6 +108,14 @@ function isCardPath(path: string): boolean {
 }
 
 function isDirectoryPath(path: string): boolean {
+  // An extension is a good proxy for "this is a file" except for the one
+  // directory convention that carries a suffix: every card's attachments live in
+  // a sibling `<basename>.attach/`. Classifying those as files sent the shell to
+  // fetch a directory's body as text, so every attachment directory in every box
+  // rendered "Failed to load: 404" on the card page while listing fine in Browse.
+  // Only a path ENDING in the suffix is the directory itself; `foo.attach/photo.jpg`
+  // is a file inside it and is classified by its own extension below.
+  if (path.endsWith(ATTACH_SUFFIX)) return true;
   return pathExt(path) === "";
 }
 

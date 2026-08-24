@@ -11,6 +11,8 @@ export function resultFromCodexTurn(options: {
   status: "completed" | "interrupted" | "failed";
   error?: string | null | undefined;
   structuredOutput?: unknown;
+  /** Includes assistant text, reasoning, tool calls, or command execution. */
+  hadAssistantActivity?: boolean;
 }): AgentResult {
   const base: AgentResultBase = {
     output: options.output,
@@ -24,5 +26,11 @@ export function resultFromCodexTurn(options: {
     ...base,
     success: false,
     error: options.error ?? (options.status === "interrupted" ? "Codex turn was interrupted" : "Codex turn failed"),
+    // A failed turn with no assistant activity is the shape used for startup
+    // and model rejection. Preserve partial-progress semantics when the turn
+    // emitted text, reasoning, tool calls, or command execution before failing.
+    ...(options.status === "failed" &&
+      !(options.hadAssistantActivity ?? options.resultText !== "") &&
+      { invocationFailure: true }),
   };
 }

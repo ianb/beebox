@@ -64,7 +64,7 @@ export function ClaudeCodeSection() {
           <p className="text-sm text-primary mb-2">
             Complete authentication in a new tab:
           </p>
-          <ExternalLink href={authUrl}>Open Anthropic Login</ExternalLink>
+          <ExternalLink id="cb-admin-claude-login-link" href={authUrl}>Open Anthropic Login</ExternalLink>
           <p className="text-xs text-primary mt-2">
             Waiting for authentication to complete...
           </p>
@@ -80,6 +80,7 @@ export function ClaudeCodeSection() {
       <div className="flex gap-3">
         {!status?.loggedIn ? (
           <Button
+            id="cb-admin-claude-authenticate"
             intent="primary"
             onClick={() => send({ type: "LOGIN" })}
             disabled={!isIdle}
@@ -91,6 +92,7 @@ export function ClaudeCodeSection() {
         ) : null}
         {status?.loggedIn ? (
           <Button
+            id="cb-admin-claude-logout"
             intent="secondary"
             onClick={() => send({ type: "LOGOUT" })}
             loading={isLoggingOut}
@@ -100,6 +102,7 @@ export function ClaudeCodeSection() {
           </Button>
         ) : null}
         <Button
+          id="cb-admin-claude-refresh"
           intent="ghost"
           onClick={() => send({ type: "REFRESH" })}
           disabled={isLoading}

@@ -15,14 +15,16 @@
  * blast-radius boundary, not a wall (the plan says so at length).
  *
  * Every outcome is logged, refusals included: a box repeatedly asking for a
- * secret it was never granted is exactly what an access log is for.
+ * secret it was never granted is exactly what an access log is for. What the
+ * log records and what the STORE records are two different questions, which is
+ * why `observe: false` exists — see the option's comment below.
  */
 
 import { boxSlug } from "../../lib/box-slug.js";
 import { invariant } from "../../lib/invariant.js";
 import { err, ok, type Result } from "../../lib/result.js";
 import { getBoxTimeISO } from "../../lib/time.js";
-import { appendSecretAccessEvent, stampSecretLastUsed } from "./access-log.js";
+import { appendSecretAccessEvent, stampSecretUse } from "./access-log.js";
 import {
   DanglingSecretGrantError,
   EmptySecretSlotError,
@@ -48,6 +50,16 @@ import { loadSecretStore, secretsFilePath, type SecretAccessLevel } from "./stor
  */
 export const SECRET_PURPOSE_PATTERN = /^[\da-z][\da-z-]{0,39}$/;
 
+/**
+ * What a per-key reader (`core/mistral-key.ts` and its siblings) is told about
+ * the read it is doing. One field today, stated at every call site rather than
+ * defaulted, so "am I about to spend this key or just look at it?" is answered
+ * where the answer is known — see {@link ResolveSecretOptions.observe}.
+ */
+export interface SecretRead {
+  observe: boolean;
+}
+
 /** A resolved value, plus whether the entry's last probe failed auth. */
 export interface ResolvedSecret {
   value: string;
@@ -66,6 +78,22 @@ export interface ResolveSecretOptions {
   /** The authoritative slug where one is threaded (`ctx.boxSlug`, `BoxSpec`);
    *  omitted callers get it derived from disk. */
   slug?: string;
+  /**
+   * Does this resolve count as USE? Omit (or `true`) for real work — the
+   * ordinary case. `false` is for a status-only probe: a health check asking
+   * "is this key configured?" resolves the value but never spends it.
+   *
+   * The split is deliberate and lands in two different places:
+   *
+   * - The **access log** records it either way. The log is attribution — who
+   *   read what, when — and a probe genuinely read the value, so hiding it
+   *   would put a hole in the one record that answers "what touched this key".
+   * - The **store metadata** (`lastUsed`, `purposes`) does NOT move. Those two
+   *   fields answer "is this grant still earning its keep", and a dashboard
+   *   polling health every minute would otherwise pin `lastUsed` to now forever
+   *   and make a dead key look busy.
+   */
+  observe?: boolean;
 }
 
 /**
@@ -115,6 +143,6 @@ export async function resolveSecret(opts: ResolveSecretOptions): Promise<Result<
   }
 
   await appendSecretAccessEvent({ ts, box: slug, secret: name, purpose, event: "resolve" });
-  await stampSecretLastUsed({ slug, name, nowIso: ts });
+  if (opts.observe !== false) await stampSecretUse({ slug, name, nowIso: ts, purpose });
   return ok({ value: entry.value, suspect: entry.verified?.status === "failed" });
 }

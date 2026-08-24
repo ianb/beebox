@@ -7,10 +7,13 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { errnoCode } from "../../lib/error-guards.js";
+import type { AgentEngine } from "../../shared/agent-models.js";
+
+export type { AgentEngine } from "../../shared/agent-models.js";
 
 export interface BoxConfig {
   /** Native agent harness used for new box jobs and chats. Missing means Claude. */
-  agentEngine?: "claude" | "codex";
+  agentEngine?: AgentEngine;
   publicUrl?: string;
   allowedEmails?: string[];
   /** IANA timezone for this box (e.g. "America/Chicago"). Used in all agent prompts. */
@@ -40,8 +43,6 @@ export interface BoxConfig {
     telegramChat?: string;
   };
 }
-
-export type AgentEngine = "claude" | "codex";
 
 export class InvalidAgentEngineError extends Error {
   readonly value: unknown;

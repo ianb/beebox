@@ -17,7 +17,7 @@ import type { FileSummary } from "@core/file-summary";
 import { resolveFileTypeUI } from "../../file-types/registry";
 import { cn } from "../../lib/cn";
 import { FileView } from "../FileView";
-import { href } from "../../lib/routing";
+import { withBase } from "../../api";
 import { useViewNavigate } from "../../hooks/useViewNavigate";
 
 interface FileEntryProps {
@@ -110,7 +110,7 @@ function ExpandedControls({
   onCollapse: () => void;
   onPanel?: (summary: FileSummary<unknown>) => void;
 }) {
-  const pageHref = boxSlug ? href(`/${boxSlug}/browse/${summary.path}`) : undefined;
+  const pageHref = boxSlug ? withBase(`/${boxSlug}/browse/${summary.path}`) : undefined;
   return (
     <>
       <button
@@ -200,7 +200,9 @@ export function FileEntry({ summary, compact, onPanel, className }: FileEntryPro
             onPanel={onPanel}
           />
         </div>
-        <div className="border-t border-warm-200">
+        {/* Peeked card body: user content, excluded from the `cb chat ui` walk
+            (lib/ui-scan/scan.ts). The row's own controls are above it. */}
+        <div data-cb-scan="exclude" className="border-t border-warm-200">
           <FileView path={summary.path} mode="companion" onNavigate={handleNavigate} />
         </div>
       </div>

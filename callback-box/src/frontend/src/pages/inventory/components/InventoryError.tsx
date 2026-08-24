@@ -9,7 +9,7 @@ export function InventoryError({ message, refresh }: { message: string; refresh:
       <Stack gap="sm">
         <Text as="h2" size="lg" weight="semibold">Couldn’t scan this box</Text>
         <Text as="p" tone="danger">{message}</Text>
-        <Button intent="secondary" size="sm" onClick={refresh}>Try again</Button>
+        <Button id="cb-inventory-retry" intent="secondary" size="sm" onClick={refresh}>Try again</Button>
       </Stack>
     </Card>
   );

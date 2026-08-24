@@ -62,12 +62,20 @@ parsePublicUrl(undefined).serverUrl === null
 Unparseable input returns nulls (no throw):
 
 ```ts
-const r = parsePublicUrl("not a url");
+const warnings: unknown[][] = [];
+const originalWarn = console.warn;
+console.warn = (...args: unknown[]) => warnings.push(args);
+const r = (() => {
+  try { return parsePublicUrl("not a url"); }
+  finally { console.warn = originalWarn; }
+})();
 print(`serverUrl: ${r.serverUrl}`);
 print(`boxName: ${r.boxName}`);
+print(`warnings: ${warnings.length}`);
 =>
 serverUrl: null
 boxName: null
+warnings: 1
 ```
 
 ## buildScriptEnv — with publicUrl configured
@@ -236,6 +244,7 @@ const poisoned = {
   THINKING_OPENAI_API_KEY: "openai-should-not-leak",
   GOOGLE_OAUTH_CLIENT_ID: "google-id-should-not-leak",
   GOOGLE_OAUTH_CLIENT_SECRET: "google-secret-should-not-leak",
+  NODE_ENV: "production",
   SOME_RANDOM_SECRET: "unknown-name-should-not-leak",
 };
 Object.assign(process.env, poisoned);

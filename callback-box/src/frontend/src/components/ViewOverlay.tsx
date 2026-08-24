@@ -122,7 +122,10 @@ function ViewOverlayPanel({
           <span className="flex-1 min-w-0 truncate text-sm font-medium">{title}</span>
           <CloseButton closeRef={closeRef} onClose={onClose} />
         </div>
-        <div className="flex-1 min-h-0 overflow-auto">
+        {/* The zoomed card is user content — excluded from the `cb chat ui`
+            walk the way the companion pane's is; the dialog's title row and
+            close button stay scannable. */}
+        <div data-cb-scan="exclude" className="flex-1 min-h-0 overflow-auto">
           <FileView
             path={state.target.path}
             mode="companion"
@@ -146,6 +149,7 @@ function CloseButton({
   return (
     <button
       ref={closeRef}
+      id="cb-view-overlay-close"
       type="button"
       onClick={onClose}
       aria-label="Close"

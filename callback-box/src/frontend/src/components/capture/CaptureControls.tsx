@@ -2,7 +2,16 @@
  * Bottom control row for the capture page: cancel / record-toggle / done.
  * Also surfaces a retry prompt when uploads have failed, and — once Done is
  * pressed with transfers still outstanding — the option to skip them.
+ *
+ * The failure banner is the one control a user meets at the worst moment, so it
+ * states where the retry actually is: idle failures offer a full-width,
+ * thumb-sized Retry; a replay in flight says so; and the batch's outcome —
+ * recovered, or failed again — is reported rather than left to be inferred from
+ * counts that quietly change. It used to be a small underlined word that gave
+ * no reaction at all when tapped (engineering principle #13).
  */
+
+import type { RetryFeedback } from "../../pages/capture/retry-feedback";
 
 interface CaptureControlsProps {
   sessionId: string | null;
@@ -18,6 +27,8 @@ interface CaptureControlsProps {
   onCancel: () => void;
   onToggleRecording: () => void;
   onRetryFailed: () => void;
+  /** What a retry the user asked for is doing right now. */
+  retryFeedback: RetryFeedback;
   /** Abandon the outstanding transfers and seal with what has landed. */
   onSkipPending: () => void;
 }
@@ -28,6 +39,52 @@ function summarizeFailures({ photosFailed, audioFailed, filesFailed }: { photosF
   if (audioFailed > 0) parts.push(`${audioFailed} audio chunk${audioFailed > 1 ? "s" : ""}`);
   if (filesFailed > 0) parts.push(`${filesFailed} file${filesFailed > 1 ? "s" : ""}`);
   return parts.join(", ");
+}
+
+/**
+ * The failed-upload state and the retry that answers it. Returns null when
+ * there is nothing to say — no failures, and no retry outcome still worth
+ * reporting.
+ */
+function UploadFailureBanner(props: {
+  summary: string;
+  totalFailed: number;
+  feedback: RetryFeedback;
+  finalizing: boolean;
+  onRetryFailed: () => void;
+}) {
+  if (props.feedback.phase === "retrying") {
+    return (
+      <div className="flex items-center justify-center gap-2 text-warning-light text-sm py-3 px-4" aria-live="polite">
+        <span className="w-4 h-4 border-2 border-warning-light border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+        Retrying {props.feedback.count} upload{props.feedback.count > 1 ? "s" : ""}…
+      </div>
+    );
+  }
+  if (props.feedback.phase === "recovered") {
+    return (
+      <div className="text-success-light text-sm py-3 px-4 text-center" aria-live="polite">
+        &#10003; All uploads recovered.
+      </div>
+    );
+  }
+  if (props.totalFailed === 0) return null;
+  return (
+    <div className="w-full py-3 px-4 flex flex-col items-center gap-2" aria-live="polite">
+      <div className="text-danger-light text-sm text-center">
+        {props.summary} {props.feedback.phase === "failed-again" ? "failed again" : "failed to upload"}.
+      </div>
+      <button
+        id="cb-capture-retry-uploads"
+        onClick={props.onRetryFailed}
+        disabled={props.finalizing}
+        className="w-full max-w-xs min-h-[48px] rounded-full bg-danger text-white text-base font-medium active:bg-danger-dark disabled:opacity-40"
+      >
+        Retry {props.totalFailed} upload{props.totalFailed > 1 ? "s" : ""}
+      </button>
+      <div className="text-gray-400 text-xs text-center">Or press Done to finalize without them.</div>
+    </div>
+  );
 }
 
 export function CaptureControls(props: CaptureControlsProps) {
@@ -43,15 +100,17 @@ export function CaptureControls(props: CaptureControlsProps) {
       {props.finalizing && props.pendingUploads > 0 ? (
         <div className="text-warning-light text-sm py-2 px-4 text-center">
           Waiting for {props.pendingUploads} upload{props.pendingUploads > 1 ? "s" : ""}.{" "}
-          <button onClick={props.onSkipPending} className="text-warning-light underline">Skip them</button>
+          <button id="cb-capture-skip-pending" onClick={props.onSkipPending} className="text-warning-light underline">Skip them</button>
         </div>
-      ) : totalFailed > 0 ? (
-        <div className="text-danger-light text-sm py-2 px-4 text-center">
-          {summarizeFailures(props)} failed to upload.{" "}
-          <button onClick={props.onRetryFailed} disabled={props.finalizing} className="text-warning-light underline disabled:opacity-40">Retry</button>
-          {" "}or press Done to finalize without them.
-        </div>
-      ) : null}
+      ) : (
+        <UploadFailureBanner
+          summary={summarizeFailures(props)}
+          totalFailed={totalFailed}
+          feedback={props.retryFeedback}
+          finalizing={props.finalizing}
+          onRetryFailed={props.onRetryFailed}
+        />
+      )}
       <div className="flex items-center justify-around w-full px-6 py-4">
         {/* Always leaveable: this control is the only exit from the full-screen
             capture overlay, so it must never be disabled by "nothing to
@@ -59,14 +118,14 @@ export function CaptureControls(props: CaptureControlsProps) {
             Escape). handleCancel already no-ops the discard when there's no
             content/session and just calls onExit. Only `finalizing` gates it,
             so a Done in flight isn't interrupted. */}
-        <button onClick={props.onCancel} disabled={props.finalizing}
+        <button id="cb-capture-cancel" onClick={props.onCancel} disabled={props.finalizing}
           aria-label={props.hasContent ? "Discard and exit capture" : "Exit capture"}
           className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center disabled:opacity-30 active:bg-gray-600">
           <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-danger-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
             <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
           </svg>
         </button>
-        <button onClick={props.onToggleRecording} disabled={!props.sessionId || props.finalizing}
+        <button id="cb-capture-record" onClick={props.onToggleRecording} disabled={!props.sessionId || props.finalizing}
           aria-label={props.recording ? "Stop audio recording" : "Start audio recording"}
           aria-pressed={props.recording}
           className={`w-16 h-16 rounded-full border-4 border-white flex items-center justify-center disabled:opacity-30 ${props.recording ? "bg-danger-dark" : ""}`}>
@@ -77,7 +136,7 @@ export function CaptureControls(props: CaptureControlsProps) {
             </svg>
           )}
         </button>
-        <button onClick={props.onDone} disabled={doneDisabled}
+        <button id="cb-capture-done" onClick={props.onDone} disabled={doneDisabled}
           aria-label={props.finalizing ? "Finalizing capture session" : "Finalize capture session"}
           aria-busy={props.finalizing}
           className="w-12 h-12 rounded-full bg-success flex items-center justify-center disabled:opacity-30 active:bg-success">

@@ -1,0 +1,10 @@
+{
+  "input": {
+    "version": 1,
+    "action": "stop"
+  },
+  "expected": {
+    "version": 1,
+    "action": "stop"
+  }
+}

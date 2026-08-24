@@ -58,6 +58,14 @@ in normal operation.
   units after.
 - Keep the store backups in `~/.config/cb/backups/` until this pass is
   verified, then they can be pruned.
+- **Dev machine (found 2026-08-19):** the shell profile exports
+  `CALLBACK_MISTRAL_API_KEY`, `THINKING_OPENAI_API_KEY`, and
+  `GEMINI_KEY`/`SKE_GEMINI_API_KEY` — now also in the local store (set +
+  granted 2026-08-19, probes ok), so these profile lines can be removed in
+  the same pass. The `SKE_*`/AssemblyAI exports are other projects', not
+  callback-box readers — leave them. Also stale: `~/.cb-publish.env`
+  (retired 2026-07-31 by the wrangler-login publishing setup) still exists
+  on disk and can be deleted.
 
 ## Verify after
 

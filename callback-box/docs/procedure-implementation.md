@@ -63,7 +63,7 @@ steps:
       agents:
         - prompt: >-
             Your agent prompt here...
-          model: sonnet
+          model: balanced
           max-turns: 30
     validate:
       shells:
@@ -101,10 +101,14 @@ for genuinely optional variables.
 
 ### Agent Invocations
 
-`<agent>` invokes Claude Code with the text as the prompt. The engine prepends a context block with working directory, date, procedure name, and step ID.
+An `agents:` entry invokes the box's configured agent engine with the text as
+the prompt. The engine prepends a context block with working directory, date,
+procedure name, and step ID.
 
 Attributes:
-- `model` — `haiku`, `sonnet`, or `opus` (default: sonnet)
+- `model` — portable `efficient`, `balanced`, `strong`, or `strongest` tier;
+  omitted uses the engine default. Legacy `haiku`, `sonnet`, `opus`, and
+  `fable` values remain aliases.
 - `max-turns` — maximum agent turns (default: 20)
 
 ### Instructions
@@ -112,7 +116,7 @@ Attributes:
 `instructions:` in a `validate` phase are model-judged. The engine assembles the
 instruction(s), the step's git diff (the whole step — every commit the run made,
 captured as a `baseline..finalRef` range, not just the last commit), and the
-step's `whys:`, and asks a review model (`validate.model`, default sonnet) for a
+step's `whys:`, and asks a review model (`validate.model`, default `balanced`) for a
 structured pass/fail verdict. A failing verdict gates by `severity` exactly like a
 failing `shells:` check; the reasoning is recorded in the run card's `validate.review`.
 If the model can't return a verdict, the check **fails closed**. Implementation:
@@ -125,7 +129,9 @@ deterministic checks in `shells:`.
 
 Applies to both `shells:` and `instructions:` failures:
 
-- `severity="warn"` — log and continue.
+- `severity="warn"` — log a completed validation check's negative result and
+  continue. If the judge engine cannot produce a usable verdict at all, the
+  step fails because validation did not run.
 - `severity="abort"` — fail the step (and, for a `kind: "procedure"` migration,
   block the migration). Hard gate, no retry.
 - `severity="review"` — self-heal: re-invoke the run agent with a
@@ -137,10 +143,12 @@ Applies to both `shells:` and `instructions:` failures:
   `engine-run-phase.ts`.
 
 A step is marked `failed` when a `validate` check fails and `severity` is `abort`,
-or when a `review` failure exhausts its retries. A failing agent invocation does
-**not** itself fail the step (it's logged) — so if you need "the agent must have
-actually done the work," prove it with a `shells:` check or an `instructions:`
-verdict; don't assume the agent succeeding means the step did.
+when a `review` failure exhausts its retries, or when an agent engine fails
+without producing a usable assistant response (for example auth or model
+rejection). A started agent turn that ends after partial assistant activity is
+still logged without gating by itself. If you need "the agent must have actually
+done the work," prove it with a `shells:` check or an `instructions:` verdict;
+don't assume the agent finishing means the step did.
 
 ### Checklists (opt-in thoroughness)
 

@@ -1,0 +1,71 @@
+{
+  "input": {
+    "version": 2,
+    "id": "scan-command-1",
+    "kind": "scan-controls",
+    "ok": true,
+    "controls": [
+      {
+        "id": "cb-composer-mic",
+        "role": "button",
+        "label": "Start dictation",
+        "does": "hold to dictate; tap for continuous dictation",
+        "container": "Composer",
+        "disabled": false,
+        "actions": ["point"]
+      },
+      {
+        "id": "cb-composer-input",
+        "role": "textbox",
+        "label": "Type a message",
+        "container": "Composer",
+        "disabled": false,
+        "actions": ["point", "focus"]
+      },
+      {
+        "id": "cb-composer-add",
+        "role": "button",
+        "label": "Add",
+        "does": "opens the attach menu",
+        "container": "Composer",
+        "disabled": false,
+        "actions": ["point", "reveal"]
+      }
+    ]
+  },
+  "expected": {
+    "version": 2,
+    "id": "scan-command-1",
+    "kind": "scan-controls",
+    "ok": true,
+    "controls": [
+      {
+        "id": "cb-composer-mic",
+        "role": "button",
+        "label": "Start dictation",
+        "does": "hold to dictate; tap for continuous dictation",
+        "container": "Composer",
+        "disabled": false,
+        "actions": ["point"]
+      },
+      {
+        "id": "cb-composer-input",
+        "role": "textbox",
+        "label": "Type a message",
+        "does": null,
+        "container": "Composer",
+        "disabled": false,
+        "actions": ["point", "focus"]
+      },
+      {
+        "id": "cb-composer-add",
+        "role": "button",
+        "label": "Add",
+        "does": "opens the attach menu",
+        "container": "Composer",
+        "disabled": false,
+        "actions": ["point", "reveal"]
+      }
+    ]
+  }
+}

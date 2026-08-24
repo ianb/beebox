@@ -63,7 +63,7 @@ to people; close when the soft launch happens. Builds on
   boxholder to them, not neutral product docs. It should also state
   cost/usage expectations honestly (a running box burns the operator's
   Claude subscription quota).
-- **Agent-legible docs as capability** (the SECURITY.md /
+- **Agent-legible docs as capability** (the security-overview.md /
   [EXPORT.md](../features/2026-07-20-export-md-agent-instructions.md) /
   agent-install pattern): instruction docs addressed to the user's agent
   are the product surface; small helper tools, not end-to-end automation.
@@ -112,9 +112,16 @@ to people; close when the soft launch happens. Builds on
    [installation-remaining-work](../features/2026-07-19-installation-remaining-work.md)):
    what-is-this / should-you-use-it, the subscription requirement stated
    plainly, what-leaves-your-machine, contribution stance.
-4. **SECURITY.md**, produced as the first run of the
+4. **Security docs — DONE.** The
    [agent-maintained security report](../closed/features/2026-07-20-agent-maintained-security-report.md)
-   (seed: [todo-security.md](../../callback-box/docs/todo-security.md)).
+   shipped 2026-08-14 (seed:
+   [todo-security.md](../../callback-box/docs/todo-security.md)), producing
+   [security-overview.md](../../callback-box/docs/security-overview.md) — the
+   readable threat model — over the structured
+   [security-report.md](../../callback-box/docs/security-report.md). The root
+   `SECURITY.md` is the short, conventional reporting policy GitHub recognizes,
+   pointing at both (split out 2026-08-22; the overview previously sat at
+   `callback-box/SECURITY.md`, where GitHub never saw it).
 5. **Issues scrub** — done except one open question: whether "the ledger
    box" in
    [stale-image-refs-after-renames](../closed/bugs/2026-05-14-stale-image-refs-after-renames.md)

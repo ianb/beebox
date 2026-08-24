@@ -3,6 +3,8 @@ import { cn } from "../../lib/cn";
 export interface ToggleProps {
   /** Current state. */
   checked: boolean;
+  /** Stable `cb-` control address for the rendered switch (see lib/ui-scan). */
+  id?: string;
   /** Fires with the new desired state. */
   onChange: (checked: boolean) => void;
   /** Visually dim + block interaction (e.g. while a mutation is in flight). */
@@ -18,7 +20,7 @@ export interface ToggleProps {
  * CheckboxField, which is form-bound). Fires on every click; callers
  * drive the `checked` value.
  */
-export function Toggle({ checked, onChange, disabled, label, className }: ToggleProps) {
+export function Toggle({ checked, id, onChange, disabled, label, className }: ToggleProps) {
   disabled = disabled ?? false;
   const classes = cn(
     "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors",
@@ -28,6 +30,7 @@ export function Toggle({ checked, onChange, disabled, label, className }: Toggle
   );
   return (
     <button
+      id={id}
       type="button"
       role="switch"
       aria-checked={checked}

@@ -1,6 +1,6 @@
 ---
 name: security-report
-description: Generate or update callback-box's security report — the structured accounting in callback-box/docs/security-report.md and the readable callback-box/SECURITY.md derived from it. Use when the boxholder asks to regenerate, update, or audit the security report, or after changes to security-relevant surfaces (routes, auth, credentials, egress, publishing). Triggers include "update the security report", "regenerate SECURITY.md", "security report pass", "/security-report". The body of this skill IS the committed rubric — the auditable process the report claims to follow.
+description: Generate or update callback-box's security report — the structured accounting in callback-box/docs/security-report.md and the readable callback-box/docs/security-overview.md derived from it. Use when the boxholder asks to regenerate, update, or audit the security report, or after changes to security-relevant surfaces (routes, auth, credentials, egress, publishing). Triggers include "update the security report", "regenerate the security overview", "security report pass", "/security-report". The body of this skill IS the committed rubric — the auditable process the report claims to follow.
 ---
 
 # Security report: the committed rubric
@@ -11,8 +11,15 @@ This skill is the **process** behind two committed artifacts:
   exhaustive, section-by-section accounting (every endpoint, credential,
   egress point, …) with per-item evaluation. An agent is the primary
   consumer; it is the substrate updates are adjudicated against.
-- **`callback-box/SECURITY.md`** — the *final report*: the human-facing
+- **`callback-box/docs/security-overview.md`** — the *readable overview*: the human-facing
   synthesis derived from the structured version. A reader's front door.
+
+**`SECURITY.md` at the repo root is NOT generated.** It is the short,
+conventional reporting policy (how to report a vulnerability, supported
+versions, pointers to the two documents above) — the file GitHub recognizes and
+surfaces. It is hand-maintained and stable; this skill must never rewrite it or
+recreate a `callback-box/SECURITY.md`. Touch it only if a *link* here goes
+stale.
 
 The honesty claim these artifacts make is a **process claim**: a reader
 cannot verify the report wasn't influenced by error or malice, but they can
@@ -90,19 +97,19 @@ is what makes the update range == "the commits not yet reflected."
    the last report? A fixed one becomes ordinary public history — move it
    back to the public queue and let the report reference it directly.
    Are there new private items to reference by class?
-6. Re-derive any SECURITY.md paragraph whose underlying items changed —
+6. Re-derive any security-overview.md paragraph whose underlying items changed —
    and expect that to be **few or none**. The two artifacts have different
    jobs: **every** security-relevant detail belongs in
-   `security-report.md`; SECURITY.md changes **only** when the
+   `security-report.md`; security-overview.md changes **only** when the
    reader-facing overall picture does (a new egress destination, a changed
    blast-radius claim, a new accepted risk, a materially different auth
-   story). Do not feel obligated to touch SECURITY.md just because you
+   story). Do not feel obligated to touch security-overview.md just because you
    edited the structured report — most per-item accounting changes need no
-   SECURITY.md edit at all, and a change that's already represented there
-   often needs no *more* exposure than it has. When SECURITY.md does need
+   security-overview.md edit at all, and a change that's already represented there
+   often needs no *more* exposure than it has. When security-overview.md does need
    to move, **prefer a small edit to an addition**: if an existing
    sentence can be clarified or corrected in place, do that rather than
-   append new content. The structured report grows with detail; SECURITY.md
+   append new content. The structured report grows with detail; security-overview.md
    stays a tight synthesis.
 7. Update the provenance headers (new rev, date, model,
    `reviewed-by: DRAFT — unreviewed`); present the diff to the boxholder.
@@ -292,7 +299,7 @@ Every `accepted` item from the sections above, repeated as a flat list
 with its rationale. This is the "residual risks" register a reader can
 take in at a glance.
 
-## The final report (SECURITY.md)
+## The readable overview (docs/security-overview.md)
 
 Derived from the structured version — never introduce a claim that isn't
 backed by an item there. Shape:
@@ -314,11 +321,11 @@ Register: honest, specific, unpromotional. Weaknesses are stated as
 plainly as strengths — the OpenClaw lesson is that an explicit blast-radius
 doc is what earns trust, not reassurance.
 
-**What reaches this document — and what doesn't.** SECURITY.md is a
+**What reaches this document — and what doesn't.** security-overview.md is a
 synthesis, not a mirror of the structured report. Its job is to give a
 reader an accurate *overall picture*; it is not obligated to surface every
 item, and an item it already covers rarely needs more prominence. A great
-many structured-report changes leave SECURITY.md untouched, and that is the
+many structured-report changes leave security-overview.md untouched, and that is the
 correct outcome — the pressure to "reflect the update somewhere visible" is
 a trap that bloats the synthesis and buries the picture. When you do edit
 it, reach for the smallest change that keeps it true: correct or clarify an
@@ -328,6 +335,6 @@ the structured report is where completeness lives.
 ## README linkage
 
 `callback-box/README.md` keeps a short "What leaves your machine" section
-(a personal-register summary) linking to SECURITY.md. When the egress
+(a personal-register summary) linking to security-overview.md. When the egress
 section changes materially, check the README summary still tells the
 truth.

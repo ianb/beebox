@@ -2,6 +2,14 @@
 import SwiftUI
 import UIKit
 
+/// A ring the fixture screen is currently drawing. A fresh `id` remounts the
+/// overlay, which is what restarts its timer when the same control is pointed at
+/// twice in a row.
+private struct FixtureRing: Identifiable {
+    var id = UUID()
+    var frame: CGRect
+}
+
 struct NativeComposerFixtureScreen: View {
     private static let boxID = UUID(uuidString: "6f673715-08d2-4e6f-86df-e8f9a457f802") ?? UUID()
     private static let fixtureRootURL: URL = {
@@ -14,6 +22,13 @@ struct NativeComposerFixtureScreen: View {
     private let fixture = ProcessInfo.processInfo.arguments
         .first { $0.hasPrefix("--composer-fixture=") }?
         .replacingOccurrences(of: "--composer-fixture=", with: "") ?? "empty"
+    /// `--composer-point=<control-id>:<action>` performs one pointer action as
+    /// soon as the anchors have registered, so a plain screenshot of the
+    /// `control-registry` fixture captures the ring (or the refusal) without
+    /// anything having to drive a tap.
+    private let pointArgument = ProcessInfo.processInfo.arguments
+        .first { $0.hasPrefix("--composer-point=") }?
+        .replacingOccurrences(of: "--composer-point=", with: "")
     private let repository: ComposerDraftRepository
     private let box = PairedBox(
         id: Self.boxID,
@@ -28,7 +43,18 @@ struct NativeComposerFixtureScreen: View {
     @StateObject private var pendingStore: PendingEmissionStore
     @StateObject private var pairedBoxStore = PairedBoxStore()
     @StateObject private var boxLockManager = BoxLockManager()
+    @StateObject private var controlRegistry = NativeControlRegistry()
     @State private var seeded = false
+    /// The registry as of the last read, for the `control-registry` fixture. Read
+    /// on demand rather than observed: the registry deliberately publishes
+    /// nothing, so nothing it does can invalidate the view registering into it.
+    @State private var registrySnapshot: [NativeControlEntry] = []
+    /// The ring the `control-registry` fixture last drew, and the last refusal it
+    /// was given. Together these make the fixture a check on the *pointing* half
+    /// too — the geometry of the ring against a real laid-out frame, and the
+    /// sentence a refusal comes back with, neither of which a unit test can show.
+    @State private var fixtureRing: FixtureRing?
+    @State private var lastRefusal: String?
 
     init() {
         let repository = ComposerDraftRepository(rootURL: Self.fixtureRootURL)
@@ -59,6 +85,15 @@ struct NativeComposerFixtureScreen: View {
             }
             .environmentObject(pairedBoxStore)
             .environmentObject(boxLockManager)
+            .environment(\.nativeControlRegistry, controlRegistry)
+            .overlay {
+                if let fixtureRing {
+                    NativeControlRingView(frame: fixtureRing.frame) {
+                        self.fixtureRing = nil
+                    }
+                    .id(fixtureRing.id)
+                }
+            }
             .task {
                 await seedFixture()
             }
@@ -68,15 +103,91 @@ struct NativeComposerFixtureScreen: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    fixtureBubble("Fixture conversation", outgoing: false)
-                    fixtureBubble("The native composer stays docked below this web content.", outgoing: true)
-                    fixtureBubble("State: \(fixture)", outgoing: false)
+                    if fixture == "control-registry" {
+                        registryReadout
+                    } else {
+                        fixtureBubble("Fixture conversation", outgoing: false)
+                        fixtureBubble("The native composer stays docked below this web content.", outgoing: true)
+                        fixtureBubble("State: \(fixture)", outgoing: false)
+                    }
                 }
                 .padding()
             }
             .background(Color(uiColor: .systemGroupedBackground))
             .navigationTitle("Fixture Box")
             .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+
+    /// What `scan-controls` would answer right now, without a server or a
+    /// webview: the same `controlRegistry.entries` the bridge reads, rendered so
+    /// a screenshot of this fixture is a check on the anchors themselves.
+    private var registryReadout: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Button("Read registry") {
+                registrySnapshot = controlRegistry.entries
+            }
+            .buttonStyle(.borderedProminent)
+            .task {
+                // Read once unattended so a plain screenshot of this fixture
+                // shows the inventory; the composer's anchors register during
+                // their own onAppear, which runs after this view's first frame.
+                try? await Task.sleep(nanoseconds: 400_000_000)
+                registrySnapshot = controlRegistry.entries
+                guard let pointArgument else {
+                    return
+                }
+                let parts = pointArgument.split(separator: ":", maxSplits: 1)
+                let action = parts.count == 2 ? NativeControlEntry.Action(rawValue: String(parts[1])) : .point
+                perform(action ?? .point, on: String(parts[0]))
+            }
+            Text("\(registrySnapshot.count) native control(s) registered")
+                .font(.headline)
+            if let lastRefusal {
+                Text(lastRefusal)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+            ForEach(registrySnapshot) { entry in
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(entry.role.rawValue) \(entry.id)")
+                        .font(.system(.footnote, design: .monospaced))
+                    Text("\(entry.label)\(entry.disabled ? " [disabled]" : "")")
+                        .font(.footnote)
+                    if let does = entry.does {
+                        Text(does)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    // One button per action the entry claims, plus every action
+                    // it does NOT — so the fixture shows the refusal sentences
+                    // as readily as the successes.
+                    HStack(spacing: 8) {
+                        ForEach(NativeControlEntry.Action.allCases, id: \.rawValue) { action in
+                            Button(entry.actions.contains(action) ? action.rawValue : "\(action.rawValue)?") {
+                                perform(action, on: entry.id)
+                            }
+                            .font(.caption)
+                            .buttonStyle(.bordered)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// The same call `RootView` makes when a `control:` pointer arrives, so what
+    /// this fixture draws is what the phone draws.
+    private func perform(_ action: NativeControlEntry.Action, on id: String) {
+        switch controlRegistry.perform(action, on: id) {
+        case .pointed(let frame):
+            lastRefusal = nil
+            fixtureRing = FixtureRing(frame: frame)
+        case .refused(let reason):
+            fixtureRing = nil
+            lastRefusal = reason
         }
     }
 
@@ -202,6 +313,8 @@ struct NativeComposerFixtureScreen: View {
         switch fixture {
         case "recording":
             return .recording
+        case "starting-dictation":
+            return .requestingPermission
         case "interrupted":
             return .failed(
                 message: "Dictation was interrupted. Your live transcript is ready to edit or send."

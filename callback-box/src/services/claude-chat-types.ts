@@ -51,6 +51,21 @@ export interface ChatBackendStartOptions {
   systemPrompt: string;
   /** If set, resumes the given SDK session; otherwise a fresh session. */
   resumeSessionId?: string | undefined;
+  /**
+   * Start a *fresh* conversation under this exact session id (the SDK's
+   * `sessionId` option / the CLI's `--session-id`), instead of letting the
+   * harness auto-generate one. Set for a chat whose id was coined by the
+   * client and reserved before its first message
+   * (`core/chat/session/reserve.ts`), which is what lets capture and the
+   * composer address one chat that does not exist yet.
+   *
+   * Mutually exclusive with `resumeSessionId` — a coined id names a
+   * conversation with no transcript, so there is nothing to resume, and the
+   * harness rejects an id that already has one ("Session ID … is already in
+   * use"). Claude only: Codex assigns its own thread id, so a coined session
+   * never reaches that backend (the reservation refuses a non-Claude box).
+   */
+  coinedSessionId?: string | undefined;
   /** Pin to a specific model; omit for SDK default. */
   model?: string | undefined;
   /**
@@ -118,6 +133,14 @@ export interface ChatBackend {
    * Idempotent and cheap when there's nothing to close. Optional — fakes and
    * backends without a warm pool don't have to implement it.
    */
+  /**
+   * Close the warm subprocess held for one chat (a coined session id), if any.
+   * Called when that chat's reservation expires — otherwise an abandoned chat's
+   * subprocess would hold one of the very few warm slots until the whole box
+   * went idle.
+   */
+  closeWarmFor?(sessionId: string): void;
+
   closeWarm?(): void;
   /**
    * Whether a warm slot is currently held OR a warm-up is in flight. Callers

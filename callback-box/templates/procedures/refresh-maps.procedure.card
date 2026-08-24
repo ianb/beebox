@@ -128,7 +128,7 @@ steps:
 
             GIT: Do NOT add Co-Authored-By to commits. The system adds the
             appropriate trailers automatically.
-          model: haiku
+          model: efficient
           max-turns: 40
       shells:
         - |-

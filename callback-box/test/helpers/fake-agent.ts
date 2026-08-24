@@ -42,11 +42,11 @@ export interface FakeAgentInvocation {
   result: AgentResult;
 }
 
-/** Thrown when invokeStructured is called on a fake created without `structuredResult`. */
+/** Thrown when invokeStructured is called on a fake without a scripted outcome. */
 export class FakeAgentStructuredUnsupportedError extends Error {
   constructor() {
     super(
-      "FakeAgent.invokeStructured needs createFakeAgent({ structuredResult }) — pass a scripted verdict provider for structured-output tests.",
+      "FakeAgent.invokeStructured needs createFakeAgent({ structuredResult }) or createFakeAgent({ structuredFailure }).",
     );
     this.name = "FakeAgentStructuredUnsupportedError";
   }
@@ -78,6 +78,8 @@ interface FakeActOutcome {
   resultText?: string;
   /** Script a deferred-recoverable failure (engine quota exhausted). */
   unavailability?: EngineUnavailability;
+  /** Script a harness failure without a usable assistant response. */
+  invocationFailure?: true;
 }
 
 export interface FakeAgentOptions {
@@ -126,6 +128,11 @@ export interface FakeAgentOptions {
     prompt: string;
     invocation: number;
   }) => unknown;
+  /** Return a failed structured invocation, including native harness rejection. */
+  structuredFailure?: {
+    error: string;
+    invocationFailure?: true;
+  };
 }
 
 export function createFakeAgent(options: FakeAgentOptions): FakeAgent {
@@ -154,6 +161,7 @@ export function createFakeAgent(options: FakeAgentOptions): FakeAgent {
               exitCode: 1,
               error: `No conversation found with session ID: ${sessionId}`,
               sessionId,
+              invocationFailure: true,
             };
             invocations.push({ systemPrompt: null, prompt: opts.prompt, resumed, options: opts, result });
             return result;
@@ -185,6 +193,7 @@ export function createFakeAgent(options: FakeAgentOptions): FakeAgent {
               success: false,
               error: partial.error !== undefined ? partial.error : "fake agent failure",
               ...(partial.unavailability !== undefined && { unavailability: partial.unavailability }),
+              ...(partial.invocationFailure === true && { invocationFailure: true }),
             }
           : { ...base, success: true };
 
@@ -203,13 +212,13 @@ export function createFakeAgent(options: FakeAgentOptions): FakeAgent {
       schema: z.ZodType<T>,
       opts: AgentInvokeOptions,
     ): Promise<StructuredAgentResult<T>> {
-      if (!options.structuredResult) {
+      if (!options.structuredResult && !options.structuredFailure) {
         throw new FakeAgentStructuredUnsupportedError();
       }
       const invocationIndex = invocations.length;
       const resumed = invocationIndex > 0;
 
-      const raw = await options.structuredResult({
+      const raw = await options.structuredResult?.({
         boxRoot: opts.boxRoot,
         systemPrompt: opts.systemPrompt !== undefined ? opts.systemPrompt : null,
         prompt: opts.prompt,
@@ -218,12 +227,20 @@ export function createFakeAgent(options: FakeAgentOptions): FakeAgent {
 
       // null models a failed/unparseable verdict; otherwise validate against
       // the caller's schema exactly as the real invokeStructured does.
-      const parsed = raw === null ? null : schema.safeParse(raw);
+      const parsed = raw == null ? null : schema.safeParse(raw);
       const data = parsed === null ? null : parsed.success ? parsed.data : null;
       const structuredBase: AgentResultBase = { output: "", exitCode: data !== null ? 0 : 1, sessionId };
 
       const result: StructuredAgentResult<T> =
-        data !== null
+        options.structuredFailure !== undefined
+          ? {
+              ...structuredBase,
+              success: false,
+              data: null,
+              error: options.structuredFailure.error,
+              ...(options.structuredFailure.invocationFailure === true && { invocationFailure: true }),
+            }
+          : data !== null
           ? { ...structuredBase, success: true, data }
           : {
               ...structuredBase,

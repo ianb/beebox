@@ -95,6 +95,7 @@ export function SelectionCapture({ onCapture, children }: SelectionCaptureProps)
       {children}
       {button === null ? null : (
         <button
+          id="cb-selection-add"
           type="button"
           aria-label="Add selection to message"
           title="Add selection to message"

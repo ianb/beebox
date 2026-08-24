@@ -1,0 +1,16 @@
+{
+  "input": {
+    "version": 2,
+    "id": "scan-command-2",
+    "kind": "scan-controls",
+    "ok": true,
+    "controls": []
+  },
+  "expected": {
+    "version": 2,
+    "id": "scan-command-2",
+    "kind": "scan-controls",
+    "ok": true,
+    "controls": []
+  }
+}

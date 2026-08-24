@@ -35,7 +35,7 @@ export function InviteSection() {
     const trimmedEmail = email.trim();
     if (!openInvite && !trimmedEmail.includes("@")) {
       setEmailError("Enter an email address or choose an open invite.");
-      document.querySelector<HTMLInputElement>("#invite-email")?.focus();
+      document.querySelector<HTMLInputElement>("#cb-admin-invite-email")?.focus();
       return;
     }
     setEmailError(undefined);
@@ -64,6 +64,7 @@ export function InviteSection() {
             </Text>
           </Stack>
           <CheckboxField
+            id="cb-admin-invite-open"
             label="Let invitee enter email"
             checked={openInvite}
             onChange={(checked) => {
@@ -73,7 +74,7 @@ export function InviteSection() {
             helper={openInvite ? "Anyone holding the link may choose an otherwise unclaimed email." : undefined}
           />
           <TextField
-            id="invite-email"
+            id="cb-admin-invite-email"
             label="Invitee email"
             type="email"
             value={email}
@@ -86,7 +87,7 @@ export function InviteSection() {
             error={emailError}
             autoComplete="email"
           />
-          <Button type="submit" intent="primary" loading={createInvite.isPending} loadingLabel="Creating…">
+          <Button id="cb-admin-invite-create" type="submit" intent="primary" loading={createInvite.isPending} loadingLabel="Creating…">
             Create invite link
           </Button>
           {createInvite.error ? <InviteError message={createInvite.error.message} /> : null}
@@ -98,7 +99,7 @@ export function InviteSection() {
                   <Text size="xs" tone="muted">
                     Expires {expiresAt === null ? "soon" : new Date(expiresAt).toLocaleTimeString()}
                   </Text>
-                  <Button type="button" intent="secondary" onClick={copy} flash={{ label: "Copied" }}>
+                  <Button id="cb-admin-invite-copy-link" type="button" intent="secondary" onClick={copy} flash={{ label: "Copied" }}>
                     Copy link
                   </Button>
                 </Row>

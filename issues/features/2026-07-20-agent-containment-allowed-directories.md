@@ -52,5 +52,5 @@ feature is what makes that section say something real. The
 question is the network-egress sibling of the same tension. Not a
 launch gate per the
 [posture](../decisions/2026-07-20-soft-launch-posture.md) — launch
-honesty means SECURITY.md describes what IS true today — but it's the
+honesty means security-overview.md describes what IS true today — but it's the
 highest-value post-launch security build.

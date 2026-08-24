@@ -17,18 +17,19 @@
  */
 
 import { refusalAllowsLegacyFallback } from "./secrets/legacy-fallback.js";
-import { resolveSecret } from "./secrets/resolve.js";
+import { resolveSecret, type SecretRead } from "./secrets/resolve.js";
 
 /** The store name this key lives under. */
 export const OPENAI_THINKING_SECRET_NAME = "openai-thinking";
 
-export async function getOpenAiThinkingKey(boxRoot?: string): Promise<string | null> {
+export async function getOpenAiThinkingKey(boxRoot: string | undefined, read: SecretRead): Promise<string | null> {
   if (boxRoot !== undefined) {
     const resolved = await resolveSecret({
       boxRoot,
       name: OPENAI_THINKING_SECRET_NAME,
       purpose: "openai-audio",
       access: "server",
+      observe: read.observe,
     });
     if (resolved.ok) {
       if (resolved.value.suspect) {

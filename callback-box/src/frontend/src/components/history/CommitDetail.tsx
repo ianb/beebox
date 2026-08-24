@@ -33,6 +33,7 @@ function SessionSection({ sessionId }: { sessionId: string }) {
   return (
     <div className="border-t border-warm-200">
       <button
+        id="cb-history-session-log-toggle"
         onClick={() => setExpanded(!expanded)}
         className="w-full px-4 py-2 text-xs text-warm-500 hover:text-warm-700 text-left"
       >
@@ -88,7 +89,7 @@ export function CommitDetail({
 
   return (
     <div className="h-full flex flex-col bg-white" {...cbSource("commit", commit.hash)}>
-      {onBack ? <MobileBackButton label="Back to commits" onClick={onBack} /> : null}
+      {onBack ? <MobileBackButton id="cb-history-back" label="Back to commits" onClick={onBack} /> : null}
       {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- role="region" + tabIndex=0 is the W3C APG "scrollable region" pattern (lets a keyboard user Page-Down/arrow-scroll the mostly-read-only diff view); the rule's default config only whitelists role="tabpanel", not "region" */}
       <div className="flex-1 overflow-auto" tabIndex={0} role="region" aria-label="Commit details">
       {/* Commit info */}

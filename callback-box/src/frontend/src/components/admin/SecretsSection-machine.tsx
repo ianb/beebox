@@ -17,6 +17,7 @@ import { Card } from "../ui/Card";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { SecretUsesBlock } from "./SecretsSection-uses";
 
 type MachineView = RouterOutput["secrets"]["machineView"];
 type MachineSecret = MachineView["secrets"][number];
@@ -51,6 +52,7 @@ function MachineRow({ secret, refresh }: { secret: MachineSecret; refresh: () =>
           {secret.shareable === false ? <Badge tone="neutral">single-box{secret.owningBox === undefined ? "" : `: ${secret.owningBox}`}</Badge> : null}
         </Row>
         {secret.note === undefined ? null : <Text size="sm" tone="muted">{secret.note}</Text>}
+        <SecretUsesBlock uses={secret.uses} />
         <Text size="xs" tone="muted">{grantSummary(secret)}</Text>
         <Text size="xs" tone="muted">
           {lastUsedSummary(secret)}

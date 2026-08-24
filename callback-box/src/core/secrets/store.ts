@@ -48,6 +48,15 @@ const secretEntrySchema = z.object({
   value: z.string().optional(),
   note: z.string().optional(),
   updated: z.string(),
+  /** Why this secret exists, in the boxholder's or an agent's own words —
+   *  ADDITIVE (one key usually serves several tricks). The built-in registry
+   *  (`uses-registry.ts`) covers what the engine's own readers do; this is the
+   *  ad-hoc half, appended by `cb secrets declare --use` / `describe --add-use`. */
+  uses: z.array(z.string()).optional(),
+  /** Distinct `purpose` labels seen on real resolves — what this secret is
+   *  ACTUALLY used for, as opposed to what anyone said. Recorded on the same
+   *  best-effort path as `lastUsed`; the access log holds the full history. */
+  purposes: z.array(z.string()).optional(),
   /** Probe result. The probe machinery itself is a later chunk; the field is
    *  read here (a `failed` status makes a successful resolve `suspect`). */
   verified: verifiedSchema.optional(),

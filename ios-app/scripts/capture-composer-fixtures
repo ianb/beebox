@@ -13,6 +13,7 @@ states=(
   failed-upload
   selection-detail
   recording
+  starting-dictation
   interrupted
   hq-preparation
   sending
@@ -21,6 +22,7 @@ states=(
   stuck-pending
   expired-attachment
   keyboard-shown
+  control-registry
 )
 
 mkdir -p "$output_dir"

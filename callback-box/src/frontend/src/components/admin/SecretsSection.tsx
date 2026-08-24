@@ -57,8 +57,8 @@ export function SecretsSection() {
         </Stack>
 
         <Row gap="sm" wrap>
-          <Button intent={machineWide ? "secondary" : "primary"} onClick={() => setMachineWide(false)}>This box</Button>
-          <Button intent={machineWide ? "primary" : "secondary"} onClick={() => setMachineWide(true)}>Machine-wide</Button>
+          <Button id="cb-admin-secrets-scope-box" intent={machineWide ? "secondary" : "primary"} onClick={() => setMachineWide(false)}>This box</Button>
+          <Button id="cb-admin-secrets-scope-machine" intent={machineWide ? "primary" : "secondary"} onClick={() => setMachineWide(true)}>Machine-wide</Button>
         </Row>
 
         {machineWide ? (
@@ -77,7 +77,7 @@ export function SecretsSection() {
               />
             ) : null}
             <Row gap="sm" wrap>
-              <Button intent="secondary" onClick={() => setAdding(!adding)}>
+              <Button id="cb-admin-secrets-add-toggle" intent="secondary" onClick={() => setAdding(!adding)}>
                 {adding ? "Close" : "Add a new secret"}
               </Button>
             </Row>
@@ -91,8 +91,13 @@ export function SecretsSection() {
           </Stack>
         )}
 
-        {status.error ? <div role="alert"><Text size="sm" tone="danger">{status.error.message}</Text></div> : null}
-        {machine.error ? <div role="alert"><Text size="sm" tone="danger">{machine.error.message}</Text></div> : null}
+        {/* Both queries fail for the same reasons — no owner session, an unreadable store — so
+            rendering one alert each printed the identical sentence twice. Show each distinct
+            message once, and keep both when they genuinely differ. */}
+        {[...new Set([status.error, machine.error].filter((e) => e !== null).map((e) => e.message))]
+          .map((message) => (
+            <div key={message} role="alert"><Text size="sm" tone="danger">{message}</Text></div>
+          ))}
       </Stack>
     </Card>
   );

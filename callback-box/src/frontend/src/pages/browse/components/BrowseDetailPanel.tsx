@@ -64,7 +64,7 @@ export function BrowseDetailPanel({
   // sideways on narrow viewports instead of the child scaling down.
   return (
     <div className={`${wide ? "max-w-7xl" : "max-w-4xl"} w-full mx-auto py-4 sm:py-8 print:max-w-none print:mx-0 print:py-0`}>
-      <MobileBackButton label="Back" onClick={onBack} className="mb-4 mx-4 print:hidden" />
+      <MobileBackButton id="cb-browse-back" label="Back" onClick={onBack} className="mb-4 mx-4 print:hidden" />
       {deleteError ? (
         <div className="mb-4 mx-4 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger-dark print:hidden">
           {deleteError}
@@ -83,6 +83,7 @@ export function BrowseDetailPanel({
           <div className="flex items-center gap-2">
             {selectedCard ? (
               <Link
+                id="cb-browse-open-card"
                 to={href(`/${boxSlug}/card/${selectedCard.relativePath}`)}
                 className="text-primary hover:text-primary-dark text-sm"
               >
@@ -92,6 +93,7 @@ export function BrowseDetailPanel({
             {selectedRawFile ? (
               <button
                 type="button"
+                id="cb-browse-delete-file"
                 onClick={() => void onDelete(selectedRawFile)}
                 disabled={deletingPath !== null}
                 aria-label={deletingPath === selectedRawFile ? "Deleting file" : "Delete file"}

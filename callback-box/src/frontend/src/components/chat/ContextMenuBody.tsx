@@ -59,7 +59,7 @@ type RecentFilesPanelFileHandler = Parameters<typeof RecentFilesPanel>[0]["onPan
 function OpenDirLink({ dir, boxSlug }: { dir: string; boxSlug: string }) {
   const href = dir === "" ? withBase(`/${boxSlug}/browse`) : withBase(`/${boxSlug}/browse/${dir}`);
   return (
-    <MenuItem href={href}>
+    <MenuItem id="cb-here-open-dir" href={href}>
       Open {dir}/
     </MenuItem>
   );
@@ -81,7 +81,7 @@ function RootPanel({
       {dir !== null ? <OpenDirLink dir={dir} boxSlug={boxSlug} /> : null}
       <LandmarkLinksPanel contextDir={dir} onPanel={onLandmarkPanel} />
       <MenuDivider />
-      <MenuItem onClick={onOpenRecentFiles} keepOpen>
+      <MenuItem id="cb-here-recent-files" onClick={onOpenRecentFiles} keepOpen>
         <span className="flex justify-between gap-2 w-full">
           <span>Recent files</span>
           <span className="text-warm-500">›</span>
@@ -102,7 +102,7 @@ function RecentFilesSubPanel({
 }) {
   return (
     <>
-      <MenuItem onClick={onBack} keepOpen>
+      <MenuItem id="cb-here-recent-files-back" onClick={onBack} keepOpen>
         <span className="text-warm-500">‹ Recent files</span>
       </MenuItem>
       <MenuDivider />

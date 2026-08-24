@@ -19,22 +19,30 @@ message.
 
 ```ts setup
 import { makeTestServer } from "../helpers/doctest-server.js";
-import { createFakeChatBackend } from "../../src/services/claude-chat.js";
+import { createFakeChatBackend, type FakeChatBackend } from "../../src/services/claude-chat.js";
 import { getTurnBuffer } from "../../src/core/chat/turn-buffer.js";
 import type { BusEvent } from "../../src/core/event-bus.js";
 
 /**
  * The response arrives before the run does, so the error frame lands a moment
- * later — poll the turn's buffer for it rather than racing a fixed sleep.
+ * later. Await the buffer's own change signal instead of imposing a second,
+ * load-sensitive polling deadline on the operation.
  */
-async function awaitTurnError(turnId: unknown): Promise<string> {
-  for (let attempt = 0; attempt < 2000; attempt += 1) {
-    const buffer = getTurnBuffer(String(turnId));
-    const errored = buffer?.errored;
-    if (errored !== null && errored !== undefined) return errored;
-    await new Promise((resolve) => { setTimeout(resolve, 5); });
+async function awaitTurnCompletion(turnId: unknown) {
+  const buffer = getTurnBuffer(String(turnId));
+  if (buffer === undefined) throw new Error("turn buffer was not created before the ack");
+  while (!buffer.complete) {
+    const version = buffer.versionSnapshot();
+    await buffer.waitForChange(undefined, version);
   }
-  return "(no error frame)";
+  return buffer;
+}
+
+/** Await the fake's real start boundary; the file-level timeout catches hangs. */
+async function awaitFakeRuns(backend: FakeChatBackend, count: number): Promise<void> {
+  while (backend.runs.length < count) {
+    await new Promise((resolve) => { setImmediate(resolve); });
+  }
 }
 ```
 
@@ -55,9 +63,10 @@ const res = await ctx.request({
   url: "/api/chat/send",
   payload: { session: "new", message: "did you water the plants", messageId: "m1" },
 });
-const failure = await awaitTurnError(res.body.turnId);
+const turn = await awaitTurnCompletion(res.body.turnId);
+const failure = turn.errored ?? "(no error frame)";
 
-`${res.statusCode} | turn=${typeof res.body.turnId} | recorded=${recorded.length} | errored=${failure} | complete=${getTurnBuffer(String(res.body.turnId))?.complete}`
+`${res.statusCode} | turn=${typeof res.body.turnId} | recorded=${recorded.length} | errored=${failure} | complete=${turn.complete}`
 => 200 | turn=string | recorded=1 | errored=spawn EBADF | complete=true
 ```
 
@@ -100,6 +109,7 @@ const res = await ctx.request({
   url: "/api/chat/send",
   payload: { session: "new", message: "water the plants", messageId: "m2" },
 });
+await awaitFakeRuns(backend, 1);
 
 `${res.statusCode} | recorded=${recorded.length} | ${recorded[0]}`
 => 200 | recorded=1 | water the plants
@@ -130,6 +140,7 @@ const again = await ctx.request({
   url: "/api/chat/send",
   payload: { session: "new", message: "hi", messageId: "m3" },
 });
+await awaitFakeRuns(backend, 1);
 
 `${again.statusCode} | dedup=${again.body.deduplicated} | recorded=${recorded.length}`
 => 200 | dedup=true | recorded=1

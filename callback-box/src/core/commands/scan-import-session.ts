@@ -155,7 +155,7 @@ export async function resolveScanInputs(
 export async function resolveScanVision(
   boxRoot: string
 ): Promise<{ vision: ScanVisionService } | { error: string }> {
-  const selection = selectScanVisionBackend(process.env, await getGeminiApiKey(boxRoot));
+  const selection = selectScanVisionBackend(process.env, await getGeminiApiKey(boxRoot, { purpose: "gemini-vision", observe: true }));
   if (!selection.ok) return { error: selection.error };
   if (selection.value.backend === "gemini") {
     return { vision: createGeminiScanVision({ apiKey: selection.value.apiKey }) };

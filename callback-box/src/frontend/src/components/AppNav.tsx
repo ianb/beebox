@@ -22,6 +22,7 @@
 import { useCallback } from "react";
 import { Link, useParams, useRouterState } from "@tanstack/react-router";
 import { useCurrentUser, type CurrentUser } from "../hooks/useCurrentUser";
+import { useBoxName } from "../hooks/useBoxName";
 import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
 import { useDeferredResync } from "../hooks/useDeferredResync";
 import { trpc } from "../lib/trpc";
@@ -30,7 +31,6 @@ import { Dropdown } from "./ui/Dropdown";
 import { MenuItem, MenuDivider } from "./ui/dropdown-menu-item";
 import { Avatar } from "./ui/Avatar";
 import { href } from "../lib/routing";
-import { useBoxes } from "../hooks/useBoxes";
 import { withBase } from "../api";
 import { PlacePill } from "./PlacePill";
 import { AppBarChipSlot, useAppBarPublishedPlace } from "./app-bar-chrome";
@@ -53,6 +53,9 @@ function ProfileMenu({ user, boxSlug, onToggleDebugLog, onToggleSourceView }: { 
       trigger={({ toggle, ariaProps }) => (
         <button
           type="button"
+          id="cb-nav-profile"
+          data-cb-reveal
+          data-cb-does={`opens the profile menu — settings, admin, source view, debug log, reload${user ? ", sign out" : ""}`}
           onClick={toggle}
           className="flex items-center gap-1.5 rounded-full hover:ring-2 hover:ring-white/30 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
           title={user ? user.name : "Menu"}
@@ -73,13 +76,13 @@ function ProfileMenu({ user, boxSlug, onToggleDebugLog, onToggleSourceView }: { 
           <div className="text-xs text-warm-500 truncate">{user.email}</div>
         </div>
       ) : null}
-      <MenuItem to={href(`${base}/settings`)} active={isOnSettings}>Settings</MenuItem>
-      <MenuItem to={href(`${base}/admin`)} active={isOnAdmin}>Admin</MenuItem>
+      <MenuItem id="cb-profile-menu-settings" to={href(`${base}/settings`)} active={isOnSettings}>Settings</MenuItem>
+      <MenuItem id="cb-profile-menu-admin" to={href(`${base}/admin`)} active={isOnAdmin}>Admin</MenuItem>
       <MenuDivider />
-      <MenuItem onClick={onToggleSourceView}>Source View</MenuItem>
-      <MenuItem onClick={onToggleDebugLog}>Debug Log</MenuItem>
-      <MenuItem onClick={() => window.location.reload()}>Reload</MenuItem>
-      {user ? <MenuItem href={withBase("/auth/logout")}>Sign out</MenuItem> : null}
+      <MenuItem id="cb-profile-menu-source-view" onClick={onToggleSourceView}>Source View</MenuItem>
+      <MenuItem id="cb-profile-menu-debug-log" onClick={onToggleDebugLog}>Debug Log</MenuItem>
+      <MenuItem id="cb-profile-menu-reload" onClick={() => window.location.reload()}>Reload</MenuItem>
+      {user ? <MenuItem id="cb-profile-menu-sign-out" href={withBase("/auth/logout")}>Sign out</MenuItem> : null}
     </Dropdown>
   );
 }
@@ -87,7 +90,6 @@ function ProfileMenu({ user, boxSlug, onToggleDebugLog, onToggleSourceView }: { 
 export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebugLog: () => void; onToggleSourceView: () => void }) {
   const { boxSlug } = useParams({ strict: false });
   const location = useRouterState({ select: (s) => s.location });
-  const { boxes } = useBoxes();
   const currentUser = useCurrentUser();
 
   const base = `/${boxSlug}`;
@@ -124,7 +126,7 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
     ),
   });
 
-  const boxName = boxes.find((b) => b.slug === boxSlug)?.name ?? boxSlug ?? "";
+  const { boxName } = useBoxName();
   // A page that knows its own place publishes it (chat: the session's context
   // dir — Track C2); every other route falls back to the route-derived map.
   const publishedPlace = useAppBarPublishedPlace();
@@ -166,6 +168,7 @@ function PlateBadge({ base, count }: { base: string; count: number }) {
   if (count === 0) return null;
   return (
     <Link
+      id="cb-nav-todo"
       to={href(`${base}/browse/store/plate.todo-view.card`)}
       className="flex items-center gap-1 text-xs bg-white/20 text-white px-1.5 py-0.5 rounded-full hover:bg-white/30 transition-colors"
       title={`${count} todo${count !== 1 ? "s" : ""} on the plate`}
@@ -185,6 +188,7 @@ function ErrorBadge({ onToggleDebugLog }: { onToggleDebugLog: () => void }) {
   if (errorCount === 0) return null;
   return (
     <button
+      id="cb-nav-errors"
       onClick={() => { clearErrorCount(); onToggleDebugLog(); }}
       className="flex items-center gap-1 text-xs bg-danger/80 text-white px-1.5 py-0.5 rounded-full hover:bg-danger-dark transition-colors"
       title={`${errorCount} error${errorCount !== 1 ? "s" : ""}`}

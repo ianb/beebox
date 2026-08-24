@@ -27,6 +27,8 @@ export interface RunStreamOutcome {
   resultMessage: SDKResultMessage | null;
   assignedSessionId: string | null;
   errorText: string | null;
+  /** At least one assistant message arrived, including thinking/tool use. */
+  hadAssistantActivity: boolean;
 }
 
 export interface ConsumeStreamOptions {
@@ -91,12 +93,14 @@ export async function consumeAgentStream(
   let resultMessage: SDKResultMessage | null = null;
   let assignedSessionId: string | null = null;
   let errorText: string | null = null;
+  let hadAssistantActivity = false;
 
   const handleMessage = (msg: SDKMessage): void => {
     if (msg.type === "system" && msg.subtype === "init" && assignedSessionId === null) {
       assignedSessionId = msg.session_id;
       options.onSessionId?.(msg.session_id);
     }
+    if (msg.type === "assistant") hadAssistantActivity = true;
     const rendered = renderSdkMessage(msg);
     if (rendered) {
       outputBuf += rendered;
@@ -141,5 +145,5 @@ export async function consumeAgentStream(
     if (options.logger) stopPromptLogger(options.logger);
   }
 
-  return { outputBuf, resultMessage, assignedSessionId, errorText };
+  return { outputBuf, resultMessage, assignedSessionId, errorText, hadAssistantActivity };
 }

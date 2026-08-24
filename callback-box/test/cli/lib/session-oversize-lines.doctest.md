@@ -16,6 +16,7 @@ import { isRealUserMessage } from "../../../src/cli/lib/session-real-user.js";
 import { writeGiantLineSessionLog } from "../../helpers/session-log-fixture.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { spawn } from "node:child_process";
+import fs from "node:fs/promises";
 import { join } from "node:path";
 
 const PACKAGE_ROOT = join(import.meta.dirname, "../../..");
@@ -72,7 +73,7 @@ print(`heap under cap: ${out.heapUsedMb < 64}`);
 exit: 0
 entries: 120
 total: 120
-stubs: 40
+stubs: 20
 stub sample: [message too large to display: ~«int» KB]
 heap under cap: true
 ```
@@ -81,6 +82,15 @@ Without the bound the same child died at the cap:
 
     FATAL ERROR: Ineffective mark-compacts near heap limit
     Allocation failed - JavaScript heap out of memory
+
+Twenty of the forty giant lines are stubs, not all forty. The fixture alternates
+two kinds: giant *assistant* turns, whose bulk is one enormous text block, and
+giant *user* turns, whose bulk is a base64 image beside the person's actual
+message. The image payload is strippable and the rest of that turn is ordinary,
+so those twenty are now read normally — see
+[Image payloads are dropped, not the turn](#image-payloads-are-dropped-not-the-turn).
+The heap assertion is what matters here and it is unchanged: dropping the bytes
+before parsing costs no more than refusing to parse did.
 
 Not parsing the line is only half of it: the stub must not *hold on to* the line
 either. `line.slice(0, n)` and the regex captures taken from it are sliced
@@ -326,3 +336,63 @@ result summary is simply not shown next to the call.
 ```ts cleanup
 await box.cleanup();
 ```
+
+
+## Image payloads are dropped, not the turn
+
+The byte bound was written for "capture-image and tool payloads" — pathological
+lines. But a single photo attached in chat produces a line of roughly 0.7-1.3 MB,
+four to five times the bound, so *every* message carrying a photo came back from
+history as a placeholder. The text the person typed alongside the photo went with
+it, the entry landed out of order relative to the reply, and a walkthrough of the
+app in 2026-08 recorded someone nearly re-sending their photos because a
+successful upload looked like a failure.
+
+The bytes are the problem; the turn is not. So an oversize line has its base64
+payloads removed and is then parsed like any other.
+
+```ts
+const box2 = await makeTmpBox();
+const logPath2 = box2.path("photo-turn.jsonl");
+
+// One turn: what the person typed, plus a photo far past the bound.
+const photo = Buffer.from("p".repeat(900_000)).toString("base64");
+const turn = JSON.stringify({
+  parentUuid: null,
+  type: "user",
+  uuid: "uuid-1",
+  timestamp: "2026-08-22T21:12:00.000Z",
+  message: {
+    role: "user",
+    content: [
+      { type: "text", text: "<typed user=\"Ada Lovelace\" user-email=\"ada@example.com\">here is the drawer</typed>" },
+      { type: "image", source: { type: "base64", media_type: "image/jpeg", data: photo } },
+    ],
+  },
+});
+await fs.writeFile(logPath2, `${turn}\n`, "utf-8");
+
+const parsed = await parseSessionLog({ logPath: logPath2, slice: { mode: "tail", tail: 50 } });
+const entry = parsed.entries[0];
+const text = entry.content.filter((b) => b.type === "text").map((b) => b.text).join(" | ");
+print(`oversize: ${Buffer.byteLength(turn, "utf8") > MAX_SESSION_LINE_BYTES}`);
+print(`entries: ${parsed.entries.length}`);
+print(`stubbed: ${text.includes("too large to display")}`);
+print(`keeps what they typed: ${text.includes("here is the drawer")}`);
+print(`says where the image was: ${text.includes("[image unavailable]")}`);
+print(`image bytes kept: ${entry.content.some((b) => b.type === "image" && b.dataBase64)}`);
+=>
+oversize: true
+entries: 1
+stubbed: false
+keeps what they typed: true
+says where the image was: true
+image bytes kept: false
+```
+
+The person's words survive, in order, in a real entry. What is gone is the only
+part that could not be afforded — and it says so where the picture was, rather
+than replacing the whole turn with a size in kilobytes.
+
+A line still too large once its images are gone — a genuinely enormous text turn
+— is stubbed exactly as before. Stripping is an attempt, not a guarantee.

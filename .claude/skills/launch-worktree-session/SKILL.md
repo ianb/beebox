@@ -48,6 +48,37 @@ like:
 Adjust the wording to fit the conversation, but the spirit is constant:
 _understanding first, plan second, work third._
 
+## If YOU are in a worktree: land what the new session needs first
+
+**A new worktree branches from `main`** — `--base-ref` defaults to it, and every
+launch path uses that default. So the child cannot see your branch's work. If
+the thing you are spinning off builds on code, a plan doc, or an issue that
+exists only in your worktree, the new session starts without it and will either
+re-derive it or contradict it.
+
+Before launching, check what you are sitting on:
+
+```bash
+git status --porcelain          # uncommitted here
+git log --oneline main..HEAD    # committed here, not on main
+```
+
+Anything the new session needs must be **committed and merged to main** first
+(`bin/land`, or `/finish` if the work is done). Committing alone is not enough —
+the commit still lives on your branch.
+
+Two honest alternatives when merging isn't right yet:
+
+- **Branch the child from your work** with `--base-ref <your-branch>`. Use it
+  when the two are genuinely one line of work; understand that the child then
+  starts from an unmerged base and both branches have to land in order.
+- **Put what they need in the briefing.** For a decision, a finding, or a file
+  path, prose is often enough and needs no merge at all.
+
+What does *not* work is assuming they will see it. This is silent: the launch
+succeeds, the session opens, and the missing context only surfaces later as
+duplicated or conflicting work.
+
 ## How the briefing reaches the new session
 
 `launch-worktree-session` automatically wraps the briefing in
@@ -65,7 +96,30 @@ briefing.
    sentences, ask anything you're unsure about. Don't fork until they've
    said yes.
 
-2. **Pick a worktree name.** Short, kebab-case, descriptive. Examples:
+2. **Route before creating.** Run `bin/workstreams list` and inspect the name,
+   description, state, action, and age. If a recent live or dormant workstream
+   already covers the subject, prefer it. A workstream marked `stale` has been
+   dormant for roughly 14 days; prefer a new stream unless the boxholder wants
+   that old context specifically.
+
+   To hand new context to an existing workstream, use the same briefing forms
+   as launch:
+
+   ```bash
+   bin/workstreams resume <name> - <<'EOF'
+   <briefing>
+   EOF
+   ```
+
+   Use `--` before literal briefing text that begins with `-`.
+
+   A dormant workstream opens with the briefing. A live workstream cannot be
+   injected from a sibling CLI session: the command focuses its tab when it can
+   and prints `manual forwarding required: <path>`. Tell the human to paste that
+   file. Never describe that outcome as delivered. Launch multiple new
+   workstreams sequentially; concurrent creation is a known lifecycle bug.
+
+3. **Pick a worktree name.** Short, kebab-case, descriptive. Examples:
    `fix-timezone-parsing`, `gcal-service-injection`, `chat-route-cleanup`.
    Ask the human if a good name isn't obvious from the discussion.
 
@@ -76,7 +130,7 @@ briefing.
    work. This is responsibility, not discovery provenance. Omit `--issue` when
    the discussion is not taking on a specific filed issue.
 
-3. **Pick an agent and model — and when it isn't clear, ASK rather than
+4. **Pick an agent and model — and when it isn't clear, ASK rather than
    assume.** This is the boxholder's call, not a scope calculation you perform
    on their behalf. Getting it wrong wastes a launch and, on the Claude side,
    quota they may be conserving.
@@ -104,7 +158,7 @@ briefing.
    design question is not. But use that to shape the question you ask, not to
    decide silently.
 
-4. **Draft the briefing and launch it.** Write the briefing directly and
+5. **Draft the briefing and launch it.** Write the briefing directly and
    invoke the command — don't pre-review the briefing with the human in
    the current session. The whole point of the launched session is that
    _it_ is where discussion, clarification, and approval happen. Pre-
@@ -121,12 +175,12 @@ briefing.
 
    ```bash
    # The default: Codex.
-   bin/launch-worktree-session --agent codex [--issue issues/<category>/<file>.md] <worktree-name> - <<'EOF'
+   bin/launch-worktree-session --agent codex --description "<one-line scope>" [--issue issues/<category>/<file>.md] <worktree-name> - <<'EOF'
    <briefing text — see "What the briefing is" above>
    EOF
 
    # When the boxholder has asked for a Claude model.
-   bin/launch-worktree-session --model <model> <worktree-name> - <<'EOF'
+   bin/launch-worktree-session --model <model> --description "<one-line scope>" <worktree-name> - <<'EOF'
    …
    EOF
    ```
@@ -143,7 +197,7 @@ briefing.
    briefing. Use `<<EOF` (unquoted) only if you intentionally want to
    interpolate variables.
 
-5. **Tell the human what happened.** One line: worktree name, **which agent and
+6. **Tell the human what happened.** One line: worktree name, **which agent and
    model**,
    where it opened (new tab in Terminal.app), and that they can now switch
    over. Naming the model lets them redirect before the session gets far.
@@ -171,6 +225,12 @@ bin/launch-worktree-session --model <model> <name> @<file>   # run on a specific
 bin/launch-worktree-session --no-remote-control <name> -     # opt out of Remote Control
 bin/launch-worktree-session --agent codex [--model gpt-5.6-sol] <name> -  # OpenAI Codex session
 ```
+
+Pass `--description "<one-line scope>"` on every skill-driven launch. It is
+shown by `bin/workstreams list` and the workstreams app so later clerical
+sessions can route related work without reconstructing the full briefing. It
+is explicit rather than inferred from Markdown and is limited to 160
+characters.
 
 **`--agent codex`** launches OpenAI's codex CLI instead of Claude Code: same
 worktree + box clone + installs (both launch paths call the agent-neutral

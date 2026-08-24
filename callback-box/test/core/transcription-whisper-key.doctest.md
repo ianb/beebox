@@ -64,14 +64,14 @@ This is the reader the Whisper path now calls, exercised against the same box.
 ```ts continue
 const slug = await boxSlug(box.root);
 process.env.THINKING_OPENAI_API_KEY = "placeholder-whisper-env-key";
-print(`ungranted: ${await getOpenAiThinkingKey(box.root)}`);
+print(`ungranted: ${await getOpenAiThinkingKey(box.root, { observe: true })}`);
 
 await setSecret({ name: "openai-thinking", value: "placeholder-whisper-store-key" });
 await grantSecret({ slug, name: "openai-thinking", access: "server" });
-print(`granted: ${await getOpenAiThinkingKey(box.root)}`);
+print(`granted: ${await getOpenAiThinkingKey(box.root, { observe: true })}`);
 
 delete process.env.THINKING_OPENAI_API_KEY;
-print(`no env, no box: ${await getOpenAiThinkingKey(undefined)}`);
+print(`no env, no box: ${await getOpenAiThinkingKey(undefined, { observe: true })}`);
 =>
 ungranted: placeholder-whisper-env-key
 granted: placeholder-whisper-store-key

@@ -41,6 +41,7 @@ import { registerChatAudioRoutes } from "./chat-audio-routes.js";
 import { registerChatLastAudioRoutes } from "./chat-last-audio-routes.js";
 import { registerChatAudioReviewRoutes } from "./chat-audio-review-routes.js";
 import { registerChatScreenshotRoutes } from "./chat-screenshot-routes.js";
+import { registerChatUiRoutes } from "./chat-ui-routes.js";
 import { chatModelFileForSession, DEFAULT_MODEL_FILE } from "../../core/chat/session/state.js";
 
 interface RegisterChatRoutesOptions {
@@ -48,6 +49,8 @@ interface RegisterChatRoutesOptions {
   boxRoot: string;
   eventBus: EventBus;
   openaiAudio?: OpenAIAudioService | undefined;
+  /** Enable local speech-test facilities. Production leaves this false. */
+  devSurfaces?: boolean | undefined;
   /**
    * If true, eagerly pre-warm a Claude subprocess so the first "new chat"
    * send doesn't pay spawn + initialize latency. Production servers set
@@ -64,6 +67,7 @@ interface RegisterChatRoutesOptions {
  */
 export async function registerChatRoutes(options: RegisterChatRoutesOptions): Promise<void> {
   const { server, boxRoot, eventBus, openaiAudio, prewarmChat, chatBackend } = options;
+  const devSurfaces = options.devSurfaces === true;
 
   // File-upload endpoint for chat attachments (writes to <boxRoot>/tmp/).
   await registerChatUploadRoutes({ server, boxRoot });
@@ -176,6 +180,7 @@ export async function registerChatRoutes(options: RegisterChatRoutesOptions): Pr
     boxRoot,
     eventBus,
     openaiAudio,
+    devSurfaces,
     registry,
     scheduleManager,
     wireSession,
@@ -204,6 +209,7 @@ export async function registerChatRoutes(options: RegisterChatRoutesOptions): Pr
   registerChatLastAudioRoutes(ctx);
   registerChatAudioReviewRoutes(ctx);
   registerChatScreenshotRoutes(ctx);
+  registerChatUiRoutes(ctx);
 
   // Surface session-id assignments as SSE events so a tab waiting on a
   // pending "new" send can pick up the real id and update its URL.

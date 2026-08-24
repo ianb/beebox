@@ -176,7 +176,7 @@ history decision. **No history surgery needed.** The repeatable gate is
 - **Why.** `callback-box/CLAUDE.md:103` requires generic shared text; these
   violate it: `test/schemas/personality-boxholder.doctest.md:20` (real name as
   test data), `docs/knowledge-taxonomy.md:468-491` (agent inferring the real
-  name), `docs/reports/user-stories-audit-2026-06-26.md:671` (real email).
+  name), `user-stories/catalog/2026-06-26.md` (real email).
 - **Direction.** Swap to a roster name from `docs/example-names.md`. The
   `agent-doctest/LICENSE` + `agent-doctest/README.md` real-name uses are
   *authorship attribution*, not boxholder data — leave them (author's call).
@@ -433,7 +433,7 @@ introduces none, so they don't apply. The two that do:
   on purpose). Fixes applied:
   - **Reports kept, paths relativized.** Stripped the
     `/Users/<user>/src/callback-worktrees/<wt>/callback-box/` prefix in
-    `user-stories-audit-2026-06-26.md` and `research/…/deep-cbx-search.md` →
+    `user-stories/catalog/2026-06-26.md` and `research/…/deep-cbx-search.md` →
     monorepo-relative `callback-box/...`.
   - **doc-graph generator fixed at the source.** `doc-graph.md` only *quoted* the
     report (fixed by relativizing the report + regen). But `doc-graph.html` had a

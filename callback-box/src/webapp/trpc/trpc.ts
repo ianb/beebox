@@ -1,7 +1,19 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import type { TrpcContext } from "./context.js";
 
-const t = initTRPC.context<TrpcContext>().create();
+// Client responses never need server frames or raw internal error messages,
+// either of which can contain absolute filesystem paths. Keep diagnosis in the
+// adapter's server-side onError log rather than letting tRPC derive response
+// disclosure from ambient NODE_ENV.
+const t = initTRPC.context<TrpcContext>().create({
+  isDev: false,
+  errorFormatter({ error, shape }) {
+    return {
+      ...shape,
+      message: error.code === "INTERNAL_SERVER_ERROR" ? "Internal server error" : shape.message,
+    };
+  },
+});
 
 export const router = t.router;
 export const publicProcedure = t.procedure;

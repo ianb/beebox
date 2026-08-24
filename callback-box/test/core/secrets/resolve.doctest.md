@@ -203,6 +203,51 @@ await box.cleanup();
 await rm(dir, { recursive: true, force: true });
 ```
 
+## A status-only probe is logged, but is not a USE
+
+`observe: false` splits the two records apart. A health check resolving the key
+to answer "is this configured?" really did read the value, so the access log
+keeps its line — attribution stays complete. What it must not do is move
+`lastUsed` and `purposes`, which answer "is this grant still earning its keep":
+a dashboard polling health every minute would otherwise pin a dead key's
+last-use to now forever.
+
+```ts
+const dir = await useTempStore();
+const box = await makeTmpBox();
+const slug = await boxSlug(box.root);
+await setSecret({ name: "probed", value: "placeholder-value-8" });
+await grantSecret({ slug, name: "probed", access: "server" });
+await resolveSecret({ boxRoot: box.root, name: "probed", purpose: "health-check", access: "server", observe: false });
+const probed = JSON.parse(await readFile(process.env.CB_SECRETS_FILE, "utf-8")).secrets.probed;
+const logged = JSON.parse((await readFile(accessLogSegmentPath(new Date().toISOString()), "utf-8")).trim());
+print(`logged: ${logged.event} ${logged.purpose}`);
+print(`lastUsed: ${JSON.stringify(probed.lastUsed)}`);
+print(`purposes: ${JSON.stringify(probed.purposes)}`);
+=>
+logged: resolve health-check
+lastUsed: undefined
+purposes: undefined
+```
+
+A real resolve — `observe` omitted — stamps both, and the probe's label is
+nowhere in the observed list:
+
+```ts continue
+await resolveSecret({ boxRoot: box.root, name: "probed", purpose: "real-work", access: "server" });
+const used = JSON.parse(await readFile(process.env.CB_SECRETS_FILE, "utf-8")).secrets.probed;
+print(`stamped: ${typeof used.lastUsed[slug] === "string"}`);
+print(`purposes: ${JSON.stringify(used.purposes)}`);
+=>
+stamped: true
+purposes: ["real-work"]
+```
+
+```ts cleanup
+await box.cleanup();
+await rm(dir, { recursive: true, force: true });
+```
+
 ## `purpose` is a label, not free text
 
 It is written verbatim into the access log the boxholder reads, so the resolver

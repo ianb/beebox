@@ -8,6 +8,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback, memo } from "react";
+import { ChatOpeners } from "./ChatOpeners";
 import { useParams } from "@tanstack/react-router";
 import type { SessionEntry, SessionContentBlock } from "../../api";
 import { extractChatImages, type MessageGroup, type OnZoomView, type ReplaySpeechOptions } from "./ChatMessages";
@@ -21,7 +22,7 @@ import {
   type RenderItemContext,
   type SpeechPlaybackState,
 } from "./InteractiveChat-message-items";
-import type { CaptureBubbleModel } from "./capture-bubble";
+import type { CaptureBubbleModel, CaptureVerbs } from "./capture-bubble";
 import type { AudioOverlayStore } from "./audio-overlay-store";
 
 interface LiveTurnState { turnId: string | null; uuid: string | null }
@@ -64,6 +65,7 @@ function LoadOlderHeader({ hasOlder, loadingOlder, onLoadOlder }: {
   return (
     <div className="text-center py-2">
       <button
+        id="cb-chat-load-older"
         onClick={onLoadOlder}
         disabled={loadingOlder}
         className="text-sm text-primary hover:text-primary/80 disabled:text-warm-400"
@@ -82,6 +84,7 @@ function LoadOlderHeader({ hasOlder, loadingOlder, onLoadOlder }: {
 function ScrollToBottomButton({ emphasized, onClick }: { emphasized: boolean; onClick: () => void }) {
   return (
     <button
+      id="cb-chat-scroll-latest"
       type="button"
       onClick={onClick}
       aria-label="Scroll to latest messages"
@@ -106,7 +109,7 @@ function MessageListInner({
   messages, groups, modelMarkers, isStreaming, streamText, streamTools,
   debugView, currentUserEmail, currentUserName, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, snapshot,
   totalEntries, onLoadOlder, loadingOlder, scrollToBottomTrigger, liveTurnId, proseEnabled, pendingHqDraft,
-  captureBubbles, onCaptureRetry, audioOverlayStore,
+  captureBubbles, captureVerbs, audioOverlayStore, openers, onSendOpener,
 }: {
   messages: SessionEntry[];
   groups: MessageGroup[];
@@ -131,8 +134,16 @@ function MessageListInner({
   proseEnabled: boolean;
   pendingHqDraft: string | null;
   captureBubbles: CaptureBubbleModel[];
-  onCaptureRetry: (id: string) => void;
+  captureVerbs: CaptureVerbs;
   audioOverlayStore: AudioOverlayStore;
+  /**
+   * Suggested opening questions from the bound directory's briefing, shown on
+   * the empty state of a fresh chat. Empty for an established box (the agent
+   * removes them once the box is in regular use) and for a resumed session.
+   */
+  openers: string[];
+  /** Send an opener as the person's message — the typed-and-entered path. */
+  onSendOpener: (text: string) => void;
 }) {
   const { boxSlug } = useParams({ strict: false });
   const hasOlder = totalEntries > messages.length;
@@ -207,14 +218,15 @@ function MessageListInner({
     onZoomView,
     proseEnabled,
     lastAssistantGroupIndex,
-    handleCaptureRetry: onCaptureRetry,
+    captureVerbs,
     audioOverlayStore,
-  }), [streamText, streamTools, debugView, currentUserEmail, currentUserName, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, proseEnabled, lastAssistantGroupIndex, onCaptureRetry, audioOverlayStore]);
+  }), [streamText, streamTools, debugView, currentUserEmail, currentUserName, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, proseEnabled, lastAssistantGroupIndex, captureVerbs, audioOverlayStore]);
 
   if (messages.length === 0 && !isStreaming) {
     return (
-      <div className="flex-1 flex items-center justify-center text-warm-500 text-sm">
-        Start a conversation with your box assistant.
+      <div className="flex-1 flex flex-col items-center justify-center gap-3 px-4">
+        <ChatOpeners openers={openers} onSendOpener={onSendOpener} />
+        <div className="text-warm-500 text-sm">Start a conversation with your box assistant.</div>
       </div>
     );
   }
@@ -237,13 +249,21 @@ function MessageListInner({
             loadingOlder={loadingOlder}
             onLoadOlder={handleLoadOlder}
           />
-          {data.map((item) => {
-            // The live turn's group keeps one key across the streamed→finalized
-            // transition so React reconciles it in place — no remount/flash.
-            const natural = dataItemKey(item);
-            const key = liveKey && liveTargetUuid && natural === liveTargetUuid ? liveKey : natural;
-            return <div key={key}>{renderDataItem(item, renderCtx)}</div>;
-          })}
+          {/* The transcript is user content, so `cb chat ui` does not walk into
+              it (lib/ui-scan/scan.ts, SCAN_BOUNDARY_ATTRIBUTE): the links,
+              buttons and rendered cards inside messages are the conversation,
+              not the app's chrome. The load-older header and the
+              scroll-to-bottom button sit outside this wrapper and stay
+              scannable. */}
+          <div data-cb-scan="exclude">
+            {data.map((item) => {
+              // The live turn's group keeps one key across the streamed→finalized
+              // transition so React reconciles it in place — no remount/flash.
+              const natural = dataItemKey(item);
+              const key = liveKey && liveTargetUuid && natural === liveTargetUuid ? liveKey : natural;
+              return <div key={key}>{renderDataItem(item, renderCtx)}</div>;
+            })}
+          </div>
         </div>
       </div>
       {!isPinned ? (

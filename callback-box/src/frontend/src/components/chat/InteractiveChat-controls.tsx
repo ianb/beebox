@@ -160,7 +160,7 @@ function CompanionViewPanelInner({
   return (
     <div className="h-[40vh] md:h-full md:w-1/2 flex-shrink-0 flex flex-col border-b md:border-b-0 md:border-r border-warm-300 bg-white">
       <div className="flex-shrink-0 flex items-stretch border-b border-warm-300 bg-warm-50 min-w-0">
-        <div role="tablist" aria-label="Open files" className="flex-1 min-w-0 flex overflow-x-auto">
+        <div id="cb-panel-tabs" role="tablist" aria-label="Open files" className="flex-1 min-w-0 flex overflow-x-auto">
           {tabs.map((tab) => {
             const isActive = tab.target.path === activePath;
             return (
@@ -205,8 +205,8 @@ function CompanionViewPanelInner({
           })}
         </div>
         <div className="flex-shrink-0 flex items-center gap-1 px-2 border-l border-warm-300">
-          <ExternalIconLink href={browseHref} label="Open in browse view (new tab)" size="sm" />
-          <CloseButton onClick={onClosePanel} label="Close companion view" size="sm" />
+          <ExternalIconLink id="cb-panel-open-browse" href={browseHref} label="Open in browse view (new tab)" size="sm" />
+          <CloseButton id="cb-panel-close" onClick={onClosePanel} label="Close companion view" size="sm" />
         </div>
       </div>
       <div className="flex-1 min-h-0 relative">
@@ -221,6 +221,11 @@ function CompanionViewPanelInner({
               key={tab.target.path}
               role="tabpanel"
               aria-hidden={!isActive}
+              // The rendered card is user content, out of the `cb chat ui` walk
+              // (lib/ui-scan/scan.ts, SCAN_BOUNDARY_ATTRIBUTE). The pane's own
+              // chrome — the tab strip, the close button — is above this and
+              // stays scannable.
+              data-cb-scan="exclude"
               // tabIndex 0: a scrolling tabpanel must be keyboard-focusable
               // (both the tabpanel ARIA pattern and axe's
               // scrollable-region-focusable) — the fixed shell's window never

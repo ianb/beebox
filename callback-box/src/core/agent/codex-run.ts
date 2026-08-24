@@ -54,6 +54,8 @@ export async function runCodexAgent(
       sessionId: options.resumeSessionId ?? "",
     };
   }
+  const activity = { seen: false };
+  let observedSessionId = options.resumeSessionId ?? "";
   try {
     await ensureCodexPluginInstalled();
     const tzContext = options.resumeSessionId === undefined ? await buildTimezoneContext(options.boxRoot) : "";
@@ -81,9 +83,13 @@ export async function runCodexAgent(
       input: options.prompt,
       outputSchema: options.outputSchema,
       signal: controller.signal,
-      onSessionId: options.onSessionId,
+      onSessionId(sessionId) {
+        observedSessionId = sessionId;
+        options.onSessionId?.(sessionId);
+      },
       onEvent(event) {
         if (event.type !== "item.completed") return;
+        activity.seen = true;
         const { item } = event;
         if (item.type === "agent_message") {
           options.onOutput?.(`${item.text}\n`);
@@ -99,6 +105,7 @@ export async function runCodexAgent(
         if (toolCount > (options.maxTurns ?? 20)) controller.abort();
       },
     });
+    observedSessionId = completed.sessionId;
     options.onSessionId?.(completed.sessionId);
     try {
       const cumulative = completed.usage === null ? null : codexSdkUsage(completed.usage);
@@ -143,6 +150,7 @@ export async function runCodexAgent(
         ...completed,
         threadId: completed.sessionId,
         structuredOutput,
+        hadAssistantActivity: activity.seen,
       }),
       { provider: "codex", boxRoot: options.boxRoot },
     );
@@ -153,7 +161,8 @@ export async function runCodexAgent(
         output: "",
         error: codexRunErrorText(error),
         exitCode: -1,
-        sessionId: options.resumeSessionId ?? "",
+        sessionId: observedSessionId,
+        ...(!activity.seen && { invocationFailure: true }),
       },
       { provider: "codex", boxRoot: options.boxRoot },
     );

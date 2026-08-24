@@ -18,6 +18,12 @@ dist/
 .env
 .overmind.sock
 
+# Document-comment store mount (docs/plans/document-comments.md). A symlink to
+# the store beside the main checkout; comments are a communication medium and
+# never repository state. NO trailing slash — a dir-only pattern does not match
+# a symlink, which would make the mount stageable.
+/comments
+
 # Personal commit blocklist (the guard's strings live here, never in git).
 # The tracked .commit-blocklist.example documents the format.
 .commit-blocklist
@@ -80,3 +86,10 @@ dev/apps/story-eval/runs/
 # Exhibit-store mount (same symlink rule — bin/lib/exhibits-store.sh; design
 # in callback-box/docs/plans/workstream-exhibits.md).
 /exhibits
+callback-box/user-stories/work/
+
+# Journey assets. Photographs are committed once compressed (a few hundred KB of
+# webp) so a journey is self-contained and runnable from a clean checkout.
+# Anonymized mail stays out until the boxholder has read it, since it is derived
+# from a real family's inbox — prepare.ts fails loudly naming anything absent.
+callback-box/user-stories/journeys/E-school/assets/

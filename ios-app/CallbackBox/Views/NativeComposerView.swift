@@ -16,6 +16,9 @@ struct NativeComposerView: View {
     var screenshotResult: NativeScreenshotResult?
     var onToggleLocationSharing: () -> Void
     var onTakeScreenshot: () -> Void
+    /// Ask the page to stop speaking (contract §4.9). Defaulted so the preview
+    /// and fixture screens need not supply a webview.
+    var onInterruptSpeech: () -> Void = {}
     var automaticallyResumeVoicePreparations = true
     var voiceStateOverride: VoiceCompositionState?
     var initiallyFocused = false
@@ -82,6 +85,9 @@ struct NativeComposerView: View {
                 }
                 pendingReferenceDate = Date()
             }
+            .onChange(of: screenAwakeReasons) { _, reasons in
+                applyScreenAwake(reasons)
+            }
     }
 
     private var composerLifecycle: some View {
@@ -101,6 +107,9 @@ struct NativeComposerView: View {
         }
         .onChange(of: dictation.state) { _, state in
             applyEarcon(.dictationStateChanged(state))
+            if case .failed = state {
+                applyVoiceTurn(.dictationFailed)
+            }
         }
         .onChange(of: dictation.interruptionCount) {
             applyEarcon(.recordingInterrupted)
@@ -130,6 +139,7 @@ struct NativeComposerView: View {
             noteSendBlockerChange(from: [], to: sendBlockers)
             applyVoiceTurn(.speechPlaybackChanged(playing: speechPlaybackActive))
             applyEarcon(.responseActiveChanged(responseActive))
+            applyScreenAwake(screenAwakeReasons)
             if initiallyFocused {
                 focused = true
             }
@@ -167,6 +177,7 @@ struct NativeComposerView: View {
             }
         }
         .onDisappear {
+            applyScreenAwake([])
             applyVoiceTurn(.microphoneStopped)
             applyEarcon(.cancelWaiting)
             NativeEarconPlayer.shared.stopAllTimers()
@@ -249,6 +260,11 @@ struct NativeComposerView: View {
                 composerButton(
                     systemImage: "plus",
                     accessibilityLabel: "Add",
+                    controlID: "cb-composer-add",
+                    does: "opens the attach menu — capture, take photo, choose photos, "
+                        + "paste an image, choose a file, screenshot the chat, share location, switch box",
+                    controlDisabled: isSending,
+                    onReveal: { showingActions = true },
                     action: { showingActions = true }
                 )
                 .disabled(isSending)
@@ -378,6 +394,16 @@ struct NativeComposerView: View {
                 isFocused: $focused,
                 height: $editorHeight
             )
+            .controlAnchor(
+                "cb-composer-input",
+                role: .textbox,
+                label: "Type a message",
+                disabled: isTextEntryLocked,
+                // The one control on this surface with a first responder to
+                // make. `focused` drives `ComposerTextView`'s own focus binding,
+                // so this raises the keyboard exactly as a tap would.
+                onFocus: { focused = true }
+            )
         }
         .frame(height: editorHeight)
         .frame(minWidth: 0, maxWidth: .infinity)
@@ -393,17 +419,25 @@ struct NativeComposerView: View {
             ProgressView()
                 .frame(width: 58, height: 58)
                 .background(.quaternary, in: Circle())
-        } else if voiceTurn.isActive || isVoiceRecording {
-            composerButton(
-                systemImage: "stop.fill",
-                accessibilityLabel: "Stop continuous dictation",
-                foregroundStyle: .red,
-                action: stopMicrophoneWithEarcon
-            )
+        } else if voiceTurn.isActive || isVoiceRecording || isVoiceStarting {
+            if isVoiceRecording == false, isVoiceStarting {
+                startingDictationButton
+            } else {
+                composerButton(
+                    systemImage: "stop.fill",
+                    accessibilityLabel: "Stop continuous dictation",
+                    controlID: "cb-composer-stop-dictation",
+                    does: "ends the dictation turn and keeps what was heard in the composer",
+                    foregroundStyle: .red,
+                    action: stopMicrophoneWithEarcon
+                )
+            }
         } else if hasTextContent {
             composerButton(
                 systemImage: "arrow.up",
                 accessibilityLabel: "Send",
+                controlID: "cb-composer-send",
+                controlDisabled: sendDisabled,
                 foregroundStyle: .white,
                 backgroundStyle: Color.accentColor,
                 action: send
@@ -415,6 +449,8 @@ struct NativeComposerView: View {
                 composerButton(
                     systemImage: "arrow.up",
                     accessibilityLabel: "Send photo",
+                    controlID: "cb-composer-send",
+                    controlDisabled: sendDisabled,
                     foregroundStyle: .white,
                     backgroundStyle: Color.accentColor,
                     action: send
@@ -430,12 +466,36 @@ struct NativeComposerView: View {
         composerButton(
             systemImage: "mic.fill",
             accessibilityLabel: "Start dictation",
+            controlID: "cb-composer-mic",
+            does: "tap to dictate continuously; say a send keyword to send hands-free",
             action: requestMicrophone
         )
     }
 
     private var isVoiceRecording: Bool {
         voiceStateOverride == .recording || dictation.isRecording
+    }
+
+    /// A turn is under way but the recognizer is not live yet — permissions, the
+    /// on-device analyzer session, the audio engine. The control says so instead
+    /// of wearing the recording face: a button that reports itself listening
+    /// while nothing is being heard is how "record does nothing" looked to the
+    /// boxholder in the first place.
+    private var isVoiceStarting: Bool {
+        voiceStateOverride == .requestingPermission || dictation.isStarting
+    }
+
+    /// The pending face of the stop control. Still stops the turn on tap — the
+    /// user must never have to wait for a start in order to abandon it.
+    private var startingDictationButton: some View {
+        Button(action: stopMicrophoneWithEarcon) {
+            ProgressView()
+                .tint(.red)
+                .frame(width: 58, height: 58)
+                .background(Color(uiColor: .tertiarySystemFill), in: Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Starting dictation — tap to stop")
     }
 
     private func openCapture() {
@@ -450,11 +510,22 @@ struct NativeComposerView: View {
         }
     }
 
+    /// One composer button, and its native control anchor.
+    ///
+    /// The anchor is applied here rather than at the call sites so the label the
+    /// agent reads is literally the label VoiceOver reads — one string, no way
+    /// for the two to drift. `controlDisabled` is passed explicitly because
+    /// SwiftUI's own `.disabled()` state cannot be read back out of a view; it
+    /// mirrors the `.disabled(...)` each call site applies.
     private func composerButton(
         systemImage: String,
         accessibilityLabel: String,
+        controlID: String,
+        does: String? = nil,
+        controlDisabled: Bool = false,
         foregroundStyle: Color = .primary,
         backgroundStyle: Color = Color(uiColor: .tertiarySystemFill),
+        onReveal: (() -> Void)? = nil,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
@@ -466,6 +537,13 @@ struct NativeComposerView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(accessibilityLabel)
+        .controlAnchor(
+            controlID,
+            label: accessibilityLabel,
+            does: does,
+            disabled: controlDisabled,
+            onReveal: onReveal
+        )
     }
 
     private func send() {
@@ -845,9 +923,46 @@ struct NativeComposerView: View {
             break
         case .startDictation:
             dictation.startIfNeeded(currentText: text)
+        case .startDictationInterruptingSpeech:
+            // The microphone opens now, not after the box finishes its sentence
+            // — a person who starts talking over you expects to be heard. The
+            // page owns the speech, so ask it to stop; nothing waits on that
+            // answer, because a lost command must not cost the user their turn.
+            dictation.startIfNeeded(currentText: text)
+            onInterruptSpeech()
         case .stopDictation:
             dictation.stop()
         }
+    }
+
+    /// The reasons this composer is currently holding the screen awake for —
+    /// derived, never accumulated, so every way a turn can end releases by the
+    /// same path. `scenePhase` is part of the derivation: a backgrounded
+    /// composer holds nothing, and returning to the foreground re-derives.
+    private var screenAwakeReasons: Set<ScreenAwakeReason> {
+        guard scenePhase == .active else {
+            return []
+        }
+        var reasons: Set<ScreenAwakeReason> = []
+        // One reason for the whole turn rather than one for the live
+        // microphone: the turn stays open across the pause for the box's speech
+        // and the reply streaming in before that speech starts, and those gaps
+        // — nobody speaking, nobody touching — are precisely when the idle
+        // timer would fire and suspend the app under the microphone it is about
+        // to reopen. `isStarting` covers the permission/engine bring-up for the
+        // same reason the composer wears its pending face there.
+        if voiceTurn.isActive || dictation.isRecording || dictation.isStarting {
+            reasons.insert(.voiceTurn)
+        }
+        if speechPlaybackActive {
+            reasons.insert(.speechPlayback)
+        }
+        return reasons
+    }
+
+    private func applyScreenAwake(_ reasons: Set<ScreenAwakeReason>) {
+        ScreenAwakeHold.shared.set(.voiceTurn, active: reasons.contains(.voiceTurn))
+        ScreenAwakeHold.shared.set(.speechPlayback, active: reasons.contains(.speechPlayback))
     }
 
     private func applyEarcon(_ event: NativeEarconEvent) {
@@ -961,7 +1076,7 @@ struct NativeComposerView: View {
         // Too many to ride inline: base64-ing this many photos into one
         // /chat/send is the failure this branch exists to prevent. Upload them
         // and let the agent file them instead. Mirrors the web composer's
-        // `shouldBatchPhotos` — see docs/mobile-contract.md §8, INLINE_PHOTO_LIMIT.
+        // `routeAddedFiles` — see docs/mobile-contract.md §8, INLINE_PHOTO_LIMIT.
         if BulkPhotoThreshold.shouldBatch(existingInline: draftStore.draft.images.count, incoming: items.count) {
             selectedPhotoItems = []
             await uploadPhotoBatch(items)

@@ -22,6 +22,7 @@ import {
   SecretStoreAccessError,
 } from "./errors.js";
 import { probeSecretInBackground } from "./probe-registry.js";
+import { appendSecretUses, secretUsesFor, type SecretUses } from "./uses.js";
 import {
   loadSecretStore,
   mutateSecretStore,
@@ -46,12 +47,14 @@ export interface SecretListing {
   /** Box slug → access level, across every box on the machine. */
   grants: Record<string, SecretAccessLevel>;
   lastUsed: Record<string, string> | undefined;
+  /** Why this secret exists: built-in, declared, and observed (`uses.ts`). */
+  uses: SecretUses;
 }
 
 /** What one box has, needs, and is stale about. */
 export interface BoxSecretStatus {
   slug: string;
-  granted: { name: string; access: SecretAccessLevel; hasValue: boolean }[];
+  granted: { name: string; access: SecretAccessLevel; hasValue: boolean; uses: SecretUses }[];
   /** Granted names whose entry exists but holds no value yet. */
   emptySlots: string[];
   /** Granted names whose entry no longer exists. */
@@ -62,7 +65,7 @@ export interface BoxSecretStatus {
    * box's own view the moment it is created (declaring grants nothing), which
    * is exactly the state an agent needs to be able to report.
    */
-  declaredHere: { name: string; hasValue: boolean }[];
+  declaredHere: { name: string; hasValue: boolean; uses: SecretUses }[];
 }
 
 function requireEntry(store: SecretStoreData, name: string): SecretEntry {
@@ -83,6 +86,8 @@ export async function setSecret(opts: {
   formatHint?: string | undefined;
   owningBox?: string | undefined;
   shareable?: boolean | undefined;
+  /** Reasons this secret exists — APPENDED, never replacing what is there. */
+  uses?: string[] | undefined;
 }): Promise<void> {
   if (opts.value === "") throw new EmptySecretValueError();
   await mutateSecretStore({ purpose: "set" }, (store) => {
@@ -92,6 +97,7 @@ export async function setSecret(opts: {
       value: opts.value,
       updated: getBoxTimeISO(),
       note: opts.note ?? existing?.note,
+      uses: appendSecretUses({ name: opts.name, existing: existing?.uses, added: opts.uses }),
       formatHint: opts.formatHint ?? existing?.formatHint,
       owningBox: opts.owningBox ?? existing?.owningBox,
       shareable: opts.shareable ?? existing?.shareable,
@@ -107,6 +113,11 @@ export async function setSecret(opts: {
  * surface — an agent writing an integration can say what it needs, and only the
  * boxholder can fill or grant it. Idempotent: re-declaring an existing name
  * refreshes its note/hint and never clobbers a value.
+ *
+ * `uses` is the WHY, and it is appended rather than replaced: a second trick
+ * declaring the same name adds its reason to the first one's, which is the
+ * whole shape of the question "why does this key exist" — a granted key
+ * accumulates callers, and the answer is a list.
  */
 export async function declareSecret(opts: {
   name: string;
@@ -114,6 +125,8 @@ export async function declareSecret(opts: {
   formatHint?: string | undefined;
   /** Slug of the box that asked for the slot, for `status` attribution. */
   declaredBy?: string | undefined;
+  /** Reasons this secret is wanted — appended to any already recorded. */
+  uses?: string[] | undefined;
 }): Promise<{ created: boolean }> {
   return mutateSecretStore({ purpose: "declare" }, (store) => {
     const existing = store.secrets[opts.name];
@@ -122,6 +135,7 @@ export async function declareSecret(opts: {
       value: existing?.value,
       updated: existing?.updated ?? getBoxTimeISO(),
       note: opts.note ?? existing?.note,
+      uses: appendSecretUses({ name: opts.name, existing: existing?.uses, added: opts.uses }),
       formatHint: opts.formatHint ?? existing?.formatHint,
       declaredBy: opts.declaredBy ?? existing?.declaredBy,
     };
@@ -334,6 +348,7 @@ export async function listSecrets(): Promise<SecretListing[]> {
         declaredBy: entry.declaredBy,
         grants,
         lastUsed: entry.lastUsed,
+        uses: secretUsesFor({ name, uses: entry.uses, purposes: entry.purposes }),
       };
     })
     .toSorted((a, b) => a.name.localeCompare(b.name));
@@ -357,14 +372,18 @@ export async function boxSecretStatus(slug: string): Promise<BoxSecretStatus> {
       continue;
     }
     const hasValue = entry.value !== undefined && entry.value !== "";
-    status.granted.push({ name, access, hasValue });
+    status.granted.push({ name, access, hasValue, uses: secretUsesFor({ name, uses: entry.uses, purposes: entry.purposes }) });
     if (!hasValue) status.emptySlots.push(name);
   }
   for (const name of Object.keys(store.secrets).toSorted()) {
     const entry = store.secrets[name];
     if (entry?.declaredBy !== slug) continue;
     if (boxGrants[name] !== undefined) continue; // already reported as granted
-    status.declaredHere.push({ name, hasValue: entry.value !== undefined && entry.value !== "" });
+    status.declaredHere.push({
+      name,
+      hasValue: entry.value !== undefined && entry.value !== "",
+      uses: secretUsesFor({ name, uses: entry.uses, purposes: entry.purposes }),
+    });
   }
   return status;
 }

@@ -12,6 +12,7 @@ import { InlineAction } from "../ui/InlineAction";
 import { Pre } from "../ui/Pre";
 import { Toggle } from "../ui/Toggle";
 import { VisuallyHidden } from "../ui/VisuallyHidden";
+import { conciseScheduleError } from "@shared/schedule-error";
 
 type ScheduleInfo = RouterOutput["scheduler"]["schedules"]["schedules"][number];
 type SchedulerLogEntry = RouterOutput["scheduler"]["log"]["entries"][number];
@@ -201,6 +202,7 @@ function RunningIndicator({ running }: { running: { startedAt: string; triggered
 }
 
 function StatusIndicator({ lastResult, lastError, onToggleError }: { lastResult: "success" | "failure" | "deferred" | null; lastError: string | null; onToggleError?: () => void }) {
+  const errorSummary = lastError === null ? null : conciseScheduleError(lastError);
   if (lastResult === "success") {
     return <span className="text-success text-xs">&#10003;</span>;
   }
@@ -212,7 +214,7 @@ function StatusIndicator({ lastResult, lastError, onToggleError }: { lastResult:
         title={lastError ? "Click to expand detail" : undefined}
         className="text-xs text-left"
       >
-        &#9203; {lastError ? <span className="text-warm-600">{lastError.substring(0, 60)}&#8230;</span> : null}
+        &#9203; {errorSummary ? <span className="text-warm-600">{errorSummary.substring(0, 60)}&#8230;</span> : null}
       </InlineAction>
     );
   }
@@ -224,7 +226,7 @@ function StatusIndicator({ lastResult, lastError, onToggleError }: { lastResult:
         title={lastError ? "Click to expand error" : undefined}
         className="text-xs text-left"
       >
-        &#10007; {lastError ? <span className="text-warm-600">{lastError.substring(0, 60)}&#8230;</span> : null}
+        &#10007; {errorSummary ? <span className="text-warm-600">{errorSummary.substring(0, 60)}&#8230;</span> : null}
       </InlineAction>
     );
   }
@@ -297,6 +299,7 @@ export function ScheduleOverview({ schedules, recentTicks, loading, error }: Sch
       {recentTicks.length > 0 ? (
         <div className="mt-3 pt-3 border-t">
           <InlineAction
+            id="cb-dashboard-ticks-toggle"
             intent="subtle"
             onClick={() => setShowTicks(!showTicks)}
             className="text-xs"

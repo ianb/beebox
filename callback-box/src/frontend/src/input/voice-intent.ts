@@ -79,6 +79,8 @@ export function buildVoiceSubmitEmission(opts: {
    * body, since the body isn't final until selections/attachments fold in.
    */
   words?: readonly FinalWord[] | null;
+  /** See `Emission.hqText` — set when this text came from an HQ pass. */
+  hqText?: true;
 }): Emission {
   const full = joinTranscript(opts.priorInput, opts.finalText);
   return createVoiceEmission({
@@ -89,6 +91,7 @@ export function buildVoiceSubmitEmission(opts: {
     diarized: opts.diarized,
     words: resolveEmissionWords(opts.words),
     spokenStart: spokenTextStart(opts.priorInput),
+    hqText: opts.hqText,
   });
 }
 
@@ -128,12 +131,19 @@ export async function prepareVoiceSubmitEmission(opts: {
     }
     if (hqResult !== null) {
       const keyword = detectKeyword(hqResult.text);
+      // A manual stop-and-send synthesizes this intent with an empty
+      // matchedPhrase (docs/implemented-plans/hq-dictation-switch.md, chunk 2) — nothing
+      // was spoken to match, so there's no trigger phrase to restore as a
+      // tag if the HQ pass doesn't literally reproduce it. Only a real
+      // keyword-fire (non-empty matchedPhrase) gets the fallback tag.
       finalText = keyword
         ? keyword.processedTranscript
-        : appendSendKeywordTag(hqResult.text, {
-          action: intent.closeMic ? "sendClose" : "send",
-          matchedPhrase: intent.matchedPhrase,
-        });
+        : intent.matchedPhrase === ""
+          ? hqResult.text
+          : appendSendKeywordTag(hqResult.text, {
+            action: intent.closeMic ? "sendClose" : "send",
+            matchedPhrase: intent.matchedPhrase,
+          });
       diarized = hqResult.diarized;
       usedHq = true;
     }
@@ -147,6 +157,9 @@ export async function prepareVoiceSubmitEmission(opts: {
       // (Track 3 HQ-drop rule). A fallback to realtime text (!usedHq)
       // attaches the intent's words like any other realtime send.
       words: usedHq ? undefined : intent.words,
+      // `stt="hq"` (docs/implemented-plans/hq-dictation-switch.md) stamps only when the
+      // HQ pass actually ran and produced text — never on a fallback.
+      hqText: usedHq ? true : undefined,
     }),
     usedHq,
   };

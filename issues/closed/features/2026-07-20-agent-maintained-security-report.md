@@ -11,9 +11,9 @@ resolution: implemented
 
 **Closed 2026-08-14.** Built and signed off. `db7901c5` created the system (the
 `/security-report` skill as the committed rubric, `callback-box/docs/security-report.md`,
-and `callback-box/SECURITY.md`); `3589d96c` and `3bbddcc5` applied cross-model
+and `callback-box/docs/security-overview.md`); `3589d96c` and `3bbddcc5` applied cross-model
 review findings; `8c9c3ec9` stamped the boxholder sign-off, live now in the
-`reviewed-by:` header at `callback-box/SECURITY.md:6`. `a8aa45fd` shows a
+`reviewed-by:` header at `callback-box/docs/security-overview.md:6`. `a8aa45fd` shows a
 second regeneration cycle has already run in practice, which is the property
 the issue actually wanted — a document an agent maintains, not a one-time audit.
 
@@ -23,11 +23,11 @@ boxholder review", which the sign-off commit superseded a week ago.
 > **Status 2026-08-07 (superseded)** — built on `worktree-security-report`: the
 > `/security-report` skill (the committed rubric), the structured report
 > (`callback-box/docs/security-report.md`), and a DRAFT
-> `callback-box/SECURITY.md`, cross-model-reviewed (7 findings applied).
+> `callback-box/docs/security-overview.md`, cross-model-reviewed (7 findings applied).
 > Awaiting boxholder review of the two report artifacts before merge;
 > the headers carry `reviewed-by: DRAFT — unreviewed` until then.
 
-The launch needs a SECURITY.md-shaped "what this can touch" page (the
+The launch needs a security-overview.md-shaped "what this can touch" page (the
 OpenClaw lesson from
 [the competitive research](../../../research/openclaw-hermes/README.md):
 install UX was never the complaint, blast radius was — what saved them was an
@@ -53,7 +53,7 @@ Fits existing infrastructure: knowledge-audits
 ([docs](../../../callback-box/docs/knowledge-audits.md)) and the doc-generation
 tooling are precedents for committed-prompt → generated-artifact loops.
 
-**First run produces the launch SECURITY.md** — gate 4 in
+**First run produces the launch security-overview.md** — gate 4 in
 [soft-launch posture](../../decisions/2026-07-20-soft-launch-posture.md) — so
 the system and the gate are one piece of work, not two.
 

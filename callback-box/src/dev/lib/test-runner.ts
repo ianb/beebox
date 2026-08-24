@@ -32,6 +32,7 @@ import { codexBehaviorFromActivity } from "./codex-audit-behavior.js";
 import { shellCommandConsultsFiles, shellCommandSearches } from "./shell-command-observation.js";
 import { runChecks } from "./audit-checks.js";
 import { generateAgentContextMirrors } from "../../core/agent-context-mirrors.js";
+import { AGENTS_MD, CLAUDE_MD } from "../../core/agent-instruction-files.js";
 
 export type { AuditTest, TestSuite };
 
@@ -124,8 +125,8 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
     if (engine === "codex" && test.fixture !== undefined) {
       await generateAgentContextMirrors(boxRoot);
       for (const fixturePath of [...fixturePaths]) {
-        if (path.basename(fixturePath) === "CLAUDE.md") {
-          fixturePaths.push(path.join(path.dirname(fixturePath), "AGENTS.md"));
+        if (path.basename(fixturePath) === CLAUDE_MD) {
+          fixturePaths.push(path.join(path.dirname(fixturePath), AGENTS_MD));
         }
       }
     }

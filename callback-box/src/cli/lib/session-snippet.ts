@@ -38,6 +38,30 @@ export function userTurnText(blocks: Array<Record<string, unknown>>): string | n
 }
 
 /**
+ * A user turn's label text: real-turn classification plus wrapper stripping,
+ * trimmed to `maxLen`. Null when the turn is the machine's own traffic or is
+ * nothing but markup.
+ *
+ * The single cleaning step between a raw user message and a list label. Codex
+ * chats once skipped it — their labels came from slicing the app-server's
+ * `preview` string, and since the `<chat-app …>` snapshot alone is longer than
+ * the 400-char cut, every Codex row rendered as envelope markup and no row
+ * could ever contain what the person typed.
+ */
+export function snippetFromUserBlocks(
+  blocks: Array<Record<string, unknown>>,
+  maxLen: number,
+): string | null {
+  const text = userTurnText(blocks);
+  return text === null ? null : extractSnippet(text, maxLen);
+}
+
+/** {@link snippetFromUserBlocks} for a message that arrives as plain text. */
+export function snippetFromUserText(text: string, maxLen: number): string | null {
+  return snippetFromUserBlocks([{ type: "text", text }], maxLen);
+}
+
+/**
  * First real user message of a transcript, trimmed to `snippetMaxLen`, or null
  * when the transcript holds none (a brand-new session, or one that is nothing
  * but plumbing). Throws the underlying fs error when the file can't be read —
@@ -57,11 +81,9 @@ export async function readFirstUserSnippet(args: {
       if (raw.isMeta === true) continue;
       const message = raw["message"];
       if (!isRecord(message)) continue;
-      const text = userTurnText(contentBlocks(message["content"]));
-      if (text === null) continue;
-      const snippet = extractSnippet(text, args.snippetMaxLen);
       // A turn whose text is all speech-wrapper markup strips to nothing; keep
       // scanning rather than reporting the chat as unlabeled.
+      const snippet = snippetFromUserBlocks(contentBlocks(message["content"]), args.snippetMaxLen);
       if (snippet !== null) return snippet;
     }
     return null;

@@ -110,11 +110,18 @@ function buildQueryOptions(
  * including error/success classification and structured-output passthrough.
  */
 function buildAgentResult(outcome: RunStreamOutcome, resumeSessionId: string | undefined): AgentResult {
-  const { outputBuf, resultMessage, assignedSessionId, errorText } = outcome;
+  const { outputBuf, resultMessage, assignedSessionId, errorText, hadAssistantActivity } = outcome;
   const sessionId = assignedSessionId ?? resumeSessionId ?? "";
 
   if (errorText !== null) {
-    return { success: false, output: outputBuf, error: errorText, exitCode: -1, sessionId };
+    return {
+      success: false,
+      output: outputBuf,
+      error: errorText,
+      exitCode: -1,
+      sessionId,
+      ...(resultMessage === null && !hadAssistantActivity && { invocationFailure: true }),
+    };
   }
   if (resultMessage === null) {
     return {
@@ -123,6 +130,7 @@ function buildAgentResult(outcome: RunStreamOutcome, resumeSessionId: string | u
       error: "Agent ended without a result message",
       exitCode: -1,
       sessionId,
+      ...(!hadAssistantActivity && { invocationFailure: true }),
     };
   }
 
@@ -236,6 +244,7 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
         error: e.message,
         exitCode: -1,
         sessionId: options.resumeSessionId ?? options.sessionId ?? "",
+        invocationFailure: true,
       };
     }
     throw e;

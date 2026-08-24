@@ -18,6 +18,7 @@
 #   close <name>       Close a merged, clean workstream's live Terminal tab.
 #                      --force overrides merged/clean, never liveness safety.
 #   resume <name>      Focus live, reopen idle, or recreate a culled workstream.
+#                      Accepts an optional briefing as text, -, or @file.
 #                      Options: --agent claude|codex, --fresh, --at-final-sha.
 #   reset-test <name>  Hard-reset the workstream's test1 clone to test-setup.
 #   confirm-tested <issue-basename>  Clear manual-testing on main and commit.
@@ -345,14 +346,21 @@ case "$cmd" in
     requested_agent=""
     fresh=false
     at_final_sha=false
+    briefing_args=()
     while [ $# -ge 1 ]; do
       case "$1" in
         --agent) [ $# -ge 2 ] || { echo "workstreams resume: --agent needs a value" >&2; exit 1; }; requested_agent="$2"; shift 2 ;;
         --agent=*) requested_agent="${1#--agent=}"; shift ;;
         --fresh) fresh=true; shift ;;
         --at-final-sha) at_final_sha=true; shift ;;
+        --) shift; briefing_args=("$@"); break ;;
+        -) [ -n "$name" ] || { echo "workstreams resume: workstream name must precede briefing" >&2; exit 1; }; briefing_args=("$@"); break ;;
         -*) echo "workstreams resume: unknown option $1" >&2; exit 1 ;;
-        *) [ -z "$name" ] || { echo "workstreams resume: unexpected argument $1" >&2; exit 1; }; name="$1"; shift ;;
+        *)
+          if [ -z "$name" ]; then name="$1"; shift
+          else briefing_args=("$@"); break
+          fi
+          ;;
       esac
     done
     case "$requested_agent" in ""|claude|codex) ;; *) echo "workstreams resume: --agent must be claude or codex" >&2; exit 1 ;; esac
@@ -361,9 +369,12 @@ case "$cmd" in
     . "$REPO_DIR/bin/lib/worktree-teardown.sh"
     wt_paths_init "$REPO_DIR" || exit 1
     [ -n "$name" ] && wt_paths_valid_name "$name" || {
-      echo "usage: workstreams resume <name> [--agent claude|codex] [--fresh] [--at-final-sha]" >&2
+      echo "usage: workstreams resume [--agent claude|codex] [--fresh] [--at-final-sha] <name> [--] [<briefing> | - | @file]" >&2
       exit 1
     }
+    # shellcheck source=lib/workstream-briefing.sh
+    . "$REPO_DIR/bin/lib/workstream-briefing.sh"
+    workstream_read_briefing "workstreams resume" ${briefing_args[@]+"${briefing_args[@]}"}
     # shellcheck source=lib/session-registry.sh
     . "$REPO_DIR/bin/lib/session-registry.sh"
     # shellcheck source=lib/workstream-resume.sh
@@ -380,7 +391,17 @@ case "$cmd" in
     fi
     resume_state=$(workstream_resume_state "$worktree_exists" "$agent_state" "$record")
     case "$resume_state" in
-      focus) exec "$REPO_DIR/bin/workstreams" focus "$name" ;;
+      focus)
+        if [ "$WORKSTREAM_BRIEFING_PROVIDED" = false ]; then
+          exec "$REPO_DIR/bin/workstreams" focus "$name"
+        fi
+        handoff_file=$(mktemp -t "workstream-handoff.$name.XXXXXX")
+        workstream_wrap_briefing "$WORKSTREAM_BRIEFING" > "$handoff_file"
+        chmod 600 "$handoff_file"
+        "$REPO_DIR/bin/workstreams" focus "$name" >/dev/null 2>&1 || true
+        echo "workstreams resume: manual forwarding required: $handoff_file"
+        exit 0
+        ;;
       liveness-unknown)
         echo "workstreams resume: cannot determine liveness for $name ($WT_AGENT_REASON) — refusing to open a duplicate" >&2
         exit 1 ;;
@@ -434,6 +455,10 @@ case "$cmd" in
     launch_dir=$(mktemp -d -t workstreams-resume.XXXXXX)
     prompt_file="$launch_dir/prompt.txt"
     workstream_continuation_prompt "$name" "$record" "$landed_log" > "$prompt_file"
+    if [ "$WORKSTREAM_BRIEFING_PROVIDED" = true ]; then
+      printf '\n' >> "$prompt_file"
+      workstream_wrap_briefing "$WORKSTREAM_BRIEFING" >> "$prompt_file"
+    fi
     emoji=$(printf '%s' "$record" | jq -r '.emoji // empty' 2>/dev/null || true)
     [ -n "$emoji" ] || emoji=$(launch_session_default_emoji "$name")
     model=$(printf '%s' "$record" | jq -r '.model // empty' 2>/dev/null || true)
@@ -448,6 +473,7 @@ case "$cmd" in
     LS_LAUNCH_DIR="$launch_dir"
     LS_WORKTREE_PATH="$target"
     LS_CODEX_RESUME=0
+    LS_DESCRIPTION_FILE=""
     if [ "$resolved_agent" = codex ] && [ "$fresh" = false ] && [ "$resume_state" = existing ]; then
       LS_CODEX_RESUME=1
     fi
@@ -455,7 +481,11 @@ case "$cmd" in
     workstream_resume_status opening-terminal
     result=$(launch_session_open)
     workstream_resume_status opened
-    echo "workstreams resume: launched $resolved_agent for $name ($result)"
+    if [ "$WORKSTREAM_BRIEFING_PROVIDED" = true ]; then
+      echo "workstreams resume: launched $resolved_agent for $name with briefing ($result)"
+    else
+      echo "workstreams resume: launched $resolved_agent for $name ($result)"
+    fi
     ;;
 
   reset-test)
@@ -534,20 +564,41 @@ case "$cmd" in
     wt_agent_snapshot_capture
     # shellcheck source=lib/workstream-box-state.sh
     . "$REPO_DIR/bin/lib/workstream-box-state.sh"
+    # shellcheck source=lib/workstream-routing.sh
+    . "$REPO_DIR/bin/lib/workstream-routing.sh"
 
     # One router query for the whole listing. A router that is down, wedged, or
     # simply not started is normal — every runtime field then reports "unknown",
     # which is distinct from a worktree the router knows to be "cold".
     router_json=$(curl -fsS -m 3 --unix-socket "$ROUTER_SOCK" "http://router/__router/status" 2>/dev/null || true)
 
+    registered_worktrees=""
+    while IFS= read -r -d '' worktree_field; do
+      case "$worktree_field" in
+        "worktree "*)
+          registered_path=${worktree_field#worktree }
+          [ -d "$registered_path" ] || continue
+          registered_path=$(cd "$registered_path" && pwd -P)
+          registered_worktrees="${registered_worktrees}${registered_path}"$'\n'
+          ;;
+      esac
+    done < <(git -C "$WT_MONO" worktree list --porcelain -z)
+    now_epoch=$(date +%s)
     rows="[]"
     for d in "$WT_ROOT"/*; do
       [ -d "$d" ] || continue
       name=$(basename "$d")
+      canonical_d=$(cd "$d" && pwd -P)
+      if ! printf '%s' "$registered_worktrees" | grep -Fqx -- "$canonical_d"; then
+        echo "workstreams list: ignoring non-worktree directory: $d" >&2
+        continue
+      fi
 
       wt_other_agent_live "$d"
       wt_work_state "$d"
       tip=$(git -C "$d" rev-parse HEAD 2>/dev/null || true)
+      tip_epoch=$(git -C "$d" log -1 --format=%ct 2>/dev/null || true)
+      dir_epoch=$(stat -f %m "$d" 2>/dev/null || stat -c %Y "$d" 2>/dev/null || true)
 
       # `git status` failing yields "?" from wt_work_state. Carry that through as
       # JSON null rather than coercing it to a number — a reader must not be able
@@ -562,6 +613,8 @@ case "$cmd" in
         runtime='{"state":"unknown"}'
       fi
       session=$(session_registry_summary "$name")
+      record=$(session_registry_read "$name" || true)
+      routing=$(workstream_routing_json true "$WT_AGENT_STATE" "$record" "$tip_epoch" "$dir_epoch" "$now_epoch")
       box_state=$(workstream_box_state "$WT_BOX_ROOT/$name/test1" "$WT_BOX_SRC")
 
       rows=$(jq -c \
@@ -575,6 +628,7 @@ case "$cmd" in
         --argjson merged "$merged" \
         --argjson runtime "$runtime" \
         --argjson session "$session" \
+        --argjson routing "$routing" \
         --argjson boxState "$box_state" \
         --arg agentState "$WT_AGENT_STATE" \
         --arg agentReason "$WT_AGENT_REASON" \
@@ -591,6 +645,7 @@ case "$cmd" in
               runtime: $runtime,
               agent: { state: $agentState, reason: $agentReason },
               session: $session,
+              routing: $routing,
               boxState: $boxState
             }]')
     done
@@ -605,6 +660,7 @@ case "$cmd" in
         [ -n "$record" ] || continue
         printf '%s' "$record" | jq -e '.removed != null' >/dev/null 2>&1 || continue
         session=$(session_registry_summary "$name")
+        routing=$(workstream_routing_json false none "$record" "" "" "$now_epoch")
         box_state=$(workstream_box_state "$WT_BOX_ROOT/$name/test1" "$WT_BOX_SRC")
         branch=$(printf '%s' "$record" | jq -r '.branch // ("worktree-" + .name)')
         rows=$(jq -c \
@@ -612,11 +668,12 @@ case "$cmd" in
           --arg name "$name" \
           --arg branch "$branch" \
           --argjson session "$session" \
+          --argjson routing "$routing" \
           --argjson boxState "$box_state" \
           -n '$rows + [{
             name:$name, branch:$branch, path:null, box:null, url:null, git:null,
             runtime:{state:"absent"}, agent:{state:"none", reason:"no-worktree"},
-            session:$session, boxState:$boxState
+            session:$session, routing:$routing, boxState:$boxState
           }]')
       done
     fi
@@ -625,13 +682,17 @@ case "$cmd" in
       printf '%s\n' "$rows" | jq .
     else
       printf '%s\n' "$rows" | jq -r '
-        (["WORKTREE","AGENT","GIT","RUNTIME"] | @tsv),
+        (["WORKTREE","STATE","ACTION","AGE","AGENT","GIT","RUNTIME","DESCRIPTION"] | @tsv),
         (.[] | [
           .name,
+          .routing.state,
+          .routing.action,
+          (.routing.lastActivityAt // "?"),
           .agent.state,
           ((if .git.ahead == null then "ahead=?" else "ahead=\(.git.ahead)" end) +
            (if .git.dirty == null then " dirty=?" elif .git.dirty > 0 then " dirty=\(.git.dirty)" else "" end)),
-          .runtime.state
+          .runtime.state,
+          (.session.description // "")
         ] | @tsv)' | column -t -s "$(printf '\t')"
     fi
     ;;

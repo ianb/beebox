@@ -6,6 +6,10 @@
  * Uploads run one at a time, so the in-flight transfer's percentage is shown
  * alongside the counts — a full-resolution photo on a weak uplink is genuinely
  * slow, and without a moving number that is indistinguishable from a hang.
+ *
+ * Status only: the failure counts here used to carry their own tiny `retry`
+ * links, three of them, competing with the one in the control row. Retry lives
+ * in `CaptureControls`, where there is room for a control worth tapping.
  */
 
 interface StatusBarProps {
@@ -32,7 +36,6 @@ interface StatusBarProps {
   onToggleSettings: () => void;
   onPickGallery: () => void;
   onPickFile: () => void;
-  onRetryFailed: () => void;
 }
 
 /** " 42%" for the in-flight transfer, or nothing while the size is unknown. */
@@ -58,7 +61,6 @@ export function StatusBar(props: StatusBarProps) {
               <>
                 <span className="text-danger-light">&#10007;</span>
                 <span className="text-danger-light">{props.audioFailed} audio failed</span>
-                <button onClick={props.onRetryFailed} disabled={props.finalizing} className="text-warning-light underline ml-1 disabled:opacity-40">retry</button>
               </>
             ) : (
               <><span className="text-success-light">&#10003;</span><span className="text-success-light">audio ({props.audioUploaded})</span></>
@@ -75,7 +77,6 @@ export function StatusBar(props: StatusBarProps) {
               <>
                 <span className="text-danger-light">&#10007;</span>
                 <span className="text-danger-light">{props.photosFailed} failed</span>
-                <button onClick={props.onRetryFailed} disabled={props.finalizing} className="text-warning-light underline ml-1 disabled:opacity-40">retry</button>
                 {props.photosUploaded > 0 ? <span className="text-success-light">, {props.photosUploaded} ok</span> : null}
               </>
             ) : (
@@ -91,7 +92,6 @@ export function StatusBar(props: StatusBarProps) {
               <>
                 <span className="text-danger-light">&#10007;</span>
                 <span className="text-danger-light">{props.filesFailed} failed</span>
-                <button onClick={props.onRetryFailed} disabled={props.finalizing} className="text-warning-light underline ml-1 disabled:opacity-40">retry</button>
                 {props.filesUploaded > 0 ? <span className="text-success-light">, {props.filesUploaded} ok</span> : null}
               </>
             ) : (
@@ -99,9 +99,10 @@ export function StatusBar(props: StatusBarProps) {
             )}
           </div>
         ) : null}
-        <button onClick={props.onPickFile} disabled={props.finalizing} className="text-gray-400 hover:text-white p-1 disabled:opacity-30" title="Upload file" aria-label="Upload file"><span aria-hidden="true">&#128206;</span></button>
-        <button onClick={props.onPickGallery} disabled={props.finalizing} className="text-gray-400 hover:text-white p-1 disabled:opacity-30" title="Add from gallery" aria-label="Add from gallery"><span aria-hidden="true">&#128247;</span></button>
+        <button id="cb-capture-add-file" onClick={props.onPickFile} disabled={props.finalizing} className="text-gray-400 hover:text-white p-1 disabled:opacity-30" title="Upload file" aria-label="Upload file"><span aria-hidden="true">&#128206;</span></button>
+        <button id="cb-capture-add-gallery" onClick={props.onPickGallery} disabled={props.finalizing} className="text-gray-400 hover:text-white p-1 disabled:opacity-30" title="Add from gallery" aria-label="Add from gallery"><span aria-hidden="true">&#128247;</span></button>
         <button
+          id="cb-capture-settings"
           onClick={props.onToggleSettings}
           className={`p-1 text-lg ${props.showSettings ? "text-white" : "text-gray-400 hover:text-white"}`}
           title="Device settings"

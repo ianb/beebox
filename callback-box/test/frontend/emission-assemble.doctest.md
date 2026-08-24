@@ -577,6 +577,37 @@ assembleChatMessage(eNoData, W).message.replace(eNoData.id, "ID")
 => <speech message-id="ID" local-time="14:23">no data here</speech>
 ```
 
+## `stt="hq"` — the always-HQ switch's provenance stamp
+
+`hqText: true` (docs/implemented-plans/hq-dictation-switch.md) stamps `stt="hq"` instead
+of `stt="deepgram"`, whether or not realtime words happened to be captured —
+the two are mutually exclusive: an HQ pass drops the realtime words it
+replaced, so `words` is never defined alongside `hqText`.
+
+```ts
+const eHq = createVoiceEmission({
+  text: "the corrected HQ transcript",
+  selections: [],
+  diarized: false,
+  hqText: true,
+});
+assembleChatMessage(eHq, W).message.replace(eHq.id, "ID")
+=> <speech stt="hq" message-id="ID" local-time="14:23">the corrected HQ transcript</speech>
+```
+
+`stt` still leads `diarized` in attribute order, same as the deepgram case:
+
+```ts
+const eHqDiarized = createVoiceEmission({
+  text: "two people talking",
+  selections: [],
+  diarized: true,
+  hqText: true,
+});
+assembleChatMessage(eHqDiarized, W).message.replace(eHqDiarized.id, "ID")
+=> <speech stt="hq" diarized="1" message-id="ID" local-time="14:23">two people talking</speech>
+```
+
 ## Emission ids are distinct per creation (the dedup key)
 
 ```ts

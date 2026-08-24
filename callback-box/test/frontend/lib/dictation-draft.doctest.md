@@ -3,14 +3,14 @@
 Pure helpers for the interrupted-dictation draft the chat persists to
 localStorage so a screen sleep / tab eviction / reload can't erase an
 in-progress narration transcript. The hook owns the storage I/O; these own the
-key shape, the parse/serialize boundary, and the age label.
+key shape and the parse/serialize boundary. The age label moved to
+`relative-time.doctest.md`, where the capture chip shares it.
 
 ```ts setup
 import {
   draftKey,
   parseDraft,
   serializeDraft,
-  formatDraftAge,
   adoptLegacyDictationDrafts,
 } from "../../../src/frontend/src/lib/dictation-draft.js";
 import type { KeyValueStorage } from "../../../src/frontend/src/input/emission-persist.js";
@@ -130,39 +130,4 @@ A complete, correctly-typed record parses:
 ```ts
 JSON.stringify(parseDraft('{"text":"hi","narration":false,"updatedAt":42}'))
 => {"text":"hi","narration":false,"updatedAt":42}
-```
-
-## formatDraftAge
-
-Renders the elapsed-since-capture label from milliseconds (the caller owns the
-clock, so this stays deterministic). Anything under ~45s reads "just now":
-
-```ts
-formatDraftAge(0)
-=> just now
-
-formatDraftAge(10_000)
-=> just now
-```
-
-Minutes, hours, and days, with singular/plural days:
-
-```ts
-formatDraftAge(60_000)
-=> 1 min ago
-
-formatDraftAge(3 * 60_000)
-=> 3 min ago
-
-formatDraftAge(60 * 60_000)
-=> 1 hr ago
-
-formatDraftAge(3 * 60 * 60_000)
-=> 3 hr ago
-
-formatDraftAge(24 * 60 * 60_000)
-=> 1 day ago
-
-formatDraftAge(48 * 60 * 60_000)
-=> 2 days ago
 ```

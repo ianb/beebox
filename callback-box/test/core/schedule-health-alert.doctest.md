@@ -37,7 +37,7 @@ runs: cb wakeup --connector notes
   await box.seed("config/schedules/.state/sync-notes.json", JSON.stringify({
     lastRun: "2026-06-09T11:00:00Z",
     lastResult: "failure",
-    lastError: "ENETUNREACH",
+    lastError: "Command failed with exit code 1\nstderr:\nAgent invocation failed: Model gpt-retired is not supported",
     lastSuccess: "2026-06-07T09:00:00Z",
     consecutiveFailures: 4,
     alertedAt: null,
@@ -84,7 +84,7 @@ tg.sent[0].chatId
 
 tg.sent[0].text
 => ⚠️ Scheduled-task health «*»
-- sync-notes: failing ×4 (last success 2d ago) — ENETUNREACH
+- sync-notes: failing ×4 (last success 2d ago) — Agent invocation failed: Model gpt-retired is not supported
 «blankline»
 Run `cb health` in the box for details.
 ```

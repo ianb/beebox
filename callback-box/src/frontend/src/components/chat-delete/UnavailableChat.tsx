@@ -30,11 +30,11 @@ export function UnavailableChat(props: { boxSlug: string | undefined; sessionId:
             Its local transcript is missing, so callback-box will not try to resume it.
           </Text>
           <Row wrap>
-            <Button intent="primary" size="sm" onClick={startNew}>
+            <Button id="cb-chat-unavailable-new" intent="primary" size="sm" onClick={startNew}>
               Start a new conversation
             </Button>
-            {huskPath === null ? null : <TextLink to={href(`/${boxSlug}/browse/${huskPath}`)}>Open chat card</TextLink>}
-            <Button intent="destructive" size="sm" onClick={() => setDeleteOpen(true)}>
+            {huskPath === null ? null : <TextLink id="cb-chat-unavailable-open-card" to={href(`/${boxSlug}/browse/${huskPath}`)}>Open chat card</TextLink>}
+            <Button id="cb-chat-unavailable-delete" intent="destructive" size="sm" onClick={() => setDeleteOpen(true)}>
               Delete conversation…
             </Button>
           </Row>

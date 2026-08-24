@@ -27,12 +27,12 @@ const devToolSchema = z
     emoji: z.string().default("🔧"),
   })
   .strict();
-// There is no scripting exemption here: every /dev/ response carries the bare
-// `sandbox` CSP. A page that needs to script is an exhibit or a committed app
-// (`dev/apps/<name>/`), served on the isolated exhibits origin — which holds no
-// router authority — rather than on this owner-authenticated one. The old
-// `scripted` allowlist granted the whole origin to a path prefix and was retired
-// with story-eval's move (issues/closed/features/2026-07-24-dev-scripted-apps-separate-origin.md).
+// The retired `scripted` allowlist key is still rejected (strict schema): it
+// once granted scripting under the since-removed /dev/ sandbox CSP, and a stale
+// copy should degrade loudly rather than be silently half-honored
+// (issues/closed/features/2026-07-24-dev-scripted-apps-separate-origin.md).
+// Interactive apps with an ask still belong on the exhibits origin — that
+// separation is about lifecycle (surviving culls) and the ask workflow, not CSP.
 const devToolsFileSchema = z.object({ tools: z.array(devToolSchema) }).strict();
 type DevTools = z.infer<typeof devToolsFileSchema>;
 
@@ -823,23 +823,30 @@ export async function serveDev(params: {
   // static artifacts) inherits it; nothing overrides cache-control to anything
   // weaker. Edits show on reload with no server restart.
   res.setHeader("Cache-Control", "no-store, max-age=0");
-  // SECURITY (expose-dev-router B.2c / review 2.1): /dev serves AGENT-authored
-  // markdown/HTML/artifacts on the SAME authenticated origin as the mutating
-  // `/__router/{stop,retry}` control routes. Without isolation a careless or
-  // malicious /dev page could script a same-origin POST that stops a worktree.
-  // A bare `sandbox` directive (no `allow-scripts`, no `allow-same-origin`) is
-  // the decided fix: a sandboxed document can neither run JS nor issue
-  // same-origin requests, which closes the CSRF vector while leaving the page
-  // fully viewable (inline CSS/styling is unaffected by `sandbox`). Set here so
-  // every response THIS FUNCTION emits — manifest, doc browser, rendered .md, dir
-  // index, static artifacts, the issue browser — inherits it (nothing below
-  // writes a Content-Security-Policy, so it survives each `writeHead`), including
-  // the decode-error / traversal / 404 / 500 paths. (One /dev response bypasses
-  // this function and carries no CSP: the `/<name>/dev`→`/dev/` redirect in
-  // router.ts — an empty, non-executable redirect.) There are NO exemptions: the
-  // `scripted` allowlist that relaxed this for one app directory is gone, and a
-  // page that needs to script belongs on the exhibits origin instead.
-  res.setHeader("Content-Security-Policy", "sandbox");
+  // SECURITY — the `sandbox` CSP that used to cover every /dev/ response
+  // (expose-dev-router B.2c) was REMOVED by boxholder decision, 2026-08-19.
+  // It made normal content broken in non-obvious ways: the opaque origin sent
+  // image subrequests out cookieless (401'd by the auth gate, so every image
+  // in rendered markdown showed broken), and inline scripts in plain HTML
+  // pages silently died. The threat it defended against — agent-authored
+  // pages scripting same-origin requests at router control routes — is
+  // already an accepted residual for this router: every worktree frontend is
+  // agent-authored JS running unsandboxed on this same origin (workstreams
+  // plan, "same-origin worktree frontends", accepted 2026-08-09; the router
+  // is only exposed on localhost or the owner's tailnet). The boxholder's
+  // sharper framing (2026-08-19): the dev agent authors the router's own
+  // code, so sandboxing its HTML output guards nothing — an agent that
+  // wanted to misbehave "could do bad things everywhere". An independent
+  // origin for agent-authored surfaces stays the ideal if that trust
+  // assumption ever weakens (see
+  // issues/exploration/2026-08-19-independent-origin-for-dev-surfaces.md). Sandboxing /dev/
+  // alone therefore blocked normal pages without narrowing the actual attack
+  // surface. The destructive control verbs (`/__router/{stop,retry}`,
+  // `/workstreams/action/*`) remain POST-only + CSRF-classified (`control` in
+  // router-auth.ts); GETs behind the router can still lazy-start processes
+  // (`/__router/dashboard/<name>`, any worktree path) — that is the router's
+  // core design, not a mutation this change exposes. Background:
+  // issues/bugs/2026-08-19-dev-md-images-broken-opaque-origin.md.
   const base = `/${name}/dev`;
   const devRoot = path.join(repoRoot, "dev");
   const [pathOnly = ""] = rest.split("?");
@@ -861,15 +868,26 @@ export async function serveDev(params: {
     res.end(await renderDevManifest(name, base, devRoot));
     return;
   }
-  if (rel === "/docs") {
-    res.writeHead(301, { location: `${base}/docs/` });
+  // RETIRED into the general browser (docs/plans/general-browser.md, Track 5).
+  //
+  // The doc browser's job — read any markdown in this worktree — is now
+  // `/workstreams/browse?file=…`, which does it for every file kind, with the
+  // cross-workstream lens and commenting attached. Redirecting rather than
+  // deleting keeps every bookmark and every pasted link working.
+  //
+  // Note the address change this encodes: `/<worktree>/dev/docs/<path>` put the
+  // WORKTREE first and the file second. The replacement puts the file in the
+  // address and the worktree in a lens — "enter a universal view, then filter by
+  // workstream if I care to."
+  if (rel === "/docs" || rel === "/docs/" || rel.startsWith("/docs/")) {
+    const file = rel.startsWith("/docs/") ? rel.slice("/docs/".length) : "";
+    const search = new URLSearchParams();
+    if (file !== "") search.set("file", file);
+    // `main` is the unlensed address; any other worktree becomes the lens.
+    if (name !== "main") search.set("workstream", name);
+    const query = search.toString();
+    res.writeHead(301, { location: `/workstreams/browse${query === "" ? "" : `?${query}`}` });
     res.end();
-    return;
-  }
-  if (rel === "/docs/" || rel.startsWith("/docs/")) {
-    const query = rest.includes("?") ? rest.slice(rest.indexOf("?") + 1) : "";
-    const sort = new URLSearchParams(query).get("sort") === "recent" ? "recent" : "path";
-    await serveDocBrowser(base, repoRoot, rel.slice("/docs".length), sort, res);
     return;
   }
   await serveDevArtifact(base, devRoot, rel, pathOnly, res);

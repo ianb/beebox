@@ -93,6 +93,7 @@ export function GoogleServicesSection() {
               {Object.entries(GOOGLE_SERVICE_LABELS).map(([key, label]) => (
                 <CheckboxField
                   key={key}
+                  id={`cb-admin-google-service-${key}`}
                   label={label}
                   checked={status.enabledServices[key] === true}
                   disabled={savingServices}
@@ -104,6 +105,7 @@ export function GoogleServicesSection() {
 
           <div className="flex gap-3">
             <Button
+              id="cb-admin-google-reauthorize"
               intent={status.needsReauthSince ? "primary" : "secondary"}
               onClick={handleAuthorize}
               loading={connecting}
@@ -112,6 +114,7 @@ export function GoogleServicesSection() {
               Re-authorize
             </Button>
             <Button
+              id="cb-admin-google-disconnect"
               intent="secondary"
               onClick={handleDisconnect}
               loading={disconnecting}
@@ -123,6 +126,7 @@ export function GoogleServicesSection() {
         </>
       ) : (
         <Button
+          id="cb-admin-google-connect"
           intent="primary"
           onClick={handleAuthorize}
           loading={connecting}

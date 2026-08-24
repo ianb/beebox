@@ -223,7 +223,7 @@ Ordered by implementation dependency, then surface size.
 
 - **What**: one human page — the boxholder's letter — plus links (repo,
   Zulip at callback-box.zulipchat.com, install docs), and the agent layer:
-  `llms.txt` indexing the machine-facing files (agent-install.md, SECURITY.md
+  `llms.txt` indexing the machine-facing files (agent-install.md, security-overview.md
   when it exists, export/instruction docs), with `.md` twins for every human
   page.
 - **Why**: this is the site's whole v1 value; the "cool" iterates later on

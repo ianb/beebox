@@ -24,6 +24,8 @@ chunks.
       "updated": "2026-08-17T…",
       "verified": { "status": "ok", "at": "…" },   // set by a later chunk's probe
       "formatHint": "openai",
+      "uses": ["morning-brief forecasts"],         // declared reasons, additive
+      "purposes": ["transcription"],               // purpose labels real resolves passed
       "lastUsed": { "<box-slug>": "…" },           // stamped hourly at most
       "declaredBy": "<box-slug>",                   // which box asked for the slot
       "owningBox": "…", "shareable": false          // structurally per-box secrets
@@ -66,6 +68,19 @@ existing `config/connectors/*.secret.json` files into exactly these names, so
 | `google-oauth-client-id` / `google-oauth-client-secret` | `connectors/google-auth.ts` | — | `GOOGLE_OAUTH_CLIENT_ID` / `_SECRET` |
 | `anthropic`, `replicate` | `/api/adapters/<name>` | `<name>.secret.json` | — |
 | `telegram-bot/<box>` | `connectors/telegram-helpers.ts`, admin setup | `telegram.secret.json` | — |
+
+**One deliberate reuse outside this table.** The dev repo's document-comment
+surface transcribes spoken comments with `CALLBACK_OPENAI_API_KEY` — the
+`openai` (embeddings) variable above — rather than minting a third name
+(`workstreams-app/src/server/transcribe-openai.ts`). That is a **boxholder
+decision, 2026-08-22**, on the grounds that a dev-surface key on the developer's
+own machine did not earn its own name.
+
+It does **not** relax the box-side rule. `openai` and `openai-thinking` stay
+distinct for boxes, for the reason `core/openai-thinking-key.ts` records: *"a
+transcription key is not consent to pay for embeddings, and boxes may hold
+different keys for each."* Nothing in a box reads `CALLBACK_OPENAI_API_KEY` for
+transcription; only the dev tooling does.
 | `publish/<box>` | `publish/connector-secret.ts` | `publish.secret.json` | — |
 
 `openai` and `openai-thinking` are two names for two keys on purpose: a
@@ -80,6 +95,74 @@ The last two are **single-box** entries: they carry `owningBox` +
 box is refused with an explanation — a Telegram bot token routes to one webhook
 URL and an R2 token is scoped to one bucket, so sharing would break routing
 rather than merely be unwise.
+
+## Why a secret exists
+
+A grant is a standing decision, and the question that comes back months later is
+*what breaks if I revoke this?* `note` never answered it — one line written once
+while pasting a key. **Uses** do, and they are **additive**: one key usually
+earns its grant several times over (an OpenAI key does speech, Whisper, and the
+realtime mint), so every source is a LIST and a new reason is appended, never a
+replacement. Separating keys *by* purpose — one key per use — is a different
+idea and is deliberately not built.
+
+Three sources, shown apart rather than merged, because they are different
+claims:
+
+| Source | Where | Who writes it |
+|---|---|---|
+| **built-in** | `src/core/secrets/uses.ts` | The server. One list per name (or `family/` prefix), each line derived from an actual `resolveSecret` call site in the engine. An agent cannot add one — the probe-registry rule. |
+| **declared** | `entry.uses` | The boxholder (admin page) or an agent (`cb secrets declare --use`, `cb secrets describe --add-use`). This is the ad-hoc half: a trick, a script, a box-local integration the engine knows nothing about. |
+| **observed** | `entry.purposes` | Nobody — it accumulates from real resolves: the distinct `purpose` labels that were actually passed. |
+
+Observed purposes are recorded on the same best-effort path as `lastUsed`
+(`stampSecretUse`), with a different throttle on purpose: the timestamp is
+stamped at most hourly, while a purpose label is written the FIRST time it is
+seen and costs nothing after that. A trick that runs once at 12:05 would
+otherwise never appear. The list is capped (16 labels); the access log keeps the
+full history either way.
+
+Observed is the source that can contradict the other two, which is why it is
+shown separately in both the CLI and the admin page: a key nothing claims to use
+but something resolves hourly is worth a look, and so is a declared reason that
+never shows up as a resolve.
+
+**A status probe is logged, but is not a use.** Reading a key to answer "is this
+configured?" — what every API-key check in `runHealthChecks` does — resolves the
+value without spending it, and passes `observe: false` to `resolveSecret`. The
+two records then part company, deliberately:
+
+- the **access log** keeps its `resolve` line, because a probe really did read
+  the value and the log is attribution — omitting it would put a hole in the one
+  record that answers "what touched this key";
+- the entry's **`lastUsed` and `purposes` do not move**, because those answer "is
+  this grant still earning its keep". A dashboard polling health every minute
+  would otherwise pin a long-dead key's last-use to *now*, forever, and the one
+  source that can contradict a declared reason would be reporting the monitoring,
+  not the work.
+
+The per-key readers (`core/mistral-key.ts` and its siblings) take the flag as an
+argument rather than defaulting it, so each call site says which it is. Gemini's
+reader takes its `purpose` the same way — that key has two genuinely different
+spends (`gemini-vision` for scan import, `gemini-audio-question` for
+`cb chat ask-about-audio`), and one hardcoded label had the log claiming every
+audio question was vision work.
+
+```bash
+cb secrets declare weatherapi --note "…" --use "forecasts in the morning brief"
+cb secrets describe weatherapi --add-use "the umbrella reminder trick"
+cb secrets describe weatherapi --remove-use "the umbrella reminder trick" --agent-confirmed
+```
+
+Adding a use is **agent-facing and unguarded**, like `declare`: an agent that
+teaches the box a new trick spending an already-granted key should append why,
+and a reason can neither disclose a value nor widen an access level. Removing or
+clearing carries the agent guard — deleting the line that justified a grant is
+an edit a human has to be behind.
+
+A reason is free prose (unlike a resolve `purpose`, which is a constrained
+label), bounded only so the store and the admin page stay readable: one line,
+200 characters, 12 declared reasons per entry.
 
 ## Multi-field credentials
 
@@ -238,12 +321,13 @@ The owner-only **Secrets** section on any box's admin page is the boxholder's
 surface (`src/frontend/src/components/admin/SecretsSection*.tsx`):
 
 - **This box** — every granted name with its access level, verification badge,
-  note and last-used; set/rotate a value (masked input, soft format warnings);
+  note, **what it is used for** (built-in, declared, and observed — see "Why a
+  secret exists"), and last-used; set/rotate a value (masked input, soft format warnings);
   raise/lower access; revoke; supply values for slots the agent declared; revoke
   stale grants; grant an existing machine-level name (the picker hides names
   another box owns exclusively).
 - **Machine-wide** (Decision 8) — every name on the machine, its grants across
-  every box, `shareable` flags, last-used, and removal. Reachable from any box's
+  every box, `shareable` flags, uses, last-used, and removal. Reachable from any box's
   page, since the store is machine-level and there is no separate hub UI.
 
 No procedure in `trpc/routers/secrets.ts` returns a value — not on a read, not
@@ -272,6 +356,7 @@ and never taken from argv.
 | `printf %s "$KEY" \| cb secrets set <name>` | Store or rotate a value (stdin, or a hidden prompt). A value in argument position is refused. |
 | `cb secrets rm <name>` | Remove an entry; grants naming it become dangling grants. |
 | `cb secrets declare <name> --note …` | Create an empty, ungranted slot — the **agent-facing** subcommand. Records the declaring box (`declaredBy`) for `status`. |
+| `cb secrets describe <name> --add-use …` | Say why a secret exists — repeatable and additive. Agent-facing, scoped to the box's own grants and declared slots; `--remove-use`/`--clear-uses` need `--agent-confirmed`. |
 | `cb secrets list` | Names + metadata across the machine, never values. The machine-wide view, so it carries the agent refusal. |
 | `cb secrets grant <box> <name> [--access server\|agent]` | Per-box opt-in; refuses for a `shareable: false` secret. |
 | `cb secrets revoke <box> <name>` | Withdraw a grant. |
@@ -280,6 +365,7 @@ and never taken from argv.
 | `cb secrets migrate [--root <dir>] [--dry-run]` | The one-time move of every box's legacy `config/connectors/*.secret.json` into the store. |
 
 `<box>` is a slug or a box root path. `set`/`rm`/`grant`/`revoke`/`copy-grants`,
+`describe --remove-use`/`--clear-uses`,
 `list`, and a non-dry-run `migrate` refuse in an
 agent session without `--agent-confirmed` (the `cb auth` pattern) — a speed bump
 and an audit signal, not an authorization boundary. `declare` is exempt: an
@@ -289,6 +375,15 @@ An agent's view of the store is its OWN box: `list` is the machine's whole
 inventory of names and grants, and `status` refuses in an agent session for any
 box other than the one the command is standing in. Neither discloses a value —
 what is withheld is the map of which credentials exist and who holds them.
+
+`describe --add-use` is scoped the same way, for the same reason. It stays
+unguarded for a name the box holds a grant on or declared itself, but in an
+agent session any other name is refused — including one that does not exist, in
+*exactly* the same words. An unguarded write that succeeded for a real name and
+errored (`SecretNotFoundError`) for an invented one would enumerate the machine's
+secrets one guess at a time, which is the map the paragraph above withholds. A
+person at a terminal is unaffected, and `--agent-confirmed` carries it through
+when the boxholder asked for the edit.
 
 ## Migrating a machine: `cb secrets migrate`
 

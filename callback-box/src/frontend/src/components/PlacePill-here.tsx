@@ -116,7 +116,7 @@ export function HereMenuBody({
   const hasBookmarks = links.length > 0 || groups.length > 0;
   return (
     <>
-      <MenuItem to={href(dir === "" ? `/${boxSlug}/browse` : `/${boxSlug}/browse/${dir}`)}>
+      <MenuItem id="cb-here-menu-open-dir" to={href(dir === "" ? `/${boxSlug}/browse` : `/${boxSlug}/browse/${dir}`)}>
         Open {dir === "" ? "/" : `${dir}/`}
       </MenuItem>
       {hasBookmarks ? <MenuDivider /> : null}

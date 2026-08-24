@@ -27,7 +27,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
 import { refusalAllowsLegacyFallback } from "./secrets/legacy-fallback.js";
-import { resolveSecret } from "./secrets/resolve.js";
+import { resolveSecret, type SecretRead } from "./secrets/resolve.js";
 
 /** The store name this connector's key lives under. */
 export const MISTRAL_SECRET_NAME = "mistral";
@@ -70,13 +70,14 @@ async function readLegacySecretFile(boxRoot: string): Promise<string | null> {
   return parsed.apiKey;
 }
 
-export async function getMistralApiKey(boxRoot?: string): Promise<string | null> {
+export async function getMistralApiKey(boxRoot: string | undefined, read: SecretRead): Promise<string | null> {
   if (boxRoot !== undefined) {
     const resolved = await resolveSecret({
       boxRoot,
       name: MISTRAL_SECRET_NAME,
       purpose: "transcription",
       access: "server",
+      observe: read.observe,
     });
     if (resolved.ok) {
       if (resolved.value.suspect) {

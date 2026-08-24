@@ -22,7 +22,8 @@ import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Button } from "../ui/Button";
 import { cbSource } from "../../lib/source-tag";
-import { formatDraftAge, type DictationDraft } from "../../lib/dictation-draft";
+import { type DictationDraft } from "../../lib/dictation-draft";
+import { formatAgo } from "../../lib/relative-time";
 
 export function RecoveredDictation(props: {
   draft: DictationDraft;
@@ -37,7 +38,7 @@ export function RecoveredDictation(props: {
   // sends or discards promptly — so it needn't tick.
   const [age, setAge] = useState("just now");
   useEffect(() => {
-    setAge(formatDraftAge(Date.now() - draft.updatedAt));
+    setAge(formatAgo(Date.now() - draft.updatedAt));
   }, [draft.updatedAt]);
 
   return (
@@ -63,9 +64,9 @@ export function RecoveredDictation(props: {
             {draft.narration ? "Narration · " : ""}realtime transcript — review before sending
           </Text>
           <Row gap="sm">
-            <Button intent="secondary" size="sm" onClick={onDiscard}>Discard</Button>
-            <Button intent="secondary" size="sm" onClick={onContinue}>Continue</Button>
-            <Button intent="primary" size="sm" onClick={onSend}>Send</Button>
+            <Button id="cb-dictation-recovered-discard" intent="secondary" size="sm" onClick={onDiscard}>Discard</Button>
+            <Button id="cb-dictation-recovered-continue" intent="secondary" size="sm" onClick={onContinue}>Continue</Button>
+            <Button id="cb-dictation-recovered-send" intent="primary" size="sm" onClick={onSend}>Send</Button>
           </Row>
         </Row>
       </Stack>

@@ -55,6 +55,30 @@ await findChatHusk(box.root, "00000000-unknown")
 => null
 ```
 
+## the snippet title strips the `<chat-app>` prepend
+
+Every stored user message begins with the `<chat-app …/>` snapshot tag
+(`session/start.ts` prepends it), so a title sliced from the raw text would
+open with the tag instead of what the user said.
+
+```ts
+const box = await makeTmpBox();
+process.env["CB_CLAUDE_PROJECTS_DIR"] = box.path("projects");
+const titled = "cccc1111-2222-3333-4444-555566667777";
+const titledLog = getSessionLogPath(box.root, titled);
+await mkdir(dirname(titledLog), { recursive: true });
+await writeFile(titledLog, JSON.stringify({
+  type: "user",
+  message: { role: "user", content: [{ type: "text", text: '<chat-app narration="off" prose="on" local-time="Sunday 2026-08-23 10:29 CDT (morning)" channel="web-desktop"/>\nPlease reply with just the word ok.' }] },
+}) + "\n");
+const titledHusk = await ensureChatHusk(box.root, { sessionId: titled, date: new Date("2026-08-23T12:00:00Z") });
+await box.read(titledHusk)
+=> ---
+session: cccc1111-2222-3333-4444-555566667777
+title: Please reply with just the word ok.
+---
+```
+
 ## reconcile husks every history entry, skipping ghosts
 
 Transcript discovery honors `CB_CLAUDE_PROJECTS_DIR`; a history entry

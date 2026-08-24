@@ -80,7 +80,7 @@ export function SessionListPanel({ contextDir }: { contextDir: string | null }) 
     return (
       <div className="px-3 py-2 text-sm text-danger-dark">
         Couldn&rsquo;t load sessions.{" "}
-        <button type="button" onClick={load} className="underline hover:no-underline">
+        <button id="cb-session-list-retry" type="button" onClick={load} className="underline hover:no-underline">
           Retry
         </button>
       </div>

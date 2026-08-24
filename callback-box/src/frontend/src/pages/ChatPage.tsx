@@ -22,6 +22,7 @@ import { href, toSearch } from "../lib/routing";
 import { carriesFreshChatMachine, createSessionAssignmentLatch } from "./chat-session-transition";
 import { UnavailableChat } from "../components/chat-delete/UnavailableChat";
 import { useIdlePrefetch } from "../hooks/useIdlePrefetch";
+import { useCoinedChat } from "./chat-coin-session";
 
 interface ChatSearch {
   session?: string;
@@ -128,7 +129,33 @@ export function ChatPage() {
   // native one. Detect the native shell by its always-present bridge instead, so
   // the flag survives navigation. The param stays as a fast-path / legacy signal.
   const nativeComposer = String(search.nativeComposer) === "1" || isNativeShell();
-  const openCaptureOnMount = String(search.capture) === "1";
+  // Latched to the first render. The effect below strips the param from the URL,
+  // which re-renders this page with `capture` gone — and InteractiveChat is keyed
+  // by session, so it can remount and re-read this prop after that. Reading
+  // `search` directly here means capture never opens at all; verified both ways
+  // in the running app.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- deliberate first-render latch; see comment.
+  const openCaptureOnMount = useMemo(() => String(search.capture) === "1", []);
+
+  // Consume the deep-link param, which nothing did despite two comments saying
+  // "consumed once". Leaving it meant the URL still claimed to be a capture link
+  // after the person closed capture — so it reopened on the next reload, and on
+  // every session switch, because InteractiveChat is keyed by session and its
+  // state initializer read the stale param again on each remount. Each of those
+  // mounts also created a capture session.
+  //
+  // Stripped once on mount rather than when capture closes: the param's whole
+  // job is done the moment the initial state is seeded, and the two URL rewrites
+  // below carry the existing search through unchanged, so anything left here
+  // outlives its purpose.
+  useEffect(() => {
+    if (!openCaptureOnMount) return;
+    const { capture: _capture, ...rest } = search;
+    void navigate({ to: href(`/${boxSlug}/chat`), search: toSearch(rest), replace: true });
+    // Mount only: `search` changes as the session id lands, and re-running then
+    // would fight the rewrites below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- deliberate mount-once consume; see comment.
+  }, []);
 
   // Key InteractiveChat so a real session switch (or "new chat" reset)
   // remounts the machine and reloads history. The `"new" → assigned id`
@@ -180,6 +207,11 @@ export function ChatPage() {
   // the box's most-active session and answers for it; `?session=new` is a
   // client-side sentinel rather than a session id, so no query runs for it.
   const isFreshChat = sessionParam === "new";
+  // A brand-new chat coins its own id and has the box reserve it, so it is
+  // addressable — by capture, by a bulk upload, by a second quick send —
+  // before its first message exists. See `chat-coin-session.ts`; a box that
+  // can't coin (Codex) reports `unavailable` and keeps the `"new"` path.
+  const coined = useCoinedChat({ enabled: isFreshChat, contextDir });
   const bootstrap = trpc.chat.bootstrap.useQuery(
     {
       slice: chatTailSlice(),
@@ -260,6 +292,18 @@ export function ChatPage() {
     });
   }, [sessionParam, bootstrap.data, boxSlug, navigate, search, utils.chat.bootstrap, keyState.prev]);
 
+  // Put the coined id in the URL, replacing the `new` sentinel: from here the
+  // chat takes every ordinary existing-session path. `replace` so Back leaves
+  // the chat rather than returning to a sentinel that would coin another id.
+  useEffect(() => {
+    if (coined.state !== "coined") return;
+    void navigate({
+      to: href(`/${boxSlug}/chat`),
+      search: toSearch({ ...search, session: coined.sessionId }),
+      replace: true,
+    });
+  }, [coined, boxSlug, navigate, search]);
+
   const sessionInput = sessionParam ?? resolvedDefault;
 
   if (sessionInput !== null && sessionInput !== keyState.prev) {
@@ -293,7 +337,11 @@ export function ChatPage() {
     bootstrapped: bootstrap.data,
   });
 
-  if (rendered === null || keyState.awaiting) {
+  // Hold the shell while the reservation is in flight. Mounting the chat as
+  // `"new"` in that window would let a fast send start a chat the harness names
+  // itself, and the navigation above would then swap the user onto a different,
+  // empty chat — losing the message they just sent.
+  if (rendered === null || keyState.awaiting || coined.state === "pending" || coined.state === "coined") {
     return <ChatLoading />;
   }
 

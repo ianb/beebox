@@ -27,6 +27,7 @@ import { CaptureControls } from "./CaptureControls";
 import { CaptureResumeDialog } from "./CaptureResumeDialog";
 import { useCaptureResume, type ResumableCaptureView } from "./useCaptureResume";
 import { useCaptureSession, type CaptureResumeTarget } from "../../pages/capture/useCaptureSession";
+import { CaptureAlreadySealedError } from "../../pages/capture/capture-api";
 
 function formatTime(seconds: number): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
@@ -69,7 +70,11 @@ export function CaptureOverlay({ targetSessionId, onExit }: { targetSessionId: s
     try {
       await discard(id);
     } catch (e) {
-      console.error("[capture] Discard of resumable session failed:", e);
+      // Sealed under us (Done in another tab, or the abandonment sweep) — the
+      // capture delivers into its chat rather than being discarded, and its
+      // bubble there reports it. Moving on to a fresh session is still right.
+      if (e instanceof CaptureAlreadySealedError) console.warn(`[capture] ${e.message}`);
+      else console.error("[capture] Discard of resumable session failed:", e);
     } finally {
       setBusy(false);
       setDecision({ kind: "fresh" });
@@ -107,7 +112,7 @@ function CaptureSurface({ targetSessionId, resume, onExit }: {
   onExit: () => void;
 }) {
   const { state, devices, uploads, inputs, camera, videoRef, actions } = useCaptureSession({ targetSessionId, resume, onExit });
-  const { recording, recordingTime, error, finalizing, showSettings, sessionId } = state;
+  const { recording, recordingTime, error, finalizing, showSettings, sessionId, retryFeedback } = state;
   const { counts } = uploads;
   const { videoDevices, audioDevices, devicePrefs, updateDevicePref } = devices;
   const { galleryRef, uploadRef, pickFromGallery, pickFileToUpload, handleGallerySelect, handleFileSelect } = inputs;
@@ -126,7 +131,7 @@ function CaptureSurface({ targetSessionId, resume, onExit }: {
         finalizing={finalizing}
         showSettings={showSettings}
         onToggleSettings={() => setShowSettings((p) => !p)}
-        onPickGallery={pickFromGallery} onPickFile={pickFileToUpload} onRetryFailed={retryFailedUploads}
+        onPickGallery={pickFromGallery} onPickFile={pickFileToUpload}
       />
 
       {showSettings ? (
@@ -160,7 +165,7 @@ function CaptureSurface({ targetSessionId, resume, onExit }: {
         hasContent={counts.photoTotal > 0 || counts.audioTotal > 0 || counts.fileTotal > 0}
         photosFailed={counts.photosFailed} audioFailed={counts.audioFailed} filesFailed={counts.filesFailed}
         onDone={() => void handleDone()} onCancel={() => void handleCancel()} onToggleRecording={() => void toggleRecording()}
-        onRetryFailed={retryFailedUploads} onSkipPending={skipPendingUploads}
+        onRetryFailed={retryFailedUploads} retryFeedback={retryFeedback} onSkipPending={skipPendingUploads}
       />
     </CaptureShell>
   );

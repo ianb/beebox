@@ -307,8 +307,12 @@ through `bin/workstreams agent-liveness` and spares an agent-browser on
 - `bin/workstreams close <name> [--force]` — close a merged, clean live tab;
   force does not override liveness/TTY verification
 - `bin/workstreams resume <name> [--agent claude|codex] [--fresh]
-[--at-final-sha]` — focus, reopen, or recreate according to registry and git
-  state; unknown and unattached names are deliberately refused
+[--at-final-sha] [--] [<briefing> | - | @file]` — focus, reopen, or recreate
+  according to registry and git state; unknown and unattached names are
+  deliberately refused. A dormant session launches with the supplied briefing
+  (including `codex resume --last`); a live session writes a unique local file,
+  focuses its tab when possible, and reports `manual forwarding required`.
+  Use `--` before literal briefing text that begins with `-`.
 - `bin/workstreams reset-test <name>` — hard-reset the isolated test1 clone to
   its `test-setup` branch
 - `bin/workstreams confirm-tested <issue-basename>` — clear a landed issue's
@@ -343,6 +347,18 @@ actions, with `/workstreams/issues/`, `/workstreams/plans/`, and
 app child without restarting the router. Router or supervisor changes still
 require one boxholder-run `pnpm dev` restart after merge. Never restart the
 shared router from a worktree session.
+
+`bin/workstreams list` is also the routing inventory. Its JSON and table carry
+an optional one-line session description plus two separate decisions:
+`routing.state` (`live`, `dormant`, `stale`, `removed`, `uncertain`) and
+`routing.action` (`manual-forward`, `resume-with-briefing`,
+`new-stream-preferred`, `investigate`). `stale` means approximately 14 days
+without trustworthy activity and is guidance to start a new stream, not a
+resume prohibition. The liveness input still comes only from
+`wt_other_agent_live`; the app consumes this projection and never reimplements
+the destructive guard. Non-worktree directories under the managed root are
+reported and skipped. The app parses rows independently so one malformed row
+produces a visible warning instead of blanking every view.
 
 Isolated router testing: `CALLBACK_STATE_DIR` + `ROUTER_PORT` run a
 second router without touching the live one (which only picks up
@@ -475,6 +491,44 @@ the session that spawned it (this happened on 2026-08-04). Callers should
 _also_ pass `--setting-sources user` so the project's hooks never load at all;
 the skill documents that as load-bearing. Two independent guards because the
 failure destroys work.
+
+## Document comments (`bin/comments`)
+
+The boxholder's channel for talking to an agent **about a document**: a remark
+anchored to a span, written in the browser at `/workstreams/browse`, waiting in
+a store until an agent reads it. Design: `callback-box/docs/plans/document-comments.md`.
+
+- **Read them.** `bin/comments show <path>` for one document (any path spelling
+  — absolute, repo-relative, cwd-relative); `bin/comments list` for everything
+  waiting; **`bin/comments list --workstream <name>` for what is addressed to
+  YOUR workstream**, newest first. That last one is the command an agent
+  actually wants.
+- **Clear them when handled.** `bin/comments clear <path> [--id <id>]`. Nothing
+  expires on its own — a comment waits until an agent says it is done with it.
+  Folding a remark into the document itself is the usual resolution; quote it
+  rather than paraphrasing, since the boxholder's words are what the store kept.
+- **`--json` on any command** for a machine reader. `bin/comments add` exists so
+  the app can write through one implementation; a human types in the browser.
+
+**Where they live, and why nothing can delete them.** A store beside the main
+checkout (`<parent>/dev-comments/`, override `CALLBACK_COMMENTS_ROOT`), mounted
+read-only into each checkout as a gitignored `comments` symlink. It is the
+exhibits store's third persistence class: survives a worktree cull, never
+merges, never reaches git. Two namespaces, because a repository-relative path is
+not a unique document — `tracked/<path>` follows a file everywhere, while
+`worktree/<name>/<path>` stays put, since two worktrees routinely hold entirely
+different `scratch/notes.md`.
+
+**The cost of being cull-proof** is that a culled workstream's comments on
+untracked files outlive it, and a recreated workstream of the same name inherits
+them. Filed as
+`issues/features/2026-08-22-orphaned-comment-namespaces-after-a-cull.md`; the fix
+direction is to report orphans, never to delete at cull time.
+
+**The CLI is the only writer.** The workstreams app shells out to it rather than
+reaching into the store, the same way it invokes `bin/workstreams` for lifecycle
+rather than reimplementing the guards. Two writers to one YAML format sharing
+one lock protocol is where duplication stops being controllable.
 
 ## Private-issues shadow repo (`private-issues`)
 

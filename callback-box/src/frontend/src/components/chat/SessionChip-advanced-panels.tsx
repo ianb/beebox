@@ -40,22 +40,22 @@ export function AdvancedPanel({
 }) {
   return (
     <>
-      <MenuItem onClick={onBack} keepOpen>
+      <MenuItem id="cb-session-advanced-back" onClick={onBack} keepOpen>
         <span className="text-warm-500">‹ Advanced</span>
       </MenuItem>
       <MenuDivider />
-      <MenuItem onClick={onToggleDebugView}>{debugView ? "✓ " : "  "}Debug View</MenuItem>
+      <MenuItem id="cb-session-debug-view" onClick={onToggleDebugView}>{debugView ? "✓ " : "  "}Debug View</MenuItem>
       <span className="sm:hidden">
-        <MenuItem onClick={onToggleDebugLog}>{showDebugLog ? "✓ " : "  "}Debug Log</MenuItem>
+        <MenuItem id="cb-session-debug-log" onClick={onToggleDebugLog}>{showDebugLog ? "✓ " : "  "}Debug Log</MenuItem>
       </span>
       <MenuDivider />
-      <MenuItem onClick={onCompactSession} disabled={busy}>
+      <MenuItem id="cb-session-compact" onClick={onCompactSession} disabled={busy}>
         Run /compact
       </MenuItem>
-      <MenuItem onClick={onRestartProcess} disabled={!running}>
+      <MenuItem id="cb-session-restart" onClick={onRestartProcess} disabled={!running}>
         Restart Subprocess
       </MenuItem>
-      <MenuItem onClick={onStopProcess} disabled={!running}>
+      <MenuItem id="cb-session-stop-process" onClick={onStopProcess} disabled={!running}>
         Stop Process
       </MenuItem>
       <MenuDivider />
@@ -64,7 +64,7 @@ export function AdvancedPanel({
         <div>Process: {running ? (busy ? "busy" : "idle") : "stopped"}</div>
       </div>
       <MenuDivider />
-      <MenuItem danger disabled={sessionId === null} onClick={onDeleteConversation}>
+      <MenuItem id="cb-session-delete" danger disabled={sessionId === null} onClick={onDeleteConversation}>
         Delete conversation…
       </MenuItem>
     </>

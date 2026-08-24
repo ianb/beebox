@@ -11,6 +11,7 @@
 import { splitCardContent, cardSchema, type CardSchema } from "../cards/index.js";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
+import { PROCEDURE_MODEL_NAMES } from "../shared/agent-models.js";
 
 /** Run-expiry value: a duration like "30d"/"12w", or "never". */
 const RunExpiryValue = z.union([
@@ -18,10 +19,10 @@ const RunExpiryValue = z.union([
   z.string().regex(/^\d+\.?\d*\s*[dhmsw]$/, 'duration like "30d", or "never"'),
 ]);
 
-/** Agent invocation: a Claude Code prompt with optional model/turn cap. */
+/** Agent invocation through the box's configured harness, with optional tier/turn cap. */
 export const ProcedureAgent = z.object({
   prompt: z.string(),
-  model: z.enum(["haiku", "sonnet", "opus"]).optional(),
+  model: z.enum(PROCEDURE_MODEL_NAMES).optional(),
   "max-turns": z.number().optional(),
 });
 
@@ -45,8 +46,8 @@ export const ProcedureRun = z.object(phaseFields);
 export const ProcedureValidate = z.object({
   ...phaseFields,
   severity: z.enum(["warn", "review", "abort"]).optional(),
-  /** Model tier for `instructions:` evaluation (default: sonnet). */
-  model: z.enum(["haiku", "sonnet", "opus"]).optional(),
+  /** Model tier for `instructions:` evaluation (default: balanced). */
+  model: z.enum(PROCEDURE_MODEL_NAMES).optional(),
 });
 
 /** One step. */
@@ -81,7 +82,7 @@ Each entry in \`steps\` has optional phases: \`precheck\` (should this step run?
 
 - \`shells:\` — a list of bash commands run in the box root. Gates a \`validate\`
   on a non-zero exit (objective check).
-- \`agents:\` — a list of \`{ prompt, model?, max-turns? }\` Claude Code invocations.
+- \`agents:\` — a list of \`{ prompt, model?, max-turns? }\` invocations through the box's configured agent engine.
 - \`instructions:\` — a list of natural-language success criteria, **model-judged**
   in a \`validate\` phase against the step's git diff. A failing verdict gates by
   the phase \`severity\` exactly like a failing \`shells:\` check. Put objective,
@@ -89,7 +90,7 @@ Each entry in \`steps\` has optional phases: \`precheck\` (should this step run?
 - \`whys:\` — a list of explanations (for humans, fixing agents, and review models);
   also handed to the instruction judge and to a \`review\` retry as context.
 
-Use YAML block scalars (\`|\`) for multi-line shell scripts and agent prompts so indentation is preserved. \`precheck.pass-output: true\` passes precheck stdout into the run phase. \`validate.severity\` is warn (log, continue) / abort (fail the step) / review (re-invoke the run agent with the failure context to self-heal, then fail the step if it still doesn't pass — needs exactly one run agent). \`validate.model\` (haiku/sonnet/opus, default sonnet) picks the judge tier for \`instructions:\`.
+Use YAML block scalars (\`|\`) for multi-line shell scripts and agent prompts so indentation is preserved. \`precheck.pass-output: true\` passes precheck stdout into the run phase. \`validate.severity\` is warn (log a completed check's negative result and continue) / abort (fail the step) / review (re-invoke the run agent with the failure context to self-heal, then fail the step if it still doesn't pass — needs exactly one run agent). If the agent engine cannot produce a usable response or judge verdict at all, the step fails regardless of severity and records the engine error. \`model\` is a portable tier: \`efficient\`, \`balanced\`, \`strong\`, or \`strongest\`; the engine maps it to its own model family. Existing \`haiku\`/\`sonnet\`/\`opus\`/\`fable\` values remain aliases. \`validate.model\` defaults to \`balanced\`.
 
 Optional \`run-expiry\` / \`failed-run-expiry\` override how long this procedure's finished run dirs are kept before \`cb procedure gc\` deletes them (defaults: 30d completed, 90d failed). Value is a duration ("60d", "12w") or "never".`,
 });

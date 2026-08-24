@@ -253,7 +253,7 @@ steps:
 
             GIT: Do NOT add Co-Authored-By to commits. The system adds
             appropriate trailers automatically.
-          model: sonnet
+          model: balanced
           max-turns: 30
     validate:
       shells:

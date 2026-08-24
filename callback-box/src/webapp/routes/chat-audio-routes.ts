@@ -14,6 +14,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import ky from "ky";
+import type { FastifyReply } from "fastify";
 import { WebSocket as WsWebSocket } from "ws";
 import { transcribeAudioHq } from "../../core/transcription/index.js";
 import {
@@ -40,7 +41,7 @@ interface TtsBody {
   text: string;
   instructions?: string;
   voice?: string;
-  // Dev-only mock fields (honored only when NODE_ENV !== "production");
+  // Dev-only mock fields (honored only with explicit development surfaces);
   // see tts-mock.ts and the /dev/speech harness.
   mock?: boolean;
   fixture?: string;
@@ -50,8 +51,23 @@ interface TtsBody {
   failText?: string;
 }
 
+function handleMockTts(options: {
+  reply: FastifyReply;
+  body: TtsBody;
+  devSurfaces: boolean;
+}): FastifyReply | undefined {
+  const { reply, body, devSurfaces } = options;
+  if (body.mock !== true) return undefined;
+  if (!devSurfaces) {
+    console.warn("[chat-tts] rejected mock request because development surfaces are disabled");
+    return reply.status(400).send({ error: "mock TTS requires development surfaces" });
+  }
+  const { text, fixture, delayMs, chunkMs, chunkSize, failText } = body;
+  return serveMockTts(reply, { text, fixture, delayMs, chunkMs, chunkSize, failText });
+}
+
 export function registerChatAudioRoutes(ctx: ChatRoutesContext): void {
-  const { server, boxRoot, openaiAudio } = ctx;
+  const { server, boxRoot, openaiAudio, devSurfaces } = ctx;
 
   // POST /api/chat/transcribe-audio — narration-mode checkpoint HQ pass.
   // Accepts a single audio file upload; dispatches to the configured HQ
@@ -114,15 +130,13 @@ export function registerChatAudioRoutes(ctx: ChatRoutesContext): void {
 
   // POST /api/chat/tts - Proxy TTS requests to OpenAI
   server.post<{ Body: TtsBody }>("/api/chat/tts", async (request, reply) => {
-    const { text, instructions, voice, mock, fixture } = request.body;
-    const { delayMs, chunkMs, chunkSize, failText } = request.body;
-
     // Serve slow fixture audio instead of calling OpenAI, for the speech
-    // browser test. Never reachable in production.
-    if (mock && process.env.NODE_ENV !== "production") {
-      return serveMockTts(reply, { text, fixture, delayMs, chunkMs, chunkSize, failText });
-    }
+    // browser test. A missing dev opt-in rejects rather than falling through
+    // to a paid provider call.
+    const mockReply = handleMockTts({ reply, body: request.body, devSurfaces });
+    if (mockReply !== undefined) return mockReply;
 
+    const { text, instructions, voice } = request.body;
     const resolvedVoice = voice && VOICE_MODEL_SET.has(voice) ? voice : "marin";
 
     if (openaiAudio) {
@@ -133,7 +147,7 @@ export function registerChatAudioRoutes(ctx: ChatRoutesContext): void {
       return reply.send(result.audio);
     }
 
-    const apiKey = await getOpenAiThinkingKey(boxRoot);
+    const apiKey = await getOpenAiThinkingKey(boxRoot, { observe: true });
     if (!apiKey) {
       return reply.status(500).send({ error: "TTS API key not configured" });
     }
@@ -157,7 +171,7 @@ export function registerChatAudioRoutes(ctx: ChatRoutesContext): void {
 
   // GET /api/chat/transcribe-ws - WebSocket proxy to Mistral Voxtral Realtime
   server.get("/api/chat/transcribe-ws", { websocket: true }, async (socket) => {
-    const apiKey = await getMistralApiKey(boxRoot);
+    const apiKey = await getMistralApiKey(boxRoot, { observe: true });
     if (!apiKey) {
       console.error("[transcribe-ws] Mistral API key not found");
       socket.send(JSON.stringify({ type: "error", error: "Mistral API key not configured" }));

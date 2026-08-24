@@ -2,7 +2,7 @@
 
 Serves an allowlisted file from **outside** the box root as a JSON envelope
 (base64 bytes + content type + version markers), for the commentary surface's
-live wrapper. Mounted only when `NODE_ENV !== "production"`.
+live wrapper. Mounted only with the explicit development-surface opt-in.
 
 ```ts setup
 import { makeTestServer } from "../../helpers/doctest-server.js";
@@ -35,12 +35,16 @@ function extUrl(href: string): string {
 async function allowRoot(ctx: { seed(p: string, c: string): Promise<void> }): Promise<void> {
   await ctx.seed("config/box.json", JSON.stringify({ externalRoots: [root] }));
 }
+
+function makeExternalServer() {
+  return makeTestServer({ devSurfaces: true });
+}
 ```
 
 ## An allowed file returns a JSON envelope
 
 ```ts
-const ctx = await makeTestServer();
+const ctx = await makeExternalServer();
 await allowRoot(ctx);
 const res = await ctx.request({ method: "GET", url: extUrl(`file:${file}`) });
 res.statusCode
@@ -65,7 +69,7 @@ await ctx.cleanup();
 ## The box's own root is always allowed (no config needed)
 
 ```ts
-const ctx = await makeTestServer();
+const ctx = await makeExternalServer();
 await ctx.seed("notes/inside.md", "in-box\n");
 const url = extUrl(`file:${path.join(ctx.boxRoot, "notes", "inside.md")}`);
 (await ctx.request({ method: "GET", url })).statusCode
@@ -79,7 +83,7 @@ await ctx.cleanup();
 ## A path outside the allowed roots is 404
 
 ```ts
-const ctx = await makeTestServer();
+const ctx = await makeExternalServer();
 await allowRoot(ctx);
 (await ctx.request({ method: "GET", url: extUrl(`file:${outside}`) })).statusCode
 => 404
@@ -92,7 +96,7 @@ await ctx.cleanup();
 ## A non-`file:` URL is 400
 
 ```ts
-const ctx = await makeTestServer();
+const ctx = await makeExternalServer();
 (await ctx.request({ method: "GET", url: extUrl("https://example.com/x") })).statusCode
 => 400
 ```
@@ -104,7 +108,7 @@ await ctx.cleanup();
 ## A missing href is 400
 
 ```ts
-const ctx = await makeTestServer();
+const ctx = await makeExternalServer();
 (await ctx.request({ method: "GET", url: "/api/external" })).statusCode
 => 400
 ```
@@ -113,13 +117,15 @@ const ctx = await makeTestServer();
 await ctx.cleanup();
 ```
 
-## Not mounted in production (404)
+## Omission fails closed (404), regardless of `NODE_ENV`
 
 ```ts
-process.env.NODE_ENV = "production";
+const previousNodeEnv = process.env.NODE_ENV;
+process.env.NODE_ENV = "development";
 const ctx = await makeTestServer();
 const code = (await ctx.request({ method: "GET", url: extUrl(`file:${file}`) })).statusCode;
-delete process.env.NODE_ENV;
+if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
+else process.env.NODE_ENV = previousNodeEnv;
 code
 => 404
 ```

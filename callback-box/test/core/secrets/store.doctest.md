@@ -131,7 +131,12 @@ await grantSecret({ slug: "demo-box", name: "weatherapi", access: "agent" });
 await setSecret({ name: "mistral", value: "placeholder-value-3" });
 await grantSecret({ slug: "demo-box", name: "mistral", access: "server" });
 const status = await boxSecretStatus("demo-box");
-print(JSON.stringify(status));
+// Each granted row also carries `uses` (why the secret exists) — that is
+// `uses.doctest.md`'s subject, projected away here to keep this shape readable.
+print(JSON.stringify({
+  ...status,
+  granted: status.granted.map((grant) => ({ name: grant.name, access: grant.access, hasValue: grant.hasValue })),
+}));
 =>
 created: true
 again: false

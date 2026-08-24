@@ -17,20 +17,23 @@ function shareLabel(opts: { busy: boolean; error: string | null; enabled: boolea
   return "Share location";
 }
 
+/** One address for both branches — the row is the same role either way. */
+const SHARE_LOCATION_ID = "cb-composer-share-location";
+
 export function ShareLocationMenuItem() {
   const { boxSlug } = useParams({ strict: false });
   const { available, enabled, busy, error, toggle } = useLocationShare(boxSlug);
 
   if (!available) {
     return (
-      <MenuItem onClick={() => {}} disabled>
+      <MenuItem id={SHARE_LOCATION_ID} onClick={() => {}} disabled>
         Location unavailable
       </MenuItem>
     );
   }
 
   return (
-    <MenuItem onClick={toggle} disabled={busy} active={enabled} danger={error !== null} keepOpen>
+    <MenuItem id={SHARE_LOCATION_ID} onClick={toggle} disabled={busy} active={enabled} danger={error !== null} keepOpen>
       {shareLabel({ busy, error, enabled })}
     </MenuItem>
   );

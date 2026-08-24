@@ -32,5 +32,5 @@ capability everywhere outside `admin.*`.
 
 The decision needed: what is the intended member capability tier? Either
 members are deliberately trusted with everything but admin (document
-that in the invite flow and SECURITY.md), or the config-writing and
+that in the invite flow and security-overview.md), or the config-writing and
 code-executing procedures above move to `ownerProcedure`.

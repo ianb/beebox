@@ -29,7 +29,7 @@ export function CardViewPage() {
     <Column overflow="auto" focusable className="h-full">
       <Stack gap="md" className="max-w-4xl mx-auto py-8 px-4 w-full">
         <Row gap="md" align="center" justify="between">
-          <TextLink to={href(`/${boxSlug}/dashboard`)} underline={false}>
+          <TextLink id="cb-card-back-dashboard" to={href(`/${boxSlug}/dashboard`)} underline={false}>
             {"\u2190 Back to Dashboard"}
           </TextLink>
           {boxSlug !== undefined ? (

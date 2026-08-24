@@ -163,9 +163,10 @@ function SetupFields({
 }: SetupFieldsProps) {
   return (
     <Stack gap="md">
-      <TextField label="Name" required value={name} onChange={onName} autoComplete="name" />
-      <TextField label="Email" type="email" required value={email} onChange={onEmail} autoComplete="email" />
+      <TextField id="cb-setup-name" label="Name" required value={name} onChange={onName} autoComplete="name" />
+      <TextField id="cb-setup-email" label="Email" type="email" required value={email} onChange={onEmail} autoComplete="email" />
       <TextField
+        id="cb-setup-password"
         label="Password"
         type="password"
         required
@@ -175,6 +176,7 @@ function SetupFields({
         autoComplete="new-password"
       />
       <TextField
+        id="cb-setup-confirm-password"
         label="Confirm password"
         type="password"
         required
@@ -187,7 +189,7 @@ function SetupFields({
           <Text as="p" tone="danger" size="sm">{error}</Text>
         </div>
       ) : null}
-      <Button type="submit" intent="primary" fullWidth loading={submitting}>
+      <Button id="cb-setup-submit" type="submit" intent="primary" fullWidth loading={submitting}>
         Create account
       </Button>
     </Stack>
