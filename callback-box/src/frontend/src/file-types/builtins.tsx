@@ -5,6 +5,7 @@
 
 import { ImageCardListEntry } from "../components/file-entries/ImageCardListEntry";
 import type { ImageAttrs } from "@schemas/image";
+import { EXTRACTED_CARD_TYPE } from "../lib/extracted-document";
 import { registerFileType } from "./registry";
 import {
   DocumentIcon,
@@ -45,7 +46,7 @@ export function registerBuiltinFileTypes(): void {
   registerFileType({ type: "feedback" }, { listUI: { icon: DocumentIcon } });
   registerFileType({ type: "guide" }, { listUI: { icon: DocumentIcon } });
   registerFileType({ type: "file" }, { listUI: { icon: DocumentIcon } });
-  registerFileType({ type: "document" }, { listUI: { icon: DocumentIcon } });
+  registerFileType({ type: EXTRACTED_CARD_TYPE }, { listUI: { icon: DocumentIcon } });
   registerFileType({ type: "telegram-message" }, { listUI: { icon: DocumentIcon } });
 
   registerFileType({ match: (p: string) => p.endsWith(".md") }, { listUI: { icon: DocumentIcon } });

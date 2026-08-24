@@ -24,7 +24,10 @@ import { extensionToMimetype } from "../../lib/mimetype.js";
 import { applyRawFileServingHeaders } from "../serving-security.js";
 import { errnoCode } from "../../lib/error-guards.js";
 
-const IMAGE_EXTS = new Set([".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg"]);
+// `.avif` is here because the document extractor writes page and figure
+// renders as AVIF (`src/core/commands/document-extract.ts`); without it every
+// page render in an extracted document served a 400 "Not an image path".
+const IMAGE_EXTS = new Set([".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif", ".bmp", ".svg"]);
 
 /**
  * Resolve an `.image.card`'s attached image to an absolute filesystem path.
