@@ -26,6 +26,44 @@ discovered-in: main session — boxholder opened a landmark's most-recent chat
 > Worth narrowing the issue's title/scope on the next pass: what remains is a
 > delivery-routing bug, not a UI flash.
 
+> **REOPENED 2026-08-24 — the flash is back, and the 08-06 fix never covered
+> this path.** Boxholder: opening a chat shows "Agent working" in a flash a
+> couple of seconds after the page loads.
+>
+> **Mechanism, confirmed by reading the code.** `988b2014` gated the strip
+> behind busy-confirmation for the `idle` and `loading` phases, but not for
+> `refreshing` — `processing-status-display.ts` reads:
+>
+> ```ts
+> if (input.phase === "refreshing") return input.confirmation !== "clearing";
+> ```
+>
+> That was defensible when `refreshing` was only reachable from `streaming`
+> (where the agent really is working). It isn't: **`REFRESH` is a *global*
+> handler** (`chatMachine.ts:105-107`, `on: { REFRESH: { target: ".refreshing" } }`),
+> so it fires from `idle` too — and one of its senders is a **reconnect-driven
+> resync** (`InteractiveChat-ws.ts:227-230`, `useDeferredResync`). A WebSocket
+> (re)connect shortly after page load therefore takes an idle chat into
+> `refreshing`, which paints the strip with no confirmation gate, until the
+> refetch settles. Exactly the reported timing.
+>
+> **What is NOT established: why now.** Both ingredients are old — the
+> reconnect-driven REFRESH landed 2026-08-04 (`add0c339`) and the ungated
+> `refreshing` branch 2026-08-06 (`988b2014`). Nothing since has touched either.
+> So either the 08-06 fix was always partial and only became visible when
+> reconnects got more frequent, or something environmental is dropping the
+> socket shortly after load. The box where this was reported has had unrelated
+> instability (intermittent codex thread-start failures, a high chat-session
+> construction rate), which would do it. Worth confirming a reconnect actually
+> occurs before assuming a code regression.
+>
+> **The real defect is that one state means two things.** "Refreshing after a
+> turn" and "refreshing because the socket reconnected" are the same machine
+> state, and only the first is the agent working. Gating `refreshing` the same
+> way as `idle` would suppress the false flash; distinguishing the two causes
+> would be more honest, and would also stop a post-turn refresh from being
+> suppressed when it legitimately should show.
+
 > **Job to be done:** *When I open a chat I was already in — to read it or pick it
 > back up — I want it to just show me the conversation, not a false "Agent is
 > working" that makes me think it's off doing something I never asked for.*
