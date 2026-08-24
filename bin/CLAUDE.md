@@ -57,21 +57,28 @@ for a real gate. Companion to the home-path guard above.
 
 ## Landing a worktree branch (`land`)
 
-`bin/land [branch]` fast-forwards a finished worktree branch onto `main` — what
-`/finish` step 8 calls, and what you run by hand to land a branch a finish left
-merge-ready. It resolves the main checkout from `--git-common-dir` and targets
-it explicitly, so it works from the main checkout or from inside a worktree
-(where a plain `git -C ~/src/callback-box merge` is blocked by Claude Code's
-worktree isolation).
+`bin/land [branch]` merges a finished worktree branch onto `main` with
+`--no-ff --no-edit` — what `/finish` step 8 calls, and what you run by hand to
+land a branch a finish left merge-ready. It resolves the main checkout from
+`--git-common-dir` and targets it explicitly, so it works from the main
+checkout or from inside a worktree (where a plain `git -C ~/src/callback-box
+merge` is blocked by Claude Code's worktree isolation).
 
 With no argument: from a worktree it lands that worktree's own branch; from the
 main checkout it auto-detects the single merge-ready branch and refuses if
 several qualify. `--list` shows candidates, `--dry-run` previews.
 
-It enforces the preflight — main checkout clean, on `main`, `--ff-only` — and
-nothing more. Landing is a fast-forward by construction, since `/finish` merges
-main INTO the worktree and verifies there; a not-a-fast-forward refusal means
-main moved, and the fix belongs back in the worktree.
+It enforces the preflight — main checkout clean, on `main`, branch already
+contains main — and nothing more. That precondition guarantees the `--no-ff`
+merge is conflict-free by construction, since `/finish` merges main INTO the
+worktree and verifies there; a refusal means main moved since, and the fix
+belongs back in the worktree. `--no-ff` always creates a merge commit (`Merge
+branch 'worktree-<name>'`) instead of moving main's pointer, so `git log
+--first-parent main` lists one entry per landing and `<merge>^1..<merge>^2`
+shows what it brought — commit provenance. `.husky/post-merge` deploys on any
+merge that updates main (fast-forward or not), so deploy is unaffected; see
+`.husky/post-commit`'s merge-commit skip and `.husky/post-merge`'s
+`ORIG_HEAD..HEAD` diff for why.
 
 ## Router architecture
 
