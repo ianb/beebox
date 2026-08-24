@@ -23,6 +23,14 @@ type IssueSearch = IssueFilters & {
   issueVisibility?: Visibility | undefined;
 };
 
+export function issuePassesStatusFilter(issue: Pick<Issue, "closed">, filter: { status: IssueFilters["status"]; selected: boolean }): boolean {
+  const { status, selected } = filter;
+  if (status === "all") return true;
+  if (status === "closed") return issue.closed;
+  if (status === "open") return !issue.closed;
+  return selected || !issue.closed;
+}
+
 export function issueChangeKey(issue: Pick<Issue, "relPath" | "visibility">): string {
   return `${issue.visibility}:${issue.relPath}`;
 }
@@ -109,7 +117,7 @@ export function IssuesPane({ issues, changes, saving, onReset, onSave, onChange 
   const selected = issues.find((issue) => issue.relPath === search.issue && issue.visibility === (search.issueVisibility ?? "public"));
   const categories = [...new Set(issues.map((issue) => issue.category))].toSorted();
   const needs = [...new Set(issues.flatMap((issue) => issue.frontmatter.needs))].toSorted();
-  const visible = issues.filter((issue) => (search.status ?? "open") === "all" || ((search.status ?? "open") === "closed" ? issue.closed : !issue.closed)).filter((issue) => !search.category || issue.category === search.category).filter((issue) => !search.needs || issue.frontmatter.needs.includes(search.needs)).filter((issue) => !search.priority || (changes.get(issueChangeKey(issue))?.priority ?? issue.frontmatter.priority) === search.priority).toSorted((a, b) => search.sort === "priority" ? PRIORITY_ORDER[changes.get(issueChangeKey(a))?.priority ?? a.frontmatter.priority] - PRIORITY_ORDER[changes.get(issueChangeKey(b))?.priority ?? b.frontmatter.priority] || b.slug.localeCompare(a.slug) : b.slug.localeCompare(a.slug));
+  const visible = issues.filter((issue) => issuePassesStatusFilter(issue, { status: search.status, selected: selected === issue })).filter((issue) => !search.category || issue.category === search.category).filter((issue) => !search.needs || issue.frontmatter.needs.includes(search.needs)).filter((issue) => !search.priority || (changes.get(issueChangeKey(issue))?.priority ?? issue.frontmatter.priority) === search.priority).toSorted((a, b) => search.sort === "priority" ? PRIORITY_ORDER[changes.get(issueChangeKey(a))?.priority ?? a.frontmatter.priority] - PRIORITY_ORDER[changes.get(issueChangeKey(b))?.priority ?? b.frontmatter.priority] || b.slug.localeCompare(a.slug) : b.slug.localeCompare(a.slug));
   const selectedKey = selected ? issueChangeKey(selected) : null;
   const selectedVisibleIndex = selectedKey ? visible.findIndex((issue) => issueChangeKey(issue) === selectedKey) : -1;
   useEffect(() => {
