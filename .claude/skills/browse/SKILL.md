@@ -161,16 +161,22 @@ When you land on `/auth/login`, work through these in order. **The first two are
 
 **1. Did you write the box slug into the path?** `open /test1/chats` becomes `/<wt>/test1/test1/chats`, which resolves to no route. You get redirected somewhere plausible rather than an error. Write `open /chats`.
 
-**2. Are you asking for something the key doesn't grant?** The browse key authenticates **box routes** — `/<worktree>/<box>/…`. It does *not* grant the router's own surfaces:
+**2. Are you asking for something the key doesn't grant?** The browse key authenticates **box routes** and the **read-only dev surfaces**. It does *not* grant the router's control surfaces:
 
 | path | what authenticates it |
 |---|---|
 | `/<wt>/<box>/…` | browse key ✅ |
+| `/<wt>/dev/…` (GET/HEAD) | browse key ✅ |
+| `/workstreams/…` (GET/HEAD) | browse key ✅ |
 | `/` (worktree index) | owner session only |
 | `/__router/…` (control routes) | owner session only |
-| `/<wt>/dev/…` | owner session only |
+| `/workstreams/…` (POST — actions, tRPC mutations) | owner session + same-origin |
 
-A navigation denied at those returns 401, which the router renders as the login page — so "I got the login page" does not by itself mean your key is wrong.
+The dev surfaces were owner-only until 2026-08-24, which made every issue *about* them boxholder-only to verify. They are reads from disk with no write path, so the browse key now carries them (`dev-read` in `bin/router-auth.ts`). The control routes above deliberately did not move.
+
+Note `/<wt>/dev/docs/…` is a 301 to `/workstreams/browse?file=…` — the doc browser retired into the general browser. Follow the redirect; both ends accept the key.
+
+A navigation denied at the owner-only rows returns 401, which the router renders as the login page — so "I got the login page" does not by itself mean your key is wrong.
 
 **3. Is the key live in the running router?** One probe answers it, and it must use the **cookie** form against a **box route**:
 

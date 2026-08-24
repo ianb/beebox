@@ -2,17 +2,15 @@
 title: "Doc browser's Cmd-P quick-open is dead under the /dev sandbox CSP"
 workstream: workstream-story
 area: router
-needs: [manual-testing]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-workstream-story — a blocked-script console error while viewing a dev/ page
-next-action: reconfirm
+resolution: superseded
 ---
-> **⏳ Awaiting manual testing** — fix landed in `worktree-workstream-story`:
-> the `/dev/` sandbox CSP was removed entirely (boxholder decision, see
-> [dev md images broken](../closed/bugs/2026-08-19-dev-md-images-broken-opaque-origin.md)),
-> which un-blocks the quick-open script. After merge + router restart, Cmd-P
-> in `/main/dev/docs/` should open the palette. Only the developer clears this.
+> **Closed as moot, 2026-08-24.** The surface this issue describes no longer
+> exists: commit `46b03219` retired the `/dev/docs/` doc browser, and
+> `/<w>/dev/docs/...` is now a 301 to `/workstreams/browse?file=…`. There is
+> nothing left to manual-test here — see "Superseded" at the bottom.
 
 The `/dev/docs/` doc browser ships its quick-open palette as an inline
 `<script>` (`bin/router-docs.ts` `renderDocQuickOpen`, included on every doc
@@ -55,3 +53,23 @@ quick-open script as-is. No code change to the doc browser was needed.
 After merge + router restart: open `/main/dev/docs/`, press Cmd-P (Ctrl-P),
 confirm the quick-open palette appears and navigates, and confirm the console
 no longer logs the blocked-script error.
+
+
+## Superseded (2026-08-24)
+
+Two things landed after this was filed, and between them the issue has no
+subject:
+
+1. The boxholder removed the `/dev/` sandbox CSP entirely (2026-08-19), which
+   was the blocking mechanism.
+2. Commit `46b03219` retired the doc browser into the general browser
+   (`/workstreams/browse`), so the inline-script page this issue is about is no
+   longer served at all.
+
+Quick-open survives in the successor, and cannot regress the same way: it is
+`workstreams-app/src/frontend/components/QuickOpen.tsx`, a React component
+mounted in the app shell rather than an inline `<script>`, and nothing in the
+workstreams app or its supervisor sets a CSP.
+
+Related: agents can now load both surfaces to check things like this
+themselves — [agents cannot reach the dev surface](../../closed/features/2026-08-24-agents-cannot-reach-the-dev-surface.md).

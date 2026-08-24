@@ -188,3 +188,32 @@ test("resolveWorktreeAsset: a mobile token does NOT reach a DIFFERENT worktree's
     await fs.rm(stray, { recursive: true, force: true });
   }
 });
+
+// --- hasBrowseKey: the dev-read rung -----------------------------------------
+
+test("hasBrowseKey: absent CB_BROWSE_API_KEY → constant false (the fail-closed default)", () => {
+  const prior = process.env.CB_BROWSE_API_KEY;
+  delete process.env.CB_BROWSE_API_KEY;
+  try {
+    const deps = createRouterAuthDeps(fakeConfig({ main: [] }));
+    assert.equal(deps.hasBrowseKey({ cookie: "cb_browse_key=anything" }), false);
+    assert.equal(deps.hasBrowseKey({}), false);
+  } finally {
+    if (prior === undefined) delete process.env.CB_BROWSE_API_KEY;
+    else process.env.CB_BROWSE_API_KEY = prior;
+  }
+});
+
+test("hasBrowseKey: the configured key in the cookie → true; a wrong value → false", () => {
+  const prior = process.env.CB_BROWSE_API_KEY;
+  process.env.CB_BROWSE_API_KEY = "dev-read-test-key";
+  try {
+    const deps = createRouterAuthDeps(fakeConfig({ main: [] }));
+    assert.equal(deps.hasBrowseKey({ cookie: "cb_browse_key=dev-read-test-key" }), true);
+    assert.equal(deps.hasBrowseKey({ cookie: "cb_browse_key=wrong" }), false);
+    assert.equal(deps.hasBrowseKey({}), false);
+  } finally {
+    if (prior === undefined) delete process.env.CB_BROWSE_API_KEY;
+    else process.env.CB_BROWSE_API_KEY = prior;
+  }
+});

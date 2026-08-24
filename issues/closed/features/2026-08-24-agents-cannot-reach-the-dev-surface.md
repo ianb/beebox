@@ -1,8 +1,9 @@
 ---
 title: "The browse key can't reach `/dev/`, so an agent can't verify the surface built for agents"
-workstream: unattached
+workstream: dev-surface-access
 area: router
 labels: [router, auth, dev-surface, agent-tooling]
+resolution: implemented
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — two issues could not be settled because /dev/ 401s the browse key
@@ -40,7 +41,7 @@ Two `reconfirm` issues could not be settled today for this reason alone, both
 of which are *about* `/dev/` and both of which are one browser action to check:
 
 - [Doc browser's Cmd-P quick-open is dead under the sandbox CSP](../bugs/2026-08-19-dev-docs-quickopen-dead-under-sandbox-csp.md)
-- [Images in rendered /dev markdown are broken](../closed/bugs/2026-08-19-dev-md-images-broken-opaque-origin.md)
+- [Images in rendered /dev markdown are broken](../bugs/2026-08-19-dev-md-images-broken-opaque-origin.md)
 
 The code side of both is verifiable and verified: the sandbox CSP was removed
 2026-08-19 and the running router restarted 2026-08-24 06:39, well after. What
@@ -69,3 +70,33 @@ Worth noting the trust argument already made for this surface: the sandbox CSP
 was removed on the reasoning that "the dev agent authors the router's own code,
 so sandboxing its HTML output guards nothing" (`bin/router-docs.ts:826`). The
 same reasoning applies to reading it.
+
+
+## Resolved (2026-08-24) — the `dev-read` route class
+
+Split out of `control-read` in `bin/router-auth.ts`: `GET`/`HEAD` on
+`/<w>/dev/...`, on the bare `/dev` redirect, and on `/workstreams/...` are now
+`dev-read`, authorized as **owner session OR browse key**. The browse key
+arrives via its own injected dep (`hasBrowseKey`), not `resolveWorktreeAsset` —
+the dev surfaces deliberately do not inherit that resolver's wider set of
+per-box mobile tokens and agent bearers.
+
+The boxholder chose the wider of the two scopes on offer. `/dev/` alone was not
+worth much: the doc browser those two reconfirm issues were about had already
+been retired into `/workstreams/browse` (commit `46b03219`), so a `/dev/`-only
+grant would have handed an agent a 301 into a surface it still could not read.
+
+What did **not** move, and why: `/` (the worktree index), `/__router/*` — both
+the mutating verbs and `/__router/status` — and every non-`GET` `/workstreams/*`
+verb, which stay `control` (owner session AND a CSRF-safe origin). Those carry
+real control verbs. Non-read methods on `/dev/` also stay owner-only; `serveDev`
+has no write path, so keeping them out grants nothing.
+
+Verified against an isolated router (`CALLBACK_STATE_DIR` + `ROUTER_PORT`):
+`/main/dev/` and `/main/dev/skills.html` went 401 → 200 with the browse-key
+cookie, `/dev/` → 301, `/workstreams/` → 503 (the gate allowed it; that
+instance's workstreams app could not bind the fixed exhibits port 3230 already
+held by the live router), while `/` and `/__router/status` stayed 401.
+
+The path/credential table in `.claude/skills/browse/SKILL.md` is updated to
+match.

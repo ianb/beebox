@@ -15,6 +15,7 @@ const unusedAuthDeps: RouterAuthDeps = {
   isAgentBearer: () => false,
   isCsrfSafe: () => false,
   resolveWorktreeAsset: () => false,
+  hasBrowseKey: () => false,
 };
 
 test("workstreams retry redirects only after startup finishes", async () => {
