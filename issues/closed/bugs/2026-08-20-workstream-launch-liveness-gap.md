@@ -11,6 +11,9 @@ priority: important
 resolution: implemented
 ---
 
+> **Resolved by `c69ac590`.** A token-owned, bounded launch lease now keeps
+> pre-agent setup visible and protected through the shared liveness path.
+
 Immediately after a workstream is created, `bin/workstreams list` could report
 `AGENT=none` for several seconds even though its Terminal launch was underway.
 The agent process had not yet become observable by the shared process/cwd guard.

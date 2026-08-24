@@ -10,6 +10,9 @@ discovered-by: agent
 discovered-in: main clerical session — launching several routed workstreams
 ---
 
+> **Resolved by `0300a018`.** Workstream setup is serialized per name, while a
+> shorter repository-wide lock protects only Git worktree administration.
+
 Launching several `bin/launch-worktree-session` commands concurrently can make
 their `git worktree add` operations collide. Some launches then fail after a
 Terminal tab has opened, leaving that session in an invalid working directory.

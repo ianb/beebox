@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-08-24T15:54:32Z
+Generated: 2026-08-24T15:59:54Z
 Total documents: 298
 
 ## Issues
@@ -4925,7 +4925,7 @@ Title: "User-story journeys" | 295 lines
 
 Referenced by:
 - user-stories/journeys/README.md:8 (link) — Design and rationale: [`docs/plans/user-story-journeys.md`](../../docs/plans/user-story-journeys.md).
-- ../issues/closed/bugs/2026-08-22-exhibits-add-silently-drops-markdown-content.md:18 (mention) — `user-story-journeys.md`, the manifest had no `figures` key, and the page showed
+- ../issues/closed/bugs/2026-08-22-exhibits-add-silently-drops-markdown-content.md:21 (mention) — `user-story-journeys.md`, the manifest had no `figures` key, and the page showed
 - ../issues/docs-and-chores/2026-08-22-doc-check-skips-untracked-docs.md:14 (mention) — Observed: `docs/plans/user-story-journeys.md` written with `status: proposed`.
 
 References:

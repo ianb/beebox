@@ -8,6 +8,9 @@ priority: normal
 resolution: implemented
 ---
 
+> **Resolved by `b1699b94`.** One Markdown argument now becomes the renderer's
+> canonical `doc.md`, and ambiguous multiple-document input fails closed.
+
 `bin/exhibits add … doc.md` copies the file into the exhibit directory under its
 own name and adds nothing to the manifest, so the page renders only the ask
 prose. The exhibit looks fine from the CLI — it prints a URL and reports

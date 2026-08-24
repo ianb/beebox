@@ -8,7 +8,7 @@ discovered-in: worktree-workstreams — implementing the workstreams testing que
 resolution: wontfix
 ---
 
-> **Closed 2026-08-24 — do not build a staging slot now.** Authenticated
+> **Closed by `0b7daa13` on 2026-08-24 — do not build a staging slot now.** Authenticated
 > Tailnet exposure of the dev router can give remote devices the selected
 > worktree and its isolated test box before merge. The real phone/Tailnet path
 > still needs the boxholder's acceptance check. The production deploy ships an
