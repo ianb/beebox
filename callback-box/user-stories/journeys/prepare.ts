@@ -110,6 +110,34 @@ if (existsSync(boxDir)) {
   rmSync(boxDir, { recursive: true, force: true });
 }
 
+/**
+ * Wiping the box is not enough to make it a stranger's box again.
+ *
+ * Claude Code keys its transcripts by working directory, under `~/.claude/projects/`
+ * with every separator replaced by a dash — so they sit OUTSIDE the box and survive
+ * `rmSync(boxDir)`. The app then backfills a chat husk per surviving transcript, and
+ * the "fresh" box opens carrying every previous walk's conversations. A walker on
+ * 2026-08-24 found five strangers' names and another session's test messages in a box
+ * the app had just called a blank slate, and reported it as the product leaking data
+ * between boxes.
+ *
+ * They also skew the clock: `agentTiming` reads every transcript in the directory, so
+ * `clock.ts` told that walker it had waited 11.3 minutes across 32 exchanges when its
+ * own run was 7.1 across 13 — and it wrote that number down.
+ */
+function clearBoxTranscripts(dir: string): void {
+  const projects = join(homedir(), ".claude", "projects");
+  for (const path of [dir, join(dir, "content")]) {
+    const transcripts = join(projects, path.replaceAll("/", "-"));
+    // Refuse anything that is not the expected descendant — this deletes outside the repo.
+    if (!transcripts.startsWith(`${projects}/`) || !existsSync(transcripts)) continue;
+    rmSync(transcripts, { recursive: true, force: true });
+    console.log(`cleared previous transcripts: ${transcripts}`);
+  }
+}
+
+clearBoxTranscripts(boxDir);
+
 const base = journey.box.base === "empty" ? join(BOXES_ROOT, "test1") : journey.box.base;
 if (!existsSync(base)) fail(`base box not found: ${base}`);
 cpSync(base, boxDir, { recursive: true, filter: (src) => !src.includes(`${join(base, ".git")}`) });
