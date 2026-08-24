@@ -159,7 +159,11 @@ export function PdfCardView({ data, onNavigate, params, mode }: RendererProps) {
   // one, so a deep link and a click land on the same highlighted thumbnail.
   const [pickedPage, setPickedPage] = useState<number | null>(null);
   const linkedPage = requestedPage(params);
-  useEffect(() => { setPickedPage(null); }, [linkedPage]);
+  // FileView reuses this component across a navigation to a different pdf
+  // card (no path-keyed remount), so a locally-picked page must be cleared
+  // explicitly on `data.path` change too — otherwise a page picked while
+  // reading one card silently survives onto the next.
+  useEffect(() => { setPickedPage(null); }, [linkedPage, data.path]);
   const activePage = pickedPage ?? linkedPage;
   const { bodyRef, markers } = usePageMarkers({
     cardPath: data.path,

@@ -20,6 +20,7 @@ import { Stack } from "../components/ui/Stack";
 import { Text } from "../components/ui/Text";
 import { useDoclingDocument } from "../hooks/useDoclingDocument";
 import { isDoclingPath } from "../lib/docling";
+import { encodePathForUrl } from "../lib/view-url";
 import type { RendererProps } from "./index";
 import { registerFileType } from "./index";
 
@@ -31,10 +32,19 @@ import { registerFileType } from "./index";
  */
 const RAW_DISPLAY_LIMIT = 500_000;
 
+/**
+ * Cap on the *raw* fetched text before we even try to parse + pretty-print
+ * it. Pretty-printing always grows the text (indentation, newlines), so
+ * anything already past this is certain to blow {@link RAW_DISPLAY_LIMIT} —
+ * checking the raw length first skips `JSON.parse` + `JSON.stringify` over a
+ * multi-megabyte string just to throw the result away.
+ */
+const RAW_FETCH_LIMIT = 1_000_000;
+
 function DoclingRawView({ data }: RendererProps) {
   const { data: loaded, isLoading, error } = useDoclingDocument(data.path);
   const basename = data.path.split("/").pop() ?? data.path;
-  const downloadUrl = `${getApiBase()}/files/${data.path}`;
+  const downloadUrl = `${getApiBase()}/files/${encodePathForUrl(data.path)}`;
 
   if (isLoading) return <Text as="div" tone="subtle" className="p-4">Loading extraction…</Text>;
   if (error !== null || loaded === undefined) {
@@ -46,6 +56,20 @@ function DoclingRawView({ data }: RendererProps) {
     );
   }
 
+  // Check the raw text length before parsing at all — parsing + pretty-
+  // printing a multi-megabyte string only to discard it past the display cap
+  // wastes real work on a large extraction.
+  if (loaded.text.length > RAW_FETCH_LIMIT) {
+    return (
+      <Stack gap="sm" className="p-4">
+        <Text as="p" tone="subtle">
+          This extraction is {String(Math.round(loaded.text.length / 1024))} KB of JSON —
+          too much to show at once. The Structure view reads it; the raw file downloads here.
+        </Text>
+        <ExternalLink href={downloadUrl} variant="button" download={basename}>Download the file</ExternalLink>
+      </Stack>
+    );
+  }
   // Re-serialize rather than print the fetched text: the file is written by
   // Python's json.dump on one line, which is unreadable in a <pre>.
   const pretty = JSON.stringify(JSON.parse(loaded.text), null, 2);

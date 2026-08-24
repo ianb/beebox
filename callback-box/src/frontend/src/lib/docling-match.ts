@@ -25,6 +25,16 @@ import type { DoclingDocumentSummary } from "./docling";
  */
 const MATCH_LOOKAHEAD = 8;
 
+/**
+ * Below this normalized length, a block is short enough to plausibly repeat
+ * verbatim (a generic heading like "Notes" or "Summary") — a match against
+ * such a block is only trusted when it's the sole candidate in the lookahead
+ * window. At or above this length a repeat within the window is vanishingly
+ * unlikely to be a coincidence, so a first hit is trusted even alongside
+ * others.
+ */
+const MIN_CONFIDENT_MATCH_LENGTH = 24;
+
 /** Block-level elements a rendered card body is walked for. */
 export const BODY_BLOCK_SELECTOR = "h1, h2, h3, h4, h5, h6, p, li, blockquote";
 
@@ -60,9 +70,14 @@ function isPrefixMatch(block: string, candidate: string): boolean {
  *
  * Sequential, never backtracking: each block is matched against a bounded
  * window of docling texts starting just after the previous match, and a matched
- * block advances the window past it. A block that matches nothing is skipped. A
- * block that matches candidates on *different* pages inside the window is
- * ambiguous and is also skipped — no marker beats a wrong one.
+ * block advances the window past it. A block that matches nothing is skipped.
+ *
+ * A block that matches more than one candidate inside the window is only
+ * bound to the first when the block itself is long enough
+ * ({@link MIN_CONFIDENT_MATCH_LENGTH}) to make a coincidental repeat
+ * implausible; a short, generic block (a heading like "Notes") with more than
+ * one candidate is genuinely ambiguous about which page it names and is
+ * skipped instead — mislabeling one page as another is worse than no marker.
  *
  * @param blocks Block text in document order (see {@link BODY_BLOCK_SELECTOR}).
  * @param texts The document's paged texts, in reading order.
@@ -77,20 +92,15 @@ export function matchBlocksToPages(blocks: string[], texts: PagedText[]): Map<nu
     if (block === "") continue;
     const end = Math.min(texts.length, cursor + MATCH_LOOKAHEAD);
     let hit: number | null = null;
-    let ambiguous = false;
+    let candidateCount = 0;
     for (let j = cursor; j < end; j++) {
       const candidate = normalized[j];
       if (candidate === undefined || candidate === "" || !isPrefixMatch(block, candidate)) continue;
-      if (hit === null) {
-        hit = j;
-        continue;
-      }
-      // A second match only spoils the first if it names a different page — a
-      // line repeated within one page still identifies that page.
-      if (texts[j]?.page !== texts[hit]?.page) ambiguous = true;
-      break;
+      candidateCount += 1;
+      if (hit === null) hit = j;
     }
-    if (hit === null || ambiguous) continue;
+    if (hit === null) continue;
+    if (candidateCount > 1 && block.length < MIN_CONFIDENT_MATCH_LENGTH) continue;
     const page = texts[hit]?.page;
     if (page !== undefined) matched.set(blockIndex, page);
     cursor = hit + 1;

@@ -16,6 +16,7 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { getApiBase } from "../api";
 import { RequestError } from "../lib/errors";
 import { gunzipToText, parseDoclingJson, type DoclingDocumentSummary } from "../lib/docling";
+import { encodePathForUrl } from "../lib/view-url";
 
 /** A loaded docling document, plus the raw JSON text the "Raw" view prints. */
 export interface LoadedDocling {
@@ -58,7 +59,7 @@ export function useDoclingDocument(path: string | null): UseQueryResult<LoadedDo
     staleTime: Number.POSITIVE_INFINITY,
     queryFn: async ({ signal }) => {
       if (path === null) throw new DoclingPathMissingError();
-      const response = await fetch(`${getApiBase()}/files/${path}`, { signal });
+      const response = await fetch(`${getApiBase()}/files/${encodePathForUrl(path)}`, { signal });
       if (!response.ok) {
         const message = `Could not load ${path}: ${String(response.status)} ${response.statusText}`;
         throw new RequestError(message);

@@ -93,12 +93,28 @@ show(matchBlocksToPages(["Continued"], [
 =>
 ```
 
-A line repeated *within* one page still identifies that page:
+A short, generic block that repeats — a heading like "Continued" — is skipped
+too, even when every candidate in the window names the *same* page. Binding it
+to the first repeat would be a guess, not a read: nothing distinguishes which
+occurrence the block is actually rendering, so a wrong page label is exactly
+as possible as a right one:
 
 ```ts
 show(matchBlocksToPages(["Continued"], [
   { text: "Continued", page: 4 },
   { text: "Continued", page: 4 },
+]))
+=>
+```
+
+A block long enough to be specific clears the same window even with more than
+one candidate — a repeat this exact is not a coincidental short-heading
+collision, so the first hit is trusted:
+
+```ts
+show(matchBlocksToPages(["This heading is long enough to be unambiguous"], [
+  { text: "This heading is long enough to be unambiguous", page: 4 },
+  { text: "This heading is long enough to be unambiguous", page: 4 },
 ]))
 => 0=4
 ```

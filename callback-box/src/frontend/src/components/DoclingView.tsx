@@ -17,7 +17,7 @@ import { getApiBase } from "../api";
 import { trpc } from "../lib/trpc";
 import { decompressionSupported, itemsByPage, type DoclingDocumentSummary } from "../lib/docling";
 import { pageRenderNumber } from "../lib/pdf-card";
-import { apiImageUrl } from "../lib/view-url";
+import { apiImageUrl, encodePathForUrl } from "../lib/view-url";
 import { useDoclingDocument } from "../hooks/useDoclingDocument";
 import type { RendererProps } from "../renderers/index";
 import { DoclingPageSection, type PageSectionAssets } from "./DoclingPageSection";
@@ -100,7 +100,7 @@ export function DoclingView({ data }: RendererProps) {
   const { boxSlug } = useParams({ strict: false });
   const { data: loaded, isLoading, error } = useDoclingDocument(data.path);
   const { pages, figures } = useSiblingRenders(data.path, boxSlug);
-  const downloadUrl = `${getApiBase()}/files/${data.path}`;
+  const downloadUrl = `${getApiBase()}/files/${encodePathForUrl(data.path)}`;
   const basename = data.path.split("/").pop() ?? data.path;
 
   if (!decompressionSupported()) {

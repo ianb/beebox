@@ -21,6 +21,7 @@
  */
 
 import { isRecord } from "@shared/is-record";
+import { readTableRows } from "./docling-table";
 
 /**
  * Cap on the decompressed JSON we will hold in memory. A DoclingDocument for a
@@ -198,45 +199,12 @@ function parseRef(value: unknown): { array: string; index: number } | null {
   return { array: name, index };
 }
 
-/**
- * Build a table's grid from `data.table_cells`. Docling gives every cell its
- * half-open row/column offsets, so the grid is filled by placing each cell at
- * its start offset; spanned positions are left out rather than duplicated
- * (`colSpan`/`rowSpan` carry them into the rendered `<td>`).
- *
- * Returns `[]` for anything we can't read — a table whose shape we don't
- * recognize renders as a placeholder, never as a wrong table.
- */
-function readTableRows(data: unknown): DoclingTableCell[][] {
-  if (!isRecord(data)) return [];
-  const cells = array(data["table_cells"]).filter(isRecord);
-  const placements = cells.flatMap((cell) => {
-    const row = int(cell["start_row_offset_idx"]);
-    const col = int(cell["start_col_offset_idx"]);
-    if (row === null || col === null || row < 0 || col < 0) return [];
-    const endRow = int(cell["end_row_offset_idx"]) ?? row + 1;
-    const endCol = int(cell["end_col_offset_idx"]) ?? col + 1;
-    return [{
-      row,
-      col,
-      cell: {
-        text: str(cell["text"]) ?? "",
-        rowSpan: Math.max(1, endRow - row),
-        colSpan: Math.max(1, endCol - col),
-        header: cell["column_header"] === true || cell["row_header"] === true,
-      },
-    }];
-  });
-  if (placements.length === 0) return [];
-  const rowCount = Math.max(...placements.map((p) => p.row)) + 1;
-  const rows: DoclingTableCell[][] = Array.from({ length: rowCount }, () => []);
-  for (const placement of placements.toSorted((a, b) => a.row - b.row || a.col - b.col)) {
-    rows[placement.row]?.push(placement.cell);
-  }
-  return rows;
-}
-
 /* ---------- reading order ---------- */
+
+/** Bounds a group chain's nesting depth — see {@link DocumentReader.children}. */
+const MAX_BODY_DEPTH = 64;
+/** Bounds total items+unrecognized emitted — see {@link DocumentReader.overBudget}. */
+const MAX_EMITTED_ITEMS = 10_000;
 
 /**
  * Walks a document's `body.children` tree, resolving each `$ref` into an item.
@@ -292,13 +260,15 @@ class DocumentReader {
   }
 
   table(raw: Record<string, unknown>, ref: string): DoclingTableItem {
+    const rows = readTableRows(raw["data"]);
+    if (rows === "too-large") this.unrecognized += 1;
     return {
       kind: "table",
       ref,
       label: str(raw["label"]) ?? "table",
       page: provPage(raw),
       caption: this.caption(raw["captions"]),
-      rows: readTableRows(raw["data"]),
+      rows: rows === "too-large" ? [] : rows,
     };
   }
 
@@ -314,7 +284,7 @@ class DocumentReader {
   }
 
   /** Read one `$ref`, recursing through `groups` (a list, an inline run, …). */
-  ref(entry: unknown): void {
+  ref(entry: unknown, depth: number): void {
     const parsed = parseRef(entry);
     if (parsed === null) { this.unrecognized += 1; return; }
     const key = `${parsed.array}/${String(parsed.index)}`;
@@ -324,7 +294,7 @@ class DocumentReader {
 
     if (parsed.array === "groups") {
       const group = this.groups[parsed.index];
-      if (isRecord(group)) this.children(group["children"]);
+      if (isRecord(group)) this.children(group["children"], depth + 1);
       else this.unrecognized += 1;
       return;
     }
@@ -347,8 +317,17 @@ class DocumentReader {
     );
   }
 
-  children(value: unknown): void {
-    for (const child of array(value)) this.ref(child);
+  /**
+   * Depth past {@link MAX_BODY_DEPTH} stops recursing (an acyclic deep chain
+   * isn't caught by {@link ref}'s cycle guard); width past {@link
+   * MAX_EMITTED_ITEMS} stops the loop — both fold into `unrecognized` once.
+   */
+  children(value: unknown, depth?: number): void {
+    if ((depth ?? 0) > MAX_BODY_DEPTH) { this.unrecognized += 1; return; }
+    for (const child of array(value)) {
+      if (this.items.length + this.unrecognized >= MAX_EMITTED_ITEMS) { this.unrecognized += 1; return; }
+      this.ref(child, depth ?? 0);
+    }
   }
 
   /**
