@@ -1,4 +1,4 @@
-export const MOBILE_AUTH_TOKEN_STORAGE_KEY = "callbackbox.mobileAuthToken";
+const MOBILE_AUTH_TOKEN_STORAGE_KEY = "callbackbox.mobileAuthToken";
 
 export function getMobileAuthToken(): string | null {
   try {

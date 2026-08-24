@@ -16,16 +16,14 @@ const config: KnipConfig = {
         "src/cli/index.ts",
         "src/webapp/server-main.ts",
         "src/dev/gen-image.ts",
-        // Published specifiers (package.json "exports"). Boxes import these,
-        // so they are entry points even with no in-repo importer.
-        "src/cards/index.ts",
-        "src/exports/schema.ts",
-        "src/exports/server.ts",
+        // The box-facing specifiers (callback-box/cards, ./schema, ./server)
+        // need no entry here: knip reads package.json "exports" and maps the
+        // dist paths back through tsconfig. Same for the frontend's main.tsx,
+        // which its Vite config names. Listing them again is redundant.
         // The suite is a consumer too: an export reached only from a test is
         // used. Doctests are markdown — see `compilers` below.
         "test/**/*.ts",
         "test/**/*.doctest.md",
-        "field-tests/**/*.doctest.md",
         "scripts/**/*.ts",
       ],
       project: [
@@ -33,7 +31,6 @@ const config: KnipConfig = {
         "!src/frontend/**",
         "test/**/*.ts",
         "test/**/*.doctest.md",
-        "field-tests/**/*.doctest.md",
         "scripts/**/*.ts",
       ],
       ignoreDependencies: [
@@ -55,7 +52,7 @@ const config: KnipConfig = {
       ],
     },
     "src/frontend": {
-      entry: ["src/main.tsx", "src/components/view-widgets/node-entry.tsx"],
+      entry: ["src/components/view-widgets/node-entry.tsx"],
       project: ["src/**/*.{ts,tsx}"],
     },
   },

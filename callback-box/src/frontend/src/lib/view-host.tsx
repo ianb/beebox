@@ -66,7 +66,7 @@ export interface ViewHost {
 const ViewHostContext = createContext<ViewHost | null>(null);
 
 /** Thrown when a card widget is rendered outside a view-host provider. */
-export class ViewHostMissingError extends Error {
+class ViewHostMissingError extends Error {
   constructor() {
     super("useViewHost() called outside a <ViewHostContext.Provider> — card widgets only work inside a box-authored view.");
     this.name = "ViewHostMissingError";

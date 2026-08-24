@@ -34,7 +34,7 @@ import type { UiScanEntry } from "@shared/ui-scan";
 export const NATIVE_SCAN_TIMEOUT_MS = 1500;
 
 /** The name the dump groups native composer chrome under. */
-export const NATIVE_CONTAINER_ROLE = "native";
+const NATIVE_CONTAINER_ROLE = "native";
 
 /**
  * Ask the shell for its control inventory. Resolves with the entries, or null

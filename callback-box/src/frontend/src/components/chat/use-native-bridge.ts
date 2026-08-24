@@ -27,7 +27,7 @@ declare global {
   }
 }
 
-export function useNativeEmissionBridge(opts: {
+function useNativeEmissionBridge(opts: {
   enabled: boolean;
   dispatchEmission: (emission: Emission) => Promise<Receipt>;
 }) {
@@ -47,7 +47,7 @@ export function useNativeEmissionBridge(opts: {
   }, [enabled, dispatchEmission]);
 }
 
-export function useNativeLocationBridge(opts: { enabled: boolean; boxSlug: string | undefined }) {
+function useNativeLocationBridge(opts: { enabled: boolean; boxSlug: string | undefined }) {
   const { enabled, boxSlug } = opts;
   useEffect(() => {
     if (!enabled) return;
@@ -65,7 +65,7 @@ export function useNativeLocationBridge(opts: { enabled: boolean; boxSlug: strin
   }, [enabled, boxSlug]);
 }
 
-export function useNativeNarrationBridge(opts: { enabled: boolean; narrationEnabled: boolean }) {
+function useNativeNarrationBridge(opts: { enabled: boolean; narrationEnabled: boolean }) {
   const { enabled, narrationEnabled } = opts;
   useEffect(() => {
     if (!enabled) return;
@@ -73,7 +73,7 @@ export function useNativeNarrationBridge(opts: { enabled: boolean; narrationEnab
   }, [enabled, narrationEnabled]);
 }
 
-export function useNativeSpeechPlaybackBridge(opts: { enabled: boolean; playing: boolean }) {
+function useNativeSpeechPlaybackBridge(opts: { enabled: boolean; playing: boolean }) {
   const { enabled, playing } = opts;
   useEffect(() => {
     if (!enabled) return;
@@ -89,7 +89,7 @@ export function useNativeSpeechPlaybackBridge(opts: { enabled: boolean; playing:
  * native shell and leaving web turn-taking to reopen it after the next speech.
  * The turn belongs to native.
  */
-export function useNativeSpeechCommandBridge(opts: { enabled: boolean; stopSpeech: () => void }) {
+function useNativeSpeechCommandBridge(opts: { enabled: boolean; stopSpeech: () => void }) {
   const { enabled, stopSpeech } = opts;
   useEffect(() => {
     if (!enabled) return;
@@ -104,7 +104,7 @@ export function useNativeSpeechCommandBridge(opts: { enabled: boolean; stopSpeec
   }, [enabled, stopSpeech]);
 }
 
-export function useNativeResponseBridge(opts: { enabled: boolean; active: boolean }) {
+function useNativeResponseBridge(opts: { enabled: boolean; active: boolean }) {
   const { enabled, active } = opts;
   useEffect(() => {
     if (!enabled) return;

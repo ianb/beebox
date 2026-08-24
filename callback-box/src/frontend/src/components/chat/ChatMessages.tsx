@@ -28,7 +28,7 @@ export interface ReplaySpeechOptions {
  * each chunk's index absolute across the whole message (groups may be split
  * by tool activity); `activeIndex` is the segment currently playing.
  */
-export function AssistantSpeechText({
+function AssistantSpeechText({
   text,
   indexOffset,
   activeIndex,
@@ -254,7 +254,5 @@ export function SelfNoteMessage({ note }: { note: SelfNoteInfo }) {
 
 export { UserMessage } from "./user-message";
 export { UserMessageText } from "./user-message-text";
-export { MarkdownContent } from "./markdown-rendering";
-export { ToolList } from "./activity-rendering";
 export { groupMessages, extractChatImages, type MessageGroup } from "./message-parsing";
 export type { OnZoomView } from "./markdown-rendering";

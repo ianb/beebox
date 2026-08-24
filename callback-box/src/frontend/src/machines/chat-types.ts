@@ -45,9 +45,9 @@ export type ChatEvent =
  * server's `CHAT_HISTORY_TAIL` (`core/chat/session/load-history.ts`), which is
  * what the schedule-fire broadcast uses, so both surfaces show the same window.
  */
-export const HISTORY_TAIL = 200;
+const HISTORY_TAIL = 200;
 /** Floor on how many real (typed/spoken) user messages the initial load must cover. */
-export const MIN_REAL_USER_MESSAGES = 2;
+const MIN_REAL_USER_MESSAGES = 2;
 
 /** The live chat's history request: the last {@link HISTORY_TAIL} entries. */
 export function chatTailSlice(): HistorySlice {

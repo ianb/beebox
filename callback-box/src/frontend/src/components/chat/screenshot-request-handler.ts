@@ -69,7 +69,7 @@ async function postJson(requestId: string, { body, label }: { body: object; labe
 }
 
 /** Ack that this tab saw and matched the request — closes the server's `no-client` window. */
-export function postAck(requestId: string): Promise<void> {
+function postAck(requestId: string): Promise<void> {
   return postJson(requestId, { body: { ack: true }, label: "ack" });
 }
 
