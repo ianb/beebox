@@ -6,10 +6,28 @@ labels: [chat, voice, transcription]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder noticed retranscribe failing on first messages
-next-action: reconfirm
 ---
 
-> **Checked 2026-08-18 — could not settle from here; worth a re-test.** Tagged
+> **Reconfirmed 2026-08-24 — half of this is now FIXED, and the research below
+> is stale where it says otherwise.** Tag removed.
+>
+> **Fixed:** finding 1. `96e28342` (2026-08-19, "let the phone answer
+> retranscription requests") makes native iOS voice retranscribable — the shell
+> keeps the last five recordings per box on disk and answers
+> `/api/chat/last-audio/:requestId` itself, with the web layer relaying the
+> request when it is inside a shell (`lib/audio/last-audio.ts:14-18`,
+> `docs/mobile-contract.md` §4.8). **Read finding 1 below as history: "native
+> iOS voice sends can never be retranscribed" is no longer true.**
+>
+> **Still live:** finding 2. Web retention is still per-tab page memory —
+> `last-audio.ts` still says "Recordings live only in this tab's memory (gone on
+> reload)" — so a cold-start reload still loses the first message's audio on the
+> web composer. That is the remaining first-message case.
+>
+> Still not settleable from here for the same reason as before: an agent cannot
+> dictate speech into a live box.
+
+> **Superseded note (2026-08-18) — could not settle from here.** Tagged
 > `reconfirm`; removed. Confirming or refuting this needs someone to dictate a
 > first message and try retranscribing it — an agent cannot produce speech into
 > a live box, so this is genuinely a human check rather than one nobody has got
