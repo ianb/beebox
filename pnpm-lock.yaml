@@ -418,6 +418,9 @@ importers:
       '@types/dagre':
         specifier: ^0.7.54
         version: 0.7.54
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.13.3
       '@types/react':
         specifier: ^18.3.0
         version: 18.3.29
@@ -442,9 +445,6 @@ importers:
       husky:
         specifier: ^9.1.7
         version: 9.1.7
-      knip:
-        specifier: ^5.83.1
-        version: 5.88.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.11.3)(@types/node@24.13.3)(typescript@5.9.3)
       lint-staged:
         specifier: ^16.2.7
         version: 16.4.0

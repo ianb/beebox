@@ -119,6 +119,6 @@ Each service has a doctest in `test/service-*.doctest.md` demonstrating the fake
 | `google-drive.ts` | `GoogleDriveService` | `createGoogleDriveService(auth)` | `createFakeGoogleDrive({ files?, spreadsheets? })` |
 | `claude-chat.ts` | `ChatBackend` | `createChatBackend()` | `createFakeChatBackend()` |
 | `call-log.ts` | — | — | `withCallLog(service)`, `printCalls(log)` |
-| `index.ts` | `Services` container | — | Barrel exports all of the above |
+| `index.ts` | `Services` container | — | — (the container only; import each factory from its own file) |
 
 `claude-chat.ts` is not part of the `Services` container — chat session code imports the backend directly. It wraps `@anthropic-ai/claude-agent-sdk`'s `query()` so the chat session can push user content and iterate SDK message events; the fake gives tests a scriptable handle (no SDK call, no subprocess). Still follows the interface/real/fake pattern.
