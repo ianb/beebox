@@ -70,8 +70,18 @@ recognize the type at all when asked — a fair reaction to a card that the
 system produces, stores, and never shows.
 
 That reframes the fix: the question is not "does the `document` view look good"
-but "should the scanner be producing an artifact nobody can reach". Sequence it
-with `scanner-ingest`, whose output this is.
+but "should this pipeline produce an artifact nobody can reach".
+
+**The one real instance, traced (2026-08-24).** A 20-page school handbook PDF,
+`source: drive` (not a physical scanner — `scan-import` names the command, not
+the hardware), captured 2026-08-04 and extracted a minute later
+(`Created-By: document-reanalyze`). Its attach scope holds `source.pdf`,
+`page-001…020.avif`, and `figure-001…015.avif`. **Every one of those page and
+figure renders exists today and nothing displays any of them** — which is the
+whole argument for the view in one example.
+
+Settle [the type's name](../code-quality/2026-08-24-document-card-type-name-is-too-generic.md)
+before building a viewer that hardcodes it.
 
 ## What to decide
 
