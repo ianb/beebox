@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — opening /browse on a cold browser profile
+resolution: implemented
 ---
 
 On a cold browser profile the browse sidebar sat at "Loading..." indefinitely.

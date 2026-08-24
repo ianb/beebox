@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — exercising the recipe card's scale control
+resolution: implemented
 ---
 
 The recipe view's scale buttons (0.5x … 3x) scale the ingredient amounts but not

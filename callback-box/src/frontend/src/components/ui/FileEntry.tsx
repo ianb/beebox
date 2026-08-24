@@ -17,7 +17,7 @@ import type { FileSummary } from "@core/file-summary";
 import { resolveFileTypeUI } from "../../file-types/registry";
 import { cn } from "../../lib/cn";
 import { FileView } from "../FileView";
-import { href } from "../../lib/routing";
+import { withBase } from "../../api";
 import { useViewNavigate } from "../../hooks/useViewNavigate";
 
 interface FileEntryProps {
@@ -110,7 +110,7 @@ function ExpandedControls({
   onCollapse: () => void;
   onPanel?: (summary: FileSummary<unknown>) => void;
 }) {
-  const pageHref = boxSlug ? href(`/${boxSlug}/browse/${summary.path}`) : undefined;
+  const pageHref = boxSlug ? withBase(`/${boxSlug}/browse/${summary.path}`) : undefined;
   return (
     <>
       <button
