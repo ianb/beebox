@@ -201,15 +201,28 @@ function resolveLockPath(dir: string): Promise<string | null> {
 
 /** The resolution itself. Never rejects: "not a repository" is a null. */
 async function computeLockPath(key: string): Promise<string | null> {
+  const gitDir = await resolveGitDir(key);
+  return gitDir === null ? null : path.join(gitDir, LOCK_FILE_NAME);
+}
+
+/**
+ * The absolute git directory for the repository containing `dir`, or null when
+ * `dir` is not in one (or does not exist). Never rejects.
+ *
+ * Exported because the index lock this module serializes on and the
+ * `.git/index.lock` that `git-stale-lock.ts` recovers live in the same
+ * directory, and both need it resolved the same way — `boxRoot` and the
+ * package root of one v2 box are different directories in the SAME repository.
+ */
+export async function resolveGitDir(dir: string): Promise<string | null> {
   let gitDir: string;
   try {
-    gitDir = (await simpleGit(key).revparse(["--absolute-git-dir"])).trim();
+    gitDir = (await simpleGit(dir).revparse(["--absolute-git-dir"])).trim();
   } catch (_e) {
     // Not a repository, or the directory does not exist.
     return null;
   }
-  if (gitDir === "") return null;
-  return path.join(gitDir, LOCK_FILE_NAME);
+  return gitDir === "" ? null : gitDir;
 }
 
 /** Run `task` after everything already queued for `lockPath`. */
@@ -310,4 +323,33 @@ export async function withBoxGitLock<T>(dir: string, fn: () => Promise<T>): Prom
  */
 export function activeBoxGitLockCount(): number {
   return chains.size;
+}
+
+/** How long a shutting-down process waits for its git spans to finish. */
+export const GIT_DRAIN_MS = 20_000;
+
+/** Poll interval while draining. */
+const DRAIN_POLL_MS = 50;
+
+/**
+ * Wait for this process's in-flight git spans to finish, up to `timeoutMs`.
+ * Resolves true when the queues drained, false on timeout.
+ *
+ * Call this before exiting on a signal. `git` cleans up `.git/index.lock` when
+ * IT is signalled, but a process that exits while its own `git commit` is
+ * still writing leaves that git orphaned and exposed to whatever SIGKILL comes
+ * next — from the supervisor's escalation or systemd's cgroup teardown — and a
+ * git killed mid-index-write leaves a lock nothing will ever remove. Draining
+ * is the cheap way not to be the process that creates that window.
+ *
+ * Bounded, and its failure is a log line rather than a refusal to exit: a
+ * shutdown that will not finish is worse than a lock we might have avoided.
+ */
+export async function drainBoxGitLocks(timeoutMs: number): Promise<boolean> {
+  if (activeBoxGitLockCount() === 0) return true;
+  const deadline = Date.now() + timeoutMs;
+  while (activeBoxGitLockCount() > 0 && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, DRAIN_POLL_MS));
+  }
+  return activeBoxGitLockCount() === 0;
 }

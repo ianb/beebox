@@ -21,7 +21,7 @@ import type { HubConfig, BoxEntry } from "./hub-config.js";
 import { HubState } from "./hub-state.js";
 import { invariant } from "../lib/invariant.js";
 import type { Endpoint, EndpointProvider } from "./endpoints.js";
-import { killGroup, sleep, describeError, DEV_BUNDLE_RELOAD_EXIT_CODE, KILL_GRACE_MS, restartAfterDevBundleReload } from "./child-process-utils.js";
+import { killGroup, killAfterGrace, describeError, DEV_BUNDLE_RELOAD_EXIT_CODE, BOX_KILL_GRACE_MS, waitForExit, restartAfterDevBundleReload } from "./child-process-utils.js";
 import { buildChildEnv } from "./child-env.js";
 import { forwardChildOutput } from "./child-output-log.js";
 import { boxHasPendingSchedules } from "./pending-schedules.js";
@@ -364,10 +364,7 @@ export class Supervisor implements EndpointProvider {
     const pid = box.child?.pid;
     box.child = undefined;
     box.port = undefined;
-    if (pid) {
-      killGroup(pid, "SIGTERM");
-      setTimeout(() => killGroup(pid, "SIGKILL"), KILL_GRACE_MS).unref();
-    }
+    killAfterGrace(pid);
   }
 
   /** SIGTERM every live child, SIGKILL any survivor after the grace
@@ -383,8 +380,15 @@ export class Supervisor implements EndpointProvider {
     const pids = boxes.map((box) => box.child?.pid).filter((pid): pid is number => pid !== undefined);
     for (const pid of pids) killGroup(pid, "SIGTERM");
     if (pids.length === 0) return;
-    await sleep(KILL_GRACE_MS);
-    for (const pid of pids) killGroup(pid, "SIGKILL");
+    // AWAITED, unlike the idle-collection path: the hub must not exit while a
+    // box child is still finishing a git write. Once we exit, systemd's
+    // cgroup teardown SIGKILLs whatever is left, and a git killed mid-index-write
+    // leaves the box unable to commit at all.
+    const survivors = await waitForExit(pids, BOX_KILL_GRACE_MS);
+    for (const pid of survivors) {
+      console.warn(`[hub] box child ${String(pid)} did not exit within the grace period; killing.`);
+      killGroup(pid, "SIGKILL");
+    }
   }
 
   /** SIGHUP handling: give any crash-looped ("unhealthy") box a fresh
@@ -477,8 +481,7 @@ export class Supervisor implements EndpointProvider {
         // can fire synchronously in tests, and fast in practice) to arrive
         // unguarded.
         box.expectedExitGeneration = generation;
-        killGroup(box.child.pid, "SIGTERM");
-        setTimeout(() => killGroup(box.child?.pid, "SIGKILL"), KILL_GRACE_MS).unref();
+        killAfterGrace(box.child.pid);
       }
       box.child = undefined;
       box.port = undefined;

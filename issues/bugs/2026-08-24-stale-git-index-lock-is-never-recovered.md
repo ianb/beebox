@@ -1,6 +1,6 @@
 ---
 title: "A stale `.git/index.lock` is treated as live contention forever — every committing task fails until a human deletes it"
-workstream: unattached
+workstream: stale-git-lock
 area: callback-box
 priority: important
 labels: [git, scheduler, boxes]
