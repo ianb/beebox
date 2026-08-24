@@ -192,22 +192,38 @@ test("regeneration removes stale generated skill links", () => {
   assert.equal(existsSync(join(repo, ".agents", "skills", "finish")), false);
 });
 
-test("refuses to overwrite an existing native Codex skill", () => {
+test("refuses to overwrite an existing native Codex skill, and keeps going", () => {
   mkdirSync(join(repo, ".claude", "skills", "finish"), { recursive: true });
   writeFileSync(
     join(repo, ".claude", "skills", "finish", "SKILL.md"),
     "---\nname: finish\n---\n",
+  );
+  mkdirSync(join(repo, ".claude", "skills", "later"), { recursive: true });
+  writeFileSync(
+    join(repo, ".claude", "skills", "later", "SKILL.md"),
+    "---\nname: later\n---\n",
   );
   mkdirSync(join(repo, ".agents", "skills", "finish"), { recursive: true });
   writeFileSync(
     join(repo, ".agents", "skills", "finish", "SKILL.md"),
     "native\n",
   );
-  git("add", ".claude/skills/finish/SKILL.md");
+  git("add", ".claude/skills/finish/SKILL.md", ".claude/skills/later/SKILL.md");
   git("commit", "-q", "-m", "restore skill");
 
-  assert.throws(
-    () => generateSkillLinks(repo),
-    /refusing to overwrite existing Codex skill path: \.agents\/skills\/finish/,
+  // The native skill is left untouched — that protection is the point.
+  const written = generateSkillLinks(repo);
+  assert.equal(
+    readFileSync(join(repo, ".agents", "skills", "finish", "SKILL.md"), "utf8"),
+    "native\n",
+  );
+
+  // ...but it no longer aborts the run. `later` sorts after `finish`, so under
+  // the old throw-on-first-conflict behavior it was never linked at all — one
+  // unexpected directory silently cost every skill after it.
+  assert.ok(written.includes(".agents/skills/later"));
+  assert.equal(
+    readlinkSync(join(repo, ".agents", "skills", "later")),
+    join("..", "..", ".claude", "skills", "later"),
   );
 });
