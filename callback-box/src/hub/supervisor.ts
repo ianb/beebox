@@ -386,7 +386,7 @@ export class Supervisor implements EndpointProvider {
     // leaves the box unable to commit at all.
     const survivors = await waitForExit(pids, BOX_KILL_GRACE_MS);
     for (const pid of survivors) {
-      console.warn(`[hub] box child ${String(pid)} did not exit within the grace period; killing.`);
+      console.warn(`[hub] box child ${String(pid)}'s process group did not empty within the grace period; killing.`);
       killGroup(pid, "SIGKILL");
     }
   }

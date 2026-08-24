@@ -31,14 +31,19 @@
  *    This is the load-bearing signal. Our own writers hold the index for well
  *    under a second, the box git lock's whole wait budget is 60s, and even the
  *    11GB `estate` repo commits in seconds.
- * 2. **No process has it open.** Cheap veto, not proof — git closes the lock
- *    fd in some flows (`close_lock_file_gently`) and holds the lock as a NAME
- *    until the rename, so "unopened" alone would be unsound. Paired with the
- *    age gate it costs nothing and catches the case where a genuinely
- *    long-running git is mid-flight.
+ * 2. **No process has it open, and no git is working in this repository.** The
+ *    descriptor check is a veto, not proof: git closes the lock's fd in some
+ *    flows (`close_lock_file_gently`) and holds the lock as a NAME until the
+ *    rename, so "unopened" alone would be unsound. That window is normally
+ *    microseconds but lasts as long as the editor in an interactive
+ *    `git commit`, which is why a git-family process whose cwd is inside the
+ *    working tree vetoes removal too. Identity is settled by device+inode
+ *    rather than path text, so a symlinked or bind-mounted `.git` cannot hide
+ *    a real holder.
  * 3. **Fail closed on an unusable probe.** If we cannot enumerate processes,
- *    the verdict is `unknown-holder` and we do not remove. A missing probe
- *    must never read as "nobody holds it".
+ *    cannot read a process's descriptors, or cannot place a possible git, the
+ *    verdict is `unknown-holder` and we do not remove. A probe that could not
+ *    answer must never read as "nobody holds it".
  * 4. **Settle, then re-verify.** After the probe we wait
  *    {@link SETTLE_MS} and re-stat: same inode, same mtime, still unopened. A
  *    lock being actively written moves its mtime; one being replaced changes
@@ -119,6 +124,7 @@ async function indexLockPath(dir: string): Promise<string | null> {
 }
 
 interface LockStat {
+  dev: bigint;
   ino: bigint;
   mtimeMs: number;
 }
@@ -127,7 +133,7 @@ interface LockStat {
 async function statLock(lockPath: string): Promise<LockStat | null> {
   try {
     const st = await fs.stat(lockPath, { bigint: true });
-    return { ino: st.ino, mtimeMs: Number(st.mtimeMs) };
+    return { dev: st.dev, ino: st.ino, mtimeMs: Number(st.mtimeMs) };
   } catch (_e) {
     return null;
   }
@@ -138,8 +144,8 @@ async function statLock(lockPath: string): Promise<LockStat | null> {
  *
  * `null` means UNDETERMINED — the caller must treat that as "possibly held".
  */
-async function processHoldsFile(lockPath: string): Promise<boolean | null> {
-  return process.platform === "linux" ? procHoldsFile(lockPath) : lsofHoldsFile(lockPath);
+async function processHoldsFile(lockPath: string, lock: LockStat): Promise<boolean | null> {
+  return process.platform === "linux" ? procHoldsFile(lockPath, lock) : lsofHoldsFile(lockPath);
 }
 
 /**
@@ -155,7 +161,7 @@ async function processHoldsFile(lockPath: string): Promise<boolean | null> {
  * unreadable stranger as a possible holder would make the verdict permanently
  * unknown on a shared machine.
  */
-async function procHoldsFile(lockPath: string): Promise<boolean | null> {
+async function procHoldsFile(lockPath: string, lock: LockStat): Promise<boolean | null> {
   let pids: string[];
   try {
     pids = (await fs.readdir("/proc")).filter((entry) => /^\d+$/.test(entry));
@@ -163,37 +169,91 @@ async function procHoldsFile(lockPath: string): Promise<boolean | null> {
     return null;
   }
 
+  const lockName = path.basename(lockPath);
+  // The working tree the lock belongs to. `.git/index.lock` sits one level
+  // inside the git directory's parent for an ordinary repository; if the layout
+  // is something else this prefix simply never matches, which weakens the veto
+  // below rather than misapplying it.
+  const repoRoot = path.dirname(path.dirname(lockPath));
+
   let inconclusive = false;
   for (const pid of pids) {
+    // A git working IN THIS REPOSITORY vetoes removal even when it has no
+    // descriptor on the lock. git closes the lock's fd in some flows and holds
+    // the lock as a NAME until it renames it into place — briefly in most
+    // paths, but for as long as an editor stays open in an interactive
+    // `git commit`. That window is the one case age and descriptors both miss,
+    // and a git whose cwd is in this tree is the cheap signal for it.
+    if (await isGitInRepo(pid, repoRoot)) {
+      inconclusive = true;
+      continue;
+    }
     let fds: string[];
     try {
       fds = await fs.readdir(`/proc/${pid}/fd`);
     } catch (e) {
       // ENOENT is an exit between the readdir and now — it holds nothing.
-      // Anything else is permission: fall back to the process's name.
+      // Anything else is permission: we cannot see this process's descriptors,
+      // so fall back to its name.
       if (isErrnoCode(e, "ENOENT")) continue;
-      if (await isGitProcess(pid)) inconclusive = true;
+      if (await mayBeGitProcess(pid)) inconclusive = true;
       continue;
     }
     for (const fd of fds) {
+      const fdPath = `/proc/${pid}/fd/${fd}`;
       let target: string;
       try {
-        target = await fs.readlink(`/proc/${pid}/fd/${fd}`);
+        target = await fs.readlink(fdPath);
       } catch (_e) {
         continue; // fd closed underneath us
       }
-      if (target === lockPath) return true;
+      // The readlink text is a cheap PREFILTER, not the test. The same file can
+      // appear under different path strings (a symlinked or bind-mounted `.git`,
+      // a different mount namespace), so matching text would miss a real holder;
+      // the basename survives all of those, and identity is then settled by
+      // device+inode. `stat` through `/proc/<pid>/fd/<n>` follows the descriptor,
+      // so it answers even for a path that has since been replaced.
+      if (path.basename(target) !== lockName) continue;
+      try {
+        const st = await fs.stat(fdPath, { bigint: true });
+        if (st.dev === lock.dev && st.ino === lock.ino) return true;
+      } catch (_e) {
+        continue; // fd or target gone
+      }
     }
   }
   return inconclusive ? null : false;
 }
 
-/** Whether `pid` is a git-family process, by its (world-readable) `comm`. */
-async function isGitProcess(pid: string): Promise<boolean> {
+/** Whether `pid` is a git-family process whose cwd is inside `repoRoot`. */
+async function isGitInRepo(pid: string, repoRoot: string): Promise<boolean> {
+  if (!(await mayBeGitProcess(pid))) return false;
+  let cwd: string;
+  try {
+    cwd = await fs.readlink(`/proc/${pid}/cwd`);
+  } catch (_e) {
+    // Exited, or its cwd is unreadable. `mayBeGitProcess` already said this
+    // could be a git; not being able to place it is a reason to be careful.
+    return true;
+  }
+  return cwd === repoRoot || cwd.startsWith(`${repoRoot}${path.sep}`);
+}
+
+/**
+ * Whether `pid` might be a git-family process — used both to place a git in
+ * this repository and as the fallback for a process whose descriptors we could
+ * not read.
+ *
+ * Fails CLOSED: `comm` is world-readable, so the only reasons a read fails are
+ * that the process exited (ENOENT — it holds nothing) or something unforeseen.
+ * The unforeseen case answers "maybe", because the caller turns a maybe into
+ * `unknown-holder` and removes nothing.
+ */
+async function mayBeGitProcess(pid: string): Promise<boolean> {
   try {
     return GIT_PROCESS_NAMES.has((await fs.readFile(`/proc/${pid}/comm`, "utf-8")).trim());
-  } catch (_e) {
-    return false; // exited; it holds nothing
+  } catch (e) {
+    return !isErrnoCode(e, "ENOENT");
   }
 }
 
@@ -240,7 +300,7 @@ export async function inspectIndexLock(dir: string): Promise<IndexLockStatus> {
   const ageMs = Date.now() - stat.mtimeMs;
   if (ageMs < INDEX_LOCK_STALE_MS) return { state: "fresh", lockPath, ageMs };
 
-  const held = await processHoldsFile(lockPath);
+  const held = await processHoldsFile(lockPath, stat);
   if (held === null) return { state: "unknown-holder", lockPath, ageMs };
   if (held) return { state: "held", lockPath, ageMs };
   return { state: "stale", lockPath, ageMs };

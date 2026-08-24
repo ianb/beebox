@@ -32,18 +32,24 @@ export const KILL_GRACE_MS = 2000;
 export const BOX_KILL_GRACE_MS = 30_000;
 
 /**
- * Wait for `pids` to exit, up to `timeoutMs`. Returns the pids still alive.
+ * Wait for the process GROUPS led by `pids` to empty, up to `timeoutMs`.
+ * Returns the pids whose groups are still populated.
  *
- * Polling rather than awaiting exit events so it works for a process group
- * whose members we never spawned directly (a box child's `git` grandchildren
- * are what actually need the time).
+ * Groups, not the leaders — that distinction is the whole point. We signal
+ * `-pid`, and the process we are actually waiting on is usually a grandchild: a
+ * box child's `git`. Polling the leader alone would return as soon as the box
+ * server exited and leave its `git` to be killed by whatever teardown follows,
+ * which is exactly the mid-index-write SIGKILL this wait exists to avoid.
+ *
+ * Polling rather than exit events for the same reason: the grandchildren are
+ * processes we never spawned and have no handle on.
  */
 export async function waitForExit(pids: number[], timeoutMs: number): Promise<number[]> {
   const deadline = Date.now() + timeoutMs;
-  let alive = pids.filter((pid) => pidAlive(pid));
+  let alive = pids.filter((pid) => groupAlive(pid));
   while (alive.length > 0 && Date.now() < deadline) {
     await sleep(EXIT_POLL_MS);
-    alive = alive.filter((pid) => pidAlive(pid));
+    alive = alive.filter((pid) => groupAlive(pid));
   }
   return alive;
 }
@@ -150,6 +156,25 @@ export function pidAlive(pid: number): boolean {
 }
 
 /**
+ * Whether ANY process remains in the group led by `pid`.
+ *
+ * `kill(-pid, 0)` succeeds while the group has members and raises ESRCH once it
+ * is empty, which is the liveness question a group-directed teardown actually
+ * asks. Falls back to the bare pid the way {@link killGroup} does: a child that
+ * is not a group leader has no group of its own, and `-pid` would then answer
+ * about some unrelated group (or nothing at all).
+ */
+export function groupAlive(pid: number): boolean {
+  try {
+    process.kill(-pid, 0);
+    return true;
+  } catch (e) {
+    if (errnoCode(e) === "EPERM") return true;
+    return pidAlive(pid);
+  }
+}
+
+/**
  * SIGTERM a box child's process group, then SIGKILL whatever survives the box
  * grace period.
  *
@@ -164,7 +189,7 @@ export function killAfterGrace(pid: number | undefined): void {
   void waitForExit([pid], BOX_KILL_GRACE_MS)
     .then((survivors) => {
       if (survivors.length === 0) return;
-      console.warn(`[hub] box child ${String(pid)} did not exit within the grace period; killing.`);
+      console.warn(`[hub] box child ${String(pid)}'s process group did not empty within the grace period; killing.`);
       killGroup(pid, "SIGKILL");
     })
     .catch((e: unknown) => {
