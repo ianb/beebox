@@ -46,10 +46,12 @@ This plan is the implementation.
   calls a TS script with the message file. Reuse: add a second call. There is
   no `prepare-commit-msg` hook (`ls .husky/` → `commit-msg post-checkout
   post-commit post-merge pre-commit pre-push`); add one.
-- **Trailer parse.** `bin/mobile-contract-check.ts:93-99`:
-  *`const pattern = new RegExp(\`^${TRAILER_KEY}:\\s*(\\S.*)$\`); ... if
-  (line.startsWith("#")) return false;`* Reuse the shape (own key, same
-  comment-skipping); do not depend on that file — it is single-purpose.
+- **Trailer parse.** `bin/mobile-contract-check.ts:93-99` matches
+  `^Key:` on *any* non-comment line of the message. Acceptable for an
+  attestation; wrong for provenance — body prose such as "Issue: unclear"
+  would become a trailer. Do **not** reuse it: parse with
+  `git interpret-trailers --parse <file>`, which returns only the trailer
+  block.
 - **Branch → stream name.** `bin/lib/worktree-paths.sh` and the launcher
   create branch `worktree-<name>` (root `CLAUDE.md`: *"creates a managed
   worktree at `~/src/callback-worktrees/<name>/` on branch
@@ -58,10 +60,11 @@ This plan is the implementation.
   `splitFrontmatter` and `:82` the `workstream` validation
   (*"frontmatter workstream must be a bare name, unattached, or unknown"*).
   Reuse `splitFrontmatter` to find the plan(s) claiming a stream. Plan dirs
-  are enumerated at `callback-box/src/dev/doc-check.ts:54-55`
-  (`docs/plans/`, `docs/implemented-plans/`); the hook reads `docs/plans/`
-  and `docs/unimplemented-plans/` — implemented plans are finished and must
-  not be stamped on new commits.
+  are enumerated at `callback-box/src/dev/doc-check.ts:53-57` (`docs/plans/`,
+  `docs/implemented-plans/`, `docs/unimplemented-plans/`). The hook reads
+  **`docs/plans/` only**: `doc-frontmatter.ts:56-57` requires
+  `unimplemented-plans` to be `superseded` or `parked`, and implemented plans
+  are finished — neither may be stamped on new commits.
 - **Landing.** `bin/land:169`: *`g merge --ff-only "$BRANCH"`*. Change to
   `--no-ff`. `bin/land:175` already says *"the post-merge hook handles deploy
   for deployed paths"*, and `.husky/post-merge` handles merges that update
@@ -106,7 +109,7 @@ Ordered by dependency, then size.
 --prepare <msgfile> <source>`. The script reads the branch; if it matches
 `^worktree-(.+)$`, it appends `Workstream: <name>` via `git
 interpret-trailers --in-place --if-exists replace`. It then scans
-`callback-box/docs/plans/*.md` and `callback-box/docs/unimplemented-plans/*.md`
+`callback-box/docs/plans/*.md` (active plans only; see "What already exists")
 for frontmatter `workstream: <name>`; if exactly one matches, appends
 `Plan: <bare filename without .md>`. On `main` or any other branch: no-op.
 
@@ -141,15 +144,20 @@ root `CLAUDE.md` in one paragraph (Track 4).
 **First implementation chunk.** `bin/commit-provenance.ts` with `--prepare`,
 unit tests for branch parsing, plan resolution (0 / 1 / many), and
 idempotence on a message that already carries the trailers; the husky hook
-file. No open questions.
+file. The Track 4 doctest also exercises real `git commit` under `-m`, the
+editor template with `#` comment lines (trailer must land above them —
+probed: `interpret-trailers` inserts before the comment block), `--amend`,
+and `--cleanup=scissors`. No open questions.
 
 ### Track 2 — `commit-msg` validates `Issue:`
 
 **What.** `.husky/commit-msg` gains a second line: `pnpm --silent
 commit-provenance --check <msgfile>`. The script reads every `Issue:` trailer
-(same comment-skipping parse as `hasContractUnchangedTrailer`); for each
-value, looks for `issues/**/<value>.md` (recursive, includes `closed/`, also
-`private-issues/**` when the symlink exists). Any miss blocks the commit with
+via `git interpret-trailers --parse`; for each value, looks for
+`issues/**/<value>.md` (recursive, includes `closed/`). **Public issues only:**
+`private-issues/` is never searched — a private slug in public history is a
+leak (root `CLAUDE.md`: public files must never link into it), so a commit
+serving a private issue carries no `Issue:`. Any miss blocks the commit with
 the bad name and the nearest basenames (prefix match on the date + first
 word) so a typo is a one-edit fix.
 
@@ -164,8 +172,8 @@ moves preserve it — treat several as one). Message format mirrors the
 mobile-contract block: what was wrong, the fix.
 
 **First implementation chunk.** `--check` mode + tests (found in open,
-found in closed, not found, private-issues symlink absent). No open
-questions.
+found in closed, not found, `Issue:` in body prose ignored, path/`.md` form
+blocked). No open questions.
 
 ### Track 3 — `bin/land --no-ff`
 
@@ -184,9 +192,11 @@ non-interactive. `.husky/post-commit` skips merge commits and
 `.husky/post-merge` deploys — verified by reading both before the change
 (`post-commit` "skips merge commits since post-merge handles those").
 
-**First implementation chunk.** The one-line change plus a doc-comment
-update in `bin/land`'s header explaining why `--no-ff`. Run `bin/land
---dry-run` in this worktree to confirm preflight still reports correctly.
+**First implementation chunk.** The merge line, plus every place that
+describes landing as a pure pointer move: `bin/land` header (`:2`, `:14-17`),
+the merge-ready comment (`:76-78`), the refusal text (`:162-165`), the
+success report (`:175`), and `bin/CLAUDE.md:58-74`. Run `bin/land --dry-run`
+in this worktree to confirm preflight still reports correctly.
 
 ### Track 4 — the reader, and the convention text
 
@@ -243,7 +253,7 @@ None. Each track's decisions are inline.
 |---|---|---|---|
 | A checkout without the hook file (history before this plan, or `HUSKY=0`) | no | commits proceed without trailers — today's state | silent by design |
 | Branch is not `worktree-*` (main, detached HEAD during rebase) | unit | no-op | silent (correct) |
-| Zero or several plans claim the stream | unit | `Plan:` omitted | silent; query `--plan` shows nothing for that stream |
+| Zero or several plans claim the stream | unit | `Plan:` omitted | silent at commit time; accepted — `--workstream` still finds the commits, and a stream with several active plans is itself the anomaly. `--check` could warn once; not in v1 |
 | Plan frontmatter unparseable | unit | one stderr line, exit 0 | clear, non-blocking |
 | `git interpret-trailers` missing/old | no | script errors → stderr, exit 0 | clear |
 | `Issue:` names no file | unit | block with suggestions | clear |
@@ -301,6 +311,7 @@ no-op.
   "ownership/intent"; reconciling the two is a later decision.
 - **Stamping `Plan:` when several plans claim a stream** — omitted rather
   than guessed.
+- **`Issue:` for private issues** — never validated or stamped; see Track 2.
 
 ## Open design questions
 
