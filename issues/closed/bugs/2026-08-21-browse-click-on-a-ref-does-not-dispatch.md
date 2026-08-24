@@ -6,7 +6,20 @@ labels: [harness]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — driving app controls from snapshot refs
+resolution: implemented
 ---
+
+**Closed 2026-08-24** — cause located and fixed on `main` (f89b7a45, workstream
+`browse-click`). agent-browser 0.27.0's `click` is a box-centre CDP mouse
+event with no preconditions, and `@eN` refs are renumbered on every snapshot
+(not in document order), so a number read off an older snapshot names a
+different valid element and the click lands there — `✓ Done`. `bin/browse`
+now annotates snapshots with the app's `cb-` ids, accepts them as targets, and
+refuses any action whose target is missing/hidden/disabled/covered/off-screen,
+with a reason (`browse/src/controls.ts`; `.claude/skills/browse/SKILL.md`).
+The walker prompt tells walkers to act by id. Not re-walked on `/admin`,
+`/questions`, `/inventory` specifically — those pages now carry ids for the
+controls named here.
 
 `bin/browse click @<ref>` exits 0 and prints its usual success output while the
 page does not change. Dispatching a DOM `.click()` on the same element through
