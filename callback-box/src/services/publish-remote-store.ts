@@ -38,7 +38,7 @@ export interface CloudflareApiErrorDetail {
 }
 
 /** An R2 request (list/get/put/delete) returned a non-success HTTP status. */
-export class R2RequestError extends Error {
+class R2RequestError extends Error {
   readonly op: string;
   readonly key: string;
   readonly status: number;
@@ -61,7 +61,7 @@ export class R2RequestError extends Error {
 }
 
 /** A requested object key does not exist in the store. */
-export class RemoteObjectNotFoundError extends Error {
+class RemoteObjectNotFoundError extends Error {
   readonly key: string;
   constructor(key: string) {
     super(`no such object: ${key}`);

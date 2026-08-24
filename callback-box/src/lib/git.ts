@@ -48,7 +48,7 @@ export {
   TOUCHPOINT_TRAILER_KEYS,
   FEEDBACK_TRAILER_KEYS,
 } from "./git-trailers.js";
-export { isNothingToCommitError, isContendedFailure, isStaleLockFailure, GitIndexLockError, CommitDidNotLandError } from "./git-internal.js";
+export { isNothingToCommitError, isContendedFailure, isStaleLockFailure } from "./git-internal.js";
 export { withBoxGitLock } from "./git-lock.js";
 export { getLogPaginated, getTrailerFacets } from "./git-log.js";
 export type {

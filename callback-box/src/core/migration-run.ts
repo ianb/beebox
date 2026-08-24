@@ -17,7 +17,7 @@ import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { errnoCode } from "../lib/error-guards.js";
 import { MANIFEST_PATH, MIGRATIONS, type ManifestEntry, type Migration } from "./migrations.js";
 
-export class ManifestReadError extends Error {
+class ManifestReadError extends Error {
   readonly manifestPath: string;
   constructor(manifestPath: string, cause: unknown) {
     super(`failed to read migration manifest: ${manifestPath}`, { cause });

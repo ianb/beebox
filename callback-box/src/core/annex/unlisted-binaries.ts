@@ -48,7 +48,7 @@ export const UNLISTED_BINARY_LIMIT_BYTES = 1024 * 1024;
  * staged blob commits anyway and the check reports success. So an incomplete
  * scan is an error the caller must surface, never an empty result.
  */
-export class UnlistedScanIncompleteError extends Error {
+class UnlistedScanIncompleteError extends Error {
   readonly relPath: string;
   constructor(relPath: string, cause: unknown) {
     super(`could not scan ${relPath} for unlisted binaries`, { cause });

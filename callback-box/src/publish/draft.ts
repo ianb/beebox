@@ -39,7 +39,7 @@ import {
 } from "./manifest.js";
 
 /** A source path resolves outside the box root — refuse rather than read it. */
-export class SourceEscapesBoxError extends Error {
+class SourceEscapesBoxError extends Error {
   readonly source: string;
   constructor(source: string) {
     super(`source path escapes the box: ${source}`);

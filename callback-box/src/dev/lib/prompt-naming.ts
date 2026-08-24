@@ -51,7 +51,7 @@ export function layerName(situation: string, rawLayerName: string): string {
   return `${situation}/${layerSlug(rawLayerName)}`;
 }
 
-export class NameCollisionError extends Error {
+class NameCollisionError extends Error {
   constructor(name: string) {
     super(`Prompt fragment name collision: "${name}" is used by more than one fragment`);
     this.name = "NameCollisionError";

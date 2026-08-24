@@ -147,7 +147,7 @@ export function isNothingToCommitError(err: unknown): boolean {
 const MAX_AUTO_STAGE_BYTES = 10 * 1024 * 1024;
 
 /** `git cat-file --batch-check` answered something other than one line per input. */
-export class GitBatchMismatchError extends Error {
+class GitBatchMismatchError extends Error {
   constructor(expected: number, received: number) {
     super(`git cat-file --batch-check returned ${received} lines for ${expected} paths`);
     this.name = "GitBatchMismatchError";
@@ -155,7 +155,7 @@ export class GitBatchMismatchError extends Error {
 }
 
 /** A git process spawned for a batch query exited non-zero. */
-export class GitBatchFailedError extends Error {
+class GitBatchFailedError extends Error {
   constructor(failure: { args: string[]; code: number | null; stderr: string }) {
     const status = failure.code === null ? "on a signal" : String(failure.code);
     super(`git ${failure.args.join(" ")} exited ${status}: ${failure.stderr.trim()}`);

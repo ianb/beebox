@@ -73,7 +73,7 @@ export interface FieldServer {
   stop(): Promise<void>;
 }
 
-export class FieldServerStartError extends Error {
+class FieldServerStartError extends Error {
   constructor({ port, reason, output }: { port: number; reason: string; output: string }) {
     super(`cb serve on port ${String(port)} ${reason}\n--- child output ---\n${output}`);
     this.name = "FieldServerStartError";
@@ -103,7 +103,7 @@ export async function allocateFreePort(): Promise<number> {
   });
 }
 
-export class FreePortError extends Error {
+class FreePortError extends Error {
   constructor(address: string) {
     super(`Could not read an assigned TCP port from a :0 listener (address was ${address})`);
     this.name = "FreePortError";

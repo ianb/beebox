@@ -112,7 +112,7 @@ export async function waitForHttp({ port, reqPath, timeoutMs, label }: WaitForHt
   throw new HttpReadinessTimeoutError({ label, reqPath, timeoutMs });
 }
 
-export class HttpReadinessTimeoutError extends Error {
+class HttpReadinessTimeoutError extends Error {
   constructor({ label, reqPath, timeoutMs }: { label: string; reqPath: string; timeoutMs: number }) {
     super(`${label} did not respond to HTTP GET ${reqPath} within ${timeoutMs}ms`);
     this.name = "HttpReadinessTimeoutError";

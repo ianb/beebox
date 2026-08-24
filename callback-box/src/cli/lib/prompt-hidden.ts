@@ -6,14 +6,14 @@
  * list) — prompting is the only interactive path.
  */
 
-export class NoTtyError extends Error {
+class NoTtyError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "NoTtyError";
   }
 }
 
-export class PromptCancelledError extends Error {
+class PromptCancelledError extends Error {
   constructor() {
     super("Secret entry cancelled.");
     this.name = "PromptCancelledError";

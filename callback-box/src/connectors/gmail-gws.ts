@@ -7,14 +7,14 @@ import type { GoogleAuthService } from "../services/google-auth.js";
 const READ_OPERATIONS = new Set(["get", "list", "getProfile"]);
 const READ_HELPERS = new Set(["+read", "+triage"]);
 
-export class UnsafeGwsCommandError extends Error {
+class UnsafeGwsCommandError extends Error {
   constructor(args: string[]) {
     super(`Rejected non-read-only gws command: ${args.join(" ")}`);
     this.name = "UnsafeGwsCommandError";
   }
 }
 
-export class GwsSignalExitError extends Error {
+class GwsSignalExitError extends Error {
   readonly signal: NodeJS.Signals;
 
   constructor(signal: NodeJS.Signals) {

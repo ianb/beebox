@@ -45,7 +45,7 @@ import type { TitleOwner } from "./state.js";
 const REJECTING_KINDS: ReadonlySet<LeakKind> = new Set<LeakKind>(["credential"]);
 
 /** Base class so callers can catch every husk-write failure at once. */
-export class HuskWriteError extends Error {
+class HuskWriteError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "HuskWriteError";

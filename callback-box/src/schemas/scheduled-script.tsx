@@ -18,13 +18,7 @@ import { DatetimeField, CronField, RruleField } from "./scheduled-script-fields.
 
 const { rrulestr } = rrulePkg;
 
-export {
-  InvalidDurationError,
-  UnknownDurationUnitError,
-  InvalidBudgetError,
-  parseDuration,
-  parseBudget,
-} from "./scheduled-script-duration.js";
+export { parseDuration, parseBudget } from "./scheduled-script-duration.js";
 
 // ============================================
 // Schema

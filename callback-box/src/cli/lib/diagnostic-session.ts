@@ -3,14 +3,14 @@
 import type { AgentEngine } from "../../core/box/config.js";
 import { loadHistoryEntries } from "../../core/chat/session/history.js";
 
-export class InvalidDiagnosticEngineError extends Error {
+class InvalidDiagnosticEngineError extends Error {
   constructor(value: string) {
     super(`Unknown session engine "${value}". Expected claude or codex.`);
     this.name = "InvalidDiagnosticEngineError";
   }
 }
 
-export class UnsupportedCodexSessionModeError extends Error {
+class UnsupportedCodexSessionModeError extends Error {
   constructor() {
     super(
       "Codex sessions support readable dialogue only; --raw, --tool-report, and --full require native rollout detail that app-server does not expose.",

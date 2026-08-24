@@ -96,7 +96,7 @@ export interface PubWorkerConfig {
 }
 
 /** Error shape for a `wrangler.jsonc` that doesn't parse or lacks the fields setup relies on. */
-export class PubWorkerConfigError extends Error {
+class PubWorkerConfigError extends Error {
   readonly detail: string;
   constructor(args: { detail: string }) {
     super(`pub-worker wrangler.jsonc is unusable: ${args.detail}`);

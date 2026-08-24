@@ -7,21 +7,21 @@ import { parseSdkSessionId } from "./session-id.js";
 
 export type SessionStorageState = "present" | "partial" | "absent";
 
-export class LexicallyUnsafeSessionContextError extends Error {
+class LexicallyUnsafeSessionContextError extends Error {
   constructor() {
     super("Chat context directory escapes the box");
     this.name = "LexicallyUnsafeSessionContextError";
   }
 }
 
-export class ResolvedUnsafeSessionContextError extends Error {
+class ResolvedUnsafeSessionContextError extends Error {
   constructor() {
     super("Chat context directory resolves outside the box");
     this.name = "ResolvedUnsafeSessionContextError";
   }
 }
 
-export class SessionStorageUnchangedError extends Error {
+class SessionStorageUnchangedError extends Error {
   constructor() {
     super("SDK session delete returned without removing local storage");
     this.name = "SessionStorageUnchangedError";

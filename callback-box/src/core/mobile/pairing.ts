@@ -48,7 +48,7 @@ export class DeviceStoreUnreadableError extends Error {
 
 /** Thrown when the device-store lock can't be acquired within the retry budget.
  *  A mutation fails loudly rather than proceeding unsynchronized. */
-export class MobileDeviceStoreLockError extends Error {
+class MobileDeviceStoreLockError extends Error {
   constructor(readonly lockPath: string) {
     super(`Could not acquire the mobile device-store lock at ${lockPath} within the retry budget`);
     this.name = "MobileDeviceStoreLockError";

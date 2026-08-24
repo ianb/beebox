@@ -115,7 +115,7 @@ export const IsoDuration = z
 const ISO_8601_DURATION_CAPTURE =
   /^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?)?$/;
 
-export class InvalidIso8601DurationError extends Error {
+class InvalidIso8601DurationError extends Error {
   constructor(value: string) {
     super(`Invalid ISO-8601 duration: "${value}"`);
     this.name = "InvalidIso8601DurationError";

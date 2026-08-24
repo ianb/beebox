@@ -126,7 +126,7 @@ Return a single JSON object: {"pages": [ ...one object per page, in index order.
 
 /** The model's enumeration must be internally consistent: `slots.length ===
  *  slot_count` and slot numbers exactly `1..slot_count`. */
-export class ScanSlotInvariantError extends ScanVisionBatchError {
+class ScanSlotInvariantError extends ScanVisionBatchError {
   constructor({ index, usage, costUsd }: { index: number; usage: BatchUsage | null; costUsd: number | null }) {
     super(`page ${String(index)} broke the slot invariant (slot_count vs slots numbering)`, {
       retry: "split",
@@ -138,7 +138,7 @@ export class ScanSlotInvariantError extends ScanVisionBatchError {
 }
 
 /** The SDK returned an error result (or a success we cannot use). */
-export class ClaudeScanFailedError extends ScanVisionBatchError {
+class ClaudeScanFailedError extends ScanVisionBatchError {
   constructor({
     detail,
     retry,
@@ -156,7 +156,7 @@ export class ClaudeScanFailedError extends ScanVisionBatchError {
 }
 
 /** `structured_output` did not match the generated wire schema. */
-export class ClaudeScanSchemaError extends ScanVisionBatchError {
+class ClaudeScanSchemaError extends ScanVisionBatchError {
   constructor({ detail, usage, costUsd }: { detail: string; usage: BatchUsage | null; costUsd: number | null }) {
     super(`Claude scan output failed schema validation: ${detail}`, { retry: "split", usage, costUsd });
     this.name = "ClaudeScanSchemaError";
@@ -164,7 +164,7 @@ export class ClaudeScanSchemaError extends ScanVisionBatchError {
 }
 
 /** The query stream ended without ever yielding a result message. */
-export class ClaudeScanNoResultError extends ScanVisionBatchError {
+class ClaudeScanNoResultError extends ScanVisionBatchError {
   constructor() {
     super("Claude scan query ended without a result message", { retry: "fatal" });
     this.name = "ClaudeScanNoResultError";
@@ -172,7 +172,7 @@ export class ClaudeScanNoResultError extends ScanVisionBatchError {
 }
 
 /** The SDK subprocess itself could not run (spawn/auth-level failure). */
-export class ClaudeScanSubprocessError extends ScanVisionBatchError {
+class ClaudeScanSubprocessError extends ScanVisionBatchError {
   constructor({ detail, cause }: { detail: string; cause: unknown }) {
     super(`Claude scan subprocess failed: ${detail}`, { retry: "fatal", cause });
     this.name = "ClaudeScanSubprocessError";

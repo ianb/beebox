@@ -57,7 +57,7 @@ export interface CodexSdkSessionLike {
 
 export type CodexSdkSessionFactory = (options: CodexSdkSessionOptions) => CodexSdkSessionLike;
 
-export class CodexImageInputError extends Error {
+class CodexImageInputError extends Error {
   readonly status: number;
 
   constructor(status: number) {
@@ -67,7 +67,7 @@ export class CodexImageInputError extends Error {
   }
 }
 
-export class CodexSdkMissingThreadIdError extends Error {
+class CodexSdkMissingThreadIdError extends Error {
   constructor() {
     super("Codex SDK stream did not provide a thread ID");
     this.name = "CodexSdkMissingThreadIdError";
@@ -80,14 +80,14 @@ export class CodexSdkMissingThreadIdError extends Error {
  * that break surfaces under its own name instead of as a `TypeError` from the
  * first property read on the missing thread.
  */
-export class CodexSdkNoThreadError extends Error {
+class CodexSdkNoThreadError extends Error {
   constructor(resumed: boolean) {
     super(`Codex SDK returned no thread from ${resumed ? "resumeThread" : "startThread"}`);
     this.name = "CodexSdkNoThreadError";
   }
 }
 
-export class CodexSdkTurnTimeoutError extends Error {
+class CodexSdkTurnTimeoutError extends Error {
   constructor() {
     super("Codex SDK turn did not complete before the timeout");
     this.name = "CodexSdkTurnTimeoutError";

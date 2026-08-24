@@ -31,7 +31,7 @@ import {
 } from "../capture/staging-store.js";
 
 /** The staging session named for bulk preparation is not a `kind: "bulk"` session. */
-export class NotABulkSessionError extends Error {
+class NotABulkSessionError extends Error {
   constructor(id: string) {
     super(`Staging session ${id} is not a bulk-upload session`);
     this.name = "NotABulkSessionError";
@@ -39,7 +39,7 @@ export class NotABulkSessionError extends Error {
 }
 
 /** A batch's resolved directory escapes the box root (poisoned `contextDir`). */
-export class BulkBatchPathError extends Error {
+class BulkBatchPathError extends Error {
   constructor(batchRelDir: string) {
     super(`Bulk batch dir escapes the box root: ${batchRelDir}`);
     this.name = "BulkBatchPathError";

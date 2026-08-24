@@ -54,7 +54,7 @@ export function defaultCheckReady(params: { port: number; label: string }): Prom
   return waitForHttp({ port: params.port, reqPath: "/healthz", timeoutMs: READY_TIMEOUT_MS, label: params.label });
 }
 
-export class BoxResolutionError extends Error {
+class BoxResolutionError extends Error {
   constructor(entryPath: string) {
     super(
       "Configured box path " + entryPath + " has no .cb-box marker at itself or at its " +

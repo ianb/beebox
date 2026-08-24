@@ -110,7 +110,7 @@ export interface FakeGmailState {
 }
 
 /** The state file is missing, unparseable, or does not match the format. */
-export class FakeGmailStateError extends Error {
+class FakeGmailStateError extends Error {
   constructor({ statePath, detail }: { statePath: string; detail: string }) {
     super(`Fake Gmail state ${statePath}: ${detail}`);
     this.name = "FakeGmailStateError";
@@ -119,7 +119,7 @@ export class FakeGmailStateError extends Error {
 
 /** A message id already present in the mailbox — injecting it again would give
  *  the fake two messages answering to one `getMessage()`. */
-export class FakeGmailDuplicateMessageError extends Error {
+class FakeGmailDuplicateMessageError extends Error {
   constructor(id: string) {
     super(`Fake Gmail state already contains message "${id}"`);
     this.name = "FakeGmailDuplicateMessageError";

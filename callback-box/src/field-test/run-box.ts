@@ -50,7 +50,7 @@ export interface FieldBox {
   slug: string;
 }
 
-export class FieldBoxInitError extends Error {
+class FieldBoxInitError extends Error {
   constructor({ packageRoot, exitCode, output }: { packageRoot: string; exitCode: number | undefined; output: string }) {
     super(
       `cb init ${packageRoot} failed (exit ${exitCode === undefined ? "unknown" : String(exitCode)}):\n${output}`
@@ -59,7 +59,7 @@ export class FieldBoxInitError extends Error {
   }
 }
 
-export class FieldBoxExistsError extends Error {
+class FieldBoxExistsError extends Error {
   constructor(packageRoot: string) {
     super(
       `${packageRoot} already exists — a field run must create its box from nothing ` +

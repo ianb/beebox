@@ -109,7 +109,7 @@ function delay(ms: number): Promise<void> {
  * budget. Signals real contention (another process holding the lock for
  * seconds), not a transient collision — those are absorbed by the retry loop.
  */
-export class TransientStateLockError extends Error {
+class TransientStateLockError extends Error {
   readonly lockPath: string;
   constructor(lockPath: string) {
     super(`transient state lock could not be acquired: ${lockPath}`);
