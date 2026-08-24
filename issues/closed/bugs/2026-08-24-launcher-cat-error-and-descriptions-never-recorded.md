@@ -18,9 +18,19 @@ discovered-in: main session — boxholder noticed an error on every workstream s
 > `cat: "": No such file or directory`, the new one is silent when empty and
 > yields the text when set.
 >
-> Not backfilled: workstreams launched before this still have no `description`
-> in the registry, and the value is not recoverable from anywhere. New launches
-> record it.
+> **Backfilled**, through `session_registry_merge` so the lock protocol held:
+> 44 of 57 registry entries, from three sources in descending trustworthiness —
+> the exact `--description` strings passed during this session (10), the `title:`
+> of a plan doc carrying that `workstream:` (17), and the `title:` of an owned
+> issue (17, suffixed `(+N more issues)` where a stream owns several). The
+> remaining 13 had no authored source and were left blank rather than invented:
+> `browse-ws-auth`, `chat-bookkeeping`, `cloud-env`, `exit-dialog-probe`,
+> `file-visualizer`, `github-pages-site`, `ios-clear-mic`, `lint-speedup`,
+> `demo-schedules`, `streaming-scroll`, `tiddlywiki-research`,
+> `tiling-backgrounds`, `workstreams-rehearsal`.
+>
+> Note the derived two-thirds are approximations: an issue title describes a
+> problem, not a stream's scope. Good enough for routing, not authoritative.
 
 Every workstream startup prints a `cat` error. It looks cosmetic. It is the
 visible half of a bug that has silently disabled the workstream **description**
