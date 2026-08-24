@@ -468,6 +468,14 @@ removes the git worktree itself there), `wt_trash_reap` — and `wt_log` (the
 shared `worktree-cleanup.log`, labeled per caller). Sweep counts a live `codex`
 process whose cwd is in a worktree as an active session, same as claude.
 
+**Auto-sweep is submitted, not merely backgrounded.** SessionStart, SessionEnd,
+and codex teardown call `.claude/hooks/auto-sweep.sh`; on macOS its trigger mode
+submits a uniquely labeled one-shot launchd worker and returns before sweep. A
+request marker plus a whole-sweep kernel lock coalesces overlapping triggers
+without dropping the trailing request. Worker logs always pair `SUBMITTED`,
+`START`, and `END status=…` when they reach those phases, and its EXIT trap
+removes the launchd label so the submitted job cannot respawn as a daemon.
+
 **Detecting a live agent process: use `ps -axo pid=,comm=`, never `pgrep -x
 claude`.** pgrep matches the 16-char accounting name (`ps ucomm`), and a
 native-installed Claude Code reports that as its _version_ (`2.1.221`), not

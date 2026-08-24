@@ -471,7 +471,7 @@ wt_trash_reap() {
   # An unmatched glob stays literal; nothing to reap.
   [ -e "${entries[0]}" ] || return 0
   nohup sh -c 'for p in "$@"; do chmod -R u+w "$p" 2>/dev/null || true; rm -rf "$p"; done' \
-    sh "${entries[@]}" 198>&- >/dev/null 2>&1 &
+    sh "${entries[@]}" 197>&- 198>&- 199>&- >/dev/null 2>&1 &
   disown 2>/dev/null || true
   return 0
 }
