@@ -36,6 +36,14 @@ problem. Two things worth checking in `record.tsx`'s `instructions`:
   price, or count" — accurate and general, and general is the problem. Nothing
   connects it to the commonest inventory question there is, "how many do I
   have", so a count reads as prose-worthy detail rather than a field.
+- **The name is part of it.** "Measures" reads as measurements — dimensions,
+  weights, a thing's size — not as "four of them". The boxholder, who knew a
+  quantity field existed, did not expect it to be called this. If the field the
+  agent should reach for when counting is named after measuring, reaching for it
+  requires a translation step that prose does not. Worth considering alongside
+  the wider vocabulary work
+  ([implementation-vocab-leaks-into-ui](2026-08-08-implementation-vocab-leaks-into-ui.md)),
+  since renaming a schema field is a migration, not a wording change.
 - The walk's agent described its plan as "one card for glue sticks, qty 4" and
   offered a card type "with location and quantity fields". It knew the intent.
   It populated `measures` for that item and then largely stopped.

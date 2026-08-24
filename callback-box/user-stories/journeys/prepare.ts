@@ -48,7 +48,7 @@ interface Asset { file: string, described_as: string }
 interface Journey {
   id: string
   title: string
-  box: { slug: string, base: string, setup?: string | null }
+  box: { base: string, setup?: string | null }
   assets?: Asset[]
   sittings?: number
   budget_actions?: number
@@ -79,7 +79,7 @@ const journey = parsed as unknown as Journey;
 for (const required of ["id", "title", "situation"] as const) {
   if (typeof journey[required] !== "string") fail(`${specPath}: missing ${required}`);
 }
-if (!isRecord(journey.box) || typeof journey.box.slug !== "string") fail(`${specPath}: box.slug is required`);
+if (!isRecord(journey.box)) fail(`${specPath}: box is required`);
 
 // Check every asset before creating or writing anything: a run that dies
 // half-provisioned leaves a box served and an .env edited for a journey that never ran.
@@ -101,7 +101,22 @@ mkdirSync(join(runDir, "shots"), { recursive: true });
 mkdirSync(join(runDir, "assets"), { recursive: true });
 
 // --- the box -------------------------------------------------------------------
-const boxDir = join(BOXES_ROOT, journey.box.slug);
+/**
+ * Each run gets its OWN box directory, named after the run.
+ *
+ * Claude Code keys transcripts by working directory, so a box path reused across
+ * runs collects every previous walk's conversations in a place no box wipe can
+ * reach (`~/.claude/projects/<path-with-dashes>/`). The app backfills a chat husk
+ * per transcript, and the "fresh" box opens carrying strangers' chats; the same
+ * files skew `agentTiming`, which reads every transcript in the directory. A
+ * walker on 2026-08-24 reported both as product faults.
+ *
+ * A unique path makes both impossible by construction rather than by cleanup.
+ * Old boxes are left alone — they hold the commits a past walk produced, and
+ * deleting a completed walk's evidence to save disk is not this script's call.
+ */
+const boxSlug = basename(runDir);
+const boxDir = join(BOXES_ROOT, boxSlug);
 if (existsSync(boxDir)) {
   // git-annex stores its objects read-only, and read-only files inside read-only
   // directories defeat rmSync — so reprovisioning a box that has been annexed once
@@ -230,7 +245,7 @@ const template = readFileSync(join(HERE, "walker-prompt.md"), "utf8")
   .replace("{{SITUATION}}", journey.situation.trim())
   .replace("{{ASSETS}}", assetLines)
   .replace("{{BUDGET}}", String(journey.budget_actions ?? 60))
-  .replaceAll("{{BOX_SLUG}}", journey.box.slug)
+  .replaceAll("{{BOX_SLUG}}", boxSlug)
   .replaceAll("{{BOX_CONTENT}}", content)
   .replace("{{SHOTS}}", join(runDir, "shots"))
   .replace("{{NOTES}}", join(runDir, "notes.md"))
@@ -277,17 +292,51 @@ if (warnings.length > 0) {
 }
 
 // --- the before-snapshot --------------------------------------------------------
+/**
+ * Warn when the walk will meet a login wall the walker cannot climb.
+ *
+ * Owner-gated surfaces — capture is the big one — resolve an identity from a
+ * session cookie and answer 401 without one (`capture-request-owner.ts`). The
+ * browse key is not the box owner, so a walk driven by the key alone finds
+ * capture dead, its mic and finalize permanently disabled, and no explanation on
+ * screen. The 2026-08-24 walker reported that as the product being broken.
+ *
+ * Auth is always on by design (`openAccess` throws on a listening server), so
+ * the fix is a saved browse login, which needs a credential only the boxholder
+ * can give. This does not invent one; it says the run will be blind to capture
+ * so that nobody reads the resulting notes as a product finding.
+ */
+const authProfiles = execFileSync(join(MONO_ROOT, "bin", "browse"), ["auth", "list"], { encoding: "utf8" });
+const captureBlind = authProfiles.includes("No auth profiles saved");
+if (captureBlind) {
+  console.log("");
+  console.log("! no browse login saved — this walk cannot reach capture or anything else owner-gated.");
+  console.log("  It will see 401s and disabled controls there, and those are NOT product findings.");
+  console.log("  To fix: bin/browse auth save <name> --url <box url> --username <email> --password <pw>");
+  console.log("");
+}
+
 const head = execFileSync("git", ["-C", boxDir, "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
 writeFileSync(join(runDir, "before.json"), `${JSON.stringify({
   journey: journey.id,
   startedIso: new Date().toISOString(),
   box: boxDir,
-  url: `http://localhost:3210/${WORKTREE}/${journey.box.slug}/`,
+  url: `http://localhost:3210/${WORKTREE}/${boxSlug}/`,
   headBefore: head,
+  captureBlind,
 }, null, 2)}\n`);
 
+// Boxes accumulate, one per run, and nothing prunes them — a past walk's box holds
+// the commits that walk produced, and deciding they are worth less than the disk is
+// the boxholder's call, not this script's. Reporting the footprint is how that call
+// stays informed rather than arriving as a surprise.
+const siblings = readdirSync(BOXES_ROOT).filter((d) => d.startsWith(`${journey.id}-`));
+if (siblings.length > 1) {
+  const used = execFileSync("du", ["-sh", BOXES_ROOT], { encoding: "utf8" }).split("\t")[0]?.trim() ?? "?";
+  console.log(`boxes    ${String(siblings.length)} runs of ${journey.id} kept (${used} total in ${BOXES_ROOT})`);
+}
 console.log(`box      ${boxDir}`);
-console.log(`url      http://localhost:3210/${WORKTREE}/${journey.box.slug}/`);
+console.log(`url      http://localhost:3210/${WORKTREE}/${boxSlug}/`);
 console.log(`assets   ${assets.length}`);
 console.log(`run      ${runDir}`);
 console.log(`prompt   ${join(runDir, "prompt.md")}`);

@@ -22,7 +22,6 @@ The yaml holds the world and the words:
 
 | Field | |
 |---|---|
-| `box.slug` | the box gets its own, served at `/<worktree>/<slug>/` |
 | `box.base` | `empty` prunes a clone to the package skeleton; or a path to clone whole |
 | `box.setup` | optional shell run with `$BOX` = the content root, before the person arrives |
 | `assets` | files plus a plain description of what each one is to them |
