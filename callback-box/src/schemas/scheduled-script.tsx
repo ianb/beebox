@@ -330,7 +330,7 @@ export interface ScheduledScriptTemplateOptions {
   requires?: string[];
 }
 
-export class InvalidScheduledScriptTemplateError extends Error {
+class InvalidScheduledScriptTemplateError extends Error {
   constructor(issues: string) {
     super(`createScheduledScriptTemplate produced an invalid card: ${issues}`);
     this.name = "InvalidScheduledScriptTemplateError";
