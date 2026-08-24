@@ -1,6 +1,6 @@
 ---
 title: "`cb health` reports a procedure as failing when only its review step ran out of turns"
-workstream: unattached
+workstream: honest-diagnostics
 area: callback-box
 labels: [health, procedures]
 filed-by: agent

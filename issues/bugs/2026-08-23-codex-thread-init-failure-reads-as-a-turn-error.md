@@ -1,6 +1,6 @@
 ---
 title: "A codex thread that fails to start is reported as a failed turn reading \"Cannot read properties of undefined (reading 'id')\""
-workstream: unattached
+workstream: honest-diagnostics
 area: callback-box
 priority: important
 labels: [codex, chat, diagnostics]

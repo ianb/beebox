@@ -1,6 +1,6 @@
 ---
 title: "A parked template update is invisible in `cb health`, so a fix can land upstream five times and never reach the box"
-workstream: unattached
+workstream: honest-diagnostics
 area: callback-box
 priority: important
 labels: [templates, health, boxes]

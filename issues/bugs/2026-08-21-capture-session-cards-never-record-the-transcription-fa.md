@@ -1,6 +1,6 @@
 ---
 title: "capture-session cards never record the transcription-failed flag their schema documents"
-workstream: unattached
+workstream: honest-diagnostics
 area: callback-box
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — user-story catalog verification
