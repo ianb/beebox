@@ -82,7 +82,7 @@ design: ../../callback-box/docs/plans/foo.md   # link once a design/plan exists
 area: callback-box            # callback-box | router | vibe-check | clerk | docs | ...
 labels: [soft-launch]         # optional cross-cutting tags (kebab-case, multiple allowed)
 priority: important           # important | normal | backlog; omitted is uncategorized
-next-action: discuss          # discuss | reconfirm | duplicate | invalid | fixed | verify-without-me
+next-action: discuss          # discuss | reconfirm | duplicate | invalid | fixed | manually-confirmed | verify-without-me
 filed-by: agent               # omit when the developer filed it
 discovered-by: Ian            # person or agent that first identified the issue
 discovered-in: worktree-foo — while doing X    # workstream/context provenance
@@ -192,11 +192,11 @@ agent-facing docs and skills as much as to shipped source.
   honest state for a freshly filed issue and is a filter they can work through.
   Write the field only when they say what it is, or when they ask you to record a
   priority they have already given.
-- `next-action:` says what should happen before implementation begins. It is
-  separate from priority.
+- `next-action:` says what should happen next before the issue leaves the queue.
+  It is separate from priority.
 
-  **This field is the developer's, and it is how they hand an idea back to an agent.** He
-  reads the queue, forms a suspicion about an item, and writes it here for
+  **This field is the developer's, and it is how they hand an idea back to an agent.** They
+  read the queue, form a suspicion about an item, and write it here for
   whoever picks it up next — so in practice they set every value, and an agent's
   job is to answer the tag rather than to write one. (The `discuss` carve-out
   below is the sole exception, and it is deliberately narrow.) Reading a tag as
@@ -204,7 +204,7 @@ agent-facing docs and skills as much as to shipped source.
   one moment they had the whole queue in view, addressed to you.
 
   `discuss` means bring the issue to the developer for discussion;
-  do not start implementing it. The remaining values ask the next agent to
+  do not start implementing it. The provisional values ask the next agent to
   verify a suspected outcome and apply it only when the evidence confirms it.
   The issue browser renders those values with question marks to keep their
   provisional meaning visible: `reconfirm` means reassess whether the issue is
@@ -213,6 +213,12 @@ agent-facing docs and skills as much as to shipped source.
   confirm that the reported behavior is already resolved. A matching tag is not
   permission to close blindly. Remove the field after acting on it or disproving
   it; remove `discuss` after the discussion produces a disposition.
+- `next-action: manually-confirmed` is authoritative, not provisional. It means
+  the developer personally confirmed that the fix applies. Read the issue once
+  to ensure the confirmation covers the whole item, then close it as
+  `implemented` without repeating the manual check. If the issue carries
+  `needs: [manual-testing]`, this tag is the developer's explicit clearance to
+  remove that gate as part of closing the issue.
 - `next-action: verify-without-me` applies to `needs: [manual-testing]` items.
   It says the human gate is not going to close — they cannot reproduce the failure on demand, or the test is not
   worth their time — so stop waiting on it and settle the issue on whatever
@@ -350,7 +356,7 @@ worth keeping that's outside your current task: check for an existing item, pick
 category, then file with `title:`, `workstream: unattached`, `filed-by: agent`,
 `discovered-by:` (the actual source), and `discovered-in:` (your worktree and
 what you were doing), and move on. Leave `priority:` off — see above; it is
-The developer's call, not yours. Set
+the developer's call, not yours. Set
 `workstream:` to the current workstream only when it has explicitly taken
 responsibility for resolving the issue. Don't fix out-of-scope things in place,
 and don't file trivia you'd be embarrassed to see triaged. Set `next-action:

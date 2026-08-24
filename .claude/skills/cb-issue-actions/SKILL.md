@@ -1,12 +1,13 @@
 ---
 name: cb-issue-actions
-description: Work the issue queue's `next-action:` tags — discussion flags, provisional agent tasks, and released manual-testing gates (discuss, reconfirm, duplicate, invalid, fixed, verify-without-me). Use when the human says "work the next actions", "go through the reconfirms", "check the issues tagged fixed", "triage the queue", or when you want to find issues that need a disposition. Includes extraction scripts. Conventions in issues/CLAUDE.md.
+description: Work the issue queue's `next-action:` tags — discussion flags, provisional agent tasks, confirmed fixes, and released manual-testing gates (discuss, reconfirm, duplicate, invalid, fixed, manually-confirmed, verify-without-me). Use when the human says "work the next actions", "go through the reconfirms", "check the issues tagged fixed", "triage the queue", or when you want to find issues that need a disposition. Includes extraction scripts. Conventions in issues/CLAUDE.md.
 ---
 
 # Working `next-action:` tags
 
-`next-action:` says what must happen before implementation begins. `discuss`
-routes an issue to the developer; the other values are **provisional agent tasks** where
+`next-action:` says what must happen next before an issue leaves the queue. `discuss`
+routes an issue to the developer; `manually-confirmed` records a completed human
+check; the other values are **provisional agent tasks** where
 someone suspects an outcome and is asking the next agent to check it.
 
 **The developer writes these tags — effectively all of them.** The field is how they hand
@@ -61,7 +62,7 @@ grep -rh "^next-action:" issues --include='*.md' \
 ```
 
 One value only (substitute `discuss` / `reconfirm` / `duplicate` / `invalid` /
-`fixed` / `verify-without-me`):
+`fixed` / `manually-confirmed` / `verify-without-me`):
 
 ```bash
 grep -rl "^next-action: *reconfirm" issues --include='*.md' | grep -v CLAUDE.md
@@ -142,6 +143,12 @@ git log --oneline --since='<issue date>' -- <the file the issue names>
 
 Then confirm the behavior rather than trusting a commit that reads like the fix.
 Close with `resolution: implemented` naming the resolving commit.
+
+**`manually-confirmed` — the developer confirmed the fix.** This value is an
+assertion, not a question and not a request to repeat the manual test. Read the
+issue once to make sure the confirmation covers the whole item, then close it
+as `implemented`. When it carries `needs: [manual-testing]`, this tag is the
+developer's explicit permission to clear that gate as part of closing it.
 
 ## Verification bar
 
