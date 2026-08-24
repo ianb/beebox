@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-08-24T01:38:21Z
-Total documents: 293
+Generated: 2026-08-24T05:15:36Z
+Total documents: 294
 
 ## Issues
 
@@ -148,6 +148,7 @@ Referenced by:
 - docs/implemented-plans/user-location.md:261 (mention) — CLAUDE.md default; the raw-route carve-out doesn't apply. (An earlier
 - docs/implemented-plans/view-render-testing.md:264 (mention) — of the orphan-prone dev machinery in CLAUDE.md — no router, no Vite, no Fastify,
 - docs/implemented-plans/web-push-notifications.md:198 (mention) — prune both write it; CLAUDE.md *"All cross-process locks go through ...file-lock.ts"*).
+- docs/implemented-plans/webapp-production-mode.md:38 (mention) — - `CLAUDE.md:107-110`: read before writing, prefer doctests, and retain raw
 - docs/implemented-plans/websocket-chat-transport.md:236 (mention) — and it reuses the framework we're already deep in (CLAUDE.md's "tRPC by
 - docs/implemented-plans/workstreams.md:745 (mention) — root CLAUDE.md "Commit docs WITH hooks"), so schema enforcement lands in
 - docs/knowledge-audits.md:19 (mention) — - After touching CLAUDE.md, schemas, prompts, or anything that changes what an agent should know.
@@ -193,7 +194,7 @@ Referenced by:
 - ../.claude/skills/cross-model/SKILL.md:38 (mention) — - Root `CLAUDE.md` mandates it for anything bigger than a small-scope bug fix,
 - ../.claude/skills/doctest/SKILL.md:19 (mention) — test, per `callback-box/CLAUDE.md`). Write prose, then fenced examples.
 - ../.claude/skills/knowledge-audit/SKILL.md:3 (mention) — description: Explains callback-box's knowledge-audit harness — YAML-defined tests that prompt a real box agent and check
-- ../.claude/skills/launch-worktree-session/SKILL.md:158 (mention) — AGENTS.md mirrors rather than CLAUDE.md, and its cross-model review command
+- ../.claude/skills/launch-worktree-session/SKILL.md:189 (mention) — AGENTS.md mirrors rather than CLAUDE.md, and its cross-model review command
 - ../CLAUDE.md:5 (mention) — - **callback-box/** — Main system. See its CLAUDE.md for details. (Card primitives that used to live in the separate `ca
 - ../bin/CLAUDE.md:5 (mention) — always-relevant summary lives in the root CLAUDE.md; this file is the mechanism.
 - ../issues/CLAUDE.md:125 (mention) — said that. This restates the broader rule in `callback-box/CLAUDE.md` ("Keep
@@ -206,6 +207,7 @@ Referenced by:
 - ../issues/closed/bugs/2026-08-23-procedure-model-pins-are-claude-only.md:145 (mention) — [AGENTS.md missing from the CLAUDE.md special-cases](2026-08-22-agents-md-missing-from-claude-md-special-cases.md),
 - ../issues/closed/code-quality/2026-07-04-fake-agent-single-export-split.md:15 (mention) — not a global weakening, per the CLAUDE.md lint policy). The blast radius was 6
 - ../issues/closed/code-quality/2026-07-16-personal-vibe-check-typecheck-no-inputs.md:25 (mention) — failure for a loud one. Note `CLAUDE.md` claims "the repo lints itself", which
+- ../issues/closed/decisions/2026-05-27-bin-browse-wrapper-future.md:21 (mention) — - **Replace the rewriting with a `BASE_PATH.txt` file** that holds the current worktree's URL prefix (e.g. `http://local
 - ../issues/closed/decisions/2026-07-07-categorize-issues-into-subdirectories.md:86 (mention) — Note: `issues/CLAUDE.md` and the root `CLAUDE.md`'s "issue queue" pointer both
 - ../issues/closed/decisions/2026-07-07-cb-render-vs-bin-browse.md:56 (mention) — `suppressHydrationWarning`); and references in `CLAUDE.md`, `frontend.md`,
 - ../issues/closed/decisions/2026-08-05-email-storage-api-vs-file-based.md:59 (link) — [cb-context](../../../callback-box/CLAUDE.md) concern as much as a code one).
@@ -218,7 +220,6 @@ Referenced by:
 - ../issues/code-quality/2026-08-08-audit-cb-subcommand-surface.md:62 (mention) — - **Box guidance references command names.** Box `CLAUDE.md`s, schema
 - ../issues/code-quality/2026-08-08-extract-cb-serve-from-the-box-cli.md:54 (mention) — `callback-box/CLAUDE.md`.
 - ../issues/code-quality/2026-08-17-cb-init-prints-a-screenful-on-every-run.md:33 (mention) — (root `CLAUDE.md`, "Treat noisy command output as a bug").
-- ../issues/decisions/2026-05-27-bin-browse-wrapper-future.md:12 (mention) — - **Replace the rewriting with a `BASE_PATH.txt` file** that holds the current worktree's URL prefix (e.g. `http://local
 - ../issues/docs-and-chores/2026-05-21-fill-out-the-glossary.md:20 (mention) — Method: do one sweep through `CLAUDE.md`, `FRONTEND.md`, the schemas, and `docs/` collecting terms-of-art, then write en
 - ../issues/docs-and-chores/2026-05-26-dev-scripts-into-bin.md:14 (mention) — CLAUDE.md files is still untouched and stays open here.
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:8 (mention) — Still-open items from the 2026-04-28 CLAUDE.md self-audit
@@ -402,6 +403,7 @@ Referenced by:
 - docs/implemented-plans/todo-annotation.md:59 (mention) — - `callback-box/code-style.md` — exhaustiveness (`assertNever` over status),
 - docs/implemented-plans/user-location.md:66 (mention) — - `callback-box/code-style.md` — no default parameters, max 2 positional
 - docs/implemented-plans/view-render-testing.md:34 (mention) — - `callback-box/code-style.md` — no `any`; custom error classes not
+- docs/implemented-plans/webapp-production-mode.md:40 (mention) — - `code-style.md:88-89`: resolve optional values inside function bodies and
 - docs/implemented-plans/webpage-card-and-commentary.md:54 (mention) — - `callback-box/code-style.md` — no optional chaining, no default params,
 - docs/implemented-plans/websocket-chat-transport.md:78 (mention) — - `callback-box/code-style.md:` no `any`, no default params, max 2 positional
 - docs/plans/agent-points-at-ui.md:64 (mention) — - `callback-box/code-style.md` — no default parameters, max two positional
@@ -439,6 +441,7 @@ Referenced by:
 - ../issues/code-quality/2026-07-06-engine-dev-knowledge-audits.md:17 (mention) — and the rest of `docs/engineering-principles.md` / `code-style.md`.
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:10 (mention) — folded into `code-style.md`, `frontend.md`, `docs/maintenance.md`, and
 - ../issues/exploration/2026-07-18-directory-scoped-rules-vs-generated-claude-md.md:31 (at-include) — - Engine side: `callback-box/CLAUDE.md:174` uses `@code-style.md` (an @-include of a
+- ../issues/exploration/2026-08-24-agent-md-article-ideas.md:26 (mention) — >   line in `code-style.md`, or both; not whether to adopt the idea.
 - ../research/external-skills-harvest.md:14 (mention) — of that in CLAUDE.md, code-style.md, frontend.md, the Laws, and our skills
 
 References:
@@ -539,7 +542,7 @@ References:
 
 #### deploy/README.md
 
-Title: "Deploy" | 437 lines
+Title: "Deploy" | 449 lines
 
 Referenced by:
 - CLAUDE.md:19 (mention) — **Deploy** — auto-deploys on `main` commits only (root CLAUDE.md). Prod runs a resident `cb hub` routing `/<slug>/...` t
@@ -552,14 +555,16 @@ Referenced by:
 - docs/implemented-plans/pub-setup-wrangler.md:161 (mention) — resume issue, and retire the `~/.cb-publish.env` mentions in `deploy/README.md`.
 - docs/implemented-plans/tailscale-expose-and-protect.md:104 (mention) — `cb hub` on the live server (hand-migrated; `deploy/README.md:85` records
 - docs/implemented-plans/web-push-notifications.md:189 (mention) — in the dev shell env. Document in `deploy/README.md`.
+- docs/implemented-plans/webapp-production-mode.md:233 (mention) — `deploy/README.md` to document the temporary unit override plus the durable
 - docs/plans/docs-reorg.md:129 (mention) — internals (already covered by `deploy/README.md`). Its dev-server section
 - docs/plans/installation-story.md:285 (mention) — enumeration is `deploy/README.md` prose, which wrongly lists
 - docs/plans/operator-member-password-reset.md:489 (mention) — - Update `deploy/README.md`, `docs/docker-install.md`, and
-- docs/security-report.md:216 (mention) — | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require
+- docs/security-report.md:218 (mention) — | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require
 - docs/server-operations.md:3 (link) — Reference for the running callback-box server (production at `box.example.com`). For initial provisioning scripts see [`
 - user-stories/catalog/2026-08-21.md:4646 (mention) — **Code check** — NotificationsSection.tsx (rendered from src/frontend/src/pages/AdminPage.tsx line 44) runs detectSuppor
 - ../issues/bugs/2026-07-18-canvas-loop-figure-post-merge-followup.md:87 (mention) — succeeded via `deploy/README.md`'s health runbook).
 - ../issues/bugs/2026-08-17-add-box-script-targets-a-service-that-no-longer-exists.md:38 (mention) — the box. `deploy/README.md:119-126` documents this as a known gap and says to
+- ../issues/closed/bugs/2026-08-21-trpc-errors-return-a-server-stack-trace.md:43 (mention) — (`callback-box/deploy/README.md:91-101`, `:243-248`). The hub copies
 - ../issues/closed/code-quality/2026-04-11-switch-deploy-rsync-to-git-push.md:18 (mention) — once deploy-info is guaranteed correct. Mechanism docs: `deploy/README.md`;
 - ../issues/code-quality/2026-07-04-web-push-followup-testing.md:52 (mention) — Documented in `callback-box/deploy/README.md` → "Web Push (VAPID) keys". Until
 - ../issues/code-quality/2026-08-07-deploy-infra-drift-setup-server-not-rerun.md:11 (mention) — (`deploy/README.md` documents this as a known gap). So a change to the
@@ -960,14 +965,15 @@ References:
 
 #### docs/content-security-policy.md
 
-Title: "Content-Security-Policy" | 96 lines
+Title: "Content-Security-Policy" | 98 lines
 
 Referenced by:
 - CLAUDE.md:169 (mention) — | Content-Security-Policy | `docs/content-security-policy.md` |
 - docs/implemented-plans/app-wide-csp.md:444 (mention) — `docs/content-security-policy.md`) describing the policy, the dev/prod split,
+- docs/implemented-plans/webapp-production-mode.md:74 (mention) — Report-Only, as documented in `docs/content-security-policy.md:3-6`.
 - docs/plans/publish-pages.md:39 (mention) — - **CSP machinery — precedent only; the Worker sets its own.** `src/lib/csp.ts` (`buildCspPolicy`) is the single source
 - docs/scheduled/csp-violation-review.md:6 (mention) — nothing — see `docs/content-security-policy.md`); this routine watches real
-- docs/security-report.md:196 (link) — | CSP | `src/lib/csp.ts`, [content-security-policy.md](content-security-policy.md) | accepted | Single policy source sha
+- docs/security-report.md:198 (link) — | CSP | `src/lib/csp.ts`, [content-security-policy.md](content-security-policy.md) | accepted | Single policy builder; F
 - src/dev/CLAUDE.md:15 (mention) — | `csp-digest.ts` | Digests the JSONL CSP violation log (incremental via per-box cursor) | `docs/content-security-policy
 - ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:17 (mention) — > `src/webapp/auth.ts` (the trust-model comment) and `docs/content-security-policy.md`
 
@@ -1091,6 +1097,7 @@ Referenced by:
 - docs/implemented-plans/todo-annotation.md:51 (mention) — - `callback-box/docs/engineering-principles.md` — especially
 - docs/implemented-plans/top-nav-ia.md:114 (mention) — - `callback-box/docs/engineering-principles.md` — reuse-over-rebuild,
 - docs/implemented-plans/transcript-confidence.md:65 (mention) — - `docs/engineering-principles.md` — #1 (types are structure: confidence rides
+- docs/implemented-plans/webapp-production-mode.md:28 (mention) — - `docs/engineering-principles.md:37-44`: environment variables are validated
 - docs/implemented-plans/workstream-routing.md:39 (mention) — (`callback-box/docs/engineering-principles.md:49`): *"Degradation is allowed
 - docs/implemented-plans/workstreams.md:58 (mention) — - `docs/engineering-principles.md` §4 (resilient AND never silent — the
 - docs/plans/agent-points-at-ui.md:43 (mention) — - `docs/engineering-principles.md`
@@ -1466,7 +1473,7 @@ Referenced by:
 - ../.claude/skills/cb-ios-overlap/SKILL.md:17 (mention) — **The canonical reference is `callback-box/docs/mobile-contract.md`**
 - ../CLAUDE.md:10 (mention) — - **ios-app/** — Native SwiftUI companion app; a thin shell around the web chat (`WKWebView`) plus native pairing, compo
 - ../issues/bugs/2026-08-03-ios-stale-unconfirmed-emission-banner.md:81 (mention) — `docs/mobile-contract.md` governs the receipt contract.
-- ../issues/bugs/2026-08-05-open-chat-flashes-agent-working-no-send.md:85 (mention) — - `docs/mobile-contract.md` / cb-ios-overlap — both platforms, shared surface.
+- ../issues/bugs/2026-08-05-open-chat-flashes-agent-working-no-send.md:123 (mention) — - `docs/mobile-contract.md` / cb-ios-overlap — both platforms, shared surface.
 - ../issues/bugs/2026-08-20-ios-record-button-silently-waits-for-speech.md:38 (mention) — This is deliberate and documented — `callback-box/docs/mobile-contract.md` §4.5:
 - ../issues/bugs/2026-08-23-share-extension-sends-classify-as-web-desktop.md:19 (mention) — (contract row S3 in `docs/mobile-contract.md` §5.5), which belongs with the
 - ../issues/closed/bugs/2026-07-17-mobile-device-store-unlocked-rmw.md:18 (mention) — `async`. Tests: `test/core/mobile/pairing-store-concurrency.doctest.md`; doc: `docs/mobile-contract.md`
@@ -1531,6 +1538,7 @@ Referenced by:
 - docs/implemented-plans/clerk-contract-and-import-boundary.md:115 (mention) — against `docs/module-map.md` and update that doc if it's silent on
 - ../issues/closed/code-quality/2026-07-12-frontend-local-helper-consolidation-into-shared.md:23 (mention) — added to `OUTSIDE_VITE_SHARED_RAW`. Pattern documented in `docs/module-map.md`.
 - ../issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md:141 (mention) — is a future boxholder question; `docs/module-map.md` now documents the
+- ../issues/exploration/2026-08-24-agent-md-article-ideas.md:56 (mention) — encapsulating low-level mechanics** — `docs/module-map.md` and the
 - ../issues/features/2026-08-12-structured-module-docs-and-code-search.md:44 (mention) — - **`callback-box/docs/module-map.md`** — a discoverability contract for where
 
 #### docs/procedure-implementation.md
@@ -1700,6 +1708,7 @@ Title: "Security overview" | 218 lines
 
 Referenced by:
 - README.md:88 (link) — what the agent can actually do — is in [the security overview](docs/security-overview.md).
+- docs/implemented-plans/webapp-production-mode.md:239 (mention) — `security-overview.md` alone unless the rubric finds a reader-facing posture
 - docs/maintenance.md:143 (mention) — (the structured, per-item accounting) and `docs/security-overview.md` (the readable
 - docs/plans/public-site.md:226 (mention) — `llms.txt` indexing the machine-facing files (agent-install.md, security-overview.md
 - docs/security-report.md:11 (link) — The exhaustive accounting behind [security-overview.md](security-overview.md). An agent
@@ -1726,14 +1735,15 @@ References:
 
 #### docs/security-report.md
 
-Title: "Security report — structured version" | 364 lines
+Title: "Security report — structured version" | 366 lines
 
 Referenced by:
+- docs/implemented-plans/webapp-production-mode.md:227 (mention) — `docs/security-report.md:107` says `/api/external` is never mounted on a
 - docs/maintenance.md:30 (mention) — | Security report | `/security-report` (skill) | At release boundaries; when the staleness diff (`git diff <generated-at
 - docs/security-overview.md:18 (link) — [`security-report.md`](security-report.md).
 - docs/todo-security.md:9 (link) — [docs/security-report.md](security-report.md) (structured accounting)
 - ../.claude/skills/security-report/SKILL.md:3 (mention) — description: Generate or update callback-box's security report — the structured accounting in callback-box/docs/security
-- ../issues/bugs/2026-08-21-trpc-errors-return-a-server-stack-trace.md:28 (mention) — (`callback-box/src/webapp/routes/api.ts:73`). `docs/security-report.md:107`
+- ../issues/closed/bugs/2026-08-21-trpc-errors-return-a-server-stack-trace.md:36 (mention) — (`callback-box/src/webapp/routes/api.ts:73`). `docs/security-report.md:107`
 - ../issues/closed/features/2026-07-20-agent-maintained-security-report.md:13 (mention) — `/security-report` skill as the committed rubric, `callback-box/docs/security-report.md`,
 - ../issues/decisions/2026-07-20-soft-launch-posture.md:121 (link) — [security-report.md](../../callback-box/docs/security-report.md). The root
 - ../issues/exploration/2026-08-11-encryption-at-rest.md:56 (mention) — - **Credentials are already hashed at rest** (`docs/security-report.md` §2:
@@ -1881,6 +1891,7 @@ Referenced by:
 - ../issues/code-quality/2026-07-11-v1-removal-residue-src-comments-and-scenario-boxes.md:49 (mention) — (`content/`-nested, `shapeVersion: 2`) layout. `docs/testing.md` was updated to
 - ../issues/code-quality/2026-08-09-src-untested-by-import.md:54 (mention) — `callback-box/docs/testing.md` is explicit that tests are not for coverage
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:24 (mention) — `docs/testing.md`): which doctest tier to choose, what to fake vs. let run
+- ../issues/exploration/2026-08-24-agent-md-article-ideas.md:60 (mention) — - **Failing test before the fix** — `docs/testing.md` gestures at test-first for
 - ../research/external-skills-harvest.md:289 (mention) — - [x] **X1 — reconcile cb-plan's test posture with `docs/testing.md`. DONE →
 
 References:
@@ -3758,6 +3769,7 @@ Referenced by:
 - docs/questions.md:254 (mention) — (`docs/implemented-plans/top-nav-ia.md`): the app bar no longer carries a
 - user-stories/catalog/2026-08-21.md:9079 (mention) — - **Nav bar with live pending counts** — The pending-questions badge was deliberately retired, so the story describes a
 - ../issues/bugs/2026-08-23-agent-guide-example-puts-landmarks-in-a-sidebar.md:38 (link) — [top-nav-ia](../../callback-box/docs/implemented-plans/top-nav-ia.md) — which
+- ../issues/bugs/2026-08-23-no-consistent-way-back-to-chat.md:21 (mention) — That is a reasonable IA decision (`docs/plans/top-nav-ia.md` Track C), but it
 - ../issues/code-quality/2026-08-02-card-vs-views-route-consolidation.md:6 (mention) — discovered-in: worktree-top-nav-ia — unified app bar (docs/implemented-plans/top-nav-ia.md)
 - ../issues/features/2026-07-20-first-run-experience.md:12 (mention) — **Update 2026-08-02** (`callback-box/docs/implemented-plans/top-nav-ia.md`): new users
 
@@ -3849,6 +3861,23 @@ Referenced by:
 References:
 - → docs/implemented-plans/web-push-notifications.md (mention)
 - → docs/box-layout.md (mention)
+
+#### docs/implemented-plans/webapp-production-mode.md
+
+Title: "Fail-closed webapp development surfaces and tRPC errors" | 385 lines
+
+Referenced by:
+- ../issues/closed/bugs/2026-08-21-trpc-errors-return-a-server-stack-trace.md:4 (frontmatter) — design: ../../../callback-box/docs/implemented-plans/webapp-production-mode.md
+
+References:
+- → ../issues/closed/bugs/2026-08-21-trpc-errors-return-a-server-stack-trace.md (frontmatter)
+- → docs/engineering-principles.md (mention)
+- → CLAUDE.md (mention)
+- → code-style.md (mention)
+- → docs/content-security-policy.md (mention)
+- → docs/security-report.md (mention)
+- → deploy/README.md (mention)
+- → docs/security-overview.md (mention)
 
 #### docs/implemented-plans/webpage-card-and-commentary.md
 
@@ -4565,6 +4594,7 @@ Referenced by:
 - docs/plans/docs-reorg.md:42 (mention) — `pdf-intake-design.md`, `source-editor.md`, `prompt-surface-ia-review.md`,
 - docs/plans/scanner-ingest.md:43 (mention) — (`src/core/commands/upload-helpers.ts`), and `docs/plans/pdf-intake-design.md`
 - ../issues/features/2026-08-09-pdf-url-into-the-commentary-path.md:21 (link) — [pdf-intake-design](../../callback-box/docs/plans/pdf-intake-design.md), as
+- ../issues/features/2026-08-23-pdf-and-document-cards-have-no-real-view.md:51 (mention) — because someone fed paper through a scanner. `docs/plans/pdf-intake-design.md`
 
 References:
 - → docs/glossary.md (link)
@@ -4929,7 +4959,7 @@ References:
 Title: "Scheduled routine: CSP violation review" | 95 lines
 
 Referenced by:
-- docs/content-security-policy.md:92 (mention) — The routine is a runbook: see `docs/scheduled/csp-violation-review.md`. To harden
+- docs/content-security-policy.md:94 (mention) — The routine is a runbook: see `docs/scheduled/csp-violation-review.md`. To harden
 - docs/plans/docs-reorg.md:194 (mention) — `scheduled/csp-violation-review.md` is half dev reference, half the literal
 - docs/scheduled/csp-violation-review.md:11 (mention) — `callback-box/docs/scheduled/csp-violation-review.md`."* Everything it needs is
 - src/dev/CLAUDE.md:15 (mention) — | `csp-digest.ts` | Digests the JSONL CSP violation log (incremental via per-box cursor) | `docs/content-security-policy
@@ -5344,7 +5374,7 @@ References:
 
 #### user-stories/journeys/walker-prompt.md
 
-Title: "You are trying out an app" | 139 lines
+Title: "You are trying out an app" | 144 lines
 
 Referenced by:
 - user-stories/journeys/README.md:51 (mention) — places the assets, composes the prompt from `walker-prompt.md`, and snapshots the box
