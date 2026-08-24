@@ -53,3 +53,47 @@ the filename-as-heading on card views.
 Related: [first-run-experience](../features/2026-07-20-first-run-experience.md) (the
 surrounding "explains nothing" tension);
 [day-to-day-usage-docs](../docs-and-chores/2026-07-20-day-to-day-usage-docs.md).
+
+## Second collection, 2026-08-23 (journey B, an independent first-time walk)
+
+A second simulated first-time user, given only "a friend set this up for you"
+and a drawer to inventory, collected the same class of words without knowing
+about this issue. Two things it found are new.
+
+**The names collide with each other, not just with the user's vocabulary.**
+The earlier list is words a user does not know. This is worse: several words
+name more than one thing, so learning one does not help.
+
+- **Box** is the app's name for itself ("your box assistant"), the name of the
+  user's own box in the menu ("Box: journey-b"), *and* a place inside the app
+  called just "Box". Verbatim: "I can't tell them apart."
+- **Session** and **chat** name the same object in the same menu.
+- **"Agent is working…"** and thinking are two names for one state.
+- **Place** appears as chrome ("Place: Chat") with no referent the user can
+  point at.
+- The running tally at the end: "box, landmark, session, agent, reactor, chat"
+  — six words, and "I couldn't draw the diagram."
+
+**"Inventory" is taken, and it means disk usage.** The dashboard uses it for
+the box's own storage — file types, linked versus unlinked content. The user
+had come to inventory a drawer. Verbatim: "The word *inventory* is taken, and
+it means *the app's own disk usage*. That is the exact word for what I came
+here to do." A word collision with the user's actual job, in the one place
+they were most likely to look.
+
+Also collected, smaller:
+
+- **"Open debug log (2 errors)"** with a red badge, on the first screen, to a
+  user who has done nothing. Developer vocabulary and a developer surface at
+  first contact; the badge is ungated in `AppNav.tsx` (`ErrorBadge`).
+- The **three unlabelled top-right icons** do carry `title`/`aria-label`, so
+  this is not an a11y gap — but a first-time user does not hover, and "I'm not
+  going to click blind yet" is where they stopped.
+- Settings names **Deepgram** and **Whisper** with no gloss: "I don't know what
+  Deepgram is, I half-know what Whisper is, and I don't know what choosing
+  between them would do to me."
+- **"Claude Code is not logged in"** — a product name the user has never seen,
+  in a message about *their* login state, while they are logged in. "So the app
+  and I disagree about whether I'm logged in, using the same word."
+
+Full notes: `callback-box/user-stories/work/journeys/B-inventory-2026-08-23*/notes.md`.
