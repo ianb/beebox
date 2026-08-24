@@ -10,8 +10,8 @@ Poppler is a deployed-server given (`poppler-utils` in `deploy/setup-server.sh`)
 but not a developer-machine one, so these assertions are
 availability-appropriate: a real measurement where poppler exists, and the
 documented fallback where it does not. The fallback is deliberately
-"assume a text layer" — that routes to document mode, which is what every PDF
-did before this split existed, and document mode preserves the original either
+"assume a text layer" — that routes to pdf mode, which is what every PDF
+did before this split existed, and pdf mode preserves the original either
 way. Assuming the opposite would send a real document through per-page vision
 analysis because a package was missing.
 
@@ -43,7 +43,7 @@ function verdict(probe) {
 }
 ```
 
-## A PDF with a text layer routes to document mode
+## A PDF with a text layer routes to pdf mode
 
 ```ts
 const probe = await probePdf(await fixture("text.pdf", textPdf()));
@@ -61,7 +61,7 @@ havePdftotext ? probe.textLayerSource : "probed"
 ## A PDF with no text layer routes to the photo flow
 
 This is the case that only works with a real probe — without poppler the
-fallback sends it to document mode instead:
+fallback sends it to pdf mode instead:
 
 ```ts
 const probe = await probePdf(await fixture("textless.pdf", textlessPdf()));

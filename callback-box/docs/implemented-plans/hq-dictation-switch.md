@@ -3,7 +3,7 @@ title: "An always-HQ dictation switch, separate from narration mode"
 status: implemented
 workstream: transcript-confidence
 issues:
-  - ../../../issues/features/2026-08-22-hq-dictation-switch-separate-from-narration.md
+  - ../../../issues/closed/features/2026-08-22-hq-dictation-switch-separate-from-narration.md
 ---
 
 # An always-HQ dictation switch, separate from narration mode

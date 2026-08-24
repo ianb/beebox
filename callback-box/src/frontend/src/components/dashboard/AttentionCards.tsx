@@ -63,6 +63,7 @@ export function AttentionCards({ questions, inboxCount }: AttentionCardsProps) {
               <StatusBadge status="new" className="ml-2">{inboxCount}</StatusBadge>
             </h2>
             <Link
+              id="cb-dashboard-inbox-browse"
               to={href(`/${boxSlug}/browse/box/inbox`)}
               className="text-xs text-primary hover:text-primary-dark"
             >

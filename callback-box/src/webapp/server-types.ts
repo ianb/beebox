@@ -53,6 +53,11 @@ export interface ServerOptions {
 export interface InternalServerOptions extends ServerOptions {
   openAccess?: boolean | undefined;
   /**
+   * Enable local development-only HTTP facilities. Fail-closed: every
+   * production caller omits this, and absence means the facilities are inert.
+   */
+  devSurfaces?: boolean | undefined;
+  /**
    * Chat backend for every session this server creates. The same test-only
    * spirit as `openAccess`: no CLI path sets it, and production falls through
    * to `createChatBackend()`. It exists so a route test can exercise the

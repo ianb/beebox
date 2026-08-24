@@ -152,6 +152,21 @@ test("serveDev: encoded traversal stays contained", async () => {
   assert.deepEqual(await codesFor(repo, "/dev/..%2F..%2Fetc%2Fpasswd"), [403]);
 });
 
+test("serveDev: dotfiles under dev/ are not served, at any depth", async () => {
+  const repo = await mkAppishRepo();
+  await fs.writeFile(path.join(repo, "dev", ".env"), "CB_SECRET=leak\n");
+  await fs.mkdir(path.join(repo, "dev", "story-eval", ".git"), { recursive: true });
+  await fs.writeFile(path.join(repo, "dev", "story-eval", ".git", "config"), "[core]\n");
+  // Hidden from the listing AND refused on a direct request — the listing
+  // filter alone used to hide them while serveDevArtifact still served them.
+  assert.deepEqual(await codesFor(repo, "/dev/.env"), [404]);
+  assert.deepEqual(await codesFor(repo, "/dev/story-eval/.git/config"), [404]);
+  // The check reads the RESOLVED path, so an encoded traversal cannot dodge it.
+  assert.deepEqual(await codesFor(repo, "/dev/story-eval%2F..%2F.env"), [404]);
+  // A normal file beside them is unaffected.
+  assert.equal((await codesFor(repo, "/dev/payload.html"))[0], 200);
+});
+
 test("serveDev: a symlink out of the app dir is contained", async () => {
   const repo = await mkAppishRepo();
   const link = path.join(repo, "dev", "story-eval", "link.html");

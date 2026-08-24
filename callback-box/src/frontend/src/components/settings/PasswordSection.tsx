@@ -47,7 +47,7 @@ export function PasswordSection() {
     if (newPassword.length < 8) nextErrors.next = "Use at least 8 characters.";
     if (newPassword !== confirmPassword) nextErrors.confirm = "Passwords do not match.";
     setErrors(nextErrors);
-    const first = nextErrors.current ? "password-current" : nextErrors.next ? "password-new" : nextErrors.confirm ? "password-confirm" : null;
+    const first = nextErrors.current ? "cb-settings-password-current" : nextErrors.next ? "cb-settings-password-new" : nextErrors.confirm ? "cb-settings-password-confirm" : null;
     if (first) {
       document.querySelector<HTMLInputElement>(`#${first}`)?.focus();
       return;
@@ -62,7 +62,7 @@ export function PasswordSection() {
       });
       if (!response.ok) {
         setErrors({ current: response.status === 401 ? "Current password could not be verified." : "Password could not be changed." });
-        document.querySelector<HTMLInputElement>("#password-current")?.focus();
+        document.querySelector<HTMLInputElement>("#cb-settings-password-current")?.focus();
         return;
       }
       setCurrentPassword("");
@@ -85,10 +85,10 @@ export function PasswordSection() {
             <Text as="h2" size="lg" weight="semibold">Change password</Text>
             <Text size="sm" tone="muted">Confirm your current password before choosing a new one.</Text>
           </Stack>
-          <TextField id="password-current" label="Current password" type="password" value={currentPassword} onChange={setCurrentPassword} error={errors.current} autoComplete="current-password" required />
-          <TextField id="password-new" label="New password" type="password" value={newPassword} onChange={setNewPassword} error={errors.next} autoComplete="new-password" minLength={8} required />
-          <TextField id="password-confirm" label="Confirm new password" type="password" value={confirmPassword} onChange={setConfirmPassword} error={errors.confirm} autoComplete="new-password" required />
-          <Button type="submit" intent="primary" loading={submitting} loadingLabel="Changing…">Change password</Button>
+          <TextField id="cb-settings-password-current" label="Current password" type="password" value={currentPassword} onChange={setCurrentPassword} error={errors.current} autoComplete="current-password" required />
+          <TextField id="cb-settings-password-new" label="New password" type="password" value={newPassword} onChange={setNewPassword} error={errors.next} autoComplete="new-password" minLength={8} required />
+          <TextField id="cb-settings-password-confirm" label="Confirm new password" type="password" value={confirmPassword} onChange={setConfirmPassword} error={errors.confirm} autoComplete="new-password" required />
+          <Button id="cb-settings-password-submit" type="submit" intent="primary" loading={submitting} loadingLabel="Changing…">Change password</Button>
           {message ? <div role="status"><Text size="sm" tone="strong">{message}</Text></div> : null}
         </Stack>
       </form>

@@ -28,7 +28,10 @@ import { getBoxTime } from "../../lib/time.js";
 import { runOnWakeupScripts } from "./tick-utils.js";
 import { runTodoReviewSweep } from "../../core/todo/review-sweep.js";
 import { runReactor } from "../../core/reactor/index.js";
-import { runConnectors } from "./wakeup-connectors.js";
+import {
+  runConnectors,
+  wakeupExitCodeForConnectorErrors,
+} from "./wakeup-connectors.js";
 import {
   runPreprocessors,
   cleanupStaleJobs,
@@ -202,7 +205,7 @@ export const wakeupCommand = new Command("wakeup")
 
     // Step 4: Connectors
     console.log("[Running connectors]");
-    const { activeConnector } = await runConnectors(boxRoot, {
+    const { activeConnector, errorCount: connectorErrorCount } = await runConnectors(boxRoot, {
       connector: options.connector,
     });
     console.log("");
@@ -258,4 +261,7 @@ export const wakeupCommand = new Command("wakeup")
     if (!options.skipPush) {
       await pushChanges(boxRoot);
     }
+
+    const connectorExitCode = wakeupExitCodeForConnectorErrors(connectorErrorCount);
+    if (connectorExitCode !== undefined) process.exitCode = connectorExitCode;
   });

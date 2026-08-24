@@ -49,7 +49,7 @@ export function BrowseSidebarBody(props: Props) {
       <Text as="div" size="xs" tone="subtle">
         {error instanceof Error ? error.message : "The server did not answer."}
       </Text>
-      <Button size="sm" intent="secondary" onClick={onRetry}>Try again</Button>
+      <Button id="cb-browse-retry" size="sm" intent="secondary" onClick={onRetry}>Try again</Button>
     </Column>
   );
 }

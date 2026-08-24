@@ -198,6 +198,15 @@ BOX_DIRS=$(find "$BOXES_DIR" -maxdepth 1 -mindepth 1 -type d | sort | tr '\n' ' 
 # paths; `cb serve` reads the manifest at startup, and a future
 # `cb boxes add <path>` just requires `systemctl restart callback-serve`
 # (no unit rewrite needed).
+# KillMode=mixed + an explicit stop timeout: with systemd's default
+# (control-group) the stop signal goes to EVERY process in the cgroup, so a
+# `git` a box child is running is signalled by systemd rather than by us, and
+# the SIGKILL that follows can land mid-index-write — which leaves a
+# `.git/index.lock` no process owns and every writer in that box then fails on.
+# `mixed` sends SIGTERM to the main process only and lets it drain its own
+# children (see drainBoxGitLocks / BOX_KILL_GRACE_MS); TimeoutStopSec is the
+# backstop, set above the in-process grace so systemd escalates only if our own
+# teardown failed.
 cat > /etc/systemd/system/callback-serve.service <<EOF
 [Unit]
 Description=Callback Box Web Server
@@ -210,6 +219,8 @@ Group=$CB_USER
 ExecStart=/usr/local/bin/cb serve --host 0.0.0.0 --port 3210
 WorkingDirectory=$BOXES_DIR
 EnvironmentFile=$CB_HOME/.env
+KillMode=mixed
+TimeoutStopSec=60
 Restart=on-failure
 RestartSec=5
 
@@ -236,6 +247,8 @@ Group=$CB_USER
 ExecStart=/usr/local/bin/cb scheduler start
 WorkingDirectory=$BOXES_DIR
 EnvironmentFile=$CB_HOME/.env
+KillMode=mixed
+TimeoutStopSec=60
 Restart=on-failure
 RestartSec=10
 
@@ -249,26 +262,11 @@ EOF
 # little between restarts. A daily restart at a low-traffic hour reclaims it.
 # cb-wait-quiet (shared with deploy.sh) waits, bounded and best-effort, for all
 # boxes to be at rest first so the restart doesn't kill an active chat/script.
-cat > /usr/local/bin/cb-wait-quiet <<EOF
-#!/usr/bin/env bash
-# Best-effort: wait up to ~3 min for all boxes to be at rest (no running
-# scripts/procedures or active chat turns) before the caller restarts
-# callback-serve. Always exits 0 — the wait is advisory, never a hard block.
-set -u
-DEADLINE=\$(( \$(date +%s) + 180 ))
-while true; do
-  if su - $CB_USER -c 'CB_CLI_PREBUILT=1 /usr/local/bin/cb activity' >/tmp/cb-activity.out 2>&1; then
-    echo "cb-wait-quiet: at rest"; exit 0
-  fi
-  if [ "\$(date +%s)" -ge "\$DEADLINE" ]; then
-    echo "cb-wait-quiet: still busy after wait cap, proceeding:"
-    sed 's/^/  /' /tmp/cb-activity.out
-    exit 0
-  fi
-  sleep 10
-done
-EOF
-chmod +x /usr/local/bin/cb-wait-quiet
+# The script itself lives at deploy/server-bin/cb-wait-quiet rather than in a
+# heredoc here, so deploy.sh can reinstall it on every deploy. A server
+# provisioned before it existed had no copy at all and every deploy restarted
+# without waiting — the drift this file layout removes.
+install -m 0755 "$INSTALL_DIR/callback-box/deploy/server-bin/cb-wait-quiet" /usr/local/bin/cb-wait-quiet
 
 cat > /etc/systemd/system/callback-serve-recycle.service <<'EOF'
 [Unit]

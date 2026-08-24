@@ -26,6 +26,8 @@ export function BrowseBreadcrumbs({ dirPath, onNavigate }: BrowseBreadcrumbsProp
   return (
     <div className="px-3 py-2 border-b text-sm break-words">
       <button
+        id="cb-browse-crumb-root"
+        data-cb-does="goes to the top of the browse tree"
         onClick={() => onNavigate("")}
         className="text-primary hover:text-primary-dark hover:underline px-0.5"
       >/</button>

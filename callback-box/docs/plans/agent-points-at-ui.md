@@ -288,7 +288,7 @@ three things a `data-control` attribute would not:
   only `color-contrast`). A duplicated address fails an instrument we already
   run, rather than a bespoke doctest this plan would have had to invent.
 - **The namespace is clean.** There are 21 authored ids in the whole frontend,
-  all kebab-case and semantic (`password-current`, `trash-card-title`,
+  all kebab-case and semantic (`trash-card-title`,
   `delete-chat-title`), plus React `useId()` for generated label/control pairs
   in `ui/fields.tsx` and `ui/Accordion.tsx`. The `cb-` prefix separates
   *published addresses* from that internal a11y wiring, so the scan knows which

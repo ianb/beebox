@@ -17,7 +17,7 @@ nothing on the iOS send path ever puts the recording anywhere the retranscribe
 path can reach.
 
 This was already noted as mechanism 1 of
-[the first-message issue](../../bugs/2026-08-18-first-message-audio-not-retranscribable.md);
+[the first-message issue](2026-08-18-first-message-audio-not-retranscribable.md);
 this item is the iOS half, given its own home because the fix is a separate
 decision (that issue's other mechanism — web retention dying on reload — is
 independent).
@@ -135,10 +135,10 @@ build that predates it.
 
 ## Related
 
-- [The first message of a chat can't have its audio retranscribed](../../bugs/2026-08-18-first-message-audio-not-retranscribable.md)
+- [The first message of a chat can't have its audio retranscribed](2026-08-18-first-message-audio-not-retranscribable.md)
   — the same "who holds the bytes" question on the web side.
 - [Show retranscription in chat](../../features/2026-08-12-show-retranscription-in-chat.md)
-  and [Mark low-confidence words in transcripts](../../features/2026-08-15-mark-low-confidence-words-in-transcripts.md)
+  and [Mark low-confidence words in transcripts](../features/2026-08-15-mark-low-confidence-words-in-transcripts.md)
   — both `transcript-confidence`, both about surfacing transcript quality. A fix
   here should feed those rather than grow a parallel display.
 - `callback-box/docs/mobile-contract.md` — where a new native duty gets written

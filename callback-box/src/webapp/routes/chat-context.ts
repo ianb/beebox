@@ -19,6 +19,7 @@ export interface ChatRoutesContext {
   boxRoot: string;
   eventBus: EventBus;
   openaiAudio: OpenAIAudioService | undefined;
+  devSurfaces: boolean;
   registry: ChatSessionRegistry;
   scheduleManager: ChatScheduleManager;
   /** Wire a session's events onto the shared event bus (idempotent). */

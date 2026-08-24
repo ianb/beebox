@@ -8,8 +8,8 @@
  * e.g. that streaming playback starts before the whole download completes,
  * and that stop/fast-forward interrupt cleanly.
  *
- * Guarded by the caller: only invoked when NODE_ENV !== "production" and the
- * request body explicitly opts in (`mock: true`).
+ * Guarded by the caller: only invoked when development surfaces are enabled
+ * and the request body explicitly opts in (`mock: true`).
  */
 
 import { sleep } from "../lib/sleep.js";

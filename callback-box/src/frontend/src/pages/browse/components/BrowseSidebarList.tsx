@@ -12,7 +12,7 @@ import { attachDirFor } from "@shared/attach-path";
 
 type BrowseData = RouterOutput["status"]["browse"];
 
-const IMAGE_EXTS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg", ".ico"]);
+const IMAGE_EXTS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".avif", ".bmp", ".svg", ".ico"]);
 
 function imageDataAttrs(relativePath: string, name: string): Record<string, string> | null {
   const dot = relativePath.lastIndexOf(".");

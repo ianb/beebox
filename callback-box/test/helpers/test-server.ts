@@ -44,6 +44,8 @@ export interface TestServerContext {
 
 export interface TestServerOptions {
   services?: Services;
+  /** Explicitly enable the local-only external-file and mock-TTS facilities. */
+  devSurfaces?: boolean | undefined;
   /**
    * Serve without an auth wall. Defaults to `true` — most route doctests are
    * deliberately open (they exercise routes, not auth), which the in-process
@@ -175,6 +177,7 @@ export async function createTestServer(opts?: TestServerOptions): Promise<TestSe
     boxes: [{ slug: TEST_SLUG, boxRoot, eventBus }],
     services: opts?.services,
     openAccess: opts?.openAccess ?? true,
+    devSurfaces: opts?.devSurfaces === true,
     ...(opts?.chatBackend !== undefined ? { chatBackend: opts.chatBackend } : {}),
   });
 

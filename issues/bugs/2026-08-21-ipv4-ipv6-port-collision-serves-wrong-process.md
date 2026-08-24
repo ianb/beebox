@@ -6,6 +6,7 @@ labels: [router, ports, process-lifecycle]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — a box served an unrelated app's shell on both web and iOS
+priority: backlog
 ---
 
 A box was unreachable in two different ways at once: on iOS it returned the

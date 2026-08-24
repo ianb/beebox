@@ -113,7 +113,7 @@ Stop recording: point+focus
 ```
 
 An id only becomes an address when it is in the `cb-` namespace and kebab-case.
-The frontend's own authored ids — `password-current`, `trash-card-title` — are
+The frontend's own authored ids — `trash-card-title`, `delete-chat-title` — are
 a11y plumbing, not promises, so they report no address:
 
 ```ts

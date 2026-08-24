@@ -9,8 +9,10 @@ import "./renderers/setup";
 import { registerBuiltinFileTypes } from "./file-types";
 import { withBase } from "./api";
 import { invariant } from "@shared/invariant";
+import { installUiScanHook } from "./lib/ui-scan/window-hook";
 
 registerBuiltinFileTypes();
+installUiScanHook();
 
 const router = createAppRouter();
 

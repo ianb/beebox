@@ -125,6 +125,10 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // whenever src/lib/asset-extensions.ts changes. A later rendering change
   // needs a new dated entry; see the script's module comment.
   { name: "annex-config-2026-08", script: "scripts/migrate/annex-config.ts" },
+  // Rename the `document` card type to `pdf` (`document` collided with
+  // `doc.card`; the pipeline only reads PDFs, so the generic name bought
+  // nothing). *.document.card → *.pdf.card + inbound refs.
+  { name: "document-to-pdf", script: "scripts/migrate/document-to-pdf.ts" },
 ];
 
 export const MANIFEST_PATH = "config/migrations.jsonl";

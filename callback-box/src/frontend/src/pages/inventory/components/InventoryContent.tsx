@@ -149,10 +149,10 @@ function InventoryArea({ items, metric, linkStatus, projection, setMetric, setLi
     <Card as="section" aria-label="Inventory area view">
       <Stack gap="md">
         <Text as="h2" size="lg" weight="semibold">Area view</Text>
-        <TabBar value={linkStatus} onChange={setLinkStatus} label="Incoming reference filter" tabs={[{ value: "all", label: "All" }, { value: "linked", label: "Linked" }, { value: "unlinked", label: "Unlinked" }]} />
+        <TabBar value={linkStatus} onChange={setLinkStatus} idPrefix="cb-inventory-link-status" label="Incoming reference filter" tabs={[{ value: "all", label: "All" }, { value: "linked", label: "Linked" }, { value: "unlinked", label: "Unlinked" }]} />
         <Row justify="between" align="end" wrap>
-          <TabBar value={projection} onChange={setProjection} label="Counting method" tabs={[{ value: "grouped", label: "Grouped" }, { value: "direct", label: "Direct" }]} />
-          <TabBar value={metric} onChange={setMetric} label="Area metric" tabs={[{ value: "count", label: "By count" }, { value: "bytes", label: "By size" }]} />
+          <TabBar value={projection} onChange={setProjection} idPrefix="cb-inventory-projection" label="Counting method" tabs={[{ value: "grouped", label: "Grouped" }, { value: "direct", label: "Direct" }]} />
+          <TabBar value={metric} onChange={setMetric} idPrefix="cb-inventory-metric" label="Area metric" tabs={[{ value: "count", label: "By count" }, { value: "bytes", label: "By size" }]} />
         </Row>
         {items.length === 0 ? <Text as="p" tone="muted">{linkStatus === "all" ? "No content files found." : `No ${linkStatus} cards found.`}</Text> : <InventoryTreemap items={items} metric={metric} />}
       </Stack>

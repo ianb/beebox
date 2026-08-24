@@ -52,7 +52,7 @@ export function LandmarkLinksPanel({ contextDir, onPanel }: LandmarkLinksPanelPr
     return (
       <div className="px-3 py-2 text-sm text-danger-dark">
         Couldn&rsquo;t load landmark links: {error.message}.{" "}
-        <button type="button" onClick={() => void refetch()} className="underline hover:no-underline">
+        <button id="cb-landmark-links-retry" type="button" onClick={() => void refetch()} className="underline hover:no-underline">
           Retry
         </button>
       </div>

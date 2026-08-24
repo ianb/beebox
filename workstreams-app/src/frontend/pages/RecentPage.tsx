@@ -1,8 +1,9 @@
 import { Link } from "@tanstack/react-router";
 
+import { QuotaPanel } from "../components/QuotaPanel.js";
 import { Button, Pill } from "../components/ui.js";
 import { trpc } from "../trpc.js";
-import type { RecentFeed, RecentFile } from "../types.js";
+import type { Quota, RecentFeed, RecentFile } from "../types.js";
 
 /**
  * The browser's front door (`docs/plans/general-browser.md`, Track 3).
@@ -55,7 +56,11 @@ function Distribution({ feed }: { feed: RecentFeed }) {
   );
 }
 
-export function RecentView({ feed, workstream }: { feed: RecentFeed; workstream: string | null }) {
+function RecentHeader({ quotas, quotaError, workstream }: { quotas: Quota[]; quotaError?: string | undefined; workstream: string | null }) {
+  return <header className="workstreams-header"><h1>recent {workstream === null ? null : <small>{workstream}</small>}</h1><QuotaPanel quotas={quotas} error={quotaError} /></header>;
+}
+
+export function RecentView({ feed, quotas, quotaError, workstream }: { feed: RecentFeed; quotas: Quota[]; quotaError?: string | undefined; workstream: string | null }) {
   // The feed carries the moment it was computed, so relative times are honest
   // about the data's age and the render stays pure — no clock read here.
   const now = feed.now;
@@ -66,7 +71,7 @@ export function RecentView({ feed, workstream }: { feed: RecentFeed; workstream:
     : feed.files.filter((file) => file.workstream === workstream);
   return (
     <main className="simple-page">
-      <h1>recent {workstream === null ? null : <small>{workstream}</small>}</h1>
+      <RecentHeader quotas={quotas} quotaError={quotaError} workstream={workstream} />
       <Distribution feed={feed} />
       {feed.unavailable.length === 0 ? null : (
         <p className="action-error" role="status">
@@ -88,9 +93,13 @@ export function RecentView({ feed, workstream }: { feed: RecentFeed; workstream:
 
 export function RecentPage({ workstream }: { workstream: string | null }) {
   const recent = trpc.documents.recent.useQuery();
+  const quotas = trpc.quotas.get.useQuery();
+  const quotaItems = quotas.data?.items ?? [];
+  const quotaError = quotas.error ? `Couldn’t load quotas: ${quotas.error.message}` : undefined;
   if (recent.isLoading) {
     return (
       <main className="simple-page">
+        <RecentHeader quotas={quotaItems} quotaError={quotaError} workstream={workstream} />
         <section className="loading-skeleton" aria-busy="true"><span /><span /><span /></section>
       </main>
     );
@@ -98,6 +107,7 @@ export function RecentPage({ workstream }: { workstream: string | null }) {
   if (recent.isError) {
     return (
       <main className="simple-page">
+        <RecentHeader quotas={quotaItems} quotaError={quotaError} workstream={workstream} />
         <section className="error-state">
           <p>Couldn’t load recent changes: {recent.error.message}</p>
           <Button onClick={() => void recent.refetch()}>Retry</Button>
@@ -105,6 +115,6 @@ export function RecentPage({ workstream }: { workstream: string | null }) {
       </main>
     );
   }
-  if (!recent.data) return <main className="simple-page"><p className="empty-state">Nothing to show.</p></main>;
-  return <RecentView feed={recent.data} workstream={workstream} />;
+  if (!recent.data) return <main className="simple-page"><RecentHeader quotas={quotaItems} quotaError={quotaError} workstream={workstream} /><p className="empty-state">Nothing to show.</p></main>;
+  return <RecentView feed={recent.data} quotas={quotaItems} quotaError={quotaError} workstream={workstream} />;
 }

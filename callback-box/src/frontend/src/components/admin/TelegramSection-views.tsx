@@ -58,6 +58,7 @@ export function TelegramConnectedView({
       </div>
 
       <Button
+        id="cb-admin-telegram-disconnect"
         intent="secondary"
         onClick={onDisconnect}
         loading={disconnecting}
@@ -99,6 +100,7 @@ export function TelegramSetupView({
 
       <div className="flex gap-2 mb-2 items-start">
         <TextField
+          id="cb-admin-telegram-bot-token"
           label="Bot token"
           hideLabel
           value={botToken}
@@ -108,6 +110,7 @@ export function TelegramSetupView({
           className="flex-1"
         />
         <Button
+          id="cb-admin-telegram-connect"
           intent="primary"
           onClick={onConnect}
           disabled={!botToken.trim()}

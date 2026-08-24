@@ -10,6 +10,8 @@ interface FlashSpec {
 
 export interface InlineActionProps {
   children: ReactNode;
+  /** Stable `cb-` control address for the rendered button (see lib/ui-scan). */
+  id?: string;
   onClick: (e: MouseEvent<HTMLButtonElement>) => void | Promise<void>;
   intent?: InlineActionIntent;
   disabled?: boolean;
@@ -27,6 +29,7 @@ const INTENT_CLASSES: Record<InlineActionIntent, string> = {
 
 export function InlineAction({
   children,
+  id,
   onClick,
   intent: intentArg,
   disabled: disabledArg,
@@ -75,6 +78,7 @@ export function InlineAction({
 
   return (
     <button
+      id={id}
       type="button"
       onClick={(e) => void handleClick(e)}
       disabled={isBusy}

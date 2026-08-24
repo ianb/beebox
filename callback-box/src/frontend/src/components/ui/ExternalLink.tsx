@@ -5,6 +5,8 @@ export type ExternalLinkVariant = "inline" | "plain" | "button";
 
 export interface ExternalLinkProps {
   href: string;
+  /** Stable `cb-` control address for the rendered anchor (see lib/ui-scan). */
+  id?: string;
   children: ReactNode;
   hideIcon?: boolean;
   title?: string;
@@ -47,12 +49,13 @@ const VARIANT_CLASSES: Record<ExternalLinkVariant, string> = {
     "inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-white border border-warm-300 rounded hover:bg-warm-50 text-warm-700",
 };
 
-export function ExternalLink({ href, children, hideIcon, title, variant, download, className }: ExternalLinkProps) {
+export function ExternalLink({ href, id, children, hideIcon, title, variant, download, className }: ExternalLinkProps) {
   hideIcon = hideIcon ?? false;
   variant = variant ?? "inline";
   const isDownload = download !== undefined && download !== false;
   return (
     <a
+      id={id}
       href={href}
       target="_blank"
       rel="noopener noreferrer"

@@ -9,6 +9,7 @@ import { parseCardName } from "../../../lib/paths.js";
 import { boxRelativePath } from "../../../shared/box-path.js";
 import { getLog } from "../../../lib/git.js";
 import { errnoCode } from "../../../lib/error-guards.js";
+import { containWithinBox } from "../../../lib/box-containment.js";
 import { cardFields, parseCardText } from "../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../schemas/registry.js";
 import { QuestionSchema, type QuestionFields } from "../../../schemas/question.js";
@@ -144,7 +145,7 @@ export const statusRouter = router({
 
       // Security: ensure we stay within boxRoot
       const resolved = path.resolve(targetDir);
-      if (!resolved.startsWith(path.resolve(ctx.boxRoot))) {
+      if (containWithinBox(ctx.boxRoot, resolved) === null) {
         const empty: { dirs: BrowseDir[]; cards: BrowseCard[]; files: BrowseFile[] } = { dirs: [], cards: [], files: [] };
         return { path: relPath, ...empty };
       }

@@ -199,7 +199,7 @@ function ModeBar({ onClose }: { onClose: () => void }) {
       <span className="font-medium">Source View — click elements to inspect</span>
       <div className="flex items-center gap-3">
         <span className="text-white/60">Esc to close</span>
-        <CloseButton onClick={onClose} onDark size="sm" />
+        <CloseButton id="cb-source-view-close" onClick={onClose} onDark size="sm" />
       </div>
     </div>
   );
@@ -219,6 +219,8 @@ function SelectedPanel({ selected, copied, onCopy }: { selected: SelectedSource;
       <div className="px-3 py-2 bg-violet-50 border-b border-violet-100 flex items-center justify-between">
         <span className="text-xs font-semibold text-violet-700">Source</span>
         <button
+          id="cb-source-view-copy"
+          data-cb-does="copies the selected element's source reference to the clipboard"
           onClick={onCopy}
           className="text-xs text-violet-600 hover:text-violet-800 font-medium"
         >

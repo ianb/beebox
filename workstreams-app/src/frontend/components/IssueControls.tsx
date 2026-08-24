@@ -4,6 +4,7 @@ import { issueNextActionSchema } from "../../shared/documents.js";
 import type { Issue, NextAction, Priority } from "../types.js";
 
 const PRIORITIES: Array<{ value: Priority; symbol: string; label: string }> = [{ value: "important", symbol: "!", label: "Important" }, { value: "normal", symbol: "−", label: "Normal" }, { value: "backlog", symbol: "↓", label: "Backlog" }, { value: "uncategorized", symbol: "?", label: "Uncategorized" }];
+export const ISSUE_NEXT_ACTION_OPTIONS: Array<{ value: NextAction; label: string }> = [{ value: "discuss", label: "Discuss" }, { value: "reconfirm", label: "Reconfirm?" }, { value: "duplicate", label: "Dup?" }, { value: "invalid", label: "Invalid?" }, { value: "fixed", label: "Fixed?" }, { value: "manually-confirmed", label: "Manually confirmed" }, { value: "verify-without-me", label: "Verify without me" }];
 function nextActionFrom(value: string): NextAction | undefined {
   const parsed = issueNextActionSchema.safeParse(value);
   return parsed.success ? parsed.data : undefined;
@@ -14,7 +15,7 @@ export function PriorityControls({ value, onChange }: { value: Priority; onChang
 }
 
 export function NextActionSelect({ value, onChange }: { value?: NextAction | undefined; onChange: (value?: NextAction | undefined) => void }) {
-  return <select className="next-action" value={value ?? ""} aria-label="Next action" onChange={(event) => onChange(nextActionFrom(event.target.value))}><option value="">Next action…</option><option value="discuss">Discuss</option><option value="reconfirm">Reconfirm?</option><option value="duplicate">Dup?</option><option value="invalid">Invalid?</option><option value="fixed">Fixed?</option></select>;
+  return <select className="next-action" value={value ?? ""} aria-label="Next action" onChange={(event) => onChange(nextActionFrom(event.target.value))}><option value="">Next action…</option>{ISSUE_NEXT_ACTION_OPTIONS.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select>;
 }
 
 export function IssueTags({ issue }: { issue: Issue }) {

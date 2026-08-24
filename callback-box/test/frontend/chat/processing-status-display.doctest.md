@@ -3,8 +3,11 @@
 The backend `busy` flag remains the send-admission truth, but a busy snapshot
 from initial chat bootstrap is not enough by itself to paint "Agent is
 working…". The display waits for a status confirmation. A locally streaming
-turn remains immediate, and its final history refresh keeps the indicator;
-only the refresh used to clear a transient bootstrap snapshot stays hidden.
+turn remains immediate, and the history refresh that finalizes it keeps the
+indicator. A refresh the machine entered for any *other* reason — a WS
+(re)connect resync, a `chat-complete` broadcast on an idle chat, a status poll
+that read idle — is a plain history round-trip and never paints the strip
+(`chatMachine.ts` records the cause in `context.refreshCause`).
 
 ```ts setup
 import {
@@ -22,29 +25,40 @@ shouldShowAgentWorking({ phase: "idle", processBusy: true, confirmation: "unconf
 
 shouldShowAgentWorking({ phase: "idle", processBusy: true, confirmation: "confirmed" })
 => true
+
+shouldShowAgentWorking({ phase: "idle", processBusy: false, confirmation: "confirmed" })
+=> false
 ```
 
-## Local streaming and normal finalization remain immediate
+## Local streaming and its finalizing refresh remain immediate
 
 ```ts
 shouldShowAgentWorking({ phase: "streaming", processBusy: false, confirmation: "unconfirmed" })
 => true
 
-shouldShowAgentWorking({ phase: "refreshing", processBusy: false, confirmation: "unconfirmed" })
+shouldShowAgentWorking({ phase: "refreshing-turn", processBusy: false, confirmation: "unconfirmed" })
 => true
 ```
 
-## Clearing a transient snapshot does not flash during history refresh
+## A resync refresh never flashes the strip
+
+The reported flash (issues/bugs/2026-08-05-open-chat-flashes-agent-working-no-send.md):
+the reconnect gate's trailing timer fires a REFRESH ~5s after every chat
+mount, so an idle chat spent one history round-trip in `refreshing` with the
+strip painted. The status poll's idle read drops its confirmation before it
+sends the REFRESH, so that path is unconfirmed too. A resync is neutral, not
+a suppressor: a busy turn already confirmed (the agent working on a capture,
+say) keeps its strip through a reconnect's round-trip rather than flickering.
 
 ```ts
-shouldShowAgentWorking({ phase: "refreshing", processBusy: true, confirmation: "clearing" })
+shouldShowAgentWorking({ phase: "refreshing-resync", processBusy: false, confirmation: "unconfirmed" })
 => false
 
-shouldShowAgentWorking({ phase: "idle", processBusy: true, confirmation: "clearing" })
+shouldShowAgentWorking({ phase: "refreshing-resync", processBusy: true, confirmation: "unconfirmed" })
 => false
 
-shouldShowAgentWorking({ phase: "idle", processBusy: false, confirmation: "confirmed" })
-=> false
+shouldShowAgentWorking({ phase: "refreshing-resync", processBusy: true, confirmation: "confirmed" })
+=> true
 ```
 
 ## The stream watchdog recovers a wedged stream, and only a wedged one

@@ -398,6 +398,7 @@ export function createRouterCore(effects: RouterEffects, config: RouterCoreConfi
       BACKEND_PORT: String(backendPort),
       VITE_BASE: baseUrl,
       PORT: String(backendPort),
+      CB_DEV_SURFACES: "1",
       NODE_OPTIONS: nodeOptions,
     };
     const browseEnv: NodeJS.ProcessEnv = {

@@ -31,6 +31,7 @@ import { legacySecretFilesCheck } from "./health-secrets.js";
 import { pendingMigrationsCheck } from "./health-migrations.js";
 import { annexHealthChecks } from "./health-annex.js";
 import { unfiledCapturesCheck, stalledJobsCheck } from "./health-stale.js";
+import { staleIndexLockCheck } from "./health-git-lock.js";
 
 export interface HealthCheck {
   name: string;
@@ -219,6 +220,7 @@ export async function runHealthChecks(
   });
 
   checks.push(...(await annexHealthChecks({ repoRoot: gitRoot, boxRoot })));
+  checks.push(await staleIndexLockCheck(boxRoot));
   checks.push(await pendingMigrationsCheck(boxRoot));
   checks.push(await unfiledCapturesCheck(boxRoot));
   checks.push(await stalledJobsCheck(boxRoot));

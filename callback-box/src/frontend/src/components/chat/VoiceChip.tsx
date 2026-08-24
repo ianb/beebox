@@ -133,10 +133,11 @@ function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
     case "root":
       return (
         <>
-          <MenuItem onClick={onToggleMute} icon={<SpeakerIcon muted={muted} />}>
+          <MenuItem id="cb-voice-mute" onClick={onToggleMute} icon={<SpeakerIcon muted={muted} />}>
             {muted ? "✓ " : ""}Mute
           </MenuItem>
           <MenuItem
+            id="cb-voice-narration"
             onClick={onToggleNarration}
             icon={
               <span className={narrationEnabled ? undefined : "opacity-40"}>
@@ -147,6 +148,7 @@ function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
             {narrationEnabled ? "✓ " : ""}Narration mode
           </MenuItem>
           <MenuItem
+            id="cb-voice-hq-dictation"
             onClick={onToggleHqDictation}
             icon={
               <span className={hqDictationEnabled ? undefined : "opacity-40"}>
@@ -157,7 +159,7 @@ function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
             {hqDictationEnabled ? "✓ " : ""}HQ dictation
           </MenuItem>
           <MenuDivider />
-          <MenuItem onClick={onOpenVoice} keepOpen>
+          <MenuItem id="cb-voice-settings" onClick={onOpenVoice} keepOpen>
             <span className="flex justify-between gap-2 w-full">
               <span className="min-w-0">
                 Voice settings

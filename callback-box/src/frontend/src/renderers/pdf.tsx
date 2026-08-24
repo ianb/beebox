@@ -1,25 +1,20 @@
 /**
- * PDF renderer — embeds the raw file in an iframe so the browser's
- * built-in PDF viewer does the rendering.
+ * PDF renderer — hands the raw file to `PdfFrame`, which embeds the browser's
+ * built-in viewer and keeps Open/Download reachable when it can't render
+ * inline (iOS).
  */
 
 import { getApiBase } from "../api";
+import { PdfFrame } from "../components/PdfFrame";
 import type { RendererProps } from "./index";
 import { registerFileType } from "./index";
 
 const PDF_EXT = /\.pdf$/i;
 
-function PdfRenderer({ data }: RendererProps) {
+function PdfRenderer({ data, mode }: RendererProps) {
   const basename = data.path.split("/").pop() || data.path;
   const src = `${getApiBase()}/files/${data.path}`;
-  return (
-    <iframe
-      src={src}
-      title={basename}
-      className="w-full h-[85vh]"
-      style={{ border: 0 }}
-    />
-  );
+  return <PdfFrame src={src} title={basename} downloadName={basename} mode={mode ?? "page"} />;
 }
 
 registerFileType(

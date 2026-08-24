@@ -6,6 +6,7 @@ labels: [worktrees, hooks, cleanup]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder hit it closing a worktree session
+priority: important
 ---
 
 > **Mitigated 2026-08-20, not fixed.** Both sweep-running hooks now carry an

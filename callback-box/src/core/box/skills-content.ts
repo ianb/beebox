@@ -309,6 +309,12 @@ description: Work with Google Drive files synced into the box — read, edit, or
 
 Google Drive content syncs **two-way** into \`store/drive/\` (or wherever you place the card). A Drive card keeps all its data in its own **attach scope** (\`<basename>.attach/\`), so \`cb mv\` moves the card and everything with it in one step — the \`drive-id\` in the card keeps the upstream link. Don't move the pieces by hand.
 
+## Stop or resume syncing
+
+- **Stop one file without deleting it remotely:** run \`cb rm <card-path>\`. The card and attach scope move to \`store/trash/\`, which is a durable untracking tombstone. A folder mount will not re-create a trashed child.
+- **Resume:** restore the card and attach scope from trash, or run \`cb drive add\` for the Drive file again.
+- **Folder-mounted files:** raw hard deletion does not override the configured folder mount; the next sync discovers that child again. Use \`cb rm\` for one child, or remove the folder entry from \`config/connectors/google-drive.json\` to stop the whole folder.
+
 ## Spreadsheets (\`.gsheet.card\`)
 
 - **Find:** the card lists the title, Google link, and its tabs.

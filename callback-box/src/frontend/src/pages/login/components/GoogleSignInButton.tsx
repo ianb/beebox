@@ -11,6 +11,7 @@ import { withBase } from "../../../api";
 export function GoogleSignInButton({ returnTo }: { returnTo: string }) {
   return (
     <a
+      id="cb-login-google"
       href={withBase(`/auth/google?returnTo=${encodeURIComponent(returnTo)}`)}
       className="inline-flex w-full items-center justify-center bg-white text-warm-800 border border-warm-300 px-4 py-2.5 rounded-lg font-medium hover:bg-warm-50 transition-colors"
     >

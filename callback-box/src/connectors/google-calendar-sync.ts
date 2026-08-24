@@ -37,7 +37,7 @@ import { invariant } from "../lib/invariant.js";
 
 interface IcsOpts { calendarId: string; calendarName?: string; calendarRole?: string }
 
-interface SyncAccumulator {
+export interface SyncAccumulator {
   created: string[];
   updated: string[];
   deleted: string[];
@@ -259,10 +259,10 @@ export async function syncCalendar(opts: {
   calDir: string;
   windowStart: Date;
   windowEnd: Date;
+  acc: SyncAccumulator;
 }): Promise<SyncAccumulator> {
   const { boxRoot, calendar, calendarId, syncToken, syncDaysBack, syncDaysForward,
-          state, icsOpts, calDir, windowStart, windowEnd } = opts;
-  const acc: SyncAccumulator = { created: [], updated: [], deleted: [], notes: [] };
+          state, icsOpts, calDir, windowStart, windowEnd, acc } = opts;
 
   const events = await fetchEvents({
     calendar, calendarId, syncToken, syncDaysBack, syncDaysForward, state, now: getBoxTime(boxRoot),

@@ -74,6 +74,7 @@ export function HistoryViewCard({ params }: { params?: ResolvedViewParams }) {
             <Text as="span" size="xs" tone="muted">
               URL overrides: {overriddenKeys.join(", ")} ·{" "}
               <button
+                id="cb-history-view-reset"
                 type="button"
                 onClick={() => void navigate({ search: toSearch({}), replace: false })}
                 className="text-info-dark hover:underline"
@@ -83,6 +84,7 @@ export function HistoryViewCard({ params }: { params?: ResolvedViewParams }) {
             </Text>
           ) : null}
           <Link
+            id="cb-history-view-open"
             to={historyPath}
             search={toSearch(filterToSearch(filter))}
             className="text-sm text-info-dark hover:underline"

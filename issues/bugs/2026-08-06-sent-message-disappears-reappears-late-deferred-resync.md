@@ -91,7 +91,7 @@ reactive background refetch still is. Reproduce the disappear before fixing.
 
 ## Related
 
-- [chat-send-receipts-fail-often…](2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md)
+- [chat-send-receipts-fail-often…](../closed/bugs/2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md)
   — same optimistic-message-vs-durable-history-timing family; this is the specific
   deferred-resync mechanism.
 - `add0c339` / `546310cb` — the OOM/refetch-storm fixes this regressed out of.

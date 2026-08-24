@@ -90,7 +90,7 @@ runs work anytime.
 
 **It never updates anything, deliberately.** A Docling bump is judgment work:
 re-read `docling convert --help` for flag changes (the CLI has moved flags
-between releases), bump the constant, then `cb document reanalyze` a sample
+between releases), bump the constant, then `cb pdf reanalyze` a sample
 document and diff the output. See
 `docs/plans/scanner-ingest-docling-decisions.md` (D3).
 

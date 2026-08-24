@@ -19,7 +19,9 @@ import { maybeArmFirstRunSetup } from "./setup-token.js";
 import { registerBoxPublicUrl } from "../core/script-env.js";
 import { getPublicUrl } from "../lib/public-url.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
-import type { ServerOptions, InternalServerOptions } from "./server-types.js";
+import { sweepStaleIndexLock } from "../lib/git-stale-lock.js";
+import { drainBoxGitLocks, GIT_DRAIN_MS } from "../lib/git-lock.js";
+import type { InternalServerOptions } from "./server-types.js";
 import { resolveBoxes, killPreviousServer } from "./server-lifecycle.js";
 import { registerBox } from "./server-box-scope.js";
 import {
@@ -151,11 +153,11 @@ export async function createServer(options?: InternalServerOptions): Promise<Fas
   // Attach the Content-Security-Policy (Report-Only) + Reporting-Endpoints
   // headers to HTML document responses. Registered early so its onSend runs on
   // every response; it yields to routes that set their own CSP (frozen pages).
-  // Prod is the only place Fastify serves HTML (dev serves it from Vite, which
-  // sets its own dev policy); the mode keeps script/style strictness correct
-  // either way. The report route is root-level (PROD_CSP_REPORT_PATH).
+  // Fastify serves the built frontend, so it always uses the production
+  // policy. Vite owns the relaxed development policy for its HMR HTML. The
+  // report route is root-level (PROD_CSP_REPORT_PATH).
   registerCspReportingHeaders(server, {
-    mode: process.env.NODE_ENV === "production" ? "prod" : "dev",
+    mode: "prod",
     reportPath: PROD_CSP_REPORT_PATH,
   });
 
@@ -268,7 +270,7 @@ export async function createServer(options?: InternalServerOptions): Promise<Fas
 /**
  * Start the server.
  */
-export async function startServer(options?: ServerOptions): Promise<void> {
+export async function startServer(options?: InternalServerOptions): Promise<void> {
   options = options ?? {};
   // Fail closed before any side effects: an open-access server is non-listenable
   // (auth is bypassed only for `.inject()` tests). Guarded here rather than at
@@ -293,6 +295,15 @@ export async function startServer(options?: ServerOptions): Promise<void> {
     await killPreviousServer(pidFile);
   }
 
+  // Reclaim an abandoned `.git/index.lock` before serving. A box whose git
+  // was SIGKILLed mid-write cannot commit anything at all, and startup is the
+  // one moment we know no write of ours is in flight — the same habit the dev
+  // router has of reclaiming orphaned state on start. Best-effort and never
+  // fatal: a box that cannot commit should still serve reads.
+  for (const box of boxes) {
+    await sweepStaleIndexLock(box.boxRoot);
+  }
+
   const server = await createServer({ ...options, boxes });
 
   // Write PID file to each box
@@ -312,6 +323,14 @@ export async function startServer(options?: ServerOptions): Promise<void> {
     }
     server.server.closeAllConnections();
     await server.close();
+    // Let any git write we started finish before we go. Exiting on top of one
+    // orphans it into whatever SIGKILL follows (the hub's escalation, or
+    // systemd's cgroup teardown), and a git killed mid-index-write leaves a
+    // `.git/index.lock` that blocks every writer in the box until a human
+    // removes it. Bounded — a stuck span must not hold the process open.
+    if (!(await drainBoxGitLocks(GIT_DRAIN_MS))) {
+      console.warn("Git writes were still in flight at shutdown; exiting anyway.");
+    }
     console.log("Server closed.");
     process.exit(exitCode ?? 0);
   };

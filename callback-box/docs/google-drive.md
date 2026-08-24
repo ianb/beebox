@@ -45,12 +45,32 @@ store/drive/Budget.attach/
 
 The `.gsheet.card` file's frontmatter carries a `drive-id` field that links to Google Drive, plus a `sheets:` list of `{ref, title, gid}` objects pointing at each tab file in `Budget.attach/` via the `attach/` virtual prefix. Moving the card (and its `.attach/` scope) to a new location with `cb mv` is safe -- the link is maintained. No separate config file is needed for individual files.
 
+### Stop or resume syncing one file
+
+Use `cb rm <card-path>` to stop syncing one Drive file without deleting the
+remote Google file. The command moves the card and its attach scope to
+`store/trash/`; the Drive connector treats that committed trash card as a
+durable tombstone. It neither syncs the trashed card nor re-creates it from a
+configured folder mount.
+
+Restore the card and its attach scope from trash to resume syncing. Running
+`cb drive add` for the same Drive file also creates a new live mount.
+
+A raw hard delete has different folder semantics. Hard-deleting an
+individually added card untracks it, but hard-deleting a child of a configured
+folder mount leaves the folder subscription in force, so the next sync
+discovers the child again. Use `cb rm` to exclude one folder child, or remove
+the folder entry from `config/connectors/google-drive.json` to stop tracking
+the whole folder.
+
 ### Sync Flow
 
 On `cb wakeup` or `cb drive sync`:
 
-1. The connector finds all `.gsheet.card` files anywhere in the box
-2. For each card, reads the `drive-id` attribute
+1. The connector finds live Drive cards outside infrastructure and
+   `store/trash/`, while retaining trash Drive IDs as folder-discovery
+   tombstones
+2. For each live card, reads the `drive-id` field
 3. Compares local JSON content hashes with stored hashes:
    - **Local file unchanged** -- pull remote changes (overwrite JSON)
    - **Local file edited** -- push changes to Google Sheets via API

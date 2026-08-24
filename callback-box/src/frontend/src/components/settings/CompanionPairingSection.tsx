@@ -118,6 +118,7 @@ export function CompanionPairingSection() {
 
         <Row gap="sm" wrap>
           <Button
+            id="cb-settings-pairing-create-qr"
             intent="primary"
             loading={createMutation.isPending}
             loadingLabel="Creating..."
@@ -126,7 +127,7 @@ export function CompanionPairingSection() {
             Create QR
           </Button>
           {ticket ? (
-            <Button onClick={copyLink} flash={{ label: "Copied" }}>
+            <Button id="cb-settings-pairing-copy-link" onClick={copyLink} flash={{ label: "Copied" }}>
               Copy Link
             </Button>
           ) : null}

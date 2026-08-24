@@ -19,6 +19,7 @@ export function BrowseContextMenu({ x, y, path, deletingPath, onDelete }: Browse
     >
       <button
         type="button"
+        id="cb-browse-context-delete"
         onClick={() => void onDelete(path)}
         disabled={deletingPath !== null}
         className="block w-full px-3 py-2 text-left text-sm text-danger hover:bg-danger/10 disabled:text-warm-400 disabled:hover:bg-transparent"

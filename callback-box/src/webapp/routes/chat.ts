@@ -49,6 +49,8 @@ interface RegisterChatRoutesOptions {
   boxRoot: string;
   eventBus: EventBus;
   openaiAudio?: OpenAIAudioService | undefined;
+  /** Enable local speech-test facilities. Production leaves this false. */
+  devSurfaces?: boolean | undefined;
   /**
    * If true, eagerly pre-warm a Claude subprocess so the first "new chat"
    * send doesn't pay spawn + initialize latency. Production servers set
@@ -65,6 +67,7 @@ interface RegisterChatRoutesOptions {
  */
 export async function registerChatRoutes(options: RegisterChatRoutesOptions): Promise<void> {
   const { server, boxRoot, eventBus, openaiAudio, prewarmChat, chatBackend } = options;
+  const devSurfaces = options.devSurfaces === true;
 
   // File-upload endpoint for chat attachments (writes to <boxRoot>/tmp/).
   await registerChatUploadRoutes({ server, boxRoot });
@@ -177,6 +180,7 @@ export async function registerChatRoutes(options: RegisterChatRoutesOptions): Pr
     boxRoot,
     eventBus,
     openaiAudio,
+    devSurfaces,
     registry,
     scheduleManager,
     wireSession,

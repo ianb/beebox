@@ -26,13 +26,33 @@ If you find yourself thinking "I need to start `pnpm dev` to use `bin/browse`," 
 ## The core loop
 
 ```bash
-bin/browse open /            # 1. Open a page (leading / → worktree router URL)
-bin/browse snapshot -i       # 2. See interactive elements with @e1, @e2, ... refs
-bin/browse click @e3         # 3. Act on refs
-bin/browse snapshot -i       # 4. Re-snapshot — refs are stale after page change
+bin/browse open /                 # 1. Open a page (leading / → worktree router URL)
+bin/browse snapshot -i            # 2. See interactive elements — each shows a ref, and an id when it has one:
+                                  #      - button "User" [expanded=false, ref=e8, id=cb-nav-profile]
+bin/browse click cb-nav-profile   # 3. Act BY ID when the line shows one; by ref (@e8) only when it doesn't
+bin/browse snapshot -i            # 4. Re-snapshot after the page changes
 ```
 
-**Refs become stale on any page change** (navigation, dynamic re-render, dialog open, viewport change). Always re-snapshot before the next ref interaction.
+**Prefer the id.** `cb-…` ids are the app's own stable control addresses
+(`callback-box/src/frontend/src/lib/ui-scan/resolve.ts`): resolved by
+`getElementById` at the moment you act, so a re-render between snapshot and
+action cannot retarget them. `@eN` refs are upstream's positional handles —
+**renumbered on every snapshot, and not in document order** (an open menu takes
+`e2–e6` and the nav buttons move to `e12+`). A ref whose number still exists
+after a re-render is not an error upstream; it just names a different element.
+
+**Every action is checked before it is sent.** On the app's own pages the wrapper
+refuses — `✗ click cb-composer-send refused: disabled — …`, exit 1 — when the
+target is missing, hidden, zero-size, off-screen, disabled, `pointer-events:
+none`, or covered by another element. A `@eN` whose number changed hands
+between your last two snapshots gets a stderr warning naming both (the tool
+cannot know which snapshot you read it from, so it warns rather than refuses —
+the id needs no warning). Upstream alone reports `✓ Done` in
+every one of those cases (measured on 0.27.0 — it is a box-center mouse event
+with no preconditions), which is how a driver ends up "clicking" a heading and
+concluding the app ignored it. A `@eN` ref on a control with no `cb-` id gets
+only the geometry checks; the wrapper says so on stderr. Off the app (any other
+origin), everything passes through to upstream unchanged.
 
 ## Commands you'll actually use
 
@@ -52,9 +72,10 @@ bin/browse get text @e5
 bin/browse get url                              # current page URL
 bin/browse get title
 
-# Acting
-bin/browse click @e3
-bin/browse fill @e2 "user@example.com"
+# Acting — a cb- id, a @eN ref, or a CSS/XPath selector, in every target slot
+bin/browse click cb-nav-profile
+bin/browse click @e3                            # ref: only when the snapshot line shows no id
+bin/browse fill cb-composer-input "hello"
 bin/browse type @e2 " more text"                # type without clearing
 bin/browse press Enter
 bin/browse press Control+a
@@ -140,16 +161,22 @@ When you land on `/auth/login`, work through these in order. **The first two are
 
 **1. Did you write the box slug into the path?** `open /test1/chats` becomes `/<wt>/test1/test1/chats`, which resolves to no route. You get redirected somewhere plausible rather than an error. Write `open /chats`.
 
-**2. Are you asking for something the key doesn't grant?** The browse key authenticates **box routes** — `/<worktree>/<box>/…`. It does *not* grant the router's own surfaces:
+**2. Are you asking for something the key doesn't grant?** The browse key authenticates **box routes** and the **read-only dev surfaces**. It does *not* grant the router's control surfaces:
 
 | path | what authenticates it |
 |---|---|
 | `/<wt>/<box>/…` | browse key ✅ |
+| `/<wt>/dev/…` (GET/HEAD) | browse key ✅ |
+| `/workstreams/…` (GET/HEAD) | browse key ✅ |
 | `/` (worktree index) | owner session only |
 | `/__router/…` (control routes) | owner session only |
-| `/<wt>/dev/…` | owner session only |
+| `/workstreams/…` (POST — actions, tRPC mutations) | owner session + same-origin |
 
-A navigation denied at those returns 401, which the router renders as the login page — so "I got the login page" does not by itself mean your key is wrong.
+The dev surfaces were owner-only until 2026-08-24, which made every issue *about* them boxholder-only to verify. They are reads from disk with no write path, so the browse key now carries them (`dev-read` in `bin/router-auth.ts`). The control routes above deliberately did not move.
+
+Note `/<wt>/dev/docs/…` is a 301 to `/workstreams/browse?file=…` — the doc browser retired into the general browser. Follow the redirect; both ends accept the key.
+
+A navigation denied at the owner-only rows returns 401, which the router renders as the login page — so "I got the login page" does not by itself mean your key is wrong.
 
 ### The key is not the box owner
 
@@ -263,6 +290,10 @@ in one session is not visible in another.
 - **"BROWSE_REPO_DIR is not set"** — you invoked `tsx browse/src/cli.ts` directly. Use `bin/browse`.
 - **"tsx not found in browse/node_modules"** — run `pnpm install` in `browse/`.
 - **First request hangs ~4s** — cold start for the worktree's dev server. Normal.
+- **`browse: @e8 may be stale — …`** — that number meant something else in the snapshot before last. If the action's effect is not what you expected, that is why; act by id where the line shows one.
+- **`✗ … refused: covered — … is under …`** — something (an overlay, a toast, a menu) sits on top of the control. That is usually a real finding about the app; report it rather than working around it.
+- **`browse: page has no window.__cbUiScan`** — the frontend on this page predates the hook (or it is not the app). Ids are not shown; refs still work.
+- **`text=…` and XPath targets say "Element not found"** even when the element is there — upstream's CDP engine does not resolve those forms (0.27.0), whatever its `--help` says. Use a `cb-` id, a ref, or CSS.
 - **Refs from a prior snapshot don't work** — page changed (navigation, viewport, dialog). Re-snapshot.
 - **You land on `/auth/login`** — work [Auth](#auth-why-a-navigation-lands-on-the-login-page) in order. Usually a box slug written into the path, or a request for an owner-session-only surface — not a bad key.
 - **You navigated somewhere you didn't ask for** — check `bin/browse get url` before concluding anything about the page. A path that resolves to no route redirects rather than erroring, so a typo reads as "the app is behaving strangely."

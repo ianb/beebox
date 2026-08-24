@@ -210,12 +210,14 @@ export function GrantExistingForm({
     <form onSubmit={(event) => void submit(event)}>
       <Stack gap="sm">
         <SelectField
+          id="cb-admin-secrets-grant-name"
           label="Grant an existing secret to this box"
           value={name === "" ? (grantable[0]?.name ?? "") : name}
           onChange={setName}
           options={grantable.map((secret) => ({ value: secret.name, label: secret.name }))}
         />
         <SelectField
+          id="cb-admin-secrets-grant-access"
           label="Access"
           value={access}
           onChange={setAccess}
@@ -225,7 +227,7 @@ export function GrantExistingForm({
           ]}
         />
         <Row gap="sm" wrap>
-          <Button type="submit" intent="primary" loading={grant.isPending} loadingLabel="Granting…">Grant</Button>
+          <Button id="cb-admin-secrets-grant-submit" type="submit" intent="primary" loading={grant.isPending} loadingLabel="Granting…">Grant</Button>
         </Row>
         {grant.error ? <div role="alert"><Text size="sm" tone="danger">{grant.error.message}</Text></div> : null}
       </Stack>
