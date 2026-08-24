@@ -2,11 +2,11 @@
 title: "A switch for always-HQ dictation, separate from narration mode"
 workstream: transcript-confidence
 area: callback-box
-needs: [manual-testing]
 labels: [voice, transcription, chat]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder wanting HQ dictation without narration mode
+resolution: implemented
 ---
 
 > **⏳ Awaiting manual testing** — implemented on `worktree-transcript-confidence`
@@ -19,6 +19,8 @@ discovered-in: main session — boxholder wanting HQ dictation without narration
 > to be.
 
 ## Manual testing
+
+> Verified by boxholder 2026-08-24
 
 What shipped: an "HQ dictation" toggle in the voice menu beside Narration mode
 (independent of it); with it on, keyword sends AND tap-sends route through the
@@ -101,13 +103,14 @@ needs to know the tool won't help here, not why.
 
 ## Related
 
-- [Mark low-confidence words in transcripts](../closed/features/2026-08-15-mark-low-confidence-words-in-transcripts.md)
+- [Mark low-confidence words in transcripts](2026-08-15-mark-low-confidence-words-in-transcripts.md)
   — the other axis of transcription quality, and the source of the second
   prompt paragraph this one must not become a third of.
-- [The first message of a chat can't have its audio retranscribed](../bugs/2026-08-18-first-message-audio-not-retranscribable.md)
+- [The first message of a chat can't have its audio retranscribed](../../bugs/2026-08-18-first-message-audio-not-retranscribable.md)
   — documents the retention model retranscription depends on. Note its finding
   that native iOS voice sends already can never be retranscribed, for the same
   underlying reason: the HQ pass happened elsewhere and nothing kept the audio.
   An always-HQ switch makes that pre-existing case the common one, so the
   signalling decided here should cover both rather than being narrowly scoped
   to this switch.
+
