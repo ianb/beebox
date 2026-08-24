@@ -48,6 +48,37 @@ like:
 Adjust the wording to fit the conversation, but the spirit is constant:
 _understanding first, plan second, work third._
 
+## If YOU are in a worktree: land what the new session needs first
+
+**A new worktree branches from `main`** — `--base-ref` defaults to it, and every
+launch path uses that default. So the child cannot see your branch's work. If
+the thing you are spinning off builds on code, a plan doc, or an issue that
+exists only in your worktree, the new session starts without it and will either
+re-derive it or contradict it.
+
+Before launching, check what you are sitting on:
+
+```bash
+git status --porcelain          # uncommitted here
+git log --oneline main..HEAD    # committed here, not on main
+```
+
+Anything the new session needs must be **committed and merged to main** first
+(`bin/land`, or `/finish` if the work is done). Committing alone is not enough —
+the commit still lives on your branch.
+
+Two honest alternatives when merging isn't right yet:
+
+- **Branch the child from your work** with `--base-ref <your-branch>`. Use it
+  when the two are genuinely one line of work; understand that the child then
+  starts from an unmerged base and both branches have to land in order.
+- **Put what they need in the briefing.** For a decision, a finding, or a file
+  path, prose is often enough and needs no merge at all.
+
+What does *not* work is assuming they will see it. This is silent: the launch
+succeeds, the session opens, and the missing context only surfaces later as
+duplicated or conflicting work.
+
 ## How the briefing reaches the new session
 
 `launch-worktree-session` automatically wraps the briefing in
