@@ -1,7 +1,8 @@
 # Workstream list registry projection
 
-Removed workstreams are opt-in ghost rows. Ordinary listing still enumerates
-only attached worktrees, while the ghost shape makes absence explicit.
+In-flight and failed launch records are visible before a worktree exists.
+Removed workstreams remain opt-in ghost rows, and every registry-only shape
+makes absence explicit.
 
 ```ts setup
 import { execFile } from "node:child_process";
@@ -52,12 +53,23 @@ await writeFile(join(stateDir, "workstreams/culled.json"), JSON.stringify({
   updatedAt: "2026-08-09T00:00:00Z",
   removed: { at: "2026-08-09T00:00:00Z", finalSha: "abc", merged: true },
 }));
-(await list(stateDir, worktreeRoot, false)).length
-=> 0
+await writeFile(join(stateDir, "workstreams/pending-launch.json"), JSON.stringify({
+  name: "pending-launch",
+  branch: "worktree-pending-launch",
+  launch: { token: "pending-token", startedAt: new Date().toISOString().replace(/\.\d{3}Z$/, "Z") },
+}));
+await writeFile(join(stateDir, "workstreams/expired-launch.json"), JSON.stringify({
+  name: "expired-launch",
+  branch: "worktree-expired-launch",
+  launch: { token: "expired-token", startedAt: "2026-01-01T00:00:00Z" },
+}));
+const ordinary = await list(stateDir, worktreeRoot, false);
+JSON.stringify(ordinary.map((row: { name: string; agent: { state: string }; routing: { state: string; action: string } }) => [row.name, row.agent.state, row.routing.state, row.routing.action]))
+=> [["expired-launch","none","uncertain","investigate"],["pending-launch","launching","launching","wait-for-launch"]]
 
 const rows = await list(stateDir, worktreeRoot, true);
-JSON.stringify(rows[0])
-=> {"name":"culled","branch":"worktree-culled","path":null,"box":null,"url":null,"git":null,"runtime":{"state":"absent"},"agent":{"state":"none","reason":"no-worktree"},"session":{"agent":"claude","hasSession":true,"tty":null,"emoji":"🧵","baseSha":null,"removed":{"at":"2026-08-09T00:00:00Z","finalSha":"abc","merged":true},"archived":null,"description":null},"routing":{"state":"removed","action":"resume-with-briefing","lastActivityAt":"2026-08-09T00:00:00Z"},"boxState":{"testSetup":false,"keepUnmerged":false,"pristine":null}}
+JSON.stringify(rows.find((row: { name: string }) => row.name === "culled"))
+=> {"name":"culled","branch":"worktree-culled","path":null,"box":null,"url":null,"git":null,"runtime":{"state":"absent"},"agent":{"state":"none","reason":"no-worktree"},"session":{"agent":"claude","hasSession":true,"tty":null,"emoji":"🧵","baseSha":null,"removed":{"at":"2026-08-09T00:00:00Z","finalSha":"abc","merged":true},"archived":null,"description":null,"launch":{"state":"none","startedAt":null,"expiresAt":null,"failedAt":null,"reason":null}},"routing":{"state":"removed","action":"resume-with-briefing","lastActivityAt":"2026-08-09T00:00:00Z"},"boxState":{"testSetup":false,"keepUnmerged":false,"pristine":null}}
 ```
 
 ## Stray directories are visible anomalies, not rows
@@ -66,7 +78,7 @@ JSON.stringify(rows[0])
 await mkdir(join(worktreeRoot, "scratch"));
 const stray = await listResult(stateDir, worktreeRoot);
 JSON.stringify({ rows: JSON.parse(stray.stdout).length, warned: stray.stderr.includes("ignoring non-worktree directory") })
-=> {"rows":0,"warned":true}
+=> {"rows":2,"warned":true}
 ```
 
 ```ts cleanup

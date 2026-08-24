@@ -19,8 +19,8 @@
 //      never exit — see below) are reaped even in a live worktree, which is the
 //      whole reason they otherwise pile up.
 //
-//      Liveness is TRI-STATE — none / live / unknown — and `unknown` counts as
-//      live (in fact stricter — see classifyAgentBrowser), because this guard
+//      Liveness has four states — none / launching / live / unknown — and both
+//      `launching` and `unknown` block reclamation, because this guard
 //      stands in front of an irreversible kill. The
 //      answer comes from `bin/workstreams agent-liveness`, i.e. from
 //      `wt_other_agent_live` in bin/lib/worktree-teardown.sh, the single shared
@@ -74,8 +74,8 @@ const KILL_GRACE_MS = 2000;
 
 export type ProcKind = "vite" | "fastify" | "agent-browser";
 
-/** Tri-state agent liveness, mirroring `wt_other_agent_live`'s WT_AGENT_STATE. */
-export type AgentState = "none" | "live" | "unknown";
+/** Agent liveness, mirroring `wt_other_agent_live`'s WT_AGENT_STATE. */
+export type AgentState = "none" | "launching" | "live" | "unknown";
 
 export interface AgentLiveness {
   state: AgentState;
@@ -182,7 +182,7 @@ function pathForWorktree(worktree: string): string {
 }
 
 /**
- * Tri-state agent liveness per worktree, from `bin/workstreams agent-liveness`
+ * Agent liveness per worktree, from `bin/workstreams agent-liveness`
  * — which is `wt_other_agent_live`, the one shared guard, and therefore knows
  * about codex sessions and about claude sessions whose argv is `--name`.
  *
@@ -218,7 +218,8 @@ export async function agentLivenessByWorktree(worktrees: string[]): Promise<Map<
     if (!entry) continue;
     // Anything that isn't a state we recognize stays `unknown` — a guard must
     // not read a value it doesn't understand as permission to kill.
-    const state: AgentState = entry.state === "live" || entry.state === "none" ? entry.state : "unknown";
+    const recognized = entry.state === "live" || entry.state === "launching" || entry.state === "none";
+    const state: AgentState = recognized ? entry.state as AgentState : "unknown";
     out.set(wt, { state, reason: entry.reason ?? "" });
   }
   return out;
@@ -231,6 +232,8 @@ export async function agentLivenessByWorktree(worktrees: string[]): Promise<Map<
  * - `none`    — nothing is using this worktree; every daemon there is reapable.
  * - `live`    — spare the daemon the socket dir vouches for; superseded orphans
  *               still go (they never exit on their own).
+ * - `launching` — spare unconditionally while setup owns an active lease. A
+ *               pre-agent shell cannot establish which daemon is current yet.
  * - `unknown` — spare unconditionally, vouched or not. This is stricter than
  *               "treat unknown as live", deliberately: reaping a superseded
  *               orphan rests entirely on the socket dir's pidfiles, and with the
@@ -243,6 +246,7 @@ export async function agentLivenessByWorktree(worktrees: string[]): Promise<Map<
  */
 export function classifyAgentBrowser(session: AgentState, vouched: boolean): { kill: boolean; reason: string } {
   if (session === "none") return { kill: true, reason: "no live session" };
+  if (session === "launching") return { kill: false, reason: "launch in progress" };
   if (session === "unknown") return { kill: false, reason: "session liveness unknown" };
   if (!vouched) return { kill: true, reason: "superseded orphan" };
   return { kill: false, reason: "current daemon" };

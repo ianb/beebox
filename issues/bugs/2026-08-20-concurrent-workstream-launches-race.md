@@ -23,4 +23,4 @@ worktree add`, with state re-checked after lock acquisition. Installs and agent
 launches should remain outside it. This needs a concurrent creation test before
 the workflow guidance permits parallel launching.
 
-Related but distinct: [the pre-agent liveness gap](2026-08-20-workstream-launch-liveness-gap.md).
+Related but distinct: [the pre-agent liveness gap](../closed/bugs/2026-08-20-workstream-launch-liveness-gap.md).

@@ -388,6 +388,14 @@ case "$cmd" in
       worktree_exists=true
       wt_other_agent_live "$target"
       agent_state="$WT_AGENT_STATE"
+    elif [ -n "$record" ]; then
+      launch_status=$(session_registry_launch_status_from_record "$record" "$(date +%s)")
+      case "$(jq -r '.state' <<<"$launch_status")" in
+        active) agent_state="launching" ;;
+        failed) agent_state="launch-failed" ;;
+        expired) agent_state="launch-expired" ;;
+        unknown) agent_state="unknown" ;;
+      esac
     fi
     resume_state=$(workstream_resume_state "$worktree_exists" "$agent_state" "$record")
     case "$resume_state" in
@@ -405,6 +413,9 @@ case "$cmd" in
       liveness-unknown)
         echo "workstreams resume: cannot determine liveness for $name ($WT_AGENT_REASON) — refusing to open a duplicate" >&2
         exit 1 ;;
+      launch-in-progress)
+        echo "workstreams resume: $name is already launching — wait for it to finish or expire" >&2
+        exit 1 ;;
       unknown)
         echo "workstreams resume: unknown workstream '$name'; use launch-worktree-session to start new work" >&2
         exit 1 ;;
@@ -416,6 +427,10 @@ case "$cmd" in
         fi
         ;;
     esac
+
+    if [ "$resume_state" = "launch-retry" ]; then
+      target=""
+    fi
 
     resolved_agent="$requested_agent"
     [ -n "$resolved_agent" ] || resolved_agent=$(printf '%s' "$record" | jq -r '.agent // empty' 2>/dev/null || true)
@@ -650,7 +665,7 @@ case "$cmd" in
             }]')
     done
 
-    if [ "$include_removed" = true ] && [ -d "$WT_STATE_DIR/workstreams" ]; then
+    if [ -d "$WT_STATE_DIR/workstreams" ]; then
       for registry_file in "$WT_STATE_DIR"/workstreams/*.json; do
         [ -f "$registry_file" ] || continue
         name=$(basename "$registry_file" .json)
@@ -658,11 +673,25 @@ case "$cmd" in
         [ -d "$WT_ROOT/$name" ] && continue
         record=$(session_registry_read "$name" || true)
         [ -n "$record" ] || continue
-        printf '%s' "$record" | jq -e '.removed != null' >/dev/null 2>&1 || continue
         session=$(session_registry_summary "$name")
-        routing=$(workstream_routing_json false none "$record" "" "" "$now_epoch")
+        launch_state=$(printf '%s' "$session" | jq -r '.launch.state')
+        removed_state=$(printf '%s' "$record" | jq -r 'if .removed != null then "true" else "false" end')
+        if [ "$launch_state" = "none" ] && { [ "$include_removed" != true ] || [ "$removed_state" != true ]; }; then
+          continue
+        fi
+        case "$launch_state" in
+          active) registry_agent_state="launching"; registry_agent_reason="signal=launch-lease" ;;
+          expired) registry_agent_state="none"; registry_agent_reason="launch=expired" ;;
+          failed) registry_agent_state="none"; registry_agent_reason="launch=failed" ;;
+          unknown)
+            registry_agent_state="unknown"
+            registry_agent_reason=$(printf '%s' "$session" | jq -r '.launch.reason // "invalid-launch-status"')
+            ;;
+          *) registry_agent_state="none"; registry_agent_reason="no-worktree" ;;
+        esac
+        routing=$(workstream_routing_json false "$registry_agent_state" "$record" "" "" "$now_epoch")
         box_state=$(workstream_box_state "$WT_BOX_ROOT/$name/test1" "$WT_BOX_SRC")
-        branch=$(printf '%s' "$record" | jq -r '.branch // ("worktree-" + .name)')
+        branch=$(printf '%s' "$record" | jq -r --arg name "$name" '.branch // ("worktree-" + $name)')
         rows=$(jq -c \
           --argjson rows "$rows" \
           --arg name "$name" \
@@ -670,9 +699,11 @@ case "$cmd" in
           --argjson session "$session" \
           --argjson routing "$routing" \
           --argjson boxState "$box_state" \
+          --arg agentState "$registry_agent_state" \
+          --arg agentReason "$registry_agent_reason" \
           -n '$rows + [{
             name:$name, branch:$branch, path:null, box:null, url:null, git:null,
-            runtime:{state:"absent"}, agent:{state:"none", reason:"no-worktree"},
+            runtime:{state:"absent"}, agent:{state:$agentState, reason:$agentReason},
             session:$session, routing:$routing, boxState:$boxState
           }]')
       done

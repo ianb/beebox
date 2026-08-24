@@ -74,9 +74,10 @@ wt_say() { printf '%s%s\n' "${WT_SAY_PREFIX:-  }" "$*"; }
 #
 # wt_other_agent_live <worktree_path> [--exclude-self-ancestor]
 #
-# Always returns 0; the answer is in WT_AGENT_STATE (`none` | `live` |
-# `unknown`) with detail in WT_AGENT_REASON. Callers MUST treat `unknown` the
-# same as `live` — that's the fail-closed half of this guard.
+# Always returns 0; the answer is in WT_AGENT_STATE (`none` | `launching` |
+# `live` | `unknown`) with detail in WT_AGENT_REASON. Callers MUST treat
+# `launching` and `unknown` the same as `live` for destructive decisions —
+# that's the fail-closed half of this guard.
 #
 # Cleaning a worktree that still has a live agent pulls the rug out from under
 # it. `bin/workstreams sweep` has always checked; session-end.sh did not, and that
@@ -182,6 +183,39 @@ wt_agent_snapshot_clear() {
   WT_SNAP_CWDS=""
 }
 
+# Process evidence is authoritative. Consult the launch lease only after both
+# process signals have established that no agent is running: the lease bridges
+# setup before the agent process exists, but must never hide a process that has
+# already started.
+wt_agent_none_or_launching() {
+  local wt_name="$1" launch status reason
+  launch=$(session_registry_launch_status "$wt_name")
+  status=$(jq -r '.state' <<<"$launch")
+  reason=$(jq -r '.reason // empty' <<<"$launch")
+  case "$status" in
+    active)
+      WT_AGENT_STATE="launching"
+      WT_AGENT_REASON="signal=launch-lease"
+      ;;
+    expired)
+      WT_AGENT_STATE="none"
+      WT_AGENT_REASON="launch=expired"
+      ;;
+    failed)
+      WT_AGENT_STATE="none"
+      WT_AGENT_REASON="launch=failed"
+      ;;
+    none)
+      WT_AGENT_STATE="none"
+      WT_AGENT_REASON=""
+      ;;
+    *)
+      WT_AGENT_STATE="unknown"
+      WT_AGENT_REASON="${reason:-invalid-launch-status}"
+      ;;
+  esac
+}
+
 wt_other_agent_live() {
   local worktree_path="$1" exclude_self=""
   [ "${2:-}" = "--exclude-self-ancestor" ] && exclude_self=1
@@ -201,7 +235,7 @@ wt_other_agent_live() {
       return 0
     fi
     case "$WT_SNAP_STATE" in
-      no-agents) WT_AGENT_STATE="none"; return 0 ;;
+      no-agents) wt_agent_none_or_launching "$wt_name"; return 0 ;;
       no-procs)  WT_AGENT_REASON="cannot-enumerate-processes"; return 0 ;;
       no-argv)   WT_AGENT_REASON="cannot-read-agent-argv"; return 0 ;;
       no-cwds)   WT_AGENT_REASON="cannot-read-agent-cwds"; return 0 ;;
@@ -230,7 +264,7 @@ EOF
     done <<EOF
 $WT_SNAP_CWDS
 EOF
-    WT_AGENT_STATE="none"
+    wt_agent_none_or_launching "$wt_name"
     return 0
   fi
 
@@ -258,7 +292,7 @@ EOF
         '{ n = $2; sub(/.*\//, "", n);
            if ((n == "claude" || n == "codex") && $1 != self) print $1 }')
   if [ -z "$other_pids" ]; then
-    WT_AGENT_STATE="none"
+    wt_agent_none_or_launching "$wt_name"
     return 0
   fi
 
@@ -297,7 +331,7 @@ EOF
 $other_cwds
 EOF
 
-  WT_AGENT_STATE="none"
+  wt_agent_none_or_launching "$wt_name"
   return 0
 }
 
@@ -520,7 +554,7 @@ wt_remove_now() {
       --arg finalSha "$final_sha" \
       --arg boxRef "$box_ref" \
       --argjson merged "$removed_merged" \
-      '{removed: ({at:$at, merged:$merged}
+      '{launch:null, removed: ({at:$at, merged:$merged}
         + if $finalSha == "" then {} else {finalSha:$finalSha} end
         + if $boxRef == "" then {} else {boxRef:$boxRef} end)}')
     session_registry_merge "$name" "$removed_patch" || true

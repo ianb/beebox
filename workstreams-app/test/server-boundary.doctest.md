@@ -36,6 +36,7 @@ function cliRow(name = "example") {
       removed: null,
       archived: null,
       description: "Workstream routing",
+      launch: { state: "none", startedAt: null, expiresAt: null, failedAt: null, reason: null },
     },
     routing: { state: "live", action: "manual-forward", lastActivityAt: "2026-08-20T00:00:00Z" },
     boxState: { testSetup: false, keepUnmerged: false, pristine: null },

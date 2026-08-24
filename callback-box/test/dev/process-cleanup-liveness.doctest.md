@@ -132,24 +132,25 @@ alive(orphan)
 => false
 ```
 
-## `unknown` liveness spares everything
+## `launching` and `unknown` liveness spare everything
 
-The guard answers `none` / `live` / `unknown`, and a caller standing in front of
-a kill must not read "could not tell" as "nothing is running" — that is the
-fail-open shape that bit `bin/workstreams sweep` in 2026-08. `unknown` is
-handled harder than `live` here: reaping a superseded orphan rests entirely on
-the socket dir's pidfiles, and once the liveness answer is already unavailable
-there is no second signal left to be wrong about.
+The guard answers `none` / `launching` / `live` / `unknown`, and a caller
+standing in front of a kill must not read setup or "could not tell" as "nothing
+is running". Both uncertain states are handled harder than `live`: before the
+agent boundary there is not yet a trustworthy current-daemon signal, and after
+an oracle failure there is no second signal left to be wrong about.
 
 ```ts
 JSON.stringify([
   classifyAgentBrowser("unknown", true),
   classifyAgentBrowser("unknown", false),
+  classifyAgentBrowser("launching", true),
+  classifyAgentBrowser("launching", false),
   classifyAgentBrowser("live", true),
   classifyAgentBrowser("live", false),
   classifyAgentBrowser("none", true),
 ])
-=> [{"kill":false,"reason":"session liveness unknown"},{"kill":false,"reason":"session liveness unknown"},{"kill":false,"reason":"current daemon"},{"kill":true,"reason":"superseded orphan"},{"kill":true,"reason":"no live session"}]
+=> [{"kill":false,"reason":"session liveness unknown"},{"kill":false,"reason":"session liveness unknown"},{"kill":false,"reason":"launch in progress"},{"kill":false,"reason":"launch in progress"},{"kill":false,"reason":"current daemon"},{"kill":true,"reason":"superseded orphan"},{"kill":true,"reason":"no live session"}]
 ```
 
 That holds end to end, not just in the classifier. Break the liveness oracle —
