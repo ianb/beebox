@@ -6,8 +6,8 @@ labels: [capture, chat, ui]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder found a months-old failed capture in chat
-needs: [manual-testing]
 next-action: fixed
+resolution: implemented
 ---
 
 > **⏳ Awaiting manual testing** — fix landed in `9e6caef8`. A failed chip now
@@ -28,7 +28,7 @@ has been surfacing an unactionable retry prompt for **16 days**. This is a
 genuine stuck capture, not a display artifact, and it is the *only* durable
 capture state the UI has: a delivered capture drops out of this same query and
 leaves nothing behind (see
-[capture success is invisible](2026-08-20-capture-success-is-invisible.md)).
+[capture success is invisible](../../bugs/2026-08-20-capture-success-is-invisible.md)).
 
 ## Two defects in one small control
 
@@ -105,7 +105,7 @@ one.
 it. The fresh/stale line the sweep draws is `ABANDONMENT_WINDOW_MS`
 (`core/capture/sweep.ts`).
 
-Related: [capture upload error/retry affordance is tiny](2026-08-03-capture-upload-error-retry-affordance-weak.md)
+Related: [capture upload error/retry affordance is tiny](../../bugs/2026-08-03-capture-upload-error-retry-affordance-weak.md)
 — same family, different surface (that one is the capture overlay's control
 being small and giving no click feedback; this one is the chat chip lacking a
 verb entirely).
@@ -141,6 +141,8 @@ verb entirely).
   brief resolved face delivery gets, then leaves.
 
 ## Manual testing
+
+> Verified by boxholder 2026-08-24
 
 1. Open the chat holding your `failed:prepare` capture from 2026-08-04. The
    chip must read `failed 17 days ago` (or however old it now is) with a
