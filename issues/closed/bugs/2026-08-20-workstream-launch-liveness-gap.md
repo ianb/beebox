@@ -1,7 +1,7 @@
 ---
 title: "A newly launched workstream briefly looks safe for sweep to delete"
 workstream: streams-and-issues
-design: ../../../callback-box/docs/plans/workstream-launch-liveness.md
+design: ../../../callback-box/docs/implemented-plans/workstream-launch-liveness.md
 area: router
 labels: [workstreams, lifecycle, liveness]
 filed-by: agent

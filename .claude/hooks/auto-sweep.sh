@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Trigger a detached `bin/workstreams sweep`, gated + logged.
+# Trigger a background `bin/workstreams sweep`, gated + logged.
 #
 # WHY THIS EXISTS: worktree auto-cleanup must NOT depend on the SessionEnd hook
 # correctly identifying a finishing session as its worktree — it can't when a
@@ -14,6 +14,10 @@
 #                           accumulate finished worktrees all day.
 #   - bin/codex-session-end → codex fires no hooks; its launcher-driven teardown
 #                           calls this for parity.
+#
+# Re-invokes ITSELF with `--run` inside a detached process group; the parent
+# returns immediately, so a caller is never blocked by a sweep. Output folds
+# into the same lifecycle log as the per-worktree hook decisions.
 # NOT wired to .husky/post-merge: sweep's `git worktree prune` is not
 # concurrency-safe against the deploy that post-merge also launches (it
 # corrupts the deploy's .deploy-checkout). Re-adding needs a shared worktree
@@ -24,7 +28,7 @@
 # `claude`/`codex` session (checked via `ps -axo pid=,comm=` + `--worktree`
 # argv + real process cwd — NOT pgrep, which misses native-installed Claude
 # Code entirely; see bin/CLAUDE.md).
-set -uo pipefail
+set -u
 
 HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || echo "")"
 REPO="$(cd "$HOOK_DIR/../.." 2>/dev/null && pwd || echo "")"
@@ -37,102 +41,66 @@ case "$REPO" in *"/callback-worktrees/"*) exit 0 ;; esac
 
 trigger="${1:-manual}"
 LOG="$HOME/.cache/callback-box/worktree-cleanup.log"
+LOCK="$HOME/.cache/callback-box/sweep.lock"
 mkdir -p "$(dirname "$LOG")" 2>/dev/null || true
 
-auto_sweep_remove_launchd_job() {
-  local label="$1"
-  [ -n "$label" ] || return 0
-  launchctl remove "$label" >/dev/null 2>&1 || true
-}
+stamp() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 
-auto_sweep_worker() {
-  local label="$1" worker_trigger="$2" lock="$HOME/.cache/callback-box/auto-sweep.lock"
-  local request="$HOME/.cache/callback-box/auto-sweep.requested" status=0 rc
-  if [ -n "$label" ]; then
-    # Labels are generated from digits/dots plus a fixed prefix. Bind it now:
-    # the function-local variable is out of scope when the shell's EXIT trap
-    # runs after worker mode returns.
-    trap "auto_sweep_remove_launchd_job '$label'" EXIT
-  fi
-  exec 197>>"$lock" || {
-    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) auto-sweep trigger=$worker_trigger LOCK-FAILED open" >> "$LOG"
-    return 1
-  }
-  if command -v lockf >/dev/null 2>&1; then
-    lockf -s -t "${AUTO_SWEEP_LOCK_TIMEOUT_SECONDS:-1800}" 197 || rc=$?
-  elif command -v flock >/dev/null 2>&1; then
-    flock -E 75 -w "${AUTO_SWEEP_LOCK_TIMEOUT_SECONDS:-1800}" 197 || rc=$?
-  else
-    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) auto-sweep trigger=$worker_trigger LOCK-FAILED no-lock-tool" >> "$LOG"
-    return 1
-  fi
-  if [ "${rc:-0}" -ne 0 ]; then
-    if [ "$rc" -eq 75 ]; then
-      echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) auto-sweep trigger=$worker_trigger LOCK-TIMEOUT" >> "$LOG"
-    else
-      echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) auto-sweep trigger=$worker_trigger LOCK-FAILED status=$rc" >> "$LOG"
-    fi
-    return "$rc"
-  fi
-
-  # Every trigger writes the marker before submitting its worker. One queued
-  # worker consumes all requests that arrived before it acquired; later queued
-  # workers observe no marker and exit without a redundant sweep.
-  if [ ! -f "$request" ]; then
-    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) auto-sweep trigger=$worker_trigger COALESCED no-request" >> "$LOG"
-    exec 197>&-
-    return 0
-  fi
-  rm -f "$request"
-
-  {
-    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) auto-sweep trigger=$worker_trigger START"
-    # The worker shell owns fd 197. The sweep and its detached trash reapers
-    # must not inherit it, or they hold the whole-sweep lock after this worker
-    # has finished waiting for the sweep command.
-    "$REPO/bin/workstreams" sweep 197>&- 2>&1 | sed 's/^/  /' || status=$?
-    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) auto-sweep trigger=$worker_trigger END status=$status"
-  } >> "$LOG" 2>&1
-  exec 197>&-
-  return "$status"
-}
-
-if [ "$trigger" = "--run-detached" ]; then
-  auto_sweep_worker "${2:-}" "${3:-unknown}"
-  exit $?
-fi
-
-# `&`/`disown` is not detachment from a non-interactive hook host: Claude can
-# still wait on or cancel the descendant process group. launchd crosses that
-# boundary. A submitted command is daemon-like by default, so worker mode
-# removes its unique label after logging END to prevent a restart.
-script="$REPO/.claude/hooks/auto-sweep.sh"
-label="com.callback-box.auto-sweep.$(date +%s).$$"
-request="$HOME/.cache/callback-box/auto-sweep.requested"
-: > "$request"
-env_args=(/usr/bin/env "HOME=$HOME" "PATH=$PATH")
-for env_name in CALLBACK_STATE_DIR CALLBACK_WORKTREE_ROOT CALLBACK_BOX_ROOT CALLBACK_BOX_SRC CALLBACK_EXHIBITS_ROOT CALLBACK_COMMENTS_ROOT AUTO_SWEEP_LOCK_TIMEOUT_SECONDS; do
-  if [ -n "${!env_name:-}" ]; then
-    env_args+=("$env_name=${!env_name}")
-  fi
-done
-
-if command -v launchctl >/dev/null 2>&1; then
-  if launchctl submit -l "$label" -o /dev/null -e /dev/null -- \
-      "${env_args[@]}" "$script" --run-detached "$label" "$trigger"; then
-    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) auto-sweep trigger=$trigger SUBMITTED label=$label" >> "$LOG"
-    exit 0
-  fi
-  echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) auto-sweep trigger=$trigger SUBMIT-FAILED launchctl" >> "$LOG"
-  exit 1
-fi
-
-if command -v setsid >/dev/null 2>&1; then
-  setsid "${env_args[@]}" "$script" --run-detached "" "$trigger" </dev/null >/dev/null 2>&1 &
-  echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) auto-sweep trigger=$trigger SUBMITTED setsid" >> "$LOG"
+# ── Parent: hand the sweep to a process group of its own, then return ───
+#
+# `( … ) & disown` is NOT detachment — see bin/lib/detach.mjs. The sweep this
+# hook launches must outlive the session whose exit triggered it, and under the
+# old form it did not: SessionEnd sweeps were the only ones that ever went
+# missing from the log, and they went missing whether or not the hook itself
+# succeeded.
+if [ "${2:-}" != "--run" ]; then
+  node "$REPO/bin/lib/detach.mjs" "$HOOK_DIR/auto-sweep.sh" "$trigger" --run \
+    >/dev/null 2>&1 || echo "$(stamp) auto-sweep trigger=$trigger DETACH-FAILED" >> "$LOG"
   exit 0
 fi
 
-nohup "${env_args[@]}" "$script" --run-detached "" "$trigger" </dev/null >/dev/null 2>&1 &
-echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) auto-sweep trigger=$trigger SUBMITTED nohup" >> "$LOG"
+# ── Child: one sweep at a time ─────────────────────────────────────────
+#
+# Concurrent sweeps are pure contention: each walks every worktree running git,
+# and they collide with each other and with whatever the triggering hook is
+# doing in its own worktree. Skip rather than queue — a sweep that does not run
+# now runs at the next session start or end, and there is always a next one.
+#
+# `mkdir` is the atomic primitive (macOS has no flock(1)). The pid inside lets a
+# lock left behind by a killed sweep be reclaimed rather than wedging every
+# later one.
+if ! mkdir "$LOCK" 2>/dev/null; then
+  holder=$(cat "$LOCK/pid" 2>/dev/null || echo "")
+  if [ -n "$holder" ] && kill -0 "$holder" 2>/dev/null; then
+    echo "$(stamp) auto-sweep trigger=$trigger SKIPPED (sweep $holder already running)" >> "$LOG"
+    exit 0
+  fi
+  echo "$(stamp) auto-sweep trigger=$trigger reclaiming stale lock (holder='$holder')" >> "$LOG"
+  rm -rf "$LOCK" 2>/dev/null || true
+  if ! mkdir "$LOCK" 2>/dev/null; then
+    echo "$(stamp) auto-sweep trigger=$trigger SKIPPED (could not take lock)" >> "$LOG"
+    exit 0
+  fi
+fi
+echo "$$" > "$LOCK/pid" 2>/dev/null || true
+
+# A killed sweep used to leave a START with nothing after it, which reads
+# identically to one still running — the ambiguity that hid the detachment bug
+# for weeks. SIGKILL still cannot be caught, so a START with neither END nor
+# INTERRUPTED now means exactly that, which is itself the diagnosis.
+on_signal() {
+  echo "$(stamp) auto-sweep trigger=$trigger INTERRUPTED sig=$1" >> "$LOG"
+  rm -rf "$LOCK" 2>/dev/null || true
+  exit 143
+}
+trap 'on_signal TERM' TERM
+trap 'on_signal HUP' HUP
+trap 'on_signal INT' INT
+trap 'rm -rf "$LOCK" 2>/dev/null || true' EXIT
+
+{
+  echo "$(stamp) auto-sweep trigger=$trigger START"
+  "$REPO/bin/workstreams" sweep 2>&1 | sed 's/^/  /'
+  echo "$(stamp) auto-sweep trigger=$trigger END"
+} >> "$LOG" 2>&1
 exit 0

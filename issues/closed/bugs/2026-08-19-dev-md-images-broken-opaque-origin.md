@@ -38,7 +38,7 @@ images as `data:` URIs (implemented, then reverted — the boxholder wants
 normal markdown to work, not a rewrite pass).
 
 This also resolves
-[quick-open dead under the sandbox CSP](../../bugs/2026-08-19-dev-docs-quickopen-dead-under-sandbox-csp.md)
+[quick-open dead under the sandbox CSP](2026-08-19-dev-docs-quickopen-dead-under-sandbox-csp.md)
 — same root cause, scripts instead of images.
 
 ## Manual testing

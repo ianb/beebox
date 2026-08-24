@@ -1,7 +1,6 @@
 ---
 title: "SessionEnd hook gets cancelled mid-sweep, so worktree cleanup silently stops — and it gets worse the more worktrees there are"
-workstream: streams-and-issues
-design: ../../../callback-box/docs/plans/session-end-sweep-detachment.md
+workstream: dev-loop-lifecycle
 area: monorepo
 labels: [worktrees, hooks, cleanup]
 filed-by: agent
@@ -11,9 +10,35 @@ priority: important
 resolution: implemented
 ---
 
-> **Resolved 2026-08-24.** The 300-second hook timeout remains defense in
-> depth, but global sweep no longer runs in SessionEnd's process group. See the
-> resolution below.
+> **Fixed 2026-08-24** in
+> [dev-loop-lifecycle](../../../callback-box/docs/implemented-plans/dev-loop-lifecycle.md).
+> The diagnosis below is partly wrong and is left as filed. The sweep was
+> already backgrounded and `disown`ed, so it never spent its 25s inside the
+> hook's budget. Two separate defects were hiding in one report:
+>
+> - **The sweep was killed at session exit.** `disown` leaves the child in the
+>   caller's process group. Reproduced directly: the old form logs `START` and
+>   nothing else when its launcher's group is killed; the new one, detached
+>   through `bin/lib/detach.mjs`, finishes. That matches the log — 15 of 109
+>   session-end sweeps lost, against 0 of 44 session-start and 0 of 72 codex.
+> - **The hook died between `resolved` and any `decision`**, 11 times in 44.
+>   Its own steps measure ~30ms, so it was not intrinsically slow; the leading
+>   explanation is contention with the sweep it had just launched, which runs
+>   `git status` over every worktree. Not proven — the hook now logs `step=`
+>   elapsed times for the liveness scan and the git work, so the next
+>   occurrence says which one it died in.
+>
+> The ordering tension is resolved by a `trap … EXIT`: reachable from every one
+> of the hook's early `exit 0`s, which is what the old inline placement was
+> protecting, while still running last. Sweeps also take an atomic lock and skip
+> rather than queue, and a caught signal now logs `INTERRUPTED`.
+
+> **Mitigated 2026-08-20, not fixed.** Both sweep-running hooks now carry an
+> explicit `"timeout": 300` in `.claude/settings.json` (SessionEnd, and the
+> SessionStart `auto-sweep.sh` entry, which had the same exposure). That buys
+> headroom — it does not address the loop described below, where every
+> uncleaned worktree makes the next sweep slower. The ordering question is
+> still open.
 
 Closing a worktree session printed:
 
@@ -101,25 +126,3 @@ That tension is the thing to resolve. Some directions, none obviously right:
 - Whether a cancelled sweep can leave partial state (the log's `START` with no
   `END` is currently the only trace that anything was interrupted).
 - Whether the same starvation applies to the SessionStart sweep path.
-
-## Resolution
-
-`auto-sweep.sh` is now a fast trigger plus a detached worker. On macOS the
-trigger submits a uniquely labeled launchd job, records `SUBMITTED`, and
-returns; the worker records `START`, output, and `END status=…`, then unloads
-its own label from an EXIT trap. SessionEnd therefore proceeds immediately to
-its session-specific liveness and teardown decision regardless of global sweep
-duration.
-
-Every trigger writes a request marker. Detached workers queue on a kernel-owned
-whole-sweep lock; one consumes pending requests and excess workers coalesce, so
-an overlapping SessionStart/SessionEnd trigger produces one trailing sweep
-instead of being dropped. The lock descriptor is closed in the sweep child so
-detached trash reapers cannot extend lock ownership. Lock timeout/tool failures
-are distinct and visible.
-
-The doctest launches a genuinely blocked worker through a fake launchctl and
-proves the trigger exits first, then covers queued/coalesced workers, terminal
-failure logging, lock-tool failure, and label removal. A real macOS launchd
-fixture canary produced `SUBMITTED`, `START`, fake sweep output, and `END
-status=0`, with the job confirmed unloaded afterward.

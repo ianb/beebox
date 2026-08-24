@@ -538,12 +538,19 @@ HISTEOF
 
 # Restart services
 if [[ "$SKIP_RESTART" != true ]]; then
-  # Best-effort: give an active chat turn / running script a bounded chance to
-  # finish before we restart, so a deploy doesn't kill active work. cb-wait-quiet
-  # polls `cb activity` (installed by setup-server.sh); skip gracefully on
-  # servers that predate it.
+  # Give an active chat turn / running script a bounded chance to finish before
+  # we restart, so a deploy doesn't kill active work — and specifically doesn't
+  # interrupt a `git commit`, which is how a box ends up with a
+  # `.git/index.lock` nothing owns (`src/lib/git-stale-lock.ts`).
+  #
+  # Installed from the tree we just synced rather than trusted to be on the
+  # server already. It used to exist only as a heredoc in setup-server.sh, so a
+  # server provisioned before it was added had NO copy and every deploy skipped
+  # the wait entirely — silently, because the skip was best-effort.
+  ssh "root@$SERVER_IP" "install -m 0755 $INSTALL_DIR/callback-box/deploy/server-bin/cb-wait-quiet /usr/local/bin/cb-wait-quiet"
+
   echo "Waiting for boxes to be at rest (best-effort)..."
-  ssh "root@$SERVER_IP" 'test -x /usr/local/bin/cb-wait-quiet && /usr/local/bin/cb-wait-quiet || echo "  (cb-wait-quiet not installed; re-run setup-server.sh to enable)"'
+  ssh "root@$SERVER_IP" /usr/local/bin/cb-wait-quiet
 
   # Converge each box onto the code that just shipped, in the at-rest window —
   # after cb-wait-quiet, before the restart brings box children back up. A box

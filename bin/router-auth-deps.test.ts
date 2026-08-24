@@ -3,8 +3,7 @@
 // the pure gate (bin/router-auth.ts, covered by bin/router-auth.test.ts) can't:
 // the single slug→box source of truth (duplicate ⇒ fail closed; a non-box
 // segment ⇒ the worktree-root/session sentinel, NOT a deny), the per-box mobile
-// keying, the machine-wide browse key, the owner-session (gen-aware) check,
-// and the CSRF rule.
+// keying, the owner-session (gen-aware) check, and the CSRF rule.
 //
 // Isolation: an empty temp CB_AUTH_FILE so the resolver's cookie path finds no
 // local record (a gen-less owner cookie then authenticates); CB_OWNER_EMAIL and
@@ -109,21 +108,6 @@ test("resolveOwnerSession: a tampered/garbage cookie → null (HMAC rejects it)"
   assert.equal(await deps.resolveOwnerSession({ cookie: "cb_session=not.a.valid.cookie" }), null);
 });
 
-test("isBrowseKey: accepts the configured key and fails closed when it is absent", () => {
-  const original = process.env.CB_BROWSE_API_KEY;
-  const deps = createRouterAuthDeps(fakeConfig({}));
-  try {
-    process.env.CB_BROWSE_API_KEY = "router-browse-test-key";
-    assert.equal(deps.isBrowseKey({ cookie: "cb_browse_key=router-browse-test-key" }), true);
-    assert.equal(deps.isBrowseKey({ cookie: "cb_browse_key=wrong" }), false);
-    delete process.env.CB_BROWSE_API_KEY;
-    assert.equal(deps.isBrowseKey({ cookie: "cb_browse_key=router-browse-test-key" }), false);
-  } finally {
-    if (original === undefined) delete process.env.CB_BROWSE_API_KEY;
-    else process.env.CB_BROWSE_API_KEY = original;
-  }
-});
-
 test("resolveBoxAccessSession: owner session reaches any box and the worktree-root sentinel", async () => {
   const deps = createRouterAuthDeps(fakeConfig({ main: [entry("test1", "/boxes/test1")] }));
   assert.deepEqual(await deps.resolveBoxAccessSession(ownerCookie(), "/boxes/test1"), { email: OWNER });
@@ -202,5 +186,34 @@ test("resolveWorktreeAsset: a mobile token does NOT reach a DIFFERENT worktree's
   } finally {
     await fs.rm(boxA, { recursive: true, force: true });
     await fs.rm(stray, { recursive: true, force: true });
+  }
+});
+
+// --- hasBrowseKey: the dev-read rung -----------------------------------------
+
+test("hasBrowseKey: absent CB_BROWSE_API_KEY → constant false (the fail-closed default)", () => {
+  const prior = process.env.CB_BROWSE_API_KEY;
+  delete process.env.CB_BROWSE_API_KEY;
+  try {
+    const deps = createRouterAuthDeps(fakeConfig({ main: [] }));
+    assert.equal(deps.hasBrowseKey({ cookie: "cb_browse_key=anything" }), false);
+    assert.equal(deps.hasBrowseKey({}), false);
+  } finally {
+    if (prior === undefined) delete process.env.CB_BROWSE_API_KEY;
+    else process.env.CB_BROWSE_API_KEY = prior;
+  }
+});
+
+test("hasBrowseKey: the configured key in the cookie → true; a wrong value → false", () => {
+  const prior = process.env.CB_BROWSE_API_KEY;
+  process.env.CB_BROWSE_API_KEY = "dev-read-test-key";
+  try {
+    const deps = createRouterAuthDeps(fakeConfig({ main: [] }));
+    assert.equal(deps.hasBrowseKey({ cookie: "cb_browse_key=dev-read-test-key" }), true);
+    assert.equal(deps.hasBrowseKey({ cookie: "cb_browse_key=wrong" }), false);
+    assert.equal(deps.hasBrowseKey({}), false);
+  } finally {
+    if (prior === undefined) delete process.env.CB_BROWSE_API_KEY;
+    else process.env.CB_BROWSE_API_KEY = prior;
   }
 });

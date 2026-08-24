@@ -36,10 +36,11 @@ interface FakeConfig {
   /** boxRoot → whether valid per-box mobile auth is present. */
   mobile: Record<string, boolean>;
   agentBearer: boolean;
-  browseKey: boolean;
   csrfSafe: boolean;
   /** worktree → whether any valid box credential (session/mobile) is present. */
   worktreeAsset: Record<string, boolean>;
+  /** Whether the machine-wide browse key is present (the `dev-read` rung). */
+  browseKey: boolean;
 }
 
 function makeDeps(overrides: Partial<FakeConfig>): RouterAuthDeps {
@@ -49,9 +50,9 @@ function makeDeps(overrides: Partial<FakeConfig>): RouterAuthDeps {
     boxAccess: {},
     mobile: {},
     agentBearer: false,
-    browseKey: false,
     csrfSafe: false,
     worktreeAsset: {},
+    browseKey: false,
     ...overrides,
   };
   const keyFor = (target: BoxTarget): string => `${target.targetWorktree}/${target.targetBox ?? "<root>"}`;
@@ -64,9 +65,9 @@ function makeDeps(overrides: Partial<FakeConfig>): RouterAuthDeps {
     resolveBoxAccessSession: (_headers, boxRoot) => cfg.boxAccess[boxRoot] ?? null,
     resolveMobileForBox: (_headers, boxRoot) => cfg.mobile[boxRoot] ?? false,
     isAgentBearer: () => cfg.agentBearer,
-    isBrowseKey: () => cfg.browseKey,
     isCsrfSafe: () => cfg.csrfSafe,
     resolveWorktreeAsset: (_headers, worktree) => cfg.worktreeAsset[worktree] ?? false,
+    hasBrowseKey: () => cfg.browseKey,
   };
 }
 
@@ -104,14 +105,23 @@ test("classifier: exhaustive route-shape mapping", () => {
   assert.deepEqual(c("GET", "/__router/status"), { kind: "control-read", json: true });
   assert.deepEqual(c("GET", "/__router/status/"), { kind: "control-read", json: true });
   assert.deepEqual(c("GET", "/"), { kind: "control-read", json: false });
-  assert.deepEqual(c("GET", "/workstreams/"), { kind: "control-read", json: false });
-  assert.deepEqual(c("HEAD", "/workstreams/testing/"), { kind: "control-read", json: false });
-  assert.deepEqual(c("POST", "/workstreams/action/resume/seam"), { kind: "control" });
+  // Non-read verbs on the dev space stay owner-only (the handler has no write
+  // path; keeping them out of `dev-read` grants the browse key nothing extra).
+  assert.deepEqual(c("POST", "/main/dev/x.html"), { kind: "control-read", json: false });
+  assert.deepEqual(c("POST", "/dev/"), { kind: "control-read", json: false });
 
   // dev-read
   assert.deepEqual(c("GET", "/main/dev/"), { kind: "dev-read" });
   assert.deepEqual(c("GET", "/main/dev/docs/x.md"), { kind: "dev-read" });
+  assert.deepEqual(c("HEAD", "/main/dev/skills.html"), { kind: "dev-read" });
+  assert.deepEqual(c("GET", "/dev"), { kind: "dev-read" });
   assert.deepEqual(c("GET", "/dev/"), { kind: "dev-read" });
+  assert.deepEqual(c("GET", "/main/dev"), { kind: "dev-read" });
+  assert.deepEqual(c("GET", "/workstreams/"), { kind: "dev-read" });
+  assert.deepEqual(c("HEAD", "/workstreams/testing/"), { kind: "dev-read" });
+  assert.deepEqual(c("GET", "/workstreams/browse?file=README.md"), { kind: "dev-read" });
+  assert.deepEqual(c("GET", "/workstreams/api/trpc/documents.read"), { kind: "dev-read" });
+  assert.deepEqual(c("POST", "/workstreams/action/resume/seam"), { kind: "control" });
 
   // box
   assert.deepEqual(c("GET", "/main/test1/"), { kind: "box", targetWorktree: "main", targetBox: "test1" });
@@ -178,6 +188,19 @@ test("classifier: exhaustive route-shape mapping", () => {
     targetWorktree: "main",
     targetBox: "test1",
   });
+});
+
+test("classifier: a raw `#` in the request target is rejected, whatever it precedes", () => {
+  // The gate strips a fragment; bin/router.ts's dispatch branches do not. Any
+  // such disagreement is a bypass, so a `#`-bearing target is `unknown` (404)
+  // for EVERY route class, not just the dev surfaces.
+  const c = (method: string, url: string) => classifyRouterRoute({ method, url });
+  for (const url of ["/main/dev#x", "/dev#x", "/workstreams#x", "/main/test1/#x", "/#x", "/__router/status#x"]) {
+    assert.deepEqual(c("GET", url), { kind: "unknown" }, url);
+  }
+  // A percent-encoded `#` is a legal path byte and is NOT a fragment — neither
+  // the gate nor the dispatcher decodes before matching, so it stays a box path.
+  assert.deepEqual(c("GET", "/main/test1/a%23b"), { kind: "box", targetWorktree: "main", targetBox: "test1" });
 });
 
 test("classifier: query string does not change classification", () => {
@@ -263,10 +286,67 @@ test("TCP control mutating: revoked session (resolveOwnerSession → null) → 4
 
 // --- control-read ------------------------------------------------------------
 
-test("TCP control-read: owner → allow", async () => {
+test("TCP control-read: owner → allow (status JSON)", async () => {
   const deps = makeDeps({ owner: { email: "boxholder@example.com" } });
   const status = await authorizeRouterRequest(req({ method: "GET", url: "/__router/status" }), deps);
   assert.equal(status.allow, true);
+});
+
+// --- dev-read ----------------------------------------------------------------
+
+const DEV_READS = ["/dev/", "/main/dev/", "/main/dev/skills.html", "/workstreams/", "/workstreams/browse"];
+
+test("TCP dev-read: owner → allow, with no browse key", async () => {
+  const deps = makeDeps({ owner: { email: "boxholder@example.com" }, browseKey: false });
+  for (const url of DEV_READS) {
+    const d = await authorizeRouterRequest(req({ method: "GET", url, headers: HTML }), deps);
+    assert.equal(d.allow, true, url);
+  }
+});
+
+test("TCP dev-read: the browse key alone → allow, with no owner session", async () => {
+  const deps = makeDeps({ owner: null, browseKey: true });
+  for (const url of DEV_READS) {
+    const d = await authorizeRouterRequest(req({ method: "GET", url, headers: HTML }), deps);
+    assert.equal(d.allow, true, url);
+    assert.equal(d.route.kind, "dev-read", url);
+  }
+});
+
+test("TCP dev-read: neither credential → 401, redirect a navigation to login", async () => {
+  const deps = makeDeps({ owner: null, browseKey: false });
+  const nav = await authorizeRouterRequest(req({ method: "GET", url: "/main/dev/", headers: HTML }), deps);
+  assert.equal(nav.allow === false && nav.status, 401);
+  assert.equal(nav.allow === false && nav.redirectToLogin, true, "a browser navigation redirects to login");
+
+  const fetchLike = await authorizeRouterRequest(
+    req({ method: "GET", url: "/workstreams/api/trpc/documents.read", headers: JSON_ACCEPT }),
+    deps,
+  );
+  assert.equal(fetchLike.allow === false && fetchLike.redirectToLogin, false, "a non-HTML client does not redirect");
+});
+
+test("dev-read does NOT widen the control surfaces the browse key must stay out of", async () => {
+  const deps = makeDeps({ owner: null, browseKey: true });
+  // The worktree index, both router control classes, and every MUTATING
+  // /workstreams/ verb stay owner-session-only (the POSTs additionally CSRF).
+  const owned: Array<[string, string]> = [
+    ["GET", "/"],
+    ["GET", "/__router/status"],
+    ["POST", "/__router/stop/main"],
+    ["POST", "/workstreams/action/refresh"],
+    ["POST", "/workstreams/issues/action/close"],
+    ["POST", "/workstreams/api/trpc/issues.close"],
+    ["POST", "/main/dev/x.html"],
+    // The fragment divergence: `dev-read` classification must not survive a
+    // raw `#` that would send the dispatcher somewhere else.
+    ["GET", "/main/dev#x"],
+    ["GET", "/workstreams#x"],
+  ];
+  for (const [method, url] of owned) {
+    const d = await authorizeRouterRequest(req({ method, url, headers: HTML }), deps);
+    assert.equal(d.allow, false, `${method} ${url} must not be reachable with the browse key`);
+  }
 });
 
 test("TCP control-read status: no owner → 401 JSON, NO redirect even for a browser navigation", async () => {
@@ -285,41 +365,6 @@ test("TCP control-read infra pages: no owner → 401, redirect a navigation to l
 
   const api = await authorizeRouterRequest(req({ method: "GET", url: "/", headers: JSON_ACCEPT }), deps);
   assert.equal(api.allow === false && api.redirectToLogin, false, "a non-HTML client does not redirect");
-});
-
-// --- dev-read ----------------------------------------------------------------
-
-test("TCP dev-read: owner or browse key → allow", async () => {
-  const owner = await authorizeRouterRequest(
-    req({ method: "GET", url: "/main/dev/", headers: HTML }),
-    makeDeps({ owner: { email: "boxholder@example.com" } }),
-  );
-  assert.equal(owner.allow, true);
-
-  const browseKey = await authorizeRouterRequest(
-    req({ method: "GET", url: "/main/dev/docs/x.md", headers: HTML }),
-    makeDeps({ browseKey: true }),
-  );
-  assert.equal(browseKey.allow, true);
-});
-
-test("TCP dev-read: no owner or browse key → 401 and navigation redirect", async () => {
-  const d = await authorizeRouterRequest(
-    req({ method: "GET", url: "/main/dev/", headers: HTML }),
-    makeDeps({}),
-  );
-  assert.equal(d.allow, false);
-  assert.equal(d.allow === false && d.status, 401);
-  assert.equal(d.allow === false && d.reason, "owner-or-browse-key-required");
-  assert.equal(d.allow === false && d.redirectToLogin, true);
-});
-
-test("TCP dev-read browse key does not grant neighboring control surfaces", async () => {
-  const deps = makeDeps({ browseKey: true });
-  for (const url of ["/", "/workstreams/", "/__router/status"]) {
-    const d = await authorizeRouterRequest(req({ method: "GET", url, headers: HTML }), deps);
-    assert.equal(d.allow, false, `${url} must remain owner-only`);
-  }
 });
 
 // --- box routes --------------------------------------------------------------

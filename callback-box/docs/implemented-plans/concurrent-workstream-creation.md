@@ -1,6 +1,6 @@
 ---
 title: "Serialize Git worktree attachment during concurrent launches"
-status: active
+status: implemented
 workstream: streams-and-issues
 issues:
   - ../../../issues/closed/bugs/2026-08-20-concurrent-workstream-launches-race.md

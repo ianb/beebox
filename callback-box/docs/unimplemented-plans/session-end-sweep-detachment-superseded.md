@@ -1,12 +1,18 @@
 ---
-title: "Detach global sweep from SessionEnd teardown"
-status: active
+title: "Detach global sweep from SessionEnd teardown (superseded)"
+status: superseded
 workstream: streams-and-issues
 issues:
   - ../../../issues/closed/bugs/2026-08-20-session-end-hook-cancelled-by-slow-sweep.md
 ---
 
 # Detach global sweep from SessionEnd teardown
+
+This exact launchd/request-marker design was superseded during integration by
+the implemented [dev-loop lifecycle](../implemented-plans/dev-loop-lifecycle.md)
+design already on `main`. That implementation keeps the core outcome—true
+process-group detachment and serialized sweeps—but uses the shared Node detach
+helper and skips concurrent triggers instead of queueing a trailing request.
 
 SessionEnd must finish the one bounded cleanup decision only it can make. The
 global sweep remains triggered on session start/end, but runs as a real

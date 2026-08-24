@@ -4,10 +4,34 @@ workstream: unattached
 area: monorepo
 priority: important
 labels: [codex, skills, tooling]
+resolution: implemented
 filed-by: agent
 discovered-by: agent
 discovered-in: main session — editing the launch-worktree-session skill and checking whether Codex would see the change
 ---
+
+> **Fixed 2026-08-24.** The refusal is kept — a native Codex skill at a tracked
+> skill's name is still never overwritten, and the test of that name still
+> proves it. What changed is the failure mode: it now **warns and skips that one
+> entry** instead of throwing, so a single unexpected directory can no longer
+> abort every later skill and the AGENTS.md mirrors after it.
+>
+> The main checkout is repaired: 0 symlinks → **21**, and generation now runs to
+> completion ("wrote 18 AGENTS.md mirror(s) and 21 skill link(s)") instead of
+> dying on the first entry. `launch-worktree-session`'s mirror went from a 6,861-byte
+> July copy to byte-identical with the tracked 15,468-byte skill.
+>
+> **Deliberately not done:** auto-replacing a non-symlink. That was the first fix
+> attempted, and the test named "refuses to overwrite an existing native Codex
+> skill" showed the refusal was a considered decision, not an oversight — so
+> overriding it was not the agent's call to make.
+>
+> **Residual:** three entries remain real directories — `cb-prompt-review`,
+> `codex`, `skill-creator` — none of which is a tracked Claude skill any more.
+> The loop only manages tracked names, so it leaves them, and the cleanup pass
+> only removes stale *symlinks*. A Codex session there still sees July copies of
+> skills that no longer exist. Worth a follow-up decision rather than a silent
+> delete.
 
 In the main checkout, **every entry under `.agents/skills/` is a real directory
 holding a stale copy, not a symlink** — 15 of 15, all dated **2026-07-06**.

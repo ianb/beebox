@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-08-24T12:02:40Z
-Total documents: 294
+Generated: 2026-08-24T15:46:15Z
+Total documents: 297
 
 ## Issues
 
@@ -49,7 +49,6 @@ These documents are not referenced by any other document.
 - **field-tests/onboarding-first-days/README.md** — "onboarding-first-days" (60 lines)
 - **field-tests/onboarding-first-days/persona.md** — "Priya Marlowe" (22 lines)
 - **field-tests/spine/persona.md** — "Priya Marlowe" (22 lines)
-- **src/frontend/dist/earcons/SOURCES.md** — "Earcon sources & attribution" (13 lines)
 - **src/frontend/public/earcons/SOURCES.md** — "Earcon sources & attribution" (13 lines)
 - **test/manual/README.md** — "Manual tests" (49 lines)
 - **user-stories/journeys/README.md** — "Journeys" (90 lines)
@@ -186,15 +185,16 @@ Referenced by:
 - ../.claude/agents/finish.md:80 (mention) — root `CLAUDE.md`/`code-style.md` — also drops you to the full flow.
 - ../.claude/memory/MEMORY.md:4 (mention) — Auto-memory (`~/.claude/projects/` path) is problematic: path-hash-based, machine-specific, not version-controlled, easi
 - ../.claude/memory/feedback_files_over_external_trackers.md:24 (mention) — - Specific applicable cases: TODO/work-queue → `TODOS.md` or similar; design notes → `docs/`; architectural decisions → 
+- ../.claude/skills/browse/SKILL.md:205 (mention) — (`callback-box/CLAUDE.md`).
 - ../.claude/skills/cb-codehealth/SKILL.md:29 (mention) — and a short usage doc at its root (a directory `CLAUDE.md` / README — like
 - ../.claude/skills/cb-context/SKILL.md:3 (mention) — description: Use when engineering what a box agent knows — writing or curating a box's CLAUDE.md, a nested CLAUDE.md, a 
 - ../.claude/skills/cb-frontend/SKILL.md:11 (mention) — read it before writing UI (`CLAUDE.md` already says so). This skill is the
-- ../.claude/skills/cb-issue-actions/SKILL.md:47 (mention) — for f in $(grep -rl "^next-action:" issues --include='*.md' | grep -v CLAUDE.md); do
+- ../.claude/skills/cb-issue-actions/SKILL.md:48 (mention) — for f in $(grep -rl "^next-action:" issues --include='*.md' | grep -v CLAUDE.md); do
 - ../.claude/skills/cb-plan/SKILL.md:126 (mention) — - `callback-box/CLAUDE.md` — project conventions, validation contract,
 - ../.claude/skills/cross-model/SKILL.md:38 (mention) — - Root `CLAUDE.md` mandates it for anything bigger than a small-scope bug fix,
 - ../.claude/skills/doctest/SKILL.md:19 (mention) — test, per `callback-box/CLAUDE.md`). Write prose, then fenced examples.
 - ../.claude/skills/knowledge-audit/SKILL.md:3 (mention) — description: Explains callback-box's knowledge-audit harness — YAML-defined tests that prompt a real box agent and check
-- ../.claude/skills/launch-worktree-session/SKILL.md:189 (mention) — AGENTS.md mirrors rather than CLAUDE.md, and its cross-model review command
+- ../.claude/skills/launch-worktree-session/SKILL.md:190 (mention) — AGENTS.md mirrors rather than CLAUDE.md, and its cross-model review command
 - ../CLAUDE.md:5 (mention) — - **callback-box/** — Main system. See its CLAUDE.md for details. (Card primitives that used to live in the separate `ca
 - ../bin/CLAUDE.md:5 (mention) — always-relevant summary lives in the root CLAUDE.md; this file is the mechanism.
 - ../issues/CLAUDE.md:125 (mention) — said that. This restates the broader rule in `callback-box/CLAUDE.md` ("Keep
@@ -406,6 +406,7 @@ Referenced by:
 - docs/implemented-plans/webapp-production-mode.md:40 (mention) — - `code-style.md:88-89`: resolve optional values inside function bodies and
 - docs/implemented-plans/webpage-card-and-commentary.md:54 (mention) — - `callback-box/code-style.md` — no optional chaining, no default params,
 - docs/implemented-plans/websocket-chat-transport.md:78 (mention) — - `callback-box/code-style.md:` no `any`, no default params, max 2 positional
+- docs/implemented-plans/workstream-launch-liveness.md:36 (mention) — - `callback-box/code-style.md:30` says, *"Never silently ignore errors"*. A
 - docs/plans/agent-points-at-ui.md:64 (mention) — - `callback-box/code-style.md` — no default parameters, max two positional
 - docs/plans/android-companion-app.md:33 (mention) — - `code-style.md`: the box side of Track 0 (TypeScript) follows the usual
 - docs/plans/asset-annex.md:73 (mention) — - `callback-box/code-style.md` — no `any`, max 2 positional params,
@@ -542,7 +543,7 @@ References:
 
 #### deploy/README.md
 
-Title: "Deploy" | 449 lines
+Title: "Deploy" | 469 lines
 
 Referenced by:
 - CLAUDE.md:19 (mention) — **Deploy** — auto-deploys on `main` commits only (root CLAUDE.md). Prod runs a resident `cb hub` routing `/<slug>/...` t
@@ -1098,6 +1099,7 @@ Referenced by:
 - docs/implemented-plans/top-nav-ia.md:114 (mention) — - `callback-box/docs/engineering-principles.md` — reuse-over-rebuild,
 - docs/implemented-plans/transcript-confidence.md:65 (mention) — - `docs/engineering-principles.md` — #1 (types are structure: confidence rides
 - docs/implemented-plans/webapp-production-mode.md:28 (mention) — - `docs/engineering-principles.md:37-44`: environment variables are validated
+- docs/implemented-plans/workstream-launch-liveness.md:18 (mention) — `callback-box/docs/engineering-principles.md:51` says, *"invisible
 - docs/implemented-plans/workstream-routing.md:39 (mention) — (`callback-box/docs/engineering-principles.md:49`): *"Degradation is allowed
 - docs/implemented-plans/workstreams.md:58 (mention) — - `docs/engineering-principles.md` §4 (resilient AND never silent — the
 - docs/plans/agent-points-at-ui.md:43 (mention) — - `docs/engineering-principles.md`
@@ -1476,7 +1478,7 @@ Referenced by:
 - ../CLAUDE.md:10 (mention) — - **ios-app/** — Native SwiftUI companion app; a thin shell around the web chat (`WKWebView`) plus native pairing, compo
 - ../issues/bugs/2026-08-05-open-chat-flashes-agent-working-no-send.md:176 (mention) — - `docs/mobile-contract.md` / cb-ios-overlap — both platforms, shared surface.
 - ../issues/bugs/2026-08-20-ios-record-button-silently-waits-for-speech.md:38 (mention) — This is deliberate and documented — `callback-box/docs/mobile-contract.md` §4.5:
-- ../issues/bugs/2026-08-23-share-extension-sends-classify-as-web-desktop.md:19 (mention) — (contract row S3 in `docs/mobile-contract.md` §5.5), which belongs with the
+- ../issues/bugs/2026-08-23-share-extension-sends-classify-as-web-desktop.md:20 (mention) — (contract row S3 in `docs/mobile-contract.md` §5.5), which belongs with the
 - ../issues/closed/bugs/2026-07-17-mobile-device-store-unlocked-rmw.md:18 (mention) — `async`. Tests: `test/core/mobile/pairing-store-concurrency.doctest.md`; doc: `docs/mobile-contract.md`
 - ../issues/closed/bugs/2026-07-21-device-store-crash-safety-and-renewal-race.md:21 (mention) — `docs/mobile-contract.md` § Cookie lifetime and revocation (decision: documented
 - ../issues/closed/bugs/2026-07-21-ios-location-always-shared-no-toggle.md:107 (link) — [mobile contract](../../../callback-box/docs/mobile-contract.md).
@@ -1484,6 +1486,7 @@ Referenced by:
 - ../issues/closed/bugs/2026-08-03-ios-stale-unconfirmed-emission-banner.md:84 (mention) — `docs/mobile-contract.md` governs the receipt contract.
 - ../issues/closed/bugs/2026-08-04-ios-landmark-opens-new-session-not-most-recent.md:67 (mention) — - `docs/mobile-contract.md` / cb-ios-overlap — this is a web/iOS parity gap on a
 - ../issues/closed/bugs/2026-08-06-ios-webview-box-switcher-dead-ends.md:54 (mention) — - `docs/mobile-contract.md` / cb-ios-overlap — web/iOS shared surface; the gate is a
+- ../issues/closed/bugs/2026-08-18-first-message-audio-not-retranscribable.md:27 (mention) — > `docs/mobile-contract.md` §4.8). **Read finding 1 below as history: "native
 - ../issues/closed/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md:144 (mention) — - `callback-box/docs/mobile-contract.md` — where a new native duty gets written
 - ../issues/closed/code-quality/2026-07-19-mobile-contract-small-cleanups.md:14 (mention) — silently falling back to `"new"`. Docs (`docs/mobile-contract.md`) and tests updated to match.
 - ../issues/closed/features/2026-08-03-attach-vs-upload-menu-confusing.md:78 (mention) — (`docs/mobile-contract.md` §8 and the iOS mirror updated with it).
@@ -2745,6 +2748,16 @@ Title: "Companion-pane card activity awareness for chat" | 372 lines
 References:
 - → code-style.md (mention)
 
+#### docs/implemented-plans/concurrent-workstream-creation.md
+
+Title: "Serialize Git worktree attachment during concurrent launches" | 176 lines
+
+Referenced by:
+- ../issues/closed/bugs/2026-08-20-concurrent-workstream-launches-race.md:4 (frontmatter) — design: ../../../callback-box/docs/implemented-plans/concurrent-workstream-creation.md
+
+References:
+- → ../issues/closed/bugs/2026-08-20-concurrent-workstream-launches-race.md (frontmatter)
+
 #### docs/implemented-plans/connector-sync-isolation.md
 
 Title: "Connector sync isolation and Drive untracking" | 472 lines
@@ -2820,15 +2833,31 @@ References:
 - → docs/implemented-plans/asset-manifests.md (mention)
 - → docs/design/trust.md (mention)
 
+#### docs/implemented-plans/dev-loop-lifecycle.md
+
+Title: "Dev-loop lifecycle: stop the dev processes from interfering with each other" | 225 lines
+
+Referenced by:
+- docs/unimplemented-plans/README.md:23 (mention) — | `session-end-sweep-detachment-superseded.md` | Superseded by `../implemented-plans/dev-loop-lifecycle.md` (2026-08-24)
+- docs/unimplemented-plans/session-end-sweep-detachment-superseded.md:12 (link) — the implemented [dev-loop lifecycle](../implemented-plans/dev-loop-lifecycle.md)
+- ../issues/closed/bugs/2026-08-15-main-runtime-stays-stale-after-deploy-build.md:13 (link) — > [dev-loop-lifecycle](../../../callback-box/docs/implemented-plans/dev-loop-lifecycle.md)
+- ../issues/closed/bugs/2026-08-20-session-end-hook-cancelled-by-slow-sweep.md:14 (link) — > [dev-loop-lifecycle](../../../callback-box/docs/implemented-plans/dev-loop-lifecycle.md).
+- ../issues/closed/bugs/2026-08-21-browse-reaper-kills-other-sessions-daemons.md:14 (link) — > [dev-loop-lifecycle](../../../callback-box/docs/implemented-plans/dev-loop-lifecycle.md).
+
+References:
+- → ../issues/closed/bugs/2026-08-20-session-end-hook-cancelled-by-slow-sweep.md (frontmatter)
+- → ../issues/closed/bugs/2026-08-21-browse-reaper-kills-other-sessions-daemons.md (frontmatter)
+- → ../issues/closed/bugs/2026-08-15-main-runtime-stays-stale-after-deploy-build.md (frontmatter)
+
 #### docs/implemented-plans/emission-model.md
 
 Title: "Emission model: durable acceptance, no sticky pending states" | 522 lines
 
 Referenced by:
 - docs/implemented-plans/coined-chat-ids.md:57 (mention) — - Precedent: `docs/implemented-plans/emission-model.md` — durable acceptance and
-- ../issues/bugs/2026-08-18-first-message-audio-not-retranscribable.md:102 (mention) — (`../../callback-box/docs/implemented-plans/emission-model.md`), not a drive-by.
 - ../issues/closed/bugs/2026-07-23-voice-send-lingers-as-unsent-recovery-draft.md:8 (frontmatter) — design: ../../../callback-box/docs/implemented-plans/emission-model.md
 - ../issues/closed/bugs/2026-08-03-ios-stale-unconfirmed-emission-banner.md:8 (frontmatter) — design: ../../../callback-box/docs/implemented-plans/emission-model.md
+- ../issues/closed/bugs/2026-08-18-first-message-audio-not-retranscribable.md:129 (mention) — (`../../callback-box/docs/implemented-plans/emission-model.md`), not a drive-by.
 - ../issues/closed/bugs/2026-08-18-ios-keyword-tag-leaks-into-composer-when-sending-is-stuck.md:9 (frontmatter) — design: ../../../callback-box/docs/implemented-plans/emission-model.md
 - ../issues/closed/bugs/2026-08-18-ios-stuck-sending-message-survives-restart.md:9 (frontmatter) — design: ../../../callback-box/docs/implemented-plans/emission-model.md
 
@@ -2838,7 +2867,7 @@ References:
 - → ../issues/closed/bugs/2026-08-18-ios-keyword-tag-leaks-into-composer-when-sending-is-stuck.md (frontmatter)
 - → ../issues/closed/bugs/2026-08-03-ios-stale-unconfirmed-emission-banner.md (frontmatter)
 - → ../issues/closed/bugs/2026-07-23-voice-send-lingers-as-unsent-recovery-draft.md (frontmatter)
-- → ../issues/bugs/2026-08-18-first-message-audio-not-retranscribable.md (frontmatter)
+- → ../issues/closed/bugs/2026-08-18-first-message-audio-not-retranscribable.md (frontmatter)
 - → docs/mobile-contract.md (mention)
 - → docs/engineering-principles.md (mention)
 
@@ -3017,7 +3046,7 @@ Referenced by:
 References:
 - → ../issues/closed/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md (frontmatter)
 - → ../issues/closed/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md (link)
-- → ../issues/bugs/2026-08-18-first-message-audio-not-retranscribable.md (link)
+- → ../issues/closed/bugs/2026-08-18-first-message-audio-not-retranscribable.md (link)
 
 #### docs/implemented-plans/ios-audio-session-routing.md
 
@@ -3290,7 +3319,7 @@ References:
 Title: "Private issues: a shadow repo mounted at `<checkout>/private-issues/`" | 444 lines
 
 Referenced by:
-- ../bin/CLAUDE.md:537 (mention) — `callback-box/docs/implemented-plans/private-issues-shadow-repo.md`). Design invariants,
+- ../bin/CLAUDE.md:592 (mention) — `callback-box/docs/implemented-plans/private-issues-shadow-repo.md`). Design invariants,
 
 References:
 - → README.md (mention)
@@ -3770,8 +3799,8 @@ Referenced by:
 - docs/landmarks.md:125 (mention) — landmark-keyed page projected twice (`docs/implemented-plans/top-nav-ia.md` Track D).
 - docs/questions.md:254 (mention) — (`docs/implemented-plans/top-nav-ia.md`): the app bar no longer carries a
 - user-stories/catalog/2026-08-21.md:9079 (mention) — - **Nav bar with live pending counts** — The pending-questions badge was deliberately retired, so the story describes a 
-- ../issues/bugs/2026-08-23-agent-guide-example-puts-landmarks-in-a-sidebar.md:38 (link) — [top-nav-ia](../../callback-box/docs/implemented-plans/top-nav-ia.md) — which
-- ../issues/bugs/2026-08-23-no-consistent-way-back-to-chat.md:21 (mention) — That is a reasonable IA decision (`docs/plans/top-nav-ia.md` Track C), but it
+- ../issues/bugs/2026-08-23-agent-guide-example-puts-landmarks-in-a-sidebar.md:39 (link) — [top-nav-ia](../../callback-box/docs/implemented-plans/top-nav-ia.md) — which
+- ../issues/bugs/2026-08-23-no-consistent-way-back-to-chat.md:22 (mention) — That is a reasonable IA decision (`docs/plans/top-nav-ia.md` Track C), but it
 - ../issues/code-quality/2026-08-02-card-vs-views-route-consolidation.md:6 (mention) — discovered-in: worktree-top-nav-ia — unified app bar (docs/implemented-plans/top-nav-ia.md)
 - ../issues/features/2026-07-20-first-run-experience.md:12 (mention) — **Update 2026-08-02** (`callback-box/docs/implemented-plans/top-nav-ia.md`): new users
 
@@ -3903,6 +3932,18 @@ References:
 - → code-style.md (mention)
 - → CLAUDE.md (mention)
 
+#### docs/implemented-plans/workstream-launch-liveness.md
+
+Title: "Protect a workstream while its agent launches" | 327 lines
+
+Referenced by:
+- ../issues/closed/bugs/2026-08-20-workstream-launch-liveness-gap.md:4 (frontmatter) — design: ../../../callback-box/docs/implemented-plans/workstream-launch-liveness.md
+
+References:
+- → ../issues/closed/bugs/2026-08-20-workstream-launch-liveness-gap.md (frontmatter)
+- → docs/engineering-principles.md (mention)
+- → code-style.md (mention)
+
 #### docs/implemented-plans/workstream-routing.md
 
 Title: "Route new work to an existing workstream" | 415 lines
@@ -3922,12 +3963,13 @@ Title: "The /workstreams/ app and disposable sessions" | 1345 lines
 
 Referenced by:
 - ../issues/closed/docs-and-chores/2026-08-08-plan-lifecycle-frontmatter-and-issue-mapping.md:5 (frontmatter) — design: ../../../callback-box/docs/implemented-plans/workstreams.md
+- ../issues/closed/exploration/2026-08-09-staging-slot-for-premerge-testing.md:5 (frontmatter) — design: ../../../callback-box/docs/implemented-plans/workstreams.md
 - ../issues/closed/features/2026-08-08-worktree-session-workflow-redesign.md:5 (frontmatter) — design: ../../../callback-box/docs/implemented-plans/workstreams.md
 - ../issues/closed/features/2026-08-08-worktree-session-workflow-redesign.md:10 (link) — > **Resolved by the [implemented workstreams plan](../../../callback-box/docs/implemented-plans/workstreams.md).**
 - ../issues/closed/watch/2026-08-09-claude-worktree-isolation-off-switch.md:5 (frontmatter) — design: ../../../callback-box/docs/implemented-plans/workstreams.md
 - ../issues/code-quality/2026-08-22-remove-legacy-issue-deep-link-routes.md:23 (link) — ([workstreams](../../callback-box/docs/implemented-plans/workstreams.md):629),
 - ../issues/decisions/2026-07-29-manual-testing-flag-overuse.md:5 (frontmatter) — design: ../../callback-box/docs/implemented-plans/workstreams.md
-- ../issues/exploration/2026-08-09-staging-slot-for-premerge-testing.md:5 (frontmatter) — design: ../../callback-box/docs/implemented-plans/workstreams.md
+- ../issues/features/2026-08-24-manual-testing-targets.md:6 (frontmatter) — design: ../../callback-box/docs/implemented-plans/workstreams.md
 
 References:
 - → ../issues/closed/features/2026-08-08-worktree-session-workflow-redesign.md (frontmatter)
@@ -3952,7 +3994,7 @@ Title: "The agent sees the interface and points at controls in it" | 1306 lines
 Referenced by:
 - docs/mobile-contract.md:452 (mention) — UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
 - ../issues/bugs/2026-08-23-composer-states-gallery-duplicates-cb-ids.md:10 (mention) — (`docs/plans/agent-points-at-ui.md`, Track 4), the gallery puts ~20 copies of
-- ../issues/bugs/2026-08-23-share-extension-sends-classify-as-web-desktop.md:21 (link) — [agent-points-at-ui](../../callback-box/docs/plans/agent-points-at-ui.md).
+- ../issues/bugs/2026-08-23-share-extension-sends-classify-as-web-desktop.md:22 (link) — [agent-points-at-ui](../../callback-box/docs/plans/agent-points-at-ui.md).
 - ../issues/closed/features/2026-08-14-agent-can-see-and-point-at-the-interface.md:5 (frontmatter) — design: ../../../callback-box/docs/plans/agent-points-at-ui.md
 
 References:
@@ -4308,7 +4350,7 @@ Title: "Document comments" | 945 lines
 
 Referenced by:
 - docs/plans/general-browser.md:17 (mention) — This plan is a dependency of `document-comments.md`. Comments attach to whatever
-- ../bin/CLAUDE.md:499 (mention) — a store until an agent reads it. Design: `callback-box/docs/plans/document-comments.md`.
+- ../bin/CLAUDE.md:554 (mention) — a store until an agent reads it. Design: `callback-box/docs/plans/document-comments.md`.
 - ../issues/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md:38 (link) — [document-comments](../../callback-box/docs/plans/document-comments.md) plan
 - ../issues/code-quality/2026-08-22-rename-drive-comments-sidecar-to-gcomments.md:18 (link) — ([document-comments](../../callback-box/docs/plans/document-comments.md)) writes
 - ../issues/features/2026-08-22-file-asks-agent-flagged-attention.md:63 (link) — - [document-comments](../../callback-box/docs/plans/document-comments.md) — the
@@ -4595,8 +4637,8 @@ Referenced by:
 - docs/plans/README.md:87 (mention) — - → `plans/` (still open): `pdf-intake-design.md` (not yet implemented),
 - docs/plans/docs-reorg.md:42 (mention) — `pdf-intake-design.md`, `source-editor.md`, `prompt-surface-ia-review.md`,
 - docs/plans/scanner-ingest.md:43 (mention) — (`src/core/commands/upload-helpers.ts`), and `docs/plans/pdf-intake-design.md`
+- ../issues/closed/features/2026-08-23-pdf-and-document-cards-have-no-real-view.md:70 (mention) — because someone fed paper through a scanner. `docs/plans/pdf-intake-design.md`
 - ../issues/features/2026-08-09-pdf-url-into-the-commentary-path.md:21 (link) — [pdf-intake-design](../../callback-box/docs/plans/pdf-intake-design.md), as
-- ../issues/features/2026-08-23-pdf-and-document-cards-have-no-real-view.md:51 (mention) — because someone fed paper through a scanner. `docs/plans/pdf-intake-design.md`
 
 References:
 - → docs/glossary.md (link)
@@ -4882,7 +4924,7 @@ Title: "User-story journeys" | 295 lines
 
 Referenced by:
 - user-stories/journeys/README.md:8 (link) — Design and rationale: [`docs/plans/user-story-journeys.md`](../../docs/plans/user-story-journeys.md).
-- ../issues/bugs/2026-08-22-exhibits-add-silently-drops-markdown-content.md:16 (mention) — `user-story-journeys.md`, the manifest had no `figures` key, and the page showed
+- ../issues/closed/bugs/2026-08-22-exhibits-add-silently-drops-markdown-content.md:18 (mention) — `user-story-journeys.md`, the manifest had no `figures` key, and the page showed
 - ../issues/docs-and-chores/2026-08-22-doc-check-skips-untracked-docs.md:14 (mention) — Observed: `docs/plans/user-story-journeys.md` written with `status: proposed`.
 
 References:
@@ -4925,7 +4967,7 @@ Title: "An agent-neutral worktree control surface" | 700 lines
 
 Referenced by:
 - docs/implemented-plans/workstreams.md:25 (link) — ([the worktree control surface](../plans/worktree-control-surface.md)) deferred.
-- ../bin/CLAUDE.md:233 (mention) — Design and rationale: `callback-box/docs/plans/worktree-control-surface.md`.
+- ../bin/CLAUDE.md:258 (mention) — Design and rationale: `callback-box/docs/plans/worktree-control-surface.md`.
 - ../issues/closed/bugs/2026-08-04-sweep-live-agent-guard-fails-open.md:7 (frontmatter) — design: ../../../callback-box/docs/plans/worktree-control-surface.md
 - ../issues/closed/bugs/2026-08-04-sweep-live-agent-guard-fails-open.md:21 (link) — > [the worktree control surface plan](../../../callback-box/docs/plans/worktree-control-surface.md)
 - ../issues/closed/code-quality/2026-08-01-derive-public-worktree-paths.md:7 (frontmatter) — design: ../../../callback-box/docs/plans/worktree-control-surface.md
@@ -5072,7 +5114,7 @@ References:
 
 #### docs/unimplemented-plans/README.md
 
-Title: "Unimplemented plans" | 23 lines
+Title: "Unimplemented plans" | 24 lines
 
 Referenced by:
 - docs/unimplemented-plans/design-card-views-superseded.md:54 (mention) — README.md               → [Source]
@@ -5092,6 +5134,19 @@ References:
 - → docs/design/representation.md (mention)
 - → docs/unimplemented-plans/email-volume-and-materialization-superseded.md (mention)
 - → docs/plans/email-tracking.md (mention)
+- → docs/unimplemented-plans/session-end-sweep-detachment-superseded.md (mention)
+- → docs/implemented-plans/dev-loop-lifecycle.md (mention)
+
+#### docs/unimplemented-plans/session-end-sweep-detachment-superseded.md
+
+Title: "Detach global sweep from SessionEnd teardown" | 77 lines
+
+Referenced by:
+- docs/unimplemented-plans/README.md:23 (mention) — | `session-end-sweep-detachment-superseded.md` | Superseded by `../implemented-plans/dev-loop-lifecycle.md` (2026-08-24)
+
+References:
+- → ../issues/closed/bugs/2026-08-20-session-end-hook-cancelled-by-slow-sweep.md (frontmatter)
+- → docs/implemented-plans/dev-loop-lifecycle.md (link)
 
 ### field-tests/onboarding-first-days/
 
@@ -5184,14 +5239,6 @@ References:
 - → docs/content-security-policy.md (mention)
 - → docs/scheduled/csp-violation-review.md (mention)
 
-### src/frontend/dist/earcons/
-
-#### src/frontend/dist/earcons/SOURCES.md **[ORPHAN]**
-
-Title: "Earcon sources & attribution" | 13 lines
-
-No references in or out.
-
 ### src/frontend/public/earcons/
 
 #### src/frontend/public/earcons/SOURCES.md **[ORPHAN]**
@@ -5277,11 +5324,11 @@ Title: "User stories" | 258 lines
 Referenced by:
 - user-stories/README.md:16 (mention) — README.md          this file
 - user-stories/catalog/2026-08-21.md:7 (link) — method are in [the pipeline README](../README.md). The underlying
-- ../issues/bugs/2026-08-21-capture-session-cards-never-record-the-transcription-fa.md:42 (link) — [the pipeline README](../../callback-box/user-stories/README.md).
+- ../issues/bugs/2026-08-21-capture-session-cards-never-record-the-transcription-fa.md:43 (link) — [the pipeline README](../../callback-box/user-stories/README.md).
 - ../issues/bugs/2026-08-21-drive-folder-mounts-cannot-be-configured-from-anywhere.md:60 (link) — [the pipeline README](../../callback-box/user-stories/README.md).
-- ../issues/bugs/2026-08-21-history-shows-no-trigger-for-procedure-and-trick-commit.md:47 (link) — [the pipeline README](../../callback-box/user-stories/README.md).
+- ../issues/bugs/2026-08-21-history-shows-no-trigger-for-procedure-and-trick-commit.md:48 (link) — [the pipeline README](../../callback-box/user-stories/README.md).
 - ../issues/bugs/2026-08-21-published-pages-can-never-carry-a-submit-form-nothing-s.md:59 (link) — [the pipeline README](../../callback-box/user-stories/README.md).
-- ../issues/bugs/2026-08-21-rotated-image-cards-overflow-and-misplace-bbox.md:71 (link) — [the pipeline README](../../callback-box/user-stories/README.md).
+- ../issues/bugs/2026-08-21-rotated-image-cards-overflow-and-misplace-bbox.md:72 (link) — [the pipeline README](../../callback-box/user-stories/README.md).
 - ../issues/closed/bugs/2026-08-21-failed-in-box-image-shows-the-browser-glyph.md:57 (link) — [the pipeline README](../../../callback-box/user-stories/README.md).
 - ../issues/closed/bugs/2026-08-21-generated-agent-guide-sends-box-agents-to-config-schema.md:43 (link) — [the pipeline README](../../../callback-box/user-stories/README.md).
 
@@ -5334,11 +5381,11 @@ Referenced by:
 - user-stories/README.md:5 (link) — The current catalog is [catalog/2026-08-21.md](catalog/2026-08-21.md). It is produced by reading
 - user-stories/catalog/2026-06-26.md:4 (link) — > [2026-08-21.md](2026-08-21.md). This file describes the product as it
 - user-stories/journeys/README.md:4 (link) — there. The [capability catalog](../catalog/2026-08-21.md) next door answers "does the
-- ../issues/bugs/2026-08-21-capture-session-cards-never-record-the-transcription-fa.md:22 (link) — This issue is why [`capture/a-capture-still-arrives-when-transcription-is-down`](../../callback-box/user-stories/catalog
+- ../issues/bugs/2026-08-21-capture-session-cards-never-record-the-transcription-fa.md:23 (link) — This issue is why [`capture/a-capture-still-arrives-when-transcription-is-down`](../../callback-box/user-stories/catalog
 - ../issues/bugs/2026-08-21-drive-folder-mounts-cannot-be-configured-from-anywhere.md:40 (link) — This issue is why [`connectors/configure-which-gmail-calendar-and-drive-content`](../../callback-box/user-stories/catalo
-- ../issues/bugs/2026-08-21-history-shows-no-trigger-for-procedure-and-trick-commit.md:27 (link) — This issue is why [`browse/see-which-changes-the-box-made-on-its-own-and`](../../callback-box/user-stories/catalog/2026-
+- ../issues/bugs/2026-08-21-history-shows-no-trigger-for-procedure-and-trick-commit.md:28 (link) — This issue is why [`browse/see-which-changes-the-box-made-on-its-own-and`](../../callback-box/user-stories/catalog/2026-
 - ../issues/bugs/2026-08-21-published-pages-can-never-carry-a-submit-form-nothing-s.md:39 (link) — This issue is why [`publish/collect-replies-from-a-published-page`](../../callback-box/user-stories/catalog/2026-08-21.m
-- ../issues/bugs/2026-08-21-rotated-image-cards-overflow-and-misplace-bbox.md:51 (link) — This issue is why [`browse/view-a-photo-card-with-its-analysis`](../../callback-box/user-stories/catalog/2026-08-21.md#f
+- ../issues/bugs/2026-08-21-rotated-image-cards-overflow-and-misplace-bbox.md:52 (link) — This issue is why [`browse/view-a-photo-card-with-its-analysis`](../../callback-box/user-stories/catalog/2026-08-21.md#f
 - ../issues/closed/bugs/2026-08-21-failed-in-box-image-shows-the-browser-glyph.md:37 (link) — This issue is why [`browse/images-still-show-when-the-source-blocks`](../../../callback-box/user-stories/catalog/2026-08
 - ../issues/closed/bugs/2026-08-21-generated-agent-guide-sends-box-agents-to-config-schema.md:23 (link) — This issue is why [`cards/define-box-local-card-types-that-hot-reload`](../../../callback-box/user-stories/catalog/2026-
 - ../issues/closed/bugs/2026-08-21-one-failing-calendar-aborts-the-whole-calendar-sync-ins.md:54 (link) — An independent adversarial source recheck marked [`connectors/calendar-sync-repairs-an-expired-sync-token-and`](../../..

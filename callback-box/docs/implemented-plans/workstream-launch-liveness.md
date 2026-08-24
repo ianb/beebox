@@ -1,6 +1,6 @@
 ---
 title: "Protect a workstream while its agent launches"
-status: active
+status: implemented
 workstream: streams-and-issues
 issues:
   - ../../../issues/closed/bugs/2026-08-20-workstream-launch-liveness-gap.md

@@ -200,6 +200,21 @@ under you; hidden tabs go quiet and their worktree stops after 5 min —
 including any in-flight chat turn, which the tab catches up on (via
 reload + history) when refocused.
 
+## Backend staleness
+
+The hub runs TypeScript from the checkout through tsx, and nothing reloads it,
+so a merge landing under a running generation leaves it executing the old code
+while the router still calls it ready. The router now records a token for
+`callback-box/src` (excluding `src/frontend`, which Vite hot-reloads) at spawn
+and rechecks it at most every 5s on the request path; a mismatch is reported as
+`staleSince` in `/__router/status` and as `ready (stale)` in
+`bin/workstreams list`. Nothing restarts automatically: the router's only
+activity signal is HTTP, so a chat streaming over a WebSocket is
+indistinguishable from an idle worktree and there is no moment it can prove is
+safe to cut. `bin/workstreams down <name>` is the fix, and it is the human's
+call. The box-child half of this is separately solved through
+`CB_DEV_BUNDLE_ID`, which drains before re-execing.
+
 ## Orphan resistance
 
 PID files at `~/.cache/callback-box/pids/<name>.json` (single-slot —
@@ -210,7 +225,14 @@ agent-browser daemons, the startup sweep also pattern-matches
 project-scoped orphans (`process-cleanup.ts`, shared with `panic`):
 vite/fastify orphaned to PID 1 (a live router — incl. an isolated test
 one — keeps its children, so they're spared) and agent-browsers whose
-worktree has no live agent session. The generation leak that made
+worktree has no live agent session. A daemon is never judged on its
+pidfile alone until it is old enough to have written one: upstream
+writes `<session>.pid` a couple of seconds after the process appears, so
+`classifyAgentBrowser` spares any unvouched agent-browser younger than
+60s. `bin/browse` calls the same guard (`reclaimWorktreeBrowsers`)
+before every command instead of the bash reaper it used to carry, which
+knew only about pidfiles and so killed the still-starting daemon of
+whichever agent in the worktree had run first. The generation leak that made
 this necessary (concurrent cold requests racing to spawn duplicate
 vite+fastify pairs) is fixed at the source in `ensureRunning`.
 
@@ -457,6 +479,23 @@ defers a trap until the foreground command returns, so a Ctrl-C reaches codex
 taking the launcher down before teardown. The teardown invoked is the **main
 checkout's** copy, and it `cd`s to main before touching anything — a script
 must not run destructive steps from inside the directory it deletes.
+
+**The global sweep is detached, serialized, and fired from an `EXIT` trap.**
+`.claude/hooks/auto-sweep.sh` re-invokes itself with `--run` through
+`bin/lib/detach.mjs` (Node's `detached: true`, i.e. `setsid(2)`) rather than
+`& disown`, which leaves the child in the caller's process group and so died
+with the very session whose exit triggered it — 15 of 109 SessionEnd sweeps
+logged a `START` with nothing after it, against zero of the SessionStart and
+codex ones. The `--run` half holds an atomic `mkdir` lock (macOS has no
+`flock(1)`) and **skips** rather than queues, reclaiming a lock whose recorded
+pid is dead. A caught signal writes `INTERRUPTED`, so a bare `START` now means
+SIGKILL specifically. `session-end.sh` triggers it from a `trap … EXIT`: that
+is reachable from every one of the hook's early `exit 0`s — the property the
+old inline placement was protecting — while still running last, so the cheap
+per-worktree teardown no longer overlaps the sweep's git work across every
+other tree. The hook also logs `step=` elapsed times for the liveness scan and
+the git work, because a cancelled hook used to say only that it died somewhere
+between them.
 
 **One implementation of the destructive path: `bin/lib/worktree-teardown.sh`**
 (sourced, not executed), shared by `.claude/hooks/session-end.sh`,

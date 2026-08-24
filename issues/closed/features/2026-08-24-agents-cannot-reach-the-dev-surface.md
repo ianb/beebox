@@ -1,21 +1,13 @@
 ---
 title: "The browse key can't reach `/dev/`, so an agent can't verify the surface built for agents"
-workstream: streams-and-issues
+workstream: dev-surface-access
 area: router
 labels: [router, auth, dev-surface, agent-tooling]
+resolution: implemented
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — two issues could not be settled because /dev/ 401s the browse key
-resolution: implemented
 ---
-
-> **Closed 2026-08-24 — implemented.** The router now classifies `/dev/` as a
-> separate read-only route. It accepts either the owner session or the
-> machine-wide browse key. The worktree index, `/workstreams/`, and
-> `/__router/*` remain owner-only. Pure authorization tests cover both allowed
-> credentials, anonymous denial, and containment from neighboring control
-> surfaces. Real-dependency tests cover browse-key verification and its
-> fail-closed behavior when the key is not configured.
 
 > Boxholder: *"There's no reason you shouldn't access /dev/ …?"*
 
@@ -48,7 +40,7 @@ strange thing to guard more tightly than a box.
 Two `reconfirm` issues could not be settled today for this reason alone, both
 of which are *about* `/dev/` and both of which are one browser action to check:
 
-- [Doc browser's Cmd-P quick-open is dead under the sandbox CSP](../../bugs/2026-08-19-dev-docs-quickopen-dead-under-sandbox-csp.md)
+- [Doc browser's Cmd-P quick-open is dead under the sandbox CSP](../bugs/2026-08-19-dev-docs-quickopen-dead-under-sandbox-csp.md)
 - [Images in rendered /dev markdown are broken](../bugs/2026-08-19-dev-md-images-broken-opaque-origin.md)
 
 The code side of both is verifiable and verified: the sandbox CSP was removed
@@ -78,3 +70,62 @@ Worth noting the trust argument already made for this surface: the sandbox CSP
 was removed on the reasoning that "the dev agent authors the router's own code,
 so sandboxing its HTML output guards nothing" (`bin/router-docs.ts:826`). The
 same reasoning applies to reading it.
+
+
+## Resolved (2026-08-24) — the `dev-read` route class
+
+Split out of `control-read` in `bin/router-auth.ts`: `GET`/`HEAD` on
+`/<w>/dev/...`, on the bare `/dev` redirect, and on `/workstreams/...` are now
+`dev-read`, authorized as **owner session OR browse key**. The browse key
+arrives via its own injected dep (`hasBrowseKey`), not `resolveWorktreeAsset` —
+the dev surfaces deliberately do not inherit that resolver's wider set of
+per-box mobile tokens and agent bearers.
+
+The boxholder chose the wider of the two scopes on offer. `/dev/` alone was not
+worth much: the doc browser those two reconfirm issues were about had already
+been retired into `/workstreams/browse` (commit `46b03219`), so a `/dev/`-only
+grant would have handed an agent a 301 into a surface it still could not read.
+
+What did **not** move, and why: `/` (the worktree index), `/__router/*` — both
+the mutating verbs and `/__router/status` — and every non-`GET` `/workstreams/*`
+verb, which stay `control` (owner session AND a CSRF-safe origin). Those carry
+real control verbs. Non-read methods on `/dev/` also stay owner-only; `serveDev`
+has no write path, so keeping them out grants nothing.
+
+Verified against an isolated router (`CALLBACK_STATE_DIR` + `ROUTER_PORT`):
+`/main/dev/` and `/main/dev/skills.html` went 401 → 200 with the browse-key
+cookie, `/dev/` → 301, `/workstreams/` → 503 (the gate allowed it; that
+instance's workstreams app could not bind the fixed exhibits port 3230 already
+held by the live router), while `/` and `/__router/status` stayed 401.
+
+The path/credential table in `.claude/skills/browse/SKILL.md` is updated to
+match.
+
+## Cross-model review (2026-08-24)
+
+Three findings; two produced fixes in the same branch.
+
+1. **Raw `#` in the request target split the gate from the dispatcher.** The
+   gate strips a fragment before classifying; `bin/router.ts`'s dispatch
+   branches match on `split("?")[0]` and do not — so `GET /main/dev#x`
+   classified as the dev space and then dispatched as a proxied worktree path.
+   Fixed by rejecting a `#`-bearing target outright (`unknown` → 404) for every
+   route class, rather than teaching each branch one more delimiter. A fragment
+   is not legal in an origin-form URI, so nothing legitimate sends one;
+   percent-encoded `%23` is untouched.
+2. **A WebSocket upgrade is a GET, so `dev-read` carries upgrades.** Real, and
+   required — `/workstreams/` is a Vite-served app and a browser cannot render
+   it without its HMR socket, the same argument already written for
+   `resolveWorktreeAsset`, which already admits the browse key to that
+   worktree's Vite sockets. Documented in the arm rather than changed.
+3. **`serveDev` served dotfiles it hid from its own directory listings.**
+   Containment against escape was airtight (lexical + realpath), but `dev/` is a
+   directory agents write into, so `dev/.env` or `dev/apps/<name>/.git/config`
+   was a plausible accident. Now refused at any depth, checked on the resolved
+   path so legitimate `..` normalization still works.
+
+Separately verified while adjudicating: every workstreams-app procedure that
+changes repo state is a tRPC `.mutation` (POST → `control`). Two side effects do
+ride read paths and are accepted, both already reachable by the browse key on
+box routes: a request can lazy-start a worktree's processes, and the
+`quotas.get` query refreshes its quota cache.

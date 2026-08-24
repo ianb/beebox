@@ -1,7 +1,7 @@
 ---
 title: "Concurrent workstream launches race in git worktree add"
 workstream: streams-and-issues
-design: ../../../callback-box/docs/plans/concurrent-workstream-creation.md
+design: ../../../callback-box/docs/implemented-plans/concurrent-workstream-creation.md
 area: router
 labels: [workstreams, lifecycle, concurrency]
 resolution: implemented

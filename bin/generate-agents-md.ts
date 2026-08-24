@@ -260,9 +260,23 @@ export function generateSkillLinks(checkoutDir: string): string[] {
     if (existing === undefined) {
       symlinkSync(target, path, "dir");
     } else if (!existing.isSymbolicLink() || readlinkSync(path) !== target) {
-      throw new Error(
-        `refusing to overwrite existing Codex skill path: .agents/skills/${name}`,
+      // Still refuse to overwrite — a hand-authored native Codex skill at a
+      // tracked skill's name is a real thing to protect (see the test of the
+      // same name). But SKIP it and keep going rather than throwing.
+      //
+      // Throwing aborted the whole run at the FIRST such entry, so one
+      // unexpected directory silently cost every later skill AND the AGENTS.md
+      // mirrors after it. The main checkout sat on 2026-07-06 copies of all 15
+      // skills for seven weeks that way, and the only symptom was Codex
+      // sessions working from stale instructions — invisible unless someone ran
+      // the generator by hand. A loud skip keeps the protection and bounds the
+      // damage to the one entry it is protecting.
+      console.warn(
+        `generate-agents-md: refusing to overwrite existing Codex skill path: .agents/skills/${name} — ` +
+          `leaving it as-is. If this is a stale generated copy rather than a native Codex skill, ` +
+          `remove it and re-run to restore the symlink.`,
       );
+      continue;
     }
     written.push(join(".agents", "skills", name));
   }
