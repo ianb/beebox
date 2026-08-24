@@ -565,7 +565,7 @@
   "seam-connectors-r3-02": "connectors/mail-rules-act-on-new-mail-not-the-archive",
   "seam-connectors-r3-03": "connectors/cap-how-many-threads-a-mail-rule-may-track-by",
   "seam-connectors-r3-04": "connectors/several-named-mail-rules-hand-edited",
-  "seam-connectors-r3-05": "connectors/stop-syncing-something-by-deleting-its-card",
+  "seam-connectors-r3-05": "connectors/stop-syncing-something-by-trashing-its-card",
   "seam-connectors-r3-06": "automation/scheduled-work-that-needs-a-connector-waits",
   "seam-connectors-r3-07": "connectors/read-the-agenda-from-the-box-s-own-copy",
   "seam-connectors-r3-08": "connectors/get-the-box-s-timezone-block-for-hand-written",

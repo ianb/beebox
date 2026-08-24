@@ -26,12 +26,52 @@ import { updateTransientState } from "../../connectors/transient-state.js";
 // Ensure handlers are registered
 import "../../connectors/drive-handler-sheets.js";
 import "../../connectors/drive-handler-docs.js";
-import { getHandlerForMimeType, getAllDriveHandlers } from "../../connectors/drive-types.js";
+import { getHandlerForMimeType } from "../../connectors/drive-types.js";
 import {
   createGoogleDriveConnector,
   emptyFileState,
   type DriveTransientState,
 } from "../../connectors/google-drive.js";
+import { findDriveCardTracking } from "../../connectors/google-drive-tracking.js";
+
+/** Print the live Drive-card working set. Exported for filesystem doctests. */
+export async function runDriveStatus(boxRoot: string): Promise<void> {
+  const { liveCards } = await findDriveCardTracking(boxRoot);
+
+  if (liveCards.length === 0) {
+    console.log("No Drive files mounted.");
+    console.log('Use "cb drive add <url> <path>" to mount a Drive file.');
+    return;
+  }
+
+  console.log(`${String(liveCards.length)} mounted file(s):\n`);
+  for (const card of liveCards) {
+    const titleMatch = card.content.match(/<title>([^<]+)<\/title>/);
+    const modifiedMatch = card.content.match(/<modified>([^<]+)<\/modified>/);
+    const statusMatch = card.content.match(/\bstatus="([^"]+)"/);
+    const sheetMatches = [...card.content.matchAll(/<sheet-tab[^>]*\btitle="([^"]+)"/g)];
+    const lossyMatches = [...card.content.matchAll(/<item type="([^"]+)" count="([^"]+)"/g)];
+
+    console.log(`  ${card.relPath}`);
+    if (titleMatch) console.log(`    Title: ${titleMatch[1]}`);
+    console.log(`    Drive ID: ${card.driveId}`);
+    if (modifiedMatch) console.log(`    Last synced: ${modifiedMatch[1]}`);
+    if (statusMatch && statusMatch[1] !== "synced") {
+      console.log(`    Status: ${statusMatch[1]}`);
+    }
+    if (sheetMatches.length > 0) {
+      const tabs = sheetMatches.map((match) => match[1]).filter(Boolean);
+      console.log(`    Tabs: ${tabs.join(", ")}`);
+    }
+    if (lossyMatches.length > 0) {
+      const summary = lossyMatches
+        .map((match) => `${match[1]}=${match[2]}`)
+        .join(", ");
+      console.log(`    Lossy: ${summary}`);
+    }
+    console.log("");
+  }
+}
 
 async function requireDriveService(boxRoot: string): Promise<GoogleDriveService> {
   const auth = await getGoogleAuth(boxRoot);
@@ -221,50 +261,7 @@ driveCommand
   .description("Show status of mounted Drive files")
   .action(async () => {
     const boxRoot = await requireBoxRoot();
-    const { glob } = await import("glob");
-
-    const cardPaths: string[] = [];
-    for (const h of getAllDriveHandlers()) {
-      const matches = await glob(`**/*.${h.cardType}.card`, { cwd: boxRoot });
-      cardPaths.push(...matches);
-    }
-    cardPaths.sort();
-
-    if (cardPaths.length === 0) {
-      console.log("No Drive files mounted.");
-      console.log('Use "cb drive add <url> <path>" to mount a Drive file.');
-      return;
-    }
-
-    console.log(`${cardPaths.length} mounted file(s):\n`);
-    for (const relPath of cardPaths) {
-      const cardPath = path.join(boxRoot, relPath);
-      const content = await fs.readFile(cardPath, "utf-8");
-
-      const driveIdMatch = content.match(/drive-id="([^"]+)"/);
-      const titleMatch = content.match(/<title>([^<]+)<\/title>/);
-      const modifiedMatch = content.match(/<modified>([^<]+)<\/modified>/);
-      const statusMatch = content.match(/\bstatus="([^"]+)"/);
-      const sheetMatches = [...content.matchAll(/<sheet-tab[^>]*\btitle="([^"]+)"/g)];
-      const lossyMatches = [...content.matchAll(/<item type="([^"]+)" count="([^"]+)"/g)];
-
-      console.log(`  ${relPath}`);
-      if (titleMatch) console.log(`    Title: ${titleMatch[1]}`);
-      if (driveIdMatch) console.log(`    Drive ID: ${driveIdMatch[1]}`);
-      if (modifiedMatch) console.log(`    Last synced: ${modifiedMatch[1]}`);
-      if (statusMatch && statusMatch[1] !== "synced") {
-        console.log(`    Status: ${statusMatch[1]}`);
-      }
-      if (sheetMatches.length > 0) {
-        const tabs = sheetMatches.map((m) => m[1]).filter(Boolean);
-        console.log(`    Tabs: ${tabs.join(", ")}`);
-      }
-      if (lossyMatches.length > 0) {
-        const summary = lossyMatches.map((m) => `${m[1]}=${m[2]}`).join(", ");
-        console.log(`    Lossy: ${summary}`);
-      }
-      console.log("");
-    }
+    await runDriveStatus(boxRoot);
   });
 
 driveCommand
