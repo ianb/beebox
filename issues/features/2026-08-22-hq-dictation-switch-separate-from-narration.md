@@ -101,7 +101,7 @@ needs to know the tool won't help here, not why.
 
 ## Related
 
-- [Mark low-confidence words in transcripts](2026-08-15-mark-low-confidence-words-in-transcripts.md)
+- [Mark low-confidence words in transcripts](../closed/features/2026-08-15-mark-low-confidence-words-in-transcripts.md)
   — the other axis of transcription quality, and the source of the second
   prompt paragraph this one must not become a third of.
 - [The first message of a chat can't have its audio retranscribed](../bugs/2026-08-18-first-message-audio-not-retranscribable.md)

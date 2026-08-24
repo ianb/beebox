@@ -3,7 +3,7 @@ title: "Mark low-confidence transcript words, agent-first"
 status: implemented
 workstream: transcript-confidence
 issues:
-  - ../../../issues/features/2026-08-15-mark-low-confidence-words-in-transcripts.md
+  - ../../../issues/closed/features/2026-08-15-mark-low-confidence-words-in-transcripts.md
   # Shared metadata design only; its display work stays open:
   - ../../../issues/features/2026-08-12-show-retranscription-in-chat.md
 ---
