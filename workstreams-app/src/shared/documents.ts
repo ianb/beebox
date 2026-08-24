@@ -12,6 +12,8 @@ export const issueNextActionSchema = z.enum([
   "duplicate",
   "invalid",
   "fixed",
+  "verify-without-me",
+  "manually-confirmed",
 ]);
 export type IssueNextAction = z.infer<typeof issueNextActionSchema>;
 export const issueVisibilitySchema = z.enum(["public", "private"]);

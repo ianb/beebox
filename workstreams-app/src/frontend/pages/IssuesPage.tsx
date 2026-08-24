@@ -1,3 +1,4 @@
+import { useBlocker } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { issueChangeKey, IssuesPane } from "../components/IssuesPane.js";
@@ -5,8 +6,29 @@ import { Button } from "../components/ui.js";
 import { trpc } from "../trpc.js";
 import type { Issue, IssueChange } from "../types.js";
 
+const DISCARD_ISSUE_CHANGES = "Discard unsaved issue changes?";
+
+export function issueNavigationGuard(hasChanges: boolean): {
+  disabled: boolean;
+  enableBeforeUnload: boolean;
+  shouldBlock: (navigation: { currentRouteId: string; nextRouteId: string; confirmDiscard: () => boolean }) => boolean;
+} {
+  return {
+    disabled: !hasChanges,
+    enableBeforeUnload: hasChanges,
+    shouldBlock: ({ currentRouteId, nextRouteId, confirmDiscard }) => hasChanges && currentRouteId !== nextRouteId && !confirmDiscard(),
+  };
+}
+
 export function IssuesPage() {
   const [changes, setChanges] = useState<Map<string, IssueChange>>(new Map());
+  const hasChanges = changes.size > 0;
+  const navigationGuard = issueNavigationGuard(hasChanges);
+  useBlocker({
+    disabled: navigationGuard.disabled,
+    enableBeforeUnload: navigationGuard.enableBeforeUnload,
+    shouldBlockFn: ({ current, next }) => navigationGuard.shouldBlock({ currentRouteId: current.routeId, nextRouteId: next.routeId, confirmDiscard: () => window.confirm(DISCARD_ISSUE_CHANGES) }),
+  });
   const issues = trpc.issues.list.useQuery();
   const utils = trpc.useUtils();
   const save = trpc.issues.save.useMutation({

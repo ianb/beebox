@@ -11,6 +11,7 @@ import * as os from "node:os";
 import { BOX_MARKER } from "../../lib/paths.js";
 import { runTick, type TickResult } from "../../cli/commands/tick.js";
 import { getStatus, isRepo } from "../../lib/git.js";
+import { drainBoxGitLocks, GIT_DRAIN_MS } from "../../lib/git-lock.js";
 import { touchSchedulerHeartbeat } from "./health-box.js";
 import { measureBoxGrowthIfDue } from "../box-growth/health.js";
 import { checkHealthAndAlert } from "./health-alert.js";
@@ -121,6 +122,37 @@ export interface SchedulerOptions {
  * Run the scheduler daemon loop. Polls each configured box every interval.
  * Reloads config each cycle so boxes can be added/removed without restart.
  */
+/**
+ * Signal teardown: record the shutdown in every box's log, let in-flight git
+ * finish, and exit.
+ *
+ * The drain is the part that matters. A scheduled task's whole job is usually
+ * to write and commit; exiting on top of an in-flight `git commit` orphans it
+ * into systemd's cgroup SIGKILL, and a git killed mid-index-write leaves a
+ * `.git/index.lock` that blocks every writer in that box until a human removes
+ * it (`lib/git-stale-lock.ts`). Bounded, and a drain that does not finish is a
+ * warning rather than a refusal to exit — a shutdown that hangs is worse.
+ */
+async function shutdownScheduler(signal: string): Promise<never> {
+  console.log(`[${new Date().toISOString()}] Scheduler received ${signal}, shutting down...`);
+
+  const config = await loadSchedulerConfig().catch((): SchedulerConfig => ({ boxes: [] }));
+  for (const boxPath of config.boxes) {
+    await writeBoxLog(boxPath, {
+      ts: new Date().toISOString(),
+      event: "shutdown",
+      box: boxPath,
+      signal,
+    }).catch(() => {});
+  }
+
+  if (!(await drainBoxGitLocks(GIT_DRAIN_MS))) {
+    console.warn("Git writes were still in flight at shutdown; exiting anyway.");
+  }
+
+  process.exit(0);
+}
+
 export async function runScheduler(options?: SchedulerOptions): Promise<never> {
   const interval = (options?.intervalSeconds ?? 60) * 1000;
   let stopping = false;
@@ -135,21 +167,8 @@ export async function runScheduler(options?: SchedulerOptions): Promise<never> {
   }
 
   async function shutdown(signal: string) {
-    console.log(`[${new Date().toISOString()}] Scheduler received ${signal}, shutting down...`);
     stopping = true;
-
-    // Log shutdown to each box
-    const config = await loadSchedulerConfig().catch((): SchedulerConfig => ({ boxes: [] }));
-    for (const boxPath of config.boxes) {
-      await writeBoxLog(boxPath, {
-        ts: new Date().toISOString(),
-        event: "shutdown",
-        box: boxPath,
-        signal,
-      }).catch(() => {});
-    }
-
-    process.exit(0);
+    await shutdownScheduler(signal);
   }
 
   process.on("SIGTERM", () => { void shutdown("SIGTERM"); });
