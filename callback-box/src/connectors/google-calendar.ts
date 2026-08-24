@@ -16,7 +16,6 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { errorMessage } from "../lib/error-guards.js";
 import { HTTPError } from "ky";
 import {
   registerConnector,
@@ -40,6 +39,9 @@ import {
 import { stageAndCommitPaths } from "../lib/git.js";
 import {
   buildNarrativeCommitMessage,
+  formatCalendarSyncFailure,
+  type CalendarSyncFailure,
+  type CalendarSyncOperation,
   type SyncNote,
 } from "./google-calendar-notes.js";
 import {
@@ -50,8 +52,37 @@ import {
   type CalendarState,
   type SyncTokenSnapshot,
 } from "./google-calendar-state.js";
-import { syncCalendar } from "./google-calendar-sync.js";
+import {
+  syncCalendar,
+  type SyncAccumulator,
+} from "./google-calendar-sync.js";
 import { pushAndCleanOrphans, processLocalDeletes } from "./google-calendar-push.js";
+import { assertNever } from "../lib/invariant.js";
+
+type CalendarSyncOutcome =
+  | { kind: "synced"; fullResync: boolean }
+  | { kind: "failed"; failure: CalendarSyncFailure };
+
+function emptySyncAccumulator(): SyncAccumulator {
+  return { created: [], updated: [], deleted: [], notes: [] };
+}
+
+function classifyCalendarFailure(
+  err: unknown,
+  opts: { calendarId: string; operation: CalendarSyncOperation },
+): CalendarSyncFailure {
+  if (err instanceof HTTPError) {
+    return {
+      ...opts,
+      errorKind: "http-error",
+      httpStatus: err.response.status,
+    };
+  }
+  return {
+    ...opts,
+    errorKind: err instanceof Error ? "error" : "non-error",
+  };
+}
 
 interface GoogleCalendarConnectorOptions {
   /** Injected calendar service (tests); the real one is built from box auth when omitted. */
@@ -170,6 +201,7 @@ class GoogleCalendarConnector implements Connector {
     const updated: string[] = [];
     const deleted: string[] = [];
     const allNotes: SyncNote[] = [];
+    const failures: CalendarSyncFailure[] = [];
     let isFullResync = false;
 
     for (const calendarId of calendars) {
@@ -183,9 +215,15 @@ class GoogleCalendarConnector implements Connector {
         syncDaysBack, syncDaysForward, windowStart, windowEnd, snapshot,
         acc: { created, updated, deleted, allNotes },
       });
-      if (outcome.fullResync) isFullResync = true;
-      if (outcome.error) {
-        return { success: false, created, updated, error: outcome.error };
+      switch (outcome.kind) {
+        case "synced":
+          if (outcome.fullResync) isFullResync = true;
+          break;
+        case "failed":
+          failures.push(outcome.failure);
+          break;
+        default:
+          assertNever(outcome);
       }
     }
 
@@ -220,25 +258,31 @@ class GoogleCalendarConnector implements Connector {
       path.relative(this.boxRoot, this.statePath()),
       "config/connectors/google-calendar.json",
     ];
-    const message =
-      changedEventFiles.length > 0
-        ? buildNarrativeCommitMessage(allNotes, { isFullResync, totalEvents: changedEventFiles.length })
-        : "Sync calendar: no changes (token refreshed)";
+    const message = changedEventFiles.length > 0 || failures.length > 0
+      ? buildNarrativeCommitMessage(allNotes, {
+        isFullResync,
+        totalEvents: changedEventFiles.length,
+        failures,
+      })
+      : "Sync calendar: no changes (token refreshed)";
     await stageAndCommitPaths(this.boxRoot, {
       paths,
       message,
       trailers: { "Pulled-By": "google-calendar-connector", ...(this.triggeredBy ? { "Triggered-By": this.triggeredBy } : {}) },
     });
 
-    const result: SyncResult = { success: true, created, updated };
+    const result: SyncResult = { success: failures.length === 0, created, updated };
     if (pushed.length > 0) result.pushed = pushed;
+    if (failures.length > 0) {
+      result.error = `Calendar sync failed for ${failures.map(formatCalendarSyncFailure).join(", ")}`;
+    }
     return result;
   }
 
   /**
    * Sync one calendar, retrying with a full sync if the sync token expired (410).
-   * Accumulates results into `acc`; returns whether a full resync happened and
-   * any fatal error message. State is persisted on the error/410 paths.
+   * Accumulates every completed write into `acc`. Ordinary failures restore
+   * the incoming token; a failed 410 recovery leaves the invalid token absent.
    */
   private async runCalendarSync(opts: {
     calendar: GoogleCalendarService;
@@ -253,36 +297,63 @@ class GoogleCalendarConnector implements Connector {
     windowEnd: Date;
     snapshot: SyncTokenSnapshot;
     acc: { created: string[]; updated: string[]; deleted: string[]; allNotes: SyncNote[] };
-  }): Promise<{ fullResync: boolean; error?: string }> {
+  }): Promise<CalendarSyncOutcome> {
     const { calendar, calendarId, syncToken, icsOpts, state, calDir,
             syncDaysBack, syncDaysForward, windowStart, windowEnd, snapshot, acc } = opts;
     const base = {
       boxRoot: this.boxRoot, calendar, calendarId, syncDaysBack, syncDaysForward,
       state, icsOpts, calDir, windowStart, windowEnd,
     };
-    const collect = (r: { created: string[]; updated: string[]; deleted: string[]; notes: SyncNote[] }, opts2: { withNotes: boolean }): void => {
+    const collect = (r: SyncAccumulator, opts2: { withNotes: boolean }): void => {
       acc.created.push(...r.created);
       acc.updated.push(...r.updated);
       acc.deleted.push(...r.deleted);
       if (opts2.withNotes) acc.allNotes.push(...r.notes);
     };
 
+    const firstAttempt = emptySyncAccumulator();
     try {
-      collect(await syncCalendar({ ...base, syncToken }), { withNotes: true });
-      return { fullResync: false };
-    } catch (err) {
-      const status = err instanceof HTTPError ? err.response.status : undefined;
-      const message = errorMessage(err);
-      if (status !== 410 && !message.includes("410")) {
+      await syncCalendar({ ...base, syncToken, acc: firstAttempt });
+      collect(firstAttempt, { withNotes: true });
+      return { kind: "synced", fullResync: false };
+    } catch (err: unknown) {
+      collect(firstAttempt, { withNotes: true });
+      if (!(err instanceof HTTPError) || err.response.status !== 410) {
+        if (syncToken === undefined) delete state.syncTokens[calendarId];
+        else state.syncTokens[calendarId] = syncToken;
         await this.saveState(state, snapshot);
-        return { fullResync: false, error: `Calendar sync failed for ${calendarId}: ${message}` };
+        return {
+          kind: "failed",
+          failure: classifyCalendarFailure(err, {
+            calendarId,
+            operation: "incremental-sync",
+          }),
+        };
       }
-      console.log(`  Sync token expired for ${calendarId}, doing full sync...`);
+    }
+
+    console.log(`  Sync token expired for ${calendarId}, doing full sync...`);
+    delete state.syncTokens[calendarId];
+    await this.saveState(state, snapshot);
+
+    const fullAttempt = emptySyncAccumulator();
+    try {
+      await syncCalendar({ ...base, syncToken: undefined, acc: fullAttempt });
+      // Don't add individual notes for a successful full re-sync — the commit
+      // message summarizes the refresh.
+      collect(fullAttempt, { withNotes: false });
+      return { kind: "synced", fullResync: true };
+    } catch (err: unknown) {
+      collect(fullAttempt, { withNotes: true });
       delete state.syncTokens[calendarId];
       await this.saveState(state, snapshot);
-      // Don't add individual notes for full re-sync — the message will summarize
-      collect(await syncCalendar({ ...base, syncToken: undefined }), { withNotes: false });
-      return { fullResync: true };
+      return {
+        kind: "failed",
+        failure: classifyCalendarFailure(err, {
+          calendarId,
+          operation: "full-sync",
+        }),
+      };
     }
   }
 

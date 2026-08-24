@@ -17,6 +17,34 @@ export interface SyncNote {
   ref?: string;
 }
 
+export type CalendarSyncOperation = "incremental-sync" | "full-sync";
+
+export interface CalendarSyncFailure {
+  calendarId: string;
+  operation: CalendarSyncOperation;
+  errorKind: "http-error" | "error" | "non-error";
+  httpStatus?: number | undefined;
+}
+
+function sanitizeDiagnosticLabel(value: string): string {
+  return [...value]
+    .map((character) => {
+      const code = character.codePointAt(0) ?? 0;
+      return code < 32 || code === 127 ? " " : character;
+    })
+    .join("")
+    .slice(0, 200);
+}
+
+/** Format a failure without serializing an exception, request URL, or token. */
+export function formatCalendarSyncFailure(failure: CalendarSyncFailure): string {
+  const calendarId = sanitizeDiagnosticLabel(failure.calendarId);
+  const status = failure.httpStatus === undefined
+    ? failure.errorKind
+    : `HTTP ${String(failure.httpStatus)}`;
+  return `${calendarId} (${failure.operation}, ${status})`;
+}
+
 /** Format an event date for commit messages: "Thu Feb 20" or "Thu Feb 20 3:00 PM" */
 export function formatEventDate(event: GoogleCalendarEvent): string {
   const dateTime = event.start?.dateTime;
@@ -119,9 +147,14 @@ export function extractCbAnnotations(content: string): { reason?: string; ref?: 
 /** Build narrative commit message from SyncNotes */
 export function buildNarrativeCommitMessage(
   notes: SyncNote[],
-  opts: { isFullResync: boolean; totalEvents?: number },
+  opts: {
+    isFullResync: boolean;
+    totalEvents?: number;
+    failures?: CalendarSyncFailure[];
+  },
 ): string {
-  if (opts.isFullResync) {
+  const failures = opts.failures ?? [];
+  if (opts.isFullResync && failures.length === 0) {
     const count = opts.totalEvents ?? notes.length;
     return `Sync calendar: full re-sync (token expired), ${count} events refreshed`;
   }
@@ -138,7 +171,9 @@ export function buildNarrativeCommitMessage(
   if (counts["pushed"]) parts.push(`${counts["pushed"]} pushed`);
   if (counts["cancelled"]) parts.push(`${counts["cancelled"]} cancelled`);
 
-  let message = `Sync calendar: ${parts.join(", ")}`;
+  let message = failures.length > 0
+    ? `Sync calendar: partial (${String(opts.totalEvents ?? notes.length)} changed, ${String(failures.length)} failed)`
+    : `Sync calendar: ${parts.join(", ")}`;
 
   // Group notes by action for the body
   const sections: Array<{ label: string; action: SyncNote["action"] }> = [
@@ -160,6 +195,12 @@ export function buildNarrativeCommitMessage(
       return line;
     });
     bodyParts.push(`${label}:\n${lines.join("\n")}`);
+  }
+
+  if (failures.length > 0) {
+    bodyParts.push(
+      `Failed calendars:\n${failures.map((failure) => `- ${formatCalendarSyncFailure(failure)}`).join("\n")}`,
+    );
   }
 
   if (bodyParts.length > 0) {
