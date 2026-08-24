@@ -18,6 +18,18 @@ not a direct reading, and at least one item looks garbled in transit ("functions
 under 30 characters" is presumably 30 *lines*). Treat this as a pointer, not a
 digest.
 
+> **Boxholder's calls, 2026-08-24 — read before reopening either.**
+>
+> - **Enums instead of booleans: wanted.** "Actually great." Open question is
+>   the mechanism — *"I almost want it as a lint rule or something, but not
+>   sure."* So the next step is deciding whether this is a rule in the preset, a
+>   line in `code-style.md`, or both; not whether to adopt the idea.
+> - **Reload agent.md: declined.** *"I'm not apt to do the reload agent.md
+>   thing, I don't understand what would trigger it reasonably."* The objection
+>   is the trigger, not the mechanism — nothing tells an operator that quality
+>   has drifted, so the move has no moment to be invoked. Don't re-propose it
+>   without answering that.
+
 ## Two ideas we do not have
 
 - **"Reload agent.md" as an explicit move when quality drops.** The article

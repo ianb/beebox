@@ -3,10 +3,24 @@ title: "Every workstream launch prints `cat: \"\": No such file or directory` â€
 workstream: unattached
 area: monorepo
 labels: [workstreams, tooling]
+resolution: implemented
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session â€” boxholder noticed an error on every workstream startup
 ---
+
+> **Fixed 2026-08-24.** `bin/lib/launch-session.sh` now emits unescaped inner
+> quotes and tests the file with `-s` rather than the path with `-n`, so an
+> absent description is simply empty instead of a failed `cat`. **Both** the
+> claude and codex launcher branches carried the bug and both are fixed.
+> Verified by generating launchers for each agent with and without a
+> description file: the old form printed
+> `cat: "": No such file or directory`, the new one is silent when empty and
+> yields the text when set.
+>
+> Not backfilled: workstreams launched before this still have no `description`
+> in the registry, and the value is not recoverable from anywhere. New launches
+> record it.
 
 Every workstream startup prints a `cat` error. It looks cosmetic. It is the
 visible half of a bug that has silently disabled the workstream **description**

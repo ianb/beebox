@@ -40,7 +40,7 @@ launch_patch=\$(jq -n \
   --arg tty "\$(tty 2>/dev/null || true)" \
   --arg baseSha "\$(git -C "\$wt_path" merge-base main HEAD 2>/dev/null || true)" \
     --arg launchedAt "\$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-    --arg description "\$(if [ -n \"${LS_DESCRIPTION_FILE:-}\" ]; then cat \"${LS_DESCRIPTION_FILE:-}\"; fi)" \
+    --arg description "\$(if [ -s "${LS_DESCRIPTION_FILE:-}" ]; then cat "${LS_DESCRIPTION_FILE:-}"; fi)" \
     '{branch:\$branch, emoji:\$emoji, agent:\$agent, tty:\$tty, baseSha:\$baseSha, launchedAt:\$launchedAt}
      + if \$model == "" then {} else {model:\$model} end
      + if \$description == "" then {} else {description:\$description} end')
@@ -80,7 +80,7 @@ launch_patch=\$(jq -n \
   --arg tty "\$(tty 2>/dev/null || true)" \
   --arg baseSha "\$(git -C "\$wt_path" rev-parse HEAD 2>/dev/null || true)" \
     --arg launchedAt "\$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-    --arg description "\$(if [ -n \"${LS_DESCRIPTION_FILE:-}\" ]; then cat \"${LS_DESCRIPTION_FILE:-}\"; fi)" \
+    --arg description "\$(if [ -s "${LS_DESCRIPTION_FILE:-}" ]; then cat "${LS_DESCRIPTION_FILE:-}"; fi)" \
     '{branch:\$branch, emoji:\$emoji, agent:\$agent, tty:\$tty, baseSha:\$baseSha, launchedAt:\$launchedAt}
      + if \$model == "" then {} else {model:\$model} end
      + if \$description == "" then {} else {description:\$description} end')
