@@ -72,6 +72,6 @@ Nothing offers a merge, and nothing says a choice is pending.
 
 ## Related
 
-- [Procedure model pins are Claude-only](2026-08-23-procedure-model-pins-are-claude-only.md)
+- [Procedure model pins are Claude-only](../closed/bugs/2026-08-23-procedure-model-pins-are-claude-only.md)
   — the fix that could not land. It shipped as `model: efficient` in the stock
   template on 2026-08-23 and the box still runs `model: haiku`.

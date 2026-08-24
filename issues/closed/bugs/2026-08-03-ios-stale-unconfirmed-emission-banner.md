@@ -1,14 +1,17 @@
 ---
 title: "iOS: a stale 'chat did not confirm the message' banner (with a duplicating Retry) survives when the send actually went through"
 workstream: emission-model
-needs: [manual-testing]
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder saw the banner without composing anything
 priority: important
-design: ../../callback-box/docs/implemented-plans/emission-model.md
+design: ../../../callback-box/docs/implemented-plans/emission-model.md
+resolution: implemented
 ---
 
+> **Closed 2026-08-24** — the boxholder confirms the behavior has not
+> recurred across normal use for a while since the fix landed; calling the
+> manual gate met by field exposure rather than a scripted repro.
 > **⏳ Awaiting manual testing** — resolved by the emission-model workstream
 > rather than by the history-reconciliation this issue proposed (see the
 > plan's "Why 'reconcile against durable history' is not the design"):
@@ -56,7 +59,7 @@ box it is restored and the banner shows, spuriously, with no fresh send.
 The offered **Retry re-sends** a message that already went through, so it **duplicates
 the turn** (the agent redoes the work, and a duplicate `chat-user-message` lands — the
 same duplication risk as the server-side send path,
-[intermittent-spawn-ebadf-sdk-chat-run](../closed/bugs/2026-08-03-intermittent-spawn-ebadf-sdk-chat-run.md)).
+[intermittent-spawn-ebadf-sdk-chat-run](2026-08-03-intermittent-spawn-ebadf-sdk-chat-run.md)).
 When the turn is visibly complete the correct action is Discard, but the UI offers and
 even emphasises Retry — the app can't tell the difference because it never checks
 history.
@@ -72,7 +75,7 @@ of truth. Only a pending emission with no corresponding message in history is a 
 
 ## Related
 
-- [intermittent-spawn-ebadf-sdk-chat-run](../closed/bugs/2026-08-03-intermittent-spawn-ebadf-sdk-chat-run.md)
+- [intermittent-spawn-ebadf-sdk-chat-run](2026-08-03-intermittent-spawn-ebadf-sdk-chat-run.md)
   — the server-side half of the same "processed but not confirmed → duplicate on
   retry" family, being worked in `worktree-cbserve-fd-leak`. This iOS reconciliation
   is the client half.

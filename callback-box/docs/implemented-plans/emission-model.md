@@ -3,11 +3,11 @@ title: "Emission model: durable acceptance, no sticky pending states"
 status: implemented
 workstream: emission-model
 issues:
-  - ../../../issues/bugs/2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md
-  - ../../../issues/bugs/2026-08-18-ios-stuck-sending-message-survives-restart.md
-  - ../../../issues/bugs/2026-08-18-ios-keyword-tag-leaks-into-composer-when-sending-is-stuck.md
-  - ../../../issues/bugs/2026-08-03-ios-stale-unconfirmed-emission-banner.md
-  - ../../../issues/bugs/2026-07-23-voice-send-lingers-as-unsent-recovery-draft.md
+  - ../../../issues/closed/bugs/2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md
+  - ../../../issues/closed/bugs/2026-08-18-ios-stuck-sending-message-survives-restart.md
+  - ../../../issues/closed/bugs/2026-08-18-ios-keyword-tag-leaks-into-composer-when-sending-is-stuck.md
+  - ../../../issues/closed/bugs/2026-08-03-ios-stale-unconfirmed-emission-banner.md
+  - ../../../issues/closed/bugs/2026-07-23-voice-send-lingers-as-unsent-recovery-draft.md
   - ../../../issues/bugs/2026-08-18-first-message-audio-not-retranscribable.md
 ---
 

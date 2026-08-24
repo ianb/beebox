@@ -13,7 +13,7 @@ discovered-in: worktree-send-receipt-logging — after landing send receipt diag
 > timeline. Only Ian clears this.
 
 The instrumentation for
-[chat sends that appear unconfirmed after they succeeded](../bugs/2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md)
+[chat sends that appear unconfirmed after they succeeded](../closed/bugs/2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md)
 is deployed. The failure trigger is still unknown. More speculative work before
 another incident would not add evidence.
 

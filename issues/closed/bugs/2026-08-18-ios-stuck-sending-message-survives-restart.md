@@ -1,15 +1,18 @@
 ---
 title: "iOS: a stuck \"Sending message…\" persists across app restarts and doubles on a real send"
 workstream: emission-model
-needs: [manual-testing]
 area: callback-box
 labels: [ios, chat, emissions]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder report from the iOS app
-design: ../../callback-box/docs/implemented-plans/emission-model.md
+design: ../../../callback-box/docs/implemented-plans/emission-model.md
+resolution: implemented
 ---
 
+> **Closed 2026-08-24** — the boxholder confirms the behavior has not
+> recurred across normal use for a while since the fix landed; calling the
+> manual gate met by field exposure rather than a scripted repro.
 > **⏳ Awaiting manual testing** — fixes landed in `d641042c`/`c296b95f`
 > (state collapse + in-session redelivery + a Restore/Discard affordance
 > after 30s pending; requires a fresh app install). See Manual testing.

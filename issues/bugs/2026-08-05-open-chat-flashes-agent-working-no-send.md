@@ -150,7 +150,7 @@ was not inspected from this worktree.
 
 1. **Real lingering turn.** The session had a queued/in-flight turn — this box has
    had stuck/duplicate turns from the receipt-failure family
-   ([chat-send-receipts-fail-often…](2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md))
+   ([chat-send-receipts-fail-often…](../closed/bugs/2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md))
    — and opening it shows the tail finishing, so `busy` is technically correct but
    surprising (the user didn't cause it, and no new output appears).
 2. **Spurious starting / status-race flash.** Opening the session momentarily reads
