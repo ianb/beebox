@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-connector-sync-isolation — independent review of Calendar failure isolation
+priority: normal
 ---
 
 `processLocalDeletes` and `pushAndCleanOrphans` in `callback-box/src/connectors/google-calendar-push.ts` warn and continue when Google rejects a delete or insert. They do not return a failure outcome. `GoogleCalendarConnector.sync` derives success only from per-calendar pull failures.

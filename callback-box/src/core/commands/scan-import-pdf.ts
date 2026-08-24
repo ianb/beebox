@@ -1,6 +1,6 @@
 /**
- * Document flow for the scan-import command: a single PDF that already has an
- * embedded text layer is run through Docling and filed as a `document.card`
+ * Pdf flow for the scan-import command: a single PDF that already has an
+ * embedded text layer is run through Docling and filed as a `pdf.card`
  * (+ the original PDF, the gzipped extraction JSON, and page/figure AVIFs)
  * inside the session's attach scope. No Gemini analysis — the text is already
  * there; Docling contributes layout, reading order, and tables.
@@ -18,20 +18,20 @@ import { randomUUID } from "node:crypto";
 import { type CommandContext, type CommandResult } from "../command-runner.js";
 import { stageAndCommitPaths } from "../../lib/git.js";
 import { createCaptureSessionTemplate } from "../../schemas/capture-session.js";
-import { createDocumentTemplate, type DocumentTemplateOptions } from "../../schemas/document.js";
+import { createPdfTemplate, type PdfTemplateOptions } from "../../schemas/pdf.js";
 import { createOrAppendIntakeJob } from "../../connectors/intake-utils.js";
 import { ensureBoxTmpDir } from "../../lib/box-tmp.js";
 import { createDoclingService, type DoclingService } from "../../services/docling.js";
-import { extractDocument } from "./document-extract.js";
+import { extractPdf } from "./pdf-extract.js";
 import { probePdf } from "./pdf-probe.js";
 import { createSessionLayout } from "./scan-import-session.js";
 
-/** Basename of the document card and its attach scope inside the session. */
-const DOCUMENT_BASENAME = "source";
-/** Name the original takes inside the document card's attach scope. */
+/** Basename of the pdf card and its attach scope inside the session. */
+const PDF_BASENAME = "source";
+/** Name the original takes inside the pdf card's attach scope. */
 const SOURCE_PDF_FILENAME = "source.pdf";
 
-export interface RunDocumentModeArgs {
+export interface RunPdfModeArgs {
   pdfPath: string;
   /** Injected in tests; production creates the real `uvx docling` wrapper. */
   docling?: DoclingService | undefined;
@@ -40,9 +40,9 @@ export interface RunDocumentModeArgs {
   source?: string | undefined;
 }
 
-export async function runDocumentMode(
+export async function runPdfMode(
   ctx: CommandContext,
-  args: RunDocumentModeArgs
+  args: RunPdfModeArgs
 ): Promise<CommandResult> {
   const layout = await createSessionLayout(ctx);
   const {
@@ -53,14 +53,14 @@ export async function runDocumentMode(
     sessionId,
     startedAt,
   } = layout;
-  ctx.writeLine(`Document intake → ${sessionCardRelPath}`);
+  ctx.writeLine(`Pdf intake → ${sessionCardRelPath}`);
   ctx.writeLine(`Source: ${args.pdfPath}`);
 
-  // The original lives in the document card's own attach scope, alongside
+  // The original lives in the pdf card's own attach scope, alongside
   // everything extraction produces.
-  const cardFilename = `${DOCUMENT_BASENAME}.document.card`;
-  const attachRelDir = `${sessionAttachRelDir}/${DOCUMENT_BASENAME}.attach`;
-  const attachAbsDir = path.join(sessionAttachAbsDir, `${DOCUMENT_BASENAME}.attach`);
+  const cardFilename = `${PDF_BASENAME}.pdf.card`;
+  const attachRelDir = `${sessionAttachRelDir}/${PDF_BASENAME}.attach`;
+  const attachAbsDir = path.join(sessionAttachAbsDir, `${PDF_BASENAME}.attach`);
   await fs.mkdir(attachAbsDir, { recursive: true });
   const pdfDestPath = path.join(attachAbsDir, SOURCE_PDF_FILENAME);
   await fs.copyFile(args.pdfPath, pdfDestPath);
@@ -69,12 +69,12 @@ export async function runDocumentMode(
   const probe = await probePdf(pdfDestPath);
   const docling = args.docling ?? createDoclingService();
 
-  const workDir = path.join(await ensureBoxTmpDir(ctx.boxRoot), `document-extract-${randomUUID().slice(0, 8)}`);
+  const workDir = path.join(await ensureBoxTmpDir(ctx.boxRoot), `pdf-extract-${randomUUID().slice(0, 8)}`);
   await fs.mkdir(workDir, { recursive: true });
   ctx.writeLine("Extracting with Docling...");
   let extraction;
   try {
-    extraction = await extractDocument({
+    extraction = await extractPdf({
       docling,
       sourcePath: pdfDestPath,
       attachAbsDir,
@@ -86,7 +86,7 @@ export async function runDocumentMode(
     await fs.rm(workDir, { recursive: true, force: true });
   }
 
-  const template: DocumentTemplateOptions = {
+  const template: PdfTemplateOptions = {
     status: extraction.ok ? "analyzed" : "new",
     format: "pdf",
     capturedAt: startedAt,
@@ -118,7 +118,7 @@ export async function runDocumentMode(
     ctx.writeLine(`Extraction failed (filed as status: new) — ${extraction.error}`);
   }
 
-  await fs.writeFile(path.join(sessionAttachAbsDir, cardFilename), createDocumentTemplate(template));
+  await fs.writeFile(path.join(sessionAttachAbsDir, cardFilename), createPdfTemplate(template));
 
   const sessionCardContent = createCaptureSessionTemplate({
     sessionId,
@@ -138,7 +138,7 @@ export async function runDocumentMode(
   ];
   await stageAndCommitPaths(ctx.boxRoot, {
     paths: filesToStage,
-    message: `Document import: ${path.basename(args.pdfPath)}`,
+    message: `Pdf import: ${path.basename(args.pdfPath)}`,
     trailers: { "Created-By": "scan-import" },
   });
 
@@ -146,7 +146,7 @@ export async function runDocumentMode(
     boxRoot: ctx.boxRoot,
     source: "scan",
     items: [sessionCardRelPath],
-    description: `Document PDF: ${path.basename(args.pdfPath)}`,
+    description: `Pdf: ${path.basename(args.pdfPath)}`,
   });
   ctx.writeLine(`\nIntake job: ${intakeJobPath}`);
   ctx.writeLine(`Session: ${sessionCardRelPath}`);
@@ -154,10 +154,10 @@ export async function runDocumentMode(
   return {
     success: true,
     data: {
-      mode: "document",
+      mode: "pdf",
       sessionRelDir: sessionAttachRelDir,
       sessionCardPath: sessionCardRelPath,
-      documentCardPath: `${sessionAttachRelDir}/${cardFilename}`,
+      pdfCardPath: `${sessionAttachRelDir}/${cardFilename}`,
       status: template.status,
       intakeJobPath,
     },

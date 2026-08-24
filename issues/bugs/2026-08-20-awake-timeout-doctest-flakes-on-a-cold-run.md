@@ -6,6 +6,7 @@ labels: [testing, flake]
 filed-by: agent
 discovered-by: agent
 discovered-in: full suite run on the codex-chat-labels worktree (2026-08-20)
+priority: normal
 ---
 
 `test/lib/exec-with-timeout.doctest.md:29` starts a 60ms `startAwakeTimeout`

@@ -1,6 +1,6 @@
 # Real Docling — the one gated integration test
 
-Everything else about document mode is tested against a fake. This file runs
+Everything else about pdf mode is tested against a fake. This file runs
 the **real** `uvx docling` at the pinned version over a real PDF, because the
 fake cannot catch the things that actually break: a renamed CLI flag, a moved
 output path, an upstream change to where artifacts land.
@@ -38,7 +38,7 @@ async function doclingRunnable() {
 }
 
 const skipReason = await doclingRunnable();
-if (skipReason) console.warn(`[skipped] document-extract-integration: ${skipReason}`);
+if (skipReason) console.warn(`[skipped] pdf-extract-integration: ${skipReason}`);
 ```
 
 ## The argv we send is the argv we mean
@@ -80,7 +80,7 @@ skipReason ? "ok" : (result.ok ? "ok" : `FAILED: ${result.error}`)
 => ok
 ```
 
-When it did run, the extraction has the shape the rest of document mode relies
+When it did run, the extraction has the shape the rest of pdf mode relies
 on: markdown carrying the page's text, a `DoclingDocument` JSON on disk, and one
 page render per page found by walking the work directory (Docling writes those
 paths relative to an output root that does not match where the files land, so
@@ -101,7 +101,7 @@ skipReason ? DOCLING_VERSION : result.value.version
 ```
 
 Page renders are PNGs Docling wrote — the AVIF re-encode happens a layer up, in
-`document-extract.ts`:
+`pdf-extract.ts`:
 
 ```ts continue
 skipReason ? "png" : result.value.pageImages[0].filePath.split(".").pop()

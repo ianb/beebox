@@ -5,7 +5,16 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — a journey walkthrough could not start a second chat
 stories: [chat/start-a-chat-scoped-to-a-place-in-the-box]
+priority: normal
 ---
+
+> **Reconfirmed 2026-08-24 — still live, unchanged.** Tag removed. The defect
+> this issue names is verbatim still in the code: `services/claude-cli.ts:27`
+> is still `execFile("claude", ["auth", "status"], …)`, resolving from `PATH`,
+> and any spawn failure still lands in the `err` branch as
+> `{ loggedIn: false }`. Nothing has touched it. The trigger remains
+> unreproduced, but the fix identified here does not depend on reproducing it:
+> the preflight probes a binary the SDK does not use.
 
 Twice in one session, every attempt to start a **new** chat failed instantly with
 

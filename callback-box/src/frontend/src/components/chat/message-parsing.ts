@@ -261,7 +261,7 @@ export function parseTaskNotification(text: string): TaskNotification | null {
   };
 }
 
-const IMAGE_EXTS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg", ".ico"]);
+const IMAGE_EXTS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".avif", ".bmp", ".svg", ".ico"]);
 
 export function isImagePath(path: string): boolean {
   // Strip any ?query / #hash before checking the extension, so a cache-busted

@@ -12,7 +12,7 @@ import { buildHistoryBlobUrl } from "./history-blob-url";
 
 // --- Binary file rendering ---
 
-const IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"];
+const IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif", ".svg"];
 const AUDIO_EXTS = [".webm", ".m4a", ".mp3", ".wav", ".ogg"];
 
 function getFileExt(filePath: string): string {

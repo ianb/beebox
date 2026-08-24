@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-connector-sync-isolation — independent review of Calendar failure isolation
+priority: normal
 ---
 
 The Calendar decision can choose `local-wins` when the local event changed and the remote event did not. `patchEventViaApi` in `callback-box/src/connectors/google-calendar-state.ts` catches an HTTP failure and returns `null`. `tryPushLocalEdit` then returns false, and `google-calendar-sync.ts` falls through to writing the remote event over the local file.

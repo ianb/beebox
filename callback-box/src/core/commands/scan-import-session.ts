@@ -1,7 +1,7 @@
 /**
  * Session layout + input classification for the scan-import command.
  *
- * Every scan-import run (photo or document) allocates one capture-session
+ * Every scan-import run (photo or pdf) allocates one capture-session
  * card under `box/inbox/scan-<date>-<id>.capture-session.card` with a sibling
  * `.attach/` scope. `createSessionLayout` computes those paths and creates the
  * attach directory. The file-type predicates and the boxholder-context

@@ -1,11 +1,10 @@
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useState } from "react";
-import { QuotaPanel } from "../components/QuotaPanel.js";
 import { WorkstreamIssueSummary } from "../components/WorkstreamIssueSummary.js";
 import { Button, Pill } from "../components/ui.js";
 import { relativeTime } from "../lib/format.js";
 import { trpc } from "../trpc.js";
-import type { ActionVerb, Issue, LifecycleJob, Quota, Workstream } from "../types.js";
+import type { ActionVerb, Issue, LifecycleJob, Workstream } from "../types.js";
 
 function stateFor(row: Workstream): { section: string; note: string } {
   if (row.session.archived) return { section: "Archived", note: `archived ${relativeTime(row.session.archived.at)}` };
@@ -62,7 +61,12 @@ function WorkstreamsContent({ rows, issues, warnings }: { rows: Workstream[]; is
 }
 
 export function WorkstreamsPage() {
-  const dashboard = trpc.dashboard.get.useQuery(undefined, { staleTime: 10_000, refetchOnWindowFocus: true });
-  const quotaItems: Quota[] = dashboard.data?.quotas ?? [];
-  return <main className="workstreams-page"><header className="workstreams-header"><div><h1>workstreams</h1><p className="muted">Sessions, issue ownership, and testing state.</p></div><QuotaPanel quotas={quotaItems} /></header>{dashboard.isLoading ? <section className="loading-skeleton" aria-busy="true"><span /><span /><span /></section> : dashboard.isError ? <section className="error-state"><p>Couldn’t load workstreams: {dashboard.error.message}</p><Button onClick={() => void dashboard.refetch()}>Retry</Button></section> : <WorkstreamsContent rows={dashboard.data?.workstreams ?? []} issues={dashboard.data?.issues ?? []} warnings={dashboard.data?.workstreamWarnings ?? []} />}</main>;
+  const workstreams = trpc.workstreams.list.useQuery(undefined, { staleTime: 10_000, refetchOnWindowFocus: true });
+  const issues = trpc.issues.list.useQuery(undefined, { staleTime: 10_000, refetchOnWindowFocus: true });
+  const error = workstreams.error ? `Couldn’t load workstreams: ${workstreams.error.message}` : issues.error ? `Couldn’t load workstream issues: ${issues.error.message}` : null;
+  return <main className="workstreams-page"><WorkstreamsHeader />{workstreams.isLoading || issues.isLoading ? <section className="loading-skeleton" aria-busy="true"><span /><span /><span /></section> : error ? <section className="error-state"><p>{error}</p><Button onClick={() => { void workstreams.refetch(); void issues.refetch(); }}>Retry</Button></section> : <WorkstreamsContent rows={workstreams.data?.items ?? []} issues={issues.data?.items ?? []} warnings={workstreams.data?.warnings ?? []} />}</main>;
+}
+
+export function WorkstreamsHeader() {
+  return <header className="workstreams-header"><div><h1>workstreams</h1><p className="muted">Sessions, issue ownership, and testing state.</p></div></header>;
 }

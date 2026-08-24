@@ -2,10 +2,11 @@
 title: "Images in rendered /dev markdown are broken: sandboxed pages make cookieless subrequests"
 workstream: workstream-story
 area: router
-needs: [manual-testing]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-workstream-story — relative-path SVGs in a dev/ .md page all rendered broken
+next-action: reconfirm
+resolution: implemented
 ---
 > **⏳ Awaiting manual testing** — fix landed in `worktree-workstream-story`
 > (the `/dev/` sandbox CSP is removed); after merge + router restart, open a
@@ -37,13 +38,16 @@ images as `data:` URIs (implemented, then reverted — the boxholder wants
 normal markdown to work, not a rewrite pass).
 
 This also resolves
-[quick-open dead under the sandbox CSP](2026-08-19-dev-docs-quickopen-dead-under-sandbox-csp.md)
+[quick-open dead under the sandbox CSP](../../bugs/2026-08-19-dev-docs-quickopen-dead-under-sandbox-csp.md)
 — same root cause, scripts instead of images.
 
 ## Manual testing
+
+> Verified by boxholder 2026-08-24
 
 After this lands on main and the router is restarted (`pnpm dev`): open any
 dev markdown page with a relative image — e.g.
 `/main/dev/workstream-story.md` — and confirm the diagrams render instead of
 broken-image icons. While there, Cmd-P in `/main/dev/docs/` should open the
 quick-open palette again (the sibling issue).
+

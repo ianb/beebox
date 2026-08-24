@@ -4,6 +4,7 @@ workstream: unattached
 area: bin
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — exhibiting a proposal doc for review
+priority: normal
 ---
 
 `bin/exhibits add … doc.md` copies the file into the exhibit directory under its

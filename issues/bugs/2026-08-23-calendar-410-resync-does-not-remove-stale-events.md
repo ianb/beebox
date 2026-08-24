@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-connector-sync-isolation — verifying calendar partial-failure handling
 stories: [connectors/calendar-sync-repairs-an-expired-sync-token-and]
+priority: normal
 ---
 
 **What is wrong.** The Google Calendar connector treats an invalid incremental

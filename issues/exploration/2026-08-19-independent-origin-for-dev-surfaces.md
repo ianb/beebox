@@ -7,7 +7,7 @@ discovered-by: Ian
 discovered-in: worktree-workstream-story — while removing the /dev sandbox CSP
 ---
 When the `/dev/` sandbox CSP was removed (2026-08-19, see
-[dev md images broken](../bugs/2026-08-19-dev-md-images-broken-opaque-origin.md)),
+[dev md images broken](../closed/bugs/2026-08-19-dev-md-images-broken-opaque-origin.md)),
 the boxholder noted the ideal shape: agent-authored browsable surfaces
 (`/dev/` pages, possibly worktree frontends) would live on an **independent
 origin** from the router's control routes, so browser origin isolation — not

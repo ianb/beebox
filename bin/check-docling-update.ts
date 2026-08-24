@@ -112,6 +112,6 @@ console.log(
 );
 console.log(
   "Upgrading is manual: re-read `docling convert --help` for flag changes, bump DOCLING_VERSION in"
-  + " callback-box/src/services/docling-version.ts, then `cb document reanalyze` a sample document and diff"
+  + " callback-box/src/services/docling-version.ts, then `cb pdf reanalyze` a sample document and diff"
   + " (callback-box/docs/plans/scanner-ingest-docling-decisions.md, D3)."
 );

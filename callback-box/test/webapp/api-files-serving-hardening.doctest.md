@@ -12,7 +12,11 @@ inline-preview exception and keeps its own sandboxed-CSP treatment; ordinary
 inert types (images, etc.) gain `nosniff` but stay inline.
 
 ```ts setup
-import { makeTestServer } from "../helpers/doctest-server.js";
+import { mkdir, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import net from "node:net";
+import { makeTestServer, TEST_SLUG } from "../helpers/doctest-server.js";
+import { statusRouter } from "../../src/webapp/trpc/routers/status.js";
 
 const server = await makeTestServer();
 ```
@@ -89,6 +93,70 @@ An ordinary image through `/api/image/*` stays inline but gains `nosniff`:
 const jpgImage = await server.rawRequest({ method: "GET", url: "/api/image/photo.jpg" });
 `${jpgImage.statusCode} ${jpgImage.headers["content-type"]} ${JSON.stringify(jpgImage.headers["content-disposition"] ?? null)} ${jpgImage.headers["x-content-type-options"]}`
 => 200 image/jpeg null nosniff
+```
+
+## Prefix-collision sibling escape (`/api/image/*`, `status.browse`)
+
+Containment checks must reject a resolved path with a bare `startsWith(root)`
+comparison, which a sibling directory sharing the box root's name as a
+*prefix* (`<boxRoot>-other`) defeats — `/box-other/x` starts with `/box`. Both
+`/api/image/*` and `status.browse` now go through the shared
+`containWithinBox` helper (`src/lib/box-containment.ts`), which uses the
+strict `=== root || startsWith(root + sep)` form instead.
+
+A normal HTTP client (`fetch`, `curl`, and `light-my-request`'s `inject()`
+alike) resolves a literal `../` client-side before the request line is ever
+sent — per the URL spec's dot-segment handling — so `server.rawRequest` can't
+reach the vulnerable code path with an ordinary request. A raw socket writing
+the request line by hand (the way a non-normalizing proxy or a deliberately
+crafted client would) can, and is the only way to actually exercise
+`containWithinBox`'s prefix-collision branch through the real HTTP route:
+
+```ts continue
+const siblingDir = `${server.boxRoot}-other`;
+await mkdir(siblingDir, { recursive: true });
+await writeFile(join(siblingDir, "secret.jpg"), "sibling-bytes");
+
+await server.server.listen({ port: 0 });
+const listenAddr = server.server.server.address();
+if (listenAddr === null || typeof listenAddr === "string") {
+  throw new Error("expected a bound TCP address");
+}
+const listenPort = listenAddr.port;
+
+function rawHttpGet(reqPath) {
+  return new Promise((resolve, reject) => {
+    const sock = net.connect(listenPort, "127.0.0.1", () => {
+      sock.write(`GET ${reqPath} HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n`);
+    });
+    let data = "";
+    sock.on("data", (chunk) => { data += chunk.toString(); });
+    sock.on("end", () => resolve(data));
+    sock.on("error", reject);
+  });
+}
+
+const boxDirName = server.boxRoot.split("/").pop();
+const escapeImage = await rawHttpGet(`/${TEST_SLUG}/api/image/../${boxDirName}-other/secret.jpg`);
+escapeImage.split("\r\n")[0]
+=> HTTP/1.1 403 Forbidden
+```
+
+```ts continue
+escapeImage.split("\r\n\r\n")[1]
+=> {"error":"Access denied"}
+```
+
+Same prefix-collision check, exercised directly against `status.browse`
+(its tRPC input travels as a JSON string, never through URL parsing, so the
+sync `containWithinBox` call is reachable with an ordinary `../<sibling>`
+path):
+
+```ts continue
+const ctx = { boxRoot: server.boxRoot, boxSlug: "t", user: null, authed: true, isOwner: true };
+const escapeBrowse = await statusRouter.createCaller(ctx).browse({ path: `../${boxDirName}-other` });
+JSON.stringify(escapeBrowse)
+=> {"path":"../content-other","dirs":[],"cards":[],"files":[]}
 ```
 
 ```ts cleanup

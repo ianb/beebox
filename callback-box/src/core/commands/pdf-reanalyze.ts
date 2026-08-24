@@ -1,6 +1,6 @@
 /**
- * `cb document reanalyze <card>` — re-run extraction over an existing
- * `document.card`'s original file.
+ * `cb pdf reanalyze <card>` — re-run extraction over an existing
+ * `pdf.card`'s original file.
  *
  * Uncommon by design: it exists for the cases the intake-time default cannot
  * cover — a junk text layer that needs `--force-ocr`, a non-English document
@@ -32,16 +32,16 @@ import { isRecord } from "../../lib/is-record.js";
 import { stageAndCommitPaths } from "../../lib/git.js";
 import { ensureBoxTmpDir } from "../../lib/box-tmp.js";
 import { createDoclingService, type DoclingService } from "../../services/docling.js";
-import { clearExtractionAssets, extractDocument } from "./document-extract.js";
+import { clearExtractionAssets, extractPdf } from "./pdf-extract.js";
 
-const DocumentReanalyzeArgsSchema = z.object({
+const PdfReanalyzeArgsSchema = z.object({
   card: z.string(),
   "force-ocr": z.boolean().optional(),
   /** Comma-separated OCR language codes; only meaningful with `force-ocr`. */
   languages: z.string().optional(),
 });
 
-export interface DocumentReanalyzeOptions {
+export interface PdfReanalyzeOptions {
   args: Record<string, unknown>;
   /** Injected in tests; production creates the real `uvx docling` wrapper. */
   docling?: DoclingService | undefined;
@@ -75,18 +75,18 @@ function resolveCardRelPath(boxRoot: string, card: string): string | null {
   return resolveRefPath({ fromPath: undefined, ref: parseRef(relative).path, kind: "card" });
 }
 
-export async function runDocumentReanalyze(
+export async function runPdfReanalyze(
   ctx: CommandContext,
-  options: DocumentReanalyzeOptions
+  options: PdfReanalyzeOptions
 ): Promise<CommandResult> {
-  const parsed = parseCommandArgs(options.args, DocumentReanalyzeArgsSchema);
+  const parsed = parseCommandArgs(options.args, PdfReanalyzeArgsSchema);
   const cardRelPath = resolveCardRelPath(ctx.boxRoot, parsed.card);
   if (cardRelPath === null) {
     return { success: false, error: `Card path is not inside the box: ${parsed.card}` };
   }
   const cardAbsPath = path.join(ctx.boxRoot, cardRelPath);
-  if (!cardAbsPath.endsWith(".document.card")) {
-    return { success: false, error: `Not a document card: ${cardRelPath}` };
+  if (!cardAbsPath.endsWith(".pdf.card")) {
+    return { success: false, error: `Not a pdf card: ${cardRelPath}` };
   }
 
   let content: string;
@@ -107,7 +107,7 @@ export async function runDocumentReanalyze(
     return { success: false, error: `Card has no usable filename.ref: ${cardRelPath}` };
   }
 
-  const cardBasename = path.basename(cardAbsPath).replace(/\.document\.card$/u, "");
+  const cardBasename = path.basename(cardAbsPath).replace(/\.pdf\.card$/u, "");
   // `path.posix.join` rather than an interpolated `/`: a card at the box root
   // has dirname ".", which would otherwise produce a "./Foo.attach" prefix on
   // every staged path.
@@ -130,13 +130,13 @@ export async function runDocumentReanalyze(
   const removed = await clearExtractionAssets(attachAbsDir, { keep: original });
   const workDir = path.join(
     await ensureBoxTmpDir(ctx.boxRoot),
-    `document-reanalyze-${randomUUID().slice(0, 8)}`
+    `pdf-reanalyze-${randomUUID().slice(0, 8)}`
   );
   await fs.mkdir(workDir, { recursive: true });
   ctx.writeLine(`Reanalyzing ${cardRelPath}${forceOcr ? " (force-ocr)" : ""}...`);
   let extraction;
   try {
-    extraction = await extractDocument({
+    extraction = await extractPdf({
       docling: options.docling ?? createDoclingService(),
       sourcePath,
       attachAbsDir,
@@ -170,15 +170,15 @@ export async function runDocumentReanalyze(
     fields["error"] = extraction.error;
     delete fields["docling"];
     body = "";
-    console.warn(`[document] reanalyze failed for ${cardRelPath}: ${extraction.error}`);
+    console.warn(`[pdf] reanalyze failed for ${cardRelPath}: ${extraction.error}`);
     ctx.writeLine(`Extraction failed (status: new) — ${extraction.error}`);
   }
 
   await fs.writeFile(cardAbsPath, `---\n${stringifyYaml(fields)}---\n${body}`);
   await stageAndCommitPaths(ctx.boxRoot, {
     paths,
-    message: `Document reanalyze: ${cardBasename}`,
-    trailers: { "Created-By": "document-reanalyze" },
+    message: `Pdf reanalyze: ${cardBasename}`,
+    trailers: { "Created-By": "pdf-reanalyze" },
   });
 
   return {
@@ -193,12 +193,12 @@ export async function runDocumentReanalyze(
 }
 
 registerCommand({
-  name: "document-reanalyze",
-  description: "Re-run document extraction over an existing document card's original file",
+  name: "pdf-reanalyze",
+  description: "Re-run extraction over an existing pdf card's original file",
   args: [
-    { name: "card", description: "Path to the .document.card (box-relative or absolute)", required: true, type: "string" },
+    { name: "card", description: "Path to the .pdf.card (box-relative or absolute)", required: true, type: "string" },
     { name: "force-ocr", description: "Re-OCR every page, discarding the embedded text layer", required: false, type: "boolean" },
     { name: "languages", description: "Comma-separated OCR language codes (with --force-ocr)", required: false, type: "string" },
   ],
-  execute: (ctx, args) => runDocumentReanalyze(ctx, { args }),
+  execute: (ctx, args) => runPdfReanalyze(ctx, { args }),
 });
