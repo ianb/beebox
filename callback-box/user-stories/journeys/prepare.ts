@@ -21,12 +21,14 @@ import { parse } from "yaml";
 
 import { errorMessage } from "../../src/lib/error-guards.ts";
 import { isRecord } from "../../src/lib/is-record.ts";
+import { readJson } from "../pipeline/json-io.ts";
 
 const HERE = import.meta.dirname;
 const MONO_ROOT = resolve(HERE, "../../..");
 const WORKTREE = basename(MONO_ROOT);
 const BOXES_ROOT = join(homedir(), "src", "box-worktrees", WORKTREE);
 const WORK = join(HERE, "../work/journeys");
+const REPORTS = join(HERE, "reports");
 
 /**
  * Emptied for `base: empty` — the person's box, not a stranger's.
@@ -99,6 +101,77 @@ let runDir = join(WORK, `${journey.id}-${today}`);
 for (let n = 2; existsSync(runDir); n++) runDir = join(WORK, `${journey.id}-${today}-${n}`);
 mkdirSync(join(runDir, "shots"), { recursive: true });
 mkdirSync(join(runDir, "assets"), { recursive: true });
+
+/**
+ * A new walk supersedes the last one, so the last one's bulk goes.
+ *
+ * What does NOT go is `notes.md` and `after.json`. `work/` is gitignored, so a
+ * walk's notes exist in exactly one place on disk and nowhere in history; issues
+ * filed from a walk cite them, and the quotes in those issues are worth less
+ * without the surrounding account. They are a few tens of KB. The box and the
+ * screenshots are the weight, and both are reproducible in the sense that
+ * matters: another walk can be run.
+ *
+ * A run that has notes but was never collected is NOT pruned — it is an
+ * unfinished reading. `collect.ts` is what turns a walk into a verified record,
+ * so discarding one before that is throwing away the thing the walk was for.
+ * Prepare stops and says so rather than deciding on the operator's behalf.
+ */
+function prunePreviousRuns(): void {
+  if (!existsSync(WORK)) return;
+  for (const name of readdirSync(WORK)) {
+    if (!name.startsWith(`${journey.id}-`)) continue;
+    const dir = join(WORK, name);
+    // No `before.json` means this run has already been pruned to its notes — an
+    // archived reading, not an unfinished one. Leave it alone.
+    if (!existsSync(join(dir, "before.json"))) continue;
+    const notes = join(dir, "notes.md");
+    const walked = existsSync(notes) && readFileSync(notes, "utf8").trim() !== "";
+
+    if (!walked) {
+      // Nothing was ever learned here — an abandoned prepare, pure clutter.
+      removeBoxOf(dir);
+      rmSync(dir, { recursive: true, force: true });
+      console.log(`pruned   ${name} (never walked)`);
+      continue;
+    }
+    // A walk is finished when it has an after-action report, not when it has been
+    // collected. The report is the only part that survives this pruning — `work/` is
+    // gitignored — so a run without one is a walk nobody has read, and the next walk
+    // would erase the evidence for findings that were never written down.
+    if (!existsSync(join(REPORTS, `${name}.md`))) {
+      fail(
+        `${name} has notes but no after-action report — nothing has been extracted from it yet.\n` +
+        "  The procedure: callback-box/user-stories/journeys/after-action.md\n" +
+        `  Its notes:     ${notes}\n` +
+        `  Write:         callback-box/user-stories/journeys/reports/${name}.md\n` +
+        "  This walk's evidence goes away when the next one is provisioned."
+      );
+    }
+    removeBoxOf(dir);
+    for (const gone of ["shots", "assets", "before.json", "prompt.md"]) {
+      rmSync(join(dir, gone), { recursive: true, force: true });
+    }
+    console.log(`pruned   ${name} (kept notes.md + after.json)`);
+  }
+}
+
+/** Remove the box a previous run walked, which no later run shares. */
+function removeBoxOf(dir: string): void {
+  const beforePath = join(dir, "before.json");
+  if (!existsSync(beforePath)) return;
+  let box: unknown;
+  try {
+    box = readJson<{ box?: unknown }>(beforePath).box;
+  } catch (_e) {
+    return; // a truncated before.json is not a reason to refuse the run
+  }
+  if (typeof box !== "string" || !box.startsWith(`${BOXES_ROOT}/`) || !existsSync(box)) return;
+  execFileSync("chmod", ["-R", "u+w", box], { stdio: "inherit" });
+  rmSync(box, { recursive: true, force: true });
+}
+
+prunePreviousRuns();
 
 // --- the box -------------------------------------------------------------------
 /**

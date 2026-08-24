@@ -64,6 +64,14 @@ pnpm exec tsx callback-box/user-stories/journeys/collect.ts B-inventory-<date>
 Runs land in `../work/journeys/<id>-<date>/` (gitignored): the prompt as given, the
 notes, screenshots, and before/after snapshots of the box.
 
+Then read the walk and write it up — **[after-action.md](after-action.md)** is the
+procedure, and `reports/<run-id>.md` is where it goes. That report is the only part of
+a run that is tracked, so it is what a walk leaves behind.
+
+Each new run supersedes the last: `prepare.ts` deletes the previous run's box and
+screenshots, keeps its notes, and **refuses to run at all** if that walk has no report
+— which is the point at which the evidence would be thrown away unread.
+
 ## Assets are not in the repo
 
 `journeys/*/assets/` is gitignored. The material so far is real photographs of someone's
@@ -86,3 +94,6 @@ half-provisioned by a missing file.
   finding.
 - **Notes stay in character and loose.** A later pass turns them into issues; stopping
   mid-walk to write a bug report distorts the walk.
+- **Nothing the walk says is a finding until it is separately verified.** Three of the
+  seven bugs the 2026-08-24 walk reported were the harness, not the app, each written
+  up in good faith. That pass is [after-action.md](after-action.md).
