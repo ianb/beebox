@@ -86,9 +86,9 @@ all four security decisions from `NODE_ENV`, stops current engines from
 passing it to agent/scripts, upgrades or backports the pinned engines, and
 then removes the drop-in.
 
-## Durable implementation draft (2026-08-23)
+## Durable implementation checkpoint (2026-08-23)
 
-The linked worktree now defaults development surfaces off and enables them only
+Commit `be218b9d` defaults development surfaces off and enables them only
 with the strict `CB_DEV_SURFACES=1` launcher opt-in. tRPC explicitly disables
 response stacks and replaces raw `INTERNAL_SERVER_ERROR` messages, since an
 exception message can contain the same absolute paths even without a stack.
@@ -96,8 +96,8 @@ Fastify always selects the built-frontend CSP policy; Vite independently owns
 its HMR policy. Mock TTS is rejected before provider lookup unless development
 surfaces are enabled.
 
-The implementation's focused tests and the full 604-file callback-box suite are
-green, but it is not yet a production replacement for the override: the change
-must be landed and deployed, and every separately pinned engine must be
-upgraded or backported before the temporary `NODE_ENV` bridge and systemd
-drop-in can be removed.
+The implementation's focused tests, 7,723 callback-box assertions, and 206
+root assertions are green. This issue remains open as the rollout punch-list:
+every separately pinned engine must be upgraded or backported, the temporary
+`NODE_ENV` bridge and systemd drop-in must be removed, and the filtered
+production canaries must then be repeated.

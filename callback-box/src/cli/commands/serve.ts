@@ -168,6 +168,8 @@ export const serveCommand = new Command("serve")
       ];
 
       // Set PORT/HOST as env vars for the server entry point
+      // TODO(env-migration): the watched child still receives its validated
+      // launch configuration through process.env.
       const env = devServerEnvironment(process.env, { port, host: options.host });
 
       // Spawn node --watch and forward signals for clean shutdown.

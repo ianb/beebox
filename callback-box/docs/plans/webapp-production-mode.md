@@ -1,6 +1,6 @@
 ---
 title: "Fail-closed webapp development surfaces and tRPC errors"
-status: draft
+status: partial
 workstream: node-env-production
 issues:
   - ../../../issues/bugs/2026-08-21-trpc-errors-return-a-server-stack-trace.md
@@ -13,6 +13,15 @@ tRPC responses never include server stacks or raw internal-error messages.
 Production omits development-only routes and test behavior by default. The two
 launchers that genuinely run a development server opt in through one narrow,
 fail-closed process flag.
+
+## Implementation status
+
+Tracks 1–3 are implemented in `be218b9d`: tRPC errors are sanitized,
+development surfaces require the explicit opt-in, Fastify owns the built-app
+CSP, and the corresponding tests and documentation are in place. Track 0 is
+partial: the approved containment is active, but separately pinned engines
+still need an upgrade or backport before the temporary systemd override can be
+removed. The linked issue remains the rollout punch-list.
 
 ## Stated preferences this plan trades against
 
@@ -86,7 +95,7 @@ fail-closed process flag.
 
 ## Tracks / scope
 
-### Track 0 — Reversible production containment
+### Track 0 — Reversible production containment (partial)
 
 **What.** With separate, explicit boxholder approval, add a systemd drop-in to
 the live `callback-hub` unit containing `Environment=NODE_ENV=production`, then
@@ -125,7 +134,7 @@ read, restart, and rollback procedure. Record filtered results in the issue.
 The task is not operationally complete while an older engine still depends on
 the override.
 
-### Track 1 — Unconditional tRPC response sanitization
+### Track 1 — Unconditional tRPC response sanitization (implemented)
 
 **What.** Omit server stacks and replace raw `INTERNAL_SERVER_ERROR` messages
 in tRPC responses in every environment.
@@ -146,7 +155,7 @@ Fastify adapter and asserts that neither its message nor path reaches the wire.
 **First implementation chunk.** Add the failing response-shape doctest, make
 the root-router formatter change, and run the focused tRPC route suite.
 
-### Track 2 — Explicit development-only surfaces
+### Track 2 — Explicit development-only surfaces (implemented)
 
 **What.** Replace the remaining `/api/external` and mock-TTS `NODE_ENV`
 branches with a boolean internal option that defaults to `false`. Use the
@@ -207,7 +216,7 @@ explicit opt-in, and `mock: true` rejection. Then add the internal option and
 route propagation. Add the two entrypoint-specific schema fields and launcher
 tests only after the in-process behavior is pinned.
 
-### Track 3 — CSP and auditable documentation
+### Track 3 — CSP and auditable documentation (implemented)
 
 **What.** Remove Fastify's `NODE_ENV` CSP choice and repair security and deploy
 documentation.
@@ -372,4 +381,4 @@ The durable code ships as one normal deployment and requires no data
 migration. The systemd override is an independently approved, bounded
 operational bridge. Production verification uses authenticated, filtered
 diagnostics and emits no credentials. The structured security report
-remains unreviewed until the boxholder explicitly accepts its wording.
+was reviewed by the boxholder before landing.
