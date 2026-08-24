@@ -55,15 +55,42 @@ spent 36 of 40 turns on `Bash` — repeated `git show`/`status`/`log`/`ls-tree`
 and four re-runs of `cb refresh-maps` — auditing its own work, and 2 turns
 writing maps. Raising the cap would have bought it more auditing.
 
-**What does limit this procedure: validate failures.** 12 of 28 runs are marked
-`failed`. Exactly **one** of those failed the outstanding-work shell check. The
-other 11 failed the validate step's *review* — the agent judging the diff and
-finding it unsound. At least one is a real regression rather than a review
-false positive: a run that reported "6 map(s)" as *created* instead deleted four
-live subdirectory entries from `config/MAP.md` and one entry each from two other
-maps (net +2/−8 lines). The review caught it; `severity: warn` meant nothing
-gated, and the lost entries stayed lost for nine days until the next large
-refresh restored them.
+**What does limit this procedure: a *different* turn cap.** 12 of 28 runs are
+marked `failed`. Classifying all 12:
+
+- **6 are not verdicts at all.** The validate step's review agent has its own
+  budget — `REVIEW_MAX_TURNS = 8` in `engine-validate-model.ts` — and blew
+  through it, recording "could not obtain a verdict: Reached maximum number of
+  turns (8)". All six also recorded `stdout: All MAP.md files current.`, i.e.
+  the map work was fine and only the judge ran out of room. **This, not
+  `max-turns: 40`, is the turn cap that actually binds.** A retry at double the
+  budget landed in `6183eb7e` on 2026-08-24 — after every run in this sample —
+  so the fix is in main and unproven in the field.
+- **3 are the reviewer being wrong about the ignore policy.** Two runs were
+  flagged for "regressing" maps by dropping `config/connectors|procedures|
+  schedules|schemas/` and `store/archive|calendar|chat|trash/`. Every one of
+  those is in `SKELETON_HIDDEN_PATHS`, whose own doc comment says "the dir
+  itself is excluded from its parent's listing". The refresh agent removed them
+  correctly; the judge, reasoning only from "these still exist on disk", called
+  it a regression. A third flagged missing evidence in the session manifest.
+- **2 are real but structural, not map quality.** `store/usage/session-manifest.jsonl`
+  lives *inside* `store/`, so procedure bookkeeping re-dirties `store/` right
+  after it is stamped. The judge is correct that the next precheck will not be
+  a no-op; nothing is wrong with the maps.
+- **1 is a genuine outstanding-work failure** — the only run in 28 where
+  `--brief` still reported `needsWork: true`.
+
+**No confirmed case of the efficient tier writing a bad map.** The one run that
+looked like proof of it was the reviewer's error. An earlier draft of this
+measurement reported that regression as real; it was not.
+
+One real (small) bug surfaced along the way, worth its own issue: `children` is
+derived from `git ls-tree` on the update and asOf-recovery paths but from
+`readdir` on the no-state create path, while `listMappableDirs` always walks
+disk. A directory holding only untracked content is therefore visible to the
+walker but absent from the git-derived listing — which is why one directory
+dropped out of its parent's map on 2026-08-06 and returned on 2026-08-11 once
+it had tracked content.
 
 **Cost, for whatever tuning follows.** Mean $0.14 per refresh invocation at
 `efficient`/haiku (dominated by cache reads); the same token profile at
@@ -73,6 +100,6 @@ almost nothing reaches it.
 
 **Recommendation: leave `max-turns: 40` alone.** It is correctly sized and is
 not what limits throughput. The open question the data actually raises is
-whether `efficient` is the right tier for a step that silently drops live
-directory entries out of an index other agents read — and whether the validate
-review should gate rather than warn. Both are separate from this issue.
+whether the validate judge should be taught the ignore policy it keeps
+tripping over, and whether an inconclusive review should read as inconclusive
+rather than as a failure. Both are separate from this issue.
