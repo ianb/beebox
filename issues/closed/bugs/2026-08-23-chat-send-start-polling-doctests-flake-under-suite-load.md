@@ -8,7 +8,7 @@ discovered-in: worktree-node-env-production — finish suite rerun after main ad
 resolution: implemented
 ---
 
-Closed 2026-08-24. Both doctests now wait on the operation's own completion
+Closed 2026-08-24 by `3c56246c`. Both doctests now wait on the operation's own completion
 signal instead of a ten-second polling deadline, and they finish background
 session work before tearing down their test boxes. The focused tests, a
 40-execution contention run, lint, typecheck, and the full callback-box suite

@@ -9,7 +9,7 @@ discovered-in: worktree-user-stories-refresh — reading a 403 from the settings
 resolution: implemented
 ---
 
-Closed 2026-08-24. The fail-closed implementation shipped, every currently
+Closed 2026-08-24 by `3c56246c`. The fail-closed implementation shipped, every currently
 served box resolves to the guarded shared engine, the temporary systemd
 override was retired, and authenticated production canaries confirmed the
 development-only routes and tRPC diagnostics remain closed with both control
