@@ -1,6 +1,7 @@
 ---
 title: "A consistent cadence framework for periodic maintenance/update tasks — where they run, how they report, how they raise issues"
 workstream: scheduled-task-voice
+design: ../../callback-box/docs/plans/scheduled-workstreams.md
 area: callback-box
 needs: [design]
 filed-by: agent

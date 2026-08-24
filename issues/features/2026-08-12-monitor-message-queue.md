@@ -1,6 +1,7 @@
 ---
 title: "Scheduled monitors have no way to talk to Ian — a message queue outside git"
 workstream: scheduled-task-voice
+design: ../../callback-box/docs/plans/scheduled-workstreams.md
 area: monorepo
 needs: [design]
 labels: [scheduler, workstreams, notifications]
