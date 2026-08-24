@@ -6,8 +6,8 @@
  * commentary renderer can render the file and drift-check its anchors in one
  * round-trip.
  *
- * Registered only when `NODE_ENV !== "production"` (see `api.ts`); the deployed
- * server never mounts it.
+ * Registered only when the server explicitly enables development surfaces
+ * (see `api.ts`); the deployed server never mounts it.
  */
 
 import type { FastifyInstance } from "fastify";
@@ -40,7 +40,7 @@ function contentTypeFor(absPath: string): string {
   return CONTENT_TYPES[path.extname(absPath).toLowerCase()] ?? "text/plain";
 }
 
-/** Register `GET /api/external` — call only behind the dev gate (see api.ts). */
+/** Register `GET /api/external` — call only behind the explicit dev gate. */
 export function registerApiExternalRoute(options: { server: FastifyInstance; boxRoot: string }): void {
   const { server, boxRoot } = options;
 

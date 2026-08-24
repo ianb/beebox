@@ -268,6 +268,21 @@ journalctl -u callback-scheduler -f
 systemctl restart callback-hub
 ```
 
+### Production-safe webapp defaults
+
+Security-sensitive webapp behavior fails closed when configuration is absent:
+tRPC never sends server stacks, Fastify always serves the built-frontend CSP,
+and `/api/external` plus mock TTS are disabled unless a development launcher
+sets the strict opt-in `CB_DEV_SURFACES=1`. The production systemd units and
+shared `.env` must not set that flag.
+
+Older box-pinned engines used `NODE_ENV=production` as their guard. During a
+mixed-engine rollout, a unit-local `callback-hub` drop-in may set that value as
+a temporary compatibility containment. Inventory and upgrade/backport every
+served engine, then remove the drop-in; do not make `NODE_ENV=production` a
+standing shared `.env` setting because child tools and package managers can
+interpret it independently.
+
 **Rollback lever:** the old `callback-serve.service` unit is stopped and
 disabled, not deleted — it stays on disk as `callback-serve-disabled-on-disk`
 (masked, not purged) so a bad hub rollout can be rolled back with

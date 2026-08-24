@@ -1,6 +1,7 @@
 ---
 title: "tRPC error responses carry a server stack trace, and the deploy never sets NODE_ENV=production"
-workstream: unattached
+workstream: node-env-production
+design: ../../callback-box/docs/plans/webapp-production-mode.md
 area: callback-box
 filed-by: agent
 discovered-by: agent
@@ -30,5 +31,73 @@ is unset in production:
   of that guard.
 - The CSP header mode (`callback-box/src/webapp/server.ts:158`).
 
-First step is to read the running server's environment and confirm whether
-`NODE_ENV` is set there; the repo cannot answer it.
+The live server uses the manually configured `callback-hub` unit, not the
+obsolete `callback-serve` unit that `setup-server.sh` still generates
+(`callback-box/deploy/README.md:91-101`, `:243-248`). The hub copies
+`NODE_ENV` into every box child only when the hub received it
+(`callback-box/src/hub/child-env.ts:42-50`, `:103-119`).
+
+## Production confirmation (2026-08-23)
+
+The boxholder authorized a read-only probe of the running `callback-hub`
+process. The probe read `/proc/<MainPID>/environ`, filtered the output to the
+single `NODE_ENV` key, and returned:
+
+```
+NODE_ENV=<unset>
+```
+
+The production children therefore take the development branch today. The
+security report's claim that `/api/external` is never mounted on a deployed
+server is false for the running deployment.
+
+The route is behind ordinary per-box authentication, but it is not owner-only.
+An authorized box member can use the raw file-write route to replace
+`config/box.json` with an arbitrary `externalRoots` entry; the external route
+reloads those roots on each request. Its denylist covers only `.git`,
+`node_modules`, and `.env*`. With `/` or `~` configured as a root, other host
+files—including credential stores and sibling-box secrets—are readable. This
+makes the live route a host-filesystem disclosure path, not merely an
+accidentally mounted commentary helper.
+
+The initial issue also missed a fourth branch. `POST /api/chat/tts` accepts
+browser-test mock fields when `NODE_ENV !== "production"`
+(`callback-box/src/webapp/routes/chat-audio-routes.ts:115-123`). An authenticated
+caller can therefore select fixture audio, delays, chunk sizes, or a
+deterministic mock failure on the deployed server.
+
+## Temporary containment (2026-08-23)
+
+With the boxholder's explicit approval, a unit-local systemd drop-in set
+`NODE_ENV=production` on `callback-hub`; the shared `.env` and scheduler unit
+were not changed or restarted. A filtered inventory confirmed that both the
+shared engine and separately pinned engines contain the ambient guard.
+
+After restarting only the hub:
+
+- `callback-hub` and `callback-scheduler` both reported active.
+- The hub process reported `NODE_ENV=production`.
+- An authenticated canary request to `GET /api/external` returned 404.
+- A missing tRPC procedure returned 404 with no `stack` field.
+
+The override is temporary. It also reaches older engines' agent/script
+subprocesses, where package managers may interpret it. The durable fix removes
+all four security decisions from `NODE_ENV`, stops current engines from
+passing it to agent/scripts, upgrades or backports the pinned engines, and
+then removes the drop-in.
+
+## Durable implementation draft (2026-08-23)
+
+The linked worktree now defaults development surfaces off and enables them only
+with the strict `CB_DEV_SURFACES=1` launcher opt-in. tRPC explicitly disables
+response stacks and replaces raw `INTERNAL_SERVER_ERROR` messages, since an
+exception message can contain the same absolute paths even without a stack.
+Fastify always selects the built-frontend CSP policy; Vite independently owns
+its HMR policy. Mock TTS is rejected before provider lookup unless development
+surfaces are enabled.
+
+The implementation's focused tests and the full 604-file callback-box suite are
+green, but it is not yet a production replacement for the override: the change
+must be landed and deployed, and every separately pinned engine must be
+upgraded or backported before the temporary `NODE_ENV` bridge and systemd
+drop-in can be removed.

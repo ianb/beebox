@@ -100,7 +100,8 @@ export const hubCommand = new Command("hub")
   .action(async (options: { config?: string }) => {
     // Validate the hub's environment before it reads any of it (Track D.8):
     // a malformed session secret / networking var fails loudly here, redacted.
-    loadEnv(hubEnvSchema);
+    const envConfig = loadEnv(hubEnvSchema);
+    if (envConfig.CB_DEV_SURFACES === undefined) delete process.env.CB_DEV_SURFACES;
 
     const configPath = options.config ?? defaultHubConfigPath();
 

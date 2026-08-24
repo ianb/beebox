@@ -22,6 +22,7 @@ import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { boxSlug } from "../../lib/box-slug.js";
 import { findBoxRoot, BOX_MARKER } from "../../lib/paths.js";
 import { isValidBox } from "../../core/box/index.js";
+import { loadEnv, serverEnvSchema } from "../../lib/env.js";
 
 /**
  * `<slug>=<boxRoot>` argv encoding `server-main.ts` expects. Exported so
@@ -34,6 +35,24 @@ import { isValidBox } from "../../core/box/index.js";
  */
 export function toBoxArgs(boxes: BoxSpec[]): string[] {
   return boxes.map((box) => `${box.slug}=${box.boxRoot}`);
+}
+
+/** Fail-closed production decision, shared with its direct doctest. */
+export function devSurfacesEnabled(env: { CB_DEV_SURFACES?: string | undefined }): boolean {
+  return env.CB_DEV_SURFACES === "1";
+}
+
+/** Build the watched development child's environment with an explicit opt-in. */
+export function devServerEnvironment(
+  sourceEnv: NodeJS.ProcessEnv,
+  options: { port: number; host: string },
+): NodeJS.ProcessEnv {
+  return {
+    ...sourceEnv,
+    CB_DEV_SURFACES: "1",
+    PORT: String(options.port),
+    HOST: options.host,
+  };
 }
 
 /**
@@ -105,6 +124,9 @@ export const serveCommand = new Command("serve")
       "Only valid with a single box directory — this is how `cb hub` names a box's process."
   )
   .action(async (dirs: string[], options: { port: string; host: string; dev?: boolean; slug?: string }) => {
+    // `cli/index.ts` validates only the deliberately permissive CLI schema.
+    // Serving has a narrower boundary, including the strict dev-surface flag.
+    const envConfig = loadEnv(serverEnvSchema);
     const port = parseInt(options.port, 10);
 
     if (isNaN(port) || port < 1 || port > 65535) {
@@ -146,11 +168,7 @@ export const serveCommand = new Command("serve")
       ];
 
       // Set PORT/HOST as env vars for the server entry point
-      const env = {
-        ...process.env,
-        PORT: String(port),
-        HOST: options.host,
-      };
+      const env = devServerEnvironment(process.env, { port, host: options.host });
 
       // Spawn node --watch and forward signals for clean shutdown.
       // stdio: "inherit" makes the child own the terminal.
@@ -170,5 +188,6 @@ export const serveCommand = new Command("serve")
       host: options.host,
       boxes,
       prewarmChat: true,
+      devSurfaces: devSurfacesEnabled(envConfig),
     });
   });

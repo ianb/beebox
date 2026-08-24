@@ -1,8 +1,8 @@
 ---
 generated-by: .claude/skills/security-report/SKILL.md
-generated-at-rev: e2d0c20dc7b063fd7c2be44cc57b47b81c1dcae5
-date: 2026-08-08
-model: claude-sonnet-5
+generated-at-rev: 17afd862b86f29330e6126d19eafa6c711d60b2c
+date: 2026-08-23
+model: codex
 reviewed-by: Ian Bicking
 ---
 
@@ -99,12 +99,12 @@ Notable abilities, and the items that are more than routine:
 |---|---|---|---|---|---|
 | `api-files.ts`, `api-files-write.ts`, `api-browse.ts`, `api-image.ts`, `history.ts` | Read/write/delete/commit raw box files; read any historical git blob | ok | — | authed | Path containment via `ref-path.ts` + route guards |
 | tRPC `share.destinations` / `share.saveTextual` | Write a new card (inbox or a landmark dir) from shared URL/text content; used by the iOS share extension | ok | — | authed | Card-schema-validated before write, `withCardLock`-serialized, `share-id`-deduped against replay; same auth tier as the file-write surface above |
-| `POST /api/chat/*`, `transcribe-ws` | Drive chat, transcribe (consumes box's provider keys) | ok | — | authed | |
+| `POST /api/chat/*`, `transcribe-ws` | Drive chat, transcribe (consumes box's provider keys) | ok | — | authed | `mock: true` TTS is rejected unless explicit development surfaces are enabled; it cannot silently fall through to a paid provider call |
 | `POST /api/chat/screenshot/request` (`chat-screenshot-routes.ts:208`) | Pull on-screen state from a connected browser | mitigated | med | authed | Extra gate: requires the agent bearer specifically; a plain session 403s |
 | `ANY /api/adapters/:adapter/*` (`api-adapters.ts:63`) | Proxy to Replicate/Mistral/Anthropic/OpenAI, injecting the box's stored key server-side | ok | — | authed | Key never reaches the client |
 | `GET /api/task-output` | Reads task-output files, not box-scoped | gap | med | authed | A cross-box read gap on multi-box servers, **tracked privately** (location-precise defect; disclosure withheld until fixed per the rubric's disclosure rule) |
 | `GET /api/proxy-image` | Server-side fetch of arbitrary public image URLs | gap | low | authed | SSRF-guarded (see §4). A possible auth-scope mismatch is under verification and **tracked privately** until confirmed harmless or fixed |
-| `GET /api/external` (`api-external.ts:47`) | Reads allowlisted paths outside the box root | ok | — | local | Dev-only: registered only when `NODE_ENV !== "production"`; never mounted on a deployed server |
+| `GET /api/external` (`api-external.ts:47`) | Reads configured paths outside the box root | mitigated | high | unreachable | Registered only with explicit `devSurfaces`; production launchers omit it and absence fails closed. If enabled, an authed member can rewrite `config/box.json` through the raw file API and widen `externalRoots`, so this remains a high-impact local-development capability rather than a hardened member boundary |
 | tRPC `admin.*`, `pairing.*`, `scanTokens.*` | Connector setup, device pairing, credential minting | ok | — | owner | Uniformly `ownerProcedure` |
 | tRPC `scheduler.trigger`, `commands.executeSync`, `drive.updateConfig`, `calendar.updateConfig` | Run scheduled script cards / registered commands; rewrite sync config | gap | med | authed | Member-level code execution and config writes; moot single-operator (fail-closed owner-only), bites on multi-member boxes — [member-level-writing-procedures](../../issues/code-quality/2026-08-07-member-level-writing-procedures.md) |
 | tRPC `transcription.deepgramTempKey` / `openaiRealtimeKey` | Mint short-TTL (≤20 min) scoped third-party keys for browser-direct streaming | mitigated | low | authed | Long-lived provider keys never leave the server |
@@ -189,11 +189,13 @@ wakeup cycle or routine use without a per-action confirmation.
 | Practice | Where | State | Notes |
 |---|---|---|---|
 | Fail-closed credential store | `local-users-errors.ts`, `server-box-scope.ts:112-114` | ok | Corrupt/unreadable store → 503, never "no session" |
+| Client error sanitization | `webapp/trpc/trpc.ts`, `webapp/server.ts:114-128` | ok | tRPC unconditionally removes response stacks and replaces internal-error messages; raw 5xx responses stay generic; full errors remain in server-side logs |
+| Development-surface opt-in | `server-types.ts`, `lib/env.ts`, `routes/api.ts`, `routes/chat-audio-routes.ts` | mitigated | `CB_DEV_SURFACES=1` is a strict positive opt-in set only by development launchers; omission disables the external-file route and rejects mock TTS before provider lookup |
 | Path traversal containment | `src/shared/ref-path.ts` | ok | All ref/path resolution goes through one pure module; `..` escaping the box root → `null` everywhere, never clamped (frontend clamping removed 2026-07-30); callers must degrade visibly |
 | Login throttling | `login-throttle.ts` | ok | Per-(IP,email) exponential backoff + per-IP and per-email buckets (X-Forwarded-For rotation defeated) + global scrypt concurrency cap 2 (memory-DoS guard); all maps hard-capped at 4000 entries; throttle, never lockout |
 | Session mechanics | `auth.ts` | ok | HMAC-SHA256 cookie, 30-day TTL, timing-safe verify with length pre-check; `gen`-based revocation on password change/user removal; hub mode never verifies cookies in the box process |
 | Timing-safe comparisons | `auth.ts:68-76,171-184`, `browse-key.ts:57-72` | ok | All bearer/secret compares |
-| CSP | `src/lib/csp.ts`, [content-security-policy.md](content-security-policy.md) | accepted | Single policy source shared prod/dev; **currently Report-Only** — blocks nothing; promotion to enforcing is a deliberate gated step (`pnpm csp-digest`) |
+| CSP | `src/lib/csp.ts`, [content-security-policy.md](content-security-policy.md) | accepted | Single policy builder; Fastify always selects the built-frontend policy and Vite explicitly selects its HMR policy. **Currently Report-Only** — blocks nothing; promotion to enforcing is a deliberate gated step (`pnpm csp-digest`) |
 | Cross-box browser isolation | — | accepted | Boxes share one origin; a script in one box can make same-origin requests to a sibling. Accepted single-operator; server-side forgery still blocked (session secret never reaches boxes). [boxes-share-one-origin](../../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md) |
 | SSRF guards | `proxy-image.ts:50-121`, `url-fetch.ts:122-190` | ok | http(s) only; DNS-resolved block of loopback/private/link-local (incl. cloud metadata)/CGNAT/multicast, v4+v6+mapped; every redirect hop re-validated (max 3); 25MB/10s caps; `image/*` only; no cookie/Referer forwarding |
 | Locking | `lib/file-lock.ts` (proper-lockfile, atomic mkdir guard), `lib/card-lock.ts` | ok | Hand-rolled reclaim retired after failing adversarial review; lease-steal residual in §8 |

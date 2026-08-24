@@ -29,13 +29,14 @@ import { registerApiImageRoutes } from "./api-image.js";
 interface RegisterApiRoutesOptions {
   boxRoot: string;
   eventBus: EventBus;
+  devSurfaces: boolean;
 }
 
 export async function registerApiRoutes(
   server: FastifyInstance,
   options: RegisterApiRoutesOptions,
 ): Promise<void> {
-  const { boxRoot, eventBus } = options;
+  const { boxRoot, eventBus, devSurfaces } = options;
   // Cheap lifecycle signal for a visible browser tab. This route deliberately
   // lives inside the box scope: reaching it through a lazy hub starts the box
   // child (or refreshes its idle timer) without running the full health checks
@@ -68,9 +69,10 @@ export async function registerApiRoutes(
   // /api/image/* — unified image resolver (plain files + .image.card)
   registerApiImageRoutes({ server, boxRoot });
 
-  // /api/external — dev-only live wrapper for the commentary surface; reads
-  // allowlisted files OUTSIDE the box root. Never mounted in production.
-  if (process.env.NODE_ENV !== "production") {
+  // /api/external — explicit local-development wrapper for the commentary
+  // surface; reads allowlisted files OUTSIDE the box root. Omission is safe:
+  // production callers never enable development surfaces.
+  if (devSurfaces) {
     registerApiExternalRoute({ server, boxRoot });
   }
 

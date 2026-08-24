@@ -204,7 +204,7 @@ interface Harness {
   cleanup(): Promise<void>;
 }
 
-async function makeHarness(): Promise<Harness> {
+async function makeHarness(options?: { devNoHub?: boolean }): Promise<Harness> {
   const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "router-core-test-"));
   const clock = new FakeClock();
   const spawner = new FakeSpawner();
@@ -264,7 +264,7 @@ async function makeHarness(): Promise<Harness> {
     logDir: path.join(tmp, "logs"),
     browseDir: path.join(tmp, "browse"),
     agentBrowserBin: path.join(tmp, "agent-browser.js"),
-    devNoHub: false,
+    devNoHub: options?.devNoHub === true,
     routerPid: 4242,
     log: LOG ? (m) => console.log(m) : () => {},
   });
@@ -311,6 +311,20 @@ test("dedupe: two concurrent ensureRunning(name) share ONE start and one handle"
     assert.equal(h.core.getHandle("wt"), a);
     // Exactly one vite + one fastify spawned — not two pairs.
     assert.equal(h.spawner.lifecycleCalls().length, 2, "one lifecycle pair, not two");
+    const fastify = h.spawner.lifecycleCalls()[0];
+    assert.equal(fastify?.options.env?.CB_DEV_SURFACES, "1", "hub backend explicitly enables dev surfaces");
+  } finally {
+    await h.cleanup();
+  }
+});
+
+test("direct backend explicitly enables development surfaces too", async () => {
+  const h = await makeHarness({ devNoHub: true });
+  try {
+    await startReady(h, "wt");
+    const fastify = h.spawner.lifecycleCalls()[0];
+    assert.ok(fastify?.args.includes("./src/webapp/server-main.ts"));
+    assert.equal(fastify?.options.env?.CB_DEV_SURFACES, "1");
   } finally {
     await h.cleanup();
   }

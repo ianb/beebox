@@ -9,6 +9,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { registerCspReportingHeaders } from "../../src/webapp/server-root.js";
 import { registerCspReportRoute } from "../../src/webapp/routes/api-csp-report.js";
+import { createTestServer } from "../helpers/test-server.js";
 
 async function makeServer() {
   const app = Fastify();
@@ -103,4 +104,29 @@ The sink writes JSONL — one JSON object per line (`ts`, `directive`, `blocked`
 
 typeof lines[0].ts
 => string
+```
+
+## The real Fastify server selects the built-frontend policy
+
+This pins `createServer` itself rather than rebuilding the CSP hook in the
+test. The route stands in for any HTML document so the assertion does not
+depend on a prebuilt frontend bundle being present in the source checkout.
+
+```ts
+const real = await createTestServer();
+real.server.get("/__csp-built-document", async (_request, reply) =>
+  reply.type("text/html").send("<!doctype html><p>built"),
+);
+const built = await real.server.inject({ method: "GET", url: "/__csp-built-document" });
+const builtPolicy = built.headers["content-security-policy-report-only"]?.toString() ?? "";
+JSON.stringify({
+  status: built.statusCode,
+  productionPolicy: builtPolicy.includes("script-src 'self';"),
+  allowsViteEval: builtPolicy.includes("'unsafe-eval'"),
+})
+=> {"status":200,"productionPolicy":true,"allowsViteEval":false}
+```
+
+```ts cleanup
+await real.cleanup();
 ```
