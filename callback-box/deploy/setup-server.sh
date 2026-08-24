@@ -262,26 +262,11 @@ EOF
 # little between restarts. A daily restart at a low-traffic hour reclaims it.
 # cb-wait-quiet (shared with deploy.sh) waits, bounded and best-effort, for all
 # boxes to be at rest first so the restart doesn't kill an active chat/script.
-cat > /usr/local/bin/cb-wait-quiet <<EOF
-#!/usr/bin/env bash
-# Best-effort: wait up to ~3 min for all boxes to be at rest (no running
-# scripts/procedures or active chat turns) before the caller restarts
-# callback-serve. Always exits 0 — the wait is advisory, never a hard block.
-set -u
-DEADLINE=\$(( \$(date +%s) + 180 ))
-while true; do
-  if su - $CB_USER -c 'CB_CLI_PREBUILT=1 /usr/local/bin/cb activity' >/tmp/cb-activity.out 2>&1; then
-    echo "cb-wait-quiet: at rest"; exit 0
-  fi
-  if [ "\$(date +%s)" -ge "\$DEADLINE" ]; then
-    echo "cb-wait-quiet: still busy after wait cap, proceeding:"
-    sed 's/^/  /' /tmp/cb-activity.out
-    exit 0
-  fi
-  sleep 10
-done
-EOF
-chmod +x /usr/local/bin/cb-wait-quiet
+# The script itself lives at deploy/server-bin/cb-wait-quiet rather than in a
+# heredoc here, so deploy.sh can reinstall it on every deploy. A server
+# provisioned before it existed had no copy at all and every deploy restarted
+# without waiting — the drift this file layout removes.
+install -m 0755 "$INSTALL_DIR/callback-box/deploy/server-bin/cb-wait-quiet" /usr/local/bin/cb-wait-quiet
 
 cat > /etc/systemd/system/callback-serve-recycle.service <<'EOF'
 [Unit]
