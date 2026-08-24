@@ -646,10 +646,12 @@ fully embedded; only the unspecified default degrades to text, and it says so on
 stderr. The key is read from `CALLBACK_OPENAI_API_KEY`, then
 `THINKING_OPENAI_API_KEY`, then `SKE_OPENAI_API_KEY`.
 
-The same order applies to the app's Related section, read from the **app
-child's** environment. The supervisor passes `process.env` straight through, so
-the key must be exported for the process that runs `pnpm dev` (or set in the
-main checkout's `callback-box/.env`, which the router loads into itself). With
+The same order applies to the app's Related section (and to comment
+transcription), read from the **app child's** environment: the supervisor
+spawns it with the main checkout's `callback-box/.env` underneath
+`process.env`, the same precedence worktree children get, so a
+`CALLBACK_OPENAI_API_KEY=` line there is enough and an exported variable
+still wins. The router does not load that line into itself. With
 no key the section says so — "the semantic index needs an OpenAI key" is a
 state it renders, not an error page.
 
