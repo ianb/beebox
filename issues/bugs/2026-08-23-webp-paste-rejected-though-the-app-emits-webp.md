@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — journey B, from assets an agent had wrongly converted to WebP
+priority: normal
 ---
 
 Two WebP images pasted into the chat composer were rejected. The composer
