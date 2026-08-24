@@ -65,6 +65,7 @@ function LoadOlderHeader({ hasOlder, loadingOlder, onLoadOlder }: {
   return (
     <div className="text-center py-2">
       <button
+        id="cb-chat-load-older"
         onClick={onLoadOlder}
         disabled={loadingOlder}
         className="text-sm text-primary hover:text-primary/80 disabled:text-warm-400"
@@ -83,6 +84,7 @@ function LoadOlderHeader({ hasOlder, loadingOlder, onLoadOlder }: {
 function ScrollToBottomButton({ emphasized, onClick }: { emphasized: boolean; onClick: () => void }) {
   return (
     <button
+      id="cb-chat-scroll-latest"
       type="button"
       onClick={onClick}
       aria-label="Scroll to latest messages"

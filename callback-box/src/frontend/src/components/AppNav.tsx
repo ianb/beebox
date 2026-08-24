@@ -76,13 +76,13 @@ function ProfileMenu({ user, boxSlug, onToggleDebugLog, onToggleSourceView }: { 
           <div className="text-xs text-warm-500 truncate">{user.email}</div>
         </div>
       ) : null}
-      <MenuItem to={href(`${base}/settings`)} active={isOnSettings}>Settings</MenuItem>
-      <MenuItem to={href(`${base}/admin`)} active={isOnAdmin}>Admin</MenuItem>
+      <MenuItem id="cb-profile-menu-settings" to={href(`${base}/settings`)} active={isOnSettings}>Settings</MenuItem>
+      <MenuItem id="cb-profile-menu-admin" to={href(`${base}/admin`)} active={isOnAdmin}>Admin</MenuItem>
       <MenuDivider />
-      <MenuItem onClick={onToggleSourceView}>Source View</MenuItem>
-      <MenuItem onClick={onToggleDebugLog}>Debug Log</MenuItem>
-      <MenuItem onClick={() => window.location.reload()}>Reload</MenuItem>
-      {user ? <MenuItem href={withBase("/auth/logout")}>Sign out</MenuItem> : null}
+      <MenuItem id="cb-profile-menu-source-view" onClick={onToggleSourceView}>Source View</MenuItem>
+      <MenuItem id="cb-profile-menu-debug-log" onClick={onToggleDebugLog}>Debug Log</MenuItem>
+      <MenuItem id="cb-profile-menu-reload" onClick={() => window.location.reload()}>Reload</MenuItem>
+      {user ? <MenuItem id="cb-profile-menu-sign-out" href={withBase("/auth/logout")}>Sign out</MenuItem> : null}
     </Dropdown>
   );
 }

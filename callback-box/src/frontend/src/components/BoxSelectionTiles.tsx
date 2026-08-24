@@ -21,6 +21,7 @@ interface Box {
 export function SignInLink({ returnTo }: { returnTo: string }) {
   return (
     <Link
+      id="cb-box-selection-sign-in"
       to={href("/auth/login")}
       search={toSearch({ returnTo })}
       className="inline-block bg-primary text-white px-6 py-3 rounded-lg font-medium hover:bg-primary-dark transition-colors"

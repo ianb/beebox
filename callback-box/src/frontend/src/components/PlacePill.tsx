@@ -243,6 +243,8 @@ export function PlacePill({
             trigger={({ toggle, ariaProps }) => (
               <button
                 type="button"
+                id="cb-nav-here"
+                data-cb-does="opens the here menu — open the current folder, plus its landmark's bookmarks"
                 onClick={toggle}
                 className="min-h-[40px] px-2.5 flex items-center gap-1.5 hover:bg-white/10 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
                 title={`Here: ${landmark.dir === "" ? "/" : `${landmark.dir}/`}`}

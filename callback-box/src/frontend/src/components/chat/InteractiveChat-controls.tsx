@@ -205,7 +205,7 @@ function CompanionViewPanelInner({
           })}
         </div>
         <div className="flex-shrink-0 flex items-center gap-1 px-2 border-l border-warm-300">
-          <ExternalIconLink href={browseHref} label="Open in browse view (new tab)" size="sm" />
+          <ExternalIconLink id="cb-panel-open-browse" href={browseHref} label="Open in browse view (new tab)" size="sm" />
           <CloseButton id="cb-panel-close" onClick={onClosePanel} label="Close companion view" size="sm" />
         </div>
       </div>

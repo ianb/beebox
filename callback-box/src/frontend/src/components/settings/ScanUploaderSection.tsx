@@ -140,6 +140,7 @@ export function ScanUploaderSection() {
 
         <Row gap="sm" wrap align="end">
           <TextField
+            id="cb-settings-scan-token-name"
             label="Token name"
             value={name}
             onChange={setName}
@@ -147,6 +148,7 @@ export function ScanUploaderSection() {
             className="w-64"
           />
           <Button
+            id="cb-settings-scan-mint"
             intent="primary"
             loading={createMutation.isPending}
             loadingLabel="Minting..."
@@ -174,10 +176,10 @@ export function ScanUploaderSection() {
               {minted.token}
             </code>
             <Row gap="sm" wrap>
-              <Button onClick={copyToken} flash={{ label: "Copied" }}>
+              <Button id="cb-settings-scan-copy-token" onClick={copyToken} flash={{ label: "Copied" }}>
                 Copy token
               </Button>
-              <Button onClick={() => setMinted(null)}>Done — hide token</Button>
+              <Button id="cb-settings-scan-hide-token" onClick={() => setMinted(null)}>Done — hide token</Button>
             </Row>
             {copyError ? (
               <Text size="sm" tone="danger">

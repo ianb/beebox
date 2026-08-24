@@ -277,6 +277,7 @@ export function CommitTimeline({
       {loading ? <div className="p-3 text-sm text-warm-500 text-center">Loading...</div> : null}
 
       {hasMore && !loading ? <button
+          id="cb-history-load-more"
           onClick={onLoadMore}
           className="w-full p-2 text-sm text-primary hover:bg-info-50"
         >

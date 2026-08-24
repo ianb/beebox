@@ -83,6 +83,8 @@ export function HeaderStrip({ status, connected }: HeaderStripProps) {
         {status ? (
           <div className="relative" ref={gitRef}>
             <button
+              id="cb-dashboard-git-status"
+              data-cb-does="opens the box's git status — which files are modified or untracked"
               onClick={() => setShowGit(!showGit)}
               className={`text-sm px-2 py-0.5 rounded hover:bg-warm-100 whitespace-nowrap ${
                 status.git.clean ? "text-success" : "text-warning"

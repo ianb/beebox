@@ -22,7 +22,7 @@ export function ModelPanel({
 }) {
   return (
     <>
-      <MenuItem onClick={onBack} keepOpen>
+      <MenuItem id="cb-session-model-back" onClick={onBack} keepOpen>
         <span className="text-warm-500">‹ Model · {agentEngine === "claude" ? "Claude" : "Codex"}</span>
       </MenuItem>
       <MenuDivider />

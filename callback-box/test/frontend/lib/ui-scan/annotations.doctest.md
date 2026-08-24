@@ -194,15 +194,24 @@ branches share one `ComposerSendButton` element. If a second literal shows up,
 that is the signal to ask whether the two really can't coexist in the DOM — the
 desktop and mobile composer rows can, which is why they carry different ids.
 
-## Every `cb-` id is kebab-case, and the table names all of them
+## Every `cb-` id is kebab-case, and no literal is authored twice
 
 Kebab-case is not cosmetic: `querySelector("#a.b")` parses a dotted id as
 id `a` plus class `b`, so the address form has to stay selector-safe.
+
+The table above is the *shared* contract, not the inventory: since the
+2026-08-23 pass every static control in the frontend carries an id (the
+`cb-frontend` skill's accessibility baseline), so the source holds far more ids
+than iOS mirrors, and the check that used to require the table to name them
+all would only ever be satisfied by a table nobody reads. What still has to
+hold for every id is that it is authored once — two literals with the same
+string are two elements answering one `getElementById`, and the runtime
+duplicate check (axe in the tours) only sees the pages a tour visits.
 
 ```ts
 SOURCE_IDS.filter((id) => !/^cb-[a-z0-9]+(-[a-z0-9]+)*$/.test(id))
 => []
 
-SOURCE_IDS.filter((id) => !TABLE_IDS.includes(id)).sort()
+SOURCE_IDS.filter((id) => countInSource(id) !== 1).map((id) => id + ": " + countInSource(id))
 => []
 ```

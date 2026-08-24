@@ -85,10 +85,10 @@ export function PasswordSection() {
             <Text as="h2" size="lg" weight="semibold">Change password</Text>
             <Text size="sm" tone="muted">Confirm your current password before choosing a new one.</Text>
           </Stack>
-          <TextField id="password-current" label="Current password" type="password" value={currentPassword} onChange={setCurrentPassword} error={errors.current} autoComplete="current-password" required />
-          <TextField id="password-new" label="New password" type="password" value={newPassword} onChange={setNewPassword} error={errors.next} autoComplete="new-password" minLength={8} required />
-          <TextField id="password-confirm" label="Confirm new password" type="password" value={confirmPassword} onChange={setConfirmPassword} error={errors.confirm} autoComplete="new-password" required />
-          <Button type="submit" intent="primary" loading={submitting} loadingLabel="Changing…">Change password</Button>
+          <TextField id="cb-settings-password-current" label="Current password" type="password" value={currentPassword} onChange={setCurrentPassword} error={errors.current} autoComplete="current-password" required />
+          <TextField id="cb-settings-password-new" label="New password" type="password" value={newPassword} onChange={setNewPassword} error={errors.next} autoComplete="new-password" minLength={8} required />
+          <TextField id="cb-settings-password-confirm" label="Confirm new password" type="password" value={confirmPassword} onChange={setConfirmPassword} error={errors.confirm} autoComplete="new-password" required />
+          <Button id="cb-settings-password-submit" type="submit" intent="primary" loading={submitting} loadingLabel="Changing…">Change password</Button>
           {message ? <div role="status"><Text size="sm" tone="strong">{message}</Text></div> : null}
         </Stack>
       </form>

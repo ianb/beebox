@@ -165,8 +165,8 @@ export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLi
               {safeIndex + 1} / {total}
             </span>
           ) : null}
-          <ExternalIconLink href={current.src} label="Open full size in new tab" onDark size="sm" />
-          <CloseButton onClick={onClose} onDark size="sm" />
+          <ExternalIconLink id="cb-lightbox-full-size" href={current.src} label="Open full size in new tab" onDark size="sm" />
+          <CloseButton id="cb-lightbox-close" onClick={onClose} onDark size="sm" />
         </div>
       </figure>
       {hasMany ? (
@@ -225,6 +225,7 @@ function NavButton({ direction, onClick }: { direction: "prev" | "next"; onClick
   return (
     <button
       type="button"
+      id={isPrev ? "cb-lightbox-prev" : "cb-lightbox-next"}
       onClick={onClick}
       aria-label={label}
       /* z-20 lifts both arrows above the figure's static img content (the

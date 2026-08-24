@@ -6,6 +6,8 @@ export type TextLinkTone = "default" | "subtle";
 
 export interface TextLinkProps {
   to: string;
+  /** Stable `cb-` control address for the rendered link (see lib/ui-scan). */
+  id?: string;
   children: ReactNode;
   /** Color. Default `"default"` (primary). `"subtle"` for dim contexts. */
   tone?: TextLinkTone;
@@ -24,6 +26,7 @@ const TONE_CLASSES: Record<TextLinkTone, string> = {
 
 export function TextLink({
   to,
+  id,
   children,
   tone: toneArg,
   underline: underlineArg,
@@ -35,7 +38,7 @@ export function TextLink({
   const underline = underlineArg ?? true;
   const classes = cn(TONE_CLASSES[tone], underline ? "hover:underline" : "", className);
   return (
-    <Link to={to} onClick={onClick} title={title} className={classes}>
+    <Link id={id} to={to} onClick={onClick} title={title} className={classes}>
       {children}
     </Link>
   );

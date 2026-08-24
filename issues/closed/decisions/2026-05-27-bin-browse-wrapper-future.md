@@ -3,7 +3,16 @@ title: "bin browse wrapper future"
 workstream: unknown
 needs: [decision]
 area: monorepo
+resolution: superseded
 ---
+
+**Closed 2026-08-23** — superseded. The wrapper is no longer an ergonomic
+convenience to keep or drop: it is where the app-specific driving contract
+lives (`cb-` id targets, annotated snapshots, the pre-action actionability and
+stale-ref checks — `browse/src/controls.ts`, `.claude/skills/browse/SKILL.md`),
+none of which a bare `agent-browser` on PATH could provide. The `reload`
+silent-success and manifest-cache notes below remain unaddressed but are minor;
+file them separately if they recur.
 
 Observed in an agent session: the wrapper's one real ergonomic feature (path-rewriting, `bin/browse open /chat` → router URL for the current worktree) went unused — the agent constructed full `localhost:3210/<wt>/<box>/...` URLs every time, partly because the user's question anchored it to a specific URL, partly out of habit. The `bin/` prefix also imposes a small `cd` tax (running `bin/browse` after `cd callback-box` fails).
 

@@ -99,9 +99,10 @@ export function StatusBar(props: StatusBarProps) {
             )}
           </div>
         ) : null}
-        <button onClick={props.onPickFile} disabled={props.finalizing} className="text-gray-400 hover:text-white p-1 disabled:opacity-30" title="Upload file" aria-label="Upload file"><span aria-hidden="true">&#128206;</span></button>
-        <button onClick={props.onPickGallery} disabled={props.finalizing} className="text-gray-400 hover:text-white p-1 disabled:opacity-30" title="Add from gallery" aria-label="Add from gallery"><span aria-hidden="true">&#128247;</span></button>
+        <button id="cb-capture-add-file" onClick={props.onPickFile} disabled={props.finalizing} className="text-gray-400 hover:text-white p-1 disabled:opacity-30" title="Upload file" aria-label="Upload file"><span aria-hidden="true">&#128206;</span></button>
+        <button id="cb-capture-add-gallery" onClick={props.onPickGallery} disabled={props.finalizing} className="text-gray-400 hover:text-white p-1 disabled:opacity-30" title="Add from gallery" aria-label="Add from gallery"><span aria-hidden="true">&#128247;</span></button>
         <button
+          id="cb-capture-settings"
           onClick={props.onToggleSettings}
           className={`p-1 text-lg ${props.showSettings ? "text-white" : "text-gray-400 hover:text-white"}`}
           title="Device settings"

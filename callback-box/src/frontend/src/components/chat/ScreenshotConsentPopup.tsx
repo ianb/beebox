@@ -115,10 +115,10 @@ export function ScreenshotConsentPopup({ request, onResolved }: {
           share in the next browser dialog.
         </Text>
         <Row gap="sm" justify="end" className="mt-5">
-          <Button intent="secondary" onClick={decline}>
+          <Button id="cb-screenshot-consent-decline" intent="secondary" onClick={decline}>
             Decline
           </Button>
-          <Button intent="primary" onClick={share} loadingLabel="Sharing…">
+          <Button id="cb-screenshot-consent-share" intent="primary" onClick={share} loadingLabel="Sharing…">
             Share screenshot
           </Button>
         </Row>

@@ -123,6 +123,7 @@ function DesktopComposerRow({
       {isTranscribing ? (
         <>
           <button
+            id="cb-composer-dictation-cancel"
             onClick={handleCancelTranscription}
             className="p-2 text-danger hover:text-danger-dark rounded-lg hover:bg-danger-50 flex-shrink-0"
             title="Cancel (Esc)"
@@ -132,6 +133,7 @@ function DesktopComposerRow({
             </svg>
           </button>
           <button
+            id="cb-composer-dictation-edit"
             onClick={() => {
               onStopDictation();
               const text = transcription.transcript;
@@ -283,14 +285,14 @@ export function ChatInputArea({
           )}
         >
           {captureEnabled ? (
-            <MenuItem onClick={onEnterCapture} disabled={captureDisabledReason !== undefined}>
+            <MenuItem id="cb-composer-add-capture" onClick={onEnterCapture} disabled={captureDisabledReason !== undefined}>
               {captureDisabledReason !== undefined ? `Capture… (${captureDisabledReason.toLowerCase()})` : "Capture…"}
             </MenuItem>
           ) : null}
           {/* One file entry: where the files land (inline vs. bulk batch) is
               decided by `file-routing.ts`, not by the user picking a menu item
               (issues/features/2026-08-03-attach-vs-upload-menu-confusing.md). */}
-          <MenuItem onClick={onAddFiles}>Add files…</MenuItem>
+          <MenuItem id="cb-composer-add-files" onClick={onAddFiles}>Add files…</MenuItem>
           <ScreenshotMenuItem addFiles={addFiles} />
           <ShareLocationMenuItem />
         </Dropdown>
@@ -337,6 +339,7 @@ export function ChatInputArea({
 
         {/* Mobile-only: keyboard button */}
         <button
+          id="cb-composer-keyboard"
           onClick={onKeyboard}
           className={`${CIRCLE_BTN} sm:hidden bg-warm-300 text-warm-700 hover:bg-warm-400 active:bg-warm-500`}
           title="Type a message"

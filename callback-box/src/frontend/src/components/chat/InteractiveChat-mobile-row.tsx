@@ -67,6 +67,7 @@ export function MobileTextareaRow({
       {isTranscribing ? (
         <>
           <button
+            id="cb-composer-dictation-cancel-mobile"
             onClick={handleCancelTranscription}
             className="p-2 text-danger hover:text-danger-dark rounded-lg hover:bg-danger-50 flex-shrink-0"
             title="Cancel (Esc)"
@@ -76,6 +77,7 @@ export function MobileTextareaRow({
             </svg>
           </button>
           <button
+            id="cb-composer-dictation-edit-mobile"
             onClick={() => {
               onStopDictation();
               const text = transcription.transcript;

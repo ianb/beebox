@@ -145,7 +145,7 @@ function LandmarkList({
   }
   if (failed) {
     return (
-      <MenuItem onClick={onRetry} keepOpen danger>
+      <MenuItem id="cb-switch-menu-landmarks-retry" onClick={onRetry} keepOpen danger>
         Couldn&rsquo;t load landmarks — Retry
       </MenuItem>
     );
@@ -163,7 +163,7 @@ function ProblemRow({ count, boxSlug }: { count: number; boxSlug: string }) {
   return (
     <>
       <MenuDivider />
-      <MenuItem to={href(`/${boxSlug}/landmarks`)} danger>
+      <MenuItem id="cb-switch-menu-problems" to={href(`/${boxSlug}/landmarks`)} danger>
         ⚠ {count} landmark card{count === 1 ? "" : "s"} didn&rsquo;t parse
       </MenuItem>
     </>
@@ -237,15 +237,15 @@ export function SwitchMenuBody(props: SwitchMenuProps): ReactNode {
     case "root":
       return (
         <>
-          <MenuItem onClick={onOpenBoxPanel} keepOpen>
+          <MenuItem id="cb-switch-menu-box" onClick={onOpenBoxPanel} keepOpen>
             <span className="flex justify-between gap-2 w-full">
               <span className="min-w-0 truncate">Box: {boxName}</span>
               <span className="text-warm-500">›</span>
             </span>
           </MenuItem>
-          <MenuItem to={href(`/${boxSlug}/landmarks`)}>All landmarks →</MenuItem>
+          <MenuItem id="cb-switch-menu-landmarks" to={href(`/${boxSlug}/landmarks`)}>All landmarks →</MenuItem>
           {recentFilesClaimed ? (
-            <MenuItem onClick={onOpenRecentFiles} keepOpen>
+            <MenuItem id="cb-switch-menu-recent-files" onClick={onOpenRecentFiles} keepOpen>
               <span className="flex justify-between gap-2 w-full">
                 <span>Recent files</span>
                 <span className="text-warm-500">›</span>
@@ -269,20 +269,20 @@ export function SwitchMenuBody(props: SwitchMenuProps): ReactNode {
     case "box":
       return (
         <>
-          <MenuItem onClick={onBackToRoot} keepOpen>
+          <MenuItem id="cb-box-menu-back" onClick={onBackToRoot} keepOpen>
             <span className="text-warm-500">‹ Box: {boxName}</span>
           </MenuItem>
           <MenuDivider />
-          <MenuItem to={href(`/${boxSlug}/dashboard`)}>Dashboard</MenuItem>
-          <MenuItem to={href(`/${boxSlug}/browse`)}>Browse</MenuItem>
-          <MenuItem to={href(`/${boxSlug}/history`)}>History</MenuItem>
-          <MenuItem to={href(`/${boxSlug}/inventory`)}>Inventory summary</MenuItem>
+          <MenuItem id="cb-box-menu-dashboard" to={href(`/${boxSlug}/dashboard`)}>Dashboard</MenuItem>
+          <MenuItem id="cb-box-menu-browse" to={href(`/${boxSlug}/browse`)}>Browse</MenuItem>
+          <MenuItem id="cb-box-menu-history" to={href(`/${boxSlug}/history`)}>History</MenuItem>
+          <MenuItem id="cb-box-menu-inventory" to={href(`/${boxSlug}/inventory`)}>Inventory summary</MenuItem>
           {boxSwitchingAvailable ? (
             <>
               <MenuDivider />
               {/* The front page (box selector) is outside the box's route tree —
                   a plain navigation, not a router Link. */}
-              <MenuItem href={withBase("/")}>Other boxes →</MenuItem>
+              <MenuItem id="cb-box-menu-other-boxes" href={withBase("/")}>Other boxes →</MenuItem>
             </>
           ) : null}
         </>
@@ -290,7 +290,7 @@ export function SwitchMenuBody(props: SwitchMenuProps): ReactNode {
     case "recent-files":
       return (
         <>
-          <MenuItem onClick={onBackToRoot} keepOpen>
+          <MenuItem id="cb-recent-files-menu-back" onClick={onBackToRoot} keepOpen>
             <span className="text-warm-500">‹ Recent files</span>
           </MenuItem>
           <MenuDivider />

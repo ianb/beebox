@@ -79,7 +79,7 @@ export function CalendarSection() {
         <div className="p-3 bg-warning-50 border border-warning-100 rounded text-sm text-warning-dark">
           {error}
         </div>
-        <GoogleConnectLink />
+        <GoogleConnectLink id="cb-settings-calendar-connect-google" />
       </div>
     );
   }

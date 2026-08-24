@@ -279,7 +279,7 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
 
   return (
     <Row gap="none" align="stretch" className="h-full">
-      <Sidebar title="Browse" subtitle={dirPath || "/"} detailSelected={hasDetail}>
+      <Sidebar title="Browse" subtitle={dirPath || "/"} detailSelected={hasDetail} idPrefix="cb-browse-sidebar">
         <Column>
           <BrowseBreadcrumbs dirPath={dirPath} onNavigate={onNavigate} />
           <BrowseSidebarBody

@@ -76,11 +76,11 @@ function BatchNoteField({ value, disabled, onChange }: {
 }) {
   return (
     <div className="mb-4">
-      <label className="block mb-1" htmlFor="bulk-upload-note">
+      <label className="block mb-1" htmlFor="cb-bulk-upload-note">
         <Text size="sm" tone="muted">What are these files? (sent with the batch)</Text>
       </label>
       <textarea
-        id="bulk-upload-note"
+        id="cb-bulk-upload-note"
         className="w-full rounded-lg border border-warm-300 bg-warm-50 px-3 py-2 text-sm"
         rows={2}
         value={value}
@@ -111,8 +111,8 @@ function BatchFooter({ counts, exitLabel, doneLabel, finalizing, canFinalize, on
         </Text>
       </div>
       <div className="flex items-center justify-between gap-3">
-        <Button intent="ghost" onClick={onExit} disabled={finalizing}>{exitLabel}</Button>
-        <Button intent="primary" onClick={onDone} disabled={!canFinalize} loading={finalizing}>
+        <Button id="cb-bulk-upload-exit" intent="ghost" onClick={onExit} disabled={finalizing}>{exitLabel}</Button>
+        <Button id="cb-bulk-upload-done" intent="primary" onClick={onDone} disabled={!canFinalize} loading={finalizing}>
           {doneLabel}
         </Button>
       </div>
@@ -258,7 +258,7 @@ export function BulkUploadOverlay({ targetSessionId, seedFiles, note, onExit, on
     >
       <header className="flex items-center justify-between px-5 py-3 border-b border-warm-300 bg-warm-100">
         <Text as="h2" size="lg" weight="semibold">Upload files</Text>
-        {finalizing ? null : <CloseButton label="Close upload" onClick={() => void handleCancel()} />}
+        {finalizing ? null : <CloseButton id="cb-bulk-upload-close" label="Close upload" onClick={() => void handleCancel()} />}
       </header>
 
       <input
@@ -271,7 +271,7 @@ export function BulkUploadOverlay({ targetSessionId, seedFiles, note, onExit, on
 
       <div className={`flex-1 overflow-auto px-5 py-4 ${dragOver ? "outline-dashed outline-2 outline-primary -outline-offset-4" : ""}`}>
         <div className="mb-4 flex items-center gap-3">
-          <Button intent="secondary" onClick={() => inputRef.current?.click()} disabled={finalizing || stillWorking}>Add files</Button>
+          <Button id="cb-bulk-upload-add-files" intent="secondary" onClick={() => inputRef.current?.click()} disabled={finalizing || stillWorking}>Add files</Button>
           <Text size="sm" tone="subtle">or drag and drop files here</Text>
         </div>
 

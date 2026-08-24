@@ -57,8 +57,8 @@ export function SecretsSection() {
         </Stack>
 
         <Row gap="sm" wrap>
-          <Button intent={machineWide ? "secondary" : "primary"} onClick={() => setMachineWide(false)}>This box</Button>
-          <Button intent={machineWide ? "primary" : "secondary"} onClick={() => setMachineWide(true)}>Machine-wide</Button>
+          <Button id="cb-admin-secrets-scope-box" intent={machineWide ? "secondary" : "primary"} onClick={() => setMachineWide(false)}>This box</Button>
+          <Button id="cb-admin-secrets-scope-machine" intent={machineWide ? "primary" : "secondary"} onClick={() => setMachineWide(true)}>Machine-wide</Button>
         </Row>
 
         {machineWide ? (
@@ -77,7 +77,7 @@ export function SecretsSection() {
               />
             ) : null}
             <Row gap="sm" wrap>
-              <Button intent="secondary" onClick={() => setAdding(!adding)}>
+              <Button id="cb-admin-secrets-add-toggle" intent="secondary" onClick={() => setAdding(!adding)}>
                 {adding ? "Close" : "Add a new secret"}
               </Button>
             </Row>

@@ -21,6 +21,12 @@ interface SidebarProps {
   defaultCollapsed?: boolean;
   /** Whether a detail item is selected (controls mobile visibility) */
   detailSelected?: boolean;
+  /**
+   * Stable `cb-` address prefix (see lib/ui-scan) for this sidebar's own
+   * controls: `${idPrefix}-expand` and `${idPrefix}-collapse`. Passed from the
+   * call site, since one Sidebar serves several pages.
+   */
+  idPrefix?: string;
 }
 
 export function Sidebar({
@@ -30,6 +36,7 @@ export function Sidebar({
   widthPx,
   defaultCollapsed,
   detailSelected,
+  idPrefix,
 }: SidebarProps) {
   widthPx = widthPx ?? 320;
   defaultCollapsed = defaultCollapsed ?? false;
@@ -53,6 +60,7 @@ export function Sidebar({
       <style>{"@media (min-width: 640px) { [style*=\"--sidebar-desktop-w\"] { width: var(--sidebar-desktop-w) !important; } }"}</style>
       {collapsed ? (
         <button
+          id={idPrefix !== undefined ? `${idPrefix}-expand` : undefined}
           onClick={() => setCollapsed(false)}
           className="p-2 hover:bg-warm-100 text-warm-600 hover:text-warm-700"
           title={`Show ${title.toLowerCase()}`}
@@ -69,6 +77,7 @@ export function Sidebar({
               {subtitle ? <div className="text-xs text-warm-500 truncate">{subtitle}</div> : null}
             </div>
             <button
+              id={idPrefix !== undefined ? `${idPrefix}-collapse` : undefined}
               onClick={() => setCollapsed(true)}
               className="hidden sm:block p-1 hover:bg-warm-200 rounded text-warm-500 hover:text-warm-700 flex-shrink-0"
               title="Collapse sidebar"

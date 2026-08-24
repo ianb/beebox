@@ -63,29 +63,34 @@ export function HistoryFilterBar({ filter, facets, onChange }: HistoryFilterBarP
     <section aria-label="History filters" className="px-3 py-2 border-b border-warm-200 bg-warm-50/60">
       <div className="flex flex-wrap items-center gap-2">
         <MultiSelectPopover
+          id="cb-history-filter-connector"
           label="Connector"
           options={facets?.connectors ?? []}
           selected={filter.connectors}
           onToggle={(v) => toggleValue("connectors", v)}
         />
         <MultiSelectPopover
+          id="cb-history-filter-workflow"
           label="Workflow"
           options={facets?.workflows ?? []}
           selected={filter.workflows}
           onToggle={(v) => toggleValue("workflows", v)}
         />
         <ToggleChip
+          id="cb-history-filter-touchpoint"
           label="Touchpoint"
           checked={filter.touchpoint}
           onChange={(v) => onChange({ ...filter, touchpoint: v })}
         />
         <ToggleChip
+          id="cb-history-filter-feedback"
           label="Feedback"
           checked={filter.feedback}
           onChange={(v) => onChange({ ...filter, feedback: v })}
         />
         {activeCount > 0 ? (
           <button
+            id="cb-history-filter-clear"
             type="button"
             onClick={clearAll}
             className="text-[11px] text-warm-500 hover:text-warm-700 underline ml-auto"
@@ -99,6 +104,7 @@ export function HistoryFilterBar({ filter, facets, onChange }: HistoryFilterBarP
           <Badge tone="accent" size="sm">
             <span className="font-mono">Session {filter.session.slice(0, 8)}</span>
             <button
+              id="cb-history-filter-clear-session"
               type="button"
               onClick={() => onChange({ ...filter, session: null })}
               className="ml-1 text-primary-dark hover:text-danger"
@@ -113,7 +119,7 @@ export function HistoryFilterBar({ filter, facets, onChange }: HistoryFilterBarP
         <div className="mt-2">
           <Badge tone="accent" size="sm">
             <span className="font-mono">Path {filter.path}</span>
-            <button type="button" onClick={() => onChange({ ...filter, path: null })} className="ml-1 text-primary-dark hover:text-danger" aria-label="Clear path filter">×</button>
+            <button id="cb-history-filter-clear-path" type="button" onClick={() => onChange({ ...filter, path: null })} className="ml-1 text-primary-dark hover:text-danger" aria-label="Clear path filter">×</button>
           </Badge>
         </div>
       ) : null}
@@ -122,13 +128,15 @@ export function HistoryFilterBar({ filter, facets, onChange }: HistoryFilterBarP
 }
 
 interface MultiSelectPopoverProps {
+  /** Stable `cb-` control address for the popover's trigger (see lib/ui-scan). */
+  id: string;
   label: string;
   options: string[];
   selected: string[];
   onToggle: (value: string) => void;
 }
 
-function MultiSelectPopover({ label, options, selected, onToggle }: MultiSelectPopoverProps) {
+function MultiSelectPopover({ id, label, options, selected, onToggle }: MultiSelectPopoverProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -161,6 +169,7 @@ function MultiSelectPopover({ label, options, selected, onToggle }: MultiSelectP
   return (
     <div className="relative" ref={rootRef}>
       <FilterChipButton
+        id={id}
         active={hasSelection}
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="listbox"
@@ -199,15 +208,17 @@ function MultiSelectPopover({ label, options, selected, onToggle }: MultiSelectP
 }
 
 interface ToggleChipProps {
+  /** Stable `cb-` control address for the switch (see lib/ui-scan). */
+  id: string;
   label: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
 }
 
-function ToggleChip({ label, checked, onChange }: ToggleChipProps) {
+function ToggleChip({ id, label, checked, onChange }: ToggleChipProps) {
   return (
     <span className="inline-flex items-center gap-1.5">
-      <Toggle checked={checked} onChange={onChange} label={label} />
+      <Toggle id={id} checked={checked} onChange={onChange} label={label} />
       <span className={cn("text-xs", checked ? "text-warm-800 font-medium" : "text-warm-600")}>
         {label}
       </span>
@@ -216,6 +227,7 @@ function ToggleChip({ label, checked, onChange }: ToggleChipProps) {
 }
 
 interface FilterChipButtonProps {
+  id: string;
   active: boolean;
   onClick: () => void;
   children: ReactNode;
@@ -223,9 +235,10 @@ interface FilterChipButtonProps {
   "aria-expanded"?: boolean;
 }
 
-function FilterChipButton({ active, onClick, children, ...aria }: FilterChipButtonProps) {
+function FilterChipButton({ id, active, onClick, children, ...aria }: FilterChipButtonProps) {
   return (
     <button
+      id={id}
       type="button"
       onClick={onClick}
       {...aria}

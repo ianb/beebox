@@ -50,6 +50,7 @@ export function AgentEngineSection() {
         {config.data ? (
           <RadioGroup
             label="Use for new agent work"
+            idPrefix="cb-admin-agent-engine"
             variant="cards"
             value={update.isPending
               ? update.variables.agentEngine ?? config.data.agentEngine

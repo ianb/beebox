@@ -138,6 +138,7 @@ function GmailFiltersForm({ initial }: { initial: GmailConfig }) {
       <p className="text-sm text-warm-700 mb-4">
         Choose which Gmail threads this box collects, and what happens to them. Uses{" "}
         <a
+          id="cb-admin-gmail-syntax-help"
           href="https://support.google.com/mail/answer/7190?hl=en"
           target="_blank"
           rel="noopener noreferrer"
@@ -151,6 +152,7 @@ function GmailFiltersForm({ initial }: { initial: GmailConfig }) {
 
       <div className="mb-4">
         <TextField
+          id="cb-admin-gmail-query"
           label="Search query"
           value={query}
           onChange={setQuery}
@@ -170,6 +172,7 @@ function GmailFiltersForm({ initial }: { initial: GmailConfig }) {
 
       <div className="mb-4">
         <SelectField
+          id="cb-admin-gmail-on-match"
           label="On match"
           value={actionType}
           onChange={setActionType}
@@ -185,6 +188,7 @@ function GmailFiltersForm({ initial }: { initial: GmailConfig }) {
       {actionType === "procedure" ? (
         <div className="mb-4">
           <TextField
+            id="cb-admin-gmail-procedure"
             label="Procedure"
             value={procedureRef}
             onChange={setProcedureRef}
@@ -201,6 +205,7 @@ function GmailFiltersForm({ initial }: { initial: GmailConfig }) {
 
       <div className="flex gap-3 items-center">
         <Button
+          id="cb-admin-gmail-save"
           intent="primary"
           onClick={handleSave}
           disabled={!dirty || (matches && action === null)}
@@ -272,6 +277,7 @@ function GmailLabelList({
       )}
       <div className="flex gap-2 items-start">
         <TextField
+          id="cb-admin-gmail-new-label"
           label="Add label"
           hideLabel
           value={newLabel}
@@ -286,6 +292,7 @@ function GmailLabelList({
           className="flex-1"
         />
         <Button
+          id="cb-admin-gmail-add-label"
           intent="secondary"
           onClick={onAdd}
           disabled={!newLabel.trim()}
