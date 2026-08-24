@@ -13,6 +13,7 @@
     "dev": "bin/workstreams serve",
     "dev-apps-typecheck": "bash bin/dev-apps-typecheck",
     "doctor": "node --import tsx bin/doctor.ts",
+    "issues": "node --import tsx bin/issues.ts",
     "lint": "pnpm --filter '!callback-box-frontend' -r lint",
     "mobile-contract-check": "node --import tsx bin/mobile-contract-check.ts",
     "path-leak-check": "node --import tsx bin/path-leak-check.ts",
@@ -25,6 +26,8 @@
     "update-agent-sdk": "node --import tsx bin/update-agent-sdk.ts"
   },
   "dependencies": {
+    "@orama/orama": "3.1.18",
+    "@orama/plugin-data-persistence": "3.1.18",
     "@anthropic-ai/claude-agent-sdk": "0.3.226",
     "execa": "^9.6.1",
     "get-port": "^7.1.0",

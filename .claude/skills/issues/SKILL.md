@@ -26,7 +26,15 @@ don't file trivia you'd be embarrassed to see triaged.
 
 ## How
 
-1. Grep the tree first — extend a matching item rather than duplicating.
+1. Search first: `bin/issues search --all "<what you saw>"` (hybrid
+   keyword + semantic over open *and* closed issues) plus a grep for the
+   file/symbol names. Read every plausible hit — titles are an index, not
+   evidence. A match means you are **re-encountering** an issue, which has
+   its own rules (`issues/CLAUDE.md` → "Re-encountering an issue"): amend it
+   with a dated sighting; if it carries `needs: [manual-testing]` the sighting
+   proves it isn't fixed, so drop that label; if it's closed, reopen; if it has
+   a low priority, flag `next-action: discuss` rather than re-prioritize.
+   Only file new when nothing describes it.
 2. Pick a category directory (`bugs/`, `features/`, `code-quality/`,
    `docs-and-chores/`, `decisions/`, `exploration/`, `watch/`) — the directory
    *is* the category, no `type:` field.

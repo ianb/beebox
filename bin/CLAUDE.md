@@ -585,6 +585,51 @@ reaching into the store, the same way it invokes `bin/workstreams` for lifecycle
 rather than reimplementing the guards. Two writers to one YAML format sharing
 one lock protocol is where duplication stops being controllable.
 
+## Searching the issue queue (`bin/issues`)
+
+A stateless CLI over `issues/` plus `private-issues/` when that mount exists
+(rows carry a `visibility`). It reuses `workstreams-app/src/server/issue-domain.ts`
+for parsing — the dev issue browser and this command must agree about what an
+issue is — and adds two derived fields the frontmatter does not carry: `date`
+from the `YYYY-MM-DD-` filename prefix, and `discoveredInWorkstream`, the bare
+name inside `discovered-in:`'s `worktree-<name>` token.
+
+- `issues list [filters]` — the filtered queue, newest first.
+- `issues groups --by discovered-in|date|labels|area|workstream|category` —
+  clusters, largest first, with their members (`--min N`, default 2).
+- `issues search <text>` — `--mode text` is BM25 and offline; `hybrid` (the
+  default when a key is available) fuses BM25 with vector similarity;
+  `semantic` is vector only.
+- `issues similar <issue-path> [--docs]` — nearest neighbours of an issue by its
+  own stored vector. `--docs` also ranks `callback-box/docs/**/*.md`, so an
+  existing plan surfaces as prior art instead of being re-derived.
+- `issues show <path>` — frontmatter as JSON plus the top of the body.
+
+Every subcommand takes `--json`, and defaults to open issues (`--closed` for
+only closed, `--all` for both). Filters: `--category --area --label --workstream
+--discovered-in --needs --priority --next-action --since --research
+--visibility`. Repeats are OR within one filter and AND across filters —
+except `--label`, where repeats mean AND, since labels are how a cross-cutting
+effort is picked out.
+
+**The `.issues-index/` cache** at the repo root is gitignored and disposable: a
+persisted Orama index, the embedding vectors, and a manifest of
+`{ contentHash, hasEmbedding }` per file. Every run re-reads every issue (cheap)
+and re-embeds only files whose embedded text changed, in one batched call —
+so the manifest exists to answer the single question whose wrong answer costs
+money. `--rebuild` wipes it and pays for the whole corpus again. `--mode text`
+never touches the network, which is what makes the command usable with no key
+at all. The embeddings key is read from `CALLBACK_OPENAI_API_KEY`, then
+`THINKING_OPENAI_API_KEY`, then `SKE_OPENAI_API_KEY`; with none set, hybrid
+degrades to text with a one-line notice on stderr.
+
+**Private issues are indexed too**, which means their text is sent to OpenAI to
+be embedded, and their bodies sit in the local cache. Both are consistent with
+where private issues already live (a local repo on the developer's machine, read
+by agents that call hosted models), but it is a real egress: use `--mode text` if
+a particular queue should never leave the machine, and `--visibility public` to
+keep private items out of a result set.
+
 ## Private-issues shadow repo (`private-issues`)
 
 `bin/private-issues` manages the per-developer private issue repo
