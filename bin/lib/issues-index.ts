@@ -37,8 +37,13 @@ import type { IssueEntry } from "./issues-model.js";
 
 // ─── Schema ──────────────────────────────────────────────────────────────────
 
-/** Bump when the document shape changes; a mismatch forces a full rebuild. */
-export const ISSUE_INDEX_SCHEMA_VERSION = 1;
+/**
+ * Bump when the document shape or the manifest shape changes; a mismatch forces
+ * a full rebuild.
+ * v2: the manifest splits `indexHash` (all indexed fields) from `embeddedHash`
+ *     (the embed text the stored vector was actually computed from).
+ */
+export const ISSUE_INDEX_SCHEMA_VERSION = 2;
 
 export const issueOramaSchema = {
   path: "string",
@@ -98,13 +103,30 @@ function placeholderVector(): number[] {
 
 // ─── Cache location + manifest ───────────────────────────────────────────────
 
-export function indexDirectory(repoRoot: string): string {
-  return path.join(repoRoot, ".issues-index");
+/**
+ * Which corpus a cache holds. `public` exists so `--visibility public` can be
+ * honoured by never LOADING private issues rather than by filtering them out of
+ * results: a post-filter would still have sent their text to OpenAI. Two
+ * directories rather than one, so alternating between the scopes does not make
+ * each run look like the other's entries vanished and re-appeared — which would
+ * delete vectors and pay for them again.
+ */
+export type IndexScope = "all" | "public";
+
+export function indexDirectory(repoRoot: string, scope: IndexScope = "all"): string {
+  return path.join(repoRoot, ".issues-index", scope);
 }
 
 const manifestEntrySchema = z.object({
-  contentHash: z.string(),
-  hasEmbedding: z.boolean(),
+  /** Hash of every field the Orama document carries — the rebuild trigger. */
+  indexHash: z.string(),
+  /**
+   * The embed-text hash the stored vector was computed from, or null when there
+   * is no usable vector. Recording the hash the vector came FROM (rather than a
+   * bare "has one") is what stops a stale vector from being adopted under a new
+   * hash when a run is text-only or an embed call fails.
+   */
+  embeddedHash: z.string().nullable(),
 });
 
 const manifestSchema = z.object({
@@ -155,9 +177,31 @@ export interface IndexDocument {
   status: "open" | "closed";
   visibility: string;
   date: string;
-  contentHash: string;
+  /** Hash of every indexed field above. Changes here mean the index is stale. */
+  indexHash: string;
+  /** Hash of {@link embedText}. Changes here mean the vector is stale. */
+  embedHash: string;
   /** Title + facets + body, truncated — exactly what gets embedded. */
   embedText: string;
+}
+
+/** An {@link IndexDocument} before its hashes are computed. */
+type IndexFields = Omit<IndexDocument, "indexHash" | "embedHash" | "embedText">;
+
+/**
+ * Attach both hashes. They are deliberately separate: the frontmatter fields the
+ * `where:` clauses filter on (workstream, needs, priority, next-action,
+ * research, visibility) and the body past the embed truncation are all indexed
+ * but NOT embedded, so a frontmatter-only edit must rebuild the index while
+ * costing nothing in embeddings.
+ */
+function withHashes(fields: IndexFields, embedText: string): IndexDocument {
+  return {
+    ...fields,
+    indexHash: hash(JSON.stringify(Object.entries(fields).toSorted())),
+    embedHash: hash(embedText),
+    embedText,
+  };
 }
 
 const EMBED_TEXT_LIMIT = 8000;
@@ -179,7 +223,7 @@ export function issueDocument(entry: IssueEntry): IndexDocument {
   const embedText = embedTextFor({
     title: entry.title, labels: entry.labels, area: entry.area ?? "", body: entry.body,
   });
-  return {
+  return withHashes({
     path: entry.path,
     kind: "issue",
     title: entry.title,
@@ -196,9 +240,7 @@ export function issueDocument(entry: IssueEntry): IndexDocument {
     status: entry.closed ? "closed" : "open",
     visibility: entry.visibility,
     date: entry.date ?? "",
-    contentHash: hash(embedText),
-    embedText,
-  };
+  }, embedText);
 }
 
 function docDocument(options: { relPath: string; source: string }): IndexDocument {
@@ -206,7 +248,7 @@ function docDocument(options: { relPath: string; source: string }): IndexDocumen
   const title = /^#\s+(?<heading>.+)$/mu.exec(source)?.groups?.["heading"]?.trim()
     ?? path.basename(relPath, ".md");
   const embedText = embedTextFor({ title, labels: [], area: "", body: source });
-  return {
+  return withHashes({
     path: relPath,
     kind: "doc",
     title,
@@ -223,9 +265,7 @@ function docDocument(options: { relPath: string; source: string }): IndexDocumen
     status: "open",
     visibility: "public",
     date: "",
-    contentHash: hash(embedText),
-    embedText,
-  };
+  }, embedText);
 }
 
 async function walkMarkdown(root: string, relative = ""): Promise<string[]> {
@@ -284,6 +324,8 @@ export function resolveEmbeddingsService(
 export interface RefreshOptions {
   repoRoot: string;
   documents: IndexDocument[];
+  /** Which cache to read and write. Defaults to the whole corpus. */
+  scope?: IndexScope;
   /** Absent (or null) means text-only: nothing is embedded and nothing is re-embedded. */
   embeddings?: EmbeddingsService | null;
   /** Discard the persisted index, vectors, and manifest before refreshing. */
@@ -302,15 +344,16 @@ export interface RefreshResult {
 }
 
 /**
- * Bring `.issues-index/` in line with `documents` and return a queryable index.
+ * Bring the cache in line with `documents` and return a queryable index.
  *
  * Every file is re-read by the caller on every run (cheap at this corpus size),
- * so the manifest exists only to answer "did the embedded text change?" — the
- * one question whose wrong answer costs money.
+ * so the manifest answers only the two questions re-reading cannot: is the
+ * persisted index stale (`indexHash`), and is a stored vector stale
+ * (`embeddedHash`). The second is the one whose wrong answer costs money.
  */
 export async function refreshIndex(options: RefreshOptions): Promise<RefreshResult> {
   const { repoRoot, documents } = options;
-  const directory = indexDirectory(repoRoot);
+  const directory = indexDirectory(repoRoot, options.scope ?? "all");
   const manifestPath = path.join(directory, "manifest.json");
   const vectorsPath = path.join(directory, "vectors.json");
   const indexPath = path.join(directory, "index.json");
@@ -333,14 +376,19 @@ export async function refreshIndex(options: RefreshOptions): Promise<RefreshResu
 
   const present = new Set(documents.map((document) => document.path));
   const vanished = Object.keys(manifest.entries).filter((key) => !present.has(key));
+  for (const gone of vanished) vectors.delete(gone);
 
   const pending = documents.filter((document) => {
     const known = manifest.entries[document.path];
     return known === undefined
-      || known.contentHash !== document.contentHash
-      || !known.hasEmbedding
+      || known.embeddedHash !== document.embedHash
       || !vectors.has(document.path);
   });
+  // A pending document's stored vector describes text that no longer exists.
+  // Dropping it BEFORE the embed attempt is what keeps a failed or text-only
+  // run honest: the document comes back as unembedded rather than keeping a
+  // vector for the old text under the new hash.
+  for (const document of pending) vectors.delete(document.path);
 
   const service = options.embeddings ?? null;
   let embeddedThisRun = 0;
@@ -361,20 +409,24 @@ export async function refreshIndex(options: RefreshOptions): Promise<RefreshResu
   const nextEntries: IssueIndexManifest["entries"] = {};
   for (const document of documents) {
     nextEntries[document.path] = {
-      contentHash: document.contentHash,
-      hasEmbedding: vectors.has(document.path),
+      indexHash: document.indexHash,
+      embeddedHash: vectors.has(document.path) ? document.embedHash : null,
     };
   }
-  for (const path_ of vanished) vectors.delete(path_);
 
-  const contentChanged = vanished.length > 0
+  const indexStale = vanished.length > 0
     || embeddedThisRun > 0
-    || documents.some((document) => manifest.entries[document.path]?.contentHash !== document.contentHash)
-    || Object.keys(manifest.entries).length !== documents.length;
+    || Object.keys(manifest.entries).length !== documents.length
+    || documents.some((document) => manifest.entries[document.path]?.indexHash !== document.indexHash)
+    // A vector that was dropped and not replaced also changes the stored docs.
+    || documents.some((document) => (manifest.entries[document.path]?.embeddedHash ?? null) !== nextEntries[document.path]?.embeddedHash);
 
-  const embedded = new Set([...vectors.keys()].filter((key) => present.has(key)));
+  const embedded = new Set(
+    documents.filter((document) => nextEntries[document.path]?.embeddedHash !== null)
+      .map((document) => document.path),
+  );
 
-  let db: IssueIndex | null = contentChanged ? null : await restoreIndex(indexPath);
+  let db: IssueIndex | null = indexStale ? null : await restoreIndex(indexPath);
   if (db === null) {
     db = await buildIndex(documents, vectors);
     await fs.mkdir(directory, { recursive: true });
@@ -395,8 +447,10 @@ export async function refreshIndex(options: RefreshOptions): Promise<RefreshResu
  * `callback-box/docs` once `--docs` has pulled it in: dropping the corpus again
  * would delete vectors that were paid for, and re-adding it would pay twice.
  */
-export async function manifestPaths(repoRoot: string): Promise<string[]> {
-  const parsed = manifestSchema.safeParse(await readJson(path.join(indexDirectory(repoRoot), "manifest.json")));
+export async function manifestPaths(repoRoot: string, scope: IndexScope = "all"): Promise<string[]> {
+  const parsed = manifestSchema.safeParse(
+    await readJson(path.join(indexDirectory(repoRoot, scope), "manifest.json")),
+  );
   return parsed.success ? Object.keys(parsed.data.entries) : [];
 }
 
@@ -482,6 +536,13 @@ export async function runSearch(options: RunSearchOptions): Promise<IndexHit[]> 
   const common = { limit: fetchLimit, ...(where && Object.keys(where).length > 0 ? { where } : {}) };
   const term = options.term ?? "";
   const vector = options.vector;
+
+  if (mode !== "text" && vector === undefined) {
+    // Silently answering a semantic request with BM25 is the failure this
+    // whole layer exists to avoid; the caller resolves the mode, so reaching
+    // here without a vector is a programming error, not a degraded state.
+    throw new Error(`issues index: ${mode} search was called without a query vector`);
+  }
 
   let results: Results<IssueDoc>;
   if (mode === "text" || vector === undefined) {

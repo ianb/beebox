@@ -294,6 +294,88 @@ void test("rebuild discards the cache and pays for every embedding again", async
   assert.deepEqual(await fs.readdir(indexDirectory(root)), ["index.json", "manifest.json", "vectors.json"]);
 });
 
+void test("a frontmatter-only edit rebuilds the index but costs no embedding", async () => {
+  const root = await makeRepo();
+  const embeddings = createFakeEmbeddings();
+  await refreshIndex({ repoRoot: root, documents: await documentsFor(root), embeddings });
+
+  // `priority` is indexed and filterable but is not part of the embedded text,
+  // so the stale-index and stale-vector questions must answer differently.
+  const target = path.join(root, "issues", "bugs", "2026-02-10-composer-splices-drafts.md");
+  const before = await fs.readFile(target, "utf8");
+  await fs.writeFile(target, before.replace("workstream: unattached", "workstream: composer-fixes\npriority: backlog"));
+
+  const refreshed = await refreshIndex({ repoRoot: root, documents: await documentsFor(root), embeddings });
+  assert.equal(refreshed.embeddedThisRun, 0, "the embedded text did not change");
+  const stale = await runSearch({
+    db: refreshed.db, mode: "text", term: "composer", where: { priority: { eq: "uncategorized" } }, limit: 5,
+  });
+  assert.deepEqual(stale.map((hit) => hit.path), [], "the index no longer holds the old priority");
+  const fresh = await runSearch({
+    db: refreshed.db, mode: "text", term: "composer", where: { workstream: { eq: "composer-fixes" } }, limit: 5,
+  });
+  assert.deepEqual(fresh.map((hit) => hit.path), ["issues/bugs/2026-02-10-composer-splices-drafts.md"]);
+});
+
+void test("a text-only run drops the stale vector instead of adopting it", async () => {
+  const root = await makeRepo();
+  const embeddings = createFakeEmbeddings();
+  const first = await refreshIndex({ repoRoot: root, documents: await documentsFor(root), embeddings });
+  const target = "issues/bugs/2026-02-10-composer-splices-drafts.md";
+  const original = first.vectors.get(target);
+  assert.ok(original);
+
+  await fs.appendFile(path.join(root, "issues", "bugs", "2026-02-10-composer-splices-drafts.md"), "\nMore detail.\n");
+  // No embeddings service: the stored vector describes text that is now gone.
+  const offline = await refreshIndex({ repoRoot: root, documents: await documentsFor(root) });
+  assert.equal(offline.embedded.has(target), false, "the document reports as unembedded");
+  assert.equal(offline.vectors.has(target), false, "and the stale vector is gone, not re-labelled");
+
+  // The next run with a service re-embeds it — proof it was never marked current.
+  const online = await refreshIndex({ repoRoot: root, documents: await documentsFor(root), embeddings });
+  assert.equal(online.embeddedThisRun, 1);
+  assert.notDeepEqual(online.vectors.get(target), original);
+});
+
+void test("a failed embed leaves the document unembedded and says so", async () => {
+  const root = await makeRepo();
+  const failing = createFakeEmbeddings({ failTimes: 1 });
+  const refreshed = await refreshIndex({ repoRoot: root, documents: await documentsFor(root), embeddings: failing });
+  assert.equal(refreshed.embeddedThisRun, 0);
+  assert.equal(refreshed.embedded.size, 0);
+  assert.equal(refreshed.warnings.length, 1);
+  assert.match(refreshed.warnings[0] ?? "", /embedding failed/u);
+
+  const retried = await refreshIndex({ repoRoot: root, documents: await documentsFor(root), embeddings: failing });
+  assert.equal(retried.embeddedThisRun, 5, "a failure is retried, not remembered as done");
+});
+
+void test("the public scope keeps its own cache, so switching scopes re-embeds nothing", async () => {
+  const root = await makeRepo();
+  const embeddings = createFakeEmbeddings();
+  await refreshIndex({ repoRoot: root, documents: await documentsFor(root), embeddings, scope: "all" });
+  const publicRun = await refreshIndex({
+    repoRoot: root, documents: await documentsFor(root), embeddings, scope: "public",
+  });
+  assert.equal(publicRun.embeddedThisRun, 5, "a separate scope starts with its own empty cache");
+
+  const backToAll = await refreshIndex({
+    repoRoot: root, documents: await documentsFor(root), embeddings, scope: "all",
+  });
+  assert.equal(backToAll.embeddedThisRun, 0, "the full-corpus cache was not disturbed");
+});
+
+void test("vector modes refuse to run without a query vector", async () => {
+  const root = await makeRepo();
+  const refreshed = await refreshIndex({ repoRoot: root, documents: await documentsFor(root) });
+  for (const mode of ["semantic", "hybrid"] as const) {
+    await assert.rejects(
+      runSearch({ db: refreshed.db, mode, term: "calendar", limit: 5 }),
+      /without a query vector/u,
+    );
+  }
+});
+
 void test("without an embeddings service nothing is embedded and text search still answers", async () => {
   const root = await makeRepo();
   const refreshed = await refreshIndex({ repoRoot: root, documents: await documentsFor(root) });

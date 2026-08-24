@@ -356,8 +356,11 @@ it was seen, in what conditions), then apply whichever of these holds:
   didn't hold).
 - **`priority: backlog` or `normal` + re-encountered → the priority may be
   stale.** Do not change it (agents never set `priority:`); note the sighting
-  and set `next-action: discuss` with a one-line "re-encountered on <date>,
-  priority may be stale" so the developer sees it. `important` needs no note.
+  in the body with a one-line "re-encountered on <date>, priority may be
+  stale". If the issue carries no `next-action:`, set `next-action: discuss`
+  so the developer sees it; if it already carries one, leave that tag alone —
+  it is the developer's requested disposition, and the body note is enough.
+  `important` needs no note.
 - **Closed + re-encountered → reopen**, unless what you saw is genuinely a
   different defect: `git mv` back out of `closed/`, drop `resolution:`, and
   record what the original fix missed. A duplicate of a closed issue is only

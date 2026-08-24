@@ -125,13 +125,20 @@ async function isDirectory(target: string): Promise<boolean> {
  * Load every issue from `issues/`, plus `private-issues/` when that symlink is
  * mounted. An absent private mount is the normal state for a developer who has
  * not opted in, so it is silent rather than an error.
+ *
+ * `publicOnly` does not filter — it never READS the private queue. That is the
+ * difference that matters: a private issue that is merely filtered out of the
+ * results has still been loaded, indexed, and sent to an embeddings API.
  */
-export async function loadIssueEntries(repoRoot: string = REPO_ROOT): Promise<IssueEntry[]> {
+export async function loadIssueEntries(
+  repoRoot: string = REPO_ROOT,
+  options?: { publicOnly?: boolean },
+): Promise<IssueEntry[]> {
   const sources: { dir: string; label: string; visibility: Visibility }[] = [
     { dir: path.join(repoRoot, "issues"), label: "issues", visibility: "public" },
   ];
   const privateDir = path.join(repoRoot, "private-issues");
-  if (await isDirectory(privateDir)) {
+  if (options?.publicOnly !== true && await isDirectory(privateDir)) {
     sources.push({ dir: privateDir, label: "private-issues", visibility: "private" });
   }
   const entries: IssueEntry[] = [];

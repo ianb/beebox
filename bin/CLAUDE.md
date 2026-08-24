@@ -612,23 +612,34 @@ only closed, `--all` for both). Filters: `--category --area --label --workstream
 except `--label`, where repeats mean AND, since labels are how a cross-cutting
 effort is picked out.
 
-**The `.issues-index/` cache** at the repo root is gitignored and disposable: a
-persisted Orama index, the embedding vectors, and a manifest of
-`{ contentHash, hasEmbedding }` per file. Every run re-reads every issue (cheap)
-and re-embeds only files whose embedded text changed, in one batched call —
-so the manifest exists to answer the single question whose wrong answer costs
-money. `--rebuild` wipes it and pays for the whole corpus again. `--mode text`
-never touches the network, which is what makes the command usable with no key
-at all. The embeddings key is read from `CALLBACK_OPENAI_API_KEY`, then
-`THINKING_OPENAI_API_KEY`, then `SKE_OPENAI_API_KEY`; with none set, hybrid
-degrades to text with a one-line notice on stderr.
+**The `.issues-index/<scope>/` cache** at the repo root is gitignored and
+disposable: a persisted Orama index, the embedding vectors, and a manifest of
+`{ indexHash, embeddedHash }` per file. Every run re-reads every issue (cheap);
+the manifest answers only what re-reading cannot. The two hashes are separate on
+purpose — `indexHash` covers every indexed field, so a frontmatter-only edit
+rebuilds the index (otherwise a `where:` filter would keep matching the old
+`workstream`/`needs`/`priority`) while costing nothing in embeddings;
+`embeddedHash` records the text the stored vector was actually computed from, so
+a run that cannot embed drops the stale vector instead of adopting it under the
+new hash. Re-embedding is one batched call. `--rebuild` wipes the cache and pays
+for the whole corpus again.
+
+`--mode text` never touches the network, which is what makes the command usable
+with no key at all. `--mode hybrid` and `--mode semantic` are assertions that
+BM25 will not do, so they **error** when there is no key or the corpus is not
+fully embedded; only the unspecified default degrades to text, and it says so on
+stderr. The key is read from `CALLBACK_OPENAI_API_KEY`, then
+`THINKING_OPENAI_API_KEY`, then `SKE_OPENAI_API_KEY`.
 
 **Private issues are indexed too**, which means their text is sent to OpenAI to
 be embedded, and their bodies sit in the local cache. Both are consistent with
 where private issues already live (a local repo on the developer's machine, read
-by agents that call hosted models), but it is a real egress: use `--mode text` if
-a particular queue should never leave the machine, and `--visibility public` to
-keep private items out of a result set.
+by agents that call hosted models), but it is a real egress. `--visibility
+public` is the control: it selects the separate `public` cache and never reads
+the private queue at all, so nothing private is loaded, indexed, or embedded on
+that run — the scopes get their own directories precisely so alternating between
+them does not look like every entry vanished and re-appeared. `--mode text`
+avoids the network entirely.
 
 ## Private-issues shadow repo (`private-issues`)
 

@@ -22,7 +22,8 @@ import {
 } from "./lib/issues-model.js";
 import {
   DOCS_SUBDIR, EMBEDDING_KEY_VARS, issueDocument, loadDocDocuments, manifestPaths, refreshIndex,
-  resolveEmbeddingsService, runSearch, type IndexDocument, type IndexHit, type SearchMode,
+  resolveEmbeddingsService, runSearch,
+  type IndexDocument, type IndexHit, type IndexScope, type SearchMode,
 } from "./lib/issues-index.js";
 
 const USAGE = `bin/issues — survey and search the issue queue
@@ -39,12 +40,15 @@ Filters: --category --area --label --workstream --discovered-in --needs
          --visibility <public|private>
   Repeats mean OR within a filter and AND across filters; --label repeats mean AND.
 groups:  --by ${GROUP_KEYS.join("|")}  --min N (default 2)
-search:  --mode text|hybrid|semantic (default hybrid when a key is available)
+search:  --mode text|hybrid|semantic — text is BM25 and offline; hybrid and semantic
+         need a key AND a fully embedded corpus, and ERROR when either is missing.
+         With no --mode, hybrid is tried and falls back to text with a stderr notice.
 similar: --docs  also rank ${DOCS_SUBDIR}/**/*.md as prior art
 Common:  --json  --limit N  --rebuild (discard .issues-index/ first)
 
 Embeddings key, first match wins: CALLBACK_OPENAI_API_KEY, THINKING_OPENAI_API_KEY,
 SKE_OPENAI_API_KEY. Without one, only --mode text works (and it never uses the network).
+--visibility public never reads private-issues at all, so nothing private is embedded.
 `;
 
 const RESEARCH_STATES = ["awaiting", "researched", "none"] as const;
@@ -195,12 +199,31 @@ function emitJson(value: unknown): void {
 
 // ─── Index plumbing ──────────────────────────────────────────────────────────
 
-async function buildDocuments(entries: IssueEntry[], includeDocs: boolean): Promise<IndexDocument[]> {
-  const documents = entries.map((entry) => issueDocument(entry));
+/**
+ * `--visibility public` selects the public-only cache, so the private queue is
+ * never read, indexed, or embedded for that run. Every other run uses the full
+ * one; `--visibility private` still narrows by filter, since the private issues
+ * have to be loaded to be returned at all.
+ */
+function scopeFor(filters: IssueFilters): IndexScope {
+  return filters.visibility === "public" ? "public" : "all";
+}
+
+function publicOnly(filters: IssueFilters): { publicOnly: boolean } {
+  return { publicOnly: filters.visibility === "public" };
+}
+
+async function buildDocuments(input: {
+  entries: IssueEntry[];
+  includeDocs: boolean;
+  scope: IndexScope;
+}): Promise<IndexDocument[]> {
+  const documents = input.entries.map((entry) => issueDocument(entry));
   // Once `--docs` has pulled the design docs in, keep refreshing them: dropping
   // the corpus would discard vectors already paid for.
-  const alreadyIndexed = (await manifestPaths(REPO_ROOT)).some((p) => p.startsWith(`${DOCS_SUBDIR}/`));
-  if (includeDocs || alreadyIndexed) documents.push(...(await loadDocDocuments(REPO_ROOT)));
+  const indexed = await manifestPaths(REPO_ROOT, input.scope);
+  const alreadyIndexed = indexed.some((entryPath) => entryPath.startsWith(`${DOCS_SUBDIR}/`));
+  if (input.includeDocs || alreadyIndexed) documents.push(...(await loadDocDocuments(REPO_ROOT)));
   return documents;
 }
 
@@ -254,24 +277,40 @@ async function openIndex(input: {
   values: ParsedValues;
   requestedMode: SearchMode | null;
   includeDocs: boolean;
+  filters: IssueFilters;
+  /** False for `similar`, whose ranking cannot fall back to BM25. */
+  textFallbackOffered?: boolean;
 }): Promise<IndexContext> {
-  const { values, requestedMode, includeDocs } = input;
-  const entries = await loadIssueEntries(REPO_ROOT);
-  const documents = await buildDocuments(entries, includeDocs);
+  const { values, requestedMode, includeDocs, filters } = input;
+  const scope = scopeFor(filters);
+  const entries = await loadIssueEntries(REPO_ROOT, { publicOnly: scope === "public" });
+  const documents = await buildDocuments({ entries, includeDocs, scope });
+
+  // Mode resolution, in one place. An EXPLICIT --mode hybrid|semantic is a
+  // statement that BM25 will not do, so it fails loudly rather than quietly
+  // answering a different question; only the unspecified default degrades, and
+  // it says so on stderr. --mode text never resolves a key and never embeds.
   const service = requestedMode === "text" ? null : resolveEmbeddingsService();
-  let mode: SearchMode = requestedMode ?? "hybrid";
-  // The notice fires for the DEFAULT too, not only for an explicit --mode
-  // hybrid: silently answering a semantic question with BM25 is the failure
-  // mode worth a line of stderr.
-  if (mode !== "text" && service === null) {
+  // `similar` asks for semantic ranking itself, so "use --mode text instead" is
+  // advice only the person who typed --mode can take.
+  const textIsAnOption = input.textFallbackOffered !== false;
+  if (requestedMode !== null && requestedMode !== "text" && service === null) {
+    throw new UsageError(
+      `${requestedMode} ranking needs an embeddings key (set one of ${EMBEDDING_KEY_VARS.join(", ")})`
+      + (textIsAnOption ? "; --mode text ranks with BM25 and never uses the network" : ""),
+    );
+  }
+  let mode: SearchMode = service === null ? "text" : (requestedMode ?? "hybrid");
+  if (service === null && requestedMode === null) {
     process.stderr.write(
       `issues: no embeddings key set (${EMBEDDING_KEY_VARS.join(", ")}); falling back to --mode text\n`,
     );
-    mode = "text";
   }
+
   const refreshed = await refreshIndex({
     repoRoot: REPO_ROOT,
     documents,
+    scope,
     embeddings: service,
     ...(values.rebuild === true ? { rebuild: true } : {}),
   });
@@ -279,10 +318,22 @@ async function openIndex(input: {
   if (refreshed.embeddedThisRun > 0) {
     process.stderr.write(`issues: embedded ${String(refreshed.embeddedThisRun)} changed document(s)\n`);
   }
-  if (mode !== "text" && refreshed.embedded.size === 0) {
-    process.stderr.write("issues: nothing is embedded yet; falling back to --mode text\n");
+
+  // Vector ranking over a half-embedded corpus ranks against placeholder
+  // vectors (hybrid) or silently omits documents (semantic) — either way the
+  // result is not the search that was asked for.
+  const missing = documents.length - refreshed.embedded.size;
+  if (mode !== "text" && missing > 0) {
+    const detail = `${String(missing)} of ${String(documents.length)} document(s) are not embedded`;
+    if (requestedMode !== null) {
+      throw new UsageError(`${requestedMode} ranking needs the whole corpus embedded — ${detail}. `
+        + "Re-run to finish embedding (stderr above says why it stopped)"
+        + (textIsAnOption ? ", or use --mode text" : ""));
+    }
+    process.stderr.write(`issues: ${detail}; falling back to --mode text\n`);
     mode = "text";
   }
+
   return { entries, byPath: new Map(entries.map((entry) => [entry.path, entry])), refreshed, mode };
 }
 
@@ -308,7 +359,7 @@ function resolveEntry(entries: IssueEntry[], needle: string): IssueEntry {
 
 async function commandList(values: ParsedValues): Promise<void> {
   const filters = buildFilters(values);
-  const entries = filterIssues(await loadIssueEntries(REPO_ROOT), filters)
+  const entries = filterIssues(await loadIssueEntries(REPO_ROOT, publicOnly(filters)), filters)
     .toSorted((a, b) => (b.date ?? "").localeCompare(a.date ?? "") || a.path.localeCompare(b.path));
   const limit = positiveInt(values.limit, 0, "--limit");
   const shown = limit > 0 ? entries.slice(0, limit) : entries;
@@ -326,7 +377,8 @@ async function commandGroups(values: ParsedValues): Promise<void> {
   const by: GroupKey = oneOf(values.by, GROUP_KEYS, "--by");
   const min = positiveInt(values.min, 2, "--min");
   const filters = buildFilters(values);
-  const groups = groupIssues(filterIssues(await loadIssueEntries(REPO_ROOT), filters), by, min);
+  const loaded = await loadIssueEntries(REPO_ROOT, publicOnly(filters));
+  const groups = groupIssues(filterIssues(loaded, filters), by, min);
   if (values.json === true) {
     emitJson({ by, min, groups });
     return;
@@ -344,7 +396,7 @@ async function commandSearch(values: ParsedValues, positionals: string[]): Promi
   const requestedMode = values.mode === undefined ? null : oneOf(values.mode, SEARCH_MODES, "--mode");
   const includeDocs = values.docs === true;
   const filters = buildFilters(values);
-  const context = await openIndex({ values, requestedMode, includeDocs });
+  const context = await openIndex({ values, requestedMode, includeDocs, filters });
   const limit = positiveInt(values.limit, 20, "--limit");
   const queryVector = context.mode === "text"
     ? undefined
@@ -374,11 +426,12 @@ async function commandSimilar(values: ParsedValues, positionals: string[]): Prom
   if (needle === undefined) throw new UsageError("similar needs an issue path");
   const includeDocs = values.docs === true;
   const filters = buildFilters(values);
-  const context = await openIndex({ values, requestedMode: "semantic", includeDocs });
+  // `similar` is semantic by construction, so it takes the explicit path: no
+  // key, or a half-embedded corpus, is an error rather than a BM25 answer.
+  const context = await openIndex({
+    values, requestedMode: "semantic", includeDocs, filters, textFallbackOffered: false,
+  });
   const target = resolveEntry(context.entries, needle);
-  if (context.mode === "text") {
-    throw new UsageError("similar needs embeddings; set an OpenAI key (see --help) and re-run");
-  }
   const vector = context.refreshed.vectors.get(target.path);
   if (vector === undefined) throw new UsageError(`${target.path} has no stored embedding`);
   const limit = positiveInt(values.limit, 20, "--limit");

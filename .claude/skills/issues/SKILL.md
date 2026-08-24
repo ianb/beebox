@@ -50,9 +50,9 @@ don't file trivia you'd be embarrassed to see triaged.
    `workstream:` to a bare workstream name only when that workstream explicitly
    takes responsibility for resolving the issue. Never use the backfill-only
    `unknown` sentinel for a new issue.
-   Add `priority: important` only when the issue deserves prominent review, or
-   `priority: backlog` when it is intentionally deprioritized. Omit the field
-   when nobody has categorized its priority yet; omission does not mean normal.
+   Leave `priority:` off — it is the developer's field (`issues/CLAUDE.md`);
+   write it only when they have stated a priority. Omission means
+   uncategorized, not normal.
 5. Private issues are a separate repo — commit them from *inside*
    `private-issues/`, never `git add -A` at the monorepo root.
 
