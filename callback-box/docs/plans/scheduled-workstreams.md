@@ -1,6 +1,6 @@
 ---
 title: "Scheduled workstreams: one scheduler, a run script as the head, alerts as durable records"
-status: draft
+status: active
 workstream: scheduled-task-voice
 issues:
   - ../../../issues/features/2026-08-12-monitor-message-queue.md
@@ -630,14 +630,10 @@ decision noted in Track E and NOT in scope.
 
 ## Open design questions
 
-- **Headless by default.** Plan chooses headless (`claude -p`) with `resume`
-  as the way in. Alternative: `important` opens a Terminal tab at once.
-  Lean: headless; a tab appearing unbidden at 03:00 is not helpful.
-- **Where cadence lives.** Plan: `schedule.yaml` only; `docs/maintenance.md`
-  points at `bin/schedules list`. Lean firm.
-- **Should `sdk-update` stay `persistent`?** Migrated as-is (persistent) to
-  keep today's contract; switching to `fresh` (ledger as memory) is a later
-  observation, not a migration decision.
+None open. Settled by the boxholder on 2026-08-24: runner-started sessions
+are headless and `resume` is the way in; `sdk-update` keeps a persistent
+session; `schedule.yaml` is the canonical cadence and
+`docs/maintenance.md` shrinks to a pointer at `bin/schedules list`.
 
 ## Knowledge audits
 
