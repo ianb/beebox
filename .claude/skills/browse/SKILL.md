@@ -258,6 +258,7 @@ in one session is not visible in another.
 - **`browse: @e8 may be stale — …`** — that number meant something else in the snapshot before last. If the action's effect is not what you expected, that is why; act by id where the line shows one.
 - **`✗ … refused: covered — … is under …`** — something (an overlay, a toast, a menu) sits on top of the control. That is usually a real finding about the app; report it rather than working around it.
 - **`browse: page has no window.__cbUiScan`** — the frontend on this page predates the hook (or it is not the app). Ids are not shown; refs still work.
+- **`text=…` and XPath targets say "Element not found"** even when the element is there — upstream's CDP engine does not resolve those forms (0.27.0), whatever its `--help` says. Use a `cb-` id, a ref, or CSS.
 - **Refs from a prior snapshot don't work** — page changed (navigation, viewport, dialog). Re-snapshot.
 - **You land on `/auth/login`** — work [Auth](#auth-why-a-navigation-lands-on-the-login-page) in order. Usually a box slug written into the path, or a request for an owner-session-only surface — not a bad key.
 - **You navigated somewhere you didn't ask for** — check `bin/browse get url` before concluding anything about the page. A path that resolves to no route redirects rather than erroring, so a typo reads as "the app is behaving strangely."

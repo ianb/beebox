@@ -9,7 +9,7 @@ in that file's header; this exercises the contract.
 ```ts setup
 import assert from "node:assert/strict";
 import {
-  annotateSnapshot, applyLiveIds, judgeBox, parseCheckResult, parseTarget, refRenumbered, upstreamSelector,
+  annotateSnapshot, applyLiveIds, boxCenter, judgeBox, parseCheckResult, parseTarget, refRenumbered, upstreamSelector,
 } from "../../../browse/src/controls.js";
 
 const SNAPSHOT = [
@@ -40,11 +40,14 @@ const ENTRIES = [
 assert.deepEqual(parseTarget("cb-nav-profile"), { kind: "id", id: "cb-nav-profile" });
 assert.deepEqual(parseTarget("#cb-nav-profile"), { kind: "id", id: "cb-nav-profile" });
 assert.deepEqual(parseTarget("@e12"), { kind: "ref", ref: "e12" });
-assert.deepEqual(parseTarget("button.primary"), { kind: "selector", selector: "button.primary" });
-assert.deepEqual(parseTarget("#password-current"), { kind: "selector", selector: "#password-current" });
-assert.deepEqual(parseTarget("cb-Nav"), { kind: "selector", selector: "cb-Nav" });
+assert.deepEqual(parseTarget("button.primary"), { kind: "css", selector: "button.primary" });
+assert.deepEqual(parseTarget("#trash-card-title"), { kind: "css", selector: "#trash-card-title" });
+assert.deepEqual(parseTarget("cb-Nav"), { kind: "css", selector: "cb-Nav" }, "not an address: bad case");
+assert.deepEqual(parseTarget("//button[@type='submit']"), { kind: "opaque", selector: "//button[@type='submit']" });
+assert.deepEqual(parseTarget("text=Send"), { kind: "opaque", selector: "text=Send" });
 assert.equal(upstreamSelector({ kind: "id", id: "cb-x" }), "#cb-x");
 assert.equal(upstreamSelector({ kind: "ref", ref: "e3" }), "@e3");
+assert.equal(upstreamSelector({ kind: "opaque", selector: "text=Send" }), "text=Send");
 ```
 
 ## Annotate: unique role+name matches get their id appended; ambiguous and unnamed-by-this-engine do not
@@ -92,6 +95,7 @@ assert.match(refRenumbered(heading, user) ?? "", /named heading "Chat" .* names 
 ```ts
 assert.deepEqual(parseCheckResult('"{\\"ok\\":true,\\"scrolled\\":false}"'), { ok: true, scrolled: false });
 assert.deepEqual(parseCheckResult('{"ok":false,"reason":"disabled","detail":"button#cb-composer-send"}'), { ok: false, reason: "disabled", detail: "button#cb-composer-send" });
+assert.deepEqual(parseCheckResult('"{\\"ok\\":true,\\"scrolled\\":true,\\"clickAt\\":{\\"x\\":12.5,\\"y\\":40}}"'), { ok: true, scrolled: true, clickAt: { x: 12.5, y: 40 } });
 assert.equal(parseCheckResult("undefined").ok, false);
 assert.equal(parseCheckResult("").ok, false);
 assert.equal(parseCheckResult('"true"').ok, false);
@@ -105,4 +109,6 @@ assert.equal(judgeBox({ x: 10, y: 10, width: 0, height: 20 }, vp).ok, false);
 assert.equal(judgeBox({ x: -9999, y: 10, width: 50, height: 20 }, vp).ok, false);
 assert.equal(judgeBox({ x: 10, y: 900, width: 50, height: 20 }, vp).ok, false);
 assert.equal(judgeBox({ x: 1084, y: 513, width: 56, height: 56 }, vp).ok, true);
+assert.deepEqual(boxCenter({ x: 1084, y: 513, width: 56, height: 56 }, vp), { x: 1112, y: 541 });
+assert.deepEqual(boxCenter({ x: 1270, y: 790, width: 40, height: 40 }, vp), { x: 1279, y: 799 }, "clamped into the viewport");
 ```

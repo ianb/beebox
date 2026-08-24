@@ -47,7 +47,7 @@ export function PasswordSection() {
     if (newPassword.length < 8) nextErrors.next = "Use at least 8 characters.";
     if (newPassword !== confirmPassword) nextErrors.confirm = "Passwords do not match.";
     setErrors(nextErrors);
-    const first = nextErrors.current ? "password-current" : nextErrors.next ? "password-new" : nextErrors.confirm ? "password-confirm" : null;
+    const first = nextErrors.current ? "cb-settings-password-current" : nextErrors.next ? "cb-settings-password-new" : nextErrors.confirm ? "cb-settings-password-confirm" : null;
     if (first) {
       document.querySelector<HTMLInputElement>(`#${first}`)?.focus();
       return;
@@ -62,7 +62,7 @@ export function PasswordSection() {
       });
       if (!response.ok) {
         setErrors({ current: response.status === 401 ? "Current password could not be verified." : "Password could not be changed." });
-        document.querySelector<HTMLInputElement>("#password-current")?.focus();
+        document.querySelector<HTMLInputElement>("#cb-settings-password-current")?.focus();
         return;
       }
       setCurrentPassword("");
