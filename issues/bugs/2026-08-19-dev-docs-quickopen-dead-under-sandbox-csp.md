@@ -10,7 +10,7 @@ next-action: reconfirm
 ---
 > **⏳ Awaiting manual testing** — fix landed in `worktree-workstream-story`:
 > the `/dev/` sandbox CSP was removed entirely (boxholder decision, see
-> [dev md images broken](2026-08-19-dev-md-images-broken-opaque-origin.md)),
+> [dev md images broken](../closed/bugs/2026-08-19-dev-md-images-broken-opaque-origin.md)),
 > which un-blocks the quick-open script. After merge + router restart, Cmd-P
 > in `/main/dev/docs/` should open the palette. Only the developer clears this.
 

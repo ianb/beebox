@@ -40,7 +40,7 @@ Two `reconfirm` issues could not be settled today for this reason alone, both
 of which are *about* `/dev/` and both of which are one browser action to check:
 
 - [Doc browser's Cmd-P quick-open is dead under the sandbox CSP](../bugs/2026-08-19-dev-docs-quickopen-dead-under-sandbox-csp.md)
-- [Images in rendered /dev markdown are broken](../bugs/2026-08-19-dev-md-images-broken-opaque-origin.md)
+- [Images in rendered /dev markdown are broken](../closed/bugs/2026-08-19-dev-md-images-broken-opaque-origin.md)
 
 The code side of both is verifiable and verified: the sandbox CSP was removed
 2026-08-19 and the running router restarted 2026-08-24 06:39, well after. What
