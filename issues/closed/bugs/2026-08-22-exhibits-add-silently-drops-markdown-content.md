@@ -1,10 +1,11 @@
 ---
 title: "bin/exhibits add accepts a .md file and renders an exhibit with no content"
-workstream: unattached
+workstream: streams-and-issues
 area: bin
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — exhibiting a proposal doc for review
 priority: normal
+resolution: implemented
 ---
 
 `bin/exhibits add … doc.md` copies the file into the exhibit directory under its
@@ -31,3 +32,15 @@ Two candidate behaviours, either better than the current silence:
 
 The second generalises better: the same silent drop presumably applies to any
 file type that is neither an image nor a page.
+
+## Resolution
+
+One `.md` or `.markdown` argument now lands as the canonical `doc.md` that the
+default renderer consumes. The CLI refuses multiple Markdown documents before
+creating the exhibit directory, and its progress line reports `document:
+true|false` alongside the figure count. Arbitrary non-document sibling files
+remain supported as assets for custom `index.html`/`index.tsx` pages.
+
+The existing CLI doctest now verifies the mixed document-plus-figures path,
+the rendered filename, the progress diagnostic, and the fail-closed
+multiple-document case.
