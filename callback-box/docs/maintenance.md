@@ -20,7 +20,7 @@ A second category catches the kind of code-health issues that pile up if nobody 
 | Prompt report | `pnpm prompt-report` | After prompt or schema-instruction changes | `docs/prompts.md` |
 | Prompt viewer | `pnpm prompt-viewer` | After prompt or schema-instruction changes | `dev/prompts/data.json` + size ledger (browse at `/<worktree>/dev/prompts/`) |
 | Doc graph | `pnpm doc-graph` | After restructuring docs | `docs/doc-graph.md` |
-| Dead-code sweep | `pnpm lint:knip` | Before releases; when code feels accumulated | Console |
+| Dead-code sweep | `pnpm lint:knip` | Weekly (manual until the scheduler exists) | Console |
 | Supplemental lint | `pnpm lint:oxlint` | Periodic | Console |
 | Circular deps | `pnpm lint:circular` | After big refactors | Console |
 | Security regression scan | `pnpm security:opengrep` (monorepo root) | Before releases; when touching auth/subprocess/temp/prompt boundaries | Console (`--sarif` for a file) |
