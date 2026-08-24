@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-public-site — box-authored site page experiment
+priority: important
 ---
 
 Every box-local schema imports `zod`, but a fresh box package's
