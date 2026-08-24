@@ -1,11 +1,18 @@
 ---
 title: "Chat-send start polling doctests flake under full-suite load"
-workstream: unattached
+workstream: node-env-production
 area: callback-box
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-node-env-production — finish suite rerun after main advanced
+resolution: implemented
 ---
+
+Closed 2026-08-24. Both doctests now wait on the operation's own completion
+signal instead of a ten-second polling deadline, and they finish background
+session work before tearing down their test boxes. The focused tests, a
+40-execution contention run, lint, typecheck, and the full callback-box suite
+passed.
 
 Two chat-send doctests can exhaust their polling window before asynchronous
 session startup publishes the expected state under full-suite load.
@@ -29,3 +36,12 @@ The tests already poll, but their bounded wait is not sufficient under suite
 contention. Investigate a deterministic readiness signal or a poll condition
 that follows the operation's actual completion boundary. Do not solve this by
 adding a larger fixed delay.
+
+## Resolution
+
+`chat-send-fast-ack.doctest.md` exposes a promise that resolves when the real
+patched send operation settles. `chat-send-run-start-failure.doctest.md` waits
+on `TurnBuffer` version changes for turn completion and yields to the fake
+backend until its run is observable. Successful and gated sends are also
+allowed to settle before test-box cleanup, eliminating teardown races with
+background document generation.

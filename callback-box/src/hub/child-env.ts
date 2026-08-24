@@ -47,12 +47,6 @@ const CHILD_ENV_ALLOWLIST: readonly string[] = [
   "TMPDIR",
   "TEMP",
   "TMP",
-  // Temporary compatibility control for older box-pinned engines. Current
-  // engines do not use NODE_ENV for security-sensitive webapp decisions.
-  // TODO: remove after every pinned engine is upgraded/backported and the
-  // rollout in issues/bugs/2026-08-21-trpc-errors-return-a-server-stack-trace.md
-  // no longer depends on the production systemd override.
-  "NODE_ENV",
   "CB_DEV_SURFACES", // Explicit local-only route/test-facility opt-in.
   "TZ",
   "LANG",

@@ -21,6 +21,7 @@ import type { BusEvent } from "../../src/core/event-bus.js";
  */
 interface SendGate {
   entered: Promise<void>;
+  completed: Promise<void>;
   release: () => void;
   restore: () => void;
 }
@@ -31,25 +32,23 @@ function openSendGate(): SendGate {
   const entered = new Promise<void>((resolve) => { markEntered = () => resolve(); });
   let letGo = (): void => {};
   const held = new Promise<void>((resolve) => { letGo = () => resolve(); });
+  let markCompleted = (): void => {};
+  const completed = new Promise<void>((resolve) => { markCompleted = () => resolve(); });
   ChatSession.prototype.send = async function patched(message: Parameters<typeof original>[0]) {
     markEntered();
     await held;
-    return original.call(this, message);
+    try {
+      return await original.call(this, message);
+    } finally {
+      markCompleted();
+    }
   };
   return {
     entered,
+    completed,
     release: () => letGo(),
     restore: () => { ChatSession.prototype.send = original; },
   };
-}
-
-/** Wait until the fake backend has opened its first run, or give up. */
-async function awaitFirstRun(hasRun: () => boolean): Promise<boolean> {
-  for (let attempt = 0; attempt < 2000; attempt += 1) {
-    if (hasRun()) return true;
-    await new Promise((resolve) => { setTimeout(resolve, 5); });
-  }
-  return false;
 }
 ```
 
@@ -82,7 +81,8 @@ subscribed to — no frame is lost, because the buffer was wired before the ack.
 
 ```ts continue
 gate.release();
-const started = await awaitFirstRun(() => backend.runs.length > 0);
+await gate.completed;
+const started = backend.runs.length > 0;
 
 `started=${started} | errored=${getTurnBuffer(String(res.body.turnId))?.errored}`
 => started=true | errored=null
@@ -131,6 +131,7 @@ const live = getTurnBuffer(String(res.body.turnId));
 
 ```ts cleanup
 gate.release();
+await gate.completed;
 gate.restore();
 await ctx.cleanup();
 ```

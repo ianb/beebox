@@ -1,12 +1,19 @@
 ---
 title: "tRPC error responses carry a server stack trace, and the deploy never sets NODE_ENV=production"
 workstream: node-env-production
-design: ../../callback-box/docs/plans/webapp-production-mode.md
+design: ../../../callback-box/docs/implemented-plans/webapp-production-mode.md
 area: callback-box
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — reading a 403 from the settings page in the browser network panel
+resolution: implemented
 ---
+
+Closed 2026-08-24. The fail-closed implementation shipped, every currently
+served box resolves to the guarded shared engine, the temporary systemd
+override was retired, and authenticated production canaries confirmed the
+development-only routes and tRPC diagnostics remain closed with both control
+variables unset.
 
 A tRPC error response body includes a full server stack trace with absolute
 filesystem paths, readable in the browser. Observed on a `FORBIDDEN`
@@ -86,7 +93,7 @@ all four security decisions from `NODE_ENV`, stops current engines from
 passing it to agent/scripts, upgrades or backports the pinned engines, and
 then removes the drop-in.
 
-## Durable implementation checkpoint (2026-08-23)
+## Durable implementation and rollout (2026-08-24)
 
 Commit `be218b9d` defaults development surfaces off and enables them only
 with the strict `CB_DEV_SURFACES=1` launcher opt-in. tRPC explicitly disables
@@ -97,7 +104,10 @@ its HMR policy. Mock TTS is rejected before provider lookup unless development
 surfaces are enabled.
 
 The implementation's focused tests, 7,723 callback-box assertions, and 206
-root assertions are green. This issue remains open as the rollout punch-list:
-every separately pinned engine must be upgraded or backported, the temporary
-`NODE_ENV` bridge and systemd drop-in must be removed, and the filtered
-production canaries must then be repeated.
+root assertions were green when it shipped. A later filtered inventory found
+six served boxes on the shared guarded engine and no separately pinned engine.
+The temporary systemd override was then retired, leaving both `NODE_ENV` and
+`CB_DEV_SURFACES` unset in the hub process. Authenticated production canaries
+confirmed `/api/external` and an unknown tRPC procedure return 404, tRPC data
+contains no stack, mock TTS is rejected, and the built-app CSP remains the
+report-only production policy.

@@ -75,12 +75,9 @@ const sourceEnv = {
 
 const env = buildChildEnv({ sourceEnv, hubExtras: { CB_HUB_SECRET: "per-boot-hub-secret" } });
 
-// NODE_ENV is temporary compatibility for older pinned engines, not a durable
-// webapp-mode control. See the removal condition in child-env.ts.
 JSON.stringify({
   path: env.PATH,
   home: env.HOME,
-  nodeEnv: env.NODE_ENV,
   devSurfaces: env.CB_DEV_SURFACES,
   publicUrl: env.PUBLIC_URL,
   authFile: env.CB_AUTH_FILE,
@@ -94,11 +91,14 @@ JSON.stringify({
   geminiKey: env.GEMINI_KEY,
   hubSecret: env.CB_HUB_SECRET,
 })
-=> {"path":"/usr/bin:/bin","home":"/home/callback","nodeEnv":"production","devSurfaces":"1","publicUrl":"https://cb.example.org","authFile":"/home/callback/.cb-auth.json","diagKey":"diag-key-value","tokensFile":"/home/callback/.google-tokens.json","thinkingKey":"sk-thinking-value","googleClientId":"app-oauth-client-id","googleClientSecret":"app-oauth-client-secret","deepgramApiKey":"dg-api-key-value","deepgramProject":"dg-project-value","geminiKey":"gemini-key-value","hubSecret":"per-boot-hub-secret"}
+=> {"path":"/usr/bin:/bin","home":"/home/callback","devSurfaces":"1","publicUrl":"https://cb.example.org","authFile":"/home/callback/.cb-auth.json","diagKey":"diag-key-value","tokensFile":"/home/callback/.google-tokens.json","thinkingKey":"sk-thinking-value","googleClientId":"app-oauth-client-id","googleClientSecret":"app-oauth-client-secret","deepgramApiKey":"dg-api-key-value","deepgramProject":"dg-project-value","geminiKey":"gemini-key-value","hubSecret":"per-boot-hub-secret"}
 ```
 
 ```ts continue
 "CB_SESSION_SECRET" in env
+=> false
+
+"NODE_ENV" in env
 => false
 
 "GOOGLE_OAUTH_CLIENT_ID" in env

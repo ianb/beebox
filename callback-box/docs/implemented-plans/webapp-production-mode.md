@@ -1,9 +1,9 @@
 ---
 title: "Fail-closed webapp development surfaces and tRPC errors"
-status: partial
+status: implemented
 workstream: node-env-production
 issues:
-  - ../../../issues/bugs/2026-08-21-trpc-errors-return-a-server-stack-trace.md
+  - ../../../issues/closed/bugs/2026-08-21-trpc-errors-return-a-server-stack-trace.md
 ---
 
 # Fail-closed webapp development surfaces and tRPC errors
@@ -16,12 +16,12 @@ fail-closed process flag.
 
 ## Implementation status
 
-Tracks 1–3 are implemented in `be218b9d`: tRPC errors are sanitized,
+Tracks 1–3 were implemented in `be218b9d`: tRPC errors are sanitized,
 development surfaces require the explicit opt-in, Fastify owns the built-app
 CSP, and the corresponding tests and documentation are in place. Track 0 is
-partial: the approved containment is active, but separately pinned engines
-still need an upgrade or backport before the temporary systemd override can be
-removed. The linked issue remains the rollout punch-list.
+complete: every currently served box resolves to the guarded shared engine,
+the temporary systemd override is retired, and production canaries pass with
+both `NODE_ENV` and `CB_DEV_SURFACES` unset.
 
 ## Stated preferences this plan trades against
 
@@ -95,7 +95,7 @@ removed. The linked issue remains the rollout punch-list.
 
 ## Tracks / scope
 
-### Track 0 — Reversible production containment (partial)
+### Track 0 — Reversible production containment (implemented)
 
 **What.** With separate, explicit boxholder approval, add a systemd drop-in to
 the live `callback-hub` unit containing `Environment=NODE_ENV=production`, then
