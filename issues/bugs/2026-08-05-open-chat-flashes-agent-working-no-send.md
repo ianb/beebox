@@ -1,6 +1,6 @@
 ---
 title: "Opening an existing chat briefly flashes 'Agent is working' with no message sent (web + iOS)"
-workstream: unknown
+workstream: emission-model
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder opened a landmark's most-recent chat
