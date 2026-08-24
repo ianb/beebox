@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-connector-sync-isolation — running the new Drive lifecycle knowledge audit
+priority: normal
 ---
 
 The knowledge audit can complete its agent check and then fail the entire command while it records context history. `loadHistory` in `callback-box/src/dev/lib/context-history.ts` parses the complete committed ledger with one strict Zod schema. One existing `points-at-ui-path-vs-control` entry in `callback-box/src/dev/context-history.yaml` has `initial` and `peak` but no `added` or `turns`. The parser rejects that entry, so it prevents a new, unrelated audit measurement from being recorded.

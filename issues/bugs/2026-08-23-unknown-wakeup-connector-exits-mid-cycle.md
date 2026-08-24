@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-connector-sync-isolation — independent review of wakeup failure signaling
+priority: normal
 ---
 
 `runConnectors` calls `process.exit(1)` when `cb wakeup --connector <name>` does not match a configured connector. The wakeup command has already run its first phases at that point, but the immediate exit skips stale-job cleanup, intake processing, index refresh, reactor work, and the final Git push.

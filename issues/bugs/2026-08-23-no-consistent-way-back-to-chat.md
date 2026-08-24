@@ -6,6 +6,7 @@ labels: [navigation, mobile, ios, ui]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder stuck on a card page on iOS
+priority: important
 ---
 
 Getting from chat into a card or the browse view is easy and has several

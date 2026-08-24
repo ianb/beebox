@@ -4,6 +4,7 @@ workstream: points-at-ui
 area: ios-app
 filed-by: agent
 discovered-in: worktree-points-at-ui — while making the chat `channel` client-sent
+priority: important
 ---
 
 `ShareExtensionAPI.swift:84` posts to `/api/chat/send` without a `channel`
