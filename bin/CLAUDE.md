@@ -373,7 +373,10 @@ Vite app in the top-level `workstreams-app/` package. The router authenticates,
 supervises, and proxies it; the app invokes the stable `bin/workstreams` CLI
 instead of reimplementing lifecycle guards. It exposes joined status and safe
 actions, with `/workstreams/issues/`, `/workstreams/plans/`, and
-`/workstreams/testing/` beneath it. App source changes landed in main reload the
+`/workstreams/testing/` beneath it. An open issue ends with a **Related** list —
+nearest issues (open and closed) and design docs, the same ranking as
+`bin/issues similar --all --docs` (see that section for the shared library and
+the key it needs). App source changes landed in main reload the
 app child without restarting the router. Router or supervisor changes still
 require one boxholder-run `pnpm dev` restart after merge. Never restart the
 shared router from a worktree session.
@@ -594,6 +597,18 @@ issue is — and adds two derived fields the frontmatter does not carry: `date`
 from the `YYYY-MM-DD-` filename prefix, and `discoveredInWorkstream`, the bare
 name inside `discovered-in:`'s `worktree-<name>` token.
 
+**The library lives in the app, not in `bin/`.** `issue-search-model.ts`
+(load/derive/filter/group), `issue-index-documents.ts` (what gets indexed and
+its two hashes), `issue-index.ts` (the Orama cache + refresh), and
+`issue-index-query.ts` (ranking) are all in `workstreams-app/src/server/`,
+beside `issue-domain.ts`; `bin/issues.ts` imports them the same way it already
+imported the parser. That is because the issue browser's **Related** section
+(`issues.related`, `issue-related-service.ts`) is the same ranking as `issues
+similar <path> --all --docs` over the same cache — one implementation, two
+callers, so a row an agent quotes from the CLI is the row the boxholder sees.
+The app is long-lived, so it holds the built index in process and re-reads the
+corpus at most every 30s to decide whether anything changed.
+
 - `issues list [filters]` — the filtered queue, newest first.
 - `issues groups --by discovered-in|date|labels|area|workstream|category` —
   clusters, largest first, with their members (`--min N`, default 2).
@@ -630,6 +645,13 @@ BM25 will not do, so they **error** when there is no key or the corpus is not
 fully embedded; only the unspecified default degrades to text, and it says so on
 stderr. The key is read from `CALLBACK_OPENAI_API_KEY`, then
 `THINKING_OPENAI_API_KEY`, then `SKE_OPENAI_API_KEY`.
+
+The same order applies to the app's Related section, read from the **app
+child's** environment. The supervisor passes `process.env` straight through, so
+the key must be exported for the process that runs `pnpm dev` (or set in the
+main checkout's `callback-box/.env`, which the router loads into itself). With
+no key the section says so — "the semantic index needs an OpenAI key" is a
+state it renders, not an error page.
 
 **Private issues are indexed too**, which means their text is sent to OpenAI to
 be embedded, and their bodies sit in the local cache. Both are consistent with

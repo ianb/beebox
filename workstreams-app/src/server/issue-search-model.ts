@@ -1,23 +1,24 @@
 /**
- * The issue-queue domain for `bin/issues`: load, derive, filter, group.
+ * The searchable issue-queue domain: load, derive, filter, group. Used by
+ * `bin/issues` and by this app's `issues.related` procedure — one corpus,
+ * two callers, so a "related" row and a `bin/issues similar` row are the
+ * same row.
  *
- * Parsing is NOT re-implemented here — `workstreams-app/src/server/issue-domain.ts`
- * owns the frontmatter reader and the `IssueRecord` shape, and the dev issue
- * browser and this CLI must agree about what an issue is. This module adds only
- * what a CLI needs on top: the two fields derivable from conventions rather than
- * frontmatter (`date` from the filename prefix, `discoveredInWorkstream` from the
- * `discovered-in` token), a display path that distinguishes the public queue from
- * the private one, and the filter/group predicates.
+ * Parsing is NOT re-implemented here — `issue-domain.ts` next door owns the
+ * frontmatter reader and the `IssueRecord` shape. This module adds only what
+ * search needs on top: the two fields derivable from conventions rather than
+ * frontmatter (`date` from the filename prefix, `discoveredInWorkstream` from
+ * the `discovered-in` token), a display path that distinguishes the public
+ * queue from the private one, and the filter/group predicates.
  */
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import { listIssues, type IssueRecord, type ResearchState, type Visibility }
-  from "../../workstreams-app/src/server/issue-domain.js";
+import { listIssues, type IssueRecord, type ResearchState, type Visibility } from "./issue-domain.js";
 
-/** Repo root, resolved from this file rather than the cwd (the CLI is location-independent). */
-export const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..");
+/** Monorepo root, resolved from this file rather than the cwd (callers are location-independent). */
+export const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..", "..");
 
 export interface IssueEntry {
   /** Repo-relative display path, e.g. `issues/bugs/2026-01-02-x.md`. Also the index id. */
@@ -131,14 +132,14 @@ async function isDirectory(target: string): Promise<boolean> {
  * results has still been loaded, indexed, and sent to an embeddings API.
  */
 export async function loadIssueEntries(
-  repoRoot: string = REPO_ROOT,
-  options?: { publicOnly?: boolean },
+  options: { repoRoot: string; publicOnly?: boolean },
 ): Promise<IssueEntry[]> {
+  const { repoRoot } = options;
   const sources: { dir: string; label: string; visibility: Visibility }[] = [
     { dir: path.join(repoRoot, "issues"), label: "issues", visibility: "public" },
   ];
   const privateDir = path.join(repoRoot, "private-issues");
-  if (options?.publicOnly !== true && await isDirectory(privateDir)) {
+  if (options.publicOnly !== true && await isDirectory(privateDir)) {
     sources.push({ dir: privateDir, label: "private-issues", visibility: "private" });
   }
   const entries: IssueEntry[] = [];
@@ -241,7 +242,8 @@ function groupValues(entry: IssueEntry, by: GroupKey): string[] {
   }
 }
 
-export function groupIssues(entries: IssueEntry[], by: GroupKey, min: number): IssueGroup[] {
+export function groupIssues(entries: IssueEntry[], options: { by: GroupKey; min: number }): IssueGroup[] {
+  const { by, min } = options;
   const buckets = new Map<string, string[]>();
   for (const entry of entries) {
     for (const value of groupValues(entry, by)) {

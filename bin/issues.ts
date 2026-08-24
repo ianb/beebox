@@ -9,8 +9,10 @@
  * leaving the shell.
  *
  * Stateless means every run re-reads every issue file. The only thing carried
- * between runs is the embedding cache under `.issues-index/` (gitignored) —
- * see `bin/lib/issues-index.ts`.
+ * between runs is the embedding cache under `.issues-index/` (gitignored). The
+ * index itself lives in `workstreams-app/src/server/issue-index.ts`, next to
+ * `issue-domain.ts` — the dev issue browser's "Related" list is the same
+ * ranking over the same cache, so there is one implementation and two callers.
  */
 
 import { parseArgs } from "node:util";
@@ -19,12 +21,17 @@ import {
   GROUP_KEYS, REPO_ROOT, emptyFilters, filterIssues, groupIssues, loadIssueEntries,
   matchesFilters, normalizeWorkstreamName,
   type GroupKey, type IssueEntry, type IssueFilters,
-} from "./lib/issues-model.js";
+} from "../workstreams-app/src/server/issue-search-model.js";
 import {
-  DOCS_SUBDIR, EMBEDDING_KEY_VARS, issueDocument, loadDocDocuments, manifestPaths, refreshIndex,
-  resolveEmbeddingsService, runSearch,
-  type IndexDocument, type IndexHit, type IndexScope, type SearchMode,
-} from "./lib/issues-index.js";
+  EMBEDDING_KEY_VARS, manifestPaths, refreshIndex, resolveEmbeddingsService,
+  type IndexScope,
+} from "../workstreams-app/src/server/issue-index.js";
+import {
+  DOCS_SUBDIR, issueDocument, loadDocDocuments, type IndexDocument,
+} from "../workstreams-app/src/server/issue-index-documents.js";
+import {
+  runSearch, type IndexHit, type SearchMode,
+} from "../workstreams-app/src/server/issue-index-query.js";
 
 const USAGE = `bin/issues — survey and search the issue queue
 
@@ -283,14 +290,14 @@ async function openIndex(input: {
 }): Promise<IndexContext> {
   const { values, requestedMode, includeDocs, filters } = input;
   const scope = scopeFor(filters);
-  const entries = await loadIssueEntries(REPO_ROOT, { publicOnly: scope === "public" });
+  const entries = await loadIssueEntries({ repoRoot: REPO_ROOT, publicOnly: scope === "public" });
   const documents = await buildDocuments({ entries, includeDocs, scope });
 
   // Mode resolution, in one place. An EXPLICIT --mode hybrid|semantic is a
   // statement that BM25 will not do, so it fails loudly rather than quietly
   // answering a different question; only the unspecified default degrades, and
   // it says so on stderr. --mode text never resolves a key and never embeds.
-  const service = requestedMode === "text" ? null : resolveEmbeddingsService();
+  const service = requestedMode === "text" ? null : resolveEmbeddingsService(process.env);
   // `similar` asks for semantic ranking itself, so "use --mode text instead" is
   // advice only the person who typed --mode can take.
   const textIsAnOption = input.textFallbackOffered !== false;
@@ -359,7 +366,7 @@ function resolveEntry(entries: IssueEntry[], needle: string): IssueEntry {
 
 async function commandList(values: ParsedValues): Promise<void> {
   const filters = buildFilters(values);
-  const entries = filterIssues(await loadIssueEntries(REPO_ROOT, publicOnly(filters)), filters)
+  const entries = filterIssues(await loadIssueEntries({ repoRoot: REPO_ROOT, ...publicOnly(filters) }), filters)
     .toSorted((a, b) => (b.date ?? "").localeCompare(a.date ?? "") || a.path.localeCompare(b.path));
   const limit = positiveInt(values.limit, 0, "--limit");
   const shown = limit > 0 ? entries.slice(0, limit) : entries;
@@ -377,8 +384,8 @@ async function commandGroups(values: ParsedValues): Promise<void> {
   const by: GroupKey = oneOf(values.by, GROUP_KEYS, "--by");
   const min = positiveInt(values.min, 2, "--min");
   const filters = buildFilters(values);
-  const loaded = await loadIssueEntries(REPO_ROOT, publicOnly(filters));
-  const groups = groupIssues(filterIssues(loaded, filters), by, min);
+  const loaded = await loadIssueEntries({ repoRoot: REPO_ROOT, ...publicOnly(filters) });
+  const groups = groupIssues(filterIssues(loaded, filters), { by, min });
   if (values.json === true) {
     emitJson({ by, min, groups });
     return;
@@ -414,7 +421,7 @@ async function commandSearch(values: ParsedValues, positionals: string[]): Promi
 }
 
 async function requireQueryVector(text: string): Promise<number[]> {
-  const service = resolveEmbeddingsService();
+  const service = resolveEmbeddingsService(process.env);
   if (service === null) throw new UsageError("no embeddings key in the environment (see --help)");
   const [vector] = await service.embed([text]);
   if (vector === undefined) throw new UsageError("the embeddings service returned no vector for the query");
@@ -471,7 +478,7 @@ const SHOW_BODY_LINES = 40;
 async function commandShow(values: ParsedValues, positionals: string[]): Promise<void> {
   const needle = positionals[0];
   if (needle === undefined) throw new UsageError("show needs an issue path");
-  const entry = resolveEntry(await loadIssueEntries(REPO_ROOT), needle);
+  const entry = resolveEntry(await loadIssueEntries({ repoRoot: REPO_ROOT }), needle);
   const lines = entry.body.split("\n");
   const head = lines.slice(0, SHOW_BODY_LINES);
   const frontmatter = { ...entry, body: undefined, absPath: undefined };

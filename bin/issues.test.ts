@@ -19,8 +19,10 @@ import { createFakeEmbeddings } from "../callback-box/src/services/openai-embedd
 import {
   deriveDate, deriveDiscoveredInWorkstream, emptyFilters, filterIssues, groupIssues,
   loadIssueEntries, normalizeWorkstreamName, type IssueEntry,
-} from "./lib/issues-model.js";
-import { indexDirectory, issueDocument, refreshIndex, runSearch } from "./lib/issues-index.js";
+} from "../workstreams-app/src/server/issue-search-model.js";
+import { indexDirectory, refreshIndex } from "../workstreams-app/src/server/issue-index.js";
+import { issueDocument } from "../workstreams-app/src/server/issue-index-documents.js";
+import { runSearch } from "../workstreams-app/src/server/issue-index-query.js";
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -138,7 +140,7 @@ void test("a workstream filter accepts either spelling of the name", () => {
 
 void test("loadIssueEntries derives date and provenance per issue", async () => {
   const root = await makeRepo();
-  const entries = byPath(await loadIssueEntries(root));
+  const entries = byPath(await loadIssueEntries({ repoRoot: root }));
 
   const calendar = entries.get("issues/bugs/2026-01-05-calendar-drops-events.md");
   assert.ok(calendar);
@@ -165,7 +167,7 @@ void test("loadIssueEntries derives date and provenance per issue", async () => 
 async function filtered(root: string, apply: (f: ReturnType<typeof emptyFilters>) => void): Promise<string[]> {
   const filters = emptyFilters();
   apply(filters);
-  return filterIssues(await loadIssueEntries(root), filters).map((entry) => entry.slug);
+  return filterIssues(await loadIssueEntries({ repoRoot: root }), filters).map((entry) => entry.slug);
 }
 
 void test("status defaults to open; --closed and --all select the rest", async () => {
@@ -223,9 +225,9 @@ void test("needs, next-action, research, since, and discovered-in each narrow", 
 
 void test("groups rank by size and drop buckets under --min", async () => {
   const root = await makeRepo();
-  const open = filterIssues(await loadIssueEntries(root), emptyFilters());
+  const open = filterIssues(await loadIssueEntries({ repoRoot: root }), emptyFilters());
 
-  const discovered = groupIssues(open, "discovered-in", 2);
+  const discovered = groupIssues(open, { by: "discovered-in", min: 2 });
   assert.deepEqual(discovered.map((group) => [group.key, group.count]), [["user-stories-refresh", 2]]);
   assert.deepEqual(discovered[0]?.paths, [
     "issues/bugs/2026-01-05-calendar-drops-events.md",
@@ -233,11 +235,11 @@ void test("groups rank by size and drop buckets under --min", async () => {
   ]);
 
   // min 1 exposes the singletons, still largest-first.
-  assert.equal(groupIssues(open, "discovered-in", 1).length, 2);
+  assert.equal(groupIssues(open, { by: "discovered-in", min: 1 }).length, 2);
   // An issue with no value for the key is not bucketed into a synthetic group.
-  assert.equal(groupIssues(open, "area", 1).reduce((sum, g) => sum + g.count, 0), 3);
+  assert.equal(groupIssues(open, { by: "area", min: 1 }).reduce((sum, g) => sum + g.count, 0), 3);
   // labels put one issue in several groups.
-  assert.deepEqual(groupIssues(open, "labels", 1).map((g) => [g.key, g.count]), [
+  assert.deepEqual(groupIssues(open, { by: "labels", min: 1 }).map((g) => [g.key, g.count]), [
     ["soft-launch", 2], ["field-test-findings", 1],
   ]);
 });
@@ -245,7 +247,7 @@ void test("groups rank by size and drop buckets under --min", async () => {
 // ─── Index refresh ───────────────────────────────────────────────────────────
 
 async function documentsFor(root: string): Promise<ReturnType<typeof issueDocument>[]> {
-  return (await loadIssueEntries(root)).map((entry) => issueDocument(entry));
+  return (await loadIssueEntries({ repoRoot: root })).map((entry) => issueDocument(entry));
 }
 
 void test("the first refresh embeds everything and later refreshes embed nothing", async () => {
@@ -291,7 +293,7 @@ void test("rebuild discards the cache and pays for every embedding again", async
     repoRoot: root, documents: await documentsFor(root), embeddings, rebuild: true,
   });
   assert.equal(rebuilt.embeddedThisRun, 5);
-  assert.deepEqual(await fs.readdir(indexDirectory(root)), ["index.json", "manifest.json", "vectors.json"]);
+  assert.deepEqual(await fs.readdir(indexDirectory(root, "all")), ["index.json", "manifest.json", "vectors.json"]);
 });
 
 void test("a frontmatter-only edit rebuilds the index but costs no embedding", async () => {
