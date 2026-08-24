@@ -25,8 +25,8 @@ import { body, cardSchema, splitCardContent, type CardSchema } from "../cards/in
  * `<upload>` chat message was sent). No terminal status: a fully-filed batch is
  * deleted, not marked done.
  */
-export const UploadBatchStatus = z.enum(["new", "delivered"]);
-export type UploadBatchStatus = z.infer<typeof UploadBatchStatus>;
+const UploadBatchStatusSchema = z.enum(["new", "delivered"]);
+export type UploadBatchStatus = z.infer<typeof UploadBatchStatusSchema>;
 
 const BatchTime = z.object({
   start: z.string().datetime({ offset: true }),
@@ -60,7 +60,7 @@ const FailedItem = z.object({
 });
 
 const uploadBatchFields = {
-  status: UploadBatchStatus.default("new"),
+  status: UploadBatchStatusSchema.default("new"),
   "batch-id": z.string(),
   /**
    * The chat session this batch was uploaded into, persisted at prepare time so
@@ -171,7 +171,7 @@ nothing regenerates it.
 
 /** Frontmatter-only object schema (the summary body lives outside Zod). */
 const UploadBatchObject = z.object({
-  status: UploadBatchStatus.default("new"),
+  status: UploadBatchStatusSchema.default("new"),
   "batch-id": z.string(),
   "target-session": z.string().optional(),
   "sweep-notified": z.string().optional(),

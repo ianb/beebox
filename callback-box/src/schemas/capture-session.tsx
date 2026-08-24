@@ -30,7 +30,7 @@ import { splitCardContent, body, cardSchema, type CardSchema } from "../cards/in
  * card in one of those states as a leftover from the old pipeline (its
  * content is still usable, just triage it like any other card in `new`).
  */
-export const CaptureSessionStatus = z.enum([
+const CaptureSessionStatusSchema = z.enum([
   "new",
   "delivered",
   "annotated",
@@ -40,7 +40,7 @@ export const CaptureSessionStatus = z.enum([
   "intake-complete",
   "extracted",
 ]);
-export type CaptureSessionStatus = z.infer<typeof CaptureSessionStatus>;
+export type CaptureSessionStatus = z.infer<typeof CaptureSessionStatusSchema>;
 
 const SessionTime = z.object({
   start: z.string().datetime({ offset: true }),
@@ -49,7 +49,7 @@ const SessionTime = z.object({
 });
 
 const captureSessionFields = {
-  status: CaptureSessionStatus.default("new"),
+  status: CaptureSessionStatusSchema.default("new"),
   "session-id": z.string(),
   time: SessionTime.optional(),
   /** Manifest of child image cards (refs into the session's attach scope). */
@@ -101,7 +101,7 @@ This body is generated, not hand-written — don't edit it directly; if somethin
 
 /** Frontmatter-only object schema (the body field lives outside Zod). */
 const CaptureSessionObject = z.object({
-  status: CaptureSessionStatus.default("new"),
+  status: CaptureSessionStatusSchema.default("new"),
   "session-id": z.string(),
   time: SessionTime.optional(),
   images: z.array(z.string()).optional(),

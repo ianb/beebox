@@ -68,7 +68,6 @@
     "doc-graph-html": "tsx src/dev/doc-graph-html.ts",
     "test:watch": "tap --watch",
     "lint:oxlint": "oxlint -A no-unused-vars",
-    "lint:knip": "knip",
     "lint:circular": "madge --circular --extensions ts,tsx src/"
   },
   "keywords": [
@@ -89,7 +88,6 @@
     "axe-core": "^4.11.4",
     "eslint": "^9.39.2",
     "eslint-import-resolver-typescript": "^4.4.4",
-    "husky": "^9.1.7",
     "knip": "^5.83.1",
     "lint-staged": "^16.2.7",
     "madge": "^8.0.0",

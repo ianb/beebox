@@ -1,7 +1,14 @@
 ---
 title: "Backend `.tsx` files escape most of the reviewed ESLint ruleset"
-workstream: unknown
+workstream: knip-exports
+resolution: implemented
 ---
+
+**Closed 2026-08-24** — fixed in the knip-exports workstream. `exts` is now
+unconditional, so the reviewed ruleset covers `.tsx`; the 12 `no-redeclare`
+collisions were resolved by renaming the Zod values to `XSchema` (the
+convention already used by `src/**/*.ts` and by the collision-free cases in
+these same files), keeping the type names unchanged.
 
 2026-08-24 · found while enabling knip's `exports` check.
 

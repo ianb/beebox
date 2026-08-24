@@ -344,8 +344,7 @@ class InvalidScheduledScriptTemplateError extends Error {
  * hand the box a card that can't load.
  */
 export function createScheduledScriptTemplate(options: ScheduledScriptTemplateOptions): string {
-  const fields: Record<string, unknown> = {
-  };
+  const fields: Record<string, unknown> = {};
   if (options.cron !== undefined) fields["cron"] = options.cron;
   if (options.at !== undefined) fields["at"] = options.at;
   if (options.rrule !== undefined) fields["rrule"] = options.rrule;

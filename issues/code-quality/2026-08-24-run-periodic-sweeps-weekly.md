@@ -35,27 +35,18 @@ What a general mechanism needs, taking those two as the requirements:
   (launchd's `StartCalendarInterval` fires on wake; a naive timer does not)
 - a way to run it on demand, so it is testable without waiting a week
 
-## Blocker for knip specifically
+## knip is quiet now
 
-A weekly knip report is only useful if it is quiet when nothing is wrong.
-Right now `pnpm lint:knip` exits non-zero on pre-existing noise that has
-nothing to do with dead code:
+Resolved 2026-08-24 in the knip-exports workstream, so a weekly report starts
+from an empty console — every line it prints is a finding.
 
-- **19 unlisted binaries.** Two kinds. System tools that legitimately are not
-  npm deps (`pdfinfo`, `pdftotext`, `pdftoppm`, `qpdf`, `uvx`, `tar`, `cb`) —
-  these want `ignoreBinaries` entries. And `tsc`, `tsx`, `eslint`, `tap`,
-  `oxlint`, `knip`, `madge`, which ARE declared devDependencies and are
-  *also* reported as unused devDependencies at the same time. knip is failing
-  to link the package.json scripts to the deps they invoke; the contradiction
-  is the tell. Root cause not diagnosed.
-- **14 unused dependencies/devDependencies.** `husky` and `lint-staged` are
-  real but used by the monorepo-root `.husky/`, not by callback-box.
-  `@googleworkspace/cli`, `react-compiler-runtime`, and
-  `babel-plugin-react-compiler` are runtime/build-tool deps knip cannot see.
-
-All of it predates this workstream — verified by running main's `knip.json`,
-which reports the same classes (14 binaries / 8 deps; the count grew only
-because the frontend's own config was folded in and had never been run).
-
-Until that is quiet, a weekly report is 33 lines of noise around whatever it
-actually found.
+The noise had one root cause worth recording: `.npmrc` sets
+`node-linker=hoisted`, so every package's dependencies install into the ROOT
+`node_modules` (`callback-box/node_modules` holds two entries). Run
+per-package, knip cannot map a binary a script invokes back to the package
+declaring it, and reports the same tool as an unlisted binary AND an unused
+devDependency simultaneously — the contradiction was the tell. Moving the
+config to the monorepo root fixed that whole class, and turned up three real
+bugs on the way: `bin/` imports `better-sqlite3`, `@markdoc/markdoc`, and
+`esbuild` without declaring any of them, and the root has a `tsc` script with
+no `typescript` dependency. All four resolved only through hoisting.

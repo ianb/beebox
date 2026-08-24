@@ -15,24 +15,24 @@ import { cardSchema, type CardSchema } from "../cards/index.js";
 // Shared enums
 // ============================================
 
-export const ConfidenceLevel = z.enum([
+export const ConfidenceLevelSchema = z.enum([
   "confirmed",
   "high",
   "medium",
   "low",
   "hypothesis",
 ]);
-export type ConfidenceLevel = z.infer<typeof ConfidenceLevel>;
+export type ConfidenceLevel = z.infer<typeof ConfidenceLevelSchema>;
 
-export const BeliefSource = z.enum([
+export const BeliefSourceSchema = z.enum([
   "user-stated",
   "feedback",
   "inferred",
   "default",
 ]);
-export type BeliefSource = z.infer<typeof BeliefSource>;
+export type BeliefSource = z.infer<typeof BeliefSourceSchema>;
 
-export const ExperimentStatus = z.enum([
+export const ExperimentStatusSchema = z.enum([
   "proposed",
   "active",
   "successful",
@@ -40,14 +40,14 @@ export const ExperimentStatus = z.enum([
   "mixed",
   "inconclusive",
 ]);
-export type ExperimentStatus = z.infer<typeof ExperimentStatus>;
+export type ExperimentStatus = z.infer<typeof ExperimentStatusSchema>;
 
-export const ReactionSentiment = z.enum([
+const ReactionSentimentSchema = z.enum([
   "positive",
   "negative",
   "neutral",
 ]);
-export type ReactionSentiment = z.infer<typeof ReactionSentiment>;
+export type ReactionSentiment = z.infer<typeof ReactionSentimentSchema>;
 
 const ContextDuration = z.enum(["ongoing", "temporary", "past"]);
 
@@ -57,8 +57,8 @@ const ContextDuration = z.enum(["ongoing", "temporary", "past"]);
 
 const TriageRuleField = z.object({
   text: z.string(),
-  confidence: ConfidenceLevel.default("low"),
-  source: BeliefSource.default("inferred"),
+  confidence: ConfidenceLevelSchema.default("low"),
+  source: BeliefSourceSchema.default("inferred"),
   ref: z.string().optional(),
   action: z.string().optional(),
 });
@@ -82,7 +82,7 @@ const ObservationField = z.object({
 
 const ExperimentField = z.object({
   id: z.string(),
-  status: ExperimentStatus.default("proposed"),
+  status: ExperimentStatusSchema.default("proposed"),
   hypothesis: z.string().optional(),
   approach: z.string().optional(),
   observations: z.array(ObservationField).optional(),
@@ -91,7 +91,7 @@ const ExperimentField = z.object({
 
 const ReactionField = z.object({
   id: z.string(),
-  sentiment: ReactionSentiment.default("neutral"),
+  sentiment: ReactionSentimentSchema.default("neutral"),
   text: z.string(),
 });
 

@@ -519,7 +519,7 @@ export function vibeCheck(options) {
 
   const reactSettings = react ? { react: { version: "detect" } } : {};
 
-  const exts = react ? "{ts,tsx,js,jsx}" : "{ts,js}";
+  const exts = "{ts,tsx,js,jsx}";
   const filePatterns = roots.map((r) => `${r}/**/*.${exts}`);
 
   // eslint-config-agent applies a strict `no-restricted-syntax` selector set to

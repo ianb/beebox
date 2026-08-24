@@ -7,9 +7,9 @@
 
 import type { z } from "zod";
 import type {
-  ConfidenceLevel,
-  BeliefSource,
-  ExperimentStatus,
+  ConfidenceLevelSchema,
+  BeliefSourceSchema,
+  ExperimentStatusSchema,
 } from "./guide.js";
 
 // `VOICE_MODELS`/`VoiceModel` live in `shared/voice-models.ts` (extracted so
@@ -20,9 +20,9 @@ import { VOICE_MODELS, type VoiceModel } from "../shared/voice-models.js";
 
 export { VOICE_MODELS, type VoiceModel };
 
-type ConfidenceLevelType = z.infer<typeof ConfidenceLevel>;
-type BeliefSourceType = z.infer<typeof BeliefSource>;
-type ExperimentStatusType = z.infer<typeof ExperimentStatus>;
+type ConfidenceLevelType = z.infer<typeof ConfidenceLevelSchema>;
+type BeliefSourceType = z.infer<typeof BeliefSourceSchema>;
+type ExperimentStatusType = z.infer<typeof ExperimentStatusSchema>;
 
 /**
  * A boxholder, resolved from a `people/*.person.card` with `boxholder: true`.
