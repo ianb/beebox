@@ -7,7 +7,13 @@ labels: [cards, naming, schemas]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder did not recognize `.document.card` as a real type
+resolution: implemented
 ---
+
+> **Closed 2026-08-24** (branch `worktree-document-card-view`): decision made
+> and executed — see the Decision section below. Renamed to `pdf.card` via
+> `scripts/migrate/document-to-pdf.ts`, registered as `document-to-pdf` in
+> `src/core/migrations.ts` with a collision guard.
 
 Two card types, near-synonymous names, unrelated purposes:
 

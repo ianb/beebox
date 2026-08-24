@@ -60,5 +60,5 @@ and has to know the gesture.
   place menus.
 - The browse route from a chat card pane is itself a single unlabeled icon
   (`FileView.tsx:296`), noted in
-  [PDFs and document cards have no real view](../features/2026-08-23-pdf-and-document-cards-have-no-real-view.md).
+  [PDFs and document cards have no real view](../closed/features/2026-08-23-pdf-and-document-cards-have-no-real-view.md).
   Entry and exit are both thin; the exit is thinner.
