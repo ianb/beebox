@@ -11,7 +11,7 @@ resolution: implemented
 > **Closed 2026-08-24** — the boxholder confirms the behavior has not
 > recurred across normal use for a while since the fix landed; calling the
 > manual gate met by field exposure rather than a scripted repro.
-> **⏳ Awaiting manual testing** — superseding fix landed in the
+> **The fix** (as it awaited that testing) — superseding fix landed in the
 > emission-model workstream (`6e928be6`): the server now acks a send the
 > moment it is durably recorded, before the engine spawns, so the cold-Codex
 > first send should confirm in about a second instead of remaining pending

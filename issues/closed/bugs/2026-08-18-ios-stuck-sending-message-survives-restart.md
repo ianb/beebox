@@ -13,7 +13,7 @@ resolution: implemented
 > **Closed 2026-08-24** — the boxholder confirms the behavior has not
 > recurred across normal use for a while since the fix landed; calling the
 > manual gate met by field exposure rather than a scripted repro.
-> **⏳ Awaiting manual testing** — fixes landed in `d641042c`/`c296b95f`
+> **The fix** (as it awaited that testing) — fixes landed in `d641042c`/`c296b95f`
 > (state collapse + in-session redelivery + a Restore/Discard affordance
 > after 30s pending; requires a fresh app install). See Manual testing.
 > Only the developer clears this.

@@ -12,7 +12,7 @@ resolution: implemented
 > **Closed 2026-08-24** — the boxholder confirms the behavior has not
 > recurred across normal use for a while since the fix landed; calling the
 > manual gate met by field exposure rather than a scripted repro.
-> **⏳ Awaiting manual testing** — resolved by the emission-model workstream
+> **The fix** (as it awaited that testing) — resolved by the emission-model workstream
 > rather than by the history-reconciliation this issue proposed (see the
 > plan's "Why 'reconcile against durable history' is not the design"):
 > history has no message-id to match on; instead the server's durable dedup

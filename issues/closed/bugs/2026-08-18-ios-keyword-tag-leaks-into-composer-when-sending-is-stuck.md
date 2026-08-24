@@ -13,7 +13,7 @@ resolution: implemented
 > **Closed 2026-08-24** — the boxholder confirms the behavior has not
 > recurred across normal use for a while since the fix landed; calling the
 > manual gate met by field exposure rather than a scripted repro.
-> **⏳ Awaiting manual testing** — fix landed in `cba769df` (requires a fresh
+> **The fix** (as it awaited that testing) — fix landed in `cba769df` (requires a fresh
 > app install): a refused keyword now leaves the composer exactly as it was
 > (tag AND spoken command dropped), detection refuses to match inside an
 > existing tag, and the refusal message names what is actually blocking.
