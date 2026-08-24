@@ -1,7 +1,7 @@
 ---
 title: "One failing calendar aborts the whole calendar sync instead of being skipped"
 workstream: connector-sync-isolation
-design: ../../../callback-box/docs/plans/connector-sync-isolation.md
+design: ../../../callback-box/docs/implemented-plans/connector-sync-isolation.md
 area: callback-box
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — user-story catalog verification
@@ -9,7 +9,7 @@ stories: [connectors/calendar-sync-repairs-an-expired-sync-token-and]
 resolution: implemented
 ---
 
-> **Resolved in `connector-sync-isolation`.** Calendar member failures now produce sanitized typed outcomes, later calendars and post-loop work continue, partial writes are committed, ordinary failures restore their incoming token, and failed 410 retries remain retryable. Connector errors make `cb wakeup` exit nonzero after the remaining phases finish. Focused doctests and an independent source recheck passed; no live authenticated Google account was available.
+> **Resolved by `878a393c` in `connector-sync-isolation`.** Calendar member failures now produce sanitized typed outcomes, later calendars and post-loop work continue, partial writes are committed, ordinary failures restore their incoming token, and failed 410 retries remain retryable. Connector errors make `cb wakeup` exit nonzero after the remaining phases finish. Focused doctests and an independent source recheck passed; no live authenticated Google account was available.
 
 **What is wrong**
 

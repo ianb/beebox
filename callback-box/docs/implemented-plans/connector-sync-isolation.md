@@ -1,6 +1,6 @@
 ---
 title: "Connector sync isolation and Drive untracking"
-status: draft
+status: implemented
 workstream: connector-sync-isolation
 issues:
   - ../../../issues/closed/bugs/2026-08-21-one-failing-calendar-aborts-the-whole-calendar-sync-ins.md

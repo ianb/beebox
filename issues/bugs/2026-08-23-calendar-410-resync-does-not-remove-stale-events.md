@@ -38,4 +38,4 @@ Google's current guidance. This is source and documentation evidence only. No
 live Google account was exercised.
 
 **Related.** The early-return defect is tracked separately in
-[one failing calendar aborts the whole sync](2026-08-21-one-failing-calendar-aborts-the-whole-calendar-sync-ins.md).
+[one failing calendar aborts the whole sync](../closed/bugs/2026-08-21-one-failing-calendar-aborts-the-whole-calendar-sync-ins.md).

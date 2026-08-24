@@ -1,7 +1,7 @@
 ---
 title: "Trashing a Google Drive card does not stop it syncing"
 workstream: connector-sync-isolation
-design: ../../../callback-box/docs/plans/connector-sync-isolation.md
+design: ../../../callback-box/docs/implemented-plans/connector-sync-isolation.md
 area: callback-box
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — user-story catalog verification
@@ -9,7 +9,7 @@ stories: [connectors/stop-syncing-something-by-trashing-its-card]
 resolution: implemented
 ---
 
-> **Resolved in `connector-sync-isolation`.** Drive sync and status now share one live-card scan. Cards in semantic trash do not sync, while their Drive IDs suppress folder rediscovery. Restoring the card resumes sync; hard deletion leaves the configured folder authoritative and performs a fresh materialization. Focused filesystem doctests, a knowledge audit, and an independent source recheck passed; no live authenticated Google account was available.
+> **Resolved by `878a393c` in `connector-sync-isolation`.** Drive sync and status now share one live-card scan. Cards in semantic trash do not sync, while their Drive IDs suppress folder rediscovery. Restoring the card resumes sync; hard deletion leaves the configured folder authoritative and performs a fresh materialization. Focused filesystem doctests, a knowledge audit, and an independent source recheck passed; no live authenticated Google account was available.
 
 **What is wrong.** The Drive connector's untracking story is 'the card's existence IS the config' (header comment, `callback-box/src/connectors/google-drive.ts:1-11`; also `src/connectors/drive-config.ts:7`), and the Gmail connector implements exactly that. Drive has one direct violation plus one folder-mount ambiguity.
 
