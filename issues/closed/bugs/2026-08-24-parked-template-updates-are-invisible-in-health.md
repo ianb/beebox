@@ -3,6 +3,7 @@ title: "A parked template update is invisible in `cb health`, so a fix can land 
 workstream: honest-diagnostics
 area: callback-box
 priority: important
+resolution: implemented
 labels: [templates, health, boxes]
 filed-by: agent
 discovered-by: Ian
@@ -72,6 +73,14 @@ Nothing offers a merge, and nothing says a choice is pending.
 
 ## Related
 
-- [Procedure model pins are Claude-only](../closed/bugs/2026-08-23-procedure-model-pins-are-claude-only.md)
+- [Procedure model pins are Claude-only](2026-08-23-procedure-model-pins-are-claude-only.md)
   — the fix that could not land. It shipped as `model: efficient` in the stock
   template on 2026-08-23 and the box still runs `model: haiku`.
+
+## Resolution (2026-08-24)
+
+`cb health` now has a `template-updates` box check (warn; error when the parked
+card belongs to a task that is failing or inconclusive), and a failing task's
+line names the parked path. The resolution-path items (`cb template
+accept`/`diff`, three-way merge, box-owned fields) were not built here — see
+[template resolution path](../../features/2026-08-24-parked-template-resolution-path.md).

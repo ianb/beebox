@@ -131,7 +131,7 @@ with.
 **Distinguish "lost a lock race" from "the task failed" in health.** A task that
 never ran is not a task that ran and broke, and the scheduler reports both as
 `exit code 1`. Compare
-[health masks a review-step turn cap](../../bugs/2026-08-12-health-masks-review-step-turn-cap.md),
+[health masks a review-step turn cap](2026-08-12-health-masks-review-step-turn-cap.md),
 the same complaint about a different collapsed distinction.
 
 The *deferred-recoverable* sibling of this distinction now exists: engine

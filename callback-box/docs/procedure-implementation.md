@@ -132,8 +132,16 @@ concrete reason in `validate.error`, and:
   hard-gates a failing check, and a check that never decided has not failed;
 - it does **not** trigger the `severity: review` work-agent retry;
 - the run's terminal status becomes `inconclusive` rather than `completed`,
-  and `cb procedure run` exits **2** with one stderr line:
+  and `cb procedure run` exits **3** (`INCONCLUSIVE_EXIT_CODE` — 2 already
+  means "migration applied with per-card failures") with one stderr line:
   `Inconclusive: procedure <name> — review of step <id> reached max turns (16); work completed`;
+- `cb procedure resume` on that run reports the same thing: the work is done
+  and nothing re-judges it, so resume re-reads the non-verdict from the run
+  card and exits the same way rather than saying "completed — nothing to
+  resume". `inconclusive` is a terminal run status;
+- `cb migrate` does **not** record a migration whose procedure ended
+  inconclusive as applied, and stops the sweep — retiring a migration on an
+  unread check is the same misreading one level up;
 - the scheduler records the run as `inconclusive` (not a failure: it does not
   increment `consecutiveFailures`, and it does not set `lastSuccess` either),
   and `cb health` shows `?  <task>  inconclusive`, which does **not** make

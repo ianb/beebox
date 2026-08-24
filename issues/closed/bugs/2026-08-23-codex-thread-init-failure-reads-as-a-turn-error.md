@@ -3,6 +3,7 @@ title: "A codex thread that fails to start is reported as a failed turn reading 
 workstream: honest-diagnostics
 area: callback-box
 priority: important
+resolution: implemented
 labels: [codex, chat, diagnostics]
 filed-by: agent
 discovered-by: Ian
@@ -62,7 +63,7 @@ The reporting half of this issue is fixed: the two paths now say which phase
 failed, the result frame carries a `phase` field, and `[codex-chat]` logs the
 full stack at the throw site. The retry decision and the construction-rate
 question moved to
-[codex session start is intermittent](2026-08-24-codex-thread-start-failure-is-intermittent.md).
+[codex session start is intermittent](../../bugs/2026-08-24-codex-thread-start-failure-is-intermittent.md).
 
 ## It is intermittent, which rules out the obvious causes
 
@@ -108,7 +109,7 @@ materialize. Neither is confirmed. What is confirmed is that the code reads
 
 ## Related
 
-- [Procedure model pins are Claude-only](../closed/bugs/2026-08-23-procedure-model-pins-are-claude-only.md)
+- [Procedure model pins are Claude-only](2026-08-23-procedure-model-pins-are-claude-only.md)
   — filed the same day, also a codex failure that reported nothing usable. That
   one produced an empty agent thread and `exit code 1`; this one produces a
   TypeError. **Both were diagnosable only by reading Codex's thread store

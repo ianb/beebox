@@ -8,6 +8,7 @@
 import { splitCardContent, cardSchema, type CardSchema } from "../cards/index.js";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
+import { INCONCLUSIVE_REASONS } from "../shared/inconclusive.js";
 
 const Iso = z.string().datetime({ offset: true });
 
@@ -31,14 +32,17 @@ export const RunStepRun = z.object({
  * `inconclusive` is the non-verdict: the checker never decided (its review
  * reached the turn cap, timed out, or returned nothing parseable). It is
  * neither a pass nor a fail, and it never gates the step on its own — the
- * work may be fine and nobody knows. `error` carries the concrete reason.
- * Additive to the enum: run cards written before it still load.
+ * work may be fine and nobody knows. `error` carries the concrete reason in
+ * prose and `reason` its tag, so a later process (`cb procedure resume`) can
+ * report the same non-verdict without re-deriving it. Additive to the enum:
+ * run cards written before it still load.
  */
 export const RunStepValidate = z.object({
   status: z.enum(["pass", "fail", "warn", "inconclusive"]),
   stdout: z.string().optional(),
   review: z.string().optional(),
   error: z.string().optional(),
+  reason: z.enum(INCONCLUSIVE_REASONS).optional(),
 });
 
 /** One step's execution record. */

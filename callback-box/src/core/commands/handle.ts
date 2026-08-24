@@ -7,7 +7,7 @@
  */
 
 import { registerCommand } from "../command-runner.js";
-import { runHandle, formatHandlingLines } from "../handle.js";
+import { runHandle, formatHandlingLines, handleVerdict, describeHandleFailures } from "../handle.js";
 
 registerCommand({
   name: "handle",
@@ -34,6 +34,11 @@ registerCommand({
     for (const result of results) {
       for (const line of formatHandlingLines(result)) ctx.writeLine(line);
     }
-    return { success: true, data: results };
+    // The pass reports its worst bucket. A failed handler is a failure of the
+    // command even though other buckets were fine; an unjudged one is not a
+    // failure, and the CLI turns it into its own exit code from `data`.
+    return handleVerdict(results) === "failed"
+      ? { success: false, error: describeHandleFailures(results), data: results }
+      : { success: true, data: results };
   },
 });

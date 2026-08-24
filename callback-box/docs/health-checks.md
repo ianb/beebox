@@ -141,7 +141,10 @@ Severity is normally `warning`: a parked update is a pending choice, not a
 defect, and must not fail a deploy. It escalates to **`error`** when a parked
 path is the procedure card or task card behind a scheduled task that currently
 reads `failing` or `inconclusive`. That combination is the trap this check
-exists for — the task's own fix is already on disk and unread. The scheduled-task
+exists for — the task's own fix is already on disk and unread. The message says
+which of the two it is (`…belongs to a task that is failing: X` /
+`…belongs to a task whose last check reached no verdict: X`): both escalate,
+but a failing task is broken and an inconclusive one is only unjudged. The scheduled-task
 list prints the same association under the affected task:
 
 ```

@@ -18,6 +18,7 @@ import { updateStepInRunCard } from "./engine-run-card.js";
 import { executePhaseShells } from "./engine-phase.js";
 import { runAndValidate, type ValidateOutcome } from "./engine-run-phase.js";
 import type { RunShellFailure } from "./engine-run-execute.js";
+import { formatInconclusiveValidateError } from "../../shared/inconclusive.js";
 
 /**
  * Parameters for executeStep
@@ -272,16 +273,21 @@ function buildRunUpdate(args: RecordStepResultsParams): NonNullable<StepUpdate["
 function buildValidateUpdate(
   result: ValidateOutcome,
 ): NonNullable<StepUpdate["validate"]> {
+  const unjudged = result.status === "inconclusive";
   const inconclusiveError =
-    result.status === "inconclusive" && result.inconclusiveDetail !== undefined
-      ? `Review ${result.inconclusiveDetail} — the work was not judged.`
+    unjudged && result.inconclusiveDetail !== undefined
+      ? formatInconclusiveValidateError(result.inconclusiveDetail)
       : undefined;
   const error = result.invocationFailure ?? inconclusiveError;
+  // The reason tag rides along with the prose so `cb procedure resume` can
+  // report the same non-verdict from the card alone.
+  const reason = unjudged ? (result.inconclusiveReason ?? "unknown") : undefined;
   return {
     status: result.status,
     ...(result.stdout !== undefined && { stdout: result.stdout }),
     ...(result.review !== undefined && { review: result.review }),
     ...(error !== undefined && { error }),
+    ...(reason !== undefined && { reason }),
   };
 }
 

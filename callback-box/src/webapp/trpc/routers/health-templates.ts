@@ -22,6 +22,7 @@ import {
   PARKED_TEMPLATE_RESOLUTION,
 } from "../../../core/install-template-file.js";
 import type { BoxScheduleHealth } from "../../../core/schedule/health-box.js";
+import type { TaskHealth } from "../../../core/schedule/health.js";
 import type { HealthCheck } from "./health.js";
 
 /** Task statuses for which a parked update is a likely cause, not a coincidence. */
@@ -46,12 +47,19 @@ export async function templateUpdatesCheck(
   );
   const plural = parked.length === 1 ? "" : "s";
   const head = `${String(parked.length)} template update${plural} parked for review: ${parked.join(", ")}.`;
-  const escalation =
-    stuck.length === 0
-      ? ""
-      : ` A parked update belongs to a task that is not working: ${stuck
-          .map((t) => `${t.name} (${t.status}) — ${(t.parkedTemplateUpdates ?? []).join(", ")}`)
-          .join("; ")}; the fix may already be on disk.`;
+  // Name which state the task is in. "Not working" covered both a task that
+  // failed and one nobody judged, which is the collapse this whole area
+  // exists to undo: the second is unknown, not broken, and the reader has to
+  // be able to tell them apart even though both escalate the same.
+  const escalation = [
+    describeStuck(stuck.filter((t) => t.status === "failing"), "that is failing"),
+    describeStuck(
+      stuck.filter((t) => t.status === "inconclusive"),
+      "whose last check reached no verdict",
+    ),
+  ]
+    .filter((clause) => clause !== "")
+    .join("");
 
   return {
     name: "template-updates",
@@ -59,4 +67,18 @@ export async function templateUpdatesCheck(
     message: `${head}${escalation} ${PARKED_TEMPLATE_RESOLUTION}`,
     severity: stuck.length > 0 ? "error" : "warning",
   };
+}
+
+/**
+ * One escalation clause: which tasks in this state a parked update belongs to.
+ * `situation` completes "…belongs to a task <situation>" — "that is failing",
+ * or "whose last check reached no verdict" — so the two states read as the
+ * different things they are.
+ */
+function describeStuck(tasks: readonly TaskHealth[], situation: string): string {
+  if (tasks.length === 0) return "";
+  const detail = tasks
+    .map((t) => `${t.name} — ${(t.parkedTemplateUpdates ?? []).join(", ")}`)
+    .join("; ");
+  return ` A parked update belongs to a task ${situation}: ${detail}; the fix may already be on disk.`;
 }

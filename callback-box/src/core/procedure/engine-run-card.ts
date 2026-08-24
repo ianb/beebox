@@ -19,6 +19,7 @@ import {
   type StepUpdate,
   type RunStatus,
 } from "./engine-types.js";
+import type { InconclusiveReason } from "../../shared/inconclusive.js";
 
 /** Raised when a run card can't be read as YAML frontmatter. */
 export class RunCardParseError extends Error {
@@ -43,6 +44,8 @@ interface MutablePhaseValidate {
   stdout?: string;
   review?: string;
   error?: string;
+  /** Why an `inconclusive` check reached no verdict (tag, not prose). */
+  reason?: InconclusiveReason;
 }
 interface MutableStep {
   id: string;
@@ -187,6 +190,7 @@ function applyStepUpdate(prev: MutableStep, update: StepUpdate): MutableStep {
     if (update.validate.stdout) step.validate.stdout = update.validate.stdout;
     if (update.validate.review) step.validate.review = update.validate.review;
     if (update.validate.error) step.validate.error = update.validate.error;
+    if (update.validate.reason) step.validate.reason = update.validate.reason;
   }
   return step;
 }

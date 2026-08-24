@@ -44,7 +44,7 @@ export class CommandTimedOutError extends CommandError {
 
 export class CommandFailedError extends CommandError {
   /** The child's exit code, or null when it died on a signal. Callers that
-   *  distinguish exit statuses (an inconclusive run exits 2, not 1) read it
+   *  distinguish exit statuses (an inconclusive run has its own code) read it
    *  from here rather than re-parsing the message. */
   readonly exitCode: number | null;
   constructor(message: string, params: { timing: ExecTiming; exitCode: number | null }) {
@@ -165,9 +165,30 @@ function appendOutputTail(
   const stderrTail = tailChars(stripNodeNoise(bufs.stderr), 500);
   const stdoutTail = tailChars(stripNodeNoise(bufs.stdout), 2000);
   const parts = [headline];
-  if (stderrTail) parts.push(`stderr:\n${stderrTail}`);
-  if (stdoutTail) parts.push(`stdout:\n${stdoutTail}`);
+  if (stderrTail) parts.push(`${STDERR_SECTION}\n${stderrTail}`);
+  if (stdoutTail) parts.push(`${STDOUT_SECTION}\n${stdoutTail}`);
   return parts.join("\n");
+}
+
+const STDERR_SECTION = "stderr:";
+const STDOUT_SECTION = "stdout:";
+
+/**
+ * The captured *stderr* out of a {@link CommandError} message, or "" when the
+ * message carries none.
+ *
+ * The message interleaves a headline with tails of both streams, and a caller
+ * that greps the whole thing is really grepping the child's stdout too — where
+ * arbitrary text lives (an agent quoting a diagnostic, a fixture echoing a
+ * marker). A caller that means "the command *said* this on its diagnostic
+ * channel" has to read the section, so the parse lives next to the format.
+ */
+export function stderrSection(message: string): string {
+  const start = message.indexOf(`\n${STDERR_SECTION}\n`);
+  if (start === -1) return "";
+  const body = message.slice(start + STDERR_SECTION.length + 2);
+  const end = body.indexOf(`\n${STDOUT_SECTION}\n`);
+  return end === -1 ? body : body.slice(0, end);
 }
 
 function stripNodeNoise(text: string): string {

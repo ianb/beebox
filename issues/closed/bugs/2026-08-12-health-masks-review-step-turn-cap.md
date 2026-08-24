@@ -7,6 +7,7 @@ filed-by: agent
 discovered-by: agent
 discovered-in: main session — cb feedback triage from a real box
 priority: important
+resolution: implemented
 ---
 
 A scheduled `refresh-maps` run showed **failing** in `cb health`, but the work

@@ -35,6 +35,7 @@ import {
   writeManifest,
 } from "../../core/migration-run.js";
 import { sweepMigrations, type SweepResult, type SweptMigration } from "../../core/migration-sweep.js";
+import { INCONCLUSIVE_EXIT_CODE } from "../../shared/inconclusive.js";
 import { assertNever } from "../../lib/invariant.js";
 
 const CALLBACK_BOX_ROOT = PACKAGE_ROOT;
@@ -327,6 +328,17 @@ export const migrateCommand = new Command("migrate")
       } else {
         console.log(`=== ${m.name} (${m.script}) ===`);
         code = await runMigrationScript({ script: m.script, boxRoot });
+      }
+      // A procedure migration whose work ran but whose review reached no
+      // verdict is neither applied nor failed. Recording it as applied would
+      // retire the migration on an unread check, so the manifest is left
+      // alone and the sweep stops — nothing after it can assume this one
+      // landed. Re-run once the run card's review question is answered.
+      if (code === INCONCLUSIVE_EXIT_CODE) {
+        console.error(
+          `\nMigration "${m.name}" ran but its check reached no verdict (exit ${String(code)}). The work completed and is committed; nothing judged it. Manifest NOT updated for this entry, and subsequent migrations were not run — read the run card under procedure/runs/, then re-run \`cb migrate\`.`,
+        );
+        process.exit(code);
       }
       if (code !== 0 && code !== 2) {
         console.error(`\nMigration "${m.name}" failed hard (exit code ${String(code)}). Manifest not updated for this entry. Subsequent migrations not run.`);

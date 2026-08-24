@@ -1,9 +1,10 @@
 # Scheduled runs that reached no verdict
 
 A scheduled command whose *work* completed but whose *check* never decided is
-neither a success nor a failure. It exits `2` and prints one `Inconclusive:`
-line; the scheduler recognizes that pair, records `lastResult:
-"inconclusive"`, and leaves the failure counter alone.
+neither a success nor a failure. It exits with `INCONCLUSIVE_EXIT_CODE` (3 —
+2 already means "migration applied with per-card failures") and prints one
+`Inconclusive:` line on stderr; the scheduler recognizes that pair, records
+`lastResult: "inconclusive"`, and leaves the failure counter alone.
 
 The rule these tests pin down: a diagnostic reports what it knows at the
 resolution it knows it, and says "inconclusive" where it doesn't — it never
@@ -23,6 +24,7 @@ import {
 import {
   INCONCLUSIVE_EXIT_CODE,
   formatInconclusiveLine,
+  formatHandleInconclusiveLine,
   classifyInconclusiveReason,
 } from "../../src/shared/inconclusive.js";
 
@@ -33,11 +35,11 @@ const NOW = new Date();
 const dir = await fs.mkdtemp(path.join(os.tmpdir(), "inconclusive-"));
 process.env.CB_ENGINE_AVAILABILITY_FILE = path.join(dir, "empty.json");
 
-function commandFailure({ exitCode, stderr }) {
-  return new CommandFailedError(
-    `Command failed with exit code ${exitCode}\nstderr:\n${stderr}\nstdout:\nAll MAP.md files current.`,
-    { timing: TIMING, exitCode },
-  );
+function commandFailure({ exitCode, stderr, stdout = "All MAP.md files current." }) {
+  const parts = [`Command failed with exit code ${exitCode}`];
+  if (stderr) parts.push(`stderr:\n${stderr}`);
+  if (stdout) parts.push(`stdout:\n${stdout}`);
+  return new CommandFailedError(parts.join("\n"), { timing: TIMING, exitCode });
 }
 
 const MARKER = formatInconclusiveLine({
@@ -59,9 +61,9 @@ MARKER
 ## Both signals are required
 
 The dedicated exit code and the marker line together. Either alone is
-ambiguous — another tool may exit 2, and the phrase could show up in unrelated
-output — and mislabeling a real failure as a non-answer is the one direction of
-error this must never make.
+ambiguous — another tool may exit with the same code, and the phrase could show
+up in unrelated output — and mislabeling a real failure as a non-answer is the
+one direction of error this must never make.
 
 ```ts
 const both = await classifyScheduleFailure({
@@ -81,7 +83,7 @@ Inconclusive: procedure refresh-maps — review of step maps reached max turns (
 const codeOnly = await classifyScheduleFailure({
   boxRoot: "/nonexistent",
   runStartedAt: NOW,
-  error: commandFailure({ exitCode: 2, stderr: "Error: something else exited 2" }),
+  error: commandFailure({ exitCode: INCONCLUSIVE_EXIT_CODE, stderr: "Error: something else failed" }),
 });
 // Marker text, wrong exit code → also an ordinary failure.
 const markerOnly = await classifyScheduleFailure({
@@ -97,6 +99,64 @@ const timedOut = await classifyScheduleFailure({
 });
 print(`${codeOnly.result}, ${markerOnly.result}, ${timedOut.result}`);
 => failure, failure, failure
+```
+
+## The marker has to be on stderr, in full
+
+The error message a failed command raises carries a tail of the child's
+*stdout* too, and stdout is arbitrary text: a shell task can print the word
+while genuinely failing, and an agent can quote its own diagnosis. Reading
+either as "no verdict" would launder a real failure. Only the `stderr:` section
+counts, and only a line in the exact shape `formatInconclusiveLine` produces.
+
+```ts
+// A shell task that exits with the inconclusive code and prints the phrase on
+// STDOUT — nothing said it on the diagnostic channel.
+const onStdout = await classifyScheduleFailure({
+  boxRoot: "/nonexistent",
+  runStartedAt: NOW,
+  error: commandFailure({
+    exitCode: INCONCLUSIVE_EXIT_CODE,
+    stderr: "",
+    stdout: `checking...\n${MARKER}\nexiting`,
+  }),
+});
+// Right channel, right code, but only the opening word — not this vocabulary.
+const prefixOnly = await classifyScheduleFailure({
+  boxRoot: "/nonexistent",
+  runStartedAt: NOW,
+  error: commandFailure({
+    exitCode: INCONCLUSIVE_EXIT_CODE,
+    stderr: "Inconclusive: something went sideways",
+  }),
+});
+print(`${onStdout.result}, ${prefixOnly.result}`);
+print(onStdout.error.split("\n")[0]);
+=>
+failure, failure
+Command failed with exit code 3
+```
+
+## `cb handle` speaks the same line
+
+Its unjudged unit is a category bucket rather than a procedure step, so the
+scheduler classifies a scheduled `cb handle` from the same pair of signals.
+
+```ts
+const handleLine = formatHandleInconclusiveLine({
+  category: "receipts",
+  detail: "review of step file reached max turns (8)",
+});
+const handled = await classifyScheduleFailure({
+  boxRoot: "/nonexistent",
+  runStartedAt: NOW,
+  error: commandFailure({ exitCode: INCONCLUSIVE_EXIT_CODE, stderr: handleLine }),
+});
+print(handleLine);
+print(handled.result);
+=>
+Inconclusive: handle receipts — review of step file reached max turns (8); work completed
+inconclusive
 ```
 
 ## Recording it freezes the failure counter

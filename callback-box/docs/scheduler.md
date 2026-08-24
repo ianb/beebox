@@ -36,9 +36,14 @@ Key behaviors:
   The boxholder is notified once per episode with the reset time. Design:
   `docs/plans/deferred-recoverable-agent-failures.md`.
 - **Inconclusive runs (no verdict)** — A script whose work completed but whose
-  check never decided exits **2** and prints one `Inconclusive: …` line on
-  stderr (today: `cb procedure run` when a validate step's review runs out of
-  turns — see `docs/procedure-implementation.md`). The scheduler records that
+  check never decided exits **3** (`INCONCLUSIVE_EXIT_CODE`) and prints one
+  `Inconclusive: …` line on stderr (`cb procedure run` when a validate step's
+  review runs out of turns — see `docs/procedure-implementation.md`; `cb handle`
+  when a category's handler procedure does). Both signals are required, and the
+  line must appear on stderr in the full shape `formatInconclusiveLine` /
+  `formatHandleInconclusiveLine` produce: a command can print anything on
+  stdout, and reading that as a non-verdict would launder a real failure. The
+  scheduler records that
   as `lastResult: "inconclusive"`, which — like `deferred` — neither
   increments nor resets `consecutiveFailures`, and unlike a success does not
   set `lastSuccess`. `cb health` shows `?` / `inconclusive` and does **not**

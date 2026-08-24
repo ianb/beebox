@@ -12,7 +12,7 @@
 
 import { getBoxTime } from "../../lib/time.js";
 import { errorMessage } from "../../lib/error-guards.js";
-import { CommandFailedError } from "../../lib/exec-with-timeout.js";
+import { CommandFailedError, stderrSection } from "../../lib/exec-with-timeout.js";
 import { INCONCLUSIVE_EXIT_CODE, findInconclusiveLine } from "../../shared/inconclusive.js";
 import { loadAgentEngine } from "../box/config.js";
 import {
@@ -48,16 +48,20 @@ export type ScheduleOutcomeResult = "failure" | "deferred" | "inconclusive";
 
 /**
  * Recognize a run that exited "the work completed, the check did not decide".
- * Requires BOTH signals: the dedicated exit code AND the marker line the
- * procedure CLI prints. Either alone is ambiguous — some other tool may exit
- * 2, and the phrase could appear in an unrelated command's output — and
- * mislabeling a real failure as a non-verdict is exactly the direction of
- * error this whole change exists to prevent.
+ *
+ * Three conditions, all required, because every relaxation of them turns a
+ * real failure into a non-answer:
+ *  - the dedicated exit code (another tool's non-zero code is not this);
+ *  - the marker line in the *stderr* section of the message, not anywhere in
+ *    it — the message also carries a tail of the child's stdout, which is
+ *    arbitrary text the command may have printed or echoed;
+ *  - the whole line in the shape `shared/inconclusive.ts` produces, not just
+ *    its opening word.
  */
 function inconclusiveLine(error: unknown): string | null {
   if (!(error instanceof CommandFailedError)) return null;
   if (error.exitCode !== INCONCLUSIVE_EXIT_CODE) return null;
-  return findInconclusiveLine(error.message);
+  return findInconclusiveLine(stderrSection(error.message));
 }
 
 /**

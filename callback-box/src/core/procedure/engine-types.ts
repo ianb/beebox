@@ -61,9 +61,11 @@ const RUN_STATUS_TRANSITIONS: Record<RunStatus, readonly RunStatus[]> = {
   pending: ["running"],
   running: ["running", "completed", "failed", "inconclusive"],
   completed: [],
-  // An inconclusive run's work is done but unjudged; resuming re-opens it the
-  // same way a failed run re-opens, so a later run can try for a verdict.
-  inconclusive: ["running"],
+  // An inconclusive run's work is done and its steps are all complete: there
+  // is nothing left to execute, and resume does not re-judge (no re-review
+  // path exists). So `inconclusive` is terminal here — `resumeProcedure`
+  // reports the standing non-verdict instead of re-opening the run.
+  inconclusive: [],
   failed: ["running"],
 };
 
@@ -151,5 +153,11 @@ export interface StepUpdate {
   completedAt?: string;
   precheck?: { status: PrecheckStatus; stdout?: string };
   run?: { sessionId?: string; stdout?: string; error?: string; gitRef?: string };
-  validate?: { status: ValidateStatus; stdout?: string; review?: string; error?: string };
+  validate?: {
+    status: ValidateStatus;
+    stdout?: string;
+    review?: string;
+    error?: string;
+    reason?: InconclusiveReason;
+  };
 }

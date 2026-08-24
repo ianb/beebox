@@ -15,7 +15,7 @@ time.
 
 Two parts of that report are still open. Both were deliberately left out of the
 diagnostics work in
-[the reporting bug](2026-08-23-codex-thread-init-failure-reads-as-a-turn-error.md),
+[the reporting bug](../closed/bugs/2026-08-23-codex-thread-init-failure-reads-as-a-turn-error.md),
 which changed only what the failure says, not what happens after it.
 
 ## Should a failed start retry?

@@ -8,7 +8,15 @@ procedure runner so we don't exercise the live procedure engine.
 See `docs/triage.md` §Handle (stage 3) and `src/core/handle.ts`.
 
 ```ts setup
-import { runHandle, formatHandlingLines, TRIAGE_ITEMS_ENV } from "../../src/core/handle.js";
+import {
+  runHandle,
+  formatHandlingLines,
+  handleVerdict,
+  describeHandleFailures,
+  readHandlingResults,
+  TRIAGE_ITEMS_ENV,
+} from "../../src/core/handle.js";
+import { formatHandleInconclusiveLine } from "../../src/shared/inconclusive.js";
 import { createCollectorContext } from "../../src/core/commands/index.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 ```
@@ -343,6 +351,41 @@ JSON.stringify(formatHandlingLines(results[0]), null, 2)
 
 ```ts cleanup
 await box.cleanup();
+```
+
+## The pass exits for its worst bucket
+
+`cb handle` used to exit 0 whether a handler failed, reached no verdict, or
+did neither — a wakeup script gating on it saw a green run in all three cases.
+The verdict is the worst outcome present, in that order.
+
+```ts
+const bucket = (category, outcome, detail) => ({ category, items: ["x"], outcome, ...(detail && { detail }) });
+const clean = [bucket("recipes", "ran"), bucket("receipts", "no-items")];
+const unjudged = [bucket("recipes", "ran"), bucket("receipts", "procedure-inconclusive", "review of step file reached max turns (8)")];
+const broken = [...unjudged, bucket("notes", "procedure-failed", "step archive failed")];
+print(`${handleVerdict(clean)}, ${handleVerdict(unjudged)}, ${handleVerdict(broken)}`);
+print(describeHandleFailures(broken));
+=>
+ok, inconclusive, failed
+handler procedure failed for notes (step archive failed)
+```
+
+The stderr line an unjudged bucket prints is the scheduler's vocabulary, same
+prefix and closing clause as a procedure run's:
+
+```ts continue
+print(formatHandleInconclusiveLine({ category: "receipts", detail: unjudged[1].detail }));
+=> Inconclusive: handle receipts — review of step file reached max turns (8); work completed
+```
+
+The CLI reads the results back across the untyped command boundary, so a
+mis-shaped value can't become a silent clean exit — unknown outcomes are
+dropped rather than trusted:
+
+```ts continue
+JSON.stringify(readHandlingResults([...unjudged, { category: "junk", outcome: "who-knows" }, "nope"]).map((r) => r.outcome))
+=> ["ran","procedure-inconclusive"]
 ```
 
 ## Env constant is exported

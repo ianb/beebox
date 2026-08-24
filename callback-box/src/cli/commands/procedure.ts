@@ -39,8 +39,11 @@ async function exitWithProcedureError(message: string | undefined): Promise<neve
  * Terminal handling for a run whose work succeeded. An unjudged run gets its
  * own exit code — not 0, because a reader who gated on success would be told
  * the review passed when nothing checked it; not 1, because the work did not
- * fail and nothing here should be redone. Exit 2 plus one stderr line the
- * scheduler recognizes (`shared/inconclusive.ts`).
+ * fail and nothing here should be redone. `INCONCLUSIVE_EXIT_CODE` plus one
+ * stderr line the scheduler recognizes (`shared/inconclusive.ts`).
+ *
+ * Shared by `run` and `resume`: a resume that finds a standing non-verdict
+ * reports it exactly as the original run did.
  */
 async function finishRun(result: CommandResult): Promise<void> {
   const outcome = procedureOutcome(result);

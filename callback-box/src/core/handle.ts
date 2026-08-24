@@ -27,6 +27,7 @@ import {
 import { startProcedure, type ProcedureInconclusive } from "./procedure/engine.js";
 import type { CommandContext } from "./command-runner.js";
 import { errnoCode } from "../lib/error-guards.js";
+import { isRecord } from "../lib/is-record.js";
 
 /** Env var the handler procedure reads to get its bucket. */
 export const TRIAGE_ITEMS_ENV = "TRIAGE_ITEMS";
@@ -148,6 +149,65 @@ export function formatHandlingLines(result: CategoryHandling): string[] {
     lines.push(`    └─ ${result.detail}`);
   }
   return lines;
+}
+
+/**
+ * The worst outcome in a handle pass, in the order a caller cares about:
+ * a failed handler is louder than an unjudged one, and an unjudged one is
+ * louder than a clean pass. `cb handle`'s exit code is this and nothing else —
+ * before it, a bucket whose handler failed and a bucket nobody judged both
+ * exited 0, so a wakeup script gating on `cb handle` saw a green run either
+ * way.
+ */
+export type HandleVerdict = "ok" | "inconclusive" | "failed";
+
+export function handleVerdict(results: readonly CategoryHandling[]): HandleVerdict {
+  if (results.some((r) => r.outcome === "procedure-failed")) return "failed";
+  if (results.some((r) => r.outcome === "procedure-inconclusive")) return "inconclusive";
+  return "ok";
+}
+
+/** One sentence naming the buckets whose handler procedure failed. */
+export function describeHandleFailures(results: readonly CategoryHandling[]): string {
+  const failed = results.filter((r) => r.outcome === "procedure-failed");
+  return `handler procedure failed for ${failed
+    .map((r) => `${r.category}${r.detail === undefined || r.detail === "" ? "" : ` (${r.detail})`}`)
+    .join("; ")}`;
+}
+
+const HANDLE_OUTCOMES: readonly CategoryHandling["outcome"][] = [
+  "ran",
+  "no-items",
+  "no-procedure",
+  "no-category",
+  "procedure-inconclusive",
+  "procedure-failed",
+];
+
+/**
+ * Read a handle command's boundary `data` back as typed results. The
+ * command-runner boundary is untyped, and the CLI keys its exit code on what
+ * comes through it, so this re-validates rather than asserts — a mis-shaped
+ * value must not silently become a clean exit.
+ */
+export function readHandlingResults(data: unknown): CategoryHandling[] {
+  if (!Array.isArray(data)) return [];
+  const results: CategoryHandling[] = [];
+  for (const entry of data) {
+    if (!isRecord(entry)) continue;
+    const { category, items, outcome, procedurePath, detail } = entry;
+    if (typeof category !== "string") continue;
+    const known = HANDLE_OUTCOMES.find((o) => o === outcome);
+    if (known === undefined) continue;
+    results.push({
+      category,
+      items: Array.isArray(items) ? items.filter((i): i is string => typeof i === "string") : [],
+      outcome: known,
+      ...(typeof procedurePath === "string" && { procedurePath }),
+      ...(typeof detail === "string" && { detail }),
+    });
+  }
+  return results;
 }
 
 export interface RunHandleOptions {
