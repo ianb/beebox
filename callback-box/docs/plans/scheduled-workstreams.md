@@ -80,9 +80,12 @@ Reused:
   with the same marker-file discipline (`bin/lib/exhibits-store.sh:15-38`).
 - **Registry records without a worktree.** `bin/workstreams:668-712` renders
   registry entries whose directory is absent (`path:null`,
-  `runtime:{state:"absent"}`); `bin/workstreams:447-459` `resume` recreates a
-  worktree from such a record. A scheduled workstream is a record with one
-  more field; resume needs no new path.
+  `runtime:{state:"absent"}`) — but only `removed` or mid-launch ones
+  (`:678-679`); `bin/workstreams:447-475` `resume` recreates a worktree for
+  a `removed` record and launches through `bin/lib/launch-session.sh`. A
+  scheduled workstream reuses both after Track D exempts `kind:
+  "scheduled"` from the skip and from prune, and teaches `resume` that an
+  absent scheduled record is recreatable without `removed`.
 - **Record writes.** `bin/lib/session-registry.sh:250`
   `session_registry_merge()`, `:254` `session_registry_begin_launch()`.
 - **Routing derivation.** `bin/lib/workstream-routing.sh:21`
@@ -100,8 +103,13 @@ Reused:
   invocation shape.
 - **Idempotent worktree creation.** `bin/workstreams create <name>`
   (`bin/workstreams:173-192`, "Idempotent").
-- **Liveness guard.** `bin/lib/worktree-teardown.sh:94` `wt_other_agent_live`
-  — the runner must not start a session in a workstream whose agent is live.
+- **Liveness guard.** `bin/lib/worktree-teardown.sh:94-96`
+  `wt_other_agent_live` — fail-closed: `launching` and `unknown` count as
+  live. The runner treats them the same way.
+- **Launch lifecycle.** `session_registry_begin_launch`
+  (`bin/lib/session-registry.sh:254`) and `bin/lib/launch-session.sh` (used
+  by `resume`, `bin/workstreams:468`) — the runner launches through these,
+  adding a headless mode rather than a second launcher.
 - **YAML parsed by Zod.** `callback-box/src/dev/knowledge-audits.yaml` and
   its loader are the precedent for `schedule.yaml`.
 - **The constrained triager.** `bin/manual-tests-scheduled.sh` — the
@@ -175,12 +183,14 @@ script that checks box health) but not a substrate.
   workstream name and the registry key.
 - **Run** — one execution of a schedule's `run` script. Identified by a
   run id `<YYYYMMDD-HHMMSS>`.
-- **Handoff** — a Markdown file `run` writes to `$SCHEDULE_HANDOFF` to say
-  "start the workstream with this briefing". Absent handoff + exit 0 = nothing
+- **Handoff** — a record `run` writes through `bin/schedules handoff` to say
+  "start the workstream with this briefing". No handoff + exit 0 = nothing
   to do.
-- **Scheduled workstream** — a registry record with `scheduled: true`. Sticky:
-  `remove`/`sweep` cull its worktree, never its record. Routing state
-  `scheduled`.
+- **Scheduled workstream** — a registry record with `kind: "scheduled"`.
+  Sticky: `remove`/`sweep`/prune cull its worktree, never its record.
+  Routing state `scheduled`.
+- **Result** — the per-run completion record `runs/<id>.result.json`, written
+  by `alert` or `done`. A run with a session and no result is a bailed run.
 - **Alert** — a record written by `bin/schedules alert`: workstream, title,
   message (one short paragraph), details (Markdown, optional), priority.
   States `open` → `acknowledged`.
@@ -212,11 +222,27 @@ description: "Weekly dead-export sweep"        # required, one line
 cadence: 7d                                     # required: <n>h | <n>d | <n>w
 grace: 1d                                       # optional; default 25% of cadence
 enabled: true                                   # optional; default true
+timeout: 2h                                     # optional; default 2h; kills run or session
 workstream:                                     # optional; absent = run-only schedule
   agent: claude                                 # claude | codex
   model: opus                                   # passed through to the agent CLI
   worktree: true                                # false = session runs in the main checkout
+  session: fresh                                # fresh | persistent (one resumed session id)
+  permissionMode: bypassPermissions             # required: bypassPermissions | dontAsk
+  tools: [Read, Grep, Glob, Edit, Write]        # optional; --tools
+  allowedTools: ["Edit(issues/**)"]             # optional; --allowedTools
+  disallowedTools: ["Read(private-issues/**)"]  # optional; --disallowedTools
+  maxBudgetUsd: 2                               # optional; --max-budget-usd
 ```
+
+`permissionMode` has no default on purpose: the author states the sandbox.
+The manual-tests triager's constraints
+(`bin/manual-tests-scheduled.sh:233-245`: `--no-session-persistence
+--disable-slash-commands --setting-sources user --permission-mode dontAsk
+--tools … --allowedTools … --disallowedTools …`) are expressible here
+without loss; `--setting-sources user` and `--disable-slash-commands` are
+always passed (the former is load-bearing: `.claude/skills/cross-model` records
+that a nested `claude -p` without it fires the repo's SessionEnd hook).
 
 **Why this needs to change.** Today the catalog (`docs/maintenance.md`
 "At a glance" table) is hand-maintained prose and the two runnable jobs each
@@ -228,8 +254,10 @@ body, not as parameter defaults (`code-style.md:88`). `workstream.worktree:
 false` exists for schedules that must run in the main checkout and push
 (the SDK updater). Environment for `run` and `check`, set by the runner:
 `SCHEDULE_NAME`, `SCHEDULE_DIR`, `SCHEDULE_RUN_ID`, `SCHEDULE_STATE_DIR`
-(the schedule's store dir), `SCHEDULE_HANDOFF` (a path; the file does not
-exist until `run` creates it), `SCHEDULE_DRY_RUN=1` when dry-running.
+(the schedule's store dir), `SCHEDULE_DRY_RUN=1` when dry-running. A `run`
+that has work calls `bin/schedules handoff --title <t> --body @file|-`
+(Track C), which validates and writes `runs/<id>.handoff.json` atomically
+(write to a temp name, rename); there is no free-form handoff file.
 
 Per-machine enablement: `enabled` is tracked; a gitignored
 `schedules/<name>/local.yaml` (same schema, partial) overrides it, so a
@@ -247,12 +275,20 @@ covering cadence parsing, missing `run`, non-executable `run`, missing
 **What.** `<parent>/schedule-runs/<name>/`:
 
 ```
-state.json                 # { lastRunAt, lastRunId, lastExit, lastOutcome }
-runs/<run-id>.log          # stdout+stderr of run (and check, and the session)
-runs/<run-id>.handoff.md   # copy of the handoff, if any
-alerts/<alert-id>.json     # Track C
-lock/                      # mkdir lock while a run or session is in flight
+../state.json                # store root: { lastTickAt, lastTickExit } — the scheduler heartbeat
+state.json                   # { lastRunAt, lastRunId, lastExit, lastOutcome }
+runs/<run-id>.log            # stdout+stderr of run (and check, and the session)
+runs/<run-id>.handoff.json   # written by `handoff`, if any
+runs/<run-id>.result.json    # written by `alert`/`done`; absent = no report
+runs/<run-id>.exit.json      # written by the runner: run exit, session exit, check exit
+alerts/<alert-id>.json       # Track C
+lock/                        # mkdir lock (PID inside) while a run or session is in flight
 ```
+
+The store-root `state.json` is the anti-silence primitive and lands in the
+first chunk: every `tick` stamps it first; `list` prints "scheduler: last
+tick N ago"; the browser (Track D) renders it red past 1h; `bin/doctor.ts`
+checks it and that the plist is loaded.
 
 `bin/schedules` is a shim (`exec node --import tsx bin/schedules.ts`, the
 `bin/comments` shape). Verbs: `list [--json]`, `tick`, `run <name>
@@ -279,27 +315,47 @@ observable.
     (below) with the handoff as briefing.
   - non-zero → `lastOutcome: "failed"`; write an `important` alert with the
     last 40 log lines as details; if the schedule has a `workstream`, start
-    it with the log tail as briefing.
+    it with the log tail (and the handoff, if one was written before the
+    failure) as briefing.
   - `--dry-run`: execute `run` with `SCHEDULE_DRY_RUN=1`, print the
-    would-be outcome and the handoff to stdout, write nothing to state.
-    `run` scripts must honor the variable (the skill and `lint` say so:
-    the lint greps for `SCHEDULE_DRY_RUN`).
+    would-be outcome and the handoff to stdout, write nothing to state
+    (`handoff` under dry-run prints instead of writing). `run` scripts must
+    honor the variable (the skill and `lint` say so: the lint greps for
+    `SCHEDULE_DRY_RUN`).
   - `--force`: ignore due-ness.
-- Starting a workstream: `bin/workstreams create <name>` (idempotent) unless
-  `worktree: false`; write/merge the registry record with `scheduled: true`;
-  refuse if `wt_other_agent_live` says an agent is live there (alert
-  `normal`: "work waiting, session already live"). Launch
-  `claude -p --brief --name "<name>" --model <model> --permission-mode
-  bypassPermissions --append-system-prompt-file schedules/<name>/prompt.md
-  "<briefing>"` (Codex equivalent via the launcher's existing `--agent codex`
-  path) in the worktree, output to the same run log. Sessions are fresh each
-  start; durable memory belongs in tracked docs (the SDK ledger) or the
-  store, not in a resumed transcript. The briefing ends with the standing
-  instruction: *finish by running `bin/schedules alert` or `bin/schedules
-  done`*.
-- After the session exits: if `check` exists, run it; non-zero → `important`
-  alert. If the session exited without writing an alert or calling `done`
-  for this run id → `important` alert "session ended without reporting".
+- Starting a workstream goes through the existing launch lifecycle, not
+  around it: `bin/workstreams create <name>` (idempotent) unless `worktree:
+  false`; `session_registry_begin_launch name token '{"kind":"scheduled",
+  …}'` (`bin/lib/session-registry.sh:254`) so the browser shows
+  `launching` and stale-launch cleanup applies; the agent invocation is
+  built by `bin/lib/launch-session.sh` (the path `resume` takes at
+  `bin/workstreams:468`), extended with a headless mode that runs
+  `claude -p` (or `codex exec`) in the foreground with output to the run log
+  instead of opening a Terminal tab. Refuse to start when
+  `wt_other_agent_live` reports `live`, `launching`, **or `unknown`**
+  (`bin/lib/worktree-teardown.sh:94-96` is fail-closed; the runner is too):
+  alert `normal` "work waiting, session already live".
+  Flags: `--brief --name "<name>" --model <model> --permission-mode <yaml>
+  --setting-sources user --disable-slash-commands
+  --append-system-prompt-file schedules/<name>/prompt.md` plus the yaml
+  tool constraints; `session: persistent` adds `--session-id`/`--resume`
+  with the id kept in `state.json` (the pattern at
+  `bin/update-agent-sdk-scheduled.sh:83-128`); `session: fresh` adds
+  `--no-session-persistence`. `--append-system-prompt-file` is listed by
+  `claude --help` (2026-08-24) but no script in the repo uses it yet;
+  `install` guards on it the way manual-tests guards on `--allowedTools`
+  (`bin/manual-tests-scheduled.sh:148`).
+  The briefing is the handoff body followed by a fixed trailer that names
+  the run id and the contract: *finish by running `bin/schedules alert
+  --run <id> …` or `bin/schedules done --run <id>`*. The run id is in the
+  text so a session that lost its env (a later `resume` tab) can still
+  report.
+- After the session exits the runner writes `runs/<id>.exit.json`, then: if
+  `check` exists, run it; non-zero → `important` alert. If
+  `runs/<id>.result.json` is absent → `important` alert "session ended
+  without reporting", log attached. If the runner itself died after
+  launching (laptop shutdown), the next tick finds a lock whose PID is dead,
+  reclaims it, and applies the same absent-result rule to that run.
 - `list`: name, cadence, enabled, last run, outcome, next due, **overdue**,
   open alerts. `--json` is what the browser consumes.
 - `install`: one plist `com.callback-box.schedules`, `StartInterval 900`,
@@ -332,9 +388,13 @@ Delivery is a separate step inside the same command: a macOS notification
 (`osascript`, best effort, swallowed if absent) whose body is the title and
 message. Nothing else reads notifications; the record is the truth.
 
-`bin/schedules done` writes `{ runId, doneAt }` to state — the "I finished
+`alert` and `done` both write `runs/<id>.result.json` (`{ runId, kind:
+"alert"|"done", alertId?, at }`, atomic rename); `done` is the "I finished
 and there was nothing to say" marker that distinguishes a clean session from
-a bailed one.
+a bailed one. `--run <id>` overrides `SCHEDULE_RUN_ID`; with neither the
+command refuses. `bin/schedules handoff --title <t> --body @file|-` writes
+`runs/<id>.handoff.json` (`{ runId, title, body, at }`, body capped at 256
+KB) the same way; it is the only way `run` starts a workstream.
 
 `bin/schedules ack <id>` sets `acknowledged`. Acknowledged alerts leave the
 default `list` and browser views after 14 days; records are kept.
@@ -347,31 +407,40 @@ precedent, `bin/CLAUDE.md` "The CLI is the only writer"). Priority guidance
 per schedule lives in its `prompt.md`; the CLI does not validate
 appropriateness, only the enum.
 
-**First implementation chunk.** `alert`, `done`, `ack`, `list` showing open
-alert counts; tests for record shape, default workstream from env, `--details
--` from stdin, and the 14-day fade.
+**First implementation chunk.** `alert`, `done`, `handoff`, `ack`, `list`
+showing open alert counts; tests for record shape, default workstream and
+run id from env, `--run` override, refusal with neither, `--details -` from
+stdin, atomic write, and the 14-day fade.
 
 ### Track D — Registry and browser
 
-**What.** A `scheduled: true` field in the session registry record; routing
-state `scheduled` with action `resume-with-briefing`; a "Scheduled" section
-in the workstream browser listing each schedule with cadence, last run,
-outcome, overdue, and open alerts, with the alert details expandable.
+**What.** A `kind: "scheduled"` field in the session registry record;
+routing state `scheduled` with action `resume-with-briefing`; a "Scheduled"
+section in the workstream browser listing each schedule with cadence, last
+run, outcome, overdue, open alerts (details expandable), and the scheduler
+heartbeat.
 
 **Why this needs to change.** A scheduled workstream with no worktree today
-renders as `uncertain / investigate` (`workstream-routing.sh:57-58`, the
-final `else`). The boxholder wants these in their own section.
+is *dropped* before routing runs: `bin/workstreams:678-679` skips absent
+records whose `launch.state` is `none` unless they carry `removed`, and
+`session_registry_prune` (`bin/lib/session-registry.sh:287-297`) deletes
+absent records with old launch state. If it survived, it would render as
+`uncertain / investigate` (`workstream-routing.sh:60-61`, the final
+`else`). The boxholder wants these sticky and in their own section.
 
 **Direction.**
 
-- `workstream_routing_json`: before the `removed_at` branch, `if
-  scheduled == true and agent_state != live → state=scheduled,
-  action=resume-with-briefing`. A live agent in a scheduled workstream is
-  `live / manual-forward` as today.
-- `bin/workstreams remove`/`sweep`: cull the worktree; keep the record
-  (`removed` is not set on a scheduled record; the worktree simply is not
-  there). `archive` is refused for scheduled records ("disable it in
-  `schedule.yaml` instead").
+- Registry: `kind: "scheduled"` written on every start (so a wiped record
+  heals). `session_registry_prune` and the `list` skip at
+  `bin/workstreams:678` both exempt `kind == "scheduled"`.
+- `workstream_routing_json`: after the launch-state branches and before the
+  `removed_at` branch, `if kind == scheduled and agent_state == none →
+  state=scheduled, action=resume-with-briefing`. `live`, `launching`, and
+  `unknown` keep their existing precedence (`workstream-routing.sh:43-50`)
+  — the branch never overrides a fail-closed state.
+- `bin/workstreams remove`/`sweep`: cull the worktree; keep the record and
+  do not set `removed` on it. `archive` is refused for scheduled records
+  ("set `enabled: false` in `schedule.yaml` instead").
 - `routingStateSchema` gains `scheduled`; `workstreamsCliRowSchema` gains
   `schedule: { cadence, lastRunAt, lastOutcome, overdue, openAlerts } | null`
   populated by `bin/workstreams list` from `bin/schedules list --json`.
@@ -389,11 +458,12 @@ for the routing table. The React section is the second chunk.
 **What.** One command that validates every `schedules/<name>/`:
 `schedule.yaml` against the Zod schema (including `local.yaml`); `run` and
 `check` are executable, have a shebang, and mention `SCHEDULE_DRY_RUN`;
-shell scripts pass shellcheck (the npm `shellcheck` package, pinned in the
-root `package.json`); TypeScript scripts are covered by the root lint once
-`eslint.config.mjs:1-10` stops being a stub for `schedules/**` — this plan
-wires the `personal-vibe-check` preset for `schedules/**/*.ts` only, and
-leaves `bin/` as it is (a separate decision). `prompt.md` present when
+shell scripts pass shellcheck (the npm `shellcheck` package, **added** to
+root `devDependencies` — nothing pins it today, `package.json:36-40`);
+TypeScript scripts are covered by wiring the `personal-vibe-check` preset
+for `schedules/**/*.ts` in the root `eslint.config.mjs`, which today exports
+an empty array for every root file (`eslint.config.mjs:1-10`, by decision);
+`bin/` stays unlinted (a separate decision). `prompt.md` present when
 `workstream` is set, and the prompt contains the words `bin/schedules alert`
 (the reporting contract).
 
@@ -415,9 +485,9 @@ executable/shebang/dry-run checks; the pre-commit hook; shellcheck wired.
 
 | Schedule | `run` | Workstream | Notes |
 |---|---|---|---|
-| `sdk-update` | query npm for versions newer than the ledger's last entry; handoff lists them | claude/opus, `worktree: false` (pushes to main per prompt) | prompt.md = today's prompt, plus: file `issues/` items for releases the code must account for; end with `alert` |
+| `sdk-update` | query npm for versions newer than the ledger's last entry; handoff lists them | claude/opus, `worktree: false` (pushes to main per prompt), `session: persistent` (today's contract, `update-agent-sdk-scheduled.sh:83-128`) | prompt.md = today's prompt, plus: file `issues/` items for releases the code must account for; end with `alert` |
 | `docling-update` | today's `bin/check-docling-update.ts`; handoff on a settled newer release | none — alert `normal` from `run` | currently piggybacks the SDK job (`update-agent-sdk-scheduled.sh:105-109`) |
-| `manual-tests` | run the suite; handoff on failures | claude/sonnet, worktree | prompt.md = today's triager prompt; tool constraints move into the prompt and `--allowedTools` in `schedule.yaml` (`workstream.allowedTools`, added in this track) |
+| `manual-tests` | run the suite; handoff on failures | claude/sonnet, worktree, `permissionMode: dontAsk`, the triager's `tools`/`allowedTools`/`disallowedTools`, `maxBudgetUsd: 2` | prompt.md = today's triager prompt; `check` = today's `validate_triage_result` (`bin/manual-tests-scheduled.sh:62`, append-only edits to open issues) followed by the commit the runner does today |
 | `knip-sweep` | `pnpm lint:knip`, diff against `$SCHEDULE_STATE_DIR/last-report.txt`, handoff with new findings | claude/opus, worktree (`knip-exports`) | needs knip's 33 lines of pre-existing noise fixed first (on the `knip-exports` branch) |
 
 Then delete `bin/update-agent-sdk-scheduled.sh`,
@@ -452,7 +522,16 @@ examples are real.
 Simplest version: keep per-job launchd scripts, add one `bin/notify-from-
 schedule` that appends a line to a file, and a page that tails the file.
 
-What the plan buys over it, traced:
+A second smaller version, the one the filed issue sketches: a sticky
+workstream plus **exhibits** as the message channel (an `fyi`/`confirm`
+ask per report) plus overdue derivation. It reuses the asks page and needs
+no alert store. The boxholder rejected it on 2026-08-24 ("exhibits seem
+like a red herring"): an exhibit is a presentation with a question attached;
+a schedule's report is a short message with a priority and an optional long
+tail, read in the workstream's own row. Bending the ask vocabulary to carry
+priority and "nothing to do" would give `fyi` a second meaning (principle 8).
+
+What the plan buys over the first version, traced:
 
 - The simple version cannot say "this job has not run" — the failure that
   actually happened twice. Overdue needs a declared cadence and a stamped
@@ -489,17 +568,19 @@ decision noted in Track E and NOT in scope.
 | Agent live in the workstream when due | B test | skip + `normal` alert | clear |
 | `osascript` missing / notifications off | C test | record still written; delivery best-effort | clear (record) |
 | Store root unwritable | B test | `tick` exits non-zero to launchd log; **nothing else** | see gap |
-| Registry record lost (state dir wiped) | D test | `tick` re-merges `scheduled: true` on every start | clear |
+| Registry record lost (state dir wiped) | D test | `kind: "scheduled"` is re-merged on every start | clear |
 | `remove --force` on a scheduled workstream | D test | culls worktree, keeps record | clear |
 | Handoff written but exit non-zero | B test | treated as `failed` (log tail + handoff both in briefing) | clear |
-| Plist never installed / bootout by an OS update | — | `bin/doctor.ts` gains a check: plist loaded and last tick < 1h | clear once added |
+| Runner dies after launching a session | B stale-lock test | next tick reclaims the lock, absent result → alert | clear |
+| Registry record pruned or `list`-skipped | D tests | `kind: "scheduled"` exempt in both | clear |
+| Plist never installed / bootout by an OS update | B heartbeat test | store-root `lastTickAt` shown by `list`/browser; `bin/doctor.ts` checks plist loaded and last tick < 1h | clear |
 
 > **Critical gap:** store root unwritable — every schedule silently stops,
 > and the overdue signal lives in the same unwritable store. Mitigation in
-> plan: `bin/doctor.ts` checks store writability and last-tick age; the
-> browser shows "scheduler: last tick N ago" from `state.json` at the store
-> root, and a missing/old value renders red. Accepted residual: if the disk
-> is gone, the browser reading it is gone too.
+> plan, in the first chunk: `tick` exits non-zero and macOS-notifies when it
+> cannot stamp `lastTickAt`; `bin/doctor.ts` checks store writability and
+> last-tick age; the browser renders a missing/old heartbeat red. Accepted
+> residual: if the disk is gone, the browser reading it is gone too.
 
 ## Agent-flow / user-flow edge cases
 
@@ -549,18 +630,14 @@ decision noted in Track E and NOT in scope.
 
 ## Open design questions
 
-- **Handoff by file vs exit code.** Plan chooses the file
-  (`$SCHEDULE_HANDOFF`): it carries content, and exit 0 keeps "success"
-  unambiguous for shell authors. Boxholder has not confirmed.
 - **Headless by default.** Plan chooses headless (`claude -p`) with `resume`
   as the way in. Alternative: `important` opens a Terminal tab at once.
   Lean: headless; a tab appearing unbidden at 03:00 is not helpful.
 - **Where cadence lives.** Plan: `schedule.yaml` only; `docs/maintenance.md`
   points at `bin/schedules list`. Lean firm.
-- **Persistent session for `sdk-update`.** The current job resumes one
-  session for continuity. Plan: fresh session, ledger is memory. If the
-  first migrated runs show the agent re-deriving too much, add
-  `workstream.session: persistent`.
+- **Should `sdk-update` stay `persistent`?** Migrated as-is (persistent) to
+  keep today's contract; switching to `fresh` (ledger as memory) is a later
+  observation, not a migration decision.
 
 ## Knowledge audits
 
@@ -572,19 +649,20 @@ document, and its worked examples are the recall mechanism.
 ## Implementation order
 
 1. Track A — schema + loader + tests.
-2. Track B chunk 1 — store, lock, `list`, `run --dry-run`, `tick` for
-   run-only schedules.
-3. Track C — `alert`, `done`, `ack`.
-4. Track B chunk 2 — workstream start, post-session check, "no report"
-   alert.
-5. Track D chunk 1 — registry field, routing branch, list row field.
+2. Track B chunk 1 — store, heartbeat, lock, `list`, `run --dry-run`, `tick`
+   for run-only schedules; `bin/doctor.ts` heartbeat/plist check.
+3. Track C — `alert`, `done`, `handoff`, `ack`.
+4. Track D chunk 1 — registry `kind`, prune/list exemptions, routing
+   branch, list row field (before any session starts, so the first started
+   workstream is never pruned).
+5. Track B chunk 2 — headless mode in `launch-session.sh`, workstream start
+   through the launch lease, post-session `check`, absent-result alert.
 6. Track E — lint + pre-commit + shellcheck.
 7. Track F — `docling-update`, `sdk-update`, `manual-tests`, `knip-sweep`
    (the last waits for the `knip-exports` branch to land its noise fix).
 8. Track D chunk 2 — the browser section.
 9. Track G — the skill, with real examples.
-10. `bin/doctor.ts` scheduler checks; `docs/maintenance.md` rewrite;
-    `bin/CLAUDE.md` section.
+10. `docs/maintenance.md` rewrite; `bin/CLAUDE.md` section.
 
 ## Rollout shape
 
