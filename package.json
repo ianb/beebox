@@ -10,6 +10,7 @@
     "check-docling-update": "node --import tsx bin/check-docling-update.ts",
     "comments": "node --import tsx bin/comments.ts",
     "commit-blocklist-check": "node --import tsx bin/commit-blocklist-check.ts",
+    "commit-provenance": "node --import tsx bin/commit-provenance.ts",
     "dev": "bin/workstreams serve",
     "dev-apps-typecheck": "bash bin/dev-apps-typecheck",
     "doctor": "node --import tsx bin/doctor.ts",
