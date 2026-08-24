@@ -57,12 +57,21 @@ the schema ships no view. `file-types/builtins.tsx:48` registers only a *list
 icon*. So the card falls through to generic rendering and the extracted
 structure — pages, tables, figures — is never used.
 
-**Scope honestly, though: zero `.document.card` files exist in any local box.**
-This gap is latent rather than something a boxholder hits daily, and it belongs
-next to the scanner work (`scanner-ingest`) rather than being treated as the
-common PDF path. Confirm whether any deployed box has one before ranking it: if
-none do, the fix is "the scanner's output should be viewable", not "PDFs render
-badly".
+**Scope honestly.** Zero exist in any local box; a deployed box was found to
+have **exactly one** (alongside 4 `.doc.card`, 1 `.gdoc.card`, 3 loose `.pdf`).
+So this is the scanner's output, at a rate of one, not the common PDF path.
+
+**And it is invisible by construction**, which is the more interesting finding.
+The card is written *inside an attach scope*
+(`<sessionAttach>/source.document.card` — `scan-import.ts`), so it does not
+appear in ordinary directory browsing; it has no renderer; and
+`file-types/builtins.tsx:48` gives it only a list icon. The boxholder did not
+recognize the type at all when asked — a fair reaction to a card that the
+system produces, stores, and never shows.
+
+That reframes the fix: the question is not "does the `document` view look good"
+but "should the scanner be producing an artifact nobody can reach". Sequence it
+with `scanner-ingest`, whose output this is.
 
 ## What to decide
 
