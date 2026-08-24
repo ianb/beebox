@@ -1,7 +1,7 @@
-# Extracted document card — reading its frontmatter, its pages, its status
+# Pdf card — reading its frontmatter, its pages, its status
 
-The document card (`src/schemas/document.ts`) reaches the frontend as parsed
-frontmatter plus a markdown body. `ExtractedDocumentView` is the container that
+The pdf card (`src/schemas/pdf.ts`) reaches the frontend as parsed
+frontmatter plus a markdown body. `PdfCardView` is the container that
 fetches the card's attach-scope listing and renders the Markdoc body; the parts
 tested here are the pieces it composes — the frontmatter reader, the page-strip
 derivation, and the two presentational components. (The container itself pulls
@@ -12,21 +12,21 @@ browser pass rather than here.)
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { parseCardText } from "../../../src/core/card-io.js";
-import { DocumentSchema } from "../../../src/schemas/document.js";
+import { PdfSchema } from "../../../src/schemas/pdf.js";
 import { isRecord } from "../../../src/lib/is-record.js";
 import {
   EXTRACTED_CARD_TYPE,
   pageRendersFrom,
   readExtractedFields,
   requestedPage,
-} from "../../../src/frontend/src/lib/extracted-document.js";
-import { DocumentPageStrip } from "../../../src/frontend/src/components/DocumentPageStrip.js";
-import { DocumentStatusNotice } from "../../../src/frontend/src/components/DocumentStatusNotice.js";
+} from "../../../src/frontend/src/lib/pdf-card.js";
+import { PdfPageStrip } from "../../../src/frontend/src/components/PdfPageStrip.js";
+import { PdfStatusNotice } from "../../../src/frontend/src/components/PdfStatusNotice.js";
 import { LightboxProvider } from "../../../src/frontend/src/components/LightboxProvider.js";
 
 globalThis.React = React;
 
-const schemas = new Map([[EXTRACTED_CARD_TYPE, DocumentSchema]]);
+const schemas = new Map([[EXTRACTED_CARD_TYPE, PdfSchema]]);
 const CARD_PATH = `inbox/Handbook.${EXTRACTED_CARD_TYPE}.card`;
 
 /** Parse a card the way the backend does, then read it the way the view does. */
@@ -132,7 +132,7 @@ the strip renders nothing at all rather than an empty scroller:
 pageRendersFrom([{ name: "source.pdf", relativePath: "inbox/Handbook.attach/source.pdf" }], (p) => p).length
 => 0
 
-render(React.createElement(DocumentPageStrip, { pages: [], activePage: null }))
+render(React.createElement(PdfPageStrip, { pages: [], activePage: null }))
 =>
 ```
 
@@ -148,7 +148,7 @@ The requested page gets a ring; the others don't. Each thumbnail also carries a
 
 ```ts
 const pages = [1, 2, 3].map((page) => ({ page, src: `/test/api/image/page-00${page}.avif` }));
-const html = render(React.createElement(DocumentPageStrip, { pages, activePage: 3 }));
+const html = render(React.createElement(PdfPageStrip, { pages, activePage: 3 }));
 
 html.split("ring-2 ring-accent").length - 1
 => 1
@@ -178,7 +178,7 @@ filename:
 error: docling exited 1 — no text layer found
 ---
 `);
-const html = renderToStaticMarkup(React.createElement(DocumentStatusNotice, {
+const html = renderToStaticMarkup(React.createElement(PdfStatusNotice, {
   status: failed.status,
   error: failed.error,
   hasBody: false,
@@ -191,7 +191,7 @@ html.includes("Text extraction failed")
 html.includes("docling exited 1 — no text layer found")
 => true
 
-html.includes(`cb document reanalyze ${CARD_PATH}`)
+html.includes(`cb pdf reanalyze ${CARD_PATH}`)
 => true
 ```
 
@@ -201,7 +201,7 @@ instead of the warning banner. A normal analyzed card with text gets no notice.
 
 ```ts
 function notice(props) {
-  return renderToStaticMarkup(React.createElement(DocumentStatusNotice, { error: null, cardPath: CARD_PATH, ...props }));
+  return renderToStaticMarkup(React.createElement(PdfStatusNotice, { error: null, cardPath: CARD_PATH, ...props }));
 }
 
 notice({ status: "invalid", hasBody: false }).includes("marked unusable")

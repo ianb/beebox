@@ -11,7 +11,7 @@ import "./extfile";
 import "./image";
 import "./pdf";
 import "./recipe";
-import "./extracted-document";
+import "./pdf-card";
 import "./figure";
 import "./concept-map";
 import "./gsheet";

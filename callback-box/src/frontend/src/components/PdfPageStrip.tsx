@@ -1,7 +1,7 @@
 /**
  * Horizontal strip of an extracted document's page renders.
  *
- * Presentational: the caller (ExtractedDocumentView) lists the card's attach
+ * Presentational: the caller (PdfCardView) lists the card's attach
  * scope and hands over already-resolved image URLs. Each thumbnail opens in the
  * shared lightbox, so prev/next paging through the document comes for free.
  *
@@ -11,11 +11,11 @@
 
 import { useEffect, useRef } from "react";
 import { cn } from "../lib/cn";
-import type { DocumentPage } from "../lib/extracted-document";
+import type { DocumentPage } from "../lib/pdf-card";
 import { Image } from "./ui/Image";
 import { Text } from "./ui/Text";
 
-export interface DocumentPageStripProps {
+export interface PdfPageStripProps {
   pages: DocumentPage[];
   /** Page to highlight and scroll to, or null for none. */
   activePage: number | null;
@@ -26,7 +26,7 @@ export function pageAnchorId(page: number): string {
   return `page-${page}`;
 }
 
-export function DocumentPageStrip({ pages, activePage }: DocumentPageStripProps) {
+export function PdfPageStrip({ pages, activePage }: PdfPageStripProps) {
   const stripRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

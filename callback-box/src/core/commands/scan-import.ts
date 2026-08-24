@@ -7,7 +7,7 @@
  * Internal dispatch (the PDF branch probes for a text layer — `pdf-probe.ts`):
  *   - All inputs are images (.jpg/.png/etc) → photo flow with image batch
  *   - Single PDF, no embedded text → photo flow with `pdftoppm`-rendered pages
- *   - Single PDF with embedded text → document mode (Docling extraction)
+ *   - Single PDF with embedded text → pdf mode (Docling extraction)
  *   - Multiple PDFs or mixed types → error (callers must split)
  *
  * Photo flow output (`<sessionAttach>` = `scan-….attach`):
@@ -26,14 +26,14 @@
  * `box/questions/`) sees them; each carries a `context:` ref back into the
  * attach scope for the item it's about.
  *
- * Document flow output:
- *   <sessionAttach>/source.document.card
+ * Pdf flow output:
+ *   <sessionAttach>/source.pdf.card
  *     + source.attach/{source.pdf, docling.json.gz, page-NNN.avif, figure-NNN.avif}
  *   box/inbox/<name>.capture-session.card  (no image refs)
  *
  * Internal implementation is split across siblings: `scan-import-session.ts`
  * (layout + input classification + vision-backend selection),
- * `scan-import-document.ts` (the PDF/document flow), `scan-import-cards.ts`
+ * `scan-import-pdf.ts` (the PDF/pdf flow), `scan-import-cards.ts`
  * (photo/back/orphan/unsure card emission), and `scan-import-helpers.ts`
  * (vision batching + reconciliation). The analysis backend itself is the
  * ScanVision service (`src/services/scan-vision.ts` — Claude default,
@@ -64,7 +64,7 @@ import {
   resolveScanVision,
   analyzeScanPages,
 } from "./scan-import-session.js";
-import { runDocumentMode } from "./scan-import-document.js";
+import { runPdfMode } from "./scan-import-pdf.js";
 import { ensureBoxTmpDir } from "../../lib/box-tmp.js";
 import { PdfRenderError, probePdf, renderPdfPages } from "./pdf-probe.js";
 import {
@@ -97,14 +97,14 @@ async function executeScanImport(
   if ("error" in resolved) return { success: false, error: resolved.error };
 
   if (resolved.kind === "pdf") {
-    // The dispatch split: a PDF that already carries text is a document (its
+    // The dispatch split: a PDF that already carries text is a pdf card (its
     // text layer is the whole point); a PDF without one is a photo batch that
     // happens to be wrapped in a PDF, and belongs in the photo flow where
     // front/back pairing lives.
     const probe = await probePdf(resolved.pdfPath);
     if (probe.hasTextLayer) {
-      ctx.writeLine(`PDF has a text layer (${probe.textLayerSource}) → document mode`);
-      return runDocumentMode(ctx, { pdfPath: resolved.pdfPath, source });
+      ctx.writeLine(`PDF has a text layer (${probe.textLayerSource}) → pdf mode`);
+      return runPdfMode(ctx, { pdfPath: resolved.pdfPath, source });
     }
     ctx.writeLine("PDF has no text layer → rendering pages for photo analysis");
     return runPhotoModeFromPdf(ctx, { pdfPath: resolved.pdfPath, extraContext, source });
@@ -327,7 +327,7 @@ async function runPhotoMode(
 
 registerCommand({
   name: "scan-import",
-  description: "Import an image batch as photo image cards, or a PDF as a document, into box/inbox/scan-…/",
+  description: "Import an image batch as photo image cards, or a PDF as a pdf card, into box/inbox/scan-…/",
   args: [
     {
       name: "inputs",

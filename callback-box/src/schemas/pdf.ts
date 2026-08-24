@@ -1,22 +1,21 @@
 /**
- * Document card schema — a document whose text has been extracted, with the
+ * PDF card schema — a document whose text has been extracted, with the
  * original bytes kept alongside.
  *
- * Written by `cb scan-import`'s document mode (a scanned PDF that already
- * carries a text layer) and refreshed by `cb document reanalyze`. The card is
- * a **superset of `file.card`**: it carries the same `filename:` provenance
+ * Written by `cb scan-import`'s pdf mode (a scanned PDF that already carries
+ * a text layer) and refreshed by `cb pdf reanalyze`. The card is a
+ * **superset of `file.card`**: it carries the same `filename:` provenance
  * entry (ref/captured/source/original-name/mime-type/size) plus the
  * extraction-derived parts — the rendered markdown as the card body, a
  * `docling.ref:` pointing at the gzipped canonical `DoclingDocument` JSON, and
  * `metadata:` (pages/title/author).
  *
- * The type is deliberately `document`, not `pdf`: `format:` carries the source
- * type, so a docx/html/… going through the same extractor later needs no
- * rename migration. See `docs/plans/scanner-ingest.md` (Track 4) and
- * `docs/plans/scanner-ingest-docling-decisions.md`.
+ * The type is `pdf` because that is the only format the pipeline reads
+ * today; `format:` still records it. See `docs/plans/scanner-ingest.md`
+ * (Track 4) and `docs/plans/scanner-ingest-docling-decisions.md`.
  *
  * Example file layout:
- *   inbox/scan-XX.attach/source.document.card
+ *   inbox/scan-XX.attach/source.pdf.card
  *   inbox/scan-XX.attach/source.attach/source.pdf      (the original)
  *   inbox/scan-XX.attach/source.attach/docling.json.gz (canonical extraction)
  *   inbox/scan-XX.attach/source.attach/text-layer.txt  (raw text layer)
@@ -34,10 +33,10 @@ import { body, cardSchema, type InferCardFields } from "../cards/index.js";
  * empty body means "no readable content", which is a real answer, not a
  * failure). `invalid` — an agent judged the document unusable.
  */
-export const DocumentStatus = z.enum(["new", "analyzed", "invalid"]);
-export type DocumentStatusType = z.infer<typeof DocumentStatus>;
+export const PdfStatus = z.enum(["new", "analyzed", "invalid"]);
+export type PdfStatusType = z.infer<typeof PdfStatus>;
 
-/** Same shape as `file.card`'s `filename:` entry — a document card is a superset. */
+/** Same shape as `file.card`'s `filename:` entry — a pdf card is a superset. */
 const FilenameEntry = z.object({
   ref: z.string(),
   captured: z.string().datetime({ offset: true }),
@@ -53,31 +52,31 @@ const DoclingEntry = z.object({
   version: z.string().optional(),
 });
 
-const DocumentMetadata = z.object({
+const PdfMetadata = z.object({
   pages: z.coerce.number().optional(),
   title: z.string().optional(),
   author: z.string().optional(),
 });
 
-export const DocumentSchema = cardSchema("document", {
-  description: "An extracted document — rendered text as the body, original bytes and page/figure renders in the attach scope",
+export const PdfSchema = cardSchema("pdf", {
+  description: "An extracted PDF — rendered text as the body, original bytes and page/figure renders in the attach scope",
   category: "synced",
   searchable: true,
   fields: {
-    status: DocumentStatus.default("new"),
-    /** Source document type, e.g. `pdf`. Not the card type — the card is generic. */
+    status: PdfStatus.default("new"),
+    /** Source document type, e.g. `pdf`. Records what the file was — the pipeline currently only reads PDFs. */
     format: z.string(),
     filename: FilenameEntry,
     docling: DoclingEntry.optional(),
-    metadata: DocumentMetadata.optional(),
+    metadata: PdfMetadata.optional(),
     /** Why extraction failed, when `status: new`. Absent on a clean extraction. */
     error: z.string().optional(),
     description: z.string().optional(),
     body: body(z.string()),
   },
-  instructions: `# Document Cards
+  instructions: `# PDF Cards
 
-A document card is a document whose text has been **extracted** — the rendered
+A pdf card is a document whose text has been **extracted** — the rendered
 markdown is the card body, and the original bytes stay attached beside it. It
 is what \`cb scan-import\` writes for a scanned PDF that already carries a text
 layer (a scanner's own OCR, or a born-digital PDF).
@@ -111,12 +110,12 @@ Everything is inside the card's own attach scope, so refs are \`attach/…\`:
   - \`new\` **with an \`error:\` field**: extraction failed. The original file is
     still attached and is the only asset; there is no docling JSON, no page
     renders, and the body is empty. Nothing is lost — re-run extraction with
-    \`cb document reanalyze <card>\` (add \`--force-ocr\` when the text layer
+    \`cb pdf reanalyze <card>\` (add \`--force-ocr\` when the text layer
     itself is junk), or read the attached original directly, or set
     \`status: invalid\` if the file is unusable.
   - \`invalid\`: you judged the document unusable (corrupt, junk, empty scan).
-- \`format\` — the source document type, e.g. \`pdf\`. The card type is generic
-  on purpose; \`format\` is what says what it came from.
+- \`format\` — the source document type, e.g. \`pdf\`. \`format:\` records what
+  the file was, distinct from the card type itself.
 - \`filename\` — provenance for the original: \`ref\` into the attach scope,
   plus \`captured\`, \`source\`, and optionally \`original-name\`, \`mime-type\`,
   \`size\`.
@@ -136,10 +135,10 @@ search, and quote, and the original plus the page renders are there when it is
 not enough.`,
 });
 
-export type DocumentFields = InferCardFields<typeof DocumentSchema>;
+export type PdfFields = InferCardFields<typeof PdfSchema>;
 
-export interface DocumentTemplateOptions {
-  status: DocumentStatusType;
+export interface PdfTemplateOptions {
+  status: PdfStatusType;
   format: string;
   capturedAt: string;
   source: string;
@@ -158,7 +157,7 @@ export interface DocumentTemplateOptions {
   body: string;
 }
 
-export function createDocumentTemplate(options: DocumentTemplateOptions): string {
+export function createPdfTemplate(options: PdfTemplateOptions): string {
   const filename: Record<string, unknown> = {
     ref: `attach/${options.filename}`,
     captured: options.capturedAt,

@@ -1,10 +1,9 @@
 /**
- * Frontend-side reading of an extracted-document card (`src/schemas/document.ts`).
+ * Frontend-side reading of a pdf card (`src/schemas/pdf.ts`).
  *
  * The card type string and the reanalyze command text live here, in one place
- * each, so the pending `document` → `extracted` rename is a one-line change:
- * the renderer, the view, and the file-type icon registration all import these
- * rather than spelling the type out.
+ * each: the renderer, the view, and the file-type icon registration all import
+ * these rather than spelling the type out.
  *
  * The frontmatter reader is deliberately tolerant: `data.frontmatter` reaches
  * the frontend as `Record<string, unknown>` (already Zod-validated on the
@@ -14,11 +13,11 @@
 
 import { isRecord } from "@shared/is-record";
 
-/** Card type of an extracted document. Renamed to `extracted` — change here only. */
-export const EXTRACTED_CARD_TYPE = "document";
+/** Card type of an extracted pdf. */
+export const EXTRACTED_CARD_TYPE = "pdf";
 
 /** CLI command that re-runs extraction; shown when extraction failed. */
-export const EXTRACTED_REANALYZE_COMMAND = "cb document reanalyze";
+export const EXTRACTED_REANALYZE_COMMAND = "cb pdf reanalyze";
 
 /** Name of the renderer that shows the original file rather than the text. */
 export const ORIGINAL_RENDERER_NAME = "Original";

@@ -404,6 +404,14 @@ Tracks 1–3 live on prod.
 
 ### Track 4 — Docling document mode and `document.card`
 
+> **Note (2026-08-24):** the card type described below as `document` was
+> renamed to `pdf` (`*.pdf.card`) — `document` collided with the unrelated
+> `doc.card` type. The pipeline only reads PDFs today, so the
+> avoid-a-future-rename rationale for the generic name stopped paying for
+> itself; `format:` still records the source type. This section is left as
+> written for the historical record; see `src/schemas/pdf.ts` for current
+> behavior.
+
 - **What:** Replace document-mode's verbatim-storage internals with a Docling
   extraction pass producing a generic `document.card`. This amends
   `docs/plans/pdf-intake-design.md`; that doc gains a pointer here and its
@@ -727,7 +735,7 @@ prod plus 0; 7 anytime; 8 needs everything.
   mismatch/smuggle/broken-PDF/oversize-stream/rate-limit/token-isolation
   including hub-path rejection),
   `test/core/scan-promote.doctest.md` (worker: batch settle, restart
-  resume, wakeup spawn failure), `test/core/commands/document-extract.doctest.md`
+  resume, wakeup spawn failure), `test/core/commands/pdf-extract.doctest.md`
   (faked Docling: success shape, failure fallback, empty markdown), one gated
   integration doctest running real `uvx docling` on a fixture PDF (skipped
   where Docling absent), and `scan-uploader/test/uploader.doctest.md`

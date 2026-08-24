@@ -24,7 +24,7 @@ import { ProcedureRunSchema } from "./procedure-run.js";
 import { ImageSchema } from "./image.js";
 import { AudioSchema } from "./audio.js";
 import { FileSchema } from "./file.js";
-import { DocumentSchema } from "./document.js";
+import { PdfSchema } from "./pdf.js";
 import { CaptureSessionSchema } from "./capture-session.js";
 import { UploadBatchSchema } from "./upload-batch.js";
 import { RecordSchema } from "./record.js";
@@ -118,7 +118,7 @@ export const cardSchemas: CardSchema[] = [
   ImageSchema,
   AudioSchema,
   FileSchema,
-  DocumentSchema,
+  PdfSchema,
   // system bookkeeping
   IntakeJobSchema,
   ChatJobSchema,

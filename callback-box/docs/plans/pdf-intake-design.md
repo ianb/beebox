@@ -10,7 +10,11 @@ Three things here are **superseded**; they are marked SUPERSEDED inline below:
 
 1. The card type is **`document`**, not `.pdf.card` — with a `format:` field
    carrying the source type, so a non-PDF input needs no rename migration.
-   Implemented in `src/schemas/document.ts`.
+   Implemented in `src/schemas/document.ts`. **Further superseded 2026-08-24:**
+   the type was renamed back to `pdf` (`document` collided with the unrelated
+   `doc.card`) — the pipeline only reads PDFs today, so the original
+   rename-avoidance rationale no longer bought anything. `format:` still
+   records the source type. Implemented in `src/schemas/pdf.ts`.
 2. **Hybrid OCR does not exist in Docling** and never did; extraction runs with
    OCR **off** (`do_ocr=False`), because the scanner supplies the text layer.
    A PDF with *no* text layer is not OCR'd here at all — it routes to the
@@ -74,7 +78,7 @@ description: ""
 ... rendered markdown body, including figure refs like ![](attach/figure-001.avif) ...
 ```
 
-`document.card` is a **superset** of `.file.card`: it carries all the same upload-provenance fields (captured, source, original-name, mime-type, size) plus the docling-derived bits. When the intake router sees `application/pdf`, it routes to the PDF path; everything else stays in `.file.card`.
+`pdf.card` is a **superset** of `.file.card`: it carries all the same upload-provenance fields (captured, source, original-name, mime-type, size) plus the docling-derived bits. When the intake router sees `application/pdf`, it routes to the PDF path; everything else stays in `.file.card`.
 
 Status lifecycle (paralleling image cards):
 - `new` — created without successful extraction (docling failed, or skipped). Holds the asset reference and any error info; agent can decide what to do.
@@ -121,7 +125,7 @@ Default feature set (intentionally lean):
 | Code recognition | off | Rare; raw text is fine |
 | Semantic chunking | off | Not building RAG yet |
 
-SUPERSEDED (hybrid OCR). Docling has **no** hybrid mode — OCR region selection is bitmap-coverage-driven and force-OCR discards the existing text layer, so "trust the text layer, OCR the rest" cannot be expressed. Extraction therefore runs with OCR **off**. Force-OCR remains the opt-in escape hatch for junk text layers, exposed via `cb document reanalyze --force-ocr`.
+SUPERSEDED (hybrid OCR). Docling has **no** hybrid mode — OCR region selection is bitmap-coverage-driven and force-OCR discards the existing text layer, so "trust the text layer, OCR the rest" cannot be expressed. Extraction therefore runs with OCR **off**. Force-OCR remains the opt-in escape hatch for junk text layers, exposed via `cb pdf reanalyze --force-ocr`.
 
 ### Box-level overrides
 
@@ -156,7 +160,7 @@ Other knobs land here over time. Keeping the surface narrow until real boxes ask
 
 On docling failure: write a `status: new` card with the original PDF as the only asset and an `error:` field carrying the failure message. The boxholder/agent can decide whether to retry, accept the file as opaque, or mark it `invalid`.
 
-### `cb document reanalyze <card>`
+### `cb pdf reanalyze <card>`
 
 Re-runs docling on an existing PDF card. Flags:
 

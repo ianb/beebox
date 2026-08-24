@@ -34,7 +34,7 @@ const TEXT_LAYER_PAGE_SAMPLE = 5;
  * Non-whitespace characters in the sample below which we call it "no text
  * layer". Not zero: a scanner-produced textless PDF often still carries a few
  * stray glyphs (a producer watermark, a page-number artifact), and one of
- * those must not route a photo batch into document mode.
+ * those must not route a photo batch into pdf mode.
  */
 const TEXT_LAYER_MIN_CHARS = 64;
 
@@ -113,8 +113,8 @@ async function runPdftotext(
  * Does this PDF carry a text layer?
  *
  * When `pdftotext` is unavailable the answer is `true` by assumption, not by
- * measurement: that routes to document mode, which is what every PDF did
- * before this split existed, and document mode's own failure fallback keeps
+ * measurement: that routes to pdf mode, which is what every PDF did
+ * before this split existed, and pdf mode's own failure fallback keeps
  * the original bytes either way. Assuming `false` instead would send a real
  * document through Gemini page-by-page — expensive and wrong — on nothing more
  * than a missing package.
@@ -140,7 +140,7 @@ const FULL_TEXT_TIMEOUT_MS = 5 * 60 * 1000;
 
 /**
  * The document's text layer, verbatim, as `pdftotext` reads it — no layout
- * analysis, no rewriting. Document mode stores this beside the original as
+ * analysis, no rewriting. Pdf mode stores this beside the original as
  * `text-layer.txt` (D8), so the exact characters the producer embedded survive
  * next to Docling's rendered-but-lossy markdown.
  *
@@ -151,7 +151,7 @@ const FULL_TEXT_TIMEOUT_MS = 5 * 60 * 1000;
 export async function extractPdfText(pdfPath: string): Promise<string | null> {
   const text = await runPdftotext(pdfPath, { lastPage: null, timeoutMs: FULL_TEXT_TIMEOUT_MS });
   if (!text.ok) {
-    console.warn(`[document] ${text.error} on ${path.basename(pdfPath)}; no text-layer.txt will be written`);
+    console.warn(`[pdf] ${text.error} on ${path.basename(pdfPath)}; no text-layer.txt will be written`);
     return null;
   }
   return text.value.trim() === "" ? null : text.value;

@@ -1,13 +1,13 @@
 /**
- * The notice above an extracted document's text, for the states the body alone
+ * The notice above a pdf card's text, for the states the body alone
  * doesn't explain: extraction failed, the document was judged unusable, or
  * extraction succeeded and honestly found no text (an empty body is a valid
- * `analyzed` result — see the schema instructions in `src/schemas/document.ts`).
+ * `analyzed` result — see the schema instructions in `src/schemas/pdf.ts`).
  *
  * Its own module, and free of data fetching, so it renders standalone.
  */
 
-import { EXTRACTED_REANALYZE_COMMAND } from "../lib/extracted-document";
+import { EXTRACTED_REANALYZE_COMMAND } from "../lib/pdf-card";
 import { Pre } from "./ui/Pre";
 import { Text } from "./ui/Text";
 
@@ -16,7 +16,7 @@ import { Text } from "./ui/Text";
  * explain: extraction failed, the document was judged unusable, or extraction
  * succeeded and honestly found no text.
  */
-export function DocumentStatusNotice({
+export function PdfStatusNotice({
   status, error, hasBody, cardPath,
 }: {
   status: string | null;

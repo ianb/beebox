@@ -70,3 +70,27 @@ move.
 [PDFs and document cards have no real view](../features/2026-08-23-pdf-and-document-cards-have-no-real-view.md)
 — the same type, viewed rather than named. Worth settling the name before
 building a viewer that hardcodes it.
+
+## Decision (2026-08-24)
+
+Renamed the extracted type to `pdf` (`*.pdf.card`) — the first option
+sketched above ("rename the extracted type"). Reasoning:
+
+- The pipeline reads only PDFs today; a docx/html extractor would be a
+  different pipeline step, not this one wearing a different `format:` value.
+  It can earn its own type name if and when it exists.
+- `pdf` parallels the naming already in use for wrapped-file types:
+  `image.card` (wrapped file + extracted content — description, EXIF) and
+  `file.card` (wrapped file, opaque). `pdf.card` fits the same pattern:
+  wrapped file + extracted content (rendered text, page renders, docling
+  JSON).
+- It no longer collides with `doc.card`, which was the actual complaint.
+
+`format:` is kept on the schema (still records the source type, still costs
+nothing), even though the no-future-rename rationale that originally motivated
+the generic name is what this decision walks back.
+
+Implemented via `scripts/migrate/document-to-pdf.ts` (registered as
+`document-to-pdf` in `src/core/migrations.ts`); see
+`issues/code-quality/2026-08-24-remove-document-card-legacy-tolerance.md` for
+the migration follow-up.

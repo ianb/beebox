@@ -5,7 +5,7 @@
 
 import { ImageCardListEntry } from "../components/file-entries/ImageCardListEntry";
 import type { ImageAttrs } from "@schemas/image";
-import { EXTRACTED_CARD_TYPE } from "../lib/extracted-document";
+import { EXTRACTED_CARD_TYPE } from "../lib/pdf-card";
 import { registerFileType } from "./registry";
 import {
   DocumentIcon,

@@ -13,7 +13,7 @@ import "./trash.js";
 import "./move.js";
 import "./procedure.js";
 import "./scan-import.js";
-import "./document-reanalyze.js";
+import "./pdf-reanalyze.js";
 import "./upload.js";
 import "./attachments.js";
 import "./ls.js";

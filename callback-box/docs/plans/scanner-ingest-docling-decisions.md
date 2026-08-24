@@ -9,7 +9,7 @@ issues: []
 Running log of every Docling-related choice made during implementation, for
 boxholder review. Docling is a big surface with many ways to use it; these
 are first choices made in the ingest context, all revisitable —
-`cb document reanalyze` exists precisely so extraction can be re-run after a
+`cb pdf reanalyze` exists precisely so extraction can be re-run after a
 decision changes. Parent plan: [`scanner-ingest.md`](scanner-ingest.md).
 
 Format: decision, why, what revisiting would look like. Implementation
@@ -43,7 +43,7 @@ reviewer:** the plan text said `uvx docling <pdf>`; the real 2.x CLI has a
 in favour of `--ocr-mode` (D7) — the plan was written against an older CLI.
 The pin is duplicated in `deploy/setup-server.sh` for the model pre-fetch;
 they must move together. **Revisit:** on any Docling upgrade — re-read
-`docling convert --help`, then `cb document reanalyze` a sample and diff.
+`docling convert --help`, then `cb pdf reanalyze` a sample and diff.
 
 ## D4. `--image-export-mode referenced` — page renders and figures as files
 
@@ -89,7 +89,7 @@ will surface rather than hide.
 
 Docling 2.117 deprecates `--force-ocr` in favour of `--ocr-mode full_page`;
 both still work, one will stop. This only ever runs behind
-`cb document reanalyze --force-ocr`, so the known long-document force-OCR bug
+`cb pdf reanalyze --force-ocr`, so the known long-document force-OCR bug
 (#1499) stays an escape-hatch-only risk, as the plan said. `--languages` maps
 to `--ocr-lang` and is only sent alongside force-OCR, since it is meaningless
 with OCR off. **Revisit:** if `--ocr-mode`'s other values (`layout_regions`,
@@ -105,10 +105,10 @@ Docling to ask a yes/no question would cost seconds and model loading. Five
 pages because a scanner OCRs a whole job or none of it. The 64-character floor
 (not zero) exists because scanner output frequently carries a few stray glyphs
 — a producer watermark, a page-number artifact — and one of those must not
-route a photo batch into document mode. When `pdftotext` is missing the answer
+route a photo batch into pdf mode. When `pdftotext` is missing the answer
 is `true` **by assumption**, and the probe says so (`textLayerSource:
-"assumed"`): that routes to document mode, which is what every PDF did before
-this split existed, and document mode preserves the original either way.
+"assumed"`): that routes to pdf mode, which is what every PDF did before
+this split existed, and pdf mode preserves the original either way.
 Assuming `false` would send a real document through per-page vision analysis
 because a package was missing. **Revisit:** if a real scan lands on the wrong
 side, the threshold and the page sample are two constants in `pdf-probe.ts`.
@@ -147,9 +147,14 @@ deploy target has no GPU and `auto` probes for one every run. **Revisit:** if
 `--force-ocr` becomes common, the first reanalyze on each box pays a
 one-time EasyOCR download; pre-fetching would then be worth it.
 
-## D12. Card layout: `source.document.card` keeps the old basename
+## D12. Card layout: `source.pdf.card` keeps the old basename
 
-Document mode previously wrote `source.file.card` + `source.attach/source.pdf`
+> **Note (2026-08-24):** the card type was renamed from `document` to `pdf`
+> (`document` collided with the unrelated `doc.card`). This section otherwise
+> describes the original decision as made; `source.document.card` below is
+> `source.pdf.card` today.
+
+Pdf mode previously wrote `source.file.card` + `source.attach/source.pdf`
 in the session's attach scope. The document card takes the same basename and
 the same attach directory, so the original PDF stays at exactly the path it
 had, and only the card's type and siblings change. Nothing migrates (the card
@@ -203,7 +208,7 @@ is empirical — it depends on how often real ScanSnap output has OCR gaps,
 which we have no data on yet. **Revisit:** after real scan volume, if triage
 surfaces documents with missing/garbled text regions (the symptom of scanner
 OCR gaps), or once the mode is a few releases old — switching is a config
-change plus deploying OCR weights, and `cb document reanalyze` back-fills
+change plus deploying OCR weights, and `cb pdf reanalyze` back-fills
 existing cards.
 
 ## D16. Hard caps on extraction output: 500 artifacts, 1 GiB
