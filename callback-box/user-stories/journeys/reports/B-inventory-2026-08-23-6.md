@@ -1,0 +1,48 @@
+# B-inventory, 2026-08-23 (run 6)
+
+| | |
+|---|---|
+| Journey | B-inventory — "I never know what I've got" |
+| Box | `journey-b` (shared path, pre-dating per-run boxes) |
+| Harness | before `cb-` id driving; `bin/browse click` could silently no-op |
+| Status | **retrospective** — written 2026-08-24 from the notes and the issues it produced |
+
+## Why this report is thin
+
+Written after the fact, once reports became the way a walk is kept. Its findings were
+filed at the time; this records what the run was and where its output went.
+
+## What the walk achieved
+
+The most productive of the 2026-08-23 series and the source of most of that round's
+issues. It got its photographs in and got records out of them, and its complaints are
+about not being able to tell where its things had gone.
+
+## What it found
+
+Its closing list is the useful part, because every item is a thing the interface never
+explained to someone who had used it for an evening:
+
+- **"Landmarks"** — *"I've used the page a dozen times and I still couldn't define
+  it."*
+- **An Inventory with chats in it**, and a chat started from Inventory that then did
+  not appear under Inventory.
+- **"Source" next to "Card"** — *"I never dared press it."*
+- **Three unlabelled round buttons top-right**, one of which grew a red `1` when the
+  capture screen failed and kept it.
+- **Where its stuff actually is** — *"the photos lived in the chat and nearly died
+  there… For something I'm meant to build up over a year, I'd like to be sure."*
+- **"Claude Code"** — *"why my inventory of a stationery drawer depends on it being
+  logged in somewhere."*
+
+These are on
+[the vocabulary issue](../../../../issues/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md)
+and in the issues filed on 2026-08-21, several of which are now closed.
+
+This run also produced the timing lesson the harness now enforces: the walker
+convinced itself a two-minute wait had taken twenty, corrected itself in its own log,
+and that is why `clock.ts` exists and why walkers are told not to read the wall clock.
+
+## Not verified
+
+Capture — reached the screen, could not use it. Same owner-auth gap as run 2.

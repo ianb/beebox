@@ -122,11 +122,17 @@ function prunePreviousRuns(): void {
   for (const name of readdirSync(WORK)) {
     if (!name.startsWith(`${journey.id}-`)) continue;
     const dir = join(WORK, name);
-    // No `before.json` means this run has already been pruned to its notes — an
-    // archived reading, not an unfinished one. Leave it alone.
-    if (!existsSync(join(dir, "before.json"))) continue;
     const notes = join(dir, "notes.md");
     const walked = existsSync(notes) && readFileSync(notes, "utf8").trim() !== "";
+    // No `before.json` means this run has already been pruned. If it kept notes it is
+    // an archived reading and stays; if it kept nothing it is a husk from a prepare
+    // that failed partway, and nothing is served by keeping it.
+    if (!existsSync(join(dir, "before.json"))) {
+      if (walked) continue;
+      rmSync(dir, { recursive: true, force: true });
+      console.log(`pruned   ${name} (empty)`);
+      continue;
+    }
 
     if (!walked) {
       // Nothing was ever learned here — an abandoned prepare, pure clutter.
