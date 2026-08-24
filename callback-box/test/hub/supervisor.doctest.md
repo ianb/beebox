@@ -40,6 +40,13 @@ function makeFakeChild(pid) {
     },
   };
 }
+
+/** Await the supervisor's real readiness transition; the file timeout catches hangs. */
+async function awaitRunning(supervisor: Supervisor): Promise<void> {
+  while (supervisor.getStatuses()[0]?.status !== "running") {
+    await new Promise((resolve) => { setImmediate(resolve); });
+  }
+}
 ```
 
 ## `buildChildEnv` allowlists, never spreads
@@ -205,7 +212,7 @@ const reloadSupervisor = new Supervisor({
 });
 await reloadSupervisor.startAll();
 reloadChildren[0].fireExit(75, null);
-await new Promise((resolve) => setTimeout(resolve, 20));
+await awaitRunning(reloadSupervisor);
 const reloadStatus = reloadSupervisor.getStatuses()[0];
 JSON.stringify({ status: reloadStatus.status, pid: reloadStatus.pid, restarts: reloadStatus.restarts, failures: reloadStatus.consecutiveFailures })
 => {"status":"running","pid":905001,"restarts":1,"failures":0}
