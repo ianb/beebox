@@ -178,6 +178,35 @@ Note `/<wt>/dev/docs/…` is a 301 to `/workstreams/browse?file=…` — the doc
 
 A navigation denied at the owner-only rows returns 401, which the router renders as the login page — so "I got the login page" does not by itself mean your key is wrong.
 
+### The key is not the box owner
+
+The browse key clears the auth wall. It does **not** make you the owner, and a
+surprising amount of the app is owner-gated: device pairing, parts of Settings, the
+Secrets panel, anything behind `ownerProcedure`. Those answer **403 "Owner access
+required"** — a different failure from the 401 above, and one no amount of key-fixing
+will change.
+
+This is worth recognising rather than working around, because it silently shrinks what a
+check can see. An audit of the app in 2026-08 ended with 57 of 168 in-app checks
+"inconclusive", most of them here, and two journey walkthroughs hit 401s on capture for
+the same reason.
+
+When you need owner surfaces, log in as a person instead of using the key:
+
+```bash
+bin/browse auth save owner --url /auth/login --username <email> --password-stdin
+bin/browse auth login owner
+```
+
+`auth save` stores a profile; `auth login` drives the real login form, so the session is
+an ordinary owner session with none of the key's limits. **Ask the boxholder for the
+credential** — do not invent one, and do not reach for `cb auth set-password`, which
+rewrites a machine-global credential store and revokes live sessions
+(`callback-box/CLAUDE.md`).
+
+If you cannot get one, say which findings were unreachable rather than reporting them as
+absent features.
+
 **3. Is the key live in the running router?** One probe answers it, and it must use the **cookie** form against a **box route**:
 
 ```bash
