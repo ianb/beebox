@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-08-24T15:46:15Z
-Total documents: 297
+Generated: 2026-08-24T15:54:32Z
+Total documents: 298
 
 ## Issues
 
@@ -49,6 +49,7 @@ These documents are not referenced by any other document.
 - **field-tests/onboarding-first-days/README.md** — "onboarding-first-days" (60 lines)
 - **field-tests/onboarding-first-days/persona.md** — "Priya Marlowe" (22 lines)
 - **field-tests/spine/persona.md** — "Priya Marlowe" (22 lines)
+- **src/frontend/dist/earcons/SOURCES.md** — "Earcon sources & attribution" (13 lines)
 - **src/frontend/public/earcons/SOURCES.md** — "Earcon sources & attribution" (13 lines)
 - **test/manual/README.md** — "Manual tests" (49 lines)
 - **user-stories/journeys/README.md** — "Journeys" (90 lines)
@@ -5238,6 +5239,14 @@ References:
 - → docs/architecture/CLAUDE.md (mention)
 - → docs/content-security-policy.md (mention)
 - → docs/scheduled/csp-violation-review.md (mention)
+
+### src/frontend/dist/earcons/
+
+#### src/frontend/dist/earcons/SOURCES.md **[ORPHAN]**
+
+Title: "Earcon sources & attribution" | 13 lines
+
+No references in or out.
 
 ### src/frontend/public/earcons/
 
