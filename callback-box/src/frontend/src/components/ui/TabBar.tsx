@@ -15,11 +15,16 @@ export interface TabBarProps<V extends string> {
   tabs: TabDef<V>[];
   /** aria-label for the tablist — used when there's no visible heading. */
   label?: string;
+  /**
+   * Stable `cb-` address prefix (see lib/ui-scan): each tab button gets
+   * `${idPrefix}-${tab.value}`, so a fixed tab set is addressable by name.
+   */
+  idPrefix?: string;
   /** Outer-layout classes (margin, padding, flex item, sizing, position). */
   className?: string;
 }
 
-export function TabBar<V extends string>({ value, onChange, tabs, label, className }: TabBarProps<V>) {
+export function TabBar<V extends string>({ value, onChange, tabs, label, idPrefix, className }: TabBarProps<V>) {
   return (
     <div role="tablist" aria-label={label} className={cn("flex gap-0 border-b border-warm-300", className)}>
       {tabs.map((tab) => {
@@ -33,6 +38,7 @@ export function TabBar<V extends string>({ value, onChange, tabs, label, classNa
         return (
           <button
             key={tab.value}
+            id={idPrefix !== undefined ? `${idPrefix}-${tab.value}` : undefined}
             type="button"
             role="tab"
             aria-selected={active}

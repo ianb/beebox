@@ -75,6 +75,7 @@ function UploadFailureBanner(props: {
         {props.summary} {props.feedback.phase === "failed-again" ? "failed again" : "failed to upload"}.
       </div>
       <button
+        id="cb-capture-retry-uploads"
         onClick={props.onRetryFailed}
         disabled={props.finalizing}
         className="w-full max-w-xs min-h-[48px] rounded-full bg-danger text-white text-base font-medium active:bg-danger-dark disabled:opacity-40"
@@ -99,7 +100,7 @@ export function CaptureControls(props: CaptureControlsProps) {
       {props.finalizing && props.pendingUploads > 0 ? (
         <div className="text-warning-light text-sm py-2 px-4 text-center">
           Waiting for {props.pendingUploads} upload{props.pendingUploads > 1 ? "s" : ""}.{" "}
-          <button onClick={props.onSkipPending} className="text-warning-light underline">Skip them</button>
+          <button id="cb-capture-skip-pending" onClick={props.onSkipPending} className="text-warning-light underline">Skip them</button>
         </div>
       ) : (
         <UploadFailureBanner
@@ -117,14 +118,14 @@ export function CaptureControls(props: CaptureControlsProps) {
             Escape). handleCancel already no-ops the discard when there's no
             content/session and just calls onExit. Only `finalizing` gates it,
             so a Done in flight isn't interrupted. */}
-        <button onClick={props.onCancel} disabled={props.finalizing}
+        <button id="cb-capture-cancel" onClick={props.onCancel} disabled={props.finalizing}
           aria-label={props.hasContent ? "Discard and exit capture" : "Exit capture"}
           className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center disabled:opacity-30 active:bg-gray-600">
           <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-danger-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
             <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
           </svg>
         </button>
-        <button onClick={props.onToggleRecording} disabled={!props.sessionId || props.finalizing}
+        <button id="cb-capture-record" onClick={props.onToggleRecording} disabled={!props.sessionId || props.finalizing}
           aria-label={props.recording ? "Stop audio recording" : "Start audio recording"}
           aria-pressed={props.recording}
           className={`w-16 h-16 rounded-full border-4 border-white flex items-center justify-center disabled:opacity-30 ${props.recording ? "bg-danger-dark" : ""}`}>
@@ -135,7 +136,7 @@ export function CaptureControls(props: CaptureControlsProps) {
             </svg>
           )}
         </button>
-        <button onClick={props.onDone} disabled={doneDisabled}
+        <button id="cb-capture-done" onClick={props.onDone} disabled={doneDisabled}
           aria-label={props.finalizing ? "Finalizing capture session" : "Finalize capture session"}
           aria-busy={props.finalizing}
           className="w-12 h-12 rounded-full bg-success flex items-center justify-center disabled:opacity-30 active:bg-success">

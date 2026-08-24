@@ -15,10 +15,10 @@ interface InventoryHeaderProps {
 export function InventoryHeader({ boxSlug, refreshing, refresh, refreshError }: InventoryHeaderProps) {
   return (
     <Stack gap="xs">
-      <TextLink to={href(`/${boxSlug}/dashboard`)} underline={false}>&larr; Dashboard</TextLink>
+      <TextLink id="cb-inventory-back" to={href(`/${boxSlug}/dashboard`)} underline={false}>&larr; Dashboard</TextLink>
       <Row justify="between" align="start" wrap>
         <InventoryTitle />
-        <Button intent="secondary" size="sm" onClick={refresh} loading={refreshing} loadingLabel="Scanning…">Refresh scan</Button>
+        <Button id="cb-inventory-refresh" intent="secondary" size="sm" onClick={refresh} loading={refreshing} loadingLabel="Scanning…">Refresh scan</Button>
       </Row>
       {refreshError === null ? null : <Text as="p" tone="danger" size="sm">Refresh failed: {refreshError}</Text>}
     </Stack>

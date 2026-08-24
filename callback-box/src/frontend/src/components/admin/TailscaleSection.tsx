@@ -98,7 +98,7 @@ export function TailscaleSection() {
 
       {tailscaleBoxUrl !== null ? (
         <p className="text-sm text-warm-700 mb-4">
-          This box over Tailscale: <ExternalLink href={tailscaleBoxUrl}>{tailscaleBoxUrl}</ExternalLink>
+          This box over Tailscale: <ExternalLink id="cb-admin-tailscale-box-url" href={tailscaleBoxUrl}>{tailscaleBoxUrl}</ExternalLink>
         </p>
       ) : null}
 
@@ -107,7 +107,7 @@ export function TailscaleSection() {
         <li>
           Install Tailscale on this machine and on your phone or laptop, and sign in to
           each.{" "}
-          <ExternalLink href="https://tailscale.com/download">Download Tailscale</ExternalLink>
+          <ExternalLink id="cb-admin-tailscale-download" href="https://tailscale.com/download">Download Tailscale</ExternalLink>
         </li>
         <li>
           On the machine running this box, run{" "}
@@ -128,7 +128,7 @@ export function TailscaleSection() {
         </li>
         <li>
           To let family members in, invite them to your tailnet.{" "}
-          <ExternalLink href="https://tailscale.com/kb/1388">Sharing with family</ExternalLink>
+          <ExternalLink id="cb-admin-tailscale-sharing" href="https://tailscale.com/kb/1388">Sharing with family</ExternalLink>
         </li>
       </ol>
 

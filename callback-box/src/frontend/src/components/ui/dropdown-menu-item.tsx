@@ -12,6 +12,8 @@ import { DropdownContext } from "./Dropdown";
 
 interface MenuItemBase {
   children: ReactNode;
+  /** Stable `cb-` control address for the rendered row (see lib/ui-scan). */
+  id?: string;
   icon?: ReactNode;
   disabled?: boolean;
   /** Styles as a destructive row. */
@@ -66,16 +68,16 @@ export function MenuItem(props: MenuItemProps) {
   const ctx = useContext(DropdownContext);
   const close = ctx !== null ? ctx.close : noop;
   const dense = ctx !== null ? ctx.dense : false;
-  const { children, icon, disabled = false, danger = false, active = false, keepOpen = false } = props;
+  const { children, id, icon, disabled = false, danger = false, active = false, keepOpen = false } = props;
   const className = rowClass({ active, danger, disabled, dense });
   const content = <MenuItemContent icon={icon}>{children}</MenuItemContent>;
 
   if ("to" in props && props.to !== undefined) {
     if (disabled) {
-      return <span role="menuitem" aria-disabled="true" className={className}>{content}</span>;
+      return <span id={id} role="menuitem" aria-disabled="true" className={className}>{content}</span>;
     }
     return (
-      <Link role="menuitem" to={props.to} onClick={close} className={className}>
+      <Link id={id} role="menuitem" to={props.to} onClick={close} className={className}>
         {content}
       </Link>
     );
@@ -83,10 +85,10 @@ export function MenuItem(props: MenuItemProps) {
 
   if ("href" in props && props.href !== undefined) {
     if (disabled) {
-      return <span role="menuitem" aria-disabled="true" className={className}>{content}</span>;
+      return <span id={id} role="menuitem" aria-disabled="true" className={className}>{content}</span>;
     }
     return (
-      <a role="menuitem" href={props.href} onClick={close} className={className}>
+      <a id={id} role="menuitem" href={props.href} onClick={close} className={className}>
         {content}
       </a>
     );
@@ -95,6 +97,7 @@ export function MenuItem(props: MenuItemProps) {
   const onClick = "onClick" in props ? props.onClick : undefined;
   return (
     <button
+      id={id}
       type="button"
       role="menuitem"
       disabled={disabled}

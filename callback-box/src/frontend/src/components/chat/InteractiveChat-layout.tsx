@@ -41,6 +41,7 @@ export function ChatStatusBanners(props: {
               keeps the message and "dismiss" separated. */}
           {error || transcriptionError}{"  "}
           <button
+            id="cb-chat-error-dismiss"
             onClick={onDismissError}
             className="text-danger hover:text-danger-dark underline"
           >
@@ -90,7 +91,7 @@ export function ExpiredAttachmentsNotice(props: { names: string[]; onDismiss: ()
       <span>
         {names.length} expired attachment{names.length === 1 ? "" : "s"} removed: {names.join(", ")}
       </span>
-      <button onClick={onDismiss} className="flex-shrink-0 text-warm-600 hover:text-warm-900 underline">
+      <button id="cb-chat-expired-attachments-dismiss" onClick={onDismiss} className="flex-shrink-0 text-warm-600 hover:text-warm-900 underline">
         dismiss
       </button>
     </div>
@@ -170,6 +171,7 @@ export function ChatComposerSection(props: ComposerSectionProps) {
           {typingMode ? (
             <div className="absolute -top-10 right-3 flex gap-1 z-10">
               <button
+                id="cb-composer-keyboard-lock"
                 onClick={() => setTypingLocked((v) => !v)}
                 className={`p-1.5 rounded-full shadow-sm backdrop-blur-sm ${typingLocked ? "bg-primary text-white hover:bg-primary-dark" : "bg-warm-100/90 text-warm-600 hover:bg-warm-300"}`}
                 aria-pressed={typingLocked}
@@ -186,6 +188,7 @@ export function ChatComposerSection(props: ComposerSectionProps) {
                 )}
               </button>
               <button
+                id="cb-composer-keyboard-close"
                 onClick={() => { setTypingMode(false); setTypingLocked(false); }}
                 className="p-1.5 rounded-full bg-warm-100/90 text-warm-600 hover:bg-warm-300 shadow-sm backdrop-blur-sm"
                 title="Close keyboard"

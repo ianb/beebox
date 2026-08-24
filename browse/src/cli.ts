@@ -1,4 +1,6 @@
 import { AgentBrowserError, getUrl, run, runPassthrough } from "agent-browser-typed";
+import { annotatedSnapshot, checkedAction, getWithTarget } from "./act.js";
+import { TARGET_COMMANDS } from "./controls.js";
 import { runEnhancedScreenshot } from "./screenshot.js";
 import type { ScreenshotInvocation } from "./screenshot.js";
 import { authCookieArgs, BrowseConfigError, detectWorktreeContext, isOwnOrigin, rewriteOpenUrl, sessionProfileDir } from "./worktree.js";
@@ -141,6 +143,18 @@ async function main(): Promise<number> {
     process.stdout.write(`title: ${result.sidecar.title}\n`);
     process.stdout.write(`sidecar: ${result.sidecarPath}\n`);
     return 0;
+  }
+
+  if (sub === "snapshot") {
+    return annotatedSnapshot(args.slice(1), ctx);
+  }
+
+  if (TARGET_COMMANDS.has(sub)) {
+    return checkedAction({ sub, args: args.slice(1), ctx });
+  }
+
+  if (sub === "get") {
+    return getWithTarget(args.slice(1));
   }
 
   return runPassthrough(args);

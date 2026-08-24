@@ -133,6 +133,7 @@ export function SessionLog({ sessionId }: SessionLogProps) {
       </div>
       {loading ? <div className="p-3 text-sm text-warm-500">Loading...</div> : null}
       {hasNextPage && !loading ? <button
+          id="cb-history-session-log-load-more"
           // fetchNextPage's failure surfaces via the query's own error state.
           onClick={() => void fetchNextPage()}
           className="w-full p-2 text-sm text-primary hover:bg-info-50 border-t"

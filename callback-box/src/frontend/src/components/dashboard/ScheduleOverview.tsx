@@ -299,6 +299,7 @@ export function ScheduleOverview({ schedules, recentTicks, loading, error }: Sch
       {recentTicks.length > 0 ? (
         <div className="mt-3 pt-3 border-t">
           <InlineAction
+            id="cb-dashboard-ticks-toggle"
             intent="subtle"
             onClick={() => setShowTicks(!showTicks)}
             className="text-xs"

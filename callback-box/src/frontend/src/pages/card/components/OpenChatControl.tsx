@@ -53,10 +53,22 @@ export function OpenChatControl({ boxSlug, cardPath }: { boxSlug: string; cardPa
 
   return (
     <Row gap="sm" align="center">
-      <Button intent="secondary" size="sm" onClick={() => open("recent")}>
+      <Button
+        id="cb-card-open-chat"
+        data-cb-does="opens the most recent chat session about this card"
+        intent="secondary"
+        size="sm"
+        onClick={() => open("recent")}
+      >
         Chat
       </Button>
-      <Button intent="ghost" size="sm" onClick={() => open("new")}>
+      <Button
+        id="cb-card-open-chat-new"
+        data-cb-does="starts a fresh chat session about this card"
+        intent="ghost"
+        size="sm"
+        onClick={() => open("new")}
+      >
         New
       </Button>
       {error !== null ? <Text as="span" size="xs" tone="danger">{error}</Text> : null}

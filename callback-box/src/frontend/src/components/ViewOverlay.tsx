@@ -149,6 +149,7 @@ function CloseButton({
   return (
     <button
       ref={closeRef}
+      id="cb-view-overlay-close"
       type="button"
       onClick={onClose}
       aria-label="Close"

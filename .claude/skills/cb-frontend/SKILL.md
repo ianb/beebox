@@ -109,6 +109,13 @@ they need; reach for them.
   `as="h3">`, never `h2`→`h4`). Heading level is structure, not size — pick the
   level for the outline, the `size`/`weight` props for the look.
 - **Icons:** an inline SVG icon, never an emoji, for UI affordances.
+- **Addressable:** every static interactive control carries a stable
+  `id="cb-<area>-<control>"` (kebab-case, unique app-wide — axe `duplicate-id`
+  in the tours enforces it). It is how the box agent points at controls and
+  how `bin/browse` acts on them without positional refs; see
+  `src/frontend/src/lib/ui-scan/resolve.ts`. Per-row controls get one only when
+  a unique derived id is obvious. Never rename an existing id (some are shared
+  with iOS).
 
 ## Avoid the "AI aesthetic"
 

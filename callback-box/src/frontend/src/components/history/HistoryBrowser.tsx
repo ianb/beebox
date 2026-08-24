@@ -153,7 +153,7 @@ export function HistoryBrowser({
 
   return (
     <Row gap="none" align="stretch" className="h-full">
-      <Sidebar title="Commits" subtitle={`${commits.length} loaded`} detailSelected={hasDetail}>
+      <Sidebar title="Commits" subtitle={`${commits.length} loaded`} detailSelected={hasDetail} idPrefix="cb-history-sidebar">
         {filterBar ? (
           <HistoryFilterBar
             filter={filter}

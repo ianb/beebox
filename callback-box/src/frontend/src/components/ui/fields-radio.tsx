@@ -15,6 +15,11 @@ export interface RadioGroupProps {
   options: RadioOption[];
   /** Shared name attribute for all radios. Auto-generated if omitted. */
   name?: string;
+  /**
+   * Stable `cb-` address prefix (see lib/ui-scan): each radio input gets
+   * `${idPrefix}-${option.value}`. Only for a fixed, enum-shaped option set.
+   */
+  idPrefix?: string;
   variant?: "list" | "cards";
   error?: ReactNode;
   helper?: ReactNode;
@@ -31,6 +36,7 @@ export function RadioGroup({
   onChange,
   options,
   name,
+  idPrefix,
   variant,
   error,
   helper,
@@ -60,9 +66,9 @@ export function RadioGroup({
         {required ? <span className="text-danger ml-0.5" aria-hidden="true">*</span> : null}
       </div>
       {variant === "list" ? (
-        <RadioList name={groupName} value={value} options={options} disabled={disabled} onChange={onChange} />
+        <RadioList name={groupName} idPrefix={idPrefix} value={value} options={options} disabled={disabled} onChange={onChange} />
       ) : (
-        <RadioCards name={groupName} value={value} options={options} disabled={disabled} onChange={onChange} />
+        <RadioCards name={groupName} idPrefix={idPrefix} value={value} options={options} disabled={disabled} onChange={onChange} />
       )}
       {error !== undefined ? (
         <div className="text-danger-dark text-sm mt-1" role="alert">{error}</div>
@@ -75,13 +81,14 @@ export function RadioGroup({
 
 interface RadioInternalProps {
   name: string;
+  idPrefix: string | undefined;
   value: string;
   options: RadioOption[];
   disabled: boolean;
   onChange: (value: string) => void;
 }
 
-function RadioList({ name, value, options, disabled, onChange }: RadioInternalProps) {
+function RadioList({ name, idPrefix, value, options, disabled, onChange }: RadioInternalProps) {
   return (
     <div className="space-y-2">
       {options.map((opt) => {
@@ -92,6 +99,7 @@ function RadioList({ name, value, options, disabled, onChange }: RadioInternalPr
         return (
           <label key={opt.value} className={labelClass}>
             <input
+              id={idPrefix !== undefined ? `${idPrefix}-${opt.value}` : undefined}
               type="radio"
               name={name}
               value={opt.value}
@@ -108,7 +116,7 @@ function RadioList({ name, value, options, disabled, onChange }: RadioInternalPr
   );
 }
 
-function RadioCards({ name, value, options, disabled, onChange }: RadioInternalProps) {
+function RadioCards({ name, idPrefix, value, options, disabled, onChange }: RadioInternalProps) {
   return (
     <div className="space-y-2">
       {options.map((opt) => {
@@ -130,6 +138,7 @@ function RadioCards({ name, value, options, disabled, onChange }: RadioInternalP
         return (
           <label key={opt.value} className={`${baseClass} ${stateClass}`}>
             <input
+              id={idPrefix !== undefined ? `${idPrefix}-${opt.value}` : undefined}
               type="radio"
               name={name}
               value={opt.value}

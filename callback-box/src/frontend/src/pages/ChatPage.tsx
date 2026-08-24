@@ -129,7 +129,33 @@ export function ChatPage() {
   // native one. Detect the native shell by its always-present bridge instead, so
   // the flag survives navigation. The param stays as a fast-path / legacy signal.
   const nativeComposer = String(search.nativeComposer) === "1" || isNativeShell();
-  const openCaptureOnMount = String(search.capture) === "1";
+  // Latched to the first render. The effect below strips the param from the URL,
+  // which re-renders this page with `capture` gone — and InteractiveChat is keyed
+  // by session, so it can remount and re-read this prop after that. Reading
+  // `search` directly here means capture never opens at all; verified both ways
+  // in the running app.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- deliberate first-render latch; see comment.
+  const openCaptureOnMount = useMemo(() => String(search.capture) === "1", []);
+
+  // Consume the deep-link param, which nothing did despite two comments saying
+  // "consumed once". Leaving it meant the URL still claimed to be a capture link
+  // after the person closed capture — so it reopened on the next reload, and on
+  // every session switch, because InteractiveChat is keyed by session and its
+  // state initializer read the stale param again on each remount. Each of those
+  // mounts also created a capture session.
+  //
+  // Stripped once on mount rather than when capture closes: the param's whole
+  // job is done the moment the initial state is seeded, and the two URL rewrites
+  // below carry the existing search through unchanged, so anything left here
+  // outlives its purpose.
+  useEffect(() => {
+    if (!openCaptureOnMount) return;
+    const { capture: _capture, ...rest } = search;
+    void navigate({ to: href(`/${boxSlug}/chat`), search: toSearch(rest), replace: true });
+    // Mount only: `search` changes as the session id lands, and re-running then
+    // would fight the rewrites below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- deliberate mount-once consume; see comment.
+  }, []);
 
   // Key InteractiveChat so a real session switch (or "new chat" reset)
   // remounts the machine and reloads history. The `"new" → assigned id`

@@ -21,8 +21,9 @@ interface LoginFieldsProps {
 export function LoginFields({ email, onEmail, password, onPassword, error, submitting }: LoginFieldsProps) {
   return (
     <Stack gap="md">
-      <TextField label="Email" type="email" autoComplete="email" required value={email} onChange={onEmail} />
+      <TextField id="cb-login-email" label="Email" type="email" autoComplete="email" required value={email} onChange={onEmail} />
       <TextField
+        id="cb-login-password"
         label="Password"
         type="password"
         autoComplete="current-password"
@@ -35,7 +36,7 @@ export function LoginFields({ email, onEmail, password, onPassword, error, submi
           <Text as="p" tone="danger" size="sm">{error}</Text>
         </div>
       ) : null}
-      <Button type="submit" intent="primary" fullWidth loading={submitting}>
+      <Button id="cb-login-submit" type="submit" intent="primary" fullWidth loading={submitting}>
         Sign in
       </Button>
     </Stack>

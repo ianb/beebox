@@ -108,10 +108,10 @@ export function DeleteChatDialog(props: DeleteChatDialogProps) {
             <li>Anthropic API data governed by Anthropic&apos;s retention policy.</li>
           </ul>
           <p className="mt-2 space-x-3">
-            <a className="text-info-dark underline" href="https://code.claude.com/docs/en/claude-directory" target="_blank" rel="noreferrer">
+            <a id="cb-chat-delete-docs-local" className="text-info-dark underline" href="https://code.claude.com/docs/en/claude-directory" target="_blank" rel="noreferrer">
               Claude local data
             </a>
-            <a className="text-info-dark underline" href="https://platform.claude.com/docs/en/manage-claude/api-and-data-retention" target="_blank" rel="noreferrer">
+            <a id="cb-chat-delete-docs-retention" className="text-info-dark underline" href="https://platform.claude.com/docs/en/manage-claude/api-and-data-retention" target="_blank" rel="noreferrer">
               Anthropic retention
             </a>
           </p>
@@ -129,10 +129,10 @@ export function DeleteChatDialog(props: DeleteChatDialogProps) {
         ) : null}
 
         <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button autoFocus intent="secondary" onClick={onClose} disabled={mutation.isPending}>
+          <Button id="cb-chat-delete-cancel" autoFocus intent="secondary" onClick={onClose} disabled={mutation.isPending}>
             Cancel
           </Button>
-          <Button intent="destructive" onClick={remove} loading={mutation.isPending} loadingLabel="Deleting…">
+          <Button id="cb-chat-delete-confirm" intent="destructive" onClick={remove} loading={mutation.isPending} loadingLabel="Deleting…">
             {cleanup ? "Retry cleanup" : "Delete permanently"}
           </Button>
         </div>

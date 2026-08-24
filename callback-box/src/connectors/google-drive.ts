@@ -12,8 +12,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { errnoCode, errorMessage } from "../lib/error-guards.js";
-import { glob } from "glob";
+import { errorMessage } from "../lib/error-guards.js";
 import type { Connector, SyncResult } from "./index.js";
 import { registerConnector } from "./index.js";
 import { getGoogleAuth } from "./google-auth.js";
@@ -32,7 +31,7 @@ import type { GoogleDriveService } from "../services/google-drive.js";
 import { getHandlerForMimeType, getAllDriveHandlers } from "./drive-types.js";
 import { safeFilename } from "./chat-utils.js";
 import { attachDirFor } from "../shared/attach-path.js";
-import { invariant } from "../lib/invariant.js";
+import { findDriveCardTracking } from "./google-drive-tracking.js";
 
 // Ensure handlers are registered
 import "./drive-handler-sheets.js";
@@ -44,34 +43,6 @@ export {
   emptyFileState,
   type DriveTransientState,
 } from "./google-drive-state.js";
-
-// ─── Card parsing ───────────────────────────────────────────────────────────
-
-/**
- * Extract drive-id from a card file by reading the XML.
- * Uses a simple regex rather than full XML parse — the attribute is on the root element.
- */
-async function readDriveIdFromCard(cardPath: string): Promise<string | null> {
-  try {
-    const content = await fs.readFile(cardPath, "utf-8");
-    // YAML frontmatter form: `drive-id: value` (optionally quoted)
-    const yamlMatch = /^drive-id:\s*"?([^\n"]+?)"?\s*$/m.exec(content);
-    if (yamlMatch) {
-      invariant(yamlMatch[1] !== undefined, "capture group 1 is non-optional in yamlMatch");
-      return yamlMatch[1];
-    }
-    // Legacy XML form (kept while older boxes still have unmigrated cards)
-    const xmlMatch = /drive-id="([^"]+)"/.exec(content);
-    if (!xmlMatch) return null;
-    invariant(xmlMatch[1] !== undefined, "capture group 1 is non-optional in xmlMatch");
-    return xmlMatch[1];
-  } catch (e) {
-    if (errnoCode(e) !== "ENOENT") {
-      console.warn(`[google-drive] Could not read drive-id from ${cardPath}, skipping: ${e instanceof Error ? e.message : String(e)}`);
-    }
-    return null;
-  }
-}
 
 // ─── Connector ──────────────────────────────────────────────────────────────
 
@@ -134,26 +105,15 @@ class GoogleDriveConnector implements Connector {
     const updated: string[] = [];
     const pushed: string[] = [];
 
-    // 1. Find all existing drive cards
-    const cardPatterns = getAllDriveHandlers().map(
-      (h) => `**/*.${h.cardType}.card`,
-    );
-    const cardPaths: string[] = [];
-    for (const pattern of cardPatterns) {
-      const matches = await glob(pattern, { cwd: this.boxRoot });
-      cardPaths.push(...matches);
-    }
+    // 1. Find live cards plus the Drive IDs retained by committed trash cards.
+    const tracking = await findDriveCardTracking(this.boxRoot);
 
     // 2. Sync each card
-    for (const relCardPath of cardPaths) {
-      const cardPath = path.join(this.boxRoot, relCardPath);
-      const driveId = await readDriveIdFromCard(cardPath);
-      if (!driveId) continue;
-
+    for (const card of tracking.liveCards) {
       try {
         const result = await this.syncFile({
-          driveId,
-          cardPath,
+          driveId: card.driveId,
+          cardPath: card.absPath,
           service,
           state,
         });
@@ -161,22 +121,22 @@ class GoogleDriveConnector implements Connector {
         updated.push(...result.updated);
         pushed.push(...result.pushed);
       } catch (err) {
-        console.error(`[google-drive] Error syncing ${relCardPath}: ${errorMessage(err)}`);
+        console.error(`[google-drive] Error syncing ${card.relPath}: ${errorMessage(err)}`);
       }
     }
 
     // 3. Folder mounts — discover new files
     const config = await loadDriveConfig(this.boxRoot);
+    const claimedDriveIds = new Set([
+      ...tracking.liveCards.map((card) => card.driveId),
+      ...tracking.trashedDriveIds,
+    ]);
     if (config.folders) {
       for (const folder of config.folders) {
         try {
           const newFiles = await this.syncFolder({
             folder,
-            existingDriveIds: new Set(
-              await Promise.all(
-                cardPaths.map((p) => readDriveIdFromCard(path.join(this.boxRoot, p))),
-              ).then((ids) => ids.filter((id): id is string => Boolean(id))),
-            ),
+            existingDriveIds: claimedDriveIds,
             service,
             state,
           });
@@ -309,6 +269,11 @@ class GoogleDriveConnector implements Connector {
         // signals "not found" and carries nothing else worth surfacing.
       }
 
+      // Discovery after a hard delete is a fresh mount. Retained transient
+      // hashes describe attachment files that no longer exist; keeping them
+      // would make the handlers mistake the missing files for local edits and
+      // recreate only the card with dangling attach refs.
+      delete state.files[file.id];
       const result = await this.syncFile({
         driveId: file.id,
         cardPath,

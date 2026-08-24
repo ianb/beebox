@@ -64,9 +64,9 @@ export function RecoveredDictation(props: {
             {draft.narration ? "Narration · " : ""}realtime transcript — review before sending
           </Text>
           <Row gap="sm">
-            <Button intent="secondary" size="sm" onClick={onDiscard}>Discard</Button>
-            <Button intent="secondary" size="sm" onClick={onContinue}>Continue</Button>
-            <Button intent="primary" size="sm" onClick={onSend}>Send</Button>
+            <Button id="cb-dictation-recovered-discard" intent="secondary" size="sm" onClick={onDiscard}>Discard</Button>
+            <Button id="cb-dictation-recovered-continue" intent="secondary" size="sm" onClick={onContinue}>Continue</Button>
+            <Button id="cb-dictation-recovered-send" intent="primary" size="sm" onClick={onSend}>Send</Button>
           </Row>
         </Row>
       </Stack>

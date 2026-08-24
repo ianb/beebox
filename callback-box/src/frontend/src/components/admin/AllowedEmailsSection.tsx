@@ -100,6 +100,7 @@ function ResetLinkCard({ resetLink }: { resetLink: ResetLink }) {
           Single-use. Creating another link replaces this one. Send it only through a trusted channel.
         </Text>
         <Button
+          id="cb-admin-reset-link-copy"
           type="button"
           intent="secondary"
           onClick={() => navigator.clipboard.writeText(resetLink.url)}
@@ -180,6 +181,7 @@ export function AllowedEmailsSection() {
 
         <Row gap="sm" align="start">
           <TextField
+            id="cb-admin-allowed-email-input"
             label="Allowed email"
             hideLabel
             type="email"
@@ -198,6 +200,7 @@ export function AllowedEmailsSection() {
             className="flex-1"
           />
           <Button
+            id="cb-admin-allowed-email-add"
             intent="primary"
             onClick={() => void addEmail()}
             disabled={!newEmail.trim().includes("@")}

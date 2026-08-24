@@ -14,13 +14,27 @@ import ICAL from "ical.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { initBox } from "../../src/core/box/index.js";
 import { createFakeGoogleCalendar } from "../../src/services/google-calendar.js";
+import type { CalendarEvent, GoogleCalendarService } from "../../src/services/google-calendar.js";
 import { createGoogleCalendarConnector } from "../../src/connectors/google-calendar.js";
+// eslint-disable-next-line import-x/no-rename-default
+import ky from "ky";
 
 // Freeze the connector's clock so the sync time-window is deterministic: the
 // fixed-date fixtures below (2026-06-0X) stay inside the 30-day-back window no
 // matter when the suite runs. Without this the tests age out (a June fixture
 // falls off the window ~30 days later).
 const NOW = () => new Date("2026-06-15T12:00:00Z");
+
+async function throwCalendarHttpError(status: number, url: string): Promise<never> {
+  await ky.get(url, {
+    retry: 0,
+    fetch: async () => new Response("", {
+      status,
+      statusText: status === 410 ? "Gone" : "Service Unavailable",
+    }),
+  });
+  throw new Error("ky did not throw for an HTTP error response");
+}
 ```
 
 ## A timezone-bearing event round-trips through ICS
@@ -286,13 +300,6 @@ expired (HTTP 410), the connector drops the token, refetches the full window,
 and continues — the sync still succeeds and a fresh token is recorded.
 
 ```ts
-class FakeSyncTokenGoneError extends Error {
-  constructor() {
-    super("HTTP 410 Gone: sync token expired");
-    this.name = "FakeSyncTokenGoneError";
-  }
-}
-
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 box.commitAll("init box");
@@ -318,7 +325,10 @@ const calendar = {
   listEvents: async (calendarId, opts) => {
     if (opts?.syncToken) {
       tokenRejections += 1;
-      throw new FakeSyncTokenGoneError();
+      return throwCalendarHttpError(
+        410,
+        "https://calendar.test/events?syncToken=expired-secret",
+      );
     }
     return inner.listEvents(calendarId, opts);
   },
@@ -350,6 +360,215 @@ const { loadCalendarState } = await import("../../src/connectors/google-calendar
 const state = await loadCalendarState(box.root);
 state.syncTokens.primary
 => fake-sync-token
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A failed calendar does not abort later calendars or post-loop work
+
+Each calendar is an independent member of the configured working set. If one
+calendar fails after writing an event, the connector retains that completed
+path, restores the calendar's incoming sync token, continues with later
+calendars, pushes local orphans, and reports the overall run as failed.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+await box.seed("config/connectors/google-calendar.json", JSON.stringify({
+  calendars: ["bad", "good"],
+  syncDaysBack: 30,
+  syncDaysForward: 90,
+}, null, 2));
+box.commitAll("init two-calendar box");
+
+const firstBadEvent: CalendarEvent = {
+  id: "evt-bad-first",
+  status: "confirmed",
+  summary: "Written before failure",
+  start: { dateTime: "2026-06-10T09:00:00Z" },
+  end: { dateTime: "2026-06-10T10:00:00Z" },
+};
+const poisonBadEvent: CalendarEvent = {
+  id: "evt-bad-poison",
+  status: "confirmed",
+  start: { dateTime: "2026-06-11T09:00:00Z" },
+  end: { dateTime: "2026-06-11T10:00:00Z" },
+};
+Object.defineProperty(poisonBadEvent, "summary", {
+  get() { throw new Error("private event text and syncToken=must-not-leak"); },
+});
+const goodEvent: CalendarEvent = {
+  id: "evt-good",
+  status: "confirmed",
+  summary: "Later calendar still runs",
+  start: { dateTime: "2026-06-12T09:00:00Z" },
+  end: { dateTime: "2026-06-12T10:00:00Z" },
+};
+
+const inner = createFakeGoogleCalendar({
+  calendars: [
+    { id: "bad", summary: "Bad", accessRole: "owner" },
+    { id: "good", summary: "Good", accessRole: "owner" },
+  ],
+});
+let exerciseFailure = false;
+const seenTokens: Array<{ calendarId: string; syncToken: string | undefined }> = [];
+const calendar: GoogleCalendarService = {
+  ...inner,
+  async listEvents(calendarId, opts) {
+    seenTokens.push({ calendarId, syncToken: opts?.syncToken });
+    if (!exerciseFailure) {
+      return { items: [], nextSyncToken: `old-${calendarId}` };
+    }
+    if (calendarId === "bad") {
+      return {
+        items: [firstBadEvent, poisonBadEvent],
+        nextSyncToken: "advanced-bad-token",
+      };
+    }
+    return { items: [goodEvent], nextSyncToken: "advanced-good-token" };
+  },
+};
+
+const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
+await connector.sync();
+
+await box.seed("store/calendar/local-new.ics",
+  "BEGIN:VCALENDAR\r\n" +
+  "VERSION:2.0\r\n" +
+  "PRODID:-//Test//EN\r\n" +
+  "BEGIN:VEVENT\r\n" +
+  "UID:local-after-failure\r\n" +
+  "SUMMARY:Push after pull failure\r\n" +
+  "DTSTART;VALUE=DATE:20260613\r\n" +
+  "DTEND;VALUE=DATE:20260614\r\n" +
+  "END:VEVENT\r\n" +
+  "END:VCALENDAR\r\n",
+);
+box.commitAll("seed local orphan");
+
+exerciseFailure = true;
+const result = await connector.sync();
+JSON.stringify({
+  success: result.success,
+  created: result.created.length,
+  pushed: result.pushed?.length,
+})
+=> {"success":false,"created":2,"pushed":1}
+```
+
+The failed member kept its old token, while the later calendar advanced. The
+overall error and commit contain controlled diagnostics, not the thrown event
+text or token-like detail.
+
+```ts continue
+const { loadCalendarState } = await import("../../src/connectors/google-calendar-state.js");
+const state = await loadCalendarState(box.root);
+JSON.stringify(state.syncTokens)
+=> {"bad":"old-bad","good":"advanced-good-token"}
+
+const secondRunTokens = seenTokens.slice(-2);
+JSON.stringify(secondRunTokens)
+=> [{"calendarId":"bad","syncToken":"old-bad"},{"calendarId":"good","syncToken":"old-good"}]
+
+JSON.stringify({
+  mentionsBad: result.error?.includes("bad"),
+  leaked: result.error?.includes("must-not-leak"),
+})
+=> {"mentionsBad":true,"leaked":false}
+
+const message = execSync("git log -1 --pretty=%B", { cwd: box.root, encoding: "utf-8" });
+JSON.stringify({
+  partial: message.includes("Sync calendar: partial"),
+  mentionsBad: message.includes("bad"),
+  leaked: message.includes("must-not-leak"),
+})
+=> {"partial":true,"mentionsBad":true,"leaked":false}
+
+const committed = execSync("git show --name-only --pretty=format: HEAD", { cwd: box.root, encoding: "utf-8" });
+const createdContents = await Promise.all(
+  result.created.map((file) => readFile(join(box.root, file), "utf-8")),
+);
+JSON.stringify({
+  badWrite: createdContents.some((content) => content.includes("Written before failure")),
+  goodWrite: createdContents.some((content) => content.includes("Later calendar still runs")),
+  allWritesCommitted: result.created.every((file) => committed.includes(file)),
+})
+=> {"badWrite":true,"goodWrite":true,"allWritesCommitted":true}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A failed full retry stays inside its calendar boundary
+
+A real 410 clears the stale token and triggers a full retry. If that retry also
+fails, the connector leaves the invalid token absent, continues later
+calendars, and never exposes the HTTP request URL containing token material.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+await box.seed("config/connectors/google-calendar.json", JSON.stringify({
+  calendars: ["expired", "healthy"],
+}, null, 2));
+box.commitAll("init retry box");
+
+const inner = createFakeGoogleCalendar({
+  calendars: [
+    { id: "expired", summary: "Expired", accessRole: "owner" },
+    { id: "healthy", summary: "Healthy", accessRole: "owner" },
+  ],
+});
+let exerciseRetryFailure = false;
+const healthyEvent: CalendarEvent = {
+  id: "evt-healthy",
+  status: "confirmed",
+  summary: "Healthy calendar",
+  start: { dateTime: "2026-06-12T12:00:00Z" },
+  end: { dateTime: "2026-06-12T13:00:00Z" },
+};
+const calendar: GoogleCalendarService = {
+  ...inner,
+  async listEvents(calendarId, opts) {
+    if (!exerciseRetryFailure) {
+      return { items: [], nextSyncToken: `old-${calendarId}` };
+    }
+    if (calendarId === "expired" && opts?.syncToken) {
+      return throwCalendarHttpError(
+        410,
+        "https://calendar.test/events?syncToken=stale-secret-token",
+      );
+    }
+    if (calendarId === "expired") {
+      return throwCalendarHttpError(
+        503,
+        "https://calendar.test/events?pageToken=full-retry-secret",
+      );
+    }
+    return { items: [healthyEvent], nextSyncToken: "healthy-next" };
+  },
+};
+
+const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
+await connector.sync();
+exerciseRetryFailure = true;
+const result = await connector.sync();
+
+const { loadCalendarState } = await import("../../src/connectors/google-calendar-state.js");
+const state = await loadCalendarState(box.root);
+JSON.stringify({
+  success: result.success,
+  healthyCreated: result.created.some((file) => file.includes("healthy")),
+  expiredToken: state.syncTokens.expired ?? null,
+  healthyToken: state.syncTokens.healthy,
+  leakedStale: result.error?.includes("stale-secret-token"),
+  leakedRetry: result.error?.includes("full-retry-secret"),
+})
+=> {"success":false,"healthyCreated":true,"expiredToken":null,"healthyToken":"healthy-next","leakedStale":false,"leakedRetry":false}
 ```
 
 ```ts cleanup

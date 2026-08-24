@@ -177,13 +177,32 @@ export function makeRecipeComponents(linkCtx: RecipeLinkContext) {
     amount?: string;
     children?: ReactNode;
   }) {
+    // The yield is the scaling base, so at 2x the card used to claim the original
+    // serving count beside doubled quantities. `amount` is the machine-readable
+    // number, and the documented body form repeats it — `{% yield amount="4" %}4
+    // servings{% /yield %}` — so scaling means substituting the new number into
+    // that text rather than printing it twice.
+    const scale = useContext(RecipeScaleContext);
+    const baseAmount = amount !== undefined && amount !== "" ? amount : null;
+    const scaledYield = baseAmount === null ? null : scaleAmount(baseAmount, scale);
+    const label = typeof children === "string" ? children : null;
+    // Only rewrite when the text actually opens with the base number, which is the
+    // convention but not enforced. Anything else renders untouched: a wrong noun is
+    // better than a wrong number silently pasted over prose we did not parse.
+    const rewritten = label !== null && scaledYield !== null && baseAmount !== null
+      && label.trimStart().startsWith(baseAmount)
+      ? `${scaledYield}${label.trimStart().slice(baseAmount.length)}`
+      : null;
     return (
       <div className="my-2 text-sm text-warm-600">
         <span className="font-medium uppercase tracking-wide text-xs">Yield</span>
-        {amount !== undefined && amount !== "" ? (
-          <span className="text-warm-400 ml-1 text-xs">(base {amount})</span>
+        {baseAmount !== null && scale !== 1 ? (
+          <span className="text-warm-400 ml-1 text-xs">(base {baseAmount})</span>
         ) : null}
-        <span className="ml-2">{children}</span>
+        <span className="ml-2">{rewritten ?? children}</span>
+        {rewritten === null && scaledYield !== null && scale !== 1 ? (
+          <span className="ml-1 text-warm-400 text-xs">(×{scale} = {scaledYield})</span>
+        ) : null}
       </div>
     );
   }

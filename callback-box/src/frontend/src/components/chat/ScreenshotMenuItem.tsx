@@ -53,7 +53,7 @@ export function ScreenshotMenuItem({ addFiles }: { addFiles: AddFiles }) {
   return (
     // captureTabScreenshot calls getDisplayMedia synchronously before its first
     // await, so this click still counts as the required user gesture.
-    <MenuItem onClick={() => void runScreenshotCapture(addFiles)}>
+    <MenuItem id="cb-composer-add-screenshot" onClick={() => void runScreenshotCapture(addFiles)}>
       Send screenshot…
     </MenuItem>
   );

@@ -70,20 +70,20 @@ export function VoicePanel({
 }) {
   return (
     <>
-      <MenuItem onClick={onBack} keepOpen>
+      <MenuItem id="cb-voice-settings-back" onClick={onBack} keepOpen>
         <span className="text-warm-500">‹ Voice settings</span>
       </MenuItem>
       <MenuDivider />
       <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-500">Live transcription</div>
       {TRANSCRIPTION_OPTIONS.map((opt) => (
-        <MenuItem key={opt.service} onClick={() => onSelectTranscriptionService(opt.service)} keepOpen>
+        <MenuItem key={opt.service} id={`cb-voice-live-${opt.service}`} onClick={() => onSelectTranscriptionService(opt.service)} keepOpen>
           {currentService === opt.service ? "✓ " : "  "}{opt.label}
         </MenuItem>
       ))}
       <MenuDivider />
       <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-500">HQ transcription</div>
       {HQ_TRANSCRIPTION_OPTIONS.map((opt) => (
-        <MenuItem key={opt.service} onClick={() => onSelectHqTranscriptionService(opt.service)} keepOpen>
+        <MenuItem key={opt.service} id={`cb-voice-hq-${opt.service}`} onClick={() => onSelectHqTranscriptionService(opt.service)} keepOpen>
           {currentHqService === opt.service ? "✓ " : "  "}{opt.label}
         </MenuItem>
       ))}

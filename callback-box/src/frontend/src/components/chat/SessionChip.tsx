@@ -73,21 +73,21 @@ function RootPanel({
 }) {
   return (
     <>
-      <MenuItem onClick={onNewSession}>New session</MenuItem>
-      <MenuItem onClick={onOpenSessions} keepOpen>
+      <MenuItem id="cb-session-new" onClick={onNewSession}>New session</MenuItem>
+      <MenuItem id="cb-session-recent" onClick={onOpenSessions} keepOpen>
         <span className="flex justify-between gap-2 w-full">
           <span>Recent chats</span>
           <span className="text-warm-500">›</span>
         </span>
       </MenuItem>
-      <MenuItem onClick={onOpenModel} keepOpen disabled={modelSelectionDisabled}>
+      <MenuItem id="cb-session-model" onClick={onOpenModel} keepOpen disabled={modelSelectionDisabled}>
         <span className="flex justify-between gap-2 w-full">
           <span>Model</span>
           <span className="text-warm-500 truncate">{currentModelLabel} ›</span>
         </span>
       </MenuItem>
       <MenuDivider />
-      <MenuItem onClick={onOpenAdvanced} keepOpen>
+      <MenuItem id="cb-session-advanced" onClick={onOpenAdvanced} keepOpen>
         <span className="flex justify-between gap-2 w-full">
           <span>Advanced</span>
           <span className="text-warm-500">›</span>
@@ -101,7 +101,7 @@ function RootPanel({
 function SessionsPanel({ onBack, contextDir }: { onBack: () => void; contextDir: string | null }) {
   return (
     <>
-      <MenuItem onClick={onBack} keepOpen>
+      <MenuItem id="cb-session-recent-back" onClick={onBack} keepOpen>
         <span className="text-warm-500">‹ Recent chats</span>
       </MenuItem>
       <MenuDivider />

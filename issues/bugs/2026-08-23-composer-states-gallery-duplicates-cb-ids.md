@@ -25,3 +25,9 @@ the harness after mount. The first keeps the harness honest about being the
 real components.
 
 Found while annotating the chat surface (Track 4a).
+
+**Also (2026-08-23, id pass):** `pages/dev/components/CaptureModeHarness.tsx`
+renders `CaptureOverlay` and a bare `CaptureControls` on one page, so
+`/dev/capture-mode` now duplicates every `cb-capture-*` id the same way. Same
+fix shape: either the harness passes a per-instance prefix or dev harness pages
+are declared out of the address space.

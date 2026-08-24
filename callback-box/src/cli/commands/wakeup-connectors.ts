@@ -31,20 +31,27 @@ import { runConnectorProcedureTriggers } from "../../core/commands/connector-pro
  */
 export async function runConnectors(
   boxRoot: string,
-  options: { connector?: string | undefined }
-): Promise<{ activeConnector: Connector | undefined }> {
-  // Initialize connectors
-  createGmailConnector(boxRoot);
-  createGoogleCalendarConnector(boxRoot);
-  createTelegramConnector(boxRoot);
-  createGoogleDriveConnector(boxRoot);
-  createPublishSubmissionsConnector(boxRoot);
-
-  const connectors = getAllConnectors();
+  options: {
+    connector?: string | undefined;
+    /** Explicit working set for deterministic orchestration tests. */
+    connectors?: Connector[] | undefined;
+    /** Procedure boundary injection; production uses the normal command runner. */
+    runProcedureTriggers?: ((procedures: ConnectorProcedureTrigger[]) => Promise<number>) | undefined;
+  },
+): Promise<{ activeConnector: Connector | undefined; errorCount: number }> {
+  let connectors = options.connectors;
+  if (connectors === undefined) {
+    createGmailConnector(boxRoot);
+    createGoogleCalendarConnector(boxRoot);
+    createTelegramConnector(boxRoot);
+    createGoogleDriveConnector(boxRoot);
+    createPublishSubmissionsConnector(boxRoot);
+    connectors = getAllConnectors();
+  }
 
   if (connectors.length === 0) {
     console.log("  No connectors configured.");
-    return { activeConnector: undefined };
+    return { activeConnector: undefined, errorCount: 0 };
   }
 
   // Filter by name if specified
@@ -87,7 +94,11 @@ export async function runConnectors(
     }
   }
 
-  totalErrors += await runConnectorProcedureTriggers(createCliContext(boxRoot), procedures);
+  const runProcedureTriggers = options.runProcedureTriggers
+    ?? ((requested: ConnectorProcedureTrigger[]) => (
+      runConnectorProcedureTriggers(createCliContext(boxRoot), requested)
+    ));
+  totalErrors += await runProcedureTriggers(procedures);
 
   const parts: string[] = [];
   if (totalPushed > 0) parts.push(`${totalPushed} pushed`);
@@ -96,7 +107,12 @@ export async function runConnectors(
   parts.push(`${totalErrors} errors`);
   console.log(`\nTotal: ${parts.join(", ")}.`);
 
-  return { activeConnector };
+  return { activeConnector, errorCount: totalErrors };
+}
+
+/** The exit status applied after the rest of the wakeup cycle finishes. */
+export function wakeupExitCodeForConnectorErrors(errorCount: number): 1 | undefined {
+  return errorCount > 0 ? 1 : undefined;
 }
 
 type SyncResult = Awaited<ReturnType<Connector["sync"]>>;

@@ -1983,6 +1983,15 @@ tests:
     correct_contains_any: ["formula", "=SUM", "\"f\""]
     tags: [drive]
 
+  # Status (2026-08-23): 1/1 agent check passed. The command then exited 1 while
+  # loading an unrelated malformed context-history entry; the result was not recorded.
+  - id: drive-untrack-and-restore
+    prompt: "A Google Drive file came from a configured folder mount. How do I stop syncing just that file without deleting it from Google, and how would I resume later?"
+    expected_level: knows_directly
+    watch_for: "Uses cb rm as the durable per-child tombstone, says restore (or cb drive add) resumes, and does not recommend raw hard deletion because the folder mount would rediscover it"
+    correct_contains: ["cb rm", "restore"]
+    tags: [drive, lifecycle]
+
   # === Google Drive / Documents ===
   #
   # Status (2026-07-03): all 5 pass. Fixed drive-docs-supported — a synced Google

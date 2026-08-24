@@ -7,6 +7,8 @@ export interface ExternalIconLinkProps {
   /** Required aria-label and title — icon-only links have no visible text. */
   label: string;
   size?: ExternalIconLinkSize;
+  /** DOM id. Set it to publish a `cb-` control address (docs/plans/agent-points-at-ui.md). */
+  id?: string;
   /**
    * When true, renders a white-pill variant that stays visible on dark
    * backgrounds (image overlays, colored bars). Mirrors the `onDark`
@@ -31,7 +33,7 @@ function OpenInNewTabIcon({ size }: { size: ExternalIconLinkSize }) {
   );
 }
 
-export function ExternalIconLink({ href, label, size, onDark, className }: ExternalIconLinkProps) {
+export function ExternalIconLink({ href, label, size, id, onDark, className }: ExternalIconLinkProps) {
   size = size ?? "md";
   onDark = onDark ?? false;
   const colorClass = onDark
@@ -39,6 +41,7 @@ export function ExternalIconLink({ href, label, size, onDark, className }: Exter
     : "bg-transparent hover:bg-warm-200 text-warm-500 hover:text-warm-700";
   return (
     <a
+      id={id}
       href={href}
       target="_blank"
       rel="noopener noreferrer"

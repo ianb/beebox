@@ -43,10 +43,10 @@ export function RouteError({ error, info, reset }: ErrorComponentProps) {
         {error.stack ?? error.message}
       </Pre>
       <Row gap="sm">
-        <Button intent="primary" onClick={reset}>
+        <Button id="cb-route-error-retry" intent="primary" onClick={reset}>
           Try again
         </Button>
-        <Button intent="secondary" onClick={() => window.location.reload()}>
+        <Button id="cb-route-error-reload" intent="secondary" onClick={() => window.location.reload()}>
           Reload page
         </Button>
       </Row>

@@ -44,16 +44,21 @@ Only through a browser, driven by `bin/browse` from the repository root:
 
 ```
 bin/browse open <path>        # e.g. bin/browse open /            (paths are app paths)
-bin/browse snapshot -i        # interactive elements as @e1, @e2 refs
-bin/browse click @e3
-bin/browse fill @e4 "text"
+bin/browse snapshot -i        # what is on screen; each control shows [ref=e3] and, usually, id=cb-…
+bin/browse click cb-some-id   # act by the id when the line shows one
+bin/browse click @e3          # by ref only when it shows no id
+bin/browse fill cb-some-id "text"
 bin/browse upload @e5 <file>  # file input
 bin/browse screenshot <path>  # save a screenshot
 bin/browse eval "<js>"        # read something off the page if you must
 ```
 
-Refs go stale after any page change — re-snapshot before interacting again. You are already
-signed in.
+Use the `id=` when a line has one: ids stay valid across page changes, refs (`@e3`) are
+renumbered by any page change and must be re-snapshotted first. If a command prints
+`✗ … refused: <reason>`, the tool did not do it — it is telling you the control could not be
+operated (disabled, hidden, covered, gone) and why. That is worth noting as what you saw; do not
+read it as the app having done nothing. `✓ Done` means the action was delivered, not that it
+had the effect you expected — look at the screen. You are already signed in.
 
 **Run every `bin/browse` command with `BROWSE_BOX={{BOX_SLUG}}` set**, e.g.
 

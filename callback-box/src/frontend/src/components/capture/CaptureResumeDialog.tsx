@@ -39,15 +39,15 @@ export function CaptureResumeDialog({ capture, busy, onResume, onSubmit, onDisca
           Pick up where you left off, submit it now, or throw it away.
         </p>
         <div className="mt-5 flex flex-col gap-2">
-          <button onClick={onResume} disabled={busy}
+          <button id="cb-capture-resume" onClick={onResume} disabled={busy}
             className="w-full rounded-lg bg-success py-2.5 text-sm font-medium disabled:opacity-40 active:bg-success">
             Resume capturing
           </button>
-          <button onClick={onSubmit} disabled={busy} aria-busy={busy}
+          <button id="cb-capture-resume-submit" onClick={onSubmit} disabled={busy} aria-busy={busy}
             className="w-full rounded-lg bg-gray-700 py-2.5 text-sm font-medium disabled:opacity-40 active:bg-gray-600">
             Submit now
           </button>
-          <button onClick={onDiscard} disabled={busy} aria-busy={busy}
+          <button id="cb-capture-resume-discard" onClick={onDiscard} disabled={busy} aria-busy={busy}
             className="w-full rounded-lg py-2.5 text-sm font-medium text-danger-light disabled:opacity-40 active:bg-gray-800">
             Discard
           </button>

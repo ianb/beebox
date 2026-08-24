@@ -4,13 +4,70 @@ Tests for the Google Drive connector using fake services.
 
 ```ts setup
 import { join } from "node:path";
-import { readFile, readdir, writeFile } from "node:fs/promises";
+import { readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { initBox } from "../../src/core/box/index.js";
 import { createFakeGoogleDrive } from "../../src/services/google-drive.js";
 import { createFakeGoogleAuth } from "../../src/services/google-auth.js";
 import { createGoogleDriveConnector } from "../../src/connectors/google-drive.js";
+import { moveCardsToTrash } from "../../src/core/commands/trash.js";
+import { createCliContext } from "../../src/core/commands/index.js";
+import { createGsheetTemplate } from "../../src/schemas/gsheet.js";
+import { runDriveStatus } from "../../src/cli/commands/drive.js";
 import type { FakeSpreadsheet } from "../../src/services/google-drive.js";
+
+function sheetFixture(opts: { id: string; name: string; parent?: string }): {
+  file: {
+    id: string;
+    name: string;
+    mimeType: string;
+    modifiedTime: string;
+    owners: Array<{ emailAddress: string }>;
+    parents?: string[];
+    webViewLink: string;
+  };
+  spreadsheet: FakeSpreadsheet;
+  card: string;
+} {
+  const file = {
+    id: opts.id,
+    name: opts.name,
+    mimeType: "application/vnd.google-apps.spreadsheet",
+    modifiedTime: "2026-03-29T10:00:00Z",
+    owners: [{ emailAddress: "test@example.com" }],
+    ...(opts.parent ? { parents: [opts.parent] } : {}),
+    webViewLink: `https://docs.google.com/spreadsheets/d/${opts.id}/edit`,
+  };
+  const spreadsheet: FakeSpreadsheet = {
+    metadata: {
+      spreadsheetId: opts.id,
+      properties: { title: opts.name },
+      sheets: [{ properties: { sheetId: 0, title: "Sheet1" } }],
+    },
+    sheets: new Map([["Sheet1", [["Name"], ["Alice"]]]]),
+  };
+  const card = createGsheetTemplate({
+    driveId: opts.id,
+    title: opts.name,
+    modified: file.modifiedTime,
+    link: file.webViewLink,
+    owner: "test@example.com",
+    sheets: [{ ref: "attach/Sheet1.json", title: "Sheet1", gid: "0" }],
+  });
+  return { file, spreadsheet, card };
+}
+
+async function captureLogs(fn: () => Promise<void>): Promise<string> {
+  const lines: string[] = [];
+  const originalLog = console.log;
+  console.log = (...args) => { lines.push(args.join(" ")); };
+  try {
+    await fn();
+  } finally {
+    console.log = originalLog;
+  }
+  return lines.join("\n");
+}
 ```
 
 ## Pull — creates card and JSON files from a spreadsheet
@@ -278,4 +335,191 @@ sidecar5[0]?.content
 
 sidecar5[0]?.author?.displayName
 => Reviewer
+```
+
+## Trashing a card stops sync, and restoring it resumes
+
+`cb rm` moves both the card and its attachment scope into `store/trash`. The
+trash copy remains the durable record of the Drive ID, but it is not part of
+the active sync working set.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+const fixture = sheetFixture({ id: "sheet-trash", name: "Trash Me" });
+await box.seed("store/drive/Trash-Me.gsheet.card", fixture.card);
+await box.seed("store/drive/Trash-Me.attach/Sheet1.json", '[["Name"],["Alice"]]\n');
+box.commitAll("add drive card");
+
+const inner = createFakeGoogleDrive({
+  files: [fixture.file],
+  spreadsheets: new Map([[fixture.file.id, fixture.spreadsheet]]),
+});
+let getFileCalls = 0;
+const drive = {
+  ...inner,
+  async getFile(fileId: string) {
+    getFileCalls += 1;
+    return inner.getFile(fileId);
+  },
+};
+const connector = createGoogleDriveConnector(box.root, drive);
+await connector.sync();
+getFileCalls
+=> 1
+```
+
+After the real trash move, another sync makes no request for that Drive file.
+
+```ts continue
+const receipt = await moveCardsToTrash(
+  createCliContext(box.root),
+  ["store/drive/Trash-Me.gsheet.card"],
+);
+getFileCalls = 0;
+const trashed = await connector.sync();
+JSON.stringify({
+  getFileCalls,
+  changed: trashed.created.length + trashed.updated.length + (trashed.pushed?.length ?? 0),
+  trashPath: receipt.moves[0]?.destPath,
+})
+=> {"getFileCalls":0,"changed":0,"trashPath":"store/trash/Trash-Me.gsheet.card"}
+```
+
+Restoring the exact card and attachment paths makes it live again.
+
+```ts continue
+for (const move of receipt.moves[0]?.fileMoves ?? []) {
+  await rename(join(box.root, move.destPath), join(box.root, move.sourcePath));
+}
+getFileCalls = 0;
+await connector.sync();
+getFileCalls
+=> 1
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A trashed folder child is not rediscovered
+
+Folder mounts still list their remote children, but the Drive IDs retained in
+trash suppress recreation. Raw hard deletion is different: once the tombstone
+is removed, the configured folder mount is authoritative and creates the card
+again.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+await box.seed("config/connectors/google-drive.json", JSON.stringify({
+  folders: [{ driveFolderId: "folder-1", localPath: "store/drive/folder" }],
+}, null, 2));
+const fixture = sheetFixture({
+  id: "sheet-folder-trash",
+  name: "Folder Child",
+  parent: "folder-1",
+});
+box.commitAll("mount folder");
+
+const inner = createFakeGoogleDrive({
+  files: [fixture.file],
+  spreadsheets: new Map([[fixture.file.id, fixture.spreadsheet]]),
+});
+let getFileCalls = 0;
+const drive = {
+  ...inner,
+  async getFile(fileId: string) {
+    getFileCalls += 1;
+    return inner.getFile(fileId);
+  },
+};
+const connector = createGoogleDriveConnector(box.root, drive);
+const initial = await connector.sync();
+const liveCard = "store/drive/folder/Folder_Child.gsheet.card";
+const liveSheet = "store/drive/folder/Folder_Child.attach/Sheet1.json";
+JSON.stringify({
+  created: initial.created.includes(liveCard),
+  attachment: (await box.list()).includes(liveSheet),
+})
+=> {"created":true,"attachment":true}
+```
+
+Trash the previously synced card, so the connector retains both real transient
+hashes and a durable tombstone. It must neither sync nor rediscover the child.
+
+```ts continue
+const receipt = await moveCardsToTrash(
+  createCliContext(box.root),
+  [liveCard],
+);
+getFileCalls = 0;
+const trashed = await connector.sync();
+const retainedState = JSON.parse(
+  await box.read("config/connectors/google-drive.state.json"),
+) as { files?: Record<string, { contentHashes?: Record<string, string> }> };
+JSON.stringify({
+  getFileCalls,
+  created: trashed.created.length,
+  liveCardExists: (await box.list()).includes(liveCard),
+  retainedHash: retainedState.files?.[fixture.file.id]?.contentHashes?.["Sheet1.json"] !== undefined,
+})
+=> {"getFileCalls":0,"created":0,"liveCardExists":false,"retainedHash":true}
+```
+
+Hard-deleting the complete tombstone allows the still-mounted folder to
+recreate both the card and its attachment data, despite retained transient
+hashes from the original mount.
+
+```ts continue
+for (const move of receipt.moves[0]?.fileMoves ?? []) {
+  await rm(join(box.root, move.destPath), { recursive: true, force: true });
+}
+getFileCalls = 0;
+const rediscovered = await connector.sync();
+JSON.stringify({
+  getFileCalls,
+  createdCard: rediscovered.created.includes(liveCard),
+  createdAttachment: rediscovered.created.includes(liveSheet),
+  attachmentExists: (await box.list()).includes(liveSheet),
+})
+=> {"getFileCalls":1,"createdCard":true,"createdAttachment":true,"attachmentExists":true}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Drive status shares the live-card scan and YAML ID parser
+
+Status reports live YAML and legacy cards, but it does not report a tombstone
+as a mounted file.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+const yamlFixture = sheetFixture({ id: "yaml-id", name: "YAML Card" });
+await box.seed("store/drive/Yaml.gsheet.card", yamlFixture.card);
+await box.seed("store/drive/Legacy.gsheet.card", '<gsheet drive-id="legacy-id"><title>Legacy</title></gsheet>\n');
+await box.seed("store/trash/Hidden.gsheet.card", createGsheetTemplate({
+  driveId: "trash-id",
+  title: "Hidden",
+  modified: "2026-03-29T10:00:00Z",
+  link: "https://example.test/hidden",
+  owner: "test@example.com",
+  sheets: [],
+}));
+
+const output = await captureLogs(() => runDriveStatus(box.root));
+JSON.stringify({
+  count: output.includes("2 mounted file(s)"),
+  yamlId: output.includes("Drive ID: yaml-id"),
+  legacyId: output.includes("Drive ID: legacy-id"),
+  trash: output.includes("trash-id") || output.includes("store/trash"),
+})
+=> {"count":true,"yamlId":true,"legacyId":true,"trash":false}
+```
+
+```ts cleanup
+await box.cleanup();
 ```

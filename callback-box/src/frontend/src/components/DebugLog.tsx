@@ -198,14 +198,15 @@ export function DebugLogPanel({ onClose }: { onClose: () => void }) {
       <div className="flex items-center gap-2 px-3 py-1.5 bg-warm-100 border-b border-warm-300 text-xs">
         <span className="font-bold text-warm-700">Debug Log</span>
         <input
+          id="cb-debug-log-filter"
           type="text"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           placeholder="Filter..."
           className="flex-1 px-2 py-0.5 rounded border border-warm-300 text-xs"
         />
-        <button onClick={clearLog} className="text-warm-500 hover:text-warm-700">Clear</button>
-        <CloseButton onClick={onClose} size="sm" />
+        <button id="cb-debug-log-clear" onClick={clearLog} className="text-warm-500 hover:text-warm-700">Clear</button>
+        <CloseButton id="cb-debug-log-close" onClick={onClose} size="sm" />
       </div>
       <div ref={scrollRef} className="flex-1 overflow-auto px-3 py-1 font-mono text-[11px] leading-tight">
         {filtered.length === 0 ? (

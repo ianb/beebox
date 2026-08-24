@@ -32,6 +32,7 @@ export const CameraViewport = forwardRef<HTMLVideoElement, CameraViewportProps>(
       {/* Full-area tap target — take a photo when on, start the camera when off.
           Kept as a sibling of the overlay buttons so we never nest <button> in <button>. */}
       <button
+        id="cb-capture-shutter"
         type="button"
         onClick={onTap}
         aria-label={cameraOn ? "Take photo" : "Start camera"}
@@ -52,6 +53,7 @@ export const CameraViewport = forwardRef<HTMLVideoElement, CameraViewportProps>(
             <div className="w-16 h-16 rounded-full border-4 border-white/40" />
           </div>
           <button
+            id="cb-capture-camera-off"
             type="button"
             onClick={onToggleCamera}
             aria-label="Turn camera off"
@@ -63,6 +65,7 @@ export const CameraViewport = forwardRef<HTMLVideoElement, CameraViewportProps>(
             </svg>
           </button>
           <button
+            id="cb-capture-camera-flip"
             type="button"
             onClick={onFlipCamera}
             aria-label="Flip camera"

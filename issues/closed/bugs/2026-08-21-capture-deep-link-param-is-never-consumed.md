@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — following the /capture deep link into chat
+resolution: implemented
 ---
 
 `/<box>/capture` redirects to the chat with `?capture=1`

@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — opening a Recent-files card preview in a new tab from chat
+resolution: implemented
 ---
 
 The "Open as full page (new tab)" link on a file row points at
