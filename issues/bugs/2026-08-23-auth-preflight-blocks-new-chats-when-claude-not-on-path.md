@@ -5,6 +5,8 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — a journey walkthrough could not start a second chat
 stories: [chat/start-a-chat-scoped-to-a-place-in-the-box]
+priority: normal
+next-action: reconfirm
 ---
 
 Twice in one session, every attempt to start a **new** chat failed instantly with

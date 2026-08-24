@@ -6,6 +6,7 @@ needs: [manual-testing]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-workstream-story — relative-path SVGs in a dev/ .md page all rendered broken
+next-action: reconfirm
 ---
 > **⏳ Awaiting manual testing** — fix landed in `worktree-workstream-story`
 > (the `/dev/` sandbox CSP is removed); after merge + router restart, open a

@@ -6,6 +6,7 @@ labels: [chat, voice, transcription]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder noticed retranscribe failing on first messages
+next-action: reconfirm
 ---
 
 > **Checked 2026-08-18 — could not settle from here; worth a re-test.** Tagged

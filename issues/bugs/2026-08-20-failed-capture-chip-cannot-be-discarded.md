@@ -7,6 +7,7 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder found a months-old failed capture in chat
 needs: [manual-testing]
+next-action: fixed
 ---
 
 > **⏳ Awaiting manual testing** — fix landed in `9e6caef8`. A failed chip now

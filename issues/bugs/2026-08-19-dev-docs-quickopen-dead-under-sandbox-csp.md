@@ -6,6 +6,7 @@ needs: [manual-testing]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-workstream-story — a blocked-script console error while viewing a dev/ page
+next-action: reconfirm
 ---
 > **⏳ Awaiting manual testing** — fix landed in `worktree-workstream-story`:
 > the `/dev/` sandbox CSP was removed entirely (boxholder decision, see

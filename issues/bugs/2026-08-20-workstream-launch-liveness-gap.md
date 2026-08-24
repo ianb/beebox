@@ -7,6 +7,7 @@ labels: [workstreams, lifecycle, liveness]
 filed-by: agent
 discovered-by: agent
 discovered-in: main clerical session — checking newly routed workstreams
+priority: important
 ---
 
 Immediately after a workstream is created, `bin/workstreams list` can report

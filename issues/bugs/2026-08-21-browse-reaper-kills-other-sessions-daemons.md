@@ -6,6 +6,7 @@ labels: [harness]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — several agents driving the app through bin/browse at once
+priority: important
 ---
 
 Every `bin/browse` invocation reaps agent-browser processes before it runs
