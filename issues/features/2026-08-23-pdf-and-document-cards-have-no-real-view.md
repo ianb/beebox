@@ -35,22 +35,34 @@ Consequences, none of them handled:
   iframe of foreign bytes participates in none of it. A PDF is the one document
   type you cannot quote, cite, or comment on.
 
-## The `document` card has no view at all
+## The `document` card has no view at all — but check the premise first
 
-This is the sharper defect. PDF intake (`docs/plans/pdf-intake-design.md`,
-status `partial`) runs docling and produces a **`document` card**
-(`src/schemas/document.ts`) carrying extracted markdown, tables, `metadata`
-(pages/title/author), page images, and figures as addressable assets.
+`document` is a real registered card type (`src/schemas/document.ts`,
+`registry.ts:121`). It is **not** what a general PDF upload produces. It is
+written by the **scanner import** path only — `scan-import-document.ts:61`,
+whose output shape is:
 
-**Nothing renders any of it.** No renderer registers `rendersCardTypes` for
-`document`, and the schema ships no view. So a card built specifically to make a
-PDF legible falls through to the generic card rendering — frontmatter plus a
-markdown body — and the structure the pipeline worked to extract (pages, tables,
-figures) is never used.
+```
+<sessionAttach>/source.document.card
+  + source.attach/{source.pdf, docling.json.gz, page-NNN.avif, figure-NNN.avif}
+```
 
-So the system extracts a good representation of a PDF and then shows you either
-that representation flattened, or the original bytes in an iframe. The one thing
-it never shows is the good representation *as* a document.
+So it carries docling's extraction, page renders, and figures, and it exists
+because someone fed paper through a scanner. `docs/plans/pdf-intake-design.md`
+describes a broader intake (`cb import`, capture endpoint, email connector); its
+`status: partial` is doing real work — the scan branch is what got built.
+
+**Nothing renders it.** No renderer registers `rendersCardTypes` for `document`;
+the schema ships no view. `file-types/builtins.tsx:48` registers only a *list
+icon*. So the card falls through to generic rendering and the extracted
+structure — pages, tables, figures — is never used.
+
+**Scope honestly, though: zero `.document.card` files exist in any local box.**
+This gap is latent rather than something a boxholder hits daily, and it belongs
+next to the scanner work (`scanner-ingest`) rather than being treated as the
+common PDF path. Confirm whether any deployed box has one before ranking it: if
+none do, the fix is "the scanner's output should be viewable", not "PDFs render
+badly".
 
 ## What to decide
 
@@ -64,10 +76,10 @@ it never shows is the good representation *as* a document.
   thing to read", which argues for text-first with the page render available.
 - **How a page is addressed.** If a document view exists, `page 3` should be
   linkable, and the existing anchoring work is the natural mechanism.
-- **What happens for a PDF that never went through intake** (imported before the
-  pipeline, or with no text layer — those route to the photo flow per the design
-  doc). The iframe is the fallback either way; it should at least be a *good*
-  fallback with a download affordance.
+- **What happens for a PDF that never went through the scanner** — which today
+  is nearly all of them. The iframe is the fallback either way; it should at
+  least be a *good* fallback with a download affordance. This is the case a
+  boxholder actually meets, so it likely outranks the `document` view.
 
 ## Related, from the same page
 
