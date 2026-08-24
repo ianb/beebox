@@ -42,6 +42,16 @@ discovered-in: main session — boxholder opened a landmark's most-recent chat
 > when the starting run's first turn completes (the alternative double-started
 > a second run). Nothing to change there.
 
+> Cross-model review (Codex) of the fix surfaced one real edge, now also
+> fixed: the same trailing REFRESH could fire during a >5s `loading` phase,
+> cancelling `fetchInitial` mid-flight and skipping its `initial`-clearing
+> onDone. `loading` now ignores REFRESH like `streaming`/`refreshing` do
+> (pushed history still lands via the global SET_MESSAGES). Its second note —
+> a send queued during `loading`/`refreshing` finishes via a `resync` refresh,
+> so the strip drops when the status poll reads idle rather than after the
+> reconcile — matches pre-fix timing (the old `"clearing"` path hid that
+> refresh too) and the agent genuinely is done then; no change.
+
 ## Manual testing
 
 On the box where it was seen (web and iOS): open an existing chat, wait ~10s

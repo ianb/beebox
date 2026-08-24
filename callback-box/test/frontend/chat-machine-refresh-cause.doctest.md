@@ -56,6 +56,29 @@ chatDisplayPhase(turn.getSnapshot())
 => refreshing-turn
 ```
 
+## A REFRESH during `loading` is ignored
+
+The reconnect gate's trailing timer can fire while `fetchInitial` is still in
+flight (a >5s bootstrap). Honoring it would cancel that fetch; the load's own
+result is fresher than any event the REFRESH could be covering for.
+
+```ts
+const actor = createActor(
+  chatMachine.provide({
+    actors: {
+      fetchInitial: fromPromise(() => new Promise(() => {})),
+      fetchHistory: fromPromise(async () => EMPTY),
+      stream: fromCallback(() => {}),
+    },
+  }),
+  { input: { sessionInput: "s1" } },
+);
+actor.start();
+actor.send({ type: "REFRESH" });
+actor.getSnapshot().value
+=> loading
+```
+
 ## A REFRESH from idle is a resync
 
 ```ts

@@ -33,8 +33,7 @@ import {
   promoteLastToPending,
   applyStreamError,
   untrackLastSend,
-  clearInterrupt, markTurnRefresh,
-  sendInterrupt,
+  clearInterrupt, markTurnRefresh, sendInterrupt,
   reconcilePendingWithDiagnostics,
 } from "./chat-actions";
 
@@ -152,6 +151,12 @@ export const chatMachine = setup({
     loading: {
       on: {
         SEND: { actions: { type: "queueSend", params: { from: "loading" } } },
+        // Ignore REFRESH here (like streaming/refreshing): fetchInitial is in
+        // flight and resolves fresher than any missed event, and honoring it
+        // would cancel that fetch and skip its `initial`-clearing onDone.
+        // Server-pushed history still lands via the global SET_MESSAGES.
+        // (Reachable: the reconnect gate's trailing timer during a >5s load.)
+        REFRESH: { actions: () => logFsm("refresh-ignored-loading") },
       },
       invoke: {
         src: "fetchInitial",
