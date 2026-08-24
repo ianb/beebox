@@ -28,7 +28,6 @@ const MONO_ROOT = resolve(HERE, "../../..");
 const WORKTREE = basename(MONO_ROOT);
 const BOXES_ROOT = join(homedir(), "src", "box-worktrees", WORKTREE);
 const WORK = join(HERE, "../work/journeys");
-const REPORTS = join(HERE, "reports");
 
 /**
  * Emptied for `base: empty` — the person's box, not a stranger's.
@@ -145,12 +144,15 @@ function prunePreviousRuns(): void {
     // collected. The report is the only part that survives this pruning — `work/` is
     // gitignored — so a run without one is a walk nobody has read, and the next walk
     // would erase the evidence for findings that were never written down.
-    if (!existsSync(join(REPORTS, `${name}.md`))) {
+    // `<journey>/reports/<date>.md` — the journey name is the directory, so the file
+    // is just the date that distinguishes one of its walks from another.
+    const reportPath = join(HERE, journey.id, "reports", `${name.slice(journey.id.length + 1)}.md`);
+    if (!existsSync(reportPath)) {
       fail(
         `${name} has notes but no after-action report — nothing has been extracted from it yet.\n` +
         "  The procedure: callback-box/user-stories/journeys/after-action.md\n" +
         `  Its notes:     ${notes}\n` +
-        `  Write:         callback-box/user-stories/journeys/reports/${name}.md\n` +
+        `  Write:         ${reportPath}\n` +
         "  This walk's evidence goes away when the next one is provisioned."
       );
     }

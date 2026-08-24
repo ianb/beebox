@@ -29,6 +29,9 @@ The yaml holds the world and the words:
 | `closing` | what to spend the back half of the budget on |
 | `watch_for` | **for the reader of the notes. Never reaches the walker.** |
 
+A journey is a directory: `journey.yaml`, its `assets/` (gitignored), and `reports/`,
+one dated file per walk of it.
+
 **The box is only files**, so `box.setup` can build any starting state from outside —
 a few contacts they would already have, last month's receipts, a half-finished note.
 Use it rather than reaching for a richer `base`: a journey should meet *this person's*
@@ -65,7 +68,7 @@ Runs land in `../work/journeys/<id>-<date>/` (gitignored): the prompt as given, 
 notes, screenshots, and before/after snapshots of the box.
 
 Then read the walk and write it up — **[after-action.md](after-action.md)** is the
-procedure, and `reports/<run-id>.md` is where it goes. That report is the only part of
+procedure, and `<journey>/reports/<date>.md` is where it goes. That report is the only part of
 a run that is tracked, so it is what a walk leaves behind.
 
 Each new run supersedes the last: `prepare.ts` deletes the previous run's box and

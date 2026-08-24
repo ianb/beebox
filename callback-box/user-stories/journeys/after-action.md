@@ -95,7 +95,8 @@ that it was wrong and why.** A queue that quietly loses its mistakes teaches nob
 
 ### 6. Write the report
 
-One file, `reports/<run-id>.md`, tracked in git. It is the durable record: `work/` is
+One file, `<journey>/reports/<date>.md` — `B-inventory/reports/2026-08-24.md` —
+tracked in git. It is the durable record: `work/` is
 gitignored, so once a run is pruned the report is what is left of it.
 
 ## What the report contains
