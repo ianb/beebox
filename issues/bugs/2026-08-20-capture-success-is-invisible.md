@@ -38,7 +38,7 @@ The result is an asymmetry pointing the wrong way:
 - **Failure is loud and permanent.** A `failed:*` staging session persists in
   `capture.pendingSessions` indefinitely — verified on a live box, one has been
   sitting in `failed:prepare` for 16 days
-  ([and cannot be discarded](2026-08-20-failed-capture-chip-cannot-be-discarded.md)).
+  ([and cannot be discarded](../closed/bugs/2026-08-20-failed-capture-chip-cannot-be-discarded.md)).
 - **Success is a silent swap** — one element vanishes, another appears
   somewhere else in the transcript a minute later, with no moment that says
   "this landed".
@@ -126,7 +126,7 @@ defect in the sibling issue. Both halves are the same two files.
 
 - [Cannot capture into a new chat](../closed/features/2026-08-20-cannot-capture-into-a-new-chat.md)
   — the gate that produced the throwaway opener in step 1.
-- [Failed capture chip cannot be discarded](2026-08-20-failed-capture-chip-cannot-be-discarded.md)
+- [Failed capture chip cannot be discarded](../closed/bugs/2026-08-20-failed-capture-chip-cannot-be-discarded.md)
   — the other half of this asymmetry: failure that never goes away.
 - [Capture upload error/retry affordance is weak](2026-08-03-capture-upload-error-retry-affordance-weak.md)
   — same family, on the overlay surface.

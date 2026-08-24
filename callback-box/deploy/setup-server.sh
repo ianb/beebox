@@ -198,6 +198,15 @@ BOX_DIRS=$(find "$BOXES_DIR" -maxdepth 1 -mindepth 1 -type d | sort | tr '\n' ' 
 # paths; `cb serve` reads the manifest at startup, and a future
 # `cb boxes add <path>` just requires `systemctl restart callback-serve`
 # (no unit rewrite needed).
+# KillMode=mixed + an explicit stop timeout: with systemd's default
+# (control-group) the stop signal goes to EVERY process in the cgroup, so a
+# `git` a box child is running is signalled by systemd rather than by us, and
+# the SIGKILL that follows can land mid-index-write — which leaves a
+# `.git/index.lock` no process owns and every writer in that box then fails on.
+# `mixed` sends SIGTERM to the main process only and lets it drain its own
+# children (see drainBoxGitLocks / BOX_KILL_GRACE_MS); TimeoutStopSec is the
+# backstop, set above the in-process grace so systemd escalates only if our own
+# teardown failed.
 cat > /etc/systemd/system/callback-serve.service <<EOF
 [Unit]
 Description=Callback Box Web Server
@@ -210,6 +219,8 @@ Group=$CB_USER
 ExecStart=/usr/local/bin/cb serve --host 0.0.0.0 --port 3210
 WorkingDirectory=$BOXES_DIR
 EnvironmentFile=$CB_HOME/.env
+KillMode=mixed
+TimeoutStopSec=60
 Restart=on-failure
 RestartSec=5
 
@@ -236,6 +247,8 @@ Group=$CB_USER
 ExecStart=/usr/local/bin/cb scheduler start
 WorkingDirectory=$BOXES_DIR
 EnvironmentFile=$CB_HOME/.env
+KillMode=mixed
+TimeoutStopSec=60
 Restart=on-failure
 RestartSec=10
 

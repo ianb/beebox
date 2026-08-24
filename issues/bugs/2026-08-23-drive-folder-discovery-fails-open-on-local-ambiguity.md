@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-connector-sync-isolation — independent review of Drive trash tombstones
+priority: normal
 ---
 
 Drive folder discovery has two silent ambiguity paths.

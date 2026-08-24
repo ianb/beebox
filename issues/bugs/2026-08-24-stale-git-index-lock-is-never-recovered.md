@@ -1,6 +1,6 @@
 ---
 title: "A stale `.git/index.lock` is treated as live contention forever — every committing task fails until a human deletes it"
-workstream: unattached
+workstream: stale-git-lock
 area: callback-box
 priority: important
 labels: [git, scheduler, boxes]
@@ -73,3 +73,34 @@ and whether any process actually has it open. Neither is consulted.
   — the retry-budget work that produced `withBoxGitLock`. It solved contention
   between our own writers; it did not consider an abandoned lock, which is why
   the symptom returned looking identical.
+
+## Status — built on `worktree-stale-git-lock`, not yet landed
+
+**Recovery.** `callback-box/src/lib/git-stale-lock.ts` classifies the lock and
+removes only an abandoned one. Reaching that verdict takes an age gate (15
+minutes), a holder probe over open descriptors that fails closed when it cannot
+answer, a veto on any git-family process working in the repository, a settle
+window with an inode+mtime re-check, and an inode-checked unlink under the box
+git lock. `withIndexLockRetry` runs it between its two attempts, `cb serve`
+sweeps at startup, and a lock that cannot be removed reports as its own
+`stale-git-index-lock` box health check instead of a per-task failure string.
+Verified end-to-end against a real box clone: `cb health` named the file, and
+the next commit recovered it.
+
+**Prevention — partial by nature.** Our own teardown was manufacturing the
+condition: the hub SIGKILLed a box child's whole process group two seconds
+after SIGTERM, and prod runs a lazy hub (6 boxes, 30-minute idle, keepRecent 1)
+restarted several times a day by deploys, against an 11GB box whose `add -A`
+alone runs for seconds. Box children now get a 30s grace, the escalation waits
+for the process GROUP to empty rather than the leader, and `cb serve` and the
+scheduler drain their git spans before exiting. The systemd units get
+`KillMode=mixed` and an explicit stop timeout via `deploy/systemd/git-drain.conf`,
+which `deploy.sh` now reinstalls and reloads on every deploy — the drop-in
+directory lets a deploy own a unit setting without owning the unit, which
+`setup-server.sh` still does not generate in its post-hub shape.
+
+This does not close every route. The OOM killer has killed processes inside
+`callback-hub.service`'s cgroup on this server, and the volume is at 92%; an
+ENOSPC mid-index-write produces the same artifact. Recovery is the load-bearing
+half for that reason.
+

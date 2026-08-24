@@ -13,6 +13,50 @@ export { DEV_BUNDLE_RELOAD_EXIT_CODE } from "../lib/dev-bundle-reload.js";
 
 export const KILL_GRACE_MS = 2000;
 
+/**
+ * How long a BOX child gets between SIGTERM and SIGKILL.
+ *
+ * Much longer than {@link KILL_GRACE_MS}, because the thing being interrupted
+ * is a git write. A box child that is mid-`git commit` when SIGKILL lands
+ * leaves `.git/index.lock` behind with no owner, and every writer in that box
+ * then fails until someone removes the file (`lib/git-stale-lock.ts`). Two
+ * seconds is not enough: the largest production box is an 11GB repository
+ * whose `add -A` alone runs for seconds, and a lazy hub tears boxes down on an
+ * idle timer all day, so the 2s escalation was landing on live git writes
+ * routinely.
+ *
+ * This is an upper bound, not a delay: `stopBox`/`stopAll` poll for the child
+ * to exit and escalate the moment it does, so an ordinary teardown is still
+ * as fast as the child is.
+ */
+export const BOX_KILL_GRACE_MS = 30_000;
+
+/**
+ * Wait for the process GROUPS led by `pids` to empty, up to `timeoutMs`.
+ * Returns the pids whose groups are still populated.
+ *
+ * Groups, not the leaders — that distinction is the whole point. We signal
+ * `-pid`, and the process we are actually waiting on is usually a grandchild: a
+ * box child's `git`. Polling the leader alone would return as soon as the box
+ * server exited and leave its `git` to be killed by whatever teardown follows,
+ * which is exactly the mid-index-write SIGKILL this wait exists to avoid.
+ *
+ * Polling rather than exit events for the same reason: the grandchildren are
+ * processes we never spawned and have no handle on.
+ */
+export async function waitForExit(pids: number[], timeoutMs: number): Promise<number[]> {
+  const deadline = Date.now() + timeoutMs;
+  let alive = pids.filter((pid) => groupAlive(pid));
+  while (alive.length > 0 && Date.now() < deadline) {
+    await sleep(EXIT_POLL_MS);
+    alive = alive.filter((pid) => groupAlive(pid));
+  }
+  return alive;
+}
+
+/** Poll interval while waiting for children to exit. */
+const EXIT_POLL_MS = 100;
+
 export function restartAfterDevBundleReload(options: {
   code: number | null;
   expectedCode: number;
@@ -109,4 +153,46 @@ export function pidAlive(pid: number): boolean {
   } catch (e) {
     return errnoCode(e) === "EPERM";
   }
+}
+
+/**
+ * Whether ANY process remains in the group led by `pid`.
+ *
+ * `kill(-pid, 0)` succeeds while the group has members and raises ESRCH once it
+ * is empty, which is the liveness question a group-directed teardown actually
+ * asks. Falls back to the bare pid the way {@link killGroup} does: a child that
+ * is not a group leader has no group of its own, and `-pid` would then answer
+ * about some unrelated group (or nothing at all).
+ */
+export function groupAlive(pid: number): boolean {
+  try {
+    process.kill(-pid, 0);
+    return true;
+  } catch (e) {
+    if (errnoCode(e) === "EPERM") return true;
+    return pidAlive(pid);
+  }
+}
+
+/**
+ * SIGTERM a box child's process group, then SIGKILL whatever survives the box
+ * grace period.
+ *
+ * Detached on purpose: the caller (an idle timer, a readiness-timeout catch)
+ * must not block for the whole grace, but the escalation still has to happen.
+ * It fires as soon as the group is empty, so an ordinary teardown costs one
+ * poll interval, not {@link BOX_KILL_GRACE_MS}.
+ */
+export function killAfterGrace(pid: number | undefined): void {
+  if (pid === undefined) return;
+  killGroup(pid, "SIGTERM");
+  void waitForExit([pid], BOX_KILL_GRACE_MS)
+    .then((survivors) => {
+      if (survivors.length === 0) return;
+      console.warn(`[hub] box child ${String(pid)}'s process group did not empty within the grace period; killing.`);
+      killGroup(pid, "SIGKILL");
+    })
+    .catch((e: unknown) => {
+      console.warn(`[hub] escalation for box child ${String(pid)} failed: ${describeError(e)}`);
+    });
 }

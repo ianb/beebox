@@ -3,12 +3,39 @@ title: "The first message of a chat can't have its audio retranscribed"
 workstream: unattached
 area: callback-box
 labels: [chat, voice, transcription]
+resolution: implemented
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder noticed retranscribe failing on first messages
 ---
 
-> **Checked 2026-08-18 — could not settle from here; worth a re-test.** Tagged
+> **Closed 2026-08-24 — fixed (boxholder's call).** `96e28342` made native iOS
+> voice retranscribable, which was the half that mattered. The remaining web
+> case — per-tab retention lost on a cold-start reload — the boxholder is
+> explicitly **not concerned about**: *"I'm not concerned about the web
+> retention bit. Call it fixed."* Recorded rather than silently dropped, so a
+> later reader knows the web gap is a decision and not an oversight.
+
+> **Reconfirmed 2026-08-24 — half of this is now FIXED, and the research below
+> is stale where it says otherwise.** Tag removed.
+>
+> **Fixed:** finding 1. `96e28342` (2026-08-19, "let the phone answer
+> retranscription requests") makes native iOS voice retranscribable — the shell
+> keeps the last five recordings per box on disk and answers
+> `/api/chat/last-audio/:requestId` itself, with the web layer relaying the
+> request when it is inside a shell (`lib/audio/last-audio.ts:14-18`,
+> `docs/mobile-contract.md` §4.8). **Read finding 1 below as history: "native
+> iOS voice sends can never be retranscribed" is no longer true.**
+>
+> **Still live:** finding 2. Web retention is still per-tab page memory —
+> `last-audio.ts` still says "Recordings live only in this tab's memory (gone on
+> reload)" — so a cold-start reload still loses the first message's audio on the
+> web composer. That is the remaining first-message case.
+>
+> Still not settleable from here for the same reason as before: an agent cannot
+> dictate speech into a live box.
+
+> **Superseded note (2026-08-18) — could not settle from here.** Tagged
 > `reconfirm`; removed. Confirming or refuting this needs someone to dictate a
 > first message and try retranscribing it — an agent cannot produce speech into
 > a live box, so this is genuinely a human check rather than one nobody has got
@@ -88,7 +115,7 @@ fall out:
    `webView.reload()`) all wipe it. This produces exactly the
    "first message fails, later ones work" pattern, and ties this issue to
    the same cold-start/navigation transition as
-   [chat send receipts fail](../closed/bugs/2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md).
+   [chat send receipts fail](2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md).
 
 So "first message" is a proxy axis: the real axes are *which composer
 recorded it* (native = always lost today) and *whether the document reloaded
@@ -122,7 +149,7 @@ mobile-contract change and belongs with the emission-model plan
 ## Related
 
 The cold-start family this may belong to:
-[chat send receipts fail](../closed/bugs/2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md)
+[chat send receipts fail](2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md)
 — the first send after a cold agent races its own receipt. If the first
 message's audio is lost during the same transition, these are two symptoms of
 one under-specified handoff, and worth investigating together rather than

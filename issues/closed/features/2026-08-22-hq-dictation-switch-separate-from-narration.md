@@ -106,7 +106,7 @@ needs to know the tool won't help here, not why.
 - [Mark low-confidence words in transcripts](2026-08-15-mark-low-confidence-words-in-transcripts.md)
   — the other axis of transcription quality, and the source of the second
   prompt paragraph this one must not become a third of.
-- [The first message of a chat can't have its audio retranscribed](../../bugs/2026-08-18-first-message-audio-not-retranscribable.md)
+- [The first message of a chat can't have its audio retranscribed](../bugs/2026-08-18-first-message-audio-not-retranscribable.md)
   — documents the retention model retranscription depends on. Note its finding
   that native iOS voice sends already can never be retranscribed, for the same
   underlying reason: the HQ pass happened elsewhere and nothing kept the audio.

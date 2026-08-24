@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — user-story catalog verification
 stories: [browse/see-which-changes-the-box-made-on-its-own-and]
+priority: normal
 ---
 
 **What is wrong.** The history UI reads only two trigger conventions, and one of them is the retired name.

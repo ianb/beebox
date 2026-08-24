@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-connector-sync-isolation — independent review of Calendar failure isolation
+priority: normal
 ---
 
 `saveCalendarState` in `callback-box/src/connectors/google-calendar-state.ts` writes the persistent Calendar state with a plain truncate-and-write operation. An interrupted write can leave invalid JSON. `loadCalendarState` catches that parse error and returns empty `syncTokens` and `eventFiles` maps.

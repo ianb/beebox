@@ -104,5 +104,5 @@ The web capture affordance is switched off entirely on the native shell
 native path. Whether the same first-message restriction is felt there needs a
 separate check — the gate examined here is the web composer's.
 
-Related: [failed capture chip cannot be discarded](../../bugs/2026-08-20-failed-capture-chip-cannot-be-discarded.md)
+Related: [failed capture chip cannot be discarded](../bugs/2026-08-20-failed-capture-chip-cannot-be-discarded.md)
 — also about capture states the UI won't let the user act on.

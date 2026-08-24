@@ -44,15 +44,40 @@ function causeMessage(cause: unknown): string {
 export const GIT_CONTENDED_MARKER = "[git-contended]";
 
 /**
- * A git index mutation failed because another process held `.git/index.lock`
- * and would not release it — the box git lock could not wait it out and the
- * one-shot retry did not clear it either. Distinct from a generic
- * {@link GitCommandError} so a scheduled task that LOST A RACE stops reading
- * like a scheduled task that is BROKEN.
+ * The marker a failure carries when `.git/index.lock` looks ABANDONED rather
+ * than contended — old, and either unheld or with no way to tell. Separate
+ * from {@link GIT_CONTENDED_MARKER} because the two demand opposite responses:
+ * contention resolves itself, an abandoned lock never does and needs the file
+ * removed. Same message-token reasoning as the contended marker — a scheduled
+ * task's failure crosses a process boundary as text.
+ */
+export const GIT_STALE_LOCK_MARKER = "[git-stale-lock]";
+
+/**
+ * A git index mutation failed on `.git/index.lock`.
+ *
+ * Two distinguishable conditions share one error class because git reports
+ * them with one message:
+ *
+ * - **Contended** — another process holds the index right now. Distinct from a
+ *   generic {@link GitCommandError} so a scheduled task that LOST A RACE stops
+ *   reading like a scheduled task that is BROKEN. It clears on its own.
+ * - **Stale** — a crashed or SIGKILLed git left the file behind and nothing
+ *   holds it. It never clears on its own, so reporting it as contention is a
+ *   false statement that invites waiting it out forever. `git-stale-lock.ts`
+ *   removes such a lock when it can prove it is abandoned; this error is what
+ *   is raised when it could not (the age gate not yet met, or no usable way to
+ *   check for a holder), and it names the file so a human can act.
  */
 export class GitIndexLockError extends GitCommandError {
-  constructor(cause: unknown) {
-    super(cause, `${GIT_CONTENDED_MARKER} another process holds the git index: ${causeMessage(cause)}`);
+  constructor(cause: unknown, staleLockPath?: string) {
+    super(
+      cause,
+      staleLockPath === undefined
+        ? `${GIT_CONTENDED_MARKER} another process holds the git index: ${causeMessage(cause)}`
+        : `${GIT_STALE_LOCK_MARKER} ${staleLockPath} looks abandoned — no git process holds it, ` +
+            `and it did not clear. If no git is running, delete it: ${causeMessage(cause)}`,
+    );
     this.name = "GitIndexLockError";
   }
 }
@@ -62,9 +87,18 @@ export class GitIndexLockError extends GitCommandError {
  * than broken work. Matches our own marker AND git's raw `index.lock` wording,
  * so a box agent's own `git` failing inside a scheduled script is recognised
  * too — that writer never runs our code and cannot carry our marker.
+ *
+ * A stale-lock failure is NOT contention and is excluded: it is a defect that
+ * needs attention, not a race that resolves itself.
  */
 export function isContendedFailure(message: string): boolean {
+  if (message.includes(GIT_STALE_LOCK_MARKER)) return false;
   return message.includes(GIT_CONTENDED_MARKER) || message.includes("index.lock");
+}
+
+/** Whether a recorded failure message describes an abandoned index lock. */
+export function isStaleLockFailure(message: string): boolean {
+  return message.includes(GIT_STALE_LOCK_MARKER);
 }
 
 /**

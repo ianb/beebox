@@ -6,6 +6,7 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — driving /browse to check the image-card user stories
 stories: [browse/view-a-photo-card-with-its-analysis]
+priority: normal
 ---
 
 An image card whose frontmatter carries `rotation: "90"` or `rotation: "270"`

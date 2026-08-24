@@ -8,7 +8,7 @@ issues:
   - ../../../issues/closed/bugs/2026-08-18-ios-keyword-tag-leaks-into-composer-when-sending-is-stuck.md
   - ../../../issues/closed/bugs/2026-08-03-ios-stale-unconfirmed-emission-banner.md
   - ../../../issues/closed/bugs/2026-07-23-voice-send-lingers-as-unsent-recovery-draft.md
-  - ../../../issues/bugs/2026-08-18-first-message-audio-not-retranscribable.md
+  - ../../../issues/closed/bugs/2026-08-18-first-message-audio-not-retranscribable.md
 ---
 
 # Emission model: durable acceptance, no sticky pending states

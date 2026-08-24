@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-connector-sync-isolation — independent review of shared Drive tracking
+priority: normal
 ---
 
 `cb drive status` now uses the shared YAML and legacy parser for `drive-id`, but its title, modified time, status, sheet-tab, and lossy-summary expressions still recognize only the legacy XML card form. Current Google Sheet and Doc handlers write YAML frontmatter.
