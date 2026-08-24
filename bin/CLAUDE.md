@@ -143,7 +143,10 @@ runs in prod. Full design and rationale:
   worktree list and `/<w>/dev/` infra, per-box mobile/session auth for box
   routes — regardless of any Tailscale identity header (those are absent for
   tagged devices/Funnel and are never trusted). The practical upshot: **local
-  browser dev now requires logging in once**, same as a deployed box.
+  browser dev normally requires logging in once**, same as a deployed box. The
+  agent-authored, read-only `/<w>/dev/` browser also accepts the opt-in
+  machine-wide browse key used by `bin/browse`; the worktree index,
+  `/workstreams/`, and `/__router/*` remain owner-session surfaces.
 - **`cb tailscale setup --target <routerPort>`** (e.g. `--target 3210`) exposes
   the _whole_ router — every worktree and box — over the tailnet through this
   one authenticated front door. Before recording the exposure, setup verifies

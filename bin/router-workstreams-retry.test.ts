@@ -13,6 +13,7 @@ const unusedAuthDeps: RouterAuthDeps = {
   resolveBoxAccessSession: () => null,
   resolveMobileForBox: () => false,
   isAgentBearer: () => false,
+  isBrowseKey: () => false,
   isCsrfSafe: () => false,
   resolveWorktreeAsset: () => false,
 };

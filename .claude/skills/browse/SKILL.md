@@ -161,14 +161,15 @@ When you land on `/auth/login`, work through these in order. **The first two are
 
 **1. Did you write the box slug into the path?** `open /test1/chats` becomes `/<wt>/test1/test1/chats`, which resolves to no route. You get redirected somewhere plausible rather than an error. Write `open /chats`.
 
-**2. Are you asking for something the key doesn't grant?** The browse key authenticates **box routes** — `/<worktree>/<box>/…`. It does *not* grant the router's own surfaces:
+**2. Are you asking for something the key doesn't grant?** The browse key authenticates box routes and the agent-authored dev browser. It does *not* grant the router's owner/control surfaces:
 
 | path | what authenticates it |
 |---|---|
 | `/<wt>/<box>/…` | browse key ✅ |
+| `/<wt>/dev/…` | browse key ✅ |
 | `/` (worktree index) | owner session only |
 | `/__router/…` (control routes) | owner session only |
-| `/<wt>/dev/…` | owner session only |
+| `/workstreams/…` | owner session only |
 
 A navigation denied at those returns 401, which the router renders as the login page — so "I got the login page" does not by itself mean your key is wrong.
 

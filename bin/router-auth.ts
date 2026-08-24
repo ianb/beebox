@@ -65,10 +65,13 @@ export interface BoxTarget {
  *   scan gate and the box child each verify independently.
  * - `control`: MUTATING router control (`/__router/{stop,retry}` and the
  *   dashboard cold-start) — owner session AND a CSRF-safe origin.
- * - `control-read`: read-only router infra (`/__router/status`, the `/` worktree
- *   index, the `/<w>/dev/` browser) — owner session, no CSRF requirement.
+ * - `control-read`: read-only router infra (`/__router/status` and the `/`
+ *   worktree index) — owner session, no CSRF requirement.
  *   `json` distinguishes the machine endpoint (`/__router/status`, always a JSON
  *   401 on deny) from the browser pages (which redirect a navigation to login).
+ * - `dev-read`: the bare and per-worktree `/dev/` browsers — owner session OR
+ *   the machine-wide browse key. These are agent-authored, read-only surfaces;
+ *   the browse key already grants the same agent every box and Vite asset.
  * - `worktree-box-list`: the hub's `GET /<w>/api/boxes` endpoint. Reachable by
  *   any valid credential in the worktree because the hub performs the
  *   credential-to-box filtering before returning the list.
@@ -89,6 +92,7 @@ export type RouterRoute =
   | { kind: "unauth-allowlist" }
   | { kind: "control" }
   | { kind: "control-read"; json: boolean }
+  | { kind: "dev-read" }
   | { kind: "worktree-box-list"; targetWorktree: string }
   | ({ kind: "box" } & BoxTarget)
   | { kind: "worktree-asset"; targetWorktree: string }
@@ -118,6 +122,8 @@ export interface BoxAccessIdentity {
  *   for box B.
  * - `isAgentBearer` — the agent bearer (folded into chunk 2's real box resolver;
  *   injected here so the ladder's first rung is exercised).
+ * - `isBrowseKey` — the machine-wide local-dev browser key. Unlike an agent
+ *   bearer, this credential is not scoped to a target box.
  * - `isCsrfSafe` — Origin / Sec-Fetch-Site same-origin assertion for mutating
  *   control.
  * - `resolveWorktreeAsset` — true if ANY valid box credential in the worktree is
@@ -133,6 +139,7 @@ export interface RouterAuthDeps {
   resolveBoxAccessSession(headers: RouterHeaders, targetBoxRoot: string): Awaitable<BoxAccessIdentity | null>;
   resolveMobileForBox(headers: RouterHeaders, targetBoxRoot: string): Awaitable<boolean>;
   isAgentBearer(headers: RouterHeaders): Awaitable<boolean>;
+  isBrowseKey(headers: RouterHeaders): Awaitable<boolean>;
   isCsrfSafe(headers: RouterHeaders): Awaitable<boolean>;
   resolveWorktreeAsset(headers: RouterHeaders, targetWorktree: string): Awaitable<boolean>;
 }
@@ -237,8 +244,8 @@ export function classifyRouterRoute({ method, url }: { method: string; url: stri
       return { kind: "control" };
     return { kind: "unknown" };
   }
-  // Bare `/dev` / `/dev/` redirect to `/main/dev/` — the dev browser (owner).
-  if (pathname === "/dev" || pathname === "/dev/") return { kind: "control-read", json: false };
+  // Bare `/dev` / `/dev/` redirect to `/main/dev/` — the agent-readable dev browser.
+  if (pathname === "/dev" || pathname === "/dev/") return { kind: "dev-read" };
 
   const name = firstSegment(pathname);
   if (name === null) return { kind: "unknown" };
@@ -251,8 +258,8 @@ export function classifyRouterRoute({ method, url }: { method: string; url: stri
   // `/<w>/{assets,icons,manifest.webmanifest,sw.js}` — public frontend static assets (GET).
   if (method === "GET" && isPublicFrontendAssetPath(rest)) return { kind: "unauth-allowlist" };
 
-  // `/<w>/dev` / `/<w>/dev/...` — the worktree's dev browser (owner, read-only).
-  if (rest === "/dev" || rest.startsWith("/dev/")) return { kind: "control-read", json: false };
+  // `/<w>/dev` / `/<w>/dev/...` — the worktree's agent-readable dev browser.
+  if (rest === "/dev" || rest.startsWith("/dev/")) return { kind: "dev-read" };
 
   const seg2Match = rest.match(/^\/([^/]+)(?:\/|$)/);
   const seg2 = seg2Match ? seg2Match[1]! : null;
@@ -367,6 +374,12 @@ export async function authorizeRouterRequest(
         });
       }
       return { allow: true, route };
+    }
+
+    case "dev-read": {
+      if (await deps.resolveOwnerSession(headers)) return { allow: true, route };
+      if (await deps.isBrowseKey(headers)) return { allow: true, route };
+      return deny({ status: 401, reason: "owner-or-browse-key-required", redirectToLogin: nav, route });
     }
 
     case "box": {

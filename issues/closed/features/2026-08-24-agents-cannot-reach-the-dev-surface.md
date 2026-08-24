@@ -1,12 +1,21 @@
 ---
 title: "The browse key can't reach `/dev/`, so an agent can't verify the surface built for agents"
-workstream: unattached
+workstream: streams-and-issues
 area: router
 labels: [router, auth, dev-surface, agent-tooling]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — two issues could not be settled because /dev/ 401s the browse key
+resolution: implemented
 ---
+
+> **Closed 2026-08-24 — implemented.** The router now classifies `/dev/` as a
+> separate read-only route. It accepts either the owner session or the
+> machine-wide browse key. The worktree index, `/workstreams/`, and
+> `/__router/*` remain owner-only. Pure authorization tests cover both allowed
+> credentials, anonymous denial, and containment from neighboring control
+> surfaces. Real-dependency tests cover browse-key verification and its
+> fail-closed behavior when the key is not configured.
 
 > Boxholder: *"There's no reason you shouldn't access /dev/ …?"*
 
@@ -39,8 +48,8 @@ strange thing to guard more tightly than a box.
 Two `reconfirm` issues could not be settled today for this reason alone, both
 of which are *about* `/dev/` and both of which are one browser action to check:
 
-- [Doc browser's Cmd-P quick-open is dead under the sandbox CSP](../bugs/2026-08-19-dev-docs-quickopen-dead-under-sandbox-csp.md)
-- [Images in rendered /dev markdown are broken](../closed/bugs/2026-08-19-dev-md-images-broken-opaque-origin.md)
+- [Doc browser's Cmd-P quick-open is dead under the sandbox CSP](../../bugs/2026-08-19-dev-docs-quickopen-dead-under-sandbox-csp.md)
+- [Images in rendered /dev markdown are broken](../bugs/2026-08-19-dev-md-images-broken-opaque-origin.md)
 
 The code side of both is verifiable and verified: the sandbox CSP was removed
 2026-08-19 and the running router restarted 2026-08-24 06:39, well after. What
