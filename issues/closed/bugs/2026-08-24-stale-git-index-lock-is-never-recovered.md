@@ -1,6 +1,7 @@
 ---
 title: "A stale `.git/index.lock` is treated as live contention forever — every committing task fails until a human deletes it"
 workstream: stale-git-lock
+resolution: implemented
 area: callback-box
 priority: important
 labels: [git, scheduler, boxes]
@@ -8,6 +9,15 @@ filed-by: agent
 discovered-by: agent
 discovered-in: main session — a box's scheduled tasks failing for days on index.lock
 ---
+
+**Closed by `e877e2aa` + `d2e09e4b` (recovery, and the fixes a cross-model review
+found in it), `0e6f66d6` and `38f4ce2a` (deploy owns the server-side settings).
+Deployed and verified on the production server: the systemd drop-ins are in
+force, `cb-wait-quiet` waits before a restart for the first time, and no box
+holds a lock.** Prevention is deliberately partial — an OOM kill or an ENOSPC
+mid-index-write still produces the artifact — so recovery is the load-bearing
+half. Reopen if a stale lock survives a write or the health check misses one.
+
 
 Found on a real box: `.git/index.lock` present, **2.2 MB**, dated **11 hours
 earlier**, with **no git process running**. A crashed git had left a
@@ -69,12 +79,12 @@ and whether any process actually has it open. Neither is consulted.
 
 ## Related
 
-- [Scheduled task dies on `.git/index.lock`](../closed/bugs/2026-08-18-scheduled-task-dies-on-git-index-lock.md)
+- [Scheduled task dies on `.git/index.lock`](2026-08-18-scheduled-task-dies-on-git-index-lock.md)
   — the retry-budget work that produced `withBoxGitLock`. It solved contention
   between our own writers; it did not consider an abandoned lock, which is why
   the symptom returned looking identical.
 
-## Status — built on `worktree-stale-git-lock`, not yet landed
+## What shipped
 
 **Recovery.** `callback-box/src/lib/git-stale-lock.ts` classifies the lock and
 removes only an abandoned one. Reaching that verdict takes an age gate (15
