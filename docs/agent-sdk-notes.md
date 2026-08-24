@@ -21,16 +21,16 @@ break this repo — v2.1.218's worktree git isolation silently broke `/finish`'s
 merge step for days. Claude Code versions that move harness behavior get their
 own entries here, labeled as such, with no pin to apply.
 
-- **Current pin:** `0.3.238` (in `callback-box/package.json` — see the split-pin
+- **Current pin:** `0.3.240` (in `callback-box/package.json` — see the split-pin
   note below; the monorepo root still carries a second, unmanaged pin at
   `0.3.226`)
 - **Latest reviewed upstream version:** `0.3.241` (SDK), `2.1.241` (Claude Code)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** `0.3.239` was ~47h at this turn, `0.3.240` ~27h,
-  `0.3.241` ~16h. Take the newest settled next turn. Nothing act-now on either
-  channel. **The open item is still not an upstream release** — the
-  `encodeProjectDir` bug recorded below remains unfixed and unfiled as of this
-  turn (`transcript-paths.ts` last changed 2026-08-20, before the finding).
+- **Current recommendation:** `0.3.241` is the only version ahead of the pin and
+  was ~40h at this turn; take it next turn on the settled path. No new releases
+  were published in the last 24h — the first quiet day since this ledger began.
+  **The open item is still not an upstream release** — the `encodeProjectDir`
+  bug recorded below remains unfixed and unfiled.
 
 ## Release ledger
 
@@ -82,25 +82,43 @@ real example on this machine) and any `*.moved-to` box directory.
 **Not fixed here.** This monitor's commit scope is the ledger, the pin, and the
 lockfile; changing `transcript-paths.ts` is application work that wants its own
 change and its own test. Recorded as durable evidence, which is what this file
-is for. **Status 2026-08-23: still unfixed and unfiled** — `transcript-paths.ts`
-last changed on 2026-08-20 (before this was found) and no issue for it exists
-under `issues/bugs/`. Re-checked each turn until it moves. The fix is presumably to stop collapsing `_` and `.` — but the exact
+is for. **Status 2026-08-24: still unfixed and unfiled** — `transcript-paths.ts` still
+carries the collapsing regex at line 28, last changed 2026-08-20 (before this
+was found), and no issue for it exists under `issues/bugs/`. Re-checked each
+turn until it moves.
+
+**Prior art worth reading before fixing this.**
+`issues/closed/bugs/2026-07-11-pre-v2-session-resume-broken.md` records the same
+class of failure from the other direction: *"Pre-v2-migration chat sessions are
+unresumable on prod (project-dir hash changed with `content/`); schedule-fire
+responses into them vanish silently."* It was closed `wontfix` for the
+data-repair half, with the delivery-loss half fixed separately by falling back
+to a fresh session. Two things carry over. First, this repo has already been
+bitten once by the project-dir name changing underneath it, so the encoder is a
+known-fragile joint rather than a novel suspicion. Second, and more useful: the
+observed symptom there was **silent** — responses vanishing rather than an
+error — which is exactly what the `_`/`.` mismatch would produce today. Whoever
+fixes the encoder should check whether the same fresh-session fallback already
+masks this one in the schedule-fire path, because if it does, the bug can be
+live in production without ever surfacing a failure. The fix is presumably to stop collapsing `_` and `.` — but the exact
 upstream rule should be derived from observed directory names rather than
 guessed, and 2.1.239 may have just changed the disambiguation behaviour on top
 of it, so whoever picks this up should re-derive the encoding against a current
 CLI before editing.
 
-### 0.3.240 — pending (parity with Claude Code 2.1.240)
+### 0.3.240 — applied (parity with Claude Code 2.1.240)
 
 - **Upstream:** SDK entry is only "Updated to parity with Claude Code v2.1.240",
   and 2.1.240 itself says only "Bug fixes and reliability improvements" — nothing
   itemized to assess on either channel.
-- **Action:** Published 2026-08-22T13:07Z, ~3h old. Note it landed at 13:07Z
-  rather than the recent 18:00–19:00Z pattern, so the cadence note below may
-  stop applying if publish times keep moving earlier.
+- **Action:** Published 2026-08-22T13:07Z. Applied 2026-08-24 via
+  `pnpm update-agent-sdk` at ~51h as the newest settled version, carrying
+  `0.3.239` in with it. Verified: typecheck clean, `pnpm -C callback-box test`
+  7848/7848 pass, and `scripts/sdk-steering-probe.ts` holds all four steering
+  behaviors.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03240), [Claude Code 2.1.240](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21240)
 
-### 0.3.239 — pending
+### 0.3.239 — applied
 
 - **Upstream (SDK):** `total_cost_usd` / `modelUsage.costUSD` now include the
   1.1× US-only-inference (data residency) multiplier when the response reports
@@ -146,7 +164,10 @@ CLI before editing.
     routinely, so the improvement is welcome; nothing to change.
   - Not applicable: the Bedrock/Vertex/proxy fixes, cloud-session plugin sync,
     Alpine/musl add-ons, and the JetBrains and terminal-rendering items.
-- **Action:** Published 2026-08-21T17:23Z, ~23h old, inside the settling window.
+- **Action:** Published 2026-08-21T17:23Z. Applied 2026-08-24, carried in by the
+  settled bump to `0.3.240`. Both cost-accounting changes are therefore live:
+  scan-vision `total_cost_usd` figures recorded from this pin forward are not
+  comparable with earlier ones.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03239), [Claude Code 2.1.239](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21239)
 
 ### Cadence note — the fixed check hour costs a day per release
