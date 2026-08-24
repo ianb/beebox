@@ -1,7 +1,7 @@
 /**
  * XState machine for chat session lifecycle.
  *
- * States: loading → idle ⇄ streaming → refreshing → idle
+ * States: loading → idle ⇄ streaming → refreshing → idle (`refreshCause`: how)
  *
  * The SSE stream lives in a callback actor's closure.
  * Serializable context holds messages, stream text, error, session info.
@@ -33,7 +33,7 @@ import {
   promoteLastToPending,
   applyStreamError,
   untrackLastSend,
-  clearInterrupt,
+  clearInterrupt, markTurnRefresh,
   sendInterrupt,
   reconcilePendingWithDiagnostics,
 } from "./chat-actions";
@@ -92,6 +92,7 @@ export const chatMachine = setup({
     processRunning: false,
     processBusy: false,
     totalEntries: 0,
+    refreshCause: "resync" as const,
     liveTurnId: null,
     // Consumed by `loading` below and cleared on the way out, so nothing can
     // replay a stale preload if `loading` is ever re-entered.
@@ -110,7 +111,7 @@ export const chatMachine = setup({
           pending: context.pendingMessages.length,
           msgs: context.messages.length,
         }),
-        assign({ streamText: "", streamTools: [] }),
+        assign({ streamText: "", streamTools: [], refreshCause: "resync" as const }),
       ],
     },
     // Global handler: another user sent a message (via SSE broadcast)
@@ -263,7 +264,7 @@ export const chatMachine = setup({
         // Clear `interrupting` though — the interrupt's own terminal paths do,
         // and a recovery during an interrupt must not leave the flag latched
         // into idle.
-        STREAM_RECOVER: { target: "refreshing", actions: assign(clearInterrupt) },
+        STREAM_RECOVER: { target: "refreshing", actions: [assign(markTurnRefresh), assign(clearInterrupt)] },
         SEND: { actions: { type: "queueSend", params: { from: "streaming" } } },
         STREAM_TEXT: {
           actions: assign(({ context, event }) => ({
@@ -298,16 +299,16 @@ export const chatMachine = setup({
         // A user interrupt ends the turn with is_error — suppress that
         // (clearInterrupt) and refresh for the partial; otherwise show it.
         STREAM_ERROR: [
-          { guard: ({ context }) => context.interrupting, target: "refreshing", actions: assign(clearInterrupt) },
+          { guard: ({ context }) => context.interrupting, target: "refreshing", actions: [assign(markTurnRefresh), assign(clearInterrupt)] },
           { target: "idle", actions: assign(applyStreamError) },
         ],
-        STREAM_RESULT: "refreshing",
+        STREAM_RESULT: { target: "refreshing", actions: assign(markTurnRefresh) },
         STREAM_FAILED: [
-          { guard: ({ context }) => context.interrupting, target: "refreshing", actions: assign(clearInterrupt) },
+          { guard: ({ context }) => context.interrupting, target: "refreshing", actions: [assign(markTurnRefresh), assign(clearInterrupt)] },
           // Go to refreshing instead of idle — the agent may still be
           // running on the server. Fetching history will pick up any
           // response that completed while we were disconnected.
-          { target: "refreshing", actions: assign(applyStreamError) },
+          { target: "refreshing", actions: [assign(markTurnRefresh), assign(applyStreamError)] },
         ],
         INTERRUPT: {
           actions: [

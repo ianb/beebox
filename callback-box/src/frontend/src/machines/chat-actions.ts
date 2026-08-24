@@ -136,6 +136,11 @@ export function clearInterrupt(): Pick<ChatContext, "interrupting" | "error"> {
   return { interrupting: false, error: null };
 }
 
+/** Every `streaming → refreshing` edge: this refresh reconciles a turn the agent just ran. */
+export function markTurnRefresh(): Pick<ChatContext, "refreshCause"> {
+  return { refreshCause: "turn" };
+}
+
 /** SET_MESSAGES (global): reconcile a server-pushed message set against pending. */
 export function applyServerMessages(
   { context, event }: { context: ChatContext; event: Extract<ChatEvent, { type: "SET_MESSAGES" }> },
