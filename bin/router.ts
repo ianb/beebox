@@ -340,6 +340,59 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
+ * A token for the backend source a checkout would run: the newest mtime seen
+ * while walking `callback-box/src`, plus the entry count.
+ *
+ * Why not the git commit, which was the first idea: the hub is spawned as
+ * `node --import tsx ./src/cli/index.ts hub` and therefore executes the
+ * TypeScript on disk. `HEAD` misses an uncommitted edit entirely and moves for
+ * commits touching nothing the hub loads. Filesystem state is what the hub
+ * actually reads, so filesystem state is what the token is made of.
+ *
+ * `src/frontend` is excluded: Vite owns that half and hot-reloads it, so a
+ * frontend edit is not a stale backend. Directory mtimes count too, which is
+ * what makes a pure deletion visible, and `callback-box/package.json` is folded
+ * in so a dependency change with no `src/` edit is not invisible.
+ *
+ * `null` on any failure — a checkout with no `callback-box/` is a legitimate
+ * shape here, and a token that cannot be computed must disable the comparison
+ * rather than fabricate a mismatch.
+ */
+async function backendSourceToken(root: string): Promise<string | null> {
+  const srcRoot = path.join(root, "callback-box", "src");
+  let newest = 0;
+  let entries = 0;
+  async function walk(dir: string): Promise<void> {
+    const items = await fs.readdir(dir, { withFileTypes: true });
+    const stat = await fs.stat(dir);
+    newest = Math.max(newest, stat.mtimeMs);
+    for (const item of items) {
+      if (item.name === "node_modules" || item.name === "frontend") continue;
+      const full = path.join(dir, item.name);
+      if (item.isDirectory()) {
+        await walk(full);
+        continue;
+      }
+      entries += 1;
+      const st = await fs.stat(full);
+      newest = Math.max(newest, st.mtimeMs);
+    }
+  }
+  try {
+    await walk(srcRoot);
+    // The hub's dependencies are as much a part of what it loaded as its own
+    // source: a package bump that lands with no `src/` change would otherwise
+    // leave a stale generation looking current.
+    const pkg = await fs.stat(path.join(root, "callback-box", "package.json"));
+    newest = Math.max(newest, pkg.mtimeMs);
+    entries += 1;
+  } catch {
+    return null;
+  }
+  return `${Math.round(newest)}:${entries}`;
+}
+
+/**
  * Build the real effects the router core runs on. Constructed in `main()` (not
  * at module scope) so importing this file is side-effect-free — no timers, no
  * pidfile-store map, no port allocation happen until the router is actually run.
@@ -372,6 +425,7 @@ function createRealEffects(): RouterEffects {
     getPort: () => getPort(),
     resolveWorktree,
     resolveBoxEntries,
+    sourceToken: backendSourceToken,
   };
 }
 
@@ -1020,6 +1074,9 @@ export function createRouterServer(core: RouterCore, gate: RouterServerGate): ht
             startedAt: handle.startedAt,
             lastActivity: ready.lastActivity,
             idleMs: Date.now() - ready.lastActivity,
+            // Non-null means this generation is executing source that has since
+            // changed on disk. Reported, never acted on — see checkSourceFreshness.
+            staleSince: ready.staleSince,
           };
         } else {
           // starting / failed — the only other in-map phases (stopping handles

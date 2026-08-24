@@ -48,9 +48,8 @@ session_id=$(printf '%s' "$input" | jq -r '.session_id // empty')
 reason=$(printf '%s' "$input" | jq -r '.reason // empty')
 wt_log "event: session=$session_id reason=$reason cwd=$cwd"
 
-# Trigger a sweep on EVERY session end, before the per-worktree logic below
-# runs. Must
-# be here, above the early `exit 0`s, or it never fires in the common case.
+# Trigger a sweep on EVERY session end — from an EXIT trap, so it fires from
+# every path out of this script including all the early `exit 0`s below.
 #
 # The sweep does not care which session ended: it removes every eligible
 # worktree with no live agent, covering tab-kills and older native `--worktree`
@@ -58,9 +57,19 @@ wt_log "event: session=$session_id reason=$reason cwd=$cwd"
 # ran only at SessionStart, so a long-lived main session accumulated finished
 # worktrees all day (2026-07-19: nine piled up in one session).
 #
+# It used to be an inline call right here, with a comment saying it "must be
+# here, above the early `exit 0`s, or it never fires in the common case". The
+# reachability argument was right; the position it implied was not. A trap is
+# reached from every exit path AND runs last, so the two jobs this hook does
+# stop sharing a moment: the cheap, specific teardown of THIS session's worktree
+# goes first, and the expensive global sweep starts as we leave. They were
+# previously running their `git status` calls over the same trees at the same
+# time, which is the leading explanation for the 11 of 44 resolved sessions that
+# logged `resolved worktree=` and then no decision at all.
+#
 # The MAIN checkout's copy deliberately: auto-sweep.sh gates itself out when its
 # own REPO is a worktree, so invoking a worktree's copy would no-op.
-"$WT_MONO/.claude/hooks/auto-sweep.sh" session-end 2>/dev/null || true
+trap '"$WT_MONO/.claude/hooks/auto-sweep.sh" session-end 2>/dev/null || true' EXIT
 
 # Determine the worktree directory. cwd is the obvious signal, but Claude
 # Code reports the session's *final* cwd — an agent that cd'd to the main
@@ -93,7 +102,14 @@ wt_log "resolved worktree=$worktree_path"
 # the worktree, and cleaning would pull the rug out from under it. This hook is
 # a descendant of the ending agent, so exclude the nearest agent ancestor —
 # that one is the session that's ending. Fail closed on `unknown`.
+# Timed, because when this hook dies it dies somewhere in here and the log has
+# never said where. `resolved` → `decision` spans a process scan plus three git
+# commands against the worktree, all unbounded; without per-step elapsed times
+# a cancelled hook is indistinguishable between "the liveness scan hung" and
+# "git blocked on a lock".
+wt_step_start=$(wt_now_ms)
 wt_other_agent_live "$worktree_path" --exclude-self-ancestor
+wt_log "step=agent-live ms=$(( $(wt_now_ms) - wt_step_start )) state=$WT_AGENT_STATE"
 case "$WT_AGENT_STATE" in
   live)
     echo "[session-end] another live claude/codex session belongs to $worktree_path ($WT_AGENT_REASON) — leaving alone"
@@ -106,7 +122,9 @@ case "$WT_AGENT_STATE" in
     exit 0 ;;
 esac
 
+wt_step_start=$(wt_now_ms)
 wt_work_state "$worktree_path"
+wt_log "step=work-state ms=$(( $(wt_now_ms) - wt_step_start )) branch=$WT_BRANCH ahead=$WT_AHEAD dirty=$WT_DIRTY"
 if [ -z "$WT_BRANCH" ] || [ "$WT_BRANCH" = "main" ] || [ "$WT_BRANCH" = "HEAD" ]; then
   echo "[session-end] branch=$WT_BRANCH, not eligible for auto-cleanup"
   wt_log "decision=skip:branch-ineligible branch='$WT_BRANCH' wt=$worktree_path"

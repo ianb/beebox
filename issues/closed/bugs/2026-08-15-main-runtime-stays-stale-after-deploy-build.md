@@ -1,12 +1,34 @@
 ---
 title: "Main runtime stays stale after a deploy rebuild"
-workstream: unattached
+workstream: dev-loop-lifecycle
 area: router
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-codex-engine-plan — verifying a fresh Codex chat after landing
 priority: important
+resolution: implemented
 ---
+
+> **Closed 2026-08-24** in
+> [dev-loop-lifecycle](../../../callback-box/docs/implemented-plans/dev-loop-lifecycle.md)
+> — as *detection*, not as automatic replacement.
+>
+> The router records a token for `callback-box/src` (excluding `src/frontend`,
+> which Vite hot-reloads) plus `callback-box/package.json` when it spawns a hub,
+> rechecks it at most every 5s on the request path, and reports a mismatch as
+> `staleSince` in `/__router/status` and `ready (stale)` in
+> `bin/workstreams list`. Git `HEAD` was the first candidate and is wrong: the
+> hub runs TypeScript from disk through tsx, so `HEAD` misses uncommitted edits
+> and moves for commits touching nothing it loads.
+>
+> **Nothing restarts automatically, deliberately.** A quiet-window restart was
+> designed and cut: `touch()` records HTTP activity only, and this router
+> documents that WebSockets never count as worktree activity, so a live chat is
+> indistinguishable from an idle worktree and there is no moment the router can
+> prove is safe to cut. The reported cost here was an agent losing time to a fix
+> that had landed and was not running — a cost paid because staleness was
+> invisible. `bin/workstreams down <name>` remains the remedy, and when to run
+> it stays a human call.
 
 The main checkout can rebuild `callback-box/dist/cli.mjs` without replacing an
 already-running main hub generation or its `cb serve` children. The router sees
@@ -25,7 +47,7 @@ timeline was:
 
 > **Checked 2026-08-18 — the box-child half is solved; the hub half is not.**
 > The invalidation contract this issue asks for now exists, from
-> [long-lived processes never reload the rebuilt bundle](../closed/bugs/2026-08-15-long-lived-processes-never-reload-the-rebuilt-bundle.md):
+> [long-lived processes never reload the rebuilt bundle](2026-08-15-long-lived-processes-never-reload-the-rebuilt-bundle.md):
 > `bin/cb` stamps `CB_DEV_BUNDLE_PATH`/`CB_DEV_BUNDLE_ID` at spawn, identifying
 > the exact artifact loaded by *identity* rather than mtime ordering, and
 > `src/webapp/server.ts:359-383` polls for a replacement.

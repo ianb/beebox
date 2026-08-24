@@ -66,6 +66,23 @@ wt_log() {
     >> "$WT_LOG_FILE" 2>/dev/null || true
 }
 
+# Milliseconds since the epoch, for timing a step whose duration is the thing
+# we're trying to learn. BSD `date` has no `%N`, so bash 5's EPOCHREALTIME is
+# the only sub-second source that costs no subprocess; the `date` fallback keeps
+# this working on bash 3.2 at one-second resolution, which still answers the
+# question being asked ("did this step take a minute?").
+wt_now_ms() {
+  local t="${EPOCHREALTIME:-}" sec frac
+  case "$t" in
+    *[.,]*)
+      sec="${t%%[.,]*}"
+      frac="${t#*[.,]}000"
+      printf '%s' "$(( sec * 1000 + 10#${frac:0:3} ))" ;;
+    *)
+      printf '%s' "$(( $(date +%s) * 1000 ))" ;;
+  esac
+}
+
 # Progress line for the human. WT_SAY_PREFIX lets a caller keep its own tag on
 # every line it emits (the hooks prefix "[session-end]").
 wt_say() { printf '%s%s\n' "${WT_SAY_PREFIX:-  }" "$*"; }

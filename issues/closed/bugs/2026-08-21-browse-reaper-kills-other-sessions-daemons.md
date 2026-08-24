@@ -1,13 +1,26 @@
 ---
 title: "bin/browse's pre-run reaper kills daemons that other sessions in the same worktree are using"
-workstream: unattached
+workstream: dev-loop-lifecycle
 area: bin
 labels: [harness]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — several agents driving the app through bin/browse at once
 priority: important
+resolution: implemented
 ---
+
+> **Fixed 2026-08-24** in
+> [dev-loop-lifecycle](../../../callback-box/docs/implemented-plans/dev-loop-lifecycle.md).
+> Measured the window directly: `bin/browse` puts agent-browser processes on the
+> process table at T+1s and its socket dir holds no `.pid` file until T+3s.
+>
+> The bash reaper is gone. `bin/process-cleanup.ts` already owned this decision
+> and its header forbids a second copy; `bin/browse` now calls it
+> (`reclaimWorktreeBrowsers`). The predicate gained the input it was missing —
+> process age — so an unvouched daemon younger than 60s is never called an
+> orphan. That closes the same window for `bin/workstreams panic` and the
+> router's startup sweep, which both had it too.
 
 Every `bin/browse` invocation reaps agent-browser processes before it runs
 (`bin/browse:100-115`). It collects the PIDs named by `*.pid` files in the

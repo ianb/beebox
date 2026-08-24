@@ -72,6 +72,28 @@ const BROWSE_CACHE_ROOT = path.join(os.homedir(), ".cache", "callback-box", "bro
 
 const KILL_GRACE_MS = 2000;
 
+// How old an unvouched agent-browser must be before we are willing to call it
+// an orphan. A freshly spawned daemon has no `*.pid` file yet: measured on
+// 2026-08-24, `bin/browse` puts agent-browser processes on the process table at
+// T+1s and its socket dir stays empty until T+3s. Anything younger than this is
+// indistinguishable from a daemon another session started a moment ago, and
+// "indistinguishable" resolves to "don't kill" everywhere else in this file.
+// Generous on purpose: the cost of waiting is one lingering process until the
+// next sweep, the cost of being wrong is a live session losing its browser.
+//
+// The override exists because the guard is defined in terms of process age and
+// a test's fake daemons are necessarily seconds old — there is no way to
+// exercise the reaping half of the predicate without it.
+const MIN_ORPHAN_AGE_SEC = ((): number => {
+  const raw = process.env.CB_CLEANUP_MIN_ORPHAN_AGE_SEC;
+  if (raw === undefined || raw === "") return 60;
+  const n = Number(raw);
+  // A malformed value must not disable the guard: `NaN` loses every comparison,
+  // so `ageSec < NaN` would be false for any process and every young unvouched
+  // daemon would be killable again — the exact bug this constant exists to stop.
+  return Number.isFinite(n) && n >= 0 ? n : 60;
+})();
+
 export type ProcKind = "vite" | "fastify" | "agent-browser";
 
 /** Tri-state agent liveness, mirroring `wt_other_agent_live`'s WT_AGENT_STATE. */
@@ -89,6 +111,8 @@ export interface ProjectProc {
   /** "main" or the worktree name the process belongs to. */
   worktree: string;
   command: string;
+  /** Wall-clock seconds since the process started (`ps etime`). */
+  ageSec: number;
 }
 
 export interface ReclaimResult {
@@ -99,6 +123,7 @@ export interface ReclaimResult {
 interface PsRow {
   pid: number;
   ppid: number;
+  ageSec: number;
   command: string;
 }
 
@@ -145,13 +170,25 @@ async function currentDaemonPids(worktree: string): Promise<Set<number>> {
   return live;
 }
 
+/**
+ * Seconds from a `ps etime` field (`[[dd-]hh:]mm:ss`). Returns `Infinity` for
+ * anything unparseable: an unreadable age must not read as "young", which is
+ * the value that spares a process from an otherwise-correct reap.
+ */
+export function etimeToSeconds(etime: string): number {
+  const m = etime.trim().match(/^(?:(\d+)-)?(?:(\d+):)?(\d+):(\d+)$/);
+  if (!m) return Infinity;
+  const [days, hours, mins, secs] = [m[1] ?? "0", m[2] ?? "0", m[3]!, m[4]!].map(Number);
+  return ((days! * 24 + hours!) * 60 + mins!) * 60 + secs!;
+}
+
 async function psRows(): Promise<PsRow[]> {
-  const { stdout } = await execa("ps", ["-axo", "pid=,ppid=,command="]);
+  const { stdout } = await execa("ps", ["-axo", "pid=,ppid=,etime=,command="]);
   const rows: PsRow[] = [];
   for (const line of stdout.split("\n")) {
-    const m = line.match(/^\s*(\d+)\s+(\d+)\s+(.*)$/);
+    const m = line.match(/^\s*(\d+)\s+(\d+)\s+(\S+)\s+(.*)$/);
     if (!m) continue;
-    rows.push({ pid: Number(m[1]), ppid: Number(m[2]), command: m[3]! });
+    rows.push({ pid: Number(m[1]), ppid: Number(m[2]), ageSec: etimeToSeconds(m[3]!), command: m[4]! });
   }
   return rows;
 }
@@ -231,6 +268,13 @@ export async function agentLivenessByWorktree(worktrees: string[]): Promise<Map<
  * - `none`    — nothing is using this worktree; every daemon there is reapable.
  * - `live`    — spare the daemon the socket dir vouches for; superseded orphans
  *               still go (they never exit on their own).
+ *
+ * In every branch that reaps an UNVOUCHED process, `ageSec` gates it: a daemon
+ * younger than MIN_ORPHAN_AGE_SEC has not had time to write its pidfile, so
+ * "not vouched for" carries no information about it yet. That window is the
+ * whole of issues/bugs/2026-08-21-browse-reaper-kills-other-sessions-daemons.md
+ * — two agents in one worktree, and the one that runs second kills the
+ * still-starting daemon of the first.
  * - `unknown` — spare unconditionally, vouched or not. This is stricter than
  *               "treat unknown as live", deliberately: reaping a superseded
  *               orphan rests entirely on the socket dir's pidfiles, and with the
@@ -241,9 +285,16 @@ export async function agentLivenessByWorktree(worktrees: string[]): Promise<Map<
  *               The cost is the opposite failure, a lingering daemon, which the
  *               next sweep collects once the oracle answers again.
  */
-export function classifyAgentBrowser(session: AgentState, vouched: boolean): { kill: boolean; reason: string } {
-  if (session === "none") return { kill: true, reason: "no live session" };
+export function classifyAgentBrowser(
+  session: AgentState,
+  vouched: boolean,
+  ageSec: number,
+): { kill: boolean; reason: string } {
   if (session === "unknown") return { kill: false, reason: "session liveness unknown" };
+  if (!vouched && ageSec < MIN_ORPHAN_AGE_SEC) {
+    return { kill: false, reason: `starting (${Math.round(ageSec)}s old, no pidfile yet)` };
+  }
+  if (session === "none") return { kill: true, reason: "no live session" };
   if (!vouched) return { kill: true, reason: "superseded orphan" };
   return { kill: false, reason: "current daemon" };
 }
@@ -259,14 +310,14 @@ export async function discoverProjectProcs(): Promise<ProjectProc[]> {
     const vite = r.command.match(/(\/\S+)\/node_modules\/\.bin\/vite\b/);
     if (vite) {
       const wt = worktreeForPath(vite[1]!);
-      if (wt) { procs.push({ pid: r.pid, ppid: r.ppid, kind: "vite", worktree: wt, command: r.command }); }
+      if (wt) { procs.push({ pid: r.pid, ppid: r.ppid, kind: "vite", worktree: wt, command: r.command, ageSec: r.ageSec }); }
       continue;
     }
     // agent-browser — `<root>/node_modules/agent-browser/bin/agent-browser-*`
     const ab = r.command.match(/(\/\S+)\/node_modules\/agent-browser\//);
     if (ab) {
       const wt = worktreeForPath(ab[1]!);
-      if (wt) { procs.push({ pid: r.pid, ppid: r.ppid, kind: "agent-browser", worktree: wt, command: r.command }); }
+      if (wt) { procs.push({ pid: r.pid, ppid: r.ppid, kind: "agent-browser", worktree: wt, command: r.command, ageSec: r.ageSec }); }
       continue;
     }
     // fastify — the callback-box backend. Its server-main.ts path is relative
@@ -281,7 +332,7 @@ export async function discoverProjectProcs(): Promise<ProjectProc[]> {
     for (const r of fastifyCandidates) {
       const cwd = cwds.get(r.pid);
       const wt = cwd ? worktreeForPath(cwd) : null;
-      if (wt) procs.push({ pid: r.pid, ppid: r.ppid, kind: "fastify", worktree: wt, command: r.command });
+      if (wt) procs.push({ pid: r.pid, ppid: r.ppid, kind: "fastify", worktree: wt, command: r.command, ageSec: r.ageSec });
     }
   }
 
@@ -355,7 +406,7 @@ export async function reclaimOrphans(opts: {
     if (p.kind === "agent-browser") {
       const session = sessions.get(p.worktree)?.state ?? "unknown";
       const vouched = currentByWt.get(p.worktree)?.has(p.pid) ?? false;
-      ({ kill: doKill, reason: abReason } = classifyAgentBrowser(session, vouched));
+      ({ kill: doKill, reason: abReason } = classifyAgentBrowser(session, vouched, p.ageSec));
     } else {
       doKill = opts.aggressive || p.ppid === 1;
     }
@@ -373,6 +424,58 @@ export async function reclaimOrphans(opts: {
   if (killed.length > 0) {
     await sleep(KILL_GRACE_MS);
     for (const p of killed) signal(p.pid, "SIGKILL");
+  }
+  return { killed, spared };
+}
+
+/**
+ * Reap this worktree's superseded agent-browser daemons, for `bin/browse` to
+ * call before it runs a command. The upstream daemon stops serving its socket
+ * on idle but never exits, so without this they accumulate one per generation.
+ *
+ * Scoped to ONE worktree and to agent-browser only — no vite/fastify, no other
+ * worktree, and no `lsof`, so it costs a single `ps`.
+ *
+ * The liveness oracle is not consulted and does not need to be: the caller is
+ * itself a live user of this worktree, which is exactly the `live` answer the
+ * oracle would return. Passing it directly saves a subprocess on every browse
+ * command without weakening the guard — `live` is the stricter of the two
+ * answers a running worktree could get.
+ *
+ * `bin/browse` used to carry its own bash copy of this decision, which knew
+ * only about pidfiles and therefore killed any daemon that had not written one
+ * yet. That is the second copy this module's header forbids; it is gone.
+ */
+export async function reclaimWorktreeBrowsers(opts: {
+  worktree: string;
+  log?: (msg: string) => void;
+}): Promise<ReclaimResult> {
+  const log = opts.log ?? (() => {});
+  const rows = await psRows();
+  const procs: ProjectProc[] = [];
+  for (const r of rows) {
+    const ab = r.command.match(/(\/\S+)\/node_modules\/agent-browser\//);
+    if (!ab) continue;
+    if (worktreeForPath(ab[1]!) !== opts.worktree) continue;
+    procs.push({
+      pid: r.pid, ppid: r.ppid, kind: "agent-browser",
+      worktree: opts.worktree, command: r.command, ageSec: r.ageSec,
+    });
+  }
+  if (procs.length === 0) return { killed: [], spared: [] };
+
+  const vouchedPids = await currentDaemonPids(opts.worktree);
+  const killed: ProjectProc[] = [];
+  const spared: ProjectProc[] = [];
+  for (const p of procs) {
+    const { kill, reason } = classifyAgentBrowser("live", vouchedPids.has(p.pid), p.ageSec);
+    if (!kill) {
+      spared.push(p);
+      continue;
+    }
+    killed.push(p);
+    log(`reclaim agent-browser pid ${p.pid} (${opts.worktree}, ${reason})`);
+    signal(p.pid, "SIGTERM");
   }
   return { killed, spared };
 }

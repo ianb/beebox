@@ -16,7 +16,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
 
-import { classifyAgentBrowser } from "../../../bin/process-cleanup.js";
+import { classifyAgentBrowser, etimeToSeconds } from "../../../bin/process-cleanup.js";
 
 const execFileAsync = promisify(execFile);
 const repoRoot = resolve(process.cwd(), "..");
@@ -78,7 +78,11 @@ async function sweep(env: Record<string, string> = {}) {
   const { stdout } = await execFileAsync(
     join(repoRoot, "node_modules/.bin/tsx"),
     [join(repoRoot, "bin/process-cleanup.ts")],
-    { env: { ...process.env, HOME: home, ...env } },
+    // Every daemon these cases make is seconds old, and an unvouched process
+    // that young is spared by the starting-daemon guard (its own case below).
+    // Zeroing the threshold puts the OTHER dimensions of the predicate — live
+    // session, vouched pidfile — back under test.
+    { env: { ...process.env, HOME: home, CB_CLEANUP_MIN_ORPHAN_AGE_SEC: "0", ...env } },
   );
   return stdout;
 }
@@ -142,14 +146,73 @@ the socket dir's pidfiles, and once the liveness answer is already unavailable
 there is no second signal left to be wrong about.
 
 ```ts
+const old = 3600;
 JSON.stringify([
-  classifyAgentBrowser("unknown", true),
-  classifyAgentBrowser("unknown", false),
-  classifyAgentBrowser("live", true),
-  classifyAgentBrowser("live", false),
-  classifyAgentBrowser("none", true),
+  classifyAgentBrowser("unknown", true, old),
+  classifyAgentBrowser("unknown", false, old),
+  classifyAgentBrowser("live", true, old),
+  classifyAgentBrowser("live", false, old),
+  classifyAgentBrowser("none", true, old),
 ])
 => [{"kill":false,"reason":"session liveness unknown"},{"kill":false,"reason":"session liveness unknown"},{"kill":false,"reason":"current daemon"},{"kill":true,"reason":"superseded orphan"},{"kill":true,"reason":"no live session"}]
+```
+
+## A daemon too young to have written its pidfile is not an orphan
+
+The socket dir's `*.pid` files are the only thing that vouches for a daemon, and
+upstream writes them a beat after the process appears — measured at ~2 seconds
+on a cold start. In that window "not vouched for" says nothing about the
+process, so it cannot be read as "superseded". Two agents sharing one worktree
+is enough to hit it: whichever runs second reaps the browser the first is still
+starting (issues/bugs/2026-08-21-browse-reaper-kills-other-sessions-daemons.md).
+
+Age is what closes it, and it closes it in every branch that would otherwise
+kill an unvouched process — including a worktree with no session at all, where
+something still spawned that daemon a moment ago.
+
+```ts
+const young = 5;
+JSON.stringify([
+  classifyAgentBrowser("live", false, young),
+  classifyAgentBrowser("none", false, young),
+  classifyAgentBrowser("live", true, young),
+  classifyAgentBrowser("live", false, 61),
+])
+=> [{"kill":false,"reason":"starting (5s old, no pidfile yet)"},{"kill":false,"reason":"starting (5s old, no pidfile yet)"},{"kill":false,"reason":"current daemon"},{"kill":true,"reason":"superseded orphan"}]
+```
+
+The threshold is overridable only so a test can reach the reaping half of the
+predicate at all. A malformed override falls back to the default rather than
+becoming `NaN`, which would lose every comparison and quietly turn the guard
+off — the failure it exists to prevent.
+
+```ts
+const starting = await browserFor("dead-wt");
+await sweep({ CB_CLEANUP_MIN_ORPHAN_AGE_SEC: "not-a-number" });
+alive(starting)
+=> true
+```
+
+Age arrives from `ps etime`, whose field is `[[dd-]hh:]mm:ss`. An unparseable
+one reads as infinitely old rather than newborn: the guard must not hand out
+"too young to judge" on the strength of a field it failed to read.
+
+```ts
+JSON.stringify([
+  etimeToSeconds("00:07"), etimeToSeconds("01:30"), etimeToSeconds("2:03:04"),
+  etimeToSeconds("1-00:00:00"), etimeToSeconds("garbage"),
+])
+=> [7,90,7384,86400,null]
+```
+
+End to end: an unvouched daemon in a worktree with no session at all — the case
+the sweep is most eager to reclaim — survives while it is still young.
+
+```ts
+const stillStarting = await browserFor("dead-wt");
+await sweep({ CB_CLEANUP_MIN_ORPHAN_AGE_SEC: "60" });
+alive(stillStarting)
+=> true
 ```
 
 That holds end to end, not just in the classifier. Break the liveness oracle —
