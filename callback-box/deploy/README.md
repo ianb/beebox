@@ -30,15 +30,18 @@ working tree: the requested ref is checked out into a persistent build
 checkout (`<main-repo-root>/.deploy-checkout`, a detached git worktree shared
 by all worktrees of the repo), gitignored build artifacts there are cleaned,
 the frontend and CLI bundle are built, and the result is rsynced to
-`/opt/callback` followed by a frozen workspace install, a per-box migration
-sweep, service restart, and healthcheck. `deploy-info.json` on the server
+`/opt/callback` followed by a frozen workspace install, a per-box convergence
+pass (migration sweep + generated-docs refresh), service restart, and
+healthcheck. `deploy-info.json` on the server
 therefore records exactly what shipped.
 
-The migration sweep (`cb migrate --sweep` per box, in the at-rest window before
-the restart) converges each box onto the code that just shipped — card-shape
-migrations and box configuration alike. It prints only boxes that did something
-or need attention, and never fails the deploy; see
-[`../docs/migrations.md`](../docs/migrations.md).
+Per-box convergence runs in the at-rest window before the restart, two steps
+each: `cb migrate --sweep` converges card shape and box configuration, then
+`cb docs refresh` regenerates the box's agent docs, card rules, and managed
+skills when the shipped engine has moved past what wrote them (otherwise a box
+nobody chats with keeps the old ones indefinitely). Both print only boxes that
+did something or need attention, skip a dirty box for the next deploy to retry,
+and never fail the deploy; see [`../docs/migrations.md`](../docs/migrations.md).
 
 The healthcheck has two depths, both diag-key-gated and run on the server's
 localhost (see [`../docs/health-checks.md`](../docs/health-checks.md)): it polls

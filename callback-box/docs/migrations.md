@@ -26,9 +26,10 @@ If a migration fails, the manifest is **not** updated for the failing entry and 
 
 ## The deploy sweep runs them automatically
 
-`deploy/deploy.sh` runs `cb migrate --sweep` for every box on the server after
-shipping new engine code, in the at-rest window between `cb-wait-quiet` and the
-service restart. A box with nothing pending prints nothing; anything else prints
+`deploy/deploy.sh` converges every box on the server after shipping new engine
+code, in the at-rest window between `cb-wait-quiet` and the service restart. Two
+steps per box, in order: `cb migrate --sweep` (the card data) then
+`cb docs refresh` (the generated guidance — see below). A box with nothing pending prints nothing; anything else prints
 one line into the deploy log. **The sweep never fails the deploy** — a box that
 needs a human is a box to look at, not a reason to abandon a shipped release.
 
@@ -60,6 +61,28 @@ in the at-rest window rather than at an arbitrary moment.
 A box left behind — dirty tree, pending procedure migration — is reported by
 `cb health` as `box-migrations` (warning), so the drift is visible after the
 deploy log scrolls away.
+
+### `cb docs refresh` — the generated-docs half
+
+Migrating a box's cards is only half of converging it. Its `.claude/rules/card-*.md`,
+`.claude/skills/`, and `docs/generated/` are regenerated from the schema registry
+by `generateDocs`, which is cache-gated on the running engine's version — so it
+regenerates the first time it runs after a deploy, but only when *something runs
+it*, and its triggers are all activity (a chat session start, a `cb wakeup`
+reactor cycle, `cb init`). A box nobody talks to kept the previous engine's
+guidance indefinitely: the 2026-08-24 `document`→`pdf` rename left 3 of 6 prod
+boxes teaching a card type that no longer existed until a manual `cb init` pass.
+
+`cb docs refresh` closes that gap and takes the sweep's shape deliberately — the
+normal cache (silent no-op on a box that already regenerated), a dirty box
+skipped and retried next deploy, and the result committed rather than left in
+the tree — two commits: `commitTemplateSyncChanges` takes the template-managed
+paths (`Triggered-By: generateDocs`), then the refresh commits the residue
+`generateDocs` writes afterwards (`AGENTS.md`, includes, briefing;
+`Created-By: docs-refresh`), sound because the tree was verified clean under
+the box git lock first. Policy lives in `src/core/docs-refresh.ts`.
+It is script plumbing — reach for `cb init` when you want a box converged by
+hand.
 
 ## Writing a new migration
 
@@ -124,7 +147,7 @@ deploy log scrolls away.
 
 6. **Test it.** Run dry-run against a real box you can reset; then `--apply` and validate with `cb validate`. Confirm the manifest got an entry. If you have a noisy-mode warning, decide explicitly whether to handle it or accept the loss — and document the call.
 
-   **A type/schema migration also has to converge each box's generated docs.** `.claude/rules/card-*.md` and `.agents/skills/` are regenerated from the schema registry, but only on `cb init`, a chat-session start, or a `cb wakeup` reactor cycle — the deploy sweep deliberately does not provision, so after the sweep migrates the card data, boxes with no such activity keep rules teaching the retired type (the 2026-08-24 `document`→`pdf` rename left 3 of 6 prod boxes on stale `card-document.md` until a manual `cb init` pass). Plan that regeneration as part of the rollout and verify it (`grep -rl` the old type name across each box, generated docs included), rather than assuming the data migration finished the job.
+   **A type/schema migration also has to converge each box's generated docs — the deploy now does this for you, so verify rather than plan it.** `.claude/rules/card-*.md`, `.claude/skills/`, and `docs/generated/` are regenerated from the schema registry, and until 2026-08-24 that happened only on `cb init`, a chat-session start, or a `cb wakeup` reactor cycle — so boxes with no such activity kept rules teaching the retired type (the `document`→`pdf` rename left 3 of 6 prod boxes on stale `card-document.md` until a manual `cb init` pass). `deploy.sh` now runs `cb docs refresh` per box right after the migration sweep, which regenerates and commits them. What is left for you is the check: a box that was **dirty** at deploy time is skipped and retried next deploy, so after a rollout `grep -rl` the old type name across each box (generated docs included) rather than assuming either half finished the job.
 
 7. **File an issue to remove the legacy support.** A migration almost always leaves code behind that exists only to tolerate the *old* shape — a fallback branch, a lenient parse, a compatibility field, a "both spellings accepted" reader. That code should not live forever, and **you are the last person who can name it precisely**: months later nobody can tell which branches are legacy tolerance and which are load-bearing. Write the issue now, while you can list them.
 

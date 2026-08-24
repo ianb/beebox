@@ -70,14 +70,15 @@ skip them:
   in `src/core/migrations.ts`. **Never reorder/rename/remove** existing entries —
   the `name` is the per-box manifest key; touching the order silently rewrites
   which migrations a box thinks it ran.
-- **Converge the generated per-box docs too.** A schema/type change leaves every
-  box's generated `.claude/rules/card-*.md` and `.agents/skills/` teaching the
-  old shape — and regeneration is activity-gated (`cb init`, chat start, or a
-  `cb wakeup` cycle; the deploy sweep does not provision). Card data migrating
-  while the box's own rules still describe the retired type is the 2026-08-24
-  `document`→`pdf` scar: 3 of 6 prod boxes kept `card-document.md` until a
-  manual `cb init` pass. Until deploy-time regeneration exists, plan the
-  `cb init` convergence as part of the migration's rollout, not an afterthought.
+- **Verify the generated per-box docs converged.** A schema/type change leaves
+  every box's generated `.claude/rules/card-*.md`, `.claude/skills/`, and
+  `docs/generated/` teaching the old shape, and regeneration used to be purely
+  activity-gated (`cb init`, chat start, a `cb wakeup` cycle) — the 2026-08-24
+  `document`→`pdf` scar: 3 of 6 prod boxes kept `card-document.md` until a manual
+  `cb init` pass. `deploy.sh` now runs `cb docs refresh` per box right after the
+  migration sweep, so this converges on its own. It still **skips a dirty box**,
+  so after the rollout confirm it rather than assuming: grep each box for the old
+  type name, generated docs included.
 - **Cover *every* card that holds the old shape.** The XML-landmark escapee is the
   lesson: a migrator that matches `*.thing.card` but a box has the data under a
   different type/extension/body leaves it behind. Grep the real boxes for the old

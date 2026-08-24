@@ -550,9 +550,11 @@ if [[ "$SKIP_RESTART" != true ]]; then
   # whose migrations are current prints nothing; anything else prints one line
   # and the deploy continues. This never fails the deploy: a box that needs a
   # human (dirty tree, agent-driven migration, hard failure) is a box to look
-  # at, not a reason to abandon a shipped release. `cb migrate --sweep` owns the
-  # policy — see src/core/migration-sweep.ts.
-  echo "Applying pending box migrations..."
+  # at, not a reason to abandon a shipped release. Two steps per box, in order:
+  # `cb migrate --sweep` (data shape) then `cb docs refresh` (generated
+  # guidance). They own their own policy — see src/core/migration-sweep.ts and
+  # src/core/docs-refresh.ts.
+  echo "Converging boxes (migrations, generated docs)..."
   ssh "root@$SERVER_IP" bash -s <<'REMOTE'
     for boxdir in /home/callback/boxes/*/; do
       name=$(basename "$boxdir")
@@ -576,6 +578,26 @@ if [[ "$SKIP_RESTART" != true ]]; then
               cb-sweep "$box" 2>&1)
       code=$?
       [[ $code -eq 124 ]] && out="${out}"$'\n'"timed out after 600s — migrations left pending, retried next deploy"
+      [[ -n "$out" ]] && echo "$out" | sed "s/^/  $name: /"
+
+      # Converge the box's GENERATED guidance the same way — agent docs, card
+      # rules, managed skills. Regeneration is otherwise activity-gated (a
+      # reactor cycle or a chat session start runs it), so a box nobody talks
+      # to keeps the previous engine's docs indefinitely. Runs after the sweep
+      # so it sees the tree the sweep left committed. Same shape as above:
+      # cache-gated (silent when current), skips a dirty box, never fails the
+      # deploy. Policy: src/core/docs-refresh.ts.
+      #
+      # Deliberately NOT gated on the sweep's exit code. Generated docs describe
+      # the engine that just shipped, and any chat or wakeup on that box would
+      # regenerate them anyway — so withholding the refresh from a box that
+      # needs a human for its migrations buys nothing and leaves that box on
+      # older guidance than every box someone happens to talk to.
+      out=$(sudo -u callback -H bash -lc \
+              'set -a; source /home/callback/.env 2>/dev/null; set +a; cd "$1" && timeout 600 cb docs refresh' \
+              cb-docs-refresh "$box" 2>&1)
+      code=$?
+      [[ $code -eq 124 ]] && out="${out}"$'\n'"timed out after 600s — generated docs left stale, retried next deploy"
       [[ -n "$out" ]] && echo "$out" | sed "s/^/  $name: /"
     done
     # Always succeed: `set -euo pipefail` in the outer script would otherwise
