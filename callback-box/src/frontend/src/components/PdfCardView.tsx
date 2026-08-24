@@ -20,6 +20,7 @@ import { trpc } from "../lib/trpc";
 import { displayName } from "../lib/display-name";
 import { apiImageUrl } from "../lib/view-url";
 import {
+  missingPageRenders,
   ORIGINAL_RENDERER_NAME,
   pageRendersFrom,
   readExtractedFields,
@@ -88,6 +89,12 @@ export function PdfCardView({ data, onNavigate, params }: RendererProps) {
   const hasBody = body.trim() !== "";
   const activePage = requestedPage(params);
   const { pages, isLoading: pagesLoading, error: pagesError } = usePageRenders(data.path, boxSlug);
+  const showMissingPageRendersNotice = missingPageRenders({
+    fields,
+    pages,
+    pagesLoading,
+    pagesErrored: pagesError !== null,
+  });
 
   const components = useMemo(
     () => makeEmbedComponents({ onNavigate, basePath: data.path, boxSlug, onJumpToQuote: undefined }),
@@ -119,6 +126,11 @@ export function PdfCardView({ data, onNavigate, params }: RendererProps) {
           <Text size="sm" tone="danger">Could not list page renders: {pagesError.message}</Text>
         ) : null}
         <PdfPageStrip pages={pages} activePage={activePage} />
+        {showMissingPageRendersNotice ? (
+          <Text size="sm" tone="muted">
+            {fields.pages} page{fields.pages === 1 ? "" : "s"} expected but not found in the attach scope.
+          </Text>
+        ) : null}
 
         {hasBody ? (
           <div data-card-section="body">

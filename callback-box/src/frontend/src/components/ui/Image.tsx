@@ -76,6 +76,12 @@ interface BaseImageProps {
    * the img itself).
    */
   className?: string;
+  /**
+   * Native `<img loading>` hint. Omit for the browser default (eager);
+   * pass `"lazy"` for offscreen images a page renders many of up front
+   * (e.g. a page-render strip) so only the ones near the viewport fetch.
+   */
+  loading?: "lazy" | "eager";
 }
 
 export type ImageProps = BaseImageProps & (
@@ -133,9 +139,10 @@ interface ImgElementProps {
   lightboxCaption: string | undefined;
   imgRef: React.RefObject<HTMLImageElement>;
   extraClass?: string;
+  loading: "lazy" | "eager" | undefined;
 }
 
-function ImgElement({ src, alt, size, bordered, rotationStyle, title, onActivate, onError, onLoad, lightbox, lightboxCaption, imgRef, extraClass }: ImgElementProps) {
+function ImgElement({ src, alt, size, bordered, rotationStyle, title, onActivate, onError, onLoad, lightbox, lightboxCaption, imgRef, extraClass, loading }: ImgElementProps) {
   const interactive = onActivate !== null;
   const handleClick = () => {
     if (onActivate !== null && imgRef.current) onActivate(imgRef.current);
@@ -152,6 +159,7 @@ function ImgElement({ src, alt, size, bordered, rotationStyle, title, onActivate
       ref={imgRef}
       src={src}
       alt={alt}
+      loading={loading}
       // In the interactive case the button is the outermost element, so
       // context styles that space the image against surrounding flow (e.g.
       // prose typography's vertical img margins) must not land on the img —
@@ -271,6 +279,7 @@ export function Image(props: ImageProps) {
     proxyFallbackSrc,
     retryOnError = false,
     className,
+    loading,
   } = props;
   const lightbox = props.lightbox === true;
   const externalOnClick = lightbox ? undefined : props.onClick;
@@ -361,6 +370,7 @@ export function Image(props: ImageProps) {
       lightboxCaption={lightboxCaption}
       imgRef={imgRef}
       extraClass={imgExtra}
+      loading={loading}
     />
   );
 

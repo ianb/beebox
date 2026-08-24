@@ -67,6 +67,35 @@ export function pageRendersFrom(
     .toSorted((a, b) => a.page - b.page);
 }
 
+/**
+ * True when a page-render notice belongs on the card: the card says pages
+ * were extracted (`status: analyzed`, `metadata.pages > 0`), the attach-scope
+ * listing finished without error, and it came back with none. Distinct from
+ * a still-loading or errored listing (those get their own state) and from a
+ * card that never claimed to have pages (`metadata.pages` absent or 0) —
+ * unanalyzed and pre-extraction cards are silent by design.
+ */
+export function missingPageRenders({
+  fields,
+  pages,
+  pagesLoading,
+  pagesErrored,
+}: {
+  fields: Pick<ExtractedDocumentFields, "status" | "pages">;
+  pages: DocumentPage[];
+  pagesLoading: boolean;
+  pagesErrored: boolean;
+}): boolean {
+  return (
+    fields.status === "analyzed" &&
+    fields.pages !== null &&
+    fields.pages > 0 &&
+    !pagesLoading &&
+    !pagesErrored &&
+    pages.length === 0
+  );
+}
+
 export interface ExtractedDocumentFields {
   /** `new` | `analyzed` | `invalid` as written; any other value passes through. */
   status: string | null;

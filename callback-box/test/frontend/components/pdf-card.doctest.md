@@ -16,6 +16,7 @@ import { PdfSchema } from "../../../src/schemas/pdf.js";
 import { isRecord } from "../../../src/lib/is-record.js";
 import {
   EXTRACTED_CARD_TYPE,
+  missingPageRenders,
   pageRendersFrom,
   readExtractedFields,
   requestedPage,
@@ -134,6 +135,56 @@ pageRendersFrom([{ name: "source.pdf", relativePath: "inbox/Handbook.attach/sour
 
 render(React.createElement(PdfPageStrip, { pages: [], activePage: null }))
 =>
+```
+
+## A card claiming pages that the attach listing didn't produce gets a notice
+
+`missingPageRenders` is the predicate behind `PdfCardView`'s muted notice: a
+card that says pages were extracted, whose attach-scope listing finished
+without error, but came back with none.
+
+```ts
+const analyzedWithPages = { status: "analyzed", pages: 12 };
+
+missingPageRenders({ fields: analyzedWithPages, pages: [], pagesLoading: false, pagesErrored: false })
+=> true
+```
+
+Still loading, or the listing errored: no notice yet — those get their own
+state, not a false "missing" claim.
+
+```ts continue
+missingPageRenders({ fields: analyzedWithPages, pages: [], pagesLoading: true, pagesErrored: false })
+=> false
+
+missingPageRenders({ fields: analyzedWithPages, pages: [], pagesLoading: false, pagesErrored: true })
+=> false
+```
+
+Renders are actually present: no notice.
+
+```ts continue
+missingPageRenders({
+  fields: analyzedWithPages,
+  pages: [{ page: 1, src: "/x" }],
+  pagesLoading: false,
+  pagesErrored: false,
+})
+=> false
+```
+
+A card that never claimed to have pages — `metadata.pages` absent, or a
+pre-extraction / non-analyzed card — stays silent even with zero renders:
+
+```ts
+missingPageRenders({ fields: { status: "analyzed", pages: null }, pages: [], pagesLoading: false, pagesErrored: false })
+=> false
+
+missingPageRenders({ fields: { status: "new", pages: 12 }, pages: [], pagesLoading: false, pagesErrored: false })
+=> false
+
+missingPageRenders({ fields: { status: "analyzed", pages: 0 }, pages: [], pagesLoading: false, pagesErrored: false })
+=> false
 ```
 
 ## `?page=3` highlights and anchors that page

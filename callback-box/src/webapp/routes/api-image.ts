@@ -23,6 +23,7 @@ import { parse as parseYaml } from "yaml";
 import { extensionToMimetype } from "../../lib/mimetype.js";
 import { applyRawFileServingHeaders } from "../serving-security.js";
 import { errnoCode } from "../../lib/error-guards.js";
+import { containWithinBox } from "../../lib/box-containment.js";
 
 // `.avif` is here because the document extractor writes page and figure
 // renders as AVIF (`src/core/commands/document-extract.ts`); without it every
@@ -91,7 +92,7 @@ export function registerApiImageRoutes({
       if (!reqPath) return reply.status(400).send({ error: "Path required" });
 
       const resolved = path.resolve(path.join(boxRoot, reqPath));
-      if (!resolved.startsWith(path.resolve(boxRoot))) {
+      if (containWithinBox(boxRoot, resolved) === null) {
         return reply.status(403).send({ error: "Access denied" });
       }
       if (path.basename(resolved).startsWith(".")) {
@@ -112,7 +113,7 @@ export function registerApiImageRoutes({
         imageAbs = resolved;
       }
 
-      if (!imageAbs.startsWith(path.resolve(boxRoot))) {
+      if (containWithinBox(boxRoot, imageAbs) === null) {
         return reply.status(403).send({ error: "Access denied" });
       }
 

@@ -50,7 +50,7 @@ export function registerBuiltinFileTypes(): void {
   registerFileType({ type: "telegram-message" }, { listUI: { icon: DocumentIcon } });
 
   registerFileType({ match: (p: string) => p.endsWith(".md") }, { listUI: { icon: DocumentIcon } });
-  registerFileType({ match: (p: string) => p.endsWith(".jpg") || p.endsWith(".jpeg") || p.endsWith(".png") || p.endsWith(".gif") || p.endsWith(".webp") }, { listUI: { icon: ImageIcon } });
+  registerFileType({ match: (p: string) => p.endsWith(".jpg") || p.endsWith(".jpeg") || p.endsWith(".png") || p.endsWith(".gif") || p.endsWith(".webp") || p.endsWith(".avif") }, { listUI: { icon: ImageIcon } });
   registerFileType({ match: (p: string) => p.endsWith(".m4a") || p.endsWith(".mp3") || p.endsWith(".wav") || p.endsWith(".ogg") }, { listUI: { icon: AudioIcon } });
   registerFileType({ match: (p: string) => p.endsWith("/") }, { listUI: { icon: DirectoryIcon } });
 }
