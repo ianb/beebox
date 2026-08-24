@@ -87,8 +87,13 @@ function imageBlock(block: Record<string, unknown>): SessionContentBlock {
   // bytes never arrived in the first place. The placeholder states what is observable
   // and does not claim to know which — an earlier wording said "not retained in
   // history", which read as a false explanation when an upload had simply failed.
+  //
+  // It also does not say "unavailable". This is reached when replaying a stored
+  // session, so the usual reader is someone looking at a conversation whose images
+  // were fine when they sent them and whose work from those images is still there.
+  // "Unavailable" reads as loss; "not displayed" is what actually happened.
   if (source?.["type"] === "base64" && !source["data"]) {
-    return { type: "text", text: "[image unavailable]" };
+    return { type: "text", text: "[image not displayed]" };
   }
   const imgBlock: SessionContentBlock = { type: "image" };
   if (source?.["media_type"]) imgBlock.mediaType = String(source["media_type"]);
