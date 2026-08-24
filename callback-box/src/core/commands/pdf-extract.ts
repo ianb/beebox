@@ -1,9 +1,9 @@
 /**
- * The extraction half of document mode: run Docling over a source file and
- * turn what it produced into the assets a `document.card` references.
+ * The extraction half of pdf mode: run Docling over a source file and
+ * turn what it produced into the assets a `pdf.card` references.
  *
- * Shared by `cb scan-import`'s document flow (first extraction) and
- * `cb document reanalyze` (re-extraction), because both write the same asset
+ * Shared by `cb scan-import`'s pdf flow (first extraction) and
+ * `cb pdf reanalyze` (re-extraction), because both write the same asset
  * set into the same attach scope and differ only in what they do with the
  * card afterwards.
  *
@@ -43,7 +43,7 @@ const TEXT_LAYER_FILENAME = "text-layer.txt";
 const AVIF_QUALITY = 60;
 const AVIF_EFFORT = 4;
 
-export interface DocumentExtraction {
+export interface PdfExtraction {
   /** Rendered markdown, with figure references rewritten into the attach scope. */
   body: string;
   /** Basenames written into the attach scope (excluding the original file). */
@@ -54,7 +54,7 @@ export interface DocumentExtraction {
   pageCount: number;
 }
 
-export interface ExtractDocumentOptions {
+export interface ExtractPdfOptions {
   docling: DoclingService;
   /** The file to extract — normally the original already copied into the attach scope. */
   sourcePath: string;
@@ -111,7 +111,7 @@ function rewriteImageRefs(markdown: string, refs: Map<string, string>): string {
   });
 }
 
-export async function extractDocument(options: ExtractDocumentOptions): Promise<Result<DocumentExtraction>> {
+export async function extractPdf(options: ExtractPdfOptions): Promise<Result<PdfExtraction>> {
   const extraction = await options.docling.extract(options.sourcePath, {
     workDir: options.workDir,
     forceOcr: options.forceOcr,
@@ -132,7 +132,7 @@ export async function extractDocument(options: ExtractDocumentOptions): Promise<
   await fs.writeFile(path.join(options.attachAbsDir, DOCLING_JSON_FILENAME), await gzipAsync(json));
   assetNames.push(DOCLING_JSON_FILENAME);
 
-  // The raw text layer, read straight off the source (D8). Only document mode
+  // The raw text layer, read straight off the source (D8). Only pdf mode
   // pays for this — the textless branch never reaches here, so a scan with no
   // text is not charged for a full-document extraction that would yield
   // nothing. Empty or unavailable → no file, because an empty asset is worse

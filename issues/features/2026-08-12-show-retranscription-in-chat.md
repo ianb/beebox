@@ -28,7 +28,7 @@ agent-side audio consultation** — `cb chat ask-about-audio` should also mark
 the message it examined (something small, e.g. an emoticon/icon on the
 bubble), so "the agent went back to the recording" is visible even when no
 text was replaced. This matters more now that `<unsure>` spans (see
-[mark low-confidence words](2026-08-15-mark-low-confidence-words-in-transcripts.md),
+[mark low-confidence words](../closed/features/2026-08-15-mark-low-confidence-words-in-transcripts.md),
 shipped) actively prompt the agent to reach for the audio commands — those
 consultations should leave a visible trace on the message they checked.
 

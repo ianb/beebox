@@ -9,7 +9,7 @@
 
 const BINARY_EXTS = new Set<string>([
   // Images
-  ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg", ".ico",
+  ".png", ".jpg", ".jpeg", ".gif", ".webp", ".avif", ".bmp", ".svg", ".ico",
   // Audio / video
   ".mp3", ".m4a", ".mp4", ".wav", ".webm", ".ogg", ".aac", ".flac", ".mov",
   // Documents

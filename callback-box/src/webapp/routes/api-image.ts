@@ -23,8 +23,12 @@ import { parse as parseYaml } from "yaml";
 import { extensionToMimetype } from "../../lib/mimetype.js";
 import { applyRawFileServingHeaders } from "../serving-security.js";
 import { errnoCode } from "../../lib/error-guards.js";
+import { containWithinBox } from "../../lib/box-containment.js";
 
-const IMAGE_EXTS = new Set([".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg"]);
+// `.avif` is here because the document extractor writes page and figure
+// renders as AVIF (`src/core/commands/document-extract.ts`); without it every
+// page render in an extracted document served a 400 "Not an image path".
+const IMAGE_EXTS = new Set([".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif", ".bmp", ".svg"]);
 
 /**
  * Resolve an `.image.card`'s attached image to an absolute filesystem path.
@@ -88,7 +92,7 @@ export function registerApiImageRoutes({
       if (!reqPath) return reply.status(400).send({ error: "Path required" });
 
       const resolved = path.resolve(path.join(boxRoot, reqPath));
-      if (!resolved.startsWith(path.resolve(boxRoot))) {
+      if (containWithinBox(boxRoot, resolved) === null) {
         return reply.status(403).send({ error: "Access denied" });
       }
       if (path.basename(resolved).startsWith(".")) {
@@ -109,7 +113,7 @@ export function registerApiImageRoutes({
         imageAbs = resolved;
       }
 
-      if (!imageAbs.startsWith(path.resolve(boxRoot))) {
+      if (containWithinBox(boxRoot, imageAbs) === null) {
         return reply.status(403).send({ error: "Access denied" });
       }
 

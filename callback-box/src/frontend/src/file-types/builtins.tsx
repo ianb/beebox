@@ -5,6 +5,7 @@
 
 import { ImageCardListEntry } from "../components/file-entries/ImageCardListEntry";
 import type { ImageAttrs } from "@schemas/image";
+import { EXTRACTED_CARD_TYPE } from "../lib/pdf-card";
 import { registerFileType } from "./registry";
 import {
   DocumentIcon,
@@ -45,11 +46,11 @@ export function registerBuiltinFileTypes(): void {
   registerFileType({ type: "feedback" }, { listUI: { icon: DocumentIcon } });
   registerFileType({ type: "guide" }, { listUI: { icon: DocumentIcon } });
   registerFileType({ type: "file" }, { listUI: { icon: DocumentIcon } });
-  registerFileType({ type: "document" }, { listUI: { icon: DocumentIcon } });
+  registerFileType({ type: EXTRACTED_CARD_TYPE }, { listUI: { icon: DocumentIcon } });
   registerFileType({ type: "telegram-message" }, { listUI: { icon: DocumentIcon } });
 
   registerFileType({ match: (p: string) => p.endsWith(".md") }, { listUI: { icon: DocumentIcon } });
-  registerFileType({ match: (p: string) => p.endsWith(".jpg") || p.endsWith(".jpeg") || p.endsWith(".png") || p.endsWith(".gif") || p.endsWith(".webp") }, { listUI: { icon: ImageIcon } });
+  registerFileType({ match: (p: string) => p.endsWith(".jpg") || p.endsWith(".jpeg") || p.endsWith(".png") || p.endsWith(".gif") || p.endsWith(".webp") || p.endsWith(".avif") }, { listUI: { icon: ImageIcon } });
   registerFileType({ match: (p: string) => p.endsWith(".m4a") || p.endsWith(".mp3") || p.endsWith(".wav") || p.endsWith(".ogg") }, { listUI: { icon: AudioIcon } });
   registerFileType({ match: (p: string) => p.endsWith("/") }, { listUI: { icon: DirectoryIcon } });
 }

@@ -86,6 +86,6 @@ Other plausible-but-absent forms, worth deciding on rather than accumulating:
 Whether the mishearing is specific to one transcription backend. `sendClose` is
 matched against the realtime transcript, so the alias may be Deepgram-shaped and
 a different backend may fail differently. Related:
-[mark low-confidence words in a transcript](2026-08-15-mark-low-confidence-words-in-transcripts.md)
+[mark low-confidence words in a transcript](../closed/features/2026-08-15-mark-low-confidence-words-in-transcripts.md)
 — the same confidence data would show, concretely, how badly the canonical
 phrase is being heard rather than leaving it to impression.

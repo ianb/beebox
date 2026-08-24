@@ -1,37 +1,37 @@
-# Document card schema
+# PDF card schema
 
-A `document.card` is an extracted document: rendered markdown as the body, the
+A `pdf.card` is an extracted document: rendered markdown as the body, the
 original bytes and the extraction artifacts in the attach scope. It is a
 superset of `file.card` — same `filename:` provenance entry — plus `format:`,
 `docling:`, `metadata:`, and (on a failed extraction) `error:`.
 
-The type is `document`, not `pdf`, deliberately: `format:` carries the source
-type, so another input format needs no rename migration.
+The type is `pdf` because that is the only format the pipeline reads today;
+`format:` still records the source type.
 
 ```ts setup
-import { DocumentSchema, createDocumentTemplate } from "../../src/schemas/document.js";
+import { PdfSchema, createPdfTemplate } from "../../src/schemas/pdf.js";
 import { FileSchema } from "../../src/schemas/file.js";
 import { parseCardText } from "../../src/core/card-io.js";
 import { createCardSchemaMap } from "../../src/schemas/registry.js";
 
 const schemas = await createCardSchemaMap();
-const source = "box/inbox/scan.attach/source.document.card";
+const source = "box/inbox/scan.attach/source.pdf.card";
 ```
 
-## Registered as `document`
+## Registered as `pdf`
 
 ```ts
-DocumentSchema.type
-=> document
+PdfSchema.type
+=> pdf
 
-schemas.get("document") === DocumentSchema
+schemas.get("pdf") === PdfSchema
 => true
 ```
 
 ## An analyzed card round-trips
 
 ```ts
-const card = createDocumentTemplate({
+const card = createPdfTemplate({
   status: "analyzed",
   format: "pdf",
   capturedAt: "2026-04-02T10:23:00Z",
@@ -51,7 +51,7 @@ JSON.stringify([parsed.fields.status, parsed.fields.format, parsed.fields.metada
 ```
 
 The provenance entry is the same shape `file.card` uses, so anything that reads
-a file card's `filename:` reads a document card's too:
+a file card's `filename:` reads a pdf card's too:
 
 ```ts continue
 JSON.stringify(parsed.fields.filename)
@@ -64,7 +64,7 @@ FileSchema.frontmatterSchema.safeParse({ type: "file", status: "new", filename: 
 ## A failed extraction: `status: new`, an `error:`, no `docling:`
 
 ```ts
-const card = createDocumentTemplate({
+const card = createPdfTemplate({
   status: "new",
   format: "pdf",
   capturedAt: "2026-04-02T10:23:00Z",
@@ -81,12 +81,12 @@ JSON.stringify([parsed.fields.status, parsed.fields.error, parsed.fields.docling
 ## `status` is the three-value lifecycle, and `format` is required
 
 ```ts
-const base = { type: "document", format: "pdf", filename: { ref: "attach/x.pdf", captured: "2026-04-02T10:23:00Z", source: "scan-import" } };
+const base = { type: "pdf", format: "pdf", filename: { ref: "attach/x.pdf", captured: "2026-04-02T10:23:00Z", source: "scan-import" } };
 
-DocumentSchema.frontmatterSchema.safeParse({ ...base, status: "invalid" }).success
+PdfSchema.frontmatterSchema.safeParse({ ...base, status: "invalid" }).success
 => true
 
-DocumentSchema.frontmatterSchema.safeParse({ ...base, status: "processed" }).success
+PdfSchema.frontmatterSchema.safeParse({ ...base, status: "processed" }).success
 => false
 ```
 
@@ -94,14 +94,14 @@ DocumentSchema.frontmatterSchema.safeParse({ ...base, status: "processed" }).suc
 claim that extraction succeeded:
 
 ```ts continue
-DocumentSchema.frontmatterSchema.parse(base).status
+PdfSchema.frontmatterSchema.parse(base).status
 => new
 ```
 
 A card with no `format:` is rejected rather than silently assumed to be a PDF:
 
 ```ts continue
-DocumentSchema.frontmatterSchema.safeParse({ type: "document", status: "new", filename: base.filename }).success
+PdfSchema.frontmatterSchema.safeParse({ type: "pdf", status: "new", filename: base.filename }).success
 => false
 ```
 
@@ -111,11 +111,11 @@ They are also the knowledge-audit target (`scanner-ingest-document-card`): what
 the card is, where the original bytes live, and what `new` + `error:` means.
 
 ```ts
-const text = DocumentSchema.instructions ?? "";
+const text = PdfSchema.instructions ?? "";
 JSON.stringify([
   text.includes("attach/source.pdf"),
   text.includes("`error:` field"),
-  text.includes("cb document reanalyze"),
+  text.includes("cb pdf reanalyze"),
 ])
 => [true,true,true]
 ```

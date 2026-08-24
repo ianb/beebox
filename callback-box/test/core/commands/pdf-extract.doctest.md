@@ -1,7 +1,7 @@
-# Document mode — Docling extraction, and what happens when it fails
+# Pdf mode — Docling extraction, and what happens when it fails
 
-`cb scan-import`'s document flow runs a text-layer PDF through Docling and
-files a `document.card` in the session's attach scope: the rendered markdown as
+`cb scan-import`'s pdf flow runs a text-layer PDF through Docling and
+files a `pdf.card` in the session's attach scope: the rendered markdown as
 the body, the gzipped `DoclingDocument` JSON, page renders and figures as AVIF.
 
 The property that matters most is the failure one: **extraction failure never
@@ -10,13 +10,13 @@ blocks intake.** When Docling cannot run, the card is still written — with
 is exactly what this flow did before Docling existed.
 
 Docling itself is faked here (the services pattern); the real binary is
-exercised by `document-extract-integration.doctest.md`.
+exercised by `pdf-extract-integration.doctest.md`.
 
 ```ts setup
-import { runDocumentMode } from "../../../src/core/commands/scan-import-document.js";
-import { runDocumentReanalyze } from "../../../src/core/commands/document-reanalyze.js";
+import { runPdfMode } from "../../../src/core/commands/scan-import-pdf.js";
+import { runPdfReanalyze } from "../../../src/core/commands/pdf-reanalyze.js";
 import { createFakeDocling, MAX_EXTRACTION_ARTIFACTS } from "../../../src/services/docling.js";
-import { extractDocument } from "../../../src/core/commands/document-extract.js";
+import { extractPdf } from "../../../src/core/commands/pdf-extract.js";
 import { createCollectorContext } from "../../../src/core/commands/index.js";
 import { createCardSchemaMap } from "../../../src/schemas/registry.js";
 import { parseCardText } from "../../../src/core/card-io.js";
@@ -35,12 +35,12 @@ const schemas = await createCardSchemaMap();
 // availability-appropriate, like `pdf-probe.doctest.md`.
 const havePdftotext = await execa("pdftotext", ["-v"], { reject: false }).then((r) => r.exitCode === 0, () => false);
 
-// Seed a box with a text-layer PDF sitting outside it, and run document mode.
+// Seed a box with a text-layer PDF sitting outside it, and run pdf mode.
 async function importPdf(box, docling, source) {
   const pdfPath = join(box.packageRoot, "incoming.pdf");
   await writeFile(pdfPath, textPdf());
   const { ctx } = createCollectorContext(box.root);
-  return runDocumentMode(ctx, { pdfPath, docling, source });
+  return runPdfMode(ctx, { pdfPath, docling, source });
 }
 
 // The session attach dir of the one session this box has.
@@ -49,7 +49,7 @@ async function sessionDir(box) {
   return entries.find((e) => e.endsWith(".attach"));
 }
 
-// Everything in the document card's attach scope, sorted. `text-layer.txt` is
+// Everything in the pdf card's attach scope, sorted. `text-layer.txt` is
 // left out because its presence depends on whether poppler exists here; it has
 // its own section below.
 async function attachContents(box) {
@@ -58,14 +58,14 @@ async function attachContents(box) {
   return names.filter((n) => n !== "text-layer.txt").sort().join("\n");
 }
 
-async function readDocumentCard(box) {
+async function readPdfCard(box) {
   const dir = await sessionDir(box);
-  const rel = `box/inbox/${dir}/source.document.card`;
+  const rel = `box/inbox/${dir}/source.pdf.card`;
   return { rel, content: await box.read(rel) };
 }
 ```
 
-## A successful extraction lands an `analyzed` document card
+## A successful extraction lands an `analyzed` pdf card
 
 ```ts
 const box = await makeTmpBox({ git: true });
@@ -79,7 +79,7 @@ result.success
 => true
 
 result.data.mode
-=> document
+=> pdf
 
 result.data.status
 => analyzed
@@ -118,13 +118,13 @@ JSON.parse(json.toString()).schema_name
 => DoclingDocument
 ```
 
-The card itself validates against the `document` schema, carries provenance as
+The card itself validates against the `pdf` schema, carries provenance as
 a superset of `file.card`, and has the rendered markdown as its body — with the
 figure reference rewritten into the attach scope, not left pointing at Docling's
 scratch directory:
 
 ```ts continue
-const { rel, content } = await readDocumentCard(box);
+const { rel, content } = await readPdfCard(box);
 const card = parseCardText(content, { source: rel, schemas });
 JSON.stringify([card.fields.status, card.fields.format, card.fields.filename.ref, card.fields.filename["mime-type"]])
 => ["analyzed","pdf","attach/source.pdf","application/pdf"]
@@ -150,11 +150,11 @@ typeof card.fields.metadata.pages
 => number
 ```
 
-The session card points at the document card, and the intake job exists:
+The session card points at the pdf card, and the intake job exists:
 
 ```ts continue
 const sessionCard = await box.read(result.data.sessionCardPath);
-sessionCard.includes("- attach/source.document.card")
+sessionCard.includes("- attach/source.pdf.card")
 => true
 
 result.data.intakeJobPath.startsWith("box/jobs/")
@@ -212,7 +212,7 @@ await mkdir(attachAbsDir, { recursive: true });
 const textlessPath = join(scratch, "textless.pdf");
 await writeFile(textlessPath, textlessPdf());
 
-const result = await extractDocument({
+const result = await extractPdf({
   docling: createFakeDocling({ markdown: "", pageCount: 1 }),
   sourcePath: textlessPath,
   attachAbsDir,
@@ -232,14 +232,14 @@ await rm(scratch, { recursive: true, force: true });
 
 A scan that arrived through the upload route carries the credential that sent
 it. The promote worker passes `scan-upload/<token-name>` down through
-`cb upload --source`, and it ends up on the document card's `source` (replacing
+`cb upload --source`, and it ends up on the pdf card's `source` (replacing
 the generic `scan-import`) and on the session card — so a batch that looks wrong
 identifies the device that produced it.
 
 ```ts
 const box = await makeTmpBox({ git: true });
 const result = await importPdf(box, createFakeDocling({ markdown: "billed", pageCount: 1 }), "scan-upload/laptop-scansnap");
-const { rel, content } = await readDocumentCard(box);
+const { rel, content } = await readPdfCard(box);
 const card = parseCardText(content, { source: rel, schemas });
 card.fields.filename.source
 => scan-upload/laptop-scansnap
@@ -249,14 +249,14 @@ sessionCard.includes("source: scan-upload/laptop-scansnap")
 => true
 ```
 
-Without it the document card keeps saying `scan-import` and the session card
+Without it the pdf card keeps saying `scan-import` and the session card
 carries no `source` at all — the field means "came from somewhere identifiable",
 so an absent one is the honest answer:
 
 ```ts continue
 const plain = await makeTmpBox({ git: true });
 const plainResult = await importPdf(plain, createFakeDocling({ markdown: "billed", pageCount: 1 }));
-const plainDoc = await readDocumentCard(plain);
+const plainDoc = await readPdfCard(plain);
 JSON.stringify([
   parseCardText(plainDoc.content, { source: plainDoc.rel, schemas }).fields.filename.source,
   (await plain.read(plainResult.data.sessionCardPath)).includes("source:"),
@@ -288,7 +288,7 @@ result.data.status
 await attachContents(box)
 => source.pdf
 
-const { rel, content } = await readDocumentCard(box);
+const { rel, content } = await readPdfCard(box);
 const card = parseCardText(content, { source: rel, schemas });
 JSON.stringify([card.fields.status, card.fields.error])
 => ["new","Docling exited 1: killed by the OOM killer"]
@@ -323,7 +323,7 @@ const result = await importPdf(box, createFakeDocling({ markdown: "", pageCount:
 result.data.status
 => analyzed
 
-const { rel, content } = await readDocumentCard(box);
+const { rel, content } = await readPdfCard(box);
 const card = parseCardText(content, { source: rel, schemas });
 JSON.stringify([card.fields.status, card.rawBody.trim(), card.fields.error])
 => ["analyzed","",null]
@@ -339,7 +339,7 @@ source.pdf
 await box.cleanup();
 ```
 
-## `cb document reanalyze` re-extracts and preserves authored fields
+## `cb pdf reanalyze` re-extracts and preserves authored fields
 
 The card is re-extracted in place. `description` (and anything else an agent
 wrote) survives; the body, `docling`, and the page assets are replaced.
@@ -348,14 +348,14 @@ wrote) survives; the body, `docling`, and the page assets are replaced.
 const box = await makeTmpBox({ git: true });
 await importPdf(box, createFakeDocling({ markdown: "first pass", pageCount: 3 }));
 const dir = await sessionDir(box);
-const cardRel = `box/inbox/${dir}/source.document.card`;
+const cardRel = `box/inbox/${dir}/source.pdf.card`;
 
 // Stand in for an agent's downstream processing pass.
 await box.write(cardRel, (await box.read(cardRel)).replace("format: pdf", "format: pdf\ndescription: A utility bill"));
 
 const docling = createFakeDocling({ markdown: "second pass", pageCount: 1 });
 const { ctx } = createCollectorContext(box.root);
-const result = await runDocumentReanalyze(ctx, {
+const result = await runPdfReanalyze(ctx, {
   args: { card: cardRel, "force-ocr": true, languages: "en,de" },
   docling,
 });
@@ -400,13 +400,13 @@ await box.cleanup();
 ```ts
 const box = await makeTmpBox({ git: true });
 const { ctx } = createCollectorContext(box.root);
-const missing = await runDocumentReanalyze(ctx, { args: { card: "box/inbox/Nope.document.card" } });
+const missing = await runPdfReanalyze(ctx, { args: { card: "box/inbox/Nope.pdf.card" } });
 JSON.stringify([missing.success, missing.error])
-=> [false,"Card not found: box/inbox/Nope.document.card"]
+=> [false,"Card not found: box/inbox/Nope.pdf.card"]
 
-const wrongType = await runDocumentReanalyze(ctx, { args: { card: "box/inbox/Nope.memo.card" } });
+const wrongType = await runPdfReanalyze(ctx, { args: { card: "box/inbox/Nope.memo.card" } });
 wrongType.error
-=> Not a document card: box/inbox/Nope.memo.card
+=> Not a pdf card: box/inbox/Nope.memo.card
 ```
 
 The `card` argument is user-supplied, so it resolves through `shared/ref-path.ts`
@@ -415,23 +415,23 @@ path naming somewhere else entirely, is a clean refusal rather than a file read
 outside the box. Fail-closed — nothing is clamped back to the root.
 
 ```ts continue
-const outside = ["../outside/Secret.document.card", "box/../../outside/Secret.document.card", "/etc/Secret.document.card", "/tmp/Secret.document.card"];
-const escapes = await Promise.all(outside.map((card) => runDocumentReanalyze(ctx, { args: { card } })));
+const outside = ["../outside/Secret.pdf.card", "box/../../outside/Secret.pdf.card", "/etc/Secret.pdf.card", "/tmp/Secret.pdf.card"];
+const escapes = await Promise.all(outside.map((card) => runPdfReanalyze(ctx, { args: { card } })));
 escapes.map((r) => `${String(r.success)} ${r.error}`).join("\n")
 =>
-false Card path is not inside the box: ../outside/Secret.document.card
-false Card path is not inside the box: box/../../outside/Secret.document.card
-false Card path is not inside the box: /etc/Secret.document.card
-false Card path is not inside the box: /tmp/Secret.document.card
+false Card path is not inside the box: ../outside/Secret.pdf.card
+false Card path is not inside the box: box/../../outside/Secret.pdf.card
+false Card path is not inside the box: /etc/Secret.pdf.card
+false Card path is not inside the box: /tmp/Secret.pdf.card
 ```
 
 A `..` that stays inside the box is fine — it just normalizes, and the refusal
 that follows is about the card, not the path:
 
 ```ts continue
-const inside = await runDocumentReanalyze(ctx, { args: { card: "box/inbox/../inbox/Nope.document.card" } });
+const inside = await runPdfReanalyze(ctx, { args: { card: "box/inbox/../inbox/Nope.pdf.card" } });
 inside.error
-=> Card not found: box/inbox/Nope.document.card
+=> Card not found: box/inbox/Nope.pdf.card
 ```
 
 ```ts cleanup
@@ -452,7 +452,7 @@ const attachAbsDir = join(scratch, "attach");
 await mkdir(workDir, { recursive: true });
 await mkdir(attachAbsDir, { recursive: true });
 
-const tooMany = await extractDocument({
+const tooMany = await extractPdf({
   docling: createFakeDocling({ pageCount: MAX_EXTRACTION_ARTIFACTS + 1 }),
   sourcePath: join(scratch, "source.pdf"),
   attachAbsDir,
@@ -475,7 +475,7 @@ re-encode, not halfway through it:
 Right at the cap is still a normal extraction:
 
 ```ts continue
-const atCap = await extractDocument({
+const atCap = await extractPdf({
   docling: createFakeDocling({ pageCount: 3, figureCount: 2 }),
   sourcePath: join(scratch, "source.pdf"),
   attachAbsDir,

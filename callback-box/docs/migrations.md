@@ -347,6 +347,21 @@ annotation (`docs/implemented-plans/todo-annotation.md`); see
 `scripts/migrate/todo-list-to-doc-run.ts` (CLI driver) for the full mapping.
 Idempotent: a box with no `*.todo-list.card` files is a clean no-op.
 
+### `document-to-pdf` (rename — `document` → `pdf`)
+
+Registered at the end of `MIGRATIONS`. Renames every `*.document.card` to
+`*.pdf.card` (the type comes from the filename, so the rename is the type
+change — no frontmatter edit) and rewrites inbound `.document.card`
+references across every `.md`/`.card` file in the box. `document` collided
+with the unrelated `doc.card` type, and the pipeline only reads PDFs today,
+so the generic name (chosen to avoid a future rename — see
+`docs/plans/scanner-ingest.md`, Track 4) bought nothing. Modeled on
+`gsheet-rename.ts`: no XML variant exists to guard against (the type
+post-dates the XML→frontmatter migration), so it's a pure rename + ref
+rewrite, same shape as `gsheet-rename`. See
+`scripts/migrate/document-to-pdf.ts`. Idempotent: a box with no
+`*.document.card` is a clean no-op.
+
 ## See also
 
 - `docs/cards-as-markdown.md` — living reference for the YAML-frontmatter format these migrators target; `docs/implemented-plans/cards-as-markdown-rfc.md` for the design rationale

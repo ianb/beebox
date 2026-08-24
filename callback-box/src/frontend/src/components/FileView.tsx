@@ -415,15 +415,18 @@ export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer,
   if (mode === "companion") {
     // The surrounding panel provides the path+open-link header. Just show a
     // compact toggle row if there are alternates.
+    // Column flex with `min-h-full` so a renderer that wants to fill the pane
+    // (the PDF frame) can take the leftover height, while a taller renderer
+    // still grows past it and scrolls in the pane's own overflow-auto.
     return (
-      <div>
+      <div className="flex flex-col min-h-full">
         {renderers.length > 1 || isCardPath(data.path) ? (
-          <div className="flex items-center justify-end gap-1 px-3 py-2 border-b border-warm-200 print:hidden">
+          <div className="flex-shrink-0 flex items-center justify-end gap-1 px-3 py-2 border-b border-warm-200 print:hidden">
             <RendererToggle renderers={renderers} active={active} onSelect={selectForPath} compact />
             {isCardPath(data.path) ? <CardActions path={data.path} onTrashed={onClose} /> : null}
           </div>
         ) : null}
-        {body}
+        <div className="flex-1 min-h-0">{body}</div>
       </div>
     );
   }

@@ -47,7 +47,7 @@ import {
   sessionCommand,
   schedulerCommand,
   scanImportCommand,
-  documentCommand,
+  pdfCommand,
   uploadCommand,
   attachmentsCommand,
   lsCommand,
@@ -126,7 +126,7 @@ program.addCommand(finalizeCommand);
 program.addCommand(sessionCommand);
 program.addCommand(schedulerCommand);
 program.addCommand(scanImportCommand);
-program.addCommand(documentCommand);
+program.addCommand(pdfCommand);
 program.addCommand(uploadCommand);
 program.addCommand(attachmentsCommand);
 program.addCommand(lsCommand);

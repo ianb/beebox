@@ -1,13 +1,32 @@
 ---
 title: "PDFs get a bare iframe and PDF-derived `document` cards get no view at all — the extracted structure is never shown"
-workstream: unattached
+workstream: document-card-view
 area: callback-box
 needs: [design]
 labels: [ui, pdf, renderers]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder opening a school document from chat
+resolution: implemented
 ---
+
+> **Closed 2026-08-24** (branch `worktree-document-card-view`): built a real
+> `pdf.card` view (`PdfCardView` — extracted text, page strip, `?page=N`
+> addressing, status notices) and rewrote the PDF file renderer (`PdfFrame`
+> with an `<object>`-based render, Open/Download affordance, no more bare
+> `iframe`). The card type itself was renamed from `document` to `pdf` first
+> (see the linked naming issue). Verified live via `bin/browse` against this
+> worktree's test1 clone (browse page, Original toggle, companion pane,
+> mobile width, `?page` highlight, error banner) — not yet exercised with a
+> PDF inline in an actual chat message (doctest-covered only) or `?page=` on
+> the `/card/` route (tracked separately:
+> `issues/features/2026-08-24-pdf-card-page-addressing-gaps.md`).
+>
+> **Not addressed**: the "Related" note below about the unlabeled browse-view
+> icon in `FileView.tsx` — left open, already named in
+> `issues/features/2026-08-08-no-visible-search-or-home.md` ("the browse
+> sidebar exists but is only reachable via an unlabeled pop-out icon inside a
+> card panel"), so no new issue filed for it.
 
 > These PDF views are not at all good.
 
@@ -109,4 +128,4 @@ open-in-panel. The boxholder's reading of that page was that there was no way to
 get to browse at all, only the landmark menu's Recent files. Whether that is a
 labelling problem or a layout one is worth a look while in this area; it is the
 same family as
-[no visible search box and no home surface](2026-08-08-no-visible-search-or-home.md).
+[no visible search box and no home surface](../../features/2026-08-08-no-visible-search-or-home.md).
