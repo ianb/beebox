@@ -1,6 +1,6 @@
 ---
 title: "`.document.card` and `.doc.card` are indistinguishable names for unrelated types"
-workstream: unattached
+workstream: document-card-view
 area: callback-box
 needs: [decision]
 labels: [cards, naming, schemas]

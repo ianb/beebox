@@ -1,6 +1,6 @@
 ---
 title: "PDFs get a bare iframe and PDF-derived `document` cards get no view at all — the extracted structure is never shown"
-workstream: unattached
+workstream: document-card-view
 area: callback-box
 needs: [design]
 labels: [ui, pdf, renderers]
