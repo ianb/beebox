@@ -8,7 +8,7 @@ procedure runner so we don't exercise the live procedure engine.
 See `docs/triage.md` §Handle (stage 3) and `src/core/handle.ts`.
 
 ```ts setup
-import { runHandle, TRIAGE_ITEMS_ENV } from "../../src/core/handle.js";
+import { runHandle, formatHandlingLines, TRIAGE_ITEMS_ENV } from "../../src/core/handle.js";
 import { createCollectorContext } from "../../src/core/commands/index.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 ```
@@ -41,7 +41,7 @@ const results = await runHandle({
   options: {
     runProcedure: async ({ procedurePath, triageItems }) => {
       calls.push({ procedurePath, triageItems });
-      return { success: true };
+      return { outcome: "completed" };
     },
   },
 });
@@ -95,7 +95,7 @@ await runHandle({
   options: {
     runProcedure: async ({ procedurePath }) => {
       calls.push(procedurePath);
-      return { success: true };
+      return { outcome: "completed" };
     },
   },
 });
@@ -135,7 +135,7 @@ const results = await runHandle({
   options: {
     runProcedure: async () => {
       called = true;
-      return { success: true };
+      return { outcome: "completed" };
     },
   },
 });
@@ -175,7 +175,7 @@ await runHandle({
   options: {
     runProcedure: async ({ triageItems }) => {
       seen.push(...triageItems);
-      return { success: true };
+      return { outcome: "completed" };
     },
   },
 });
@@ -209,7 +209,7 @@ await box.write("box/inbox/triaged/notes/Item.memo.card", "<memo/>");
 const { ctx } = createCollectorContext(box.root);
 const results = await runHandle({
   ctx,
-  options: { runProcedure: async () => ({ success: true }) },
+  options: { runProcedure: async () => ({ outcome: "completed" }) },
 });
 
 JSON.stringify(results.map((r) => ({ category: r.category, outcome: r.outcome })))
@@ -233,13 +233,112 @@ const results = await runHandle({
   options: {
     runProcedure: async () => {
       called = true;
-      return { success: true };
+      return { outcome: "completed" };
     },
   },
 });
 
 JSON.stringify({ called, buckets: results.length })
 => {"called":false,"buckets":0}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## An inconclusive handler run is reported as inconclusive, not as done
+
+A handler whose work completed but whose review reached no verdict is neither
+`ran` nor `procedure-failed`. The bucket outcome says so, and the report line
+names the reason and says the work itself completed — the misreading this
+distinction exists to prevent.
+
+```ts
+const box = await makeTmpBox();
+await box.write(
+  "store/recipes/Recipes.landmark.card",
+  `---
+navigation:
+  label: Recipes
+  symbol: 🍳
+destinations:
+  - for: [triage]
+    procedure:
+      ref: archive.procedure.card
+---
+`,
+);
+await box.write("box/inbox/triaged/recipes/Bread.memo.card", "<memo/>");
+
+const { ctx } = createCollectorContext(box.root);
+const results = await runHandle({
+  ctx,
+  options: {
+    runProcedure: async () => ({
+      outcome: "inconclusive",
+      detail: "review of step archive reached max turns (8)",
+    }),
+  },
+});
+
+JSON.stringify(results.map((r) => ({ outcome: r.outcome, detail: r.detail })), null, 2)
+=>
+[
+  {
+    "outcome": "procedure-inconclusive",
+    "detail": "review of step archive reached max turns (8)"
+  }
+]
+```
+
+The report line a reader sees:
+
+```ts continue
+JSON.stringify(formatHandlingLines(results[0]), null, 2)
+=>
+[
+  "  procedure-inconclusive\trecipes (1 item) [store/recipes/archive.procedure.card]",
+  "    └─ inconclusive — review of step archive reached max turns (8); work completed"
+]
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A failed handler run still reports its error
+
+```ts
+const box = await makeTmpBox();
+await box.write(
+  "store/recipes/Recipes.landmark.card",
+  `---
+navigation:
+  label: Recipes
+  symbol: 🍳
+destinations:
+  - for: [triage]
+    procedure:
+      ref: archive.procedure.card
+---
+`,
+);
+await box.write("box/inbox/triaged/recipes/Bread.memo.card", "<memo/>");
+
+const { ctx } = createCollectorContext(box.root);
+const results = await runHandle({
+  ctx,
+  options: {
+    runProcedure: async () => ({ outcome: "failed", detail: "step archive failed" }),
+  },
+});
+
+JSON.stringify(formatHandlingLines(results[0]), null, 2)
+=>
+[
+  "  procedure-failed\trecipes (1 item) [store/recipes/archive.procedure.card]",
+  "    └─ step archive failed"
+]
 ```
 
 ```ts cleanup

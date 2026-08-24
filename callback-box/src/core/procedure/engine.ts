@@ -13,9 +13,9 @@ import { parseProcedureRun } from "../../schemas/procedure-run.js";
 import { stageAll, commit, withBoxGitLock } from "../../lib/git.js";
 import { fmt } from "../../lib/format.js";
 import { getBoxTime, getBoxTimeISO } from "../../lib/time.js";
-import { okVoid, err, type Result } from "../../lib/result.js";
+import { ok, err, type Result } from "../../lib/result.js";
 import type { CommandContext } from "../command-runner.js";
-import { type ProcedureOptions, type ParsedProcedure, type ProcedureError } from "./engine-types.js";
+import { type ProcedureOptions, type ParsedProcedure, type ProcedureError, type ProcedureOutcome } from "./engine-types.js";
 import { loadProcedureDefinition } from "./engine-parse.js";
 import { buildInitialRunCard, updateRunCardStatus } from "./engine-run-card.js";
 import { runSteps, finalizeRun } from "./engine-orchestrate.js";
@@ -23,7 +23,12 @@ import { resolveRunDir } from "./engine-query.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
 export type { AgentFactory } from "./engine-types.js";
-export type { ProcedureOptions, ProcedureError } from "./engine-types.js";
+export type {
+  ProcedureOptions,
+  ProcedureError,
+  ProcedureOutcome,
+  ProcedureInconclusive,
+} from "./engine-types.js";
 
 /**
  * Parameters for startProcedure
@@ -89,7 +94,7 @@ function printDryRun(args: {
  */
 export async function startProcedure(
   params: StartProcedureParams
-): Promise<Result<void, ProcedureError>> {
+): Promise<Result<ProcedureOutcome, ProcedureError>> {
   const { ctx, procedureNameOrPath, options = {} } = params;
   const { boxRoot } = ctx;
 
@@ -111,7 +116,7 @@ export async function startProcedure(
 
   if (options.dryRun) {
     printDryRun({ ctx, procedure, directive: options.directive });
-    return okVoid;
+    return ok({ status: "completed", procedure: procedureName, inconclusive: [] });
   }
 
   // Validate --step if provided
@@ -170,7 +175,7 @@ export async function startProcedure(
   ctx.writeLine("");
 
   // Execute steps (optionally filtered to a single step)
-  const { allSucceeded, failedStepId, failedStepError } = await runSteps({
+  const { allSucceeded, failedStepId, failedStepError, inconclusive } = await runSteps({
     ctx,
     boxRoot,
     procedure,
@@ -187,7 +192,7 @@ export async function startProcedure(
     procedure,
     runDir,
     runCardPath,
-    result: { allSucceeded, failedStepId, failedStepError },
+    result: { allSucceeded, failedStepId, failedStepError, inconclusive },
     materialized,
   });
 }
@@ -201,7 +206,7 @@ export async function resumeProcedure(params: {
   ctx: CommandContext;
   runDir?: string;
   options?: ProcedureOptions;
-}): Promise<Result<void, ProcedureError>> {
+}): Promise<Result<ProcedureOutcome, ProcedureError>> {
   const { ctx, options = {} } = params;
   const { boxRoot } = ctx;
 
@@ -224,7 +229,7 @@ export async function resumeProcedure(params: {
   const relRunDir = path.relative(boxRoot, runDir);
   if (run.status === "completed") {
     ctx.writeLine(fmt.ok(`Run already completed: ${relRunDir} — nothing to resume`));
-    return okVoid;
+    return ok({ status: "completed", procedure: run.procedure, inconclusive: [] });
   }
 
   // Resume index: the first step that is neither completed nor skipped (both
@@ -233,7 +238,7 @@ export async function resumeProcedure(params: {
   const resumeStep = run.steps.find((s) => s.status !== "completed" && s.status !== "skipped");
   if (resumeStep === undefined) {
     ctx.writeLine(fmt.ok(`All steps already completed: ${relRunDir} — nothing to resume`));
-    return okVoid;
+    return ok({ status: "completed", procedure: run.procedure, inconclusive: [] });
   }
 
   // Load the procedure definition the run was created from.
@@ -272,7 +277,7 @@ export async function resumeProcedure(params: {
     resumeOptions.directive = run.directive;
   }
 
-  const { allSucceeded, failedStepId, failedStepError } = await runSteps({
+  const { allSucceeded, failedStepId, failedStepError, inconclusive } = await runSteps({
     ctx,
     boxRoot,
     procedure,
@@ -289,7 +294,7 @@ export async function resumeProcedure(params: {
     procedure,
     runDir,
     runCardPath,
-    result: { allSucceeded, failedStepId, failedStepError },
+    result: { allSucceeded, failedStepId, failedStepError, inconclusive },
     materialized: true,
   });
 }

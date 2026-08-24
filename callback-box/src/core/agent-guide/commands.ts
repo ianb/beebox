@@ -61,7 +61,9 @@ appear here so you recognize them in \`git log\` and health output):
 
 - \`cb reactor\` — process pending jobs in \`box/jobs/\`.
 - \`cb finalize\` — flush outbound cards in \`box/output/\`.
-- \`cb health\` — scheduled-task health (failing / overdue / blocked tasks +
-  scheduler liveness).
+- \`cb health\` — scheduled-task health (failing / overdue / blocked /
+  inconclusive tasks + scheduler liveness). \`inconclusive\` means the last run
+  did its work but its check never reached a verdict — unknown, not broken; do
+  not redo the work on that basis.
 `;
 }

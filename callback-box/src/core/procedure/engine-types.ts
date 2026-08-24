@@ -9,6 +9,7 @@ import { type createAgent as realCreateAgent } from "../agent/index.js";
 import type { ProcedureModelName } from "../../shared/agent-models.js";
 import type { RunStepResult, ProcedureRunFields } from "../../schemas/procedure-run.js";
 import type { ProcedureStepDef } from "../../schemas/procedure.js";
+import type { InconclusiveReason } from "../../shared/inconclusive.js";
 
 // Status/severity vocabularies, derived from the card schemas' z.enums so the
 // engine's in-memory shapes can't drift from what validates on disk (Track B).
@@ -18,7 +19,7 @@ export type RunStatus = ProcedureRunFields["status"];
 export type StepStatus = RunStepResult["status"];
 /** A precheck phase's outcome (pass/fail/skip). */
 export type PrecheckStatus = NonNullable<RunStepResult["precheck"]>["status"];
-/** A validate phase's outcome (pass/fail/warn). */
+/** A validate phase's outcome (pass/fail/warn/inconclusive). */
 export type ValidateStatus = NonNullable<RunStepResult["validate"]>["status"];
 /** How a failing validation phase gates the step (warn/review/abort). */
 export type ProcedureSeverity = NonNullable<NonNullable<ProcedureStepDef["validate"]>["severity"]>;
@@ -58,8 +59,11 @@ export interface ProcedureError {
  */
 const RUN_STATUS_TRANSITIONS: Record<RunStatus, readonly RunStatus[]> = {
   pending: ["running"],
-  running: ["running", "completed", "failed"],
+  running: ["running", "completed", "failed", "inconclusive"],
   completed: [],
+  // An inconclusive run's work is done but unjudged; resuming re-opens it the
+  // same way a failed run re-opens, so a later run can try for a verdict.
+  inconclusive: ["running"],
   failed: ["running"],
 };
 
@@ -114,6 +118,31 @@ export interface ParsedProcedure {
   runExpiry?: string;
   /** Override for failed-run expiry: duration ("180d") or "never" */
   failedRunExpiry?: string;
+}
+
+/**
+ * One step whose work completed but whose review never reached a verdict.
+ * Carried out of the engine so the CLI can report the non-answer as a
+ * non-answer instead of letting it read as success or as failure.
+ */
+export interface ProcedureInconclusive {
+  stepId: string;
+  reason: InconclusiveReason;
+  /** Human phrase for the reason, e.g. "reached max turns (8)". */
+  detail: string;
+}
+
+/**
+ * How a run that did NOT fail ended. `completed` is the ordinary success;
+ * `inconclusive` means every step's work succeeded but at least one review
+ * produced no verdict. A failed run is the `Result` error arm, not this.
+ */
+export interface ProcedureOutcome {
+  status: "completed" | "inconclusive";
+  /** The procedure this outcome describes, for diagnostics that name it. */
+  procedure: string;
+  /** Non-empty exactly when `status` is "inconclusive". */
+  inconclusive: ProcedureInconclusive[];
 }
 
 export interface StepUpdate {

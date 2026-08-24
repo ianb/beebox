@@ -118,7 +118,13 @@ export async function procedureStatus(
         ctx.writeLine(fmt.fail(`      ${step.run.error}`));
       }
       if (step.validate?.error !== undefined) {
-        ctx.writeLine(fmt.fail(`      ${step.validate.error}`));
+        // An inconclusive check produced no verdict — say that, in the
+        // warning voice, instead of printing it as a failure.
+        ctx.writeLine(
+          step.validate.status === "inconclusive"
+            ? fmt.warn(`      ? ${step.validate.error}`)
+            : fmt.fail(`      ${step.validate.error}`)
+        );
       }
     }
 

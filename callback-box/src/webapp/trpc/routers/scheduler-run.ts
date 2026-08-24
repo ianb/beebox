@@ -70,8 +70,14 @@ interface RunOptions {
 /**
  * Acquire the lock, execute the script, record the timed outcome, and release.
  * Returns the measured duration on success; rethrows as TRPCError on failure.
+ *
+ * An inconclusive run is NOT a failure: its work completed, only its check
+ * reached no verdict. It returns successfully, carrying the diagnostic in
+ * `inconclusive` so the caller can say so rather than showing a red error.
  */
-export async function runScheduledScript(options: RunOptions): Promise<{ success: true; durationMs: number }> {
+export async function runScheduledScript(
+  options: RunOptions,
+): Promise<{ success: true; durationMs: number; inconclusive?: string }> {
   const { boxRoot, name, parsed } = options;
   const now = new Date();
   const state = await loadScriptState(boxRoot, name);
@@ -115,6 +121,10 @@ export async function runScheduledScript(options: RunOptions): Promise<{ success
       windowMs: parsed.budget?.windowMs ?? DEFAULT_RUN_WINDOW_MS, now,
     });
     await saveScriptState({ boxRoot, scriptName: name, state });
+
+    if (outcome.result === "inconclusive") {
+      return { success: true, durationMs, inconclusive: outcome.error };
+    }
 
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",

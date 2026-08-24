@@ -49,6 +49,21 @@ observed.
 So a *thread that never started* is reported as a *turn that failed*, with a
 TypeError as its explanation.
 
+### Correction (2026-08-24): the mechanism above is wrong
+
+`codex.startThread()` is synchronous and always returns a `Thread`
+(`@openai/codex-sdk` `dist/index.js`, `Codex.startThread`), so `this.thread`
+cannot be `undefined` and the getter cannot throw. The origin of the observed
+`TypeError` is still unknown. Both catch paths in `services/codex-chat.ts` — the
+initialization chain and the per-turn chain — produce the `num_turns=0
+duration_ms=0` shape, so the frame alone did not say which one threw.
+
+The reporting half of this issue is fixed: the two paths now say which phase
+failed, the result frame carries a `phase` field, and `[codex-chat]` logs the
+full stack at the throw site. The retry decision and the construction-rate
+question moved to
+[codex session start is intermittent](2026-08-24-codex-thread-start-failure-is-intermittent.md).
+
 ## It is intermittent, which rules out the obvious causes
 
 Observed on one box within twelve minutes — successes and failures alternating

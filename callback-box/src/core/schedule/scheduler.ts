@@ -75,6 +75,8 @@ export interface LogEntry {
     ran: number;
     skipped: number;
     errors: number;
+    /** Runs whose work completed but whose check reached no verdict. */
+    inconclusive: number;
     scripts: TickResult["scripts"];
   };
   error?: string;
@@ -256,6 +258,7 @@ export async function runScheduler(options?: SchedulerOptions): Promise<never> {
             ran: result.ranCount,
             skipped: result.skipCount,
             errors: result.errorCount,
+            inconclusive: result.inconclusiveCount,
             scripts: result.scripts,
           },
         });

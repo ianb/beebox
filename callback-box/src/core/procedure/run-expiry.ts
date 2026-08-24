@@ -60,7 +60,9 @@ export function validateRunExpiry(attr: string, value: string): void {
  * Parameters for computeRunExpires
  */
 export interface ComputeRunExpiresParams {
-  status: "completed" | "failed";
+  /** An `inconclusive` run keeps the longer (failed) retention: an unjudged
+   *  run is exactly the kind someone comes back to look at. */
+  status: "completed" | "failed" | "inconclusive";
   completedAt: string;
   procedure: ParsedProcedure;
 }

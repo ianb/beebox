@@ -25,9 +25,17 @@ export const RunStepRun = z.object({
   "git-ref": z.string().optional(),
 });
 
-/** Validate phase result. */
+/**
+ * Validate phase result.
+ *
+ * `inconclusive` is the non-verdict: the checker never decided (its review
+ * reached the turn cap, timed out, or returned nothing parseable). It is
+ * neither a pass nor a fail, and it never gates the step on its own — the
+ * work may be fine and nobody knows. `error` carries the concrete reason.
+ * Additive to the enum: run cards written before it still load.
+ */
 export const RunStepValidate = z.object({
-  status: z.enum(["pass", "fail", "warn"]),
+  status: z.enum(["pass", "fail", "warn", "inconclusive"]),
   stdout: z.string().optional(),
   review: z.string().optional(),
   error: z.string().optional(),
@@ -46,7 +54,7 @@ export const RunStep = z.object({
 
 const procedureRunFields = {
   procedure: z.string(),
-  status: z.enum(["pending", "running", "completed", "failed"]),
+  status: z.enum(["pending", "running", "completed", "failed", "inconclusive"]),
   "started-at": Iso,
   "completed-at": Iso.optional(),
   directive: z.string().optional(),
@@ -63,9 +71,11 @@ export const ProcedureRunSchema: CardSchema = cardSchema("procedure-run", {
 
 This card is managed by the procedure engine. Agents should read it to understand execution progress but should NOT modify it directly — with one exception: the \`expires\` field.
 
-Check the root \`status\` field for overall progress: pending → running → completed/failed. Each entry in \`steps\` also has its own status.
+Check the root \`status\` field for overall progress: pending → running → completed/failed/inconclusive. Each entry in \`steps\` also has its own status.
 
-Step statuses: pending → running → completed/skipped/failed. Look at a step's \`precheck.status\` to see why it was skipped, \`run.error\` for run-agent or shell failures, and \`validate.error\` / \`validate.status\` for validation failures.
+\`inconclusive\` means every step's work completed but at least one \`validate\` check never reached a verdict (its review ran out of turns, timed out, or returned nothing parseable). The work is unjudged, not wrong — do not redo it on that basis; read the step's \`validate.error\` for the reason.
+
+Step statuses: pending → running → completed/skipped/failed. Look at a step's \`precheck.status\` to see why it was skipped, \`run.error\` for run-agent or shell failures, and \`validate.error\` / \`validate.status\` for validation failures (\`validate.status: inconclusive\` is a non-verdict, not a failure).
 
 The \`expires\` field (stamped by the engine at completion) is when \`cb procedure gc\` may delete this run's directory. Run dirs are a recent cache — git history is the archive. To retain a specific run, set \`expires: never\` or push the date out.
 

@@ -9,8 +9,15 @@ import { registerCommand, parseCommandArgs, type CommandResult } from "../comman
 import { startProcedure, resumeProcedure } from "../procedure/engine.js";
 import { listProcedures, procedureStatus } from "../procedure/engine-query.js";
 import { gcProcedureRuns } from "../procedure/gc.js";
-import type { ProcedureOptions, ProcedureError } from "../procedure/engine.js";
+import type {
+  ProcedureOptions,
+  ProcedureError,
+  ProcedureOutcome,
+  ProcedureInconclusive,
+} from "../procedure/engine.js";
 import type { Result } from "../../lib/result.js";
+import { isRecord } from "../../lib/is-record.js";
+import { type InconclusiveReason } from "../../shared/inconclusive.js";
 
 /**
  * Adapt the engine's typed {@link Result} into the command-runner's
@@ -22,6 +29,42 @@ function toCommandResult<T>(result: Result<T, ProcedureError>): CommandResult {
     return { success: false, error: result.error.message };
   }
   return result.value === undefined ? { success: true } : { success: true, data: result.value };
+}
+
+const INCONCLUSIVE_REASONS: readonly InconclusiveReason[] = [
+  "max-turns",
+  "max-budget",
+  "timeout",
+  "no-structured-output",
+  "unknown",
+];
+
+function toInconclusive(value: unknown): ProcedureInconclusive | null {
+  if (!isRecord(value)) return null;
+  const { stepId, reason, detail } = value;
+  if (typeof stepId !== "string" || typeof detail !== "string") return null;
+  const known = INCONCLUSIVE_REASONS.find((r) => r === reason);
+  return known === undefined ? null : { stepId, reason: known, detail };
+}
+
+/**
+ * Read a procedure command's boundary `data` back as the engine outcome.
+ * The command-runner boundary is untyped (`data?: unknown`), so the outcome
+ * is re-validated here rather than asserted — the CLI keys its exit code on
+ * it, and a silently mis-shaped value would exit 0 on an unjudged run.
+ */
+export function procedureOutcome(result: CommandResult): ProcedureOutcome | null {
+  const data = result.data;
+  if (!isRecord(data)) return null;
+  const status = data["status"];
+  if (status !== "completed" && status !== "inconclusive") return null;
+  const procedure = data["procedure"];
+  if (typeof procedure !== "string") return null;
+  const raw = data["inconclusive"];
+  const inconclusive = Array.isArray(raw)
+    ? raw.map(toInconclusive).filter((i): i is ProcedureInconclusive => i !== null)
+    : [];
+  return { status, procedure, inconclusive };
 }
 
 registerCommand({

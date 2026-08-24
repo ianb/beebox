@@ -7,7 +7,7 @@
  */
 
 import { registerCommand } from "../command-runner.js";
-import { runHandle } from "../handle.js";
+import { runHandle, formatHandlingLines } from "../handle.js";
 
 registerCommand({
   name: "handle",
@@ -32,10 +32,7 @@ registerCommand({
       return { success: true, data: results };
     }
     for (const result of results) {
-      const itemCount = result.items.length;
-      const procDetail = result.procedurePath ? ` [${result.procedurePath}]` : "";
-      ctx.writeLine(`  ${result.outcome}\t${result.category} (${itemCount} item${itemCount === 1 ? "" : "s"})${procDetail}`);
-      if (result.error) ctx.writeLine(`    └─ ${result.error}`);
+      for (const line of formatHandlingLines(result)) ctx.writeLine(line);
     }
     return { success: true, data: results };
   },

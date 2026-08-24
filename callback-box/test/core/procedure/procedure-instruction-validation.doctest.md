@@ -10,6 +10,8 @@ import { startProcedure } from "../../../src/core/procedure/engine.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { createFakeAgent } from "../../helpers/fake-agent.js";
 import { parseProcedureRun } from "../../../src/schemas/procedure-run.js";
+import { procedureOutcome } from "../../../src/core/commands/procedure.js";
+import { formatInconclusiveLine } from "../../../src/shared/inconclusive.js";
 ```
 
 ## Passing instruction + the judge sees the whole multi-commit diff
@@ -209,6 +211,107 @@ success: true
 after.txt exists: true
 lax step: completed
 validate status: warn
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## An inconclusive judge under `abort` does NOT fail the step
+
+The judge never reaches a verdict (it exhausts its turn cap on both attempts).
+`severity: abort` hard-gates a *failing* check — and a check that never decided
+has not failed. So the work stands, the following step runs, and the run's
+terminal status is `inconclusive`: honest about what is and isn't known, rather
+than reporting a non-answer as a verdict in either direction.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("config/procedures/unjudged.procedure.card", `---
+name: unjudged
+description: The judge runs out of turns
+steps:
+  - id: checked
+    description: Work succeeds, review never decides
+    run:
+      agents:
+        - prompt: Do work.
+    validate:
+      severity: abort
+      instructions:
+        - The work must be complete.
+  - id: after
+    description: Runs anyway — nothing failed
+    run:
+      shells:
+        - |
+          echo "ran" > box/output/after.txt
+---
+`);
+await box.write("box/output/.gitkeep", "");
+box.commitAll("Add unjudged procedure");
+
+let workAgentRuns = 0;
+const createAgent = (opts) => createFakeAgent({
+  name: opts.name,
+  act: async () => {
+    workAgentRuns++;
+    await box.write("box/output/done.txt", "all done");
+    box.commitAll("agent work");
+    return { success: true };
+  },
+  structuredResult: () => null,
+  structuredFailure: { error: "error_max_turns" },
+});
+
+const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
+const result = await startProcedure({
+  ctx,
+  procedureNameOrPath: "unjudged",
+  options: { createAgent },
+});
+print(`success: ${result.ok}`);
+print(`run status: ${result.value.status}`);
+print(`inconclusive step: ${result.value.inconclusive[0].stepId}`);
+print(`reason: ${result.value.inconclusive[0].reason}`);
+print(`detail: ${result.value.inconclusive[0].detail}`);
+
+// The work agent ran once. Redoing finished work because the CHECKER ran out
+// of budget is the exact confusion this state exists to end.
+print(`work agent invocations: ${workAgentRuns}`);
+
+const files = await box.list("box/output");
+print(`after.txt (second step) exists: ${files.includes("after.txt")}`);
+
+const runs = await box.list("procedure/runs");
+const runDir = runs.split("\n").find(f => f.includes("unjudged_"));
+const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
+print(`card run status: ${run.status}`);
+print(`checked step: ${run.steps[0].status}`);
+print(`validate status: ${run.steps[0].validate.status}`);
+print(`validate error: ${run.steps[0].validate.error}`);
+
+// The CLI re-validates the outcome across the untyped command-runner
+// boundary before keying its exit code on it.
+const crossed = procedureOutcome({ success: true, data: result.value });
+print(formatInconclusiveLine({
+  procedure: crossed.procedure,
+  stepId: crossed.inconclusive[0].stepId,
+  detail: crossed.inconclusive[0].detail,
+}));
+=>
+success: true
+run status: inconclusive
+inconclusive step: checked
+reason: max-turns
+detail: reached max turns (16)
+work agent invocations: 1
+after.txt (second step) exists: true
+card run status: inconclusive
+checked step: completed
+validate status: inconclusive
+validate error: Review reached max turns (16) — the work was not judged.
+Inconclusive: procedure unjudged — review of step checked reached max turns (16); work completed
 ```
 
 ```ts cleanup

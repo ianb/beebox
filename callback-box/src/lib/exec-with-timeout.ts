@@ -43,9 +43,14 @@ export class CommandTimedOutError extends CommandError {
 }
 
 export class CommandFailedError extends CommandError {
-  constructor(message: string, timing: ExecTiming) {
-    super(message, timing);
+  /** The child's exit code, or null when it died on a signal. Callers that
+   *  distinguish exit statuses (an inconclusive run exits 2, not 1) read it
+   *  from here rather than re-parsing the message. */
+  readonly exitCode: number | null;
+  constructor(message: string, params: { timing: ExecTiming; exitCode: number | null }) {
+    super(message, params.timing);
     this.name = "CommandFailedError";
+    this.exitCode = params.exitCode;
   }
 }
 
@@ -136,7 +141,7 @@ export function execWithTimeout(
         const base = `Command failed with exit code ${String(code)}`;
         reject(new CommandFailedError(
           appendOutputTail(base, { stdout: stdoutBuf, stderr: stderrBuf }),
-          timing,
+          { timing, exitCode: code },
         ));
       }
     });

@@ -56,7 +56,23 @@ import { errnoCode } from "../lib/error-guards.js";
 import { isRecord } from "./card-io.js";
 
 const VERSIONS_FILE = "config/template-versions.json";
-const TEMPLATE_UPDATES_DIR = "config/_template-updates";
+/** Where a parked update is mirrored, box-relative. */
+export const TEMPLATE_UPDATES_DIR = "config/_template-updates";
+
+/**
+ * The one sentence that tells a boxholder what to do about a parked update.
+ * Shared by every surface that reports them (`cb status`, the `template-updates`
+ * health check) so the instruction can't drift between them — a parked update
+ * that says nothing about how to resolve it is what let five upstream fixes sit
+ * unread (issues/bugs/2026-08-24-parked-template-updates-are-invisible-in-health.md).
+ */
+export const PARKED_TEMPLATE_RESOLUTION =
+  `Accept one by copying ${TEMPLATE_UPDATES_DIR}/<path> over <path>, or discard the parked copy.`;
+
+/** The parked mirror's box-relative path for an original box-relative path. */
+export function parkedUpdatePath(relPath: string): string {
+  return `${TEMPLATE_UPDATES_DIR}/${relPath}`;
+}
 
 /**
  * Box-relative paths that callback-box owns as template output (the `install*`

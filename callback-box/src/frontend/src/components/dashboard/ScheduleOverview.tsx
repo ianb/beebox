@@ -12,7 +12,7 @@ import { InlineAction } from "../ui/InlineAction";
 import { Pre } from "../ui/Pre";
 import { Toggle } from "../ui/Toggle";
 import { VisuallyHidden } from "../ui/VisuallyHidden";
-import { conciseScheduleError } from "@shared/schedule-error";
+import { ScheduleStatusIndicator } from "./ScheduleStatusIndicator";
 
 type ScheduleInfo = RouterOutput["scheduler"]["schedules"]["schedules"][number];
 type SchedulerLogEntry = RouterOutput["scheduler"]["log"]["entries"][number];
@@ -144,7 +144,7 @@ function ScheduleRow({ s }: { s: ScheduleInfo }) {
           ) : s.running ? (
             <RunningIndicator running={s.running} />
           ) : (
-            <StatusIndicator lastResult={s.lastResult} lastError={s.lastError} onToggleError={() => setShowError(!showError)} />
+            <ScheduleStatusIndicator lastResult={s.lastResult} lastError={s.lastError} onToggleError={() => setShowError(!showError)} />
           )}
         </td>
         <td className="py-2">
@@ -199,38 +199,6 @@ function RunningIndicator({ running }: { running: { startedAt: string; triggered
       running ({elapsed})
     </span>
   );
-}
-
-function StatusIndicator({ lastResult, lastError, onToggleError }: { lastResult: "success" | "failure" | "deferred" | null; lastError: string | null; onToggleError?: () => void }) {
-  const errorSummary = lastError === null ? null : conciseScheduleError(lastError);
-  if (lastResult === "success") {
-    return <span className="text-success text-xs">&#10003;</span>;
-  }
-  if (lastResult === "deferred") {
-    return (
-      <InlineAction
-        intent="subtle"
-        onClick={() => { if (onToggleError) onToggleError(); }}
-        title={lastError ? "Click to expand detail" : undefined}
-        className="text-xs text-left"
-      >
-        &#9203; {errorSummary ? <span className="text-warm-600">{errorSummary.substring(0, 60)}&#8230;</span> : null}
-      </InlineAction>
-    );
-  }
-  if (lastResult === "failure") {
-    return (
-      <InlineAction
-        intent="danger"
-        onClick={() => { if (onToggleError) onToggleError(); }}
-        title={lastError ? "Click to expand error" : undefined}
-        className="text-xs text-left"
-      >
-        &#10007; {errorSummary ? <span className="text-warm-600">{errorSummary.substring(0, 60)}&#8230;</span> : null}
-      </InlineAction>
-    );
-  }
-  return <span className="text-warm-500 text-xs">&mdash;</span>;
 }
 
 function TickEntry({ tick }: { tick: SchedulerLogEntry }) {

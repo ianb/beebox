@@ -33,6 +33,7 @@ import {
 } from "../../lib/exec-with-timeout.js";
 import { parseCardName } from "../../lib/paths.js";
 import { resolveRefPath } from "../../shared/ref-path.js";
+import { scheduleOutcomeLine } from "../../shared/schedule-error.js";
 import { getDefaultTemplate } from "../../schemas/templates.js";
 import { buildToolingScriptEnv } from "../../core/script-env.js";
 import {
@@ -159,7 +160,7 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
       const outcome = await classifyScheduleFailure({ boxRoot, runStartedAt: scriptStartedAt, error: err });
       recordOutcome(state, { result: outcome.result, error: outcome.error, durationMs, sleepAffected, windowMs, now });
       await saveScriptState({ boxRoot, scriptName, state });
-      console.error(`  ${outcome.result === "deferred" ? "Deferred" : "Failed"}: ${outcome.error}`);
+      console.error(`  ${scheduleOutcomeLine(outcome)}`);
     } finally {
       await releaseScriptLock({ boxRoot, scriptName });
     }
