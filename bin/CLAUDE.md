@@ -301,7 +301,12 @@ through `bin/workstreams agent-liveness` and spares an agent-browser on
 - `bin/workstreams create <name> [--base-ref <ref>] [--box-ref <ref>]` — create
   or re-attach (idempotent); prints the path on stdout, logs on stderr. A
   recorded `keep/*` box ref restores the isolated test1 clone during a culled
-  workstream's recreation.
+  workstream's recreation. Concurrent creates are supported: Git attachment
+  queues briefly per repository, same-name callers wait for complete setup,
+  and different-name installs continue in parallel. This guarantee covers the
+  managed lifecycle commands; do not mix a concurrent create with Claude
+  Code's native worktree removal, whose Git mutation happens outside repo
+  tooling (the WorktreeRemove adapter still protects same-name satellites).
 - `bin/workstreams remove <name> [--force] [--keep-branch] [--dry-run]`
 - `bin/workstreams focus <name>` — focus the recorded live Terminal tab
 - `bin/workstreams close <name> [--force]` — close a merged, clean live tab;

@@ -34,4 +34,4 @@ Doctests cover token supersession, expiry, setup and automation failure,
 process precedence, routing, list projection, retry/refusal behavior, resident
 UI controls, and process cleanup.
 
-Related but distinct: [the concurrent creation race](../../bugs/2026-08-20-concurrent-workstream-launches-race.md).
+Related but distinct: [the concurrent creation race](2026-08-20-concurrent-workstream-launches-race.md).

@@ -98,10 +98,10 @@ pi_repo_valid() {
 PI_LOCK=""
 pi_lock() {
   PI_LOCK="$PI_REPO/.git/private-issues.lock"
-  local tries=0 owner now mtime
+  local tries=0 max_tries="${PRIVATE_ISSUES_LOCK_MAX_TRIES:-600}" owner now mtime
   while ! mkdir "$PI_LOCK" 2>/dev/null; do
     tries=$((tries + 1))
-    if [ "$tries" -gt 50 ]; then
+    if [ "$tries" -gt "$max_tries" ]; then
       owner=$(cat "$PI_LOCK/pid" 2>/dev/null || true)
       if [ -n "$owner" ] && ! kill -0 "$owner" 2>/dev/null; then
         log "taking over lock from dead owner (pid $owner)"

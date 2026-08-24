@@ -36,6 +36,8 @@
 . "$(dirname "${BASH_SOURCE[0]}")/session-registry.sh"
 # shellcheck source=exhibits-store.sh
 . "$(dirname "${BASH_SOURCE[0]}")/exhibits-store.sh"
+# shellcheck source=worktree-git-lock.sh
+. "$(dirname "${BASH_SOURCE[0]}")/worktree-git-lock.sh"
 if ! wt_paths_init "$(dirname "${BASH_SOURCE[0]}")/.."; then
   # Leave every derived location empty rather than half-set: `cd ""` and
   # `[ -d "" ]` both fail, so each destructive step declines on its own.
@@ -469,7 +471,7 @@ wt_trash_reap() {
   # An unmatched glob stays literal; nothing to reap.
   [ -e "${entries[0]}" ] || return 0
   nohup sh -c 'for p in "$@"; do chmod -R u+w "$p" 2>/dev/null || true; rm -rf "$p"; done' \
-    sh "${entries[@]}" >/dev/null 2>&1 &
+    sh "${entries[@]}" 198>&- >/dev/null 2>&1 &
   disown 2>/dev/null || true
   return 0
 }
@@ -492,7 +494,7 @@ wt_remove_private_issues() {
   return 0
 }
 
-wt_remove_now() {
+wt_remove_now_locked() {
   local worktree_path="$1" branch="$2" keep_branch="" preserve_box="" arg
   shift 2
   for arg in "$@"; do
@@ -527,13 +529,26 @@ wt_remove_now() {
     fi
   fi
 
+  # Acquire before the first public destructive step. On timeout the box,
+  # checkout, and Git registration are all still present for a later sweep.
+  if ! wt_git_admin_lock_acquire; then
+    wt_say "refusing removal: could not acquire the Git worktree administration lock"
+    return 1
+  fi
+
   wt_remove_satellites "$name"
 
   # Move out of the worktree dir before removing it.
-  cd "$WT_MONO" || return 0
+  if ! cd "$WT_MONO"; then
+    wt_git_admin_lock_release
+    return 0
+  fi
 
   # Trash the worktree directory, then prune the now-dangling registration.
+  # Creation uses this same repository lock around its registration checks and
+  # add, so Git never observes a half-finished concurrent lifecycle mutation.
   if ! mv "$worktree_path" "$WT_TRASH/wt-$name-$(date +%s)"; then
+    wt_git_admin_lock_release
     wt_say "refusing branch cleanup: failed to trash worktree $worktree_path"
     wt_log "trash failed wt=$worktree_path branch=$branch"
     return 1
@@ -547,6 +562,11 @@ wt_remove_now() {
   elif [ -n "$branch" ] && git branch -D "$branch" >/dev/null 2>&1; then
     wt_say "deleted branch $branch"
   fi
+  local setup_state_file
+  if setup_state_file=$(wt_git_setup_state_file "$name"); then
+    rm -f "$setup_state_file"
+  fi
+  wt_git_admin_lock_release
 
   if [ "$moved" = true ]; then
     removed_patch=$(jq -n \
@@ -562,4 +582,23 @@ wt_remove_now() {
 
   wt_trash_reap
   return 0
+}
+
+wt_remove_now() {
+  local worktree_path="$1" name rc=0
+  name=$(basename "$worktree_path")
+  # Never wait and then act on the caller's pre-lock liveness/git snapshot. A
+  # contended setup means state is changing; refuse immediately and make the
+  # caller retry from fresh evidence after creation finishes.
+  if ! wt_git_setup_lock_acquire "$name" 0; then
+    wt_say "refusing removal: workstream setup is active; retry after it finishes"
+    return 1
+  fi
+  # As in creation, keep the fallible body bare: putting it in a conditional
+  # suppresses errexit throughout the sourced implementation. Process exit
+  # releases the kernel lock on abrupt failure; ordinary returns close it here.
+  wt_remove_now_locked "$@"
+  rc=$?
+  wt_git_setup_lock_release
+  return "$rc"
 }
