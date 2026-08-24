@@ -93,9 +93,11 @@ after SIGTERM, and prod runs a lazy hub (6 boxes, 30-minute idle, keepRecent 1)
 restarted several times a day by deploys, against an 11GB box whose `add -A`
 alone runs for seconds. Box children now get a 30s grace, the escalation waits
 for the process GROUP to empty rather than the leader, and `cb serve` and the
-scheduler drain their git spans before exiting. The systemd units want
-`KillMode=mixed` and an explicit stop timeout (`deploy/systemd/git-drain.conf`),
-which is a by-hand install — `deploy.sh` does not regenerate units.
+scheduler drain their git spans before exiting. The systemd units get
+`KillMode=mixed` and an explicit stop timeout via `deploy/systemd/git-drain.conf`,
+which `deploy.sh` now reinstalls and reloads on every deploy — the drop-in
+directory lets a deploy own a unit setting without owning the unit, which
+`setup-server.sh` still does not generate in its post-hub shape.
 
 This does not close every route. The OOM killer has killed processes inside
 `callback-hub.service`'s cgroup on this server, and the volume is at 92%; an
