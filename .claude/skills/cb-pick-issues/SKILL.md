@@ -21,7 +21,7 @@ requires a new instruction from them — you never promote yourself.
 |---|---|---|---|
 | "look at", "look into", "what's in the queue", "find a cluster", "what's related to X", "what should we work on" | **Investigate** | `bin/issues` queries; read issues in full; check the code for what has since shipped; write up findings; append dated notes to issue *bodies* recording what you verified (found stale, re-encountered — per `issues/CLAUDE.md`) | changing frontmatter (`priority:`, `needs:`, `next-action:`, `workstream:`), closing, moving or merging issues; launching anything; choosing a model |
 | "propose", "what would you do", "make a plan for", "pick one", "which of these" | **Propose** | everything above, plus one ranked recommendation with the issue set, the kind of session it deserves, and a draft briefing | launching; setting `priority:`; closing or merging issues |
-| "do it", "launch", "start a worktree on X", "go" — naming a specific item or approving a specific proposal | **Act** | launch via the `launch-worktree-session` skill (which still asks about model when unsure); amend the chosen issues per `issues/CLAUDE.md` | widening to a second item, cluster, or session without a fresh "go" |
+| "do it", "launch", "start a worktree on X", "go" — naming a specific item or approving a specific proposal | **Act** | launch via the `launch-worktree-session` skill (which still asks about model when unsure), passing `--issue <path>` for the issue the workstream takes responsibility for and listing the rest of the cluster in the briefing; amend the chosen issues per `issues/CLAUDE.md` | widening to a second item, cluster, or session without a fresh "go" |
 
 Rules that come from real failures:
 

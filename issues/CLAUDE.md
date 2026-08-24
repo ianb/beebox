@@ -148,15 +148,15 @@ agent-facing docs and skills as much as to shipped source.
   and what should happen** — a year from now "needs testing" alone is useless. An
   agent should never remove this itself; only the developer clears it, by testing. Every
   flagged issue must use a `## Manual testing` section; the browser links to its
-  stable `#manual-testing` anchor. `grep -rl "manual-testing" issues/` is the
-  list of things waiting on them.
+  stable `#manual-testing` anchor. `bin/issues list --needs manual-testing` is
+  the list of things waiting on them.
   - **Ready-to-test is the whole point — do NOT use it for an unfixed bug.** If no
     fix has landed (the item just describes a problem, or only proposes fix
     directions), it is *not* awaiting testing — it is awaiting a fix, so it gets
     **no** `needs` value (or `[design]`/`[decision]` if it genuinely needs those).
     A "verify on a real device" note in the body is guidance for *when* a fix
-    lands, not license to pre-set the label. The list `grep -rl "manual-testing"`
-    produces must be things the developer can actually pick up and test *today*; an unfixed
+    lands, not license to pre-set the label. The list `bin/issues list --needs
+    manual-testing` produces must be things the developer can actually pick up and test *today*; an unfixed
     bug in it wastes their time. Only add the label once the fix is committed.
   - **When the code has already landed** (the common case — the fix shipped and
     only a real-device / browser check remains), make that the item's *headline*:
@@ -240,7 +240,7 @@ agent-facing docs and skills as much as to shipped source.
   the second is often fixable here.
 
   Removing the field is not enough on its own: an item that leaves
-  `grep -rl "manual-testing" issues/` must leave it because it was settled, so
+  `bin/issues list --needs manual-testing` must leave it because it was settled, so
   that list stays a queue the developer can work rather than a graveyard.
   Agents may set `discuss` when work reaches a genuine human judgment call, but
   must summarize the tension in the issue rather than using the tag as a vague
@@ -276,7 +276,7 @@ with a stub section:
 ```
 
 Whoever researches the item fills the section in and retitles it
-`## Research (YYYY-MM-DD)`. So `grep -rl "## Research (incomplete)" issues/` lists
+`## Research (YYYY-MM-DD)`. So `bin/issues list --research awaiting` lists
 everything awaiting research, and researching an item is a first-class way to
 advance it without implementing anything.
 
