@@ -3,9 +3,14 @@ cadence: 1d
 workstream:
   agent: claude
   model: opus
-  # The session pulls, bumps the pin, commits and pushes `main` — that is the
-  # main checkout's job, and a worktree would push a branch nobody deploys.
-  worktree: false
+  # An ordinary scheduled workstream: the session works on
+  # `worktree-sdk-update` and lands the bump with `bin/land` (ff-only), so the
+  # runner's liveness guard applies and the agent never edits or commits in a
+  # checkout the boxholder is using. It ran with `worktree: false` until
+  # 2026-08-25, inherited from `bin/update-agent-sdk-scheduled.sh`; the guard is
+  # skipped for that mode, so the agent could pull and commit over uncommitted
+  # work or under a live session.
+  worktree: true
   # One long-lived session: the ledger's continuity is the product, and the
   # monitor's memory of what it already assessed rides in the transcript
   # (today's contract, `bin/update-agent-sdk-scheduled.sh:83-128`).
