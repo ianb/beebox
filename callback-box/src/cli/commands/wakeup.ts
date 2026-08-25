@@ -16,6 +16,12 @@
  * connector, step 4b scans only its `inboxPaths` and tags new intake
  * jobs `source="X"`, and step 5 passes `sourceFilter: "X"` to the
  * reactor so it processes just the jobs that this run produced.
+ *
+ * If `X` doesn't match any configured connector, steps 4b and 5 are
+ * scoped to NOTHING (not to a full unscoped run) — 4b is skipped
+ * outright, and step 5's `sourceFilter` is set to the unmatched name so
+ * it matches zero jobs. Step 4a (stale-job cleanup) and step 6 (push)
+ * still run, and the process exits nonzero.
  */
 
 import { Command } from "commander";
@@ -205,7 +211,7 @@ export const wakeupCommand = new Command("wakeup")
 
     // Step 4: Connectors
     console.log("[Running connectors]");
-    const { activeConnector, errorCount: connectorErrorCount } = await runConnectors(boxRoot, {
+    const { activeConnector, activeConnectorName, errorCount: connectorErrorCount } = await runConnectors(boxRoot, {
       connector: options.connector,
     });
     console.log("");
@@ -220,16 +226,26 @@ export const wakeupCommand = new Command("wakeup")
     }
     console.log("");
 
-    // Step 4b: Create intake jobs for unjobbed inbox items
+    // Step 4b: Create intake jobs for unjobbed inbox items.
+    //
+    // A named-but-unmatched `--connector` (activeConnector undefined while
+    // activeConnectorName is set) must scope this step to NOTHING, not to a
+    // full unscoped scan — `{}` below means "no connector filter", which
+    // is exactly the opposite of what was requested. Skip the scan
+    // entirely in that case; step 4a/6 still run.
     console.log("[Checking for unjobbed inbox items]");
-    const intakeJobs = await createIntakeJobsForUnjobbed(
-      boxRoot,
-      activeConnector ? { connector: activeConnector } : {},
-    );
-    if (intakeJobs > 0) {
-      console.log(`  Created intake jobs for ${intakeJobs} item(s)`);
+    if (activeConnectorName && !activeConnector) {
+      console.log(`  Skipped: connector "${activeConnectorName}" not found`);
     } else {
-      console.log("  No unjobbed items");
+      const intakeJobs = await createIntakeJobsForUnjobbed(
+        boxRoot,
+        activeConnector ? { connector: activeConnector } : {},
+      );
+      if (intakeJobs > 0) {
+        console.log(`  Created intake jobs for ${intakeJobs} item(s)`);
+      } else {
+        console.log("  No unjobbed items");
+      }
     }
     console.log("");
 
@@ -254,8 +270,12 @@ export const wakeupCommand = new Command("wakeup")
       }
     }
 
-    // Step 5: Process pending jobs.
-    await processPendingJobs(boxRoot, activeConnector?.name);
+    // Step 5: Process pending jobs. Pass `activeConnectorName` (the raw
+    // requested name), not `activeConnector?.name` — a named-but-unmatched
+    // connector must scope the reactor's sourceFilter to that (unmatched)
+    // name, not to "everything" (which is what `activeConnector` collapses
+    // to when the name didn't match).
+    await processPendingJobs(boxRoot, activeConnectorName);
 
     // Step 6: Push committed changes to the box's git remote.
     if (!options.skipPush) {

@@ -28,6 +28,17 @@ import { runConnectorProcedureTriggers } from "../../core/commands/connector-pro
  * Returns the connector that was scoped to via `--connector X` (or
  * `undefined` for a full wakeup) so later steps can scope their inbox
  * scan and the reactor's `sourceFilter`.
+ *
+ * `activeConnector` is ALSO `undefined` when `--connector X` names a
+ * connector that doesn't exist (`toRun` is empty, so `toRun[0]` is
+ * `undefined`) — the same value a full wakeup produces. A caller that
+ * branched only on `activeConnector` couldn't tell "no flag, run
+ * everything" apart from "flag given, nothing matched, run nothing" and
+ * would wrongly fall back to a full run for the latter. `activeConnectorName`
+ * carries the raw requested name (unset only when no `--connector` flag was
+ * given at all) so later phases can be told to scope to that name — which,
+ * being unmatched, naturally scopes them to nothing — instead of falling
+ * back to unscoped. See wakeup.ts's steps 4b/5.
  */
 export async function runConnectors(
   boxRoot: string,
@@ -38,7 +49,11 @@ export async function runConnectors(
     /** Procedure boundary injection; production uses the normal command runner. */
     runProcedureTriggers?: ((procedures: ConnectorProcedureTrigger[]) => Promise<number>) | undefined;
   },
-): Promise<{ activeConnector: Connector | undefined; errorCount: number }> {
+): Promise<{
+  activeConnector: Connector | undefined;
+  activeConnectorName: string | undefined;
+  errorCount: number;
+}> {
   let connectors = options.connectors;
   if (connectors === undefined) {
     createGmailConnector(boxRoot);
@@ -51,7 +66,7 @@ export async function runConnectors(
 
   if (connectors.length === 0) {
     console.log("  No connectors configured.");
-    return { activeConnector: undefined, errorCount: 0 };
+    return { activeConnector: undefined, activeConnectorName: options.connector, errorCount: 0 };
   }
 
   // Filter by name if specified
@@ -112,7 +127,7 @@ export async function runConnectors(
   parts.push(`${totalErrors} errors`);
   console.log(`\nTotal: ${parts.join(", ")}.`);
 
-  return { activeConnector, errorCount: totalErrors };
+  return { activeConnector, activeConnectorName: options.connector, errorCount: totalErrors };
 }
 
 /** The exit status applied after the rest of the wakeup cycle finishes. */
