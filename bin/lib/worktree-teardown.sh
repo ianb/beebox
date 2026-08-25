@@ -512,14 +512,21 @@ wt_remove_private_issues() {
 }
 
 # wt_removal_patch <record-json> <removed-at> <final-sha> <box-ref> <merged>
-# The registry patch a culled worktree leaves behind. A scheduled record only
-# drops its launch lease: its worktree is disposable and recreatable, so marking
-# it `removed` would hide it from `list` and route it as removed rather than
-# scheduled. Everything else records the removal for later recovery.
+# The registry patch a culled worktree leaves behind. A scheduled record drops
+# its launch lease and records the cull under `culled`, NOT `removed`: marking
+# it removed would hide it from `list` and route it as removed rather than
+# scheduled, but the tip it was culled at is still the pointer `resume` needs to
+# tell the next session what landed since. Everything else records the removal
+# for later recovery.
 wt_removal_patch() {
   local record="$1" removed_at="$2" final_sha="$3" box_ref="$4" merged="$5"
   if session_registry_is_scheduled "$record"; then
-    printf '{"launch":null}\n'
+    jq -cn \
+      --arg at "$removed_at" \
+      --arg finalSha "$final_sha" \
+      --argjson merged "$merged" \
+      '{launch:null, culled: ({at:$at, merged:$merged}
+        + if $finalSha == "" then {} else {finalSha:$finalSha} end)}'
     return 0
   fi
   jq -cn \

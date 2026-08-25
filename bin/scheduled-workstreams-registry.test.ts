@@ -224,7 +224,38 @@ test("removing a scheduled workstream drops the launch lease and sets no removed
     `wt_removal_patch '${JSON.stringify(SCHEDULED)}' 2026-08-24T00:00:00Z abc123 keep/x true`,
     place,
   )) as { launch: null; removed?: unknown };
-  assert.deepEqual(patch, { launch: null });
+  assert.equal(patch.launch, null);
+  // `removed` is what would hide the record from `list` and route it as
+  // removed; the cull is recorded under `culled` instead (next test).
+  assert.equal(patch.removed, undefined);
+});
+
+test("a culled scheduled record keeps the tip it was culled at, for the resume briefing", async () => {
+  const place = await harness();
+  const patch = JSON.parse(await bash(
+    `wt_removal_patch '${JSON.stringify(SCHEDULED)}' 2026-08-24T00:00:00Z abc123 keep/x true`,
+    place,
+  )) as { launch: null; culled: { at: string; merged: boolean; finalSha: string } };
+  assert.deepEqual(patch.culled, { at: "2026-08-24T00:00:00Z", merged: true, finalSha: "abc123" });
+});
+
+test("a culled record is still scheduled, not removed: routing, resume and prune are unchanged", async () => {
+  const place = await harness();
+  const culled = { ...SCHEDULED, launch: null, culled: { at: "2026-08-24T00:00:00Z", merged: true, finalSha: "abc123" } };
+  assert.equal((await routing(place, { exists: false, agentState: "none", record: culled })).state, "scheduled");
+  assert.equal(await resumeState(place, culled), "scheduled");
+  await writeRecord(place, "knip-sweep", culled);
+  await bash("session_registry_prune \"$(date +%s)\"", place);
+  assert.deepEqual(await recordNames(place), ["knip-sweep"]);
+});
+
+test("resume recovers the landed-since tip from `culled` for a schedule and `removed` for everything else", async () => {
+  const place = await harness();
+  const sha = async (record: unknown): Promise<string> =>
+    bash(`. "${BIN}/lib/workstream-resume.sh"\nworkstream_recovery_sha '${JSON.stringify(record)}'`, place);
+  assert.equal(await sha({ ...SCHEDULED, culled: { at: "x", merged: true, finalSha: "abc123" } }), "abc123");
+  assert.equal(await sha({ agent: "claude", removed: { at: "x", merged: true, finalSha: "def456" } }), "def456");
+  assert.equal(await sha(SCHEDULED), "");
 });
 
 test("removing an ordinary workstream still records the removal", async () => {

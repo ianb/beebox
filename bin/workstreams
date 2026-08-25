@@ -447,7 +447,7 @@ case "$cmd" in
     # scheduled record is culled-but-resumable, it just has no `removed` block.
     if [ "$resume_state" = "culled" ] || [ "$resume_state" = "removed-unmerged" ] || [ "$resume_state" = "scheduled" ]; then
       workstream_resume_status restoring
-      final_sha=$(printf '%s' "$record" | jq -r '.removed.finalSha // empty')
+      final_sha=$(workstream_recovery_sha "$record")
       box_ref=$(printf '%s' "$record" | jq -r '.removed.boxRef // empty')
       if [ "$at_final_sha" = true ]; then
         [ -n "$final_sha" ] || { echo "workstreams resume: no final SHA recorded; recreating at it is impossible" >&2; exit 1; }
@@ -467,7 +467,7 @@ case "$cmd" in
     fi
 
     workstream_resume_status preparing
-    final_sha=$(printf '%s' "$record" | jq -r '.removed.finalSha // empty' 2>/dev/null || true)
+    final_sha=$(workstream_recovery_sha "$record")
     landed_log=""
     if [ -n "$final_sha" ] && git -C "$WT_MONO" cat-file -e "$final_sha^{commit}" 2>/dev/null; then
       landed_log=$(git -C "$WT_MONO" log --oneline "$final_sha..main" -50 2>/dev/null || true)
