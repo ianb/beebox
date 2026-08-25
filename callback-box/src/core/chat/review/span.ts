@@ -61,6 +61,14 @@ export interface ResolvedSpan {
   clipped: boolean;
 }
 
+/** The walk could not advance past `offset`: the page there came back empty. */
+class SpanWalkStalledError extends Error {
+  constructor(offset: number, total: number) {
+    super(`chat-review: span walk stalled at entry ${String(offset)} of ${String(total)} (empty page)`);
+    this.name = "SpanWalkStalledError";
+  }
+}
+
 /**
  * The prefix hash, folded one entry at a time. Produces exactly
  * {@link prefixHash}'s digest for the same entries, so journals written before
@@ -177,10 +185,14 @@ export async function resolveSpan(args: ResolveSpanArgs): Promise<ResolvedSpan> 
       }
     }
     offset += page.entries.length;
+    if (clipped || offset >= page.total) break;
     // A page can come back short of `limit` without ending the transcript (the
-    // scan clips a page at its byte budget); only an empty page or reaching
-    // `total` ends the walk.
-    if (clipped || page.entries.length === 0 || offset >= page.total) break;
+    // scan clips a page at its byte budget), and the walk simply continues
+    // from where it stopped. An EMPTY page short of `total` is different: the
+    // next entry alone exceeds the budget, so the walk can never advance. That
+    // must not read as "boundary missing" — bootstrapping there would move the
+    // journal backwards — so the session is skipped for this run instead.
+    if (page.entries.length === 0) throw new SpanWalkStalledError(offset, page.total);
   }
 
   if (!found) return bootstrap({ readPage, limit, reason: "boundary-missing" });

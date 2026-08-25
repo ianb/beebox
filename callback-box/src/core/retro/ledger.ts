@@ -8,7 +8,7 @@
  */
 
 import * as fs from "node:fs/promises";
-import { createReadStream, type ReadStream } from "node:fs";
+import { createReadStream } from "node:fs";
 import * as readline from "node:readline";
 import * as path from "node:path";
 import { z } from "zod";
@@ -63,17 +63,7 @@ export async function loadEvidenceHashes(boxRoot: string): Promise<Set<string>> 
 
 async function forEachLedgerEntry(boxRoot: string, visit: (entry: LedgerEntry) => void): Promise<void> {
   const filePath = path.join(boxRoot, LEDGER_FILE);
-  let stream: ReadStream;
-  try {
-    await fs.access(filePath);
-    stream = createReadStream(filePath, { encoding: "utf-8" });
-  } catch (e) {
-    if (errnoCode(e) !== "ENOENT") {
-      console.warn(`retro: could not read ${LEDGER_FILE}, treating as empty:`, e);
-    }
-    return;
-  }
-
+  const stream = createReadStream(filePath, { encoding: "utf-8" });
   const lines = readline.createInterface({ input: stream, crlfDelay: Infinity });
   try {
     for await (const line of lines) {
@@ -91,6 +81,12 @@ async function forEachLedgerEntry(boxRoot: string, visit: (entry: LedgerEntry) =
         continue;
       }
       visit(parsed.data);
+    }
+  } catch (e) {
+    // Open and read errors both surface here (the stream opens lazily). A
+    // missing ledger is the empty ledger; anything else is empty-but-visible.
+    if (errnoCode(e) !== "ENOENT") {
+      console.warn(`retro: could not read ${LEDGER_FILE}, treating as empty:`, e);
     }
   } finally {
     lines.close();

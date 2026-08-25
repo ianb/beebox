@@ -14,6 +14,7 @@ import { z } from "zod";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as readline from "node:readline";
+import { errnoCode } from "../lib/error-guards.js";
 import { listSessions } from "../cli/lib/session.js";
 import { CODEX_USAGE_REL_PATH, readCodexTurnUsage } from "./codex-usage.js";
 
@@ -125,12 +126,6 @@ const sessionUsageLineSchema = z.object({
 async function readManifest(boxRoot: string): Promise<Map<string, ManifestEntry>> {
   const manifestPath = path.join(boxRoot, MANIFEST_REL_PATH);
   const entries = new Map<string, ManifestEntry>();
-  try {
-    await fs.promises.access(manifestPath);
-  } catch (_e) {
-    // No manifest yet — every session attributes as "unknown".
-    return entries;
-  }
   const stream = fs.createReadStream(manifestPath, { encoding: "utf-8" });
   const lines = readline.createInterface({ input: stream, crlfDelay: Infinity });
   try {
@@ -143,6 +138,10 @@ async function readManifest(boxRoot: string): Promise<Map<string, ManifestEntry>
         // skip malformed lines
       }
     }
+  } catch (e) {
+    // No manifest yet (ENOENT) — every session attributes as "unknown". Any
+    // other read failure degrades the same way, but visibly.
+    if (errnoCode(e) !== "ENOENT") console.warn(`usage: could not read ${MANIFEST_REL_PATH}, treating as empty:`, e);
   } finally {
     lines.close();
     stream.close();
