@@ -12,6 +12,7 @@
 
 import { useMemo } from "react";
 import { z } from "zod";
+import { encodePathForUrl } from "../lib/view-url";
 
 /**
  * File metadata from the views API; content is fetched on demand. The zod
@@ -102,7 +103,7 @@ export function useViewFileHelpers(apiBase: string): ViewFileHelpers {
 }
 
 function makeHelpers(apiBase: string): ViewFileHelpers {
-  const fileUrl = (filePath: string): string => `${apiBase}/files/${filePath}`;
+  const fileUrl = (filePath: string): string => `${apiBase}/files/${encodePathForUrl(filePath)}`;
 
   const adapterFetch = (
     adapter: string,

@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
 # Shared Terminal session launcher. Callers set the LS_* inputs below, then
 # call launch_session_build followed by launch_session_open.
+#
+# Everything here opens a Terminal tab. The unattended counterpart —
+# `claude -p` / `codex exec` in the foreground, briefing on stdin, for
+# scheduled runs — is launch-headless.sh, sourced here so that a caller who
+# sources this file has both launchers and neither duplicates the other's flag
+# assembly (callback-box/docs/plans/scheduled-workstreams.md, Track B).
+
+# shellcheck source=launch-headless.sh
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/launch-headless.sh"
 
 launch_session_build() {
   local model_arg="" rc_arg="" model_line=""

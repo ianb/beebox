@@ -16,6 +16,7 @@
 #   WT_BOX_ROOT   where each worktree's box clone is created
 #   WT_BOX_SRC    the source box cloned into each new worktree
 #   WT_EXHIBITS_ROOT  per-workstream exhibit stores (exhibits-store.sh)
+#   WT_SCHEDULES_ROOT scheduled-run store (bin/schedules, bin/lib/schedules.ts)
 #   WT_STATE_DIR  router/agent cache + state
 #
 # WHAT IS DERIVED AND WHAT IS CONVENTION. The *parent* is derived — resolved
@@ -80,6 +81,10 @@ wt_paths_init() {
   # reads, so the shell and TypeScript halves cannot disagree about where the
   # store is.
   WT_COMMENTS_ROOT="${CALLBACK_COMMENTS_ROOT:-$WT_PARENT/dev-comments}"
+  # Scheduled runs (callback-box/docs/plans/scheduled-workstreams.md). Same
+  # store-beside-checkout shape and the same override name bin/lib/schedules.ts
+  # reads, so the shell and TypeScript halves cannot disagree.
+  WT_SCHEDULES_ROOT="${CALLBACK_SCHEDULES_ROOT:-$WT_PARENT/schedule-runs}"
 
   # The roots feed paths that get deleted, so an override must not be able to
   # aim them at data that is not a worktree's to lose. The source box is the

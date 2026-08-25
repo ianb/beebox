@@ -117,9 +117,12 @@ invalid, so confirm before closing — the tag is a question.
 *the work probably happened, there is evidence in git, and the issue just got
 lost.* So **search history first** — the fix commonly landed under a different
 description, inside a larger change, or in a workstream that never closed the
-item:
+item. Commits that named the issue carry an `Issue:` trailer (root
+`CLAUDE.md`), so query that first; the `-S` guess is the fallback for
+commits that predate the convention or forgot the trailer:
 
 ```bash
+pnpm commit-provenance --issue <issue basename, no dir, no .md>
 git log --oneline -S'<a distinctive symbol or string from the issue>' -- <path>
 git log --oneline --since='<issue date>' -- <the file the issue names>
 ```

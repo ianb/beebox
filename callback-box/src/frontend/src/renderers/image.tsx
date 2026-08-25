@@ -13,7 +13,7 @@ import { Row } from "../components/ui/Row";
 import { Stack } from "../components/ui/Stack";
 import { Card } from "../components/ui/Card";
 import { BboxOverlay } from "../components/ui/BboxOverlay";
-import { getApiBase } from "../api";
+import { apiRawFileUrl, getApiBase } from "../api";
 import { resolveRelativePath } from "../lib/view-url";
 import type { RendererProps } from "./index";
 import { registerFileType } from "./index";
@@ -87,7 +87,7 @@ function ImageCardRenderer({ data, onNavigate, mode, caption }: RendererProps) {
   // A filename ref that escapes the box root names no servable file. An empty
   // src renders as the browser's broken-image affordance with the alt text —
   // visibly wrong, rather than showing a clamped-to-root image instead.
-  const imageSrc = resolvedPath === null ? "" : `${getApiBase()}/files/${resolvedPath}`;
+  const imageSrc = resolvedPath === null ? "" : apiRawFileUrl(getApiBase(), resolvedPath);
   const altText = card.description || card.filename;
 
   // Embedded inline (`![caption](…image.card)`): render exactly like a
@@ -186,7 +186,7 @@ function RawImageRenderer({ data }: RendererProps) {
   return (
     <div className="p-4">
       <Image
-        src={`${getApiBase()}/files/${data.path}`}
+        src={apiRawFileUrl(getApiBase(), data.path)}
         alt={basename}
         size="lg"
         lightbox

@@ -6,7 +6,16 @@ needs: [decision]
 labels: [migrations]
 filed-by: agent
 discovered-in: document-card-view worktree — cross-model review of document-to-pdf
+resolution: wontfix
 ---
+
+> **Closed 2026-08-24 — window closed.** Verified zero `*.sheet.card` files
+> remain: local boxes (`~/src/boxes/*/`, all 10) and every prod box
+> (`ai-class`, `birch`, `box-family`, `estate`, `mn-pottery`, `personal`, via
+> `sudo -u callback find /home/callback/boxes -name '*.sheet.card'`, empty on
+> both). Each prod box's `config/migrations.jsonl` records `gsheet-rename` as
+> applied. No box exists that could still hit the collision this issue
+> describes, so the fix is moot; not implementing it.
 
 `scripts/migrate/gsheet-rename.ts` renames `*.sheet.card` → `*.gsheet.card`
 without checking whether the destination exists; POSIX rename silently

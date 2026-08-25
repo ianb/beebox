@@ -12,7 +12,10 @@ import {
   isExternalUrl,
   resolveImageSrc,
   externalImageProxyUrl,
+  apiFileUrl,
+  apiImageUrl,
 } from "../../../src/frontend/src/lib/view-url.js";
+import { apiRawFileUrl } from "../../../src/frontend/src/api-core.js";
 ```
 
 ## parseViewUrl
@@ -305,4 +308,32 @@ externalImageProxyUrl("/test1/api/files/store/a.png", "test1")
 
 externalImageProxyUrl("data:image/png;base64,AAAA", "test1")
 => undefined
+```
+
+## apiFileUrl / apiImageUrl / apiRawFileUrl
+
+These build the URLs the file/image renderers embed a box-relative path into — `apiFileUrl`/`apiImageUrl` prefix the Vite base and box slug themselves (for an `<img src>` or link target built without an already box-scoped API base in hand); `apiRawFileUrl` takes an already-computed `apiBase` (as returned by `getApiBase()`) and builds the raw `/files/<path>` download/fetch URL. All three route every path segment through `encodePathForUrl`, so a filename containing `#`, `?`, `%`, or a space survives — a URL built by plain concatenation would otherwise get truncated at `#`/`?` or have a literal `%` reinterpreted as a percent-escape.
+
+```ts
+apiFileUrl("test1", "store/notes/plan.md")
+=> /test1/api/files/store/notes/plan.md
+
+apiImageUrl("test1", "store/photos/front.png")
+=> /test1/api/image/store/photos/front.png
+
+apiRawFileUrl("/test1/api", "store/notes/plan.md")
+=> /test1/api/files/store/notes/plan.md
+```
+
+A path segment with `#`, `?`, `%`, or a space is percent-encoded — but the `/` separators between segments are preserved, not escaped into `%2F`:
+
+```ts
+apiFileUrl("test1", "store/Q&A #3 100% done?.md")
+=> /test1/api/files/store/Q%26A%20%233%20100%25%20done%3F.md
+
+apiImageUrl("test1", "store/Q&A #3 100% done?.png")
+=> /test1/api/image/store/Q%26A%20%233%20100%25%20done%3F.png
+
+apiRawFileUrl("/test1/api", "store/Q&A #3 100% done?.md")
+=> /test1/api/files/store/Q%26A%20%233%20100%25%20done%3F.md
 ```

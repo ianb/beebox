@@ -1,0 +1,5 @@
+description: "Docling currency watch — is the pinned extractor release stale?"
+cadence: 1d
+# No `workstream:`: a Docling bump is judgment work (re-read `docling convert
+# --help`, re-extract a sample document, diff), not something an unattended
+# agent should do. The run alerts and stops there.

@@ -28,6 +28,9 @@
  *   - The Agent SDK resolves a bundled Claude Code binary for this platform
  *     (`callback-box/src/core/sdk-binary-path.ts`, imported directly — the
  *     workspace import works cleanly from a root tsx script; see below).
+ *   - The scheduler heartbeat (`<store>/state.json`) is under an hour old and
+ *     the `com.callback-box.schedules` launchd job is loaded — the anti-silence
+ *     check for callback-box/docs/plans/scheduled-workstreams.md.
  *   - The frontend build output exists (`callback-box/src/frontend/dist`,
  *     Vite's `build.outDir`), else "run `pnpm --dir callback-box
  *     build:frontend`".
@@ -60,6 +63,7 @@ import { createRequire } from "node:module";
 // `.js`-extension NodeNext convention) — no awkwardness to fall back from.
 import { resolveClaudeCodeBinary } from "../callback-box/src/core/sdk-binary-path.js";
 import { isRecord } from "../callback-box/src/lib/is-record.js";
+import { schedulesStoreRoot, storeStateSchema } from "./lib/schedules.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -113,6 +117,8 @@ export interface DoctorDeps {
    * than anything naming the cause.
    */
   loadBetterSqlite3: () => Promise<string>;
+  /** Wall clock, injected so the schedules-heartbeat check is deterministic. */
+  nowMs: number;
 }
 
 // ─── Minimal version-range comparison (no `semver` dependency: it's hoisted
@@ -213,6 +219,9 @@ function fail(name: string, detail: string, remedy: string): CheckResult {
 }
 
 // ─── Checks ───────────────────────────────────────────────────────────────
+
+/** The one launchd label the schedules tick runs under (bin/lib/schedules-launchd.ts). */
+const SCHEDULES_LABEL = "com.callback-box.schedules";
 
 export function checkNodeVersion(deps: Pick<DoctorDeps, "nodeVersion" | "engines">): CheckResult {
   const name = "Node version";
@@ -405,6 +414,64 @@ export async function checkDeployCurrency(deps: Pick<DoctorDeps, "run" | "fileEx
   );
 }
 
+/**
+ * Is the scheduler actually ticking, and is its launchd job loaded?
+ *
+ * This is the mitigation for the plan's critical gap: every schedule's
+ * due-ness lives in the store, so a store that stopped being written (plist
+ * booted out by an OS update, never installed, disk gone) stops every job with
+ * nothing saying so. `<store>/state.json` is stamped by every tick, and the
+ * plist is checked directly rather than inferred from it.
+ *
+ * `launchctl` unavailable is reported, not failed — this check must not turn a
+ * Linux checkout or a sandbox into a red doctor.
+ */
+export async function checkSchedulesTick(
+  deps: Pick<DoctorDeps, "run" | "fileExists" | "nowMs">,
+): Promise<CheckResult> {
+  const name = "Schedules tick";
+  const common = await deps.run("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"]);
+  if (!common.spawned || common.stdout.trim() === "") return pass(name, "not a git checkout — skipped");
+  const storeRoot = schedulesStoreRoot(path.dirname(common.stdout.trim()));
+  if (!deps.fileExists(storeRoot)) {
+    return pass(name, `no schedule store at ${storeRoot} — no schedules installed on this machine`);
+  }
+
+  const state = await deps.run("cat", [path.join(storeRoot, "state.json")]);
+  const parsed = state.stdout.trim() === ""
+    ? null
+    : storeStateSchema.safeParse(JSON.parse(state.stdout));
+  if (parsed === null || !parsed.success) {
+    return fail(
+      name,
+      `${storeRoot}/state.json is missing or unreadable — the scheduler has never ticked`,
+      "run `bin/schedules install` from the main checkout, then `bin/schedules tick`",
+    );
+  }
+  const ageMs = deps.nowMs - Date.parse(parsed.data.lastTickAt);
+  const ageText = `${String(Math.round(ageMs / 60000))} min ago`;
+  if (ageMs >= 60 * 60 * 1000) {
+    return fail(
+      name,
+      `last tick ${ageText} (over an hour; the tick runs every 15 min)`,
+      "check ~/Library/Logs/callback-box-schedules.log, then `bin/schedules install` from the main checkout",
+    );
+  }
+
+  const uid = await deps.run("id", ["-u"]);
+  if (!uid.spawned) return pass(name, `last tick ${ageText} (could not check launchd)`);
+  const loaded = await deps.run("launchctl", ["print", `gui/${uid.stdout.trim()}/${SCHEDULES_LABEL}`]);
+  if (!loaded.spawned) return pass(name, `last tick ${ageText} (launchctl unavailable)`);
+  if (loaded.code !== 0) {
+    return fail(
+      name,
+      `last tick ${ageText}, but ${SCHEDULES_LABEL} is not loaded in launchd`,
+      "run `bin/schedules install` from the main checkout",
+    );
+  }
+  return pass(name, `last tick ${ageText}; ${SCHEDULES_LABEL} loaded`);
+}
+
 // ─── Runner ───────────────────────────────────────────────────────────────
 
 export async function runChecks(deps: DoctorDeps): Promise<CheckResult[]> {
@@ -418,6 +485,7 @@ export async function runChecks(deps: DoctorDeps): Promise<CheckResult[]> {
       checkClaudeAuth(deps),
     ]);
   const deployResult = await checkDeployCurrency(deps);
+  const schedulesResult = await checkSchedulesTick(deps);
   return [
     checkNodeVersion(deps),
     pnpmResult,
@@ -429,6 +497,7 @@ export async function runChecks(deps: DoctorDeps): Promise<CheckResult[]> {
     checkSdkBinary(deps),
     checkFrontendBuild(deps),
     deployResult,
+    schedulesResult,
   ];
 }
 
@@ -475,6 +544,7 @@ async function main(): Promise<void> {
     engines,
     packageManager,
     resolveSdkBinary: resolveClaudeCodeBinary,
+    nowMs: Date.now(),
     loadBetterSqlite3: async () => {
       // createRequire, not `import()`: tsx's dynamic-import transform runs
       // es-module-lexer over this file and chokes on it (Parse error at the
