@@ -138,8 +138,19 @@ const result = await parseSessionLog({
   slice: { mode: "tail", tail: 200 },
 });
 JSON.stringify(result.entries.map((e) => ({ uuid: e.uuid, type: e.type, blocks: e.content.length })))
-=> [{"uuid":"u1","type":"user","blocks":1},{"uuid":"a-huge","type":"assistant","blocks":1},{"uuid":"u-huge","type":"user","blocks":1}]
+=> [{"uuid":"u1","type":"user","blocks":1},{"uuid":"a-huge","type":"assistant","blocks":1}]
 ```
+
+`u-huge` is missing on purpose. It is a user turn whose only content is an
+image, which `classifyUserEntry` drops as PDF-reading plumbing — and always
+did, for a normally-sized image. An oversize one used to survive that filter by
+accident: stripping its payload left a text placeholder behind, and a text block
+is exactly what the filter looks for. Now that a stripped image comes back as an
+image again (see [Image payloads are dropped, not the
+turn](#image-payloads-are-dropped-not-the-turn)), the two sizes are classified
+the same way. Nothing a person sends is affected — chat wraps every message in
+`<typed>`/`<speech>` before it reaches the log, so a real photo turn carries
+text whether or not the sender wrote a caption.
 
 The uuid and timestamp are sniffed too, so a stub still sorts and identifies
 like the entry it stands for:
@@ -154,7 +165,7 @@ stay honest about how much transcript exists:
 
 ```ts continue
 JSON.stringify({ total: result.total, hasMore: result.hasMore })
-=> {"total":3,"hasMore":false}
+=> {"total":2,"hasMore":false}
 ```
 
 A stub is **never** a real user message, even when the line it replaced was a
@@ -164,7 +175,7 @@ nothing:
 
 ```ts continue
 JSON.stringify(result.entries.map(isRealUserMessage))
-=> [true,false,false]
+=> [true,false]
 ```
 
 So widening the tail to cover two real user messages keeps only the one real
@@ -177,7 +188,7 @@ const widened = await parseSessionLog({
   slice: { mode: "tail", tail: 1, minRealUserMessages: 2 },
 });
 JSON.stringify({ entries: widened.entries.length, real: widened.entries.filter(isRealUserMessage).length })
-=> {"entries":3,"real":1}
+=> {"entries":2,"real":1}
 ```
 
 ```ts cleanup
@@ -379,20 +390,53 @@ print(`oversize: ${Buffer.byteLength(turn, "utf8") > MAX_SESSION_LINE_BYTES}`);
 print(`entries: ${parsed.entries.length}`);
 print(`stubbed: ${text.includes("too large to display")}`);
 print(`keeps what they typed: ${text.includes("here is the drawer")}`);
-print(`says where the image was: ${text.includes("[image not displayed]")}`);
 print(`image bytes kept: ${entry.content.some((b) => b.type === "image" && b.dataBase64)}`);
+print(`points at the image: ${JSON.stringify(entry.content.filter((b) => b.type === "image"))}`);
 =>
 oversize: true
 entries: 1
 stubbed: false
 keeps what they typed: true
-says where the image was: true
 image bytes kept: false
+points at the image: [{"type":"image","imageRef":"photo-turn/uuid-1/0","mediaType":"image/jpeg"}]
 ```
 
-The person's words survive, in order, in a real entry. What is gone is the only
-part that could not be afforded — and it says so where the picture was, rather
-than replacing the whole turn with a size in kilobytes.
+A turn can carry both kinds of image at once — a photo that was stripped, and
+one whose bytes never arrived. They are different facts and get different
+answers: only the first has anything to fetch. Keying the decision on "this line
+had something stripped from it" would hand the failed upload a URL that could
+only 404, so the guard marks each payload it removes and the reader keys on the
+mark:
+
+```ts continue
+const failed = JSON.stringify({
+  parentUuid: null,
+  type: "user",
+  uuid: "uuid-2",
+  timestamp: "2026-08-22T21:14:00.000Z",
+  message: {
+    role: "user",
+    content: [
+      { type: "text", text: "<typed>one of these did not upload</typed>" },
+      { type: "image", source: { type: "base64", media_type: "image/jpeg", data: photo } },
+      { type: "image", source: { type: "base64", media_type: "image/png", data: "" } },
+    ],
+  },
+});
+await fs.writeFile(logPath2, `${failed}\n`, "utf-8");
+
+const mixed = await parseSessionLog({ logPath: logPath2, slice: { mode: "tail", tail: 50 } });
+JSON.stringify(mixed.entries[0].content.filter((b) => b.type !== "text" || b.text.includes("image")))
+=> [{"type":"image","imageRef":"photo-turn/uuid-2/0","mediaType":"image/jpeg"},{"type":"text","text":"[image not displayed]"}]
+```
+
+The person's words survive, in order, in a real entry. The bytes still do not
+travel with them — that is the whole point of the bound — but the entry now
+carries the photo's address instead of a sentence about its absence: the
+session named by the transcript's filename, the entry's own uuid, and the
+image's ordinal within the turn (`shared/session-media.ts`). The client turns
+that into a lazy `<img src>` and fetches the photograph only if someone scrolls
+to it.
 
 A line still too large once its images are gone — a genuinely enormous text turn
 — is stubbed exactly as before. Stripping is an attempt, not a guarantee.

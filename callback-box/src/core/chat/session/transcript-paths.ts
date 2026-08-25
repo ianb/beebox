@@ -16,6 +16,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
 import { errnoCode } from "../../../lib/error-guards.js";
+import { containWithinBox } from "../../../lib/box-containment.js";
 
 /**
  * Encode a cwd into Claude Code's `~/.claude/projects/<dir>` key. The
@@ -38,6 +39,29 @@ export function claudeProjectsRoot(): string {
   const override = process.env["CB_CLAUDE_PROJECTS_DIR"];
   if (override) return override;
   return path.join(os.homedir(), ".claude", "projects");
+}
+
+/**
+ * The SDK cwd for a session bound to `contextDir`, contained to the box.
+ *
+ * `contextDir` is a string read off the box's session-history file that gets
+ * joined into a path — and it is now joined on behalf of an HTTP request
+ * (`webapp/routes/api-session-media.ts` serves a photo out of the resolved
+ * transcript). A row naming `../../elsewhere` would point the encoder outside
+ * this box, so the join is contained like every other box-path resolution
+ * here. An escaping row falls back to the box root rather than being clamped
+ * into something plausible: the transcript is then simply not found. Only
+ * reachable by something that can already write inside the box — depth, not a
+ * live hole.
+ */
+export function containedSessionCwd(boxRoot: string, contextDir: string | undefined): string {
+  if (contextDir === undefined || contextDir === "") return boxRoot;
+  const contained = containWithinBox(boxRoot, path.join(boxRoot, contextDir));
+  if (contained === null) {
+    console.warn(`[chat-history] contextDir ${contextDir} escapes the box; reading from the box root instead`);
+    return boxRoot;
+  }
+  return path.join(boxRoot, contained);
 }
 
 /**

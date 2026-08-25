@@ -46,6 +46,14 @@ function ToastCard(props: { toast: Toast }) {
           </div>
         ) : null}
       </div>
+      {toast.action !== undefined ? (
+        <a
+          href={toast.action.href}
+          className="flex-shrink-0 text-danger-dark font-medium underline"
+        >
+          {toast.action.label}
+        </a>
+      ) : null}
       <button
         type="button"
         onClick={() => dismissToast(toast.id)}

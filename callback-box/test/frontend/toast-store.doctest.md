@@ -4,8 +4,9 @@
 framework-free core behind `toastError(...)`. It's the one place chat action
 handlers, xstate machine actions, and plain async `.catch` blocks surface a
 failure the stream-error banner can't reach. Errors only — no success/info
-vocabulary. This exercises the three behaviors the UI leans on: the dedupe
-counter, auto-expiry, and dismiss.
+vocabulary. This exercises the behaviors the UI leans on: the dedupe counter,
+auto-expiry, dismiss, and the persistent-with-an-action shape a session-ended
+notice uses.
 
 Timers are injected via `schedule` so expiry is deterministic here instead of
 a real 10s wait — the same seam the React viewport never touches (it uses the
@@ -139,4 +140,62 @@ nothing changed, or React re-renders forever:
 ```ts continue
 store.getSnapshot() === store.getSnapshot()
 => true
+```
+
+## A condition that is still true in ten seconds does not expire
+
+Most errors are moments — a restart that failed, a fetch that did not land — and
+they should get out of the way. Some are *states*. A session that ended has not
+un-ended by the time an expiry timer fires, and every request after it fails the
+same way, so a notice that quietly disappeared would leave someone looking at an
+app that answers nothing for no stated reason
+(`issues/bugs/2026-08-25-one-401-ejects-the-whole-app-to-a-login-form.md`).
+
+`persist` arms no timer at all:
+
+```ts
+const clock = makeFakeSchedule();
+const store = createToastStore({ schedule: clock.schedule });
+store.error("Your session has ended, so the box stopped answering.", {
+  persist: true,
+  action: { label: "Sign in", href: "/auth/login?returnTo=%2Fchat" },
+});
+JSON.stringify({ pending: clock.pending(), toasts: store.getSnapshot().length })
+=> {"pending":0,"toasts":1}
+```
+
+It carries the way out with it. An href rather than a handler, because the
+destination is a URL and an anchor gets middle-click and keyboard activation
+for free:
+
+```ts continue
+JSON.stringify(store.getSnapshot()[0].action)
+=> {"label":"Sign in","href":"/auth/login?returnTo=%2Fchat"}
+```
+
+Firing every timer the store armed leaves it standing, and an ordinary error
+raised alongside it still expires normally:
+
+```ts continue
+store.error("Failed to restart the agent process");
+clock.fireAll();
+store.getSnapshot().map((t) => t.message).join(",")
+=> Your session has ended, so the box stopped answering.
+```
+
+A repeat collapses into it as usual — but must not hand it a timer on the way
+in. The second 401 is more of the same condition, not evidence it is ending:
+
+```ts continue
+store.error("Your session has ended, so the box stopped answering.", { persist: true });
+JSON.stringify({ pending: clock.pending(), count: store.getSnapshot()[0].count })
+=> {"pending":0,"count":2}
+```
+
+Dismissing still works — the person can put it away once they have read it:
+
+```ts continue
+store.dismiss(store.getSnapshot()[0].id);
+store.getSnapshot().length
+=> 0
 ```

@@ -14,6 +14,7 @@ import {
 import {
   getSessionLogPath,
   getSessionDir,
+  containedSessionCwd,
 } from "../../../src/core/chat/session/transcript-paths.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 // "Everything, bounded": the first page at the hard retention ceiling. Every
@@ -42,6 +43,43 @@ const result = getSessionDir("/tmp/test-box");
 const expected = path.join(os.homedir(), ".claude/projects/-tmp-test-box");
 result === expected
 => true
+```
+
+## containedSessionCwd
+
+A landmark-bound chat runs the SDK with its cwd set to a box subdirectory, and
+that `contextDir` is a string read off the box's session-history file. It gets
+joined into a filesystem path — now on behalf of an HTTP request, since
+`/api/session-media` serves a photo out of whichever transcript this resolves
+to. An ordinary binding resolves as you would expect:
+
+```ts
+containedSessionCwd("/tmp/test-box", "store/recipes") === path.join("/tmp/test-box", "store/recipes")
+=> true
+```
+
+No binding is the box root:
+
+```ts
+JSON.stringify([containedSessionCwd("/tmp/test-box", undefined), containedSessionCwd("/tmp/test-box", "")])
+=> ["/tmp/test-box","/tmp/test-box"]
+```
+
+A row that climbs out of the box does **not** get clamped into something
+plausible — it falls back to the box root, so the transcript it names is simply
+not found rather than read from somewhere else:
+
+```ts
+containedSessionCwd("/tmp/test-box", "../../etc")
+=> /tmp/test-box
+```
+
+A leading slash does not make it absolute — `path.join` reads it as
+box-relative, so it lands inside the box rather than at the filesystem root:
+
+```ts
+containedSessionCwd("/tmp/test-box", "/etc/passwd")
+=> /tmp/test-box/etc/passwd
 ```
 
 ## parseSessionLog

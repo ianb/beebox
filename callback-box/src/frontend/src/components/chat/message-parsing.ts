@@ -9,6 +9,8 @@ import { isExternalUrl, resolveImageSrc } from "../../lib/view-url";
 import { bustImageSrc } from "../../lib/file-version";
 import type { SessionEntry, SessionContentBlock } from "../../api";
 import { stripChatAppTags } from "@shared/chat-tags";
+import { SESSION_MEDIA_ROUTE } from "@shared/session-media";
+import { getApiBase } from "../../api-core";
 import { entrySelfNotes, type SelfNoteInfo } from "@shared/self-note";
 
 // Self-note parsing is shared with the CLI/webapp — see `core/self-note.ts`.
@@ -281,6 +283,10 @@ export function imageBlockSrc(block: SessionContentBlock): string | null {
     return `data:${block.mediaType};base64,${block.dataBase64}`;
   }
   if (block.imageUrl) return block.imageUrl;
+  // A photo whose bytes stayed in the transcript. The reference is box-relative
+  // by construction — the server that minted it has no way to know the prefix
+  // this page is served under — so the box-scoped API base is added here.
+  if (block.imageRef) return `${getApiBase()}/${SESSION_MEDIA_ROUTE}/${block.imageRef}`;
   return null;
 }
 

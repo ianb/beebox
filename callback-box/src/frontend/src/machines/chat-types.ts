@@ -161,6 +161,14 @@ export type ChatInitialLoad =
       sessionId: string | null;
       running: boolean;
       busy: boolean;
+      /**
+       * Messages the box has accepted but not yet written into the transcript
+       * (`chat.bootstrap`'s `pending`). A fresh page has no optimistic copy of
+       * its own — that lived in the last page's memory — so without these a
+       * reload during the window between acceptance and the transcript write
+       * shows a conversation missing the question the box already has.
+       */
+      pending: PendingSessionEntry[];
     }
   | { status: "failed"; error: string };
 

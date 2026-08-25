@@ -105,16 +105,32 @@ function classifyUserEntry(
   return "keep";
 }
 
+/** What `buildEntry` needs beyond the record itself. */
+export interface BuildEntryOptions {
+  /**
+   * The scan's bounded graft window — read, and written into, for user entries
+   * carrying tool_result blocks (see {@link graftToolResults}).
+   */
+  recent: SessionEntry[];
+  /**
+   * The session this line belongs to, when its image payloads were stripped on
+   * the way in — the other half of the coordinates a stripped image is served
+   * by (`shared/session-media.ts`). Null when nothing was stripped, which is
+   * every ordinary line: an image block with no bytes is then a genuinely
+   * empty one, and still renders as the placeholder.
+   */
+  mediaSessionId: string | null;
+}
+
 /**
  * Decide what (if anything) a single raw entry contributes to the scan.
- * Returns a SessionEntry to record, or null to skip. `recent` is read (and
- * tool_use results grafted into it) for user entries carrying tool_result
- * blocks — see {@link graftToolResults}.
+ * Returns a SessionEntry to record, or null to skip.
  */
 export function buildEntry(
   raw: Record<string, unknown>,
-  recent: SessionEntry[]
+  options: BuildEntryOptions
 ): SessionEntry | null {
+  const { recent, mediaSessionId } = options;
   // Skip compact_boundary system messages — the compaction summary user
   // message that follows is the one we display.
   if (raw.type === "system" && raw.subtype === "compact_boundary") return null;
@@ -123,7 +139,10 @@ export function buildEntry(
   const message = isRecord(raw["message"]) ? raw["message"] : undefined;
   if (!message) return null;
 
-  const content = transformContent(message["content"]);
+  const uuid = String(raw.uuid || "");
+  const content = transformContent(message["content"], {
+    mediaRef: mediaSessionId !== null && uuid !== "" ? { sessionId: mediaSessionId, entryUuid: uuid } : null,
+  });
 
   // Skip SDK meta prompts ("Continue from where you left off.") — wakeup plumbing.
   if (raw.isMeta === true) return null;
@@ -139,7 +158,7 @@ export function buildEntry(
     const user = userIdentity(content, "user");
     const userEmail = userIdentity(content, "user-email");
     return {
-      uuid: String(raw.uuid || ""),
+      uuid,
       type: "user",
       timestamp: String(raw.timestamp || ""),
       content,
@@ -151,7 +170,7 @@ export function buildEntry(
   // Assistant entry — skip if it has no visible content.
   if (content.length === 0) return null;
   return {
-    uuid: String(raw.uuid || ""),
+    uuid,
     type: "assistant",
     timestamp: String(raw.timestamp || ""),
     content,

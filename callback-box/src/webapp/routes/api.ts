@@ -22,6 +22,7 @@ import { errnoCode } from "../../lib/error-guards.js";
 import { registerApiAdapterRoutes } from "./api-adapters.js";
 import { registerApiExternalRoute } from "./api-external.js";
 import { registerApiImageRoutes } from "./api-image.js";
+import { registerApiSessionMediaRoutes } from "./api-session-media.js";
 
 /**
  * Register API routes on the Fastify server.
@@ -68,6 +69,10 @@ export async function registerApiRoutes(
 
   // /api/image/* — unified image resolver (plain files + .image.card)
   registerApiImageRoutes({ server, boxRoot });
+
+  // /api/session-media/* — one inline chat photo, read back out of the
+  // transcript line the history path stripped it from.
+  registerApiSessionMediaRoutes({ server, boxRoot });
 
   // /api/external — explicit local-development wrapper for the commentary
   // surface; reads allowlisted files OUTSIDE the box root. Omission is safe:

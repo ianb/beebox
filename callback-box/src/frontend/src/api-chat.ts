@@ -49,6 +49,13 @@ export interface SessionContentBlock {
   dataBase64?: string;
   /** For image blocks with URL source */
   imageUrl?: string;
+  /**
+   * For image blocks whose inline bytes the history read stripped: the
+   * `<sessionId>/<entryUuid>/<index>` path to fetch them from under the box's
+   * API base. `imageBlockSrc` turns it into a URL; the browser then loads it
+   * lazily, so scrollback only pays for photos actually scrolled to.
+   */
+  imageRef?: string;
 }
 
 /**

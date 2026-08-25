@@ -7,7 +7,7 @@ rest stay visible. Entries explicitly queued while the agent is busy also
 carry `pending: true`, which gives them the dimmed "queued — waiting" UI.
 
 ```ts setup
-import { reconcilePending } from "../../src/frontend/src/machines/chat-shared.js";
+import { reconcilePending, mergeAcceptedIntoPending } from "../../src/frontend/src/machines/chat-shared.js";
 import type { PendingSessionEntry, SessionEntry } from "../../src/frontend/src/api.js";
 
 function userEntry(uuid: string, text: string): SessionEntry {
@@ -230,4 +230,77 @@ or not — the fix must not retire an entry the server has never seen.
 const unsent = reconcilePending({ serverMessages: [], pendingMessages: [optimistic] });
 JSON.stringify({ rendered: unsent.messages.length, stillPending: unsent.pendingMessages.length })
 => {"rendered":1,"stillPending":1}
+```
+
+## mergeAcceptedIntoPending — the box's record and this page's, without doubling
+
+`chat.bootstrap` reports what the box has **accepted** but not yet written into
+the transcript. On a fresh page load that list is the only thing standing
+between a reload mid-turn and a conversation missing the question the box
+already promised to have — the optimistic copies died with the previous page.
+
+```ts
+const accepted = [pendingEntry("accepted-7", "<typed>where is the drawer key?</typed>")];
+mergeAcceptedIntoPending({ pendingMessages: [], accepted }).map((e) => e.uuid).join(",")
+=> accepted-7
+```
+
+The two lists describe the same events from different sides, so in the window
+where a send lands while the initial fetch is still in flight they overlap. The
+server injects `user=`/`user-email=` attributes the optimistic copy never
+carried, so the comparison runs through the same normalizer reconciliation uses
+— otherwise the message renders twice, once from each side:
+
+```ts continue
+const mine = pendingEntry("local-1", "<typed>where is the drawer key?</typed>");
+const server = pendingEntry("accepted-7", "<typed user=\"Ada Lovelace\" user-email=\"ada@example.com\">where is the drawer key?</typed>");
+mergeAcceptedIntoPending({ pendingMessages: [mine], accepted: [server] }).map((e) => e.uuid).join(",")
+=> local-1
+```
+
+A match is consumed, so a person who really did send the same words twice keeps
+both — one optimistic copy cannot answer for two acceptances:
+
+```ts continue
+const twice = [
+  pendingEntry("accepted-8", "<typed>yes</typed>"),
+  pendingEntry("accepted-9", "<typed>yes</typed>"),
+];
+mergeAcceptedIntoPending({ pendingMessages: [pendingEntry("local-2", "<typed>yes</typed>")], accepted: twice })
+  .map((e) => e.uuid).join(",")
+=> local-2,accepted-9
+```
+
+An image send is the asymmetric case. The transcript and the optimistic copy
+both consume `[imageN]` into image blocks, so their text no longer holds the
+token; the box's acceptance record carries the raw text, because the bytes never
+reached the bus. Compared naively those are different messages and the send
+renders twice:
+
+```ts continue
+const withImage = pendingEntry("local-3", "<typed>here is the drawer</typed>");
+const acceptedImage = pendingEntry("accepted-11", "<typed>[image1]here is the drawer</typed>");
+mergeAcceptedIntoPending({ pendingMessages: [withImage], accepted: [acceptedImage] }).map((e) => e.uuid).join(",")
+=> local-3
+```
+
+And a repeated load cannot stack copies of one bus row, because the uuid it is
+minted from is stable:
+
+```ts continue
+const once = mergeAcceptedIntoPending({ pendingMessages: [], accepted });
+mergeAcceptedIntoPending({ pendingMessages: once, accepted }).map((e) => e.uuid).join(",")
+=> accepted-7
+```
+
+Once the transcript catches up, reconciliation retires an accepted entry exactly
+as it does a locally-minted one — the point of carrying them in this shape:
+
+```ts continue
+const echoed = reconcilePending({
+  serverMessages: [userEntry("real-1", "<typed user=\"Ada Lovelace\">where is the drawer key?</typed>")],
+  pendingMessages: once,
+});
+JSON.stringify({ messages: echoed.messages.length, pending: echoed.pendingMessages.length })
+=> {"messages":1,"pending":0}
 ```
