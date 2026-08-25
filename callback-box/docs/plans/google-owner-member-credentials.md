@@ -108,15 +108,16 @@ password.
 must contain at least one user and may contain zero or one owner.
 
 **Why this needs to change:** The current file schema rejects the desired state,
-and `addUserWithPasswordHash` rejects an absent file. Treating the member as a
+and the shared `insertUserWithPasswordHash` rejects an absent file unless the
+caller passes `allowMemberOnlyStore`. Treating the member as a
 fake owner would give the wrong role and authorization semantics.
 
 **Direction:** Validate a user array with at most one owner.
 `createFirstUser` will use `withAuthFileLock`: it creates an owner file when no
 file exists, appends the owner when a member-only file has no owner, and reports
 `UserExistsError` when an identity or owner already exists so the web setup and
-CLI retain their current conflict contract. `addUserWithPasswordHash` and
-`addUser` continue to require an existing owner. The explicit
+CLI retain their current conflict contract. `addUser` continues to require an
+existing owner. The explicit
 `addInvitedMemberWithPasswordHash` path can create a member-only store only when
 `CB_OWNER_EMAIL` still configures the owner. Invite acceptance checks
 `getOwnerEmail()` before capability consumption, so temporary configuration

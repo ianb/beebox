@@ -10,7 +10,8 @@ priority: normal
 ---
 
 A box can pin the model its **chat** agent uses (`.callback-box/chat-model.json`,
-read by `loadPersistedChatModel`, `src/core/chat/session/state.ts`). Nothing
+read by `loadCurrentModel` against `DEFAULT_MODEL_FILE`,
+`src/core/chat/session/state.ts`). Nothing
 pins the model its **reactor** agent uses. The reactor invokes agents through
 `createAgent` (`src/core/reactor/batch-jobs.ts:53`, `chat-jobs.ts`) and never
 passes a `model`, and `runAgent` (`src/core/agent/run.ts:30`) leaves it at the

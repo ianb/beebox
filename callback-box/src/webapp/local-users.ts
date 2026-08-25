@@ -271,16 +271,6 @@ export async function addUser(opts: {
   return insertUserWithPasswordHash({ ...opts, scrypt, allowMemberOnlyStore: false });
 }
 
-/** Insert a member after its password was hashed outside the store lock. */
-export async function addUserWithPasswordHash(opts: {
-  email: string;
-  name: string;
-  role: LocalRole;
-  scrypt: StoredScrypt;
-}): Promise<LocalUser> {
-  return insertUserWithPasswordHash({ ...opts, allowMemberOnlyStore: false });
-}
-
 /** Add a member through an owner-issued invite, including the first local user. */
 export async function addInvitedMember(opts: { email: string; name: string; password: string }): Promise<LocalUser> {
   const scrypt = await hashPassword(opts.password);
