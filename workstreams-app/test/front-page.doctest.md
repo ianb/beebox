@@ -55,8 +55,10 @@ JSON.stringify({
 
 The feed addresses every entry by repository path, but an issue is not read as
 markdown source — it has a viewer that knows about frontmatter, related items,
-and actions. Only main's copy: the viewer reads issues from the main checkout,
-so a worktree's row keeps the checkout-aware browser.
+and actions. A worktree's row goes there too: the viewer resolves an issue
+through the worktree overlay before main, so it opens that branch's copy — the
+case worth clicking on most. A file under `issues/` that is not an issue (no
+category directory) keeps the browser.
 
 ```ts
 const recentFile = (relPath, workstream) => ({
@@ -87,10 +89,9 @@ JSON.stringify([
     }
   },
   {
-    "to": "/browse",
+    "to": "/issues",
     "search": {
-      "file": "issues/bugs/2026-08-25-a-worktree-issue.md",
-      "workstream": "some-stream"
+      "issue": "bugs/2026-08-25-a-worktree-issue.md"
     }
   },
   {
