@@ -16,6 +16,11 @@ import { createIntakeJobTemplate } from "../../src/schemas/index.js";
 
 const job = (description: string) =>
   createIntakeJobTemplate({ source: "test", description, items: [] });
+
+// Matches the `YYYY-MM-DDTHH-MM-SS` stamp every job-card writer uses, built
+// relative to "now" so the doctest never goes stale as the calendar moves.
+const stampFromNow = (msAgo: number) =>
+  new Date(Date.now() - msAgo).toISOString().replace(/:/g, "-").replace(/\.\d+Z$/, "");
 ```
 
 ## A box with no jobs, and a box with fresh ones, both pass
@@ -29,7 +34,7 @@ const empty = await stalledJobsCheck(box.root);
 JSON.stringify({ ok: empty.ok, severity: empty.severity })
 => {"ok":true,"severity":"warning"}
 
-await box.write("box/jobs/2026-08-18T09-00-00-fresh.intake.job.card", job("Today's work"));
+await box.write(`box/jobs/${stampFromNow(0)}-fresh.intake.job.card`, job("Today's work"));
 (await stalledJobsCheck(box.root)).ok
 => true
 ```
