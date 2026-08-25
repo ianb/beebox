@@ -5,7 +5,6 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — user-story catalog verification
 resolution: implemented
-stories: [cards/define-box-local-card-types-that-hot-reload]
 ---
 
 **What is wrong.** Box-local card types are loaded only from the package root's `src/schemas/`. `schemas/registry.ts` rebuildBoxSchemas reads `boxCodePaths(shape).schemasDir`, and `lib/box-shape.ts:242` defines that as `path.join(shape.packageRoot, "src/schemas")`; `core/schema-watcher.ts:38` watches the same single helper. There is no fallback branch, and every box is shapeVersion 2 (getBoxShape hard-errors on anything older), so `content/config/schemas/` is dead for all boxes. But the generated agent guide still names it: `core/agent-guide/cards.ts:175` emits 'New card types can be defined in `config/schemas/` using cardSchema() ... see `config/schemas/CLAUDE.md` for how.' That sentence is live in a real box's guide today — `content/.callback-box/agent-guide.md:302` in the test1 clone — 143 lines above the correct Box-Owned Code table (line 445, `| Schemas | ../src/schemas/ |`) rendered by `core/agent-guide/box-shape.ts` boxCodeLocationSection. The two sections contradict each other, and the actionable, imperative one is the wrong one.

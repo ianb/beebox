@@ -49,6 +49,8 @@ bin/browse click cb-some-id   # act by the id when the line shows one
 bin/browse click @e3          # by ref only when it shows no id
 bin/browse fill cb-some-id "text"
 bin/browse upload @e5 <file>  # file input
+bin/browse scroll down [px]   # also up/left/right
+bin/browse scrollintoview cb-some-id   # bring a control into view before acting on it
 bin/browse screenshot <path>  # save a screenshot
 bin/browse eval "<js>"        # read something off the page if you must
 ```
@@ -58,7 +60,12 @@ renumbered by any page change and must be re-snapshotted first. If a command pri
 `✗ … refused: <reason>`, the tool did not do it — it is telling you the control could not be
 operated (disabled, hidden, covered, gone) and why. That is worth noting as what you saw; do not
 read it as the app having done nothing. `✓ Done` means the action was delivered, not that it
-had the effect you expected — look at the screen. You are already signed in.
+had the effect you expected — look at the screen.
+
+A refusal that says `offscreen` is the one you can always do something about: scroll, or
+`scrollintoview`, and try again. A person would scroll without thinking about it, so reaching
+something that way is not worth a note — but if you scroll to it and it still cannot be used,
+that is the app, and it is worth one. You are already signed in.
 
 **Run every `bin/browse` command with `BROWSE_BOX={{BOX_SLUG}}` set**, e.g.
 

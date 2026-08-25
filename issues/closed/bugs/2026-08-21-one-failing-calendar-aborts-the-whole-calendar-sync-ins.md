@@ -5,7 +5,6 @@ design: ../../../callback-box/docs/implemented-plans/connector-sync-isolation.md
 area: callback-box
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — user-story catalog verification
-stories: [connectors/calendar-sync-repairs-an-expired-sync-token-and]
 resolution: implemented
 ---
 

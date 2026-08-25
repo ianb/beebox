@@ -4,7 +4,6 @@ workstream: unattached
 area: callback-box
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — user-story catalog verification
-stories: [browse/see-which-changes-the-box-made-on-its-own-and]
 priority: normal
 ---
 
