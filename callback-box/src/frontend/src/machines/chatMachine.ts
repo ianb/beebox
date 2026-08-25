@@ -10,7 +10,7 @@
 
 import { setup, assign, enqueueActions } from "xstate";
 import { invariant } from "@shared/invariant";
-import { buildOptimisticContent } from "./chat-shared";
+import { buildOptimisticContent, mergeAcceptedIntoPending } from "./chat-shared";
 import {
   chatTailSlice,
   logFsm,
@@ -169,7 +169,15 @@ export const chatMachine = setup({
           // fetch appended a pending entry, and the fetched history predates
           // it — a plain overwrite would blank the row until the next refresh.
           actions: assign(({ context, event }) => {
-            const { messages, pendingMessages } = reconcilePendingWithDiagnostics({ serverMessages: event.output.entries, pendingMessages: context.pendingMessages });
+            // The box's own record of what it accepted joins this machine's
+            // optimistic copies before reconciliation. On a fresh page load
+            // there are no optimistic copies — they died with the last page —
+            // so these are the only thing standing between a reload mid-turn
+            // and a conversation missing the question the box already has.
+            // Reconciliation then retires whichever of them the transcript has
+            // caught up to, exactly as it does for a locally-minted one.
+            const carried = mergeAcceptedIntoPending({ pendingMessages: context.pendingMessages, accepted: event.output.pending });
+            const { messages, pendingMessages } = reconcilePendingWithDiagnostics({ serverMessages: event.output.entries, pendingMessages: carried });
             return {
               messages, pendingMessages, sessionId: event.output.sessionId,
               processRunning: event.output.running, processBusy: event.output.busy,

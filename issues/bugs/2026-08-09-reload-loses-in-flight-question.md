@@ -56,31 +56,60 @@ takes the durable claim — its own comment says *"recording it IS acceptance"*.
 in-memory optimistic copy plus the bus event over the WebSocket
 (`InteractiveChat-ws.ts:252`); a reloaded page has neither.
 
-## Proposed fix
+## Fixed (2026-08-25)
 
-Have `chat.bootstrap` return the messages the box has **accepted but not yet
-made durable in the transcript**, as a separate field — not merged into
-`entries`. The client already knows what to do with that shape: it feeds them
-into `pendingMessages`, and the existing `reconcilePending`
-(`frontend/src/machines/chat-shared.ts:81`) retires each one as the transcript
-catches up. No new dedup logic server-side; the client's is already doctested.
+`chat.bootstrap` now reports what the box has **accepted but not yet made
+durable**, as a field of its own (`pending`) rather than merged into `entries`
+— `history` keeps meaning "what is on disk", which is what every other reader
+of it assumes.
 
-Details to settle when building:
-- The bus needs a bounded "recent events of this type" read; today it exposes
-  `readSince(afterId)` only.
-- Bound it in time (~10 min, matching `RUN_START_TIMEOUT_MS`) and then stop
-  claiming it — a message still not durable after that is a failure to surface,
-  not a pending state to render forever.
-- The `kind: "empty"` case is the important one and the awkward one: a
-  pending-new send has `sessionId: null` on its bus event, so these cannot be
-  keyed by session.
+- `core/chat/session/accepted-messages.ts` reads a bounded, time-limited tail of
+  `chat-user-message` off the bus. Bounded in time to ten minutes, matching
+  `RUN_START_TIMEOUT_MS`: a message still absent from the transcript after the
+  longest a cold spawn is given is not pending any more, and rendering it
+  forever would be a comfortable lie rather than a true "not yet".
+- The bus grew `readRecent({ event, limit })` for this. `readSince(afterId)`
+  answers "what have I missed", which needs a cursor a page load does not have.
+- The server deliberately does **not** filter these against the transcript. The
+  client already owns that comparison (`reconcilePending`), and a second
+  implementation server-side could disagree with it. The client folds them into
+  `pendingMessages` and reconciliation retires each one as the transcript
+  catches up, exactly as for a locally-minted optimistic copy.
+- `mergeAcceptedIntoPending` (`frontend/src/machines/chat-shared.ts`) keeps the
+  two sides from doubling: in the window where a send lands while the initial
+  fetch is still in flight, this page's optimistic copy and the box's accepted
+  record describe the same message. Matched through the same normalizer
+  reconciliation uses (the server injects `user=`/`user-email=` attributes the
+  optimistic copy never carried), consumed one-for-one so a person who really
+  did send the same words twice keeps both.
+- `ChatPage` now carries a preload for `rendered === "new"` when the box has
+  accepted messages with no session yet — the `kind: "empty"` case, which is the
+  one the field report described and the one that previously showed nothing at
+  all.
 
-## Blocked on sequencing, not on design
+Verified in the running app: with the only record of a message being its
+acceptance on the bus, a bare `/chat` load renders it instead of a blank chat.
+Covered by `test/webapp/chat-reload-loses-in-flight.doctest.md` (the
+reproduction, now carried through to the fix) and the
+`mergeAcceptedIntoPending` cases in `test/frontend/reconcile-pending.doctest.md`.
 
-Two live worktrees — `emission-model` and `capture-chip-states` — are both
-actively restructuring `chat-shared.ts`, `chatMachine.ts`, `chat-types.ts` and
-`chat-actors.ts`, and both are net-*deleting* from the pending/reconcile
-machinery this fix would extend. Building the client half here means a
-three-way conflict on files two streams are rewriting, possibly on top of a
-shape they are removing. The server half is additive and safe; the client half
-should wait for those to land, or be done inside one of them.
+## Not covered (deliberate)
+
+- **A stuck send eventually goes quiet.** A message accepted more than ten
+  minutes ago and still not durable falls out of the window and stops being
+  shown. Bounding it is right — rendering it forever would be a lie — but the
+  message deserves a visible terminal state ("this never sent") rather than
+  silence. Separate work; the same shape as
+  [nothing-retries-forever](../../issues/).
+- **A `?session=new` URL on a box that cannot coin.** The web client normally
+  coins a session id and reserves it before the first send
+  (`pages/chat-coin-session.ts`), so the URL carries a real id by the time
+  anything is sent and the acceptance record matches by session. A box whose
+  engine cannot coin (Codex) keeps the `"new"` sentinel, and `ChatPage` disables
+  the bootstrap query for it — so that reload still comes back blank. Covering
+  it means a bootstrap round trip on every new-chat open, which is a real cost
+  paid by every box to fix one engine's case.
+- **Two new chats at once, same person.** Two tabs each starting an unassigned
+  chat would each show both pending messages, since neither has a session id to
+  tell them apart and the sender is the same. Narrow, and it self-corrects the
+  moment either engine assigns an id.

@@ -64,7 +64,53 @@ function normalizeForCompare(text: string): string {
   // placeholders. Observed in a journey walk, 2026-08-24.
   return text
     .replaceAll(IMAGE_NOT_DISPLAYED, "")
+    // `[imageN]` tokens are consumed into image blocks by whichever side built
+    // the entry, so a side that did not build image blocks (the box's record of
+    // an accepted message — the bytes never reached the bus) still carries
+    // them. Dropping them here keeps every comparison between the three copies
+    // of one message symmetric, including the orphan-token case the shared
+    // builder deliberately leaves as literal text.
+    .replace(/\[image\d+]/g, "")
     .replace(/<(typed|speech)\b[^>]*>/g, "<$1>");
+}
+
+/**
+ * Fold the box's own record of accepted-but-not-durable messages into this
+ * machine's optimistic ones.
+ *
+ * The two lists describe the same events from different sides: `pendingMessages`
+ * is what this page sent and is still waiting on, `accepted` is what the box
+ * says it took (`chat.bootstrap`'s `pending`). On a fresh load the first is
+ * empty and the second is everything. In the narrow window where a send lands
+ * while the initial fetch is still in flight they overlap, and appending
+ * blindly would render that message twice — once from each side.
+ *
+ * So an accepted entry is dropped when something already pending carries the
+ * same text, compared through the same normalizer reconciliation uses, and
+ * again by uuid so a repeated load cannot stack copies of one bus row.
+ */
+export function mergeAcceptedIntoPending(params: {
+  pendingMessages: PendingSessionEntry[];
+  accepted: PendingSessionEntry[];
+}): PendingSessionEntry[] {
+  const { pendingMessages, accepted } = params;
+  if (accepted.length === 0) return pendingMessages;
+  const seenUuids = new Set(pendingMessages.map((pm) => pm.uuid));
+  const seenText = pendingMessages.map((pm) => normalizeForCompare(entryText(pm))).filter((t) => t !== "");
+  const fresh = accepted.filter((entry) => {
+    if (seenUuids.has(entry.uuid)) return false;
+    const text = normalizeForCompare(entryText(entry));
+    const at = seenText.indexOf(text);
+    // Consume the match, so two identical messages the person really did send
+    // twice are not collapsed into one by a single optimistic copy.
+    if (text !== "" && at !== -1) {
+      seenText.splice(at, 1);
+      return false;
+    }
+    seenUuids.add(entry.uuid);
+    return true;
+  });
+  return [...pendingMessages, ...fresh];
 }
 
 /**

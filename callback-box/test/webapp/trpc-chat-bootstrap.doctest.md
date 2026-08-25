@@ -81,7 +81,7 @@ const server = await makeTestServer();
 
 const empty = await caller(server).chat.bootstrap({ slice: TAIL });
 JSON.stringify(empty)
-=> {"kind":"empty","sessionId":null,"history":null,"label":null,"status":{"sessionId":null,"running":false,"busy":false,"model":null,"engine":"claude"}}
+=> {"kind":"empty","sessionId":null,"history":null,"label":null,"status":{"sessionId":null,"running":false,"busy":false,"model":null,"engine":"claude"},"pending":[]}
 ```
 
 ## An explicit session id returns that session's history and status
@@ -146,9 +146,10 @@ const [viaDefault, viaHistory, viaStatus] = await Promise.all([
 ]);
 const atomic = await c.chat.bootstrap({ slice: TAIL });
 
-// `label` is bootstrap's own addition — the three procedures it replaces have
-// no equivalent — so it sits out the comparison.
-const { label, ...composed } = atomic;
+// `label` and `pending` are bootstrap's own additions — the three procedures it
+// replaces have no equivalent (`pending` reads the acceptance record on the
+// event bus, not the transcript) — so they sit out the comparison.
+const { label, pending, ...composed } = atomic;
 JSON.stringify(composed) === JSON.stringify({
   kind: "resumable",
   sessionId: viaDefault.sessionId,
@@ -172,7 +173,7 @@ doesn't.)
 ```ts continue
 const missing = await caller(server).chat.bootstrap({ session: "no-such-session", slice: TAIL });
 JSON.stringify(missing)
-=> {"kind":"unavailable","sessionId":"no-such-session","history":null,"label":null,"status":{"sessionId":"no-such-session","running":false,"busy":false,"model":null,"engine":"claude"},"reason":"missing-local-transcript","huskPath":null}
+=> {"kind":"unavailable","sessionId":"no-such-session","history":null,"label":null,"status":{"sessionId":"no-such-session","running":false,"busy":false,"model":null,"engine":"claude"},"reason":"missing-local-transcript","huskPath":null,"pending":[]}
 ```
 
 Input still validates: a non-string session is rejected before any work, and so
@@ -245,7 +246,7 @@ than a session named `""`:
 ```ts continue
 await setDefaultSession(server, "");
 JSON.stringify(await caller(server).chat.bootstrap({ slice: TAIL }))
-=> {"kind":"empty","sessionId":null,"history":null,"label":null,"status":{"sessionId":null,"running":false,"busy":false,"model":null,"engine":"claude"}}
+=> {"kind":"empty","sessionId":null,"history":null,"label":null,"status":{"sessionId":null,"running":false,"busy":false,"model":null,"engine":"claude"},"pending":[]}
 ```
 
 ```ts cleanup

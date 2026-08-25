@@ -119,3 +119,24 @@ leaves `STRIPPED_MEDIA_MARKER` where the payload was rather than an empty
 string, so the reader can tell a photo it can go and fetch from an upload that
 failed and has nothing behind it — one turn can carry both, and only the first
 gets a URL. The second still reads `[image not displayed]`, which is true.
+
+## Two records of a message, and which one each reader sees
+
+A send is answered 200 once it is **durably recorded**: `POST /api/chat/send`
+emits the persisted `chat-user-message` onto the box's event bus and takes the
+durable claim, and only then starts the engine — *"recording it IS acceptance"*
+(`webapp/routes/chat-send-routes.ts`). The **transcript** is written later, by
+the agent subprocess.
+
+So the box holds two records, and they are not in step. `chat.history` and
+`chat.bootstrap`'s `entries` read the transcript: that is what is durable.
+`chat.bootstrap`'s `pending` reads the acceptance record: that is what is owed
+(`core/chat/session/accepted-messages.ts`). A live client never notices the gap
+— it holds its own optimistic copy and sees the bus event over the WebSocket —
+but a reloaded page has neither, and for a message that opened a *new* chat the
+gap lasts until the engine assigns a session id.
+
+The two are kept separate on the wire and joined on the client, where
+`reconcilePending` already knows how to retire a pending message once the
+transcript catches up. Nothing server-side compares them; one comparison, in one
+place.

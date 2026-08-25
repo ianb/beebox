@@ -12,7 +12,9 @@ now shares the queue-don't-interrupt SEND handling with `streaming` and
 import { createActor, fromPromise, fromCallback } from "xstate";
 import { chatMachine } from "../../src/frontend/src/machines/chatMachine.js";
 
-const EMPTY = { entries: [], total: 0, sessionId: "s1", running: false, busy: false };
+// `pending` is the box's record of messages it accepted but has not yet
+// written into the transcript (`chat.bootstrap`); a stubbed fetch has none.
+const EMPTY = { entries: [], total: 0, sessionId: "s1", running: false, busy: false, pending: [] };
 ```
 
 ## The optimistic entry appears while loading and survives fetchInitial
