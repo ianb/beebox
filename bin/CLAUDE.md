@@ -388,7 +388,10 @@ without trustworthy activity and is guidance to start a new stream, not a
 resume prohibition. `scheduled` is a `kind: "scheduled"` record resting between
 runs: sticky by design, so `remove`, `sweep`, and prune cull its worktree but
 never its record, `archive` refuses it (set `enabled: false` in its
-`schedule.yaml` instead), and `list` renders it with no worktree at all. Every
+`schedule.yaml` instead), and `list` renders it with no worktree at all. A cull
+records the tip it happened at under `culled` (never `removed`, which would
+hide the row), and `resume` reads that pointer for its "landed since" log the
+same way it reads `removed.finalSha`. Every
 row also carries a `schedule` field — cadence, last run and outcome, overdue,
 open alerts, and the scheduler's own last tick — joined by name from one
 `bin/schedules list --json` call per listing, and null for a workstream that is
@@ -554,6 +557,22 @@ the session that spawned it (this happened on 2026-08-04). Callers should
 _also_ pass `--setting-sources user` so the project's hooks never load at all;
 the skill documents that as load-bearing. Two independent guards because the
 failure destroys work.
+
+## Headless agent sessions (`bin/lib/launch-headless.sh`)
+
+A scheduled run that has work starts its agent through the same lifecycle a
+Terminal session uses — `bin/workstreams create`, `wt_other_agent_live`, the
+registry's launch lease — but with no tab: `claude -p` / `codex exec` in the
+foreground, the briefing on **stdin** (never argv), output appended to the run
+log, killed at the schedule's `timeout`. `launch-headless.sh` is the ONE place
+those flags are assembled; source it (`launch-session.sh` does) or execute it to
+print the argv one element per line. Codex has no equivalent for `tools` /
+`allowedTools` / `disallowedTools` / `maxBudgetUsd`, so a codex schedule that
+declares any of them is refused rather than launched unconstrained, and its
+`prompt.md` leads the briefing instead of riding `--append-system-prompt-file`.
+The session reports by writing a record (`bin/schedules alert` or `done`); one
+that ends without either is an `important` alert. Design:
+`callback-box/docs/plans/scheduled-workstreams.md`, Track B.
 
 ## Document comments (`bin/comments`)
 

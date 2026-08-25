@@ -33,6 +33,7 @@ import {
 import {
   ACK_FADE_MS,
   acquireLock,
+  ensureStoreRoot,
   readAlerts,
   readScheduleState,
   readStoreState,
@@ -44,11 +45,10 @@ import {
   classifyOutcome,
   isDue,
   isOverdue,
-  raiseAlert,
   runSchedule,
   tick,
-  type RunnerDeps,
 } from "./lib/schedules-runner.js";
+import { raiseAlert, type RunnerDeps } from "./lib/schedules-alerts.js";
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────
 
@@ -100,7 +100,7 @@ interface Fake {
   setNow: (ms: number) => void;
 }
 
-async function makeDeps(input: { schedulesRoot: string; nowMs: number; alive?: (pid: number) => boolean }): Promise<Fake> {
+async function makeDeps(input: { schedulesRoot: string; nowMs: number; alive?: (pid: number) => boolean; mainRoot?: string }): Promise<Fake> {
   const storeRoot = path.join(await tempDir("schedule-runs"), "store");
   const notifications: { title: string; message: string }[] = [];
   let nowMs = input.nowMs;
@@ -111,6 +111,7 @@ async function makeDeps(input: { schedulesRoot: string; nowMs: number; alive?: (
       storeRoot,
       schedulesRoot: input.schedulesRoot,
       repoRoot: input.schedulesRoot,
+      mainRoot: input.mainRoot ?? input.schedulesRoot,
       now: () => new Date(nowMs),
       pid: process.pid,
       isProcessAlive: input.alive ?? (() => true),
@@ -299,6 +300,9 @@ test("a held lock skips the run; a lock owned by a dead pid is reclaimed", async
   const fake = await makeDeps({ schedulesRoot, nowMs: Date.parse("2026-08-24T12:00:00Z") });
   const schedule = await onlySchedule(schedulesRoot);
 
+  // Seeded by hand, so the store gets its marker the way the CLI's entry
+  // points write it.
+  await ensureStoreRoot(fake.deps.storeRoot);
   await fs.mkdir(path.join(fake.deps.storeRoot, "lockjob", "runs"), { recursive: true });
   const held = await acquireLock(fake.deps.storeRoot, {
     name: "lockjob",
@@ -520,4 +524,404 @@ test("handoff under SCHEDULE_DRY_RUN=1 prints instead of writing", async () => {
   assert.equal(result.exitCode, 0, result.stderr);
   assert.match(result.stdout, new RegExp(DRY_RUN_HANDOFF_MARKER.replace(/[[\]]/g, "\\$&")));
   await assert.rejects(fs.stat(storeRoot), /ENOENT/);
+});
+
+// ─── Track B chunk 2: starting the workstream ─────────────────────────────
+
+/** Where the REAL session-registry.sh writes during these tests: the launch
+ *  lease is part of what is under test, so the shell library runs for real
+ *  against a temp state dir rather than being stood in for. */
+const registryStateDir = await tempDir("schedules-registry");
+process.env["CALLBACK_STATE_DIR"] = registryStateDir;
+
+const REPO = path.dirname(import.meta.dirname);
+const LAUNCH_HEADLESS = path.join(import.meta.dirname, "lib", "launch-headless.sh");
+const REAL_PATH = process.env["PATH"] ?? "";
+
+/** The agent command as the one shell library assembles it. */
+async function headlessArgv(env: NodeJS.ProcessEnv): Promise<{ exitCode: number; argv: string[]; stderr: string }> {
+  const result = await execa(LAUNCH_HEADLESS, [], { reject: false, env: { ...process.env, ...env } });
+  return {
+    exitCode: result.exitCode ?? -1,
+    argv: result.stdout.split("\n").filter((line) => line !== ""),
+    stderr: result.stderr,
+  };
+}
+
+const CLAUDE_ENV = {
+  LH_AGENT: "claude",
+  LH_WORKSTREAM: "knip-sweep",
+  LH_MODEL: "opus",
+  LH_PERMISSION_MODE: "dontAsk",
+  LH_SYSTEM_PROMPT_FILE: path.join(REPO, "package.json"),
+  LH_SESSION: "fresh",
+};
+
+test("the claude command carries the sandbox, the prompt file, and a fresh session", async () => {
+  const built = await headlessArgv({
+    ...CLAUDE_ENV,
+    LH_TOOLS: "Read\nGrep\nEdit",
+    LH_ALLOWED_TOOLS: "Edit(issues/**)\nRead(bin/**)",
+    LH_DISALLOWED_TOOLS: "Read(private-issues/**)",
+    LH_MAX_BUDGET_USD: "2",
+  });
+  assert.equal(built.exitCode, 0, built.stderr);
+  assert.deepEqual(built.argv, [
+    "claude", "-p", "--brief", "--name", "knip-sweep", "--model", "opus",
+    "--permission-mode", "dontAsk", "--setting-sources", "user", "--disable-slash-commands",
+    "--append-system-prompt-file", path.join(REPO, "package.json"),
+    "--tools", "Read", "Grep", "Edit",
+    "--allowedTools", "Edit(issues/**)", "Read(bin/**)",
+    "--disallowedTools", "Read(private-issues/**)",
+    "--max-budget-usd", "2",
+    "--no-session-persistence",
+  ]);
+});
+
+test("a persistent claude session mints an id on the first run and resumes it afterwards", async () => {
+  const first = await headlessArgv({ ...CLAUDE_ENV, LH_SESSION: "persistent", LH_SESSION_ID: "abc-123", LH_SESSION_RESUME: "0" });
+  assert.deepEqual(first.argv.slice(-2), ["--session-id", "abc-123"]);
+  const later = await headlessArgv({ ...CLAUDE_ENV, LH_SESSION: "persistent", LH_SESSION_ID: "abc-123", LH_SESSION_RESUME: "1" });
+  assert.deepEqual(later.argv.slice(-2), ["--resume", "abc-123"]);
+  const refused = await headlessArgv({ ...CLAUDE_ENV, LH_SESSION: "persistent" });
+  assert.notEqual(refused.exitCode, 0);
+  assert.match(refused.stderr, /LH_SESSION_ID is required/u);
+});
+
+test("the codex command maps the sandbox and refuses constraints it cannot honor", async () => {
+  const bypass = await headlessArgv({
+    LH_AGENT: "codex", LH_WORKSTREAM: "sdk-update", LH_MODEL: "gpt-5.6-sol",
+    LH_PERMISSION_MODE: "bypassPermissions", LH_SESSION: "fresh", LH_CWD: "/tmp/wt",
+  });
+  assert.equal(bypass.exitCode, 0, bypass.stderr);
+  assert.deepEqual(bypass.argv, [
+    "codex", "exec", "-s", "danger-full-access",
+    "-c", 'projects."/tmp/wt".trust_level="trusted"', "-c", "project_doc_max_bytes=131072",
+    "-m", "gpt-5.6-sol",
+  ]);
+
+  const resumed = await headlessArgv({
+    LH_AGENT: "codex", LH_WORKSTREAM: "sdk-update", LH_PERMISSION_MODE: "dontAsk",
+    LH_SESSION: "persistent", LH_SESSION_RESUME: "1", LH_CWD: "/tmp/wt",
+  });
+  assert.deepEqual(resumed.argv.slice(0, 6), ["codex", "exec", "resume", "--last", "-s", "workspace-write"]);
+
+  // A declared sandbox codex cannot express is a refusal, never a silently
+  // unconstrained agent.
+  const constrained = await headlessArgv({
+    LH_AGENT: "codex", LH_WORKSTREAM: "sdk-update", LH_PERMISSION_MODE: "dontAsk",
+    LH_SESSION: "fresh", LH_CWD: "/tmp/wt", LH_ALLOWED_TOOLS: "Edit(issues/**)", LH_MAX_BUDGET_USD: "2",
+  });
+  assert.notEqual(constrained.exitCode, 0);
+  assert.match(constrained.stderr, /no equivalent for: allowedTools maxBudgetUsd/u);
+});
+
+// ─── The launch, end to end against a fake agent ──────────────────────────
+
+const HANDOFF_RUN = [
+  "#!/bin/sh",
+  'printf \'{"runId":"%s","title":"twelve exports","body":"remove them","at":"2026-08-24T12:00:00.000Z"}\\n\' "$SCHEDULE_RUN_ID" \\',
+  '  > "$SCHEDULE_STATE_DIR/runs/$SCHEDULE_RUN_ID.handoff.json"',
+  "",
+].join("\n");
+
+function workstreamYaml(fields: string): string {
+  return [
+    'description: "a schedule with an agent"',
+    "cadence: 1d",
+    "workstream:",
+    "  agent: claude",
+    "  model: opus",
+    "  session: fresh",
+    "  permissionMode: bypassPermissions",
+    fields,
+    "",
+  ].join("\n");
+}
+
+interface Rig {
+  fake: Fake;
+  schedule: LoadedSchedule;
+  worktreePath: string;
+  binDir: string;
+  /** Everything the fake agent saw: argv, cwd, environment, briefing. */
+  transcript: () => Promise<string>;
+}
+
+/**
+ * A schedule whose agent is a shell script that records what it was given.
+ * Nothing here launches a real agent — but `bin/workstreams` is only stood in
+ * for because creating a real worktree costs ten seconds and a git mutation;
+ * the registry, the store, the launch-headless assembly, and the process
+ * plumbing are all the shipping ones.
+ */
+async function launchRig(input: {
+  name: string;
+  yaml: string;
+  run: string;
+  liveness: string;
+  agentExit: number;
+  agentExtra: string;
+  check: string | null;
+}): Promise<Rig> {
+  const { schedulesRoot, dir } = await makeSchedule(input.name, {
+    yaml: input.yaml,
+    run: input.run,
+    prompt: "You are the test agent. Finish with bin/schedules alert or done.\n",
+  });
+  if (input.check !== null) {
+    const check = path.join(dir, "check");
+    await fs.writeFile(check, input.check, "utf8");
+    await fs.chmod(check, 0o755);
+  }
+
+  const mainRoot = await tempDir("main-checkout");
+  const worktreePath = path.join(await tempDir("worktrees"), input.name);
+  await fs.mkdir(path.join(mainRoot, "bin"), { recursive: true });
+  const workstreams = path.join(mainRoot, "bin", "workstreams");
+  await fs.writeFile(workstreams, [
+    "#!/bin/sh",
+    "case \"$1\" in",
+    `  create) mkdir -p "${worktreePath}"; printf '%s\\n' "${worktreePath}" ;;`,
+    `  agent-liveness) printf '{"ok":true,"paths":{"%s":{"state":"${input.liveness}","reason":"fake"}}}\\n' "$2" ;;`,
+    "  *) echo \"unexpected: $*\" >&2; exit 64 ;;",
+    "esac",
+    "",
+  ].join("\n"), "utf8");
+  await fs.chmod(workstreams, 0o755);
+
+  const binDir = await tempDir("fake-agent-bin");
+  const agentLog = path.join(binDir, "transcript.txt");
+  const script = [
+    "#!/bin/sh",
+    "{",
+    "  printf 'cwd=%s\\n' \"$PWD\"",
+    "  printf 'name=%s\\n' \"$SCHEDULE_NAME\"",
+    "  printf 'runid=%s\\n' \"$SCHEDULE_RUN_ID\"",
+    "  printf 'statedir=%s\\n' \"$SCHEDULE_STATE_DIR\"",
+    "  for a in \"$@\"; do printf 'arg=%s\\n' \"$a\"; done",
+    "  printf 'briefing<<\\n'",
+    "  cat",
+    `} > "${agentLog}"`,
+    input.agentExtra,
+    `exit ${String(input.agentExit)}`,
+    "",
+  ].join("\n");
+  for (const name of ["claude", "codex"]) {
+    const file = path.join(binDir, name);
+    await fs.writeFile(file, script, "utf8");
+    await fs.chmod(file, 0o755);
+  }
+
+  const fake = await makeDeps({ schedulesRoot, nowMs: Date.parse("2026-08-24T12:00:00Z"), mainRoot });
+  return {
+    fake,
+    schedule: await onlySchedule(schedulesRoot),
+    worktreePath,
+    binDir,
+    transcript: async () => {
+      try {
+        return await fs.readFile(agentLog, "utf8");
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException).code === "ENOENT") return "";
+        throw e;
+      }
+    },
+  };
+}
+
+/** The fake agent is found the way the real one is: by name, on PATH. */
+async function withFakeAgent<T>(rig: Rig, body: () => Promise<T>): Promise<T> {
+  process.env["PATH"] = `${rig.binDir}:${REAL_PATH}`;
+  try {
+    return await body();
+  } finally {
+    process.env["PATH"] = REAL_PATH;
+  }
+}
+
+const REPORTS_DONE = [
+  'printf \'{"runId":"%s","kind":"done","alertId":null,"at":"2026-08-24T12:00:00.000Z"}\\n\' "$SCHEDULE_RUN_ID" \\',
+  '  > "$SCHEDULE_STATE_DIR/runs/$SCHEDULE_RUN_ID.result.json"',
+].join("\n");
+
+test("a handoff starts the session in the worktree, on stdin, and records both exits", async () => {
+  const rig = await launchRig({
+    name: "knip-sweep",
+    yaml: workstreamYaml("  worktree: true"),
+    run: HANDOFF_RUN,
+    liveness: "none",
+    agentExit: 0,
+    agentExtra: REPORTS_DONE,
+    check: "#!/bin/sh\nexit 0\n",
+  });
+  const report = await withFakeAgent(rig, async () => runSchedule(rig.fake.deps, { schedule: rig.schedule, dryRun: false }));
+  assert.ok(report.kind === "ran" && report.outcome === "handoff");
+
+  const seen = await rig.transcript();
+  // realpath: macOS resolves /var to /private/var for a child's $PWD.
+  assert.match(seen, new RegExp(`^cwd=${await fs.realpath(rig.worktreePath)}$`, "mu"));
+  assert.match(seen, /^name=knip-sweep$/mu);
+  assert.match(seen, /^arg=--append-system-prompt-file$/mu);
+  // The briefing is the handoff body plus the trailer that names the run id and
+  // the reporting contract — the prompt is never an argv element.
+  assert.match(seen, /^briefing<<$/mu);
+  assert.match(seen, /remove them/u);
+  assert.match(seen, new RegExp(`bin/schedules alert --run ${report.runId}`, "u"));
+  assert.match(seen, new RegExp(`bin/schedules done --run ${report.runId}`, "u"));
+
+  const exit = JSON.parse(await fs.readFile(
+    path.join(rig.fake.deps.storeRoot, "knip-sweep", "runs", `${report.runId}.exit.json`), "utf8",
+  )) as { runExit: number; sessionExit: number; checkExit: number; sessionLaunched: boolean };
+  assert.deepEqual(
+    { runExit: exit.runExit, sessionExit: exit.sessionExit, checkExit: exit.checkExit, sessionLaunched: exit.sessionLaunched },
+    { runExit: 0, sessionExit: 0, checkExit: 0, sessionLaunched: true },
+  );
+  // A session that reported has nothing to alert about.
+  assert.deepEqual(await readAlerts(rig.fake.deps.storeRoot, "knip-sweep"), []);
+});
+
+test("worktree: false runs the session in the main checkout and never creates a worktree", async () => {
+  const rig = await launchRig({
+    name: "sdk-update",
+    yaml: workstreamYaml("  worktree: false"),
+    run: HANDOFF_RUN,
+    // The stand-in `workstreams` exits 64 for anything but create/agent-liveness;
+    // a `worktree: false` schedule must call neither.
+    liveness: "live",
+    agentExit: 0,
+    agentExtra: REPORTS_DONE,
+    check: null,
+  });
+  const report = await withFakeAgent(rig, async () => runSchedule(rig.fake.deps, { schedule: rig.schedule, dryRun: false }));
+  assert.ok(report.kind === "ran" && report.outcome === "handoff");
+  assert.match(await rig.transcript(), new RegExp(`^cwd=${await fs.realpath(rig.fake.deps.mainRoot)}$`, "mu"));
+});
+
+test("a live or unknown agent in the worktree refuses the launch and alerts normal", async () => {
+  for (const state of ["live", "launching", "unknown"]) {
+    const rig = await launchRig({
+      name: "knip-sweep",
+      yaml: workstreamYaml("  worktree: true"),
+      run: HANDOFF_RUN,
+      liveness: state,
+      agentExit: 0,
+      agentExtra: REPORTS_DONE,
+      check: null,
+    });
+    await withFakeAgent(rig, async () => runSchedule(rig.fake.deps, { schedule: rig.schedule, dryRun: false }));
+    assert.equal(await rig.transcript(), "", `${state} should not have started an agent`);
+    const [alert] = await readAlerts(rig.fake.deps.storeRoot, "knip-sweep");
+    assert.equal(alert?.priority, "normal");
+    assert.equal(alert?.title, "work waiting, session already live");
+  }
+});
+
+test("a session that ends without reporting is an important alert with the log tail", async () => {
+  const rig = await launchRig({
+    name: "knip-sweep",
+    yaml: workstreamYaml("  worktree: true"),
+    run: HANDOFF_RUN,
+    liveness: "none",
+    agentExit: 0,
+    agentExtra: 'echo "I did some things and wandered off"',
+    check: null,
+  });
+  await withFakeAgent(rig, async () => runSchedule(rig.fake.deps, { schedule: rig.schedule, dryRun: false }));
+  const [alert] = await readAlerts(rig.fake.deps.storeRoot, "knip-sweep");
+  assert.equal(alert?.priority, "important");
+  assert.equal(alert?.title, "session ended without reporting");
+  assert.match(alert?.details ?? "", /wandered off/u);
+});
+
+test("a session reporting through the real `bin/schedules done` counts as reported", async () => {
+  const rig = await launchRig({
+    name: "knip-sweep",
+    yaml: workstreamYaml("  worktree: true"),
+    run: HANDOFF_RUN,
+    liveness: "none",
+    agentExit: 0,
+    agentExtra: `cd "${REPO}" && CALLBACK_SCHEDULES_ROOT="__STORE__" "${REPO}/bin/schedules" done --run "$SCHEDULE_RUN_ID"`,
+    check: null,
+  });
+  // The store path is only known after the rig exists; patch it into the fake.
+  for (const name of ["claude", "codex"]) {
+    const file = path.join(rig.binDir, name);
+    const text = await fs.readFile(file, "utf8");
+    await fs.writeFile(file, text.replace("__STORE__", rig.fake.deps.storeRoot), "utf8");
+  }
+  await withFakeAgent(rig, async () => runSchedule(rig.fake.deps, { schedule: rig.schedule, dryRun: false }));
+  assert.deepEqual(await readAlerts(rig.fake.deps.storeRoot, "knip-sweep"), []);
+});
+
+test("a non-zero check is an important alert even when the session reported", async () => {
+  const rig = await launchRig({
+    name: "manual-tests",
+    yaml: workstreamYaml("  worktree: true"),
+    run: HANDOFF_RUN,
+    liveness: "none",
+    agentExit: 0,
+    agentExtra: REPORTS_DONE,
+    check: "#!/bin/sh\necho 'the triage edited a closed issue' >&2\nexit 4\n",
+  });
+  const report = await withFakeAgent(rig, async () => runSchedule(rig.fake.deps, { schedule: rig.schedule, dryRun: false }));
+  assert.ok(report.kind === "ran");
+  const [alert] = await readAlerts(rig.fake.deps.storeRoot, "manual-tests");
+  assert.equal(alert?.priority, "important");
+  assert.equal(alert?.title, "the post-session check failed");
+  const exit = JSON.parse(await fs.readFile(
+    path.join(rig.fake.deps.storeRoot, "manual-tests", "runs", `${report.runId}.exit.json`), "utf8",
+  )) as { checkExit: number };
+  assert.equal(exit.checkExit, 4);
+});
+
+test("a persistent schedule keeps its minted claude session id in state.json", async () => {
+  const rig = await launchRig({
+    name: "sdk-update",
+    yaml: workstreamYaml("  worktree: false").replace("session: fresh", "session: persistent"),
+    run: HANDOFF_RUN,
+    liveness: "none",
+    agentExit: 0,
+    agentExtra: REPORTS_DONE,
+    check: null,
+  });
+  const report = await withFakeAgent(rig, async () => runSchedule(rig.fake.deps, { schedule: rig.schedule, dryRun: false }));
+  assert.ok(report.kind === "ran");
+  const state = await readScheduleState(rig.fake.deps.storeRoot, "sdk-update");
+  assert.ok(state.sessionId !== null && state.sessionId.length > 0);
+  // First run: the id has no transcript yet, so it is minted rather than resumed.
+  const seen = await rig.transcript();
+  assert.match(seen, new RegExp(`^arg=--session-id\\narg=${state.sessionId}$`, "mu"));
+});
+
+test("a lock reclaimed from a dead runner still accounts for the session that never reported", async () => {
+  const rig = await launchRig({
+    name: "knip-sweep",
+    yaml: workstreamYaml("  worktree: true"),
+    run: "#!/bin/sh\nexit 0\n",
+    liveness: "none",
+    agentExit: 0,
+    agentExtra: REPORTS_DONE,
+    check: null,
+  });
+  const store = rig.fake.deps.storeRoot;
+  // A run that launched a session and left no result: the laptop went down.
+  await ensureStoreRoot(store);
+  await fs.mkdir(path.join(store, "knip-sweep", "runs"), { recursive: true });
+  await fs.writeFile(path.join(store, "knip-sweep", "runs", "20260824-110000.log"), "the session was cut off\n", "utf8");
+  await fs.writeFile(path.join(store, "knip-sweep", "runs", "20260824-110000.exit.json"), JSON.stringify({
+    runId: "20260824-110000", runExit: 0, sessionExit: null, checkExit: null,
+    sessionLaunched: true, timedOut: false, at: "2026-08-24T11:00:00.000Z",
+  }), "utf8");
+  await acquireLock(store, {
+    name: "knip-sweep", runId: "20260824-110000", pid: 4242,
+    isProcessAlive: () => true, at: new Date(),
+  });
+
+  const deps = { ...rig.fake.deps, isProcessAlive: () => false };
+  await withFakeAgent(rig, async () => runSchedule(deps, { schedule: rig.schedule, dryRun: false }));
+  const alerts = await readAlerts(store, "knip-sweep");
+  assert.equal(alerts.length, 1);
+  assert.equal(alerts[0]?.title, "session ended without reporting");
+  assert.equal(alerts[0]?.runId, "20260824-110000");
 });

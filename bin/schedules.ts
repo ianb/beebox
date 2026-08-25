@@ -57,13 +57,11 @@ import {
   isDue,
   isOverdue,
   nextDueAtMs,
-  osascriptNotify,
-  raiseAlert,
   readRunLog,
   runSchedule,
   tick,
-  type RunnerDeps,
 } from "./lib/schedules-runner.js";
+import { osascriptNotify, raiseAlert, type RunnerDeps } from "./lib/schedules-alerts.js";
 import { installTick, uninstallTick } from "./lib/schedules-launchd.js";
 
 const USAGE = `usage: bin/schedules <command>
@@ -111,6 +109,7 @@ function runnerDeps(context: Context): RunnerDeps {
     storeRoot: context.storeRoot,
     schedulesRoot: context.schedulesRoot,
     repoRoot: context.repoRoot,
+    mainRoot: context.mainRoot,
     now: () => new Date(),
     pid: process.pid,
     isProcessAlive,

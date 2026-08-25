@@ -143,6 +143,10 @@ export async function writeResult(root: string, record: Result & { name: string 
   await writeJson(runFilePath(scheduleDir(root, name), `${result.runId}.result.json`), result);
 }
 
+export async function readRunExit(root: string, run: { name: string; runId: string }): Promise<RunExit | null> {
+  return readJson(runFilePath(scheduleDir(root, run.name), `${run.runId}.exit.json`), runExitSchema);
+}
+
 export async function writeRunExit(root: string, record: RunExit & { name: string }): Promise<void> {
   const { name, ...exit } = record;
   await writeJson(runFilePath(scheduleDir(root, name), `${exit.runId}.exit.json`), exit);
@@ -238,7 +242,9 @@ export function visibleAlerts(alerts: Alert[], nowMs: number): Alert[] {
 const lockRecordSchema = z.strictObject({ pid: z.number(), runId: z.string(), at: z.string() });
 
 export type LockResult =
-  | { kind: "acquired"; dir: string }
+  /** `reclaimed` names the run whose runner died holding this lock: that run's
+   *  story was never finished, and the caller owes it an accounting. */
+  | { kind: "acquired"; dir: string; reclaimed: { pid: number; runId: string } | null }
   | { kind: "held"; pid: number | null; runId: string | null };
 
 function lockDir(root: string, name: string): string {
@@ -256,6 +262,7 @@ export async function acquireLock(
 ): Promise<LockResult> {
   const dir = lockDir(root, claim.name);
   const record = { pid: claim.pid, runId: claim.runId, at: claim.at.toISOString() };
+  let reclaimed: { pid: number; runId: string } | null = null;
   // The PARENT may not exist yet (the store-root tick lock, a schedule's first
   // run); the lock directory itself is always created non-recursively, because
   // that failure is the mutual exclusion.
@@ -270,6 +277,7 @@ export async function acquireLock(
     if (held !== null && claim.isProcessAlive(held.pid)) {
       return { kind: "held", pid: held.pid, runId: held.runId };
     }
+    if (held !== null) reclaimed = { pid: held.pid, runId: held.runId };
     await fs.rm(dir, { recursive: true, force: true });
     try {
       await fs.mkdir(dir, { recursive: false });
@@ -279,7 +287,7 @@ export async function acquireLock(
     }
   }
   await writeJson(path.join(dir, "owner.json"), record);
-  return { kind: "acquired", dir };
+  return { kind: "acquired", dir, reclaimed };
 }
 
 export async function releaseLock(root: string, name: string): Promise<void> {

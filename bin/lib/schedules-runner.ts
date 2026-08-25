@@ -12,21 +12,15 @@
  * Design: callback-box/docs/plans/scheduled-workstreams.md (Track B).
  */
 
-import * as fsSync from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { spawn } from "node:child_process";
-import { randomBytes } from "node:crypto";
 
 import {
-  alertIdFor,
   loadSchedules,
   runIdFor,
-  type Alert,
   type Handoff,
   type LoadedSchedule,
   type Outcome,
-  type Priority,
   type ScheduleConfig,
   type ScheduleEntry,
   type ScheduleState,
@@ -37,34 +31,20 @@ import {
   ensureStoreRoot,
   logPath,
   readHandoff,
+  readRunExit,
   readScheduleState,
   releaseLock,
   tailLog,
-  writeAlert,
   writeRunExit,
   writeScheduleState,
   writeStoreState,
 } from "./schedules-store.js";
-
-/** Everything the runner touches that a test wants to hold still. */
-export interface RunnerDeps {
-  /** `<parent>/schedule-runs` (or `CALLBACK_SCHEDULES_ROOT`). */
-  storeRoot: string;
-  /** `<checkout>/schedules`. */
-  schedulesRoot: string;
-  /** The checkout `run` scripts execute in. */
-  repoRoot: string;
-  now: () => Date;
-  pid: number;
-  isProcessAlive: (pid: number) => boolean;
-  notify: (notification: { title: string; message: string }) => Promise<void>;
-}
+import { raiseAlert, type RunnerDeps } from "./schedules-alerts.js";
+import { execChild, scheduleEnv } from "./schedules-exec.js";
+import { alertIfBailed, startWorkstream } from "./schedules-workstream.js";
 
 /** How many log lines a `failed` alert carries as details. */
 const LOG_TAIL_LINES = 40;
-/** Grace between SIGTERM and SIGKILL for a run that overran its timeout. */
-const KILL_GRACE_MS = 5000;
-
 /** Printed by `bin/schedules handoff` under `SCHEDULE_DRY_RUN=1` instead of
  *  writing a record, so a dry run can still report the would-be outcome. */
 export const DRY_RUN_HANDOFF_MARKER = "[schedules] would hand off:";
@@ -105,146 +85,33 @@ export function classifyOutcome(input: { exitCode: number | null; hasHandoff: bo
   return input.hasHandoff ? "handoff" : "clean";
 }
 
-// ─── Alerts ───────────────────────────────────────────────────────────────
-
-export interface AlertInput {
-  workstream: string;
-  runId: string | null;
-  title: string;
-  message: string;
-  details: string | null;
-  priority: Priority;
-}
-
-/**
- * Write the record, then deliver. The record is the truth; the macOS
- * notification is one best-effort delivery of it, and a machine without
- * `osascript` (or with notifications off) still gets the alert.
- */
-export async function raiseAlert(deps: RunnerDeps, input: AlertInput): Promise<Alert> {
-  const at = deps.now();
-  const alert: Alert = {
-    id: alertIdFor(at, randomBytes(2).toString("hex")),
-    workstream: input.workstream,
-    runId: input.runId,
-    title: input.title,
-    message: input.message,
-    details: input.details,
-    priority: input.priority,
-    createdAt: at.toISOString(),
-    state: "open",
-    acknowledgedAt: null,
-  };
-  await ensureScheduleDir(deps.storeRoot, input.workstream);
-  await writeAlert(deps.storeRoot, alert);
-  await deps.notify({ title: `${input.workstream}: ${input.title}`, message: input.message });
-  return alert;
-}
-
-/** Best-effort macOS notification. Absent `osascript` is not an error — the
- *  record was already written by the time this runs. */
-export async function osascriptNotify(notification: { title: string; message: string }): Promise<void> {
-  await new Promise<void>((resolve) => {
-    const quote = (text: string): string => text.replace(/["\\]/g, " ").replace(/\n/g, " ");
-    const child = spawn(
-      "/usr/bin/osascript",
-      ["-e", `display notification "${quote(notification.message)}" with title "${quote(notification.title)}"`],
-      { stdio: "ignore" },
-    );
-    child.on("error", () => { resolve(); });
-    child.on("exit", () => { resolve(); });
-  });
-}
-
-// ─── Executing one `run` script ───────────────────────────────────────────
-
-interface ExecOutcome {
-  exitCode: number | null;
-  timedOut: boolean;
-  output: string;
-}
-
-/**
- * Run the script with the schedule's environment, streaming to the run log (a
- * real run) or capturing for stdout (a dry run). A run that overruns its
- * timeout is killed and reads as a failure — a hung job is silence, which is
- * the thing this plan refuses to allow.
- */
-async function execRun(
-  script: string,
-  options: { cwd: string; env: NodeJS.ProcessEnv; timeoutMs: number; logFile: string | null },
-): Promise<ExecOutcome> {
-  const stream = options.logFile === null ? null : fsSync.createWriteStream(options.logFile, { flags: "a" });
-  const chunks: string[] = [];
-  const child = spawn(script, [], { cwd: options.cwd, env: options.env, stdio: ["ignore", "pipe", "pipe"] });
-
-  const collect = (data: Buffer): void => {
-    const text = data.toString("utf8");
-    chunks.push(text);
-    stream?.write(text);
-  };
-  child.stdout.on("data", collect);
-  child.stderr.on("data", collect);
-
-  let timedOut = false;
-  const timer = setTimeout(() => {
-    timedOut = true;
-    child.kill("SIGTERM");
-    setTimeout(() => child.kill("SIGKILL"), KILL_GRACE_MS).unref();
-  }, options.timeoutMs);
-
-  const exitCode = await new Promise<number | null>((resolve) => {
-    // A script that cannot be spawned at all (mode bit cleared between lint and
-    // run) is a failed run, not a crashed runner.
-    child.on("error", (e) => { chunks.push(`[schedules] could not execute ${script}: ${e.message}\n`); resolve(null); });
-    child.on("close", (code) => { resolve(code); });
-  });
-  clearTimeout(timer);
-  await new Promise<void>((resolve) => {
-    if (stream === null) { resolve(); return; }
-    stream.end(() => { resolve(); });
-  });
-  return { exitCode: timedOut ? null : exitCode, timedOut, output: chunks.join("") };
-}
-
-function runEnv(input: { name: string; dir: string; runId: string; stateDir: string; dryRun: boolean }): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = {
-    ...process.env,
-    SCHEDULE_NAME: input.name,
-    SCHEDULE_DIR: input.dir,
-    SCHEDULE_RUN_ID: input.runId,
-    SCHEDULE_STATE_DIR: input.stateDir,
-  };
-  if (input.dryRun) env["SCHEDULE_DRY_RUN"] = "1";
-  else delete env["SCHEDULE_DRY_RUN"];
-  return env;
-}
-
 export type RunReport =
   | { kind: "skipped"; name: string; reason: string }
   | { kind: "dry-run"; name: string; runId: string; outcome: Outcome; exitCode: number | null; timedOut: boolean; output: string }
   | { kind: "ran"; name: string; runId: string; outcome: Outcome; exitCode: number | null; timedOut: boolean; handoff: Handoff | null; alertId: string | null };
 
 /**
- * Workstream start (chunk 5 of the plan, Track B chunk 2). A `handoff` or a
- * failure on a schedule that declares a `workstream:` is supposed to launch a
- * headless agent session through `bin/lib/launch-session.sh` and the registry's
- * launch lease. Until that lands, the outcome and the records are written and
- * this says so out loud rather than silently doing nothing.
+ * A lock whose owner PID is dead is debris from a crash or a laptop shutdown,
+ * and the run it belonged to never got to finish its story. If that run had
+ * started a session, the absent-result rule applies to it exactly as it would
+ * have at the end of a live session — otherwise a mid-session shutdown is the
+ * one way a bailed run stays silent.
  */
-async function startWorkstream(input: { name: string; runId: string; outcome: Outcome }): Promise<void> {
-  process.stderr.write(
-    `schedules: workstream start not implemented (chunk 5) — ${input.name} run ${input.runId} ended '${input.outcome}'\n`,
-  );
-  await Promise.resolve();
+async function accountForReclaimedRun(deps: RunnerDeps, reclaimed: { name: string; runId: string }): Promise<void> {
+  const exit = await readRunExit(deps.storeRoot, reclaimed);
+  if (exit === null || !exit.sessionLaunched) return;
+  await alertIfBailed(deps, { ...reclaimed, logFile: logPath(deps.storeRoot, reclaimed) });
 }
 
 /**
- * One execution of one schedule: lock, run, classify, record.
+ * One execution of one schedule: lock, run, classify, record, and — when the
+ * schedule declares a workstream and the run has something to say — the agent
+ * session, in the foreground, before this returns.
  *
  * `--dry-run` writes NOTHING — no lock, no log, no state — so it is safe on a
  * schedule whose real run is in flight, and so a `run` script's own dry-run
- * handling is what is being exercised.
+ * handling is what is being exercised. It never starts a session either: a dry
+ * run is a rehearsal of the head, not of the agent.
  */
 export async function runSchedule(
   deps: RunnerDeps,
@@ -257,11 +124,12 @@ export async function runSchedule(
   const stateDir = path.join(deps.storeRoot, schedule.name);
 
   if (request.dryRun) {
-    const result = await execRun(script, {
+    const result = await execChild({ file: script, args: [] }, {
       cwd: deps.repoRoot,
-      env: runEnv({ name: schedule.name, dir: schedule.dir, runId, stateDir, dryRun: true }),
+      env: scheduleEnv({ name: schedule.name, dir: schedule.dir, runId, stateDir, dryRun: true }),
       timeoutMs: schedule.config.timeoutMs,
       logFile: null,
+      input: null,
     });
     const hasHandoff = result.output.includes(DRY_RUN_HANDOFF_MARKER);
     return {
@@ -275,7 +143,12 @@ export async function runSchedule(
     };
   }
 
+  // Marker first, then the schedule's own directory: a run reached directly
+  // (a test, a future caller) must leave the store in the same shape the CLI's
+  // entry points do, or the session's own `bin/schedules done` refuses it.
+  await ensureStoreRoot(deps.storeRoot);
   await ensureScheduleDir(deps.storeRoot, schedule.name);
+  const previous = await readScheduleState(deps.storeRoot, schedule.name);
   const lock = await acquireLock(deps.storeRoot, {
     name: schedule.name,
     runId,
@@ -288,27 +161,40 @@ export async function runSchedule(
     // keeps happening, and a lock held by a live run is normal.
     return { kind: "skipped", name: schedule.name, reason: `lock held by pid ${String(lock.pid ?? 0)}` };
   }
+  if (lock.reclaimed !== null) {
+    await accountForReclaimedRun(deps, { name: schedule.name, runId: lock.reclaimed.runId });
+  }
 
   try {
     const logFile = logPath(deps.storeRoot, { name: schedule.name, runId });
-    const result = await execRun(script, {
+    const env = scheduleEnv({ name: schedule.name, dir: schedule.dir, runId, stateDir, dryRun: false });
+    const result = await execChild({ file: script, args: [] }, {
       cwd: deps.repoRoot,
-      env: runEnv({ name: schedule.name, dir: schedule.dir, runId, stateDir, dryRun: false }),
+      env,
       timeoutMs: schedule.config.timeoutMs,
       logFile,
+      input: null,
     });
     const handoff = await readHandoff(deps.storeRoot, { name: schedule.name, runId });
     const outcome = classifyOutcome({ exitCode: result.exitCode, hasHandoff: handoff !== null });
+    const willLaunch = schedule.config.workstream !== null && (outcome === "handoff" || outcome === "failed");
 
-    await writeRunExit(deps.storeRoot, {
-      name: schedule.name,
-      runId,
-      runExit: result.exitCode,
-      sessionExit: null,
-      checkExit: null,
-      timedOut: result.timedOut,
-      at: deps.now().toISOString(),
-    });
+    // Written BEFORE the session, with `sessionLaunched` already true: a runner
+    // the laptop kills mid-session leaves this behind, and it is what tells the
+    // next tick that the reclaimed run owed a report.
+    const writeExit = async (session: { sessionExit: number | null; checkExit: number | null; timedOut: boolean }): Promise<void> => {
+      await writeRunExit(deps.storeRoot, {
+        name: schedule.name,
+        runId,
+        runExit: result.exitCode,
+        sessionExit: session.sessionExit,
+        checkExit: session.checkExit,
+        sessionLaunched: willLaunch,
+        timedOut: result.timedOut || session.timedOut,
+        at: deps.now().toISOString(),
+      });
+    };
+    await writeExit({ sessionExit: null, checkExit: null, timedOut: false });
     await writeScheduleState(deps.storeRoot, {
       name: schedule.name,
       state: {
@@ -335,8 +221,9 @@ export async function runSchedule(
       });
       alertId = alert.id;
     }
-    if (schedule.config.workstream !== null && (outcome === "handoff" || outcome === "failed")) {
-      await startWorkstream({ name: schedule.name, runId, outcome });
+    if (willLaunch) {
+      const session = await startWorkstream(deps, { schedule, runId, outcome, handoff, previous });
+      await writeExit(session);
     }
     return { kind: "ran", name: schedule.name, runId, outcome, exitCode: result.exitCode, timedOut: result.timedOut, handoff, alertId };
   } finally {

@@ -71,10 +71,41 @@ async function refuseFromWorktree(repoRoot: string): Promise<string | null> {
   return null;
 }
 
+/**
+ * A scheduled claude session hands its schedule's `prompt.md` over with
+ * `--append-system-prompt-file`; without that flag every workstream schedule
+ * would run promptless and nobody would find out until 03:00 on a Sunday. The
+ * `bin/manual-tests-scheduled.sh:148` precedent guards install on the flag it
+ * needs — this does the same, by ARGV PROBE rather than by grepping `--help`:
+ * the flag is real (2.1.243 accepts it) but `claude --help` lists only
+ * `--append-system-prompt`, mentioning the `-file` form solely inside another
+ * option's prose. The probe adds a sentinel flag so the CLI always refuses
+ * before doing any work, and reads WHICH flag it names as unknown.
+ */
+async function refuseWithoutSystemPromptFile(): Promise<string | null> {
+  const probe = await execa(
+    "claude",
+    ["-p", "--append-system-prompt-file", "/dev/null", "--schedules-install-probe"],
+    { reject: false },
+  );
+  if (probe.exitCode === undefined || probe.stderr === undefined) {
+    return "the Claude CLI could not be run — install it, or put it on PATH";
+  }
+  if (probe.stderr.includes("--append-system-prompt-file")) {
+    return "this Claude CLI has no --append-system-prompt-file; a scheduled workstream cannot be given its prompt";
+  }
+  return null;
+}
+
 export async function installTick(input: { repoRoot: string }): Promise<number> {
   const refusal = await refuseFromWorktree(input.repoRoot);
   if (refusal !== null) {
     process.stderr.write(`schedules install: ${refusal}\n`);
+    return 1;
+  }
+  const flagRefusal = await refuseWithoutSystemPromptFile();
+  if (flagRefusal !== null) {
+    process.stderr.write(`schedules install: ${flagRefusal}\n`);
     return 1;
   }
   const target = domainTarget();

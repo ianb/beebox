@@ -309,6 +309,11 @@ export const runExitSchema = z.strictObject({
   runExit: z.number().nullable(),
   sessionExit: z.number().nullable(),
   checkExit: z.number().nullable(),
+  /** Whether an agent session was started at all. It is written BEFORE the
+   *  session begins, because it is what tells a later tick — reclaiming a lock
+   *  from a runner the laptop killed — whether a missing result record means a
+   *  bailed session or simply a run-only schedule. */
+  sessionLaunched: z.boolean(),
   timedOut: z.boolean(),
   at: z.string(),
 });
