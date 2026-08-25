@@ -29,6 +29,7 @@ function row(state: "active" | "expired", routingState: "launching" | "uncertain
     },
     routing: { state: routingState, action: routingAction, lastActivityAt: null },
     boxState: { testSetup: false, keepUnmerged: false, pristine: null },
+    schedule: null,
   };
 }
 ```

@@ -380,11 +380,19 @@ shared router from a worktree session.
 
 `bin/workstreams list` is also the routing inventory. Its JSON and table carry
 an optional one-line session description plus two separate decisions:
-`routing.state` (`live`, `dormant`, `stale`, `removed`, `uncertain`) and
+`routing.state` (`launching`, `live`, `scheduled`, `dormant`, `stale`,
+`removed`, `uncertain`) and
 `routing.action` (`manual-forward`, `resume-with-briefing`,
 `new-stream-preferred`, `investigate`). `stale` means approximately 14 days
 without trustworthy activity and is guidance to start a new stream, not a
-resume prohibition. The liveness input still comes only from
+resume prohibition. `scheduled` is a `kind: "scheduled"` record resting between
+runs: sticky by design, so `remove`, `sweep`, and prune cull its worktree but
+never its record, `archive` refuses it (set `enabled: false` in its
+`schedule.yaml` instead), and `list` renders it with no worktree at all. Every
+row also carries a `schedule` field — cadence, last run and outcome, overdue,
+open alerts, and the scheduler's own last tick — joined by name from one
+`bin/schedules list --json` call per listing, and null for a workstream that is
+not a schedule. The liveness input still comes only from
 `wt_other_agent_live`; the app consumes this projection and never reimplements
 the destructive guard. Non-worktree directories under the managed root are
 reported and skipped. The app parses rows independently so one malformed row
