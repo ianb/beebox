@@ -21,21 +21,47 @@ on disk (`d860a9f2-…jsonl`, the session behind
 `store/courses/Acids_Bases.attach`), so it was written, not assembled at display
 time.
 
-The likely mechanism is draft restoration inserting at the caret rather than
-replacing, combined with drafts not being scoped per chat. That second half was
-observed independently during the same catalog run and dismissed as not-a-defect
-("the composer draft is not scoped per chat — it follows you into a new
-session"). This is the same behaviour with teeth: it does not merely follow you,
-it can land inside a message you are part-way through writing, and the result is
-committed to history.
+> **The stated mechanism is wrong — checked against the code 2026-08-25**
+> (worktree-composer-intake). Draft restoration does not insert at the caret. It
+> calls `editor.setText(p.text)` — a whole replace — and only into an already
+> empty store, with a commit-time recheck that *aborts* the restore if the user
+> typed during the file-existence round trip
+> (`hooks/useEmissionPersistence.ts`). Nor does anything else in the composer
+> insert arbitrary text at a caret: `insertTokensAtCursor`
+> (`InteractiveChat-attachments.ts`) is the only caret-aware writer and it only
+> ever writes a `[image#N]`-shaped token; every voice path *appends*
+> (`setInput((existing) => existing + " " + text)`).
+>
+> **The record was read, and it is a genuine user turn.** Line 4 of the
+> transcript, not the `last-prompt` bookkeeping copy on line 12 that repeats the
+> same string. The whole thing is inside one `<typed>` wrapper — one opening
+> tag, one closing tag, the guest message between `surv` and `ives?` — so the
+> splice was in the composer's own text at send time, not produced by assembly
+> or by display. The composer text was approximately
+> `[selection1] [image1] draft survives?`, into which
+> `In 2 minutes, remind me to stretch…` was inserted at offset 11 of the visible
+> prose. The assistant's reply on line 11 answers the *stretch* request, so the
+> guest message is the one the user meant to send and the host is the stale
+> draft wrapped around it.
+>
+> **The surviving suspect** is the textarea's DOM caret outliving a programmatic
+> replacement of the store text: React writes the restored value into the
+> element, the browser leaves the selection at its old character offset, and the
+> next thing typed lands there. That fits an insertion mid-word at a fixed point
+> with no caret-aware code involved. It is a suspicion, not a finding — there is
+> still no reproduction, and reproducing it needs the restore to land while the
+> composer is focused.
+>
+> The drafts-are-not-per-chat half stands as originally written and is
+> unaffected by the above.
 
 Both messages read like deliberate manual testing — one is literally a test of
 whether a draft survives — so this was probably produced while exercising draft
 persistence, which is where it would show up.
 
-Worth knowing before trusting the fix: whether the insertion point is the caret
-or an index into a stale value, and whether the same path can drop text as well
-as insert it.
+Worth knowing before trusting a fix: whether the insertion point is the DOM
+caret or an index into a stale value, and whether the same path can drop text as
+well as insert it.
 
 ## Also in that turn
 

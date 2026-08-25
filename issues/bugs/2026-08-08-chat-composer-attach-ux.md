@@ -6,7 +6,33 @@ filed-by: agent
 discovered-in: worktree-integration-tests — field-test operator prototype (Priya, activity 1)
 labels: [soft-launch, field-test-findings, ui-error, ui-sensibility]
 priority: important
+needs: [manual-testing]
 ---
+
+> **⏳ Awaiting manual testing** — all three items are settled in code
+> (`305c3a2a`); what is left is a look at the real composer. Only the developer
+> clears this. See [Manual testing](#manual-testing).
+>
+> **Resolved 2026-08-25** (worktree-composer-intake).
+>
+> **Item 2** — the twin menu entries were merged into one "Add files…" in
+> `5336b291` / `f8095747`; routing decides inline-vs-batch from the file set
+> (`file-routing.ts`), so the user never sees the two paths. That also retires
+> the run-2 observation about the bulk-upload panel reporting "No files yet"
+> while files landed in the composer: the overlay can no longer be open and
+> empty, because one selection act has exactly one destination and the overlay
+> only ever opens already seeded.
+>
+> **Item 3** — placeholder is "Type a message…" in both composer variants.
+>
+> **Item 1** — the token is now `[image#1]` / `[file#2]` / `[selection#3]`, and
+> it **stays inline and stays visible in the composer by design** (boxholder,
+> 2026-08-25): the `#` makes it easier to pick out of a sentence and edit
+> around, and anchoring the attachment where the user put it is worth the
+> literal token. The sent message still hides it (`stripUserDisplayTags`). So
+> the rich-composer / re-anchoring question this was holding open is **not**
+> being pursued; the grammar's statement of record is
+> `callback-box/src/shared/composer-tokens.ts`.
 
 > **Partly resolved 2026-08-09.** Item 1's display half: the `[fileN]` token
 > is load-bearing on send (it anchors the attachment inline, resolved through
@@ -72,3 +98,18 @@ What is left is narrower than the header suggests:
   while the files landed in the composer). The menu merge removes the *choice*
   between two intake paths but not the two paths themselves, so whether this
   still reproduces is unverified.
+
+## Manual testing
+
+In the chat composer:
+
+1. **Attach a photo** (paste, drop, or Add files…). The composer should show
+   `[image#1]` — with the `#` — where the caret was, and a thumbnail chip
+   labelled `image#1`.
+2. **Send it.** The sent bubble should show the photo and the prose, and **no**
+   `[image#1]` anywhere in the text.
+3. **Scroll back to an older message that had an attachment** (anything from
+   before 2026-08-25). It should still render the same way — no bare `[image1]`
+   appearing in an old bubble. This is the half that a reader narrowed to the
+   new form would break, and it cannot be seen from the new messages alone.
+4. **Open the "+" menu.** One file entry, "Add files…", with no greyed-out twin.

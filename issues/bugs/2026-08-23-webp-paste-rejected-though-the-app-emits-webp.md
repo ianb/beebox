@@ -8,6 +8,35 @@ discovered-in: worktree-user-stories-refresh — journey B, from assets an agent
 priority: normal
 ---
 
+> **Not reproducible, 2026-08-25** (worktree-composer-intake). The stated
+> asymmetry does not hold: the app does not refuse WebP as a category. Every
+> WebP shape that could be constructed was run through the real pipeline —
+> `decodeOriented` → canvas → `encodeCanvasBlob` — in Chromium, and all of them
+> decoded via `createImageBitmap` and re-encoded to `image/webp`:
+>
+> | sample | source | result |
+> |---|---|---|
+> | lossy `cwebp -q 80` | 800×600 | ok, 4.4 KB |
+> | **lossless** `cwebp -lossless` | 800×600 | ok, 4.8 KB |
+> | oversized (exercises the downscale) | 5000×4000 → 1920×1536 | ok, 16 KB |
+> | **animated** | 40×40, 2 frames | ok, first frame, 658 B |
+> | extreme aspect ratio | 6×16000 → 1×1920 | ok, 746 B |
+>
+> So the two files that failed were specific, not representative — most likely
+> malformed output from the conversion the agent ran, which is consistent with
+> how they were produced. Nothing in the composer path treats WebP differently
+> from JPEG.
+>
+> Reopen with a **sample file**, not a description. Since `ab5f483e` the debug
+> log carries the failing step by name (`decode`, `FileReader failed`,
+> `canvas.toBlob failed`, …), so one recurrence with the log line attached
+> settles it — whereas without a file there is nothing further to test.
+>
+> Ruled out along the way: the near-miss where an extreme aspect ratio rounds a
+> canvas dimension down to 0 (which would surface as `canvas.toBlob failed`).
+> It needs a ratio beyond 3840:1, and `cwebp` refuses to encode anything that
+> shape — unreachable in practice, left alone.
+
 Two WebP images pasted into the chat composer were rejected. The composer
 reported that the files could not be added, and the console recorded
 `ImageProcessingError`. The same two photos re-saved as JPEG attached
