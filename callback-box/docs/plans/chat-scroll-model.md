@@ -1,6 +1,6 @@
 ---
 title: "Chat scroll: write on user actions only"
-status: active
+status: partial
 workstream: chat-scroll
 issues:
   - ../../../issues/bugs/2026-08-13-chat-cannot-stay-at-bottom-while-growing.md
@@ -200,3 +200,11 @@ is the way to get the boxholder's actual traces; the trace pipeline exists.
    still feels wrong.
 4. **Close out** — re-aim the open issue at the model change; the harness
    finding (`prepend-older` badge) is a scenario, not a separate issue.
+
+Tracks 1-3 are done for everything reproducible on desktop Chromium: harness
+13/13, controller rewrite landed (`chat-scroll.ts`), and `MessageList` wired
+to it. **Outstanding:** the iOS device checklist in Track 3 has not been run
+on a real device — the boxholder's original report is device-specific and
+unverified there. `issues/bugs/2026-08-13-chat-cannot-stay-at-bottom-while-growing.md`
+stays open with a punch-list note for that verification
+(`/scrolldebug` trace) rather than closing on desktop-only evidence.
