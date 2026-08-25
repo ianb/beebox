@@ -59,7 +59,7 @@ const NOT_LAUNCHED = { sessionExit: null, checkExit: null, timedOut: false };
  * its environment — a later `resume` in a Terminal tab, an agent that shelled
  * out through something that scrubbed it — can still file its report.
  */
-export function briefingFor(input: { name: string; runId: string; handoff: Handoff | null; logTail: string; outcome: Outcome }): string {
+function briefingFor(input: { name: string; runId: string; handoff: Handoff | null; logTail: string; outcome: Outcome }): string {
   const parts: string[] = [];
   if (input.handoff !== null) parts.push(`# ${input.handoff.title}\n\n${input.handoff.body}`);
   if (input.outcome === "failed") {

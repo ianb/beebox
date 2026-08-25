@@ -334,7 +334,7 @@ export async function tick(deps: RunnerDeps): Promise<TickResult> {
 
 /** Where a schedule's own state directory is, for callers that hand it to a
  *  child process (`SCHEDULE_STATE_DIR`) without going through the runner. */
-export function scheduleStateDir(storeRoot: string, name: string): string {
+function scheduleStateDir(storeRoot: string, name: string): string {
   return path.join(storeRoot, name);
 }
 

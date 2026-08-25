@@ -88,7 +88,7 @@ export type ScheduleYaml = z.infer<typeof scheduleYamlSchema>;
 
 /** `local.yaml` is the same schema, every field optional: a laptop disables a
  *  schedule (or shortens its cadence) without a commit. */
-export const scheduleLocalYamlSchema = scheduleYamlSchema.partial();
+const scheduleLocalYamlSchema = scheduleYamlSchema.partial();
 
 const DEFAULT_TIMEOUT_MS = 2 * HOUR_MS;
 const GRACE_FRACTION = 0.25;

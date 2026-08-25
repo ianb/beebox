@@ -56,7 +56,7 @@ export async function ensureStoreRoot(root: string): Promise<void> {
   }
 }
 
-export function scheduleDir(root: string, name: string): string {
+function scheduleDir(root: string, name: string): string {
   return path.join(root, name);
 }
 
@@ -96,7 +96,7 @@ async function writeJson<T>(filePath: string, record: T): Promise<void> {
 
 // ─── Heartbeat (store root) ───────────────────────────────────────────────
 
-export function storeStatePath(root: string): string {
+function storeStatePath(root: string): string {
   return path.join(root, "state.json");
 }
 
@@ -121,7 +121,7 @@ export async function writeScheduleState(root: string, update: { name: string; s
 
 // ─── Per-run records ──────────────────────────────────────────────────────
 
-export function runFilePath(dir: string, file: string): string {
+function runFilePath(dir: string, file: string): string {
   return path.join(dir, "runs", file);
 }
 

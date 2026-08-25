@@ -15,7 +15,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { execa } from "execa";
 
-export const TICK_LABEL = "com.callback-box.schedules";
+const TICK_LABEL = "com.callback-box.schedules";
 /** Retired per-job labels; install boots them out so nothing double-runs. */
 const SUPERSEDED_LABELS = ["com.callback-box.sdk-update", "com.callback-box.manual-tests"];
 const TICK_INTERVAL_SECONDS = 900;
