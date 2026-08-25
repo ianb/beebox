@@ -18,7 +18,11 @@ import { createInitialPersonalityTemplate } from "../../schemas/personality.js";
 import { createBriefingTemplate } from "../../schemas/briefing.js";
 import { createTodoViewTemplate } from "../../schemas/todo-view.js";
 import { createLandmarkTemplate, parseLandmarkFields } from "../../schemas/landmark.js";
-import { installTemplateFile, type InstallResult } from "../install-template-file.js";
+import {
+  hasRecordedTemplateVersion,
+  installTemplateFile,
+  type InstallResult,
+} from "../install-template-file.js";
 import { TEMPLATE_STOCK_HASHES } from "../template-stock-hashes.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 
@@ -63,6 +67,13 @@ function describeInstall(result: InstallResult, displayName: string): string | n
  * procedures declare no `boxOwnedFields` and no `normalize`, so that is the
  * file hash. Add to this list only for a copy you have likewise shown to be
  * unedited stock — a wrong entry here silently overwrites someone's work.
+ *
+ * Applied ONLY to a box with no recorded version for the file — the bootstrap
+ * case above. A tracked box that diverged from its recorded hash has been
+ * edited by someone, and an edit that happens to land on old stock content
+ * (reverting a prompt on purpose, say) is still their choice to keep. Without
+ * this scoping, `installTemplateFile` would overwrite it, since it accepts a
+ * prior-stock match whether or not a recorded hash exists.
  */
 const PRIOR_STOCK_PROCEDURE_HASHES: Readonly<Record<string, string[]>> = {
   "refresh-maps.procedure.card": [
@@ -92,12 +103,15 @@ export async function installProcedures(boxRoot: string): Promise<string[]> {
   const installed: string[] = [];
   for (const file of templateFiles) {
     const templateContent = await fs.readFile(path.join(templatesDir, file), "utf-8");
-    const priorStockHashes = PRIOR_STOCK_PROCEDURE_HASHES[file];
+    const relPath = path.join(BOX_DIRS.procedures, file);
+    const priorStock = PRIOR_STOCK_PROCEDURE_HASHES[file];
+    const usePriorStock =
+      priorStock !== undefined && !(await hasRecordedTemplateVersion(boxRoot, relPath));
     const result = await installTemplateFile({
       boxRoot,
-      relPath: path.join(BOX_DIRS.procedures, file),
+      relPath,
       templateContent,
-      ...(priorStockHashes ? { priorStockHashes } : {}),
+      ...(usePriorStock ? { priorStockHashes: priorStock } : {}),
     });
     const entry = describeInstall(result, file);
     if (entry !== null) installed.push(entry);
