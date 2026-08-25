@@ -583,11 +583,50 @@ branch's own commits do), and the failing files, then reports via
 `bin/schedules alert`. It does not fix anything; the workstream's own agent
 does the fixup.
 
-**E. `/finish` verifies with `test:changed`**, not `pnpm test`. The tracked-flake
-protocol and the one-re-run limit stay, applied to the selected set. Guidance
-(`callback-box/CLAUDE.md:11`, `cb-guide-testing`, `doctest`) becomes: iterate
-with `pnpm test:changed` or a named file; `pnpm test` is what the schedule
-runs, and an agent reaching for it should say why.
+**E. `/finish` — a cheaper landing.** `.claude/agents/finish.md` changes in
+five places; the dispatcher skill (`.claude/skills/finish/SKILL.md`) needs
+only its description updated.
+
+- *Step 4 runs `pnpm test:changed`*, plus typecheck and lint as today. The
+  selection is computed after step 3's merge of `main`, on `main...HEAD`, so
+  it is the branch's own change set. It takes one ordinary semaphore slot.
+  "Read the full output" and the summary-line parse stay; the synthetic
+  `total: 0` line from B is a green result with a stated reason, reported as
+  "no test imports the change".
+- *The docs-only fast path is subsumed.* Its `iff every path under docs/`
+  rule (`finish.md:127-158`) is the selector's rule with a directory check
+  in place of a graph: a docs-only diff selects nothing. Typecheck, lint and
+  Track O are still skipped when the diff has no code, decided from the same
+  path list; the special case stops being a separate procedure.
+- *The test-failure rule gets stronger, and the flake protocol shrinks.*
+  "Any failure blocks" (`finish.md:90-101`) stays, and now means more: every
+  selected test was chosen because the branch touched what it imports, so a
+  red one is the branch's to answer for, and "unrelated file" is no longer a
+  plausible plea. The tracked-flake protocol (`finish.md:103-125`) loses its
+  issue-grep, its "did the branch touch the code it exercises" judgment, and
+  the one-full-suite re-run: the agent re-runs the failing file once in
+  isolation; the ledger records fail-then-pass at the same content hash as a
+  flake by definition; the agent proceeds on an isolated pass and names the
+  file. Filing a flake issue is no longer the finish's job — `careful.txt`
+  curation from the ledger report (C) is the channel.
+- *Re-verification after green* (`finish.md:282-291`) is the same rule: a
+  post-green code commit re-runs `test:changed`, which now includes only
+  what that commit implicates.
+- *"Never run the suite in the main checkout"* (`finish.md:122-125`) stays
+  and gains its complement: the hourly run (D) is the only thing that tests
+  `main`, and it does so from a detached worktree.
+
+What is not changed and why: Track O (step 5), plan reconciliation (6) and
+issue closing (7) are judgment passes, cheap in machine time and the reason a
+landing is more than a merge; the strictness of BLOCKED-on-anything-unclear
+is what lets a headless Sonnet do this at all. One inefficiency is noted and
+left: a BLOCKED result re-dispatches from step 1 and repeats every step,
+including verification. With verification now seconds instead of minutes,
+that repeat stops mattering, which is the cheaper fix than a resume protocol.
+
+Guidance (`callback-box/CLAUDE.md:11`, `cb-guide-testing`, `doctest`) becomes:
+iterate with `pnpm test:changed` or a named file; `pnpm test` is what the
+schedule runs, and an agent reaching for it should say why.
 
 ### What this costs, stated
 
