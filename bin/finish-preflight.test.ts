@@ -70,7 +70,7 @@ test("callback-box runs the selected set, not the whole suite", () => {
   });
   assert.deepEqual(
     commands.map((c) => c.command),
-    ["pnpm --dir callback-box test:changed", "pnpm --dir callback-box typecheck", "pnpm --dir callback-box lint"],
+    ["pnpm --dir callback-box test:changed", "pnpm --dir callback-box typecheck", "pnpm --dir callback-box lint:changed"],
   );
   assert.ok(commands[0]?.isolate?.argv.includes("../bin/test-ledger.ts"));
 });
@@ -128,7 +128,7 @@ test("two changed packages coalesce onto the one workspace lint gate", () => {
   const lint = commands.filter((c) => c.kind === "lint");
   assert.deepEqual(
     lint.map((c) => c.command),
-    ["pnpm lint"],
+    ["pnpm lint:changed"],
   );
   // Tests and typechecks never coalesce.
   assert.equal(commands.filter((c) => c.kind === "typecheck").length, 2);

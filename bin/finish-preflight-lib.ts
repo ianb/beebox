@@ -206,11 +206,18 @@ function isolateFor(pkg: string): VerificationCommand["isolate"] | undefined {
 /**
  * The commands this diff calls for, coalesced.
  *
- * Lint is the only one that coalesces: root `pnpm lint` is the workspace-wide
- * gate, so two or more changed packages run it once instead of each. `bin/`
- * and `dev/` carry no ESLint rules of their own, so a root-only change lints
- * nothing. Tests and typechecks stay per-package — root `pnpm typecheck` is
- * root-only and replaces no package's.
+ * Lint is the only one that coalesces: root `pnpm lint:changed` is the
+ * workspace-wide fan-out, so two or more changed packages run it once instead
+ * of each. `bin/` and `dev/` carry no ESLint rules of their own, so a
+ * root-only change lints nothing. Tests and typechecks stay per-package — root
+ * `pnpm typecheck` is root-only and replaces no package's.
+ *
+ * Lint here means CHANGED-file lint where a package offers it (callback-box,
+ * and the root fan-out), the same "run what the change implicates" posture the
+ * test selection already takes. The cross-file consequence a whole-tree run
+ * would catch is an accepted escape, exactly like an unimplicated test —
+ * issues/code-quality/2026-08-25-lint-runs-contend-like-tests.md. Typecheck
+ * stays whole-tree (it is incremental now, and cheap warm).
  */
 export function verificationCommands(input: CommandInput): VerificationCommand[] {
   const { packages, root } = groupPaths(input.paths, input.workspacePackages);
@@ -263,14 +270,15 @@ export function verificationCommands(input: CommandInput): VerificationCommand[]
 
   const linting = packages.filter((pkg) => input.hasScript(pkg, "lint"));
   if (linting.length >= 2) {
-    add({ kind: "lint", command: "pnpm lint", cwd: ".", argv: ["pnpm", "lint"] });
+    add({ kind: "lint", command: "pnpm lint:changed", cwd: ".", argv: ["pnpm", "lint:changed"] });
   } else {
     for (const pkg of linting) {
+      const script = input.hasScript(pkg, "lint:changed") ? "lint:changed" : "lint";
       add({
         kind: "lint",
-        command: `pnpm --dir ${pkg} lint`,
+        command: `pnpm --dir ${pkg} ${script}`,
         cwd: ".",
-        argv: ["pnpm", "--dir", pkg, "lint"],
+        argv: ["pnpm", "--dir", pkg, script],
       });
     }
   }

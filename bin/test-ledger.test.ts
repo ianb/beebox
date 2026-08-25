@@ -17,7 +17,7 @@ import {
   summarize,
   type LedgerRecord,
 } from "./test-ledger-lib.js";
-import { terminateChild } from "./test-ledger.js";
+import { terminateChild } from "./child-signals.js";
 
 // ── TAP parsing ─────────────────────────────────────────────────────────────
 
