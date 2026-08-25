@@ -6,7 +6,7 @@
 // Relative (not `@shared/…`): this file is imported directly by Node/tsx in
 // doctests (no Vite bundler in that path to resolve the aliased specifier),
 // same reasoning as components/view-widgets/node-entry.tsx.
-import { buildChatContentBlocks } from "../../../shared/chat-content-blocks";
+import { buildChatContentBlocks, IMAGE_NOT_DISPLAYED } from "../../../shared/chat-content-blocks";
 import type {
   SessionEntry,
   PendingSessionEntry,
@@ -56,7 +56,15 @@ export function entryText(entry: SessionEntry): string {
  * suffixes), neither of which the optimistic copy carries.
  */
 function normalizeForCompare(text: string): string {
-  return text.replace(/<(typed|speech)\b[^>]*>/g, "<$1>");
+  // A stripped image comes back as placeholder TEXT, so the server's copy of a
+  // turn carries characters the client's optimistic copy never had — the images
+  // there are still image blocks, contributing nothing to the text. Comparing
+  // the two verbatim then fails, the pending entry is never retired, and the
+  // user sees their own message twice: once with their photos, once with grey
+  // placeholders. Observed in a journey walk, 2026-08-24.
+  return text
+    .replaceAll(IMAGE_NOT_DISPLAYED, "")
+    .replace(/<(typed|speech)\b[^>]*>/g, "<$1>");
 }
 
 /**

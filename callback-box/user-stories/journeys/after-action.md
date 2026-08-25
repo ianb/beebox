@@ -39,6 +39,28 @@ Read the whole thing before judging any of it. The walker's confusions arrive in
 order and often resolve themselves three entries later; a claim that looks damning in
 isolation is frequently answered on the next screen.
 
+**Harvest from the whole document, not from the complaints.** A walk's failures are
+easy to find and are not the only findings in it. The 2026-08-24 report missed
+"no way to see all my containers and their counts on one screen" — the walker's
+single biggest wish — because it sat under *what I wish I had* rather than under
+what went wrong. Read the closing sections with the same attention as the log:
+
+- **what I wish I had** — the feature the product does not have, named by someone
+  who wanted it, which is worth more than the same idea proposed internally.
+- **what I still do not understand** — vocabulary and model failures, stated as
+  questions rather than as complaints.
+- **would I keep using this** — where the walker weighs everything at once, and
+  the only place you learn which failure was the one that nearly ended the run.
+- **what I wanted and could not find** — scattered mid-log, not only at the end.
+
+**Give every claim its own line, and never merge one into a neighbour.** The same
+report folded "thrown to a Sign in page mid-session" into the capture 401 because
+both looked like auth. They were different mechanisms with different dispositions
+— one harness, one a filed product issue — and the merged row hid the second for
+a day. Two claims that share a smell are still two claims. Split first; discover
+they are one bug later, on evidence, and say so then (findings 5 and 6 of that
+same report turned out to be one bug, and that is a finding, not a shortcut).
+
 ### 3. Classify every claim before believing any of it
 
 Take each thing the walk reports and put it in one of four buckets. Assume nothing;
@@ -76,13 +98,25 @@ worth filing names a file and a line, or reproduces. "The app seems to lose imag
 is where the work starts, not where it ends — that one turned out to be a session-log
 size guard, which changed the fix entirely.
 
-Two habits that repeatedly paid:
+Three habits that repeatedly paid:
 
 - **Read one instance, then check a second.** A count in prose looked like a missing
   schema field until the second record showed the field populated. The finding
   survived; it just became a different, smaller, truer one.
 - **Suspect your own diagnosis before the system's behaviour.** If a mechanism you
   have asserted does not reproduce, say so and re-open it.
+- **Reproduce before patching, in the cheapest thing that can hold the bug.** The
+  duplicate-message bug was settled in seconds by calling one pure function with
+  the two shapes it had to reconcile — no browser, no box, no agent. A failing
+  check written before the fix is also the regression test afterwards, and it is
+  what stops a plausible story being shipped as a diagnosis.
+
+**Check that your check ran.** Twice on 2026-08-24 a verification reported a
+difference that was really an artifact of the tool: a raw comparison that was
+measuring quote style, then a formatter that could not parse the file at all and
+passed it through unchanged. Both looked like findings. Before believing a
+verification, confirm it is measuring what you think — run it against a case whose
+answer you already know.
 
 ### 5. File, and correct what you got wrong
 
@@ -113,6 +147,16 @@ gitignored, so once a run is pruned the report is what is left of it.
   that only stops being true if each round's lessons are actually landed.
 - **Not verified** — plainly. Anything the run could not reach (an auth-blind walk
   cannot speak about capture), and anything you could not settle.
+
+## Before you call the report done
+
+One pass back over the notes with the finished table beside them, asking only:
+**is every claim in there?** Not "is the report good" — that question is too easy
+to answer yes to. Walk the notes section by section and tick each claim off against
+a row.
+
+Two rows is the right answer more often than one. If you find yourself writing
+"and also" inside a row, that is a second finding.
 
 ## Then prune
 
