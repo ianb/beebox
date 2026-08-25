@@ -219,7 +219,13 @@ function releaseOwn(path: string, pid: number): void {
  * not: this sits in front of every `pnpm test`, and an instrument that
  * narrates itself costs agent context on every run.
  */
-export async function acquire(input: { dir: string; tier: Tier; branch: string }): Promise<Held> {
+export async function acquire(input: {
+  dir: string;
+  tier: Tier;
+  branch: string;
+  /** Prefix on the one waiting line, so each wrapper names itself. */
+  label?: string;
+}): Promise<Held> {
   mkdirSync(input.dir, { recursive: true });
   const self = process.pid;
   const markerPath = join(input.dir, CAREFUL_WAITING);
@@ -277,7 +283,7 @@ export async function acquire(input: { dir: string; tier: Tier; branch: string }
     if (!announced && choice.blockedBy !== null) {
       const by = choice.blockedBy;
       console.error(
-        `test-ledger: waiting for slot (held by pid ${by.pid}, branch ${by.branch}, since ${by.at})`,
+        `${input.label ?? "test-ledger"}: waiting for slot (held by pid ${by.pid}, branch ${by.branch}, since ${by.at})`,
       );
       announced = true;
     }
