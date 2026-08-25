@@ -197,6 +197,8 @@ script that checks box health) but not a substrate.
 - **Priority** — `important | normal | backlog | fyi`. The first three match
   `issues/CLAUDE.md` `priority:`; `fyi` means "something new, nothing to do".
 - **Overdue** — derived: `now - lastRunAt > cadence + grace`. Never stored.
+  A never-run schedule is *due* but not overdue (no `lastRunAt` to measure
+  from; calling a fresh enrolment overdue on day one would cry wolf).
 - **Tick** — the one launchd job: `bin/schedules tick`, every 15 minutes.
 
 ## Tracks / scope
@@ -319,7 +321,9 @@ observable.
     failure) as briefing.
   - `--dry-run`: execute `run` with `SCHEDULE_DRY_RUN=1`, print the
     would-be outcome and the handoff to stdout, write nothing to state
-    (`handoff` under dry-run prints instead of writing). `run` scripts must
+    (`handoff` under dry-run prints a `[schedules] would hand off:` line
+    instead of writing; the runner recognizes that sentinel to report the
+    would-be outcome). `run` scripts must
     honor the variable (the skill and `lint` say so: the lint greps for
     `SCHEDULE_DRY_RUN`).
   - `--force`: ignore due-ness.
@@ -358,6 +362,9 @@ observable.
   reclaims it, and applies the same absent-result rule to that run.
 - `list`: name, cadence, enabled, last run, outcome, next due, **overdue**,
   open alerts. `--json` is what the browser consumes.
+- `tick` exits non-zero only when it cannot write the store; a failed
+  schedule run is already an `important` alert, so the launchd log stays
+  meaningful.
 - `install`: one plist `com.callback-box.schedules`, `StartInterval 900`,
   `ProgramArguments` = the main checkout's `bin/schedules tick`; refuses to
   install from a worktree (the precedent at
@@ -439,7 +446,9 @@ absent records with old launch state. If it survived, it would render as
   `unknown` keep their existing precedence (`workstream-routing.sh:43-50`)
   — the branch never overrides a fail-closed state.
 - `bin/workstreams remove`/`sweep`: cull the worktree; keep the record and
-  do not set `removed` on it. `archive` is refused for scheduled records
+  do not set `removed` on it. The recovery pointer that `removed` would
+  have carried goes under `culled: {at, finalSha, merged}` instead, and
+  `resume` reads it the way it reads `removed.finalSha`. `archive` is refused for scheduled records
   ("set `enabled: false` in `schedule.yaml` instead").
 - `routingStateSchema` gains `scheduled`; `workstreamsCliRowSchema` gains
   `schedule: { cadence, lastRunAt, lastOutcome, overdue, openAlerts } | null`
@@ -662,7 +671,11 @@ document, and its worked examples are the recall mechanism.
 
 ## Rollout shape
 
-- **Tests first.** `bin/schedules.test.ts` (Node test runner) is written
+- **Tests first.** `bin/schedules.test.ts` and
+  `bin/scheduled-workstreams-registry.test.ts` (Node test runner; `bin/CLAUDE.md`
+  prefers doctests for `bin/`, and each file's header records this plan's
+  exception — pure functions with injected clocks and fake `run` scripts fit
+  the unit tier) are written
   per chunk before the code: cadence parsing, due-ness with an injected
   clock, lock/stale-lock, outcome classification, alert records, the
   routing table, lint verdicts. Each row in Failure modes marked "test" maps
