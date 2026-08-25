@@ -18,10 +18,10 @@
  * See callback-box/docs/plans/change-based-test-selection.md, Track 5.
  */
 
-import { execFileSync, spawn } from "node:child_process";
+import { spawn } from "node:child_process";
 import { appendFileSync, readFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { changedPaths, git, gitCommonDir, treeHash } from "./test-git.js";
 import { buildGraph } from "./test-graph.js";
 import { implicatedTests, isAccounted } from "./test-graph-query.js";
 import { renderReport } from "./test-ledger-report.js";
@@ -32,50 +32,10 @@ import {
   hashFileset,
   isCompletedRun,
   ledgerPaths,
-  parsePorcelainPaths,
   parseTapFiles,
   summarize,
   type LedgerRecord,
 } from "./test-ledger-lib.js";
-
-/**
- * Strips only the trailing newline, never leading whitespace: `git status
- * --porcelain` encodes status in the first two columns, and one of them is
- * routinely a space.
- */
-const git = (args: string[]): string =>
-  execFileSync("git", args, { encoding: "utf-8", maxBuffer: 64 * 1024 * 1024 }).replace(/\n$/, "");
-
-function gitCommonDir(): string {
-  return execFileSync("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], {
-    encoding: "utf-8",
-  }).trim();
-}
-
-/**
- * `--untracked-files=all` is load-bearing in both callers below.
- *
- * Plain `git status --porcelain` collapses a wholly-untracked directory into a
- * single `?? dir/` entry. That breaks two different things: a new test
- * directory reads as one unaccounted path (so every test in it is invisible to
- * `implicated`, and the whole change reads as unaccounted), and — worse —
- * adding another file inside that directory does not change the status output,
- * so `treeHash` would call two genuinely different working states identical
- * and the flake derivation would compare across them.
- */
-const porcelain = (): string => git(["status", "--porcelain", "-z", "--untracked-files=all"]);
-
-/** Changed paths versus `main`, plus anything uncommitted. */
-function changedPaths(): string[] {
-  const committed = git(["diff", "--name-only", "main...HEAD"]).split("\n");
-  const dirty = parsePorcelainPaths(porcelain());
-  return [...new Set([...committed, ...dirty].filter((p) => p !== ""))].sort();
-}
-
-/** Identifies the exact working state, so a re-run with no edits is detectable. */
-function treeHash(): string {
-  return hashFileset([git(["rev-parse", "HEAD^{tree}"]), porcelain()]);
-}
 
 /** A ledger operation that could not complete. Never reaches a caller's exit code. */
 class LedgerRecordError extends Error {
@@ -131,7 +91,7 @@ export function readRecords(path: string): LedgerRecord[] {
   return records;
 }
 
-async function runWrapped(command: string[], tier: Tier): Promise<number> {
+async function runWrapped(command: string[], tier: Tier, mode: RunMode): Promise<number> {
   const [executable, ...args] = command;
   if (executable === undefined) {
     console.error("test-ledger run: needs a command after --");
@@ -143,7 +103,7 @@ async function runWrapped(command: string[], tier: Tier): Promise<number> {
   // lock directory that cannot be used is not a reason to refuse to test.
   const held = await holdSlot(tier);
   try {
-    return await runUnderSlot({ executable, args, tier, concurrency: held?.concurrency ?? null });
+    return await runUnderSlot({ executable, args, tier, mode, concurrency: held?.concurrency ?? null });
   } finally {
     releaseHeld(held);
   }
@@ -190,6 +150,7 @@ async function runUnderSlot(input: {
   executable: string;
   args: string[];
   tier: Tier;
+  mode: RunMode;
   concurrency: number | null;
 }): Promise<number> {
   const { executable, args } = input;
@@ -233,6 +194,7 @@ async function runUnderSlot(input: {
         changed,
         exitCode,
         tier: input.tier,
+        mode: input.mode,
         concurrency: input.concurrency,
         graph: await computeGraph(changed),
       });
@@ -306,6 +268,7 @@ function record(input: {
   changed: string[];
   exitCode: number;
   tier: Tier;
+  mode: RunMode;
   /** Null when no slot could be taken, so the figure is unknown rather than zero. */
   concurrency: number | null;
   graph: GraphView | null;
@@ -327,7 +290,7 @@ function record(input: {
     commit: git(["rev-parse", "HEAD"]),
     branch: git(["rev-parse", "--abbrev-ref", "HEAD"]),
     treeHash: treeHash(),
-    mode: "full",
+    mode: input.mode,
     exitCode: input.exitCode,
     tier: input.tier,
     ...(input.concurrency === null ? {} : { concurrency: input.concurrency }),
@@ -341,15 +304,34 @@ function record(input: {
       .map((r) => ({ file: r.file, class: classifyFailure({ file: r.file, implicated: implicatedForClass }) })),
   };
 
-  // Append both, never rewrite: this directory is shared by every worktree on
-  // the machine and concurrent suite runs are routine. Duplicate hashes are
-  // harmless — the reader folds them into a map.
+  appendLedgerRecord({ record, ranFiles, implicatedFiles, paths });
+}
+
+/**
+ * Append one record plus the filesets it names.
+ *
+ * Exported because `bin/test-select.ts` writes its own record when the
+ * selection is empty: there is no tap invocation to wrap, and a run that
+ * tested nothing still has to be counted or the gap hides (plan revision
+ * 2026-08-25, mechanism B).
+ *
+ * Append both, never rewrite: this directory is shared by every worktree on
+ * the machine and concurrent suite runs are routine. Duplicate hashes are
+ * harmless — the reader folds them into a map.
+ */
+export function appendLedgerRecord(input: {
+  record: LedgerRecord;
+  ranFiles: string[];
+  implicatedFiles: string[];
+  paths?: { ledger: string; filesets: string };
+}): void {
+  const paths = input.paths ?? ledgerPaths(gitCommonDir());
   const filesetLines = [
-    { hash: record.ranFiles, files: [...ranFiles].sort() },
-    { hash: record.implicated, files: [...implicatedFiles].sort() },
+    { hash: input.record.ranFiles, files: [...input.ranFiles].sort() },
+    { hash: input.record.implicated, files: [...input.implicatedFiles].sort() },
   ].map((entry) => `${JSON.stringify(entry)}\n`);
   appendFileSync(paths.filesets, filesetLines.join(""));
-  appendFileSync(paths.ledger, `${JSON.stringify(record)}\n`);
+  appendFileSync(paths.ledger, `${JSON.stringify(input.record)}\n`);
 }
 
 /** Graph paths are repo-relative; TAP names them relative to callback-box. */
@@ -370,6 +352,20 @@ async function computeGraph(changed: string[]): Promise<GraphView | null> {
   }
 }
 
+/**
+ * What the run was: everything `.taprc` includes, or a change-based selection.
+ * `bin/test-select.ts --run` passes `--mode selected`; nothing else does.
+ */
+export type RunMode = LedgerRecord["mode"];
+
+/** Reads `--mode` from the wrapper's own flags; null on an unknown value. */
+function parseMode(flags: string[]): RunMode | null {
+  const index = flags.indexOf("--mode");
+  if (index === -1) return "full";
+  const value = flags[index + 1];
+  return value === "full" || value === "selected" ? value : null;
+}
+
 /** Reads `--tier` from the wrapper's own flags; null on an unknown value. */
 function parseTier(flags: string[]): Tier | null {
   const index = flags.indexOf("--tier");
@@ -383,21 +379,31 @@ export async function main(argv: string[]): Promise<void> {
   if (subcommand === "run") {
     const sepIndex = rest.indexOf("--");
     const command = sepIndex === -1 ? rest : rest.slice(sepIndex + 1);
-    const tier = parseTier(sepIndex === -1 ? [] : rest.slice(0, sepIndex));
+    const flags = sepIndex === -1 ? [] : rest.slice(0, sepIndex);
+    const tier = parseTier(flags);
     if (tier === null) {
       console.error("test-ledger run: --tier takes ordinary or careful");
       process.exitCode = 2;
       return;
     }
+    const mode = parseMode(flags);
+    if (mode === null) {
+      console.error("test-ledger run: --mode takes full or selected");
+      process.exitCode = 2;
+      return;
+    }
     installSignalReleases();
-    process.exitCode = await runWrapped(command, tier);
+    process.exitCode = await runWrapped(command, tier, mode);
     return;
   }
   if (subcommand === "report") {
     renderReport();
     return;
   }
-  console.error("usage: test-ledger run [--tier ordinary|careful] -- <command…> | test-ledger report");
+  console.error(
+    "usage: test-ledger run [--tier ordinary|careful] [--mode full|selected] -- <command…>" +
+      " | test-ledger report",
+  );
   process.exitCode = 2;
 }
 

@@ -90,7 +90,7 @@ export function parseTapFiles(raw: string): TapFileResult[] {
 }
 
 /**
- * Paths out of `git status --porcelain -z` output.
+ * Entries — status plus path — out of `git status --porcelain -z` output.
  *
  * `-z` is required, not a nicety. Without it git *quotes* any path containing
  * a space, quote, backslash, or non-ASCII byte (`"src/a b.ts"`), and encodes a
@@ -103,20 +103,25 @@ export function parseTapFiles(raw: string): TapFileResult[] {
  * space (` M path`, an unstaged modification — the commonest case). Trimming
  * before slicing eats it and shifts the path by one character.
  */
-export function parsePorcelainPaths(raw: string): string[] {
+export function parsePorcelainEntries(raw: string): Array<{ status: string; path: string }> {
   const entries = raw.split("\u0000").filter((entry) => entry !== "");
-  const paths: string[] = [];
+  const parsed: Array<{ status: string; path: string }> = [];
   for (let i = 0; i < entries.length; i++) {
     const entry = entries[i];
     if (entry === undefined || entry.length < 4) continue;
     const status = entry.slice(0, 2);
-    paths.push(entry.slice(3));
+    parsed.push({ status, path: entry.slice(3) });
     // A rename or copy emits the ORIGIN path as the following entry. Consume
     // it: the destination is the path that exists now, and treating the origin
     // as another status line would slice three characters off a bare path.
     if (status.startsWith("R") || status.startsWith("C")) i++;
   }
-  return paths;
+  return parsed;
+}
+
+/** The paths alone, for callers that do not care how each one changed. */
+export function parsePorcelainPaths(raw: string): string[] {
+  return parsePorcelainEntries(raw).map((entry) => entry.path);
 }
 
 /**
