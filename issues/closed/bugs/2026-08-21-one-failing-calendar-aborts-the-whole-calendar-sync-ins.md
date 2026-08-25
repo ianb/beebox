@@ -3,7 +3,6 @@ title: "One failing calendar aborts the whole calendar sync instead of being ski
 workstream: connector-sync-isolation
 design: ../../../callback-box/docs/implemented-plans/connector-sync-isolation.md
 area: callback-box
-labels: [user-stories-audit]
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — user-story catalog verification
 resolution: implemented
@@ -52,5 +51,3 @@ Read the loop and the error path in full. The 410 branch was confirmed to do wha
 ## User-story catalog recheck
 
 An independent adversarial source recheck marked [`connectors/calendar-sync-repairs-an-expired-sync-token-and`](../../../callback-box/user-stories/catalog/2026-08-21.md) accurate on 2026-08-23. The rendered catalog now shows the story as verified.
-
-Catalogued as `connectors/calendar-sync-repairs-an-expired-sync-token-and` in the [user-story catalog](../../../callback-box/user-stories/catalog/2026-08-21.md).

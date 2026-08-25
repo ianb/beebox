@@ -2,7 +2,6 @@
 title: "New chats intermittently fail with \"Claude Code is not logged in\" while existing chats keep working"
 workstream: unattached
 area: callback-box
-labels: [user-stories-audit]
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — a journey walkthrough could not start a second chat
 priority: normal
@@ -72,5 +71,3 @@ confident wrong diagnosis and unactionable advice.
 An earlier version of this issue asserted a `PATH` cause from a process inspection
 that, on re-checking, had probably read the wrong process. Recorded here so nobody
 builds on it: the mechanism above is what the code shows, and the trigger is open.
-
-Catalogued as `chat/start-a-chat-scoped-to-a-place-in-the-box` in the [user-story catalog](../../callback-box/user-stories/catalog/2026-08-21.md).

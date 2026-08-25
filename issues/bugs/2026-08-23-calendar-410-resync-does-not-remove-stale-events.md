@@ -2,7 +2,6 @@
 title: "Calendar 410 resync does not remove stale local events"
 workstream: unattached
 area: callback-box
-labels: [user-stories-audit]
 filed-by: agent
 discovered-in: worktree-connector-sync-isolation — verifying calendar partial-failure handling
 priority: normal
@@ -40,5 +39,3 @@ live Google account was exercised.
 
 **Related.** The early-return defect is tracked separately in
 [one failing calendar aborts the whole sync](../closed/bugs/2026-08-21-one-failing-calendar-aborts-the-whole-calendar-sync-ins.md).
-
-Catalogued as `connectors/calendar-sync-repairs-an-expired-sync-token-and` in the [user-story catalog](../../callback-box/user-stories/catalog/2026-08-21.md).

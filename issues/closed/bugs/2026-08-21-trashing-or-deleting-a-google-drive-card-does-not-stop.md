@@ -3,7 +3,6 @@ title: "Trashing a Google Drive card does not stop it syncing"
 workstream: connector-sync-isolation
 design: ../../../callback-box/docs/implemented-plans/connector-sync-isolation.md
 area: callback-box
-labels: [user-stories-audit]
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — user-story catalog verification
 resolution: implemented
@@ -34,5 +33,3 @@ store merely to make raw hard deletion override a folder mount.
 ## User-story catalog recheck
 
 The story was narrowed from raw deletion to the supported trash-and-restore lifecycle and re-keyed as [`connectors/stop-syncing-something-by-trashing-its-card`](../../../callback-box/user-stories/catalog/2026-08-21.md). An independent adversarial source recheck marked it accurate on 2026-08-23, and the old ID remains an alias.
-
-Catalogued as `connectors/stop-syncing-something-by-trashing-its-card` in the [user-story catalog](../../../callback-box/user-stories/catalog/2026-08-21.md).

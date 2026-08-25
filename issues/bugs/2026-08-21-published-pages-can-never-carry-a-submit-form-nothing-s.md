@@ -2,7 +2,6 @@
 title: "Published pages can never carry a submit form — nothing sets a manifest's submit block or renders a form"
 workstream: unattached
 area: callback-box
-labels: [user-stories-audit]
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — user-story catalog verification
 ---
@@ -57,5 +56,3 @@ The recheck is adversarial by design: it will not mark the story accurate just b
 this issue was closed — it re-reads the code. If it still refutes, that is worth knowing
 before you call the fix done. Details in
 [the pipeline README](../../callback-box/user-stories/README.md).
-
-Catalogued as `publish/collect-replies-from-a-published-page` in the [user-story catalog](../../callback-box/user-stories/catalog/2026-08-21.md).

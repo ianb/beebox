@@ -2,7 +2,6 @@
 title: "A rotated image card overflows its panel and its subject box no longer matches the photo"
 workstream: unattached
 area: callback-box
-labels: [user-stories-audit]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — driving /browse to check the image-card user stories
@@ -70,5 +69,3 @@ The recheck is adversarial by design: it will not mark the story accurate just b
 this issue was closed — it re-reads the code. If it still refutes, that is worth knowing
 before you call the fix done. Details in
 [the pipeline README](../../callback-box/user-stories/README.md).
-
-Catalogued as `browse/view-a-photo-card-with-its-analysis` in the [user-story catalog](../../callback-box/user-stories/catalog/2026-08-21.md).
