@@ -6,7 +6,6 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — checking the "a broken image says so" user story on /browse
 resolution: implemented
-stories: [browse/images-still-show-when-the-source-blocks]
 ---
 
 An in-box image URL that 404s renders the browser's native broken-image glyph.

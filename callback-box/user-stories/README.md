@@ -15,6 +15,8 @@ previous one. If you change this pipeline, keep that property or the document be
 user-stories/
   README.md          this file
   pipeline/          the workflows and tools that produce a catalog
+                     *.workflow.ts is the source; `pnpm build:workflows` emits
+                     the .mjs the Workflow tool runs into dist/workflows/
   catalog/
     2026-08-21.md    the readable catalog
     2026-08-21.jsonl one capability per line, with the evidence behind
@@ -138,9 +140,18 @@ Needs `pnpm dev` up (for the browser pass) and a box to point at. Chain the work
 ```bash
 ROOT=$(git rev-parse --show-toplevel)
 mkdir -p "$ROOT"/callback-box/user-stories/work/{areas,verdicts,panel,browser,dedup,triage}
+pnpm --dir callback-box build:workflows
 ```
 
-1. `Workflow({scriptPath: "callback-box/user-stories/pipeline/discover.workflow.mjs", args: {root: ROOT}})`
+**The `.mjs` a `Workflow({scriptPath: …})` call names is generated and gitignored — build it
+first or the call will not find it.** The workflows are written and typechecked as
+`pipeline/*.workflow.ts`, against the runtime's globals in `pipeline/workflow-globals.d.ts`, and
+`pipeline/build-workflows.ts` transpiles each one to the `.mjs` beside it. Only the TypeScript is
+committed. (The runnable form has to be plain JavaScript: the tool parses the script itself, and
+gives it no filesystem and no imports — which is also why each workflow is one self-contained
+file rather than sharing code with its neighbours.)
+
+1. `Workflow({scriptPath: "callback-box/dist/workflows/discover.workflow.mjs", args: {root: ROOT}})`
 2. `pnpm exec tsx callback-box/user-stories/pipeline/validate-discovery.ts` — **exits non-zero on a
    partial discovery; do not proceed past a failure.** It checks every expected unit produced a
    file, every file parses, every id is unique, every field is present, and every cited path exists.
@@ -190,9 +201,11 @@ that fix invalidates — but it depends on someone having written it down. The g
 
 1. Someone fixes a bug. The issue carries `stories: [<id>]` in its frontmatter and ends with a
    footer spelling this out, so they do not need to know this directory exists.
-2. Re-check just those stories:
+2. Re-check just those stories (build the workflows first — the `.mjs` is generated):
    ```
-   Workflow({scriptPath: "callback-box/user-stories/pipeline/recheck.workflow.mjs",
+   pnpm --dir callback-box build:workflows
+
+   Workflow({scriptPath: "callback-box/dist/workflows/recheck.workflow.mjs",
              args: {root: "<repo root>", date: "2026-08-21",
                     ids: ["group/slug"], run: "<a name for this run>"}})
    ```

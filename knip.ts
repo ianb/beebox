@@ -104,6 +104,10 @@ const config: KnipConfig = {
   ],
   ignoreBinaries: [
     // System tools, not npm packages — there is no dependency to declare.
+    // launchctl (bin/schedules install) and claude (the headless launcher's
+    // install-time probe) are the same kind.
+    "launchctl",
+    "claude",
     "pdfinfo",
     "pdftotext",
     "pdftoppm",

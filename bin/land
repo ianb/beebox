@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# land — Fast-forward a finished worktree branch onto main. Runs from anywhere.
+# land — Merge a finished worktree branch onto main (--no-ff). Runs from anywhere.
 #
 # Why this exists: Claude Code isolates a `--worktree` session (and every
 # subagent it spawns) from the main checkout, blocking `git -C <main>`,
@@ -12,8 +12,12 @@
 # it behaves identically there, so the fallback needs no code change.
 #
 # There is nothing to *resolve* in main. `/finish` merges main INTO the
-# worktree and re-verifies there, so landing is a pure fast-forward: a pointer
-# move. If it isn't a fast-forward, main moved — this refuses, and the fix
+# worktree and re-verifies there, so landing itself never needs conflict
+# resolution — it always merges cleanly. It merges with `--no-ff`, so a
+# merge commit `Merge branch 'worktree-<name>'` always lands on main, keeping
+# one visible entry per landing in `git log --first-parent main` (commit
+# provenance: what a stream brought is `<merge>^1..<merge>^2`). If the branch
+# doesn't already contain main, this refuses — main moved, and the fix
 # belongs back in the worktree (merge main in, re-verify, retry), never here.
 #
 # Usage:
@@ -73,9 +77,10 @@ HERE_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 
 g() { git -C "$MONO" "$@"; }
 
-# A branch is merge-ready iff it already contains main (so the merge is a pure
-# fast-forward) and has commits main doesn't. `--ff-only` re-checks this at
-# merge time; this is for auto-detection and for a legible refusal message.
+# A branch is merge-ready iff it already contains main (so a `--no-ff` merge
+# is guaranteed conflict-free) and has commits main doesn't. The precondition
+# checks below re-verify this at merge time; this is for auto-detection and
+# for a legible refusal message.
 merge_ready() {
   local ref="$1"
   g merge-base --is-ancestor main "$ref" 2>/dev/null || return 1
@@ -151,7 +156,7 @@ if [ "$(g rev-parse "$BRANCH")" = "$(g rev-parse main)" ]; then
 fi
 
 if ! g merge-base --is-ancestor main "$BRANCH"; then
-  die "$BRANCH does not contain current main — this would not be a fast-forward.
+  die "$BRANCH does not contain current main — merging it now could conflict.
   Main moved (another finish probably landed). Resolve it in the WORKTREE, not here:
     git merge main    # from the worktree, then re-run verification
   then run: bin/land $BRANCH"
@@ -160,17 +165,17 @@ fi
 AHEAD="$(g rev-list --count main.."$BRANCH")"
 
 if [ "$DRY_RUN" = 1 ]; then
-  echo "land: would fast-forward main to $BRANCH (+$AHEAD commits)"
+  echo "land: would merge $BRANCH into main with --no-ff (+$AHEAD commits)"
   g log --oneline "main..$BRANCH" | sed 's/^/    /'
   echo "land: dry run — nothing merged"
   exit 0
 fi
 
-g merge --ff-only "$BRANCH"
+g merge --no-ff --no-edit "$BRANCH"
 
 echo
-echo "land: main → $(g rev-parse --short HEAD) (+$AHEAD commits from $BRANCH)"
+echo "land: main → $(g rev-parse --short HEAD) (merge commit, +$AHEAD commits from $BRANCH)"
 g log --oneline -3 | sed 's/^/    /'
 echo
-echo "land: the post-merge hook handles deploy for deployed paths."
+echo "land: the post-merge hook still handles deploy for deployed paths (fires on any merge that updates main, --no-ff included)."
 echo "land: the worktree cleans up on session exit / next SessionStart sweep."

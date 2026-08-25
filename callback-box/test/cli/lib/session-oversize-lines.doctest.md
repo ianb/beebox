@@ -379,7 +379,7 @@ print(`oversize: ${Buffer.byteLength(turn, "utf8") > MAX_SESSION_LINE_BYTES}`);
 print(`entries: ${parsed.entries.length}`);
 print(`stubbed: ${text.includes("too large to display")}`);
 print(`keeps what they typed: ${text.includes("here is the drawer")}`);
-print(`says where the image was: ${text.includes("[image unavailable]")}`);
+print(`says where the image was: ${text.includes("[image not displayed]")}`);
 print(`image bytes kept: ${entry.content.some((b) => b.type === "image" && b.dataBase64)}`);
 =>
 oversize: true
