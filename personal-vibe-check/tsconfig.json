@@ -1,0 +1,23 @@
+{
+  // This package type-checks ITSELF here, once, under settings it controls.
+  // Consumers never type-check this source: the exports map serves them
+  // `types.d.ts` instead (see the note in that file), so nothing downstream
+  // depends on which flags are set below.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "lib": ["ES2023"],
+    "types": ["node"]
+  },
+  "include": [
+    "preset.ts",
+    "plugin.ts",
+    "types.d.ts",
+    "types/**/*",
+    "prettier.config.ts",
+    "eslint.config.ts",
+    "rules/**/*",
+    "bin/**/*"
+  ],
+  "exclude": ["node_modules"]
+}

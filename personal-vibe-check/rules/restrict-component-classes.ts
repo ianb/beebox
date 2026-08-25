@@ -22,6 +22,33 @@
  *     add the barrel path to the `components` patterns too.
  */
 
+import type { Rule } from "eslint";
+import type { ImportDeclaration } from "estree";
+
+/**
+ * Narrow an unknown value to a plain object we can safely index. JSX AST
+ * nodes (JSXAttribute, JSXOpeningElement, JSXIdentifier, ...) are not part
+ * of the `estree` spec — they come from the JSX parser extension — so this
+ * rule reads their shape defensively at runtime instead of typing them
+ * precisely against a JSX AST package we don't depend on.
+ */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+/**
+ * A JSXAttribute node, typed just precisely enough to satisfy
+ * `context.report`'s node parameter (which only requires `type: string`).
+ * `name`, `value`, and `parent` are read defensively via `isRecord` since
+ * their real shape comes from the JSX parser extension, not `estree`.
+ */
+interface JSXAttributeNode {
+  type: "JSXAttribute";
+  name: unknown;
+  value: unknown;
+  parent: unknown;
+}
+
 /**
  * Default allowlist of token patterns. Each entry is a RegExp.source string
  * applied against tokens after any responsive/state prefixes (`md:`, `hover:`
@@ -34,7 +61,7 @@
  *   - appearance classes (colors, fonts, borders, shadows) — use component
  *     intent/variant props instead
  */
-const DEFAULT_ALLOWED_PATTERNS = [
+const DEFAULT_ALLOWED_PATTERNS: string[] = [
   // Margin (including negative)
   "^-?(m|mt|mr|mb|ml|mx|my|ms|me)-.+$",
   // Padding
@@ -61,15 +88,15 @@ const DEFAULT_ALLOWED_PATTERNS = [
   "^aspect-.+$",
 ];
 
-const DEFAULT_PROPS = ["className"];
-const DEFAULT_COMPONENT_PATTERNS = [];
+const DEFAULT_PROPS: string[] = ["className"];
+const DEFAULT_COMPONENT_PATTERNS: string[] = [];
 
 /**
  * Convert a simple glob to a RegExp.
  * Supports `*` (one segment) and `**` (any number of segments).
  * Everything else is treated literally.
  */
-function globToRegex(glob) {
+function globToRegex(glob: string): RegExp {
   let out = "^";
   let i = 0;
   while (i < glob.length) {
@@ -82,7 +109,7 @@ function globToRegex(glob) {
     } else if (c === "*") {
       out += "[^/]*";
       i += 1;
-    } else if (/[.+?^${}()|[\]\\]/.test(c)) {
+    } else if (c !== undefined && /[$()+.?[\\\]^{|}]/.test(c)) {
       out += "\\" + c;
       i += 1;
     } else {
@@ -91,10 +118,11 @@ function globToRegex(glob) {
     }
   }
   out += "$";
+  // eslint-disable-next-line security/detect-non-literal-regexp -- `out` is built here from a project-config glob pattern (rule options), not untrusted runtime input.
   return new RegExp(out);
 }
 
-function matchesAnyGlob(source, patterns) {
+function matchesAnyGlob(source: string, patterns: string[]): boolean {
   for (const pattern of patterns) {
     if (globToRegex(pattern).test(source)) return true;
   }
@@ -105,7 +133,7 @@ function matchesAnyGlob(source, patterns) {
  * Strip Tailwind variant/modifier prefixes (everything up to and including
  * the final `:`). Leaves the underlying utility untouched.
  */
-function stripPrefixes(token) {
+function stripPrefixes(token: string): string {
   const lastColon = token.lastIndexOf(":");
   return lastColon === -1 ? token : token.slice(lastColon + 1);
 }
@@ -118,21 +146,30 @@ function stripPrefixes(token) {
  * so they're implicitly skipped — the rule only flags tokens it can prove will
  * show up.
  *
+ * `expr` is read defensively (`unknown`) since the JSX expression nodes it
+ * walks (e.g. inside a `JSXExpressionContainer`) aren't part of `estree`.
+ *
  * Returns an array of strings. Each string is later split into whitespace-
  * separated class tokens by the caller.
  */
-function collectStringFragments(expr) {
-  if (!expr) return [];
+function collectStringFragments(expr: unknown): string[] {
+  if (!isRecord(expr)) return [];
   if (expr.type === "Literal" && typeof expr.value === "string") {
     return [expr.value];
   }
   if (expr.type === "TemplateLiteral") {
-    const out = [];
-    for (const q of expr.quasis) {
-      if (q.value.cooked) out.push(q.value.cooked);
+    const out: string[] = [];
+    if (Array.isArray(expr.quasis)) {
+      for (const q of expr.quasis) {
+        if (isRecord(q) && isRecord(q.value) && typeof q.value.cooked === "string") {
+          out.push(q.value.cooked);
+        }
+      }
     }
-    for (const e of expr.expressions) {
-      out.push(...collectStringFragments(e));
+    if (Array.isArray(expr.expressions)) {
+      for (const e of expr.expressions) {
+        out.push(...collectStringFragments(e));
+      }
     }
     return out;
   }
@@ -148,8 +185,8 @@ function collectStringFragments(expr) {
   return [];
 }
 
-function extractStringFragments(valueNode) {
-  if (valueNode === null || valueNode === undefined) return [];
+function extractStringFragments(valueNode: unknown): string[] {
+  if (!isRecord(valueNode)) return [];
   if (valueNode.type === "Literal" && typeof valueNode.value === "string") {
     return [valueNode.value];
   }
@@ -159,7 +196,32 @@ function extractStringFragments(valueNode) {
   return [];
 }
 
-const rule = {
+/**
+ * The rule's configured options, validated at runtime out of the untyped
+ * options array ESLint hands `create`.
+ */
+interface RestrictComponentClassesOptions {
+  components?: string[];
+  matchAll?: boolean;
+  props?: string[];
+  allowedPatterns?: string[];
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((v) => typeof v === "string");
+}
+
+function normalizeOptions(raw: unknown): RestrictComponentClassesOptions {
+  if (!isRecord(raw)) return {};
+  const options: RestrictComponentClassesOptions = {};
+  if (isStringArray(raw.components)) options.components = raw.components;
+  if (typeof raw.matchAll === "boolean") options.matchAll = raw.matchAll;
+  if (isStringArray(raw.props)) options.props = raw.props;
+  if (isStringArray(raw.allowedPatterns)) options.allowedPatterns = raw.allowedPatterns;
+  return options;
+}
+
+const rule: Rule.RuleModule = {
   meta: {
     type: "problem",
     docs: {
@@ -220,19 +282,20 @@ const rule = {
   },
 
   create(context) {
-    const options = context.options[0] || {};
+    const options = normalizeOptions(context.options[0]);
     const matchAll = options.matchAll === true;
     const componentPatterns = options.components || DEFAULT_COMPONENT_PATTERNS;
     const propNames = new Set(options.props || DEFAULT_PROPS);
     const allowedPatterns = (options.allowedPatterns || DEFAULT_ALLOWED_PATTERNS).map(
+      // eslint-disable-next-line security/detect-non-literal-regexp -- `p` comes from `allowedPatterns` rule options (project eslint config), not untrusted runtime input.
       (p) => new RegExp(p),
     );
 
     // Imported component name → source (for elements we should check).
     // Unused when `matchAll` is true.
-    const importedComponents = new Map();
+    const importedComponents = new Map<string, string>();
 
-    function isAllowedToken(token) {
+    function isAllowedToken(token: string): boolean {
       const core = stripPrefixes(token);
       for (const pattern of allowedPatterns) {
         if (pattern.test(core)) return true;
@@ -240,35 +303,52 @@ const rule = {
       return false;
     }
 
-    function reportDisallowed(node, componentName, propName, bad) {
+    function reportDisallowed(report: {
+      node: JSXAttributeNode;
+      componentName: string;
+      propName: string;
+      bad: string;
+    }): void {
       context.report({
-        node,
+        node: report.node,
         messageId: "disallowedClass",
-        data: { class: bad, component: componentName, prop: propName },
+        data: { class: report.bad, component: report.componentName, prop: report.propName },
       });
     }
 
-    const visitors = {
-      JSXAttribute(node) {
-        const propName = node.name.type === "JSXIdentifier" ? node.name.name : null;
+    const visitors: Rule.RuleListener = {
+      JSXAttribute(node: JSXAttributeNode) {
+        const nameNode = node.name;
+        const propName =
+          isRecord(nameNode) &&
+          nameNode.type === "JSXIdentifier" &&
+          typeof nameNode.name === "string"
+            ? nameNode.name
+            : null;
         if (propName === null || !propNames.has(propName)) return;
 
         const opening = node.parent;
-        if (!opening || opening.type !== "JSXOpeningElement") return;
-        const nameNode = opening.name;
-        if (nameNode.type !== "JSXIdentifier") return;
-        const componentName = nameNode.name;
+        if (!isRecord(opening) || opening.type !== "JSXOpeningElement") return;
+        const openingName = opening.name;
+        if (
+          !isRecord(openingName) ||
+          openingName.type !== "JSXIdentifier" ||
+          typeof openingName.name !== "string"
+        ) {
+          return;
+        }
+        const componentName = openingName.name;
 
         if (!matchAll && !importedComponents.has(componentName)) return;
 
         const fragments = extractStringFragments(node.value);
-        const seen = new Set();
+        const seen = new Set<string>();
         for (const fragment of fragments) {
           for (const token of fragment.split(/\s+/).filter(Boolean)) {
             if (seen.has(token)) continue;
             seen.add(token);
             if (!isAllowedToken(token)) {
-              reportDisallowed(node, componentName, propName, token);
+              reportDisallowed({ node, componentName, propName, bad: token });
             }
           }
         }
@@ -277,7 +357,7 @@ const rule = {
 
     // Only track imports when we need to discriminate by import source
     if (!matchAll) {
-      visitors.ImportDeclaration = function (node) {
+      visitors.ImportDeclaration = function (node: ImportDeclaration) {
         const source = node.source.value;
         if (typeof source !== "string") return;
         if (!matchesAnyGlob(source, componentPatterns)) return;

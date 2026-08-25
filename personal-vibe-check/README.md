@@ -13,8 +13,8 @@ npx vibe-init
 
 `vibe-init` will:
 1. Add npm scripts (`typecheck`, `lint`, `format`, `format:check`, `lint:oxlint`, `lint:knip`, `lint:circular`)
-2. Create `eslint.config.mjs` importing the preset
-3. Create `prettier.config.mjs` importing the base Prettier config
+2. Create `eslint.config.ts` importing the preset
+3. Create `prettier.config.ts` importing the base Prettier config
 4. Create `tsconfig.json` extending the base config (if none exists)
 5. Create `knip.json` for dead code detection
 6. Install CLI tools (`eslint`, `prettier`, `oxlint`, `knip`, `madge`) as devDependencies
@@ -40,7 +40,7 @@ The package bundles all ESLint plugins as dependencies — you don't need to ins
 
 ### 2. ESLint Config
 
-Create `eslint.config.mjs`:
+Create `eslint.config.ts`:
 
 ```js
 import { vibeCheck } from "@ianbicking/personal-vibe-check/eslint";
@@ -53,7 +53,7 @@ Options:
 
 ### 3. Prettier Config
 
-Create `prettier.config.mjs`:
+Create `prettier.config.ts`:
 
 ```js
 export { default } from "@ianbicking/personal-vibe-check/prettier";

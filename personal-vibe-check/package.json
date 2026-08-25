@@ -4,20 +4,24 @@
   "description": "Reusable TypeScript/React lint and static analysis preset",
   "type": "module",
   "exports": {
-    "./eslint": "./eslint.config.mjs",
-    "./plugin": "./plugin.mjs",
+    "./eslint": {
+      "types": "./types.d.ts",
+      "default": "./preset.ts"
+    },
+    "./plugin": "./plugin.ts",
     "./tsconfig.base.json": "./tsconfig.base.json",
     "./knip-base.json": "./knip-base.json",
-    "./prettier": "./prettier.config.mjs"
+    "./prettier": "./prettier.config.ts"
   },
   "bin": {
-    "vibe-check": "./bin/vibe-check.mjs",
-    "vibe-init": "./bin/vibe-init.mjs"
+    "vibe-check": "./bin/vibe-check.ts",
+    "vibe-init": "./bin/vibe-init.ts"
   },
   "files": [
-    "eslint.config.mjs",
-    "plugin.mjs",
-    "prettier.config.mjs",
+    "preset.ts",
+    "types.d.ts",
+    "plugin.ts",
+    "prettier.config.ts",
     "tsconfig.base.json",
     "knip-base.json",
     "conventions.md",
@@ -56,11 +60,12 @@
   "license": "MIT",
   "author": "Ian Bicking",
   "scripts": {
-    "format": "prettier --write \"**/*.{mjs,json}\"",
-    "format:check": "prettier --check \"**/*.{mjs,json}\"",
+    "format": "prettier --write \"**/*.{ts,json}\"",
+    "format:check": "prettier --check \"**/*.{ts,json}\"",
     "lint:oxlint": "oxlint -A no-unused-vars",
     "lint:knip": "knip",
     "lint:circular": "madge --circular --extensions ts,tsx src/",
-    "test": "node --test rules/test/*.test.mjs"
+    "test": "node --test rules/test/*.test.ts",
+    "typecheck": "tsc --noEmit"
   }
 }
