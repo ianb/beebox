@@ -4,8 +4,9 @@
  * The workflows are the one part of this pipeline that cannot be TypeScript at runtime: the tool
  * parses plain JavaScript, and gives the script no filesystem and no Node API, so it can import
  * nothing — not even a type. They are written as `.ts` anyway (so they are typechecked against
- * `workflow-globals.d.ts` like everything else here) and built to `.mjs`, which is generated and
- * gitignored. **A `Workflow({scriptPath: …})` call will not find a workflow until this has run.**
+ * `workflow-globals.d.ts` like everything else here) and built into `callback-box/dist/workflows/`,
+ * with the rest of this package's generated output. **A `Workflow({scriptPath: …})` call will not
+ * find a workflow until this has run.**
  *
  * `tsc` is the compiler here rather than esbuild for one specific reason: the tool requires the
  * script to open with `export const meta = {…}` as a literal, and esbuild rewrites that into
@@ -14,12 +15,22 @@
  *
  * Usage: pnpm exec tsx callback-box/user-stories/pipeline/build-workflows.ts
  */
-import { readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 
 import ts from "typescript";
 
 const HERE = import.meta.dirname;
+
+/**
+ * Generated workflows go to `dist/`, with the rest of this package's build output.
+ *
+ * Not beside their sources: a `.mjs` sitting in the source tree reads as a file
+ * someone wrote and has to maintain, and the whole point of the `.ts` sources is
+ * that nobody edits the JavaScript. `dist/` already means "generated, gitignored,
+ * rebuild it" here.
+ */
+const OUT_DIR = resolve(HERE, "../../dist/workflows");
 
 // A workflow's body runs inside an async function the runtime wraps around it, so it ends in a
 // top-level `return` — a grammar error to a compiler reading the file as a module. The sources
@@ -69,6 +80,7 @@ for (const file of workflows) {
   }
 
   const out = file.replace(/\.ts$/, ".mjs");
-  writeFileSync(join(HERE, out), outputText);
-  console.log(`${out} (${outputText.split("\n").length} lines)`);
+  mkdirSync(OUT_DIR, { recursive: true });
+  writeFileSync(join(OUT_DIR, out), outputText);
+  console.log(`dist/workflows/${out} (${outputText.split("\n").length} lines)`);
 }

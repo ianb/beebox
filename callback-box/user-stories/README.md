@@ -15,8 +15,8 @@ previous one. If you change this pipeline, keep that property or the document be
 user-stories/
   README.md          this file
   pipeline/          the workflows and tools that produce a catalog
-                     *.workflow.ts is the source; the *.workflow.mjs the
-                     Workflow tool runs is built from it and gitignored
+                     *.workflow.ts is the source; `pnpm build:workflows` emits
+                     the .mjs the Workflow tool runs into dist/workflows/
   catalog/
     2026-08-21.md    the readable catalog
     2026-08-21.jsonl one capability per line, with the evidence behind
@@ -151,7 +151,7 @@ committed. (The runnable form has to be plain JavaScript: the tool parses the sc
 gives it no filesystem and no imports — which is also why each workflow is one self-contained
 file rather than sharing code with its neighbours.)
 
-1. `Workflow({scriptPath: "callback-box/user-stories/pipeline/discover.workflow.mjs", args: {root: ROOT}})`
+1. `Workflow({scriptPath: "callback-box/dist/workflows/discover.workflow.mjs", args: {root: ROOT}})`
 2. `pnpm exec tsx callback-box/user-stories/pipeline/validate-discovery.ts` — **exits non-zero on a
    partial discovery; do not proceed past a failure.** It checks every expected unit produced a
    file, every file parses, every id is unique, every field is present, and every cited path exists.
@@ -205,7 +205,7 @@ that fix invalidates — but it depends on someone having written it down. The g
    ```
    pnpm --dir callback-box build:workflows
 
-   Workflow({scriptPath: "callback-box/user-stories/pipeline/recheck.workflow.mjs",
+   Workflow({scriptPath: "callback-box/dist/workflows/recheck.workflow.mjs",
              args: {root: "<repo root>", date: "2026-08-21",
                     ids: ["group/slug"], run: "<a name for this run>"}})
    ```
