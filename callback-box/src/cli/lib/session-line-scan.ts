@@ -28,10 +28,12 @@ const CHUNK_BYTES = 256 * 1024;
  *
  * The route materializes the whole line to reach one payload inside it, so
  * this is the endpoint's memory bound. An image-bearing turn measures ~0.7-1.3
- * MB per photo; 16 MB leaves room for a turn carrying several without letting
- * a pathological line become an allocation a request can ask for by name.
+ * MB per photo, and a large photo selection is routed to bulk upload rather
+ * than inlined, so 8 MB covers a turn carrying half a dozen while keeping the
+ * worst allocation a request can ask for by name well clear of the multiplier
+ * that made the 2026-08 OOM fatal.
  */
-export const MAX_MEDIA_LINE_BYTES = 16 * 1024 * 1024;
+export const MAX_MEDIA_LINE_BYTES = 8 * 1024 * 1024;
 
 const NEWLINE = 0x0a;
 

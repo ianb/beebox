@@ -8,6 +8,7 @@
 import { type KnownToolName, isKnownTool } from "../../shared/known-tools.js";
 import { IMAGE_NOT_DISPLAYED } from "../../shared/chat-content-blocks.js";
 import { encodeSessionMediaRef } from "../../shared/session-media.js";
+import { STRIPPED_MEDIA_MARKER } from "./session-oversize.js";
 import { isRecord } from "../../lib/is-record.js";
 
 /**
@@ -111,11 +112,15 @@ function imageBlock(block: Record<string, unknown>, context: ImageBlockContext):
   // session, so the usual reader is someone looking at a conversation whose images
   // were fine when they sent them and whose work from those images is still there.
   // "Unavailable" reads as loss; "not displayed" is what actually happened.
-  if (source?.["type"] === "base64" && !source["data"]) {
-    // Stripped by the oversize guard: the photo is still in the transcript, so
-    // hand back its coordinates instead of a placeholder. The client fetches
-    // the bytes only if this image is ever actually looked at, which is what
-    // keeps a long scrollback from paying for photographs nobody scrolls to.
+  // Stripped by the oversize guard: the photo is still in the transcript, so
+  // hand back its coordinates instead of a placeholder. The client fetches the
+  // bytes only if this image is ever actually looked at, which is what keeps a
+  // long scrollback from paying for photographs nobody scrolls to.
+  //
+  // Keyed on the marker the guard wrote, NOT on "something on this line was
+  // stripped": an entry can carry a stripped photo AND a failed upload, and
+  // only the first has anything to fetch.
+  if (source?.["type"] === "base64" && source["data"] === STRIPPED_MEDIA_MARKER) {
     if (context.mediaRef !== null) {
       const stripped: SessionContentBlock = {
         type: "image",
@@ -124,8 +129,14 @@ function imageBlock(block: Record<string, unknown>, context: ImageBlockContext):
       if (source["media_type"]) stripped.mediaType = String(source["media_type"]);
       return stripped;
     }
-    // Nothing was stripped from this line, so the block is empty because the
-    // bytes never arrived. There is no image to point at.
+    // Stripped, but this reader has no session to address it by (a CLI
+    // renderer reading a transcript it will never serve). Say the image is
+    // there and not shown, which is exactly what happened.
+    return { type: "text", text: IMAGE_NOT_DISPLAYED };
+  }
+  if (source?.["type"] === "base64" && !source["data"]) {
+    // Never stripped, and empty: the bytes never arrived (a failed upload).
+    // There is nothing to point at, and offering a URL would only 404.
     return { type: "text", text: IMAGE_NOT_DISPLAYED };
   }
   const imgBlock: SessionContentBlock = { type: "image" };

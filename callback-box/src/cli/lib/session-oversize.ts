@@ -92,6 +92,16 @@ export function isOversizeLine(line: string): boolean {
 export const BASE64_PAYLOAD_RE = /"(data|base64)":"([\d+/=A-Za-z]{1024,})"/g;
 
 /**
+ * What {@link stripInlineMedia} leaves where a payload was.
+ *
+ * Base64 characters only, so it stays inside the alphabet the pattern matches
+ * and cannot make the line invalid JSON — and long enough to be nothing a real
+ * short `data` field would hold, since a reader keys on it to decide the block
+ * is a photo it can go and fetch rather than one that was never uploaded.
+ */
+export const STRIPPED_MEDIA_MARKER = "cbStrippedMedia";
+
+/**
  * Remove image payloads from a raw line, returning null when there were none.
  *
  * This is what lets an image-bearing turn be *read* rather than stubbed. A photo
@@ -101,6 +111,15 @@ export const BASE64_PAYLOAD_RE = /"(data|base64)":"([\d+/=A-Za-z]{1024,})"/g;
  * alongside it included. The bytes are what the guard exists to keep out of the
  * heap; the rest of the turn is ordinary and small.
  *
+ * The payload is replaced by {@link STRIPPED_MEDIA_MARKER} rather than by an
+ * empty string, so a reader can tell "we took this out" from "there was never
+ * anything here". Those are different facts with different answers: the first
+ * is a photo that can still be fetched from this line
+ * (`shared/session-media.ts`), the second is an upload that failed and has
+ * nothing behind it. Blanking both to `""` conflated them, and an entry
+ * carrying one of each — a stripped photo beside a failed one — would offer
+ * the failed one a URL that could only 404.
+ *
  * The result is forced through a Buffer for the same reason {@link detachedHead}
  * does it: a string built from a large parent can keep that parent alive, which
  * would defeat the whole point of dropping the payload.
@@ -109,7 +128,7 @@ export function stripInlineMedia(line: string): string | null {
   BASE64_PAYLOAD_RE.lastIndex = 0;
   if (!BASE64_PAYLOAD_RE.test(line)) return null;
   BASE64_PAYLOAD_RE.lastIndex = 0;
-  const stripped = line.replace(BASE64_PAYLOAD_RE, '"$1":""');
+  const stripped = line.replace(BASE64_PAYLOAD_RE, `"$1":"${STRIPPED_MEDIA_MARKER}"`);
   return Buffer.from(stripped, "utf8").toString("utf8");
 }
 

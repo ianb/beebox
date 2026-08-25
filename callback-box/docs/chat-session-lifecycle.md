@@ -113,3 +113,9 @@ Two pieces have to enumerate image blocks identically for a reference to
 resolve: `transformContent` (`cli/lib/session-content.ts`), which mints it, and
 `session-media-extract.ts`, which follows it back. Both count blocks of type
 `image` in `message.content`, in document order.
+
+A reference is minted only for an image the guard actually stripped. The strip
+leaves `STRIPPED_MEDIA_MARKER` where the payload was rather than an empty
+string, so the reader can tell a photo it can go and fetch from an upload that
+failed and has nothing behind it — one turn can carry both, and only the first
+gets a URL. The second still reads `[image not displayed]`, which is true.

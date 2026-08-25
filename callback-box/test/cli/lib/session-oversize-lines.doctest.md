@@ -401,6 +401,35 @@ image bytes kept: false
 points at the image: [{"type":"image","imageRef":"photo-turn/uuid-1/0","mediaType":"image/jpeg"}]
 ```
 
+A turn can carry both kinds of image at once — a photo that was stripped, and
+one whose bytes never arrived. They are different facts and get different
+answers: only the first has anything to fetch. Keying the decision on "this line
+had something stripped from it" would hand the failed upload a URL that could
+only 404, so the guard marks each payload it removes and the reader keys on the
+mark:
+
+```ts continue
+const failed = JSON.stringify({
+  parentUuid: null,
+  type: "user",
+  uuid: "uuid-2",
+  timestamp: "2026-08-22T21:14:00.000Z",
+  message: {
+    role: "user",
+    content: [
+      { type: "text", text: "<typed>one of these did not upload</typed>" },
+      { type: "image", source: { type: "base64", media_type: "image/jpeg", data: photo } },
+      { type: "image", source: { type: "base64", media_type: "image/png", data: "" } },
+    ],
+  },
+});
+await fs.writeFile(logPath2, `${failed}\n`, "utf-8");
+
+const mixed = await parseSessionLog({ logPath: logPath2, slice: { mode: "tail", tail: 50 } });
+JSON.stringify(mixed.entries[0].content.filter((b) => b.type !== "text" || b.text.includes("image")))
+=> [{"type":"image","imageRef":"photo-turn/uuid-2/0","mediaType":"image/jpeg"},{"type":"text","text":"[image not displayed]"}]
+```
+
 The person's words survive, in order, in a real entry. The bytes still do not
 travel with them — that is the whole point of the bound — but the entry now
 carries the photo's address instead of a sentence about its absence: the

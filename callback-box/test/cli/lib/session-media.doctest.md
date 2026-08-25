@@ -139,7 +139,7 @@ can ask the server to allocate is bounded:
 
 ```ts continue
 MAX_MEDIA_LINE_BYTES
-=> 16777216
+=> 8388608
 ```
 
 ```ts cleanup
