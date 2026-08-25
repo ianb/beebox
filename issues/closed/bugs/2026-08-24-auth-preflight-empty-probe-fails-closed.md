@@ -4,6 +4,7 @@ workstream: refresh-maps-throughput
 filed-by: agent
 discovered-in: refresh-maps tier comparison (worktree-refresh-maps-throughput)
 area: callback-box
+resolution: implemented
 ---
 
 `createClaudeCliService().authStatus()` in `src/services/claude-cli.ts` shells
@@ -38,3 +39,26 @@ carry an explicit `unknown` state the way the judge now does.
 
 Worth checking whether the same collapse affects the `cb health` auth probe in
 `webapp/trpc/routers/health.ts`, which uses the same service.
+
+## Fixed, 2026-08-24
+
+`claude-cli.ts` now marks an unusable probe with `AUTH_PROBE_INCONCLUSIVE`
+instead of reporting it as `loggedIn: false`, so callers can tell "no answer"
+from "answered no".
+
+- `auth-preflight.ts` retries once on an inconclusive probe, and if the retry
+  is also inconclusive it proceeds with a warning rather than throwing. The
+  preflight exists only to turn an opaque SDK auth failure into a clear
+  message; when it can't tell, the SDK call right behind it is the better
+  judge, and a false positive there kills a run that would have succeeded. An
+  inconclusive result is never cached, so the next call reprobes. A real
+  logout still fails closed.
+- `health.ts` did have the same collapse. Its `claude-credentials` check now
+  reports an unusable probe as a `warning` saying auth could not be
+  determined, instead of a red "not logged in" naming the wrong remedy. The
+  check moved into its own `claudeAuthCheck` function — inlining the third
+  branch pushed `runHealthChecks` past the complexity limit.
+
+Covered by `test/core/agent/auth-preflight.doctest.md` (retry, proceed-on-
+still-inconclusive, no caching of inconclusive, real logout still throws) and
+`test/webapp/health-claude-auth.doctest.md`.
