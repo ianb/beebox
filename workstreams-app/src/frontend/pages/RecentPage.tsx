@@ -4,6 +4,7 @@ import { QuotaPanel } from "../components/QuotaPanel.js";
 import { Button, Pill } from "../components/ui.js";
 import { trpc } from "../trpc.js";
 import type { Quota, RecentFeed, RecentFile } from "../types.js";
+import { issueRelPathFromRepoPath } from "../../shared/documents.js";
 
 /**
  * The browser's front door (`docs/plans/general-browser.md`, Track 3).
@@ -22,13 +23,37 @@ function ago(at: number, now: number): string {
   return `${String(Math.floor(hours / 24))}d ago`;
 }
 
+/**
+ * Where a feed row goes. The feed addresses everything by repository path, but
+ * an issue has a viewer of its own — frontmatter, related items, actions — so it
+ * opens there rather than having its source rendered as markdown.
+ *
+ * Main only. The viewer reads issues from the main checkout
+ * (`documents-service.ts` `listIssues`), so a worktree's copy would silently
+ * resolve to a different file — or to none, for an issue that exists only on
+ * that branch. Those rows keep the browser, which is checkout-aware.
+ *
+ * Exported for the doctest: a `Link` cannot render outside the router, and this
+ * decision is worth testing without one.
+ */
+export function recentRowTarget(file: RecentFile): { to: "/browse" | "/issues"; search: Record<string, string> } {
+  const issue = file.workstream === null ? issueRelPathFromRepoPath(file.relPath) : null;
+  if (issue !== null) return { to: "/issues", search: { issue } };
+  return {
+    to: "/browse",
+    search: file.workstream === null
+      ? { file: file.relPath }
+      : { file: file.relPath, workstream: file.workstream },
+  };
+}
+
 function RecentRow({ file, now }: { file: RecentFile; now: number }) {
-  const search = file.workstream === null
-    ? { file: file.relPath }
-    : { file: file.relPath, workstream: file.workstream };
+  const target = recentRowTarget(file);
   return (
     <li>
-      <Link to="/browse" search={search}>{file.relPath}</Link>
+      {target.to === "/issues"
+        ? <Link to="/issues" search={target.search}>{file.relPath}</Link>
+        : <Link to="/browse" search={target.search}>{file.relPath}</Link>}
       <span className="muted">{ago(file.at, now)}</span>
       {file.workstream === null ? null : <Pill tone="accent">{file.workstream}</Pill>}
       {file.inProgress ? <Pill tone="warning">in progress</Pill> : null}
