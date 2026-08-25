@@ -1,0 +1,10 @@
+description: "Weekly knip sweep: what became dead code since last week"
+cadence: 7d
+workstream:
+  agent: claude
+  model: opus
+  worktree: true
+  # Nothing carries between weeks: the baseline in the store is the memory, and
+  # each sweep is judged on the branch it produces.
+  session: fresh
+  permissionMode: bypassPermissions
