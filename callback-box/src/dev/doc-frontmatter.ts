@@ -19,7 +19,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function splitFrontmatter(source: string): FrontmatterDocument | null {
+export function splitFrontmatter(source: string): FrontmatterDocument | null {
   if (!source.startsWith("---\n")) return null;
   const end = source.indexOf("\n---", 4);
   if (end === -1) return null;

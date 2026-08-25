@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-08-25T02:33:23Z
-Total documents: 298
+Generated: 2026-08-25T02:34:01Z
+Total documents: 299
 
 ## Issues
 
@@ -105,6 +105,7 @@ Referenced by:
 - docs/implemented-plans/clerk-webpage-capture.md:129 (mention) — - **callback-clerk `CLAUDE.md`** — *"domain code never imports React, WXT, or
 - docs/implemented-plans/codex-box-engine.md:57 (mention) — - Box docs and skills are generated from canonical `CLAUDE.md`, `.claude/skills`, and
 - docs/implemented-plans/codex-worktree-sessions.md:19 (mention) — - **Codex reads AGENTS.md, not CLAUDE.md.** Two layers, both verified against
+- docs/implemented-plans/commit-provenance-trailers.md:27 (mention) — - Root `CLAUDE.md`: *"NEVER disable or weaken a lint rule"* — same posture for
 - docs/implemented-plans/connector-sync-isolation.md:29 (mention) — - `CLAUDE.md:11`: *"Tests are doctests (`.doctest.md`) in `test/`."* Tests land
 - docs/implemented-plans/courseware-phase1.md:102 (mention) — "filename supplies the type — there is no `type:` field"** (`CLAUDE.md:39`), so templates
 - docs/implemented-plans/delivered-user-message-codec.md:23 (mention) — - Project testing convention. `CLAUDE.md:11-17` says: *"Tests are doctests (`.doctest.md`) in `test/`"* and *"Run tests 
@@ -189,6 +190,7 @@ Referenced by:
 - ../.claude/skills/cb-codehealth/SKILL.md:29 (mention) — and a short usage doc at its root (a directory `CLAUDE.md` / README — like
 - ../.claude/skills/cb-context/SKILL.md:3 (mention) — description: Use when engineering what a box agent knows — writing or curating a box's CLAUDE.md, a nested CLAUDE.md, a 
 - ../.claude/skills/cb-frontend/SKILL.md:11 (mention) — read it before writing UI (`CLAUDE.md` already says so). This skill is the
+- ../.claude/skills/cb-issue-actions/SKILL.md:121 (mention) — `CLAUDE.md`), so query that first; the `-S` guess is the fallback for
 - ../.claude/skills/cb-plan/SKILL.md:126 (mention) — - `callback-box/CLAUDE.md` — project conventions, validation contract,
 - ../.claude/skills/cross-model/SKILL.md:38 (mention) — - Root `CLAUDE.md` mandates it for anything bigger than a small-scope bug fix,
 - ../.claude/skills/doctest/SKILL.md:19 (mention) — test, per `callback-box/CLAUDE.md`). Write prose, then fenced examples.
@@ -210,6 +212,7 @@ Referenced by:
 - ../issues/closed/decisions/2026-07-07-categorize-issues-into-subdirectories.md:86 (mention) — Note: `issues/CLAUDE.md` and the root `CLAUDE.md`'s "issue queue" pointer both
 - ../issues/closed/decisions/2026-07-07-cb-render-vs-bin-browse.md:56 (mention) — `suppressHydrationWarning`); and references in `CLAUDE.md`, `frontend.md`,
 - ../issues/closed/decisions/2026-08-05-email-storage-api-vs-file-based.md:59 (link) — [cb-context](../../../callback-box/CLAUDE.md) concern as much as a code one).
+- ../issues/closed/decisions/2026-08-24-commit-trailers-for-workstream-issue-plan.md:13 (mention) — > Closed: implemented by the commit-provenance-trailers plan. Resolving commits: `887f7a51` (script + hooks), `2fa2822c`
 - ../issues/closed/docs-and-chores/2026-03-04-documentation-graph.md:8 (mention) — **Closed:** Implemented as `docs/doc-graph.md` (auto-generated cross-reference report, `src/dev/doc-graph-html.ts`). See
 - ../issues/closed/docs-and-chores/2026-08-03-one-temp-file-convention-for-agents.md:24 (mention) — the box's own CLAUDE.md / agent-guide / rules, not this repo's docs). So the box
 - ../issues/closed/features/2026-08-04-crossmodel-review-skill-bidirectional.md:28 (mention) — catches blind spots a same-model self-review structurally cannot (root CLAUDE.md
@@ -219,7 +222,6 @@ Referenced by:
 - ../issues/code-quality/2026-08-08-audit-cb-subcommand-surface.md:62 (mention) — - **Box guidance references command names.** Box `CLAUDE.md`s, schema
 - ../issues/code-quality/2026-08-08-extract-cb-serve-from-the-box-cli.md:54 (mention) — `callback-box/CLAUDE.md`.
 - ../issues/code-quality/2026-08-17-cb-init-prints-a-screenful-on-every-run.md:33 (mention) — (root `CLAUDE.md`, "Treat noisy command output as a bug").
-- ../issues/decisions/2026-08-24-commit-trailers-for-workstream-issue-plan.md:96 (mention) — - The commit-message convention itself lives in the root `CLAUDE.md`, which is
 - ../issues/docs-and-chores/2026-05-21-fill-out-the-glossary.md:20 (mention) — Method: do one sweep through `CLAUDE.md`, `FRONTEND.md`, the schemas, and `docs/` collecting terms-of-art, then write en
 - ../issues/docs-and-chores/2026-05-26-dev-scripts-into-bin.md:14 (mention) — CLAUDE.md files is still untouched and stays open here.
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:8 (mention) — Still-open items from the 2026-04-28 CLAUDE.md self-audit
@@ -362,6 +364,7 @@ Referenced by:
 - docs/implemented-plans/codex-box-engine.md:42 (mention) — - `callback-box/code-style.md` requires errors with recovery paths to remain visible.
 - docs/implemented-plans/codex-diagnostic-parity.md:27 (mention) — - `callback-box/code-style.md` requires narrow typed boundaries and visible recovery
 - docs/implemented-plans/coined-chat-ids.md:55 (mention) — - `code-style.md` exhaustiveness — `switch-exhaustiveness-check` with
+- docs/implemented-plans/commit-provenance-trailers.md:30 (mention) — - `callback-box/code-style.md` — no default parameters, max two positional
 - docs/implemented-plans/companion-pane-card-activity.md:42 (mention) — - `callback-box/code-style.md` — files ≤300 lines, no default parameters, max 2
 - docs/implemented-plans/connector-sync-isolation.md:34 (mention) — - `code-style.md:27-33`: *"ONLY catch the minimal, specific error you can
 - docs/implemented-plans/courseware-lesson-plan.md:29 (mention) — - `callback-box/code-style.md` — no `any`, no default params, max 2 positional params, files ≤300
@@ -435,7 +438,7 @@ Referenced by:
 - ../.claude/agents/finish.md:80 (mention) — root `CLAUDE.md`/`code-style.md` — also drops you to the full flow.
 - ../.claude/skills/cb-frontend/SKILL.md:37 (mention) — - **One job per component.** A component near the 300-line cap (code-style.md)
 - ../.claude/skills/cb-plan/SKILL.md:129 (mention) — - `callback-box/code-style.md` — the checkable mechanical rules (no
-- ../CLAUDE.md:62 (mention) — **NEVER disable or weaken a lint rule to make code pass. Ask first.** Every rule in `@ianbicking/personal-vibe-check` is
+- ../CLAUDE.md:64 (mention) — **NEVER disable or weaken a lint rule to make code pass. Ask first.** Every rule in `@ianbicking/personal-vibe-check` is
 - ../issues/closed/bugs/2026-07-21-file-lock-empty-window-race.md:92 (mention) — standing `code-style.md`/CLAUDE.md decision ("don't roll your own with
 - ../issues/closed/code-quality/2026-07-10-tour-lib-lint-debt.md:18 (mention) — helpers. See `code-style.md`'s "Type Checking and Linting" section for the
 - ../issues/closed/code-quality/2026-07-12-frontend-local-helper-consolidation-into-shared.md:38 (mention) — code-style.md) has a frontend twin. `isRecord` is pure and dependency-free, so
@@ -1073,6 +1076,7 @@ Referenced by:
 - docs/implemented-plans/chat-review.md:42 (mention) — - **`docs/engineering-principles.md`** — findings trace to:
 - docs/implemented-plans/codex-sdk-backend.md:44 (mention) — (`docs/engineering-principles.md:12`).
 - docs/implemented-plans/coined-chat-ids.md:41 (mention) — - `docs/engineering-principles.md` #2 (exhaustiveness is enforced, not hoped
+- docs/implemented-plans/commit-provenance-trailers.md:23 (mention) — - `callback-box/docs/engineering-principles.md` — #3 validate at boundaries
 - docs/implemented-plans/connector-sync-isolation.md:25 (mention) — - `docs/engineering-principles.md`: principle 1 (types are structure),
 - docs/implemented-plans/deferred-recoverable-agent-failures.md:62 (mention) — - `docs/engineering-principles.md` #1 (types are structure), #2
 - docs/implemented-plans/delivered-user-message-codec.md:18 (mention) — - Engineering principle 1, Types are structure. `docs/engineering-principles.md:12-18` says: *"Prefer types that make il
@@ -1654,7 +1658,7 @@ Referenced by:
 - docs/plans/docs-reorg.md:342 (mention) — role change). Conventions recorded in `docs/README.md`.
 - src/dev/CLAUDE.md:12 (mention) — | `doc-check.ts` | Enforcement twin of doc-graph: exits nonzero on broken refs, live-area orphans, duplicate `issues/` b
 - ../.claude/agents/finish.md:359 (mention) — - **Filenames matter** — apply `callback-box/docs/README.md`'s naming rules: a
-- ../CLAUDE.md:36 (mention) — **Commit docs WITH hooks.** Docs-only commits run only fast checks (~1s — typecheck/lint are skipped automatically), so 
+- ../CLAUDE.md:38 (mention) — **Commit docs WITH hooks.** Docs-only commits run only fast checks (~1s — typecheck/lint are skipped automatically), so 
 - ../issues/docs-and-chores/2026-07-20-day-to-day-usage-docs.md:38 (mention) — addressed (`docs/README.md` says so), so an invitee browsing `docs/`
 
 References:
@@ -2753,6 +2757,21 @@ References:
 - → docs/implemented-plans/emission-model.md (mention)
 - → docs/testing.md (mention)
 
+#### docs/implemented-plans/commit-provenance-trailers.md
+
+Title: "Commit provenance trailers" | 361 lines
+
+Referenced by:
+- ../bin/CLAUDE.md:62 (mention) — `CLAUDE.md`. Design: `callback-box/docs/plans/commit-provenance-trailers.md`.
+- ../issues/closed/features/2026-08-20-no-way-to-know-what-a-workstream-covers.md:19 (mention) — `callback-box/docs/implemented-plans/commit-provenance-trailers.md`).
+
+References:
+- → ../issues/closed/decisions/2026-08-24-commit-trailers-for-workstream-issue-plan.md (frontmatter)
+- → ../issues/closed/features/2026-08-20-no-way-to-know-what-a-workstream-covers.md (frontmatter)
+- → docs/engineering-principles.md (mention)
+- → CLAUDE.md (mention)
+- → code-style.md (mention)
+
 #### docs/implemented-plans/companion-pane-card-activity.md **[ORPHAN]**
 
 Title: "Companion-pane card activity awareness for chat" | 372 lines
@@ -2896,7 +2915,7 @@ Title: "Make the shared dev router safely exposable over Tailscale" | 566 lines
 Referenced by:
 - docs/docker-install.md:193 (mention) — router's auth model and `docs/implemented-plans/expose-dev-router.md` for the
 - docs/implemented-plans/expose-dev-router.review.md:4 (mention) — `expose-dev-router.md`, 2026-07-21. **Verdict: unsafe as written — do not
-- ../bin/CLAUDE.md:124 (mention) — `callback-box/docs/implemented-plans/expose-dev-router.md`.
+- ../bin/CLAUDE.md:160 (mention) — `callback-box/docs/implemented-plans/expose-dev-router.md`.
 - ../issues/closed/bugs/2026-07-20-dev-router-login-page-broken.md:11 (mention) — `expose-dev-router` plan (`callback-box/docs/implemented-plans/expose-dev-router.md`),
 - ../issues/closed/features/2026-07-21-expose-dev-checkout-over-tailscale.md:13 (mention) — (`callback-box/docs/implemented-plans/expose-dev-router.md`): the shared
 - ../issues/features/2026-07-22-cb-tailscale-dev-router-operational-polish.md:11 (mention) — The dev-router Tailscale exposure (`docs/implemented-plans/expose-dev-router.md`)
@@ -3331,7 +3350,7 @@ References:
 Title: "Private issues: a shadow repo mounted at `<checkout>/private-issues/`" | 444 lines
 
 Referenced by:
-- ../bin/CLAUDE.md:770 (mention) — `callback-box/docs/implemented-plans/private-issues-shadow-repo.md`). Design invariants,
+- ../bin/CLAUDE.md:806 (mention) — `callback-box/docs/implemented-plans/private-issues-shadow-repo.md`). Design invariants,
 
 References:
 - → README.md (mention)
@@ -3632,7 +3651,7 @@ Title: "Scheduled workstreams" | 731 lines
 Referenced by:
 - docs/maintenance.md:38 (mention) — --dry-run`. Design: `docs/plans/scheduled-workstreams.md`.
 - ../.claude/skills/cb-authoring-schedules/SKILL.md:3 (mention) — description: Explains how recurring work is enrolled in this monorepo — the `schedules/<name>/` directory, its `run` scr
-- ../bin/CLAUDE.md:569 (mention) — `callback-box/docs/plans/scheduled-workstreams.md`. Mechanism, in the spirit of
+- ../bin/CLAUDE.md:605 (mention) — `callback-box/docs/plans/scheduled-workstreams.md`. Mechanism, in the spirit of
 - ../issues/closed/docs-and-chores/2026-08-08-maintenance-cadence-framework.md:5 (frontmatter) — design: ../../../callback-box/docs/implemented-plans/scheduled-workstreams.md
 - ../issues/closed/features/2026-08-12-monitor-message-queue.md:5 (frontmatter) — design: ../../../callback-box/docs/implemented-plans/scheduled-workstreams.md
 - ../issues/features/2026-08-25-sdk-update-in-a-worktree.md:16 (mention) — The problems, from the review of `scheduled-workstreams.md`:
@@ -4382,7 +4401,7 @@ Title: "Document comments" | 945 lines
 
 Referenced by:
 - docs/plans/general-browser.md:17 (mention) — This plan is a dependency of `document-comments.md`. Comments attach to whatever
-- ../bin/CLAUDE.md:655 (mention) — a store until an agent reads it. Design: `callback-box/docs/plans/document-comments.md`.
+- ../bin/CLAUDE.md:691 (mention) — a store until an agent reads it. Design: `callback-box/docs/plans/document-comments.md`.
 - ../issues/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md:38 (link) — [document-comments](../../callback-box/docs/plans/document-comments.md) plan
 - ../issues/code-quality/2026-08-22-rename-drive-comments-sidecar-to-gcomments.md:18 (link) — ([document-comments](../../callback-box/docs/plans/document-comments.md)) writes
 - ../issues/features/2026-08-22-file-asks-agent-flagged-attention.md:63 (link) — - [document-comments](../../callback-box/docs/plans/document-comments.md) — the
@@ -4974,7 +4993,7 @@ Title: "Workstream exhibits" | 754 lines
 Referenced by:
 - docs/plans/document-comments.md:80 (mention) — - **Precedent: the exhibits store** — `callback-box/docs/plans/workstream-exhibits.md:236`:
 - docs/plans/general-browser.md:143 (mention) — stays one directory per workstream (`workstream-exhibits.md:231`) — that layout
-- ../CLAUDE.md:40 (mention) — **Exhibits — showing work instead of pasting it into chat.** An exhibit is a directory the developer views in a browser:
+- ../CLAUDE.md:42 (mention) — **Exhibits — showing work instead of pasting it into chat.** An exhibit is a directory the developer views in a browser:
 - ../issues/closed/features/2026-07-24-dev-scripted-apps-separate-origin.md:13 (mention) — > `callback-box/docs/plans/workstream-exhibits.md`). The separate origin this
 - ../issues/features/2026-08-22-orphaned-comment-namespaces-after-a-cull.md:30 (link) — ([workstream-exhibits](../../callback-box/docs/plans/workstream-exhibits.md):265).
 
@@ -5004,7 +5023,7 @@ Title: "An agent-neutral worktree control surface" | 700 lines
 
 Referenced by:
 - docs/implemented-plans/workstreams.md:25 (link) — ([the worktree control surface](../plans/worktree-control-surface.md)) deferred.
-- ../bin/CLAUDE.md:258 (mention) — Design and rationale: `callback-box/docs/plans/worktree-control-surface.md`.
+- ../bin/CLAUDE.md:294 (mention) — Design and rationale: `callback-box/docs/plans/worktree-control-surface.md`.
 - ../issues/closed/bugs/2026-08-04-sweep-live-agent-guard-fails-open.md:7 (frontmatter) — design: ../../../callback-box/docs/plans/worktree-control-surface.md
 - ../issues/closed/bugs/2026-08-04-sweep-live-agent-guard-fails-open.md:21 (link) — > [the worktree control surface plan](../../../callback-box/docs/plans/worktree-control-surface.md)
 - ../issues/closed/code-quality/2026-08-01-derive-public-worktree-paths.md:7 (frontmatter) — design: ../../../callback-box/docs/plans/worktree-control-surface.md
