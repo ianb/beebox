@@ -15,13 +15,14 @@ import {
   getDirectoryForSession,
   getLastSessionForDirectory,
   resolveSessionLogPath,
+  sessionLogPathFor,
   removeSessionFromHistory,
   clearMostActiveIfMatches,
   getMostActive,
   getMostActiveSavedAt,
   setMostActive,
 } from "../../src/core/chat/session/history.js";
-import { getSessionDir } from "../../src/core/chat/session/transcript-paths.js";
+import { getSessionDir, getSessionLogPath } from "../../src/core/chat/session/transcript-paths.js";
 import { resolveChatEngine } from "../../src/core/chat/session/engine.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
@@ -252,6 +253,41 @@ await getDirectoryForSession(box.root, "def")
 
 await getDirectoryForSession(box.root, "ghi")
 => null
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## sessionLogPathFor resolves an entry the caller already holds
+
+`resolveSessionLogPath` re-reads the whole history file to find the entry's
+`contextDir`. A caller looping over entries already has them, so it uses
+`sessionLogPathFor` instead — the same resolution with no per-iteration read.
+Both agree, for a bound and an unbound session.
+
+```ts
+const box = await makeTmpBox();
+await appendHistory(box.root, { sessionId: "bound", contextDir: "store/recipes" });
+await appendHistory(box.root, { sessionId: "unbound" });
+const entries = await loadHistoryEntries(box.root);
+
+const same = await Promise.all(entries.map(async (entry) =>
+  sessionLogPathFor(box.root, entry) === (await resolveSessionLogPath(box.root, entry.id))));
+same.join(",")
+=> true,true
+```
+
+A bound entry's log lives under its context dir's encoded projects directory,
+not the box root's:
+
+```ts continue
+const [bound, unbound] = entries;
+sessionLogPathFor(box.root, bound) === sessionLogPathFor(box.root, { ...bound, contextDir: undefined })
+=> false
+
+sessionLogPathFor(box.root, unbound) === getSessionLogPath(box.root, "unbound")
+=> true
 ```
 
 ```ts cleanup

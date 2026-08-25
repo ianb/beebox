@@ -8,6 +8,8 @@
  */
 
 import * as fs from "node:fs/promises";
+import { createReadStream, type ReadStream } from "node:fs";
+import * as readline from "node:readline";
 import * as path from "node:path";
 import { z } from "zod";
 import { ObservationSchema } from "./observations.js";
@@ -39,41 +41,59 @@ export async function appendLedgerEntries(
  * Read the ledger, skipping blank/corrupt/mismatched lines (a partial
  * write shouldn't poison the whole history — same tolerance as session
  * log parsing).
+ *
+ * Streamed line by line rather than read whole: the ledger is append-forever
+ * (one line per observation per nightly run), so a whole-file read plus split
+ * holds two copies of it at once.
  */
 export async function loadLedgerEntries(boxRoot: string): Promise<LedgerEntry[]> {
-  const filePath = path.join(boxRoot, LEDGER_FILE);
-  let text: string;
-  try {
-    text = await fs.readFile(filePath, "utf-8");
-  } catch (e) {
-    if (errnoCode(e) !== "ENOENT") {
-      console.warn(`retro: could not read ${LEDGER_FILE}, treating as empty:`, e);
-    }
-    return [];
-  }
-
   const entries: LedgerEntry[] = [];
-  for (const line of text.split("\n")) {
-    if (!line.trim()) continue;
-    let raw: unknown;
-    try {
-      raw = JSON.parse(line);
-    } catch (_e) {
-      console.debug("retro: skipping unparseable ledger line");
-      continue;
-    }
-    const parsed = LedgerEntrySchema.safeParse(raw);
-    if (!parsed.success) {
-      console.debug("retro: skipping ledger line that doesn't match the entry shape");
-      continue;
-    }
-    entries.push(parsed.data);
-  }
+  await forEachLedgerEntry(boxRoot, (entry) => { entries.push(entry); });
   return entries;
 }
 
 /** Evidence hashes already in the ledger, for duplicate suppression. */
 export async function loadEvidenceHashes(boxRoot: string): Promise<Set<string>> {
-  const entries = await loadLedgerEntries(boxRoot);
-  return new Set(entries.map((entry) => entry.evidenceHash));
+  // Built as the lines stream past: the scanner wants only the hashes, so
+  // materializing every entry first would retain the whole ledger for nothing.
+  const hashes = new Set<string>();
+  await forEachLedgerEntry(boxRoot, (entry) => { hashes.add(entry.evidenceHash); });
+  return hashes;
+}
+
+async function forEachLedgerEntry(boxRoot: string, visit: (entry: LedgerEntry) => void): Promise<void> {
+  const filePath = path.join(boxRoot, LEDGER_FILE);
+  let stream: ReadStream;
+  try {
+    await fs.access(filePath);
+    stream = createReadStream(filePath, { encoding: "utf-8" });
+  } catch (e) {
+    if (errnoCode(e) !== "ENOENT") {
+      console.warn(`retro: could not read ${LEDGER_FILE}, treating as empty:`, e);
+    }
+    return;
+  }
+
+  const lines = readline.createInterface({ input: stream, crlfDelay: Infinity });
+  try {
+    for await (const line of lines) {
+      if (!line.trim()) continue;
+      let raw: unknown;
+      try {
+        raw = JSON.parse(line);
+      } catch (_e) {
+        console.debug("retro: skipping unparseable ledger line");
+        continue;
+      }
+      const parsed = LedgerEntrySchema.safeParse(raw);
+      if (!parsed.success) {
+        console.debug("retro: skipping ledger line that doesn't match the entry shape");
+        continue;
+      }
+      visit(parsed.data);
+    }
+  } finally {
+    lines.close();
+    stream.close();
+  }
 }

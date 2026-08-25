@@ -4,7 +4,7 @@
 been folded into a session's account.
 
 The journal records the **identity** of the last entry read (`endUuid`) plus a
-hash of every uuid before it (`prefixHash`) — never a bare index. Transcripts
+hash of every entry before it (`prefixHash`) — never a bare index. Transcripts
 are SDK-owned and get rewritten (auto-compaction, `--resume` forks), and
 `parseSessionLog` slices positionally, so an index alone silently shifts under
 a rewrite that keeps the total the same.
@@ -13,6 +13,7 @@ a rewrite that keeps the total the same.
 import {
   appliedSpanFor,
   computeSpanId,
+  pagesOf,
   prefixHash,
   resolveSpan,
   spanSize,
@@ -43,7 +44,7 @@ long session enters the system — one pass over everything, rather than replayi
 its history span by span.
 
 ```ts
-const fresh = resolveSpan({ entries: [a, b, c], applied: null, truncated: false });
+const fresh = await resolveSpan({ readPage: pagesOf([a, b, c]), applied: null });
 fresh.bootstrap
 => no-journal
 
@@ -59,11 +60,11 @@ fresh.endIndex
 With a journal pointing at `u-b`, the span is everything after it.
 
 ```ts
-const applied = appliedSpanFor({ sessionId: "s1", entries: [a, b], endIndex: 1, now: NOW });
+const applied = appliedSpanFor({ sessionId: "s1", span: await resolveSpan({ readPage: pagesOf([a, b]), applied: null }), now: NOW });
 applied.endUuid
 => u-b
 
-const next = resolveSpan({ entries: [a, b, c, d], applied, truncated: false });
+const next = await resolveSpan({ readPage: pagesOf([a, b, c, d]), applied });
 next.bootstrap
 => null
 
@@ -75,7 +76,7 @@ A transcript that hasn't grown yields an empty span, which the size gate then
 rejects — nothing is re-read and no model is called.
 
 ```ts continue
-const unchanged = resolveSpan({ entries: [a, b], applied, truncated: false });
+const unchanged = await resolveSpan({ readPage: pagesOf([a, b]), applied });
 JSON.stringify({ bootstrap: unchanged.bootstrap, entries: unchanged.entries.length })
 => {"bootstrap":null,"entries":0}
 ```
@@ -83,10 +84,10 @@ JSON.stringify({ bootstrap: unchanged.bootstrap, entries: unchanged.entries.leng
 ## The boundary entry is gone: history was rewritten wholesale
 
 ```ts
-const applied = appliedSpanFor({ sessionId: "s1", entries: [a, b], endIndex: 1, now: NOW });
+const applied = appliedSpanFor({ sessionId: "s1", span: await resolveSpan({ readPage: pagesOf([a, b]), applied: null }), now: NOW });
 
 // The SDK replaced the transcript; `u-b` no longer exists.
-const rewritten = resolveSpan({ entries: [entry("u-x", "summary"), entry("u-y", "later")], applied, truncated: false });
+const rewritten = await resolveSpan({ readPage: pagesOf([entry("u-x", "summary"), entry("u-y", "later")]), applied });
 rewritten.bootstrap
 => boundary-missing
 ```
@@ -98,14 +99,14 @@ and the total is unchanged, so an index-based cursor would happily continue and
 skip the rewritten material. The prefix hash catches it.
 
 ```ts
-const applied = appliedSpanFor({ sessionId: "s1", entries: [a, b], endIndex: 1, now: NOW });
+const applied = appliedSpanFor({ sessionId: "s1", span: await resolveSpan({ readPage: pagesOf([a, b]), applied: null }), now: NOW });
 
 // `u-b` is still at index 1, total still 2 — but `u-a` was replaced.
 const mutated = [entry("u-z", "replaced"), b, c];
 mutated[1].uuid === applied.endUuid
 => true
 
-resolveSpan({ entries: mutated, applied, truncated: false }).bootstrap
+(await resolveSpan({ readPage: pagesOf(mutated), applied })).bootstrap
 => prefix-rewritten
 ```
 
@@ -113,7 +114,7 @@ The whole transcript comes back as the span, so nothing is lost — the caller
 keeps the existing account, which is now the only record of what was rewritten.
 
 ```ts continue
-resolveSpan({ entries: mutated, applied, truncated: false }).entries.map((e) => e.uuid).join(",")
+(await resolveSpan({ readPage: pagesOf(mutated), applied })).entries.map((e) => e.uuid).join(",")
 => u-z,u-b,u-c
 ```
 
@@ -124,14 +125,14 @@ a uuid-only hash would call this history untouched and skip the edited material
 forever. The prefix hash covers rendered content, so it does not.
 
 ```ts
-const applied = appliedSpanFor({ sessionId: "s1", entries: [a, b], endIndex: 1, now: NOW });
+const applied = appliedSpanFor({ sessionId: "s1", span: await resolveSpan({ readPage: pagesOf([a, b]), applied: null }), now: NOW });
 
 // Same uuids, same positions, same count — different words.
 const edited = [entry("u-a", "first, REVISED"), b, c];
 edited.map((e) => e.uuid).join(",")
 => u-a,u-b,u-c
 
-resolveSpan({ entries: edited, applied, truncated: false }).bootstrap
+(await resolveSpan({ readPage: pagesOf(edited), applied })).bootstrap
 => prefix-rewritten
 ```
 
@@ -143,61 +144,75 @@ boundary is refused at both ends: no journal entry is written, and one that
 somehow exists forces a bootstrap.
 
 ```ts
-appliedSpanFor({ sessionId: "s1", entries: [entry("", "anonymous")], endIndex: 0, now: NOW })
+appliedSpanFor({ sessionId: "s1", span: await resolveSpan({ readPage: pagesOf([entry("", "anonymous")]), applied: null }), now: NOW })
 => null
 
-resolveSpan({
-  entries: [a, b],
+(await resolveSpan({
+  readPage: pagesOf([a, b]),
   applied: {
     spanId: "x", endUuid: "", endIndex: 0, prefixHash: "y", at: "2026-07-28T04:00:00Z",
   },
-  truncated: false,
-}).bootstrap
+})).bootstrap
 => boundary-missing
 ```
 
-## A missing boundary in a TRUNCATED read defers instead of bootstrapping
+## The walk is paged: nothing before the boundary is retained, and the span is bounded
 
-The read is capped (`MAX_SESSION_ENTRIES`), so a session that grew past the cap
-since its last review has its journal boundary *past the window* — not deleted.
-Bootstrapping there would re-summarize ancient entries and then record a span
-whose `endIndex` moves the journal backwards, destroying the real boundary. The
-span is refused instead, and the caller leaves the husk and journal alone.
+`limit` is both the page size and the most entries a span may hold. The
+boundary can sit on any page — the prefix hash is folded as the pages go by —
+and the journal hash for the new end covers the whole prefix, exactly as the
+whole-array `prefixHash` would compute it. So a journal written by either form
+verifies against the other.
 
 ```ts
-const applied = appliedSpanFor({ sessionId: "s1", entries: [a, b], endIndex: 1, now: NOW });
+const applied = appliedSpanFor({ sessionId: "s1", span: await resolveSpan({ readPage: pagesOf([a, b, c]), applied: null }), now: NOW });
+const e = entry("u-e", "fifth");
+const f = entry("u-f", "sixth");
+const g = entry("u-g", "seventh");
+const all = [a, b, c, d, e, f, g];
 
-// `u-b` is not in this window, and the transcript is longer than the window.
-const beyond = resolveSpan({ entries: [c, d], applied, truncated: true });
+// Pages of two: the boundary `u-c` is on the second page.
+const paged = await resolveSpan({ readPage: pagesOf(all), applied, limit: 2 });
 JSON.stringify({
-  deferred: beyond.deferred,
-  bootstrap: beyond.bootstrap,
-  entries: beyond.entries.length,
-  endIndex: beyond.endIndex,
+  bootstrap: paged.bootstrap,
+  entries: paged.entries.map((x) => x.uuid).join(","),
+  endIndex: paged.endIndex,
+  clipped: paged.clipped,
+  hashMatchesWholeArray: paged.endPrefixHash === prefixHash(all, paged.endIndex),
 })
-=> {"deferred":"boundary-beyond-window","bootstrap":null,"entries":0,"endIndex":-1}
+=> {"bootstrap":null,"entries":"u-d,u-e","endIndex":4,"clipped":true,"hashMatchesWholeArray":true}
 ```
 
-Truncation alone doesn't defer: with no journal at all there is no boundary to
-lose, so the first-ever review of an over-long session still bootstraps.
+Journalling that clipped span and resolving again continues from `u-e`; the
+walk converges rather than re-reading anything.
 
 ```ts continue
-const first = resolveSpan({ entries: [c, d], applied: null, truncated: true });
-JSON.stringify({ deferred: first.deferred, bootstrap: first.bootstrap })
-=> {"deferred":null,"bootstrap":"no-journal"}
+const next = appliedSpanFor({ sessionId: "s1", span: paged, now: NOW });
+const rest = await resolveSpan({ readPage: pagesOf(all), applied: next, limit: 2 });
+JSON.stringify({ entries: rest.entries.map((x) => x.uuid).join(","), endIndex: rest.endIndex, clipped: rest.clipped })
+=> {"entries":"u-f,u-g","endIndex":6,"clipped":false}
 ```
 
-And a boundary that IS in the window with a changed prefix is a real rewrite,
-truncated read or not — that still bootstraps over the window.
+A bootstrap is bounded the same way: the first-ever review of an over-long
+transcript takes the first window and reports it as clipped.
 
 ```ts continue
-const rewrittenPrefix = resolveSpan({
-  entries: [entry("u-z", "replaced"), b, c],
+const first = await resolveSpan({ readPage: pagesOf(all), applied: null, limit: 3 });
+JSON.stringify({ bootstrap: first.bootstrap, entries: first.entries.length, clipped: first.clipped })
+=> {"bootstrap":"no-journal","entries":3,"clipped":true}
+```
+
+A boundary that IS present with a changed prefix is a real rewrite, whichever
+page it sits on — that bootstraps over the first window.
+
+```ts continue
+const rewrittenPrefix = await resolveSpan({
+  readPage: pagesOf([entry("u-z", "replaced"), b, c, d]),
   applied,
-  truncated: true,
+  limit: 2,
 });
-JSON.stringify({ deferred: rewrittenPrefix.deferred, bootstrap: rewrittenPrefix.bootstrap })
-=> {"deferred":null,"bootstrap":"prefix-rewritten"}
+JSON.stringify({ bootstrap: rewrittenPrefix.bootstrap, entries: rewrittenPrefix.entries.map((x) => x.uuid).join(",") })
+=> {"bootstrap":"prefix-rewritten","entries":"u-z,u-b"}
 ```
 
 ## Span ids are stable, and distinguish what they should
@@ -227,7 +242,7 @@ computeSpanId({ sessionId: "s1", endUuid: "u-b", prefixHash: p })
 boundary.
 
 ```ts continue
-appliedSpanFor({ sessionId: "s1", entries: [], endIndex: -1, now: NOW })
+appliedSpanFor({ sessionId: "s1", span: await resolveSpan({ readPage: pagesOf([]), applied: null }), now: NOW })
 => null
 ```
 
@@ -239,7 +254,7 @@ qualify again. `spanSize` renders uncapped.
 
 ```ts
 const long = Array.from({ length: 500 }, (_, i) => entry(`u-${i}`, "x".repeat(200)));
-const size = spanSize(resolveSpan({ entries: long, applied: null, truncated: false }));
+const size = spanSize(await resolveSpan({ readPage: pagesOf(long), applied: null }));
 size > 40_000
 => true
 ```

@@ -574,76 +574,70 @@ await runChatReview(box.root, {
 await box.cleanup();
 ```
 
-## A journal boundary past the read window defers the session — it never regresses
+## A boundary past the first page is found, and a long backlog is reviewed in windows
 
-The transcript read is capped at `MAX_SESSION_ENTRIES`, so a session that grew
-past the cap since its last review has its recorded boundary *outside* the
-window. That looks identical to "the boundary was deleted", but it is not: the
-entry is still there, further down the file.
-
-Treating it as a rewrite would be actively destructive — the run would
-re-summarize thousands of already-folded entries AND write a journal entry whose
-boundary sits *behind* the real one, permanently losing the reviewed position.
-So the session is left completely alone instead.
+Nothing before the journal boundary is retained — the span walk streams the
+transcript in pages and folds the prefix hash as it goes — so a session that
+grew past `MAX_SESSION_ENTRIES` since its last review still continues from its
+real boundary. What comes back is bounded too: one run folds in at most
+`MAX_SESSION_ENTRIES` new entries and advances the journal that far; the next
+run picks up the rest. No run ever moves the journal backwards.
 
 ```ts
 const box = await makeTmpBox();
 process.env["CB_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-// One entry more than the read window, so the read is truncated.
-const overCap = Array.from({ length: MAX_SESSION_ENTRIES + 1 },
-  (_, i) => userEntry(`cap-${String(i)}`, `line ${String(i)}`));
+// First pass: a short transcript, reviewed and journalled normally.
 const huskPath = await seed(box, {
-  sessionId: "sesscap", husk: "title: Untouched\n", entries: overCap,
+  sessionId: "sesscap", husk: "title: Untouched\n", entries: [bulk("cap-0"), bulk("cap-1")],
 });
-const beforeCard = await readFile(box.path(huskPath), "utf8");
-
-// The journal points at the LAST entry — beyond the first-page read.
-const lastUuid = `cap-${String(MAX_SESSION_ENTRIES)}`;
-await saveReviewState(box.root, {
-  lastRunAt: null,
-  sessions: {
-    sesscap: {
-      applied: {
-        metadata: {
-          spanId: "prior-span",
-          endUuid: lastUuid,
-          endIndex: MAX_SESSION_ENTRIES,
-          prefixHash: "prior-prefix",
-          at: "2026-07-27T12:00:00Z",
-        },
-      },
-      titleOwner: "unmanaged",
-      titleHash: null,
-      attempts: 0,
-    },
-  },
+await runChatReview(box.root, {
+  reviewer: fakeReviewer([OUTPUT]), maxSessions: 10, now: NOW, ownerEmail: null,
 });
+const journalled = (await loadReviewState(box.root)).sessions["sesscap"].applied["metadata"];
+JSON.stringify({ endUuid: journalled.endUuid, endIndex: journalled.endIndex })
+=> {"endUuid":"cap-1","endIndex":1}
+```
 
-const reviewer = fakeReviewer([OUTPUT]);
+Then the transcript grows by more than a whole read window.
+
+```ts continue
+const logPath = getSessionLogPath(box.root, "sesscap");
+// The last ten are bulky so the leftover span clears the size gate on its own.
+const grown = Array.from({ length: MAX_SESSION_ENTRIES + 10 },
+  (_, i) => i < MAX_SESSION_ENTRIES ? userEntry(`cap-${String(i + 2)}`, `line ${String(i)}`) : bulk(`cap-${String(i + 2)}`));
+await appendFile(logPath, grown.map((e) => JSON.stringify(e)).join("\n") + "\n");
+const when = new Date(NOW.getTime() - 5 * HOUR);
+await utimes(logPath, when, when);
+
+const second = fakeReviewer([OUTPUT]);
 const summary = await runChatReview(box.root, {
-  reviewer, maxSessions: 10, now: NOW, ownerEmail: null,
+  reviewer: second, maxSessions: 10, now: NOW, ownerEmail: null,
 });
+const advanced = (await loadReviewState(box.root)).sessions["sesscap"].applied["metadata"];
 JSON.stringify({
   reviewed: summary.reviewed,
   bootstrapped: summary.bootstrapped,
-  boundaryBeyondWindow: summary.boundaryBeyondWindow,
-  modelCalls: reviewer.calls.length,
+  endUuid: advanced.endUuid,
+  endIndex: advanced.endIndex,
 })
-=> {"reviewed":0,"bootstrapped":0,"boundaryBeyondWindow":1,"modelCalls":0}
+=> {"reviewed":1,"bootstrapped":0,"endUuid":"cap-5001","endIndex":5001}
 ```
 
-The husk and the journal are exactly as they were — in particular the recorded
-boundary still names the real last entry, not a truncated stand-in.
+The reviewer saw only the new material, and the remaining ten entries are the
+next run's span — which in turn continues from `cap-5001`, not from the top.
 
 ```ts continue
-const state = await loadReviewState(box.root);
-JSON.stringify({
-  card: (await readFile(box.path(huskPath), "utf8")) === beforeCard,
-  endUuid: state.sessions["sesscap"].applied["metadata"].endUuid,
-  endIndex: state.sessions["sesscap"].applied["metadata"].endIndex,
-})
-=> {"card":true,"endUuid":"cap-5000","endIndex":5000}
+second.calls[0].span.includes("line 0") && !second.calls[0].span.includes("aaaa")
+=> true
+
+const third = fakeReviewer([OUTPUT]);
+const again = await runChatReview(box.root, {
+  reviewer: third, maxSessions: 10, now: NOW, ownerEmail: null,
+});
+const final = (await loadReviewState(box.root)).sessions["sesscap"].applied["metadata"];
+JSON.stringify({ bootstrapped: again.bootstrapped, endUuid: final.endUuid, endIndex: final.endIndex })
+=> {"bootstrapped":0,"endUuid":"cap-5011","endIndex":5011}
 ```
 
 ```ts cleanup

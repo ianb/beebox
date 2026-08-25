@@ -21,8 +21,8 @@
 import * as fs from "node:fs/promises";
 import { errnoCode } from "../../../lib/error-guards.js";
 import { elideMiddle, MAX_RENDERED_CHARS, renderEntries } from "../transcript-render.js";
-import { discoverSessions, QUIESCENCE_MS, readSessionWindow, warnDeferredBoundary, type QualifiedSession } from "./discovery.js";
-import { appliedSpanFor, computeSpanId, prefixHash } from "./span.js";
+import { discoverSessions, QUIESCENCE_MS, readSessionWindow, type QualifiedSession } from "./discovery.js";
+import { appliedSpanFor, computeSpanId } from "./span.js";
 import { applyReviewToHusk, readHuskFields } from "./husk-write.js";
 import type { ChatReviewer } from "./reviewer.js";
 import { contentHash } from "../../../lib/content-hash.js";
@@ -65,7 +65,6 @@ export interface RunSummary {
    * Sessions left untouched because their journal boundary sits past the
    * bounded read window — reviewing them would regress the journal.
    */
-  boundaryBeyondWindow: number;
 }
 
 function emptySummary(): RunSummary {
@@ -82,7 +81,6 @@ function emptySummary(): RunSummary {
     deferredActive: 0,
     belowThreshold: 0,
     overflow: 0,
-    boundaryBeyondWindow: 0,
   };
 }
 
@@ -133,27 +131,15 @@ async function reviewOne(
   // from the same journal, so it matches what discovery measured unless the
   // transcript changed underneath — in which case the fresh read is the right
   // one anyway.
-  const transcript = await readSessionWindow({
+  const span = await readSessionWindow({
     sessionId: session.sessionId,
     logPath: session.logPath,
     state,
     ...(session.engine === "codex" ? { boxRoot } : {}),
   });
-  if (transcript === null) {
+  if (span === null) {
     // Vanished between discovery and now. Nothing to fold in; the husk stands.
     summary.missingTranscripts += 1;
-    return;
-  }
-  const { entries, span } = transcript;
-
-  // Unresolvable: the journal boundary is past the read window (the transcript
-  // grew past the cap between the last review and now). Bootstrapping here
-  // would re-summarize ancient entries AND record a span whose endIndex moves
-  // the journal backwards, losing the real boundary for good. Leave the husk
-  // and the journal exactly as they are.
-  if (span.deferred !== null) {
-    warnDeferredBoundary(session.sessionId);
-    summary.boundaryBeyondWindow += 1;
     return;
   }
 
@@ -165,12 +151,12 @@ async function reviewOne(
     }
   }
 
-  const endEntry = entries[span.endIndex];
-  if (endEntry === undefined) return; // empty transcript — nothing to fold in
+  const endEntry = span.entries.at(-1);
+  if (endEntry === undefined || span.endPrefixHash === null) return; // nothing new — nothing to fold in
   const spanId = computeSpanId({
     sessionId: session.sessionId,
     endUuid: endEntry.uuid,
-    prefixHash: prefixHash(entries, span.endIndex),
+    prefixHash: span.endPrefixHash,
   });
 
   const husk = await readHuskFields(boxRoot, session.huskPath);
@@ -186,12 +172,7 @@ async function reviewOne(
   // Already folded in by a run that died before advancing the journal.
   if (husk.reviewSpan === spanId) {
     summary.alreadyApplied += 1;
-    const applied = appliedSpanFor({
-      sessionId: session.sessionId,
-      entries,
-      endIndex: span.endIndex,
-      now: options.now,
-    });
+    const applied = appliedSpanFor({ sessionId: session.sessionId, span, now: options.now });
     if (applied !== null) {
       // Re-derive title provenance as well. Losing the journal must not lose
       // the fact that we wrote the title we are looking at — otherwise the
@@ -244,12 +225,7 @@ async function reviewOne(
   // unclaimed and be retried — but count the attempt, or a model that keeps
   // producing leaky output would be retried every night forever.
   const applied = written.spanApplied
-    ? appliedSpanFor({
-        sessionId: session.sessionId,
-        entries,
-        endIndex: span.endIndex,
-        now: options.now,
-      })
+    ? appliedSpanFor({ sessionId: session.sessionId, span, now: options.now })
     : null;
   state.sessions[session.sessionId] = {
     ...previous,
@@ -286,9 +262,6 @@ export async function runChatReview(boxRoot: string, options: RunOptions): Promi
       summary.missingTranscripts = discovery.missingTranscripts;
       summary.deferredActive = discovery.deferredActive.length;
       summary.belowThreshold = discovery.belowThreshold;
-      // Seeded like missingTranscripts: reviewOne can add to it when a transcript
-      // crosses the read cap between discovery's read and the reviewer's.
-      summary.boundaryBeyondWindow = discovery.boundaryBeyondWindow;
 
       // One unreadable transcript or unwritable husk must not cost the night's
       // other sessions, nor the journal advances already earned.

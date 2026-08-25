@@ -10,7 +10,7 @@ import { interruptChat, type PendingSessionEntry, type SessionEntry } from "../a
 import { buildOptimisticContent, entryText, reconcilePending } from "./chat-shared";
 import { queueMessageToBackend } from "./chat-actors";
 import { toastError } from "../components/ui/toast-store";
-import type { ChatContext, ChatEvent } from "./chat-types";
+import { MAX_RETAINED_MESSAGES, type ChatContext, type ChatEvent } from "./chat-types";
 import { observeChatSendHistory } from "../lib/chat-send-diagnostics";
 
 type SendEvent = Extract<ChatEvent, { type: "SEND" }>;
@@ -94,6 +94,28 @@ export function appendOtherUserMessage(
       },
     ],
   };
+}
+
+/**
+ * PREPEND_MESSAGES (global): prepend a page of older entries, bounded by
+ * {@link MAX_RETAINED_MESSAGES}.
+ *
+ * A page that would overflow the ceiling is truncated from its *older* end —
+ * its newest entries are the ones adjacent to what the tab already holds, so
+ * the retained window stays contiguous — and once the ceiling is reached
+ * further prepends are dropped. Trimming the newer end instead would evict the
+ * live tail, which is where streaming lands. The load-older affordance hides
+ * at the same threshold, so this is the backstop, not the user-visible stop.
+ */
+export function prependOlderMessages(
+  { context, event }: { context: ChatContext; event: Extract<ChatEvent, { type: "PREPEND_MESSAGES" }> },
+): Partial<Pick<ChatContext, "messages">> {
+  const room = MAX_RETAINED_MESSAGES - context.messages.length;
+  if (room <= 0) return {};
+  const page = event.messages.length <= room
+    ? event.messages
+    : event.messages.slice(event.messages.length - room);
+  return { messages: [...page, ...context.messages] };
 }
 
 /** STREAM_ERROR / STREAM_FAILED: surface the error and clear the live stream. */

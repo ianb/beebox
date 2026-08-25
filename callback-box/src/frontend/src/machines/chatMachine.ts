@@ -30,6 +30,7 @@ import {
   cardFieldsFromEvent,
   applyServerMessages,
   appendOtherUserMessage,
+  prependOlderMessages,
   promoteLastToPending,
   applyStreamError,
   untrackLastSend,
@@ -117,11 +118,10 @@ export const chatMachine = setup({
     OTHER_USER_MESSAGE: {
       actions: assign(appendOtherUserMessage),
     },
-    // Global handler: prepend older messages loaded on demand
+    // Global handler: prepend older messages loaded on demand (bounded — see
+    // prependOlderMessages).
     PREPEND_MESSAGES: {
-      actions: assign(({ context, event }) => ({
-        messages: [...event.messages, ...context.messages],
-      })),
+      actions: assign(prependOlderMessages),
     },
     // Global handler: record a pre-session chat-feature choice (e.g. narration
     // toggled on in a brand-new chat) to fold into the first send. Only while

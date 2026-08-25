@@ -117,23 +117,35 @@ const sessionUsageLineSchema = z.object({
     .optional(),
 });
 
-function readManifest(boxRoot: string): Map<string, ManifestEntry> {
+/**
+ * The session manifest, keyed by session id. Streamed line by line: the file
+ * gets one line per session ever run and is never rotated, so reading it whole
+ * and splitting held two copies of it at once.
+ */
+async function readManifest(boxRoot: string): Promise<Map<string, ManifestEntry>> {
   const manifestPath = path.join(boxRoot, MANIFEST_REL_PATH);
   const entries = new Map<string, ManifestEntry>();
-  let content: string;
   try {
-    content = fs.readFileSync(manifestPath, "utf-8");
+    await fs.promises.access(manifestPath);
   } catch (_e) {
+    // No manifest yet — every session attributes as "unknown".
     return entries;
   }
-  for (const line of content.split("\n")) {
-    if (!line.trim()) continue;
-    try {
-      const entry = manifestEntrySchema.parse(JSON.parse(line));
-      entries.set(entry.sessionId, entry);
-    } catch (_e) {
-      // skip malformed lines
+  const stream = fs.createReadStream(manifestPath, { encoding: "utf-8" });
+  const lines = readline.createInterface({ input: stream, crlfDelay: Infinity });
+  try {
+    for await (const line of lines) {
+      if (!line.trim()) continue;
+      try {
+        const entry = manifestEntrySchema.parse(JSON.parse(line));
+        entries.set(entry.sessionId, entry);
+      } catch (_e) {
+        // skip malformed lines
+      }
     }
+  } finally {
+    lines.close();
+    stream.close();
   }
   return entries;
 }
@@ -217,7 +229,7 @@ export interface SyncResult {
  */
 export async function syncUsage(boxRoot: string): Promise<SyncResult> {
   const db = openDb(boxRoot);
-  const manifest = readManifest(boxRoot);
+  const manifest = await readManifest(boxRoot);
 
   // Aggregate across every context root (box root + landmark subdirs) —
   // landmark-bound sessions live under their own encoded dir. listSessions

@@ -1,6 +1,6 @@
 ---
 title: "Chat review stops advancing once a transcript passes MAX_SESSION_ENTRIES"
-workstream: chat-history-oom-mobile-lock
+workstream: chat-history-scale
 area: callback-box
 filed-by: agent
 discovered-in: worktree-chat-history-oom-mobile-lock — Track A of docs/plans/chat-history-oom-mobile-lock.md
@@ -49,3 +49,14 @@ read returns `deferred: "boundary-beyond-window"`, and both discovery and the ru
 leave the husk and the journal untouched. Bootstrapping stays legal only when the
 read reached the top of what exists, or when there is no prior applied span.
 Pinned by `test/core/chat/review/{span,discovery,run}.doctest.md`.
+
+## Fixed (2026-08-25)
+
+Took the first option. `resolveSpan` (`core/chat/review/span.ts`) now walks the
+transcript in pages through a `SpanPageReader`, folding the prefix hash
+incrementally (byte-identical to the whole-array `prefixHash`, so existing
+journals still verify), retaining nothing before the boundary and at most
+`limit` (= `MAX_SESSION_ENTRIES`) entries after it. A longer backlog is
+reviewed across consecutive runs (`clipped`); a bootstrap is bounded the same
+way. `deferred`/`boundaryBeyondWindow` are gone — the boundary is always
+findable if it exists. Pinned by `test/core/chat/review/{span,discovery,run}.doctest.md`.
