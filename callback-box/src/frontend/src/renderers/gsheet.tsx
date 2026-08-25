@@ -4,7 +4,7 @@
 
 import { useState, useEffect } from "react";
 import { isRecord } from "@shared/is-record";
-import { getApiBase } from "../api";
+import { apiRawFileUrl, getApiBase } from "../api";
 import { TabBar } from "../components/ui/TabBar";
 import { Text } from "../components/ui/Text";
 import { Row } from "../components/ui/Row";
@@ -76,7 +76,7 @@ function SheetView({ data }: RendererProps) {
             console.warn(`Sheet tab ref escapes the box root; skipping tab: ${tab.ref}`);
             continue;
           }
-          const resp = await fetch(`${getApiBase()}/files/${filePath}`);
+          const resp = await fetch(apiRawFileUrl(getApiBase(), filePath));
           if (resp.ok) {
             const json = await resp.json();
             results.set(tab.title, json);

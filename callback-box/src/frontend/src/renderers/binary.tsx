@@ -5,7 +5,7 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-import { getApiBase } from "../api";
+import { apiRawFileUrl, getApiBase } from "../api";
 import { isBinaryPath } from "../lib/binary-files";
 import { formatBytes } from "../lib/format-bytes";
 import { Stack } from "../components/ui/Stack";
@@ -16,7 +16,7 @@ import { registerFileType, type RendererProps } from "./index";
 
 function BinaryRenderer({ data }: RendererProps) {
   const apiBase = getApiBase();
-  const url = `${apiBase}/files/${data.path}`;
+  const url = apiRawFileUrl(apiBase, data.path);
   const basename = data.path.split("/").pop() || data.path;
 
   const { data: meta, isLoading } = useQuery({

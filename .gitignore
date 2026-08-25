@@ -100,6 +100,10 @@ callback-box/user-stories/pipeline/*.workflow.mjs
 # from a real family's inbox — prepare.ts fails loudly naming anything absent.
 callback-box/user-stories/journeys/E-school/assets/
 
+# Per-machine schedule overrides (callback-box/docs/plans/scheduled-workstreams.md,
+# Track A): same schema as schedule.yaml, every field optional, so a laptop can
+# disable a schedule without a commit.
+schedules/*/local.yaml
 # Embedding/search cache for `bin/issues` (see bin/CLAUDE.md). Disposable: a
 # delete just means the next run re-embeds the whole queue, which costs money
 # rather than correctness.

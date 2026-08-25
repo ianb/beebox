@@ -27,7 +27,7 @@ import { useQuery } from "@tanstack/react-query";
 import { trpc } from "../lib/trpc";
 import { displayName } from "../lib/display-name";
 import { ATTACH_SUFFIX } from "@shared/attach-path";
-import { getApiBase, withBase } from "../api";
+import { apiRawFileUrl, getApiBase, withBase } from "../api";
 import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
 import { useDeferredResync } from "../hooks/useDeferredResync";
 import { getRenderers, type FileData, type FileRenderer } from "../renderers";
@@ -157,7 +157,7 @@ function useFileData(path: string): LoadResult {
     queryKey: ["file-text", path],
     enabled: fetchText,
     queryFn: async ({ signal }) => {
-      const resp = await fetch(`${apiBase}/files/${path}`, { signal });
+      const resp = await fetch(apiRawFileUrl(apiBase, path), { signal });
       if (!resp.ok) {
         const message = `Failed to load: ${resp.status} ${resp.statusText}`;
         throw new RequestError(message);

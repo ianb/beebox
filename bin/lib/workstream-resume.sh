@@ -23,14 +23,26 @@ workstream_resume_state() {
     printf 'culled\n'
   elif printf '%s' "$record" | jq -e '.removed != null' >/dev/null 2>&1; then
     printf 'removed-unmerged\n'
+  elif printf '%s' "$record" | jq -e '.kind == "scheduled"' >/dev/null 2>&1; then
+    # Sticky record, disposable worktree: an absent scheduled workstream is
+    # always recreatable, and never carries a `removed` block to prove it.
+    printf 'scheduled\n'
   else
     printf 'unknown\n'
   fi
 }
 
+# The commit a record's last worktree ended at, wherever it was written down.
+# An ordinary workstream records a cull under `removed`; a scheduled one records
+# it under `culled` (it is never `removed` — see wt_removal_patch). Both mean the
+# same thing to `resume`: recreate here, and say what landed since.
+workstream_recovery_sha() {
+  printf '%s' "$1" | jq -r '.removed.finalSha // .culled.finalSha // empty' 2>/dev/null || true
+}
+
 workstream_continuation_prompt() {
   local name="$1" record="$2" landed_log="${3:-}" final_sha session_id
-  final_sha=$(printf '%s' "$record" | jq -r '.removed.finalSha // empty' 2>/dev/null || true)
+  final_sha=$(workstream_recovery_sha "$record")
   session_id=$(printf '%s' "$record" | jq -r '.sessionId // empty' 2>/dev/null || true)
   printf 'Continue workstream `%s` in its newly attached worktree.\n' "$name"
   printf 'Inspect the current branch, git status, relevant plan/issues, and existing implementation before changing anything.\n'

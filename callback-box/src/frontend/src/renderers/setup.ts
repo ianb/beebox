@@ -12,6 +12,7 @@ import "./image";
 import "./pdf";
 import "./recipe";
 import "./pdf-card";
+import "./docling";
 import "./figure";
 import "./concept-map";
 import "./gsheet";

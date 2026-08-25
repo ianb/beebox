@@ -5,7 +5,8 @@ until a real agent process takes over. Failed or expired registry-only launches
 also offer no destructive controls.
 
 ```ts setup
-import { workstreamActionVerbs, workstreamStateFor } from "../src/frontend/pages/WorkstreamsPage.js";
+import { workstreamActionVerbs } from "../src/frontend/components/WorkstreamActions.js";
+import { workstreamStateFor } from "../src/frontend/pages/WorkstreamsPage.js";
 import type { Workstream } from "../src/frontend/types.js";
 
 function row(state: "active" | "expired", routingState: "launching" | "uncertain", routingAction: "wait-for-launch" | "investigate"): Workstream {
@@ -29,6 +30,7 @@ function row(state: "active" | "expired", routingState: "launching" | "uncertain
     },
     routing: { state: routingState, action: routingAction, lastActivityAt: null },
     boxState: { testSetup: false, keepUnmerged: false, pristine: null },
+    schedule: null,
   };
 }
 ```

@@ -11,7 +11,7 @@
  */
 
 import { useCallback } from "react";
-import { getApiBase } from "../api";
+import { apiRawFileUrl, getApiBase } from "../api";
 import { Markdown } from "./Markdown";
 import { Text } from "./ui/Text";
 import { FriendlyDate } from "./ui/FriendlyDate";
@@ -40,7 +40,7 @@ export function CommentaryView({ data, onNavigate }: RendererProps) {
   // not re-reported on every render here.
   const frozenRelative =
     frozenPath !== null && frozenPath !== "" ? resolveRelativePath(data.path, frozenPath) : null;
-  const frozenUrl = frozenRelative === null ? null : `${getApiBase()}/files/${frozenRelative}`;
+  const frozenUrl = frozenRelative === null ? null : apiRawFileUrl(getApiBase(), frozenRelative);
   const capturedAt = typeof captured === "string" && captured !== "" ? captured : null;
 
   const onJumpToQuote = useCallback((quoteText: string): Promise<boolean> => {

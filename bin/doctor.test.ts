@@ -13,6 +13,7 @@ import {
   checkNativeSqlite,
   checkNodeVersion,
   checkPnpm,
+  checkSchedulesTick,
   checkSdkBinary,
   checkWorkspaceInstalled,
   formatJson,
@@ -181,6 +182,64 @@ test("checkFrontendBuild fails with the build:frontend remedy when dist/index.ht
   assert.match(result.remedy ?? "", /build:frontend/);
 });
 
+// ─── Schedules heartbeat + launchd job ─────────────────────────────────────
+
+const NOW_MS = Date.parse("2026-08-24T12:00:00Z");
+const GIT_COMMON = "git rev-parse --path-format=absolute --git-common-dir";
+
+function schedulesRun(state: string, launchctlCode: number): RunCommand {
+  return fakeRun({
+    [GIT_COMMON]: ok("/checkouts/callback-box/.git\n"),
+    "cat /checkouts/schedule-runs/state.json": ok(state),
+    "id -u": ok("501\n"),
+    "launchctl print gui/501/com.callback-box.schedules": { spawned: true, code: launchctlCode, stdout: "", stderr: "" },
+  });
+}
+
+test("checkSchedulesTick skips a machine with no schedule store", async () => {
+  const run = fakeRun({ [GIT_COMMON]: ok("/checkouts/callback-box/.git\n") });
+  const result = await checkSchedulesTick({ run, fileExists: () => false, nowMs: NOW_MS });
+  assert.equal(result.ok, true);
+  assert.match(result.detail, /no schedules installed/);
+});
+
+test("checkSchedulesTick passes on a fresh heartbeat with the plist loaded", async () => {
+  const run = schedulesRun(JSON.stringify({ lastTickAt: "2026-08-24T11:50:00Z", lastTickExit: 0 }), 0);
+  const result = await checkSchedulesTick({ run, fileExists: () => true, nowMs: NOW_MS });
+  assert.equal(result.ok, true);
+  assert.match(result.detail, /10 min ago/);
+});
+
+test("checkSchedulesTick fails on a heartbeat older than an hour", async () => {
+  const run = schedulesRun(JSON.stringify({ lastTickAt: "2026-08-24T08:00:00Z", lastTickExit: 0 }), 0);
+  const result = await checkSchedulesTick({ run, fileExists: () => true, nowMs: NOW_MS });
+  assert.equal(result.ok, false);
+  assert.match(result.remedy ?? "", /bin\/schedules install/);
+});
+
+test("checkSchedulesTick fails when the tick job is not loaded, and tolerates a missing launchctl", async () => {
+  const notLoaded = schedulesRun(JSON.stringify({ lastTickAt: "2026-08-24T11:55:00Z", lastTickExit: 0 }), 113);
+  const failed = await checkSchedulesTick({ run: notLoaded, fileExists: () => true, nowMs: NOW_MS });
+  assert.equal(failed.ok, false);
+  assert.match(failed.detail, /not loaded in launchd/);
+
+  const noLaunchctl = fakeRun({
+    [GIT_COMMON]: ok("/checkouts/callback-box/.git\n"),
+    "cat /checkouts/schedule-runs/state.json": ok(JSON.stringify({ lastTickAt: "2026-08-24T11:55:00Z", lastTickExit: 0 })),
+    "id -u": ok("501\n"),
+  });
+  const tolerated = await checkSchedulesTick({ run: noLaunchctl, fileExists: () => true, nowMs: NOW_MS });
+  assert.equal(tolerated.ok, true);
+  assert.match(tolerated.detail, /launchctl unavailable/);
+});
+
+test("checkSchedulesTick fails when the store exists but was never ticked", async () => {
+  const run = fakeRun({ [GIT_COMMON]: ok("/checkouts/callback-box/.git\n") });
+  const result = await checkSchedulesTick({ run, fileExists: () => true, nowMs: NOW_MS });
+  assert.equal(result.ok, false);
+  assert.match(result.detail, /never ticked/);
+});
+
 // ─── Aggregate runner + output shapes ──────────────────────────────────────
 
 function passingDeps(overrides: Partial<DoctorDeps>): DoctorDeps {
@@ -203,6 +262,7 @@ function passingDeps(overrides: Partial<DoctorDeps>): DoctorDeps {
     packageManager: "pnpm@10.26.2",
     resolveSdkBinary: () => "/repo/node_modules/@anthropic-ai/claude-agent-sdk-darwin-arm64/claude",
     loadBetterSqlite3: async () => "loads and opens (SQLite 3.50.0)",
+    nowMs: Date.parse("2026-08-24T12:00:00Z"),
     ...overrides,
   };
 }
