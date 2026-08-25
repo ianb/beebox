@@ -22,7 +22,7 @@ import type { FieldCleanupPolicy } from "./scenario.js";
 import type { QuiescenceOutcome } from "./quiescence.js";
 
 /** Filename of the raw result inside the run directory. */
-export const RESULTS_FILENAME = "results.json";
+const RESULTS_FILENAME = "results.json";
 
 export interface PreActionResult {
   type: "inject-email" | "advance-days";

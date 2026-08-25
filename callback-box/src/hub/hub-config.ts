@@ -90,7 +90,7 @@ const hubConfigFileSchema = z.strictObject({
 export type BoxEntry = z.infer<typeof boxEntrySchema>;
 
 /** Default idle timeout for a lazy hub — mirrors the dev router's `IDLE_TIMEOUT_MS`. */
-export const DEFAULT_IDLE_MS = 5 * 60 * 1000;
+const DEFAULT_IDLE_MS = 5 * 60 * 1000;
 
 /** No strong precedent for a hub default port (it's a new, prod-only concept
  *  distinct from the dev router's 3210) — chosen simply to avoid the box

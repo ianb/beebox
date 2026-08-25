@@ -10,7 +10,7 @@ Run checks after writing code. The build tool (esbuild) does NOT do type checkin
 pnpm typecheck    # TypeScript errors
 pnpm lint         # ESLint errors
 pnpm lint:oxlint  # Supplemental linter (fast, catches patterns ESLint misses)
-pnpm lint:knip    # Dead code detector (unused files, exports, dependencies)
+pnpm lint:knip    # Dead code detector — run from the MONOREPO ROOT (see docs/maintenance.md)
 pnpm lint:circular  # Circular dependency detector (madge)
 ```
 
@@ -110,5 +110,8 @@ Every rule in `@ianbicking/personal-vibe-check` is a deliberate choice, and the 
 - **Explicit return types on exported functions**; inference is fine for locals.
 - **File naming: PascalCase for a single-React-component file, kebab-case otherwise.** A file whose primary export is one React component matches the component name (`CommitTimeline.tsx`, `FileView.tsx`); everything else — hooks, utilities, non-component modules, backend `.ts` — is kebab-case (`view-url.ts`, `chat-actors.ts`, `use-capture-session.ts`). A file that moves into a subdirectory drops the now-redundant directory prefix from its name (`chat-session-history.ts` → `chat/session/history.ts`). Rename opportunistically when you touch a mis-cased file; don't sweep.
 - Files max 300 lines, functions max 150 lines (excluding blanks/comments)
-- **Only export what's needed**: don't export functions/constants only used within their own file. Not currently knip-enforced — `knip.json` excludes the `exports` check because the codebase has a backlog of ~277 unused exports; enforce this by convention/review until that backlog is cleared.
+- **Only export what's needed**: don't export functions/constants only used within their own file. Knip-enforced — `pnpm lint:knip` reports unused exports, and the backlog it was excluded for is cleared. It's a periodic sweep, not a commit gate (`docs/maintenance.md`), so a dead export surfaces in review rather than blocking you.
+  - **A missing `export` is not a decision to respect — it's just the current call count.** Nothing here is private by design; a symbol lacks the keyword only because no second file has needed it yet. So when you need one elsewhere, add `export` and import it. You never have to justify that, work around it with a copy, or check whether it was exported before — the rule is about not exporting *speculatively*, for a caller that doesn't exist, and it says nothing about a caller that now does.
+  - This applies to error classes too. One that's only thrown inside its own file carries no `export`; add it the moment a caller wants `instanceof`.
+  - knip reads the doctest suite through a markdown compiler (`scripts/knip-doctest-imports.ts`), so an export whose only consumer is a `.doctest.md` fence counts as used — static and `await import(...)` forms alike.
 - **No barrels** (boxholder decision, 2026-07-12): no `index.ts` re-export files — import from the module that defines the thing. Barrels are indirection: they blur what's public (fighting the export-what's-needed rule), invite import cycles, and fuzz dead-export detection. Directory grouping already carries discoverability.

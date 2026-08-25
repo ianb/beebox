@@ -11,11 +11,12 @@
 import { getHead } from "../../lib/git.js";
 import { invariant } from "../../lib/invariant.js";
 import { fmt } from "../../lib/format.js";
-import type { ParsedStep, ValidateStatus } from "./engine-types.js";
+import type { ParsedStep } from "./engine-types.js";
 import type { ExecuteStepParams } from "./engine-step.js";
 import {
   executeValidation,
   ensureGitClean,
+  type ValidationPhaseResult,
 } from "./engine-phase.js";
 import { runRunAgents, runRunShells, type RunShellFailure } from "./engine-run-execute.js";
 
@@ -24,16 +25,18 @@ import { runRunAgents, runRunShells, type RunShellFailure } from "./engine-run-e
  * `number` (not the narrowed literal `1`) since it's a tunable knob — the
  * plural-vs-singular check below stays meaningful if this value changes.
  */
-export const MAX_REVIEW_RETRIES: number = 1;
+const MAX_REVIEW_RETRIES: number = 1;
 
-/** The validation outcome shape carried between phases. */
-export interface ValidateOutcome {
-  status: ValidateStatus;
-  stdout?: string;
-  review?: string;
-  /** Native judge harness failed before producing an assistant verdict. */
-  invocationFailure?: string;
-}
+/**
+ * The validation outcome shape carried between phases.
+ *
+ * `status: "inconclusive"` is a non-verdict — the judge never decided. It is
+ * deliberately NOT "fail": the `severity: review` self-heal below keys on
+ * `fail`, so an inconclusive check can never re-run the work agent. Redoing
+ * finished work because the checker ran out of budget is the exact confusion
+ * this state exists to end.
+ */
+export type ValidateOutcome = ValidationPhaseResult;
 
 /** Result of running (and validating) a step's run phase. */
 export interface RunAndValidateResult {

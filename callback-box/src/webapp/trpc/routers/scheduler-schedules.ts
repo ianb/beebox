@@ -11,6 +11,7 @@ import { checkMissingConnectors } from "../../../connectors/requirements.js";
 import {
   loadScriptState,
   loadRunningScripts,
+  type ScriptState,
 } from "../../../core/schedule/state.js";
 import { describeCadence } from "../../../core/schedule/describe.js";
 
@@ -28,7 +29,7 @@ export interface ScheduleEntry {
   until: string | undefined;
   runs: string;
   lastRun: string | null;
-  lastResult: "success" | "failure" | "deferred" | null;
+  lastResult: ScriptState["lastResult"];
   lastError: string | null;
   runCount: number;
   once: boolean;

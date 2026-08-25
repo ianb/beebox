@@ -27,7 +27,7 @@ export const SCAN_GUIDE_REL_PATH = "config/scan.guide.card";
 /** The scan guide exists but cannot be parsed/validated — a hard error:
  * scanning without priors would commit misread names silently. `detail`
  * carries the stage-specific reason. */
-export class ScanGuideParseError extends Error {
+class ScanGuideParseError extends Error {
   readonly detail: string;
   constructor(context: { detail: string }) {
     super(

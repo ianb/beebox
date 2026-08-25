@@ -113,6 +113,13 @@ is_figure_file() {
   return 1
 }
 
+is_markdown_file() {
+  case "$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')" in
+    *.md|*.markdown) return 0 ;;
+  esac
+  return 1
+}
+
 # exhibits_token — the machine-scoped token, minting it if it does not exist.
 #
 # The supervisor mints the same file and REUSES an existing one rather than
@@ -213,8 +220,14 @@ case "$cmd" in
     slug="$(slugify "$title")"
     [ -n "$slug" ] || die "add: --title '$title' has no slug-able characters"
 
+    doc_source=""
     for f in ${files[@]+"${files[@]}"}; do
       [ -f "$f" ] || die "add: not a readable file: $f"
+      if [ "$permanent" = false ] && is_markdown_file "$f"; then
+        [ -z "$doc_source" ] \
+          || die "add: only one Markdown document can be rendered as doc.md (got '$doc_source' and '$f')"
+        doc_source="$f"
+      fi
     done
 
     # One line on stdout, structurally: everything a step prints lands on
@@ -249,13 +262,25 @@ case "$cmd" in
 
     figures_json="[]"
     n=0
+    document=false
     for f in ${files[@]+"${files[@]}"}; do
       base="$(basename "$f")"
-      safe="$(sanitize_basename "$base")" \
-        || die "add: '$base' has no characters a URL segment can carry — rename it and retry"
+      if [ -n "$doc_source" ] && [ "$f" = "$doc_source" ]; then
+        safe="doc.md"
+        document=true
+      else
+        safe="$(sanitize_basename "$base")" \
+          || die "add: '$base' has no characters a URL segment can carry — rename it and retry"
+      fi
       [ ! -e "$dest/$safe" ] || die "add: '$base' becomes '$safe', which is already in this exhibit — rename one of them"
       cp "$f" "$dest/$safe"
-      [ "$safe" = "$base" ] || say "copied $base as $safe (the app routes files by URL segment)"
+      if [ "$safe" != "$base" ]; then
+        if [ "$safe" = "doc.md" ]; then
+          say "copied $base as doc.md (the default renderer's Markdown document)"
+        else
+          say "copied $base as $safe (the app routes files by URL segment)"
+        fi
+      fi
       if is_figure_file "$safe"; then
         n=$((n + 1))
         figures_json="$(jq -c --arg label "A$n" --arg file "$safe" '. + [{label: $label, file: $file}]' <<<"$figures_json")"
@@ -293,7 +318,7 @@ HTML
       fi
       say "committed app skeleton at $dest — it is TRACKED: commit it, and it ships to /apps/$slug/ only once the branch merges to main"
     else
-      say "exhibit at $dest (ask: ${ask}, figures: $n)"
+      say "exhibit at $dest (ask: ${ask}, document: $document, figures: $n)"
     fi
 
     url="$(exhibit_url "$scope")"

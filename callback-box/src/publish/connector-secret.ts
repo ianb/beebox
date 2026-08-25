@@ -49,7 +49,7 @@ export function publishSecretName(slug: string): string {
 }
 
 /** Path of the LEGACY per-box secret file, still read during the transition. */
-export function publishSecretPath(boxRoot: string): string {
+function publishSecretPath(boxRoot: string): string {
   return path.join(boxRoot, "config", "connectors", "publish.secret.json");
 }
 

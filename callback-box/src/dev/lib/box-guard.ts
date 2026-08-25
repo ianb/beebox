@@ -24,7 +24,7 @@ export class UnsafeAuditBoxError extends Error {
 }
 
 /** boxRoot is missing or isn't a git repository at all. */
-export class AuditBoxNotGitRepoError extends UnsafeAuditBoxError {
+class AuditBoxNotGitRepoError extends UnsafeAuditBoxError {
   readonly boxRoot: string;
   constructor(boxRoot: string) {
     super("Audit box is missing or not a git repository");
@@ -34,7 +34,7 @@ export class AuditBoxNotGitRepoError extends UnsafeAuditBoxError {
 }
 
 /** boxRoot lives inside another git repo (e.g. the monorepo), not its own. */
-export class AuditBoxInsideRepoError extends UnsafeAuditBoxError {
+class AuditBoxInsideRepoError extends UnsafeAuditBoxError {
   readonly boxRoot: string;
   readonly enclosingRepo: string;
   constructor(boxRoot: string, enclosingRepo: string) {

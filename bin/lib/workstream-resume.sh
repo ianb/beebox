@@ -7,10 +7,16 @@ workstream_resume_state() {
     case "$agent_state" in
       live) printf 'focus\n' ;;
       none) printf 'existing\n' ;;
+      launching) printf 'launch-in-progress\n' ;;
       *) printf 'liveness-unknown\n' ;;
     esac
     return 0
   fi
+  case "$agent_state" in
+    launching) printf 'launch-in-progress\n'; return 0 ;;
+    launch-failed|launch-expired) printf 'launch-retry\n'; return 0 ;;
+    unknown) printf 'liveness-unknown\n'; return 0 ;;
+  esac
   if [ -z "$record" ]; then
     printf 'unknown\n'
   elif [ "$(printf '%s' "$record" | jq -r '.removed.merged // empty' 2>/dev/null)" = "true" ]; then

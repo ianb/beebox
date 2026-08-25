@@ -18,7 +18,6 @@ import { checkHealthAndAlert } from "./health-alert.js";
 import { checkGoogleAuthAndAlert } from "./google-auth-alert.js";
 import {
   loadBoxesConfig,
-  saveBoxesConfig,
   type BoxesConfig,
 } from "../box/boxes-config.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
@@ -28,7 +27,7 @@ import { DEV_BUNDLE_RELOAD_EXIT_CODE, devBundleWasReplaced } from "../../lib/dev
 export type SchedulerConfig = BoxesConfig;
 
 /** Per-box log filename inside .callback-box/ */
-export const SCHEDULER_LOG_FILENAME = "scheduler.jsonl";
+const SCHEDULER_LOG_FILENAME = "scheduler.jsonl";
 const MAX_LOG_BYTES = 1_000_000; // 1MB
 
 /** For backwards compat and the CLI status command */
@@ -44,11 +43,6 @@ export function boxLogFile(boxRoot: string): string {
 /** @deprecated — call `loadBoxesConfig` from `./boxes-config.js` directly. */
 export async function loadSchedulerConfig(): Promise<SchedulerConfig> {
   return loadBoxesConfig();
-}
-
-/** @deprecated — call `saveBoxesConfig` from `./boxes-config.js` directly. */
-export async function saveSchedulerConfig(config: SchedulerConfig): Promise<void> {
-  await saveBoxesConfig(config);
 }
 
 /**
@@ -75,6 +69,8 @@ export interface LogEntry {
     ran: number;
     skipped: number;
     errors: number;
+    /** Runs whose work completed but whose check reached no verdict. */
+    inconclusive: number;
     scripts: TickResult["scripts"];
   };
   error?: string;
@@ -256,6 +252,7 @@ export async function runScheduler(options?: SchedulerOptions): Promise<never> {
             ran: result.ranCount,
             skipped: result.skipCount,
             errors: result.errorCount,
+            inconclusive: result.inconclusiveCount,
             scripts: result.scripts,
           },
         });

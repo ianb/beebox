@@ -7,7 +7,9 @@ import type {
   Issue,
   IssueChange,
   Plan,
+  IssueVisibility,
   Quota,
+  RelatedResult,
   TestingQueue,
 } from "../shared/documents.js";
 import type {
@@ -30,6 +32,18 @@ export interface AppServices {
   quotas: QuotasService;
   actions: ActionsService;
   exhibits: ExhibitsService;
+  related: IssueRelatedService;
+}
+
+/**
+ * Nearest issues and design docs for one issue — the same ranking
+ * `bin/issues similar --all --docs` prints, over the same index. Declared
+ * here rather than imported from issue-related-service.ts for the reason
+ * given on TranscribeService below: this file is in the frontend's type
+ * graph, and the implementation is server-only.
+ */
+export interface IssueRelatedService {
+  related(input: { relPath: string; visibility: IssueVisibility }): Promise<RelatedResult>;
 }
 
 /**

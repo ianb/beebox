@@ -6,7 +6,7 @@ import { errnoCode } from "../lib/error-guards.js";
 
 const INCLUDE_PATTERN = /^@(.+\.md)\s*$/gm;
 
-export class UnsafeAgentContextIncludeError extends Error {
+class UnsafeAgentContextIncludeError extends Error {
   readonly specifier: string;
 
   constructor(specifier: string) {

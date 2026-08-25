@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # Pure routing-state projection for bin/workstreams list.
 
+# shellcheck source=session-registry.sh
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/session-registry.sh"
+
 workstream_iso_epoch() {
   local value="$1"
   [ -n "$value" ] || return 1
@@ -18,6 +21,7 @@ workstream_epoch_iso() {
 workstream_routing_json() {
   local exists="$1" agent_state="$2" record="$3" tip_epoch="$4" dir_epoch="$5" now_epoch="$6"
   local launched_at removed_at archived_at candidate last_epoch="" state action last_iso=""
+  local launch launch_state
   launched_at=$(printf '%s' "$record" | jq -r '.launchedAt // empty' 2>/dev/null || true)
   removed_at=$(printf '%s' "$record" | jq -r '.removed.at // empty' 2>/dev/null || true)
   archived_at=$(printf '%s' "$record" | jq -r '.archived.at // empty' 2>/dev/null || true)
@@ -36,10 +40,17 @@ workstream_routing_json() {
   fi
   [ -z "$last_epoch" ] || last_iso=$(workstream_epoch_iso "$last_epoch")
 
+  launch=$(session_registry_launch_status_from_record "$record" "$now_epoch")
+  launch_state=$(jq -r '.state' <<<"$launch")
+
   if [ "$agent_state" = "unknown" ] || [ -n "$archived_at" ]; then
     state="uncertain"; action="investigate"
   elif [ "$agent_state" = "live" ]; then
     state="live"; action="manual-forward"
+  elif [ "$launch_state" = "active" ] && [ "$agent_state" = "launching" ]; then
+    state="launching"; action="wait-for-launch"
+  elif [ "$launch_state" != "none" ]; then
+    state="uncertain"; action="investigate"
   elif [ "$exists" != "true" ] && [ -n "$removed_at" ]; then
     state="removed"; action="resume-with-briefing"
   elif [ -n "$last_epoch" ] && [ $((now_epoch - last_epoch)) -ge $((14 * 24 * 60 * 60)) ]; then

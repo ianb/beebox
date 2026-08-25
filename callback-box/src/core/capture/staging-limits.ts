@@ -22,7 +22,7 @@ export class StagingByteLimitError extends Error {
 }
 
 /** An upload would push the session past {@link MAX_STAGED_ITEMS}. */
-export class StagingItemLimitError extends Error {
+class StagingItemLimitError extends Error {
   constructor() {
     super("Capture exceeds the staging item limit");
     this.name = "StagingItemLimitError";

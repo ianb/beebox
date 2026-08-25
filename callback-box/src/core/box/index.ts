@@ -226,7 +226,7 @@ ${annexed ? UNIGNORE_BLOCK : GITIGNORE_BLOCK}`;
  *
  * @param boxRoot - The box root directory
  */
-export async function ensureDirectories(boxRoot: string): Promise<void> {
+async function ensureDirectories(boxRoot: string): Promise<void> {
   const skip: Set<string> = new Set([BOX_DIRS.claude, BOX_DIRS.rules]);
   const dirs = Object.values(BOX_DIRS).filter((dir) => !skip.has(dir));
 

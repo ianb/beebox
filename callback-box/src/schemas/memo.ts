@@ -11,7 +11,7 @@ import { z } from "zod";
 import { type FileLoader, titleFromFilename, truncateTitle } from "../core/file-summary.js";
 import { isRecord } from "../lib/is-record.js";
 
-export const MemoStatus = z.enum(["new", "processing", "processed"]);
+const MemoStatus = z.enum(["new", "processing", "processed"]);
 export type MemoStatusType = z.infer<typeof MemoStatus>;
 
 const ContextEntry = z.object({

@@ -9,7 +9,7 @@ import { scanBoxRepositoryStats, type BoxRepositoryStats } from "./box-repositor
 const EXCLUDED_DIRECTORY_NAMES = new Set([".git", ".callback-box", "node_modules"]);
 const STAT_CONCURRENCY = 32;
 
-export const BOX_INVENTORY_EXCLUSIONS = [".git/", ".callback-box/", "node_modules/"] as const;
+const BOX_INVENTORY_EXCLUSIONS = [".git/", ".callback-box/", "node_modules/"] as const;
 
 export interface InventoryTypeSummary {
   type: string;

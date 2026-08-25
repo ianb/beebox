@@ -16,7 +16,7 @@ export interface TrackGmailThreadResult {
   updated: string[];
 }
 
-export class EmptyGmailThreadError extends Error {
+class EmptyGmailThreadError extends Error {
   readonly threadId: string;
 
   constructor(threadId: string) {

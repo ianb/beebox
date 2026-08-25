@@ -10,7 +10,7 @@
 import { processTextFragmentDirective } from "text-fragments-polyfill/text-fragment-utils";
 
 /** Named highlight for the span a source chip jumped to (see index.css). */
-export const QUOTE_HIGHLIGHT = "cb-quote-anchor";
+const QUOTE_HIGHLIGHT = "cb-quote-anchor";
 
 /**
  * Find the range of `exact` within `root` via text-fragment matching, or null.

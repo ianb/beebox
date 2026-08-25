@@ -46,6 +46,8 @@
 . "$(dirname "${BASH_SOURCE[0]}")/exhibits-store.sh"
 # shellcheck source=comments-store.sh
 . "$(dirname "${BASH_SOURCE[0]}")/comments-store.sh"
+# shellcheck source=worktree-git-lock.sh
+. "$(dirname "${BASH_SOURCE[0]}")/worktree-git-lock.sh"
 
 # The private-issues shadow-repo mount (bin/private-issues). Runs on BOTH the
 # fresh-create and resume paths (a resume must self-heal a missing mount).
@@ -71,7 +73,7 @@ wt_create_mount_private_issues() {
 wt_create_generate_agents_md() {
   local wt="$1" name="$2" tsx="$1/node_modules/.bin/tsx"
   if [ -x "$tsx" ]; then
-    "$tsx" "$wt/bin/generate-agents-md.ts" --worktree-name "$name" "$wt" \
+    (exec 198>&-; "$tsx" "$wt/bin/generate-agents-md.ts" --worktree-name "$name" "$wt") \
       || echo "[worktree-create] WARNING: generate-agents-md failed; codex sessions will lack mirrors" >&2
   else
     echo "[worktree-create] WARNING: no tsx at $tsx; skipping Codex mirror generation" >&2
@@ -86,12 +88,54 @@ wt_create_restore_box_ref() {
   git -C "$box_dest" reset --hard FETCH_HEAD >&2
 }
 
-# wt_create <name> <base_ref> [<worktree_path>]
-#
-# Prints nothing on stdout — the caller owns stdout, and reads the resulting
-# path from WT_CREATED_PATH. All progress goes to stderr.
-wt_create() {
-  local NAME="$1" base_ref="$2" worktree_path="${3:-}" box_ref="${4:-}"
+wt_create_attach_worktree() {
+  local worktree_path="$1" new_branch="$2" base_ref="$3" state_file="$4" rc=0
+  WT_CREATE_REUSED=false
+
+  if ! wt_git_admin_lock_acquire; then
+    return 1
+  fi
+  # A killed teardown can leave a registration whose directory has already
+  # moved to trash. Repair that exact dangling state while holding the same
+  # admin lock teardown uses, then make the normal decision from fresh state.
+  if git -C "$WT_MONO" worktree list --porcelain | grep -qxF "worktree $worktree_path" \
+     && [ ! -d "$worktree_path" ]; then
+    git -C "$WT_MONO" worktree prune
+  fi
+  if git -C "$WT_MONO" worktree list --porcelain | grep -qxF "worktree $worktree_path"; then
+    WT_CREATE_REUSED=true
+  else
+    if ! printf 'in-progress\t%s\n' "$worktree_path" > "$state_file"; then
+      rc=1
+    elif git -C "$WT_MONO" show-ref --verify --quiet "refs/heads/$new_branch"; then
+      echo "[worktree-create] branch $new_branch already exists — attaching without -b" >&2
+      git -C "$WT_MONO" worktree add "$worktree_path" "$new_branch" >&2 || rc=$?
+    else
+      git -C "$WT_MONO" worktree add -b "$new_branch" "$worktree_path" "$base_ref" >&2 || rc=$?
+    fi
+  fi
+  wt_git_admin_lock_release
+  return "$rc"
+}
+
+wt_create_state_file() {
+  wt_git_setup_state_file "$1"
+}
+
+wt_create_resume_ready() {
+  local worktree_path="$1" name="$2"
+  echo "[worktree-create] worktree already registered at $worktree_path — resume, skipping setup" >&2
+  wt_create_log "resume: existing worktree reused name=$name"
+  wt_create_mount_private_issues "$worktree_path"
+  wt_exhibits_mount "$worktree_path" "$name" \
+    || echo "[worktree-create] WARNING: exhibit-store mount failed; session runs without exhibits/" >&2
+  wt_comments_mount "$worktree_path" \
+    || echo "[worktree-create] WARNING: comment-store mount failed; use bin/comments instead of comments/" >&2
+  wt_create_generate_agents_md "$worktree_path" "$name"
+}
+
+wt_create_locked() {
+  local NAME="$1" base_ref="$2" worktree_path="${3:-}" box_ref="${4:-}" state_file state rc worktree_parent
 
   wt_paths_init || return 1
   # Same rule as removal: a name becomes a path, and a name with a slash in it
@@ -112,9 +156,20 @@ wt_create() {
 
   local new_branch="worktree-$NAME"
   [ -n "$worktree_path" ] || worktree_path="$WT_ROOT/$NAME"
+  if [ "$(basename "$worktree_path")" != "$NAME" ]; then
+    echo "[worktree-create] FATAL: worktree path basename must match its name ('$NAME'): $worktree_path" >&2
+    return 1
+  fi
+  mkdir -p "$(dirname "$worktree_path")"
+  worktree_parent=$(cd "$(dirname "$worktree_path")" && pwd -P) || return 1
+  worktree_path="$worktree_parent/$(basename "$worktree_path")"
   local BOX_SRC="$WT_BOX_SRC"
   local BOX_DEST="$WT_BOX_ROOT/$NAME/test1"
   WT_CREATED_PATH="$worktree_path"
+  state_file=$(wt_create_state_file "$NAME") || {
+    echo "[worktree-create] FATAL: cannot resolve setup state file for $NAME" >&2
+    return 1
+  }
 
   # Shared append-only lifecycle log (see session-end.sh for rationale) — the
   # create end of the lifecycle, so a lingering worktree can be traced back to
@@ -130,26 +185,33 @@ wt_create() {
   wt_create_log "event: name=$NAME base=$base_ref path=$worktree_path"
 
   # 1. Create (or re-attach to) the worktree.
-  mkdir -p "$(dirname "$worktree_path")"
-  if git -C "$WT_MONO" worktree list --porcelain | grep -qxF "worktree $worktree_path"; then
-    echo "[worktree-create] worktree already registered at $worktree_path — resume, skipping setup" >&2
-    wt_create_log "resume: existing worktree reused name=$NAME"
-    wt_create_mount_private_issues "$worktree_path"
-    # Exhibit-store mount, same posture as private-issues: best-effort on both
-    # paths (a resume must self-heal a missing symlink), never blocks a session.
-    wt_exhibits_mount "$worktree_path" "$NAME" \
-      || echo "[worktree-create] WARNING: exhibit-store mount failed; session runs without exhibits/" >&2
-    # Read convenience only: bin/comments derives the store root itself, so a
-    # failed mount never costs a comment.
-    wt_comments_mount "$worktree_path" \
-      || echo "[worktree-create] WARNING: comment-store mount failed; use bin/comments instead of comments/" >&2
-    wt_create_generate_agents_md "$worktree_path" "$NAME"
-    return 0
-  elif git -C "$WT_MONO" show-ref --verify --quiet "refs/heads/$new_branch"; then
-    echo "[worktree-create] branch $new_branch already exists — attaching without -b" >&2
-    git -C "$WT_MONO" worktree add "$worktree_path" "$new_branch" >&2
+  if wt_create_attach_worktree "$worktree_path" "$new_branch" "$base_ref" "$state_file"; then
+    :
   else
-    git -C "$WT_MONO" worktree add -b "$new_branch" "$worktree_path" "$base_ref" >&2
+    rc=$?
+    return "$rc"
+  fi
+  if [ "$WT_CREATE_REUSED" = true ]; then
+    state=$(cat "$state_file" 2>/dev/null || true)
+    if [ "$state" = "native-removal-pending$(printf '\t')$worktree_path" ]; then
+      echo "[worktree-create] FATAL: Claude Code removal is still pending for $worktree_path; retry after it finishes" >&2
+      return 1
+    fi
+    if [ "$state" = "ready$(printf '\t')$worktree_path" ]; then
+      wt_create_resume_ready "$worktree_path" "$NAME"
+      return 0
+    fi
+    if [ -z "$state" ]; then
+      # Worktrees created before setup states existed are already the baseline
+      # for today's fast resume behavior. Backfill without overwriting their
+      # deliberately divergent .env or reinstalling a live checkout.
+      printf 'ready\t%s\n' "$worktree_path" > "$state_file"
+      wt_create_log "resume: legacy setup state backfilled name=$NAME"
+      wt_create_resume_ready "$worktree_path" "$NAME"
+      return 0
+    fi
+    echo "[worktree-create] registered worktree has incomplete setup state — resuming setup" >&2
+    wt_create_log "repair: interrupted worktree setup resumed name=$NAME"
   fi
 
   wt_create_mount_private_issues "$worktree_path"
@@ -248,7 +310,7 @@ wt_create() {
           "$BOX_DEST/package.json" > "$tmp_pkg"
         mv "$tmp_pkg" "$BOX_DEST/package.json"
         echo "[worktree-create] running pnpm install in $BOX_DEST..." >&2
-        (cd "$BOX_DEST" && pnpm install >&2)
+        (exec 198>&-; cd "$BOX_DEST" && pnpm install >&2)
       fi
     else
       echo "[worktree-create] warning: $BOX_SRC not found; router will fall back to defaults" >&2
@@ -290,7 +352,7 @@ wt_create() {
   # (which then breaks bin/browse, bin/cb, etc.). Same shape as what
   # deploy/deploy.sh does on the server.
   echo "[worktree-create] running pnpm install (workspace-wide)..." >&2
-  (cd "$worktree_path" && pnpm install >&2)
+  (exec 198>&-; cd "$worktree_path" && pnpm install >&2)
 
   # 3.5. AGENTS.md and skill mirrors for Codex sessions (see above — this needs
   # the install for tsx).
@@ -322,10 +384,40 @@ EOF
     # checkout, defeating this refresh (a stale main cb then rejects cards using
     # in-flight schema changes; see
     # issues/closed/bugs/2026-07-10-box-hook-stale-cross-checkout-cb.md).
-    CB_HOOK_BIN="$worktree_path/callback-box/bin/cb" \
-      "$worktree_path/callback-box/bin/cb" init "$BOX_DEST" >/dev/null
+    (exec 198>&-; CB_HOOK_BIN="$worktree_path/callback-box/bin/cb" \
+      "$worktree_path/callback-box/bin/cb" init "$BOX_DEST" >/dev/null)
   fi
 
+  if ! printf 'ready\t%s\n' "$worktree_path" > "$state_file"; then
+    echo "[worktree-create] FATAL: could not record completed setup at $state_file" >&2
+    return 1
+  fi
   echo "[worktree-create] done. open http://localhost:3210/$NAME/ when the router is running" >&2
   return 0
+}
+
+# wt_create <name> <base_ref> [<worktree_path>]
+#
+# Prints nothing on stdout — the caller owns stdout, and reads the resulting
+# path from WT_CREATED_PATH. All progress goes to stderr. A per-name lock spans
+# the whole operation: seeing Git registration is not enough to call a checkout
+# reusable while the process that registered it is still installing it.
+wt_create() {
+  local name="$1" rc=0
+
+  wt_paths_init || return 1
+  wt_paths_valid_name "$name" || {
+    echo "[worktree-create] FATAL: '$name' is not a worktree name ([a-zA-Z0-9_-]+, no slashes)" >&2
+    return 1
+  }
+  if ! wt_git_setup_lock_acquire "$name"; then
+    return 1
+  fi
+  # Keep this a bare command. Putting it in `if`, `||`, or `&&` suppresses the
+  # caller's errexit/ERR behavior throughout the function body, turning a
+  # failed install into a false success and a permanently-ready state.
+  wt_create_locked "$@"
+  rc=$?
+  wt_git_setup_lock_release
+  return "$rc"
 }

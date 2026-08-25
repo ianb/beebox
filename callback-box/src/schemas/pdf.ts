@@ -33,7 +33,7 @@ import { body, cardSchema, type InferCardFields } from "../cards/index.js";
  * empty body means "no readable content", which is a real answer, not a
  * failure). `invalid` — an agent judged the document unusable.
  */
-export const PdfStatus = z.enum(["new", "analyzed", "invalid"]);
+const PdfStatus = z.enum(["new", "analyzed", "invalid"]);
 export type PdfStatusType = z.infer<typeof PdfStatus>;
 
 /** Same shape as `file.card`'s `filename:` entry — a pdf card is a superset. */

@@ -57,7 +57,7 @@ function isKnownAuthError(e: unknown): e is Error {
   return KNOWN_AUTH_ERROR_CLASSES.some((cls) => e instanceof cls);
 }
 
-export class PasswordMismatchError extends Error {
+class PasswordMismatchError extends Error {
   constructor() {
     super("Passwords did not match.");
     this.name = "PasswordMismatchError";

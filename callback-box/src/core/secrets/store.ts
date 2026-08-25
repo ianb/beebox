@@ -82,7 +82,7 @@ const secretStoreSchema = z.object({
 export type SecretStoreData = z.infer<typeof secretStoreSchema>;
 
 /** The empty store — what a machine with no secrets file has. */
-export function emptySecretStore(): SecretStoreData {
+function emptySecretStore(): SecretStoreData {
   return { secrets: {}, grants: {} };
 }
 

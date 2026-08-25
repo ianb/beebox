@@ -132,11 +132,15 @@ const attach = `tmp-capture/${basename}.attach`;
 const docRel = `tmp-capture/${basename}.capture-session.card`;
 ```
 
-One capture card, one audio card per segment, both transcribed:
+One capture card, one audio card per segment, both transcribed — and with
+nothing left untranscribed, the card carries no `transcription-failed` flag:
 
 ```ts continue
 (await box.read(docRel)).includes(`session-id: ${id}`)
 => true
+
+(await box.read(docRel)).includes("transcription-failed")
+=> false
 
 (await box.read(`${attach}/audio-001.audio.card`)).includes("status: transcribed")
 => true
@@ -278,6 +282,15 @@ await tick();
 const basename = sessionBasenameFor({ actualStartedAt: "2026-07-09T14:00:00.000Z", id });
 const partialBody = splitCardContent(await box.read(`tmp-capture/${basename}.capture-session.card`)).body;
 partialBody.includes("[audio clip 2 not transcribed]")
+=> true
+```
+
+The card itself records the failure in frontmatter, so an agent annotating it
+later — possibly with no `<capture>` message in view — sees why the audio card
+is still `new`:
+
+```ts continue
+(await box.read(`tmp-capture/${basename}.capture-session.card`)).includes("transcription-failed: true")
 => true
 ```
 

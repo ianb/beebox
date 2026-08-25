@@ -48,7 +48,7 @@ const toolFormatters: Record<
  * Format a tool_use block as a compact one-liner.
  * Returns null to skip the block entirely.
  */
-export function formatToolUse(block: SessionContentBlock): string | null {
+function formatToolUse(block: SessionContentBlock): string | null {
   const name = block.toolName || "";
   const formatter = toolFormatters[name];
   if (formatter) return formatter(block);

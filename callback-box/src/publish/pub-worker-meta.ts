@@ -78,8 +78,8 @@ const wranglerConfigSchema = z.object({
 });
 
 /** The Worker's two R2 bindings (`docs/implemented-plans/pub-setup-wrangler.md` amendment 1 — the bucket split). */
-export const CONTENT_BUCKET_BINDING = "PUB_STORE";
-export const INGEST_BUCKET_BINDING = "PUB_INGEST";
+const CONTENT_BUCKET_BINDING = "PUB_STORE";
+const INGEST_BUCKET_BINDING = "PUB_INGEST";
 
 /** What setup/status need to know about the committed Worker deployment shape. */
 export interface PubWorkerConfig {
@@ -96,7 +96,7 @@ export interface PubWorkerConfig {
 }
 
 /** Error shape for a `wrangler.jsonc` that doesn't parse or lacks the fields setup relies on. */
-export class PubWorkerConfigError extends Error {
+class PubWorkerConfigError extends Error {
   readonly detail: string;
   constructor(args: { detail: string }) {
     super(`pub-worker wrangler.jsonc is unusable: ${args.detail}`);

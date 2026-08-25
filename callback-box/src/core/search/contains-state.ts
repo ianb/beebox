@@ -68,11 +68,11 @@ const containsStateSchema = z.object({
 });
 export type ContainsState = z.infer<typeof containsStateSchema>;
 
-export function emptyContainsState(): ContainsState {
+function emptyContainsState(): ContainsState {
   return { version: STATE_VERSION, cards: {} };
 }
 
-export function containsStatePath(boxRoot: string): string {
+function containsStatePath(boxRoot: string): string {
   return path.join(boxRoot, ".callback-box", STATE_FILENAME);
 }
 
@@ -169,7 +169,7 @@ export function rebaseContains(
 }
 
 /** True when the card's content moved since its `contains` was written. */
-export function isStale(entry: ContainsCardState): boolean {
+function isStale(entry: ContainsCardState): boolean {
   return entry.containsText !== "" && entry.basisAtWrite !== entry.currentBasis;
 }
 

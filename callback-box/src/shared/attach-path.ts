@@ -15,7 +15,7 @@
 export const ATTACH_SUFFIX = ".attach";
 
 /** Virtual prefix used in ref values pointing into the current card's attach scope. */
-export const ATTACH_PREFIX = "attach/";
+const ATTACH_PREFIX = "attach/";
 
 /**
  * Card basename — the part of the filename before `.<type>.card`.

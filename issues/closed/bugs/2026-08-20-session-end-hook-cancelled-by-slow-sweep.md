@@ -1,13 +1,37 @@
 ---
 title: "SessionEnd hook gets cancelled mid-sweep, so worktree cleanup silently stops — and it gets worse the more worktrees there are"
-workstream: unattached
+workstream: dev-loop-lifecycle
 area: monorepo
 labels: [worktrees, hooks, cleanup]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder hit it closing a worktree session
 priority: important
+resolution: implemented
 ---
+
+> **Fixed 2026-08-24** in
+> [dev-loop-lifecycle](../../../callback-box/docs/implemented-plans/dev-loop-lifecycle.md).
+> The diagnosis below is partly wrong and is left as filed. The sweep was
+> already backgrounded and `disown`ed, so it never spent its 25s inside the
+> hook's budget. Two separate defects were hiding in one report:
+>
+> - **The sweep was killed at session exit.** `disown` leaves the child in the
+>   caller's process group. Reproduced directly: the old form logs `START` and
+>   nothing else when its launcher's group is killed; the new one, detached
+>   through `bin/lib/detach.mjs`, finishes. That matches the log — 15 of 109
+>   session-end sweeps lost, against 0 of 44 session-start and 0 of 72 codex.
+> - **The hook died between `resolved` and any `decision`**, 11 times in 44.
+>   Its own steps measure ~30ms, so it was not intrinsically slow; the leading
+>   explanation is contention with the sweep it had just launched, which runs
+>   `git status` over every worktree. Not proven — the hook now logs `step=`
+>   elapsed times for the liveness scan and the git work, so the next
+>   occurrence says which one it died in.
+>
+> The ordering tension is resolved by a `trap … EXIT`: reachable from every one
+> of the hook's early `exit 0`s, which is what the old inline placement was
+> protecting, while still running last. Sweeps also take an atomic lock and skip
+> rather than queue, and a caught signal now logs `INTERRUPTED`.
 
 > **Mitigated 2026-08-20, not fixed.** Both sweep-running hooks now carry an
 > explicit `"timeout": 300` in `.claude/settings.json` (SessionEnd, and the

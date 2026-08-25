@@ -155,6 +155,13 @@ Effect on the sync:
 - Divergence in **any other key or the body** still parks — a retimed `cron` or
   edited `runs` is a real customization and is never overwritten.
 
+A parked update is **reported, not silent**: `cb status` lists the parked paths,
+and `cb health`'s `template-updates` box check reports them too — escalating from
+`warning` to `error` when a parked path is the procedure or task card behind a
+scheduled task that is currently failing or inconclusive, since that task's fix
+is then already sitting on disk unread. See
+[`health-checks.md`](health-checks.md#template-updates-a-fix-that-never-reached-the-box).
+
 It is deliberately a **field list, not a `merge(box, upstream)` callback**. The
 judgement that matters — "is this box on unmodified old stock, or did the
 boxholder edit the definition?" — needs the last-shipped hash, which lives in

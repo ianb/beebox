@@ -45,8 +45,8 @@ export type GoogleServiceName = "calendar" | "gmail" | "drive";
 export type GoogleServicesPolicy = Partial<Record<GoogleServiceName, boolean>>;
 
 /** The store names the OAuth app's client credentials live under. */
-export const GOOGLE_CLIENT_ID_SECRET_NAME = "google-oauth-client-id";
-export const GOOGLE_CLIENT_SECRET_SECRET_NAME = "google-oauth-client-secret";
+const GOOGLE_CLIENT_ID_SECRET_NAME = "google-oauth-client-id";
+const GOOGLE_CLIENT_SECRET_SECRET_NAME = "google-oauth-client-secret";
 
 /**
  * Get Google OAuth client credentials: the machine store first (names

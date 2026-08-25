@@ -97,20 +97,12 @@ if [[ -n "${BROWSE_CLERK:-}" ]]; then
   fi
 fi
 
-# Reap superseded agent-browser daemons for this worktree before running. The
-# upstream daemon stops serving its socket on idle but never exits (it reparents
-# to PID 1 and lingers), so a new one spawns on next use and the dead ones pile
-# up. The socket dir's *.pid files name the only live ones (daemon, dashboard,
-# sessions); any other agent-browser launched from this repo is an orphan.
-# Best-effort — never let cleanup fail the actual command.
-{
-  live=" "
-  for f in "${AGENT_BROWSER_SOCKET_DIR}"/*.pid; do
-    [[ -f "$f" ]] && live+="$(cat "$f" 2>/dev/null) "
-  done
-  while IFS= read -r abpid; do
-    [[ -n "$abpid" && "$live" != *" $abpid "* ]] && kill "$abpid" 2>/dev/null
-  done < <(pgrep -f "${REPO_DIR}/node_modules/agent-browser/bin" 2>/dev/null)
-} 2>/dev/null || true
+# Superseded agent-browser daemons are reaped by cli.ts, through the shared
+# guard in bin/process-cleanup.ts. This used to be a bash loop right here that
+# killed every agent-browser without a *.pid file — which is a second copy of a
+# decision that module's header explicitly forbids duplicating, and the
+# fail-OPEN copy at that: a daemon another session had just started has no
+# pidfile for its first ~3 seconds, so whichever agent ran second killed the
+# browser of the agent that ran first.
 
 exec "$TSX" "$REPO_DIR/browse/src/cli.ts" "$@"

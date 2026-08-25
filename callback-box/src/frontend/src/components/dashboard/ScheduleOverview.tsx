@@ -12,7 +12,8 @@ import { InlineAction } from "../ui/InlineAction";
 import { Pre } from "../ui/Pre";
 import { Toggle } from "../ui/Toggle";
 import { VisuallyHidden } from "../ui/VisuallyHidden";
-import { conciseScheduleError } from "@shared/schedule-error";
+import { ScheduleStatusIndicator } from "./ScheduleStatusIndicator";
+import { TickList, quietTickCount } from "./ScheduleTicks";
 
 type ScheduleInfo = RouterOutput["scheduler"]["schedules"]["schedules"][number];
 type SchedulerLogEntry = RouterOutput["scheduler"]["log"]["entries"][number];
@@ -144,7 +145,7 @@ function ScheduleRow({ s }: { s: ScheduleInfo }) {
           ) : s.running ? (
             <RunningIndicator running={s.running} />
           ) : (
-            <StatusIndicator lastResult={s.lastResult} lastError={s.lastError} onToggleError={() => setShowError(!showError)} />
+            <ScheduleStatusIndicator lastResult={s.lastResult} lastError={s.lastError} onToggleError={() => setShowError(!showError)} />
           )}
         </td>
         <td className="py-2">
@@ -201,61 +202,6 @@ function RunningIndicator({ running }: { running: { startedAt: string; triggered
   );
 }
 
-function StatusIndicator({ lastResult, lastError, onToggleError }: { lastResult: "success" | "failure" | "deferred" | null; lastError: string | null; onToggleError?: () => void }) {
-  const errorSummary = lastError === null ? null : conciseScheduleError(lastError);
-  if (lastResult === "success") {
-    return <span className="text-success text-xs">&#10003;</span>;
-  }
-  if (lastResult === "deferred") {
-    return (
-      <InlineAction
-        intent="subtle"
-        onClick={() => { if (onToggleError) onToggleError(); }}
-        title={lastError ? "Click to expand detail" : undefined}
-        className="text-xs text-left"
-      >
-        &#9203; {errorSummary ? <span className="text-warm-600">{errorSummary.substring(0, 60)}&#8230;</span> : null}
-      </InlineAction>
-    );
-  }
-  if (lastResult === "failure") {
-    return (
-      <InlineAction
-        intent="danger"
-        onClick={() => { if (onToggleError) onToggleError(); }}
-        title={lastError ? "Click to expand error" : undefined}
-        className="text-xs text-left"
-      >
-        &#10007; {errorSummary ? <span className="text-warm-600">{errorSummary.substring(0, 60)}&#8230;</span> : null}
-      </InlineAction>
-    );
-  }
-  return <span className="text-warm-500 text-xs">&mdash;</span>;
-}
-
-function TickEntry({ tick }: { tick: SchedulerLogEntry }) {
-  const hasActivity = Boolean(tick.result && (tick.result.ran > 0 || tick.result.errors > 0));
-  return (
-    <div className={`flex items-center gap-2 ${hasActivity ? "text-warm-700" : "text-warm-500"}`}>
-      <span className="font-mono">{new Date(tick.ts).toLocaleTimeString()}</span>
-      {tick.result ? (
-        <TickResult result={tick.result} />
-      ) : null}
-      {tick.error ? <span className="text-danger-dark">{tick.error}</span> : null}
-    </div>
-  );
-}
-
-function TickResult({ result }: { result: NonNullable<SchedulerLogEntry["result"]> }) {
-  if (result.ran > 0) {
-    return <span className="text-success">{result.ran} ran</span>;
-  }
-  if (result.errors > 0) {
-    return <span className="text-danger-dark">{result.errors} errors</span>;
-  }
-  return <span>all skipped</span>;
-}
-
 export function ScheduleOverview({ schedules, recentTicks, loading, error }: ScheduleOverviewProps) {
   const [showTicks, setShowTicks] = useState(false);
 
@@ -286,9 +232,7 @@ export function ScheduleOverview({ schedules, recentTicks, loading, error }: Sch
     );
   }
 
-  const skippedCount = recentTicks.filter(
-    (t) => !t.result || (t.result.ran === 0 && t.result.errors === 0),
-  ).length;
+  const skippedCount = quietTickCount(recentTicks);
 
   return (
     <Card as="section" aria-label="Schedules" shadow border="none">
@@ -312,13 +256,7 @@ export function ScheduleOverview({ schedules, recentTicks, loading, error }: Sch
             ) : null}
           </InlineAction>
 
-          {showTicks ? (
-            <div className="mt-2 space-y-1 text-xs">
-              {recentTicks.map((tick, i) => (
-                <TickEntry key={i} tick={tick} />
-              ))}
-            </div>
-          ) : null}
+          {showTicks ? <TickList ticks={recentTicks} /> : null}
         </div>
       ) : null}
     </Card>

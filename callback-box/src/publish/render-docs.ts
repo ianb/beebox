@@ -59,7 +59,7 @@ export const INLINE_IMAGE_MAX_BYTES = 8 * 1024;
  * message is hardcoded inside the class — the `error/*` lint rules forbid a
  * string literal *anywhere* in a `new *Error(...)` call (see `src/lib/errors.ts`).
  */
-export class ImageEscapesBoxError extends Error {
+class ImageEscapesBoxError extends Error {
   readonly src: string;
   constructor(src: string) {
     super(`image reference escapes the box: ${src}`);
@@ -74,7 +74,7 @@ export class ImageEscapesBoxError extends Error {
  * would inline ~100 bytes of pointer text as a data: URI and ship a broken
  * image to a public page — a failure nobody would trace back to here.
  */
-export class ImageContentNotPresentError extends Error {
+class ImageContentNotPresentError extends Error {
   readonly src: string;
   constructor(src: string) {
     super(`image content is not present locally: ${src} (fetch it with \`git annex get\`)`);
@@ -83,7 +83,7 @@ export class ImageContentNotPresentError extends Error {
   }
 }
 
-export class ImageNotFoundError extends Error {
+class ImageNotFoundError extends Error {
   readonly src: string;
   constructor(src: string, options?: { cause?: unknown }) {
     super(`image not found: ${src}`, options);

@@ -48,7 +48,7 @@ export function userTurnText(blocks: Array<Record<string, unknown>>): string | n
  * the 400-char cut, every Codex row rendered as envelope markup and no row
  * could ever contain what the person typed.
  */
-export function snippetFromUserBlocks(
+function snippetFromUserBlocks(
   blocks: Array<Record<string, unknown>>,
   maxLen: number,
 ): string | null {

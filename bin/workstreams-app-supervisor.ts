@@ -8,9 +8,10 @@
 
 import { createHash, randomBytes } from "node:crypto";
 import fs from "node:fs/promises";
-import { watch as watchFs, type FSWatcher } from "node:fs";
+import { readFileSync, watch as watchFs, type FSWatcher } from "node:fs";
 import http from "node:http";
 import path from "node:path";
+import { parseEnv } from "node:util";
 import { execa } from "execa";
 import getPort from "get-port";
 import { createPidStore, type PidStore } from "./router-pidfile.js";
@@ -767,11 +768,35 @@ function killProcessGroup(pid: number | undefined, signal: NodeJS.Signals): void
   }
 }
 
+/**
+ * The main checkout's `callback-box/.env`, for the resident app the same way
+ * `router-core.ts` hands each worktree child its own copy: dev config such as
+ * `CALLBACK_OPENAI_API_KEY` (comment transcription, the issue browser's
+ * Related section) lives there, and a real exported variable still wins.
+ * Missing or unparseable means no file config, never a failed start — the
+ * app has explicit no-key states for exactly this.
+ */
+function mainCheckoutEnvFile(appRoot: string): NodeJS.Dict<string> {
+  const envPath = path.join(appRoot, "..", "callback-box", ".env");
+  let text: string;
+  try {
+    text = readFileSync(envPath, "utf8");
+  } catch {
+    return {};
+  }
+  try {
+    return parseEnv(text);
+  } catch {
+    return {};
+  }
+}
+
 function spawnAppChild(
   command: "dev:server" | "dev:frontend",
   options: WorkstreamsAppSpawnOptions,
 ): WorkstreamsAppChild {
   const env: NodeJS.ProcessEnv = {
+    ...mainCheckoutEnvFile(options.appRoot),
     ...process.env,
     WORKSTREAMS_APP_PORT: String(options.backendPort),
     WORKSTREAMS_APP_FRONTEND_PORT: String(options.frontendPort),

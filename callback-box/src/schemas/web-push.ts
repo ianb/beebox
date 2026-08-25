@@ -16,7 +16,7 @@ import { cardSchema, type InferCardFields } from "../cards/index.js";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 
-export const WebPushStatus = z.enum(["pending", "failed"]);
+const WebPushStatus = z.enum(["pending", "failed"]);
 export type WebPushStatusValue = z.infer<typeof WebPushStatus>;
 
 export const WebPushSeverity = z.enum(["info", "alert"]);

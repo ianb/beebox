@@ -37,8 +37,11 @@ export interface ScriptState {
   lastRun: string | null;
   /** "deferred" = the run failed because the engine was unavailable
    * (deferred-recoverable, e.g. quota-exhausted) — not the task's fault,
-   * so it neither increments nor resets `consecutiveFailures`. */
-  lastResult: "success" | "failure" | "deferred" | null;
+   * so it neither increments nor resets `consecutiveFailures`.
+   * "inconclusive" = the run's work completed but its check reached no
+   * verdict (a review out of turns, a timeout). Also outside the failure
+   * counter: nothing failed, and nothing was confirmed either. */
+  lastResult: "success" | "failure" | "deferred" | "inconclusive" | null;
   lastError: string | null;
   lastDurationMs: number | null;
   /** When a run last succeeded — diverges from lastRun while failing. */
@@ -61,7 +64,7 @@ const RunRecordSchema = z.object({
 const ScriptStatePartialSchema = z
   .object({
     lastRun: z.string().nullable(),
-    lastResult: z.enum(["success", "failure", "deferred"]).nullable(),
+    lastResult: z.enum(["success", "failure", "deferred", "inconclusive"]).nullable(),
     lastError: z.string().nullable(),
     lastDurationMs: z.number().nullable(),
     lastSuccess: z.string().nullable(),
@@ -189,7 +192,7 @@ export function recordRun(
 }
 
 export interface RecordOutcomeOptions {
-  result: "success" | "failure" | "deferred";
+  result: NonNullable<ScriptState["lastResult"]>;
   error: string | null;
   durationMs: number;
   sleepAffected: boolean;
@@ -218,9 +221,12 @@ export function recordOutcome(state: ScriptState, opts: RecordOutcomeOptions): v
   } else if (result === "failure") {
     state.consecutiveFailures++;
   }
-  // "deferred" freezes the failure counter: it must not accrue (the engine
-  // was unavailable, not the task broken) and must not reset (a genuinely
-  // broken task doesn't get its counter laundered by a quota episode).
+  // "deferred" and "inconclusive" both freeze the failure counter: neither
+  // must accrue (nothing failed — the engine was unavailable, or the checker
+  // never decided) and neither must reset it (a genuinely broken task doesn't
+  // get its counter laundered by a quota episode or an undecided review).
+  // `lastSuccess` stays put for the same reason: an unjudged run is not a
+  // confirmed one.
   recordRun(state, {
     record: { ts: now.toISOString(), durationMs, ...(sleepAffected ? { sleepAffected: true } : {}) },
     windowMs,

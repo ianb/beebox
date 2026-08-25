@@ -26,7 +26,7 @@ const storedLocationSchema = z.object({
 
 export type StoredLocation = z.infer<typeof storedLocationSchema>;
 
-export function locationStatePath(boxRoot: string): string {
+function locationStatePath(boxRoot: string): string {
   return path.join(boxRoot, ".callback-box", "location.json");
 }
 

@@ -108,6 +108,11 @@ export interface RouterEffects {
   getPort(): Promise<number>;
   resolveWorktree(name: string): Promise<ResolvedWorktree | null>;
   resolveBoxEntries(entries: string[]): Promise<ResolvedBoxEntry[]>;
+  /** A token identifying the backend source in a checkout, for detecting that a
+   *  running generation is executing code that has since changed on disk.
+   *  Returns `null` when it cannot be computed — which disables the comparison
+   *  for that generation rather than reporting a false mismatch. */
+  sourceToken(root: string): Promise<string | null>;
 }
 
 /** Static configuration + hooks the lifecycle needs (non-impure values, plus the
@@ -130,6 +135,11 @@ export interface RouterCoreConfig {
    *  can refresh the terminal tab title. Replaces the old let-rebinding hack. */
   onStateChange?: () => void;
 }
+
+/** How often a ready generation's source token is recomputed. The check costs
+ *  one directory walk (~16ms over ~1000 files), so this keeps a request burst
+ *  down to a single one while still noticing a merge within seconds. */
+const STALE_CHECK_INTERVAL_MS = 5_000;
 
 // --- error helpers (honestly typed; bin/ can't import callback-box's guards) ---
 
@@ -315,10 +325,58 @@ export function createRouterCore(effects: RouterEffects, config: RouterCoreConfi
     config.onStateChange?.();
   }
 
+  /**
+   * Notice, and say, that a ready generation is running source that has since
+   * changed on disk.
+   *
+   * Detection only — nothing here stops or replaces anything. The router's
+   * activity signal (`touch`, above) records HTTP requests and nothing else, so
+   * a worktree carrying a live chat over a WebSocket is indistinguishable from
+   * an idle one; there is no moment this code could prove is safe to cut. What
+   * it can do is stop the staleness being invisible, which is what actually
+   * cost time in the reported case: an agent chasing a fix that had landed and
+   * was not running.
+   *
+   * Fire-and-forget on purpose. This sits on the request path, and a slow or
+   * broken `sourceToken` must delay nothing; the answer lands on the handle in
+   * time for the next request either way.
+   */
+  function checkSourceFreshness(handle: WorktreeHandle): void {
+    const ready = readyLifecycle(handle);
+    if (!ready) return;
+    // Nothing to compare against, or already reported — either way there is no
+    // question left to ask.
+    if (ready.sourceToken === null || ready.staleSince !== null) return;
+    const now = effects.now();
+    if (now - ready.lastStaleCheck < STALE_CHECK_INTERVAL_MS) return;
+    ready.lastStaleCheck = now;
+    void (async () => {
+      const wt = await effects.resolveWorktree(handle.name);
+      if (!wt) return;
+      const current = await effects.sourceToken(wt.root);
+      if (current === null || current === ready.sourceToken) return;
+      // The walk above is not instant, and a generation can be stopped or
+      // replaced while it runs — `stopWorktree` unlinks the handle before its
+      // async cleanup, so both the map entry and the lifecycle variant have to
+      // still be the ones we sampled. Reporting against a dead generation would
+      // announce staleness for a process that is already gone.
+      if (worktrees.get(handle.name) !== handle) return;
+      if (handle.lifecycle !== ready) return;
+      if (ready.staleSince !== null) return;
+      ready.staleSince = effects.now();
+      log(
+        `[${handle.name}] backend source changed since this generation started — ` +
+        `it is still running the old code. \`bin/workstreams down ${handle.name}\` replaces it.`,
+      );
+      config.onStateChange?.();
+    })().catch((err: unknown) => log(`[${handle.name}] source freshness check failed: ${errMessage(err)}`));
+  }
+
   async function ensureRunning(name: string): Promise<WorktreeHandle> {
     const existing = worktrees.get(name);
     if (existing) {
       if (readyLifecycle(existing)) {
+        checkSourceFreshness(existing);
         touch(existing);
         return existing;
       }
@@ -414,6 +472,9 @@ export function createRouterCore(effects: RouterEffects, config: RouterCoreConfi
     // content dir (see box-entry.ts) — resolve to {contentDir, slug} before
     // handing off to the backend, which no longer guesses the slug itself.
     const resolvedBoxes = await effects.resolveBoxEntries(wt.boxes);
+    // Taken BEFORE the spawn, so a source change that lands during startup
+    // reads as stale rather than being baked in as this generation's baseline.
+    const sourceToken = await effects.sourceToken(wt.root);
     const backendArgs = config.devNoHub
       ? ["./src/webapp/server-main.ts", ...resolvedBoxes.map(boxEntryToArg)]
       : ["./src/cli/index.ts", "hub", "--config", await effects.writeHubConfig({ name, backendPort, resolvedBoxes })];
@@ -592,8 +653,11 @@ export function createRouterCore(effects: RouterEffects, config: RouterCoreConfi
       profileDir,
       browseEnv,
       logFile,
+      sourceToken,
       lastActivity: effects.now(),
       idleTimer: null,
+      staleSince: null,
+      lastStaleCheck: effects.now(),
     });
     touch(handle);
     log(`[${name}] ready`);

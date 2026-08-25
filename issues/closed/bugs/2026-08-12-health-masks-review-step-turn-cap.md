@@ -1,12 +1,13 @@
 ---
 title: "`cb health` reports a procedure as failing when only its review step ran out of turns"
-workstream: unattached
+workstream: honest-diagnostics
 area: callback-box
 labels: [health, procedures]
 filed-by: agent
 discovered-by: agent
 discovered-in: main session — cb feedback triage from a real box
 priority: important
+resolution: implemented
 ---
 
 A scheduled `refresh-maps` run showed **failing** in `cb health`, but the work

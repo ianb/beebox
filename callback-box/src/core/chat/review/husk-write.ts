@@ -45,7 +45,7 @@ import type { TitleOwner } from "./state.js";
 const REJECTING_KINDS: ReadonlySet<LeakKind> = new Set<LeakKind>(["credential"]);
 
 /** Base class so callers can catch every husk-write failure at once. */
-export class HuskWriteError extends Error {
+class HuskWriteError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "HuskWriteError";
@@ -96,7 +96,7 @@ export async function readHuskFields(boxRoot: string, relPath: string): Promise<
 }
 
 /** Render the model's kinded notes into the markdown the account field holds. */
-export function renderAccount(notes: ReviewOutput["notes"]): string {
+function renderAccount(notes: ReviewOutput["notes"]): string {
   if (notes.length === 0) return "";
   return notes.map((note) => `- ${note.kind}: ${note.text}`).join("\n");
 }

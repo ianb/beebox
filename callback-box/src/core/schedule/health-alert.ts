@@ -19,6 +19,7 @@ import {
   loadScheduleHealth,
   selectAlertableTasks,
   describeUnhealthyTask,
+  describeParkedUpdates,
 } from "./health-box.js";
 import { conciseScheduleError, type TaskHealth } from "./health.js";
 import { loadScriptState, saveScriptState } from "./state.js";
@@ -34,11 +35,14 @@ export interface HealthAlertResult {
 }
 
 function alertLine(task: TaskHealth, now: Date): string {
-  const line = `- ${describeUnhealthyTask(task, now)}`;
+  let line = `- ${describeUnhealthyTask(task, now)}`;
   if (task.status === "failing" && task.lastError) {
-    return `${line} — ${conciseScheduleError(task.lastError)}`;
+    line = `${line} — ${conciseScheduleError(task.lastError)}`;
   }
-  return line;
+  // Last, after the error: the boxholder reads the symptom, then learns the fix
+  // is already parked on disk and only needs accepting.
+  const parked = describeParkedUpdates(task);
+  return parked === null ? line : `${line} — ${parked}`;
 }
 
 function latchKind(task: TaskHealth): "failing" | "overdue" | "invalid" {

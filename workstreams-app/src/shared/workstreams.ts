@@ -36,10 +36,17 @@ const sessionStateSchema = z.object({
   removed: removedStateSchema.nullable(),
   archived: archivedStateSchema.nullable(),
   description: z.string().min(1).nullable(),
+  launch: z.object({
+    state: z.enum(["none", "active", "expired", "failed", "unknown"]),
+    startedAt: z.iso.datetime().nullable(),
+    expiresAt: z.iso.datetime().nullable(),
+    failedAt: z.iso.datetime().nullable(),
+    reason: z.string().min(1).nullable(),
+  }),
 });
 
-export const routingStateSchema = z.enum(["live", "dormant", "stale", "removed", "uncertain"]);
-export const routingActionSchema = z.enum(["resume-with-briefing", "manual-forward", "new-stream-preferred", "investigate"]);
+export const routingStateSchema = z.enum(["launching", "live", "dormant", "stale", "removed", "uncertain"]);
+export const routingActionSchema = z.enum(["wait-for-launch", "resume-with-briefing", "manual-forward", "new-stream-preferred", "investigate"]);
 const routingSchema = z.object({
   state: routingStateSchema,
   action: routingActionSchema,

@@ -24,9 +24,10 @@ import {
   compileTriageInstructions,
   type TriageCategory,
 } from "./triage/instructions.js";
-import { startProcedure } from "./procedure/engine.js";
+import { startProcedure, type ProcedureInconclusive } from "./procedure/engine.js";
 import type { CommandContext } from "./command-runner.js";
 import { errnoCode } from "../lib/error-guards.js";
+import { isRecord } from "../lib/is-record.js";
 
 /** Env var the handler procedure reads to get its bucket. */
 export const TRIAGE_ITEMS_ENV = "TRIAGE_ITEMS";
@@ -48,12 +49,35 @@ export interface RunProcedureInput {
   ctx: CommandContext;
 }
 
+/**
+ * How one handler-procedure invocation ended. Three arms, not a boolean plus a
+ * message: `inconclusive` is a run whose *work* completed but whose review
+ * reached no verdict, and collapsing it into either `completed` or `failed`
+ * is the misreading this type exists to prevent (`shared/inconclusive.ts`).
+ */
 export interface RunProcedureOutput {
-  success: boolean;
-  error?: string;
+  outcome: "completed" | "failed" | "inconclusive";
+  /**
+   * Why. The error message for `failed`; the reason phrase (e.g. "review of
+   * step draft reached max turns (8)") for `inconclusive`. Absent on
+   * `completed`.
+   */
+  detail?: string;
 }
 
 export type ProcedureRunner = (input: RunProcedureInput) => Promise<RunProcedureOutput>;
+
+/**
+ * One phrase naming every step whose review reached no verdict, in the voice
+ * of the thing that happened, so it drops into a report line after
+ * "inconclusive — ".
+ */
+function describeInconclusiveSteps(items: ProcedureInconclusive[]): string {
+  if (items.length === 0) return "the review reached no verdict";
+  return items
+    .map((item) => `review of step ${item.stepId} ${item.detail}`)
+    .join("; ");
+}
 
 /**
  * Live procedure runner: sets TRIAGE_ITEMS in the process env, calls
@@ -69,9 +93,14 @@ const liveRunProcedure: ProcedureRunner = async ({ procedurePath, triageItems, c
       ctx,
       procedureNameOrPath: procedurePath,
     });
-    const output: RunProcedureOutput = { success: result.ok };
-    if (!result.ok) output.error = result.error.message;
-    return output;
+    if (!result.ok) return { outcome: "failed", detail: result.error.message };
+    if (result.value.status === "inconclusive") {
+      return {
+        outcome: "inconclusive",
+        detail: describeInconclusiveSteps(result.value.inconclusive),
+      };
+    }
+    return { outcome: "completed" };
   } finally {
     if (previous === undefined) delete process.env[TRIAGE_ITEMS_ENV];
     else process.env[TRIAGE_ITEMS_ENV] = previous;
@@ -87,10 +116,98 @@ export interface CategoryHandling {
     | "no-items"
     | "no-procedure"
     | "no-category"
+    // The handler's work completed but its review reached no verdict — not
+    // `ran` (nothing judged it) and not `procedure-failed` (nothing failed).
+    | "procedure-inconclusive"
     | "procedure-failed";
   /** Box-relative procedure path, if one was resolved. */
   procedurePath?: string;
-  error?: string;
+  /**
+   * The failure message for `procedure-failed`, or the reason phrase for
+   * `procedure-inconclusive`. Named for what it carries, not for failure:
+   * an inconclusive run has no error to report.
+   */
+  detail?: string;
+}
+
+/**
+ * The report lines for one category's handling — the outcome row, then a
+ * detail row when there's something to say. An inconclusive run gets its own
+ * sentence: the reason, then the clause that stops it reading as a failure.
+ */
+export function formatHandlingLines(result: CategoryHandling): string[] {
+  const itemCount = result.items.length;
+  const procDetail = result.procedurePath ? ` [${result.procedurePath}]` : "";
+  const lines = [
+    `  ${result.outcome}\t${result.category} (${itemCount} item${itemCount === 1 ? "" : "s"})${procDetail}`,
+  ];
+  if (result.outcome === "procedure-inconclusive") {
+    lines.push(
+      `    └─ inconclusive — ${result.detail ?? "the review reached no verdict"}; work completed`,
+    );
+  } else if (result.detail !== undefined && result.detail !== "") {
+    lines.push(`    └─ ${result.detail}`);
+  }
+  return lines;
+}
+
+/**
+ * The worst outcome in a handle pass, in the order a caller cares about:
+ * a failed handler is louder than an unjudged one, and an unjudged one is
+ * louder than a clean pass. `cb handle`'s exit code is this and nothing else —
+ * before it, a bucket whose handler failed and a bucket nobody judged both
+ * exited 0, so a wakeup script gating on `cb handle` saw a green run either
+ * way.
+ */
+export type HandleVerdict = "ok" | "inconclusive" | "failed";
+
+export function handleVerdict(results: readonly CategoryHandling[]): HandleVerdict {
+  if (results.some((r) => r.outcome === "procedure-failed")) return "failed";
+  if (results.some((r) => r.outcome === "procedure-inconclusive")) return "inconclusive";
+  return "ok";
+}
+
+/** One sentence naming the buckets whose handler procedure failed. */
+export function describeHandleFailures(results: readonly CategoryHandling[]): string {
+  const failed = results.filter((r) => r.outcome === "procedure-failed");
+  return `handler procedure failed for ${failed
+    .map((r) => `${r.category}${r.detail === undefined || r.detail === "" ? "" : ` (${r.detail})`}`)
+    .join("; ")}`;
+}
+
+const HANDLE_OUTCOMES: readonly CategoryHandling["outcome"][] = [
+  "ran",
+  "no-items",
+  "no-procedure",
+  "no-category",
+  "procedure-inconclusive",
+  "procedure-failed",
+];
+
+/**
+ * Read a handle command's boundary `data` back as typed results. The
+ * command-runner boundary is untyped, and the CLI keys its exit code on what
+ * comes through it, so this re-validates rather than asserts — a mis-shaped
+ * value must not silently become a clean exit.
+ */
+export function readHandlingResults(data: unknown): CategoryHandling[] {
+  if (!Array.isArray(data)) return [];
+  const results: CategoryHandling[] = [];
+  for (const entry of data) {
+    if (!isRecord(entry)) continue;
+    const { category, items, outcome, procedurePath, detail } = entry;
+    if (typeof category !== "string") continue;
+    const known = HANDLE_OUTCOMES.find((o) => o === outcome);
+    if (known === undefined) continue;
+    results.push({
+      category,
+      items: Array.isArray(items) ? items.filter((i): i is string => typeof i === "string") : [],
+      outcome: known,
+      ...(typeof procedurePath === "string" && { procedurePath }),
+      ...(typeof detail === "string" && { detail }),
+    });
+  }
+  return results;
 }
 
 export interface RunHandleOptions {
@@ -191,22 +308,25 @@ export async function runHandle(params: HandleParams): Promise<CategoryHandling[
       path.join("box/inbox/triaged", name, file),
     );
     const result = await runProcedure({ procedurePath, triageItems, ctx });
-    if (!result.success) {
-      const handling: CategoryHandling = {
-        category: name,
-        items,
-        outcome: "procedure-failed",
-        procedurePath,
-      };
-      if (result.error !== undefined) handling.error = result.error;
-      results.push(handling);
-    } else {
+    if (result.outcome === "completed") {
       results.push({
         category: name,
         items,
         outcome: "ran",
         procedurePath,
       });
+    } else {
+      const handling: CategoryHandling = {
+        category: name,
+        items,
+        outcome:
+          result.outcome === "inconclusive"
+            ? "procedure-inconclusive"
+            : "procedure-failed",
+        procedurePath,
+      };
+      if (result.detail !== undefined) handling.detail = result.detail;
+      results.push(handling);
     }
   }
 

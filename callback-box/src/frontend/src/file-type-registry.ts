@@ -151,7 +151,7 @@ export function getRenderers(filePath: string, data: FileData): FileRenderer[] {
  * Fallback UI — generic icon, no custom ListComponent (the default title-only
  * rendering applies).
  */
-export const fallbackFileTypeUI: FileTypeUI<unknown> = {
+const fallbackFileTypeUI: FileTypeUI<unknown> = {
   icon: GenericIcon,
 };
 
@@ -175,11 +175,4 @@ export function resolveFileTypeUI(summary: FileSummary<unknown>): FileTypeUI<unk
   const pathMatch = pathMatches.at(0);
   if (pathMatch) return pathMatch.listUI;
   return fallbackFileTypeUI;
-}
-
-/**
- * Reset the registry. Intended for tests.
- */
-export function resetFileTypeRegistry(): void {
-  entries.length = 0;
 }

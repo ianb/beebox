@@ -53,5 +53,10 @@ printf '%s' "$TRIAGE_ITEMS" | xargs -0 -I{} sh -c 'process "{}"'
 Use \`xargs -0\` (or split on NUL) — the paths are NUL-delimited so filenames with
 spaces survive. When the handler finishes, it moves each item out of the bucket
 (\`cb mv\` to its destination, or \`cb rm\` to trash); the bucket is empty when done.
+
+\`cb handle\` reports its worst bucket: exit 1 if a handler procedure failed,
+exit 3 if one finished its work but its review reached no verdict (one
+\`Inconclusive: handle <category> — …\` line on stderr), exit 0 only when
+everything that ran was judged.
 `;
 }

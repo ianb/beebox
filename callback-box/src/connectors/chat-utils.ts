@@ -200,7 +200,7 @@ export async function stampSentMessage(options: {
  * Find an existing pending chat job for a given thread ref. Returns the
  * box-relative path, or null when none exists.
  */
-export async function findExistingChatJob(
+async function findExistingChatJob(
   boxRoot: string,
   threadRef: string
 ): Promise<string | null> {

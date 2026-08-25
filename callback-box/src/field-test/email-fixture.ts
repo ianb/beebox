@@ -80,7 +80,7 @@ const EmailFixtureSchema = z.strictObject({
 });
 
 /** The fixture file is unreadable, unparseable, or does not match the format. */
-export class EmailFixtureError extends Error {
+class EmailFixtureError extends Error {
   constructor({ fixturePath, detail }: { fixturePath: string; detail: string }) {
     super(`Email fixture ${fixturePath}: ${detail}`);
     this.name = "EmailFixtureError";

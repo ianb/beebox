@@ -158,7 +158,7 @@ export function parseCardText(
  * doesn't match — a broken invariant, since callers pass the schema the card
  * was loaded under. Named (not a bare `Error`) so the mismatch is inspectable.
  */
-export class CardTypeMismatchError extends Error {
+class CardTypeMismatchError extends Error {
   readonly expected: string;
   readonly actual: string;
   constructor(expected: string, actual: string) {
@@ -175,7 +175,7 @@ export class CardTypeMismatchError extends Error {
  * fields do not satisfy the requested (built-in) schema. Carries the type and
  * the formatted zod issues for inspection.
  */
-export class CardSchemaOverrideMismatchError extends Error {
+class CardSchemaOverrideMismatchError extends Error {
   readonly cardType: string;
   readonly issues: string;
   constructor(cardType: string, issues: string) {

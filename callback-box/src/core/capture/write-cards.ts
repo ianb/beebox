@@ -23,6 +23,9 @@ import { concatSegmentChunks } from "./audio-concat.js";
 import { computeEntry, saveManifest, emptyManifest } from "../asset-manifest.js";
 import type { StagingSession, StagingSegment, StagingPhoto, StagingFile } from "./staging-store.js";
 import { M4ASegmentFileCountError } from "./audio-format.js";
+import { CardIOError, parseCardText, serializeCardText } from "../card-io.js";
+import { createCardSchemaMap } from "../../schemas/registry.js";
+import { withCardLock } from "../../lib/card-lock.js";
 
 /**
  * Accumulates the media + cards written for one session, tracking which paths
@@ -120,7 +123,7 @@ export async function writeAudioCards(opts: {
 }
 
 /** Create image cards + copy media files. */
-export async function writeImageCards(opts: {
+async function writeImageCards(opts: {
   builder: SessionBuilder;
   sessionDir: string;
   photos: StagingPhoto[];
@@ -158,7 +161,7 @@ export async function writeImageCards(opts: {
 }
 
 /** Copy uploaded files + create file cards. */
-export async function writeFileCards(opts: {
+async function writeFileCards(opts: {
   builder: SessionBuilder;
   sessionDir: string;
   files: StagingFile[];
@@ -273,4 +276,35 @@ export async function writeCaptureDocument(opts: {
     audioCount: builder.audioRefs.length,
     fileCount: builder.fileRefs.length,
   };
+}
+
+/**
+ * Write (or clear) the capture-session card's `transcription-failed` flag to
+ * match this run's outcome. The schema declares the field optional, so it is
+ * present only while it is true — a re-fire whose transcription succeeded
+ * removes a stale flag. Idempotent: an already-matching card is not rewritten.
+ */
+export async function recordTranscriptionOutcome(opts: {
+  sessionCardAbsPath: string;
+  transcriptionFailed: boolean;
+}): Promise<void> {
+  const { sessionCardAbsPath, transcriptionFailed } = opts;
+  await withCardLock(sessionCardAbsPath, async () => {
+    const content = await fs.readFile(sessionCardAbsPath, "utf-8");
+    let parsed;
+    try {
+      parsed = parseCardText(content, { source: sessionCardAbsPath, schemas: await createCardSchemaMap() });
+    } catch (e) {
+      // An unparseable card (a resume over a corrupt/pre-seeded one) is step
+      // e's job to report and dead-end; a diagnostic flag must not pre-empt
+      // that with a raw throw.
+      if (!(e instanceof CardIOError)) throw e;
+      console.warn(`[capture] Could not record the transcription outcome on ${sessionCardAbsPath}:`, e);
+      return;
+    }
+    if ((parsed.fields["transcription-failed"] === true) === transcriptionFailed) return;
+    if (transcriptionFailed) parsed.fields["transcription-failed"] = true;
+    else delete parsed.fields["transcription-failed"];
+    await fs.writeFile(sessionCardAbsPath, serializeCardText({ schema: parsed.schema, fields: parsed.fields }));
+  });
 }

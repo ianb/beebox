@@ -29,7 +29,7 @@ const publishConfigSchema = z
 export type PublishConfig = z.infer<typeof publishConfigSchema>;
 
 /** The on-disk home: non-secret, committed with the box config. */
-export function publishConfigPath(boxRoot: string): string {
+function publishConfigPath(boxRoot: string): string {
   return path.join(boxRoot, "config", "publish.json");
 }
 

@@ -43,10 +43,6 @@ const MOVE_ADVICE =
   "(a sibling doc, a nested CLAUDE.md, a .claude/rules/ glob, or a skill). " +
   "See docs/generated/reducing-claude-md.md for concrete strategies.";
 
-export function isClaudeMdFile(filePath: string): boolean {
-  return path.basename(filePath) === CLAUDE_MD;
-}
-
 /**
  * Return a soft warning line if the CLAUDE.md is large, else null. Two tiers:
  * a gentle nudge at {@link CLAUDE_MD_WARN_CHARS}, firmer language at
@@ -84,7 +80,7 @@ export async function lintClaudeMdFile(boxRoot: string, absPath: string): Promis
 }
 
 /** Recursively find every CLAUDE.md in the box, skipping vendored/infra dirs. */
-export async function findClaudeMdFiles(dir: string): Promise<string[]> {
+async function findClaudeMdFiles(dir: string): Promise<string[]> {
   const entries = await fs.readdir(dir, { withFileTypes: true }).catch(() => null);
   if (entries === null) return [];
   const results: string[] = [];

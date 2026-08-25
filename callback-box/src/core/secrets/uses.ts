@@ -116,11 +116,6 @@ export function secretUsesFor(opts: {
   return { builtin, declared, observed: opts.purposes ?? [] };
 }
 
-/** Nothing is known about why this secret exists — no source has anything. */
-export function secretUsesAreEmpty(uses: SecretUses): boolean {
-  return uses.builtin.length === 0 && uses.declared.length === 0 && uses.observed.length === 0;
-}
-
 /**
  * The three sources as printable lines, for `cb secrets status` and anything
  * else writing them to a terminal. Each source is labelled rather than merged:

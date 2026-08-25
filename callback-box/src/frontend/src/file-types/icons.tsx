@@ -64,13 +64,6 @@ export function DirectoryIcon(props: IconProps) {
   });
 }
 
-export function DataIcon(props: IconProps) {
-  return stroke({
-    size: props.size,
-    d: "M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3v12c0 1.7-3.6 3-8 3s-8-1.3-8-3V6zM4 6c0 1.7 3.6 3 8 3s8-1.3 8-3M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3",
-  });
-}
-
 export function JobIcon(props: IconProps) {
   return stroke({
     size: props.size,

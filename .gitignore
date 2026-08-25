@@ -99,3 +99,8 @@ callback-box/user-stories/pipeline/*.workflow.mjs
 # Anonymized mail stays out until the boxholder has read it, since it is derived
 # from a real family's inbox — prepare.ts fails loudly naming anything absent.
 callback-box/user-stories/journeys/E-school/assets/
+
+# Embedding/search cache for `bin/issues` (see bin/CLAUDE.md). Disposable: a
+# delete just means the next run re-embeds the whole queue, which costs money
+# rather than correctness.
+/.issues-index

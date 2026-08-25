@@ -31,7 +31,7 @@
 // unaffected; the union/serialization logic below still owns them.
 import { ACTIVITY_KINDS, type ActivityKind } from "../../shared/card-activity-kinds.js";
 
-export { ACTIVITY_KINDS, type ActivityKind };
+export { type ActivityKind };
 
 const ACTIVITY_KIND_SET: ReadonlySet<string> = new Set(ACTIVITY_KINDS);
 
