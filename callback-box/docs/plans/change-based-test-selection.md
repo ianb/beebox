@@ -1,7 +1,7 @@
 ---
 title: "Test failure ledger, and change-based selection on the iteration loop"
 status: partial
-workstream: unknown
+workstream: test-economics
 issues: []
 ---
 # Test failure ledger, and change-based selection on the iteration loop
@@ -439,6 +439,189 @@ elapsed.
 **The nightly** (`bin/manual-tests-scheduled.sh`'s shape) runs the full suite
 from `main` and appends to the same ledger, so `main` breakage that no branch ran
 is captured too.
+
+---
+
+## Revision 2026-08-25 — test economics
+
+The tracks above were written when the value was a speedup and the risk posture
+was "unaccounted → run everything." Sixteen days of ledger data and a decision
+by the boxholder replace that posture. This section supersedes Tracks 2, 4 and
+5b where they conflict; Tracks 1, 3 and 5a stand as landed.
+
+### What the ledger showed (546 runs, 2026-08-09 → 08-25)
+
+Each run's window was estimated from its timestamp and per-file durations
+(`jobs: 6`); a run is *concurrent* if another run's window overlaps it.
+
+| full runs | n | red | unimplicated failures | median wall |
+| --- | ---: | ---: | ---: | ---: |
+| solo | 256 | 18% | 215 | 2.4 min |
+| concurrent (max 8 at once) | 87 | 46% | 367 | 5.4 min |
+
+- A quarter of full runs, run under contention, produced 63% of all
+  unimplicated failures and each took 2.2× as long. Queued is faster than
+  parallel here, and greener.
+- Of the 255 unimplicated failures on **solo** runs, 87 passed at the identical
+  tree hash (flake by definition); most of the rest are the `test/frontend/*`
+  thirteen-file block failing as one loader event, one 291-failure run with a
+  broken environment, and a persistent timing-sensitive set —
+  `test/core/box/file-watcher`, `test/hub/hub-e2e`, `test/lib/git-lock`,
+  `test/field-test/run`, `test/field-test/lifecycle`. **No clear case was found
+  of a full run catching an unexpected interaction bug in unrelated code.**
+  (Caveat: a real failure fixed by the next commit is indistinguishable from a
+  flake in this data; this is absence of evidence.)
+- The cost is volume: 343 full runs across 56 branches — median 4 per branch,
+  max 31, 12 of them on a tree already recorded green — 28 wall-hours.
+
+### The decision
+
+Stated by the boxholder, recorded here so the plan carries its own risk
+appetite rather than the earlier one:
+
+- Test things that matter. Fast, useful tests; not tests run constantly
+  because it is "the right way."
+- Iteration runs affected tests only. **No full suite at merge.** A failure
+  occasionally reaching `main` is acceptable provided it is caught within
+  roughly a day; agents can reconstruct what happened and fix up.
+- Full runs are batched — every ~10 landings or every hour, whichever first.
+- Flaky tests are not deleted for being a nuisance; they run less often and
+  more carefully.
+
+### Mechanism
+
+**A. Machine-wide run semaphore, in the ledger wrapper.** `bin/test-ledger.ts
+run` already wraps every `pnpm test` and already owns a location in the shared
+git common dir. It gains a lock: **2 slots** for ordinary runs; a *careful* run
+takes **both**, so it starts only when nothing else is running. Lock files
+`<common-dir>/callback-test-locks/<slot>` carry a pid and are stale when the
+pid is dead, written before the current boot (`sysctl kern.boottime`), or
+older than any run could be (2 h) — pid liveness alone wedges on pid reuse
+after a reboot, the same hardening `bin/schedules`' run lock already carries.
+**A waiting exclusive run is a barrier:** once a careful run is queued, new
+ordinary runs queue behind it rather than taking freed slots, otherwise a
+steady stream of iteration runs starves it forever. A queued run prints one line — `test-ledger: waiting for slot
+(held by pid N, branch X, since T)` — then nothing until it starts. Every
+record gains `concurrency: <runs live at start>` so the table above never has
+to be estimated again. One slot was rejected as inviting lockups (a wedged run
+holding the only slot blocks everything); two bounds contention below the
+thrash point measured above while a stale-pid check bounds the wedge.
+
+**B. Selection, permissive.** `bin/test-select` per Track 2, with the rule
+changed:
+
+```
+selected = alwaysRun ∪ graph.unresolved ∪ changedTests ∪ implicated
+```
+
+and **no `FULL` fallback.** An unaccounted path contributes nothing. If the
+result is empty the selector prints `no test imports the changed paths` and
+exits 0 having run nothing — that is the honest statement. tap is not
+invoked at all in that case (a bare `tap` would fall back to `.taprc`'s
+includes and run everything), so the wrapper cannot parse a TAP summary; the
+selector appends the ledger record itself — `mode: "selected"`, empty
+`ranFiles`, no failures — so the gap is counted, not hidden, and prints a
+synthetic `# { total: 0, pass: 0, selected: 0 }` line so `/finish`'s
+summary-line parse (`.claude/agents/finish.md:170-172`) has something to read
+and treats it as green with a stated reason. `record()`'s current
+"TAP output named no test files" error stays for the tap path.
+
+**`treeHash` must hash content, not status.** Today it hashes `HEAD^{tree}`
+plus porcelain *text* (`bin/test-ledger.ts:75-77`), so fail → edit the same
+dirty file → pass keeps one hash and the flake derivation calls a real fix a
+flake. Under full runs that was tolerable; with selected runs the derivation
+is the only flake signal, so it is fixed first: hash `git diff HEAD` plus the
+`git hash-object` of each untracked file. Careful-tier files (C) are dropped from the selection
+unless the test file itself changed. `test:changed` is the agent's iteration
+command; the "full on first invocation per branch" rule from Track 4 is
+dropped. Internal error still exits non-zero, and callers treat that as "run
+`pnpm test`."
+
+**C. Careful tier.** A committed list, `callback-box/test/careful.txt`, one
+test path per line, seeded from the ledger's flake set (the files named above
+plus the `test/frontend/*` block only if its loader failure recurs after the
+semaphore lands — that block is load, not flake). `.taprc` cannot express it,
+and shell expansion of file lists in `package.json` is fragile (a list that
+expands to nothing leaves a bare `tap` running everything), so the ledger
+wrapper — already in front of every tap invocation — builds the argv:
+`test-ledger run --tier ordinary -- tap` appends every `.taprc`-included
+file not in `careful.txt`; `--tier careful` appends the list, forces `-j1`,
+and takes the exclusive lock. A listed path that no longer exists fails the
+run loudly rather than silently shrinking the tier. Membership is a
+judgment, not an automatic demotion: `bin/test-ledger report` prints
+candidates (flake share over the last N runs) and a human moves lines.
+A careful test that starts failing in the batched run is a real signal, since
+it ran alone on an idle machine.
+
+**D. Batched full run — `schedules/full-suite/`.** Replaces Track 5b's nightly
+and the full run `/finish` performs today. `bin/schedules` computes due-ness
+from cadence only (`bin/CLAUDE.md`, "Due-ness is computed"); a schedule's
+`check` is a post-run validator, not a due hook. So: `cadence: 1h`, and `run`
+decides whether there is work — it reads the last full-suite record on `main`
+from the ledger and exits via `bin/schedules done` when no landing has
+arrived since. The "every 10 landings" half of the rule is dropped; hourly
+with a landing is the batch, and a burst of landings inside an hour is one
+run. `run` **pins the commit at start** — `git rev-parse main` once, then
+runs in a detached worktree of that commit, not the live main checkout — so
+a landing that arrives mid-run is neither tested nor marked tested; it is
+the next hour's work. The ledger call passes `--base <last tested commit>`
+so `changed` is the landed range (on `main`, `main...HEAD` is empty and
+`implicated` would otherwise be nothing), which is what makes `unimplicated`
+on these runs a real meter. It runs `pnpm test` then `pnpm test:careful`
+under the semaphore, the careful half exclusive.
+
+On red, in order: an *environment* failure (more than ~20 files, or the
+loader block) raises one alert and does not bisect; a file that passes on
+its isolated re-run is recorded as flake and does not open an issue (it
+does count toward C's candidates); a file the ledger already shows with a
+high flake share is treated the same even if it fails twice. What remains is
+bisected over **landings only** — `git log --first-parent <last tested>..<pinned>`,
+~a few candidates, one branch each — and files one issue per failing landing
+naming the landing commit, the workstream from its subject (`Merge branch
+'worktree-<name>'`; landing merges carry no `Workstream:` trailer, the
+branch's own commits do), and the failing files, then reports via
+`bin/schedules alert`. It does not fix anything; the workstream's own agent
+does the fixup.
+
+**E. `/finish` verifies with `test:changed`**, not `pnpm test`. The tracked-flake
+protocol and the one-re-run limit stay, applied to the selected set. Guidance
+(`callback-box/CLAUDE.md:11`, `cb-guide-testing`, `doctest`) becomes: iterate
+with `pnpm test:changed` or a named file; `pnpm test` is what the schedule
+runs, and an agent reaching for it should say why.
+
+### What this costs, stated
+
+- Integration breakage now surfaces up to ~1 h (or 10 landings) after merge,
+  on `main`, as a filed issue rather than a blocked merge. The boxholder has
+  priced this as acceptable; the ledger's `unimplicated` count on schedule
+  runs is the meter, and if it rises the dial to turn is the batch size, not
+  the posture.
+- A branch that touches only untested code merges with no test having run.
+  That was already true in substance (the tests that ran did not import the
+  change); it is now visible in the ledger as an empty `ranFiles`.
+- Two lists to maintain (`alwaysRun`, generated; `careful.txt`, curated).
+- Cross-model review (Codex, 2026-08-25) found the gaps now folded in above:
+  the empty-selection record, content-based `treeHash`, pid-reuse and
+  exclusive-starvation in the lock, the due-hook that does not exist, the
+  pinned commit and `--base` for the schedule, argv building for the tiers,
+  and flake/environment handling before bisect.
+
+### Expected effect
+
+Full runs machine-wide drop from ~21/day to ~4–8/day, each ~2× faster
+without contention; iteration runs go from the suite (2.4–5 min) to a median
+13% of it or a single file. The instrument keeps measuring whether the
+escapes the posture accepts actually happen.
+
+### Order
+
+1. **A** (self-contained; lands first because it also cleans the ledger's
+   signal for C).
+2. **B** + Track 3's `alwaysRun` generator, with `test:changed`.
+3. **C** — `careful.txt` seeded from the current report.
+4. **D** — the schedule, with bisect + issue filing.
+5. **E** — `/finish` and guidance, last, because it is the point where agent
+   behavior changes.
 
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: "Run less of the full suite — map changes to the tests that could break"
-workstream: unknown
+workstream: test-economics
 area: callback-box
 needs: [design]
 design: ../../callback-box/docs/plans/change-based-test-selection.md
