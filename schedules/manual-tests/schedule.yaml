@@ -1,0 +1,34 @@
+description: "Weekly run of the manual test suite, triaged into issues/"
+cadence: 7d
+workstream:
+  agent: claude
+  model: sonnet
+  worktree: true
+  # Nothing carries between weeks: each run triages its own failures, and the
+  # issue queue is the memory.
+  session: fresh
+  permissionMode: dontAsk
+  # The triager reads and writes issue files and nothing else. `Bash` is here
+  # only for the reporting contract — `allowedTools` below admits exactly two
+  # commands, both of them `bin/schedules` reports. Everything the agent is
+  # meant to touch is an Edit under `issues/`.
+  tools: [Read, Grep, Glob, Edit, Write, Bash]
+  allowedTools:
+    - "Read(issues/**)"
+    - "Read(callback-box/**)"
+    - "Read(bin/**)"
+    - "Read(package.json)"
+    - "Read(pnpm-lock.yaml)"
+    - "Edit(issues/bugs/**)"
+    - "Edit(issues/features/**)"
+    - "Edit(issues/code-quality/**)"
+    - "Edit(issues/docs-and-chores/**)"
+    - "Edit(issues/decisions/**)"
+    - "Edit(issues/exploration/**)"
+    - "Edit(issues/watch/**)"
+    - "Bash(bin/schedules alert:*)"
+    - "Bash(bin/schedules done:*)"
+  disallowedTools:
+    - "Read(private-issues/**)"
+    - "Edit(private-issues/**)"
+  maxBudgetUsd: 2

@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Thin shim: check.ts holds the logic (TypeScript, run via tsx) — the bin/schedules shape.
+exec node --import tsx "$(dirname "$0")/check.ts" "$@"
