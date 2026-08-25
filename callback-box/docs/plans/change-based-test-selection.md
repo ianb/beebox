@@ -655,7 +655,10 @@ act on what they print":
   after a post-green commit is the same command; it re-selects.
 
 Both are TypeScript under `bin/` with tests, like `test-ledger`. The agent
-file is then rewritten around them — kept are the rules that need judgment
+file is then rewritten around them **under a budget: at most 150 lines**,
+against 562 today — instruction files only ever grow, so the rewrite is a
+cut, and anything mechanical that would push it over the budget goes into a
+script instead — kept are the rules that need judgment
 (Track O's checklist, plan reconciliation, issue closing, the BLOCKED
 contract, the report); removed are the mechanics the scripts now own. The
 dispatcher skill passes the sheet's inputs (straggler intent, issues) as it
