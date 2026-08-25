@@ -22,4 +22,4 @@ workspace ownership in `groupOf`, matching what `packageOf`
 the full directory list rather than top-level names.
 
 Found by a cross-model review of
-[the lint economics work](closed/code-quality/2026-08-25-lint-runs-contend-like-tests.md).
+[the lint economics work](../closed/code-quality/2026-08-25-lint-runs-contend-like-tests.md).
