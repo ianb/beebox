@@ -5,7 +5,10 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-chat-history-oom-mobile-lock — Track A of docs/plans/chat-history-oom-mobile-lock.md
 priority: normal
+resolution: implemented
 ---
+
+**Closed 2026-08-25** — resolved by commits f7d24973 / b093062b (workstream chat-history-scale). See the "Fixed (2026-08-25)" section below for what shipped.
 
 `parseSessionLog` no longer retains a whole transcript (that OOM'd `cb serve`
 in prod on 2026-08-01). Every caller now names a bounded slice, capped at

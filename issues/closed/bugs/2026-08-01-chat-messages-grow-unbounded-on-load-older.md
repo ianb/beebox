@@ -5,7 +5,10 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-chat-history-oom-mobile-lock — post-fix sweep
 priority: normal
+resolution: implemented
 ---
+
+**Closed 2026-08-25** — resolved by commits f7d24973 / b093062b (workstream chat-history-scale). See the "Fixed (2026-08-25)" section below for what shipped.
 
 `callback-box/src/frontend/src/machines/chatMachine.ts` `PREPEND_MESSAGES`
 does `[...event.messages, ...context.messages]` — each load-older page is

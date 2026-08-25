@@ -4,7 +4,10 @@ workstream: chat-history-scale
 area: callback-box
 filed-by: agent
 discovered-in: worktree-chat-history-oom-mobile-lock — post-fix sweep
+resolution: implemented
 ---
+
+**Closed 2026-08-25** — resolved by commits f7d24973 / b093062b (workstream chat-history-scale). See the "Fixed (2026-08-25)" section below for what shipped.
 
 Two append-forever JSONL stores are read whole into memory and never rotated:
 
