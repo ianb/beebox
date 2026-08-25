@@ -12,6 +12,7 @@ The four outcomes:
 `pruneStaleTemplateUpdates` sweeps parked files older than 30 days (configurable) so the review pile doesn't accumulate cruft indefinitely.
 
 ```ts setup
+import { createHash } from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
@@ -209,6 +210,44 @@ const result = await installTemplateFile({
   boxRoot: box,
   relPath: "config/x.card",
   templateContent: "v2\n",
+});
+result.outcome
+=> parked
+```
+
+Unless the old version is one we *can* recognise. `priorStockHashes` names
+stock content shipped before this file was tracked, so a box still carrying it
+takes the update instead of parking — the case that otherwise leaves the
+longest-running boxes silently frozen on old templates.
+
+```ts
+const box = await makeBox();
+await fs.mkdir(path.join(box, "config"), { recursive: true });
+await fs.writeFile(path.join(box, "config/x.card"), "old stock\n");
+const oldStock = createHash("sha256").update("old stock\n").digest("hex");
+const result = await installTemplateFile({
+  boxRoot: box,
+  relPath: "config/x.card",
+  templateContent: "v2\n",
+  priorStockHashes: [oldStock],
+});
+print(`${result.outcome}: ${await fs.readFile(path.join(box, "config/x.card"), "utf-8")}`.trim());
+=>
+overwritten: v2
+```
+
+A hash that isn't listed still parks — the mechanism widens what counts as
+recognised stock, it doesn't stop protecting edited files.
+
+```ts
+const box = await makeBox();
+await fs.mkdir(path.join(box, "config"), { recursive: true });
+await fs.writeFile(path.join(box, "config/x.card"), "someone's edit\n");
+const result = await installTemplateFile({
+  boxRoot: box,
+  relPath: "config/x.card",
+  templateContent: "v2\n",
+  priorStockHashes: [createHash("sha256").update("old stock\n").digest("hex")],
 });
 result.outcome
 => parked

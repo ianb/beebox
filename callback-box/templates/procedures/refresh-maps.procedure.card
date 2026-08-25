@@ -148,7 +148,7 @@ steps:
 
             GIT: Do NOT add Co-Authored-By to commits. The system adds the
             appropriate trailers automatically.
-          model: efficient
+          model: balanced
           max-turns: 40
       shells:
         - |-
