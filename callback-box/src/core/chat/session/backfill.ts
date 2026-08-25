@@ -6,11 +6,10 @@
  */
 
 import { makeLog } from "./log.js";
-import * as readline from "node:readline";
-import { createReadStream } from "node:fs";
 import { isRecord } from "../../card-io.js";
 import { listSessionRoots, readHistoryFile, writeHistoryFile, withHistoryLock } from "./history.js";
 import { listSessionFilesInDir } from "./transcript-paths.js";
+import { readTranscriptLines } from "../../../cli/lib/session-lines.js";
 
 const log = makeLog("chat-history");
 
@@ -19,44 +18,40 @@ const log = makeLog("chat-history");
  * `<typed>` tags). Streams the file and returns on first match.
  */
 async function logHasWebChatMarkers(logPath: string): Promise<boolean> {
-  const fileStream = createReadStream(logPath, { encoding: "utf-8" });
-  const rl = readline.createInterface({
-    input: fileStream,
-    crlfDelay: Infinity,
-  });
-  try {
-    for await (const line of rl) {
-      if (!line.trim()) continue;
-      let raw: { type?: string; message?: { content?: unknown } };
-      try {
-        raw = JSON.parse(line);
-      } catch (e) {
-        // Tolerate a malformed JSONL line (partial write, truncation) — skip
-        // it and keep scanning the rest of the log for chat markers.
-        console.warn(`[chat-history] Skipping unparseable line in ${logPath}: ${e instanceof Error ? e.message : String(e)}`);
-        continue;
-      }
-      if (raw.type !== "user") continue;
-      const content = raw.message?.content;
-      const blocks: Array<{ type?: string; text?: string }> =
-        typeof content === "string"
-          ? [{ type: "text", text: content }]
-          : Array.isArray(content)
-            ? content.filter(isRecord).map((item) => ({
-                ...(typeof item.type === "string" ? { type: item.type } : {}),
-                ...(typeof item.text === "string" ? { text: item.text } : {}),
-              }))
-            : [];
-      for (const block of blocks) {
-        if (block.type !== "text" || typeof block.text !== "string") continue;
-        if (block.text.includes("<speech") || block.text.includes("<typed")) {
-          return true;
-        }
+  for await (const scanned of readTranscriptLines(logPath)) {
+    // A line still past the byte bound with its images gone is an enormous text
+    // turn. This runs once per transcript over every session on the box, and a
+    // `<speech>`/`<typed>` marker sits in ordinary text — not worth the object
+    // graph that parsing such a line would build (`cli/lib/session-lines.ts`).
+    if (scanned.kind === "oversize") continue;
+    const line = scanned.text;
+    if (!line.trim()) continue;
+    let raw: { type?: string; message?: { content?: unknown } };
+    try {
+      raw = JSON.parse(line);
+    } catch (e) {
+      // Tolerate a malformed JSONL line (partial write, truncation) — skip
+      // it and keep scanning the rest of the log for chat markers.
+      console.warn(`[chat-history] Skipping unparseable line in ${logPath}: ${e instanceof Error ? e.message : String(e)}`);
+      continue;
+    }
+    if (raw.type !== "user") continue;
+    const content = raw.message?.content;
+    const blocks: Array<{ type?: string; text?: string }> =
+      typeof content === "string"
+        ? [{ type: "text", text: content }]
+        : Array.isArray(content)
+          ? content.filter(isRecord).map((item) => ({
+              ...(typeof item.type === "string" ? { type: item.type } : {}),
+              ...(typeof item.text === "string" ? { text: item.text } : {}),
+            }))
+          : [];
+    for (const block of blocks) {
+      if (block.type !== "text" || typeof block.text !== "string") continue;
+      if (block.text.includes("<speech") || block.text.includes("<typed")) {
+        return true;
       }
     }
-  } finally {
-    rl.close();
-    fileStream.destroy();
   }
   return false;
 }
