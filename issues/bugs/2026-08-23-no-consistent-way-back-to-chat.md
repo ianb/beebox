@@ -1,13 +1,23 @@
 ---
 title: "No consistent way back to chat from browse or a card page — worst on iOS, where there is no browser chrome"
-workstream: unattached
+workstream: chat-wayfinding
 area: callback-box
 labels: [navigation, mobile, ios, ui]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder stuck on a card page on iOS
 priority: important
+needs: [manual-testing]
 ---
+
+## Manual testing
+
+Both halves shipped in `8d80ef30`, verified so far only in the running app via `bin/browse` (web) and simulator unit tests + a compile (iOS) — the iOS chevron has never run on a physical device, and the original report came from the boxholder's phone. Needs, on an actual iPhone:
+
+- Tap into a card from chat, confirm a chevron appears on the webview's leading edge.
+- Tap it, confirm it returns to the chat session you left (not the landmark's newest chat).
+- Confirm the web "Chat" chip appears in the app bar on non-chat pages when this tab has been in a chat, and returns to the right session.
+
 
 Getting from chat into a card or the browse view is easy and has several
 routes. Getting back is not, and on iOS there is no visible route at all.
@@ -63,3 +73,30 @@ and has to know the gesture.
   (`FileView.tsx:296`), noted in
   [PDFs and document cards have no real view](../closed/features/2026-08-23-pdf-and-document-cards-have-no-real-view.md).
   Entry and exit are both thin; the exit is thinner.
+
+## Decided and built (2026-08-25)
+
+The boxholder answered the two open questions.
+
+- **What "back" promises: the exact session you left.** The chat page records
+  the session this tab is in (`frontend/src/lib/last-chat.ts`, per tab, per
+  box, `sessionStorage`); every other page reads it. That is a different
+  promise from the switch menu's "newest chat in this landmark", which is why
+  the menu was never the answer.
+- **Where it lives: a contextual chip, not a nav item.** `BackToChatChip`
+  renders in the app bar beside the place pill, only off the chat page and only
+  when this tab has actually been in a chat. The no-link-row decision is about
+  *permanent* navigation; a return path that exists only when there is
+  something to return to is not that.
+- **iOS gets a native chevron.** A floating control on the webview's leading
+  edge, bound to `WKWebView.canGoBack` (observed by KVO, since the web client
+  routes client-side and `pushState` never fires `didFinish`). No bridge or
+  contract change — the shell reads its own history — so the mobile-contract
+  question the issue raised does not arise. It marks where the invisible
+  edge-swipe already is, and is the floor under the web chip for a page that
+  forgets to offer one.
+
+The switch menu's half of this — switching to a landmark coining a second empty
+chat instead of returning you to the one you left — is fixed with
+[the landmark-switch issue](../closed/bugs/2026-08-20-cannot-switch-landmarks-from-chat.md),
+which turned out to share a cause.
