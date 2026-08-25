@@ -22,9 +22,15 @@ import { UserMessageText } from "./user-message-text";
 
 /**
  * Thumbnail + lightbox for an inline image in a user message bubble.
+ *
+ * Lazy on purpose. A photo that stayed in the transcript is fetched per image
+ * (`shared/session-media.ts`), so an old conversation full of them would
+ * otherwise fire a request per photo the moment its history arrived. `lazy`
+ * defers each one until it is near the viewport, which means scrolling back
+ * costs a photo at a time and the ones never reached cost nothing.
  */
 function MessageImage({ src, alt }: { src: string; alt: string }) {
-  return <Image src={src} alt={alt} size="sm" lightbox bordered className="my-1" />;
+  return <Image src={src} alt={alt} size="sm" lightbox bordered className="my-1" loading="lazy" />;
 }
 
 /**

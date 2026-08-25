@@ -1,6 +1,6 @@
 ---
 title: "A reloaded conversation shows [image not displayed] where your photos were"
-workstream: unattached
+workstream: live-vs-stored
 area: callback-box
 labels: [journey-findings]
 filed-by: agent
@@ -31,10 +31,34 @@ The wording is fixed: it now reads `[image not displayed]` rather than
 `[image unavailable]`, which described a fault to someone whose images were
 fine when they sent them. That is a smaller claim and a true one.
 
-What remains is whether the original should be recoverable at all — the box
-has the photograph, since it was uploaded; only the inline copy in the session
-log was stripped. If the two can be reconnected, the placeholder could show the
-stored image instead of standing in for it — which would make this disappear
-rather than merely read better.
+## Fixed (2026-08-25) — the placeholder became the photograph
+
+The filing's guess about *where* the photo survives was wrong in a way that made
+the fix easier, not harder. The box does **not** hold a copy: a composer photo
+goes straight into the SDK's transcript line as base64 and is stored nowhere
+else. But `stripInlineMedia` runs at **read** time — it removes the payload from
+the line the scan is holding, and never touches the file. The bytes were still
+on disk the whole time.
+
+So the reader now emits the photo's coordinates instead of a placeholder —
+`<sessionId>/<entryUuid>/<index>` (`src/shared/session-media.ts`) — and
+`GET /api/session-media/<ref>` reads that one line back out and serves that one
+image (`src/webapp/routes/api-session-media.ts`). The history path still carries
+no image bytes, so the OOM this trade-off was protecting against stays fixed.
+
+Per the boxholder: the image loads **on demand**. The block renders as a lazy
+`<img>`, so an old photo further back in the scrollback is fetched only when it
+is scrolled to, and never at all otherwise.
+
+One deliberate behavior change came with it: a user turn whose *only* content is
+an image is now dropped from history, as a normally-sized one always was. Such a
+turn used to survive by accident, because stripping left a text placeholder and
+the plumbing filter looks for text. Nothing a person sends is affected — chat
+wraps every message in `<typed>`/`<speech>` before it reaches the log, so a real
+photo turn carries text with or without a caption.
+
+Still a placeholder, correctly: an image block whose bytes never arrived (a
+failed upload). Nothing was stripped from that line, so there is nothing to
+point at, and it still reads `[image not displayed]`.
 
 Related: [implementation-vocab-leaks-into-ui](2026-08-08-implementation-vocab-leaks-into-ui.md).

@@ -82,8 +82,14 @@ export function isOversizeLine(line: string): boolean {
  * The 1024-character floor keeps the match well clear of any short legitimate
  * `data` field while sitting far below a real image (the smallest photo through
  * the chat's own downscale is a few hundred KB).
+ *
+ * Exported because the session-media route strips the same payloads for the
+ * opposite reason — it wants one of them, and blanks the rest to reach it
+ * cheaply (`session-media-extract.ts`). One pattern, so "what counts as a
+ * payload" cannot drift between the reader that drops them and the reader that
+ * serves them. Group 1 is the key, group 2 the payload.
  */
-const BASE64_PAYLOAD_RE = /"(data|base64)":"[\d+/=A-Za-z]{1024,}"/g;
+export const BASE64_PAYLOAD_RE = /"(data|base64)":"([\d+/=A-Za-z]{1024,})"/g;
 
 /**
  * Remove image payloads from a raw line, returning null when there were none.

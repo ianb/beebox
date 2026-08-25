@@ -57,6 +57,7 @@ const sessionContentBlockSchema = z.object({
   mediaType: z.string().optional(),
   dataBase64: z.string().optional(),
   imageUrl: z.string().optional(),
+  imageRef: z.string().optional(),
 });
 
 /**

@@ -7,6 +7,7 @@
 
 import { type KnownToolName, isKnownTool } from "../../shared/known-tools.js";
 import { IMAGE_NOT_DISPLAYED } from "../../shared/chat-content-blocks.js";
+import { encodeSessionMediaRef } from "../../shared/session-media.js";
 import { isRecord } from "../../lib/is-record.js";
 
 /**
@@ -28,6 +29,14 @@ export interface SessionContentBlock {
   dataBase64?: string;
   /** For image blocks with URL source */
   imageUrl?: string;
+  /**
+   * For image blocks whose inline bytes were stripped on the way in: where to
+   * fetch them from, as the `<sessionId>/<entryUuid>/<index>` path the
+   * session-media route takes (`shared/session-media.ts`). The bytes are still
+   * in the transcript; this is how a client asks for that one image without
+   * the history read carrying any of them.
+   */
+  imageRef?: string;
 }
 
 /** Per-tool input summarizers, keyed on the shared tool vocabulary. */
@@ -76,8 +85,17 @@ export function summarizeToolResult(content: unknown): string {
   return "";
 }
 
-/** Build a SessionContentBlock from a raw image block, or null if not an image. */
-function imageBlock(block: Record<string, unknown>): SessionContentBlock {
+/**
+ * Where a stripped image can be fetched from, when this scan knows: the
+ * session and entry naming the line, plus the ordinal of the image within it.
+ */
+interface ImageBlockContext {
+  mediaRef: { sessionId: string; entryUuid: string } | null;
+  index: number;
+}
+
+/** Build a SessionContentBlock from a raw image block. */
+function imageBlock(block: Record<string, unknown>, context: ImageBlockContext): SessionContentBlock {
   // Preserve image blocks so user-pasted images render in history.
   // PDF-reading plumbing (user-role turns containing only images) is
   // filtered at the message level by callers — turns with no text content
@@ -94,6 +112,20 @@ function imageBlock(block: Record<string, unknown>): SessionContentBlock {
   // were fine when they sent them and whose work from those images is still there.
   // "Unavailable" reads as loss; "not displayed" is what actually happened.
   if (source?.["type"] === "base64" && !source["data"]) {
+    // Stripped by the oversize guard: the photo is still in the transcript, so
+    // hand back its coordinates instead of a placeholder. The client fetches
+    // the bytes only if this image is ever actually looked at, which is what
+    // keeps a long scrollback from paying for photographs nobody scrolls to.
+    if (context.mediaRef !== null) {
+      const stripped: SessionContentBlock = {
+        type: "image",
+        imageRef: encodeSessionMediaRef({ ...context.mediaRef, index: context.index }),
+      };
+      if (source["media_type"]) stripped.mediaType = String(source["media_type"]);
+      return stripped;
+    }
+    // Nothing was stripped from this line, so the block is empty because the
+    // bytes never arrived. There is no image to point at.
     return { type: "text", text: IMAGE_NOT_DISPLAYED };
   }
   const imgBlock: SessionContentBlock = { type: "image" };
@@ -107,16 +139,37 @@ function imageBlock(block: Record<string, unknown>): SessionContentBlock {
   return imgBlock;
 }
 
+/** What a scan can tell {@link transformContent} about the line it came from. */
+export interface TransformContentOptions {
+  /**
+   * The line's identity, when its image payloads were stripped on the way in.
+   * Null for every ordinary line — see {@link ImageBlockContext}.
+   */
+  mediaRef: { sessionId: string; entryUuid: string } | null;
+}
+
 /**
  * Transform raw message content into SessionContentBlocks.
+ *
+ * `options` is optional because most callers (the CLI's own renderers) read a
+ * transcript they will never serve over HTTP, and have no session to name.
+ * Those get today's behavior exactly: a stripped image stays a placeholder.
  */
-export function transformContent(content: unknown): SessionContentBlock[] {
+export function transformContent(
+  content: unknown,
+  options?: TransformContentOptions
+): SessionContentBlock[] {
   if (typeof content === "string") {
     return [{ type: "text", text: content }];
   }
 
   if (!Array.isArray(content)) return [];
 
+  const mediaRef = options?.mediaRef ?? null;
+  // Counts image blocks only, in document order: the ordinal half of a media
+  // reference. `session-media-extract.ts` enumerates the same array the same
+  // way to find its way back, so the two must not drift.
+  let imageIndex = 0;
   const blocks: SessionContentBlock[] = [];
   for (const block of content.filter(isRecord)) {
     if (block.type === "text") {
@@ -155,7 +208,8 @@ export function transformContent(content: unknown): SessionContentBlock[] {
     }
 
     if (block.type === "image") {
-      blocks.push(imageBlock(block));
+      blocks.push(imageBlock(block, { mediaRef, index: imageIndex }));
+      imageIndex += 1;
       continue;
     }
 
