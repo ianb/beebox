@@ -579,10 +579,18 @@ the router protocol above:
   `<name>/state.json` (`lastRunAt`, `lastRunId`, `lastExit`, `lastOutcome`, and
   a persistent session's id), `runs/<id>.{log,handoff.json,result.json,exit.json}`,
   `alerts/<id>.json`, and a `lock/` directory (mkdir with the PID inside; a
-  dead PID is reclaimed and its unreported run accounted for).
+  dead PID is reclaimed and its unreported run accounted for — as is a lock
+  written before the current boot or older than the run could possibly be,
+  since PID reuse after a reboot otherwise holds a lock forever). State is
+  written read-modify-write under that lock: a run's outcome and the session id
+  minted mid-launch both update the same file.
 - **The heartbeat is the anti-silence primitive.** Every `tick` stamps the
-  store root's `state.json` (`lastTickAt`, `lastTickExit`) FIRST, before it
-  looks at any schedule. That is what makes "nothing has run for a week"
+  store root's `state.json` (`lastTickAt`, `lastTickExit`) as soon as it holds
+  the tick lock, before it looks at any schedule. A tick that finds the lock
+  held stamps `lastTickSkippedAt`/`lastTickSkippedReason` and leaves
+  `lastTickAt` alone — a tick hung inside a child would otherwise keep the
+  heartbeat reading "just now" forever while nothing ran; `list` prints the
+  skip beside the last real tick. That is what makes "nothing has run for a week"
   visible without any job reporting its own death — `bin/schedules list` prints
   it, every `bin/workstreams list` row carries it, and `bin/doctor.ts` checks
   both it and whether the plist is loaded. `tick` exits non-zero only when it

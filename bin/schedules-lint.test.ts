@@ -311,6 +311,7 @@ async function makeDeps(schedulesRoot: string): Promise<Fake> {
       now: () => new Date("2026-08-24T12:00:00Z"),
       pid: process.pid,
       isProcessAlive: () => true,
+      bootTimeMs: () => null,
       notify: async (notification) => { notifications.push(notification); await Promise.resolve(); },
     },
   };

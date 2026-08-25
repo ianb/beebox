@@ -267,6 +267,12 @@ export const EMPTY_SCHEDULE_STATE: ScheduleState = {
 export const storeStateSchema = z.strictObject({
   lastTickAt: z.string(),
   lastTickExit: z.number().nullable(),
+  /** When a tick fired and did NOT get to work because another tick held the
+   *  lock. Separate from `lastTickAt` on purpose: a hung tick would otherwise
+   *  keep the heartbeat looking fresh forever while nothing ran. Defaulted so
+   *  a state.json written before this field existed still parses. */
+  lastTickSkippedAt: z.string().nullable().default(null),
+  lastTickSkippedReason: z.string().nullable().default(null),
 });
 export type StoreState = z.infer<typeof storeStateSchema>;
 

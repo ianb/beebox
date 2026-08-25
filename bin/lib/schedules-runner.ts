@@ -5,9 +5,11 @@
  * launchd's own missed-run semantics are undocumented and lossy (a
  * `StartInterval` firing during sleep is simply missed), so due-ness is
  * computed here from persisted state — the anacron model — and launchd only
- * supplies a 15-minute heartbeat. That heartbeat is stamped BEFORE any
- * schedule runs, because "nothing ran at all" is the failure that actually
- * happened twice and no job can report its own death.
+ * supplies a 15-minute heartbeat. That heartbeat is stamped as soon as the tick
+ * holds the tick lock and BEFORE any schedule runs, because "nothing ran at
+ * all" is the failure that actually happened twice and no job can report its
+ * own death. A tick that never got the lock records a SKIP instead: refreshing
+ * the heartbeat there would report health it never established.
  *
  * Design: callback-box/docs/plans/scheduled-workstreams.md (Track B).
  */
@@ -30,6 +32,7 @@ import {
   acquireLock,
   ensureScheduleDir,
   ensureStoreRoot,
+  lockStaleAfterMs,
   logPath,
   readAlerts,
   readHandoff,
@@ -37,9 +40,9 @@ import {
   readScheduleState,
   releaseLock,
   tailLog,
+  updateScheduleState,
+  updateStoreState,
   writeRunExit,
-  writeScheduleState,
-  writeStoreState,
 } from "./schedules-store.js";
 import { raiseAlert, type RunnerDeps } from "./schedules-alerts.js";
 import { execChild, scheduleEnv } from "./schedules-exec.js";
@@ -87,6 +90,49 @@ export function classifyOutcome(input: { exitCode: number | null; hasHandoff: bo
   return input.hasHandoff ? "handoff" : "clean";
 }
 
+/** What a failed run's alert says, in the three ways a run can fail. */
+function failureText(
+  name: string,
+  result: { timedOut: boolean; logTruncated: boolean; exitCode: number | null },
+): { title: string; message: string } {
+  if (result.timedOut) return { title: "run timed out", message: `${name} exceeded its timeout and was killed.` };
+  if (result.logTruncated) {
+    return {
+      title: "run output exceeded the log cap",
+      message: `${name} wrote more output than the per-run log cap allows; the log was truncated and the run is recorded as failed.`,
+    };
+  }
+  return { title: "run failed", message: `${name} exited ${String(result.exitCode)}.` };
+}
+
+/**
+ * Why `bin/schedules run <name>` must refuse from here, or null when it may
+ * proceed.
+ *
+ * A `worktree: false` schedule's session runs in the MAIN checkout, but its
+ * `run` script executes in — and reads its evidence from — whichever checkout
+ * the command was typed in. From a worktree those are two different trees, so
+ * the agent would act on main from branch-local evidence (the SDK ledger, an
+ * issue file, a lockfile that only exists on this branch). A dry run reads the
+ * same evidence but starts nobody, so it stays allowed everywhere.
+ */
+export function refuseRunHere(input: {
+  schedule: LoadedSchedule;
+  repoRoot: string;
+  mainRoot: string;
+  dryRun: boolean;
+}): string | null {
+  if (input.dryRun) return null;
+  const { workstream } = input.schedule.config;
+  if (workstream === null || workstream.worktree) return null;
+  if (input.repoRoot === input.mainRoot) return null;
+  return [
+    `${input.schedule.name} is a 'worktree: false' schedule: its session runs in the main checkout (${input.mainRoot}),`,
+    `but this command would read its inputs from ${input.repoRoot}.`,
+    "Run it from the main checkout, or use --dry-run here.",
+  ].join("\n");
+}
+
 export type RunReport =
   | { kind: "skipped"; name: string; reason: string }
   | { kind: "dry-run"; name: string; runId: string; outcome: Outcome; exitCode: number | null; timedOut: boolean; output: string }
@@ -101,9 +147,32 @@ export type RunReport =
  */
 async function accountForReclaimedRun(deps: RunnerDeps, reclaimed: { name: string; runId: string }): Promise<void> {
   const exit = await readRunExit(deps.storeRoot, reclaimed);
-  if (exit === null || !exit.sessionLaunched) return;
+  if (exit === null) {
+    // No exit record at all: the runner died between the `run` script and the
+    // accounting. If that script had already written a handoff, the work it
+    // found exists only in that file — nobody is coming back for it, and the
+    // next run may find nothing new to report. The alert IS the handoff's
+    // delivery. The session is deliberately NOT started here: a reclaim runs
+    // inside another schedule's tick, and starting an agent from it would move
+    // the launch out of the one place that accounts for it.
+    const handoff = await readHandoff(deps.storeRoot, reclaimed);
+    if (handoff === null) return;
+    await raiseAlert(deps, {
+      workstream: reclaimed.name,
+      runId: reclaimed.runId,
+      title: INTERRUPTED_HANDOFF_ALERT_TITLE,
+      message: `${reclaimed.name} run ${reclaimed.runId} handed off "${handoff.title}" and was killed before it could start or record a session.`,
+      details: handoff.body,
+      priority: "important",
+    });
+    return;
+  }
+  if (!exit.sessionLaunched) return;
   await alertIfBailed(deps, { ...reclaimed, logFile: logPath(deps.storeRoot, reclaimed) });
 }
+
+/** The title a reclaimed run's orphaned handoff is filed under. */
+export const INTERRUPTED_HANDOFF_ALERT_TITLE = "run interrupted after handoff";
 
 /**
  * One execution of one schedule: lock, run, classify, record, and — when the
@@ -157,6 +226,8 @@ export async function runSchedule(
     pid: deps.pid,
     isProcessAlive: deps.isProcessAlive,
     at,
+    staleAfterMs: lockStaleAfterMs(schedule.config.timeoutMs),
+    bootTimeMs: deps.bootTimeMs(),
   });
   if (lock.kind === "held") {
     // Not an alert: the NEXT tick's overdue derivation is the signal if this
@@ -178,7 +249,12 @@ export async function runSchedule(
       input: null,
     });
     const handoff = await readHandoff(deps.storeRoot, { name: schedule.name, runId });
-    const outcome = classifyOutcome({ exitCode: result.exitCode, hasHandoff: handoff !== null });
+    // A run that blew the log cap is failed whatever it exited: its output was
+    // cut, so nothing downstream — the tail in an alert, the TRIAGE line a
+    // `check` reads — can be trusted to be complete.
+    const outcome = result.logTruncated
+      ? "failed"
+      : classifyOutcome({ exitCode: result.exitCode, hasHandoff: handoff !== null });
     const willLaunch = schedule.config.workstream !== null && (outcome === "handoff" || outcome === "failed");
 
     // Written BEFORE the session, with `sessionLaunched` already true: a runner
@@ -197,10 +273,9 @@ export async function runSchedule(
       });
     };
     await writeExit({ sessionExit: null, checkExit: null, timedOut: false });
-    await writeScheduleState(deps.storeRoot, {
+    await updateScheduleState(deps.storeRoot, {
       name: schedule.name,
-      state: {
-        ...(await readScheduleState(deps.storeRoot, schedule.name)),
+      patch: {
         lastRunAt: at.toISOString(),
         lastRunId: runId,
         lastExit: result.exitCode,
@@ -211,13 +286,12 @@ export async function runSchedule(
     let alertId: string | null = null;
     if (outcome === "failed") {
       const tail = await tailLog(logFile, LOG_TAIL_LINES);
+      const failure = failureText(schedule.name, result);
       const alert = await raiseAlert(deps, {
         workstream: schedule.name,
         runId,
-        title: result.timedOut ? "run timed out" : "run failed",
-        message: result.timedOut
-          ? `${schedule.name} exceeded its timeout and was killed.`
-          : `${schedule.name} exited ${String(result.exitCode)}.`,
+        title: failure.title,
+        message: failure.message,
         details: tail === "" ? null : `Last ${String(LOG_TAIL_LINES)} log lines:\n\n\`\`\`\n${tail}\n\`\`\``,
         priority: "important",
       });
@@ -286,30 +360,65 @@ const TICK_LOCK_NAME = ".tick";
  */
 export async function tick(deps: RunnerDeps): Promise<TickResult> {
   const startedAt = deps.now();
+  let entries: ScheduleEntry[];
   try {
     await ensureStoreRoot(deps.storeRoot);
-    await writeStoreState(deps.storeRoot, { lastTickAt: startedAt.toISOString(), lastTickExit: null });
+    // Loaded before the lock, so the tick's own staleness window can be the
+    // longest run it could legitimately be waiting on.
+    entries = await loadSchedules(deps.schedulesRoot);
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     await deps.notify({ title: "callback-box schedules", message: `cannot write the schedule store: ${message}` });
     return { exitCode: 1, reports: [], invalid: [], heartbeatError: message };
   }
 
+  const longestTimeoutMs = Math.max(
+    0,
+    ...entries.map((entry) => (entry.kind === "ok" ? entry.config.timeoutMs : 0)),
+  );
   const lock = await acquireLock(deps.storeRoot, {
     name: TICK_LOCK_NAME,
     runId: runIdFor(startedAt),
     pid: deps.pid,
     isProcessAlive: deps.isProcessAlive,
     at: startedAt,
+    staleAfterMs: lockStaleAfterMs(longestTimeoutMs),
+    bootTimeMs: deps.bootTimeMs(),
   });
   if (lock.kind === "held") {
-    return { exitCode: 0, reports: [{ kind: "skipped", name: "tick", reason: `tick already running (pid ${String(lock.pid ?? 0)})` }], invalid: [], heartbeatError: null };
+    // The heartbeat is NOT refreshed here. A tick that never got past the lock
+    // has proved nothing about whether schedules can run, and a tick hung in a
+    // child would otherwise keep `last tick just now` on screen forever while
+    // nothing at all happened (the 2026-08-24 review's finding 3).
+    const reason = `tick already running (pid ${String(lock.pid ?? 0)})`;
+    try {
+      await updateStoreState(deps.storeRoot, {
+        lastTickSkippedAt: startedAt.toISOString(),
+        lastTickSkippedReason: reason,
+      });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      await deps.notify({ title: "callback-box schedules", message: `cannot write the schedule store: ${message}` });
+      return { exitCode: 1, reports: [], invalid: [], heartbeatError: message };
+    }
+    return { exitCode: 0, reports: [{ kind: "skipped", name: "tick", reason }], invalid: [], heartbeatError: null };
+  }
+
+  // Stamped here rather than at entry: past the lock, this tick is the one that
+  // will do the work, so the heartbeat now means what it says. Still BEFORE any
+  // schedule runs, because a run that hangs must not take the heartbeat with it.
+  try {
+    await updateStoreState(deps.storeRoot, { lastTickAt: startedAt.toISOString(), lastTickExit: null });
+  } catch (e) {
+    await releaseLock(deps.storeRoot, TICK_LOCK_NAME);
+    const message = e instanceof Error ? e.message : String(e);
+    await deps.notify({ title: "callback-box schedules", message: `cannot write the schedule store: ${message}` });
+    return { exitCode: 1, reports: [], invalid: [], heartbeatError: message };
   }
 
   const reports: RunReport[] = [];
   const invalid: ScheduleEntry[] = [];
   try {
-    const entries = await loadSchedules(deps.schedulesRoot);
     for (const entry of entries) {
       if (entry.kind === "invalid") {
         invalid.push(entry);
@@ -328,7 +437,7 @@ export async function tick(deps: RunnerDeps): Promise<TickResult> {
   // A failed RUN is already an `important` alert; the tick itself succeeded.
   // Reserving a non-zero tick exit for "the store could not be written" keeps
   // the launchd log meaningful.
-  await writeStoreState(deps.storeRoot, { lastTickAt: startedAt.toISOString(), lastTickExit: 0 });
+  await updateStoreState(deps.storeRoot, { lastTickAt: startedAt.toISOString(), lastTickExit: 0 });
   return { exitCode: 0, reports, invalid, heartbeatError: null };
 }
 

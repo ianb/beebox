@@ -52,6 +52,7 @@ import {
   writeAlert,
   writeHandoff,
   writeResult,
+  bootTimeMs,
   isProcessAlive,
 } from "./lib/schedules-store.js";
 import {
@@ -60,6 +61,7 @@ import {
   isOverdue,
   nextDueAtMs,
   readRunLog,
+  refuseRunHere,
   runSchedule,
   tick,
 } from "./lib/schedules-runner.js";
@@ -126,6 +128,7 @@ function runnerDeps(context: Context): RunnerDeps {
     now: () => new Date(),
     pid: process.pid,
     isProcessAlive,
+    bootTimeMs,
     notify: osascriptNotify,
   };
 }
@@ -224,12 +227,19 @@ async function commandList(context: Context, args: string[]): Promise<number> {
   }
   const storeState = await readStoreState(context.storeRoot);
   const lastTickAt = storeState === null ? null : storeState.lastTickAt;
+  const lastTickSkippedAt = storeState === null ? null : storeState.lastTickSkippedAt;
+  const lastTickSkippedReason = storeState === null ? null : storeState.lastTickSkippedReason;
 
   if (args.includes("--json")) {
-    process.stdout.write(`${JSON.stringify({ lastTickAt, schedules: rows, invalid })}\n`);
+    process.stdout.write(`${JSON.stringify({ lastTickAt, lastTickSkippedAt, lastTickSkippedReason, schedules: rows, invalid })}\n`);
     return 0;
   }
-  const lines = [`scheduler: last tick ${agoText(lastTickAt, nowMs)}`];
+  // A skip more recent than the last real tick is the shape of a wedged
+  // scheduler: firings are happening, work is not.
+  const skipped = lastTickSkippedAt !== null && (lastTickAt === null || lastTickSkippedAt > lastTickAt)
+    ? ` (skipped ${agoText(lastTickSkippedAt, nowMs)}: ${lastTickSkippedReason ?? "reason unrecorded"})`
+    : "";
+  const lines = [`scheduler: last tick ${agoText(lastTickAt, nowMs)}${skipped}`];
   for (const row of rows) {
     const marks = [
       row.enabled ? null : "disabled",
@@ -266,6 +276,11 @@ async function commandRun(context: Context, args: string[]): Promise<number> {
   }
   const schedule = await requireSchedule(context, name);
   const dryRun = args.includes("--dry-run");
+  const refusal = refuseRunHere({ schedule, repoRoot: context.repoRoot, mainRoot: context.mainRoot, dryRun });
+  if (refusal !== null) {
+    process.stderr.write(`schedules run: ${refusal}\n`);
+    return 2;
+  }
   const deps = runnerDeps(context);
 
   if (!dryRun && !args.includes("--force")) {

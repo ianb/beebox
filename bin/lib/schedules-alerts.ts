@@ -30,6 +30,9 @@ export interface RunnerDeps {
   now: () => Date;
   pid: number;
   isProcessAlive: (pid: number) => boolean;
+  /** This machine's boot time in ms, or null when it cannot be determined: a
+   *  lock written before it belongs to a PID the kernel has since reused. */
+  bootTimeMs: () => number | null;
   notify: (notification: { title: string; message: string }) => Promise<void>;
 }
 

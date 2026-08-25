@@ -31,7 +31,7 @@ import {
   type ScheduleState,
   type ScheduleWorkstream,
 } from "./schedules.js";
-import { logPath, readResult, tailLog, writeScheduleState } from "./schedules-store.js";
+import { logPath, readResult, tailLog, updateScheduleState } from "./schedules-store.js";
 import { raiseAlert, type RunnerDeps } from "./schedules-alerts.js";
 import { execChild, scheduleEnv } from "./schedules-exec.js";
 
@@ -104,10 +104,20 @@ function workstreamsCli(deps: RunnerDeps): string {
  * bug of 2026-08-04 happened. A guard that cannot answer reads as `unknown`,
  * which counts as live.
  */
-async function agentState(deps: RunnerDeps, worktreePath: string): Promise<string> {
+export async function agentState(deps: RunnerDeps, worktreePath: string): Promise<string> {
   const result = await execa(workstreamsCli(deps), ["agent-liveness", worktreePath], { reject: false });
   if (result.exitCode !== 0) return "unknown";
-  const parsed = livenessSchema.safeParse(JSON.parse(result.stdout));
+  // Truncated or non-JSON stdout from a guard that still exited 0 is exactly
+  // the case that must fail CLOSED. Parsing it outside a try turned an
+  // unanswerable guard into a thrown launcher — no alert, no session, and the
+  // schedule waiting for its next cadence.
+  let payload: unknown;
+  try {
+    payload = JSON.parse(result.stdout);
+  } catch {
+    return "unknown";
+  }
+  const parsed = livenessSchema.safeParse(payload);
   if (!parsed.success) return "unknown";
   return parsed.data.paths[worktreePath]?.state ?? "unknown";
 }
@@ -165,7 +175,11 @@ async function sessionIdentity(deps: RunnerDeps, input: { schedule: LoadedSchedu
   const existing = input.previous.sessionId;
   if (existing !== null) return { sessionId: existing, resume: await claudeTranscriptExists(existing) };
   const minted = randomUUID();
-  await writeScheduleState(deps.storeRoot, { name: input.schedule.name, state: { ...input.previous, sessionId: minted } });
+  // Merged into whatever is on disk NOW, not into the pre-run snapshot: the
+  // run stamped its own `lastRunAt` between then and here, and writing the
+  // snapshot back would erase it — leaving the schedule looking never-run and
+  // due again on the next tick.
+  await updateScheduleState(deps.storeRoot, { name: input.schedule.name, patch: { sessionId: minted } });
   return { sessionId: minted, resume: false };
 }
 
@@ -213,6 +227,9 @@ async function agentArgv(input: { workstream: ScheduleWorkstream; name: string; 
 }
 
 // ─── Start ────────────────────────────────────────────────────────────────
+
+/** The title a failed `session_registry_complete_launch` is filed under. */
+export const REGISTRY_COMPLETION_ALERT_TITLE = "registry launch completion failed";
 
 export interface StartRequest {
   schedule: LoadedSchedule;
@@ -315,7 +332,7 @@ export async function startWorkstream(deps: RunnerDeps, request: StartRequest): 
   const [file, ...args] = command.argv;
   const session = await execChild({ file: file ?? "", args }, { cwd, env, timeoutMs: schedule.config.timeoutMs, logFile, input: briefing });
 
-  await registryCall(deps, {
+  const completed = await registryCall(deps, {
     fn: "session_registry_complete_launch",
     args: [schedule.name, token, JSON.stringify({
       kind: "scheduled",
@@ -329,6 +346,18 @@ export async function startWorkstream(deps: RunnerDeps, request: StartRequest): 
       launchedAt: deps.now().toISOString().replace(/\.\d{3}Z$/u, "Z"),
     }), "--preserve-base-sha"],
   });
+  if (!completed) {
+    // The session itself is over and its outcome is recorded either way; what
+    // failed is the registry's record of it, and that record is what the
+    // browser routes on. Left silent, the row sits on `launching`/`uncertain`
+    // forever while the schedule believes everything went fine.
+    await alert({
+      title: REGISTRY_COMPLETION_ALERT_TITLE,
+      message: `${schedule.name} ran its session, but the registry would not record the launch as complete; the browser may still show it as launching.`,
+      details: null,
+      priority: "important",
+    });
+  }
 
   let checkExit: number | null = null;
   const checkScript = path.join(schedule.dir, "check");

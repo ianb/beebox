@@ -15,6 +15,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { execFileSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
 
@@ -108,6 +109,25 @@ export async function writeStoreState(root: string, state: StoreState): Promise<
   await writeJson(storeStatePath(root), state);
 }
 
+/**
+ * Read-modify-write of the heartbeat record: a caller that only has something
+ * to say about the SKIP fields must not blank the last real tick, and vice
+ * versa. Returns false when there is no record yet and the patch cannot make a
+ * whole one (no `lastTickAt`) — a skipped tick with no history to preserve.
+ */
+export async function updateStoreState(root: string, patch: Partial<StoreState>): Promise<boolean> {
+  const current = await readStoreState(root);
+  const lastTickAt = patch.lastTickAt ?? current?.lastTickAt;
+  if (lastTickAt === undefined) return false;
+  await writeStoreState(root, {
+    lastTickAt,
+    lastTickExit: patch.lastTickExit === undefined ? current?.lastTickExit ?? null : patch.lastTickExit,
+    lastTickSkippedAt: patch.lastTickSkippedAt === undefined ? current?.lastTickSkippedAt ?? null : patch.lastTickSkippedAt,
+    lastTickSkippedReason: patch.lastTickSkippedReason === undefined ? current?.lastTickSkippedReason ?? null : patch.lastTickSkippedReason,
+  });
+  return true;
+}
+
 // ─── Per-schedule state ───────────────────────────────────────────────────
 
 export async function readScheduleState(root: string, name: string): Promise<ScheduleState> {
@@ -117,6 +137,24 @@ export async function readScheduleState(root: string, name: string): Promise<Sch
 
 export async function writeScheduleState(root: string, update: { name: string; state: ScheduleState }): Promise<void> {
   await writeJson(path.join(scheduleDir(root, update.name), "state.json"), update.state);
+}
+
+/**
+ * The ONLY way a live run should write state: read-modify-write of the record
+ * on disk, never of a snapshot taken earlier. Two things in one run update this
+ * file — the run's own outcome and the persistent session id minted while the
+ * session starts — and a write built from a stale snapshot silently reverts the
+ * other one (the 2026-08-24 review's first critical: a first persistent run
+ * nulled its own `lastRunAt` and stayed due every tick).
+ *
+ * Callers hold the schedule's lock, so the read and the write are one
+ * transaction with respect to every other runner.
+ */
+export async function updateScheduleState(root: string, update: { name: string; patch: Partial<ScheduleState> }): Promise<ScheduleState> {
+  const current = await readScheduleState(root, update.name);
+  const merged: ScheduleState = { ...current, ...update.patch };
+  await writeScheduleState(root, { name: update.name, state: merged });
+  return merged;
 }
 
 // ─── Per-run records ──────────────────────────────────────────────────────
@@ -251,6 +289,53 @@ function lockDir(root: string, name: string): string {
   return path.join(scheduleDir(root, name), "lock");
 }
 
+/** Grace on top of the run's own timeout before a lock counts as abandoned: the
+ *  runner kills an overrunning child and then still has recording to do. */
+const LOCK_STALE_GRACE_MS = 30 * 60 * 1000;
+/** Floor for the staleness window, so a schedule with a short timeout still
+ *  gets the two hours the plan's alerting cadence assumes. */
+const LOCK_STALE_FLOOR_MS = 2 * 60 * 60 * 1000;
+
+/** How long a lock for a run with this timeout may be held before it reads as
+ *  debris no matter what its PID says. */
+export function lockStaleAfterMs(timeoutMs: number): number {
+  return Math.max(timeoutMs, LOCK_STALE_FLOOR_MS) + LOCK_STALE_GRACE_MS;
+}
+
+/**
+ * `kill(pid, 0)` alone is not proof a lock is live: after a reboot the kernel
+ * happily hands the dead runner's PID to something unrelated, and the lock is
+ * then held forever by a process that never heard of it. Two independent facts
+ * about the RECORD settle it — a lock written before the current boot cannot
+ * belong to a running process, and one older than the run could possibly take
+ * is debris whatever the PID table says.
+ */
+export function isLockStale(
+  held: { at: string },
+  probe: { nowMs: number; staleAfterMs: number; bootTimeMs: number | null },
+): boolean {
+  const atMs = Date.parse(held.at);
+  if (Number.isNaN(atMs)) return true;
+  if (probe.bootTimeMs !== null && atMs < probe.bootTimeMs) return true;
+  return probe.nowMs - atMs >= probe.staleAfterMs;
+}
+
+/** When this machine booted, from `kern.boottime`. Null off macOS or when the
+ *  answer cannot be parsed — the age rule then carries the reclaim alone. */
+export function bootTimeMs(): number | null {
+  if (process.platform !== "darwin") return null;
+  let raw: string;
+  try {
+    raw = execFileSync("/usr/sbin/sysctl", ["-n", "kern.boottime"], { encoding: "utf8" });
+  } catch {
+    return null;
+  }
+  const match = /sec\s*=\s*(\d+)/u.exec(raw);
+  const seconds = match?.[1];
+  if (seconds === undefined) return null;
+  return Number(seconds) * 1000;
+}
+
 /**
  * `mkdir` is the atomic primitive on macOS (no `flock`), with the PID inside so
  * a lock left by a killed runner can be told from a live one. Deps carry the
@@ -258,7 +343,17 @@ function lockDir(root: string, name: string): string {
  */
 export async function acquireLock(
   root: string,
-  claim: { name: string; runId: string; pid: number; isProcessAlive: (pid: number) => boolean; at: Date },
+  claim: {
+    name: string;
+    runId: string;
+    pid: number;
+    isProcessAlive: (pid: number) => boolean;
+    at: Date;
+    /** Age past which the lock reads as debris even if its PID is alive. */
+    staleAfterMs: number;
+    /** This machine's boot time; a lock older than it cannot be live. */
+    bootTimeMs: number | null;
+  },
 ): Promise<LockResult> {
   const dir = lockDir(root, claim.name);
   const record = { pid: claim.pid, runId: claim.runId, at: claim.at.toISOString() };
@@ -274,7 +369,12 @@ export async function acquireLock(
     const held = await readJson(path.join(dir, "owner.json"), lockRecordSchema);
     // A lock whose owner is gone is debris from a crash or a laptop shutdown —
     // reclaiming it is the only way the next tick can finish that run's story.
-    if (held !== null && claim.isProcessAlive(held.pid)) {
+    const stale = held !== null && isLockStale(held, {
+      nowMs: claim.at.getTime(),
+      staleAfterMs: claim.staleAfterMs,
+      bootTimeMs: claim.bootTimeMs,
+    });
+    if (held !== null && !stale && claim.isProcessAlive(held.pid)) {
       return { kind: "held", pid: held.pid, runId: held.runId };
     }
     if (held !== null) reclaimed = { pid: held.pid, runId: held.runId };
