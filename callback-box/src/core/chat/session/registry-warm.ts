@@ -22,7 +22,7 @@ const log = makeLog("ChatSessionRegistry");
  * The probe session is a throwaway: it never spawns, it only resolves the
  * system prompt, landmark binding, and env.
  */
-export async function probeStartOptions(opts: {
+async function probeStartOptions(opts: {
   boxRoot: string;
   backend: ChatBackend;
   baseOptions: ChatSessionOptions;

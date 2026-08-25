@@ -14,6 +14,7 @@ import { loadEnv, cliEnvSchema } from "../lib/env.js";
 import {
   initCommand,
   migrateCommand,
+  docsCommand,
   upgradeCommand,
   statusCommand,
   validateCommand,
@@ -92,6 +93,7 @@ program
 
 program.addCommand(initCommand);
 program.addCommand(migrateCommand);
+program.addCommand(docsCommand);
 program.addCommand(upgradeCommand);
 program.addCommand(statusCommand);
 program.addCommand(validateCommand);

@@ -55,23 +55,59 @@ value** (printing it would re-leak exactly what you're purging; look it up with
 convenience not enforcement — pair with server-side push protection / a CI scan
 for a real gate. Companion to the home-path guard above.
 
+## Commit provenance trailers (`commit-provenance.ts`)
+
+Two hooks and one script give every commit a queryable link to its
+workstream, plan, and (optionally) issue. Convention for agents: root
+`CLAUDE.md`. Design: `callback-box/docs/plans/commit-provenance-trailers.md`.
+
+- **`.husky/prepare-commit-msg`** → `commit-provenance --prepare <msgfile>
+  <source>`: on a `worktree-<name>` branch, `git interpret-trailers --in-place
+  --if-exists replace` stamps `Workstream: <name>` and, when exactly one
+  `callback-box/docs/plans/*.md` carries `workstream: <name>`, `Plan:
+  <basename>`. Skips `squash` sources, detached HEAD, and `main`. Any error
+  prints one stderr line and exits 0 — provenance never blocks a commit.
+- **`.husky/commit-msg`** → `commit-provenance --check <msgfile>`: reads the
+  trailer block with `git interpret-trailers --parse` (body prose that
+  happens to start with `Issue:` is not a trailer) and requires each `Issue:`
+  value to match `issues/**/<value>.md`, `closed/` included. A miss blocks
+  with the bare-name form and nearest basenames. `private-issues/` is never
+  searched — a private slug in public history is a leak.
+- **Queries**: `pnpm commit-provenance --workstream|--plan|--issue <name>
+  [--main]` — `git log --oneline --grep='^Key: value$'` over `--all` (or
+  `main`). Empty result prints nothing.
+- `land` merges `--no-ff`, so `git log --first-parent main` lists landings
+  and `<merge>^1..<merge>^2` lists what each brought.
+
+Hooks activate on checkout: `core.hooksPath` is the relative `.husky/_`, whose
+shim runs `.husky/<hook>` when the file exists — no install step.
+Tests: `bin/commit-provenance.test.ts` (a `.test.ts`, not a doctest, because
+each case forks a throwaway git repo with its own `core.hooksPath`).
+
 ## Landing a worktree branch (`land`)
 
-`bin/land [branch]` fast-forwards a finished worktree branch onto `main` — what
-`/finish` step 8 calls, and what you run by hand to land a branch a finish left
-merge-ready. It resolves the main checkout from `--git-common-dir` and targets
-it explicitly, so it works from the main checkout or from inside a worktree
-(where a plain `git -C ~/src/callback-box merge` is blocked by Claude Code's
-worktree isolation).
+`bin/land [branch]` merges a finished worktree branch onto `main` with
+`--no-ff --no-edit` — what `/finish` step 8 calls, and what you run by hand to
+land a branch a finish left merge-ready. It resolves the main checkout from
+`--git-common-dir` and targets it explicitly, so it works from the main
+checkout or from inside a worktree (where a plain `git -C ~/src/callback-box
+merge` is blocked by Claude Code's worktree isolation).
 
 With no argument: from a worktree it lands that worktree's own branch; from the
 main checkout it auto-detects the single merge-ready branch and refuses if
 several qualify. `--list` shows candidates, `--dry-run` previews.
 
-It enforces the preflight — main checkout clean, on `main`, `--ff-only` — and
-nothing more. Landing is a fast-forward by construction, since `/finish` merges
-main INTO the worktree and verifies there; a not-a-fast-forward refusal means
-main moved, and the fix belongs back in the worktree.
+It enforces the preflight — main checkout clean, on `main`, branch already
+contains main — and nothing more. That precondition guarantees the `--no-ff`
+merge is conflict-free by construction, since `/finish` merges main INTO the
+worktree and verifies there; a refusal means main moved since, and the fix
+belongs back in the worktree. `--no-ff` always creates a merge commit (`Merge
+branch 'worktree-<name>'`) instead of moving main's pointer, so `git log
+--first-parent main` lists one entry per landing and `<merge>^1..<merge>^2`
+shows what it brought — commit provenance. `.husky/post-merge` deploys on any
+merge that updates main (fast-forward or not), so deploy is unaffected; see
+`.husky/post-commit`'s merge-commit skip and `.husky/post-merge`'s
+`ORIG_HEAD..HEAD` diff for why.
 
 ## Router architecture
 
@@ -373,18 +409,32 @@ Vite app in the top-level `workstreams-app/` package. The router authenticates,
 supervises, and proxies it; the app invokes the stable `bin/workstreams` CLI
 instead of reimplementing lifecycle guards. It exposes joined status and safe
 actions, with `/workstreams/issues/`, `/workstreams/plans/`, and
-`/workstreams/testing/` beneath it. App source changes landed in main reload the
+`/workstreams/testing/` beneath it. An open issue ends with a **Related** list —
+nearest issues (open and closed) and design docs, the same ranking as
+`bin/issues similar --all --docs` (see that section for the shared library and
+the key it needs). App source changes landed in main reload the
 app child without restarting the router. Router or supervisor changes still
 require one boxholder-run `pnpm dev` restart after merge. Never restart the
 shared router from a worktree session.
 
 `bin/workstreams list` is also the routing inventory. Its JSON and table carry
 an optional one-line session description plus two separate decisions:
-`routing.state` (`live`, `dormant`, `stale`, `removed`, `uncertain`) and
+`routing.state` (`launching`, `live`, `scheduled`, `dormant`, `stale`,
+`removed`, `uncertain`) and
 `routing.action` (`manual-forward`, `resume-with-briefing`,
 `new-stream-preferred`, `investigate`). `stale` means approximately 14 days
 without trustworthy activity and is guidance to start a new stream, not a
-resume prohibition. The liveness input still comes only from
+resume prohibition. `scheduled` is a `kind: "scheduled"` record resting between
+runs: sticky by design, so `remove`, `sweep`, and prune cull its worktree but
+never its record, `archive` refuses it (set `enabled: false` in its
+`schedule.yaml` instead), and `list` renders it with no worktree at all. A cull
+records the tip it happened at under `culled` (never `removed`, which would
+hide the row), and `resume` reads that pointer for its "landed since" log the
+same way it reads `removed.finalSha`. Every
+row also carries a `schedule` field — cadence, last run and outcome, overdue,
+open alerts, and the scheduler's own last tick — joined by name from one
+`bin/schedules list --json` call per listing, and null for a workstream that is
+not a schedule. The liveness input still comes only from
 `wt_other_agent_live`; the app consumes this projection and never reimplements
 the destructive guard. Non-worktree directories under the managed root are
 reported and skipped. The app parses rows independently so one malformed row
@@ -547,6 +597,93 @@ _also_ pass `--setting-sources user` so the project's hooks never load at all;
 the skill documents that as load-bearing. Two independent guards because the
 failure destroys work.
 
+## Schedules (`bin/schedules`)
+
+Recurring work: one directory per job under `schedules/`, one launchd tick, one
+alert store. The root CLAUDE.md has the contract; the `cb-authoring-schedules`
+skill is how to write one. Design:
+`callback-box/docs/plans/scheduled-workstreams.md`. Mechanism, in the spirit of
+the router protocol above:
+
+- **The store lives beside the main checkout**, never inside it:
+  `<parent>/schedule-runs/` (override `CALLBACK_SCHEDULES_ROOT`), the exhibits
+  and comments convention, with the same marker-file discipline — a directory
+  without `.schedule-runs` in it is refused rather than adopted. One store
+  behind every worktree, so a run's history does not evaporate with whichever
+  checkout happened to trigger it, and logs stay out of git (the boxholder
+  asked for that explicitly). Per schedule:
+  `<name>/state.json` (`lastRunAt`, `lastRunId`, `lastExit`, `lastOutcome`, and
+  a persistent session's id), `runs/<id>.{log,handoff.json,result.json,exit.json}`,
+  `alerts/<id>.json`, and a `lock/` directory (mkdir with the PID inside; a
+  dead PID is reclaimed and its unreported run accounted for — as is a lock
+  written before the current boot or older than the run could possibly be,
+  since PID reuse after a reboot otherwise holds a lock forever). State is
+  written read-modify-write under that lock: a run's outcome and the session id
+  minted mid-launch both update the same file.
+- **The heartbeat is the anti-silence primitive.** Every `tick` stamps the
+  store root's `state.json` (`lastTickAt`, `lastTickExit`) as soon as it holds
+  the tick lock, before it looks at any schedule. A tick that finds the lock
+  held stamps `lastTickSkippedAt`/`lastTickSkippedReason` and leaves
+  `lastTickAt` alone — a tick hung inside a child would otherwise keep the
+  heartbeat reading "just now" forever while nothing ran; `list` prints the
+  skip beside the last real tick. That is what makes "nothing has run for a week"
+  visible without any job reporting its own death — `bin/schedules list` prints
+  it, every `bin/workstreams list` row carries it, and `bin/doctor.ts` checks
+  both it and whether the plist is loaded. `tick` exits non-zero only when it
+  cannot write the store; a schedule that failed is already an alert, so the
+  launchd log stays meaningful.
+- **Due-ness is computed, never delegated to launchd.** One `StartInterval`
+  tick every 15 minutes plus a persisted `lastRunAt` — anacron's semantics —
+  because `StartCalendarInterval` misses jobs the machine slept through and
+  says nothing. Overdue is derived (`now - lastRunAt > cadence + grace`) and
+  never stored; a never-run schedule is *due*, not overdue.
+- **The alert store is the message channel.** `bin/schedules alert` writes a
+  record (workstream, title, message, optional Markdown details, priority
+  `important|normal|backlog|fyi`) and then delivers a macOS notification as one
+  best-effort delivery of it — the record is the truth, and acknowledged alerts
+  fade from the default views after 14 days without being deleted. `done` is
+  the "finished, nothing to say" marker: a run with a session and neither
+  record is a bailed run and raises an `important` alert of its own.
+- **The CLI is the only writer.** The workstreams app shells out to
+  `bin/schedules ack` rather than touching the store, the same way it invokes
+  `bin/workstreams` for lifecycle instead of reimplementing the guards. A `run`
+  script reaches the store only through `handoff`/`alert`/`done` — there is no
+  free-form handoff file — and every record is Zod-parsed at the boundary
+  (`bin/lib/schedules.ts`) and written atomically (temp name, rename).
+
+## Headless agent sessions (`bin/lib/launch-headless.sh`)
+
+A scheduled run that has work starts its agent through the same lifecycle a
+Terminal session uses — `bin/workstreams create`, `wt_other_agent_live`, the
+registry's launch lease — but with no tab: `claude -p` / `codex exec` in the
+foreground, the briefing on **stdin** (never argv), output appended to the run
+log, killed at the schedule's `timeout`. `launch-headless.sh` is the ONE place
+those flags are assembled; source it (`launch-session.sh` does) or execute it to
+print the argv one element per line. Codex has no equivalent for `tools` /
+`allowedTools` / `disallowedTools` / `maxBudgetUsd` / `effort`, so a codex
+schedule that declares any of them is refused rather than launched
+unconstrained, and its
+`prompt.md` leads the briefing instead of riding `--append-system-prompt-file`.
+The session reports by writing a record (`bin/schedules alert` or `done`); one
+that ends without either is an `important` alert. Design:
+`callback-box/docs/plans/scheduled-workstreams.md`, Track B.
+
+## Linting a schedule (`bin/schedules lint`)
+
+`bin/schedules lint [--json]` checks every `schedules/<name>/` without running
+it: the `schedule.yaml`/`local.yaml` schema, `run` and `check` executable and
+carrying a shebang, `run` honoring `SCHEDULE_DRY_RUN`, `prompt.md` naming
+`bin/schedules alert`, shellcheck over the shell scripts (the pinned npm
+`shellcheck`, fetched lazily on first use), and eslint over the TypeScript ones.
+Silent on success; one `schedules/<name>/<file>: <message>` line per finding
+otherwise. Pre-commit runs it whenever anything under `schedules/` is staged,
+and a `tick` raises one `important` alert per broken schedule — latched on that
+alert staying open, so a schedule left broken is one record rather than one
+every fifteen minutes.
+
+`schedules/**/*.ts` is the only root path the root `eslint.config.mjs` lints;
+`bin/` and `dev/` stay unlinted by decision (the comment in that file says why).
+
 ## Document comments (`bin/comments`)
 
 The boxholder's channel for talking to an agent **about a document**: a remark
@@ -584,6 +721,83 @@ direction is to report orphans, never to delete at cull time.
 reaching into the store, the same way it invokes `bin/workstreams` for lifecycle
 rather than reimplementing the guards. Two writers to one YAML format sharing
 one lock protocol is where duplication stops being controllable.
+
+## Searching the issue queue (`bin/issues`)
+
+A stateless CLI over `issues/` plus `private-issues/` when that mount exists
+(rows carry a `visibility`). It reuses `workstreams-app/src/server/issue-domain.ts`
+for parsing — the dev issue browser and this command must agree about what an
+issue is — and adds two derived fields the frontmatter does not carry: `date`
+from the `YYYY-MM-DD-` filename prefix, and `discoveredInWorkstream`, the bare
+name inside `discovered-in:`'s `worktree-<name>` token.
+
+**The library lives in the app, not in `bin/`.** `issue-search-model.ts`
+(load/derive/filter/group), `issue-index-documents.ts` (what gets indexed and
+its two hashes), `issue-index.ts` (the Orama cache + refresh), and
+`issue-index-query.ts` (ranking) are all in `workstreams-app/src/server/`,
+beside `issue-domain.ts`; `bin/issues.ts` imports them the same way it already
+imported the parser. That is because the issue browser's **Related** section
+(`issues.related`, `issue-related-service.ts`) is the same ranking as `issues
+similar <path> --all --docs` over the same cache — one implementation, two
+callers, so a row an agent quotes from the CLI is the row the boxholder sees.
+The app is long-lived, so it holds the built index in process and re-reads the
+corpus at most every 30s to decide whether anything changed.
+
+- `issues list [filters]` — the filtered queue, newest first.
+- `issues groups --by discovered-in|date|labels|area|workstream|category` —
+  clusters, largest first, with their members (`--min N`, default 2).
+- `issues search <text>` — `--mode text` is BM25 and offline; `hybrid` (the
+  default when a key is available) fuses BM25 with vector similarity;
+  `semantic` is vector only.
+- `issues similar <issue-path> [--docs]` — nearest neighbours of an issue by its
+  own stored vector. `--docs` also ranks `callback-box/docs/**/*.md`, so an
+  existing plan surfaces as prior art instead of being re-derived.
+- `issues show <path>` — frontmatter as JSON plus the top of the body.
+
+Every subcommand takes `--json`, and defaults to open issues (`--closed` for
+only closed, `--all` for both). Filters: `--category --area --label --workstream
+--discovered-in --needs --priority --next-action --since --research
+--visibility`. Repeats are OR within one filter and AND across filters —
+except `--label`, where repeats mean AND, since labels are how a cross-cutting
+effort is picked out.
+
+**The `.issues-index/<scope>/` cache** at the repo root is gitignored and
+disposable: a persisted Orama index, the embedding vectors, and a manifest of
+`{ indexHash, embeddedHash }` per file. Every run re-reads every issue (cheap);
+the manifest answers only what re-reading cannot. The two hashes are separate on
+purpose — `indexHash` covers every indexed field, so a frontmatter-only edit
+rebuilds the index (otherwise a `where:` filter would keep matching the old
+`workstream`/`needs`/`priority`) while costing nothing in embeddings;
+`embeddedHash` records the text the stored vector was actually computed from, so
+a run that cannot embed drops the stale vector instead of adopting it under the
+new hash. Re-embedding is one batched call. `--rebuild` wipes the cache and pays
+for the whole corpus again.
+
+`--mode text` never touches the network, which is what makes the command usable
+with no key at all. `--mode hybrid` and `--mode semantic` are assertions that
+BM25 will not do, so they **error** when there is no key or the corpus is not
+fully embedded; only the unspecified default degrades to text, and it says so on
+stderr. The key is read from `CALLBACK_OPENAI_API_KEY`, then
+`THINKING_OPENAI_API_KEY`, then `SKE_OPENAI_API_KEY`.
+
+The same order applies to the app's Related section (and to comment
+transcription), read from the **app child's** environment: the supervisor
+spawns it with the main checkout's `callback-box/.env` underneath
+`process.env`, the same precedence worktree children get, so a
+`CALLBACK_OPENAI_API_KEY=` line there is enough and an exported variable
+still wins. The router does not load that line into itself. With
+no key the section says so — "the semantic index needs an OpenAI key" is a
+state it renders, not an error page.
+
+**Private issues are indexed too**, which means their text is sent to OpenAI to
+be embedded, and their bodies sit in the local cache. Both are consistent with
+where private issues already live (a local repo on the developer's machine, read
+by agents that call hosted models), but it is a real egress. `--visibility
+public` is the control: it selects the separate `public` cache and never reads
+the private queue at all, so nothing private is loaded, indexed, or embedded on
+that run — the scopes get their own directories precisely so alternating between
+them does not look like every entry vanished and re-appeared. `--mode text`
+avoids the network entirely.
 
 ## Private-issues shadow repo (`private-issues`)
 

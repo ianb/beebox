@@ -7,8 +7,9 @@
 import { cbSource } from "../../../lib/source-tag";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
 import type { RouterOutput } from "../../../lib/trpc";
-import { getApiBase } from "../../../api";
+import { apiRawFileUrl, getApiBase } from "../../../api";
 import { attachDirFor } from "@shared/attach-path";
+import { encodePathForUrl } from "../../../lib/view-url";
 
 type BrowseData = RouterOutput["status"]["browse"];
 
@@ -19,7 +20,7 @@ function imageDataAttrs(relativePath: string, name: string): Record<string, stri
   if (dot <= 0) return null;
   if (!IMAGE_EXTS.has(relativePath.slice(dot).toLowerCase())) return null;
   return {
-    "data-image-src": `${getApiBase()}/files/${relativePath}`,
+    "data-image-src": apiRawFileUrl(getApiBase(), relativePath),
     "data-image-alt": name,
   };
 }
@@ -91,7 +92,7 @@ export function BrowseSidebarList({
               onClick={() => onNavigate(card.relativePath)}
               {...cbSource("card", card.relativePath)}
               {...(card.type === "image" ? {
-                "data-image-src": `${getApiBase()}/image/${card.relativePath}`,
+                "data-image-src": `${getApiBase()}/image/${encodePathForUrl(card.relativePath)}`,
                 "data-image-alt": card.name,
               } : {})}
               aria-label={card.name === card.type ? `${card.name} card${card.status ? `, ${card.status}` : ""}` : `${card.name}, ${card.type} card${card.status ? `, ${card.status}` : ""}`}

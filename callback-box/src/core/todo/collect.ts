@@ -49,7 +49,7 @@ const CARD_GLOB_IGNORE = ["node_modules/**", ".git/**", "tmp/**", ".callback-box
  * than each re-deriving it, so the box-root boundary can't drift out of sync
  * between them.
  */
-export class UnsafeTodoGlobError extends Error {
+class UnsafeTodoGlobError extends Error {
   constructor(pattern: string) {
     super(`glob must stay within the box root — no absolute paths or ".." segments (got "${pattern}")`);
     this.name = "UnsafeTodoGlobError";
@@ -62,7 +62,7 @@ export function isUnsafeGlobPattern(pattern: string): boolean {
 }
 
 /** Throws {@link UnsafeTodoGlobError} if `pattern` could resolve outside the box root. */
-export function assertSafeGlobPattern(pattern: string): void {
+function assertSafeGlobPattern(pattern: string): void {
   if (isUnsafeGlobPattern(pattern)) throw new UnsafeTodoGlobError(pattern);
 }
 

@@ -25,7 +25,7 @@ import { runRunAgents, runRunShells, type RunShellFailure } from "./engine-run-e
  * `number` (not the narrowed literal `1`) since it's a tunable knob — the
  * plural-vs-singular check below stays meaningful if this value changes.
  */
-export const MAX_REVIEW_RETRIES: number = 1;
+const MAX_REVIEW_RETRIES: number = 1;
 
 /**
  * The validation outcome shape carried between phases.

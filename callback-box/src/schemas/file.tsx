@@ -15,8 +15,8 @@ import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import { cardSchema, type InferCardFields } from "../cards/index.js";
 
-export const FileStatus = z.enum(["new", "processed", "invalid"]);
-export type FileStatus = z.infer<typeof FileStatus>;
+const FileStatusSchema = z.enum(["new", "processed", "invalid"]);
+export type FileStatus = z.infer<typeof FileStatusSchema>;
 
 const FilenameEntry = z.object({
   ref: z.string(),
@@ -31,7 +31,7 @@ export const FileSchema = cardSchema("file", {
   description: "Metadata for an arbitrary uploaded file (PDF, archive, …) — the binary lives in the attach scope, awaiting agent handling",
   category: "synced",
   fields: {
-    status: FileStatus.default("new"),
+    status: FileStatusSchema.default("new"),
     filename: FilenameEntry,
     description: z.string().optional(),
   },

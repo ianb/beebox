@@ -258,4 +258,3 @@ const sheetsHandler: DriveTypeHandler = {
 
 registerDriveHandler(sheetsHandler);
 
-export { sheetsHandler };

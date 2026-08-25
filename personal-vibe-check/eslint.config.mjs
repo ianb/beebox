@@ -519,7 +519,7 @@ export function vibeCheck(options) {
 
   const reactSettings = react ? { react: { version: "detect" } } : {};
 
-  const exts = react ? "{ts,tsx,js,jsx}" : "{ts,js}";
+  const exts = "{ts,tsx,js,jsx}";
   const filePatterns = roots.map((r) => `${r}/**/*.${exts}`);
 
   // eslint-config-agent applies a strict `no-restricted-syntax` selector set to
@@ -788,6 +788,15 @@ export function vibeCheck(options) {
               // otherwise escape no-shadow entirely. Re-assert it here.
               "no-shadow": "off",
               "@typescript-eslint/no-shadow": "error",
+              // Same gap, opposite direction: these two are in disabledRules,
+              // which `.tsx` never reaches, so eslint-config-agent's base
+              // leaves them ON there. They demand that every top-level
+              // declaration be exported — `const x = 42` is a violation — which
+              // is the inverse of the export-what's-needed rule in
+              // callback-box/code-style.md and blocks un-exporting anything in
+              // a `.tsx`. Off here so the rejection actually applies.
+              "class-export/class-export": "off",
+              "required-exports/required-exports": "off",
             },
           },
         ]),

@@ -10,7 +10,7 @@ import type { ConnectionHandle } from "./transcription-connections";
  * Extracted from transcription-actor.ts to keep that file under the
  * max-lines budget; used by its reconnect loop.
  */
-export function waitForOpen(ws: WebSocket, timeoutMs: number): Promise<boolean> {
+function waitForOpen(ws: WebSocket, timeoutMs: number): Promise<boolean> {
   return new Promise((resolve) => {
     if (ws.readyState === WebSocket.OPEN) {
       resolve(true);

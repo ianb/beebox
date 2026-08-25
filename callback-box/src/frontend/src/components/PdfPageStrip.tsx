@@ -22,7 +22,7 @@ export interface PdfPageStripProps {
 }
 
 /** DOM id of a page thumbnail — the anchor a `#page-3` link targets. */
-export function pageAnchorId(page: number): string {
+function pageAnchorId(page: number): string {
   return `page-${page}`;
 }
 

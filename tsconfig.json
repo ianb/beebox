@@ -17,6 +17,6 @@
     "lib": ["ES2023"],
     "types": ["node", "@fastify/cookie"]
   },
-  "include": ["bin/**/*.ts"],
+  "include": ["bin/**/*.ts", "schedules/**/*.ts"],
   "exclude": ["node_modules", "callback-box", "cardworks", "agent-doctest", "canvas-loop", "callback-clerk", "browse"]
 }

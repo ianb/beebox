@@ -32,6 +32,7 @@ import {
 import { installSchemasGuide, installViewsGuide } from "../box/templates.js";
 import { pruneStaleTemplateUpdates, isTemplateManagedPath } from "../install-template-file.js";
 import { generateRules } from "../init-rules.js";
+import { generateSkills } from "../box/skills.js";
 import { installValidationHooks } from "../install-validation-hooks.js";
 import { getBoxShape, type BoxShape } from "../../lib/box-shape.js";
 import { isRepo, hasCommits, getStatus, stageFiles, commitPaths, withBoxGitLock } from "../../lib/git.js";
@@ -70,7 +71,13 @@ const DeployInfoSchema = z.object({
   commits: z.record(z.string(), z.object({ hash: z.string().optional() })).optional(),
 });
 
-const GENERATE_MARKER = ".callback-box/docs-generated-at";
+/**
+ * Box-relative path of the doc-generation cache marker: an ISO timestamp plus
+ * the engine version signal the run was made against. Exported for
+ * `docs-refresh.ts`, which reads it before and after a run to tell "the cache
+ * was current" from "docs were regenerated".
+ */
+export const GENERATE_MARKER = ".callback-box/docs-generated-at";
 
 const DOCID_DEBUG_MARKER = ".callback-box/docid-debug";
 
@@ -241,7 +248,7 @@ async function checkChatGuideMtimes(
 
 /**
  * Re-install upstream templates (procedures, guides, schedules, personality,
- * briefing, card rules) into the box. Each install* helper is idempotent and
+ * briefing, card rules, managed box skills) into the box. Each install* helper is idempotent and
  * only writes when the upstream template differs from the box's copy. Runs
  * inside generateDocs's cache-invalidated path, so it fires when the
  * callback-box source has changed (typically right after a deploy) and is a
@@ -268,6 +275,13 @@ async function syncTemplatesFromSource(boxRoot: string): Promise<void> {
   // cycle (not just an explicit `cb init`); user-edited guides are parked.
   await installViewsGuide(boxRoot);
   await generateRules(boxRoot);
+  // Managed box skills refresh on the same path as the rules they mirror.
+  // They used to be provisioned only by `cb init`, so a box that never got a
+  // manual re-init kept whatever skills shipped the day it was created; the
+  // engine's own upgrades (a renamed card type in a skill body, say) never
+  // reached it. Same cache gate as everything else here, so this is a no-op
+  // between deploys.
+  await generateSkills(boxRoot);
   await installValidationHooks(boxRoot);
   await pruneStaleTemplateUpdates(boxRoot);
 

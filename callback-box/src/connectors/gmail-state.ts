@@ -39,7 +39,7 @@ export type GmailPendingSummary = z.infer<typeof PendingSummarySchema>;
 export type GmailRuleState = z.infer<typeof GmailRuleStateSchema>;
 export type GmailTransientState = z.infer<typeof GmailTransientStateSchema>;
 
-export class GmailTransientStateValidationError extends Error {
+class GmailTransientStateValidationError extends Error {
   constructor(detail: string) {
     super(`Invalid Gmail transient state: ${detail}`);
     this.name = "GmailTransientStateValidationError";

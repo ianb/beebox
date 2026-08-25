@@ -380,7 +380,7 @@ safely replace an existing member credential based on a reset bearer.
   box access after hashing. Then consume the reset capability under the
   capability lock.
 - Add `setPasswordWithPasswordHash({ email, scrypt })` beside
-  `addUserWithPasswordHash`. It rechecks the user under the auth-file lock,
+  `addInvitedMemberWithPasswordHash`. It rechecks the user under the auth-file lock,
   preserves name and role, replaces the hash, increments `gen`, and returns the
   public user. `setPassword` delegates to this helper after hashing so the
   generation rule remains in one implementation.

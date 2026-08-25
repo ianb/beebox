@@ -41,44 +41,27 @@ leaves with the field gone.
 
 ## Finding the work
 
-List everything tagged, with the tag and title:
+`bin/issues` (see `bin/CLAUDE.md`) replaces the ad-hoc grep loops this section
+used to carry. Everything tagged, with the tag and title:
 
 ```bash
-cd "$(git rev-parse --show-toplevel)"
-for f in $(grep -rl "^next-action:" issues --include='*.md' | grep -v CLAUDE.md); do
-  printf "%-10s %-56s %s\n" \
-    "$(grep -m1 '^next-action:' "$f" | sed 's/^next-action:[[:space:]]*//;s/[[:space:]]*#.*//')" \
-    "${f#issues/}" \
-    "$(grep -m1 '^title:' "$f" | cut -c8- | tr -d '"' | cut -c1-46)"
-done | sort
+bin/issues list --next-action discuss --next-action reconfirm --next-action duplicate \
+  --next-action invalid --next-action fixed --next-action manually-confirmed \
+  --next-action verify-without-me
 ```
 
-Count by value, to see the shape of the backlog:
+One value only, and the same as JSON for scripting:
 
 ```bash
-grep -rh "^next-action:" issues --include='*.md' \
-  | sed 's/^next-action:[[:space:]]*//;s/[[:space:]]*#.*//' \
-  | sort | uniq -c | sort -rn
-```
-
-One value only (substitute `discuss` / `reconfirm` / `duplicate` / `invalid` /
-`fixed` / `manually-confirmed` / `verify-without-me`):
-
-```bash
-grep -rl "^next-action: *reconfirm" issues --include='*.md' | grep -v CLAUDE.md
+bin/issues list --next-action reconfirm
+bin/issues list --next-action fixed --json
 ```
 
 Cross-reference with priority, since a tagged `important` issue is worth doing
-first:
-
-```bash
-for f in $(grep -rl "^next-action:" issues --include='*.md' | grep -v CLAUDE.md); do
-  printf "%-10s %-12s %s\n" \
-    "$(grep -m1 '^next-action:' "$f" | sed 's/^next-action:[[:space:]]*//')" \
-    "$(grep -m1 '^priority:' "$f" | sed 's/^priority:[[:space:]]*//' || echo uncategorized)" \
-    "${f#issues/}"
-done | sort
-```
+first: add `--priority important`. To see whether a `fixed?`/`duplicate?` guess
+holds, `bin/issues similar <path> --all` lists the closed siblings that may
+already own the work, and `bin/issues show <path>` prints the frontmatter and
+body head.
 
 ## What each value asks of you
 
@@ -134,9 +117,12 @@ invalid, so confirm before closing — the tag is a question.
 *the work probably happened, there is evidence in git, and the issue just got
 lost.* So **search history first** — the fix commonly landed under a different
 description, inside a larger change, or in a workstream that never closed the
-item:
+item. Commits that named the issue carry an `Issue:` trailer (root
+`CLAUDE.md`), so query that first; the `-S` guess is the fallback for
+commits that predate the convention or forgot the trailer:
 
 ```bash
+pnpm commit-provenance --issue <issue basename, no dir, no .md>
 git log --oneline -S'<a distinctive symbol or string from the issue>' -- <path>
 git log --oneline --since='<issue date>' -- <the file the issue names>
 ```

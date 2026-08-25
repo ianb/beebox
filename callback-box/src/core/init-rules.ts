@@ -4,8 +4,9 @@
  * auto-loads when an agent reads or edits a matching card file. Connector
  * rules cover non-card files (e.g. `.ics`).
  *
- * Called from `cb init`. Not a standalone CLI command — invoke `cb init`
- * to regenerate rules in a box.
+ * Called from `syncTemplatesFromSource` (inside `generateDocs`). Not a
+ * standalone CLI command — `cb init` or `cb docs refresh` regenerates a box's
+ * rules.
  */
 
 import { join, relative } from "node:path";
@@ -66,7 +67,7 @@ Use \`cb calendar today\`, \`cb calendar upcoming\`, or \`cb calendar <timespan>
  * legacy box) — see "Where Claude Code runs" in
  * `docs/implemented-plans/boxes-as-packages-v2.md`.
  *
- * Called by `cb init`.
+ * Called by `syncTemplatesFromSource`, inside `generateDocs`.
  */
 export async function generateRules(boxRoot: string): Promise<string[]> {
   const shape = await getBoxShape(boxRoot);

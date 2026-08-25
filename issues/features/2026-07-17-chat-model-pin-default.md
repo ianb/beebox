@@ -41,8 +41,9 @@ warm-up.
 Today there isn't really a per-chat model *and* a separate default; there's **one
 box-wide pointer**:
 
-- `saveCurrentModel`/`loadPersistedChatModel` read+write a single box file,
-  `.callback-box/chat-model.json` (`src/core/chat/session/state.ts:95-145`).
+- `saveCurrentModel`/`loadCurrentModel` read+write a single box file,
+  `.callback-box/chat-model.json` — the path is `DEFAULT_MODEL_FILE`
+  (`src/core/chat/session/state.ts`).
 - Every `ChatSession` defaults `modelFile` to that same box path
   (`src/core/chat/session/index.ts:106`), and holds an in-memory
   `currentModel: string | null` (`index.ts:86`) where **null means the SDK

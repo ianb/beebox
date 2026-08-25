@@ -62,7 +62,7 @@ const OUTPUT_TAIL_BYTES = 64 * 1024;
  * back to `status: new` + `error:` and intake still completes).
  */
 export const MAX_EXTRACTION_ARTIFACTS = 500;
-export const MAX_EXTRACTION_BYTES = 512 * 1024 ** 2;
+const MAX_EXTRACTION_BYTES = 512 * 1024 ** 2;
 
 export interface DoclingExtractOptions {
   /** Scratch directory Docling writes into. Caller owns creation and cleanup. */

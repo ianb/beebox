@@ -7,7 +7,9 @@ import type {
   Issue,
   IssueChange,
   Plan,
+  IssueVisibility,
   Quota,
+  RelatedResult,
   TestingQueue,
 } from "../shared/documents.js";
 import type {
@@ -16,20 +18,43 @@ import type {
   LifecycleJob,
 } from "../shared/actions.js";
 import type { AskQueue } from "../shared/exhibits.js";
+import type { ScheduleAlert } from "../shared/schedules.js";
 import type { CommentsService } from "./comments-service.js";
 
 export interface WorkstreamsService {
   list(): Promise<WorkstreamListResult>;
 }
 
+/**
+ * Schedule alerts, read and acknowledged through `bin/schedules`. The app is a
+ * reader of that store and never a writer (scheduled-workstreams.md, Track D).
+ */
+export interface SchedulesService {
+  alerts(workstream: string | null): Promise<ScheduleAlert[]>;
+  acknowledge(id: string): Promise<void>;
+}
+
 export interface AppServices {
   workstreams: WorkstreamsService;
+  schedules: SchedulesService;
   documents: DocumentsService;
   comments: CommentsService;
   transcribe: TranscribeService;
   quotas: QuotasService;
   actions: ActionsService;
   exhibits: ExhibitsService;
+  related: IssueRelatedService;
+}
+
+/**
+ * Nearest issues and design docs for one issue — the same ranking
+ * `bin/issues similar --all --docs` prints, over the same index. Declared
+ * here rather than imported from issue-related-service.ts for the reason
+ * given on TranscribeService below: this file is in the frontend's type
+ * graph, and the implementation is server-only.
+ */
+export interface IssueRelatedService {
+  related(input: { relPath: string; visibility: IssueVisibility }): Promise<RelatedResult>;
 }
 
 /**

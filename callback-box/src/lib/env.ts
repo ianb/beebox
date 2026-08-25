@@ -110,7 +110,7 @@ const optionalDevSurfaces = z.literal("1").optional();
  * with strict URL validation — there a malformed value is a boot-stopping
  * misconfig an operator should see immediately.
  */
-export const baseEnvSchema = z.object({
+const baseEnvSchema = z.object({
   NODE_ENV: optionalString,
   // Global local-user store; the invite store is its 0600 sibling file. The
   // hub passes this path to children so minting and acceptance share state.

@@ -135,10 +135,3 @@ export function stripAnsi(text: string): string {
   // eslint-disable-next-line no-control-regex
   return text.replace(/\u001B\[[\d;]*m/g, "");
 }
-
-/**
- * Check if the terminal supports colors.
- */
-export function supportsColor(): boolean {
-  return chalk.level > 0;
-}

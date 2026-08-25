@@ -47,7 +47,7 @@ export interface HubStateOptions {
 }
 
 /** `hub-state.json`, a sibling of the loaded config file. */
-export function hubStatePath(configPath: string): string {
+function hubStatePath(configPath: string): string {
   return path.join(path.dirname(configPath), "hub-state.json");
 }
 

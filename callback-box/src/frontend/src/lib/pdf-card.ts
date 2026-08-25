@@ -23,7 +23,7 @@ export const EXTRACTED_REANALYZE_COMMAND = "cb pdf reanalyze";
 export const ORIGINAL_RENDERER_NAME = "Original";
 
 /** Page renders written by the extractor: `page-001.avif`, `page-002.avif`, … */
-export const PAGE_RENDER_RE = /^page-(\d{3})\.avif$/;
+const PAGE_RENDER_RE = /^page-(\d{3})\.avif$/;
 
 /** The page number a page-render filename encodes, or `null` if it isn't one. */
 export function pageRenderNumber(name: string): number | null {
@@ -103,6 +103,8 @@ export interface ExtractedDocumentFields {
   format: string | null;
   /** Ref to the original bytes, normally `attach/source.pdf`. */
   originalRef: string | null;
+  /** Ref to the gzipped DoclingDocument, normally `attach/docling.json.gz`. */
+  doclingRef: string | null;
   /** The file's name before capture, when the pipeline recorded one. */
   originalName: string | null;
   captured: string | null;
@@ -129,10 +131,12 @@ export function readExtractedFields(
   const fm = frontmatter ?? {};
   const filename = isRecord(fm["filename"]) ? fm["filename"] : {};
   const metadata = isRecord(fm["metadata"]) ? fm["metadata"] : {};
+  const docling = isRecord(fm["docling"]) ? fm["docling"] : {};
   return {
     status: str(fm["status"]),
     format: str(fm["format"]),
     originalRef: str(filename["ref"]),
+    doclingRef: str(docling["ref"]),
     originalName: str(filename["original-name"]),
     captured: str(filename["captured"]),
     source: str(filename["source"]),

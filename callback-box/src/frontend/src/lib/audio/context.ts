@@ -88,7 +88,7 @@ export function formatThrownError(error: unknown): string {
   return error instanceof Error ? `${error.name}: ${error.message}` : String(error);
 }
 
-export function isIOS(): boolean {
+function isIOS(): boolean {
   return /iP(ad|hone|od)/.test(navigator.userAgent);
 }
 
@@ -134,7 +134,7 @@ export function unlockAudioContext(): void {
  * Get the shared audio element (pre-unlocked on iOS).
  * On non-iOS, returns a new Audio element each time.
  */
-export function getPlaybackAudioElement(): HTMLAudioElement {
+function getPlaybackAudioElement(): HTMLAudioElement {
   if (isIOS() && sharedAudio) {
     return sharedAudio;
   }

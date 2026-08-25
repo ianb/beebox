@@ -88,8 +88,22 @@ dev/apps/story-eval/runs/
 /exhibits
 callback-box/user-stories/work/
 
+# Workflow scripts, built from the `.ts` sources beside them by
+# `user-stories/pipeline/build-workflows.ts`. The Workflow tool parses plain
+# JavaScript and cannot import anything, so the runnable form has to be `.mjs`;
+# only the TypeScript is committed. Build before invoking one.
+
 # Journey assets. Photographs are committed once compressed (a few hundred KB of
 # webp) so a journey is self-contained and runnable from a clean checkout.
 # Anonymized mail stays out until the boxholder has read it, since it is derived
 # from a real family's inbox — prepare.ts fails loudly naming anything absent.
 callback-box/user-stories/journeys/E-school/assets/
+
+# Per-machine schedule overrides (callback-box/docs/plans/scheduled-workstreams.md,
+# Track A): same schema as schedule.yaml, every field optional, so a laptop can
+# disable a schedule without a commit.
+schedules/*/local.yaml
+# Embedding/search cache for `bin/issues` (see bin/CLAUDE.md). Disposable: a
+# delete just means the next run re-embeds the whole queue, which costs money
+# rather than correctness.
+/.issues-index

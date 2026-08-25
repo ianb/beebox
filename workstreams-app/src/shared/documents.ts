@@ -55,6 +55,49 @@ export const issueSchema = z.object({
   overlay: z.array(issueOverlaySchema).optional(),
 });
 
+/**
+ * One "Related" row under an open issue: a nearest neighbour by embedding,
+ * ranked exactly as `bin/issues similar <path> --all --docs` ranks it (same
+ * index, same cache, same scores) — the browser is a second caller of that
+ * ranking, never a second implementation of it.
+ */
+export const relatedRowSchema = z.object({
+  /** Cosine score, as printed by the CLI. */
+  score: z.number(),
+  /** Repo-relative path, e.g. `issues/bugs/…md` or `callback-box/docs/…md`. */
+  path: z.string(),
+  title: z.string(),
+  kind: z.enum(["issue", "doc"]),
+  /** Null for a design doc, which has no open/closed status to report. */
+  status: z.enum(["open", "closed"]).nullable(),
+  /** How to address this row in the issue browser; null for a design doc. */
+  issue: z.object({
+    relPath: issueRelPathSchema,
+    visibility: issueVisibilitySchema,
+  }).nullable(),
+});
+
+/**
+ * Why there is no ranking at all. `no-key` is an ordinary state, not an
+ * error: the semantic index needs an OpenAI key, and a checkout without one
+ * still browses issues perfectly well.
+ */
+export const relatedProblemSchema = z.object({
+  reason: z.enum(["no-key", "no-vector", "failed"]),
+  detail: z.string(),
+});
+
+export const relatedResultSchema = z.object({
+  rows: z.array(relatedRowSchema),
+  /** Null when the ranking ran. Non-null means `rows` is empty for a reason. */
+  problem: relatedProblemSchema.nullable(),
+  /**
+   * Documents with no usable embedding yet. Non-zero means the ranking could
+   * not see all of them — partial is not complete, and must not look like it.
+   */
+  unembedded: z.number(),
+});
+
 export const planSchema = z.object({
   title: z.string(),
   status: z.string(),
@@ -101,6 +144,9 @@ export type Plan = z.infer<typeof planSchema>;
 export type Quota = z.infer<typeof quotaSchema>;
 export type TestingQueue = z.infer<typeof testingQueueSchema>;
 export type IssueChange = z.infer<typeof issueChangeSchema>;
+export type IssueVisibility = z.infer<typeof issueVisibilitySchema>;
+export type RelatedRow = z.infer<typeof relatedRowSchema>;
+export type RelatedResult = z.infer<typeof relatedResultSchema>;
 
 /**
  * What a browsable path turns out to be. A closed union so a renderer cannot

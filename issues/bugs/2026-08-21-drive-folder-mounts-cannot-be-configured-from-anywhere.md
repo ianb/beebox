@@ -4,7 +4,6 @@ workstream: unattached
 area: callback-box
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — user-story catalog verification
-stories: [connectors/configure-which-gmail-calendar-and-drive-content]
 ---
 
 The Gmail and Calendar connectors can be configured from the web UI; Google Drive cannot, and its backing mutation has no caller at all.

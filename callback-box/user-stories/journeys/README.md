@@ -22,13 +22,15 @@ The yaml holds the world and the words:
 
 | Field | |
 |---|---|
-| `box.slug` | the box gets its own, served at `/<worktree>/<slug>/` |
 | `box.base` | `empty` prunes a clone to the package skeleton; or a path to clone whole |
 | `box.setup` | optional shell run with `$BOX` = the content root, before the person arrives |
 | `assets` | files plus a plain description of what each one is to them |
 | `situation` | handed over verbatim — their life, their reason, no product words |
 | `closing` | what to spend the back half of the budget on |
 | `watch_for` | **for the reader of the notes. Never reaches the walker.** |
+
+A journey is a directory: `journey.yaml`, its `assets/` (gitignored), and `reports/`,
+one dated file per walk of it.
 
 **The box is only files**, so `box.setup` can build any starting state from outside —
 a few contacts they would already have, last month's receipts, a half-finished note.
@@ -65,6 +67,14 @@ pnpm exec tsx callback-box/user-stories/journeys/collect.ts B-inventory-<date>
 Runs land in `../work/journeys/<id>-<date>/` (gitignored): the prompt as given, the
 notes, screenshots, and before/after snapshots of the box.
 
+Then read the walk and write it up — **[after-action.md](after-action.md)** is the
+procedure, and `<journey>/reports/<date>.md` is where it goes. That report is the only part of
+a run that is tracked, so it is what a walk leaves behind.
+
+Each new run supersedes the last: `prepare.ts` deletes the previous run's box and
+screenshots, keeps its notes, and **refuses to run at all** if that walk has no report
+— which is the point at which the evidence would be thrown away unread.
+
 ## Assets are not in the repo
 
 `journeys/*/assets/` is gitignored. The material so far is real photographs of someone's
@@ -87,3 +97,6 @@ half-provisioned by a missing file.
   finding.
 - **Notes stay in character and loose.** A later pass turns them into issues; stopping
   mid-walk to write a bug report distorts the walk.
+- **Nothing the walk says is a finding until it is separately verified.** Three of the
+  seven bugs the 2026-08-24 walk reported were the harness, not the app, each written
+  up in good faith. That pass is [after-action.md](after-action.md).

@@ -23,6 +23,7 @@ import { markdocConfig } from "../shared/markdoc-config.js";
 // Value named imports (`{ parse, validate }`) don't resolve from this CommonJS
 // module under Node's ESM loader (used by tsx / the doctest runner). Destructure
 // off the default import — same pattern as `markdoc-config.ts` / `card-lint.ts`.
+// eslint-disable-next-line import-x/no-named-as-default-member -- the rule's suggested named import is exactly what the comment above says does not resolve here.
 const { parse: markdocParse, validate: markdocValidate } = Markdoc;
 
 /**

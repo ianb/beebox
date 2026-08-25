@@ -32,7 +32,7 @@ export async function sendTelegramMessage(opts: {
 /**
  * Send a "typing..." indicator. Expires after ~5s.
  */
-export async function sendTypingIndicator(opts: {
+async function sendTypingIndicator(opts: {
   botToken: string;
   chatId: string | number;
 }): Promise<void> {

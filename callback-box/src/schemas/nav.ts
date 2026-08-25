@@ -32,7 +32,7 @@ const validHrefs = new Set(NAV_ROUTES.map((r) => r.href));
 const hrefList = NAV_ROUTES.map((r) => r.href).join(", ");
 
 /** A builtin route path; unknown paths fail validation with the valid set enumerated. */
-export const NavHref = z.string().refine((h) => validHrefs.has(h), {
+const NavHref = z.string().refine((h) => validHrefs.has(h), {
   message: `href must be one of: ${hrefList}`,
 });
 
@@ -42,7 +42,7 @@ export const NavHref = z.string().refine((h) => validHrefs.has(h), {
  * overrides the default (the route's builtin label, or the target card's
  * title).
  */
-export const NavEntry = z.union([
+const NavEntry = z.union([
   z.object({ href: NavHref, label: z.string().optional() }).strict(),
   z.object({ ref: z.string(), label: z.string().optional() }).strict(),
 ]);

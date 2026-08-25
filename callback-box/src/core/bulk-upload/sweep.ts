@@ -39,10 +39,10 @@ import { StagingSessionGoneError } from "../capture/staging-errors.js";
 import { bulkBatchCardRelPath } from "./prepare.js";
 
 /** No-activity window after which an open bulk batch is surfaced as abandoned. */
-export const BULK_ABANDONMENT_WINDOW_MS = 60 * 60 * 1000; // 60 minutes
+const BULK_ABANDONMENT_WINDOW_MS = 60 * 60 * 1000; // 60 minutes
 
 /** Age after which a delivered batch still under `tmp-upload/` is flagged unfiled. */
-export const TMP_UPLOAD_STALE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const TMP_UPLOAD_STALE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 /** Directories never worth descending into while hunting for `tmp-upload/`. */
 const SKIP_DIRS = new Set([".git", "node_modules", "tmp", ".callback-box"]);

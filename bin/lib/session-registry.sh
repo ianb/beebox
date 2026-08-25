@@ -251,6 +251,19 @@ session_registry_merge() {
   session_registry_update "$1" "$2" "${3:-}" "" false
 }
 
+# Mark a record as a scheduled workstream (docs/plans/scheduled-workstreams.md).
+# Written on every scheduled start so a wiped record heals itself.
+session_registry_mark_scheduled() {
+  session_registry_merge "$1" '{"kind":"scheduled"}'
+}
+
+# session_registry_is_scheduled <record-json>
+# Scheduled records are sticky: `remove`, `sweep`, and prune cull the worktree,
+# never the record, and `list` renders them even with no worktree and no launch.
+session_registry_is_scheduled() {
+  printf '%s' "$1" | jq -e '.kind == "scheduled"' >/dev/null 2>&1
+}
+
 session_registry_begin_launch() {
   local name="$1" token="$2" metadata="${3:-}" started_at patch
   [ -n "$token" ] || { echo "session-registry: launch token must not be empty" >&2; return 1; }
@@ -285,6 +298,8 @@ session_registry_fail_launch() {
 }
 
 # Remove records for absent worktrees only after their removal record is old.
+# Scheduled records are never removed — their worktree comes and goes, but the
+# record is the schedule's identity in the browser.
 session_registry_prune() {
   local cutoff_epoch="$1" file name removed_at removed_epoch record launch launch_state launch_at launch_epoch
   [ -d "$WT_STATE_DIR/workstreams" ] || return 0
@@ -294,6 +309,7 @@ session_registry_prune() {
     [ -d "$WT_ROOT/$name" ] && continue
     record=$(session_registry_read "$name" || true)
     [ -n "$record" ] || continue
+    if session_registry_is_scheduled "$record"; then continue; fi
     removed_at=$(jq -r '.removed.at // empty' <<<"$record")
     if [ -n "$removed_at" ]; then
       removed_epoch=$(session_registry_iso_epoch "$removed_at" || true)

@@ -66,11 +66,6 @@ const telegramSecretSchema = z.object({
 
 let warnedAboutLegacyFile = false;
 
-/** Reset the once-per-process deprecation latch (tests only). */
-export function resetTelegramLegacyWarning(): void {
-  warnedAboutLegacyFile = false;
-}
-
 /**
  * Load a box's Telegram credentials: the machine store's `telegram-bot/<slug>`
  * entry (a JSON string `{botToken, webhookSecret}`) at `server` access, then

@@ -116,7 +116,7 @@ export interface FieldScenario {
 }
 
 /** The scenario file is unreadable, unparseable, or does not match the format. */
-export class FieldScenarioParseError extends Error {
+class FieldScenarioParseError extends Error {
   constructor({ dir, detail }: { dir: string; detail: string }) {
     super(`Field scenario ${dir}: ${detail}`);
     this.name = "FieldScenarioParseError";
@@ -125,7 +125,7 @@ export class FieldScenarioParseError extends Error {
 
 /** The scenario parses but does not hang together — a duplicate id, or a file
  *  it names that is not there. */
-export class FieldScenarioInvalidError extends Error {
+class FieldScenarioInvalidError extends Error {
   readonly problems: string[];
   constructor({ dir, problems }: { dir: string; problems: string[] }) {
     super(`Field scenario ${dir}:\n${problems.map((p) => `  - ${p}`).join("\n")}`);

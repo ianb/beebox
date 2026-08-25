@@ -11,8 +11,6 @@ import { Command } from "commander";
 import { initBox, installProcedures, installGuides, installSchedules, installPersonality, installBriefing, installTodoView, installRootLandmark, symlinkClaudeMemory } from "../../core/box/index.js";
 import { detectBoxTarget, scaffoldV2Box } from "../../core/box/package.js";
 import { stageAll, commit, initRepo, isRepo } from "../../lib/git.js";
-import { generateRules } from "../../core/init-rules.js";
-import { generateSkills } from "../../core/box/skills.js";
 import { generateDocs, setDocIdDebug } from "../../core/docs-gen/index.js";
 import { installValidationHooks } from "../../core/install-validation-hooks.js";
 import { runAnnexDoctor } from "../../core/annex/doctor.js";
@@ -77,7 +75,7 @@ export interface InitOptions {
  * directly from tests without going through Commander's argv parsing or the
  * process.exit(1)-on-error wrapper below.
  */
-export async function runInit(targetPath: string, options: InitOptions): Promise<void> {
+async function runInit(targetPath: string, options: InitOptions): Promise<void> {
   // Detects what's already at `targetPath`: an existing v2 box (addressed by
   // its operational `content/` root or by its package root), or nothing yet.
   // A fresh init always scaffolds the v2 package layout — see "The box
@@ -166,18 +164,6 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
     console.log("\nLinked .claude/memory/ → ~/.claude/projects/ (auto-memory now git-tracked)");
   }
 
-  // Generate card-handling rules from schemas
-  const generated = await generateRules(boxRoot);
-  if (generated.length > 0) {
-    console.log(`\nGenerated ${generated.length} card rules in .claude/rules/`);
-  }
-
-  // Install managed box skills (e.g. build-course)
-  const skills = await generateSkills(boxRoot);
-  if (skills.length > 0) {
-    console.log(`Installed ${skills.length} skill(s) in .claude/skills/: ${skills.join(", ")}`);
-  }
-
   // Set or clear the docid-debug marker
   if (options.docidDebug !== undefined) {
     await setDocIdDebug(boxRoot, options.docidDebug);
@@ -185,10 +171,10 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
 
   // Install/refresh validation hooks (.git/hooks/pre-commit and
   // .claude/settings.json PostToolUse entry) so the cb path embedded in
-  // them matches THIS cb. generateDocs() also calls this, but it short-
-  // circuits when its doc-gen cache says nothing changed — so re-running
-  // `cb init` after switching cb sources (monorepo migration, new
-  // worktree, etc.) wouldn't refresh the hooks via that path alone.
+  // them matches THIS cb. generateDocs() also calls this (and init now forces
+  // it past the doc-gen cache, so that call does fire) — but the hooks are
+  // wanted whether or not doc generation later throws, and the helper is
+  // idempotent.
   await installValidationHooks(boxRoot);
 
   // Bring git-annex configuration up to spec, repairing what it can.
@@ -210,9 +196,19 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
     if (check.status === "failed") console.warn(`git-annex: ${check.message}`);
   }
 
-  // Generate agent documentation (picks up docid-debug from marker file)
-  await generateDocs(boxRoot);
-  console.log("Generated agent docs in .callback-box/ and docs/generated/");
+  // Generate agent documentation (picks up docid-debug from marker file).
+  // This is also where card rules (`generateRules`) and the managed box skills
+  // (`generateSkills`) are written — `syncTemplatesFromSource` owns both, so
+  // `cb init` no longer calls them itself and there is one path that keeps a
+  // box's generated artifacts current.
+  //
+  // Forced: generateDocs is cache-gated on input mtimes + the running engine's
+  // version, and `cb init` is the explicit "converge this box" hammer a human
+  // reaches for precisely when they suspect the cache is lying. Before rules
+  // and skills moved onto this path, init's own direct calls gave that
+  // guarantee; `force` is what preserves it.
+  await generateDocs(boxRoot, { force: true });
+  console.log("Generated agent docs in .callback-box/ and docs/generated/, card rules in .claude/rules/, and box skills in .claude/skills/");
 
   // Build the search index so the first `cb search` isn't a cold build.
   await openSearchIndex(boxRoot, {

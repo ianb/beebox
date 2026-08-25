@@ -13,8 +13,8 @@ import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import { body, cardSchema, type InferCardFields } from "../cards/index.js";
 
-export const RecordStatus = z.enum(["draft", "reviewed", "archived"]);
-export type RecordStatus = z.infer<typeof RecordStatus>;
+const RecordStatusSchema = z.enum(["draft", "reviewed", "archived"]);
+export type RecordStatus = z.infer<typeof RecordStatusSchema>;
 
 const SourceEntry = z.object({
   ref: z.string(),
@@ -49,7 +49,7 @@ export const RecordSchema = cardSchema("record", {
   description: "A discrete extracted unit (inventory item, archived document, contact) pulled from a capture session or other source",
   category: "authored",
   fields: {
-    status: RecordStatus.default("draft"),
+    status: RecordStatusSchema.default("draft"),
     name: z.string(),
     description: z.string().optional(),
     sources: z.array(SourceEntry).optional(),

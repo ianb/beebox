@@ -27,7 +27,7 @@ interface ExistingMessages {
   refs: string[];
 }
 
-export class InvalidTrackedGmailMessageCardError extends Error {
+class InvalidTrackedGmailMessageCardError extends Error {
   readonly cardPath: string;
 
   constructor(cardPath: string) {

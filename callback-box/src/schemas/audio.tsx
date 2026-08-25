@@ -16,8 +16,8 @@ import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import { cardSchema, type InferCardFields } from "../cards/index.js";
 
-export const AudioStatus = z.enum(["new", "transcribed"]);
-export type AudioStatus = z.infer<typeof AudioStatus>;
+const AudioStatusSchema = z.enum(["new", "transcribed"]);
+export type AudioStatus = z.infer<typeof AudioStatusSchema>;
 
 const FilenameEntry = z.object({
   ref: z.string(),
@@ -37,7 +37,7 @@ export const AudioSchema = cardSchema("audio", {
   description: "A recorded speech clip from a capture session — audio file in the attach scope, transcript and summary filled on transcription",
   category: "synced",
   fields: {
-    status: AudioStatus.default("new"),
+    status: AudioStatusSchema.default("new"),
     filename: FilenameEntry,
     summary: z.string().optional(),
     transcript: z.string().optional(),

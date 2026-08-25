@@ -28,7 +28,7 @@ import { loadAgentEngine, type AgentEngine } from "../../box/config.js";
 import { sdkSessionIdSchema } from "./session-id.js";
 
 /** How long an unused reservation stays addressable. */
-export const RESERVATION_TTL_MS = 6 * 60 * 60 * 1000;
+const RESERVATION_TTL_MS = 6 * 60 * 60 * 1000;
 
 /** A coined id the box has accepted, with the context its first run needs. */
 export interface ChatReservation {
@@ -55,7 +55,7 @@ export type ReserveResult =
   | { kind: "unsupported" };
 
 /** The harness requires a coined id to be a UUID — the same shape it assigns. */
-export function isCoinedIdShape(sessionId: string): boolean {
+function isCoinedIdShape(sessionId: string): boolean {
   return sdkSessionIdSchema.safeParse(sessionId).success;
 }
 

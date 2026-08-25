@@ -7,4 +7,4 @@
  * import the one Result shape via `@shared/result`, exactly as
  * `shared/invariant.ts` does for the invariant helpers (see docs/module-map.md).
  */
-export { ok, okVoid, err, type Result } from "../lib/result.js";
+export { ok, err, type Result } from "../lib/result.js";

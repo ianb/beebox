@@ -112,4 +112,3 @@ registerCommand({
   execute: executeSync,
 });
 
-export { executeSync };

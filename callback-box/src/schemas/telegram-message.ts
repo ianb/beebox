@@ -9,7 +9,7 @@
 import { cardSchema, renderFrontmatterBlock, type InferCardFields } from "../cards/index.js";
 import { z } from "zod";
 
-export const TelegramMessageStatus = z.enum(["pending", "sent", "failed"]);
+const TelegramMessageStatus = z.enum(["pending", "sent", "failed"]);
 export type TelegramMessageStatusValue = z.infer<typeof TelegramMessageStatus>;
 
 const TelegramResponse = z.object({

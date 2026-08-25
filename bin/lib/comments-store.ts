@@ -54,7 +54,7 @@ export const STORE_MARKER = ".dev-comments";
 export const COMMENTS_SUFFIX = ".comments.yaml";
 
 /** The current on-disk shape. Bumped only for a change old readers cannot handle. */
-export const STORE_VERSION = 1;
+const STORE_VERSION = 1;
 
 /**
  * How the text arrived. Deliberately the same field and values as callback-box's
@@ -64,7 +64,7 @@ export const STORE_VERSION = 1;
  * `voice` records how the text arrived, not that it is verbatim: the boxholder
  * may have edited the transcript before submitting.
  */
-export const commentOriginSchema = z.enum(["typed", "voice"]);
+const commentOriginSchema = z.enum(["typed", "voice"]);
 
 export const commentSchema = z.object({
   id: z.string().min(1),
@@ -84,7 +84,7 @@ export const commentSchema = z.object({
   fragment: z.string().optional(),
 });
 
-export const commentsFileSchema = z.object({
+const commentsFileSchema = z.object({
   version: z.literal(STORE_VERSION),
   comments: z.array(commentSchema),
 });
@@ -97,14 +97,14 @@ export type Subject =
   | { scope: "tracked"; relPath: string }
   | { scope: "worktree"; worktree: string; relPath: string };
 
-export class InvalidCommentPathError extends Error {
+class InvalidCommentPathError extends Error {
   constructor(detail: string) {
     super(`invalid comment path: ${detail}`);
     this.name = "InvalidCommentPathError";
   }
 }
 
-export class UninitializedCommentStoreError extends Error {
+class UninitializedCommentStoreError extends Error {
   constructor(public readonly storeRoot: string) {
     super(`comment store ${storeRoot} is missing its ${STORE_MARKER} marker`);
     this.name = "UninitializedCommentStoreError";
@@ -183,7 +183,7 @@ export async function initStore(storeRoot: string): Promise<void> {
  * Refuse to write to a directory that is not a comment store. Without this, a
  * mistyped `CALLBACK_COMMENTS_ROOT` scatters files into an unrelated tree.
  */
-export async function assertStoreInitialized(storeRoot: string): Promise<void> {
+async function assertStoreInitialized(storeRoot: string): Promise<void> {
   const root = path.resolve(storeRoot);
   // lstat + isFile: a DIRECTORY named `.dev-comments`, or a symlink to some
   // unrelated file, would otherwise adopt an arbitrary directory as the store.

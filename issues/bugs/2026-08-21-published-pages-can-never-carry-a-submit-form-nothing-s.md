@@ -4,7 +4,6 @@ workstream: unattached
 area: callback-box
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — user-story catalog verification
-stories: [publish/collect-replies-from-a-published-page]
 ---
 
 The publish "drop box" (Track F of `callback-box/docs/plans/publish-pages.md`) is complete on the receiving side but has no producing side, so no reader can ever post a reply.

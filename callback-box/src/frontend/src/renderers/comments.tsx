@@ -8,7 +8,7 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-import { getApiBase } from "../api";
+import { apiRawFileUrl, getApiBase } from "../api";
 import { CommentsThread, parseComments } from "../components/CommentsThread";
 import { Stack } from "../components/ui/Stack";
 import { Text } from "../components/ui/Text";
@@ -16,7 +16,7 @@ import { RequestError } from "../lib/errors";
 import { registerFileType, type RendererProps } from "./index";
 
 function CommentsRenderer({ data }: RendererProps) {
-  const url = `${getApiBase()}/files/${data.path}`;
+  const url = apiRawFileUrl(getApiBase(), data.path);
   const basename = data.path.split("/").pop() ?? data.path;
 
   const { data: comments, isLoading, error } = useQuery({

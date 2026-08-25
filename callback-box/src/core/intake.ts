@@ -96,7 +96,7 @@ const filenameNormalizationStep: IntakeStep = {
   },
 };
 
-export const intakeSteps: IntakeStep[] = [filenameNormalizationStep];
+const intakeSteps: IntakeStep[] = [filenameNormalizationStep];
 
 class DirReadError extends Error {
   constructor(cause: unknown, dir: string) {

@@ -84,6 +84,14 @@ const fields = readCard(ANALYZED);
 => null | analyzed | The 2026 handbook, scanned.
 ```
 
+The `docling:` ref is read too — it is what the view needs to label page
+boundaries in the extracted text (`lib/docling-match.ts`):
+
+```ts continue
+fields.doclingRef
+=> attach/docling.json.gz
+```
+
 A card with nothing optional filled in reads as nulls, not as `undefined`
 leaking into the markup:
 
@@ -99,6 +107,9 @@ filename:
 `);
 [String(bare.title), String(bare.author), String(bare.pages), String(bare.description)].join(" ")
 => null null null null
+
+String(bare.doclingRef)
+=> null
 ```
 
 ## Page renders come out of the attach listing

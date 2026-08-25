@@ -30,7 +30,7 @@ export function quietTickCount(ticks: SchedulerLogEntry[]): number {
  * The counts for one tick. Each non-zero kind gets its own span so an
  * inconclusive run is never absorbed into the green "ran" number.
  */
-export function TickResult({ result }: { result: TickResultData }) {
+function TickResult({ result }: { result: TickResultData }) {
   const parts = [
     result.ran > 0 ? <span key="ran" className="text-success">{result.ran} ran</span> : null,
     result.inconclusive > 0 ? (

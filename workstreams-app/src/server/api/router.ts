@@ -13,9 +13,14 @@ import {
   issueVisibilitySchema,
   planSchema,
   quotaSchema,
+  relatedResultSchema,
   testingQueueSchema,
 } from "../../shared/documents.js";
 import { askQueueSchema } from "../../shared/exhibits.js";
+import {
+  scheduleAlertIdSchema,
+  scheduleAlertsResultSchema,
+} from "../../shared/schedules.js";
 import {
   actionResultSchema,
   actionVerbSchema,
@@ -43,6 +48,24 @@ const workstreamsRouter = router({
     }),
 });
 
+/** Reads and acknowledges through `bin/schedules`; the store's only writer is
+ *  still that CLI (scheduled-workstreams.md, Track D). */
+const schedulesRouter = router({
+  alerts: procedure
+    .input(z.object({ workstream: z.string().regex(/^[a-zA-Z0-9_-]+$/u).nullable() }))
+    .output(scheduleAlertsResultSchema)
+    .query(async ({ input, ctx }) => ({
+      items: await ctx.services.schedules.alerts(input.workstream),
+    })),
+  acknowledge: procedure
+    .input(z.object({ id: scheduleAlertIdSchema }))
+    .output(z.object({ id: scheduleAlertIdSchema }))
+    .mutation(async ({ input, ctx }) => {
+      await ctx.services.schedules.acknowledge(input.id);
+      return { id: input.id };
+    }),
+});
+
 const issuesRouter = router({
   list: procedure.output(z.object({ items: z.array(issueSchema) })).query(async ({ ctx }) => ({
     items: await ctx.services.documents.listIssues(),
@@ -52,6 +75,18 @@ const issuesRouter = router({
     visibility: issueVisibilitySchema,
   })).output(issueSchema).query(async ({ input, ctx }) =>
     ctx.services.documents.issueDetail(input.relPath, input.visibility)),
+  /**
+   * Nearest issues and design docs for one issue. Deliberately the same
+   * ranking as `bin/issues similar <path> --all --docs`, over the same
+   * `.issues-index/` cache — the browser is a second caller, not a second
+   * implementation. A missing embeddings key is a reported state in the
+   * result, not an error: the rest of the browser works without one.
+   */
+  related: procedure.input(z.object({
+    relPath: issueRelPathSchema,
+    visibility: issueVisibilitySchema,
+  })).output(relatedResultSchema).query(async ({ input, ctx }) =>
+    ctx.services.related.related(input)),
   save: procedure.input(z.object({ changes: z.array(issueChangeSchema).max(1_000) }))
     .output(z.object({ saved: z.number().int().nonnegative() }))
     .mutation(async ({ input, ctx }) => ({
@@ -115,6 +150,7 @@ const dashboardRouter = router({
 export const appRouter = router({
   dashboard: dashboardRouter,
   workstreams: workstreamsRouter,
+  schedules: schedulesRouter,
   issues: issuesRouter,
   comments: commentsRouter,
   documents: documentsRouter,

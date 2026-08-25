@@ -8,7 +8,6 @@ id: B-inventory
 title: I never know what I've got
 
 box:
-  slug: journey-b
   # `empty` prunes a clone down to the package skeleton: no store, no box content,
   # no people. Every journey premise is "this is MY box", and a stranger's courses
   # and inbox read as confusing rather than realistic (observed, 2026-08-22).

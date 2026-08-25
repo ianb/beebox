@@ -5,8 +5,9 @@
  * Reuses the shared deliver core (`core/chat/session/deliver-user-message.ts`);
  * unlike capture there is NO most-active fallback — a bulk batch is always
  * launched from a specific chat, so a target that no longer resolves is a broken
- * invariant (→ {@link BulkTargetGoneError}, batch left retryable), never a
- * heterogeneous file dump misdirected into "whatever chat was most active".
+ * invariant — {@link resolveBulkTarget} returns null and the caller fails loudly,
+ * leaving the batch retryable — never a heterogeneous file dump misdirected into
+ * "whatever chat was most active".
  */
 
 import type { ChatSessionRegistry } from "../chat/session/registry.js";
@@ -14,14 +15,6 @@ import { loadHistory } from "../chat/session/history.js";
 import type { DeliveryTarget } from "../chat/session/deliver-user-message.js";
 
 export { buildUploadWrapper } from "../../shared/delivered-user-message.js";
-
-/** Raised when a bulk batch's target chat no longer resolves at delivery. Retryable. */
-export class BulkTargetGoneError extends Error {
-  constructor(targetSessionId: string) {
-    super(`Bulk batch target chat ${targetSessionId} no longer exists`);
-    this.name = "BulkTargetGoneError";
-  }
-}
 
 /**
  * Resolve a bulk batch's delivery target from on-disk state (no session is

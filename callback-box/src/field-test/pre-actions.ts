@@ -38,7 +38,7 @@ import {
  *  past it, something is wedged and the run wants to hear about it. */
 const WAKEUP_TIMEOUT_MS = 15 * 60_000;
 
-export class FieldPreActionError extends Error {
+class FieldPreActionError extends Error {
   constructor({ action, detail }: { action: string; detail: string }) {
     super(`Field-test pre action ${action} failed: ${detail}`);
     this.name = "FieldPreActionError";

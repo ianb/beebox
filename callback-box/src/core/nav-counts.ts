@@ -37,7 +37,7 @@ const READ_CONCURRENCY = 64;
  * `status.questions` follows for its `invalid` rows). `status.status` shares
  * this count rather than deriving its own, so the two can't disagree.
  */
-export async function countPendingQuestions(boxRoot: string): Promise<number> {
+async function countPendingQuestions(boxRoot: string): Promise<number> {
   const dir = getBoxDir(boxRoot, "questions");
   let names: string[];
   try {

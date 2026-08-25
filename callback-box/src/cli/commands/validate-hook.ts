@@ -122,10 +122,6 @@ async function validateHookPathResult(fp: string): Promise<HookValidationResult>
   return { feedback: parts.length === 0 ? null : parts.join("\n"), hasErrors: summary.totalErrors > 0 };
 }
 
-export async function validateHookPath(fp: string): Promise<string | null> {
-  return (await validateHookPathResult(fp)).feedback;
-}
-
 /** Validate paths reported by a harness, preserving warnings versus errors. */
 export async function validateHookPathsResult(paths: string[]): Promise<HookValidationResult> {
   const feedback: string[] = [];
@@ -141,7 +137,7 @@ export async function validateHookPathsResult(paths: string[]): Promise<HookVali
 }
 
 /** Validate paths reported by a hook and return combined agent feedback. */
-export async function validateHookPaths(paths: string[]): Promise<string | null> {
+async function validateHookPaths(paths: string[]): Promise<string | null> {
   return (await validateHookPathsResult(paths)).feedback;
 }
 

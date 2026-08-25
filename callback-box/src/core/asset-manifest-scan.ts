@@ -19,7 +19,6 @@ import {
   entryMatchesStat,
   loadManifest,
   saveManifest,
-  sha256File,
 } from "./asset-manifest.js";
 import { errorMessage } from "../lib/error-guards.js";
 import { type AttachScope, findAttachScopes } from "../lib/attach-scopes.js";
@@ -289,4 +288,3 @@ export async function scanBoxAttachments(
 }
 
 /** Re-export so callers don't need to reach into two files. */
-export { sha256File };

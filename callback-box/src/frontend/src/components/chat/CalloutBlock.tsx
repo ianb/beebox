@@ -14,7 +14,7 @@ import type { OnZoomView } from "./ChatMessages";
 import type { ViewTarget } from "../../lib/view-url";
 import { cn } from "../../lib/cn";
 
-export function CalloutBlock({
+function CalloutBlock({
   callout,
   onZoomView,
   className,

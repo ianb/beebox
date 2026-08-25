@@ -12,6 +12,7 @@
 
 import { useMemo } from "react";
 import { z } from "zod";
+import { encodePathForUrl } from "../lib/view-url";
 
 /**
  * File metadata from the views API; content is fetched on demand. The zod
@@ -36,7 +37,7 @@ const commitResultSchema = z.object({ committed: z.boolean(), hash: z.string().o
 const errorBodySchema = z.object({ error: z.string().optional() });
 
 /** readFile() failure — carries the path and HTTP status for view code to inspect. */
-export class ViewFileFetchError extends Error {
+class ViewFileFetchError extends Error {
   readonly path: string;
   readonly status: number;
   constructor(path: string, { status }: { status: number }) {
@@ -48,7 +49,7 @@ export class ViewFileFetchError extends Error {
 }
 
 /** Generic write/commit failure (4xx/5xx other than a version conflict). */
-export class ViewFileWriteError extends Error {
+class ViewFileWriteError extends Error {
   readonly path: string;
   readonly status: number;
   constructor(path: string, { status, detail }: { status: number; detail: string }) {
@@ -65,7 +66,7 @@ export class ViewFileWriteError extends Error {
  * (null = it no longer exists) — refresh from it rather than retrying
  * blind.
  */
-export class ViewFileConflictError extends Error {
+class ViewFileConflictError extends Error {
   readonly path: string;
   readonly current: ViewFile | null;
   constructor(path: string, { current }: { current: ViewFile | null }) {
@@ -102,7 +103,7 @@ export function useViewFileHelpers(apiBase: string): ViewFileHelpers {
 }
 
 function makeHelpers(apiBase: string): ViewFileHelpers {
-  const fileUrl = (filePath: string): string => `${apiBase}/files/${filePath}`;
+  const fileUrl = (filePath: string): string => `${apiBase}/files/${encodePathForUrl(filePath)}`;
 
   const adapterFetch = (
     adapter: string,

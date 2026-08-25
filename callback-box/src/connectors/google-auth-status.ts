@@ -33,7 +33,7 @@ const PROBE_INTERVAL_MS = 24 * 60 * 60 * 1000;
  * grant, so callers up the stack can tell "you need to re-authorize" apart from
  * a network blip without re-parsing Google's error shape.
  */
-export class GoogleAuthExpiredError extends Error {
+class GoogleAuthExpiredError extends Error {
   constructor(reason: string) {
     super(`Google authorization expired or revoked: ${reason}`);
     this.name = "GoogleAuthExpiredError";

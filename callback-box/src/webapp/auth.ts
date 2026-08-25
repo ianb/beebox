@@ -303,17 +303,10 @@ export function getSessionUser(request: FastifyRequest): SessionUser | null {
  * of a `FastifyRequest`'s decorated `.cookies` — for the paths without
  * `@fastify/cookie`'s decoration (see `lib/cookies.ts`).
  */
-export function getSessionUserFromCookieHeader(cookieHeader: string | undefined): SessionUser | null {
+function getSessionUserFromCookieHeader(cookieHeader: string | undefined): SessionUser | null {
   const cookie = parseCookieHeader(cookieHeader)[COOKIE_NAME];
   if (!cookie) return null;
   return verifySession(cookie);
-}
-
-/**
- * Extract the authenticated email from a request's session cookie.
- */
-export function getSessionEmail(request: FastifyRequest): string | null {
-  return getSessionUser(request)?.email ?? null;
 }
 
 let loggedAuthStoreUnavailable = false;
@@ -347,16 +340,6 @@ export function getOwnerEmail(): string | null {
     }
     throw e;
   }
-}
-
-/**
- * Check if the authenticated user is the system owner.
- */
-export function isOwner(request: FastifyRequest): boolean {
-  const ownerEmail = getOwnerEmail();
-  if (!ownerEmail) return false;
-  const email = getSessionEmail(request);
-  return email === ownerEmail;
 }
 
 /**

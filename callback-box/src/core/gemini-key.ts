@@ -18,10 +18,10 @@ import { refusalAllowsLegacyFallback } from "./secrets/legacy-fallback.js";
 import { resolveSecret, type SecretRead } from "./secrets/resolve.js";
 
 /** The store name this key lives under. */
-export const GEMINI_SECRET_NAME = "gemini";
+const GEMINI_SECRET_NAME = "gemini";
 
 /** The env fallbacks, in the order they have always been read. */
-export function geminiKeyFromEnv(): string | null {
+function geminiKeyFromEnv(): string | null {
   return process.env["GEMINI_KEY"] || process.env["SKE_GEMINI_API_KEY"] || null;
 }
 

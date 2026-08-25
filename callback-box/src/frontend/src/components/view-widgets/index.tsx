@@ -11,7 +11,6 @@
 import { CardLink } from "./CardLink";
 import { CardRef } from "./CardRef";
 
-export { CardLink, CardRef };
 export type { CardLinkProps } from "./CardLink";
 export type { CardRefProps } from "./CardRef";
 

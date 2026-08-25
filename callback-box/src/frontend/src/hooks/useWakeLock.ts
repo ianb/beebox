@@ -61,7 +61,7 @@ export function useDebouncedWakeLock(active: boolean, releaseDelayMsArg?: number
   }, [active, releaseDelayMs, requestWakeLock, releaseWakeLock]);
 }
 
-export function useWakeLock(): WakeLockApi {
+function useWakeLock(): WakeLockApi {
   const wakeLock = useRef<WakeLockSentinel | null>(null);
 
   const requestWakeLock = useCallback(async (): Promise<boolean> => {

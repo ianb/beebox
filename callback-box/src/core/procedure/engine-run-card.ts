@@ -22,7 +22,7 @@ import {
 import type { InconclusiveReason } from "../../shared/inconclusive.js";
 
 /** Raised when a run card can't be read as YAML frontmatter. */
-export class RunCardParseError extends Error {
+class RunCardParseError extends Error {
   constructor(runCardPath: string) {
     super(`Run card is not valid frontmatter: ${runCardPath}`);
     this.name = "RunCardParseError";

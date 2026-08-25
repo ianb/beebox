@@ -102,14 +102,14 @@ export interface GmailConnectorConfig {
   gcIntervalHours: number | undefined;
 }
 
-export class GmailConnectorConfigError extends Error {
+class GmailConnectorConfigError extends Error {
   constructor(detail: string) {
     super(`Invalid config/connectors/gmail.json: ${detail}`);
     this.name = "GmailConnectorConfigError";
   }
 }
 
-export class DuplicateGmailRuleNameError extends GmailConnectorConfigError {
+class DuplicateGmailRuleNameError extends GmailConnectorConfigError {
   readonly ruleName: string;
 
   constructor(ruleName: string) {
@@ -119,7 +119,7 @@ export class DuplicateGmailRuleNameError extends GmailConnectorConfigError {
   }
 }
 
-export class MixedGmailRuleConfigError extends GmailConnectorConfigError {
+class MixedGmailRuleConfigError extends GmailConnectorConfigError {
   constructor() {
     super("rules cannot be combined with the query or labels shorthand");
     this.name = "MixedGmailRuleConfigError";
@@ -131,7 +131,7 @@ export class MixedGmailRuleConfigError extends GmailConnectorConfigError {
  * the point: this used to default to tracking, so a filter saved from the admin
  * form created cards without ever saying it would.
  */
-export class MissingGmailActionError extends GmailConnectorConfigError {
+class MissingGmailActionError extends GmailConnectorConfigError {
   constructor() {
     super(
       'query or labels needs an action — add "action": {"type": "track"} to ' +
@@ -143,7 +143,7 @@ export class MissingGmailActionError extends GmailConnectorConfigError {
   }
 }
 
-export class StrayGmailActionError extends GmailConnectorConfigError {
+class StrayGmailActionError extends GmailConnectorConfigError {
   constructor() {
     super("action applies to the query or labels shorthand; named rules carry their own");
     this.name = "StrayGmailActionError";
@@ -155,7 +155,7 @@ export class StrayGmailActionError extends GmailConnectorConfigError {
  * the file looking effective while matching nothing. Ambiguity in a config that
  * decides what mail gets collected is worth an error, not a precedence rule.
  */
-export class AmbiguousGmailShorthandError extends GmailConnectorConfigError {
+class AmbiguousGmailShorthandError extends GmailConnectorConfigError {
   constructor() {
     super("query and labels are two spellings of the same shorthand — set one, not both");
     this.name = "AmbiguousGmailShorthandError";

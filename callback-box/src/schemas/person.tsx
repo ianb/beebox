@@ -13,7 +13,7 @@ import { z } from "zod";
 import { body, cardSchema, type InferCardFields } from "../cards/index.js";
 import { namedEntityFields } from "./named-entity-fields.js";
 
-export const PersonStatus = z.enum(["active", "inactive", "archived"]);
+const PersonStatus = z.enum(["active", "inactive", "archived"]);
 export type PersonStatusType = z.infer<typeof PersonStatus>;
 
 export const PersonSchema = cardSchema("person", {

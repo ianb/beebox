@@ -20,7 +20,7 @@
 import { readFirstUserSnippet, snippetFromUserText } from "../../cli/lib/session-snippet.js";
 
 /** Chars of the first user message used when there is no title. */
-export const SNIPPET_MAX_LEN = 400;
+const SNIPPET_MAX_LEN = 400;
 
 /**
  * Where a label's first-user-message text comes from — the *only* thing the

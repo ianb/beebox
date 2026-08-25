@@ -58,7 +58,7 @@ export interface ResolvedNavigation {
  * "+N more" affordance. Keeps a huge glob from ballooning the wire payload
  * (the `list` endpoint resolves every landmark in the box).
  */
-export const GROUP_CHILD_CAP = 50;
+const GROUP_CHILD_CAP = 50;
 
 export interface ResolveOptions {
   /** Absolute path to the landmark card's directory (the `expand` glob's cwd). */

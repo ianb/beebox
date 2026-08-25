@@ -31,7 +31,7 @@ import { refusalAllowsLegacyFallback } from "../secrets/legacy-fallback.js";
 import { resolveSecret } from "../secrets/resolve.js";
 
 /** The store name this key lives under — matches the legacy file's basename. */
-export const OPENAI_SECRET_NAME = "openai";
+const OPENAI_SECRET_NAME = "openai";
 
 const SECRET_RELATIVE_PATH = "config/connectors/openai.secret.json";
 

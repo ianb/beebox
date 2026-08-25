@@ -23,7 +23,7 @@ import { body, cardSchema, type InferCardFields } from "../cards/index.js";
  * a frozen `*.webpage.card`). Typed rather than freeform so a source can be a
  * clickable link or a tracked ref while still allowing a plain name.
  */
-export const RecipeSource = z
+const RecipeSource = z
   .object({
     label: z.string().optional(),
     href: z.string().optional(),
@@ -37,7 +37,7 @@ export const RecipeSource = z
  * A representative image — exactly one of `ref` (into the recipe's attach scope,
  * e.g. `attach/finished.jpg`) or `href` (an external URL).
  */
-export const RecipeHeroImage = z
+const RecipeHeroImage = z
   .object({
     ref: z.string().optional(),
     href: z.string().optional(),

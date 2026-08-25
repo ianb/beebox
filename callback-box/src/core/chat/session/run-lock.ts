@@ -19,7 +19,7 @@ import {
  * path to store: the existing one when already held, the freshly acquired
  * path, or null if acquisition failed (logged non-fatally upstream).
  */
-export async function acquireSessionRunLock(opts: {
+async function acquireSessionRunLock(opts: {
   boxRoot: string;
   sessionId: string | null;
   currentLockPath: string | null;
@@ -31,7 +31,7 @@ export async function acquireSessionRunLock(opts: {
 /**
  * Release the held lock if any. Returns the new lock-path state (always null).
  */
-export async function releaseSessionRunLock(currentLockPath: string | null): Promise<null> {
+async function releaseSessionRunLock(currentLockPath: string | null): Promise<null> {
   if (currentLockPath === null) return null;
   await releaseChatRunLock(currentLockPath);
   return null;

@@ -99,5 +99,5 @@ presents as a crash sends every investigation — this one included — toward
 code that changed, engines that switched, and processes that might be stale,
 when the answer was an account limit with a published reset time.
 
-Related: [Codex has no update monitor, notes, or cadence](../../docs-and-chores/2026-08-08-maintenance-cadence-framework.md)
+Related: [Codex has no update monitor, notes, or cadence](../docs-and-chores/2026-08-08-maintenance-cadence-framework.md)
 records the same theme — Codex is load-bearing and unwatched.

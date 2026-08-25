@@ -11,6 +11,8 @@
  * is built on top of at this box-scoped-router layer.
  */
 
+import { encodePathForUrl } from "./lib/view-url";
+
 /** A streaming response arrived without a readable body. */
 export class NoResponseBodyError extends Error {
   constructor() {
@@ -72,6 +74,23 @@ export function getApiBase(): string {
   const prefix = base.replace(/\/$/, "");
   if (!firstSegment) return `${prefix}/api`;
   return `${prefix}/${firstSegment}/api`;
+}
+
+/**
+ * Build a URL for the backend's raw `/files/<path>` route (mounted under
+ * `getApiBase()`, so it's already box-scoped) — the family of call sites that
+ * fetch/download a box-relative file directly rather than through
+ * `apiFileUrl`/`apiImageUrl` (which additionally prefix the Vite base and
+ * box slug themselves; those are for `<img src>`/link targets built without
+ * an already-box-scoped `apiBase` in hand).
+ *
+ * `apiBase` is a parameter rather than calling `getApiBase()` internally so
+ * this stays a pure, unit-testable string builder — `getApiBase()` reads
+ * `window.location`, which doesn't exist under the plain-Node doctest
+ * runner. Call sites pass `getApiBase()` (or an already-computed local).
+ */
+export function apiRawFileUrl(apiBase: string, path: string): string {
+  return `${apiBase}/files/${encodePathForUrl(path)}`;
 }
 
 /**

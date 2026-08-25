@@ -8,14 +8,14 @@
 
 import type { ListProps } from "../../file-types/registry";
 import type { ImageAttrs } from "@schemas/image";
-import { getApiBase } from "../../api";
+import { apiRawFileUrl, getApiBase } from "../../api";
 import { resolveRelativePath } from "../../lib/view-url";
 
 function imageSrc(cardPath: string, filenameRef: string): string {
   const resolved = resolveRelativePath(cardPath, filenameRef);
   // Escaping ref → empty src: the thumbnail shows broken rather than pulling in
   // whatever a clamped-to-root path resolved to.
-  return resolved === null ? "" : `${getApiBase()}/files/${resolved}`;
+  return resolved === null ? "" : apiRawFileUrl(getApiBase(), resolved);
 }
 
 export function ImageCardListEntry({ data, compact }: ListProps<ImageAttrs>) {

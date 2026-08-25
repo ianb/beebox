@@ -48,7 +48,7 @@ export class DeviceStoreUnreadableError extends Error {
 
 /** Thrown when the device-store lock can't be acquired within the retry budget.
  *  A mutation fails loudly rather than proceeding unsynchronized. */
-export class MobileDeviceStoreLockError extends Error {
+class MobileDeviceStoreLockError extends Error {
   constructor(readonly lockPath: string) {
     super(`Could not acquire the mobile device-store lock at ${lockPath} within the retry budget`);
     this.name = "MobileDeviceStoreLockError";
@@ -144,14 +144,6 @@ export async function resolveMobileBearerIdentity(
   const prefix = "Bearer ";
   if (!authorization.startsWith(prefix)) return null;
   return resolveMobileTokenIdentity(boxRoot, authorization.slice(prefix.length));
-}
-
-export async function verifyMobileBearer(boxRoot: string, authorization: string | undefined): Promise<boolean> {
-  return (await resolveMobileBearerIdentity(boxRoot, authorization)) !== null;
-}
-
-export async function verifyMobileToken(boxRoot: string, token: string | undefined): Promise<boolean> {
-  return (await resolveMobileTokenIdentity(boxRoot, token)) !== null;
 }
 
 async function resolveMobileTokenIdentity(

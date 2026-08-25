@@ -5,7 +5,6 @@ design: ../../../callback-box/docs/implemented-plans/connector-sync-isolation.md
 area: callback-box
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — user-story catalog verification
-stories: [connectors/stop-syncing-something-by-trashing-its-card]
 resolution: implemented
 ---
 

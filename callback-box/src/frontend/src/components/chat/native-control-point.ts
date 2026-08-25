@@ -36,7 +36,7 @@ export type NativePointOutcome = { ok: true } | { ok: false; reason: string };
  * shell may well have drawn the ring and lost the answer — so it says what is
  * actually known: no confirmation arrived.
  */
-export const NATIVE_POINT_TIMEOUT_REASON =
+const NATIVE_POINT_TIMEOUT_REASON =
   "The app did not answer in time, so this control could not be pointed at.";
 
 /**
