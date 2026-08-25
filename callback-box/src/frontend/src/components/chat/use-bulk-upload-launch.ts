@@ -54,7 +54,11 @@ export interface BulkUploadLaunchController {
    * the folded photos and their `[image#N]` tokens back in the composer.
    */
   close: () => void;
-  /** Clear the composer text a delivered batch consumed as its introduction. */
+  /**
+   * The batch is SEALED — finalize returned. Not necessarily delivered: the box
+   * may still be working, or delivery may have failed outright. Either way the
+   * server holds the bytes and the note, so the composer releases both.
+   */
   onDelivered: () => void;
 }
 
@@ -114,10 +118,19 @@ export function useBulkUploadLaunch(opts: {
     // not still hold it — same "consumed on send" semantics as an ordinary send.
     emissionStore.editor.setText("");
     clearDraftRef.current();
-    // The folded photos have landed in the batch, so nothing is coming back and
+    // The folded photos are in the sealed batch, so nothing is coming back and
     // their previews can go. Clearing the ref is also what turns the `onExit`
     // that follows a successful finalize into a plain close rather than a
     // resurrection.
+    //
+    // This runs on an UNCONFIRMED delivery too, which reads like a bug and is
+    // not: finalize sealed the batch server-side, so putting the photos back in
+    // the composer would queue a second copy of bytes the box already has, and
+    // the sweep surfaces an undelivered batch to the chat agent (see
+    // `BulkUploadOverlay.handleDone`). A folded photo whose own upload FAILED is
+    // genuinely dropped here — but it is listed as a failed row with a retry
+    // control before Done is enabled, so finalizing past it is a choice the user
+    // makes with it on screen, the same as for any other file in the batch.
     const fold = foldedRef.current;
     foldedRef.current = null;
     if (fold !== null) releaseFoldedImages(fold);
