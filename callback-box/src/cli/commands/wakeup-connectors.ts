@@ -59,17 +59,22 @@ export async function runConnectors(
     ? connectors.filter((c) => c.name === options.connector)
     : connectors;
 
-  if (toRun.length === 0) {
-    console.error(`Connector not found: ${options.connector}`);
-    process.exit(1);
-  }
-
-  const activeConnector = options.connector ? toRun[0] : undefined;
-
   let totalCreated = 0;
   let totalPushed = 0;
   let totalJobs = 0;
   let totalErrors = 0;
+
+  if (options.connector && toRun.length === 0) {
+    // An unknown `--connector` name is an orchestration error, but it must
+    // not abort the cycle: earlier phases (preprocessing, housekeeping) have
+    // already run, and later ones (stale-job cleanup, intake, reactor, push)
+    // still need to. Fold it into the same errorCount the caller turns into
+    // a nonzero exit code once the whole cycle finishes.
+    console.error(`Connector not found: ${options.connector}`);
+    totalErrors++;
+  }
+
+  const activeConnector = options.connector ? toRun[0] : undefined;
   const procedures: ConnectorProcedureTrigger[] = [];
 
   for (const connector of toRun) {

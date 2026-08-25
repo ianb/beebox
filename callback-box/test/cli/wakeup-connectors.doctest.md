@@ -100,6 +100,33 @@ JSON.stringify({
 => {"activeConnector":"only","errorCount":1}
 ```
 
+## An unknown `--connector` name is folded into the error count, not a process exit
+
+Naming a connector that doesn't match any configured connector must not abort
+the cycle mid-run: the caller (`cb wakeup`) still needs to run stale-job
+cleanup, intake, the reactor, and the final push. `runConnectors` reports the
+miss the same way it reports any other connector failure — through
+`errorCount` — so the process only exits nonzero after every later wakeup
+phase has had a chance to run.
+
+```ts
+const configured = connector("configured", async () => ({
+  success: true,
+  created: [],
+  updated: [],
+}));
+const result = await captureOutput(() => runConnectors("/unused", {
+  connector: "nonexistent",
+  connectors: [configured],
+  runProcedureTriggers: async () => 0,
+}));
+JSON.stringify({
+  activeConnector: result.activeConnector?.name ?? null,
+  errorCount: result.errorCount,
+})
+=> {"activeConnector":null,"errorCount":1}
+```
+
 ## Only a nonzero connector error count requests a failing process status
 
 The command applies this value after stale-job cleanup, intake, indexing,
