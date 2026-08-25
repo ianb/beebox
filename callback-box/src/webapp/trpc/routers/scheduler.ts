@@ -36,10 +36,15 @@ const schedulerLogEntrySchema = z.object({
       ran: z.number(),
       skipped: z.number(),
       errors: z.number(),
+      // The fourth count: scripts whose work ran but whose check reached no
+      // verdict. Defaulted, not required — lines written before the scheduler
+      // counted them must still parse, and a dropped line is a tick the
+      // dashboard silently never saw.
+      inconclusive: z.number().default(0),
       scripts: z.array(
         z.object({
           name: z.string(),
-          status: z.enum(["ran", "skipped", "error"]),
+          status: z.enum(["ran", "skipped", "error", "inconclusive"]),
           command: z.string().optional(),
           durationMs: z.number().optional(),
           error: z.string().optional(),

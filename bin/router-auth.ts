@@ -66,9 +66,17 @@ export interface BoxTarget {
  * - `control`: MUTATING router control (`/__router/{stop,retry}` and the
  *   dashboard cold-start) — owner session AND a CSRF-safe origin.
  * - `control-read`: read-only router infra (`/__router/status`, the `/` worktree
- *   index, the `/<w>/dev/` browser) — owner session, no CSRF requirement.
- *   `json` distinguishes the machine endpoint (`/__router/status`, always a JSON
- *   401 on deny) from the browser pages (which redirect a navigation to login).
+ *   index) — owner session, no CSRF requirement. `json` distinguishes the
+ *   machine endpoint (`/__router/status`, always a JSON 401 on deny) from the
+ *   browser pages (which redirect a navigation to login).
+ * - `dev-read`: the AGENT-FACING read surfaces — `GET`/`HEAD` on `/<w>/dev/...`
+ *   (the tracked `dev/` directory, served from disk) and on `/workstreams/...`
+ *   (the general browser and issue views). Owner session OR the browse key.
+ *   Split out of `control-read` on 2026-08-24 because lumping them together
+ *   made the surfaces built FOR agents the only ones an agent could not read,
+ *   while the browse key reached strictly more sensitive box routes (real chat
+ *   history, real user content). See the `dev-read` arm below for the full
+ *   rationale and for what deliberately stays owner-only.
  * - `worktree-box-list`: the hub's `GET /<w>/api/boxes` endpoint. Reachable by
  *   any valid credential in the worktree because the hub performs the
  *   credential-to-box filtering before returning the list.
@@ -89,6 +97,7 @@ export type RouterRoute =
   | { kind: "unauth-allowlist" }
   | { kind: "control" }
   | { kind: "control-read"; json: boolean }
+  | { kind: "dev-read" }
   | { kind: "worktree-box-list"; targetWorktree: string }
   | ({ kind: "box" } & BoxTarget)
   | { kind: "worktree-asset"; targetWorktree: string }
@@ -120,6 +129,9 @@ export interface BoxAccessIdentity {
  *   injected here so the ladder's first rung is exercised).
  * - `isCsrfSafe` — Origin / Sec-Fetch-Site same-origin assertion for mutating
  *   control.
+ * - `hasBrowseKey` — the machine-wide local-dev browser key alone (NOT the box
+ *   credential ladder). Gates `dev-read` only; constant false unless the
+ *   operator set `CB_BROWSE_API_KEY`.
  * - `resolveWorktreeAsset` — true if ANY valid box credential in the worktree is
  *   present: a session (owner, or a member of any box there), OR a per-box mobile
  *   token / agent bearer for any box there. Gates the non-sensitive dev assets
@@ -135,6 +147,7 @@ export interface RouterAuthDeps {
   isAgentBearer(headers: RouterHeaders): Awaitable<boolean>;
   isCsrfSafe(headers: RouterHeaders): Awaitable<boolean>;
   resolveWorktreeAsset(headers: RouterHeaders, targetWorktree: string): Awaitable<boolean>;
+  hasBrowseKey(headers: RouterHeaders): Awaitable<boolean>;
 }
 
 /** The request facts the gate reads. `trustedLocal` = arrived on the UDS. */
@@ -155,6 +168,9 @@ export type RouterAuthDecision =
 function pathnameOf(url: string): string {
   const q = url.indexOf("?");
   const noQuery = q === -1 ? url : url.slice(0, q);
+  // Defence in depth only: `classifyRouterRoute` rejects a `#`-bearing target
+  // outright, so this branch is unreachable from there. Kept so the helper is
+  // still correct for any other caller.
   const h = noQuery.indexOf("#");
   return h === -1 ? noQuery : noQuery.slice(0, h);
 }
@@ -194,6 +210,11 @@ function isPublicFrontendAssetPath(rest: string): boolean {
   );
 }
 
+/** A read verb — the only methods the dev/workstreams read surfaces serve. */
+function isRead(method: string): boolean {
+  return method === "GET" || method === "HEAD";
+}
+
 function classifyRouterControl(pathname: string): RouterRoute {
   if (pathname === "/__router/status" || pathname === "/__router/status/") {
     return { kind: "control-read", json: true };
@@ -214,6 +235,17 @@ function classifyRouterControl(pathname: string): RouterRoute {
  * resolvers turn the extracted slug into a box root and a decision).
  */
 export function classifyRouterRoute({ method, url }: { method: string; url: string }): RouterRoute {
+  // A raw `#` in the request target is not a legal origin-form URI (RFC 9112:
+  // absolute-path [ "?" query ] — a fragment never travels on the wire, and no
+  // browser sends one). It DID travel through this gate: `pathnameOf` strips
+  // it, while bin/router.ts's dispatch branches match on `split("?")[0]` and do
+  // not — so `GET /main/dev#x` classified as the dev space and then dispatched
+  // as a proxied worktree path instead. Any gate/dispatcher disagreement about
+  // what a URL means is a bypass by construction, so reject the whole class
+  // here rather than teaching each branch to strip one more delimiter
+  // (cross-model review, 2026-08-24). Percent-encoded `%23` is untouched: it is
+  // a legal path byte and neither side decodes before matching.
+  if (url.includes("#")) return { kind: "unknown" };
   const pathname = pathnameOf(url);
 
   // The pre-auth iOS pairing bootstrap. Router-scoped: the router sees the
@@ -226,7 +258,9 @@ export function classifyRouterRoute({ method, url }: { method: string; url: stri
   if (pathname === "/favicon.png" || pathname === "/favicon.ico") return { kind: "unauth-allowlist" };
   if (pathname === "/__router" || pathname.startsWith("/__router/")) return classifyRouterControl(pathname);
   if (pathname === "/workstreams" || pathname.startsWith("/workstreams/")) {
-    if (method === "GET" || method === "HEAD") return { kind: "control-read", json: false };
+    // Reads (the general browser, issue views, tRPC queries) are `dev-read`;
+    // the mutating action/tRPC POSTs below stay `control` (owner + CSRF).
+    if (method === "GET" || method === "HEAD") return { kind: "dev-read" };
     if (
       method === "POST" &&
       (pathname.startsWith("/workstreams/action/") ||
@@ -237,8 +271,12 @@ export function classifyRouterRoute({ method, url }: { method: string; url: stri
       return { kind: "control" };
     return { kind: "unknown" };
   }
-  // Bare `/dev` / `/dev/` redirect to `/main/dev/` — the dev browser (owner).
-  if (pathname === "/dev" || pathname === "/dev/") return { kind: "control-read", json: false };
+  // Bare `/dev` / `/dev/` redirect to `/main/dev/` — the dev space. A read gets
+  // the same treatment as the `/<w>/dev/...` it redirects to; any other method
+  // stays owner-only (the handler has no write path, so this grants nothing new).
+  if (pathname === "/dev" || pathname === "/dev/") {
+    return isRead(method) ? { kind: "dev-read" } : { kind: "control-read", json: false };
+  }
 
   const name = firstSegment(pathname);
   if (name === null) return { kind: "unknown" };
@@ -251,8 +289,10 @@ export function classifyRouterRoute({ method, url }: { method: string; url: stri
   // `/<w>/{assets,icons,manifest.webmanifest,sw.js}` — public frontend static assets (GET).
   if (method === "GET" && isPublicFrontendAssetPath(rest)) return { kind: "unauth-allowlist" };
 
-  // `/<w>/dev` / `/<w>/dev/...` — the worktree's dev browser (owner, read-only).
-  if (rest === "/dev" || rest.startsWith("/dev/")) return { kind: "control-read", json: false };
+  // `/<w>/dev` / `/<w>/dev/...` — the worktree's dev space, served from disk.
+  if (rest === "/dev" || rest.startsWith("/dev/")) {
+    return isRead(method) ? { kind: "dev-read" } : { kind: "control-read", json: false };
+  }
 
   const seg2Match = rest.match(/^\/([^/]+)(?:\/|$)/);
   const seg2 = seg2Match ? seg2Match[1]! : null;
@@ -354,11 +394,67 @@ export async function authorizeRouterRequest(
       return { allow: true, route };
     }
 
+    case "dev-read": {
+      // The agent-facing read surfaces: `/<w>/dev/...` (the tracked `dev/`
+      // directory, served straight from disk by serveDev — no method dispatch,
+      // no write path, containment-checked lexically AND by realpath) and
+      // `GET /workstreams/...` (the general browser that replaced the `/dev/`
+      // doc browser, plus the issue views and their tRPC queries).
+      //
+      // Owner session OR the browse key. The browse key is admitted here — and
+      // NOT via `resolveWorktreeAsset`, which would also admit per-box iOS
+      // mobile tokens and agent bearers — because the grant is deliberately the
+      // browse key's alone: it is machine-wide by construction, absent unless
+      // the operator sets CB_BROWSE_API_KEY, and already opens every box route
+      // the router fronts (core/browse-key.ts). Refusing it here meant the
+      // credential opened real chat history and closed a directory of tracked
+      // files — so issues ABOUT the dev surface became boxholder-only to verify
+      // (boxholder, 2026-08-24: "There's no reason you shouldn't access /dev/").
+      // The same trust argument is already written down one layer up: the
+      // `/dev/` sandbox CSP was removed because "the dev agent authors the
+      // router's own code, so sandboxing its HTML output guards nothing"
+      // (router-docs.ts serveDev, boxholder decision 2026-08-19). Being allowed
+      // to READ that surface is strictly weaker than being allowed to execute
+      // on it.
+      //
+      // "Read" here means "no mutating verb", not "no side effect". Two are
+      // known and accepted, both pre-existing and both already within the
+      // browse key's reach on box routes: a `/<w>/dev/...` or `/workstreams/`
+      // request can lazy-start a worktree's processes (that is the router's
+      // core design), and the `quotas.get` tRPC QUERY makes an outbound quota
+      // request and writes its cache (workstreams-app quota-collect.ts). Every
+      // procedure that changes repo state is a tRPC `.mutation`, hence POST,
+      // hence `control` above — checked procedure by procedure, 2026-08-24.
+      //
+      // A WebSocket upgrade is a GET, so this arm carries upgrades too. That is
+      // required, not incidental: `/workstreams/...` is a Vite-served app, and a
+      // browser cannot render it without its HMR socket — the same argument
+      // already written for `resolveWorktreeAsset` below. It grants no new
+      // reach either, since that resolver already admits the browse key to the
+      // worktree's Vite sockets under `/<w>/@vite/...`.
+      //
+      // What deliberately does NOT move: `/` (the worktree index), `/__router/*`
+      // (both the mutating verbs and `/__router/status`), and every non-GET
+      // `/workstreams/*` — the action and tRPC-mutation POSTs, which stay
+      // `control` (owner session AND a CSRF-safe origin). Those carry real
+      // control verbs; `/dev/` and the browser's reads do not, and lumping them
+      // into one class is what produced the asymmetry.
+      if (await deps.hasBrowseKey(headers)) return { allow: true, route };
+      const owner = await deps.resolveOwnerSession(headers);
+      if (!owner) {
+        // Keep the login redirect: a browser navigation here should land on the
+        // login page, not a bare 401. A tRPC/fetch read (no `text/html`) is not
+        // a navigation and still gets the flat 401.
+        return deny({ status: 401, reason: "dev-read-auth-required", redirectToLogin: nav, route });
+      }
+      return { allow: true, route };
+    }
+
     case "control-read": {
       const owner = await deps.resolveOwnerSession(headers);
       if (!owner) {
         // `/__router/status` (json) is a machine endpoint — never redirect it;
-        // the `/` and `/dev/` browser pages redirect a navigation to login.
+        // the `/` worktree index redirects a navigation to login.
         return deny({
           status: 401,
           reason: "owner-session-required",

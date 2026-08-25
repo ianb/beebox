@@ -5,51 +5,26 @@ description: Explains the monorepo's issue/idea queue at issues/ (and the privat
 
 # The issue queue
 
-A pointer skill: the queue exists and this is when/how to use it. Full
-conventions — frontmatter fields, body style, closing/reclassifying,
-private-issues mechanics — live in `issues/CLAUDE.md`; read it before filing
-anything nontrivial.
+The conventions live in **`issues/CLAUDE.md`** — read it before filing,
+amending, closing, or reclassifying anything. Nothing here adds to it.
 
-## What it is
+What it covers, so you know what there is to look up: the seven category
+directories and how to pick one; the frontmatter fields and who owns each
+(`priority:` and `next-action:` are the developer's, `needs:` gates like
+`manual-testing` have strict entry/exit rules, `discovered-in:` is provenance
+not ownership, `workstream:` is rarely meaningful); title and cross-link
+conventions that `doc-check` enforces; body style (STE, tensions not
+resolutions, `## Research` sections); what to do when you **re-encounter** an
+already-filed issue; closing and reopening, including `resolution:` values;
+the private-issues repo and the never-public rule for real-box work; and the
+agent-specific rules for taking on and filing issues.
 
-`issues/` is a **parking lot for tensions, not resolutions** — half-thought-out
-ideas, noticed problems whose fix isn't obvious, questions needing research.
-Filing an item is **not** license to implement it; research/design is real
-progress, implementation happens when the boxholder chooses it.
+Two commands you will need from it:
 
-## When to file
+- `bin/issues search --all "<what you saw>"` before filing — a match (open
+  or closed) is a re-encounter, which has its own rules there, not a new file.
+- `git mv` into `closed/<category>/` + `resolution:` to close, then
+  `pnpm --dir callback-box doc-check --fix`.
 
-Something you can just fix in your current task — fix it, don't file it. File
-when what you noticed is **outside your current work**, or the right fix is
-genuinely unsettled. Filing is discretionary, no thresholds or quotas — but
-don't file trivia you'd be embarrassed to see triaged.
-
-## How
-
-1. Grep the tree first — extend a matching item rather than duplicating.
-2. Pick a category directory (`bugs/`, `features/`, `code-quality/`,
-   `docs-and-chores/`, `decisions/`, `exploration/`, `watch/`) — the directory
-   *is* the category, no `type:` field.
-3. Decide public vs `private-issues/` — anything about a person's own boxes,
-   personal/operational specifics, or non-public identifiers goes private.
-   **When unsure, ask before filing publicly.**
-4. File one `<category>/YYYY-MM-DD-<slug>.md`, `title:` in frontmatter (not an
-   H1), plus `workstream: unattached`, `filed-by: agent`, `discovered-by:` (the
-   person or agent that first identified it), and
-   `discovered-in: <worktree — what you were doing>`. `filed-by:` records who
-   created the issue file; `discovered-by:` records the source of the finding;
-   `discovered-in:` records where it was noticed. None assigns ownership. Set
-   `workstream:` to a bare workstream name only when that workstream explicitly
-   takes responsibility for resolving the issue. Never use the backfill-only
-   `unknown` sentinel for a new issue.
-   Add `priority: important` only when the issue deserves prominent review, or
-   `priority: backlog` when it is intentionally deprioritized. Omit the field
-   when nobody has categorized its priority yet; omission does not mean normal.
-5. Private issues are a separate repo — commit them from *inside*
-   `private-issues/`, never `git add -A` at the monorepo root.
-
-## Closing
-
-`git mv` the file into `closed/<category>/`, add `resolution:` and a short
-closing note. Then run `pnpm --dir callback-box doc-check --fix` to repair any
-inbound links broken by the move.
+Private content goes to `private-issues/` (separate repo; commit from inside
+it) — when unsure, ask before filing publicly.

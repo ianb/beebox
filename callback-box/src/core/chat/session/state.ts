@@ -142,28 +142,6 @@ export function loadSessionId(boxRoot: string, sessionFile: string | null): stri
 }
 
 /**
- * Persist a newly-assigned session id and fire the optional bookkeeping
- * callback (errors logged, non-fatal). Wraps the two side effects the
- * session runs the first time the SDK hands back an id.
- */
-export function onSessionIdAssigned(
-  boxRoot: string,
-  { sessionFile, sessionId, callback }: {
-    sessionFile: string | null;
-    sessionId: string;
-    callback?: ((sessionId: string) => Promise<void> | void) | undefined;
-  },
-): void {
-  log("session", `Got session ID: ${sessionId}`);
-  saveSessionId(boxRoot, { sessionFile, sessionId });
-  if (callback !== undefined) {
-    void Promise.resolve(callback(sessionId)).catch((e: unknown) => {
-      log("session", `onSessionIdAssigned error: ${e instanceof Error ? e.message : String(e)}`);
-    });
-  }
-}
-
-/**
  * Persist the session-id pointer. No-op when persistence is opted out
  * (`sessionFile === null`).
  */
@@ -193,7 +171,7 @@ export function captureAssignedSessionId(opts: {
   return sessionId;
 }
 
-export function saveSessionId(
+function saveSessionId(
   boxRoot: string,
   { sessionFile, sessionId }: { sessionFile: string | null; sessionId: string },
 ): void {

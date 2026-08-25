@@ -14,6 +14,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { CODEX_BOX_SANDBOX } from "./codex-sandbox.js";
 import { toError } from "../lib/error-guards.js";
+import { declaredPresent } from "../lib/declared-present.js";
 import type { ChatContentBlock } from "./claude-chat-types.js";
 
 export type CodexSdkItem = ThreadItem;
@@ -56,7 +57,7 @@ export interface CodexSdkSessionLike {
 
 export type CodexSdkSessionFactory = (options: CodexSdkSessionOptions) => CodexSdkSessionLike;
 
-export class CodexImageInputError extends Error {
+class CodexImageInputError extends Error {
   readonly status: number;
 
   constructor(status: number) {
@@ -66,14 +67,27 @@ export class CodexImageInputError extends Error {
   }
 }
 
-export class CodexSdkMissingThreadIdError extends Error {
+class CodexSdkMissingThreadIdError extends Error {
   constructor() {
     super("Codex SDK stream did not provide a thread ID");
     this.name = "CodexSdkMissingThreadIdError";
   }
 }
 
-export class CodexSdkTurnTimeoutError extends Error {
+/**
+ * The SDK's thread factory returned nothing. Its types declare a `Thread` is
+ * always returned, so this is a claim the runtime broke; the class exists so
+ * that break surfaces under its own name instead of as a `TypeError` from the
+ * first property read on the missing thread.
+ */
+class CodexSdkNoThreadError extends Error {
+  constructor(resumed: boolean) {
+    super(`Codex SDK returned no thread from ${resumed ? "resumeThread" : "startThread"}`);
+    this.name = "CodexSdkNoThreadError";
+  }
+}
+
+class CodexSdkTurnTimeoutError extends Error {
   constructor() {
     super("Codex SDK turn did not complete before the timeout");
     this.name = "CodexSdkTurnTimeoutError";
@@ -113,6 +127,18 @@ function settleStreamThrow(options: {
     return { status: "failed", error: options.capturedError };
   }
   throw toError(options.cause);
+}
+
+/**
+ * The message a `turn.failed` event carries. The event's declared type always
+ * has an `error` object, so this covers the case where it arrives without one:
+ * the turn still failed, and saying so beats a `TypeError` raised while reading
+ * the reason.
+ */
+function failedTurnMessage(event: Extract<ThreadEvent, { type: "turn.failed" }>): string {
+  const failure = declaredPresent(event.error);
+  if (failure === null) return "Codex SDK reported turn.failed with no error detail";
+  return declaredPresent(failure.message) ?? "Codex SDK reported turn.failed with an empty error message";
 }
 
 export function codexSdkThreadOptions(options: CodexSdkSessionOptions): ThreadOptions {
@@ -165,7 +191,7 @@ async function materializeInput(
 }
 
 /** One native Codex thread. The SDK owns CLI spawning, protocol parsing, and resume. */
-export class CodexSdkSession {
+class CodexSdkSession {
   private readonly thread: Thread;
   private readonly turnTimeoutMs: number;
 
@@ -178,9 +204,11 @@ export class CodexSdkSession {
       ...(process.env.CB_CODEX_BINARY === undefined ? {} : { codexPathOverride: process.env.CB_CODEX_BINARY }),
     });
     const threadOptions = codexSdkThreadOptions(options);
-    this.thread = options.resumeSessionId === undefined
+    const started = declaredPresent(options.resumeSessionId === undefined
       ? codex.startThread(threadOptions)
-      : codex.resumeThread(options.resumeSessionId, threadOptions);
+      : codex.resumeThread(options.resumeSessionId, threadOptions));
+    if (started === null) throw new CodexSdkNoThreadError(options.resumeSessionId !== undefined);
+    this.thread = started;
     this.turnTimeoutMs = options.turnTimeoutMs ?? 600_000;
   }
 
@@ -214,13 +242,18 @@ export class CodexSdkSession {
           sessionId = event.thread_id;
           options.onSessionId?.(sessionId);
         } else if (event.type === "item.completed") {
-          items.push(event.item);
-          if (event.item.type === "agent_message") output.push(event.item.text);
+          const item = declaredPresent(event.item);
+          if (item === null) {
+            console.warn("[codex-sdk-session] codex SDK emitted item.completed with no item; dropping the event");
+          } else {
+            items.push(item);
+            if (item.type === "agent_message") output.push(item.text);
+          }
         } else if (event.type === "turn.completed") {
-          usage = event.usage;
+          usage = declaredPresent(event.usage);
           status = "completed";
         } else if (event.type === "turn.failed") {
-          error = event.error.message;
+          error = failedTurnMessage(event);
         } else if (event.type === "error") {
           error = event.message;
         }

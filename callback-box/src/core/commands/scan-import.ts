@@ -351,4 +351,4 @@ registerCommand({
   execute: executeScanImport,
 });
 
-export { executeScanImport, runPhotoMode };
+export { runPhotoMode };

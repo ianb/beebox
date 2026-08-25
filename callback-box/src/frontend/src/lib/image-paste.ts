@@ -207,3 +207,28 @@ export function extractTransferFiles(
   }
   return out;
 }
+
+/**
+ * What to tell someone whose picked file did not make it into the message.
+ *
+ * The encoder can only take what the browser can decode, and the usual
+ * casualty is a HEIC straight off an iPhone. The message this replaced named
+ * neither the format nor the reason, so the only place the word "HEIC"
+ * appeared was a developer console line — a first-time user guessed their way
+ * to the answer and said their mother would not have.
+ */
+export function unsupportedImageMessage(files: File[]): string {
+  const named = [...new Set(files.map(formatLabel))].filter((f) => f !== "").toSorted();
+  const subject = named.length > 0
+    ? `${named.join(" and ")} files`
+    : files.length === 1 ? "That file" : "Those files";
+  return `${subject} can't be added: this browser can't read that format. JPEG, PNG, GIF and WebP work.`;
+}
+
+/** "HEIC" from `image/heic`; falls back to the extension, else "". */
+function formatLabel(file: File): string {
+  const subtype = file.type.startsWith("image/") ? file.type.slice("image/".length) : "";
+  if (subtype !== "") return subtype.replace(/^x-/, "").toUpperCase();
+  const dot = file.name.lastIndexOf(".");
+  return dot === -1 ? "" : file.name.slice(dot + 1).toUpperCase();
+}

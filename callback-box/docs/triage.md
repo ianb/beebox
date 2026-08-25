@@ -203,6 +203,8 @@ Handle is whatever the category's procedure does. Properties:
 - **Procedure-driven.** Reads from the category card (inline or via `ref`).
 - **Operates on the holding spot's bucket.** Receives the file list (via `$TRIAGE_ITEMS` env var or similar — see §3).
 - **Final-state moves are handler-specific.** A receipts handler might move items to `archive/receipts/<year>/`; a recipes handler might re-render the recipe collection; a calendar-event handler might create a follow-up question and leave the item where it is.
+- **A run that reached no verdict is reported as its own outcome.** When the handler procedure's work completed but a review step produced no verdict (turn cap, timeout, unparseable answer — `src/shared/inconclusive.ts`), the bucket's outcome is `procedure-inconclusive`, not `ran` and not `procedure-failed`, and the report line reads `inconclusive — <reason>; work completed`.
+- **`cb handle` exits for its worst bucket.** Any bucket whose handler failed exits 1; otherwise any unjudged bucket exits 3 (`INCONCLUSIVE_EXIT_CODE`) and prints one `Inconclusive: handle <category> — …; work completed` line on stderr, which the scheduler classifies as `inconclusive`. Exit 0 means every bucket that ran was judged.
 
 The handle stage is where the system's "do something useful with this kind of thing" knowledge lives. Triage is dumb compared to it — triage just routes.
 

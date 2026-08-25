@@ -9,13 +9,20 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { parseProcedureRun } from "../../schemas/procedure-run.js";
+import { parseProcedureRun, type ProcedureRunFields } from "../../schemas/procedure-run.js";
 import { stageAll, commit, withBoxGitLock } from "../../lib/git.js";
 import { fmt } from "../../lib/format.js";
 import { getBoxTime, getBoxTimeISO } from "../../lib/time.js";
-import { okVoid, err, type Result } from "../../lib/result.js";
+import { ok, err, type Result } from "../../lib/result.js";
 import type { CommandContext } from "../command-runner.js";
-import { type ProcedureOptions, type ParsedProcedure, type ProcedureError } from "./engine-types.js";
+import {
+  type ProcedureOptions,
+  type ParsedProcedure,
+  type ProcedureError,
+  type ProcedureOutcome,
+  type ProcedureInconclusive,
+} from "./engine-types.js";
+import { parseInconclusiveValidateError } from "../../shared/inconclusive.js";
 import { loadProcedureDefinition } from "./engine-parse.js";
 import { buildInitialRunCard, updateRunCardStatus } from "./engine-run-card.js";
 import { runSteps, finalizeRun } from "./engine-orchestrate.js";
@@ -23,7 +30,12 @@ import { resolveRunDir } from "./engine-query.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
 export type { AgentFactory } from "./engine-types.js";
-export type { ProcedureOptions, ProcedureError } from "./engine-types.js";
+export type {
+  ProcedureOptions,
+  ProcedureError,
+  ProcedureOutcome,
+  ProcedureInconclusive,
+} from "./engine-types.js";
 
 /**
  * Parameters for startProcedure
@@ -89,7 +101,7 @@ function printDryRun(args: {
  */
 export async function startProcedure(
   params: StartProcedureParams
-): Promise<Result<void, ProcedureError>> {
+): Promise<Result<ProcedureOutcome, ProcedureError>> {
   const { ctx, procedureNameOrPath, options = {} } = params;
   const { boxRoot } = ctx;
 
@@ -111,7 +123,7 @@ export async function startProcedure(
 
   if (options.dryRun) {
     printDryRun({ ctx, procedure, directive: options.directive });
-    return okVoid;
+    return ok({ status: "completed", procedure: procedureName, inconclusive: [] });
   }
 
   // Validate --step if provided
@@ -170,7 +182,7 @@ export async function startProcedure(
   ctx.writeLine("");
 
   // Execute steps (optionally filtered to a single step)
-  const { allSucceeded, failedStepId, failedStepError } = await runSteps({
+  const { allSucceeded, failedStepId, failedStepError, inconclusive } = await runSteps({
     ctx,
     boxRoot,
     procedure,
@@ -187,9 +199,50 @@ export async function startProcedure(
     procedure,
     runDir,
     runCardPath,
-    result: { allSucceeded, failedStepId, failedStepError },
+    result: { allSucceeded, failedStepId, failedStepError, inconclusive },
     materialized,
   });
+}
+
+/**
+ * The non-verdicts a run card already records — one per step whose validate
+ * phase reached no verdict. The card is the only record: the run that wrote it
+ * has exited, so `cb procedure resume` reads the reason back rather than
+ * re-deriving (or re-running) it.
+ */
+function recordedInconclusive(run: ProcedureRunFields): ProcedureInconclusive[] {
+  return run.steps.flatMap((step) => {
+    const validate = step.validate;
+    if (validate?.status !== "inconclusive") return [];
+    const detail =
+      (validate.error === undefined ? null : parseInconclusiveValidateError(validate.error)) ??
+      "reached no verdict";
+    return [{ stepId: step.id, reason: validate.reason ?? "unknown", detail }];
+  });
+}
+
+/**
+ * Answer a resume request against a run whose work is done but unjudged.
+ * Nothing is re-run and nothing is re-judged — resume has no re-review path —
+ * so the honest answer is the non-verdict itself, which the CLI turns into the
+ * same stderr line and exit code `cb procedure run` produced.
+ */
+function reportStandingInconclusive(args: {
+  ctx: CommandContext;
+  run: ProcedureRunFields;
+  relRunDir: string;
+}): Result<ProcedureOutcome, ProcedureError> {
+  const { ctx, run, relRunDir } = args;
+  const inconclusive = recordedInconclusive(run);
+  ctx.writeLine(
+    fmt.warn(
+      `Run completed with no verdict: ${relRunDir} — nothing to resume (resume does not re-judge)`
+    )
+  );
+  for (const item of inconclusive) {
+    ctx.writeLine(fmt.dim(`  Review of ${item.stepId} ${item.detail} — the work is unjudged, not rejected.`));
+  }
+  return ok({ status: "inconclusive", procedure: run.procedure, inconclusive });
 }
 
 /**
@@ -201,7 +254,7 @@ export async function resumeProcedure(params: {
   ctx: CommandContext;
   runDir?: string;
   options?: ProcedureOptions;
-}): Promise<Result<void, ProcedureError>> {
+}): Promise<Result<ProcedureOutcome, ProcedureError>> {
   const { ctx, options = {} } = params;
   const { boxRoot } = ctx;
 
@@ -224,7 +277,14 @@ export async function resumeProcedure(params: {
   const relRunDir = path.relative(boxRoot, runDir);
   if (run.status === "completed") {
     ctx.writeLine(fmt.ok(`Run already completed: ${relRunDir} — nothing to resume`));
-    return okVoid;
+    return ok({ status: "completed", procedure: run.procedure, inconclusive: [] });
+  }
+  // An inconclusive run has nothing to resume — every step's work finished —
+  // but it is not "completed" either, and saying so is what this whole path
+  // exists to stop. Report the standing non-verdict, in the same words and
+  // with the same exit code as the original run.
+  if (run.status === "inconclusive") {
+    return reportStandingInconclusive({ ctx, run, relRunDir });
   }
 
   // Resume index: the first step that is neither completed nor skipped (both
@@ -232,8 +292,11 @@ export async function resumeProcedure(params: {
   // failure, this is the failed step, and everything after it is pending.
   const resumeStep = run.steps.find((s) => s.status !== "completed" && s.status !== "skipped");
   if (resumeStep === undefined) {
+    if (recordedInconclusive(run).length > 0) {
+      return reportStandingInconclusive({ ctx, run, relRunDir });
+    }
     ctx.writeLine(fmt.ok(`All steps already completed: ${relRunDir} — nothing to resume`));
-    return okVoid;
+    return ok({ status: "completed", procedure: run.procedure, inconclusive: [] });
   }
 
   // Load the procedure definition the run was created from.
@@ -272,7 +335,7 @@ export async function resumeProcedure(params: {
     resumeOptions.directive = run.directive;
   }
 
-  const { allSucceeded, failedStepId, failedStepError } = await runSteps({
+  const { allSucceeded, failedStepId, failedStepError, inconclusive } = await runSteps({
     ctx,
     boxRoot,
     procedure,
@@ -289,7 +352,7 @@ export async function resumeProcedure(params: {
     procedure,
     runDir,
     runCardPath,
-    result: { allSucceeded, failedStepId, failedStepError },
+    result: { allSucceeded, failedStepId, failedStepError, inconclusive },
     materialized: true,
   });
 }

@@ -4,6 +4,7 @@ workstream: unattached
 area: callback-box
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — a first-time user was told to look in a sidebar
+priority: backlog
 ---
 
 A first-time user was told by the assistant:

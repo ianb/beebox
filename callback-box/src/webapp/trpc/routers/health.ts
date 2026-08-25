@@ -23,7 +23,7 @@ import { engineHealthChecks } from "./health-engine.js";
 import { googleAuthHealthChecks } from "./health-google.js";
 import { getBoxTime } from "../../../lib/time.js";
 import { getHealthSnapshot } from "./health-snapshot.js";
-import { checkSchedulerHeartbeat } from "../../../core/schedule/health-box.js";
+import { checkSchedulerHeartbeat, loadScheduleHealth, type BoxScheduleHealth } from "../../../core/schedule/health-box.js";
 import { boxGrowthHealthCheck } from "../../../core/box-growth/health.js";
 import { acknowledgeBoxGrowthProcedure, expectBoxGrowthRatesProcedure } from "./health-box-growth.js";
 import { isWritable, writability } from "./health-writability.js";
@@ -31,6 +31,8 @@ import { legacySecretFilesCheck } from "./health-secrets.js";
 import { pendingMigrationsCheck } from "./health-migrations.js";
 import { annexHealthChecks } from "./health-annex.js";
 import { unfiledCapturesCheck, stalledJobsCheck } from "./health-stale.js";
+import { staleIndexLockCheck } from "./health-git-lock.js";
+import { templateUpdatesCheck } from "./health-templates.js";
 
 export interface HealthCheck {
   name: string;
@@ -122,6 +124,13 @@ export interface RunHealthChecksOptions {
    * `createClaudeCliService()` is constructed. Tests inject a fake.
    */
   claudeCli?: ClaudeCliService | undefined;
+  /**
+   * Already-loaded schedule health, so the `template-updates` check can tell a
+   * parked update apart from one that is blocking a failing task. `cb health`
+   * passes the evaluation it already did; when omitted the check loads it
+   * itself, so the dashboard and `/api/health` escalate the same way.
+   */
+  scheduleHealth?: BoxScheduleHealth | undefined;
 }
 
 
@@ -219,7 +228,10 @@ export async function runHealthChecks(
   });
 
   checks.push(...(await annexHealthChecks({ repoRoot: gitRoot, boxRoot })));
+  checks.push(await staleIndexLockCheck(boxRoot));
   checks.push(await pendingMigrationsCheck(boxRoot));
+  const scheduleHealth = options?.scheduleHealth ?? (await loadScheduleHealth(boxRoot, getBoxTime(boxRoot)));
+  checks.push(await templateUpdatesCheck(boxRoot, scheduleHealth));
   checks.push(await unfiledCapturesCheck(boxRoot));
   checks.push(await stalledJobsCheck(boxRoot));
   const now = getBoxTime(boxRoot);

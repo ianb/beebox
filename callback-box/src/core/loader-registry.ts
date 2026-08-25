@@ -1,7 +1,7 @@
 /**
  * Registry for FileLoaders — maps a file (by card type or path pattern) to a
  * loader that produces a typed FileSummary. One custom registration per match
- * key; additional matches are reported as warnings.
+ * key; a colliding registration logs a warning and wins (last-wins).
  *
  * Dispatch rule: exact card-type match wins over path-pattern match. If no
  * custom loader matches, the built-in fallback produces
@@ -25,13 +25,6 @@ interface PathRegistration {
 type Registration = TypeRegistration | PathRegistration;
 
 const registrations: Registration[] = [];
-
-export class LoaderCollisionError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "LoaderCollisionError";
-  }
-}
 
 /**
  * Register a loader for a specific card type.
@@ -69,7 +62,7 @@ export function registerPathLoader<T>(
 /**
  * Built-in fallback loader. Reads nothing beyond the path.
  */
-export const fallbackLoader: FileLoader<unknown> = (raw: LoaderInput) => ({
+const fallbackLoader: FileLoader<unknown> = (raw: LoaderInput) => ({
   path: raw.path,
   title: titleFromFilename(raw.path),
 });
@@ -80,7 +73,7 @@ export const fallbackLoader: FileLoader<unknown> = (raw: LoaderInput) => ({
  *   2. path predicate match
  *   3. fallback
  */
-export function resolveLoader(input: LoaderInput): FileLoader<unknown> {
+function resolveLoader(input: LoaderInput): FileLoader<unknown> {
   const type = input.type;
   if (type) {
     const match = registrations.find(r => r.kind === "type" && r.type === type);

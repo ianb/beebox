@@ -1,10 +1,11 @@
 # Scheduled-task health
 
 `evaluateTaskHealth` classifies a scheduled task from its card + run
-state: `ok`, `waiting`, `failing`, `overdue`, `blocked`, `invalid`, or
-`disabled`.
+state: `ok`, `waiting`, `inconclusive`, `failing`, `overdue`, `blocked`,
+`invalid`, or `disabled`.
 The trust rule: a deliberate skip (budget, missing connector, disabled)
-must never be reported as overdue or failing.
+must never be reported as overdue or failing — and neither must a
+non-answer (`inconclusive`), where nothing found a defect at all.
 
 ```ts setup
 import {
@@ -371,4 +372,79 @@ selectAlertableTasks({
   engineWait: reason,
 }).length
 => 0
+```
+
+## Inconclusive — the work ran, the check never decided
+
+A run that exits with the inconclusive marker records `lastResult:
+"inconclusive"`. That is not a failure: `consecutiveFailures` stays where it
+was, so the task reads `inconclusive`, not `failing ×1`. It is not a success
+either — `lastSuccess` is untouched, because an unjudged run is not a
+confirmed one.
+
+```ts
+const h = evaluate({
+  fields: { cron: "0 5 * * *" },
+  state: {
+    lastRun: "2026-06-09T05:00:10Z",
+    lastResult: "inconclusive",
+    lastError:
+      "Command failed with exit code 2\nstderr:\n" +
+      "Inconclusive: procedure refresh-maps — review of step maps reached max turns (16); work completed",
+    lastSuccess: "2026-06-06T05:00:10Z",
+    consecutiveFailures: 0,
+  },
+});
+print(`status: ${h.status}`);
+print(`failures: ${h.consecutiveFailures}`);
+print(`reason: ${h.reason}`);
+=>
+status: inconclusive
+failures: 0
+reason: last run's check reached no verdict; the work itself completed
+```
+
+A live problem outranks the stale non-answer: a task that has failed since, or
+gone overdue, or is out of budget, reports that instead.
+
+```ts continue
+print(evaluate({
+  fields: { cron: "0 5 * * *" },
+  state: {
+    lastRun: "2026-06-09T05:00:10Z", lastResult: "inconclusive",
+    lastSuccess: "2026-06-06T05:00:10Z", consecutiveFailures: 2,
+  },
+}).status);
+print(evaluate({
+  fields: { cron: "0 5 * * *", enabled: false },
+  state: { lastRun: "2026-06-09T05:00:10Z", lastResult: "inconclusive" },
+}).status);
+=>
+failing
+disabled
+```
+
+It speaks in the session-start summary but never pages the boxholder — nothing
+is wrong yet:
+
+```ts continue
+const scheduler = { status: "running", lastTickAt: "2026-06-09T11:59:30Z", ageMs: 30_000 };
+print(summarizeScheduleHealth({ tasks: [h], scheduler, engineWait: null }, NOW));
+print(`alertable: ${selectAlertableTasks({ tasks: [h], scheduler, engineWait: null }).length}`);
+=>
+demo: review inconclusive (work completed, unjudged)
+alertable: 0
+```
+
+The inconclusive line is the headline `cb health` prints for that error — it is
+the only line that says the work completed, so it wins over
+`Command failed with exit code 2`:
+
+```ts
+conciseScheduleError(
+  "Command failed with exit code 2\nstderr:\n" +
+  "Inconclusive: procedure refresh-maps — review of step maps reached max turns (16); work completed\n" +
+  "stdout:\nAll MAP.md files current.",
+)
+=> Inconclusive: procedure refresh-maps — review of step maps reached max turns (16); work completed
 ```

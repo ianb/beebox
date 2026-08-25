@@ -13,7 +13,9 @@
     "dev": "bin/workstreams serve",
     "dev-apps-typecheck": "bash bin/dev-apps-typecheck",
     "doctor": "node --import tsx bin/doctor.ts",
+    "issues": "node --import tsx bin/issues.ts",
     "lint": "pnpm --filter '!callback-box-frontend' -r lint",
+    "lint:knip": "knip",
     "mobile-contract-check": "node --import tsx bin/mobile-contract-check.ts",
     "path-leak-check": "node --import tsx bin/path-leak-check.ts",
     "postinstall": "patch-package",
@@ -34,11 +36,17 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@fastify/cookie": "^11.0.2",
+    "@markdoc/markdoc": "^0.5.7",
     "@types/node": "^24.0.0",
     "agent-browser": "^0.27.0",
+    "better-sqlite3": "^12.10.0",
+    "esbuild": "^0.25.12",
     "husky": "^9.1.7",
+    "knip": "^5.83.1",
     "patch-package": "^8.0.0",
-    "tsx": "^4.23.1"
+    "tsx": "^4.23.1",
+    "typescript": "^5.9.3"
   },
   "overrides": {
     "react": "^18.3.1",

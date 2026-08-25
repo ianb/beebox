@@ -23,7 +23,7 @@ import {
   type ParsedScheduledScript,
 } from "../../schemas/scheduled-script.js";
 import type { ScriptState } from "./state.js";
-import { isContendedFailure } from "../../lib/git.js";
+import { isContendedFailure, isStaleLockFailure } from "../../lib/git.js";
 
 export { conciseScheduleError } from "../../shared/schedule-error.js";
 
@@ -31,12 +31,13 @@ const { rrulestr } = rrulePkg;
 
 export type TaskHealthStatus =
   | "ok"
-  | "waiting"   // engine unavailable (e.g. quota-exhausted); deferred, not failing
-  | "failing"   // last run(s) failed
-  | "overdue"   // a due occurrence has gone unattempted past grace
-  | "blocked"   // unrunnable for a declared reason (budget, connector)
-  | "invalid"   // card doesn't parse — can never run
-  | "disabled"; // enabled: false, or past its until date
+  | "waiting"      // engine unavailable (e.g. quota-exhausted); deferred, not failing
+  | "inconclusive" // the last run's work completed but its check reached no verdict
+  | "failing"      // last run(s) failed
+  | "overdue"      // a due occurrence has gone unattempted past grace
+  | "blocked"      // unrunnable for a declared reason (budget, connector)
+  | "invalid"      // card doesn't parse — can never run
+  | "disabled";    // enabled: false, or past its until date
 
 export interface TaskHealth {
   name: string;
@@ -50,6 +51,14 @@ export interface TaskHealth {
   pendingMs?: number;
   /** Why the task can't run (blocked), is disabled, or didn't parse (invalid). */
   reason?: string;
+  /**
+   * Box-relative paths of template files behind this task — its own card, the
+   * procedure it runs — that have an upstream update parked in
+   * `config/_template-updates/`. Present (non-empty) only when something is
+   * waiting: a failing task whose own fix is already on disk, unread. Computed
+   * in `health-box.ts` (it needs the box), not by `evaluateTaskHealth`.
+   */
+  parkedTemplateUpdates?: string[];
   alertedAt: string | null;
   alertedFor: ScriptState["alertedFor"];
 }
@@ -83,11 +92,19 @@ export interface EvaluateTaskInput {
 
 /**
  * Classify one task. Precedence: disabled > invalid-input states the
- * caller handles > waiting > failing > blocked > overdue > ok. "Waiting"
- * wins over "failing"/"overdue" per the trust rule above: during an engine
- * outage the task is deferred by the system, not broken. "Failing" wins
+ * caller handles > waiting > failing > blocked > overdue > inconclusive > ok.
+ * "Waiting" wins over "failing"/"overdue" per the trust rule above: during an
+ * engine outage the task is deferred by the system, not broken. "Failing" wins
  * over "blocked" because failures are what consumed the budget; the
  * blocked reason still rides along in `reason`.
+ *
+ * "Inconclusive" sits just above "ok" and below everything else: it is a
+ * report about the last run's *checker*, not about the task's ability to run,
+ * so any live condition (a failure since, a missed occurrence, an exhausted
+ * budget) is the more actionable thing to say. It is emphatically not
+ * "failing" — a checker that ran out of budget has not found anything wrong,
+ * and reporting it as a failure is what taught readers to discount the signal
+ * (issues/bugs/2026-08-12-health-masks-review-step-turn-cap.md).
  */
 export function evaluateTaskHealth(input: EvaluateTaskInput): TaskHealth {
   const { name, parsed, state, now, cardMtime, missingConnectors } = input;
@@ -126,10 +143,19 @@ export function evaluateTaskHealth(input: EvaluateTaskInput): TaskHealth {
     // A task that lost a git-index race never got to run its own work, so the
     // reader should not go debugging the task. Contention still counts as a
     // failure (four in a row is worth surfacing), but it says what it is.
-    const contended = state.lastError !== null && isContendedFailure(state.lastError);
-    const failureReason = contended
-      ? "contended — another process held the box's git index"
-      : blockedReason;
+    //
+    // An ABANDONED lock is the opposite advice. It never clears, so calling it
+    // contention tells the reader to wait for something that will not happen —
+    // which is exactly how one crashed git cost a box days of failing tasks.
+    // The box-level `stale-git-index-lock` health check carries the detail;
+    // this only has to stop lying about which condition it is.
+    const staleLock = state.lastError !== null && isStaleLockFailure(state.lastError);
+    const contended = !staleLock && state.lastError !== null && isContendedFailure(state.lastError);
+    const failureReason = staleLock
+      ? "blocked by an abandoned .git/index.lock — see the box's stale-git-index-lock health check"
+      : contended
+        ? "contended — another process held the box's git index"
+        : blockedReason;
     return { ...base, status: "failing", ...(failureReason ? { reason: failureReason } : {}) };
   }
   if (blockedReason) {
@@ -142,6 +168,15 @@ export function evaluateTaskHealth(input: EvaluateTaskInput): TaskHealth {
     if (pendingMs > missed.graceMs) {
       return { ...base, status: "overdue", pendingMs };
     }
+  }
+  if (state.lastResult === "inconclusive") {
+    // The reason is the fixed fact; the specifics live in lastError, which
+    // every surface renders through conciseScheduleError.
+    return {
+      ...base,
+      status: "inconclusive",
+      reason: "last run's check reached no verdict; the work itself completed",
+    };
   }
   return { ...base, status: "ok" };
 }

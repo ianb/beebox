@@ -24,7 +24,7 @@ import { loadSessionHistory } from "./session/load-history.js";
 /** Husk cards read at once — see {@link mapInBatchesSettled}. */
 const READ_CONCURRENCY = 64;
 
-export const CHAT_HUSK_DIR = "store/chat/web";
+const CHAT_HUSK_DIR = "store/chat/web";
 /** Keep husk titles bookmark-sized, not transcript-sized. */
 const TITLE_MAX_LEN = 80;
 
@@ -174,7 +174,7 @@ export async function listChatHusksUnder(boxRoot: string, relDir: string): Promi
  * usable husk. The per-file half of `listChatHusks`, split out so a single
  * session can be resolved without reading every husk in the box.
  */
-export async function readChatHusk(boxRoot: string, relPath: string): Promise<ChatHuskEntry | null> {
+async function readChatHusk(boxRoot: string, relPath: string): Promise<ChatHuskEntry | null> {
   let content: string;
   try {
     content = await fs.readFile(path.join(boxRoot, relPath), "utf-8");

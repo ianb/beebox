@@ -7,6 +7,7 @@ import { href } from "../../lib/routing";
 import type { RouterOutput } from "../../lib/trpc";
 import { cbSource } from "../../lib/source-tag";
 import { Card } from "../ui/Card";
+import { tickHadActivity } from "./ScheduleTicks";
 
 type LogEntry = RouterOutput["status"]["activity"]["entries"][number];
 type SchedulerLogEntry = RouterOutput["scheduler"]["log"]["entries"][number];
@@ -63,6 +64,28 @@ function CommitRow({ commit }: { commit: LogEntry }) {
   );
 }
 
+/**
+ * Colour and glyph for one script's outcome. `inconclusive` gets neither the
+ * green of a pass nor the red of a failure: its work ran and nothing judged
+ * it, and colouring it as success is the misreading the whole outcome exists
+ * to prevent.
+ */
+function scriptStatusStyle(status: NonNullable<SchedulerLogEntry["result"]>["scripts"][number]["status"]): {
+  className: string;
+  glyph: string;
+  title: string;
+} {
+  if (status === "error") return { className: "text-danger-dark", glyph: "", title: "Failed" };
+  if (status === "inconclusive") {
+    return {
+      className: "text-warm-600",
+      glyph: "? ",
+      title: "Inconclusive — work ran; the check reached no verdict",
+    };
+  }
+  return { className: "text-success", glyph: "", title: "Ran" };
+}
+
 function TickRow({ tick }: { tick: SchedulerLogEntry }) {
   const scripts = tick.result?.scripts.filter((s) => s.status !== "skipped") ?? [];
   return (
@@ -72,19 +95,24 @@ function TickRow({ tick }: { tick: SchedulerLogEntry }) {
           <span className="text-xs bg-info-50 text-primary px-1.5 py-0.5 rounded mr-1">
             tick
           </span>
-          {scripts.map((s, si) => (
-            <span
-              key={`${s.name}-${si}`}
-              className={`text-xs mr-1 ${s.status === "error" ? "text-danger-dark" : "text-success"}`}
-            >
-              {s.name}
-              {s.durationMs != null ? (
-                <span className="text-warm-500 ml-0.5">
-                  {s.durationMs < 1000 ? `${s.durationMs}ms` : `${(s.durationMs / 1000).toFixed(1)}s`}
-                </span>
-              ) : null}
-            </span>
-          ))}
+          {scripts.map((s, si) => {
+            const style = scriptStatusStyle(s.status);
+            return (
+              <span
+                key={`${s.name}-${si}`}
+                className={`text-xs mr-1 ${style.className}`}
+                title={style.title}
+              >
+                {style.glyph}
+                {s.name}
+                {s.durationMs != null ? (
+                  <span className="text-warm-500 ml-0.5">
+                    {s.durationMs < 1000 ? `${s.durationMs}ms` : `${(s.durationMs / 1000).toFixed(1)}s`}
+                  </span>
+                ) : null}
+              </span>
+            );
+          })}
         </div>
       </div>
       <span className="text-xs text-warm-500 whitespace-nowrap">
@@ -96,10 +124,8 @@ function TickRow({ tick }: { tick: SchedulerLogEntry }) {
 
 export function RecentActivity({ commits, ticks, loading, error }: RecentActivityProps) {
   const { boxSlug } = useParams({ strict: false });
-  // Only include ticks that had activity
-  const activeTicks = ticks.filter(
-    (t) => t.result && (t.result.ran > 0 || t.result.errors > 0),
-  );
+  // Only include ticks that had activity — an unjudged run is activity.
+  const activeTicks = ticks.filter(tickHadActivity);
 
   // Merge and sort by timestamp
   const items: ActivityItem[] = [

@@ -21,7 +21,7 @@ function formatTimestamp(d: Date): string {
   return d.toISOString().replace("T", " ").substring(0, 16);
 }
 
-export function formatTimeRange(start: Date | null, end: Date | null): string {
+function formatTimeRange(start: Date | null, end: Date | null): string {
   if (!start) return "(empty)";
   const startStr = formatTimestamp(start);
   if (!end) return startStr;

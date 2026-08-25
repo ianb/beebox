@@ -20,13 +20,17 @@ import {
   codexUsageDelta,
   totalCodexSessionUsage,
 } from "../core/codex-usage.js";
-import { codexSdkToolChatMessage } from "./codex-tool-activity.js";
+import { codexSdkItemId, codexSdkToolChatMessage } from "./codex-tool-activity.js";
+import { declaredPresent } from "../lib/declared-present.js";
 import {
   codexSdkUsage,
   createCodexSdkSession,
+  type CodexSdkEvent,
+  type CodexSdkItem,
   type CodexSdkSessionFactory,
   type CodexSdkSessionLike,
 } from "./codex-sdk-session.js";
+import type { ChatResultPhase } from "../core/chat/message-types.js";
 
 function event(message: NativeChatBackendMessage["message"]): NativeChatBackendMessage {
   return { provider: "codex", message };
@@ -34,6 +38,56 @@ function event(message: NativeChatBackendMessage["message"]): NativeChatBackendM
 
 function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+const FAILURE_PREFIX: Record<ChatResultPhase, string> = {
+  "session-start": "Could not start codex session",
+  turn: "Codex turn threw before completing",
+};
+
+/**
+ * The result frame a codex run emits when a step of its promise chain rejects.
+ * The phase — and the prefix built from it — say which step threw, so a reader
+ * can tell "no session was ever created" from "a session ran and the turn did
+ * not finish"; both otherwise arrive as `num_turns=0 duration_ms=0`.
+ *
+ * The stack goes to the console because the frame carries a message only. A
+ * thrown `TypeError` reaches the user as its bare message, which names a
+ * property and no location; without the stack the throw site is unrecoverable.
+ */
+export function codexFailureEvent(
+  { phase, sessionId, error }: { phase: ChatResultPhase; sessionId: string; error: unknown },
+): NativeChatBackendMessage {
+  const trace = error instanceof Error
+    ? error.stack ?? `${error.name}: ${error.message} (no stack)`
+    : `non-Error throw: ${String(error)}`;
+  console.error(`[codex-chat] ${phase} failure: ${errorText(error)}\n${trace}`);
+  return event({
+    type: "result",
+    subtype: "failed",
+    session_id: sessionId,
+    is_error: true,
+    phase,
+    duration_ms: 0,
+    num_turns: 0,
+    result: `${FAILURE_PREFIX[phase]}: ${errorText(error)}`,
+  });
+}
+
+/**
+ * Read the item off an `item.completed` event. The SDK's types promise the
+ * field is always populated; this catches a stream that yields the event
+ * without it, so a missing item is reported as a named, dropped event rather
+ * than escaping the turn as a property-access `TypeError`.
+ */
+function completedItem(nativeEvent: CodexSdkEvent): CodexSdkItem | null {
+  if (nativeEvent.type !== "item.completed") return null;
+  const item = declaredPresent(nativeEvent.item);
+  if (item === null) {
+    console.warn("[codex-chat] codex SDK emitted item.completed with no item; dropping the event");
+    return null;
+  }
+  return item;
 }
 
 function createRun(opts: ChatBackendStartOptions, createSession: CodexSdkSessionFactory): ChatBackendRun {
@@ -63,15 +117,7 @@ function createRun(opts: ChatBackendStartOptions, createSession: CodexSdkSession
     }
   }).catch((error: unknown) => {
     initializationError = error;
-    queue.push(event({
-      type: "result",
-      subtype: "failed",
-      session_id: sessionId,
-      is_error: true,
-      duration_ms: 0,
-      num_turns: 0,
-      result: errorText(error),
-    }));
+    queue.push(codexFailureEvent({ phase: "session-start", sessionId, error }));
   });
   const run: ChatBackendRun = {
     closed: false,
@@ -98,13 +144,14 @@ function createRun(opts: ChatBackendStartOptions, createSession: CodexSdkSession
             pushUser();
           },
           onEvent(nativeEvent) {
-            if (nativeEvent.type !== "item.completed") return;
-            const { item } = nativeEvent;
+            const item = completedItem(nativeEvent);
+            if (item === null) return;
             if (item.type === "agent_message") {
+              const uuid = codexSdkItemId(item);
               queue.push(event({
                 type: "assistant",
                 session_id: sessionId,
-                uuid: item.id,
+                ...(uuid === null ? {} : { uuid }),
                 message: { role: "assistant", content: [{ type: "text", text: item.text }] },
               }));
             } else {
@@ -112,7 +159,12 @@ function createRun(opts: ChatBackendStartOptions, createSession: CodexSdkSession
               if (message !== null) queue.push(event(message));
             }
             if (item.type === "file_change" && item.status === "completed") {
-              for (const change of item.changes) changedPaths.add(change.path);
+              const changes = declaredPresent(item.changes);
+              if (changes === null) {
+                console.warn("[codex-chat] codex SDK emitted a completed file_change with no changes list");
+              } else {
+                for (const change of changes) changedPaths.add(change.path);
+              }
             }
           },
         });
@@ -161,15 +213,7 @@ function createRun(opts: ChatBackendStartOptions, createSession: CodexSdkSession
         }));
       }).catch((error: unknown) => {
         activeController = null;
-        queue.push(event({
-          type: "result",
-          subtype: "failed",
-          session_id: sessionId,
-          is_error: true,
-          duration_ms: 0,
-          num_turns: 0,
-          result: errorText(error),
-        }));
+        queue.push(codexFailureEvent({ phase: "turn", sessionId, error }));
       });
     },
     async interrupt(): Promise<void> {

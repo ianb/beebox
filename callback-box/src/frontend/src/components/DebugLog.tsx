@@ -9,6 +9,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { trpcClient } from "../lib/trpc";
+import { describeArg } from "../lib/debug-log-format";
 import { CloseButton } from "./ui/CloseButton";
 
 interface LogEntry {
@@ -81,7 +82,7 @@ function patchConsole() {
     const original = console[level];
     console[level] = (...args: unknown[]) => {
       original.apply(console, args);
-      const message = args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" ");
+      const message = args.map(describeArg).join(" ");
       logEntries.push({ level, message, timestamp: Date.now() });
       if (logEntries.length > MAX_ENTRIES) logEntries.shift();
       queueForServer(level, message);
@@ -127,7 +128,7 @@ export function enableDebugLogCapture() {
 }
 
 /** Enable forwarding of all log levels (not just errors/warns) to the server. */
-export function setVerboseForwarding(enabled: boolean) {
+function setVerboseForwarding(enabled: boolean) {
   verboseForwarding = enabled;
 }
 

@@ -30,6 +30,7 @@ import { stageAll, commit, getStatus, withBoxGitLock } from "../../lib/git.js";
 import { buildToolingScriptEnv } from "../../core/script-env.js";
 import type { TickOptions, ScriptResult } from "./tick.js";
 import { errnoCode } from "../../lib/error-guards.js";
+import { scheduleOutcomeLine } from "../../shared/schedule-error.js";
 import {
   boxEngineUnavailability,
   classifyScheduleFailure,
@@ -293,9 +294,17 @@ export async function executeScript(args: ExecuteScriptArgs): Promise<ScriptResu
     recordOutcome(state, { result: outcome.result, error: outcome.error, durationMs, sleepAffected, windowMs, now });
     await saveScriptState({ boxRoot, scriptName, state });
     if (!options.quiet) {
-      console.error(`  ${outcome.result === "deferred" ? "Deferred" : "Failed"}: ${outcome.error}`);
+      console.error(`  ${scheduleOutcomeLine(outcome)}`);
     }
-    return { name: scriptName, status: "error", command: parsed.runs, durationMs, error: outcome.error };
+    // An inconclusive run is not an error: its work completed. It gets its own
+    // ScriptResult status so the tick summary doesn't count it as one.
+    return {
+      name: scriptName,
+      status: outcome.result === "inconclusive" ? "inconclusive" : "error",
+      command: parsed.runs,
+      durationMs,
+      error: outcome.error,
+    };
   } finally {
     await releaseScriptLock({ boxRoot, scriptName });
   }

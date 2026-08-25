@@ -271,6 +271,26 @@ journalctl -u callback-scheduler -f
 systemctl restart callback-hub
 ```
 
+### Git-drain drop-in (`deploy/systemd/git-drain.conf`)
+
+Both units need `KillMode=mixed` and `TimeoutStopSec=60`. Without them systemd
+signals every process in the cgroup on stop, so a `git` a box child is running
+gets killed by systemd rather than by us — and a `git` SIGKILLed mid-index-write
+leaves a `.git/index.lock` no process owns, which blocks every writer in that
+box until a human deletes it. With `mixed`, only the main process is signalled
+and it drains its own git spans before exiting.
+
+**`deploy.sh` reconfirms this on every deploy** — it reinstalls every `.conf`
+in `deploy/systemd/` into both `callback-hub.service.d/` and
+`callback-scheduler.service.d/`, and `daemon-reload`s only when something
+changed, immediately before the restart. The drop-in directory is the seam that
+lets a deploy own a unit SETTING without owning the unit itself, which matters
+because `setup-server.sh` still emits the pre-hub unit shape (see the Known gap
+above). Anything a future deploy must guarantee about the units belongs here as
+another `.conf`, not as a by-hand step someone repeats and then forgets.
+
+Verify with `systemctl show callback-hub -p KillMode -p TimeoutStopUSec`.
+
 ### Production-safe webapp defaults
 
 Security-sensitive webapp behavior fails closed when configuration is absent:

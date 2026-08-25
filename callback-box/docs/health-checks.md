@@ -24,6 +24,21 @@ self-expires at the reset. Investigate only if `waiting` persists well past
 the stated time (the store then shows a fresh episode — quota was exhausted
 again immediately, which is a capacity problem, not a code problem).
 
+## Inconclusive (`?` is not `✗`)
+
+When `cb health` shows a task as `?  <name>  inconclusive` with
+`last run's check reached no verdict; the work itself completed`, the run did
+its work and its **checker** fell short — typically a procedure's `validate`
+review hitting its turn cap. Nothing found a defect. Do not redo the work on
+this signal, and do not read it as a failure: `consecutiveFailures` does not
+accrue, no alert fires, and `cb health` does not exit 1 for it. The error line
+under the task names the procedure, the step, and the reason.
+
+What to do with it: if the same task reads `inconclusive` repeatedly, the fix
+is a budget or prompt fix on the *judge* (a turn cap set too low, or a review
+prompt that wanders), not a fix to the work. The reason tags distinguish the
+cases — see `docs/procedure-implementation.md` → Instructions.
+
 ## `health.check` snapshot vs fresh
 
 The box-level checks (`runHealthChecks` — permissions, API keys, annex, nav card, engine) are deep and slow: a subprocess `claude auth status`, the git-annex doctor over the attachment trees, a `tmp-capture/` walk, a dozen serial fs probes. Measured 580–650 ms on prod, and they rode in the dashboard's tRPC batch, so every dashboard load waited on them.
@@ -111,6 +126,37 @@ untouched and reports the validation error so an operator can inspect or remove
 it deliberately. If state disappears while the scheduler is running, the
 in-process hourly backoff prevents a rescan loop and the replacement baseline
 is surfaced as a warning until an owner accepts it.
+
+## template-updates (a fix that never reached the box)
+
+`cb health`'s box-checks section carries a `template-updates` check reporting
+upstream template changes that were **parked** rather than written: the box's
+copy of a shipped procedure, guide, or schedule card had diverged, so the new
+version went to `config/_template-updates/<path>` for review instead of
+clobbering the local edit. The message lists the parked paths and ends with the
+same resolution sentence `cb status` prints — copy the parked file over the live
+one, or discard the parked copy.
+
+Severity is normally `warning`: a parked update is a pending choice, not a
+defect, and must not fail a deploy. It escalates to **`error`** when a parked
+path is the procedure card or task card behind a scheduled task that currently
+reads `failing` or `inconclusive`. That combination is the trap this check
+exists for — the task's own fix is already on disk and unread. The message says
+which of the two it is (`…belongs to a task that is failing: X` /
+`…belongs to a task whose last check reached no verdict: X`): both escalate,
+but a failing task is broken and an inconclusive one is only unjudged. The scheduled-task
+list prints the same association under the affected task:
+
+```
+  ✗ refresh-maps          failing ×5     last attempt 7h ago, never succeeded
+      error: step refresh failed
+      parked update: config/_template-updates/config/procedures/refresh-maps.procedure.card — the fix may already be on disk
+```
+
+The association also rides on `TaskHealth.parkedTemplateUpdates`, so `cb health
+--json`, the dashboard, the session-start snapshot, and proactive health alerts
+all carry it. Escalation needs the schedule evaluation, which only `cb health`
+loads — the dashboard and `/api/health` report the un-escalated `warning`.
 
 ## google-auth (is the Google grant still alive?)
 

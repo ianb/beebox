@@ -26,7 +26,7 @@ export type SecretRefusalKind =
   | "store-unreadable";
 
 /** Shared shape: the refusal names the secret it is about, and carries a relay-ready message. */
-export abstract class SecretRefusalError extends Error {
+abstract class SecretRefusalError extends Error {
   abstract readonly kind: SecretRefusalKind;
   /** The secret name that was asked for. */
   readonly secretName: string;

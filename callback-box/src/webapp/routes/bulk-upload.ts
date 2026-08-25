@@ -61,7 +61,7 @@ const BULK_CAPABILITIES = {
 } as const;
 
 /** An item upload named an `itemId` not in the session's predeclared registry. */
-export class UnregisteredBulkItemError extends Error {
+class UnregisteredBulkItemError extends Error {
   constructor(itemId: string) {
     super(`No registered item ${itemId} in this bulk batch`);
     this.name = "UnregisteredBulkItemError";

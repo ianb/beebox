@@ -27,7 +27,7 @@ import {
 } from "./unlisted-binaries.js";
 
 /** `git cat-file --batch-check` could not report the staged blob sizes. */
-export class StagedBlobSizeError extends Error {
+class StagedBlobSizeError extends Error {
   constructor(detail: string) {
     super(`could not read staged blob sizes: ${detail}`);
     this.name = "StagedBlobSizeError";
@@ -38,7 +38,7 @@ export class StagedBlobSizeError extends Error {
  * A staged path contains a newline, which the newline-delimited
  * `cat-file --batch-check` input cannot express — see `stagedBlobSizes`.
  */
-export class NewlineStagedPathError extends Error {
+class NewlineStagedPathError extends Error {
   readonly relPath: string;
   constructor(relPath: string) {
     super("staged path contains a newline; the unlisted-binary guard cannot size it");

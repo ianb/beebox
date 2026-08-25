@@ -1,9 +1,10 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Ref } from "react";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 
 import { CopyIssuePath, IssueTags, NextActionSelect, PriorityControls } from "./IssueControls.js";
 import { IssueCategoryNav } from "./IssueCategoryNav.js";
+import { IssueRelated } from "./IssueRelated.js";
 import { Markdown } from "./Markdown.js";
 import { Button, Pill } from "./ui.js";
 import { trpc } from "../trpc.js";
@@ -22,6 +23,20 @@ type IssueSearch = IssueFilters & {
   issue?: string | undefined;
   issueVisibility?: Visibility | undefined;
 };
+
+type SortableIssue = Pick<Issue, "slug"> & { frontmatter: Pick<Issue["frontmatter"], "priority"> };
+
+export function issuePassesStatusFilter(issue: Pick<Issue, "closed">, filter: { status: IssueFilters["status"]; selected: boolean }): boolean {
+  const { status, selected } = filter;
+  if (status === "all") return true;
+  if (status === "closed") return issue.closed;
+  if (status === "open") return !issue.closed;
+  return selected || !issue.closed;
+}
+
+export function filterAndSortIssues<T extends SortableIssue>(issues: T[], filters: Pick<IssueFilters, "priority" | "sort">): T[] {
+  return issues.filter((issue) => !filters.priority || issue.frontmatter.priority === filters.priority).toSorted((a, b) => filters.sort === "priority" ? PRIORITY_ORDER[a.frontmatter.priority] - PRIORITY_ORDER[b.frontmatter.priority] || b.slug.localeCompare(a.slug) : b.slug.localeCompare(a.slug));
+}
 
 export function issueChangeKey(issue: Pick<Issue, "relPath" | "visibility">): string {
   return `${issue.visibility}:${issue.relPath}`;
@@ -66,6 +81,18 @@ function editedChange(issue: Issue, values: { priority: Priority; nextAction?: N
 }
 
 function FilterMenu({ filters, categories, needs, onFilters }: { filters: IssueFilters; categories: string[]; needs: string[]; onFilters: (filters: IssueFilters) => void }) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    function closeOnEscape(event: KeyboardEvent): void {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setOpen(false);
+      document.querySelector<HTMLElement>("#cb-issues-filter")?.focus();
+    }
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [open]);
   function without(field: "category" | "priority" | "needs"): IssueFilters {
     const { [field]: _removed, ...remaining } = filters;
     return remaining;
@@ -76,7 +103,7 @@ function FilterMenu({ filters, categories, needs, onFilters }: { filters: IssueF
   function setSort(value: string): void {
     if (value === "date" || value === "priority") onFilters({ ...filters, sort: value });
   }
-  return <details className="filter-menu"><summary>Filter</summary><div className="filter-popover">
+  return <details className="filter-menu" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}><summary id="cb-issues-filter">Filter</summary><button type="button" id="cb-issues-filter-close" className="filter-backdrop" aria-hidden="true" tabIndex={-1} hidden={!open} onClick={() => setOpen(false)} /><div className="filter-popover" role="dialog" aria-label="Issue filters">
     <label>Status <select value={filters.status ?? "open"} onChange={(event) => setStatus(event.target.value)}><option value="open">Open</option><option value="all">All</option><option value="closed">Closed</option></select></label>
     <label>Sort <select value={filters.sort ?? "date"} onChange={(event) => setSort(event.target.value)}><option value="date">Newest filed</option><option value="priority">Priority</option></select></label>
     <label>Category <select value={filters.category ?? ""} onChange={(event) => onFilters(event.target.value ? { ...filters, category: event.target.value } : without("category"))}><option value="">Every category</option>{categories.map((category) => <option value={category} key={category}>{category}</option>)}</select></label>
@@ -94,7 +121,7 @@ function IssueRow({ issue, selected, change, rowRef, onSelect, onChange }: { iss
 function LoadedIssueDetail({ issue, onBack }: { issue: Issue; onBack: () => void }) {
   const detail = trpc.issues.detail.useQuery({ relPath: issue.relPath, visibility: issue.visibility });
   const value = detail.data ?? issue;
-  return <aside className="issue-detail"><Button className="mobile-back" onClick={onBack}>← Issues</Button><header><h2 className="issue-detail-title">{value.frontmatter.title}</h2><p className="issue-meta">{value.relPath} · {value.closed ? "Closed" : "Open"}</p><IssueTags issue={value} /></header>{detail.isLoading ? <section className="loading-skeleton" aria-busy="true"><span /></section> : detail.isError ? <section className="error-state"><p>Couldn’t load details: {detail.error.message}</p><Button onClick={() => void detail.refetch()}>Retry</Button></section> : value.body ? <article className="issue-body"><Markdown source={value.body} /></article> : <p className="muted">No issue details found.</p>}</aside>;
+  return <aside className="issue-detail"><Button className="mobile-back" onClick={onBack}>← Issues</Button><header><h2 className="issue-detail-title">{value.frontmatter.title}</h2><p className="issue-meta">{value.relPath} · {value.closed ? "Closed" : "Open"}</p><IssueTags issue={value} /></header>{detail.isLoading ? <section className="loading-skeleton" aria-busy="true"><span /></section> : detail.isError ? <section className="error-state"><p>Couldn’t load details: {detail.error.message}</p><Button onClick={() => void detail.refetch()}>Retry</Button></section> : value.body ? <article className="issue-body"><Markdown source={value.body} /></article> : <p className="muted">No issue details found.</p>}<IssueRelated issue={issue} /></aside>;
 }
 
 function IssueDetail({ issue, onBack }: { issue?: Issue | undefined; onBack: () => void }) {
@@ -109,7 +136,7 @@ export function IssuesPane({ issues, changes, saving, onReset, onSave, onChange 
   const selected = issues.find((issue) => issue.relPath === search.issue && issue.visibility === (search.issueVisibility ?? "public"));
   const categories = [...new Set(issues.map((issue) => issue.category))].toSorted();
   const needs = [...new Set(issues.flatMap((issue) => issue.frontmatter.needs))].toSorted();
-  const visible = issues.filter((issue) => (search.status ?? "open") === "all" || ((search.status ?? "open") === "closed" ? issue.closed : !issue.closed)).filter((issue) => !search.category || issue.category === search.category).filter((issue) => !search.needs || issue.frontmatter.needs.includes(search.needs)).filter((issue) => !search.priority || (changes.get(issueChangeKey(issue))?.priority ?? issue.frontmatter.priority) === search.priority).toSorted((a, b) => search.sort === "priority" ? PRIORITY_ORDER[changes.get(issueChangeKey(a))?.priority ?? a.frontmatter.priority] - PRIORITY_ORDER[changes.get(issueChangeKey(b))?.priority ?? b.frontmatter.priority] || b.slug.localeCompare(a.slug) : b.slug.localeCompare(a.slug));
+  const visible = filterAndSortIssues(issues.filter((issue) => issuePassesStatusFilter(issue, { status: search.status, selected: selected === issue })).filter((issue) => !search.category || issue.category === search.category).filter((issue) => !search.needs || issue.frontmatter.needs.includes(search.needs)), search);
   const selectedKey = selected ? issueChangeKey(selected) : null;
   const selectedVisibleIndex = selectedKey ? visible.findIndex((issue) => issueChangeKey(issue) === selectedKey) : -1;
   useEffect(() => {

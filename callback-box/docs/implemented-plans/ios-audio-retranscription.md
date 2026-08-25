@@ -140,7 +140,7 @@ Stated plainly so it isn't discovered as a surprise:
   describes itself as transient. This is the known cost of the chosen direction.
 - **Recordings made before this ships** are gone; nothing can recover them.
 - **The web-reload half** of
-  [the first-message issue](../../../issues/bugs/2026-08-18-first-message-audio-not-retranscribable.md)
+  [the first-message issue](../../../issues/closed/bugs/2026-08-18-first-message-audio-not-retranscribable.md)
   is untouched — that is the web store's memory-only lifetime, a separate fix.
 
 ## Verification

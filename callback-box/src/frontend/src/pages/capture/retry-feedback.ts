@@ -32,7 +32,7 @@ export type RetryFeedbackEvent =
   | { type: "expire" };
 
 /** How long "all uploads recovered" stays up before the banner goes quiet. */
-export const RECOVERED_NOTICE_MS = 3_000;
+const RECOVERED_NOTICE_MS = 3_000;
 
 export function nextRetryFeedback(state: RetryFeedback, event: RetryFeedbackEvent): RetryFeedback {
   switch (event.type) {

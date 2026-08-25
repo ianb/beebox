@@ -201,6 +201,8 @@ interface Harness {
   /** When set, the NEXT `pidStore.write` call rejects with this and clears
    *  itself (a disk-full/permission failure between spawn and waitForHttp). */
   failNextPidWrite: { value: unknown | undefined };
+  /** The backend-source token the effects report; assign to simulate a rebuild. */
+  sourceToken: { value: string | null };
   cleanup(): Promise<void>;
 }
 
@@ -215,6 +217,9 @@ async function makeHarness(options?: { devNoHub?: boolean }): Promise<Harness> {
   let probeMode: "auto" | "manual" = "auto";
   let pendingProbes: Deferred[] = [];
   const failNextPidWrite: { value: unknown | undefined } = { value: undefined };
+  // What the backend source "looks like" right now. A test moves it to simulate
+  // a merge landing under a running generation.
+  const sourceToken: { value: string | null } = { value: "src-gen-1" };
 
   const effects: RouterEffects = {
     spawn: spawner.spawn,
@@ -256,6 +261,7 @@ async function makeHarness(options?: { devNoHub?: boolean }): Promise<Harness> {
       return { name, root: tmp, backendCwd: tmp, frontendCwd: tmp, boxes: [] };
     },
     resolveBoxEntries: async () => [],
+    sourceToken: () => Promise.resolve(sourceToken.value),
   };
 
   const core = createRouterCore(effects, {
@@ -277,6 +283,7 @@ async function makeHarness(options?: { devNoHub?: boolean }): Promise<Harness> {
     removeCalls,
     unknownNames,
     failNextPidWrite,
+    sourceToken,
     manualProbes: () => {
       probeMode = "manual";
     },
@@ -338,6 +345,79 @@ test("404 corollary: an unknown name leaves NO phantom map entry", async () => {
     // The detached .catch cleanup runs a microtask later — flush, then assert.
     await ticks(2);
     assert.equal(h.core.getHandle("ghost"), undefined, "no phantom starting entry left behind");
+  } finally {
+    await h.cleanup();
+  }
+});
+
+// --- source freshness: a running generation vs. the code on disk --------------
+//
+// The hub executes TypeScript straight from the checkout, and nothing reloads
+// it, so a merge landing under a running generation leaves it serving the old
+// code while the router keeps calling it ready
+// (issues/bugs/2026-08-15-main-runtime-stays-stale-after-deploy-build.md).
+// These cover the noticing. There is deliberately no restart to cover: the
+// router's only activity signal is HTTP, so it cannot tell a chat streaming
+// over a WebSocket from an idle worktree, and has no moment it can prove safe.
+
+test("source freshness: a token that moves under a ready generation marks it stale", async () => {
+  const h = await makeHarness();
+  try {
+    const handle = await startReady(h, "wt");
+    const ready = readyLifecycle(handle)!;
+    assert.equal(ready.staleSince, null, "fresh at start");
+
+    h.sourceToken.value = "src-gen-2"; // a merge lands
+    h.clock.advance(6_000); // past the throttle
+    await h.core.ensureRunning("wt");
+    await ticks(4); // the check is fire-and-forget off the request path
+
+    assert.equal(typeof ready.staleSince, "number", "the request after the change reports it");
+  } finally {
+    await h.cleanup();
+  }
+});
+
+test("source freshness: an unchanged token never marks a generation stale, and the check is throttled", async () => {
+  const h = await makeHarness();
+  try {
+    const handle = await startReady(h, "wt");
+    const ready = readyLifecycle(handle)!;
+
+    h.clock.advance(6_000);
+    await h.core.ensureRunning("wt");
+    await ticks(4);
+    assert.equal(ready.staleSince, null, "same source, nothing to report");
+
+    // Within the throttle window the token is not consulted at all: move it and
+    // the answer must not change until the window elapses.
+    h.sourceToken.value = "src-gen-2";
+    await h.core.ensureRunning("wt");
+    await ticks(4);
+    assert.equal(ready.staleSince, null, "throttled — not rechecked yet");
+
+    h.clock.advance(6_000);
+    await h.core.ensureRunning("wt");
+    await ticks(4);
+    assert.equal(typeof ready.staleSince, "number", "rechecked once the window passed");
+  } finally {
+    await h.cleanup();
+  }
+});
+
+test("source freshness: an uncomputable token disables the comparison instead of crying stale", async () => {
+  const h = await makeHarness();
+  h.sourceToken.value = null; // e.g. a checkout with no callback-box/src
+  try {
+    const handle = await startReady(h, "wt");
+    const ready = readyLifecycle(handle)!;
+    assert.equal(ready.sourceToken, null);
+
+    h.sourceToken.value = "src-gen-2";
+    h.clock.advance(6_000);
+    await h.core.ensureRunning("wt");
+    await ticks(4);
+    assert.equal(ready.staleSince, null, "no baseline to compare against — stays quiet");
   } finally {
     await h.cleanup();
   }

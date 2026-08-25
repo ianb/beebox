@@ -46,7 +46,7 @@ export interface FakeTailscaleOptions {
 
 /** Thrown when a doctest drives the fake with a `tailscale` command it never
  *  modeled — a modeling gap must fail loudly, never pass as a no-op exit 0. */
-export class UnexpectedTailscaleCommandError extends Error {
+class UnexpectedTailscaleCommandError extends Error {
   constructor(readonly command: string) {
     super("fake tailscale deps received an unmodeled command: " + command);
     this.name = "UnexpectedTailscaleCommandError";

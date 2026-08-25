@@ -36,6 +36,8 @@
 . "$(dirname "${BASH_SOURCE[0]}")/session-registry.sh"
 # shellcheck source=exhibits-store.sh
 . "$(dirname "${BASH_SOURCE[0]}")/exhibits-store.sh"
+# shellcheck source=worktree-git-lock.sh
+. "$(dirname "${BASH_SOURCE[0]}")/worktree-git-lock.sh"
 if ! wt_paths_init "$(dirname "${BASH_SOURCE[0]}")/.."; then
   # Leave every derived location empty rather than half-set: `cd ""` and
   # `[ -d "" ]` both fail, so each destructive step declines on its own.
@@ -66,6 +68,23 @@ wt_log() {
     >> "$WT_LOG_FILE" 2>/dev/null || true
 }
 
+# Milliseconds since the epoch, for timing a step whose duration is the thing
+# we're trying to learn. BSD `date` has no `%N`, so bash 5's EPOCHREALTIME is
+# the only sub-second source that costs no subprocess; the `date` fallback keeps
+# this working on bash 3.2 at one-second resolution, which still answers the
+# question being asked ("did this step take a minute?").
+wt_now_ms() {
+  local t="${EPOCHREALTIME:-}" sec frac
+  case "$t" in
+    *[.,]*)
+      sec="${t%%[.,]*}"
+      frac="${t#*[.,]}000"
+      printf '%s' "$(( sec * 1000 + 10#${frac:0:3} ))" ;;
+    *)
+      printf '%s' "$(( $(date +%s) * 1000 ))" ;;
+  esac
+}
+
 # Progress line for the human. WT_SAY_PREFIX lets a caller keep its own tag on
 # every line it emits (the hooks prefix "[session-end]").
 wt_say() { printf '%s%s\n' "${WT_SAY_PREFIX:-  }" "$*"; }
@@ -74,9 +93,10 @@ wt_say() { printf '%s%s\n' "${WT_SAY_PREFIX:-  }" "$*"; }
 #
 # wt_other_agent_live <worktree_path> [--exclude-self-ancestor]
 #
-# Always returns 0; the answer is in WT_AGENT_STATE (`none` | `live` |
-# `unknown`) with detail in WT_AGENT_REASON. Callers MUST treat `unknown` the
-# same as `live` — that's the fail-closed half of this guard.
+# Always returns 0; the answer is in WT_AGENT_STATE (`none` | `launching` |
+# `live` | `unknown`) with detail in WT_AGENT_REASON. Callers MUST treat
+# `launching` and `unknown` the same as `live` for destructive decisions —
+# that's the fail-closed half of this guard.
 #
 # Cleaning a worktree that still has a live agent pulls the rug out from under
 # it. `bin/workstreams sweep` has always checked; session-end.sh did not, and that
@@ -182,6 +202,39 @@ wt_agent_snapshot_clear() {
   WT_SNAP_CWDS=""
 }
 
+# Process evidence is authoritative. Consult the launch lease only after both
+# process signals have established that no agent is running: the lease bridges
+# setup before the agent process exists, but must never hide a process that has
+# already started.
+wt_agent_none_or_launching() {
+  local wt_name="$1" launch status reason
+  launch=$(session_registry_launch_status "$wt_name")
+  status=$(jq -r '.state' <<<"$launch")
+  reason=$(jq -r '.reason // empty' <<<"$launch")
+  case "$status" in
+    active)
+      WT_AGENT_STATE="launching"
+      WT_AGENT_REASON="signal=launch-lease"
+      ;;
+    expired)
+      WT_AGENT_STATE="none"
+      WT_AGENT_REASON="launch=expired"
+      ;;
+    failed)
+      WT_AGENT_STATE="none"
+      WT_AGENT_REASON="launch=failed"
+      ;;
+    none)
+      WT_AGENT_STATE="none"
+      WT_AGENT_REASON=""
+      ;;
+    *)
+      WT_AGENT_STATE="unknown"
+      WT_AGENT_REASON="${reason:-invalid-launch-status}"
+      ;;
+  esac
+}
+
 wt_other_agent_live() {
   local worktree_path="$1" exclude_self=""
   [ "${2:-}" = "--exclude-self-ancestor" ] && exclude_self=1
@@ -201,7 +254,7 @@ wt_other_agent_live() {
       return 0
     fi
     case "$WT_SNAP_STATE" in
-      no-agents) WT_AGENT_STATE="none"; return 0 ;;
+      no-agents) wt_agent_none_or_launching "$wt_name"; return 0 ;;
       no-procs)  WT_AGENT_REASON="cannot-enumerate-processes"; return 0 ;;
       no-argv)   WT_AGENT_REASON="cannot-read-agent-argv"; return 0 ;;
       no-cwds)   WT_AGENT_REASON="cannot-read-agent-cwds"; return 0 ;;
@@ -230,7 +283,7 @@ EOF
     done <<EOF
 $WT_SNAP_CWDS
 EOF
-    WT_AGENT_STATE="none"
+    wt_agent_none_or_launching "$wt_name"
     return 0
   fi
 
@@ -258,7 +311,7 @@ EOF
         '{ n = $2; sub(/.*\//, "", n);
            if ((n == "claude" || n == "codex") && $1 != self) print $1 }')
   if [ -z "$other_pids" ]; then
-    WT_AGENT_STATE="none"
+    wt_agent_none_or_launching "$wt_name"
     return 0
   fi
 
@@ -297,7 +350,7 @@ EOF
 $other_cwds
 EOF
 
-  WT_AGENT_STATE="none"
+  wt_agent_none_or_launching "$wt_name"
   return 0
 }
 
@@ -435,7 +488,7 @@ wt_trash_reap() {
   # An unmatched glob stays literal; nothing to reap.
   [ -e "${entries[0]}" ] || return 0
   nohup sh -c 'for p in "$@"; do chmod -R u+w "$p" 2>/dev/null || true; rm -rf "$p"; done' \
-    sh "${entries[@]}" >/dev/null 2>&1 &
+    sh "${entries[@]}" 197>&- 198>&- 199>&- >/dev/null 2>&1 &
   disown 2>/dev/null || true
   return 0
 }
@@ -458,7 +511,7 @@ wt_remove_private_issues() {
   return 0
 }
 
-wt_remove_now() {
+wt_remove_now_locked() {
   local worktree_path="$1" branch="$2" keep_branch="" preserve_box="" arg
   shift 2
   for arg in "$@"; do
@@ -493,13 +546,26 @@ wt_remove_now() {
     fi
   fi
 
+  # Acquire before the first public destructive step. On timeout the box,
+  # checkout, and Git registration are all still present for a later sweep.
+  if ! wt_git_admin_lock_acquire; then
+    wt_say "refusing removal: could not acquire the Git worktree administration lock"
+    return 1
+  fi
+
   wt_remove_satellites "$name"
 
   # Move out of the worktree dir before removing it.
-  cd "$WT_MONO" || return 0
+  if ! cd "$WT_MONO"; then
+    wt_git_admin_lock_release
+    return 0
+  fi
 
   # Trash the worktree directory, then prune the now-dangling registration.
+  # Creation uses this same repository lock around its registration checks and
+  # add, so Git never observes a half-finished concurrent lifecycle mutation.
   if ! mv "$worktree_path" "$WT_TRASH/wt-$name-$(date +%s)"; then
+    wt_git_admin_lock_release
     wt_say "refusing branch cleanup: failed to trash worktree $worktree_path"
     wt_log "trash failed wt=$worktree_path branch=$branch"
     return 1
@@ -513,6 +579,11 @@ wt_remove_now() {
   elif [ -n "$branch" ] && git branch -D "$branch" >/dev/null 2>&1; then
     wt_say "deleted branch $branch"
   fi
+  local setup_state_file
+  if setup_state_file=$(wt_git_setup_state_file "$name"); then
+    rm -f "$setup_state_file"
+  fi
+  wt_git_admin_lock_release
 
   if [ "$moved" = true ]; then
     removed_patch=$(jq -n \
@@ -520,7 +591,7 @@ wt_remove_now() {
       --arg finalSha "$final_sha" \
       --arg boxRef "$box_ref" \
       --argjson merged "$removed_merged" \
-      '{removed: ({at:$at, merged:$merged}
+      '{launch:null, removed: ({at:$at, merged:$merged}
         + if $finalSha == "" then {} else {finalSha:$finalSha} end
         + if $boxRef == "" then {} else {boxRef:$boxRef} end)}')
     session_registry_merge "$name" "$removed_patch" || true
@@ -528,4 +599,23 @@ wt_remove_now() {
 
   wt_trash_reap
   return 0
+}
+
+wt_remove_now() {
+  local worktree_path="$1" name rc=0
+  name=$(basename "$worktree_path")
+  # Never wait and then act on the caller's pre-lock liveness/git snapshot. A
+  # contended setup means state is changing; refuse immediately and make the
+  # caller retry from fresh evidence after creation finishes.
+  if ! wt_git_setup_lock_acquire "$name" 0; then
+    wt_say "refusing removal: workstream setup is active; retry after it finishes"
+    return 1
+  fi
+  # As in creation, keep the fallible body bare: putting it in a conditional
+  # suppresses errexit throughout the sourced implementation. Process exit
+  # releases the kernel lock on abrupt failure; ordinary returns close it here.
+  wt_remove_now_locked "$@"
+  rc=$?
+  wt_git_setup_lock_release
+  return "$rc"
 }

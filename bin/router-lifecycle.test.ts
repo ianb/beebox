@@ -42,8 +42,11 @@ function readyVariant(): ReadyLifecycle {
     profileDir: "/tmp/prof",
     browseEnv: {},
     logFile: "/tmp/x.log",
+    sourceToken: null,
     lastActivity: 0,
     idleTimer: null,
+    staleSince: null,
+    lastStaleCheck: 0,
   };
 }
 

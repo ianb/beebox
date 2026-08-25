@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — checking the speech-playback user stories on /dev/speech
+priority: important
 ---
 
 Every segment on the `/dev/speech` harness goes to state `failed` with

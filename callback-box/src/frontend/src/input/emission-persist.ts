@@ -180,7 +180,7 @@ export function commitPersistedEmission(
   savePersistedEmission(storage, input);
 }
 
-export function removePersistedEmission(storage: KeyValueStorage, boxSlug: string | undefined): void {
+function removePersistedEmission(storage: KeyValueStorage, boxSlug: string | undefined): void {
   try {
     storage.removeItem(emissionKey(boxSlug));
   } catch (e) {

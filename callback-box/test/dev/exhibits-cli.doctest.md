@@ -65,11 +65,12 @@ const shot2 = join(root, "compact.png");
 await writeFile(shot, "png-bytes");
 await writeFile(shot2, "png-bytes");
 await writeFile(join(root, "notes.md"), "not a figure\n");
+await writeFile(join(root, "appendix.markdown"), "second document\n");
 ```
 
-`add` creates the directory, copies the files, and writes a manifest with
-auto-assigned figure labels in argument order. Non-media files are copied but
-are not figures. Stdout is exactly the URL — one line, nothing else; the
+`add` creates the directory, maps one Markdown input to `doc.md`, copies the
+figures, and writes a manifest with labels in argument order. Stdout is exactly
+the URL — one line, nothing else; the
 `[exhibits]` progress lines go to stderr.
 
 ```ts
@@ -96,9 +97,11 @@ JSON.stringify({
   figures: manifest.figures,
   createdLooksIso: /^\d{4}-\d{2}-\d{2}T/u.test(manifest.created),
   copied: (await readFile(join(dir, "comfortable.png"), "utf8")) === "png-bytes",
-  copiedNonFigure: (await readFile(join(dir, "notes.md"), "utf8")) === "not a figure\n",
+  copiedDocument: (await readFile(join(dir, "doc.md"), "utf8")) === "not a figure\n",
+  originalNameAbsent: await lstat(join(dir, "notes.md")).then(() => false, () => true),
+  progressNamesDocument: added.stderr.includes("document: true"),
 })
-=> {"code":0,"stdoutLines":1,"stdout":"http://127.0.0.1:3230/demo/dashboard-density-options/?token=TOKEN-0123456789abcdef","progressOnStderr":true,"title":"Dashboard Density Options","ask":{"type":"decide","prose":"Pick a density; I apply it everywhere and delete the other.","options":["Comfortable (A1)","Compact (A2)"]},"figures":[{"label":"A1","file":"comfortable.png"},{"label":"A2","file":"compact.png"}],"createdLooksIso":true,"copied":true,"copiedNonFigure":true}
+=> {"code":0,"stdoutLines":1,"stdout":"http://127.0.0.1:3230/demo/dashboard-density-options/?token=TOKEN-0123456789abcdef","progressOnStderr":true,"title":"Dashboard Density Options","ask":{"type":"decide","prose":"Pick a density; I apply it everywhere and delete the other.","options":["Comfortable (A1)","Compact (A2)"]},"figures":[{"label":"A1","file":"comfortable.png"},{"label":"A2","file":"compact.png"}],"createdLooksIso":true,"copied":true,"copiedDocument":true,"originalNameAbsent":true,"progressNamesDocument":true}
 ```
 
 The manifest must satisfy the app's own schema, not just look right — the CLI
@@ -131,6 +134,10 @@ const reserved = await run([
 const traversal = await run([
   "add", "--workstream", "../escape", "--title", "Sneaky", "--ask", "fyi", "--prose", "p",
 ]);
+const multipleDocs = await run([
+  "add", "--workstream", "demo", "--title", "Multiple Docs",
+  "--ask", "fyi", "--prose", "read these", join(root, "notes.md"), join(root, "appendix.markdown"),
+]);
 const unknown = await run(["frobnicate"]);
 JSON.stringify({
   collision: collision.code !== 0 && collision.stderr.includes("dashboard-density-options-2"),
@@ -138,9 +145,11 @@ JSON.stringify({
   noOptions: noOptions.code !== 0 && noOptions.stderr.includes("at least two --option"),
   reserved: reserved.code !== 0 && reserved.stderr.includes("reserved"),
   traversal: traversal.code !== 0 && traversal.stderr.includes("invalid workstream name"),
+  multipleDocs: multipleDocs.code !== 0 && multipleDocs.stderr.includes("only one Markdown document"),
+  multipleDocsCreatedNothing: await lstat(join(store, "demo/multiple-docs")).then(() => false, () => true),
   unknownCommand: unknown.code === 1 && unknown.stderr.includes("unknown command"),
 })
-=> {"collision":true,"collisionKeptOriginal":true,"noOptions":true,"reserved":true,"traversal":true,"unknownCommand":true}
+=> {"collision":true,"collisionKeptOriginal":true,"noOptions":true,"reserved":true,"traversal":true,"multipleDocs":true,"multipleDocsCreatedNothing":true,"unknownCommand":true}
 ```
 
 The workstream defaults from the cwd's checkout: a worktree on branch

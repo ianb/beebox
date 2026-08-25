@@ -6,7 +6,7 @@ import { LightboxProvider } from "./components/LightboxProvider";
 import { ToastViewport } from "./components/ui/ToastViewport";
 import "./index.css";
 import "./renderers/setup";
-import { registerBuiltinFileTypes } from "./file-types";
+import { registerBuiltinFileTypes } from "./file-types/builtins";
 import { withBase } from "./api";
 import { invariant } from "@shared/invariant";
 import { installUiScanHook } from "./lib/ui-scan/window-hook";

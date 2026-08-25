@@ -20,7 +20,7 @@ A second category catches the kind of code-health issues that pile up if nobody 
 | Prompt report | `pnpm prompt-report` | After prompt or schema-instruction changes | `docs/prompts.md` |
 | Prompt viewer | `pnpm prompt-viewer` | After prompt or schema-instruction changes | `dev/prompts/data.json` + size ledger (browse at `/<worktree>/dev/prompts/`) |
 | Doc graph | `pnpm doc-graph` | After restructuring docs | `docs/doc-graph.md` |
-| Dead-code sweep | `pnpm lint:knip` | Before releases; when code feels accumulated | Console |
+| Dead-code sweep | `pnpm lint:knip` (monorepo root) | Weekly (manual until the scheduler exists) | Console |
 | Supplemental lint | `pnpm lint:oxlint` | Periodic | Console |
 | Circular deps | `pnpm lint:circular` | After big refactors | Console |
 | Security regression scan | `pnpm security:opengrep` (monorepo root) | Before releases; when touching auth/subprocess/temp/prompt boundaries | Console (`--sarif` for a file) |
@@ -192,13 +192,31 @@ npx tsx scripts/clean-broken-refs.ts <boxRoot>           # dry-run
 npx tsx scripts/clean-broken-refs.ts <boxRoot> --apply   # write
 ```
 
-### Dead-code sweep — `npm run lint:knip`
+### Dead-code sweep — `pnpm lint:knip`
 
-Detects unused files, exports, and dependencies. Knip can have false positives for entry-point scripts that aren't imported (CLI tools, dev scripts) — those go in `knip.json`'s `entry` array or get registered as `npm run` scripts in `package.json`.
+Detects unused files, exports, and dependencies.
 
-**When to run:** before a meaningful release, or whenever the code feels accumulated. Don't include in pre-commit — the run is too slow and the false-positive resolution is judgment-based.
+**Run it from the monorepo root**, not from `callback-box`. The config is the
+root `knip.ts` and it covers the root tooling, `callback-box`, and the frontend
+in one pass. Two reasons it lives there: `.npmrc` sets `node-linker=hoisted`,
+so every package's dependencies are installed into the root `node_modules` —
+run per-package, knip cannot tie a binary a script invokes back to the package
+declaring it, and reports the same tool as an unlisted binary *and* an unused
+devDependency at once. And the workspaces import each other (`bin/` reaches
+into `callback-box/src`, the frontend imports `src/shared`, callback-box's
+doctests exercise frontend machines); analyzed separately each side reads the
+others' live code as dead.
 
-**Output:** console list of unused files / exports / deps. Triage each: real dead code → delete; legitimate entry point → register; deferred/in-progress → leave with a comment explaining why it's currently unused.
+**When to run:** weekly. Not in pre-commit — a dead export is not a broken
+build, and the false-positive resolution is judgment-based.
+
+**Output:** console list of unused files / exports / deps, and it should be
+EMPTY. Treat any line as a finding, including the dependency and binary
+sections — the config is tuned so nothing routine prints. Triage each: real
+dead code → delete, or drop the `export` if the symbol is still used inside its
+own file; consumed from outside its package in a way the graph can't show → an
+`@public` JSDoc tag at the declaration naming the consumer; a genuine entry
+point → add it to `knip.ts`.
 
 ### Supplemental lint — `npm run lint:oxlint`
 

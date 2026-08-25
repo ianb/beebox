@@ -25,7 +25,7 @@ export interface CaptureApi {
 }
 
 /** The real, network-backed implementation (the production default). */
-export const realCaptureApi: CaptureApi = {
+const realCaptureApi: CaptureApi = {
   createCaptureSession,
   finalizeCaptureSession,
   cancelCaptureSession,

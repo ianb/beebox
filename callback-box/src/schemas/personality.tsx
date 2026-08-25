@@ -13,9 +13,9 @@
 import { z } from "zod";
 import { body, cardSchema, type CardSchema } from "../cards/index.js";
 import {
-  ConfidenceLevel,
-  BeliefSource,
-  ExperimentStatus,
+  ConfidenceLevelSchema,
+  BeliefSourceSchema,
+  ExperimentStatusSchema,
 } from "./guide.js";
 import {
   appendBoxholder,
@@ -28,13 +28,14 @@ import {
 } from "./personality-compile.js";
 import { PERSONALITY_INSTRUCTIONS } from "./personality-instructions.js";
 import { VOICE_MODELS, type VoiceModel, type PersonalityFields, type Boxholder } from "./personality-fields.js";
+
 export { createInitialPersonalityTemplate } from "./personality-template.js";
 export { VOICE_MODELS, type VoiceModel, type PersonalityFields, type Boxholder } from "./personality-fields.js";
 
 const RelationshipEntry = z.object({
   text: z.string(),
-  confidence: ConfidenceLevel.default("confirmed"),
-  source: BeliefSource.default("user-stated"),
+  confidence: ConfidenceLevelSchema.default("confirmed"),
+  source: BeliefSourceSchema.default("user-stated"),
   ref: z.string().optional(),
 });
 
@@ -54,15 +55,15 @@ export const CompiledSpeakingVoiceSchema = z.object({
 
 const ToneInstruction = z.object({
   text: z.string(),
-  confidence: ConfidenceLevel.default("medium"),
-  source: BeliefSource.default("inferred"),
+  confidence: ConfidenceLevelSchema.default("medium"),
+  source: BeliefSourceSchema.default("inferred"),
   ref: z.string().optional(),
 });
 
 const TraitEntry = z.object({
   text: z.string(),
-  confidence: ConfidenceLevel.default("medium"),
-  source: BeliefSource.default("inferred"),
+  confidence: ConfidenceLevelSchema.default("medium"),
+  source: BeliefSourceSchema.default("inferred"),
   ref: z.string().optional(),
 });
 
@@ -74,7 +75,7 @@ const ObservationEntry = z.object({
 
 const ExperimentEntry = z.object({
   id: z.string(),
-  status: ExperimentStatus.default("proposed"),
+  status: ExperimentStatusSchema.default("proposed"),
   hypothesis: z.string().optional(),
   approach: z.string().optional(),
   observations: z.array(ObservationEntry).optional(),

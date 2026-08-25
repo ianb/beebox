@@ -23,7 +23,7 @@ export const EXTRACTED_REANALYZE_COMMAND = "cb pdf reanalyze";
 export const ORIGINAL_RENDERER_NAME = "Original";
 
 /** Page renders written by the extractor: `page-001.avif`, `page-002.avif`, … */
-export const PAGE_RENDER_RE = /^page-(\d{3})\.avif$/;
+const PAGE_RENDER_RE = /^page-(\d{3})\.avif$/;
 
 /** The page number a page-render filename encodes, or `null` if it isn't one. */
 export function pageRenderNumber(name: string): number | null {

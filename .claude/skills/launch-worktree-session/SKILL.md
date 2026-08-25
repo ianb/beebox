@@ -116,8 +116,9 @@ briefing.
    A dormant workstream opens with the briefing. A live workstream cannot be
    injected from a sibling CLI session: the command focuses its tab when it can
    and prints `manual forwarding required: <path>`. Tell the human to paste that
-   file. Never describe that outcome as delivered. Launch multiple new
-   workstreams sequentially; concurrent creation is a known lifecycle bug.
+   file. Never describe that outcome as delivered. Multiple new workstreams may
+   be launched concurrently: their Git attachment queues briefly, while the
+   independent setup work continues in parallel.
 
 3. **Pick a worktree name.** Short, kebab-case, descriptive. Examples:
    `fix-timezone-parsing`, `gcal-service-injection`, `chat-route-cleanup`.
@@ -128,7 +129,10 @@ briefing.
    `workstream:` field inside the new checkout, so the issue immediately appears
    as work owned by the workstream, and the assignment lands with the eventual
    work. This is responsibility, not discovery provenance. Omit `--issue` when
-   the discussion is not taking on a specific filed issue.
+   the discussion is not taking on a specific filed issue. The flag takes one
+   path; when the work is a cluster (see `cb-pick-issues`), pass the anchor
+   issue here and list every other member's path in the briefing so the new
+   session's plan names the full set and `/finish` reconciles all of them.
 
 4. **Pick an agent and model — and when it isn't clear, ASK rather than
    assume.** This is the boxholder's call, not a scope calculation you perform

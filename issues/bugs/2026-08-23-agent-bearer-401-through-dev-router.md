@@ -4,6 +4,7 @@ workstream: unattached
 area: callback-box
 filed-by: agent
 discovered-in: worktree-points-at-ui — verifying cb chat ui by hand
+priority: normal
 ---
 
 Running `cb chat ui` (and by the same path, `cb chat screenshot`) with

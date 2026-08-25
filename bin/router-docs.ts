@@ -731,6 +731,20 @@ async function serveDevArtifact(
     res.end("forbidden\n");
     return;
   }
+  // No dotfile segment, at any depth. The directory listing already hides them
+  // (see the readdir filter below), so serving them on a direct request was an
+  // inconsistency — and `dev/` is a working directory agents write into, so a
+  // stray `dev/.env` or a `dev/apps/<name>/.git/config` is a plausible accident
+  // rather than a contrived one. Cheap to close, and it matters more now that
+  // the browse key can read this surface (cross-model review, 2026-08-24).
+  // Checked on the RESOLVED path, not the raw `rel`: a legitimate request may
+  // contain `..` segments that normalize away inside dev/ (see the encoded-dot
+  // cases in bin/router-docs.test.ts), and those must still resolve.
+  if (path.relative(devRoot, resolved).split(path.sep).some((segment) => segment.startsWith("."))) {
+    res.writeHead(404, { "content-type": "text/plain" });
+    res.end(`not found in dev/: ${rel}\n`);
+    return;
+  }
   let stat;
   try {
     stat = await fs.stat(resolved);

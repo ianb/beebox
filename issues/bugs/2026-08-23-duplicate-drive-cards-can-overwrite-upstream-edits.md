@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-connector-sync-isolation — independent review of Drive trash tombstones
+priority: normal
 ---
 
 The Drive connector permits two live cards with the same `drive-id`. It syncs both paths, but transient hashes are keyed only by Drive ID. `cb drive add` rejects a destination-path collision, not an already-mounted Drive ID.

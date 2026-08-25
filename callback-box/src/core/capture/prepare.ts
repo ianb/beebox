@@ -40,7 +40,12 @@ import {
   type StagingSessionState,
 } from "./staging-store.js";
 import { cleanupStagingSession } from "./staging-teardown.js";
-import { writeCaptureDocument, sessionBasenameFor, collectTimestamps } from "./write-cards.js";
+import {
+  writeCaptureDocument,
+  sessionBasenameFor,
+  collectTimestamps,
+  recordTranscriptionOutcome,
+} from "./write-cards.js";
 import { transcribeCaptureClips } from "./transcribe-clips.js";
 import { assembleCaptureTimeline } from "./timeline.js";
 import {
@@ -233,6 +238,15 @@ async function runPreparation(deps: PrepareCaptureDeps): Promise<void> {
       `[capture] ${transcription.errors.length} clip(s) failed to transcribe for ${basename}: ${transcription.errors.join("; ")}`,
     );
   }
+
+  // Record the transcription outcome on the card itself. The wrapper's flag
+  // lives only in the chat transcript, which scrolls away — and a capture that
+  // never touched chat has no wrapper at all — so an agent annotating the card
+  // later needs the flag in frontmatter (the capture-session schema documents
+  // it, and the audio schema sends readers here). Written before the timeline
+  // so step d's frontmatter-verbatim rewrite carries it, and before validation
+  // so the schema check covers it.
+  await recordTranscriptionOutcome({ sessionCardAbsPath, transcriptionFailed });
 
   // Step d — assemble the deterministic timeline body (idempotent).
   await assembleCaptureTimeline({ captureCardPath: sessionCardAbsPath });

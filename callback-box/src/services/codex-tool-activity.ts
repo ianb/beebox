@@ -4,13 +4,14 @@ import { z } from "zod";
 import type { CodexSdkItem } from "./codex-sdk-session.js";
 import type { ChatMessageAssistant, ChatMessageContent } from "../core/chat/message-types.js";
 import { isRecord } from "../lib/is-record.js";
+import { declaredPresent } from "../lib/declared-present.js";
 
 const changeSchema = z.looseObject({
   path: z.string(),
   kind: z.unknown().optional(),
 });
 
-export const codexToolItemSchema = z.discriminatedUnion("type", [
+const codexToolItemSchema = z.discriminatedUnion("type", [
   z.looseObject({
     id: z.string(),
     type: z.literal("commandExecution"),
@@ -134,16 +135,34 @@ export function normalizeCodexToolItem(raw: unknown): CodexToolContent | null {
   };
 }
 
+/**
+ * The `id` of an SDK item, or null when the item arrived without one. Every
+ * item type in the SDK's declared vocabulary carries a string `id`, and both
+ * the tool-content shape below and the chat frame's `uuid` are keyed by it, so
+ * an item that reaches us without one is reported and dropped rather than
+ * flowing on as `undefined` (which reads as a duplicate frame downstream) or
+ * throwing where it is read.
+ */
+export function codexSdkItemId(item: CodexSdkItem): string | null {
+  const id = declaredPresent(item.id);
+  if (id === null) {
+    console.warn(`[codex-tool-activity] codex SDK emitted a ${item.type} item with no id; dropping it`);
+  }
+  return id;
+}
+
 /** Convert the official SDK item vocabulary used by live batch and chat runs. */
 export function normalizeCodexSdkToolItem(item: CodexSdkItem): CodexToolContent | null {
+  const id = codexSdkItemId(item);
+  if (id === null) return null;
   switch (item.type) {
     case "command_execution":
-      return { type: "tool_use", id: item.id, name: "Bash", input: { command: item.command } };
+      return { type: "tool_use", id, name: "Bash", input: { command: item.command } };
     case "file_change": {
-      const paths = item.changes.map((change) => change.path);
+      const paths = (declaredPresent(item.changes) ?? []).map((change) => change.path);
       return {
         type: "tool_use",
-        id: item.id,
+        id,
         name: "Edit",
         input: {
           ...(paths[0] === undefined ? {} : { file_path: paths[0] }),
@@ -153,33 +172,21 @@ export function normalizeCodexSdkToolItem(item: CodexSdkItem): CodexToolContent 
       };
     }
     case "web_search":
-      return { type: "tool_use", id: item.id, name: "WebSearch", input: { query: item.query } };
+      return { type: "tool_use", id, name: "WebSearch", input: { query: item.query } };
     case "mcp_tool_call":
       return {
         type: "tool_use",
-        id: item.id,
+        id,
         name: `${item.server}.${item.tool}`,
         input: record(item.arguments),
       };
     case "todo_list":
-      return { type: "tool_use", id: item.id, name: "TodoWrite", input: { items: item.items } };
+      return { type: "tool_use", id, name: "TodoWrite", input: { items: item.items } };
     case "agent_message":
     case "reasoning":
     case "error":
       return null;
   }
-}
-
-/** Build the provider-neutral assistant frame consumed by live ChatSession. */
-export function codexToolChatMessage(raw: unknown, sessionId: string): ChatMessageAssistant | null {
-  const tool = normalizeCodexToolItem(raw);
-  if (tool === null) return null;
-  return {
-    type: "assistant",
-    session_id: sessionId,
-    uuid: tool.id,
-    message: { role: "assistant", content: [tool] },
-  };
 }
 
 export function codexSdkToolChatMessage(item: CodexSdkItem, sessionId: string): ChatMessageAssistant | null {

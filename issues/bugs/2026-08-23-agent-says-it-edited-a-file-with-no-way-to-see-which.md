@@ -4,6 +4,7 @@ workstream: unattached
 area: callback-box
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — journey B, twelve minutes into a first session
+priority: normal
 ---
 
 While answering a question, the assistant's activity line reported that it had

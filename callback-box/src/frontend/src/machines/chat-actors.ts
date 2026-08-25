@@ -183,15 +183,13 @@ export function handleTurnMessage(
   if (msg.type === "result") {
     // A result with is_error=true means the turn errored even though the run
     // "completed" (subtype is often "success"). Surface the SDK's own error
-    // text when present rather than guessing a cause — the previous hardcoded
-    // "no log on disk" message was wrong for the common case where the
-    // selected model is unavailable (it fails in ~500ms with is_error=true,
-    // subtype=success). Real causes vary: unavailable model, unresumable
-    // session, server error.
+    // text when present; when there is none, say so — a guessed cause sends
+    // the reader somewhere specific for no reason (the server log carries the
+    // phase and stack).
     if (msg.is_error === true) {
       const detail = typeof msg.result === "string" && msg.result.trim()
         ? msg.result.trim()
-        : `the run reported an error with no detail (subtype: ${msg.subtype}). Common causes: the selected model is unavailable, or this session can't be resumed.`;
+        : `the run reported an error with no detail (subtype: ${msg.subtype}); check the server log for this session`;
       terminal({ type: "STREAM_ERROR", error: `Chat turn failed — ${detail}` });
     } else {
       terminal({ type: "STREAM_RESULT" });

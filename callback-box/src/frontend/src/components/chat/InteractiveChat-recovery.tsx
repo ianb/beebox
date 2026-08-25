@@ -25,7 +25,7 @@ export function dropSmallRecoveredDictation(text: string, clearDraft: () => void
   return true;
 }
 
-export function useRecoveredDictation(opts: {
+function useRecoveredDictation(opts: {
   boxSlug: string | undefined;
   transcript: string;
   isTranscribing: boolean;

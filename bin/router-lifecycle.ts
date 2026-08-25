@@ -76,11 +76,34 @@ export interface ReadyLifecycle {
   readonly profileDir: string;
   readonly browseEnv: NodeJS.ProcessEnv;
   readonly logFile: string;
+  /**
+   * What the backend source looked like when this generation was spawned.
+   * The hub runs TypeScript straight from the checkout through tsx, so the code
+   * it is executing is whatever was on disk at spawn time and nothing reloads
+   * it afterwards — a merge + rebuild leaves the running hub on the old source
+   * while the router keeps reporting it healthy
+   * (issues/bugs/2026-08-15-main-runtime-stays-stale-after-deploy-build.md).
+   * Fixed for the generation; compared against a freshly computed token to
+   * detect that. `null` when the token could not be computed at spawn, which
+   * disables the comparison rather than guessing.
+   */
+  readonly sourceToken: string | null;
   // Mutable idle bookkeeping — `touch` updates these in place (a within-phase
   // field update, deliberately NOT a transition). Everything else is fixed for
   // the generation.
   lastActivity: number;
   idleTimer: TimerHandle | null;
+  /**
+   * When the source under this generation was first seen to have moved, or
+   * `null` while it still matches. Reporting only: nothing in the router acts
+   * on it. See the "why not restart" note in
+   * callback-box/docs/plans/dev-loop-lifecycle.md — the router's activity
+   * signal is HTTP-only, so a WebSocket-borne chat looks idle to it and there
+   * is no moment it can prove is safe to replace a generation in.
+   */
+  staleSince: number | null;
+  /** Last time the source token was recomputed, to throttle the check. */
+  lastStaleCheck: number;
 }
 
 /**

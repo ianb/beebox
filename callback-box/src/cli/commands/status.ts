@@ -4,7 +4,11 @@
 
 import { Command } from "commander";
 import { getSystemState, type CardInfo } from "../../core/state.js";
-import { listParkedTemplateUpdates } from "../../core/install-template-file.js";
+import {
+  listParkedTemplateUpdates,
+  PARKED_TEMPLATE_RESOLUTION,
+  TEMPLATE_UPDATES_DIR,
+} from "../../core/install-template-file.js";
 import { requireBoxRoot } from "../../lib/paths.js";
 import { getBoxShape, findLegacySchemaFiles, describeLegacySchemaFiles } from "../../lib/box-shape.js";
 import { loadBoxSchemas } from "../../schemas/registry.js";
@@ -76,12 +80,12 @@ export const statusCommand = new Command("status")
       // template's priorStockHashes). Surfaced so drift doesn't stay invisible.
       const parkedTemplates = await listParkedTemplateUpdates(boxRoot);
       if (parkedTemplates.length > 0) {
-        console.log(`Template updates: ${parkedTemplates.length} parked (in config/_template-updates/)`);
+        console.log(`Template updates: ${parkedTemplates.length} parked (in ${TEMPLATE_UPDATES_DIR}/)`);
         if (options.verbose) {
           for (const relPath of parkedTemplates) {
             console.log(`  - ${relPath}`);
           }
-          console.log("  Accept one by copying config/_template-updates/<path> over config/<path>, or discard the parked copy.");
+          console.log(`  ${PARKED_TEMPLATE_RESOLUTION}`);
         }
       }
 

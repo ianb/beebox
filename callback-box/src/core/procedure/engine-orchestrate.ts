@@ -8,9 +8,15 @@ import * as path from "node:path";
 import { stageAll, commit, withBoxGitLock } from "../../lib/git.js";
 import { fmt } from "../../lib/format.js";
 import { getBoxTimeISO } from "../../lib/time.js";
-import { okVoid, err, type Result } from "../../lib/result.js";
+import { ok, err, type Result } from "../../lib/result.js";
 import type { CommandContext } from "../command-runner.js";
-import { type ProcedureOptions, type ParsedProcedure, type ProcedureError } from "./engine-types.js";
+import {
+  type ProcedureOptions,
+  type ParsedProcedure,
+  type ProcedureError,
+  type ProcedureInconclusive,
+  type ProcedureOutcome,
+} from "./engine-types.js";
 import { updateRunCardStatus } from "./engine-run-card.js";
 import { computeRunExpires } from "./run-expiry.js";
 import { executeStep } from "./engine-step.js";
@@ -19,6 +25,8 @@ export interface RunStepsResult {
   allSucceeded: boolean;
   failedStepId: string | null;
   failedStepError: string | null;
+  /** Steps whose work completed but whose review reached no verdict. */
+  inconclusive: ProcedureInconclusive[];
 }
 
 /**
@@ -46,6 +54,7 @@ export async function runSteps(args: {
         )
       : procedure.steps;
 
+  const inconclusive: ProcedureInconclusive[] = [];
   for (const step of stepsToRun) {
     const result = await executeStep({
       ctx,
@@ -60,16 +69,19 @@ export async function runSteps(args: {
       ...(options.createAgent && { createAgent: options.createAgent }),
     });
 
+    if (result.inconclusive !== undefined) inconclusive.push(result.inconclusive);
+
     if (result.status === "failed") {
       return {
         allSucceeded: false,
         failedStepId: step.id,
         failedStepError: result.error ?? null,
+        inconclusive,
       };
     }
   }
 
-  return { allSucceeded: true, failedStepId: null, failedStepError: null };
+  return { allSucceeded: true, failedStepId: null, failedStepError: null, inconclusive };
 }
 
 /**
@@ -87,20 +99,26 @@ export async function finalizeRun(args: {
   /** Whether the run dir is committed. A fresh start where every step skipped
    *  is a no-op whose dir is removed; resume always passes true. */
   materialized: boolean;
-}): Promise<Result<void, ProcedureError>> {
+}): Promise<Result<ProcedureOutcome, ProcedureError>> {
   const { ctx, boxRoot, procedure, runDir, runCardPath, result, materialized } = args;
-  const { allSucceeded, failedStepId, failedStepError } = result;
+  const { allSucceeded, failedStepId, failedStepError, inconclusive } = result;
   const procedureName = procedure.name;
 
   if (!materialized) {
     // No-op run: every executed step skipped, nothing was ever committed.
     await fs.rm(runDir, { recursive: true, force: true });
     ctx.writeLine(fmt.dim(`No-op run (all steps skipped) — removed ${path.relative(boxRoot, runDir)}`));
-    return okVoid;
+    return ok({ status: "completed", procedure: procedureName, inconclusive: [] });
   }
 
   const completedAt = getBoxTimeISO(boxRoot);
-  const status = allSucceeded ? "completed" : "failed";
+  // Three terminal states, not two: a run whose work all succeeded but whose
+  // review never decided is neither `completed` nor `failed`.
+  const status = allSucceeded
+    ? inconclusive.length > 0
+      ? "inconclusive"
+      : "completed"
+    : "failed";
   await updateRunCardStatus({
     runCardPath,
     status,
@@ -116,8 +134,18 @@ export async function finalizeRun(args: {
   });
 
   if (allSucceeded) {
+    if (status === "inconclusive") {
+      ctx.writeLine(
+        fmt.warn(
+          `Procedure completed, review inconclusive: ${procedureName} (${inconclusive
+            .map((i) => `${i.stepId} ${i.detail}`)
+            .join("; ")})`
+        )
+      );
+      return ok({ status: "inconclusive", procedure: procedureName, inconclusive });
+    }
     ctx.writeLine(fmt.ok(`Procedure completed: ${procedureName}`));
-    return okVoid;
+    return ok({ status: "completed", procedure: procedureName, inconclusive: [] });
   }
 
   ctx.writeLine(fmt.fail(`Procedure failed: ${procedureName}`));

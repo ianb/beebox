@@ -111,4 +111,3 @@ registerCommand({
   execute: executeSearch,
 });
 
-export { executeSearch };

@@ -130,12 +130,22 @@ export interface ChatMessageStreamEvent {
   parent_tool_use_id: string | null;
 }
 
+/**
+ * Which step of a run produced a failed result. `session-start` means the
+ * backend never got a live agent session; `turn` means a session existed and
+ * the turn itself did not finish. Set only by backends that can tell the two
+ * apart (Codex); absent means the backend did not report a phase.
+ */
+export type ChatResultPhase = "session-start" | "turn";
+
 /** Terminal turn result — timing, cost, and (on success) the final text. */
 export interface ChatMessageResult {
   type: "result";
   subtype: string;
   session_id: string;
   is_error: boolean;
+  /** Set on failures whose backend knows which step threw. */
+  phase?: ChatResultPhase;
   /** Absent when the native harness does not report USD cost. */
   total_cost_usd?: number;
   duration_ms: number;

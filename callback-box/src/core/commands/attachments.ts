@@ -351,4 +351,3 @@ registerCommand({
   execute: executeAttachments,
 });
 
-export { executeAttachments };

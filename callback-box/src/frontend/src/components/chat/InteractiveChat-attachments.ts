@@ -26,7 +26,7 @@
  */
 
 import { useRef, useCallback, useEffect, useSyncExternalStore } from "react";
-import { processImageBlob } from "../../lib/image-paste";
+import { processImageBlob, unsupportedImageMessage } from "../../lib/image-paste";
 import { useEmissionStore } from "./input-store";
 import { toastError } from "../ui/toast-store";
 import { routeAddedFiles } from "./file-routing";
@@ -221,12 +221,8 @@ export function useChatAttachments(opts: {
     // the old explicit attach path gone this is the only path such a file has:
     // a console-only log would let a picked file vanish with no signal at all
     // (code-style.md defensiveness rule 5).
-    const failed = files.length - newItems.length;
-    if (failed > 0) {
-      toastError(failed === files.length
-        ? "Those files couldn't be added to the message"
-        : `${String(failed)} of ${String(files.length)} files couldn't be added to the message`);
-    }
+    const failedFiles = files.filter((_f, i) => processed[i] === null);
+    if (failedFiles.length > 0) toastError(unsupportedImageMessage(failedFiles));
     if (newItems.length === 0) return { route: "inline", added: 0 };
     const tokens = newItems.map((a) => `[image${a.id}]`).join(" ");
     insertTokensAtCursor(tokens, { input: emissionStore.get().text, setInput: editor.setText, textareaRef, alwaysFocus: false });

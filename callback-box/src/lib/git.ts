@@ -37,6 +37,7 @@ import {
   LOG_FORMAT,
 } from "./git-internal.js";
 import { withBoxGitLock } from "./git-lock.js";
+import { inspectIndexLock, recoverStaleIndexLock } from "./git-stale-lock.js";
 import { sleep } from "./sleep.js";
 import { errorMessage } from "./error-guards.js";
 import type { GitLogFormat } from "./git-internal.js";
@@ -47,7 +48,7 @@ export {
   TOUCHPOINT_TRAILER_KEYS,
   FEEDBACK_TRAILER_KEYS,
 } from "./git-trailers.js";
-export { isNothingToCommitError, isContendedFailure, GitIndexLockError, CommitDidNotLandError } from "./git-internal.js";
+export { isNothingToCommitError, isContendedFailure, isStaleLockFailure } from "./git-internal.js";
 export { withBoxGitLock } from "./git-lock.js";
 export { getLogPaginated, getTrailerFacets } from "./git-log.js";
 export type {
@@ -161,21 +162,37 @@ export async function getStatus(boxRoot: string): Promise<GitStatus> {
  * overlap the next git call in boxes that track images/audio via LFS. Any other
  * failure is wrapped as a {@link GitCommandError}. The single home for the
  * retry idiom every index mutator here shares.
+ *
+ * Between the two attempts it also tries to RECOVER the lock. Hitting
+ * `.git/index.lock` is the one moment we know for certain the file exists, so
+ * it is the natural place to ask whether anything actually holds it; a lock a
+ * killed git abandoned would otherwise fail every writer forever
+ * (`git-stale-lock.ts` explains the test and why it is safe). The recovery
+ * doubles as the pause the retry already wanted, so the contended path is no
+ * slower than before.
  */
-async function withIndexLockRetry<T>(op: () => Promise<T>): Promise<T> {
+async function withIndexLockRetry<T>(dir: string, op: () => Promise<T>): Promise<T> {
   try {
     return await op();
   } catch (err) {
     if (!isIndexLockError(err)) throw new GitCommandError(err);
-    await sleep(2000);
+    const recovery = await recoverStaleIndexLock(dir);
+    // `stale` means the file was abandoned AND removed, so the retry should
+    // now succeed. Every other state left the lock in place; give a live
+    // holder the pause it needs to finish.
+    if (recovery.state !== "stale") await sleep(2000);
     try {
       return await op();
     } catch (retryErr) {
-      // Still contended after the retry, so the holder is not one of ours —
-      // the box git lock only serializes writers that take it. Report that
-      // specifically: a task that lost a race is not a task that is broken.
-      if (isIndexLockError(retryErr)) throw new GitIndexLockError(retryErr);
-      throw new GitCommandError(retryErr);
+      if (!isIndexLockError(retryErr)) throw new GitCommandError(retryErr);
+      // Still on the lock. Which failure this is decides whether anyone should
+      // wait: an abandoned lock never clears, contention does. `unknown-holder`
+      // reports as stale — we know it is old and un-clearing, and only the
+      // holder probe was inconclusive; naming the file is the useful thing to
+      // say either way.
+      const after = await inspectIndexLock(dir);
+      const abandoned = after.state === "stale" || after.state === "unknown-holder";
+      throw new GitIndexLockError(retryErr, abandoned ? (after.lockPath ?? undefined) : undefined);
     }
   }
 }
@@ -197,7 +214,7 @@ async function commitAndReadHead(boxRoot: string, op: () => Promise<unknown>): P
     (await hasCommits(boxRoot)) ? (await simpleGit(boxRoot).revparse(["HEAD"])).trim() : null;
   return withBoxGitLock(boxRoot, async () => {
     const before = await head();
-    await withIndexLockRetry(op);
+    await withIndexLockRetry(boxRoot, op);
     const after = await head();
     if (after === null || after === before) throw new CommitDidNotLandError(boxRoot);
     return after;
@@ -212,7 +229,7 @@ async function commitAndReadHead(boxRoot: string, op: () => Promise<unknown>): P
  */
 export async function stageFiles(boxRoot: string, paths: string[]): Promise<void> {
   if (paths.length === 0) return;
-  await withBoxGitLock(boxRoot, () => withIndexLockRetry(() => simpleGit(boxRoot).add(paths)));
+  await withBoxGitLock(boxRoot, () => withIndexLockRetry(boxRoot, () => simpleGit(boxRoot).add(paths)));
 }
 
 /**
@@ -227,7 +244,7 @@ export async function stageFiles(boxRoot: string, paths: string[]): Promise<void
 export async function unstageFiles(boxRoot: string, paths: string[]): Promise<void> {
   if (paths.length === 0) return;
   const reset = (): Promise<string> => simpleGit(boxRoot).raw(["reset", "--quiet", "--", ...paths]);
-  await withBoxGitLock(boxRoot, () => withIndexLockRetry(reset));
+  await withBoxGitLock(boxRoot, () => withIndexLockRetry(boxRoot, reset));
 }
 
 /**
@@ -244,7 +261,7 @@ export async function unstageFiles(boxRoot: string, paths: string[]): Promise<vo
  * @param boxRoot - Repository root
  * @param paths - Paths to inspect (relative to boxRoot)
  */
-export async function stagedPaths(boxRoot: string, paths: string[]): Promise<string[]> {
+async function stagedPaths(boxRoot: string, paths: string[]): Promise<string[]> {
   if (paths.length === 0) return [];
   // Disable rename pairing: a path-scoped commit needs both the deleted source
   // and added destination. With rename detection, `--name-only` reports only
@@ -274,7 +291,7 @@ export async function pathsHaveChanges(boxRoot: string, paths: string[]): Promis
  */
 export async function stageAll(boxRoot: string): Promise<void> {
   await withBoxGitLock(boxRoot, async () => {
-    await withIndexLockRetry(() => simpleGit(boxRoot).raw(["add", "-A"]));
+    await withIndexLockRetry(boxRoot, () => simpleGit(boxRoot).raw(["add", "-A"]));
     await unstageOversizedBlobs(boxRoot);
   });
 }
@@ -543,7 +560,7 @@ export async function getHead(boxRoot: string): Promise<string> {
  * migrated data behind). This is real data loss by design: only ever call it
  * against a `sha` captured before the changes being discarded.
  */
-export async function resetHard(boxRoot: string, sha: string): Promise<void> {
+async function resetHard(boxRoot: string, sha: string): Promise<void> {
   await withBoxGitLock(boxRoot, () => simpleGit(boxRoot).raw(["reset", "--hard", sha]));
 }
 

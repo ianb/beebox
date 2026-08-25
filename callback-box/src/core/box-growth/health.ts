@@ -35,15 +35,15 @@ export type {
   SubtreeCounts,
 } from "./model.js";
 
-export const BOX_GROWTH_STATE_FILENAME = "box-growth-health.json";
-export const BOX_GROWTH_MEASUREMENT_INTERVAL_MS = 60 * 60 * 1000;
-export const BOX_GROWTH_STALE_MS = 26 * 60 * 60 * 1000;
+const BOX_GROWTH_STATE_FILENAME = "box-growth-health.json";
+const BOX_GROWTH_MEASUREMENT_INTERVAL_MS = 60 * 60 * 1000;
+const BOX_GROWTH_STALE_MS = 26 * 60 * 60 * 1000;
 
 export function boxGrowthStatePath(boxRoot: string): string {
   return path.join(boxRoot, ".callback-box", BOX_GROWTH_STATE_FILENAME);
 }
 
-export function boxGrowthLockPath(boxRoot: string): string {
+function boxGrowthLockPath(boxRoot: string): string {
   return path.join(boxRoot, ".callback-box", "box-growth-health.lock");
 }
 

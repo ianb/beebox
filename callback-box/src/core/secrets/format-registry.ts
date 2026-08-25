@@ -107,17 +107,6 @@ function formatFor(opts: { name: string; formatHint: string | undefined }): { ke
 }
 
 /**
- * The format that applies to a name. An entry's own `formatHint` wins when it
- * names a registry key (that is what an ad-hoc slot's hint is for); otherwise
- * the name itself is looked up. A hint naming nothing in the registry is not an
- * error — it is free prose the UI shows as-is.
- */
-export function secretFormatFor(opts: { name: string; formatHint?: string | undefined }): SecretFormatEntry | null {
-  const found = formatFor({ name: opts.name, formatHint: opts.formatHint });
-  return found === null ? null : toEntry(found.key, found.entry);
-}
-
-/**
  * Check a value against its format. Returns the warnings to SHOW, never a
  * verdict to act on — an empty array means "nothing looks off", and a non-empty
  * one still saves if the boxholder proceeds.

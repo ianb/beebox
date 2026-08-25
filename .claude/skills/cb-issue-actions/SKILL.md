@@ -1,12 +1,13 @@
 ---
 name: cb-issue-actions
-description: Work the issue queue's `next-action:` tags — discussion flags, provisional agent tasks, and released manual-testing gates (discuss, reconfirm, duplicate, invalid, fixed, verify-without-me). Use when the human says "work the next actions", "go through the reconfirms", "check the issues tagged fixed", "triage the queue", or when you want to find issues that need a disposition. Includes extraction scripts. Conventions in issues/CLAUDE.md.
+description: Work the issue queue's `next-action:` tags — discussion flags, provisional agent tasks, confirmed fixes, and released manual-testing gates (discuss, reconfirm, duplicate, invalid, fixed, manually-confirmed, verify-without-me). Use when the human says "work the next actions", "go through the reconfirms", "check the issues tagged fixed", "triage the queue", or when you want to find issues that need a disposition. Includes extraction scripts. Conventions in issues/CLAUDE.md.
 ---
 
 # Working `next-action:` tags
 
-`next-action:` says what must happen before implementation begins. `discuss`
-routes an issue to the developer; the other values are **provisional agent tasks** where
+`next-action:` says what must happen next before an issue leaves the queue. `discuss`
+routes an issue to the developer; `manually-confirmed` records a completed human
+check; the other values are **provisional agent tasks** where
 someone suspects an outcome and is asking the next agent to check it.
 
 **The developer writes these tags — effectively all of them.** The field is how they hand
@@ -40,44 +41,27 @@ leaves with the field gone.
 
 ## Finding the work
 
-List everything tagged, with the tag and title:
+`bin/issues` (see `bin/CLAUDE.md`) replaces the ad-hoc grep loops this section
+used to carry. Everything tagged, with the tag and title:
 
 ```bash
-cd "$(git rev-parse --show-toplevel)"
-for f in $(grep -rl "^next-action:" issues --include='*.md' | grep -v CLAUDE.md); do
-  printf "%-10s %-56s %s\n" \
-    "$(grep -m1 '^next-action:' "$f" | sed 's/^next-action:[[:space:]]*//;s/[[:space:]]*#.*//')" \
-    "${f#issues/}" \
-    "$(grep -m1 '^title:' "$f" | cut -c8- | tr -d '"' | cut -c1-46)"
-done | sort
+bin/issues list --next-action discuss --next-action reconfirm --next-action duplicate \
+  --next-action invalid --next-action fixed --next-action manually-confirmed \
+  --next-action verify-without-me
 ```
 
-Count by value, to see the shape of the backlog:
+One value only, and the same as JSON for scripting:
 
 ```bash
-grep -rh "^next-action:" issues --include='*.md' \
-  | sed 's/^next-action:[[:space:]]*//;s/[[:space:]]*#.*//' \
-  | sort | uniq -c | sort -rn
-```
-
-One value only (substitute `discuss` / `reconfirm` / `duplicate` / `invalid` /
-`fixed` / `verify-without-me`):
-
-```bash
-grep -rl "^next-action: *reconfirm" issues --include='*.md' | grep -v CLAUDE.md
+bin/issues list --next-action reconfirm
+bin/issues list --next-action fixed --json
 ```
 
 Cross-reference with priority, since a tagged `important` issue is worth doing
-first:
-
-```bash
-for f in $(grep -rl "^next-action:" issues --include='*.md' | grep -v CLAUDE.md); do
-  printf "%-10s %-12s %s\n" \
-    "$(grep -m1 '^next-action:' "$f" | sed 's/^next-action:[[:space:]]*//')" \
-    "$(grep -m1 '^priority:' "$f" | sed 's/^priority:[[:space:]]*//' || echo uncategorized)" \
-    "${f#issues/}"
-done | sort
-```
+first: add `--priority important`. To see whether a `fixed?`/`duplicate?` guess
+holds, `bin/issues similar <path> --all` lists the closed siblings that may
+already own the work, and `bin/issues show <path>` prints the frontmatter and
+body head.
 
 ## What each value asks of you
 
@@ -142,6 +126,12 @@ git log --oneline --since='<issue date>' -- <the file the issue names>
 
 Then confirm the behavior rather than trusting a commit that reads like the fix.
 Close with `resolution: implemented` naming the resolving commit.
+
+**`manually-confirmed` — the developer confirmed the fix.** This value is an
+assertion, not a question and not a request to repeat the manual test. Read the
+issue once to make sure the confirmation covers the whole item, then close it
+as `implemented`. When it carries `needs: [manual-testing]`, this tag is the
+developer's explicit permission to clear that gate as part of closing it.
 
 ## Verification bar
 

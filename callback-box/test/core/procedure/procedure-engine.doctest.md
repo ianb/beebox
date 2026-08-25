@@ -884,6 +884,57 @@ status: completed
 await box.cleanup();
 ```
 
+## Resuming an inconclusive run reports the non-verdict, not "completed"
+
+Every step's work finished, so there is nothing to resume — but the run was
+never judged, and resume has no re-judging path. Reporting "completed / nothing
+to resume" would answer a question about the review with the state of the work.
+Instead it re-reports the standing non-verdict, read back out of the run card,
+which the CLI turns into the same stderr line and exit code `cb procedure run`
+printed.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("procedure/runs/refresh-maps_2026-08-24T05-00-00/run.procedure-run.card", `---
+procedure: config/procedures/refresh-maps.procedure.card
+status: inconclusive
+started-at: 2026-08-24T05:00:00Z
+completed-at: 2026-08-24T05:04:00Z
+steps:
+  - id: maps
+    status: completed
+    validate:
+      status: inconclusive
+      error: Review reached max turns (16) — the work was not judged.
+      reason: max-turns
+---
+`);
+box.commitAll("An unjudged run");
+
+const lines = [];
+const ctx = { boxRoot: box.root, writeLine: (l) => lines.push(l), write: () => {} };
+const result = await resumeProcedure({ ctx, runDir: "procedure/runs/refresh-maps_2026-08-24T05-00-00" });
+print(`success: ${result.ok}`);
+print(`status: ${result.value.status}`);
+print(JSON.stringify(result.value.inconclusive));
+=>
+success: true
+status: inconclusive
+[{"stepId":"maps","reason":"max-turns","detail":"reached max turns (16)"}]
+```
+
+The run card is left alone: `inconclusive` is terminal, so resume does not
+re-open it as `running`.
+
+```ts continue
+print(parseProcedureRun(await box.read("procedure/runs/refresh-maps_2026-08-24T05-00-00/run.procedure-run.card")).status);
+=> inconclusive
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
 ## Resume with no runs returns an error
 
 ```ts

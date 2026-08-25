@@ -47,7 +47,7 @@ export type LandmarkSymbolData = z.infer<typeof LandmarkSymbol>;
  * like any other ref. `label` is an optional display label (falls back to
  * the target's filename title).
  */
-export const LandmarkLink = z.object({
+const LandmarkLink = z.object({
   ref: z.string(),
   label: z.string().optional(),
 });
@@ -82,7 +82,7 @@ export type LandmarkExpandData = z.infer<typeof LandmarkExpand>;
  * Chat-feature seed for chats opened from this landmark. Each key is a
  * feature name; only applied at session open.
  */
-export const LandmarkChatApp = z.object({
+const LandmarkChatApp = z.object({
   narration: z.enum(["on", "off"]).optional(),
   prose: z.enum(["on", "off"]).optional(),
 });

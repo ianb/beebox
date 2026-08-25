@@ -143,7 +143,10 @@ runs in prod. Full design and rationale:
   worktree list and `/<w>/dev/` infra, per-box mobile/session auth for box
   routes — regardless of any Tailscale identity header (those are absent for
   tagged devices/Funnel and are never trusted). The practical upshot: **local
-  browser dev now requires logging in once**, same as a deployed box.
+  browser dev normally requires logging in once**, same as a deployed box. The
+  agent-authored, read-only `/<w>/dev/` browser also accepts the opt-in
+  machine-wide browse key used by `bin/browse`; the worktree index,
+  `/workstreams/`, and `/__router/*` remain owner-session surfaces.
 - **`cb tailscale setup --target <routerPort>`** (e.g. `--target 3210`) exposes
   the _whole_ router — every worktree and box — over the tailnet through this
   one authenticated front door. Before recording the exposure, setup verifies
@@ -197,6 +200,21 @@ under you; hidden tabs go quiet and their worktree stops after 5 min —
 including any in-flight chat turn, which the tab catches up on (via
 reload + history) when refocused.
 
+## Backend staleness
+
+The hub runs TypeScript from the checkout through tsx, and nothing reloads it,
+so a merge landing under a running generation leaves it executing the old code
+while the router still calls it ready. The router now records a token for
+`callback-box/src` (excluding `src/frontend`, which Vite hot-reloads) at spawn
+and rechecks it at most every 5s on the request path; a mismatch is reported as
+`staleSince` in `/__router/status` and as `ready (stale)` in
+`bin/workstreams list`. Nothing restarts automatically: the router's only
+activity signal is HTTP, so a chat streaming over a WebSocket is
+indistinguishable from an idle worktree and there is no moment it can prove is
+safe to cut. `bin/workstreams down <name>` is the fix, and it is the human's
+call. The box-child half of this is separately solved through
+`CB_DEV_BUNDLE_ID`, which drains before re-execing.
+
 ## Orphan resistance
 
 PID files at `~/.cache/callback-box/pids/<name>.json` (single-slot —
@@ -207,7 +225,14 @@ agent-browser daemons, the startup sweep also pattern-matches
 project-scoped orphans (`process-cleanup.ts`, shared with `panic`):
 vite/fastify orphaned to PID 1 (a live router — incl. an isolated test
 one — keeps its children, so they're spared) and agent-browsers whose
-worktree has no live agent session. The generation leak that made
+worktree has no live agent session. A daemon is never judged on its
+pidfile alone until it is old enough to have written one: upstream
+writes `<session>.pid` a couple of seconds after the process appears, so
+`classifyAgentBrowser` spares any unvouched agent-browser younger than
+60s. `bin/browse` calls the same guard (`reclaimWorktreeBrowsers`)
+before every command instead of the bash reaper it used to carry, which
+knew only about pidfiles and so killed the still-starting daemon of
+whichever agent in the worktree had run first. The generation leak that made
 this necessary (concurrent cold requests racing to spawn duplicate
 vite+fastify pairs) is fixed at the source in `ensureRunning`.
 
@@ -301,7 +326,12 @@ through `bin/workstreams agent-liveness` and spares an agent-browser on
 - `bin/workstreams create <name> [--base-ref <ref>] [--box-ref <ref>]` — create
   or re-attach (idempotent); prints the path on stdout, logs on stderr. A
   recorded `keep/*` box ref restores the isolated test1 clone during a culled
-  workstream's recreation.
+  workstream's recreation. Concurrent creates are supported: Git attachment
+  queues briefly per repository, same-name callers wait for complete setup,
+  and different-name installs continue in parallel. This guarantee covers the
+  managed lifecycle commands; do not mix a concurrent create with Claude
+  Code's native worktree removal, whose Git mutation happens outside repo
+  tooling (the WorktreeRemove adapter still protects same-name satellites).
 - `bin/workstreams remove <name> [--force] [--keep-branch] [--dry-run]`
 - `bin/workstreams focus <name>` — focus the recorded live Terminal tab
 - `bin/workstreams close <name> [--force]` — close a merged, clean live tab;
@@ -343,7 +373,10 @@ Vite app in the top-level `workstreams-app/` package. The router authenticates,
 supervises, and proxies it; the app invokes the stable `bin/workstreams` CLI
 instead of reimplementing lifecycle guards. It exposes joined status and safe
 actions, with `/workstreams/issues/`, `/workstreams/plans/`, and
-`/workstreams/testing/` beneath it. App source changes landed in main reload the
+`/workstreams/testing/` beneath it. An open issue ends with a **Related** list —
+nearest issues (open and closed) and design docs, the same ranking as
+`bin/issues similar --all --docs` (see that section for the shared library and
+the key it needs). App source changes landed in main reload the
 app child without restarting the router. Router or supervisor changes still
 require one boxholder-run `pnpm dev` restart after merge. Never restart the
 shared router from a worktree session.
@@ -450,6 +483,23 @@ taking the launcher down before teardown. The teardown invoked is the **main
 checkout's** copy, and it `cd`s to main before touching anything — a script
 must not run destructive steps from inside the directory it deletes.
 
+**The global sweep is detached, serialized, and fired from an `EXIT` trap.**
+`.claude/hooks/auto-sweep.sh` re-invokes itself with `--run` through
+`bin/lib/detach.mjs` (Node's `detached: true`, i.e. `setsid(2)`) rather than
+`& disown`, which leaves the child in the caller's process group and so died
+with the very session whose exit triggered it — 15 of 109 SessionEnd sweeps
+logged a `START` with nothing after it, against zero of the SessionStart and
+codex ones. The `--run` half holds an atomic `mkdir` lock (macOS has no
+`flock(1)`) and **skips** rather than queues, reclaiming a lock whose recorded
+pid is dead. A caught signal writes `INTERRUPTED`, so a bare `START` now means
+SIGKILL specifically. `session-end.sh` triggers it from a `trap … EXIT`: that
+is reachable from every one of the hook's early `exit 0`s — the property the
+old inline placement was protecting — while still running last, so the cheap
+per-worktree teardown no longer overlaps the sweep's git work across every
+other tree. The hook also logs `step=` elapsed times for the liveness scan and
+the git work, because a cancelled hook used to say only that it died somewhere
+between them.
+
 **One implementation of the destructive path: `bin/lib/worktree-teardown.sh`**
 (sourced, not executed), shared by `.claude/hooks/session-end.sh`,
 `.claude/hooks/worktree-remove.sh`, `bin/codex-session-end`, and
@@ -462,6 +512,14 @@ cache state, which is all the WorktreeRemove hook wants, since Claude Code
 removes the git worktree itself there), `wt_trash_reap` — and `wt_log` (the
 shared `worktree-cleanup.log`, labeled per caller). Sweep counts a live `codex`
 process whose cwd is in a worktree as an active session, same as claude.
+
+**Auto-sweep is submitted, not merely backgrounded.** SessionStart, SessionEnd,
+and codex teardown call `.claude/hooks/auto-sweep.sh`; on macOS its trigger mode
+submits a uniquely labeled one-shot launchd worker and returns before sweep. A
+request marker plus a whole-sweep kernel lock coalesces overlapping triggers
+without dropping the trailing request. Worker logs always pair `SUBMITTED`,
+`START`, and `END status=…` when they reach those phases, and its EXIT trap
+removes the launchd label so the submitted job cannot respawn as a daemon.
 
 **Detecting a live agent process: use `ps -axo pid=,comm=`, never `pgrep -x
 claude`.** pgrep matches the 16-char accounting name (`ps ucomm`), and a
@@ -529,6 +587,83 @@ direction is to report orphans, never to delete at cull time.
 reaching into the store, the same way it invokes `bin/workstreams` for lifecycle
 rather than reimplementing the guards. Two writers to one YAML format sharing
 one lock protocol is where duplication stops being controllable.
+
+## Searching the issue queue (`bin/issues`)
+
+A stateless CLI over `issues/` plus `private-issues/` when that mount exists
+(rows carry a `visibility`). It reuses `workstreams-app/src/server/issue-domain.ts`
+for parsing — the dev issue browser and this command must agree about what an
+issue is — and adds two derived fields the frontmatter does not carry: `date`
+from the `YYYY-MM-DD-` filename prefix, and `discoveredInWorkstream`, the bare
+name inside `discovered-in:`'s `worktree-<name>` token.
+
+**The library lives in the app, not in `bin/`.** `issue-search-model.ts`
+(load/derive/filter/group), `issue-index-documents.ts` (what gets indexed and
+its two hashes), `issue-index.ts` (the Orama cache + refresh), and
+`issue-index-query.ts` (ranking) are all in `workstreams-app/src/server/`,
+beside `issue-domain.ts`; `bin/issues.ts` imports them the same way it already
+imported the parser. That is because the issue browser's **Related** section
+(`issues.related`, `issue-related-service.ts`) is the same ranking as `issues
+similar <path> --all --docs` over the same cache — one implementation, two
+callers, so a row an agent quotes from the CLI is the row the boxholder sees.
+The app is long-lived, so it holds the built index in process and re-reads the
+corpus at most every 30s to decide whether anything changed.
+
+- `issues list [filters]` — the filtered queue, newest first.
+- `issues groups --by discovered-in|date|labels|area|workstream|category` —
+  clusters, largest first, with their members (`--min N`, default 2).
+- `issues search <text>` — `--mode text` is BM25 and offline; `hybrid` (the
+  default when a key is available) fuses BM25 with vector similarity;
+  `semantic` is vector only.
+- `issues similar <issue-path> [--docs]` — nearest neighbours of an issue by its
+  own stored vector. `--docs` also ranks `callback-box/docs/**/*.md`, so an
+  existing plan surfaces as prior art instead of being re-derived.
+- `issues show <path>` — frontmatter as JSON plus the top of the body.
+
+Every subcommand takes `--json`, and defaults to open issues (`--closed` for
+only closed, `--all` for both). Filters: `--category --area --label --workstream
+--discovered-in --needs --priority --next-action --since --research
+--visibility`. Repeats are OR within one filter and AND across filters —
+except `--label`, where repeats mean AND, since labels are how a cross-cutting
+effort is picked out.
+
+**The `.issues-index/<scope>/` cache** at the repo root is gitignored and
+disposable: a persisted Orama index, the embedding vectors, and a manifest of
+`{ indexHash, embeddedHash }` per file. Every run re-reads every issue (cheap);
+the manifest answers only what re-reading cannot. The two hashes are separate on
+purpose — `indexHash` covers every indexed field, so a frontmatter-only edit
+rebuilds the index (otherwise a `where:` filter would keep matching the old
+`workstream`/`needs`/`priority`) while costing nothing in embeddings;
+`embeddedHash` records the text the stored vector was actually computed from, so
+a run that cannot embed drops the stale vector instead of adopting it under the
+new hash. Re-embedding is one batched call. `--rebuild` wipes the cache and pays
+for the whole corpus again.
+
+`--mode text` never touches the network, which is what makes the command usable
+with no key at all. `--mode hybrid` and `--mode semantic` are assertions that
+BM25 will not do, so they **error** when there is no key or the corpus is not
+fully embedded; only the unspecified default degrades to text, and it says so on
+stderr. The key is read from `CALLBACK_OPENAI_API_KEY`, then
+`THINKING_OPENAI_API_KEY`, then `SKE_OPENAI_API_KEY`.
+
+The same order applies to the app's Related section (and to comment
+transcription), read from the **app child's** environment: the supervisor
+spawns it with the main checkout's `callback-box/.env` underneath
+`process.env`, the same precedence worktree children get, so a
+`CALLBACK_OPENAI_API_KEY=` line there is enough and an exported variable
+still wins. The router does not load that line into itself. With
+no key the section says so — "the semantic index needs an OpenAI key" is a
+state it renders, not an error page.
+
+**Private issues are indexed too**, which means their text is sent to OpenAI to
+be embedded, and their bodies sit in the local cache. Both are consistent with
+where private issues already live (a local repo on the developer's machine, read
+by agents that call hosted models), but it is a real egress. `--visibility
+public` is the control: it selects the separate `public` cache and never reads
+the private queue at all, so nothing private is loaded, indexed, or embedded on
+that run — the scopes get their own directories precisely so alternating between
+them does not look like every entry vanished and re-appeared. `--mode text`
+avoids the network entirely.
 
 ## Private-issues shadow repo (`private-issues`)
 

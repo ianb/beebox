@@ -12,11 +12,13 @@ import {
   type ParsedStep,
   type ParsedProcedure,
   type StepUpdate,
+  type ProcedureInconclusive,
 } from "./engine-types.js";
 import { updateStepInRunCard } from "./engine-run-card.js";
 import { executePhaseShells } from "./engine-phase.js";
 import { runAndValidate, type ValidateOutcome } from "./engine-run-phase.js";
 import type { RunShellFailure } from "./engine-run-execute.js";
+import { formatInconclusiveValidateError } from "../../shared/inconclusive.js";
 
 /**
  * Parameters for executeStep
@@ -43,6 +45,13 @@ export interface StepExecutionResult {
   status: "completed" | "skipped" | "failed";
   /** Root cause to carry through the procedure/CLI boundary when known. */
   error?: string;
+  /**
+   * Set when the step's work completed but its review reached no verdict.
+   * The step is NOT failed — reporting a non-answer as a failure is what
+   * sent readers to redo work that was already correct — but the run says
+   * so, all the way out to `cb health`.
+   */
+  inconclusive?: ProcedureInconclusive;
 }
 
 /**
@@ -255,14 +264,49 @@ function buildRunUpdate(args: RecordStepResultsParams): NonNullable<StepUpdate["
   return runResult;
 }
 
+/**
+ * Persist the validate phase. `error` carries the concrete reason a check
+ * didn't reach a verdict — a harness failure, or (for an inconclusive check)
+ * the budget/timeout/parse reason — so a reader of the run card learns which
+ * one happened without re-deriving it from prose.
+ */
 function buildValidateUpdate(
   result: ValidateOutcome,
 ): NonNullable<StepUpdate["validate"]> {
+  const unjudged = result.status === "inconclusive";
+  const inconclusiveError =
+    unjudged && result.inconclusiveDetail !== undefined
+      ? formatInconclusiveValidateError(result.inconclusiveDetail)
+      : undefined;
+  const error = result.invocationFailure ?? inconclusiveError;
+  // The reason tag rides along with the prose so `cb procedure resume` can
+  // report the same non-verdict from the card alone.
+  const reason = unjudged ? (result.inconclusiveReason ?? "unknown") : undefined;
   return {
     status: result.status,
     ...(result.stdout !== undefined && { stdout: result.stdout }),
     ...(result.review !== undefined && { review: result.review }),
-    ...(result.invocationFailure !== undefined && { error: result.invocationFailure }),
+    ...(error !== undefined && { error }),
+    ...(reason !== undefined && { reason }),
+  };
+}
+
+/**
+ * The inconclusive record for a step that otherwise succeeded, or undefined.
+ * A failed step reports its failure; the non-verdict only speaks when there
+ * is nothing louder to say.
+ */
+function stepInconclusive(args: {
+  stepId: string;
+  failed: boolean;
+  validateResult: ValidateOutcome | undefined;
+}): ProcedureInconclusive | undefined {
+  const { stepId, failed, validateResult } = args;
+  if (failed || validateResult?.status !== "inconclusive") return undefined;
+  return {
+    stepId,
+    reason: validateResult.inconclusiveReason ?? "unknown",
+    detail: validateResult.inconclusiveDetail ?? "reached no verdict",
   };
 }
 
@@ -287,6 +331,11 @@ async function recordStepResults(
   // runAndValidate makes review gate), or when the engine was unavailable
   // (deferred-recoverable — the step can succeed on a later run), or when the
   // harness failed without a usable assistant response.
+  //
+  // An INCONCLUSIVE validation is not on that list, at any severity —
+  // including `abort`. `abort` hard-gates a *failing check*; a check that
+  // never decided has not failed, and treating its silence as a verdict is
+  // the whole bug this state exists to fix. The run reports it separately.
   const validationGated =
     validateResult?.status === "fail" && step.validate?.severity === "abort";
   const failed =
@@ -328,9 +377,21 @@ async function recordStepResults(
   }
   ctx.writeLine("");
 
+  const inconclusive = stepInconclusive({
+    stepId: step.id,
+    failed,
+    validateResult,
+  });
+  if (inconclusive !== undefined) {
+    ctx.writeLine(
+      fmt.warn(`  Review of ${step.id} ${inconclusive.detail} — the work is unjudged, not rejected.`)
+    );
+  }
+
   return {
     status: succeeded ? "completed" : "failed",
     ...(invocationFailure !== undefined && { error: `Agent invocation failed: ${invocationFailure}` }),
     ...(engineUnavailable !== undefined && { error: engineUnavailable }),
+    ...(inconclusive !== undefined && { inconclusive }),
   };
 }

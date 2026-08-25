@@ -12,7 +12,8 @@ import { fmt } from "../../lib/format.js";
 import { getBoxTime } from "../../lib/time.js";
 import { runShell, CHECK_SKIP_CODE } from "./shell.js";
 import { evaluateInstructions } from "./engine-validate-model.js";
-import { invariant } from "../../lib/invariant.js";
+import { invariant, assertNever } from "../../lib/invariant.js";
+import type { InconclusiveReason } from "../../shared/inconclusive.js";
 import type { CommandContext } from "../command-runner.js";
 import type { ParsedPhase, ParsedStep, AgentFactory, ProcedureSeverity, ValidateStatus } from "./engine-types.js";
 import { errnoCode } from "../../lib/error-guards.js";
@@ -70,6 +71,18 @@ export interface ExecuteValidationParams {
   createAgent?: AgentFactory;
 }
 
+/** What a validate phase produced. */
+export interface ValidationPhaseResult {
+  status: ValidateStatus;
+  stdout?: string;
+  review?: string;
+  /** Set when `status` is "inconclusive": why no verdict was reached. */
+  inconclusiveReason?: InconclusiveReason;
+  /** Set when `status` is "inconclusive": the human phrase for the reason. */
+  inconclusiveDetail?: string;
+  invocationFailure?: string;
+}
+
 /** Map a failing check to a status given the phase severity. */
 function failStatus(severity: ProcedureSeverity): "warn" | "fail" {
   return severity === "warn" ? "warn" : "fail";
@@ -83,15 +96,16 @@ function failStatus(severity: ProcedureSeverity): "warn" | "fail" {
  * shell check short-circuits the model call. A failing `review` check returns
  * `fail` here; the auto-retry that tries to heal it (and the terminal gate when
  * it can't) lives in `runAndValidate` (engine-run-phase.ts).
+ *
+ * A judge that reached no verdict returns `inconclusive` — which is not a
+ * failing check and gates nothing, whatever the severity. It wins over a
+ * shell `warn` in the single `status` field, because "one check warned and
+ * another never decided" reads as unknown, not as a completed warning; the
+ * shell's own text stays in `stdout`.
  */
 export async function executeValidation(
   params: ExecuteValidationParams
-): Promise<{
-  status: ValidateStatus;
-  stdout?: string;
-  review?: string;
-  invocationFailure?: string;
-}> {
+): Promise<ValidationPhaseResult> {
   const { ctx, boxRoot, step, procedureName } = params;
   invariant(step.validate, "executeValidation requires step.validate (checked by callers before invoking)");
   const { phase, severity, model } = step.validate;
@@ -99,6 +113,8 @@ export async function executeValidation(
   let stdout = "";
   let review: string | undefined = undefined;
   let invocationFailure: string | undefined = undefined;
+  let inconclusiveReason: InconclusiveReason | undefined = undefined;
+  let inconclusiveDetail: string | undefined = undefined;
 
   // Run shell checks
   if (phase.shells.length > 0) {
@@ -134,31 +150,48 @@ export async function executeValidation(
       ...(params.createAgent && { createAgent: params.createAgent }),
     });
     review = verdict.review;
-    invocationFailure = verdict.invocationFailure;
 
-    if (!verdict.passed) {
-      status = failStatus(severity);
-      ctx.writeLine(
-        severity === "warn"
-          ? fmt.warn(`  Instruction check warning: ${verdict.review}`)
-          : fmt.fail(`  Instruction check failed: ${verdict.review}`)
-      );
-    } else {
-      ctx.writeLine(fmt.ok(`Instruction check passed: ${verdict.review}`));
+    switch (verdict.outcome) {
+      case "invocation-failure":
+        invocationFailure = verdict.error;
+        status = failStatus(severity);
+        ctx.writeLine(fmt.fail(`  Instruction check could not run: ${verdict.error}`));
+        break;
+      case "inconclusive":
+        status = "inconclusive";
+        inconclusiveReason = verdict.reason;
+        inconclusiveDetail = verdict.detail;
+        ctx.writeLine(fmt.warn(`  Instruction check inconclusive: ${verdict.review}`));
+        break;
+      case "verdict":
+        if (verdict.passed) {
+          ctx.writeLine(fmt.ok(`Instruction check passed: ${verdict.review}`));
+        } else {
+          status = failStatus(severity);
+          ctx.writeLine(
+            severity === "warn"
+              ? fmt.warn(`  Instruction check warning: ${verdict.review}`)
+              : fmt.fail(`  Instruction check failed: ${verdict.review}`)
+          );
+        }
+        break;
+      default:
+        assertNever(verdict);
     }
   }
 
-  const result: {
-    status: ValidateStatus;
-    stdout?: string;
-    review?: string;
-    invocationFailure?: string;
-  } = { status };
+  const result: ValidationPhaseResult = { status };
   if (stdout) {
     result.stdout = stdout;
   }
   if (review) {
     result.review = review;
+  }
+  if (inconclusiveReason !== undefined) {
+    result.inconclusiveReason = inconclusiveReason;
+  }
+  if (inconclusiveDetail !== undefined) {
+    result.inconclusiveDetail = inconclusiveDetail;
   }
   if (invocationFailure !== undefined) {
     result.invocationFailure = invocationFailure;

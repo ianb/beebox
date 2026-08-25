@@ -175,14 +175,14 @@ function makeEffects() {
 
 ## Fail-closed route classification
 
-The resident app is the only workstreams renderer. tRPC queries retain owner
-read authorization, while mutations require the owner plus the existing
-same-origin check. Unknown verbs stay denied.
+The resident app is the only workstreams renderer. tRPC queries are `dev-read`
+(owner session OR the browse key, since 2026-08-24), while mutations require the
+owner plus the existing same-origin check. Unknown verbs stay denied.
 
 ```ts
 assert.deepEqual(
   classifyRouterRoute({ method: "GET", url: "/workstreams/api/trpc/workstreams.list" }),
-  { kind: "control-read", json: false },
+  { kind: "dev-read" },
 );
 assert.deepEqual(
   classifyRouterRoute({ method: "POST", url: "/workstreams/api/trpc/issues.save" }),
@@ -207,9 +207,9 @@ writeDeny(
   {
     allow: false,
     status: 401,
-    reason: "owner-session-required",
+    reason: "dev-read-auth-required",
     redirectToLogin: true,
-    route: { kind: "control-read", json: false },
+    route: { kind: "dev-read" },
   },
 );
 assert.equal(redirect.status, 302);

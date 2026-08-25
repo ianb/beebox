@@ -255,4 +255,3 @@ registerCommand({
   execute: executeUpload,
 });
 
-export { executeUpload };

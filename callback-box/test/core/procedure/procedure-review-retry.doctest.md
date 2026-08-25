@@ -284,3 +284,71 @@ shell ran 1 time(s)
 ```ts cleanup
 await box.cleanup();
 ```
+
+## An inconclusive judge never re-runs the work agent
+
+`severity: review` heals a *failing* verdict by re-invoking the run agent with
+the failure context. A judge that reached no verdict has nothing to hand it:
+there is no stated defect to fix, and the work is already done and committed.
+So the self-heal does not fire, the agent runs exactly once, and the run ends
+`inconclusive` — the check is retried, the work is not.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("config/procedures/nodecide.procedure.card", `---
+name: nodecide
+description: Review never decides
+steps:
+  - id: work
+    description: Work succeeds, judge exhausts its turns
+    run:
+      agents:
+        - prompt: Do it.
+    validate:
+      severity: review
+      instructions:
+        - Some criterion.
+---
+`);
+await box.write("box/output/.gitkeep", "");
+box.commitAll("Add nodecide procedure");
+
+let runCount = 0;
+const createAgent = (opts) => createFakeAgent({
+  name: opts.name,
+  act: async () => {
+    runCount++;
+    await box.write("box/output/try.txt", `try ${runCount}`);
+    box.commitAll(`agent try ${runCount}`);
+    return { success: true };
+  },
+  structuredResult: () => null,
+  structuredFailure: { error: "error_max_turns" },
+});
+
+const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
+const result = await startProcedure({
+  ctx,
+  procedureNameOrPath: "nodecide",
+  options: { createAgent },
+});
+print(`success: ${result.ok}`);
+print(`run status: ${result.value.status}`);
+print(`agent runs: ${runCount}`);
+
+const runs = await box.list("procedure/runs");
+const runDir = runs.split("\n").find(f => f.includes("nodecide_"));
+const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
+print(`work step: ${run.steps[0].status}`);
+print(`validate status: ${run.steps[0].validate.status}`);
+=>
+success: true
+run status: inconclusive
+agent runs: 1
+work step: completed
+validate status: inconclusive
+```
+
+```ts cleanup
+await box.cleanup();
+```

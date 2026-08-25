@@ -37,7 +37,11 @@ export const commentaryOutput = z.object({
   open: z.string(),
 });
 
-/** A single landmark commentary destination (mirrors `DestinationInfo`). */
+/**
+ * A single landmark commentary destination (mirrors `DestinationInfo`).
+ *
+ * @public Imported by `bin/snapshot-clerk-contract.ts`, outside this package.
+ */
 export const commentaryDestination = z.object({
   // Box-relative directory (empty string = box root).
   dir: z.string(),
@@ -53,14 +57,14 @@ export const commentaryDestinationsOutput = z.object({
 
 export const tabTransferScope = z.enum(["current-window", "all-windows"]);
 
-export const capturedTab = z.object({
+const capturedTab = z.object({
   id: z.string().uuid(),
   title: z.string(),
   url: z.string(),
   pinned: z.boolean(),
 });
 
-export const capturedTabWindow = z.object({
+const capturedTabWindow = z.object({
   id: z.string().uuid(),
   tabs: z.array(capturedTab).min(1),
 });
@@ -69,7 +73,7 @@ export const capturedTabSet = z.object({
   windows: z.array(capturedTabWindow).min(1),
 });
 
-export const proposedTabWindow = z.object({
+const proposedTabWindow = z.object({
   id: z.string().uuid(),
   tabs: z.array(z.string().uuid()).min(1),
 });

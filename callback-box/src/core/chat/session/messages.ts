@@ -57,7 +57,7 @@ let unknownMessageCount = 0;
  * recognize. Logs and counts every occurrence — a parser/SDK-version drift can
  * degrade the stream but can never do so silently.
  */
-export function unknownChatMessage(msg: SDKMessage): ChatMessageUnknown {
+function unknownChatMessage(msg: SDKMessage): ChatMessageUnknown {
   unknownMessageCount++;
   console.warn(
     `[chat-session] Unrecognized SDK message type "${msg.type}" surfaced as an \`unknown\` sentinel (count=${unknownMessageCount}) — update adaptSdkMessage if this type should be handled.`,
@@ -329,24 +329,26 @@ export function accumulateAssistantText(prior: string, msg: ChatMessage): string
 }
 
 /**
- * Warn loudly when a turn ends with `is_error=true`. Causes vary —
- * unavailable model (fails in ~500ms, subtype=success), an unresumable
- * session id (would-be ghost row in chat-session-history), or a server
- * error — so log the SDK's own result text and the timing rather than
- * asserting one cause. Makes the failure recoverable from logs.
+ * Warn loudly when a turn ends with `is_error=true`, and log only what the
+ * result frame actually carries: the phase the backend reported, the subtype,
+ * the turn count, the duration, and the backend's own result text. It names no
+ * cause. A guess here reads as a diagnosis and sends the reader after the wrong
+ * thing; the result text plus `[codex-chat]`'s stack log are what locate the
+ * failure.
  */
 export function warnErroredTurn(
   { sessionId, msg }: { sessionId: string | null; msg: ChatMessageResult },
 ): void {
   const sid = sessionId === null ? "<unassigned>" : sessionId;
   const subtype = msg.subtype;
+  const phase = msg.phase ?? "<unreported>";
   const turns = String(msg.num_turns);
   const dur = String(msg.duration_ms);
   const detail = typeof msg.result === "string" && msg.result.trim()
     ? ` result=${JSON.stringify(msg.result.trim().slice(0, 300))}`
     : "";
   console.warn(
-    `[chat-session] Turn ended with is_error=true (session ${sid}). Likely an unavailable model, an unresumable session, or a server error. subtype=${subtype} num_turns=${turns} duration_ms=${dur}${detail}`,
+    `[chat-session] Turn ended with is_error=true (session ${sid}). phase=${phase} subtype=${subtype} num_turns=${turns} duration_ms=${dur}${detail}`,
   );
 }
 

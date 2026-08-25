@@ -22,6 +22,7 @@ import { assertNever } from "../../lib/invariant.js";
 import {
   loadScheduleHealth,
   formatDurationShort,
+  describeParkedUpdates,
   type BoxScheduleHealth,
 } from "../../core/schedule/health-box.js";
 import { conciseScheduleError, type TaskHealth } from "../../core/schedule/health.js";
@@ -31,6 +32,8 @@ import { runHealthChecks, type HealthCheck } from "../../webapp/trpc/routers/hea
 const STATUS_GLYPHS: Record<TaskHealth["status"], string> = {
   ok: "✓",
   waiting: "◷",
+  // "?" and not "✗": nobody knows whether this one is fine.
+  inconclusive: "?",
   failing: "✗",
   overdue: "✗",
   blocked: "◷",
@@ -38,6 +41,12 @@ const STATUS_GLYPHS: Record<TaskHealth["status"], string> = {
   disabled: "-",
 };
 
+/**
+ * What makes `cb health` exit 1. An inconclusive task is deliberately absent:
+ * its work completed and nothing found a defect, so gating a script on it
+ * would report a healthy box as broken — the exact confusion this status was
+ * added to end. It still prints, with a "?" and its reason.
+ */
 function isUnhealthy(task: TaskHealth): boolean {
   return task.status === "failing" || task.status === "overdue" || task.status === "invalid";
 }
@@ -50,6 +59,7 @@ function describeStatus(task: TaskHealth): string {
       return `overdue ${formatDurationShort(task.pendingMs ?? 0)}`;
     case "ok":
     case "waiting":
+    case "inconclusive":
     case "blocked":
     case "invalid":
     case "disabled":
@@ -87,8 +97,14 @@ function printHealth(
     console.log(
       `  ${lock ? "▶" : STATUS_GLYPHS[task.status]} ${task.name.padEnd(22)} ${describeStatus(task).padEnd(14)} ${detail}`
     );
-    if (isUnhealthy(task) && task.lastError) {
+    if ((isUnhealthy(task) || task.status === "inconclusive") && task.lastError) {
       console.log(`      error: ${conciseScheduleError(task.lastError)}`);
+    }
+    // The cross-reference the boxholder otherwise has to make by hand between
+    // `cb health` and `cb status`: this task's own fix is parked, unread.
+    const parked = describeParkedUpdates(task);
+    if (parked !== null && (isUnhealthy(task) || task.status === "inconclusive")) {
+      console.log(`      ${parked}`);
     }
   }
   const hidden = health.tasks.length - tasks.length;
@@ -140,7 +156,7 @@ export const healthCommand = new Command("health")
     const now = getBoxTime(boxRoot);
     const health = await loadScheduleHealth(boxRoot, now);
     const running = await loadRunningScripts(boxRoot);
-    const boxChecks = await runHealthChecks(boxRoot);
+    const boxChecks = await runHealthChecks(boxRoot, { scheduleHealth: health });
 
     if (options.json) {
       const runningJson = [...running].map(([name, lock]) => ({ name, ...lock }));

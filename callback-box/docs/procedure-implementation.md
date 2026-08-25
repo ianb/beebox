@@ -119,8 +119,40 @@ captured as a `baseline..finalRef` range, not just the last commit), and the
 step's `whys:`, and asks a review model (`validate.model`, default `balanced`) for a
 structured pass/fail verdict. A failing verdict gates by `severity` exactly like a
 failing `shells:` check; the reasoning is recorded in the run card's `validate.review`.
-If the model can't return a verdict, the check **fails closed**. Implementation:
-`evaluateInstructions` in `engine-validate-model.ts`.
+Implementation: `evaluateInstructions` in `engine-validate-model.ts`.
+
+**A judge that never answers is `inconclusive`, not a failure.** If the review
+hits its turn cap, times out, or returns nothing parseable, the engine retries
+the *judge* once (a fresh session at double the turn cap — never the work
+agent, whose work is already done and committed). If the second attempt also
+reaches no verdict, the check records `validate.status: inconclusive` with the
+concrete reason in `validate.error`, and:
+
+- it does **not** fail the step, at any severity, including `abort` — `abort`
+  hard-gates a failing check, and a check that never decided has not failed;
+- it does **not** trigger the `severity: review` work-agent retry;
+- the run's terminal status becomes `inconclusive` rather than `completed`,
+  and `cb procedure run` exits **3** (`INCONCLUSIVE_EXIT_CODE` — 2 already
+  means "migration applied with per-card failures") with one stderr line:
+  `Inconclusive: procedure <name> — review of step <id> reached max turns (16); work completed`;
+- `cb procedure resume` on that run reports the same thing: the work is done
+  and nothing re-judges it, so resume re-reads the non-verdict from the run
+  card and exits the same way rather than saying "completed — nothing to
+  resume". `inconclusive` is a terminal run status;
+- `cb migrate` does **not** record a migration whose procedure ended
+  inconclusive as applied, and stops the sweep — retiring a migration on an
+  unread check is the same misreading one level up;
+- the scheduler records the run as `inconclusive` (not a failure: it does not
+  increment `consecutiveFailures`, and it does not set `lastSuccess` either),
+  and `cb health` shows `?  <task>  inconclusive`, which does **not** make
+  `cb health` exit 1.
+
+Nothing silently passes: an unjudged step stays visibly unjudged everywhere it
+surfaces. Reason tags (`max-turns`, `max-budget`, `timeout`,
+`no-structured-output`, `unknown`) live in `src/shared/inconclusive.ts` — a
+turn-cap exhaustion is a *budget* problem (a cap set too low, or a judge prompt
+that wanders), which is a different fix from a timeout, so they are recorded
+distinctly.
 
 Use `instructions:` for judgment a shell can't cheaply make; keep objective,
 deterministic checks in `shells:`.
@@ -130,8 +162,9 @@ deterministic checks in `shells:`.
 Applies to both `shells:` and `instructions:` failures:
 
 - `severity="warn"` — log a completed validation check's negative result and
-  continue. If the judge engine cannot produce a usable verdict at all, the
-  step fails because validation did not run.
+  continue. If the judge *harness* fails outright (auth/model rejection — no
+  assistant response at all), the step fails because validation did not run.
+  A judge that ran but reached no verdict is `inconclusive` instead (above).
 - `severity="abort"` — fail the step (and, for a `kind: "procedure"` migration,
   block the migration). Hard gate, no retry.
 - `severity="review"` — self-heal: re-invoke the run agent with a
@@ -145,7 +178,7 @@ Applies to both `shells:` and `instructions:` failures:
 A step is marked `failed` when a `validate` check fails and `severity` is `abort`,
 when a `review` failure exhausts its retries, or when an agent engine fails
 without producing a usable assistant response (for example auth or model
-rejection). A started agent turn that ends after partial assistant activity is
+rejection). An inconclusive check is not on that list. A started agent turn that ends after partial assistant activity is
 still logged without gating by itself. If you need "the agent must have actually
 done the work," prove it with a `shells:` check or an `instructions:` verdict;
 don't assume the agent finishing means the step did.

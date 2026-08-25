@@ -37,7 +37,9 @@ export interface TickOptions {
 
 export interface ScriptResult {
   name: string;
-  status: "ran" | "skipped" | "error";
+  /** "inconclusive": the script's work completed but its check reached no
+   *  verdict. Separate from "error" so a non-answer is never counted as one. */
+  status: "ran" | "skipped" | "error" | "inconclusive";
   command?: string;
   durationMs?: number;
   error?: string;
@@ -47,6 +49,8 @@ export interface TickResult {
   ranCount: number;
   skipCount: number;
   errorCount: number;
+  /** Runs whose work completed but whose check reached no verdict. */
+  inconclusiveCount: number;
   scripts: ScriptResult[];
 }
 
@@ -56,7 +60,7 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
 
   const readFiles = await readScheduleFiles(schedulesDir, options);
   if (readFiles === null) {
-    return { ranCount: 0, skipCount: 0, errorCount: 0, scripts: [] };
+    return { ranCount: 0, skipCount: 0, errorCount: 0, inconclusiveCount: 0, scripts: [] };
   }
   let files = readFiles;
 
@@ -73,6 +77,7 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
   let ranCount = 0;
   let skipCount = 0;
   let errorCount = 0;
+  let inconclusiveCount = 0;
   const scripts: ScriptResult[] = [];
 
   // Load currently running scripts for lock-group conflict detection
@@ -92,7 +97,7 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
         : "";
       console.log(`Tick deferred — system busy: ${blockers.join(", ")}${hint}`);
     }
-    return { ranCount: 0, skipCount: files.length, errorCount: 0, scripts: [] };
+    return { ranCount: 0, skipCount: files.length, errorCount: 0, inconclusiveCount: 0, scripts: [] };
   }
 
   for (const file of files) {
@@ -130,6 +135,7 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
     const result = await executeScript({ boxRoot, parsed, scriptName, cardPath, file, state, now, options });
     scripts.push(result);
     if (result.status === "ran") ranCount++;
+    else if (result.status === "inconclusive") inconclusiveCount++;
     else errorCount++;
   }
 
@@ -137,13 +143,14 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
     if (options.dryRun) {
       console.log(`\n${ranCount} script(s) would run, ${skipCount} not due.`);
     } else {
+      const unjudged = inconclusiveCount > 0 ? `, ${inconclusiveCount} inconclusive` : "";
       console.log(
-        `\nTick complete: ${ranCount} ran, ${skipCount} skipped, ${errorCount} errors.`
+        `\nTick complete: ${ranCount} ran, ${skipCount} skipped, ${errorCount} errors${unjudged}.`
       );
     }
   }
 
-  return { ranCount, skipCount, errorCount, scripts };
+  return { ranCount, skipCount, errorCount, inconclusiveCount, scripts };
 }
 
 export const tickCommand = new Command("tick")

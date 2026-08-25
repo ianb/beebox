@@ -26,6 +26,8 @@ import { loadScriptState } from "./state.js";
 import { evaluateTaskHealth, type TaskHealth } from "./health.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 import { boxEngineUnavailability, engineWaitReason } from "./engine-wait.js";
+import { listParkedTemplateUpdates, parkedUpdatePath } from "../install-template-file.js";
+import { parkedUpdatesForTask } from "./parked-templates.js";
 
 const HEARTBEAT_FILE = ".callback-box/scheduler-heartbeat";
 const HEARTBEAT_STALE_MS = 5 * 60 * 1000;
@@ -84,6 +86,8 @@ export async function checkSchedulerHeartbeat(
  */
 export async function loadScheduleHealth(boxRoot: string, now: Date): Promise<BoxScheduleHealth> {
   const scheduler = await checkSchedulerHeartbeat(boxRoot, now);
+  // Read once per box: every task is cross-referenced against the same list.
+  const parked = await listParkedTemplateUpdates(boxRoot);
   const engineUnavailable = await boxEngineUnavailability(boxRoot);
   const engineWait = engineUnavailable === null ? null : engineWaitReason(engineUnavailable);
   const schedulesDir = path.join(boxRoot, "config/schedules");
@@ -111,12 +115,15 @@ export async function loadScheduleHealth(boxRoot: string, now: Date): Promise<Bo
       const missingConnectors = parsed.requires
         ? await checkMissingConnectors(boxRoot, parsed.requires)
         : [];
-      tasks.push(evaluateTaskHealth({
+      const task = evaluateTaskHealth({
         name, parsed, state, now, cardMtime, missingConnectors,
         engineWaitReason: engineWait ?? undefined,
-      }));
+      });
+      tasks.push(withParkedUpdates(task, { runs: parsed.runs, parked }));
     } catch (err) {
-      tasks.push({
+      // A card that doesn't parse has no `runs` to read, but its own card may
+      // still be the thing with a parked update — that is a likely cause.
+      tasks.push(withParkedUpdates({
         name,
         status: "invalid",
         description: undefined,
@@ -127,10 +134,34 @@ export async function loadScheduleHealth(boxRoot: string, now: Date): Promise<Bo
         reason: `card does not parse: ${errorMessage(err)}`,
         alertedAt: state.alertedAt,
         alertedFor: state.alertedFor,
-      });
+      }, { runs: undefined, parked }));
     }
   }
   return { tasks, scheduler, engineWait };
+}
+
+/**
+ * Attach the task's parked template updates, if any. Omitted entirely when
+ * nothing is parked, so the common case adds no field to the JSON.
+ */
+function withParkedUpdates(
+  task: TaskHealth,
+  { runs, parked }: { runs: string | undefined; parked: readonly string[] },
+): TaskHealth {
+  const own = parkedUpdatesForTask({ name: task.name, runs }, parked);
+  return own.length > 0 ? { ...task, parkedTemplateUpdates: own } : task;
+}
+
+/**
+ * The one-line "your fix is already on disk" note for a task, or null when
+ * nothing is parked for it. Shared by every surface that speaks a task's line
+ * (`cb health`, the session-start summary, proactive alerts).
+ */
+export function describeParkedUpdates(task: TaskHealth): string | null {
+  const parked = task.parkedTemplateUpdates ?? [];
+  if (parked.length === 0) return null;
+  const paths = parked.map((p) => parkedUpdatePath(p)).join(", ");
+  return `parked update: ${paths} — the fix may already be on disk`;
 }
 
 /** Short duration for summaries: 45m, 26h, 3d. */
@@ -147,6 +178,11 @@ export function describeUnhealthyTask(task: TaskHealth, now: Date): string {
   if (task.status === "overdue") {
     return `${task.name}: overdue ${formatDurationShort(task.pendingMs ?? 0)}`;
   }
+  if (task.status === "inconclusive") {
+    // Says what is and isn't known, in that order — a reader who skims this
+    // must not come away thinking the work failed.
+    return `${task.name}: review inconclusive (work completed, unjudged)`;
+  }
   const since = task.lastSuccess
     ? `last success ${formatDurationShort(now.getTime() - new Date(task.lastSuccess).getTime())} ago`
     : "never succeeded";
@@ -155,7 +191,7 @@ export function describeUnhealthyTask(task: TaskHealth, now: Date): string {
 
 /**
  * One-line health summary, or null when there is nothing to say —
- * the session-start surface only speaks when something is wrong.
+ * the session-start surface only speaks when something is wrong or unknown.
  * Overdue findings are folded into the scheduler-down finding when the
  * daemon is stale, and suppressed entirely when no daemon has ever run
  * for this box.
@@ -170,15 +206,28 @@ export function summarizeScheduleHealth(health: BoxScheduleHealth, now: Date): s
       `scheduler not running (last tick ${formatDurationShort(health.scheduler.ageMs ?? 0)} ago)`,
     );
   }
+  // Inconclusive tasks speak here but never alert (selectAlertableTasks): a
+  // missing verdict is worth a line in the snapshot a reader is already
+  // looking at, and not worth a push notification — nothing is wrong yet.
   const speaking = health.tasks.filter(
     (t) =>
       t.status === "failing" ||
       t.status === "invalid" ||
+      t.status === "inconclusive" ||
       (t.status === "overdue" && health.scheduler.status === "running"),
   );
-  parts.push(...speaking.slice(0, MAX_SUMMARY_ITEMS).map((t) => describeUnhealthyTask(t, now)));
+  parts.push(
+    ...speaking.slice(0, MAX_SUMMARY_ITEMS).map((t) => {
+      // The parked note rides along: a task whose own fix is unread on disk is
+      // the one case where the next action is neither "debug" nor "wait".
+      const parked = describeParkedUpdates(t);
+      return parked === null
+        ? describeUnhealthyTask(t, now)
+        : `${describeUnhealthyTask(t, now)} — ${parked}`;
+    }),
+  );
   const overflow = speaking.length - MAX_SUMMARY_ITEMS;
-  if (overflow > 0) parts.push(`+${overflow} more unhealthy`);
+  if (overflow > 0) parts.push(`+${overflow} more needing attention`);
   return parts.length > 0 ? parts.join("; ") : null;
 }
 
