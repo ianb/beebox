@@ -31,8 +31,8 @@ import {
   type IcsOptions,
 } from "./google-calendar-state.js";
 import { patchLocalEdit, writeBackPushedEvent, type LocalPushOutcome } from "./google-calendar-local-push.js";
+import { recordFailedLocalPush } from "./google-calendar-strand.js";
 import { contentHash } from "../lib/content-hash.js";
-import { getBoxTime } from "../lib/time.js";
 import { decideCalendarSync } from "./google-calendar-decide.js";
 import { invariant } from "../lib/invariant.js";
 
@@ -43,6 +43,11 @@ export interface SyncAccumulator {
   notes: SyncNote[];
   /** Push-side failures raised while reconciling this calendar's events. */
   failures: CalendarSyncFailure[];
+  /**
+   * Paths a stranding moved (the vacated one and the one under `stranded/`),
+   * so the sync's path-scoped commit records the move.
+   */
+  stranded: string[];
   /**
    * Every tracked event this attempt reconciled — pulled, or attempted a
    * local-edit push for. The pending-edit pass skips these, so an edit the
@@ -178,9 +183,9 @@ function recordUpsertNote(
 /** Reconcile a single non-cancelled, in-window event into the local store. */
 async function reconcileEvent(
   event: GoogleCalendarEvent,
-  ctx: { boxRoot: string; calendar: GoogleCalendarService; calendarId: string; icsOpts: IcsOptions; calDir: string; state: CalendarState; acc: SyncAccumulator },
+  ctx: { boxRoot: string; calendar: GoogleCalendarService; calendarId: string; icsOpts: IcsOptions; calDir: string; state: CalendarState; now: Date; acc: SyncAccumulator },
 ): Promise<void> {
-  const { boxRoot, calendar, calendarId, icsOpts, calDir, state, acc } = ctx;
+  const { boxRoot, calendar, calendarId, icsOpts, calDir, state, now, acc } = ctx;
   acc.reconciledEventIds.add(event.id);
   const filename = eventFilename(event);
   const filePath = path.join(calDir, filename);
@@ -210,16 +215,26 @@ async function reconcileEvent(
 
     switch (decision.kind) {
       case "local-wins": {
-        // localEdited && !remoteChanged: localContent is defined here.
+        // localEdited && !remoteChanged: localContent is defined here, and a
+        // legacy string entry can never get here (it has no stored hash, so
+        // nothing can be read as edited).
         invariant(localContent !== undefined, "local-wins requires local content");
+        invariant(typeof existingEntry !== "string", "local-wins requires a structured entry");
         const outcome = await tryPushLocalEdit(event, {
           boxRoot, calDir, oldName, calendar, icsOpts, relPath, filename,
           localContent, existingEntry, state, acc,
         });
         // Either way this event is finished. A failed push returns WITHOUT
         // writing Google's ICS or re-stamping the contentHash, so the local
-        // edit survives and the next sync retries it.
-        if (outcome.kind === "failed") acc.failures.push(outcome.failure);
+        // edit survives — and it either keeps its place in the retry queue or
+        // is stranded, which is the same decision the pending-edit pass makes.
+        if (outcome.kind === "failed") {
+          await recordFailedLocalPush({
+            boxRoot, calDir, state, googleEventId: event.id, entry: existingEntry,
+            localContent, failure: outcome.failure, now,
+            acc: { notes: acc.notes, failures: acc.failures, stranded: acc.stranded },
+          });
+        }
         return;
       }
       case "remote-wins": {
@@ -277,13 +292,15 @@ export async function syncCalendar(opts: {
   calDir: string;
   windowStart: Date;
   windowEnd: Date;
+  /** Domain time (the connector's injected clock) — the retry window's "now". */
+  now: Date;
   acc: SyncAccumulator;
 }): Promise<SyncAccumulator> {
   const { boxRoot, calendar, calendarId, syncToken, syncDaysBack, syncDaysForward,
-          state, icsOpts, calDir, windowStart, windowEnd, acc } = opts;
+          state, icsOpts, calDir, windowStart, windowEnd, now, acc } = opts;
 
   const events = await fetchEvents({
-    calendar, calendarId, syncToken, syncDaysBack, syncDaysForward, state, now: getBoxTime(boxRoot),
+    calendar, calendarId, syncToken, syncDaysBack, syncDaysForward, state, now,
   });
 
   for (const event of events) {
@@ -299,7 +316,7 @@ export async function syncCalendar(opts: {
 
     if (!isInWindow(event, { start: windowStart, end: windowEnd })) continue;
 
-    await reconcileEvent(event, { boxRoot, calendar, calendarId, icsOpts, calDir, state, acc });
+    await reconcileEvent(event, { boxRoot, calendar, calendarId, icsOpts, calDir, state, now, acc });
   }
 
   return acc;

@@ -54,6 +54,9 @@ export async function pushAndCleanOrphans(
     trackedFiles.add(getFilename(entry));
   }
 
+  // A flat readdir, deliberately: it must NOT descend into `stranded/`, whose
+  // `.ics` files are edits given up on (google-calendar-strand.ts) and would be
+  // read here as locally-created events and inserted into Google.
   let files: string[];
   try {
     files = await fs.readdir(calDir);

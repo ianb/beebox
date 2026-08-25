@@ -9,8 +9,8 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { errnoCode } from "../lib/error-guards.js";
 import { icsToGoogleEvent, isInWindow } from "./google-calendar-ics.js";
-import { localCalendarFailure } from "./google-calendar-notes.js";
 import { type CalendarState } from "./google-calendar-state.js";
+import { strandEntry } from "./google-calendar-strand.js";
 import { contentHash } from "../lib/content-hash.js";
 import { type SyncAccumulator } from "./google-calendar-sync.js";
 
@@ -28,12 +28,13 @@ import { type SyncAccumulator } from "./google-calendar-sync.js";
  *  - **file matches the recorded contentHash** — the connector wrote it and
  *    nobody touched it. Delete the file and untrack it.
  *  - **file edited locally (or an entry with no recorded hash, which we cannot
- *    verify)** — keep the file AND keep tracking it, and report a failure.
- *    Untracking would be worse than doing nothing: `pushAndCleanOrphans` treats
- *    an untracked `.ics` as a locally-created event and would insert the
- *    just-deleted event back into Google. Staying tracked leaves the boxholder
- *    an ordinary way out (edit it, or add X-CB-DELETE), and the failure keeps
- *    the stuck file visible instead of silent.
+ *    verify)** — strand it: the file moves to `stranded/`, the entry goes away,
+ *    and the run says so once. The edit cannot be pushed (the event is gone
+ *    from Google), so retrying it forever only re-reports the same stuck file.
+ *    It may not simply be untracked in place either — `pushAndCleanOrphans`
+ *    reads an untracked `.ics` as a locally-created event and would insert the
+ *    just-deleted event back into Google — and moving it out of that scan's
+ *    reach is what makes untracking safe.
  *  - **anything outside the refetched window, or that does not parse** — never
  *    touched. It was never in the response's scope, so its absence means
  *    nothing.
@@ -95,20 +96,16 @@ export async function removeStaleAfterFullResync(opts: {
       continue;
     }
 
-    // Reported here, so the pending-local-edit pass must not ALSO try to patch
-    // this run's mismatched hash and report the same file a second time. Next
-    // run it does, and the stuck file stays visible.
-    acc.reconciledEventIds.add(eventId);
-    console.warn(`  ${entry.filename} is no longer on Google but was edited locally — keeping it`);
-    acc.notes.push({
-      action: "updated",
-      summary,
-      detail: "no longer on Google, local edit kept",
-      ref: relPath,
+    // The edit can never be pushed — there is nothing on Google to patch — so
+    // it is stranded rather than kept tracked. Keeping it tracked used to be
+    // the least-bad option: untracking leaves an `.ics` the orphan scan reads
+    // as locally-created and inserts back into Google. Stranding gets the same
+    // protection by MOVING the file out of the orphan scan's reach, and ends
+    // the retry loop that reported the same stuck file on every later run.
+    await strandEntry({
+      boxRoot, calDir, state, googleEventId: eventId, entry, summary,
+      reason: "deleted on Google (absent from a full resync)",
+      operation: "stale-cleanup", acc,
     });
-    acc.failures.push(localCalendarFailure({
-      calendarId, operation: "stale-cleanup", path: relPath,
-      detail: "locally edited event no longer exists on Google",
-    }));
   }
 }

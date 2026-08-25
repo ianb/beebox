@@ -989,22 +989,31 @@ inner.events = inner.events.filter((e) => e.id === "evt-keep");
 
 const result = await connector.sync();
 JSON.stringify(await summaries())
-=> ["MINE now","Still on Google"]
+=> ["Still on Google"]
 ```
 
-The untouched stale file is gone; the locally-edited one is kept, still tracked,
-and reported as a failure rather than deleted behind the boxholder's back:
+The untouched stale file is deleted; the locally-edited one is stranded rather
+than deleted behind the boxholder's back — the edit is still on disk, under
+`stranded/`, and the run reports it once:
 
 ```ts continue
 JSON.stringify({
   success: result.success,
   files: (await readdir(dir)).filter((f) => f.endsWith(".ics")).length,
-  editedKept: (await readFile(join(dir, editedFile), "utf-8")).includes("MINE now"),
+  editKept: (await readFile(join(dir, "stranded", editedFile), "utf-8")).includes("MINE now"),
 })
-=> {"success":false,"files":2,"editedKept":true}
+=> {"success":false,"files":1,"editKept":true}
 
-result.error?.includes("(stale-cleanup, local: locally edited event no longer exists on Google)")
+result.error?.includes("(stale-cleanup, local: stranded — deleted on Google (absent from a full resync))")
 => true
+```
+
+Nothing tracks it any more, so no later run patches, reports, or re-inserts it:
+
+```ts continue
+const { loadCalendarState: loadState1 } = await import("../../src/connectors/google-calendar-state.js");
+JSON.stringify(Object.keys((await loadState1(box.root)).eventFiles))
+=> ["evt-keep"]
 ```
 
 An event outside the refetched window was never in the full response's scope, so
@@ -1204,14 +1213,12 @@ JSON.stringify({
 await box.cleanup();
 ```
 
-## A locally-edited event Google no longer has stays visible
+## A local edit Google will never take is stranded
 
-The post-410 stale pass keeps a locally-edited `.ics` whose event Google no
-longer returns, and reports it once. Reported once is not enough: nothing in a
-later run pulled that event either, so the stuck file used to go silent after
-its one mention. The pending-edit pass retries the push on every run, and a
-patch to an event Google has deleted keeps failing — which is the point, since
-that failure is the only thing telling the boxholder the file is stranded.
+A patch that comes back 404 is definitive: there is no event on Google to
+patch, and no number of retries changes that. The edit used to sit in the
+retry queue forever, re-patched and re-reported on every wakeup. Now the file
+is stranded — moved to `store/calendar/stranded/`, untracked, reported once.
 
 ```ts
 const box = await makeTmpBox({ git: true });
@@ -1231,18 +1238,20 @@ const inner = createFakeGoogleCalendar({
   ],
 });
 
-let expireToken = false;
+let patchCalls = 0;
 const calendar: GoogleCalendarService = {
   ...inner,
   listEvents: async (calendarId, opts) => {
-    if (opts?.syncToken && expireToken) {
-      return throwCalendarHttpError(410, "https://calendar.test/events?syncToken=expired");
-    }
+    // After the first run this is an ordinary incremental sync that returns
+    // nothing — the pull never revisits the event, which is why the pending
+    // pass (and its stranding decision) is the only thing that can end this.
     if (opts?.syncToken) return { items: [], nextSyncToken: "fake-sync-token-2" };
     return inner.listEvents(calendarId, opts);
   },
-  // Google no longer has the event, so a patch to it is a 404.
-  patchEvent: async () => throwCalendarHttpError(404, "https://calendar.test/events/evt-gone"),
+  patchEvent: async () => {
+    patchCalls++;
+    return throwCalendarHttpError(404, "https://calendar.test/events/evt-gone");
+  },
 };
 
 const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
@@ -1254,34 +1263,217 @@ const localIcs = await readFile(join(dir, file), "utf-8");
 await writeFile(join(dir, file), localIcs.replace("Deleted but edited here", "MINE now"));
 inner.events = [];
 
-// The 410 run: the stale pass reports it, and only it — the pending-edit pass
-// stands aside for an entry this run already dealt with.
-expireToken = true;
-const staleRun = await connector.sync();
+// The patch 404s. One try, then the file is stranded.
+const strandRun = await connector.sync();
 JSON.stringify({
-  success: staleRun.success,
-  stale: staleRun.error?.includes("(stale-cleanup,"),
-  alsoPush: staleRun.error?.includes("local-push"),
+  success: strandRun.success,
+  patchCalls,
+  blamed: strandRun.error?.includes(`store/calendar/${file} (local-push, local: stranded — deleted on Google (HTTP 404))`),
+  gone: (await readdir(dir)).includes(file),
+  kept: (await readFile(join(dir, "stranded", file), "utf-8")).includes("MINE now"),
 })
-=> {"success":false,"stale":true,"alsoPush":false}
+=> {"success":false,"patchCalls":1,"blamed":true,"gone":false,"kept":true}
 ```
 
-The following run is an ordinary incremental sync that returns nothing, and the
-stranded file is reported again rather than fading out:
+The entry is gone from the index, and the commit narrative names the file and
+why it was given up on:
 
 ```ts continue
-expireToken = false;
-const nextRun = await connector.sync();
+const { loadCalendarState } = await import("../../src/connectors/google-calendar-state.js");
+JSON.stringify(Object.keys((await loadCalendarState(box.root)).eventFiles))
+=> []
+
+const msg = execSync("git log -1 --pretty=%B", { cwd: box.root, encoding: "utf-8" });
 JSON.stringify({
-  success: nextRun.success,
-  blamed: nextRun.error?.includes(`store/calendar/${file} (local-push, HTTP 404)`),
-  kept: (await readFile(join(dir, file), "utf-8")).includes("MINE now"),
+  section: msg.includes("Stranded:"),
+  reason: msg.includes("MINE now — deleted on Google (HTTP 404)"),
 })
-=> {"success":false,"blamed":true,"kept":true}
+=> {"section":true,"reason":true}
+```
+
+BOTH ends of the move are in that commit — the vacated path as well as the new
+one. A commit that recorded only the arrival would leave the old path staged-but
+-uncommitted, for the box's next sweep to attribute to whatever ran next:
+
+```ts continue
+const nameStatus = execSync("git show --name-status --pretty=format: HEAD", { cwd: box.root, encoding: "utf-8" });
+// Columns are status, path(s) — and the box package puts the box under
+// content/, so match by suffix rather than by a whole path.
+const rows = nameStatus.trim().split("\n").filter(Boolean).map((line) => line.split("\t"));
+const vacated = rows.find((row) => row[1]?.endsWith(`store/calendar/${file}`));
+// Git may record the move as a rename (R) or as a delete plus an add.
+const renamed = vacated?.[0]?.startsWith("R") === true
+  && vacated[2]?.endsWith(`store/calendar/stranded/${file}`) === true;
+const deletedAndAdded = vacated?.[0] === "D"
+  && rows.some((row) => row[0] === "A" && row[1]?.endsWith(`store/calendar/stranded/${file}`));
+JSON.stringify({ recorded: renamed || deletedAndAdded })
+=> {"recorded":true}
+```
+
+Nothing is left behind in the working tree either:
+
+```ts continue
+JSON.stringify({
+  status: execSync("git status --short", { cwd: box.root, encoding: "utf-8" }).trim(),
+})
+=> {"status":""}
+```
+
+The next run neither calls the API for it nor mentions it — the retry loop is
+over, and the boxholder's edit is sitting in `stranded/` if they want it back:
+
+```ts continue
+const quietRun = await connector.sync();
+JSON.stringify({
+  success: quietRun.success,
+  patchCalls,
+  error: quietRun.error ?? null,
+  stillThere: (await readdir(join(dir, "stranded"))).includes(file),
+})
+=> {"success":true,"patchCalls":1,"error":null,"stillThere":true}
 ```
 
 ```ts cleanup
 await box.cleanup();
+```
+
+## A transient failure is retried for a week, then stranded
+
+A 503 says nothing about whether Google would ever take the edit, so it is
+retried on every wakeup — but not forever. `pendingSince` records when the edit
+first failed, and the first run more than `STRANDED_AFTER_MS` (seven days)
+later gives up on it.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+box.commitAll("init box");
+
+const inner = createFakeGoogleCalendar({
+  calendars: [{ id: "primary", summary: "Main", primary: true, accessRole: "owner" }],
+  events: [
+    {
+      id: "evt-lunch",
+      status: "confirmed",
+      summary: "Lunch",
+      updated: "2026-06-01T10:00:00Z",
+      start: { dateTime: "2026-06-05T12:00:00Z" },
+      end: { dateTime: "2026-06-05T13:00:00Z" },
+    },
+  ],
+});
+
+let clock = new Date("2026-06-15T12:00:00Z");
+let patchFails = true;
+const calendar: GoogleCalendarService = {
+  ...inner,
+  listEvents: async (calendarId, opts) => {
+    if (opts?.syncToken) return { items: [], nextSyncToken: "fake-sync-token-2" };
+    return inner.listEvents(calendarId, opts);
+  },
+  patchEvent: async (calendarId, opts) => {
+    if (patchFails) return throwCalendarHttpError(503, "https://calendar.test/events/evt-lunch");
+    return inner.patchEvent(calendarId, opts);
+  },
+};
+
+const connector = createGoogleCalendarConnector(box.root, { calendar, now: () => clock });
+await connector.sync();
+
+const dir = join(box.root, "store/calendar");
+const file = (await readdir(dir)).filter((f) => f.endsWith(".ics"))[0] ?? "";
+const localIcs = await readFile(join(dir, file), "utf-8");
+await writeFile(join(dir, file), localIcs.replace("SUMMARY:Lunch", "SUMMARY:Lunch MINE"));
+
+// First failure: reported, file kept, and the retry window opens.
+const firstFail = await connector.sync();
+const { loadCalendarState } = await import("../../src/connectors/google-calendar-state.js");
+const afterFirst = (await loadCalendarState(box.root)).eventFiles["evt-lunch"];
+JSON.stringify({
+  success: firstFail.success,
+  http: firstFail.error?.includes("(local-push, HTTP 503)"),
+  kept: (await readdir(dir)).includes(file),
+  pendingSince: typeof afterFirst === "string" ? null : afterFirst?.pendingSince,
+})
+=> {"success":false,"http":true,"kept":true,"pendingSince":"2026-06-15T12:00:00.000Z"}
+```
+
+A day later it is still inside the window, so it is retried — and the stamp is
+left alone, because the window measures the edit's age, not this run's:
+
+```ts continue
+clock = new Date("2026-06-16T12:00:00Z");
+const secondFail = await connector.sync();
+const afterSecond = (await loadCalendarState(box.root)).eventFiles["evt-lunch"];
+JSON.stringify({
+  http: secondFail.error?.includes("(local-push, HTTP 503)"),
+  kept: (await readdir(dir)).includes(file),
+  pendingSince: typeof afterSecond === "string" ? null : afterSecond?.pendingSince,
+})
+=> {"http":true,"kept":true,"pendingSince":"2026-06-15T12:00:00.000Z"}
+```
+
+Eight days after the first failure the edit has run out of window. It is
+stranded with the last error named, and the run after that says nothing:
+
+```ts continue
+clock = new Date("2026-06-23T12:00:00Z");
+const strandRun = await connector.sync();
+const quietRun = await connector.sync();
+JSON.stringify({
+  blamed: strandRun.error?.includes("(local-push, local: stranded — not pushed for 7 days: HTTP 503)"),
+  gone: (await readdir(dir)).includes(file),
+  kept: (await readFile(join(dir, "stranded", file), "utf-8")).includes("Lunch MINE"),
+  tracked: Object.keys((await loadCalendarState(box.root)).eventFiles).length,
+  quiet: quietRun.error ?? null,
+})
+=> {"blamed":true,"gone":false,"kept":true,"tracked":0,"quiet":null}
+```
+
+A push Google accepts inside the window closes it instead: the stamp is dropped
+the moment the edit lands, so a later unrelated failure starts a fresh week
+rather than inheriting a spent one.
+
+```ts continue
+const box2 = await makeTmpBox({ git: true });
+await initBox(box2.root);
+box2.commitAll("init box");
+clock = new Date("2026-06-15T12:00:00Z");
+patchFails = true;
+inner.events = [
+  {
+    id: "evt-lunch",
+    status: "confirmed",
+    summary: "Lunch",
+    updated: "2026-06-01T10:00:00Z",
+    start: { dateTime: "2026-06-05T12:00:00Z" },
+    end: { dateTime: "2026-06-05T13:00:00Z" },
+  },
+];
+const connector2 = createGoogleCalendarConnector(box2.root, { calendar, now: () => clock });
+await connector2.sync();
+
+const dir2 = join(box2.root, "store/calendar");
+const file2 = (await readdir(dir2)).filter((f) => f.endsWith(".ics"))[0] ?? "";
+const ics2 = await readFile(join(dir2, file2), "utf-8");
+await writeFile(join(dir2, file2), ics2.replace("SUMMARY:Lunch", "SUMMARY:Lunch MINE"));
+await connector2.sync();
+
+patchFails = false;
+clock = new Date("2026-06-18T12:00:00Z");
+const accepted = await connector2.sync();
+const entry2 = (await loadCalendarState(box2.root)).eventFiles["evt-lunch"];
+JSON.stringify({
+  success: accepted.success,
+  remote: inner.events[0]?.summary,
+  pendingSince: typeof entry2 === "string" ? null : entry2?.pendingSince ?? null,
+})
+=> {"success":true,"remote":"Lunch MINE","pendingSince":null}
+```
+
+```ts cleanup
+await box.cleanup();
+await box2.cleanup();
 ```
 
 ## A full resync never removes a recurring master
@@ -1320,6 +1512,12 @@ const calendar: GoogleCalendarService = {
     }
     return inner.listEvents(calendarId, opts);
   },
+  // Google still holds the series even though the resync did not list it, so a
+  // patch to it succeeds. (The stale pass has already run by then — this is
+  // what makes the section's claim about the master testable with an edit.)
+  patchEvent: async (_calendarId, opts) => ({
+    ...opts.event, id: "evt-weekly", status: "confirmed", updated: "2026-06-15T00:00:00Z",
+  }),
 };
 
 const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
@@ -1342,6 +1540,23 @@ const { loadCalendarState } = await import("../../src/connectors/google-calendar
 const state = await loadCalendarState(box.root);
 JSON.stringify(Object.keys(state.eventFiles))
 => ["evt-weekly"]
+```
+
+A LOCALLY EDITED master is not stranded either. A non-recurring event missing
+from a full resync is deleted-on-Google and its edit is given up on; for a
+master, absence is not evidence, so the edit stays in the ordinary push queue:
+
+```ts continue
+const edited = (await readFile(join(dir, file), "utf-8")).replace("Weekly sync", "Weekly sync MINE");
+await writeFile(join(dir, file), edited);
+const afterEdit = await connector.sync();
+JSON.stringify({
+  success: afterEdit.success,
+  kept: (await readdir(dir)).includes(file),
+  stranded: (await readdir(dir)).includes("stranded"),
+  tracked: Object.keys((await loadCalendarState(box.root)).eventFiles),
+})
+=> {"success":true,"kept":true,"stranded":false,"tracked":["evt-weekly"]}
 ```
 
 ```ts cleanup

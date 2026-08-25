@@ -24,6 +24,7 @@ import {
   type CalendarSyncFailure,
   type SyncNote,
 } from "./google-calendar-notes.js";
+import { recordFailedLocalPush } from "./google-calendar-strand.js";
 import {
   patchEventViaApi,
   type CalendarState,
@@ -119,6 +120,9 @@ export async function writeBackPushedEvent(opts: {
   const pushedEntry: EventFileEntry = {
     ...entry, contentHash: contentHash(ics), remoteUpdated: event.updated,
   };
+  // Google took the edit, so nothing is owed: the retry window that would end
+  // in stranding closes here (see google-calendar-strand.ts).
+  delete pushedEntry.pendingSince;
   state.eventFiles[googleEventId] = pushedEntry;
   try {
     await fs.writeFile(path.join(calDir, entry.filename), ics);
@@ -171,8 +175,10 @@ async function readPendingEdit(opts: {
  * the sync token advanced past it, and a patch that failed once was never
  * retried for the same reason.
  *
- * The contentHash mismatch IS the retry queue: no new state, and an edit stops
- * being pending exactly when Google has accepted it. Entries this run's pull
+ * The contentHash mismatch IS the retry queue: an edit stops being pending
+ * exactly when Google has accepted it — or when the edit is stranded, because
+ * Google will never accept it (a 404/410 patch) or has not accepted it for a
+ * week (see google-calendar-strand.ts). Entries this run's pull
  * (or the post-410 stale pass) already dealt with are skipped via
  * `reconciledEventIds` so nothing is pushed or reported twice.
  *
@@ -188,11 +194,14 @@ export async function pushPendingLocalEdits(opts: {
   calDir: string;
   reconciledEventIds: Set<string>;
   icsOptsFor: (calendarId: string) => IcsOptions;
-}): Promise<{ updated: string[]; notes: SyncNote[]; failures: CalendarSyncFailure[] }> {
-  const { boxRoot, calendar, state, calDir, reconciledEventIds, icsOptsFor } = opts;
+  /** Domain time (the connector's injected clock) — the retry window's "now". */
+  now: Date;
+}): Promise<{ updated: string[]; notes: SyncNote[]; failures: CalendarSyncFailure[]; stranded: string[] }> {
+  const { boxRoot, calendar, state, calDir, reconciledEventIds, icsOptsFor, now } = opts;
   const updated: string[] = [];
   const notes: SyncNote[] = [];
   const failures: CalendarSyncFailure[] = [];
+  const stranded: string[] = [];
 
   for (const [googleEventId, entry] of Object.entries(state.eventFiles)) {
     if (typeof entry === "string") continue;
@@ -212,9 +221,14 @@ export async function pushPendingLocalEdits(opts: {
       localContent, filename: entry.filename, relPath,
     });
     if (outcome.kind === "failed") {
-      // Everything stays as it is — the file, its stored hash, the notes — so
-      // the next sync finds the same mismatch and tries again.
-      failures.push(outcome.failure);
+      // A retried failure leaves everything as it is — the file, its stored
+      // hash, the notes — so the next sync finds the same mismatch and tries
+      // again. A definitive one (or a week of transient ones) strands instead:
+      // the file moves to stranded/ and the entry goes away.
+      await recordFailedLocalPush({
+        boxRoot, calDir, state, googleEventId, entry, localContent,
+        failure: outcome.failure, now, acc: { notes, failures, stranded },
+      });
       continue;
     }
 
@@ -242,5 +256,5 @@ export async function pushPendingLocalEdits(opts: {
     });
   }
 
-  return { updated, notes, failures };
+  return { updated, notes, failures, stranded };
 }

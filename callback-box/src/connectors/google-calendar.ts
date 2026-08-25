@@ -190,6 +190,11 @@ class GoogleCalendarConnector implements Connector {
     const created: string[] = [];
     const updated: string[] = [];
     const deleted: string[] = [];
+    // Paths a stranding moved — the vacated one and its new home under
+    // store/calendar/stranded/. Kept apart from created/updated/deleted so the
+    // path-scoped commit records the move without the sync claiming it as an
+    // event it created or updated.
+    const stranded: string[] = [];
     const allNotes: SyncNote[] = [];
     const failures: CalendarSyncFailure[] = [];
     let isFullResync = false;
@@ -202,8 +207,8 @@ class GoogleCalendarConnector implements Connector {
 
       const outcome = await runCalendarSync({
         boxRoot: this.boxRoot, calendar, calendarId, syncToken: existingSyncToken, icsOpts: icsOptsFor(calendarId),
-        state, calDir, syncDaysBack, syncDaysForward, windowStart, windowEnd, snapshot,
-        acc: { created, updated, deleted, allNotes, failures, reconciledEventIds },
+        state, calDir, syncDaysBack, syncDaysForward, windowStart, windowEnd, now, snapshot,
+        acc: { created, updated, deleted, stranded, allNotes, failures, reconciledEventIds },
       });
       switch (outcome.kind) {
         case "synced":
@@ -228,11 +233,12 @@ class GoogleCalendarConnector implements Connector {
     // file marked X-CB-DELETE is gone (or still marked, and skipped) rather
     // than patched.
     const pendingResult = await pushPendingLocalEdits({
-      boxRoot: this.boxRoot, calendar, state, calDir, reconciledEventIds, icsOptsFor,
+      boxRoot: this.boxRoot, calendar, state, calDir, reconciledEventIds, icsOptsFor, now,
     });
     updated.push(...pendingResult.updated);
     allNotes.push(...pendingResult.notes);
     failures.push(...pendingResult.failures);
+    stranded.push(...pendingResult.stranded);
 
     // Push locally-created files to Google, clean unparseable orphans
     const defaultCalendarId = calendars[0] || "primary";
@@ -255,7 +261,7 @@ class GoogleCalendarConnector implements Connector {
     // cached calendar metadata (names/roles). stageAndCommitPaths' fast path
     // no-ops when none of these actually changed, replacing the old
     // getStatus-guarded second commit for a token-only refresh.
-    const changedEventFiles = [...created, ...updated, ...deleted, ...pushed];
+    const changedEventFiles = [...created, ...updated, ...deleted, ...pushed, ...stranded];
     const paths = [
       ...changedEventFiles,
       path.relative(this.boxRoot, this.statePath()),

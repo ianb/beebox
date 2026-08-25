@@ -27,6 +27,14 @@ export interface EventFileEntry {
   contentHash?: string;
   /** Google event `updated` timestamp captured at the last pull, for remote-change detection */
   remoteUpdated?: string | undefined;
+  /**
+   * ISO timestamp of the FIRST push failure for the local edit currently
+   * pending on this event — the start of the retry window that ends in
+   * stranding (see google-calendar-strand.ts). Left alone by later failures,
+   * deleted the moment Google accepts a push. Absent means nothing is owed, or
+   * the edit has not yet failed once.
+   */
+  pendingSince?: string | undefined;
 }
 
 /**

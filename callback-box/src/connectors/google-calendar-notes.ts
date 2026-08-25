@@ -21,7 +21,7 @@ import { type GoogleCalendarEvent } from "./google-calendar-ics.js";
 export const CB_DELETE_PATTERN = /^x-cb-delete[:;](.*)$/im;
 
 export interface SyncNote {
-  action: "new" | "updated" | "deleted" | "pushed" | "cancelled";
+  action: "new" | "updated" | "deleted" | "pushed" | "cancelled" | "stranded";
   summary: string;
   detail?: string;
   ref?: string;
@@ -250,6 +250,7 @@ export function buildNarrativeCommitMessage(
   if (counts["deleted"]) parts.push(`${counts["deleted"]} deleted`);
   if (counts["pushed"]) parts.push(`${counts["pushed"]} pushed`);
   if (counts["cancelled"]) parts.push(`${counts["cancelled"]} cancelled`);
+  if (counts["stranded"]) parts.push(`${counts["stranded"]} stranded`);
 
   let message = failures.length > 0
     ? `Sync calendar: partial (${String(opts.totalEvents ?? notes.length)} changed, ${String(failures.length)} failed)`
@@ -262,6 +263,7 @@ export function buildNarrativeCommitMessage(
     { label: "Pushed", action: "pushed" },
     { label: "Deleted", action: "deleted" },
     { label: "Cancelled", action: "cancelled" },
+    { label: "Stranded", action: "stranded" },
   ];
 
   const bodyParts: string[] = [];

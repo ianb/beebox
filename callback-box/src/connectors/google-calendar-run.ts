@@ -29,7 +29,7 @@ type CalendarSyncOutcome =
 
 function emptySyncAccumulator(): SyncAccumulator {
   return {
-    created: [], updated: [], deleted: [], notes: [], failures: [],
+    created: [], updated: [], deleted: [], notes: [], failures: [], stranded: [],
     reconciledEventIds: new Set(), seenEventIds: new Set(),
   };
 }
@@ -51,24 +51,29 @@ export async function runCalendarSync(opts: {
   syncDaysForward: number;
   windowStart: Date;
   windowEnd: Date;
+  /** Domain time (the connector's injected clock) — the retry window's "now". */
+  now: Date;
   snapshot: SyncTokenSnapshot;
   acc: {
-    created: string[]; updated: string[]; deleted: string[];
+    created: string[]; updated: string[]; deleted: string[]; stranded: string[];
     allNotes: SyncNote[]; failures: CalendarSyncFailure[]; reconciledEventIds: Set<string>;
   };
 }): Promise<CalendarSyncOutcome> {
   const { boxRoot, calendar, calendarId, syncToken, icsOpts, state, calDir,
-          syncDaysBack, syncDaysForward, windowStart, windowEnd, snapshot, acc } = opts;
+          syncDaysBack, syncDaysForward, windowStart, windowEnd, now, snapshot, acc } = opts;
   const saveState = async (): Promise<void> =>
     saveCalendarState(boxRoot, { state, snapshot });
   const base = {
     boxRoot, calendar, calendarId, syncDaysBack, syncDaysForward,
-    state, icsOpts, calDir, windowStart, windowEnd,
+    state, icsOpts, calDir, windowStart, windowEnd, now,
   };
   const collect = (r: SyncAccumulator, opts2: { withNotes: boolean; withFailures: boolean }): void => {
     acc.created.push(...r.created);
     acc.updated.push(...r.updated);
     acc.deleted.push(...r.deleted);
+    // Always collected: a strand MOVED a file, and the commit is path-scoped —
+    // a dropped path leaves the move half-recorded in git.
+    acc.stranded.push(...r.stranded);
     // Always union the reconciled ids, even for a discarded 410 attempt: the
     // pull DID look at those events, so the pending pass has nothing to add.
     for (const id of r.reconciledEventIds) acc.reconciledEventIds.add(id);
