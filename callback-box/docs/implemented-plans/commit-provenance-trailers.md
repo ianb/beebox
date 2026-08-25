@@ -1,9 +1,9 @@
 ---
 title: "Commit provenance trailers: Workstream / Plan / Issue"
-status: draft
+status: implemented
 workstream: commit-provenance
 issues:
-  - ../../../issues/decisions/2026-08-24-commit-trailers-for-workstream-issue-plan.md
+  - ../../../issues/closed/decisions/2026-08-24-commit-trailers-for-workstream-issue-plan.md
   - ../../../issues/closed/features/2026-08-20-no-way-to-know-what-a-workstream-covers.md
 ---
 

@@ -40,5 +40,5 @@ override.
 
 ## Related
 
-- [Commit trailers for workstream/issue/plan](../decisions/2026-08-24-commit-trailers-for-workstream-issue-plan.md)
+- [Commit trailers for workstream/issue/plan](../closed/decisions/2026-08-24-commit-trailers-for-workstream-issue-plan.md)
   — the other trailer family, descriptive rather than an override.

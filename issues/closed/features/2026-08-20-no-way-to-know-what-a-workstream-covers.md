@@ -14,6 +14,10 @@ Implemented by the workstream-routing plan: launch records now carry concise
 descriptions, the CLI and app expose routing state/action/age, and the launch
 skill routes related work before creating a new stream.
 
+Also answered from the commit side: `pnpm commit-provenance --workstream
+<name>` lists every commit a stream produced (see
+`callback-box/docs/implemented-plans/commit-provenance-trailers.md`).
+
 > I think there's a workstream that *should* own this (one that already exists),
 > but I'm not sure.
 

@@ -7,7 +7,10 @@ labels: [git, workstreams, issues, provenance]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder wanting structured commit metadata
+resolution: implemented
 ---
+
+> Closed: implemented by the commit-provenance-trailers plan. Resolving commits: `887f7a51` (script + hooks), `2fa2822c` (`bin/land --no-ff`), `8356dcd6` (review fixes), `77727b99` (CLAUDE.md convention).
 
 > I feel like we should have more structure in our git commit messages. Like
 > trailers that show associations with workstreams, issues, plans, etc.
