@@ -23,6 +23,10 @@ workstream_resume_state() {
     printf 'culled\n'
   elif printf '%s' "$record" | jq -e '.removed != null' >/dev/null 2>&1; then
     printf 'removed-unmerged\n'
+  elif printf '%s' "$record" | jq -e '.kind == "scheduled"' >/dev/null 2>&1; then
+    # Sticky record, disposable worktree: an absent scheduled workstream is
+    # always recreatable, and never carries a `removed` block to prove it.
+    printf 'scheduled\n'
   else
     printf 'unknown\n'
   fi

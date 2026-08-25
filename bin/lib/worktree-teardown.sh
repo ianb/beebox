@@ -511,6 +511,27 @@ wt_remove_private_issues() {
   return 0
 }
 
+# wt_removal_patch <record-json> <removed-at> <final-sha> <box-ref> <merged>
+# The registry patch a culled worktree leaves behind. A scheduled record only
+# drops its launch lease: its worktree is disposable and recreatable, so marking
+# it `removed` would hide it from `list` and route it as removed rather than
+# scheduled. Everything else records the removal for later recovery.
+wt_removal_patch() {
+  local record="$1" removed_at="$2" final_sha="$3" box_ref="$4" merged="$5"
+  if session_registry_is_scheduled "$record"; then
+    printf '{"launch":null}\n'
+    return 0
+  fi
+  jq -cn \
+    --arg at "$removed_at" \
+    --arg finalSha "$final_sha" \
+    --arg boxRef "$box_ref" \
+    --argjson merged "$merged" \
+    '{launch:null, removed: ({at:$at, merged:$merged}
+      + if $finalSha == "" then {} else {finalSha:$finalSha} end
+      + if $boxRef == "" then {} else {boxRef:$boxRef} end)}'
+}
+
 wt_remove_now_locked() {
   local worktree_path="$1" branch="$2" keep_branch="" preserve_box="" arg
   shift 2
@@ -586,14 +607,9 @@ wt_remove_now_locked() {
   wt_git_admin_lock_release
 
   if [ "$moved" = true ]; then
-    removed_patch=$(jq -n \
-      --arg at "$removed_at" \
-      --arg finalSha "$final_sha" \
-      --arg boxRef "$box_ref" \
-      --argjson merged "$removed_merged" \
-      '{launch:null, removed: ({at:$at, merged:$merged}
-        + if $finalSha == "" then {} else {finalSha:$finalSha} end
-        + if $boxRef == "" then {} else {boxRef:$boxRef} end)}')
+    removed_patch=$(wt_removal_patch \
+      "$(session_registry_read "$name" 2>/dev/null || true)" \
+      "$removed_at" "$final_sha" "$box_ref" "$removed_merged")
     session_registry_merge "$name" "$removed_patch" || true
   fi
 

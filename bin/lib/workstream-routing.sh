@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Pure routing-state projection for bin/workstreams list.
+# Pure routing-state projection for bin/workstreams list. States:
+# launching | live | scheduled | removed | stale | dormant | uncertain.
 
 # shellcheck source=session-registry.sh
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/session-registry.sh"
@@ -15,6 +16,23 @@ workstream_epoch_iso() {
   local value="$1"
   date -j -u -f '%s' "$value" '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null \
     || date -u -d "@$value" '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null
+}
+
+# workstream_schedule_row <schedules-list-json> <name>
+# The `schedule` field of one `bin/workstreams list` row: the named schedule's
+# entry in `bin/schedules list --json`, or null for a workstream that is not a
+# schedule. `heartbeat` is the whole scheduler's last tick rather than this
+# schedule's — carried per row so a reader that only ever sees rows can still
+# tell that the tick itself stopped, which is what makes `overdue` trustworthy.
+workstream_schedule_row() {
+  jq -c --arg name "$2" '
+    ((.schedules | map(select(.name == $name)) | first) // null) as $s
+    | if $s == null then null else {
+        cadence: $s.cadence, enabled: $s.enabled,
+        lastRunAt: $s.lastRunAt, lastOutcome: $s.lastOutcome,
+        overdue: $s.overdue, nextDueAt: $s.nextDueAt, openAlerts: $s.openAlerts,
+        heartbeat: (if .lastTickAt == null then null else {lastTickAt: .lastTickAt} end)
+      } end' <<<"$1"
 }
 
 # workstream_routing_json <exists> <agent-state> <record-json> <tip-epoch> <dir-epoch> <now-epoch>
@@ -51,6 +69,11 @@ workstream_routing_json() {
     state="launching"; action="wait-for-launch"
   elif [ "$launch_state" != "none" ]; then
     state="uncertain"; action="investigate"
+  elif [ "$agent_state" = "none" ] && session_registry_is_scheduled "$record"; then
+    # Placed after the launch-state branches on purpose: `live`, `launching`,
+    # and `unknown` are fail-closed answers about a running agent, and a
+    # schedule's record must never talk over one.
+    state="scheduled"; action="resume-with-briefing"
   elif [ "$exists" != "true" ] && [ -n "$removed_at" ]; then
     state="removed"; action="resume-with-briefing"
   elif [ -n "$last_epoch" ] && [ $((now_epoch - last_epoch)) -ge $((14 * 24 * 60 * 60)) ]; then
