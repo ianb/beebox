@@ -63,6 +63,27 @@ discovers the child again. Use `cb rm` to exclude one folder child, or remove
 the folder entry from `config/connectors/google-drive.json` to stop tracking
 the whole folder.
 
+### Ambiguous local identity fails closed
+
+One Drive file has one card. When local identity is ambiguous, the connector
+declines to sync rather than guessing — the run reports a failure (which
+`cb wakeup` counts as a connector error) and names the paths involved:
+
+- **Two live cards with the same `drive-id`.** Transient content hashes are
+  keyed by Drive ID while attachments live per card, so syncing either copy can
+  push its stale attachments over the other's edit. Neither is synced; delete
+  or re-point one card to resolve it. `cb drive add` refuses a Drive file that
+  a live card already claims.
+- **A remote file whose derived card name is already taken by a different
+  `drive-id`.** Folder discovery reports the collision instead of skipping the
+  child silently. Rename the local card (or the Drive file) to give the child a
+  free name.
+- **A Drive card whose `drive-id` cannot be read.** It may be the trash
+  tombstone that suppresses a folder child, so folder discovery is skipped
+  entirely for that run; per-card sync still runs. Fix or remove the card.
+
+`cb drive status` lists all three alongside the healthy mounts.
+
 ### Sync Flow
 
 On `cb wakeup` or `cb drive sync`:

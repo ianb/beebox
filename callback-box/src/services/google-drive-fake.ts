@@ -57,6 +57,8 @@ export interface FakeGoogleDriveService extends GoogleDriveService {
   documents: Map<string, FakeDocument>;
   updateLog: Array<{ fileId: string; sheetTitle: string; values: string[][] }>;
   contentUpdateLog: Array<{ fileId: string; mimeType: string; content: string }>;
+  /** Stable, human-readable snapshot of remote state and writes so far. */
+  describe(): string;
 }
 
 export function createFakeGoogleDrive(
@@ -145,6 +147,37 @@ export function createFakeGoogleDrive(
     async listComments(fileId) {
       const doc = fake.documents.get(fileId);
       return doc ? [...doc.comments] : [];
+    },
+
+    describe() {
+      const lines: string[] = [];
+      lines.push("files:");
+      for (const file of fake.files.toSorted((a, b) => a.id.localeCompare(b.id))) {
+        lines.push(`  ${file.id} "${file.name}" ${file.mimeType} modified=${file.modifiedTime}`);
+      }
+      lines.push("spreadsheets:");
+      for (const [id, sheet] of [...fake.spreadsheets].toSorted(([a], [b]) => a.localeCompare(b))) {
+        lines.push(`  ${id} "${sheet.metadata.properties.title}"`);
+        for (const [title, values] of [...sheet.sheets].toSorted(([a], [b]) => a.localeCompare(b))) {
+          lines.push(`    ${title}: ${JSON.stringify(values)}`);
+        }
+      }
+      lines.push("documents:");
+      for (const [id, doc] of [...fake.documents].toSorted(([a], [b]) => a.localeCompare(b))) {
+        lines.push(`  ${id} revision=${doc.structure.revisionId} comments=${String(doc.comments.length)}`);
+        for (const [mimeType, content] of [...doc.exports].toSorted(([a], [b]) => a.localeCompare(b))) {
+          lines.push(`    ${mimeType}: ${JSON.stringify(content)}`);
+        }
+      }
+      lines.push(`updateLog (${String(fake.updateLog.length)}):`);
+      for (const entry of fake.updateLog) {
+        lines.push(`  ${entry.fileId} ${entry.sheetTitle} ${JSON.stringify(entry.values)}`);
+      }
+      lines.push(`contentUpdateLog (${String(fake.contentUpdateLog.length)}):`);
+      for (const entry of fake.contentUpdateLog) {
+        lines.push(`  ${entry.fileId} ${entry.mimeType} ${JSON.stringify(entry.content)}`);
+      }
+      return lines.join("\n");
     },
   };
 
