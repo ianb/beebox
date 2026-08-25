@@ -234,3 +234,23 @@ test("fileset hashing is order-independent", () => {
 test("different filesets hash differently", () => {
   assert.notEqual(hashFileset(["a"]), hashFileset(["a", "b"]));
 });
+
+// ── schema additions ────────────────────────────────────────────────────────
+
+test("a record written before the semaphore, with no tier or concurrency, still counts", () => {
+  // The semaphore added `tier`/`concurrency` (bin/test-locks.ts); the sixteen
+  // days of records that motivated it have neither, and voiding them would
+  // throw away the denominator the whole instrument exists to hold.
+  const old = { ...rec({}) } as Record<string, unknown>;
+  delete old.tier;
+  delete old.concurrency;
+  const parsed = JSON.parse(JSON.stringify(old)) as LedgerRecord;
+  assert.equal(parsed.tier, undefined);
+  assert.equal(summarize({ records: [parsed], filesets: FILESETS }).get("test/a.doctest.md")?.runs, 1);
+});
+
+test("a record from a run under the semaphore carries both", () => {
+  const record = rec({ tier: "careful", concurrency: 0 });
+  assert.equal(record.tier, "careful");
+  assert.equal(record.concurrency, 0);
+});

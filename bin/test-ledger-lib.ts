@@ -38,6 +38,16 @@ export interface LedgerRecord {
    * written now has it. See {@link isCompletedRun}.
    */
   exitCode?: number;
+  /**
+   * Which semaphore tier the run took (bin/test-locks.ts). Absent on records
+   * written before the semaphore existed.
+   */
+  tier?: "ordinary" | "careful";
+  /**
+   * Other runs holding a slot when this one started — the concurrency figure
+   * the plan's table had to estimate. Absent on pre-semaphore records.
+   */
+  concurrency?: number;
   /** Whether the graph accounted for every changed path; null if uncomputable. */
   accounted: boolean | null;
   changed: string[];

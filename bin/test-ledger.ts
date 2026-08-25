@@ -25,6 +25,7 @@ import { fileURLToPath } from "node:url";
 import { buildGraph } from "./test-graph.js";
 import { implicatedTests, isAccounted } from "./test-graph-query.js";
 import { renderReport } from "./test-ledger-report.js";
+import { acquire, lockDir, type Held, type Tier } from "./test-locks.js";
 import {
   classifyFailure,
   foldFilesets,
@@ -130,12 +131,68 @@ export function readRecords(path: string): LedgerRecord[] {
   return records;
 }
 
-async function runWrapped(command: string[]): Promise<number> {
+async function runWrapped(command: string[], tier: Tier): Promise<number> {
   const [executable, ...args] = command;
   if (executable === undefined) {
     console.error("test-ledger run: needs a command after --");
     return 2;
   }
+
+  // The semaphore (plan revision 2026-08-25, mechanism A): concurrent suites
+  // measurably slow each other down and turn each other red. Fail-open — a
+  // lock directory that cannot be used is not a reason to refuse to test.
+  const held = await holdSlot(tier);
+  try {
+    return await runUnderSlot({ executable, args, tier, concurrency: held?.concurrency ?? null });
+  } finally {
+    releaseHeld(held);
+  }
+}
+
+/** The one lock this process holds, so a signal handler can let it go. */
+let heldSlot: Held | null = null;
+
+function releaseHeld(held: Held | null): void {
+  if (held === null) return;
+  heldSlot = null;
+  held.release();
+}
+
+async function holdSlot(tier: Tier): Promise<Held | null> {
+  try {
+    const held = await acquire({
+      dir: lockDir(gitCommonDir()),
+      tier,
+      branch: git(["rev-parse", "--abbrev-ref", "HEAD"]),
+    });
+    heldSlot = held;
+    return held;
+  } catch (e) {
+    console.warn(`test-ledger: running without a slot (${String(e)})`);
+    return null;
+  }
+}
+
+/**
+ * A killed run must still give its slot back; the stale rules bound the damage
+ * when it cannot (SIGKILL), but they take two hours to do it.
+ */
+function installSignalReleases(): void {
+  for (const signal of ["SIGINT", "SIGTERM"] as const) {
+    process.once(signal, () => {
+      releaseHeld(heldSlot);
+      process.kill(process.pid, signal);
+    });
+  }
+}
+
+async function runUnderSlot(input: {
+  executable: string;
+  args: string[];
+  tier: Tier;
+  concurrency: number | null;
+}): Promise<number> {
+  const { executable, args } = input;
 
   // Tee stdout rather than using tap's `--output-file`.
   //
@@ -171,7 +228,14 @@ async function runWrapped(command: string[]): Promise<number> {
   try {
     await withTimeout(LEDGER_BUDGET_MS, async () => {
       const changed = changedPaths();
-      record({ tapOutput: output, changed, exitCode, graph: await computeGraph(changed) });
+      record({
+        tapOutput: output,
+        changed,
+        exitCode,
+        tier: input.tier,
+        concurrency: input.concurrency,
+        graph: await computeGraph(changed),
+      });
     });
   } catch (e) {
     // The ledger gates nothing, and that has to include liveness: the graph
@@ -241,6 +305,9 @@ function record(input: {
   tapOutput: string;
   changed: string[];
   exitCode: number;
+  tier: Tier;
+  /** Null when no slot could be taken, so the figure is unknown rather than zero. */
+  concurrency: number | null;
   graph: GraphView | null;
 }): void {
   const results = parseTapFiles(input.tapOutput);
@@ -262,6 +329,8 @@ function record(input: {
     treeHash: treeHash(),
     mode: "full",
     exitCode: input.exitCode,
+    tier: input.tier,
+    ...(input.concurrency === null ? {} : { concurrency: input.concurrency }),
     accounted,
     changed,
     ranFiles: hashFileset(ranFiles),
@@ -301,19 +370,34 @@ async function computeGraph(changed: string[]): Promise<GraphView | null> {
   }
 }
 
+/** Reads `--tier` from the wrapper's own flags; null on an unknown value. */
+function parseTier(flags: string[]): Tier | null {
+  const index = flags.indexOf("--tier");
+  if (index === -1) return "ordinary";
+  const value = flags[index + 1];
+  return value === "ordinary" || value === "careful" ? value : null;
+}
+
 export async function main(argv: string[]): Promise<void> {
   const [subcommand, ...rest] = argv;
   if (subcommand === "run") {
     const sepIndex = rest.indexOf("--");
     const command = sepIndex === -1 ? rest : rest.slice(sepIndex + 1);
-    process.exitCode = await runWrapped(command);
+    const tier = parseTier(sepIndex === -1 ? [] : rest.slice(0, sepIndex));
+    if (tier === null) {
+      console.error("test-ledger run: --tier takes ordinary or careful");
+      process.exitCode = 2;
+      return;
+    }
+    installSignalReleases();
+    process.exitCode = await runWrapped(command, tier);
     return;
   }
   if (subcommand === "report") {
     renderReport();
     return;
   }
-  console.error("usage: test-ledger run -- <command…> | test-ledger report");
+  console.error("usage: test-ledger run [--tier ordinary|careful] -- <command…> | test-ledger report");
   process.exitCode = 2;
 }
 
