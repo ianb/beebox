@@ -1,5 +1,5 @@
 /**
- * Flag-gated trace for the chat scroll controller (`InteractiveChat-scroll.ts`),
+ * Flag-gated trace for the chat scroll controller (`chat-scroll.ts`),
  * for diagnosing feel bugs on devices where no devtools exist (iOS). Toggled by
  * typing `/scrolldebug` in the composer; while on, the controller records every
  * scroll event, reconcile cycle, and programmatic write into a bounded buffer
@@ -10,11 +10,11 @@
  *
  * Reading a trace: each flush line is `[scroll-trace] [...]` holding an array
  * of events `{ t: ms-since-page-load, k: kind, ...detail }`. Kinds come from
- * the controller: "scroll" (one per scroll event, with the decideScroll action),
+ * the controller: "scroll" (one per scroll event, with its geometry),
  * "reconcile" (one per ResizeObserver cycle, with the decideReconcile action
- * and measured anchor delta), "write" (every programmatic scrollTop write),
- * "intent" (wheel/touchmove/scroll-key input marks — gaps in these during
- * scroll events are momentum).
+ * and measured anchor delta), and "write" (every programmatic scrollTop write —
+ * rare under the write-on-user-action model, and each one should be explainable
+ * by a user action or a resize compensation).
  */
 
 const MAX_EVENTS = 600;

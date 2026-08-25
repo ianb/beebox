@@ -43,6 +43,15 @@ const AT_BOTTOM_PX = 24;
 const GROWTH_EPSILON = 1;
 /** Re-pick the top-visible anchor this long after scrolling pauses. */
 const ANCHOR_RECAPTURE_MS = 80;
+/**
+ * How long the open-thread hold outlives `settleOpen()`. The caller can only
+ * report "the history is in the DOM" from an effect, which runs *before* the
+ * ResizeObserver cycle that measures it — and markdown, images and embeds keep
+ * resizing for a beat after that. The hold therefore lapses on a timer rather
+ * than on the report, and it is a fixed window, not one that growth can extend:
+ * a thread opened onto a live stream must not follow it forever.
+ */
+const OPEN_SETTLE_MS = 400;
 
 interface Anchor { el: Element; top: number }
 
@@ -61,8 +70,14 @@ interface Anchor { el: Element; top: number }
 function anchorChild(scroller: HTMLDivElement | null, content: HTMLDivElement | null): Anchor | null {
   if (!scroller || !content) return null;
   const scTop = scroller.getBoundingClientRect().top;
+  // The turns, not the content wrapper's immediate children: in the chat those
+  // are two boxes (the load-older header and the scan-boundary wrapper holding
+  // every message), and a ruler that spans the whole transcript measures no
+  // shift at all. Every item wrapper carries `data-role` for this.
+  const items = content.querySelectorAll("[data-role]");
+  const children: ArrayLike<Element> = items.length > 0 ? items : content.children;
   let last: Element | null = null;
-  for (const child of content.children) {
+  for (const child of Array.from(children)) {
     const r = child.getBoundingClientRect();
     if (r.top >= scTop - 1) return { el: child, top: r.top - scTop };
     last = child;
@@ -136,7 +151,7 @@ export interface ChatScroll {
   captureForPrepend: () => void;
   /** Begin the bounded open-thread phase (hold the bottom as content lands). */
   openThread: () => void;
-  /** End it: the first history render has landed. */
+  /** The first history render has landed — the hold lapses shortly after. */
   settleOpen: () => void;
   /** The scroller's clientHeight, for the last turn's min-height spacer. */
   viewportPx: number;
@@ -170,6 +185,7 @@ export function useChatScroll(): ChatScroll {
   const anchorRef = useRef<Anchor | null>(null);
   const anchorTimerRef = useRef<number | null>(null);
   const openPhaseRef = useRef(true);
+  const openTimerRef = useRef<number | null>(null);
   const observersRef = useRef<{ content: ResizeObserver | null; scroller: ResizeObserver | null }>({
     content: null,
     scroller: null,
@@ -199,24 +215,30 @@ export function useChatScroll(): ChatScroll {
     if (el) writeTop(el.scrollHeight - el.clientHeight, behavior);
   }, [writeTop]);
 
+  const endOpenPhase = useCallback(() => {
+    openPhaseRef.current = false;
+    if (openTimerRef.current !== null) window.clearTimeout(openTimerRef.current);
+    openTimerRef.current = null;
+  }, []);
+
   const scrollToBottom = useCallback((opts?: { behavior?: ScrollBehavior }) => {
     const el = scrollerElRef.current;
-    openPhaseRef.current = false;
+    endOpenPhase();
     setUnseen(false);
     writeToBottom(opts && opts.behavior ? opts.behavior : "instant");
     if (el) measure(el);
-  }, [setUnseen, writeToBottom, measure]);
+  }, [endOpenPhase, setUnseen, writeToBottom, measure]);
 
   const anchorToTop = useCallback((target: Element | null) => {
     const el = scrollerElRef.current;
     if (!el || !target) return;
-    openPhaseRef.current = false;
+    endOpenPhase();
     setUnseen(false);
     const offset = target.getBoundingClientRect().top - el.getBoundingClientRect().top;
     writeTop(el.scrollTop + offset, "instant");
     anchorRef.current = anchorChild(el, contentElRef.current);
     measure(el);
-  }, [setUnseen, writeTop, measure]);
+  }, [endOpenPhase, setUnseen, writeTop, measure]);
 
   const captureForPrepend = useCallback(() => {
     const el = scrollerElRef.current;
@@ -224,13 +246,15 @@ export function useChatScroll(): ChatScroll {
   }, []);
 
   const openThread = useCallback(() => {
+    endOpenPhase();
     openPhaseRef.current = true;
     writeToBottom("instant");
-  }, [writeToBottom]);
+  }, [endOpenPhase, writeToBottom]);
 
   const settleOpen = useCallback(() => {
-    openPhaseRef.current = false;
-  }, []);
+    if (!openPhaseRef.current || openTimerRef.current !== null) return;
+    openTimerRef.current = window.setTimeout(endOpenPhase, OPEN_SETTLE_MS);
+  }, [endOpenPhase]);
 
   // Re-pick the anchor once scrolling pauses: the previous one has usually
   // scrolled out of view, and the compensations only work against a child that
@@ -255,10 +279,10 @@ export function useChatScroll(): ChatScroll {
     const fromBottom = measure(el);
     // A reader who scrolls away while the thread is still loading has taken
     // over; the open-phase hold is theirs to end.
-    if (openPhaseRef.current && fromBottom > AT_BOTTOM_PX) openPhaseRef.current = false;
+    if (openPhaseRef.current && fromBottom > AT_BOTTOM_PX) endOpenPhase();
     recordScrollTrace("scroll", { top: Math.round(el.scrollTop), fb: Math.round(fromBottom), at: atBottomRef.current, open: openPhaseRef.current });
     scheduleAnchorRecapture();
-  }, [measure, atBottomRef, scheduleAnchorRecapture]);
+  }, [measure, atBottomRef, endOpenPhase, scheduleAnchorRecapture]);
 
   // Both ResizeObservers funnel here: the pure `decideReconcile` classifies the
   // cycle, this measures the DOM facts it needs and applies the compensation.
@@ -323,6 +347,7 @@ export function useChatScroll(): ChatScroll {
       if (observers.content) observers.content.disconnect();
       if (observers.scroller) observers.scroller.disconnect();
       if (anchorTimerRef.current !== null) window.clearTimeout(anchorTimerRef.current);
+      if (openTimerRef.current !== null) window.clearTimeout(openTimerRef.current);
     };
   }, []);
 

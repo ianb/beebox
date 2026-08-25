@@ -1,6 +1,6 @@
 ---
 title: "Chat scroll: write on user actions only"
-status: draft
+status: active
 workstream: chat-scroll
 issues:
   - ../../../issues/bugs/2026-08-13-chat-cannot-stay-at-bottom-while-growing.md
@@ -112,7 +112,10 @@ that scroll ours". The scroll handler records geometry and recomputes
 `atBottom`. Estimated size: ~180 lines; `decideReconcile` stays as the pure
 rule-4 dispatcher.
 
-### Decision for the boxholder: does anything still follow?
+### Decision: does anything still follow?
+
+**Decided 2026-08-25 by the boxholder: no auto-scroll except on the user's own
+send.** The rest of this section records the alternative that was weighed.
 
 Under this model nothing follows the bottom — not the streaming reply, and not
 a message that arrives without a local send (another participant, an agent
