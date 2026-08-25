@@ -184,3 +184,50 @@ const result = reconcilePending({
 result.pendingMessages.length
 => 0
 ```
+
+## A turn whose images were stripped still retires its pending copy
+
+The client's optimistic entry keeps the user's photos as image blocks, which
+contribute nothing to the entry's text. The server's copy of the same turn, read
+back from a session log whose inline media was stripped for size, has each image
+block replaced by placeholder *text*.
+
+Comparing the two verbatim fails: the server's text carries characters the
+client's never had. The pending entry is then never retired and the user sees
+their own message twice — once with their photos, once with grey placeholders.
+A journey walker hit exactly that on 2026-08-24 and reported the app as
+duplicating their message.
+
+```ts
+const optimistic: PendingSessionEntry = {
+  uuid: "m1", type: "user", timestamp: "2026-01-01T00:00:00Z", pending: true,
+  reconcileKnownUuids: [],
+  content: [
+    { type: "image", mediaType: "image/jpeg", dataBase64: "AAAA" },
+    { type: "text", text: " " },
+    { type: "image", mediaType: "image/jpeg", dataBase64: "BBBB" },
+    { type: "text", text: " workroom tray 1" },
+  ],
+};
+const stripped: SessionEntry = {
+  uuid: "s1", type: "user", timestamp: "2026-01-01T00:00:01Z",
+  content: [
+    { type: "text", text: "[image not displayed]" },
+    { type: "text", text: " " },
+    { type: "text", text: "[image not displayed]" },
+    { type: "text", text: " workroom tray 1" },
+  ],
+};
+const out = reconcilePending({ serverMessages: [stripped], pendingMessages: [optimistic] });
+JSON.stringify({ rendered: out.messages.length, stillPending: out.pendingMessages.length })
+=> {"rendered":1,"stillPending":0}
+```
+
+A turn that genuinely has not reached the server yet is still kept, placeholders
+or not — the fix must not retire an entry the server has never seen.
+
+```ts continue
+const unsent = reconcilePending({ serverMessages: [], pendingMessages: [optimistic] });
+JSON.stringify({ rendered: unsent.messages.length, stillPending: unsent.pendingMessages.length })
+=> {"rendered":1,"stillPending":1}
+```

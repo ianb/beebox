@@ -160,7 +160,6 @@ log(`Verify: ${accurate} accurate, ${inaccurate} flagged of ${accurate + inaccur
 // appears to say. Verdicts here override code verdicts downstream.
 // ---------------------------------------------------------------------------
 
-phase("Browser");
 
 /** What driving the running app established about one story. */
 interface BrowserCheck {
@@ -272,6 +271,12 @@ let inconclusive = 0;
 let browserAgentFailures = 0;
 
 if (resolvedPages.length > 0) {
+  // Announced here, not above the Browser section's type declarations: `phase()` is
+  // narration, and calling it before the Map stage ran told the progress display the
+  // browser work had started while the mapping agent was still going. Every `agent()`
+  // below carries an explicit `phase:`, so grouping was never affected — only the story
+  // the display told about what was happening.
+  phase("Browser");
   const browserResults = await parallel(resolvedPages.map((p) => () => agent<BrowserResult>(
     `You are checking user stories against the RUNNING callback-box app, not against its source.
 
