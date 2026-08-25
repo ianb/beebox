@@ -20,7 +20,9 @@
  *       issue name is a permanent dangling link. Zero `Issue:` trailers is fine
  *       (the trailer is optional and hand-written). `private-issues/` is NEVER
  *       searched — a private slug in public history is a leak, so a commit
- *       serving a private issue carries no `Issue:`.
+ *       serving a private issue carries no `Issue:`. Keys are case-sensitive
+ *       here: the queries grep the canonical spelling, so `issue:` is rejected
+ *       rather than stamped into history where nothing would find it.
  *
  *   --workstream|--plan|--issue <name> [--main]
  *       `git log --oneline` of the commits carrying that trailer, across all
@@ -112,19 +114,51 @@ function prepare(msgFile: string, source: string): void {
   stampTrailers(root, { msgFile, trailers });
 }
 
-/** Values of one trailer key, from `git interpret-trailers --parse` output. */
-export function trailerValues(parsed: string, key: string): string[] {
-  const out: string[] = [];
+/** The three provenance keys, in their one canonical spelling. */
+const KEYS = ["Workstream", "Plan", "Issue"];
+
+/** `[key, value]` for every line of `git interpret-trailers --parse` output. */
+function parsedTrailers(parsed: string): Array<[string, string]> {
+  const out: Array<[string, string]> = [];
   for (const line of parsed.split("\n")) {
     const match = /^([\w-]+):[ \t]*(.*)$/.exec(line);
-    if (match !== null && match[1]!.toLowerCase() === key.toLowerCase()) out.push(match[2]!.trim());
+    if (match !== null) out.push([match[1]!, match[2]!.trim()]);
   }
   return out;
 }
 
-/** Every issue basename (without `.md`) under `issues/`, including `closed/`. */
+/**
+ * Values of one provenance key — matched EXACTLY. The queries grep for the
+ * canonical spelling, so a `issue:` trailer would be stamped into history and
+ * then never found; `miscasedKeys` turns that into a commit-time error instead.
+ */
+export function trailerValues(parsed: string, key: string): string[] {
+  return parsedTrailers(parsed).filter(([k]) => k === key).map(([, value]) => value);
+}
+
+/** Trailer keys that are a provenance key in the wrong case (`issue:`, `PLAN:`). */
+export function miscasedKeys(parsed: string): string[] {
+  const out: string[] = [];
+  for (const [key] of parsedTrailers(parsed)) {
+    const canonical = KEYS.find((k) => k.toLowerCase() === key.toLowerCase());
+    if (canonical !== undefined && canonical !== key && !out.includes(key)) out.push(key);
+  }
+  return out;
+}
+
+/**
+ * Every issue basename (without `.md`) under `issues/`, `closed/` included.
+ * Only real issue files count — `issues/<category>/<name>.md` and
+ * `issues/closed/<category>/<name>.md` — so the queue's own prose
+ * (`issues/CLAUDE.md`, `issues/closed/README.md`) can never be cited as an issue.
+ */
 export function issueBasenames(issuesDir: string): string[] {
   const out: string[] = [];
+  const isIssuePath = (rel: string): boolean => {
+    const parts = rel.split(path.sep);
+    if (parts.length === 2) return parts[0] !== "closed"; // issues/<category>/<name>.md
+    return parts.length === 3 && parts[0] === "closed"; // issues/closed/<category>/<name>.md
+  };
   const walk = (dir: string): void => {
     let entries: fs.Dirent[];
     try {
@@ -134,8 +168,11 @@ export function issueBasenames(issuesDir: string): string[] {
       throw e;
     }
     for (const entry of entries) {
-      if (entry.isDirectory()) walk(path.join(dir, entry.name));
-      else if (entry.isFile() && entry.name.endsWith(".md")) out.push(entry.name.slice(0, -3));
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.isFile() && entry.name.endsWith(".md") && isIssuePath(path.relative(issuesDir, full))) {
+        out.push(entry.name.slice(0, -3));
+      }
     }
   };
   walk(issuesDir);
@@ -186,6 +223,15 @@ export function checkIssueTrailers(parsed: string, issuesDir: string): IssueProb
 function check(msgFile: string): void {
   const root = repoRoot();
   const parsed = git(["interpret-trailers", "--parse", msgFile], root);
+  const miscased = miscasedKeys(parsed);
+  if (miscased.length > 0) {
+    console.error("commit-provenance: provenance trailer keys are case-sensitive — the queries look for the exact spelling:");
+    for (const key of miscased) {
+      const canonical = KEYS.find((k) => k.toLowerCase() === key.toLowerCase())!;
+      console.error(`  ${key}: -> use \`${canonical}:\``);
+    }
+    process.exit(1);
+  }
   const problems = checkIssueTrailers(parsed, path.join(root, ISSUES_DIR));
   if (problems.length === 0) return;
   console.error("commit-provenance: Issue: trailer names no issue file:");
@@ -203,10 +249,29 @@ function check(msgFile: string): void {
 
 const QUERY_KEYS: Record<string, string> = { "--workstream": "Workstream", "--plan": "Plan", "--issue": "Issue" };
 
+/**
+ * Keep only the commits whose real trailer block carries `value` under `key`.
+ * `--grep` alone would match a body sentence that happens to start "Issue: ..."
+ * — the same prose `--check` deliberately ignores — so each candidate is
+ * re-read through `%(trailers:key=…,valueonly)`, git's own trailer parser.
+ * Record layout: `<oneline>\0<value>\x1f<value>…`.
+ */
+export function filterByTrailer(records: string, value: string): string[] {
+  const out: string[] = [];
+  for (const record of records.split("\n")) {
+    if (record === "") continue;
+    const [oneline, values] = record.split("\0");
+    if (oneline === undefined || values === undefined) continue;
+    if (values.split("\u001f").map((v) => v.trim()).includes(value)) out.push(oneline);
+  }
+  return out;
+}
+
 function query(params: { key: string; value: string; mainOnly: boolean }): void {
   const { key, value, mainOnly } = params;
   const pattern = `^${key}: ${value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`;
-  const args = ["log", "--oneline", "--extended-regexp", `--grep=${pattern}`];
+  const format = `--format=%h %s%x00%(trailers:key=${key},valueonly,unfold,separator=%x1f)`;
+  const args = ["log", "--extended-regexp", `--grep=${pattern}`, format];
   args.push(mainOnly ? "main" : "--all");
   let out: string;
   try {
@@ -216,7 +281,8 @@ function query(params: { key: string; value: string; mainOnly: boolean }): void 
     console.error(`commit-provenance: ${errorMessage(e).split("\n")[0]}`);
     process.exit(1);
   }
-  if (out !== "") process.stdout.write(out);
+  const lines = filterByTrailer(out, value);
+  if (lines.length > 0) process.stdout.write(`${lines.join("\n")}\n`);
 }
 
 function usage(): never {

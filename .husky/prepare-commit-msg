@@ -11,7 +11,11 @@
 # Lives at the monorepo root alongside commit-msg; core.hooksPath (set to
 # .husky/_/ by the root `pnpm install`) is shared across all worktrees.
 
-set -e
+# No `set -e`, and the call cannot fail the hook: if pnpm/tsx/node itself dies
+# before the script's own try/catch can run, the commit must still go through.
 
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-(cd "$REPO_DIR" && pnpm --silent commit-provenance --prepare "$1" "$2")
+(cd "$REPO_DIR" && pnpm --silent commit-provenance --prepare "$1" "$2") \
+  || echo "commit-provenance: prepare hook failed (commit proceeds without trailers)" >&2
+
+exit 0

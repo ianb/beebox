@@ -18,7 +18,9 @@ import { after, test } from "node:test";
 import { fileURLToPath } from "node:url";
 import {
   checkIssueTrailers,
+  filterByTrailer,
   issueBasenames,
+  miscasedKeys,
   nearestIssues,
   resolvePlan,
   trailerValues,
@@ -70,7 +72,7 @@ function git(cwd: string, args: string[]): string {
   return execFileSync("git", args, {
     cwd,
     encoding: "utf8",
-    env: { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_SYSTEM: "/dev/null" },
+    env: { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_SYSTEM: "/dev/null", GIT_EDITOR: "true" },
   });
 }
 
@@ -86,6 +88,7 @@ function makeRepo(params: { label: string; branch: string; plans: string[]; issu
     write(path.join(dir, "callback-box/docs/plans", `plan-${index}.md`), plan(stream));
   }
   for (const rel of issues) write(path.join(dir, "issues", rel), "---\ntitle: i\n---\n");
+  if (issues.length > 0) write(path.join(dir, "issues/CLAUDE.md"), "queue conventions, not an issue\n");
   const hooks = path.join(dir, "hooks");
   fs.mkdirSync(hooks);
   fs.writeFileSync(
@@ -134,23 +137,29 @@ test("resolvePlan returns the single claiming plan, and null for zero or several
   assert.equal(resolvePlan(plans, "x"), null); // ambiguous — omitted, not guessed
 });
 
-test("trailerValues reads one key case-insensitively from interpret-trailers output", () => {
+test("trailerValues matches the canonical key exactly; miscasedKeys catches the rest", () => {
   const parsed = "Workstream: s\nIssue: a\nissue: b\nCo-Authored-By: X <x@y>\n";
-  assert.deepEqual(trailerValues(parsed, "Issue"), ["a", "b"]);
+  assert.deepEqual(trailerValues(parsed, "Issue"), ["a"]); // `issue:` is not the key the queries grep for
   assert.deepEqual(trailerValues(parsed, "Plan"), []);
+  assert.deepEqual(miscasedKeys(parsed), ["issue"]);
+  assert.deepEqual(miscasedKeys("Workstream: s\nPLAN: p\nCo-Authored-By: X <x@y>\n"), ["PLAN"]);
+  assert.deepEqual(miscasedKeys("Workstream: s\nIssue: a\nPlan: p\n"), []);
 });
 
-test("issueBasenames walks issues/ recursively, closed/ included", () => {
+test("issueBasenames takes only category-dir issues — the queue's own prose is not citable", () => {
   const dir = tmpDir("issues");
   write(path.join(dir, "issues/bugs/2026-01-01-a.md"), "x");
   write(path.join(dir, "issues/closed/features/2026-01-02-b.md"), "x");
-  write(path.join(dir, "issues/CLAUDE.md"), "x");
-  assert.deepEqual(issueBasenames(path.join(dir, "issues")).sort(), [
-    "2026-01-01-a",
-    "2026-01-02-b",
-    "CLAUDE",
-  ]);
+  write(path.join(dir, "issues/CLAUDE.md"), "x"); // conventions doc, not an issue
+  write(path.join(dir, "issues/closed/README.md"), "x");
+  assert.deepEqual(issueBasenames(path.join(dir, "issues")).sort(), ["2026-01-01-a", "2026-01-02-b"]);
   assert.deepEqual(issueBasenames(path.join(dir, "nope")), []);
+});
+
+test("filterByTrailer keeps only commits whose parsed trailers hold the value", () => {
+  const records = "abc123 fix: real\u0000x\u001fy\ndef456 fix: prose only\u0000\n789abc fix: two\u0000 x \n";
+  assert.deepEqual(filterByTrailer(records, "x"), ["abc123 fix: real", "789abc fix: two"]);
+  assert.deepEqual(filterByTrailer("", "x"), []);
 });
 
 test("nearestIssues suggests at most three by shared prefix, best first", () => {
@@ -224,6 +233,23 @@ test("a real `git commit -m` on a worktree branch carries the trailers (hook end
   assert.equal(git(dir, ["log", "-1", "--format=%(trailers)"]).trim(), "Workstream: alpha\nPlan: plan-0");
 });
 
+test("--cleanup=scissors keeps the trailers above the scissors line, junk stripped", () => {
+  const dir = makeRepo({ label: "scissors", branch: "worktree-alpha", plans: ["alpha"], issues: [] });
+  const file = path.join(dir, "SCISSORS_MSG");
+  fs.writeFileSync(
+    file,
+    "feat: scissors\n\n# ------------------------ >8 ------------------------\n"
+      + "# Do not modify or remove the line above.\ndiff --git a/x b/x\njunk below the scissors\n",
+  );
+  // scissors truncation only happens when the message is edited (GIT_EDITOR=true
+  // is a no-op editor), so -e is part of what makes this the real case.
+  git(dir, ["commit", "-q", "--cleanup=scissors", "-e", "-F", file]);
+  assert.equal(git(dir, ["log", "-1", "--format=%(trailers)"]).trim(), "Workstream: alpha\nPlan: plan-0");
+  const body = git(dir, ["log", "-1", "--format=%B"]);
+  assert.doesNotMatch(body, /junk below the scissors/);
+  assert.doesNotMatch(body, />8/);
+});
+
 test("--check blocks an unknown Issue: name and passes a known one, through the commit-msg hook", () => {
   const dir = makeRepo({
     label: "issuecheck",
@@ -248,6 +274,19 @@ test("--check blocks an unknown Issue: name and passes a known one, through the 
   assert.equal(pathForm.status, 1);
   assert.match(pathForm.stderr, /use the bare name, no path and no \.md: Issue: 2026-08-24-real$/m);
 
+  // issues/CLAUDE.md is the queue's conventions doc, not a citable issue.
+  const notAnIssue = run(dir, ["--check", msgFile(dir, "fix: x\n\nIssue: CLAUDE\n")]);
+  assert.equal(notAnIssue.status, 1);
+  assert.match(notAnIssue.stderr, /Issue: CLAUDE/);
+
+  // The queries grep the canonical spelling, so a mis-cased key is an error.
+  const miscased = run(dir, ["--check", msgFile(dir, "fix: x\n\nissue: 2026-08-24-real\n")]);
+  assert.equal(miscased.status, 1);
+  assert.match(miscased.stderr, /use `Issue:`/);
+  const miscasedPlan = run(dir, ["--check", msgFile(dir, "fix: x\n\nPLAN: p\n")]);
+  assert.equal(miscasedPlan.status, 1);
+  assert.match(miscasedPlan.stderr, /use `Plan:`/);
+
   // And the same check refuses the commit for real.
   fs.writeFileSync(path.join(dir, "README.md"), "changed\n");
   git(dir, ["add", "README.md"]);
@@ -260,6 +299,7 @@ test("query modes list matching commits, --all by default and main with --main",
   git(dir, ["commit", "-q", "--allow-empty", "-m", "fix: on main\n\nWorkstream: alpha\nIssue: 2026-08-24-real\n"]);
   git(dir, ["checkout", "-q", "-b", "worktree-alpha"]);
   git(dir, ["commit", "-q", "--allow-empty", "-m", "feat: unlanded\n\nWorkstream: alpha\nPlan: plan-0\n"]);
+  git(dir, ["commit", "-q", "--allow-empty", "-m", "docs: prose only\n\nIssue: 2026-08-24-real is what this is about, but no trailer.\n\nSigned-off-by: T <t@e>\n"]);
   git(dir, ["checkout", "-q", "main"]);
 
   const all = run(dir, ["--workstream", "alpha"]).stdout;
@@ -269,7 +309,9 @@ test("query modes list matching commits, --all by default and main with --main",
   assert.match(onMain, /fix: on main/);
   assert.doesNotMatch(onMain, /feat: unlanded/);
   assert.match(run(dir, ["--plan", "plan-0"]).stdout, /feat: unlanded/);
-  assert.match(run(dir, ["--issue", "2026-08-24-real"]).stdout, /fix: on main/);
+  const byIssue = run(dir, ["--issue", "2026-08-24-real"]).stdout;
+  assert.match(byIssue, /fix: on main/);
+  assert.doesNotMatch(byIssue, /prose only/); // body prose is not a trailer
   assert.equal(run(dir, ["--workstream", "nobody"]).stdout, "");
   assert.equal(run(dir, ["--issue", "2026-08-24-rea"]).stdout, ""); // anchored, not a prefix match
 });
