@@ -25,20 +25,214 @@ break this repo — v2.1.218's worktree git isolation silently broke `/finish`'s
 merge step for days. Claude Code versions that move harness behavior get their
 own entries here, labeled as such, with no pin to apply.
 
-- **Current pin:** `0.3.240` (in `callback-box/package.json` — see the split-pin
+- **Current pin:** `0.3.241` (in `callback-box/package.json` — see the split-pin
   note below; the monorepo root still carries a second, unmanaged pin at
-  `0.3.226`)
-- **Latest reviewed upstream version:** `0.3.241` (SDK), `2.1.241` (Claude Code)
+  `0.3.226`, which is why `pnpm update-agent-sdk` ends by printing
+  "Now at 0.3.226" even when the managed pin moved)
+- **Latest reviewed upstream version:** `0.3.246` (SDK), `2.1.246` (Claude Code)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** `0.3.241` is the only version ahead of the pin and
-  was ~40h at this turn; take it next turn on the settled path. No new releases
-  were published in the last 24h — the first quiet day since this ledger began.
-  **The open item is still not an upstream release** — the `encodeProjectDir`
-  bug recorded below remains unfixed and unfiled.
+- **Current recommendation:** `0.3.242`, `0.3.243`, `0.3.245` and `0.3.246` are
+  all ahead of the pin and all inside the two-day window (the oldest, `0.3.242`,
+  was ~28h at this turn). None carries an act-now fix, so they take the settled
+  path — `0.3.243` becomes takeable next turn and carries the batch's only
+  runtime-visible behavior changes. Two issues were filed this turn: the
+  long-standing `encodeProjectDir` bug below is now
+  `issues/bugs/2026-08-25-encode-project-dir-underscore-mismatch.md`, and
+  `perTaskStopAffordance` (0.3.246) opened a chat-stop semantics decision,
+  `issues/decisions/2026-08-25-chat-stop-and-background-subagents.md`.
 
 ## Release ledger
 
-### 0.3.241 — pending (parity with Claude Code 2.1.241)
+### 0.3.246 — pending (published 2026-08-25T19:15Z, ~4h at this turn)
+
+- **Upstream:** Four additions, no fixes. Optional `user_message_uuid` on error
+  result messages and on the first assistant message or `stream_event` of each
+  turn, linking a reply or failure back to the user message that triggered it.
+  `modelUsage[*].costBasis` (`'list' | 'managed' | 'unknown'`) reporting which
+  price table `costUSD` came from. `modelPricing` in the `managedSettings`
+  option. And `perTaskStopAffordance`: with it set, `interrupt()` aborts only
+  the current turn and leaves background agents and workflows running;
+  without it — and always for one-shot string prompts — they stop with it.
+- **Callback-box applicability (runtime):** `perTaskStopAffordance` is the one
+  that matters. callback-box calls `interrupt()` on the chat stop path
+  (`src/core/chat/session/index.ts:374`, via
+  `webapp/trpc/routers/chat-control-procedures.ts:212`), in
+  `services/claude-chat.ts:273`, and in the field-test operator turns — all of
+  which today mean "stop the background subagents too". Whether the chat stop
+  button should keep that meaning is a real product question, not a flag flip,
+  so it is filed as a decision rather than acted on:
+  `issues/decisions/2026-08-25-chat-stop-and-background-subagents.md`.
+  `user_message_uuid` is worth remembering next to the chat session's own uuid
+  reconciliation (`src/core/chat/session/transcript-sync.ts`,
+  `accepted-messages.ts`), which correlates by hand today; no work filed yet
+  because the field only appears on the live stream and the reconciliation
+  reads the on-disk transcript. `costBasis` and `modelPricing` are additive:
+  callback-box budgets with `maxBudgetUsd` but reads no cost fields, and sets
+  no managed settings.
+- **Callback-box applicability (harness):** None. `perTaskStopAffordance` is an
+  SDK option; worker sessions are unaffected.
+- **Action:** Settled path — nothing act-now. Cannot be taken until 2026-08-27.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03246)
+
+### Claude Code 2.1.246 — harness only (no SDK pin; 0.3.246 does not claim parity with it)
+
+The largest itemized Claude Code release this ledger has seen, ~55 entries.
+Almost all of it is interactive-UI polish that no worker session or box agent
+touches. What is actually relevant here, in order:
+
+- **Background sessions now open on a slept or slow machine.** *"Fixed
+  background sessions failing to open after 45 seconds when Claude Code's
+  starting directory had been deleted, the machine had slept, or the host is
+  slow to start processes."* This is the schedule runner's exact environment —
+  a laptop that sleeps, running scheduled sessions, in worktrees that get
+  created and removed. A 45-second startup failure here reads as a bailed run
+  with no explanation, which is the least diagnosable failure this repo has.
+  The same release also fixes background sessions failing with
+  `EACCES` when another Claude Code process is re-installing the npm package at
+  that moment — plausible on a machine where several worktree sessions and a
+  scheduled run overlap — and, on macOS, headless sessions leaving stale
+  entries in `~/.claude/sessions` after an unclean exit.
+- **Worktree deletion, checked and clear.** *"Fixed the background retention
+  sweep removing git worktrees under `.claude/worktrees/` that you created
+  yourself when an old background-session record pointed at them."* A
+  worktree-destroying bug is worth checking rather than assuming: this repo is
+  **not** exposed. `.claude/hooks/worktree-create.sh` deliberately does not
+  forward Claude Code's proposed `<repo>/.claude/worktrees/<name>` path — it
+  hands creation to `bin/workstreams create`, which places worktrees as
+  siblings of the monorepo (`~/src/callback-worktrees/`, `~/src/box-worktrees/`)
+  because callback-box's `file:../personal-vibe-check` dep only resolves there.
+  No repo worktree has ever lived under the swept directory.
+- **Bash permission checks on malformed commands.** *"Fixed Bash permission
+  checks to always require approval for malformed commands with a dangling `&&`
+  or `||` operator."* A permission-bypass class fix; it tightens, so nothing to
+  adjust. Related: the release adds a startup warning for allow rules with a
+  wildcard **before** the subcommand (`Bash(git * main)`). Checked the rules
+  worker sessions actually run under — this repo's `.claude/settings.json` has
+  no `permissions` block at all, and every user-level Bash rule is the ordinary
+  `Bash(cmd:*)` trailing-wildcard form (`Bash(git mv:*)`, `Bash(node -e:*)`).
+  No rule matches the warned shape, so no new startup noise and no rule that
+  was quietly broader than it looked.
+- **Non-interactive turns no longer die mid-stream.** *"Improved non-interactive
+  sessions (`-p`, SDK, cloud sessions) to automatically continue a response cut
+  off mid-stream by a server error, connection loss, or stall instead of ending
+  with an error."* Directly relevant to every box agent turn and chat turn, both
+  of which run through the SDK. Expect fewer spurious `is_error` turns of the
+  kind `src/core/chat/session/messages.ts` logs. It also means a turn can now
+  consume more wall-clock and more of its `maxTurns` budget before giving up;
+  nothing to change, but it is the explanation to reach for if turn durations
+  drift upward after this reaches the pin.
+- **Concurrent launches from several worktrees.** *"Fixed `/ultrareview` runs
+  and cloud sessions launched at the same time from one repository (e.g. from
+  several worktrees) sometimes starting with another launch's uncommitted
+  changes."* This repo runs many worktrees at once against one repository, so
+  the shape is familiar, but the bug is confined to `/ultrareview` and cloud
+  sessions — the cross-model review this repo actually runs is local Codex, and
+  `/ultrareview` is boxholder-triggered and rare. Worth knowing that
+  simultaneous launches were mixing trees; nothing to fix here.
+- **Memory:** *"Fixed memory growing with session length in the fullscreen and
+  Ctrl+O transcript views."* Interactive views only — the boxholder's own
+  sessions benefit, box agents never render them. Likewise *"Fixed the Write
+  tool reporting 'Out of memory' or freezing for a long time after overwriting
+  a very large existing file"*, which box agents could in principle hit when
+  rewriting a large card, though nothing has reported it.
+- **Not applicable, checked:** the third-party-gateway credential leak fix
+  (telemetry carrying the `ANTHROPIC_BASE_URL` API key) and the resumed-session
+  400 on proxy-written tool blocks both need a third-party endpoint, which this
+  repo does not use. The plugin fixes (duplicate SHA cache dirs, doubled
+  `<plugin>:` skill names, `skills/*/SKILL.md` skills reporting 0,
+  `${CLAUDE_PLUGIN_ROOT}` unresolved in hook errors) look aimed at
+  `callback-box/plugins/callback-box-claude`, which box agents load as a local
+  plugin from `run.ts` — but that plugin ships hooks only, no skills, and its
+  `hooks.json` uses no `${CLAUDE_PLUGIN_ROOT}`, so none of them bite.
+- **Action:** Nothing to adjust. The background-session and non-interactive
+  continuation fixes are improvements this repo wants; they arrive with a
+  future pin.
+- **Sources:** [Claude Code 2.1.246](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21246)
+
+### 0.3.245 — pending (parity with Claude Code 2.1.245)
+
+- **Upstream:** SDK says only "parity with Claude Code v2.1.245". 2.1.245 is a
+  single-line release: *"Fixed a crash on startup on Linux distributions that
+  ship glibc 2.44 (for example Arch Linux, CachyOS and Fedora Rawhide)."*
+- **Callback-box applicability:** None on either channel. The boxholder's
+  machine is macOS and the prod server is Debian-family, well below glibc 2.44.
+  Recorded so the parity line is not mistaken for something unread.
+- **Action:** Settled path, nothing act-now.
+- **Sources:** [Claude Code 2.1.245](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21245)
+
+### 0.3.244 — never published
+
+The SDK changelog carries a `0.3.244` section ("parity with Claude Code
+v2.1.244"), but npm has no such version — `npm view … time` skips straight from
+`0.3.243` to `0.3.245`. Claude Code's changelog likewise jumps 2.1.243 → 2.1.245.
+Both were pulled before or shortly after publish. Nothing to review, and
+`update-agent-sdk` reads the registry rather than the changelog, so it will
+never try to install it. Noted only so a future turn does not go looking for a
+missing version.
+
+### 0.3.243 — pending (published 2026-08-24T23:07Z, ~24h at this turn)
+
+- **Upstream:** Four itemized changes plus parity with 2.1.243. Optional
+  `queued_turn_count` on result messages (how many queued user sends were still
+  pending when the result was produced). Fixed `mcp_status` reporting a remote
+  MCP server as connected after its connection dropped — it now reports pending
+  while reconnecting, then connected or failed. Fixed managed `disableAllHooks`
+  also disabling hook callbacks registered through the `hooks` option; those now
+  keep running, matching `allowManagedHooksOnly`. And a shape change: Read tool
+  PDF results now deliver the `document` block (or page `image` blocks for
+  `pages` reads) **inside** the `tool_result` content instead of as a separate
+  `user` message after it.
+- **Callback-box applicability (runtime):** This is the batch's only release
+  that touches shapes callback-box parses.
+  - *PDF result shape.* Boxes hold PDF cards (the `document` → `pdf` card-type
+    migration is in `src/core/migrations.ts`), so box agents do read PDFs.
+    `src/core/agent/render.ts` renders user messages by walking only
+    `tool_result` blocks, and `extractToolResultText` keeps only `text` items —
+    so before this change a PDF's trailing `document` user-message rendered as
+    nothing, and after it the block rides inside a `tool_result` whose text
+    parts are empty, rendering as `↳ (no content)`. Cosmetic either way, no
+    crash, no type error; recorded because "a tool result that used to print
+    nothing now prints `(no content)`" is exactly the kind of diff that gets
+    misread as a regression.
+  - *`disableAllHooks`.* callback-box registers `gitMvNudgeHook` through the
+    `hooks` option in `src/core/agent/run.ts` and a `PostToolUse` validator
+    through its local plugin. The fix only matters where a **managed** settings
+    source sets `disableAllHooks`; neither this machine nor the prod box does,
+    so nothing was silently off. Worth keeping in mind if managed settings ever
+    arrive — the failure mode was silent hook loss.
+  - *MCP reconnect.* `run.ts` passes no `mcpServers`, but `settingSources`
+    defaults to `["user", "project"]`, so user-level MCP servers do load into
+    box agent sessions. A server that dropped previously stayed reported as
+    connected forever; now it reconnects or fails visibly. Correctness, arrives
+    with the pin, no code change.
+  - `queued_turn_count` is additive; the chat session tracks its own queue.
+- **Callback-box applicability (harness):** 2.1.243 itself is mostly
+  configuration and `/usage` surface — a Loops breakdown in `/usage`, a
+  `modelPicker` setting, `promptCacheTtl`/`subagentPromptCacheTtl` (explicitly
+  for API-key and cloud-provider users, which this account is not), a
+  `modelPricing` managed setting, Console keyless sign-in, `/status` additions,
+  and the model each subagent ran on now shown in `/tasks`. The one worth
+  noting: *"Fixed remote MCP servers in non-interactive (`-p`) and SDK sessions
+  never recovering after a dropped connection"* — the harness-side half of the
+  SDK's `mcp_status` fix, and it applies to scheduled runs, which are exactly
+  the long-lived non-interactive sessions where a connection has time to drop.
+- **Action:** Settled path. The PDF shape change and the MCP reconnect fix are
+  behavior changes rather than act-now correctness fixes for callback-box, so
+  `0.3.243` waits out its window; it becomes takeable 2026-08-26.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03243), [Claude Code 2.1.243](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21243)
+
+### 0.3.242 — pending, nothing relevant (parity with Claude Code 2.1.242)
+
+- **Upstream:** SDK says only "parity with Claude Code v2.1.242", and **2.1.242
+  has no changelog section at all** — Claude Code's changelog jumps 2.1.243 →
+  2.1.241. So this is a published version whose contents are not documented
+  anywhere, the third such pin in a short run (2.1.240 and 2.1.241 both said
+  only "bug fixes and reliability improvements").
+- **Callback-box applicability:** Nothing assessable on either channel.
+- **Action:** Settled path; takeable 2026-08-26.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03242)
+
+### 0.3.241 — APPLIED 2026-08-25 (parity with Claude Code 2.1.241)
 
 - **Upstream:** SDK entry is only "Updated to parity with Claude Code v2.1.241",
   and 2.1.241 itself says only "Bug fixes and reliability improvements" — nothing
@@ -49,10 +243,16 @@ own entries here, labeled as such, with no pin to apply.
   could pass through unremarked, and the only defense is noticing behavior
   afterward rather than reading about it first.
 - **Callback-box applicability:** Nothing assessable on either channel.
-- **Action:** Published 2026-08-22T23:59Z, ~16h old, inside the settling window.
+- **Action:** Applied 2026-08-25 on the settled path (~71h old) — it was the
+  only version past the two-day window. `pnpm -C callback-box test`: 7,866 pass,
+  27 fail, all 27 in `test/webapp/login-redirect.doctest.md` and
+  `test/webapp/mobile-spa-fallback.doctest.md` and **pre-existing** — confirmed
+  by re-running both files at the previous `0.3.240` pin, where they fail
+  identically. They exercise `src/webapp/base-prefix.ts`, which imports nothing
+  from the SDK. `sdk-steering-probe`: all four steering behaviors pass.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03241), [Claude Code 2.1.241](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21241)
 
-### Live bug found while reviewing 2.1.239 — `encodeProjectDir` no longer matches Claude Code
+### Live bug found while reviewing 2.1.239 — `encodeProjectDir` no longer matches Claude Code (FILED 2026-08-25 as `issues/bugs/2026-08-25-encode-project-dir-underscore-mismatch.md`; re-verified still live at that date)
 
 Claude Code 2.1.239 lists: *"Fixed `claude -c`/resume picking up sessions from a
 different directory whose path differed only by characters like `_`, `-`, or
