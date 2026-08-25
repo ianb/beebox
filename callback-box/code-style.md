@@ -15,7 +15,7 @@ pnpm lint:circular  # Circular dependency detector (madge)
 ```
 
 - The tsconfig is strict — no implicit `any` allowed
-- ESLint config is in `eslint.config.mjs` with rules reviewed individually
+- ESLint config is in `eslint.config.ts` with rules reviewed individually
 - oxlint provides supplemental checks (ambiguous constructors, useless spreads, identical ternary branches, etc.) — run periodically, not in pre-commit
 - knip detects unused files, exports, and dependencies — run periodically to catch dead code
 - madge detects circular dependencies — type-only cycles (`import type`) are acceptable, value import cycles are not

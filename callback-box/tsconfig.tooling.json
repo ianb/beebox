@@ -1,0 +1,18 @@
+{
+  // Package-root tooling that lives outside the backend tsconfig's `rootDir`
+  // ("src") — putting it in that program trips TS6059, and `pnpm build` emits
+  // from it. These files still have to be type-checked, which is the whole
+  // reason they are TypeScript and not `.mjs`, so they get their own no-emit
+  // program here, wired into `typecheck:tooling`. Same shape as
+  // tsconfig.user-stories.json.
+  //
+  // NOT included: the rest of `scripts/` and all of `test/`. Those are linted
+  // but have never been type-checked, and pulling them in is its own piece of
+  // work — see issues/code-quality/2026-08-25-callback-box-scripts-and-test-untypechecked.md.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true
+  },
+  "include": ["eslint.config.ts", "scripts/build-cli.ts"]
+}

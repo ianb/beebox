@@ -259,7 +259,7 @@ async function runEslint(input: { repoRoot: string; args: string[]; stdin: strin
       // cover schedules/ any more. Left as a warning it would read as a clean
       // schedule, which is the one wrong answer this command can give.
       if (message.ruleId === null && message.message.startsWith("File ignored")) {
-        throw new ScheduleError(`eslint does not lint ${file.filePath} — the root eslint.config.mjs no longer scopes schedules/**/*.ts (${message.message})`);
+        throw new ScheduleError(`eslint does not lint ${file.filePath} — the root eslint.config.ts no longer scopes schedules/**/*.ts (${message.message})`);
       }
     }
     byFile.set(file.filePath, file.messages);
@@ -278,7 +278,7 @@ function eslintFinding(input: { script: ScriptFile; message: { line: number | nu
 
 /**
  * Every TypeScript script, linted under the personal-vibe-check preset the root
- * `eslint.config.mjs` scopes to `schedules/**\/*.ts`.
+ * `eslint.config.ts` scopes to `schedules/**\/*.ts`.
  *
  * A script eslint cannot be handed by path — an executable `run` with a node
  * shebang has no `.ts` extension, and a test fixture lives outside the repo —

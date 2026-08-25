@@ -18,6 +18,6 @@
     "lib": ["ES2023"],
     "types": ["node"]
   },
-  "include": ["src/server/**/*", "src/shared/**/*"],
+  "include": ["eslint.frontend.config.ts", "eslint.config.ts", "src/server/**/*", "src/shared/**/*"],
   "exclude": ["node_modules", "dist", "src/frontend"]
 }

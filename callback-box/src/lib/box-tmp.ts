@@ -10,7 +10,7 @@
  * belongs to.
  *
  * HTTP route handlers (and other box-request code) must use this instead of
- * `os.tmpdir()` — enforced by `no-restricted-properties` in `eslint.config.mjs`
+ * `os.tmpdir()` — enforced by `no-restricted-properties` in `eslint.config.ts`
  * for `src/webapp/routes|trpc`. CLI/dev tooling that is genuinely host-scoped
  * (build scratch, one-off subprocess IPC) may still use the host temp dir.
  */

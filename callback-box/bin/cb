@@ -10,7 +10,7 @@
 #     `scripts/` and `src/` aren't shipped (see package.json's `files`
 #     allowlist / `docs/implemented-plans/boxes-as-packages-v2.md` Track F) — there is
 #     nothing to rebuild from and no tsx fallback to degrade to, so this mode
-#     is detected by `scripts/build-cli.mjs`'s absence and just runs the
+#     is detected by `scripts/build-cli.ts`'s absence and just runs the
 #     bundle unconditionally. A missing bundle here is a broken install, not
 #     a staleness problem — error out rather than silently trying a rebuild
 #     that can't succeed.
@@ -66,13 +66,13 @@ run_tsx() {
     "$PROJECT_DIR/src/cli/index.ts" "$@"
 }
 
-# Packed fast path: no scripts/build-cli.mjs means this is an installed
+# Packed fast path: no scripts/build-cli.ts means this is an installed
 # package (npm/pnpm `files` allowlist excludes scripts/ and src/), not a
 # dev checkout — there's no source tree to scan for staleness and no build
 # script to fall back to, so just run the bundle. Ahead of the
 # CB_CLI_PREBUILT check because a packed install should behave this way
 # regardless of whether that env var happens to be set.
-if [ ! -f "$PROJECT_DIR/scripts/build-cli.mjs" ]; then
+if [ ! -f "$PROJECT_DIR/scripts/build-cli.ts" ]; then
   if [ -f "$BUNDLE" ]; then
     run_bundle "$@"
   fi
@@ -100,7 +100,7 @@ elif [ -n "$(find "$PROJECT_DIR/src" -path "$PROJECT_DIR/src/frontend" -prune -o
 fi
 
 if [ "$needs_build" = 1 ]; then
-  if ! node "$PROJECT_DIR/scripts/build-cli.mjs" >/dev/null 2>&1; then
+  if ! node "$PROJECT_DIR/scripts/build-cli.ts" >/dev/null 2>&1; then
     # Build failed — fall back to running source directly via tsx.
     run_tsx "$@"
   fi

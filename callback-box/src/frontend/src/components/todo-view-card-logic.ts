@@ -7,7 +7,7 @@
 
 // Raw relative (not `@shared/…`): loaded outside Vite by the tap/tsx doctest
 // runner (root tsconfig, no @shared resolution) — see OUTSIDE_VITE_SHARED_RAW
-// in src/frontend/eslint.config.mjs.
+// in src/frontend/eslint.config.ts.
 import { isTodoStatus } from "../../../shared/todo-model.js";
 import type { TodoStatus } from "../../../shared/todo-model.js";
 

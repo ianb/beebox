@@ -4,7 +4,7 @@
 path — it touches no disk. `ensureBoxTmpDir(boxRoot)` creates that dir and
 returns its path. Box-request handlers use these instead of host `os.tmpdir()`
 so per-box scratch stays inside the box it belongs to (enforced for
-`src/webapp/routes|trpc` in `eslint.config.mjs`).
+`src/webapp/routes|trpc` in `eslint.config.ts`).
 
 ```ts setup
 import * as fs from "node:fs/promises";

@@ -8,6 +8,6 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": [".wxt/wxt.d.ts", "src/**/*", "test/**/*"],
+  "include": ["eslint.config.ts", ".wxt/wxt.d.ts", "src/**/*", "test/**/*"],
   "exclude": ["node_modules", ".output"]
 }

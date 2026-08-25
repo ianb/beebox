@@ -142,7 +142,7 @@ call. It is deliberately not rebuilt when stale — this test proves
 routing, not frontend freshness:
 
 ```ts
-await execFileP("node", ["scripts/build-cli.mjs"], { cwd: PACKAGE_ROOT });
+await execFileP("node", ["scripts/build-cli.ts"], { cwd: PACKAGE_ROOT });
 
 const frontendIndex = path.join(PACKAGE_ROOT, "src/frontend/dist/index.html");
 const frontendBuilt = await fs.access(frontendIndex).then(() => true, () => false);

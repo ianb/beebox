@@ -91,15 +91,15 @@ of branches where it is free.
 ## What already exists
 
 - **The transform is a shared, exported function.** `generateTestSource` at
-  `agent-doctest/src/doctest-hooks.mjs:366`, published as `agent-doctest/hooks`.
+  `agent-doctest/src/doctest-hooks.ts:366`, published as `agent-doctest/hooks`.
   The graph pass calls it rather than reimplementing it. **Verified working** —
   the spike built all 484 entrypoints through it.
 - **The resolution rules live in one file and must stay that way.** The loader's
-  `resolve` (`doctest-hooks.mjs:20-45`). Track 1 extracts, does not copy.
+  `resolve` (`doctest-hooks.ts:20-45`). Track 1 extracts, does not copy.
 - **The resolution surface is one alias.** `"@shared/*": ["./src/shared/*"]`
   (`callback-box/tsconfig.json:37-39`); the frontend's other four are
   deliberately unresolvable in the doctest program (`tsconfig.json:34-36`).
-- **esbuild already drives a build step** (`scripts/build-cli.mjs:32`,
+- **esbuild already drives a build step** (`scripts/build-cli.ts:32`,
   `packages: "external"`). Reused with `metafile: true`, `write: false`.
 - **`/finish` already computes the diff** (`.claude/agents/finish.md:69-70`) and
   has a per-path verification map (`:184-196`). Reused verbatim.
@@ -187,14 +187,14 @@ for `.css/.svg/.png`.
 
 Two plugins: the doctest transform (`generateTestSource`, `loader: "ts"`,
 `resolveDir` = the file's directory), and a resolution plugin consuming rules
-**extracted** from `doctest-hooks.mjs`.
+**extracted** from `doctest-hooks.ts`.
 
 The extraction target is specified, because leaving it open would put an
-unresolved question inside a first chunk: **`agent-doctest/src/resolve-rules.mjs`**
+unresolved question inside a first chunk: **`agent-doctest/src/resolve-rules.ts`**
 — `.mjs`, matching the hook that consumes it, so no cross-language boundary is
 introduced into a published package. Added to `exports` as `./resolve-rules`
 alongside the existing four (`agent-doctest/package.json:6-10`); imported
-relatively by `doctest-hooks.mjs` and by path from `bin/test-graph.ts`. The
+relatively by `doctest-hooks.ts` and by path from `bin/test-graph.ts`. The
 `@shared/*` alias is a parameter, never baked in — `agent-doctest` is a
 standalone package and must not learn this repo's tsconfig. No existing consumer
 changes, and `agent-doctest`'s own suite must be green after the move.
@@ -296,7 +296,7 @@ per-session state and drifts out of agreement with the gate. Keeping both on the
 same diff means a green loop run predicts a green finish.
 
 ```json
-"pretest:changed": "node scripts/build-cli.mjs",
+"pretest:changed": "node scripts/build-cli.ts",
 "test:changed":    "node --import tsx ../bin/test-select.ts --run"
 ```
 
@@ -592,7 +592,7 @@ collecting is a week of data lost, while the selector's benefit is available any
 time.
 
 1. **Track 1 (landed 2026-08-09)** — `bin/test-graph`, including the
-   `resolve-rules` extraction from `doctest-hooks.mjs`, with `agent-doctest`'s
+   `resolve-rules` extraction from `doctest-hooks.ts`, with `agent-doctest`'s
    suite green afterwards. Needed by the ledger for `implicated`.
 2. **Track 5a** — the ledger: the `--output-file` capture, the sidecar manifest,
    `implicated` + `accounted`, mechanical classification, and `report`. Wired to

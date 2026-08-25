@@ -63,7 +63,7 @@ Data-loss / corruption tier:
     guards were kept as general defense, but there is no SSR authoring
     contract left to document.
 11. **`restrict-component-classes` silently skips dynamic `className`
-    expressions** (`personal-vibe-check/rules/restrict-component-classes.mjs:17-19`);
+    expressions** (`personal-vibe-check/rules/restrict-component-classes.ts:17-19`);
     FRONTEND.md implies categorical enforcement. Rule of thumb to state:
     keep className values literal.
 12. **`src/lib/` helpers keep getting reinvented** (`content-hash.ts`,
@@ -125,11 +125,11 @@ answered — remain open questions in `docs-reorg.md`.
    `test/helpers/`.
 2. **`.claude/rules/doctest.md` is a stale copy** — missing the
    `=> throws ErrorName[: message]` shorthand
-   (`agent-doctest/src/doctest-hooks.mjs:185-215`); 10 doctests hand-roll
+   (`agent-doctest/src/doctest-hooks.ts:185-215`); 10 doctests hand-roll
    try/catch instead.
 3. **CODE-STYLE.md claims knip enforces export minimalism; `knip.json`
    excludes `"exports"`.**
-4. **`eslint.config.mjs` references `eslint-suppressions.json` and a
+4. **`eslint.config.ts` references `eslint-suppressions.json` and a
    `docs/eslint-rule-suppression-audit.md` path that don't resolve** (the
    audit doc lives at monorepo-root `docs/`, not callback-box's).
 5. **`src/hub/hub-server.ts:1-14` comment says the hub never lazy-spawns —

@@ -224,7 +224,7 @@ test("a helper script beside run is linted too, and does not satisfy the dry-run
 
 test("a TypeScript script that lives under the repo's own schedules/ is linted by path", async () => {
   // The by-path branch is the one real schedules use, and it is the branch that
-  // depends on the root eslint.config.mjs scoping `schedules/**/*.ts`.
+  // depends on the root eslint.config.ts scoping `schedules/**/*.ts`.
   const repoSchedules = path.join(REPO_ROOT, "schedules");
   const name = `lint-fixture-${String(process.pid)}`;
   const dir = path.join(repoSchedules, name);

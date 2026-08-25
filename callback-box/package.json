@@ -38,23 +38,24 @@
     "build": "tsc",
     "build:frontend": "cd src/frontend && pnpm build",
     "build:all": "pnpm build && pnpm build:frontend",
-    "build:cli": "node scripts/build-cli.mjs && tsc -p tsconfig.declarations.json",
+    "build:cli": "node scripts/build-cli.ts && tsc -p tsconfig.declarations.json",
     "build:workflows": "tsx user-stories/pipeline/build-workflows.ts",
     "release": "tsx scripts/release.ts",
     "smoke": "tsx scripts/smoke-external-box.ts",
     "smoke:upgrade": "tsx scripts/smoke-upgrade.ts",
     "dev": "echo 'The dev server is the monorepo router. Run \\`pnpm dev\\` from the monorepo root.' && exit 1",
     "cb": "./bin/cb",
-    "typecheck": "pnpm run '/^typecheck:(backend|frontend|user-stories)$/'",
+    "typecheck": "pnpm run '/^typecheck:(backend|frontend|user-stories|tooling)$/'",
     "typecheck:backend": "tsc --noEmit",
     "typecheck:frontend": "cd src/frontend && pnpm typecheck",
     "typecheck:user-stories": "tsc --noEmit -p tsconfig.user-stories.json",
+    "typecheck:tooling": "tsc --noEmit -p tsconfig.tooling.json",
     "lint": "pnpm run '/^lint:(backend|frontend)$/'",
     "lint:backend": "eslint src/ scripts/ test/ user-stories/",
     "lint:frontend": "cd src/frontend && pnpm lint",
     "start": "node dist/webapp/server.js",
     "cli": "node dist/cli/index.js",
-    "pretest": "node scripts/build-cli.mjs",
+    "pretest": "node scripts/build-cli.ts",
     "test": "node --import tsx ../bin/test-ledger.ts run -- tap",
     "test:manual": "tap -j1 'test/manual/chat-queue-real.doctest.md' 'test/manual/box-growth-partial-timeout.doctest.md' 'test/manual/field-test-inject-email.doctest.md'",
     "knowledge-audit": "tsx src/dev/knowledge-audit.ts",
@@ -153,7 +154,7 @@
   },
   "lint-staged": {
     "src/frontend/src/**/*.{ts,tsx,js}": [
-      "eslint --config src/frontend/eslint.config.mjs"
+      "eslint --config src/frontend/eslint.config.ts"
     ],
     "src/!(frontend)/**/*.ts": [
       "eslint"
