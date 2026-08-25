@@ -24,8 +24,11 @@ export interface ReconcileInputs {
   /** A live, connected scroll anchor shifted on screen — existing content above
    *  the reader reflowed (a late-decoding image/embed/card), not new content. */
   anchorMoved: boolean;
-  /** The view was within the at-bottom margin before this cycle's change. */
-  atBottom: boolean;
+  /** The view will be within the at-bottom margin once this cycle's change has
+   *  landed with no write (for growth, previous fromBottom + the growth). A
+   *  reader at the bottom whose reply outgrows the screen is no longer at the
+   *  bottom afterwards, and the badge lights. */
+  atBottomAfter: boolean;
   /** The thread is still in its bounded open phase: keep the bottom on every
    *  growth until the first history render has landed. */
   openPhase: boolean;
@@ -44,7 +47,7 @@ export type ReconcileAction =
   | "hold-anchor"
   /** Content arrived below a reader who is not at the bottom — light the badge. */
   | "flag-unseen"
-  /** Nothing to do — in particular, growth below a reader at the bottom. */
+  /** Nothing to do — in particular, growth that leaves the reader at the bottom. */
   | "none";
 
 /**
@@ -52,14 +55,14 @@ export type ReconcileAction =
  * a prepend of older history is held first (a top-insertion is never "new"),
  * then the bounded open phase, then a scroller-box resize (a change in the
  * viewport, not the content), then an above-reader reflow; only a *content*
- * grow that is none of those, landing below a reader who is not at the bottom,
- * counts as unseen.
+ * grow that is none of those, leaving the reader off the bottom, counts as
+ * unseen.
  */
 export function decideReconcile(inputs: ReconcileInputs): ReconcileAction {
   if (inputs.prepend) return "hold-prepend";
   if (inputs.openPhase) return "open-bottom";
   if (inputs.source === "scroller") return "hold-from-bottom";
   if (inputs.anchorMoved) return "hold-anchor";
-  if (inputs.grew && !inputs.atBottom) return "flag-unseen";
+  if (inputs.grew && !inputs.atBottomAfter) return "flag-unseen";
   return "none";
 }

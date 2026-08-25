@@ -169,7 +169,7 @@ function MessageListInner({
     [groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, pendingHqDraft, captureBubbles, debugView],
   );
 
-  const { scrollerRef, contentRef, atBottom, hasUnseenContent, scrollToBottom, anchorToTop, captureForPrepend, settleOpen, viewportPx } = useChatScroll();
+  const { scrollerRef, contentRef, atBottom, hasUnseenContent, scrollToBottom, anchorToTop, captureForPrepend, openThread, settleOpen, viewportPx } = useChatScroll();
 
   // The content element, for the send anchor's DOM query. Held alongside (never
   // instead of) the controller's attach callback — one authority owns scroll.
@@ -190,6 +190,13 @@ function MessageListInner({
     const users = content.querySelectorAll("[data-role=\"user\"]");
     anchorToTop(users[users.length - 1] ?? null);
   }, [sendSignal, anchorToTop]);
+
+  // Mounting this list IS opening a thread: `InteractiveChat` is keyed by
+  // session (ChatPage), so a session switch remounts. Say so to the controller
+  // rather than relying on the initial value of a ref inside it.
+  useEffect(() => {
+    openThread();
+  }, [openThread]);
 
   // The bounded open-thread hold ends once the first history render has landed.
   const loading = snapshot.matches("loading");

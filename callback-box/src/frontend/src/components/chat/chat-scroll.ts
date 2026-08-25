@@ -44,6 +44,14 @@ const GROWTH_EPSILON = 1;
 /** Re-pick the top-visible anchor this long after scrolling pauses. */
 const ANCHOR_RECAPTURE_MS = 80;
 /**
+ * How long a prepend snapshot stays armed. A load-older that errors, is
+ * cancelled, or returns nothing renderable never produces the growth that
+ * consumes the snapshot — and an unbounded one would make the *next* unrelated
+ * growth (a reply arriving minutes later) restore a stale gap and jump the
+ * reader. The snapshot belongs to one in-flight request; it expires with it.
+ */
+const PREPEND_SNAPSHOT_MS = 10000;
+/**
  * How long the open-thread hold outlives `settleOpen()`. The caller can only
  * report "the history is in the DOM" from an effect, which runs *before* the
  * ResizeObserver cycle that measures it — and markdown, images and embeds keep
@@ -73,8 +81,11 @@ function anchorChild(scroller: HTMLDivElement | null, content: HTMLDivElement | 
   // The turns, not the content wrapper's immediate children: in the chat those
   // are two boxes (the load-older header and the scan-boundary wrapper holding
   // every message), and a ruler that spans the whole transcript measures no
-  // shift at all. Every item wrapper carries `data-role` for this.
-  const items = content.querySelectorAll("[data-role]");
+  // shift at all. Every item wrapper carries `data-role` for this — matched at
+  // the two depths the wrappers actually live at, never `[data-role]` anywhere,
+  // so a rendered card or markdown block that happens to carry the attribute
+  // deeper inside a message can never become the ruler.
+  const items = content.querySelectorAll(":scope > [data-role], :scope > * > [data-role]");
   const children: ArrayLike<Element> = items.length > 0 ? items : content.children;
   let last: Element | null = null;
   for (const child of Array.from(children)) {
@@ -82,8 +93,11 @@ function anchorChild(scroller: HTMLDivElement | null, content: HTMLDivElement | 
     if (r.top >= scTop - 1) return { el: child, top: r.top - scTop };
     last = child;
   }
-  // Everything starts above the top edge (one very tall last message): the
-  // final child is still a usable ruler for growth happening above it.
+  // Everything starts above the top edge — the viewport sits inside one very
+  // tall message. The final item is still a usable ruler for growth above it,
+  // with the known limit that growth *inside* it moves the reader's view
+  // without moving its top, which is exactly what the choice above avoids
+  // everywhere else. There is no better ruler when no item starts on screen.
   if (!last) return null;
   return { el: last, top: last.getBoundingClientRect().top - scTop };
 }
@@ -124,12 +138,38 @@ function applyReconcileAction(action: ReconcileAction, opts: {
   } else if (action === "open-bottom") {
     writeTop(el.scrollHeight - el.clientHeight, "instant");
   } else if (action === "hold-from-bottom") {
+    // `prevFromBottom` is the last value measured before this resize was
+    // observed. If the resize also clamped `scrollTop` and the browser
+    // delivered that scroll event before the ResizeObserver callback, the
+    // snapshot is already the clamped one — but a clamp lands AT the bottom, so
+    // what is preserved is 0 and the reader ends up at the bottom. That is the
+    // bounded worst case of the ordering, and only for a reader who was already
+    // within the resize delta of the bottom.
     writeTop(el.scrollHeight - el.clientHeight - prevFromBottom, "instant");
   } else if (action === "hold-anchor") {
     writeTop(el.scrollTop + anchorDelta, "instant");
   } else if (action === "flag-unseen") {
     setUnseen(true);
   }
+}
+
+/** A `window.setTimeout` handle held in a ref, cleared idempotently. */
+function clearTimer(ref: MutableRefObject<number | null>): void {
+  if (ref.current !== null) window.clearTimeout(ref.current);
+  ref.current = null;
+}
+
+/**
+ * Record the bottom gap to restore once the older-history page lands, and arm
+ * its expiry (see PREPEND_SNAPSHOT_MS).
+ */
+function armPrependSnapshot(el: HTMLDivElement, refs: { gap: MutableRefObject<number | null>; timer: MutableRefObject<number | null> }): void {
+  refs.gap.current = el.scrollHeight - el.scrollTop;
+  clearTimer(refs.timer);
+  refs.timer.current = window.setTimeout(() => {
+    refs.gap.current = null;
+    refs.timer.current = null;
+  }, PREPEND_SNAPSHOT_MS);
 }
 
 export interface ChatScroll {
@@ -182,6 +222,7 @@ export function useChatScroll(): ChatScroll {
   // Set while older messages are being loaded: the pre-prepend
   // (scrollHeight - scrollTop) gap to restore once the insertion lands.
   const prependGapRef = useRef<number | null>(null);
+  const prependTimerRef = useRef<number | null>(null);
   const anchorRef = useRef<Anchor | null>(null);
   const anchorTimerRef = useRef<number | null>(null);
   const openPhaseRef = useRef(true);
@@ -217,8 +258,7 @@ export function useChatScroll(): ChatScroll {
 
   const endOpenPhase = useCallback(() => {
     openPhaseRef.current = false;
-    if (openTimerRef.current !== null) window.clearTimeout(openTimerRef.current);
-    openTimerRef.current = null;
+    clearTimer(openTimerRef);
   }, []);
 
   const scrollToBottom = useCallback((opts?: { behavior?: ScrollBehavior }) => {
@@ -242,7 +282,7 @@ export function useChatScroll(): ChatScroll {
 
   const captureForPrepend = useCallback(() => {
     const el = scrollerElRef.current;
-    if (el) prependGapRef.current = el.scrollHeight - el.scrollTop;
+    if (el) armPrependSnapshot(el, { gap: prependGapRef, timer: prependTimerRef });
   }, []);
 
   const openThread = useCallback(() => {
@@ -260,7 +300,7 @@ export function useChatScroll(): ChatScroll {
   // scrolled out of view, and the compensations only work against a child that
   // is still at the top of the viewport.
   const scheduleAnchorRecapture = useCallback(() => {
-    if (anchorTimerRef.current !== null) window.clearTimeout(anchorTimerRef.current);
+    clearTimer(anchorTimerRef);
     anchorTimerRef.current = window.setTimeout(() => {
       anchorRef.current = anchorChild(scrollerElRef.current, contentElRef.current);
     }, ANCHOR_RECAPTURE_MS);
@@ -306,14 +346,17 @@ export function useChatScroll(): ChatScroll {
       grew,
       prepend,
       anchorMoved: Math.abs(anchorDelta) > 1,
-      atBottom: atBottomRef.current,
+      // Where the reader lands if nothing is written: the pre-cycle gap plus
+      // whatever the content grew by (a scroller resize is compensated, so its
+      // pre-cycle state stands).
+      atBottomAfter: prevFromBottom + Math.max(0, el.scrollHeight - prevScrollHeightRef.current) <= AT_BOTTOM_PX,
       openPhase: openPhaseRef.current,
     });
     recordScrollTrace("reconcile", { src: source, grew, ad: Math.round(anchorDelta), act: action, sh: el.scrollHeight, ch: el.clientHeight, st: Math.round(el.scrollTop) });
     applyReconcileAction(action, { el, anchorDelta, prevFromBottom, prependGapRef, anchorRef, contentElRef, writeTop, setUnseen });
     if (source === "scroller") setViewportPx(el.clientHeight);
     measure(el);
-  }, [atBottomRef, writeTop, setUnseen, measure]);
+  }, [writeTop, setUnseen, measure]);
 
   const scrollerRef = useCallback((el: HTMLDivElement | null) => {
     const prev = scrollerElRef.current;
@@ -343,11 +386,11 @@ export function useChatScroll(): ChatScroll {
 
   useEffect(() => {
     const observers = observersRef.current;
+    const timers = [anchorTimerRef, openTimerRef, prependTimerRef];
     return () => {
       if (observers.content) observers.content.disconnect();
       if (observers.scroller) observers.scroller.disconnect();
-      if (anchorTimerRef.current !== null) window.clearTimeout(anchorTimerRef.current);
-      if (openTimerRef.current !== null) window.clearTimeout(openTimerRef.current);
+      for (const timer of timers) clearTimer(timer);
     };
   }, []);
 

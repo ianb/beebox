@@ -19,11 +19,11 @@ bottom append, but must be held in place, never flagged as new — this is the
 false-"new messages" badge bug. `prepend` wins over everything.
 
 ```ts
-decideReconcile({ source: "content", grew: true, prepend: true, anchorMoved: false, atBottom: false, openPhase: false })
+decideReconcile({ source: "content", grew: true, prepend: true, anchorMoved: false, atBottomAfter: false, openPhase: false })
 => hold-prepend
 
 // even during the open phase, or with a moved anchor, a landed prepend is held
-decideReconcile({ source: "content", grew: true, prepend: true, anchorMoved: true, atBottom: true, openPhase: true })
+decideReconcile({ source: "content", grew: true, prepend: true, anchorMoved: true, atBottomAfter: true, openPhase: true })
 => hold-prepend
 ```
 
@@ -32,11 +32,11 @@ chunk of the first history render keeps the bottom, until the caller says the
 render landed (or the reader scrolls away).
 
 ```ts
-decideReconcile({ source: "content", grew: true, prepend: false, anchorMoved: false, atBottom: false, openPhase: true })
+decideReconcile({ source: "content", grew: true, prepend: false, anchorMoved: false, atBottomAfter: false, openPhase: true })
 => open-bottom
 
 // a scroller resize during the open phase lands at the bottom too
-decideReconcile({ source: "scroller", grew: false, prepend: false, anchorMoved: false, atBottom: false, openPhase: true })
+decideReconcile({ source: "scroller", grew: false, prepend: false, anchorMoved: false, atBottomAfter: false, openPhase: true })
 => open-bottom
 ```
 
@@ -46,11 +46,11 @@ distance from the bottom is preserved across it — which is what keeps a reader
 who was at the bottom at the bottom when the keyboard clamps `scrollTop`.
 
 ```ts
-decideReconcile({ source: "scroller", grew: false, prepend: false, anchorMoved: false, atBottom: true, openPhase: false })
+decideReconcile({ source: "scroller", grew: false, prepend: false, anchorMoved: false, atBottomAfter: true, openPhase: false })
 => hold-from-bottom
 
 // same branch when the reader is away from the bottom — reposition, never flag
-decideReconcile({ source: "scroller", grew: true, prepend: false, anchorMoved: true, atBottom: false, openPhase: false })
+decideReconcile({ source: "scroller", grew: true, prepend: false, anchorMoved: true, atBottomAfter: false, openPhase: false })
 => hold-from-bottom
 ```
 
@@ -60,7 +60,7 @@ anchoring of its own, and the app disables Chrome's, so this branch is the only
 one doing it.
 
 ```ts
-decideReconcile({ source: "content", grew: true, prepend: false, anchorMoved: true, atBottom: false, openPhase: false })
+decideReconcile({ source: "content", grew: true, prepend: false, anchorMoved: true, atBottomAfter: false, openPhase: false })
 => hold-anchor
 ```
 
@@ -69,17 +69,18 @@ landed below them — light the badge. Nothing scrolls; the button is how they g
 see it.
 
 ```ts
-decideReconcile({ source: "content", grew: true, prepend: false, anchorMoved: false, atBottom: false, openPhase: false })
+decideReconcile({ source: "content", grew: true, prepend: false, anchorMoved: false, atBottomAfter: false, openPhase: false })
 => flag-unseen
 ```
 
-The same growth while the reader IS at the bottom does nothing at all. This is
-the model's central claim: a streaming reply below a reader at the bottom does
-not scroll and is not "unseen" — they watched it arrive, and `atBottom` simply
-becomes false as it grows.
+Growth that leaves the reader still within the at-bottom margin does nothing at
+all: they are watching it arrive. This is the model's central claim — a
+streaming reply never scrolls; once it grows past the margin the reader is no
+longer at the bottom, and *that* cycle flags unseen (the case above), so a
+reader who sat at the bottom while a reply outgrew the screen sees the badge.
 
 ```ts
-decideReconcile({ source: "content", grew: true, prepend: false, anchorMoved: false, atBottom: true, openPhase: false })
+decideReconcile({ source: "content", grew: true, prepend: false, anchorMoved: false, atBottomAfter: true, openPhase: false })
 => none
 ```
 
@@ -87,6 +88,6 @@ A content cycle that didn't grow (a shrink at finalize, a label swap) is never
 new content either.
 
 ```ts
-decideReconcile({ source: "content", grew: false, prepend: false, anchorMoved: false, atBottom: false, openPhase: false })
+decideReconcile({ source: "content", grew: false, prepend: false, anchorMoved: false, atBottomAfter: false, openPhase: false })
 => none
 ```
