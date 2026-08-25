@@ -1231,3 +1231,15 @@ test("execChild keeps only the tail of a noisy child in memory", async () => {
   assert.equal(result.output.includes("line-0\n"), false);
   assert.equal(result.logTruncated, false);
 });
+
+test("ensureStoreRoot claims an empty unmarked directory but refuses one with contents", async () => {
+  const empty = path.join(await tempDir("store-empty"), "schedule-runs");
+  await fs.mkdir(empty);
+  await ensureStoreRoot(empty);
+  await fs.stat(path.join(empty, ".schedule-runs"));
+
+  const occupied = path.join(await tempDir("store-occupied"), "schedule-runs");
+  await fs.mkdir(occupied);
+  await fs.writeFile(path.join(occupied, "somebody-elses.txt"), "x", "utf8");
+  await assert.rejects(ensureStoreRoot(occupied), /refusing to adopt/);
+});
