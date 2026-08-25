@@ -29,6 +29,18 @@ export interface EventFileEntry {
   remoteUpdated?: string | undefined;
 }
 
+/**
+ * Provenance for one calendar, written into every generated `.ics` as the
+ * X-CB-CALENDAR-* properties. Lives here with the connector's other shared
+ * vocabulary (it is passed to `eventToIcs` by the sync, push, and local-edit
+ * passes alike) rather than in the ICS module, which never needs the name.
+ */
+export interface IcsOptions {
+  calendarId: string;
+  calendarName?: string;
+  calendarRole?: string;
+}
+
 export interface CalendarState {
   /** syncToken per calendar ID */
   syncTokens: Record<string, string>;

@@ -16,7 +16,6 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { HTTPError } from "ky";
 import {
   registerConnector,
   type Connector,
@@ -40,7 +39,6 @@ import { stageAndCommitPaths } from "../lib/git.js";
 import {
   buildNarrativeCommitMessage,
   formatCalendarSyncFailure,
-  classifyCalendarFailure,
   type CalendarSyncFailure,
   type SyncNote,
 } from "./google-calendar-notes.js";
@@ -51,23 +49,13 @@ import {
   saveCalendarState,
   CalendarStateCorruptError,
   type CalendarState,
+  type IcsOptions,
   type SyncTokenSnapshot,
 } from "./google-calendar-state.js";
-import { removeStaleAfterFullResync } from "./google-calendar-stale.js";
-import {
-  syncCalendar,
-  type SyncAccumulator,
-} from "./google-calendar-sync.js";
+import { runCalendarSync } from "./google-calendar-run.js";
 import { pushAndCleanOrphans, processLocalDeletes } from "./google-calendar-push.js";
+import { pushPendingLocalEdits } from "./google-calendar-local-push.js";
 import { assertNever } from "../lib/invariant.js";
-
-type CalendarSyncOutcome =
-  | { kind: "synced"; fullResync: boolean }
-  | { kind: "failed"; failure: CalendarSyncFailure };
-
-function emptySyncAccumulator(): SyncAccumulator {
-  return { created: [], updated: [], deleted: [], notes: [], failures: [], seenEventIds: new Set() };
-}
 
 interface GoogleCalendarConnectorOptions {
   /** Injected calendar service (tests); the real one is built from box auth when omitted. */
@@ -181,6 +169,13 @@ class GoogleCalendarConnector implements Connector {
       calendarRoles,
     });
 
+    const icsOptsFor = (calendarId: string): IcsOptions => {
+      const opts: IcsOptions = { calendarId };
+      if (calendarNames[calendarId]) opts.calendarName = calendarNames[calendarId];
+      if (calendarRoles[calendarId]) opts.calendarRole = calendarRoles[calendarId];
+      return opts;
+    };
+
     const calDir = this.calendarDir();
     await fs.mkdir(calDir, { recursive: true });
 
@@ -198,17 +193,17 @@ class GoogleCalendarConnector implements Connector {
     const allNotes: SyncNote[] = [];
     const failures: CalendarSyncFailure[] = [];
     let isFullResync = false;
+    // Union across calendars of the events this run's pull (or its post-410
+    // stale pass) already handled — what the pending-edit pass must not touch.
+    const reconciledEventIds = new Set<string>();
 
     for (const calendarId of calendars) {
       const existingSyncToken = state.syncTokens[calendarId];
-      const icsOpts: { calendarId: string; calendarName?: string; calendarRole?: string } = { calendarId };
-      if (calendarNames[calendarId]) icsOpts.calendarName = calendarNames[calendarId];
-      if (calendarRoles[calendarId]) icsOpts.calendarRole = calendarRoles[calendarId];
 
-      const outcome = await this.runCalendarSync({
-        calendar, calendarId, syncToken: existingSyncToken, icsOpts, state, calDir,
-        syncDaysBack, syncDaysForward, windowStart, windowEnd, snapshot,
-        acc: { created, updated, deleted, allNotes, failures },
+      const outcome = await runCalendarSync({
+        boxRoot: this.boxRoot, calendar, calendarId, syncToken: existingSyncToken, icsOpts: icsOptsFor(calendarId),
+        state, calDir, syncDaysBack, syncDaysForward, windowStart, windowEnd, snapshot,
+        acc: { created, updated, deleted, allNotes, failures, reconciledEventIds },
       });
       switch (outcome.kind) {
         case "synced":
@@ -227,6 +222,17 @@ class GoogleCalendarConnector implements Connector {
     deleted.push(...deleteResult.deleted);
     allNotes.push(...deleteResult.notes);
     failures.push(...deleteResult.failures);
+
+    // Push local edits the pull never reached: a tracked file whose content no
+    // longer matches the hash we recorded. Runs AFTER processLocalDeletes so a
+    // file marked X-CB-DELETE is gone (or still marked, and skipped) rather
+    // than patched.
+    const pendingResult = await pushPendingLocalEdits({
+      boxRoot: this.boxRoot, calendar, state, calDir, reconciledEventIds, icsOptsFor,
+    });
+    updated.push(...pendingResult.updated);
+    allNotes.push(...pendingResult.notes);
+    failures.push(...pendingResult.failures);
 
     // Push locally-created files to Google, clean unparseable orphans
     const defaultCalendarId = calendars[0] || "primary";
@@ -274,98 +280,6 @@ class GoogleCalendarConnector implements Connector {
       result.error = `Calendar sync failed for ${failures.map(formatCalendarSyncFailure).join(", ")}`;
     }
     return result;
-  }
-
-  /**
-   * Sync one calendar, retrying with a full sync if the sync token expired (410).
-   * Accumulates every completed write into `acc`. Ordinary failures restore
-   * the incoming token; a failed 410 recovery leaves the invalid token absent.
-   */
-  private async runCalendarSync(opts: {
-    calendar: GoogleCalendarService;
-    calendarId: string;
-    syncToken: string | undefined;
-    icsOpts: { calendarId: string; calendarName?: string; calendarRole?: string };
-    state: CalendarState;
-    calDir: string;
-    syncDaysBack: number;
-    syncDaysForward: number;
-    windowStart: Date;
-    windowEnd: Date;
-    snapshot: SyncTokenSnapshot;
-    acc: { created: string[]; updated: string[]; deleted: string[]; allNotes: SyncNote[]; failures: CalendarSyncFailure[] };
-  }): Promise<CalendarSyncOutcome> {
-    const { calendar, calendarId, syncToken, icsOpts, state, calDir,
-            syncDaysBack, syncDaysForward, windowStart, windowEnd, snapshot, acc } = opts;
-    const base = {
-      boxRoot: this.boxRoot, calendar, calendarId, syncDaysBack, syncDaysForward,
-      state, icsOpts, calDir, windowStart, windowEnd,
-    };
-    const collect = (r: SyncAccumulator, opts2: { withNotes: boolean; withFailures: boolean }): void => {
-      acc.created.push(...r.created);
-      acc.updated.push(...r.updated);
-      acc.deleted.push(...r.deleted);
-      if (opts2.withNotes) acc.allNotes.push(...r.notes);
-      // A 410 discards the attempt's failures: the full resync that follows
-      // re-runs every one of those events, so keeping them would double-report.
-      if (opts2.withFailures) acc.failures.push(...r.failures);
-    };
-
-    const firstAttempt = emptySyncAccumulator();
-    try {
-      await syncCalendar({ ...base, syncToken, acc: firstAttempt });
-      collect(firstAttempt, { withNotes: true, withFailures: true });
-      return { kind: "synced", fullResync: false };
-    } catch (err: unknown) {
-      const expiredToken = err instanceof HTTPError && err.response.status === 410;
-      collect(firstAttempt, { withNotes: true, withFailures: !expiredToken });
-      if (!expiredToken) {
-        if (syncToken === undefined) delete state.syncTokens[calendarId];
-        else state.syncTokens[calendarId] = syncToken;
-        await this.saveState(state, snapshot);
-        return {
-          kind: "failed",
-          failure: classifyCalendarFailure(err, {
-            calendarId,
-            operation: "incremental-sync",
-          }),
-        };
-      }
-    }
-
-    console.log(`  Sync token expired for ${calendarId}, doing full sync...`);
-    delete state.syncTokens[calendarId];
-    await this.saveState(state, snapshot);
-
-    const fullAttempt = emptySyncAccumulator();
-    try {
-      await syncCalendar({ ...base, syncToken: undefined, acc: fullAttempt });
-      // Don't add individual notes for a successful full re-sync — the commit
-      // message summarizes the refresh.
-      collect(fullAttempt, { withNotes: false, withFailures: true });
-      // The full response is the complete truth for this window, and it does
-      // not report deletions — so anything we still track and it didn't return
-      // is gone from Google. Only reachable after a SUCCESSFUL full fetch: a
-      // partial one would read as "everything was deleted".
-      const staleAcc = emptySyncAccumulator();
-      await removeStaleAfterFullResync({
-        boxRoot: this.boxRoot, calDir, state, calendarId,
-        returnedEventIds: fullAttempt.seenEventIds, windowStart, windowEnd, acc: staleAcc,
-      });
-      collect(staleAcc, { withNotes: true, withFailures: true });
-      return { kind: "synced", fullResync: true };
-    } catch (err: unknown) {
-      collect(fullAttempt, { withNotes: true, withFailures: true });
-      delete state.syncTokens[calendarId];
-      await this.saveState(state, snapshot);
-      return {
-        kind: "failed",
-        failure: classifyCalendarFailure(err, {
-          calendarId,
-          operation: "full-sync",
-        }),
-      };
-    }
   }
 
 }

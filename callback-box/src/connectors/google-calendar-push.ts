@@ -10,12 +10,14 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { errnoCode } from "../lib/error-guards.js";
+import { contentHash } from "../lib/content-hash.js";
 import { type GoogleCalendarService } from "../services/google-calendar.js";
 import { validateIcsTimezone } from "./calendar-utils.js";
 import { icsToGoogleEvent } from "./google-calendar-ics.js";
 import { decideCalendarSync } from "./google-calendar-decide.js";
 import { invariant } from "../lib/invariant.js";
 import {
+  CB_DELETE_PATTERN,
   formatEventDate,
   extractCbAnnotations,
   classifyCalendarFailure,
@@ -97,14 +99,23 @@ export async function pushAndCleanOrphans(
 
       const result = await insertEventViaApi(calendar, { calendarId, event: apiEvent });
       if (result.ok) {
-        // Track the file with its new Google event ID
-        state.eventFiles[result.value.id] = { filename: file, calendarId };
-        pushed.push(relPath);
-
-        // Write back stripped content (without annotations)
+        // Write back stripped content (without annotations) BEFORE hashing:
+        // the hash has to describe the bytes that end up on disk.
         if (reason || ref) {
           await fs.writeFile(filePath, stripped);
         }
+
+        // Track the file with its new Google event ID, and stamp the hash of
+        // what is now on disk. Without it the entry has no recorded hash, so a
+        // later edit to a locally-created event is indistinguishable from the
+        // original and never enters the pending-edit push.
+        state.eventFiles[result.value.id] = {
+          filename: file,
+          calendarId,
+          contentHash: contentHash(reason || ref ? stripped : content),
+          remoteUpdated: result.value.updated,
+        };
+        pushed.push(relPath);
 
         // Build push note
         const dateStr = formatEventDate(apiEvent);
@@ -162,7 +173,7 @@ export async function processLocalDeletes(
     }
 
     // Check for X-CB-DELETE property
-    const deleteMatch = content.match(/^x-cb-delete[:;](.*)$/im);
+    const deleteMatch = CB_DELETE_PATTERN.exec(content);
     if (!deleteMatch) continue;
 
     const reason = deleteMatch[1]?.trim() || "(no reason)";

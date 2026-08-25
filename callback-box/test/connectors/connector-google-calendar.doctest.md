@@ -1036,3 +1036,363 @@ JSON.stringify({
 ```ts cleanup
 await box.cleanup();
 ```
+
+## A local edit is pushed even when Google returns nothing
+
+The pull can only reconcile events Google chooses to return, and an incremental
+sync returns nothing for an event nobody else touched — while the sync token
+advances past it. So a local edit used to reach Google only if the same event
+happened to come back in a pull, in practice only during a full resync. The
+push phase now looks for tracked files whose content no longer matches the hash
+the connector recorded, and patches them.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+box.commitAll("init box");
+
+const inner = createFakeGoogleCalendar({
+  calendars: [{ id: "primary", summary: "Main", primary: true, accessRole: "owner" }],
+  events: [
+    {
+      id: "evt-lunch",
+      status: "confirmed",
+      summary: "Lunch",
+      updated: "2026-06-01T10:00:00Z",
+      start: { dateTime: "2026-06-03T12:00:00-04:00", timeZone: "America/New_York" },
+      end: { dateTime: "2026-06-03T13:00:00-04:00", timeZone: "America/New_York" },
+    },
+  ],
+});
+
+// After the first pull the incremental sync returns nothing, exactly as Google
+// does when no one has touched the event since the stored token.
+let quiet = false;
+const calendar: GoogleCalendarService = {
+  ...inner,
+  listEvents: async (calendarId, opts) => {
+    if (quiet) return { items: [], nextSyncToken: "fake-sync-token-2" };
+    return inner.listEvents(calendarId, opts);
+  },
+};
+
+const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
+await connector.sync();
+
+const dir = join(box.root, "store/calendar");
+const file = (await readdir(dir)).filter((f) => f.endsWith(".ics"))[0] ?? "";
+const localIcs = await readFile(join(dir, file), "utf-8");
+await writeFile(join(dir, file), localIcs.replace("Lunch", "Lunch MINE"));
+
+quiet = true;
+const result = await connector.sync();
+JSON.stringify({
+  success: result.success,
+  updated: result.updated.length,
+  remote: inner.events[0]?.summary,
+})
+=> {"success":true,"updated":1,"remote":"Lunch MINE"}
+```
+
+The file was rewritten from Google's response and its hash re-stamped, so the
+edit stops being pending — a third sync pushes nothing:
+
+```ts continue
+const msg = execSync("git log -1 --pretty=%B", { cwd: box.root, encoding: "utf-8" });
+msg.includes("Pushed:")
+=> true
+
+const third = await connector.sync();
+JSON.stringify({ updated: third.updated.length, remote: inner.events[0]?.summary })
+=> {"updated":0,"remote":"Lunch MINE"}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A rejected patch is retried on the next sync
+
+A patch Google refuses leaves the file and its stored hash alone so the edit
+survives. That is only half a retry: an incremental sync will not resend an
+event Google did not change, and the sync token advances anyway, so the pull
+never revisits it. The mismatched hash IS the retry queue — the pending-edit
+pass finds it on the next run without any new state.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+box.commitAll("init box");
+
+const inner = createFakeGoogleCalendar({
+  calendars: [{ id: "primary", summary: "Main", primary: true, accessRole: "owner" }],
+  events: [
+    {
+      id: "evt-dentist",
+      status: "confirmed",
+      summary: "Dentist",
+      updated: "2026-06-01T10:00:00Z",
+      start: { dateTime: "2026-06-05T09:00:00Z" },
+      end: { dateTime: "2026-06-05T10:00:00Z" },
+    },
+  ],
+});
+
+let quiet = false;
+let patchFails = false;
+const calendar: GoogleCalendarService = {
+  ...inner,
+  listEvents: async (calendarId, opts) => {
+    if (quiet) return { items: [], nextSyncToken: "fake-sync-token-2" };
+    return inner.listEvents(calendarId, opts);
+  },
+  patchEvent: async (calendarId, opts) => {
+    if (patchFails) return throwCalendarHttpError(503, "https://calendar.test/events/evt-dentist");
+    return inner.patchEvent(calendarId, opts);
+  },
+};
+
+const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
+await connector.sync();
+
+const dir = join(box.root, "store/calendar");
+const file = (await readdir(dir)).filter((f) => f.endsWith(".ics"))[0] ?? "";
+const localIcs = await readFile(join(dir, file), "utf-8");
+await writeFile(join(dir, file), localIcs.replace("Dentist", "Dentist MINE"));
+
+// Run 2: Google still returns the event, the patch is rejected, the edit stays.
+patchFails = true;
+const rejected = await connector.sync();
+JSON.stringify({ success: rejected.success, remote: inner.events[0]?.summary })
+=> {"success":false,"remote":"Dentist"}
+```
+
+Run 3 is an ordinary incremental sync — Google returns nothing at all — and the
+held edit still goes up:
+
+```ts continue
+quiet = true;
+patchFails = false;
+const retried = await connector.sync();
+JSON.stringify({
+  success: retried.success,
+  updated: retried.updated.length,
+  remote: inner.events[0]?.summary,
+})
+=> {"success":true,"updated":1,"remote":"Dentist MINE"}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A locally-edited event Google no longer has stays visible
+
+The post-410 stale pass keeps a locally-edited `.ics` whose event Google no
+longer returns, and reports it once. Reported once is not enough: nothing in a
+later run pulled that event either, so the stuck file used to go silent after
+its one mention. The pending-edit pass retries the push on every run, and a
+patch to an event Google has deleted keeps failing — which is the point, since
+that failure is the only thing telling the boxholder the file is stranded.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+box.commitAll("init box");
+
+const inner = createFakeGoogleCalendar({
+  calendars: [{ id: "primary", summary: "Main", primary: true, accessRole: "owner" }],
+  events: [
+    {
+      id: "evt-gone",
+      status: "confirmed",
+      summary: "Deleted but edited here",
+      start: { dateTime: "2026-06-05T10:00:00Z" },
+      end: { dateTime: "2026-06-05T11:00:00Z" },
+    },
+  ],
+});
+
+let expireToken = false;
+const calendar: GoogleCalendarService = {
+  ...inner,
+  listEvents: async (calendarId, opts) => {
+    if (opts?.syncToken && expireToken) {
+      return throwCalendarHttpError(410, "https://calendar.test/events?syncToken=expired");
+    }
+    if (opts?.syncToken) return { items: [], nextSyncToken: "fake-sync-token-2" };
+    return inner.listEvents(calendarId, opts);
+  },
+  // Google no longer has the event, so a patch to it is a 404.
+  patchEvent: async () => throwCalendarHttpError(404, "https://calendar.test/events/evt-gone"),
+};
+
+const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
+await connector.sync();
+
+const dir = join(box.root, "store/calendar");
+const file = (await readdir(dir)).filter((f) => f.endsWith(".ics"))[0] ?? "";
+const localIcs = await readFile(join(dir, file), "utf-8");
+await writeFile(join(dir, file), localIcs.replace("Deleted but edited here", "MINE now"));
+inner.events = [];
+
+// The 410 run: the stale pass reports it, and only it — the pending-edit pass
+// stands aside for an entry this run already dealt with.
+expireToken = true;
+const staleRun = await connector.sync();
+JSON.stringify({
+  success: staleRun.success,
+  stale: staleRun.error?.includes("(stale-cleanup,"),
+  alsoPush: staleRun.error?.includes("local-push"),
+})
+=> {"success":false,"stale":true,"alsoPush":false}
+```
+
+The following run is an ordinary incremental sync that returns nothing, and the
+stranded file is reported again rather than fading out:
+
+```ts continue
+expireToken = false;
+const nextRun = await connector.sync();
+JSON.stringify({
+  success: nextRun.success,
+  blamed: nextRun.error?.includes(`store/calendar/${file} (local-push, HTTP 404)`),
+  kept: (await readFile(join(dir, file), "utf-8")).includes("MINE now"),
+})
+=> {"success":false,"blamed":true,"kept":true}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A full resync never removes a recurring master
+
+`singleEvents=false` plus a `timeMin`/`timeMax` leaves it to Google whether a
+series' master comes back in a window, and `isInWindow` cannot arbitrate — it
+answers `true` for every recurring event by construction. So a master missing
+from a full resync is no information at all, and the stale pass leaves it
+alone. (A series really deleted in Google arrives as a cancelled event on an
+ordinary pull.)
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+box.commitAll("init box");
+
+const inner = createFakeGoogleCalendar({
+  calendars: [{ id: "primary", summary: "Main", primary: true, accessRole: "owner" }],
+  events: [
+    {
+      id: "evt-weekly",
+      status: "confirmed",
+      summary: "Weekly sync",
+      start: { dateTime: "2026-06-01T14:00:00-04:00", timeZone: "America/New_York" },
+      end: { dateTime: "2026-06-01T15:00:00-04:00", timeZone: "America/New_York" },
+      recurrence: ["RRULE:FREQ=WEEKLY;BYDAY=MO"],
+    },
+  ],
+});
+
+const calendar: GoogleCalendarService = {
+  ...inner,
+  listEvents: async (calendarId, opts) => {
+    if (opts?.syncToken) {
+      return throwCalendarHttpError(410, "https://calendar.test/events?syncToken=expired");
+    }
+    return inner.listEvents(calendarId, opts);
+  },
+};
+
+const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
+await connector.sync();
+const dir = join(box.root, "store/calendar");
+const file = (await readdir(dir)).filter((f) => f.endsWith(".ics"))[0] ?? "";
+
+// The resync comes back without the master. Nothing may be concluded from that.
+inner.events = [];
+const result = await connector.sync();
+JSON.stringify({ success: result.success, kept: (await readdir(dir)).includes(file) })
+=> {"success":true,"kept":true}
+```
+
+It is still tracked, too — an untracked `.ics` would be read as a
+locally-created event and inserted back into Google as a duplicate series:
+
+```ts continue
+const { loadCalendarState } = await import("../../src/connectors/google-calendar-state.js");
+const state = await loadCalendarState(box.root);
+JSON.stringify(Object.keys(state.eventFiles))
+=> ["evt-weekly"]
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## An edit to a locally-created event is pushed too
+
+A file pushed from the box gets tracked with the hash of what is on disk, like
+one written from a pull. Without that hash the entry has nothing to compare
+against, so a later edit to an event the boxholder created here would look
+identical to the original forever and never enter the pending-edit push.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+box.commitAll("init box");
+
+await box.seed("store/calendar/local-new.ics",
+  "BEGIN:VCALENDAR\r\n" +
+  "VERSION:2.0\r\n" +
+  "PRODID:-//Test//EN\r\n" +
+  "BEGIN:VEVENT\r\n" +
+  "UID:local-editable\r\n" +
+  "SUMMARY:Locally created\r\n" +
+  "DTSTART;VALUE=DATE:20260601\r\n" +
+  "DTEND;VALUE=DATE:20260602\r\n" +
+  "END:VEVENT\r\n" +
+  "END:VCALENDAR\r\n",
+);
+box.commitAll("seed local ics");
+
+const inner = createFakeGoogleCalendar({
+  calendars: [{ id: "primary", summary: "Main", primary: true, accessRole: "owner" }],
+});
+
+// After the insert, Google has nothing new to report on any later sync.
+let quiet = false;
+const calendar: GoogleCalendarService = {
+  ...inner,
+  listEvents: async (calendarId, opts) => {
+    if (quiet) return { items: [], nextSyncToken: "fake-sync-token-2" };
+    return inner.listEvents(calendarId, opts);
+  },
+};
+
+const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
+const first = await connector.sync();
+JSON.stringify({ pushed: first.pushed?.length, remote: inner.events[0]?.summary })
+=> {"pushed":1,"remote":"Locally created"}
+```
+
+Edit the file the box created. The next sync patches it up:
+
+```ts continue
+const filePath = join(box.root, "store/calendar/local-new.ics");
+const localIcs = await readFile(filePath, "utf-8");
+await writeFile(filePath, localIcs.replace("Locally created", "Locally created MINE"));
+
+quiet = true;
+const second = await connector.sync();
+JSON.stringify({
+  success: second.success,
+  updated: second.updated.length,
+  remote: inner.events[0]?.summary,
+})
+=> {"success":true,"updated":1,"remote":"Locally created MINE"}
+```
+
+```ts cleanup
+await box.cleanup();
+```

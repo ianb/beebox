@@ -11,6 +11,15 @@ import ICAL from "ical.js";
 import { HTTPError } from "ky";
 import { type GoogleCalendarEvent } from "./google-calendar-ics.js";
 
+/**
+ * The X-CB-DELETE marker a boxholder adds to a tracked `.ics` to ask for the
+ * event's deletion. Shared so every pass agrees on what a delete request looks
+ * like: adding the marker also changes the file's hash, and the local-edit push
+ * must recognize it and stand aside rather than patch a file already destined
+ * for `processLocalDeletes`.
+ */
+export const CB_DELETE_PATTERN = /^x-cb-delete[:;](.*)$/im;
+
 export interface SyncNote {
   action: "new" | "updated" | "deleted" | "pushed" | "cancelled";
   summary: string;

@@ -1,6 +1,6 @@
 # Calendar Integration
 
-**Status: Implemented (bidirectional).** Google Calendar ↔ `.ics` files in `store/calendar/`. Pull is the well-exercised path; local edits, locally-created events, and `X-CB-DELETE` markers are pushed back to Google during sync. Caveats: scheduled auto-sync is disabled by default, and the push path is largely untested.
+**Status: Implemented (bidirectional).** Google Calendar ↔ `.ics` files in `store/calendar/`. Pull is the well-exercised path; local edits, locally-created events, and `X-CB-DELETE` markers are pushed back to Google during sync. Caveats: scheduled auto-sync is disabled by default, and the push path has little real-world mileage.
 
 ## Overview
 
@@ -37,7 +37,9 @@ The state file is an *index*, not a cache: a `.ics` file missing from it is read
 
 Every way a sync can fall short is part of its result: a calendar whose pull failed, a rejected `X-CB-DELETE`, a local `.ics` Google refused, a local edit whose patch was rejected. Each becomes a line in the commit's `Failed:` section and in `SyncResult.error`, so `cb wakeup` counts it. **A push that fails leaves the local file and its recorded hash alone** — the boxholder's edit is never overwritten by Google's copy on a failed push, and the next sync retries.
 
-After a `410` (expired sync token) the connector refetches the full window and then reconciles: a tracked, in-window event Google no longer returns was deleted remotely while the token was invalid. Its `.ics` is deleted if it still matches what the connector wrote; if it was edited locally, the file is kept and still tracked, and the sync reports a `stale-cleanup` failure — untracking it would make the next push pass insert the just-deleted event back into Google. Events outside the refetched window are never touched.
+**The recorded hash is the retry queue.** A tracked `.ics` whose content no longer matches the hash the connector last wrote holds an edit Google has not accepted, and the push phase patches it — whether it was edited a minute ago or a rejected patch left it pending three syncs back. This is a separate pass from the pull, because the pull only ever sees events Google *chose to return*: an incremental sync returns nothing for an event nobody else touched, yet the sync token advances past it. Without the pass, an ordinary local edit could sit unsent until the next full resync, and a failed patch was never retried at all. Nothing is pushed or reported twice — entries the same run already reconciled (or reported as stale) are skipped — and a file carrying an `X-CB-DELETE` marker belongs to the delete pass, which runs first and wins.
+
+After a `410` (expired sync token) the connector refetches the full window and then reconciles: a tracked, in-window event Google no longer returns was deleted remotely while the token was invalid. Its `.ics` is deleted if it still matches what the connector wrote; if it was edited locally, the file is kept and still tracked, and the sync reports a `stale-cleanup` failure — untracking it would make the next push pass insert the just-deleted event back into Google. On later runs that stranded file keeps failing its retried patch, so it stays visible instead of being mentioned once and forgotten. Events outside the refetched window are never touched, and neither are **recurring masters**: with `singleEvents=false` and a `timeMin`/`timeMax`, whether a series' master comes back in a window is Google's judgement about where its instances fall, so an absent master is no evidence of deletion. A series really deleted in Google arrives as a cancelled event on an ordinary pull.
 
 ## CLI
 
@@ -67,7 +69,7 @@ class GoogleCalendarConnector implements Connector {
 }
 ```
 
-`produces` is `["calendar-event"]`. Local edits and locally-created `.ics` files are pushed back to Google during sync, so the connector is bidirectional — pull is the primary, well-tested path; the push path is implemented but largely untested.
+`produces` is `["calendar-event"]`. Local edits and locally-created `.ics` files are pushed back to Google during sync, so the connector is bidirectional — pull is the primary path; the push path is implemented and doctest-covered, but has little real-world mileage.
 
 ## Auth
 
@@ -82,7 +84,8 @@ Google Calendar requires OAuth2 (unlike Gmail, which accepts app passwords). Aut
 
 ## Known limitations
 
-- **Push path is untested.** Local `.ics` edits and locally-created events are detected (content hash) and pushed back to Google, but this push path is largely untested and scheduled auto-sync is disabled by default. Remote-vs-local conflict detection (a remote change since the last pull) is not yet tracked — on a failed push the remote version wins.
+- **Push path is lightly exercised.** Local `.ics` edits and locally-created events are detected (content hash) and pushed back to Google. The failure and retry behavior is covered by doctests against the fake service, but the path has little real-world mileage and scheduled auto-sync is disabled by default.
+- **Conflicts resolve remote-wins.** When an event changed both locally and in Google since the last pull, Google's version overwrites the local file and the edit is discarded (recorded as such in the commit). A *failed* push is not a conflict and never discards the edit.
 - **Slug collisions.** Two events with the same slug currently get a numeric suffix; revisit if it becomes noisy.
 - **Recurring event edits.** Editing a single occurrence of a recurring series in Google Calendar (creating an `EXDATE` or override) is fetched, but the local representation is whatever Google returns in the series — no separate per-occurrence file.
 

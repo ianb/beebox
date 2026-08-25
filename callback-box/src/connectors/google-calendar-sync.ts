@@ -16,29 +16,25 @@ import {
   eventToIcs,
   eventFilename,
   isInWindow,
-  icsToGoogleEvent,
   type GoogleCalendarEvent,
 } from "./google-calendar-ics.js";
 import {
   formatEventDate,
   describeChanges,
-  classifyCalendarFailure,
-  localCalendarFailure,
   type CalendarSyncFailure,
   type SyncNote,
 } from "./google-calendar-notes.js";
 import {
   getFilename,
-  patchEventViaApi,
   fetchEvents,
   type CalendarState,
+  type IcsOptions,
 } from "./google-calendar-state.js";
+import { patchLocalEdit, type LocalPushOutcome } from "./google-calendar-local-push.js";
 import { contentHash } from "../lib/content-hash.js";
 import { getBoxTime } from "../lib/time.js";
 import { decideCalendarSync } from "./google-calendar-decide.js";
 import { invariant } from "../lib/invariant.js";
-
-interface IcsOpts { calendarId: string; calendarName?: string; calendarRole?: string }
 
 export interface SyncAccumulator {
   created: string[];
@@ -48,22 +44,18 @@ export interface SyncAccumulator {
   /** Push-side failures raised while reconciling this calendar's events. */
   failures: CalendarSyncFailure[];
   /**
+   * Every tracked event this attempt reconciled — pulled, or attempted a
+   * local-edit push for. The pending-edit pass skips these, so an edit the
+   * pull already handled is neither pushed nor reported twice.
+   */
+  reconciledEventIds: Set<string>;
+  /**
    * Every event id Google returned in THIS attempt, before window/cancelled
    * filtering. Only meaningful for a full-window fetch, where it is the
    * complete picture the post-410 stale reconciliation diffs against.
    */
   seenEventIds: Set<string>;
 }
-
-/**
- * What happened to a selected local-wins push. There is no "fall through and
- * let Google's copy win" outcome: a push we chose to make and could not
- * complete must leave the local file (and its recorded contentHash) alone, or
- * a transient 429 silently erases the boxholder's edit.
- */
-type LocalPushOutcome =
-  | { kind: "pushed" }
-  | { kind: "failed"; failure: CalendarSyncFailure };
 
 /** Handle a cancelled event: delete the local file and untrack it. */
 async function handleCancelledEvent(
@@ -106,17 +98,16 @@ async function unlinkRenamed(
  * The local file was edited and Google's copy was not, so the local edit is
  * pushed and the file rewritten from the response.
  *
- * Both failure modes — a local file we cannot parse into an event, and a patch
- * Google rejects — return `failed` and touch NOTHING on disk or in state. The
- * caller must not write Google's version over the file afterwards: the edit is
- * still the only copy of what the boxholder wrote, and the unchanged stored
- * contentHash is what makes the next sync try the push again.
+ * A `failed` outcome touches NOTHING on disk or in state (see patchLocalEdit).
+ * The caller must not write Google's version over the file afterwards: the edit
+ * is still the only copy of what the boxholder wrote, and the unchanged stored
+ * contentHash is what makes a later sync try the push again.
  */
 async function tryPushLocalEdit(
   event: GoogleCalendarEvent,
   ctx: {
     boxRoot: string; calDir: string; oldName: string | undefined;
-    calendar: GoogleCalendarService; icsOpts: IcsOpts; filePath: string; relPath: string;
+    calendar: GoogleCalendarService; icsOpts: IcsOptions; filePath: string; relPath: string;
     filename: string; localContent: string; existingEntry: string | { calendarId: string };
     state: CalendarState; acc: SyncAccumulator;
   },
@@ -124,51 +115,30 @@ async function tryPushLocalEdit(
   const { boxRoot, calDir, oldName, calendar, icsOpts, filePath, relPath, filename,
           localContent, existingEntry, state, acc } = ctx;
   const entryCalId = typeof existingEntry === "string" ? icsOpts.calendarId : existingEntry.calendarId;
-  const fail = (err: unknown): LocalPushOutcome => ({
-    kind: "failed",
-    failure: classifyCalendarFailure(err, {
-      calendarId: entryCalId, operation: "local-push", path: relPath,
-    }),
-  });
 
-  const localEvent = icsToGoogleEvent(localContent);
-  if (!localEvent) {
-    console.warn(`  Local edit to ${filename} does not parse as an event, keeping it`);
-    return {
-      kind: "failed",
-      failure: localCalendarFailure({
-        calendarId: entryCalId, operation: "local-push", path: relPath,
-        detail: "local .ics does not parse as an event",
-      }),
-    };
-  }
-
-  delete localEvent._calendarId;
-  const patchResult = await patchEventViaApi(calendar, {
-    calendarId: entryCalId, googleEventId: event.id, event: localEvent,
+  const outcome = await patchLocalEdit({
+    calendar, calendarId: entryCalId, googleEventId: event.id,
+    localContent, filename, relPath,
   });
-  if (!patchResult.ok) {
-    console.warn(`  Failed to push local edit for ${filename}, keeping the local file`);
-    return fail(patchResult.error);
-  }
+  if (outcome.kind === "failed") return outcome;
 
   // Patch succeeded — rewrite file from Google's response to normalize. Only
-  // here is dropping a renamed predecessor safe; on the failure paths above the
+  // here is dropping a renamed predecessor safe; on the failure path above the
   // old file is still the boxholder's only copy.
   await unlinkRenamed({ boxRoot, calDir, oldName, filename, acc });
-  const patchedIcs = eventToIcs(patchResult.value, icsOpts);
+  const patchedIcs = eventToIcs(outcome.event, icsOpts);
   await fs.writeFile(filePath, patchedIcs);
   state.eventFiles[event.id] = {
     filename, calendarId: icsOpts.calendarId, contentHash: contentHash(patchedIcs),
-    remoteUpdated: patchResult.value.updated,
+    remoteUpdated: outcome.event.updated,
   };
   acc.updated.push(relPath);
   acc.notes.push({
     action: "pushed",
-    summary: `${localEvent.summary || filename} (local edit pushed)`,
+    summary: `${outcome.event.summary || filename} (local edit pushed)`,
     ref: relPath,
   });
-  return { kind: "pushed" };
+  return outcome;
 }
 
 /** Build the SyncNote for an updated/new event (does not write the file). */
@@ -176,7 +146,7 @@ function recordUpsertNote(
   event: GoogleCalendarEvent,
   ctx: {
     isExisting: boolean; localContent: string | undefined; icsContent: string;
-    filename: string; relPath: string; calendarId: string; icsOpts: IcsOpts;
+    filename: string; relPath: string; calendarId: string; icsOpts: IcsOptions;
     acc: SyncAccumulator;
   },
 ): void {
@@ -207,9 +177,10 @@ function recordUpsertNote(
 /** Reconcile a single non-cancelled, in-window event into the local store. */
 async function reconcileEvent(
   event: GoogleCalendarEvent,
-  ctx: { boxRoot: string; calendar: GoogleCalendarService; calendarId: string; icsOpts: IcsOpts; calDir: string; state: CalendarState; acc: SyncAccumulator },
+  ctx: { boxRoot: string; calendar: GoogleCalendarService; calendarId: string; icsOpts: IcsOptions; calDir: string; state: CalendarState; acc: SyncAccumulator },
 ): Promise<void> {
   const { boxRoot, calendar, calendarId, icsOpts, calDir, state, acc } = ctx;
+  acc.reconciledEventIds.add(event.id);
   const filename = eventFilename(event);
   const filePath = path.join(calDir, filename);
   const icsContent = eventToIcs(event, icsOpts);
@@ -301,7 +272,7 @@ export async function syncCalendar(opts: {
   syncDaysBack: number;
   syncDaysForward: number;
   state: CalendarState;
-  icsOpts: IcsOpts;
+  icsOpts: IcsOptions;
   calDir: string;
   windowStart: Date;
   windowEnd: Date;

@@ -37,6 +37,16 @@ import { type SyncAccumulator } from "./google-calendar-sync.js";
  *  - **anything outside the refetched window, or that does not parse** — never
  *    touched. It was never in the response's scope, so its absence means
  *    nothing.
+ *  - **a recurring master (the `.ics` carries an RRULE)** — never touched
+ *    either. We list with `singleEvents=false` and a `timeMin`/`timeMax`, and
+ *    which masters that combination returns is a Google-side judgement about
+ *    where a series' instances fall, not something absence can be read as
+ *    deletion of: a series whose instances have all drifted out of the window
+ *    is simply not returned. `isInWindow` cannot arbitrate — it answers `true`
+ *    for every recurring event by construction — so the only safe reading of a
+ *    missing master is "no information". A series really deleted in Google
+ *    comes back as a cancelled event on an ordinary pull, or is cleaned up by
+ *    hand with X-CB-DELETE.
  */
 export async function removeStaleAfterFullResync(opts: {
   boxRoot: string;
@@ -73,6 +83,7 @@ export async function removeStaleAfterFullResync(opts: {
 
     const localEvent = icsToGoogleEvent(localContent);
     if (!localEvent) continue;
+    if (localEvent.recurrence && localEvent.recurrence.length > 0) continue;
     if (!isInWindow(localEvent, { start: windowStart, end: windowEnd })) continue;
 
     const summary = localEvent.summary || entry.filename;
@@ -84,6 +95,10 @@ export async function removeStaleAfterFullResync(opts: {
       continue;
     }
 
+    // Reported here, so the pending-local-edit pass must not ALSO try to patch
+    // this run's mismatched hash and report the same file a second time. Next
+    // run it does, and the stuck file stays visible.
+    acc.reconciledEventIds.add(eventId);
     console.warn(`  ${entry.filename} is no longer on Google but was edited locally — keeping it`);
     acc.notes.push({
       action: "updated",
