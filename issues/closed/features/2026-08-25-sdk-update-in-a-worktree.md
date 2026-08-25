@@ -3,10 +3,35 @@ title: "Run the sdk-update schedule in its own worktree instead of the main chec
 workstream: unattached
 area: monorepo
 labels: [scheduler, workstreams]
+resolution: implemented
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-scheduled-task-voice — cross-model review of the scheduler
 ---
+
+> **Done 2026-08-25.** `sdk-update` is now `worktree: true`: the session works
+> on `worktree-sdk-update`, merges `main` in at the start of a run, commits
+> there, and fast-forwards `main` with `bin/land`. The runner's liveness guard
+> therefore applies to it like any other scheduled workstream.
+>
+> `prompt.md` changed with it — the preconditions are now "this worktree is
+> clean" plus a `git merge main` (not `--ff-only`, since the branch carries its
+> own commits between lands), and the push steps became `bin/land`. It also
+> gained the case this mode introduces: **land can legitimately refuse** (dirty
+> main checkout, not on `main`, not a fast-forward), which is not a failure to
+> work around — the commit is already safe on the branch, so the run alerts and
+> stops and the next one re-lands. Verified: `bin/schedules lint` clean, and a
+> `--dry-run --force` still detects work (4 unreviewed releases) and reports the
+> handoff.
+>
+> **The follow-on was deliberately not done.** `worktree: false` now has no user
+> in `schedules/` — `docling-update` has no `workstream:` at all, and the other
+> two were already `true` — but removing the option means changing the schema,
+> the runner's `mainRoot` branch, and the guard exemption
+> (`bin/lib/schedules-workstream.ts:286-289`). That is a capability removal, not
+> a cleanup, and it is the boxholder's call: a future schedule that genuinely
+> must act on the main checkout would have to reintroduce it. Filed here rather
+> than done silently.
 
 `schedules/sdk-update/schedule.yaml` runs its agent session with
 `worktree: false` and `permissionMode: bypassPermissions`: the session edits,

@@ -5,7 +5,7 @@ workstream: unknown
 
 2026-08-24 · from the knip-exports workstream (boxholder decision).
 
-knip's `exports` check is on and the backlog is cleared, so from here the
+knip's `exports` check is on and its report is empty, so from here the
 question is when it runs. **Not per-commit.** A dead export is not a broken
 build; blocking a commit on one is the wrong severity, and pre-commit is
 already slow. The right cadence is **weekly**, as a report someone reads.
