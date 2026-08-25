@@ -27,6 +27,7 @@ import {
 import {
   patchEventViaApi,
   type CalendarState,
+  type EventFileEntry,
   type IcsOptions,
 } from "./google-calendar-state.js";
 
@@ -85,6 +86,52 @@ export async function patchLocalEdit(opts: {
     };
   }
   return { kind: "pushed", event: patchResult.value };
+}
+
+/**
+ * Record Google's acceptance of a push, then bring the local file into line.
+ *
+ * The API call has already returned, so state is stamped BEFORE the local
+ * write. An event Google holds must never be left looking un-pushed, and a
+ * rewrite that throws — a full disk, a path something else replaced — is a
+ * reported failure, not a lost update. The worst a failed rewrite can leave
+ * behind is a hash mismatch, which the pending-edit pass clears next run by
+ * re-patching content Google already has: idempotent, not a second edit.
+ *
+ * `fallbackFilename` is the name of the file that still exists when the push
+ * renamed the event (the pull path's rename). On a failed rewrite the entry
+ * points back at it: an entry naming a file we never wrote would strand the old
+ * one untracked, and the orphan pass re-inserts untracked `.ics` files as brand
+ * new Google events.
+ */
+export async function writeBackPushedEvent(opts: {
+  state: CalendarState;
+  googleEventId: string;
+  entry: EventFileEntry;
+  calDir: string;
+  relPath: string;
+  event: GoogleCalendarEvent;
+  icsOpts: IcsOptions;
+  fallbackFilename: string | undefined;
+}): Promise<CalendarSyncFailure | undefined> {
+  const { state, googleEventId, entry, calDir, relPath, event, icsOpts, fallbackFilename } = opts;
+  const ics = eventToIcs(event, icsOpts);
+  const pushedEntry: EventFileEntry = {
+    ...entry, contentHash: contentHash(ics), remoteUpdated: event.updated,
+  };
+  state.eventFiles[googleEventId] = pushedEntry;
+  try {
+    await fs.writeFile(path.join(calDir, entry.filename), ics);
+    return undefined;
+  } catch (err: unknown) {
+    if (fallbackFilename !== undefined && fallbackFilename !== entry.filename) {
+      state.eventFiles[googleEventId] = { ...pushedEntry, filename: fallbackFilename };
+    }
+    console.warn(`  Pushed ${entry.filename} to Google but could not rewrite it locally:`, err);
+    return classifyCalendarFailure(err, {
+      calendarId: entry.calendarId, operation: "local-push", path: relPath,
+    });
+  }
 }
 
 /** Does this tracked entry hold an edit that still owes Google a patch? */
@@ -175,13 +222,18 @@ export async function pushPendingLocalEdits(opts: {
     // edit stops being pending. The filename is deliberately left alone even if
     // the edit moved the event's date: renaming is the pull path's job, which
     // owns the old-file cleanup.
-    const patchedIcs = eventToIcs(outcome.event, icsOptsFor(entry.calendarId));
-    await fs.writeFile(filePath, patchedIcs);
-    state.eventFiles[googleEventId] = {
-      ...entry,
-      contentHash: contentHash(patchedIcs),
-      remoteUpdated: outcome.event.updated,
-    };
+    const rewriteFailure = await writeBackPushedEvent({
+      state, googleEventId, entry, calDir, relPath,
+      event: outcome.event, icsOpts: icsOptsFor(entry.calendarId),
+      fallbackFilename: undefined,
+    });
+    if (rewriteFailure) {
+      // Google took the edit; only the local normalization failed. The entry is
+      // tracked against Google's copy, so the next run finds the mismatch and
+      // re-patches the same content rather than losing or duplicating anything.
+      failures.push(rewriteFailure);
+      continue;
+    }
     updated.push(relPath);
     notes.push({
       action: "pushed",

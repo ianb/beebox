@@ -8,7 +8,7 @@ generation path (VTIMEZONE + DTSTART) without hitting the network.
 ```ts setup
 import { join } from "node:path";
 import { execSync } from "node:child_process";
-import { readFile, readdir, writeFile } from "node:fs/promises";
+import { chmod, readFile, readdir, writeFile } from "node:fs/promises";
 // eslint-disable-next-line import-x/no-rename-default
 import ICAL from "ical.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
@@ -785,7 +785,13 @@ let quiet = false;
 const calendar: GoogleCalendarService = {
   ...inner,
   listEvents: async (calendarId, opts) => {
-    if (quiet) return { items: [], nextSyncToken: "fake-sync-token-2" };
+    if (quiet) {
+      // An incremental fetch is what the section is about. If production ever
+      // stopped sending the stored token this wrapper would be standing in for
+      // a full fetch instead, and the test would quietly test nothing.
+      if (!opts?.syncToken) throw new Error("expected the stored syncToken on this fetch");
+      return { items: [], nextSyncToken: "fake-sync-token-2" };
+    }
     return inner.listEvents(calendarId, opts);
   },
   deleteEvent: async () => throwCalendarHttpError(503, "https://calendar.test/events/evt-cancelme"),
@@ -1071,7 +1077,13 @@ let quiet = false;
 const calendar: GoogleCalendarService = {
   ...inner,
   listEvents: async (calendarId, opts) => {
-    if (quiet) return { items: [], nextSyncToken: "fake-sync-token-2" };
+    if (quiet) {
+      // An incremental fetch is what the section is about. If production ever
+      // stopped sending the stored token this wrapper would be standing in for
+      // a full fetch instead, and the test would quietly test nothing.
+      if (!opts?.syncToken) throw new Error("expected the stored syncToken on this fetch");
+      return { items: [], nextSyncToken: "fake-sync-token-2" };
+    }
     return inner.listEvents(calendarId, opts);
   },
 };
@@ -1143,7 +1155,13 @@ let patchFails = false;
 const calendar: GoogleCalendarService = {
   ...inner,
   listEvents: async (calendarId, opts) => {
-    if (quiet) return { items: [], nextSyncToken: "fake-sync-token-2" };
+    if (quiet) {
+      // An incremental fetch is what the section is about. If production ever
+      // stopped sending the stored token this wrapper would be standing in for
+      // a full fetch instead, and the test would quietly test nothing.
+      if (!opts?.syncToken) throw new Error("expected the stored syncToken on this fetch");
+      return { items: [], nextSyncToken: "fake-sync-token-2" };
+    }
     return inner.listEvents(calendarId, opts);
   },
   patchEvent: async (calendarId, opts) => {
@@ -1365,7 +1383,13 @@ let quiet = false;
 const calendar: GoogleCalendarService = {
   ...inner,
   listEvents: async (calendarId, opts) => {
-    if (quiet) return { items: [], nextSyncToken: "fake-sync-token-2" };
+    if (quiet) {
+      // An incremental fetch is what the section is about. If production ever
+      // stopped sending the stored token this wrapper would be standing in for
+      // a full fetch instead, and the test would quietly test nothing.
+      if (!opts?.syncToken) throw new Error("expected the stored syncToken on this fetch");
+      return { items: [], nextSyncToken: "fake-sync-token-2" };
+    }
     return inner.listEvents(calendarId, opts);
   },
 };
@@ -1391,6 +1415,205 @@ JSON.stringify({
   remote: inner.events[0]?.summary,
 })
 => {"success":true,"updated":1,"remote":"Locally created MINE"}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## An event Google created is tracked even if the local rewrite fails
+
+Pushing a locally-created `.ics` is two steps: the insert, then a rewrite that
+strips the `X-CB-` annotations out of the local file. Only the first of those
+is visible to Google, so the tracking entry is written the moment the insert
+returns. If the rewrite is the thing that fails, the event is still tracked and
+the failure is reported — an untracked event Google holds would look
+locally-created to the next run's orphan scan, which would insert a duplicate.
+
+Make the rewrite fail by taking write permission off the file: it stays
+readable, so everything up to the rewrite proceeds exactly as it normally does.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+box.commitAll("init box");
+
+await box.seed("store/calendar/annotated.ics",
+  "BEGIN:VCALENDAR\r\n" +
+  "VERSION:2.0\r\n" +
+  "PRODID:-//Test//EN\r\n" +
+  "BEGIN:VEVENT\r\n" +
+  "UID:annotated-local\r\n" +
+  "SUMMARY:Book the hall\r\n" +
+  "DTSTART;VALUE=DATE:20260601\r\n" +
+  "DTEND;VALUE=DATE:20260602\r\n" +
+  "X-CB-REASON:the caterer asked\r\n" +
+  "END:VEVENT\r\n" +
+  "END:VCALENDAR\r\n",
+);
+box.commitAll("seed local ics");
+
+const inner = createFakeGoogleCalendar({
+  calendars: [{ id: "primary", summary: "Main", primary: true, accessRole: "owner" }],
+});
+
+let quiet = false;
+const calendar: GoogleCalendarService = {
+  ...inner,
+  listEvents: async (calendarId, opts) => {
+    if (quiet) {
+      if (!opts?.syncToken) throw new Error("expected the stored syncToken on this fetch");
+      return { items: [], nextSyncToken: "fake-sync-token-2" };
+    }
+    return inner.listEvents(calendarId, opts);
+  },
+};
+
+const filePath = join(box.root, "store/calendar/annotated.ics");
+await chmod(filePath, 0o444);
+
+const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
+const first = await connector.sync();
+JSON.stringify({
+  success: first.success,
+  pushed: first.pushed?.length,
+  blamed: first.error?.includes("store/calendar/annotated.ics (local-push, error)"),
+  remote: inner.events.map((e) => e.summary),
+})
+=> {"success":false,"pushed":1,"blamed":true,"remote":["Book the hall"]}
+```
+
+The entry is tracked against the bytes that are actually on disk — annotations
+and all, since the strip never happened — so the file is neither re-pushed nor
+seen as a pending edit:
+
+```ts continue
+const { loadCalendarState } = await import("../../src/connectors/google-calendar-state.js");
+const state = await loadCalendarState(box.root);
+const entry = Object.values(state.eventFiles)[0];
+JSON.stringify({
+  ids: Object.keys(state.eventFiles).length,
+  filename: typeof entry === "string" ? entry : entry?.filename,
+  hashed: typeof entry === "string" ? false : entry?.contentHash !== undefined,
+})
+=> {"ids":1,"filename":"annotated.ics","hashed":true}
+```
+
+The second sync is the one that used to duplicate. Google still has exactly one
+event:
+
+```ts continue
+quiet = true;
+const second = await connector.sync();
+await chmod(filePath, 0o644);
+JSON.stringify({
+  success: second.success,
+  pushed: second.pushed?.length ?? 0,
+  remote: inner.events.map((e) => e.summary),
+  kept: (await readFile(filePath, "utf-8")).includes("X-CB-REASON"),
+})
+=> {"success":true,"pushed":0,"remote":["Book the hall"],"kept":true}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A pushed edit Google accepted survives a failed local rewrite
+
+The pending-edit pass patches Google and then rewrites the local file from the
+response to normalize it. Google's acceptance is the fact that matters, so the
+entry is stamped against Google's copy before the rewrite is attempted. A
+rewrite that fails is a reported failure, not a lost update: the recorded hash
+no longer matches the file, so the next run re-patches the same content Google
+already has — idempotent, and never a second event.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+box.commitAll("init box");
+
+const inner = createFakeGoogleCalendar({
+  calendars: [{ id: "primary", summary: "Main", primary: true, accessRole: "owner" }],
+  events: [
+    {
+      id: "evt-review",
+      status: "confirmed",
+      summary: "Review",
+      updated: "2026-06-01T10:00:00Z",
+      start: { dateTime: "2026-06-05T09:00:00Z" },
+      end: { dateTime: "2026-06-05T10:00:00Z" },
+    },
+  ],
+});
+
+let quiet = false;
+const calendar: GoogleCalendarService = {
+  ...inner,
+  listEvents: async (calendarId, opts) => {
+    if (quiet) {
+      if (!opts?.syncToken) throw new Error("expected the stored syncToken on this fetch");
+      return { items: [], nextSyncToken: "fake-sync-token-2" };
+    }
+    return inner.listEvents(calendarId, opts);
+  },
+};
+
+const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
+await connector.sync();
+
+const dir = join(box.root, "store/calendar");
+const file = (await readdir(dir)).filter((f) => f.endsWith(".ics"))[0] ?? "";
+const filePath = join(dir, file);
+const localIcs = await readFile(filePath, "utf-8");
+// The edit changes the summary and leaves an annotation the normalizing
+// rewrite would have dropped, so the file and Google's copy really do differ.
+await writeFile(filePath, localIcs
+  .replace("Review", "Review MINE")
+  .replace("END:VEVENT", "X-CB-REF:store/note.md\r\nEND:VEVENT"));
+await chmod(filePath, 0o444);
+
+quiet = true;
+const rewriteFailed = await connector.sync();
+JSON.stringify({
+  success: rewriteFailed.success,
+  blamed: rewriteFailed.error?.includes(`store/calendar/${file} (local-push, error)`),
+  remote: inner.events.map((e) => e.summary),
+})
+=> {"success":false,"blamed":true,"remote":["Review MINE"]}
+```
+
+The entry is still tracked, and its hash describes what Google accepted rather
+than what is on disk — that mismatch is the retry:
+
+```ts continue
+const { loadCalendarState } = await import("../../src/connectors/google-calendar-state.js");
+const { contentHash } = await import("../../src/lib/content-hash.js");
+const state = await loadCalendarState(box.root);
+const entry = state.eventFiles["evt-review"];
+JSON.stringify({
+  ids: Object.keys(state.eventFiles).length,
+  filename: typeof entry === "string" ? entry : entry?.filename,
+  pending: typeof entry === "string"
+    ? false
+    : entry?.contentHash !== contentHash(await readFile(filePath, "utf-8")),
+})
+=> {"ids":1,"filename":"2026-06-05_t-review.ics","pending":true}
+```
+
+Give the file back its write bit and the next run re-patches the same content.
+Google ends up where it already was, with one event:
+
+```ts continue
+await chmod(filePath, 0o644);
+const retried = await connector.sync();
+const settled = await connector.sync();
+JSON.stringify({
+  retried: { success: retried.success, updated: retried.updated.length },
+  settled: { success: settled.success, updated: settled.updated.length },
+  remote: inner.events.map((e) => e.summary),
+})
+=> {"retried":{"success":true,"updated":1},"settled":{"success":true,"updated":0},"remote":["Review MINE"]}
 ```
 
 ```ts cleanup

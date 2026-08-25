@@ -30,7 +30,7 @@ import {
   type CalendarState,
   type IcsOptions,
 } from "./google-calendar-state.js";
-import { patchLocalEdit, type LocalPushOutcome } from "./google-calendar-local-push.js";
+import { patchLocalEdit, writeBackPushedEvent, type LocalPushOutcome } from "./google-calendar-local-push.js";
 import { contentHash } from "../lib/content-hash.js";
 import { getBoxTime } from "../lib/time.js";
 import { decideCalendarSync } from "./google-calendar-decide.js";
@@ -96,23 +96,22 @@ async function unlinkRenamed(
 
 /**
  * The local file was edited and Google's copy was not, so the local edit is
- * pushed and the file rewritten from the response.
- *
- * A `failed` outcome touches NOTHING on disk or in state (see patchLocalEdit).
- * The caller must not write Google's version over the file afterwards: the edit
- * is still the only copy of what the boxholder wrote, and the unchanged stored
- * contentHash is what makes a later sync try the push again.
+ * pushed and the file rewritten from the response. A `failed` outcome touches
+ * NOTHING on disk or in state (see patchLocalEdit) and the caller must not
+ * write Google's version over the file afterwards: the edit is still the only
+ * copy of what the boxholder wrote, and the unchanged stored contentHash is
+ * what makes a later sync try the push again.
  */
 async function tryPushLocalEdit(
   event: GoogleCalendarEvent,
   ctx: {
     boxRoot: string; calDir: string; oldName: string | undefined;
-    calendar: GoogleCalendarService; icsOpts: IcsOptions; filePath: string; relPath: string;
+    calendar: GoogleCalendarService; icsOpts: IcsOptions; relPath: string;
     filename: string; localContent: string; existingEntry: string | { calendarId: string };
     state: CalendarState; acc: SyncAccumulator;
   },
 ): Promise<LocalPushOutcome> {
-  const { boxRoot, calDir, oldName, calendar, icsOpts, filePath, relPath, filename,
+  const { boxRoot, calDir, oldName, calendar, icsOpts, relPath, filename,
           localContent, existingEntry, state, acc } = ctx;
   const entryCalId = typeof existingEntry === "string" ? icsOpts.calendarId : existingEntry.calendarId;
 
@@ -122,16 +121,18 @@ async function tryPushLocalEdit(
   });
   if (outcome.kind === "failed") return outcome;
 
-  // Patch succeeded — rewrite file from Google's response to normalize. Only
-  // here is dropping a renamed predecessor safe; on the failure path above the
-  // old file is still the boxholder's only copy.
+  // Patch succeeded — the entry is stamped against Google's copy first.
+  const rewriteFailure = await writeBackPushedEvent({
+    state, googleEventId: event.id, entry: { filename, calendarId: icsOpts.calendarId },
+    calDir, relPath, event: outcome.event, icsOpts, fallbackFilename: oldName,
+  });
+  // A failed rewrite leaves the predecessor as this event's only file, with the
+  // entry pointing back at it — so the rename is not finished below.
+  if (rewriteFailure) {
+    acc.failures.push(rewriteFailure);
+    return outcome;
+  }
   await unlinkRenamed({ boxRoot, calDir, oldName, filename, acc });
-  const patchedIcs = eventToIcs(outcome.event, icsOpts);
-  await fs.writeFile(filePath, patchedIcs);
-  state.eventFiles[event.id] = {
-    filename, calendarId: icsOpts.calendarId, contentHash: contentHash(patchedIcs),
-    remoteUpdated: outcome.event.updated,
-  };
   acc.updated.push(relPath);
   acc.notes.push({
     action: "pushed",
@@ -212,7 +213,7 @@ async function reconcileEvent(
         // localEdited && !remoteChanged: localContent is defined here.
         invariant(localContent !== undefined, "local-wins requires local content");
         const outcome = await tryPushLocalEdit(event, {
-          boxRoot, calDir, oldName, calendar, icsOpts, filePath, relPath, filename,
+          boxRoot, calDir, oldName, calendar, icsOpts, relPath, filename,
           localContent, existingEntry, state, acc,
         });
         // Either way this event is finished. A failed push returns WITHOUT

@@ -29,6 +29,7 @@ import {
   deleteEventViaApi,
   insertEventViaApi,
   type CalendarState,
+  type EventFileEntry,
 } from "./google-calendar-state.js";
 
 /**
@@ -99,22 +100,38 @@ export async function pushAndCleanOrphans(
 
       const result = await insertEventViaApi(calendar, { calendarId, event: apiEvent });
       if (result.ok) {
-        // Write back stripped content (without annotations) BEFORE hashing:
-        // the hash has to describe the bytes that end up on disk.
-        if (reason || ref) {
-          await fs.writeFile(filePath, stripped);
-        }
-
-        // Track the file with its new Google event ID, and stamp the hash of
-        // what is now on disk. Without it the entry has no recorded hash, so a
-        // later edit to a locally-created event is indistinguishable from the
-        // original and never enters the pending-edit push.
-        state.eventFiles[result.value.id] = {
+        // Google has created the event — track it NOW, hashed against the bytes
+        // currently on disk. Nothing after this point may leave it untracked:
+        // an untracked .ics is a locally-created event to the next run's orphan
+        // scan, which would insert a SECOND copy into Google. (The hash matters
+        // on its own too: without one the entry has nothing to compare against,
+        // so a later edit to a locally-created event looks identical to the
+        // original forever and never enters the pending-edit push.)
+        const trackedEntry: EventFileEntry = {
           filename: file,
           calendarId,
-          contentHash: contentHash(reason || ref ? stripped : content),
+          contentHash: contentHash(content),
           remoteUpdated: result.value.updated,
         };
+        state.eventFiles[result.value.id] = trackedEntry;
+
+        // Now strip the annotations from the local copy and re-stamp the hash
+        // to the bytes that ended up on disk. A rewrite that fails is a
+        // reported failure: the file keeps its annotations and the entry keeps
+        // matching it, so the next run neither re-pushes nor duplicates it.
+        if (reason || ref) {
+          try {
+            await fs.writeFile(filePath, stripped);
+            state.eventFiles[result.value.id] = {
+              ...trackedEntry, contentHash: contentHash(stripped),
+            };
+          } catch (err: unknown) {
+            console.warn(`  Pushed ${file} to Google but could not rewrite it locally:`, err);
+            failures.push(classifyCalendarFailure(err, {
+              calendarId, operation: "local-push", path: relPath,
+            }));
+          }
+        }
         pushed.push(relPath);
 
         // Build push note
