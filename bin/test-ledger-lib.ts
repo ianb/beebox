@@ -154,11 +154,25 @@ export function deriveFlakes(input: {
   records: LedgerRecord[];
   filesets: Record<string, string[]>;
 }): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const [file, events] of deriveFlakeEvents(input)) counts.set(file, events.length);
+  return counts;
+}
+
+/**
+ * The same derivation, keeping WHEN each flake was observed: file -> the
+ * indices (into `records`) of the runs where the fail-then-pass completed.
+ * `carefulCandidates` needs the position to ask about a recent window.
+ */
+export function deriveFlakeEvents(input: {
+  records: LedgerRecord[];
+  filesets: Record<string, string[]>;
+}): Map<string, number[]> {
   const { records, filesets } = input;
-  const flakes = new Map<string, number>();
+  const flakes = new Map<string, number[]>();
   const failedAt = new Map<string, Set<string>>(); // "commit\0tree" -> files failing
 
-  for (const record of records) {
+  for (const [index, record] of records.entries()) {
     const key = `${record.commit}\u0000${record.treeHash}`;
     const ran = new Set(filesets[record.ranFiles] ?? []);
     const failing = new Set(record.failures.map((f) => f.file));
@@ -166,7 +180,7 @@ export function deriveFlakes(input: {
 
     for (const file of previouslyFailed) {
       if (ran.has(file) && !failing.has(file)) {
-        flakes.set(file, (flakes.get(file) ?? 0) + 1);
+        flakes.set(file, [...(flakes.get(file) ?? []), index]);
         previouslyFailed.delete(file);
       }
     }
@@ -281,4 +295,91 @@ function isFilesetEntry(value: unknown): value is { hash: string; files: string[
 export function hashFileset(files: string[]): string {
   const sorted = [...files].sort();
   return `sha256:${createHash("sha256").update(sorted.join("\n")).digest("hex").slice(0, 16)}`;
+}
+
+// ── the careful tier's candidates (mechanism C) ─────────────────────────────
+
+/** How often a file flaked over the recent window of runs that ran it. */
+export interface FlakeShare {
+  file: string;
+  /** Runs in the window — fewer than `window` for a file that is new or rarely run. */
+  runs: number;
+  flakes: number;
+  /** flakes / runs, 0..1. */
+  share: number;
+}
+
+/** Runs of the last N that ran the file, and how many of them flaked. */
+export function flakeShare(input: {
+  records: LedgerRecord[];
+  filesets: Record<string, string[]>;
+  file: string;
+  window: number;
+}): FlakeShare {
+  const records = input.records.filter(isCompletedRun);
+  const events = deriveFlakeEvents({ records, filesets: input.filesets });
+  return shareOf({ ...input, records, events });
+}
+
+/** The window arithmetic, over an already-derived event map. */
+function shareOf(input: {
+  records: LedgerRecord[];
+  filesets: Record<string, string[]>;
+  events: Map<string, number[]>;
+  file: string;
+  window: number;
+}): FlakeShare {
+  const { file } = input;
+  const ranAt: number[] = [];
+  for (const [index, record] of input.records.entries()) {
+    if ((input.filesets[record.ranFiles] ?? []).includes(file)) ranAt.push(index);
+  }
+  const recent = ranAt.slice(-input.window);
+  const first = recent[0];
+  const events = input.events.get(file) ?? [];
+  const flakes = first === undefined ? 0 : events.filter((index) => index >= first).length;
+  return {
+    file,
+    runs: recent.length,
+    flakes,
+    share: recent.length === 0 ? 0 : flakes / recent.length,
+  };
+}
+
+/** The default window and bar for promotion. Judgment, not an auto-demotion. */
+export const CAREFUL_WINDOW = 40;
+export const CAREFUL_THRESHOLD = 0.25;
+
+/**
+ * Files flaky enough to be worth a human moving a line into `careful.txt`, and
+ * how the current members are doing. A member with a low share is a candidate
+ * for the other direction.
+ */
+export function carefulCandidates(input: {
+  records: LedgerRecord[];
+  filesets: Record<string, string[]>;
+  careful: string[];
+  window?: number;
+  threshold?: number;
+}): { candidates: FlakeShare[]; members: FlakeShare[] } {
+  const window = input.window ?? CAREFUL_WINDOW;
+  const threshold = input.threshold ?? CAREFUL_THRESHOLD;
+  const isMember = new Set(input.careful);
+  const records = input.records.filter(isCompletedRun);
+  const filesets = input.filesets;
+  // Derived once: the event map is a pass over every record, and this asks
+  // about every file the ledger has ever run.
+  const events = deriveFlakeEvents({ records, filesets });
+  const share = (file: string): FlakeShare => shareOf({ records, filesets, events, file, window });
+
+  const seen = new Set<string>();
+  for (const record of records) {
+    for (const file of filesets[record.ranFiles] ?? []) seen.add(file);
+  }
+  const candidates = [...seen]
+    .filter((file) => !isMember.has(file))
+    .map(share)
+    .filter((s) => s.share > threshold)
+    .sort((a, b) => b.share - a.share);
+  return { candidates, members: input.careful.map(share) };
 }

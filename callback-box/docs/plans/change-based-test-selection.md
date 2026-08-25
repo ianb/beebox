@@ -514,7 +514,12 @@ changed:
 selected = alwaysRun ∪ graph.unresolved ∪ changedTests ∪ implicated
 ```
 
-and **no `FULL` fallback.** An unaccounted path contributes nothing. If the
+and **no `FULL` fallback.** `alwaysRun` is edge-based rather than a set: each
+(spawner test → source ref it hands a child process) pair is an extra edge, so
+a spawner runs when the change matches one of ITS refs — and a `dist/cli.mjs`
+ref matches the bundle's real inputs, computed from `scripts/build-cli.ts`'s
+entry (932 files across most of `src/`, not `src/cli/**`) — instead of all ten
+spawners running on every selected run. An unaccounted path contributes nothing. If the
 result is empty the selector prints `no test imports the changed paths` and
 exits 0 having run nothing — that is the honest statement. tap is not
 invoked at all in that case (a bare `tap` would fall back to `.taprc`'s
@@ -549,7 +554,12 @@ file not in `careful.txt`; `--tier careful` appends the list, forces `-j1`,
 and takes the exclusive lock. A listed path that no longer exists fails the
 run loudly rather than silently shrinking the tier. Membership is a
 judgment, not an automatic demotion: `bin/test-ledger report` prints
-candidates (flake share over the last N runs) and a human moves lines.
+candidates (files whose flake share over their last 40 runs exceeds 25% and
+that are not already listed) plus the current members' recent shares, and a
+human moves lines. The wrapper reads `.taprc`'s own include/exclude to build
+the ordinary list, and refuses to emit a bare `tap` if either tier resolves to
+no files — the same fragility that ruled out shell expansion. Seeded with the
+five timing-sensitive files above; the `test/frontend/*` block was left out.
 A careful test that starts failing in the batched run is a real signal, since
 it ran alone on an idle machine.
 

@@ -24,11 +24,12 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { changedPaths, git, treeHash } from "./test-git.js";
-import { buildGraph, REPO_ROOT } from "./test-graph.js";
+import { buildGraph, cliBundleInputs, REPO_ROOT } from "./test-graph.js";
 import { isAccounted } from "./test-graph-query.js";
 import { hashFileset, type LedgerRecord } from "./test-ledger-lib.js";
 import { appendLedgerRecord } from "./test-ledger.js";
-import { alwaysRunTests, selectTests } from "./test-select-lib.js";
+import { selectTests, spawnerEdges } from "./test-select-lib.js";
+import { carefulExclusions } from "./test-tiers.js";
 
 const PACKAGE_ROOT = join(REPO_ROOT, "callback-box");
 
@@ -50,6 +51,16 @@ function readRepoFile(repoRelative: string): string | null {
   try {
     return readFileSync(join(REPO_ROOT, repoRelative), "utf-8");
   } catch {
+    return null;
+  }
+}
+
+/** Null on failure: `selectTests` then fails open on the whole of `src/`. */
+async function readCliBundleInputs(): Promise<Set<string> | null> {
+  try {
+    return await cliBundleInputs();
+  } catch (e) {
+    console.warn(`test-select: CLI bundle inputs unavailable (${String(e)})`);
     return null;
   }
 }
@@ -140,7 +151,11 @@ export async function main(argv: string[]): Promise<number> {
   const selection = selectTests({
     graph,
     changed,
-    alwaysRun: alwaysRunTests({ graph, readFile: readRepoFile }),
+    spawnEdges: spawnerEdges({ graph, readFile: readRepoFile }),
+    cliBundleInputs: await readCliBundleInputs(),
+    // The careful tier runs alone in the batched run (mechanism C). A changed
+    // careful test still runs — selectTests keeps what the branch touched.
+    exclude: carefulExclusions(),
   });
   const files = selection.selected.map(stripPackagePrefix);
 

@@ -1,7 +1,7 @@
 /**
  * Which tests a change calls for — the pure half.
  *
- *   selected = alwaysRun ∪ graph.unresolved ∪ changedTests ∪ implicated
+ *   selected = spawnEdges ∪ graph.unresolved ∪ changedTests ∪ implicated
  *
  * and nothing else. There is no escape to the full suite: an unaccounted
  * changed path contributes nothing, and an empty selection is the honest
@@ -29,13 +29,23 @@ export interface Selection {
 export function selectTests(input: {
   graph: TestGraph;
   changed: string[];
-  /** Entrypoints no import edge can reach — see {@link alwaysRunTests}. */
-  alwaysRun?: Iterable<string>;
+  /**
+   * Spawner edges: test -> the source refs its CHILD process touches, from
+   * {@link spawnerEdges}. Each ref is an extra edge, so a spawner is selected
+   * only when the change matches one of them.
+   */
+  spawnEdges?: Map<string, Set<string>>;
+  /**
+   * The repo files bundled into `dist/cli.mjs` (test-graph.ts's
+   * `cliBundleInputs`). Null/absent means unknown, and a `dist/cli.mjs` ref
+   * then matches any `callback-box/src/` change — fail open, since the bundle
+   * is a superset of no-one-knows-what.
+   */
+  cliBundleInputs?: Set<string> | null;
   /**
    * Careful-tier files, which run in the batched exclusive run instead
-   * (mechanism C, not yet built). A changed test still runs: the exclusion is
-   * about not paying for a flaky neighbour, not about skipping the test you
-   * just edited.
+   * (mechanism C). A changed test still runs: the exclusion is about not
+   * paying for a flaky neighbour, not about skipping the test you just edited.
    */
   exclude?: Iterable<string>;
 }): Selection {
@@ -45,13 +55,17 @@ export function selectTests(input: {
   const implicated = implicatedTests({ graph, changed: input.changed });
 
   const changedTests = scoped.filter((path) => graph.tests.has(path) || graph.unresolved.has(path));
-  // `alwaysRun` compensates for edges the graph cannot see, so it fires
-  // whenever this suite's territory changed at all — but not when nothing in
-  // scope changed, which would make the empty selection unreachable and every
-  // `test:changed` pay for ten files to verify a change to `bin/` or `issues/`.
-  const alwaysRun = scoped.length === 0 ? [] : (input.alwaysRun ?? []);
+  // Spawner edges stand in for import edges the graph cannot see, and are read
+  // exactly like them: a spawner runs when the change matches one of ITS refs,
+  // not whenever anything in this suite's territory moved (plan revision
+  // 2026-08-25, mechanism B — `alwaysRun` was a set, it is now edges).
+  const spawners = matchedSpawners({
+    edges: input.spawnEdges,
+    scoped,
+    cliBundleInputs: input.cliBundleInputs ?? null,
+  });
   const selected = new Set<string>([
-    ...alwaysRun,
+    ...spawners,
     ...graph.unresolved,
     ...changedTests,
     ...implicated,
@@ -67,7 +81,7 @@ export function selectTests(input: {
   };
 }
 
-// ── alwaysRun: the tests import edges cannot reach ──────────────────────────
+// ── spawner edges: the imports the graph cannot see ─────────────────────────
 
 /**
  * A spawn of some kind. Track 3c: a test that runs source in a CHILD process
@@ -88,10 +102,13 @@ const SOURCE_LITERAL =
  * Dropping these lines before looking for literals is what keeps the heuristic
  * usable: without it, every ordinary import in a file that happens to spawn
  * something reads as a child's target, and the real suite produced 71
- * always-run entrypoints instead of 10. A type-only import is the sharp case —
+ * spawner entrypoints instead of 10. A type-only import is the sharp case —
  * it leaves no graph edge, so it looks exactly like an uncovered reference.
  */
 const IMPORT_LINE = /^\s*(?:import|export)\b[^\n]*?(?:from\s*)?['"][^'"]+['"]/;
+
+/** The build artifact a test execs instead of importing the CLI. */
+const CLI_BUNDLE = "dist/cli.mjs";
 
 /** Source paths a file appears to hand to a child process. */
 export function spawnedSourceRefs(source: string): string[] {
@@ -104,39 +121,88 @@ export function spawnedSourceRefs(source: string): string[] {
 }
 
 /**
- * The entrypoints that must run regardless of what the graph says.
+ * Test -> the source refs its child processes touch that its own imports do
+ * NOT cover. Each is an extra edge for {@link selectTests}, so a spawner is
+ * selected by a change to what it spawns and by nothing else. (Until the
+ * 2026-08-25 revision these were an `alwaysRun` SET, which cost ~10 files and
+ * ~35s on every selected run whatever the change was.)
  *
- * An entrypoint qualifies when it — or a `test/helpers/**` module it imports —
- * hands a child process a path to repo source that the entrypoint does NOT
- * import itself, or the built `dist/cli.mjs` (a build artifact, in no graph, so
- * a `src/cli/**` change can never point at it).
+ * An entrypoint contributes a ref when it — or a `test/helpers/**` module it
+ * imports — hands a child process a path to repo source, or the built
+ * `dist/cli.mjs` (a build artifact, in no graph, so a change to the sources it
+ * bundles can never point at it).
  *
  * Helpers are read through the graph rather than globbed so a spawner is
  * attributed to the tests that actually use it. Refs are compared by path tail
  * without extension, because a NodeNext specifier says `.js` where the file on
  * disk says `.ts`.
  */
-export function alwaysRunTests(input: {
+export function spawnerEdges(input: {
   graph: TestGraph;
   /** Reads a repo-relative path; null when it cannot be read. */
   readFile: (path: string) => string | null;
-}): Set<string> {
-  const alwaysRun = new Set<string>();
+}): Map<string, Set<string>> {
+  const edges = new Map<string, Set<string>>();
   for (const [entry, deps] of input.graph.tests) {
     const sources = [entry, ...[...deps].filter((dep) => dep.includes("/test/helpers/"))];
     const refs = new Set<string>();
     for (const path of sources) {
       const contents = input.readFile(path);
       if (contents === null) continue;
-      for (const ref of spawnedSourceRefs(contents)) refs.add(ref);
+      for (const ref of spawnedSourceRefs(contents)) {
+        if (!isCoveredByImports(ref, deps)) refs.add(ref);
+      }
     }
-    if ([...refs].some((ref) => !isCoveredByImports(ref, deps))) alwaysRun.add(entry);
+    if (refs.size > 0) edges.set(entry, refs);
   }
-  return alwaysRun;
+  return edges;
+}
+
+/** The spawners whose refs one of the changed paths matches. */
+function matchedSpawners(input: {
+  edges: Map<string, Set<string>> | undefined;
+  scoped: string[];
+  cliBundleInputs: Set<string> | null;
+}): string[] {
+  const matched: string[] = [];
+  for (const [entry, refs] of input.edges ?? []) {
+    const hit = [...refs].some((ref) =>
+      refMatchesChange({ ref, scoped: input.scoped, cliBundleInputs: input.cliBundleInputs }),
+    );
+    if (hit) matched.push(entry);
+  }
+  return matched;
+}
+
+/**
+ * Whether a changed path is one of the sources bundled into `dist/cli.mjs`.
+ *
+ * `scripts/build-cli.ts` bundles `src/cli/index.ts` transitively, so the real
+ * input set is most of `src/` — not `src/cli/**`, which would cover 100 of the
+ * 932 files esbuild actually reads. The caller computes the true set; without
+ * it we fail open on `src/`, the smallest honest superset.
+ */
+function isCliBundleInput(path: string, inputs: Set<string> | null): boolean {
+  if (inputs === null) return path.startsWith("callback-box/src/");
+  return inputs.has(path);
+}
+
+export function refMatchesChange(input: {
+  ref: string;
+  scoped: string[];
+  cliBundleInputs: Set<string> | null;
+}): boolean {
+  const { ref, scoped } = input;
+  if (ref.includes(CLI_BUNDLE)) {
+    return scoped.some((path) => isCliBundleInput(path, input.cliBundleInputs));
+  }
+  const tail = stripExtension(ref.replace(/^(?:\.\.?\/)+/, ""));
+  if (tail === "") return false;
+  return scoped.some((path) => stripExtension(path).endsWith(tail));
 }
 
 function isCoveredByImports(ref: string, deps: Set<string>): boolean {
-  if (ref.includes("dist/cli.mjs")) return false;
+  if (ref.includes(CLI_BUNDLE)) return false;
   const tail = stripExtension(ref.replace(/^(?:\.\.?\/)+/, ""));
   if (tail === "") return true;
   return [...deps].some((dep) => stripExtension(dep).endsWith(tail));

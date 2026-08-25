@@ -14,7 +14,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { buildGraphFrom, testEntrypoints, REPO_ROOT } from "./test-graph.js";
 import type { TestGraph } from "./test-graph-query.js";
-import { alwaysRunTests, selectTests, spawnedSourceRefs } from "./test-select-lib.js";
+import { selectTests, spawnedSourceRefs, spawnerEdges } from "./test-select-lib.js";
 import { emptyRunLines } from "./test-select.js";
 
 /** A graph stated directly, so the rule is tested without an esbuild pass. */
@@ -52,13 +52,67 @@ test("the union rule: implicated tests, and only paths this suite could care abo
       "issues/bugs/x.md",
       `${BOX}docs/testing.md`,
     ],
-    alwaysRun: [`${BOX}test/cli/init.doctest.md`],
+    spawnEdges: new Map([[`${BOX}test/cli/init.doctest.md`, new Set(["src/core/box.ts"])]]),
   });
   assert.deepEqual(selection.selected, [
     `${BOX}test/cli/init.doctest.md`,
     `${BOX}test/core/box.doctest.md`,
   ]);
   assert.deepEqual(selection.scoped, [`${BOX}src/core/box.ts`]);
+});
+
+test("a spawner is selected by a change to what it spawns, and by nothing else", () => {
+  // Until the 2026-08-25 revision every spawner ran on every selected run —
+  // ~10 files and ~35s whatever the change was. The refs are edges now.
+  const graph = graphOf({
+    tests: {
+      [`${BOX}test/cli/spawner.test.ts`]: [],
+      [`${BOX}test/core/box.doctest.md`]: [`${BOX}src/core/box.ts`],
+    },
+  });
+  const spawnEdges = new Map([
+    [`${BOX}test/cli/spawner.test.ts`, new Set(["../../src/cli/child.js"])],
+  ]);
+  // A NodeNext specifier says `.js` where the file on disk says `.ts`.
+  assert.deepEqual(
+    selectTests({ graph, changed: [`${BOX}src/cli/child.ts`], spawnEdges }).selected,
+    [`${BOX}test/cli/spawner.test.ts`],
+  );
+  assert.deepEqual(
+    selectTests({ graph, changed: [`${BOX}src/core/box.ts`], spawnEdges }).selected,
+    [`${BOX}test/core/box.doctest.md`],
+  );
+});
+
+test("a dist/cli.mjs spawner follows the bundle's real inputs", () => {
+  // `scripts/build-cli.ts` bundles src/cli/index.ts TRANSITIVELY — 932 files
+  // across nearly every src/ subtree, not src/cli/**. The caller computes the
+  // set; a null one fails open on all of src/.
+  const graph = graphOf({ tests: { [`${BOX}test/cli/cli.doctest.md`]: [] } });
+  const spawnEdges = new Map([[`${BOX}test/cli/cli.doctest.md`, new Set(["dist/cli.mjs"])]]);
+  const cliBundleInputs = new Set([`${BOX}src/core/box.ts`]);
+  assert.deepEqual(
+    selectTests({ graph, changed: [`${BOX}src/core/box.ts`], spawnEdges, cliBundleInputs }).selected,
+    [`${BOX}test/cli/cli.doctest.md`],
+  );
+  assert.deepEqual(
+    selectTests({
+      graph,
+      changed: [`${BOX}src/frontend/src/App.tsx`],
+      spawnEdges,
+      cliBundleInputs,
+    }).selected,
+    [],
+  );
+  assert.deepEqual(
+    selectTests({
+      graph,
+      changed: [`${BOX}src/frontend/src/App.tsx`],
+      spawnEdges,
+      cliBundleInputs: null,
+    }).selected,
+    [`${BOX}test/cli/cli.doctest.md`],
+  );
 });
 
 test("a change nothing imports selects nothing — there is no full-suite fallback", () => {
@@ -74,12 +128,12 @@ test("a change nothing imports selects nothing — there is no full-suite fallba
   assert.deepEqual(selection.implicated, []);
 });
 
-test("nothing in scope means not even alwaysRun", () => {
+test("nothing in scope means nothing selected, spawners included", () => {
   const graph = graphOf({ tests: { [`${BOX}test/a.doctest.md`]: [] } });
   const selection = selectTests({
     graph,
     changed: ["bin/test-select.ts", "issues/features/y.md"],
-    alwaysRun: [`${BOX}test/a.doctest.md`],
+    spawnEdges: new Map([[`${BOX}test/a.doctest.md`, new Set(["src/a.ts", "dist/cli.mjs"])]]),
   });
   assert.deepEqual(selection.selected, []);
 });
@@ -121,7 +175,7 @@ test("an excluded (careful-tier) test is dropped unless it is what changed", () 
   );
 });
 
-// ── alwaysRun detection ─────────────────────────────────────────────────────
+// ── spawner-edge detection ──────────────────────────────────────────────────
 
 test("an import specifier is not a spawn target", () => {
   const source = ['import { box } from "../src/core/box.js";', "spawnSync('echo', ['hi']);"].join("\n");
@@ -145,7 +199,7 @@ function fixture(files: Record<string, string>): { root: string; cleanup: () => 
 
 const doctest = (lines: string[]): string => [...lines, ""].join("\n");
 
-test("alwaysRun catches a test whose CHILD imports source the parent does not", async () => {
+test("spawnerEdges catches a test whose CHILD imports source the parent does not", async () => {
   // Track 3c. The regression test for the TSX loader flake spawns twelve
   // children importing frontend source; no import edge reaches it, so no
   // change to that source would ever select it.
@@ -191,17 +245,18 @@ test("alwaysRun catches a test whose CHILD imports source the parent does not", 
       aliases: {},
       entrypoints: testEntrypoints(packageRoot),
     });
-    const alwaysRun = alwaysRunTests({
+    const edges = spawnerEdges({
       graph,
       readFile: (path) => readFileSync(join(fx.root, path), "utf-8"),
     });
-    assert.deepEqual([...alwaysRun].sort(), [
+    assert.deepEqual([...edges.keys()].sort(), [
       "pkg/test/cli.doctest.md",
       "pkg/test/spawner.test.ts",
     ]);
+    assert.deepEqual([...(edges.get("pkg/test/cli.doctest.md") ?? [])], ["dist/cli.mjs"]);
     // The one that spawns a path it also imports is already reachable: the
     // graph selects it whenever src/run.ts changes.
-    assert.equal(alwaysRun.has("pkg/test/honest.doctest.md"), false);
+    assert.equal(edges.has("pkg/test/honest.doctest.md"), false);
   } finally {
     fx.cleanup();
   }

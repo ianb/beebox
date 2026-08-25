@@ -16,11 +16,11 @@
 
 import { build, type Metafile, type BuildFailure } from "esbuild";
 import { readFileSync } from "node:fs";
-import { globSync } from "node:fs";
 import { relative, resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { candidateFiles, isRelative } from "../agent-doctest/src/resolve-rules.ts";
 import type { TestGraph } from "./test-graph-query.js";
+import { taprcTestFiles } from "./test-tiers.js";
 
 export const REPO_ROOT = resolve(import.meta.dirname, "..");
 const PACKAGE_ROOT = join(REPO_ROOT, "callback-box");
@@ -50,16 +50,9 @@ const CALLBACK_BOX_ALIASES: Record<string, string> = {
   "@shared/": join(PACKAGE_ROOT, "src/shared"),
 };
 
-/** Mirrors `callback-box/.taprc`'s include/exclude. */
+/** What `.taprc` includes, as absolute paths — the graph's entrypoints. */
 export function testEntrypoints(packageRoot: string): string[] {
-  const found: string[] = [];
-  for (const pattern of ["test/**/*.doctest.md", "test/**/*.test.ts"]) {
-    for (const rel of globSync(pattern, { cwd: packageRoot })) {
-      if (rel.startsWith(`test/manual/`)) continue;
-      found.push(join(packageRoot, rel));
-    }
-  }
-  return found.sort();
+  return taprcTestFiles(packageRoot).map((rel) => join(packageRoot, rel));
 }
 
 export function callbackBoxConfig(): GraphConfig {
@@ -264,6 +257,38 @@ export async function buildGraphFrom(config: GraphConfig): Promise<TestGraph> {
 /** The callback-box graph. */
 export async function buildGraph(): Promise<TestGraph> {
   return buildGraphFrom(callbackBoxConfig());
+}
+
+/**
+ * The repo files esbuild bundles into `callback-box/dist/cli.mjs`.
+ *
+ * A test that execs the bundle has no import edge to anything in it, and the
+ * bundle is not `src/cli/**`: `scripts/build-cli.ts` bundles `src/cli/index.ts`
+ * transitively, which reads 932 files across nearly every `src/` subtree. The
+ * selector needs the real set to decide whether a change reaches such a test
+ * (plan revision 2026-08-25, mechanism B). Mirrors that script's build options;
+ * ~100ms.
+ */
+export async function cliBundleInputs(): Promise<Set<string>> {
+  const result = await build({
+    entryPoints: [join(PACKAGE_ROOT, "src/cli/index.ts")],
+    bundle: true,
+    packages: "external",
+    write: false,
+    metafile: true,
+    platform: "node",
+    format: "esm",
+    target: "node22",
+    logLevel: "silent",
+    absWorkingDir: REPO_ROOT,
+  });
+  const inputs = new Set<string>();
+  for (const input of Object.keys(result.metafile.inputs)) {
+    if (input.includes("node_modules")) continue;
+    const rel = relative(REPO_ROOT, resolve(REPO_ROOT, input));
+    if (!rel.startsWith("..")) inputs.add(rel);
+  }
+  return inputs;
 }
 
 async function main(): Promise<void> {

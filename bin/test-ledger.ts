@@ -27,6 +27,13 @@ import { implicatedTests, isAccounted } from "./test-graph-query.js";
 import { renderReport } from "./test-ledger-report.js";
 import { acquire, lockDir, type Held, type Tier } from "./test-locks.js";
 import {
+  PACKAGE_ROOT,
+  readCarefulList,
+  taprcTestFiles,
+  tierCommand,
+  TierListError,
+} from "./test-tiers.js";
+import {
   classifyFailure,
   foldFilesets,
   hashFileset,
@@ -378,7 +385,7 @@ export async function main(argv: string[]): Promise<void> {
   const [subcommand, ...rest] = argv;
   if (subcommand === "run") {
     const sepIndex = rest.indexOf("--");
-    const command = sepIndex === -1 ? rest : rest.slice(sepIndex + 1);
+    const given = sepIndex === -1 ? rest : rest.slice(sepIndex + 1);
     const flags = sepIndex === -1 ? [] : rest.slice(0, sepIndex);
     const tier = parseTier(flags);
     if (tier === null) {
@@ -389,6 +396,22 @@ export async function main(argv: string[]): Promise<void> {
     const mode = parseMode(flags);
     if (mode === null) {
       console.error("test-ledger run: --mode takes full or selected");
+      process.exitCode = 2;
+      return;
+    }
+    // The tier's file list is argv, not shell expansion (mechanism C): a list
+    // that expands to nothing would leave a bare `tap` running everything.
+    let command: string[];
+    try {
+      command = tierCommand({
+        command: given,
+        tier,
+        taprcFiles: taprcTestFiles(PACKAGE_ROOT),
+        careful: readCarefulList(),
+      });
+    } catch (e) {
+      if (!(e instanceof TierListError)) throw e;
+      console.error(`test-ledger: ${e.message}`);
       process.exitCode = 2;
       return;
     }

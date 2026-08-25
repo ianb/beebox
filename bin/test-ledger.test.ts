@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   classifyFailure,
+  carefulCandidates,
   deriveFlakes,
   hashFileset,
   parsePorcelainPaths,
@@ -175,6 +176,73 @@ test("repeated fail-then-pass cycles each count", () => {
     rec({ failures: [] }),
   ];
   assert.deepEqual([...deriveFlakes({ records, filesets: FILESETS })], [["test/a.doctest.md", 2]]);
+});
+
+// ── careful-tier candidates (mechanism C) ───────────────────────────────────
+
+/** `n` fail-then-pass pairs at distinct trees, then `clean` plain green runs. */
+function flakeHistory(input: { pairs: number; clean: number }): LedgerRecord[] {
+  const records: LedgerRecord[] = [];
+  for (let i = 0; i < input.pairs; i++) {
+    records.push(rec({ treeHash: `t${i}`, failures: [{ file: "test/a.doctest.md", class: "attached" }] }));
+    records.push(rec({ treeHash: `t${i}`, failures: [] }));
+  }
+  for (let i = 0; i < input.clean; i++) records.push(rec({ treeHash: `clean${i}`, failures: [] }));
+  return records;
+}
+
+test("a file over the bar is a candidate; one under it is not", () => {
+  // 3 flakes in a 10-run window is 30%; the same 3 in a 40-run window is 7.5%.
+  const over = carefulCandidates({
+    records: flakeHistory({ pairs: 3, clean: 4 }),
+    filesets: FILESETS,
+    careful: [],
+    window: 10,
+  });
+  assert.deepEqual(
+    over.candidates.map((c) => [c.file, c.flakes, c.runs]),
+    [["test/a.doctest.md", 3, 10]],
+  );
+  const under = carefulCandidates({
+    records: flakeHistory({ pairs: 3, clean: 34 }),
+    filesets: FILESETS,
+    careful: [],
+    window: 40,
+  });
+  assert.deepEqual(under.candidates, []);
+});
+
+test("the window is the last N runs THAT RAN THE FILE, so old flakes age out", () => {
+  const records = [...flakeHistory({ pairs: 3, clean: 0 }), ...flakeHistory({ pairs: 0, clean: 6 })];
+  const { candidates } = carefulCandidates({
+    records,
+    filesets: FILESETS,
+    careful: [],
+    window: 6,
+  });
+  assert.deepEqual(candidates, []);
+});
+
+test("a current member is reported, never re-proposed", () => {
+  const { candidates, members } = carefulCandidates({
+    records: flakeHistory({ pairs: 3, clean: 4 }),
+    filesets: FILESETS,
+    careful: ["test/a.doctest.md"],
+    window: 10,
+  });
+  assert.deepEqual(candidates, []);
+  assert.deepEqual(members.map((m) => [m.file, m.share]), [["test/a.doctest.md", 0.3]]);
+});
+
+test("a run that bailed out is no evidence either way", () => {
+  const records = [...flakeHistory({ pairs: 3, clean: 4 }), rec({ exitCode: 143, failures: [] })];
+  const { candidates } = carefulCandidates({
+    records,
+    filesets: FILESETS,
+    careful: [],
+    window: 10,
+  });
+  assert.deepEqual(candidates.map((c) => c.runs), [10]);
 });
 
 // ── aggregation ─────────────────────────────────────────────────────────────
