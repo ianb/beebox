@@ -192,6 +192,7 @@ async function agentArgv(input: { workstream: ScheduleWorkstream; name: string; 
       LH_AGENT: workstream.agent,
       LH_WORKSTREAM: input.name,
       LH_MODEL: workstream.model,
+      LH_EFFORT: workstream.effort ?? "",
       LH_PERMISSION_MODE: workstream.permissionMode,
       LH_SYSTEM_PROMPT_FILE: path.join(input.dir, "prompt.md"),
       LH_TOOLS: listEnv(workstream.tools),

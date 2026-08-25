@@ -60,6 +60,10 @@ const durationSchema = z
 export const scheduleWorkstreamSchema = z.strictObject({
   agent: z.enum(["claude", "codex"]),
   model: z.string().min(1),
+  /** Reasoning effort, passed through as `--effort`. Claude-only: codex has no
+   *  equivalent, so a codex schedule that declares one is refused rather than
+   *  launched at whatever effort the CLI happens to default to. */
+  effort: z.enum(["low", "medium", "high", "xhigh", "max"]).optional(),
   /** false = the session runs in the main checkout (the SDK updater pushes). */
   worktree: z.boolean(),
   session: z.enum(["fresh", "persistent"]),

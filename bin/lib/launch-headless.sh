@@ -15,6 +15,7 @@
 #   LH_AGENT              claude | codex                                (required)
 #   LH_WORKSTREAM         schedule/workstream name                      (required)
 #   LH_MODEL              passed through to the agent CLI               (optional)
+#   LH_EFFORT             low|medium|high|xhigh|max, --effort           (claude)
 #   LH_PERMISSION_MODE    bypassPermissions | dontAsk                   (required)
 #   LH_SYSTEM_PROMPT_FILE schedules/<name>/prompt.md                    (claude)
 #   LH_TOOLS              newline-separated --tools list                (optional)
@@ -58,6 +59,7 @@ launch_headless_claude() {
   fi
   argv=(claude -p --brief --name "$LH_WORKSTREAM")
   [ -n "${LH_MODEL:-}" ] && argv+=(--model "$LH_MODEL")
+  [ -n "${LH_EFFORT:-}" ] && argv+=(--effort "$LH_EFFORT")
   # --setting-sources user is load-bearing, not decoration: a nested claude -p
   # without it fires this repo's SessionEnd hook (.claude/skills/cross-model
   # records the worktree it deleted that way).
@@ -85,10 +87,10 @@ launch_headless_claude() {
 }
 
 # Codex parity, and where it stops. `codex exec` has no --tools/--allowedTools/
-# --disallowedTools, no budget cap, and no --append-system-prompt-file. The
-# tool constraints are a sandbox the schedule's author declared, so a codex
-# schedule that declares them is REFUSED rather than silently launched
-# unconstrained; the system prompt is prepended to the stdin briefing by the
+# --disallowedTools, no budget cap, no --effort, and no
+# --append-system-prompt-file. The tool constraints and the effort are a sandbox
+# the schedule's author declared, so a codex schedule that declares them is
+# REFUSED rather than silently launched unconstrained; the system prompt is prepended to the stdin briefing by the
 # caller instead. Session persistence has no pre-mintable id either: `codex
 # exec resume --last` resumes the newest recorded session for this cwd, which
 # is the schedule's own last run.
@@ -102,6 +104,7 @@ launch_headless_codex() {
   [ -n "${LH_ALLOWED_TOOLS:-}" ] && unsupported="$unsupported allowedTools"
   [ -n "${LH_DISALLOWED_TOOLS:-}" ] && unsupported="$unsupported disallowedTools"
   [ -n "${LH_MAX_BUDGET_USD:-}" ] && unsupported="$unsupported maxBudgetUsd"
+  [ -n "${LH_EFFORT:-}" ] && unsupported="$unsupported effort"
   if [ -n "$unsupported" ]; then
     echo "launch-headless: codex has no equivalent for:$unsupported — drop them or use agent: claude" >&2
     return 2

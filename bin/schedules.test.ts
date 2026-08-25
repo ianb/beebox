@@ -578,6 +578,24 @@ test("the claude command carries the sandbox, the prompt file, and a fresh sessi
   ]);
 });
 
+test("effort rides the claude command and is refused for codex", async () => {
+  const built = await headlessArgv({ ...CLAUDE_ENV, LH_EFFORT: "high" });
+  assert.equal(built.exitCode, 0, built.stderr);
+  assert.deepEqual(built.argv.slice(0, 9), [
+    "claude", "-p", "--brief", "--name", "knip-sweep", "--model", "opus", "--effort", "high",
+  ]);
+  // Absent means absent: the CLI's own default is what an unstated effort means.
+  const bare = await headlessArgv({ ...CLAUDE_ENV, LH_EFFORT: "" });
+  assert.equal(bare.argv.includes("--effort"), false);
+
+  const codex = await headlessArgv({
+    LH_AGENT: "codex", LH_WORKSTREAM: "sdk-update", LH_PERMISSION_MODE: "dontAsk",
+    LH_SESSION: "fresh", LH_CWD: "/tmp/wt", LH_EFFORT: "max",
+  });
+  assert.notEqual(codex.exitCode, 0);
+  assert.match(codex.stderr, /no equivalent for: effort/u);
+});
+
 test("a persistent claude session mints an id on the first run and resumes it afterwards", async () => {
   const first = await headlessArgv({ ...CLAUDE_ENV, LH_SESSION: "persistent", LH_SESSION_ID: "abc-123", LH_SESSION_RESUME: "0" });
   assert.deepEqual(first.argv.slice(-2), ["--session-id", "abc-123"]);
