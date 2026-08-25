@@ -12,9 +12,13 @@
  * would inherit TS7016 errors from a file they don't own. A `.d.ts` is covered
  * by `skipLibCheck`, so consumers get the contract and nothing else.
  *
- * This cannot drift from the implementation: `eslint.config.ts` annotates its
- * export as `typeof import("./types.d.ts").vibeCheck`, so a signature change
- * that isn't mirrored here fails `pnpm typecheck` in this package.
+ * `preset.ts` asserts that its implementation's parameter tuple and return type
+ * are mutually assignable with this declaration's, and imports
+ * `VibeCheckOptions` from here rather than restating it. So a signature change
+ * that is not mirrored here fails this package's own `pnpm typecheck`. (Both
+ * halves of that are needed: a one-way assignment tolerates a narrower return
+ * type, and comparing the function types directly tolerates an extra trailing
+ * optional parameter on either side.)
  */
 
 import type { Linter } from "eslint";

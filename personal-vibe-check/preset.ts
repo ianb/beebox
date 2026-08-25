@@ -807,7 +807,28 @@ export function vibeCheck(options?: VibeCheckOptions): Linter.Config[] {
 export default vibeCheck;
 
 // Binds the implementation to the published declaration in types.d.ts (what the
-// exports map's `types` condition serves). A signature change here that isn't
-// mirrored there fails this package's own `pnpm typecheck`, so the two cannot
-// drift apart unnoticed.
-const _implementationMatchesDeclaration: typeof DeclaredVibeCheck = vibeCheck;
+// exports map's `types` condition serves), in BOTH directions. One assignment
+// alone would only prove the implementation is *assignable to* the declaration,
+// which tolerates real divergence — a narrower return type, or extra optional
+// parameters, passes a one-way check. Mutual assignability is as close to
+// "these are the same function type" as TypeScript expresses, and it is what
+// makes a signature change here fail this package's own `pnpm typecheck` unless
+// types.d.ts moves with it.
+//
+// The options object cannot drift at all: `VibeCheckOptions` is imported FROM
+// types.d.ts rather than restated here, so there is only one definition.
+// Parameters/ReturnType rather than the function types directly: TypeScript's
+// function assignability ignores an extra trailing OPTIONAL parameter in both
+// directions, so comparing `typeof vibeCheck` to `typeof DeclaredVibeCheck`
+// would let one side grow an option the other never declares. Comparing the
+// parameter tuples closes that — tuples of different arity are not mutually
+// assignable.
+type MutuallyAssignable<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+const _parametersMatch: MutuallyAssignable<
+  Parameters<typeof vibeCheck>,
+  Parameters<typeof DeclaredVibeCheck>
+> = true;
+const _returnTypeMatches: MutuallyAssignable<
+  ReturnType<typeof vibeCheck>,
+  ReturnType<typeof DeclaredVibeCheck>
+> = true;
