@@ -1,5 +1,5 @@
 ---
-title: "pdf.card view: no text↔page mapping, and ?page= works only in browse"
+title: "pdf.card Original view assumes PDF; page matcher untested on real docling output"
 workstream: unattached
 area: callback-box
 needs: [design]
@@ -8,30 +8,21 @@ filed-by: agent
 discovered-in: document-card-view worktree — building the pdf.card view
 ---
 
-The pdf.card view (2026-08) shows the extracted text and a page-render
-strip, but the two are unconnected, and page deep-links only work on one
-route.
-
-## Text↔page mapping needs `docling.json.gz`
-
-The card body carries no page-boundary markers — the extractor passes no
-page-break placeholder and adds none itself. The mapping exists only in
-`attach/docling.json.gz` (`DoclingDocument`, per-text-item
-`prov[].page_no`), which the codebase treats as opaque cargo: nothing
-in-repo parses it. A "which page is this paragraph on" affordance — or
-jumping from a quote anchor to the page render — means gunzipping and
-walking that JSON in the frontend or via an endpoint. Decide whether that
-is worth a helper before any second consumer appears.
-
-## `?page=N` is browse-only
-
-`BrowseDetailPanel` forwards query params to `FileView`, so
-`/browse/...?page=2` highlights and scrolls the page strip. The full-page
-card route (`/card/...`) forwards no search params, so the same link there
-silently does nothing. Wiring it touches that route's search schema.
+Trimmed 2026-08-24: the first two gaps are built — `lib/docling.ts` parses
+`docling.json.gz` (structured viewer + raw toggle), gutter `p. N` markers map
+body blocks to pages via a two-pointer matcher, and `/card/` now forwards
+`?page=`/`?view=`. Remainders:
 
 ## Original view assumes PDF
 
 The "Original" renderer toggle points `PdfFrame` at `filename.ref`. For a
 future non-PDF `format:` it degrades to the object-tag fallback
 (Open/Download) — acceptable, not a viewer.
+
+## Matcher untested against real docling output
+
+The block→page matcher (`lib/docling-match.ts`, `MATCH_LOOKAHEAD = 8`) and the
+figure-index correlation (`pictures[i]` → `figure-{i+1}.avif`, an ordering
+convention from `pdf-extract.ts`, not a recorded link) are verified only
+against synthetic fixtures. Run `cb pdf reanalyze` on a real multi-page scan
+and check the markers before trusting them on long documents.

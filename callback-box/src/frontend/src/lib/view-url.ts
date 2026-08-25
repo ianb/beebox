@@ -292,6 +292,18 @@ export function externalImageProxyUrl(src: string, boxSlug: string | undefined):
 }
 
 /**
+ * Percent-encode a box-relative path for use in a URL, segment by segment —
+ * `encodeURIComponent` on the whole string would also escape the `/`
+ * separators. Without this, a path segment containing `#`, `?`, or `%`
+ * breaks a URL built by plain concatenation: `#` truncates it at the
+ * fragment, `?` truncates it at the query string, and a literal `%` is
+ * reinterpreted as the start of a percent-escape by whatever parses the URL.
+ */
+export function encodePathForUrl(path: string): string {
+  return path.split("/").map(encodeURIComponent).join("/");
+}
+
+/**
  * Build a URL for an in-box file served by the backend's `/api/files/<path>`
  * route, prefixed with Vite's BASE_URL so it works under the dev router's
  * `/<worktree>/` path prefix and in prod (where BASE_URL is `/`).
@@ -303,7 +315,7 @@ export function externalImageProxyUrl(src: string, boxSlug: string | undefined):
  */
 export function apiFileUrl(boxSlug: string, path: string): string {
   const base = viteBase().replace(/\/$/, "");
-  return `${base}/${boxSlug}/api/files/${path}`;
+  return `${base}/${boxSlug}/api/files/${encodePathForUrl(path)}`;
 }
 
 /**
@@ -315,7 +327,7 @@ export function apiFileUrl(boxSlug: string, path: string): string {
  */
 export function apiImageUrl(boxSlug: string, path: string): string {
   const base = viteBase().replace(/\/$/, "");
-  return `${base}/${boxSlug}/api/image/${path}`;
+  return `${base}/${boxSlug}/api/image/${encodePathForUrl(path)}`;
 }
 
 // Read Vite's base URL. Wrapped so the bare `import.meta.env` access doesn't

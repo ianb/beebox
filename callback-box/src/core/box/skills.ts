@@ -5,7 +5,9 @@
  * `settingSources`) can invoke them. Verified: a box-level skill is discovered
  * with no SDK-option change (see docs/implemented-plans/courseware-phase1.md, Track 1).
  *
- * Called from `cb init`.
+ * Called from `syncTemplatesFromSource` (inside `generateDocs`), so managed
+ * skills refresh wherever card rules do — `cb init`, `cb wakeup`, a chat
+ * session start, `cb migrate --apply`, and `cb docs refresh`.
  */
 
 import { join } from "node:path";
@@ -59,8 +61,8 @@ function buildBoxSkills(): BoxSkill[] {
  * Write each managed box skill to `<packageRoot>/.claude/skills/<name>/SKILL.md`
  * (`.claude/` lives at the box's package root, which equals `boxRoot` for a
  * legacy box — see "Where Claude Code runs" in
- * `docs/implemented-plans/boxes-as-packages-v2.md`). Idempotent overwrite — re-running
- * `cb init` refreshes them. Returns the skill names written. Only writes the
+ * `docs/implemented-plans/boxes-as-packages-v2.md`). Idempotent overwrite — any
+ * `generateDocs` run past its cache refreshes them. Returns the skill names written. Only writes the
  * directories it manages, so a hand-authored box skill alongside is left
  * untouched.
  */

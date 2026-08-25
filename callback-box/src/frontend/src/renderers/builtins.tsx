@@ -3,7 +3,7 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-import { getApiBase } from "../api";
+import { apiRawFileUrl, getApiBase } from "../api";
 import { Pre } from "../components/ui/Pre";
 import { Text } from "../components/ui/Text";
 import { RequestError } from "../lib/errors";
@@ -19,7 +19,7 @@ function SourceRenderer({ data }: RendererProps) {
   const { data: text, isLoading, error } = useQuery({
     queryKey: ["card-source", data.path],
     queryFn: async ({ signal }) => {
-      const resp = await fetch(`${getApiBase()}/files/${data.path}`, { signal });
+      const resp = await fetch(apiRawFileUrl(getApiBase(), data.path), { signal });
       if (!resp.ok) {
         const message = `Failed to load source: ${resp.status} ${resp.statusText}`;
         throw new RequestError(message);
