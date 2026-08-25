@@ -503,38 +503,24 @@ frame-for-frame.
 
 Example: `/fakestream 2000 30 25` streams ~50k chars over ~60s. The message
 list is a single scroll container with `data-testid="chat-scroller"` driven by
-the `useStickToBottom` controller (`InteractiveChat-scroll.ts`). Measure scroll
-state from the browser to assert behavior deterministically:
+the `useChatScroll` controller (`components/chat/chat-scroll.ts`). Measure
+scroll state from the browser to assert behavior deterministically — with
+`bin/browse eval --no-wait`, since a plain `eval` waits out the stream and hands
+you the settled page:
 
 ```js
-// fromBottom should stay ~0 while scrollHeight grows (auto-follow working)
+// Under the write-on-user-action model, fromBottom GROWS as the reply streams
+// and scrollTop does not move: nothing follows the bottom.
 const s = document.querySelector('[data-testid="chat-scroller"]');
-({ fromBottom: s.scrollHeight - s.scrollTop - s.clientHeight, scrollHeight: s.scrollHeight });
+({ fromBottom: s.scrollHeight - s.scrollTop - s.clientHeight, scrollTop: s.scrollTop, scrollHeight: s.scrollHeight });
 ```
 
-**Driving the scroll regressions via `bin/browse`.** The full step-by-step
-procedure (setup, all six scenarios with expected outputs, and the real-device
-checklist) lives in [chat-scroll-testing.md](chat-scroll-testing.md). The
-defects this redesign fixed are reproducible as `bin/browse eval` recipes
-against `/fakestream`:
-
-- **Follow while pinned:** send `/fakestream`, sample `fromBottom` repeatedly —
-  it must stay `<= ~2` while `scrollHeight` grows.
-- **Scroll-up during streaming must NOT yank back:** mid-stream, dispatch a
-  *real* wheel event then scroll up (a bare `scrollTop` write is intentionally
-  ignored — the controller only disengages on genuine wheel/touch/key intent,
-  so a write-only test is a false green):
-  ```js
-  const s = document.querySelector('[data-testid="chat-scroller"]');
-  s.dispatchEvent(new WheelEvent('wheel', { deltaY: -150, bubbles: true }));
-  s.scrollTop -= 700;            // then assert fromBottom keeps GROWING, never 0
-  ```
-  `agent-browser`'s `mouse wheel` does not translate to a scroll in headless
-  Chromium, so use the synthetic `WheelEvent` + `scrollTop` pair above.
-- **Scroll-to-bottom button:** while detached,
-  `document.querySelector('button[aria-label="Scroll to latest messages"]')`
-  is present, and its child `span` (the accent dot) is present when content
-  arrived since the user scrolled away. Clicking it returns `fromBottom` to 0.
+**Driving the scroll behavior.** The two instruments — the scenario table at
+`/dev/chat-scroll` and the step-by-step `bin/browse` procedure, plus the
+real-device checklist — live in
+[chat-scroll-testing.md](chat-scroll-testing.md). Note that `/fakestream`
+content **vanishes at finalize in a server-backed session** (the authoritative
+history has no such turn), so sample while it streams, not after.
 
 The stub is gated purely on the message prefix, so it ships harmlessly — a real
 message never starts with `/fakestream`.
