@@ -13,7 +13,9 @@ import { createGoogleDriveConnector } from "../../src/connectors/google-drive.js
 import { moveCardsToTrash } from "../../src/core/commands/trash.js";
 import { createCliContext } from "../../src/core/commands/index.js";
 import { createGsheetTemplate } from "../../src/schemas/gsheet.js";
+import { createGdocTemplate } from "../../src/schemas/gdoc.js";
 import { runDriveStatus } from "../../src/cli/commands/drive.js";
+import { findDriveCardTracking } from "../../src/connectors/google-drive-tracking.js";
 import type { FakeSpreadsheet } from "../../src/services/google-drive.js";
 
 function sheetFixture(opts: { id: string; name: string; parent?: string }): {
@@ -500,7 +502,7 @@ const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 const yamlFixture = sheetFixture({ id: "yaml-id", name: "YAML Card" });
 await box.seed("store/drive/Yaml.gsheet.card", yamlFixture.card);
-await box.seed("store/drive/Legacy.gsheet.card", '<gsheet drive-id="legacy-id"><title>Legacy</title></gsheet>\n');
+await box.seed("store/drive/Legacy.gsheet.card", '<gsheet drive-id="legacy-id"><title>Legacy</title><modified>2026-03-01T00:00:00Z</modified><sheet-tab title="Old Tab" gid="0"/></gsheet>\n');
 await box.seed("store/trash/Hidden.gsheet.card", createGsheetTemplate({
   driveId: "trash-id",
   title: "Hidden",
@@ -518,6 +520,288 @@ JSON.stringify({
   trash: output.includes("trash-id") || output.includes("store/trash"),
 })
 => {"count":true,"yamlId":true,"legacyId":true,"trash":false}
+```
+
+The health fields come from the current YAML form, not just the legacy XML
+form: title, last-synced time, a non-`synced` status, sheet tabs, and the
+lossy summary all print.
+
+```ts continue
+const conflicted = createGdocTemplate({
+  driveId: "doc-id",
+  title: "Contended Doc",
+  modified: "2026-04-26T12:00:00Z",
+  link: "https://docs.google.com/document/d/doc-id/edit",
+  owner: "test@example.com",
+  contentFile: "Contended.md",
+  status: "conflict",
+  lossy: [{ type: "images", count: 2 }, { type: "footnotes", count: 1 }],
+});
+await box.seed("store/drive/Contended.gdoc.card", conflicted);
+
+const health = await captureLogs(() => runDriveStatus(box.root));
+JSON.stringify({
+  yamlTitle: health.includes("Title: YAML Card"),
+  yamlSynced: health.includes("Last synced: 2026-03-29T10:00:00Z"),
+  yamlTabs: health.includes("Tabs: Sheet1"),
+  yamlStatusHidden: !health.includes("Status: synced"),
+  docTitle: health.includes("Title: Contended Doc"),
+  docStatus: health.includes("Status: conflict"),
+  docLossy: health.includes("Lossy: images=2, footnotes=1"),
+  legacyTabs: health.includes("Tabs: Old Tab"),
+})
+=> {"yamlTitle":true,"yamlSynced":true,"yamlTabs":true,"yamlStatusHidden":true,"docTitle":true,"docStatus":true,"docLossy":true,"legacyTabs":true}
+```
+
+Cards with an ambiguous identity are listed too — they are not synced, so a
+silent omission would read as "not mounted".
+
+```ts continue
+await box.seed("store/drive/Yaml-Copy.gsheet.card", yamlFixture.card);
+await box.seed("store/drive/Broken.gsheet.card", "---\ntitle: No identity\n---\n");
+
+const ambiguous = await captureLogs(() => runDriveStatus(box.root));
+JSON.stringify({
+  duplicate: ambiguous.includes("Duplicate drive-id yaml-id"),
+  bothPaths: ambiguous.includes("store/drive/Yaml.gsheet.card")
+    && ambiguous.includes("store/drive/Yaml-Copy.gsheet.card"),
+  unreadable: ambiguous.includes("No readable drive-id: store/drive/Broken.gsheet.card"),
+  mounted: ambiguous.includes("2 mounted file(s)"),
+})
+=> {"duplicate":true,"bothPaths":true,"unreadable":true,"mounted":true}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Drive IDs come from parsed YAML, not a line match
+
+A quoted or commented `drive-id` is ordinary YAML. Reading it with a regex
+yields a *wrong* ID — worse than none, because a wrong tombstone ID lets folder
+discovery recreate a deleted card. Unparseable frontmatter reads as no ID.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+await box.seed("store/drive/Quoted.gsheet.card", "---\ndrive-id: 'sheet-quoted'\nstatus: synced\ntitle: Quoted\n---\n");
+await box.seed("store/drive/Commented.gsheet.card", "---\ndrive-id: sheet-commented # mounted by hand\ntitle: Commented\n---\n");
+await box.seed("store/drive/Broken.gsheet.card", "---\ndrive-id: [unclosed\n---\n");
+await box.seed("store/drive/Legacy.gsheet.card", '<gsheet drive-id="legacy-id"><title>Legacy</title></gsheet>\n');
+
+const tracking = await findDriveCardTracking(box.root);
+JSON.stringify({
+  ids: tracking.liveCards.map((card) => card.driveId),
+  unreadable: tracking.unreadable,
+})
+=> {"ids":["sheet-commented","legacy-id","sheet-quoted"],"unreadable":["store/drive/Broken.gsheet.card"]}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Duplicate drive-id — neither working copy is pushed
+
+Two live cards for one Drive file share a single transient-hash entry while
+their attachments are per-card. Syncing either one would push its own copy over
+the other's, so the connector syncs neither and reports the ambiguity.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+const fixture = sheetFixture({ id: "sheet-dup", name: "Shared" });
+await box.seed("store/drive/Alpha.gsheet.card", fixture.card);
+box.commitAll("mount alpha");
+
+const drive = createFakeGoogleDrive({
+  files: [fixture.file],
+  spreadsheets: new Map([[fixture.file.id, fixture.spreadsheet]]),
+});
+const connector = createGoogleDriveConnector(box.root, drive);
+const first = await connector.sync();
+JSON.stringify({
+  success: first.success,
+  attach: (await box.list()).includes("store/drive/Alpha.attach/Sheet1.json"),
+})
+=> {"success":true,"attach":true}
+```
+
+A second card claiming the same `drive-id` appears (a copy, a restore, a
+rename gone wrong). Alpha's attachment is edited locally — the exact case that
+used to push Beta's stale copy back over it.
+
+```ts continue
+await box.seed("store/drive/Beta.gsheet.card", fixture.card);
+// Beta's own attach copy is the stale data that used to get pushed back over
+// Alpha's edit, because both share one transient-hash entry.
+await box.seed("store/drive/Beta.attach/Sheet1.json", '[\n["Name"],\n["Alice stale"]\n]\n');
+await box.seed("store/drive/Alpha.attach/Sheet1.json", '[\n["Name"],\n["Alice edited"]\n]\n');
+
+const ambiguous = await connector.sync();
+JSON.stringify({
+  success: ambiguous.success,
+  error: ambiguous.error,
+  pushed: ambiguous.pushed ?? [],
+  updates: drive.updateLog.length,
+})
+=> {"success":false,"error":"Duplicate drive-id sheet-dup claimed by store/drive/Alpha.gsheet.card, store/drive/Beta.gsheet.card — both skipped","pushed":[],"updates":0}
+```
+
+Nothing reached Google — the remote spreadsheet still holds its original rows.
+
+```ts continue
+print(drive.describe());
+=> files:
+  sheet-dup "Shared" application/vnd.google-apps.spreadsheet modified=2026-03-29T10:00:00Z
+spreadsheets:
+  sheet-dup "Shared"
+    Sheet1: [["Name"],["Alice"]]
+documents:
+updateLog (0):
+contentUpdateLog (0):
+```
+
+Removing the duplicate makes the surviving card syncable again, and the local
+edit then pushes.
+
+```ts continue
+await rm(join(box.root, "store/drive/Beta.gsheet.card"));
+await rm(join(box.root, "store/drive/Beta.attach"), { recursive: true });
+const resolved = await connector.sync();
+JSON.stringify({
+  success: resolved.success,
+  pushed: resolved.pushed ?? [],
+  remote: drive.spreadsheets.get("sheet-dup")?.sheets.get("Sheet1"),
+})
+=> {"success":true,"pushed":["store/drive/Alpha.attach/Sheet1.json"],"remote":[["Name"],["Alice edited"]]}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Folder discovery — a safe-name collision is reported, not skipped
+
+Two remote children can derive the same local card name. The occupant is
+compared by Drive ID: a different ID is a real collision, and the run fails
+rather than leaving the remote child untracked forever.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+await box.seed("config/connectors/google-drive.json", JSON.stringify({
+  folders: [{ driveFolderId: "folder-1", localPath: "store/drive/folder" }],
+}, null, 2));
+
+const occupant = sheetFixture({ id: "sheet-occupant", name: "Shared Name" });
+const newcomer = sheetFixture({
+  id: "sheet-newcomer",
+  name: "Shared Name",
+  parent: "folder-1",
+});
+await box.seed("store/drive/folder/Shared_Name.gsheet.card", occupant.card);
+box.commitAll("mount folder");
+
+const drive = createFakeGoogleDrive({
+  files: [occupant.file, newcomer.file],
+  spreadsheets: new Map([
+    [occupant.file.id, occupant.spreadsheet],
+    [newcomer.file.id, newcomer.spreadsheet],
+  ]),
+});
+const connector = createGoogleDriveConnector(box.root, drive);
+const result = await connector.sync();
+const cards = (await box.list()).split("\n").filter((p) => p.endsWith(".gsheet.card"));
+JSON.stringify({ success: result.success, error: result.error, cards })
+=> {"success":false,"error":"Drive file sheet-newcomer (\"Shared Name\") maps to store/drive/folder/Shared_Name.gsheet.card, already claimed by drive-id sheet-occupant","cards":["store/drive/folder/Shared_Name.gsheet.card"]}
+```
+
+The same Drive ID at that path is a benign re-mount, not a collision. That is
+what a concurrent `cb drive add` looks like: the card appears after discovery
+took its snapshot, so the path is occupied by the very file being discovered.
+
+```ts continue
+const raced = sheetFixture({ id: "sheet-raced", name: "Raced Child", parent: "folder-1" });
+drive.files.push(raced.file);
+drive.spreadsheets.set(raced.file.id, raced.spreadsheet);
+const racing = {
+  ...drive,
+  async listFiles(folderId: string) {
+    // Stand in for `cb drive add` landing between the card scan and this
+    // folder pass: the card exists on disk but was not in the snapshot.
+    await box.seed("store/drive/folder/Raced_Child.gsheet.card", raced.card);
+    return drive.listFiles(folderId);
+  },
+};
+const racedConnector = createGoogleDriveConnector(box.root, racing);
+const third = await racedConnector.sync();
+JSON.stringify({
+  error: third.error,
+  cards: (await box.list()).split("\n").filter((p) => p.endsWith(".gsheet.card")),
+})
+=> {"error":"Drive file sheet-newcomer (\"Shared Name\") maps to store/drive/folder/Shared_Name.gsheet.card, already claimed by drive-id sheet-occupant","cards":["store/drive/folder/Raced_Child.gsheet.card","store/drive/folder/Shared_Name.gsheet.card"]}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Folder discovery — an unreadable card blocks rediscovery
+
+A trash tombstone whose `drive-id` cannot be read is exactly the card that
+suppresses a folder child. Discovery cannot tell it apart from an unrelated
+broken card, so the folder pass does not run at all while one exists — no
+Drive request, no recreated card, and the failure names the path.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+await box.seed("config/connectors/google-drive.json", JSON.stringify({
+  folders: [{ driveFolderId: "folder-1", localPath: "store/drive/folder" }],
+}, null, 2));
+const fixture = sheetFixture({
+  id: "sheet-folder-unreadable",
+  name: "Folder Child",
+  parent: "folder-1",
+});
+box.commitAll("mount folder");
+
+const inner = createFakeGoogleDrive({
+  files: [fixture.file],
+  spreadsheets: new Map([[fixture.file.id, fixture.spreadsheet]]),
+});
+let getFileCalls = 0;
+const drive = {
+  ...inner,
+  async getFile(fileId: string) {
+    getFileCalls += 1;
+    return inner.getFile(fileId);
+  },
+};
+const connector = createGoogleDriveConnector(box.root, drive);
+const initial = await connector.sync();
+const liveCard = "store/drive/folder/Folder_Child.gsheet.card";
+JSON.stringify({ success: initial.success, created: initial.created.includes(liveCard) })
+=> {"success":true,"created":true}
+```
+
+Trash the card, then corrupt the tombstone so its retained Drive ID is
+unreadable.
+
+```ts continue
+await moveCardsToTrash(createCliContext(box.root), [liveCard]);
+await box.seed("store/trash/Folder_Child.gsheet.card", "---\ntitle: Folder Child\n---\n");
+getFileCalls = 0;
+const blocked = await connector.sync();
+JSON.stringify({
+  success: blocked.success,
+  error: blocked.error,
+  getFileCalls,
+  created: blocked.created.length,
+  liveCardExists: (await box.list()).includes(liveCard),
+})
+=> {"success":false,"error":"Unreadable Drive card(s), folder discovery skipped: store/trash/Folder_Child.gsheet.card","getFileCalls":0,"created":0,"liveCardExists":false}
 ```
 
 ```ts cleanup

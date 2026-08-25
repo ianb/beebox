@@ -8,22 +8,75 @@
 
 // eslint-disable-next-line import-x/no-rename-default
 import ICAL from "ical.js";
+import { HTTPError } from "ky";
 import { type GoogleCalendarEvent } from "./google-calendar-ics.js";
 
+/**
+ * The X-CB-DELETE marker a boxholder adds to a tracked `.ics` to ask for the
+ * event's deletion. Shared so every pass agrees on what a delete request looks
+ * like: adding the marker also changes the file's hash, and the local-edit push
+ * must recognize it and stand aside rather than patch a file already destined
+ * for `processLocalDeletes`.
+ */
+export const CB_DELETE_PATTERN = /^x-cb-delete[:;](.*)$/im;
+
 export interface SyncNote {
-  action: "new" | "updated" | "deleted" | "pushed" | "cancelled";
+  action: "new" | "updated" | "deleted" | "pushed" | "cancelled" | "stranded";
   summary: string;
   detail?: string;
   ref?: string;
 }
 
-export type CalendarSyncOperation = "incremental-sync" | "full-sync";
+/**
+ * Which half of the sync a failure came from. The pull side is per-calendar
+ * (`incremental-sync`/`full-sync`); the push side is per-file — a rejected
+ * X-CB-DELETE (`local-delete`), a local `.ics` that could not be inserted or
+ * patched (`local-push`), and the post-410 reconciliation of events Google no
+ * longer returns (`stale-cleanup`).
+ */
+export type CalendarSyncOperation =
+  | "incremental-sync"
+  | "full-sync"
+  | "local-delete"
+  | "local-push"
+  | "stale-cleanup";
 
 export interface CalendarSyncFailure {
   calendarId: string;
   operation: CalendarSyncOperation;
-  errorKind: "http-error" | "error" | "non-error";
+  /** `local` is a problem with the box's own file — no request was rejected. */
+  errorKind: "http-error" | "error" | "non-error" | "local";
   httpStatus?: number | undefined;
+  /** Short, human-written reason for a `local` failure. Never an exception message. */
+  detail?: string | undefined;
+  /**
+   * Which local file the failure is about, box-root-relative, for the push-side
+   * operations where the calendar id alone doesn't identify the thing stuck.
+   * Sanitized like the calendar id before it reaches a commit message.
+   */
+  path?: string | undefined;
+}
+
+/**
+ * Classify a thrown/returned error into a reportable failure. Deliberately
+ * keeps nothing but the shape of the error — no message, URL, or token — so a
+ * failure is safe to put in a commit message (see sanitizeDiagnosticLabel).
+ */
+export function classifyCalendarFailure(
+  err: unknown,
+  opts: { calendarId: string; operation: CalendarSyncOperation; path?: string | undefined },
+): CalendarSyncFailure {
+  const base: CalendarSyncFailure = {
+    calendarId: opts.calendarId,
+    operation: opts.operation,
+    errorKind: err instanceof Error ? "error" : "non-error",
+  };
+  if (opts.path !== undefined) base.path = opts.path;
+  if (err instanceof HTTPError) {
+    base.errorKind = "http-error";
+    base.httpStatus = err.response.status;
+  }
+  return base;
 }
 
 function sanitizeDiagnosticLabel(value: string): string {
@@ -42,7 +95,34 @@ export function formatCalendarSyncFailure(failure: CalendarSyncFailure): string 
   const status = failure.httpStatus === undefined
     ? failure.errorKind
     : `HTTP ${String(failure.httpStatus)}`;
-  return `${calendarId} (${failure.operation}, ${status})`;
+  const subject = failure.path === undefined
+    ? calendarId
+    : `${calendarId} ${sanitizeDiagnosticLabel(failure.path)}`;
+  const detail = failure.detail === undefined
+    ? ""
+    : `: ${sanitizeDiagnosticLabel(failure.detail)}`;
+  return `${subject} (${failure.operation}, ${status}${detail})`;
+}
+
+/**
+ * A failure with no exception behind it: the box's own file is unusable or
+ * stuck. Kept distinct from {@link classifyCalendarFailure} so nothing has to
+ * mint a throwaway Error just to be reportable.
+ */
+export function localCalendarFailure(opts: {
+  calendarId: string;
+  operation: CalendarSyncOperation;
+  detail: string;
+  path?: string | undefined;
+}): CalendarSyncFailure {
+  const failure: CalendarSyncFailure = {
+    calendarId: opts.calendarId,
+    operation: opts.operation,
+    errorKind: "local",
+    detail: opts.detail,
+  };
+  if (opts.path !== undefined) failure.path = opts.path;
+  return failure;
 }
 
 /** Format an event date for commit messages: "Thu Feb 20" or "Thu Feb 20 3:00 PM" */
@@ -170,6 +250,7 @@ export function buildNarrativeCommitMessage(
   if (counts["deleted"]) parts.push(`${counts["deleted"]} deleted`);
   if (counts["pushed"]) parts.push(`${counts["pushed"]} pushed`);
   if (counts["cancelled"]) parts.push(`${counts["cancelled"]} cancelled`);
+  if (counts["stranded"]) parts.push(`${counts["stranded"]} stranded`);
 
   let message = failures.length > 0
     ? `Sync calendar: partial (${String(opts.totalEvents ?? notes.length)} changed, ${String(failures.length)} failed)`
@@ -182,6 +263,7 @@ export function buildNarrativeCommitMessage(
     { label: "Pushed", action: "pushed" },
     { label: "Deleted", action: "deleted" },
     { label: "Cancelled", action: "cancelled" },
+    { label: "Stranded", action: "stranded" },
   ];
 
   const bodyParts: string[] = [];
@@ -199,7 +281,7 @@ export function buildNarrativeCommitMessage(
 
   if (failures.length > 0) {
     bodyParts.push(
-      `Failed calendars:\n${failures.map((failure) => `- ${formatCalendarSyncFailure(failure)}`).join("\n")}`,
+      `Failed:\n${failures.map((failure) => `- ${formatCalendarSyncFailure(failure)}`).join("\n")}`,
     );
   }
 

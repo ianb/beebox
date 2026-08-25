@@ -12,7 +12,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { errorMessage } from "../lib/error-guards.js";
+import { errnoCode, errorMessage } from "../lib/error-guards.js";
 import type { Connector, SyncResult } from "./index.js";
 import { registerConnector } from "./index.js";
 import { getGoogleAuth } from "./google-auth.js";
@@ -31,7 +31,7 @@ import type { GoogleDriveService } from "../services/google-drive.js";
 import { getHandlerForMimeType, getAllDriveHandlers } from "./drive-types.js";
 import { safeFilename } from "./chat-utils.js";
 import { attachDirFor } from "../shared/attach-path.js";
-import { findDriveCardTracking } from "./google-drive-tracking.js";
+import { driveIdFromCardContent, findDriveCardTracking } from "./google-drive-tracking.js";
 
 // Ensure handlers are registered
 import "./drive-handler-sheets.js";
@@ -43,6 +43,16 @@ export {
   emptyFileState,
   type DriveTransientState,
 } from "./google-drive-state.js";
+
+/** Read a file, or `null` when it does not exist. Other errors propagate. */
+async function readIfPresent(filePath: string): Promise<string | null> {
+  try {
+    return await fs.readFile(filePath, "utf-8");
+  } catch (error: unknown) {
+    if (errnoCode(error) === "ENOENT") return null;
+    throw error;
+  }
+}
 
 // ─── Connector ──────────────────────────────────────────────────────────────
 
@@ -104,9 +114,23 @@ class GoogleDriveConnector implements Connector {
     const created: string[] = [];
     const updated: string[] = [];
     const pushed: string[] = [];
+    // Anything that went wrong. Flattened into `result.error` at the end —
+    // wakeup counts a connector error only from `error`, never from `success`,
+    // so a failure that never lands here is a silent failure.
+    const failures: string[] = [];
 
     // 1. Find live cards plus the Drive IDs retained by committed trash cards.
     const tracking = await findDriveCardTracking(this.boxRoot);
+
+    // Two cards claiming one Drive ID are an ambiguous working copy: state is
+    // keyed by Drive ID while attachments are per-card, so syncing either can
+    // revert the other's edit upstream. Skip both — first-wins would leave the
+    // stale copy on disk, ready to push again.
+    for (const duplicate of tracking.duplicates) {
+      failures.push(
+        `Duplicate drive-id ${duplicate.driveId} claimed by ${duplicate.relPaths.join(", ")} — both skipped`,
+      );
+    }
 
     // 2. Sync each card
     for (const card of tracking.liveCards) {
@@ -121,7 +145,7 @@ class GoogleDriveConnector implements Connector {
         updated.push(...result.updated);
         pushed.push(...result.pushed);
       } catch (err) {
-        console.error(`[google-drive] Error syncing ${card.relPath}: ${errorMessage(err)}`);
+        failures.push(`Sync failed for ${card.relPath}: ${errorMessage(err)}`);
       }
     }
 
@@ -129,9 +153,17 @@ class GoogleDriveConnector implements Connector {
     const config = await loadDriveConfig(this.boxRoot);
     const claimedDriveIds = new Set([
       ...tracking.liveCards.map((card) => card.driveId),
+      ...tracking.duplicates.map((duplicate) => duplicate.driveId),
       ...tracking.trashedDriveIds,
     ]);
-    if (config.folders) {
+    // A card we could not read may be the trash tombstone that suppresses a
+    // folder child. Discovery would recreate the deleted card AND wipe its
+    // retained hashes, so it fails closed while any local identity is unknown.
+    if (tracking.unreadable.length > 0) {
+      failures.push(
+        `Unreadable Drive card(s), folder discovery skipped: ${tracking.unreadable.join(", ")}`,
+      );
+    } else if (config.folders) {
       for (const folder of config.folders) {
         try {
           const newFiles = await this.syncFolder({
@@ -143,8 +175,9 @@ class GoogleDriveConnector implements Connector {
           created.push(...newFiles.created);
           updated.push(...newFiles.updated);
           pushed.push(...newFiles.pushed);
+          failures.push(...newFiles.failures);
         } catch (err) {
-          console.error(`[google-drive] Error syncing folder ${folder.localPath}: ${errorMessage(err)}`);
+          failures.push(`Folder sync failed for ${folder.localPath}: ${errorMessage(err)}`);
         }
       }
     }
@@ -175,10 +208,11 @@ class GoogleDriveConnector implements Connector {
     }
 
     return {
-      success: true,
+      success: failures.length === 0,
       created,
       updated,
       ...(pushed.length > 0 ? { pushed } : {}),
+      ...(failures.length > 0 ? { error: failures.join("; ") } : {}),
     };
   }
 
@@ -236,13 +270,19 @@ class GoogleDriveConnector implements Connector {
     existingDriveIds: Set<string>;
     service: GoogleDriveService;
     state: DriveTransientState;
-  }): Promise<{ created: string[]; updated: string[]; pushed: string[] }> {
+  }): Promise<{
+    created: string[];
+    updated: string[];
+    pushed: string[];
+    failures: string[];
+  }> {
     const { folder, existingDriveIds, service, state } = opts;
 
     const files = await service.listFiles(folder.driveFolderId);
     const created: string[] = [];
     const updated: string[] = [];
     const pushed: string[] = [];
+    const failures: string[] = [];
 
     for (const file of files) {
       // Skip files we already have cards for
@@ -259,14 +299,24 @@ class GoogleDriveConnector implements Connector {
         `${safeName}.${handler.cardType}.card`,
       );
 
-      // Check if card already exists at this path
-      try {
-        await fs.access(cardPath);
-        continue; // Already exists
-      } catch (_e) {
-        // fs.access throws precisely when the card path is absent, which is
-        // the case we want here — fall through to create it. The error only
-        // signals "not found" and carries nothing else worth surfacing.
+      // A card may already occupy the derived path. Two remote children can
+      // share one safe name, so "occupied" is not necessarily "already mine":
+      // compare the occupant's Drive ID before assuming anything.
+      const occupant = await readIfPresent(cardPath);
+      if (occupant !== null) {
+        const occupantId = driveIdFromCardContent(occupant);
+        if (occupantId === file.id) {
+          // Benign re-mount: the same file, already carded at this path.
+          existingDriveIds.add(file.id);
+          continue;
+        }
+        const relCardPath = path.relative(this.boxRoot, cardPath);
+        failures.push(
+          occupantId === null
+            ? `Drive file ${file.id} ("${file.name}") maps to ${relCardPath}, which holds a card with no readable drive-id`
+            : `Drive file ${file.id} ("${file.name}") maps to ${relCardPath}, already claimed by drive-id ${occupantId}`,
+        );
+        continue;
       }
 
       // Discovery after a hard delete is a fresh mount. Retained transient
@@ -287,7 +337,7 @@ class GoogleDriveConnector implements Connector {
       existingDriveIds.add(file.id);
     }
 
-    return { created, updated, pushed };
+    return { created, updated, pushed, failures };
   }
 }
 

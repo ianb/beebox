@@ -32,13 +32,16 @@ import {
   emptyFileState,
   type DriveTransientState,
 } from "../../connectors/google-drive.js";
-import { findDriveCardTracking } from "../../connectors/google-drive-tracking.js";
+import {
+  driveCardSummary,
+  findDriveCardTracking,
+} from "../../connectors/google-drive-tracking.js";
 
 /** Print the live Drive-card working set. Exported for filesystem doctests. */
 export async function runDriveStatus(boxRoot: string): Promise<void> {
-  const { liveCards } = await findDriveCardTracking(boxRoot);
+  const { liveCards, duplicates, unreadable } = await findDriveCardTracking(boxRoot);
 
-  if (liveCards.length === 0) {
+  if (liveCards.length === 0 && duplicates.length === 0 && unreadable.length === 0) {
     console.log("No Drive files mounted.");
     console.log('Use "cb drive add <url> <path>" to mount a Drive file.');
     return;
@@ -46,31 +49,38 @@ export async function runDriveStatus(boxRoot: string): Promise<void> {
 
   console.log(`${String(liveCards.length)} mounted file(s):\n`);
   for (const card of liveCards) {
-    const titleMatch = card.content.match(/<title>([^<]+)<\/title>/);
-    const modifiedMatch = card.content.match(/<modified>([^<]+)<\/modified>/);
-    const statusMatch = card.content.match(/\bstatus="([^"]+)"/);
-    const sheetMatches = [...card.content.matchAll(/<sheet-tab[^>]*\btitle="([^"]+)"/g)];
-    const lossyMatches = [...card.content.matchAll(/<item type="([^"]+)" count="([^"]+)"/g)];
+    const summary = driveCardSummary(card.content);
 
     console.log(`  ${card.relPath}`);
-    if (titleMatch) console.log(`    Title: ${titleMatch[1]}`);
+    if (summary.title !== null) console.log(`    Title: ${summary.title}`);
     console.log(`    Drive ID: ${card.driveId}`);
-    if (modifiedMatch) console.log(`    Last synced: ${modifiedMatch[1]}`);
-    if (statusMatch && statusMatch[1] !== "synced") {
-      console.log(`    Status: ${statusMatch[1]}`);
+    if (summary.modified !== null) console.log(`    Last synced: ${summary.modified}`);
+    if (summary.status !== null && summary.status !== "synced") {
+      console.log(`    Status: ${summary.status}`);
     }
-    if (sheetMatches.length > 0) {
-      const tabs = sheetMatches.map((match) => match[1]).filter(Boolean);
-      console.log(`    Tabs: ${tabs.join(", ")}`);
+    if (summary.tabs.length > 0) {
+      console.log(`    Tabs: ${summary.tabs.join(", ")}`);
     }
-    if (lossyMatches.length > 0) {
-      const summary = lossyMatches
-        .map((match) => `${match[1]}=${match[2]}`)
+    if (summary.lossy.length > 0) {
+      const lossy = summary.lossy
+        .map((item) => `${item.type}=${String(item.count)}`)
         .join(", ");
-      console.log(`    Lossy: ${summary}`);
+      console.log(`    Lossy: ${lossy}`);
     }
     console.log("");
   }
+
+  // Ambiguous local identity is not synced at all, so it must be visible here
+  // rather than looking like an absent mount.
+  for (const duplicate of duplicates) {
+    console.log(`  ! Duplicate drive-id ${duplicate.driveId} (not synced):`);
+    for (const relPath of duplicate.relPaths) console.log(`      ${relPath}`);
+    console.log("");
+  }
+  for (const relPath of unreadable) {
+    console.log(`  ! No readable drive-id: ${relPath}`);
+  }
+  if (unreadable.length > 0) console.log("");
 }
 
 async function requireDriveService(boxRoot: string): Promise<GoogleDriveService> {
@@ -192,6 +202,22 @@ driveCommand
       // Expected: fs.access throws when the card does not exist, which is the
       // desired state for a fresh create. The specific error is irrelevant —
       // any failure to access means there's nothing to collide with, so proceed.
+    }
+
+    // A second card for the same Drive ID is never a valid mount: transient
+    // state is keyed by Drive ID while attachments are per-card, so the two
+    // working copies overwrite each other upstream. Refuse at creation.
+    const tracking = await findDriveCardTracking(boxRoot);
+    const claimedBy = [
+      ...tracking.liveCards.filter((card) => card.driveId === fileId).map((card) => card.relPath),
+      ...tracking.duplicates
+        .filter((duplicate) => duplicate.driveId === fileId)
+        .flatMap((duplicate) => duplicate.relPaths),
+    ];
+    if (claimedBy.length > 0) {
+      console.error(`Drive file ${fileId} is already mounted at: ${claimedBy.join(", ")}`);
+      console.error("Move or delete that card to mount it elsewhere.");
+      process.exit(1);
     }
 
     // Delegate first-time creation to the handler's pull(): it knows
