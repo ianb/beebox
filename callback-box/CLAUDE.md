@@ -8,13 +8,13 @@ This is not an app — it's a system that Claude Code operates. The human teache
 
 **Dev server** — one shared router serves every checkout at `http://localhost:3210/<main|worktree>/<box>/...` (lazy start, idle stop); don't restart it from a worktree session. Contract in the monorepo root CLAUDE.md; mechanism in `bin/CLAUDE.md`.
 
-**Testing** — `pnpm test` runs tap. Pre-commit hook runs typecheck + lint automatically.
+**Testing** — `pnpm test:changed` runs the tests your diff implicates (or a named file: `pnpm exec tap test/<path>.doctest.md`). `pnpm test` is the full suite: an hourly schedule runs it on `main`; don't run it in a worktree without a reason. Pre-commit hook runs typecheck + lint automatically. Why: `docs/plans/change-based-test-selection.md`.
 - `pnpm typecheck` — TypeScript (both backend and frontend)
 - `pnpm lint` — ESLint
 - Tests are doctests (`.doctest.md`) in `test/`. See `.claude/rules/doctest.md` for syntax.
 - Three tiers: pure function doctests, route doctests (`makeTestServer()`), filesystem doctests (`makeTmpBox()`)
 - Use `t.check(actual, expected)` for string comparisons. Objects serialize as `JSON.stringify(val, null, 2)`.
-- Run tests before committing. If tests fail, fix them. If a test failure is clearly pre-existing and unrelated to your changes, note it but don't ignore your own failures.
+- Run `pnpm test:changed` before committing. Every selected test is one your change implicates, so a failure is yours to fix.
 
 **Deploy** — auto-deploys on `main` commits only (root CLAUDE.md). Prod runs a resident `cb hub` routing `/<slug>/...` to per-box `cb serve` children executing the bundled `dist/cli.mjs` — not tsx. Because the bundle lives at `dist/` (one level below the package root), resolve package-relative asset paths via `src/lib/package-root.ts` `PACKAGE_ROOT`, never a hardcoded `import.meta.dirname + "../.."`. Server layout, systemd units, rollback lever: `deploy/README.md`.
 

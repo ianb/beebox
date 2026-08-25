@@ -63,6 +63,7 @@ this?" → knowledge audit. "Did the tools help or hinder?" → session
 critique. When a change fits no tier cleanly, that's usually a
 decomposition smell — split the change, don't invent a new harness.
 
-Run `pnpm test` before committing (pre-commit runs typecheck + lint, not
-tests). Time in tests: `getBoxTime` honors frozen scenario time; plain
+Run `pnpm test:changed` before committing (pre-commit runs typecheck + lint,
+not tests). The full `pnpm test` belongs to the hourly `full-suite` schedule
+and to nobody's iteration loop. Time in tests: `getBoxTime` honors frozen scenario time; plain
 `new Date()` doesn't.
