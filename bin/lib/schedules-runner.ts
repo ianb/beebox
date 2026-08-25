@@ -252,8 +252,18 @@ export const INVALID_SCHEDULE_ALERT_TITLE = "schedule cannot run";
 /** An invalid schedule is silent otherwise: it never runs, so no run can fail
  *  and no run can report. The alert IS the notice. */
 async function alertInvalidSchedule(deps: RunnerDeps, entry: InvalidSchedule): Promise<void> {
-  const alerts = await readAlerts(deps.storeRoot, entry.name);
-  if (alerts.some((alert) => alert.state === "open" && alert.title === INVALID_SCHEDULE_ALERT_TITLE)) return;
+  // A latch that cannot be read is not a reason to stay quiet, and not a reason
+  // to abandon the rest of the tick: an unreadable alert record means raise the
+  // alert anyway. A duplicate record is a nuisance; a swallowed one is the
+  // failure this whole design exists to prevent.
+  let latched = false;
+  try {
+    const alerts = await readAlerts(deps.storeRoot, entry.name);
+    latched = alerts.some((alert) => alert.state === "open" && alert.title === INVALID_SCHEDULE_ALERT_TITLE);
+  } catch (e) {
+    process.stderr.write(`schedules: cannot read ${entry.name}'s alerts (${e instanceof Error ? e.message : String(e)}); alerting anyway\n`);
+  }
+  if (latched) return;
   const problems = entry.issues.map((issue) => `- \`${issue.path}\`: ${issue.message}`).join("\n");
   await raiseAlert(deps, {
     workstream: entry.name,

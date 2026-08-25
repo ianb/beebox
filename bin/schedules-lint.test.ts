@@ -21,7 +21,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { execa } from "execa";
 
-import { lintSchedules, shebangKind, type LintFinding } from "./lib/schedules-lint.js";
+import { lintSchedules, shebangKind, shebangProblem, type LintFinding } from "./lib/schedules-lint.js";
 import { INVALID_SCHEDULE_ALERT_TITLE, tick } from "./lib/schedules-runner.js";
 import { readAlerts, writeAlert } from "./lib/schedules-store.js";
 import type { RunnerDeps } from "./lib/schedules-alerts.js";
@@ -96,6 +96,13 @@ test("shebangKind reads env and its options", () => {
   assert.equal(shebangKind("#!/usr/bin/env -S node --import tsx\n"), "node");
   assert.equal(shebangKind("#!/usr/bin/env python3\n"), "other");
   assert.equal(shebangKind("echo hi\n"), "none");
+});
+
+test("an env shebang that passes arguments without -S", () => {
+  assert.equal(shebangProblem("#!/usr/bin/env -S node --import tsx\n"), null);
+  assert.equal(shebangProblem("#!/usr/bin/env bash\n"), null);
+  assert.equal(shebangProblem("#!/bin/bash -e\n"), null);
+  assert.match(shebangProblem("#!/usr/bin/env node --import tsx\n") ?? "", /needs -S/);
 });
 
 test("the loader's own problems are findings: unparseable yaml, a missing field, no run, no prompt", async () => {
@@ -192,6 +199,48 @@ test("eslint findings are reported against the TypeScript script", async () => {
   const findings = await lint(root);
   assert.equal(findings.length, 1, rendered(findings));
   assert.equal(findings[0]?.file, "run");
+  assert.match(findings[0]?.message ?? "", /@typescript-eslint\/no-explicit-any/);
+});
+
+test("a helper script beside run is linted too, and does not satisfy the dry-run contract", async () => {
+  const root = await makeSchedule("helpers", {
+    "schedule.yaml": CLEAN_YAML,
+    run: '#!/usr/bin/env bash\nset -euo pipefail\n"$(dirname "$0")/helper.sh"\n',
+    "helper.sh": '#!/usr/bin/env bash\ncd "$SCHEDULE_DIR"\necho "${SCHEDULE_DRY_RUN:-0}"\n',
+  });
+  const findings = await lint(root);
+  assert.equal(
+    findings.some((finding) => finding.file === "helper.sh" && finding.message.includes("SC2164")),
+    true,
+    rendered(findings),
+  );
+  // The helper mentions SCHEDULE_DRY_RUN; `run` still has to honor it itself.
+  assert.equal(
+    findings.some((finding) => finding.file === "run" && finding.message.startsWith("never mentions SCHEDULE_DRY_RUN")),
+    true,
+    rendered(findings),
+  );
+});
+
+test("a TypeScript script that lives under the repo's own schedules/ is linted by path", async () => {
+  // The by-path branch is the one real schedules use, and it is the branch that
+  // depends on the root eslint.config.mjs scoping `schedules/**/*.ts`.
+  const repoSchedules = path.join(REPO_ROOT, "schedules");
+  const name = `lint-fixture-${String(process.pid)}`;
+  const dir = path.join(repoSchedules, name);
+  await fs.mkdir(dir, { recursive: true });
+  tempDirs.push(dir);
+  await fs.writeFile(path.join(dir, "schedule.yaml"), CLEAN_YAML, "utf8");
+  await fs.writeFile(path.join(dir, "run"), '#!/usr/bin/env bash\nexec node --import tsx "$(dirname "$0")/run.ts" "$@"\n', "utf8");
+  await fs.chmod(path.join(dir, "run"), 0o755);
+  await fs.writeFile(path.join(dir, "run.ts"), 'const dry: any = process.env["SCHEDULE_DRY_RUN"];\nprocess.stdout.write(String(dry));\n', "utf8");
+
+  const findings = (await lint(repoSchedules)).filter((finding) => finding.schedule === name);
+  assert.deepEqual(
+    findings.map((finding) => finding.file),
+    ["run.ts"],
+    rendered(findings),
+  );
   assert.match(findings[0]?.message ?? "", /@typescript-eslint\/no-explicit-any/);
 });
 

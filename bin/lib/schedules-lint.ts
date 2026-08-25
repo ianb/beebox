@@ -70,6 +70,24 @@ export function shebangKind(text: string): ScriptKind {
   return "other";
 }
 
+/**
+ * A shebang that parses but will not exec. `#!/usr/bin/env node --import tsx`
+ * is the one that bites: the kernel hands `env` a single argument, so the
+ * interpreter is looked up as the whole string `node --import tsx` and the
+ * script dies with "no such file or directory" at the only moment nobody is
+ * watching. `-S` is what splits it.
+ */
+export function shebangProblem(text: string): string | null {
+  const [firstLine] = text.split("\n");
+  if (firstLine === undefined || !firstLine.startsWith("#!")) return null;
+  const words = firstLine.slice(2).trim().split(/\s+/).filter((word) => word !== "");
+  const [command, ...rest] = words;
+  if (command === undefined || path.basename(command) !== "env") return null;
+  if (rest.some((word) => word.startsWith("-S"))) return null;
+  if (rest.length <= 1) return null;
+  return `\`env\` needs -S to pass arguments to the interpreter (#!${command} -S ${rest.join(" ")})`;
+}
+
 // ─── Reading a schedule directory ─────────────────────────────────────────
 
 /** The two script names a schedule can hold, in report order. */
@@ -103,8 +121,10 @@ async function isExecutable(filePath: string): Promise<boolean> {
   }
 }
 
-/** Every `.ts` file under a schedule directory, relative-pathed. */
-async function typescriptFiles(dir: string): Promise<string[]> {
+/** Every `.ts` and `.sh` file under a schedule directory, relative-pathed. A
+ *  `run` that calls `helper.sh` fails at 03:00 for whatever is wrong in the
+ *  helper, so the helpers are linted too, not just the two entry points. */
+async function sourceFiles(dir: string): Promise<string[]> {
   let entries: { name: string; parentPath: string; isFile: () => boolean }[];
   try {
     entries = await fs.readdir(dir, { withFileTypes: true, recursive: true });
@@ -113,7 +133,7 @@ async function typescriptFiles(dir: string): Promise<string[]> {
     throw e;
   }
   return entries
-    .filter((entry) => entry.isFile() && entry.name.endsWith(".ts"))
+    .filter((entry) => entry.isFile() && (entry.name.endsWith(".ts") || entry.name.endsWith(".sh")))
     .map((entry) => path.relative(dir, path.join(entry.parentPath, entry.name)))
     .sort();
 }
@@ -305,11 +325,11 @@ async function readScripts(input: { name: string; dir: string }): Promise<Script
     if (text === null) continue;
     scripts.push({ schedule: input.name, file: name, absolute, kind: shebangKind(text), text });
   }
-  for (const relative of await typescriptFiles(input.dir)) {
+  for (const relative of await sourceFiles(input.dir)) {
     const absolute = path.join(input.dir, relative);
     const text = await readIfPresent(absolute);
     if (text === null) continue;
-    scripts.push({ schedule: input.name, file: relative, absolute, kind: "node", text });
+    scripts.push({ schedule: input.name, file: relative, absolute, kind: shebangKind(text), text });
   }
   return scripts;
 }
@@ -338,28 +358,30 @@ export async function lintSchedules(input: LintInput): Promise<LintFinding[]> {
     const scripts = await readScripts({ name: entry.name, dir: entry.dir });
 
     for (const script of scripts) {
-      if (!SCRIPT_NAMES.includes(script.file)) continue;
-      if (script.kind === "none") {
-        findings.push({ schedule: entry.name, file: script.file, message: "needs a shebang (#!/usr/bin/env bash or #!/usr/bin/env -S node --import tsx)" });
+      if (SCRIPT_NAMES.includes(script.file)) {
+        if (script.kind === "none") {
+          findings.push({ schedule: entry.name, file: script.file, message: "needs a shebang (#!/usr/bin/env bash or #!/usr/bin/env -S node --import tsx)" });
+        }
+        const problem = shebangProblem(script.text);
+        if (problem !== null) findings.push({ schedule: entry.name, file: script.file, message: problem });
+        // The loader already refuses a `run` that is not executable; `check` is
+        // optional, so a present-but-unexecutable one is this command's to catch.
+        if (script.file === "check" && !(await isExecutable(script.absolute))) {
+          findings.push({ schedule: entry.name, file: "check", message: "is not executable" });
+        }
       }
-      // The loader already refuses a `run` that is not executable; `check` is
-      // optional, so a present-but-unexecutable one is this command's to catch.
-      if (script.file === "check" && !(await isExecutable(script.absolute))) {
-        findings.push({ schedule: entry.name, file: "check", message: "is not executable" });
-      }
-      if (script.kind === "shell") shellScripts.push(script);
-      if (script.kind === "node") nodeScripts.push(script);
-    }
-    for (const script of scripts) {
-      if (SCRIPT_NAMES.includes(script.file)) continue;
-      nodeScripts.push(script);
+      if (script.file.endsWith(".ts") || script.kind === "node") nodeScripts.push(script);
+      else if (script.file.endsWith(".sh") || script.kind === "shell") shellScripts.push(script);
     }
 
-    // Attributed to `run` but satisfied by any script in the directory: a `run`
-    // that is a two-line shim to `run.ts` honors the dry-run contract in the
-    // file that does the work, and flagging the shim would be a false positive.
+    // Attributed to `run` and satisfied by `run` or a `run.*` beside it: a
+    // `run` that is a two-line shim honors the dry-run contract in the file
+    // that does the work, and flagging the shim would be a false positive. A
+    // mention in some unrelated helper is NOT enough — that would let the
+    // contract be satisfied by a file `run` never calls.
     const run = scripts.find((script) => script.file === "run");
-    if (run !== undefined && !scripts.some((script) => script.text.includes(DRY_RUN_VARIABLE))) {
+    const runFiles = scripts.filter((script) => script.file === "run" || script.file.startsWith("run."));
+    if (run !== undefined && !runFiles.some((script) => script.text.includes(DRY_RUN_VARIABLE))) {
       findings.push({ schedule: entry.name, file: "run", message: `never mentions ${DRY_RUN_VARIABLE} — a run script must honor the dry-run contract` });
     }
 
