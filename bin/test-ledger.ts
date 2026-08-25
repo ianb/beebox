@@ -98,7 +98,22 @@ export function readRecords(path: string): LedgerRecord[] {
   return records;
 }
 
-async function runWrapped(command: string[], tier: Tier, mode: RunMode): Promise<number> {
+/** What the run is, beyond its argv: how to record it and what "changed" means. */
+export interface RunContext {
+  tier: Tier;
+  mode: RunMode;
+  /**
+   * The ref `changed` is computed against, in place of `main`. The batched
+   * full-suite schedule passes the commit it last tested, so `changed` is the
+   * landed range — on `main`, `main...HEAD` is empty and `implicated` would
+   * otherwise be nothing (plan revision 2026-08-25, mechanism D).
+   */
+  base: string | null;
+  /** Recorded as {@link LedgerRecord.source}; null for an ordinary run. */
+  source: string | null;
+}
+
+async function runWrapped(command: string[], context: RunContext): Promise<number> {
   const [executable, ...args] = command;
   if (executable === undefined) {
     console.error("test-ledger run: needs a command after --");
@@ -108,9 +123,9 @@ async function runWrapped(command: string[], tier: Tier, mode: RunMode): Promise
   // The semaphore (plan revision 2026-08-25, mechanism A): concurrent suites
   // measurably slow each other down and turn each other red. Fail-open — a
   // lock directory that cannot be used is not a reason to refuse to test.
-  const held = await holdSlot(tier);
+  const held = await holdSlot(context.tier);
   try {
-    return await runUnderSlot({ executable, args, tier, mode, concurrency: held?.concurrency ?? null });
+    return await runUnderSlot({ executable, args, context, concurrency: held?.concurrency ?? null });
   } finally {
     releaseHeld(held);
   }
@@ -156,8 +171,7 @@ function installSignalReleases(): void {
 async function runUnderSlot(input: {
   executable: string;
   args: string[];
-  tier: Tier;
-  mode: RunMode;
+  context: RunContext;
   concurrency: number | null;
 }): Promise<number> {
   const { executable, args } = input;
@@ -195,13 +209,13 @@ async function runUnderSlot(input: {
 
   try {
     await withTimeout(LEDGER_BUDGET_MS, async () => {
-      const changed = changedPaths();
+      const base = input.context.base;
+      const changed = changedPaths(base === null ? {} : { base });
       record({
         tapOutput: output,
         changed,
         exitCode,
-        tier: input.tier,
-        mode: input.mode,
+        context: input.context,
         concurrency: input.concurrency,
         graph: await computeGraph(changed),
       });
@@ -274,8 +288,7 @@ function record(input: {
   tapOutput: string;
   changed: string[];
   exitCode: number;
-  tier: Tier;
-  mode: RunMode;
+  context: RunContext;
   /** Null when no slot could be taken, so the figure is unknown rather than zero. */
   concurrency: number | null;
   graph: GraphView | null;
@@ -297,9 +310,10 @@ function record(input: {
     commit: git(["rev-parse", "HEAD"]),
     branch: git(["rev-parse", "--abbrev-ref", "HEAD"]),
     treeHash: treeHash(),
-    mode: input.mode,
+    mode: input.context.mode,
+    ...(input.context.source === null ? {} : { source: input.context.source }),
     exitCode: input.exitCode,
-    tier: input.tier,
+    tier: input.context.tier,
     ...(input.concurrency === null ? {} : { concurrency: input.concurrency }),
     accounted,
     changed,
@@ -373,6 +387,13 @@ function parseMode(flags: string[]): RunMode | null {
   return value === "full" || value === "selected" ? value : null;
 }
 
+/** Reads a `--flag value` pair from the wrapper's own flags; null when absent. */
+function parseValue(flags: string[], name: string): string | null {
+  const index = flags.indexOf(name);
+  if (index === -1) return null;
+  return flags[index + 1] ?? null;
+}
+
 /** Reads `--tier` from the wrapper's own flags; null on an unknown value. */
 function parseTier(flags: string[]): Tier | null {
   const index = flags.indexOf("--tier");
@@ -415,8 +436,23 @@ export async function main(argv: string[]): Promise<void> {
       process.exitCode = 2;
       return;
     }
+    // `--base` takes a ref rather than validating it here: an unresolvable ref
+    // fails inside `git diff`, which names it, and the ledger's own failure is
+    // a warning rather than a broken run.
+    const base = parseValue(flags, "--base");
+    if (flags.includes("--base") && (base === null || base === "")) {
+      console.error("test-ledger run: --base takes a ref");
+      process.exitCode = 2;
+      return;
+    }
+    const source = parseValue(flags, "--source");
+    if (flags.includes("--source") && (source === null || source === "")) {
+      console.error("test-ledger run: --source takes a name");
+      process.exitCode = 2;
+      return;
+    }
     installSignalReleases();
-    process.exitCode = await runWrapped(command, tier, mode);
+    process.exitCode = await runWrapped(command, { tier, mode, base, source });
     return;
   }
   if (subcommand === "report") {
@@ -424,8 +460,8 @@ export async function main(argv: string[]): Promise<void> {
     return;
   }
   console.error(
-    "usage: test-ledger run [--tier ordinary|careful] [--mode full|selected] -- <command…>" +
-      " | test-ledger report",
+    "usage: test-ledger run [--tier ordinary|careful] [--mode full|selected]" +
+      " [--base <ref>] [--source <name>] -- <command…> | test-ledger report",
   );
   process.exitCode = 2;
 }

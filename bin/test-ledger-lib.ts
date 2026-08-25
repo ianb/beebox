@@ -30,6 +30,18 @@ export interface LedgerRecord {
   treeHash: string;
   mode: "full" | "selected";
   /**
+   * Who asked for this run, when it was not an agent at a keyboard. Only the
+   * batched full-suite schedule sets it (`source: "full-suite"`), which is how
+   * `schedules/full-suite/run.ts` finds the last commit it tested without
+   * having to infer it from `branch`/`mode` — a detached worktree reports
+   * `branch: "HEAD"`, and a human running `pnpm test` on main is
+   * indistinguishable from the schedule under any such inference.
+   *
+   * Absent on every other record, including all records written before this
+   * field existed. Plan revision 2026-08-25, mechanism D.
+   */
+  source?: string;
+  /**
    * The wrapped command's exit status (128+signum if it was killed). Recorded
    * because a run that bailed out early reports only the files it reached, and
    * counting that as a completed run would quietly corrupt every denominator.
