@@ -17,6 +17,10 @@ import {
 } from "../../shared/documents.js";
 import { askQueueSchema } from "../../shared/exhibits.js";
 import {
+  scheduleAlertIdSchema,
+  scheduleAlertsResultSchema,
+} from "../../shared/schedules.js";
+import {
   actionResultSchema,
   actionVerbSchema,
   lifecycleJobSchema,
@@ -40,6 +44,24 @@ const workstreamsRouter = router({
         workstream,
         issues: await ctx.services.documents.issuesForWorkstream(input.name),
       };
+    }),
+});
+
+/** Reads and acknowledges through `bin/schedules`; the store's only writer is
+ *  still that CLI (scheduled-workstreams.md, Track D). */
+const schedulesRouter = router({
+  alerts: procedure
+    .input(z.object({ workstream: z.string().regex(/^[a-zA-Z0-9_-]+$/u).nullable() }))
+    .output(scheduleAlertsResultSchema)
+    .query(async ({ input, ctx }) => ({
+      items: await ctx.services.schedules.alerts(input.workstream),
+    })),
+  acknowledge: procedure
+    .input(z.object({ id: scheduleAlertIdSchema }))
+    .output(z.object({ id: scheduleAlertIdSchema }))
+    .mutation(async ({ input, ctx }) => {
+      await ctx.services.schedules.acknowledge(input.id);
+      return { id: input.id };
     }),
 });
 
@@ -115,6 +137,7 @@ const dashboardRouter = router({
 export const appRouter = router({
   dashboard: dashboardRouter,
   workstreams: workstreamsRouter,
+  schedules: schedulesRouter,
   issues: issuesRouter,
   comments: commentsRouter,
   documents: documentsRouter,
