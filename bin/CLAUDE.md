@@ -90,8 +90,11 @@ each case forks a throwaway git repo with its own `core.hooksPath`).
 `--no-ff --no-edit` — what `/finish` step 8 calls, and what you run by hand to
 land a branch a finish left merge-ready. It resolves the main checkout from
 `--git-common-dir` and targets it explicitly, so it works from the main
-checkout or from inside a worktree (where a plain `git -C ~/src/callback-box
-merge` is blocked by Claude Code's worktree isolation).
+checkout, from inside a worktree, or from a Codex session (whose sandbox can't
+git the main checkout). Managed Claude worktree sessions are not isolated from
+the main checkout — that isolation belongs to native `claude --worktree`, which
+they don't use — so `git -C ~/src/callback-box` works there; `bin/land` is
+preferred for its checks, not because git is blocked.
 
 With no argument: from a worktree it lands that worktree's own branch; from the
 main checkout it auto-detects the single merge-ready branch and refuses if
