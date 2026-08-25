@@ -349,16 +349,16 @@ enum ComposerDraftReducer {
         case .addImage(let image):
             draft.images.append(image)
             draft.nextImageID = max(draft.nextImageID, image.id + 1)
-            insertToken("[image\(image.id)]", into: &draft)
+            insertToken(ComposerToken.write(.image, image.id), into: &draft)
         case .addFile(let file):
             draft.files.append(file)
             draft.nextFileID = max(draft.nextFileID, file.id + 1)
-            insertToken("[file\(file.id)]", into: &draft)
+            insertToken(ComposerToken.write(.file, file.id), into: &draft)
         case .addSelection(let selection):
             draft.selections.append(selection)
             draft.nextSelectionID = max(draft.nextSelectionID, selection.id + 1)
             if selection.anchor == nil {
-                insertToken("[selection\(selection.id)]", into: &draft)
+                insertToken(ComposerToken.write(.selection, selection.id), into: &draft)
             }
         case .updateFile(let file):
             guard let index = draft.files.firstIndex(where: { $0.id == file.id }) else {
@@ -381,17 +381,17 @@ enum ComposerDraftReducer {
             draft.selections.append(selection)
             draft.nextSelectionID = max(draft.nextSelectionID, selection.id + 1)
             if selection.anchor == nil {
-                insertToken("[selection\(selection.id)]", into: &draft)
+                insertToken(ComposerToken.write(.selection, selection.id), into: &draft)
             }
         case .removeImage(let id):
             draft.images.removeAll { $0.id == id }
-            removeToken("[image\(id)]", from: &draft)
+            removeToken(.image, id: id, from: &draft)
         case .removeFile(let id):
             draft.files.removeAll { $0.id == id }
-            removeToken("[file\(id)]", from: &draft)
+            removeToken(.file, id: id, from: &draft)
         case .removeSelection(let id):
             draft.selections.removeAll { $0.id == id }
-            removeToken("[selection\(id)]", from: &draft)
+            removeToken(.selection, id: id, from: &draft)
         case .reset:
             let processedCommandIDs = draft.processedCommandIDs
             draft = .empty
@@ -414,8 +414,12 @@ enum ComposerDraftReducer {
         value.rangeOfCharacter(from: .whitespacesAndNewlines) != nil
     }
 
-    private static func removeToken(_ token: String, from draft: inout ComposerDraft) {
-        draft.text = draft.text.replacingOccurrences(of: token, with: "")
+    private static func removeToken(_ kind: ComposerToken.Kind, id: Int, from draft: inout ComposerDraft) {
+        // Both forms: a draft persisted before the `#` rename still holds the
+        // old one, and removing its attachment must not leave the token behind.
+        for token in ComposerToken.forms(kind, id) {
+            draft.text = draft.text.replacingOccurrences(of: token, with: "")
+        }
         draft.text = draft.text.replacingOccurrences(of: "  ", with: " ")
         let end = (draft.text as NSString).length
         draft.selection = NSRangeValue(location: min(draft.selection.location, end), length: 0)

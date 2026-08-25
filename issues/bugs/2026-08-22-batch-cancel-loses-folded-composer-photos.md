@@ -1,6 +1,6 @@
 ---
 title: "Cancelling a bulk batch loses the composer photos it folded in"
-workstream: unattached
+workstream: composer-intake
 area: callback-box
 filed-by: agent
 discovered-in: cross-model review of the add-files-menu work

@@ -256,7 +256,6 @@ struct ChatWebView: UIViewRepresentable {
         var speechStopRequest: NativeSpeechStopRequest?
         var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = []
         var composerCommandResults: [NativeComposerCommandResult] = []
-        private var receiptTimeouts: [NativeChatEmission.ID: DispatchWorkItem] = [:]
         /// The delivery attempt currently in flight for each emission ID, keyed
         /// by ID and valued by the attempt's generation. Redelivery abandons an
         /// attempt and starts a new one under the SAME emission ID, so an ID
@@ -301,7 +300,6 @@ struct ChatWebView: UIViewRepresentable {
             onComposerCommandResultDelivered: @escaping (String) -> Void = { _ in },
             onLastAudioRequest: @escaping (NativeLastAudioRequest) -> Void = { _ in },
             onSpeechStopRequestSettled: @escaping (NativeSpeechStopRequest.ID) -> Void = { _ in },
-            receiptTimeoutDelay: TimeInterval = 35,
             pageLoaded: Bool = false,
             evaluateEmission: ((String, @escaping (Error?) -> Void) -> Void)? = nil,
             openExternalURL: @escaping (URL) -> Void = { UIApplication.shared.open($0) },
@@ -325,7 +323,6 @@ struct ChatWebView: UIViewRepresentable {
             self.onComposerCommandResultDelivered = onComposerCommandResultDelivered
             self.onLastAudioRequest = onLastAudioRequest
             self.onSpeechStopRequestSettled = onSpeechStopRequestSettled
-            self.receiptTimeoutDelay = receiptTimeoutDelay
             self.pageLoaded = pageLoaded
             self.evaluateEmission = evaluateEmission
             self.openExternalURL = openExternalURL
