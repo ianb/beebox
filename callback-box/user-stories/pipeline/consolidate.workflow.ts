@@ -1,52 +1,65 @@
 export const meta = {
-  name: 'user-stories-consolidate',
-  description: 'Reconcile group/audience labels, then merge duplicate stories within each group',
+  name: "user-stories-consolidate",
+  description: "Reconcile group/audience labels, then merge duplicate stories within each group",
   phases: [
-    { title: 'Normalize', detail: 'reconcile group/audience across 21 independent readers' },
-    { title: 'Dedup', detail: 'one merger per group finds and clusters duplicate stories' },
+    { title: "Normalize", detail: "reconcile group/audience across 21 independent readers" },
+    { title: "Dedup", detail: "one merger per group finds and clusters duplicate stories" },
   ],
-}
+};
 
 // The absolute repo root, passed in by the caller — workflow scripts have no filesystem access
 // and every subagent prompt needs absolute paths. Run from a worktree and this is that worktree.
-const ROOT = args && args.root
-if (!ROOT) throw new Error('pass {root: "<absolute path to the repo root>"} in args')
-const OUT = `${ROOT}/callback-box/user-stories/work`
+const ROOT = args && args.root;
+if (!ROOT) throw new Error('pass {root: "<absolute path to the repo root>"} in args');
+const OUT = `${ROOT}/callback-box/user-stories/work`;
 
 // args: { root: string, groups: string[] }
-const groups = (args && args.groups) || []
+const groups = (args && args.groups) || [];
 
 // ---------------------------------------------------------------------------
 // Normalize first, so dedup (which works within a group) sees stories that are
 // actually in the right group to be compared against each other.
 // ---------------------------------------------------------------------------
 
-phase('Normalize')
+phase("Normalize");
 
-const NORM_SCHEMA = {
-  type: 'object',
+/** One reconciled label. */
+interface LabelChange {
+  id: string
+  field: "group" | "audience"
+  from: string
+  to: string
+}
+
+interface NormalizeResult {
+  file: string
+  changes: LabelChange[]
+}
+
+const NORM_SCHEMA: WorkflowJsonSchema = {
+  type: "object",
   additionalProperties: false,
-  required: ['file', 'changes'],
+  required: ["file", "changes"],
   properties: {
-    file: { type: 'string' },
+    file: { type: "string" },
     changes: {
-      type: 'array',
+      type: "array",
       items: {
-        type: 'object',
+        type: "object",
         additionalProperties: false,
-        required: ['id', 'field', 'from', 'to'],
+        required: ["id", "field", "from", "to"],
         properties: {
-          id: { type: 'string' },
-          field: { type: 'string', enum: ['group', 'audience'] },
-          from: { type: 'string' },
-          to: { type: 'string' },
+          id: { type: "string" },
+          field: { type: "string", enum: ["group", "audience"] },
+          from: { type: "string" },
+          to: { type: "string" },
         },
       },
     },
   },
-}
+};
 
-const norm = await agent(
+const norm = await agent<NormalizeResult>(
   `You are reconciling classification labels across a user-story catalog. Repository root: ${ROOT}.
 
 Read \`${OUT}/stories.json\` — 1024 stories, each with a \`group\` (product capability area) and an
@@ -78,12 +91,12 @@ Write your JSON to: ${OUT}/normalize.json
 {"changes": [{"id": "...", "field": "group"|"audience", "from": "...", "to": "...", "why": "..."}]}
 
 Then return the file path and id/field/from/to for each (omit \`why\` from the return).`,
-  { label: 'normalize', phase: 'Normalize', schema: NORM_SCHEMA, effort: 'high' },
-)
+  { label: "normalize", phase: "Normalize", schema: NORM_SCHEMA, effort: "high" },
+);
 
-const normChanges = norm && norm.changes ? norm.changes : []
-if (!norm) log('INCOMPLETE: normalization failed — groups stay as the readers left them')
-log(`Normalize: ${normChanges.length} label changes`)
+const normChanges = norm && norm.changes ? norm.changes : [];
+if (!norm) log("INCOMPLETE: normalization failed — groups stay as the readers left them");
+log(`Normalize: ${normChanges.length} label changes`);
 
 // ---------------------------------------------------------------------------
 // Dedup. 14 area readers and 7 seam readers deliberately overlap: a seam reader
@@ -92,35 +105,47 @@ log(`Normalize: ${normChanges.length} label changes`)
 // means the same capability is now in the catalog two or three times.
 // ---------------------------------------------------------------------------
 
-phase('Dedup')
+phase("Dedup");
 
-const DEDUP_SCHEMA = {
-  type: 'object',
+/** One set of stories that say the same thing, and which of them survives. */
+interface DuplicateCluster {
+  keep: string
+  merge: string[]
+}
+
+interface DedupResult {
+  group: string
+  file: string
+  clusters: DuplicateCluster[]
+}
+
+const DEDUP_SCHEMA: WorkflowJsonSchema = {
+  type: "object",
   additionalProperties: false,
-  required: ['group', 'file', 'clusters'],
+  required: ["group", "file", "clusters"],
   properties: {
-    group: { type: 'string' },
-    file: { type: 'string' },
+    group: { type: "string" },
+    file: { type: "string" },
     clusters: {
-      type: 'array',
+      type: "array",
       items: {
-        type: 'object',
+        type: "object",
         additionalProperties: false,
-        required: ['keep', 'merge'],
+        required: ["keep", "merge"],
         properties: {
-          keep: { type: 'string', description: 'id of the story to keep as canonical' },
+          keep: { type: "string", description: "id of the story to keep as canonical" },
           merge: {
-            type: 'array',
-            items: { type: 'string' },
-            description: 'ids of duplicates folded into it (dropped from the catalog)',
+            type: "array",
+            items: { type: "string" },
+            description: "ids of duplicates folded into it (dropped from the catalog)",
           },
         },
       },
     },
   },
-}
+};
 
-const dedup = await parallel(groups.map((g) => () => agent(
+const dedup = await parallel(groups.map((g) => () => agent<DedupResult>(
   `You are merging duplicate user stories. Repository root: ${ROOT}.
 
 Read \`${OUT}/stories.json\` and take **only the stories whose \`group\` is \`${g}\`** — but apply
@@ -177,25 +202,27 @@ Write your JSON to: ${OUT}/dedup/${g}.json
   {"keep": "<id>", "merge": ["<id>", "<id>"], "why": "one line on what makes these the same"}]}
 
 Then return the group, the file path, and keep/merge for each cluster (omit \`why\`).`,
-  { label: `dedup:${g}`, phase: 'Dedup', schema: DEDUP_SCHEMA, effort: 'high' },
-)))
+  { label: `dedup:${g}`, phase: "Dedup", schema: DEDUP_SCHEMA, effort: "high" },
+)));
 
-let clusters = 0
-let dropped = 0
-let dedupFailures = 0
-const failedGroups = []
-for (let i = 0; i < groups.length; i++) {
-  const d = dedup[i]
-  if (!d) { dedupFailures++; failedGroups.push(groups[i]); continue }
+let clusters = 0;
+let dropped = 0;
+let dedupFailures = 0;
+const failedGroups: string[] = [];
+for (const [i, group] of groups.entries()) {
+  const d = dedup[i];
+  if (!d) { dedupFailures++; failedGroups.push(group); continue; }
   for (const c of d.clusters || []) {
-    clusters++
-    dropped += (c.merge || []).length
+    clusters++;
+    dropped += (c.merge || []).length;
   }
 }
 
-if (dedupFailures) log(`INCOMPLETE: dedup failed for groups: ${failedGroups.join(', ')} — those keep their duplicates`)
-log(`Dedup: ${clusters} clusters, ${dropped} stories folded away`)
+if (dedupFailures) log(`INCOMPLETE: dedup failed for groups: ${failedGroups.join(", ")} — those keep their duplicates`);
+log(`Dedup: ${clusters} clusters, ${dropped} stories folded away`);
 
+// @ts-expect-error -- TS1108: the Workflow runtime wraps this script body in an async function,
+// so a top-level return is how a workflow reports its result.
 return {
   normalizeChanges: normChanges.length,
   clusters,
@@ -203,4 +230,4 @@ return {
   remaining: 1024 - dropped,
   dedupFailures,
   failedGroups,
-}
+};

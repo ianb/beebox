@@ -88,6 +88,12 @@ dev/apps/story-eval/runs/
 /exhibits
 callback-box/user-stories/work/
 
+# Workflow scripts, built from the `.ts` sources beside them by
+# `user-stories/pipeline/build-workflows.ts`. The Workflow tool parses plain
+# JavaScript and cannot import anything, so the runnable form has to be `.mjs`;
+# only the TypeScript is committed. Build before invoking one.
+callback-box/user-stories/pipeline/*.workflow.mjs
+
 # Journey assets. Photographs are committed once compressed (a few hundred KB of
 # webp) so a journey is self-contained and runnable from a clean checkout.
 # Anonymized mail stays out until the boxholder has read it, since it is derived

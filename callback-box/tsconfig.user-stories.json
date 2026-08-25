@@ -1,0 +1,16 @@
+{
+  // The user-stories module is not part of the shipped bundle, so it sits outside
+  // `src/` and outside the backend tsconfig's `include`. That left ~1,400 lines of
+  // TypeScript that `pnpm typecheck` never looked at — discovered 2026-08-24, when a
+  // run of `tsc` over the directory turned out to be the first one ever.
+  //
+  // These files run under tsx, which is why they import each other with an explicit
+  // `.ts` extension; `allowImportingTsExtensions` is what makes that legal to check.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true,
+    "allowImportingTsExtensions": true
+  },
+  "include": ["user-stories/**/*.ts"]
+}

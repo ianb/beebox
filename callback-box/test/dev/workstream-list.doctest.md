@@ -69,7 +69,7 @@ JSON.stringify(ordinary.map((row: { name: string; agent: { state: string }; rout
 
 const rows = await list(stateDir, worktreeRoot, true);
 JSON.stringify(rows.find((row: { name: string }) => row.name === "culled"))
-=> {"name":"culled","branch":"worktree-culled","path":null,"box":null,"url":null,"git":null,"runtime":{"state":"absent"},"agent":{"state":"none","reason":"no-worktree"},"session":{"agent":"claude","hasSession":true,"tty":null,"emoji":"🧵","baseSha":null,"removed":{"at":"2026-08-09T00:00:00Z","finalSha":"abc","merged":true},"archived":null,"description":null,"launch":{"state":"none","startedAt":null,"expiresAt":null,"failedAt":null,"reason":null}},"routing":{"state":"removed","action":"resume-with-briefing","lastActivityAt":"2026-08-09T00:00:00Z"},"boxState":{"testSetup":false,"keepUnmerged":false,"pristine":null}}
+=> {"name":"culled","branch":"worktree-culled","path":null,"box":null,"url":null,"git":null,"runtime":{"state":"absent"},"agent":{"state":"none","reason":"no-worktree"},"session":{"agent":"claude","hasSession":true,"tty":null,"emoji":"🧵","baseSha":null,"removed":{"at":"2026-08-09T00:00:00Z","finalSha":"abc","merged":true},"archived":null,"description":null,"launch":{"state":"none","startedAt":null,"expiresAt":null,"failedAt":null,"reason":null}},"routing":{"state":"removed","action":"resume-with-briefing","lastActivityAt":"2026-08-09T00:00:00Z"},"boxState":{"testSetup":false,"keepUnmerged":false,"pristine":null},"schedule":null}
 ```
 
 ## Stray directories are visible anomalies, not rows
