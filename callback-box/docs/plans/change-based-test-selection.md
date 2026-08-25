@@ -624,6 +624,45 @@ left: a BLOCKED result re-dispatches from step 1 and repeats every step,
 including verification. With verification now seconds instead of minutes,
 that repeat stops mattering, which is the cheaper fix than a resume protocol.
 
+**E2. Scripts for the finish.** `/finish` is invoked on every landing, and
+`.claude/agents/finish.md` is 562 lines of prose that a headless Sonnet
+re-derives each time: a dozen git commands to classify the diff, a per-path
+verification map to apply by hand, PIPESTATUS discipline, a report template.
+Every prose step is a place to be slow or wrong. The merge end already has a
+script (`bin/land`: gate checks, `--no-ff`, refuses when main moved). The
+front end gets two more, and the agent's instructions shrink to "run these,
+act on what they print":
+
+- **`bin/finish-preflight`** — steps 1–3 and the classification, one command,
+  one JSON/text report. Confirms worktree state and the private leg; lists
+  stragglers (it never commits them — whether they are intentional is the
+  one thing the dispatcher passes in); merges `main` and stops on conflict
+  with the paths; then prints the **decision sheet**: changed paths grouped
+  by package; `docsOnly`; the selected test set (from `bin/test-select`) or
+  "nothing implicated"; the verification commands to run, coalesced per the
+  per-path map (`finish.md:251-280`), so the map lives in code; whether a
+  plan (`Plan:` trailer / `workstream:` front matter) and any named issues
+  exist, i.e. whether steps 5b, 6 and 7 have anything to do; and a Track O
+  scope: the diff line count and whether any non-test source changed, so a
+  tests-and-docs-only diff skips the review. Each step in the agent file
+  becomes conditional on a field of this sheet rather than on re-derivation.
+- **`bin/finish-verify`** — runs the verification commands the sheet named,
+  each captured to a file outside the worktree with its real exit status,
+  and prints one line per command (`ok` / `FAIL <path to output>`) and a
+  final verdict. On a test failure it performs the isolated re-run of the
+  failing file itself and reports `flake` or `real`, so the agent's
+  remaining judgment is only "real failure → fix or BLOCKED". Re-running
+  after a post-green commit is the same command; it re-selects.
+
+Both are TypeScript under `bin/` with tests, like `test-ledger`. The agent
+file is then rewritten around them — kept are the rules that need judgment
+(Track O's checklist, plan reconciliation, issue closing, the BLOCKED
+contract, the report); removed are the mechanics the scripts now own. The
+dispatcher skill passes the sheet's inputs (straggler intent, issues) as it
+does today. Expected: a code landing's fixed cost drops from a suite run plus
+several minutes of derivation to under a minute of scripts, with the agent's
+tokens spent on the three judgment steps.
+
 Guidance (`callback-box/CLAUDE.md:11`, `cb-guide-testing`, `doctest`) becomes:
 iterate with `pnpm test:changed` or a named file; `pnpm test` is what the
 schedule runs, and an agent reaching for it should say why.
@@ -659,8 +698,9 @@ escapes the posture accepts actually happen.
 2. **B** + Track 3's `alwaysRun` generator, with `test:changed`.
 3. **C** — `careful.txt` seeded from the current report.
 4. **D** — the schedule, with bisect + issue filing.
-5. **E** — `/finish` and guidance, last, because it is the point where agent
-   behavior changes.
+5. **E** — `bin/finish-preflight` + `bin/finish-verify`, then the agent-file
+   rewrite around them and the guidance change, last, because it is the
+   point where agent behavior changes.
 
 ---
 
