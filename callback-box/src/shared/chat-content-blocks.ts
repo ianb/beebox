@@ -18,6 +18,19 @@
  * they had (see `ensureTrailingTextBlock` below).
  */
 
+/**
+ * What stands in for an image whose bytes are not in the transcript.
+ *
+ * A session log that grew too large has its inline media stripped
+ * (`cli/lib/session-oversize.ts`), and reading one back turns each image block
+ * into this text (`cli/lib/session-content.ts`). It lives here, beside the
+ * token algorithm, because two ends depend on the exact string: the reader that
+ * writes it, and the client's pending-message reconciliation, which compares a
+ * turn's text against its own optimistic copy and must not count a placeholder
+ * as text the user typed.
+ */
+export const IMAGE_NOT_DISPLAYED = "[image not displayed]";
+
 /** The minimal image-attachment shape both callers key `[imageN]` tokens against. */
 export interface ChatBlockImage {
   id: number;

@@ -408,3 +408,26 @@ markup inside whatever tiddler contains it), and nothing can be checked before
 it runs. Our card-anchored `?view=foo` invariant is the better choice and should
 hold — which leaves the open question above unchanged and unhelped: where a
 conventional collection lives in URL space when there is no card to hang it off.
+
+## What a first-time user asked for, unprompted (journey B, 2026-08-24)
+
+The abstraction above has a concrete shape, and a walker who had never seen the
+product named it as the top thing they wished they had, after an evening of
+cataloguing a drawer into 20 record cards:
+
+> *"A way to see, on one screen, **all my containers and how many things are in
+> each** — so I can tell at a glance what I've done and what's left. Right now
+> 'what have I actually catalogued?' is a question I have to ask in words."*
+
+Two details worth keeping:
+
+- **They could get the answer** — the agent answers it well in chat. What they
+  wanted was to *see* it without asking, and to see progress: done versus left.
+- **It is a count over a set**, which is the same missing primitive as
+  [counts living in prose](../bugs/2026-08-24-agent-records-counts-in-prose-though-measures-exists.md).
+  A collection view that cannot say how many things are in a container is not
+  much better than the paragraph.
+
+They also asked what `reviewed` is for — *"whether it does anything, or is just
+a label I now feel responsible for maintaining."* A status a collection view
+never surfaces is exactly a label the user maintains for nobody.

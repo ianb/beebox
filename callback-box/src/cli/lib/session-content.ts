@@ -6,6 +6,7 @@
  */
 
 import { type KnownToolName, isKnownTool } from "../../shared/known-tools.js";
+import { IMAGE_NOT_DISPLAYED } from "../../shared/chat-content-blocks.js";
 import { isRecord } from "../../lib/is-record.js";
 
 /**
@@ -93,7 +94,7 @@ function imageBlock(block: Record<string, unknown>): SessionContentBlock {
   // were fine when they sent them and whose work from those images is still there.
   // "Unavailable" reads as loss; "not displayed" is what actually happened.
   if (source?.["type"] === "base64" && !source["data"]) {
-    return { type: "text", text: "[image not displayed]" };
+    return { type: "text", text: IMAGE_NOT_DISPLAYED };
   }
   const imgBlock: SessionContentBlock = { type: "image" };
   if (source?.["media_type"]) imgBlock.mediaType = String(source["media_type"]);
