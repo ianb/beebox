@@ -1,12 +1,15 @@
 ---
 title: "`stories:` frontmatter field is undocumented and unparsed"
-workstream: unattached
+workstream: user-stories-refresh
 area: monorepo
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-issue-selection — frontmatter census while building bin/issues
 labels: [issues-queue]
+resolution: implemented
 ---
+
+**Closed by commit 1104f438** ("issues: retire the invented `stories:` field, and stop swallowing unknown keys") and c75fc713. Chose "Drop it": the `stories:` field is scrubbed from all 11 issues that carried it, and `parseIssueFile` now reports `unknownKeys` (in `issue-domain.ts`), which satisfies the issue's "either way" ask. No `bin/issues list` surfacing was added on top of `unknownKeys` — if that's still wanted, file a new issue for it.
 
 Ten issues (six open, four closed, all filed 2026-08-21/23 by the user-story
 verification work) carry a `stories:` list, e.g.
