@@ -17,6 +17,7 @@
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
 import * as fs from "node:fs/promises";
+import { existsSync } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { execa } from "execa";
@@ -709,7 +710,15 @@ async function launchRig(input: {
   await fs.writeFile(workstreams, [
     "#!/bin/sh",
     "case \"$1\" in",
-    `  create) mkdir -p "${worktreePath}"; printf '%s\\n' "${worktreePath}" ;;`,
+    // A real worktree is a git worktree, and the runner brings it up to date
+    // with `main` before launching. Make the fake one an actual repo on `main`
+    // so that merge is exercised rather than sidestepped.
+    `  create) mkdir -p "${worktreePath}";`,
+    `    if [ ! -e "${worktreePath}/.git" ]; then`,
+    `      git -C "${worktreePath}" init -q -b main;`,
+    `      git -C "${worktreePath}" -c user.email=t@t -c user.name=t commit -q --allow-empty -m init;`,
+    `    fi;`,
+    `    printf '%s\\n' "${worktreePath}" ;;`,
     `  agent-liveness) printf '{"ok":true,"paths":{"%s":{"state":"${input.liveness}","reason":"fake"}}}\\n' "$2" ;;`,
     "  *) echo \"unexpected: $*\" >&2; exit 64 ;;",
     "esac",
@@ -842,6 +851,42 @@ test("a live or unknown agent in the worktree refuses the launch and alerts norm
     assert.equal(alert?.priority, "normal");
     assert.equal(alert?.title, "work waiting, session already live");
   }
+});
+
+test("the worktree is brought up to date with main before the session starts", async () => {
+  const rig = await launchRig({
+    name: "knip-sweep",
+    yaml: workstreamYaml("  worktree: true"),
+    run: HANDOFF_RUN,
+    liveness: "none",
+    agentExit: 0,
+    agentExtra: REPORTS_DONE,
+    check: null,
+  });
+
+  // Stand the worktree up ahead of the run — `create` only re-attaches when it
+  // already exists, which is the long-lived shape a schedule resumes into.
+  // Give `main` a commit the schedule's own branch does not have.
+  const wt = rig.worktreePath;
+  await fs.mkdir(wt, { recursive: true });
+  const git = (...args: string[]) => execa("git", ["-C", wt, "-c", "user.email=t@t", "-c", "user.name=t", ...args]);
+  await git("init", "-q", "-b", "main");
+  await git("commit", "-q", "--allow-empty", "-m", "init");
+  await fs.writeFile(path.join(wt, "from-main.txt"), "landed elsewhere\n", "utf8");
+  await git("add", "from-main.txt");
+  await git("commit", "-q", "-m", "a commit only main has");
+  await git("checkout", "-q", "-b", "worktree-knip-sweep", "HEAD~1");
+
+  assert.equal(existsSync(path.join(wt, "from-main.txt")), false, "precondition: the branch lacks main's commit");
+
+  await withFakeAgent(rig, async () => runSchedule(rig.fake.deps, { schedule: rig.schedule, dryRun: false }));
+
+  assert.ok(await rig.transcript(), "the session should have started");
+  assert.equal(
+    existsSync(path.join(wt, "from-main.txt")),
+    true,
+    "the runner should have merged main into the branch before launching",
+  );
 });
 
 test("a session that ends without reporting is an important alert with the log tail", async () => {
