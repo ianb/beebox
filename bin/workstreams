@@ -137,6 +137,10 @@ case "$cmd" in
       exit 1
     fi
     if [ "$cmd" = archive ]; then
+      if session_registry_is_scheduled "$record"; then
+        echo "workstreams archive: '$name' is a scheduled workstream; set \`enabled: false\` in schedule.yaml instead" >&2
+        exit 1
+      fi
       if printf '%s' "$record" | jq -e '.removed.merged == false' >/dev/null 2>&1; then
         echo "workstreams archive: refusing to hide recovery state for '$name'" >&2
         exit 1
@@ -439,9 +443,11 @@ case "$cmd" in
       *) echo "workstreams resume: no recorded agent for $name; pass --agent claude or --agent codex" >&2; exit 1 ;;
     esac
 
-    if [ "$resume_state" = "culled" ] || [ "$resume_state" = "removed-unmerged" ]; then
+    # `scheduled` joins the recreate path rather than duplicating it: an absent
+    # scheduled record is culled-but-resumable, it just has no `removed` block.
+    if [ "$resume_state" = "culled" ] || [ "$resume_state" = "removed-unmerged" ] || [ "$resume_state" = "scheduled" ]; then
       workstream_resume_status restoring
-      final_sha=$(printf '%s' "$record" | jq -r '.removed.finalSha // empty')
+      final_sha=$(workstream_recovery_sha "$record")
       box_ref=$(printf '%s' "$record" | jq -r '.removed.boxRef // empty')
       if [ "$at_final_sha" = true ]; then
         [ -n "$final_sha" ] || { echo "workstreams resume: no final SHA recorded; recreating at it is impossible" >&2; exit 1; }
@@ -450,7 +456,8 @@ case "$cmd" in
         target=$("$REPO_DIR/bin/workstreams" create "${create_args[@]}")
         new_base_sha="$final_sha"
       else
-        [ -n "$final_sha" ] || echo "workstreams resume: no final SHA recorded; recreating from main" >&2
+        [ -n "$final_sha" ] || [ "$resume_state" = "scheduled" ] \
+          || echo "workstreams resume: no final SHA recorded; recreating from main" >&2
         create_args=("$name")
         [ -n "$box_ref" ] && create_args+=(--box-ref "$box_ref")
         target=$("$REPO_DIR/bin/workstreams" create "${create_args[@]}")
@@ -460,7 +467,7 @@ case "$cmd" in
     fi
 
     workstream_resume_status preparing
-    final_sha=$(printf '%s' "$record" | jq -r '.removed.finalSha // empty' 2>/dev/null || true)
+    final_sha=$(workstream_recovery_sha "$record")
     landed_log=""
     if [ -n "$final_sha" ] && git -C "$WT_MONO" cat-file -e "$final_sha^{commit}" 2>/dev/null; then
       landed_log=$(git -C "$WT_MONO" log --oneline "$final_sha..main" -50 2>/dev/null || true)
@@ -599,6 +606,17 @@ case "$cmd" in
       esac
     done < <(git -C "$WT_MONO" worktree list --porcelain -z)
     now_epoch=$(date +%s)
+
+    # One scheduler query for the whole listing, joined to rows by name — a
+    # node+tsx start, so it happens once here and never per row. Skipped
+    # entirely with no schedules/ directory, since `list` is on the app's
+    # refresh path and an empty listing is the only possible answer. Anything
+    # unparseable is also an empty listing: the scheduler is a joined-in extra,
+    # and it must not be able to blank the inventory.
+    schedules_json=""
+    [ -d "$REPO_DIR/schedules" ] && schedules_json=$("$REPO_DIR/bin/schedules" list --json 2>/dev/null || true)
+    jq -e 'type == "object" and (.schedules | type) == "array"' >/dev/null 2>&1 <<<"$schedules_json" \
+      || schedules_json='{"lastTickAt":null,"schedules":[]}'
     rows="[]"
     for d in "$WT_ROOT"/*; do
       [ -d "$d" ] || continue
@@ -631,9 +649,11 @@ case "$cmd" in
       record=$(session_registry_read "$name" || true)
       routing=$(workstream_routing_json true "$WT_AGENT_STATE" "$record" "$tip_epoch" "$dir_epoch" "$now_epoch")
       box_state=$(workstream_box_state "$WT_BOX_ROOT/$name/test1" "$WT_BOX_SRC")
+      schedule=$(workstream_schedule_row "$schedules_json" "$name")
 
       rows=$(jq -c \
         --argjson rows "$rows" \
+        --argjson schedule "$schedule" \
         --arg name "$name" \
         --arg branch "$WT_BRANCH" \
         --arg path "$d" \
@@ -661,7 +681,8 @@ case "$cmd" in
               agent: { state: $agentState, reason: $agentReason },
               session: $session,
               routing: $routing,
-              boxState: $boxState
+              boxState: $boxState,
+              schedule: $schedule
             }]')
     done
 
@@ -676,7 +697,12 @@ case "$cmd" in
         session=$(session_registry_summary "$name")
         launch_state=$(printf '%s' "$session" | jq -r '.launch.state')
         removed_state=$(printf '%s' "$record" | jq -r 'if .removed != null then "true" else "false" end')
-        if [ "$launch_state" = "none" ] && { [ "$include_removed" != true ] || [ "$removed_state" != true ]; }; then
+        # Scheduled records are the one kind that renders with no worktree and
+        # no launch in flight: between runs that IS their resting state.
+        scheduled_record=false
+        session_registry_is_scheduled "$record" && scheduled_record=true
+        if [ "$launch_state" = "none" ] && [ "$scheduled_record" != true ] \
+          && { [ "$include_removed" != true ] || [ "$removed_state" != true ]; }; then
           continue
         fi
         case "$launch_state" in
@@ -692,8 +718,10 @@ case "$cmd" in
         routing=$(workstream_routing_json false "$registry_agent_state" "$record" "" "" "$now_epoch")
         box_state=$(workstream_box_state "$WT_BOX_ROOT/$name/test1" "$WT_BOX_SRC")
         branch=$(printf '%s' "$record" | jq -r --arg name "$name" '.branch // ("worktree-" + $name)')
+        schedule=$(workstream_schedule_row "$schedules_json" "$name")
         rows=$(jq -c \
           --argjson rows "$rows" \
+          --argjson schedule "$schedule" \
           --arg name "$name" \
           --arg branch "$branch" \
           --argjson session "$session" \
@@ -704,7 +732,7 @@ case "$cmd" in
           -n '$rows + [{
             name:$name, branch:$branch, path:null, box:null, url:null, git:null,
             runtime:{state:"absent"}, agent:{state:$agentState, reason:$agentReason},
-            session:$session, routing:$routing, boxState:$boxState
+            session:$session, routing:$routing, boxState:$boxState, schedule:$schedule
           }]')
       done
     fi

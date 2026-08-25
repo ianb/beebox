@@ -1,0 +1,13 @@
+description: "Agent SDK + Claude Code release monitor: filter, ledger, bump"
+cadence: 1d
+workstream:
+  agent: claude
+  model: opus
+  # The session pulls, bumps the pin, commits and pushes `main` — that is the
+  # main checkout's job, and a worktree would push a branch nobody deploys.
+  worktree: false
+  # One long-lived session: the ledger's continuity is the product, and the
+  # monitor's memory of what it already assessed rides in the transcript
+  # (today's contract, `bin/update-agent-sdk-scheduled.sh:83-128`).
+  session: persistent
+  permissionMode: bypassPermissions

@@ -40,6 +40,7 @@ function cliRow(name = "example") {
     },
     routing: { state: "live", action: "manual-forward", lastActivityAt: "2026-08-20T00:00:00Z" },
     boxState: { testSetup: false, keepUnmerged: false, pristine: null },
+    schedule: null,
   };
 }
 
@@ -197,6 +198,7 @@ const apiApp = await buildApp({
         session: row.session,
         routing: row.routing,
         boxState: row.boxState,
+        schedule: row.schedule,
   }]),
   routerCapability: "correct-capability",
   basePath: "/workstreams",

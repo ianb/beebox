@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-08-25T00:22:11Z
+Generated: 2026-08-25T02:34:01Z
 Total documents: 299
 
 ## Issues
@@ -40,18 +40,15 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/schema-validate-hook.md** — "Schema `validate` hook — co-locate non-Zod card validation with its schema" (379 lines)
 - **docs/implemented-plans/view-render-testing.md** — "Plan: testing agent-authored views" (550 lines)
 - **docs/plans/chat-session-delete.review.md** — "Plan Engineering Review — Chat Session Delete" (154 lines)
-- **docs/plans/google-owner-member-credentials.md** — "Google owners can administer local member credentials" (309 lines)
 - **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines)
-- **docs/plans/operator-member-password-reset.md** — "Operator-driven member password reset" (711 lines)
 - **docs/plans/public-site-orientation.md** — "Public site — orientation & re-entry map" (93 lines)
 - **docs/plans/scan-guide-card.review.md** — "Plan Engineering Review — scan-guide-card (codex cross-model, 2026-08-01)" (105 lines)
 - **docs/plans/scan-vision-claude.review.md** — "Plan Engineering Review — scan-vision-claude" (140 lines)
 - **field-tests/onboarding-first-days/README.md** — "onboarding-first-days" (60 lines)
 - **field-tests/onboarding-first-days/persona.md** — "Priya Marlowe" (22 lines)
 - **field-tests/spine/persona.md** — "Priya Marlowe" (22 lines)
-- **src/frontend/dist/earcons/SOURCES.md** — "Earcon sources & attribution" (13 lines)
 - **src/frontend/public/earcons/SOURCES.md** — "Earcon sources & attribution" (13 lines)
-- **test/manual/README.md** — "Manual tests" (49 lines)
+- **test/manual/README.md** — "Manual tests" (44 lines)
 - **user-stories/journeys/README.md** — "Journeys" (90 lines)
 
 ### Broken References
@@ -138,6 +135,7 @@ Referenced by:
 - docs/implemented-plans/remove-cardworks-package.md:93 (mention) — - **`callback-box/CLAUDE.md`** — `CLAUDE.md:28` (current): *"Every built-in
 - docs/implemented-plans/remove-cb-render.md:34 (mention) — - **`CLAUDE.md`** — *"Read before writing"* (`CLAUDE.md:101`); *"Leave the repo
 - docs/implemented-plans/rest-to-trpc-consolidation.md:149 (mention) — already runs cross-origin-capable via `wsLink`/`splitLink` (`CLAUDE.md`).
+- docs/implemented-plans/scheduled-workstreams.md:55 (mention) — - Root `CLAUDE.md`: no `.js`; TypeScript for logic; treat noisy output as a
 - docs/implemented-plans/schema-validate-hook.md:248 (mention) — (`CLAUDE.md` Behavioral Notes). Designed-for, not built — see Open questions
 - docs/implemented-plans/see-as-the-user.md:429 (mention) — CLAUDE.md).
 - docs/implemented-plans/selection-commentary.md:451 (mention) — explained will be misread; CLAUDE.md's "improving these instructions" loop
@@ -154,7 +152,7 @@ Referenced by:
 - docs/implemented-plans/workstreams.md:745 (mention) — root CLAUDE.md "Commit docs WITH hooks"), so schema enforcement lands in
 - docs/knowledge-audits.md:19 (mention) — - After touching CLAUDE.md, schemas, prompts, or anything that changes what an agent should know.
 - docs/knowledge-taxonomy.md:7 (mention) — 1. **Knows directly** — Can answer without investigation. The information is directly in the agent's loaded context: `CL
-- docs/maintenance.md:7 (mention) — The system carries a lot of agent-facing surface: CLAUDE.md and rule files, schemas with embedded `instructions`, prompt
+- docs/maintenance.md:7 (mention) — The system carries a lot of agent-facing surface: CLAUDE.md and rule files,
 - docs/plans/asset-offbox-storage.md:355 (mention) — remote (`CLAUDE.md:96`). Asset push belongs in the same place, so the
 - docs/plans/box-commentary-surface.md:381 (mention) — (CLAUDE.md exempts "per-box config, throwaway replies, and personal memory"),
 - docs/plans/change-based-test-selection.md:611 (mention) — `--base`, CLAUDE.md guidance. The point at which behavior changes for agents,
@@ -188,6 +186,7 @@ Referenced by:
 - ../.claude/memory/MEMORY.md:4 (mention) — Auto-memory (`~/.claude/projects/` path) is problematic: path-hash-based, machine-specific, not version-controlled, easi
 - ../.claude/memory/feedback_files_over_external_trackers.md:24 (mention) — - Specific applicable cases: TODO/work-queue → `TODOS.md` or similar; design notes → `docs/`; architectural decisions → 
 - ../.claude/skills/browse/SKILL.md:205 (mention) — (`callback-box/CLAUDE.md`).
+- ../.claude/skills/cb-authoring-schedules/SKILL.md:52 (mention) — `run` is a shim so the logic can be TypeScript (root CLAUDE.md: no `.js`, logic
 - ../.claude/skills/cb-codehealth/SKILL.md:29 (mention) — and a short usage doc at its root (a directory `CLAUDE.md` / README — like
 - ../.claude/skills/cb-context/SKILL.md:3 (mention) — description: Use when engineering what a box agent knows — writing or curating a box's CLAUDE.md, a nested CLAUDE.md, a 
 - ../.claude/skills/cb-frontend/SKILL.md:11 (mention) — read it before writing UI (`CLAUDE.md` already says so). This skill is the
@@ -241,6 +240,7 @@ Referenced by:
 - ../issues/exploration/2026-07-18-directory-scoped-rules-vs-generated-claude-md.md:2 (mention) — title: "Can directory-scoped rules replace generated CLAUDE.md / @-includes?"
 - ../issues/exploration/2026-07-30-do-our-skills-auto-fire.md:14 (mention) — that CLAUDE.md prose routing measured "~0% firing across 400 sessions" — which is
 - ../issues/exploration/2026-07-30-subagent-context-inheritance.md:2 (mention) — title: "Do our subagents inherit the monorepo CLAUDE.md and its rules?"
+- ../issues/exploration/2026-08-25-coherence-agent-spine-evaluation.md:85 (mention) — system alongside CLAUDE.md, `docs/`, plans, and the generated box docs. This
 - ../issues/features/2026-05-28-retrospective-session-scan.md:8 (mention) — Closely related to the doc-usage miner: instead of mining transcripts for *what was read*, mine them for *what the user 
 - ../issues/features/2026-06-20-context-size-measurement-legibility.md:13 (mention) — - **Compositional breakdown.** The most *actionable* and the most work: split the baseline into system prompt vs. agent-
 - ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:16 (mention) — and what else to sweep. The knowledge is scattered across box CLAUDE.md-equivalents,
@@ -336,7 +336,7 @@ References:
 
 #### code-style.md
 
-Title: "Code Style" | 115 lines
+Title: "Code Style" | 118 lines
 
 Referenced by:
 - CLAUDE.md:123 (mention) — When you get corrected on a convention, pattern, or workflow that wasn't documented, update CLAUDE.md, code-style.md, fr
@@ -398,6 +398,7 @@ Referenced by:
 - docs/implemented-plans/responsive-figures.md:44 (mention) — - `code-style.md` — no default parameters, explicit return types, teardown/
 - docs/implemented-plans/rest-to-trpc-consolidation.md:49 (mention) — - **`callback-box/code-style.md`** — Zod-validated inputs, `only export what's
 - docs/implemented-plans/scan-uploader-pairing.md:49 (mention) — - `callback-box/code-style.md`: Result-vs-throw at boundaries; no default
+- docs/implemented-plans/scheduled-workstreams.md:51 (mention) — - `callback-box/code-style.md:42` — *"console.log — CLI user-facing output
 - docs/implemented-plans/schema-validate-hook.md:38 (mention) — - `callback-box/code-style.md` — *"as type assertions are like Rust's
 - docs/implemented-plans/secret-custody.md:162 (mention) — - `code-style.md` — custom error classes, no default parameters, explicit
 - docs/implemented-plans/see-as-the-user.md:37 (mention) — - `callback-box/code-style.md` — mechanical rules (no default parameters,
@@ -437,7 +438,7 @@ Referenced by:
 - ../.claude/agents/finish.md:80 (mention) — root `CLAUDE.md`/`code-style.md` — also drops you to the full flow.
 - ../.claude/skills/cb-frontend/SKILL.md:37 (mention) — - **One job per component.** A component near the 300-line cap (code-style.md)
 - ../.claude/skills/cb-plan/SKILL.md:129 (mention) — - `callback-box/code-style.md` — the checkable mechanical rules (no
-- ../CLAUDE.md:54 (mention) — **NEVER disable or weaken a lint rule to make code pass. Ask first.** Every rule in `@ianbicking/personal-vibe-check` is
+- ../CLAUDE.md:64 (mention) — **NEVER disable or weaken a lint rule to make code pass. Ask first.** Every rule in `@ianbicking/personal-vibe-check` is
 - ../issues/closed/bugs/2026-07-21-file-lock-empty-window-race.md:92 (mention) — standing `code-style.md`/CLAUDE.md decision ("don't roll your own with
 - ../issues/closed/code-quality/2026-07-10-tour-lib-lint-debt.md:18 (mention) — helpers. See `code-style.md`'s "Type Checking and Linting" section for the
 - ../issues/closed/code-quality/2026-07-12-frontend-local-helper-consolidation-into-shared.md:38 (mention) — code-style.md) has a frontend twin. `isRecord` is pure and dependency-free, so
@@ -452,6 +453,7 @@ Referenced by:
 References:
 - → docs/engineering-principles.md (link)
 - → frontend.md (mention)
+- → docs/maintenance.md (mention)
 - → CLAUDE.md (mention)
 
 #### frontend.md
@@ -540,14 +542,14 @@ References:
 Title: "Deploy" | 56 lines
 
 Referenced by:
-- deploy/README.md:63 (mention) — (see `deploy/CLAUDE.md` for the wait/poll pattern).
+- deploy/README.md:66 (mention) — (see `deploy/CLAUDE.md` for the wait/poll pattern).
 
 References:
 - → deploy/README.md (mention)
 
 #### deploy/README.md
 
-Title: "Deploy" | 469 lines
+Title: "Deploy" | 472 lines
 
 Referenced by:
 - CLAUDE.md:19 (mention) — **Deploy** — auto-deploys on `main` commits only (root CLAUDE.md). Prod runs a resident `cb hub` routing `/<slug>/...` t
@@ -687,7 +689,7 @@ Referenced by:
 - docs/implemented-plans/remove-cardworks-deletion.md:461 (mention) — `CLAUDE.md:87`/`docs/adding-schemas.md` (the cardworks bullet → `src/cards/`),
 - docs/implemented-plans/remove-cardworks-package.md:329 (mention) — `CLAUDE.md:39`/`docs/adding-schemas.md` (drop "from cardworks" phrasing where
 - docs/implemented-plans/schema-validate-hook.md:10 (mention) — > convention lives in `docs/adding-schemas.md`, the box-local schema guide
-- docs/migrations.md:369 (mention) — - `docs/adding-schemas.md` — when a *schema* change (not a data shape change) is the right move instead of a migrator
+- docs/migrations.md:394 (mention) — - `docs/adding-schemas.md` — when a *schema* change (not a data shape change) is the right move instead of a migrator
 - docs/plans/docs-reorg.gap-analysis.md:47 (mention) — prime retrieval field. `docs/adding-schemas.md` never mentions it and
 - docs/plans/docs-reorg.md:88 (mention) — (`box-layout.md`, `testing.md`, `migrations.md`, `adding-schemas.md`,
 - user-stories/catalog/2026-06-26.md:775 (mention) — Files: `src/cards/schema.ts`, `src/schemas/audio.tsx`, `src/schemas/memo.ts`, `docs/adding-schemas.md`
@@ -828,7 +830,7 @@ Referenced by:
 - docs/implemented-plans/mvp-implementation-guide.md:13 (mention) — > markdown now, `../cards-as-markdown.md`), the "tailing phase" / `cb tail`
 - docs/implemented-plans/remove-cardworks-and-xml.md:423 (mention) — `docs/cards-as-markdown.md`, `docs/adding-schemas.md`.
 - docs/implemented-plans/todo-annotation.md:436 (mention) — `docs/cards-as-markdown.md` gains the tag reference; the issue file closes
-- docs/migrations.md:367 (mention) — - `docs/cards-as-markdown.md` — living reference for the YAML-frontmatter format these migrators target; `docs/implement
+- docs/migrations.md:392 (mention) — - `docs/cards-as-markdown.md` — living reference for the YAML-frontmatter format these migrators target; `docs/implement
 - docs/plans/docs-reorg.md:110 (mention) — 7. `cards-as-markdown.md` — 2,552 lines of resolved RFC with ~50
 - docs/stack-decisions.md:18 (mention) — | 15 | [Markdoc](#decision-15-markdown-parsing--markdoc) | Frontend renders markdown via `@markdoc/markdoc` (replaced re
 - docs/unimplemented-plans/boxes-as-packages-v1-superseded.md:703 (mention) — - **Interaction with the [Markdown cards idea](../../../issues/closed/features/2026-03-21-markdown-cards-replacing-xml.m
@@ -1024,7 +1026,6 @@ Referenced by:
 - docs/README.md:32 (mention) — - **`docs/doc-graph.md`** / **`docs/doc-graph.html`** — generated
 - docs/implemented-plans/remove-cb-render.md:358 (mention) — **Regenerated, not hand-edited:** `docs/doc-graph.md` (and
 - docs/implemented-plans/remove-cb-render.review.md:29 (mention) — 7. **Medium — the prose done-condition cannot pass as written.** The plan updates `publish-pages.md` but misses live ref
-- docs/maintenance.md:22 (mention) — | Doc graph | `pnpm doc-graph` | After restructuring docs | `docs/doc-graph.md` |
 - docs/plans/docs-reorg.md:114 (mention) — (5,767 generated lines), `doc-graph.md` (build artifact among
 - docs/plans/source-available-release.md:438 (mention) — - **doc-graph generator fixed at the source.** `doc-graph.md` only *quoted* the
 - docs/testing.md:640 (mention) — `npx tsx src/dev/doc-graph.ts > docs/doc-graph.md` — scans all `.md` files, extracts cross-references, reports orphans a
@@ -1098,6 +1099,7 @@ Referenced by:
 - docs/implemented-plans/responsive-figures.md:34 (mention) — - `docs/engineering-principles.md` — **#6 Right-sized defensiveness** (the
 - docs/implemented-plans/retranscription-in-chat.md:30 (mention) — - `docs/engineering-principles.md` — #1 (types are structure: two precise
 - docs/implemented-plans/scan-uploader-pairing.md:37 (mention) — - `docs/engineering-principles.md`: **#3 validate-at-boundaries** (the
+- docs/implemented-plans/scheduled-workstreams.md:38 (mention) — - `callback-box/docs/engineering-principles.md:37` — *3. Validate at
 - docs/implemented-plans/secret-custody.md:148 (mention) — - `docs/engineering-principles.md` — validate-at-boundaries (grant checks at
 - docs/implemented-plans/see-as-the-user.md:25 (mention) — - `callback-box/docs/engineering-principles.md` — traced by number below.
 - docs/implemented-plans/semantic-search.md:22 (mention) — - `docs/engineering-principles.md` #3 (validate at boundaries) — the
@@ -1260,7 +1262,7 @@ Title: "Health Checks" | 240 lines
 
 Referenced by:
 - CLAUDE.md:155 (mention) — | Deployed-server health-check runbooks | `docs/health-checks.md` |
-- deploy/README.md:44 (link) — localhost (see [`../docs/health-checks.md`](../docs/health-checks.md)): it polls
+- deploy/README.md:47 (link) — localhost (see [`../docs/health-checks.md`](../docs/health-checks.md)): it polls
 - docs/adding-schemas.md:163 (link) — [`health-checks.md`](health-checks.md#template-updates-a-fix-that-never-reached-the-box).
 - docs/implemented-plans/box-growth-health-checks.md:451 (mention) — **What.** Extend `docs/health-checks.md` and `docs/box-layout.md` with the scan
 - docs/implemented-plans/deferred-recoverable-agent-failures.md:415 (mention) — 8. **Docs + issue reconciliation** — `docs/scheduler.md`, `docs/health-checks.md`
@@ -1303,7 +1305,7 @@ Referenced by:
 - CLAUDE.md:171 (mention) — | Knowledge audits | `docs/knowledge-audits.md` |
 - docs/engineering-principles.md:174 (link) — ([`docs/knowledge-audits.md`](knowledge-audits.md)).
 - docs/implemented-plans/workstreams.md:1231 (mention) — box agents, whom knowledge audits test (`docs/knowledge-audits.md`). The
-- docs/maintenance.md:136 (mention) — **Full guide:** `docs/knowledge-audits.md` (test structure, recording results, interpreting failures).
+- docs/maintenance.md:48 (mention) — | Knowledge audits | `pnpm knowledge-audit` | After prompt/schema/CLAUDE.md changes; monthly otherwise. Guide: `docs/kno
 - docs/plans/docs-reorg.md:117 (mention) — policy — `.gitignore` and `knowledge-audits.md` both say reports are
 - docs/plans/document-comments.md:839 (mention) — by prompting a real box agent (`callback-box/docs/knowledge-audits.md`). Every
 - docs/plans/general-browser.md:590 (mention) — what it recalls (`callback-box/docs/knowledge-audits.md`). This browser is dev-repo
@@ -1315,10 +1317,10 @@ Referenced by:
 - ../.claude/skills/cb-guide-schemas/SKILL.md:47 (mention) — (`docs/knowledge-audits.md`).
 - ../.claude/skills/knowledge-audit/SKILL.md:3 (mention) — description: Explains callback-box's knowledge-audit harness — YAML-defined tests that prompt a real box agent and check
 - ../issues/closed/bugs/2026-07-15-knowledge-audit-box-nesting.md:19 (mention) — `docs/knowledge-audits.md`. See the commit in the closing note.
+- ../issues/closed/docs-and-chores/2026-08-08-maintenance-cadence-framework.md:56 (mention) — for someone to remember (`callback-box/docs/knowledge-audits.md`).
 - ../issues/closed/features/2026-07-20-agent-maintained-security-report.md:53 (link) — ([docs](../../../callback-box/docs/knowledge-audits.md)) and the doc-generation
 - ../issues/code-quality/2026-08-08-audit-cb-subcommand-surface.md:65 (mention) — harness (`docs/knowledge-audits.md`) is the tool for catching that.
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:11 (mention) — `docs/knowledge-audits.md` over several passes). What's left:
-- ../issues/docs-and-chores/2026-08-08-maintenance-cadence-framework.md:52 (mention) — for someone to remember (`callback-box/docs/knowledge-audits.md`).
 
 References:
 - → CLAUDE.md (mention)
@@ -1385,47 +1387,49 @@ References:
 
 #### docs/maintenance.md
 
-Title: "Code Maintenance" | 232 lines
+Title: "Code Maintenance" | 85 lines
 
 Referenced by:
 - CLAUDE.md:170 (mention) — | Periodic maintenance | `docs/maintenance.md` |
+- code-style.md:13 (mention) — pnpm lint:knip    # Dead code detector — run from the MONOREPO ROOT (see docs/maintenance.md)
 - docs/implemented-plans/box-retrospectives.md:419 (mention) — (`enabled="false"`), `docs/box-layout.md` + `docs/maintenance.md` +
 - docs/implemented-plans/mobile-parity-sync.md:178 (mention) — After any burst of mobile work, and otherwise on the `docs/maintenance.md`
+- docs/implemented-plans/scheduled-workstreams.md:253 (mention) — **Why this needs to change.** Today the catalog (`docs/maintenance.md`
 - docs/knowledge-audits.md:22 (mention) — `docs/maintenance.md` lists this alongside the other periodic tasks.
-- docs/migrations.md:368 (mention) — - `docs/maintenance.md` — where `cb migrate` and `clean-broken-refs.ts` sit in the broader maintenance surface
+- docs/migrations.md:393 (mention) — - `docs/maintenance.md` — where `cb migrate` and `clean-broken-refs.ts` sit in the broader maintenance surface
 - docs/plans/cli-restructure.md:141 (mention) — - **Card normalization story.** `cb format` was deleted (80-line one-off normalizer that re-serialized cards to flat XML
 - docs/plans/docs-reorg.md:390 (mention) — belongs in the maintenance cadence (it is listed in docs/maintenance.md).
 - src/dev/CLAUDE.md:8 (mention) — | `prompt-report.ts` | Generates `docs/prompts.md` (system-wide prompt inventory) | `docs/maintenance.md` |
 - user-stories/catalog/2026-08-21.md:8819 (mention) — Files: `callback-box/src/services/docling-version.ts`, `bin/check-docling-update.ts`, `callback-box/docs/maintenance.md`
 - ../.claude/skills/security-report/SKILL.md:136 (mention) — listed in `callback-box/docs/maintenance.md` alongside knowledge-audits
 - ../issues/closed/code-quality/2026-05-09-claude-code-sdk-binary-currency.md:14 (mention) — semantics. Documented in `callback-box/docs/maintenance.md`.
+- ../issues/closed/docs-and-chores/2026-08-08-maintenance-cadence-framework.md:12 (mention) — **Closed:** Resolved by the scheduled-workstreams plan: one `schedules/` directory, `bin/schedules` CLI, and a single la
+- ../issues/closed/features/2026-08-12-monitor-message-queue.md:175 (mention) — - Cadence declared in the registry (this read) vs in `docs/maintenance.md`
+- ../issues/code-quality/2026-07-04-knip-exports-enforcement.md:13 (mention) — (`2026-08-24-run-periodic-sweeps-weekly.md`), and `docs/maintenance.md` says
+- ../issues/code-quality/2026-08-24-run-periodic-sweeps-weekly.md:13 (mention) — That applies to the other entries in `callback-box/docs/maintenance.md` with
 - ../issues/docs-and-chores/2026-03-16-review-all-prompts.md:17 (mention) — `~/src/boxes/test1`; `docs/maintenance.md` has the details). Every fragment has
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:10 (mention) — folded into `code-style.md`, `frontend.md`, `docs/maintenance.md`, and
 - ../issues/docs-and-chores/2026-07-04-doc-refresh-cadence.md:16 (mention) — `callback-box/docs/maintenance.md` with a cadence, or a scheduled routine):
-- ../issues/docs-and-chores/2026-08-08-maintenance-cadence-framework.md:18 (mention) — `callback-box/docs/maintenance.md` catalogs the periodic tasks, and there are
 - ../issues/exploration/2026-07-25-opengrep-self-cve-scanner.md:34 (mention) — Registered in `callback-box/docs/maintenance.md` (run before releases and when
 - ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:64 (mention) — `docs/maintenance.md` already owns **dev/code** maintenance (audits, sweeps, SDK
 
 References:
 - → CLAUDE.md (mention)
-- → docs/doc-graph.md (mention)
-- → docs/security-report.md (mention)
-- → docs/implemented-plans/mobile-parity-sync.md (mention)
-- → ../docs/agent-sdk-notes.md (link)
-- → docs/plans/scanner-ingest-docling-decisions.md (mention)
+- → docs/implemented-plans/scheduled-workstreams.md (mention)
 - → docs/knowledge-audits.md (mention)
-- → docs/security-overview.md (mention)
-- → docs/migrations.md (mention)
+- → docs/scheduled/csp-violation-review.md (mention)
 - → docs/architecture/CLAUDE.md (mention)
+- → docs/migrations.md (mention)
+- → docs/implemented-plans/mobile-parity-sync.md (mention)
 
 #### docs/migrations.md
 
-Title: "Box Migrations" | 382 lines
+Title: "Box Migrations" | 407 lines
 
 Referenced by:
 - CLAUDE.md:144 (mention) — | Box migration runbook | `docs/migrations.md` |
 - README.md:96 (link) — - [`docs/migrations.md`](docs/migrations.md) — the data-migration runbook
-- deploy/README.md:41 (link) — [`../docs/migrations.md`](../docs/migrations.md).
+- deploy/README.md:44 (link) — and never fail the deploy; see [`../docs/migrations.md`](../docs/migrations.md).
 - docs/design/representation.md:65 (link) — controlled migration ([`../migrations.md`](../migrations.md)), not silent
 - docs/implemented-plans/agent-applied-migrations.md:39 (mention) — `docs/migrations.md` ("Writing an agent-applied (procedure) migration").
 - docs/implemented-plans/box-migration.subplan.md:54 (mention) — - **`docs/migrations.md`** — the established migration framework: `cb migrate`
@@ -1437,7 +1441,7 @@ Referenced by:
 - docs/implemented-plans/remove-box-shape-v1.review.md:47 (mention) — entries." `migrations.md:80-84`: "Never reorder, rename, or remove."
 - docs/implemented-plans/remove-cardworks-deletion.md:462 (mention) — `docs/migrations.md` (retire deleted-migrator references).
 - docs/implemented-plans/remove-cardworks-package.md:330 (mention) — it now means "from `src/cards/`"); retire `docs/migrations.md` references to
-- docs/maintenance.md:184 (mention) — **Author guide + runbook:** `docs/migrations.md` (how to write a new migrator with the noisy-mode `_migrate-warnings` he
+- docs/maintenance.md:66 (mention) — | Box data migrations | `cb migrate` (per box) | After adding a migrator to `src/core/migrations.ts`. Author guide and r
 - docs/plans/asset-annex.md:752 (mention) — since it accurately records a system that existed. `docs/migrations.md`
 - docs/plans/asset-offbox-storage.md:569 (mention) — nothing in `docs/migrations.md`. The only state change is Track A2
 - docs/plans/docs-reorg.gap-analysis.md:164 (mention) — `docs/migrations.md`, chat components CLAUDE.md, `chat-turn-buffer.ts`,
@@ -1446,8 +1450,8 @@ Referenced by:
 - ../.claude/skills/cb-migration/SKILL.md:12 (mention) — lives in **`callback-box/docs/migrations.md`** — read it before writing one.
 - ../issues/closed/bugs/2026-07-11-pre-v2-session-resume-broken.md:40 (mention) — migration script territory (`docs/migrations.md`).
 - ../issues/closed/bugs/2026-08-18-stale-annex-largefiles-never-reapplies.md:21 (mention) — and it is written down in `docs/migrations.md` and in the migration script's own
+- ../issues/closed/code-quality/2026-08-24-remove-document-card-legacy-tolerance.md:52 (mention) — stay registered forever (append-only `MIGRATIONS`, per `docs/migrations.md`)
 - ../issues/closed/features/2026-07-29-retire-todo-list-schema.md:19 (mention) — test1 via `cb migrate --apply` (see `docs/migrations.md`'s `todo-list-to-doc`
-- ../issues/code-quality/2026-08-24-remove-document-card-legacy-tolerance.md:22 (mention) — stay registered forever (append-only `MIGRATIONS`, per `docs/migrations.md`)
 - ../issues/decisions/2026-07-20-release-discipline-and-update-story.md:25 (mention) — (`docs/migrations.md` is currently a maintainer runbook, not an
 - ../issues/docs-and-chores/2026-07-19-questions-end-to-end-followups.md:15 (mention) — `~/src/boxes/test1`** per `callback-box/docs/migrations.md`
 - ../issues/exploration/2026-08-19-plugins-and-the-medium-content-line.md:94 (mention) — definitions come from. `docs/migrations.md` step 7 applies: whatever moves,
@@ -1654,7 +1658,7 @@ Referenced by:
 - docs/plans/docs-reorg.md:342 (mention) — role change). Conventions recorded in `docs/README.md`.
 - src/dev/CLAUDE.md:12 (mention) — | `doc-check.ts` | Enforcement twin of doc-graph: exits nonzero on broken refs, live-area orphans, duplicate `issues/` b
 - ../.claude/agents/finish.md:359 (mention) — - **Filenames matter** — apply `callback-box/docs/README.md`'s naming rules: a
-- ../CLAUDE.md:28 (mention) — **Commit docs WITH hooks.** Docs-only commits run only fast checks (~1s — typecheck/lint are skipped automatically), so 
+- ../CLAUDE.md:38 (mention) — **Commit docs WITH hooks.** Docs-only commits run only fast checks (~1s — typecheck/lint are skipped automatically), so 
 - ../issues/docs-and-chores/2026-07-20-day-to-day-usage-docs.md:38 (mention) — addressed (`docs/README.md` says so), so an invitee browsing `docs/`
 
 References:
@@ -1726,18 +1730,18 @@ Title: "Security overview" | 218 lines
 Referenced by:
 - README.md:88 (link) — what the agent can actually do — is in [the security overview](docs/security-overview.md).
 - docs/implemented-plans/webapp-production-mode.md:239 (mention) — `security-overview.md` alone unless the rubric finds a reader-facing posture
-- docs/maintenance.md:143 (mention) — (the structured, per-item accounting) and `docs/security-overview.md` (the readable
 - docs/plans/public-site.md:226 (mention) — `llms.txt` indexing the machine-facing files (agent-install.md, security-overview.md
 - docs/security-report.md:11 (link) — The exhaustive accounting behind [security-overview.md](security-overview.md). An agent
 - docs/todo-security.md:10 (link) — and [security-overview.md](security-overview.md) (the readable report).
 - ../.claude/skills/security-report/SKILL.md:3 (mention) — description: Generate or update callback-box's security report — the structured accounting in callback-box/docs/security
 - ../issues/closed/bugs/2026-07-21-file-lock-empty-window-race.md:35 (mention) — `callback-box/docs/todo-security.md` for the security-overview.md security report.
+- ../issues/closed/docs-and-chores/2026-08-08-maintenance-cadence-framework.md:15 (mention) — a cadence** — Agent SDK updates, the security-overview.md regeneration, manual testing,
 - ../issues/closed/features/2026-07-20-agent-maintained-security-report.md:14 (mention) — and `callback-box/docs/security-overview.md`); `3589d96c` and `3bbddcc5` applied cross-model
 - ../issues/code-quality/2026-08-07-member-level-writing-procedures.md:35 (mention) — that in the invite flow and security-overview.md), or the config-writing and
 - ../issues/code-quality/2026-08-07-no-socket-level-ws-auth-test.md:6 (mention) — discovered-in: main session — todo-security breakdown for the security-overview.md report
 - ../issues/decisions/2026-07-20-soft-launch-posture.md:66 (mention) — - **Agent-legible docs as capability** (the security-overview.md /
 - ../issues/decisions/2026-07-20-soft-launch-posture.md:119 (link) — [security-overview.md](../../callback-box/docs/security-overview.md) — the
-- ../issues/docs-and-chores/2026-08-08-maintenance-cadence-framework.md:11 (mention) — a cadence** — Agent SDK updates, the security-overview.md regeneration, manual testing,
+- ../issues/exploration/2026-08-25-coherence-agent-spine-evaluation.md:46 (mention) — - `callback-box/docs/security-overview.md:66` states "On fresh boxes, scheduled
 - ../issues/features/2026-07-20-agent-containment-allowed-directories.md:55 (mention) — honesty means security-overview.md describes what IS true today — but it's the
 - ../issues/features/2026-07-20-export-md-agent-instructions.md:11 (mention) — Data export on the security-overview.md pattern (boxholder, 2026-07-20): not a
 
@@ -1756,7 +1760,6 @@ Title: "Security report — structured version" | 366 lines
 
 Referenced by:
 - docs/implemented-plans/webapp-production-mode.md:227 (mention) — `docs/security-report.md:107` says `/api/external` is never mounted on a
-- docs/maintenance.md:30 (mention) — | Security report | `/security-report` (skill) | At release boundaries; when the staleness diff (`git diff <generated-at
 - docs/security-overview.md:18 (link) — [`security-report.md`](security-report.md).
 - docs/todo-security.md:9 (link) — [docs/security-report.md](security-report.md) (structured accounting)
 - ../.claude/skills/security-report/SKILL.md:3 (mention) — description: Generate or update callback-box's security report — the structured accounting in callback-box/docs/security
@@ -1834,6 +1837,7 @@ Referenced by:
 - user-stories/catalog/2026-06-26.md:4812 (mention) — Feature is fully implemented with all claimed capabilities. Evidence: (1) /src/cli/commands/render.ts registers the `cb 
 - ../issues/closed/decisions/2026-07-07-cb-render-vs-bin-browse.md:46 (mention) — pixel screenshots for exactly this (stack-decisions.md Decision 1, §931).
 - ../issues/code-quality/2026-07-04-xstate-store-never-adopted.md:8 (mention) — `callback-box/docs/stack-decisions.md` (~line 143) records `@xstate/store`
+- ../issues/exploration/2026-08-25-coherence-agent-spine-evaluation.md:58 (mention) — `docs/stack-decisions.md`, and the rationale paragraphs in plan docs all serve
 
 References:
 - → docs/cards-as-markdown.md (mention)
@@ -2024,7 +2028,7 @@ Title: "Architecture Docs" | 59 lines
 
 Referenced by:
 - docs/design/README.md:5 (link) — narrative lives in [`../architecture/`](../architecture/CLAUDE.md); the values
-- docs/maintenance.md:223 (mention) — **When to run:** after editing `docs/architecture/*.md` text that drives image prompts, or after editing `.mmd` Mermaid 
+- docs/maintenance.md:65 (mention) — | Doc images | `pnpm generate:doc-images` | After editing architecture-diagram text or `.mmd` sources. Pipeline: `docs/a
 - src/dev/CLAUDE.md:14 (mention) — | `generate-doc-images.ts` | Generates illustrations for `docs/architecture/` | `docs/architecture/CLAUDE.md` |
 
 References:
@@ -2461,7 +2465,7 @@ Title: "Boxes as Packages v2 — callback-box as a library" | 720 lines
 
 Referenced by:
 - README.md:25 (link) — live yet — see [`docs/implemented-plans/boxes-as-packages-v2.md`](docs/implemented-plans/boxes-as-packages-v2.md)
-- deploy/README.md:95 (mention) — `docs/implemented-plans/boxes-as-packages-v2.md`'s "Post-cutover state" section); a fresh
+- deploy/README.md:98 (mention) — `docs/implemented-plans/boxes-as-packages-v2.md`'s "Post-cutover state" section); a fresh
 - docs/adding-a-box.md:4 (link) — see "Serving" in [`docs/implemented-plans/boxes-as-packages-v2.md`](implemented-plans/boxes-as-packages-v2.md)
 - docs/box-layout.md:15 (mention) — repository" in `docs/implemented-plans/boxes-as-packages-v2.md` for the full design.
 - docs/design/identity.md:45 (mention) — (`../implemented-plans/boxes-as-packages-v2.md`, including the
@@ -2568,7 +2572,7 @@ Referenced by:
 - docs/card-validation.md:74 (mention) — Format reference: `docs/cards-as-markdown.md`; design history and migration phases: `docs/implemented-plans/cards-as-mar
 - docs/cards-as-markdown.md:5 (mention) — This is the living reference for the card *file format* — filenames, frontmatter/body split, attachments, and refs. For 
 - docs/implemented-plans/remove-cardworks-and-xml.md:123 (mention) — production migration"* (`docs/implemented-plans/cards-as-markdown-rfc.md`). **Reuse:** the
-- docs/migrations.md:367 (mention) — - `docs/cards-as-markdown.md` — living reference for the YAML-frontmatter format these migrators target; `docs/implement
+- docs/migrations.md:392 (mention) — - `docs/cards-as-markdown.md` — living reference for the YAML-frontmatter format these migrators target; `docs/implement
 - docs/plans/public-site-story-extraction.subplan.md:184 (mention) — `callback-box/docs/implemented-plans/cards-as-markdown-rfc.md` (2555-line
 - docs/stack-decisions.md:804 (mention) — > **Superseded in practice (2026-05).** The frontend no longer uses react-markdown / remark / rehype — it renders via Ma
 - ../issues/features/2026-07-22-embed-json-schema-in-card-docs.md:6 (mention) — discovered-in: worktree-github-pages-site — story-extraction triage of cards-as-markdown-rfc.md
@@ -3245,7 +3249,7 @@ Title: "Mobile parity & contract-sync discipline" | 292 lines
 
 Referenced by:
 - docs/implemented-plans/ios-per-box-device-lock.md:43 (mention) — (`docs/implemented-plans/mobile-parity-sync.md:115-134`). This feature changes
-- docs/maintenance.md:31 (mention) — | Mobile parity audit | agent procedure (prompt in `docs/implemented-plans/mobile-parity-sync.md` §6) | After a burst of
+- docs/maintenance.md:68 (mention) — | Mobile parity audit | agent procedure (`docs/implemented-plans/mobile-parity-sync.md` §6) | After a burst of mobile wo
 - docs/mobile-contract.md:14 (mention) — contract change — is defined in `docs/implemented-plans/mobile-parity-sync.md`.
 - docs/mobile-parity.md:4 (mention) — Maintained under the process in `docs/implemented-plans/mobile-parity-sync.md`; wire-level
 - docs/plans/android-companion-app.md:574 (mention) — **What.** Consume the shared golden fixtures the parallel `docs/implemented-plans/mobile-parity-sync.md`
@@ -3346,7 +3350,7 @@ References:
 Title: "Private issues: a shadow repo mounted at `<checkout>/private-issues/`" | 444 lines
 
 Referenced by:
-- ../bin/CLAUDE.md:708 (mention) — `callback-box/docs/implemented-plans/private-issues-shadow-repo.md`). Design invariants,
+- ../bin/CLAUDE.md:806 (mention) — `callback-box/docs/implemented-plans/private-issues-shadow-repo.md`). Design invariants,
 
 References:
 - → README.md (mention)
@@ -3381,7 +3385,7 @@ References:
 Title: "Questions, end-to-end" | 664 lines
 
 Referenced by:
-- docs/migrations.md:250 (mention) — `question-lifecycle` (`scripts/migrate/question-lifecycle-run.ts`, pure transform in `scripts/migrate/question-lifecycle
+- docs/migrations.md:275 (mention) — `question-lifecycle` (`scripts/migrate/question-lifecycle-run.ts`, pure transform in `scripts/migrate/question-lifecycle
 - docs/questions.md:6 (mention) — Design and implementation history: `docs/implemented-plans/questions-end-to-end.md`.
 - docs/triage.md:133 (mention) — The rule-update-plus-placement evolution landed: `learning:` (`docs/questions.md`, `docs/implemented-plans/questions-end
 - ../issues/closed/features/2026-05-19-questions-aging-policy.md:9 (mention) — aging sweep, Track D of `docs/implemented-plans/questions-end-to-end.md`) — nudge once
@@ -3457,7 +3461,7 @@ Title: "Remove box-shape v1 (legacy) + de-template box skills" | 358 lines
 Referenced by:
 - docs/implemented-plans/boxes-as-packages-v2.md:490 (mention) — resolve-hook machinery are now removed (`docs/implemented-plans/remove-box-shape-v1.md`); see the rewritten
 - docs/implemented-plans/remove-box-shape-v1.review.md:3 (mention) — Cross-model review of the draft `remove-box-shape-v1.md`. Findings verbatim
-- docs/migrations.md:260 (mention) — `docs/implemented-plans/remove-box-shape-v1.md`).
+- docs/migrations.md:285 (mention) — `docs/implemented-plans/remove-box-shape-v1.md`).
 - docs/testing.md:316 (mention) — The existing scenarios in the table above (`intake-basic`, `tick-basic`, `tick-chain`) predate this and are still flat o
 - ../issues/code-quality/2026-07-11-v1-removal-residue-src-comments-and-scenario-boxes.md:8 (mention) — Fallout from the box-shape v1 removal (`docs/plans/remove-box-shape-v1.md`,
 
@@ -3640,6 +3644,26 @@ Title: "Codex cross-model review — scan-uploader-pairing (2026-08-01)" | 87 li
 Referenced by:
 - docs/implemented-plans/scan-uploader-pairing.md:16 (mention) — (`scan-uploader-pairing.review.md`): the original unauthenticated
 
+#### docs/implemented-plans/scheduled-workstreams.md
+
+Title: "Scheduled workstreams" | 731 lines
+
+Referenced by:
+- docs/maintenance.md:38 (mention) — --dry-run`. Design: `docs/plans/scheduled-workstreams.md`.
+- ../.claude/skills/cb-authoring-schedules/SKILL.md:3 (mention) — description: Explains how recurring work is enrolled in this monorepo — the `schedules/<name>/` directory, its `run` scr
+- ../bin/CLAUDE.md:605 (mention) — `callback-box/docs/plans/scheduled-workstreams.md`. Mechanism, in the spirit of
+- ../issues/closed/docs-and-chores/2026-08-08-maintenance-cadence-framework.md:5 (frontmatter) — design: ../../../callback-box/docs/implemented-plans/scheduled-workstreams.md
+- ../issues/closed/features/2026-08-12-monitor-message-queue.md:5 (frontmatter) — design: ../../../callback-box/docs/implemented-plans/scheduled-workstreams.md
+- ../issues/features/2026-08-25-sdk-update-in-a-worktree.md:16 (mention) — The problems, from the review of `scheduled-workstreams.md`:
+
+References:
+- → ../issues/closed/features/2026-08-12-monitor-message-queue.md (frontmatter)
+- → ../issues/closed/docs-and-chores/2026-08-08-maintenance-cadence-framework.md (frontmatter)
+- → docs/engineering-principles.md (mention)
+- → code-style.md (mention)
+- → CLAUDE.md (mention)
+- → docs/maintenance.md (mention)
+
 #### docs/implemented-plans/schema-validate-hook.md **[ORPHAN]**
 
 Title: "Schema `validate` hook — co-locate non-Zod card validation with its schema" | 379 lines
@@ -3797,7 +3821,7 @@ Title: "`{% todo %}` — universal todo annotation" | 596 lines
 
 Referenced by:
 - docs/cards-as-markdown.md:89 (mention) — record: `docs/implemented-plans/todo-annotation.md`.
-- docs/migrations.md:345 (mention) — annotation (`docs/implemented-plans/todo-annotation.md`); see
+- docs/migrations.md:370 (mention) — annotation (`docs/implemented-plans/todo-annotation.md`); see
 - ../issues/closed/features/2026-07-28-todo-markdoc-annotation.md:8 (frontmatter) — design: ../../../callback-box/docs/implemented-plans/todo-annotation.md
 - ../issues/closed/features/2026-07-28-todo-markdoc-annotation.md:13 (link) — > [todo-annotation](../../../callback-box/docs/implemented-plans/todo-annotation.md)
 - ../issues/closed/features/2026-07-29-retire-todo-list-schema.md:7 (frontmatter) — design: ../../../callback-box/docs/implemented-plans/todo-annotation.md
@@ -4377,7 +4401,7 @@ Title: "Document comments" | 945 lines
 
 Referenced by:
 - docs/plans/general-browser.md:17 (mention) — This plan is a dependency of `document-comments.md`. Comments attach to whatever
-- ../bin/CLAUDE.md:593 (mention) — a store until an agent reads it. Design: `callback-box/docs/plans/document-comments.md`.
+- ../bin/CLAUDE.md:691 (mention) — a store until an agent reads it. Design: `callback-box/docs/plans/document-comments.md`.
 - ../issues/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md:38 (link) — [document-comments](../../callback-box/docs/plans/document-comments.md) plan
 - ../issues/code-quality/2026-08-22-rename-drive-comments-sidecar-to-gcomments.md:18 (link) — ([document-comments](../../callback-box/docs/plans/document-comments.md)) writes
 - ../issues/features/2026-08-22-file-asks-agent-flagged-attention.md:63 (link) — - [document-comments](../../callback-box/docs/plans/document-comments.md) — the
@@ -4431,9 +4455,12 @@ References:
 - → docs/plans/workstream-exhibits.md (mention)
 - → docs/knowledge-audits.md (mention)
 
-#### docs/plans/google-owner-member-credentials.md **[ORPHAN]**
+#### docs/plans/google-owner-member-credentials.md
 
 Title: "Google owners can administer local member credentials" | 309 lines
+
+Referenced by:
+- ../issues/code-quality/2026-07-04-knip-exports-enforcement.md:25 (mention) — no caller, but `docs/plans/google-owner-member-credentials.md` and
 
 References:
 - → ../issues/closed/bugs/2026-08-08-google-owner-invites-require-local-owner.md (link)
@@ -4639,9 +4666,12 @@ References:
 - → frontend.md (mention)
 - → docs/activities-design.md (mention)
 
-#### docs/plans/operator-member-password-reset.md **[ORPHAN]**
+#### docs/plans/operator-member-password-reset.md
 
 Title: "Operator-driven member password reset" | 711 lines
+
+Referenced by:
+- ../issues/code-quality/2026-07-04-knip-exports-enforcement.md:26 (mention) — `docs/plans/operator-member-password-reset.md` both describe it as
 
 References:
 - → docs/engineering-principles.md (mention)
@@ -4859,7 +4889,6 @@ References:
 Title: "Docling Decisions Log — scanner-ingest" | 239 lines
 
 Referenced by:
-- docs/maintenance.md:95 (mention) — `docs/plans/scanner-ingest-docling-decisions.md` (D3).
 - docs/plans/scan-vision-claude.md:464 (mention) — `scanner-ingest-docling-decisions.md`.
 
 References:
@@ -4870,7 +4899,7 @@ References:
 Title: "Scanner Ingest" | 756 lines
 
 Referenced by:
-- docs/migrations.md:358 (mention) — `docs/plans/scanner-ingest.md`, Track 4) bought nothing. Modeled on
+- docs/migrations.md:383 (mention) — `docs/plans/scanner-ingest.md`, Track 4) bought nothing. Modeled on
 - docs/plans/scan-guide-card.md:17 (mention) — This is a subplan of `docs/plans/scanner-ingest.md` (Track 6 reshaped).
 - docs/plans/scan-guide-card.review.md:13 (mention) — (`scanner-ingest.md:510`); the minimal version keeps `readScanContextFile`
 - docs/plans/scan-vision-claude.md:443 (mention) — scan section of `docs/plans/scanner-ingest.md`.
@@ -4878,7 +4907,7 @@ Referenced by:
 - docs/plans/scanner-ingest.review.md:3 (mention) — Cross-model review of `scanner-ingest.md`, run 2026-08-01 with OpenAI Codex
 - docs/scan-upload-contract.md:16 (link) — history: [`plans/scanner-ingest.md`](plans/scanner-ingest.md).
 - docs/server-operations.md:236 (mention) — `docs/plans/scanner-ingest.md` Track 0 needs both prod boxes (`estate`,
-- ../issues/code-quality/2026-08-24-remove-document-card-legacy-tolerance.md:24 (mention) — `docs/plans/scanner-ingest.md`'s Track 4 section and the dated note added at
+- ../issues/closed/code-quality/2026-08-24-remove-document-card-legacy-tolerance.md:34 (mention) — > `docs/plans/scanner-ingest.md`'s Track 4 already carries the dated note
 - ../issues/features/2026-08-09-pdf-url-into-the-commentary-path.md:22 (mention) — amended by `scanner-ingest.md`. `cb document reanalyze` re-runs extraction over
 
 References:
@@ -4964,7 +4993,7 @@ Title: "Workstream exhibits" | 754 lines
 Referenced by:
 - docs/plans/document-comments.md:80 (mention) — - **Precedent: the exhibits store** — `callback-box/docs/plans/workstream-exhibits.md:236`:
 - docs/plans/general-browser.md:143 (mention) — stays one directory per workstream (`workstream-exhibits.md:231`) — that layout
-- ../CLAUDE.md:32 (mention) — **Exhibits — showing work instead of pasting it into chat.** An exhibit is a directory the developer views in a browser:
+- ../CLAUDE.md:42 (mention) — **Exhibits — showing work instead of pasting it into chat.** An exhibit is a directory the developer views in a browser:
 - ../issues/closed/features/2026-07-24-dev-scripted-apps-separate-origin.md:13 (mention) — > `callback-box/docs/plans/workstream-exhibits.md`). The separate origin this
 - ../issues/features/2026-08-22-orphaned-comment-namespaces-after-a-cull.md:30 (link) — ([workstream-exhibits](../../callback-box/docs/plans/workstream-exhibits.md):265).
 
@@ -5033,10 +5062,11 @@ Title: "Scheduled routine: CSP violation review" | 95 lines
 
 Referenced by:
 - docs/content-security-policy.md:94 (mention) — The routine is a runbook: see `docs/scheduled/csp-violation-review.md`. To harden
+- docs/maintenance.md:52 (mention) — | CSP violation review | runbook: `docs/scheduled/csp-violation-review.md` | An agent analyzes new violations and *propo
 - docs/plans/docs-reorg.md:194 (mention) — `scheduled/csp-violation-review.md` is half dev reference, half the literal
 - docs/scheduled/csp-violation-review.md:11 (mention) — `callback-box/docs/scheduled/csp-violation-review.md`."* Everything it needs is
 - src/dev/CLAUDE.md:15 (mention) — | `csp-digest.ts` | Digests the JSONL CSP violation log (incremental via per-box cursor) | `docs/content-security-policy
-- ../issues/docs-and-chores/2026-08-08-maintenance-cadence-framework.md:33 (mention) — - **CSP violation review** (`callback-box/docs/scheduled/csp-violation-review.md`)
+- ../issues/closed/docs-and-chores/2026-08-08-maintenance-cadence-framework.md:37 (mention) — - **CSP violation review** (`callback-box/docs/scheduled/csp-violation-review.md`)
 
 References:
 - → docs/content-security-policy.md (mention)
@@ -5266,14 +5296,6 @@ References:
 - → docs/content-security-policy.md (mention)
 - → docs/scheduled/csp-violation-review.md (mention)
 
-### src/frontend/dist/earcons/
-
-#### src/frontend/dist/earcons/SOURCES.md **[ORPHAN]**
-
-Title: "Earcon sources & attribution" | 13 lines
-
-No references in or out.
-
 ### src/frontend/public/earcons/
 
 #### src/frontend/public/earcons/SOURCES.md **[ORPHAN]**
@@ -5339,7 +5361,7 @@ Referenced by:
 
 #### test/manual/README.md **[ORPHAN]**
 
-Title: "Manual tests" | 49 lines
+Title: "Manual tests" | 44 lines
 
 No references in or out.
 

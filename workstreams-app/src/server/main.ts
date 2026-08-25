@@ -8,6 +8,7 @@ import { buildExhibitsApp } from "./exhibits/app.js";
 import { defaultStoreRoot } from "./exhibits/store.js";
 import { createViteAssets } from "./exhibits/vite-assets.js";
 import { createWorkstreamsCommandService } from "./workstreams-command.js";
+import { createSchedulesCommandService } from "./schedules-command.js";
 import { createCommentsService } from "./comments-service.js";
 import { createTranscribeService } from "./transcribe-openai.js";
 import { createDocumentsService } from "./documents-service.js";
@@ -72,6 +73,7 @@ async function main(): Promise<void> {
   });
   const services = {
     workstreams: createWorkstreamsCommandService({ repoRoot }),
+    schedules: createSchedulesCommandService({ repoRoot }),
     documents: createDocumentsService({ mainRoot: repoRoot, worktreesRoot }),
     // Reads the shared `.issues-index/` cache at the main checkout, and needs
     // an embeddings key in THIS process's environment (the router passes its

@@ -11,6 +11,16 @@ Four projects live in one git repository (previously independent repos, merged 2
 
 Also: `research/` — competitive/external-tool reviews (see its CLAUDE.md); `dev/` — per-worktree pages served at `/<worktree>/dev/`; `bin/` — the dev router and worktree tooling (see `bin/CLAUDE.md`); `issues/` — the task/idea queue, sorted into category subdirs (`bugs/`, `features/`, `code-quality/`, `docs-and-chores/`, `decisions/`, `exploration/`, `watch/`; `closed/<category>/` for done), one `YYYY-MM-DD-slug.md` per item, title in frontmatter — the parking lot for known problems that aren't scheduled work yet (conventions in `issues/CLAUDE.md`).
 
+**Schedules — `schedules/` at the repo root.** Recurring work is one directory
+per job (`schedules/<name>/`: a `schedule.yaml` with the cadence, an executable
+`run`, a `prompt.md` when a run can start an agent, an optional `check`), driven
+by one launchd tick through `bin/schedules`. Due-ness is computed from persisted
+state rather than launchd, so a laptop that slept catches up once; each run's
+report is a durable alert record, and a session that ends without one is itself
+an alert. **`bin/schedules list` is the catalog** — what is scheduled, when it
+last ran, what is overdue. Writing or migrating one: the
+`cb-authoring-schedules` skill. Mechanism: `bin/CLAUDE.md`.
+
 **Boxes** live at `~/src/boxes/` (outside this repo so agents don't inherit this CLAUDE.md). `~/src/boxes/test1/` is the primary test box; each worktree gets its own clone at `~/src/box-worktrees/<name>/test1/`.
 
 **Worktrees** — `bin/launch-worktree-session` creates a managed worktree at `~/src/callback-worktrees/<name>/` on branch `worktree-<name>`, clones the test box, runs installs, and launches Claude or Codex inside it. Repository hooks and sweep own cleanup, so managed Claude sessions intentionally do not use native `claude --worktree` or show its exit-time keep/remove dialog (mechanism: `bin/CLAUDE.md`).

@@ -1,11 +1,15 @@
 ---
 title: "A consistent cadence framework for periodic maintenance/update tasks — where they run, how they report, how they raise issues"
-workstream: unknown
+workstream: scheduled-task-voice
+resolution: implemented
+design: ../../../callback-box/docs/implemented-plans/scheduled-workstreams.md
 area: callback-box
 needs: [design]
 filed-by: agent
 discovered-in: main session — boxholder wants recurring updates on a cadence
 ---
+
+**Closed:** Resolved by the scheduled-workstreams plan: one `schedules/` directory, `bin/schedules` CLI, and a single launchd tick replace the ad hoc per-job plists. Four tasks are enrolled (sdk-update, manual-tests, knip-sweep, docling-update) — see commits 69bf1bd1 (schema/loader), 568ada2e (lint + tick), 9eeb572e and 62d2c10c (enroll sdk-update/manual-tests). Remaining not-yet-enrolled tasks are tracked in `callback-box/docs/maintenance.md` as ordinary follow-up work under the `cb-authoring-schedules` skill, not as an open design gap.
 
 The boxholder wants a **coherent way to run recurring maintenance/update tasks on
 a cadence** — Agent SDK updates, the security-overview.md regeneration, manual testing,
@@ -45,15 +49,15 @@ Several **judgment-heavy periodic tasks have no scheduled runner** and rely on
 human memory, with inconsistent (or no) reporting:
 
 - **security-overview.md regeneration** — designed with git-rev-anchored, diff-driven
-  updates ([agent-maintained-security-report](../closed/features/2026-07-20-agent-maintained-security-report.md)),
+  updates ([agent-maintained-security-report](../features/2026-07-20-agent-maintained-security-report.md)),
   but no cadence home decides *when* it re-runs or where.
 - **Knowledge-audit revisit** — `pnpm knowledge-audit` exists and the doc says
   "monthly is probably enough," but **nothing runs it on a cadence** — it waits
   for someone to remember (`callback-box/docs/knowledge-audits.md`).
 - **Doc / prompt refresh** — the standing tension in
-  [doc-refresh-cadence](2026-07-04-doc-refresh-cadence.md) (docs-claim vs. code
+  [doc-refresh-cadence](../../docs-and-chores/2026-07-04-doc-refresh-cadence.md) (docs-claim vs. code
   adjudication) and the prompt-report/prompt-viewer drift catchers.
-- **Feedback collection** — [feedback-collection-cadence](2026-07-14-feedback-collection-cadence.md)
+- **Feedback collection** — [feedback-collection-cadence](../../docs-and-chores/2026-07-14-feedback-collection-cadence.md)
   ("items rot before review").
 - **Codex — nothing at all** (added 2026-08-15). Grep the repo: Codex appears
   in neither `docs/maintenance.md` nor this issue, and no version of it is
@@ -112,15 +116,15 @@ and standardize report + issue-raising across all of them.
 
 ## Related
 
-- [agent-maintained-security-report](../closed/features/2026-07-20-agent-maintained-security-report.md)
+- [agent-maintained-security-report](../features/2026-07-20-agent-maintained-security-report.md)
   — the security-overview.md regen that needs a cadence home; its git-rev-anchored update
   model is one concrete task this framework would schedule.
-- [doc-refresh-cadence](2026-07-04-doc-refresh-cadence.md),
-  [feedback-collection-cadence](2026-07-14-feedback-collection-cadence.md) — two
+- [doc-refresh-cadence](../../docs-and-chores/2026-07-04-doc-refresh-cadence.md),
+  [feedback-collection-cadence](../../docs-and-chores/2026-07-14-feedback-collection-cadence.md) — two
   existing "X has no cadence" instances this umbrella would subsume.
-- [release-discipline-and-update-story](../decisions/2026-07-20-release-discipline-and-update-story.md)
+- [release-discipline-and-update-story](../../decisions/2026-07-20-release-discipline-and-update-story.md)
   — the release/update-story decision this dovetails with.
-- [meta-issues](2026-07-21-meta-issues.md) — this coordinates several tasks/issues,
+- [meta-issues](../../docs-and-chores/2026-07-21-meta-issues.md) — this coordinates several tasks/issues,
   so it may itself be a meta/tracking issue.
 - `callback-box/docs/maintenance.md` (the task catalog),
   `callback-box/docs/knowledge-audits.md`,
