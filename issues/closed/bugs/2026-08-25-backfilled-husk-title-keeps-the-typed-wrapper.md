@@ -1,11 +1,26 @@
 ---
 title: "A husk titled from an existing transcript keeps the raw <typed> wrapper, email and all"
-workstream: unattached
+workstream: live-vs-stored
+resolution: implemented
 area: callback-box
 filed-by: agent
 discovered-in: worktree-live-vs-stored — noticed while verifying session-media in the running app
 labels: [code-error]
 ---
+
+> **Fixed 2026-08-25.** `readSnippetTitle` now calls `extractSnippet` — the one
+> cleaning step between a raw user message and a display label — instead of
+> reimplementing half of it. Covered by a `<typed>`-wrapped case in
+> `test/core/chat-husk.doctest.md` that asserts the resulting card carries no
+> email address.
+>
+> **No repair needed for existing data.** A survey of every chat husk in the
+> local boxes found no title carrying a `<typed>` wrapper: the backfill path is
+> narrow enough that the leak had not been hit. (One stale title carries an old
+> `<chat-app>` prepend, which the previous code already stripped — it predates
+> that stripping rather than showing a live defect.) Had one existed, a data
+> migration would have bought little anyway: the address would already be in the
+> box's git history, which a title rewrite cannot reach.
 
 `readSnippetTitle` (`src/core/chat/husk.ts:60-81`) builds a husk title from the
 transcript's first user message and strips only the `<chat-app …>` snapshot tag.
