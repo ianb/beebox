@@ -13,14 +13,6 @@
 
 import { encodePathForUrl } from "./lib/view-url";
 
-/** A streaming response arrived without a readable body. */
-export class NoResponseBodyError extends Error {
-  constructor() {
-    super("No response body");
-    this.name = "NoResponseBodyError";
-  }
-}
-
 /**
  * Pure helper exported for testability: combine a base URL prefix and a
  * path. Kept separate from `withBase()` so the join logic can be unit-

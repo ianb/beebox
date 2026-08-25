@@ -1,7 +1,19 @@
 ---
 title: "Move logic out of `.mjs` files into TypeScript"
-workstream: unattached
+workstream: knip-exports
+resolution: superseded
 ---
+
+**Superseded 2026-08-25** by
+[the fuller inventory](../../code-quality/2026-08-25-mjs-files-should-be-typescript.md),
+filed from a main session with the boxholder's own framing. That one verified
+`eslint.config.ts` actually loads (this one only reasoned that it should),
+sorts all thirty files, and flags the package-consumption risk for
+`personal-vibe-check`'s `exports` map and `bin/` entries.
+
+The one datum worth keeping — that the untyped preset hid two real defects —
+has been folded into it. This file's `user-stories/pipeline/*.workflow.mjs`
+section is moot: those files no longer exist on `main`.
 
 2026-08-24 · noticed while editing the vibe-check preset (knip-exports workstream).
 

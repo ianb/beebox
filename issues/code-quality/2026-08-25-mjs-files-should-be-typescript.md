@@ -69,6 +69,18 @@ rather than converting and hoping. Note this package also carries
 the softest spot in the tree — and part of why its config could not be linted is
 that it default-exports a factory, which a `.ts` version does not change.
 
+## Evidence the cost is real, not stylistic
+
+`personal-vibe-check/eslint.config.mjs` (807 lines) hid two defects that the
+knip-exports workstream tripped over on 2026-08-24: the `exts` gate silently
+excluded every `.tsx` file from the entire reviewed ruleset (71 rules,
+including `no-unused-vars` and the `as`-cast ban), and two rule keys sat in a
+`disabledRules` object that never reached the files they named. Neither is a
+type error, so TypeScript would not have caught them outright — but the flat
+config's own types make the shape of what is being assembled visible, and that
+visibility is precisely what was missing. It is the largest of these files and
+the one with the most leverage over every other package.
+
 ## Order that de-risks it
 
 Configs first (provable, isolated, immediately valuable), then the leaf logic
