@@ -10,7 +10,7 @@ This is not an app — it's a system that Claude Code operates. The human teache
 
 **Testing** — `pnpm test:changed` runs the tests your diff implicates (or a named file: `pnpm exec tap test/<path>.doctest.md`). `pnpm test` is the full suite: an hourly schedule runs it on `main`; don't run it in a worktree without a reason. Pre-commit hook runs typecheck + lint automatically. Why: `docs/plans/change-based-test-selection.md`.
 - `pnpm typecheck` — TypeScript (both backend and frontend)
-- `pnpm lint` — ESLint
+- `pnpm lint:changed` — ESLint over what your diff touched (seconds); `pnpm lint` is the whole tree — run it when you changed something many files import. Both are behind the machine-wide run semaphore/eslint cache; why: `../issues/closed/code-quality/2026-08-25-lint-runs-contend-like-tests.md`.
 - Tests are doctests (`.doctest.md`) in `test/`. See `.claude/rules/doctest.md` for syntax.
 - Three tiers: pure function doctests, route doctests (`makeTestServer()`), filesystem doctests (`makeTmpBox()`)
 - Use `t.check(actual, expected)` for string comparisons. Objects serialize as `JSON.stringify(val, null, 2)`.

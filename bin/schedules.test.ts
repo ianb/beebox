@@ -16,6 +16,7 @@
 
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
+import { tickPath } from "./lib/schedules-launchd.js";
 import * as fs from "node:fs/promises";
 import { existsSync } from "node:fs";
 import * as os from "node:os";
@@ -383,8 +384,10 @@ test("tick stamps the heartbeat BEFORE any schedule runs, and runs only what is 
 test("tick that cannot write the store exits non-zero and notifies", async () => {
   const { schedulesRoot } = await makeSchedule("anyjob", { yaml: BASE_YAML, run: "#!/bin/sh\n" });
   const fake = await makeDeps({ schedulesRoot, nowMs: Date.parse("2026-08-24T12:00:00Z") });
-  // An existing directory with no marker is somebody else's data: refused.
+  // An existing directory with contents and no marker is somebody else's
+  // data: refused. (Empty is claimed — see ensureStoreRoot.)
   await fs.mkdir(fake.deps.storeRoot, { recursive: true });
+  await fs.writeFile(path.join(fake.deps.storeRoot, "theirs.txt"), "", "utf8");
   const result = await tick(fake.deps);
   assert.equal(result.exitCode, 1);
   assert.ok(result.heartbeatError !== null);
@@ -1242,4 +1245,11 @@ test("ensureStoreRoot claims an empty unmarked directory but refuses one with co
   await fs.mkdir(occupied);
   await fs.writeFile(path.join(occupied, "somebody-elses.txt"), "x", "utf8");
   await assert.rejects(ensureStoreRoot(occupied), /refusing to adopt/);
+});
+
+test("tickPath puts the installing node and the agent CLIs ahead of launchd's default PATH", () => {
+  const p = tickPath({ execPath: "/opt/nvm/v24/bin/node", env: { PATH: "/x/agents:/usr/bin" } });
+  assert.equal(p.split(":")[0], "/opt/nvm/v24/bin");
+  assert.ok(p.split(":").includes("/usr/bin"));
+  assert.ok(!p.includes("::"));
 });
