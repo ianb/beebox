@@ -55,6 +55,35 @@ value** (printing it would re-leak exactly what you're purging; look it up with
 convenience not enforcement — pair with server-side push protection / a CI scan
 for a real gate. Companion to the home-path guard above.
 
+## Commit provenance trailers (`commit-provenance.ts`)
+
+Two hooks and one script give every commit a queryable link to its
+workstream, plan, and (optionally) issue. Convention for agents: root
+`CLAUDE.md`. Design: `callback-box/docs/plans/commit-provenance-trailers.md`.
+
+- **`.husky/prepare-commit-msg`** → `commit-provenance --prepare <msgfile>
+  <source>`: on a `worktree-<name>` branch, `git interpret-trailers --in-place
+  --if-exists replace` stamps `Workstream: <name>` and, when exactly one
+  `callback-box/docs/plans/*.md` carries `workstream: <name>`, `Plan:
+  <basename>`. Skips `squash` sources, detached HEAD, and `main`. Any error
+  prints one stderr line and exits 0 — provenance never blocks a commit.
+- **`.husky/commit-msg`** → `commit-provenance --check <msgfile>`: reads the
+  trailer block with `git interpret-trailers --parse` (body prose that
+  happens to start with `Issue:` is not a trailer) and requires each `Issue:`
+  value to match `issues/**/<value>.md`, `closed/` included. A miss blocks
+  with the bare-name form and nearest basenames. `private-issues/` is never
+  searched — a private slug in public history is a leak.
+- **Queries**: `pnpm commit-provenance --workstream|--plan|--issue <name>
+  [--main]` — `git log --oneline --grep='^Key: value$'` over `--all` (or
+  `main`). Empty result prints nothing.
+- `land` merges `--no-ff`, so `git log --first-parent main` lists landings
+  and `<merge>^1..<merge>^2` lists what each brought.
+
+Hooks activate on checkout: `core.hooksPath` is the relative `.husky/_`, whose
+shim runs `.husky/<hook>` when the file exists — no install step.
+Tests: `bin/commit-provenance.test.ts` (a `.test.ts`, not a doctest, because
+each case forks a throwaway git repo with its own `core.hooksPath`).
+
 ## Landing a worktree branch (`land`)
 
 `bin/land [branch]` merges a finished worktree branch onto `main` with
