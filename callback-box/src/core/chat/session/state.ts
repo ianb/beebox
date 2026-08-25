@@ -20,6 +20,7 @@ import { errorMessage } from "../../../lib/error-guards.js";
 import { isRecord } from "../../card-io.js";
 import { chatModelForEngine } from "../../../shared/chat-models.js";
 import type { AgentEngine } from "../../box/config.js";
+import { composerToken } from "../../../shared/composer-tokens.js";
 
 const log = makeLog("ChatSession");
 
@@ -229,9 +230,9 @@ export function combineQueuedInputs(queued: ChatSendInput[]): ChatSendInput {
     if (imgs.length > 0 && idOffset > 0) {
       // Renumber `[imageN]` tokens in this message's text and the image ids
       // to avoid collisions with previously-queued messages.
-      text = text.replace(/\[image(\d+)]/g, (_m, n: string) => {
+      text = text.replace(/\[image#?(\d+)]/g, (_m, n: string) => {
         const id = parseInt(n, 10);
-        return `[image${id + idOffset}]`;
+        return composerToken("image", id + idOffset);
       });
       for (const img of imgs) {
         combinedImages.push({ ...img, id: img.id + idOffset });

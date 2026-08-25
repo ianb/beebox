@@ -54,6 +54,7 @@ import {
 } from "../input/emission-persist";
 import { apiRawFileUrl, getApiBase } from "../api-core";
 import { usePersistScheduler, PERSIST_DEBOUNCE_MS } from "./usePersistScheduler";
+import { normalizeComposerTokens } from "@shared/composer-tokens";
 
 // Restore is once per store LIFETIME, not per hook mount: the store is the
 // lifted singleton (ChatPage), but this hook remounts with InteractiveChat
@@ -157,17 +158,18 @@ export function useEmissionPersistence(opts: {
       const existingPaths = new Set(checks.filter(([, ok]) => ok).map(([path]) => path));
       const { live, dead } = partitionFiles(p.files, existingPaths);
 
-      editor.setText(p.text);
-      for (const image of p.images) {
-        const item: ImageItem = {
-          ...image,
-          objectUrl: `data:${image.mimeType};base64,${image.dataBase64}`,
-        };
-        editor.addImage(item);
-      }
+      // A draft written before the `[image#1]` rename still carries `[image1]`.
+      // Normalize on the way back in, so what the user is handed reads like a
+      // freshly-attached composition and the `<attachments>` block a later send
+      // writes matches the tokens in its own body.
+      editor.setText(normalizeComposerTokens(p.text));
+      editor.restoreImages(p.images.map((image): ImageItem => ({
+        ...image,
+        objectUrl: `data:${image.mimeType};base64,${image.dataBase64}`,
+      })));
       for (const file of live) editor.addFile(file);
       // Dead files (their tmp/ upload was swept) must not leave dangling
-      // [fileN] tokens in the restored text — a send would reference an
+      // [file#N] tokens in the restored text — a send would reference an
       // attachment that isn't in the outgoing block. add+remove reuses the
       // store's own token-stripping.
       for (const file of dead) {

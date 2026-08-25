@@ -274,6 +274,7 @@ Calendar events live as \`.ics\` files in \`store/calendar/\`. Sync with Google 
   - Optionally include \`X-CB-REASON:<why>\` and \`X-CB-REF:<path>\` for tracking.
 - **Edit an event:** modify a tracked \`.ics\` file directly. The next sync pushes the changes.
 - **Delete an event:** add an \`X-CB-DELETE:<reason>\` property to a tracked \`.ics\` file. The next sync deletes it from Google Calendar.
+- **\`store/calendar/stranded/\`** holds edits Google would never take (the event was deleted there, or the push failed for a week). They are not synced. Move a file back up into \`store/calendar/\` to push it as a new event, or delete it.
 
 **Timezone requirement:** non-all-day events MUST include a VTIMEZONE component and a TZID parameter on DTSTART/DTEND. Never create floating-time events — they'll be rejected.
 

@@ -75,8 +75,9 @@ JSON.stringify({
   procedureRefs,
   errorCount: result.errorCount,
   activeConnector: result.activeConnector?.name ?? null,
+  activeConnectorName: result.activeConnectorName ?? null,
 })
-=> {"ran":["result-error","thrown-error","procedure-error"],"procedureRefs":["procedure/test"],"errorCount":3,"activeConnector":null}
+=> {"ran":["result-error","thrown-error","procedure-error"],"procedureRefs":["procedure/test"],"errorCount":3,"activeConnector":null,"activeConnectorName":null}
 ```
 
 ## Scoped runs still return their active connector and error count
@@ -95,9 +96,72 @@ const result = await captureOutput(() => runConnectors("/unused", {
 }));
 JSON.stringify({
   activeConnector: result.activeConnector?.name,
+  activeConnectorName: result.activeConnectorName,
   errorCount: result.errorCount,
 })
-=> {"activeConnector":"only","errorCount":1}
+=> {"activeConnector":"only","activeConnectorName":"only","errorCount":1}
+```
+
+## An unknown `--connector` name is folded into the error count, not a process exit
+
+Naming a connector that doesn't match any configured connector must not abort
+the cycle mid-run: the caller (`cb wakeup`) still needs to run stale-job
+cleanup, intake, the reactor, and the final push. `runConnectors` reports the
+miss the same way it reports any other connector failure — through
+`errorCount` — so the process only exits nonzero after every later wakeup
+phase has had a chance to run.
+
+`activeConnector` collapses to `undefined` here — the same value a full,
+unscoped wakeup produces — so a caller that only looked at `activeConnector`
+couldn't tell "run everything" apart from "this name matched nothing, run
+nothing". `activeConnectorName` stays set to the raw requested name so later
+phases (wakeup.ts's steps 4b/5) can scope themselves to that (unmatched) name
+— which naturally processes zero connector-scoped work — instead of falling
+back to a full run.
+
+```ts
+const configured = connector("configured", async () => ({
+  success: true,
+  created: [],
+  updated: [],
+}));
+const result = await captureOutput(() => runConnectors("/unused", {
+  connector: "nonexistent",
+  connectors: [configured],
+  runProcedureTriggers: async () => 0,
+}));
+JSON.stringify({
+  activeConnector: result.activeConnector?.name ?? null,
+  activeConnectorName: result.activeConnectorName ?? null,
+  errorCount: result.errorCount,
+})
+=> {"activeConnector":null,"activeConnectorName":"nonexistent","errorCount":1}
+```
+
+## No `--connector` flag at all leaves `activeConnectorName` unset too
+
+Distinguishes the two `undefined`-`activeConnector` cases from the caller's
+side: a bare wakeup (no flag) and an unmatched-name wakeup both leave
+`activeConnector` unset, but only the bare case also leaves
+`activeConnectorName` unset — that's the signal wakeup.ts uses to run
+unscoped only when no scoping was ever requested.
+
+```ts
+const configuredForFullRun = connector("configured", async () => ({
+  success: true,
+  created: [],
+  updated: [],
+}));
+const result = await captureOutput(() => runConnectors("/unused", {
+  connectors: [configuredForFullRun],
+  runProcedureTriggers: async () => 0,
+}));
+JSON.stringify({
+  activeConnector: result.activeConnector?.name ?? null,
+  activeConnectorName: result.activeConnectorName ?? null,
+  errorCount: result.errorCount,
+})
+=> {"activeConnector":null,"activeConnectorName":null,"errorCount":0}
 ```
 
 ## Only a nonzero connector error count requests a failing process status

@@ -27,12 +27,57 @@ const contextHistoryEntrySchema = z.object({
 });
 export type ContextHistoryEntry = z.infer<typeof contextHistoryEntrySchema>;
 
+/**
+ * Outer shape only — each entry is validated individually in
+ * {@link parseContextHistory} so one malformed row can be warned about and
+ * skipped instead of rejecting the whole committed ledger.
+ */
+const rawContextHistorySchema = z.record(
+  z.string(),
+  z.record(z.string(), z.array(z.unknown())),
+);
+
 /** box basename → audit id → entries (oldest first). */
 const contextHistorySchema = z.record(
   z.string(),
   z.record(z.string(), z.array(contextHistoryEntrySchema)),
 );
 export type ContextHistory = z.infer<typeof contextHistorySchema>;
+
+/**
+ * Validate a parsed history document entry by entry, warning about and
+ * dropping any row that doesn't match {@link contextHistoryEntrySchema}
+ * instead of rejecting the whole ledger. A single hand-edited or
+ * merge-mangled row (see the 2026-08-23 `points-at-ui-path-vs-control`
+ * incident, where a merge conflict resolution silently dropped an entry's
+ * `added`/`turns` lines) must not block every other audit id from recording.
+ */
+export function parseContextHistory(raw: unknown): ContextHistory {
+  const shaped = rawContextHistorySchema.parse(raw);
+  const result: ContextHistory = {};
+  for (const [box, audits] of Object.entries(shaped)) {
+    const boxHistory: Record<string, ContextHistoryEntry[]> = {};
+    for (const [auditId, entries] of Object.entries(audits)) {
+      const valid: ContextHistoryEntry[] = [];
+      for (const [index, entry] of entries.entries()) {
+        const parsed = contextHistoryEntrySchema.safeParse(entry);
+        if (parsed.success) {
+          valid.push(parsed.data);
+        } else {
+          console.warn(
+            `context-history: malformed entry for audit "${auditId}" ` +
+              `(box "${box}", index ${index}) is ignored and will be dropped ` +
+              "by the next recorded run; repair it in the ledger to keep it: " +
+              `${parsed.error.message}`,
+          );
+        }
+      }
+      boxHistory[auditId] = valid;
+    }
+    result[box] = boxHistory;
+  }
+  return result;
+}
 
 export interface RunMeasurement {
   auditId: string;
@@ -85,7 +130,7 @@ export async function loadHistory(historyPath: string): Promise<ContextHistory> 
     // than casting past it. An empty/all-comments file parses to `null`,
     // which is the normal "no history yet" case (same as ENOENT below).
     const parsed: unknown = YAML.parse(text);
-    return parsed === null ? {} : contextHistorySchema.parse(parsed);
+    return parsed === null ? {} : parseContextHistory(parsed);
   } catch (e) {
     if (errnoCode(e) !== "ENOENT") throw e;
     return {};
@@ -101,5 +146,10 @@ export async function recordRun(
   const { historyPath, ...run } = options;
   const history = await loadHistory(historyPath);
   const next = appendRun(history, run);
+  // Validate the whole document (not just the entries this run added) right
+  // before it becomes the new committed ledger — a cheap backstop so a
+  // future bug that shapes `next` incorrectly fails loudly here rather than
+  // writing a row later runs will need to warn-and-skip past.
+  contextHistorySchema.parse(next);
   await fs.writeFile(historyPath, HISTORY_HEADER + YAML.stringify(next), "utf-8");
 }

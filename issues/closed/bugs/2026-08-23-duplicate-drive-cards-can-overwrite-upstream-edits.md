@@ -1,12 +1,15 @@
 ---
 title: "Duplicate Drive cards can overwrite upstream edits"
-workstream: unattached
+workstream: connector-integrity
 area: callback-box
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-connector-sync-isolation — independent review of Drive trash tombstones
 priority: normal
+resolution: implemented
 ---
+
+**Closed 2026-08-25** in 3051bf12: two cards with one drive-id are skipped together and reported in `result.error`; `cb drive add` refuses a drive-id another card already claims.
 
 The Drive connector permits two live cards with the same `drive-id`. It syncs both paths, but transient hashes are keyed only by Drive ID. `cb drive add` rejects a destination-path collision, not an already-mounted Drive ID.
 

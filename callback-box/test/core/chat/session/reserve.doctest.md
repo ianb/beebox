@@ -261,3 +261,91 @@ JSON.stringify((await loadHistoryEntries(box.root)).map((e) => e.engine))
 registry.shutdown();
 await box.cleanup();
 ```
+
+## A reservation answers "which chat is this landmark's?"
+
+`getLastSessionForDirectory` reads the history file, which has no row for a
+coined chat until its first turn commits. Without the reservation as a
+fallback, leaving a fresh landmark chat and switching back to that landmark
+coins a *second* one, every time — the switch never returns you to the chat you
+just left.
+
+```ts
+const box = await makeTmpBox();
+const registry = makeRegistry(box, createFakeChatBackend());
+await registry.reserve({ sessionId: COINED, contextDir: "store/recipes", seedFeatures: {} });
+
+JSON.stringify({
+  here: registry.reservationForDirectory("store/recipes"),
+  elsewhere: registry.reservationForDirectory("store/courses"),
+})
+=> {"here":"11111111-2222-4333-8444-555555555555","elsewhere":null}
+```
+
+The box root is a landmark like any other, and `""` is its real binding — kept
+distinct from `null`, which means a chat opened from nowhere. Collapsing the two
+left a chat opened from the Box row unlabelled until its first turn.
+
+```ts continue
+await registry.reserve({ sessionId: OTHER, contextDir: "", seedFeatures: {} });
+
+JSON.stringify({
+  root: registry.reservationForDirectory(""),
+  unbound: registry.getReservation(COINED).contextDir,
+})
+=> {"root":"99999999-8888-4777-8666-555555555555","unbound":"store/recipes"}
+```
+
+```ts continue cleanup
+registry.shutdown();
+await box.cleanup();
+```
+
+## The handoff from reservation to history loses nothing
+
+The reservation is released only after the first run's history row is written.
+Releasing first left a window — and, since that bookkeeping is deliberately
+quiet on failure, a permanent state — in which the chat was bound to a landmark
+and nothing could say which.
+
+```ts
+const box = await makeTmpBox();
+const backend = createFakeChatBackend();
+const registry = makeRegistry(box, backend);
+await registry.reserve({ sessionId: COINED, contextDir: "store/recipes", seedFeatures: {} });
+
+const session = registry.getOrCreate(COINED);
+await session.send("hello");
+await tick();
+await waitForSessionRecorded(box, COINED);
+
+JSON.stringify({
+  reservation: registry.reservationForDirectory("store/recipes"),
+  history: (await loadHistoryEntries(box.root)).map((e) => e.contextDir),
+})
+=> {"reservation":null,"history":["store/recipes"]}
+```
+
+```ts continue cleanup
+registry.shutdown();
+await box.cleanup();
+```
+
+## An expired reservation is not somewhere you can go back to
+
+```ts
+const box = await makeTmpBox();
+let clock = 1_000;
+const registry = makeRegistry(box, createFakeChatBackend(), { now: () => clock });
+await registry.reserve({ sessionId: COINED, contextDir: "store/recipes", seedFeatures: {} });
+
+clock += 7 * 60 * 60 * 1000;
+
+registry.reservationForDirectory("store/recipes")
+=> null
+```
+
+```ts continue cleanup
+registry.shutdown();
+await box.cleanup();
+```

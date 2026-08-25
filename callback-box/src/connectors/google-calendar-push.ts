@@ -10,14 +10,18 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { errnoCode } from "../lib/error-guards.js";
+import { contentHash } from "../lib/content-hash.js";
 import { type GoogleCalendarService } from "../services/google-calendar.js";
 import { validateIcsTimezone } from "./calendar-utils.js";
 import { icsToGoogleEvent } from "./google-calendar-ics.js";
 import { decideCalendarSync } from "./google-calendar-decide.js";
 import { invariant } from "../lib/invariant.js";
 import {
+  CB_DELETE_PATTERN,
   formatEventDate,
   extractCbAnnotations,
+  classifyCalendarFailure,
+  type CalendarSyncFailure,
   type SyncNote,
 } from "./google-calendar-notes.js";
 import {
@@ -25,30 +29,40 @@ import {
   deleteEventViaApi,
   insertEventViaApi,
   type CalendarState,
+  type EventFileEntry,
 } from "./google-calendar-state.js";
 
 /**
  * Push locally-created .ics files (not tracked in state) to Google Calendar,
- * then track them. Returns { pushed, deleted, notes } arrays.
+ * then track them. Returns { pushed, deleted, notes, failures }.
+ *
+ * Every way a file can fail to reach Google — a rejected insert, an
+ * unusable timezone, an unexpected per-file error — produces a
+ * CalendarSyncFailure. These used to be console warnings only, so a file that
+ * could never be pushed retried forever while the sync reported success.
  */
 export async function pushAndCleanOrphans(
   opts: { boxRoot: string; calendar: GoogleCalendarService; state: CalendarState; calDir: string; defaultCalendarId: string },
-): Promise<{ pushed: string[]; deleted: string[]; notes: SyncNote[] }> {
+): Promise<{ pushed: string[]; deleted: string[]; notes: SyncNote[]; failures: CalendarSyncFailure[] }> {
   const { boxRoot, calendar, state, calDir, defaultCalendarId } = opts;
   const pushed: string[] = [];
   const deleted: string[] = [];
   const notes: SyncNote[] = [];
+  const failures: CalendarSyncFailure[] = [];
   const trackedFiles = new Set<string>();
   for (const entry of Object.values(state.eventFiles)) {
     trackedFiles.add(getFilename(entry));
   }
 
+  // A flat readdir, deliberately: it must NOT descend into `stranded/`, whose
+  // `.ics` files are edits given up on (google-calendar-strand.ts) and would be
+  // read here as locally-created events and inserted into Google.
   let files: string[];
   try {
     files = await fs.readdir(calDir);
   } catch (err: unknown) {
     if (errnoCode(err) !== "ENOENT") throw err;
-    return { pushed, deleted, notes };
+    return { pushed, deleted, notes, failures };
   }
 
   for (const file of files) {
@@ -68,10 +82,14 @@ export async function pushAndCleanOrphans(
         continue;
       }
 
-      // Validate timezone on non-all-day events
+      // Validate timezone on non-all-day events. Unfixable without a human
+      // editing the file, so it is a failure rather than a silent skip.
       const tzError = validateIcsTimezone(content);
       if (tzError) {
         console.warn(`  Skipping ${file}: ${tzError}`);
+        failures.push(classifyCalendarFailure(new Error(tzError), {
+          calendarId: defaultCalendarId, operation: "local-push", path: relPath,
+        }));
         continue;
       }
 
@@ -84,15 +102,40 @@ export async function pushAndCleanOrphans(
       delete apiEvent._calendarId;
 
       const result = await insertEventViaApi(calendar, { calendarId, event: apiEvent });
-      if (result) {
-        // Track the file with its new Google event ID
-        state.eventFiles[result.id] = { filename: file, calendarId };
-        pushed.push(relPath);
+      if (result.ok) {
+        // Google has created the event — track it NOW, hashed against the bytes
+        // currently on disk. Nothing after this point may leave it untracked:
+        // an untracked .ics is a locally-created event to the next run's orphan
+        // scan, which would insert a SECOND copy into Google. (The hash matters
+        // on its own too: without one the entry has nothing to compare against,
+        // so a later edit to a locally-created event looks identical to the
+        // original forever and never enters the pending-edit push.)
+        const trackedEntry: EventFileEntry = {
+          filename: file,
+          calendarId,
+          contentHash: contentHash(content),
+          remoteUpdated: result.value.updated,
+        };
+        state.eventFiles[result.value.id] = trackedEntry;
 
-        // Write back stripped content (without annotations)
+        // Now strip the annotations from the local copy and re-stamp the hash
+        // to the bytes that ended up on disk. A rewrite that fails is a
+        // reported failure: the file keeps its annotations and the entry keeps
+        // matching it, so the next run neither re-pushes nor duplicates it.
         if (reason || ref) {
-          await fs.writeFile(filePath, stripped);
+          try {
+            await fs.writeFile(filePath, stripped);
+            state.eventFiles[result.value.id] = {
+              ...trackedEntry, contentHash: contentHash(stripped),
+            };
+          } catch (err: unknown) {
+            console.warn(`  Pushed ${file} to Google but could not rewrite it locally:`, err);
+            failures.push(classifyCalendarFailure(err, {
+              calendarId, operation: "local-push", path: relPath,
+            }));
+          }
         }
+        pushed.push(relPath);
 
         // Build push note
         const dateStr = formatEventDate(apiEvent);
@@ -104,15 +147,22 @@ export async function pushAndCleanOrphans(
         if (ref) pushNote.ref = ref;
         notes.push(pushNote);
       } else {
-        // Push failed — leave the file alone (don't delete it)
+        // Push failed — leave the file alone (don't delete it) so the next
+        // sync retries, and report the failure so the retry loop is visible.
         console.warn(`  Failed to push ${file}, keeping locally`);
+        failures.push(classifyCalendarFailure(result.error, {
+          calendarId, operation: "local-push", path: relPath,
+        }));
       }
     } catch (err: unknown) {
       console.warn(`  Error processing ${file}:`, err);
+      failures.push(classifyCalendarFailure(err, {
+        calendarId: defaultCalendarId, operation: "local-push", path: relPath,
+      }));
     }
   }
 
-  return { pushed, deleted, notes };
+  return { pushed, deleted, notes, failures };
 }
 
 /**
@@ -122,10 +172,11 @@ export async function pushAndCleanOrphans(
  */
 export async function processLocalDeletes(
   opts: { boxRoot: string; calendar: GoogleCalendarService; state: CalendarState; calDir: string },
-): Promise<{ deleted: string[]; notes: SyncNote[] }> {
+): Promise<{ deleted: string[]; notes: SyncNote[]; failures: CalendarSyncFailure[] }> {
   const { boxRoot, calendar, state, calDir } = opts;
   const deleted: string[] = [];
   const notes: SyncNote[] = [];
+  const failures: CalendarSyncFailure[] = [];
   const MAX_DELETES = 3;
 
   for (const [googleEventId, entry] of Object.entries(state.eventFiles)) {
@@ -142,7 +193,7 @@ export async function processLocalDeletes(
     }
 
     // Check for X-CB-DELETE property
-    const deleteMatch = content.match(/^x-cb-delete[:;](.*)$/im);
+    const deleteMatch = CB_DELETE_PATTERN.exec(content);
     if (!deleteMatch) continue;
 
     const reason = deleteMatch[1]?.trim() || "(no reason)";
@@ -167,8 +218,8 @@ export async function processLocalDeletes(
     invariant(decision.kind === "delete" && calendarId !== undefined, "delete-marker decision must delete with a calendar id");
 
     console.log(`  Deleting ${filename}: ${reason}`);
-    const success = await deleteEventViaApi(calendar, { calendarId, googleEventId });
-    if (success) {
+    const deleteResult = await deleteEventViaApi(calendar, { calendarId, googleEventId });
+    if (deleteResult.ok) {
       await fs.unlink(filePath);
       delete state.eventFiles[googleEventId];
       deleted.push(path.relative(boxRoot, filePath));
@@ -176,9 +227,16 @@ export async function processLocalDeletes(
       if (ref) deleteNote.ref = ref;
       notes.push(deleteNote);
     } else {
+      // Keep the file (and its X-CB-DELETE marker) so the next sync retries,
+      // and report it — an unrepeatable delete used to retry forever in
+      // silence. The delete-cap and missing-calendar-id skips above stay plain
+      // warnings: they are deliberate policy, not a stuck request.
       console.warn(`  Failed to delete ${filename} from Google Calendar`);
+      failures.push(classifyCalendarFailure(deleteResult.error, {
+        calendarId, operation: "local-delete", path: path.relative(boxRoot, filePath),
+      }));
     }
   }
 
-  return { deleted, notes };
+  return { deleted, notes, failures };
 }

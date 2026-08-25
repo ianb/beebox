@@ -70,7 +70,12 @@ function normalizeForCompare(text: string): string {
     // them. Dropping them here keeps every comparison between the three copies
     // of one message symmetric, including the orphan-token case the shared
     // builder deliberately leaves as literal text.
-    .replace(/\[image\d+]/g, "")
+    // `#?` so it matches the pre-2026-08-25 form too: the three copies of one
+    // message can be from different eras (an old transcript entry against a
+    // fresh optimistic one), and a normalizer that only knew one form would
+    // leave the token in on one side and strip it on the other — turning a
+    // match into a mismatch, which is this whole function's failure mode.
+    .replace(/\[image#?\d+]/g, "")
     .replace(/<(typed|speech)\b[^>]*>/g, "<$1>");
 }
 

@@ -25,6 +25,7 @@
  * paths both route through it.
  */
 
+
 export interface SelectionItem {
   id: number;
   /** Box-relative source path, absolute (leading "/"). */
@@ -168,7 +169,7 @@ export function applySelections(body: string, opts: { selections: SelectionItem[
     return body;
   }
   const used = new Set<number>();
-  let result = body.replace(/\[selection(\d+)]/g, (match, digits: string) => {
+  let result = body.replace(/\[selection#?(\d+)]/g, (match, digits: string) => {
     const id = parseInt(digits, 10);
     const selection = selections.find((s) => s.id === id);
     if (selection === undefined) {

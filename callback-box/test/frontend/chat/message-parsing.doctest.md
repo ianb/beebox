@@ -1,7 +1,7 @@
 # Chat user-message display stripping
 
 `stripUserDisplayTags` removes the system-injected halves of a sent message
-before display. Inline `[fileN]` tokens are the machine half of the
+before display. Inline `[file#N]` tokens are the machine half of the
 attachments contract (`chat-assemble.ts`): they anchor where an attached file
 sits in the text and resolve through the `<attachments>` block. The block is
 stripped and the file renders as its own chip, so the bare token used to
@@ -18,12 +18,26 @@ prose stays intact.
 
 ```ts
 const sent = [
+  "Here's the recipe [file#1] from my files.",
+  "<attachments>",
+  "[file#1]: tmp/1723200000_lemon-chicken.txt",
+  "</attachments>",
+].join("\n");
+JSON.stringify(stripUserDisplayTags(sent).trim())
+=> "Here's the recipe from my files."
+```
+
+The same message in the pre-rename form — every transcript written before
+2026-08-25 looks like this, and the bubble must read the same either way.
+
+```ts
+const legacy = [
   "Here's the recipe [file1] from my files.",
   "<attachments>",
   "[file1]: tmp/1723200000_lemon-chicken.txt",
   "</attachments>",
 ].join("\n");
-JSON.stringify(stripUserDisplayTags(sent).trim())
+JSON.stringify(stripUserDisplayTags(legacy).trim())
 => "Here's the recipe from my files."
 ```
 

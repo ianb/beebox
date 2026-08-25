@@ -27,7 +27,7 @@ end-to-end through the actual UI.
      read from the selection rect).
    - Starting a new selection (mousedown) or selecting nothing dismisses it.
 2. **Whitespace-only / empty selection → no "+".**
-3. **Click the "+".** A `[selectionN]` token is inserted at the composer
+3. **Click the "+".** A `[selection#N]` token is inserted at the composer
    caret and a pill appears above the composer (Track 3). The capture carries:
    - `ref` = the open doc's path, leading-slash absolute.
    - `text` = the verbatim rendered selection.
@@ -38,9 +38,9 @@ end-to-end through the actual UI.
 
 1. **Pill** shows `selectionN` + a truncated snippet. Clicking it opens a
    popover with the source doc name, the position, and the full text.
-2. **Trash (×)** on the pill removes it and strips the `[selectionN]` token
+2. **Trash (×)** on the pill removes it and strips the `[selection#N]` token
    from the textarea.
-3. **Type around the token** (e.g. `compare [selection1] with this`), then
+3. **Type around the token** (e.g. `compare [selection#1] with this`), then
    send. Inspect the outgoing message (session log / debug view): the token is
    replaced inline by
    `<user-selection ref="…" pos="…">…</user-selection>` inside `<typed>`.

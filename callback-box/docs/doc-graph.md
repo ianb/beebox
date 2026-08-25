@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-08-25T06:12:22Z
-Total documents: 304
+Generated: 2026-08-25T21:07:50Z
+Total documents: 305
 
 ## Issues
 
@@ -162,6 +162,7 @@ Referenced by:
 - docs/plans/box-commentary-surface.md:381 (mention) — (CLAUDE.md exempts "per-box config, throwaway replies, and personal memory"),
 - docs/plans/change-based-test-selection.md:611 (mention) — `--base`, CLAUDE.md guidance. The point at which behavior changes for agents,
 - docs/plans/chat-photo-batch-upload.md:32 (link) — - [`callback-box/CLAUDE.md`](../../CLAUDE.md):101 — *"Read before writing. Don't
+- docs/plans/chat-scroll-model.md:195 (mention) — harness, all scenarios green, `decideScroll` deleted, nested CLAUDE.md and
 - docs/plans/design-reconciliation.md:88 (mention) — - **Reality/tension** — CLAUDE.md:1 (the sentence agents actually load): "A
 - docs/plans/docs-reorg.gap-analysis.md:39 (mention) — `setTimeout` counts macOS sleep. CLAUDE.md covers the analogous
 - docs/plans/docs-reorg.md:13 (mention) — history out of the way but findable, and slim CLAUDE.md files down to
@@ -213,6 +214,7 @@ Referenced by:
 - ../issues/closed/bugs/2026-08-23-procedure-model-pins-are-claude-only.md:145 (mention) — [AGENTS.md missing from the CLAUDE.md special-cases](2026-08-22-agents-md-missing-from-claude-md-special-cases.md),
 - ../issues/closed/code-quality/2026-07-04-fake-agent-single-export-split.md:15 (mention) — not a global weakening, per the CLAUDE.md lint policy). The blast radius was 6
 - ../issues/closed/code-quality/2026-07-16-personal-vibe-check-typecheck-no-inputs.md:25 (mention) — failure for a loud one. Note `CLAUDE.md` claims "the repo lints itself", which
+- ../issues/closed/code-quality/2026-08-25-mjs-files-should-be-typescript.md:15 (mention) — The standing rule (root `CLAUDE.md`, and the boxholder's repeated preference) is
 - ../issues/closed/decisions/2026-05-27-bin-browse-wrapper-future.md:21 (mention) — - **Replace the rewriting with a `BASE_PATH.txt` file** that holds the current worktree's URL prefix (e.g. `http://local
 - ../issues/closed/decisions/2026-07-07-categorize-issues-into-subdirectories.md:86 (mention) — Note: `issues/CLAUDE.md` and the root `CLAUDE.md`'s "issue queue" pointer both
 - ../issues/closed/decisions/2026-07-07-cb-render-vs-bin-browse.md:56 (mention) — `suppressHydrationWarning`); and references in `CLAUDE.md`, `frontend.md`,
@@ -227,7 +229,6 @@ Referenced by:
 - ../issues/code-quality/2026-08-08-audit-cb-subcommand-surface.md:62 (mention) — - **Box guidance references command names.** Box `CLAUDE.md`s, schema
 - ../issues/code-quality/2026-08-08-extract-cb-serve-from-the-box-cli.md:54 (mention) — `callback-box/CLAUDE.md`.
 - ../issues/code-quality/2026-08-17-cb-init-prints-a-screenful-on-every-run.md:33 (mention) — (root `CLAUDE.md`, "Treat noisy command output as a bug").
-- ../issues/code-quality/2026-08-25-mjs-files-should-be-typescript.md:14 (mention) — The standing rule (root `CLAUDE.md`, and the boxholder's repeated preference) is
 - ../issues/docs-and-chores/2026-05-21-fill-out-the-glossary.md:20 (mention) — Method: do one sweep through `CLAUDE.md`, `FRONTEND.md`, the schemas, and `docs/` collecting terms-of-art, then write en
 - ../issues/docs-and-chores/2026-05-26-dev-scripts-into-bin.md:14 (mention) — CLAUDE.md files is still untouched and stays open here.
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:8 (mention) — Still-open items from the 2026-04-28 CLAUDE.md self-audit
@@ -793,7 +794,7 @@ References:
 
 #### docs/calendar.md
 
-Title: "Calendar Integration" | 89 lines
+Title: "Calendar Integration" | 102 lines
 
 Referenced by:
 - CLAUDE.md:172 (mention) — | Calendar integration | `docs/calendar.md` |
@@ -854,13 +855,13 @@ References:
 
 #### docs/chat-review.md
 
-Title: "Chat review" | 147 lines
+Title: "Chat review" | 154 lines
 
 Referenced by:
 - CLAUDE.md:168 (mention) — | Chat review (nightly titles + summaries) | `docs/chat-review.md` |
 - ../issues/bugs/2026-07-28-renamed-husk-duplicates-on-backfill.md:71 (link) — [chat review](../../callback-box/docs/chat-review.md): its journal is keyed by
 - ../issues/bugs/2026-07-29-chat-review-journal-is-machine-local.md:10 (link) — [Chat review](../../callback-box/docs/chat-review.md) keeps two pieces of state
-- ../issues/bugs/2026-08-01-chat-review-capped-at-max-session-entries.md:38 (mention) — - Accept the cap and say so in `docs/chat-review.md`.
+- ../issues/closed/bugs/2026-08-01-chat-review-capped-at-max-session-entries.md:41 (mention) — - Accept the cap and say so in `docs/chat-review.md`.
 - ../issues/closed/features/2026-05-19-overnight-session-compaction.md:11 (link) — See [docs/chat-review.md](../../../callback-box/docs/chat-review.md) for the
 - ../issues/features/2026-07-29-stale-husks-outlive-their-transcripts.md:77 (link) — - [Chat review](../../callback-box/docs/chat-review.md) skips it too (correctly —
 
@@ -885,22 +886,24 @@ References:
 
 #### docs/chat-scroll-testing.md
 
-Title: "Chat scroll — manual test procedure" | 212 lines
+Title: "Chat scroll — test procedure" | 209 lines
 
 Referenced by:
 - docs/implemented-plans/chat-composer-rerender.md:146 (mention) — 4. Manual procedure in `docs/chat-scroll-testing.md` (stick-to-bottom,
 - docs/implemented-plans/chat-scroll-redesign.md:22 (mention) — > desktop Chrome via `bin/browse` (procedure: `docs/chat-scroll-testing.md`):
 - docs/implemented-plans/chat-stream-finalize-unify.md:370 (mention) — procedure in `docs/chat-scroll-testing.md` (extended), not doctests
-- docs/testing.md:517 (link) — checklist) lives in [chat-scroll-testing.md](chat-scroll-testing.md). The
-- src/frontend/src/components/chat/CLAUDE.md:37 (mention) — `docs/chat-scroll-testing.md`** (drives the app via `bin/browse`; layout
+- docs/plans/chat-scroll-model.md:181 (mention) — Chrome's native anchoring, which the app disables); `docs/chat-scroll-testing.md`
+- docs/testing.md:521 (link) — [chat-scroll-testing.md](chat-scroll-testing.md). Note that `/fakestream`
+- src/frontend/src/components/chat/CLAUDE.md:67 (mention) — PASS) **and the browser procedure in `docs/chat-scroll-testing.md`**, and verify
 - ../issues/closed/bugs/2026-07-19-scroll-up-history-false-new-messages.md:20 (mention) — `docs/chat-scroll-testing.md`. See the commit referenced in the closing note.
 
 References:
 - → docs/testing.md (mention)
+- → docs/plans/chat-scroll-model.md (mention)
 
 #### docs/chat-session-lifecycle.md
 
-Title: "Chat session lifecycle" | 94 lines
+Title: "Chat session lifecycle" | 143 lines
 
 Referenced by:
 - CLAUDE.md:167 (mention) — | Chat session lifecycle | `docs/chat-session-lifecycle.md` |
@@ -925,7 +928,7 @@ Referenced by:
 - docs/implemented-plans/remove-cb-render.md:552 (mention) — errors (`docs/client-debug-log.md`).
 - docs/server-operations.md:232 (link) — For SSH-only debugging: `ssh root@<server> tail /home/callback/boxes/<box>/.callback-box/client-debug.log`. See [`client
 - ../.claude/skills/cb-guide-api/SKILL.md:38 (mention) — misbehaves (`docs/client-debug-log.md`).
-- ../issues/bugs/2026-08-20-cannot-switch-landmarks-from-chat.md:77 (mention) — entries land in the same sink tagged `[ios]` (`docs/client-debug-log.md`). If
+- ../issues/closed/bugs/2026-08-20-cannot-switch-landmarks-from-chat.md:83 (mention) — entries land in the same sink tagged `[ios]` (`docs/client-debug-log.md`). If
 
 References:
 - → docs/mobile-contract.md (mention)
@@ -1036,7 +1039,7 @@ Referenced by:
 - docs/implemented-plans/remove-cb-render.review.md:29 (mention) — 7. **Medium — the prose done-condition cannot pass as written.** The plan updates `publish-pages.md` but misses live ref
 - docs/plans/docs-reorg.md:114 (mention) — (5,767 generated lines), `doc-graph.md` (build artifact among
 - docs/plans/source-available-release.md:438 (mention) — - **doc-graph generator fixed at the source.** `doc-graph.md` only *quoted* the
-- docs/testing.md:640 (mention) — `npx tsx src/dev/doc-graph.ts > docs/doc-graph.md` — scans all `.md` files, extracts cross-references, reports orphans a
+- docs/testing.md:626 (mention) — `npx tsx src/dev/doc-graph.ts > docs/doc-graph.md` — scans all `.md` files, extracts cross-references, reports orphans a
 - src/dev/CLAUDE.md:11 (mention) — | `doc-graph.ts` | Generates `docs/doc-graph.md` (cross-reference graph + orphan/broken-ref report) | `docs/maintenance.
 - user-stories/catalog/2026-08-21.md:8730 (mention) — **Code check** — callback-box/package.json defines both scripts: "doc-graph": tsx src/dev/doc-graph.ts > docs/doc-graph.
 - ../issues/closed/docs-and-chores/2026-03-04-documentation-graph.md:8 (mention) — **Closed:** Implemented as `docs/doc-graph.md` (auto-generated cross-reference report, `src/dev/doc-graph-html.ts`). See
@@ -1234,7 +1237,7 @@ References:
 
 #### docs/google-drive.md
 
-Title: "Google Drive Integration" | 160 lines
+Title: "Google Drive Integration" | 181 lines
 
 Referenced by:
 - docs/connectors.md:31 (link) — | Google Drive | `google-drive.ts` | `sheet` | Two-way | Yes | [google-drive.md](google-drive.md) |
@@ -1414,7 +1417,7 @@ Referenced by:
 - ../issues/closed/code-quality/2026-07-04-knip-exports-enforcement.md:11 (mention) — (`2026-08-24-run-periodic-sweeps-weekly.md`), and `docs/maintenance.md` says
 - ../issues/closed/docs-and-chores/2026-08-08-maintenance-cadence-framework.md:12 (mention) — **Closed:** Resolved by the scheduled-workstreams plan: one `schedules/` directory, `bin/schedules` CLI, and a single la
 - ../issues/closed/features/2026-08-12-monitor-message-queue.md:175 (mention) — - Cadence declared in the registry (this read) vs in `docs/maintenance.md`
-- ../issues/code-quality/2026-08-24-run-periodic-sweeps-weekly.md:13 (mention) — That applies to the other entries in `callback-box/docs/maintenance.md` with
+- ../issues/code-quality/2026-08-25-oxlint-circular-no-cadence.md:17 (mention) — What remains is the smaller half. `callback-box/docs/maintenance.md` lists two
 - ../issues/docs-and-chores/2026-03-16-review-all-prompts.md:17 (mention) — `~/src/boxes/test1`; `docs/maintenance.md` has the details). Every fragment has
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:10 (mention) — folded into `code-style.md`, `frontend.md`, `docs/maintenance.md`, and
 - ../issues/docs-and-chores/2026-07-04-doc-refresh-cadence.md:16 (mention) — `callback-box/docs/maintenance.md` with a cadence, or a scheduled routine):
@@ -1477,7 +1480,7 @@ References:
 
 #### docs/mobile-contract.md
 
-Title: "Cross-Platform Mobile Contract" | 1256 lines
+Title: "Cross-Platform Mobile Contract" | 1282 lines
 
 Referenced by:
 - CLAUDE.md:145 (mention) — | Cross-platform mobile contract (iOS/Android ↔ box) | `docs/mobile-contract.md` |
@@ -1865,11 +1868,11 @@ Referenced by:
 
 #### docs/testing.md
 
-Title: "Testing" | 660 lines
+Title: "Testing" | 646 lines
 
 Referenced by:
 - CLAUDE.md:138 (mention) — | Testing philosophy | `docs/testing.md` |
-- docs/chat-scroll-testing.md:5 (mention) — behavior that doctests can't exercise (`docs/testing.md` §6). This is the
+- docs/chat-scroll-testing.md:4 (mention) — exercise (`docs/testing.md` §6). Two instruments cover it, and a change to
 - docs/engineering-principles.md:125 (link) — [`docs/testing.md`](testing.md).
 - docs/implemented-plans/agent-applied-migrations.md:88 (mention) — - `callback-box/docs/testing.md` — tests-first as a design tool; the machine
 - docs/implemented-plans/agent-field-tests.md:97 (mention) — (`docs/testing.md:271`) and session critiques (`docs/testing.md:409`) both
@@ -1970,7 +1973,7 @@ Referenced by:
 - CLAUDE.md:139 (mention) — | Tours (browser walks for UI/a11y review) | `docs/tours.md` |
 - docs/plans/agent-points-at-ui.md:133 (mention) — out of `bin/browse snapshot`, and `docs/tours.md:39-50` archives
 - docs/plans/public-site.md:95 (mention) — `docs/tours.md:39-50`) — the future automated-screenshot pipeline if
-- docs/testing.md:551 (link) — them: [tours.md](tours.md).
+- docs/testing.md:537 (link) — them: [tours.md](tours.md).
 - ../issues/closed/code-quality/2026-07-10-tour-lib-lint-debt.md:46 (mention) — Filed while formalizing tours (docs/tours.md); the 2026-07-10 fixes to
 - ../issues/exploration/2026-07-15-claude-code-cloud-environment.md:194 (mention) — (`agent-browser` / `bin/browse`) and **tours** (`docs/tours.md` — scripted browser
 - ../issues/features/2026-07-17-regenerable-app-demo-video.md:24 (mention) — 375×800) + a11y snapshots, not video (`docs/tours.md`). The interaction-scripting
@@ -2261,7 +2264,7 @@ References:
 Title: "Agent field tests — an agent-operator exercising realistic box activities end-to-end" | 518 lines
 
 Referenced by:
-- docs/testing.md:565 (link) — live in [`docs/implemented-plans/agent-field-tests.md`](implemented-plans/agent-field-tests.md).
+- docs/testing.md:551 (link) — live in [`docs/implemented-plans/agent-field-tests.md`](implemented-plans/agent-field-tests.md).
 - field-tests/onboarding-first-days/README.md:3 (mention) — The first real field-test scenario (`docs/implemented-plans/agent-field-tests.md`, Track 4):
 - ../issues/closed/code-quality/2026-08-08-field-test-run-setup-failure-no-teardown.md:5 (mention) — discovered-in: worktree integration-tests — implementing Track 5 (reporting) of docs/implemented-plans/agent-field-tests
 - ../issues/closed/features/2026-08-06-agent-driven-integration-tests.md:12 (mention) — > `docs/implemented-plans/agent-field-tests.md`: the `cb field-test run|list|report`
@@ -2511,7 +2514,7 @@ Title: "Bulk file upload" | 461 lines
 
 Referenced by:
 - docs/box-layout.md:103 (mention) — `docs/implemented-plans/bulk-file-upload.md`; agent duties:
-- docs/mobile-contract.md:788 (mention) — `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
+- docs/mobile-contract.md:814 (mention) — `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
 - docs/plans/chat-photo-batch-upload.md:15 (link) — [bulk-file-upload](../implemented-plans/bulk-file-upload.md) — the iOS native
 - ../issues/closed/bugs/2026-07-27-bulk-upload-arbitrary-ext-gitignore.md:16 (mention) — Surfaced building Track 1 chunk 1 of `docs/plans/bulk-file-upload.md`.
 
@@ -2621,9 +2624,9 @@ Title: "Bounded chat-history loading + fast stale-lock recovery" | 207 lines
 
 Referenced by:
 - ../issues/bugs/2026-07-28-parse-session-log-silent-page-truncation.md:42 (mention) — Track A of `docs/plans/chat-history-oom-mobile-lock.md` took option 1: the
-- ../issues/bugs/2026-08-01-chat-review-capped-at-max-session-entries.md:6 (mention) — discovered-in: worktree-chat-history-oom-mobile-lock — Track A of docs/plans/chat-history-oom-mobile-lock.md
+- ../issues/closed/bugs/2026-08-01-chat-review-capped-at-max-session-entries.md:6 (mention) — discovered-in: worktree-chat-history-oom-mobile-lock — Track A of docs/plans/chat-history-oom-mobile-lock.md
 - ../issues/closed/bugs/2026-08-04-chat-history-parse-transient-oom.md:22 (mention) — (`docs/implemented-plans/chat-history-oom-mobile-lock.md`, `ac0d7d65`) is
-- ../issues/code-quality/2026-08-05-strip-multi-mb-payloads-from-transcript-entries.md:38 (mention) — - The bounded-retention design: `callback-box/docs/implemented-plans/chat-history-oom-mobile-lock.md`.
+- ../issues/closed/code-quality/2026-08-05-strip-multi-mb-payloads-from-transcript-entries.md:88 (mention) — - The bounded-retention design: `callback-box/docs/implemented-plans/chat-history-oom-mobile-lock.md`.
 
 #### docs/implemented-plans/chat-review.md
 
@@ -2667,7 +2670,7 @@ References:
 Title: "Chat streaming/finalize unification: one stably-keyed assistant turn" | 385 lines
 
 Referenced by:
-- src/frontend/src/components/chat/CLAUDE.md:69 (mention) — (`docs/implemented-plans/chat-stream-finalize-unify.md`). `liveTurnId` is held
+- src/frontend/src/components/chat/CLAUDE.md:99 (mention) — (`docs/implemented-plans/chat-stream-finalize-unify.md`). `liveTurnId` is held
 
 References:
 - → frontend.md (mention)
@@ -3079,7 +3082,7 @@ No references in or out.
 Title: "iOS audio retranscription" | 170 lines
 
 Referenced by:
-- docs/mobile-contract.md:568 (mention) — `docs/plans/ios-audio-retranscription.md`.
+- docs/mobile-contract.md:594 (mention) — `docs/plans/ios-audio-retranscription.md`.
 - ../issues/closed/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md:6 (frontmatter) — design: ../../../callback-box/docs/implemented-plans/ios-audio-retranscription.md
 - ../issues/closed/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md:104 (link) — [iOS audio retranscription](../../../callback-box/docs/implemented-plans/ios-audio-retranscription.md).
 
@@ -3275,7 +3278,7 @@ References:
 Title: "Mobile device token: replace `?mobileToken=` with a box-scoped session cookie" | 510 lines
 
 Referenced by:
-- docs/mobile-contract.md:1133 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
+- docs/mobile-contract.md:1159 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
 - ../issues/closed/bugs/2026-07-17-mobile-token-in-url-query.md:11 (mention) — `../../../callback-box/docs/implemented-plans/mobile-token-handshake.md`. The query-param carrier is gone: the
 - ../issues/closed/code-quality/2026-07-17-mobile-auth-parser-plumbing-cleanups.md:13 (mention) — `../../../callback-box/docs/implemented-plans/mobile-token-handshake.md`; the single resolver every mobile
 - ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:40 (mention) — The mobile-token work (`docs/implemented-plans/mobile-token-handshake.md`) ran into this and deliberately
@@ -3860,7 +3863,7 @@ Referenced by:
 - docs/questions.md:254 (mention) — (`docs/implemented-plans/top-nav-ia.md`): the app bar no longer carries a
 - user-stories/catalog/2026-08-21.md:9070 (mention) — - **Nav bar with live pending counts** — The pending-questions badge was deliberately retired, so the story describes a 
 - ../issues/bugs/2026-08-23-agent-guide-example-puts-landmarks-in-a-sidebar.md:39 (link) — [top-nav-ia](../../callback-box/docs/implemented-plans/top-nav-ia.md) — which
-- ../issues/bugs/2026-08-23-no-consistent-way-back-to-chat.md:22 (mention) — That is a reasonable IA decision (`docs/plans/top-nav-ia.md` Track C), but it
+- ../issues/bugs/2026-08-23-no-consistent-way-back-to-chat.md:32 (mention) — That is a reasonable IA decision (`docs/plans/top-nav-ia.md` Track C), but it
 - ../issues/code-quality/2026-08-02-card-vs-views-route-consolidation.md:6 (mention) — discovered-in: worktree-top-nav-ia — unified app bar (docs/implemented-plans/top-nav-ia.md)
 - ../issues/features/2026-07-20-first-run-experience.md:12 (mention) — **Update 2026-08-02** (`callback-box/docs/implemented-plans/top-nav-ia.md`): new users
 
@@ -4052,7 +4055,7 @@ References:
 Title: "The agent sees the interface and points at controls in it" | 1306 lines
 
 Referenced by:
-- docs/mobile-contract.md:452 (mention) — UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
+- docs/mobile-contract.md:478 (mention) — UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
 - ../issues/bugs/2026-08-23-composer-states-gallery-duplicates-cb-ids.md:10 (mention) — (`docs/plans/agent-points-at-ui.md`, Track 4), the gallery puts ~20 copies of
 - ../issues/bugs/2026-08-23-share-extension-sends-classify-as-web-desktop.md:22 (link) — [agent-points-at-ui](../../callback-box/docs/plans/agent-points-at-ui.md).
 - ../issues/closed/features/2026-08-14-agent-can-see-and-point-at-the-interface.md:5 (frontmatter) — design: ../../../callback-box/docs/plans/agent-points-at-ui.md
@@ -4196,7 +4199,7 @@ Referenced by:
 Title: "Chat photo batch upload" | 494 lines
 
 Referenced by:
-- docs/mobile-contract.md:787 (mention) — (`docs/plans/chat-photo-batch-upload.md`, the Track 3 that
+- docs/mobile-contract.md:813 (mention) — (`docs/plans/chat-photo-batch-upload.md`, the Track 3 that
 - ../issues/bugs/2026-07-30-capture-teardown-race.md:12 (link) — [chat-photo-batch-upload](../../callback-box/docs/plans/chat-photo-batch-upload.md)):
 - ../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md:8 (frontmatter) — design: ../../../callback-box/docs/plans/chat-photo-batch-upload.md
 - ../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md:23 (link) — [chat-photo-batch-upload](../../../callback-box/docs/plans/chat-photo-batch-upload.md)).
@@ -4212,6 +4215,20 @@ References:
 - → docs/mobile-contract.md (link)
 - → ../issues/features/2026-03-05-share-to-box-images-files.md (link)
 - → docs/mobile-parity.md (mention)
+
+#### docs/plans/chat-scroll-model.md
+
+Title: "Chat scroll: write on user actions only" | 211 lines
+
+Referenced by:
+- docs/chat-scroll-testing.md:18 (mention) — never scrolls** (`docs/plans/chat-scroll-model.md`; the nested
+- src/frontend/src/components/chat/CLAUDE.md:15 (mention) — (`docs/plans/chat-scroll-model.md`). The writes, exhaustively:
+- ../issues/bugs/2026-08-13-chat-cannot-stay-at-bottom-while-growing.md:65 (mention) — (`callback-box/docs/plans/chat-scroll-model.md`; controller
+
+References:
+- → ../issues/bugs/2026-08-13-chat-cannot-stay-at-bottom-while-growing.md (frontmatter)
+- → docs/chat-scroll-testing.md (mention)
+- → CLAUDE.md (mention)
 
 #### docs/plans/chat-session-delete.md
 
@@ -4583,7 +4600,7 @@ References:
 Title: "iOS Companion — follow-up code review (2026-07-17)" | 155 lines
 
 Referenced by:
-- docs/mobile-contract.md:1127 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
+- docs/mobile-contract.md:1153 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
 - docs/plans/android-companion-app.md:38 (mention) — `docs/plans/ios-companion-review-2026-07-17.md`. This plan ports the iOS
 - docs/plans/ios-companion-review-2026-07-09.md:9 (mention) — **Superseded:** follow-up review at `ios-companion-review-2026-07-17.md` (2026-07-17) — most iOS findings closed by the 
 - ../issues/bugs/2026-07-17-ios-pairing-flow-robustness.md:6 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
@@ -5319,13 +5336,14 @@ No references in or out.
 
 #### src/frontend/src/components/chat/CLAUDE.md
 
-Title: "Chat UI" | 126 lines
+Title: "Chat UI" | 156 lines
 
 Referenced by:
 - docs/implemented-plans/chat-stream-finalize-unify.md:344 (mention) — `CLAUDE.md` (`src/frontend/src/components/chat/CLAUDE.md`, shipped with the scroll
 
 References:
 - → docs/implemented-plans/chat-scroll-redesign.md (mention)
+- → docs/plans/chat-scroll-model.md (mention)
 - → docs/chat-scroll-testing.md (mention)
 - → docs/implemented-plans/chat-stream-finalize-unify.md (mention)
 
@@ -5485,7 +5503,7 @@ References:
 
 #### user-stories/journeys/after-action.md
 
-Title: "After-action: turning a walk into findings" | 123 lines
+Title: "After-action: turning a walk into findings" | 167 lines
 
 Referenced by:
 - user-stories/journeys/README.md:70 (link) — Then read the walk and write it up — **[after-action.md](after-action.md)** is the
@@ -5529,13 +5547,15 @@ References:
 
 #### user-stories/journeys/B-inventory/reports/2026-08-24.md
 
-Title: "B-inventory, 2026-08-24" | 95 lines
+Title: "B-inventory, 2026-08-24" | 133 lines
 
 Referenced by:
-- user-stories/journeys/after-action.md:98 (mention) — One file, `<journey>/reports/<date>.md` — `B-inventory/reports/2026-08-24.md` —
+- user-stories/journeys/after-action.md:132 (mention) — One file, `<journey>/reports/<date>.md` — `B-inventory/reports/2026-08-24.md` —
 
 References:
 - → ../issues/bugs/2026-08-24-agent-records-counts-in-prose-though-measures-exists.md (link)
-- → ../issues/bugs/2026-08-24-reloaded-conversation-hides-the-photos-you-sent.md (link)
+- → ../issues/closed/bugs/2026-08-24-reloaded-conversation-hides-the-photos-you-sent.md (link)
 - → ../issues/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md (link)
+- → ../issues/closed/bugs/2026-08-25-one-401-ejects-the-whole-app-to-a-login-form.md (link)
+- → ../issues/features/2026-08-19-collection-views-are-badly-defined.md (link)
 
