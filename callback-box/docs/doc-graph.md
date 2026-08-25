@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-08-25T02:34:01Z
-Total documents: 299
+Generated: 2026-08-25T06:12:22Z
+Total documents: 304
 
 ## Issues
 
@@ -40,16 +40,21 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/schema-validate-hook.md** — "Schema `validate` hook — co-locate non-Zod card validation with its schema" (379 lines)
 - **docs/implemented-plans/view-render-testing.md** — "Plan: testing agent-authored views" (550 lines)
 - **docs/plans/chat-session-delete.review.md** — "Plan Engineering Review — Chat Session Delete" (154 lines)
+- **docs/plans/google-owner-member-credentials.md** — "Google owners can administer local member credentials" (310 lines)
 - **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines)
+- **docs/plans/operator-member-password-reset.md** — "Operator-driven member password reset" (711 lines)
 - **docs/plans/public-site-orientation.md** — "Public site — orientation & re-entry map" (93 lines)
 - **docs/plans/scan-guide-card.review.md** — "Plan Engineering Review — scan-guide-card (codex cross-model, 2026-08-01)" (105 lines)
 - **docs/plans/scan-vision-claude.review.md** — "Plan Engineering Review — scan-vision-claude" (140 lines)
 - **field-tests/onboarding-first-days/README.md** — "onboarding-first-days" (60 lines)
 - **field-tests/onboarding-first-days/persona.md** — "Priya Marlowe" (22 lines)
 - **field-tests/spine/persona.md** — "Priya Marlowe" (22 lines)
+- **src/frontend/dist/earcons/SOURCES.md** — "Earcon sources & attribution" (13 lines)
 - **src/frontend/public/earcons/SOURCES.md** — "Earcon sources & attribution" (13 lines)
 - **test/manual/README.md** — "Manual tests" (44 lines)
-- **user-stories/journeys/README.md** — "Journeys" (90 lines)
+- **user-stories/journeys/B-inventory/reports/2026-08-23-2.md** — "B-inventory, 2026-08-23 (run 2)" (54 lines)
+- **user-stories/journeys/B-inventory/reports/2026-08-23-6.md** — "B-inventory, 2026-08-23 (run 6)" (49 lines)
+- **user-stories/journeys/README.md** — "Journeys" (103 lines)
 
 ### Broken References
 
@@ -198,12 +203,12 @@ Referenced by:
 - ../.claude/skills/launch-worktree-session/SKILL.md:193 (mention) — AGENTS.md mirrors rather than CLAUDE.md, and its cross-model review command
 - ../CLAUDE.md:5 (mention) — - **callback-box/** — Main system. See its CLAUDE.md for details. (Card primitives that used to live in the separate `ca
 - ../bin/CLAUDE.md:5 (mention) — always-relevant summary lives in the root CLAUDE.md; this file is the mechanism.
-- ../issues/CLAUDE.md:127 (mention) — said that. This restates the broader rule in `callback-box/CLAUDE.md` ("Keep
+- ../issues/CLAUDE.md:136 (mention) — said that. This restates the broader rule in `callback-box/CLAUDE.md` ("Keep
 - ../issues/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md:50 (mention) — the user (the agent-guide / box CLAUDE.md owns that). The worst single item is
 - ../issues/bugs/2026-08-08-markdown-not-rendering-in-agent-output.md:16 (mention) — > bracket form is the system's own CLAUDE.md-downgrade serialization of
 - ../issues/closed/bugs/2026-07-15-box-packageify-doubled-subtrees.md:12 (mention) — doubling held only empty directory structure, `CLAUDE.md` files byte-identical to
 - ../issues/closed/bugs/2026-08-08-todo-view-dumps-noncard-file-errors.md:23 (mention) — non-card file in the box — `briefing.md`, `CLAUDE.md`, `config/cb-validate.ignore`,
-- ../issues/closed/bugs/2026-08-21-generated-agent-guide-sends-box-agents-to-config-schema.md:15 (mention) — **Supporting stale references in the same family.** `cb init` still creates the decoy directory: `config/schemas` is a B
+- ../issues/closed/bugs/2026-08-21-generated-agent-guide-sends-box-agents-to-config-schema.md:14 (mention) — **Supporting stale references in the same family.** `cb init` still creates the decoy directory: `config/schemas` is a B
 - ../issues/closed/bugs/2026-08-22-agents-md-missing-from-claude-md-special-cases.md:2 (mention) — title: "`AGENTS.md` is missing from the places that special-case `CLAUDE.md` — refresh-maps fails forever on every codex
 - ../issues/closed/bugs/2026-08-23-procedure-model-pins-are-claude-only.md:145 (mention) — [AGENTS.md missing from the CLAUDE.md special-cases](2026-08-22-agents-md-missing-from-claude-md-special-cases.md),
 - ../issues/closed/code-quality/2026-07-04-fake-agent-single-export-split.md:15 (mention) — not a global weakening, per the CLAUDE.md lint policy). The blast radius was 6
@@ -222,6 +227,7 @@ Referenced by:
 - ../issues/code-quality/2026-08-08-audit-cb-subcommand-surface.md:62 (mention) — - **Box guidance references command names.** Box `CLAUDE.md`s, schema
 - ../issues/code-quality/2026-08-08-extract-cb-serve-from-the-box-cli.md:54 (mention) — `callback-box/CLAUDE.md`.
 - ../issues/code-quality/2026-08-17-cb-init-prints-a-screenful-on-every-run.md:33 (mention) — (root `CLAUDE.md`, "Treat noisy command output as a bug").
+- ../issues/code-quality/2026-08-25-mjs-files-should-be-typescript.md:14 (mention) — The standing rule (root `CLAUDE.md`, and the boxholder's repeated preference) is
 - ../issues/docs-and-chores/2026-05-21-fill-out-the-glossary.md:20 (mention) — Method: do one sweep through `CLAUDE.md`, `FRONTEND.md`, the schemas, and `docs/` collecting terms-of-art, then write en
 - ../issues/docs-and-chores/2026-05-26-dev-scripts-into-bin.md:14 (mention) — CLAUDE.md files is still untouched and stays open here.
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:8 (mention) — Still-open items from the 2026-04-28 CLAUDE.md self-audit
@@ -440,6 +446,7 @@ Referenced by:
 - ../.claude/skills/cb-plan/SKILL.md:129 (mention) — - `callback-box/code-style.md` — the checkable mechanical rules (no
 - ../CLAUDE.md:64 (mention) — **NEVER disable or weaken a lint rule to make code pass. Ask first.** Every rule in `@ianbicking/personal-vibe-check` is
 - ../issues/closed/bugs/2026-07-21-file-lock-empty-window-race.md:92 (mention) — standing `code-style.md`/CLAUDE.md decision ("don't roll your own with
+- ../issues/closed/code-quality/2026-07-04-knip-exports-enforcement.md:35 (mention) — per the no-barrels decision. `code-style.md` now states that a missing `export`
 - ../issues/closed/code-quality/2026-07-10-tour-lib-lint-debt.md:18 (mention) — helpers. See `code-style.md`'s "Type Checking and Linting" section for the
 - ../issues/closed/code-quality/2026-07-12-frontend-local-helper-consolidation-into-shared.md:38 (mention) — code-style.md) has a frontend twin. `isRecord` is pure and dependency-free, so
 - ../issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md:103 (mention) — code-style.md's Exhaustiveness section, not literal `switch` statements:
@@ -769,7 +776,7 @@ Referenced by:
 - docs/plans/source-available-release.md:66 (mention) — and documented at `callback-box/docs/box-layout.md:194`. No credential values
 - user-stories/catalog/2026-06-26.md:4938 (mention) — The user story is accurately implemented across both claimed files. `callback-box/src/cli/commands/init.ts` provides the
 - user-stories/catalog/2026-08-21.md:7698 (mention) — Files: `callback-box/src/lib/box-shape.ts`, `callback-box/docs/box-layout.md`
-- ../issues/closed/bugs/2026-08-21-generated-agent-guide-sends-box-agents-to-config-schema.md:15 (mention) — **Supporting stale references in the same family.** `cb init` still creates the decoy directory: `config/schemas` is a B
+- ../issues/closed/bugs/2026-08-21-generated-agent-guide-sends-box-agents-to-config-schema.md:14 (mention) — **Supporting stale references in the same family.** `cb init` still creates the decoy directory: `config/schemas` is a B
 - ../issues/closed/bugs/2026-08-22-agents-md-missing-from-claude-md-special-cases.md:44 (mention) — fields are already in `docs/box-layout.md`, so a per-box MAP bullet would only
 - ../issues/closed/docs-and-chores/2026-08-03-one-temp-file-convention-for-agents.md:22 (mention) — the dev-repo `docs/box-layout.md:82` ("scratch space (not committed)"). **Box
 - ../issues/code-quality/2026-08-17-package-root-vs-content-dir-keeps-causing-bugs.md:13 (link) — an agent sees. See [`box-layout.md`](../../callback-box/docs/box-layout.md).
@@ -1014,6 +1021,7 @@ Referenced by:
 - ../issues/closed/features/2026-07-20-tailscale-expose-and-protect.md:80 (mention) — gotcha `docs/developer-install.md` has to warn about — a real argument for a
 - ../issues/closed/features/2026-07-28-excel-reader-standard-install.md:12 (mention) — (`developer-install.md`, `docker-install.md`), and added to the agent's
 - ../issues/features/2026-07-19-installation-remaining-work.md:16 (mention) — - From-source developer install: `callback-box/docs/developer-install.md`,
+- ../issues/features/2026-08-25-shellcheck-shell-in-box-cards.md:38 (mention) — developer install lists (`docs/developer-install.md:32,36`) — today only the
 
 References:
 - → docs/docker-install.md (link)
@@ -1403,9 +1411,9 @@ Referenced by:
 - user-stories/catalog/2026-08-21.md:8819 (mention) — Files: `callback-box/src/services/docling-version.ts`, `bin/check-docling-update.ts`, `callback-box/docs/maintenance.md`
 - ../.claude/skills/security-report/SKILL.md:136 (mention) — listed in `callback-box/docs/maintenance.md` alongside knowledge-audits
 - ../issues/closed/code-quality/2026-05-09-claude-code-sdk-binary-currency.md:14 (mention) — semantics. Documented in `callback-box/docs/maintenance.md`.
+- ../issues/closed/code-quality/2026-07-04-knip-exports-enforcement.md:11 (mention) — (`2026-08-24-run-periodic-sweeps-weekly.md`), and `docs/maintenance.md` says
 - ../issues/closed/docs-and-chores/2026-08-08-maintenance-cadence-framework.md:12 (mention) — **Closed:** Resolved by the scheduled-workstreams plan: one `schedules/` directory, `bin/schedules` CLI, and a single la
 - ../issues/closed/features/2026-08-12-monitor-message-queue.md:175 (mention) — - Cadence declared in the registry (this read) vs in `docs/maintenance.md`
-- ../issues/code-quality/2026-07-04-knip-exports-enforcement.md:13 (mention) — (`2026-08-24-run-periodic-sweeps-weekly.md`), and `docs/maintenance.md` says
 - ../issues/code-quality/2026-08-24-run-periodic-sweeps-weekly.md:13 (mention) — That applies to the other entries in `callback-box/docs/maintenance.md` with
 - ../issues/docs-and-chores/2026-03-16-review-all-prompts.md:17 (mention) — `~/src/boxes/test1`; `docs/maintenance.md` has the details). Every fragment has
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:10 (mention) — folded into `code-style.md`, `frontend.md`, `docs/maintenance.md`, and
@@ -1455,6 +1463,7 @@ Referenced by:
 - ../issues/decisions/2026-07-20-release-discipline-and-update-story.md:25 (mention) — (`docs/migrations.md` is currently a maintainer runbook, not an
 - ../issues/docs-and-chores/2026-07-19-questions-end-to-end-followups.md:15 (mention) — `~/src/boxes/test1`** per `callback-box/docs/migrations.md`
 - ../issues/exploration/2026-08-19-plugins-and-the-medium-content-line.md:94 (mention) — definitions come from. `docs/migrations.md` step 7 applies: whatever moves,
+- ../issues/features/2026-08-25-shellcheck-shell-in-box-cards.md:21 (mention) — gate for agent-applied migrations, per `docs/migrations.md`), and any `runs:`
 
 References:
 - → docs/implemented-plans/questions-end-to-end.md (mention)
@@ -3423,7 +3432,7 @@ Title: "refresh-maps convergence" | 384 lines
 Referenced by:
 - docs/implemented-plans/refresh-maps-convergence.review.md:12 (link) — Adversarial review of [`refresh-maps-convergence.md`](refresh-maps-convergence.md),
 - ../issues/closed/bugs/2026-07-15-refresh-maps-wedges-on-unresolvable-dir.md:83 (link) — [`callback-box/docs/plans/refresh-maps-convergence.md`](../../../callback-box/docs/implemented-plans/refresh-maps-conver
-- ../issues/code-quality/2026-07-19-refresh-maps-max-turns-throughput.md:17 (link) — [`docs/plans/refresh-maps-convergence.md`](../../callback-box/docs/implemented-plans/refresh-maps-convergence.md)).
+- ../issues/closed/code-quality/2026-07-19-refresh-maps-max-turns-throughput.md:23 (link) — [`docs/plans/refresh-maps-convergence.md`](../../../callback-box/docs/implemented-plans/refresh-maps-convergence.md)).
 
 References:
 - → docs/engineering-principles.md (link)
@@ -3654,7 +3663,7 @@ Referenced by:
 - ../bin/CLAUDE.md:605 (mention) — `callback-box/docs/plans/scheduled-workstreams.md`. Mechanism, in the spirit of
 - ../issues/closed/docs-and-chores/2026-08-08-maintenance-cadence-framework.md:5 (frontmatter) — design: ../../../callback-box/docs/implemented-plans/scheduled-workstreams.md
 - ../issues/closed/features/2026-08-12-monitor-message-queue.md:5 (frontmatter) — design: ../../../callback-box/docs/implemented-plans/scheduled-workstreams.md
-- ../issues/features/2026-08-25-sdk-update-in-a-worktree.md:16 (mention) — The problems, from the review of `scheduled-workstreams.md`:
+- ../issues/closed/features/2026-08-25-sdk-update-in-a-worktree.md:41 (mention) — The problems, from the review of `scheduled-workstreams.md`:
 
 References:
 - → ../issues/closed/features/2026-08-12-monitor-message-queue.md (frontmatter)
@@ -4455,12 +4464,9 @@ References:
 - → docs/plans/workstream-exhibits.md (mention)
 - → docs/knowledge-audits.md (mention)
 
-#### docs/plans/google-owner-member-credentials.md
+#### docs/plans/google-owner-member-credentials.md **[ORPHAN]**
 
-Title: "Google owners can administer local member credentials" | 309 lines
-
-Referenced by:
-- ../issues/code-quality/2026-07-04-knip-exports-enforcement.md:25 (mention) — no caller, but `docs/plans/google-owner-member-credentials.md` and
+Title: "Google owners can administer local member credentials" | 310 lines
 
 References:
 - → ../issues/closed/bugs/2026-08-08-google-owner-invites-require-local-owner.md (link)
@@ -4666,12 +4672,9 @@ References:
 - → frontend.md (mention)
 - → docs/activities-design.md (mention)
 
-#### docs/plans/operator-member-password-reset.md
+#### docs/plans/operator-member-password-reset.md **[ORPHAN]**
 
 Title: "Operator-driven member password reset" | 711 lines
-
-Referenced by:
-- ../issues/code-quality/2026-07-04-knip-exports-enforcement.md:26 (mention) — `docs/plans/operator-member-password-reset.md` both describe it as
 
 References:
 - → docs/engineering-principles.md (mention)
@@ -4772,7 +4775,7 @@ Referenced by:
 - docs/implemented-plans/remove-cb-render.md:310 (mention) — emitter — `docs/plans/publish-pages.md` contemplates one) re-arms it. Comments
 - docs/implemented-plans/remove-cb-render.review.md:29 (mention) — 7. **Medium — the prose done-condition cannot pass as written.** The plan updates `publish-pages.md` but misses live ref
 - user-stories/catalog/2026-08-21.md:6223 (mention) — **Flag review** (real-gap) — The receiving half is fully built and live, and the producing half does not exist, so the c
-- ../issues/bugs/2026-08-21-published-pages-can-never-carry-a-submit-form-nothing-s.md:10 (mention) — The publish "drop box" (Track F of `callback-box/docs/plans/publish-pages.md`) is complete on the receiving side but has
+- ../issues/bugs/2026-08-21-published-pages-can-never-carry-a-submit-form-nothing-s.md:9 (mention) — The publish "drop box" (Track F of `callback-box/docs/plans/publish-pages.md`) is complete on the receiving side but has
 - ../issues/features/2026-07-19-publish-pages-resume.md:6 (frontmatter) — design: ../../callback-box/docs/plans/publish-pages.md
 - ../issues/features/2026-07-19-publish-pages-resume.md:14 (link) — [publish-pages.md](../../callback-box/docs/plans/publish-pages.md).
 - ../issues/features/2026-07-27-echo-show-display-dashboard-view.md:65 (mention) — `docs/plans/publish-pages.md`). The box **renders the dashboard and publishes a
@@ -5296,6 +5299,14 @@ References:
 - → docs/content-security-policy.md (mention)
 - → docs/scheduled/csp-violation-review.md (mention)
 
+### src/frontend/dist/earcons/
+
+#### src/frontend/dist/earcons/SOURCES.md **[ORPHAN]**
+
+Title: "Earcon sources & attribution" | 13 lines
+
+No references in or out.
+
 ### src/frontend/public/earcons/
 
 #### src/frontend/public/earcons/SOURCES.md **[ORPHAN]**
@@ -5376,18 +5387,18 @@ Referenced by:
 
 #### user-stories/README.md
 
-Title: "User stories" | 258 lines
+Title: "User stories" | 271 lines
 
 Referenced by:
 - user-stories/README.md:16 (mention) — README.md          this file
 - user-stories/catalog/2026-08-21.md:7 (link) — method are in [the pipeline README](../README.md). The underlying
-- ../issues/bugs/2026-08-21-drive-folder-mounts-cannot-be-configured-from-anywhere.md:60 (link) — [the pipeline README](../../callback-box/user-stories/README.md).
-- ../issues/bugs/2026-08-21-history-shows-no-trigger-for-procedure-and-trick-commit.md:48 (link) — [the pipeline README](../../callback-box/user-stories/README.md).
-- ../issues/bugs/2026-08-21-published-pages-can-never-carry-a-submit-form-nothing-s.md:59 (link) — [the pipeline README](../../callback-box/user-stories/README.md).
-- ../issues/bugs/2026-08-21-rotated-image-cards-overflow-and-misplace-bbox.md:72 (link) — [the pipeline README](../../callback-box/user-stories/README.md).
-- ../issues/closed/bugs/2026-08-21-capture-session-cards-never-record-the-transcription-fa.md:44 (link) — [the pipeline README](../../../callback-box/user-stories/README.md).
-- ../issues/closed/bugs/2026-08-21-failed-in-box-image-shows-the-browser-glyph.md:57 (link) — [the pipeline README](../../../callback-box/user-stories/README.md).
-- ../issues/closed/bugs/2026-08-21-generated-agent-guide-sends-box-agents-to-config-schema.md:43 (link) — [the pipeline README](../../../callback-box/user-stories/README.md).
+- ../issues/bugs/2026-08-21-drive-folder-mounts-cannot-be-configured-from-anywhere.md:59 (link) — [the pipeline README](../../callback-box/user-stories/README.md).
+- ../issues/bugs/2026-08-21-history-shows-no-trigger-for-procedure-and-trick-commit.md:47 (link) — [the pipeline README](../../callback-box/user-stories/README.md).
+- ../issues/bugs/2026-08-21-published-pages-can-never-carry-a-submit-form-nothing-s.md:58 (link) — [the pipeline README](../../callback-box/user-stories/README.md).
+- ../issues/bugs/2026-08-21-rotated-image-cards-overflow-and-misplace-bbox.md:71 (link) — [the pipeline README](../../callback-box/user-stories/README.md).
+- ../issues/closed/bugs/2026-08-21-capture-session-cards-never-record-the-transcription-fa.md:43 (link) — [the pipeline README](../../../callback-box/user-stories/README.md).
+- ../issues/closed/bugs/2026-08-21-failed-in-box-image-shows-the-browser-glyph.md:56 (link) — [the pipeline README](../../../callback-box/user-stories/README.md).
+- ../issues/closed/bugs/2026-08-21-generated-agent-guide-sends-box-agents-to-config-schema.md:42 (link) — [the pipeline README](../../../callback-box/user-stories/README.md).
 
 References:
 - → user-stories/catalog/2026-08-21.md (link)
@@ -5406,7 +5417,7 @@ Referenced by:
 - docs/implemented-plans/user-story-audit-followups.md:9 (mention) — This plan triages the 95 `IAN:` comments left on `user-stories/catalog/2026-06-26.md` (the
 - docs/plans/invite-links-and-password-change.md:31 (mention) — `user-stories/catalog/2026-06-26.md` is corrected because the
 - docs/plans/source-available-release.md:179 (mention) — name), `user-stories/catalog/2026-06-26.md` (real email).
-- user-stories/README.md:23 (mention) — 2026-06-26.md    the superseded predecessor, kept for its item
+- user-stories/README.md:25 (mention) — 2026-06-26.md    the superseded predecessor, kept for its item
 
 References:
 - → user-stories/catalog/2026-08-21.md (link)
@@ -5438,16 +5449,16 @@ Referenced by:
 - user-stories/README.md:5 (link) — The current catalog is [catalog/2026-08-21.md](catalog/2026-08-21.md). It is produced by reading
 - user-stories/catalog/2026-06-26.md:4 (link) — > [2026-08-21.md](2026-08-21.md). This file describes the product as it
 - user-stories/journeys/README.md:4 (link) — there. The [capability catalog](../catalog/2026-08-21.md) next door answers "does the
-- ../issues/bugs/2026-08-21-drive-folder-mounts-cannot-be-configured-from-anywhere.md:40 (link) — This issue is why [`connectors/configure-which-gmail-calendar-and-drive-content`](../../callback-box/user-stories/catalo
-- ../issues/bugs/2026-08-21-history-shows-no-trigger-for-procedure-and-trick-commit.md:28 (link) — This issue is why [`browse/see-which-changes-the-box-made-on-its-own-and`](../../callback-box/user-stories/catalog/2026-
-- ../issues/bugs/2026-08-21-published-pages-can-never-carry-a-submit-form-nothing-s.md:39 (link) — This issue is why [`publish/collect-replies-from-a-published-page`](../../callback-box/user-stories/catalog/2026-08-21.m
-- ../issues/bugs/2026-08-21-rotated-image-cards-overflow-and-misplace-bbox.md:52 (link) — This issue is why [`browse/view-a-photo-card-with-its-analysis`](../../callback-box/user-stories/catalog/2026-08-21.md#f
-- ../issues/closed/bugs/2026-08-21-capture-session-cards-never-record-the-transcription-fa.md:24 (link) — This issue is why [`capture/a-capture-still-arrives-when-transcription-is-down`](../../../../callback-box/user-stories/c
-- ../issues/closed/bugs/2026-08-21-failed-in-box-image-shows-the-browser-glyph.md:37 (link) — This issue is why [`browse/images-still-show-when-the-source-blocks`](../../../callback-box/user-stories/catalog/2026-08
-- ../issues/closed/bugs/2026-08-21-generated-agent-guide-sends-box-agents-to-config-schema.md:23 (link) — This issue is why [`cards/define-box-local-card-types-that-hot-reload`](../../../callback-box/user-stories/catalog/2026-
-- ../issues/closed/bugs/2026-08-21-one-failing-calendar-aborts-the-whole-calendar-sync-ins.md:54 (link) — An independent adversarial source recheck marked [`connectors/calendar-sync-repairs-an-expired-sync-token-and`](../../..
-- ../issues/closed/bugs/2026-08-21-trashing-or-deleting-a-google-drive-card-does-not-stop.md:36 (link) — The story was narrowed from raw deletion to the supported trash-and-restore lifecycle and re-keyed as [`connectors/stop-
-- ../issues/docs-and-chores/2026-08-24-stories-frontmatter-field-undocumented.md:14 (mention) — pointing at slugs in `callback-box/user-stories/catalog/2026-08-21.md`.
+- ../issues/bugs/2026-08-21-drive-folder-mounts-cannot-be-configured-from-anywhere.md:39 (link) — This issue is why [`connectors/configure-which-gmail-calendar-and-drive-content`](../../callback-box/user-stories/catalo
+- ../issues/bugs/2026-08-21-history-shows-no-trigger-for-procedure-and-trick-commit.md:27 (link) — This issue is why [`browse/see-which-changes-the-box-made-on-its-own-and`](../../callback-box/user-stories/catalog/2026-
+- ../issues/bugs/2026-08-21-published-pages-can-never-carry-a-submit-form-nothing-s.md:38 (link) — This issue is why [`publish/collect-replies-from-a-published-page`](../../callback-box/user-stories/catalog/2026-08-21.m
+- ../issues/bugs/2026-08-21-rotated-image-cards-overflow-and-misplace-bbox.md:51 (link) — This issue is why [`browse/view-a-photo-card-with-its-analysis`](../../callback-box/user-stories/catalog/2026-08-21.md#f
+- ../issues/closed/bugs/2026-08-21-capture-session-cards-never-record-the-transcription-fa.md:23 (link) — This issue is why [`capture/a-capture-still-arrives-when-transcription-is-down`](../../../../callback-box/user-stories/c
+- ../issues/closed/bugs/2026-08-21-failed-in-box-image-shows-the-browser-glyph.md:36 (link) — This issue is why [`browse/images-still-show-when-the-source-blocks`](../../../callback-box/user-stories/catalog/2026-08
+- ../issues/closed/bugs/2026-08-21-generated-agent-guide-sends-box-agents-to-config-schema.md:22 (link) — This issue is why [`cards/define-box-local-card-types-that-hot-reload`](../../../callback-box/user-stories/catalog/2026-
+- ../issues/closed/bugs/2026-08-21-one-failing-calendar-aborts-the-whole-calendar-sync-ins.md:53 (link) — An independent adversarial source recheck marked [`connectors/calendar-sync-repairs-an-expired-sync-token-and`](../../..
+- ../issues/closed/bugs/2026-08-21-trashing-or-deleting-a-google-drive-card-does-not-stop.md:35 (link) — The story was narrowed from raw deletion to the supported trash-and-restore lifecycle and re-keyed as [`connectors/stop-
+- ../issues/closed/docs-and-chores/2026-08-24-stories-frontmatter-field-undocumented.md:17 (mention) — pointing at slugs in `callback-box/user-stories/catalog/2026-08-21.md`.
 
 References:
 - → user-stories/README.md (link)
@@ -5472,19 +5483,59 @@ References:
 
 ### user-stories/journeys/
 
+#### user-stories/journeys/after-action.md
+
+Title: "After-action: turning a walk into findings" | 123 lines
+
+Referenced by:
+- user-stories/journeys/README.md:70 (link) — Then read the walk and write it up — **[after-action.md](after-action.md)** is the
+
+References:
+- → user-stories/journeys/B-inventory/reports/2026-08-24.md (mention)
+
 #### user-stories/journeys/README.md **[ORPHAN]**
 
-Title: "Journeys" | 90 lines
+Title: "Journeys" | 103 lines
 
 References:
 - → user-stories/catalog/2026-08-21.md (link)
 - → docs/plans/user-story-journeys.md (link)
 - → user-stories/journeys/walker-prompt.md (mention)
+- → user-stories/journeys/after-action.md (link)
 
 #### user-stories/journeys/walker-prompt.md
 
-Title: "You are trying out an app" | 144 lines
+Title: "You are trying out an app" | 151 lines
 
 Referenced by:
-- user-stories/journeys/README.md:51 (mention) — places the assets, composes the prompt from `walker-prompt.md`, and snapshots the box
+- user-stories/journeys/README.md:53 (mention) — places the assets, composes the prompt from `walker-prompt.md`, and snapshots the box
+
+### user-stories/journeys/B-inventory/reports/
+
+#### user-stories/journeys/B-inventory/reports/2026-08-23-2.md **[ORPHAN]**
+
+Title: "B-inventory, 2026-08-23 (run 2)" | 54 lines
+
+References:
+- → ../issues/bugs/2026-08-23-webp-paste-rejected-though-the-app-emits-webp.md (link)
+- → ../issues/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md (link)
+
+#### user-stories/journeys/B-inventory/reports/2026-08-23-6.md **[ORPHAN]**
+
+Title: "B-inventory, 2026-08-23 (run 6)" | 49 lines
+
+References:
+- → ../issues/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md (link)
+
+#### user-stories/journeys/B-inventory/reports/2026-08-24.md
+
+Title: "B-inventory, 2026-08-24" | 95 lines
+
+Referenced by:
+- user-stories/journeys/after-action.md:98 (mention) — One file, `<journey>/reports/<date>.md` — `B-inventory/reports/2026-08-24.md` —
+
+References:
+- → ../issues/bugs/2026-08-24-agent-records-counts-in-prose-though-measures-exists.md (link)
+- → ../issues/bugs/2026-08-24-reloaded-conversation-hides-the-photos-you-sent.md (link)
+- → ../issues/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md (link)
 
