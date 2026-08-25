@@ -558,6 +558,52 @@ _also_ pass `--setting-sources user` so the project's hooks never load at all;
 the skill documents that as load-bearing. Two independent guards because the
 failure destroys work.
 
+## Schedules (`bin/schedules`)
+
+Recurring work: one directory per job under `schedules/`, one launchd tick, one
+alert store. The root CLAUDE.md has the contract; the `cb-authoring-schedules`
+skill is how to write one. Design:
+`callback-box/docs/plans/scheduled-workstreams.md`. Mechanism, in the spirit of
+the router protocol above:
+
+- **The store lives beside the main checkout**, never inside it:
+  `<parent>/schedule-runs/` (override `CALLBACK_SCHEDULES_ROOT`), the exhibits
+  and comments convention, with the same marker-file discipline — a directory
+  without `.schedule-runs` in it is refused rather than adopted. One store
+  behind every worktree, so a run's history does not evaporate with whichever
+  checkout happened to trigger it, and logs stay out of git (the boxholder
+  asked for that explicitly). Per schedule:
+  `<name>/state.json` (`lastRunAt`, `lastRunId`, `lastExit`, `lastOutcome`, and
+  a persistent session's id), `runs/<id>.{log,handoff.json,result.json,exit.json}`,
+  `alerts/<id>.json`, and a `lock/` directory (mkdir with the PID inside; a
+  dead PID is reclaimed and its unreported run accounted for).
+- **The heartbeat is the anti-silence primitive.** Every `tick` stamps the
+  store root's `state.json` (`lastTickAt`, `lastTickExit`) FIRST, before it
+  looks at any schedule. That is what makes "nothing has run for a week"
+  visible without any job reporting its own death — `bin/schedules list` prints
+  it, every `bin/workstreams list` row carries it, and `bin/doctor.ts` checks
+  both it and whether the plist is loaded. `tick` exits non-zero only when it
+  cannot write the store; a schedule that failed is already an alert, so the
+  launchd log stays meaningful.
+- **Due-ness is computed, never delegated to launchd.** One `StartInterval`
+  tick every 15 minutes plus a persisted `lastRunAt` — anacron's semantics —
+  because `StartCalendarInterval` misses jobs the machine slept through and
+  says nothing. Overdue is derived (`now - lastRunAt > cadence + grace`) and
+  never stored; a never-run schedule is *due*, not overdue.
+- **The alert store is the message channel.** `bin/schedules alert` writes a
+  record (workstream, title, message, optional Markdown details, priority
+  `important|normal|backlog|fyi`) and then delivers a macOS notification as one
+  best-effort delivery of it — the record is the truth, and acknowledged alerts
+  fade from the default views after 14 days without being deleted. `done` is
+  the "finished, nothing to say" marker: a run with a session and neither
+  record is a bailed run and raises an `important` alert of its own.
+- **The CLI is the only writer.** The workstreams app shells out to
+  `bin/schedules ack` rather than touching the store, the same way it invokes
+  `bin/workstreams` for lifecycle instead of reimplementing the guards. A `run`
+  script reaches the store only through `handoff`/`alert`/`done` — there is no
+  free-form handoff file — and every record is Zod-parsed at the boundary
+  (`bin/lib/schedules.ts`) and written atomically (temp name, rename).
+
 ## Headless agent sessions (`bin/lib/launch-headless.sh`)
 
 A scheduled run that has work starts its agent through the same lifecycle a
@@ -567,8 +613,9 @@ foreground, the briefing on **stdin** (never argv), output appended to the run
 log, killed at the schedule's `timeout`. `launch-headless.sh` is the ONE place
 those flags are assembled; source it (`launch-session.sh` does) or execute it to
 print the argv one element per line. Codex has no equivalent for `tools` /
-`allowedTools` / `disallowedTools` / `maxBudgetUsd`, so a codex schedule that
-declares any of them is refused rather than launched unconstrained, and its
+`allowedTools` / `disallowedTools` / `maxBudgetUsd` / `effort`, so a codex
+schedule that declares any of them is refused rather than launched
+unconstrained, and its
 `prompt.md` leads the briefing instead of riding `--append-system-prompt-file`.
 The session reports by writing a record (`bin/schedules alert` or `done`); one
 that ends without either is an `important` alert. Design:

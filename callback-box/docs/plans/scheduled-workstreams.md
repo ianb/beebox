@@ -228,6 +228,7 @@ timeout: 2h                                     # optional; default 2h; kills ru
 workstream:                                     # optional; absent = run-only schedule
   agent: claude                                 # claude | codex
   model: opus                                   # passed through to the agent CLI
+  effort: high                                  # optional; --effort (claude only)
   worktree: true                                # false = session runs in the main checkout
   session: fresh                                # fresh | persistent (one resumed session id)
   permissionMode: bypassPermissions             # required: bypassPermissions | dontAsk
@@ -238,6 +239,9 @@ workstream:                                     # optional; absent = run-only sc
 ```
 
 `permissionMode` has no default on purpose: the author states the sandbox.
+`effort` (`low|medium|high|xhigh|max`) is the reasoning dial the retired
+`bin/manual-tests-scheduled.sh` passed as `--effort high`; absent means the
+CLI's own default.
 The manual-tests triager's constraints
 (`bin/manual-tests-scheduled.sh:233-245`: `--no-session-persistence
 --disable-slash-commands --setting-sources user --permission-mode dontAsk
@@ -338,8 +342,13 @@ observable.
   instead of opening a Terminal tab. Refuse to start when
   `wt_other_agent_live` reports `live`, `launching`, **or `unknown`**
   (`bin/lib/worktree-teardown.sh:94-96` is fail-closed; the runner is too):
-  alert `normal` "work waiting, session already live".
-  Flags: `--brief --name "<name>" --model <model> --permission-mode <yaml>
+  alert `normal` "work waiting, session already live". Settled while
+  implementing: the guard applies to `worktree: true` schedules only. A
+  `worktree: false` schedule runs in the main checkout, which the boxholder
+  also works in — asking there would block the schedule for as long as any
+  session is open anywhere, and the main checkout is not a tree a scheduled
+  run can pull out from under anybody.
+  Flags: `--brief --name "<name>" --model <model> [--effort <e>] --permission-mode <yaml>
   --setting-sources user --disable-slash-commands
   --append-system-prompt-file schedules/<name>/prompt.md` plus the yaml
   tool constraints; `session: persistent` adds `--session-id`/`--resume`
@@ -348,13 +357,21 @@ observable.
   `--no-session-persistence`. `--append-system-prompt-file` is listed by
   `claude --help` (2026-08-24) but no script in the repo uses it yet;
   `install` guards on it the way manual-tests guards on `--allowedTools`
-  (`bin/manual-tests-scheduled.sh:148`).
+  (`bin/manual-tests-scheduled.sh:148`). Codex expresses none of
+  `tools`/`allowedTools`/`disallowedTools`/`maxBudgetUsd`/`effort`, so a codex
+  schedule declaring any of them is **refused**, never launched unconstrained;
+  its `prompt.md` leads the stdin briefing instead of riding
+  `--append-system-prompt-file`.
   The briefing is the handoff body followed by a fixed trailer that names
   the run id and the contract: *finish by running `bin/schedules alert
   --run <id> …` or `bin/schedules done --run <id>`*. The run id is in the
   text so a session that lost its env (a later `resume` tab) can still
   report.
-- After the session exits the runner writes `runs/<id>.exit.json`, then: if
+- Before the session starts, the runner writes `runs/<id>.exit.json` with
+  `sessionLaunched: true` — that flag is what tells a later tick reclaiming a
+  dead runner's lock whether a missing result record means a bailed session or
+  simply a run-only schedule. After the session exits it is rewritten with the
+  exits, then: if
   `check` exists, run it; non-zero → `important` alert. If
   `runs/<id>.result.json` is absent → `important` alert "session ended
   without reporting", log attached. If the runner itself died after
@@ -451,8 +468,13 @@ absent records with old launch state. If it survived, it would render as
   `resume` reads it the way it reads `removed.finalSha`. `archive` is refused for scheduled records
   ("set `enabled: false` in `schedule.yaml` instead").
 - `routingStateSchema` gains `scheduled`; `workstreamsCliRowSchema` gains
-  `schedule: { cadence, lastRunAt, lastOutcome, overdue, openAlerts } | null`
-  populated by `bin/workstreams list` from `bin/schedules list --json`.
+  `schedule: { cadence, enabled, lastRunAt, lastOutcome, nextDueAt, overdue,
+  openAlerts, heartbeat } | null`, populated by `bin/workstreams list` from one
+  `bin/schedules list --json` call per listing. `enabled` and `nextDueAt` are
+  there because "not overdue" has two meanings the browser must not conflate
+  (turned off vs. due next Tuesday), and `heartbeat` — the store-root
+  `lastTickAt` — rides every row so a scheduler that stopped ticking is visible
+  in the section it silenced.
 - `WorkstreamsPage.tsx`: `SECTION_ORDER` gains `"Scheduled"` after
   `"Launching"`; rows in it render the schedule fields and an overdue badge.
   Alert details render as Markdown; an "Acknowledge" button shells out to
@@ -483,7 +505,7 @@ commit time.
 **Direction.** Pre-commit runs `bin/schedules lint` when anything under
 `schedules/` is staged (the `dev-apps-typecheck` precedent in root
 `CLAUDE.md`). `tick` alerts `important` on an invalid schedule rather than
-skipping it silently.
+skipping it silently — from the loader, not the full lint (next paragraph).
 
 Settled while implementing (2026-08-24): **`tick` does not run the full lint.**
 It alerts on what the loader already answers — the schema, a missing or
@@ -507,8 +529,8 @@ executable/shebang/dry-run checks; the pre-commit hook; shellcheck wired.
 |---|---|---|---|
 | `sdk-update` | query npm for versions newer than the ledger's last entry; handoff lists them | claude/opus, `worktree: false` (pushes to main per prompt), `session: persistent` (today's contract, `update-agent-sdk-scheduled.sh:83-128`) | prompt.md = today's prompt, plus: file `issues/` items for releases the code must account for; end with `alert` |
 | `docling-update` | today's `bin/check-docling-update.ts`; handoff on a settled newer release | none — alert `normal` from `run` | currently piggybacks the SDK job (`update-agent-sdk-scheduled.sh:105-109`) |
-| `manual-tests` | run the suite; handoff on failures | claude/sonnet, worktree, `permissionMode: dontAsk`, the triager's `tools`/`allowedTools`/`disallowedTools`, `maxBudgetUsd: 2` | prompt.md = today's triager prompt; `check` = today's `validate_triage_result` (`bin/manual-tests-scheduled.sh:62`, append-only edits to open issues) followed by the commit the runner does today |
-| `knip-sweep` | `pnpm lint:knip`, diff against `$SCHEDULE_STATE_DIR/last-report.txt`, handoff with new findings | claude/opus, worktree (`knip-exports`) | needs knip's 33 lines of pre-existing noise fixed first (on the `knip-exports` branch) |
+| `manual-tests` | run the suite; handoff on failures | claude/sonnet, worktree, `permissionMode: dontAsk`, `effort: high`, the triager's `tools`/`allowedTools`/`disallowedTools`, `maxBudgetUsd: 2` | prompt.md = today's triager prompt; `check` = today's `validate_triage_result` (`bin/manual-tests-scheduled.sh:62`, append-only edits to open issues) followed by the commit the runner does today |
+| `knip-sweep` | `pnpm lint:knip`, diff against `$SCHEDULE_STATE_DIR/last-report.txt`, handoff with new findings | claude/opus, worktree | the noise fix landed on main separately; this branch is behind it, so the schedule's first real run records whatever knip says then as its baseline |
 
 Then delete `bin/update-agent-sdk-scheduled.sh`,
 `bin/manual-tests-scheduled.sh`, their plists (`bin/schedules install`
@@ -531,8 +553,11 @@ work, honor `SCHEDULE_DRY_RUN`, keep a comparison baseline in
 `prompt.md` (authority: push? file issues? edit code?; which outcomes map to
 which priority; must end with `alert` or `done`); when `check` is worth
 writing; `bin/schedules run <name> --dry-run` and `logs` for testing;
-`lint`; migrating an ad hoc job. Worked examples: `docling-update`
-(run-only) and `knip-sweep` (handoff) — each shows several aspects at once.
+`lint`; migrating an ad hoc job. Worked examples: all four enrolled
+schedules — `docling-update` (run-only, refuse-loudly), `knip-sweep` (handoff
+plus a baseline), `manual-tests` (a constrained sandbox plus a `check`), and
+`sdk-update` (authority, and the one persistent session) — each shows several
+aspects at once.
 
 **First implementation chunk.** The skill, written after Track F so the
 examples are real.
