@@ -303,12 +303,12 @@ STE-style prose does not want a template.
 | 8 | `deferred` status, `defer_until`, `due_at`, `estimated_minutes` | **reject** | `watch/` is trigger-based by design; `priority: backlog` |
 | 9 | Agent-settable priority P0–P4 | **reject** | "Agents do not set this field" — the developer's attention budget |
 | 10 | Claim leases / heartbeats / `hooked` | **reject** | git commit on `main` is the lock; #6 |
-| 16 | `pinned` status, `milestone` and `message` types | **reject** (milestone folds into #4) | §2.5 |
 | 11 | Semantic compaction of closed issues | **reject** | closed items are not agent memory here; git history is the archive |
 | 12 | Per-type required sections (`bd lint --validate`) | **reject** | STE body conventions are judgment, not template |
 | 13 | "File issues for all remaining work" at session end | **reject** | "Something you can just fix, fix — don't file it"; 329 open |
 | 14 | `bd prime`-style session-start reminder | **later** | monorepo session-start question, not an issues one; §2.8 |
 | 15 | Molecules, formulas, gates, wisps, swarm, federation | **out of scope** | orchestration; our equivalents are workstreams, `schedules/`, `launch-worktree-session` |
+| 16 | `pinned` status, `milestone` and `message` types | **reject** (milestone folds into #4) | §2.5 |
 
 ## 5. Filed
 
