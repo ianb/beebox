@@ -22,7 +22,7 @@ if (outcome.error) {
 }
 ```
 
-`runCalendarSync` (lines ~252-283) returns that `error` for every non-410 failure (`Calendar sync failed for ${calendarId}: ...`). Expired sync tokens (410) do delete the token, save state, and retry without the token. That retry does not remove stale local events absent from the full response; the separate [410 stale-event issue](../../bugs/2026-08-23-calendar-410-resync-does-not-remove-stale-events.md) tracks that adjacent gap. The isolation half described here does not exist.
+`runCalendarSync` (lines ~252-283) returns that `error` for every non-410 failure (`Calendar sync failed for ${calendarId}: ...`). Expired sync tokens (410) do delete the token, save state, and retry without the token. That retry does not remove stale local events absent from the full response; the separate [410 stale-event issue](2026-08-23-calendar-410-resync-does-not-remove-stale-events.md) tracks that adjacent gap. The isolation half described here does not exist.
 
 **User-visible consequence**
 

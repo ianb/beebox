@@ -1,5 +1,5 @@
 /**
- * Flag-gated trace for the chat scroll controller (`InteractiveChat-scroll.ts`),
+ * Flag-gated trace for the chat scroll controller (`chat-scroll.ts`),
  * for diagnosing feel bugs on devices where no devtools exist (iOS). Toggled by
  * typing `/scrolldebug` in the composer; while on, the controller records every
  * scroll event, reconcile cycle, and programmatic write into a bounded buffer
@@ -10,11 +10,11 @@
  *
  * Reading a trace: each flush line is `[scroll-trace] [...]` holding an array
  * of events `{ t: ms-since-page-load, k: kind, ...detail }`. Kinds come from
- * the controller: "scroll" (one per scroll event, with the decideScroll action),
+ * the controller: "scroll" (one per scroll event, with its geometry),
  * "reconcile" (one per ResizeObserver cycle, with the decideReconcile action
- * and measured anchor delta), "write" (every programmatic scrollTop write),
- * "intent" (wheel/touchmove/scroll-key input marks — gaps in these during
- * scroll events are momentum).
+ * and measured anchor delta), and "write" (every programmatic scrollTop write —
+ * rare under the write-on-user-action model, and each one should be explainable
+ * by a user action or a resize compensation).
  */
 
 const MAX_EVENTS = 600;
@@ -23,7 +23,11 @@ const MAX_PAYLOAD_CHARS = 3600;
 
 type TraceValue = string | number | boolean;
 
+/** Receives every trace event as it is recorded, regardless of the flag. */
+export type TraceSubscriber = (event: Record<string, TraceValue>) => void;
+
 let enabled = false;
+let subscriber: TraceSubscriber | null = null;
 let events: Record<string, TraceValue>[] = [];
 let dropped = 0;
 let timer: number | null = null;
@@ -63,8 +67,19 @@ export function scrollTraceToggle(): boolean {
   return enabled;
 }
 
+/**
+ * Watch every trace event live, independent of the `/scrolldebug` flag — the
+ * dev scroll harness (`pages/dev/components/ChatScrollHarness.tsx`) reads the
+ * controller's decisions this way instead of scraping console.warn. Pass null
+ * to detach. One subscriber at a time; this is a dev-tool seam, not a bus.
+ */
+export function scrollTraceSubscribe(fn: TraceSubscriber | null): void {
+  subscriber = fn;
+}
+
 /** Record one trace event; near-free no-op while the trace is off. */
 export function recordScrollTrace(k: string, detail: Record<string, TraceValue>): void {
+  if (subscriber) subscriber({ t: Math.round(performance.now()), k, ...detail });
   if (!enabled) return;
   if (events.length >= MAX_EVENTS) {
     // Between flushes the buffer is bounded; count what fell off instead of

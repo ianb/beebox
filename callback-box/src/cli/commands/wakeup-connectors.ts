@@ -28,6 +28,17 @@ import { runConnectorProcedureTriggers } from "../../core/commands/connector-pro
  * Returns the connector that was scoped to via `--connector X` (or
  * `undefined` for a full wakeup) so later steps can scope their inbox
  * scan and the reactor's `sourceFilter`.
+ *
+ * `activeConnector` is ALSO `undefined` when `--connector X` names a
+ * connector that doesn't exist (`toRun` is empty, so `toRun[0]` is
+ * `undefined`) — the same value a full wakeup produces. A caller that
+ * branched only on `activeConnector` couldn't tell "no flag, run
+ * everything" apart from "flag given, nothing matched, run nothing" and
+ * would wrongly fall back to a full run for the latter. `activeConnectorName`
+ * carries the raw requested name (unset only when no `--connector` flag was
+ * given at all) so later phases can be told to scope to that name — which,
+ * being unmatched, naturally scopes them to nothing — instead of falling
+ * back to unscoped. See wakeup.ts's steps 4b/5.
  */
 export async function runConnectors(
   boxRoot: string,
@@ -38,7 +49,11 @@ export async function runConnectors(
     /** Procedure boundary injection; production uses the normal command runner. */
     runProcedureTriggers?: ((procedures: ConnectorProcedureTrigger[]) => Promise<number>) | undefined;
   },
-): Promise<{ activeConnector: Connector | undefined; errorCount: number }> {
+): Promise<{
+  activeConnector: Connector | undefined;
+  activeConnectorName: string | undefined;
+  errorCount: number;
+}> {
   let connectors = options.connectors;
   if (connectors === undefined) {
     createGmailConnector(boxRoot);
@@ -51,7 +66,7 @@ export async function runConnectors(
 
   if (connectors.length === 0) {
     console.log("  No connectors configured.");
-    return { activeConnector: undefined, errorCount: 0 };
+    return { activeConnector: undefined, activeConnectorName: options.connector, errorCount: 0 };
   }
 
   // Filter by name if specified
@@ -59,17 +74,22 @@ export async function runConnectors(
     ? connectors.filter((c) => c.name === options.connector)
     : connectors;
 
-  if (toRun.length === 0) {
-    console.error(`Connector not found: ${options.connector}`);
-    process.exit(1);
-  }
-
-  const activeConnector = options.connector ? toRun[0] : undefined;
-
   let totalCreated = 0;
   let totalPushed = 0;
   let totalJobs = 0;
   let totalErrors = 0;
+
+  if (options.connector && toRun.length === 0) {
+    // An unknown `--connector` name is an orchestration error, but it must
+    // not abort the cycle: earlier phases (preprocessing, housekeeping) have
+    // already run, and later ones (stale-job cleanup, intake, reactor, push)
+    // still need to. Fold it into the same errorCount the caller turns into
+    // a nonzero exit code once the whole cycle finishes.
+    console.error(`Connector not found: ${options.connector}`);
+    totalErrors++;
+  }
+
+  const activeConnector = options.connector ? toRun[0] : undefined;
   const procedures: ConnectorProcedureTrigger[] = [];
 
   for (const connector of toRun) {
@@ -107,7 +127,7 @@ export async function runConnectors(
   parts.push(`${totalErrors} errors`);
   console.log(`\nTotal: ${parts.join(", ")}.`);
 
-  return { activeConnector, errorCount: totalErrors };
+  return { activeConnector, activeConnectorName: options.connector, errorCount: totalErrors };
 }
 
 /** The exit status applied after the rest of the wakeup cycle finishes. */

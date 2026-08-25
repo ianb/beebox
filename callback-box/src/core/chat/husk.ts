@@ -14,7 +14,7 @@ import { parse as parseYaml } from "yaml";
 import { splitCardContent } from "../../cards/index.js";
 import { createChatHuskTemplate } from "../../schemas/chat.js";
 import { loadHistoryEntries, resolveSessionLogPath } from "./session/history.js";
-import { stripChatAppTags } from "../../shared/chat-tags.js";
+import { extractSnippet } from "../../cli/lib/session-text.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 import { isRecord } from "../card-io.js";
 import { mapInBatchesSettled } from "../../lib/map-batched.js";
@@ -69,10 +69,15 @@ async function readSnippetTitle(boxRoot: string, sessionId: string): Promise<str
       .map((block) => block.text)
       .join("\n");
     if (raw === undefined) return null;
-    // The stored text starts with the `<chat-app …/>` snapshot prepend; a
-    // title sliced from the raw text would open with the tag, not the message.
-    const text = stripChatAppTags(raw).trim();
-    return text === "" ? null : text.slice(0, TITLE_MAX_LEN);
+    // `extractSnippet`, not a hand-rolled clean: it is the single cleaning step
+    // between a raw user message and a display label
+    // (`cli/lib/session-text.ts`), and it strips the `<typed>`/`<speech>` shell
+    // as well as the `<chat-app …/>` snapshot prepend. This used to strip only
+    // the latter, so a husk titled from an existing transcript was named
+    // `<typed user="…" user-email="…">…</typed>` — putting a sender's email
+    // address into a committed card title and into the session chip
+    // (`issues/bugs/2026-08-25-backfilled-husk-title-keeps-the-typed-wrapper.md`).
+    return extractSnippet(raw, TITLE_MAX_LEN);
   } catch (_e) {
     // No transcript yet (brand-new session) or unreadable — the husk starts
     // untitled; enrichment is editorial, not plumbing.

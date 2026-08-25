@@ -16,7 +16,6 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { HTTPError } from "ky";
 import {
   registerConnector,
   type Connector,
@@ -41,7 +40,6 @@ import {
   buildNarrativeCommitMessage,
   formatCalendarSyncFailure,
   type CalendarSyncFailure,
-  type CalendarSyncOperation,
   type SyncNote,
 } from "./google-calendar-notes.js";
 import {
@@ -49,40 +47,15 @@ import {
   calendarDir,
   loadCalendarState,
   saveCalendarState,
+  CalendarStateCorruptError,
   type CalendarState,
+  type IcsOptions,
   type SyncTokenSnapshot,
 } from "./google-calendar-state.js";
-import {
-  syncCalendar,
-  type SyncAccumulator,
-} from "./google-calendar-sync.js";
+import { runCalendarSync } from "./google-calendar-run.js";
 import { pushAndCleanOrphans, processLocalDeletes } from "./google-calendar-push.js";
+import { pushPendingLocalEdits } from "./google-calendar-local-push.js";
 import { assertNever } from "../lib/invariant.js";
-
-type CalendarSyncOutcome =
-  | { kind: "synced"; fullResync: boolean }
-  | { kind: "failed"; failure: CalendarSyncFailure };
-
-function emptySyncAccumulator(): SyncAccumulator {
-  return { created: [], updated: [], deleted: [], notes: [] };
-}
-
-function classifyCalendarFailure(
-  err: unknown,
-  opts: { calendarId: string; operation: CalendarSyncOperation },
-): CalendarSyncFailure {
-  if (err instanceof HTTPError) {
-    return {
-      ...opts,
-      errorKind: "http-error",
-      httpStatus: err.response.status,
-    };
-  }
-  return {
-    ...opts,
-    errorKind: err instanceof Error ? "error" : "non-error",
-  };
-}
 
 interface GoogleCalendarConnectorOptions {
   /** Injected calendar service (tests); the real one is built from box auth when omitted. */
@@ -160,7 +133,17 @@ class GoogleCalendarConnector implements Connector {
     }
 
     const config = await this.loadConfig();
-    const state = await this.loadState();
+    let state: CalendarState;
+    try {
+      state = await this.loadState();
+    } catch (err: unknown) {
+      // A present-but-unreadable event index would make every local .ics look
+      // locally-created; abort before the push pass can duplicate them all
+      // into Google. See CalendarStateCorruptError.
+      if (!(err instanceof CalendarStateCorruptError)) throw err;
+      console.error(err.message);
+      return { success: false, created: [], updated: [], error: err.message };
+    }
     // Per-sync delta baseline for the transient syncTokens (advanced by each
     // save — see SyncTokenSnapshot in google-calendar-state.ts).
     const snapshot: SyncTokenSnapshot = { tokens: { ...state.syncTokens } };
@@ -186,6 +169,13 @@ class GoogleCalendarConnector implements Connector {
       calendarRoles,
     });
 
+    const icsOptsFor = (calendarId: string): IcsOptions => {
+      const opts: IcsOptions = { calendarId };
+      if (calendarNames[calendarId]) opts.calendarName = calendarNames[calendarId];
+      if (calendarRoles[calendarId]) opts.calendarRole = calendarRoles[calendarId];
+      return opts;
+    };
+
     const calDir = this.calendarDir();
     await fs.mkdir(calDir, { recursive: true });
 
@@ -200,20 +190,25 @@ class GoogleCalendarConnector implements Connector {
     const created: string[] = [];
     const updated: string[] = [];
     const deleted: string[] = [];
+    // Paths a stranding moved — the vacated one and its new home under
+    // store/calendar/stranded/. Kept apart from created/updated/deleted so the
+    // path-scoped commit records the move without the sync claiming it as an
+    // event it created or updated.
+    const stranded: string[] = [];
     const allNotes: SyncNote[] = [];
     const failures: CalendarSyncFailure[] = [];
     let isFullResync = false;
+    // Union across calendars of the events this run's pull (or its post-410
+    // stale pass) already handled — what the pending-edit pass must not touch.
+    const reconciledEventIds = new Set<string>();
 
     for (const calendarId of calendars) {
       const existingSyncToken = state.syncTokens[calendarId];
-      const icsOpts: { calendarId: string; calendarName?: string; calendarRole?: string } = { calendarId };
-      if (calendarNames[calendarId]) icsOpts.calendarName = calendarNames[calendarId];
-      if (calendarRoles[calendarId]) icsOpts.calendarRole = calendarRoles[calendarId];
 
-      const outcome = await this.runCalendarSync({
-        calendar, calendarId, syncToken: existingSyncToken, icsOpts, state, calDir,
-        syncDaysBack, syncDaysForward, windowStart, windowEnd, snapshot,
-        acc: { created, updated, deleted, allNotes },
+      const outcome = await runCalendarSync({
+        boxRoot: this.boxRoot, calendar, calendarId, syncToken: existingSyncToken, icsOpts: icsOptsFor(calendarId),
+        state, calDir, syncDaysBack, syncDaysForward, windowStart, windowEnd, now, snapshot,
+        acc: { created, updated, deleted, stranded, allNotes, failures, reconciledEventIds },
       });
       switch (outcome.kind) {
         case "synced":
@@ -231,6 +226,19 @@ class GoogleCalendarConnector implements Connector {
     const deleteResult = await processLocalDeletes({ boxRoot: this.boxRoot, calendar, state, calDir });
     deleted.push(...deleteResult.deleted);
     allNotes.push(...deleteResult.notes);
+    failures.push(...deleteResult.failures);
+
+    // Push local edits the pull never reached: a tracked file whose content no
+    // longer matches the hash we recorded. Runs AFTER processLocalDeletes so a
+    // file marked X-CB-DELETE is gone (or still marked, and skipped) rather
+    // than patched.
+    const pendingResult = await pushPendingLocalEdits({
+      boxRoot: this.boxRoot, calendar, state, calDir, reconciledEventIds, icsOptsFor, now,
+    });
+    updated.push(...pendingResult.updated);
+    allNotes.push(...pendingResult.notes);
+    failures.push(...pendingResult.failures);
+    stranded.push(...pendingResult.stranded);
 
     // Push locally-created files to Google, clean unparseable orphans
     const defaultCalendarId = calendars[0] || "primary";
@@ -240,6 +248,7 @@ class GoogleCalendarConnector implements Connector {
     const pushed = orphanResult.pushed;
     deleted.push(...orphanResult.deleted);
     allNotes.push(...orphanResult.notes);
+    failures.push(...orphanResult.failures);
 
     await this.saveState(state, snapshot);
 
@@ -252,7 +261,7 @@ class GoogleCalendarConnector implements Connector {
     // cached calendar metadata (names/roles). stageAndCommitPaths' fast path
     // no-ops when none of these actually changed, replacing the old
     // getStatus-guarded second commit for a token-only refresh.
-    const changedEventFiles = [...created, ...updated, ...deleted, ...pushed];
+    const changedEventFiles = [...created, ...updated, ...deleted, ...pushed, ...stranded];
     const paths = [
       ...changedEventFiles,
       path.relative(this.boxRoot, this.statePath()),
@@ -277,84 +286,6 @@ class GoogleCalendarConnector implements Connector {
       result.error = `Calendar sync failed for ${failures.map(formatCalendarSyncFailure).join(", ")}`;
     }
     return result;
-  }
-
-  /**
-   * Sync one calendar, retrying with a full sync if the sync token expired (410).
-   * Accumulates every completed write into `acc`. Ordinary failures restore
-   * the incoming token; a failed 410 recovery leaves the invalid token absent.
-   */
-  private async runCalendarSync(opts: {
-    calendar: GoogleCalendarService;
-    calendarId: string;
-    syncToken: string | undefined;
-    icsOpts: { calendarId: string; calendarName?: string; calendarRole?: string };
-    state: CalendarState;
-    calDir: string;
-    syncDaysBack: number;
-    syncDaysForward: number;
-    windowStart: Date;
-    windowEnd: Date;
-    snapshot: SyncTokenSnapshot;
-    acc: { created: string[]; updated: string[]; deleted: string[]; allNotes: SyncNote[] };
-  }): Promise<CalendarSyncOutcome> {
-    const { calendar, calendarId, syncToken, icsOpts, state, calDir,
-            syncDaysBack, syncDaysForward, windowStart, windowEnd, snapshot, acc } = opts;
-    const base = {
-      boxRoot: this.boxRoot, calendar, calendarId, syncDaysBack, syncDaysForward,
-      state, icsOpts, calDir, windowStart, windowEnd,
-    };
-    const collect = (r: SyncAccumulator, opts2: { withNotes: boolean }): void => {
-      acc.created.push(...r.created);
-      acc.updated.push(...r.updated);
-      acc.deleted.push(...r.deleted);
-      if (opts2.withNotes) acc.allNotes.push(...r.notes);
-    };
-
-    const firstAttempt = emptySyncAccumulator();
-    try {
-      await syncCalendar({ ...base, syncToken, acc: firstAttempt });
-      collect(firstAttempt, { withNotes: true });
-      return { kind: "synced", fullResync: false };
-    } catch (err: unknown) {
-      collect(firstAttempt, { withNotes: true });
-      if (!(err instanceof HTTPError) || err.response.status !== 410) {
-        if (syncToken === undefined) delete state.syncTokens[calendarId];
-        else state.syncTokens[calendarId] = syncToken;
-        await this.saveState(state, snapshot);
-        return {
-          kind: "failed",
-          failure: classifyCalendarFailure(err, {
-            calendarId,
-            operation: "incremental-sync",
-          }),
-        };
-      }
-    }
-
-    console.log(`  Sync token expired for ${calendarId}, doing full sync...`);
-    delete state.syncTokens[calendarId];
-    await this.saveState(state, snapshot);
-
-    const fullAttempt = emptySyncAccumulator();
-    try {
-      await syncCalendar({ ...base, syncToken: undefined, acc: fullAttempt });
-      // Don't add individual notes for a successful full re-sync — the commit
-      // message summarizes the refresh.
-      collect(fullAttempt, { withNotes: false });
-      return { kind: "synced", fullResync: true };
-    } catch (err: unknown) {
-      collect(fullAttempt, { withNotes: true });
-      delete state.syncTokens[calendarId];
-      await this.saveState(state, snapshot);
-      return {
-        kind: "failed",
-        failure: classifyCalendarFailure(err, {
-          calendarId,
-          operation: "full-sync",
-        }),
-      };
-    }
   }
 
 }
