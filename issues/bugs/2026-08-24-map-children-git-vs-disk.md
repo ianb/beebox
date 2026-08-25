@@ -21,18 +21,47 @@ a MAP.md — but invisible to `git ls-tree`. On the git-derived paths it silentl
 drops out of its parent's listing, and the agent, doing exactly what the brief
 says, writes a MAP.md without it.
 
+**Confirmed by reproduction, and it is worse than the listing mismatch above.**
+A box with `*.jpg` gitignored, a stamped-current `store/`, and a new
+`store/photos/holiday.jpg`:
+
+```
+create children: b.md,notes/      # bootstrap (readdir) — correct
+needsWork=false                   # store/ never dirties when photos/ appears
+update children: (store not dirty)
+```
+
+Detection itself is git-only. The directory is not merely absent from
+`children` — it never triggers a refresh, so its parent's MAP.md omits it
+indefinitely, until some unrelated tracked change dirties the parent, at which
+point the git-derived `children` still omits it. Boxes gitignore media, so
+"a directory holding only ignored files" is an ordinary box, not a corner case.
+
 Observed on a deployed box: a directory vanished from its parent's map on
 2026-08-06 and reappeared on 2026-08-11 once it had tracked content. The agent
 that dropped it had spent nine consecutive turns checking `ls`, `cb ls`,
 `git ls-tree`, `git check-ignore`, and `find` against that very directory before
 deferring to the brief — it noticed the discrepancy and had no way to act on it.
 
-Not decided: which source is right. Disk matches what the walker already
-believes and what a reader of the directory sees, which argues for using it
-everywhere. Git is stable against transient working-tree noise, and the update
-path needs a listing *at a commit* to diff `added`/`deleted` against — so the
-two callers may genuinely want different things, in which case the fix is to
-reconcile the walker with whichever the listing uses rather than to unify them.
+Patching `children` alone does not fix this, and neither does unioning the
+git listing with on-disk directories: `prev` would still come from a commit
+that never contained the ignored dir, so it would read as "added" on every run
+and the directory would be permanently dirty.
+
+The fix that follows from the reproduction is to **store the listing in
+`.cb-maps-state.json` and diff the current on-disk listing against the stored
+one**, instead of diffing two commits. That makes `children`, `added`, and
+`deleted` all disk-derived and mutually consistent, and it retires the
+`asOf`-unresolvable recovery path entirely — the path that regenerated six
+directories at once after a history rewrite and produced the confusing
+2026-08-06 diff.
+
+**This crosses a migration boundary** (`MapStateEntry` gains a field; live
+boxes hold the old shape) so it is a developer's call, not an agent's. It may
+not need a migration script: an entry with no stored listing can be read as
+"prior listing unknown" and regenerated once, which is self-healing at the cost
+of one extra full regeneration per directory — affordable, given a whole-box
+refresh measured at 25 turns.
 
 Related: [refresh-maps max-turns throughput](../code-quality/2026-07-19-refresh-maps-max-turns-throughput.md),
 where this surfaced.
