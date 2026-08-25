@@ -66,6 +66,23 @@ export default [
     },
   },
   {
+    // A workflow script is handed to a runtime that parses plain JavaScript and
+    // gives it no filesystem and no module resolution, so it cannot import — which
+    // means it cannot be split into modules, the one remedy `max-lines` assumes.
+    // Roughly 40% of each file is prompt prose handed to subagents, and shortening
+    // that changes what the agents are asked.
+    //
+    // Carved out rather than weakened project-wide, and deliberately still bounded:
+    // 400 is above today's largest (discover, 381) with little room, so a workflow
+    // that keeps growing still has to answer for it. Every other rule applies in
+    // full — the six generic-Error throws these files used to carry were fixed, not
+    // exempted (boxholder decision, 2026-08-24).
+    files: ["user-stories/pipeline/*.workflow.ts"],
+    rules: {
+      "max-lines": ["error", { max: 400, skipBlankLines: true, skipComments: true }],
+    },
+  },
+  {
     files: ["src/**/*.ts"],
     // Only the owner is exempt. `registry.ts` defines `createNew` but no longer
     // calls it, and a method definition is not a member access — so it needs no

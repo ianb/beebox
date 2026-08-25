@@ -50,7 +50,7 @@
     "typecheck:frontend": "cd src/frontend && pnpm typecheck",
     "typecheck:user-stories": "tsc --noEmit -p tsconfig.user-stories.json",
     "lint": "pnpm run '/^lint:(backend|frontend)$/'",
-    "lint:backend": "eslint src/ scripts/ test/",
+    "lint:backend": "eslint src/ scripts/ test/ user-stories/",
     "lint:frontend": "cd src/frontend && pnpm lint",
     "start": "node dist/webapp/server.js",
     "cli": "node dist/cli/index.js",

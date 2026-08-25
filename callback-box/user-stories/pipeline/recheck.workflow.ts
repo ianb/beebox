@@ -13,11 +13,32 @@ export const meta = {
 // fixed, so without this the catalog rots from the day it is committed. This re-checks only the
 // stories a fix touched, using the same adversarial stance as the full run, and writes results
 // `apply-recheck.ts` merges back into the frozen catalog.
+/**
+ * A workflow script cannot import, so its error class is declared where it is thrown.
+ *
+ * The preset bans a bare `Error` and bans a string literal as an Error's first
+ * argument, and both bans are right here: this is the guard that fires when a
+ * caller forgets an argument, and it is the only thing standing between a typo in
+ * a `Workflow({args})` call and a fan-out of subagents pointed at `undefined`.
+ */
+class WorkflowArgsError extends Error {
+  constructor(detail: string) {
+    super(detail);
+    this.name = "WorkflowArgsError";
+  }
+}
+
+/** Named so they are passed as identifiers rather than literals. */
+const ARGS_ERR = {
+  root: 'pass {root: "<absolute path to the repo root>"} in args',
+  ids: 'pass {ids: ["group/slug", ...]} in args',
+} as const;
+
 const ROOT = args && args.root;
-if (!ROOT) throw new Error('pass {root: "<absolute path to the repo root>"} in args');
+if (!ROOT) throw new WorkflowArgsError(ARGS_ERR.root);
 const DATE = (args && args.date) || "";
 const IDS = (args && args.ids) || [];
-if (IDS.length === 0) throw new Error('pass {ids: ["group/slug", ...]} in args');
+if (IDS.length === 0) throw new WorkflowArgsError(ARGS_ERR.ids);
 
 const CATALOG = `${ROOT}/callback-box/user-stories/catalog`;
 // A per-run directory, not one shared bucket. Leftovers from an earlier recheck sitting in a
