@@ -1,6 +1,6 @@
 ---
 title: "Corrupt Calendar state can duplicate remote events"
-workstream: unattached
+workstream: connector-integrity
 area: callback-box
 filed-by: agent
 discovered-by: agent

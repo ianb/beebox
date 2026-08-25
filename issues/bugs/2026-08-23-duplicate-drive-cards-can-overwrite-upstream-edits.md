@@ -1,6 +1,6 @@
 ---
 title: "Duplicate Drive cards can overwrite upstream edits"
-workstream: unattached
+workstream: connector-integrity
 area: callback-box
 filed-by: agent
 discovered-by: agent

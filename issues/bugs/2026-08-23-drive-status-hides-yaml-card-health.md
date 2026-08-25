@@ -1,6 +1,6 @@
 ---
 title: "Drive status hides health fields on current YAML cards"
-workstream: unattached
+workstream: connector-integrity
 area: callback-box
 filed-by: agent
 discovered-by: agent

@@ -1,6 +1,6 @@
 ---
 title: "An unknown wakeup connector exits in the middle of the cycle"
-workstream: unattached
+workstream: connector-integrity
 area: callback-box
 filed-by: agent
 discovered-by: agent

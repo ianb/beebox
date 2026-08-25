@@ -1,6 +1,6 @@
 ---
 title: "Calendar 410 resync does not remove stale local events"
-workstream: unattached
+workstream: connector-integrity
 area: callback-box
 filed-by: agent
 discovered-in: worktree-connector-sync-isolation — verifying calendar partial-failure handling

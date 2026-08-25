@@ -1,6 +1,6 @@
 ---
 title: "A Calendar patch failure can discard a local edit"
-workstream: unattached
+workstream: connector-integrity
 area: callback-box
 filed-by: agent
 discovered-by: agent

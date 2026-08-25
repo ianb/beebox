@@ -1,6 +1,6 @@
 ---
 title: "One malformed context-history entry blocks every knowledge audit"
-workstream: unattached
+workstream: connector-integrity
 area: callback-box
 filed-by: agent
 discovered-by: agent

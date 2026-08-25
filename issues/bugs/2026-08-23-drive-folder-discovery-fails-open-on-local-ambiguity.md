@@ -1,6 +1,6 @@
 ---
 title: "Drive folder discovery fails open on local ambiguity"
-workstream: unattached
+workstream: connector-integrity
 area: callback-box
 filed-by: agent
 discovered-by: agent

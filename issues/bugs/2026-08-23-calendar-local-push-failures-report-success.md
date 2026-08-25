@@ -1,6 +1,6 @@
 ---
 title: "Calendar local push failures report sync success"
-workstream: unattached
+workstream: connector-integrity
 area: callback-box
 filed-by: agent
 discovered-by: agent
