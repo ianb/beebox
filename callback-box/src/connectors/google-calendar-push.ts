@@ -25,12 +25,16 @@ import {
   type SyncNote,
 } from "./google-calendar-notes.js";
 import {
-  getFilename,
   deleteEventViaApi,
   insertEventViaApi,
   type CalendarState,
-  type EventFileEntry,
 } from "./google-calendar-state.js";
+import {
+  eventKey,
+  getFilename,
+  parseEventKey,
+  type EventFileEntry,
+} from "./google-calendar-event-index.js";
 
 /**
  * Push locally-created .ics files (not tracked in state) to Google Calendar,
@@ -49,6 +53,9 @@ export async function pushAndCleanOrphans(
   const deleted: string[] = [];
   const notes: SyncNote[] = [];
   const failures: CalendarSyncFailure[] = [];
+  // Also what keeps this pass from ever needing uniqueEventFilename: a file it
+  // pushes is one no entry names, so tracking it under its on-disk name cannot
+  // collide with another entry's file.
   const trackedFiles = new Set<string>();
   for (const entry of Object.values(state.eventFiles)) {
     trackedFiles.add(getFilename(entry));
@@ -116,7 +123,8 @@ export async function pushAndCleanOrphans(
           contentHash: contentHash(content),
           remoteUpdated: result.value.updated,
         };
-        state.eventFiles[result.value.id] = trackedEntry;
+        const key = eventKey({ calendarId, eventId: result.value.id });
+        state.eventFiles[key] = trackedEntry;
 
         // Now strip the annotations from the local copy and re-stamp the hash
         // to the bytes that ended up on disk. A rewrite that fails is a
@@ -125,7 +133,7 @@ export async function pushAndCleanOrphans(
         if (reason || ref) {
           try {
             await fs.writeFile(filePath, stripped);
-            state.eventFiles[result.value.id] = {
+            state.eventFiles[key] = {
               ...trackedEntry, contentHash: contentHash(stripped),
             };
           } catch (err: unknown) {
@@ -179,9 +187,12 @@ export async function processLocalDeletes(
   const failures: CalendarSyncFailure[] = [];
   const MAX_DELETES = 3;
 
-  for (const [googleEventId, entry] of Object.entries(state.eventFiles)) {
+  for (const [key, entry] of Object.entries(state.eventFiles)) {
     const filename = getFilename(entry);
+    // The entry is the authority on the calendar (the key agrees, except for an
+    // unattributed legacy entry — which has no calendarId and is skipped below).
     const calendarId = typeof entry === "string" ? undefined : entry.calendarId;
+    const { eventId: googleEventId } = parseEventKey(key);
     const filePath = path.join(calDir, filename);
 
     let content: string;
@@ -221,7 +232,7 @@ export async function processLocalDeletes(
     const deleteResult = await deleteEventViaApi(calendar, { calendarId, googleEventId });
     if (deleteResult.ok) {
       await fs.unlink(filePath);
-      delete state.eventFiles[googleEventId];
+      delete state.eventFiles[key];
       deleted.push(path.relative(boxRoot, filePath));
       const deleteNote: SyncNote = { action: "deleted", summary, detail: reason };
       if (ref) deleteNote.ref = ref;

@@ -39,6 +39,7 @@ import { stageAndCommitPaths } from "../lib/git.js";
 import {
   buildNarrativeCommitMessage,
   formatCalendarSyncFailure,
+  localCalendarFailure,
   type CalendarSyncFailure,
   type SyncNote,
 } from "./google-calendar-notes.js";
@@ -55,6 +56,7 @@ import {
 import { runCalendarSync } from "./google-calendar-run.js";
 import { pushAndCleanOrphans, processLocalDeletes } from "./google-calendar-push.js";
 import { pushPendingLocalEdits } from "./google-calendar-local-push.js";
+import { dropDuplicateFilenames } from "./google-calendar-event-index.js";
 import { assertNever } from "../lib/invariant.js";
 
 interface GoogleCalendarConnectorOptions {
@@ -197,10 +199,23 @@ class GoogleCalendarConnector implements Connector {
     const stranded: string[] = [];
     const allNotes: SyncNote[] = [];
     const failures: CalendarSyncFailure[] = [];
+    // One file per entry is what every pass below assumes. A box that synced
+    // under the old bare-id keys can hold two entries for one file; the ones
+    // that lose the file are untracked here and reported, rather than left to
+    // have their event patched with the keeper's content.
+    for (const dup of await dropDuplicateFilenames({ index: state.eventFiles, calDir })) {
+      console.warn(`  Untracked ${dup.key} — store/calendar/${dup.filename} belongs to another entry`);
+      failures.push(localCalendarFailure({
+        calendarId: dup.calendarId, operation: "stale-cleanup",
+        path: `store/calendar/${dup.filename}`,
+        detail: "two tracked events named one file; this entry was untracked",
+      }));
+    }
     let isFullResync = false;
     // Union across calendars of the events this run's pull (or its post-410
-    // stale pass) already handled — what the pending-edit pass must not touch.
-    const reconciledEventIds = new Set<string>();
+    // stale pass) already handled, as index keys — what the pending-edit pass
+    // must not touch.
+    const reconciledEventKeys = new Set<string>();
 
     for (const calendarId of calendars) {
       const existingSyncToken = state.syncTokens[calendarId];
@@ -208,7 +223,7 @@ class GoogleCalendarConnector implements Connector {
       const outcome = await runCalendarSync({
         boxRoot: this.boxRoot, calendar, calendarId, syncToken: existingSyncToken, icsOpts: icsOptsFor(calendarId),
         state, calDir, syncDaysBack, syncDaysForward, windowStart, windowEnd, now, snapshot,
-        acc: { created, updated, deleted, stranded, allNotes, failures, reconciledEventIds },
+        acc: { created, updated, deleted, stranded, allNotes, failures, reconciledEventKeys },
       });
       switch (outcome.kind) {
         case "synced":
@@ -233,7 +248,7 @@ class GoogleCalendarConnector implements Connector {
     // file marked X-CB-DELETE is gone (or still marked, and skipped) rather
     // than patched.
     const pendingResult = await pushPendingLocalEdits({
-      boxRoot: this.boxRoot, calendar, state, calDir, reconciledEventIds, icsOptsFor, now,
+      boxRoot: this.boxRoot, calendar, state, calDir, reconciledEventKeys, icsOptsFor, now,
     });
     updated.push(...pendingResult.updated);
     allNotes.push(...pendingResult.notes);
