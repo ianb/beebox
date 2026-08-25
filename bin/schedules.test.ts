@@ -451,7 +451,7 @@ interface CliRun {
 async function runCli(args: string[], options: { env: NodeJS.ProcessEnv; input?: string }): Promise<CliRun> {
   const result = await execa("node", ["--import", "tsx", CLI, ...args], {
     reject: false,
-    env: { ...process.env, ...options.env },
+    env: { ...process.env, SCHEDULE_NOTIFY: "0", ...options.env },
     cwd: path.dirname(path.dirname(CLI)),
     ...(options.input === undefined ? {} : { input: options.input }),
   });

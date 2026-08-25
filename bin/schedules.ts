@@ -129,7 +129,10 @@ function runnerDeps(context: Context): RunnerDeps {
     pid: process.pid,
     isProcessAlive,
     bootTimeMs,
-    notify: osascriptNotify,
+    // SCHEDULE_NOTIFY=0 keeps the alert record but skips the desktop
+    // notification — set by the test suite so fixtures never reach the
+    // boxholder's notification center.
+    notify: process.env["SCHEDULE_NOTIFY"] === "0" ? async () => {} : osascriptNotify,
   };
 }
 
