@@ -6,7 +6,13 @@ labels: [journey-findings]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — journey B, 2026-08-24 walk
+resolution: implemented
 ---
+
+Closed 2026-08-25 by commit `36312a3a` (workstream `live-vs-stored`) — a 401
+now raises a persistent, explained toast with a Sign in link instead of a hard
+navigation, and `trpcFetch` returns the failure instead of a promise that
+never resolves. Verified in the running app via a forced 401.
 
 When I am part-way through something in the box, I want a permission problem
 with one action to stay that one action's problem, so that I do not lose the

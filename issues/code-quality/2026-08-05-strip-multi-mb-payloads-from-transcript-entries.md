@@ -38,7 +38,7 @@ reference the client can resolve (`shared/session-media.ts`,
 `webapp/routes/api-session-media.ts`), so the bytes leave the history read
 entirely and are fetched per image, lazily, only when looked at. That is the
 part of this direction that was reachable, and it closed
-[reloaded-conversation-hides-the-photos-you-sent](../bugs/2026-08-24-reloaded-conversation-hides-the-photos-you-sent.md)
+[reloaded-conversation-hides-the-photos-you-sent](../closed/bugs/2026-08-24-reloaded-conversation-hides-the-photos-you-sent.md)
 without weakening the read guard.
 
 **"At write" is not ours to do.** The transcript is written entirely by the

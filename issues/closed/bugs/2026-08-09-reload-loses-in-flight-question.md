@@ -5,14 +5,20 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test spine run; spun out of chat-status-lies-after-completion
 labels: [field-test-findings, code-error]
+resolution: implemented
 ---
+
+Closed 2026-08-25 by commit `97c57780` (workstream `live-vs-stored`,
+reproduction pinned in `2bd186e2`) — `chat.bootstrap` now reports box-accepted,
+not-yet-durable messages as `pending`. The "Not covered (deliberate)" section
+below records three intentionally out-of-scope residuals, not blockers.
 
 During the field-test spine run, a page reload while a turn appeared stuck
 seemed to lose the user's just-sent question entirely — it was not in the
 rendered history after reload.
 
 Investigation (while closing
-[chat-status-lies-after-completion](../closed/bugs/2026-08-08-chat-status-lies-after-completion.md))
+[chat-status-lies-after-completion](2026-08-08-chat-status-lies-after-completion.md))
 established the reload path is HTTP-only and disk-backed: `fetchInitialActor`
 (`src/frontend/src/machines/chat-actors.ts`) calls `chat.bootstrap` /
 `getChatHistory`, so a *finished* turn must appear. Losing the question
