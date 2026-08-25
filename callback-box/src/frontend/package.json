@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "analyze:bundle": "tsx src/dev/analyze-bundle.ts",
     "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/frontend.tsbuildinfo",
-    "lint": "eslint --cache --cache-location node_modules/.cache/eslint/frontend src/",
+    "lint": "eslint --cache --cache-strategy content --cache-location node_modules/.cache/eslint/frontend src/",
     "lint:oxlint": "oxlint -A no-unused-vars",
     "lint:circular": "madge --circular --extensions ts,tsx src/"
   },

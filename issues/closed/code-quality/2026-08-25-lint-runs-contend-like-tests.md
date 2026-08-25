@@ -53,6 +53,18 @@ Kept:
   virtue of being that script; its lint-staged run is not (it is small, and
   queueing it behind a whole-tree run would cost more than the contention does).
 
+A cross-model review moved three things: `.jsx` joined the extension lists
+(the preset's own glob is `{ts,tsx,js,jsx}`, so a `.jsx` file would have failed
+`pnpm lint` and been skipped by `lint:changed`); the eslint runs ask for
+`--cache-strategy content`, because the default strategy is mtime+size and the
+correctness claim here is content-keyed (measured free — warm stays 1.6-3.4 s);
+and `finish-preflight`'s lint entry collapsed to a single root `pnpm
+lint:changed`, which is the fan-out and so also covers a `schedules/`-only
+change that no per-package lint reaches. It also found that `groupOf` attributes
+a nested workspace package's paths to its parent — filed separately as
+[nested workspace packages](../../code-quality/2026-08-25-nested-workspace-packages-misclassified.md),
+since it predates this work.
+
 The cross-file escape is accepted and stated, the same posture the plan takes
 for unimplicated tests: an eslint cache entry keys on one file's content, and
 `lint:changed` looks only at changed files, so a type-aware rule's consequence

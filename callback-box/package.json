@@ -52,7 +52,7 @@
     "typecheck:tooling": "tsc --noEmit -p tsconfig.tooling.json --incremental --tsBuildInfoFile node_modules/.cache/tsc/tooling.tsbuildinfo",
     "lint": "node --import tsx ../bin/with-slot.ts -- pnpm run '/^lint:(backend|frontend)$/'",
     "lint:changed": "node --import tsx ../bin/lint-changed.ts",
-    "lint:backend": "eslint --cache --cache-location node_modules/.cache/eslint/backend src/ scripts/ test/ user-stories/",
+    "lint:backend": "eslint --cache --cache-strategy content --cache-location node_modules/.cache/eslint/backend src/ scripts/ test/ user-stories/",
     "lint:frontend": "cd src/frontend && pnpm lint",
     "start": "node dist/webapp/server.js",
     "cli": "node dist/cli/index.js",

@@ -19,7 +19,7 @@
  * The rules are pure and exported for bin/lint-changed.test.ts; the git,
  * filesystem and spawning is the shell at the bottom.
  *
- * See issues/code-quality/2026-08-25-lint-runs-contend-like-tests.md and
+ * See issues/closed/code-quality/2026-08-25-lint-runs-contend-like-tests.md and
  * callback-box/docs/plans/change-based-test-selection.md, mechanism B.
  */
 
@@ -41,8 +41,11 @@ const BACKEND_ROOTS = ["src", "scripts", "test", "user-stories"];
 const FRONTEND_DIR = "callback-box/src/frontend";
 const FRONTEND_ROOT = `${FRONTEND_DIR}/src/`;
 
-const BACKEND_EXTENSIONS = [".ts", ".tsx", ".js", ".cjs"];
-const FRONTEND_EXTENSIONS = [".ts", ".tsx", ".js"];
+// `{ts,tsx,js,jsx}` is the preset's own file glob (personal-vibe-check/preset.ts
+// `exts`); `.cjs` rides eslint's default flat-config files. `.mjs` is in the
+// backend config's ignores, so it is deliberately absent.
+const BACKEND_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".cjs"];
+const FRONTEND_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx"];
 
 const hasExtension = (path: string, extensions: string[]): boolean =>
   extensions.some((extension) => path.endsWith(extension));
@@ -223,6 +226,8 @@ function eslintCommand(input: { cwd: string; cache: string; files: string[] }): 
       "exec",
       "eslint",
       "--cache",
+      "--cache-strategy",
+      "content",
       "--cache-location",
       input.cache,
       ...input.files,

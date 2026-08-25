@@ -13,7 +13,7 @@
  *
  * The ledger is not involved. This is the lock and nothing else.
  *
- * See issues/code-quality/2026-08-25-lint-runs-contend-like-tests.md and
+ * See issues/closed/code-quality/2026-08-25-lint-runs-contend-like-tests.md and
  * callback-box/docs/plans/change-based-test-selection.md, mechanism A.
  */
 
