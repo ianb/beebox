@@ -11,6 +11,7 @@ import { createWorkstreamsCommandService } from "./workstreams-command.js";
 import { createCommentsService } from "./comments-service.js";
 import { createTranscribeService } from "./transcribe-openai.js";
 import { createDocumentsService } from "./documents-service.js";
+import { createIssueRelatedService } from "./issue-related-service.js";
 import { createExhibitsQueueService } from "./exhibits-queue-service.js";
 import { createQuotasService } from "./quotas-service.js";
 import {
@@ -72,6 +73,10 @@ async function main(): Promise<void> {
   const services = {
     workstreams: createWorkstreamsCommandService({ repoRoot }),
     documents: createDocumentsService({ mainRoot: repoRoot, worktreesRoot }),
+    // Reads the shared `.issues-index/` cache at the main checkout, and needs
+    // an embeddings key in THIS process's environment (the router passes its
+    // own env down, so exporting one before `pnpm dev` is what reaches here).
+    related: createIssueRelatedService({ mainRoot: repoRoot }),
     comments: createCommentsService({ repoRoot }),
     transcribe: createTranscribeService(),
     quotas: createQuotasService(),

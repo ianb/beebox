@@ -13,6 +13,7 @@
     "dev": "bin/workstreams serve",
     "dev-apps-typecheck": "bash bin/dev-apps-typecheck",
     "doctor": "node --import tsx bin/doctor.ts",
+    "issues": "node --import tsx bin/issues.ts",
     "lint": "pnpm --filter '!callback-box-frontend' -r lint",
     "lint:knip": "knip",
     "mobile-contract-check": "node --import tsx bin/mobile-contract-check.ts",
