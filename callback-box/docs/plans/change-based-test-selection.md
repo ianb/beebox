@@ -680,6 +680,35 @@ Guidance (`callback-box/CLAUDE.md:11`, `cb-guide-testing`, `doctest`) becomes:
 iterate with `pnpm test:changed` or a named file; `pnpm test` is what the
 schedule runs, and an agent reaching for it should say why.
 
+### Built, and what the code corrected (2026-08-25)
+
+- **A** landed (`bin/test-locks.ts`): a lock stamps the writer's boot time, and
+  a mismatch is a third staleness rule alongside pre-boot and age.
+- **B** landed (`bin/test-select.ts`, `bin/test-git.ts`). `alwaysRun` as a flat
+  set would have run ten spawner tests (~35 s) on every in-scope change, so it
+  is **edges**: a spawner is selected only when a changed path matches a
+  source its child imports. The `dist/cli.mjs` spawners key on the CLI
+  bundle's real inputs (932 files, computed from esbuild's metafile in ~0.1 s),
+  not `src/cli/**`, which covers a ninth of them. Measured: a source edit with
+  two importers ran 12 files in 72 s against the 627-file suite; a `bin/`-only
+  change ran nothing in 4–10 s. **The graph build is 6–17 s, not Track 1's
+  1.8 s** — 627 entrypoints now, cold esbuild — and it is the floor under every
+  `test:changed`, including the empty one. Track 1's "no cache" holds until
+  that floor is what an agent waits on; the cache key would be the
+  (path, mtime, size) of every file in the graph's universe.
+- **C** landed (`callback-box/test/careful.txt`, `bin/test-tiers.ts`). An
+  appended tier that resolves to zero files is refused (a bare `tap` would
+  run everything). Five members; the report's candidate block showed the
+  semaphore flattening their flake share within hours of landing.
+- **Where finish time goes**, measured over 16 finish runs on 2026-08-25:
+  median 15 min; **79% test/typecheck/lint, 1% git, 20% judgment**, and the
+  judgment share is mostly reasoning about failing test or lint output, not
+  Track O or plan/issue steps. So `finish-verify` is where the minutes are;
+  `finish-preflight` buys correctness and a short agent file. One more cut
+  follows from it: every worktree commit already passed typecheck + lint in
+  pre-commit, so a finish re-runs them only when the merge from `main`
+  brought code in — a `skipTypecheckLint` field on the decision sheet.
+
 ### What this costs, stated
 
 - Integration breakage now surfaces up to ~1 h (or 10 landings) after merge,
