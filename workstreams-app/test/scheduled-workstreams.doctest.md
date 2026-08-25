@@ -18,18 +18,23 @@ Object.assign(globalThis, { React });
 
 import { ScheduleAlertList } from "../src/frontend/components/ScheduleAlerts.js";
 import { ScheduledSection, scheduleHeartbeatStatus } from "../src/frontend/components/ScheduledWorkstreams.js";
+import { workstreamActionVerbs } from "../src/frontend/components/WorkstreamActions.js";
 import { workstreamStateFor } from "../src/frontend/pages/WorkstreamsPage.js";
 import { createSchedulesCommandService } from "../src/server/schedules-command.js";
 import type { CommandRequest } from "../src/server/workstreams-command.js";
 import type { ScheduleAlert } from "../src/shared/schedules.js";
 import { router } from "../src/frontend/router.js";
+import { WorkstreamsApiProvider } from "../src/frontend/trpc.js";
 import type { Workstream } from "../src/frontend/types.js";
 
 // A row links to its detail page, and TanStack's <Link> needs a router in
-// context to build an href; the routes themselves are not exercised here.
+// context to build an href; the routes themselves are not exercised here. The
+// lifecycle buttons read the tRPC client from context, so the section renders
+// under the real provider — no request is issued by a static render.
 router.update({ history: createMemoryHistory({ initialEntries: ["/"] }) });
 const render = (element: ReactElement): string =>
-  renderToStaticMarkup(createElement(RouterContextProvider, { router }, element));
+  renderToStaticMarkup(createElement(WorkstreamsApiProvider, null,
+    createElement(RouterContextProvider, { router }, element)));
 
 const now = new Date("2026-08-24T12:00:00.000Z");
 
@@ -127,6 +132,38 @@ JSON.stringify({
   heartbeatCalm: !markup.includes("schedule-heartbeat-stale"),
 })
 => {"named":true,"cadence":true,"lastRun":true,"overdueBadge":true,"alertCount":true,"disabled":true,"heartbeat":true,"heartbeatCalm":true}
+```
+
+## A resting schedule offers Resume, a running one Focus
+
+The boxholder's way into a schedule is to go into the workstream and chat, so a
+scheduled record between runs gets the same Resume the dormant and culled rows
+get — `bin/workstreams resume` recreates the worktree and launches, with the
+optional briefing the record's `resume-with-briefing` routing already names. A
+schedule whose run is under way gets Focus like any live row, and the Alerts
+toggle stays either way.
+
+```ts
+const resting = render(createElement(ScheduledSection, {
+  rows: [row("knip-sweep", scheduleRow({}), "scheduled")],
+  issues: [],
+  now,
+}));
+const running = render(createElement(ScheduledSection, {
+  rows: [row("manual-tests", scheduleRow({}), "live")],
+  issues: [],
+  now,
+}));
+JSON.stringify({
+  restingVerbs: workstreamActionVerbs(row("knip-sweep", scheduleRow({}), "scheduled")),
+  runningVerbs: workstreamActionVerbs(row("manual-tests", scheduleRow({}), "live")),
+  restingResume: resting.includes(">Resume</button>"),
+  restingNotFocus: !resting.includes(">Focus</button>"),
+  runningFocus: running.includes(">Focus</button>"),
+  runningNotResume: !running.includes(">Resume</button>"),
+  alertsBoth: resting.includes(">Alerts</button>") && running.includes(">Alerts</button>"),
+})
+=> {"restingVerbs":["resume"],"runningVerbs":["focus"],"restingResume":true,"restingNotFocus":true,"runningFocus":true,"runningNotResume":true,"alertsBoth":true}
 ```
 
 ## A dead scheduler is red, and a scheduler that never ticked says so

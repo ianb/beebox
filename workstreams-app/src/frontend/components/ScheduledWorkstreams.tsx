@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { ScheduleAlerts } from "./ScheduleAlerts.js";
+import { WorkstreamActions } from "./WorkstreamActions.js";
 import { WorkstreamIssueSummary } from "./WorkstreamIssueSummary.js";
 import { Button, Pill } from "./ui.js";
 import { relativeTime } from "../lib/format.js";
@@ -65,11 +66,11 @@ function ScheduledRow({ row, issues }: { row: Workstream; issues: Issue[] }) {
         </Link>
         <span className="workstream-description">{row.session.description ?? "No description"}</span>
         {row.schedule ? <ScheduleFacts schedule={row.schedule} /> : <span className="workstream-note">schedule unreadable</span>}
-        <div className="workstream-actions">
+        <WorkstreamActions row={row}>
           <Button type="button" aria-expanded={open} onClick={() => setOpen(!open)}>
             {open ? "Hide alerts" : "Alerts"}
           </Button>
-        </div>
+        </WorkstreamActions>
       </div>
       {open ? <ScheduleAlerts name={row.name} /> : null}
       {related.length > 0 ? (

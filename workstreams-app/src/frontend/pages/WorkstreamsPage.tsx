@@ -1,11 +1,12 @@
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useState } from "react";
 import { ScheduledSection } from "../components/ScheduledWorkstreams.js";
+import { isScheduled, WorkstreamActions } from "../components/WorkstreamActions.js";
 import { WorkstreamIssueSummary } from "../components/WorkstreamIssueSummary.js";
 import { Button, Pill } from "../components/ui.js";
 import { relativeTime } from "../lib/format.js";
 import { trpc } from "../trpc.js";
-import type { ActionVerb, Issue, LifecycleJob, Workstream } from "../types.js";
+import type { Issue, Workstream } from "../types.js";
 
 function launchStateFor(row: Workstream): { section: string; note: string } | null {
   if (row.routing.state === "launching") return { section: "Launching", note: "setting up worktree and agent" };
@@ -19,16 +20,6 @@ function launchStateFor(row: Workstream): { section: string; note: string } | nu
 }
 
 export const SCHEDULED_SECTION = "Scheduled";
-
-/**
- * A schedule is sticky and always shown as one, worktree or not: the boxholder
- * asked for these in their own section rather than mixed into "In progress"
- * whenever a run happens to have a live session
- * (callback-box/docs/plans/scheduled-workstreams.md, Track D).
- */
-function isScheduled(row: Workstream): boolean {
-  return row.routing.state === "scheduled" || row.schedule !== null;
-}
 
 /** The branches for a workstream that is neither scheduled nor mid-launch. */
 function settledStateFor(row: Workstream): { section: string; note: string } {
@@ -57,34 +48,11 @@ function AgentState({ item }: { item: Workstream }) {
   return <span className={`agent-state ${active ? "agent-state-live" : ""}`}>{label}</span>;
 }
 
-const resumeLabels: Record<LifecycleJob["stage"], string> = { queued: "Request accepted", checking: "Checking workstream", restoring: "Restoring worktree", preparing: "Preparing session", "opening-terminal": "Opening Terminal", opened: "Terminal opened", ready: "Session ready", failed: "Resume failed" };
-
-function ResumeProgress({ job }: { job: LifecycleJob }) {
-  const state = trpc.actions.job.useQuery({ id: job.id }, { refetchInterval: (query) => { const value = query.state.data; return value && (value.stage === "ready" || value.stage === "opened" || value.stage === "failed") ? false : 750; } });
-  const current = state.data ?? job;
-  return <span className={current.stage === "failed" ? "action-error" : "action-progress"} role="status">{resumeLabels[current.stage]}{current.error ? ` · ${current.error}` : ""}</span>;
-}
-
-function Actions({ row }: { row: Workstream }) {
-  const action = trpc.actions.run.useMutation();
-  const [job, setJob] = useState<LifecycleJob | null>(null);
-  function run(verb: ActionVerb): void { action.mutate({ verb, name: row.name }, { onSuccess(result) { if (result.status === "started") setJob(result.job); } }); }
-  const verbs = workstreamActionVerbs(row);
-  return <div className="workstream-actions">{verbs.includes("focus") ? <Button type="button" disabled={action.isPending} onClick={() => run("focus")}>Focus</Button> : null}{verbs.includes("resume") ? <Button type="button" intent="primary" disabled={action.isPending} onClick={() => run("resume")}>{row.git === null ? "Retry" : "Resume"}</Button> : null}{verbs.includes("close") ? <Button type="button" disabled={action.isPending} onClick={() => run("close")}>Close</Button> : null}{job ? <ResumeProgress job={job} /> : null}{action.isError ? <span className="action-error" role="alert">{action.error.message}</span> : null}</div>;
-}
-
-export function workstreamActionVerbs(row: Workstream): ActionVerb[] {
-  if (row.routing.action === "wait-for-launch") return [];
-  if (row.session.removed) return ["focus", "resume"];
-  if (row.git === null) return row.session.agent && (row.session.launch.state === "failed" || row.session.launch.state === "expired") ? ["resume"] : [];
-  return ["focus", "close"];
-}
-
 function WorkstreamRow({ row, issues }: { row: Workstream; issues: Issue[] }) {
   const state = workstreamStateFor(row);
   const related = issues.filter((issue) => issue.frontmatter.workstream === row.name || issue.frontmatter.discoveredIn === row.name);
   const activity = row.routing.lastActivityAt ? relativeTime(row.routing.lastActivityAt) : "age unknown";
-  return <li className="workstream-row"><div className="workstream-row-main"><Link to="/$name" params={{ name: row.name }} className="workstream-name"><span aria-hidden="true">{row.session.emoji ?? "·"}</span>{row.name}</Link><span className="workstream-description">{row.session.description ?? "No description"}</span><span className="workstream-note">{state.note} · {activity}</span><Pill tone={row.routing.action === "new-stream-preferred" ? "warning" : row.routing.action === "manual-forward" ? "manual" : "info"}>{row.routing.action}</Pill><AgentState item={row} />{row.boxState.keepUnmerged ? <Pill tone="warning">keep unmerged</Pill> : row.boxState.testSetup ? <Pill tone="warning">test1 {row.boxState.pristine ? "pristine" : "dirtied"}</Pill> : null}<Actions row={row} /></div>{related.length > 0 ? <div className="workstream-issues">{related.map((issue) => <WorkstreamIssueSummary key={`${issue.visibility}:${issue.relPath}`} issue={issue} owned={issue.frontmatter.workstream === row.name} discovered={issue.frontmatter.discoveredIn === row.name} />)}</div> : null}</li>;
+  return <li className="workstream-row"><div className="workstream-row-main"><Link to="/$name" params={{ name: row.name }} className="workstream-name"><span aria-hidden="true">{row.session.emoji ?? "·"}</span>{row.name}</Link><span className="workstream-description">{row.session.description ?? "No description"}</span><span className="workstream-note">{state.note} · {activity}</span><Pill tone={row.routing.action === "new-stream-preferred" ? "warning" : row.routing.action === "manual-forward" ? "manual" : "info"}>{row.routing.action}</Pill><AgentState item={row} />{row.boxState.keepUnmerged ? <Pill tone="warning">keep unmerged</Pill> : row.boxState.testSetup ? <Pill tone="warning">test1 {row.boxState.pristine ? "pristine" : "dirtied"}</Pill> : null}<WorkstreamActions row={row} /></div>{related.length > 0 ? <div className="workstream-issues">{related.map((issue) => <WorkstreamIssueSummary key={`${issue.visibility}:${issue.relPath}`} issue={issue} owned={issue.frontmatter.workstream === row.name} discovered={issue.frontmatter.discoveredIn === row.name} />)}</div> : null}</li>;
 }
 
 const SECTION_ORDER = ["Launching", SCHEDULED_SECTION, "Launch needs attention", "In progress", "Merged ✓, session still open", "Untouched", "Held for testing", "Dormant", "Stale", "Recently culled", "Removed with unmerged work", "Archived"];
