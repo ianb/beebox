@@ -121,3 +121,64 @@ test("TRIAGE: clean commits nothing and succeeds", async (t) => {
   assert.equal(result.exitCode, 0, result.stderr);
   assert.equal(await headCount(fixture.worktree), 1);
 });
+
+test("a path that escapes the issue directory is refused", async (t) => {
+  const fixture = await makeFixture();
+  t.after(() => fs.rm(path.dirname(fixture.worktree), { recursive: true, force: true }));
+  // `issues/bugs/` as a prefix, anywhere in the tree once resolved: checking
+  // only the first two segments let this through to `git add`.
+  await fs.writeFile(path.join(fixture.worktree, "escape.md"), "not an issue\n");
+  const result = await runCheck(fixture, "TRIAGE: issues/bugs/../../escape.md\n");
+  assert.equal(result.exitCode, 1);
+  assert.match(result.stderr, /is not an open-issue markdown file/u);
+  assert.equal(await headCount(fixture.worktree), 1);
+});
+
+test("a symlinked issue path is refused", async (t) => {
+  const fixture = await makeFixture();
+  t.after(() => fs.rm(path.dirname(fixture.worktree), { recursive: true, force: true }));
+  await fs.writeFile(path.join(fixture.worktree, "elsewhere.md"), "not an issue\n");
+  const link = "issues/bugs/2026-01-02-linked.md";
+  await fs.symlink(path.join(fixture.worktree, "elsewhere.md"), path.join(fixture.worktree, link));
+  const result = await runCheck(fixture, `TRIAGE: ${link}\n`);
+  assert.equal(result.exitCode, 1);
+  assert.match(result.stderr, /is not a regular file/u);
+  assert.equal(await headCount(fixture.worktree), 1);
+});
+
+test("TRIAGE: clean with dirty issue files is refused", async (t) => {
+  const fixture = await makeFixture();
+  t.after(() => fs.rm(path.dirname(fixture.worktree), { recursive: true, force: true }));
+  await fs.appendFile(path.join(fixture.worktree, ISSUE), "\nAn edit nobody mentioned.\n");
+  const result = await runCheck(fixture, "TRIAGE: clean\n");
+  assert.equal(result.exitCode, 1);
+  assert.match(result.stderr, /modified issue files it did not report/u);
+  assert.match(result.stderr, new RegExp(ISSUE, "u"));
+  assert.equal(await headCount(fixture.worktree), 1);
+});
+
+test("an issue file edited but left off the TRIAGE line is refused", async (t) => {
+  const fixture = await makeFixture();
+  t.after(() => fs.rm(path.dirname(fixture.worktree), { recursive: true, force: true }));
+  const other = "issues/features/2026-01-03-unlisted.md";
+  await fs.mkdir(path.join(fixture.worktree, path.dirname(other)), { recursive: true });
+  await fs.appendFile(path.join(fixture.worktree, ISSUE), "\nAgent diagnosis.\n");
+  await fs.writeFile(path.join(fixture.worktree, other), "---\ntitle: Unlisted\n---\n");
+  const result = await runCheck(fixture, `TRIAGE: ${ISSUE}\n`);
+  assert.equal(result.exitCode, 1);
+  assert.match(result.stderr, /modified issue files it did not report/u);
+  assert.match(result.stderr, new RegExp(other, "u"));
+  assert.equal(await headCount(fixture.worktree), 1);
+});
+
+test("a file dirtied outside issues/ is refused by name", async (t) => {
+  const fixture = await makeFixture();
+  t.after(() => fs.rm(path.dirname(fixture.worktree), { recursive: true, force: true }));
+  await fs.appendFile(path.join(fixture.worktree, ISSUE), "\nAgent diagnosis.\n");
+  await fs.writeFile(path.join(fixture.worktree, "callback-box-note.ts"), "export const x = 1;\n");
+  const result = await runCheck(fixture, `TRIAGE: ${ISSUE}\n`);
+  assert.equal(result.exitCode, 1);
+  assert.match(result.stderr, /outside issues\/ modified/u);
+  assert.match(result.stderr, /callback-box-note\.ts/u);
+  assert.equal(await headCount(fixture.worktree), 1);
+});
