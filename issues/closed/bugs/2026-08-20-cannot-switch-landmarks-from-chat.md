@@ -6,7 +6,13 @@ labels: [chat, navigation, ios, landmarks]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder report from a deployed box
+resolution: implemented
 ---
+
+## Resolved (2026-08-25)
+
+Fixed by `8d80ef30` (fix(chat): name the landmark a coined chat is bound to, and offer a way back). The actual cause was server-side after all, just not in `chat.placeMenu` or `chat.lastSessionForDirectory`'s *committed-history* answers as inspected above — the switch coined a fresh chat every time the target landmark's only session was a reservation with no committed history row yet, because `chat.lastSessionForDirectory` and `chat.directoryFor` read only committed history. Both now fall back to the in-memory reservation store. Verified in the running app: switching to a reserved-but-unstarted landmark now reuses that reservation's id instead of coining a second one.
+
 
 On a deployed box, the chat is stuck in one landmark: the place-switch menu
 will not move to another. Observed on iOS; unconfirmed whether the web client
@@ -128,7 +134,7 @@ A second-order bug rides along: `chat.lastSessionForDirectory` ignores
 reservations too, so switching to a landmark whose only chat is
 reserved-not-yet-started coins a *fresh* chat every time rather than returning
 to the one you just left. That is the same complaint as
-[no consistent way back to chat](2026-08-23-no-consistent-way-back-to-chat.md).
+[no consistent way back to chat](../../bugs/2026-08-23-no-consistent-way-back-to-chat.md).
 
 Both are fixed on `worktree-chat-wayfinding`: the two procedures consult the
 reservation store, `""` (the box-root landmark) is kept distinct from `null`

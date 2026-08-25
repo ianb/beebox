@@ -7,7 +7,17 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder stuck on a card page on iOS
 priority: important
+needs: [manual-testing]
 ---
+
+## Manual testing
+
+Both halves shipped in `8d80ef30`, verified so far only in the running app via `bin/browse` (web) and simulator unit tests + a compile (iOS) — the iOS chevron has never run on a physical device, and the original report came from the boxholder's phone. Needs, on an actual iPhone:
+
+- Tap into a card from chat, confirm a chevron appears on the webview's leading edge.
+- Tap it, confirm it returns to the chat session you left (not the landmark's newest chat).
+- Confirm the web "Chat" chip appears in the app bar on non-chat pages when this tab has been in a chat, and returns to the right session.
+
 
 Getting from chat into a card or the browse view is easy and has several
 routes. Getting back is not, and on iOS there is no visible route at all.
@@ -88,5 +98,5 @@ The boxholder answered the two open questions.
 
 The switch menu's half of this — switching to a landmark coining a second empty
 chat instead of returning you to the one you left — is fixed with
-[the landmark-switch issue](2026-08-20-cannot-switch-landmarks-from-chat.md),
+[the landmark-switch issue](../closed/bugs/2026-08-20-cannot-switch-landmarks-from-chat.md),
 which turned out to share a cause.
