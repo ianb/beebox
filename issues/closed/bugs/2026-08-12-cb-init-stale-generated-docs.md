@@ -1,21 +1,23 @@
 ---
 title: "`cb init` doesn't refresh docs/generated/ for newly added box-local schemas"
-workstream: unattached
+workstream: document-card-view
 area: callback-box
 labels: [cli, schemas]
 filed-by: agent
 discovered-by: agent
 discovered-in: main session — cb feedback triage from a real box
 priority: important
-next-action: fixed
+resolution: implemented
 ---
 
-Status (2026-08-24, commit b6564a61): `cb init` now forces `generateDocs`
-on every run (folded together with `generateSkills`), which should close
-this — newly added box-local schemas should now get their
-`docs/generated/card-*.md` alongside the `.claude/rules/` files. Not
-re-tested on a real box with box-local schemas since the fix; needs that
-confirmation before closing.
+Closed 2026-08-25: fixed by commit b6564a61 (`cb init` forces `generateDocs`,
+skills folded in; `cb docs refresh` runs per box on every deploy). Verified on
+the deployed server after the first deploy carrying the fix: on the four boxes
+with box-local schemas (3, 9, 1, and 3 local types), every local type has its
+`.claude/rules/card-<type>.md`, `docs/generated/card-<type>.md`, and skill;
+rule and generated-doc counts match on each box; trees clean; the refresh's
+`Sync templates from upstream` + `Refresh generated docs` commits are in each
+box's history at deploy time.
 
 After adding two box-local schemas (each with `instructions`), `cb init .` from
 the package root correctly generated their `.claude/rules/card-*.md` files — the
