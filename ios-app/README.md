@@ -25,6 +25,12 @@ Agent and contributor build/test guidance lives in [`CLAUDE.md`](CLAUDE.md).
   and `SFSpeechRecognizer` remains the iOS 17–25 fallback. The first use of a
   locale may download its system-managed model. A recorded WAV is still kept in
   parallel for the box's HQ transcription and diarization pass at send time.
+- A floating chevron on the webview's leading edge appears whenever the page
+  has history to go back to, and disappears on the chat itself. The shell has
+  no browser chrome, so before it the only way out of a card or the browse view
+  was the invisible edge-swipe. The web app bar carries its own contextual
+  "back to chat" chip; the native control is the floor under it, for a page
+  that offers nothing.
 - Native speech uses the web chat's earcon files, volumes, and timing for
   recording start/stop/failure, send/wait feedback, and idle listening.
 

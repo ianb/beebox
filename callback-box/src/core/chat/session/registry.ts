@@ -154,6 +154,15 @@ export class ChatSessionRegistry extends EventEmitter {
   }
 
   /**
+   * The newest reserved-but-unstarted chat bound to `contextDir`, or null —
+   * what "open this landmark's chat" falls back to when the history file has
+   * no committed session for it yet (`ChatReservationStore.latestForDirectory`).
+   */
+  reservationForDirectory(contextDir: string): string | null {
+    return this.reservations.latestForDirectory(contextDir);
+  }
+
+  /**
    * Whether this box can address the id at all — a live entry or a
    * reservation. The existence gates (send availability, capture and bulk
    * delivery targets) ask this instead of proving a chat exists by finding its
@@ -354,8 +363,17 @@ export class ChatSessionRegistry extends EventEmitter {
       engine?: AgentEngine | undefined;
     },
   ): Promise<void> {
-    this.reservations.release(sessionId);
-    await recordSessionStart(this.boxRoot, { sessionId, ...params });
+    // Released on the history write, not before it: until that row exists the
+    // reservation is the only thing that can answer `chat.directoryFor` /
+    // `chat.lastSessionForDirectory` for this chat, and the write is
+    // deliberately quiet on failure — so releasing up front left a window, and
+    // on a failed write a permanent state, where the chat was bound to a
+    // landmark and nothing could say which.
+    await recordSessionStart(this.boxRoot, {
+      sessionId,
+      ...params,
+      onHistoryWritten: () => { this.reservations.release(sessionId); },
+    });
   }
 
   /**

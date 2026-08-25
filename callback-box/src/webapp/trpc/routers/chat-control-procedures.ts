@@ -230,7 +230,10 @@ export const chatControlProcedures = {
     .input(z.object({ sessionId: sdkSessionIdSchema, contextDir: z.string().optional() }))
     .mutation(async ({ input, ctx }): Promise<ReserveResult> => {
       const { registry } = requireRuntime(ctx.boxRoot);
-      const contextDir = input.contextDir !== undefined && input.contextDir !== "" ? input.contextDir : null;
+      // `""` is kept, not collapsed to null: it is the box-root landmark, a
+      // real binding that `chat.directoryFor` reports so the bar can name the
+      // place. Only an absent param means "opened from nowhere".
+      const contextDir = input.contextDir ?? null;
       // Landmark feature defaults are captured now because nothing else will:
       // they only ever ride a `"new"` send, and a coined chat never sends one.
       const landmark = contextDir !== null ? await readLandmarkFeaturesForDir(ctx.boxRoot, contextDir) : null;
