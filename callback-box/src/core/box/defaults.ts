@@ -18,7 +18,11 @@ import { createInitialPersonalityTemplate } from "../../schemas/personality.js";
 import { createBriefingTemplate } from "../../schemas/briefing.js";
 import { createTodoViewTemplate } from "../../schemas/todo-view.js";
 import { createLandmarkTemplate, parseLandmarkFields } from "../../schemas/landmark.js";
-import { installTemplateFile, type InstallResult } from "../install-template-file.js";
+import {
+  hasRecordedTemplateVersion,
+  installTemplateFile,
+  type InstallResult,
+} from "../install-template-file.js";
 import { TEMPLATE_STOCK_HASHES } from "../template-stock-hashes.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 
@@ -46,6 +50,40 @@ function describeInstall(result: InstallResult, displayName: string): string | n
  *
  * @returns List of installed/updated procedure names
  */
+/**
+ * Stock procedure-card hashes that predate `config/template-versions.json`
+ * tracking for procedures, keyed by template filename.
+ *
+ * Without these, a box whose copy was installed before procedures were tracked
+ * has no recorded hash, so any upstream change parks in
+ * `config/_template-updates/` instead of landing — silently, since a parked
+ * update is not an error. The boxes running a procedure most are the oldest
+ * ones, i.e. exactly the ones that park.
+ *
+ * Every hash here was verified against a real field copy whose box-side git
+ * history shows no human or agent edit — only the automated `box-packageify`
+ * migration, which rewrote paths inside the card. They are canonical hashes
+ * (the same `sha256(canonicalize(...))` {@link installTemplateFile} computes);
+ * procedures declare no `boxOwnedFields` and no `normalize`, so that is the
+ * file hash. Add to this list only for a copy you have likewise shown to be
+ * unedited stock — a wrong entry here silently overwrites someone's work.
+ *
+ * Applied ONLY to a box with no recorded version for the file — the bootstrap
+ * case above. A tracked box that diverged from its recorded hash has been
+ * edited by someone, and an edit that happens to land on old stock content
+ * (reverting a prompt on purpose, say) is still their choice to keep. Without
+ * this scoping, `installTemplateFile` would overwrite it, since it accepts a
+ * prior-stock match whether or not a recorded hash exists.
+ */
+const PRIOR_STOCK_PROCEDURE_HASHES: Readonly<Record<string, string[]>> = {
+  "refresh-maps.procedure.card": [
+    // Field copies as of 2026-08-24: two boxes share the first, one carries
+    // the second. Both are pre-tracking stock mutated only by box-packageify.
+    "22359ef58fe4fecda2bb8e7ce12fcbd511df4edaf4e30d5befbf6ae9f3474a47",
+    "3fcb0dd508a76194ff1cd6af2d222a953a651d58f9846304e42ae3c5bb1e8a99",
+  ],
+};
+
 export async function installProcedures(boxRoot: string): Promise<string[]> {
   const templatesDir = path.join(PACKAGE_ROOT, "templates", "procedures");
 
@@ -65,10 +103,15 @@ export async function installProcedures(boxRoot: string): Promise<string[]> {
   const installed: string[] = [];
   for (const file of templateFiles) {
     const templateContent = await fs.readFile(path.join(templatesDir, file), "utf-8");
+    const relPath = path.join(BOX_DIRS.procedures, file);
+    const priorStock = PRIOR_STOCK_PROCEDURE_HASHES[file];
+    const usePriorStock =
+      priorStock !== undefined && !(await hasRecordedTemplateVersion(boxRoot, relPath));
     const result = await installTemplateFile({
       boxRoot,
-      relPath: path.join(BOX_DIRS.procedures, file),
+      relPath,
       templateContent,
+      ...(usePriorStock ? { priorStockHashes: priorStock } : {}),
     });
     const entry = describeInstall(result, file);
     if (entry !== null) installed.push(entry);

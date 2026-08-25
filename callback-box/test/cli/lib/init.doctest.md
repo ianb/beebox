@@ -117,7 +117,7 @@ const stockProcedures = await Promise.all(
     .filter((name) => name.endsWith(".procedure.card"))
     .map((name) => fs.readFile(path.join(procedureDir, name), "utf8")),
 );
-print(`refresh-maps: ${refreshMaps.includes("model: efficient")}`);
+print(`refresh-maps: ${refreshMaps.includes("model: balanced")}`);
 print(`process-pages: ${processPages.includes("model: balanced")}`);
 print(`provider pins: ${/model: (?:haiku|sonnet|opus|fable)/.test(stockProcedures.join("\n"))}`);
 =>

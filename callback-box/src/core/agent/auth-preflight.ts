@@ -12,7 +12,11 @@
  * never cached, so a fresh `claude auth login` is picked up on the next run.
  */
 
-import { createClaudeCliService, type ClaudeCliService } from "../../services/claude-cli.js";
+import {
+  AUTH_PROBE_INCONCLUSIVE,
+  createClaudeCliService,
+  type ClaudeCliService,
+} from "../../services/claude-cli.js";
 
 /** The single actionable message shown when Claude Code has no active login. */
 export const CLAUDE_NOT_LOGGED_IN_MESSAGE =
@@ -32,6 +36,18 @@ export class ClaudeAuthError extends Error {
 const POSITIVE_TTL_MS = 10 * 60 * 1000;
 
 let cachedOkAt: number | null = null;
+
+/**
+ * A probe that returns no usable answer is retried once before we act on it.
+ * `claude auth status` intermittently comes back empty on a machine that is
+ * genuinely logged in — observed twice in roughly eight local procedure
+ * invocations — and one retry clears it.
+ */
+async function probeAuth(claudeCli: ClaudeCliService): Promise<Record<string, unknown>> {
+  const first = await claudeCli.authStatus();
+  if (first[AUTH_PROBE_INCONCLUSIVE] !== true) return first;
+  return claudeCli.authStatus();
+}
 
 export interface CheckClaudeAuthOptions {
   /**
@@ -58,9 +74,21 @@ export async function checkClaudeAuth(options?: CheckClaudeAuthOptions): Promise
   if (cachedOkAt !== null && at - cachedOkAt < POSITIVE_TTL_MS) return;
 
   const claudeCli = options?.claudeCli ?? createClaudeCliService();
-  const status = await claudeCli.authStatus();
+  const status = await probeAuth(claudeCli);
   if (status["loggedIn"] === true) {
     cachedOkAt = at;
+    return;
+  }
+  if (status[AUTH_PROBE_INCONCLUSIVE] === true) {
+    // Still no answer after a retry. Proceed rather than fail: this preflight
+    // exists only to turn an opaque SDK auth failure into a clear message, so
+    // when it cannot tell, the SDK call right behind it is the better judge —
+    // it reports a real missing login precisely, and a false positive here
+    // kills a run that would have succeeded. Not cached: the next call reprobes.
+    console.warn(
+      "Claude auth probe returned no usable answer twice; proceeding and letting " +
+        "the agent invocation report auth state itself.",
+    );
     return;
   }
   throw new ClaudeAuthError();

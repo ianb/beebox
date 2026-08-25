@@ -82,4 +82,4 @@ partial work is still banked. The unresolvable-`asOf` case is now surfaced as an
 explicit anomaly rather than silently inflating the brief. Design and evidence:
 [`callback-box/docs/plans/refresh-maps-convergence.md`](../../../callback-box/docs/implemented-plans/refresh-maps-convergence.md).
 
-Remaining follow-up: [refresh-maps max-turns throughput](../../code-quality/2026-07-19-refresh-maps-max-turns-throughput.md).
+Remaining follow-up: [refresh-maps max-turns throughput](../code-quality/2026-07-19-refresh-maps-max-turns-throughput.md).
