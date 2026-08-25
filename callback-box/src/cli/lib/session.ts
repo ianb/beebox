@@ -7,11 +7,11 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import * as readline from "node:readline";
 import { isRecord } from "../../lib/is-record.js";
 
 import { buildEntry } from "./session-entry.js";
-import { isOversizeLine, oversizeEntry, stripInlineMedia } from "./session-oversize.js";
+import { oversizeEntry } from "./session-oversize.js";
+import { readTranscriptLines } from "./session-lines.js";
 import {
   SessionScan,
   type SessionLogResult,
@@ -193,9 +193,6 @@ export async function getSessionMetadata(args: {
   /** Max chars of the first user message captured in `firstUserSnippet`. Default 60. */
   snippetMaxLen?: number;
 }): Promise<SessionMetadata> {
-  const fileStream = fs.createReadStream(args.logPath, { encoding: "utf-8" });
-  const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
-
   let startTime: Date | null = null;
   let endTime: Date | null = null;
   const acc: MetadataAccumulator = {
@@ -205,8 +202,14 @@ export async function getSessionMetadata(args: {
     firstUserSnippet: null,
   };
 
-  for await (const line of rl) {
-    const raw = parseJsonlLine(line, "getSessionMetadata");
+  for await (const line of readTranscriptLines(args.logPath)) {
+    // A line still past the bound with its images gone is a genuinely enormous
+    // text turn. It goes uncounted rather than parsed: this walks whole
+    // transcripts (chat review does it per session), and the object graph is
+    // the cost the guard exists to refuse. The undercount is accepted — the
+    // common fat line is image-bearing and strips down to an ordinary parse.
+    if (line.kind === "oversize") continue;
+    const raw = parseJsonlLine(line.text, "getSessionMetadata");
     if (!raw) continue;
     if (raw.type !== "user" && raw.type !== "assistant") continue;
 
@@ -269,44 +272,28 @@ export async function parseSessionLog(
   // Taking it from here rather than from a new parameter keeps every existing
   // caller — CLI renderers, review, retro — unchanged.
   const sessionId = path.basename(logPath, ".jsonl");
-  const fileStream = fs.createReadStream(logPath, { encoding: "utf-8" });
-  const rl = readline.createInterface({
-    input: fileStream,
-    crlfDelay: Infinity,
-  });
-
   const scan = new SessionScan(slice);
 
-  let lineNumber = 0;
-  for await (const line of rl) {
-    lineNumber += 1;
+  for await (const line of readTranscriptLines(logPath)) {
     // A pathologically long line is never parsed — see `session-oversize.ts`.
     // It is dropped if its head shows plumbing the scan would drop anyway;
     // otherwise the stub it becomes counts as one displayable entry (so `total`
     // and `hasMore` stay honest), is never a real user message, and carries no
     // `tool_use` block for a later `tool_result` to graft onto.
-    let usable = line;
+    if (line.kind === "oversize") {
+      const stub = oversizeEntry(line.raw, line.lineNumber);
+      if (stub) scan.record(stub);
+      continue;
+    }
+    const raw = parseJsonlLine(line.text, "parseSessionLog");
+    if (!raw) continue;
     // Non-null once this line's image payloads have been dropped: the entry's
     // image blocks then carry a reference back to the bytes still sitting in
     // this file, instead of a placeholder (`shared/session-media.ts`).
-    let mediaSessionId: string | null = null;
-    if (isOversizeLine(line)) {
-      // Almost every oversize line is oversize because it carries an image. Drop
-      // the payload and the rest of the turn — the person's own text, the
-      // ordering, the identity — parses normally and cheaply. Only a line still
-      // too big without its images falls through to the stub.
-      const stripped = stripInlineMedia(line);
-      if (stripped === null || isOversizeLine(stripped)) {
-        const stub = oversizeEntry(line, lineNumber);
-        if (stub) scan.record(stub);
-        continue;
-      }
-      usable = stripped;
-      mediaSessionId = sessionId;
-    }
-    const raw = parseJsonlLine(usable, "parseSessionLog");
-    if (!raw) continue;
-    const entry = buildEntry(raw, { recent: scan.recent(), mediaSessionId });
+    const entry = buildEntry(raw, {
+      recent: scan.recent(),
+      mediaSessionId: line.mediaStripped ? sessionId : null,
+    });
     if (entry) scan.record(entry);
   }
 

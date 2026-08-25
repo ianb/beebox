@@ -22,7 +22,7 @@ discovered-in: main session — direction 4 spun out of the closed chat.history 
 > [reloaded-conversation-hides-the-photos-you-sent](../bugs/2026-08-24-reloaded-conversation-hides-the-photos-you-sent.md).
 > The one residual that IS ours — our own readers, not the transcript — is spun
 > out as
-> [transcript-readers-without-the-oversize-guard](../../code-quality/2026-08-25-transcript-readers-without-the-oversize-guard.md).
+> [transcript-readers-without-the-oversize-guard](2026-08-25-transcript-readers-without-the-oversize-guard.md).
 
 Follow-up hardening from
 [chat-history-parse-transient-oom](../bugs/2026-08-04-chat-history-parse-transient-oom.md),
