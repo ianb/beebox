@@ -1,7 +1,8 @@
 ---
 title: "Scheduled monitors have no way to talk to Ian — a message queue outside git"
 workstream: scheduled-task-voice
-design: ../../callback-box/docs/plans/scheduled-workstreams.md
+resolution: implemented
+design: ../../../callback-box/docs/implemented-plans/scheduled-workstreams.md
 area: monorepo
 needs: [design]
 labels: [scheduler, workstreams, notifications]
@@ -10,6 +11,8 @@ discovered-by: Ian
 discovered-in: main session — cb feedback triage
 priority: normal
 ---
+
+**Closed:** Resolved by the scheduled-workstreams plan: alerts are durable records in an outside-git store (`bin/lib/schedules-alerts.ts`), surfaced in the workstream browser's Scheduled section (`workstreams-app/src/frontend/components/ScheduleAlertList` and related) and via `bin/schedules alerts`. See commits 8c98e4a4 (store + alert commands), 9b305999 (browser reads/acknowledges alerts), 8455d8d5 (Scheduled section).
 
 The recurring jobs — the Agent SDK update monitor, the weekly manual-test run,
 periodic health monitors, the scheduler daemon — all suffer the same problem:

@@ -1,10 +1,10 @@
 ---
 title: "Scheduled workstreams: one scheduler, a run script as the head, alerts as durable records"
-status: active
+status: implemented
 workstream: scheduled-task-voice
 issues:
-  - ../../../issues/features/2026-08-12-monitor-message-queue.md
-  - ../../../issues/docs-and-chores/2026-08-08-maintenance-cadence-framework.md
+  - ../../../issues/closed/features/2026-08-12-monitor-message-queue.md
+  - ../../../issues/closed/docs-and-chores/2026-08-08-maintenance-cadence-framework.md
 ---
 
 # Scheduled workstreams

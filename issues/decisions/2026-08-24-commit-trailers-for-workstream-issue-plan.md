@@ -89,7 +89,7 @@ invention.
 
 ## Related
 
-- [No way to know what a workstream covers](../features/2026-08-20-no-way-to-know-what-a-workstream-covers.md)
+- [No way to know what a workstream covers](../closed/features/2026-08-20-no-way-to-know-what-a-workstream-covers.md)
   — the same missing association from the issue-queue end. If commits carried
   `Workstream:`, "what did this stream actually do" would be answerable from git
   rather than from a field someone had to remember to fill.
