@@ -22,7 +22,7 @@ import { errorMessage } from "../../lib/error-guards.js";
  * noise. Non-zero means a human needs to look, which for `deploy.sh` is
  * something to report without failing the deploy.
  */
-export async function runDocsRefresh(boxRoot: string): Promise<number> {
+async function runDocsRefresh(boxRoot: string): Promise<number> {
   const result: DocsRefreshResult = await refreshGeneratedDocs({ boxRoot });
   switch (result.status) {
     case "current":

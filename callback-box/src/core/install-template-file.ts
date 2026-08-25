@@ -316,6 +316,23 @@ async function removeParkedMirror(boxRoot: string, relPath: string): Promise<voi
   }
 }
 
+/**
+ * Has this box ever recorded a clean install of `relPath`?
+ *
+ * Lets a caller scope a `priorStockHashes` allowlist to the bootstrap case it
+ * was written for — a box whose copy predates tracking. The guide templates
+ * deliberately want the broader behaviour (a tracked box carrying a superseded
+ * guide should still take the update), so this is a per-caller choice rather
+ * than a change to {@link installTemplateFile}.
+ */
+export async function hasRecordedTemplateVersion(
+  boxRoot: string,
+  relPath: string,
+): Promise<boolean> {
+  const versions = await readVersions(boxRoot);
+  return versions[relPath] !== undefined;
+}
+
 async function readVersions(boxRoot: string): Promise<VersionsFile> {
   const abs = path.join(boxRoot, VERSIONS_FILE);
   try {

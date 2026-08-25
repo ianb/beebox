@@ -10,6 +10,14 @@ import { invariant } from "../lib/invariant.js";
 
 // ─── Service interface ───────────────────────────────────────────────────────
 
+/**
+ * Marks a status probe that produced no usable answer — an empty or
+ * unparseable `claude auth status`, or a spawn/timeout failure. Distinct from
+ * a probe that answered `loggedIn: false`: the first means we don't know, the
+ * second means we do. Callers that gate on auth must not treat them alike.
+ */
+export const AUTH_PROBE_INCONCLUSIVE = "probeInconclusive";
+
 export interface ClaudeCliService {
   authStatus(): Promise<Record<string, unknown>>;
   authLogin(email?: string): Promise<{ authUrl: string | null; error?: string }>;
@@ -28,11 +36,14 @@ export function createClaudeCliService(): ClaudeCliService {
           const output = stdout || "";
           try {
             resolve(JSON.parse(output));
-          } catch (e) {
-            console.warn("claude auth status output was not JSON, falling back to raw/error:", e);
+          } catch (_e) {
+            // No usable answer. Report that as its own state rather than as a
+            // logout: an empty probe intermittently happens on a perfectly
+            // authenticated machine, and reporting it as `loggedIn: false`
+            // fails runs closed while naming a remedy that isn't the problem.
             resolve(err
-              ? { loggedIn: false, error: err.message }
-              : { loggedIn: false, raw: output });
+              ? { [AUTH_PROBE_INCONCLUSIVE]: true, error: err.message }
+              : { [AUTH_PROBE_INCONCLUSIVE]: true, raw: output });
           }
         });
       });

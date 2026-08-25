@@ -20,10 +20,10 @@ const KILL_GRACE_MS = 5000;
  *  alert carries. The LOG on disk keeps everything up to the cap below. */
 export const OUTPUT_TAIL_LINES = 400;
 /** Byte ceiling on that in-memory tail, for output with no newlines in it. */
-export const OUTPUT_TAIL_BYTES = 256 * 1024;
+const OUTPUT_TAIL_BYTES = 256 * 1024;
 /** Per-run log ceiling. Past it the log is truncated with a marker and the run
  *  is recorded as failed: a runner that OOMs writes no accounting at all. */
-export const LOG_MAX_BYTES = 50 * 1024 * 1024;
+const LOG_MAX_BYTES = 50 * 1024 * 1024;
 const TRUNCATION_MARKER = "\n[schedules] output exceeded the per-run log cap; the rest was discarded.\n";
 
 /**

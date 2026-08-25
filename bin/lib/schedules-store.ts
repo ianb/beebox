@@ -105,7 +105,7 @@ export async function readStoreState(root: string): Promise<StoreState | null> {
   return readJson(storeStatePath(root), storeStateSchema);
 }
 
-export async function writeStoreState(root: string, state: StoreState): Promise<void> {
+async function writeStoreState(root: string, state: StoreState): Promise<void> {
   await writeJson(storeStatePath(root), state);
 }
 
@@ -135,7 +135,7 @@ export async function readScheduleState(root: string, name: string): Promise<Sch
   return state === null ? EMPTY_SCHEDULE_STATE : state;
 }
 
-export async function writeScheduleState(root: string, update: { name: string; state: ScheduleState }): Promise<void> {
+async function writeScheduleState(root: string, update: { name: string; state: ScheduleState }): Promise<void> {
   await writeJson(path.join(scheduleDir(root, update.name), "state.json"), update.state);
 }
 

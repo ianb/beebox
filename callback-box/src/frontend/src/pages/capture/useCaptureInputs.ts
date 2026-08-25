@@ -6,6 +6,7 @@
 
 import { useRef, useCallback } from "react";
 import { type UploadState } from "./capture-api";
+import { toastError } from "../../components/ui/toast-store";
 
 interface CaptureInputsOptions {
   sessionId: string | null;
@@ -26,6 +27,19 @@ interface CaptureInputs {
   handleFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
+/**
+ * Picking a file with no capture session used to do nothing at all — no upload,
+ * no message, no trace. The session is absent exactly when capture failed to
+ * start, which is the moment the user is most likely to reach for this button,
+ * so the one path they had left answered with silence (a journey walker on
+ * 2026-08-24 concluded the upload had failed too, and only found out otherwise
+ * by backing out of capture). A user-initiated action never silently no-ops —
+ * code-style.md defensiveness rule 5.
+ */
+function noSession(): void {
+  toastError("Capture has not started, so there is nowhere to put this yet");
+}
+
 export function useCaptureInputs(options: CaptureInputsOptions): CaptureInputs {
   const { sessionId, photoTotal, fileTotal, setPhotoStates, setFileStates, uploadPhoto, uploadFile } = options;
   const galleryRef = useRef<HTMLInputElement>(null);
@@ -36,7 +50,8 @@ export function useCaptureInputs(options: CaptureInputsOptions): CaptureInputs {
 
   const handleGallerySelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (!sessionId || !e.target.files) return;
+      if (!e.target.files || e.target.files.length === 0) return; // a cancelled picker
+      if (!sessionId) { noSession(); e.target.value = ""; return; }
       const files = Array.from(e.target.files);
       const baseIndex = photoTotal;
       const placeholders: UploadState[] = Array.from({ length: files.length }, (): UploadState => "uploading");
@@ -52,7 +67,8 @@ export function useCaptureInputs(options: CaptureInputsOptions): CaptureInputs {
 
   const handleFileSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (!sessionId || !e.target.files) return;
+      if (!e.target.files || e.target.files.length === 0) return; // a cancelled picker
+      if (!sessionId) { noSession(); e.target.value = ""; return; }
       const files = Array.from(e.target.files);
       const baseIndex = fileTotal;
       const placeholders: UploadState[] = Array.from({ length: files.length }, (): UploadState => "uploading");
