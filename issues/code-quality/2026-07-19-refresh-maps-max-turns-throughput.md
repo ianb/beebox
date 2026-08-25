@@ -100,6 +100,62 @@ it had tracked content.
 roughly $12/mo → $37/mo. Raising `max-turns` alone changes nothing, since
 almost nothing reaches it.
 
+## Tier comparison, 2026-08-24
+
+Measured rather than argued, since the tier question came up once the "haiku
+damages maps" reading was withdrawn. A purpose-built fixture box, bootstrapped
+from one pinned seed commit, produces a 7-directory / 25-child brief mixing
+names that need an annotation with names that don't. Three runs per tier through
+the real procedure path, `efficient` vs `balanced`, same brief every run.
+
+**Both tiers are mechanically perfect.** 7/7 maps written, 0 children dropped,
+0 entries invented, 0 annotations over the 100-character limit, in all six runs.
+Nothing supports the idea that the efficient tier damages maps.
+
+**They differ on whether the map says anything.** Scoring against the fixture's
+two deliberate name classes — 8 entries whose meaning the name does not carry,
+12 that speak for themselves:
+
+| tier | annotated the opaque 8 | annotated the obvious 12 | mean |
+|---|---|---|---|
+| `efficient` | 2.0 (range 1–3) | 0.7 | 232s |
+| `balanced` | 5.0 (range 3–6) | 4.7 | 185s |
+
+The same directory, same brief:
+
+```
+efficient                 balanced
+- `codes/`                - `codes/` — ISO reference tables (country, currency)
+- `g7.doc.card`           - `g7.doc.card`
+- `rfc-index.doc.card`    - `rfc-index.doc.card`
+- `scratch/`              - `scratch/` — working notes
+```
+
+The efficient tier reliably produces a strictly worse `ls` — it costs a model
+call and adds nothing the filenames already carried. That defeats the point of
+MAP.md while passing every check the procedure makes, because the template says
+annotations are optional.
+
+But `balanced` is not the fix. It annotates 4.7 of the 12 self-explanatory
+entries, which the template explicitly tells it not to do, and it still misses
+the two most opaque names in the fixture. Its range (3–6) overlaps the efficient
+tier's. And neither tier obeys the SHELL DIRS rule: both were handed a directory
+whose contents are hidden by ignore patterns and asked for an honest count, and
+neither produced a count in any run.
+
+Both tiers fail the same instructions, in the same places, at different rates.
+That is a prompt result, not a capability result — the annotation rule is
+written as permission ("annotations are OPTIONAL … only earns its place when it
+tells a reader something the name doesn't"), and it gives no way to tell which
+case a given entry is. Buying around it with `balanced` costs ~3× per run and
+still leaves the SHELL DIRS rule unfollowed and the obvious entries
+over-annotated.
+
+**Recommendation on tier: sharpen the template first, then re-measure.** The
+harness and rubric are reusable; re-running is one command. If a sharpened
+prompt still leaves `efficient` at ~2/8, that is the evidence for `balanced`,
+and it will be evidence rather than inference.
+
 **Recommendation: leave `max-turns: 40` alone.** It is correctly sized and is
 not what limits throughput. The open question the data actually raises is
 whether the validate judge should be taught the ignore policy it keeps
