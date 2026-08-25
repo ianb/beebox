@@ -75,10 +75,17 @@ export function parkedUpdatePath(relPath: string): string {
 }
 
 /**
- * Box-relative paths that callback-box owns as template output (the `install*`
- * and `generateRules` helpers write them). `syncTemplatesFromSource` uses this
- * to commit just their output without sweeping up unrelated user work. Simple
- * regex over relative paths — no globbing needed for what we generate.
+ * Box-relative paths that callback-box owns as template output (the `install*`,
+ * `generateRules`, and `generateSkills` helpers write them).
+ * `syncTemplatesFromSource` uses this to commit just their output without
+ * sweeping up unrelated user work. Simple regex over relative paths — no
+ * globbing needed for what we generate.
+ *
+ * Deliberately matched by directory, not by managed-file name: a hand-authored
+ * rule or skill sitting in `.claude/rules/` / `.claude/skills/` is committed
+ * alongside ours rather than left dirty. That is the pre-existing convention
+ * for `.claude/rules/`, and the alternative — importing the managed skill list
+ * here — would drag the whole skill-content module into every consumer.
  */
 const TEMPLATE_MANAGED_PATTERNS: readonly RegExp[] = [
   /^config\/procedures\/.+\.(?:procedure|orig-procedure)\.card$/,
@@ -109,12 +116,20 @@ const TEMPLATE_MANAGED_PATTERNS: readonly RegExp[] = [
   /^\.\.\/src\/tricks\/scripts\/CLAUDE\.md$/,
   /^briefing\.(?:briefing|orig-briefing)\.card$/,
   /^briefing\.md$/,
-  /^\.claude\/rules\/.+\.md$/,
-  /^\.claude\/settings\.json$/,
+  // `.claude/` lives at the box's PACKAGE root. For a legacy box that is
+  // `boxRoot` itself; for a v2 box `commitTemplateSyncChanges` normalizes the
+  // git-reported path to `../.claude/...` (it sits outside `content/`) — so
+  // both forms have to match or a v2 box's regenerated rules/skills stay
+  // uncommitted and leave the tree permanently dirty.
+  /^(?:\.\.\/)?\.claude\/rules\/.+\.md$/,
+  /^(?:\.\.\/)?\.claude\/settings\.json$/,
+  // Managed box skills (`generateSkills`), including each skill's
+  // supplementary files.
+  /^(?:\.\.\/)?\.claude\/skills\/.+$/,
   /^\.\.\/AGENTS\.md$/,
   /^AGENTS\.md$/,
   /^.+\/AGENTS\.md$/,
-  /^\.\.\/\.agents\/skills\/.+$/,
+  /^(?:\.\.\/)?\.agents\/skills\/.+$/,
   /^\.\.\/\.codex\/hooks\.json$/,
 ];
 
@@ -423,7 +438,7 @@ export async function installTemplateFile(opts: InstallTemplateOptions): Promise
  * case it'll re-park on the next template change). Sweeping prevents
  * `config/_template-updates/` from accumulating cruft indefinitely.
  */
-export const STALE_TEMPLATE_UPDATE_MS = 30 * 24 * 60 * 60 * 1000;
+const STALE_TEMPLATE_UPDATE_MS = 30 * 24 * 60 * 60 * 1000;
 
 /**
  * Delete parked template-update files under `config/_template-updates/` that are

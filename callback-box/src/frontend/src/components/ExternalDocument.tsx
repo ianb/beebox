@@ -18,7 +18,7 @@ import { Pre } from "./ui/Pre";
 import { getRenderers, type FileData } from "../renderers";
 import { type NavigateHint, type ViewTarget } from "../lib/view-url";
 
-export class ExternalFetchError extends Error {
+class ExternalFetchError extends Error {
   readonly status: number;
   constructor(status: number) {
     super("Failed to load external target");
@@ -27,7 +27,7 @@ export class ExternalFetchError extends Error {
   }
 }
 
-export const EnvelopeSchema = z.object({
+const EnvelopeSchema = z.object({
   contentBase64: z.string(),
   contentType: z.string(),
   markers: z.string(),

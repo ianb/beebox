@@ -14,7 +14,7 @@ import { GoogleGenAI } from "@google/genai";
 
 const AUDIO_QUESTION_MODEL = "gemini-2.5-flash";
 
-export class AudioQuestionError extends Error {
+class AudioQuestionError extends Error {
   constructor(details: { finishReason?: string | undefined; blockReason?: string | undefined }) {
     const parts = ["audio model returned no answer"];
     if (details.finishReason) parts.push(`finishReason=${details.finishReason}`);

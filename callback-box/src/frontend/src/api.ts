@@ -17,6 +17,7 @@
  */
 
 export {
+  apiRawFileUrl,
   getApiBase,
   getWebSocketUrl,
   joinBaseAndPath,

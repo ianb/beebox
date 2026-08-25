@@ -20,10 +20,9 @@
  */
 
 export {
-  ConfidenceLevel,
-  BeliefSource,
-  ExperimentStatus,
-  ReactionSentiment,
+  ConfidenceLevelSchema,
+  BeliefSourceSchema,
+  ExperimentStatusSchema,
   GuideSchema,
   type Guide,
   type GuideFields,

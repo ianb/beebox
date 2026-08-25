@@ -31,7 +31,7 @@ export function appendRollingLogStrict(filePath: string, content: string): Promi
 }
 
 /** Thrown by {@link appendRollingLogStrict} when the underlying write fails. */
-export class RollingLogWriteError extends Error {
+class RollingLogWriteError extends Error {
   constructor(readonly filePath: string, options: { cause: unknown }) {
     super(`Failed to append to rolling log ${filePath}`, options);
     this.name = "RollingLogWriteError";

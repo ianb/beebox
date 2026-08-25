@@ -46,7 +46,7 @@ function delay(ms: number): Promise<void> {
  * Infrastructure failure, not a caller-actionable condition — `runCommand`
  * catches it into a `{ success: false }` result.
  */
-export class QuestionLockError extends Error {
+class QuestionLockError extends Error {
   readonly lockPath: string;
   constructor(lockPath: string) {
     super(`Question transition lock could not be acquired: ${lockPath}`);

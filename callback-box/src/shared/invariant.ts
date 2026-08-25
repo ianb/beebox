@@ -9,10 +9,4 @@
  * `shared/self-note.ts` already lean on `lib/invariant` the same way); keeping the
  * source in `lib/` preserves `lib/` as a leaf that imports nothing upward.
  */
-export {
-  assertNever,
-  invariant,
-  checkInvariant,
-  tolerateNever,
-  InvariantError,
-} from "../lib/invariant.js";
+export { assertNever, invariant } from "../lib/invariant.js";

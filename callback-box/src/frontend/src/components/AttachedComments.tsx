@@ -11,10 +11,11 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-import { getApiBase } from "../api";
+import { apiRawFileUrl, getApiBase } from "../api";
 import { resolveRelativePath } from "../lib/view-url";
 import { cbSource } from "../lib/source-tag";
 import { RequestError } from "../lib/errors";
+import { invariant } from "@shared/invariant";
 import { isRecord } from "@shared/is-record";
 import { Accordion } from "./ui/Accordion";
 import { Text } from "./ui/Text";
@@ -46,7 +47,10 @@ export function AttachedComments({
     queryKey: ["comments-sidecar", filePath],
     enabled: filePath !== null,
     queryFn: async ({ signal }) => {
-      const resp = await fetch(`${getApiBase()}/files/${filePath}`, { signal });
+      // `enabled: filePath !== null` gates the query itself; TS can't see
+      // that gate narrow this closure's capture, so assert it explicitly.
+      invariant(filePath !== null, "queryFn only runs when enabled, i.e. filePath !== null");
+      const resp = await fetch(apiRawFileUrl(getApiBase(), filePath), { signal });
       if (!resp.ok) {
         const message = `Failed to load comments: ${resp.status} ${resp.statusText}`;
         throw new RequestError(message);

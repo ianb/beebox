@@ -165,4 +165,3 @@ registerCommand({
   execute: executeLs,
 });
 
-export { executeLs };

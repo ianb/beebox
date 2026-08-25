@@ -52,7 +52,7 @@ class GoogleTokenLockError extends Error {
  * genuinely-absent file (ENOENT → start fresh), which is the legitimate
  * first-run case.
  */
-export class GoogleTokenStoreCorruptError extends Error {
+class GoogleTokenStoreCorruptError extends Error {
   readonly storePath: string;
   constructor(filePath: string, options: { cause: unknown }) {
     super(

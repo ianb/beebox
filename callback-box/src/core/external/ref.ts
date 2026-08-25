@@ -37,19 +37,19 @@ export class NotFileUrlError extends ExternalRefError {
     this.name = "NotFileUrlError";
   }
 }
-export class TargetNotFoundError extends ExternalRefError {
+class TargetNotFoundError extends ExternalRefError {
   constructor(absPath: string) {
     super("Target not found", absPath);
     this.name = "TargetNotFoundError";
   }
 }
-export class PathNotAllowedError extends ExternalRefError {
+class PathNotAllowedError extends ExternalRefError {
   constructor(absPath: string) {
     super("Path is not under an allowed root", absPath);
     this.name = "PathNotAllowedError";
   }
 }
-export class DeniedPathError extends ExternalRefError {
+class DeniedPathError extends ExternalRefError {
   constructor(absPath: string) {
     super("Denied path", absPath);
     this.name = "DeniedPathError";

@@ -49,7 +49,7 @@ function embedHash(text: string): string {
  * embedder + text. Pure — exported for doctests and reused to recompute
  * readiness after the pass.
  */
-export function computePendingEmbeds({
+function computePendingEmbeds({
   manifest,
   containsState,
 }: {

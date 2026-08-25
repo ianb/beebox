@@ -25,7 +25,6 @@ import "./handle.js";
 
 // Re-export for convenience
 export {
-  registerCommand,
   getCommand,
   listCommands,
   runCommand,
@@ -37,4 +36,3 @@ export {
   type ArgDefinition,
 } from "../command-runner.js";
 
-export { getTemplateNames } from "../../schemas/index.js";

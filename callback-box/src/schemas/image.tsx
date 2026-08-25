@@ -19,10 +19,10 @@ import { z } from "zod";
 import { cardSchema, type InferCardFields } from "../cards/index.js";
 import { type FileLoader, titleFromFilename, truncateTitle } from "../core/file-summary.js";
 
-export const ImageStatus = z.enum(["new", "analyzed", "invalid"]);
-export type ImageStatus = z.infer<typeof ImageStatus>;
+const ImageStatusSchema = z.enum(["new", "analyzed", "invalid"]);
+export type ImageStatus = z.infer<typeof ImageStatusSchema>;
 
-export const ImageSource = z.enum([
+export const ImageSourceSchema = z.enum([
   "camera-user",
   "camera-environment",
   "gallery",
@@ -31,15 +31,15 @@ export const ImageSource = z.enum([
   "scan",
   "generated",
 ]);
-export type ImageSource = z.infer<typeof ImageSource>;
+export type ImageSource = z.infer<typeof ImageSourceSchema>;
 
-export const ImageRotation = z.enum(["0", "90", "180", "270"]);
-export type ImageRotation = z.infer<typeof ImageRotation>;
+const ImageRotationSchema = z.enum(["0", "90", "180", "270"]);
+export type ImageRotation = z.infer<typeof ImageRotationSchema>;
 
 const FilenameEntry = z.object({
   ref: z.string(),
   captured: z.string().datetime({ offset: true }),
-  source: ImageSource,
+  source: ImageSourceSchema,
 });
 
 const TextBlock = z.object({
@@ -77,9 +77,9 @@ export const ImageSchema = cardSchema("image", {
   description: "A photo (typically from a capture session) — the image file lives in the attach scope; analysis fills description/OCR/EXIF",
   category: "synced",
   fields: {
-    status: ImageStatus.default("new"),
+    status: ImageStatusSchema.default("new"),
     "has-text": z.boolean().optional(),
-    rotation: ImageRotation.optional(),
+    rotation: ImageRotationSchema.optional(),
     filename: FilenameEntry,
     description: z.string().optional(),
     creation: z.string().optional(),

@@ -31,8 +31,10 @@ the directory — like `closed/` is the status, there is no `type:` field):
   belongs in another category.
 
 Each item is one file, `<category>/YYYY-MM-DD-<slug>.md` (date = when filed; slug
-is the ID — pick a descriptive name). Before filing, grep the whole tree for
-related slugs/words and extend a matching item rather than duplicating. Pick the
+is the ID — pick a descriptive name). Before filing, search the whole tree —
+`bin/issues search --all "<symptom or idea>"` (hybrid keyword + semantic; see
+`bin/CLAUDE.md`) plus a grep for the file/symbol names — and extend a matching
+item rather than duplicating. Pick the
 *dominant* category — a bug whose fix is a refactor is still a `bug`. Reclassify
 by `git mv`-ing between category dirs (and fix any inbound links).
 
@@ -146,15 +148,15 @@ agent-facing docs and skills as much as to shipped source.
   and what should happen** — a year from now "needs testing" alone is useless. An
   agent should never remove this itself; only the developer clears it, by testing. Every
   flagged issue must use a `## Manual testing` section; the browser links to its
-  stable `#manual-testing` anchor. `grep -rl "manual-testing" issues/` is the
-  list of things waiting on them.
+  stable `#manual-testing` anchor. `bin/issues list --needs manual-testing` is
+  the list of things waiting on them.
   - **Ready-to-test is the whole point — do NOT use it for an unfixed bug.** If no
     fix has landed (the item just describes a problem, or only proposes fix
     directions), it is *not* awaiting testing — it is awaiting a fix, so it gets
     **no** `needs` value (or `[design]`/`[decision]` if it genuinely needs those).
     A "verify on a real device" note in the body is guidance for *when* a fix
-    lands, not license to pre-set the label. The list `grep -rl "manual-testing"`
-    produces must be things the developer can actually pick up and test *today*; an unfixed
+    lands, not license to pre-set the label. The list `bin/issues list --needs
+    manual-testing` produces must be things the developer can actually pick up and test *today*; an unfixed
     bug in it wastes their time. Only add the label once the fix is committed.
   - **When the code has already landed** (the common case — the fix shipped and
     only a real-device / browser check remains), make that the item's *headline*:
@@ -238,7 +240,7 @@ agent-facing docs and skills as much as to shipped source.
   the second is often fixable here.
 
   Removing the field is not enough on its own: an item that leaves
-  `grep -rl "manual-testing" issues/` must leave it because it was settled, so
+  `bin/issues list --needs manual-testing` must leave it because it was settled, so
   that list stays a queue the developer can work rather than a graveyard.
   Agents may set `discuss` when work reaches a genuine human judgment call, but
   must summarize the tension in the issue rather than using the tag as a vague
@@ -274,7 +276,7 @@ with a stub section:
 ```
 
 Whoever researches the item fills the section in and retitles it
-`## Research (YYYY-MM-DD)`. So `grep -rl "## Research (incomplete)" issues/` lists
+`## Research (YYYY-MM-DD)`. So `bin/issues list --research awaiting` lists
 everything awaiting research, and researching an item is a first-class way to
 advance it without implementing anything.
 
@@ -338,11 +340,38 @@ orphan that `bin/workstreams sweep` reports until resolved. Details:
 dev issues browser (`/workstreams/issues/`) marked `private` — that page is
 owner-session-gated.
 
+## Re-encountering an issue
+
+Meeting an already-filed problem again — the same bug in a new session, a user
+report matching an open item, a symptom found while fixing something else — is
+evidence, and the issue should record it. Add a dated line to the body (where
+it was seen, in what conditions), then apply whichever of these holds:
+
+- **`needs: [manual-testing]` + re-encountered → it is not fixed.** The label
+  means "code landed, only a human check remains"; a fresh sighting *is* that
+  check, failed. Remove `manual-testing`, keep the `## Manual testing` section
+  as history, note the re-encounter as the headline, and treat the item as an
+  open bug again (this is the one case where an agent removes the label —
+  the developer's gate is for confirming a fix, not for a fix that visibly
+  didn't hold).
+- **`priority: backlog` or `normal` + re-encountered → the priority may be
+  stale.** Do not change it (agents never set `priority:`); note the sighting
+  in the body with a one-line "re-encountered on <date>, priority may be
+  stale". If the issue carries no `next-action:`, set `next-action: discuss`
+  so the developer sees it; if it already carries one, leave that tag alone —
+  it is the developer's requested disposition, and the body note is enough.
+  `important` needs no note.
+- **Closed + re-encountered → reopen**, unless what you saw is genuinely a
+  different defect: `git mv` back out of `closed/`, drop `resolution:`, and
+  record what the original fix missed. A duplicate of a closed issue is only
+  closed if the closed one's fix is still in place.
+
 ## Taking on an issue (agents)
 
-Before you start working an issue, **grep the queue for related and duplicate
-items** — by the issue's slug, its keywords, the files/symbols it names, and the
-symptom. A fix often resolves a sibling too, and there are frequently near-dupes
+Before you start working an issue, **search the queue for related and
+duplicate items** — `bin/issues similar <path> --all` (semantic; add `--docs`
+to include plans/design docs as prior art), then grep by the issue's slug,
+its keywords, the files/symbols it names, and the symptom. A fix often resolves a sibling too, and there are frequently near-dupes
 filed from different angles. Decide up front which of the cluster this work should
 address *together* (fixing one and leaving its twin open is wasted future work),
 and **list every issue in the cluster in the plan** (cb-plan's "Issues addressed"
@@ -352,8 +381,10 @@ are the ones that get forgotten.
 ## Filing (agents)
 
 Filing is at your discretion — no thresholds or quotas. When you notice something
-worth keeping that's outside your current task: check for an existing item, pick a
-category, then file with `title:`, `workstream: unattached`, `filed-by: agent`,
+worth keeping that's outside your current task: check for an existing item
+(`bin/issues search --all "<what you saw>"`; a hit that already describes it —
+open or closed — is amended or reopened per "Re-encountering an issue" above,
+not duplicated), pick a category, then file with `title:`, `workstream: unattached`, `filed-by: agent`,
 `discovered-by:` (the actual source), and `discovered-in:` (your worktree and
 what you were doing), and move on. Leave `priority:` off — see above; it is
 the developer's call, not yours. Set

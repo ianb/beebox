@@ -31,7 +31,7 @@ import {
 } from "../../shared/inconclusive.js";
 
 /** Structured verdict the review model returns for an instruction check. */
-export const InstructionVerdict = z.object({
+const InstructionVerdict = z.object({
   passed: z.boolean(),
   reasoning: z.string(),
 });

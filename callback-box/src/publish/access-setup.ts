@@ -40,7 +40,7 @@ export type AccessProvisionResult =
   | { ok: false; reason: "policy-drift"; message: string };
 
 /** The Access application name setup creates (also the find key in error text). */
-export const ACCESS_APP_NAME = "callback-box publications";
+const ACCESS_APP_NAME = "callback-box publications";
 
 /**
  * Ensure the Zero Trust org, OTP IdP, `/a` application, and allow-everyone

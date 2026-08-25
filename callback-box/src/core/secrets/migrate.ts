@@ -165,7 +165,7 @@ export interface MigrationPlan {
  * what the scheduler actually runs, so it cannot include a stale checkout that
  * merely happens to sit beside the real ones.
  */
-export async function migrationBoxRoots(opts: { root: string | undefined }): Promise<string[]> {
+async function migrationBoxRoots(opts: { root: string | undefined }): Promise<string[]> {
   if (opts.root === undefined) {
     const config = await loadBoxesConfig();
     return config.boxes;

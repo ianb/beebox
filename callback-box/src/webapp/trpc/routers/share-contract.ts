@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const shareDestination = z.discriminatedUnion("kind", [
+const shareDestination = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("inbox") }),
   z.object({ kind: z.literal("landmark"), dir: z.string() }),
 ]);

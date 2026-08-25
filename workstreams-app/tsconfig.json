@@ -15,7 +15,6 @@
     "declaration": false,
     "sourceMap": true,
     "outDir": "dist",
-    "rootDir": ".",
     "lib": ["ES2023"],
     "types": ["node"]
   },

@@ -33,7 +33,7 @@ export const FAKE_GMAIL_ENV = "CB_FAKE_GMAIL";
 /** `CB_FAKE_GMAIL` was set against a box that is not a field-test box.
  *  A {@link ConnectorFatalError}, so `cb wakeup`'s connector loop rethrows it
  *  instead of counting it as one more failed sync and continuing. */
-export class FakeGmailNotPermittedError extends ConnectorFatalError {
+class FakeGmailNotPermittedError extends ConnectorFatalError {
   constructor({ boxRoot, statePath }: { boxRoot: string; statePath: string }) {
     super(
       `${FAKE_GMAIL_ENV}=${statePath} is set, but ${boxRoot} is not a field-test box ` +
@@ -45,7 +45,7 @@ export class FakeGmailNotPermittedError extends ConnectorFatalError {
 }
 
 /** True when this box carries the field-test marker. */
-export async function isFieldTestBox(boxRoot: string): Promise<boolean> {
+async function isFieldTestBox(boxRoot: string): Promise<boolean> {
   return fileExists(path.join(boxRoot, TEST_BOX_MARKER));
 }
 

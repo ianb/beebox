@@ -115,7 +115,7 @@ export async function runSetSecret(opts: {
   }
 }
 
-export async function runRemoveSecret(opts: { name: string; agentConfirmed?: boolean | undefined }): Promise<void> {
+async function runRemoveSecret(opts: { name: string; agentConfirmed?: boolean | undefined }): Promise<void> {
   refuseIfUnconfirmedAgent({ action: "remove a secret", agentConfirmed: opts.agentConfirmed });
   try {
     await removeSecret(opts.name);

@@ -29,9 +29,9 @@ import { readCodexSessionHistory } from "./codex-transcript.js";
 export type { SessionLogSlice } from "../../../cli/lib/session.js";
 
 /** How much history the chat UI loads on mount and on every refresh. */
-export const CHAT_HISTORY_TAIL = 200;
+const CHAT_HISTORY_TAIL = 200;
 /** Floor on how many real (typed/spoken) user messages that window covers. */
-export const CHAT_HISTORY_MIN_REAL_USER_MESSAGES = 2;
+const CHAT_HISTORY_MIN_REAL_USER_MESSAGES = 2;
 
 /** The default chat window: the last {@link CHAT_HISTORY_TAIL} entries. */
 export function chatHistorySlice(): SessionLogSlice {

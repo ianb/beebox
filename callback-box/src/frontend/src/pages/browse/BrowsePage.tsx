@@ -5,8 +5,8 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useParams, useRouterState } from "@tanstack/react-router";
-import { getApiBase } from "../../api";
+import { useParams } from "@tanstack/react-router";
+import { apiRawFileUrl, getApiBase } from "../../api";
 import { useBusSubscription, type RealtimeEvent } from "../../hooks/useBusSubscription";
 import { busEventData } from "../../lib/bus-events";
 import { isRecord } from "@shared/is-record";
@@ -21,6 +21,7 @@ import { Column } from "../../components/ui/Column";
 import { Text } from "../../components/ui/Text";
 import { BrowseSidebarBody } from "./components/BrowseSidebarBody";
 import { useDocumentTitle } from "../../hooks/useDocumentTitle";
+import { useUrlView } from "../../hooks/useUrlView";
 import { RequestError } from "../../lib/errors";
 import { attachDirOwnerBasename, isAttachDirName } from "@shared/attach-path";
 import { useAppBarPlace } from "../../components/app-bar-chrome";
@@ -114,24 +115,6 @@ function useBrowseListLiveRefresh(dirPath: string): void {
 }
 
 /**
- * Query params on the browse URL, split the same way a view: URL is: the
- * reserved `view` key selects the renderer, everything else is a runtime
- * override forwarded to it.
- */
-function useBrowseUrlView(): { viewer: string | null; params: Record<string, string> } {
-  const searchStr = useRouterState({ select: (s) => s.location.searchStr });
-  return useMemo(() => {
-    const params: Record<string, string> = {};
-    let viewer: string | null = null;
-    for (const [key, value] of new URLSearchParams(searchStr)) {
-      if (key === "view") viewer = value;
-      else params[key] = value;
-    }
-    return { viewer, params };
-  }, [searchStr]);
-}
-
-/**
  * Publish browse's place to the app bar (docs/plans/top-nav-ia.md Track C2).
  *
  * The bar's own fallback (`lib/place-label.ts`) can only guess a route's
@@ -151,7 +134,7 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
   const currentPath = currentPathArg ?? "";
   const { boxSlug } = useParams({ strict: false });
   const utils = trpc.useUtils();
-  const { viewer, params: urlParams } = useBrowseUrlView();
+  const { viewer, params: urlParams } = useUrlView();
 
   const pathIsFile = isFilePath(currentPath);
   const dirPath = pathIsFile ? currentPath.split("/").slice(0, -1).join("/") : currentPath;
@@ -251,7 +234,7 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
     setDeleteError(null);
     setDeletingPath(path);
     try {
-      const response = await fetch(`${getApiBase()}/files/${path}`, {
+      const response = await fetch(apiRawFileUrl(getApiBase(), path), {
         method: "DELETE",
       });
       if (!response.ok) {

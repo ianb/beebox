@@ -23,7 +23,7 @@ export interface TrackedGmailThread {
   relPath: string;
 }
 
-export class DuplicateTrackedGmailThreadError extends Error {
+class DuplicateTrackedGmailThreadError extends Error {
   readonly threadId: string;
   readonly paths: string[];
 
@@ -35,7 +35,7 @@ export class DuplicateTrackedGmailThreadError extends Error {
   }
 }
 
-export class InvalidAutomaticTrackingEventError extends Error {
+class InvalidAutomaticTrackingEventError extends Error {
   readonly value: string;
 
   constructor(value: string) {

@@ -21,7 +21,7 @@ import { canonicalizeEmail } from "../local-users.js";
 /** Thrown when auth is enabled (GOOGLE_OAUTH_CLIENT_ID set) but the paired
  * GOOGLE_OAUTH_CLIENT_SECRET is missing — a misconfiguration, not a request
  * failure, so it fails the server at route-registration time. */
-export class MissingOAuthClientSecretError extends Error {
+class MissingOAuthClientSecretError extends Error {
   constructor() {
     super(
       "GOOGLE_OAUTH_CLIENT_ID is set but GOOGLE_OAUTH_CLIENT_SECRET is missing — " +

@@ -169,7 +169,7 @@ function emitFence(node: Node, out: string[]): void {
   out.push("```\n\n");
 }
 
-export function emitChildren(node: Node, out: string[]): void {
+function emitChildren(node: Node, out: string[]): void {
   for (const child of node.children) emitNode(child, out);
 }
 

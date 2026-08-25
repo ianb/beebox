@@ -6,7 +6,7 @@
 import { parseTags } from "../parseTags";
 import { VOICE_MODELS, type VoiceModel } from "../../../../shared/voice-models.js";
 
-export const VALID_VOICES = VOICE_MODELS;
+const VALID_VOICES = VOICE_MODELS;
 export type TTSVoice = VoiceModel;
 
 const VOICE_SET: ReadonlySet<string> = new Set(VALID_VOICES);

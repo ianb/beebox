@@ -12,14 +12,13 @@
  * than spoken).
  */
 
-import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import { body, cardSchema, type InferCardFields } from "../cards/index.js";
 
-export const FeedbackType = z.enum(["query-response", "comment", "brief"]);
+const FeedbackType = z.enum(["query-response", "comment", "brief"]);
 export type FeedbackTypeValue = z.infer<typeof FeedbackType>;
 
-export const FeedbackSource = z.enum(["text", "voice"]);
+const FeedbackSource = z.enum(["text", "voice"]);
 export type FeedbackSourceValue = z.infer<typeof FeedbackSource>;
 
 const TargetEntry = z.object({ ref: z.string() });
@@ -69,28 +68,3 @@ may be empty; \`transcription.text\` is the source of truth.`,
 });
 
 export type FeedbackFields = InferCardFields<typeof FeedbackSchema>;
-
-export function createFeedbackTemplate(options: {
-  typeOfFeedback?: FeedbackTypeValue;
-  targetRef: string;
-  source: FeedbackSourceValue;
-  text?: string;
-  timestamp?: string;
-}): string {
-  const fields: Record<string, unknown> = {
-  };
-  if (options.typeOfFeedback !== undefined) {
-    fields["type-of-feedback"] = options.typeOfFeedback;
-  }
-  fields["target"] = { ref: options.targetRef };
-  fields["source"] = options.source;
-  fields["timestamp"] = options.timestamp === undefined
-    ? new Date().toISOString()
-    : options.timestamp;
-  const yamlText = stringifyYaml(fields);
-  const bodyText = options.text === undefined ? "" : options.text;
-  const bodyTail = bodyText === ""
-    ? ""
-    : `${bodyText}${bodyText.endsWith("\n") ? "" : "\n"}`;
-  return `---\n${yamlText}---\n${bodyTail}`;
-}

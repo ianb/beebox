@@ -121,11 +121,11 @@ export function formatHandleInconclusiveLine(params: {
  * reading that as "the check reached no verdict" would launder a real failure
  * into a non-answer. Matchers require the whole line, not the opening word.
  */
-export const INCONCLUSIVE_LINE_RE =
+const INCONCLUSIVE_LINE_RE =
   /^Inconclusive: (?:procedure \S+ — review of step \S+ .*|handle \S+ — .*); work completed$/;
 
 /** Whether `line` is exactly one of this module's inconclusive lines. */
-export function isInconclusiveLine(line: string): boolean {
+function isInconclusiveLine(line: string): boolean {
   return INCONCLUSIVE_LINE_RE.test(line.trim());
 }
 

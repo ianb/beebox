@@ -15,7 +15,7 @@ export const codexTokenUsageSchema = z.object({
   reasoningOutputTokens: z.number().int().nonnegative(),
 });
 
-export const codexTurnUsageSchema = z.object({
+const codexTurnUsageSchema = z.object({
   sessionId: z.string(),
   turnId: z.string(),
   task: z.string(),
@@ -27,7 +27,7 @@ export const codexTurnUsageSchema = z.object({
 export type CodexTokenUsage = z.infer<typeof codexTokenUsageSchema>;
 export type CodexTurnUsage = z.infer<typeof codexTurnUsageSchema>;
 
-export class CodexUsageCounterResetError extends Error {
+class CodexUsageCounterResetError extends Error {
   constructor() {
     super("Codex cumulative usage was smaller than its recorded session total");
     this.name = "CodexUsageCounterResetError";

@@ -86,7 +86,7 @@ function isAuthenticatedMeBody(body: Record<string, unknown>): boolean {
  * router (401 + header ⇒ the gate is live) from an ungated one (200) from a
  * non-router (anything else).
  */
-export const ROUTER_GUARDED_HEADER = "x-cb-router-guarded";
+const ROUTER_GUARDED_HEADER = "x-cb-router-guarded";
 
 function hasRouterGuardedHeader(probe: ProbeResult): boolean {
   return probe.headers?.[ROUTER_GUARDED_HEADER] === "1";
@@ -100,7 +100,7 @@ export function looksLikeGuardedRouter(probe: ProbeResult): boolean {
 
 /** Does a `/__router/status` probe carry an UNGATED dev router's status JSON?
  *  (200 + `routerPort` + `worktrees` — a pre-Track-B build with no auth gate.) */
-export function looksLikeUngatedRouter(probe: ProbeResult): boolean {
+function looksLikeUngatedRouter(probe: ProbeResult): boolean {
   if (!probe.reachable || probe.status !== 200) return false;
   const body = parseJsonBody(probe.body);
   if (body === null) return false;

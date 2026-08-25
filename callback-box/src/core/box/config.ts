@@ -44,7 +44,7 @@ export interface BoxConfig {
   };
 }
 
-export class InvalidAgentEngineError extends Error {
+class InvalidAgentEngineError extends Error {
   readonly value: unknown;
 
   constructor(value: unknown) {

@@ -114,7 +114,7 @@ async function readThread(boxRoot: string, sessionId: string): Promise<unknown> 
   return raw;
 }
 
-export class CodexSessionOutsideBoxError extends Error {
+class CodexSessionOutsideBoxError extends Error {
   constructor() {
     super("Codex session belongs to a working directory outside this box");
     this.name = "CodexSessionOutsideBoxError";

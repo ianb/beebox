@@ -32,7 +32,7 @@ export class VoxtralNetworkError extends Error implements TranscriptionError {
   }
 }
 
-export class VoxtralApiError extends Error implements TranscriptionError {
+class VoxtralApiError extends Error implements TranscriptionError {
   readonly permanent: boolean;
   readonly code: string;
   constructor(

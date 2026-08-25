@@ -13,7 +13,7 @@ import { useCallback, useRef } from "react";
 import { Markdown } from "./Markdown";
 import { Text } from "./ui/Text";
 import { FriendlyDate } from "./ui/FriendlyDate";
-import { getApiBase } from "../api";
+import { apiRawFileUrl, getApiBase } from "../api";
 import { type RendererProps } from "../renderers";
 import { resolveRelativePath } from "../lib/view-url";
 import { findQuoteRange, highlightRange, scrollRangeIntoView } from "../lib/selection/quote-anchor";
@@ -41,7 +41,7 @@ export function WebpageView({ data, onNavigate }: RendererProps) {
   // not re-reported on every render here.
   const frozenRelative =
     frozenPath !== null && frozenPath !== "" ? resolveRelativePath(data.path, frozenPath) : null;
-  const frozenUrl = frozenRelative === null ? null : `${getApiBase()}/files/${frozenRelative}`;
+  const frozenUrl = frozenRelative === null ? null : apiRawFileUrl(getApiBase(), frozenRelative);
   const capturedAt = typeof captured === "string" && captured !== "" ? captured : null;
 
   // A source chip jumps to its verbatim span in the page body (matched in-pane

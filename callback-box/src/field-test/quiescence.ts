@@ -68,7 +68,7 @@ const StatusAllSchema = z.object({
 });
 
 /** Chat sessions, read from the run server over the diagnostic key. */
-export function chatProbe(opts: { baseUrl: string; diagKey: string }): QuiescenceProbe {
+function chatProbe(opts: { baseUrl: string; diagKey: string }): QuiescenceProbe {
   const url = `${opts.baseUrl}/api/trpc/chat.statusAll`;
   return {
     name: "chat",
@@ -110,7 +110,7 @@ function isBackgroundJob(file: string): boolean {
 }
 
 /** Pending reactor job cards under `box/jobs/`, background maintenance aside. */
-export function jobsProbe(boxRoot: string): QuiescenceProbe {
+function jobsProbe(boxRoot: string): QuiescenceProbe {
   const jobsDir = path.join(boxRoot, "box/jobs");
   return {
     name: "jobs",
@@ -123,7 +123,7 @@ export function jobsProbe(boxRoot: string): QuiescenceProbe {
 }
 
 /** Bulk-upload batches the box has taken responsibility for but not finished. */
-export function bulkUploadProbe(boxRoot: string): QuiescenceProbe {
+function bulkUploadProbe(boxRoot: string): QuiescenceProbe {
   return {
     name: "bulk-upload",
     async read(): Promise<ProbeReading> {

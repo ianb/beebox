@@ -294,7 +294,8 @@ export const BOX_LAYOUT = [
     boxDirsKey: "rules",
     path: ".claude/rules",
     area: "agent-config",
-    description: "Card-handling rules generated from schemas by `cb init`.",
+    description:
+      "Card-handling rules generated from schemas by `generateDocs` (so: `cb init`, a chat-session start, a `cb wakeup` cycle, or `cb docs refresh`).",
   },
 ] as const satisfies readonly BoxLayoutEntry[];
 

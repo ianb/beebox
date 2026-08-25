@@ -14,7 +14,7 @@ import { canonicalizeEmail } from "./local-users.js";
 const LOCK_WAIT_MS = 5_000;
 const CONFIG_RELATIVE_PATH = "config/box.json";
 
-export class BoxConfigWriteError extends Error {
+class BoxConfigWriteError extends Error {
   constructor(
     readonly configPath: string,
     options?: { cause: unknown },

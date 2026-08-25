@@ -13,6 +13,7 @@ import {
   issueVisibilitySchema,
   planSchema,
   quotaSchema,
+  relatedResultSchema,
   testingQueueSchema,
 } from "../../shared/documents.js";
 import { askQueueSchema } from "../../shared/exhibits.js";
@@ -74,6 +75,18 @@ const issuesRouter = router({
     visibility: issueVisibilitySchema,
   })).output(issueSchema).query(async ({ input, ctx }) =>
     ctx.services.documents.issueDetail(input.relPath, input.visibility)),
+  /**
+   * Nearest issues and design docs for one issue. Deliberately the same
+   * ranking as `bin/issues similar <path> --all --docs`, over the same
+   * `.issues-index/` cache — the browser is a second caller, not a second
+   * implementation. A missing embeddings key is a reported state in the
+   * result, not an error: the rest of the browser works without one.
+   */
+  related: procedure.input(z.object({
+    relPath: issueRelPathSchema,
+    visibility: issueVisibilitySchema,
+  })).output(relatedResultSchema).query(async ({ input, ctx }) =>
+    ctx.services.related.related(input)),
   save: procedure.input(z.object({ changes: z.array(issueChangeSchema).max(1_000) }))
     .output(z.object({ saved: z.number().int().nonnegative() }))
     .mutation(async ({ input, ctx }) => ({

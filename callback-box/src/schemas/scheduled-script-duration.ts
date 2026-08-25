@@ -19,7 +19,7 @@ export class UnknownDurationUnitError extends Error {
   }
 }
 
-export class InvalidBudgetError extends Error {
+class InvalidBudgetError extends Error {
   constructor(input: string) {
     super(`Invalid budget: "${input}". Use format like "10m/5h".`);
     this.name = "InvalidBudgetError";

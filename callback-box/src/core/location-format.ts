@@ -8,7 +8,7 @@ import { describeElapsed } from "./session-context.js";
 import type { StoredLocation } from "./location-store.js";
 
 /** A fix older than this is flagged `[stale]` (still reported — the caller judges). */
-export const LOCATION_STALE_MS = 60 * 60 * 1000;
+const LOCATION_STALE_MS = 60 * 60 * 1000;
 
 export interface LocationAge {
   ageMs: number;

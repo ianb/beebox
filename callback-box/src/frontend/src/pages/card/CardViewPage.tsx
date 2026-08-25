@@ -5,7 +5,8 @@
  */
 
 import { useNavigate, useParams } from "@tanstack/react-router";
-import { href } from "../../lib/routing";
+import { href, toSearch } from "../../lib/routing";
+import { useUrlView } from "../../hooks/useUrlView";
 import { useViewNavigate } from "../../hooks/useViewNavigate";
 import { FileView } from "../../components/FileView";
 import { Card } from "../../components/ui/Card";
@@ -20,6 +21,20 @@ export function CardViewPage() {
   const { boxSlug, _splat: cardPath } = useParams({ strict: false });
   const handleNavigate = useViewNavigate();
   const navigate = useNavigate();
+  // The URL's query is the renderer's, exactly as it is in browse: `?view=`
+  // picks the renderer and everything else is forwarded to it. Without this,
+  // `/card/...?page=2` — a link the page strip and the box agent both hand out
+  // — silently did nothing here while working in `/browse/...`.
+  const { viewer, params } = useUrlView();
+  const selectRenderer = (name: string) => {
+    // Looking at the same card a different way is not a new place: replace, so
+    // back leaves the card rather than undoing a toggle (as browse does).
+    void navigate({
+      to: href(`/${boxSlug}/card/${cardPath ?? ""}`),
+      search: toSearch({ ...params, view: name }),
+      replace: true,
+    });
+  };
 
   if (!cardPath) {
     return <Text as="div" tone="subtle" className="p-8">No card path specified</Text>;
@@ -37,7 +52,14 @@ export function CardViewPage() {
           ) : null}
         </Row>
         <Card padding="none" shadow>
-          <FileView path={cardPath} onNavigate={handleNavigate} onClose={() => void navigate({ to: href(`/${boxSlug}/dashboard`), replace: true })} />
+          <FileView
+            path={cardPath}
+            params={params}
+            rendererName={viewer}
+            onSelectRenderer={selectRenderer}
+            onNavigate={handleNavigate}
+            onClose={() => void navigate({ to: href(`/${boxSlug}/dashboard`), replace: true })}
+          />
         </Card>
       </Stack>
     </Column>

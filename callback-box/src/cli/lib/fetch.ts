@@ -231,29 +231,3 @@ export function installStrictFetch(): void {
     throw new UnstubbedFetchError(url);
   };
 }
-
-/**
- * Drop-in replacement for fetch() that checks stubs first.
- *
- * When no stubs are loaded, this is a pure passthrough to global fetch().
- */
-export async function boxFetch(
-  input: string | URL | Request,
-  init?: RequestInit,
-): Promise<Response> {
-  ensureEnvStubs();
-
-  if (!stubs || !scenarioDir) {
-    return fetch(input, init);
-  }
-
-  const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-
-  const stub = findMatchingStub(url);
-  if (stub) {
-    return buildStubResponse(stub, scenarioDir);
-  }
-
-  // No stub matched — fall through to real fetch
-  return fetch(input, init);
-}

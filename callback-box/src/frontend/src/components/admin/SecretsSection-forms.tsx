@@ -24,7 +24,7 @@ type FormatHints = RouterOutput["secrets"]["formatHints"];
 type MachineView = RouterOutput["secrets"]["machineView"];
 
 /** The registry entry for a name: exact match, else the `family/` prefix. */
-export function formatHintFor(hints: FormatHints | undefined, name: string): FormatHints[number] | null {
+function formatHintFor(hints: FormatHints | undefined, name: string): FormatHints[number] | null {
   if (hints === undefined) return null;
   return (
     hints.find((entry) => entry.key === name) ??

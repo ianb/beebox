@@ -13,7 +13,6 @@
  * live file's hash is the drift signal.
  */
 
-import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import { cardSchema, type InferCardFields, type LintIssue } from "../cards/index.js";
 
@@ -126,11 +125,3 @@ box/reviews/Foo_Source.attach/Foo_Source.commentary.card   # remarks (optional)
 });
 
 export type ExtfileFields = InferCardFields<typeof ExtfileSchema>;
-
-export function createExtfileTemplate(options: { href: string; title?: string | undefined }): string {
-  const fields: Record<string, unknown> = { href: options.href };
-  if (options.title !== undefined && options.title !== "") {
-    fields["title"] = options.title;
-  }
-  return `---\n${stringifyYaml(fields)}---\n`;
-}

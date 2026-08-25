@@ -95,7 +95,7 @@ export async function loadBoxesConfig(configPath?: string): Promise<BoxesConfig>
   return { boxes: [] };
 }
 
-export async function saveBoxesConfig(config: BoxesConfig): Promise<void> {
+async function saveBoxesConfig(config: BoxesConfig): Promise<void> {
   // Atomic: this is the scheduler's live box list, and a torn write leaves the
   // scheduler unable to parse it at its next start (matching how the hub's own
   // routing table is written — see src/hub/hub-config-edit.ts).

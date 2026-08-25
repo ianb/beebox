@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const growthCountsSchema = z.object({
+const growthCountsSchema = z.object({
   directories: z.number().int().nonnegative(),
   files: z.number().int().nonnegative(),
 });
