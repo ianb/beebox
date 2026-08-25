@@ -23,3 +23,8 @@ narrows the damage but does not fix the keying.
 **Fix shape.** Key `eventFiles` by `(calendarId, eventId)` — a joined string is
 enough — with a migration of existing state files. Doctest: two configured
 calendars, one shared event id, distinct files survive a sync of each.
+
+**Also affected (2026-08-25).** `reconciledEventIds` in the sync accumulator
+(`google-calendar.ts` / `google-calendar-local-push.ts`) is keyed the same way:
+a pull of calendar A can mark id `X` reconciled and make the pending-edit pass
+skip a locally edited `X` tracked for calendar B. Fix together.
