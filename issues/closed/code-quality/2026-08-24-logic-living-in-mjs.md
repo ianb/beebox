@@ -1,7 +1,29 @@
 ---
 title: "Move logic out of `.mjs` files into TypeScript"
-workstream: unattached
+workstream: mjs-to-typescript
+resolution: implemented
 ---
+
+Closed 2026-08-25 — done by the `mjs-to-typescript` workstream, which filed the
+same tension a day later with a fuller survey:
+[The repo's `.mjs` files should be TypeScript](../../code-quality/2026-08-25-mjs-files-should-be-typescript.md).
+Read that item's Outcome section for what shipped.
+
+**Correction worth keeping:** this issue's "Genuinely constrained — leave as
+`.mjs`" table was wrong on three of its four rows. Only `tsx-preload.mjs` is
+actually constrained.
+
+- `doctest-hooks` / `resolve-rules` — the bootstrap argument does not hold.
+  Node 24 type-strips a `.ts` module registered through `node:module`
+  `register()`; probed directly on 2026-08-25. Both converted, and the
+  hand-written `resolve-rules.d.mts` was deleted as redundant.
+- `bin/lib/detach.mjs` — the cost argument assumed a tsx loader. Native type
+  stripping measured 209ms vs 288ms for the `.mjs`, i.e. node's own boot either
+  way. Converted.
+
+The `user-stories/pipeline/*.workflow.mjs` files stay out of scope, and correctly
+so: those are generated build output, transpiled from `.ts` sources that already
+exist.
 
 2026-08-24 · noticed while editing the vibe-check preset (knip-exports workstream).
 
