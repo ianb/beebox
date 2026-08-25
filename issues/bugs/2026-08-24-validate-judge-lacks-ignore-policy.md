@@ -30,6 +30,6 @@ procedure's correct behavior is defined by config the judge can't read.
 
 Worth pairing with the question of whether a judge's *inconclusive* result should
 surface as a failed step at all; see
-[refresh-maps max-turns throughput](../code-quality/2026-07-19-refresh-maps-max-turns-throughput.md),
+[refresh-maps max-turns throughput](../closed/code-quality/2026-07-19-refresh-maps-max-turns-throughput.md),
 where 6 of 12 failures were the judge exhausting its own 8-turn budget rather
 than judging anything.

@@ -63,5 +63,5 @@ not need a migration script: an entry with no stored listing can be read as
 of one extra full regeneration per directory — affordable, given a whole-box
 refresh measured at 25 turns.
 
-Related: [refresh-maps max-turns throughput](../code-quality/2026-07-19-refresh-maps-max-turns-throughput.md),
+Related: [refresh-maps max-turns throughput](../closed/code-quality/2026-07-19-refresh-maps-max-turns-throughput.md),
 where this surfaced.

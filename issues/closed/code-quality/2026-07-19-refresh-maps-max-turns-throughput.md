@@ -4,7 +4,13 @@ workstream: refresh-maps-throughput
 filed-by: agent
 discovered-in: refresh-maps convergence work (worktree-refresh-maps-convergence)
 area: callback-box
+resolution: implemented
 ---
+
+Closed 2026-08-25: measured (body below) and shipped in `b1460ffd` — the
+`max-turns: 40` cap is correctly sized and left alone, and the template moved
+to the `balanced` tier. The measurement is kept as the record of how that
+conclusion was reached.
 
 `templates/procedures/refresh-maps.procedure.card` caps its agent at
 `max-turns: 40` on haiku. Before the convergence fix, an agent that hit that cap
@@ -14,7 +20,7 @@ correctness problem disguised as a budget.
 That's fixed: finalize now runs as a run-phase shell and stamps only the maps it
 can prove were rewritten, so a capped run banks its partial work and the next run
 continues from there (see
-[`docs/plans/refresh-maps-convergence.md`](../../callback-box/docs/implemented-plans/refresh-maps-convergence.md)).
+[`docs/plans/refresh-maps-convergence.md`](../../../callback-box/docs/implemented-plans/refresh-maps-convergence.md)).
 
 What's left is a genuine throughput question with no measurement behind it: on a
 box with a large brief, 40 turns means N runs to converge, and nobody has checked
@@ -22,7 +28,7 @@ what N actually is or how many maps one haiku run gets through. Raising it, or
 switching model tier, is guessing until someone watches a real refresh on a big
 box. Worth measuring before tuning.
 
-Related: [box-packageify doubled subtrees](../closed/bugs/2026-07-15-box-packageify-doubled-subtrees.md)
+Related: [box-packageify doubled subtrees](../bugs/2026-07-15-box-packageify-doubled-subtrees.md)
 — the corruption that produced a maximally-inflated brief in the first place.
 
 ## Measured, 2026-08-24
@@ -85,7 +91,7 @@ looked like proof of it was the reviewer's error. An earlier draft of this
 measurement reported that regression as real; it was not.
 
 One real (small) bug surfaced along the way, filed as
-[map children git vs disk](../bugs/2026-08-24-map-children-git-vs-disk.md):
+[map children git vs disk](../../bugs/2026-08-24-map-children-git-vs-disk.md):
 `children` is
 derived from `git ls-tree` on the update and asOf-recovery paths but from
 `readdir` on the no-state create path, while `listMappableDirs` always walks
@@ -207,6 +213,6 @@ instead of arguing.
 not what limits throughput. The open question the data actually raises is
 whether the validate judge should be taught the ignore policy it keeps
 tripping over — filed as
-[validate judge lacks ignore policy](../bugs/2026-08-24-validate-judge-lacks-ignore-policy.md)
+[validate judge lacks ignore policy](../../bugs/2026-08-24-validate-judge-lacks-ignore-policy.md)
 — and whether an inconclusive review should read as inconclusive rather than as
 a failure. Both are separate from this issue.
