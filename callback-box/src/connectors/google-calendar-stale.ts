@@ -54,19 +54,20 @@ export async function removeStaleAfterFullResync(opts: {
   calDir: string;
   state: CalendarState;
   calendarId: string;
-  returnedEventIds: Set<string>;
+  /** Index keys (`<eventId> <calendarId>`) Google returned for THIS calendar. */
+  returnedEventKeys: Set<string>;
   windowStart: Date;
   windowEnd: Date;
   acc: SyncAccumulator;
 }): Promise<void> {
-  const { boxRoot, calDir, state, calendarId, returnedEventIds, windowStart, windowEnd, acc } = opts;
+  const { boxRoot, calDir, state, calendarId, returnedEventKeys, windowStart, windowEnd, acc } = opts;
 
-  for (const [eventId, entry] of Object.entries(state.eventFiles)) {
+  for (const [key, entry] of Object.entries(state.eventFiles)) {
     // Legacy plain-string entries carry no calendar id, so they cannot be
     // attributed to the calendar we just refetched.
     if (typeof entry === "string") continue;
     if (entry.calendarId !== calendarId) continue;
-    if (returnedEventIds.has(eventId)) continue;
+    if (returnedEventKeys.has(key)) continue;
 
     const filePath = path.join(calDir, entry.filename);
     const relPath = path.relative(boxRoot, filePath);
@@ -78,7 +79,7 @@ export async function removeStaleAfterFullResync(opts: {
     }
     if (localContent === undefined) {
       // The file is already gone; only the dangling index entry is left.
-      delete state.eventFiles[eventId];
+      delete state.eventFiles[key];
       continue;
     }
 
@@ -90,7 +91,7 @@ export async function removeStaleAfterFullResync(opts: {
     const summary = localEvent.summary || entry.filename;
     if (entry.contentHash !== undefined && contentHash(localContent) === entry.contentHash) {
       await fs.unlink(filePath);
-      delete state.eventFiles[eventId];
+      delete state.eventFiles[key];
       acc.deleted.push(relPath);
       acc.notes.push({ action: "cancelled", summary });
       continue;
@@ -103,7 +104,7 @@ export async function removeStaleAfterFullResync(opts: {
     // protection by MOVING the file out of the orphan scan's reach, and ends
     // the retry loop that reported the same stuck file on every later run.
     await strandEntry({
-      boxRoot, calDir, state, googleEventId: eventId, entry, summary,
+      boxRoot, calDir, state, key, entry, summary,
       reason: "deleted on Google (absent from a full resync)",
       operation: "stale-cleanup", acc,
     });

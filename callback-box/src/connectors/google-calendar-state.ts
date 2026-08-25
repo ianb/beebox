@@ -3,8 +3,10 @@
  *
  * Owns the on-disk sync state (syncTokens in gitignored transient state,
  * eventFiles in committed persistent state) and the thin Google Calendar API
- * call wrappers that translate HTTP errors into null/false results. Leaf
- * module: depends only on fs, the calendar service, and transient-state.
+ * call wrappers that translate HTTP errors into null/false results. The index's
+ * key format, entry shape, and migration live next door in
+ * google-calendar-event-index.ts. Leaf module: depends only on fs, the calendar
+ * service, transient-state, and that index module.
  */
 
 import * as fs from "node:fs/promises";
@@ -15,26 +17,14 @@ import { HTTPError } from "ky";
 import { type GoogleCalendarService } from "../services/google-calendar.js";
 import { loadTransientState, updateTransientState } from "./transient-state.js";
 import { type GoogleCalendarEvent } from "./google-calendar-ics.js";
+import {
+  EVENT_INDEX_VERSION,
+  migrateEventIndex,
+  type EventFileIndex,
+} from "./google-calendar-event-index.js";
 
 interface CalendarTransientState {
   syncTokens: Record<string, string>;
-}
-
-export interface EventFileEntry {
-  filename: string;
-  calendarId: string;
-  /** Hash of the ICS content last written by the connector (for detecting local edits) */
-  contentHash?: string;
-  /** Google event `updated` timestamp captured at the last pull, for remote-change detection */
-  remoteUpdated?: string | undefined;
-  /**
-   * ISO timestamp of the FIRST push failure for the local edit currently
-   * pending on this event — the start of the retry window that ends in
-   * stranding (see google-calendar-strand.ts). Left alone by later failures,
-   * deleted the moment Google accepts a push. Absent means nothing is owed, or
-   * the edit has not yet failed once.
-   */
-  pendingSince?: string | undefined;
 }
 
 /**
@@ -52,13 +42,19 @@ export interface IcsOptions {
 export interface CalendarState {
   /** syncToken per calendar ID */
   syncTokens: Record<string, string>;
-  /** Google event ID → file info (or legacy plain filename string) */
-  eventFiles: Record<string, string | EventFileEntry>;
+  /**
+   * Tracked events, keyed `<eventId> <calendarId>` — see
+   * google-calendar-event-index.ts for why the key is composite.
+   */
+  eventFiles: EventFileIndex;
 }
 
-/** Get filename from eventFiles entry (handles legacy string format) */
-export function getFilename(entry: string | EventFileEntry): string {
-  return typeof entry === "string" ? entry : entry.filename;
+/**
+ * The on-disk persistent half. `version` is absent on a file written before the
+ * index moved to composite keys; {@link loadCalendarState} migrates those.
+ */
+interface PersistedCalendarState extends CalendarState {
+  version?: number;
 }
 
 export function calendarStatePath(boxRoot: string): string {
@@ -101,6 +97,14 @@ export class CalendarStateCorruptError extends Error {
  * ENOENT is the only tolerated failure (no state yet — start with empty maps).
  * Anything else — an I/O error, a permissions problem, or JSON that doesn't
  * parse — throws {@link CalendarStateCorruptError}.
+ *
+ * Keys are normalized HERE, on the way in, rather than by a `cb migrate` script.
+ * The state file is connector-owned and rewritten on every sync, and no box may
+ * ever sync against bare-id keys — an entry the sync cannot find is an `.ics`
+ * the orphan scan re-inserts into Google, and one the stale pass reads as
+ * deleted-on-Google. The rewrite reaches disk on the sync's own save. Read-only
+ * callers (`cb calendar calendars`) get the normalized view in memory and write
+ * nothing.
  */
 export async function loadCalendarState(boxRoot: string): Promise<CalendarState> {
   const statePath = calendarStatePath(boxRoot);
@@ -112,7 +116,7 @@ export async function loadCalendarState(boxRoot: string): Promise<CalendarState>
       throw new CalendarStateCorruptError(statePath, { cause: err });
     }
   }
-  let persistent: CalendarState;
+  let persistent: PersistedCalendarState;
   if (content === undefined) {
     persistent = { syncTokens: {}, eventFiles: {} };
   } else {
@@ -124,12 +128,29 @@ export async function loadCalendarState(boxRoot: string): Promise<CalendarState>
       throw new CalendarStateCorruptError(statePath, { cause: err });
     }
   }
+  // Unconditionally, by the SHAPE of the keys — never gated on the version
+  // marker. A marked file can still hold a bare key (a hand repair, an older
+  // binary writing between two runs of this one), and a bare key is invisible to
+  // every lookup: the stale pass would then read its event as absent from Google
+  // and delete the file. The pass is idempotent, so running it always costs one
+  // walk of the index; `version` is only the marker we WRITE.
+  const { index: eventFiles, migrated, unattributed } = migrateEventIndex(persistent.eventFiles);
+  if (migrated > 0) {
+    console.warn(
+      `  Calendar state: re-keyed ${String(migrated)} tracked event(s) by (event, calendar)` +
+      (unattributed > 0
+        ? `; ${String(unattributed)} legacy entr(y/ies) carry no calendar and stay unattributed`
+        : ""),
+    );
+  }
   // Merge syncTokens from transient state (gitignored)
   const transient = await loadTransientState<CalendarTransientState>({
     boxRoot, connectorName: "google-calendar", defaultValue: { syncTokens: {} },
   });
-  persistent.syncTokens = { ...persistent.syncTokens, ...transient.syncTokens };
-  return persistent;
+  return {
+    syncTokens: { ...persistent.syncTokens, ...transient.syncTokens },
+    eventFiles,
+  };
 }
 
 /**
@@ -196,7 +217,9 @@ export async function saveCalendarState(
   // torn write here is not a lost cursor but a lost *index* — see
   // CalendarStateCorruptError for what an unreadable index costs. The git
   // commit of this file is scoped and handled by the connector (Track 2).
-  const persistent = { syncTokens: {}, eventFiles: state.eventFiles };
+  const persistent: PersistedCalendarState = {
+    version: EVENT_INDEX_VERSION, syncTokens: {}, eventFiles: state.eventFiles,
+  };
   await writeFileAtomic(calendarStatePath(boxRoot), {
     content: JSON.stringify(persistent, null, 2),
   });

@@ -5,7 +5,10 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-connector-integrity — cross-model review of the 410 stale-removal pass
 priority: normal
+resolution: implemented
 ---
+
+**Closed 2026-08-25.** `eventFiles` is keyed by `"<eventId> <calendarId>"` (`google-calendar-event-index.ts`: `eventKey`/`parseEventKey`); `reconciledEventKeys`/`seenEventKeys` use the same keys. State files migrate on load (`version: 2`), legacy plain-string entries sit under `(legacy)` until a pull adopts them. Colliding filenames across calendars get a calendar-hash suffix. Doctests: `test/connectors/google-calendar-event-index.doctest.md`.
 
 **What is wrong.** `eventFiles` in `callback-box/src/connectors/google-calendar-state.ts`
 is keyed by `event.id` alone. Every consumer — `reconcileEvent` in
