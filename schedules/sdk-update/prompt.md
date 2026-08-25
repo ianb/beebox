@@ -29,10 +29,12 @@ all.
 1. **Before changing anything**, require no modified tracked files in this
    worktree (untracked are fine) — a dirty tree means a previous run left
    something behind. If that check fails, `bin/schedules alert --priority
-   important` reporting it, and stop. Then bring the branch level with main:
-   `git merge main` (not `--ff-only`; your branch carries its own commits until
-   a land clears them). A merge conflict is a stop-and-alert, never something to
-   resolve unattended.
+   important` reporting it, and stop.
+
+   You do **not** need to merge `main` yourself: the runner brings this branch
+   up to date before starting you, and refuses to start the run at all if that
+   merge conflicts. So you begin on current `main` plus whatever your own branch
+   still carries from a land that did not go through.
 2. Read the notes file and the exact SDK pin in `callback-box/package.json`.
 3. Read the authoritative release notes from `anthropics/claude-agent-sdk-typescript`
    for every stable SDK version missing from the ledger, even one already

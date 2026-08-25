@@ -282,6 +282,32 @@ export async function startWorkstream(deps: RunnerDeps, request: StartRequest): 
       });
       return { kind: "refused", ...NOT_LAUNCHED };
     }
+
+    // Bring the branch up to date with `main` before the session starts.
+    //
+    // A worktree schedule is long-lived: `bin/workstreams create` re-attaches an
+    // existing branch rather than rebuilding it, so without this the session
+    // resumes on whatever `main` looked like the first time the worktree was
+    // made. Asking the prompt to do it works until an agent forgets, and the
+    // whole point of a scheduled run is that nobody is watching.
+    //
+    // Plain merge, not `--ff-only`: a schedule that commits between lands
+    // carries its own commits, so its branch is legitimately ahead. A fresh
+    // worktree is already at `main`, where this is a no-op.
+    //
+    // Done AFTER the liveness guard, so it never writes into a tree an agent is
+    // using — and a conflict is a stop, never something resolved unattended.
+    const freshened = await execa("git", ["-C", cwd, "merge", "--no-edit", "main"], { reject: false });
+    if (freshened.exitCode !== 0) {
+      await execa("git", ["-C", cwd, "merge", "--abort"], { reject: false });
+      await alert({
+        title: "could not bring the worktree up to date with main",
+        message: `${schedule.name} has work waiting, but merging \`main\` into ${path.basename(cwd)} failed — the run was not started.`,
+        details: [freshened.stdout, freshened.stderr].filter((s) => s.trim() !== "").join("\n") || null,
+        priority: "important",
+      });
+      return { kind: "unlaunchable", ...NOT_LAUNCHED };
+    }
   }
   // A `worktree: false` schedule runs in the main checkout, which the boxholder
   // also works in; the liveness guard is deliberately not applied there (it

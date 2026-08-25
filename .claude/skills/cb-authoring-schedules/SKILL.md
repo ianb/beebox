@@ -70,7 +70,7 @@ workstream:          # optional; absent = run-only
   agent: claude      # claude | codex
   model: sonnet
   effort: high       # optional: low|medium|high|xhigh|max (claude only)
-  worktree: true     # false = the session runs in the main checkout
+  worktree: true     # false = the session runs in the main checkout (see below)
   session: fresh     # fresh | persistent
   permissionMode: dontAsk       # REQUIRED: bypassPermissions | dontAsk
   tools: [Read, Grep, Glob, Edit, Write, Bash]
@@ -82,6 +82,38 @@ workstream:          # optional; absent = run-only
 `local.yaml` takes the same fields, all optional, and overrides only what it
 declares — `enabled: false` there disables a schedule on one machine without a
 commit.
+
+### `worktree: true` is the default answer
+
+A scheduled session should almost always get its own worktree, and two
+properties come with it that a schedule does not have to build:
+
+- **The liveness guard applies.** If an agent is already live in that worktree,
+  the run is refused with a `normal` alert rather than starting a second agent
+  on top of it. The guard is deliberately **skipped** for `worktree: false`,
+  because the main checkout is where the boxholder's own sessions live — so a
+  `worktree: false` schedule can edit and commit under a live session or over
+  uncommitted work. `sdk-update` ran that way until 2026-08-25 and was moved for
+  exactly this reason.
+- **The runner brings the branch up to date with `main` before the session
+  starts** — `git merge`, not `--ff-only`, because a schedule that commits
+  between lands is legitimately ahead. A conflict is an `important` alert and
+  the run does not start; nothing is resolved unattended.
+
+That second one is why **`prompt.md` should not tell the session to pull or
+merge `main` itself.** It begins on current `main` already. A long-lived
+worktree is re-attached, not rebuilt, so without the runner doing this a
+persistent schedule would resume on whatever `main` looked like the day its
+worktree was made — and asking the prompt to remember is exactly the kind of
+instruction that works until it doesn't, on a run nobody is watching.
+
+**How work leaves a worktree schedule: `bin/land`**, not a push. It
+fast-forwards `main` onto the branch, so the post-merge deploy path fires
+normally. It can legitimately refuse — the main checkout must be clean, on
+`main`, and the merge must be a fast-forward — and that is not a failure to work
+around: the commit is already safe on the branch, so alert and stop, and the
+next run merges `main` again and re-lands. Say that in `prompt.md`; a session
+that tries to force a land is worse than one that waits a day.
 
 ## 3. What `run` owes
 
