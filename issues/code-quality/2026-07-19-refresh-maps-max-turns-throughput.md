@@ -84,7 +84,9 @@ marked `failed`. Classifying all 12:
 looked like proof of it was the reviewer's error. An earlier draft of this
 measurement reported that regression as real; it was not.
 
-One real (small) bug surfaced along the way, worth its own issue: `children` is
+One real (small) bug surfaced along the way, filed as
+[map children git vs disk](../bugs/2026-08-24-map-children-git-vs-disk.md):
+`children` is
 derived from `git ls-tree` on the update and asOf-recovery paths but from
 `readdir` on the no-state create path, while `listMappableDirs` always walks
 disk. A directory holding only untracked content is therefore visible to the
@@ -101,5 +103,7 @@ almost nothing reaches it.
 **Recommendation: leave `max-turns: 40` alone.** It is correctly sized and is
 not what limits throughput. The open question the data actually raises is
 whether the validate judge should be taught the ignore policy it keeps
-tripping over, and whether an inconclusive review should read as inconclusive
-rather than as a failure. Both are separate from this issue.
+tripping over — filed as
+[validate judge lacks ignore policy](../bugs/2026-08-24-validate-judge-lacks-ignore-policy.md)
+— and whether an inconclusive review should read as inconclusive rather than as
+a failure. Both are separate from this issue.
