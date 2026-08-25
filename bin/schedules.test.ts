@@ -1239,3 +1239,12 @@ test("tickPath puts the installing node and the agent CLIs ahead of launchd's de
   assert.ok(p.split(":").includes("/usr/bin"));
   assert.ok(!p.includes("::"));
 });
+
+test("ensureStoreRoot adopts an empty unmarked directory and refuses a non-empty one", async () => {
+  const empty = await fs.mkdtemp(path.join(os.tmpdir(), "sched-empty-"));
+  await ensureStoreRoot(empty);
+  await fs.stat(path.join(empty, ".schedule-runs"));
+  const full = await fs.mkdtemp(path.join(os.tmpdir(), "sched-full-"));
+  await fs.writeFile(path.join(full, "somebody-elses.txt"), "", "utf8");
+  await assert.rejects(ensureStoreRoot(full), /refusing to adopt/);
+});

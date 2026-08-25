@@ -53,6 +53,12 @@ export async function ensureStoreRoot(root: string): Promise<void> {
     await fs.stat(marker);
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
+    // An empty directory holds nobody's data — typically a prior tick that
+    // made the directory and died before its marker (seen 2026-08-25).
+    if ((await fs.readdir(root)).length === 0) {
+      await fs.writeFile(marker, "", "utf8");
+      return;
+    }
     throw new ScheduleError(`${root} exists without ${SCHEDULES_MARKER} — refusing to adopt an unrelated directory`);
   }
 }
