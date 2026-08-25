@@ -21,7 +21,8 @@ import {
   QUIESCENCE_MS,
 } from "../../../../src/core/chat/review/discovery.js";
 import { loadReviewState, saveReviewState } from "../../../../src/core/chat/review/state.js";
-import { MAX_SESSION_ENTRIES } from "../../../../src/cli/lib/session.js";
+import { MAX_SESSION_ENTRIES, parseSessionLog } from "../../../../src/cli/lib/session.js";
+import { prefixHash } from "../../../../src/core/chat/review/span.js";
 
 const NOW = new Date("2026-07-28T12:00:00Z");
 const HOUR = 60 * 60 * 1000;
@@ -114,11 +115,11 @@ const window = await readSessionWindow({
   state: await loadReviewState(box.root),
 });
 JSON.stringify({
-  entries: window.entries.length,
-  spanEntries: window.span.entries.length,
-  bootstrap: window.span.bootstrap,
+  spanEntries: window.entries.length,
+  bootstrap: window.bootstrap,
+  clipped: window.clipped,
 })
-=> {"entries":2,"spanEntries":2,"bootstrap":"no-journal"}
+=> {"spanEntries":2,"bootstrap":"no-journal","clipped":false}
 ```
 
 A husk whose transcript is gone reads as null rather than throwing.
@@ -185,23 +186,27 @@ await seed(box, { sessionId: "sessmid", entries: [bulk("m1"), bulk("m2")], agoHo
 await box.cleanup();
 ```
 
-## A boundary past the read window disqualifies the session, loudly
+## A boundary past the first page is still found; the span is bounded
 
-Discovery reads the first `MAX_SESSION_ENTRIES` of a transcript. When a session
-has grown past that since its last review, its recorded boundary is *below* the
-window — indistinguishable from a deleted boundary by identity alone, but the
-truncation flag tells them apart.
-
-Such a session is not qualified: it gets its own counter rather than falling into
-`belowThreshold`, which would report a destructive situation as a quiet one.
+The span walk streams the transcript in pages, so a session that grew past
+`MAX_SESSION_ENTRIES` since its last review continues from its real boundary
+rather than bootstrapping over it. What it hands on is capped at one window of
+new entries (`clipped`), with the rest left for a later run.
 
 ```ts
 const box = await makeTmpBox();
 process.env["CB_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-const overCap = Array.from({ length: MAX_SESSION_ENTRIES + 1 },
+const overCap = Array.from({ length: MAX_SESSION_ENTRIES + 10 },
   (_, i) => userEntry(`cap-${String(i)}`, `line ${String(i)}`));
 await seed(box, { sessionId: "sesscap", entries: overCap, agoHours: 5 });
+
+// A journal whose boundary sits at index 3 — computed over the parsed prefix,
+// exactly as a prior run would have recorded it.
+const parsed = await parseSessionLog({
+  logPath: getSessionLogPath(box.root, "sesscap"),
+  slice: { mode: "page", offset: 0, limit: 4 },
+});
 await saveReviewState(box.root, {
   lastRunAt: null,
   sessions: {
@@ -209,9 +214,9 @@ await saveReviewState(box.root, {
       applied: {
         metadata: {
           spanId: "prior-span",
-          endUuid: `cap-${String(MAX_SESSION_ENTRIES)}`,
-          endIndex: MAX_SESSION_ENTRIES,
-          prefixHash: "prior-prefix",
+          endUuid: "cap-3",
+          endIndex: 3,
+          prefixHash: prefixHash(parsed.entries, 3),
           at: "2026-07-27T12:00:00Z",
         },
       },
@@ -222,30 +227,30 @@ await saveReviewState(box.root, {
   },
 });
 
-const result = await discover(box);
-JSON.stringify({
-  qualified: result.qualified.map((s) => s.sessionId),
-  belowThreshold: result.belowThreshold,
-  boundaryBeyondWindow: result.boundaryBeyondWindow,
-})
-=> {"qualified":[],"belowThreshold":0,"boundaryBeyondWindow":1}
-```
-
-The window itself reports the deferral rather than a bootstrap, with an empty
-span — there is nothing safe to review.
-
-```ts continue
 const window = await readSessionWindow({
   sessionId: "sesscap",
   logPath: getSessionLogPath(box.root, "sesscap"),
   state: await loadReviewState(box.root),
 });
 JSON.stringify({
-  deferred: window.span.deferred,
-  bootstrap: window.span.bootstrap,
-  spanEntries: window.span.entries.length,
+  bootstrap: window.bootstrap,
+  first: window.entries[0].uuid,
+  spanEntries: window.entries.length,
+  endIndex: window.endIndex,
+  clipped: window.clipped,
 })
-=> {"deferred":"boundary-beyond-window","bootstrap":null,"spanEntries":0}
+=> {"bootstrap":null,"first":"cap-4","spanEntries":5000,"endIndex":5003,"clipped":true}
+```
+
+The journal hash for the new boundary covers the whole prefix, not just the
+window — so the next run's walk verifies against it.
+
+```ts continue
+const logPath = getSessionLogPath(box.root, "sesscap");
+const head = await parseSessionLog({ logPath, slice: { mode: "page", offset: 0, limit: MAX_SESSION_ENTRIES } });
+const tail = await parseSessionLog({ logPath, slice: { mode: "page", offset: MAX_SESSION_ENTRIES, limit: 4 } });
+window.endPrefixHash === prefixHash([...head.entries, ...tail.entries], 5003)
+=> true
 ```
 
 ```ts cleanup

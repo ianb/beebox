@@ -22,6 +22,23 @@ export const issueRelPathSchema = z.string().regex(
   "Invalid issue path",
 );
 
+/**
+ * The issue viewer's path for a repository-relative one, or null when the path
+ * is not an issue.
+ *
+ * Surfaces that address files by repository path — the recent feed — use this
+ * to send an issue to the viewer that knows what an issue is (frontmatter,
+ * related items, actions) instead of to the markdown reader, which would show
+ * its source. The category set is the schema's, so a directory that is not a
+ * category answers null rather than producing a link the viewer refuses.
+ */
+export function issueRelPathFromRepoPath(repoRelPath: string): string | null {
+  const prefix = "issues/";
+  if (!repoRelPath.startsWith(prefix)) return null;
+  const relPath = repoRelPath.slice(prefix.length);
+  return issueRelPathSchema.safeParse(relPath).success ? relPath : null;
+}
+
 const issueFrontmatterSchema = z.object({
   title: z.string(),
   workstream: z.string(),

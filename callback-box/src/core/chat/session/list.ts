@@ -119,19 +119,43 @@ export async function listSessionEntries(boxRoot: string): Promise<ChatSessionEn
  */
 export async function loadAllSessions(boxRoot: string): Promise<ChatSessionRow[]> {
   const entries = await listSessionEntries(boxRoot);
-  // Bounded: an untitled chat's label comes from a transcript read, so this is
-  // one open stream per chat and a box's chat count only ever grows.
+  // An untitled chat's label comes from a full transcript scan, so this is one
+  // open stream per unlabelled chat and a box's chat count only ever grows.
+  // Memoized on (transcript path, mtime) — a re-listing then rescans only the
+  // transcripts that actually changed since the last one.
   return mapInBatches(entries, {
     size: READ_CONCURRENCY,
-    map: async (entry) => ({
-      ...entry,
-      label: await resolveSessionLabel({
-        sessionId: entry.sessionId,
-        title: entry.title,
-        source: labelSource(entry),
-      }),
-    }),
+    map: async (entry) => ({ ...entry, label: await labelFor(entry) }),
   });
+}
+
+/**
+ * Cached labels, keyed by transcript path + mtime. Bounded so a long-lived
+ * server can't accumulate one entry per chat it has ever listed; eviction is
+ * insertion order (a Map iterates oldest-first), which is close enough to LRU
+ * for a cache whose miss costs one file scan.
+ */
+const LABEL_CACHE_MAX = 2000;
+const labelCache = new Map<string, string>();
+
+async function labelFor(entry: ChatSessionEntry): Promise<string> {
+  // Only the transcript source is worth caching: a title rode the husk, and a
+  // Codex preview came free with the thread listing.
+  if (entry.title !== undefined && entry.title !== "") return entry.title;
+  const source = labelSource(entry);
+  if (source.kind !== "transcript") {
+    return resolveSessionLabel({ sessionId: entry.sessionId, title: entry.title, source });
+  }
+  const key = `${source.logPath}\0${entry.mtime.getTime()}`;
+  const cached = labelCache.get(key);
+  if (cached !== undefined) return cached;
+  const label = await resolveSessionLabel({ sessionId: entry.sessionId, title: entry.title, source });
+  if (labelCache.size >= LABEL_CACHE_MAX) {
+    const oldest = labelCache.keys().next();
+    if (!oldest.done) labelCache.delete(oldest.value);
+  }
+  labelCache.set(key, label);
+  return label;
 }
 
 /**

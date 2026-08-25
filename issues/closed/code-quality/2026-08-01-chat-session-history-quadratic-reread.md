@@ -1,10 +1,13 @@
 ---
 title: "chat-session-history.json is re-read and re-parsed O(n) times per lookup"
-workstream: chat-history-oom-mobile-lock
+workstream: chat-history-scale
 area: callback-box
 filed-by: agent
 discovered-in: worktree-chat-history-oom-mobile-lock — post-fix sweep
+resolution: implemented
 ---
+
+**Closed 2026-08-25** — resolved by commits f7d24973 / b093062b (workstream chat-history-scale). See the "Fixed (2026-08-25)" section below for what shipped.
 
 `readHistoryFile` (`callback-box/src/core/chat/session/history.ts`) reads and
 `JSON.parse`s the whole session-history file on every call, and
@@ -18,3 +21,16 @@ on the request path, not resident memory (entries are small).
 Fix shape: hoist `loadHistoryEntries` out of the `getLastSessionForDirectory`
 loop; add a short-TTL or mtime-keyed in-process cache in `readHistoryFile`;
 consider pruning/rotation for the file itself.
+
+## Fixed (2026-08-25)
+
+`sessionLogPathFor(boxRoot, entry)` (`callback-box/src/core/chat/session/history.ts`)
+is the pure resolution for an entry the caller already holds.
+`getLastSessionForDirectory` uses it in its loop, so a landmark "Chat" click no
+longer re-reads and re-parses the whole history file once per iterated entry;
+`resolveSessionLogPath` resolves through the same helper. No cache was added —
+the per-lookup read remains, only the O(n) amplification is gone. Covered by
+`callback-box/test/core/chat-session-history.doctest.md`.
+
+Still open: the per-call `readHistoryFile` read (including on every
+`transcript-sync` poll), and pruning/rotation of the file itself.

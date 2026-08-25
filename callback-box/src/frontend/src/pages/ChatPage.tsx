@@ -67,11 +67,26 @@ function initialLoadFrom(params: {
   error: { message: string } | null;
 }): ChatInitialLoad | undefined {
   const { rendered, data, error } = params;
-  // A fresh chat has nothing to load, and no bootstrap query ran for it.
-  if (rendered === "new") return undefined;
   // Reproduce the failure inside the machine so a failed preload surfaces the
   // same way a failed in-machine fetch does (error banner, chat still usable).
-  if (error) return { status: "failed", error: error.message };
+  if (error) return rendered === "new" ? undefined : { status: "failed", error: error.message };
+  if (rendered === "new") {
+    // A fresh chat has no history to preload — but the box may still be
+    // holding messages it accepted before it had a session id to file them
+    // under, which is exactly what a reload mid-first-turn looks like. Carry
+    // those in; without them the page comes back blank and the question the
+    // box already promised to have is nowhere on screen.
+    if (!data || data.history !== null || data.pending.length === 0) return undefined;
+    return {
+      status: "loaded",
+      entries: [],
+      total: 0,
+      sessionId: null,
+      running: data.status.running,
+      busy: data.status.busy,
+      pending: data.pending,
+    };
+  }
   if (!data || data.sessionId !== rendered || data.history === null) return undefined;
   return {
     status: "loaded",
@@ -80,6 +95,7 @@ function initialLoadFrom(params: {
     sessionId: data.history.sessionId,
     running: data.status.running,
     busy: data.status.busy,
+    pending: data.pending,
   };
 }
 

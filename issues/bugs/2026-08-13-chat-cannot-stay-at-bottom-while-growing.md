@@ -1,6 +1,6 @@
 ---
 title: "Chat drifts off the bottom as it grows, and is hard to scroll back down"
-workstream: unattached
+workstream: chat-scroll
 area: callback-box
 priority: important
 labels: [chat, scroll]
@@ -52,8 +52,32 @@ turn from a start-at-bottom state and establish, before changing code:
 - whether `scrollTop` writes are being clamped by a height that changes
   underneath them.
 
+## Re-aimed 2026-08-25: the model was replaced, not patched
+
+Re-verification found the drift does not reproduce on desktop Chromium (7
+hands-off runs end at `fromBottom` 0), so the report is about inputs Chromium
+does not produce — iOS momentum with no `touchmove`, keyboard clamps,
+rubber-band — which is precisely what the follow-the-bottom controller had to
+guess about. Rather than a fifth discriminator, the controller was replaced with
+one that never asks the question: it writes `scrollTop` only on a discrete user
+action (open a thread, send, press the button) plus geometric compensations, and
+content growth below the reader never scrolls
+(`callback-box/docs/plans/chat-scroll-model.md`; controller
+`components/chat/chat-scroll.ts`).
+
+The failure described above is therefore not fixed so much as made
+unreachable: there is no pin to lose a race with, and "getting back to the
+bottom is difficult" is now one button that is always offered when the view is
+away from the bottom. Sending anchors the new user message to the top of the
+screen, so a reply fills the screen without any scrolling at all.
+
+**Left open pending device verification** — the keyboard and momentum branches
+are the half a headless Chromium cannot exercise. Close it when the boxholder
+has used the new model on the phone; a `/scrolldebug` trace (`field-probe`
+skill) is the instrument if anything still feels wrong.
+
 ## Related
 
 - Prepend and drop both shift position too — see the paging window in
-  [chat messages grow unbounded](2026-08-01-chat-messages-grow-unbounded-on-load-older.md).
+  [chat messages grow unbounded](../closed/bugs/2026-08-01-chat-messages-grow-unbounded-on-load-older.md).
   Any fix here should not assume growth only happens at the bottom.

@@ -20,7 +20,7 @@ import { useTranscriptAutoscroll } from "../../hooks/useTranscriptAutoscroll";
 import { createTypedEmission, draftAttachments, type Emission } from "../../input/emission";
 import type { InputStore } from "./input-store";
 import type { EmissionStore } from "../../input/emission-store";
-import type { ChatEvent } from "../../machines/chat-types";
+import { MAX_RETAINED_MESSAGES, type ChatEvent } from "../../machines/chat-types";
 
 interface ChatActionsOpts {
   send: (event: ChatEvent) => void;
@@ -46,7 +46,7 @@ interface ChatActionsOpts {
   typingMode: boolean;
   typingLocked: boolean;
   setTypingMode: React.Dispatch<React.SetStateAction<boolean>>;
-  setScrollToBottomTrigger: React.Dispatch<React.SetStateAction<number>>;
+  setSendSignal: React.Dispatch<React.SetStateAction<number>>;
   /** The one send funnel — assembly happens target-side (InteractiveChat-dispatch.ts). */
   dispatchEmission: (emission: Emission) => void;
 }
@@ -56,7 +56,7 @@ export function useChatActions(opts: ChatActionsOpts) {
     send, sessionId, boxSlug, effectiveContextDir, messages, totalEntries, loadingOlder, setLoadingOlder,
     inputStore, emissionStore, selections, resetAttachments, resetSelections, addFiles,
     onSend, isTranscribing, textareaRef, transcriptTick, typingMode, typingLocked, setTypingMode,
-    setScrollToBottomTrigger, dispatchEmission,
+    setSendSignal, dispatchEmission,
   } = opts;
   const navigate = useNavigate();
 
@@ -80,11 +80,11 @@ export function useChatActions(opts: ChatActionsOpts) {
     resetSelections();
     inputStore.set("");
     dispatchEmission(emission);
-    setScrollToBottomTrigger((n) => n + 1);
+    setSendSignal((n) => n + 1);
     if (typingMode && !typingLocked) {
       setTypingMode(false);
     }
-  }, [inputStore, emissionStore, selections, dispatchEmission, typingMode, typingLocked, onSend, resetAttachments, resetSelections, setScrollToBottomTrigger, setTypingMode]);
+  }, [inputStore, emissionStore, selections, dispatchEmission, typingMode, typingLocked, onSend, resetAttachments, resetSelections, setSendSignal, setTypingMode]);
 
   // Clicking a suggested opener is typing it and pressing enter: seed the
   // composer store, then run the exact same send funnel — so an opener carries
@@ -157,6 +157,12 @@ export function useChatActions(opts: ChatActionsOpts) {
   const handleLoadOlder = useCallback(() => {
     if (loadingOlder) return;
     if (!sessionId) return;
+    // The tab keeps a bounded window (chat-types.ts MAX_RETAINED_MESSAGES), so
+    // once it is full a further page would be discarded by the machine's
+    // prepend reducer. Stop fetching rather than spending a round trip on
+    // entries that can't be retained. The header hides at the same threshold,
+    // so a user only reaches this guard by racing the last click.
+    if (messages.length >= MAX_RETAINED_MESSAGES) return;
     setLoadingOlder(true);
     // One bounded page per click, walking backwards from the current window.
     // `totalEntries` is exact (the server counts every entry even though it

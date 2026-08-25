@@ -14,6 +14,7 @@
  */
 
 import { z } from "zod";
+import { readAcceptedMessages, type AcceptedMessage } from "../../../core/chat/session/accepted-messages.js";
 import { publicProcedure } from "../trpc.js";
 import { getMostActive } from "../../../core/chat/session/history.js";
 import { historySliceSchema, loadHistoryForSession, type SessionHistory } from "./chat-session-procedures.js";
@@ -33,6 +34,21 @@ interface ChatBootstrapBase {
    */
   label: string | null;
   status: ChatSessionStatus;
+  /**
+   * Messages this box has ACCEPTED but has not yet written into a transcript.
+   *
+   * A send is answered 200 once it is durably recorded, which happens before
+   * the engine starts — so a page loaded in that window would otherwise show a
+   * conversation missing the question the box already promised to have, or (for
+   * a message that opened a new chat, before an id exists) no conversation at
+   * all. `history` is what is durable; this is what is owed. Kept separate
+   * rather than merged into `entries` so the client can render it as pending
+   * and retire it through the same `reconcilePending` it applies to its own
+   * optimistic copies — the entries here are deliberately NOT filtered against
+   * the history, because that comparison already exists client-side and a
+   * second implementation could disagree with it.
+   */
+  pending: AcceptedMessage[];
 }
 
 export type ChatBootstrap =
@@ -73,13 +89,30 @@ export const chatBootstrapProcedure = {
       // The persisted pointer is a file another process wrote; an empty id in
       // it means "none", not a session named "".
       const sessionId = resolved === "" ? null : resolved;
+      // The acceptance record is read against whatever history goes back with
+      // it: the entries already there are each accepted message's
+      // reconciliation baseline, so an old turn repeating the same words cannot
+      // stand in for the echo it is still waiting for.
+      const acceptedFor = (knownUuids: string[]): AcceptedMessage[] =>
+        readAcceptedMessages(ctx.eventBus, {
+          sessionId,
+          now: new Date(),
+          viewerEmail: ctx.user?.email ?? null,
+          knownUuids,
+        });
       if (sessionId === null) {
+        // "No session" is the reload that loses the most: a first message is
+        // accepted before the engine assigns an id, so there is nothing yet for
+        // the page to resolve. The acceptance record is the only evidence the
+        // message exists, and it is what makes this an empty chat that is
+        // visibly waiting rather than one that never happened.
         return {
           kind: "empty",
           sessionId: null,
           history: null,
           label: null,
           status: await readSessionStatus(ctx.boxRoot, null),
+          pending: acceptedFor([]),
         };
       }
       const runtime = getChatRuntime(ctx.boxRoot);
@@ -103,6 +136,7 @@ export const chatBootstrapProcedure = {
           status: await readSessionStatus(ctx.boxRoot, sessionId),
           reason: availability.reason,
           huskPath: availability.huskPath,
+          pending: acceptedFor([]),
         };
       }
       const [history, label] = await Promise.all([loadHistoryForSession(ctx.boxRoot, { session: sessionId, slice }), titleForSession(ctx.boxRoot, sessionId)]);
@@ -112,6 +146,7 @@ export const chatBootstrapProcedure = {
         history,
         label,
         status: await readSessionStatus(ctx.boxRoot, sessionId),
+        pending: acceptedFor(history.entries.map((entry) => entry.uuid)),
       };
     }),
 };

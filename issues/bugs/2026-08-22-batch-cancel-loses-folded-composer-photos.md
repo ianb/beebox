@@ -31,3 +31,16 @@ Fix directions:
   instead — the composer then shows the photos until they've actually landed.
 
 Related: [attach-vs-upload-menu-confusing](../closed/features/2026-08-03-attach-vs-upload-menu-confusing.md).
+
+## Re-checked 2026-08-25
+
+Still true as filed: `use-bulk-upload-launch.ts` removes each folded image from
+the emission store and revokes its object URL before the overlay opens, and no
+commit has touched that file since this was filed.
+
+One detail that makes the first fix direction smaller than it reads: the folded
+`File` objects are **not** discarded — `setLaunch` keeps them in
+`seedFiles: [...folded, ...files]`. The data needed to restore the composer is
+already held by the launch object for as long as the overlay is open. What is
+missing is only the restore path on a cancel/discard exit, plus re-minting the
+`[imageN]` tokens and object URLs.

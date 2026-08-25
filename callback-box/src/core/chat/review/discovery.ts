@@ -24,13 +24,12 @@ import {
   MAX_SESSION_ENTRIES,
   getSessionMetadata,
   parseSessionLog,
-  type SessionEntry,
 } from "../../../cli/lib/session.js";
 import { errnoCode } from "../../../lib/error-guards.js";
 import { listChatHusks, type ChatHuskEntry } from "../husk.js";
 import { huskTranscriptPath } from "../husk-transcript.js";
 import { METADATA_CONSUMER, sessionState, type ReviewState } from "./state.js";
-import { resolveSpan, spanSize, type BootstrapReason, type ResolvedSpan } from "./span.js";
+import { resolveSpan, spanSize, type BootstrapReason, type ResolvedSpan, type SpanPageReader } from "./span.js";
 import { resolveChatEngine } from "../session/engine.js";
 import { loadSessionHistory } from "../session/load-history.js";
 import { readCodexSessionUpdatedAt } from "../session/codex-transcript.js";
@@ -51,11 +50,10 @@ export const REVIEW_CHAR_THRESHOLD = 6_000;
 const REVIEW_MIN_USER_TURNS = 2;
 
 /**
- * Chat review reads a transcript from the top: `resolveSpan` hashes every
- * entry before the journal boundary, so the read has to be a first-page read,
- * not a tail. It is nonetheless bounded — retaining a whole transcript is what
- * OOM'd `cb serve` (see `cli/lib/session-retention.ts`) — and a session past
- * the cap is reported loudly rather than silently truncated.
+ * Page size for the span walk, and the most entries one review may fold in.
+ * `resolveSpan` reads a transcript from the top in pages of this size,
+ * retaining nothing before the journal boundary and at most this many entries
+ * after it; a longer backlog is reviewed across consecutive runs.
  */
 const PARSE_LIMIT = MAX_SESSION_ENTRIES;
 
@@ -100,8 +98,6 @@ export interface DiscoveryResult {
   tooFewTurns: number;
   /** Husks whose transcript is gone — nothing to read, husk left alone. */
   missingTranscripts: number;
-  /** Skipped: the journal boundary lies past the bounded read window. */
-  boundaryBeyondWindow: number;
 }
 
 export interface DiscoverOptions {
@@ -117,99 +113,54 @@ function emptyResult(): DiscoveryResult {
     belowThreshold: 0,
     tooFewTurns: 0,
     missingTranscripts: 0,
-    boundaryBeyondWindow: 0,
   };
 }
 
-/** A bounded first-page read, plus whether the transcript ran past it. */
-interface ParsedWindow {
-  entries: SessionEntry[];
-  /** True when the transcript holds more entries than `entries` — read capped. */
-  truncated: boolean;
-}
-
 /**
- * Parse a transcript's bounded first page. Returns null when the file is gone
- * (the SDK cleaned it up, or `~/.claude` was cleared between listing and
- * reading).
+ * A page reader over a Claude transcript. Returns null pages when the file is
+ * gone (the SDK cleaned it up, or `~/.claude` was cleared between listing and
+ * reading) — surfaced as a null window by {@link readSessionWindow}.
  */
-async function parseFull(logPath: string): Promise<ParsedWindow | null> {
-  try {
-    const { entries, total } = await parseSessionLog({
-      logPath,
-      slice: { mode: "page", offset: 0, limit: PARSE_LIMIT },
-    });
-    const truncated = entries.length < total;
-    if (truncated) {
-      // Degraded, but visibly: the span this session resolves is computed over
-      // the first PARSE_LIMIT entries, so review stops advancing once a
-      // transcript grows past the cap. Reviewing a transcript that long needs
-      // a streaming span resolver — see
-      // issues/bugs/2026-08-01-chat-review-capped-at-max-session-entries.md.
-      console.warn(
-        `chat-review: transcript ${logPath} has ${String(total)} entries; reviewing only the first ${String(entries.length)} (bounded read).`,
-      );
-    }
-    return { entries, truncated };
-  } catch (e) {
-    if (errnoCode(e) === "ENOENT") return null;
-    throw e;
-  }
+function claudePages(logPath: string): SpanPageReader {
+  return ({ offset, limit }) => parseSessionLog({ logPath, slice: { mode: "page", offset, limit } });
 }
 
-/** One session's parsed transcript window plus the unread span within it. */
-export interface SessionWindow {
-  /** The bounded first-page read of the transcript. */
-  entries: SessionEntry[];
-  span: ResolvedSpan;
+function codexPages(boxRoot: string, sessionId: string): SpanPageReader {
+  return ({ offset, limit }) => loadSessionHistory(boxRoot, {
+    sessionId,
+    slice: { mode: "page", offset, limit },
+  });
 }
 
 /**
- * Read the bounded window for one session and locate its unread span.
- *
- * Both discovery (to measure the span) and the reviewer (to render it) go
- * through this. The reviewer re-reads rather than being handed discovery's
- * array on purpose: see {@link QualifiedSession}. Returns null when the
- * transcript is gone.
- *
- * Every read reports the entry cap, including the reviewer's. A transcript that
- * crosses PARSE_LIMIT between the two reads is truncated in the read that
- * actually advances the journal, so silencing the second one would hide exactly
- * the case that matters; two lines about one over-long session is the cheaper
- * cost.
+ * Locate one session's unread span. Both discovery (to measure the span) and
+ * the reviewer (to render it) go through this. The reviewer re-reads rather
+ * than being handed discovery's array on purpose: see {@link QualifiedSession}.
+ * Returns null when the transcript is gone.
  */
 export async function readSessionWindow(args: {
   sessionId: string;
   logPath: string;
   state: ReviewState;
   boxRoot?: string;
-}): Promise<SessionWindow | null> {
-  const parsed = args.boxRoot === undefined
-    ? await parseFull(args.logPath)
-    : await loadSessionHistory(args.boxRoot, {
-      sessionId: args.sessionId,
-      slice: { mode: "page", offset: 0, limit: PARSE_LIMIT },
-    }).then(({ entries, total }) => ({ entries, truncated: entries.length < total }));
-  if (parsed === null) return null;
-  const { entries, truncated } = parsed;
+}): Promise<ResolvedSpan | null> {
+  const readPage = args.boxRoot === undefined
+    ? claudePages(args.logPath)
+    : codexPages(args.boxRoot, args.sessionId);
   const applied = sessionState(args.state, args.sessionId).applied[METADATA_CONSUMER] ?? null;
-  return { entries, span: resolveSpan({ entries, applied, truncated }) };
-}
-
-/**
- * The shared reaction to an unresolvable span: say which session, and why it is
- * being left alone. Both readers of a window (discovery's measurement and the
- * reviewer's re-read) can hit it — the second only when a transcript crosses
- * the cap between the two reads — so the message lives here once.
- */
-export function warnDeferredBoundary(sessionId: string): void {
-  console.warn(
-    `chat-review: session ${sessionId} has a journal boundary that is not in the first `
-      + `${String(PARSE_LIMIT)} entries of its transcript, and the transcript is longer than that — `
-      + "the boundary is past the read window. Skipping it rather than re-reading from the top, "
-      + "which would re-summarize old material and move the journal backwards. "
-      + "See issues/bugs/2026-08-01-chat-review-capped-at-max-session-entries.md.",
-  );
+  try {
+    const span = await resolveSpan({ readPage, applied, limit: PARSE_LIMIT });
+    if (span.clipped) {
+      console.warn(
+        `chat-review: session ${args.sessionId} has more than ${String(PARSE_LIMIT)} unread entries; `
+          + "reviewing the first window now and the rest on later runs.",
+      );
+    }
+    return span;
+  } catch (e) {
+    if (errnoCode(e) === "ENOENT") return null;
+    throw e;
+  }
 }
 
 async function qualifyHusk(
@@ -260,25 +211,18 @@ async function qualifyHusk(
 
   // Scoped to this block so the window is unreachable the moment the scalars
   // below have been taken from it — the array must not outlive qualification.
-  const window = await readSessionWindow({
+  const span = await readSessionWindow({
     sessionId: husk.session,
     logPath,
     state: options.state,
     ...(engine === "codex" ? { boxRoot } : {}),
   });
-  if (window === null) {
+  if (span === null) {
     result.missingTranscripts += 1;
     return null;
   }
-  if (window.span.deferred !== null) {
-    // Unresolvable span: not "nothing new", so it must NOT fall through to the
-    // threshold bucket, which would report it as quietly uninteresting.
-    warnDeferredBoundary(husk.session);
-    result.boundaryBeyondWindow += 1;
-    return null;
-  }
-  const spanChars = spanSize(window.span);
-  const bootstrap = window.span.bootstrap;
+  const spanChars = spanSize(span);
+  const bootstrap = span.bootstrap;
   if (spanChars < REVIEW_CHAR_THRESHOLD) {
     result.belowThreshold += 1;
     return null;

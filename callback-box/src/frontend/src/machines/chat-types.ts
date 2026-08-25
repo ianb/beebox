@@ -49,6 +49,20 @@ const HISTORY_TAIL = 200;
 /** Floor on how many real (typed/spoken) user messages the initial load must cover. */
 const MIN_REAL_USER_MESSAGES = 2;
 
+/**
+ * Ceiling on how many entries one tab keeps in memory while the user pages
+ * backwards. Without it, `PREPEND_MESSAGES` grows `messages` without bound —
+ * every page ever fetched stays resident, including base64 image blocks, which
+ * is what kills a long session in a mobile WebView.
+ *
+ * 600 is a judgment call, not a measurement: three initial windows' worth, so
+ * ordinary paging back never hits it, and a determined pager stops well before
+ * a whole transcript is rebuilt client-side. Trimming happens at the *older*
+ * end (the prepend is truncated) rather than the newer end, because the newest
+ * entries are the live tail where streaming lands.
+ */
+export const MAX_RETAINED_MESSAGES = 600;
+
 /** The live chat's history request: the last {@link HISTORY_TAIL} entries. */
 export function chatTailSlice(): HistorySlice {
   return { mode: "tail", tail: HISTORY_TAIL, minRealUserMessages: MIN_REAL_USER_MESSAGES };
@@ -147,6 +161,14 @@ export type ChatInitialLoad =
       sessionId: string | null;
       running: boolean;
       busy: boolean;
+      /**
+       * Messages the box has accepted but not yet written into the transcript
+       * (`chat.bootstrap`'s `pending`). A fresh page has no optimistic copy of
+       * its own — that lived in the last page's memory — so without these a
+       * reload during the window between acceptance and the transcript write
+       * shows a conversation missing the question the box already has.
+       */
+      pending: PendingSessionEntry[];
     }
   | { status: "failed"; error: string };
 

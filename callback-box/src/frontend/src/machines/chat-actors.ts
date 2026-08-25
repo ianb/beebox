@@ -16,6 +16,7 @@ import {
   type SessionEntry,
   type SessionContentBlock,
   type ChatImageAttachment,
+  type PendingSessionEntry,
 } from "../api";
 import { trpcClient } from "../lib/trpc";
 // Raw relative (not `@shared/…`): loaded outside Vite by the tap/tsx doctest
@@ -38,13 +39,17 @@ import { settleFromTurnStart, settleRejectedTurnStart } from "./chat-receipt-set
 import { recordChatSendEvent } from "../lib/chat-send-diagnostics";
 
 export const fetchInitialActor = fromPromise<
-  { entries: SessionEntry[]; total: number; sessionId: string | null; running: boolean; busy: boolean },
+  { entries: SessionEntry[]; total: number; sessionId: string | null; running: boolean; busy: boolean; pending: PendingSessionEntry[] },
   InitialSessionInput
 >(async ({ input }) => {
-  if (input.sessionInput === "new") {
-    return { entries: [], total: 0, sessionId: null, running: false, busy: false };
-  }
   const preloaded = input.initial;
+  // The preload is consulted BEFORE the fresh-chat shortcut. A chat that is
+  // still "new" can have messages the box already accepted — that is the whole
+  // window this exists to cover, since a first message is accepted before the
+  // engine assigns the id that would stop it being "new".
+  if (input.sessionInput === "new" && !preloaded) {
+    return { entries: [], total: 0, sessionId: null, running: false, busy: false, pending: [] };
+  }
   if (preloaded) {
     // The mounting page already fetched this session (one `chat.bootstrap`
     // round trip covering session resolution + history + status). Throwing on
@@ -56,6 +61,7 @@ export const fetchInitialActor = fromPromise<
       sessionId: preloaded.sessionId,
       running: preloaded.running,
       busy: preloaded.busy,
+      pending: preloaded.pending,
     };
   }
   const [history, status] = await Promise.all([
@@ -68,6 +74,9 @@ export const fetchInitialActor = fromPromise<
     sessionId: history.sessionId ?? status.sessionId,
     running: status.running,
     busy: status.busy,
+    // This path is the machine fetching for itself, which only happens when no
+    // page preloaded a bootstrap — `chat.history` carries no acceptance record.
+    pending: [],
   };
 });
 

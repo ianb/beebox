@@ -4,6 +4,7 @@ import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@backend/trpc/router.js";
 import { getApiBase, getWebSocketUrl, withBase } from "../../api.js";
 import { getMobileAuthToken, isMobileAuthenticated, refreshMobileSession, withMobileAuth } from "../mobile-auth";
+import { toastError } from "../../components/ui/toast-store";
 
 export const trpc = createTRPCReact<AppRouter>();
 
@@ -11,8 +12,44 @@ export const trpc = createTRPCReact<AppRouter>();
 export type RouterOutput = inferRouterOutputs<AppRouter>;
 
 /**
+ * What a 401 means here, and why it no longer takes the page away.
+ *
+ * A tRPC *procedure* error cannot produce a 401 on this client: every HTTP link
+ * below is `httpBatchStreamLink`, and the server's jsonl branch sends its
+ * headers before any procedure has resolved — so the HTTP status is
+ * unconditionally 200 and the per-call error rides in the body. The only thing
+ * that reaches this check is a transport-level 401 from the box auth wall
+ * (`webapp/server-box-scope.ts`), which answers 403 for a permitted-user
+ * problem and 401 only when there is no identity at all. So a 401 here really
+ * does mean the session ended — a 30-day cookie expiry, or a `gen` revocation
+ * from a password change.
+ *
+ * It used to mean an immediate `window.location.href` to the login page, plus a
+ * promise that never resolved. Both were wrong. The navigation replaced
+ * whatever the person was doing with a bare Sign in form carrying no
+ * explanation, which reads as data loss — a 2026-08 walkthrough recorded
+ * someone assuming an evening's work was gone (it was not; `returnTo` restores
+ * the route and the composer draft is in `localStorage`). And the pending
+ * promise left every caller hanging forever, so anything mid-flight could
+ * neither finish nor fail.
+ *
+ * Now the session's end is *reported* — one persistent toast that says what
+ * happened and offers the login page — and the 401 is returned so callers fail
+ * normally. The person chooses when to leave the page.
+ *
+ * See `issues/bugs/2026-08-25-one-401-ejects-the-whole-app-to-a-login-form.md`.
+ */
+function reportSessionEnded(): void {
+  const returnTo = encodeURIComponent(window.location.pathname + window.location.search);
+  toastError("Your session has ended, so the box stopped answering.", {
+    persist: true,
+    action: { label: "Sign in", href: withBase(`/auth/login?returnTo=${returnTo}`) },
+  });
+}
+
+/**
  * Shared custom fetch for every link: rewrites the URL so it always reflects
- * the current box slug, and redirects to the login page on a 401.
+ * the current box slug, and reports a 401 rather than ejecting the page.
  */
 async function trpcFetch(url: RequestInfo | URL, options?: RequestInit): Promise<Response> {
   const reqUrl = typeof url === "string" ? url : url.toString();
@@ -33,11 +70,7 @@ async function trpcFetch(url: RequestInfo | URL, options?: RequestInit): Promise
       }
       return response;
     }
-    const returnTo = encodeURIComponent(
-      window.location.pathname + window.location.search,
-    );
-    window.location.href = withBase(`/auth/login?returnTo=${returnTo}`);
-    return new Promise(() => {});
+    reportSessionEnded();
   }
   return response;
 }

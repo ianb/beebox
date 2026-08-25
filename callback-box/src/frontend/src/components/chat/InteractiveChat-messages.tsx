@@ -1,19 +1,20 @@
 /**
- * The chat message list shell: owns the scroll container, the single
- * stick-to-bottom controller (InteractiveChat-scroll.ts), the floating
- * scroll-to-bottom button, and the load-older prepend anchoring. Renders the
+ * The chat message list shell: owns the scroll container, the single scroll
+ * controller (chat-scroll.ts), the send anchor and its last-turn spacer, the
+ * floating scroll-to-bottom button, and the load-older prepend anchoring. Renders the
  * messages in normal DOM order — no virtualization; the loaded window is
- * bounded by HISTORY_TAIL + explicit "load older" pagination. Per-item
+ * bounded by HISTORY_TAIL + explicit "load older" pagination, capped at
+ * MAX_RETAINED_MESSAGES. Per-item
  * rendering and data-array assembly live in InteractiveChat-message-items.tsx.
  */
 
-import { useState, useEffect, useMemo, useCallback, memo } from "react";
+import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef, memo } from "react";
 import { ChatOpeners } from "./ChatOpeners";
 import { useParams } from "@tanstack/react-router";
 import type { SessionEntry, SessionContentBlock } from "../../api";
 import { extractChatImages, type MessageGroup, type OnZoomView, type ReplaySpeechOptions } from "./ChatMessages";
 import type { ModelMarker } from "./InteractiveChat-helpers";
-import { useStickToBottom } from "./InteractiveChat-scroll";
+import { useChatScroll } from "./chat-scroll";
 import {
   buildDataItems,
   dataItemKey,
@@ -22,6 +23,7 @@ import {
   type RenderItemContext,
   type SpeechPlaybackState,
 } from "./InteractiveChat-message-items";
+import { MAX_RETAINED_MESSAGES } from "../../machines/chat-types";
 import type { CaptureBubbleModel, CaptureVerbs } from "./capture-bubble";
 import type { AudioOverlayStore } from "./audio-overlay-store";
 
@@ -77,9 +79,10 @@ function LoadOlderHeader({ hasOlder, loadingOlder, onLoadOlder }: {
 }
 
 /**
- * Floating "jump to latest" affordance. Visible only when the view isn't
- * following the bottom; takes its accent (and a small dot) when content has
- * arrived since the user scrolled away, per the controller's hasUnseenContent.
+ * Floating "jump to latest" affordance. Visible whenever the view is away from
+ * the bottom — nothing follows the bottom on its own, so this is how a reader
+ * gets back to the newest content; it takes its accent (and a small dot) when
+ * content arrived below them, per the controller's hasUnseenContent.
  */
 function ScrollToBottomButton({ emphasized, onClick }: { emphasized: boolean; onClick: () => void }) {
   return (
@@ -108,7 +111,7 @@ function ScrollToBottomButton({ emphasized, onClick }: { emphasized: boolean; on
 function MessageListInner({
   messages, groups, modelMarkers, isStreaming, streamText, streamTools,
   debugView, currentUserEmail, currentUserName, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, snapshot,
-  totalEntries, onLoadOlder, loadingOlder, scrollToBottomTrigger, liveTurnId, proseEnabled, pendingHqDraft,
+  totalEntries, onLoadOlder, loadingOlder, sendSignal, liveTurnId, proseEnabled, pendingHqDraft,
   captureBubbles, captureVerbs, audioOverlayStore, openers, onSendOpener,
 }: {
   messages: SessionEntry[];
@@ -129,7 +132,8 @@ function MessageListInner({
   totalEntries: number;
   onLoadOlder: () => void;
   loadingOlder: boolean;
-  scrollToBottomTrigger: number;
+  /** Increments on every send — the anchor signal, not a scroll-to-bottom. */
+  sendSignal: number;
   liveTurnId: string | null;
   proseEnabled: boolean;
   pendingHqDraft: string | null;
@@ -146,7 +150,9 @@ function MessageListInner({
   onSendOpener: (text: string) => void;
 }) {
   const { boxSlug } = useParams({ strict: false });
-  const hasOlder = totalEntries > messages.length;
+  // Also gated on the retained-window ceiling: past it the machine drops what
+  // a further page would prepend, so offering the affordance would lie.
+  const hasOlder = totalEntries > messages.length && messages.length < MAX_RETAINED_MESSAGES;
 
   // Keep the streamed bubble visible through `refreshing` too — the brief
   // fetchHistory roundtrip after a turn completes. The machine holds
@@ -163,12 +169,40 @@ function MessageListInner({
     [groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, pendingHqDraft, captureBubbles, debugView],
   );
 
-  const { scrollerRef, contentRef, isPinned, hasUnseenContent, scrollToBottom, captureForPrepend } = useStickToBottom();
+  const { scrollerRef, contentRef, atBottom, hasUnseenContent, scrollToBottom, anchorToTop, captureForPrepend, openThread, settleOpen, viewportPx } = useChatScroll();
 
-  // Scroll to bottom when the user sends a message (even if scrolled up).
+  // The content element, for the send anchor's DOM query. Held alongside (never
+  // instead of) the controller's attach callback — one authority owns scroll.
+  const contentElRef = useRef<HTMLDivElement | null>(null);
+  const attachContent = useCallback((el: HTMLDivElement | null) => {
+    contentElRef.current = el;
+    contentRef(el);
+  }, [contentRef]);
+
+  // Send: put the new user message at the top of the viewport (the reply
+  // streams in below it and nothing follows). A layout effect, so it runs after
+  // the commit that added both the message and the last-turn spacer — one
+  // write, after the shrink above and the growth below have landed.
+  useLayoutEffect(() => {
+    if (sendSignal === 0) return;
+    const content = contentElRef.current;
+    if (!content) return;
+    const users = content.querySelectorAll("[data-role=\"user\"]");
+    anchorToTop(users[users.length - 1] ?? null);
+  }, [sendSignal, anchorToTop]);
+
+  // Mounting this list IS opening a thread: `InteractiveChat` is keyed by
+  // session (ChatPage), so a session switch remounts. Say so to the controller
+  // rather than relying on the initial value of a ref inside it.
   useEffect(() => {
-    if (scrollToBottomTrigger > 0) scrollToBottom({ behavior: "instant" });
-  }, [scrollToBottomTrigger, scrollToBottom]);
+    openThread();
+  }, [openThread]);
+
+  // The bounded open-thread hold ends once the first history render has landed.
+  const loading = snapshot.matches("loading");
+  useEffect(() => {
+    if (!loading && messages.length > 0) settleOpen();
+  }, [loading, messages.length, settleOpen]);
 
   // Snapshot the anchor before older messages prepend so the controller can
   // restore the user's position once the new content lands.
@@ -243,7 +277,7 @@ function MessageListInner({
         className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain"
         style={{ overflowAnchor: "none" }}
       >
-        <div ref={contentRef} className="mx-auto w-full max-w-5xl">
+        <div ref={attachContent} className="mx-auto w-full max-w-5xl">
           <LoadOlderHeader
             hasOlder={hasOlder}
             loadingOlder={loadingOlder}
@@ -256,17 +290,26 @@ function MessageListInner({
               scroll-to-bottom button sit outside this wrapper and stay
               scannable. */}
           <div data-cb-scan="exclude">
-            {data.map((item) => {
+            {data.map((item, index) => {
               // The live turn's group keeps one key across the streamed→finalized
               // transition so React reconciles it in place — no remount/flash.
               const natural = dataItemKey(item);
               const key = liveKey && liveTargetUuid && natural === liveTargetUuid ? liveKey : natural;
-              return <div key={key}>{renderDataItem(item, renderCtx)}</div>;
+              // The last turn carries a viewport-tall min-height once the person
+              // has sent in this session, so "the user message at the top of the
+              // screen" is a reachable scroll position even for a one-line
+              // reply. It moves down with the turn and vanishes on unmount.
+              const spacer = sendSignal > 0 && index === data.length - 1 ? viewportPx : undefined;
+              return (
+                <div key={key} data-role={item.kind === "group" ? item.group.type : item.kind} style={{ minHeight: spacer }}>
+                  {renderDataItem(item, renderCtx)}
+                </div>
+              );
             })}
           </div>
         </div>
       </div>
-      {!isPinned ? (
+      {!atBottom ? (
         <ScrollToBottomButton emphasized={hasUnseenContent} onClick={() => scrollToBottom({ behavior: "smooth" })} />
       ) : null}
     </div>

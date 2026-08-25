@@ -63,6 +63,13 @@ rewrite that kept the entry count. When the boundary is gone or the prefix hash
 no longer matches, the pass re-reads from the top and **keeps the existing
 account** — it is now the only record of what the rewrite destroyed.
 
+The transcript is walked in pages from the top and nothing before the boundary
+is retained (the prefix hash is folded as the pages go by), so a transcript of
+any length costs one page of memory. Each pass folds in at most
+`MAX_SESSION_ENTRIES` (5 000) new entries and advances the journal that far; a
+backlog longer than that is finished over the following nights, and a session
+that grew past the cap is reported on stderr rather than silently deferred.
+
 The first review of an already-long session reads it whole (elided if huge),
 rather than replaying its history span by span. So for a session that was already
 long when the feature arrived, the account starts out missing the middle — a
