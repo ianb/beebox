@@ -6,7 +6,10 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-connector-sync-isolation — independent review of Drive trash tombstones
 priority: normal
+resolution: implemented
 ---
+
+**Closed 2026-08-25** in 3051bf12: an occupied safe-name path is compared by drive-id (same id = re-mount, otherwise reported); a card with an unreadable drive-id suspends folder discovery for that run and is reported. Drive `sync()` now accumulates failures into `result.error`.
 
 Drive folder discovery has two silent ambiguity paths.
 

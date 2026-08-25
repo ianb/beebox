@@ -6,7 +6,10 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-connector-sync-isolation — running the new Drive lifecycle knowledge audit
 priority: normal
+resolution: implemented
 ---
+
+**Closed 2026-08-25** in b9c583f6: the row was mangled by a merge-conflict resolution (restored from the pre-merge commit); entries are now validated one at a time (warn + skip), and `recordRun` validates before writing.
 
 The knowledge audit can complete its agent check and then fail the entire command while it records context history. `loadHistory` in `callback-box/src/dev/lib/context-history.ts` parses the complete committed ledger with one strict Zod schema. One existing `points-at-ui-path-vs-control` entry in `callback-box/src/dev/context-history.yaml` has `initial` and `peak` but no `added` or `turns`. The parser rejects that entry, so it prevents a new, unrelated audit measurement from being recorded.
 

@@ -6,7 +6,10 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-connector-sync-isolation — independent review of Calendar failure isolation
 priority: normal
+resolution: implemented
 ---
+
+**Closed 2026-08-25** in ca356806: local delete/insert/patch failures are `CalendarSyncFailure` entries merged into the connector's failures, so `result.error` is set, the commit narrative shows them and `cb wakeup` exits nonzero.
 
 `processLocalDeletes` and `pushAndCleanOrphans` in `callback-box/src/connectors/google-calendar-push.ts` warn and continue when Google rejects a delete or insert. They do not return a failure outcome. `GoogleCalendarConnector.sync` derives success only from per-calendar pull failures.
 

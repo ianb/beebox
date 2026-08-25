@@ -6,7 +6,10 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-connector-sync-isolation — independent review of Calendar failure isolation
 priority: normal
+resolution: implemented
 ---
+
+**Closed 2026-08-25** in ca356806: `saveCalendarState` writes atomically; `loadCalendarState` tolerates only ENOENT and throws `CalendarStateCorruptError` otherwise, so the sync fails before any push. Doctest: corrupt state → no insert.
 
 `saveCalendarState` in `callback-box/src/connectors/google-calendar-state.ts` writes the persistent Calendar state with a plain truncate-and-write operation. An interrupted write can leave invalid JSON. `loadCalendarState` catches that parse error and returns empty `syncTokens` and `eventFiles` maps.
 

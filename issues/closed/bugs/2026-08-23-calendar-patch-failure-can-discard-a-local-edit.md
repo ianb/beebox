@@ -6,7 +6,10 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-connector-sync-isolation — independent review of Calendar failure isolation
 priority: normal
+resolution: implemented
 ---
+
+**Closed 2026-08-25** in ca356806 + b4fc4959: a failed patch leaves the file and its recorded hash untouched and records a failure; a new push-phase pass retries every tracked entry whose hash differs (the hash is the retry queue). That pass also closes a pre-existing gap: local edits were only ever pushed on a full-window fetch.
 
 The Calendar decision can choose `local-wins` when the local event changed and the remote event did not. `patchEventViaApi` in `callback-box/src/connectors/google-calendar-state.ts` catches an HTTP failure and returns `null`. `tryPushLocalEdit` then returns false, and `google-calendar-sync.ts` falls through to writing the remote event over the local file.
 
