@@ -409,7 +409,10 @@ Vite app in the top-level `workstreams-app/` package. The router authenticates,
 supervises, and proxies it; the app invokes the stable `bin/workstreams` CLI
 instead of reimplementing lifecycle guards. It exposes joined status and safe
 actions, with `/workstreams/issues/`, `/workstreams/plans/`, and
-`/workstreams/testing/` beneath it. App source changes landed in main reload the
+`/workstreams/testing/` beneath it. An open issue ends with a **Related** list —
+nearest issues (open and closed) and design docs, the same ranking as
+`bin/issues similar --all --docs` (see that section for the shared library and
+the key it needs). App source changes landed in main reload the
 app child without restarting the router. Router or supervisor changes still
 require one boxholder-run `pnpm dev` restart after merge. Never restart the
 shared router from a worktree session.
@@ -620,6 +623,83 @@ direction is to report orphans, never to delete at cull time.
 reaching into the store, the same way it invokes `bin/workstreams` for lifecycle
 rather than reimplementing the guards. Two writers to one YAML format sharing
 one lock protocol is where duplication stops being controllable.
+
+## Searching the issue queue (`bin/issues`)
+
+A stateless CLI over `issues/` plus `private-issues/` when that mount exists
+(rows carry a `visibility`). It reuses `workstreams-app/src/server/issue-domain.ts`
+for parsing — the dev issue browser and this command must agree about what an
+issue is — and adds two derived fields the frontmatter does not carry: `date`
+from the `YYYY-MM-DD-` filename prefix, and `discoveredInWorkstream`, the bare
+name inside `discovered-in:`'s `worktree-<name>` token.
+
+**The library lives in the app, not in `bin/`.** `issue-search-model.ts`
+(load/derive/filter/group), `issue-index-documents.ts` (what gets indexed and
+its two hashes), `issue-index.ts` (the Orama cache + refresh), and
+`issue-index-query.ts` (ranking) are all in `workstreams-app/src/server/`,
+beside `issue-domain.ts`; `bin/issues.ts` imports them the same way it already
+imported the parser. That is because the issue browser's **Related** section
+(`issues.related`, `issue-related-service.ts`) is the same ranking as `issues
+similar <path> --all --docs` over the same cache — one implementation, two
+callers, so a row an agent quotes from the CLI is the row the boxholder sees.
+The app is long-lived, so it holds the built index in process and re-reads the
+corpus at most every 30s to decide whether anything changed.
+
+- `issues list [filters]` — the filtered queue, newest first.
+- `issues groups --by discovered-in|date|labels|area|workstream|category` —
+  clusters, largest first, with their members (`--min N`, default 2).
+- `issues search <text>` — `--mode text` is BM25 and offline; `hybrid` (the
+  default when a key is available) fuses BM25 with vector similarity;
+  `semantic` is vector only.
+- `issues similar <issue-path> [--docs]` — nearest neighbours of an issue by its
+  own stored vector. `--docs` also ranks `callback-box/docs/**/*.md`, so an
+  existing plan surfaces as prior art instead of being re-derived.
+- `issues show <path>` — frontmatter as JSON plus the top of the body.
+
+Every subcommand takes `--json`, and defaults to open issues (`--closed` for
+only closed, `--all` for both). Filters: `--category --area --label --workstream
+--discovered-in --needs --priority --next-action --since --research
+--visibility`. Repeats are OR within one filter and AND across filters —
+except `--label`, where repeats mean AND, since labels are how a cross-cutting
+effort is picked out.
+
+**The `.issues-index/<scope>/` cache** at the repo root is gitignored and
+disposable: a persisted Orama index, the embedding vectors, and a manifest of
+`{ indexHash, embeddedHash }` per file. Every run re-reads every issue (cheap);
+the manifest answers only what re-reading cannot. The two hashes are separate on
+purpose — `indexHash` covers every indexed field, so a frontmatter-only edit
+rebuilds the index (otherwise a `where:` filter would keep matching the old
+`workstream`/`needs`/`priority`) while costing nothing in embeddings;
+`embeddedHash` records the text the stored vector was actually computed from, so
+a run that cannot embed drops the stale vector instead of adopting it under the
+new hash. Re-embedding is one batched call. `--rebuild` wipes the cache and pays
+for the whole corpus again.
+
+`--mode text` never touches the network, which is what makes the command usable
+with no key at all. `--mode hybrid` and `--mode semantic` are assertions that
+BM25 will not do, so they **error** when there is no key or the corpus is not
+fully embedded; only the unspecified default degrades to text, and it says so on
+stderr. The key is read from `CALLBACK_OPENAI_API_KEY`, then
+`THINKING_OPENAI_API_KEY`, then `SKE_OPENAI_API_KEY`.
+
+The same order applies to the app's Related section (and to comment
+transcription), read from the **app child's** environment: the supervisor
+spawns it with the main checkout's `callback-box/.env` underneath
+`process.env`, the same precedence worktree children get, so a
+`CALLBACK_OPENAI_API_KEY=` line there is enough and an exported variable
+still wins. The router does not load that line into itself. With
+no key the section says so — "the semantic index needs an OpenAI key" is a
+state it renders, not an error page.
+
+**Private issues are indexed too**, which means their text is sent to OpenAI to
+be embedded, and their bodies sit in the local cache. Both are consistent with
+where private issues already live (a local repo on the developer's machine, read
+by agents that call hosted models), but it is a real egress. `--visibility
+public` is the control: it selects the separate `public` cache and never reads
+the private queue at all, so nothing private is loaded, indexed, or embedded on
+that run — the scopes get their own directories precisely so alternating between
+them does not look like every entry vanished and re-appeared. `--mode text`
+avoids the network entirely.
 
 ## Private-issues shadow repo (`private-issues`)
 

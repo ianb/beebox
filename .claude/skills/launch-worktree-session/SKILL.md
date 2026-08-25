@@ -129,7 +129,10 @@ briefing.
    `workstream:` field inside the new checkout, so the issue immediately appears
    as work owned by the workstream, and the assignment lands with the eventual
    work. This is responsibility, not discovery provenance. Omit `--issue` when
-   the discussion is not taking on a specific filed issue.
+   the discussion is not taking on a specific filed issue. The flag takes one
+   path; when the work is a cluster (see `cb-pick-issues`), pass the anchor
+   issue here and list every other member's path in the briefing so the new
+   session's plan names the full set and `/finish` reconciles all of them.
 
 4. **Pick an agent and model — and when it isn't clear, ASK rather than
    assume.** This is the boxholder's call, not a scope calculation you perform
