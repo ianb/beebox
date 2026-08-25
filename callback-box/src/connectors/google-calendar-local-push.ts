@@ -28,9 +28,12 @@ import { recordFailedLocalPush } from "./google-calendar-strand.js";
 import {
   patchEventViaApi,
   type CalendarState,
-  type EventFileEntry,
   type IcsOptions,
 } from "./google-calendar-state.js";
+import {
+  parseEventKey,
+  type EventFileEntry,
+} from "./google-calendar-event-index.js";
 
 /**
  * What happened to a local-wins push. There is no "fall through and let
@@ -107,7 +110,8 @@ export async function patchLocalEdit(opts: {
  */
 export async function writeBackPushedEvent(opts: {
   state: CalendarState;
-  googleEventId: string;
+  /** The event's index key — see google-calendar-event-index.ts. */
+  key: string;
   entry: EventFileEntry;
   calDir: string;
   relPath: string;
@@ -115,7 +119,7 @@ export async function writeBackPushedEvent(opts: {
   icsOpts: IcsOptions;
   fallbackFilename: string | undefined;
 }): Promise<CalendarSyncFailure | undefined> {
-  const { state, googleEventId, entry, calDir, relPath, event, icsOpts, fallbackFilename } = opts;
+  const { state, key, entry, calDir, relPath, event, icsOpts, fallbackFilename } = opts;
   const ics = eventToIcs(event, icsOpts);
   const pushedEntry: EventFileEntry = {
     ...entry, contentHash: contentHash(ics), remoteUpdated: event.updated,
@@ -123,13 +127,13 @@ export async function writeBackPushedEvent(opts: {
   // Google took the edit, so nothing is owed: the retry window that would end
   // in stranding closes here (see google-calendar-strand.ts).
   delete pushedEntry.pendingSince;
-  state.eventFiles[googleEventId] = pushedEntry;
+  state.eventFiles[key] = pushedEntry;
   try {
     await fs.writeFile(path.join(calDir, entry.filename), ics);
     return undefined;
   } catch (err: unknown) {
     if (fallbackFilename !== undefined && fallbackFilename !== entry.filename) {
-      state.eventFiles[googleEventId] = { ...pushedEntry, filename: fallbackFilename };
+      state.eventFiles[key] = { ...pushedEntry, filename: fallbackFilename };
     }
     console.warn(`  Pushed ${entry.filename} to Google but could not rewrite it locally:`, err);
     return classifyCalendarFailure(err, {
@@ -180,7 +184,9 @@ async function readPendingEdit(opts: {
  * Google will never accept it (a 404/410 patch) or has not accepted it for a
  * week (see google-calendar-strand.ts). Entries this run's pull
  * (or the post-410 stale pass) already dealt with are skipped via
- * `reconciledEventIds` so nothing is pushed or reported twice.
+ * `reconciledEventKeys` so nothing is pushed or reported twice — by (event,
+ * calendar), so a pull of calendar A cannot make this pass skip the same event
+ * id tracked for calendar B.
  *
  * Skipped without comment: legacy string entries and entries with no recorded
  * hash — the connector never stamped one, so "differs from what we wrote" is
@@ -192,22 +198,23 @@ export async function pushPendingLocalEdits(opts: {
   calendar: GoogleCalendarService;
   state: CalendarState;
   calDir: string;
-  reconciledEventIds: Set<string>;
+  reconciledEventKeys: Set<string>;
   icsOptsFor: (calendarId: string) => IcsOptions;
   /** Domain time (the connector's injected clock) — the retry window's "now". */
   now: Date;
 }): Promise<{ updated: string[]; notes: SyncNote[]; failures: CalendarSyncFailure[]; stranded: string[] }> {
-  const { boxRoot, calendar, state, calDir, reconciledEventIds, icsOptsFor, now } = opts;
+  const { boxRoot, calendar, state, calDir, reconciledEventKeys, icsOptsFor, now } = opts;
   const updated: string[] = [];
   const notes: SyncNote[] = [];
   const failures: CalendarSyncFailure[] = [];
   const stranded: string[] = [];
 
-  for (const [googleEventId, entry] of Object.entries(state.eventFiles)) {
+  for (const [key, entry] of Object.entries(state.eventFiles)) {
     if (typeof entry === "string") continue;
     const storedHash = entry.contentHash;
     if (storedHash === undefined) continue;
-    if (reconciledEventIds.has(googleEventId)) continue;
+    if (reconciledEventKeys.has(key)) continue;
+    const { eventId: googleEventId } = parseEventKey(key);
 
     const filePath = path.join(calDir, entry.filename);
     const relPath = path.relative(boxRoot, filePath);
@@ -226,7 +233,7 @@ export async function pushPendingLocalEdits(opts: {
       // again. A definitive one (or a week of transient ones) strands instead:
       // the file moves to stranded/ and the entry goes away.
       await recordFailedLocalPush({
-        boxRoot, calDir, state, googleEventId, entry, localContent,
+        boxRoot, calDir, state, key, entry, localContent,
         failure: outcome.failure, now, acc: { notes, failures, stranded },
       });
       continue;
@@ -237,7 +244,7 @@ export async function pushPendingLocalEdits(opts: {
     // the edit moved the event's date: renaming is the pull path's job, which
     // owns the old-file cleanup.
     const rewriteFailure = await writeBackPushedEvent({
-      state, googleEventId, entry, calDir, relPath,
+      state, key, entry, calDir, relPath,
       event: outcome.event, icsOpts: icsOptsFor(entry.calendarId),
       fallbackFilename: undefined,
     });

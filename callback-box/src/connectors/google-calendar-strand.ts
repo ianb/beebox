@@ -27,7 +27,8 @@ import {
   type CalendarSyncOperation,
   type SyncNote,
 } from "./google-calendar-notes.js";
-import { type CalendarState, type EventFileEntry } from "./google-calendar-state.js";
+import { type CalendarState } from "./google-calendar-state.js";
+import { type EventFileEntry } from "./google-calendar-event-index.js";
 import { invariant } from "../lib/invariant.js";
 
 /**
@@ -170,14 +171,15 @@ export async function strandEntry(opts: {
   boxRoot: string;
   calDir: string;
   state: CalendarState;
-  googleEventId: string;
+  /** The event's index key — see google-calendar-event-index.ts. */
+  key: string;
   entry: EventFileEntry;
   summary: string;
   reason: string;
   operation: CalendarSyncOperation;
   acc: StrandAccumulator;
 }): Promise<void> {
-  const { boxRoot, calDir, state, googleEventId, entry, summary, reason, operation, acc } = opts;
+  const { boxRoot, calDir, state, key, entry, summary, reason, operation, acc } = opts;
   const from = path.join(calDir, entry.filename);
   const fromRel = path.relative(boxRoot, from);
 
@@ -198,14 +200,14 @@ export async function strandEntry(opts: {
     }
     // Nothing left to preserve — the file went away under us. Untrack it and
     // report the strand anyway, so the entry does not linger as a dangling one.
-    delete state.eventFiles[googleEventId];
+    delete state.eventFiles[key];
     acc.stranded.push(fromRel);
     acc.notes.push({ action: "stranded", summary, detail: reason });
     return;
   }
 
   const toRel = path.relative(boxRoot, to);
-  delete state.eventFiles[googleEventId];
+  delete state.eventFiles[key];
   acc.stranded.push(fromRel, toRel);
   console.warn(`  Stranded ${entry.filename} — ${reason}; moved to ${STRANDED_DIR}/`);
   acc.notes.push({ action: "stranded", summary, detail: reason, ref: toRel });
@@ -225,14 +227,15 @@ export async function recordFailedLocalPush(opts: {
   boxRoot: string;
   calDir: string;
   state: CalendarState;
-  googleEventId: string;
+  /** The event's index key — see google-calendar-event-index.ts. */
+  key: string;
   entry: EventFileEntry;
   localContent: string;
   failure: CalendarSyncFailure;
   now: Date;
   acc: StrandAccumulator;
 }): Promise<void> {
-  const { boxRoot, calDir, state, googleEventId, entry, localContent, failure, now, acc } = opts;
+  const { boxRoot, calDir, state, key, entry, localContent, failure, now, acc } = opts;
   const verdict = classifyPushFailure({ failure, pendingSince: entry.pendingSince, now });
   if (verdict.kind === "retry") {
     markPushPending(entry, now);
@@ -240,7 +243,7 @@ export async function recordFailedLocalPush(opts: {
     return;
   }
   await strandEntry({
-    boxRoot, calDir, state, googleEventId, entry,
+    boxRoot, calDir, state, key, entry,
     summary: icsSummary(localContent, entry.filename),
     reason: verdict.reason, operation: "local-push", acc,
   });

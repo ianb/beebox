@@ -30,7 +30,7 @@ type CalendarSyncOutcome =
 function emptySyncAccumulator(): SyncAccumulator {
   return {
     created: [], updated: [], deleted: [], notes: [], failures: [], stranded: [],
-    reconciledEventIds: new Set(), seenEventIds: new Set(),
+    reconciledEventKeys: new Set(), seenEventKeys: new Set(),
   };
 }
 
@@ -56,7 +56,7 @@ export async function runCalendarSync(opts: {
   snapshot: SyncTokenSnapshot;
   acc: {
     created: string[]; updated: string[]; deleted: string[]; stranded: string[];
-    allNotes: SyncNote[]; failures: CalendarSyncFailure[]; reconciledEventIds: Set<string>;
+    allNotes: SyncNote[]; failures: CalendarSyncFailure[]; reconciledEventKeys: Set<string>;
   };
 }): Promise<CalendarSyncOutcome> {
   const { boxRoot, calendar, calendarId, syncToken, icsOpts, state, calDir,
@@ -74,9 +74,9 @@ export async function runCalendarSync(opts: {
     // Always collected: a strand MOVED a file, and the commit is path-scoped —
     // a dropped path leaves the move half-recorded in git.
     acc.stranded.push(...r.stranded);
-    // Always union the reconciled ids, even for a discarded 410 attempt: the
+    // Always union the reconciled keys, even for a discarded 410 attempt: the
     // pull DID look at those events, so the pending pass has nothing to add.
-    for (const id of r.reconciledEventIds) acc.reconciledEventIds.add(id);
+    for (const key of r.reconciledEventKeys) acc.reconciledEventKeys.add(key);
     if (opts2.withNotes) acc.allNotes.push(...r.notes);
     // A 410 discards the attempt's failures: the full resync that follows
     // re-runs every one of those events, so keeping them would double-report.
@@ -122,7 +122,7 @@ export async function runCalendarSync(opts: {
     const staleAcc = emptySyncAccumulator();
     await removeStaleAfterFullResync({
       boxRoot, calDir, state, calendarId,
-      returnedEventIds: fullAttempt.seenEventIds, windowStart, windowEnd, acc: staleAcc,
+      returnedEventKeys: fullAttempt.seenEventKeys, windowStart, windowEnd, acc: staleAcc,
     });
     collect(staleAcc, { withNotes: true, withFailures: true });
     return { kind: "synced", fullResync: true };

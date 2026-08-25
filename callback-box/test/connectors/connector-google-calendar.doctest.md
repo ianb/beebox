@@ -1008,12 +1008,14 @@ result.error?.includes("(stale-cleanup, local: stranded — deleted on Google (a
 => true
 ```
 
-Nothing tracks it any more, so no later run patches, reports, or re-inserts it:
+Nothing tracks it any more, so no later run patches, reports, or re-inserts it
+(index keys are `<eventId> <calendarId>` — see
+`google-calendar-event-index.doctest.md`):
 
 ```ts continue
 const { loadCalendarState: loadState1 } = await import("../../src/connectors/google-calendar-state.js");
 JSON.stringify(Object.keys((await loadState1(box.root)).eventFiles))
-=> ["evt-keep"]
+=> ["evt-keep primary"]
 ```
 
 An event outside the refetched window was never in the full response's scope, so
@@ -1388,7 +1390,7 @@ await writeFile(join(dir, file), localIcs.replace("SUMMARY:Lunch", "SUMMARY:Lunc
 // First failure: reported, file kept, and the retry window opens.
 const firstFail = await connector.sync();
 const { loadCalendarState } = await import("../../src/connectors/google-calendar-state.js");
-const afterFirst = (await loadCalendarState(box.root)).eventFiles["evt-lunch"];
+const afterFirst = (await loadCalendarState(box.root)).eventFiles["evt-lunch primary"];
 JSON.stringify({
   success: firstFail.success,
   http: firstFail.error?.includes("(local-push, HTTP 503)"),
@@ -1404,7 +1406,7 @@ left alone, because the window measures the edit's age, not this run's:
 ```ts continue
 clock = new Date("2026-06-16T12:00:00Z");
 const secondFail = await connector.sync();
-const afterSecond = (await loadCalendarState(box.root)).eventFiles["evt-lunch"];
+const afterSecond = (await loadCalendarState(box.root)).eventFiles["evt-lunch primary"];
 JSON.stringify({
   http: secondFail.error?.includes("(local-push, HTTP 503)"),
   kept: (await readdir(dir)).includes(file),
@@ -1462,7 +1464,7 @@ await connector2.sync();
 patchFails = false;
 clock = new Date("2026-06-18T12:00:00Z");
 const accepted = await connector2.sync();
-const entry2 = (await loadCalendarState(box2.root)).eventFiles["evt-lunch"];
+const entry2 = (await loadCalendarState(box2.root)).eventFiles["evt-lunch primary"];
 JSON.stringify({
   success: accepted.success,
   remote: inner.events[0]?.summary,
@@ -1539,7 +1541,7 @@ locally-created event and inserted back into Google as a duplicate series:
 const { loadCalendarState } = await import("../../src/connectors/google-calendar-state.js");
 const state = await loadCalendarState(box.root);
 JSON.stringify(Object.keys(state.eventFiles))
-=> ["evt-weekly"]
+=> ["evt-weekly primary"]
 ```
 
 A LOCALLY EDITED master is not stranded either. A non-recurring event missing
@@ -1556,7 +1558,7 @@ JSON.stringify({
   stranded: (await readdir(dir)).includes("stranded"),
   tracked: Object.keys((await loadCalendarState(box.root)).eventFiles),
 })
-=> {"success":true,"kept":true,"stranded":false,"tracked":["evt-weekly"]}
+=> {"success":true,"kept":true,"stranded":false,"tracked":["evt-weekly primary"]}
 ```
 
 ```ts cleanup
@@ -1805,7 +1807,7 @@ than what is on disk — that mismatch is the retry:
 const { loadCalendarState } = await import("../../src/connectors/google-calendar-state.js");
 const { contentHash } = await import("../../src/lib/content-hash.js");
 const state = await loadCalendarState(box.root);
-const entry = state.eventFiles["evt-review"];
+const entry = state.eventFiles["evt-review primary"];
 JSON.stringify({
   ids: Object.keys(state.eventFiles).length,
   filename: typeof entry === "string" ? entry : entry?.filename,

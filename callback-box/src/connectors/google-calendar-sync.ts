@@ -25,11 +25,16 @@ import {
   type SyncNote,
 } from "./google-calendar-notes.js";
 import {
-  getFilename,
   fetchEvents,
   type CalendarState,
   type IcsOptions,
 } from "./google-calendar-state.js";
+import {
+  eventKey,
+  getFilename,
+  lookupEventEntry,
+  uniqueEventFilename,
+} from "./google-calendar-event-index.js";
 import { patchLocalEdit, writeBackPushedEvent, type LocalPushOutcome } from "./google-calendar-local-push.js";
 import { recordFailedLocalPush } from "./google-calendar-strand.js";
 import { contentHash } from "../lib/content-hash.js";
@@ -50,30 +55,32 @@ export interface SyncAccumulator {
   stranded: string[];
   /**
    * Every tracked event this attempt reconciled — pulled, or attempted a
-   * local-edit push for. The pending-edit pass skips these, so an edit the
-   * pull already handled is neither pushed nor reported twice.
+   * local-edit push for — as index keys (`<eventId> <calendarId>`), so a pull of
+   * calendar A never speaks for the same event id on calendar B. The
+   * pending-edit pass skips these, so an edit the pull already handled is
+   * neither pushed nor reported twice.
    */
-  reconciledEventIds: Set<string>;
+  reconciledEventKeys: Set<string>;
   /**
-   * Every event id Google returned in THIS attempt, before window/cancelled
-   * filtering. Only meaningful for a full-window fetch, where it is the
-   * complete picture the post-410 stale reconciliation diffs against.
+   * Every event Google returned in THIS attempt (as index keys), before
+   * window/cancelled filtering. Only meaningful for a full-window fetch, where
+   * it is the complete picture the post-410 stale reconciliation diffs against.
    */
-  seenEventIds: Set<string>;
+  seenEventKeys: Set<string>;
 }
 
 /** Handle a cancelled event: delete the local file and untrack it. */
 async function handleCancelledEvent(
   event: GoogleCalendarEvent,
-  ctx: { boxRoot: string; calDir: string; state: CalendarState; acc: SyncAccumulator },
+  ctx: { boxRoot: string; calendarId: string; calDir: string; state: CalendarState; acc: SyncAccumulator },
 ): Promise<void> {
-  const { boxRoot, calDir, state, acc } = ctx;
-  const existingEntry = state.eventFiles[event.id];
-  const decision = decideCalendarSync({ source: "remote-cancelled", tracked: existingEntry !== undefined });
+  const { boxRoot, calendarId, calDir, state, acc } = ctx;
+  const tracked = lookupEventEntry(state.eventFiles, { calendarId, eventId: event.id });
+  const decision = decideCalendarSync({ source: "remote-cancelled", tracked: tracked !== undefined });
   if (decision.kind === "noop") return;
-  invariant(decision.kind === "delete" && existingEntry !== undefined, "cancelled tracked event must delete");
+  invariant(decision.kind === "delete" && tracked !== undefined, "cancelled tracked event must delete");
 
-  const oldName = getFilename(existingEntry);
+  const oldName = getFilename(tracked.entry);
   const filePath = path.join(calDir, oldName);
   try {
     await fs.unlink(filePath);
@@ -82,7 +89,7 @@ async function handleCancelledEvent(
   } catch (err: unknown) {
     if (errnoCode(err) !== "ENOENT") throw err;
   }
-  delete state.eventFiles[event.id];
+  delete state.eventFiles[tracked.key];
 }
 
 /** Remove a stale renamed file when an event's filename changed. */
@@ -113,11 +120,11 @@ async function tryPushLocalEdit(
     boxRoot: string; calDir: string; oldName: string | undefined;
     calendar: GoogleCalendarService; icsOpts: IcsOptions; relPath: string;
     filename: string; localContent: string; existingEntry: string | { calendarId: string };
-    state: CalendarState; acc: SyncAccumulator;
+    key: string; state: CalendarState; acc: SyncAccumulator;
   },
 ): Promise<LocalPushOutcome> {
   const { boxRoot, calDir, oldName, calendar, icsOpts, relPath, filename,
-          localContent, existingEntry, state, acc } = ctx;
+          localContent, existingEntry, key, state, acc } = ctx;
   const entryCalId = typeof existingEntry === "string" ? icsOpts.calendarId : existingEntry.calendarId;
 
   const outcome = await patchLocalEdit({
@@ -128,7 +135,7 @@ async function tryPushLocalEdit(
 
   // Patch succeeded — the entry is stamped against Google's copy first.
   const rewriteFailure = await writeBackPushedEvent({
-    state, googleEventId: event.id, entry: { filename, calendarId: icsOpts.calendarId },
+    state, key, entry: { filename, calendarId: icsOpts.calendarId },
     calDir, relPath, event: outcome.event, icsOpts, fallbackFilename: oldName,
   });
   // A failed rewrite leaves the predecessor as this event's only file, with the
@@ -186,13 +193,23 @@ async function reconcileEvent(
   ctx: { boxRoot: string; calendar: GoogleCalendarService; calendarId: string; icsOpts: IcsOptions; calDir: string; state: CalendarState; now: Date; acc: SyncAccumulator },
 ): Promise<void> {
   const { boxRoot, calendar, calendarId, icsOpts, calDir, state, now, acc } = ctx;
-  acc.reconciledEventIds.add(event.id);
-  const filename = eventFilename(event);
+  const key = eventKey({ calendarId, eventId: event.id });
+  acc.reconciledEventKeys.add(key);
+  // The tracked entry may still be filed under a legacy key (see
+  // lookupEventEntry); `tracked.key` is what to delete, `key` what to write.
+  const tracked = lookupEventEntry(state.eventFiles, { calendarId, eventId: event.id });
+  const existingEntry = tracked?.entry;
+  const oldName = existingEntry ? getFilename(existingEntry) : undefined;
+
+  // The natural name carries no calendar, so the same event id on two calendars
+  // on the same date would land on one file — see uniqueEventFilename.
+  const filename = uniqueEventFilename({
+    index: state.eventFiles,
+    ownKeys: tracked && tracked.key !== key ? [key, tracked.key] : [key],
+    calendarId, filename: eventFilename(event), current: oldName,
+  });
   const filePath = path.join(calDir, filename);
   const icsContent = eventToIcs(event, icsOpts);
-
-  const existingEntry = state.eventFiles[event.id];
-  const oldName = existingEntry ? getFilename(existingEntry) : undefined;
   const relPath = path.relative(boxRoot, filePath);
 
   if (existingEntry) {
@@ -222,7 +239,7 @@ async function reconcileEvent(
         invariant(typeof existingEntry !== "string", "local-wins requires a structured entry");
         const outcome = await tryPushLocalEdit(event, {
           boxRoot, calDir, oldName, calendar, icsOpts, relPath, filename,
-          localContent, existingEntry, state, acc,
+          localContent, existingEntry, key, state, acc,
         });
         // Either way this event is finished. A failed push returns WITHOUT
         // writing Google's ICS or re-stamping the contentHash, so the local
@@ -230,7 +247,7 @@ async function reconcileEvent(
         // is stranded, which is the same decision the pending-edit pass makes.
         if (outcome.kind === "failed") {
           await recordFailedLocalPush({
-            boxRoot, calDir, state, googleEventId: event.id, entry: existingEntry,
+            boxRoot, calDir, state, key, entry: existingEntry,
             localContent, failure: outcome.failure, now,
             acc: { notes: acc.notes, failures: acc.failures, stranded: acc.stranded },
           });
@@ -274,7 +291,9 @@ async function reconcileEvent(
   await fs.writeFile(filePath, icsContent);
   if (existingEntry) acc.updated.push(relPath);
   else acc.created.push(relPath);
-  state.eventFiles[event.id] = {
+  // A legacy entry is re-filed, not duplicated: its key is not this one.
+  if (tracked && tracked.key !== key) delete state.eventFiles[tracked.key];
+  state.eventFiles[key] = {
     filename, calendarId: icsOpts.calendarId, contentHash: contentHash(icsContent),
     remoteUpdated: event.updated,
   };
@@ -304,13 +323,13 @@ export async function syncCalendar(opts: {
   });
 
   for (const event of events) {
-    acc.seenEventIds.add(event.id);
+    acc.seenEventKeys.add(eventKey({ calendarId, eventId: event.id }));
     // Skip exception instances (single-instance overrides of recurring events).
     // We only store the recurring master with its RRULE.
     if (event.recurringEventId) continue;
 
     if (event.status === "cancelled") {
-      await handleCancelledEvent(event, { boxRoot, calDir, state, acc });
+      await handleCancelledEvent(event, { boxRoot, calendarId, calDir, state, acc });
       continue;
     }
 
