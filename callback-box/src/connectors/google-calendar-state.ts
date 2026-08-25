@@ -10,6 +10,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { errnoCode } from "../lib/error-guards.js";
+import { writeFileAtomic } from "../lib/atomic-write.js";
 import { HTTPError } from "ky";
 import { type GoogleCalendarService } from "../services/google-calendar.js";
 import { loadTransientState, updateTransientState } from "./transient-state.js";
@@ -26,6 +27,26 @@ export interface EventFileEntry {
   contentHash?: string;
   /** Google event `updated` timestamp captured at the last pull, for remote-change detection */
   remoteUpdated?: string | undefined;
+  /**
+   * ISO timestamp of the FIRST push failure for the local edit currently
+   * pending on this event — the start of the retry window that ends in
+   * stranding (see google-calendar-strand.ts). Left alone by later failures,
+   * deleted the moment Google accepts a push. Absent means nothing is owed, or
+   * the edit has not yet failed once.
+   */
+  pendingSince?: string | undefined;
+}
+
+/**
+ * Provenance for one calendar, written into every generated `.ics` as the
+ * X-CB-CALENDAR-* properties. Lives here with the connector's other shared
+ * vocabulary (it is passed to `eventToIcs` by the sync, push, and local-edit
+ * passes alike) rather than in the ICS module, which never needs the name.
+ */
+export interface IcsOptions {
+  calendarId: string;
+  calendarName?: string;
+  calendarRole?: string;
 }
 
 export interface CalendarState {
@@ -48,16 +69,60 @@ export function calendarDir(boxRoot: string): string {
   return path.join(boxRoot, "store/calendar");
 }
 
+/**
+ * Thrown when the persistent calendar state exists but can't be read or parsed.
+ *
+ * It FAILS THE SYNC rather than starting from empty maps. `eventFiles` is not a
+ * cache — `pushAndCleanOrphans` treats every `.ics` file absent from that index
+ * as a locally-created event, so an empty index against a populated
+ * `store/calendar/` means "insert a duplicate of every event into Google". A
+ * present-but-unreadable index carries no information about which of those two
+ * situations we are in, and there is no safe automatic recovery: the file has to
+ * be inspected or removed by hand (removing it, with the calendar directory
+ * emptied too, is the deliberate start-over). Distinct from a genuinely-absent
+ * file (ENOENT → start fresh), which is the legitimate first-run case.
+ */
+export class CalendarStateCorruptError extends Error {
+  readonly statePath: string;
+  constructor(filePath: string, options: { cause: unknown }) {
+    super(
+      `Calendar state at ${filePath} exists but could not be read or parsed. ` +
+        "Refusing to sync — inspect or remove the file by hand before syncing again.",
+      options,
+    );
+    this.name = "CalendarStateCorruptError";
+    this.statePath = filePath;
+  }
+}
+
+/**
+ * Load the calendar state, FAIL-CLOSED.
+ *
+ * ENOENT is the only tolerated failure (no state yet — start with empty maps).
+ * Anything else — an I/O error, a permissions problem, or JSON that doesn't
+ * parse — throws {@link CalendarStateCorruptError}.
+ */
 export async function loadCalendarState(boxRoot: string): Promise<CalendarState> {
-  let persistent: CalendarState;
+  const statePath = calendarStatePath(boxRoot);
+  let content: string | undefined;
   try {
-    const content = await fs.readFile(calendarStatePath(boxRoot), "utf-8");
-    persistent = JSON.parse(content);
+    content = await fs.readFile(statePath, "utf-8");
   } catch (err: unknown) {
-    if (errnoCode(err) !== "ENOENT" && !(err instanceof SyntaxError)) {
-      throw err;
+    if (errnoCode(err) !== "ENOENT") {
+      throw new CalendarStateCorruptError(statePath, { cause: err });
     }
+  }
+  let persistent: CalendarState;
+  if (content === undefined) {
     persistent = { syncTokens: {}, eventFiles: {} };
+  } else {
+    try {
+      // An empty file is corruption, not a fresh start: a pre-atomic truncated
+      // write is exactly how one appears. JSON.parse rejects it for us.
+      persistent = JSON.parse(content);
+    } catch (err: unknown) {
+      throw new CalendarStateCorruptError(statePath, { cause: err });
+    }
   }
   // Merge syncTokens from transient state (gitignored)
   const transient = await loadTransientState<CalendarTransientState>({
@@ -127,66 +192,80 @@ export async function saveCalendarState(
   });
   // Advance the baseline: the next save's delta is relative to THIS save.
   snapshot.tokens = { ...state.syncTokens };
-  // Persistent side (committed eventFiles): unchanged direct write; the git
+  // Persistent side (committed eventFiles): atomic whole-file replacement. A
+  // torn write here is not a lost cursor but a lost *index* — see
+  // CalendarStateCorruptError for what an unreadable index costs. The git
   // commit of this file is scoped and handled by the connector (Track 2).
   const persistent = { syncTokens: {}, eventFiles: state.eventFiles };
-  await fs.mkdir(path.dirname(calendarStatePath(boxRoot)), { recursive: true });
-  await fs.writeFile(calendarStatePath(boxRoot), JSON.stringify(persistent, null, 2));
+  await writeFileAtomic(calendarStatePath(boxRoot), {
+    content: JSON.stringify(persistent, null, 2),
+  });
 }
 
-/** Delete an event via the calendar service. Returns false on HTTP errors. */
+/**
+ * Outcome of one Google Calendar write. `error` carries the original HTTPError
+ * so the caller can classify it into a `CalendarSyncFailure` — the wrappers
+ * deliberately do NOT flatten a rejection into `null`/`false` any more, because
+ * every caller then had to guess whether "no result" meant a failure worth
+ * reporting (see google-calendar-push.ts / google-calendar-sync.ts).
+ */
+export type CalendarApiResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; error: unknown };
+
+/** Delete an event via the calendar service. HTTP errors come back as `ok: false`. */
 export async function deleteEventViaApi(
   calendar: GoogleCalendarService,
   opts: { calendarId: string; googleEventId: string },
-): Promise<boolean> {
+): Promise<CalendarApiResult<void>> {
   const { calendarId, googleEventId } = opts;
   try {
     await calendar.deleteEvent(calendarId, googleEventId);
-    return true;
+    return { ok: true, value: undefined };
   } catch (err) {
     if (err instanceof HTTPError) {
       const status = err.response.status;
       const text = await err.response.text();
       console.warn(`  API error deleting from ${calendarId}: ${status} ${text}`);
-      return false;
+      return { ok: false, error: err };
     }
     throw err;
   }
 }
 
-/** Insert an event via the calendar service. Returns null on HTTP errors. */
+/** Insert an event via the calendar service. HTTP errors come back as `ok: false`. */
 export async function insertEventViaApi(
   calendar: GoogleCalendarService,
   opts: { calendarId: string; event: GoogleCalendarEvent },
-): Promise<GoogleCalendarEvent | null> {
+): Promise<CalendarApiResult<GoogleCalendarEvent>> {
   const { calendarId, event } = opts;
   try {
-    return await calendar.insertEvent(calendarId, event);
+    return { ok: true, value: await calendar.insertEvent(calendarId, event) };
   } catch (err) {
     if (err instanceof HTTPError) {
       const status = err.response.status;
       const text = await err.response.text();
       console.warn(`  API error pushing to ${calendarId}: ${status} ${text}`);
-      return null;
+      return { ok: false, error: err };
     }
     throw err;
   }
 }
 
-/** Patch an event via the calendar service. Returns null on HTTP errors. */
+/** Patch an event via the calendar service. HTTP errors come back as `ok: false`. */
 export async function patchEventViaApi(
   calendar: GoogleCalendarService,
   opts: { calendarId: string; googleEventId: string; event: GoogleCalendarEvent },
-): Promise<GoogleCalendarEvent | null> {
+): Promise<CalendarApiResult<GoogleCalendarEvent>> {
   const { calendarId, googleEventId, event } = opts;
   try {
-    return await calendar.patchEvent(calendarId, { eventId: googleEventId, event });
+    return { ok: true, value: await calendar.patchEvent(calendarId, { eventId: googleEventId, event }) };
   } catch (err) {
     if (err instanceof HTTPError) {
       const status = err.response.status;
       const text = await err.response.text();
       console.warn(`  API error patching in ${calendarId}: ${status} ${text}`);
-      return null;
+      return { ok: false, error: err };
     }
     throw err;
   }

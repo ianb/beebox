@@ -17,6 +17,7 @@ import type { ChatImageAttachment } from "../../api-chat";
 import { applySelections } from "../../lib/selection/serialize";
 import type { Emission } from "../emission";
 import { markUnsureWords } from "../unsure-words";
+import { composerToken, composerTokenIn } from "@shared/composer-tokens";
 
 /**
  * Frame state at the moment of sending, pre-formatted as plain values:
@@ -62,9 +63,15 @@ export function assembleChatMessage(
   // file whose token is missing (voice sends never had one; a typed send's
   // may have been edited out) is noted at the end of the text instead, so
   // the <attachments> block below never lists an unreferenced file.
-  const missingTokens = emission.files
-    .map((f) => `[file${f.id}]`)
-    .filter((token) => !emission.text.includes(token));
+  // Each file's token AS THE BODY SPELLS IT — a body restored from a draft
+  // written before the `#` rename still says `[file1]`, and the <attachments>
+  // block below has to label it the same way or the two halves of one message
+  // disagree. A file the body never mentions gets the current form, appended.
+  const fileTokens = emission.files.map((f) => ({
+    file: f,
+    token: composerTokenIn(emission.text, { kind: "file", id: f.id }),
+  }));
+  const missingTokens = fileTokens.filter((e) => e.token === null).map((e) => composerToken("file", e.file.id));
   const text = missingTokens.length === 0
     ? emission.text
     : [emission.text, ...missingTokens].filter((s) => s.length > 0).join(" ");
@@ -122,7 +129,7 @@ export function assembleChatMessage(
   // to without inlining the file's bytes.
   const attachmentsBlock = emission.files.length > 0
     ? "\n<attachments>\n" +
-      emission.files.map((f) => `[file${f.id}]: ${f.path}`).join("\n") +
+      fileTokens.map((e) => `${e.token ?? composerToken("file", e.file.id)}: ${e.file.path}`).join("\n") +
       "\n</attachments>"
     : "";
 

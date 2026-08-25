@@ -272,16 +272,29 @@ mergeAcceptedIntoPending({ pendingMessages: [pendingEntry("local-2", "<typed>yes
 ```
 
 An image send is the asymmetric case. The transcript and the optimistic copy
-both consume `[imageN]` into image blocks, so their text no longer holds the
+both consume `[image#N]` into image blocks, so their text no longer holds the
 token; the box's acceptance record carries the raw text, because the bytes never
 reached the bus. Compared naively those are different messages and the send
 renders twice:
 
 ```ts continue
 const withImage = pendingEntry("local-3", "<typed>here is the drawer</typed>");
-const acceptedImage = pendingEntry("accepted-11", "<typed>[image1]here is the drawer</typed>");
+const acceptedImage = pendingEntry("accepted-11", "<typed>[image#1]here is the drawer</typed>");
 mergeAcceptedIntoPending({ pendingMessages: [withImage], accepted: [acceptedImage] }).map((e) => e.uuid).join(",")
 => local-3
+```
+
+The token form is not necessarily the same on both sides — the three copies of
+one message can come from different eras — so the pre-2026-08-25 spelling has
+to normalize away too. A reader that knew only one form would strip the token
+on one side and keep it on the other, which is exactly the mismatch this guards
+against:
+
+```ts continue
+const withImage2 = pendingEntry("local-4", "<typed>here is the drawer</typed>");
+const acceptedLegacy = pendingEntry("accepted-12", "<typed>[image1]here is the drawer</typed>");
+mergeAcceptedIntoPending({ pendingMessages: [withImage2], accepted: [acceptedLegacy] }).map((e) => e.uuid).join(",")
+=> local-4
 ```
 
 And a repeated load cannot stack copies of one bus row, because the uuid it is

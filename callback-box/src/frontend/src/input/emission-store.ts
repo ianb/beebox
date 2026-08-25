@@ -29,6 +29,7 @@
  */
 
 import type { SelectionItem } from "../lib/selection/serialize";
+import type { ComposerTokenKind } from "@shared/composer-tokens";
 
 /** An image attachment as the store carries it (today: `AttachmentItem`). */
 export interface ImageItem {
@@ -84,6 +85,19 @@ export interface EmissionEditor {
   bumpPendingImages(delta: number): void;
   /** Appends an image and decrements `pendingImages` by 1 (floor 0) — the image this pending slot was for has now landed. */
   addImage(item: ImageItem): void;
+  /**
+   * Puts images BACK that were taken out of a composition — a bulk batch the
+   * user cancelled, a persisted draft coming home. Appends without touching
+   * `pendingImages`, which is what separates it from {@link addImage}: that
+   * counter tracks photos still encoding, and each `addImage` clears the slot
+   * its own photo was occupying. A restore has no slot to clear, so routing it
+   * through `addImage` would decrement the counter for encodes that are still
+   * in flight and make their placeholder tiles disappear.
+   *
+   * Ids are reused as-is (they are monotonic and never re-minted), so the
+   * tokens already in the restored text keep matching.
+   */
+  restoreImages(items: readonly ImageItem[]): void;
   addFile(item: FileItem): void;
   addSelection(item: SelectionItem): void;
   /** Removes the image and strips its `[imageN]` token (plus a bounding whitespace char) from the text. */
@@ -126,13 +140,15 @@ export interface EmissionStore {
 
 const NO_REMOVALS: ResetResult = { removedImageObjectUrls: [] };
 
-const TOKEN_PATTERNS = {
-  image: /\s?\[image(\d+)]\s?/g,
-  file: /\s?\[file(\d+)]\s?/g,
-  selection: /\s?\[selection(\d+)]\s?/g,
-} as const;
+// Each token plus a bounding whitespace char on each side. `#?` matches the
+// pre-2026-08-25 form too — see shared/composer-tokens.ts.
+const TOKEN_PATTERNS: Record<ComposerTokenKind, RegExp> = {
+  image: /\s?\[image#?(\d+)]\s?/g,
+  file: /\s?\[file#?(\d+)]\s?/g,
+  selection: /\s?\[selection#?(\d+)]\s?/g,
+};
 
-function stripToken(text: string, opts: { word: keyof typeof TOKEN_PATTERNS; id: number }): string {
+function stripToken(text: string, opts: { word: ComposerTokenKind; id: number }): string {
   const { word, id } = opts;
   return text
     .replace(TOKEN_PATTERNS[word], (match, digits: string) => (parseInt(digits, 10) === id ? " " : match))
@@ -169,6 +185,10 @@ export function createEmissionStore(): EmissionStore {
         images: [...draft.images, item],
         pendingImages: Math.max(0, draft.pendingImages - 1),
       });
+    },
+    restoreImages(items) {
+      if (items.length === 0) return;
+      patch({ images: [...draft.images, ...items] });
     },
     addFile(item) {
       patch({ files: [...draft.files, item] });

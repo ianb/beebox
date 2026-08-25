@@ -279,7 +279,6 @@ struct ChatWebView: UIViewRepresentable {
         var backRequest: NativeBackRequest?
         var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = []
         var composerCommandResults: [NativeComposerCommandResult] = []
-        private var receiptTimeouts: [NativeChatEmission.ID: DispatchWorkItem] = [:]
         /// The delivery attempt currently in flight for each emission ID, keyed
         /// by ID and valued by the attempt's generation. Redelivery abandons an
         /// attempt and starts a new one under the SAME emission ID, so an ID

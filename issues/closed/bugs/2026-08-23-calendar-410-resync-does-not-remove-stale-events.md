@@ -1,11 +1,14 @@
 ---
 title: "Calendar 410 resync does not remove stale local events"
-workstream: unattached
+workstream: connector-integrity
 area: callback-box
 filed-by: agent
 discovered-in: worktree-connector-sync-isolation — verifying calendar partial-failure handling
 priority: normal
+resolution: implemented
 ---
+
+**Closed 2026-08-25** in ca356806 + b4fc4959: after a successful full resync of one calendar, tracked in-window events absent from the response are removed when unedited; locally edited ones stay tracked and are reported each run; recurring masters and out-of-window entries are never touched.
 
 **What is wrong.** The Google Calendar connector treats an invalid incremental
 sync token as recoverable, but it implements only the token half of recovery.
@@ -38,4 +41,4 @@ Google's current guidance. This is source and documentation evidence only. No
 live Google account was exercised.
 
 **Related.** The early-return defect is tracked separately in
-[one failing calendar aborts the whole sync](../closed/bugs/2026-08-21-one-failing-calendar-aborts-the-whole-calendar-sync-ins.md).
+[one failing calendar aborts the whole sync](2026-08-21-one-failing-calendar-aborts-the-whole-calendar-sync-ins.md).

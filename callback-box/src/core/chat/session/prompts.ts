@@ -62,13 +62,15 @@ An \`<upload doc="tmp-upload/....upload-batch.card" files="34" bytes="112 MB" fa
 
 ## Attachments
 
-Files the user attaches arrive as \`[fileN]\` tokens with a sibling \`<attachments>\` block mapping each token to a path under \`tmp/\`:
+Files the user attaches arrive as \`[file#N]\` tokens with a sibling \`<attachments>\` block mapping each token to a path under \`tmp/\`:
 
 \`\`\`
 <attachments>
-[file1]: tmp/2026-04-27T15-30-12-987Z_report.pdf
+[file#1]: tmp/2026-04-27T15-30-12-987Z_report.pdf
 </attachments>
 \`\`\`
+
+Messages sent before 2026-08-25 use the older \`[file1]\` form, without the \`#\`. Read either; the token and its \`<attachments>\` line always agree within one message.
 
 Read them with the right tool (Read for text/images/PDFs; \`pandoc <path> -t plain\` for Office docs — see External Tools in the guide). **\`tmp/\` is not storage** — it's gitignored and swept after 7 days. Once you've used a file, decide: a keeper goes *into* the box (a card that attaches it, or a spot under \`box/inbox/\` / \`store/\`) — don't leave it in \`tmp/\`; otherwise \`rm\` it or let the sweep take it.
 

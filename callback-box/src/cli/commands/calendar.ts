@@ -12,17 +12,19 @@
  *   cb calendar remove <id>  — remove a calendar from sync
  */
 
-import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths.js";
 import { getGoogleAuth } from "../../connectors/google-auth.js";
-import { errnoCode } from "../../lib/error-guards.js";
 import {
   loadCalendarConfig,
   saveCalendarConfig,
   fetchAvailableCalendars,
 } from "../../connectors/calendar-config.js";
+import {
+  loadCalendarState,
+  CalendarStateCorruptError,
+} from "../../connectors/google-calendar-state.js";
 import { createGoogleCalendarService } from "../../services/google-calendar.js";
 import { createGoogleAuthService } from "../../services/google-auth.js";
 import {
@@ -120,17 +122,16 @@ calendarCommand
       return false;
     }
 
-    // Read state for event count
-    const statePath = path.join(boxRoot, "config/connectors/google-calendar-state.json");
-    let eventCount = 0;
+    // Read state for event count, through the connector's own loader so this
+    // display can't disagree with what a sync would see. A corrupt index is
+    // read-only here, so it degrades — but visibly, never as a silent "0".
+    let eventCount: number | undefined;
     try {
-      const content = await fs.readFile(statePath, "utf-8");
-      const state = JSON.parse(content);
-      eventCount = Object.keys(state.eventFiles || {}).length;
+      const state = await loadCalendarState(boxRoot);
+      eventCount = Object.keys(state.eventFiles).length;
     } catch (e) {
-      if (errnoCode(e) !== "ENOENT") {
-        console.warn(`Could not read calendar state at ${statePath}, assuming no events stored:`, e);
-      }
+      if (!(e instanceof CalendarStateCorruptError)) throw e;
+      console.warn(e.message);
     }
 
     console.log("Available calendars:\n");
@@ -140,7 +141,9 @@ calendarCommand
       console.log(`  ${active ? active + " " : ""}${cal.summary}  ${role}`);
       console.log(`         id: ${cal.id}`);
     }
-    console.log(`\n${eventCount} events stored locally.`);
+    console.log(eventCount === undefined
+      ? "\nEvent count unavailable — the calendar state file is unreadable (see above)."
+      : `\n${String(eventCount)} events stored locally.`);
     console.log("\nUse \"cb calendar add <id>\" / \"cb calendar remove <id>\" to configure.");
   });
 

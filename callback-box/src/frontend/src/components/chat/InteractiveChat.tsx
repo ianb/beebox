@@ -183,7 +183,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
   // reload — the design's singleton-draft promise.
   const { expiredAttachments, dismissExpiredAttachments } = useEmissionPersistence({ boxSlug, emissionStore });
   const [loadingOlder, setLoadingOlder] = useState(false);
-  const [scrollToBottomTrigger, setScrollToBottomTrigger] = useState(0);
+  const [sendSignal, setSendSignal] = useState(0);
   const [debugView, setDebugView] = useState(false);
   const [showDebugLog, setShowDebugLog] = useState(false);
   const [typingMode, setTypingMode] = useState(false);
@@ -288,7 +288,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
     addFiles: (files) => { void attach.addFiles(files); },
     onSend: voice.notifySent, isTranscribing: voice.isTranscribing, textareaRef,
     transcriptTick: voice.transcription.transcript, typingMode, typingLocked, setTypingMode,
-    setScrollToBottomTrigger, dispatchEmission: dispatchEmissionVoid,
+    setSendSignal, dispatchEmission: dispatchEmissionVoid,
   });
 
   if (isLoading) return <ChatLoading />;
@@ -323,7 +323,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
       currentUserEmail={currentUser ? currentUser.email : undefined} currentUserName={currentUser ? currentUser.name : undefined}
       modelMarkers={model.modelMarkers}
       loadingOlder={loadingOlder}
-      scrollToBottomTrigger={scrollToBottomTrigger} liveTurnId={liveTurnId}
+      sendSignal={sendSignal} liveTurnId={liveTurnId}
       snapshot={snapshot}
       textareaRef={textareaRef}
       debugView={debugView}

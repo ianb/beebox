@@ -50,7 +50,7 @@ notifications
 
 ```ts
 const store = createEmissionStore();
-store.editor.setText("check [image1] and [image2] out");
+store.editor.setText("check [image#1] and [image#2] out");
 store.editor.bumpPendingImages(2);
 store.get().pendingImages
 => 2
@@ -87,7 +87,7 @@ words around it, are left alone:
 ```ts continue
 store.editor.removeImage(id1);
 store.get().text
-=> check and [image2] out
+=> check and [image#2] out
 
 JSON.stringify(store.get().images.map((i) => i.id))
 => [2]
@@ -97,7 +97,7 @@ JSON.stringify(store.get().images.map((i) => i.id))
 
 ```ts
 const store = createEmissionStore();
-store.editor.setText("see [file1] please");
+store.editor.setText("see [file#1] please");
 const fid = store.editor.nextFileId();
 store.editor.addFile({ id: fid, path: "tmp/report.pdf", originalName: "report.pdf", size: 10, mimetype: "application/pdf" });
 store.get().files.length
@@ -115,7 +115,7 @@ store.get().files.length
 
 ```ts
 const store = createEmissionStore();
-store.editor.setText("compare [selection1] with the doc");
+store.editor.setText("compare [selection#1] with the doc");
 const sid = store.editor.nextSelectionId();
 store.editor.addSelection({ id: sid, ref: "/store/notes/Bread.doc.card", text: "let it rise", position: "body" });
 store.get().selections.length
@@ -267,4 +267,19 @@ store.get().images === imagesBefore
 
 store.get().files === filesBefore
 => true
+```
+
+## Removal strips the pre-rename token form too
+
+A composition persisted before 2026-08-25 comes back saying `[image1]`. Taking
+that attachment out has to strip the token the text actually holds, or the
+message ships a reference to a photo that is no longer attached.
+
+```ts
+const store = createEmissionStore();
+store.editor.setText("look at [image1] here");
+store.editor.addImage({ id: 1, mimeType: "image/png", dataBase64: "aGk=", objectUrl: "blob:1", byteLength: 100 });
+store.editor.removeImage(1);
+store.get().text
+=> look at here
 ```

@@ -72,7 +72,7 @@ function BarChromeRegion(props: ChatBodyProps) {
 function MessageListRegion(props: ChatBodyProps) {
   const {
     tabs, model, voice, actions, messages, groups, modelMarkers, isStreaming, streamText, streamTools,
-    debugView, currentUserEmail, currentUserName, snapshot, totalEntries, loadingOlder, scrollToBottomTrigger, liveTurnId,
+    debugView, currentUserEmail, currentUserName, snapshot, totalEntries, loadingOlder, sendSignal, liveTurnId,
     captureBubbles, captureVerbs, audioOverlayStore, openers,
   } = props;
   const { onZoomView } = tabs;
@@ -98,7 +98,7 @@ function MessageListRegion(props: ChatBodyProps) {
       totalEntries={totalEntries}
       onLoadOlder={handleLoadOlder}
       loadingOlder={loadingOlder}
-      scrollToBottomTrigger={scrollToBottomTrigger}
+      sendSignal={sendSignal}
       liveTurnId={liveTurnId}
       proseEnabled={model.chatFeatures.prose !== "off"}
       pendingHqDraft={pendingHqDraft}

@@ -10,9 +10,8 @@
  * 2026-08-08 on a ~10k-file box: 65 chats, ~500ms of it this read).
  */
 
-import * as fs from "node:fs";
-import * as readline from "node:readline";
 import { isRecord } from "../../lib/is-record.js";
+import { readTranscriptLines } from "./session-lines.js";
 import { contentBlocks, parseJsonlLine } from "./session-jsonl.js";
 import {
   extractSnippet,
@@ -71,26 +70,21 @@ export async function readFirstUserSnippet(args: {
   logPath: string;
   snippetMaxLen: number;
 }): Promise<string | null> {
-  const fileStream = fs.createReadStream(args.logPath, { encoding: "utf-8" });
-  const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
-  try {
-    for await (const line of rl) {
-      const raw = parseJsonlLine(line, "readFirstUserSnippet");
-      if (raw === null || raw.type !== "user") continue;
-      // SDK meta prompts sit in the user position but were never typed.
-      if (raw.isMeta === true) continue;
-      const message = raw["message"];
-      if (!isRecord(message)) continue;
-      // A turn whose text is all speech-wrapper markup strips to nothing; keep
-      // scanning rather than reporting the chat as unlabeled.
-      const snippet = snippetFromUserBlocks(contentBlocks(message["content"]), args.snippetMaxLen);
-      if (snippet !== null) return snippet;
-    }
-    return null;
-  } finally {
-    // `break`/`return` out of the loop closes the interface but leaves the file
-    // handle open until GC — the whole point here is not reading the rest.
-    rl.close();
-    fileStream.destroy();
+  // `readTranscriptLines` applies the byte bound and owns the stream's cleanup,
+  // so breaking out at the first real user message — the whole point here is not
+  // reading the rest — cannot leave the handle open.
+  for await (const line of readTranscriptLines(args.logPath)) {
+    if (line.kind === "oversize") continue;
+    const raw = parseJsonlLine(line.text, "readFirstUserSnippet");
+    if (raw === null || raw.type !== "user") continue;
+    // SDK meta prompts sit in the user position but were never typed.
+    if (raw.isMeta === true) continue;
+    const message = raw["message"];
+    if (!isRecord(message)) continue;
+    // A turn whose text is all speech-wrapper markup strips to nothing; keep
+    // scanning rather than reporting the chat as unlabeled.
+    const snippet = snippetFromUserBlocks(contentBlocks(message["content"]), args.snippetMaxLen);
+    if (snippet !== null) return snippet;
   }
+  return null;
 }

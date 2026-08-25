@@ -298,6 +298,32 @@ the contract.
 - **Drift:** LOUD for V2 (a rejected receipt carries the validation reason); legacy coercion remains
   SILENT except when no usable text or image survives.
 
+### 4.1a Attachment tokens (shared vocabulary, no wire of its own)
+
+An attachment is anchored *in the message text* by a token, so a photo can sit
+mid-sentence rather than being appended in an arbitrary order. Both composers
+mint them independently; the ids are per-emission and per-kind.
+
+- **Current form:** `[image#1]`, `[file#2]`, `[selection#3]`.
+- **Legacy form:** `[image1]`, without the `#`, used before 2026-08-25. Every
+  message already in a box's transcript, every draft persisted before the
+  change (browser `localStorage` and on-device alike), and every installed iOS
+  build until it updates still speak it.
+- **Rule: write the current form, read both.** A reader that matches only one
+  form drops the other's attachment on the floor — the token stops resolving,
+  and either the photo vanishes from the turn or the bare token shows up in the
+  bubble as text the user never typed.
+- **Within one message the token and whatever resolves it always agree**: a
+  body that says `[file1]` gets an `<attachments>` line that says `[file1]`.
+  The agent reads either form and is never asked to reconcile two.
+- **Anchors:**
+  | side | anchor |
+  |---|---|
+  | web | `src/shared/composer-tokens.ts` (the writer + the reader roster it lists) |
+  | native | `ios-app/CallbackBox/Models/ComposerToken.swift`; `Models/ComposerDraft.swift` — `insertToken`, `removeToken` |
+- **Drift:** SILENT. Nothing validates a token against its attachment list, on
+  either side.
+
 ### 4.2 Emission receipt (web → native)
 
 - **What a receipt means:** durable acceptance — the box has recorded the message and will run it.
@@ -435,7 +461,7 @@ the contract.
   relaunch returns accepted without adding a second selection or inline token. Rejection leaves the
   draft unchanged. Web waits 15s, then shows a dismissible error and lets the user add again.
 - **Composition semantics:** typed companion selections have `anchor:null` and `spokenWords:null`,
-  so native inserts `[selectionN]` at the current UTF-16 caret. During active native dictation,
+  so native inserts `[selection#N]` at the current UTF-16 caret. During active native dictation,
   native instead snapshots the last eight recognized words and total spoken-word count as
   `anchor`/`spokenWords` and does not insert an inline token. Both forms reach Emission V2.
 - **Anchors:**
