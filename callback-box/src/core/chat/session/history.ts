@@ -276,10 +276,8 @@ export async function restoreSessionHistoryEntries(boxRoot: string, entries: Ses
  * (no entry, or entry has no binding recorded).
  */
 export async function getDirectoryForSession(boxRoot: string, sessionId: string): Promise<string | null> {
-  const entries = await loadHistoryEntries(boxRoot);
-  const entry = entries.find((s) => s.id === sessionId);
-  if (!entry || entry.contextDir === undefined) return null;
-  return entry.contextDir;
+  const entry = (await loadHistoryEntries(boxRoot)).find((s) => s.id === sessionId);
+  return entry?.contextDir ?? null;
 }
 
 /**
@@ -290,9 +288,18 @@ export async function getDirectoryForSession(boxRoot: string, sessionId: string)
  * the box-root path.
  */
 export async function resolveSessionLogPath(boxRoot: string, sessionId: string): Promise<string> {
-  const contextDir = await getDirectoryForSession(boxRoot, sessionId);
-  if (contextDir === null || contextDir === "") return getSessionLogPath(boxRoot, sessionId);
-  return getSessionLogPath(path.join(boxRoot, contextDir), sessionId);
+  const entry = (await loadHistoryEntries(boxRoot)).find((s) => s.id === sessionId);
+  return entry === undefined ? getSessionLogPath(boxRoot, sessionId) : sessionLogPathFor(boxRoot, entry);
+}
+
+/**
+ * The pure half of {@link resolveSessionLogPath}, for a caller that already
+ * holds the entry — a loop over history entries uses this rather than paying
+ * a whole re-read and re-parse of the history file per iteration.
+ */
+export function sessionLogPathFor(boxRoot: string, entry: SessionHistoryEntry): string {
+  const cwd = entry.contextDir === undefined || entry.contextDir === "" ? boxRoot : path.join(boxRoot, entry.contextDir);
+  return getSessionLogPath(cwd, entry.id);
 }
 
 /**
@@ -325,7 +332,7 @@ export async function getLastSessionForDirectory(boxRoot: string, contextDir: st
     if (!matches) continue;
     try {
       if (entry.engine === "codex") await readCodexSessionUpdatedAt(boxRoot, entry.id);
-      else await fs.access(await resolveSessionLogPath(boxRoot, entry.id));
+      else await fs.access(sessionLogPathFor(boxRoot, entry));
       return entry.id;
     } catch (_e) {
       // Ghost entry — no log on disk. The fs.access rejection only tells us
@@ -346,10 +353,8 @@ export async function getLastSessionForDirectory(boxRoot: string, contextDir: st
  * defaults"). The caller is expected to merge with registry defaults.
  */
 export async function getFeaturesForSession(boxRoot: string, sessionId: string): Promise<Record<string, string> | null> {
-  const entries = await loadHistoryEntries(boxRoot);
-  const entry = entries.find((s) => s.id === sessionId);
-  if (!entry || !entry.features) return null;
-  return { ...entry.features };
+  const entry = (await loadHistoryEntries(boxRoot)).find((s) => s.id === sessionId);
+  return entry?.features === undefined ? null : { ...entry.features };
 }
 
 /**

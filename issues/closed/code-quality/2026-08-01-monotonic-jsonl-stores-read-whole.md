@@ -1,10 +1,13 @@
 ---
 title: "Monotonic JSONL stores (retro ledger, usage manifest) read whole with no rotation"
-workstream: chat-history-oom-mobile-lock
+workstream: chat-history-scale
 area: callback-box
 filed-by: agent
 discovered-in: worktree-chat-history-oom-mobile-lock — post-fix sweep
+resolution: implemented
 ---
+
+**Closed 2026-08-25** — resolved by commits f7d24973 / b093062b (workstream chat-history-scale). See the "Fixed (2026-08-25)" section below for what shipped.
 
 Two append-forever JSONL stores are read whole into memory and never rotated:
 
@@ -24,3 +27,19 @@ Two append-forever JSONL stores are read whole into memory and never rotated:
 Not urgent (small lines, slow growth), but the pattern is the same
 bounded-nothing shape that produced the 2026-08-01 OOM; worth sweeping when
 touching either subsystem.
+
+## Fixed (2026-08-25)
+
+Both stores are read line by line over a stream instead of whole-file + split.
+
+- `callback-box/src/core/retro/ledger.ts` — `loadLedgerEntries` and
+  `loadEvidenceHashes` share a `forEachLedgerEntry` streaming walk;
+  `loadEvidenceHashes` adds to its Set as lines go past, so it never
+  materializes the entries. `loadLedgerEntries` stays — `retro-scan.doctest.md`
+  and the integrator still read full entries. Covered by
+  `callback-box/test/core/retro/ledger.doctest.md`.
+- `callback-box/src/core/usage.ts` — `readManifest` became async and streams;
+  its one caller (`syncUsage`) awaits it.
+
+Rotation/pruning was not added — the streaming read is the cheap half, and
+neither store has a retention policy to hang a prune on yet.

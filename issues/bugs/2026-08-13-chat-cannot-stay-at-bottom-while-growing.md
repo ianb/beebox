@@ -55,5 +55,5 @@ turn from a start-at-bottom state and establish, before changing code:
 ## Related
 
 - Prepend and drop both shift position too — see the paging window in
-  [chat messages grow unbounded](2026-08-01-chat-messages-grow-unbounded-on-load-older.md).
+  [chat messages grow unbounded](../closed/bugs/2026-08-01-chat-messages-grow-unbounded-on-load-older.md).
   Any fix here should not assume growth only happens at the bottom.

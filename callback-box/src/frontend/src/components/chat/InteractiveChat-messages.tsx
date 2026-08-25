@@ -3,7 +3,8 @@
  * stick-to-bottom controller (InteractiveChat-scroll.ts), the floating
  * scroll-to-bottom button, and the load-older prepend anchoring. Renders the
  * messages in normal DOM order — no virtualization; the loaded window is
- * bounded by HISTORY_TAIL + explicit "load older" pagination. Per-item
+ * bounded by HISTORY_TAIL + explicit "load older" pagination, capped at
+ * MAX_RETAINED_MESSAGES. Per-item
  * rendering and data-array assembly live in InteractiveChat-message-items.tsx.
  */
 
@@ -22,6 +23,7 @@ import {
   type RenderItemContext,
   type SpeechPlaybackState,
 } from "./InteractiveChat-message-items";
+import { MAX_RETAINED_MESSAGES } from "../../machines/chat-types";
 import type { CaptureBubbleModel, CaptureVerbs } from "./capture-bubble";
 import type { AudioOverlayStore } from "./audio-overlay-store";
 
@@ -146,7 +148,9 @@ function MessageListInner({
   onSendOpener: (text: string) => void;
 }) {
   const { boxSlug } = useParams({ strict: false });
-  const hasOlder = totalEntries > messages.length;
+  // Also gated on the retained-window ceiling: past it the machine drops what
+  // a further page would prepend, so offering the affordance would lie.
+  const hasOlder = totalEntries > messages.length && messages.length < MAX_RETAINED_MESSAGES;
 
   // Keep the streamed bubble visible through `refreshing` too — the brief
   // fetchHistory roundtrip after a turn completes. The machine holds
