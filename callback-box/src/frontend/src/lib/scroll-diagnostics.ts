@@ -23,7 +23,11 @@ const MAX_PAYLOAD_CHARS = 3600;
 
 type TraceValue = string | number | boolean;
 
+/** Receives every trace event as it is recorded, regardless of the flag. */
+export type TraceSubscriber = (event: Record<string, TraceValue>) => void;
+
 let enabled = false;
+let subscriber: TraceSubscriber | null = null;
 let events: Record<string, TraceValue>[] = [];
 let dropped = 0;
 let timer: number | null = null;
@@ -63,8 +67,19 @@ export function scrollTraceToggle(): boolean {
   return enabled;
 }
 
+/**
+ * Watch every trace event live, independent of the `/scrolldebug` flag — the
+ * dev scroll harness (`pages/dev/components/ChatScrollHarness.tsx`) reads the
+ * controller's decisions this way instead of scraping console.warn. Pass null
+ * to detach. One subscriber at a time; this is a dev-tool seam, not a bus.
+ */
+export function scrollTraceSubscribe(fn: TraceSubscriber | null): void {
+  subscriber = fn;
+}
+
 /** Record one trace event; near-free no-op while the trace is off. */
 export function recordScrollTrace(k: string, detail: Record<string, TraceValue>): void {
+  if (subscriber) subscriber({ t: Math.round(performance.now()), k, ...detail });
   if (!enabled) return;
   if (events.length >= MAX_EVENTS) {
     // Between flushes the buffer is bounded; count what fell off instead of

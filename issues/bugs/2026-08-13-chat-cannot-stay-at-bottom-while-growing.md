@@ -1,6 +1,6 @@
 ---
 title: "Chat drifts off the bottom as it grows, and is hard to scroll back down"
-workstream: unattached
+workstream: chat-scroll
 area: callback-box
 priority: important
 labels: [chat, scroll]
