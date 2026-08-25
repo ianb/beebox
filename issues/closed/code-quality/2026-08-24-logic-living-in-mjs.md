@@ -5,7 +5,7 @@ resolution: superseded
 ---
 
 **Superseded 2026-08-25** by
-[the fuller inventory](../../code-quality/2026-08-25-mjs-files-should-be-typescript.md),
+[the fuller inventory](2026-08-25-mjs-files-should-be-typescript.md),
 filed from a main session with the boxholder's own framing. That one verified
 `eslint.config.ts` actually loads (this one only reasoned that it should),
 sorts all thirty files, and flags the package-consumption risk for

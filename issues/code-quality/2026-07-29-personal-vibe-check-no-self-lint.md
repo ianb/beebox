@@ -29,7 +29,7 @@ audit warned about.
 ## Update 2026-08-25 — the structural blocker is gone; only content remains
 
 The `.mjs` → TypeScript sweep
-([2026-08-25-mjs-files-should-be-typescript](2026-08-25-mjs-files-should-be-typescript.md))
+([2026-08-25-mjs-files-should-be-typescript](../closed/code-quality/2026-08-25-mjs-files-should-be-typescript.md))
 fixed the shadowing half of this by moving the preset out of `eslint.config.mjs`
 into **`preset.ts`**. `eslint.config.*` is now free for the package's own config,
 and `personal-vibe-check/eslint.config.ts` exists and works — `pnpm exec eslint .`
