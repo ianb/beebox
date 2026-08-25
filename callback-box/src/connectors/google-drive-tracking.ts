@@ -3,7 +3,8 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { glob } from "glob";
-import { errnoCode } from "../lib/error-guards.js";
+import { parseFrontmatterObject } from "../cards/frontmatter.js";
+import { isRecord } from "../lib/is-record.js";
 import { getBoxDir } from "../lib/paths.js";
 import { invariant } from "../lib/invariant.js";
 import { getAllDriveHandlers } from "./drive-types.js";
@@ -23,18 +24,43 @@ export interface TrackedDriveCard {
   content: string;
 }
 
-export interface DriveCardTracking {
-  liveCards: TrackedDriveCard[];
-  trashedDriveIds: Set<string>;
+/** Two or more live cards claiming one Drive ID — an ambiguous working copy. */
+export interface DuplicateDriveClaim {
+  driveId: string;
+  relPaths: string[];
 }
 
-/** Parse the current YAML form and the legacy XML attribute form. */
-function driveIdFromCardContent(content: string): string | null {
-  const yamlMatch = /^drive-id:\s*"?([^\n"]+?)"?\s*$/m.exec(content);
-  if (yamlMatch) {
-    invariant(yamlMatch[1] !== undefined, "capture group 1 is non-optional in yamlMatch");
-    return yamlMatch[1];
-  }
+export interface DriveCardTracking {
+  /** Cards with an unambiguous Drive ID. Duplicates are NOT included. */
+  liveCards: TrackedDriveCard[];
+  trashedDriveIds: Set<string>;
+  /** Drive IDs claimed by more than one live card; none of them are synced. */
+  duplicates: DuplicateDriveClaim[];
+  /**
+   * Card paths (box-relative) whose Drive ID could not be determined — the file
+   * could not be read, or it carries no parseable `drive-id`. A card in this
+   * list may be a trash tombstone whose retained ID we cannot see, so folder
+   * discovery must not run while it is non-empty.
+   */
+  unreadable: string[];
+}
+
+/**
+ * Read a card's Drive ID: the current YAML frontmatter form first, the legacy
+ * XML attribute form as a fallback.
+ *
+ * The frontmatter goes through the real YAML parser rather than a line regex —
+ * `drive-id: 'sheet-1'` and a trailing `# comment` are both valid YAML that a
+ * regex reads as part of the ID, and a wrong ID is worse than no ID here: it
+ * silently drops out of the tombstone set and lets folder discovery recreate a
+ * deleted card. A card whose frontmatter is unparseable, or whose `drive-id`
+ * is not a non-empty string, reads as no ID at all (callers fail closed).
+ */
+export function driveIdFromCardContent(content: string): string | null {
+  const fields = parseFrontmatterObject(content);
+  const yamlValue = fields?.["drive-id"];
+  if (typeof yamlValue === "string" && yamlValue !== "") return yamlValue;
+  if (fields !== null) return null;
   const xmlMatch = /drive-id="([^"]+)"/.exec(content);
   if (!xmlMatch) return null;
   invariant(xmlMatch[1] !== undefined, "capture group 1 is non-optional in xmlMatch");
@@ -60,32 +86,130 @@ export async function findDriveCardTracking(boxRoot: string): Promise<DriveCardT
   }
 
   const trashDir = getBoxDir(boxRoot, "trash");
-  const liveCards: TrackedDriveCard[] = [];
+  const byDriveId = new Map<string, TrackedDriveCard[]>();
   const trashedDriveIds = new Set<string>();
+  const unreadable: string[] = [];
   for (const absPath of [...matches].toSorted()) {
+    const relPath = path.relative(boxRoot, absPath);
     let content: string;
     try {
       content = await fs.readFile(absPath, "utf-8");
-    } catch (error: unknown) {
-      if (errnoCode(error) !== "ENOENT") {
-        console.warn(
-          `[google-drive] Could not read drive-id from ${absPath}, skipping`,
-        );
-      }
+    } catch (_error: unknown) {
+      // Includes ENOENT: a card that vanished between the glob and this read
+      // was moved or deleted concurrently (a `cb rm` mid-sync moves it to
+      // trash), and its trash destination may postdate the glob too — so the
+      // ID would be in neither set and folder discovery could recreate the
+      // card that was just trashed. Any unread card is ambiguity, not absence.
+      unreadable.push(relPath);
       continue;
     }
     const driveId = driveIdFromCardContent(content);
-    if (driveId === null) continue;
+    if (driveId === null) {
+      unreadable.push(relPath);
+      continue;
+    }
     if (isWithin(trashDir, absPath)) {
       trashedDriveIds.add(driveId);
       continue;
     }
-    liveCards.push({
-      driveId,
-      absPath,
-      relPath: path.relative(boxRoot, absPath),
-      content,
-    });
+    const card: TrackedDriveCard = { driveId, absPath, relPath, content };
+    const existing = byDriveId.get(driveId);
+    if (existing) existing.push(card);
+    else byDriveId.set(driveId, [card]);
   }
-  return { liveCards, trashedDriveIds };
+
+  const liveCards: TrackedDriveCard[] = [];
+  const duplicates: DuplicateDriveClaim[] = [];
+  for (const [driveId, cards] of byDriveId) {
+    const first = cards[0];
+    if (cards.length === 1 && first !== undefined) {
+      liveCards.push(first);
+      continue;
+    }
+    // Neither copy is authoritative: the transient hashes are keyed by Drive
+    // ID alone, so syncing either one can push its stale attachments over the
+    // other's edit. Drop both from the working set and let callers report it.
+    duplicates.push({ driveId, relPaths: cards.map((card) => card.relPath) });
+  }
+  liveCards.sort((a, b) => a.relPath.localeCompare(b.relPath));
+  duplicates.sort((a, b) => a.driveId.localeCompare(b.driveId));
+  return { liveCards, trashedDriveIds, duplicates, unreadable };
+}
+
+/** Health fields `cb drive status` prints, from a YAML or legacy XML card. */
+export interface DriveCardSummary {
+  title: string | null;
+  modified: string | null;
+  status: string | null;
+  tabs: string[];
+  lossy: Array<{ type: string; count: number }>;
+}
+
+function xmlSummary(content: string): DriveCardSummary {
+  const titleMatch = /<title>([^<]+)<\/title>/.exec(content);
+  const modifiedMatch = /<modified>([^<]+)<\/modified>/.exec(content);
+  const statusMatch = /\bstatus="([^"]+)"/.exec(content);
+  const tabs = [...content.matchAll(/<sheet-tab[^>]*\btitle="([^"]+)"/g)]
+    .map((match) => match[1])
+    .filter((title): title is string => title !== undefined);
+  const lossy: Array<{ type: string; count: number }> = [];
+  for (const match of content.matchAll(/<item type="([^"]+)" count="([^"]+)"/g)) {
+    const [, type, rawCount] = match;
+    if (type === undefined || rawCount === undefined) continue;
+    const count = Number.parseInt(rawCount, 10);
+    lossy.push({ type, count: Number.isNaN(count) ? 0 : count });
+  }
+  return {
+    title: titleMatch?.[1] ?? null,
+    modified: modifiedMatch?.[1] ?? null,
+    status: statusMatch?.[1] ?? null,
+    tabs,
+    lossy,
+  };
+}
+
+function optionalString(value: unknown): string | null {
+  return typeof value === "string" && value !== "" ? value : null;
+}
+
+/**
+ * Read a Drive card's health fields without the schema machinery.
+ *
+ * Current cards (`schemas/gsheet.tsx`, `schemas/gdoc.tsx`) are YAML
+ * frontmatter; the legacy XML element form is still on disk in older boxes, so
+ * it stays as a fallback. Frontmatter wins when present.
+ */
+export function driveCardSummary(content: string): DriveCardSummary {
+  const fields = parseFrontmatterObject(content);
+  if (fields === null) return xmlSummary(content);
+
+  const tabs: string[] = [];
+  const sheets = fields["sheets"];
+  if (Array.isArray(sheets)) {
+    for (const sheet of sheets) {
+      if (!isRecord(sheet)) continue;
+      const title = optionalString(sheet["title"]);
+      if (title !== null) tabs.push(title);
+    }
+  }
+
+  const lossy: Array<{ type: string; count: number }> = [];
+  const lossyField = fields["lossy"];
+  if (Array.isArray(lossyField)) {
+    for (const item of lossyField) {
+      if (!isRecord(item)) continue;
+      const type = optionalString(item["type"]);
+      const count = item["count"];
+      if (type === null || typeof count !== "number") continue;
+      lossy.push({ type, count });
+    }
+  }
+
+  return {
+    title: optionalString(fields["title"]),
+    modified: optionalString(fields["modified"]),
+    status: optionalString(fields["status"]),
+    tabs,
+    lossy,
+  };
 }
