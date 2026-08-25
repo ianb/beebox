@@ -578,10 +578,19 @@ the next hour's work. The ledger call passes `--base <last tested commit>`
 so `changed` is the landed range (on `main`, `main...HEAD` is empty and
 `implicated` would otherwise be nothing), which is what makes `unimplicated`
 on these runs a real meter. It runs `pnpm test` then `pnpm test:careful`
-under the semaphore, the careful half exclusive.
+under the semaphore, the careful half exclusive, rebuilding `dist/cli.mjs`
+(callback-box's `pretest`) at every checkout, since the ledger wrapper is
+invoked directly and npm's `pretest` hook never fires. "The last tested
+commit" is read from **one completion marker** the run appends after both
+tiers have finished and the batch has been reported on, never from a per-tier
+record: a run that died between the tiers would otherwise mark the commit
+tested with the careful tier never run.
 
-On red, in order: an *environment* failure (more than ~20 files, or the
-loader block) raises one alert and does not bisect; a file that passes on
+On red, in order: an *environment* failure raises one alert and does not
+bisect — either more than ~20 files, or a directory failing as one event (at
+least 5 files under it, all with the same first error line in their TAP
+diagnostics, which is what the 13-file `test/frontend/*` loader block looks
+like and what a set of genuine bugs does not); a file that passes on
 its isolated re-run is recorded as flake and does not open an issue (it
 does count toward C's candidates); a file the ledger already shows with a
 high flake share is treated the same even if it fails twice. What remains is

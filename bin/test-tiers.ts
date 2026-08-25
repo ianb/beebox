@@ -11,7 +11,7 @@
  * See callback-box/docs/plans/change-based-test-selection.md, mechanism C.
  */
 
-import { globSync, readFileSync, existsSync } from "node:fs";
+import { globSync, readFileSync, existsSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { parse } from "yaml";
 import type { Tier } from "./test-locks.js";
@@ -112,9 +112,36 @@ export function taprcTestFiles(packageRoot: string): string[] {
 
 // ── argv ────────────────────────────────────────────────────────────────────
 
-/** Whether the caller already named the files to run, in which case we do not. */
-function hasExplicitFiles(args: string[]): boolean {
-  return args.some((arg) => !arg.startsWith("-"));
+/**
+ * Whether the caller already named the files to run, in which case we do not.
+ *
+ * "Not a flag" is not enough: `tap --timeout 300` and `tap --grep foo` put a
+ * bare `300`/`foo` in argv, and reading those as a file list suppressed the
+ * tier's own list — leaving a bare `tap`, which falls back to `.taprc` and
+ * runs everything, careful tier included. So an argument counts as a file only
+ * if it IS one: a member of the tier lists, or a path that exists on disk.
+ */
+export function hasExplicitFiles(input: {
+  args: string[];
+  known: string[];
+  isFile: (path: string) => boolean;
+}): boolean {
+  const known = new Set(input.known);
+  return input.args.some((arg) => !arg.startsWith("-") && (known.has(arg) || input.isFile(arg)));
+}
+
+/**
+ * Does this argument name a file in the package?
+ *
+ * A directory does not count: `--grep test` would otherwise resolve against
+ * `callback-box/test/` and be read as a file list. Erring this way runs a
+ * superset (the tier list is still appended), never a subset.
+ */
+function packageFile(packageRoot: string): (path: string) => boolean {
+  return (path) => {
+    const full = join(packageRoot, path);
+    return existsSync(full) && statSync(full).isFile();
+  };
 }
 
 /**
@@ -131,13 +158,20 @@ export function tierCommand(input: {
   /** Every file `.taprc` includes; only read for the ordinary tier. */
   taprcFiles: string[];
   careful: string[];
+  /** How an argument is recognised as a real path; defaults to the package. */
+  isFile?: (path: string) => boolean;
 }): string[] {
   const [executable, ...args] = input.command;
   if (executable !== "tap") return input.command;
 
   // -j1 is what "carefully" means: the flakes in this tier are contention.
   const flags = input.tier === "careful" && !args.some((a) => a.startsWith("-j")) ? ["-j1"] : [];
-  if (hasExplicitFiles(args)) return [executable, ...flags, ...args];
+  const explicit = hasExplicitFiles({
+    args,
+    known: [...input.taprcFiles, ...input.careful],
+    isFile: input.isFile ?? packageFile(PACKAGE_ROOT),
+  });
+  if (explicit) return [executable, ...flags, ...args];
 
   const careful = new Set(input.careful);
   const files =

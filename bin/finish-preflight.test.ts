@@ -75,6 +75,36 @@ test("callback-box runs the selected set, not the whole suite", () => {
   assert.ok(commands[0]?.isolate?.argv.includes("../bin/test-ledger.ts"));
 });
 
+test("a failed selector sends callback-box to the full suite", () => {
+  // An internal selector error (graph, esbuild) is not a test result. The sheet
+  // already noted "run pnpm test"; the verification list has to agree, or
+  // finish-verify runs `test:changed` straight back into the same error.
+  const commands = verificationCommands({
+    paths: ["callback-box/src/core/box.ts"],
+    workspacePackages: PACKAGES,
+    hasScript: allScripts(),
+    skipTypecheckLint: NO_SKIP,
+    selectorFailed: true,
+  });
+  assert.deepEqual(commands[0]?.command, "pnpm --dir callback-box test");
+  assert.deepEqual(commands[0]?.argv, ["pnpm", "--dir", "callback-box", "test"]);
+  // Still isolatable: a flake in the full suite is a flake.
+  assert.equal(commands[0]?.isolate?.packageDir, "callback-box");
+});
+
+test("the callback-box isolate resolves TAP paths against the package, not its cwd", () => {
+  const commands = verificationCommands({
+    paths: ["callback-box/src/core/box.ts"],
+    workspacePackages: PACKAGES,
+    hasScript: allScripts(),
+    skipTypecheckLint: NO_SKIP,
+  });
+  // `pnpm --dir callback-box` is spawned from the repo root while tap prints
+  // `test/...` relative to callback-box/.
+  assert.equal(commands[0]?.isolate?.cwd, ".");
+  assert.equal(commands[0]?.isolate?.packageDir, "callback-box");
+});
+
 test("a bin/ change runs the root suite and typecheck, and lints nothing", () => {
   const commands = verificationCommands({
     paths: ["bin/router.ts"],

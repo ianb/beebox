@@ -5,7 +5,9 @@
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { spawn } from "node:child_process";
 import {
+  isMeasuredRun,
   classifyFailure,
   carefulCandidates,
   deriveFlakes,
@@ -15,6 +17,7 @@ import {
   summarize,
   type LedgerRecord,
 } from "./test-ledger-lib.js";
+import { terminateChild } from "./test-ledger.js";
 
 // ── TAP parsing ─────────────────────────────────────────────────────────────
 
@@ -321,4 +324,51 @@ test("a record from a run under the semaphore carries both", () => {
   const record = rec({ tier: "careful", concurrency: 0 });
   assert.equal(record.tier, "careful");
   assert.equal(record.concurrency, 0);
+});
+
+// ── markers ─────────────────────────────────────────────────────────────────
+
+test("a marker is not a measured run, however it exited", () => {
+  assert.equal(isMeasuredRun(rec({ marker: true, exitCode: 0 })), false);
+  assert.equal(isMeasuredRun(rec({ exitCode: 0 })), true);
+  assert.equal(isMeasuredRun(rec({ exitCode: 143 })), false);
+});
+
+test("a marker adds no run to any file's denominator", () => {
+  const filesets = { r: ["test/a.test.ts"], empty: [] };
+  const records: LedgerRecord[] = [
+    rec({ ranFiles: "r" }),
+    rec({ marker: true, ranFiles: "empty" }),
+  ];
+  assert.equal(summarize({ records, filesets }).get("test/a.test.ts")?.runs, 1);
+});
+
+// ── signals reach the child ─────────────────────────────────────────────────
+
+test("terminateChild waits for a signalled child to actually exit", async () => {
+  const child = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"]);
+  await new Promise((resolve) => child.once("spawn", resolve));
+  await terminateChild({ child, signal: "SIGTERM" });
+  // The point of waiting: the slot is released after tap is gone, not while it
+  // is still running and contending with whatever takes the slot next.
+  assert.equal(child.signalCode, "SIGTERM");
+});
+
+test("a child that ignores the signal is killed rather than waited on forever", async () => {
+  const child = spawn(process.execPath, [
+    "-e",
+    "process.on('SIGTERM', () => {}); setInterval(() => {}, 1000); console.log('ready');",
+  ]);
+  // Waiting for the handler to be INSTALLED, not merely for the process to
+  // exist: a signal delivered before that line runs kills it by default and
+  // the test would pass without exercising the escalation at all.
+  await new Promise((resolve) => child.stdout.once("data", resolve));
+  await terminateChild({ child, signal: "SIGTERM", graceMs: 200 });
+  assert.equal(child.signalCode, "SIGKILL");
+});
+
+test("terminateChild returns at once for a child that already exited", async () => {
+  const child = spawn(process.execPath, ["-e", ""]);
+  await new Promise((resolve) => child.once("close", resolve));
+  await terminateChild({ child, signal: "SIGTERM", graceMs: 60_000 });
 });

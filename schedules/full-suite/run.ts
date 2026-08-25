@@ -43,16 +43,21 @@ import { readFileSync, existsSync } from "node:fs";
 import { execa } from "execa";
 
 import { gitCommonDir } from "../../bin/test-git.js";
-import { readRecords } from "../../bin/test-ledger.js";
-import { flakeShare, foldFilesets, ledgerPaths } from "../../bin/test-ledger-lib.js";
+import { appendLedgerRecord, readRecords } from "../../bin/test-ledger.js";
+import { flakeShare, foldFilesets, hashFileset, ledgerPaths } from "../../bin/test-ledger-lib.js";
 import {
   BISECT_MAX_FILES,
   FLAKE_WINDOW,
   LANDING_FIELD_SEPARATOR,
   LANDING_RECORD_SEPARATOR,
+  TIERS,
+  batchExit,
   bisect,
   classifyFailure,
+  completionMarker,
+  environmentCluster,
   failureExcerpt,
+  firstErrorLines,
   isEnvironmentFailure,
   issuePath,
   lastTestedCommit,
@@ -72,6 +77,7 @@ import {
   runFileAlone,
   runTier,
   type Checkout,
+  type SuiteRun,
 } from "./checkout.js";
 import { REPO_ROOT, git, refuse } from "./repo.js";
 
@@ -237,6 +243,16 @@ async function fileIssues(input: { culprits: Culprit[]; batch: Batch }): Promise
     input.culprits.length === 1
       ? `chore(issues): full-suite red after ${input.culprits[0]?.landing.commit.slice(0, 8) ?? ""}`
       : `chore(issues): full-suite red across ${String(input.culprits.length)} landings`;
+  // `git add` first: these files are new, and a pathspec-scoped `git commit`
+  // refuses a path git has never heard of. Path-scoped throughout (bin/
+  // CLAUDE.md) so a commit here cannot sweep up somebody's staged work.
+  const staged = await execa("git", ["-C", REPO_ROOT, "add", "--", ...paths], {
+    reject: false,
+    all: true,
+  });
+  if (staged.exitCode !== 0) {
+    return { written: paths, blocked: `git add failed: ${(staged.all ?? "").slice(-500)}` };
+  }
   const commit = await execa(
     "git",
     ["-C", REPO_ROOT, "commit", "-m", subject, "-m", "Filed by schedules/full-suite; the named workstream owns the fixup.", "--", ...paths],
@@ -251,15 +267,41 @@ async function fileIssues(input: { culprits: Culprit[]; batch: Batch }): Promise
   return { written: paths, blocked: null };
 }
 
+// ─── the completion marker ────────────────────────────────────────────────
+
+/**
+ * Record that this commit has been through EVERY tier — written last, after
+ * the batch has been reported on, so a run that dies mid-bisect leaves its
+ * range untested rather than tested-and-unfiled.
+ */
+async function markComplete(input: { batch: Batch; runs: SuiteRun[] }): Promise<void> {
+  appendLedgerRecord({
+    record: completionMarker({
+      commit: input.batch.pinned,
+      branch: "HEAD",
+      treeHash: await git(["rev-parse", `${input.batch.pinned}^{tree}`]),
+      exitCode: batchExit(input.runs.map((run) => run.exitCode)),
+      tiers: [...TIERS],
+      changed: [],
+      emptyFileset: hashFileset([]),
+    }),
+    ranFiles: [],
+    implicatedFiles: [],
+    paths: ledgerPaths(gitCommonDir(REPO_ROOT)),
+  });
+}
+
 // ─── the run ──────────────────────────────────────────────────────────────
 
 async function handleRed(input: { batch: Batch; checkout: Checkout; failures: string[]; output: string }): Promise<void> {
   const { batch, failures } = input;
-  if (isEnvironmentFailure({ failures })) {
+  const firstErrors = firstErrorLines({ raw: input.output, files: failures });
+  const cluster = environmentCluster({ failures, firstErrors });
+  if (isEnvironmentFailure({ failures, firstErrors })) {
     await alert({
       priority: "important",
       title: `full suite: ${String(failures.length)} files failed (environment)`,
-      message: renderEnvironmentAlert({ testedCommit: batch.pinned, failures }),
+      message: renderEnvironmentAlert({ testedCommit: batch.pinned, failures, cluster }),
     });
     return;
   }
@@ -353,13 +395,16 @@ async function main(): Promise<void> {
     const ordinary = await runTier({ checkout, tier: "ordinary", base });
     const careful = await runTier({ checkout, tier: "careful", base });
     const output = `${ordinary.output}\n${careful.output}`;
-    const failures = failingFiles([ordinary, careful]);
+    const runs = [ordinary, careful];
+    const failures = failingFiles(runs);
     if (failures.length === 0) {
       process.stdout.write("full-suite: green.\n");
+      await markComplete({ batch, runs });
       await report(["done"]);
       return;
     }
     await handleRed({ batch, checkout, failures, output });
+    await markComplete({ batch, runs });
   } finally {
     await removeCheckout(checkout);
   }

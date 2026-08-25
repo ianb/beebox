@@ -147,7 +147,7 @@ function runCommand(input: {
     const isolate = command.isolate;
     const isolateCwd = join(root, isolate.cwd);
     const failing = parseFailingFiles(output.text, (path) =>
-      existsRelative({ cwd: isolateCwd, path, root }),
+      existsRelative({ packageDir: join(root, isolate.packageDir), path, root }),
     );
     if (failing.length === 0) unattributed = true;
     failing.forEach((file, position) => {
@@ -166,9 +166,17 @@ function runCommand(input: {
   return { command, ok: false, seconds, outputPath, files, unattributed };
 }
 
-/** A TAP description is a file only if it resolves against the run's cwd or the repo. */
-function existsRelative(input: { cwd: string; path: string; root: string }): boolean {
-  return existsSync(join(input.cwd, input.path)) || existsSync(join(input.root, input.path));
+/**
+ * A TAP description is a file only if it resolves against the package the
+ * suite ran in, or against the repo root.
+ *
+ * The package dir, NOT the command's cwd: `pnpm --dir callback-box …` runs
+ * from the repo root, and every path callback-box's tap prints is relative to
+ * `callback-box/`. Checking the cwd alone identified no failing file at all
+ * there, so every flake came back `real` and blocked the merge.
+ */
+export function existsRelative(input: { packageDir: string; path: string; root: string }): boolean {
+  return existsSync(join(input.packageDir, input.path)) || existsSync(join(input.root, input.path));
 }
 
 export function main(argv: string[]): number {

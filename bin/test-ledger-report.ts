@@ -46,11 +46,14 @@ export function renderReport(): void {
   const filesets = readFilesets(paths.filesets);
   const stats = summarize({ records, filesets });
 
-  const excluded = records.filter((r) => !isCompletedRun(r)).length;
+  // Markers are bookkeeping, not runs: they are neither counted nor
+  // reported as excluded, because there was never a run to exclude.
+  const runs = records.filter((r) => r.marker !== true);
+  const excluded = runs.filter((r) => !isCompletedRun(r)).length;
   const failing = [...stats.entries()].filter(([, s]) => s.failures > 0);
   failing.sort((a, b) => b[1].failures - a[1].failures);
 
-  console.log(`runs recorded:   ${records.length}${excluded > 0 ? ` (${excluded} excluded: did not complete)` : ""}`);
+  console.log(`runs recorded:   ${runs.length}${excluded > 0 ? ` (${excluded} excluded: did not complete)` : ""}`);
   console.log(`files seen:      ${stats.size}`);
   console.log(`files ever failed: ${failing.length}`);
   console.log("");

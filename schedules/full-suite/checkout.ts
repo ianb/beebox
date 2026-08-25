@@ -35,6 +35,7 @@ export async function createCheckout(commit: string): Promise<Checkout> {
   await git(["worktree", "add", "--detach", dir, commit]);
   checkedOut = commit;
   await installDeps(dir);
+  await buildCli(dir);
   return { dir, parent };
 }
 
@@ -61,6 +62,24 @@ async function installDeps(dir: string): Promise<void> {
     all: true,
   });
   if (result.exitCode !== 0) refuse(`pnpm install failed in the detached worktree:\n${result.all ?? ""}`);
+}
+
+/**
+ * `callback-box`'s `pretest`, run explicitly.
+ *
+ * The tiers invoke the ledger wrapper directly rather than through `pnpm test`,
+ * which means npm's `pretest` hook — `node scripts/build-cli.ts` — never fires.
+ * A fresh detached worktree has no `dist/cli.mjs` at all, and every bisect
+ * checkout leaves whatever the previous commit built, so the CLI the suite
+ * exercises would be a different commit's. Running the package's own script
+ * rather than restating its command keeps one definition of the build.
+ */
+async function buildCli(dir: string): Promise<void> {
+  const result = await execa("pnpm", ["--dir", path.join(dir, "callback-box"), "run", "pretest"], {
+    reject: false,
+    all: true,
+  });
+  if (result.exitCode !== 0) refuse(`callback-box pretest (build-cli) failed:\n${result.all ?? ""}`);
 }
 
 /** The lockfile at a commit, so a bisect step reinstalls only when it must. */
@@ -141,4 +160,7 @@ export async function checkoutCommit(input: { checkout: Checkout; commit: string
   if (before === null || (await lockfileHash(before)) !== (await lockfileHash(input.commit))) {
     await installDeps(input.checkout.dir);
   }
+  // Unconditional: the sources the CLI is built from change at every landing,
+  // whether or not the lockfile did.
+  await buildCli(input.checkout.dir);
 }

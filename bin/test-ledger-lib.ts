@@ -42,6 +42,16 @@ export interface LedgerRecord {
    */
   source?: string;
   /**
+   * A bookkeeping record rather than a test run: it ran no files and its
+   * presence is the fact being recorded. `schedules/full-suite/run.ts` writes
+   * one after BOTH tiers have finished, so "the last commit this schedule
+   * tested" cannot be answered by a run that died between them. Markers are
+   * excluded from every rate the report computes — they have no denominator.
+   */
+  marker?: true;
+  /** Which tiers a {@link LedgerRecord.marker} covers; absent on a run. */
+  tiers?: string[];
+  /**
    * The wrapped command's exit status (128+signum if it was killed). Recorded
    * because a run that bailed out early reports only the files it reached, and
    * counting that as a completed run would quietly corrupt every denominator.
@@ -221,6 +231,15 @@ export function isCompletedRun(record: LedgerRecord): boolean {
   return exitCode === 0 || exitCode === 1;
 }
 
+/**
+ * Whether a record measures a test run at all: a completed one that is not a
+ * bookkeeping {@link LedgerRecord.marker}. A marker ran no files, so counting
+ * it would add a run to the report's total that no file was ever part of.
+ */
+export function isMeasuredRun(record: LedgerRecord): boolean {
+  return record.marker !== true && isCompletedRun(record);
+}
+
 export interface FileStats {
   runs: number;
   failures: number;
@@ -234,7 +253,7 @@ export function summarize(input: {
   filesets: Record<string, string[]>;
 }): Map<string, FileStats> {
   const { filesets } = input;
-  const records = input.records.filter(isCompletedRun);
+  const records = input.records.filter(isMeasuredRun);
   const flakes = deriveFlakes({ records, filesets });
   const runs = new Map<string, number>();
   const failures = new Map<string, number>();
@@ -328,7 +347,7 @@ export function flakeShare(input: {
   file: string;
   window: number;
 }): FlakeShare {
-  const records = input.records.filter(isCompletedRun);
+  const records = input.records.filter(isMeasuredRun);
   const events = deriveFlakeEvents({ records, filesets: input.filesets });
   return shareOf({ ...input, records, events });
 }
@@ -377,7 +396,7 @@ export function carefulCandidates(input: {
   const window = input.window ?? CAREFUL_WINDOW;
   const threshold = input.threshold ?? CAREFUL_THRESHOLD;
   const isMember = new Set(input.careful);
-  const records = input.records.filter(isCompletedRun);
+  const records = input.records.filter(isMeasuredRun);
   const filesets = input.filesets;
   // Derived once: the event map is a pass over every record, and this asks
   // about every file the ledger has ever run.

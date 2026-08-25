@@ -130,6 +130,35 @@ test("explicit files pass through — that is how test:changed runs a selection"
   );
 });
 
+test("an option's value is not a file list, and does not suppress the tier", () => {
+  // `tap --timeout 300` and `tap --grep box` put a bare word in argv. Reading
+  // it as "the caller named the files" left a bare `tap`, which falls back to
+  // .taprc and runs everything — the careful tier included.
+  const never = (): boolean => false;
+  for (const command of [
+    ["tap", "--timeout", "300"],
+    ["tap", "--grep", "box"],
+  ]) {
+    assert.deepEqual(
+      tierCommand({ command, tier: "ordinary", taprcFiles: TAPRC_FILES, careful: CAREFUL, isFile: never }),
+      [...command, "test/a.doctest.md", "test/b.test.ts"],
+    );
+  }
+});
+
+test("a real path after an option is still an explicit file list", () => {
+  assert.deepEqual(
+    tierCommand({
+      command: ["tap", "--timeout", "300", "test/on-disk.test.ts"],
+      tier: "ordinary",
+      taprcFiles: TAPRC_FILES,
+      careful: CAREFUL,
+      isFile: (path) => path === "test/on-disk.test.ts",
+    }),
+    ["tap", "--timeout", "300", "test/on-disk.test.ts"],
+  );
+});
+
 test("a command that is not tap is not rewritten", () => {
   const command = ["pnpm", "exec", "vitest"];
   assert.deepEqual(

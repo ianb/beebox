@@ -26,6 +26,19 @@ export const LEDGER_SOURCE = "full-suite";
 export const ENVIRONMENT_FAILURE_FILES = 20;
 
 /**
+ * The other shape a broken machine takes: a whole directory failing as one
+ * event. The plan names `test/frontend/*` — 13 files that die together when
+ * the frontend loader block breaks — and 13 is under the 20-file bar, so the
+ * count alone would bisect a loader failure into thirteen bogus issues.
+ *
+ * A directory alone is not enough evidence (a real bug in one module breaks its
+ * neighbours too), so the cluster also has to fail the SAME way: identical
+ * first error line across every file in it. That is what a loader or install
+ * failure looks like and what a set of genuine bugs does not.
+ */
+export const ENVIRONMENT_CLUSTER_FILES = 5;
+
+/**
  * A file whose recent flake share is at least this is treated as a flake even
  * when its isolated re-run also fails. Same bar the careful tier uses
  * (`CAREFUL_THRESHOLD`), restated rather than imported so the two can diverge
@@ -94,15 +107,23 @@ export function workstreamOf(subject: string): string | null {
 /**
  * The commit this schedule last finished testing, or null if it never has.
  *
+ * Read ONLY from the completion marker {@link completionMarker} writes after
+ * both tiers have finished. The per-tier records cannot answer this: the run
+ * writes one for `ordinary` and one for `careful`, so a run that died between
+ * them would leave an ordinary record behind and mark the commit tested with
+ * the careful tier never run — a whole tier silently skipped forever, since
+ * the next batch starts after it.
+ *
  * Red counts: a batch whose failures have been filed is tested, and re-testing
- * the same range every hour would file the same issues every hour. Runs that
- * did not complete (killed, crashed — anything outside exit 0/1) do not count,
- * because their file list is a fragment.
+ * the same range every hour would file the same issues every hour. A marker
+ * whose run did not complete (killed, crashed — anything outside exit 0/1)
+ * does not count, because its file list is a fragment.
  */
 export function lastTestedCommit(records: LedgerRecord[]): string | null {
   for (let i = records.length - 1; i >= 0; i--) {
     const record = records[i];
     if (record === undefined || record.source !== LEDGER_SOURCE) continue;
+    if (record.marker !== true) continue;
     const exitCode = record.exitCode ?? 0;
     if (exitCode !== 0 && exitCode !== 1) continue;
     return record.commit;
@@ -110,13 +131,140 @@ export function lastTestedCommit(records: LedgerRecord[]): string | null {
   return null;
 }
 
+/** The tiers a completed batch covers, in the order the run does them. */
+export const TIERS = ["ordinary", "careful"] as const;
+
+/**
+ * One exit status for the whole batch: the worst of the tiers, unless a tier
+ * did not complete at all (a signal, a crashed harness — anything outside
+ * 0/1, and a null status counts as one) — then that status, so the marker is
+ * skipped by {@link lastTestedCommit} and the range is tested again next hour.
+ */
+export function batchExit(codes: Array<number | null>): number {
+  let worst = 0;
+  for (const code of codes) {
+    const status = code ?? 2;
+    if (status !== 0 && status !== 1) return status;
+    worst = Math.max(worst, status);
+  }
+  return worst;
+}
+
+/**
+ * The record that says "this commit has been through every tier".
+ *
+ * A marker rather than a field on the last tier's record: the ledger wrapper
+ * runs one tier and knows nothing about the other, so only the schedule can
+ * say both are done — and it can only say it here, after both returned.
+ */
+export function completionMarker(input: {
+  commit: string;
+  branch: string;
+  treeHash: string;
+  exitCode: number;
+  tiers: string[];
+  changed: string[];
+  emptyFileset: string;
+  now?: Date;
+}): LedgerRecord {
+  return {
+    ts: (input.now ?? new Date()).toISOString(),
+    commit: input.commit,
+    branch: input.branch,
+    treeHash: input.treeHash,
+    mode: "full",
+    source: LEDGER_SOURCE,
+    marker: true,
+    exitCode: input.exitCode,
+    accounted: null,
+    changed: input.changed,
+    ranFiles: input.emptyFileset,
+    implicated: input.emptyFileset,
+    durations: {},
+    failures: [],
+    tiers: input.tiers,
+  };
+}
+
 // ─── classifying a red run ────────────────────────────────────────────────
 
 export type FailureVerdict = "flake" | "real";
 
-/** Whether the whole run is a broken environment rather than a set of bugs. */
-export function isEnvironmentFailure(input: { failures: string[]; threshold?: number }): boolean {
-  return input.failures.length > (input.threshold ?? ENVIRONMENT_FAILURE_FILES);
+/**
+ * Whether the whole run is a broken environment rather than a set of bugs:
+ * too many files to be about the code, or one directory failing identically.
+ *
+ * `firstErrors` maps a failing file to the first error line of its TAP block
+ * ({@link firstErrorLine}); files with no readable error are never clustered,
+ * since "no error line" is not evidence of a shared cause.
+ */
+export function isEnvironmentFailure(input: {
+  failures: string[];
+  firstErrors?: Record<string, string | null>;
+  threshold?: number;
+  clusterThreshold?: number;
+}): boolean {
+  if (input.failures.length > (input.threshold ?? ENVIRONMENT_FAILURE_FILES)) return true;
+  return environmentCluster(input) !== null;
+}
+
+/**
+ * The directory whose files all failed the same way, when there is one:
+ * at least `clusterThreshold` failing files directly under it, every one with
+ * the same non-empty first error line.
+ */
+export function environmentCluster(input: {
+  failures: string[];
+  firstErrors?: Record<string, string | null>;
+  clusterThreshold?: number;
+}): { directory: string; files: string[]; error: string } | null {
+  const firstErrors = input.firstErrors;
+  if (firstErrors === undefined) return null;
+  const threshold = input.clusterThreshold ?? ENVIRONMENT_CLUSTER_FILES;
+  const byDirectory = new Map<string, string[]>();
+  for (const file of input.failures) {
+    const directory = file.slice(0, file.lastIndexOf("/") + 1);
+    if (directory === "") continue;
+    byDirectory.set(directory, [...(byDirectory.get(directory) ?? []), file]);
+  }
+  for (const [directory, files] of byDirectory) {
+    if (files.length < threshold) continue;
+    const errors = files.map((file) => firstErrors[file] ?? null);
+    const [first] = errors;
+    if (first === undefined || first === null || first === "") continue;
+    if (errors.every((error) => error === first)) return { directory, files, error: first };
+  }
+  return null;
+}
+
+/**
+ * The first line of a failing file's TAP diagnostics that says what went wrong.
+ *
+ * tap writes the failure as a YAML block under the `not ok` line; `error:` and
+ * `message:` are where the cause lands, and a folded scalar (`error: >-`) puts
+ * it on the following line. Anything else — a stack, a diff — is not compared,
+ * because two files can share a cause without sharing a stack.
+ */
+export function firstErrorLine(input: { raw: string; file: string }): string | null {
+  const block = failureExcerpt({ raw: input.raw, file: input.file, maxLines: 40 }).split("\n");
+  for (let i = 0; i < block.length; i++) {
+    const match = /^\s*(?:error|message):\s*(.*)$/u.exec(block[i] ?? "");
+    if (match === null) continue;
+    const value = (match[1] ?? "").trim();
+    if (value !== "" && value !== ">-" && value !== "|-" && value !== ">" && value !== "|") {
+      return value;
+    }
+    const folded = (block[i + 1] ?? "").trim();
+    return folded === "" ? null : folded;
+  }
+  return null;
+}
+
+/** {@link firstErrorLine} for every failing file, keyed by file. */
+export function firstErrorLines(input: { raw: string; files: string[] }): Record<string, string | null> {
+  return Object.fromEntries(
+    input.files.map((file) => [file, firstErrorLine({ raw: input.raw, file })]),
+  );
 }
 
 /**
@@ -300,13 +448,23 @@ export function renderRedAlert(input: {
 }
 
 /** The alert body for a run that failed too broadly to be about the code. */
-export function renderEnvironmentAlert(input: { testedCommit: string; failures: string[] }): string {
+export function renderEnvironmentAlert(input: {
+  testedCommit: string;
+  failures: string[];
+  cluster?: { directory: string; files: string[]; error: string } | null;
+}): string {
+  const cluster = input.cluster ?? null;
+  const why =
+    cluster === null
+      ? `over the ${String(ENVIRONMENT_FAILURE_FILES)}-file bar`
+      : `${String(cluster.files.length)} files under \`${cluster.directory}\` all failed with the same first error`;
   return [
     `${String(input.failures.length)} test files failed in the batched full-suite run at` +
-      ` \`${input.testedCommit.slice(0, 8)}\` — over the ${String(ENVIRONMENT_FAILURE_FILES)}-file bar, so this is`,
+      ` \`${input.testedCommit.slice(0, 8)}\` — ${why}, so this is`,
     "read as a broken environment rather than a set of bugs. Nothing was bisected and no",
     "issue was filed; the run log has the output.",
     "",
+    ...(cluster === null ? [] : [`Shared error: ${cluster.error}`, ""]),
     `First files: ${input.failures.slice(0, 10).join(", ")}`,
     "",
   ].join("\n");

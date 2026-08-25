@@ -42,7 +42,8 @@ export interface Sheet {
   changed: { all: string[]; byGroup: Record<string, string[]>; unknownGroups: string[] };
   docsOnly: boolean;
   codeChanged: boolean;
-  selectedTests: { files: string[]; note: string } | null;
+  /** `failed` distinguishes a selector that errored from one that selected nothing. */
+  selectedTests: { files: string[]; note: string; failed?: true } | null;
   verification: VerificationCommand[];
   skipTypecheckLint: { value: boolean; reason: string; rule: string };
   plan: { attached: boolean; docs: string[]; trailers: string[] };
@@ -172,7 +173,7 @@ function selection(root: string, packages: string[]): Sheet["selectedTests"] {
     encoding: "utf-8",
   });
   if (result.status !== 0) {
-    return { files: [], note: `selector failed (${result.stderr.trim()}) — run pnpm test` };
+    return { files: [], failed: true, note: `selector failed (${result.stderr.trim()}) — run pnpm test` };
   }
   const files = result.stdout
     .split("\n")
@@ -213,11 +214,16 @@ export function buildSheet(input: { merge: boolean }): Sheet {
         mergeBroughtPaths: merge.broughtPaths,
         stragglers,
       });
+  // Selected BEFORE the verification list is built: a selector that failed
+  // changes which test command the sheet names (the full suite, not the
+  // selected set), so the two cannot disagree.
+  const selectedTests = selection(root, grouped.packages);
   const verification = verificationCommands({
     paths: changed,
     workspacePackages: packages,
     hasScript: hasScriptIn(root),
     skipTypecheckLint: skip,
+    selectorFailed: selectedTests?.failed === true,
   });
   const messages = git(["log", "--format=%B%x00", "main..HEAD"], root).split("\0");
   const trailers = parseTrailers(messages);
@@ -235,7 +241,7 @@ export function buildSheet(input: { merge: boolean }): Sheet {
     changed: { all: changed, byGroup: grouped.groups, unknownGroups: grouped.unknown },
     docsOnly: isDocsOnly(changed),
     codeChanged,
-    selectedTests: selection(root, grouped.packages),
+    selectedTests,
     verification,
     skipTypecheckLint: { ...skip, rule: SKIP_RULE },
     plan: { attached: plans.length > 0 || trailers.plans.length > 0, docs: plans, trailers: trailers.plans },

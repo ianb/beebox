@@ -14,14 +14,21 @@ import { test } from "node:test";
 import type { LedgerRecord } from "../../bin/test-ledger-lib.js";
 import {
   BISECT_MAX_FILES,
+  ENVIRONMENT_CLUSTER_FILES,
   ENVIRONMENT_FAILURE_FILES,
   LANDING_FIELD_SEPARATOR as FS,
   LANDING_RECORD_SEPARATOR as RS,
   LEDGER_SOURCE,
+  TIERS,
+  batchExit,
   bisect,
   bisectStep,
   classifyFailure,
+  completionMarker,
+  environmentCluster,
   failureExcerpt,
+  firstErrorLine,
+  firstErrorLines,
   isEnvironmentFailure,
   issuePath,
   lastTestedCommit,
@@ -88,29 +95,65 @@ function record(overrides: Partial<LedgerRecord>): LedgerRecord {
   };
 }
 
-test("lastTestedCommit takes the newest completed run this schedule made", () => {
+/** The marker the run writes once both tiers are done, at `commit`. */
+function marker(commit: string, exitCode: number): LedgerRecord {
+  return completionMarker({
+    commit,
+    branch: "HEAD",
+    treeHash: "sha256:0",
+    exitCode,
+    tiers: [...TIERS],
+    changed: [],
+    emptyFileset: "sha256:empty",
+  });
+}
+
+test("lastTestedCommit takes the newest completed marker this schedule wrote", () => {
   const records = [
-    record({ commit: "a".repeat(40), source: LEDGER_SOURCE, exitCode: 0 }),
+    marker("a".repeat(40), 0),
     // Somebody's own `pnpm test` on main: no source, so not this schedule's.
     record({ commit: "z".repeat(40), branch: "main", exitCode: 0 }),
     // A red batch still counts — its failures were filed, and re-testing the
     // same range hourly would re-file them.
-    record({ commit: "b".repeat(40), source: LEDGER_SOURCE, exitCode: 1 }),
+    marker("b".repeat(40), 1),
   ];
   assert.equal(lastTestedCommit(records), "b".repeat(40));
 });
 
-test("lastTestedCommit ignores a run that did not complete", () => {
+test("a tier record alone does not mark a commit tested", () => {
+  // The exact shape of a run that died between the two tiers: the ordinary
+  // tier finished and recorded, the careful tier never ran. Reading this as
+  // "tested" would skip the careful tier for that range forever.
   const records = [
-    record({ commit: "a".repeat(40), source: LEDGER_SOURCE, exitCode: 0 }),
-    record({ commit: "b".repeat(40), source: LEDGER_SOURCE, exitCode: 143 }),
+    marker("a".repeat(40), 0),
+    record({ commit: "b".repeat(40), source: LEDGER_SOURCE, tier: "ordinary", exitCode: 0 }),
   ];
   assert.equal(lastTestedCommit(records), "a".repeat(40));
+});
+
+test("lastTestedCommit ignores a marker whose batch did not complete", () => {
+  assert.equal(lastTestedCommit([marker("a".repeat(40), 0), marker("b".repeat(40), 143)]), "a".repeat(40));
 });
 
 test("lastTestedCommit is null before the schedule has ever run", () => {
   assert.equal(lastTestedCommit([record({ commit: "a".repeat(40) })]), null);
   assert.equal(lastTestedCommit([]), null);
+});
+
+test("a marker records no files, so it is no run's denominator", () => {
+  const written = marker("a".repeat(40), 0);
+  assert.equal(written.marker, true);
+  assert.deepEqual(written.tiers, ["ordinary", "careful"]);
+  assert.deepEqual(written.failures, []);
+  assert.deepEqual(written.durations, {});
+});
+
+test("batchExit is the worst tier, unless one never completed", () => {
+  assert.equal(batchExit([0, 0]), 0);
+  assert.equal(batchExit([0, 1]), 1);
+  // A killed tier: reported as-is, which keeps the marker out of the baseline.
+  assert.equal(batchExit([1, 143]), 143);
+  assert.equal(batchExit([0, null]), 2);
 });
 
 // ─── classifying red ──────────────────────────────────────────────────────
@@ -119,6 +162,60 @@ test("a wide failure is the environment, not a batch of bugs", () => {
   const wide = Array.from({ length: ENVIRONMENT_FAILURE_FILES + 1 }, (_unused, i) => `test/f${String(i)}.test.ts`);
   assert.equal(isEnvironmentFailure({ failures: wide }), true);
   assert.equal(isEnvironmentFailure({ failures: wide.slice(0, ENVIRONMENT_FAILURE_FILES) }), false);
+});
+
+/** A TAP block per file, all failing the same way. */
+const loaderBlock = (files: string[], error: string): string =>
+  files
+    .map((file, i) => [`not ok ${String(i + 1)} - ${file}`, "  ---", `  error: ${error}`, "  ...", ""].join("\n"))
+    .join("\n");
+
+test("a directory failing identically is the environment, under the file bar", () => {
+  // The plan's own example: the frontend loader block, 13 files — well under
+  // the 20-file bar, and thirteen bogus issues if it is bisected.
+  const files = Array.from({ length: 13 }, (_unused, i) => `test/frontend/f${String(i)}.test.ts`);
+  const raw = loaderBlock(files, "Cannot find module 'react-dom/client'");
+  const firstErrors = firstErrorLines({ raw, files });
+  assert.equal(isEnvironmentFailure({ failures: files, firstErrors }), true);
+  assert.equal(environmentCluster({ failures: files, firstErrors })?.directory, "test/frontend/");
+});
+
+test("a cluster needs the SAME error, not just the same directory", () => {
+  const files = Array.from({ length: ENVIRONMENT_CLUSTER_FILES }, (_unused, i) => `test/core/f${String(i)}.test.ts`);
+  const raw = files
+    .map((file, i) => `not ok ${String(i + 1)} - ${file}\n  ---\n  error: distinct failure ${String(i)}\n  ...\n`)
+    .join("\n");
+  const firstErrors = firstErrorLines({ raw, files });
+  assert.equal(isEnvironmentFailure({ failures: files, firstErrors }), false);
+  assert.equal(environmentCluster({ failures: files, firstErrors }), null);
+});
+
+test("too few files failing alike is a set of bugs, not a broken machine", () => {
+  const files = Array.from({ length: ENVIRONMENT_CLUSTER_FILES - 1 }, (_unused, i) => `test/frontend/f${String(i)}.test.ts`);
+  const raw = loaderBlock(files, "Cannot find module 'react-dom/client'");
+  assert.equal(isEnvironmentFailure({ failures: files, firstErrors: firstErrorLines({ raw, files }) }), false);
+});
+
+test("files with no readable error are never clustered", () => {
+  const files = Array.from({ length: 8 }, (_unused, i) => `test/frontend/f${String(i)}.test.ts`);
+  const raw = files.map((file, i) => `not ok ${String(i + 1)} - ${file}`).join("\n");
+  const firstErrors = firstErrorLines({ raw, files });
+  assert.deepEqual(Object.values(firstErrors), files.map(() => null));
+  assert.equal(isEnvironmentFailure({ failures: files, firstErrors }), false);
+});
+
+test("firstErrorLine reads a folded scalar's next line", () => {
+  const raw = ["not ok 1 - test/a.test.ts", "  ---", "  error: >-", "    ENOENT: no such file", "  ...", ""].join("\n");
+  assert.equal(firstErrorLine({ raw, file: "test/a.test.ts" }), "ENOENT: no such file");
+});
+
+test("the environment alert says which rule fired", () => {
+  const files = Array.from({ length: 13 }, (_unused, i) => `test/frontend/f${String(i)}.test.ts`);
+  const raw = loaderBlock(files, "Cannot find module 'react-dom/client'");
+  const cluster = environmentCluster({ failures: files, firstErrors: firstErrorLines({ raw, files }) });
+  const message = renderEnvironmentAlert({ testedCommit: "1".repeat(40), failures: files, cluster });
+  assert.match(message, /13 files under `test\/frontend\/` all failed with the same first error/u);
+  assert.match(message, /Shared error: Cannot find module/u);
 });
 
 test("classifyFailure follows the plan's order", () => {

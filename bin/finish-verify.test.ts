@@ -8,15 +8,24 @@
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { VerificationCommand } from "./finish-preflight-lib.js";
-import { formatResult, parseFailingFiles, verdict, type CommandResult } from "./finish-verify.js";
+import {
+  existsRelative,
+  formatResult,
+  parseFailingFiles,
+  verdict,
+  type CommandResult,
+} from "./finish-verify.js";
 
 const TESTS: VerificationCommand = {
   kind: "tests",
   command: "pnpm --dir callback-box test:changed",
   cwd: ".",
   argv: ["pnpm", "--dir", "callback-box", "test:changed"],
-  isolate: { cwd: "callback-box", argv: ["tap"] },
+  isolate: { cwd: ".", packageDir: "callback-box", argv: ["tap"] },
 };
 const LINT: VerificationCommand = {
   kind: "lint",
@@ -92,4 +101,28 @@ test("a failing typecheck or lint is red with no isolation attempted", () => {
   assert.deepEqual(formatResult(result({ command: LINT, seconds: 4 })), [
     "FAIL pnpm lint (4.0s) → /tmp/out.log",
   ]);
+});
+
+test("a callback-box TAP path resolves against the package, not the command's cwd", () => {
+  // The shape that matters: `pnpm --dir callback-box test:changed` runs from
+  // the repo root and tap prints `test/...` relative to callback-box/. Checked
+  // against the cwd, no failing file is ever identified — and finish-verify
+  // reports every one of them `real`, blocking on a known flake.
+  const root = mkdtempSync(join(tmpdir(), "finish-verify-"));
+  try {
+    mkdirSync(join(root, "callback-box/test/core"), { recursive: true });
+    writeFileSync(join(root, "callback-box/test/core/box.doctest.md"), "");
+    const path = "test/core/box.doctest.md";
+    assert.equal(existsRelative({ packageDir: join(root, "callback-box"), path, root }), true);
+    assert.equal(existsRelative({ packageDir: root, path, root }), false);
+    const output = `not ok 1 - ${path} # time=812ms`;
+    assert.deepEqual(
+      parseFailingFiles(output, (p) =>
+        existsRelative({ packageDir: join(root, "callback-box"), path: p, root }),
+      ),
+      [path],
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

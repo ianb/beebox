@@ -19,8 +19,17 @@ export interface VerificationCommand {
   /** Repo-root-relative directory to run in. */
   cwd: string;
   argv: string[];
-  /** Argv prefix for the isolated re-run of one failing test file, if possible. */
-  isolate?: { cwd: string; argv: string[] };
+  /**
+   * Argv prefix for the isolated re-run of one failing test file, if possible.
+   *
+   * `cwd` is where the re-run is spawned; `packageDir` is the directory the
+   * suite's OWN paths are relative to, which is not the same thing. `pnpm
+   * --dir callback-box` is spawned from the repo root while tap names
+   * `test/foo.test.ts` relative to `callback-box/` — resolving a TAP path
+   * against `cwd` alone finds nothing, and a failing file that cannot be
+   * identified is reported as real rather than re-run.
+   */
+  isolate?: { cwd: string; packageDir: string; argv: string[] };
   /** Present when the command is named but deliberately not run. */
   skip?: string;
 }
@@ -145,11 +154,20 @@ export interface CommandInput {
   hasScript: (pkg: string, script: string) => boolean;
   /** From {@link skipTypecheckLintDecision}. */
   skipTypecheckLint: { value: boolean; reason: string };
+  /** Did `bin/test-select` fail outright? Then callback-box runs everything. */
+  selectorFailed?: boolean;
 }
 
-/** callback-box iterates on the selected set; every other package runs its own. */
-function testScript(pkg: string): string {
-  return pkg === "callback-box" ? "test:changed" : "test";
+/**
+ * callback-box iterates on the selected set; every other package runs its own.
+ *
+ * When the selector itself failed — a graph or esbuild error, not a test
+ * failure — there is no selection to iterate on, and `test:changed` would just
+ * hit the same error. The plan's rule for an internal selector error is that
+ * callers run the full suite, so that is what the sheet names.
+ */
+function testScript(pkg: string, selectorFailed: boolean): string {
+  return pkg === "callback-box" && !selectorFailed ? "test:changed" : "test";
 }
 
 /**
@@ -158,12 +176,13 @@ function testScript(pkg: string): string {
  * fail-then-pass at the same content hash IS the flake definition); elsewhere
  * finish-verify reports the failure as real without a re-run.
  */
-const ROOT_ISOLATE = { cwd: ".", argv: ["node", "--import", "tsx", "--test"] };
+const ROOT_ISOLATE = { cwd: ".", packageDir: ".", argv: ["node", "--import", "tsx", "--test"] };
 
 function isolateFor(pkg: string): VerificationCommand["isolate"] | undefined {
   if (pkg === "callback-box") {
     return {
       cwd: ".",
+      packageDir: "callback-box",
       argv: [
         "pnpm",
         "--dir",
@@ -210,13 +229,14 @@ export function verificationCommands(input: CommandInput): VerificationCommand[]
   };
 
   for (const pkg of packages) {
-    if (input.hasScript(pkg, testScript(pkg))) {
+    const script = testScript(pkg, input.selectorFailed === true);
+    if (input.hasScript(pkg, script)) {
       const isolate = isolateFor(pkg);
       add({
         kind: "tests",
-        command: `pnpm --dir ${pkg} ${testScript(pkg)}`,
+        command: `pnpm --dir ${pkg} ${script}`,
         cwd: ".",
-        argv: ["pnpm", "--dir", pkg, testScript(pkg)],
+        argv: ["pnpm", "--dir", pkg, script],
         ...(isolate === undefined ? {} : { isolate }),
       });
     }
