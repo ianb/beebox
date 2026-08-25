@@ -384,8 +384,10 @@ test("tick stamps the heartbeat BEFORE any schedule runs, and runs only what is 
 test("tick that cannot write the store exits non-zero and notifies", async () => {
   const { schedulesRoot } = await makeSchedule("anyjob", { yaml: BASE_YAML, run: "#!/bin/sh\n" });
   const fake = await makeDeps({ schedulesRoot, nowMs: Date.parse("2026-08-24T12:00:00Z") });
-  // An existing directory with no marker is somebody else's data: refused.
+  // An existing directory with contents and no marker is somebody else's
+  // data: refused. (Empty is claimed — see ensureStoreRoot.)
   await fs.mkdir(fake.deps.storeRoot, { recursive: true });
+  await fs.writeFile(path.join(fake.deps.storeRoot, "theirs.txt"), "", "utf8");
   const result = await tick(fake.deps);
   assert.equal(result.exitCode, 1);
   assert.ok(result.heartbeatError !== null);
