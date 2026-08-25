@@ -55,23 +55,59 @@ value** (printing it would re-leak exactly what you're purging; look it up with
 convenience not enforcement — pair with server-side push protection / a CI scan
 for a real gate. Companion to the home-path guard above.
 
+## Commit provenance trailers (`commit-provenance.ts`)
+
+Two hooks and one script give every commit a queryable link to its
+workstream, plan, and (optionally) issue. Convention for agents: root
+`CLAUDE.md`. Design: `callback-box/docs/plans/commit-provenance-trailers.md`.
+
+- **`.husky/prepare-commit-msg`** → `commit-provenance --prepare <msgfile>
+  <source>`: on a `worktree-<name>` branch, `git interpret-trailers --in-place
+  --if-exists replace` stamps `Workstream: <name>` and, when exactly one
+  `callback-box/docs/plans/*.md` carries `workstream: <name>`, `Plan:
+  <basename>`. Skips `squash` sources, detached HEAD, and `main`. Any error
+  prints one stderr line and exits 0 — provenance never blocks a commit.
+- **`.husky/commit-msg`** → `commit-provenance --check <msgfile>`: reads the
+  trailer block with `git interpret-trailers --parse` (body prose that
+  happens to start with `Issue:` is not a trailer) and requires each `Issue:`
+  value to match `issues/**/<value>.md`, `closed/` included. A miss blocks
+  with the bare-name form and nearest basenames. `private-issues/` is never
+  searched — a private slug in public history is a leak.
+- **Queries**: `pnpm commit-provenance --workstream|--plan|--issue <name>
+  [--main]` — `git log --oneline --grep='^Key: value$'` over `--all` (or
+  `main`). Empty result prints nothing.
+- `land` merges `--no-ff`, so `git log --first-parent main` lists landings
+  and `<merge>^1..<merge>^2` lists what each brought.
+
+Hooks activate on checkout: `core.hooksPath` is the relative `.husky/_`, whose
+shim runs `.husky/<hook>` when the file exists — no install step.
+Tests: `bin/commit-provenance.test.ts` (a `.test.ts`, not a doctest, because
+each case forks a throwaway git repo with its own `core.hooksPath`).
+
 ## Landing a worktree branch (`land`)
 
-`bin/land [branch]` fast-forwards a finished worktree branch onto `main` — what
-`/finish` step 8 calls, and what you run by hand to land a branch a finish left
-merge-ready. It resolves the main checkout from `--git-common-dir` and targets
-it explicitly, so it works from the main checkout or from inside a worktree
-(where a plain `git -C ~/src/callback-box merge` is blocked by Claude Code's
-worktree isolation).
+`bin/land [branch]` merges a finished worktree branch onto `main` with
+`--no-ff --no-edit` — what `/finish` step 8 calls, and what you run by hand to
+land a branch a finish left merge-ready. It resolves the main checkout from
+`--git-common-dir` and targets it explicitly, so it works from the main
+checkout or from inside a worktree (where a plain `git -C ~/src/callback-box
+merge` is blocked by Claude Code's worktree isolation).
 
 With no argument: from a worktree it lands that worktree's own branch; from the
 main checkout it auto-detects the single merge-ready branch and refuses if
 several qualify. `--list` shows candidates, `--dry-run` previews.
 
-It enforces the preflight — main checkout clean, on `main`, `--ff-only` — and
-nothing more. Landing is a fast-forward by construction, since `/finish` merges
-main INTO the worktree and verifies there; a not-a-fast-forward refusal means
-main moved, and the fix belongs back in the worktree.
+It enforces the preflight — main checkout clean, on `main`, branch already
+contains main — and nothing more. That precondition guarantees the `--no-ff`
+merge is conflict-free by construction, since `/finish` merges main INTO the
+worktree and verifies there; a refusal means main moved since, and the fix
+belongs back in the worktree. `--no-ff` always creates a merge commit (`Merge
+branch 'worktree-<name>'`) instead of moving main's pointer, so `git log
+--first-parent main` lists one entry per landing and `<merge>^1..<merge>^2`
+shows what it brought — commit provenance. `.husky/post-merge` deploys on any
+merge that updates main (fast-forward or not), so deploy is unaffected; see
+`.husky/post-commit`'s merge-commit skip and `.husky/post-merge`'s
+`ORIG_HEAD..HEAD` diff for why.
 
 ## Router architecture
 
