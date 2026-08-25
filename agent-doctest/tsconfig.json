@@ -1,4 +1,17 @@
 {
+  // Typecheck-only. This package has no build step and never emits: its
+  // `exports` map serves the TypeScript sources directly (`"./check":
+  // "./src/check.ts"`), and there is no `build` script. The tsconfig used to
+  // carry `outDir`/`rootDir`/`declaration` anyway, describing an emit nobody
+  // ran.
+  //
+  // `allowImportingTsExtensions` is load-bearing, not a convenience:
+  // `src/doctest-hooks.ts` is loaded by Node's module-customization hook thread
+  // via `register()`, which does NOT get tsx's `.js` → `.ts` extension probing
+  // (only the main thread, running under `--import=tsx`, does). So the literal
+  // `.ts` extension is what actually resolves at runtime, and this flag is what
+  // makes writing it legal. It lives here rather than on the `typecheck` script
+  // so editors see the same program the CLI does.
   "compilerOptions": {
     "target": "ES2023",
     "module": "NodeNext",
@@ -12,14 +25,11 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "outDir": "dist",
-    "rootDir": "src",
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
     "lib": ["ES2023"],
     "types": ["node"]
   },
-  "include": ["src/**/*"],
+  "include": ["eslint.config.ts", "src/**/*"],
   "exclude": ["node_modules", "dist"]
 }

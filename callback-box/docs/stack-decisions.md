@@ -838,7 +838,7 @@ Position tracking is needed for:
 
 Why the switch: Markdoc's tag syntax (`{% quote from="people/dana" %}…{% /quote %}`) gives us first-class custom content types with attributes, validated at parse time, without bolting on rehype plugins to invent syntax inside HTML comments. See `docs/implemented-plans/cards-as-markdown-rfc.md` for the fuller rationale (cards moved to the same Markdoc tag system).
 
-**Doctest loader.** A separate concern, unaffected by the render swap. It extracts fenced code blocks from `.doctest.md` files with plain regex (`agent-doctest/src/doctest-hooks.mjs`), not an AST — so the remark/unified-based source-position story this decision originally imagined never actually got built, and remark/unified is no longer a dependency anywhere in the repo.
+**Doctest loader.** A separate concern, unaffected by the render swap. It extracts fenced code blocks from `.doctest.md` files with plain regex (`agent-doctest/src/doctest-parse.ts`), not an AST — so the remark/unified-based source-position story this decision originally imagined never actually got built, and remark/unified is no longer a dependency anywhere in the repo.
 
 KaTeX/math support is not currently wired into the Markdoc pipeline — revisit if math rendering is needed.
 

@@ -1,8 +1,8 @@
 /**
  * `eslint-plugin-tea` — the canvas-loop TEA (Elm-Architecture) sketch discipline
- * as a real ESLint plugin (the package's `./eslint` export). Stays plain `.mjs`:
- * ESLint loads config/plugins as JS and the package has no build step, so there
- * is nothing to compile the rules through.
+ * as a real ESLint plugin (the package's `./eslint` export). Plain TypeScript,
+ * no build step: ESLint 9 bundles jiti and loads `.ts` config/plugin files
+ * through it directly, so there is nothing to compile the rules through.
  *
  * The types + runtime deep-freeze already make violations fail; these rules are
  * the belt that fails them at lint time, before a run, with a clear message.
@@ -19,29 +19,31 @@
  * `@typescript-eslint/switch-exhaustiveness-check` (exhaustive `Msg` switch).
  * That rule needs TypeScript project information (`parserOptions.projectService`),
  * so a consumer wires it into their own type-aware block — see this package's
- * `eslint.config.mjs` and TEA.md for the exact snippet.
+ * `eslint.config.ts` and TEA.md for the exact snippet.
  *
  * `no-classes` is a custom rule rather than a config-level `no-restricted-syntax`
  * entry on purpose: adding a second `no-restricted-syntax` for the sketch dirs
  * would replace (not extend) the vibe-check preset's own selectors there,
  * silently weakening the shared config. A standalone rule composes cleanly.
  */
+import type { ESLint, Linter, Rule } from "eslint";
+import type * as ESTree from "estree";
 
 /** Walk a MemberExpression chain down to its base object node. */
-function rootObject(node) {
+function rootObject(node: ESTree.Node): ESTree.Node {
   let current = node;
   while (current.type === "MemberExpression") current = current.object;
   return current;
 }
 
 /** True when a MemberExpression is rooted at an identifier named `model`. */
-function rootedAtModel(memberExpression) {
+function rootedAtModel(memberExpression: ESTree.MemberExpression): boolean {
   const root = rootObject(memberExpression);
   return root.type === "Identifier" && root.name === "model";
 }
 
 // Array/Map/Set methods that mutate in place.
-const MUTATORS = new Set([
+const MUTATORS: ReadonlySet<string> = new Set([
   "push",
   "pop",
   "shift",
@@ -57,7 +59,7 @@ const MUTATORS = new Set([
   "clear",
 ]);
 
-const noModuleState = {
+const noModuleState: Rule.RuleModule = {
   meta: {
     type: "problem",
     docs: { description: "Disallow top-level let/var in sketch modules; all state lives in Model." },
@@ -78,7 +80,7 @@ const noModuleState = {
   },
 };
 
-const noModelMutation = {
+const noModelMutation: Rule.RuleModule = {
   meta: {
     type: "problem",
     docs: { description: "Disallow mutating a `model` parameter; return a new Model instead." },
@@ -88,7 +90,7 @@ const noModelMutation = {
     },
   },
   create(context) {
-    function report(node) {
+    function report(node: ESTree.Node) {
       context.report({ node, messageId: "mutation" });
     }
     return {
@@ -113,7 +115,7 @@ const noModelMutation = {
   },
 };
 
-const noAsyncSketch = {
+const noAsyncSketch: Rule.RuleModule = {
   meta: {
     type: "problem",
     docs: { description: "Disallow async/await/.then/new Promise in sketch modules." },
@@ -123,7 +125,9 @@ const noAsyncSketch = {
     },
   },
   create(context) {
-    function reportAsyncFn(node) {
+    function reportAsyncFn(
+      node: ESTree.FunctionDeclaration | ESTree.FunctionExpression | ESTree.ArrowFunctionExpression,
+    ) {
       if (node.async) context.report({ node, messageId: "async", data: { what: "`async` functions are not allowed" } });
     }
     return {
@@ -147,7 +151,7 @@ const noAsyncSketch = {
   },
 };
 
-const noClasses = {
+const noClasses: Rule.RuleModule = {
   meta: {
     type: "problem",
     docs: { description: "Disallow class declarations/expressions in sketch modules." },
@@ -157,7 +161,7 @@ const noClasses = {
     },
   },
   create(context) {
-    function report(node) {
+    function report(node: ESTree.Node) {
       context.report({ node, messageId: "noClass" });
     }
     return { ClassDeclaration: report, ClassExpression: report };
@@ -174,7 +178,7 @@ export { noModuleState, noModelMutation, noAsyncSketch, noClasses };
  * type-only. Shared here so `configs.recommended` and any hand-rolled block use
  * the identical pattern.
  */
-export const teaImportRestriction = {
+export const teaImportRestriction: { patterns: Array<{ regex: string; message: string }> } = {
   patterns: [
     {
       regex: "^(?!@ianbicking/canvas-loop$).+",
@@ -183,6 +187,12 @@ export const teaImportRestriction = {
   ],
 };
 
+// `rules`/`configs` are typed via `satisfies` rather than a plain `ESLint.Plugin`
+// annotation so the named keys stay concrete (no `Record<string, …>` index
+// signature) — that keeps `plugin.rules["no-module-state"]` and
+// `plugin.configs.recommended` free of the `| undefined` that
+// `noUncheckedIndexedAccess`/optional `Plugin` properties would otherwise add,
+// for every consumer (this file, the test, `eslint.config.ts`).
 const plugin = {
   meta: { name: "eslint-plugin-tea" },
   rules: {
@@ -191,8 +201,7 @@ const plugin = {
     "no-async-sketch": noAsyncSketch,
     "no-classes": noClasses,
   },
-  configs: {},
-};
+} satisfies ESLint.Plugin;
 
 /**
  * The TEA discipline as a ready-to-spread flat-config block, scoped to the
@@ -200,7 +209,7 @@ const plugin = {
  * file header). Spread this after your base config; nothing here redefines a
  * preset rule, so the shared config is never weakened.
  */
-plugin.configs.recommended = {
+const recommended = {
   files: ["**/*-tea.ts"],
   plugins: { tea: plugin },
   rules: {
@@ -210,6 +219,11 @@ plugin.configs.recommended = {
     "tea/no-classes": "error",
     "no-restricted-imports": ["error", teaImportRestriction],
   },
-};
+} satisfies Linter.Config;
 
-export default plugin;
+const pluginWithConfigs = {
+  ...plugin,
+  configs: { recommended },
+} satisfies ESLint.Plugin;
+
+export default pluginWithConfigs;

@@ -48,13 +48,13 @@ stamp() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 
 # ── Parent: hand the sweep to a process group of its own, then return ───
 #
-# `( … ) & disown` is NOT detachment — see bin/lib/detach.mjs. The sweep this
+# `( … ) & disown` is NOT detachment — see bin/lib/detach.ts. The sweep this
 # hook launches must outlive the session whose exit triggered it, and under the
 # old form it did not: SessionEnd sweeps were the only ones that ever went
 # missing from the log, and they went missing whether or not the hook itself
 # succeeded.
 if [ "${2:-}" != "--run" ]; then
-  node "$REPO/bin/lib/detach.mjs" "$HOOK_DIR/auto-sweep.sh" "$trigger" --run \
+  node "$REPO/bin/lib/detach.ts" "$HOOK_DIR/auto-sweep.sh" "$trigger" --run \
     >/dev/null 2>&1 || echo "$(stamp) auto-sweep trigger=$trigger DETACH-FAILED" >> "$LOG"
   exit 0
 fi

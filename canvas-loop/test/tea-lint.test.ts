@@ -1,6 +1,6 @@
 import { RuleTester } from "eslint";
 import { describe, it } from "node:test";
-import plugin from "../src/eslint/index.mjs";
+import plugin from "../src/eslint/index.js";
 
 const tester = new RuleTester({
   languageOptions: { ecmaVersion: "latest", sourceType: "module" },
