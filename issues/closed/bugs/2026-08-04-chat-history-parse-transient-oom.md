@@ -13,7 +13,7 @@ resolution: implemented
 > client refetch backoff/dedupe). The temporary `cb` instrumentation patch and the
 > `/home/callback/diag` dir are removed. Direction 4 (strip/sidecar multi-MB
 > payloads at write/render) is the remaining longer-term hardening, spun out to
-> [strip-multi-mb-payloads-from-transcript-entries](../../code-quality/2026-08-05-strip-multi-mb-payloads-from-transcript-entries.md).
+> [strip-multi-mb-payloads-from-transcript-entries](../code-quality/2026-08-05-strip-multi-mb-payloads-from-transcript-entries.md).
 
 Four V8 heap OOMs of prod box-family's `cb serve` (2026-08-03 21:39, 2026-08-04
 02:09, 02:10, 17:18 UTC — all at the ~1.9GB default cap, all during

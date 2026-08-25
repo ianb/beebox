@@ -55,11 +55,15 @@ await findChatHusk(box.root, "00000000-unknown")
 => null
 ```
 
-## the snippet title strips the `<chat-app>` prepend
+## the snippet title strips every wrapper, not just `<chat-app>`
 
-Every stored user message begins with the `<chat-app …/>` snapshot tag
-(`session/start.ts` prepends it), so a title sliced from the raw text would
-open with the tag instead of what the user said.
+A stored user message is wrapped twice over: the `<chat-app …/>` snapshot tag
+(`session/start.ts` prepends it) and the `<typed>`/`<speech>` shell the chat
+adds, which carries the sender's name and email as attributes. A title sliced
+from the raw text opens with markup instead of what the person said — and in the
+`<typed>` case puts their **email address** into a committed card title and into
+the session chip. So the title goes through `extractSnippet`, the one cleaning
+step between a raw user message and a display label.
 
 ```ts
 const box = await makeTmpBox();
@@ -77,6 +81,27 @@ await box.read(titledHusk)
 session: cccc1111-2222-3333-4444-555566667777
 title: Please reply with just the word ok.
 ---
+```
+
+A web-composer message — the shape that actually reaches a backfilled husk —
+carries the `<typed>` shell with the sender's identity on it. None of that
+belongs in the chat's name:
+
+```ts continue
+const web = "dddd1111-2222-3333-4444-555566667777";
+const webLog = getSessionLogPath(box.root, web);
+await mkdir(dirname(webLog), { recursive: true });
+await writeFile(webLog, JSON.stringify({
+  type: "user",
+  message: { role: "user", content: [{ type: "text", text: '<chat-app narration="off" channel="web-desktop"/>\n<typed user="Ada Lovelace" user-email="ada@example.com">where did I put the drawer key?</typed>' }] },
+}) + "\n");
+const webHusk = await ensureChatHusk(box.root, { sessionId: web, date: new Date("2026-08-23T12:00:00Z") });
+const card = await box.read(webHusk);
+JSON.stringify({
+  title: card.split("\n").find((l) => l.startsWith("title:")),
+  leaksEmail: card.includes("ada@example.com"),
+})
+=> {"title":"title: where did I put the drawer key?","leaksEmail":false}
 ```
 
 ## reconcile husks every history entry, skipping ghosts
