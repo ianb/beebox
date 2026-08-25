@@ -16,6 +16,7 @@
 
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
+import { tickPath } from "./lib/schedules-launchd.js";
 import * as fs from "node:fs/promises";
 import { existsSync } from "node:fs";
 import * as os from "node:os";
@@ -1230,4 +1231,11 @@ test("execChild keeps only the tail of a noisy child in memory", async () => {
   assert.equal(lines.at(-1), "line-4999");
   assert.equal(result.output.includes("line-0\n"), false);
   assert.equal(result.logTruncated, false);
+});
+
+test("tickPath puts the installing node and the agent CLIs ahead of launchd's default PATH", () => {
+  const p = tickPath({ execPath: "/opt/nvm/v24/bin/node", env: { PATH: "/x/agents:/usr/bin" } });
+  assert.equal(p.split(":")[0], "/opt/nvm/v24/bin");
+  assert.ok(p.split(":").includes("/usr/bin"));
+  assert.ok(!p.includes("::"));
 });
