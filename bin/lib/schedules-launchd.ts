@@ -31,7 +31,8 @@ function logFile(): string {
 
 /**
  * launchd starts jobs with a PATH of `/usr/bin:/bin:/usr/sbin:/sbin` — no
- * version-managed node, no `~/.local/bin` agent CLIs. Without this, the tick
+ * version-managed node, no `~/.local/bin` agent CLIs — and a cwd of `/`, where
+ * `--import tsx` resolves nothing (hence `WorkingDirectory`). Without these the tick
  * died on `exec: node: not found` at every interval and nothing ever ran
  * (found 2026-08-25, after the tick had "never" ticked). Baked at install from
  * the node that ran `install` and the agent CLIs it can see; a node upgrade
@@ -64,6 +65,7 @@ function plistBody(input: { repoRoot: string; log: string; pathEnv: string }): s
     <string>${input.repoRoot}/bin/schedules</string>
     <string>tick</string>
   </array>
+  <key>WorkingDirectory</key><string>${input.repoRoot}</string>
   <key>EnvironmentVariables</key>
   <dict><key>PATH</key><string>${xmlEscape(input.pathEnv)}</string></dict>
   <key>StartInterval</key><integer>${String(TICK_INTERVAL_SECONDS)}</integer>
