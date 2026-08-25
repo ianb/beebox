@@ -180,6 +180,18 @@ export interface EventBus {
   /** Read all persisted events after the given ID. */
   readSince(afterId: number): BusEvent[];
 
+  /**
+   * The most recent persisted events of one type, oldest-first, at most
+   * `limit` of them.
+   *
+   * `readSince` answers "what have I missed", which needs a cursor the caller
+   * has been holding. A page load has no cursor — it is asking "what does the
+   * box know right now", and the only bounded honest answer is a recent slice
+   * of one event type. Used by `chat.bootstrap` to report the messages the box
+   * has accepted but not yet written into a transcript.
+   */
+  readRecent(options: { event: BusEventName; limit: number }): BusEvent[];
+
   /** Replay missed events then stream live ones. */
   subscribe(options: { afterId?: number; listener: BusListener }): Subscription;
 
@@ -225,6 +237,11 @@ export function createEventBus(boxRoot: string, options?: CreateEventBusOptions)
       id INTEGER PRIMARY KEY CHECK (id = 1),
       schema_generation INTEGER NOT NULL
     );
+    -- Backs readRecent's "newest N of one type". Without it that query walks
+    -- backwards through every row of every other type until it has collected
+    -- its limit, which on a busy box is most of the table for an answer about
+    -- a handful of chat messages.
+    CREATE INDEX IF NOT EXISTS idx_events_event_id ON events (event, id);
   `);
 
   reconcileSchemaGeneration(db);
@@ -234,6 +251,9 @@ export function createEventBus(boxRoot: string, options?: CreateEventBusOptions)
   );
   const readSinceStmt = db.prepare<[number], EventRow>(
     "SELECT id, event, data, created_at as createdAt FROM events WHERE id > ? ORDER BY id"
+  );
+  const readRecentStmt = db.prepare<[string, number], EventRow>(
+    "SELECT id, event, data, created_at as createdAt FROM events WHERE event = ? ORDER BY id DESC LIMIT ?"
   );
   const pruneStmt = db.prepare(
     "DELETE FROM events WHERE created_at < ?"
@@ -292,6 +312,20 @@ export function createEventBus(boxRoot: string, options?: CreateEventBusOptions)
       createdAt: new Date().toISOString(),
     };
     notifyListeners(busEvent);
+  }
+
+  /**
+   * A bounded tail of one event type, handed back oldest-first.
+   *
+   * The query takes the newest rows (so the bound bites on the recent end,
+   * which is the end a caller asking "what just happened" means) and the order
+   * is flipped afterwards, because every consumer reads a conversation
+   * forwards. A row that fails validation is dropped by `parseRows`, same as
+   * on every other read path.
+   */
+  function readRecent(request: { event: BusEventName; limit: number }): BusEvent[] {
+    const rows = readRecentStmt.all(request.event, request.limit);
+    return parseRows(rows.toReversed());
   }
 
   function readSince(afterId: number): BusEvent[] {
@@ -363,5 +397,5 @@ export function createEventBus(boxRoot: string, options?: CreateEventBusOptions)
     listeners.clear();
   }
 
-  return { emit, emitTransient, readSince, subscribe, prune, close };
+  return { emit, emitTransient, readSince, readRecent, subscribe, prune, close };
 }

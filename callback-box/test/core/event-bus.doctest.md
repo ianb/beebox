@@ -114,6 +114,47 @@ bus.close();
 await box.cleanup();
 ```
 
+## readRecent — a bounded tail of one event type
+
+`readSince(afterId)` answers "what have I missed", which needs a cursor the
+caller has been holding. A page load has no cursor: it is asking what the box
+knows right now, and the only bounded honest answer is a recent slice of one
+type. `chat.bootstrap` reads the messages the box accepted this way.
+
+Newest-first is how the bound should bite — the recent end is the end the
+question is about — but every consumer reads a conversation forwards, so the
+result comes back oldest-first:
+
+```ts
+const box2 = await makeTmpBox();
+const bus2 = createEventBus(box2.root);
+for (const source of ["a", "b", "c", "d"]) bus2.emit("cards-changed", { source });
+bus2.emit("chat-complete", { sessionId: "s-1", timestamp: TS });
+
+bus2.readRecent({ event: "cards-changed", limit: 3 }).map((e) => e.data.source).join(",")
+=> b,c,d
+```
+
+It answers about one type only — a busier neighbouring event stream cannot
+crowd out the answer:
+
+```ts continue
+JSON.stringify(bus2.readRecent({ event: "chat-complete", limit: 10 }).map((e) => e.event))
+=> ["chat-complete"]
+```
+
+A type nothing has emitted is empty, not an error:
+
+```ts continue
+bus2.readRecent({ event: "chat-user-message", limit: 10 }).length
+=> 0
+```
+
+```ts cleanup
+bus2.close();
+await box2.cleanup();
+```
+
 ## A bad row degrades to a sentinel without breaking its siblings
 
 Emit one valid row, then hand-write three broken ones directly into SQLite: a

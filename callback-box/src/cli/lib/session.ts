@@ -264,6 +264,11 @@ export async function parseSessionLog(
   params: ParseSessionLogParams
 ): Promise<SessionLogResult> {
   const { logPath, slice } = params;
+  // The transcript is named for its session (`transcript-paths.ts`), so the
+  // file the scan was handed already carries the id a media reference needs.
+  // Taking it from here rather than from a new parameter keeps every existing
+  // caller — CLI renderers, review, retro — unchanged.
+  const sessionId = path.basename(logPath, ".jsonl");
   const fileStream = fs.createReadStream(logPath, { encoding: "utf-8" });
   const rl = readline.createInterface({
     input: fileStream,
@@ -281,6 +286,10 @@ export async function parseSessionLog(
     // and `hasMore` stay honest), is never a real user message, and carries no
     // `tool_use` block for a later `tool_result` to graft onto.
     let usable = line;
+    // Non-null once this line's image payloads have been dropped: the entry's
+    // image blocks then carry a reference back to the bytes still sitting in
+    // this file, instead of a placeholder (`shared/session-media.ts`).
+    let mediaSessionId: string | null = null;
     if (isOversizeLine(line)) {
       // Almost every oversize line is oversize because it carries an image. Drop
       // the payload and the rest of the turn — the person's own text, the
@@ -293,10 +302,11 @@ export async function parseSessionLog(
         continue;
       }
       usable = stripped;
+      mediaSessionId = sessionId;
     }
     const raw = parseJsonlLine(usable, "parseSessionLog");
     if (!raw) continue;
-    const entry = buildEntry(raw, scan.recent());
+    const entry = buildEntry(raw, { recent: scan.recent(), mediaSessionId });
     if (entry) scan.record(entry);
   }
 

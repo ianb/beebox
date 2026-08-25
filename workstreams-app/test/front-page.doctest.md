@@ -10,7 +10,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 Object.assign(globalThis, { React });
 
-import { RecentView } from "../src/frontend/pages/RecentPage.js";
+import { RecentView, recentRowTarget } from "../src/frontend/pages/RecentPage.js";
 import { WorkstreamsHeader } from "../src/frontend/pages/WorkstreamsPage.js";
 import type { Quota, RecentFeed } from "../src/frontend/types.js";
 
@@ -49,4 +49,61 @@ JSON.stringify({
   streamsPageHasQuota: streamsHeader.includes("Quotas"),
 })
 => {"frontPageHasQuota":true,"quotaFailureIsVisible":true,"streamsPageHasQuota":false}
+```
+
+## An issue in the feed opens in the issue viewer
+
+The feed addresses every entry by repository path, but an issue is not read as
+markdown source — it has a viewer that knows about frontmatter, related items,
+and actions. Only main's copy: the viewer reads issues from the main checkout,
+so a worktree's row keeps the checkout-aware browser.
+
+```ts
+const recentFile = (relPath, workstream) => ({
+  relPath,
+  kind: "markdown",
+  at: 1_779_999_000,
+  workstream,
+  inProgress: false,
+});
+JSON.stringify([
+  recentFile("issues/bugs/2026-08-25-a-real-issue.md", null),
+  recentFile("issues/closed/features/2026-08-01-a-closed-issue.md", null),
+  recentFile("issues/bugs/2026-08-25-a-worktree-issue.md", "some-stream"),
+  recentFile("issues/CLAUDE.md", null),
+  recentFile("callback-box/docs/plans/a-plan.md", null),
+].map(recentRowTarget), null, 2)
+=> [
+  {
+    "to": "/issues",
+    "search": {
+      "issue": "bugs/2026-08-25-a-real-issue.md"
+    }
+  },
+  {
+    "to": "/issues",
+    "search": {
+      "issue": "closed/features/2026-08-01-a-closed-issue.md"
+    }
+  },
+  {
+    "to": "/browse",
+    "search": {
+      "file": "issues/bugs/2026-08-25-a-worktree-issue.md",
+      "workstream": "some-stream"
+    }
+  },
+  {
+    "to": "/browse",
+    "search": {
+      "file": "issues/CLAUDE.md"
+    }
+  },
+  {
+    "to": "/browse",
+    "search": {
+      "file": "callback-box/docs/plans/a-plan.md"
+    }
+  }
+]
 ```

@@ -27,7 +27,9 @@ import { createActor, fromPromise, fromCallback } from "xstate";
 import { chatMachine } from "../../src/frontend/src/machines/chatMachine.js";
 import { applyStreamError, promoteLastToPending } from "../../src/frontend/src/machines/chat-actions.js";
 
-const EMPTY = { entries: [], total: 0, sessionId: "s1", running: false, busy: false };
+// `pending` is the box's record of messages it accepted but has not yet
+// written into the transcript (`chat.bootstrap`); a stubbed fetch has none.
+const EMPTY = { entries: [], total: 0, sessionId: "s1", running: false, busy: false, pending: [] };
 
 // A started machine parked in `refreshing` with a streamed reply in hand:
 // `fetchHistory` never settles, so the state under test stays observable.

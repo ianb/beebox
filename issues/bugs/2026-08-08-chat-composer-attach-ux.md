@@ -54,3 +54,21 @@ Three related composer problems, seen on a first-ever file attach in chat:
 
 All three are on the first surface a new user touches (the empty-box chat), so
 they punch above their weight for onboarding.
+
+## Re-checked 2026-08-25
+
+Item 2 is **resolved** and was not recorded here: the two menu entries were
+merged into one "Add files…" routed in code (`5336b291`, `f8095747`,
+`worktree-add-files-menu`), closing
+[attach-vs-upload-menu-confusing](../closed/features/2026-08-03-attach-vs-upload-menu-confusing.md).
+The labeling/merge decision this issue was waiting on has therefore been made.
+
+What is left is narrower than the header suggests:
+
+- Item 1's remaining half — the `[fileN]` token is still visible in the
+  composer while typing. Unchanged; it needs a rich composer or a different
+  anchoring design, not a label fix.
+- The run-2 bulk-upload panel observation (the panel reporting "No files yet"
+  while the files landed in the composer). The menu merge removes the *choice*
+  between two intake paths but not the two paths themselves, so whether this
+  still reproduces is unverified.

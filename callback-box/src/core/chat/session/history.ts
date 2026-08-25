@@ -24,7 +24,7 @@
 import { makeLog } from "./log.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { getSessionDir, getSessionLogPath } from "./transcript-paths.js";
+import { containedSessionCwd, getSessionDir, getSessionLogPath } from "./transcript-paths.js";
 import { errnoCode, errorMessage } from "../../../lib/error-guards.js";
 import { isRecord } from "../../card-io.js";
 import { writeFileAtomic } from "../../../lib/atomic-write.js";
@@ -298,9 +298,10 @@ export async function resolveSessionLogPath(boxRoot: string, sessionId: string):
  * a whole re-read and re-parse of the history file per iteration.
  */
 export function sessionLogPathFor(boxRoot: string, entry: SessionHistoryEntry): string {
-  const cwd = entry.contextDir === undefined || entry.contextDir === "" ? boxRoot : path.join(boxRoot, entry.contextDir);
-  return getSessionLogPath(cwd, entry.id);
+  return getSessionLogPath(containedSessionCwd(boxRoot, entry.contextDir), entry.id);
 }
+
+
 
 /**
  * Find the most-recently-created session associated with a directory.
