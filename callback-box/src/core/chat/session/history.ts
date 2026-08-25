@@ -80,7 +80,12 @@ function parseSessionEntry(raw: unknown): SessionHistoryEntry | null {
   const engine = "engine" in raw ? raw.engine : "claude";
   if (engine !== "claude" && engine !== "codex") return null;
   const entry: SessionHistoryEntry = { id: raw.id, engine };
-  if ("contextDir" in raw && typeof raw.contextDir === "string" && raw.contextDir.length > 0) {
+  // `""` is kept, not treated as absent: it is the box-root landmark, which
+  // `appendHistory` and `getDirectoryForSession` both document as a real
+  // binding. Dropping it here lost the binding of every chat opened from the
+  // Box row the moment its reservation went away, so the app bar stopped
+  // naming its place.
+  if ("contextDir" in raw && typeof raw.contextDir === "string") {
     entry.contextDir = raw.contextDir;
   }
   if ("features" in raw && raw.features !== null && typeof raw.features === "object" && !Array.isArray(raw.features)) {

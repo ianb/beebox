@@ -47,8 +47,8 @@ const ACCEPTED_WINDOW_MS = 10 * 60 * 1000;
  */
 const ACCEPTED_SCAN_LIMIT = 50;
 
-/** `[imageN]` composer tokens — see where this is applied. */
-const IMAGE_TOKEN_RE = /\[image\d+]/g;
+/** `[image#N]` composer tokens, either form — see where this is applied. */
+const IMAGE_TOKEN_RE = /\[image#?\d+]/g;
 
 /**
  * An accepted message in the shape the client's pending list already takes.

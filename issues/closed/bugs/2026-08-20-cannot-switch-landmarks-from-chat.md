@@ -1,12 +1,18 @@
 ---
 title: "Stuck in one landmark — the switch menu doesn't move you, though the whole server side resolves correctly"
-workstream: unattached
+workstream: chat-wayfinding
 area: callback-box
 labels: [chat, navigation, ios, landmarks]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder report from a deployed box
+resolution: implemented
 ---
+
+## Resolved (2026-08-25)
+
+Fixed by `8d80ef30` (fix(chat): name the landmark a coined chat is bound to, and offer a way back). The actual cause was server-side after all, just not in `chat.placeMenu` or `chat.lastSessionForDirectory`'s *committed-history* answers as inspected above — the switch coined a fresh chat every time the target landmark's only session was a reservation with no committed history row yet, because `chat.lastSessionForDirectory` and `chat.directoryFor` read only committed history. Both now fall back to the in-memory reservation store. Verified in the running app: switching to a reserved-but-unstarted landmark now reuses that reservation's id instead of coining a second one.
+
 
 On a deployed box, the chat is stuck in one landmark: the place-switch menu
 will not move to another. Observed on iOS; unconfirmed whether the web client
@@ -101,3 +107,37 @@ navigation the coining/latch machinery above that line can hand back a session i
 instead, and the dir is dropped — leaving the chat bound but unlabelled.
 
 So the search is not confined to the iOS shell.
+
+## The prop-drop diagnosis above is wrong; the cause is the reservation (2026-08-25)
+
+Re-reproduced in the web client on a local box. The symptom is real and worse
+than filed — **a cold load of the same URL is wrong too**, which the section
+above says it is not. Two observations rule the filed mechanism out:
+
+- Switching to a landmark whose chat already has a committed history row
+  relabels the chip immediately, on the client-side navigation, with no reload.
+  So `ChatPage`'s `contextDir={rendered === "new" ? … }` is not dropping
+  anything that matters.
+- A landmark chat that has never had a turn is unlabelled on a cold load as
+  well, so the difference is not client-side-nav versus first paint.
+
+What actually happens: opening a landmark with no committed chat takes the coin
+path, and a coined chat's binding lives **only in the in-memory reservation**
+(`core/chat/session/reserve.ts` — "Reservations are in-memory only";
+`contextDir` sits on the `ChatReservation`). `chat.directoryFor` reads only the
+persisted history (`getDirectoryForSession` → `loadHistoryEntries`), which has
+no row until the first turn commits. It therefore answers `null`, and the chat
+is bound server-side but unlabelled client-side until the chat has been used
+*and* the page reloaded — the `null` is cached.
+
+A second-order bug rides along: `chat.lastSessionForDirectory` ignores
+reservations too, so switching to a landmark whose only chat is
+reserved-not-yet-started coins a *fresh* chat every time rather than returning
+to the one you just left. That is the same complaint as
+[no consistent way back to chat](../../bugs/2026-08-23-no-consistent-way-back-to-chat.md).
+
+Both are fixed on `worktree-chat-wayfinding`: the two procedures consult the
+reservation store, `""` (the box-root landmark) is kept distinct from `null`
+through the reserve path so a chat opened from the Box row is labelled too, and
+`ChatReservationStore.latestForDirectory` is what "open this landmark's chat"
+falls back to.

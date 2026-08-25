@@ -35,3 +35,9 @@ Not yet reproduced twice, so filed rather than fixed. If it recurs, look at
 whether `fakeSweep`'s log-polling `until()` helper has a race against when
 the "reclaiming stale lock" line is flushed relative to the other lines it
 checks for.
+
+**Recurred 2026-08-25** in a full-suite run on `worktree-live-vs-stored` (load
+average 23+, a deploy running alongside). Failed once at 25s, passed 6/6 in
+isolation immediately after. The branch touched only session-transcript readers,
+nothing under `bin/`, `dev/`, or auto-sweep — consistent with the load-race
+diagnosis above rather than any regression.

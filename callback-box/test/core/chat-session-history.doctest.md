@@ -259,6 +259,34 @@ await getDirectoryForSession(box.root, "ghi")
 await box.cleanup();
 ```
 
+## The box-root binding survives a read
+
+`""` is the box-root landmark, and a chat opened from the Box row is bound to
+it as much as one opened from any other landmark. The reader used to drop an
+empty `contextDir` as if it were absent, which meant a root-bound chat came
+back unbound — so the app bar stopped naming its place the moment the chat's
+in-memory reservation went away. `null` still means a chat with no binding at
+all.
+
+```ts
+const box = await makeTmpBox();
+await appendHistory(box.root, { sessionId: "abc", contextDir: "" });
+await appendHistory(box.root, { sessionId: "def" });
+await seedSessionLog(box.root, "abc");
+
+JSON.stringify({
+  root: await getDirectoryForSession(box.root, "abc"),
+  unbound: await getDirectoryForSession(box.root, "def"),
+  lastForRoot: await getLastSessionForDirectory(box.root, ""),
+})
+=> {"root":"","unbound":null,"lastForRoot":"abc"}
+```
+
+```ts cleanup
+await cleanupSessionLogs(box.root, []);
+await box.cleanup();
+```
+
 ## sessionLogPathFor resolves an entry the caller already holds
 
 `resolveSessionLogPath` re-reads the whole history file to find the entry's

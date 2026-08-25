@@ -212,19 +212,19 @@ JSON.stringify(buildContentBlocks({ text: "hello world" }))
 
 ## buildContentBlocks — inline image replacement
 
-An `[imageN]` token in the text is replaced with the matching image block,
+An `[image#N]` token in the text is replaced with the matching image block,
 and the surrounding text is split into separate blocks:
 
 ```ts
 const imgs = [{ id: 1, mimeType: "image/png", dataBase64: "AAAA" }];
-const blocks = buildContentBlocks({ text: "before [image1] after", images: imgs });
+const blocks = buildContentBlocks({ text: "before [image#1] after", images: imgs });
 JSON.stringify(blocks)
 => [{"type":"text","text":"before "},{"type":"image","source":{"type":"base64","media_type":"image/png","data":"AAAA"}},{"type":"text","text":" after"}]
 ```
 
 ## buildContentBlocks — unreferenced images append at end
 
-Images without a matching `[imageN]` token get appended after the text:
+Images without a matching `[image#N]` token get appended after the text:
 
 ```ts
 const imgs = [{ id: 1, mimeType: "image/jpeg", dataBase64: "QQ==" }];
@@ -235,20 +235,22 @@ JSON.stringify(blocks.map((b) => b.type))
 
 ## buildContentBlocks — orphan tokens left as literal text
 
-A `[image9]` token with no matching attachment stays as literal text
+A `[image#9]` token with no matching attachment stays as literal text
 (rather than being silently dropped):
 
 ```ts
 const imgs = [{ id: 1, mimeType: "image/png", dataBase64: "X" }];
-const blocks = buildContentBlocks({ text: "[image9] is orphan [image1] real", images: imgs });
+const blocks = buildContentBlocks({ text: "[image#9] is orphan [image#1] real", images: imgs });
 JSON.stringify(blocks)
-=> [{"type":"text","text":"[image9] is orphan "},{"type":"image","source":{"type":"base64","media_type":"image/png","data":"X"}},{"type":"text","text":" real"}]
+=> [{"type":"text","text":"[image#9] is orphan "},{"type":"image","source":{"type":"base64","media_type":"image/png","data":"X"}},{"type":"text","text":" real"}]
 ```
 
 ## buildContentBlocks — multiple images in order
 
 Two different images resolve to different blocks at their respective
-token positions:
+token positions. Spelled here in the pre-2026-08-25 form, without the `#`:
+every transcript written before then looks like this, and replaying one has to
+land the photos in the same places it always did.
 
 ```ts
 const imgs = [

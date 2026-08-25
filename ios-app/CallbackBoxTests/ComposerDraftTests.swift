@@ -470,8 +470,8 @@ final class ComposerDraftReducerTests: XCTestCase {
             state: .local
         )))
 
-        XCTAssertEqual(draft.text, "A 👩🏽‍💻 [file7] Z")
-        XCTAssertEqual(draft.selection.location, ("A 👩🏽‍💻 [file7]" as NSString).length)
+        XCTAssertEqual(draft.text, "A 👩🏽‍💻 [file#7] Z")
+        XCTAssertEqual(draft.selection.location, ("A 👩🏽‍💻 [file#7]" as NSString).length)
         XCTAssertEqual(draft.nextFileID, 8)
     }
 
@@ -482,9 +482,22 @@ final class ComposerDraftReducerTests: XCTestCase {
         ComposerDraftReducer.reduce(&draft, .removeImage(2))
 
         XCTAssertEqual(draft.images.map(\.id), [5])
-        XCTAssertFalse(draft.text.contains("[image2]"))
-        XCTAssertTrue(draft.text.contains("[image5]"))
+        XCTAssertFalse(draft.text.contains("[image#2]"))
+        XCTAssertTrue(draft.text.contains("[image#5]"))
         XCTAssertEqual(draft.nextImageID, 6)
+    }
+
+    func testRemovingAnItemStripsThePreRenameTokenForm() {
+        // A draft persisted before 2026-08-25 says `[image3]`, without the `#`.
+        // Taking that attachment out has to strip the token the text actually
+        // holds, or the message ships a reference to a photo that is gone.
+        var draft = ComposerDraft.empty
+        draft.text = "look at [image3] here"
+        draft.images = [DraftImage(id: 3, filename: "old.jpg", mimeType: "image/jpeg", state: .local)]
+        ComposerDraftReducer.reduce(&draft, .removeImage(3))
+
+        XCTAssertTrue(draft.images.isEmpty)
+        XCTAssertFalse(draft.text.contains("[image3]"))
     }
 
     func testCaretInsideComposedEmojiFallsBackToEnd() {
@@ -593,8 +606,8 @@ final class ComposerDraftRepositoryTests: XCTestCase {
 
         XCTAssertEqual(store.draft.images.map(\.id), [2])
         XCTAssertEqual(store.draft.nextImageID, 3)
-        XCTAssertFalse(store.draft.text.contains("[image1]"))
-        XCTAssertTrue(store.draft.text.contains("[image2]"))
+        XCTAssertFalse(store.draft.text.contains("[image#1]"))
+        XCTAssertTrue(store.draft.text.contains("[image#2]"))
 
         let relaunched = ComposerDraftStore(repository: repository, defaults: defaults)
         await relaunched.activate(boxID: boxID)
@@ -647,7 +660,7 @@ final class ComposerDraftRepositoryTests: XCTestCase {
         await store.activate(boxID: boxID)
 
         XCTAssertTrue(store.draft.images.isEmpty)
-        XCTAssertFalse(store.draft.text.contains("[image4]"))
+        XCTAssertFalse(store.draft.text.contains("[image#4]"))
         XCTAssertEqual(store.restoreNotice, "Some draft attachments were missing and were removed.")
     }
 
@@ -685,7 +698,7 @@ final class ComposerDraftRepositoryTests: XCTestCase {
         await relaunched.activate(boxID: boxID)
         let emitted = try relaunched.emissionFiles(from: relaunched.draft)
         XCTAssertEqual(emitted.map(\.path), ["tmp/report.pdf"])
-        XCTAssertEqual(relaunched.draft.text, "[file1]")
+        XCTAssertEqual(relaunched.draft.text, "[file#1]")
     }
 
     @MainActor
@@ -712,7 +725,7 @@ final class ComposerDraftRepositoryTests: XCTestCase {
         XCTAssertTrue(first.accepted)
         XCTAssertEqual(duplicate, first)
         XCTAssertEqual(store.draft.selections.count, 1)
-        XCTAssertEqual(store.draft.text, "[selection1]")
+        XCTAssertEqual(store.draft.text, "[selection#1]")
         XCTAssertEqual(store.draft.processedCommandIDs, [command.id])
 
         let relaunched = ComposerDraftStore(repository: repository, defaults: defaults)
@@ -720,7 +733,7 @@ final class ComposerDraftRepositoryTests: XCTestCase {
         let afterRelaunch = await relaunched.applySelectionCommand(command, boxID: boxID)
         XCTAssertEqual(afterRelaunch, first)
         XCTAssertEqual(relaunched.draft.selections.count, 1)
-        XCTAssertEqual(relaunched.draft.text, "[selection1]")
+        XCTAssertEqual(relaunched.draft.text, "[selection#1]")
         XCTAssertEqual(
             relaunched.emissionSelections(from: relaunched.draft),
             [NativeEmissionSelection(
@@ -762,7 +775,7 @@ final class ComposerDraftRepositoryTests: XCTestCase {
         XCTAssertTrue(voiceAcknowledgement.accepted)
         XCTAssertEqual(store.draft.selections.first?.anchor, "three four five six seven eight nine ten")
         XCTAssertEqual(store.draft.selections.first?.spokenWords, 10)
-        XCTAssertFalse(store.draft.text.contains("[selection1]"))
+        XCTAssertFalse(store.draft.text.contains("[selection#1]"))
 
         store.setVoiceSelectionContext(transcript: "", active: false)
         let typedCommand = NativeComposerCommand(
@@ -771,7 +784,7 @@ final class ComposerDraftRepositoryTests: XCTestCase {
         )
         let typedAcknowledgement = await store.applySelectionCommand(typedCommand, boxID: boxID)
         XCTAssertTrue(typedAcknowledgement.accepted)
-        XCTAssertTrue(store.draft.text.contains("[selection2]"))
+        XCTAssertTrue(store.draft.text.contains("[selection#2]"))
         XCTAssertNil(store.draft.selections.last?.anchor)
         XCTAssertNil(store.draft.selections.last?.spokenWords)
     }
@@ -797,7 +810,7 @@ final class ComposerDraftRepositoryTests: XCTestCase {
         let relaunched = ComposerDraftStore(repository: repository)
         await relaunched.activate(boxID: boxID)
         XCTAssertEqual(relaunched.draft.selections.first?.text, "arrived early")
-        XCTAssertTrue(relaunched.draft.text.contains("[selection1]"))
+        XCTAssertTrue(relaunched.draft.text.contains("[selection#1]"))
     }
 
     @MainActor

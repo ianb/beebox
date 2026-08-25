@@ -18,6 +18,7 @@
  * they had (see `ensureTrailingTextBlock` below).
  */
 
+
 /**
  * What stands in for an image whose bytes are not in the transcript.
  *
@@ -79,7 +80,7 @@ export function buildChatContentBlocks<TBlock extends { type: string }>(
   const used = new Set<number>();
 
   const blocks: TBlock[] = [];
-  const tokenRe = /\[image(\d+)]/g;
+  const tokenRe = /\[image#?(\d+)]/g;
   let cursor = 0;
   let match: RegExpExecArray | null;
   while ((match = tokenRe.exec(text)) !== null) {

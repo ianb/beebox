@@ -31,6 +31,7 @@ import { useEmissionStore } from "./input-store";
 import { toastError } from "../ui/toast-store";
 import { routeAddedFiles } from "./file-routing";
 import type { EmissionStore, ImageItem, FileItem } from "../../input/emission-store";
+import { composerToken } from "@shared/composer-tokens";
 
 /**
  * Insert a token string (`[imageN]` / `[fileN] `) at the textarea cursor, or
@@ -224,7 +225,7 @@ export function useChatAttachments(opts: {
     const failedFiles = files.filter((_f, i) => processed[i] === null);
     if (failedFiles.length > 0) toastError(unsupportedImageMessage(failedFiles));
     if (newItems.length === 0) return { route: "inline", added: 0 };
-    const tokens = newItems.map((a) => `[image${a.id}]`).join(" ");
+    const tokens = newItems.map((a) => composerToken("image", a.id)).join(" ");
     insertTokensAtCursor(tokens, { input: emissionStore.get().text, setInput: editor.setText, textareaRef, alwaysFocus: false });
     ensureComposerVisibleRef.current();
     // Count actually added — the screenshot path toasts when an inline route
