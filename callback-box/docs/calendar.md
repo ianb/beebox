@@ -31,6 +31,14 @@ config/connectors/google-calendar-state.json   # sync cursor, event-file mapping
 
 `google-calendar.json` holds the list of calendar IDs to sync (default: `["primary"]`). `google-calendar-state.json` tracks per-event metadata, including the slugged filename for each Google event ID (so re-syncs update the right file even if the slug would change).
 
+### Failure and recovery
+
+The state file is an *index*, not a cache: a `.ics` file missing from it is read as a locally-created event and pushed to Google. So the connector writes it atomically and, if it is ever present but unreadable, refuses to sync — `CalendarStateCorruptError`, reported as a failed sync — rather than starting from an empty index and inserting a duplicate of every local event. Recovery is a human one: inspect the file, or remove it *together with* `store/calendar/` to start over. `cb calendar calendars` degrades to "event count unavailable" rather than showing `0`.
+
+Every way a sync can fall short is part of its result: a calendar whose pull failed, a rejected `X-CB-DELETE`, a local `.ics` Google refused, a local edit whose patch was rejected. Each becomes a line in the commit's `Failed:` section and in `SyncResult.error`, so `cb wakeup` counts it. **A push that fails leaves the local file and its recorded hash alone** — the boxholder's edit is never overwritten by Google's copy on a failed push, and the next sync retries.
+
+After a `410` (expired sync token) the connector refetches the full window and then reconciles: a tracked, in-window event Google no longer returns was deleted remotely while the token was invalid. Its `.ics` is deleted if it still matches what the connector wrote; if it was edited locally, the file is kept and still tracked, and the sync reports a `stale-cleanup` failure — untracking it would make the next push pass insert the just-deleted event back into Google. Events outside the refetched window are never touched.
+
 ## CLI
 
 | Command | What it does |

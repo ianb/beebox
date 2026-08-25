@@ -40,8 +40,8 @@ import { stageAndCommitPaths } from "../lib/git.js";
 import {
   buildNarrativeCommitMessage,
   formatCalendarSyncFailure,
+  classifyCalendarFailure,
   type CalendarSyncFailure,
-  type CalendarSyncOperation,
   type SyncNote,
 } from "./google-calendar-notes.js";
 import {
@@ -49,9 +49,11 @@ import {
   calendarDir,
   loadCalendarState,
   saveCalendarState,
+  CalendarStateCorruptError,
   type CalendarState,
   type SyncTokenSnapshot,
 } from "./google-calendar-state.js";
+import { removeStaleAfterFullResync } from "./google-calendar-stale.js";
 import {
   syncCalendar,
   type SyncAccumulator,
@@ -64,24 +66,7 @@ type CalendarSyncOutcome =
   | { kind: "failed"; failure: CalendarSyncFailure };
 
 function emptySyncAccumulator(): SyncAccumulator {
-  return { created: [], updated: [], deleted: [], notes: [] };
-}
-
-function classifyCalendarFailure(
-  err: unknown,
-  opts: { calendarId: string; operation: CalendarSyncOperation },
-): CalendarSyncFailure {
-  if (err instanceof HTTPError) {
-    return {
-      ...opts,
-      errorKind: "http-error",
-      httpStatus: err.response.status,
-    };
-  }
-  return {
-    ...opts,
-    errorKind: err instanceof Error ? "error" : "non-error",
-  };
+  return { created: [], updated: [], deleted: [], notes: [], failures: [], seenEventIds: new Set() };
 }
 
 interface GoogleCalendarConnectorOptions {
@@ -160,7 +145,17 @@ class GoogleCalendarConnector implements Connector {
     }
 
     const config = await this.loadConfig();
-    const state = await this.loadState();
+    let state: CalendarState;
+    try {
+      state = await this.loadState();
+    } catch (err: unknown) {
+      // A present-but-unreadable event index would make every local .ics look
+      // locally-created; abort before the push pass can duplicate them all
+      // into Google. See CalendarStateCorruptError.
+      if (!(err instanceof CalendarStateCorruptError)) throw err;
+      console.error(err.message);
+      return { success: false, created: [], updated: [], error: err.message };
+    }
     // Per-sync delta baseline for the transient syncTokens (advanced by each
     // save — see SyncTokenSnapshot in google-calendar-state.ts).
     const snapshot: SyncTokenSnapshot = { tokens: { ...state.syncTokens } };
@@ -213,7 +208,7 @@ class GoogleCalendarConnector implements Connector {
       const outcome = await this.runCalendarSync({
         calendar, calendarId, syncToken: existingSyncToken, icsOpts, state, calDir,
         syncDaysBack, syncDaysForward, windowStart, windowEnd, snapshot,
-        acc: { created, updated, deleted, allNotes },
+        acc: { created, updated, deleted, allNotes, failures },
       });
       switch (outcome.kind) {
         case "synced":
@@ -231,6 +226,7 @@ class GoogleCalendarConnector implements Connector {
     const deleteResult = await processLocalDeletes({ boxRoot: this.boxRoot, calendar, state, calDir });
     deleted.push(...deleteResult.deleted);
     allNotes.push(...deleteResult.notes);
+    failures.push(...deleteResult.failures);
 
     // Push locally-created files to Google, clean unparseable orphans
     const defaultCalendarId = calendars[0] || "primary";
@@ -240,6 +236,7 @@ class GoogleCalendarConnector implements Connector {
     const pushed = orphanResult.pushed;
     deleted.push(...orphanResult.deleted);
     allNotes.push(...orphanResult.notes);
+    failures.push(...orphanResult.failures);
 
     await this.saveState(state, snapshot);
 
@@ -296,7 +293,7 @@ class GoogleCalendarConnector implements Connector {
     windowStart: Date;
     windowEnd: Date;
     snapshot: SyncTokenSnapshot;
-    acc: { created: string[]; updated: string[]; deleted: string[]; allNotes: SyncNote[] };
+    acc: { created: string[]; updated: string[]; deleted: string[]; allNotes: SyncNote[]; failures: CalendarSyncFailure[] };
   }): Promise<CalendarSyncOutcome> {
     const { calendar, calendarId, syncToken, icsOpts, state, calDir,
             syncDaysBack, syncDaysForward, windowStart, windowEnd, snapshot, acc } = opts;
@@ -304,21 +301,25 @@ class GoogleCalendarConnector implements Connector {
       boxRoot: this.boxRoot, calendar, calendarId, syncDaysBack, syncDaysForward,
       state, icsOpts, calDir, windowStart, windowEnd,
     };
-    const collect = (r: SyncAccumulator, opts2: { withNotes: boolean }): void => {
+    const collect = (r: SyncAccumulator, opts2: { withNotes: boolean; withFailures: boolean }): void => {
       acc.created.push(...r.created);
       acc.updated.push(...r.updated);
       acc.deleted.push(...r.deleted);
       if (opts2.withNotes) acc.allNotes.push(...r.notes);
+      // A 410 discards the attempt's failures: the full resync that follows
+      // re-runs every one of those events, so keeping them would double-report.
+      if (opts2.withFailures) acc.failures.push(...r.failures);
     };
 
     const firstAttempt = emptySyncAccumulator();
     try {
       await syncCalendar({ ...base, syncToken, acc: firstAttempt });
-      collect(firstAttempt, { withNotes: true });
+      collect(firstAttempt, { withNotes: true, withFailures: true });
       return { kind: "synced", fullResync: false };
     } catch (err: unknown) {
-      collect(firstAttempt, { withNotes: true });
-      if (!(err instanceof HTTPError) || err.response.status !== 410) {
+      const expiredToken = err instanceof HTTPError && err.response.status === 410;
+      collect(firstAttempt, { withNotes: true, withFailures: !expiredToken });
+      if (!expiredToken) {
         if (syncToken === undefined) delete state.syncTokens[calendarId];
         else state.syncTokens[calendarId] = syncToken;
         await this.saveState(state, snapshot);
@@ -341,10 +342,20 @@ class GoogleCalendarConnector implements Connector {
       await syncCalendar({ ...base, syncToken: undefined, acc: fullAttempt });
       // Don't add individual notes for a successful full re-sync — the commit
       // message summarizes the refresh.
-      collect(fullAttempt, { withNotes: false });
+      collect(fullAttempt, { withNotes: false, withFailures: true });
+      // The full response is the complete truth for this window, and it does
+      // not report deletions — so anything we still track and it didn't return
+      // is gone from Google. Only reachable after a SUCCESSFUL full fetch: a
+      // partial one would read as "everything was deleted".
+      const staleAcc = emptySyncAccumulator();
+      await removeStaleAfterFullResync({
+        boxRoot: this.boxRoot, calDir, state, calendarId,
+        returnedEventIds: fullAttempt.seenEventIds, windowStart, windowEnd, acc: staleAcc,
+      });
+      collect(staleAcc, { withNotes: true, withFailures: true });
       return { kind: "synced", fullResync: true };
     } catch (err: unknown) {
-      collect(fullAttempt, { withNotes: true });
+      collect(fullAttempt, { withNotes: true, withFailures: true });
       delete state.syncTokens[calendarId];
       await this.saveState(state, snapshot);
       return {

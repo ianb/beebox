@@ -627,3 +627,412 @@ staged.trim()
 ```ts cleanup
 await box.cleanup();
 ```
+
+## A corrupt state file fails the sync closed, nothing is pushed
+
+`config/connectors/google-calendar-state.json` is the index of which `.ics`
+file belongs to which Google event. It is not a cache: the push pass treats
+every calendar file *absent* from that index as a locally-created event, so
+recovering from an unreadable index by starting with an empty one would insert
+a duplicate of every existing event into Google. The load refuses instead, and
+the sync stops before the push pass runs.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+box.commitAll("init box");
+
+const calendar = createFakeGoogleCalendar({
+  calendars: [{ id: "primary", summary: "Main", primary: true, accessRole: "owner" }],
+  events: [
+    {
+      id: "evt-review",
+      status: "confirmed",
+      summary: "Review",
+      start: { dateTime: "2026-06-04T09:00:00Z" },
+      end: { dateTime: "2026-06-04T10:00:00Z" },
+    },
+  ],
+});
+
+const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
+const first = await connector.sync();
+JSON.stringify({ success: first.success, created: first.created.length, events: calendar.events.length })
+=> {"success":true,"created":1,"events":1}
+```
+
+Truncate the state file the way an interrupted write would, then sync again.
+The sync fails, and — the point of the test — the fake calendar is untouched:
+no `insertEvent` reached Google.
+
+```ts continue
+const statePath = join(box.root, "config/connectors/google-calendar-state.json");
+await writeFile(statePath, '{"syncTokens": {}, "eventFiles": {"evt-rev');
+
+const second = await connector.sync();
+JSON.stringify({ success: second.success, events: calendar.events.length })
+=> {"success":false,"events":1}
+```
+
+The failure names the file and says what to do about it, and the corrupt bytes
+are left exactly as they were for a human to look at:
+
+```ts continue
+second.error?.includes("could not be read or parsed")
+=> true
+
+(await readFile(statePath, "utf-8"))
+=> {"syncTokens": {}, "eventFiles": {"evt-rev
+```
+
+The local `.ics` is still there too — a failed load never touches the store:
+
+```ts continue
+(await readdir(join(box.root, "store/calendar"))).filter((f) => f.endsWith(".ics")).length
+=> 1
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A rejected local push fails the sync and keeps the file
+
+An untracked `.ics` that Google refuses used to warn and continue, so the file
+retried on every wakeup while the connector reported success. The insert
+failure is now part of the result.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+box.commitAll("init box");
+
+await box.seed("store/calendar/local-new.ics",
+  "BEGIN:VCALENDAR\r\n" +
+  "VERSION:2.0\r\n" +
+  "PRODID:-//Test//EN\r\n" +
+  "BEGIN:VEVENT\r\n" +
+  "UID:local-rejected\r\n" +
+  "SUMMARY:Rejected push\r\n" +
+  "DTSTART;VALUE=DATE:20260601\r\n" +
+  "DTEND;VALUE=DATE:20260602\r\n" +
+  "END:VEVENT\r\n" +
+  "END:VCALENDAR\r\n",
+);
+box.commitAll("seed local ics");
+
+const inner = createFakeGoogleCalendar({
+  calendars: [{ id: "primary", summary: "Main", primary: true, accessRole: "owner" }],
+});
+const calendar: GoogleCalendarService = {
+  ...inner,
+  insertEvent: async () => throwCalendarHttpError(503, "https://calendar.test/events"),
+};
+
+const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
+const result = await connector.sync();
+JSON.stringify({
+  success: result.success,
+  pushed: result.pushed,
+  remoteEvents: inner.events.length,
+})
+=> {"success":false,"remoteEvents":0}
+```
+
+The error names the operation, the calendar, and the file still sitting there
+waiting to be retried:
+
+```ts continue
+result.error
+=> Calendar sync failed for primary store/calendar/local-new.ics (local-push, HTTP 503)
+
+(await readFile(join(box.root, "store/calendar/local-new.ics"), "utf-8")).includes("Rejected push")
+=> true
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A rejected X-CB-DELETE fails the sync and keeps the marker
+
+A delete Google rejects has to stay pending — the file and its `X-CB-DELETE`
+marker survive so the next sync retries — and it has to be visible, or the
+retry loop runs forever behind a `cb wakeup` that exits zero.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+box.commitAll("init box");
+
+const inner = createFakeGoogleCalendar({
+  calendars: [{ id: "primary", summary: "Main", primary: true, accessRole: "owner" }],
+  events: [
+    {
+      id: "evt-cancelme",
+      status: "confirmed",
+      summary: "Cancel me",
+      updated: "2026-06-01T10:00:00Z",
+      start: { dateTime: "2026-06-05T09:00:00Z" },
+      end: { dateTime: "2026-06-05T10:00:00Z" },
+    },
+  ],
+});
+
+// After the first sync the incremental fetch returns nothing (nothing changed
+// remotely), and every delete is refused.
+let quiet = false;
+const calendar: GoogleCalendarService = {
+  ...inner,
+  listEvents: async (calendarId, opts) => {
+    if (quiet) return { items: [], nextSyncToken: "fake-sync-token-2" };
+    return inner.listEvents(calendarId, opts);
+  },
+  deleteEvent: async () => throwCalendarHttpError(503, "https://calendar.test/events/evt-cancelme"),
+};
+
+const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
+await connector.sync();
+
+const dir = join(box.root, "store/calendar");
+const file = (await readdir(dir)).filter((f) => f.endsWith(".ics"))[0] ?? "";
+const ics = await readFile(join(dir, file), "utf-8");
+await writeFile(join(dir, file), ics.replace("END:VEVENT", "X-CB-DELETE:no longer happening\r\nEND:VEVENT"));
+
+quiet = true;
+const result = await connector.sync();
+JSON.stringify({ success: result.success, remoteEvents: inner.events.length })
+=> {"success":false,"remoteEvents":1}
+```
+
+The marker and the file are both still there for the retry, and the failure
+says which file is stuck:
+
+```ts continue
+(await readFile(join(dir, file), "utf-8")).includes("X-CB-DELETE")
+=> true
+
+result.error?.includes("(local-delete, HTTP 503)")
+=> true
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A failed patch keeps the local edit instead of overwriting it
+
+When the local file changed and Google's copy did not, the connector pushes the
+edit. If that patch is rejected — a transient 429 or 503 is the realistic case —
+the old code fell through and wrote Google's version over the file, erasing the
+boxholder's edit and reporting a normal update. The edit now survives, the
+stored hash is left alone so the next sync retries, and the run fails.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+box.commitAll("init box");
+
+const inner = createFakeGoogleCalendar({
+  calendars: [{ id: "primary", summary: "Main", primary: true, accessRole: "owner" }],
+  events: [
+    {
+      id: "evt-lunch",
+      status: "confirmed",
+      summary: "Lunch",
+      updated: "2026-06-01T10:00:00Z",
+      start: { dateTime: "2026-06-03T12:00:00-04:00", timeZone: "America/New_York" },
+      end: { dateTime: "2026-06-03T13:00:00-04:00", timeZone: "America/New_York" },
+    },
+  ],
+});
+const calendar: GoogleCalendarService = {
+  ...inner,
+  patchEvent: async () => throwCalendarHttpError(503, "https://calendar.test/events/evt-lunch"),
+};
+
+const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
+await connector.sync();
+
+const dir = join(box.root, "store/calendar");
+const file = (await readdir(dir)).filter((f) => f.endsWith(".ics"))[0] ?? "";
+const localIcs = await readFile(join(dir, file), "utf-8");
+await writeFile(join(dir, file), localIcs.replace("Lunch", "Lunch MINE"));
+
+const result = await connector.sync();
+JSON.stringify({ success: result.success, updated: result.updated.length, pushed: result.pushed })
+=> {"success":false,"updated":0}
+```
+
+The file still holds the local edit, and the failure points at it:
+
+```ts continue
+const after = await readFile(join(dir, file), "utf-8");
+after.includes("Lunch MINE")
+=> true
+
+result.error?.includes(`store/calendar/${file} (local-push, HTTP 503)`)
+=> true
+```
+
+Nothing was recorded as an update, so the commit narrative does not claim the
+event changed:
+
+```ts continue
+const msg = execSync("git log -1 --pretty=%B", { cwd: box.root, encoding: "utf-8" });
+msg.includes("Updated:")
+=> false
+```
+
+A later sync where the patch works pushes the edit that was held:
+
+```ts continue
+const recovered = createGoogleCalendarConnector(box.root, { calendar: inner, now: NOW });
+await recovered.sync();
+inner.events[0]?.summary
+=> Lunch MINE
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A full resync after a 410 removes events Google no longer has
+
+A full-window list is the whole truth for that window and does not report
+deletions, so an event we still track that the response omits was deleted
+remotely while our sync token was invalid. The 410 recovery used to refresh
+only the events Google returned, leaving the deleted one as a stale `.ics`
+forever. Now the resync reconciles — but never at the cost of a local edit.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+box.commitAll("init box");
+
+const inner = createFakeGoogleCalendar({
+  calendars: [{ id: "primary", summary: "Main", primary: true, accessRole: "owner" }],
+  events: [
+    {
+      id: "evt-keep",
+      status: "confirmed",
+      summary: "Still on Google",
+      start: { dateTime: "2026-06-03T10:00:00Z" },
+      end: { dateTime: "2026-06-03T11:00:00Z" },
+    },
+    {
+      id: "evt-stale",
+      status: "confirmed",
+      summary: "Deleted while token was invalid",
+      start: { dateTime: "2026-06-04T10:00:00Z" },
+      end: { dateTime: "2026-06-04T11:00:00Z" },
+    },
+    {
+      id: "evt-edited",
+      status: "confirmed",
+      summary: "Deleted but edited here",
+      start: { dateTime: "2026-06-05T10:00:00Z" },
+      end: { dateTime: "2026-06-05T11:00:00Z" },
+    },
+  ],
+});
+
+// The fake's listEvents ignores syncToken/timeMin/timeMax and always returns
+// whatever `inner.events` currently holds, so splicing an event out below is
+// exactly "Google no longer returns it". This wrapper supplies the 410.
+const calendar: GoogleCalendarService = {
+  ...inner,
+  listEvents: async (calendarId, opts) => {
+    if (opts?.syncToken) {
+      return throwCalendarHttpError(410, "https://calendar.test/events?syncToken=expired");
+    }
+    return inner.listEvents(calendarId, opts);
+  },
+};
+
+const dir = join(box.root, "store/calendar");
+const summaries = async (): Promise<string[]> => {
+  const names = (await readdir(dir)).filter((f) => f.endsWith(".ics"));
+  const found: string[] = [];
+  for (const name of names) {
+    const text = await readFile(join(dir, name), "utf-8");
+    found.push((/^SUMMARY:(.*)$/m.exec(text)?.[1] ?? name).trim());
+  }
+  return found.sort();
+};
+
+const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
+await connector.sync();
+JSON.stringify(await summaries())
+=> ["Deleted but edited here","Deleted while token was invalid","Still on Google"]
+```
+
+Edit one file locally, then delete both of those events from Google. The next
+sync presents the stored token, gets the 410, and refetches the full window.
+
+```ts continue
+const names = (await readdir(dir)).filter((f) => f.endsWith(".ics"));
+let editedFile = "";
+for (const name of names) {
+  const text = await readFile(join(dir, name), "utf-8");
+  if (!text.includes("Deleted but edited here")) continue;
+  editedFile = name;
+  await writeFile(join(dir, name), text.replace("Deleted but edited here", "MINE now"));
+}
+inner.events = inner.events.filter((e) => e.id === "evt-keep");
+
+const result = await connector.sync();
+JSON.stringify(await summaries())
+=> ["MINE now","Still on Google"]
+```
+
+The untouched stale file is gone; the locally-edited one is kept, still tracked,
+and reported as a failure rather than deleted behind the boxholder's back:
+
+```ts continue
+JSON.stringify({
+  success: result.success,
+  files: (await readdir(dir)).filter((f) => f.endsWith(".ics")).length,
+  editedKept: (await readFile(join(dir, editedFile), "utf-8")).includes("MINE now"),
+})
+=> {"success":false,"files":2,"editedKept":true}
+
+result.error?.includes("(stale-cleanup, local: locally edited event no longer exists on Google)")
+=> true
+```
+
+An event outside the refetched window was never in the full response's scope, so
+its absence is not evidence of anything and it is never removed. Push one into
+Google (which tracks it), delete it there, and force another 410:
+
+```ts continue
+await box.seed("store/calendar/2027-01-01_faraway.ics",
+  "BEGIN:VCALENDAR\r\n" +
+  "VERSION:2.0\r\n" +
+  "PRODID:-//Test//EN\r\n" +
+  "BEGIN:VEVENT\r\n" +
+  "UID:far-away\r\n" +
+  "SUMMARY:Far future\r\n" +
+  "DTSTART;VALUE=DATE:20270101\r\n" +
+  "DTEND;VALUE=DATE:20270102\r\n" +
+  "END:VEVENT\r\n" +
+  "END:VCALENDAR\r\n",
+);
+const pushRun = await connector.sync();
+pushRun.pushed?.length
+=> 1
+```
+
+```ts continue
+inner.events = inner.events.filter((e) => e.summary !== "Far future");
+const afterFar = await connector.sync();
+JSON.stringify({
+  stillThere: (await readdir(dir)).includes("2027-01-01_faraway.ics"),
+  blamed: afterFar.error?.includes("faraway") ?? false,
+})
+=> {"stillThere":true,"blamed":false}
+```
+
+```ts cleanup
+await box.cleanup();
+```
