@@ -711,6 +711,19 @@ schedule runs, and an agent reaching for it should say why.
 
 ### What this costs, stated
 
+- **Suite-level changes select nothing.** `.taprc`, `test/helpers/**`,
+  `callback-box/package.json` and the lockfile, and `agent-doctest/` (which
+  the doctests run through) have no import edge to any test, so a change to
+  them runs no tests at merge and gets a green "no test imports the changed
+  paths". The conservative rule would run everything for exactly these; the
+  posture says the hourly run is the catch. The decision sheet names the
+  case (`suite-level config changed`) so the finish report says it out loud.
+  (Codex review, 2026-08-25, findings 5–7 — accepted, not fixed.)
+- **`--no-verify` is undetectable**, so `skipTypecheckLint` trusts that every
+  branch commit ran pre-commit. A hook-bypassed commit can land without
+  typecheck or lint at finish; the hourly run's typecheck… does not exist —
+  only tests run there. Accepted: bypassing hooks is a deliberate act, and
+  lint/typecheck failures surface on the next commit anyone makes.
 - Integration breakage now surfaces up to ~1 h (or 10 landings) after merge,
   on `main`, as a filed issue rather than a blocked merge. The boxholder has
   priced this as acceptable; the ledger's `unimplicated` count on schedule
