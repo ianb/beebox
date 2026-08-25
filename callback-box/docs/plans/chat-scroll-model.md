@@ -60,60 +60,76 @@ open-ended.
 ## The model
 
 **The controller writes `scrollTop` only in response to a discrete user
-action. Content growth never scrolls.** There is no "pinned" state and no
-classification of scroll events, because after a discrete action every
-subsequent scroll event is the user's by construction.
+action, plus geometric compensations for changes the user cannot see. Content
+growth below the reader never scrolls.** The controller keeps *geometry* state
+(previous `scrollHeight`, previous `fromBottom`, a top-visible anchor) and no
+*intent* state: it never asks whether a scroll event was the user's, because
+nothing it does depends on the answer.
 
 Writes, exhaustively:
 
-1. **Open a thread** → scroll to the bottom.
+1. **Open a thread** → scroll to the bottom, and keep doing so on each content
+   growth until the first history render has landed (`messages.length > 0`
+   after load; the empty state renders no scroller at all,
+   `InteractiveChat-messages.tsx:229`). This is a bounded initial state, not
+   following: it ends at the first paint with content.
 2. **Send a message** → scroll so the new user message sits at the top of the
    viewport. The reply streams in below it and fills the screen without any
    scrolling. If the reply outgrows the screen, it continues below the fold;
-   the scroll-to-bottom button shows. (This is the boxholder's proposal and the
-   ChatGPT/claude.ai behaviour.) To make "at the top" reachable when the reply
-   is short, the last turn carries `min-height: <scroller clientHeight>`; the
-   spacer persists until the next send, so finalize never clamps.
+   the scroll-to-bottom button shows. (The boxholder's proposal and the
+   ChatGPT/claude.ai behaviour.) The last turn carries
+   `min-height: <scroller clientHeight>` so "at the top" is reachable when the
+   reply is short; the spacer persists until the next send. Ordering on send:
+   the previous turn loses its spacer, the new user turn gains it, and the
+   scroll write runs in a layout effect after that commit — one write, after
+   the shrink above and the growth below have both landed, so nothing clamps.
 3. **Click the scroll-to-bottom button** → smooth scroll to the bottom.
-4. **Hold position** across changes the user did not cause and cannot see:
-   older history prepended above (restore the bottom gap), content above the
-   viewport reflowing (anchor the top visible child), the scroller shrinking
-   from below while the view is at the bottom (keyboard, composer growth —
-   preserve `fromBottom`). These are geometric compensations with no state:
-   each is "measure delta, write delta", triggered by a resize, never by a
-   scroll event. Safari has no native scroll anchoring, so they stay manual and
-   `overflow-anchor: none` stays on everywhere so Chrome does not double-apply.
+4. **Hold position** across changes the user did not cause:
+   - older history prepended above → restore the captured bottom gap;
+   - content above the viewport reflowing (a late image/embed) → keep the
+     top-visible child at its recorded offset. The anchor's offset is updated
+     on every scroll event (the current controller already does this,
+     `InteractiveChat-scroll.ts:266-273`) so a resize landing mid-fling
+     measures only reflow, never the user's own momentum;
+   - the scroller shrinking or growing from below (keyboard, composer,
+     banners) → preserve the previous `fromBottom`. This needs the
+     pre-resize `fromBottom`, a number recorded on every scroll and resize.
+   Each is "measure delta, write delta", triggered by a resize. None consults
+   whether the user scrolled recently.
 
-Derived, never stored:
+Derived from geometry:
 
 - `atBottom = fromBottom <= 24px`, recomputed on scroll and resize. Drives the
   button's visibility.
-- `unseen = content grew below the viewport while !atBottom`, cleared when
-  `atBottom` becomes true. Drives the button accent. Growth *above* the
-  viewport (rule 4) is excluded by construction — the gap/anchor rules know
-  which side the delta landed on.
+- `unseen`: set when a content resize's growth lands below the anchor (the
+  delta not explained by rule 4's above-viewport compensation) while
+  `!atBottom`; cleared when `atBottom` becomes true. Drives the button accent.
 
 Gone: `pinnedRef`, `lastProgrammaticTopRef`, `lastUserIntentAtRef`,
 `smoothTargetRef`, `PROGRAMMATIC_EPSILON`, `USER_INTENT_WINDOW_MS`,
-wheel/touch/key listeners, `decideScroll`. The scroll handler only recomputes
-`atBottom`. Estimated size: ~150 lines plus the pure `decideReconcile` for the
-rule-4 branches.
+wheel/touch/key listeners, `decideScroll`, and every branch that asks "was
+that scroll ours". The scroll handler records geometry and recomputes
+`atBottom`. Estimated size: ~180 lines; `decideReconcile` stays as the pure
+rule-4 dispatcher.
 
-Follow-while-streaming is deliberately not a rule. The boxholder said it does
-not need to follow past a screen; under rule 2 a reply shorter than a screen is
-fully visible without following, so the stateless version of "follow" (snap to
-bottom on growth when `atBottom` was true before the growth) buys nothing on
-short replies and reintroduces the one ambiguity that matters — a small
-scroll-up near the bottom during fast growth — on long ones. If the boxholder
-wants following back after living with rule 2, it is a five-line addition to
-the content-resize branch with no classifier, and the harness scenario for it
-already exists (`follow-while-streaming`).
+### Decision for the boxholder: does anything still follow?
 
-Why this is different from the four previous fixes: they each narrowed the
-classifier's error on one input the desktop could not reproduce. This removes
-the classifier. The remaining device-only surface is rule 4's scroller-shrink
-branch (keyboard), which is a delta write with no intent inference, and which
-the current controller already relies on today.
+Under this model nothing follows the bottom — not the streaming reply, and not
+a message that arrives without a local send (another participant, an agent
+emission, a scheduled turn). A user sitting at the bottom sees the button light
+up and presses it. Codex's review calls the loss of follow a regression against
+the current contract, and it is one; the boxholder's words were that following
+past a screen is not needed, which is not the same as none.
+
+The alternative, if wanted, is one stateless rule in the content-resize branch:
+*if `fromBottom <= 24px` before the growth, write to the bottom after it.* It
+is the same shape as rule 4's scroller-resize branch and needs no intent
+state. Its one cost is the ambiguity that produced the intent machinery: a
+scroll-up of less than 24px during fast growth is snapped back. With rule 2 in
+place that only matters on replies longer than a screen. Either way the harness
+scenario exists (`follow-while-streaming`); the choice flips one expectation.
+Recommendation: ship without follow first, per the boxholder's proposal, and
+add the rule only if they miss it.
 
 ## Library call: none
 
@@ -125,9 +141,18 @@ the current controller already relies on today.
 - `use-stick-to-bottom` (the library the current design mirrors) *is* the
   current model — position-classified following — so adopting it would be the
   same code with less control.
-- The model above needs ~150 lines and every line is device-behaviour we need to
+- The model above needs ~180 lines and every line is device-behaviour we need to
   own. A dependency adds review surface and removes the harness's ability to
   swap controllers.
+- Platform primitives: CSS scroll anchoring (`overflow-anchor`) would do rule
+  4's prepend and above-viewport branches natively, and Chrome did exactly that
+  in the harness — but WebKit does not implement it, and the boxholder's
+  device is iOS, so the manual branches must exist anyway; running both
+  double-applies, hence `overflow-anchor: none` stays. `flex-direction:
+  column-reverse` gives native bottom-following in every browser but is the
+  *opposite* of rule 2 (it follows unconditionally) and breaks DOM order for
+  a11y. `scrollend` is unsupported in Safari. None removes code this model
+  needs.
 
 ## Reproductions and the harness
 
