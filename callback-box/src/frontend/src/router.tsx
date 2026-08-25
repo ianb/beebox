@@ -28,6 +28,7 @@ import { ChatsPage } from "./pages/chats/ChatsPage";
 import { SpeechTestPage } from "./pages/dev/SpeechTestPage";
 import { ComposerStatesPage } from "./pages/dev/ComposerStatesPage";
 import { CaptureModePage } from "./pages/dev/CaptureModeHarness";
+import { ChatScrollPage } from "./pages/dev/ChatScrollHarness";
 import { InventoryPage } from "./pages/inventory/InventoryPage";
 
 // --- Root route ---
@@ -226,6 +227,13 @@ const devCaptureModeRoute = createRoute({
   component: CaptureModePage,
 });
 
+// Dev-only harness for the chat scroll controller (isolated, scripted).
+const devChatScrollRoute = createRoute({
+  getParentRoute: () => boxLayoutRoute,
+  path: "/dev/chat-scroll",
+  component: ChatScrollPage,
+});
+
 // Catch-all for unknown paths under a box
 const boxCatchAllRoute = createRoute({
   getParentRoute: () => boxLayoutRoute,
@@ -266,7 +274,7 @@ const routeTree = rootRoute.addChildren([
     // and the literal `import.meta.env.DEV` shape has to stay intact for Vite's
     // static DCE, ruling out the honest-cast pattern `lib/view-url.ts` uses instead.
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- see comment above
-    ...((import.meta.env !== undefined && import.meta.env.DEV) ? [devSpeechRoute, devComposerStatesRoute, devCaptureModeRoute] : []),
+    ...((import.meta.env !== undefined && import.meta.env.DEV) ? [devSpeechRoute, devComposerStatesRoute, devCaptureModeRoute, devChatScrollRoute] : []),
     boxCatchAllRoute,
   ]),
 ]);

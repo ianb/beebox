@@ -7,36 +7,66 @@ The message list is **not virtualized** — it renders the loaded window
 Virtualization (react-virtuoso) was removed deliberately; don't reintroduce it
 without revisiting `docs/implemented-plans/chat-scroll-redesign.md`.
 
-A single in-repo controller, `useStickToBottom` (`InteractiveChat-scroll.ts`),
-owns all scroll behavior: follow-the-bottom while streaming, disengage on a
-genuine user scroll-up, the floating scroll-to-bottom button's state
-(`isPinned` / `hasUnseenContent`), prepend anchoring for "load older", and
-holding the reading position when content loads above the viewport.
+A single in-repo controller, `useChatScroll` (`chat-scroll.ts`), owns all scroll
+behavior. **The model: it writes `scrollTop` only in response to a discrete user
+action, plus geometric compensations for changes the reader cannot see. Content
+growth below the reader never scrolls** — a streaming reply that outgrows the
+screen continues below the fold and the button lights up
+(`docs/plans/chat-scroll-model.md`). The writes, exhaustively:
+
+1. **Open a thread** — hold the bottom on every growth until the first history
+   render has landed (`settleOpen()`; the hold lapses on a short fixed timer,
+   because the caller can only report "the history is in the DOM" from an effect
+   that runs before the ResizeObserver cycle measuring it). A reader who scrolls
+   away during the load ends the hold themselves.
+2. **Send** — the new user message goes to the top of the viewport
+   (`anchorToTop`), from a layout effect, after the commit that added both the
+   message and the spacer. The reply streams in below it; nothing follows it.
+3. **The scroll-to-bottom button** — smooth scroll to the bottom.
+4. **Compensations**, all "measure delta, write delta" on a resize: restore the
+   captured gap across an older-history prepend, hold the reading anchor when
+   content above the viewport reflows, and preserve the previous `fromBottom`
+   when the scroller box itself resizes (keyboard, composer, banners). The pure
+   dispatcher is `decideReconcile` in `scroll-reconcile.ts`, unit-checked in
+   `test/frontend/chat-scroll-reconcile.doctest.md`.
+
+The controller keeps *geometry* state only (previous `scrollHeight`, previous
+`fromBottom`, one anchor) and no *intent* state: it never asks whether a scroll
+event was the user's, because nothing it does depends on the answer. That
+question — a programmatic-write epsilon, a 250ms input-intent window,
+wheel/touch/key listeners, a smooth-scroll target — is what the previous
+`useStickToBottom` needed in order to follow the bottom, and each of its cases
+was only testable on the device that produced it (iOS momentum with no
+`touchmove`, keyboard clamps, rubber-band). `atBottom = fromBottom <= 24`,
+recomputed on every scroll and every resize, drives the button's visibility;
+`hasUnseenContent` its accent.
 
 **Invariant: exactly one thing controls scroll.** Don't add another effect that
 calls `scrollTo` / sets `scrollTop` on the list, and don't reintroduce a
 library's own follow logic — two authorities fighting (Virtuoso's `followOutput`
-vs. a hand-rolled pin layer) was the original bug. Two non-obvious details the
-controller depends on:
+vs. a hand-rolled pin layer) was the original bug. Three details the controller
+depends on:
 
 - It runs a `ResizeObserver` on **both** the content and the scroller element.
   Below-list chrome (status banners, composer, the iOS keyboard) resizes the
-  scroller's `clientHeight` without changing content height; a content-only
-  observer silently drifts off the bottom.
-- User vs. programmatic scroll is told apart by recording the last `scrollTop`
-  the controller wrote (not `event.isTrusted`), plus the in-flight smooth-scroll
-  target (the button's return animation frames are ours too). A scroll-up
-  disengages on recent wheel/touch/key intent, or — with no intent — when it
-  lands well above the bottom: scrollbar-thumb drags fire no input events, while
-  the layout clamps the intent gate ignores land at the bottom. While detached,
-  the reading anchor's offset is updated inside the scroll handler itself, so a
-  resize mid-fling measures only reflow — never the user's own scrolling (the
-  pure rules: `decideScroll`/`decideReconcile` in `scroll-reconcile.ts`).
+  scroller's `clientHeight` without changing content height, and that is rule
+  4's third branch — a content-only observer cannot see it at all.
+- **Every message wrapper carries `data-role`**, and the reading anchor is the
+  first such item that *starts* in the viewport. Both halves matter: the content
+  wrapper's own children are two boxes (the load-older header and the
+  scan-boundary wrapper holding the whole transcript), which measure no shift;
+  and anchoring to the topmost *partly*-visible item would miss an image
+  decoding inside it, which grows it downward without moving its own top.
+- **The last turn carries `min-height: <scroller clientHeight>`** once the person
+  has sent in this session (the controller reports `viewportPx`), so "the user
+  message at the top of the screen" is a reachable scroll position even for a
+  one-line reply. It moves down with the turn.
 
-**After changing scroll code, run the manual procedure in
-`docs/chat-scroll-testing.md`** (drives the app via `bin/browse`; layout
-behavior can't be doctested), and verify on a real iOS device for
-keyboard/momentum/rubber-band, which headless Chromium can't emulate.
+**After changing scroll code, run the scenario table at `/dev/chat-scroll`**
+(`window.__scrollHarness.runAll()` via `bin/browse eval` — every scenario must
+PASS) **and the browser procedure in `docs/chat-scroll-testing.md`**, and verify
+on a real iOS device for keyboard/momentum/rubber-band, which headless Chromium
+can't emulate.
 
 ## Streaming → finalize
 
