@@ -118,3 +118,12 @@ if echo "$staged" | grep -qE '^dev/apps/.*\.(ts|tsx)$'; then
   echo "[pre-commit] .: pnpm dev-apps-typecheck"
   (cd "$REPO_DIR" && pnpm --silent dev-apps-typecheck)
 fi
+
+# A schedule that fails lint is a schedule that fails at 03:00 on a Sunday with
+# nobody watching, so the check happens at commit time. Silent on success; one
+# line per finding otherwise. schedules/ is outside every package's lint, so
+# nothing else covers it (scheduled-workstreams.md, Track E).
+if echo "$staged" | grep -q '^schedules/'; then
+  echo "[pre-commit] .: bin/schedules lint"
+  (cd "$REPO_DIR" && bin/schedules lint)
+fi

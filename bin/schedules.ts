@@ -14,7 +14,9 @@
  *   handoff --title <t> --body @file|-      "there is work" (called BY `run`)
  *   alert --title <t> --message <m> [...]   the report (called BY a session)
  *   done [--run <id>]             "finished, nothing to say"
+ *   alerts --json                 the alert records, for the browser
  *   ack <alert-id>                stop showing an alert
+ *   lint [--json]                 every schedule, checked without running it
  *   install | uninstall           the launchd tick
  *
  * THIS CLI IS THE ONLY WRITER of the store, the `bin/comments` precedent.
@@ -63,6 +65,7 @@ import {
 } from "./lib/schedules-runner.js";
 import { osascriptNotify, raiseAlert, type RunnerDeps } from "./lib/schedules-alerts.js";
 import { installTick, uninstallTick } from "./lib/schedules-launchd.js";
+import { formatFinding, lintSchedules } from "./lib/schedules-lint.js";
 
 const USAGE = `usage: bin/schedules <command>
 
@@ -80,7 +83,13 @@ const USAGE = `usage: bin/schedules <command>
         [--priority important|normal|backlog|fyi] [--workstream <n>] [--run <id>]
                                   The report. Writes a record, then notifies.
   done [--run <id>]               Finished with nothing to say.
+  alerts --json [--workstream <n>]
+                                  Read-only: every open alert plus the ones
+                                  acknowledged in the last 14 days.
   ack <alert-id>                  Acknowledge an alert.
+  lint [--json]                   Check every schedule without running it:
+                                  schema, shebangs, the dry-run and reporting
+                                  contracts, shellcheck, eslint.
   install | uninstall             The launchd tick (main checkout only).
 `;
 
@@ -96,10 +105,14 @@ async function resolveContext(): Promise<Context> {
   const { stdout: common } = await execa("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"]);
   const repoRoot = top.trim();
   const mainRoot = path.dirname(common.trim());
+  // `CALLBACK_SCHEDULES_DIR` points the CLI at a different set of schedule
+  // directories, the way `CALLBACK_SCHEDULES_ROOT` points it at a different
+  // store — what lets a test run `lint` over a fixture tree.
+  const schedulesDir = process.env["CALLBACK_SCHEDULES_DIR"];
   return {
     repoRoot,
     mainRoot,
-    schedulesRoot: path.join(repoRoot, "schedules"),
+    schedulesRoot: schedulesDir === undefined || schedulesDir === "" ? path.join(repoRoot, "schedules") : schedulesDir,
     storeRoot: schedulesStoreRoot(mainRoot),
   };
 }
@@ -423,6 +436,26 @@ async function commandDone(context: Context, args: string[]): Promise<number> {
   return 0;
 }
 
+/**
+ * Read-only alert listing. The workstream browser reads the store through this
+ * rather than opening it itself: the CLI is the only thing that knows the
+ * store's layout, and the app is downstream of `bin/` everywhere else too.
+ */
+async function commandAlerts(context: Context, args: string[]): Promise<number> {
+  if (!args.includes("--json")) {
+    process.stderr.write("schedules alerts: --json is required (the human view is `list`)\n");
+    return 2;
+  }
+  const workstream = flags(args).get("workstream");
+  const all = workstream === undefined || workstream === ""
+    ? await readAllAlerts(context.storeRoot)
+    : await readAlerts(context.storeRoot, workstream);
+  const alerts = visibleAlerts(all, Date.now())
+    .toSorted((left, right) => right.createdAt.localeCompare(left.createdAt));
+  process.stdout.write(`${JSON.stringify({ alerts })}\n`);
+  return 0;
+}
+
 async function commandAck(context: Context, args: string[]): Promise<number> {
   const [id] = args;
   if (id === undefined || id.startsWith("--")) {
@@ -443,6 +476,21 @@ async function commandAck(context: Context, args: string[]): Promise<number> {
   return 0;
 }
 
+// ─── lint ─────────────────────────────────────────────────────────────────
+
+/** Silent and 0 when every schedule is clean — a lint that prints on success
+ *  trains people to stop reading it (the pre-commit hook runs this). */
+async function commandLint(context: Context, args: string[]): Promise<number> {
+  const findings = await lintSchedules({ schedulesRoot: context.schedulesRoot, repoRoot: context.repoRoot });
+  if (args.includes("--json")) {
+    process.stdout.write(`${JSON.stringify({ findings })}\n`);
+    return findings.length === 0 ? 0 : 1;
+  }
+  if (findings.length === 0) return 0;
+  process.stdout.write(`${findings.map((finding) => formatFinding(finding)).join("\n")}\n`);
+  return 1;
+}
+
 // ─── Dispatch ─────────────────────────────────────────────────────────────
 
 async function dispatch(): Promise<number> {
@@ -459,7 +507,9 @@ async function dispatch(): Promise<number> {
   if (command === "handoff") return commandHandoff(context, args);
   if (command === "alert") return commandAlert(context, args);
   if (command === "done") return commandDone(context, args);
+  if (command === "alerts") return commandAlerts(context, args);
   if (command === "ack") return commandAck(context, args);
+  if (command === "lint") return commandLint(context, args);
   if (command === "install") return installTick({ repoRoot: context.repoRoot });
   if (command === "uninstall") return uninstallTick();
   process.stderr.write(`schedules: unknown command '${command}'\n\n${USAGE}`);

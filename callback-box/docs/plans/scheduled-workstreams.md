@@ -482,8 +482,19 @@ commit time.
 
 **Direction.** Pre-commit runs `bin/schedules lint` when anything under
 `schedules/` is staged (the `dev-apps-typecheck` precedent in root
-`CLAUDE.md`). `tick` also runs lint first and alerts `important` on an
-invalid schedule rather than skipping it silently.
+`CLAUDE.md`). `tick` alerts `important` on an invalid schedule rather than
+skipping it silently.
+
+Settled while implementing (2026-08-24): **`tick` does not run the full lint.**
+It alerts on what the loader already answers — the schema, a missing or
+unexecutable `run`, a missing `prompt.md` — which is exactly the set that
+decides whether a schedule can run at all. shellcheck and eslint stay on the
+commit-time path: eslint startup in this repo costs 10-20 seconds, and paying
+that every fifteen minutes to re-lint scripts that have not changed since the
+commit that gated them buys nothing. The alert **latches on its own record**:
+one per schedule while an `important` alert with that title is still open, and
+re-armed once the boxholder acknowledges it, so a schedule left broken for a
+month is one record rather than ~3000.
 
 **First implementation chunk.** `lint` over the Track A loader plus the
 executable/shebang/dry-run checks; the pre-commit hook; shellcheck wired.

@@ -574,6 +574,22 @@ The session reports by writing a record (`bin/schedules alert` or `done`); one
 that ends without either is an `important` alert. Design:
 `callback-box/docs/plans/scheduled-workstreams.md`, Track B.
 
+## Linting a schedule (`bin/schedules lint`)
+
+`bin/schedules lint [--json]` checks every `schedules/<name>/` without running
+it: the `schedule.yaml`/`local.yaml` schema, `run` and `check` executable and
+carrying a shebang, `run` honoring `SCHEDULE_DRY_RUN`, `prompt.md` naming
+`bin/schedules alert`, shellcheck over the shell scripts (the pinned npm
+`shellcheck`, fetched lazily on first use), and eslint over the TypeScript ones.
+Silent on success; one `schedules/<name>/<file>: <message>` line per finding
+otherwise. Pre-commit runs it whenever anything under `schedules/` is staged,
+and a `tick` raises one `important` alert per broken schedule — latched on that
+alert staying open, so a schedule left broken is one record rather than one
+every fifteen minutes.
+
+`schedules/**/*.ts` is the only root path the root `eslint.config.mjs` lints;
+`bin/` and `dev/` stay unlinted by decision (the comment in that file says why).
+
 ## Document comments (`bin/comments`)
 
 The boxholder's channel for talking to an agent **about a document**: a remark

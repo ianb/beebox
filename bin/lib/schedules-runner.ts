@@ -19,6 +19,7 @@ import {
   loadSchedules,
   runIdFor,
   type Handoff,
+  type InvalidSchedule,
   type LoadedSchedule,
   type Outcome,
   type ScheduleConfig,
@@ -30,6 +31,7 @@ import {
   ensureScheduleDir,
   ensureStoreRoot,
   logPath,
+  readAlerts,
   readHandoff,
   readRunExit,
   readScheduleState,
@@ -240,6 +242,29 @@ export interface TickResult {
   heartbeatError: string | null;
 }
 
+/** The title every "this schedule cannot run" alert carries. It is also the
+ *  latch: a tick raises one only when no OPEN alert with this title exists for
+ *  the schedule, so a schedule left broken for a month is one record rather
+ *  than one every fifteen minutes — and acknowledging it re-arms the alarm for
+ *  a break that is still not fixed. */
+export const INVALID_SCHEDULE_ALERT_TITLE = "schedule cannot run";
+
+/** An invalid schedule is silent otherwise: it never runs, so no run can fail
+ *  and no run can report. The alert IS the notice. */
+async function alertInvalidSchedule(deps: RunnerDeps, entry: InvalidSchedule): Promise<void> {
+  const alerts = await readAlerts(deps.storeRoot, entry.name);
+  if (alerts.some((alert) => alert.state === "open" && alert.title === INVALID_SCHEDULE_ALERT_TITLE)) return;
+  const problems = entry.issues.map((issue) => `- \`${issue.path}\`: ${issue.message}`).join("\n");
+  await raiseAlert(deps, {
+    workstream: entry.name,
+    runId: null,
+    title: INVALID_SCHEDULE_ALERT_TITLE,
+    message: `${entry.name} is skipped every tick: ${entry.issues.length === 1 ? "1 problem" : `${String(entry.issues.length)} problems`} in schedules/${entry.name}/. Fix it and run \`bin/schedules lint\`.`,
+    details: problems,
+    priority: "important",
+  });
+}
+
 /** The store root's own lock name — hidden, so it can never collide with a
  *  schedule directory. */
 const TICK_LOCK_NAME = ".tick";
@@ -277,10 +302,9 @@ export async function tick(deps: RunnerDeps): Promise<TickResult> {
     const entries = await loadSchedules(deps.schedulesRoot);
     for (const entry of entries) {
       if (entry.kind === "invalid") {
-        // Track E turns this into an `important` alert; until then it is a
-        // loud line in the tick's launchd log rather than a silent skip.
         invalid.push(entry);
         process.stderr.write(`schedules: ${entry.name} is invalid — ${entry.issues.map((i) => `${i.path} ${i.message}`).join("; ")}\n`);
+        await alertInvalidSchedule(deps, entry);
         continue;
       }
       const state = await readScheduleState(deps.storeRoot, entry.name);
