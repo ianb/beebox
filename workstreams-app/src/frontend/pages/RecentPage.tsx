@@ -28,16 +28,19 @@ function ago(at: number, now: number): string {
  * an issue has a viewer of its own — frontmatter, related items, actions — so it
  * opens there rather than having its source rendered as markdown.
  *
- * Main only. The viewer reads issues from the main checkout
- * (`documents-service.ts` `listIssues`), so a worktree's copy would silently
- * resolve to a different file — or to none, for an issue that exists only on
- * that branch. Those rows keep the browser, which is checkout-aware.
+ * Worktree rows go there too. The viewer is already checkout-aware:
+ * `resolveIssueTarget` (`issues-mutation-service.ts`) reads the overlay before
+ * main, so a worktree's copy — including an issue that exists only on that
+ * branch, since the overlay covers untracked files — is what it opens. The
+ * `workstream` lens is dropped rather than carried, because the viewer holds
+ * ONE authoritative copy per issue; when two worktrees have touched the same
+ * one it shows the copy it treats as authoritative, not necessarily this row's.
  *
  * Exported for the doctest: a `Link` cannot render outside the router, and this
  * decision is worth testing without one.
  */
 export function recentRowTarget(file: RecentFile): { to: "/browse" | "/issues"; search: Record<string, string> } {
-  const issue = file.workstream === null ? issueRelPathFromRepoPath(file.relPath) : null;
+  const issue = issueRelPathFromRepoPath(file.relPath);
   if (issue !== null) return { to: "/issues", search: { issue } };
   return {
     to: "/browse",
