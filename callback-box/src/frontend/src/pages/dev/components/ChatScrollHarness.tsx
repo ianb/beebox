@@ -7,9 +7,11 @@
  * scroller's own clientHeight — can be moved independently and deterministically.
  *
  * The controller is a registry entry (chat-scroll-controller.ts), not an import
- * baked into the markup: the harness only ever touches the public
- * scrollerRef/contentRef/isPinned/hasUnseenContent/scrollToBottom/captureForPrepend
- * surface, so a rewrite drops in and inherits every scenario.
+ * baked into the markup: the harness only ever touches the public controller
+ * surface (chat-scroll-controller.ts), so a rewrite drops in and inherits every
+ * scenario. The scroller sets `overflow-anchor: none` exactly as the app does —
+ * with Chrome's native scroll anchoring left on, the browser silently performs
+ * rule 4's compensations and the harness measures the browser, not us.
  *
  * Scenarios (chat-scroll-scenarios.ts) are scripts with expected outcomes; the
  * runner (chat-scroll-runner.ts) measures what a viewer would have seen and the
@@ -111,15 +113,18 @@ function HarnessFrame({ useController }: { useController: HarnessControllerHook 
   const [summary, setSummary] = useState<RunSummary | null>(null);
   const [running, setRunning] = useState<string | null>(null);
 
-  const pinnedRef = useRef(controller.isPinned);
+  const atBottomRef = useRef(controller.atBottom);
   const unseenRef = useRef(controller.hasUnseenContent);
   // Mirror the controller's flags where the runner and the scroll probe can
   // read them synchronously. Layout effect, so a frame sampled right after a
   // commit sees the flag that commit carried.
   useLayoutEffect(() => {
-    pinnedRef.current = controller.isPinned;
+    atBottomRef.current = controller.atBottom;
     unseenRef.current = controller.hasUnseenContent;
   });
+  // Every programmatic write the controller makes, counted from its own trace:
+  // "the controller wrote nothing" is an expectation the model turns on.
+  const writeCountRef = useRef(0);
 
   const log = useCallback((kind: string, detail: Record<string, string | number | boolean>) => {
     logRef.current.push({ t: Math.round(performance.now()), kind, detail });
@@ -131,6 +136,7 @@ function HarnessFrame({ useController }: { useController: HarnessControllerHook 
   useEffect(() => {
     scrollTraceSubscribe((event) => {
       const { k, t, ...rest } = event;
+      if (k === "write") writeCountRef.current++;
       logRef.current.push({ t: typeof t === "number" ? t : 0, kind: `trace:${String(k)}`, detail: rest });
     });
     return () => scrollTraceSubscribe(null);
@@ -150,7 +156,7 @@ function HarnessFrame({ useController }: { useController: HarnessControllerHook 
       detail: {
         top: Math.round(target.scrollTop),
         fromBottom: Math.round(target.scrollHeight - target.scrollTop - target.clientHeight),
-        pinned: pinnedRef.current,
+        atBottom: atBottomRef.current,
       },
     });
   }, []);
@@ -172,16 +178,33 @@ function HarnessFrame({ useController }: { useController: HarnessControllerHook 
 
   const capture = controller.captureForPrepend;
   const toBottom = controller.scrollToBottom;
+  const anchorToTop = controller.anchorToTop;
+  const openThread = controller.openThread;
+  const settleOpen = controller.settleOpen;
+
+  // The app's send effect, in miniature: find the newest user message and hand
+  // it to the controller as the top-of-viewport anchor.
+  const anchorSend = useCallback(() => {
+    const contentEl = contentElRef.current;
+    if (!contentEl) return;
+    const users = contentEl.querySelectorAll("[data-role=\"user\"]");
+    anchorToTop(users[users.length - 1] ?? null);
+  }, [anchorToTop]);
 
   const ctx: RunContext = useMemo(() => ({
     scroller: () => scrollerElRef.current,
     content: () => contentElRef.current,
-    isPinned: () => pinnedRef.current,
+    atBottom: () => atBottomRef.current,
     hasUnseenContent: () => unseenRef.current,
     captureForPrepend: capture,
+    anchorSend,
+    scrollToBottom: toBottom,
+    openThread,
+    settleOpen,
+    writeCount: () => writeCountRef.current,
     apply: (fn: (prev: HarnessContent) => HarnessContent) => flushApply(() => store.update(fn)),
     log,
-  }), [capture, store, log]);
+  }), [capture, anchorSend, toBottom, openThread, settleOpen, store, log]);
 
   const run = useCallback(async (scenario: Scenario): Promise<RunSummary> => {
     setRunning(scenario.name);
@@ -195,18 +218,24 @@ function HarnessFrame({ useController }: { useController: HarnessControllerHook 
     }
   }, [ctx]);
 
+  // A reset is a fresh thread, so it goes through the controller's open-thread
+  // path rather than a bare scroll-to-bottom: swapping the whole list out from
+  // under a live reading anchor is exactly the case rule 4 compensates for, and
+  // between scenarios that compensation would carry the previous run's position
+  // into the next one.
   const reset = useCallback(() => {
     flushApply(() => store.reset());
     logRef.current = [];
     setSummary(null);
     setLogTail([]);
-    toBottom({ behavior: "instant" });
-  }, [store, toBottom]);
+    openThread();
+  }, [store, openThread]);
 
   const resetAndSettle = useCallback(async (): Promise<void> => {
     reset();
     await new Promise<void>((resolve) => window.setTimeout(resolve, RESET_SETTLE_MS));
-  }, [reset]);
+    settleOpen();
+  }, [reset, settleOpen]);
 
   useEffect(() => {
     window.__scrollHarness = {
@@ -225,7 +254,7 @@ function HarnessFrame({ useController }: { useController: HarnessControllerHook 
         }
         return results;
       },
-      state: () => readState(scrollerElRef.current, { pinned: pinnedRef.current, unseen: unseenRef.current }),
+      state: () => readState(scrollerElRef.current, { atBottom: atBottomRef.current, unseen: unseenRef.current }),
       log: () => logRef.current.slice(),
       reset,
     };
@@ -239,11 +268,12 @@ function HarnessFrame({ useController }: { useController: HarnessControllerHook 
       <HarnessToolbar running={running} onReset={reset} />
       <ScrollFrame
         content={content}
+        viewportPx={controller.viewportPx}
         attachScroller={attachScroller}
         attachContent={attachContent}
       />
-      <HarnessStatusRow pinned={controller.isPinned} unseen={controller.hasUnseenContent} onScrollToBottom={toBottom} />
-      <HarnessReadout scroller={scrollerElRef} pinned={controller.isPinned} unseen={controller.hasUnseenContent} summary={summary} />
+      <HarnessStatusRow atBottom={controller.atBottom} unseen={controller.hasUnseenContent} onScrollToBottom={toBottom} />
+      <HarnessReadout scroller={scrollerElRef} atBottom={controller.atBottom} unseen={controller.hasUnseenContent} summary={summary} />
       <HarnessLog entries={logTail} />
     </Stack>
   );
@@ -251,25 +281,34 @@ function HarnessFrame({ useController }: { useController: HarnessControllerHook 
 
 interface ScrollFrameProps {
   content: HarnessContent;
+  /** The scroller's clientHeight, from the controller — the send spacer's height. */
+  viewportPx: number;
   attachScroller: (el: HTMLDivElement | null) => void;
   attachContent: (el: HTMLDivElement | null) => void;
 }
 
-function ScrollFrame({ content, attachScroller, attachContent }: ScrollFrameProps) {
+function ScrollFrame({ content, viewportPx, attachScroller, attachContent }: ScrollFrameProps) {
+  const lastId = content.messages.at(-1)?.id ?? null;
   return (
     <div
       className="flex flex-col border border-warm-300 rounded overflow-hidden"
       style={{ height: FRAME_PX - content.viewportShrinkPx }}
       data-testid="harness-frame"
     >
-      <div ref={attachScroller} data-testid="harness-scroller" className="flex-1 min-h-0 overflow-y-auto bg-warm-50">
+      <div
+        ref={attachScroller}
+        data-testid="harness-scroller"
+        className="flex-1 min-h-0 overflow-y-auto bg-warm-50"
+        style={{ overflowAnchor: "none" }}
+      >
         <div ref={attachContent} data-testid="harness-content" className="flex flex-col gap-2 p-2">
           {content.messages.map((m) => (
             <div
               key={m.id}
               data-testid="harness-message"
+              data-role={m.role}
               className={m.role === "assistant" ? "rounded bg-white border border-warm-200" : "rounded bg-primary-100 border border-primary-200 ml-12"}
-              style={{ height: m.px }}
+              style={{ height: m.px, minHeight: content.lastTurnSpacer && m.id === lastId ? viewportPx : undefined }}
             />
           ))}
         </div>
@@ -285,16 +324,16 @@ function ScrollFrame({ content, attachScroller, attachContent }: ScrollFrameProp
   );
 }
 
-function readState(el: HTMLDivElement | null, flags: { pinned: boolean; unseen: boolean }): Record<string, number | boolean | string> {
-  const { pinned, unseen } = flags;
-  if (!el) return { mounted: false, isPinned: pinned, hasUnseenContent: unseen };
+function readState(el: HTMLDivElement | null, flags: { atBottom: boolean; unseen: boolean }): Record<string, number | boolean | string> {
+  const { atBottom, unseen } = flags;
+  if (!el) return { mounted: false, atBottom, hasUnseenContent: unseen };
   return {
     mounted: true,
     scrollTop: Math.round(el.scrollTop),
     scrollHeight: el.scrollHeight,
     clientHeight: el.clientHeight,
     fromBottom: Math.round(el.scrollHeight - el.scrollTop - el.clientHeight),
-    isPinned: pinned,
+    atBottom,
     hasUnseenContent: unseen,
   };
 }

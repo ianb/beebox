@@ -51,7 +51,7 @@ export interface ChatBodyProps {
   currentUserEmail: string | undefined; currentUserName: string | undefined;
   modelMarkers: ModelMarker[];
   loadingOlder: boolean;
-  scrollToBottomTrigger: number;
+  sendSignal: number;
   liveTurnId: string | null;
   snapshot: { matches: (state: "loading" | "idle" | "streaming" | "refreshing") => boolean };
   textareaRef: React.RefObject<HTMLTextAreaElement>;

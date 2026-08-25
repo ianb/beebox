@@ -33,12 +33,12 @@ interface Geometry {
 
 interface ReadoutProps {
   scroller: MutableRefObject<HTMLDivElement | null>;
-  pinned: boolean;
+  atBottom: boolean;
   unseen: boolean;
   summary: RunSummary | null;
 }
 
-export function HarnessReadout({ scroller, pinned, unseen, summary }: ReadoutProps) {
+export function HarnessReadout({ scroller, atBottom, unseen, summary }: ReadoutProps) {
   const [geometry, setGeometry] = useState<Geometry | null>(null);
 
   useEffect(() => {
@@ -68,7 +68,7 @@ export function HarnessReadout({ scroller, pinned, unseen, summary }: ReadoutPro
           scrollTop {geometry ? geometry.scrollTop : "—"} · scrollHeight {geometry ? geometry.scrollHeight : "—"}
           {" · "}clientHeight {geometry ? geometry.clientHeight : "—"} · fromBottom {geometry ? geometry.fromBottom : "—"}
         </Text>
-        <Badge tone={pinned ? "success" : "neutral"}>isPinned {String(pinned)}</Badge>
+        <Badge tone={atBottom ? "success" : "neutral"}>atBottom {String(atBottom)}</Badge>
         <Badge tone={unseen ? "warning" : "neutral"}>hasUnseenContent {String(unseen)}</Badge>
       </Row>
       {summary ? <SummaryPanel summary={summary} /> : <Text size="sm" tone="muted">No run yet.</Text>}
@@ -136,13 +136,13 @@ export function HarnessToolbar({ running, onReset }: { running: string | null; o
 }
 
 interface StatusRowProps {
-  pinned: boolean;
+  atBottom: boolean;
   unseen: boolean;
   onScrollToBottom: (opts?: { behavior?: ScrollBehavior }) => void;
 }
 
 /** The chat's own scroll-to-bottom affordance, driven by the same two flags. */
-export function HarnessStatusRow({ pinned, unseen, onScrollToBottom }: StatusRowProps) {
+export function HarnessStatusRow({ atBottom, unseen, onScrollToBottom }: StatusRowProps) {
   return (
     <Row gap="sm" align="center">
       <Button
@@ -153,7 +153,7 @@ export function HarnessStatusRow({ pinned, unseen, onScrollToBottom }: StatusRow
       >
         Scroll to bottom
       </Button>
-      <Badge tone={pinned ? "success" : "neutral"}>{pinned ? "pinned" : "detached"}</Badge>
+      <Badge tone={atBottom ? "success" : "neutral"}>{atBottom ? "at bottom" : "away"}</Badge>
       <Badge tone={unseen ? "warning" : "neutral"}>{unseen ? "unseen content" : "no unseen content"}</Badge>
     </Row>
   );

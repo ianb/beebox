@@ -1,13 +1,17 @@
 # Chat scroll reconcile decision
 
 The pure classifier behind the message-list scroll controller's resize handler
-(`InteractiveChat-scroll.ts`). Given the facts of one ResizeObserver cycle it
-decides what the scroller should do — the layout effects themselves still need
-the manual procedure in `docs/chat-scroll-testing.md`, but the *decision* is
-deterministic and checked here.
+(`chat-scroll.ts`). Under the scroll model
+(`docs/plans/chat-scroll-model.md`) the controller writes `scrollTop` only on a
+discrete user action — opening a thread, sending, pressing the button — plus
+geometric compensations for changes the reader did not cause. This function is
+the dispatcher for the compensations: given the facts of one ResizeObserver
+cycle it decides which one applies. The layout effects themselves still need the
+browser procedure in `docs/chat-scroll-testing.md` and the scenario table at
+`/dev/chat-scroll`, but the *decision* is deterministic and checked here.
 
 ```ts setup
-import { decideReconcile, decideScroll } from "../../src/frontend/src/components/chat/scroll-reconcile.js";
+import { decideReconcile } from "../../src/frontend/src/components/chat/scroll-reconcile.js";
 ```
 
 A prepend of older history (loaded on scroll-up) grows the content just like a
@@ -15,90 +19,74 @@ bottom append, but must be held in place, never flagged as new — this is the
 false-"new messages" badge bug. `prepend` wins over everything.
 
 ```ts
-decideReconcile({ source: "content", grew: true, pinned: false, prepend: true, anchorMoved: false })
+decideReconcile({ source: "content", grew: true, prepend: true, anchorMoved: false, atBottom: false, openPhase: false })
 => hold-prepend
 
-// even while pinned or with a moved anchor, a landed prepend is held, not followed/flagged
-decideReconcile({ source: "content", grew: true, pinned: true, prepend: true, anchorMoved: true })
+// even during the open phase, or with a moved anchor, a landed prepend is held
+decideReconcile({ source: "content", grew: true, prepend: true, anchorMoved: true, atBottom: true, openPhase: true })
 => hold-prepend
 ```
 
-While following the bottom, any growth just re-pins.
+Opening a thread is the one bounded state in which growth does scroll: each
+chunk of the first history render keeps the bottom, until the caller says the
+render landed (or the reader scrolls away).
 
 ```ts
-decideReconcile({ source: "content", grew: true, pinned: true, prepend: false, anchorMoved: false })
-=> follow-bottom
+decideReconcile({ source: "content", grew: true, prepend: false, anchorMoved: false, atBottom: false, openPhase: true })
+=> open-bottom
+
+// a scroller resize during the open phase lands at the bottom too
+decideReconcile({ source: "scroller", grew: false, prepend: false, anchorMoved: false, atBottom: false, openPhase: true })
+=> open-bottom
 ```
 
-Detached, an anchor that shifted on screen means existing content above the
-reader reflowed (a late image/embed) — compensate, don't flag.
+A scroller-box resize is the viewport changing, not the content: the mobile
+keyboard opening, the composer growing, a banner appearing. The reader's
+distance from the bottom is preserved across it — which is what keeps a reader
+who was at the bottom at the bottom when the keyboard clamps `scrollTop`.
 
 ```ts
-decideReconcile({ source: "content", grew: true, pinned: false, prepend: false, anchorMoved: true })
+decideReconcile({ source: "scroller", grew: false, prepend: false, anchorMoved: false, atBottom: true, openPhase: false })
+=> hold-from-bottom
+
+// same branch when the reader is away from the bottom — reposition, never flag
+decideReconcile({ source: "scroller", grew: true, prepend: false, anchorMoved: true, atBottom: false, openPhase: false })
+=> hold-from-bottom
+```
+
+An anchor that shifted on screen means existing content above the reader
+reflowed (a late image/embed) — compensate, don't flag. Safari has no scroll
+anchoring of its own, and the app disables Chrome's, so this branch is the only
+one doing it.
+
+```ts
+decideReconcile({ source: "content", grew: true, prepend: false, anchorMoved: true, atBottom: false, openPhase: false })
 => hold-anchor
 ```
 
-Detached, content grew, and none of the above: genuinely new content below the
-reader — light the badge.
+Content grew, none of the above, and the reader is not at the bottom: the growth
+landed below them — light the badge. Nothing scrolls; the button is how they go
+see it.
 
 ```ts
-decideReconcile({ source: "content", grew: true, pinned: false, prepend: false, anchorMoved: false })
+decideReconcile({ source: "content", grew: true, prepend: false, anchorMoved: false, atBottom: false, openPhase: false })
 => flag-unseen
 ```
 
-A scroller-box resize (chrome below the list) or a no-growth cycle is never new
-content.
+The same growth while the reader IS at the bottom does nothing at all. This is
+the model's central claim: a streaming reply below a reader at the bottom does
+not scroll and is not "unseen" — they watched it arrive, and `atBottom` simply
+becomes false as it grows.
 
 ```ts
-// scroller source: reposition only, never unseen
-decideReconcile({ source: "scroller", grew: true, pinned: false, prepend: false, anchorMoved: false })
-=> none
-
-// content source but nothing grew
-decideReconcile({ source: "content", grew: false, pinned: false, prepend: false, anchorMoved: false })
+decideReconcile({ source: "content", grew: true, prepend: false, anchorMoved: false, atBottom: true, openPhase: false })
 => none
 ```
 
-## Scroll-event classification (`decideScroll`)
-
-The companion classifier for user scroll events (the controller's `scroll`
-handler, after programmatic writes are filtered out). An upward scroll with
-recent wheel/touch/key intent disengages following.
+A content cycle that didn't grow (a shrink at finalize, a label swap) is never
+new content either.
 
 ```ts
-decideScroll({ scrolledUp: true, recentIntent: true, fromBottom: 300, nearBottomPx: 70 })
-=> disengage
-
-// even an intent-carrying scroll-up that stays near the bottom disengages
-decideScroll({ scrolledUp: true, recentIntent: true, fromBottom: 30, nearBottomPx: 70 })
-=> disengage
-```
-
-A scrollbar-thumb drag fires no wheel/touch/key events, so it carries no
-recorded intent — but an upward scroll that lands well above the bottom can
-only be the user, so it disengages anyway (the mid-stream scrollbar-drag
-fight bug). The layout clamps the intent gate exists to ignore — content
-shrinking below the reader, the mobile keyboard dismissing — land AT the new
-bottom, so the away-from-bottom condition never matches them.
-
-```ts
-// scrollbar drag: no intent, but well above the bottom — the user
-decideScroll({ scrolledUp: true, recentIntent: false, fromBottom: 300, nearBottomPx: 70 })
-=> disengage
-
-// keyboard-dismiss / shrink clamp: scrollTop drops to the new bottom, no
-// intent — must NOT disengage (nor re-engage: it reads as scrolled-up)
-decideScroll({ scrolledUp: true, recentIntent: false, fromBottom: 0, nearBottomPx: 70 })
-=> none
-```
-
-A downward (or stationary) scroll that settles near the bottom re-engages —
-no intent needed; one that stays far from the bottom does nothing.
-
-```ts
-decideScroll({ scrolledUp: false, recentIntent: false, fromBottom: 40, nearBottomPx: 70 })
-=> re-engage
-
-decideScroll({ scrolledUp: false, recentIntent: false, fromBottom: 500, nearBottomPx: 70 })
+decideReconcile({ source: "content", grew: false, prepend: false, anchorMoved: false, atBottom: false, openPhase: false })
 => none
 ```

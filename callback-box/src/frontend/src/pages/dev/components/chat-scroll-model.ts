@@ -22,6 +22,9 @@ export interface HarnessContent {
   chromePx: number;
   /** Temporary shrink of the whole frame — the mobile-keyboard clamp. */
   viewportShrinkPx: number;
+  /** The last turn carries a viewport-tall min-height (the app's send spacer),
+   *  so "the user message at the top" is a reachable scroll position. */
+  lastTurnSpacer: boolean;
   /** Next id to hand out; ids never repeat so React keys stay stable. */
   nextId: number;
 }
@@ -59,6 +62,7 @@ export function initialContent(): HarnessContent {
     messages,
     chromePx: INITIAL_CHROME_PX,
     viewportShrinkPx: 0,
+    lastTurnSpacer: false,
     nextId: messages.length + 1,
   };
 }

@@ -1,17 +1,18 @@
 /**
  * The seam between the dev scroll harness and whatever controller it is
- * exercising. The harness knows only this interface — attach points for the
- * scroller and content elements, two observable flags, and the two imperative
- * calls the chat makes — so a replacement controller can be registered here and
+ * exercising. The harness knows only this interface — the two attach points,
+ * the two observable flags, the viewport height the send spacer needs, and the
+ * imperative calls the chat makes (send anchor, button, prepend capture,
+ * open-thread hold) — so a replacement controller can be registered here and
  * driven by the same scenarios without touching the harness or the scripts.
  *
- * `useStickToBottom` (the shipping controller) already has exactly this shape;
- * the alias is what documents it as a contract rather than a coincidence.
+ * `useChatScroll` (the shipping controller) already has exactly this shape; the
+ * alias is what documents it as a contract rather than a coincidence.
  */
 
-import { useStickToBottom, type StickToBottom } from "../../../components/chat/InteractiveChat-scroll";
+import { useChatScroll, type ChatScroll } from "../../../components/chat/chat-scroll";
 
-export type HarnessScrollController = StickToBottom;
+export type HarnessScrollController = ChatScroll;
 
 export type HarnessControllerHook = () => HarnessScrollController;
 
@@ -27,9 +28,9 @@ export interface ControllerEntry {
  * in place), which is also the clean-slate every scenario run wants anyway.
  */
 export const DEFAULT_CONTROLLER: ControllerEntry = {
-  name: "useStickToBottom",
-  description: "The shipping chat controller (components/chat/InteractiveChat-scroll.ts).",
-  use: useStickToBottom,
+  name: "useChatScroll",
+  description: "The shipping chat controller (components/chat/chat-scroll.ts).",
+  use: useChatScroll,
 };
 
 export const CONTROLLERS: ControllerEntry[] = [DEFAULT_CONTROLLER];

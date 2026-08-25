@@ -7,15 +7,16 @@
  * what the user would actually see:
  *
  *  - `fromBottom` at every frame, and the worst value recorded during any
- *    moment the controller claimed to be pinned (a pinned view that is 300px
- *    off the bottom is the "drifts as it grows" bug, whatever the flag says);
- *  - pin transitions, and whether a disengage happened anywhere near real user
- *    input (a disengage with no input is the controller mistaking its own
- *    write, or layout, for the user);
- *  - visual drift while detached, measured against a real DOM anchor rather
- *    than scrollTop — prepends and bottom growth move scrollTop in opposite
- *    directions for the same on-screen result, so scrollTop can't tell you
- *    whether the reader's page moved.
+ *    moment the controller claimed to be at the bottom;
+ *  - at-bottom transitions, and whether the view left the bottom anywhere near
+ *    real user input;
+ *  - visual drift while away from the bottom, measured against a real DOM
+ *    anchor rather than scrollTop — prepends and bottom growth move scrollTop
+ *    in opposite directions for the same on-screen result, so scrollTop can't
+ *    tell you whether the reader's page moved;
+ *  - backwards jumps during a fling (a yank), and the number of programmatic
+ *    writes the controller made — under the write-on-user-action model a
+ *    hands-off scenario must produce zero.
  */
 
 import { flushSync } from "react-dom";
@@ -23,36 +24,28 @@ import { assertNever } from "@shared/invariant";
 import type { HarnessContent, HarnessMessage } from "./chat-scroll-model";
 import { makeRandom } from "./chat-scroll-model";
 import type { Scenario, Step } from "./chat-scroll-scenarios";
+import { Sampler, fromBottomOf, type RunContext } from "./chat-scroll-sampler";
 
-/** Everything the runner needs from the page. */
-export interface RunContext {
-  scroller: () => HTMLDivElement | null;
-  content: () => HTMLDivElement | null;
-  isPinned: () => boolean;
-  hasUnseenContent: () => boolean;
-  captureForPrepend: () => void;
-  apply: (fn: (prev: HarnessContent) => HarnessContent) => void;
-  log: (kind: string, detail: Record<string, string | number | boolean>) => void;
-}
+export type { RunContext } from "./chat-scroll-sampler";
 
 export interface RunSummary {
   scenario: string;
   durationMs: number;
-  finalPinned: boolean;
+  finalAtBottom: boolean;
   finalFromBottom: number;
   finalHasUnseenContent: boolean;
-  maxFromBottomWhilePinned: number;
-  disengageCount: number;
-  reengageCount: number;
-  disengagedWithoutIntent: boolean;
-  driftWhileDetachedPx: number;
+  finalUserMessageTop: number;
+  maxFromBottomWhileAtBottom: number;
+  leftBottomCount: number;
+  reachedBottomCount: number;
+  leftBottomWithoutIntent: boolean;
+  driftWhileAwayPx: number;
+  flingReversals: number;
+  writes: number;
   samples: number;
   pass: boolean;
   failures: string[];
 }
-
-/** A user step counts as "intent" for this long afterwards. */
-const INTENT_WINDOW_MS = 350;
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -66,133 +59,6 @@ function frame(): Promise<void> {
 async function settle(): Promise<void> {
   await frame();
   await frame();
-}
-
-function fromBottomOf(el: HTMLDivElement): number {
-  return el.scrollHeight - el.scrollTop - el.clientHeight;
-}
-
-/** The topmost child still visible, with its offset below the scroller's top edge. */
-function topVisible(scroller: HTMLDivElement, content: HTMLDivElement): { el: Element; top: number } | null {
-  const scTop = scroller.getBoundingClientRect().top;
-  for (const child of content.children) {
-    const r = child.getBoundingClientRect();
-    if (r.bottom > scTop + 1) return { el: child, top: r.top - scTop };
-  }
-  return null;
-}
-
-/** Per-frame measurement of what the viewer sees, independent of the controller. */
-class Sampler {
-  maxFromBottomWhilePinned = 0;
-  disengageCount = 0;
-  reengageCount = 0;
-  disengagedWithoutIntent = false;
-  driftWhileDetachedPx = 0;
-  samples = 0;
-
-  private prevPinned: boolean;
-  private anchor: { el: Element; top: number } | null = null;
-  private lastIntentAt = -Infinity;
-  private running = true;
-  private inResizeCycle = false;
-  private observer: ResizeObserver | null = null;
-
-  constructor(private ctx: RunContext) {
-    this.prevPinned = ctx.isPinned();
-  }
-
-  markIntent(): void {
-    this.lastIntentAt = performance.now();
-    this.anchor = null;
-  }
-
-  private sample(): void {
-    const el = this.ctx.scroller();
-    const content = this.ctx.content();
-    if (!el || !content) return;
-    this.samples++;
-    const pinned = this.ctx.isPinned();
-    const fb = fromBottomOf(el);
-    // Only the post-resize phase can say how far off the bottom the view
-    // actually WAS: between a content mutation and the resize cycle that
-    // answers it, the scroller is legitimately off the bottom and nothing has
-    // been painted yet. Counting that gap would score every controller as
-    // drifting by one chunk. `inResizeCycle` samples are taken from our own
-    // ResizeObserver, which — registered after the controller's — runs after it
-    // has already written, so it sees the state that goes to the screen.
-    if (pinned && this.inResizeCycle && fb > this.maxFromBottomWhilePinned) this.maxFromBottomWhilePinned = fb;
-    if (pinned !== this.prevPinned) {
-      const withIntent = performance.now() - this.lastIntentAt < INTENT_WINDOW_MS;
-      if (pinned) this.reengageCount++;
-      else {
-        this.disengageCount++;
-        if (!withIntent) this.disengagedWithoutIntent = true;
-      }
-      this.ctx.log("pin", { pinned, fromBottom: Math.round(fb), withIntent });
-      this.prevPinned = pinned;
-      this.anchor = null;
-    }
-    if (pinned) {
-      this.anchor = null;
-      return;
-    }
-    // Detached: accumulate how far the reader's page moved on screen, ignoring
-    // the window right after their own scroll (that movement is theirs).
-    const fresh = performance.now() - this.lastIntentAt < INTENT_WINDOW_MS;
-    const anchor = this.anchor;
-    if (!anchor || !anchor.el.isConnected || fresh) {
-      this.anchor = fresh ? null : topVisible(el, content);
-      return;
-    }
-    const top = anchor.el.getBoundingClientRect().top - el.getBoundingClientRect().top;
-    this.driftWhileDetachedPx += Math.abs(top - anchor.top);
-    anchor.top = top;
-  }
-
-  start(): void {
-    // Our own ResizeObserver, created after the controller's so it is delivered
-    // after it in the same cycle: this is the phase where the controller has
-    // finished reacting and the frame is about to be painted.
-    const el = this.ctx.scroller();
-    const content = this.ctx.content();
-    if (el && content) {
-      const ro = new ResizeObserver(() => {
-        this.inResizeCycle = true;
-        try {
-          this.sample();
-        } finally {
-          this.inResizeCycle = false;
-        }
-      });
-      ro.observe(el);
-      ro.observe(content);
-      this.observer = ro;
-    }
-    // Sample from a task scheduled INSIDE a frame callback, not from the frame
-    // callback itself: a rAF runs before that frame's layout and before its
-    // ResizeObserver delivery, so it would see the scroller mid-growth, before
-    // the controller's re-pin write — a state the user never sees. The task
-    // runs after layout, observers, and paint, so what it measures is what was
-    // on screen.
-    const tick = (): void => {
-      if (!this.running) return;
-      window.requestAnimationFrame(() => {
-        window.setTimeout(() => {
-          if (!this.running) return;
-          this.sample();
-          tick();
-        }, 0);
-      });
-    };
-    tick();
-  }
-
-  stop(): void {
-    this.running = false;
-    if (this.observer) this.observer.disconnect();
-    this.observer = null;
-  }
 }
 
 function growLast(prev: HarnessContent, by: number): HarnessContent {
@@ -222,6 +88,34 @@ async function runStep(step: Step, deps: StepDeps): Promise<void> {
   switch (step.k) {
     case "wait":
       await delay(step.ms);
+      return;
+    case "send":
+      // The app's send: the user message lands, takes the last-turn spacer,
+      // and the controller anchors it to the top in the same commit.
+      ctx.apply((prev) => ({
+        ...prev,
+        messages: [...prev.messages, { id: prev.nextId, role: "user", px: step.px }],
+        nextId: prev.nextId + 1,
+        lastTurnSpacer: true,
+      }));
+      ctx.anchorSend();
+      await settle();
+      return;
+    case "button":
+      ctx.scrollToBottom({ behavior: step.behavior });
+      await settle();
+      return;
+    case "openThread":
+      ctx.apply((prev) => ({ ...prev, messages: [], lastTurnSpacer: false }));
+      ctx.openThread();
+      await settle();
+      return;
+    case "settleOpen":
+      ctx.settleOpen();
+      await settle();
+      return;
+    case "fling":
+      await runFling(step, { el, sampler });
       return;
     case "append":
       ctx.apply((prev) => ({
@@ -280,6 +174,34 @@ async function runStep(step: Step, deps: StepDeps): Promise<void> {
   }
 }
 
+/**
+ * A momentum fling: scroll events and nothing else — no wheel, no touchmove,
+ * no key. This is the iOS shape the previous controller had to classify from
+ * position alone. Reversals (scrollTop jumping back down while the reader
+ * flings up) are the yank this model must never produce.
+ */
+async function runFling(step: { steps: number; stepPx: number; intervalMs: number }, deps: { el: HTMLDivElement; sampler: Sampler }): Promise<void> {
+  const { el, sampler } = deps;
+  const positions: number[] = [];
+  const onScroll = (): void => { positions.push(el.scrollTop); };
+  el.addEventListener("scroll", onScroll, { passive: true });
+  try {
+    for (let i = 0; i < step.steps; i++) {
+      sampler.markIntent();
+      el.scrollTop = Math.max(0, el.scrollTop - step.stepPx);
+      await delay(step.intervalMs);
+    }
+    await settle();
+  } finally {
+    el.removeEventListener("scroll", onScroll);
+  }
+  let prev = positions[0] ?? 0;
+  for (const at of positions) {
+    if (at > prev + 2) sampler.flingReversals++;
+    prev = at;
+  }
+}
+
 function prependOlder(prev: HarnessContent, count: number): HarnessContent {
   const rnd = makeRandom(prev.nextId * 7919);
   const older: HarnessMessage[] = [];
@@ -317,18 +239,24 @@ function evaluate(scenario: Scenario, summary: Omit<RunSummary, "pass" | "failur
   const check = (ok: boolean, message: string): void => {
     if (!ok) failures.push(message);
   };
-  if (e.finalPinned !== undefined) check(summary.finalPinned === e.finalPinned, `finalPinned ${summary.finalPinned} !== ${e.finalPinned}`);
+  if (e.finalAtBottom !== undefined) check(summary.finalAtBottom === e.finalAtBottom, `finalAtBottom ${summary.finalAtBottom} !== ${e.finalAtBottom}`);
   if (e.finalFromBottomAtMost !== undefined) check(summary.finalFromBottom <= e.finalFromBottomAtMost, `finalFromBottom ${summary.finalFromBottom} > ${e.finalFromBottomAtMost}`);
-  if (e.maxFromBottomWhilePinnedAtMost !== undefined) {
-    check(summary.maxFromBottomWhilePinned <= e.maxFromBottomWhilePinnedAtMost, `maxFromBottomWhilePinned ${summary.maxFromBottomWhilePinned} > ${e.maxFromBottomWhilePinnedAtMost}`);
+  if (e.finalFromBottomAtLeast !== undefined) check(summary.finalFromBottom >= e.finalFromBottomAtLeast, `finalFromBottom ${summary.finalFromBottom} < ${e.finalFromBottomAtLeast}`);
+  if (e.maxFromBottomWhileAtBottomAtMost !== undefined) {
+    check(summary.maxFromBottomWhileAtBottom <= e.maxFromBottomWhileAtBottomAtMost, `maxFromBottomWhileAtBottom ${summary.maxFromBottomWhileAtBottom} > ${e.maxFromBottomWhileAtBottomAtMost}`);
   }
-  if (e.disengagedWithoutIntent !== undefined) {
-    check(summary.disengagedWithoutIntent === e.disengagedWithoutIntent, `disengagedWithoutIntent ${summary.disengagedWithoutIntent} !== ${e.disengagedWithoutIntent}`);
+  if (e.leftBottomWithoutIntent !== undefined) {
+    check(summary.leftBottomWithoutIntent === e.leftBottomWithoutIntent, `leftBottomWithoutIntent ${summary.leftBottomWithoutIntent} !== ${e.leftBottomWithoutIntent}`);
   }
-  if (e.driftWhileDetachedAtMost !== undefined) check(summary.driftWhileDetachedPx <= e.driftWhileDetachedAtMost, `driftWhileDetachedPx ${summary.driftWhileDetachedPx} > ${e.driftWhileDetachedAtMost}`);
+  if (e.driftWhileAwayAtMost !== undefined) check(summary.driftWhileAwayPx <= e.driftWhileAwayAtMost, `driftWhileAwayPx ${summary.driftWhileAwayPx} > ${e.driftWhileAwayAtMost}`);
   if (e.finalHasUnseenContent !== undefined) {
     check(summary.finalHasUnseenContent === e.finalHasUnseenContent, `finalHasUnseenContent ${summary.finalHasUnseenContent} !== ${e.finalHasUnseenContent}`);
   }
+  if (e.finalUserMessageTopAtMost !== undefined) {
+    check(Math.abs(summary.finalUserMessageTop) <= e.finalUserMessageTopAtMost, `|finalUserMessageTop| ${summary.finalUserMessageTop} > ${e.finalUserMessageTopAtMost}`);
+  }
+  if (e.writesAtMost !== undefined) check(summary.writes <= e.writesAtMost, `writes ${summary.writes} > ${e.writesAtMost}`);
+  if (e.flingReversalsAtMost !== undefined) check(summary.flingReversals <= e.flingReversalsAtMost, `flingReversals ${summary.flingReversals} > ${e.flingReversalsAtMost}`);
   return failures;
 }
 
@@ -336,6 +264,7 @@ function evaluate(scenario: Scenario, summary: Omit<RunSummary, "pass" | "failur
 export async function runScenario(scenario: Scenario, ctx: RunContext): Promise<RunSummary> {
   const sampler = new Sampler(ctx);
   const startedAt = performance.now();
+  const writesBefore = ctx.writeCount();
   ctx.log("scenario-start", { name: scenario.name });
   sampler.start();
   try {
@@ -348,20 +277,36 @@ export async function runScenario(scenario: Scenario, ctx: RunContext): Promise<
   const measured = {
     scenario: scenario.name,
     durationMs: Math.round(performance.now() - startedAt),
-    finalPinned: ctx.isPinned(),
+    finalAtBottom: ctx.atBottom(),
     finalFromBottom: el ? Math.round(fromBottomOf(el)) : -1,
     finalHasUnseenContent: ctx.hasUnseenContent(),
-    maxFromBottomWhilePinned: Math.round(sampler.maxFromBottomWhilePinned),
-    disengageCount: sampler.disengageCount,
-    reengageCount: sampler.reengageCount,
-    disengagedWithoutIntent: sampler.disengagedWithoutIntent,
-    driftWhileDetachedPx: Math.round(sampler.driftWhileDetachedPx),
+    finalUserMessageTop: lastUserMessageTop(el, ctx.content()),
+    maxFromBottomWhileAtBottom: Math.round(sampler.maxFromBottomWhileAtBottom),
+    leftBottomCount: sampler.leftBottomCount,
+    reachedBottomCount: sampler.reachedBottomCount,
+    leftBottomWithoutIntent: sampler.leftBottomWithoutIntent,
+    driftWhileAwayPx: Math.round(sampler.driftWhileAwayPx),
+    flingReversals: sampler.flingReversals,
+    writes: ctx.writeCount() - writesBefore,
     samples: sampler.samples,
   };
   const failures = evaluate(scenario, measured);
   const summary: RunSummary = { ...measured, pass: failures.length === 0, failures };
   ctx.log("scenario-end", { name: scenario.name, pass: summary.pass, failures: failures.join("; ") });
   return summary;
+}
+
+/**
+ * Offset of the newest user message from the scroller's top edge — the send
+ * anchor's on-screen result. A large sentinel when there is no user message, so
+ * a scenario that expects the anchor fails loudly instead of passing on absence.
+ */
+function lastUserMessageTop(scroller: HTMLDivElement | null, content: HTMLDivElement | null): number {
+  if (!scroller || !content) return 99999;
+  const users = content.querySelectorAll("[data-role=\"user\"]");
+  const last = users[users.length - 1];
+  if (!last) return 99999;
+  return Math.round(last.getBoundingClientRect().top - scroller.getBoundingClientRect().top);
 }
 
 /** Apply a content mutation and force React to render it before returning. */
