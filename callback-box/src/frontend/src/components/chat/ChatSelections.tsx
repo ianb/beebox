@@ -56,7 +56,7 @@ function SelectionPill({
         className="flex items-center gap-1.5 max-w-[16rem] rounded bg-warm-200 pl-1.5 pr-2 py-1 hover:ring-2 hover:ring-accent focus:outline-none focus:ring-2 focus:ring-accent"
         title="Click to view the selected text"
       >
-        <span className="font-mono text-[10px] bg-warm-800 text-white px-1 rounded flex-shrink-0">{`selection${selection.id}`}</span>
+        <span className="font-mono text-[10px] bg-warm-800 text-white px-1 rounded flex-shrink-0">{`selection#${String(selection.id)}`}</span>
         <span className="text-xs text-warm-700 truncate">“{snippet(selection.text)}”</span>
       </button>
       <button

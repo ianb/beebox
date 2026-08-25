@@ -72,7 +72,12 @@ export function useCoinedChat(opts: { enabled: boolean; contextDir: string | und
         try {
           const outcome = await mutateAsync({
             sessionId,
-            ...(contextDir !== undefined && contextDir !== "" ? { contextDir } : {}),
+            // `""` is forwarded, not dropped: it is the box-root landmark
+            // (`useOpenLandmarkChat` sends exactly that for the Box row), and
+            // the reservation is what names the chat's place until its first
+            // turn commits a history row. Only an absent param means the chat
+            // was opened from nowhere.
+            ...(contextDir !== undefined ? { contextDir } : {}),
           });
           if (abort.signal.aborted) return;
           if (outcome.kind === "reserved") {

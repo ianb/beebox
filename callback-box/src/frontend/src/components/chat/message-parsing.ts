@@ -57,9 +57,8 @@ export function stripUserDisplayTags(
     // A declared token takes its surrounding spaces with it: both neighbors
     // present collapse to one ("see [file1] here" → "see here"), otherwise
     // none survive ("see [file1]." → "see."). Undeclared tokens stay whole.
-    .replace(/ ?\[file\d+] ?/g, (token) => {
-      const id = parseInt(token.match(/\d+/)?.[0] ?? "", 10);
-      if (!attachedIds.has(id)) return token;
+    .replace(/ ?\[file#?(\d+)] ?/g, (token, digits: string) => {
+      if (!attachedIds.has(parseInt(digits, 10))) return token;
       return token.startsWith(" ") && token.endsWith(" ") ? " " : "";
     });
 }
@@ -77,7 +76,7 @@ export interface FileAttachmentRef {
 }
 
 const ATTACHMENTS_BLOCK_RE = /<attachments>([\S\s]*?)<\/attachments>/i;
-const FILE_REF_LINE_RE = /\[file(\d+)]:\s*(\S+)/g;
+const FILE_REF_LINE_RE = /\[file#?(\d+)]:\s*(\S+)/g;
 const TMP_FILENAME_PREFIX_RE = /^tmp\/[^/_]+_(.+)$/;
 
 export function extractFileAttachments(text: string): FileAttachmentRef[] {

@@ -22,6 +22,7 @@ import {
   getLastSessionForDirectory,
 } from "../../../core/chat/session/history.js";
 import { nearestLandmarkDir, isBoxRelativeCardPath } from "../../../core/landmark/nearest.js";
+import { getChatRuntime } from "../../chat-runtime.js";
 import { loadAllSessions, type ChatSessionRow } from "../../../core/chat/session/list.js";
 import { CHAT_FRESH_WINDOW_MS } from "../../../core/chat/session/recent-landmark.js";
 import { loadLandmarkSummaries, type LandmarkProblem } from "../../../core/landmark/summaries.js";
@@ -111,6 +112,18 @@ async function readBriefingOpeners(boxRoot: string, dir: string): Promise<string
   }
 }
 
+/**
+ * A coined-but-unstarted chat bound to `contextDir`, or null.
+ *
+ * Reservations live on the per-box runtime, which a box that is only being
+ * read (no chat runtime wired) does not have — hence the soft accessor rather
+ * than `requireRuntime`. No runtime means no reservations to find, not an
+ * error: the caller falls back to the history answer.
+ */
+function reservedSessionForDirectory(boxRoot: string, contextDir: string): string | null {
+  return getChatRuntime(boxRoot)?.registry.reservationForDirectory(contextDir) ?? null;
+}
+
 export const chatRouter = router({
   ...chatSessionProcedures,
   ...chatControlProcedures,
@@ -119,11 +132,19 @@ export const chatRouter = router({
   /**
    * Most-recently-created session associated with a directory, or null
    * if no chat has been started for that directory.
+   *
+   * A committed chat wins over a reservation even when the reservation is
+   * newer: the reserved one is empty by definition, and "open this landmark"
+   * means resume its conversation. The reservation is the fallback so that a
+   * fresh landmark chat you left without sending is the one you come back to,
+   * rather than a second coined id every time
+   * (`ChatReservationStore.latestForDirectory`).
    */
   lastSessionForDirectory: publicProcedure
     .input(z.object({ contextDir: z.string() }))
     .query(async ({ ctx, input }) => {
-      const sessionId = await getLastSessionForDirectory(ctx.boxRoot, input.contextDir);
+      const committed = await getLastSessionForDirectory(ctx.boxRoot, input.contextDir);
+      const sessionId = committed ?? reservedSessionForDirectory(ctx.boxRoot, input.contextDir);
       return { sessionId };
     }),
 
@@ -145,7 +166,11 @@ export const chatRouter = router({
     )
     .query(async ({ ctx, input }): Promise<{ contextDir: string; sessionId: string | null }> => {
       const contextDir = await nearestLandmarkDir(ctx.boxRoot, { cardPath: input.cardPath });
-      const sessionId = await getLastSessionForDirectory(ctx.boxRoot, contextDir);
+      // Same reservation fallback as `lastSessionForDirectory`: without it the
+      // card page's chat button coins a second empty chat for a landmark whose
+      // only chat is reserved-but-unstarted.
+      const committed = await getLastSessionForDirectory(ctx.boxRoot, contextDir);
+      const sessionId = committed ?? reservedSessionForDirectory(ctx.boxRoot, contextDir);
       return { contextDir, sessionId };
     }),
 
@@ -188,11 +213,20 @@ export const chatRouter = router({
 
   /**
    * Directory a session is associated with, or null if it isn't.
+   *
+   * A coined chat is bound at reserve time but has no history row until its
+   * first turn commits, so history alone answers `null` for it — which left
+   * the app bar naming a landmark-bound chat "Chat", with its landmark
+   * directory, curated links and Recent files unreachable, until the chat had
+   * been used *and* the page reloaded. The reservation carries the binding in
+   * that window; history stays authoritative once it has one.
    */
   directoryFor: publicProcedure
     .input(z.object({ sessionId: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
-      const contextDir = await getDirectoryForSession(ctx.boxRoot, input.sessionId);
+      const recorded = await getDirectoryForSession(ctx.boxRoot, input.sessionId);
+      const reserved = getChatRuntime(ctx.boxRoot)?.registry.getReservation(input.sessionId) ?? null;
+      const contextDir = recorded ?? (reserved === null ? null : reserved.contextDir);
       return { contextDir };
     }),
 

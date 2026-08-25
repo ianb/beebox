@@ -39,15 +39,25 @@ export async function recordSessionStart(
      * engine that was configured when it was reserved.
      */
     engine?: AgentEngine | undefined;
+    /**
+     * Called once the history row exists — the moment the chat's landmark
+     * binding is durable and the in-memory reservation is no longer the only
+     * thing that can answer for it. That is exactly when the registry releases
+     * the reservation: earlier leaves a window (and, since the writes below are
+     * deliberately quiet on failure, a permanent state) in which the chat is
+     * bound and nothing can say to what.
+     */
+    onHistoryWritten?: (() => void) | undefined;
   },
 ): Promise<void> {
-  const { sessionId, contextDir, seedFeatures, engine } = params;
+  const { sessionId, contextDir, seedFeatures, engine, onHistoryWritten } = params;
   try {
     await appendHistory(boxRoot, {
       sessionId,
       ...(contextDir !== undefined ? { contextDir } : {}),
       ...(engine !== undefined ? { engine } : {}),
     });
+    onHistoryWritten?.();
     // Persist landmark feature seeds alongside the new history entry so a
     // future resume of this session (or a fresh server boot) still sees the
     // seed as the session's starting state. User toggles afterward overwrite
