@@ -1,15 +1,13 @@
 #!/usr/bin/env bash
 # land — Merge a finished worktree branch onto main (--no-ff). Runs from anywhere.
 #
-# Why this exists: Claude Code isolates a `--worktree` session (and every
-# subagent it spawns) from the main checkout, blocking `git -C <main>`,
-# `--git-dir`, `GIT_DIR`/`GIT_WORK_TREE`, and `cd <main>` before git. See
-# "How Claude Code enforces isolation" in https://code.claude.com/docs/en/worktrees.
-# That check reads the Bash tool's command string; it does not follow into a
-# script file, so `/finish` can invoke this and complete the merge itself.
-#
-# If that ever stops working, run this same script from the main checkout —
-# it behaves identically there, so the fallback needs no code change.
+# Why this exists: one place that resolves the main checkout (from
+# `--git-common-dir`), enforces main-clean and on-`main`, and merges `--no-ff`,
+# so a landing is the same command from a worktree, from the main checkout, or
+# from a Codex session — whose sandbox cannot git the main checkout at all.
+# (Managed Claude sessions are NOT isolated from the main checkout: they don't
+# use native `claude --worktree`, which is what carries that isolation. An
+# earlier version of this comment claimed otherwise; corrected 2026-08-25.)
 #
 # There is nothing to *resolve* in main. `/finish` merges main INTO the
 # worktree and re-verifies there, so landing itself never needs conflict
