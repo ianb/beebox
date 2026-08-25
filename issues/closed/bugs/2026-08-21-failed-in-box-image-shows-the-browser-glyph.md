@@ -2,11 +2,11 @@
 title: "An in-box image that 404s shows the browser's broken-image glyph, not the app's placeholder"
 workstream: unattached
 area: callback-box
+labels: [user-stories-audit]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — checking the "a broken image says so" user story on /browse
 resolution: implemented
-stories: [browse/images-still-show-when-the-source-blocks]
 ---
 
 An in-box image URL that 404s renders the browser's native broken-image glyph.
@@ -55,3 +55,5 @@ The recheck is adversarial by design: it will not mark the story accurate just b
 this issue was closed — it re-reads the code. If it still refutes, that is worth knowing
 before you call the fix done. Details in
 [the pipeline README](../../../callback-box/user-stories/README.md).
+
+Catalogued as `browse/images-still-show-when-the-source-blocks` in the [user-story catalog](../../../callback-box/user-stories/catalog/2026-08-21.md).

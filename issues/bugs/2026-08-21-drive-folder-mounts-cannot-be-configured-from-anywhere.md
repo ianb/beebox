@@ -2,9 +2,9 @@
 title: "Drive folder mounts cannot be configured from anywhere a boxholder actually uses"
 workstream: unattached
 area: callback-box
+labels: [user-stories-audit]
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — user-story catalog verification
-stories: [connectors/configure-which-gmail-calendar-and-drive-content]
 ---
 
 The Gmail and Calendar connectors can be configured from the web UI; Google Drive cannot, and its backing mutation has no caller at all.
@@ -58,3 +58,5 @@ The recheck is adversarial by design: it will not mark the story accurate just b
 this issue was closed — it re-reads the code. If it still refutes, that is worth knowing
 before you call the fix done. Details in
 [the pipeline README](../../callback-box/user-stories/README.md).
+
+Catalogued as `connectors/configure-which-gmail-calendar-and-drive-content` in the [user-story catalog](../../callback-box/user-stories/catalog/2026-08-21.md).

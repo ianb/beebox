@@ -2,9 +2,9 @@
 title: "History shows no trigger for procedure and trick commits, and its Workflow filter only matches pre-rename runs"
 workstream: unattached
 area: callback-box
+labels: [user-stories-audit]
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — user-story catalog verification
-stories: [browse/see-which-changes-the-box-made-on-its-own-and]
 priority: normal
 ---
 
@@ -46,3 +46,5 @@ The recheck is adversarial by design: it will not mark the story accurate just b
 this issue was closed — it re-reads the code. If it still refutes, that is worth knowing
 before you call the fix done. Details in
 [the pipeline README](../../callback-box/user-stories/README.md).
+
+Catalogued as `browse/see-which-changes-the-box-made-on-its-own-and` in the [user-story catalog](../../callback-box/user-stories/catalog/2026-08-21.md).

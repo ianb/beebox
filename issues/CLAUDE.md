@@ -90,6 +90,15 @@ resolution: implemented       # closed/ only: implemented | wontfix | superseded
 ---
 ```
 
+**The schema is closed.** These are the only frontmatter fields; anything else is
+dropped by every consumer. The parser
+(`workstreams-app/src/server/issue-domain.ts`) reports unrecognised keys as
+`unknownKeys` rather than swallowing them — eleven issues carried an invented
+`stories:` list for two months, reaching no filter, facet or `--json` output,
+because nothing said a word. If you want to group issues by something the schema
+does not name, that is what `labels:` is for; if a field genuinely belongs in the
+schema, add it here **and** to `KNOWN_FRONTMATTER_KEYS` in that parser.
+
 - `workstream:` records **ownership**: the bare name of the workstream that has
   taken responsibility for resolving the issue. Use `unattached` when no
   workstream owns it yet, including for out-of-scope work merely discovered
