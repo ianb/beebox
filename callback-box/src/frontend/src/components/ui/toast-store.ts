@@ -36,6 +36,22 @@ export interface Toast {
    * as a counter (×N) once it exceeds 1.
    */
   readonly count: number;
+  /**
+   * A link the toast offers, for an error the person can actually do something
+   * about — a signed-out session offering the login page, say. An href rather
+   * than a handler: the destination is a URL, and an anchor gets
+   * middle-click, "open in new tab", and keyboard activation for free.
+   */
+  readonly action?: { readonly label: string; readonly href: string };
+  /**
+   * Whether this toast sits until dismissed instead of expiring.
+   *
+   * For a condition that is still true ten seconds from now. A session that
+   * ended has not un-ended by the time the timer fires, and a notice that
+   * quietly disappears leaves the person looking at an app whose every
+   * request fails for no stated reason.
+   */
+  readonly persist?: boolean;
 }
 
 /**
@@ -68,9 +84,16 @@ function describeCause(cause: unknown): string | undefined {
   return text === "" ? undefined : text;
 }
 
+/** Everything optional a caller can say about one error. */
+export interface ToastOptions {
+  cause?: unknown;
+  action?: { label: string; href: string };
+  persist?: boolean;
+}
+
 export interface ToastStore {
   /** Raise an error toast; identical messages collapse into one with a counter. */
-  error: (message: string, opts?: { cause?: unknown }) => void;
+  error: (message: string, opts?: ToastOptions) => void;
   /** Dismiss a toast by id (the user's close button). No-op if already gone. */
   dismiss: (id: number) => void;
   /** Subscribe to changes; returns an unsubscribe. Backs `useSyncExternalStore`. */
@@ -106,8 +129,9 @@ export function createToastStore(options?: ToastStoreOptions): ToastStore {
     notify();
   }
 
-  function error(message: string, opts?: { cause?: unknown }): void {
+  function error(message: string, opts?: ToastOptions): void {
     const detail = describeCause(opts?.cause);
+    const persist = opts?.persist === true;
     // Collapse an identical message into the existing toast with a counter,
     // refreshing its detail to the latest cause and restarting its expiry.
     const existing = toasts.find((toast) => toast.message === message);
@@ -117,13 +141,23 @@ export function createToastStore(options?: ToastStoreOptions): ToastStore {
           ? { ...toast, count: toast.count + 1, detail: detail ?? toast.detail }
           : toast
       );
-      armExpiry(existing.id);
+      // A persistent toast has no timer to restart, and must not acquire one:
+      // the repeat that collapsed into it is more of the same condition, not
+      // evidence the condition is ending.
+      if (!persist) armExpiry(existing.id);
       notify();
       return;
     }
     const id = nextId++;
-    toasts = [...toasts, { id, message, detail, count: 1 }];
-    armExpiry(id);
+    toasts = [...toasts, {
+      id,
+      message,
+      detail,
+      count: 1,
+      ...(opts?.action !== undefined ? { action: opts.action } : {}),
+      ...(persist ? { persist: true } : {}),
+    }];
+    if (!persist) armExpiry(id);
     notify();
   }
 
