@@ -1,7 +1,11 @@
 # Agent SDK release applicability
 
 This file is a cumulative, newest-first, callback-box-specific view of Agent SDK
-releases. The daily persistent monitor session maintains it. It reads upstream
+releases. The daily persistent monitor session maintains it — the
+`sdk-update` schedule (`schedules/sdk-update/`, `bin/schedules list`), whose
+`run` script parses the **Latest reviewed upstream version** line below to
+decide whether there is anything to start a session for. Keep that line's
+shape. It reads upstream
 release notes in light of the SDK surfaces callback-box actually uses. Applied
 entries stay here because they can explain regressions and expose future
 opportunities elsewhere in the code. The monitor automatically bumps settled

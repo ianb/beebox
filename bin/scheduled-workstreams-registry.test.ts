@@ -313,7 +313,11 @@ test("list renders an absent scheduled record that no launch is in flight for", 
 
 test("every row carries a schedule field, null when the name is not a schedule", async () => {
   const place = await harness();
-  await writeRecord(place, "knip-sweep", SCHEDULED);
+  // A sticky record whose `schedules/<name>/` is gone — the record outlives the
+  // directory by design, so this is the shape that has to render with no
+  // schedule data rather than crash. (Any name that IS enrolled would join
+  // against the real schedule and report its cadence.)
+  await writeRecord(place, "retired-sweep", SCHEDULED);
   const rows = await list(place);
   assert.equal(rows[0]?.schedule, null);
 });

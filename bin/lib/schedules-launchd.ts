@@ -114,7 +114,15 @@ export async function installTick(input: { repoRoot: string }): Promise<number> 
   await fs.mkdir(path.dirname(logFile()), { recursive: true });
   await fs.writeFile(file, plistBody({ repoRoot: input.repoRoot, log: logFile() }), "utf8");
 
-  for (const label of SUPERSEDED_LABELS) await launchctl(["bootout", `${target}/${label}`]);
+  // Boot the retired jobs out AND delete their plists. A booted-out label whose
+  // file survives comes back at the next login — the plist is what launchd
+  // loads, so leaving it behind means the SDK job runs twice a day from two
+  // mechanisms and nobody finds out until the ledger has two entries per
+  // release.
+  for (const label of SUPERSEDED_LABELS) {
+    await launchctl(["bootout", `${target}/${label}`]);
+    await fs.rm(path.join(os.homedir(), "Library", "LaunchAgents", `${label}.plist`), { force: true });
+  }
   await launchctl(["bootout", `${target}/${TICK_LABEL}`]);
   const code = await launchctl(["bootstrap", target, file]);
   if (code !== 0) {
