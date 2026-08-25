@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 
 import { searchPaths } from "../lib/path-search.js";
 import { trpc } from "../trpc.js";
+import { issueRelPathFromRepoPath } from "../../shared/documents.js";
 
 /**
  * Cmd-P over every browsable path — ported from the doc browser's quick-open
@@ -39,9 +40,17 @@ export function QuickOpen({ workstream }: { workstream: string | null }) {
   if (!open) return null;
 
   const matches = searchPaths(index.data?.paths ?? [], { text: query, limit: RESULT_LIMIT });
+  // An issue opens in the issue viewer, the same decision the recency feed
+  // makes (`RecentPage.tsx` recentRowTarget) — the palette is a way to reach a
+  // document, not a way to reach the markdown reader specifically.
   function choose(relPath: string): void {
     setOpen(false);
     setQuery("");
+    const issue = issueRelPathFromRepoPath(relPath);
+    if (issue !== null) {
+      void navigate({ to: "/issues", search: { issue } });
+      return;
+    }
     void navigate({
       to: "/browse",
       search: workstream === null ? { file: relPath } : { file: relPath, workstream },

@@ -2,6 +2,8 @@ import Markdoc from "@markdoc/markdoc";
 import * as React from "react";
 import { useMemo, type AnchorHTMLAttributes, type ReactNode } from "react";
 
+import { CodeBlock, languageForFence } from "./CodeBlock.js";
+
 function safeHref(href: string | undefined): string | undefined {
   if (!href) return undefined;
   if (/^[a-z][a-z\d+.-]*:/iu.test(href)) return /^(?:https?|mailto):/iu.test(href) ? href : undefined;
@@ -25,6 +27,15 @@ function MarkdownLink({
   );
 }
 
+/**
+ * A fenced block, highlighted by the same component the browser's code view
+ * uses — a `.ts` file and a ```ts fence inside a document are the same thing to
+ * read, so they are the same thing to look at.
+ */
+function MarkdownFence({ content, language }: { content?: string | undefined; language?: string | undefined }) {
+  return <CodeBlock source={content ?? ""} language={languageForFence(language)} />;
+}
+
 export function Markdown({ source }: { source: string }): ReactNode {
   // eslint-disable-next-line import-x/no-named-as-default-member -- Markdoc's Node ESM runtime exposes these only on its default export despite its named-export typings.
   const { parse, renderers, transform } = Markdoc;
@@ -36,12 +47,16 @@ export function Markdown({ source }: { source: string }): ReactNode {
             render: "MarkdownLink",
             attributes: { href: { type: String }, title: { type: String } },
           },
+          fence: {
+            render: "MarkdownFence",
+            attributes: { content: { type: String }, language: { type: String } },
+          },
         },
       }),
     [parse, source, transform],
   );
   const rendered = renderers.react(tree, React, {
-    components: { MarkdownLink },
+    components: { MarkdownFence, MarkdownLink },
   });
   return <div className="prose prose-sm max-w-none">{rendered}</div>;
 }

@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { Link } from "@tanstack/react-router";
 
+import { CodeBlock, languageForPath } from "../components/CodeBlock.js";
 import { CommentLayer } from "../components/CommentLayer.js";
 
 import { Markdown } from "../components/Markdown.js";
@@ -104,9 +105,11 @@ function DocumentBody({ document }: { document: BrowsedDocument }) {
     return <DirectoryView entries={document.entries} workstream={document.workstream} />;
   }
   if (document.text === null) return <p className="empty-state">No content.</p>;
-  if (document.kind === "markdown") return <article className="issue-body"><Markdown source={document.text} /></article>;
+  // Prose gets a measure; source does not. A 1500px line of English is unread,
+  // and a wrapped line of code is misread.
+  if (document.kind === "markdown") return <article className="issue-body browse-prose"><Markdown source={document.text} /></article>;
   if (document.kind === "page") return <PageView document={document} />;
-  return <pre className="code-view"><code>{document.text}</code></pre>;
+  return <CodeBlock source={document.text} language={languageForPath(document.relPath)} />;
 }
 
 export function BrowseView({ document }: { document: BrowsedDocument }) {
