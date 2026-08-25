@@ -40,7 +40,7 @@ export function AttachmentPanel({
   const openAt = (clickedId: number) => {
     const images = attachments.map((a) => ({
       src: a.objectUrl,
-      alt: `image${a.id}`,
+      alt: `image#${String(a.id)}`,
     }));
     const index = attachments.findIndex((a) => a.id === clickedId);
     if (index !== -1) lightbox.openList(images, index);
@@ -95,11 +95,11 @@ function ThumbTile({
         type="button"
         onClick={onClick}
         className="block rounded bg-warm-200 overflow-hidden hover:ring-2 hover:ring-accent focus:outline-none focus:ring-2 focus:ring-accent"
-        title={`image${attachment.id} · ${kb} KB · click to zoom`}
+        title={`image#${String(attachment.id)} · ${kb} KB · click to zoom`}
       >
         <Image
           src={attachment.objectUrl}
-          alt={`image${attachment.id}`}
+          alt={`image#${String(attachment.id)}`}
           size="thumb"
           bordered
         />
@@ -162,7 +162,7 @@ function FileChip({
     <div
       className="relative group flex items-center gap-2 pl-2 pr-7 py-1.5 rounded bg-warm-200 border border-warm-300 max-w-xs"
       data-cb-source={`file-attachment-${attachment.id}`}
-      title={`file${attachment.id} · ${attachment.originalName} · ${sizeLabel}`}
+      title={`file#${String(attachment.id)} · ${attachment.originalName} · ${sizeLabel}`}
     >
       <span className="text-[10px] font-mono bg-warm-800 text-white px-1 rounded flex-shrink-0">
         {attachment.id}

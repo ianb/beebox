@@ -17,6 +17,7 @@ import { insertTokensAtCursor } from "./InteractiveChat-attachments";
 import { type SelectionItem } from "../../lib/selection/serialize";
 import { type AddSelectionInput } from "../../lib/selection/position";
 import type { EmissionStore } from "../../input/emission-store";
+import { composerToken } from "@shared/composer-tokens";
 
 export function useChatSelections(opts: {
   emissionStore: EmissionStore;
@@ -41,7 +42,7 @@ export function useChatSelections(opts: {
     if (anchor !== null) {
       return;
     }
-    insertTokensAtCursor(`[selection${id}]`, { input: emissionStore.get().text, setInput: editor.setText, textareaRef, alwaysFocus: true });
+    insertTokensAtCursor(composerToken("selection", id), { input: emissionStore.get().text, setInput: editor.setText, textareaRef, alwaysFocus: true });
   }, [editor, emissionStore, textareaRef]);
 
   const removeSelection = useCallback((id: number) => {
