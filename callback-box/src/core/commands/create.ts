@@ -276,4 +276,3 @@ registerCommand({
   execute: executeCreate,
 });
 
-export { executeCreate };

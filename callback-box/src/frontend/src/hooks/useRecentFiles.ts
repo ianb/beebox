@@ -77,7 +77,7 @@ function extractFromBlock(block: SessionContentBlock, out: string[]): void {
  * Pull paths from a list of session entries. Older entries come first in
  * the result (chronological); the caller dedupes last-occurrence.
  */
-export function collectPaths(entries: SessionEntry[]): string[] {
+function collectPaths(entries: SessionEntry[]): string[] {
   const out: string[] = [];
   for (const entry of entries) {
     for (const block of entry.content) extractFromBlock(block, out);
@@ -89,7 +89,7 @@ export function collectPaths(entries: SessionEntry[]): string[] {
  * Dedupe a chronological list, keeping the LAST occurrence of each path
  * and reversing so most-recent comes first.
  */
-export function dedupeRecent(paths: string[]): string[] {
+function dedupeRecent(paths: string[]): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
   for (const p of paths.toReversed()) {

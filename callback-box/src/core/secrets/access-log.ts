@@ -61,11 +61,6 @@ function warnOnce(message: string): void {
   console.warn(`[secrets] ${message}`);
 }
 
-/** Reset the once-per-process warning latch (tests only). */
-export function resetSecretLogWarning(): void {
-  warnedAboutLog = false;
-}
-
 /** The monthly segment a timestamp belongs to, e.g. `…/secrets-log/2026-08.jsonl`. */
 export function accessLogSegmentPath(iso: string): string {
   const month = iso.slice(0, 7);

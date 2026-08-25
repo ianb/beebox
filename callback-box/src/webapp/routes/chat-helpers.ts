@@ -136,7 +136,7 @@ export const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
  * WebView carries an ordinary iPhone UA), which is why this is only the
  * fallback for a client that sends nothing — see `resolveChannel`.
  */
-export function classifyChannel(userAgent: string | undefined): ChatChannel | undefined {
+function classifyChannel(userAgent: string | undefined): ChatChannel | undefined {
   if (!userAgent) return undefined;
   return /mobi|android|iphone|ipad/i.test(userAgent) ? "web-mobile" : "web-desktop";
 }

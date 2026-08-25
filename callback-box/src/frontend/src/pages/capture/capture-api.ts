@@ -192,7 +192,7 @@ const RETRY_BASE_DELAY_MS = 1000;
 const UPLOAD_STALL_TIMEOUT_MS = 20_000;
 
 /** One staged upload gave up. `reason` carries the last transport failure. */
-export class CaptureUploadError extends Error {
+class CaptureUploadError extends Error {
   readonly filename: string;
   readonly reason: string;
   constructor(opts: { filename: string; reason: string; attempts: number }) {

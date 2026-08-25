@@ -21,7 +21,7 @@ import { localPubWorkerVersion, readPubWorkerConfig } from "./pub-worker-meta.js
 export type ProbeTextFn = (url: string) => Promise<string | null>;
 
 /** The real probe: a plain fetch with failures mapped to `null` (status reports, never throws mid-report). */
-export const defaultProbeText: ProbeTextFn = async (url) => {
+const defaultProbeText: ProbeTextFn = async (url) => {
   try {
     const res = await fetch(url);
     if (!res.ok) return null;

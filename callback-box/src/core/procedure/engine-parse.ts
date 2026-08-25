@@ -12,7 +12,7 @@ import { validateRunExpiry } from "./run-expiry.js";
 import type { ParsedPhase, ParsedStep, ParsedProcedure } from "./engine-types.js";
 
 /** Raised when a procedure card can't be parsed as a valid definition. */
-export class ProcedureParseError extends Error {
+class ProcedureParseError extends Error {
   constructor(cardPath: string) {
     super(`Invalid procedure definition: ${cardPath}`);
     this.name = "ProcedureParseError";

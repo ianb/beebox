@@ -125,7 +125,7 @@ export function isGeolocationAvailable(): boolean {
  * Infinity, which would leave an enable click pending forever). Rejects on
  * denial, timeout, or position-unavailable — the caller treats all the same.
  */
-export function captureCurrentPosition(): Promise<Coordinates> {
+function captureCurrentPosition(): Promise<Coordinates> {
   return new Promise((resolve, reject) => {
     navigator.geolocation.getCurrentPosition(
       (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy }),

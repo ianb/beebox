@@ -57,7 +57,7 @@ let unknownMessageCount = 0;
  * recognize. Logs and counts every occurrence — a parser/SDK-version drift can
  * degrade the stream but can never do so silently.
  */
-export function unknownChatMessage(msg: SDKMessage): ChatMessageUnknown {
+function unknownChatMessage(msg: SDKMessage): ChatMessageUnknown {
   unknownMessageCount++;
   console.warn(
     `[chat-session] Unrecognized SDK message type "${msg.type}" surfaced as an \`unknown\` sentinel (count=${unknownMessageCount}) — update adaptSdkMessage if this type should be handled.`,

@@ -1,6 +1,6 @@
 const STOP_POLL_MS = 25;
 
-export class ChatSessionStopTimeoutError extends Error {
+class ChatSessionStopTimeoutError extends Error {
   readonly timeoutMs: number;
   constructor(timeoutMs: number) {
     super("Timed out waiting for chat session to stop");

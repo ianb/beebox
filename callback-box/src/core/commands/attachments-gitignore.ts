@@ -47,7 +47,7 @@ const LEGACY_GITIGNORE_BLOCK_MARKER = "# cb-attach-binaries (managed by cb attac
 // The asset extension list and its renderers moved to src/lib/asset-extensions.ts —
 // they define asset *identity*, not a gitignore detail, and are now shared with
 // the git-annex classifier. Re-exported here for existing importers.
-export { ASSET_EXTENSIONS, assetGitignorePatterns } from "../../lib/asset-extensions.js";
+export { assetGitignorePatterns } from "../../lib/asset-extensions.js";
 
 /**
  * The managed asset block, verbatim — the manifest scheme's half of the box
@@ -161,7 +161,7 @@ ${CAPTURE_STAGING_TRACKED_PATTERNS.join("\n")}
  *
  * @param line - A single `.gitignore` line
  */
-export function isAssetIgnoreRule(line: string): boolean {
+function isAssetIgnoreRule(line: string): boolean {
   return line.trim().startsWith("**/*.attach/**/*.");
 }
 

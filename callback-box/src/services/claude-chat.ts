@@ -198,7 +198,7 @@ export function warmSlotKey(opts: ChatBackendStartOptions): string {
  */
 const MAX_WARM_SLOTS = 2;
 
-export function createClaudeChatBackend(): ChatBackend {
+function createClaudeChatBackend(): ChatBackend {
   interface WarmSlot {
     warmQuery: WarmQuery;
     opts: ChatBackendStartOptions;

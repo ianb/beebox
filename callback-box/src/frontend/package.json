@@ -12,7 +12,6 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
     "lint:oxlint": "oxlint -A no-unused-vars",
-    "lint:knip": "knip",
     "lint:circular": "madge --circular --extensions ts,tsx src/"
   },
   "dependencies": {
@@ -44,6 +43,7 @@
     "@ianbicking/personal-vibe-check": "workspace:*",
     "@types/d3": "^7.4.3",
     "@types/dagre": "^0.7.54",
+    "@types/node": "^24.0.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "@types/three": "^0.184.1",
@@ -51,8 +51,6 @@
     "autoprefixer": "^10.4.20",
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9.39.2",
-    "husky": "^9.1.7",
-    "knip": "^5.83.1",
     "lint-staged": "^16.2.7",
     "madge": "^8.0.0",
     "oxlint": "^1.47.0",

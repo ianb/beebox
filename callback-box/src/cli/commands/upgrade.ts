@@ -48,7 +48,7 @@ export class DirtyWorkingTreeError extends Error {
   }
 }
 
-export class UnresolvableSpecError extends Error {
+class UnresolvableSpecError extends Error {
   constructor(spec: string, resolvedPath: string) {
     super(`--to ${spec} looks like a tarball path, but nothing exists at ${resolvedPath}.`);
     this.name = "UnresolvableSpecError";
@@ -66,7 +66,7 @@ export class UpgradeStepFailedError extends Error {
   }
 }
 
-export class InstalledVersionMissingError extends Error {
+class InstalledVersionMissingError extends Error {
   constructor(packageRoot: string) {
     super(`${packageRoot}/node_modules/callback-box/package.json has no "version" field after install.`);
     this.name = "InstalledVersionMissingError";
@@ -85,7 +85,7 @@ export class InstalledVersionMissingError extends Error {
  * `error/no-literal-error-message` flags a literal *anywhere* in a `new
  * *Error(...)` call, not just the message position.
  */
-export const UPGRADE_STEPS = {
+const UPGRADE_STEPS = {
   preflightValidate: "preflight-validate",
   pnpmInstall: "pnpm-install",
   cbMigrate: "cb-migrate",

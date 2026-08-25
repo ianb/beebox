@@ -90,9 +90,9 @@ export async function fileSessionSourcePdf(args: {
   };
 }
 
-export const isImageFile = (p: string): boolean =>
+const isImageFile = (p: string): boolean =>
   SUPPORTED_IMAGE_EXTENSIONS.includes(path.extname(p).toLowerCase());
-export const isPdfFile = (p: string): boolean =>
+const isPdfFile = (p: string): boolean =>
   path.extname(p).toLowerCase() === PDF_EXTENSION;
 
 /** What one scan-import invocation was handed, once resolved and classified. */

@@ -33,7 +33,7 @@ export const FAILED_RUN_EXPIRY = "90d";
  */
 export const MAX_RUNS_PER_PROCEDURE = 100;
 
-export class InvalidRunExpiryError extends Error {
+class InvalidRunExpiryError extends Error {
   constructor(attr: string, value: string) {
     super(
       `Invalid ${attr}="${value}": use a duration like "30d" or "12w", or "never"`

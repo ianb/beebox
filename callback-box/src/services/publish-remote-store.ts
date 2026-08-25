@@ -28,8 +28,8 @@ import { z } from "zod";
 import { type BearerProvider, staticBearer } from "./cloudflare-bearer.js";
 
 /** R2 key prefixes the connector pulls from (plan Track A/F key layout). */
-export const SUBMISSIONS_PREFIX = "submissions/";
-export const ACCESS_LOG_PREFIX = "access-log/";
+const SUBMISSIONS_PREFIX = "submissions/";
+const ACCESS_LOG_PREFIX = "access-log/";
 
 /** One entry of a Cloudflare API JSON error body's `errors` array. */
 export interface CloudflareApiErrorDetail {
@@ -38,7 +38,7 @@ export interface CloudflareApiErrorDetail {
 }
 
 /** An R2 request (list/get/put/delete) returned a non-success HTTP status. */
-export class R2RequestError extends Error {
+class R2RequestError extends Error {
   readonly op: string;
   readonly key: string;
   readonly status: number;
@@ -61,7 +61,7 @@ export class R2RequestError extends Error {
 }
 
 /** A requested object key does not exist in the store. */
-export class RemoteObjectNotFoundError extends Error {
+class RemoteObjectNotFoundError extends Error {
   readonly key: string;
   constructor(key: string) {
     super(`no such object: ${key}`);

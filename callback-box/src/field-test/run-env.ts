@@ -17,14 +17,14 @@ import { errnoCode } from "../lib/error-guards.js";
 /** The browse env var whose absence makes the wrapper fail closed. */
 const BROWSE_KEY_ENV = "CB_BROWSE_API_KEY";
 
-export class BrowseCommandMissingError extends Error {
+class BrowseCommandMissingError extends Error {
   constructor(browsePath: string) {
     super(`Field-test run cannot start: no browse wrapper at ${browsePath}`);
     this.name = "BrowseCommandMissingError";
   }
 }
 
-export class BrowseKeyMissingError extends Error {
+class BrowseKeyMissingError extends Error {
   constructor(envPath: string) {
     super(
       `Field-test run cannot start: ${BROWSE_KEY_ENV} is set neither in the environment ` +

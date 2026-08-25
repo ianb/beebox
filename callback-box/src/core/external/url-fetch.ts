@@ -119,7 +119,7 @@ async function fetchOnce(url: string, method: "HEAD" | "GET"): Promise<FetchOnce
  * following redirects manually and re-validating each hop. Network failures and
  * server hiccups classify as `transient` (retry later); 404/410/DNS as `broken`.
  */
-export async function checkUrl(rawUrl: string): Promise<UrlVerdict> {
+async function checkUrl(rawUrl: string): Promise<UrlVerdict> {
   let current: string;
   try {
     current = (await assertPublicHttpUrl(rawUrl)).href;

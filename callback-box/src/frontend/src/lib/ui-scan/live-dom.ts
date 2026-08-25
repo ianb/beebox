@@ -22,7 +22,7 @@ function attributesOf(element: Element): Record<string, string> {
 }
 
 /** Wrap one live element (and, lazily, its subtree) as a {@link ScanElement}. */
-export function domScanElement(element: Element): ScanElement {
+function domScanElement(element: Element): ScanElement {
   return {
     kind: "element",
     tag: element.tagName.toLowerCase(),

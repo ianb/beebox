@@ -42,7 +42,7 @@ export type ScanToken = z.infer<typeof ScanTokenSchema>;
 
 /** Thrown when the scan-token store exists but can't be read or parsed. Callers
  *  fail closed: a mutation must NOT overwrite a store it couldn't read. */
-export class ScanTokenStoreUnreadableError extends Error {
+class ScanTokenStoreUnreadableError extends Error {
   constructor(readonly storePath: string, options?: { cause?: unknown }) {
     super(`Scan token store at ${storePath} exists but could not be read or parsed`, options);
     this.name = "ScanTokenStoreUnreadableError";
@@ -51,7 +51,7 @@ export class ScanTokenStoreUnreadableError extends Error {
 
 /** Thrown when the scan-token store lock can't be acquired within the retry
  *  budget. A mutation fails loudly rather than proceeding unsynchronized. */
-export class ScanTokenStoreLockError extends Error {
+class ScanTokenStoreLockError extends Error {
   constructor(readonly lockPath: string) {
     super(`Could not acquire the scan-token store lock at ${lockPath} within the retry budget`);
     this.name = "ScanTokenStoreLockError";

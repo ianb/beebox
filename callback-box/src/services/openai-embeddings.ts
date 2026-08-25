@@ -17,7 +17,7 @@ import { isRecord } from "../lib/is-record.js";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-export const EMBEDDING_MODEL = "text-embedding-3-small";
+const EMBEDDING_MODEL = "text-embedding-3-small";
 export const EMBEDDING_DIMENSIONS = 512;
 /** `"<provider>:<model>@<dims>"` — folded into every embedded-text hash. */
 export const EMBEDDER_ID = `openai:${EMBEDDING_MODEL}@${String(EMBEDDING_DIMENSIONS)}`;

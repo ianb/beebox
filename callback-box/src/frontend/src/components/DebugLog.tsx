@@ -128,7 +128,7 @@ export function enableDebugLogCapture() {
 }
 
 /** Enable forwarding of all log levels (not just errors/warns) to the server. */
-export function setVerboseForwarding(enabled: boolean) {
+function setVerboseForwarding(enabled: boolean) {
   verboseForwarding = enabled;
 }
 

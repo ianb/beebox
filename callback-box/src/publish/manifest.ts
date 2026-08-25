@@ -40,8 +40,6 @@ import {
 // from `manifest.ts` (the Worker imports them from `manifest-edge.ts` instead).
 export {
   type EdgeManifest,
-  edgeManifestSchema,
-  submitBlockSchema,
   type SubmitBlock,
   type Tier,
   tierValues,

@@ -48,7 +48,7 @@ export const QUIESCENCE_MS = 30 * 60 * 1000;
 export const REVIEW_CHAR_THRESHOLD = 6_000;
 
 /** Real user turns in the whole session before it is reviewed at all. */
-export const REVIEW_MIN_USER_TURNS = 2;
+const REVIEW_MIN_USER_TURNS = 2;
 
 /**
  * Chat review reads a transcript from the top: `resolveSpan` hashes every

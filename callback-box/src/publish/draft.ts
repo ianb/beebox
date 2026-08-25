@@ -39,7 +39,7 @@ import {
 } from "./manifest.js";
 
 /** A source path resolves outside the box root — refuse rather than read it. */
-export class SourceEscapesBoxError extends Error {
+class SourceEscapesBoxError extends Error {
   readonly source: string;
   constructor(source: string) {
     super(`source path escapes the box: ${source}`);
@@ -86,7 +86,7 @@ export interface DraftContext {
 }
 
 /** The default commit step: a path-scoped git commit of the draft directory. */
-export async function defaultCommit(args: { boxRoot: string; paths: string[]; pubId: PubId }): Promise<void> {
+async function defaultCommit(args: { boxRoot: string; paths: string[]; pubId: PubId }): Promise<void> {
   await stageAndCommitPaths(args.boxRoot, {
     paths: args.paths,
     message: `pub: draft ${args.pubId}`,

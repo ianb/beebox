@@ -48,14 +48,14 @@ export type ExposureFile = z.infer<typeof exposureFileSchema>;
 
 /** Thrown by the CLI-facing loader when the exposure file exists but can't be
  *  read or doesn't match the schema — a fail-closed distinct failure. */
-export class ExposureFileCorruptError extends Error {
+class ExposureFileCorruptError extends Error {
   constructor(readonly detail: string) {
     super(`Tailscale exposure file at ${exposureFilePath()} is unreadable: ${detail}`);
     this.name = "ExposureFileCorruptError";
   }
 }
 
-export function exposureFilePath(): string {
+function exposureFilePath(): string {
   return process.env.CB_TAILSCALE_EXPOSURE_FILE ?? path.join(os.homedir(), ".config", "cb", "tailscale-exposure.json");
 }
 

@@ -77,7 +77,7 @@ const WORKING_PATIENCE_MS = 45_000;
 const AGE_TICK_MS = 15_000;
 
 /** Whether a bubble is in a failed state (query state or live event). */
-export function captureBubbleFailed(model: CaptureBubbleModel): boolean {
+function captureBubbleFailed(model: CaptureBubbleModel): boolean {
   return model.state.startsWith("failed:") || model.liveStatus === "failed";
 }
 

@@ -18,13 +18,7 @@ import { DatetimeField, CronField, RruleField } from "./scheduled-script-fields.
 
 const { rrulestr } = rrulePkg;
 
-export {
-  InvalidDurationError,
-  UnknownDurationUnitError,
-  InvalidBudgetError,
-  parseDuration,
-  parseBudget,
-} from "./scheduled-script-duration.js";
+export { parseDuration, parseBudget } from "./scheduled-script-duration.js";
 
 // ============================================
 // Schema
@@ -336,7 +330,7 @@ export interface ScheduledScriptTemplateOptions {
   requires?: string[];
 }
 
-export class InvalidScheduledScriptTemplateError extends Error {
+class InvalidScheduledScriptTemplateError extends Error {
   constructor(issues: string) {
     super(`createScheduledScriptTemplate produced an invalid card: ${issues}`);
     this.name = "InvalidScheduledScriptTemplateError";
@@ -350,8 +344,7 @@ export class InvalidScheduledScriptTemplateError extends Error {
  * hand the box a card that can't load.
  */
 export function createScheduledScriptTemplate(options: ScheduledScriptTemplateOptions): string {
-  const fields: Record<string, unknown> = {
-  };
+  const fields: Record<string, unknown> = {};
   if (options.cron !== undefined) fields["cron"] = options.cron;
   if (options.at !== undefined) fields["at"] = options.at;
   if (options.rrule !== undefined) fields["rrule"] = options.rrule;

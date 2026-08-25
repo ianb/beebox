@@ -31,23 +31,23 @@ export interface PointerSample {
 }
 
 /** Minimum pointer travel (px) before a `pending` gesture is classified. */
-export const MOVE_THRESHOLD_PX = 10;
+const MOVE_THRESHOLD_PX = 10;
 /** Max delay (ms) between two taps for a double-tap. */
-export const DOUBLE_TAP_MS = 300;
+const DOUBLE_TAP_MS = 300;
 /** Max distance (px) between two taps for a double-tap. */
-export const DOUBLE_TAP_DISTANCE_PX = 30;
+const DOUBLE_TAP_DISTANCE_PX = 30;
 /** "At fit scale" epsilon — after float math, never compare `scale === 1`. */
-export const FIT_EPSILON = 0.01;
+const FIT_EPSILON = 0.01;
 /** Flick speed (px/ms) at or above which a dismiss drag closes the lightbox. */
-export const DISMISS_VELOCITY_PX_PER_MS = 0.5;
+const DISMISS_VELOCITY_PX_PER_MS = 0.5;
 /** Fraction of viewport height a dismiss drag must cross to close on release. */
-export const DISMISS_DISPLACEMENT_RATIO = 0.3;
+const DISMISS_DISPLACEMENT_RATIO = 0.3;
 /** Fraction of viewport height over which a dismiss drag fades fully. */
-export const DISMISS_FADE_RATIO = 0.4;
+const DISMISS_FADE_RATIO = 0.4;
 /** Flick speed (px/ms) at or above which a swipe changes image on release. */
-export const SWIPE_VELOCITY_PX_PER_MS = 0.4;
+const SWIPE_VELOCITY_PX_PER_MS = 0.4;
 /** Fraction of viewport width a swipe must cross to navigate on release. */
-export const SWIPE_DISPLACEMENT_RATIO = 0.25;
+const SWIPE_DISPLACEMENT_RATIO = 0.25;
 /**
  * Gap (px) between adjacent images in the swipe strip. The peers are parked
  * `viewportWidth + SWIPE_GUTTER_PX` away and a committed swipe springs exactly
@@ -59,13 +59,13 @@ export const SWIPE_GUTTER_PX = 32;
 /** Target scale a double-tap zooms to (and back from). */
 export const ZOOM_SCALE = 2.5;
 /** Hard ceiling on scale (pinch and double-tap). */
-export const MAX_SCALE = 4;
+const MAX_SCALE = 4;
 /** Live-pinch floor (below fit) before the epsilon snap-back on release. */
-export const MIN_PINCH_SCALE = 0.85;
+const MIN_PINCH_SCALE = 0.85;
 /** Window (ms) within which a completed drag's trailing click is suppressed. */
 export const CLICK_SUPPRESS_MS = 500;
 /** Samples used for last-samples velocity (not whole-gesture average). */
-export const VELOCITY_SAMPLE_COUNT = 5;
+const VELOCITY_SAMPLE_COUNT = 5;
 
 /** Convert a client-space point to container-centered coordinates. */
 export function toContainerCentered(clientPoint: Point, center: Point): Point {

@@ -16,7 +16,7 @@ import { errnoCode } from "../../lib/error-guards.js";
 const STATE_FILE = ".callback-box/retro/state.json";
 
 /** Observer attempts per session before it is permanently skipped. */
-export const MAX_OBSERVE_ATTEMPTS = 2;
+const MAX_OBSERVE_ATTEMPTS = 2;
 
 const RetroSessionStateSchema = z.object({
   status: z.enum(["done", "failed"]),

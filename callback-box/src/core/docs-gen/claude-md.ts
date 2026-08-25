@@ -23,7 +23,7 @@ export async function ensureAgentContext(boxRoot: string, briefingPaths: string[
  * Adds missing includes and removes stale briefing includes.
  * Never overwrite hand-edited content.
  */
-export async function ensureClaudeMdIncludes(boxRoot: string, briefingPaths: string[]): Promise<void> {
+async function ensureClaudeMdIncludes(boxRoot: string, briefingPaths: string[]): Promise<void> {
   const claudePath = join(boxRoot, "CLAUDE.md");
   const includeLine = `@.callback-box/${AGENT_GUIDE_FILE}`;
 

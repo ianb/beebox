@@ -48,7 +48,7 @@ export {
   TOUCHPOINT_TRAILER_KEYS,
   FEEDBACK_TRAILER_KEYS,
 } from "./git-trailers.js";
-export { isNothingToCommitError, isContendedFailure, isStaleLockFailure, GitIndexLockError, CommitDidNotLandError } from "./git-internal.js";
+export { isNothingToCommitError, isContendedFailure, isStaleLockFailure } from "./git-internal.js";
 export { withBoxGitLock } from "./git-lock.js";
 export { getLogPaginated, getTrailerFacets } from "./git-log.js";
 export type {
@@ -261,7 +261,7 @@ export async function unstageFiles(boxRoot: string, paths: string[]): Promise<vo
  * @param boxRoot - Repository root
  * @param paths - Paths to inspect (relative to boxRoot)
  */
-export async function stagedPaths(boxRoot: string, paths: string[]): Promise<string[]> {
+async function stagedPaths(boxRoot: string, paths: string[]): Promise<string[]> {
   if (paths.length === 0) return [];
   // Disable rename pairing: a path-scoped commit needs both the deleted source
   // and added destination. With rename detection, `--name-only` reports only
@@ -560,7 +560,7 @@ export async function getHead(boxRoot: string): Promise<string> {
  * migrated data behind). This is real data loss by design: only ever call it
  * against a `sha` captured before the changes being discarded.
  */
-export async function resetHard(boxRoot: string, sha: string): Promise<void> {
+async function resetHard(boxRoot: string, sha: string): Promise<void> {
   await withBoxGitLock(boxRoot, () => simpleGit(boxRoot).raw(["reset", "--hard", sha]));
 }
 

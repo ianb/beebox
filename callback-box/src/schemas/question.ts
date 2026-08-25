@@ -13,7 +13,7 @@ import { z } from "zod";
 export const QuestionStatus = z.enum(["pending", "answered", "dismissed", "expired"]);
 export type QuestionStatusType = z.infer<typeof QuestionStatus>;
 
-export const QuestionInputType = z.enum(["select", "text", "confirm"]);
+const QuestionInputType = z.enum(["select", "text", "confirm"]);
 export type QuestionInputTypeValue = z.infer<typeof QuestionInputType>;
 
 const QuestionOption = z.object({
@@ -85,7 +85,7 @@ const QuestionAnswer = z.object({
  * sink vocabulary (`ObservationSink`) minus `question` itself — a question
  * card can't declare itself as its own destination.
  */
-export const QuestionLearningSink = z.enum(["guide", "briefing", "personality"]);
+const QuestionLearningSink = z.enum(["guide", "briefing", "personality"]);
 export type QuestionLearningSinkValue = z.infer<typeof QuestionLearningSink>;
 
 export const QuestionLearning = z.object({
@@ -115,7 +115,7 @@ export const IsoDuration = z
 const ISO_8601_DURATION_CAPTURE =
   /^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?)?$/;
 
-export class InvalidIso8601DurationError extends Error {
+class InvalidIso8601DurationError extends Error {
   constructor(value: string) {
     super(`Invalid ISO-8601 duration: "${value}"`);
     this.name = "InvalidIso8601DurationError";

@@ -17,7 +17,7 @@ export interface FormulaCell {
 
 export type CellValue = string | number | boolean | null | FormulaCell;
 
-export function isFormulaCell(cell: CellValue): cell is FormulaCell {
+function isFormulaCell(cell: CellValue): cell is FormulaCell {
   return cell !== null && typeof cell === "object" && "f" in cell;
 }
 

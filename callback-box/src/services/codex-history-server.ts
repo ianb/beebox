@@ -24,7 +24,7 @@ export class CodexHistoryRpcError extends Error {
   }
 }
 
-export class CodexHistoryServerExitError extends Error {
+class CodexHistoryServerExitError extends Error {
   readonly detail: string;
 
   constructor(options: { detail: string }) {

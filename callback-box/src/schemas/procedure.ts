@@ -20,7 +20,7 @@ const RunExpiryValue = z.union([
 ]);
 
 /** Agent invocation through the box's configured harness, with optional tier/turn cap. */
-export const ProcedureAgent = z.object({
+const ProcedureAgent = z.object({
   prompt: z.string(),
   model: z.enum(PROCEDURE_MODEL_NAMES).optional(),
   "max-turns": z.number().optional(),
@@ -34,16 +34,16 @@ const phaseFields = {
 };
 
 /** Precheck phase — gates whether a step runs. */
-export const ProcedurePrecheck = z.object({
+const ProcedurePrecheck = z.object({
   ...phaseFields,
   "pass-output": z.boolean().optional(),
 });
 
 /** Run phase — the step's main action. */
-export const ProcedureRun = z.object(phaseFields);
+const ProcedureRun = z.object(phaseFields);
 
 /** Validate phase — checks results after the run. */
-export const ProcedureValidate = z.object({
+const ProcedureValidate = z.object({
   ...phaseFields,
   severity: z.enum(["warn", "review", "abort"]).optional(),
   /** Model tier for `instructions:` evaluation (default: balanced). */

@@ -5,7 +5,7 @@ import { gitBoxPrefix, unstageFiles } from "../../lib/git.js";
 import { attachDirFor } from "../../shared/attach-path.js";
 import type { TrashMove, TrashReceipt } from "./trash.js";
 
-export class TrashReceiptRecoveryError extends Error {
+class TrashReceiptRecoveryError extends Error {
   constructor(destPath: string) {
     super(`Could not recover the pending git rename for ${destPath}`);
     this.name = "TrashReceiptRecoveryError";

@@ -17,13 +17,13 @@ import { z } from "zod";
 import { createAgent } from "../../agent/index.js";
 
 /** Husk titles stay bookmark-sized. Matches TITLE_MAX_LEN in core/chat/husk.ts. */
-export const TITLE_MAX = 80;
+const TITLE_MAX = 80;
 /** `contains` stays inside the lint budget (core/card-lint.ts CONTAINS_MAX_CHARS). */
-export const CONTAINS_MAX = 200;
+const CONTAINS_MAX = 200;
 /** Account items before the model must merge the least durable ones. */
-export const NOTES_MAX = 40;
+const NOTES_MAX = 40;
 /** One account item stays a line, not an essay. */
-export const NOTE_MAX = 280;
+const NOTE_MAX = 280;
 
 export const ReviewOutputSchema = z.object({
   /** One line. Empty string means "the existing title still fits, keep it". */
@@ -73,7 +73,7 @@ const DEFAULT_REVIEWER_MODEL = "haiku";
 /** Hard per-session cost ceiling. */
 const MAX_BUDGET_USD = 0.25;
 
-export const REVIEWER_SYSTEM_PROMPT = `You read one chat conversation between a person (the "boxholder") and their personal assistant, and you write down what it amounts to: a title, a one-sentence summary, and a short account of what came of it.
+const REVIEWER_SYSTEM_PROMPT = `You read one chat conversation between a person (the "boxholder") and their personal assistant, and you write down what it amounts to: a title, a one-sentence summary, and a short account of what came of it.
 
 You are usually shown only the NEW part of a conversation you have summarized before, together with the account you wrote last time. Extend that account: carry items forward, revise them when the new material changes them, drop them when they are resolved and no longer worth keeping, and add what is new. Do not re-derive the account from scratch — the earlier conversation is not in front of you, and your previous account is the only record of it.
 
@@ -132,7 +132,7 @@ class ReviewerRunError extends Error {
 }
 
 /** Assemble the per-session user prompt: prior state first, then the new span. */
-export function buildReviewPrompt(args: ReviewArgs): string {
+function buildReviewPrompt(args: ReviewArgs): string {
   const parts: string[] = [];
   parts.push(
     args.currentTitle === null

@@ -38,7 +38,7 @@ interface RefExistsInput {
  * fails closed on both — see `src/shared/ref-path.ts`. Any `?query`/`#fragment`
  * is dropped: it addresses a location *within* the target, not a different file.
  */
-export function resolveRefToPath(input: RefExistsInput): string | null {
+function resolveRefToPath(input: RefExistsInput): string | null {
   const fromPath = input.fromPath === "" ? "" : boxRelativeFrom(input.boxRoot, input.fromPath);
   if (fromPath === null) return null;
   const resolved = resolveRefPath({ fromPath, ref: parseRef(input.ref).path, kind: "card" });

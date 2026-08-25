@@ -31,7 +31,6 @@
  *   We can do the usual place.
  */
 
-import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import { body, cardSchema, type InferCardFields } from "../cards/index.js";
 
@@ -105,31 +104,3 @@ The card's body is the email body. Markdown subset only:
 });
 
 export type EmailOutboundFields = InferCardFields<typeof EmailOutboundSchema>;
-
-/**
- * Build the file content for an outbound draft card.
- *
- * For replies, set `inReplyToRef` to the path of the source email-message
- * card relative to the directory the draft will be written into (typically
- * just `msg-NNN.email-message.card`).
- */
-export function createEmailOutboundTemplate(options: {
-  to: string;
-  cc?: string;
-  bcc?: string;
-  subject: string;
-  body: string;
-  inReplyToRef?: string;
-}): string {
-  const fields: Record<string, unknown> = {
-    status: "draft",
-    to: options.to,
-  };
-  if (options.cc !== undefined && options.cc !== "") fields["cc"] = options.cc;
-  if (options.bcc !== undefined && options.bcc !== "") fields["bcc"] = options.bcc;
-  fields["subject"] = options.subject;
-  if (options.inReplyToRef !== undefined && options.inReplyToRef !== "") {
-    fields["in-reply-to"] = { ref: options.inReplyToRef };
-  }
-  return `---\n${stringifyYaml(fields)}---\n${options.body}`;
-}

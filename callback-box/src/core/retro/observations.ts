@@ -7,7 +7,7 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
 
-export const ObservationKind = z.enum([
+const ObservationKind = z.enum([
   "correction",
   "preference",
   "register",
@@ -16,7 +16,7 @@ export const ObservationKind = z.enum([
   "experiment-evidence",
 ]);
 
-export const ObservationSink = z.enum(["personality", "guide", "briefing", "question"]);
+const ObservationSink = z.enum(["personality", "guide", "briefing", "question"]);
 
 /**
  * One observation. `evidence` must be a literal quote — requiring the

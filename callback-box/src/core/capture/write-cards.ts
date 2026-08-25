@@ -123,7 +123,7 @@ export async function writeAudioCards(opts: {
 }
 
 /** Create image cards + copy media files. */
-export async function writeImageCards(opts: {
+async function writeImageCards(opts: {
   builder: SessionBuilder;
   sessionDir: string;
   photos: StagingPhoto[];
@@ -161,7 +161,7 @@ export async function writeImageCards(opts: {
 }
 
 /** Copy uploaded files + create file cards. */
-export async function writeFileCards(opts: {
+async function writeFileCards(opts: {
   builder: SessionBuilder;
   sessionDir: string;
   files: StagingFile[];

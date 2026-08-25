@@ -17,6 +17,4 @@ export {
   type FileTypeUI,
   registerFileType,
   resolveFileTypeUI,
-  fallbackFileTypeUI,
-  resetFileTypeRegistry,
 } from "../file-type-registry";

@@ -65,7 +65,7 @@ function warnIfFdsRunningOut(): void {
   );
 }
 
-export function startBackendRun(
+function startBackendRun(
   backend: ChatBackend,
   options: ChatBackendStartOptions,
 ): ChatBackendRun {

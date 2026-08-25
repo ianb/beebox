@@ -43,35 +43,35 @@ export function isSupportedImageMediaType(value: string): value is SupportedImag
 }
 
 /** Base type for every send-boundary conversion failure; catch this to handle any. */
-export class MalformedChatContentBlockError extends Error {
+class MalformedChatContentBlockError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "MalformedChatContentBlockError";
   }
 }
 
-export class ImageBlockMissingBase64DataError extends MalformedChatContentBlockError {
+class ImageBlockMissingBase64DataError extends MalformedChatContentBlockError {
   override readonly name = "ImageBlockMissingBase64DataError";
   constructor() {
     super("image block with a base64 source is missing or has empty `data`");
   }
 }
 
-export class ImageBlockMissingMediaTypeError extends MalformedChatContentBlockError {
+class ImageBlockMissingMediaTypeError extends MalformedChatContentBlockError {
   override readonly name = "ImageBlockMissingMediaTypeError";
   constructor() {
     super("image block with a base64 source is missing `media_type`");
   }
 }
 
-export class ImageBlockMissingUrlError extends MalformedChatContentBlockError {
+class ImageBlockMissingUrlError extends MalformedChatContentBlockError {
   override readonly name = "ImageBlockMissingUrlError";
   constructor() {
     super("image block with a url source is missing or has empty `url`");
   }
 }
 
-export class UnsupportedImageMediaTypeError extends MalformedChatContentBlockError {
+class UnsupportedImageMediaTypeError extends MalformedChatContentBlockError {
   override readonly name = "UnsupportedImageMediaTypeError";
   constructor(readonly mediaType: string) {
     super(

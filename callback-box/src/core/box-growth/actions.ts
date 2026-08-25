@@ -13,7 +13,7 @@ export class BoxGrowthAcceptanceError extends Error {
   }
 }
 
-export class BoxGrowthRateExpectationError extends Error {
+class BoxGrowthRateExpectationError extends Error {
   constructor() {
     super("Box growth has no current rate warning to expect");
     this.name = "BoxGrowthRateExpectationError";

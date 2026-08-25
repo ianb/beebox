@@ -42,14 +42,14 @@ export interface OperatorTurn {
   error: string | null;
 }
 
-export class OperatorSessionClosedError extends Error {
+class OperatorSessionClosedError extends Error {
   constructor() {
     super("Operator session is closed; it cannot be sent another message");
     this.name = "OperatorSessionClosedError";
   }
 }
 
-export class OperatorTurnInFlightError extends Error {
+class OperatorTurnInFlightError extends Error {
   constructor() {
     super("Operator session already has a turn in flight — activities are sequential");
     this.name = "OperatorTurnInFlightError";

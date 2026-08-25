@@ -12,7 +12,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { LedgerEntry } from "./ledger.js";
 
-export const RETRO_REPORTS_DIR = "store/reviews/retro";
+const RETRO_REPORTS_DIR = "store/reviews/retro";
 
 export interface RetroRunSessionSummary {
   sessionId: string;
@@ -42,7 +42,7 @@ export interface RetroRunReportData {
 }
 
 /** Box-relative path of a run's report file. */
-export function runReportPath(runId: string): string {
+function runReportPath(runId: string): string {
   return `${RETRO_REPORTS_DIR}/${runId}.md`;
 }
 

@@ -81,7 +81,7 @@ export interface TailscaleDeps {
   sleep: (ms: number) => Promise<void>;
 }
 
-export function createRealRun(): RunCommand {
+function createRealRun(): RunCommand {
   return async (cmd, args) => {
     try {
       const { stdout, stderr } = await execFileAsync(cmd, args, { timeout: 10000, encoding: "utf8" });
@@ -97,7 +97,7 @@ export function createRealRun(): RunCommand {
   };
 }
 
-export function createRealProbe(): ProbeEndpoint {
+function createRealProbe(): ProbeEndpoint {
   return async (url) => {
     try {
       const res = await fetch(url, { method: "GET", redirect: "manual" });
@@ -121,7 +121,7 @@ export function createRealProbe(): ProbeEndpoint {
 }
 
 /** Real non-loopback address enumeration: every non-internal interface address. */
-export function createRealNetworkInterfaces(): ListNetworkAddresses {
+function createRealNetworkInterfaces(): ListNetworkAddresses {
   return () => {
     const out: string[] = [];
     for (const infos of Object.values(os.networkInterfaces())) {
