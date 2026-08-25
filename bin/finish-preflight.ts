@@ -196,16 +196,23 @@ export function buildSheet(input: { merge: boolean }): Sheet {
     .split("\n")
     .filter((line) => line !== "")
     .map((line) => line.slice(3));
+  // `--no-merge` may only claim "up-to-date" when main really is contained;
+  // otherwise the skip decision below would rest on a merge nobody performed.
+  const mergeSkipped =
+    !input.merge &&
+    spawnSync("git", ["merge-base", "--is-ancestor", "main", "HEAD"], { cwd: root }).status !== 0;
   const merge = input.merge ? mergeMain(root) : { status: "up-to-date" as const, broughtPaths: [] };
 
   const changed = changedPaths({ base: "main", cwd: root });
   const packages = workspacePackages(root);
   const grouped = groupPaths(changed, packages);
-  const skip = skipTypecheckLintDecision({
-    mergeNoOp: merge.status === "up-to-date",
-    mergeBroughtPaths: merge.broughtPaths,
-    stragglers,
-  });
+  const skip = mergeSkipped
+    ? { value: false, reason: "main was not merged in (--no-merge) and is not contained" }
+    : skipTypecheckLintDecision({
+        mergeNoOp: merge.status === "up-to-date",
+        mergeBroughtPaths: merge.broughtPaths,
+        stragglers,
+      });
   const verification = verificationCommands({
     paths: changed,
     workspacePackages: packages,
