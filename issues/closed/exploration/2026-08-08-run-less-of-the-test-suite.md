@@ -2,13 +2,25 @@
 title: "Run less of the full suite — map changes to the tests that could break"
 workstream: test-economics
 area: callback-box
+resolution: implemented
 needs: [design]
-design: ../../callback-box/docs/plans/change-based-test-selection.md
+design: ../../../callback-box/docs/plans/change-based-test-selection.md
 labels: [testing, developer-experience]
 ---
 
+Resolved by the "Revision 2026-08-25" mechanisms (A–E) of
+[change-based test selection](../../../callback-box/docs/plans/change-based-test-selection.md),
+landed on `worktree-test-economics` (commits `5a93effa`, `fd174775`,
+`096c5883`, `041304fc`, `347958ed`, `ab4f886c`, and others on the branch): the
+test-run ledger, the machine-wide two-slot semaphore, change-based selection
+with a content-based tree hash, the careful tier, and the hourly
+`schedules/full-suite` batched-and-bisected run against `main`. Track
+3a/3b/3d guards and the graph cache from the plan remain unbuilt, so the plan
+itself stays `status: partial` — this issue's origin question ("which tests
+run on a given change, and can that be smaller") is answered and shipped.
+
 > **Design written 2026-08-08, twice reviewed** —
-> [change-based test selection](../../callback-box/docs/plans/change-based-test-selection.md)
+> [change-based test selection](../../../callback-box/docs/plans/change-based-test-selection.md)
 > settles the mechanism (an import graph derived from the tree with esbuild, not
 > recorded at runtime), the trust model (selection applies only when every
 > changed path is accounted for by the graph; anything else runs everything), and
@@ -92,7 +104,7 @@ shipped, not as a failing test. Worth surveying before designing:
   concentrated in a handful of route files, in which case targeted fixes to
   those could beat a selection system entirely.
 
-Related: [flaky login-redirect doctest](../bugs/2026-07-29-flaky-login-redirect-doctest.md)
+Related: [flaky login-redirect doctest](../../bugs/2026-07-29-flaky-login-redirect-doctest.md)
 (parallel-load flakes are the same contention this would reduce).
 
 ## Research (2026-08-08)
@@ -759,7 +771,7 @@ path no test imports, so they run the full suite anyway.
 **The dominant cause is test coverage, not the selection mechanism.** 430 of
 1,288 `src/**` TypeScript files (33%) are imported by no test at all; 327 of
 those are frontend. Filed separately as
-[a third of src is untested by import](../code-quality/2026-08-09-src-untested-by-import.md).
+[a third of src is untested by import](../../code-quality/2026-08-09-src-untested-by-import.md).
 
 ### The tension the numbers expose
 
