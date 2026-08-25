@@ -82,12 +82,11 @@ The gap: we cannot ask "which open items has nobody touched in 90 days."
 Filing date is a poor proxy (an old issue with a dated re-encounter note is
 live). Git gives us last-modified for free.
 
-Disposition: **adopt** `bin/issues list --stale <days>` (last commit touching
-the file, from `git log -1 --format=%ci -- <path>`). Not a status, not a
-timer that acts — a query for `cb-pick-issues`. **Reject** `deferred` /
-`defer_until`: `watch/` is trigger-based on purpose ("visit a watch item when
-its trigger lands … not on a schedule"), and `priority: backlog` covers the
-rest.
+Disposition: **reject** both (developer, 2026-08-25). Staleness is handled
+by reading the queue and tagging `reconfirm`; a stale query would only feed
+the same pass. `deferred` / `defer_until` lose to `watch/`, which is
+trigger-based on purpose ("visit a watch item when its trigger lands … not
+on a schedule"), and `priority: backlog` covers the rest.
 
 ### 2.3 Ownership and handoff
 
@@ -107,10 +106,22 @@ so a stale `workstream: foo` misleads `bin/issues list --workstream` and the
 issues browser rather than blocking anyone. A lease/heartbeat is the wrong
 size for that.
 
-Disposition: **adapt**, cheaply: make `bin/workstreams sweep` (or a
-`bin/issues` check) list open issues whose `workstream:` names a workstream
-that no longer has a worktree or branch, and offer to reset them to
-`unattached`. No new field.
+There is a second, sharper problem: the claim is not atomic.
+`bin/lib/launch-session.sh:52` writes `workstream:` into the issue *inside
+the new worktree*, so it lives on the branch until merge and main never sees
+it; two launches can claim the same issue. Beads' `--claim` is a
+compare-and-set (sets assignee to the actor, refuses if another actor holds
+a live claim, idempotent for the same actor). Our atomic point has to be a
+commit on `main`.
+
+Disposition: **adapt**, twice. (1) `launch-worktree-session --issue` commits
+the `workstream:` stamp to `main` before creating the worktree (a docs-only
+commit, ~1s of hooks), refusing if the field already names a live
+workstream; the in-worktree write goes away. (2) `bin/workstreams sweep`
+lists open issues whose `workstream:` names a workstream with no worktree or
+branch, resets them to `unattached`, and sets `next-action: reconfirm` so
+they surface in the developer's normal pass — a dead owner is evidence the
+issue's state is unknown. No new field, no lease.
 
 ### 2.4 Discovered work
 
@@ -171,6 +182,22 @@ related` becomes a cluster query, and `/finish` can reconcile "closed A, B is
 here and that works), not `conditional-blocks`/`waits-for` (orchestration),
 not `bd ready`.
 
+Three Beads types and statuses the developer asked about resolve here
+rather than as new categories:
+
+- `milestone` — "marks completion of a set of related issues (no work
+  itself)." It only means something with relationships: a milestone is an
+  issue whose `blocked-by:` lists its members and closes when they all
+  close. A use of the field, not a category.
+- `pinned` — "a persistent bead that stays open indefinitely," protected
+  from close, compaction and stale. Standing context for agents, not work.
+  Ours lives in CLAUDE.md and docs; the queue is deliberately things that
+  end. Not needed.
+- `message` — inter-agent mail stored as beads (`sender` field; `bd mail`
+  delegates to the Gas Town orchestrator). A mailbox, not a task. Our
+  equivalents exist: `bin/comments` (human→agent) and each schedule run's
+  report. Not needed.
+
 This is a schema change to a closed schema, so it is filed as a decision,
 not done here. The reason to say no: 329 items, most of which have no
 relationships worth recording, and a field agents will pad. The reason to
@@ -209,10 +236,15 @@ per commit). The missing half is the inverse query: an open issue with
 commits already citing it is either done-but-not-closed or partially
 addressed, and nothing surfaces it today.
 
-Disposition: **adopt** `bin/issues orphans` (or `list --cited`): open issues
-that appear in an `Issue:` trailer on `main`, with the commits. No `--fix`;
-closing is a `/finish` or `cb-issue-actions` judgment. This is the cheapest
-item here — `commit-provenance.ts` already parses the trailers.
+Disposition: **adopt** two things. `bin/issues orphans` (or `list --cited`):
+open issues that appear in an `Issue:` trailer on `main`, with the commits;
+no `--fix`. And a second trailer, `Resolves: <basename>` (optionally with
+`implemented|wontfix|superseded`), so that closing is declared in the commit
+that does it: `/finish` performs the `git mv` + `resolution:` from the
+branch's trailers instead of from the plan's "Issues addressed" list, and
+`commit-provenance` answers "what closed this" without reading the file. The
+file move stays the status; the trailer is the input that drives it. The
+existing trailer validator covers both.
 
 ### 2.8 Session start context
 
@@ -239,10 +271,10 @@ unknown keys; nothing checks that a `needs: [manual-testing]` item has a
 `## Manual testing` section or that a `## Research (incomplete)` stub was
 retitled with a date.
 
-Disposition: **adopt**, narrowly: a `bin/issues lint` that checks the two
-invariants `issues/CLAUDE.md` already states (manual-testing ⇒ section +
-headline blockquote; `closed/` ⇒ `resolution:` present; open ⇒ none). Not
-per-category required sections — the body conventions are judgment, and
+Disposition: **adapt** into `doc-check`, which already parses every issue's
+frontmatter: `needs: [manual-testing]` ⇒ a `## Manual testing` section;
+`closed/` ⇔ `resolution:`. No separate lint command (developer, 2026-08-25).
+Not per-category required sections — the body conventions are judgment, and
 STE-style prose does not want a template.
 
 ## 3. Tooling, side by side
@@ -261,27 +293,25 @@ STE-style prose does not want a template.
 
 | # | Item | Disposition | Traced to |
 |---|---|---|---|
-| 1 | `bin/issues orphans` — open issues cited by `Issue:` trailers on `main` | **adopt** | `bin/commit-provenance.ts`; `finish` agent's close step; §2.7 |
-| 2 | `bin/issues list --stale <days>` by last git touch | **adopt** | `cb-pick-issues` "check what's stale"; §2.2 |
-| 3 | `bin/issues lint` for the manual-testing and resolution invariants | **adopt** | `issues/CLAUDE.md` rules that nothing enforces; §2.9 |
+| 1 | `bin/issues orphans` — open issues cited by `Issue:` trailers on `main`; `Resolves:` trailer driving `/finish` closes | **adopt** | `bin/commit-provenance.ts`; `finish` agent's close step; §2.7 |
+| 2 | Stale-by-last-touch query | **reject** | developer, 2026-08-25: triage by reading + `reconfirm`; §2.2 |
+| 3 | manual-testing and resolution invariants | **adapt** into `doc-check` | `issues/CLAUDE.md` rules that nothing enforces; §2.9 |
 | 4 | `blocked-by:` / `related:` frontmatter lists (bare basenames) | **adapt — decision** | closed schema in `issues/CLAUDE.md` + `KNOWN_FRONTMATTER_KEYS`; `/finish` sibling reconciliation; §2.5 |
 | 5 | `superseded-by:` target on closed items | **adapt — decision** (same issue as 4) | `resolution: superseded` has no target; §2.6 |
-| 6 | Sweep for `workstream:` values naming dead workstreams | **adapt** | `bin/workstreams sweep`; §2.3 |
+| 6 | Atomic `--issue` claim committed on `main`; sweep dead-workstream ownership → `unattached` + `reconfirm` | **adapt** | `bin/lib/launch-session.sh:52`; `bin/workstreams sweep`; §2.3 |
 | 7 | Dolt / JSONL storage | **reject** | developer, 2026-08-25: "not going to make that change at this moment" |
 | 8 | `deferred` status, `defer_until`, `due_at`, `estimated_minutes` | **reject** | `watch/` is trigger-based by design; `priority: backlog` |
 | 9 | Agent-settable priority P0–P4 | **reject** | "Agents do not set this field" — the developer's attention budget |
-| 10 | Claim leases / heartbeats / `hooked` | **reject** | single-developer, one-session-at-a-time; #6 covers the residue |
+| 10 | Claim leases / heartbeats / `hooked` | **reject** | git commit on `main` is the lock; #6 |
+| 16 | `pinned` status, `milestone` and `message` types | **reject** (milestone folds into #4) | §2.5 |
 | 11 | Semantic compaction of closed issues | **reject** | closed items are not agent memory here; git history is the archive |
 | 12 | Per-type required sections (`bd lint --validate`) | **reject** | STE body conventions are judgment, not template |
 | 13 | "File issues for all remaining work" at session end | **reject** | "Something you can just fix, fix — don't file it"; 329 open |
 | 14 | `bd prime`-style session-start reminder | **later** | monorepo session-start question, not an issues one; §2.8 |
 | 15 | Molecules, formulas, gates, wisps, swarm, federation | **out of scope** | orchestration; our equivalents are workstreams, `schedules/`, `launch-worktree-session` |
 
-Items 1–3 are one tooling issue; 4–5 are one decision issue; 6 is one small
-issue. Filed below.
-
 ## 5. Filed
 
-- `issues/features/2026-08-25-issues-orphans-stale-lint.md` — items 1–3.
-- `issues/decisions/2026-08-25-issue-relationship-fields.md` — items 4–5.
-- `issues/code-quality/2026-08-25-sweep-dead-workstream-ownership.md` — item 6.
+- `issues/features/2026-08-25-issue-provenance-trailers-and-orphans.md` — items 1, 3.
+- `issues/decisions/2026-08-25-issue-relationship-fields.md` — items 4–5, 16.
+- `issues/features/2026-08-25-atomic-issue-claim-and-dead-workstream-sweep.md` — item 6.

@@ -31,6 +31,16 @@ Consumers: `bin/issues show` prints inverse edges; `groups --by related`
 becomes a cluster query; `/finish` notes in B when it closes an A that B is
 `blocked-by`. No `bd ready` equivalent; the developer still picks work.
 
+## Related Beads concepts that resolve here, not as new categories
+
+- `milestone` ("completion of a set of related issues, no work itself") is
+  an issue whose `blocked-by:` lists its members; it closes when they all
+  close. A use of the field.
+- `pinned` (persistent, protected from close/stale) is standing agent
+  context, which lives in CLAUDE.md/docs here. Not needed.
+- `message` (inter-agent mail as beads) is a mailbox; `bin/comments` and
+  schedule reports already cover it. Not needed.
+
 ## Against
 
 329 open items, most with nothing worth linking; agents will pad the field;
