@@ -22,5 +22,5 @@
     "lib": ["ES2023"],
     "types": ["@cloudflare/workers-types"]
   },
-  "include": ["src/**/*", "test/**/*", "vitest.config.ts"]
+  "include": ["eslint.config.ts", "src/**/*", "test/**/*", "vitest.config.ts"]
 }

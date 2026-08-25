@@ -37,7 +37,7 @@ await mkdir(join(fakeRepo, ".claude/hooks"), { recursive: true });
 await mkdir(join(fakeRepo, "bin/lib"), { recursive: true });
 await mkdir(join(home, ".cache/callback-box"), { recursive: true });
 await cp(join(repoRoot, ".claude/hooks/auto-sweep.sh"), join(fakeRepo, ".claude/hooks/auto-sweep.sh"));
-await cp(join(repoRoot, "bin/lib/detach.mjs"), join(fakeRepo, "bin/lib/detach.mjs"));
+await cp(join(repoRoot, "bin/lib/detach.ts"), join(fakeRepo, "bin/lib/detach.ts"));
 
 /** Stand-in for `bin/workstreams sweep`: takes `seconds`, touches nothing. */
 async function fakeSweep(seconds: number) {

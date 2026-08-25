@@ -19,12 +19,12 @@ pnpm install
 
 # Rebuild the CLI bundle + dist/cards. The server runs cb via tsx, but
 # box-local schemas import `callback-box/cards`, which package.json `exports`
-# maps to ./dist/cards/index.js (gitignored, emitted by build-cli.mjs). Without
+# maps to ./dist/cards/index.js (gitignored, emitted by build-cli.ts). Without
 # this, a pull that changed src/cards/ leaves dist/cards stale or missing and
 # every box-local schema fails to load. (deploy.sh builds this before rsync;
 # this rebuild path must too.)
 echo "=== Rebuilding CLI bundle (dist/cli.mjs + dist/cards) ==="
-node scripts/build-cli.mjs
+node scripts/build-cli.ts
 
 echo "=== Rebuilding frontend ==="
 cd "$INSTALL_DIR/callback-box/src/frontend"

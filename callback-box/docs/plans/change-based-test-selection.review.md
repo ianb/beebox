@@ -150,7 +150,7 @@ Seven findings. Two were verified by hand before recording; both hold exactly.
 > Track 3c says it covers "the 11 `.doctest.md` files that spawn a child" (`change-based-test-selection.md:337-343`). But traditional tests also spawn child processes, e.g. `test/frontend/trpc-directory-resolution.test.ts` uses `execFile` with `--eval` to import frontend source inside children (`callback-box/test/frontend/trpc-directory-resolution.test.ts:9-18`, `:21-29`). Even if today's particular source is also covered elsewhere, the enforcement rule is attached to a file extension, not the architectural coupling channel. It should scan all test entrypoints and helpers that can launch repo-loading children.
 >
 > **6. Medium: the selector duplicates the runner's discovery and resolution contract.**
-> The real test runner is Tap plus `.taprc` node args, includes, excludes, and the doctest loader (`callback-box/.taprc:7-14`). The loader only patches one TSX-only case and delegates the rest to Node/tsx (`agent-doctest/src/doctest-hooks.mjs:20-43`). The plan builds a sibling `bin/test-graph` that independently enumerates entrypoints and reimplements resolution candidates (`change-based-test-selection.md:153-178`). That creates a second authority over what "this test imports" means. Given the codebase's "one way to do each thing" principle (`callback-box/docs/engineering-principles.md:95-104`), the better seam is inside `agent-doctest` or a runner-owned graph API that consumes the same config the runner consumes.
+> The real test runner is Tap plus `.taprc` node args, includes, excludes, and the doctest loader (`callback-box/.taprc:7-14`). The loader only patches one TSX-only case and delegates the rest to Node/tsx (`agent-doctest/src/doctest-hooks.ts:20-43`). The plan builds a sibling `bin/test-graph` that independently enumerates entrypoints and reimplements resolution candidates (`change-based-test-selection.md:153-178`). That creates a second authority over what "this test imports" means. Given the codebase's "one way to do each thing" principle (`callback-box/docs/engineering-principles.md:95-104`), the better seam is inside `agent-doctest` or a runner-owned graph API that consumes the same config the runner consumes.
 >
 > **7. Medium: selection makes flaky-test hygiene worse in practice.**
 > The plan explicitly leaves the TSX-resolution and login-redirect flakes unresolved (`change-based-test-selection.md:32-35`, `:630-631`). Running fewer files reduces the chance agents see those flakes during branch work, so signatures rot and failures shift to nightly/main where attribution is weaker. The current tracked-flake protocol depends on seeing the failure in the branch, rerunning the exact file, checking whether the branch touched the exercised code, and requiring one full-suite rerun (`.claude/agents/finish.md:40-52`). Nightly issue filing (`change-based-test-selection.md:460-464`) is not equivalent to that decision point.
@@ -205,7 +205,7 @@ stay full) is deferred to that log.
 **6 — accepted in principle, deferred in placement.** The resolution logic should
 have one authority. `agent-doctest` is a standalone published package and should
 not learn callback-box's tsconfig aliases, so the shape is: extract the
-resolution rules from `doctest-hooks.mjs` into a module both the loader and the
+resolution rules from `doctest-hooks.ts` into a module both the loader and the
 graph builder consume, with the callback-box-specific alias passed in.
 
 **7 — accepted as a real second-order effect**, and it dissolves if finding 2 is
@@ -282,9 +282,9 @@ surfaced rather than acted on. The reordering means the ledger begins collecting
 during the period selection is still being built, which is the reviewer's real
 point and costs nothing.
 
-**5 — accepted.** Specified: `agent-doctest/src/resolve-rules.mjs` (matching the
+**5 — accepted.** Specified: `agent-doctest/src/resolve-rules.ts` (matching the
 hook's existing `.mjs`, so no cross-language boundary), added to `exports` as
-`./resolve-rules`, imported relatively by `doctest-hooks.mjs` and by path from
+`./resolve-rules`, imported relatively by `doctest-hooks.ts` and by path from
 `bin/test-graph.ts`. No existing consumer changes.
 
 **6 — accepted, and the reviewer's own search surfaced the right seam.** tap's

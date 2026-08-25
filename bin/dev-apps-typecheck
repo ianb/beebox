@@ -2,7 +2,7 @@
 # This-will-build gate for committed exhibit apps (dev/apps/).
 #
 # Committed apps are deliberately outside every package's lint — they are
-# casual by design (root eslint.config.mjs is empty on purpose). But they
+# casual by design (root eslint.config.ts is empty on purpose). But they
 # merge to main and live forever, so staged app source gets one bare check:
 # tsc --noEmit with the same compiler settings the exhibits container serves
 # with (dev/apps/tsconfig.json extends workstreams-app's fragment). The

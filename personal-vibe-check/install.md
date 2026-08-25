@@ -37,8 +37,8 @@ Concrete outputs, so you can evaluate whether to accept them:
 
 1. Adds these scripts to `package.json` (only if missing): `typecheck`, `lint`, `format`, `format:check`, `lint:oxlint`, `lint:knip`, `lint:circular`, `prepare`.
 2. Adds `lint-staged` config to `package.json`: `"src/**/*.{ts,tsx}": ["prettier --write", "eslint"]`.
-3. Creates `eslint.config.mjs` importing `vibeCheck` (auto-detects React based on your `dependencies`).
-4. Creates `prettier.config.mjs` re-exporting the shared Prettier config.
+3. Creates `eslint.config.ts` importing `vibeCheck` (auto-detects React based on your `dependencies`).
+4. Creates `prettier.config.ts` re-exporting the shared Prettier config.
 5. Creates `tsconfig.json` extending `@ianbicking/personal-vibe-check/tsconfig.base.json` — only if no `tsconfig.json` exists.
 6. Creates `knip.json` with your entry point filled in.
 7. Installs as devDependencies: `eslint@^9 prettier oxlint knip madge husky lint-staged`.
@@ -51,7 +51,7 @@ Concrete outputs, so you can evaluate whether to accept them:
 Use the manual path instead of `vibe-init` when:
 
 - The project is a **monorepo root** with per-workspace configs — `vibe-init` writes files at `cwd`, which may be the wrong scope. Run it per-workspace instead, or follow the manual steps per-workspace.
-- The project **already has** `eslint.config.mjs` / `prettier.config.mjs` / `tsconfig.json` with non-trivial customizations — `vibe-init` skips existing files (will not overwrite), but you still need to merge manually.
+- The project **already has** `eslint.config.ts` / `prettier.config.ts` / `tsconfig.json` with non-trivial customizations — `vibe-init` skips existing files (will not overwrite), but you still need to merge manually.
 - Running the npm install step is not acceptable right now (offline, sandboxed, CI-only install flow, etc.).
 
 ## Manual install
@@ -65,7 +65,7 @@ npm install --save-dev @ianbicking/personal-vibe-check \
 
 ESLint must be pinned to v9 — v10 has breaking plugin incompatibilities. Other versions can float.
 
-### 2. Create `eslint.config.mjs`
+### 2. Create `eslint.config.ts`
 
 ```js
 import { vibeCheck } from "@ianbicking/personal-vibe-check/eslint";
@@ -79,7 +79,7 @@ Optional advanced options:
 - `ignores: ["dist/**", "generated/**"]` — extra glob patterns to ignore
 - `restrictComponentClasses: { components: ["./components/ui/**"] }` — enable the `restrict-component-classes` rule for UI-component `className` hygiene (see `conventions.md`)
 
-### 3. Create `prettier.config.mjs`
+### 3. Create `prettier.config.ts`
 
 ```js
 export { default } from "@ianbicking/personal-vibe-check/prettier";
@@ -199,7 +199,7 @@ git add . && git commit -m "test"
 
 - **`npm error ERESOLVE`** on install — usually a React version mismatch between the project and the `eslint-plugin-react` bundled peer. Resolve by matching React versions, or install with `--legacy-peer-deps` if the conflict is spurious.
 - **`Cannot find package '@ianbicking/personal-vibe-check'`** at lint time — the package is not installed at the eslint CLI's nearest `node_modules`. Common in monorepos when eslint runs from the root but the dep is in a workspace.
-- **`Parsing error: Cannot read file 'tsconfig.json'`** from ESLint — the project root doesn't have a `tsconfig.json` that satisfies the TS-ESLint parser. Either create one (step 4 above) or pass `languageOptions.parserOptions.project` in `eslint.config.mjs`.
+- **`Parsing error: Cannot read file 'tsconfig.json'`** from ESLint — the project root doesn't have a `tsconfig.json` that satisfies the TS-ESLint parser. Either create one (step 4 above) or pass `languageOptions.parserOptions.project` in `eslint.config.ts`.
 - **Husky hook doesn't run** — `git config core.hooksPath` points elsewhere, or `prepare` script wasn't run. Run `npm install` again to trigger `prepare`.
 - **`vibe-check` reports "eslint: command not found"** — tools are installed at a different level (monorepo workspace vs root). Run `npx vibe-check` from the directory containing `node_modules/.bin/eslint`.
 

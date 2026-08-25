@@ -274,11 +274,11 @@ echo "Building frontend..."
 # excluded), and while the server runs cb via tsx (not the bundle), it DOES need
 # dist/cards/index.js on disk: box-local schema files import `callback-box/cards`,
 # which package.json `exports` maps to ./dist/cards/index.js (a plain-JS build of
-# the card-primitive layer, emitted by build-cli.mjs alongside dist/cli.mjs). If
+# the card-primitive layer, emitted by build-cli.ts alongside dist/cli.mjs). If
 # that file is missing or stale on the server, every box-local schema fails to
 # load. Building here keeps dist/ in lockstep with the source we rsync.
 echo "Building CLI bundle (dist/cli.mjs + dist/cards)..."
-(cd "$CHECKOUT/callback-box" && node scripts/build-cli.mjs >/dev/null)
+(cd "$CHECKOUT/callback-box" && node scripts/build-cli.ts >/dev/null)
 
 RSYNC_OPTS=(-az --delete
   # rsync runs as root over ssh, and -a preserves the sender's (local dev

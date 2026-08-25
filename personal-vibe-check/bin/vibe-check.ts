@@ -4,6 +4,29 @@ import { execSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { dirname } from "node:path";
 
+/**
+ * Narrow an unknown value to a plain object we can safely index. Used instead
+ * of an `as` cast when reading fields out of `JSON.parse` output.
+ */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+/**
+ * An error thrown by `execSync` carries the child process's captured
+ * stdout/stderr as extra (optional, untyped-by-Error) properties. We only
+ * know it's an `Error` for certain, so read the rest defensively.
+ */
+function getExecOutput(error: unknown): { stdout: string; stderr: string } {
+  if (!isRecord(error)) return { stdout: "", stderr: "" };
+  const stdout = error.stdout;
+  const stderr = error.stderr;
+  return {
+    stdout: typeof stdout === "string" || Buffer.isBuffer(stdout) ? stdout.toString().trim() : "",
+    stderr: typeof stderr === "string" || Buffer.isBuffer(stderr) ? stderr.toString().trim() : "",
+  };
+}
+
 const args = process.argv.slice(2);
 
 // vibe-check lint --hook: Claude Code PostToolUse hook mode
@@ -16,11 +39,13 @@ if (args[0] === "lint" && args.includes("--hook")) {
 
 async function runLintHook() {
   // Read JSON from stdin
-  const chunks = [];
+  const chunks: Buffer[] = [];
   for await (const chunk of process.stdin) {
-    chunks.push(chunk);
+    if (Buffer.isBuffer(chunk)) {
+      chunks.push(chunk);
+    }
   }
-  let input;
+  let input: unknown;
   try {
     input = JSON.parse(Buffer.concat(chunks).toString());
   } catch (_e) {
@@ -28,8 +53,9 @@ async function runLintHook() {
     process.exit(0);
   }
 
-  const filePath = input.tool_input && input.tool_input.file_path;
-  if (!filePath) {
+  const toolInput = isRecord(input) ? input.tool_input : undefined;
+  const filePath = isRecord(toolInput) ? toolInput.file_path : undefined;
+  if (typeof filePath !== "string" || filePath.length === 0) {
     process.exit(0);
   }
 
@@ -59,9 +85,8 @@ async function runLintHook() {
   } catch (e) {
     // eslint failed — output JSON so Claude sees the errors, but exit 0
     // so the edit is not reverted. Lint is enforced at pre-commit time.
-    const output = e.stdout ? e.stdout.toString().trim() : "";
-    const errOutput = e.stderr ? e.stderr.toString().trim() : "";
-    const lintErrors = [output, errOutput].filter(Boolean).join("\n");
+    const { stdout, stderr } = getExecOutput(e);
+    const lintErrors = [stdout, stderr].filter(Boolean).join("\n");
     const hookOutput = JSON.stringify({
       hookSpecificOutput: {
         hookEventName: "PostToolUse",
@@ -72,8 +97,14 @@ async function runLintHook() {
   }
 }
 
+interface Step {
+  name: string;
+  cmd: string;
+  condition?: () => boolean;
+}
+
 function runFullCheck() {
-  const steps = [
+  const steps: Step[] = [
     {
       name: "TypeScript",
       cmd: "npx tsc --noEmit",

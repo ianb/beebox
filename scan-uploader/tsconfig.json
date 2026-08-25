@@ -17,6 +17,6 @@
     "lib": ["ES2023"],
     "types": ["node"]
   },
-  "include": ["src/**/*", "test/**/*", "build.ts"],
+  "include": ["eslint.config.ts", "src/**/*", "test/**/*", "build.ts"],
   "exclude": ["node_modules", "dist"]
 }

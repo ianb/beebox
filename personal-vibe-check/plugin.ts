@@ -11,7 +11,7 @@
  * rule without the rest of the config.
  */
 
-import restrictComponentClasses from "./rules/restrict-component-classes.mjs";
+import restrictComponentClasses from "./rules/restrict-component-classes.ts";
 
 const plugin = {
   meta: { name: "personal-vibe-check" },

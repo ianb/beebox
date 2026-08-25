@@ -122,7 +122,7 @@ callers. Don't write a fresh `ssh root@... 'command'` line.
 
 ## Prod runs the bundled `dist/cli.mjs`
 
-`cb serve` (spawned by `cb hub` per box, or run directly) runs the single-file esbuild bundle at `dist/cli.mjs` (built by `scripts/build-cli.mjs`), not tsx on source and not a per-file compiled tree. `deploy/deploy.sh` builds the bundle in its local build checkout (a detached git worktree at the deployed ref — see `deploy/README.md`) and rsyncs it — `bin/cb` sees the bundle is newer than every backend `.ts` (the deploy builds it last) and runs it directly; tsx is only the fallback if a build fails. `deploy/deploy.sh` also rsyncs the `.ts` sources, but they're not what the server executes. `cb hub` itself runs from the same bundle.
+`cb serve` (spawned by `cb hub` per box, or run directly) runs the single-file esbuild bundle at `dist/cli.mjs` (built by `scripts/build-cli.ts`), not tsx on source and not a per-file compiled tree. `deploy/deploy.sh` builds the bundle in its local build checkout (a detached git worktree at the deployed ref — see `deploy/README.md`) and rsyncs it — `bin/cb` sees the bundle is newer than every backend `.ts` (the deploy builds it last) and runs it directly; tsx is only the fallback if a build fails. `deploy/deploy.sh` also rsyncs the `.ts` sources, but they're not what the server executes. `cb hub` itself runs from the same bundle.
 
 Consequences:
 

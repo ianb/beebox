@@ -12,7 +12,7 @@
     "typecheck:frontend": "tsc --noEmit -p src/frontend/tsconfig.json",
     "lint": "pnpm run '/^lint:(backend|frontend)$/'",
     "lint:backend": "eslint src/",
-    "lint:frontend": "eslint --config eslint.frontend.config.mjs src/frontend/",
+    "lint:frontend": "eslint --config eslint.frontend.config.ts src/frontend/",
     "test": "tap"
   },
   "dependencies": {

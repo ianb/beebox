@@ -1,25 +1,35 @@
+import type { ESLint, Linter } from "eslint";
 import baseConfigRaw from "eslint-config-agent";
 import dddPlugin from "eslint-plugin-ddd";
 import reactHooksPlugin from "eslint-plugin-react-hooks";
 import unicornPlugin from "eslint-plugin-unicorn";
 import importXPlugin from "eslint-plugin-import-x";
 import jsxA11yPlugin from "eslint-plugin-jsx-a11y";
-import vibePlugin from "./plugin.mjs";
+import vibePlugin from "./plugin.ts";
+import type { VibeCheckOptions, vibeCheck as DeclaredVibeCheck } from "./types";
 
 // Some plugins eslint-config-agent depends on still ship legacy-eslintrc
 // configs whose `plugins:` is a string array — newer ESLint flat config
 // rejects that. Rewrite any such entry to the object form before spreading.
-const PLUGIN_OBJECTS = {
+//
+// The react-hooks entry names `meta` and `rules` rather than passing the whole
+// module: eslint-plugin-react-hooks ships types whose `configs.flat` shape does
+// not satisfy ESLint's own `Plugin` type. Those legacy configs are unused here,
+// and `rules` is the only thing read off a plugin once it is in the `plugins`
+// map, so naming the two live fields sidesteps the upstream mismatch without a
+// cast.
+const PLUGIN_OBJECTS: Record<string, ESLint.Plugin> = {
   ddd: dddPlugin,
-  "react-hooks": reactHooksPlugin,
+  "react-hooks": { meta: reactHooksPlugin.meta, rules: reactHooksPlugin.rules },
 };
-const baseConfig = baseConfigRaw.map((entry) => {
-  if (!entry || typeof entry !== "object" || !Array.isArray(entry.plugins)) return entry;
-  const plugins = {};
-  for (const name of entry.plugins) {
-    if (name in PLUGIN_OBJECTS) plugins[name] = PLUGIN_OBJECTS[name];
+const baseConfig: Linter.Config[] = baseConfigRaw.map(({ plugins, ...rest }) => {
+  if (!Array.isArray(plugins)) return plugins ? { ...rest, plugins } : rest;
+  const named: Record<string, ESLint.Plugin> = {};
+  for (const name of plugins) {
+    const known = PLUGIN_OBJECTS[name];
+    if (known) named[name] = known;
   }
-  return { ...entry, plugins };
+  return { ...rest, plugins: named };
 });
 
 // ── The `as`-cast ban ─────────────────────────────────────────────
@@ -65,7 +75,7 @@ const AS_BAN_SELECTORS = [
 
 // ── Enabled rules ──────────────────────────────────────────────────
 // Rules reviewed and accepted. Each has a comment explaining why.
-const enabledRules = {
+const enabledRules: Linter.RulesRecord = {
   // Prevents @ts-ignore/@ts-nocheck from silencing the compiler; @ts-expect-error with description still allowed
   "@typescript-eslint/ban-ts-comment": "error",
   // Prefer `interface` over `type` for object shapes
@@ -350,7 +360,7 @@ const enabledRules = {
 
 // ── Disabled rules ─────────────────────────────────────────────────
 // Rules reviewed and rejected. Each has a comment explaining why.
-const disabledRules = {
+const disabledRules: Linter.RulesRecord = {
   // Redundant with TypeScript — TS already catches undeclared variables
   "no-undef": "off",
   // Superseded by @typescript-eslint/no-unused-vars which understands TS
@@ -384,8 +394,8 @@ const disabledRules = {
  * Build the set of all rule keys from the base config so we can turn them off
  * before applying our reviewed rules.
  */
-function allRulesOffFrom(config) {
-  const off = {};
+function allRulesOffFrom(config: { rules?: Record<string, unknown> }[]): Record<string, "off"> {
+  const off: Record<string, "off"> = {};
   for (const entry of config) {
     if (entry.rules) {
       for (const key of Object.keys(entry.rules)) {
@@ -399,25 +409,15 @@ function allRulesOffFrom(config) {
 /**
  * Returns a flat ESLint config array.
  *
- * @param {object} [options]
- * @param {boolean} [options.react] — include React/JSX rules (default: false)
- * @param {string[]} [options.ignores] — additional ignore patterns
- * @param {string[]} [options.roots] — source roots the ruleset applies to
- *   (default: `["src"]`). Add e.g. `"scripts"` to hold first-party tooling
- *   outside src/ to the same reviewed rules instead of eslint-config-agent's
- *   harsher global base. Only affects the main (non-type-aware) rule block; the
- *   type-aware scope stays src-only since it needs tsconfig project membership.
- * @param {object} [options.restrictComponentClasses] — enable the
- *   restrict-component-classes rule. Pass an options object, e.g.
- *     `{ components: ["./ui/**", "./components/ui/**"] }`.
- *   Omit to disable the rule.
+ * The options are documented on `VibeCheckOptions` in `types.d.ts`, which is
+ * also what consumers resolve as this module's types — see the note there for
+ * why the declaration is separate from this source.
  */
-export function vibeCheck(options) {
-  const react = options && options.react;
-  const extraIgnores = (options && options.ignores) || [];
-  const roots = (options && options.roots) || ["src"];
-  const restrictClassesOptions =
-    options && options.restrictComponentClasses ? options.restrictComponentClasses : null;
+export function vibeCheck(options?: VibeCheckOptions): Linter.Config[] {
+  const react = options?.react;
+  const extraIgnores = options?.ignores ?? [];
+  const roots = options?.roots ?? ["src"];
+  const restrictClassesOptions = options?.restrictComponentClasses ?? null;
 
   const allRulesOff = allRulesOffFrom(baseConfig);
 
@@ -739,7 +739,7 @@ export function vibeCheck(options) {
         // catch block and causes a second send (FST_ERR_REP_ALREADY_SENT).
         // Consuming projects with a route-handler directory matching this
         // shape should disable the rule there in their OWN eslint config
-        // (see callback-box/eslint.config.mjs for the model), not here —
+        // (see callback-box/eslint.config.ts for the model), not here —
         // this preset has no opinion on any one project's route layout.
         "@typescript-eslint/return-await": "error",
         // `x!` silences the compiler instead of proving non-null; a wrong
@@ -754,8 +754,8 @@ export function vibeCheck(options) {
         // guard left over after a type narrowed, or a check that was never
         // reachable to begin with. Burned down 2026-07-10: ~200 sites fixed
         // across callback-box (backend + frontend), callback-clerk, and
-        // agent-doctest; 3 sites kept a justified single-line
-        // eslint-disable-next-line (agent-doctest/src/check.ts and
+        // agent-doctest; 3 sites kept a justified single-line disable comment
+        // (agent-doctest/src/check.ts and
         // callback-box frontend useSSRMachine.ts, router.tsx) where the
         // condition is genuinely defensive against a case the type system
         // can't see (e.g. a cast at a parse/runtime boundary).
@@ -772,7 +772,7 @@ export function vibeCheck(options) {
     // through the main block instead.)
     ...(react
       ? []
-      : [
+      : ([
           {
             files: ["**/*.{tsx,jsx}"],
             rules: {
@@ -799,9 +799,36 @@ export function vibeCheck(options) {
               "required-exports/required-exports": "off",
             },
           },
-        ]),
+        ] satisfies Linter.Config[])),
   ];
 }
 
 // Default export for backward compatibility
 export default vibeCheck;
+
+// Binds the implementation to the published declaration in types.d.ts (what the
+// exports map's `types` condition serves), in BOTH directions. One assignment
+// alone would only prove the implementation is *assignable to* the declaration,
+// which tolerates real divergence — a narrower return type, or extra optional
+// parameters, passes a one-way check. Mutual assignability is as close to
+// "these are the same function type" as TypeScript expresses, and it is what
+// makes a signature change here fail this package's own `pnpm typecheck` unless
+// types.d.ts moves with it.
+//
+// The options object cannot drift at all: `VibeCheckOptions` is imported FROM
+// types.d.ts rather than restated here, so there is only one definition.
+// Parameters/ReturnType rather than the function types directly: TypeScript's
+// function assignability ignores an extra trailing OPTIONAL parameter in both
+// directions, so comparing `typeof vibeCheck` to `typeof DeclaredVibeCheck`
+// would let one side grow an option the other never declares. Comparing the
+// parameter tuples closes that — tuples of different arity are not mutually
+// assignable.
+type MutuallyAssignable<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+const _parametersMatch: MutuallyAssignable<
+  Parameters<typeof vibeCheck>,
+  Parameters<typeof DeclaredVibeCheck>
+> = true;
+const _returnTypeMatches: MutuallyAssignable<
+  ReturnType<typeof vibeCheck>,
+  ReturnType<typeof DeclaredVibeCheck>
+> = true;

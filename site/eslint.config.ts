@@ -1,4 +1,5 @@
 import { vibeCheck } from "@ianbicking/personal-vibe-check/eslint";
+
 export default [
   // roots: ["."] — the generator's sources live at the package root (build.ts,
   // render.ts, links.ts), not under src/, so point the reviewed .ts ruleset at

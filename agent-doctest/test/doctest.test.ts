@@ -14,7 +14,7 @@ import {
   parseExamples,
   generateTestSource,
   resolve,
-} from "../src/doctest-hooks.mjs";
+} from "../src/doctest-hooks.js";
 
 test("parseCodeBlocks extracts fenced code blocks", async (t) => {
   const md = `# Title

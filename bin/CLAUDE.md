@@ -532,7 +532,7 @@ must not run destructive steps from inside the directory it deletes.
 
 **The global sweep is detached, serialized, and fired from an `EXIT` trap.**
 `.claude/hooks/auto-sweep.sh` re-invokes itself with `--run` through
-`bin/lib/detach.mjs` (Node's `detached: true`, i.e. `setsid(2)`) rather than
+`bin/lib/detach.ts` (Node's `detached: true`, i.e. `setsid(2)`) rather than
 `& disown`, which leaves the child in the caller's process group and so died
 with the very session whose exit triggered it — 15 of 109 SessionEnd sweeps
 logged a `START` with nothing after it, against zero of the SessionStart and
@@ -681,7 +681,7 @@ and a `tick` raises one `important` alert per broken schedule — latched on tha
 alert staying open, so a schedule left broken is one record rather than one
 every fifteen minutes.
 
-`schedules/**/*.ts` is the only root path the root `eslint.config.mjs` lints;
+`schedules/**/*.ts` is the only root path the root `eslint.config.ts` lints;
 `bin/` and `dev/` stay unlinted by decision (the comment in that file says why).
 
 ## Document comments (`bin/comments`)

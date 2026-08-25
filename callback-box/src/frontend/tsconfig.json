@@ -27,7 +27,7 @@
     //                matching Vite alias, an accidental value import through
     //                them fails the client build loudly instead of silently
     //                bundling backend source. The lint rule in
-    //                src/frontend/eslint.config.mjs bans the raw relative
+    //                src/frontend/eslint.config.ts bans the raw relative
     //                spellings so these aliases are the only sanctioned path.
     // tsx caveat (probed 2026-07-12): a tsx run pointed at THIS tsconfig
     // (TSX_TSCONFIG_PATH=src/frontend/tsconfig.json) DOES honor these paths and
@@ -45,6 +45,6 @@
       "@schemas/*": ["../schemas/*"]
     }
   },
-  "include": ["src", "../shared/**/*"],
+  "include": ["eslint.config.ts", "src", "../shared/**/*"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

@@ -19,7 +19,7 @@ import { readFileSync } from "node:fs";
 import { globSync } from "node:fs";
 import { relative, resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { candidateFiles, isRelative } from "../agent-doctest/src/resolve-rules.mjs";
+import { candidateFiles, isRelative } from "../agent-doctest/src/resolve-rules.ts";
 import type { TestGraph } from "./test-graph-query.js";
 
 export const REPO_ROOT = resolve(import.meta.dirname, "..");
@@ -151,7 +151,7 @@ function isBuildFailure(e: unknown): e is BuildFailure {
 
 export async function buildGraphFrom(config: GraphConfig): Promise<TestGraph> {
   const { generateTestSource } = (await import(
-    join(REPO_ROOT, "agent-doctest/src/doctest-hooks.mjs")
+    join(REPO_ROOT, "agent-doctest/src/doctest-hooks.ts")
   )) as { generateTestSource: (md: string, path: string) => string };
 
   const entrypoints = config.entrypoints;

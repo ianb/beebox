@@ -23,14 +23,15 @@
     },
     "./browser/figure.css": "./browser/figure.css",
     "./eslint": {
-      "default": "./src/eslint/index.mjs"
+      "types": "./src/eslint/index.ts",
+      "default": "./src/eslint/index.ts"
     }
   },
   "scripts": {
     "cli": "node --import tsx src/headless/cli.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p browser/tsconfig.json && tsc --noEmit -p src/react/tsconfig.json",
     "lint": "eslint .",
-    "test": "TSX_TSCONFIG_PATH=src/react/tsconfig.json node --import tsx --test test/*.test.ts test/*.test.mjs test/*.test.tsx",
+    "test": "TSX_TSCONFIG_PATH=src/react/tsconfig.json node --import tsx --test test/*.test.ts test/*.test.tsx",
     "build:playground": "node --import tsx browser/build.ts",
     "build:dev-demo": "node --import tsx dev-demo/build.ts",
     "gallery:check": "node --import tsx src/headless/cli.ts gallery check",
