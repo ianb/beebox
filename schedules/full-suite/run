@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Thin shim: run.ts holds the logic (TypeScript, run via tsx) — the bin/schedules shape.
+# It honors SCHEDULE_DRY_RUN itself.
+exec node --import tsx "$(dirname "$0")/run.ts" "$@"

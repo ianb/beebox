@@ -9,7 +9,7 @@ discovered-in: worktree-test-selection — measured while running the test-selec
 
 Measured 2026-08-09 by building the full test→source import graph with esbuild
 over all 484 test entrypoints (method and numbers in
-[run less of the full suite](../exploration/2026-08-08-run-less-of-the-test-suite.md),
+[run less of the full suite](../closed/exploration/2026-08-08-run-less-of-the-test-suite.md),
 `## Track 0 measurement`).
 
 **430 of 1,288 `.ts`/`.tsx` files under `callback-box/src/` are imported by no

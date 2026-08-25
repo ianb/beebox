@@ -13,7 +13,7 @@ process boot, the tsx import hook, the doctest loader, and — for the 37 files
 that call `makeTestServer()` — a cold template-box build.
 
 The measured figures come from the profiling in
-[run less of the full suite](../exploration/2026-08-08-run-less-of-the-test-suite.md)
+[run less of the full suite](../closed/exploration/2026-08-08-run-less-of-the-test-suite.md)
 (`## Research (2026-08-08)`; loaded-machine caveat applies to all of them):
 
 - Cold template-box build: **1,023 ms**. Warm clones after it: 387 ms mean,

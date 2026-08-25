@@ -22,7 +22,7 @@
     "prepare": "husky",
     "security:opengrep": "bash security/opengrep/run.sh",
     "snapshot:clerk-contract": "node --import tsx bin/snapshot-clerk-contract.ts",
-    "test": "node --import tsx --test bin/*.test.ts",
+    "test": "node --import tsx --test bin/*.test.ts schedules/*/*.test.ts",
     "typecheck": "tsc --noEmit",
     "update-agent-sdk": "node --import tsx bin/update-agent-sdk.ts"
   },

@@ -25,8 +25,9 @@ rule file's string-comparison rules), not syntax.
 ## Running
 
 - One file: `pnpm exec tap test/<path>.doctest.md`
-- Whole suite: `pnpm test`. Note pre-commit runs typecheck + lint only,
-  NOT the suite — run `pnpm test` yourself before declaring done.
+- What your diff implicates: `pnpm test:changed`. Pre-commit runs typecheck +
+  lint only, not tests — run this yourself before declaring done. The whole
+  suite (`pnpm test`) runs hourly on `main`; not for iteration.
 - Force serial (rule out contention as a cause): add `-j1`
 
 **Never declare a doctest fixed without actually running it.** Reading

@@ -42,7 +42,7 @@ Candidates worth checking when this recurs:
   the `uuid` key differently than the fixture-built ones in
   `chat-session-transcript-sync.doctest.md` assume).
 - Whether this machine's load (concurrent Claude/Codex processes — see
-  [run less of the test suite](../exploration/2026-08-08-run-less-of-the-test-suite.md)
+  [run less of the test suite](../closed/exploration/2026-08-08-run-less-of-the-test-suite.md)
   for the same environment's contention profile) is inflating the real CLI's
   flush latency well past 150ms, in which case the fix is a larger timeout or
   a different gating strategy, not a code bug.
