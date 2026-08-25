@@ -40,7 +40,13 @@ export interface ChatReservation {
    * id to Claude.
    */
   engine: AgentEngine;
-  /** Landmark binding captured at reserve time, or null for a root chat. */
+  /**
+   * Landmark binding captured at reserve time. `""` is the box-root landmark
+   * — a real binding, distinguished from `null` (a chat opened from nowhere),
+   * the same way `chat-session-history` distinguishes them once the chat is
+   * committed. Collapsing the two here would leave a chat opened from the Box
+   * landmark unlabelled until its first turn.
+   */
   contextDir: string | null;
   /** Pre-session chat-feature choices (landmark defaults, narration, …). */
   seedFeatures: Record<string, string>;
@@ -117,6 +123,28 @@ export class ChatReservationStore {
 
   size(): number {
     return this.records.size;
+  }
+
+  /**
+   * The newest live reservation bound to `contextDir`, or null.
+   *
+   * "Open this landmark's chat" resolves through
+   * `getLastSessionForDirectory`, which reads the history file — and a coined
+   * chat has no row there until its first turn commits. Without this, leaving
+   * a fresh landmark chat and switching back coins a *second* one, every
+   * time, so the switch never returns you to the chat you just left.
+   */
+  latestForDirectory(contextDir: string): string | null {
+    // Expired records are skipped, not deleted: dropping one here would take
+    // its id out of `sweepExpired`'s hands, and the sweep is what closes the
+    // warm subprocess held for it (`registry-reservations.ts`).
+    const cutoff = this.now() - RESERVATION_TTL_MS;
+    let newest: ChatReservation | null = null;
+    for (const record of this.records.values()) {
+      if (record.createdAt <= cutoff || record.contextDir !== contextDir) continue;
+      if (newest === null || record.createdAt > newest.createdAt) newest = record;
+    }
+    return newest === null ? null : newest.sessionId;
   }
 
   /** Reserved ids, newest first — the per-chat prewarm's candidate list. */
