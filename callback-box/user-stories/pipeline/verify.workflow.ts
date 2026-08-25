@@ -1,47 +1,58 @@
 export const meta = {
-  name: 'user-stories-verify',
-  description: 'Adversarially verify each catalogued story against the code, plus a live-app browser pass',
+  name: "user-stories-verify",
+  description: "Adversarially verify each catalogued story against the code, plus a live-app browser pass",
   phases: [
-    { title: 'Verify', detail: 'cross-unit batches of 3, adversarial verifier per batch' },
-    { title: 'Map', detail: 'assign web-ui stories to the pages that would show them' },
-    { title: 'Browser', detail: 'drive the running app page by page via bin/browse' },
+    { title: "Verify", detail: "cross-unit batches of 3, adversarial verifier per batch" },
+    { title: "Map", detail: "assign web-ui stories to the pages that would show them" },
+    { title: "Browser", detail: "drive the running app page by page via bin/browse" },
   ],
-}
+};
 
 // The absolute repo root, passed in by the caller — workflow scripts have no filesystem access
 // and every subagent prompt needs absolute paths. Run from a worktree and this is that worktree.
-const ROOT = args && args.root
-if (!ROOT) throw new Error('pass {root: "<absolute path to the repo root>"} in args')
-const OUT = `${ROOT}/callback-box/user-stories/work`
+const ROOT = args && args.root;
+if (!ROOT) throw new Error('pass {root: "<absolute path to the repo root>"} in args');
+const OUT = `${ROOT}/callback-box/user-stories/work`;
 
 // args: { root: string, batchCount: number, pages?: {slug, path, ids}[] }
 // Batch membership lives in batches.json rather than in args — each verifier reads its own entry,
 // which keeps a 12KB id list out of the orchestration and off every prompt.
-const batchCount = (args && args.batchCount) || 0
-const pages = (args && args.pages) || []
+const batchCount = (args && args.batchCount) || 0;
+const pages = (args && args.pages) || [];
 
-const VERDICT_SCHEMA = {
-  type: 'object',
+/** One verifier's call on one story; the reasoning stays in the file it writes. */
+interface StoryVerdict {
+  id: string
+  verdict: "accurate" | "inaccurate"
+}
+
+interface BatchVerdicts {
+  file: string
+  verdicts: StoryVerdict[]
+}
+
+const VERDICT_SCHEMA: WorkflowJsonSchema = {
+  type: "object",
   additionalProperties: false,
-  required: ['file', 'verdicts'],
+  required: ["file", "verdicts"],
   properties: {
-    file: { type: 'string' },
+    file: { type: "string" },
     verdicts: {
-      type: 'array',
+      type: "array",
       items: {
-        type: 'object',
+        type: "object",
         additionalProperties: false,
-        required: ['id', 'verdict'],
+        required: ["id", "verdict"],
         properties: {
-          id: { type: 'string' },
-          verdict: { type: 'string', enum: ['accurate', 'inaccurate'] },
+          id: { type: "string" },
+          verdict: { type: "string", enum: ["accurate", "inaccurate"] },
         },
       },
     },
   },
-}
+};
 
-phase('Verify')
+phase("Verify");
 
 const VERIFIER = `You are an adversarial verifier. Repository root: ${ROOT}.
 
@@ -93,11 +104,11 @@ Write your JSON to the file path given, in exactly this shape:
 
 {"verdicts": [{"id": "...", "verdict": "accurate"|"inaccurate", "note": "..."}]}
 
-Then return the file path and just the id + verdict for each. Keep notes in the file only.`
+Then return the file path and just the id + verdict for each. Keep notes in the file only.`;
 
 const verifyResults = await parallel(Array.from({ length: batchCount }, (_, i) => () => {
-  const tag = String(i + 1).padStart(4, '0')
-  return agent(
+  const tag = String(i + 1).padStart(4, "0");
+  return agent<BatchVerdicts>(
     `${VERIFIER}
 
 ## Your assignment
@@ -105,81 +116,97 @@ const verifyResults = await parallel(Array.from({ length: batchCount }, (_, i) =
 **Batch index ${i}** — read \`${OUT}/batches.json\` and verify the ids in \`batches[${i}]\`.
 
 Write your JSON to: ${OUT}/verdicts/batch-${tag}.json`,
-    { label: `verify:${tag}`, phase: 'Verify', schema: VERDICT_SCHEMA },
-  )
-}))
+    { label: `verify:${tag}`, phase: "Verify", schema: VERDICT_SCHEMA },
+  );
+}));
 
-let accurate = 0
-let inaccurate = 0
-let verifyFailures = 0
-const flagged = []
+let accurate = 0;
+let inaccurate = 0;
+let verifyFailures = 0;
+const flagged: string[] = [];
 for (const r of verifyResults) {
-  if (!r) { verifyFailures++; continue }
+  if (!r) { verifyFailures++; continue; }
   for (const v of r.verdicts || []) {
-    if (v.verdict === 'accurate') accurate++
-    else { inaccurate++; flagged.push(v.id) }
+    if (v.verdict === "accurate") accurate++;
+    else { inaccurate++; flagged.push(v.id); }
   }
 }
 
-if (verifyFailures) log(`INCOMPLETE: ${verifyFailures} verify batch(es) failed — those stories have NO verdict`)
-log(`Verify: ${accurate} accurate, ${inaccurate} flagged of ${accurate + inaccurate}`)
+if (verifyFailures) log(`INCOMPLETE: ${verifyFailures} verify batch(es) failed — those stories have NO verdict`);
+log(`Verify: ${accurate} accurate, ${inaccurate} flagged of ${accurate + inaccurate}`);
 
 // ---------------------------------------------------------------------------
 // Browser pass — what actually renders in the running app beats what the code
 // appears to say. Verdicts here override code verdicts downstream.
 // ---------------------------------------------------------------------------
 
-phase('Browser')
+phase("Browser");
 
-const BROWSER_SCHEMA = {
-  type: 'object',
+/** What driving the running app established about one story. */
+interface BrowserCheck {
+  id: string
+  status: "confirmed" | "failed" | "inconclusive"
+}
+
+interface BrowserResult {
+  file: string
+  checks: BrowserCheck[]
+}
+
+const BROWSER_SCHEMA: WorkflowJsonSchema = {
+  type: "object",
   additionalProperties: false,
-  required: ['file', 'checks'],
+  required: ["file", "checks"],
   properties: {
-    file: { type: 'string' },
+    file: { type: "string" },
     checks: {
-      type: 'array',
+      type: "array",
       items: {
-        type: 'object',
+        type: "object",
         additionalProperties: false,
-        required: ['id', 'status'],
+        required: ["id", "status"],
         properties: {
-          id: { type: 'string' },
-          status: { type: 'string', enum: ['confirmed', 'failed', 'inconclusive'] },
+          id: { type: "string" },
+          status: { type: "string", enum: ["confirmed", "failed", "inconclusive"] },
         },
       },
     },
   },
+};
+
+phase("Map");
+
+interface PageMap {
+  file: string
+  pages: WorkflowPageAssignment[]
 }
 
-phase('Map')
-
-const MAP_SCHEMA = {
-  type: 'object',
+const MAP_SCHEMA: WorkflowJsonSchema = {
+  type: "object",
   additionalProperties: false,
-  required: ['file', 'pages'],
+  required: ["file", "pages"],
   properties: {
-    file: { type: 'string' },
+    file: { type: "string" },
     pages: {
-      type: 'array',
+      type: "array",
       items: {
-        type: 'object',
+        type: "object",
         additionalProperties: false,
-        required: ['slug', 'path', 'ids'],
+        required: ["slug", "path", "ids"],
         properties: {
-          slug: { type: 'string', description: 'short kebab-case name, used as a filename' },
-          path: { type: 'string', description: 'app path to open, e.g. /dashboard' },
-          ids: { type: 'array', items: { type: 'string' } },
+          slug: { type: "string", description: "short kebab-case name, used as a filename" },
+          path: { type: "string", description: "app path to open, e.g. /dashboard" },
+          ids: { type: "array", items: { type: "string" } },
         },
       },
     },
   },
-}
+};
 
-let resolvedPages = pages
+let resolvedPages = pages;
 
 if (resolvedPages.length === 0) {
-  const mapped = await agent(
+  const mapped = await agent<PageMap>(
     `You are planning a browser verification pass. Repository root: ${ROOT}.
 
 Read the frontend route table at \`callback-box/src/frontend/src/router.tsx\` — that is the
@@ -207,25 +234,25 @@ Write your JSON to: ${OUT}/pages.json
 {"pages": [{"slug": "dashboard", "path": "/dashboard", "ids": ["..."]}]}
 
 Then return the file path and the pages.`,
-    { label: 'map-pages', phase: 'Map', schema: MAP_SCHEMA, effort: 'high' },
-  )
+    { label: "map-pages", phase: "Map", schema: MAP_SCHEMA, effort: "high" },
+  );
 
   if (!mapped) {
-    log('INCOMPLETE: page mapping failed — skipping the browser pass entirely')
+    log("INCOMPLETE: page mapping failed — skipping the browser pass entirely");
   } else {
-    resolvedPages = mapped.pages || []
-    const assigned = resolvedPages.reduce((n, pg) => n + pg.ids.length, 0)
-    log(`Map: ${assigned} web-ui stories across ${resolvedPages.length} pages`)
+    resolvedPages = mapped.pages || [];
+    const assigned = resolvedPages.reduce((n, pg) => n + pg.ids.length, 0);
+    log(`Map: ${assigned} web-ui stories across ${resolvedPages.length} pages`);
   }
 }
 
-let confirmed = 0
-let browserFailed = 0
-let inconclusive = 0
-let browserAgentFailures = 0
+let confirmed = 0;
+let browserFailed = 0;
+let inconclusive = 0;
+let browserAgentFailures = 0;
 
 if (resolvedPages.length > 0) {
-  const browserResults = await parallel(resolvedPages.map((p) => () => agent(
+  const browserResults = await parallel(resolvedPages.map((p) => () => agent<BrowserResult>(
     `You are checking user stories against the RUNNING callback-box app, not against its source.
 
 Repository root: ${ROOT}. You are in the \`user-stories-refresh\` worktree.
@@ -253,7 +280,7 @@ do not trigger scheduled tasks. If checking a story would require a destructive 
 
 Page: **${p.slug}** at \`${p.path}\`
 
-Check these stories against what the page actually does: ${p.ids.join(', ')}
+Check these stories against what the page actually does: ${p.ids.join(", ")}
 
 Read each story from \`${OUT}/stories.final.json\` (match on \`id\`), then go see whether the running
 app does it.
@@ -277,21 +304,23 @@ Write your JSON to: ${OUT}/browser/${p.slug}.json
   {"id": "...", "status": "confirmed"|"failed"|"inconclusive", "note": "what you saw"}]}
 
 Then return the file path and id + status for each check.`,
-    { label: `browse:${p.slug}`, phase: 'Browser', schema: BROWSER_SCHEMA },
-  )))
+    { label: `browse:${p.slug}`, phase: "Browser", schema: BROWSER_SCHEMA },
+  )));
 
   for (const r of browserResults) {
-    if (!r) { browserAgentFailures++; continue }
+    if (!r) { browserAgentFailures++; continue; }
     for (const c of r.checks || []) {
-      if (c.status === 'confirmed') confirmed++
-      else if (c.status === 'failed') browserFailed++
-      else inconclusive++
+      if (c.status === "confirmed") confirmed++;
+      else if (c.status === "failed") browserFailed++;
+      else inconclusive++;
     }
   }
-  if (browserAgentFailures) log(`INCOMPLETE: ${browserAgentFailures} browser agent(s) failed`)
-  log(`Browser: ${confirmed} confirmed, ${browserFailed} failed, ${inconclusive} inconclusive`)
+  if (browserAgentFailures) log(`INCOMPLETE: ${browserAgentFailures} browser agent(s) failed`);
+  log(`Browser: ${confirmed} confirmed, ${browserFailed} failed, ${inconclusive} inconclusive`);
 }
 
+// @ts-expect-error -- TS1108: the Workflow runtime wraps this script body in an async function,
+// so a top-level return is how a workflow reports its result.
 return {
   verified: accurate + inaccurate,
   accurate,
@@ -299,4 +328,4 @@ return {
   flaggedIds: flagged,
   verifyBatchFailures: verifyFailures,
   browser: { confirmed, failed: browserFailed, inconclusive, agentFailures: browserAgentFailures },
-}
+};

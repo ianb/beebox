@@ -39,6 +39,7 @@
     "build:frontend": "cd src/frontend && pnpm build",
     "build:all": "pnpm build && pnpm build:frontend",
     "build:cli": "node scripts/build-cli.mjs && tsc -p tsconfig.declarations.json",
+    "build:workflows": "tsx user-stories/pipeline/build-workflows.ts",
     "release": "tsx scripts/release.ts",
     "smoke": "tsx scripts/smoke-external-box.ts",
     "smoke:upgrade": "tsx scripts/smoke-upgrade.ts",

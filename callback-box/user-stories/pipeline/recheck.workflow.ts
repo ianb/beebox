@@ -1,11 +1,11 @@
 export const meta = {
-  name: 'user-stories-recheck',
-  description: 'Re-verify specific catalogued capabilities against current code, after a fix',
+  name: "user-stories-recheck",
+  description: "Re-verify specific catalogued capabilities against current code, after a fix",
   phases: [
-    { title: 'Verify', detail: 'one adversarial verifier per story' },
-    { title: 'Panel', detail: 'three lenses on anything still flagged' },
+    { title: "Verify", detail: "one adversarial verifier per story" },
+    { title: "Panel", detail: "three lenses on anything still flagged" },
   ],
-}
+};
 
 // args: { root: string, date: string, ids: string[], run?: string }
 //
@@ -13,30 +13,36 @@ export const meta = {
 // fixed, so without this the catalog rots from the day it is committed. This re-checks only the
 // stories a fix touched, using the same adversarial stance as the full run, and writes results
 // `apply-recheck.ts` merges back into the frozen catalog.
-const ROOT = args && args.root
-if (!ROOT) throw new Error('pass {root: "<absolute path to the repo root>"} in args')
-const DATE = (args && args.date) || ''
-const IDS = (args && args.ids) || []
-if (IDS.length === 0) throw new Error('pass {ids: ["group/slug", ...]} in args')
+const ROOT = args && args.root;
+if (!ROOT) throw new Error('pass {root: "<absolute path to the repo root>"} in args');
+const DATE = (args && args.date) || "";
+const IDS = (args && args.ids) || [];
+if (IDS.length === 0) throw new Error('pass {ids: ["group/slug", ...]} in args');
 
-const CATALOG = `${ROOT}/callback-box/user-stories/catalog`
+const CATALOG = `${ROOT}/callback-box/user-stories/catalog`;
 // A per-run directory, not one shared bucket. Leftovers from an earlier recheck sitting in a
 // fixed directory would be merged by the next one, silently updating stories nobody asked about.
-const RUN = (args && args.run) || 'latest'
-const OUT = `${ROOT}/callback-box/user-stories/work/recheck/${RUN}`
+const RUN = (args && args.run) || "latest";
+const OUT = `${ROOT}/callback-box/user-stories/work/recheck/${RUN}`;
 
 /** Ids contain a slash; filenames cannot. */
-const safe = (id) => id.replace(/\//g, '__')
+const safe = (id: string) => id.replace(/\//g, "__");
 
-const VERDICT_SCHEMA = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['id', 'verdict'],
-  properties: {
-    id: { type: 'string' },
-    verdict: { type: 'string', enum: ['accurate', 'inaccurate'] },
-  },
+/** What a re-checking verifier returns; `note` lives in the file it writes, not the return. */
+interface RecheckVerdict {
+  id: string
+  verdict: "accurate" | "inaccurate"
 }
+
+const VERDICT_SCHEMA: WorkflowJsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["id", "verdict"],
+  properties: {
+    id: { type: "string" },
+    verdict: { type: "string", enum: ["accurate", "inaccurate"] },
+  },
+};
 
 const STANCE = `You are an adversarial verifier. Repository root: ${ROOT}.
 
@@ -58,11 +64,11 @@ It is NOT inaccurate for imperfect wording that still describes what the code do
 of several implementing files is cited.
 
 Write 2-5 sentences naming the specific code you read. When refuting, say what the code does
-instead. Someone must be able to check you from the note alone.`
+instead. Someone must be able to check you from the note alone.`;
 
-phase('Verify')
+phase("Verify");
 
-const verified = await parallel(IDS.map((id) => () => agent(
+const verified = await parallel(IDS.map((id) => () => agent<RecheckVerdict>(
   `${STANCE}
 
 ## Your assignment
@@ -76,48 +82,61 @@ Write your JSON to: ${OUT}/${safe(id)}.verdict.json
 {"id": "${id}", "verdict": "accurate"|"inaccurate", "note": "..."}
 
 Then return the id and verdict.`,
-  { label: `recheck:${id}`, phase: 'Verify', schema: VERDICT_SCHEMA },
-)))
+  { label: `recheck:${id}`, phase: "Verify", schema: VERDICT_SCHEMA },
+)));
 
-const stillFlagged = []
-let accurate = 0
-let failures = 0
+const stillFlagged: string[] = [];
+let accurate = 0;
+let failures = 0;
 for (const v of verified) {
-  if (!v) { failures++; continue }
-  if (v.verdict === 'accurate') accurate++
-  else stillFlagged.push(v.id)
+  if (!v) { failures++; continue; }
+  if (v.verdict === "accurate") accurate++;
+  else stillFlagged.push(v.id);
 }
-if (failures) log(`INCOMPLETE: ${failures} recheck(s) failed — those stories keep their old verdict`)
-log(`Recheck: ${accurate} now accurate, ${stillFlagged.length} still flagged`)
+if (failures) log(`INCOMPLETE: ${failures} recheck(s) failed — those stories keep their old verdict`);
+log(`Recheck: ${accurate} now accurate, ${stillFlagged.length} still flagged`);
 
 // ---------------------------------------------------------------------------
 // Same three lenses as the full run, and the same combining rule: ANY refutation
 // upholds the flag, because the lenses test separate necessary conditions.
 // ---------------------------------------------------------------------------
 
-phase('Panel')
+phase("Panel");
 
-const LENSES = [
-  { key: 'exists', brief: 'Ignore reachability and wording. Ask only: is there real, live code implementing this, connected to the rest of the system? Dead code nothing references does not count.' },
-  { key: 'reachable', brief: "Assume it exists and works. Ask only: can the story's stated role reach it? Trace a real entry point — a route, a rendered control, a registered command, a trigger. Say what it is, or that there isn't one." },
-  { key: 'wording', brief: 'Assume it exists and is reachable. Read the wording literally, every qualifier and the "so that" clause. Ask only: does the code deliver that, or something narrower?' },
-]
-
-const REFUTE_SCHEMA = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['id', 'lens', 'refuted'],
-  properties: {
-    id: { type: 'string' },
-    lens: { type: 'string' },
-    refuted: { type: 'boolean' },
-  },
+/** One lens's brief. The three together test separate necessary conditions — see below. */
+interface Lens {
+  key: string
+  brief: string
 }
 
-const assignments = []
-for (const id of stillFlagged) for (const lens of LENSES) assignments.push({ id, lens })
+const LENSES: Lens[] = [
+  { key: "exists", brief: "Ignore reachability and wording. Ask only: is there real, live code implementing this, connected to the rest of the system? Dead code nothing references does not count." },
+  { key: "reachable", brief: "Assume it exists and works. Ask only: can the story's stated role reach it? Trace a real entry point — a route, a rendered control, a registered command, a trigger. Say what it is, or that there isn't one." },
+  { key: "wording", brief: 'Assume it exists and is reachable. Read the wording literally, every qualifier and the "so that" clause. Ask only: does the code deliver that, or something narrower?' },
+];
 
-const votes = await parallel(assignments.map(({ id, lens }) => () => agent(
+/** One lens's vote on one story. */
+interface LensVote {
+  id: string
+  lens: string
+  refuted: boolean
+}
+
+const REFUTE_SCHEMA: WorkflowJsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["id", "lens", "refuted"],
+  properties: {
+    id: { type: "string" },
+    lens: { type: "string" },
+    refuted: { type: "boolean" },
+  },
+};
+
+const assignments: Array<{ id: string; lens: Lens }> = [];
+for (const id of stillFlagged) for (const lens of LENSES) assignments.push({ id, lens });
+
+const votes = await parallel(assignments.map(({ id, lens }) => () => agent<LensVote>(
   `You are one of three reviewers examining one catalogued capability, each through a different
 lens, none seeing the others' conclusions. Repository root: ${ROOT}.
 
@@ -138,13 +157,15 @@ Write your JSON to: ${OUT}/${safe(id)}.${lens.key}.json
 {"id": "${id}", "lens": "${lens.key}", "refuted": true|false, "note": "2-5 sentences citing code"}
 
 Then return id, lens, refuted.`,
-  { label: `panel:${id}/${lens.key}`, phase: 'Panel', schema: REFUTE_SCHEMA },
-)))
+  { label: `panel:${id}/${lens.key}`, phase: "Panel", schema: REFUTE_SCHEMA },
+)));
 
-let panelFailures = 0
-for (const v of votes) if (!v) panelFailures++
-if (panelFailures) log(`INCOMPLETE: ${panelFailures} panel vote(s) failed`)
+let panelFailures = 0;
+for (const v of votes) if (!v) panelFailures++;
+if (panelFailures) log(`INCOMPLETE: ${panelFailures} panel vote(s) failed`);
 
+// @ts-expect-error -- TS1108: the Workflow runtime wraps this script body in an async function,
+// so a top-level return is how a workflow reports its result.
 return {
   run: RUN,
   outDir: OUT,
@@ -155,4 +176,4 @@ return {
   verifyFailures: failures,
   panelFailures,
   next: `pnpm exec tsx callback-box/user-stories/pipeline/apply-recheck.ts ${DATE} --run ${RUN}`,
-}
+};
