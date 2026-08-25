@@ -151,10 +151,57 @@ case a given entry is. Buying around it with `balanced` costs ~3× per run and
 still leaves the SHELL DIRS rule unfollowed and the obvious entries
 over-annotated.
 
-**Recommendation on tier: sharpen the template first, then re-measure.** The
-harness and rubric are reusable; re-running is one command. If a sharpened
-prompt still leaves `efficient` at ~2/8, that is the evidence for `balanced`,
-and it will be evidence rather than inference.
+### Then the template was sharpened, and the prompt hypothesis failed
+
+The reading above — "prompt problem, not capability problem" — was testable, so
+it was tested. The annotation rule was rewritten to lead with a mandatory `ls`
+into each subdirectory ("a name is not enough to annotate from"), to replace
+"annotations are OPTIONAL" with one explicit test (*could someone who has never
+seen this box predict what is inside, from the name alone?*) with paired
+yes/no examples, and to require a count for shell dirs. Same fixture, same
+seed, three runs per tier again.
+
+Raw coverage rose for both tiers. But so did annotation of the entries that
+should have stayed bare, by about the same amount — so what moved was the
+annotation rate, not the judgment:
+
+| tier | version | annotated the opaque 8 | annotated the obvious 12 | discrimination |
+|---|---|---|---|---|
+| `efficient` | before | 25% | 6% | +0.19 |
+| `efficient` | after | 54% | 33% | **+0.21** |
+| `balanced` | before | 62% | 39% | +0.24 |
+| `balanced` | after | 83% | 50% | **+0.33** |
+
+Discrimination is the gap between the two rates — the thing the test in the
+prompt is supposed to produce. **For `efficient` it did not move** (+0.19 →
++0.21 is inside the run-to-run spread; its opaque range across three runs was
+2–6). For `balanced` it did (+0.24 → +0.33). A sharper instruction turned the
+dial up on the efficient tier and taught the stronger one the rule.
+
+Neither tier produced the count the SHELL DIRS rule asks for, in any of the
+twelve runs across both versions. After the rewrite they do annotate those
+directories, but with characterizations ("trip photos") or file enumerations
+("(a.jpg, b.jpg)") rather than the honest count the instruction spells out and
+gives an example of. That instruction is not landing for either tier, and more
+prompt did not fix it.
+
+**Revised recommendation: the tier change is justified; the earlier "sharpen
+the prompt instead" was not.** The prompt was the cheaper hypothesis and it was
+worth testing before spending 3× per run, but it failed on its own terms: the
+efficient tier does not apply a decision rule it is given, it just responds to
+emphasis. Keep the sharpened rules (they help `balanced` and raise coverage on
+both), and move the template to `balanced`.
+
+Cost of that, measured rather than guessed: mean $0.14 → ~$0.41 per invocation
+at API prices, ~$12/mo → ~$37/mo across three boxes running daily — and
+materially less than that on subscription quota. Note the direction of the
+per-run duration too: `balanced` was not slower (185s mean vs 232s for
+`efficient` in the first round), because it needs fewer turns to get there.
+
+**The reusable part:** the fixture, the arms, and the rubric are a harness for
+this question, not a one-off. Re-running is one command, so the next person to
+wonder whether a tier or a prompt change helps can answer it in twenty minutes
+instead of arguing.
 
 **Recommendation: leave `max-turns: 40` alone.** It is correctly sized and is
 not what limits throughput. The open question the data actually raises is

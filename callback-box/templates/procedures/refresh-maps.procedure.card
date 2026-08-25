@@ -84,24 +84,44 @@ steps:
             - `briefing.briefing.card` — context for this area (only if present)
             ```
 
-            Rules for annotations:
-            - Annotations are OPTIONAL. If the filename or directory name is
-              already self-explanatory (e.g. `2024/`, `recipes/`, `README.md`,
-              a person's name), just list it as a bare bullet — no ` — …`.
-              The annotation only earns its place when it tells a reader
-              something the name doesn't.
-            - When you do annotate: ≤ 100 characters.
+            LOOK FIRST. Before writing a MAP.md, look inside what you are
+            about to list — the brief gives you names, and a name is not
+            enough to annotate from. One command per directory:
+
+            ```bash
+            ls -F <dir> && for d in <dir>/*/; do echo "== $d"; ls -F "$d" | head -20; done
+            ```
+
+            Annotate from what you saw in there, never from the name alone.
+
+            Rules for annotations — apply this test to every entry: could
+            someone who has never seen this box predict what is inside, from
+            the name alone?
+
+            - YES → bare bullet, no ` — …`. (`2024/`, `recipes/`, `README.md`,
+              a person's name, `phase-one/` sitting next to `phase-two/`.)
+            - NO → annotate it, ≤ 100 characters, saying what is actually in
+              there. (`codes/ — ISO country and currency tables`, not
+              `codes/ — reference code files`, which just restates the name.)
+
+            The failure that matters is an opaque name left bare: `g7.doc.card`
+            or `scratch/` on its own tells a reader nothing the filename didn't,
+            and a MAP.md of those is a worse `ls`. The opposite wastes a line —
+            annotating `notes/` with "notes" adds no information. Most boxes
+            land with a mix of both kinds; a map that is all bare bullets, or
+            all annotated, usually means the test wasn't applied.
+
             - Say what's in the dir, not what kind of dir it is.
               ("Per-property document folders", not "directory of subdirs")
             - Skip filler ("this is a", "contains", "directory of").
 
-            SHELL DIRS — when a subdir's contents are hidden by ignore
-            patterns (e.g. `store/archive/captures/` whose dated capture
-            sessions are excluded by `store/archive/captures/*`), the dir
-            appears in the parent's listing but its own children list will
-            look empty. Peek inside with `ls` to give an honest count and
-            characterization, e.g. "captures/ — 143 archived voice/photo
-            capture sessions (per-item maps disabled)".
+            SHELL DIRS — a subdir whose contents are hidden by ignore patterns
+            (e.g. `store/archive/captures/`, whose dated capture sessions are
+            excluded by `store/archive/captures/*`) shows up in the parent's
+            listing but looks empty in the brief's children list. The `ls`
+            above is what reveals it, and these always need an annotation with
+            an honest count: "captures/ — 143 archived voice/photo capture
+            sessions (per-item maps disabled)".
 
             Use `cb create` or just `Write` to author each MAP.md. Don't
             modify any other files.
