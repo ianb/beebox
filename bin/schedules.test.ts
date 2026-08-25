@@ -384,10 +384,8 @@ test("tick stamps the heartbeat BEFORE any schedule runs, and runs only what is 
 test("tick that cannot write the store exits non-zero and notifies", async () => {
   const { schedulesRoot } = await makeSchedule("anyjob", { yaml: BASE_YAML, run: "#!/bin/sh\n" });
   const fake = await makeDeps({ schedulesRoot, nowMs: Date.parse("2026-08-24T12:00:00Z") });
-  // An existing directory with contents and no marker is somebody else's
-  // data: refused. (Empty is adopted — see ensureStoreRoot.)
+  // An existing directory with no marker is somebody else's data: refused.
   await fs.mkdir(fake.deps.storeRoot, { recursive: true });
-  await fs.writeFile(path.join(fake.deps.storeRoot, "theirs.txt"), "", "utf8");
   const result = await tick(fake.deps);
   assert.equal(result.exitCode, 1);
   assert.ok(result.heartbeatError !== null);
@@ -1235,18 +1233,21 @@ test("execChild keeps only the tail of a noisy child in memory", async () => {
   assert.equal(result.logTruncated, false);
 });
 
+test("ensureStoreRoot claims an empty unmarked directory but refuses one with contents", async () => {
+  const empty = path.join(await tempDir("store-empty"), "schedule-runs");
+  await fs.mkdir(empty);
+  await ensureStoreRoot(empty);
+  await fs.stat(path.join(empty, ".schedule-runs"));
+
+  const occupied = path.join(await tempDir("store-occupied"), "schedule-runs");
+  await fs.mkdir(occupied);
+  await fs.writeFile(path.join(occupied, "somebody-elses.txt"), "x", "utf8");
+  await assert.rejects(ensureStoreRoot(occupied), /refusing to adopt/);
+});
+
 test("tickPath puts the installing node and the agent CLIs ahead of launchd's default PATH", () => {
   const p = tickPath({ execPath: "/opt/nvm/v24/bin/node", env: { PATH: "/x/agents:/usr/bin" } });
   assert.equal(p.split(":")[0], "/opt/nvm/v24/bin");
   assert.ok(p.split(":").includes("/usr/bin"));
   assert.ok(!p.includes("::"));
-});
-
-test("ensureStoreRoot adopts an empty unmarked directory and refuses a non-empty one", async () => {
-  const empty = await fs.mkdtemp(path.join(os.tmpdir(), "sched-empty-"));
-  await ensureStoreRoot(empty);
-  await fs.stat(path.join(empty, ".schedule-runs"));
-  const full = await fs.mkdtemp(path.join(os.tmpdir(), "sched-full-"));
-  await fs.writeFile(path.join(full, "somebody-elses.txt"), "", "utf8");
-  await assert.rejects(ensureStoreRoot(full), /refusing to adopt/);
 });
