@@ -55,20 +55,27 @@ function within(lines: readonly string[], window: { start: string; end: string }
   });
 }
 
-/** The window's red runs, most recent first. */
-function failuresIn(lines: readonly string[]): Evidence["failures"] {
+/**
+ * The window's red runs, most recent first, with the deliberately broken ones
+ * separated out. A manufactured red is evidence about the tier, not the app.
+ */
+function redsIn(lines: readonly string[]): {
+  failures: Evidence["failures"];
+  injected: Evidence["injected"];
+} {
   const failures: Evidence["failures"] = [];
+  const injected: Evidence["injected"] = [];
   for (const line of lines) {
     const record = parseRunRecord(line);
     if (record === null || record.verdict !== "red") continue;
-    failures.push({
-      ts: record.ts,
-      step: record.failedStep ?? "unknown",
-      message: record.failure ?? "",
-      commit: record.commit,
-    });
+    const step = record.failedStep ?? "unknown";
+    if (record.faultInjected !== undefined) {
+      injected.push({ ts: record.ts, step, reason: record.faultInjected });
+      continue;
+    }
+    failures.push({ ts: record.ts, step, message: record.failure ?? "", commit: record.commit });
   }
-  return failures.toReversed();
+  return { failures: failures.toReversed(), injected: injected.toReversed() };
 }
 
 async function landingsSince(start: string): Promise<Landing[]> {
@@ -163,12 +170,14 @@ const start = windowStart({ baseline, now, cadenceDays: CADENCE_DAYS });
 
 const lines = (await readLog()).filter((line) => line.trim() !== "");
 const windowed = within(lines, { start, end: windowEnd });
+const reds = redsIn(windowed);
 const evidence: Evidence = {
   windowStart: start,
   windowEnd,
   allTime: summarizeSmokeLog(lines),
   window: summarizeSmokeLog(windowed),
-  failures: failuresIn(windowed),
+  failures: reds.failures,
+  injected: reds.injected,
   landings: await landingsSince(start),
   bugs: await bugsSince(start),
 };

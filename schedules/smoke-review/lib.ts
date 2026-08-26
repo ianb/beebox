@@ -63,6 +63,16 @@ export interface Evidence {
   window: SmokeSummary;
   /** Failures in the window, most recent first. */
   failures: Array<{ ts: string; step: string; message: string; commit: string }>;
+  /**
+   * Deliberately broken runs in the window, kept apart from {@link failures}.
+   *
+   * The first review of this tier read a fault-injected red as a real
+   * intermittent "worth a second look if it recurs" — a genuine conclusion
+   * drawn from a manufactured failure. These are shown so that cannot happen
+   * again, and shown separately so they are never counted as the tier catching
+   * something.
+   */
+  injected: Array<{ ts: string; step: string; reason: string }>;
   landings: Landing[];
   /** Bug issues added in the window — the gap half's raw material. */
   bugs: FiledIssue[];
@@ -181,6 +191,23 @@ export function formatBriefing(evidence: Evidence): string {
     }
     lines.push("");
   }
+
+  lines.push(
+    `## Fault-injected runs in this window (${String(evidence.injected.length)})`,
+    "",
+    "Someone broke something on purpose to prove the tier still goes red. These",
+    "say nothing about the app and are excluded from every count above — do not",
+    "read one as an intermittent.",
+    "",
+    ...(evidence.injected.length === 0
+      ? ["None.", ""]
+      : [
+          ...evidence.injected.map(
+            (run) => `- \`${run.ts}\` **${run.step}** — declared: ${run.reason}`,
+          ),
+          "",
+        ]),
+  );
 
   lines.push(
     "## Coverage",

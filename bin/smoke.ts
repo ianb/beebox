@@ -14,6 +14,16 @@
  *   bin/smoke --no-restart    # skip the cold start (debugging the walk itself)
  *   bin/smoke --report        # what each step has caught, and what it costs
  *
+ * Proving the tier can still go red means breaking something on purpose. Say so
+ * when you do:
+ *
+ *   CB_SMOKE_FAULT_INJECTION="hub throws at import" bin/smoke
+ *
+ * That reason is stamped on the run, and every count in `--report` and in the
+ * weekly review excludes it. Without it a manufactured red is indistinguishable
+ * from one the tier caught, and the first weekly review duly read one as a real
+ * intermittent worth watching.
+ *
  * Every run appends to a shared log beside the test ledger, and `--report`
  * folds it into per-step counts. That exists to be acted on: a step that has
  * never caught anything is paying rent out of a two-minute budget, and the
@@ -90,6 +100,17 @@ function parseArgs(argv: readonly string[]): Options {
 function git(args: string[]): string {
   const result = spawnSync("git", args, { cwd: REPO_ROOT, encoding: "utf-8" });
   return result.status === 0 ? (result.stdout ?? "").trim() : "";
+}
+
+/**
+ * The reason this run was deliberately broken, if it was.
+ *
+ * A reason rather than a flag: `=1` records that someone was testing the tier
+ * but not what they broke, and the value is the only thing a later reader has.
+ */
+function faultInjection(): string | null {
+  const reason = process.env["CB_SMOKE_FAULT_INJECTION"];
+  return reason === undefined || reason.trim() === "" ? null : reason.trim();
 }
 
 function logPath(): string {
@@ -548,6 +569,14 @@ export async function main(argv: string[]): Promise<number> {
   killer.unref();
 
   process.stdout.write(`smoke: ${baseUrl}\n`);
+  if (faultInjection() !== null) {
+    // Loud, because the whole point is that this run must not be mistaken for a
+    // real one — by a reader now or by the weekly review later.
+    process.stdout.write(
+      `smoke: FAULT INJECTION DECLARED — "${faultInjection() ?? ""}".` +
+        " This run is excluded from every count in --report.\n",
+    );
+  }
   // Page errors accumulate per session; clear first so the last step reports
   // this walk's errors rather than whatever an earlier browse left behind.
   await session.run(["errors", "--clear"]).catch(() => {
@@ -560,6 +589,7 @@ export async function main(argv: string[]): Promise<number> {
   const outcomes = new Map<string, SmokeStepRecord>(
     steps.map((step) => [step.id, { id: step.id, outcome: "not-run", ms: 0 }]),
   );
+  const injected = faultInjection();
   const finish = (verdict: "green" | "red", failure?: { step: string; message: string }): void => {
     record({
       ts: new Date().toISOString(),
@@ -572,6 +602,7 @@ export async function main(argv: string[]): Promise<number> {
       ...(failure === undefined
         ? {}
         : { failedStep: failure.step, failure: failure.message.split("\n")[0] ?? "" }),
+      ...(injected === null ? {} : { faultInjected: injected }),
       steps: [...outcomes.values()],
     });
   };
