@@ -26,6 +26,27 @@ type TraceValue = string | number | boolean;
 /** Receives every trace event as it is recorded, regardless of the flag. */
 export type TraceSubscriber = (event: Record<string, TraceValue>) => void;
 
+/**
+ * The flag survives a reload — the load itself is what the trace most often
+ * needs to see — but not a new tab: sessionStorage, read once at module load.
+ */
+const STORAGE_KEY = "cb-scroll-trace";
+function readPersisted(): boolean {
+  try {
+    return window.sessionStorage.getItem(STORAGE_KEY) === "1";
+  } catch (e: unknown) {
+    void e; // storage unavailable (private mode, blocked): the flag is off
+    return false;
+  }
+}
+function writePersisted(on: boolean): void {
+  try {
+    window.sessionStorage.setItem(STORAGE_KEY, on ? "1" : "0");
+  } catch (e: unknown) {
+    void e; // storage unavailable: the flag lives for this load only
+  }
+}
+
 let enabled = false;
 let subscriber: TraceSubscriber | null = null;
 let events: Record<string, TraceValue>[] = [];
@@ -52,7 +73,12 @@ function flush(): void {
 
 /** Toggle the trace; returns the new state. Disabling flushes the remainder. */
 export function scrollTraceToggle(): boolean {
-  enabled = !enabled;
+  return setScrollTrace(!enabled);
+}
+
+function setScrollTrace(on: boolean): boolean {
+  enabled = on;
+  writePersisted(on);
   if (enabled) {
     events = [];
     dropped = 0;
@@ -89,3 +115,5 @@ export function recordScrollTrace(k: string, detail: Record<string, TraceValue>)
   }
   events.push({ t: Math.round(performance.now()), k, ...detail });
 }
+
+if (readPersisted()) setScrollTrace(true);

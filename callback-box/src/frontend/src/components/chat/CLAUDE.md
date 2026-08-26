@@ -15,8 +15,8 @@ screen continues below the fold and the button lights up
 (`docs/plans/chat-scroll-model.md`). The writes, exhaustively:
 
 1. **Open a thread** — hold the bottom on every growth until the first history
-   render has landed (`settleOpen()`; the hold waits for the images in and
-   around the viewport to load or fail — an `<img>` reserves no height until
+   render has landed (`settleOpen()`; the hold waits for the transcript's
+   images to load or fail — an `<img>` reserves no height until
    its bytes land, and the chat has no dimension metadata to reserve with —
    then lapses on a short timer, with an 8s cap on the wait). A reader who
    scrolls away (scrollTop moves *up* — being off the bottom is not enough,

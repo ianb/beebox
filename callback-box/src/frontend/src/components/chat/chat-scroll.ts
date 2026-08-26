@@ -70,8 +70,8 @@ const OPEN_SETTLE_MS = 400;
  * dimension metadata to reserve with), so on a real box the last turn grows by
  * up to a screenful well after the first render; a hold that lapsed before
  * then stranded the reader an image's height above the bottom of a thread they
- * had just opened. `settleOpen` waits for the images in and around the viewport
- * to load or fail, bounded by this cap: a fetch that retries for longer (see
+ * had just opened. `settleOpen` waits for the transcript's images to load or
+ * fail, bounded by this cap: a fetch that retries for longer (see
  * use-image-retry) is not something a thread opened onto a live stream should
  * be followed for. The reader's own action ends the hold at any time.
  */
@@ -170,12 +170,16 @@ function applyReconcileAction(action: ReconcileAction, opts: {
 }
 
 /**
- * Resolves once every image inside the scroller that is still loading and is
- * within a viewport's height of the visible area has loaded or failed. Images
- * further away are not waited for — lazy ones never load until scrolled to,
- * and their growth is above the reader, which the anchor compensation handles.
+ * Resolves once every image inside the scroller that is still loading has
+ * loaded or failed — every eager one, and the lazy ones within a viewport's
+ * height of the visible area (a lazy image further away never loads until
+ * scrolled to, and waiting for it would only run out the cap). Growth
+ * anywhere in the transcript matters while the hold is on: a 450px-tall
+ * viewport sits inside one tall last turn, whose images are neither "above
+ * the anchor" nor "below the reader" — the 3635px-off-the-bottom open the
+ * 2026-08-26 field trace recorded, with 38 images arriving over two seconds.
  */
-async function pendingNearbyImages(scroller: HTMLDivElement, content: HTMLDivElement | null): Promise<void> {
+async function pendingImages(scroller: HTMLDivElement, content: HTMLDivElement | null): Promise<void> {
   if (!content) return;
   const box = scroller.getBoundingClientRect();
   const margin = scroller.clientHeight;
@@ -183,7 +187,7 @@ async function pendingNearbyImages(scroller: HTMLDivElement, content: HTMLDivEle
   for (const img of Array.from(content.querySelectorAll("img"))) {
     if (img.complete) continue;
     const r = img.getBoundingClientRect();
-    if (r.bottom < box.top - margin || r.top > box.bottom + margin) continue;
+    if (img.loading === "lazy" && (r.bottom < box.top - margin || r.top > box.bottom + margin)) continue;
     waits.push(new Promise<void>((resolve) => {
       const done = (): void => {
         img.removeEventListener("load", done);
@@ -209,7 +213,7 @@ function armOpenSettle(wait: { until: Promise<void> | undefined; scroller: HTMLD
   end: () => void;
 }): void {
   const { end } = refs;
-  const until = wait.until ?? (wait.scroller ? pendingNearbyImages(wait.scroller, wait.content) : Promise.resolve());
+  const until = wait.until ?? (wait.scroller ? pendingImages(wait.scroller, wait.content) : Promise.resolve());
   const gen = refs.gen.current;
   refs.timer.current = window.setTimeout(end, OPEN_IMAGES_MAX_MS);
   void until.then(() => {
@@ -272,7 +276,7 @@ export interface ChatScroll {
   /** Begin the bounded open-thread phase (hold the bottom as content lands). */
   openThread: () => void;
   /** The first history render has landed — the hold lapses shortly after the
-   *  nearby images have loaded (or `until`, when the caller knows better). */
+   *  transcript's images have loaded (or `until`, when the caller knows better). */
   settleOpen: (opts?: { until?: Promise<void> }) => void;
   /** The scroller's clientHeight, for the last turn's min-height spacer. */
   viewportPx: number;
