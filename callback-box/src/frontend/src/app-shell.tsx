@@ -22,7 +22,7 @@ import { useBoxes } from "./hooks/useBoxes";
 import type { KnownBox } from "./lib/boxes";
 import { useDevWorktreeKeepalive } from "./hooks/useDevWorktreeKeepalive";
 import { useBoxIdentityMeta } from "./hooks/useBoxIdentityMeta";
-import { PageTitleProvider } from "./components/DocumentTitle";
+import { PageTitleProvider, usePageTitle } from "./components/DocumentTitle";
 import { useVisualViewportHeight } from "./hooks/useVisualViewportHeight";
 
 import { href, toSearch } from "./lib/routing";
@@ -104,6 +104,10 @@ export function AppLayout() {
 }
 
 function BoxNotFound({ slug, boxes }: { slug: string; boxes: KnownBox[] }) {
+  // This renders instead of the routed page, so the route's static title would
+  // name a page that never appeared.
+  usePageTitle("Box not found");
+
   // Only the dev router serves under a non-root base; in that case the URL's
   // first segment is the worktree name. The default WorktreeCreate setup only
   // clones `test1` into a worktree (as `test1-<name>`), so URLs copied from

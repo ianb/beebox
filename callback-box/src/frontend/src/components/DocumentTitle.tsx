@@ -35,9 +35,9 @@ import {
   createContext, useContext, useEffect, useMemo, useRef, useState,
   type ReactNode,
 } from "react";
-import { useParams, useRouterState } from "@tanstack/react-router";
+import { useRouterState } from "@tanstack/react-router";
 import { composeDocumentTitle } from "../lib/document-title";
-import { useBoxes } from "../hooks/useBoxes";
+import { useBoxName } from "../hooks/useBoxName";
 
 interface PageTitleWriters {
   publish: (owner: object, title: string) => void;
@@ -74,6 +74,10 @@ export function usePageTitle(title: string | null | undefined): void {
  */
 export function PageTitleProvider({ children }: { children: ReactNode }) {
   const [published, setPublished] = useState<{ owner: object; title: string } | null>(null);
+  // Nested inside another provider (the error page mounts its own, and cannot
+  // know whether the root layout survived the error), this is a pass-through:
+  // two providers would mean two writers racing to set `document.title`.
+  const enclosing = useContext(PageTitleWriteContext);
 
   const writers = useMemo<PageTitleWriters>(
     () => ({
@@ -82,6 +86,8 @@ export function PageTitleProvider({ children }: { children: ReactNode }) {
     }),
     [],
   );
+
+  if (enclosing !== null) return children;
 
   return (
     <PageTitleWriteContext.Provider value={writers}>
@@ -109,14 +115,12 @@ function DocumentTitleWriter() {
     },
   });
 
-  const { boxSlug } = useParams({ strict: false });
-  const { boxes } = useBoxes();
-  // The slug stands in until the box list resolves. Without it the title
-  // would flash the app name — "Settings — Callback Box" — on every cold
-  // load before settling on the box's real name.
-  const box = boxes.find((b) => b.slug === boxSlug)?.name ?? boxSlug ?? null;
+  // `useBoxName` falls back to the slug while the box list loads, which keeps
+  // the title from flashing the app name on a cold load, and to "" outside a
+  // box -- which composes as absent.
+  const { boxName } = useBoxName();
 
-  const title = composeDocumentTitle({ page: published ?? routeTitle, box });
+  const title = composeDocumentTitle({ page: published ?? routeTitle, box: boxName });
 
   useEffect(() => {
     document.title = title;

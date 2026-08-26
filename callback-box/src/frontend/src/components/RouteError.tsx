@@ -21,8 +21,23 @@ import { Pre } from "./ui/Pre";
 import { Row } from "./ui/Row";
 import { Stack } from "./ui/Stack";
 import { Text } from "./ui/Text";
+import { PageTitleProvider, usePageTitle } from "./DocumentTitle";
 
-export function RouteError({ error, info, reset }: ErrorComponentProps) {
+export function RouteError(props: ErrorComponentProps) {
+  // The root error component replaces the root layout, taking the title
+  // provider with it, so the tab would otherwise keep naming the page that
+  // crashed. Mounting one here restores the writer; it is a pass-through if
+  // the layout did survive.
+  return (
+    <PageTitleProvider>
+      <RouteErrorBody {...props} />
+    </PageTitleProvider>
+  );
+}
+
+function RouteErrorBody({ error, info, reset }: ErrorComponentProps) {
+  usePageTitle("Error");
+
   useEffect(() => {
     // Router-caught errors don't reach window.onerror, so without this the
     // debug log has no record of a page that visibly broke.
