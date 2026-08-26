@@ -4,6 +4,16 @@ A box has one **model policy** and any number of chats that may disagree with
 it. This describes where each lives, who reads it, and when a change takes
 effect.
 
+## Three settings, one file
+
+`config/box.json` holds all of it, beside `agentEngine`:
+
+| Field | What it decides |
+|---|---|
+| `agentModel` | The box default model — what chat and the reactor use when nothing more specific applies. |
+| `smallModel` | The model for the cheap structured passes (chat review, retro observation, triage). Missing means the `efficient` tier for whichever engine runs the pass. |
+| `engines` | Which harnesses a new chat may be started on. Missing means only `agentEngine`; the default engine can never be disabled. |
+
 ## Two levels
 
 **The box default** is `agentModel` in `config/box.json`, beside `agentEngine`.
@@ -19,16 +29,21 @@ default changes what every unopinionated chat starts on.
 
 ## What reads the policy
 
-| Reader | When it resolves |
-|---|---|
-| A chat | When its subprocess starts (cold start or restart). |
-| The reactor | Once per run, before its agents are created. |
+| Reader | Which setting | When it resolves |
+|---|---|---|
+| A chat | `agentModel` | When its subprocess starts (cold start or restart). |
+| The reactor | `agentModel` | Once per run, before its agents are created. |
+| Chat review, retro observation, triage | `smallModel` | Per run. |
 
-Everything else is unchanged: a caller that names a model still gets that model.
-Procedure steps with a `model:` tier, the retro observer, and the chat reviewer
-all name theirs, and a procedure step that omits `model:` still means "the
-harness default" — the policy is read at the two call sites above, not inside
-`createAgent`. (Why: `docs/plans/model-engine-policy.md`.)
+Everything else is unchanged: a caller that names a model still gets that model,
+and a procedure step that omits `model:` still means "the harness default" — the
+policy is read at the call sites above, not inside `createAgent`. (Why:
+`docs/plans/model-engine-policy.md`.)
+
+The small passes used to name `"haiku"`, a Claude nickname the Codex harness
+forwarded to the Codex SDK verbatim. Nothing names a model as a bare string any
+more: every value passes through the resolver, which cannot produce a name the
+running engine does not know.
 
 ## Resolution
 
@@ -56,14 +71,50 @@ Choosing a model *for one chat* is the other case and does restart it — an
 explicit choice is an instruction to that conversation, deferred past a turn in
 flight so no response is lost.
 
+## A chat's engine is fixed at birth
+
+A chat's model can change whenever. Its **engine** cannot: transcripts live in
+different stores per engine (a Codex chat's history is Codex's own thread; a
+Claude chat's is husk JSONL on disk) and models are engine-scoped, so switching
+mid-chat would silently change two things at once and strand the transcript.
+
+So the engine is chosen **before the first message**, in the same picker as the
+model: each enabled engine gets a section, and picking a model under one is how
+you choose it. `resolveStartEngine` enforces the rule where it is read — a
+recorded engine always wins over a requested one.
+
+Two carriers, because only Claude accepts an id the browser chose:
+
+- **Claude** — the chat coins its own id, and the choice rides the reservation.
+- **Anything else** — no id to reserve, so the choice rides the `"new"` send.
+
+Switching engines therefore restarts a chat that has not spoken yet: the coined
+id is abandoned (its reservation expires on its own) and the chat comes back
+through `?session=new` carrying the choice. Nothing is lost, because this is
+only reachable before the first message.
+
+## How much context a run gets
+
+The same question — what does *this* invocation get — covers context, and it has
+one lever: `loadBoxContext`. The SDK loads the box's `CLAUDE.md`, generated agent
+guide and `.claude/rules/` by default, which is right for the reactor, procedure
+runs and chat. The four small structured passes set it false: measured on the
+test box that context is ~9,700 words on every invocation, and a pass emitting a
+title or a verdict cannot use it. It is an opt-out, never a default, and it is
+Claude-only — the Codex harness has no equivalent.
+
 ## Where the controls are
 
-- **Chat** — the session chip's Model panel. A row selects for this chat; the
-  pin beside it (owner only) sets the box default. The first row shows what
-  following the default currently gets you. The chip itself marks a chat running
-  above or below the default, by tier.
-- **Settings** — "Agent engine and model" sets the engine and the default
-  together.
+- **Chat** — the session chip's Model panel. Each enabled engine has a section
+  using its own model names, the chat's engine first and the box's default
+  marked. A row selects for this chat; a row under another engine's heading
+  starts the chat there (before its first message only, after which that heading
+  says so). The pin beside a row (owner only, and only in the box's default
+  engine's section) sets the box default. The first row shows what following the
+  default currently gets you. The chip marks a chat running above or below the
+  default, by tier.
+- **Settings** — "Agent engine and model" sets the default engine, which engines
+  are available at all, and the default model.
 
 ## History
 

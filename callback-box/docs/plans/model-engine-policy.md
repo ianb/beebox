@@ -1,6 +1,6 @@
 ---
 title: "Box model/engine policy"
-status: partial
+status: implemented
 workstream: model-engine-policy
 issues:
   - ../../../issues/features/2026-07-17-chat-model-pin-default.md
@@ -36,11 +36,13 @@ The goal is **one policy with no unfilled corner cases** — every invocation pa
 gets engine + model + context from the same answer, rather than a patch per
 caller.
 
-**Tracks A–D have shipped** (commits `3471fa65f`…`d61bb7ec0`): the `agentModel`
-field, the resolution ladder, the reactor reading it, per-chat
-follow-vs-explicit, the pin affordance, the off-default indicator, and the
-migration off `.callback-box/chat-model.json`. Tracks E–H below are the rest of
-the cluster and are **not** built.
+**All eight tracks have shipped.** A–D: the `agentModel` field, the resolution
+ladder, the reactor reading it, per-chat follow-vs-explicit, the pin affordance,
+the off-default indicator, and the migration off `.callback-box/chat-model.json`.
+E–H: enabled engines in box config, the chat-start picker that chooses engine and
+model together, the small-model slot (which closed the live
+`"haiku"`-reaches-Codex defect), and the context opt-out for the four structured
+passes. The reference doc is `docs/model-policy.md`.
 
 ## Job to be done
 
@@ -474,8 +476,12 @@ two mechanisms. The SDK's `settingSources` is the lever; the measurement of what
 each pass actually needs comes first, because trimming context on a judgment pass
 is exactly where a silent quality regression hides.
 
-**First implementation chunk.** Measure: log the assembled prompt size for each
-of the four passes before changing anything. The trim lands only against numbers.
+**First implementation chunk.** Measure: `pnpm agent-context reactor --box <box>`
+before changing anything. It reported **~9,659 always-loaded words** on the test
+box, 9,082 of them the box CLAUDE.md — which is what the trim was then made
+against. The retro observer is the one site where box vocabulary could plausibly
+have helped; it is trimmed with the others and the code says to look there first
+if observation quality drops.
 
 ## Could this be simpler?
 
