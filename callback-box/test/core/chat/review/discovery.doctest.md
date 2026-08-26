@@ -24,6 +24,11 @@ import { loadReviewState, saveReviewState } from "../../../../src/core/chat/revi
 import { MAX_SESSION_ENTRIES, parseSessionLog } from "../../../../src/cli/lib/session.js";
 import { prefixHash } from "../../../../src/core/chat/review/span.js";
 
+// Pin this machine's origin id to a file under the tmp box, so a doctest run
+// neither reads nor mints the real `~/.local/share/cb/origin-id`.
+const LOCAL_ORIGIN = "11111111-2222-4333-8444-555555555555";
+const FOREIGN_ORIGIN = "99999999-8888-4777-8666-555555555555";
+
 const NOW = new Date("2026-07-28T12:00:00Z");
 const HOUR = 60 * 60 * 1000;
 
@@ -41,10 +46,15 @@ function bulk(uuid: string) {
   return userEntry(uuid, "a".repeat(4000));
 }
 
-/** Seed a husk plus a transcript whose mtime is `agoHours` old. */
-async function seed(box, opts: { sessionId: string; entries: object[]; agoHours: number }) {
+/**
+ * Seed a husk plus a transcript whose mtime is `agoHours` old. `origin` is
+ * omitted by default — a pre-Track-2 husk, which discovery claims on the
+ * strength of the transcript being here.
+ */
+async function seed(box, opts: { sessionId: string; entries: object[]; agoHours: number; origin?: string }) {
+  const originLine = opts.origin === undefined ? "" : `origin: ${opts.origin}\n`;
   await box.write(`store/chat/web/2026-07-28_${opts.sessionId}.chat.card`,
-    `---\nsession: ${opts.sessionId}\n---\n\n`);
+    `---\nsession: ${opts.sessionId}\n${originLine}---\n\n`);
   const logPath = getSessionLogPath(box.root, opts.sessionId);
   await mkdir(dirname(logPath), { recursive: true });
   await writeFile(logPath, opts.entries.map((e) => JSON.stringify(e)).join("\n") + "\n");
@@ -53,6 +63,8 @@ async function seed(box, opts: { sessionId: string; entries: object[]; agoHours:
 }
 
 async function discover(box) {
+  await writeFile(box.path("origin-id"), `${LOCAL_ORIGIN}\n`);
+  process.env["CB_ORIGIN_ID_FILE"] = box.path("origin-id");
   return discoverSessions(box.root, {
     now: NOW,
     quiescenceMs: QUIESCENCE_MS,
@@ -165,8 +177,9 @@ JSON.stringify({
   tooFewTurns: result.tooFewTurns,
   deferredActive: result.deferredActive,
   missingTranscripts: result.missingTranscripts,
+  foreignOrigin: result.foreignOrigin,
 })
-=> {"qualified":["sessbig"],"belowThreshold":1,"tooFewTurns":1,"deferredActive":["sessnow"],"missingTranscripts":1}
+=> {"qualified":["sessbig"],"belowThreshold":1,"tooFewTurns":1,"deferredActive":["sessnow"],"missingTranscripts":1,"foreignOrigin":0}
 ```
 
 ## Qualified sessions come back oldest first
@@ -180,6 +193,45 @@ await seed(box, { sessionId: "sessmid", entries: [bulk("m1"), bulk("m2")], agoHo
 
 (await discover(box)).qualified.map((s) => s.sessionId).join(",")
 => sessold,sessmid,sessbig
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Review is claimed by origin
+
+A session's transcript lives on one machine, and that machine is the only one
+that can see the whole conversation — so a husk stamped with another machine's
+`origin` is skipped here even when a transcript for that id happens to sit in
+this checkout's engine store. It is counted, never named.
+
+```ts
+const box = await makeTmpBox();
+process.env["CB_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
+
+await seed(box, { sessionId: "sessmine", entries: [bulk("m1"), bulk("m2")], agoHours: 5, origin: LOCAL_ORIGIN });
+await seed(box, { sessionId: "sesstheirs", entries: [bulk("t1"), bulk("t2")], agoHours: 5, origin: FOREIGN_ORIGIN });
+await seed(box, { sessionId: "sessunset", entries: [bulk("u1"), bulk("u2")], agoHours: 5 });
+
+const result = await discover(box);
+JSON.stringify({
+  qualified: result.qualified.map((s) => s.sessionId).sort(),
+  foreignOrigin: result.foreignOrigin,
+})
+=> {"qualified":["sessmine","sessunset"],"foreignOrigin":1}
+```
+
+The foreign husk's transcript is never opened, so a session that ran elsewhere
+costs nothing to skip — it is turned away before the stat.
+
+```ts continue
+JSON.stringify({
+  missingTranscripts: result.missingTranscripts,
+  belowThreshold: result.belowThreshold,
+  tooFewTurns: result.tooFewTurns,
+})
+=> {"missingTranscripts":0,"belowThreshold":0,"tooFewTurns":0}
 ```
 
 ```ts cleanup
