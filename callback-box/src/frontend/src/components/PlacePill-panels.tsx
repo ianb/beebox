@@ -113,10 +113,16 @@ function LandmarkRows({
 }
 
 /**
- * The "Switch to" section's body: the rows, or — while `chat.byLandmark` is
+ * The "Switch to" section's body: the rows, or — while `chat.placeMenu` is
  * still resolving — a loading line, or, when it failed, a retry row. A failure
  * used to render as "Loading…" forever, which reads as a hang rather than as
  * the recoverable error it is (code-style.md: UI errors stay visible).
+ *
+ * The copy names the menu, not the landmarks: `placeMenu` reads landmark cards
+ * AND enumerates the box's chats, so "couldn't load landmarks" sent readers to
+ * inspect landmark cards that were fine. (It said that while a broken Codex
+ * CLI was failing the chat half — see `readCodexThreads`, which now degrades
+ * rather than failing the query.)
  */
 function LandmarkList({
   landmarks,
@@ -146,7 +152,7 @@ function LandmarkList({
   if (failed) {
     return (
       <MenuItem id="cb-switch-menu-landmarks-retry" onClick={onRetry} keepOpen danger>
-        Couldn&rsquo;t load landmarks — Retry
+        Couldn&rsquo;t load this menu — Retry
       </MenuItem>
     );
   }
