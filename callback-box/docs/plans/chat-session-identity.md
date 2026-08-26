@@ -9,8 +9,8 @@ issues:
   - ../../../issues/bugs/2026-07-29-chat-review-journal-is-machine-local.md
   - ../../../issues/code-quality/2026-07-18-chat-backend-port-hygiene.md
   - ../../../issues/features/2026-07-20-chat-thread-management.md
-  - ../../../issues/bugs/2026-07-28-parse-session-log-silent-page-truncation.md
-  - ../../../issues/bugs/2026-08-15-chat-husk-title-contains-raw-message-markup.md
+  - ../../../issues/closed/bugs/2026-07-28-parse-session-log-silent-page-truncation.md
+  - ../../../issues/closed/bugs/2026-08-15-chat-husk-title-contains-raw-message-markup.md
 ---
 # Chat session identity — one owned key, one recorded origin
 
