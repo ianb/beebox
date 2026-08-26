@@ -216,26 +216,28 @@ class OpenHold {
   private lapseTimer: number | null = null;
 
   open(): void {
-    this.end();
-    this.active = true;
-    this.gen += 1;
+    this.end("open");
+    this.active = true; this.gen += 1;
+    recordScrollTrace("hold", { ev: "open", gen: this.gen });
   }
 
   settle(until: Promise<void>): void {
     if (!this.active || this.capTimer !== null) return;
     const gen = this.gen;
-    this.capTimer = window.setTimeout(() => this.end(), OPEN_MAX_MS);
+    recordScrollTrace("hold", { ev: "settle", gen });
+    this.capTimer = window.setTimeout(() => this.end("cap"), OPEN_MAX_MS);
     void until.then(() => {
+      recordScrollTrace("hold", { ev: "images-done", gen, live: this.active && this.gen === gen });
       if (this.active && this.gen === gen) this.armLapse();
     });
   }
 
-  /** Content grew while the hold is on: the quiet period starts over. */
-  touch(): void {
+  touch(): void { // content grew: the quiet period starts over
     if (this.lapseTimer !== null) this.armLapse();
   }
 
-  end(): void {
+  end(why: string): void {
+    if (this.active) recordScrollTrace("hold", { ev: "end", why });
     this.active = false;
     if (this.capTimer !== null) window.clearTimeout(this.capTimer);
     if (this.lapseTimer !== null) window.clearTimeout(this.lapseTimer);
@@ -245,7 +247,7 @@ class OpenHold {
 
   private armLapse(): void {
     if (this.lapseTimer !== null) window.clearTimeout(this.lapseTimer);
-    this.lapseTimer = window.setTimeout(() => this.end(), OPEN_SETTLE_MS);
+    this.lapseTimer = window.setTimeout(() => this.end("quiet"), OPEN_SETTLE_MS);
   }
 }
 
@@ -345,6 +347,10 @@ export function useChatScroll(): ChatScroll {
   // Derived geometry, re-read after every scroll and reconcile: never a guess.
   const measure = useCallback((el: HTMLDivElement) => {
     const fromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    // Growth is noticed here, not only in reconcile: a scroll event (the
+    // previous write's) can precede the resize callback in the same frame, and
+    // it re-measures first — so per-frame growth never reads as `grew` there.
+    if (el.scrollHeight > prevScrollHeightRef.current + GROWTH_EPSILON) openHoldRef.current.touch();
     prevFromBottomRef.current = fromBottom;
     prevScrollHeightRef.current = el.scrollHeight;
     const at = fromBottom <= AT_BOTTOM_PX;
@@ -365,11 +371,11 @@ export function useChatScroll(): ChatScroll {
     if (el) writeTop(el.scrollHeight - el.clientHeight, behavior);
   }, [writeTop]);
 
-  const endOpenPhase = useCallback(() => openHoldRef.current.end(), []);
+  const endOpenPhase = useCallback((why: string) => openHoldRef.current.end(why), []);
 
   const scrollToBottom = useCallback((opts?: { behavior?: ScrollBehavior }) => {
     const el = scrollerElRef.current;
-    endOpenPhase();
+    endOpenPhase("button");
     setUnseen(false);
     writeToBottom(opts && opts.behavior ? opts.behavior : "instant");
     if (el) measure(el);
@@ -378,7 +384,7 @@ export function useChatScroll(): ChatScroll {
   const anchorToTop = useCallback((target: Element | null) => {
     const el = scrollerElRef.current;
     if (!el || !target) return;
-    endOpenPhase();
+    endOpenPhase("send");
     setUnseen(false);
     const offset = target.getBoundingClientRect().top - el.getBoundingClientRect().top;
     writeTop(el.scrollTop + offset, "instant");
@@ -420,7 +426,7 @@ export function useChatScroll(): ChatScroll {
     // this replaces guessed at with an input-intent window instead).
     refreshAnchorTop(anchorRef.current, el);
     const fromBottom = measure(el);
-    if (openHoldRef.current.active && movedUp(el, prevScrollTopRef) && fromBottom > AT_BOTTOM_PX) endOpenPhase();
+    if (openHoldRef.current.active && movedUp(el, prevScrollTopRef) && fromBottom > AT_BOTTOM_PX) endOpenPhase("scrolled-up");
     recordScrollTrace("scroll", { top: Math.round(el.scrollTop), fb: Math.round(fromBottom), at: atBottomRef.current, open: openHoldRef.current.active });
     scheduleAnchorRecapture();
   }, [measure, atBottomRef, endOpenPhase, scheduleAnchorRecapture]);
@@ -432,7 +438,6 @@ export function useChatScroll(): ChatScroll {
     if (!el) return;
     const prevFromBottom = prevFromBottomRef.current;
     const grew = el.scrollHeight > prevScrollHeightRef.current + GROWTH_EPSILON;
-    if (grew) openHoldRef.current.touch();
     // A prepend only "lands" once content actually grew — a zero-growth content
     // cycle in the load-older window (the button's "Loading…" label swap) must
     // not consume the snapshot and leave the real insertion unguarded.
@@ -494,7 +499,7 @@ export function useChatScroll(): ChatScroll {
       if (observers.content) observers.content.disconnect();
       if (observers.scroller) observers.scroller.disconnect();
       for (const timer of timers) clearTimer(timer);
-      hold.end();
+      hold.end("unmount");
     };
   }, []);
 

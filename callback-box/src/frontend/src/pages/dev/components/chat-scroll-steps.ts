@@ -20,6 +20,10 @@ export type Step =
   | { k: "chromeResize"; px: number }
   /** An existing message grows in place (an image finishing decode). */
   | { k: "imageDecode"; msgIndex: number; px: number }
+  /** Grow the last message by `px` on each of `frames` consecutive animation
+   *  frames — cached images laying out one per frame, each frame's growth
+   *  landing after the previous write's scroll event. */
+  | { k: "growPerFrame"; frames: number; px: number }
   /** Grow the last message, then grow it AGAIN inside the same resize-observer
    *  pass — after the controller's write, before the browser delivers that
    *  write's scroll event. A real thread does this on every load. */
