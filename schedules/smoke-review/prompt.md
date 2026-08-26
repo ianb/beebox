@@ -33,6 +33,11 @@ commits.
 The briefing gives per-step counts, all-time and for this window: how often each
 step ran, how often it caught something, and its median duration.
 
+A run listed under **Fault-injected runs** was broken on purpose to prove the
+tier still goes red. It is already excluded from every count, and it is evidence
+about the tier's wiring, never about the app — do not read one as an
+intermittent, and do not let it argue that a step is earning its place.
+
 Read `ran` as the denominator, never the run count. The walk stops at the first
 failure, so a late step has seen fewer runs than an early one; a step with
 `ran: 4` has almost no record either way.

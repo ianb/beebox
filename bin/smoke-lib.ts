@@ -362,6 +362,17 @@ export interface SmokeRunRecord {
   failedStep?: string;
   /** Its message, first line only — the log is a tally, not an error store. */
   failure?: string;
+  /**
+   * Why this run was deliberately broken, when it was (`CB_SMOKE_FAULT_INJECTION`).
+   *
+   * Proving the tier can go red means breaking something on purpose, and the
+   * resulting red is indistinguishable in the log from one the tier caught in
+   * the wild. The first weekly review read exactly such a run as "restart
+   * contention worth a second look if it recurs" — a real conclusion drawn from
+   * a manufactured failure. A run that says why it was broken cannot be
+   * misread; one that stays silent will be, every week, forever.
+   */
+  faultInjected?: string;
   steps: SmokeStepRecord[];
 }
 
@@ -402,6 +413,9 @@ export function parseRunRecord(line: string): SmokeRunRecord | null {
     ms: typeof record["ms"] === "number" ? record["ms"] : 0,
     ...(typeof record["failedStep"] === "string" ? { failedStep: record["failedStep"] } : {}),
     ...(typeof record["failure"] === "string" ? { failure: record["failure"] } : {}),
+    ...(typeof record["faultInjected"] === "string" && record["faultInjected"] !== ""
+      ? { faultInjected: record["faultInjected"] }
+      : {}),
     steps: steps.filter(isStepRecord),
   };
 }
@@ -423,9 +437,20 @@ export function smokeLogPath(gitCommonDir: string): string {
 
 export interface StepStats {
   id: string;
-  /** Runs in which this step actually executed. */
+  /** Runs in which this step executed, fault injections excluded. */
   ran: number;
+  /** Failures in the wild — what the step has actually caught. */
   failed: number;
+  /**
+   * Failures under deliberate fault injection.
+   *
+   * Kept apart from {@link StepStats.failed} rather than added to it, because
+   * the two answer different questions. An injected failure proves the step is
+   * wired up and can fire; only a real one proves it catches anything. Folding
+   * them together would let a step that has only ever fired on demand look like
+   * it is earning its place.
+   */
+  injected: number;
   /** Median duration over the runs it executed, in seconds. */
   medianSeconds: number;
   /** ISO timestamp of the most recent failure, or null if it has never failed. */
@@ -433,8 +458,11 @@ export interface StepStats {
 }
 
 export interface SmokeSummary {
+  /** Runs in the wild. Fault injections are not a sample of anything. */
   runs: number;
   red: number;
+  /** Deliberately broken runs, excluded from every rate above. */
+  injectedRuns: number;
   steps: StepStats[];
 }
 
@@ -459,21 +487,35 @@ export function summarizeSmokeLog(lines: readonly string[]): SmokeSummary {
   const order: string[] = [];
   const ran = new Map<string, number[]>();
   const failed = new Map<string, number>();
+  const injected = new Map<string, number>();
   const lastFailure = new Map<string, string>();
   let runs = 0;
   let red = 0;
+  let injectedRuns = 0;
 
   for (const line of lines) {
     const record = parseRunRecord(line);
     if (record === null) continue;
-    runs += 1;
-    if (record.verdict === "red") red += 1;
+    // A deliberately broken run measures the tier, not the app. It is counted,
+    // and then kept out of every rate — its duration is a timeout, its failure
+    // was ordered, and its later steps never ran for a reason that says nothing
+    // about them.
+    const wasInjected = record.faultInjected !== undefined;
+    if (wasInjected) injectedRuns += 1;
+    else {
+      runs += 1;
+      if (record.verdict === "red") red += 1;
+    }
     for (const step of record.steps) {
       if (!ran.has(step.id)) {
         ran.set(step.id, []);
         order.push(step.id);
       }
       if (step.outcome === "not-run") continue;
+      if (wasInjected) {
+        if (step.outcome === "fail") injected.set(step.id, (injected.get(step.id) ?? 0) + 1);
+        continue;
+      }
       ran.get(step.id)?.push(step.ms);
       if (step.outcome === "fail") {
         failed.set(step.id, (failed.get(step.id) ?? 0) + 1);
@@ -485,10 +527,12 @@ export function summarizeSmokeLog(lines: readonly string[]): SmokeSummary {
   return {
     runs,
     red,
+    injectedRuns,
     steps: order.map((id) => ({
       id,
       ran: ran.get(id)?.length ?? 0,
       failed: failed.get(id) ?? 0,
+      injected: injected.get(id) ?? 0,
       medianSeconds: Math.round(median(ran.get(id) ?? []) / 100) / 10,
       lastFailure: lastFailure.get(id) ?? null,
     })),
@@ -511,14 +555,20 @@ export const TRIM_EVIDENCE_RUNS = 20;
  * takes 5s is a different call from one that has never failed and takes 0.4s.
  */
 export function formatSmokeReport(summary: SmokeSummary): string {
-  if (summary.runs === 0) {
+  if (summary.runs === 0 && summary.injectedRuns === 0) {
     return "smoke: no runs logged yet.\n";
   }
+  const forced =
+    summary.injectedRuns === 0
+      ? ""
+      : ` ${String(summary.injectedRuns)} fault-injected run${summary.injectedRuns === 1 ? "" : "s"}` +
+        " excluded from every count below.";
   const lines = [
     `smoke: ${String(summary.runs)} run${summary.runs === 1 ? "" : "s"} logged,` +
-      ` ${String(summary.red)} red.`,
+      ` ${String(summary.red)} red.${forced}`,
     "",
-    `${"step".padEnd(14)}${"ran".padStart(6)}${"failed".padStart(8)}${"p50".padStart(8)}   last failure`,
+    `${"step".padEnd(14)}${"ran".padStart(6)}${"failed".padStart(8)}${"forced".padStart(8)}` +
+      `${"p50".padStart(8)}   last failure`,
   ];
   for (const step of summary.steps) {
     const never = step.ran === 0 ? "never ran" : "never failed";
@@ -526,6 +576,7 @@ export function formatSmokeReport(summary: SmokeSummary): string {
       step.id.padEnd(14) +
         String(step.ran).padStart(6) +
         String(step.failed).padStart(8) +
+        String(step.injected).padStart(8) +
         `${step.medianSeconds.toFixed(1)}s`.padStart(8) +
         `   ${step.lastFailure ?? never}`,
     );
@@ -541,6 +592,8 @@ export function formatSmokeReport(summary: SmokeSummary): string {
         ` ${seconds.toFixed(1)}s of every walk: ${idle.map((step) => step.id).join(", ")}.`,
       "Read `ran`, not the run count, as the denominator — the walk stops at the",
       "first failure, so a late step has seen fewer runs than an early one.",
+      "`forced` is failures under deliberate fault injection: it proves the step",
+      "can fire, never that it has caught anything.",
     );
   }
   return `${lines.join("\n")}\n`;
