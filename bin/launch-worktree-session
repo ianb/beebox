@@ -109,6 +109,15 @@ fi
 
 wt="$1"; shift
 
+# Options go BEFORE the name. An option here would otherwise be swallowed as
+# the briefing text — the session opens with "--issue <path> -" as its whole
+# handoff (2026-08-25, three launches in a row).
+for arg in "$@"; do
+  case "$arg" in
+    --*) echo "launch-worktree-session: option '$arg' must come before the worktree name '$wt'" >&2; exit 1 ;;
+  esac
+done
+
 if ! [[ "$wt" =~ ^[a-zA-Z0-9_-]+$ ]]; then
   echo "launch-worktree-session: worktree name must match [a-zA-Z0-9_-]+, got: $wt" >&2
   exit 1

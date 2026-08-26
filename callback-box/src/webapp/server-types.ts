@@ -65,6 +65,19 @@ export interface InternalServerOptions extends ServerOptions {
    * Claude subprocess.
    */
   chatBackend?: ChatBackend | undefined;
+  /**
+   * Directory holding the built frontend (`index.html` and friends). Defaults
+   * to `<package root>/src/frontend/dist`, which is what every production
+   * caller wants and no caller passes.
+   *
+   * It exists for tests: that default is a gitignored build artifact, so
+   * whether the server installs the SPA fallback and the static mounts at all
+   * depended on whether the checkout happened to have run `build:frontend` —
+   * a test asserting on a document response passed or 404'd by accident. A
+   * test points this at `test/fixtures/frontend-dist` and gets the built-
+   * frontend server shape deterministically.
+   */
+  frontendPath?: string | undefined;
 }
 
 export interface ServerContext {
