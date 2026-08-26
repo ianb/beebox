@@ -18,7 +18,8 @@ screen continues below the fold and the button lights up
    render has landed (`settleOpen()`; the hold waits for the transcript's
    images to load or fail — an `<img>` reserves no height until
    its bytes land, and the chat has no dimension metadata to reserve with —
-   then lapses on a short timer, with an 8s cap on the wait). A reader who
+   then ends after a short quiet period with no growth — a cached image is
+   `complete` before it is laid out — under an 8s cap). A reader who
    scrolls away (scrollTop moves *up* — being off the bottom is not enough,
    since content grows between the hold's write and its scroll event), sends,
    or presses the button ends the hold themselves.

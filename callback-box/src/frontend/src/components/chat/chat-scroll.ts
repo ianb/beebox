@@ -57,25 +57,25 @@ const ANCHOR_RECAPTURE_MS = 80;
  */
 const PREPEND_SNAPSHOT_MS = 10000;
 /**
- * How long the open-thread hold outlives the transcript's first render. The
- * caller can only report "the history is in the DOM" from an effect, which
- * runs *before* the ResizeObserver cycle that measures it — and markdown and
- * embeds keep resizing for a beat after that. The hold therefore lapses on a
- * timer rather than on the report.
+ * The quiet period that ends the open-thread hold: this long with no content
+ * growth after the transcript's images have loaded. The caller can only report
+ * "the history is in the DOM" from an effect, which runs *before* the
+ * ResizeObserver cycle that measures it; markdown and embeds keep resizing for
+ * a beat after that; and a cached image is `complete` before it is decoded
+ * and laid out — the 2026-08-26 field trace shows 38 cached images growing
+ * the transcript 404px per frame for 500ms after every one reported complete.
+ * Growth therefore re-arms the timer; only silence lets it fire.
  */
 const OPEN_SETTLE_MS = 400;
 /**
- * The most the hold waits for the transcript's images before that timer
- * starts. An `<img>` reserves no height until its bytes land (the chat has no
- * dimension metadata to reserve with), so on a real box the last turn grows by
- * up to a screenful well after the first render; a hold that lapsed before
- * then stranded the reader an image's height above the bottom of a thread they
- * had just opened. `settleOpen` waits for the transcript's images to load or
- * fail, bounded by this cap: a fetch that retries for longer (see
- * use-image-retry) is not something a thread opened onto a live stream should
- * be followed for. The reader's own action ends the hold at any time.
+ * The most the hold lasts after the first render, whatever keeps growing. An
+ * `<img>` reserves no height until its bytes land (the chat has no dimension
+ * metadata to reserve with), so the hold waits for the transcript's images,
+ * but a fetch that retries for longer (see use-image-retry) and a thread
+ * opened onto a live stream are not followed past this. The reader's own
+ * action ends the hold at any time.
  */
-const OPEN_IMAGES_MAX_MS = 8000;
+const OPEN_MAX_MS = 8000;
 
 interface Anchor { el: Element; top: number }
 
@@ -202,25 +202,51 @@ async function pendingImages(scroller: HTMLDivElement, content: HTMLDivElement |
 }
 
 /**
- * Arm the end of the open-thread hold: the cap first (its handle doubles as
- * the "a settle is in flight" marker), then the short lapse once `until`
- * resolves — unless the hold ended or a newer thread opened meanwhile.
+ * The bounded open-thread hold (rule 1). `open()` starts it; `settle()` says
+ * the first render landed and arms its end: a cap (OPEN_MAX_MS) at once, and
+ * the quiet-period timer once the images have loaded; `touch()` on every
+ * growth restarts the quiet period; `end()` on the reader's action. A settle
+ * whose image wait resolves after the thread it belonged to was replaced
+ * (`gen`) must not end the new one's hold.
  */
-function armOpenSettle(wait: { until: Promise<void> | undefined; scroller: HTMLDivElement | null; content: HTMLDivElement | null }, refs: {
-  phase: MutableRefObject<boolean>;
-  gen: MutableRefObject<number>;
-  timer: MutableRefObject<number | null>;
-  end: () => void;
-}): void {
-  const { end } = refs;
-  const until = wait.until ?? (wait.scroller ? pendingImages(wait.scroller, wait.content) : Promise.resolve());
-  const gen = refs.gen.current;
-  refs.timer.current = window.setTimeout(end, OPEN_IMAGES_MAX_MS);
-  void until.then(() => {
-    if (!refs.phase.current || refs.gen.current !== gen) return;
-    clearTimer(refs.timer);
-    refs.timer.current = window.setTimeout(end, OPEN_SETTLE_MS);
-  });
+class OpenHold {
+  active = true;
+  private gen = 0;
+  private capTimer: number | null = null;
+  private lapseTimer: number | null = null;
+
+  open(): void {
+    this.end();
+    this.active = true;
+    this.gen += 1;
+  }
+
+  settle(until: Promise<void>): void {
+    if (!this.active || this.capTimer !== null) return;
+    const gen = this.gen;
+    this.capTimer = window.setTimeout(() => this.end(), OPEN_MAX_MS);
+    void until.then(() => {
+      if (this.active && this.gen === gen) this.armLapse();
+    });
+  }
+
+  /** Content grew while the hold is on: the quiet period starts over. */
+  touch(): void {
+    if (this.lapseTimer !== null) this.armLapse();
+  }
+
+  end(): void {
+    this.active = false;
+    if (this.capTimer !== null) window.clearTimeout(this.capTimer);
+    if (this.lapseTimer !== null) window.clearTimeout(this.lapseTimer);
+    this.capTimer = null;
+    this.lapseTimer = null;
+  }
+
+  private armLapse(): void {
+    if (this.lapseTimer !== null) window.clearTimeout(this.lapseTimer);
+    this.lapseTimer = window.setTimeout(() => this.end(), OPEN_SETTLE_MS);
+  }
 }
 
 /** Re-read the anchor's offset from the DOM (see `handleScroll`). */
@@ -310,9 +336,7 @@ export function useChatScroll(): ChatScroll {
   const prependTimerRef = useRef<number | null>(null);
   const anchorRef = useRef<Anchor | null>(null);
   const anchorTimerRef = useRef<number | null>(null);
-  const openPhaseRef = useRef(true);
-  const openGenRef = useRef(0); // bumped per openThread(): a stale settle must not end the new hold
-  const openTimerRef = useRef<number | null>(null);
+  const openHoldRef = useRef(new OpenHold());
   const observersRef = useRef<{ content: ResizeObserver | null; scroller: ResizeObserver | null }>({
     content: null,
     scroller: null,
@@ -341,10 +365,7 @@ export function useChatScroll(): ChatScroll {
     if (el) writeTop(el.scrollHeight - el.clientHeight, behavior);
   }, [writeTop]);
 
-  const endOpenPhase = useCallback(() => {
-    openPhaseRef.current = false;
-    clearTimer(openTimerRef);
-  }, []);
+  const endOpenPhase = useCallback(() => openHoldRef.current.end(), []);
 
   const scrollToBottom = useCallback((opts?: { behavior?: ScrollBehavior }) => {
     const el = scrollerElRef.current;
@@ -371,15 +392,14 @@ export function useChatScroll(): ChatScroll {
   }, []);
 
   const openThread = useCallback(() => {
-    endOpenPhase();
-    openPhaseRef.current = true; openGenRef.current += 1;
+    openHoldRef.current.open();
     writeToBottom("instant");
-  }, [endOpenPhase, writeToBottom]);
+  }, [writeToBottom]);
 
   const settleOpen = useCallback((opts?: { until?: Promise<void> }) => {
-    if (!openPhaseRef.current || openTimerRef.current !== null) return;
-    armOpenSettle({ until: opts?.until, scroller: scrollerElRef.current, content: contentElRef.current }, { phase: openPhaseRef, gen: openGenRef, timer: openTimerRef, end: endOpenPhase });
-  }, [endOpenPhase]);
+    const el = scrollerElRef.current;
+    openHoldRef.current.settle(opts?.until ?? (el ? pendingImages(el, contentElRef.current) : Promise.resolve()));
+  }, []);
 
   // Re-pick the anchor once scrolling pauses: the previous one has usually
   // scrolled out of view, and the compensations only work against a child that
@@ -400,8 +420,8 @@ export function useChatScroll(): ChatScroll {
     // this replaces guessed at with an input-intent window instead).
     refreshAnchorTop(anchorRef.current, el);
     const fromBottom = measure(el);
-    if (openPhaseRef.current && movedUp(el, prevScrollTopRef) && fromBottom > AT_BOTTOM_PX) endOpenPhase();
-    recordScrollTrace("scroll", { top: Math.round(el.scrollTop), fb: Math.round(fromBottom), at: atBottomRef.current, open: openPhaseRef.current });
+    if (openHoldRef.current.active && movedUp(el, prevScrollTopRef) && fromBottom > AT_BOTTOM_PX) endOpenPhase();
+    recordScrollTrace("scroll", { top: Math.round(el.scrollTop), fb: Math.round(fromBottom), at: atBottomRef.current, open: openHoldRef.current.active });
     scheduleAnchorRecapture();
   }, [measure, atBottomRef, endOpenPhase, scheduleAnchorRecapture]);
 
@@ -412,6 +432,7 @@ export function useChatScroll(): ChatScroll {
     if (!el) return;
     const prevFromBottom = prevFromBottomRef.current;
     const grew = el.scrollHeight > prevScrollHeightRef.current + GROWTH_EPSILON;
+    if (grew) openHoldRef.current.touch();
     // A prepend only "lands" once content actually grew — a zero-growth content
     // cycle in the load-older window (the button's "Loading…" label swap) must
     // not consume the snapshot and leave the real insertion unguarded.
@@ -431,7 +452,7 @@ export function useChatScroll(): ChatScroll {
       // whatever the content grew by (a scroller resize is compensated, so its
       // pre-cycle state stands).
       atBottomAfter: prevFromBottom + Math.max(0, el.scrollHeight - prevScrollHeightRef.current) <= AT_BOTTOM_PX,
-      openPhase: openPhaseRef.current,
+      openPhase: openHoldRef.current.active,
     });
     recordScrollTrace("reconcile", { src: source, grew, ad: Math.round(anchorDelta), act: action, sh: el.scrollHeight, ch: el.clientHeight, st: Math.round(el.scrollTop) });
     applyReconcileAction(action, { el, anchorDelta, prevFromBottom, prependGapRef, anchorRef, contentElRef, writeTop, setUnseen });
@@ -467,11 +488,13 @@ export function useChatScroll(): ChatScroll {
 
   useEffect(() => {
     const observers = observersRef.current;
-    const timers = [anchorTimerRef, openTimerRef, prependTimerRef];
+    const timers = [anchorTimerRef, prependTimerRef];
+    const hold = openHoldRef.current;
     return () => {
       if (observers.content) observers.content.disconnect();
       if (observers.scroller) observers.scroller.disconnect();
       for (const timer of timers) clearTimer(timer);
+      hold.end();
     };
   }, []);
 
