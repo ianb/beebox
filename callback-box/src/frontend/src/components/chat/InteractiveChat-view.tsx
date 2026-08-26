@@ -59,18 +59,35 @@ function BarChromeRegion(props: ChatBodyProps) {
    * and the abandoned reservation expires on its own. Nothing is lost: this is
    * only reachable before the first message.
    */
-  const handleChooseStart = useCallback((choice: { engine: ChatAgentEngine; model: string }) => {
+  const handleChooseStart = useCallback((choice: { engine: ChatAgentEngine; model: string | null }) => {
     if (routeBoxSlug === undefined) return;
     void navigate({
       to: href(`/${routeBoxSlug}/chat`),
       search: toSearch({
         session: "new",
         engine: choice.engine,
-        model: choice.model,
+        ...(choice.model !== null ? { model: choice.model } : {}),
         ...(effectiveContextDir !== null ? { contextDir: effectiveContextDir } : {}),
       }),
     });
   }, [navigate, routeBoxSlug, effectiveContextDir]);
+
+  /**
+   * Set this chat's model.
+   *
+   * A chat with an id can hold one server-side. A chat without one cannot —
+   * `setModel` has nothing to address — so its choice has to ride the first
+   * send, which is the same restart-with-the-choice path a cross-engine pick
+   * takes. Without this the menu showed "switched" while the send carried
+   * nothing (found in cross-model review).
+   */
+  const handleSelectOwnModel = useCallback((chosen: string | null) => {
+    if (sessionId === null && agentEngine !== null) {
+      handleChooseStart({ engine: agentEngine, model: chosen });
+      return;
+    }
+    handleSelectModel(chosen);
+  }, [sessionId, agentEngine, handleChooseStart, handleSelectModel]);
   return (
     <ChatBarChrome
       contextDir={effectiveContextDir}
@@ -97,7 +114,7 @@ function BarChromeRegion(props: ChatBodyProps) {
       onPinModel={handlePinModel}
       onOpenModelPanel={handleOpenModelPanel}
       agentEngine={agentEngine}
-      onSelectModel={handleSelectModel}
+      onSelectModel={handleSelectOwnModel}
       onStopProcess={actions.handleStopProcess}
       onRestartProcess={actions.handleRestartProcess}
       onCompactSession={actions.handleCompactSession}

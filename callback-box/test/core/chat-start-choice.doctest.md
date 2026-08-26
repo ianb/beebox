@@ -91,3 +91,35 @@ codexReserved.kind
 
 await box.cleanup();
 ```
+
+A reservation on a Codex-default box still answers `unsupported` — only Claude
+accepts an id we chose — but the client must ask with the engine it actually
+wants, or a chat the user asked to run on Claude is refused for the box's own
+default and loses its id.
+
+```ts
+const codexBox = await makeTmpBox();
+await configure(codexBox.root, { agentEngine: "codex", engines: { claude: true, codex: true } });
+const codexStore = new ChatReservationStore(() => Date.now());
+
+const asked = await reserveChatSession({
+  boxRoot: codexBox.root,
+  store: codexStore,
+  sessionId: randomUUID(),
+  contextDir: null,
+  seedFeatures: {},
+  requestedEngine: "claude",
+});
+const unasked = await reserveChatSession({
+  boxRoot: codexBox.root,
+  store: codexStore,
+  sessionId: randomUUID(),
+  contextDir: null,
+  seedFeatures: {},
+});
+
+JSON.stringify([asked.kind, unasked.kind])
+=> ["reserved","unsupported"]
+
+await codexBox.cleanup();
+```

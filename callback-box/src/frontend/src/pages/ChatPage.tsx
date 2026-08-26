@@ -24,6 +24,7 @@ import { UnavailableChat } from "../components/chat-delete/UnavailableChat";
 import { useIdlePrefetch } from "../hooks/useIdlePrefetch";
 import { usePageTitle } from "../components/DocumentTitle";
 import { useCoinedChat } from "./chat-coin-session";
+import { parseChatAgentEngine, type ChatAgentEngine } from "@shared/chat-models.js";
 
 /**
  * Whether a chat asked for on this engine may coin its own id.
@@ -37,16 +38,23 @@ function canCoinFor(engine: string | undefined): boolean {
   return engine === undefined || engine === "claude";
 }
 
+/** The engine a URL param names, or undefined when it names none we know. */
+function requestedEngine(engine: string | undefined): ChatAgentEngine | undefined {
+  return engine === undefined ? undefined : parseChatAgentEngine(engine) ?? undefined;
+}
+
 /** What to ask the box to reserve for a fresh chat, and whether to ask at all. */
 function coinRequest(opts: {
   isFreshChat: boolean;
   contextDir: string | undefined;
   engine: string | undefined;
   model: string | undefined;
-}): { enabled: boolean; contextDir: string | undefined; model?: string } {
+}): { enabled: boolean; contextDir: string | undefined; engine?: ChatAgentEngine; model?: string } {
+  const engine = requestedEngine(opts.engine);
   return {
     enabled: opts.isFreshChat && canCoinFor(opts.engine),
     contextDir: opts.contextDir,
+    ...(engine !== undefined ? { engine } : {}),
     ...(opts.model !== undefined ? { model: opts.model } : {}),
   };
 }

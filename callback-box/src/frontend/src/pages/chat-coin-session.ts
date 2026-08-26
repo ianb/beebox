@@ -20,6 +20,7 @@
 
 import { useEffect, useState } from "react";
 import { trpc } from "../lib/trpc";
+import type { ChatAgentEngine } from "@shared/chat-models.js";
 
 export type CoinedChat =
   /** The reservation is in flight; render nothing yet. */
@@ -35,25 +36,31 @@ const MAX_ATTEMPTS = 2;
 export function useCoinedChat(opts: {
   enabled: boolean;
   contextDir: string | undefined;
-  /** Model chosen before the first message; stored with the reservation. */
+  /** Engine and model chosen before the first message; stored with the reservation. */
+  engine?: ChatAgentEngine | undefined;
   model?: string | undefined;
 }): CoinedChat {
-  const { enabled, contextDir, model } = opts;
+  const { enabled, contextDir, engine, model } = opts;
+  // What this reservation is FOR. A coined id carries the landmark binding and
+  // the model choice, so a chat that changes either needs a different one —
+  // keying on `enabled` alone handed the new request the old id, and the page
+  // navigated straight back into a chat reserved for the previous choice.
+  const request = enabled ? `${contextDir ?? ""}|${engine ?? ""}|${model ?? ""}` : "";
   // `attempt` identifies WHICH new-chat this state describes. The page does not
   // remount between chats, so without it the hook would hand a second "New
   // chat" the id it coined for the first, and the page would navigate straight
   // back into that chat instead of starting one.
-  const [state, setState] = useState<{ enabled: boolean; attempt: number; value: CoinedChat }>({
-    enabled,
+  const [state, setState] = useState<{ request: string; attempt: number; value: CoinedChat }>({
+    request,
     attempt: 0,
     value: { state: "pending" },
   });
   // Adjusting state during render (the React "derived from props" pattern):
   // this re-renders immediately with the reset value, so no effect ever sees —
   // and no consumer ever reads — a stale coined id for a new chat.
-  if (state.enabled !== enabled) {
+  if (state.request !== request) {
     setState({
-      enabled,
+      request,
       attempt: enabled ? state.attempt + 1 : state.attempt,
       value: { state: "pending" },
     });
@@ -83,13 +90,17 @@ export function useCoinedChat(opts: {
             // turn commits a history row. Only an absent param means the chat
             // was opened from nowhere.
             ...(contextDir !== undefined ? { contextDir } : {}),
-            // The chat exists from this moment, so its model choice can be
-            // recorded now rather than riding the first send.
+            // The chat exists from this moment, so its engine and model can be
+            // recorded now rather than riding the first send. The engine
+            // matters even though only Claude can be coined: without it a
+            // Codex-default box answers `unsupported` for a chat the user
+            // explicitly asked to run on Claude, and the id is lost.
+            ...(engine !== undefined ? { engine } : {}),
             ...(model !== undefined ? { model } : {}),
           });
           if (abort.signal.aborted) return;
           if (outcome.kind === "reserved") {
-            setState({ enabled: true, attempt, value: { state: "coined", sessionId: outcome.sessionId } });
+            setState({ request, attempt, value: { state: "coined", sessionId: outcome.sessionId } });
             return;
           }
           if (outcome.kind === "unsupported") break;
@@ -101,12 +112,12 @@ export function useCoinedChat(opts: {
           break;
         }
       }
-      if (!abort.signal.aborted) setState({ enabled: true, attempt, value: { state: "unavailable" } });
+      if (!abort.signal.aborted) setState({ request, attempt, value: { state: "unavailable" } });
     })();
     return () => {
       abort.abort();
     };
-  }, [enabled, contextDir, model, mutateAsync, attempt]);
+  }, [enabled, contextDir, engine, model, mutateAsync, attempt, request]);
 
   return enabled ? state.value : { state: "unavailable" };
 }

@@ -45,6 +45,7 @@ export async function reserveAndWarm(opts: {
     baseOptions,
     sessionId: result.sessionId,
     contextDir: request.contextDir,
+    ...(request.model !== undefined ? { model: request.model } : {}),
   });
   return result;
 }
