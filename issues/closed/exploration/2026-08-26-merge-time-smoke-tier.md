@@ -1,13 +1,23 @@
 ---
 title: "A smoke tier at merge and deploy: boot a real box and click, because two of today's escapes were state bugs no unit tier can see"
-workstream: unattached
+workstream: smoke-tier
 area: callback-box
-needs: [design]
 labels: [tests]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "seems like we might be missing a standard smoke test to be run on merge?"
+resolution: implemented
 ---
+
+**Closed 2026-08-26**, by `worktree-smoke-tier`: `bin/smoke` boots a real box
+through the dev router and walks it with `bin/browse` (nav-pages, place menu,
+one chat), wired into `/finish` as a `kind: "smoke"` step whenever a landing
+touches a deployed path (`bin/finish-preflight-lib.ts`,
+`bin/deployed-paths.ts`); `callback-box/deploy/deploy.sh` keeps the
+post-deploy `/healthz` + `/healthz/canary` hooks against prod. Per-run
+history lands in a shared log (`bin/smoke --report`), and
+`schedules/smoke-review/` reviews weekly whether each step still earns its
+place.
 
 Unparked the same day: after the retro
 (`2026-08-26-post-test-economics-retro`) the boxholder's position is that

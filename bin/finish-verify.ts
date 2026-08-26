@@ -9,7 +9,8 @@
  * Output is one line per command, then `VERDICT: green|red`. A failing test
  * file is re-run once in isolation: passing there is a flake by the ledger's
  * definition (fail-then-pass at the same content hash) and is named, not
- * hidden; failing again is real and blocks.
+ * hidden; failing again is real and blocks. The `smoke` command gets no such
+ * forgiveness — it boots one real box and either it works or it does not.
  *
  * See callback-box/docs/plans/change-based-test-selection.md, "Revision
  * 2026-08-25 — test economics", mechanism E2.
@@ -183,8 +184,8 @@ export function main(argv: string[]): number {
   const sheet = readSheet(argv);
   const onlyIndex = argv.indexOf("--only");
   const only = onlyIndex === -1 ? null : argv[onlyIndex + 1];
-  if (only !== null && !["tests", "typecheck", "lint"].includes(only ?? "")) {
-    throw new Error("--only takes tests, typecheck or lint");
+  if (only !== null && !["tests", "typecheck", "lint", "smoke"].includes(only ?? "")) {
+    throw new Error("--only takes tests, typecheck, lint or smoke");
   }
   const outDir = mkdtempSync(join(tmpdir(), "finish-verify-"));
   const results: CommandResult[] = [];

@@ -7,6 +7,7 @@
 
 import { spawn } from "node:child_process";
 import path from "node:path";
+import { invariant } from "../../../src/lib/invariant.js";
 import { escapeForRegex, snapshotRegex } from "./snapshot-regex.js";
 
 const __dirname = import.meta.dirname;
@@ -56,6 +57,10 @@ export class BrowseSession {
       });
       let stdout = "";
       let stderr = "";
+      // `stdio` above pipes both, so these are non-null — but only this call
+      // site knows that, and reading them optionally would silently discard the
+      // output every caller here parses. Assert instead of narrowing away.
+      invariant(child.stdout !== null && child.stderr !== null, "browse child has no pipes");
       child.stdout.on("data", (chunk: Buffer) => { stdout += chunk.toString("utf8"); });
       child.stderr.on("data", (chunk: Buffer) => { stderr += chunk.toString("utf8"); });
       child.on("error", (e) => reject(e));

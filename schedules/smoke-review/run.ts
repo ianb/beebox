@@ -1,0 +1,219 @@
+/**
+ * The weekly smoke-tier review: gather, compare, decide whether to hand off.
+ *
+ * Everything here is I/O — reading the shared smoke log, asking git what landed
+ * and what bugs were filed. The rule for "is there anything to review" and the
+ * shape of the briefing live in ./lib.ts, where they are testable.
+ *
+ * Nothing here judges a step. `run` deciding that a step "looks unproductive"
+ * would be the script reasoning about its own findings — see the schedule's
+ * header, and `.claude/skills/cb-authoring-schedules`.
+ */
+
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+import { execa } from "execa";
+import { issueFiles } from "../../bin/commit-provenance.ts";
+import { parseRunRecord, smokeLogPath, summarizeSmokeLog } from "../../bin/smoke-lib.ts";
+import { formatBriefing, hasSomethingToReview, parseBaseline, windowStart, type Baseline, type Evidence, type FiledIssue, type Landing } from "./lib.ts";
+
+const SCHEDULE_DIR = import.meta.dirname;
+const REPO_ROOT = path.resolve(SCHEDULE_DIR, "..", "..");
+const CADENCE_DAYS = 7;
+
+function refuse(message: string): never {
+  process.stderr.write(`smoke-review: ${message}\n`);
+  process.exit(2);
+}
+
+async function git(args: string[]): Promise<string> {
+  const result = await execa("git", args, { cwd: REPO_ROOT, reject: false });
+  if (result.exitCode !== 0) refuse(`git ${args.join(" ")} failed: ${result.stderr}`);
+  return result.stdout;
+}
+
+/** Every line of the shared log, or refusal — a review with no data to review. */
+async function readLog(): Promise<string[]> {
+  const common = await git(["rev-parse", "--git-common-dir"]);
+  const logPath = smokeLogPath(common.startsWith("/") ? common : path.join(REPO_ROOT, common));
+  return fs.readFile(logPath, "utf8").then(
+    (text) => text.split("\n"),
+    (e: NodeJS.ErrnoException) => {
+      // No log yet is a legitimate state — the tier has simply never run here.
+      // It is not a broken watch, so it is not a refusal.
+      if (e.code === "ENOENT") return [];
+      return refuse(`cannot read ${logPath}: ${e.message}`);
+    },
+  );
+}
+
+/** Lines whose run falls inside `[start, end)`. */
+function within(lines: readonly string[], window: { start: string; end: string }): string[] {
+  return lines.filter((line) => {
+    const record = parseRunRecord(line);
+    return record !== null && record.ts >= window.start && record.ts < window.end;
+  });
+}
+
+/** The window's red runs, most recent first. */
+function failuresIn(lines: readonly string[]): Evidence["failures"] {
+  const failures: Evidence["failures"] = [];
+  for (const line of lines) {
+    const record = parseRunRecord(line);
+    if (record === null || record.verdict !== "red") continue;
+    failures.push({
+      ts: record.ts,
+      step: record.failedStep ?? "unknown",
+      message: record.failure ?? "",
+      commit: record.commit,
+    });
+  }
+  return failures.toReversed();
+}
+
+async function landingsSince(start: string): Promise<Landing[]> {
+  const output = await git([
+    "log", "--first-parent", "main", `--since=${start}`, "--format=%H%x00%s",
+  ]);
+  return output
+    .split("\n")
+    .filter((line) => line !== "")
+    .map((line) => {
+      const [commit = "", subject = ""] = line.split("\0");
+      return { commit, subject };
+    });
+}
+
+/**
+ * Bug issues added in the window, by git rather than by mtime: a checkout is
+ * full of files whose mtime is the day it was cloned, and a worktree schedule
+ * gets a fresh one whenever its branch is rebuilt.
+ */
+/**
+ * Bug issues added in the window, resolved to where they live NOW.
+ *
+ * Git says which issues were filed (by mtime a checkout is useless — a worktree
+ * schedule gets a fresh one whenever its branch is rebuilt). But an issue's
+ * basename is its identity repo-wide, unique by convention and relied on by
+ * the `Issue:` trailer, so the current file is a map lookup rather than an
+ * archaeology dig through the commit that added it.
+ *
+ * Reading the file where it sits now beats reading the blob as filed: the title
+ * is whatever it has been sharpened to since, and the directory says whether
+ * anyone has closed it — which is real signal for the gap half, since a bug
+ * still open a week later is one nobody has explained yet.
+ */
+async function bugsSince(start: string): Promise<FiledIssue[]> {
+  const added = await git([
+    "log", "--first-parent", "main", `--since=${start}`,
+    "--diff-filter=A", "--name-only", "--format=",
+    "--", "issues/bugs", "issues/closed/bugs",
+  ]);
+  const filed = [
+    ...new Set(
+      added
+        .split("\n")
+        .filter((line) => line.endsWith(".md"))
+        .map((line) => path.basename(line, ".md")),
+    ),
+  ];
+  const current = issueFiles(path.join(REPO_ROOT, "issues"));
+  const bugs: FiledIssue[] = [];
+  for (const name of filed) {
+    const rel = current.get(name);
+    if (rel === undefined) {
+      // Filed and then deleted outright rather than closed — rare, and worth
+      // showing as itself rather than dropping.
+      bugs.push({ path: `issues/**/${name}.md`, title: "(no longer in the queue)", closed: false });
+      continue;
+    }
+    const full = path.join(REPO_ROOT, "issues", rel);
+    const text = await fs.readFile(full, "utf8").catch(() => "");
+    bugs.push({
+      path: `issues/${rel}`,
+      title: titleIn(text),
+      closed: rel.startsWith("closed/"),
+    });
+  }
+  return bugs;
+}
+
+/** The `title:` line of an issue's frontmatter, unquoted. */
+function titleIn(text: string): string {
+  const raw = /^title:\s*(.*?)\s*$/m.exec(text)?.[1];
+  if (raw === undefined) return "(no title in frontmatter)";
+  // YAML-quoted, so a title containing a quote arrives escaped.
+  return raw.replace(/^"(.*)"$/s, "$1").replaceAll('\\"', '"');
+}
+
+const stateDir = process.env["SCHEDULE_STATE_DIR"];
+if (stateDir === undefined || stateDir === "") refuse("SCHEDULE_STATE_DIR is not set");
+const baselineFile = path.join(stateDir, "last-review.json");
+const dryRun = process.env["SCHEDULE_DRY_RUN"] === "1";
+
+const baseline: Baseline | null = await fs.readFile(baselineFile, "utf8").then(
+  (text) => parseBaseline(text),
+  (e: NodeJS.ErrnoException) =>
+    e.code === "ENOENT" ? null : refuse(`cannot read ${baselineFile}: ${e.message}`),
+);
+
+const now = new Date();
+const windowEnd = now.toISOString();
+const start = windowStart({ baseline, now, cadenceDays: CADENCE_DAYS });
+
+const lines = (await readLog()).filter((line) => line.trim() !== "");
+const windowed = within(lines, { start, end: windowEnd });
+const evidence: Evidence = {
+  windowStart: start,
+  windowEnd,
+  allTime: summarizeSmokeLog(lines),
+  window: summarizeSmokeLog(windowed),
+  failures: failuresIn(windowed),
+  landings: await landingsSince(start),
+  bugs: await bugsSince(start),
+};
+
+async function recordBaseline(): Promise<void> {
+  // A dry run writes nothing anywhere — including the baseline, which would
+  // otherwise move the window and make the next real run review less than it
+  // should.
+  if (dryRun) {
+    console.log(`[smoke-review] dry run: would record the window end (${windowEnd}) as the baseline.`);
+    return;
+  }
+  const next: Baseline = { reviewedAt: windowEnd, runs: evidence.allTime.runs };
+  await fs.writeFile(baselineFile, `${JSON.stringify(next, null, 2)}\n`, "utf8");
+}
+
+await recordBaseline();
+
+if (!hasSomethingToReview(evidence)) {
+  // No smoke runs and no bugs filed: nothing happened, so nothing is said.
+  process.exit(0);
+}
+
+// One line to the run log, not the briefing: the handoff carries that, and the
+// runner echoes it — printing both put the same 150 lines in the log twice.
+console.log(
+  `[smoke-review] ${start} → ${windowEnd}: ${String(evidence.window.runs)} smoke run(s),` +
+    ` ${String(evidence.failures.length)} failure(s), ${String(evidence.bugs.length)} bug(s) filed,` +
+    ` ${String(evidence.landings.length)} landing(s).`,
+);
+
+const briefing = formatBriefing(evidence);
+
+if (dryRun) {
+  console.log("[smoke-review] dry run: the handoff below is printed, not recorded.");
+}
+await execa(
+  path.join(REPO_ROOT, "bin", "schedules"),
+  [
+    "handoff",
+    "--title",
+    `Smoke tier review: ${String(evidence.window.runs)} run${evidence.window.runs === 1 ? "" : "s"},` +
+      ` ${String(evidence.bugs.length)} bug${evidence.bugs.length === 1 ? "" : "s"} filed`,
+    "--body",
+    "-",
+  ],
+  { input: briefing, stdout: "inherit", stderr: "inherit" },
+);

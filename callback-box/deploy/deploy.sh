@@ -690,8 +690,9 @@ REMOTE
 TOOLCHECK
 
   echo "Verifying hub health + box canary..."
-  ssh "root@$SERVER_IP" bash -s <<'HEALTHCHECK'
+  ssh "root@$SERVER_IP" bash -s "$INSTALL_DIR" <<'HEALTHCHECK'
     set -euo pipefail
+    install_dir="$1"
     KEY=$(grep -E '^CB_DIAG_API_KEY=' /home/callback/.env 2>/dev/null | cut -d= -f2- || true)
     # Fail closed: a deploy that can't verify anything must not report success
     # (the whole point of this check). If a server legitimately has no key,
@@ -755,6 +756,30 @@ TOOLCHECK
     fi
     echo "  Box canary OK: $(cat /tmp/canary.out)"
     rm -f /tmp/canary.out
+
+    # (3) SPA fallback: the frontend build has to be ON the server.
+    # `registerSpaFallback` is installed ONLY when src/frontend/dist/index.html
+    # exists (callback-box/src/webapp/server.ts) — without it every page
+    # navigation 404s while /healthz and the canary above both stay green. That
+    # is the 2026-08-25 escape verbatim
+    # (issues/exploration/2026-08-26-post-test-economics-retro.md, incident 3),
+    # and it is the half of the smoke tier the local dev-router walk
+    # structurally cannot see: in dev, page requests are served by vite and
+    # never reach this handler.
+    #
+    # This asserts the file rather than probing a URL on purpose. An
+    # unauthenticated page navigation is redirected to login by the HUB before
+    # it ever reaches the child (hub-server.ts's `/*` gate), so a URL probe
+    # answers 302 whether or not the child has a fallback — a check that cannot
+    # fail for the right reason. The file IS the condition the code branches on.
+    spa_index="$install_dir/callback-box/src/frontend/dist/index.html"
+    if [ ! -s "$spa_index" ]; then
+      echo "  SPA fallback FAILED: $spa_index is missing or empty."
+      echo "  Every page navigation on this server will 404 — the frontend build"
+      echo "  did not ship. /healthz and the box canary cannot see this."
+      exit 1
+    fi
+    echo "  SPA fallback OK: frontend build present ($(wc -c < "$spa_index") bytes)"
 HEALTHCHECK
 fi
 

@@ -1,0 +1,26 @@
+# The weekly review of the smoke tier — is each step still earning its place,
+# and is there something the walk should be checking that it isn't?
+#
+# Handoff shape, not run-only: `run` gathers the evidence and decides whether
+# there is anything to review, but both questions are judgment. "This step has
+# not failed in 40 runs" is not by itself a verdict — a gate's whole job is to
+# not fire — and "this week's bug should have been caught by the walk" cannot be
+# derived from a log at all. So the script assembles and the session decides.
+#
+# The gap half is deliberately after-the-fact. A bug that reached `main` and was
+# only visible on a running box is the evidence that the walk has a hole; the
+# hourly full-suite run and the week's filed bugs are where that shows up.
+description: "Weekly review of the smoke tier: which steps earn their place, and what the walk is missing"
+cadence: 7d
+workstream:
+  agent: claude
+  # Both questions are judgment over a small evidence set — the reasoning is
+  # the product, and there is one run a week to pay for.
+  model: opus
+  effort: high
+  worktree: true
+  # Nothing carries between weeks: the baseline in the store is the memory, and
+  # a finding that mattered left an issue behind.
+  session: fresh
+  permissionMode: bypassPermissions
+  maxBudgetUsd: 3

@@ -11,9 +11,11 @@
  * 2026-08-25 — test economics", mechanisms E and E2.
  */
 
+import { touchesDeployedPath } from "./deployed-paths.js";
+
 /** One thing finish-verify runs, with everything it needs to run it. */
 export interface VerificationCommand {
-  kind: "tests" | "typecheck" | "lint";
+  kind: "tests" | "typecheck" | "lint" | "smoke";
   /** What the agent would type; also the display name in finish-verify output. */
   command: string;
   /** Repo-root-relative directory to run in. */
@@ -239,8 +241,12 @@ export function verificationCommands(input: CommandInput): VerificationCommand[]
       : undefined;
 
   const add = (command: VerificationCommand): void => {
-    const skip = docsOnly && command.kind === "tests" ? "docs-only diff" : undefined;
-    const reason = command.kind === "tests" ? skip : skipTypeLint;
+    // Tests and the smoke walk answer for behaviour, so only a docs-only diff
+    // excuses them; typecheck and lint additionally skip on the
+    // nothing-changed-since-verified rule.
+    const behavioural = command.kind === "tests" || command.kind === "smoke";
+    const skip = docsOnly ? "docs-only diff" : undefined;
+    const reason = behavioural ? skip : skipTypeLint;
     commands.push(reason === undefined ? command : { ...command, skip: reason });
   };
 
@@ -275,6 +281,15 @@ export function verificationCommands(input: CommandInput): VerificationCommand[]
       isolate: ROOT_ISOLATE,
     });
     add({ kind: "typecheck", command: "pnpm typecheck", cwd: ".", argv: ["pnpm", "typecheck"] });
+  }
+
+  // The smoke tier: a code-related landing boots a real box and walks it
+  // before it merges. "Code-related" is the deploy hook's own rule — what
+  // ships is what owes an answer here (bin/deployed-paths.ts). Docs-only
+  // diffs never reach it, and a diff that touches only bin/, issues/ or
+  // ios-app/ changes nothing a running box would show.
+  if (touchesDeployedPath(input.paths)) {
+    add({ kind: "smoke", command: "bin/smoke", cwd: ".", argv: ["bin/smoke"] });
   }
 
   const linting = packages.filter((pkg) => input.hasScript(pkg, "lint"));
