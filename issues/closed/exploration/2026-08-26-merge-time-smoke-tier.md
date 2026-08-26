@@ -45,3 +45,41 @@ budget. Two hooks: after the merge in `/finish` against the main checkout on the
 dev router; post-deploy against prod in the canary slot. Belongs to the
 test-economics scheme as its own tier (`careful.txt` is the precedent for a
 tier expressed as a list).
+
+## Research: the existing tours have already rotted (2026-08-26)
+
+Ran all five in the `tab-identity` worktree, against its own box clone, to
+see whether "wired to nothing" had cost anything yet. It has.
+
+All five still **execute** — the framework has not bit-rotted in the three
+months since it landed. But three of the five are failing their own soft
+assertions and aborting after one checkpoint:
+
+- `browse-walk` — `pass aborted: Could not resolve button "box directory, 3357 items"`
+- `dashboard` — `expected button "+ Memo" not found in interactive snapshot`
+- `capture` — `expected button "Cancel capture session" not found in interactive snapshot`
+
+`nav-pages` (10 checkpoints) and `new-chat` (2) still walk clean, with 2 axe
+violations each.
+
+Two things this settles for the tier proposed above.
+
+**It is evidence for the tier.** An instrument nobody runs decays silently and
+nobody learns anything from it; these have been degraded for weeks with no
+signal. Whatever gets built has to run on its own or it becomes this.
+
+**It is also a warning about how to write it.** Not all three failures are app
+regressions — `browse-walk` hardcoded an item COUNT into a selector
+(`"box directory, 3357 items"`), so it breaks whenever the box's contents
+change, and the findings above are partly box-state artifacts rather than
+defects. A hard-fail smoke tier written with content-coupled selectors like
+that fails every week for reasons nobody cares about, gets ignored, and ends
+up exactly where the tours are — except now it is also blocking merges. The
+selectors need to be stable app addresses (`cb-` ids), and the fixture box
+stable, before anything hard-fails on them.
+
+Decided since (2026-08-26): repair them and run them weekly, tracked as
+[repair the tours and check them weekly](../code-quality/2026-08-26-repair-tours-and-check-them-weekly.md).
+That is the soft instrument, whose weekly run may *amend* a tour when the app
+changed deliberately; this issue remains the hard-fail gate. The two should
+share a walk definition rather than diverging into two.
