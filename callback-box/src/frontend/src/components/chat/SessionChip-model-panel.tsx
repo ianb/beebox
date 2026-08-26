@@ -36,6 +36,7 @@ export function ModelPanel({
   selectedModel,
   boxDefault,
   canPin,
+  canSelect,
   agentEngine,
   onSelectModel,
   onPinModel,
@@ -46,6 +47,8 @@ export function ModelPanel({
   boxDefault: string | null;
   /** Whether this viewer may change box configuration. */
   canPin: boolean;
+  /** Whether this chat can hold a model of its own yet (it needs an id first). */
+  canSelect: boolean;
   onBack: () => void;
   agentEngine: ChatAgentEngine;
   onSelectModel: (model: string | null) => void;
@@ -61,6 +64,11 @@ export function ModelPanel({
         <span className="text-warm-500">‹ Model · {agentEngine === "claude" ? "Claude" : "Codex"}</span>
       </MenuItem>
       <MenuDivider />
+      {canSelect ? null : (
+        <MenuItem id="cb-session-model-no-session" disabled onClick={() => {}}>
+          <span className="text-xs">This chat picks its own model after its first message.</span>
+        </MenuItem>
+      )}
       {options.map((opt) => {
         // The first row (`model: null`) is "follow the box default", so it
         // names what following currently gets you rather than claiming a model
@@ -71,12 +79,17 @@ export function ModelPanel({
         const pinned = !follows && opt.model === boxDefault;
         return (
           <div key={opt.label} role="none" className="flex items-stretch">
-            <MenuItem onClick={() => onSelectModel(opt.model)}>
+            {/* The row's select half must own the leftover width itself: MenuItem
+                renders `w-full`, which as a bare flex child measures the whole
+                row and pushes the pin outside it. */}
+            <div role="none" className="flex-1 min-w-0">
+            <MenuItem disabled={!canSelect} onClick={() => onSelectModel(opt.model)}>
               <span className="flex justify-between gap-2 w-full">
                 <span>{selectedModel === opt.model ? "✓ " : "  "}{label}</span>
                 {pinned ? <span className="text-warm-500 text-xs self-center">default</span> : null}
               </span>
             </MenuItem>
+            </div>
             {canPin && !follows ? (
               <button
                 type="button"

@@ -31,27 +31,12 @@ import { href, toSearch } from "../../lib/routing";
 import { ModelPanel } from "./SessionChip-model-panel";
 import { SessionListPanel } from "./SessionListPanel";
 import { chatModelOptions, type ChatAgentEngine } from "@shared/chat-models.js";
-import { modelTier, TIER_RANK } from "@shared/agent-models.js";
+import { modelDrift } from "./model-drift";
 
 // Single-panel submenu pattern: the dropdown swaps which set of rows it
 // renders rather than spawning a flyout. Better on touch and avoids
 // positioning complexity. Resets to "root" when the dropdown closes.
 type SessionChipPanel = "root" | "sessions" | "model" | "advanced";
-
-/**
- * Is this chat running something stronger or weaker than the box default?
- *
- * `null` — and so no mark — whenever the comparison would be meaningless or
- * uninteresting: nothing pinned, an unknown model, or the same tier (two
- * models of one tier are a sideways move, not a smarter/dumber one).
- */
-function modelDrift({ model, boxDefault }: { model: string | null; boxDefault: string | null }): "above" | "below" | null {
-  if (model === null || boxDefault === null || model === boxDefault) return null;
-  const tier = modelTier(model);
-  const defaultTier = modelTier(boxDefault);
-  if (tier === null || defaultTier === null || TIER_RANK[tier] === TIER_RANK[defaultTier]) return null;
-  return TIER_RANK[tier] > TIER_RANK[defaultTier] ? "above" : "below";
-}
 
 /** Three sliders — "settings for this thing", the phone-width face. */
 function SlidersIcon() {
@@ -137,6 +122,7 @@ interface SessionChipBodyProps {
   selectedModel: string | null;
   boxDefault: string | null;
   canPin: boolean;
+  canSelect: boolean;
   onPinModel: (model: string | null) => void;
   agentEngine: ChatAgentEngine | null;
   onSelectModel: (model: string | null) => void;
@@ -152,14 +138,14 @@ interface SessionChipBodyProps {
  * `SessionChipPanel` member at compile time without one).
  */
 function SessionChipBody(props: SessionChipBodyProps): ReactNode {
-  const { panel, onNewSession, contextDir, onOpenSessions, currentModelLabel, modelSelectionDisabled, onOpenModel, selectedModel, boxDefault, canPin, onPinModel, agentEngine, onSelectModel, onOpenAdvanced, onBackToRoot, advancedProps } = props;
+  const { panel, onNewSession, contextDir, onOpenSessions, currentModelLabel, modelSelectionDisabled, onOpenModel, selectedModel, boxDefault, canPin, canSelect, onPinModel, agentEngine, onSelectModel, onOpenAdvanced, onBackToRoot, advancedProps } = props;
   switch (panel) {
     case "root":
       return <RootPanel onNewSession={onNewSession} onOpenSessions={onOpenSessions} currentModelLabel={currentModelLabel} modelSelectionDisabled={modelSelectionDisabled} onOpenModel={onOpenModel} onOpenAdvanced={onOpenAdvanced} />;
     case "sessions":
       return <SessionsPanel onBack={onBackToRoot} contextDir={contextDir} />;
     case "model":
-      return agentEngine === null ? null : <ModelPanel onBack={onBackToRoot} selectedModel={selectedModel} boxDefault={boxDefault} canPin={canPin} onPinModel={onPinModel} agentEngine={agentEngine} onSelectModel={onSelectModel} />;
+      return agentEngine === null ? null : <ModelPanel onBack={onBackToRoot} selectedModel={selectedModel} boxDefault={boxDefault} canPin={canPin} canSelect={canSelect} onPinModel={onPinModel} agentEngine={agentEngine} onSelectModel={onSelectModel} />;
     case "advanced":
       return <AdvancedPanel onBack={onBackToRoot} {...advancedProps} />;
   }
@@ -279,11 +265,14 @@ export const SessionChip = memo(function SessionChip(props: SessionChipProps) {
           contextDir={contextDir}
           onOpenSessions={() => setPanel("sessions")}
           currentModelLabel={currentModelLabel}
-          modelSelectionDisabled={sessionId === null || agentEngine === null}
+          // A chat with no id yet cannot set a model of its own, but the panel
+          // is also where the box default is pinned and shown — so it opens.
+          modelSelectionDisabled={agentEngine === null}
           onOpenModel={() => { onOpenModelPanel(); setPanel("model"); }}
           selectedModel={selectedModel}
           boxDefault={boxDefault}
           canPin={canPin}
+          canSelect={sessionId !== null}
           onPinModel={onPinModel}
           agentEngine={agentEngine}
           onSelectModel={onSelectModel}

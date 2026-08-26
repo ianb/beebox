@@ -38,10 +38,10 @@ function BarChromeRegion(props: ChatBodyProps) {
   } = props;
   const { onZoomView } = tabs;
   const { agentEngine, selectedModel, modelInForce, boxDefault, handlePinModel, handleOpenModelPanel, narrationEnabled, handleToggleNarration, hqDictationEnabled, handleToggleHqDictation, handleSelectModel } = model;
-  // Open-access boxes have no signed-in user and pass the server's owner gate,
-  // so only a known non-owner hides the pin — matching `ownerProcedure`.
+  // Pinning writes box configuration, so it is the owner's control — the same
+  // signal the dashboard uses for its owner-only actions.
   const currentUser = useCurrentUser();
-  const canPin = currentUser === null || currentUser.isOwner;
+  const canPin = currentUser?.isOwner === true;
   return (
     <ChatBarChrome
       contextDir={effectiveContextDir}
