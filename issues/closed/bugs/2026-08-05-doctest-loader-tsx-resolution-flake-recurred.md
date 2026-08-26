@@ -7,6 +7,28 @@ discovered-in: worktree-load-older-label — full finish-suite verification
 resolution: wontfix
 ---
 
+> **2026-08-25 — this is very probably the mechanism, and it is now fixed.**
+> Not reopened; recorded here because a future sighting should read this first.
+> `issues/closed/bugs/2026-08-25-fresh-checkout-tap-default-plugins.md` shows
+> that tap runs with its DEFAULT plugin set — `@tapjs/typescript` included,
+> which `.taprc` disables — on the first run after any `pnpm install`, because
+> the built Test class in `node_modules/@tapjs/test/test-built/` is the shipped
+> default until `tap build` runs, and tap's own rebuild lands one run late. The
+> typescript loader sits ahead of tsx and cannot resolve an extensionless
+> directory import, which produces exactly this signature.
+>
+> It fits the three facts that made this look like a load flake: only some
+> frontend files fail (only the ones that reach `src/frontend/src/lib/trpc`);
+> the identical files pass on the very next run (the failing run performed the
+> rebuild); and it fires after a worktree is created or dependencies are
+> reinstalled, which correlates with heavy sessions rather than being caused by
+> them. It also explains why no campaign could force it in a warm worktree —
+> the built set was already correct there.
+>
+> The fix is `callback-box`'s `postinstall: tap build`. If this signature
+> appears again, check `tap versions` (the BUILT set) before assuming load;
+> `tap plugin list` prints the configured set and will look right either way.
+
 **Closed 2026-08-18 — real, but not actionable.** Boxholder's call: an
 unreproducible flake shouldn't sit open indefinitely.
 

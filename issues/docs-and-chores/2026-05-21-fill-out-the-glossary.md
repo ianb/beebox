@@ -20,3 +20,9 @@ area: docs
 Method: do one sweep through `CLAUDE.md`, `FRONTEND.md`, the schemas, and `docs/` collecting terms-of-art, then write entries. Keep them short (one paragraph), link to deeper docs rather than restating. The glossary is for *naming the thing*, not explaining it in full.
 
 Worth treating as a single pass — partial glossaries are worse than none because readers stop trusting them as comprehensive.
+
+**2026-08-25 addendum (from [research/opencode/inspiration.md](../../research/opencode/inspiration.md)).**
+OpenCode's `CONTEXT.md` gives each term an `_Avoid_:` line naming the wrong word, and
+follows the terms with a list of one-line invariant relationships between them. Both
+are cheap and would have caught the duplicate `asset` entry the glossary carried until
+today. Adopt the form when filling this out.

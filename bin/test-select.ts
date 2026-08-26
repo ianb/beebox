@@ -4,6 +4,7 @@
  *   node --import tsx bin/test-select.ts            # one test path per line
  *   node --import tsx bin/test-select.ts --run      # run exactly those
  *   node --import tsx bin/test-select.ts --base <ref>
+ *   node --import tsx bin/test-select.ts --no-cache  # rebuild the graph
  *
  * `pnpm test:changed` in callback-box is the `--run` form, and it is the
  * agent's iteration command. `pnpm test` keeps its meaning: everything.
@@ -68,13 +69,14 @@ async function readCliBundleInputs(): Promise<Set<string> | null> {
 interface Args {
   base: string;
   run: boolean;
+  cache: boolean;
 }
 
 function parseArgs(argv: string[]): Args {
   const baseIndex = argv.indexOf("--base");
   const base = baseIndex === -1 ? "main" : argv[baseIndex + 1];
   if (base === undefined) throw new Error("--base needs a ref");
-  return { base, run: argv.includes("--run") };
+  return { base, run: argv.includes("--run"), cache: !argv.includes("--no-cache") };
 }
 
 /**
@@ -147,7 +149,7 @@ export async function main(argv: string[]): Promise<number> {
   // Before the graph: a bad base ref should cost a git call, not an esbuild
   // pass over every entrypoint.
   const changed = changedPaths({ base: args.base });
-  const graph = await buildGraph();
+  const graph = await buildGraph({ cache: args.cache });
   const selection = selectTests({
     graph,
     changed,

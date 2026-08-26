@@ -192,6 +192,7 @@ test("the selector drops careful files unless the branch changed one", () => {
     unresolved: new Set(),
     ambiguousEdges: 0,
     buildMs: 0,
+    cached: false,
   };
   assert.deepEqual(
     selectTests({ graph, changed: [`${box}src/shared.ts`], exclude: careful }).selected,

@@ -72,18 +72,26 @@ export type PathGroup =
   | { kind: "unknown"; name: string };
 
 /**
- * Which verification surface owns a path. `workspacePackages` is the top-level
- * directory of every pnpm workspace entry, so a new package is classified
- * without editing this file.
+ * Which verification surface owns a path. `workspacePackages` is the directory
+ * of every pnpm workspace package (bin/workspace-packages.ts), so a new package
+ * is classified without editing this file.
+ *
+ * The NEAREST enclosing package wins: `callback-box/pub-worker` is its own
+ * package inside callback-box, and its `test`/`typecheck`/`lint` are the ones
+ * that cover a change under it.
  */
 export function groupOf(path: string, workspacePackages: Set<string>): PathGroup {
-  const [head, ...rest] = path.split("/");
+  const segments = path.split("/");
+  const [head, ...rest] = segments;
   if (head === undefined || head === "") return { kind: "none" };
   if (rest.length === 0) {
     if (ROOT_FILES.has(head)) return { kind: "root" };
     return { kind: "none" };
   }
-  if (workspacePackages.has(head)) return { kind: "package", name: head };
+  for (let depth = segments.length - 1; depth >= 1; depth--) {
+    const dir = segments.slice(0, depth).join("/");
+    if (workspacePackages.has(dir)) return { kind: "package", name: dir };
+  }
   if (ROOT_DIRS.has(head)) return { kind: "root" };
   if (NONE_DIRS.has(head)) return { kind: "none" };
   // Fail toward more verification, and say so: an unclassified directory is a

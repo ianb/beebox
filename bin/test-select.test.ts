@@ -31,6 +31,7 @@ function graphOf(input: {
     unresolved: new Set(input.unresolved ?? []),
     ambiguousEdges: 0,
     buildMs: 0,
+    cached: false,
   };
 }
 

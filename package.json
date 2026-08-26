@@ -19,7 +19,7 @@
     "lint:knip": "knip",
     "mobile-contract-check": "node --import tsx bin/mobile-contract-check.ts",
     "path-leak-check": "node --import tsx bin/path-leak-check.ts",
-    "postinstall": "patch-package",
+    "postinstall": "patch-package && pnpm --dir callback-box exec tap build",
     "prepare": "husky",
     "security:opengrep": "bash security/opengrep/run.sh",
     "snapshot:clerk-contract": "node --import tsx bin/snapshot-clerk-contract.ts",

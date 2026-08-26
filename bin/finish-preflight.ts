@@ -17,8 +17,8 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parse } from "yaml";
 import { changedPaths, git } from "./test-git.js";
+import { packageOwnerDirs } from "./workspace-packages.js";
 import {
   hasCodeChange,
   isDocPath,
@@ -59,18 +59,6 @@ const SKIP_RULE =
 
 function repoRoot(): string {
   return git(["rev-parse", "--show-toplevel"]);
-}
-
-/** Top-level directory of every pnpm workspace entry. */
-function workspacePackages(root: string): Set<string> {
-  const text = readFileSync(join(root, "pnpm-workspace.yaml"), "utf-8");
-  const parsed: unknown = parse(text);
-  const packages =
-    typeof parsed === "object" && parsed !== null && "packages" in parsed
-      ? (parsed as { packages?: unknown }).packages
-      : undefined;
-  const list = Array.isArray(packages) ? packages : [];
-  return new Set(list.map((entry) => String(entry).split("/")[0] ?? "").filter((p) => p !== ""));
 }
 
 function hasScriptIn(root: string): (pkg: string, script: string) => boolean {
@@ -205,7 +193,7 @@ export function buildSheet(input: { merge: boolean }): Sheet {
   const merge = input.merge ? mergeMain(root) : { status: "up-to-date" as const, broughtPaths: [] };
 
   const changed = changedPaths({ base: "main", cwd: root });
-  const packages = workspacePackages(root);
+  const packages = new Set(packageOwnerDirs(root));
   const grouped = groupPaths(changed, packages);
   const skip = mergeSkipped
     ? { value: false, reason: "main was not merged in (--no-merge) and is not contained" }
