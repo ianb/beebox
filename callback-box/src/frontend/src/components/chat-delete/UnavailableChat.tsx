@@ -8,9 +8,17 @@ import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 import { TextLink } from "../ui/TextLink";
 import { DeleteChatDialog } from "./DeleteChatDialog";
+import { transcriptStateSentence } from "../../lib/transcript-state";
+import type { RouterOutput } from "../../lib/trpc";
 
-export function UnavailableChat(props: { boxSlug: string | undefined; sessionId: string; label: string | null; huskPath: string | null }) {
-  const { boxSlug, sessionId, label, huskPath } = props;
+/** The bootstrap answer this page exists to render. */
+type UnavailableBootstrap = Extract<RouterOutput["chat"]["bootstrap"], { kind: "unavailable" }>;
+
+export function UnavailableChat({ boxSlug, chat }: { boxSlug: string | undefined; chat: UnavailableBootstrap }) {
+  const { sessionId, label, huskPath } = chat;
+  // A deletion in flight says nothing about where the transcript is — reporting
+  // a state there would be a guess presented as fact.
+  const transcript = chat.reason === "deletion-in-progress" ? null : chat.transcript;
   const [deleteOpen, setDeleteOpen] = useState(false);
   const navigate = useNavigate();
   const startNew = (): void => {
@@ -27,7 +35,7 @@ export function UnavailableChat(props: { boxSlug: string | undefined; sessionId:
             Conversation not available on this machine
           </Text>
           <Text as="p" size="sm" tone="muted">
-            Its local transcript is missing, so callback-box will not try to resume it.
+            {transcript === null ? "Cleanup of this conversation is in progress." : transcriptStateSentence(transcript)}
           </Text>
           <Row wrap>
             <Button id="cb-chat-unavailable-new" intent="primary" size="sm" onClick={startNew}>

@@ -155,6 +155,12 @@ export interface ChatHuskEntry {
   title?: string;
   /** Machine id stamped at creation; absent on husks written before Track 2. */
   origin?: string;
+  /**
+   * The origin machine's hostname at stamp time — a display label only, and
+   * possibly stale (a laptop renames itself with its network location). Lists
+   * fall back to the id when it is absent.
+   */
+  originName?: string;
 }
 
 /**
@@ -249,12 +255,14 @@ async function readChatHusk(boxRoot: string, relPath: string): Promise<ChatHuskE
   const contextDir = fm["context-dir"];
   const title = fm["title"];
   const origin = fm["origin"];
+  const originName = fm["origin-name"];
   return {
     path: relPath,
     session,
     ...(typeof contextDir === "string" ? { contextDir } : {}),
     ...(typeof title === "string" && title !== "" ? { title } : {}),
     ...(typeof origin === "string" && origin !== "" ? { origin } : {}),
+    ...(typeof originName === "string" && originName !== "" ? { originName } : {}),
   };
 }
 

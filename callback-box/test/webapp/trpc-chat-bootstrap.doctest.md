@@ -173,7 +173,7 @@ doesn't.)
 ```ts continue
 const missing = await caller(server).chat.bootstrap({ session: "no-such-session", slice: TAIL });
 JSON.stringify(missing)
-=> {"kind":"unavailable","sessionId":"no-such-session","history":null,"label":null,"status":{"sessionId":"no-such-session","running":false,"busy":false,"model":null,"engine":"claude"},"reason":"missing-local-transcript","huskPath":null,"pending":[]}
+=> {"kind":"unavailable","reason":"missing-local-transcript","transcript":{"state":"unknown"},"huskPath":null,"sessionId":"no-such-session","history":null,"label":null,"status":{"sessionId":"no-such-session","running":false,"busy":false,"model":null,"engine":"claude"},"pending":[]}
 ```
 
 Input still validates: a non-string session is rejected before any work, and so
