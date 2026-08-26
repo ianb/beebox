@@ -241,6 +241,22 @@ async function readChatHusk(boxRoot: string, relPath: string): Promise<ChatHuskE
 }
 
 /**
+ * Husk paths grouped by their `session` field — the shape both duplicate
+ * checks want (card-lint's cross-file rule at commit time, reconcile's
+ * warning at boot). One definition so the two can't disagree about what
+ * "the same session" means.
+ */
+export function groupHusksBySession(husks: ChatHuskEntry[]): Map<string, string[]> {
+  const bySession = new Map<string, string[]>();
+  for (const husk of husks) {
+    const paths = bySession.get(husk.session);
+    if (paths === undefined) bySession.set(husk.session, [husk.path]);
+    else paths.push(husk.path);
+  }
+  return bySession;
+}
+
+/**
  * The husk for one session, or null when it has none.
  *
  * The `session` field is authoritative — a husk can be renamed freely, and the
@@ -278,10 +294,22 @@ export async function findChatHuskEntry(boxRoot: string, sessionId: string): Pro
  */
 export async function reconcileChatHusks(boxRoot: string): Promise<void> {
   const [entries, husks] = await Promise.all([loadHistoryEntries(boxRoot), listChatHusks(boxRoot)]);
-  const husked = new Set(husks.map((h) => h.session));
+  const bySession = groupHusksBySession(husks);
+  // Boot-time visibility for what card-lint reports at commit time. A duplicate
+  // is no longer created (ensure is idempotent on the field), but a box can
+  // still hold one from before that fix, from a copied card, or a hand-edit —
+  // and it would otherwise be silent until someone happened to lint. No repair:
+  // which husk to keep is editorial (`core/lint-chat-duplicates.ts`).
+  for (const [session, paths] of bySession) {
+    if (paths.length < 2) continue;
+    console.warn(
+      `chat-husk: ${String(paths.length)} husks claim session ${session} (${paths.join(", ")}) — ` +
+      "keep one and `cb trash` the others",
+    );
+  }
 
   for (const entry of entries) {
-    if (husked.has(entry.id)) continue;
+    if (bySession.has(entry.id)) continue;
     let mtime: Date;
     try {
       mtime = entry.engine === "codex"

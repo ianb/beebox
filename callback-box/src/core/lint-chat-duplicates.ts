@@ -17,7 +17,7 @@
 
 import * as path from "node:path";
 import type { LintIssue } from "../cards/index.js";
-import { listChatHusksTree } from "./chat/husk.js";
+import { groupHusksBySession, listChatHusksTree } from "./chat/husk.js";
 
 /**
  * `session` → the box-relative husk paths carrying it, per lint run. Keyed on
@@ -30,15 +30,7 @@ const runIndexes = new WeakMap<object, Promise<Map<string, string[]>>>();
 function sessionIndex(input: { boxRoot: string; run: object }): Promise<Map<string, string[]>> {
   const cached = runIndexes.get(input.run);
   if (cached !== undefined) return cached;
-  const built = listChatHusksTree(input.boxRoot).then((husks) => {
-    const index = new Map<string, string[]>();
-    for (const husk of husks) {
-      const paths = index.get(husk.session);
-      if (paths === undefined) index.set(husk.session, [husk.path]);
-      else paths.push(husk.path);
-    }
-    return index;
-  });
+  const built = listChatHusksTree(input.boxRoot).then(groupHusksBySession);
   runIndexes.set(input.run, built);
   return built;
 }

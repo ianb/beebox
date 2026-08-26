@@ -223,3 +223,33 @@ JSON.stringify(husks.map((h) => ({ session: h.session.slice(0, 8), title: h.titl
   }
 ]
 ```
+
+## reconcile warns about duplicate husks, and repairs nothing
+
+Two husks claiming one session is no longer *created* — ensure is idempotent on
+the field — but a box can still hold a pair from before that fix, from a copied
+card, or from a hand-edit. `cb validate` errors on it, which only helps at
+commit time; reconcile runs on every boot, so it says so once per duplicated
+session, naming the paths. It doesn't pick a winner: which husk keeps the
+chat's title and body is the boxholder's call.
+
+```ts
+const box = await makeTmpBox();
+const dup = "59fc20dd-fe6d-45cb-8f37-f1508a5a0869";
+await box.write("store/chat/web/2026-07-02_59fc20dd.chat.card", `---\nsession: ${dup}\n---\n`);
+await box.write("store/chat/web/Copied.chat.card", `---\nsession: ${dup}\n---\n`);
+await box.write("store/chat/web/2026-07-03_aaaa9999.chat.card",
+  "---\nsession: aaaa9999-fe6d-45cb-8f37-f1508a5a0869\n---\n");
+
+const warnings: string[] = [];
+const original = console.warn;
+console.warn = (msg: string) => { warnings.push(msg); };
+await reconcileChatHusks(box.root);
+console.warn = original;
+
+warnings.join("\n")
+=> chat-husk: 2 husks claim session 59fc20dd-fe6d-45cb-8f37-f1508a5a0869 (store/chat/web/2026-07-02_59fc20dd.chat.card, store/chat/web/Copied.chat.card) — keep one and `cb trash` the others
+
+(await listChatHusks(box.root)).length
+=> 3
+```
