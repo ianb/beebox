@@ -52,14 +52,25 @@ const ANCHOR_RECAPTURE_MS = 80;
  */
 const PREPEND_SNAPSHOT_MS = 10000;
 /**
- * How long the open-thread hold outlives `settleOpen()`. The caller can only
- * report "the history is in the DOM" from an effect, which runs *before* the
- * ResizeObserver cycle that measures it — and markdown, images and embeds keep
- * resizing for a beat after that. The hold therefore lapses on a timer rather
- * than on the report, and it is a fixed window, not one that growth can extend:
- * a thread opened onto a live stream must not follow it forever.
+ * How long the open-thread hold outlives the transcript's first render. The
+ * caller can only report "the history is in the DOM" from an effect, which
+ * runs *before* the ResizeObserver cycle that measures it — and markdown and
+ * embeds keep resizing for a beat after that. The hold therefore lapses on a
+ * timer rather than on the report.
  */
 const OPEN_SETTLE_MS = 400;
+/**
+ * The most the hold waits for the transcript's images before that timer
+ * starts. An `<img>` reserves no height until its bytes land (the chat has no
+ * dimension metadata to reserve with), so on a real box the last turn grows by
+ * up to a screenful well after the first render; a hold that lapsed before
+ * then stranded the reader an image's height above the bottom of a thread they
+ * had just opened. `settleOpen` waits for the images in and around the viewport
+ * to load or fail, bounded by this cap: a fetch that retries for longer (see
+ * use-image-retry) is not something a thread opened onto a live stream should
+ * be followed for. The reader's own action ends the hold at any time.
+ */
+const OPEN_IMAGES_MAX_MS = 8000;
 
 interface Anchor { el: Element; top: number }
 
@@ -153,6 +164,56 @@ function applyReconcileAction(action: ReconcileAction, opts: {
   }
 }
 
+/**
+ * Resolves once every image inside the scroller that is still loading and is
+ * within a viewport's height of the visible area has loaded or failed. Images
+ * further away are not waited for — lazy ones never load until scrolled to,
+ * and their growth is above the reader, which the anchor compensation handles.
+ */
+async function pendingNearbyImages(scroller: HTMLDivElement, content: HTMLDivElement | null): Promise<void> {
+  if (!content) return;
+  const box = scroller.getBoundingClientRect();
+  const margin = scroller.clientHeight;
+  const waits: Promise<void>[] = [];
+  for (const img of Array.from(content.querySelectorAll("img"))) {
+    if (img.complete) continue;
+    const r = img.getBoundingClientRect();
+    if (r.bottom < box.top - margin || r.top > box.bottom + margin) continue;
+    waits.push(new Promise<void>((resolve) => {
+      const done = (): void => {
+        img.removeEventListener("load", done);
+        img.removeEventListener("error", done);
+        resolve();
+      };
+      img.addEventListener("load", done);
+      img.addEventListener("error", done);
+    }));
+  }
+  await Promise.all(waits);
+}
+
+/**
+ * Arm the end of the open-thread hold: the cap first (its handle doubles as
+ * the "a settle is in flight" marker), then the short lapse once `until`
+ * resolves — unless the hold ended or a newer thread opened meanwhile.
+ */
+function armOpenSettle(wait: { until: Promise<void> | undefined; scroller: HTMLDivElement | null; content: HTMLDivElement | null }, refs: {
+  phase: MutableRefObject<boolean>;
+  gen: MutableRefObject<number>;
+  timer: MutableRefObject<number | null>;
+  end: () => void;
+}): void {
+  const { end } = refs;
+  const until = wait.until ?? (wait.scroller ? pendingNearbyImages(wait.scroller, wait.content) : Promise.resolve());
+  const gen = refs.gen.current;
+  refs.timer.current = window.setTimeout(end, OPEN_IMAGES_MAX_MS);
+  void until.then(() => {
+    if (!refs.phase.current || refs.gen.current !== gen) return;
+    clearTimer(refs.timer);
+    refs.timer.current = window.setTimeout(end, OPEN_SETTLE_MS);
+  });
+}
+
 /** A `window.setTimeout` handle held in a ref, cleared idempotently. */
 function clearTimer(ref: MutableRefObject<number | null>): void {
   if (ref.current !== null) window.clearTimeout(ref.current);
@@ -191,8 +252,9 @@ export interface ChatScroll {
   captureForPrepend: () => void;
   /** Begin the bounded open-thread phase (hold the bottom as content lands). */
   openThread: () => void;
-  /** The first history render has landed — the hold lapses shortly after. */
-  settleOpen: () => void;
+  /** The first history render has landed — the hold lapses shortly after the
+   *  nearby images have loaded (or `until`, when the caller knows better). */
+  settleOpen: (opts?: { until?: Promise<void> }) => void;
   /** The scroller's clientHeight, for the last turn's min-height spacer. */
   viewportPx: number;
 }
@@ -226,6 +288,7 @@ export function useChatScroll(): ChatScroll {
   const anchorRef = useRef<Anchor | null>(null);
   const anchorTimerRef = useRef<number | null>(null);
   const openPhaseRef = useRef(true);
+  const openGenRef = useRef(0); // bumped per openThread(): a stale settle must not end the new hold
   const openTimerRef = useRef<number | null>(null);
   const observersRef = useRef<{ content: ResizeObserver | null; scroller: ResizeObserver | null }>({
     content: null,
@@ -287,13 +350,13 @@ export function useChatScroll(): ChatScroll {
 
   const openThread = useCallback(() => {
     endOpenPhase();
-    openPhaseRef.current = true;
+    openPhaseRef.current = true; openGenRef.current += 1;
     writeToBottom("instant");
   }, [endOpenPhase, writeToBottom]);
 
-  const settleOpen = useCallback(() => {
+  const settleOpen = useCallback((opts?: { until?: Promise<void> }) => {
     if (!openPhaseRef.current || openTimerRef.current !== null) return;
-    openTimerRef.current = window.setTimeout(endOpenPhase, OPEN_SETTLE_MS);
+    armOpenSettle({ until: opts?.until, scroller: scrollerElRef.current, content: contentElRef.current }, { phase: openPhaseRef, gen: openGenRef, timer: openTimerRef, end: endOpenPhase });
   }, [endOpenPhase]);
 
   // Re-pick the anchor once scrolling pauses: the previous one has usually
