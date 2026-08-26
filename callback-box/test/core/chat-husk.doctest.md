@@ -1,16 +1,17 @@
 # Chat husks — a `chat` card per web chat session
 
 `ensureChatHusk` creates the session's card under `store/chat/web/`
-(docs/plans/chat-husks.md): identity + editorial only, with the
-`_<shortid>.chat.card` filename suffix as the idempotency key.
+(docs/plans/chat-husks.md): identity + editorial only, keyed on the
+`session` field — the `_<shortid>.chat.card` filename is a naming
+convention and a lookup hint, nothing more.
 `reconcileChatHusks` gives every history entry a husk, skipping ghosts
 whose transcript is gone.
 
 ```ts setup
-import { mkdir, writeFile, readFile as readFsFile } from "node:fs/promises";
+import { mkdir, rename, writeFile, readFile as readFsFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { ensureChatHusk, findChatHusk, reconcileChatHusks, listChatHusks } from "../../src/core/chat/husk.js";
+import { ensureChatHusk, findChatHuskEntry, reconcileChatHusks, listChatHusks } from "../../src/core/chat/husk.js";
 import { getSessionLogPath } from "../../src/core/chat/session/transcript-paths.js";
 ```
 
@@ -37,9 +38,9 @@ context-dir: store/projects
 ---
 ```
 
-## ensure is idempotent — a later call finds the existing husk by suffix
+## ensure is idempotent on the `session` field
 
-Even with a different date: the suffix, not the full name, is the key.
+Even with a different date: the field, not the file name, is the key.
 
 ```ts continue
 await ensureChatHusk(box.root, {
@@ -48,11 +49,29 @@ await ensureChatHusk(box.root, {
 })
 => store/chat/web/2026-07-02_59fc20dd.chat.card
 
-await findChatHusk(box.root, "59fc20dd-fe6d-45cb-8f37-f1508a5a0869")
+(await findChatHuskEntry(box.root, "59fc20dd-fe6d-45cb-8f37-f1508a5a0869"))?.path ?? null
 => store/chat/web/2026-07-02_59fc20dd.chat.card
 
-await findChatHusk(box.root, "00000000-unknown")
+await findChatHuskEntry(box.root, "00000000-0000-4000-8000-000000000000")
 => null
+```
+
+Renaming the husk to a name with no `_<shortid>` suffix is safe — renaming is
+encouraged once a chat's topic is clear, and it used to mint a **second** card
+for the same session on the next resume after a server restart
+(`issues/bugs/2026-07-28-renamed-husk-duplicates-on-backfill.md`). The suffix is
+only a lookup hint; when it misses, the `session`-field scan finds the card.
+
+```ts continue
+await rename(box.path("store/chat/web/2026-07-02_59fc20dd.chat.card"), box.path("store/chat/web/Planning the trip.chat.card"));
+await ensureChatHusk(box.root, {
+  sessionId: "59fc20dd-fe6d-45cb-8f37-f1508a5a0869",
+  date: new Date("2026-08-01T12:00:00Z"),
+})
+=> store/chat/web/Planning the trip.chat.card
+
+(await listChatHusks(box.root)).length
+=> 1
 ```
 
 ## the snippet title strips every wrapper, not just `<chat-app>`
@@ -123,11 +142,11 @@ await mkdir(dirname(logPath), { recursive: true });
 await writeFile(logPath, "{}\n");
 
 await reconcileChatHusks(box.root);
-const huskPath = await findChatHusk(box.root, live);
+const huskPath = (await findChatHuskEntry(box.root, live))?.path ?? null;
 huskPath !== null
 => true
 
-await findChatHusk(box.root, ghost)
+await findChatHuskEntry(box.root, ghost)
 => null
 
 (await readFsFile(box.path(huskPath ?? ""), "utf-8")).includes(`session: ${live}`)
@@ -150,7 +169,7 @@ await box.write(".callback-box/chat-session-history.json", JSON.stringify({
 }));
 
 await reconcileChatHusks(box.root);
-(await findChatHusk(box.root, late)) !== null
+(await findChatHuskEntry(box.root, late)) !== null
 => true
 ```
 

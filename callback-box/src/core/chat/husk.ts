@@ -32,19 +32,18 @@ function shortId(sessionId: string): string {
   return sessionId.slice(0, 8);
 }
 
-/** `2026-07-02_59fc20dd.chat.card` — date names the file; the suffix is the idempotency key. */
+/** `2026-07-02_59fc20dd.chat.card` — date names the file, the suffix is a lookup hint. */
 function huskFileName(sessionId: string, date: Date): string {
   return `${date.toISOString().slice(0, 10)}_${shortId(sessionId)}.chat.card`;
 }
 
 /**
- * Find an existing husk for a session, by the `_<shortid>.chat.card`
- * filename suffix (rename-tolerant as long as the suffix survives; a
- * fully renamed husk is fine too — it just won't be found here, and
- * ensure would create a duplicate pointer, which validation of the
- * `session` field makes discoverable rather than harmful).
+ * The husk path matching the `_<shortid>.chat.card` filename convention, or
+ * null. A fast path only — the filename is a naming convention, never the key,
+ * so every caller must confirm the card's `session` field and fall back to the
+ * field scan when this misses. Private for that reason.
  */
-export async function findChatHusk(boxRoot: string, sessionId: string): Promise<string | null> {
+async function findHuskBySuffix(boxRoot: string, sessionId: string): Promise<string | null> {
   const suffix = `_${shortId(sessionId)}.chat.card`;
   let names: string[];
   try {
@@ -87,12 +86,17 @@ async function readSnippetTitle(boxRoot: string, sessionId: string): Promise<str
 
 /**
  * Ensure a husk card exists for a session; returns its box-relative path.
- * Idempotent. `date` names the file (defaults to now; backfill passes the
- * transcript mtime so old husks sort by when the chat happened).
+ *
+ * Idempotent on the `session` field, not on the filename: a husk renamed to
+ * something without the `_<shortid>` suffix is still found, so resuming a
+ * renamed chat doesn't mint a second card pointing at the same session
+ * (`docs/plans/chat-session-identity.md`, Track 1). `date` names the file
+ * (defaults to now; backfill passes the transcript mtime so old husks sort by
+ * when the chat happened).
  */
 export async function ensureChatHusk(boxRoot: string, opts: { sessionId: string; contextDir?: string; date?: Date }): Promise<string> {
-  const existing = await findChatHusk(boxRoot, opts.sessionId);
-  if (existing !== null) return existing;
+  const existing = await findChatHuskEntry(boxRoot, opts.sessionId);
+  if (existing !== null) return existing.path;
 
   const title = await readSnippetTitle(boxRoot, opts.sessionId);
   const relPath = `${CHAT_HUSK_DIR}/${huskFileName(opts.sessionId, opts.date ?? new Date())}`;
@@ -218,7 +222,7 @@ async function readChatHusk(boxRoot: string, relPath: string): Promise<ChatHuskE
  * would have found.
  */
 export async function findChatHuskEntry(boxRoot: string, sessionId: string): Promise<ChatHuskEntry | null> {
-  const relPath = await findChatHusk(boxRoot, sessionId);
+  const relPath = await findHuskBySuffix(boxRoot, sessionId);
   if (relPath !== null) {
     const entry = await readChatHusk(boxRoot, relPath);
     if (entry !== null && entry.session === sessionId) return entry;
