@@ -12,7 +12,7 @@
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/launch-headless.sh"
 
 launch_session_build() {
-  local model_arg="" rc_arg="" model_line=""
+  local model_arg="" rc_arg="" model_line="" resume_arg=""
   LS_LAUNCHER="$LS_LAUNCH_DIR/launch.sh"
   LS_LAUNCH_TOKEN="${LS_LAUNCH_TOKEN:-$(uuidgen 2>/dev/null || printf '%s-%s-%s' "$(date +%s)" "$$" "$RANDOM")}"
 
@@ -23,6 +23,17 @@ launch_session_build() {
   if [ "$LS_AGENT" = "claude" ]; then
     [ -n "$LS_MODEL" ] && model_arg="--model $LS_MODEL"
     [ "$LS_REMOTE_CONTROL" = "1" ] && rc_arg="--remote-control $LS_WORKSTREAM"
+    # Continuing a conversation instead of starting one. The id is interpolated
+    # into a generated script unquoted, and `--resume` takes an OPTIONAL value —
+    # a malformed id would swallow the next flag or, empty, eat the briefing as
+    # the session to resume. Refuse anything that is not a uuid.
+    if [ -n "${LS_CLAUDE_RESUME_SESSION:-}" ]; then
+      if [[ ! "$LS_CLAUDE_RESUME_SESSION" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]]; then
+        echo "launch-session: LS_CLAUDE_RESUME_SESSION is not a uuid: $LS_CLAUDE_RESUME_SESSION" >&2
+        return 1
+      fi
+      resume_arg="--resume $LS_CLAUDE_RESUME_SESSION"
+    fi
     cat > "$LS_LAUNCHER" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
@@ -77,9 +88,9 @@ else
 fi
 claude_status=0
 if [ -s "$LS_PROMPT_FILE" ]; then
-  claude --name "$LS_WORKSTREAM" $model_arg $rc_arg --dangerously-skip-permissions "\$(cat "$LS_PROMPT_FILE")" || claude_status=\$?
+  claude --name "$LS_WORKSTREAM" $model_arg $rc_arg $resume_arg --dangerously-skip-permissions "\$(cat "$LS_PROMPT_FILE")" || claude_status=\$?
 else
-  claude --name "$LS_WORKSTREAM" $model_arg $rc_arg --dangerously-skip-permissions || claude_status=\$?
+  claude --name "$LS_WORKSTREAM" $model_arg $rc_arg $resume_arg --dangerously-skip-permissions || claude_status=\$?
 fi
 exit \$claude_status
 EOF

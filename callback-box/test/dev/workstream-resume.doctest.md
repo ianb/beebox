@@ -6,7 +6,7 @@ choice before recreation.
 
 ```ts setup
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { promisify } from "node:util";
@@ -70,6 +70,92 @@ const oldTipRecentDir = await route(true, "none", {}, String(old), String(recent
 const noTipRecentDir = await route(true, "none", {}, "", String(recent));
 JSON.stringify([oldTipRecentDir.state, noTipRecentDir.state])
 => ["stale","dormant"]
+```
+
+## Continuing a conversation is decided before the tab opens
+
+A worktree can be culled and recreated at the same path, and Claude Code keys
+transcripts by path — so the conversation is still there. `resume` continues it
+when the recorded id has a transcript, and starts fresh, saying which reason,
+when it does not. It never picks the newest transcript in the directory: a
+workstream that was already resumed fresh once has two, and the newest is not
+the one that did the work.
+
+```ts
+async function mode(agent: string, fresh: boolean, record: object, projects: string) {
+  const result = await execFileAsync("bash", ["-c", '. "$1"; workstream_resume_session_mode "$2" "$3" "$4" "$5"', "mode-test", resumeLib, agent, String(fresh), JSON.stringify(record), projects]);
+  return result.stdout.trim();
+}
+const projectsRoot = await mkdtemp(`${tmpdir()}/workstream-resume-projects-`);
+const kept = "40009a22-c9b5-49f8-b166-f16937403e8d";
+const pruned = "db662a8d-58b6-4a89-b281-9567aa9c73bf";
+await mkdir(`${projectsRoot}/-Users-someone-src-worktrees-chat-scroll`, { recursive: true });
+await writeFile(`${projectsRoot}/-Users-someone-src-worktrees-chat-scroll/${kept}.jsonl`, "{}\n");
+JSON.stringify([
+  await mode("claude", false, { sessionId: kept }, projectsRoot),
+  await mode("claude", true, { sessionId: kept }, projectsRoot),
+  await mode("claude", false, { sessionId: pruned }, projectsRoot),
+  await mode("claude", false, {}, projectsRoot),
+  await mode("codex", false, { sessionId: kept }, projectsRoot),
+  await mode("claude", false, { sessionId: "../../etc/passwd" }, projectsRoot),
+])
+=> ["continue 40009a22-c9b5-49f8-b166-f16937403e8d","fresh forced","fresh transcript-missing","fresh no-recorded-session","fresh agent-not-claude","fresh invalid-session-id"]
+```
+
+An id this decision accepts is one `launch_session_build` will also accept — its
+uuid guard runs after `resume` has committed to continuing, so a disagreement
+between them would mean no session at all rather than a fresh one. A recorded id
+that is not a uuid falls to fresh here even when a file with that name exists.
+And a transcript must be non-empty: a zero-byte one is a session killed before
+it wrote anything, and `--resume` on it fails inside the tab.
+
+```ts continue
+const malformed = "not-a-uuid";
+const emptied = "7c1f0f5a-1111-4222-8333-444455556666";
+await writeFile(`${projectsRoot}/-Users-someone-src-worktrees-chat-scroll/${malformed}.jsonl`, "{}\n");
+await writeFile(`${projectsRoot}/-Users-someone-src-worktrees-chat-scroll/${emptied}.jsonl`, "");
+JSON.stringify([
+  await mode("claude", false, { sessionId: malformed }, projectsRoot),
+  await mode("claude", false, { sessionId: emptied }, projectsRoot),
+])
+=> ["fresh invalid-session-id","fresh transcript-missing"]
+```
+
+A transcript is found by id across every project directory, not by the one
+encoding the current worktree path, so a session started elsewhere still
+resolves.
+
+```ts continue
+const found = await execFileAsync("bash", ["-c", '. "$1"; workstream_claude_transcript "$2" "$3"', "transcript-test", resumeLib, kept, projectsRoot]);
+found.stdout.trim().endsWith(`chat-scroll/${kept}.jsonl`)
+=> true
+```
+
+The two first messages differ in what they assume the reader remembers. A fresh
+session is told to go read the tree; a continued one already knows why it is
+there and needs only what changed while it was gone.
+
+```ts continue
+const record = { removed: { finalSha: "abc1234", merged: true } };
+async function prompt(fn: string) {
+  const result = await execFileAsync("bash", ["-c", '. "$1"; "$2" chat-scroll "$3" "$4"', "prompt-test", resumeLib, fn, JSON.stringify(record), "def5678 a landed commit"]);
+  return result.stdout;
+}
+const continued = await prompt("workstream_continued_prompt");
+const startedFresh = await prompt("workstream_continuation_prompt");
+JSON.stringify([
+  continued.includes("this conversation resumed"),
+  continued.includes("recreated at the same path"),
+  continued.includes("def5678 a landed commit"),
+  startedFresh.includes("before changing anything"),
+  startedFresh.includes("def5678 a landed commit"),
+  !startedFresh.includes("prior Claude session id"),
+])
+=> [true,true,true,true,true,true]
+```
+
+```ts cleanup
+await rm(projectsRoot, { recursive: true, force: true });
 ```
 
 ## Briefing sources fail loudly and share one wrapper

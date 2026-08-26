@@ -43,13 +43,14 @@ async function buildScript(
     mono?: string;
     model?: string;
     resume: boolean;
+    claudeSession?: string;
     description?: string;
     issue?: string;
     worktreePath?: string;
   },
 ) {
   const { agent, resume } = options;
-  const launchDir = join(root, `${agent}-${resume ? "resume" : "fresh"}`);
+  const launchDir = join(root, `${agent}-${resume ? "resume" : "fresh"}${options.claudeSession ?? ""}`);
   const promptFile = join(root, "prompt.txt");
   await writeFile(promptFile, "briefing");
   const descriptionFile = join(root, `${agent}-${resume ? "resume" : "fresh"}-description.txt`);
@@ -60,7 +61,9 @@ async function buildScript(
     "launch_session_build",
     'bash -n "$LS_LAUNCHER"',
     'printf "%s" "$LS_LAUNCHER"',
-  ].join("; ");
+    // `&&`, not `;`: a refused build must reach the caller as a non-zero exit
+    // rather than being papered over by the printf that follows it.
+  ].join(" && ");
   const result = await execFileAsync(
     "bash",
     ["-c", command, "launch-test", launchLib],
@@ -79,6 +82,9 @@ async function buildScript(
         LS_LAUNCH_TOKEN: "token-seam",
         LS_DESCRIPTION_FILE: options.description === undefined ? "" : descriptionFile,
         LS_WORKSTREAM: "seam",
+        ...(options.claudeSession !== undefined
+          ? { LS_CLAUDE_RESUME_SESSION: options.claudeSession }
+          : {}),
         ...(options.issue !== undefined ? { LS_ISSUE: options.issue } : {}),
         ...(options.worktreePath
           ? { LS_WORKTREE_PATH: options.worktreePath }
@@ -163,6 +169,38 @@ JSON.stringify([
   resolvedScript.includes('wt_path="/resolved/seam"'),
 ])
 => [true,true]
+```
+
+## Claude continues a recorded conversation instead of starting one
+
+`LS_CLAUDE_RESUME_SESSION` turns the generated script's `claude` call into a
+`--resume`, with the briefing still the first message of the continued session.
+The id is interpolated unquoted and `--resume` takes an *optional* value, so
+anything that is not a uuid is refused before a script is written at all —
+otherwise a malformed id would consume the next flag, and an empty one would
+treat the briefing itself as the session to resume.
+
+```ts continue
+const continuedScript = await buildScript(root, {
+  agent: "claude",
+  resume: false,
+  claudeSession: "40009a22-c9b5-49f8-b166-f16937403e8d",
+});
+const freshScript = await buildScript(root, { agent: "claude", resume: false });
+JSON.stringify([
+  continuedScript.includes('claude --name "seam" --model opus --remote-control seam --resume 40009a22-c9b5-49f8-b166-f16937403e8d --dangerously-skip-permissions "$(cat'),
+  continuedScript.indexOf('cd "$wt_path"') < continuedScript.indexOf("--resume 40009a22"),
+  !freshScript.includes("--resume"),
+])
+=> [true,true,true]
+
+const badSession = await buildScript(root, {
+  agent: "claude",
+  resume: false,
+  claudeSession: "--dangerously-skip-permissions",
+}).catch((error: unknown) => error as { code: number; stderr: string });
+JSON.stringify({ code: badSession.code, message: badSession.stderr.includes("is not a uuid") })
+=> {"code":1,"message":true}
 ```
 
 ## Codex preserves creation, flags, and teardown behavior

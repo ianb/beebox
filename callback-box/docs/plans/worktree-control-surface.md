@@ -601,11 +601,13 @@ shape.
 - **Should `resume` reattach the actual conversation?** Claude has `--resume
   <session-id>`; Codex has `codex resume`. Both need a session id the launcher
   never sees today — Claude Code could write one from a `SessionStart` hook,
-  Codex stores its own under `~/.codex/sessions`. **Lean: no, not in the first
-  version.** Resuming the worktree with a fresh context is the missing motion;
-  conversation resume is a second, agent-specific mechanism that would need a
-  per-agent id story, and getting it wrong reintroduces the Claude-only coupling
-  this plan removes. Revisit once `resume` is in daily use.
+  Codex stores its own under `~/.codex/sessions`. **Leaned no for the first
+  version; answered yes on 2026-08-26**, once daily use produced the case this
+  was waiting for (a culled `chat-scroll` came back with its 1MB transcript on
+  disk and no way to reach it). Claude's id comes from the `SessionStart` hook
+  as anticipated; Codex keeps its own `codex resume --last` path and gains
+  nothing here. The per-agent id story stayed per-agent, so the Claude-only
+  coupling this plan removes did not come back.
 - **Does the session file earn itself?** Stated in Track D's first chunk as
   deliberately absent. Decide after using `resume --agent` by hand for a while.
   **Lean: probably yes for `--agent`, probably no for `model`** — retyping a
