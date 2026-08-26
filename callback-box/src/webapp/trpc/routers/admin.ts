@@ -44,6 +44,7 @@ const boxConfigSchema = z.object({
   // boundary that rejects an unusable value; here it only needs to survive the
   // trip so the UI can show it back as unrecognized.
   agentModel: z.string().optional(),
+  engines: z.object({ claude: z.boolean().optional(), codex: z.boolean().optional() }).optional(),
   allowedEmails: z.array(z.string()).default([]),
   publicUrl: z.string().nullable().default(null),
   googleServices: googleServicesSchema.default({}),
@@ -219,6 +220,9 @@ export const adminRouter = router({
       googleServices: config.googleServices,
       agentEngine: config.agentEngine,
       agentModel: config.agentModel ?? null,
+      // Absent means "only the default engine", the same rule loadEnabledEngines
+      // applies — resolved here so the UI never has to re-derive it.
+      engines: config.engines ?? { [config.agentEngine]: true },
     };
   }),
 
@@ -246,8 +250,9 @@ export const adminRouter = router({
             .refine((m) => modelTier(normalizeModelId(m)) !== null, { message: "Unknown model id" })
             .nullable()
             .optional(),
+          engines: z.object({ claude: z.boolean().optional(), codex: z.boolean().optional() }).optional(),
         })
-        .refine((v) => v.allowedEmails !== undefined || v.googleServices !== undefined || v.agentEngine !== undefined || v.agentModel !== undefined, {
+        .refine((v) => v.allowedEmails !== undefined || v.googleServices !== undefined || v.agentEngine !== undefined || v.agentModel !== undefined || v.engines !== undefined, {
           message: "At least one box configuration field is required",
         }),
     )
@@ -258,6 +263,7 @@ export const adminRouter = router({
         ...(input.googleServices === undefined ? {} : { googleServices: input.googleServices }),
         ...(input.agentEngine === undefined ? {} : { agentEngine: input.agentEngine }),
         ...(input.agentModel === undefined ? {} : { agentModel: input.agentModel }),
+        ...(input.engines === undefined ? {} : { engines: input.engines }),
       });
       if (result.commitError) {
         console.error(`[admin] box config was saved but its Git commit failed for ${ctx.boxRoot}:`, result.commitError);
@@ -270,6 +276,7 @@ export const adminRouter = router({
         googleServices: saved.googleServices,
         agentEngine: saved.agentEngine,
         agentModel: saved.agentModel ?? null,
+        engines: saved.engines ?? { [saved.agentEngine]: true },
       };
     }),
 

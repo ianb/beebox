@@ -2,10 +2,13 @@
 
 import { trpc } from "../../lib/trpc";
 import { Card } from "../ui/Card";
-import { RadioGroup, SelectField } from "../ui/fields";
+import { CheckboxField, RadioGroup, SelectField } from "../ui/fields";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 import { chatModelOptions, parseChatAgentEngine } from "@shared/chat-models.js";
+import { AGENT_ENGINES } from "@shared/agent-models.js";
+
+const ENGINE_LABELS: Record<string, string> = { claude: "Claude Code", codex: "Codex" };
 
 const ENGINE_OPTIONS = [
   {
@@ -83,6 +86,28 @@ export function AgentEngineSection() {
                 update.mutate({ agentEngine });
               }}
             />
+            <Stack gap="xs">
+              <Text size="sm" weight="semibold">Available engines</Text>
+              <Text size="sm" tone="muted">
+                Which harnesses a new chat may choose. Turn off an engine this box has no
+                account for, so nobody starts a chat that cannot run.
+              </Text>
+              {AGENT_ENGINES.map((candidate) => (
+                <CheckboxField
+                  key={candidate}
+                  id={`cb-admin-engine-enabled-${candidate}`}
+                  label={ENGINE_LABELS[candidate] ?? candidate}
+                  checked={candidate === engine || config.data.engines[candidate] === true}
+                  // The default engine cannot be turned off — a box whose default
+                  // engine is unavailable cannot run at all.
+                  disabled={candidate === engine || update.isPending}
+                  helper={candidate === engine ? "The default engine is always available." : undefined}
+                  onChange={(checked) => {
+                    update.mutate({ engines: { ...config.data.engines, [candidate]: checked } });
+                  }}
+                />
+              ))}
+            </Stack>
             <SelectField
               id="cb-admin-agent-model"
               label="Default model"

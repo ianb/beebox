@@ -6,7 +6,7 @@ The model picker and mutation boundary share one engine-indexed registry.
 import { chatModelOptions, isChatModelAllowed, parseChatAgentEngine } from "../../src/shared/chat-models.js";
 import { modelTier, resolveProcedureModel, isProcedureModelName, PROCEDURE_MODEL_NAMES, TIER_RANK } from "../../src/shared/agent-models.js";
 import { liveModelState, resolveBoxModelForEngine, resolveEffectiveModel, resolveSmallModelForEngine, loadEffectiveSmallModel } from "../../src/core/model-policy.js";
-import { loadBoxModel, clearBoxConfigCache } from "../../src/core/box/config.js";
+import { loadBoxModel, loadEnabledEngines, clearBoxConfigCache } from "../../src/core/box/config.js";
 import { writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { chatModelFileForSession, loadCurrentModel, loadCurrentModelForEngine, saveCurrentModel } from "../../src/core/chat/session/state.js";
@@ -208,4 +208,42 @@ await loadEffectiveSmallModel(smallBox.root)
 => gpt-5.6-terra
 
 await smallBox.cleanup();
+```
+
+## Which engines a box may offer
+
+A box with no Codex subscription should not be offered Codex chats. Absent
+config means **only the default engine** — how every box behaved before the
+field existed — rather than both.
+
+```ts
+const engineBox = await makeTmpBox();
+await mkdir(join(engineBox.root, "config"), { recursive: true });
+const writeEngines = async (config: Record<string, unknown>) => {
+  await writeFile(join(engineBox.root, "config/box.json"), JSON.stringify(config));
+  clearBoxConfigCache(engineBox.root);
+};
+
+await writeEngines({});
+JSON.stringify(await loadEnabledEngines(engineBox.root))
+=> ["claude"]
+
+await writeEngines({ engines: { claude: true, codex: true } });
+JSON.stringify(await loadEnabledEngines(engineBox.root))
+=> ["claude","codex"]
+
+await writeEngines({ agentEngine: "codex", engines: { codex: true } });
+JSON.stringify(await loadEnabledEngines(engineBox.root))
+=> ["codex"]
+```
+
+A config that disables the box's own default engine is a mistake, not a state to
+honor: nothing could run. The default comes back enabled, loudly.
+
+```ts continue
+await writeEngines({ agentEngine: "codex", engines: { claude: true, codex: false } });
+JSON.stringify(await loadEnabledEngines(engineBox.root))
+=> ["claude","codex"]
+
+await engineBox.cleanup();
 ```

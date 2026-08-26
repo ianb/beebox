@@ -7,7 +7,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { errnoCode } from "../../lib/error-guards.js";
-import { modelTier, type AgentEngine } from "../../shared/agent-models.js";
+import { AGENT_ENGINES, modelTier, type AgentEngine } from "../../shared/agent-models.js";
 import { normalizeModelId } from "../../shared/model-ids.js";
 
 export type { AgentEngine } from "../../shared/agent-models.js";
@@ -27,6 +27,13 @@ export interface BoxConfig {
    * engine the invocation runs on.
    */
   smallModel?: string;
+  /**
+   * Which native harnesses this box may offer at all — a box with no Codex
+   * subscription should not be offered Codex chats. Missing means only
+   * {@link BoxConfig.agentEngine} is enabled, which is how every box behaved
+   * before the field existed.
+   */
+  engines?: Partial<Record<AgentEngine, boolean>>;
   publicUrl?: string;
   allowedEmails?: string[];
   /** IANA timezone for this box (e.g. "America/Chicago"). Used in all agent prompts. */
@@ -174,6 +181,27 @@ async function readConfiguredModel(
     return null;
   }
   return normalizeModelId(model);
+}
+
+/**
+ * The engines this box may offer, always including its default.
+ *
+ * Absent config means "just the default engine" rather than "both": a box that
+ * has never said anything about Codex should not be offered it. The default
+ * engine is always in the result even when the config disables it — a box whose
+ * default engine is off cannot run, so that combination is a configuration
+ * mistake to report, not a state to honor.
+ */
+export async function loadEnabledEngines(boxRoot: string): Promise<AgentEngine[]> {
+  const config = await loadBoxConfig(boxRoot);
+  const fallback = await loadAgentEngine(boxRoot);
+  if (config.engines === undefined) return [fallback];
+  if (config.engines[fallback] === false) {
+    console.warn(
+      `Box config disables its own default engine (${fallback}); treating it as enabled, since nothing could run otherwise.`,
+    );
+  }
+  return AGENT_ENGINES.filter((engine) => engine === fallback || config.engines?.[engine] === true);
 }
 
 /**
