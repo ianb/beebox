@@ -188,6 +188,7 @@ export function InteractiveChat({ sessionInput, contextDir, startEngine, startMo
   const { expiredAttachments, dismissExpiredAttachments } = useEmissionPersistence({ boxSlug, emissionStore });
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [sendSignal, setSendSignal] = useState(0);
+  const bumpSendSignal = useCallback(() => setSendSignal((n) => n + 1), []);
   const [debugView, setDebugView] = useState(false);
   const [showDebugLog, setShowDebugLog] = useState(false);
   const [typingMode, setTypingMode] = useState(false);
@@ -232,15 +233,13 @@ export function InteractiveChat({ sessionInput, contextDir, startEngine, startMo
     send, captureCardSend: cardSend.capture, boxSlug, activeView, messages, emissionStore,
     selections: selections.selections, resetSelections: selections.resetSelections,
     resetAttachments: attach.resetAttachments,
+    onSent: bumpSendSignal,
   });
   // useChatVoice/useChatActions only ever fire-and-forget dispatchEmission
   // (its Promise<Receipt> is for callers that want to await the outcome,
   // per InteractiveChat-dispatch.ts) -- void it once here so both callees'
   // option types can stay honestly void-returning.
-  const dispatchEmissionVoid = useCallback(
-    (emission: Emission) => { void dispatchEmission(emission); },
-    [dispatchEmission]
-  );
+  const dispatchEmissionVoid = useCallback((emission: Emission) => { void dispatchEmission(emission); }, [dispatchEmission]);
   const voice = useChatVoice({
     snapshot, sessionId, muted: mute.muted, narrationEnabled: model.narrationEnabled,
     hqDictationEnabled: model.hqDictationEnabled,
@@ -292,7 +291,7 @@ export function InteractiveChat({ sessionInput, contextDir, startEngine, startMo
     addFiles: (files) => { void attach.addFiles(files); },
     onSend: voice.notifySent, isTranscribing: voice.isTranscribing, textareaRef,
     transcriptTick: voice.transcription.transcript, typingMode, typingLocked, setTypingMode,
-    setSendSignal, dispatchEmission: dispatchEmissionVoid,
+    dispatchEmission: dispatchEmissionVoid,
   });
 
   if (isLoading) return <ChatLoading />;
