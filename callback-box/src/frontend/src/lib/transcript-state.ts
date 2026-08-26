@@ -40,3 +40,25 @@ export function transcriptStateSentence(transcript: TranscriptState): string {
       return assertNever(transcript);
   }
 }
+
+/** Dead chats under one heading — every row in it reads the same way. */
+export interface TranscriptGroup<T> {
+  label: string;
+  rows: T[];
+}
+
+/**
+ * Group dead chats by what their state *says* — so every chat from one machine
+ * lands under that machine's name, and the reader gets one heading per reason
+ * rather than one row each. First-seen order, which is the caller's order.
+ */
+export function groupByTranscriptState<T extends { transcript: TranscriptState }>(rows: readonly T[]): TranscriptGroup<T>[] {
+  const groups = new Map<string, T[]>();
+  for (const row of rows) {
+    const label = transcriptStateLabel(row.transcript);
+    const existing = groups.get(label);
+    if (existing === undefined) groups.set(label, [row]);
+    else existing.push(row);
+  }
+  return [...groups.entries()].map(([label, grouped]) => ({ label, rows: grouped }));
+}

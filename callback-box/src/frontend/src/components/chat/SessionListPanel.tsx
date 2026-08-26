@@ -28,7 +28,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link, useParams, useSearch } from "@tanstack/react-router";
 import { href, toSearch } from "../../lib/routing";
-import { getChatSessions, type ChatSessionInfo } from "../../api";
+import { getChatSessions, type ChatSessionInfo, type DeadChatInfo } from "../../api";
+import { groupByTranscriptState } from "../../lib/transcript-state";
 import { cbSource } from "../../lib/source-tag";
 import { useDropdownClose } from "../ui/Dropdown";
 import { layoutSessionList } from "./session-list-grouping";
@@ -50,7 +51,7 @@ function relativeTime(dateStr: string): string {
 type LoadState =
   | { kind: "loading" }
   | { kind: "error" }
-  | { kind: "loaded"; sessions: ChatSessionInfo[] };
+  | { kind: "loaded"; sessions: ChatSessionInfo[]; dead: DeadChatInfo[] };
 
 export function SessionListPanel({ contextDir }: { contextDir: string | null }) {
   const { boxSlug } = useParams({ strict: false });
@@ -62,7 +63,7 @@ export function SessionListPanel({ contextDir }: { contextDir: string | null }) 
   const load = useCallback(() => {
     setState({ kind: "loading" });
     getChatSessions()
-      .then((result) => setState({ kind: "loaded", sessions: result.sessions }))
+      .then((result) => setState({ kind: "loaded", sessions: result.sessions, dead: result.dead }))
       .catch((e) => {
         console.error("Failed to load sessions:", e);
         setState({ kind: "error" });
@@ -86,8 +87,8 @@ export function SessionListPanel({ contextDir }: { contextDir: string | null }) 
       </div>
     );
   }
-  const { sessions } = state;
-  if (sessions.length === 0) {
+  const { sessions, dead } = state;
+  if (sessions.length === 0 && dead.length === 0) {
     return <div className="px-3 py-2 text-sm text-warm-500">No sessions yet</div>;
   }
 
@@ -104,17 +105,56 @@ export function SessionListPanel({ contextDir }: { contextDir: string | null }) 
   });
   const rowProps = { boxSlug: boxSlug ?? "", currentSessionId };
 
-  if (layout.kind === "flat") {
-    return <SessionRows sessions={layout.sessions} showLandmark={layout.showLandmark} {...rowProps} />;
-  }
   return (
     <>
-      <SessionGroup label={layout.hereLabel}>
-        <SessionRows sessions={layout.here} showLandmark={false} {...rowProps} />
-      </SessionGroup>
-      <SessionGroup label="Other chats">
-        <SessionRows sessions={layout.elsewhere} showLandmark {...rowProps} />
-      </SessionGroup>
+      {layout.kind === "flat" ? (
+        <SessionRows sessions={layout.sessions} showLandmark={layout.showLandmark} {...rowProps} />
+      ) : (
+        <>
+          <SessionGroup label={layout.hereLabel}>
+            <SessionRows sessions={layout.here} showLandmark={false} {...rowProps} />
+          </SessionGroup>
+          <SessionGroup label="Other chats">
+            <SessionRows sessions={layout.elsewhere} showLandmark {...rowProps} />
+          </SessionGroup>
+        </>
+      )}
+      <DeadSessionGroups dead={dead} boxSlug={boxSlug ?? ""} />
+    </>
+  );
+}
+
+/**
+ * The chats that no longer have a transcript here, after every live one and
+ * under a heading saying why (`docs/plans/chat-session-identity.md`, Track 3).
+ * They were invisible before — a chat whose transcript expired simply left the
+ * list, so the box looked like it had forgotten the conversation entirely.
+ *
+ * Each row goes to the husk card: there is nothing at `/chat?session=` to open.
+ */
+function DeadSessionGroups({ dead, boxSlug }: { dead: DeadChatInfo[]; boxSlug: string }) {
+  const close = useDropdownClose();
+  if (dead.length === 0) return null;
+  return (
+    <>
+      {groupByTranscriptState(dead).map((group) => (
+        <SessionGroup key={group.label} label={group.label}>
+          {group.rows.map((s) => (
+            <Link
+              key={s.sessionId}
+              role="menuitem"
+              to={href(`/${boxSlug}/browse/${s.huskPath}`)}
+              onClick={close}
+              className="block px-3 py-2 text-sm text-warm-500 hover:bg-warm-100"
+            >
+              <div className="flex items-baseline gap-2">
+                <span className="flex-1 truncate">{s.label}</span>
+                <span className="text-xs flex-shrink-0 font-mono">{s.sessionId.slice(0, 8)}</span>
+              </div>
+            </Link>
+          ))}
+        </SessionGroup>
+      ))}
     </>
   );
 }

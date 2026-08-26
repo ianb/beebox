@@ -27,6 +27,7 @@ export {
 export type {
   ChatImageAttachment,
   ChatSessionInfo,
+  DeadChatInfo,
   HqTranscriptionResult,
   PendingSessionEntry,
   SessionContentBlock,

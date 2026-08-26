@@ -32,7 +32,7 @@ export function ChatsPicker() {
   const landmarks = data ? data.landmarks : [];
   const unassigned = data ? data.unassigned : null;
   const hasUnassigned =
-    unassigned !== null && (unassigned.sessions.length > 0 || unassigned.olderSessions.length > 0);
+    unassigned !== null && (unassigned.sessions.length > 0 || unassigned.olderSessions.length > 0 || unassigned.dead.length > 0);
 
   return (
     <Stack gap="lg">
@@ -65,6 +65,7 @@ export function ChatsPicker() {
                 symbolSrc: null,
                 sessions: unassigned.sessions,
                 olderSessions: unassigned.olderSessions,
+                dead: unassigned.dead,
               }}
               boxSlug={slug}
             />

@@ -185,7 +185,29 @@ async function enumerateChats(boxRoot: string): Promise<ChatEnumeration> {
  * the enumeration on its own.
  */
 export async function loadAllSessions(boxRoot: string): Promise<ChatSessionRow[]> {
-  const entries = await listSessionEntries(boxRoot);
+  return labelEntries(await listSessionEntries(boxRoot));
+}
+
+/**
+ * Both lists at once, for the surfaces that show live chats *and* the dead
+ * husks underneath them. One enumeration: asking `loadAllSessions` and
+ * `loadDeadHusks` separately would read every husk and stat every transcript
+ * twice for one page.
+ */
+export async function loadChatLists(boxRoot: string): Promise<{ sessions: ChatSessionRow[]; dead: DeadHuskEntry[] }> {
+  const { live, dead } = await enumerateChats(boxRoot);
+  return { sessions: await labelEntries(live), dead };
+}
+
+/**
+ * A dead chat's display name, in the same order a live one's resolves — minus
+ * the transcript scan, because the transcript is exactly what is gone.
+ */
+export function deadHuskLabel(husk: DeadHuskEntry): string {
+  return husk.title === undefined || husk.title === "" ? husk.sessionId.slice(0, 8) : husk.title;
+}
+
+async function labelEntries(entries: ChatSessionEntry[]): Promise<ChatSessionRow[]> {
   // An untitled chat's label comes from a full transcript scan, so this is one
   // open stream per unlabelled chat and a box's chat count only ever grows.
   // Memoized on (transcript path, mtime) — a re-listing then rescans only the

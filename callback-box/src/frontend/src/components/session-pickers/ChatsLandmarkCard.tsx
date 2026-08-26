@@ -15,6 +15,7 @@ import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 import { SessionRow, type SessionRowItem } from "./SessionRow";
+import { DeadSessionSection, type DeadSessionRowItem } from "./DeadSessionRow";
 
 export interface PickerLandmark {
   /** Box-relative path; empty string for the root tile. */
@@ -24,6 +25,8 @@ export interface PickerLandmark {
   symbolSrc: string | null;
   sessions: SessionRowItem[];
   olderSessions: SessionRowItem[];
+  /** Chats with no transcript left — listed after the live ones, or not at all. */
+  dead: DeadSessionRowItem[];
 }
 
 export function ChatsLandmarkCard({
@@ -35,7 +38,7 @@ export function ChatsLandmarkCard({
 }) {
   const hasFresh = landmark.sessions.length > 0;
   const hasOlder = landmark.olderSessions.length > 0;
-  const isEmpty = !hasFresh && !hasOlder;
+  const isEmpty = !hasFresh && !hasOlder && landmark.dead.length === 0;
   const [showOlder, setShowOlder] = useState(false);
   return (
     <Card padding={isEmpty ? "sm" : "md"} border="subtle" shadow={!isEmpty} muted={isEmpty}>
@@ -85,6 +88,8 @@ export function ChatsLandmarkCard({
             ) : null}
           </Stack>
         ) : null}
+
+        <DeadSessionSection sessions={landmark.dead} boxSlug={boxSlug} />
       </Stack>
     </Card>
   );

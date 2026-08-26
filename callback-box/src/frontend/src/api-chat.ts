@@ -30,6 +30,7 @@ import { getApiBase } from "./api-core";
 import { trpcClient } from "./lib/trpc";
 import { mobileAuthHeaders } from "./lib/mobile-auth";
 import type { ActivityKind, CardStateDetails } from "@core/chat/card-activity.js";
+import type { TranscriptState } from "@core/chat/session/availability.js";
 import { chatSendReasonKind, recordChatSendEvent } from "./lib/chat-send-diagnostics";
 import { currentChatChannel } from "./lib/chat-channel";
 import { parseChatAgentEngine, type ChatAgentEngine } from "@shared/chat-models.js";
@@ -182,7 +183,19 @@ export interface ChatSessionInfo {
   landmarkLabel: string;
 }
 
-export async function getChatSessions(): Promise<{ sessions: ChatSessionInfo[] }> {
+/**
+ * A chat that is now only a card: its transcript is not on this machine, so it
+ * has no `/chat?session=` to open and no last-used time left to report.
+ */
+export interface DeadChatInfo {
+  sessionId: string;
+  label: string;
+  /** Box-relative path of the husk card — this row's only destination. */
+  huskPath: string;
+  transcript: TranscriptState;
+}
+
+export async function getChatSessions(): Promise<{ sessions: ChatSessionInfo[]; dead: DeadChatInfo[] }> {
   return trpcClient.chat.sessions.query();
 }
 
