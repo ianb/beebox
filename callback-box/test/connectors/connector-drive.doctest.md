@@ -542,7 +542,7 @@ await box.seed("store/trash/Hidden.gsheet.card", createGsheetTemplate({
 
 const output = await captureLogs(() => runDriveStatus(box.root));
 JSON.stringify({
-  count: output.includes("2 mounted file(s)"),
+  count: output.includes("2 Drive card(s)"),
   yamlId: output.includes("Drive ID: yaml-id"),
   legacyId: output.includes("Drive ID: legacy-id"),
   trash: output.includes("trash-id") || output.includes("store/trash"),
@@ -594,7 +594,7 @@ JSON.stringify({
   bothPaths: ambiguous.includes("store/drive/Yaml.gsheet.card")
     && ambiguous.includes("store/drive/Yaml-Copy.gsheet.card"),
   unreadable: ambiguous.includes("No readable drive-id: store/drive/Broken.gsheet.card"),
-  mounted: ambiguous.includes("2 mounted file(s)"),
+  mounted: ambiguous.includes("2 Drive card(s)"),
 })
 => {"duplicate":true,"bothPaths":true,"unreadable":true,"mounted":true}
 ```

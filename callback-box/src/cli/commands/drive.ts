@@ -1,12 +1,19 @@
 /**
- * cb drive — Manage Google Drive sync (Sheets, Docs).
+ * cb drive — Manage Google Drive mounts.
  *
- * Usage:
- *   cb drive inspect <url-or-id>        — preview file metadata
- *   cb drive add <url-or-id> <path>     — mount a file at a local path
- *   cb drive sync                       — sync all mounted files
- *   cb drive status                     — show mount status
- *   cb drive list [folder-url-or-id]    — browse Drive files
+ * Three kinds of Drive card, three ways to make one:
+ *
+ *   cb drive add <url-or-id> <path>       — sync a Doc or Sheet two-way
+ *   cb drive mount <url-or-id> <dir>      — mirror a folder into a directory
+ *   cb drive link <url-or-id> <path>      — a pointer; nothing is copied
+ *   cb drive unmount <dir-or-card>        — stop mirroring; children stay
+ *
+ * And the read-only ones:
+ *
+ *   cb drive inspect <url-or-id>          — preview Drive metadata
+ *   cb drive sync                         — sync every Drive card
+ *   cb drive status                       — what this box has mounted
+ *   cb drive list [folder-url-or-id]      — browse Drive
  */
 
 import * as fs from "node:fs/promises";
@@ -14,11 +21,13 @@ import { isRecord } from "../../lib/is-record.js";
 import * as path from "node:path";
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths.js";
-import { getGoogleAuth } from "../../connectors/google-auth.js";
 import { extractDriveFileId } from "../../connectors/drive-types.js";
-import { createGoogleAuthService } from "../../services/google-auth.js";
-import { createGoogleDriveService } from "../../services/google-drive.js";
-import type { GoogleDriveService } from "../../services/google-drive.js";
+import { requireDriveService } from "./drive-service.js";
+import {
+  driveLinkCommand,
+  driveMountCommand,
+  driveUnmountCommand,
+} from "./drive-mount-cli.js";
 import { stageAndCommitPaths } from "../../lib/git.js";
 import { attachDirFor } from "../../shared/attach-path.js";
 import { updateTransientState } from "../../connectors/transient-state.js";
@@ -35,23 +44,34 @@ import {
 import {
   driveCardSummary,
   findDriveCardTracking,
+  type DriveCardKind,
 } from "../../connectors/google-drive-tracking.js";
+
+/** How `cb drive status` names each kind of Drive card. */
+const DRIVE_KIND_LABEL: Record<DriveCardKind, string> = {
+  file: "file (synced two-way)",
+  folder: "folder (mirrored)",
+  link: "link (pointer, nothing copied)",
+};
 
 /** Print the live Drive-card working set. Exported for filesystem doctests. */
 export async function runDriveStatus(boxRoot: string): Promise<void> {
   const { liveCards, duplicates, unreadable } = await findDriveCardTracking(boxRoot);
 
   if (liveCards.length === 0 && duplicates.length === 0 && unreadable.length === 0) {
-    console.log("No Drive files mounted.");
-    console.log('Use "cb drive add <url> <path>" to mount a Drive file.');
+    console.log("No Drive cards in this box.");
+    console.log('Use "cb drive mount <folder-url> <dir>" to mirror a folder,');
+    console.log('"cb drive add <url> <path>" to sync a Doc or Sheet,');
+    console.log('or "cb drive link <url> <path>" to keep a pointer.');
     return;
   }
 
-  console.log(`${String(liveCards.length)} mounted file(s):\n`);
+  console.log(`${String(liveCards.length)} Drive card(s):\n`);
   for (const card of liveCards) {
     const summary = driveCardSummary(card.content);
 
     console.log(`  ${card.relPath}`);
+    console.log(`    Kind: ${DRIVE_KIND_LABEL[card.kind]}`);
     if (summary.title !== null) console.log(`    Title: ${summary.title}`);
     console.log(`    Drive ID: ${card.driveId}`);
     if (summary.modified !== null) console.log(`    Last synced: ${summary.modified}`);
@@ -83,16 +103,6 @@ export async function runDriveStatus(boxRoot: string): Promise<void> {
   if (unreadable.length > 0) console.log("");
 }
 
-async function requireDriveService(boxRoot: string): Promise<GoogleDriveService> {
-  const auth = await getGoogleAuth(boxRoot);
-  if (!auth) {
-    console.error("Google auth not configured. Run: cb google-auth");
-    process.exit(1);
-  }
-  const authService = createGoogleAuthService(auth, { boxRoot });
-  return createGoogleDriveService(authService);
-}
-
 function requireFileId(input: string): string {
   const fileId = extractDriveFileId(input);
   if (!fileId) {
@@ -104,7 +114,7 @@ function requireFileId(input: string): string {
 }
 
 export const driveCommand = new Command("drive")
-  .description("Manage Google Drive sync (Sheets, Docs)")
+  .description("Manage Google Drive mounts (files, folders, pointers)")
   .action(async () => {
     // Default action: show status
     await driveCommand.commands.find((c) => c.name() === "status")?.parseAsync([], { from: "user" });
@@ -320,3 +330,7 @@ driveCommand
       console.log("");
     }
   });
+
+driveCommand.addCommand(driveMountCommand);
+driveCommand.addCommand(driveLinkCommand);
+driveCommand.addCommand(driveUnmountCommand);

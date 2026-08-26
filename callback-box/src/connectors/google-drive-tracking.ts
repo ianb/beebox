@@ -238,8 +238,12 @@ export function driveCardSummary(content: string): DriveCardSummary {
   }
 
   return {
-    title: optionalString(fields["title"]),
-    modified: optionalString(fields["modified"]),
+    // A synced file carries `title`/`modified`; a folder mount and a pointer
+    // carry the Drive `name` and the mount's `last-sync` instead. Same two
+    // questions — what is it, when did the box last hear from Drive — so
+    // status reads them from whichever field the card type uses.
+    title: optionalString(fields["title"]) ?? optionalString(fields["name"]),
+    modified: optionalString(fields["modified"]) ?? optionalString(fields["last-sync"]),
     status: optionalString(fields["status"]),
     tabs,
     lossy,
