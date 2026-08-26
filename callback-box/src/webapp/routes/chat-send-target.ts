@@ -6,12 +6,58 @@ import { resolveSessionAvailability } from "../../core/chat/session/availability
 import { isResumableSession } from "../../core/chat/session/recent-landmark.js";
 import { resolveChatTarget, type ChatTargetSpec } from "../../core/chat/session/target.js";
 import type { ChatRoutesContext } from "./chat-context.js";
+import { loadEnabledEngines, type AgentEngine } from "../../core/box/config.js";
+import { isChatModelAllowed } from "../../shared/chat-models.js";
 
 interface ResolveSendArgs {
   sessionParam: string;
   contextDir: string | undefined;
   requestSeedFeatures: Record<string, string> | undefined;
   exactSession: boolean;
+  /** Engine and model chosen before the chat existed; `"new"` sends only. */
+  engine?: AgentEngine | undefined;
+  model?: string | undefined;
+}
+
+/** A `"new"` send naming an engine the box does not offer, or a model that engine cannot run. */
+export class UnavailableChatChoiceError extends Error {
+  constructor(readonly engine: AgentEngine, readonly model: string | null) {
+    super("The engine or model chosen for this chat is unavailable");
+    this.name = "UnavailableChatChoiceError";
+  }
+
+  /** The sentence the client shows — which half was wrong, and for which engine. */
+  get detail(): string {
+    return this.model === null
+      ? `${this.engine} is not enabled for this box`
+      : `Model ${this.model} is unavailable for ${this.engine} chats`;
+  }
+}
+
+/**
+ * Validate a pre-first-message engine/model choice against the box.
+ *
+ * Rejecting is the point: a chat started on an engine the box does not offer,
+ * or a model that engine cannot run, would fail at its first turn or silently
+ * run something else. Better to refuse the send and say which.
+ */
+async function validatedChoice(
+  boxRoot: string,
+  args: ResolveSendArgs,
+): Promise<{ engine?: AgentEngine; model?: string }> {
+  if (args.engine === undefined && args.model === undefined) return {};
+  const enabled = await loadEnabledEngines(boxRoot);
+  const engine = args.engine ?? enabled[0] ?? "claude";
+  if (!enabled.includes(engine)) {
+    throw new UnavailableChatChoiceError(engine, null);
+  }
+  if (args.model !== undefined && !isChatModelAllowed(engine, args.model)) {
+    throw new UnavailableChatChoiceError(engine, args.model);
+  }
+  return {
+    ...(args.engine !== undefined ? { engine } : {}),
+    ...(args.model !== undefined ? { model: args.model } : {}),
+  };
 }
 
 async function resolveSendTarget(ctx: ChatRoutesContext, args: ResolveSendArgs): Promise<{ session: ChatSession; id: string | null }> {
@@ -26,6 +72,7 @@ async function resolveSendTarget(ctx: ChatRoutesContext, args: ResolveSendArgs):
         kind: "fresh",
         ...(args.contextDir !== undefined ? { contextDir: args.contextDir } : {}),
         ...(await freshSeedFeatures(boxRoot, args)),
+        ...(await validatedChoice(boxRoot, args)),
       }
     : { kind: "existing", sessionId: args.sessionParam };
   if (spec.kind === "existing") {
@@ -88,6 +135,10 @@ export async function resolveSendTargetForRoute(options: {
   } catch (error) {
     if (error instanceof ExactSessionTargetError) {
       await options.reply.status(error.status).send({ error: error.message });
+      return null;
+    }
+    if (error instanceof UnavailableChatChoiceError) {
+      await options.reply.status(400).send({ error: error.detail });
       return null;
     }
     if (!(error instanceof UnavailableChatSessionError)) throw error;

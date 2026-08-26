@@ -15,10 +15,14 @@ screen continues below the fold and the button lights up
 (`docs/plans/chat-scroll-model.md`). The writes, exhaustively:
 
 1. **Open a thread** — hold the bottom on every growth until the first history
-   render has landed (`settleOpen()`; the hold lapses on a short fixed timer,
-   because the caller can only report "the history is in the DOM" from an effect
-   that runs before the ResizeObserver cycle measuring it). A reader who scrolls
-   away during the load ends the hold themselves.
+   render has landed (`settleOpen()`; the hold waits for the transcript's
+   images to load or fail — an `<img>` reserves no height until
+   its bytes land, and the chat has no dimension metadata to reserve with —
+   then ends after a short quiet period with no growth — a cached image is
+   `complete` before it is laid out — under an 8s cap). A reader who
+   scrolls away (scrollTop moves *up* — being off the bottom is not enough,
+   since content grows between the hold's write and its scroll event), sends,
+   or presses the button ends the hold themselves.
 2. **Send** — the new user message goes to the top of the viewport
    (`anchorToTop`), from a layout effect, after the commit that added both the
    message and the spacer. The reply streams in below it; nothing follows it.

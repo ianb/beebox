@@ -14,16 +14,18 @@
  */
 
 import * as fs from "node:fs/promises";
-import { findChatHuskEntry, listChatHusks, type ChatHuskEntry } from "../husk.js";
+import { findChatHuskEntry, listChatHusks, type ChatHuskEntry } from "../husk-read.js";
 import { huskTranscriptPath } from "../husk-transcript.js";
 import { resolveSessionLabel, type SessionLabelSource } from "../session-label.js";
 import { assertNever } from "../../../lib/invariant.js";
 import { errnoCode } from "../../../lib/error-guards.js";
 import { mapInBatches, mapInBatchesSettled } from "../../../lib/map-batched.js";
-import { loadHistoryEntries, type SessionHistoryEntry } from "./history.js";
+import { loadHistoryEntries } from "./history.js";
+import { resolveChatEngine } from "./engine.js";
+import { deriveTranscriptState, type TranscriptState } from "./availability.js";
 import { listCodexThreadMetadata, type CodexThreadMetadata } from "./codex-transcript.js";
+import { containedSessionCwd } from "./transcript-paths.js";
 import type { AgentEngine } from "../../box/config.js";
-import * as path from "node:path";
 
 /**
  * Chats resolved at once — see {@link mapInBatchesSettled}. `resolveSessionLabel`
@@ -67,6 +69,39 @@ export interface ChatSessionRow extends ChatSessionEntry {
 }
 
 /**
+ * A husk whose transcript is not on this machine — a chat that still exists as
+ * a card but has nothing left to resume.
+ *
+ * Deliberately not a `ChatSessionEntry`: it has no mtime (the transcript that
+ * carried activity is gone) and no engine worth reporting, and every field it
+ * does carry rode the husk. Its rows link to the card, never to `/chat?session=`.
+ */
+export interface DeadHuskEntry {
+  sessionId: string;
+  /** Box-relative path of the husk card. */
+  huskPath: string;
+  /** "" for root-bound, undefined for legacy unbound (treated as root). */
+  contextDir: string | undefined;
+  /** The husk's editorial `title`, when it has one. */
+  title: string | undefined;
+  /**
+   * Why there is nothing to resume. Never `present` — that is what makes the
+   * husk dead, and it is the enumeration's job to keep the two lists disjoint.
+   */
+  transcript: TranscriptState;
+}
+
+/**
+ * One enumeration, two answers. Which husks are live and which are dead is the
+ * *same* question — one husk read and one `stat` each — so asking it twice
+ * would double the I/O of every surface that shows both.
+ */
+interface ChatEnumeration {
+  live: ChatSessionEntry[];
+  dead: DeadHuskEntry[];
+}
+
+/**
  * Every resumable web chat, most-recently-active first, **without labels**.
  *
  * This is the cheap enumeration: one husk read and one `stat` per chat, no
@@ -80,35 +115,107 @@ export interface ChatSessionRow extends ChatSessionEntry {
  * already a per-husk skip, and must not abandon the others.
  */
 export async function listSessionEntries(boxRoot: string): Promise<ChatSessionEntry[]> {
+  return (await enumerateChats(boxRoot)).live;
+}
+
+/**
+ * Every husk with no transcript on this machine, newest first.
+ *
+ * The sibling of `listSessionEntries` — same pass, the other half of the
+ * answer. Husk filenames lead with the chat's date, so sorting on the path
+ * orders these by when the chat happened; there is no mtime left to sort on.
+ */
+export async function loadDeadHusks(boxRoot: string): Promise<DeadHuskEntry[]> {
+  return (await enumerateChats(boxRoot)).dead;
+}
+
+/**
+ * Codex's view of its own threads, or `null` when Codex couldn't answer.
+ *
+ * A degradation rather than a failure. For a codex chat this metadata is not
+ * decoration — it carries the chat's existence as well as its date, so losing
+ * it means losing those chats from the listing entirely, counts included. That
+ * is still the better trade: when the Codex CLI is broken (the plugin
+ * marketplace pointing at a deleted checkout is the case that prompted this),
+ * the honest answer is that those chats are unavailable — not that the whole
+ * enumeration failed, which took the app bar's place menu down with it.
+ *
+ * The catch is deliberately wide. "Codex couldn't answer" is one recoverable
+ * class from the caller's side whether the CLI is missing, its registration is
+ * broken, or its reply no longer matches the schema — the listing can do
+ * nothing about any of them, and the warning names the cause either way.
+ */
+async function readCodexThreads(
+  boxRoot: string,
+  cwds: string[],
+): Promise<Map<string, CodexThreadMetadata> | null> {
+  if (cwds.length === 0) return new Map();
+  try {
+    return await listCodexThreadMetadata(boxRoot, [...new Set(cwds)]);
+  } catch (error) {
+    console.warn("[chat] codex thread metadata unavailable; omitting this box's codex chats:", error);
+    return null;
+  }
+}
+
+/** The single husk-read-and-stat pass behind both enumerations. */
+async function enumerateChats(boxRoot: string): Promise<ChatEnumeration> {
   const [husks, history] = await Promise.all([listChatHusks(boxRoot), loadHistoryEntries(boxRoot)]);
   const historyById = new Map(history.map((entry) => [entry.id, entry]));
+  // Resolved once per husk, up front: which engine ran a chat decides both
+  // which store to look in and whether its thread metadata has to be fetched,
+  // and `resolveChatEngine` is the only place that order is written down.
+  const engines = new Map(await mapInBatches(husks, {
+    size: READ_CONCURRENCY,
+    map: async (husk) => [husk.session, await resolveChatEngine(boxRoot, {
+      sessionId: husk.session,
+      husk,
+      historyEngine: historyById.get(husk.session)?.engine ?? null,
+    })] as const,
+  }));
   const codexCwds = husks
-    .filter((husk) => historyById.get(husk.session)?.engine === "codex")
-    .map((husk) => husk.contextDir === undefined || husk.contextDir === ""
-      ? boxRoot
-      : path.join(boxRoot, husk.contextDir));
-  const codexThreads = codexCwds.length === 0
-    ? new Map<string, CodexThreadMetadata>()
-    : await listCodexThreadMetadata(boxRoot, [...new Set(codexCwds)]);
+    .filter((husk) => engines.get(husk.session) === "codex")
+    // Contained, like every other resolution of a husk's `context-dir`: the
+    // field is a card value, and an escaping one reads from the box root.
+    .map((husk) => containedSessionCwd(boxRoot, husk.contextDir));
+  const codexThreads = await readCodexThreads(boxRoot, codexCwds);
   const settled = await mapInBatchesSettled(husks, {
     size: READ_CONCURRENCY,
-    map: (husk) => loadSessionEntry({
+    map: (husk) => resolveHusk({
       boxRoot,
       husk,
-      history: historyById.get(husk.session),
-      codexMetadata: codexThreads.get(husk.session),
+      engine: engines.get(husk.session) ?? "claude",
+      codexMetadata: codexThreads?.get(husk.session),
+      codexAvailable: codexThreads !== null,
     }),
   });
-  const entries: ChatSessionEntry[] = [];
+  const live: ChatSessionEntry[] = [];
+  const dead: DeadHuskEntry[] = [];
   for (const [i, outcome] of settled.entries()) {
     if (outcome.status === "rejected") {
       console.warn(`[chat] husk ${husks[i]?.path}: could not resolve session:`, outcome.reason);
       continue;
     }
-    if (outcome.value !== null) entries.push(outcome.value);
+    const resolved = outcome.value;
+    switch (resolved.kind) {
+      case "live":
+        live.push(resolved.entry);
+        break;
+      case "dead":
+        dead.push(resolved.entry);
+        break;
+      case "unreadable":
+        // Already warned about, and claimed by neither list: "the transcript is
+        // gone" and "the transcript is unreadable" are different facts, and the
+        // dead list exists to state the first one truthfully.
+        break;
+      default:
+        assertNever(resolved);
+    }
   }
-  entries.sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
-  return entries;
+  live.sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
+  dead.sort((a, b) => b.huskPath.localeCompare(a.huskPath));
+  return { live, dead };
 }
 
 /**
@@ -118,7 +225,29 @@ export async function listSessionEntries(boxRoot: string): Promise<ChatSessionEn
  * the enumeration on its own.
  */
 export async function loadAllSessions(boxRoot: string): Promise<ChatSessionRow[]> {
-  const entries = await listSessionEntries(boxRoot);
+  return labelEntries(await listSessionEntries(boxRoot));
+}
+
+/**
+ * Both lists at once, for the surfaces that show live chats *and* the dead
+ * husks underneath them. One enumeration: asking `loadAllSessions` and
+ * `loadDeadHusks` separately would read every husk and stat every transcript
+ * twice for one page.
+ */
+export async function loadChatLists(boxRoot: string): Promise<{ sessions: ChatSessionRow[]; dead: DeadHuskEntry[] }> {
+  const { live, dead } = await enumerateChats(boxRoot);
+  return { sessions: await labelEntries(live), dead };
+}
+
+/**
+ * A dead chat's display name, in the same order a live one's resolves — minus
+ * the transcript scan, because the transcript is exactly what is gone.
+ */
+export function deadHuskLabel(husk: DeadHuskEntry): string {
+  return husk.title === undefined || husk.title === "" ? husk.sessionId.slice(0, 8) : husk.title;
+}
+
+async function labelEntries(entries: ChatSessionEntry[]): Promise<ChatSessionRow[]> {
   // An untitled chat's label comes from a full transcript scan, so this is one
   // open stream per unlabelled chat and a box's chat count only ever grows.
   // Memoized on (transcript path, mtime) — a re-listing then rescans only the
@@ -180,20 +309,48 @@ export function labelSource(entry: ChatSessionEntry): SessionLabelSource {
   }
 }
 
-/** One husk's entry, or null when there's no transcript left to resume. */
-async function loadSessionEntry(options: {
+/**
+ * What one husk turned out to be. Three outcomes, not two: a transcript that
+ * is *absent* makes a dead chat, while one that is present-but-unreadable
+ * (EACCES, EIO) is a fact this enumeration cannot establish either way.
+ */
+type HuskResolution =
+  | { kind: "live"; entry: ChatSessionEntry }
+  | { kind: "dead"; entry: DeadHuskEntry }
+  | { kind: "unreadable" };
+
+async function deadHusk(husk: ChatHuskEntry): Promise<HuskResolution> {
+  return {
+    kind: "dead",
+    entry: {
+      sessionId: husk.session,
+      huskPath: husk.path,
+      contextDir: husk.contextDir,
+      title: husk.title,
+      transcript: await deriveTranscriptState({ husk, present: false }),
+    },
+  };
+}
+
+/** Resolve one husk against this machine's transcript store. */
+async function resolveHusk(options: {
   boxRoot: string;
   husk: ChatHuskEntry;
-  history: SessionHistoryEntry | undefined;
+  engine: AgentEngine;
   codexMetadata: CodexThreadMetadata | undefined;
-}): Promise<ChatSessionEntry | null> {
-  const { boxRoot, husk, history, codexMetadata } = options;
-  const engine = history?.engine ?? "claude";
+  /** False when Codex itself couldn't be asked — see `readCodexThreads`. */
+  codexAvailable: boolean;
+}): Promise<HuskResolution> {
+  const { boxRoot, husk, engine, codexMetadata, codexAvailable } = options;
   const logPath = huskTranscriptPath(boxRoot, husk);
   let mtime: Date;
   try {
     if (engine === "codex") {
-      if (codexMetadata === undefined) return null;
+      // "Codex couldn't be asked" and "Codex has no such thread" are different
+      // facts: the second is a dead husk, the first is one we can't classify,
+      // so it goes in neither list rather than being reported as expired.
+      if (!codexAvailable) return { kind: "unreadable" };
+      if (codexMetadata === undefined) return await deadHusk(husk);
       mtime = codexMetadata.updatedAt;
     } else {
       mtime = (await fs.stat(logPath)).mtime;
@@ -201,23 +358,26 @@ async function loadSessionEntry(options: {
   } catch (e) {
     if (errnoCode(e) !== "ENOENT") {
       // Not "the transcript was cleaned up" — the file may well be there and
-      // unreadable (EACCES, EIO). Dropping the chat from every list is the
-      // same outcome either way, so say so loudly rather than silently.
+      // unreadable (EACCES, EIO). Say so loudly rather than silently, and don't
+      // let the dead list report it as expired.
       console.warn(`[chat] husk ${husk.path}: transcript unreadable, omitting session:`, e);
+      return { kind: "unreadable" };
     }
-    // Nothing to resume — skip it. The husk card stays browsable.
-    return null;
+    return deadHusk(husk);
   }
 
   return {
-    sessionId: husk.session,
-    engine,
-    contextDir: husk.contextDir,
-    mtime,
-    huskPath: husk.path,
-    logPath,
-    title: husk.title,
-    ...(codexMetadata === undefined ? {} : { nativePreview: codexMetadata.preview }),
+    kind: "live",
+    entry: {
+      sessionId: husk.session,
+      engine,
+      contextDir: husk.contextDir,
+      mtime,
+      huskPath: husk.path,
+      logPath,
+      title: husk.title,
+      ...(codexMetadata === undefined ? {} : { nativePreview: codexMetadata.preview }),
+    },
   };
 }
 

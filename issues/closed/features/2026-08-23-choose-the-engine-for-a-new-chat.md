@@ -1,6 +1,7 @@
 ---
 title: "No way to pick a chat's engine — models are switchable per chat, engines are box-wide"
-workstream: unattached
+workstream: model-engine-policy
+resolution: implemented
 area: callback-box
 needs: [design]
 labels: [chat, codex, engines]
@@ -9,6 +10,8 @@ discovered-by: Ian
 discovered-in: main session — boxholder wanting a codex chat on a claude box, or the reverse
 ---
 
+**Resolved 2026-08-26** by `docs/implemented-plans/model-engine-policy.md` (Track F, commits `1a2092900`/`0ad98c7e4`/`23871ea80`): a new chat's start picker offers engine and model together before the first message. Mid-chat engine conversion is explicitly out of scope, per the issue's own framing.
+
 > There's no way to convert a chat between engines. Old chats still use the old
 > engine, but new chats can't change in the way models can change. It would
 > still only support it on new chats.
@@ -16,6 +19,18 @@ discovered-in: main session — boxholder wanting a codex chat on a claude box, 
 A chat's **model** is a per-chat choice that can change mid-conversation. Its
 **engine** is whatever the box was set to when the chat started, and nothing
 offers a choice.
+
+> **Considered and deferred 2026-08-25** by the model/engine policy work
+> (`callback-box/docs/implemented-plans/model-engine-policy.md`), which shipped the
+> *model* half — a box default model that chat and the reactor both read, with a
+> per-chat override. This issue was carried as a fifth track and cut, because it
+> is a bigger mechanism than the "thread one existing parameter" the note below
+> suggests: `reserveSession` takes no engine
+> (`webapp/trpc/routers/chat-control-procedures.ts`), `registry.reserve` takes
+> none (`core/chat/session/registry.ts`), and coined ids are Claude-only by
+> contract (`core/chat/session/reserve.ts` returns `unsupported` for a codex
+> box). So offering the choice on a Codex box means changing how a chat is
+> *named*, not adding a menu. It wants its own plan.
 
 ## Where it stands today
 
@@ -86,6 +101,6 @@ claude-engine box with none on disk at all), so "not engine-gated" is not the
 same as "always present". Whether a codex chat should ensure its mirrors before
 its first turn is worth a moment's thought rather than an assumption.
 
-Related: [AGENTS.md missing from the CLAUDE.md special-cases](../closed/bugs/2026-08-22-agents-md-missing-from-claude-md-special-cases.md)
+Related: [AGENTS.md missing from the CLAUDE.md special-cases](../bugs/2026-08-22-agents-md-missing-from-claude-md-special-cases.md)
 — the mirrors' current sharp edge, and the reason to be careful about assuming
 where they are.

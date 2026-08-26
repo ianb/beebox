@@ -1,12 +1,14 @@
 ---
 title: "parseSessionLog silently truncates transcripts at 10,000 entries"
-workstream: compacting
+workstream: chat-session-identity
 area: callback-box
 filed-by: agent
 discovered-in: worktree-compacting — while designing chat review (docs/implemented-plans/chat-review.md)
 priority: normal
+resolution: implemented
 ---
 
+**Closed 2026-08-26.** The last silent first-page reader, `core/retro/discovery.ts` `countUserMessages`, now returns `truncated` and its caller logs a notice (`d3d678ee1`). `renderSessionCompact` (`transcript-render.ts:88-91`) and `extractBehavior` (`dev/lib/test-runner.ts:219,248`) already warned. Workstream chat-session-identity.
 `parseSessionLog` (`callback-box/src/cli/lib/session.ts:317`) defaults `limit`
 to 10,000 (line 322) and slices *after* building the whole filtered array
 (line 339). A caller that doesn't pass an explicit `limit` therefore gets only

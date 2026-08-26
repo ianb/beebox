@@ -19,7 +19,7 @@ import {
 import { resolveFeatures } from "../../../core/chat/features.js";
 import { MAX_SESSION_ENTRIES, type SessionEntry } from "../../../cli/lib/session.js";
 import { loadSessionHistory } from "../../../core/chat/session/load-history.js";
-import { titleForSession, loadAllSessions } from "../../../core/chat/session/list.js";
+import { titleForSession, loadChatLists, deadHuskLabel } from "../../../core/chat/session/list.js";
 import { landmarkLabelsForDirs } from "../../../core/landmark/summaries.js";
 
 /**
@@ -86,16 +86,20 @@ export const chatSessionProcedures = {
   // Each row carries its landmark binding so the dropdown can put the current
   // landmark's chats first: `contextDir` ("" for root/legacy-unbound) plus the
   // landmark's display label, resolved here so the client stays dumb.
+  //
+  // Dead husks ride along in their own list rather than mixed into `sessions`:
+  // every row in `sessions` is a link into `/chat?session=`, and a chat with no
+  // transcript has nothing there to open. Theirs link to the card instead.
   sessions: publicProcedure.query(async ({ ctx }) => {
-    const [rows, mostActive] = await Promise.all([
-      loadAllSessions(ctx.boxRoot),
+    const [{ sessions: rows, dead }, mostActive] = await Promise.all([
+      loadChatLists(ctx.boxRoot),
       getMostActive(ctx.boxRoot),
     ]);
     // Only the dirs these sessions actually bind to — a handful — rather than
     // globbing the whole box for landmark cards on every dropdown open.
     const labelByDir = await landmarkLabelsForDirs(
       ctx.boxRoot,
-      rows.map((row) => row.contextDir ?? ""),
+      [...rows, ...dead].map((row) => row.contextDir ?? ""),
     );
 
     const sessions = rows.map((row) => {
@@ -113,7 +117,13 @@ export const chatSessionProcedures = {
         landmarkLabel,
       };
     });
-    return { sessions };
+    const deadRows = dead.map((husk) => ({
+      sessionId: husk.sessionId,
+      label: deadHuskLabel(husk),
+      huskPath: husk.huskPath,
+      transcript: husk.transcript,
+    }));
+    return { sessions, dead: deadRows };
   }),
 
   // One session's display label, resolved exactly as `chat.bootstrap` and the

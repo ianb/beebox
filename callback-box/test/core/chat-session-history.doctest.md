@@ -59,8 +59,51 @@ await box.write(
   ".callback-box/chat-session-history.json",
   JSON.stringify({ sessions: [{ id: "old" }, { id: "new", engine: "codex" }], migrated: true }),
 );
-JSON.stringify([await resolveChatEngine(box.root, "old"), await resolveChatEngine(box.root, "new")])
+JSON.stringify([
+  await resolveChatEngine(box.root, { sessionId: "old" }),
+  await resolveChatEngine(box.root, { sessionId: "new" }),
+])
 => ["claude","codex"]
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## The husk's `engine` stamp outranks the per-checkout history file
+
+The history file is per-checkout; the husk card travels with the box. So a
+Codex chat opened on a machine that never ran it has a stamped husk and no
+history entry at all — and reading that as Claude would send the resume down
+the wrong SDK.
+
+```ts
+const codexSession = "0198f0b0-1111-7111-8111-111111111111";
+const box = await makeTmpBox();
+await box.write(
+  `store/chat/web/2026-08-26_${codexSession.slice(0, 8)}.chat.card`,
+  `---\nsession: ${codexSession}\nengine: codex\n---\n`,
+);
+await resolveChatEngine(box.root, { sessionId: codexSession })
+=> codex
+```
+
+A value that isn't an engine we run is a hand-edit: it warns and reads as
+absent, so resolution falls through to the history entry rather than carrying
+a nonsense string into engine dispatch.
+
+```ts continue
+const junkSession = "0198f0b0-2222-7222-8222-222222222222";
+await box.write(
+  `store/chat/web/2026-08-26_${junkSession.slice(0, 8)}.chat.card`,
+  `---\nsession: ${junkSession}\nengine: gpt-9\n---\n`,
+);
+await box.write(
+  ".callback-box/chat-session-history.json",
+  JSON.stringify({ sessions: [{ id: junkSession, engine: "codex" }], migrated: true }),
+);
+await resolveChatEngine(box.root, { sessionId: junkSession })
+=> codex
 ```
 
 ```ts cleanup

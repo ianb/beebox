@@ -30,6 +30,7 @@ import { getApiBase } from "./api-core";
 import { trpcClient } from "./lib/trpc";
 import { mobileAuthHeaders } from "./lib/mobile-auth";
 import type { ActivityKind, CardStateDetails } from "@core/chat/card-activity.js";
+import type { TranscriptState } from "@core/chat/session/availability.js";
 import { chatSendReasonKind, recordChatSendEvent } from "./lib/chat-send-diagnostics";
 import { currentChatChannel } from "./lib/chat-channel";
 import { parseChatAgentEngine, type ChatAgentEngine } from "@shared/chat-models.js";
@@ -97,9 +98,32 @@ export interface SessionEntry {
 /** A client-created entry tracked until authoritative history echoes it. */
 export type PendingSessionEntry = SessionEntry & { reconcileKnownUuids: string[] };
 
-export async function getChatStatus(params: { sessionId: string | null }): Promise<{ sessionId: string | null; running: boolean; busy: boolean; model: string | null; engine: ChatAgentEngine | null }> {
+export interface ChatStatus {
+  sessionId: string | null;
+  running: boolean;
+  busy: boolean;
+  /** The model in force — what a live run is using, else what the next one would. */
+  model: string | null;
+  /** Whether `model` is this chat's own pick, the box default, or neither. */
+  source: "explicit" | "default" | "none";
+  /** The box default as this chat's engine runs it. */
+  boxDefault: string | null;
+  /** What a restart would switch this chat to, when that differs from `model`. */
+  pendingModel: string | null;
+  engine: ChatAgentEngine | null;
+  /** Engines this box may start a new chat on, and the one it defaults to. */
+  enabledEngines: ChatAgentEngine[];
+  boxEngine: ChatAgentEngine;
+}
+
+export async function getChatStatus(params: { sessionId: string | null }): Promise<ChatStatus> {
   const status = await trpcClient.chat.status.query({ session: params.sessionId ?? undefined });
   return { ...status, engine: parseChatAgentEngine(status.engine) };
+}
+
+/** Pin the box default — the model every chat that has not chosen follows. */
+export async function setDefaultChatModel(params: { model: string | null }): Promise<{ ok: boolean; model: string | null; commitWarning: string | null }> {
+  return trpcClient.chat.setDefaultModel.mutate({ model: params.model });
 }
 
 export async function setChatModel(params: { sessionId: string; model: string | null }): Promise<{ ok: boolean; model: string | null }> {
@@ -182,7 +206,19 @@ export interface ChatSessionInfo {
   landmarkLabel: string;
 }
 
-export async function getChatSessions(): Promise<{ sessions: ChatSessionInfo[] }> {
+/**
+ * A chat that is now only a card: its transcript is not on this machine, so it
+ * has no `/chat?session=` to open and no last-used time left to report.
+ */
+export interface DeadChatInfo {
+  sessionId: string;
+  label: string;
+  /** Box-relative path of the husk card — this row's only destination. */
+  huskPath: string;
+  transcript: TranscriptState;
+}
+
+export async function getChatSessions(): Promise<{ sessions: ChatSessionInfo[]; dead: DeadChatInfo[] }> {
   return trpcClient.chat.sessions.query();
 }
 
@@ -242,6 +278,13 @@ export async function startChatTurn(params: {
   contextDir?: string;
   /** Pre-session chat-feature seeds (session "new"). */
   seedFeatures?: Record<string, string>;
+  /**
+   * Engine and model chosen for a chat that does not exist yet (session
+   * `"new"`). A chat's engine is fixed once it starts, so this is the only
+   * send that can carry them.
+   */
+  engine?: string;
+  model?: string;
   /** Box-relative path of the card open in the companion pane at send time. */
   openCard?: string;
   /** What the user did to the companion-pane card since the last reply. */
@@ -249,7 +292,7 @@ export async function startChatTurn(params: {
   /** Per-kind free-text detail for that activity (e.g. the query typed). */
   cardState?: CardStateDetails;
 }): Promise<ChatTurnStart> {
-  const { session, message, images, contextDir, seedFeatures, openCard, cardActivity, cardState } = params;
+  const { session, message, images, contextDir, seedFeatures, engine, model, openCard, cardActivity, cardState } = params;
   const messageId = params.messageId ?? `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
   let attemptNumber = 0;
@@ -266,6 +309,8 @@ export async function startChatTurn(params: {
         ...(images && images.length > 0 ? { images } : {}),
         ...(contextDir !== undefined ? { contextDir } : {}),
         ...(seedFeatures !== undefined ? { seedFeatures } : {}),
+        ...(engine !== undefined ? { engine } : {}),
+        ...(model !== undefined ? { model } : {}),
         ...(openCard !== undefined ? { openCard } : {}),
         ...(cardActivity && cardActivity.length > 0 ? { cardActivity } : {}),
         ...(cardState && Object.keys(cardState).length > 0 ? { cardState } : {}),

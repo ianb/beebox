@@ -9,7 +9,6 @@
  */
 
 import { makeLog } from "./log.js";
-import { chatModelForEngine } from "../../../shared/chat-models.js";
 import { errorMessage } from "../../../lib/error-guards.js";
 import { openChatRun } from "./start-run.js";
 import { EventEmitter } from "node:events";
@@ -43,9 +42,9 @@ import {
   loadCurrentModel,
   loadSessionId,
   saveCurrentModel,
-  DEFAULT_MODEL_FILE,
 } from "./state.js";
 import { pumpSessionRun } from "./consume.js";
+import { resolveSessionModel } from "./model.js";
 import { preflightChatBackend } from "../../agent/auth-preflight.js";
 import { createRunLockHolder } from "./run-lock.js";
 import {
@@ -77,7 +76,10 @@ export class ChatSession extends EventEmitter {
   private readonly sessionFile: string | null;
   private modelFile: string | null;
   private readonly backend: ChatBackend;
-  private currentModel: string | null = null;
+  /** This chat's own choice; `null` = follows the box default (`./model.ts`). */
+  private explicitModel: string | null = null;
+  /** What the live subprocess runs, fixed when it started (`./model.ts`). */
+  private resolvedModel: string | null = null;
   /** Chat-feature flag state: lazy-loaded map plus persistence + change events. */
   private readonly features: FeatureStore;
   /**
@@ -102,14 +104,14 @@ export class ChatSession extends EventEmitter {
     this.options = options;
     this.coined = createCoinedRunState(options);
     this.sessionFile = options.sessionFile === undefined ? DEFAULT_SESSION_FILE : options.sessionFile;
-    this.modelFile = options.modelFile === undefined ? DEFAULT_MODEL_FILE : options.modelFile;
+    this.modelFile = options.modelFile ?? null;
     this.backend = options.backend ?? createChatBackend();
     if (options.initialSessionId !== undefined) {
       this.sessionId = options.initialSessionId;
     } else {
       this.sessionId = loadSessionId(this.boxRoot, this.sessionFile);
     }
-    this.currentModel = this.modelFile === null ? null : loadCurrentModel(this.boxRoot, this.modelFile);
+    this.explicitModel = this.modelFile === null ? null : loadCurrentModel(this.boxRoot, this.modelFile);
     this.features = new FeatureStore({
       boxRoot: this.boxRoot,
       getSessionId: () => this.sessionId,
@@ -123,8 +125,8 @@ export class ChatSession extends EventEmitter {
     } else {
       log("init", "No saved session, will create on first message");
     }
-    if (this.currentModel) {
-      log("init", `Loaded model override: ${this.currentModel}`);
+    if (this.explicitModel) {
+      log("init", `Loaded model override: ${this.explicitModel}`);
     }
   }
 
@@ -177,8 +179,8 @@ export class ChatSession extends EventEmitter {
     // Preflight login before transitioning or locking; fakes skip this.
     const preview = await this.buildBackendStartOptions();
     if (!(await preflightChatBackend({ backend: this.backend, session: this, engine: preview.engine }))) return;
-    const compatibleModel = chatModelForEngine(preview.engine ?? "claude", this.currentModel);
-    this.currentModel = compatibleModel;
+    // Cold start is the only place the box default is read.
+    this.resolvedModel = (await resolveSessionModel(this.boxRoot, { engine: preview.engine ?? "claude", explicit: this.explicitModel })).model;
     this.transition({ phase: "starting" });
 
     // `openChatRun` either returns a live run or unwinds (lock released,
@@ -192,7 +194,7 @@ export class ChatSession extends EventEmitter {
       // A coined id names a conversation with nothing to resume; the run
       // creates it under that id via `startOptions.coinedSessionId` instead.
       resumeSessionId: this.coined.pending ? undefined : this.sessionId ?? undefined,
-      model: compatibleModel ?? undefined,
+      model: this.resolvedModel ?? undefined,
       acquireLock: () => this.runLock.acquire(),
       releaseLock: () => this.runLock.release(),
       onFailed: () => this.abandonStart(),
@@ -244,7 +246,9 @@ export class ChatSession extends EventEmitter {
     if (assigned !== null) {
       this.sessionId = assigned;
       this.modelFile = this.options.modelFileForSession?.(assigned) ?? this.modelFile;
-      if (this.modelFile !== null && this.currentModel !== null) saveCurrentModel(this.boxRoot, { modelFile: this.modelFile, model: this.currentModel });
+      // Only an explicit choice is promoted: a chat that never chose stays a
+      // follower rather than freezing onto the default of its first turn.
+      if (this.modelFile !== null && this.explicitModel !== null) saveCurrentModel(this.boxRoot, { modelFile: this.modelFile, model: this.explicitModel });
       log("session", `Got session ID: ${assigned}`);
     }
     // Background-task events fire between turns (no per-turn SSE attached), so
@@ -361,9 +365,7 @@ export class ChatSession extends EventEmitter {
     } finally { this.preparingTurn = false; }
   }
 
-  /**
-   * Interrupt the current turn.
-   */
+  /** Interrupt the current turn. */
   interrupt(): void {
     const run = this.liveRun();
     if (run === null) {
@@ -377,17 +379,18 @@ export class ChatSession extends EventEmitter {
   }
 
   /**
-   * Set the model for this chat session. Pass `null` to reset to the SDK default.
-   * Persisted to the model file so subsequent runs pick it up. Does NOT
-   * change the model of an in-flight run — caller must restart.
+   * Choose this chat's model. `null` returns it to following the box default.
+   * Persisted; takes effect on the next run, so the caller must restart to
+   * apply it to a live one.
    */
   setModel(model: string | null): void {
-    this.currentModel = model;
+    this.explicitModel = model;
     if (this.modelFile !== null) saveCurrentModel(this.boxRoot, { modelFile: this.modelFile, model });
   }
 
-  getCurrentModel(): string | null {
-    return this.currentModel;
+  /** This chat's own choice, and what a live run is using (`./model.ts`). */
+  modelState(): { explicit: string | null; resolved: string | null } {
+    return { explicit: this.explicitModel, resolved: this.isRunning() ? this.resolvedModel : null };
   }
 
   /** Current feature map with defaults applied. Safe to call before features

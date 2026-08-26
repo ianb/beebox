@@ -11,7 +11,7 @@ import { mkdir, utimes, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { getSessionLogPath } from "../../../src/core/chat/session/transcript-paths.js";
-import { discoverSessions } from "../../../src/core/retro/discovery.js";
+import { countUserMessages, discoverSessions } from "../../../src/core/retro/discovery.js";
 import { renderSessionCompact } from "../../../src/core/chat/transcript-render.js";
 import { renderRunReport } from "../../../src/core/retro/report.js";
 import {
@@ -218,6 +218,48 @@ _None recorded._
 ## Actions taken
 «blankline»
 _None — no observations to integrate._
+```
+
+```ts cleanup
+delete process.env["CB_CLAUDE_PROJECTS_DIR"];
+await box.cleanup();
+```
+
+## A transcript longer than the read window says so
+
+Discovery reads one page of `MAX_SESSION_ENTRIES` and counts user messages in
+it. That is fine for the threshold it feeds — "has this conversation enough
+human turns to be worth observing" — but the number it produces is a floor, and
+a floor that looks like a total is exactly the sort of thing that gets believed
+years later. So the count carries `truncated`, and discovery logs a one-line
+notice naming the session. The limit is a parameter, so this is provable without
+a 5000-entry fixture; the real constant is untouched.
+
+```ts
+const box = await makeTmpBox();
+process.env["CB_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
+await seedSession(box.root, { sessionId: "chat-long", age: 5 * HOUR, entries: [
+  typedEntry("first", "2026-06-09T07:00:00Z"),
+  agentEntry("ok", "2026-06-09T07:00:10Z"),
+  typedEntry("second", "2026-06-09T07:01:00Z"),
+  agentEntry("ok", "2026-06-09T07:01:10Z"),
+  typedEntry("third", "2026-06-09T07:02:00Z"),
+] });
+const logPath = getSessionLogPath(box.root, "chat-long");
+
+JSON.stringify(await countUserMessages({ logPath, limit: 2 }))
+=> {"userEntries":1,"tagged":1,"truncated":true}
+
+JSON.stringify(await countUserMessages({ logPath, limit: 500 }))
+=> {"userEntries":3,"tagged":3,"truncated":false}
+```
+
+A transcript that vanished between listing and reading is still `null`, not a
+throw — the retro walker counts it rather than failing the run.
+
+```ts continue
+await countUserMessages({ logPath: box.path("claude-projects/nope.jsonl"), limit: 10 })
+=> null
 ```
 
 ```ts cleanup

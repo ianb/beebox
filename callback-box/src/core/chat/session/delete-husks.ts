@@ -4,7 +4,7 @@ import {
   type TrashReceipt,
 } from "../../commands/trash.js";
 import { recoverTrashReceipt } from "../../commands/trash-recovery.js";
-import type { ChatHuskEntry } from "../husk.js";
+import type { ChatHuskEntry } from "../husk-read.js";
 import type { ChatSessionRegistry } from "./registry.js";
 import type { SessionStorageState } from "./delete-storage.js";
 

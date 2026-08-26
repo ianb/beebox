@@ -1,12 +1,14 @@
 ---
 title: "Husks outlive their transcripts, and nothing handles the resulting husk graveyard"
-workstream: compacting
+workstream: chat-session-identity
 area: callback-box
 filed-by: agent
 discovered-in: worktree-compacting — eval'ing chat review against real boxes
 priority: normal
+resolution: implemented
 ---
 
+**Closed 2026-08-26** by [chat-session-identity](../../../callback-box/docs/implemented-plans/chat-session-identity.md) Tracks 2–3: husks record `engine`/`origin`/`origin-name` (backfilled on boot for transcripts present here), transcript availability is a typed state — present / expired / elsewhere (on <machine>) / unknown — shown in the history dropdown and landmark card, and a dead husk can be archived to `store/chat/archive/` (`chat.archive`). Not built, by decision: automatic GC/archive sweeps, a box-owned transcript (transcripts stay out of git).
 **Implementation update (2026-08-07):** `worktree-chat-session-delete` makes
 missing local transcripts an explicit unavailable state, disables the unsafe
 `Open chat` path, and guards bootstrap, raw-send, and schedule-resume paths.
@@ -74,7 +76,7 @@ A dead husk is not inert — it is actively misleading:
 - `loadAllSessions` (`callback-box/src/webapp/trpc/routers/chat.ts`) silently
   skips it, so it's invisible in the picker but present everywhere else — the
   worst of both.
-- [Chat review](../../callback-box/docs/chat-review.md) skips it too (correctly —
+- [Chat review](../../../callback-box/docs/chat-review.md) skips it too (correctly —
   there is nothing to read), so it will never be titled or summarized. Its
   content is unrecoverable.
 - **Resuming it crashes the turn — it is not merely a dead link.** Confirmed

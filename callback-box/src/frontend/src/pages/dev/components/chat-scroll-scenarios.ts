@@ -14,62 +14,10 @@
  * Runner + measurement live in chat-scroll-runner.ts; this file is data.
  */
 
-export type Step =
-  /** A new message of `px` height lands at the bottom. */
-  | { k: "append"; px: number; role: "user" | "assistant" }
-  /** The user sends: a user message lands, takes the last-turn spacer, and the
-   *  controller anchors it to the top of the viewport. */
-  | { k: "send"; px: number }
-  /** Grow the last message `chunks` times by `chunkPx`, every `intervalMs`. */
-  | { k: "stream"; chunks: number; intervalMs: number; chunkPx: number }
-  /** Replace the streamed message with a shorter final one. */
-  | { k: "finalize"; shrinkBy: number }
-  /** Load `count` older messages above (captureForPrepend runs first). */
-  | { k: "prepend"; count: number }
-  /** Set the below-list chrome height — clientHeight moves, content doesn't. */
-  | { k: "chromeResize"; px: number }
-  /** An existing message grows in place (an image finishing decode). */
-  | { k: "imageDecode"; msgIndex: number; px: number }
-  /** A real wheel: dispatch the event AND move scrollTop, as a browser does. */
-  | { k: "userWheel"; deltaY: number }
-  /** A scrollbar-thumb drag: scrollTop write with no input event at all. */
-  | { k: "userDrag"; toTop: number }
-  /** Momentum: a run of scroll events with NO input events (the iOS fling the
-   *  old controller had to guess about). Reversals are counted. */
-  | { k: "fling"; steps: number; stepPx: number; intervalMs: number }
-  /** The floating scroll-to-bottom button. */
-  | { k: "button"; behavior: ScrollBehavior }
-  /** Open a thread: empty the list and start the bounded open-phase hold. */
-  | { k: "openThread" }
-  /** The first history render has landed — end the hold. */
-  | { k: "settleOpen" }
-  /** Mobile keyboard: shrink the frame, hold, restore. */
-  | { k: "keyboardClamp"; px: number; holdMs: number }
-  | { k: "wait"; ms: number };
+import type { Step, Expectation } from "./chat-scroll-steps";
+import { OPEN_THREAD_SCENARIOS } from "./chat-scroll-scenarios-open";
 
-/** Declarative outcome check, evaluated against the run's measured summary. */
-export interface Expectation {
-  /** Within the at-bottom margin when the scenario ends. */
-  finalAtBottom?: boolean;
-  /** Distance from the bottom at the end, in px. */
-  finalFromBottomAtMost?: number;
-  /** Content must have grown past the fold and stayed there (no follow). */
-  finalFromBottomAtLeast?: number;
-  /** Worst drift off the bottom during any moment the controller claimed atBottom. */
-  maxFromBottomWhileAtBottomAtMost?: number;
-  /** The view left the bottom with no user input anywhere near it. */
-  leftBottomWithoutIntent?: boolean;
-  /** Scroll movement the controller caused while the reader was away from the bottom. */
-  driftWhileAwayAtMost?: number;
-  /** The "new content below" badge state at the end. */
-  finalHasUnseenContent?: boolean;
-  /** Offset of the newest user message from the scroller's top edge (the send anchor). */
-  finalUserMessageTopAtMost?: number;
-  /** Programmatic `scrollTop` writes the controller made during the run. */
-  writesAtMost?: number;
-  /** Backwards jumps in scrollTop observed during a fling — a yank. */
-  flingReversalsAtMost?: number;
-}
+export type { Step, Expectation } from "./chat-scroll-steps";
 
 export interface Scenario {
   name: string;
@@ -80,7 +28,7 @@ export interface Scenario {
 
 const STREAM_CHUNK_PX = 26;
 
-export const SCENARIOS: Scenario[] = [
+const SCENARIOS_MAIN: Scenario[] = [
   {
     name: "follow-while-streaming",
     description: "At the bottom, an ordinary streamed reply. Under the write-on-user-action model the view must NOT follow: fromBottom grows, the badge lights, and the controller writes nothing.",
@@ -279,20 +227,14 @@ export const SCENARIOS: Scenario[] = [
     },
   },
   {
-    name: "open-thread-lands-at-bottom",
-    description: "Rule 1: a thread opens empty and its history lands in several async chunks. Every chunk keeps the bottom until the first render has settled.",
+    name: "finalize-drops-spacer",
+    description: "A short reply to a send. While it streams the last turn keeps a viewport-tall spacer so the user message can sit at the top; once it is complete the spacer goes, and the view clamps to the real bottom with no blank room below the reply.",
     steps: [
-      { k: "openThread" },
-      { k: "wait", ms: 80 },
-      { k: "append", px: 420, role: "assistant" },
-      { k: "wait", ms: 80 },
-      { k: "append", px: 60, role: "user" },
-      { k: "append", px: 380, role: "assistant" },
-      { k: "wait", ms: 120 },
       { k: "append", px: 300, role: "assistant" },
-      { k: "wait", ms: 120 },
-      { k: "settleOpen" },
-      { k: "wait", ms: 200 },
+      { k: "send", px: 40 },
+      { k: "stream", chunks: 3, intervalMs: 50, chunkPx: 40 },
+      { k: "finalize", shrinkBy: 20 },
+      { k: "wait", ms: 300 },
     ],
     expect: {
       finalAtBottom: true,
@@ -301,6 +243,8 @@ export const SCENARIOS: Scenario[] = [
     },
   },
 ];
+
+export const SCENARIOS: Scenario[] = [...SCENARIOS_MAIN, ...OPEN_THREAD_SCENARIOS];
 
 export function findScenario(name: string): Scenario | null {
   return SCENARIOS.find((s) => s.name === name) ?? null;

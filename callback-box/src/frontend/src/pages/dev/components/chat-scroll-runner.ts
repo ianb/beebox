@@ -71,6 +71,9 @@ function growLast(prev: HarnessContent, by: number): HarnessContent {
 interface StepDeps {
   ctx: RunContext;
   sampler: Sampler;
+  /** The settles' image waits, oldest first — pushed by `settleOpen
+   *  { awaitImage }`, the oldest fired by each `imageDecode`. */
+  imageLanded: Array<() => void>;
 }
 
 class HarnessNotMountedError extends Error {
@@ -111,7 +114,12 @@ async function runStep(step: Step, deps: StepDeps): Promise<void> {
       await settle();
       return;
     case "settleOpen":
-      ctx.settleOpen();
+      if (step.awaitImage) {
+        const until = new Promise<void>((resolve) => { deps.imageLanded.push(resolve); });
+        ctx.settleOpen({ until });
+      } else {
+        ctx.settleOpen();
+      }
       await settle();
       return;
     case "fling":
@@ -133,7 +141,8 @@ async function runStep(step: Step, deps: StepDeps): Promise<void> {
       await settle();
       return;
     case "finalize":
-      ctx.apply((prev) => growLast(prev, -step.shrinkBy));
+      // The reply is complete: the last-turn spacer goes with the shrink.
+      ctx.apply((prev) => ({ ...growLast(prev, -step.shrinkBy), lastTurnSpacer: false }));
       await settle();
       return;
     case "prepend":
@@ -145,9 +154,39 @@ async function runStep(step: Step, deps: StepDeps): Promise<void> {
       ctx.apply((prev) => ({ ...prev, chromePx: step.px }));
       await settle();
       return;
+    case "growPerFrame": {
+      // Between frames — a task after the frame's resize pass — is when a
+      // decoded image's layout arrives: after the previous write, before the
+      // next frame delivers that write's scroll event.
+      for (let i = 0; i < step.frames; i++) {
+        await new Promise<void>((resolve) => requestAnimationFrame(() => window.setTimeout(resolve, 0)));
+        flushApply(() => ctx.apply((prev) => growLast(prev, step.px)));
+      }
+      await settle();
+      return;
+    }
+    case "growTwiceInOnePass": {
+      // A one-shot observer created after the controller's runs after it in
+      // the same pass; a layout change made inside it is delivered in that
+      // pass's next iteration — before any scroll event.
+      const content = el.firstElementChild;
+      if (!content) throw new HarnessNotMountedError();
+      let fired = false;
+      const ro = new ResizeObserver(() => {
+        if (fired) return;
+        fired = true;
+        ro.disconnect();
+        flushApply(() => ctx.apply((prev) => growLast(prev, step.againPx)));
+      });
+      ro.observe(content);
+      ctx.apply((prev) => growLast(prev, step.px));
+      await settle();
+      return;
+    }
     case "imageDecode":
       ctx.apply((prev) => growAt(prev, { index: step.msgIndex, by: step.px }));
       await settle();
+      deps.imageLanded.shift()?.();
       return;
     case "userWheel":
       // A real wheel does both: the input event the controller listens for AND
@@ -268,7 +307,8 @@ export async function runScenario(scenario: Scenario, ctx: RunContext): Promise<
   ctx.log("scenario-start", { name: scenario.name });
   sampler.start();
   try {
-    for (const step of scenario.steps) await runStep(step, { ctx, sampler });
+    const imageLanded: StepDeps["imageLanded"] = [];
+    for (const step of scenario.steps) await runStep(step, { ctx, sampler, imageLanded });
     await settle();
   } finally {
     sampler.stop();

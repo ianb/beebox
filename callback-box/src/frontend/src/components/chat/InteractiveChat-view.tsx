@@ -22,6 +22,10 @@ import { ScreenshotRequestUI } from "./ScreenshotRequestUI";
 import { useChatAttachmentValues } from "./InteractiveChat-attachments";
 import { useCompanionSelection } from "./use-companion-selection";
 import type { ChatBodyProps } from "./InteractiveChat-body-props";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
+import { useNavigate, useParams } from "@tanstack/react-router";
+import { href, toSearch } from "../../lib/routing";
+import type { ChatAgentEngine } from "@shared/chat-models.js";
 
 
 /**
@@ -36,7 +40,54 @@ function BarChromeRegion(props: ChatBodyProps) {
     sessionId, processRunning, isStreaming, debugView, setDebugView, showDebugLog, setShowDebugLog,
   } = props;
   const { onZoomView } = tabs;
-  const { agentEngine, selectedModel, narrationEnabled, handleToggleNarration, hqDictationEnabled, handleToggleHqDictation, handleSelectModel } = model;
+  const { agentEngine, selectedModel, modelInForce, boxDefault, enabledEngines, boxEngine, handlePinModel, handleOpenModelPanel, narrationEnabled, handleToggleNarration, hqDictationEnabled, handleToggleHqDictation, handleSelectModel } = model;
+  // Pinning writes box configuration, so it is the owner's control — the same
+  // signal the dashboard uses for its owner-only actions.
+  const currentUser = useCurrentUser();
+  const canPin = currentUser?.isOwner === true;
+  // A chat's engine is fixed by its first message. Before that there is nothing
+  // to lose by starting over on another engine — after it, the transcript lives
+  // in that engine's store and cannot be handed across.
+  const canChooseEngine = messages.length === 0;
+  const navigate = useNavigate();
+  const { boxSlug: routeBoxSlug } = useParams({ strict: false });
+  /**
+   * Start this chat again on another engine.
+   *
+   * A coined chat id is reserved against Claude, so switching engines cannot
+   * reuse it — the chat goes back through `?session=new` carrying the choice,
+   * and the abandoned reservation expires on its own. Nothing is lost: this is
+   * only reachable before the first message.
+   */
+  const handleChooseStart = useCallback((choice: { engine: ChatAgentEngine; model: string | null }) => {
+    if (routeBoxSlug === undefined) return;
+    void navigate({
+      to: href(`/${routeBoxSlug}/chat`),
+      search: toSearch({
+        session: "new",
+        engine: choice.engine,
+        ...(choice.model !== null ? { model: choice.model } : {}),
+        ...(effectiveContextDir !== null ? { contextDir: effectiveContextDir } : {}),
+      }),
+    });
+  }, [navigate, routeBoxSlug, effectiveContextDir]);
+
+  /**
+   * Set this chat's model.
+   *
+   * A chat with an id can hold one server-side. A chat without one cannot —
+   * `setModel` has nothing to address — so its choice has to ride the first
+   * send, which is the same restart-with-the-choice path a cross-engine pick
+   * takes. Without this the menu showed "switched" while the send carried
+   * nothing (found in cross-model review).
+   */
+  const handleSelectOwnModel = useCallback((chosen: string | null) => {
+    if (sessionId === null && agentEngine !== null) {
+      handleChooseStart({ engine: agentEngine, model: chosen });
+      return;
+    }
+    handleSelectModel(chosen);
+  }, [sessionId, agentEngine, handleChooseStart, handleSelectModel]);
   return (
     <ChatBarChrome
       contextDir={effectiveContextDir}
@@ -53,8 +104,17 @@ function BarChromeRegion(props: ChatBodyProps) {
       hqInFlight={voice.hqInFlight}
       onNewSession={actions.handleNewSession}
       selectedModel={selectedModel}
+      modelInForce={modelInForce}
+      boxDefault={boxDefault}
+      canPin={canPin}
+      canChooseEngine={canChooseEngine}
+      enabledEngines={enabledEngines}
+      boxEngine={boxEngine}
+      onChooseStart={handleChooseStart}
+      onPinModel={handlePinModel}
+      onOpenModelPanel={handleOpenModelPanel}
       agentEngine={agentEngine}
-      onSelectModel={handleSelectModel}
+      onSelectModel={handleSelectOwnModel}
       onStopProcess={actions.handleStopProcess}
       onRestartProcess={actions.handleRestartProcess}
       onCompactSession={actions.handleCompactSession}

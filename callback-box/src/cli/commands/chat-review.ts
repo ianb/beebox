@@ -35,6 +35,16 @@ async function discover(boxRoot: string): Promise<DiscoveryResult> {
   });
 }
 
+/**
+ * The origin skip, worded the same in `status` and `run` — it is a coverage
+ * statement (those sessions are reviewed on the machine that ran them, or not
+ * at all), not a failure. Count only: naming them would leak one machine's
+ * chat titles into another's output.
+ */
+function originSkipLine(count: number): string {
+  return `${String(count)} session${count === 1 ? "" : "s"} originated on another machine (not reviewed here)`;
+}
+
 function describeSkips(result: DiscoveryResult): string[] {
   const lines: string[] = [];
   if (result.deferredActive.length > 0) {
@@ -48,6 +58,9 @@ function describeSkips(result: DiscoveryResult): string[] {
   if (result.tooFewTurns > 0) lines.push(`  too few user turns: ${String(result.tooFewTurns)}`);
   if (result.missingTranscripts > 0) {
     lines.push(`  husks whose transcript is gone: ${String(result.missingTranscripts)}`);
+  }
+  if (result.foreignOrigin > 0) {
+    lines.push(`  ${originSkipLine(result.foreignOrigin)}`);
   }
   return lines;
 }
@@ -119,6 +132,9 @@ const runCommand = new Command("run")
     if (summary.belowThreshold > 0) parts.push(`${String(summary.belowThreshold)} below threshold`);
     if (summary.missingTranscripts > 0) {
       parts.push(`${String(summary.missingTranscripts)} husk(s) with no transcript`);
+    }
+    if (summary.foreignOrigin > 0) {
+      parts.push(originSkipLine(summary.foreignOrigin));
     }
     if (summary.exhausted > 0) parts.push(`${String(summary.exhausted)} given up on`);
     if (summary.sessionErrors > 0) parts.push(`${String(summary.sessionErrors)} error(s)`);

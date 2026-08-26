@@ -14,13 +14,13 @@
  */
 
 import { z } from "zod";
-import { readAcceptedMessages, type AcceptedMessage } from "../../../core/chat/session/accepted-messages.js";
+import { readAcceptedMessages, type AcceptedMessage, type HistoryMarker } from "../../../core/chat/session/accepted-messages.js";
 import { publicProcedure } from "../trpc.js";
 import { getMostActive } from "../../../core/chat/session/history.js";
 import { historySliceSchema, loadHistoryForSession, type SessionHistory } from "./chat-session-procedures.js";
 import { readSessionStatus, type ChatSessionStatus } from "./chat-control-procedures.js";
 import { titleForSession } from "../../../core/chat/session/list.js";
-import { resolveSessionAvailability } from "../../../core/chat/session/availability.js";
+import { resolveSessionAvailability, type SessionAvailability } from "../../../core/chat/session/availability.js";
 import { getChatRuntime } from "../../chat-runtime.js";
 import { TRPCError } from "@trpc/server";
 
@@ -51,6 +51,18 @@ interface ChatBootstrapBase {
   pending: AcceptedMessage[];
 }
 
+/**
+ * The availability answer, minus its own `kind` (the bootstrap's `kind` says
+ * `"unavailable"` already). Distributed over the union member by member —
+ * a plain `Omit` would collapse the two arms into their common keys and lose
+ * `transcript` entirely, which is the distinction this carries.
+ */
+type UnavailableDetail = Extract<SessionAvailability, { kind: "unavailable" }> extends infer U
+  ? U extends { kind: "unavailable" }
+    ? Omit<U, "kind">
+    : never
+  : never;
+
 export type ChatBootstrap =
   | (ChatBootstrapBase & {
       kind: "empty";
@@ -63,12 +75,10 @@ export type ChatBootstrap =
       sessionId: string;
       history: SessionHistory;
     })
-  | (ChatBootstrapBase & {
+  | (ChatBootstrapBase & UnavailableDetail & {
       kind: "unavailable";
       sessionId: string;
       history: null;
-      reason: "missing-local-transcript" | "deletion-in-progress";
-      huskPath: string | null;
     });
 
 export const chatBootstrapProcedure = {
@@ -90,15 +100,18 @@ export const chatBootstrapProcedure = {
       // it means "none", not a session named "".
       const sessionId = resolved === "" ? null : resolved;
       // The acceptance record is read against whatever history goes back with
-      // it: the entries already there are each accepted message's
-      // reconciliation baseline, so an old turn repeating the same words cannot
-      // stand in for the echo it is still waiting for.
-      const acceptedFor = (knownUuids: string[]): AcceptedMessage[] =>
+      // it: the entries that already existed when a message was accepted are
+      // that message's reconciliation baseline, so an old turn repeating the
+      // same words cannot stand in for the echo it is still waiting for — and,
+      // because the baseline is dated per message rather than being the whole
+      // returned list, the message's own echo is never blacklisted along with
+      // them when the transcript has already caught up.
+      const acceptedFor = (history: HistoryMarker[]): AcceptedMessage[] =>
         readAcceptedMessages(ctx.eventBus, {
           sessionId,
           now: new Date(),
           viewerEmail: ctx.user?.email ?? null,
-          knownUuids,
+          history,
         });
       if (sessionId === null) {
         // "No session" is the reload that loses the most: a first message is
@@ -128,14 +141,16 @@ export const chatBootstrapProcedure = {
         registry: runtime.registry,
       });
       if (availability.kind === "unavailable") {
+        // Spread rather than restated field-by-field: the availability union
+        // carries `transcript` on one arm only, and a hand-copied literal here
+        // is exactly where that distinction gets flattened back to a string.
         return {
+          ...availability,
           kind: "unavailable",
           sessionId,
           history: null,
           label: await titleForSession(ctx.boxRoot, sessionId),
           status: await readSessionStatus(ctx.boxRoot, sessionId),
-          reason: availability.reason,
-          huskPath: availability.huskPath,
           pending: acceptedFor([]),
         };
       }
@@ -146,7 +161,7 @@ export const chatBootstrapProcedure = {
         history,
         label,
         status: await readSessionStatus(ctx.boxRoot, sessionId),
-        pending: acceptedFor(history.entries.map((entry) => entry.uuid)),
+        pending: acceptedFor(history.entries.map((entry) => ({ uuid: entry.uuid, timestamp: entry.timestamp }))),
       };
     }),
 };

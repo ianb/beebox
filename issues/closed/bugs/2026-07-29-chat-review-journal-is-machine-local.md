@@ -1,13 +1,15 @@
 ---
 title: "Chat review's journal is machine-local but the husk it guards is shared, so two machines fight"
-workstream: compacting
+workstream: chat-session-identity
 area: callback-box
 filed-by: agent
 discovered-in: worktree-compacting — checking prod retention after shipping chat review
 priority: backlog
+resolution: implemented
 ---
 
-[Chat review](../../callback-box/docs/chat-review.md) keeps two pieces of state
+**Closed 2026-08-26** by [chat-session-identity](../../../callback-box/docs/implemented-plans/chat-session-identity.md) Track 4 (`65f943555`): a machine reviews only sessions whose husk `origin` is its own (or unstamped ones whose transcript is present here), so the journal is now legitimately machine-local — the origin machine is the only one holding the whole transcript. Skipped sessions are counted in `cb chat review status`. Coverage for laptop-origin sessions requires running the schedule there (boxholder policy).
+[Chat review](../../../callback-box/docs/chat-review.md) keeps two pieces of state
 about a session, and they live on opposite sides of the sync boundary:
 
 - **The span journal** — `.callback-box/chat-review/state.json`. `.callback-box/`

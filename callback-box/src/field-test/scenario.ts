@@ -29,11 +29,31 @@ import { fileExists } from "../lib/file-exists.js";
 import { errorMessage } from "../lib/error-guards.js";
 import { assertNever, invariant } from "../lib/invariant.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
+import { modelTier, resolveProcedureModel, isProcedureModelName } from "../shared/agent-models.js";
+import { normalizeModelId } from "../shared/model-ids.js";
 
 /** Both models default here, not at a call site: a run that did not say what it
  *  tested is not comparable to last week's run, so the default is part of the
  *  format rather than an argument the harness may forget to pass. */
 const DEFAULT_MODEL = "opus";
+
+/**
+ * Resolve a scenario's `models.chat` to a concrete model id.
+ *
+ * Scenarios name a tier (`opus`, `balanced`) — which the operator's own SDK
+ * call accepts as an alias, but the box model policy does not: `agentModel`
+ * holds an id, and a tier name there is rejected on read, leaving the run
+ * unpinned while the report claims otherwise. Resolving here keeps `models.chat`
+ * one thing everywhere: what the box was actually set to.
+ *
+ * Resolved against Claude because the harness's operator is Claude; a codex box
+ * translates the id to its own same-tier model when it reads the policy
+ * (`core/model-policy.ts`), so nothing is lost by picking a family here.
+ */
+function resolveScenarioChatModel(model: string): string | null {
+  if (isProcedureModelName(model)) return resolveProcedureModel("claude", model);
+  return modelTier(normalizeModelId(model)) === null ? null : normalizeModelId(model);
+}
 
 /** Ids name checkpoint tags, check scripts and report rows — kebab-case keeps
  *  all three legible and shell-safe. */
@@ -268,6 +288,10 @@ export async function loadFieldScenario(dir: string): Promise<FieldScenario> {
   }));
 
   const problems = await referenceProblems(absoluteDir, checklist);
+  const chatModel = resolveScenarioChatModel(file.models?.chat ?? DEFAULT_MODEL);
+  if (chatModel === null) {
+    problems.push(`models.chat: "${file.models?.chat ?? DEFAULT_MODEL}" is not a model tier or a known model id`);
+  }
   if (problems.length > 0) throw new FieldScenarioInvalidError({ dir: absoluteDir, problems });
 
   return {
@@ -277,7 +301,7 @@ export async function loadFieldScenario(dir: string): Promise<FieldScenario> {
     startTime: file.startTime,
     models: {
       operator: file.models?.operator ?? DEFAULT_MODEL,
-      chat: file.models?.chat ?? DEFAULT_MODEL,
+      chat: chatModel ?? DEFAULT_MODEL,
     },
     persona,
     assetsDir: path.join(absoluteDir, "assets"),

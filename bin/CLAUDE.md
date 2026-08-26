@@ -251,8 +251,19 @@ and rechecks it at most every 5s on the request path; a mismatch is reported as
 activity signal is HTTP, so a chat streaming over a WebSocket is
 indistinguishable from an idle worktree and there is no moment it can prove is
 safe to cut. `bin/workstreams down <name>` is the fix, and it is the human's
-call. The box-child half of this is separately solved through
-`CB_DEV_BUNDLE_ID`, which drains before re-execing.
+call.
+
+The box-child half is solved end to end. A child stamps its bundle's stat
+identity (`CB_DEV_BUNDLE_ID`), polls it once a second, and drains before
+re-execing on exit 75 — but nothing used to WRITE a new bundle, so that poll
+had no producer and fired only when someone happened to run `cb` or `pnpm test`
+for an unrelated reason. `callback-box/scripts/auto-build-cli.sh` is the
+producer: the root post-commit/post-merge hooks call it in every checkout, and
+it rebuilds `dist/cli.mjs` (~250ms, esbuild only) when the commit or merge
+moved an actual bundle input. It gates on paths because rewriting the bundle
+cycles every box child in the checkout, and a docs-only merge must not do that.
+So a merge now reaches the running box child on its own; the hub above it still
+does not.
 
 ## Orphan resistance
 
@@ -382,6 +393,19 @@ through `bin/workstreams agent-liveness` and spares an agent-browser on
   (including `codex resume --last`); a live session writes a unique local file,
   focuses its tab when possible, and reports `manual forwarding required`.
   Use `--` before literal briefing text that begins with `-`.
+  **Claude continues its prior conversation** when the registry's `sessionId`
+  still has a transcript under `~/.claude/projects/*/` — the worktree is
+  recreated at the same path, and Claude Code keys transcripts by path, so the
+  history outlives a cull. The briefing (or the recreated-worktree note) is the
+  continued session's first message. It starts fresh on `--fresh`, with no
+  recorded id, or when the transcript is gone, and the launch line says which
+  and why. The transcript check happens before the tab opens: `--resume` with a
+  pruned id fails inside the tab, where there is no fallback left. Only the
+  recorded id is ever used — a project directory routinely holds several
+  transcripts, and the newest is not the one that did the work. The id shape
+  this decision accepts is the shape `launch_session_build`'s own guard
+  demands, because that guard runs after `resume` has committed to continuing:
+  a disagreement between them is no session at all, not a fresh one.
 - `bin/workstreams reset-test <name>` — hard-reset the isolated test1 clone to
   its `test-setup` branch
 - `bin/workstreams confirm-tested <issue-basename>` — clear a landed issue's

@@ -9,6 +9,7 @@
  */
 
 import assert from "node:assert/strict";
+import { homedir } from "node:os";
 import { test } from "node:test";
 
 import type { LedgerRecord } from "../../bin/test-ledger-lib.js";
@@ -288,7 +289,7 @@ test("renderIssue names the landing, the workstream, the files and the excerpt",
     date: "2026-08-25",
     landing,
     files: ["test/core/box/file-watcher.doctest.md"],
-    excerpt: "not ok 12 - test/core/box/file-watcher.doctest.md",
+    excerpt: `not ok 12 - test/core/box/file-watcher.doctest.md\n  command: ${homedir()}/.nvm/bin/node`,
     testedCommit: "1".repeat(40),
     baseCommit: "2".repeat(40),
   });
@@ -299,6 +300,9 @@ test("renderIssue names the landing, the workstream, the files and the excerpt",
   assert.match(text, /abcdef12/u);
   assert.match(text, /test\/core\/box\/file-watcher\.doctest\.md/u);
   assert.match(text, /not ok 12/u);
+  // The excerpt's home paths are written as `~`, or path-leak-check refuses the report.
+  assert.match(text, /command: ~\/\.nvm\/bin\/node/u);
+  assert.ok(!text.includes(homedir()));
   // No `# H1`: the title lives in frontmatter.
   assert.doesNotMatch(text, /^# /mu);
 });

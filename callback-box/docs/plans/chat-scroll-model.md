@@ -72,14 +72,28 @@ Writes, exhaustively:
    growth until the first history render has landed (`messages.length > 0`
    after load; the empty state renders no scroller at all,
    `InteractiveChat-messages.tsx:229`). This is a bounded initial state, not
-   following: it ends at the first paint with content.
+   following: it ends at the first paint with content — where "paint" has to
+   include the transcript's images: an `<img>` reserves no height until its
+   bytes arrive (the chat has no dimension metadata to reserve with), so the
+   hold waits for the transcript's images to load or fail (lazy ones only
+   when near the viewport),
+   then ends after a short quiet period with no content growth (a cached
+   image is `complete` before it is decoded and laid out), all under an 8s
+   cap (2026-08-26; the fixed
+   400ms it shipped with stranded a reader an image's height above the bottom
+   on every open of an image-bearing thread). The reader's own action ends it
+   early.
 2. **Send a message** → scroll so the new user message sits at the top of the
    viewport. The reply streams in below it and fills the screen without any
    scrolling. If the reply outgrows the screen, it continues below the fold;
    the scroll-to-bottom button shows. (The boxholder's proposal and the
    ChatGPT/claude.ai behaviour.) The last turn carries
    `min-height: <scroller clientHeight>` so "at the top" is reachable when the
-   reply is short; the spacer persists until the next send. Ordering on send:
+   reply is short; the spacer lasts until the reply is complete (2026-08-26:
+   it used to persist until the next send, leaving a screen of blank room
+   under every finished reply — dropping it at finalize lets the browser
+   clamp the view to the real bottom, one move to a place showing the whole
+   reply). Ordering on send:
    the previous turn loses its spacer, the new user turn gains it, and the
    scroll write runs in a layout effect after that commit — one write, after
    the shrink above and the growth below have both landed, so nothing clamps.

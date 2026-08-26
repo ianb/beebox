@@ -69,7 +69,7 @@ export async function waitForTranscriptEntry(
     timeoutMs?: number;
   },
 ): Promise<boolean> {
-  if (await resolveChatEngine(boxRoot, sessionId) === "codex") {
+  if (await resolveChatEngine(boxRoot, { sessionId }) === "codex") {
     const deadline = Date.now() + (timeoutMs ?? WAIT_TIMEOUT_MS);
     for (;;) {
       const { entries } = await loadSessionHistory(boxRoot, {

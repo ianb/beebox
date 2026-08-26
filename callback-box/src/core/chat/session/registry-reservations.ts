@@ -11,6 +11,7 @@ import { reserveChatSession, type ChatReservationStore, type ReserveResult } fro
 import { prewarmReservedChat } from "./registry-warm.js";
 import type { ChatBackend } from "../../../services/claude-chat.js";
 import type { ChatSessionOptions } from "./options.js";
+import type { AgentEngine } from "../../box/config.js";
 
 const log = makeLog("ChatSessionRegistry");
 
@@ -31,6 +32,8 @@ export async function reserveAndWarm(opts: {
   sessionId: string;
   contextDir: string | null;
   seedFeatures: Record<string, string>;
+  requestedEngine?: AgentEngine | undefined;
+  model?: string | undefined;
 }): Promise<ReserveResult> {
   const { boxRoot, store, backend, baseOptions, ...request } = opts;
   const result = await reserveChatSession({ boxRoot, store, ...request });
@@ -42,6 +45,7 @@ export async function reserveAndWarm(opts: {
     baseOptions,
     sessionId: result.sessionId,
     contextDir: request.contextDir,
+    ...(request.model !== undefined ? { model: request.model } : {}),
   });
   return result;
 }

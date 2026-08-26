@@ -22,6 +22,7 @@ import { dirname } from "node:path";
 import { appRouter } from "../../src/webapp/trpc/router.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { getSessionLogPath } from "../../src/core/chat/session/transcript-paths.js";
+import { localOrigin } from "../../src/core/chat/session/origin.js";
 
 function caller(boxRoot) {
   const ctx = {
@@ -203,5 +204,39 @@ its chats: intrips01 [store/trips]
 ```
 
 ```ts cleanup
+await box.cleanup();
+```
+
+## Dead chats ride in their own bucket, under the landmark they were bound to
+
+A chat whose transcript is gone can't be resumed, so it can't be a `sessions`
+row — every one of those links into `/chat?session=`. It comes back in `dead`
+instead, carrying the husk path the UI links to and the state that names its
+section ("Expired", "On prod", "Unavailable").
+
+```ts
+const box = await makeTmpBox();
+process.env["CB_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
+const here = await localOrigin();
+
+await box.write("store/recipes/Recipes.landmark.card",
+  "---\nnavigation:\n  label: Recipes\n---\n\n");
+await seedSession(box, { sessionId: "livechat1", contextDir: "store/recipes", firstMessage: "what's for dinner", daysAgo: 1 });
+await box.write("store/chat/web/2026-07-20_gone.chat.card",
+  `---\nsession: goneaway1\ntitle: Sourdough attempt\ncontext-dir: store/recipes\norigin: ${here.id}\norigin-name: ${here.name}\n---\n\n`);
+await box.write("store/chat/web/2026-07-19_prod.chat.card",
+  "---\nsession: elsewhere1\ncontext-dir: store/recipes\norigin: prod-machine-id\norigin-name: prod\n---\n\n");
+
+const picked = await caller(box.root).chat.byLandmark();
+const recipes = picked.landmarks.find((l) => l.label === "Recipes");
+print(`live: ${recipes.sessions.map((s) => s.sessionId).join(",")}`);
+print(`dead: ${recipes.dead.map((d) => `${d.label} [${d.transcript.state}] -> ${d.huskPath}`).join(" | ")}`);
+=>
+live: livechat1
+dead: Sourdough attempt [expired] -> store/chat/web/2026-07-20_gone.chat.card | elsewher [elsewhere] -> store/chat/web/2026-07-19_prod.chat.card
+```
+
+```ts cleanup
+delete process.env["CB_CLAUDE_PROJECTS_DIR"];
 await box.cleanup();
 ```

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { trpc, type RouterOutput } from "../../lib/trpc";
 import { Button } from "../ui/Button";
+import { ArchiveChatSection } from "./ArchiveChatSection";
 
 type DeleteResult = RouterOutput["chat"]["deleteSession"];
 
@@ -116,6 +117,8 @@ export function DeleteChatDialog(props: DeleteChatDialogProps) {
             </a>
           </p>
         </section>
+
+        <ArchiveChatSection sessionId={sessionId} huskPath={huskPath} busy={mutation.isPending} onArchived={onClose} />
 
         {mutation.error ? (
           <p className="mt-4 rounded border border-danger-light bg-danger-50 p-2 text-sm text-danger-dark" role="alert">

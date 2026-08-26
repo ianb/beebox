@@ -27,6 +27,7 @@ export {
 export type {
   ChatImageAttachment,
   ChatSessionInfo,
+  DeadChatInfo,
   HqTranscriptionResult,
   PendingSessionEntry,
   SessionContentBlock,
@@ -38,6 +39,7 @@ export {
   getChatHistory,
   getChatSessions,
   getChatStatus,
+  setDefaultChatModel,
   interruptChat,
   postAudioForHqTranscription,
   restartChatSubprocess,

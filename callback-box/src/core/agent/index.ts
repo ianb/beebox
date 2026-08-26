@@ -107,6 +107,7 @@ export function createClaudeAgent(options: {
       prompt: opts.prompt,
       onOutput: options.onOutput,
       model: opts.model,
+      loadBoxContext: opts.loadBoxContext,
       maxTurns: opts.maxTurns,
       maxBudgetUsd: opts.maxBudgetUsd,
       dryRun: opts.dryRun,

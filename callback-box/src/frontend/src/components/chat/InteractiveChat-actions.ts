@@ -46,7 +46,6 @@ interface ChatActionsOpts {
   typingMode: boolean;
   typingLocked: boolean;
   setTypingMode: React.Dispatch<React.SetStateAction<boolean>>;
-  setSendSignal: React.Dispatch<React.SetStateAction<number>>;
   /** The one send funnel — assembly happens target-side (InteractiveChat-dispatch.ts). */
   dispatchEmission: (emission: Emission) => void;
 }
@@ -56,7 +55,7 @@ export function useChatActions(opts: ChatActionsOpts) {
     send, sessionId, boxSlug, effectiveContextDir, messages, totalEntries, loadingOlder, setLoadingOlder,
     inputStore, emissionStore, selections, resetAttachments, resetSelections, addFiles,
     onSend, isTranscribing, textareaRef, transcriptTick, typingMode, typingLocked, setTypingMode,
-    setSendSignal, dispatchEmission,
+    dispatchEmission,
   } = opts;
   const navigate = useNavigate();
 
@@ -80,11 +79,10 @@ export function useChatActions(opts: ChatActionsOpts) {
     resetSelections();
     inputStore.set("");
     dispatchEmission(emission);
-    setSendSignal((n) => n + 1);
     if (typingMode && !typingLocked) {
       setTypingMode(false);
     }
-  }, [inputStore, emissionStore, selections, dispatchEmission, typingMode, typingLocked, onSend, resetAttachments, resetSelections, setSendSignal, setTypingMode]);
+  }, [inputStore, emissionStore, selections, dispatchEmission, typingMode, typingLocked, onSend, resetAttachments, resetSelections, setTypingMode]);
 
   // Clicking a suggested opener is typing it and pressing enter: seed the
   // composer store, then run the exact same send funnel — so an opener carries

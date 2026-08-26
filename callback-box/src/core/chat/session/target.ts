@@ -17,6 +17,7 @@ import { assertNever } from "../../../lib/invariant.js";
 import { getMostActive } from "./history.js";
 import type { ChatSession } from "./index.js";
 import type { ChatSessionRegistry } from "./registry.js";
+import type { AgentEngine } from "../../box/config.js";
 
 export type ChatTargetSpec =
   /** A chat that already exists — resumable, live, or reserved. */
@@ -26,7 +27,14 @@ export type ChatTargetSpec =
    * (whose harness assigns its own id), and the schedule-fire fallbacks. The id
    * arrives asynchronously via `session-assigned`.
    */
-  | { kind: "fresh"; contextDir?: string | undefined; seedFeatures?: Record<string, string> | undefined }
+  | {
+      kind: "fresh";
+      contextDir?: string | undefined;
+      seedFeatures?: Record<string, string> | undefined;
+      /** Engine and model chosen for this chat before its first message. */
+      engine?: AgentEngine | undefined;
+      model?: string | undefined;
+    }
   /**
    * Whatever chat the box was last active in, else a fresh one. The `/capture`
    * deep link and legacy schedules with no recorded session.
@@ -61,6 +69,8 @@ export async function resolveChatTarget(
         session: ctx.registry.createNew({
           ...(spec.contextDir !== undefined ? { contextDir: spec.contextDir } : {}),
           ...(spec.seedFeatures !== undefined ? { seedFeatures: spec.seedFeatures } : {}),
+          ...(spec.engine !== undefined ? { engine: spec.engine } : {}),
+          ...(spec.model !== undefined ? { model: spec.model } : {}),
         }),
         sessionId: null,
       };

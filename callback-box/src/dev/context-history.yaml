@@ -3911,6 +3911,14 @@ test1:
       peak: 46221
       added: 0
       turns: 2
+  chat-husk-rename-safe:
+    - date: 2026-08-26T06:23:44.724Z
+      boxCommit: 7aab290df469641b2d958c19b9a2421e91adabf6
+      repoCommit: f26a64d65507d519e1d66cd28de2ea8d3b88068f
+      initial: 46890
+      peak: 48335
+      added: 1445
+      turns: 3
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

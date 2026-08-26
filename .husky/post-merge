@@ -24,6 +24,17 @@ else
   "$REPO_DIR/bin/post-merge-install.sh" "$REPO_DIR" ORIG_HEAD HEAD || true
 fi
 
+# Rebuild this checkout's CLI bundle if the merge moved a bundle input. Every
+# checkout, not just main: the bundle is per-checkout dev state, and until this
+# ran on its own a merged fix kept being served by a box child still on the old
+# bundle. After post-merge-install.sh, which may have changed the dep graph the
+# bundle externalizes.
+if [ "${1:-0}" = "1" ]; then
+  "$REPO_DIR/callback-box/scripts/auto-build-cli.sh" HEAD WORKTREE || true
+else
+  "$REPO_DIR/callback-box/scripts/auto-build-cli.sh" ORIG_HEAD HEAD || true
+fi
+
 if [ "$BRANCH" = "main" ]; then
   # Only deploy when the merge actually changed something deploy.sh ships (see
   # post-commit / callback-box/deploy/deploy.sh): callback-box, agent-doctest,

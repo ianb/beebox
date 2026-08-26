@@ -15,10 +15,10 @@
  */
 
 import * as fs from "node:fs/promises";
-import * as os from "node:os";
 import * as path from "node:path";
 import { z } from "zod";
 import { writeFileAtomic } from "../lib/atomic-write.js";
+import { CB_STATE_DIR } from "../lib/state-dir.js";
 import { acquireLock, releaseLock, requestScopedLock, LockHeldError } from "../lib/file-lock.js";
 import type { StoredPushSubscription, PushSubscriptionKeys } from "../services/push.js";
 import { errnoCode } from "../lib/error-guards.js";
@@ -69,7 +69,7 @@ export class PushStoreCorruptError extends Error {
  * isolated router) don't touch the real home directory.
  */
 function storeDir(): string {
-  return process.env.CALLBACK_PUSH_STORE_DIR ?? path.join(os.homedir(), ".local/share/cb");
+  return process.env.CALLBACK_PUSH_STORE_DIR ?? CB_STATE_DIR;
 }
 
 function storePath(): string {

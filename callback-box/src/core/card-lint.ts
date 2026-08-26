@@ -16,7 +16,10 @@
  *
  * Type-specific, self-contained validation (rules Zod can't express, e.g.
  * commentary's Markdoc check or extfile's `file:`-URL refinement) is NOT here:
- * it lives on each schema as a `validate` hook, invoked generically below.
+ * it lives on each schema as a `validate` hook, invoked generically below. The
+ * one rule that cannot be self-contained — a chat husk's `session` must be
+ * unique across `store/chat/**` — is dispatched from here against a per-run
+ * index (`lint-chat-duplicates.ts`).
  * The ref-existence walk stays here because it is box-aware (resolves refs
  * against the box root), which the self-contained hook deliberately lacks.
  *
@@ -50,6 +53,7 @@ import {
 } from "./canonical-refs.js";
 import { lintLessonPlanNodeRefs, lintProgressNodeRefs } from "./lint-node-refs.js";
 import { lintFigureEntry, lintLandmarkSymbolSrc } from "./lint-path-fields.js";
+import { lintDuplicateChatSession } from "./lint-chat-duplicates.js";
 import { conceptMapShapeWarnings } from "../schemas/concept-map.js";
 import { errorMessage } from "../lib/error-guards.js";
 
@@ -228,7 +232,13 @@ async function lintFrontmatterCard(input: {
   // the schema as its `validate` hook — see the commentary/extfile schema
   // modules. The generic ref-existence walk above stays here because it needs
   // the loader (box-aware), which the self-contained hook deliberately lacks.
-  const errors = parsed.schema.validate ? parsed.schema.validate({ fields: parsed.fields }) : [];
+  const errors: LintIssue[] = parsed.schema.validate ? [...parsed.schema.validate({ fields: parsed.fields })] : [];
+  // The one cross-file rule: a chat husk's `session` is its identity, so two
+  // husks carrying the same one is an error, not a warning — see
+  // lint-chat-duplicates.ts for why it can't be a schema `validate` hook.
+  if (type === "chat") {
+    errors.push(...(await lintDuplicateChatSession({ path, fields: parsed.fields, boxRoot: options.boxRoot, run: options })));
+  }
   return { path, errors, warnings };
 }
 

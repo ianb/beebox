@@ -23,7 +23,8 @@ import {
 } from "../../../core/chat/session/history.js";
 import { nearestLandmarkDir, isBoxRelativeCardPath } from "../../../core/landmark/nearest.js";
 import { getChatRuntime } from "../../chat-runtime.js";
-import { loadAllSessions, type ChatSessionRow } from "../../../core/chat/session/list.js";
+import { loadChatLists, deadHuskLabel, type ChatSessionRow } from "../../../core/chat/session/list.js";
+import type { TranscriptState } from "../../../core/chat/session/availability.js";
 import { CHAT_FRESH_WINDOW_MS } from "../../../core/chat/session/recent-landmark.js";
 import { loadLandmarkSummaries, type LandmarkProblem } from "../../../core/landmark/summaries.js";
 
@@ -33,6 +34,18 @@ export interface PickerSession {
   lastActivity: string;
   /** Box-relative path of the session's husk card. */
   huskPath: string;
+}
+
+/**
+ * A chat that exists only as a card now — its transcript is not on this
+ * machine. No `lastActivity`: the transcript that carried it is gone.
+ */
+export interface DeadPickerSession {
+  sessionId: string;
+  label: string;
+  /** Box-relative path of the husk card — the only place this row can go. */
+  huskPath: string;
+  transcript: TranscriptState;
 }
 
 /** Fields every bucket carries, landmark-backed or not. */
@@ -50,6 +63,12 @@ interface PickerBucket {
   freshCount: number;
   /** ISO mtime of the bucket's newest session (fresh or not); null when empty. */
   latestActivity: string | null;
+  /**
+   * The bucket's chats with no transcript left. Kept out of `sessions` and
+   * `olderSessions` because those are resumable and these are not — a row here
+   * links to the card, never to `/chat?session=`.
+   */
+  dead: DeadPickerSession[];
 }
 
 export interface PickerLandmark extends PickerBucket {
@@ -252,10 +271,26 @@ export const chatRouter = router({
     problems: LandmarkProblem[];
   }> => {
     const cutoff = Date.now() - CHAT_FRESH_WINDOW_MS;
-    const [{ summaries: landmarks, problems }, allSessions] = await Promise.all([
+    const [{ summaries: landmarks, problems }, { sessions: allSessions, dead }] = await Promise.all([
       loadLandmarkSummaries(ctx.boxRoot),
-      loadAllSessions(ctx.boxRoot),
+      loadChatLists(ctx.boxRoot),
     ]);
+
+    // Dead husks bucket by the same binding as live chats, so a landmark's
+    // expired conversations sit under that landmark rather than in a pile.
+    const deadByDir = new Map<string, DeadPickerSession[]>();
+    for (const husk of dead) {
+      const bucket = husk.contextDir ?? "";
+      const row: DeadPickerSession = {
+        sessionId: husk.sessionId,
+        label: deadHuskLabel(husk),
+        huskPath: husk.huskPath,
+        transcript: husk.transcript,
+      };
+      const list = deadByDir.get(bucket);
+      if (list) list.push(row);
+      else deadByDir.set(bucket, [row]);
+    }
 
     // Group sessions by binding. `contextDir === undefined` (legacy
     // unbound) and `contextDir === ""` (explicit root) both belong to
@@ -294,6 +329,7 @@ export const chatRouter = router({
         olderSessions: [...inlineOlder, ...older].map(toPicker),
         freshCount: fresh.length,
         latestActivity: newest === undefined ? null : newest.mtime.toISOString(),
+        dead: deadByDir.get(lm.dir) ?? [],
       };
     });
 
@@ -316,6 +352,9 @@ export const chatRouter = router({
       olderSessions: orphaned.filter((e) => e.session.mtime.getTime() < cutoff).map(toUnassigned),
       freshCount: orphanFresh.length,
       latestActivity: newestOrphan === undefined ? null : newestOrphan.session.mtime.toISOString(),
+      // Same rule as the live rows: a dead husk bound to a directory with no
+      // landmark card would otherwise be listed nowhere at all.
+      dead: [...deadByDir.entries()].filter(([dir]) => !landmarked.has(dir)).flatMap(([, rows]) => rows),
     };
 
     // Sort by latest activity (most-recent landmark first), reading

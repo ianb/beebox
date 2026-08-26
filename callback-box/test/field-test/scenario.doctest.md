@@ -103,6 +103,12 @@ A scenario may omit `models:` entirely; both halves still come back pinned,
 because a run that did not record what it tested is not comparable to the next
 one.
 
+`models.chat` comes back as a concrete model **id**, not the tier the scenario
+wrote. It is written into the box's model policy, which holds ids — a tier name
+there is rejected on read, so the run would go unpinned while the report claimed
+a model (`docs/model-policy.md`). `models.operator` keeps the alias: it goes
+straight to the operator's own SDK call, which accepts one.
+
 ```ts
 const dir = await makeScenario(HEADER + [
   "  - id: only-item",
@@ -110,11 +116,29 @@ const dir = await makeScenario(HEADER + [
 ].join("\n") + "\n", {});
 const scenario = await loadFieldScenario(dir);
 [scenario.models.operator, scenario.models.chat, scenario.checklist[0]!.cleanup].join(" | ")
-=> opus | opus | keep
+=> opus | claude-opus-5 | keep
 ```
 
 ```ts cleanup
 await rm(dir, { recursive: true, force: true });
+```
+
+## A model name no engine knows is rejected
+
+`models.chat` is validated at load, not at seed time: an unknown name would
+otherwise leave the box unpinned and the report claiming otherwise.
+
+```ts
+const badModelDir = await makeScenario(HEADER.replace("checklist:", "models:\n  chat: turbo\nchecklist:") + [
+  "  - id: only-item",
+  "    brief: Do the thing.",
+].join("\n") + "\n", {});
+await loadFieldScenario(badModelDir).then(() => "loaded", (e) => e.problems.join())
+=> models.chat: "turbo" is not a model tier or a known model id
+```
+
+```ts cleanup
+await rm(badModelDir, { recursive: true, force: true });
 ```
 
 ## Duplicate ids are rejected

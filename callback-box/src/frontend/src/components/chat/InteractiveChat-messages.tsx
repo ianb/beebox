@@ -200,6 +200,7 @@ function MessageListInner({
 
   // The bounded open-thread hold ends once the first history render has landed.
   const loading = snapshot.matches("loading");
+  const turnLive = !snapshot.matches("idle");
   useEffect(() => {
     if (!loading && messages.length > 0) settleOpen();
   }, [loading, messages.length, settleOpen]);
@@ -295,11 +296,14 @@ function MessageListInner({
               // transition so React reconciles it in place — no remount/flash.
               const natural = dataItemKey(item);
               const key = liveKey && liveTargetUuid && natural === liveTargetUuid ? liveKey : natural;
-              // The last turn carries a viewport-tall min-height once the person
-              // has sent in this session, so "the user message at the top of the
-              // screen" is a reachable scroll position even for a one-line
-              // reply. It moves down with the turn and vanishes on unmount.
-              const spacer = sendSignal > 0 && index === data.length - 1 ? viewportPx : undefined;
+              // The last turn carries a viewport-tall min-height from the send
+              // until its reply is complete, so "the user message at the top of
+              // the screen" is a reachable scroll position while the reply
+              // streams in. Once the turn is done the room below it is only
+              // blank space; dropping it lets the browser clamp the view to the
+              // real bottom — one move, at finalize, to a place that shows the
+              // whole reply.
+              const spacer = sendSignal > 0 && turnLive && index === data.length - 1 ? viewportPx : undefined;
               return (
                 <div key={key} data-role={item.kind === "group" ? item.group.type : item.kind} style={{ minHeight: spacer }}>
                   {renderDataItem(item, renderCtx)}

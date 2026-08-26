@@ -53,9 +53,9 @@ const IMAGE_TOKEN_RE = /\[image#?\d+]/g;
 /**
  * An accepted message in the shape the client's pending list already takes.
  *
- * `reconcileKnownUuids` carries the history's existing entry uuids, so the echo
- * this is waiting for can only be an entry that was not already there — see
- * `knownUuids` on {@link readAcceptedMessages}.
+ * `reconcileKnownUuids` carries the entries that already existed WHEN THIS
+ * MESSAGE WAS ACCEPTED, so the echo it is waiting for can only be an entry that
+ * was not already there — see `history` on {@link readAcceptedMessages}.
  */
 export type AcceptedMessage = SessionEntry & { reconcileKnownUuids: string[] };
 
@@ -94,6 +94,35 @@ function matchesUser(rowEmail: string | null, viewerEmail: string | null): boole
 }
 
 /**
+ * A history entry as this reader needs it: what it is, and when it happened.
+ *
+ * Timestamps rather than uuids alone, because "already there" is a question
+ * about a moment — see `history` on {@link readAcceptedMessages}.
+ */
+export interface HistoryMarker {
+  uuid: string;
+  timestamp: string;
+}
+
+/**
+ * Entries that already existed when a message was accepted at `at`.
+ *
+ * An entry we cannot date counts as older. The echo of an acceptance is written
+ * after it (the agent receives the message, then records it), so an undatable
+ * entry is far more likely to be old history than the echo being waited for —
+ * and treating it as a candidate would let it retire a pending message it has
+ * nothing to do with.
+ */
+function baselineFor(history: HistoryMarker[], at: number): string[] {
+  return history
+    .filter((entry) => {
+      const entryAt = Date.parse(entry.timestamp);
+      return !Number.isFinite(entryAt) || entryAt < at;
+    })
+    .map((entry) => entry.uuid);
+}
+
+/**
  * Recent user messages this box accepted for `sessionId`, oldest-first.
  *
  * `now` is a parameter rather than a call to the clock so the window is
@@ -101,20 +130,30 @@ function matchesUser(rowEmail: string | null, viewerEmail: string | null): boole
  */
 export function readAcceptedMessages(
   eventBus: EventBus,
-  { sessionId, now, viewerEmail, knownUuids }: {
+  { sessionId, now, viewerEmail, history }: {
     sessionId: string | null;
     now: Date;
     /** The asking user's identity, for the id-less rows — see {@link matchesUser}. */
     viewerEmail: string | null;
     /**
-     * Every entry uuid the history being returned alongside these already
-     * carries. It becomes each accepted entry's reconciliation baseline, which
-     * is what stops one of them being retired by an OLD transcript entry that
-     * happens to repeat its words. Without it a second "yes" in a conversation
-     * that already contains a "yes" is answered by the first and vanishes on
-     * reload — the exact disappearance this whole path exists to prevent.
+     * The history being returned alongside these, as identity plus time.
+     *
+     * Each accepted message gets the entries OLDER THAN ITSELF as its
+     * reconciliation baseline. The baseline is what stops one of them being
+     * retired by an OLD transcript entry that happens to repeat its words:
+     * without it, a second "yes" in a conversation that already contains a
+     * "yes" is answered by the first and vanishes on reload — the exact
+     * disappearance this whole path exists to prevent.
+     *
+     * It has to be per-message and dated, not the whole list. Handing every
+     * returned uuid to every acceptance also blacklists the message's OWN echo
+     * whenever the transcript has already caught up by the time bootstrap runs
+     * — which is precisely what a reload does. The pending copy then can never
+     * be retired, and `reconcilePending` appends it after the server messages,
+     * pinning a duplicate of the last few messages to the bottom of the chat
+     * until the acceptance ages out of {@link ACCEPTED_WINDOW_MS}.
      */
-    knownUuids: string[];
+    history: HistoryMarker[];
   },
 ): AcceptedMessage[] {
   const cutoff = now.getTime() - ACCEPTED_WINDOW_MS;
@@ -157,7 +196,7 @@ export function readAcceptedMessages(
       content,
       ...(user ? { user } : {}),
       ...(userEmail ? { userEmail } : {}),
-      reconcileKnownUuids: knownUuids,
+      reconcileKnownUuids: baselineFor(history, at),
     });
   }
   return accepted;

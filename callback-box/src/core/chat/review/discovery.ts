@@ -8,9 +8,10 @@
  * `<typed>`/`<speech>` tags to tell chats from job runs) — husk existence is
  * the answer.
  *
- * A session qualifies when its transcript exists, has been quiet past the
- * quiescence window, holds at least REVIEW_MIN_USER_TURNS real user turns, and
- * its unread span renders to at least REVIEW_CHAR_THRESHOLD characters.
+ * A session qualifies when this machine originated it, its transcript exists,
+ * it has been quiet past the quiescence window, it holds at least
+ * REVIEW_MIN_USER_TURNS real user turns, and its unread span renders to at
+ * least REVIEW_CHAR_THRESHOLD characters.
  *
  * Qualifying a session requires parsing its transcript, but nothing parsed is
  * retained: a `QualifiedSession` is scalars only, and the reviewer re-reads the
@@ -26,7 +27,8 @@ import {
   parseSessionLog,
 } from "../../../cli/lib/session.js";
 import { errnoCode } from "../../../lib/error-guards.js";
-import { listChatHusks, type ChatHuskEntry } from "../husk.js";
+import { listChatHusks, type ChatHuskEntry } from "../husk-read.js";
+import { localOrigin } from "../session/origin.js";
 import { huskTranscriptPath } from "../husk-transcript.js";
 import { METADATA_CONSUMER, sessionState, type ReviewState } from "./state.js";
 import { resolveSpan, spanSize, type BootstrapReason, type ResolvedSpan, type SpanPageReader } from "./span.js";
@@ -98,6 +100,12 @@ export interface DiscoveryResult {
   tooFewTurns: number;
   /** Husks whose transcript is gone — nothing to read, husk left alone. */
   missingTranscripts: number;
+  /**
+   * Skipped: the session ran on another machine, which is the only one that
+   * can see the whole conversation. Counted, never named — see
+   * {@link claimsSession}.
+   */
+  foreignOrigin: number;
 }
 
 export interface DiscoverOptions {
@@ -113,7 +121,25 @@ function emptyResult(): DiscoveryResult {
     belowThreshold: 0,
     tooFewTurns: 0,
     missingTranscripts: 0,
+    foreignOrigin: 0,
   };
+}
+
+/**
+ * Whether this machine may review a session.
+ *
+ * Two checkouts share one account but hold different transcript subsets, so a
+ * machine that reviews a session it did not originate extends
+ * `contains-evidence` from partial material — the origin machine is the only
+ * one that can see the whole conversation
+ * (`docs/implemented-plans/chat-session-identity.md`, Track 4).
+ *
+ * A husk with no `origin` predates the Track 2 stamp; it is claimed when its
+ * transcript is here, which is the same evidence the backfill uses. Reconcile
+ * stamps such husks on the next boot, so this branch decays to nothing.
+ */
+function claimsSession(husk: ChatHuskEntry, localOriginId: string): boolean {
+  return husk.origin === undefined || husk.origin === localOriginId;
 }
 
 /**
@@ -165,11 +191,15 @@ export async function readSessionWindow(args: {
 
 async function qualifyHusk(
   husk: ChatHuskEntry,
-  args: { boxRoot: string; options: DiscoverOptions; result: DiscoveryResult },
+  args: { boxRoot: string; options: DiscoverOptions; result: DiscoveryResult; localOriginId: string },
 ): Promise<QualifiedSession | null> {
   const { boxRoot, options, result } = args;
+  if (!claimsSession(husk, args.localOriginId)) {
+    result.foreignOrigin += 1;
+    return null;
+  }
   const logPath = huskTranscriptPath(boxRoot, husk);
-  const engine = await resolveChatEngine(boxRoot, husk.session);
+  const engine = await resolveChatEngine(boxRoot, { sessionId: husk.session, husk });
 
   let mtime: Date;
   try {
@@ -246,12 +276,15 @@ export async function discoverSessions(
 ): Promise<DiscoveryResult> {
   const husks = await listChatHusks(boxRoot);
   const result = emptyResult();
+  // Once per run, not per husk: the id is a file read, and it cannot change
+  // under a run.
+  const { id: localOriginId } = await localOrigin();
 
   for (const husk of husks) {
     // Exhaustion is NOT checked here: it is scoped to a particular span, and
     // the span isn't known until the transcript is parsed. runChatReview makes
     // that call, so growth always gets a fresh attempt.
-    const qualified = await qualifyHusk(husk, { boxRoot, options, result });
+    const qualified = await qualifyHusk(husk, { boxRoot, options, result, localOriginId });
     if (qualified !== null) result.qualified.push(qualified);
   }
 
