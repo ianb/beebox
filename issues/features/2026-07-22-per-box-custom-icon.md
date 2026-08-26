@@ -1,6 +1,6 @@
 ---
 title: "Per-box custom icon (favicon, PWA install icon, tiles, notifications)"
-workstream: unknown
+workstream: tab-identity
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder wants a distinct icon per box
