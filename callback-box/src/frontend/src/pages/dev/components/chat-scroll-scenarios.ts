@@ -300,6 +300,26 @@ export const SCENARIOS: Scenario[] = [
       finalHasUnseenContent: false,
     },
   },
+  {
+    name: "open-thread-late-image-at-bottom",
+    description: "Rule 1, the load-with-images case: the history lands and the hold settles, then an image in the last message finishes fetching well after the settle window. The reader opened the thread at the bottom and has not touched it; they should still be at the bottom.",
+    steps: [
+      { k: "openThread" },
+      { k: "wait", ms: 80 },
+      { k: "append", px: 420, role: "assistant" },
+      { k: "append", px: 60, role: "user" },
+      { k: "append", px: 120, role: "assistant" },
+      { k: "settleOpen" },
+      { k: "wait", ms: 600 },
+      { k: "imageDecode", msgIndex: 2, px: 500 },
+      { k: "wait", ms: 200 },
+    ],
+    expect: {
+      finalAtBottom: true,
+      finalFromBottomAtMost: 4,
+      finalHasUnseenContent: false,
+    },
+  },
 ];
 
 export function findScenario(name: string): Scenario | null {

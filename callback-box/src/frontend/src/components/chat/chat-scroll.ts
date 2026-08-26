@@ -54,12 +54,18 @@ const PREPEND_SNAPSHOT_MS = 10000;
 /**
  * How long the open-thread hold outlives `settleOpen()`. The caller can only
  * report "the history is in the DOM" from an effect, which runs *before* the
- * ResizeObserver cycle that measures it — and markdown, images and embeds keep
- * resizing for a beat after that. The hold therefore lapses on a timer rather
- * than on the report, and it is a fixed window, not one that growth can extend:
- * a thread opened onto a live stream must not follow it forever.
+ * ResizeObserver cycle that measures it — and the transcript keeps growing
+ * after that for as long as its images take to arrive: an `<img>` reserves no
+ * height until its bytes land (the chat has no dimension metadata to reserve
+ * with), so on a real box the last turn can grow by a screenful a second or
+ * more after the first render. A short window stranded the reader that far
+ * above the bottom of a thread they had just opened and never touched. The
+ * hold is therefore long enough to outlast a slow fetch, and it ends early the
+ * moment the reader acts (scrolls away, sends, presses the button). It is
+ * still a fixed window, not one that growth can extend: a thread opened onto a
+ * live stream is followed for this long at most.
  */
-const OPEN_SETTLE_MS = 400;
+const OPEN_SETTLE_MS = 8000;
 
 interface Anchor { el: Element; top: number }
 
