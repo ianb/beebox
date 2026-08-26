@@ -5,6 +5,8 @@
 // finish-preflight) and because root `pnpm test` is what runs bin/ tooling
 // tests. See bin/CLAUDE.md's note on the doctest-first rule.
 import assert from "node:assert/strict";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
@@ -47,6 +49,23 @@ test("paths no lint script covers are dropped rather than handed to eslint", () 
     "site/src/index.ts",
   ]);
   assert.deepEqual(split, { backend: [], frontend: [] });
+});
+
+test("the workspace list expands globs, honours `!`, and skips scriptless packages", () => {
+  const root = mkdtempSync(join(tmpdir(), "workspace-packages-"));
+  const write = (dir: string, json: unknown): void => {
+    mkdirSync(join(root, dir), { recursive: true });
+    writeFileSync(join(root, dir, "package.json"), JSON.stringify(json));
+  };
+  writeFileSync(
+    join(root, "pnpm-workspace.yaml"),
+    "packages:\n  - apps/*\n  - \"!apps/excluded\"\n",
+  );
+  write("apps/one", { name: "one", scripts: { lint: "eslint ." } });
+  write("apps/scriptless", { name: "scriptless" });
+  write("apps/excluded", { name: "excluded", scripts: { test: "tap" } });
+  assert.deepEqual(packageOwnerDirs(root), ["apps/one"]);
+  rmSync(root, { recursive: true, force: true });
 });
 
 test("the workspace list resolves nested packages and drops the frontend", () => {

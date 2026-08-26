@@ -73,12 +73,19 @@ function workspaceEntries(root: string): string[] {
  */
 export function packageOwnerDirs(root: string): string[] {
   const dirs = new Set<string>();
+  const excluded = new Set<string>();
   for (const entry of workspaceEntries(root)) {
-    for (const match of globSync(entry, { cwd: root })) {
+    // pnpm reads a leading `!` as "exclude what this matches".
+    const negated = entry.startsWith("!");
+    for (const match of globSync(negated ? entry.slice(1) : entry, { cwd: root })) {
       const dir = match.split(sep).join("/");
+      if (negated) {
+        excluded.add(dir);
+        continue;
+      }
       if (PARENT_OWNED.has(dir)) continue;
       if (verifiesItself(root, dir)) dirs.add(dir);
     }
   }
-  return [...dirs].sort();
+  return [...dirs].filter((dir) => !excluded.has(dir)).sort();
 }
