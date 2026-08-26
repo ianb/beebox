@@ -186,7 +186,25 @@ export function normalizeCodexSdkToolItem(item: CodexSdkItem): CodexToolContent 
     case "reasoning":
     case "error":
       return null;
+    default:
+      // The SDK's ThreadItem union lags the binary: 2026-08-26 a codex turn on
+      // a real box died with "Cannot read properties of undefined (reading
+      // 'id')" because an item type this switch had never seen fell out of it
+      // as `undefined`, and the caller's `=== null` guard let it through. One
+      // unrenderable activity item is not a failed turn — skip it, and say
+      // which type once so the next case gets added.
+      warnUnknownItemType(item);
+      return null;
   }
+}
+
+const warnedItemTypes = new Set<string>();
+
+function warnUnknownItemType(item: unknown): void {
+  const type = isRecord(item) && typeof item["type"] === "string" ? item["type"] : "unknown";
+  if (warnedItemTypes.has(type)) return;
+  warnedItemTypes.add(type);
+  console.warn(`[codex-tool-activity] unknown Codex item type "${type}" — not rendered as activity`);
 }
 
 export function codexSdkToolChatMessage(item: CodexSdkItem, sessionId: string): ChatMessageAssistant | null {

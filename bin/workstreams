@@ -472,11 +472,23 @@ case "$cmd" in
     if [ -n "$final_sha" ] && git -C "$WT_MONO" cat-file -e "$final_sha^{commit}" 2>/dev/null; then
       landed_log=$(git -C "$WT_MONO" log --oneline "$final_sha..main" -50 2>/dev/null || true)
     fi
+    # Continue the prior conversation when its transcript is still on disk.
+    # Decided here, before the tab opens: `claude --resume` with a pruned id
+    # fails inside the tab, where there is nothing left to fall back to.
+    session_mode=$(workstream_resume_session_mode "$resolved_agent" "$fresh" "$record")
+    resume_session=""
+    case "$session_mode" in
+      "continue "*) resume_session="${session_mode#continue }" ;;
+    esac
     # shellcheck source=lib/launch-session.sh
     . "$REPO_DIR/bin/lib/launch-session.sh"
     launch_dir=$(mktemp -d -t workstreams-resume.XXXXXX)
     prompt_file="$launch_dir/prompt.txt"
-    workstream_continuation_prompt "$name" "$record" "$landed_log" > "$prompt_file"
+    if [ -n "$resume_session" ]; then
+      workstream_continued_prompt "$name" "$record" "$landed_log" > "$prompt_file"
+    else
+      workstream_continuation_prompt "$name" "$record" "$landed_log" > "$prompt_file"
+    fi
     if [ "$WORKSTREAM_BRIEFING_PROVIDED" = true ]; then
       printf '\n' >> "$prompt_file"
       workstream_wrap_briefing "$WORKSTREAM_BRIEFING" >> "$prompt_file"
@@ -495,18 +507,32 @@ case "$cmd" in
     LS_LAUNCH_DIR="$launch_dir"
     LS_WORKTREE_PATH="$target"
     LS_CODEX_RESUME=0
+    LS_CLAUDE_RESUME_SESSION="$resume_session"
     LS_DESCRIPTION_FILE=""
     if [ "$resolved_agent" = codex ] && [ "$fresh" = false ] && [ "$resume_state" = existing ]; then
       LS_CODEX_RESUME=1
     fi
-    launch_session_build
+    launch_session_build || exit 1
     workstream_resume_status opening-terminal
     result=$(launch_session_open)
     workstream_resume_status opened
-    if [ "$WORKSTREAM_BRIEFING_PROVIDED" = true ]; then
-      echo "workstreams resume: launched $resolved_agent for $name with briefing ($result)"
+    if [ -n "$resume_session" ]; then
+      session_note="continuing session $resume_session"
+    elif [ "$LS_CODEX_RESUME" = 1 ]; then
+      session_note="continuing this directory's last codex session"
     else
-      echo "workstreams resume: launched $resolved_agent for $name ($result)"
+      case "$session_mode" in
+        "fresh forced") session_note="fresh session (--fresh)" ;;
+        "fresh no-recorded-session") session_note="fresh session (no recorded session id)" ;;
+        "fresh invalid-session-id") session_note="fresh session (recorded session id is malformed)" ;;
+        "fresh transcript-missing") session_note="fresh session (recorded transcript is gone)" ;;
+        *) session_note="fresh session" ;;
+      esac
+    fi
+    if [ "$WORKSTREAM_BRIEFING_PROVIDED" = true ]; then
+      echo "workstreams resume: launched $resolved_agent for $name with briefing, $session_note ($result)"
+    else
+      echo "workstreams resume: launched $resolved_agent for $name, $session_note ($result)"
     fi
     ;;
 
