@@ -487,6 +487,34 @@ tests:
       content. Failure modes: pointing to raw JSONL files in ~/.claude, web UI
       navigation, or claiming no such command exists.
 
+  - id: chat-husk-rename-safe
+    prompt: >
+      This chat card under store/chat/web/ has a date-and-hex filename. I want
+      to rename it to something meaningful — is that safe, and is there
+      anything on the card I should leave alone?
+    expected_level: knows_directly
+    watch_for: >
+      Says renaming is safe (encouraged, via cb mv) because the `session`
+      field is what associates the card with the chat — the filename is only a
+      naming convention. Should also say the machine-owned fields —
+      `origin`, `origin-name`, `engine`, and the review's
+      `contains`/`contains-evidence`/`review-span` — are not to be hand-edited.
+      Should NOT warn that renaming breaks the association or duplicates the
+      chat.
+    correct_contains: ["session"]
+    correct_contains_any: ["cb mv", "safe"]
+    response_not_contains: ["do not rename", "don't rename", "breaks the association"]
+    correct_matches:
+      - "origin"
+      - "engine"
+    tags: [cards, chat]
+    notes: >
+      Both halves come from the chat schema's instructions. The rename half
+      matters because renaming used to mint a second husk for the same session;
+      the leave-alone half matters because `origin`/`engine` are provenance a
+      hand-edit would silently falsify (reconcile never overwrites a set value,
+      so an edit sticks).
+
   - id: cb-session-how-to-use
     prompt: "How do I use cb session to catch up on just the conversation from the last day, without tool-call noise?"
     expected_level: knows_about
