@@ -116,6 +116,7 @@ A card appearing both in a hand-listed `links` entry and in an unnamed `expand` 
 
 Landmarks have three rendering surfaces: the Landmarks page (the full
 picture), and the app bar's two menus (the compact, always-reachable forms).
+A fourth surface is the browser tab, below.
 
 ### Landmarks page — the merged activity surface
 
@@ -174,6 +175,26 @@ The unified app bar (`docs/implemented-plans/top-nav-ia.md`) is the compact surf
   sub-panel), grouped expands as disclosures, and — on chat pages — Recent
   files. Links open in the companion pane on chat, and navigate normally
   elsewhere.
+
+### The browser tab
+
+The tab's icon is the landmark's `symbol` for the directory you are in — an
+emoji becomes an SVG `data:` URI, an image symbol is served from its box path
+(`frontend/src/components/DocumentIcon.tsx`, `shared/favicon.ts`).
+
+**The box root's landmark is the box's own identity.** Its `label` is the box's
+display name in every `/api/boxes` listing — the box switcher, the dashboard
+header, and the `<page> — <box>` tab title — and its `symbol` is the box's
+mark, which the box server stamps into the served document so a tab is
+identifiable before the app boots (`core/landmark/box-identity.ts`,
+`webapp/index-html.ts`). A box had no display name before this; it answered
+with its slug. Renaming a box is editing that card, which is why there is no
+box-name setting anywhere.
+
+Landmark first, box second: a tab deep in a landmarked directory wears that
+landmark's mark rather than the box's, on the same reasoning as the title
+(within one box, the place is what tells two tabs apart). Unlike the title,
+there is no room for both.
 
 ## Implementation outline
 

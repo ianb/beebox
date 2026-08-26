@@ -23,6 +23,7 @@ import type { KnownBox } from "./lib/boxes";
 import { useDevWorktreeKeepalive } from "./hooks/useDevWorktreeKeepalive";
 import { useBoxIdentityMeta } from "./hooks/useBoxIdentityMeta";
 import { PageTitleProvider, usePageTitle } from "./components/DocumentTitle";
+import { DocumentIcon } from "./components/DocumentIcon";
 import { useVisualViewportHeight } from "./hooks/useVisualViewportHeight";
 
 import { href, toSearch } from "./lib/routing";
@@ -83,6 +84,7 @@ export function AppLayout() {
     // (only the bar's context consumers re-render). See app-bar-chrome.tsx.
     <AppBarChromeProvider>
       <ViewOverlayProvider>
+        <DocumentIcon />
         <Column className="h-app">
           <AppNav
             onToggleDebugLog={() => { clearErrorCount(); setShowDebugLog((v) => !v); }}

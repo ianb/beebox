@@ -18,6 +18,8 @@ import { listSchemaLoadFailures } from "../schemas/schema-load-status.js";
 import { loadBoxSchemas } from "../schemas/registry.js";
 import { getEngineVersionReport } from "../core/engine-version.js";
 import { filterAccessibleBoxes } from "./box-access.js";
+import { readBoxIdentity } from "../core/landmark/box-identity.js";
+import { stampBoxIdentity, documentBoxSlug } from "./index-html.js";
 import { loginRedirect } from "./base-prefix.js";
 import type { BoxSpec } from "./server-types.js";
 import { buildCspPolicy, reportingEndpointsHeader, type CspMode } from "../lib/csp.js";
@@ -126,7 +128,25 @@ export function registerCspReportingHeaders(
 export async function listAccessibleBoxes(boxes: BoxSpec[], email: string): Promise<Array<{ slug: string; name: string }>> {
   const ownerEmail = getOwnerEmail();
   const accessible = await filterAccessibleBoxes({ boxes, email, ownerEmail });
-  return accessible.map((b) => ({ slug: b.slug, name: b.slug }));
+  return describeBoxes(accessible);
+}
+
+/**
+ * The `/api/boxes` shape for a set of boxes: each box's slug plus the display
+ * name from its root landmark. Every listing goes through here so they can't
+ * drift — this used to be five copies of `name: b.slug`, which is why the UI
+ * showed a slug wherever a box was named.
+ *
+ * Names are read concurrently and each one degrades to the slug on its own,
+ * so one unreadable box can't cost the others their names or fail the list.
+ */
+export async function describeBoxes(boxes: BoxSpec[]): Promise<Array<{ slug: string; name: string }>> {
+  return Promise.all(
+    boxes.map(async (b) => ({
+      slug: b.slug,
+      name: (await readBoxIdentity({ boxRoot: b.boxRoot, slug: b.slug })).name,
+    })),
+  );
 }
 
 /**
@@ -251,7 +271,7 @@ export function registerRootInfoRoutes(server: FastifyInstance, boxes: BoxSpec[]
       // nothing new — without this branch the SPA's box resolution sees an
       // empty list and renders "Box not found" for a browse-key session.
       if (verifyBrowseKey(request.headers)) {
-        return { boxes: boxes.map((b) => ({ slug: b.slug, name: b.slug })) };
+        return { boxes: await describeBoxes(boxes) };
       }
       const mobileBoxes = await listMobileAuthorizedBoxes({ boxes, headers: request.headers });
       if (mobileBoxes.length > 0) return { boxes: mobileBoxes };
@@ -267,14 +287,14 @@ export function registerRootInfoRoutes(server: FastifyInstance, boxes: BoxSpec[]
       // empty auth-required list. In standalone this branch is unreachable (the
       // outer `!request.server.openAccess` already handled open access).
       if (identity.source === "open") {
-        return { boxes: boxes.map((b) => ({ slug: b.slug, name: b.slug })) };
+        return { boxes: await describeBoxes(boxes) };
       }
       if (!identity.email) {
         return { boxes: [], authRequired: true };
       }
       return { boxes: await listAccessibleBoxes(boxes, identity.email) };
     }
-    return { boxes: boxes.map((b) => ({ slug: b.slug, name: b.slug })) };
+    return { boxes: await describeBoxes(boxes) };
   });
 }
 
@@ -287,6 +307,20 @@ export function registerSpaFallback(
   server: FastifyInstance,
   opts: { frontendPath: string; boxes: BoxSpec[] },
 ): void {
+  /**
+   * The document, with the box's own name and mark stamped in so a tab is
+   * identifiable before React boots (`index-html.ts`). The box is the URL's
+   * first segment; a URL that names no box (the root listing, `/auth/*`) is
+   * served the built document unchanged, since there is no box to name.
+   */
+  const spaDocument = async (url: string): Promise<string> => {
+    const html = fs.readFileSync(path.join(opts.frontendPath, "index.html"), "utf-8");
+    const slug = documentBoxSlug(url);
+    const box = slug === null ? undefined : opts.boxes.find((b) => b.slug === slug);
+    if (box === undefined) return html;
+    return stampBoxIdentity(html, await readBoxIdentity({ boxRoot: box.boxRoot, slug: box.slug }));
+  };
+
   server.setNotFoundHandler(async (request, reply) => {
     const url = request.url;
 
@@ -314,9 +348,7 @@ export function registerSpaFallback(
       // Browse-key sessions pass the box-scoped auth gate; a page navigation
       // that falls through to here must not bounce them to login.
       if (verifyBrowseKey(request.headers)) {
-        return reply.type("text/html").send(
-          fs.readFileSync(path.join(opts.frontendPath, "index.html"), "utf-8")
-        );
+        return reply.type("text/html").send(await spaDocument(url));
       }
       const identity = resolveRequestIdentity(request, { openAccess: request.server.openAccess });
       if (identity.source === "unavailable") {
@@ -338,9 +370,7 @@ export function registerSpaFallback(
     }
 
     // SPA fallback: serve index.html
-    return reply.type("text/html").send(
-      fs.readFileSync(path.join(opts.frontendPath, "index.html"), "utf-8")
-    );
+    return reply.type("text/html").send(await spaDocument(url));
   });
 }
 
@@ -351,7 +381,7 @@ async function listMobileAuthorizedBoxes(opts: {
   const checked = await Promise.all(
     opts.boxes.map(async (box) => ({ box, ok: await verifyMobileRequest(box.boxRoot, opts.headers) })),
   );
-  return checked.filter((c) => c.ok).map(({ box }) => ({ slug: box.slug, name: box.slug }));
+  return describeBoxes(checked.filter((c) => c.ok).map(({ box }) => box));
 }
 
 async function isMobileSpaRequest(request: FastifyRequest, boxes: BoxSpec[]): Promise<boolean> {
