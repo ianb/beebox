@@ -9,7 +9,6 @@ exists", and only claim it when there isn't one.
 ```ts setup
 import { installCodexPlugin, CodexPluginInstallError } from "../../../src/core/agent/ensure-codex-plugin.js";
 import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
-import { tmpdir } from "node:os";
 
 /** A fake `codex`, recording what was asked of it. */
 function fakeCodex(responses: (args: string[]) => string) {
@@ -30,6 +29,16 @@ function listing(fields: { version: string; path: string }): string {
   });
 }
 
+/** What `codex plugin marketplace list --json` prints for one marketplace. */
+function marketplaces(source: string | null): string {
+  return JSON.stringify({
+    marketplaces: source === null ? [] : [{ name: "callback-box", marketplaceSource: { source } }],
+  });
+}
+
+/** A real plugin root, so "the path still exists" means what it says. */
+const PLUGIN_ROOT = `${PACKAGE_ROOT}/plugins/callback-box-codex`;
+
 class FakeCodexFailure extends Error {}
 ```
 
@@ -39,11 +48,48 @@ worktree must not re-point the entry at itself while another checkout is using
 it, so the only command that runs is the question.
 
 ```ts
-const codex = fakeCodex(() => listing({ version: "0.1.1", path: tmpdir() }));
+const codex = fakeCodex(() => listing({ version: "0.1.1", path: PLUGIN_ROOT }));
 await installCodexPlugin(codex.run);
 
 JSON.stringify(codex.calls)
 => ["plugin list --json"]
+```
+
+The plugin not being installed here is a different fact from the registration
+being broken, and collapsing the two is how a checkout hijacks the entry: if
+"absent" meant "re-register at me", every fresh worktree would still claim the
+marketplace. An existing marketplace whose root is on disk is one we can just
+install from.
+
+```ts continue
+const borrow = fakeCodex((args) => {
+  if (args[1] === "list") return JSON.stringify({ installed: [] });
+  if (args[1] === "marketplace") return marketplaces(PACKAGE_ROOT);
+  return "{}";
+});
+await installCodexPlugin(borrow.run);
+
+JSON.stringify(borrow.calls, null, 2)
+=> [
+  "plugin list --json",
+  "plugin marketplace list --json",
+  "plugin add callback-box-codex@callback-box --json"
+]
+```
+
+When there is no marketplace to install from — or its root is gone — this
+checkout registers one. Someone has to.
+
+```ts continue
+const claim = fakeCodex((args) => {
+  if (args[1] === "list") return JSON.stringify({ installed: [] });
+  if (args[1] === "marketplace") return marketplaces("/nonexistent/deleted-temp-checkout");
+  return "{}";
+});
+await installCodexPlugin(claim.run);
+
+JSON.stringify(claim.calls.slice(-2))
+=> ["plugin marketplace add <root> --json","plugin add callback-box-codex@callback-box --json"]
 ```
 
 **The regression case.** A temp checkout registered the marketplace and was
@@ -106,7 +152,7 @@ plugin's wire contract is what the running code assumes.
 
 ```ts continue
 const stale = fakeCodex((args) => (
-  args[1] === "list" ? listing({ version: "0.0.9", path: PACKAGE_ROOT }) : "{}"
+  args[1] === "list" ? listing({ version: "0.0.9", path: PLUGIN_ROOT }) : "{}"
 ));
 await installCodexPlugin(stale.run);
 

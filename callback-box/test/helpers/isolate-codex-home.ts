@@ -23,15 +23,17 @@
  * exists to prevent (a temp checkout's registration outliving the checkout).
  * Living inside the checkout means a deleted checkout takes its home with it.
  *
- * A test that sets `CODEX_HOME` itself keeps its own path.
+ * The override is unconditional, unlike its siblings: nothing in the suite
+ * wants its own Codex home, and an inherited `CODEX_HOME` — a developer's
+ * shell, a launchd job's environment — would silently be a REAL one, which is
+ * exactly the state this guards against. "Isolate unless told otherwise" would
+ * be an opt-out nobody asks for and an escape hatch everybody inherits.
  */
 
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { PACKAGE_ROOT } from "../../src/lib/package-root.js";
 
-if (process.env["CODEX_HOME"] === undefined) {
-  const home = join(PACKAGE_ROOT, ".codex-test-home");
-  mkdirSync(home, { recursive: true });
-  process.env["CODEX_HOME"] = home;
-}
+const home = join(PACKAGE_ROOT, ".codex-test-home");
+mkdirSync(home, { recursive: true });
+process.env["CODEX_HOME"] = home;

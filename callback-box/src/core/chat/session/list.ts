@@ -130,13 +130,20 @@ export async function loadDeadHusks(boxRoot: string): Promise<DeadHuskEntry[]> {
 }
 
 /**
- * Codex's view of its own threads, or `null` when Codex can't be reached.
+ * Codex's view of its own threads, or `null` when Codex couldn't answer.
  *
- * A degradation rather than a failure: this metadata names and dates the box's
- * codex chats, and nothing else. When the Codex CLI is broken (the plugin
+ * A degradation rather than a failure. For a codex chat this metadata is not
+ * decoration — it carries the chat's existence as well as its date, so losing
+ * it means losing those chats from the listing entirely, counts included. That
+ * is still the better trade: when the Codex CLI is broken (the plugin
  * marketplace pointing at a deleted checkout is the case that prompted this),
  * the honest answer is that those chats are unavailable — not that the whole
  * enumeration failed, which took the app bar's place menu down with it.
+ *
+ * The catch is deliberately wide. "Codex couldn't answer" is one recoverable
+ * class from the caller's side whether the CLI is missing, its registration is
+ * broken, or its reply no longer matches the schema — the listing can do
+ * nothing about any of them, and the warning names the cause either way.
  */
 async function readCodexThreads(
   boxRoot: string,
