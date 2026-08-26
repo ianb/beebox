@@ -1,6 +1,6 @@
 ---
 title: "Box model/engine policy"
-status: draft
+status: implemented
 workstream: model-engine-policy
 issues:
   - ../../../issues/features/2026-07-17-chat-model-pin-default.md
@@ -489,20 +489,20 @@ separate mechanism rather than a sub-question of this one.
 
 ## Knowledge audits
 
-Two agent-facing rules land with this plan, and both are ones an agent could get
-wrong while editing a box:
+**None, and the reason changed during the work.** The draft planned two
+`knows_directly` entries, both premised on the blanket `createAgent` rule the
+cross-model review cut (Track B). With the policy read at two named call sites:
 
-1. **Explicit beats policy.** A procedure step's `model:` tier still wins over
-   the box's `agentModel`. An agent that "helpfully" strips a `model:` line
-   because "the box has a default now" would silently re-tier that step.
-   → one `knows_directly` entry in `src/dev/knowledge-audits.yaml`.
-2. **Pin is not select.** An agent asked to "set the model to Sonnet" in a chat
-   must change that chat, not the box. → one `knows_directly` entry.
+1. *"Explicit beats policy"* has nothing to teach — a procedure step that omits
+   `model:` still means the harness default, exactly as before, so there is no
+   new rule an agent could get wrong while editing a procedure card.
+2. *"Pin is not select"* is a distinction between two **UI controls**. A box
+   agent operates neither, and nothing it loads mentions them.
 
-Both entries land **run**, not just written: `pnpm knowledge-audit run --box <absolute path to a test box> --filter model-policy`, with the status comment recorded in the YAML before the plan completes. (`--box` takes a path, so it must be absolute or omitted — a bare name resolves inside the monorepo.)
-
-No audit for the config field itself: `agentModel` is written through the admin
-UI and the resolver, not by agents recalling a convention.
+An audit tests what a box agent absorbed from its own context — box CLAUDE.md,
+the generated guide, schema instructions. Nothing this plan adds enters that
+context, so an audit here would test guidance that does not exist and fail for
+the wrong reason. The human-facing reference is `docs/model-policy.md`.
 
 ## Implementation order
 
@@ -551,8 +551,8 @@ of the design:
   itself is covered by the existing chat-chip tests plus a manual pass. No new
   browser test — the logic worth testing is not in the component.
 
-**Knowledge audits.** Both entries land with the plan, run, per the Knowledge
-audits section.
+**Knowledge audits.** None — see the Knowledge audits section for why the
+draft's two entries were dropped rather than deferred.
 
 **Migration.** One scripted, atomic step in C2, run per box: if
 `.callback-box/chat-model.json` exists and `box.json` has no `agentModel`, copy
@@ -568,7 +568,8 @@ procedures without an explicit model — use this model."* That sentence is the
 announcement `2026-08-08` asks for, and it is why the policy field starts unset
 rather than defaulting to today's implicit behavior.
 
-**Docs.** `docs/` reference material to update when the plan completes: the chat
-model documentation and the box-configuration reference gain `agentModel` and the
-follow/explicit distinction. The plan itself moves to `docs/implemented-plans/`
-via `/finish`.
+**Docs.** `docs/model-policy.md` is the reference this shipped with — the two
+levels, what reads them, resolution order, and when a change takes effect —
+linked from the CLAUDE.md guides table, with `agentModel` and
+`chat-models/<sessionId>.json` named in `docs/box-layout.md`. The plan itself
+moves to `docs/implemented-plans/` via `/finish`.

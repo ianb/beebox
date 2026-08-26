@@ -156,7 +156,7 @@ Mostly hand-edited by humans, but `cb init` installs templates.
 
 | Path | What it holds |
 |------|---------------|
-| `config/box.json` | Per-box settings: timezone, allowed emails, etc. |
+| `config/box.json` | Per-box settings: timezone, allowed emails, `agentEngine`/`agentModel` (see `docs/model-policy.md`), etc. |
 | `config/connectors/` | Per-connector config + state + secrets. Files: `<name>.json` (config), `<name>.state.json` (sync state), `<name>.secret.json` (credentials). Secret files are gitignored. |
 | `config/schemas/` | Box-local card-type definitions (Zod + `callback-box/cards`). Has its own CLAUDE.md. |
 | `config/procedures/` | Procedure cards (`*.procedure.card`). `cb init` installs default templates. |
@@ -183,6 +183,7 @@ Generated and managed by callback-box itself; not hand-edited. Most contents are
 | `scheduler.jsonl` | One JSONL line per scheduler tick. Records which scripts ran/skipped/errored. |
 | `usage.db` | Token-usage tracking database. |
 | `chat-session-history.json`, `chat-session-id.json`, `chat-sessions.json`, `chat-thread-sessions.json` | Active chat session state. |
+| `chat-models/<sessionId>.json` | One chat's own model choice. Absent means the chat follows the box default (`docs/model-policy.md`). |
 | `retro/state.json`, `retro/observations.jsonl` | Retrospective walker state (which sessions were observed) and the append-only observation ledger that recurrence judgments draw on. Survives transcript clearing. |
 
 ## `.claude/` — agent configuration
