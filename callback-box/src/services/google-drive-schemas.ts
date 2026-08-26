@@ -14,11 +14,19 @@ const driveFileSchema = z.object({
   name: z.string(),
   mimeType: z.string(),
   modifiedTime: z.string(),
+  // Explicitly requested in the `fields` param, so Drive returns it on every
+  // file — required here rather than optional, since a silently-absent
+  // `trashed` would read as "not trashed" and strand a deleted child forever.
+  trashed: z.boolean(),
   owners: z
     .array(z.object({ emailAddress: z.string(), displayName: z.string().optional() }))
     .optional(),
   parents: z.array(z.string()).optional(),
   webViewLink: z.string().optional(),
+  // Only on `application/vnd.google-apps.shortcut` items.
+  shortcutDetails: z
+    .object({ targetId: z.string(), targetMimeType: z.string().optional() })
+    .optional(),
 });
 
 export const driveGetFileSchema = driveFileSchema;

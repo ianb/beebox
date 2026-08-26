@@ -7,7 +7,7 @@
 
 import { useParams } from "@tanstack/react-router";
 import { attachDirFor } from "@shared/attach-path";
-import { trpc } from "../lib/trpc";
+import { trpc, type RouterOutput } from "../lib/trpc";
 import { href } from "../lib/routing";
 import { Accordion } from "../components/ui/Accordion";
 import { Text } from "../components/ui/Text";
@@ -16,6 +16,20 @@ import { Stack } from "../components/ui/Stack";
 import { Badge } from "../components/ui/Badge";
 import { TextLink } from "../components/ui/TextLink";
 import { getRenderers, registerFileType, type FileData, type RendererProps } from "./index";
+import type { ReactNode } from "react";
+
+/** One `.card` entry in a `status.browse` listing. */
+export type BrowseCardEntry = RouterOutput["status"]["browse"]["cards"][number];
+
+/**
+ * The listing behind the directory view. Exported so a renderer that shows a
+ * directory *with something added* — the `gfolder` mirror view and its Drive
+ * state column — reads the same query rather than fetching the tree twice
+ * under a second cache key.
+ */
+export function useDirectoryListing(dirPath: string) {
+  return trpc.status.browse.useQuery({ path: dirPath });
+}
 
 function CardAccordion({
   cardPath,
@@ -25,6 +39,7 @@ function CardAccordion({
   hasAttachments,
   boxSlug,
   onNavigate,
+  annotation,
 }: {
   cardPath: string;
   name: string;
@@ -33,6 +48,12 @@ function CardAccordion({
   hasAttachments?: boolean;
   boxSlug: string | undefined;
   onNavigate: RendererProps["onNavigate"];
+  /**
+   * Replaces the card's own status badge — the Drive state column, today. A
+   * column that says "conflict" beside a status badge saying "conflict" is one
+   * badge too many, and the column is the more specific of the two.
+   */
+  annotation?: ReactNode;
 }) {
   // Card-as-directory: when a card has its own attach scope, expose a link to
   // browse INTO it. The scope dir is `<basename>.attach` (basename only, no
@@ -42,7 +63,7 @@ function CardAccordion({
     <Row gap="sm">
       <Text size="sm" weight="medium" tone="emphasis">{name}</Text>
       <Text size="xs" tone="muted">.{type}.card</Text>
-      {status ? <Badge size="sm">{status}</Badge> : null}
+      {annotation ?? (status ? <Badge size="sm">{status}</Badge> : null)}
       {attachPath && boxSlug ? (
         <TextLink to={href(`/${boxSlug}/browse/${attachPath}`)}>
           <Text size="xs" tone="muted">contents →</Text>
@@ -85,20 +106,39 @@ function CardAccordionBody({
   return <Renderer data={fileData} onNavigate={onNavigate} />;
 }
 
-function DirectoryRenderer({ data, onNavigate }: RendererProps) {
-  const dirPath = data.path.replace(/\/$/, "");
-  const { boxSlug } = useParams({ strict: false });
-  const { data: browse, isLoading, error } = trpc.status.browse.useQuery({ path: dirPath });
+export interface DirectoryListingProps {
+  /** The `status.browse` result to render. */
+  browse: RouterOutput["status"]["browse"];
+  /** Box-relative directory the listing describes ("" at the box root). */
+  dirPath: string;
+  boxSlug: string | undefined;
+  onNavigate: RendererProps["onNavigate"];
+  /**
+   * Per card row, a badge shown INSTEAD of the card's own status — the
+   * `gfolder` view's Drive state column.
+   */
+  annotate?: (card: BrowseCardEntry) => ReactNode;
+  /**
+   * A card to leave out. The `gfolder` view omits the mount card itself: it
+   * IS the surrounding view, and an accordion for it would render this same
+   * renderer inside itself, forever.
+   */
+  omitCardPath?: string;
+}
 
-  if (isLoading) return <div className="p-4"><Text tone="subtle">Loading...</Text></div>;
-  if (error) return <div className="p-4"><Text tone="danger">Error: {error.message}</Text></div>;
-  if (!browse) return <div className="p-4"><Text tone="subtle">Not found: {dirPath || "/"}</Text></div>;
-
-  const isEmpty = browse.dirs.length === 0 && browse.cards.length === 0 && browse.files.length === 0;
-
+/**
+ * The directory's three lists — subdirectories, cards, other files.
+ *
+ * Split out of `DirectoryRenderer` so the `gfolder` mirror view shows exactly
+ * what browsing the directory shows, with one column added, rather than a
+ * second listing that could disagree with it.
+ */
+export function DirectoryListing(props: DirectoryListingProps) {
+  const { browse, dirPath, boxSlug, onNavigate, annotate, omitCardPath } = props;
+  const cards = browse.cards.filter((card) => card.relativePath !== omitCardPath);
+  const isEmpty = browse.dirs.length === 0 && cards.length === 0 && browse.files.length === 0;
   return (
-    <div className="p-4">
-      <Text as="div" size="sm" mono tone="muted" className="mb-2">{dirPath || ""}/</Text>
+    <>
       {isEmpty ? <Text size="sm" tone="muted">Empty directory</Text> : null}
       {browse.dirs.length > 0 ? (
         <Stack as="ul" gap="xs" className="mb-2">
@@ -115,9 +155,9 @@ function DirectoryRenderer({ data, onNavigate }: RendererProps) {
           ))}
         </Stack>
       ) : null}
-      {browse.cards.length > 0 ? (
+      {cards.length > 0 ? (
         <Stack gap="xs" className="mb-2">
-          {browse.cards.map((card) => (
+          {cards.map((card) => (
             <CardAccordion
               key={card.relativePath}
               cardPath={card.relativePath}
@@ -127,6 +167,7 @@ function DirectoryRenderer({ data, onNavigate }: RendererProps) {
               hasAttachments={card.hasAttachments}
               boxSlug={boxSlug}
               onNavigate={onNavigate}
+              annotation={annotate === undefined ? null : annotate(card)}
             />
           ))}
         </Stack>
@@ -142,6 +183,28 @@ function DirectoryRenderer({ data, onNavigate }: RendererProps) {
           ))}
         </Stack>
       ) : null}
+    </>
+  );
+}
+
+function DirectoryRenderer({ data, onNavigate }: RendererProps) {
+  const dirPath = data.path.replace(/\/$/, "");
+  const { boxSlug } = useParams({ strict: false });
+  const { data: browse, isLoading, error } = useDirectoryListing(dirPath);
+
+  if (isLoading) return <div className="p-4"><Text tone="subtle">Loading...</Text></div>;
+  if (error) return <div className="p-4"><Text tone="danger">Error: {error.message}</Text></div>;
+  if (!browse) return <div className="p-4"><Text tone="subtle">Not found: {dirPath || "/"}</Text></div>;
+
+  return (
+    <div className="p-4">
+      <Text as="div" size="sm" mono tone="muted" className="mb-2">{dirPath || ""}/</Text>
+      <DirectoryListing
+        browse={browse}
+        dirPath={dirPath}
+        boxSlug={boxSlug}
+        onNavigate={onNavigate}
+      />
     </div>
   );
 }

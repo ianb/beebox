@@ -51,6 +51,8 @@ export type { TodoViewFields } from "./todo-view.js";
 export type { GsheetFields } from "./gsheet.js";
 export type { DocFields } from "./doc.js";
 export type { GdocFields, GdocLossyType } from "./gdoc.js";
+export type { GfolderFields } from "./gfolder.js";
+export type { GlinkFields, GlinkOriginType } from "./glink.js";
 export type { Landmark } from "./landmark.js";
 
 // Re-export template functions
@@ -83,6 +85,8 @@ export type {
 } from "./landmark.js";
 export { createDocTemplate } from "./doc.js";
 export { createGdocTemplate } from "./gdoc.js";
+export { createGfolderTemplate } from "./gfolder.js";
+export { createGlinkTemplate } from "./glink.js";
 
 // Guide exports
 export { parseGuide, compileGuide, createInitialGuideTemplate } from "./guide.js";

@@ -55,7 +55,7 @@ Creating the file is the easy half (Drive `files.create` /
 
 ## Related
 
-- [Drive mounting / file-browsing UI](2026-06-26-drive-mounting-file-browsing-ui.md)
+- [Drive mounting / file-browsing UI](../closed/features/2026-06-26-drive-mounting-file-browsing-ui.md)
   — same integration, the browse/mount side.
 - [Agent emits bare card filenames in chat](../closed/bugs/2026-07-21-agent-emits-bare-card-filenames-in-chat.md)
   — the synced-doc card type is the most exposed surface; a create flow adds

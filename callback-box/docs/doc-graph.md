@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-08-26T22:47:29Z
-Total documents: 309
+Generated: 2026-08-26T23:44:15Z
+Total documents: 310
 
 ## Issues
 
@@ -1060,7 +1060,7 @@ Referenced by:
 - docs/implemented-plans/remove-cb-render.review.md:29 (mention) — 7. **Medium — the prose done-condition cannot pass as written.** The plan updates `publish-pages.md` but misses live ref
 - docs/plans/docs-reorg.md:114 (mention) — (5,767 generated lines), `doc-graph.md` (build artifact among
 - docs/plans/source-available-release.md:438 (mention) — - **doc-graph generator fixed at the source.** `doc-graph.md` only *quoted* the
-- docs/testing.md:745 (mention) — `npx tsx src/dev/doc-graph.ts > docs/doc-graph.md` — scans all `.md` files, extracts cross-references, reports orphans a
+- docs/testing.md:747 (mention) — `npx tsx src/dev/doc-graph.ts > docs/doc-graph.md` — scans all `.md` files, extracts cross-references, reports orphans a
 - src/dev/CLAUDE.md:11 (mention) — | `doc-graph.ts` | Generates `docs/doc-graph.md` (cross-reference graph + orphan/broken-ref report) | `docs/maintenance.
 - user-stories/catalog/2026-08-21.md:8730 (mention) — **Code check** — callback-box/package.json defines both scripts: "doc-graph": tsx src/dev/doc-graph.ts > docs/doc-graph.
 - ../issues/closed/docs-and-chores/2026-03-04-documentation-graph.md:8 (mention) — **Closed:** Implemented as `docs/doc-graph.md` (auto-generated cross-reference report, `src/dev/doc-graph-html.ts`). See
@@ -1264,12 +1264,13 @@ References:
 
 #### docs/google-drive.md
 
-Title: "Google Drive Integration" | 181 lines
+Title: "Google Drive Integration" | 263 lines
 
 Referenced by:
 - docs/connectors.md:31 (link) — | Google Drive | `google-drive.ts` | `sheet` | Two-way | Yes | [google-drive.md](google-drive.md) |
 - docs/google-setup.md:5 (mention) — See also: `gmail-setup.md`, `google-drive.md`, `calendar.md` for the per-connector guides that build on this setup.
 - docs/implemented-plans/connector-sync-isolation.md:288 (mention) — 1. Update `docs/google-drive.md` and the Drive skill text in
+- docs/implemented-plans/drive-folder-mounts.md:109 (mention) — after migration, `docs/google-drive.md:141-150` "Folder Mounts" section.
 - docs/plans/docs-reorg.md:208 (mention) — - `google-setup.md` / `gmail-setup.md` / `google-drive.md` / `connectors.md`
 - user-stories/catalog/2026-06-26.md:2713 (mention) — The implementation is complete and accurate. The google-drive.ts connector's syncFolder() method (lines 260-312) fully i
 
@@ -1282,7 +1283,7 @@ Title: "Google Cloud Console Setup" | 162 lines
 
 Referenced by:
 - docs/gmail-setup.md:11 (link) — in [google-setup.md](google-setup.md).
-- docs/google-drive.md:7 (link) — 1. **Google OAuth** configured (see [google-setup.md](google-setup.md))
+- docs/google-drive.md:16 (link) — 1. **Google OAuth** configured (see [google-setup.md](google-setup.md))
 - docs/health-checks.md:182 (link) — in [`google-setup.md`](google-setup.md#token-expired--invalid_grant); design
 - docs/implemented-plans/google-auth-reauth-health.md:129 (mention) — 7. **Docs** — `docs/google-setup.md` troubleshooting, `docs/health-checks.md`.
 - docs/plans/docs-reorg.md:208 (mention) — - `google-setup.md` / `gmail-setup.md` / `google-drive.md` / `connectors.md`
@@ -1913,7 +1914,7 @@ Referenced by:
 
 #### docs/testing.md
 
-Title: "Testing" | 765 lines
+Title: "Testing" | 767 lines
 
 Referenced by:
 - CLAUDE.md:138 (mention) — | Testing philosophy | `docs/testing.md` |
@@ -2018,7 +2019,7 @@ Referenced by:
 - CLAUDE.md:139 (mention) — | Tours (browser walks for UI/a11y review) | `docs/tours.md` |
 - docs/plans/agent-points-at-ui.md:133 (mention) — out of `bin/browse snapshot`, and `docs/tours.md:39-50` archives
 - docs/plans/public-site.md:95 (mention) — `docs/tours.md:39-50`) — the future automated-screenshot pipeline if
-- docs/testing.md:655 (link) — rule, and when NOT to use them: [tours.md](tours.md).
+- docs/testing.md:657 (link) — rule, and when NOT to use them: [tours.md](tours.md).
 - ../.claude/skills/cb-plan/TEMPLATE.md:134 (mention) — (docs/tours.md), not a regression anchor for behaviour — put behaviour
 - ../issues/closed/code-quality/2026-07-10-tour-lib-lint-debt.md:46 (mention) — Filed while formalizing tours (docs/tours.md); the 2026-07-10 fixes to
 - ../issues/closed/code-quality/2026-08-26-repair-tours-and-check-them-weekly.md:27 (mention) — (`callback-box/docs/tours.md` keeps them out of pre-commit and the suite on
@@ -2330,7 +2331,7 @@ References:
 Title: "Agent field tests — an agent-operator exercising realistic box activities end-to-end" | 518 lines
 
 Referenced by:
-- docs/testing.md:669 (link) — live in [`docs/implemented-plans/agent-field-tests.md`](implemented-plans/agent-field-tests.md).
+- docs/testing.md:671 (link) — live in [`docs/implemented-plans/agent-field-tests.md`](implemented-plans/agent-field-tests.md).
 - field-tests/onboarding-first-days/README.md:3 (mention) — The first real field-test scenario (`docs/implemented-plans/agent-field-tests.md`, Track 4):
 - ../issues/closed/code-quality/2026-08-08-field-test-run-setup-failure-no-teardown.md:5 (mention) — discovered-in: worktree integration-tests — implementing Track 5 (reporting) of docs/implemented-plans/agent-field-tests
 - ../issues/closed/features/2026-08-06-agent-driven-integration-tests.md:12 (mention) — > `docs/implemented-plans/agent-field-tests.md`: the `cb field-test run|list|report`
@@ -2984,6 +2985,19 @@ References:
 - → ../issues/closed/bugs/2026-08-20-session-end-hook-cancelled-by-slow-sweep.md (frontmatter)
 - → ../issues/closed/bugs/2026-08-21-browse-reaper-kills-other-sessions-daemons.md (frontmatter)
 - → ../issues/closed/bugs/2026-08-15-main-runtime-stays-stale-after-deploy-build.md (frontmatter)
+
+#### docs/implemented-plans/drive-folder-mounts.md
+
+Title: "Drive mounts: pointers, synced files, synced folders" | 450 lines
+
+Referenced by:
+- ../issues/closed/bugs/2026-08-21-drive-folder-mounts-cannot-be-configured-from-anywhere.md:10 (mention) — **Closed 2026-08-26:** implemented by the drive-folder-mounts workstream (commit 544fa0c96 and the `bin/land` merge that
+- ../issues/closed/features/2026-06-26-drive-mounting-file-browsing-ui.md:11 (mention) — card-based redesign in `callback-box/docs/implemented-plans/drive-folder-mounts.md`
+
+References:
+- → ../issues/closed/bugs/2026-08-21-drive-folder-mounts-cannot-be-configured-from-anywhere.md (frontmatter)
+- → ../issues/closed/features/2026-06-26-drive-mounting-file-browsing-ui.md (frontmatter)
+- → docs/google-drive.md (mention)
 
 #### docs/implemented-plans/emission-model.md
 
@@ -4033,8 +4047,8 @@ Referenced by:
 - docs/plans/design-reconciliation.md:14 (mention) — `docs/implemented-plans/user-story-audit-followups.md`): the boxholder writes
 - docs/plans/docs-reorg.md:54 (mention) — and `user-story-audit-followups.md` (mostly done).
 - user-stories/catalog/2026-06-26.md:9 (link) — > [the follow-up plan](../../docs/implemented-plans/user-story-audit-followups.md) indexes into it by item
+- ../issues/closed/features/2026-06-26-drive-mounting-file-browsing-ui.md:18 (mention) — Surfaced by the user-story audit (`docs/plans/user-story-audit-followups.md` D9).
 - ../issues/closed/features/2026-06-26-questions-end-to-end-d1.md:18 (mention) — From the user-story audit (`docs/plans/user-story-audit-followups.md`, bucket D).
-- ../issues/features/2026-06-26-drive-mounting-file-browsing-ui.md:8 (mention) — Surfaced by the user-story audit (`docs/plans/user-story-audit-followups.md` D9).
 
 References:
 - → user-stories/catalog/2026-06-26.md (mention)
@@ -5530,11 +5544,11 @@ Referenced by:
 - docs/implemented-plans/agent-browsing-owner.md:177 (mention) — - `user-stories/README.md:257-259` lesson → resolved, pointing here.
 - user-stories/README.md:16 (mention) — README.md          this file
 - user-stories/catalog/2026-08-21.md:7 (link) — method are in [the pipeline README](../README.md). The underlying
-- ../issues/bugs/2026-08-21-drive-folder-mounts-cannot-be-configured-from-anywhere.md:59 (link) — [the pipeline README](../../callback-box/user-stories/README.md).
 - ../issues/bugs/2026-08-21-history-shows-no-trigger-for-procedure-and-trick-commit.md:47 (link) — [the pipeline README](../../callback-box/user-stories/README.md).
 - ../issues/bugs/2026-08-21-published-pages-can-never-carry-a-submit-form-nothing-s.md:58 (link) — [the pipeline README](../../callback-box/user-stories/README.md).
 - ../issues/bugs/2026-08-21-rotated-image-cards-overflow-and-misplace-bbox.md:71 (link) — [the pipeline README](../../callback-box/user-stories/README.md).
 - ../issues/closed/bugs/2026-08-21-capture-session-cards-never-record-the-transcription-fa.md:43 (link) — [the pipeline README](../../../callback-box/user-stories/README.md).
+- ../issues/closed/bugs/2026-08-21-drive-folder-mounts-cannot-be-configured-from-anywhere.md:62 (link) — [the pipeline README](../../../callback-box/user-stories/README.md).
 - ../issues/closed/bugs/2026-08-21-failed-in-box-image-shows-the-browser-glyph.md:56 (link) — [the pipeline README](../../../callback-box/user-stories/README.md).
 - ../issues/closed/bugs/2026-08-21-generated-agent-guide-sends-box-agents-to-config-schema.md:42 (link) — [the pipeline README](../../../callback-box/user-stories/README.md).
 
@@ -5588,11 +5602,11 @@ Referenced by:
 - user-stories/README.md:5 (link) — The current catalog is [catalog/2026-08-21.md](catalog/2026-08-21.md). It is produced by reading
 - user-stories/catalog/2026-06-26.md:4 (link) — > [2026-08-21.md](2026-08-21.md). This file describes the product as it
 - user-stories/journeys/README.md:4 (link) — there. The [capability catalog](../catalog/2026-08-21.md) next door answers "does the
-- ../issues/bugs/2026-08-21-drive-folder-mounts-cannot-be-configured-from-anywhere.md:39 (link) — This issue is why [`connectors/configure-which-gmail-calendar-and-drive-content`](../../callback-box/user-stories/catalo
 - ../issues/bugs/2026-08-21-history-shows-no-trigger-for-procedure-and-trick-commit.md:27 (link) — This issue is why [`browse/see-which-changes-the-box-made-on-its-own-and`](../../callback-box/user-stories/catalog/2026-
 - ../issues/bugs/2026-08-21-published-pages-can-never-carry-a-submit-form-nothing-s.md:38 (link) — This issue is why [`publish/collect-replies-from-a-published-page`](../../callback-box/user-stories/catalog/2026-08-21.m
 - ../issues/bugs/2026-08-21-rotated-image-cards-overflow-and-misplace-bbox.md:51 (link) — This issue is why [`browse/view-a-photo-card-with-its-analysis`](../../callback-box/user-stories/catalog/2026-08-21.md#f
 - ../issues/closed/bugs/2026-08-21-capture-session-cards-never-record-the-transcription-fa.md:23 (link) — This issue is why [`capture/a-capture-still-arrives-when-transcription-is-down`](../../../../callback-box/user-stories/c
+- ../issues/closed/bugs/2026-08-21-drive-folder-mounts-cannot-be-configured-from-anywhere.md:42 (link) — This issue is why [`connectors/configure-which-gmail-calendar-and-drive-content`](../../../callback-box/user-stories/cat
 - ../issues/closed/bugs/2026-08-21-failed-in-box-image-shows-the-browser-glyph.md:36 (link) — This issue is why [`browse/images-still-show-when-the-source-blocks`](../../../callback-box/user-stories/catalog/2026-08
 - ../issues/closed/bugs/2026-08-21-generated-agent-guide-sends-box-agents-to-config-schema.md:22 (link) — This issue is why [`cards/define-box-local-card-types-that-hot-reload`](../../../callback-box/user-stories/catalog/2026-
 - ../issues/closed/bugs/2026-08-21-one-failing-calendar-aborts-the-whole-calendar-sync-ins.md:53 (link) — An independent adversarial source recheck marked [`connectors/calendar-sync-repairs-an-expired-sync-token-and`](../../..

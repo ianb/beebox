@@ -1,78 +1,110 @@
 /**
- * Google Drive section: lists mounted folders and available spreadsheets.
- * Mounting itself is done via CLI (`cb drive add`); this view is read-only.
+ * Google Drive section: the box's mount manager.
+ *
+ * A Drive mount is a card — `.gdoc.card`/`.gsheet.card` for a synced file,
+ * `.gfolder.card` for a mirrored folder, `.glink.card` for a pointer — so this
+ * lists cards, not config. The mutations behind the forms are the same
+ * operations `cb drive mount` / `link` / `unmount` run, which is why the page
+ * and the agent can never disagree about what a mount is.
+ *
+ * Chat is still the primary path (paste a Drive URL, say what you want); this
+ * is for seeing everything at once and for the boxholder who would rather
+ * type into a form than ask.
  */
 
 import { trpc } from "../../lib/trpc";
+import { Stack } from "../ui/Stack";
+import { Text } from "../ui/Text";
 import { GoogleConnectLink } from "./GoogleConnectLink";
+import { DriveMountRow } from "./DriveMountRow";
+import { AddPointerForm, MountFolderForm } from "./DriveMountForms";
+
+function DriveShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="bg-white rounded-lg shadow p-6 mt-6">
+      <h2 className="text-lg font-semibold text-warm-800 mb-2">Google Drive</h2>
+      {children}
+    </div>
+  );
+}
 
 export function DriveSection() {
+  const mountsQuery = trpc.drive.mounts.useQuery();
   const configQuery = trpc.drive.config.useQuery();
-  const availableQuery = trpc.drive.available.useQuery(undefined, { retry: false });
-  const error = availableQuery.error?.message ?? configQuery.error?.message ?? null;
-  const config = configQuery.data;
-  const available = availableQuery.data;
+  const error = mountsQuery.error?.message ?? configQuery.error?.message ?? null;
 
-  if (error) {
+  if (error !== null) {
     return (
-      <div className="bg-white rounded-lg shadow p-6 mt-6">
-        <h2 className="text-lg font-semibold text-warm-800 mb-4">
-          Google Drive
-        </h2>
+      <DriveShell>
         <div className="p-3 bg-warning-50 border border-warning-100 rounded text-sm text-warning-dark">
           {error}
         </div>
         <GoogleConnectLink id="cb-settings-drive-connect-google" />
-      </div>
+      </DriveShell>
+    );
+  }
+
+  const data = mountsQuery.data;
+  if (data === undefined) {
+    return (
+      <DriveShell>
+        <Text size="sm" tone="muted">Loading Drive mounts…</Text>
+      </DriveShell>
+    );
+  }
+
+  // An unconverted `folders` array from a box set up before mounts were cards.
+  // The next Drive sync turns each entry into a mount card; until then it is
+  // real configuration doing real work, so it is listed rather than hidden.
+  const legacyFolders = configQuery.data?.folders ?? [];
+
+  if (!data.connected) {
+    return (
+      <DriveShell>
+        <Text size="sm">
+          Google isn&apos;t connected for this box, so there is nothing to mirror
+          from yet.
+        </Text>
+        <GoogleConnectLink id="cb-settings-drive-connect-google" />
+      </DriveShell>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6 mt-6">
-      <h2 className="text-lg font-semibold text-warm-800 mb-2">
-        Google Drive
-      </h2>
-      <p className="text-sm text-warm-700 mb-4">
-        Spreadsheets are synced as CSV files. Use{" "}
-        <code className="text-xs bg-warm-100 px-1 rounded">cb drive add &lt;url&gt; &lt;path&gt;</code>{" "}
-        to mount a spreadsheet.
-      </p>
+    <DriveShell>
+      <Text size="sm" tone="muted" className="mb-4">
+        A mirrored folder keeps a box directory in step with a Drive folder. You
+        can also ask in chat — paste a Drive link and say what you want done
+        with it.
+      </Text>
 
-      {config?.folders && config.folders.length > 0 ? (
-        <div className="mb-4">
-          <h3 className="text-sm font-medium text-warm-800 mb-2">Folder mounts</h3>
-          <div className="space-y-1">
-            {config.folders.map((f) => (
-              <div key={f.driveFolderId} className="flex items-center gap-3 px-3 py-2 rounded bg-warm-50 text-sm">
-                <span className="text-warm-600">{f.localPath}</span>
-              </div>
+      <Stack gap="md">
+        {data.mounts.length === 0 ? (
+          <Text size="sm" tone="muted">No folders are mirrored yet.</Text>
+        ) : (
+          <Stack gap="sm">
+            {data.mounts.map((mount) => (
+              <DriveMountRow key={mount.cardPath} mount={mount} />
             ))}
-          </div>
-        </div>
-      ) : null}
+          </Stack>
+        )}
 
-      {available && available.length > 0 ? (
-        <div>
-          <h3 className="text-sm font-medium text-warm-800 mb-2">Available spreadsheets</h3>
-          <div className="space-y-1 max-h-48 overflow-auto">
-            {available.map((file) => (
-              <div key={file.id} className="flex items-center gap-3 px-3 py-2 rounded hover:bg-warm-50 text-sm">
-                <span className="flex-1 min-w-0 text-warm-900 truncate">{file.name}</span>
-                <span className="text-xs text-warm-500 flex-shrink-0">
-                  {new Date(file.modifiedTime).toLocaleDateString()}
-                </span>
-              </div>
+        {legacyFolders.length === 0 ? null : (
+          <Stack gap="xs">
+            <Text as="h3" size="sm" weight="semibold">Folder mounts awaiting conversion</Text>
+            {legacyFolders.map((folder) => (
+              <Text key={folder.driveFolderId} size="sm" tone="muted">{folder.localPath}</Text>
             ))}
-          </div>
-          <p className="text-xs text-warm-500 mt-2">
-            Use the CLI to mount: <code className="bg-warm-100 px-1 rounded">cb drive add &lt;url&gt; store/drive/name</code>
-          </p>
-        </div>
-      ) : !availableQuery.isLoading ? (
-        <p className="text-sm text-warm-600">No spreadsheets found in your Drive.</p>
-      ) : (
-        <p className="text-sm text-warm-600">Loading spreadsheets...</p>
-      )}
-    </div>
+            <Text size="xs" tone="muted">
+              The next Drive sync turns each of these into a folder card in that
+              directory.
+            </Text>
+          </Stack>
+        )}
+
+        <MountFolderForm />
+        <AddPointerForm />
+      </Stack>
+    </DriveShell>
   );
 }

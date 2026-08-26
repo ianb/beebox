@@ -52,6 +52,8 @@ import { PlaceSchema } from "./place.js";
 import { GsheetSchema } from "./gsheet.js";
 import { DocSchema } from "./doc.js";
 import { GdocSchema } from "./gdoc.js";
+import { GfolderSchema } from "./gfolder.js";
+import { GlinkSchema } from "./glink.js";
 import { CommentarySchema } from "./commentary.js";
 import { WebpageSchema } from "./webpage.js";
 import { ExtfileSchema } from "./extfile.js";
@@ -110,6 +112,8 @@ export const cardSchemas: CardSchema[] = [
   WebPushSchema,
   GdocSchema,
   GsheetSchema,
+  GfolderSchema,
+  GlinkSchema,
   WebpageSchema,
   ExtfileSchema,
   TabArrangementSchema,

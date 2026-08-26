@@ -2021,6 +2021,76 @@ tests:
     correct_contains: ["cb rm", "restore"]
     tags: [drive, lifecycle]
 
+  # === Google Drive / Mounts (folders, pointers) ===
+  #
+  # Status (2026-08-26): 7/7 pass on first run, against the rewritten drive
+  # skill. Two of them (drive-mount-folder, drive-url-in-chat) answered with
+  # zero file reads and zero searches — the command is in the always-loaded
+  # skill, which is the point.
+  #
+  # Added 2026-08-26 with the drive-folder-mounts plan (Track 3). These are
+  # answerable from the drive skill alone — test1 has no Drive fixture (see the
+  # BOX DRIFT note above), and deliberately so: what they check is whether the
+  # agent knows the three card kinds and reaches for the right command when the
+  # boxholder pastes a link, not whether a mount exists.
+
+  - id: drive-three-kinds
+    prompt: "What are the different kinds of Google Drive card this box can hold, and what does each one promise?"
+    expected_level: knows_directly
+    watch_for: "Names all three — a pointer that copies nothing, a two-way synced file, and a mirrored folder — without reading a fixture"
+    correct_contains_any: ["glink", "pointer"]
+    correct_matches:
+      - "gfolder|mirror"
+      - "gdoc|gsheet|synced file"
+    tags: [drive, mounts]
+
+  - id: drive-mount-folder
+    prompt: "I want a Google Drive folder mirrored into this box. What command does that?"
+    expected_level: knows_directly
+    watch_for: "Answers cb drive mount with a URL and a directory — not editing connector JSON, not cb drive add"
+    correct_contains: ["cb drive mount"]
+    response_not_contains: ["google-drive.json"]
+    tags: [drive, mounts]
+
+  - id: drive-pointer-for-pdf
+    prompt: "If a Google Drive folder I'm mirroring contains a PDF, what happens to that PDF in the box?"
+    expected_level: knows_directly
+    watch_for: "Says it becomes a pointer card — nothing is copied — rather than claiming the PDF syncs or is downloaded"
+    correct_contains_any: ["glink", "pointer"]
+    correct_matches:
+      - "not copied|nothing is copied|isn't copied|is never copied"
+    tags: [drive, mounts]
+
+  - id: drive-unmount-keeps-children
+    prompt: "If I unmount a mirrored Drive folder, what happens to the cards already in that directory?"
+    expected_level: knows_directly
+    watch_for: "Says the children stay in place and synced ones keep syncing; unmount is not a delete"
+    correct_contains: ["cb drive unmount"]
+    correct_matches:
+      - "stay|remain|left in place|nothing is deleted"
+    tags: [drive, mounts]
+
+  - id: drive-url-in-chat
+    prompt: "Here's a Drive folder: https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOpQrS — I'd like it mirrored into the box. What do you do?"
+    expected_level: knows_directly
+    watch_for: "Runs or proposes cb drive mount <url> <dir>, and either proposes a directory with a reason or asks — never assumes a default"
+    correct_contains: ["cb drive mount"]
+    tags: [drive, mounts]
+
+  - id: drive-link-in-chat
+    prompt: "Here's a Drive file: https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrS/view — don't copy it into the box, I just want the box to know it exists and what it's for."
+    expected_level: knows_directly
+    watch_for: "Reaches for cb drive link (a pointer card), not cb drive add or cb drive mount"
+    correct_contains: ["cb drive link"]
+    tags: [drive, mounts]
+
+  - id: drive-trashed-child
+    prompt: "Someone trashed one of the files in a Drive folder this box mirrors. What happens to that file's card here?"
+    expected_level: knows_about
+    watch_for: "Says the card moves to store/trash/ and the sync reports it — not that it is silently deleted or left syncing"
+    correct_contains: ["store/trash"]
+    tags: [drive, mounts]
+
   # === Google Drive / Documents ===
   #
   # Status (2026-07-03): all 5 pass. Fixed drive-docs-supported — a synced Google
