@@ -39,7 +39,7 @@ await configure(box.root, { agentEngine: "claude", engines: { claude: true, code
 JSON.stringify([
   await resolveStartEngine(box.root, { sessionId: null, requested: null }),
   await resolveStartEngine(box.root, { sessionId: null, requested: "codex" }),
-  await resolveChatEngine(box.root, null),
+  await resolveChatEngine(box.root, { sessionId: null }),
 ])
 => ["claude","codex","claude"]
 ```
@@ -53,7 +53,7 @@ const sessionId = randomUUID();
 await recordSessionStart(box.root, { sessionId, engine: "codex" });
 
 JSON.stringify([
-  await resolveChatEngine(box.root, sessionId),
+  await resolveChatEngine(box.root, { sessionId }),
   await resolveStartEngine(box.root, { sessionId, requested: "claude" }),
 ])
 => ["codex","codex"]
