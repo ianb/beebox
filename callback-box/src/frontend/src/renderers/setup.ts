@@ -16,6 +16,8 @@ import "./docling";
 import "./figure";
 import "./concept-map";
 import "./gsheet";
+import "./gfolder";
+import "./glink";
 import "./markdown";
 import "./comments";
 import "./json";
