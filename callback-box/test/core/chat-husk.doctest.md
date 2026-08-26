@@ -274,3 +274,69 @@ warnings.join("\n")
 (await listChatHusks(box.root)).length
 => 3
 ```
+
+## reconcile backfills provenance for husks written before it existed
+
+A husk from before `origin` existed gets it on the first boot of the machine
+that holds its transcript — the transcript IS the evidence, and a session's
+engine store exists on exactly one machine, so two checkouts can never stamp
+the same husk. `engine` comes from the history entry — this one has none, which
+decodes as `claude`, as everywhere else. The body, the title and every other field are
+carried through untouched, and a second pass writes nothing.
+
+```ts
+const box = await makeTmpBox();
+process.env["CB_CLAUDE_PROJECTS_DIR"] = box.path("projects");
+const here = "eeee1111-2222-3333-4444-555566667777";
+const away = "ffff1111-2222-3333-4444-555566667777";
+await box.write("store/chat/web/Kitchen redo.chat.card", `---
+session: ${here}
+title: Kitchen redo
+---
+Decided on the tile in this chat.
+`);
+await box.write("store/chat/web/Old trip.chat.card", `---
+session: ${away}
+title: Old trip
+---
+`);
+await box.write(".callback-box/chat-session-history.json", JSON.stringify({
+  sessions: [{ id: here }, { id: away }],
+  migrated: true,
+}));
+const hereLog = getSessionLogPath(box.root, here);
+await mkdir(dirname(hereLog), { recursive: true });
+await writeFile(hereLog, "{}\n");
+
+await reconcileChatHusks(box.root);
+await box.read("store/chat/web/Kitchen redo.chat.card")
+=> ---
+session: eeee1111-2222-3333-4444-555566667777
+title: Kitchen redo
+origin: «*»
+origin-name: «*»
+engine: claude
+---
+Decided on the tile in this chat.
+```
+
+The other husk's transcript is on some other machine (or expired), so it stays
+unstamped — "unknown" is honest, and a guessed origin would make an expired
+chat look like it lives somewhere it doesn't.
+
+```ts continue
+await box.read("store/chat/web/Old trip.chat.card")
+=> ---
+session: ffff1111-2222-3333-4444-555566667777
+title: Old trip
+---
+
+const stamped = await box.read("store/chat/web/Kitchen redo.chat.card");
+await reconcileChatHusks(box.root);
+(await box.read("store/chat/web/Kitchen redo.chat.card")) === stamped
+=> true
+```
+
+```ts cleanup
+delete process.env["CB_CLAUDE_PROJECTS_DIR"];
+```

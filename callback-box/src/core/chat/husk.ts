@@ -11,10 +11,11 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parse as parseYaml } from "yaml";
-import { splitCardContent } from "../../cards/index.js";
+import { renderFrontmatterBlock, splitCardContent } from "../../cards/index.js";
 import { createChatHuskTemplate } from "../../schemas/chat.js";
-import { loadHistoryEntries, resolveSessionLogPath } from "./session/history.js";
-import { localOrigin } from "./session/origin.js";
+import { loadHistoryEntries, resolveSessionLogPath, type SessionHistoryEntry } from "./session/history.js";
+import { localOrigin, type LocalOrigin } from "./session/origin.js";
+import { withCardLock } from "../../lib/card-lock.js";
 import { loadAgentEngine, type AgentEngine } from "../box/config.js";
 import { extractSnippet } from "../../cli/lib/session-text.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
@@ -152,6 +153,8 @@ export interface ChatHuskEntry {
   session: string;
   contextDir?: string;
   title?: string;
+  /** Machine id stamped at creation; absent on husks written before Track 2. */
+  origin?: string;
 }
 
 /**
@@ -245,11 +248,13 @@ async function readChatHusk(boxRoot: string, relPath: string): Promise<ChatHuskE
   }
   const contextDir = fm["context-dir"];
   const title = fm["title"];
+  const origin = fm["origin"];
   return {
     path: relPath,
     session,
     ...(typeof contextDir === "string" ? { contextDir } : {}),
     ...(typeof title === "string" && title !== "" ? { title } : {}),
+    ...(typeof origin === "string" && origin !== "" ? { origin } : {}),
   };
 }
 
@@ -290,6 +295,76 @@ export async function findChatHuskEntry(boxRoot: string, sessionId: string): Pro
 }
 
 /**
+ * When this machine's copy of a session's transcript was last written, or null
+ * when it holds none. The one "is the transcript here?" check: reconcile skips
+ * ghost history entries with it, and the provenance backfill uses the same
+ * answer to decide whether this machine is the session's origin.
+ */
+async function transcriptMtime(boxRoot: string, opts: { sessionId: string; engine: AgentEngine }): Promise<Date | null> {
+  try {
+    return opts.engine === "codex"
+      ? await readCodexSessionUpdatedAt(boxRoot, opts.sessionId)
+      : (await fs.stat(await resolveSessionLogPath(boxRoot, opts.sessionId))).mtime;
+  } catch (_e) {
+    // Absent (or unreadable) transcript — the caller's whole question.
+    return null;
+  }
+}
+
+/**
+ * Add the machine-owned provenance fields to an existing husk, frontmatter
+ * only — the body and every other field are carried through untouched.
+ * Returns whether anything was written.
+ *
+ * The card is re-read under `withCardLock` and re-checked for `origin`,
+ * because the snapshot the caller matched on was taken outside the lock and
+ * chat review writes to the same cards.
+ */
+async function stampHuskProvenance(absPath: string, args: { engine: AgentEngine; origin: LocalOrigin }): Promise<boolean> {
+  return withCardLock(absPath, async () => {
+    const content = await fs.readFile(absPath, "utf-8");
+    const split = splitCardContent(content);
+    const fields = parseHuskFrontmatter(content);
+    // Unreadable frontmatter: `listChatHusks` already warned about it, and a
+    // rewrite would be guessing at what the file meant.
+    if (!split.hasFrontmatter || fields === null) return false;
+    if (fields["origin"] !== undefined) return false;
+    fields["origin"] = args.origin.id;
+    fields["origin-name"] = args.origin.name;
+    // An `engine` already on the card wins — reconcile records, never corrects.
+    if (fields["engine"] === undefined) fields["engine"] = args.engine;
+    await fs.writeFile(absPath, renderFrontmatterBlock(fields, split.body));
+    return true;
+  });
+}
+
+/**
+ * Stamp `origin` on every pre-Track-2 husk whose transcript is on THIS
+ * machine, and return how many were written.
+ *
+ * The transcript is the proof: a session's engine store exists on exactly one
+ * machine, so two checkouts can never claim the same husk and the stamped sets
+ * cannot conflict on merge. A husk with no transcript here is left unset —
+ * "unknown" is honest, and inventing an origin would make an expired chat look
+ * like it lives somewhere it doesn't.
+ */
+async function backfillHuskProvenance(boxRoot: string, args: { husks: ChatHuskEntry[]; entries: SessionHistoryEntry[] }): Promise<number> {
+  const engineBySession = new Map(args.entries.map((entry) => [entry.id, entry.engine]));
+  let stamped = 0;
+  for (const husk of args.husks) {
+    if (husk.origin !== undefined) continue;
+    // No history entry (the file is per-checkout, the husk is not): `claude`,
+    // the same decode a history entry without an `engine` gets.
+    const engine = engineBySession.get(husk.session) ?? "claude";
+    const mtime = await transcriptMtime(boxRoot, { sessionId: husk.session, engine });
+    if (mtime === null) continue;
+    const origin = await localOrigin();
+    if (await stampHuskProvenance(path.join(boxRoot, husk.path), { engine, origin })) stamped += 1;
+  }
+  return stamped;
+}
+
+/**
  * Give every resumable session in the history file a husk. Ghost entries
  * (no transcript on disk) are skipped — nothing to point at.
  *
@@ -304,6 +379,10 @@ export async function findChatHuskEntry(boxRoot: string, sessionId: string): Pro
  *
  * Cheap to repeat: one directory listing plus one history read, and per-session
  * work only for the sessions actually missing a husk.
+ *
+ * It is also where husks written before Track 2 acquire their provenance
+ * (`backfillHuskProvenance`): a boot on the machine that holds a session's
+ * transcript is exactly when its origin can be established from evidence.
  */
 export async function reconcileChatHusks(boxRoot: string): Promise<void> {
   const [entries, husks] = await Promise.all([loadHistoryEntries(boxRoot), listChatHusks(boxRoot)]);
@@ -321,17 +400,16 @@ export async function reconcileChatHusks(boxRoot: string): Promise<void> {
     );
   }
 
+  const stamped = await backfillHuskProvenance(boxRoot, { husks, entries });
+  // Routine and usually zero, so it says nothing when nothing changed; when it
+  // does, it dirtied git-tracked cards and that should be attributable.
+  if (stamped > 0) console.debug(`chat-husk: recorded origin on ${String(stamped)} husk(s)`);
+
   for (const entry of entries) {
     if (bySession.has(entry.id)) continue;
-    let mtime: Date;
-    try {
-      mtime = entry.engine === "codex"
-        ? await readCodexSessionUpdatedAt(boxRoot, entry.id)
-        : (await fs.stat(await resolveSessionLogPath(boxRoot, entry.id))).mtime;
-    } catch (_e) {
-      // Ghost entry — transcript gone; nothing to resume, so no husk.
-      continue;
-    }
+    const mtime = await transcriptMtime(boxRoot, { sessionId: entry.id, engine: entry.engine });
+    // Ghost entry — transcript gone; nothing to resume, so no husk.
+    if (mtime === null) continue;
     await ensureChatHusk(boxRoot, {
       sessionId: entry.id,
       ...(entry.contextDir !== undefined ? { contextDir: entry.contextDir } : {}),
