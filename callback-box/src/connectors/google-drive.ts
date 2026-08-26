@@ -39,8 +39,6 @@ import { createFolderSyncDeps } from "./drive-sync-deps.js";
 import { assertNever } from "../lib/invariant.js";
 
 // Ensure handlers are registered
-import "./drive-handler-sheets.js";
-import "./drive-handler-docs.js";
 
 // State types + the delta-merging state writer live in the sibling state-IO
 // module; re-export the surface CLI callers (`cli/commands/drive.ts`) import.

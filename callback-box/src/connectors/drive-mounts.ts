@@ -21,8 +21,7 @@ import { extractDriveFileId } from "./drive-types.js";
 import { writeGfolderCard, writeGlinkCard } from "./drive-card-stamp.js";
 import { DRIVE_FOLDER_MIME } from "./drive-folder-plan.js";
 import { gfolderCardsIn } from "./drive-folder-cards.js";
-import { syncFolderCard } from "./drive-folder-sync.js";
-import { createFolderSyncDeps } from "./drive-sync-deps.js";
+import { mirrorFolderOnce } from "./drive-mount-sync.js";
 import { safeFilename } from "./chat-utils.js";
 import {
   AmbiguousFolderMountError,
@@ -39,12 +38,6 @@ import {
   GLINK_CARD_TYPE,
   type DriveCardTracking,
 } from "./google-drive-tracking.js";
-import { loadTransientState } from "./transient-state.js";
-import {
-  DEFAULT_DRIVE_STATE,
-  commitDriveStateDelta,
-  type DriveTransientState,
-} from "./google-drive-state.js";
 
 /** A Drive URL or bare id, or a refusal naming what was unusable. */
 function requireDriveId(input: string): string {
@@ -143,7 +136,7 @@ export async function mountDriveFolder(options: {
   await writeGfolderCard(cardPath, file);
   const relCard = path.relative(boxRoot, cardPath);
 
-  const mirror = await mirrorOnce({ boxRoot, service, driveId, cardPath });
+  const mirror = await mirrorFolderOnce({ boxRoot, service, driveId, cardPath });
 
   const paths = [...new Set([relCard, ...mirror.created, ...mirror.updated, ...mirror.pushed])];
   await stageAndCommitPaths(boxRoot, { paths, message: `Mount Drive folder: ${file.name}` });
@@ -157,35 +150,6 @@ export async function mountDriveFolder(options: {
     failures: mirror.failures,
     notes: mirror.notes,
   };
-}
-
-/**
- * One mirror pass over a freshly-written mount card, with its transient state
- * merged back the same way a connector sync merges it. A mount whose first
- * sync waited for the next wakeup would show an empty directory and no status
- * for hours.
- */
-async function mirrorOnce(opts: {
-  boxRoot: string;
-  service: GoogleDriveService;
-  driveId: string;
-  cardPath: string;
-}) {
-  const { boxRoot, service, driveId, cardPath } = opts;
-  const state = await loadTransientState<DriveTransientState>({
-    boxRoot,
-    connectorName: "google-drive",
-    defaultValue: DEFAULT_DRIVE_STATE,
-  });
-  const snapshot: DriveTransientState = structuredClone(state);
-  // Re-scan after the card write so the new mount is in its own tracking —
-  // that is what makes its Drive ID claimed and its directory's membership
-  // visible to the planner.
-  const tracking = await findDriveCardTracking(boxRoot);
-  const deps = createFolderSyncDeps({ boxRoot, service, state, tracking });
-  const mirror = await syncFolderCard({ driveId, cardPath, depth: 0 }, deps);
-  await commitDriveStateDelta({ boxRoot, snapshot, working: state });
-  return mirror;
 }
 
 export interface LinkResult {

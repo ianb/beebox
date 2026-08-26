@@ -6,7 +6,9 @@ commits exactly that path via `stageAndCommitPaths`, and returns the saved
 shape. Gmail is an `ownerProcedure`; calendar is public.
 
 Drive has no such mutation, on purpose — a Drive mount is a card, so there is no
-config for a settings page to write. The Drive section here pins that.
+config for a settings page to write. The Drive section here pins that; the
+mount-writing procedures that DO exist are covered in
+`trpc-drive-mounts.doctest.md`.
 
 ```ts setup
 import { appRouter } from "../../src/webapp/trpc/router.js";
@@ -113,11 +115,12 @@ await code(c.drive.config())
 => INTERNAL_SERVER_ERROR
 ```
 
-There is no mount-writing procedure on this router.
+The router writes mounts — as cards, through the same operations `cb drive
+mount` / `link` / `unmount` use — but it never writes connector config.
 
 ```ts continue
-JSON.stringify(Object.keys(appRouter._def.procedures).filter((name) => name.startsWith("drive.")))
-=> ["drive.config"]
+JSON.stringify(Object.keys(appRouter._def.procedures).filter((name) => name.startsWith("drive.")).sort())
+=> ["drive.config","drive.link","drive.mount","drive.mounts","drive.syncFolder","drive.unmount"]
 ```
 
 ```ts cleanup

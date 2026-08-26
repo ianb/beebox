@@ -80,6 +80,16 @@ export class NoFolderMountHereError extends DriveMountError {
   }
 }
 
+/** Asked to sync a mount by naming something that is not one. */
+export class NotAFolderMountError extends DriveMountError {
+  readonly relPath: string;
+  constructor(relPath: string) {
+    super(`${relPath} is not a Drive folder mount card`);
+    this.name = "NotAFolderMountError";
+    this.relPath = relPath;
+  }
+}
+
 export class AmbiguousFolderMountError extends DriveMountError {
   readonly mountCards: string[];
   constructor(options: { relDir: string; mountCards: string[] }) {

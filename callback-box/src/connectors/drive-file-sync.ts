@@ -10,6 +10,10 @@
 import { attachDirFor } from "../shared/attach-path.js";
 import type { GoogleDriveService } from "../services/google-drive.js";
 import { getHandlerForMimeType } from "./drive-types.js";
+// Same reason as in google-drive-tracking.ts: the registry is only populated
+// by importing the handlers, and this is the module that dispatches on it.
+import "./drive-handler-sheets.js";
+import "./drive-handler-docs.js";
 import type { DriveTransientState } from "./google-drive-state.js";
 import type { SyncPaths } from "./drive-folder-types.js";
 

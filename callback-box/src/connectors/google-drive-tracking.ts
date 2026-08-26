@@ -8,6 +8,13 @@ import { isRecord } from "../lib/is-record.js";
 import { getBoxDir } from "../lib/paths.js";
 import { invariant } from "../lib/invariant.js";
 import { getAllDriveHandlers } from "./drive-types.js";
+// The handler registry is populated by importing the handlers, and this module
+// is what asks it which card types are Drive cards. Registering them here
+// rather than in the connector is what lets a caller that never builds a
+// connector — `cb drive mount`, the tRPC mount router — still see a
+// `.gsheet.card` as a synced file instead of an unknown type.
+import "./drive-handler-sheets.js";
+import "./drive-handler-docs.js";
 
 const DRIVE_CARD_IGNORE = [
   "node_modules/**",
