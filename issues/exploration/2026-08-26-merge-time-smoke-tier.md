@@ -68,5 +68,8 @@ up exactly where the tours are — except now it is also blocking merges. The
 selectors need to be stable app addresses (`cb-` ids), and the fixture box
 stable, before anything hard-fails on them.
 
-Worth deciding as part of this issue: whether the existing five tours are
-repaired, retired, or left as the review instrument they are.
+Decided since (2026-08-26): repair them and run them weekly, tracked as
+[repair the tours and check them weekly](../code-quality/2026-08-26-repair-tours-and-check-them-weekly.md).
+That is the soft instrument, whose weekly run may *amend* a tour when the app
+changed deliberately; this issue remains the hard-fail gate. The two should
+share a walk definition rather than diverging into two.
