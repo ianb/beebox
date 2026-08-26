@@ -7,7 +7,12 @@
  * scrolls.** Writes, exhaustively:
  *
  *  1. `openThread()` → hold the bottom on every growth until `settleOpen()`
- *     says the first history render landed (or the reader scrolls away).
+ *     says the first history render landed (or the reader scrolls away —
+ *     scrollTop moving *up*. Being off the bottom is not leaving: the event
+ *     for the hold's own write arrives a frame later, and content that grew
+ *     in between leaves it reading off the bottom with scrollTop exactly
+ *     where the write put it — the 92px-then-abandoned open the 2026-08-26
+ *     field trace recorded).
  *  2. `anchorToTop(el)` → on send, put the new user message at the top of the
  *     viewport. The reply streams in below it; nothing follows it.
  *  3. `scrollToBottom()` → the floating button.
@@ -214,6 +219,20 @@ function armOpenSettle(wait: { until: Promise<void> | undefined; scroller: HTMLD
   });
 }
 
+/** Re-read the anchor's offset from the DOM (see `handleScroll`). */
+function refreshAnchorTop(anchor: Anchor | null, scroller: HTMLDivElement): void {
+  const live = anchorOffset(anchor, scroller);
+  if (anchor && live !== null) anchor.top = live;
+}
+
+/** Did scrollTop move up since the last look? Records the current value.
+ *  Scrolling away is this, never merely being off the bottom — see rule 1. */
+function movedUp(el: HTMLDivElement, prevTop: MutableRefObject<number>): boolean {
+  const up = el.scrollTop < prevTop.current - 1;
+  prevTop.current = el.scrollTop;
+  return up;
+}
+
 /** A `window.setTimeout` handle held in a ref, cleared idempotently. */
 function clearTimer(ref: MutableRefObject<number | null>): void {
   if (ref.current !== null) window.clearTimeout(ref.current);
@@ -281,8 +300,8 @@ export function useChatScroll(): ChatScroll {
 
   const prevScrollHeightRef = useRef(0);
   const prevFromBottomRef = useRef(0);
-  // Set while older messages are being loaded: the pre-prepend
-  // (scrollHeight - scrollTop) gap to restore once the insertion lands.
+  const prevScrollTopRef = useRef(0);
+  // While older messages load: the pre-prepend gap to restore once they land.
   const prependGapRef = useRef<number | null>(null);
   const prependTimerRef = useRef<number | null>(null);
   const anchorRef = useRef<Anchor | null>(null);
@@ -295,8 +314,7 @@ export function useChatScroll(): ChatScroll {
     scroller: null,
   });
 
-  // Recompute the derived geometry from the DOM. Called after every scroll
-  // event and at the end of every reconcile, so `atBottom` is never a guess.
+  // Derived geometry, re-read after every scroll and reconcile: never a guess.
   const measure = useCallback((el: HTMLDivElement) => {
     const fromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
     prevFromBottomRef.current = fromBottom;
@@ -376,13 +394,9 @@ export function useChatScroll(): ChatScroll {
     // or the user's: a resize landing mid-fling then measures only genuine
     // reflow, never the movement the reader just made (the mid-stream sawtooth
     // this replaces guessed at with an input-intent window instead).
-    const anchor = anchorRef.current;
-    const live = anchorOffset(anchor, el);
-    if (anchor && live !== null) anchor.top = live;
+    refreshAnchorTop(anchorRef.current, el);
     const fromBottom = measure(el);
-    // A reader who scrolls away while the thread is still loading has taken
-    // over; the open-phase hold is theirs to end.
-    if (openPhaseRef.current && fromBottom > AT_BOTTOM_PX) endOpenPhase();
+    if (openPhaseRef.current && movedUp(el, prevScrollTopRef) && fromBottom > AT_BOTTOM_PX) endOpenPhase();
     recordScrollTrace("scroll", { top: Math.round(el.scrollTop), fb: Math.round(fromBottom), at: atBottomRef.current, open: openPhaseRef.current });
     scheduleAnchorRecapture();
   }, [measure, atBottomRef, endOpenPhase, scheduleAnchorRecapture]);
