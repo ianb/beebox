@@ -32,12 +32,12 @@ default as the model it will use, and says where that came from.
 ```ts
 const server = await makeTestServer();
 JSON.stringify(await caller(server).chat.status({}))
-=> {"sessionId":null,"running":false,"busy":false,"model":null,"source":"none","boxDefault":null,"pendingModel":null,"engine":"claude"}
+=> {"sessionId":null,"running":false,"busy":false,"model":null,"source":"none","boxDefault":null,"pendingModel":null,"engine":"claude","enabledEngines":["claude"],"boxEngine":"claude"}
 
 await caller(server).chat.setDefaultModel({ model: "claude-sonnet-5" });
 clearBoxConfigCache(server.boxRoot);
 JSON.stringify(await caller(server).chat.status({}))
-=> {"sessionId":null,"running":false,"busy":false,"model":"claude-sonnet-5","source":"default","boxDefault":"claude-sonnet-5","pendingModel":null,"engine":"claude"}
+=> {"sessionId":null,"running":false,"busy":false,"model":"claude-sonnet-5","source":"default","boxDefault":"claude-sonnet-5","pendingModel":null,"engine":"claude","enabledEngines":["claude"],"boxEngine":"claude"}
 ```
 
 Clearing the pin returns the box to its harness default.

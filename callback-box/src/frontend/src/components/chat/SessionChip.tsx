@@ -122,7 +122,10 @@ interface SessionChipBodyProps {
   selectedModel: string | null;
   boxDefault: string | null;
   canPin: boolean;
-  canSelect: boolean;
+  canChooseEngine: boolean;
+  enabledEngines: ChatAgentEngine[];
+  boxEngine: ChatAgentEngine | null;
+  onChooseStart: (choice: { engine: ChatAgentEngine; model: string }) => void;
   onPinModel: (model: string | null) => void;
   agentEngine: ChatAgentEngine | null;
   onSelectModel: (model: string | null) => void;
@@ -138,14 +141,28 @@ interface SessionChipBodyProps {
  * `SessionChipPanel` member at compile time without one).
  */
 function SessionChipBody(props: SessionChipBodyProps): ReactNode {
-  const { panel, onNewSession, contextDir, onOpenSessions, currentModelLabel, modelSelectionDisabled, onOpenModel, selectedModel, boxDefault, canPin, canSelect, onPinModel, agentEngine, onSelectModel, onOpenAdvanced, onBackToRoot, advancedProps } = props;
+  const { panel, onNewSession, contextDir, onOpenSessions, currentModelLabel, modelSelectionDisabled, onOpenModel, selectedModel, boxDefault, canPin, canChooseEngine, enabledEngines, boxEngine, onChooseStart, onPinModel, agentEngine, onSelectModel, onOpenAdvanced, onBackToRoot, advancedProps } = props;
   switch (panel) {
     case "root":
       return <RootPanel onNewSession={onNewSession} onOpenSessions={onOpenSessions} currentModelLabel={currentModelLabel} modelSelectionDisabled={modelSelectionDisabled} onOpenModel={onOpenModel} onOpenAdvanced={onOpenAdvanced} />;
     case "sessions":
       return <SessionsPanel onBack={onBackToRoot} contextDir={contextDir} />;
     case "model":
-      return agentEngine === null ? null : <ModelPanel onBack={onBackToRoot} selectedModel={selectedModel} boxDefault={boxDefault} canPin={canPin} canSelect={canSelect} onPinModel={onPinModel} agentEngine={agentEngine} onSelectModel={onSelectModel} />;
+      return agentEngine === null || boxEngine === null ? null : (
+        <ModelPanel
+          onBack={onBackToRoot}
+          selectedModel={selectedModel}
+          boxDefault={boxDefault}
+          canPin={canPin}
+          canChooseEngine={canChooseEngine}
+          enabledEngines={enabledEngines}
+          boxEngine={boxEngine}
+          onChooseStart={onChooseStart}
+          onPinModel={onPinModel}
+          agentEngine={agentEngine}
+          onSelectModel={onSelectModel}
+        />
+      );
     case "advanced":
       return <AdvancedPanel onBack={onBackToRoot} {...advancedProps} />;
   }
@@ -162,6 +179,11 @@ export interface SessionChipProps {
   modelInForce: string | null;
   boxDefault: string | null;
   canPin: boolean;
+  /** True until this chat's first message — after that its engine is fixed. */
+  canChooseEngine: boolean;
+  enabledEngines: ChatAgentEngine[];
+  boxEngine: ChatAgentEngine | null;
+  onChooseStart: (choice: { engine: ChatAgentEngine; model: string }) => void;
   onPinModel: (model: string | null) => void;
   onOpenModelPanel: () => void;
   agentEngine: ChatAgentEngine | null;
@@ -187,6 +209,10 @@ export const SessionChip = memo(function SessionChip(props: SessionChipProps) {
     modelInForce,
     boxDefault,
     canPin,
+    canChooseEngine,
+    enabledEngines,
+    boxEngine,
+    onChooseStart,
     onPinModel,
     onOpenModelPanel,
     agentEngine,
@@ -272,7 +298,10 @@ export const SessionChip = memo(function SessionChip(props: SessionChipProps) {
           selectedModel={selectedModel}
           boxDefault={boxDefault}
           canPin={canPin}
-          canSelect={sessionId !== null}
+          canChooseEngine={canChooseEngine}
+          enabledEngines={enabledEngines}
+          boxEngine={boxEngine}
+          onChooseStart={onChooseStart}
           onPinModel={onPinModel}
           agentEngine={agentEngine}
           onSelectModel={onSelectModel}

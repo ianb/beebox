@@ -32,8 +32,13 @@ export type CoinedChat =
 /** How many times to re-mint after a `taken` collision before giving up. */
 const MAX_ATTEMPTS = 2;
 
-export function useCoinedChat(opts: { enabled: boolean; contextDir: string | undefined }): CoinedChat {
-  const { enabled, contextDir } = opts;
+export function useCoinedChat(opts: {
+  enabled: boolean;
+  contextDir: string | undefined;
+  /** Model chosen before the first message; stored with the reservation. */
+  model?: string | undefined;
+}): CoinedChat {
+  const { enabled, contextDir, model } = opts;
   // `attempt` identifies WHICH new-chat this state describes. The page does not
   // remount between chats, so without it the hook would hand a second "New
   // chat" the id it coined for the first, and the page would navigate straight
@@ -78,6 +83,9 @@ export function useCoinedChat(opts: { enabled: boolean; contextDir: string | und
             // turn commits a history row. Only an absent param means the chat
             // was opened from nowhere.
             ...(contextDir !== undefined ? { contextDir } : {}),
+            // The chat exists from this moment, so its model choice can be
+            // recorded now rather than riding the first send.
+            ...(model !== undefined ? { model } : {}),
           });
           if (abort.signal.aborted) return;
           if (outcome.kind === "reserved") {
@@ -98,7 +106,7 @@ export function useCoinedChat(opts: { enabled: boolean; contextDir: string | und
     return () => {
       abort.abort();
     };
-  }, [enabled, contextDir, mutateAsync, attempt]);
+  }, [enabled, contextDir, model, mutateAsync, attempt]);
 
   return enabled ? state.value : { state: "unavailable" };
 }

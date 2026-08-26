@@ -223,7 +223,7 @@ export const streamActor = fromCallback(
     input,
   }: {
     sendBack: (event: ChatEvent) => void;
-    input: { sessionInput: string; message: string; messageId: string; images?: ChatImageAttachment[]; contextDir?: string; seedFeatures?: Record<string, string>; openCard?: string; cardActivity?: ActivityKind[]; cardState?: CardStateDetails };
+    input: { sessionInput: string; message: string; messageId: string; images?: ChatImageAttachment[]; contextDir?: string; seedFeatures?: Record<string, string>; engine?: string; model?: string; openCard?: string; cardActivity?: ActivityKind[]; cardState?: CardStateDetails };
   }) => {
     let terminalFired = false;
     let msgCount = 0;
@@ -266,6 +266,8 @@ export const streamActor = fromCallback(
       ...(input.images && input.images.length > 0 ? { images: input.images } : {}),
       ...(input.contextDir ? { contextDir: input.contextDir } : {}),
       ...(input.seedFeatures ? { seedFeatures: input.seedFeatures } : {}),
+      ...(input.engine !== undefined ? { engine: input.engine } : {}),
+      ...(input.model !== undefined ? { model: input.model } : {}),
       ...(input.openCard !== undefined ? { openCard: input.openCard } : {}),
       ...(input.cardActivity && input.cardActivity.length > 0 ? { cardActivity: input.cardActivity } : {}),
       ...(input.cardState && Object.keys(input.cardState).length > 0 ? { cardState: input.cardState } : {}),

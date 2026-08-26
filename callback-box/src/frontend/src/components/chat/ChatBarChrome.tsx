@@ -57,6 +57,10 @@ export interface ChatBarChromeProps {
   modelInForce: string | null;
   boxDefault: string | null;
   canPin: boolean;
+  canChooseEngine: boolean;
+  enabledEngines: ChatAgentEngine[];
+  boxEngine: ChatAgentEngine | null;
+  onChooseStart: (choice: { engine: ChatAgentEngine; model: string }) => void;
   onPinModel: (model: string | null) => void;
   onOpenModelPanel: () => void;
   agentEngine: ChatAgentEngine | null;
@@ -78,7 +82,8 @@ export function ChatBarChrome(props: ChatBarChromeProps) {
     contextDir, boxSlug, sessionLabel, messages, onZoomView,
     muted, onToggleMute, narrationEnabled, onToggleNarration,
     hqDictationEnabled, onToggleHqDictation, hqInFlight,
-    onNewSession, selectedModel, modelInForce, boxDefault, canPin, onPinModel, onOpenModelPanel,
+    onNewSession, selectedModel, modelInForce, boxDefault, canPin, canChooseEngine, enabledEngines,
+    boxEngine, onChooseStart, onPinModel, onOpenModelPanel,
     agentEngine, onSelectModel, onStopProcess, onRestartProcess, onCompactSession,
     sessionId, running, busy, debugView, setDebugView, showDebugLog, setShowDebugLog,
   } = props;
@@ -127,6 +132,10 @@ export function ChatBarChrome(props: ChatBarChromeProps) {
         modelInForce={modelInForce}
         boxDefault={boxDefault}
         canPin={canPin}
+        canChooseEngine={canChooseEngine}
+        enabledEngines={enabledEngines}
+        boxEngine={boxEngine}
+        onChooseStart={onChooseStart}
         onPinModel={onPinModel}
         onOpenModelPanel={onOpenModelPanel}
         agentEngine={agentEngine}

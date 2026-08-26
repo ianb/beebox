@@ -5,7 +5,7 @@
  * `docs/plans/model-engine-policy.md`).
  */
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, type Dispatch, type SetStateAction } from "react";
 import {
   getChatStatus,
   setChatModel,
@@ -14,7 +14,7 @@ import {
   setChatFeature,
 } from "../../api";
 import { type ModelMarker } from "./InteractiveChat-helpers";
-import { chatModelOptions, type ChatAgentEngine } from "@shared/chat-models.js";
+import { chatModelOptions, parseChatAgentEngine, type ChatAgentEngine } from "@shared/chat-models.js";
 import { toastError } from "../ui/toast-store";
 import type { ChatEvent } from "../../machines/chat-types";
 
@@ -24,13 +24,29 @@ import type { ChatEvent } from "../../machines/chat-types";
  * read on mount; feature changes are optimistic and reconciled by the SSE
  * `chat-features-changed` handler in the parent.
  */
-export function useChatModelFeatures(opts: { sessionId: string | null; groupCount: number; send: (event: ChatEvent) => void }) {
-  const { sessionId, groupCount, send } = opts;
+export function useChatModelFeatures(opts: {
+  sessionId: string | null;
+  groupCount: number;
+  send: (event: ChatEvent) => void;
+  /**
+   * The engine and model this chat was started with, before it exists. The
+   * server cannot report them — a chat with no id resolves to the box's own
+   * defaults — so they are overlaid here, or the picker would show the box's
+   * answer while the first send carried a different one.
+   */
+  startEngine?: string | undefined;
+  startModel?: string | undefined;
+}) {
+  const { sessionId, groupCount, send, startEngine, startModel } = opts;
   // This chat's OWN pick; `null` means it follows the box default. The
   // effective model is `modelInForce` — the two differ for a follower.
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [modelInForce, setModelInForce] = useState<string | null>(null);
   const [boxDefault, setBoxDefault] = useState<string | null>(null);
+  // Which engines a NEW chat may be started on, and the box's own default —
+  // read with the rest of the model state so the picker never re-derives them.
+  const [enabledEngines, setEnabledEngines] = useState<ChatAgentEngine[]>([]);
+  const [boxEngine, setBoxEngine] = useState<ChatAgentEngine | null>(null);
   const [agentEngine, setAgentEngine] = useState<ChatAgentEngine | null>(null);
   const [modelMarkers, setModelMarkers] = useState<ModelMarker[]>([]);
   const [chatFeatures, setChatFeatures] = useState<Record<string, string>>({});
@@ -47,6 +63,8 @@ export function useChatModelFeatures(opts: { sessionId: string | null; groupCoun
     setModelInForce(status.model);
     setBoxDefault(status.boxDefault);
     setAgentEngine(status.engine);
+    setEnabledEngines(status.enabledEngines);
+    setBoxEngine(status.boxEngine);
   }, [sessionId]);
 
   // For a fresh chat, status reports the box's configured engine and default.
@@ -60,6 +78,8 @@ export function useChatModelFeatures(opts: { sessionId: string | null; groupCoun
         setModelInForce(status.model);
         setBoxDefault(status.boxDefault);
         setAgentEngine(status.engine);
+        setEnabledEngines(status.enabledEngines);
+        setBoxEngine(status.boxEngine);
       })
       .catch((e: unknown) => {
         console.warn(`[chatfsm] get-status (model) failed: ${e instanceof Error ? e.message : String(e)}`);
@@ -78,73 +98,13 @@ export function useChatModelFeatures(opts: { sessionId: string | null; groupCoun
       });
   }, [sessionId]);
 
-  const narrationEnabled = chatFeatures.narration === "on";
-  const hqDictationEnabled = chatFeatures["hq-dictation"] === "on";
+  const {
+    narrationEnabled, handleToggleNarration, hqDictationEnabled, handleToggleHqDictation,
+  } = useChatFeatureToggles({ sessionId, chatFeatures, setChatFeatures, send });
 
-  // Generation counters so an out-of-order completion (an older toggle/select
-  // resolving after a newer one) can't clobber state a later request already
-  // set — bumped on every call, and a response only applies if it's still the
-  // most recent one in flight.
-  const narrationRequestIdRef = useRef(0);
-  const hqDictationRequestIdRef = useRef(0);
+  // Generation counter so an out-of-order completion (an older select
+  // resolving after a newer one) cannot clobber state a later request set.
   const modelRequestIdRef = useRef(0);
-
-  const handleToggleNarration = useCallback(() => {
-    const next = narrationEnabled ? "off" : "on";
-    // Rollback target if the request is rejected — the pre-toggle value,
-    // derived the same way `narrationEnabled` is (absent key reads as "off").
-    const previous = narrationEnabled ? "on" : "off";
-    const requestId = ++narrationRequestIdRef.current;
-    // Optimistic — server-confirmed value lands via the SSE event handler
-    // (or, pre-session, reconciles from the server once the id is assigned).
-    setChatFeatures((prev) => ({ ...prev, narration: next }));
-    if (!sessionId) {
-      // Brand-new chat: no session to set the flag on yet. Stash the choice
-      // as a machine seed so it rides along on the first send and applies to
-      // the very first turn.
-      send({ type: "SET_SEED_FEATURE", feature: "narration", value: next });
-      return;
-    }
-    setChatFeature({ sessionId, feature: "narration", value: next })
-      .then((res) => {
-        if (narrationRequestIdRef.current !== requestId) return;
-        setChatFeatures(res.features);
-      })
-      .catch((e: unknown) => {
-        console.warn(`[chatfsm] set-feature narration failed: ${e instanceof Error ? e.message : String(e)}`);
-        toastError("Failed to update narration mode", { cause: e });
-        if (narrationRequestIdRef.current !== requestId) return;
-        // No SSE correction follows a rejected write, so the optimistic flip
-        // must be undone here or the UI shows wrong state indefinitely — but
-        // only when no newer toggle has since taken over.
-        setChatFeatures((prev) => ({ ...prev, narration: previous }));
-      });
-  }, [sessionId, narrationEnabled, send]);
-
-  // Mirrors handleToggleNarration exactly (docs/implemented-plans/hq-dictation-switch.md,
-  // chunk 1) — a separate feature slot, separate request-id generation, same
-  // optimistic-set/rollback shape.
-  const handleToggleHqDictation = useCallback(() => {
-    const next = hqDictationEnabled ? "off" : "on";
-    const previous = hqDictationEnabled ? "on" : "off";
-    const requestId = ++hqDictationRequestIdRef.current;
-    setChatFeatures((prev) => ({ ...prev, "hq-dictation": next }));
-    if (!sessionId) {
-      send({ type: "SET_SEED_FEATURE", feature: "hq-dictation", value: next });
-      return;
-    }
-    setChatFeature({ sessionId, feature: "hq-dictation", value: next })
-      .then((res) => {
-        if (hqDictationRequestIdRef.current !== requestId) return;
-        setChatFeatures(res.features);
-      })
-      .catch((e: unknown) => {
-        console.warn(`[chatfsm] set-feature hq-dictation failed: ${e instanceof Error ? e.message : String(e)}`);
-        toastError("Failed to update HQ dictation", { cause: e });
-        if (hqDictationRequestIdRef.current !== requestId) return;
-        setChatFeatures((prev) => ({ ...prev, "hq-dictation": previous }));
-      });
-  }, [sessionId, hqDictationEnabled, send]);
 
   const handleSelectModel = useCallback((model: string | null) => {
     if (model === selectedModel) return;
@@ -215,8 +175,22 @@ export function useChatModelFeatures(opts: { sessionId: string | null; groupCoun
     });
   }, [refreshModelStatus]);
 
+  // A pending choice only applies while the chat has no id; once it has one,
+  // the server is authoritative for both.
+  const pending = sessionId === null;
+  const effectiveEngine = pending && startEngine !== undefined
+    ? parseChatAgentEngine(startEngine) ?? agentEngine
+    : agentEngine;
+  const effectiveSelected = pending && startModel !== undefined ? startModel : selectedModel;
+
   return {
-    agentEngine, selectedModel, modelInForce, boxDefault, handlePinModel, handleOpenModelPanel,
+    agentEngine: effectiveEngine,
+    selectedModel: effectiveSelected,
+    modelInForce: pending && startModel !== undefined ? startModel : modelInForce,
+    boxDefault,
+    enabledEngines,
+    boxEngine,
+    handlePinModel, handleOpenModelPanel,
     modelMarkers, chatFeatures, setChatFeatures,
     narrationEnabled, handleToggleNarration,
     hqDictationEnabled, handleToggleHqDictation,
@@ -224,3 +198,87 @@ export function useChatModelFeatures(opts: { sessionId: string | null; groupCoun
   };
 }
 
+
+/**
+ * The chat-feature toggles (narration, HQ dictation) — split from
+ * `useChatModelFeatures` for its line budget. Both follow one shape: set
+ * optimistically, reconcile from the server's answer, and roll back on a
+ * rejection, since no event corrects a write the server refused.
+ */
+function useChatFeatureToggles(opts: {
+  sessionId: string | null;
+  chatFeatures: Record<string, string>;
+  setChatFeatures: Dispatch<SetStateAction<Record<string, string>>>;
+  send: (event: ChatEvent) => void;
+}) {
+  const { sessionId, chatFeatures, setChatFeatures, send } = opts;
+  const narrationEnabled = chatFeatures.narration === "on";
+  const hqDictationEnabled = chatFeatures["hq-dictation"] === "on";
+
+  // Generation counters so an out-of-order completion (an older toggle/select
+  // resolving after a newer one) can't clobber state a later request already
+  // set — bumped on every call, and a response only applies if it's still the
+  // most recent one in flight.
+  const narrationRequestIdRef = useRef(0);
+  const hqDictationRequestIdRef = useRef(0);
+
+  const handleToggleNarration = useCallback(() => {
+    const next = narrationEnabled ? "off" : "on";
+    // Rollback target if the request is rejected — the pre-toggle value,
+    // derived the same way `narrationEnabled` is (absent key reads as "off").
+    const previous = narrationEnabled ? "on" : "off";
+    const requestId = ++narrationRequestIdRef.current;
+    // Optimistic — server-confirmed value lands via the SSE event handler
+    // (or, pre-session, reconciles from the server once the id is assigned).
+    setChatFeatures((prev) => ({ ...prev, narration: next }));
+    if (!sessionId) {
+      // Brand-new chat: no session to set the flag on yet. Stash the choice
+      // as a machine seed so it rides along on the first send and applies to
+      // the very first turn.
+      send({ type: "SET_SEED_FEATURE", feature: "narration", value: next });
+      return;
+    }
+    setChatFeature({ sessionId, feature: "narration", value: next })
+      .then((res) => {
+        if (narrationRequestIdRef.current !== requestId) return;
+        setChatFeatures(res.features);
+      })
+      .catch((e: unknown) => {
+        console.warn(`[chatfsm] set-feature narration failed: ${e instanceof Error ? e.message : String(e)}`);
+        toastError("Failed to update narration mode", { cause: e });
+        if (narrationRequestIdRef.current !== requestId) return;
+        // No SSE correction follows a rejected write, so the optimistic flip
+        // must be undone here or the UI shows wrong state indefinitely — but
+        // only when no newer toggle has since taken over.
+        setChatFeatures((prev) => ({ ...prev, narration: previous }));
+      });
+  }, [sessionId, narrationEnabled, send, setChatFeatures]);
+
+  // Mirrors handleToggleNarration exactly (docs/implemented-plans/hq-dictation-switch.md,
+  // chunk 1) — a separate feature slot, separate request-id generation, same
+  // optimistic-set/rollback shape.
+  const handleToggleHqDictation = useCallback(() => {
+    const next = hqDictationEnabled ? "off" : "on";
+    const previous = hqDictationEnabled ? "on" : "off";
+    const requestId = ++hqDictationRequestIdRef.current;
+    setChatFeatures((prev) => ({ ...prev, "hq-dictation": next }));
+    if (!sessionId) {
+      send({ type: "SET_SEED_FEATURE", feature: "hq-dictation", value: next });
+      return;
+    }
+    setChatFeature({ sessionId, feature: "hq-dictation", value: next })
+      .then((res) => {
+        if (hqDictationRequestIdRef.current !== requestId) return;
+        setChatFeatures(res.features);
+      })
+      .catch((e: unknown) => {
+        console.warn(`[chatfsm] set-feature hq-dictation failed: ${e instanceof Error ? e.message : String(e)}`);
+        toastError("Failed to update HQ dictation", { cause: e });
+        if (hqDictationRequestIdRef.current !== requestId) return;
+        setChatFeatures((prev) => ({ ...prev, "hq-dictation": previous }));
+      });
+  }, [sessionId, hqDictationEnabled, send, setChatFeatures]);
+
+
+  return { narrationEnabled, handleToggleNarration, hqDictationEnabled, handleToggleHqDictation };
+}

@@ -82,6 +82,9 @@ interface InteractiveChatProps {
    * the session id is assigned, future resumes look it up server-side.
    */
   contextDir?: string;
+  /** Engine and model chosen before this chat exists (fresh chats only). */
+  startEngine?: string;
+  startModel?: string;
   /**
    * A `view:` URL to open in the companion pane once, on mount — set by
    * deep-links such as the clerk extension's "comment on this page" flow.
@@ -162,10 +165,10 @@ function ChatModeOverlays({ captureMode, bulkUpload, usesNativeShell, sessionId,
   );
 }
 
-export function InteractiveChat({ sessionInput, contextDir, companion, card, emissionStore, embedded, nativeComposer, openCaptureOnMount, initial, sessionLabel, onSessionAssignment }: InteractiveChatProps) {
+export function InteractiveChat({ sessionInput, contextDir, startEngine, startModel, companion, card, emissionStore, embedded, nativeComposer, openCaptureOnMount, initial, sessionLabel, onSessionAssignment }: InteractiveChatProps) {
   const usesNativeComposer = nativeComposer === true; const usesNativeShell = embedded === true || usesNativeComposer;
   const [snapshot, send] = useMachine(chatMachine, {
-    input: { sessionInput, contextDir, initial },
+    input: { sessionInput, contextDir, startEngine, startModel, initial },
   });
   const { messages, pendingMessages, streamText, streamTools, error, sessionId, processRunning, processBusy, totalEntries, liveTurnId } = snapshot.context;
   const { contextDir: effectiveContextDir, openers } = useChatBinding({ sessionId, sessionInput, contextDir });
@@ -200,7 +203,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const groups = useMemo(() => groupMessages(messages), [messages]);
 
-  const model = useChatModelFeatures({ sessionId, groupCount: groups.length, send });
+  const model = useChatModelFeatures({ sessionId, groupCount: groups.length, send, startEngine, startModel });
   const mute = useChatMute();
   const tabs = useChatTabs();
   const { activeView } = tabs;

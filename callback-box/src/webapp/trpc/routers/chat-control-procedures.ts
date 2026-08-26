@@ -55,7 +55,11 @@ export interface ChatSessionStatus {
    * the box default changed under a warm chat.
    */
   pendingModel: string | null;
+  /** This chat's engine — recorded at its birth, and never changed after. */
   engine: AgentEngine;
+  /** Engines this box may offer a NEW chat, and which of them it defaults to. */
+  enabledEngines: AgentEngine[];
+  boxEngine: AgentEngine;
 }
 
 /**
@@ -97,6 +101,8 @@ export async function readSessionStatus(boxRoot: string, sessionId: string | nul
     boxDefault,
     pendingModel: running && live.model !== wouldUse.model ? wouldUse.model : null,
     engine,
+    enabledEngines: await loadEnabledEngines(boxRoot),
+    boxEngine: await loadAgentEngine(boxRoot),
   };
 }
 
