@@ -6,7 +6,13 @@ labels: [tests, tours, schedules]
 filed-by: agent
 discovered-by: Ian
 discovered-in: tab-identity workstream — ran all five tours out of curiosity and three had silently rotted
+resolution: implemented
 ---
+
+> Closed 2026-08-26 (tour-health): all five tours repaired and pass
+> (`dashboard` folded into `nav-pages`); `schedules/tour-check/` runs them
+> weekly with edit-or-file judgment. See "Resolved 2026-08-26" below for the
+> full breakdown and the three standing findings it filed.
 
 Tours are a development practice, not only a review artifact: **writing the
 walk down is more solid than doing it by hand**, because the next person gets
