@@ -26,6 +26,7 @@ import {
   type ResolvedChild,
 } from "../../src/connectors/drive-folder-plan.js";
 import { extractDriveFileId } from "../../src/connectors/drive-types.js";
+import { moveCardsToTrash } from "../../src/core/commands/trash.js";
 import { createGfolderTemplate } from "../../src/schemas/gfolder.js";
 import { createGsheetTemplate } from "../../src/schemas/gsheet.js";
 
@@ -48,6 +49,7 @@ function planInput(opts: {
   children: ResolvedChild[];
   entries?: MountEntry[];
   claimed?: string[];
+  restorable?: string[];
   visited?: string[];
   depth?: number;
   foldersSoFar?: number;
@@ -56,6 +58,7 @@ function planInput(opts: {
     children: opts.children,
     entries: opts.entries ?? [],
     claimed: new Set(opts.claimed ?? []),
+    restorable: new Set(opts.restorable ?? []),
     visitedFolders: new Set(opts.visited ?? []),
     depth: opts.depth ?? 0,
     foldersSoFar: opts.foldersSoFar ?? 0,
@@ -224,6 +227,75 @@ const wide = planFolderSync(planInput({
 }));
 JSON.stringify({ reason: wide.refusals[0]?.reason, enter: wide.subfolders[0]?.enter })
 => {"reason":"folder-cap","enter":false}
+```
+
+## The plan — one resolved ID listed twice is mirrored once
+
+Two shortcuts to one Doc, or a subfolder plus a shortcut to it, both resolve to
+the same target. Carding each occurrence would put two cards on one Drive ID,
+which the connector then refuses to sync at all — so the first wins and the
+rest are named.
+
+```ts
+const plan = planFolderSync(planInput({
+  children: [
+    child({ id: "doc-1", name: "Trip Notes", mimeType: DOC_MIME }),
+    child({ id: "doc-1", name: "Trip Notes (shortcut)", mimeType: DOC_MIME, via: "shortcut-1" }),
+    child({ id: "folder-2", name: "Desserts", mimeType: FOLDER_MIME }),
+    child({ id: "folder-2", name: "Sweets", mimeType: FOLDER_MIME, via: "shortcut-2" }),
+  ],
+}));
+JSON.stringify({
+  files: plan.createFiles.map((a) => a.cardPath),
+  subfolders: plan.subfolders.map((a) => a.cardPath),
+  duplicates: plan.duplicates,
+})
+=> {"files":["Trip_Notes.gdoc.card"],"subfolders":["Desserts/Desserts.gfolder.card"],"duplicates":["Drive item doc-1 (\"Trip Notes (shortcut)\") is listed twice in this folder — mirrored once","Drive item folder-2 (\"Sweets\") is listed twice in this folder — mirrored once"]}
+```
+
+## The plan — a connector-made tombstone is re-created when Drive lists it again
+
+A tombstone in `store/trash/` claims its Drive ID, which is what stops a mirror
+re-creating a card someone deleted. But the connector makes tombstones too, when
+Drive says a child was trashed — and if that file is restored on Drive the card
+must come back. `restorable` is the set of IDs whose only claim is one of the
+connector's own tombstones.
+
+```ts
+const blocked = planFolderSync(planInput({
+  children: [child({ id: "sheet-1", name: "Budget", mimeType: SHEET_MIME })],
+  claimed: ["sheet-1"],
+}));
+JSON.stringify(blocked.createFiles)
+=> []
+
+const restored = planFolderSync(planInput({
+  children: [child({ id: "sheet-1", name: "Budget", mimeType: SHEET_MIME })],
+  claimed: ["sheet-1"],
+  restorable: ["sheet-1"],
+}));
+JSON.stringify(restored.createFiles.map((a) => a.cardPath))
+=> ["Budget.gsheet.card"]
+```
+
+A restored subfolder comes back the same way, and a restored pointer too.
+
+```ts continue
+const folder = planFolderSync(planInput({
+  children: [child({ id: "folder-2", name: "Desserts", mimeType: FOLDER_MIME })],
+  claimed: ["folder-2"],
+  restorable: ["folder-2"],
+}));
+JSON.stringify(folder.subfolders.map((a) => ({ path: a.cardPath, create: a.create })))
+=> [{"path":"Desserts/Desserts.gfolder.card","create":true}]
+
+const pointer = planFolderSync(planInput({
+  children: [child({ id: "pdf-1", name: "Scan.pdf", mimeType: "application/pdf" })],
+  claimed: ["pdf-1"],
+  restorable: ["pdf-1"],
+}));
+JSON.stringify(pointer.createLinks.map((a) => a.cardPath))
+=> ["Scanpdf.glink.card"]
 ```
 
 ## The plan — a card whose Drive ID left the listing is absent, not doomed
@@ -570,6 +642,166 @@ mirrored everything it could. The collision is a sync-report failure about one
 child, not a broken mount, and `success: false` is what carries it.
 
 ```ts continue
+/status: (\S+)/.exec(await box.read("store/drive/recipes/Recipes.gfolder.card"))?.[1]
+=> ok
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## End to end — trashed on Drive, restored on Drive, and the card comes back
+
+The tombstone the connector leaves behind is a mirror of Drive's trash, not a
+decision by the boxholder. So when the file comes back on Drive, so does the
+card.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+await box.seed(
+  "store/drive/recipes/Recipes.gfolder.card",
+  createGfolderTemplate({ driveId: "folder-1" }),
+);
+box.commitAll("mount the Recipes folder");
+
+const drive = createFakeGoogleDrive({
+  files: [
+    driveFile({ id: "folder-1", name: "Recipes", mimeType: FOLDER_MIME }),
+    driveFile({ id: "sheet-1", name: "Bake Times", mimeType: SHEET_MIME, parent: "folder-1" }),
+  ],
+  spreadsheets: new Map([["sheet-1", spreadsheetFor({ id: "sheet-1", name: "Bake Times" })]]),
+});
+
+const connector = createGoogleDriveConnector(box.root, drive);
+await connector.sync();
+const trashOnDrive = (id: string, trashed: boolean) => {
+  const file = drive.files.find((f) => f.id === id);
+  if (file) file.trashed = trashed;
+};
+
+trashOnDrive("sheet-1", true);
+await captureWarnings(async () => { await connector.sync(); });
+JSON.stringify({
+  gone: cardsIn(await box.list(), "store/drive/recipes/"),
+  tombstone: (await box.list()).includes("store/trash/Bake_Times.gsheet.card"),
+})
+=> {"gone":["store/drive/recipes/Recipes.gfolder.card"],"tombstone":true}
+```
+
+Restored on Drive, the next sync lists it again and re-creates the card — the
+tombstone alone no longer suppresses it.
+
+```ts continue
+trashOnDrive("sheet-1", false);
+const back = await connector.sync();
+JSON.stringify({
+  success: back.success,
+  cards: cardsIn(await box.list(), "store/drive/recipes/"),
+})
+=> {"success":true,"cards":["store/drive/recipes/Bake_Times.gsheet.card","store/drive/recipes/Recipes.gfolder.card"]}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## End to end — a `cb rm` tombstone stays durable
+
+The same tombstone made by a person means the opposite thing: they removed the
+card from the box while the file is alive and well on Drive. Every later sync
+lists that child, and the card stays gone.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+await box.seed(
+  "store/drive/recipes/Recipes.gfolder.card",
+  createGfolderTemplate({ driveId: "folder-1" }),
+);
+box.commitAll("mount the Recipes folder");
+
+const drive = createFakeGoogleDrive({
+  files: [
+    driveFile({ id: "folder-1", name: "Recipes", mimeType: FOLDER_MIME }),
+    driveFile({ id: "sheet-1", name: "Bake Times", mimeType: SHEET_MIME, parent: "folder-1" }),
+  ],
+  spreadsheets: new Map([["sheet-1", spreadsheetFor({ id: "sheet-1", name: "Bake Times" })]]),
+});
+
+const connector = createGoogleDriveConnector(box.root, drive);
+await connector.sync();
+
+const receipt = await moveCardsToTrash(
+  { boxRoot: box.root, write: () => {}, writeLine: () => {} },
+  ["store/drive/recipes/Bake_Times.gsheet.card"],
+);
+box.commitAll("cb rm the synced child");
+JSON.stringify({ moved: receipt.moves.length, cards: cardsIn(await box.list(), "store/drive/recipes/") })
+=> {"moved":1,"cards":["store/drive/recipes/Recipes.gfolder.card"]}
+
+const after = await connector.sync();
+JSON.stringify({ success: after.success, cards: cardsIn(await box.list(), "store/drive/recipes/") })
+=> {"success":true,"cards":["store/drive/recipes/Recipes.gfolder.card"]}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## End to end — the mount's own folder in the Drive trash
+
+A trashed folder lists as empty, and empty read as membership would trash every
+child. So the pass stops at the card: it says what happened, and the children
+are left alone.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+await box.seed(
+  "store/drive/recipes/Recipes.gfolder.card",
+  createGfolderTemplate({ driveId: "folder-1" }),
+);
+box.commitAll("mount the Recipes folder");
+
+const drive = createFakeGoogleDrive({
+  files: [
+    driveFile({ id: "folder-1", name: "Recipes", mimeType: FOLDER_MIME }),
+    driveFile({ id: "sheet-1", name: "Bake Times", mimeType: SHEET_MIME, parent: "folder-1" }),
+  ],
+  spreadsheets: new Map([["sheet-1", spreadsheetFor({ id: "sheet-1", name: "Bake Times" })]]),
+});
+
+const connector = createGoogleDriveConnector(box.root, drive);
+await connector.sync();
+
+const folder = drive.files.find((f) => f.id === "folder-1");
+if (folder) folder.trashed = true;
+const warnings = await captureWarnings(async () => { await connector.sync(); });
+JSON.stringify({
+  cards: cardsIn(await box.list(), "store/drive/recipes/"),
+  noted: warnings.some((l) => l.includes("folder is in Drive trash")),
+})
+=> {"cards":["store/drive/recipes/Bake_Times.gsheet.card","store/drive/recipes/Recipes.gfolder.card"],"noted":true}
+```
+
+The card itself carries the reason, so the mount reads as broken rather than as
+an empty folder that mirrored fine.
+
+```ts continue
+const card = await box.read("store/drive/recipes/Recipes.gfolder.card");
+JSON.stringify({
+  status: /status: (\S+)/.exec(card)?.[1],
+  error: /error: (.*)/.exec(card)?.[1],
+})
+=> {"status":"error","error":"folder is in Drive trash"}
+```
+
+Untrashed on Drive, the very next pass is ordinary again.
+
+```ts continue
+if (folder) folder.trashed = false;
+await connector.sync();
 /status: (\S+)/.exec(await box.read("store/drive/recipes/Recipes.gfolder.card"))?.[1]
 => ok
 ```

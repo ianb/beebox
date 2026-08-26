@@ -40,12 +40,28 @@ export async function syncFolderCard(
   deps.budget.foldersMirrored += 1;
 
   const relCard = path.relative(deps.boxRoot, mount.cardPath);
+  // The mount is wherever the card is RIGHT NOW. A `cb mv` of this card that
+  // lands mid-pass leaves the children this pass creates under the old
+  // directory: harmless and self-correcting — the next pass reads the card's
+  // new home, and the strays there stay valid synced cards and pointers in the
+  // meantime (nothing is deleted to make the move look clean).
   const mountDir = path.dirname(mount.cardPath);
 
   let folder: DriveFile;
   let listing: DriveFile[];
   try {
     folder = await deps.service.getFile(mount.driveId);
+    if (folder.trashed) {
+      // The mount's own folder is in the Drive trash. Listing it would return
+      // nothing, and "nothing" read as membership would trash every child. The
+      // card says what happened and the children are left exactly as they are —
+      // an untrash on Drive puts the mount straight back.
+      const message = "folder is in Drive trash";
+      result.notes.push(`${relCard}: ${message}`);
+      await stampOutcome({ mount, name: folder.name, link: null, error: message }, deps);
+      result.updated.push(relCard);
+      return result;
+    }
     listing = await deps.service.listFiles(mount.driveId);
   } catch (err) {
     const message = errorMessage(err);
@@ -67,11 +83,13 @@ export async function syncFolderCard(
       folderCardPath: mount.cardPath,
     }),
     claimed: deps.claimed,
+    restorable: deps.restorable,
     visitedFolders: deps.visitedFolders,
     depth: mount.depth,
     foldersSoFar: deps.budget.foldersMirrored,
   });
   result.notes.push(...plan.refusals.map((refusal) => refusal.message));
+  result.notes.push(...plan.duplicates);
 
   for (const action of plan.createFiles) {
     const cardPath = path.join(mountDir, action.cardPath);
@@ -86,7 +104,7 @@ export async function syncFolderCard(
     result.created.push(...synced.created);
     result.updated.push(...synced.updated);
     result.pushed.push(...synced.pushed);
-    deps.claimed.add(action.driveId);
+    claimCreated(action.driveId, deps);
   }
 
   for (const action of plan.createLinks) {
@@ -99,7 +117,7 @@ export async function syncFolderCard(
     await fs.mkdir(path.dirname(cardPath), { recursive: true });
     await writeGlinkCard(cardPath, { file, origin: "mirror" });
     result.created.push(path.relative(deps.boxRoot, cardPath));
-    deps.claimed.add(action.driveId);
+    claimCreated(action.driveId, deps);
   }
 
   for (const action of plan.subfolders) {
@@ -113,7 +131,7 @@ export async function syncFolderCard(
       await fs.mkdir(path.dirname(cardPath), { recursive: true });
       await writeGfolderCard(cardPath, file);
       result.created.push(path.relative(deps.boxRoot, cardPath));
-      deps.claimed.add(action.driveId);
+      claimCreated(action.driveId, deps);
     }
     if (!action.enter) continue;
     const nested = await syncFolderCard(
@@ -146,6 +164,15 @@ export async function syncFolderCard(
   );
   result.updated.push(relCard);
   return result;
+}
+
+/**
+ * This pass now speaks for the Drive ID. Any connector-made tombstone for it is
+ * spent — the restore it was holding open just happened.
+ */
+function claimCreated(driveId: string, deps: FolderSyncDeps): void {
+  deps.claimed.add(driveId);
+  deps.forgetDriveTrash(driveId);
 }
 
 async function stampOutcome(

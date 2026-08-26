@@ -27,10 +27,9 @@ import {
   findDriveCardTracking,
   GFOLDER_CARD_TYPE,
 } from "./google-drive-tracking.js";
-import { loadTransientState } from "./transient-state.js";
 import {
-  DEFAULT_DRIVE_STATE,
   commitDriveStateDelta,
+  loadDriveState,
   type DriveTransientState,
 } from "./google-drive-state.js";
 
@@ -58,11 +57,7 @@ async function mirrorUnderLock(opts: {
   cardPath: string;
 }): Promise<FolderSyncResult> {
   const { boxRoot, service, driveId, cardPath } = opts;
-  const state = await loadTransientState<DriveTransientState>({
-    boxRoot,
-    connectorName: "google-drive",
-    defaultValue: DEFAULT_DRIVE_STATE,
-  });
+  const state = await loadDriveState(boxRoot);
   const snapshot: DriveTransientState = structuredClone(state);
   // Re-scan after the card write so the new mount is in its own tracking —
   // that is what makes its Drive ID claimed and its directory's membership

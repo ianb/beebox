@@ -44,7 +44,7 @@ import {
   emptyFileState,
   type DriveTransientState,
 } from "../../connectors/google-drive.js";
-import { DEFAULT_DRIVE_STATE } from "../../connectors/google-drive-state.js";
+import { DEFAULT_DRIVE_STATE, normalizeDriveState } from "../../connectors/google-drive-state.js";
 import {
   driveCardSummary,
   findDriveCardTracking,
@@ -287,7 +287,10 @@ async function addDriveFileUnderLock(opts: {
     boxRoot,
     connectorName: "google-drive",
     defaultValue: DEFAULT_DRIVE_STATE,
-    update: (fresh) => ({ ...fresh, files: { ...fresh.files, [fileId]: fileState } }),
+    update: (fresh) => {
+      const base = normalizeDriveState(fresh);
+      return { ...base, files: { ...base.files, [fileId]: fileState } };
+    },
   });
 
   await stageAndCommitPaths(boxRoot, {

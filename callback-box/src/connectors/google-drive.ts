@@ -20,10 +20,9 @@ import { getGoogleAuth } from "./google-auth.js";
 import { isGoogleServiceAllowed } from "../core/box/config.js";
 import { loadDriveConfig } from "./drive-config.js";
 import { convertConfigFolders } from "./drive-folder-convert.js";
-import { loadTransientState } from "./transient-state.js";
 import {
-  DEFAULT_DRIVE_STATE,
   commitDriveStateDelta,
+  loadDriveState,
   type DriveTransientState,
 } from "./google-drive-state.js";
 import { stageAndCommitPaths } from "../lib/git.js";
@@ -104,11 +103,7 @@ class GoogleDriveConnector implements Connector {
       };
     }
 
-    const state = await loadTransientState<DriveTransientState>({
-      boxRoot: this.boxRoot,
-      connectorName: "google-drive",
-      defaultValue: DEFAULT_DRIVE_STATE,
-    });
+    const state = await loadDriveState(this.boxRoot);
     // Baseline for the end-of-sync delta merge: which files THIS sync changed
     // is `state` (mutated in place below) diffed against this snapshot. Deep
     // copy so the in-place mutation doesn't move the baseline underneath us.
@@ -188,7 +183,11 @@ class GoogleDriveConnector implements Connector {
       }
     }
 
-    // 4. Folder mounts — every `.gfolder.card`, mirroring into its own directory.
+    // 4. Folder mounts — every `.gfolder.card`, mirroring into its own
+    // directory, which is read from where the card sits when its turn comes. A
+    // card moved by `cb mv` mid-pass therefore mirrors into one directory this
+    // pass and another the next; the children left behind are ordinary synced
+    // cards and pointers, so the box is never wrong, only briefly untidy.
     // A card we could not read may be the trash tombstone that suppresses a
     // folder child. Discovery would recreate the deleted card AND wipe its
     // retained hashes, so it fails closed while any local identity is unknown.

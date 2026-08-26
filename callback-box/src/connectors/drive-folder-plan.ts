@@ -55,6 +55,13 @@ export interface FolderPlanInput {
   entries: MountEntry[];
   /** Drive IDs claimed anywhere in the box — live cards, duplicates, tombstones. */
   claimed: ReadonlySet<string>;
+  /**
+   * Drive IDs whose ONLY claim is a tombstone the connector itself made, when
+   * Drive said the child was trashed. Drive has since listed them again, so the
+   * child was restored and its card comes back. A `cb rm` tombstone is never in
+   * here, and neither is an ID some live card still holds.
+   */
+  restorable: ReadonlySet<string>;
   /** Folder IDs already entered on this pass. The cycle guard. */
   visitedFolders: ReadonlySet<string>;
   /** Levels below the outermost folder card of this pass; the top mount is 0. */
@@ -116,6 +123,13 @@ export interface FolderPlan {
   subfolders: SubfolderAction[];
   absent: AbsentEntry[];
   refusals: FolderRefusal[];
+  /**
+   * One resolved ID listed more than once — two shortcuts to one Doc, or a
+   * subfolder alongside a shortcut to it. The first occurrence is planned and
+   * the rest are named here: two cards for one Drive ID are an ambiguous
+   * working copy the connector then refuses to sync at all.
+   */
+  duplicates: string[];
 }
 
 /**
@@ -147,19 +161,26 @@ export function mountEntries(opts: {
 }
 
 export function planFolderSync(input: FolderPlanInput): FolderPlan {
-  const { children, entries, claimed, visitedFolders, depth, foldersSoFar } = input;
+  const { children, entries, claimed, restorable, visitedFolders, depth, foldersSoFar } = input;
   const plan: FolderPlan = {
     createFiles: [],
     createLinks: [],
     subfolders: [],
     absent: [],
     refusals: [],
+    duplicates: [],
   };
   const byDriveId = new Map(entries.map((entry) => [entry.driveId, entry]));
   const listed = new Set<string>();
   let entering = 0;
 
   for (const child of children) {
+    if (listed.has(child.id)) {
+      plan.duplicates.push(
+        `Drive item ${child.id} ("${child.name}") is listed twice in this folder — mirrored once`,
+      );
+      continue;
+    }
     listed.add(child.id);
     const held = byDriveId.get(child.id);
     const safeName = safeFilename(child.name);
@@ -170,7 +191,7 @@ export function planFolderSync(input: FolderPlanInput): FolderPlan {
         : path.join(safeName, `${safeName}.${GFOLDER_CARD_TYPE}.card`);
       // A folder claimed elsewhere in the box (or held as a trash tombstone)
       // keeps its existing home; re-creating it here would fork the mount.
-      const create = held === undefined && !claimed.has(child.id);
+      const create = held === undefined && (restorable.has(child.id) || !claimed.has(child.id));
       const refusal = refuseEntry({
         child,
         depth,
@@ -187,7 +208,10 @@ export function planFolderSync(input: FolderPlanInput): FolderPlan {
     }
 
     // Already carded — here or elsewhere. The box-wide card pass syncs it.
-    if (held !== undefined || claimed.has(child.id)) continue;
+    // A restorable ID is the exception: its only card is the tombstone this
+    // connector made when Drive trashed it, and Drive has it back.
+    if (held !== undefined) continue;
+    if (claimed.has(child.id) && !restorable.has(child.id)) continue;
 
     const handler = getHandlerForMimeType(child.mimeType);
     if (handler) {

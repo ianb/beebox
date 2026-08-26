@@ -91,7 +91,7 @@ export async function probeAbsent(
       notes: [`not-in-folder: ${relPath} — Drive ${entry.driveId} is no longer in this folder; left in place and still syncing`],
     };
   }
-  const moved = await deps.trashCard(relPath);
+  const moved = await deps.trashCard({ cardPath: relPath, driveId: entry.driveId });
   return {
     updated: moved,
     notes: [`trashed: ${relPath} — Drive ${entry.driveId} is in the Drive trash; moved to store/trash/`],

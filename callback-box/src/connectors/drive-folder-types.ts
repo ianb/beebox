@@ -27,6 +27,8 @@ export interface FolderSyncDeps {
   service: GoogleDriveService;
   /** Drive IDs claimed anywhere in the box; grows as this pass creates cards. */
   claimed: Set<string>;
+  /** IDs whose only claim is a connector-made tombstone — see `FolderPlanInput`. */
+  restorable: Set<string>;
   /** Folder IDs entered on this pass. The cycle guard, shared across mounts. */
   visitedFolders: Set<string>;
   /** The pre-pass card scan, used to read each mount's current membership. */
@@ -36,8 +38,14 @@ export interface FolderSyncDeps {
   syncFile(opts: { driveId: string; cardPath: string }): Promise<SyncPaths>;
   /** Drop retained transient hashes before a fresh mount of an old Drive ID. */
   forgetFileState(driveId: string): void;
-  /** `cb rm` for one card: moves it and its attach scope to `store/trash/`. */
-  trashCard(cardPath: string): Promise<string[]>;
+  /**
+   * `cb rm` for one card: moves it and its attach scope to `store/trash/`, and
+   * records the Drive ID as connector-trashed so a restore on Drive brings the
+   * card back (a `cb rm` tombstone stays durable).
+   */
+  trashCard(card: { cardPath: string; driveId: string }): Promise<string[]>;
+  /** This ID has a card again: it is no longer connector-trashed. */
+  forgetDriveTrash(driveId: string): void;
 }
 
 export interface FolderMount {

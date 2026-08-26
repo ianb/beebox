@@ -15,13 +15,48 @@
  */
 
 import type { FileState } from "./drive-types.js";
-import { updateTransientState } from "./transient-state.js";
+import { loadTransientState, updateTransientState } from "./transient-state.js";
 
 export interface DriveTransientState {
   files: Record<string, FileState>;
+  /**
+   * Drive IDs the CONNECTOR trashed, because Drive said the child was trashed.
+   * The tombstone in `store/trash/` cannot say who made it, and the two authors
+   * mean opposite things: a `cb rm` tombstone is a durable "not here", while a
+   * connector one is only a mirror of Drive's own trash — so a file restored on
+   * Drive must come back. Membership here is what tells them apart, and an ID
+   * leaves the moment its card is re-created.
+   */
+  driveTrashed: string[];
 }
 
-export const DEFAULT_DRIVE_STATE: DriveTransientState = { files: {} };
+export const DEFAULT_DRIVE_STATE: DriveTransientState = { files: {}, driveTrashed: [] };
+
+/**
+ * The state as it may actually be ON DISK: a file written before a field
+ * existed simply lacks it, and `loadTransientState` hands back exactly what it
+ * parsed. Every load goes through {@link normalizeDriveState}, so nothing past
+ * this boundary has to defend against a missing key.
+ */
+interface StoredDriveState {
+  files?: Record<string, FileState>;
+  driveTrashed?: string[];
+}
+
+export function normalizeDriveState(stored: StoredDriveState): DriveTransientState {
+  return { files: stored.files ?? {}, driveTrashed: stored.driveTrashed ?? [] };
+}
+
+/** Load the connector's state with every field present. */
+export async function loadDriveState(boxRoot: string): Promise<DriveTransientState> {
+  return normalizeDriveState(
+    await loadTransientState<StoredDriveState>({
+      boxRoot,
+      connectorName: "google-drive",
+      defaultValue: DEFAULT_DRIVE_STATE,
+    }),
+  );
+}
 
 export function emptyFileState(): FileState {
   return { contentHashes: {}, lastModified: "", extra: {} };
@@ -44,6 +79,10 @@ export function emptyFileState(): FileState {
  *     merge starts from a copy of `fresh.files`.
  *   - No deletions: the Drive sync only ever adds/updates `files` entries, so a
  *     key never needs removing.
+ *   - **`driveTrashed`** — a set, merged as one: `fresh` plus whatever this
+ *     writer ADDED, minus whatever this writer REMOVED (an ID it re-created a
+ *     card for, or one whose tombstone is gone). Additions and removals are
+ *     both meaningful here, so neither side can simply win.
  *
  * A file's `FileState` is taken wholesale (never sub-field merged): a single
  * Drive file is not synced by two processes in a way that would split its
@@ -62,7 +101,22 @@ export function mergeDriveState(opts: {
       files[driveId] = state;
     }
   }
-  return { files };
+  return { files, driveTrashed: mergeDriveTrashed(opts) };
+}
+
+/** `fresh`, plus this writer's additions, minus this writer's removals. */
+function mergeDriveTrashed(opts: {
+  fresh: DriveTransientState;
+  snapshot: DriveTransientState;
+  working: DriveTransientState;
+}): string[] {
+  const before = new Set(opts.snapshot.driveTrashed);
+  const after = new Set(opts.working.driveTrashed);
+  const merged = new Set([...opts.fresh.driveTrashed, ...after]);
+  for (const driveId of before) {
+    if (!after.has(driveId)) merged.delete(driveId);
+  }
+  return [...merged].toSorted();
 }
 
 /**
@@ -79,10 +133,10 @@ export async function commitDriveStateDelta(opts: {
   working: DriveTransientState;
 }): Promise<void> {
   const { boxRoot, snapshot, working } = opts;
-  await updateTransientState<DriveTransientState>({
+  await updateTransientState<StoredDriveState>({
     boxRoot,
     connectorName: "google-drive",
     defaultValue: DEFAULT_DRIVE_STATE,
-    update: (fresh) => mergeDriveState({ fresh, snapshot, working }),
+    update: (fresh) => mergeDriveState({ fresh: normalizeDriveState(fresh), snapshot, working }),
   });
 }
