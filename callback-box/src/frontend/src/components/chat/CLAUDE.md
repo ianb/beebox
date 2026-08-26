@@ -19,7 +19,9 @@ screen continues below the fold and the button lights up
    around the viewport to load or fail — an `<img>` reserves no height until
    its bytes land, and the chat has no dimension metadata to reserve with —
    then lapses on a short timer, with an 8s cap on the wait). A reader who
-   scrolls away, sends, or presses the button ends the hold themselves.
+   scrolls away (scrollTop moves *up* — being off the bottom is not enough,
+   since content grows between the hold's write and its scroll event), sends,
+   or presses the button ends the hold themselves.
 2. **Send** — the new user message goes to the top of the viewport
    (`anchorToTop`), from a layout effect, after the commit that added both the
    message and the spacer. The reply streams in below it; nothing follows it.
