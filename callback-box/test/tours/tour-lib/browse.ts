@@ -124,16 +124,30 @@ export class BrowseSession {
     }
   }
 
-  async findRef(role: string, name: string): Promise<string | null> {
-    // Use agent-browser's `find` subcommand to resolve a locator into a ref.
-    // We dispatch a `click` indirectly by selecting first, but for refs we
-    // need the snapshot. Simpler: read the interactive snapshot, scan for
-    // `<role> "<name>" [ref=eN]`.
+  /**
+   * Resolve a locator into a ref by scanning the interactive snapshot for
+   * `<role> "<name>" [ref=eN]`. A string `name` must match the accessible
+   * name exactly; a RegExp is tested against it, which is how a tour avoids
+   * baking box content into a locator (item counts, titles, filenames).
+   */
+  async findRef(role: string, name: string | RegExp): Promise<string | null> {
     const snap = await this.snapshot({ interactiveOnly: true });
-    const escaped = escapeForRegex(name);
-    const re = snapshotRegex(`\\b${role}\\s+"${escaped}"\\s+\\[(?:[^\\]]*?,\\s*)?ref=(e\\d+)`);
-    const m = snap.match(re);
-    return m && m[1] ? m[1] : null;
+    if (typeof name === "string") {
+      const escaped = escapeForRegex(name);
+      const re = snapshotRegex(`\\b${role}\\s+"${escaped}"\\s+\\[(?:[^\\]]*?,\\s*)?ref=(e\\d+)`);
+      const m = snap.match(re);
+      return m && m[1] ? m[1] : null;
+    }
+    const re = snapshotRegex(`\\b${role}\\s+"([^"]*)"\\s+\\[(?:[^\\]]*?,\\s*)?ref=(e\\d+)`, "g");
+    for (const m of snap.matchAll(re)) {
+      const accessibleName = m[1];
+      const ref = m[2];
+      if (accessibleName === undefined || ref === undefined) continue;
+      // A caller's RegExp may carry /g; reset so the test isn't stateful.
+      name.lastIndex = 0;
+      if (name.test(accessibleName)) return ref;
+    }
+    return null;
   }
 
   async clickRef(ref: string): Promise<void> {

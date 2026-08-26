@@ -639,16 +639,20 @@ to land rather than whatever was running.
 ships nothing and the "code-related" rule is deliberately the deploy hook's. A
 `bin/router.ts` change that breaks the dev router is therefore not gated here.
 
-## Tours (rendering + a11y review — not a gate)
+## Tours (the app's walk, written down — kept true weekly, not a gate)
 
 Scripted browser walks (`bin/tour <name>`, scripts in `test/tours/`)
 that produce review artifacts: desktop+mobile screenshots, AX-tree
 snapshots, axe-core reports, and soft-assertion findings per
-checkpoint. Deliberately ungated — findings never fail an exit code and
-artifacts are gitignored; they're judgment material for a human or
-agent reviewing UI work, not pass/fail facts. Full reference —
-running, reviewing artifacts, writing conventions, and when NOT to use
-them: [tours.md](tours.md).
+checkpoint. Ungated — findings never fail an exit code and artifacts
+are gitignored — but not unrun: `schedules/tour-check/` walks every
+tour weekly, *edits* a tour when a miss is explained by a deliberate
+change (a landing, plan, or issue), and files an issue for anything
+else. That asymmetry with `smoke-review` (which files and never edits)
+is by design: a gate goes red on every intended UI change, so tours
+need a session with judgment rather than a threshold. Full reference —
+running, reviewing artifacts, writing conventions, the edit-vs-finding
+rule, and when NOT to use them: [tours.md](tours.md).
 
 ## Field Tests (agent-operator, expensive, not a gate)
 
@@ -701,7 +705,7 @@ run never auto-files.
 | Does a card validate after agent edits? | Card validator (automatic) |
 | Does the streaming UI scroll/reflow correctly? | Frontend dev stub (`/fakestream` + `bin/browse`) |
 | Does the app still boot and work at all? | Smoke tier (`bin/smoke` — runs automatically at `/finish` for a code change) |
-| Does this page render sane at both viewports / pass axe? | Tour (`bin/tour <name>` — see [tours.md](tours.md); review instrument, not a gate) |
+| Does this page render sane at both viewports / pass axe? | Tour (`bin/tour <name>` — see [tours.md](tours.md); walked and kept true weekly, not a gate) |
 | Is every state of this component reachable and right? | Dev harness route (`/dev/…`, real components over injected fakes) |
 | Is this realistically discoverable/usable end-to-end, through the real UI? | Field test (`cb field-test run <scenario>` — expensive, weekly/manual, never a gate) |
 

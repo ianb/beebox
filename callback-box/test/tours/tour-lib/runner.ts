@@ -158,7 +158,8 @@ function mergeCheckpoints(passes: readonly PassResult[]): CheckpointRecord[] {
 
 class LocatorResolveError extends Error {
   constructor(locator: ClickLocator) {
-    super(`Could not resolve ${locator.role} "${locator.name}"`);
+    const name = typeof locator.name === "string" ? `"${locator.name}"` : String(locator.name);
+    super(`Could not resolve ${locator.role} ${name}`);
     this.name = "LocatorResolveError";
   }
 }
