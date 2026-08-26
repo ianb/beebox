@@ -11,6 +11,7 @@
 import { isChatModelAllowed } from "../shared/chat-models.js";
 import { modelTier, resolveProcedureModel, type AgentEngine } from "../shared/agent-models.js";
 import { normalizeModelId } from "../shared/model-ids.js";
+import { loadAgentEngine, loadBoxModel } from "./box/config.js";
 
 /** A chat's own model state: an explicit pick, or "whatever the box says". */
 export type ChatModelChoice =
@@ -62,4 +63,14 @@ export function resolveEffectiveModel(
   const fromPolicy = resolveBoxModelForEngine(engine, pinned);
   if (fromPolicy !== null) return { model: fromPolicy, source: "default" };
   return { model: null, source: "none" };
+}
+
+/**
+ * The box's pinned model as the box's own engine can run it, or null when no
+ * policy is set. The form agent runs outside chat want: one read, one answer,
+ * resolved once at the top of a run so nothing changes model midway.
+ */
+export async function loadEffectiveBoxModel(boxRoot: string): Promise<string | null> {
+  const engine = await loadAgentEngine(boxRoot);
+  return resolveBoxModelForEngine(engine, await loadBoxModel(boxRoot));
 }

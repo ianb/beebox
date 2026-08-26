@@ -20,6 +20,8 @@ import { buildReactorSystemPrompt, buildReactorUserPrompt } from "./prompts.js";
 import { computeTodoAmbientLine } from "../todo/ambient-summary.js";
 import type { ProcessJobsOptions, JobWithContent } from "./types.js";
 import { errnoCode } from "../../lib/error-guards.js";
+import { loadEffectiveBoxModel } from "../model-policy.js";
+import { fmt } from "../../lib/format.js";
 
 /**
  * Process agent jobs in a single batched agent session.
@@ -48,6 +50,11 @@ export async function processBatchJobs(opts: ProcessJobsOptions): Promise<boolea
     return true;
   }
 
+  // Resolved once for the whole run: a pin that lands mid-run does not switch
+  // the model out from under the agent (docs/plans/model-engine-policy.md).
+  const boxModel = await loadEffectiveBoxModel(boxRoot);
+  if (boxModel !== null) onLog?.(fmt.dim(`  Model: ${boxModel}\n`));
+
   onLog?.("\n");
   const maxTurns = typeFilter ? 10 : 30;
   const agent = opts.createAgent({
@@ -62,6 +69,7 @@ export async function processBatchJobs(opts: ProcessJobsOptions): Promise<boolea
     prompt: userPrompt,
     maxTurns,
     maxBudgetUsd: 10,
+    ...(boxModel !== null && { model: boxModel }),
   });
 
   await ensureAgentCommitted({
