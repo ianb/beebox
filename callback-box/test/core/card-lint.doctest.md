@@ -22,6 +22,7 @@ import { LessonPlanSchema } from "../../src/schemas/lesson-plan.js";
 import { ConceptMapSchema } from "../../src/schemas/concept-map.js";
 import { LandmarkSchema } from "../../src/schemas/landmark.js";
 import { FigureSchema } from "../../src/schemas/figure.js";
+import { ChatSchema } from "../../src/schemas/chat.js";
 
 const threadSchema: CardSchema = cardSchema("email-thread", {
   fields: {
@@ -67,6 +68,7 @@ const ctx: LoadCardContext = {
     ["concept-map", ConceptMapSchema],
     ["landmark", LandmarkSchema],
     ["figure", FigureSchema],
+    ["chat", ChatSchema],
   ]),
 };
 ```
@@ -937,4 +939,30 @@ figures.results[1]!.warnings[0]!.message
 
 ```ts cleanup
 await box.cleanup();
+```
+
+## Chat husks: `session` must be a real engine session id
+
+A husk's `session` field is the *only* thing that identifies which chat the
+card is about — the filename is a naming convention, and renaming a husk is
+encouraged (`docs/plans/chat-session-identity.md`). So it is validated as a
+UUID before anything keys on it or joins it into a path: Claude Agent SDK ids
+are UUIDv4, Codex thread ids UUIDv7, and one check covers both.
+
+```ts
+const box = await makeTmpBox();
+await box.write("store/chat/web/2026-08-26_ok.chat.card",
+  "---\nsession: 59fc20dd-fe6d-45cb-8f37-f1508a5a0869\n---\n");
+await box.write("store/chat/web/2026-08-26_bad.chat.card",
+  "---\nsession: sess1234\n---\n");
+const result = await lintCardsDispatch(
+  [box.path("store/chat/web/2026-08-26_ok.chat.card"), box.path("store/chat/web/2026-08-26_bad.chat.card")],
+  { boxRoot: box.root, ctx },
+);
+JSON.stringify({
+  ok: result.results[0]!.errors.length,
+  bad: result.results[1]!.errors.length,
+  says: result.results[1]!.errors[0]!.message.includes("session"),
+})
+=> {"ok":0,"bad":1,"says":true}
 ```

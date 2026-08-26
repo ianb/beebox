@@ -38,8 +38,8 @@ store; that is not this plan.
 - #6 right-sized defensiveness (`:75`) — no defense against a session running
   on two machines at once; that cannot happen (one engine store per machine).
 - #8 one way to do each thing (`:95`) — one lookup (`session` field), one
-  host identity (`os.hostname()`, already used by `src/lib/file-lock.ts:302`),
-  one archive mechanism (`cb mv` semantics, as delete reuses `trash`).
+  origin identity (`localOrigin()`), one archive mechanism (`executeMove`, as
+  delete reuses `trash`).
 - `callback-box/CLAUDE.md` "don't add features beyond what the task requires" —
   no GC sweep, no rename UI.
 - Precedent: `docs/plans/chat-session-delete.md` — validate `session` as the
@@ -61,17 +61,20 @@ store; that is not this plan.
   `ensureChatHusk`, already carrying `engine`. **Reuse: pass `engine` and
   `origin` through.**
 - `src/core/chat/session/availability.ts:13,32` — `reason:
-  "missing-local-transcript"`, surfaced by `chat-bootstrap-procedure.ts:70`.
+  "missing-local-transcript"`, surfaced by
+  `webapp/trpc/routers/chat-bootstrap-procedure.ts:70`.
   **Extend** with attribution.
 - `src/core/chat/session/list.ts:83-95` `loadAllSessions` — skips husks whose
-  transcript is absent. **Change**: return them with a transcript state so the
-  UI can group them.
+  transcript is absent; callers treat every row as resumable
+  (`recent-landmark.ts:52`). **Keep**; add a sibling `loadDeadHusks`.
 - `src/core/chat/review/discovery.ts:247` — husk-first corpus. **Extend** with
   the origin claim.
 - `src/core/chat/review/state.ts` — the span journal. **Keep machine-local**;
   it is legitimate once only the origin machine reviews a session.
-- `src/core/commands/trash.ts:58-149` — moves a card + attachment scope and
-  can commit. **Reuse its move primitive** for archive; delete already does.
+- `src/core/commands/move.ts:326` `executeMove` — the `cb mv` primitive
+  (card + attachment scope). **Reuse** for archive. `trash.ts:139` hardcodes
+  the Trash destination, so it is the precedent for commit/compensation shape,
+  not the move itself.
 - `src/core/card-lint.ts:76` `lintCardsDispatch` / `lintFrontmatterCard` —
   per-file only; no cross-file rule exists. **Add** a per-run index for the
   `chat` type.
@@ -118,10 +121,12 @@ duplicate: `session` is a bare `z.string()` (`schemas/chat.ts:18`).
 **Direction.**
 - `findChatHusk` → delete. `ensureChatHusk` calls `findChatHuskEntry`
   (field scan; the suffix fast-path stays inside it).
-- `schemas/chat.ts`: `session: z.string().uuid()`-shaped check via the same
-  strict id parser delete uses (`docs/plans/chat-session-delete.md`, "parse it
-  as the SDK's strict UUID shape"). Codex thread ids: confirm shape in chunk 1;
-  if not UUID, a union of the two shapes.
+- `schemas/chat.ts`: `session` gets a strict id check via the same parser
+  delete uses (`docs/plans/chat-session-delete.md`, "parse it as the SDK's
+  strict UUID shape"). Codex thread ids are accepted as bare strings today
+  (`codex-transcript.ts:30`, `services/codex-sdk-session.ts:241`); chunk 1
+  proves their shape from a real thread list before choosing UUID-only vs a
+  union. A UUID-only check does not land until that is proven.
 - card-lint: for `chat` cards, an error when another card under
   `store/chat/**` carries the same `session`. Index built once per
   `lintCardsDispatch` run (lazy, on `LintDispatchOptions`), listing via
@@ -139,8 +144,19 @@ questions.
 
 ### Track 2 — The husk records `engine` and `origin`
 
-**What.** Two write-once fields on the husk: `engine: claude | codex` and
-`origin: <hostname>` — the machine whose engine store holds the transcript.
+**What.** Three write-once fields on the husk: `engine: claude | codex`,
+`origin: <machine id>` — the machine whose engine store holds the transcript —
+and `origin-name: <hostname at write time>`, a display label only.
+
+**Machine id.** `os.hostname()` is not stable on a laptop (network-location
+renames), so it is never a decision key. The id is a UUID created once at
+`~/.local/share/cb/origin-id` (the existing per-user state dir:
+`src/core/schedule/scheduler.ts:34`, `src/core/push-subscriptions.ts:72`),
+read by one helper `localOrigin()` in `src/core/chat/session/origin.ts`, which
+also returns the current hostname for the label. `CB_ORIGIN_ID_FILE` overrides
+the path for doctests. Deleting the file makes the machine a new origin — its
+old sessions then read as `elsewhere` (visible, and repairable by restoring the
+file); recorded as a failure mode below.
 
 **Why.** Today "transcript missing here" cannot be told from "transcript
 expired". The history file has `engine` but is per-checkout; nothing anywhere
@@ -148,16 +164,22 @@ records the machine.
 
 **Direction.**
 - `schemas/chat.ts`: `engine: z.enum(["claude","codex"]).optional()`,
-  `origin: z.string().optional()`. Instructions: machine-owned, leave alone.
-- `createChatHuskTemplate` takes both; `ensureChatHusk` writes them on
-  create. `recordSessionStart` passes `engine` (it has it) and
-  `origin = os.hostname()` via one helper `localOrigin()` in
-  `src/core/chat/session/origin.ts` (single definition, principle #8).
+  `origin: z.string().optional()`, `origin-name: z.string().optional()`.
+  Instructions: machine-owned, leave alone.
+- `createChatHuskTemplate` takes all three; `ensureChatHusk` writes them on
+  create. `recordSessionStart` passes `engine` (it has it) and the origin pair
+  from `localOrigin()` (single definition, principle #8).
 - Backfill in `reconcileChatHusks`: a husk with no `origin` whose transcript
-  exists here gets `origin = localOrigin()` and `engine` from the history
-  entry (default `claude`). A husk with no `origin` and no transcript stays
-  unset — `unknown` is honest. One card write per backfilled husk, under the
-  existing card lock; logged as a count.
+  exists here gets the origin pair and `engine` from the history entry
+  (default `claude`). A husk with no `origin` and no transcript stays unset —
+  `unknown` is honest. Each write goes through `withCardLock`
+  (`src/lib/card-lock.ts:123`) and rewrites frontmatter only. Logged as a count.
+  **This dirties git-tracked cards on boot**, as reconcile's husk creation
+  already does (`webapp/routes/chat.ts:75` starts it in the background). Two
+  checkouts never stamp the same husk: a transcript exists on exactly one
+  machine, so the stamped sets are disjoint and cannot conflict on merge. The
+  one-time diff on an old box is one line per husk; it lands with the box's
+  next commit like any other reconcile write.
 - Existing `engine` on the history entry is unchanged (it is the runtime's
   fast path); the husk copy is the durable one.
 
@@ -180,12 +202,18 @@ and bootstrap; an archive action for dead husks.
   present → `present`; missing and `origin === localOrigin()` → `expired`;
   missing and `origin` set → `elsewhere`; missing and unset → `unknown`.
   Replaces the bare `"missing-local-transcript"` reason (principle #1).
-- `loadAllSessions` returns dead husks too, with the state; the dropdown and
-  `ChatsLandmarkCard` group them under "Expired" / "On <origin>" /
-  "Unavailable", non-resumable, linking to the husk card.
+- `loadAllSessions` keeps its contract — live, resumable chats only
+  (`recent-landmark.ts:52` `isResumableSession` is literally `.some()` over
+  it; `SessionRow.tsx:51` always links to `/chat?session=`). A second
+  enumeration `loadDeadHusks(boxRoot): DeadHuskEntry[]` (husk path, title,
+  session, transcript state) feeds a separate section in the dropdown and
+  `ChatsLandmarkCard`: "Expired" / "On <origin-name>" / "Unavailable",
+  linking to the husk card, never to `/chat?session=`.
 - Archive: `chat.archive` tRPC procedure beside `chat.delete`; moves the husk
-  (with attachment scope, via the `trash.ts` move primitive) to
-  `store/chat/archive/`, commits like delete does. Offered in the same
+  with its attachment scope to `store/chat/archive/` via `executeMove`
+  (`src/core/commands/move.ts:326` — the `cb mv` primitive; `trash.ts:139`
+  hardcodes the Trash destination and is not reusable here), commits like
+  delete does. Offered in the same
   confirmation surface as delete, enabled for any state except `present`.
   `listChatHusks` continues to read `store/chat/web/` only, so archived husks
   leave every list and the review corpus while staying searchable cards.
@@ -207,7 +235,15 @@ each extends `contains-evidence` from partial material.
 `origin === localOrigin()`, or `origin` unset and the transcript is present
 here (pre-backfill husks; reconcile sets `origin` on the next boot so this
 branch decays). Sessions skipped for origin are counted in `cb chat review
-status` output. The journal stays in `.callback-box/` — it is machine state
+status` output.
+
+**Coverage is unchanged, and stated:** today only prod runs the nightly
+review, and prod holds only prod-origin transcripts, so laptop-origin sessions
+are already never reviewed before they expire. The claim rule makes that
+explicit instead of letting the laptop's absent journal double-extend prod's
+account. Reviewing laptop sessions means enabling the schedule on the laptop;
+that is boxholder policy (NOT in scope), and the status counter is what makes
+the gap visible. The journal stays in `.callback-box/` — it is machine state
 about a machine-local transcript, which is now the correct scope.
 
 **First chunk.** The discovery predicate + a doctest with a husk whose
@@ -242,16 +278,17 @@ None. A non-git durable transcript store would be one; it is out of scope.
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
 | Two husks carry the same `session` (pre-existing duplicates) | Track 1 lint doctest | lint error + reconcile warning | clear |
-| `os.hostname()` changes on the laptop → own sessions read as `elsewhere` | Track 3 doctest for the `elsewhere` branch only | none: state shows "On <old-name>"; archive still allowed, review skips | clear but wrong attribution |
+| `~/.local/share/cb/origin-id` deleted → own sessions read as `elsewhere` | Track 3 doctest for the `elsewhere` branch | state shows "On <origin-name>"; review skips them; restoring the file repairs | clear |
+| `os.hostname()` changes → stale `origin-name` label | — | label only; never a decision | clear |
 | Backfill stamps `origin` on a husk whose transcript exists on two machines | cannot happen: one engine store per machine; a resumed-elsewhere session forks a new id | — | — |
 | Reconcile's card write fails mid-backfill | existing reconcile logging | logged, retried next boot (idempotent) | clear |
 | Archive move fails after commit staging | reuse of `trash.ts` paths + its doctests | compensates like delete | clear |
 | Codex thread id not UUID-shaped, strict `session` check rejects valid husks | chunk-1 check | fix shape before landing | — |
 | `countUserMessages` truncated on a >5000-entry transcript | new doctest with a synthetic long log | notice logged | clear |
 
-> No critical gap. The hostname-drift row is accepted: the field is a label,
-> the wrong label is visible, and a rename of the machine is rare and
-> boxholder-caused.
+> No critical gap. The deleted-id row is accepted: deleting per-user state is
+> boxholder-caused, the effect is visible in every list, and the repair is
+> restoring one file.
 
 ## Agent-flow / user-flow edge cases
 
@@ -263,8 +300,10 @@ None. A non-git durable transcript store would be one; it is out of scope.
 - **Two agents touching the same card** — reconcile backfill vs review
   writing `contains`: ADDRESSED, both use the existing card lock
   (`review/husk-write.ts` `withCardLock`).
-- **Hand-edit drift** — `Origin:` capitalised: ADDRESSED by schema (unknown
-  key is a lint error today).
+- **Hand-edit drift** — `Origin:` capitalised: ADDRESSED as a visible
+  warning, not an error — unknown frontmatter keys warn
+  (`card-lint.ts:261,288`); the husk then reads as `unknown` origin, which the
+  list shows. Accepted: machine-written fields are rarely hand-edited.
 - **Fabricated value** — n/a; both fields are machine-written.
 - **Validation error UX** — duplicate-session message names both paths and
   says "keep one; `cb trash` the other": ADDRESSED in Track 1.
@@ -279,6 +318,8 @@ None. A non-git durable transcript store would be one; it is out of scope.
   a policy decision not yet made.
 - Rename UI — renaming is `cb mv`/editor today and Track 1 makes it safe;
   a UI affordance is the thread-management issue's remainder.
+- Enabling chat review on non-prod machines (the coverage gap Track 4 makes
+  visible).
 - Moving the review journal onto the husk — unnecessary once review is
   origin-claimed; it would add four machine fields to a card.
 - `events-db` generation truncation across checkouts
