@@ -42,3 +42,10 @@ stand on their own as hygiene, whether or not a second backend ever exists:
 Order matters: 1 and 2 are mechanical; 3 is a design (and 4 folds into its
 design space). Doing 1 first makes 3's "log the wire messages" trivially
 well-defined.
+
+**Addendum 2026-08-25** (from the [oh-my-pi review](../../research/backend-alternatives/2026-08-25-oh-my-pi.md)):
+add to the engine contract "validator findings reach the model within the same
+turn". The Codex engine plan recorded losing this (validation now fails the turn
+with no feedback), and the Claude plugin's PostToolUse path dropped the SDK
+in-process validator's advisory context. omp's `tool_result` rewrite is the
+reference shape.
