@@ -33,19 +33,25 @@ function escapeHtml(text: string): string {
 }
 
 /**
- * The box a document request is for: the URL's first path segment.
+ * The box a document request is for: the URL's first path segment, matched
+ * against the boxes this server actually serves.
  *
  * Every layout that serves the SPA carries the slug there — a standalone
  * `cb serve` mounts each box at `/<slug>`, and a hub child sees the same
  * `/<slug>/...` the hub proxied to it (the hub strips no prefix; the dev
- * router strips only its own worktree segment, ahead of the box's). Returns
- * null for a URL that names no box, which is the root listing and `/auth/*`.
+ * router strips only its own worktree segment, ahead of the box's).
+ *
+ * Matching against the served boxes rather than excluding known non-box
+ * segments (`/auth/…`, Vite's `/@…`) keeps routing policy in one place: a
+ * segment is a box exactly when a box answers to it. A box whose slug
+ * collides with a reserved path is a routing bug to fix where slugs are
+ * validated, not a case for this function to encode a second opinion about.
  */
-export function documentBoxSlug(url: string): string | null {
+export function documentBoxSlug(url: string, knownSlugs: readonly string[]): string | null {
   const pathOnly = url.split("?")[0] ?? "";
   const first = pathOnly.split("/").find((segment) => segment !== "");
-  if (first === undefined || first === "auth" || first.startsWith("@")) return null;
-  return first;
+  if (first === undefined) return null;
+  return knownSlugs.includes(first) ? first : null;
 }
 
 /**
@@ -61,17 +67,38 @@ export function documentBoxSlug(url: string): string | null {
  * symbol), and leaves the built icon link in place for an image symbol.
  */
 export function stampBoxIdentity(html: string, identity: BoxIdentity): string {
-  let out = html.replace(
-    /<title>[^<]*<\/title>/,
-    `<title>${escapeHtml(identity.name)}</title>`,
-  );
+  const titleRe = /<title>[^<]*<\/title>/;
+  const iconRe = /<link rel="icon"[^>]*>/;
 
+  // A rewrite that stops matching -- an attribute reordered, the tag
+  // reformatted -- would silently go back to serving every box the same
+  // document, which looks exactly like the bug this exists to fix. Say so
+  // once rather than never.
+  if (!titleRe.test(html)) warnOnce("title", "no <title> tag matched");
+  if (identity.symbol !== "" && !iconRe.test(html)) warnOnce("icon", "no <link rel=\"icon\"> matched");
+
+  let out = html.replace(titleRe, `<title>${escapeHtml(identity.name)}</title>`);
   if (identity.symbol !== "") {
-    out = out.replace(
-      /<link rel="icon"[^>]*>/,
-      `<link rel="icon" href="${emojiFaviconUri(identity.symbol)}" />`,
-    );
+    // The built href is kept in `data-cb-default-icon`. Without it the client
+    // has no way to tell the app's own icon from the mark of whichever box
+    // happened to serve the document, and "this box has no mark" would show
+    // the previous box's (`frontend/src/components/DocumentIcon.tsx`).
+    out = out.replace(iconRe, (link) => {
+      const built = /href="([^"]*)"/.exec(link)?.[1] ?? "";
+      return (
+        `<link rel="icon" href="${emojiFaviconUri(identity.symbol)}"` +
+        ` data-cb-default-icon="${escapeHtml(built)}" />`
+      );
+    });
   }
-
   return out;
+}
+
+/** Complained-about stamp targets, so a per-request failure logs once. */
+const warned = new Set<string>();
+
+function warnOnce(what: string, detail: string): void {
+  if (warned.has(what)) return;
+  warned.add(what);
+  console.warn(`index.html: cannot stamp the box ${what} -- ${detail}. The document's markup changed; see webapp/index-html.ts.`);
 }

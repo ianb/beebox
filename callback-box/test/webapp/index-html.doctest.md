@@ -83,22 +83,35 @@ const nasty = iconOf(stampBoxIdentity(DOC, { name: "x", symbol: '"><script>', sy
 
 The slug is the URL's first segment in every layout that serves the SPA: a
 standalone `cb serve` mounts each box at `/<slug>`, and a hub child is proxied
-the same `/<slug>/...`. A URL naming no box gets the built document unchanged.
+the same `/<slug>/...`.
 
 ```ts
+const served = ["kitchen", "workshop"];
 JSON.stringify([
-  documentBoxSlug("/kitchen/settings"),
-  documentBoxSlug("/kitchen"),
-  documentBoxSlug("/kitchen/browse/store/recipes?view=sheet"),
-  documentBoxSlug("/"),
-  documentBoxSlug("/auth/login?returnTo=%2Fkitchen"),
+  documentBoxSlug("/kitchen/settings", served),
+  documentBoxSlug("/kitchen", served),
+  documentBoxSlug("/kitchen/browse/store/recipes?view=sheet", served),
 ])
-=> ["kitchen","kitchen","kitchen",null,null]
+=> ["kitchen","kitchen","kitchen"]
+```
+
+A segment is a box exactly when a box answers to it — so the root listing,
+`/auth/*`, Vite's `/@…` requests, and a slug this server doesn't serve all get
+the built document unchanged, with no list of non-box paths to keep in sync.
+
+```ts continue
+JSON.stringify([
+  documentBoxSlug("/", served),
+  documentBoxSlug("/auth/login?returnTo=%2Fkitchen", served),
+  documentBoxSlug("/@vite/client", served),
+  documentBoxSlug("/garage/settings", served),
+])
+=> [null,null,null,null]
 ```
 
 A query string carrying slashes doesn't move the segment boundary.
 
 ```ts continue
-documentBoxSlug("/kitchen?returnTo=/other/box")
+documentBoxSlug("/kitchen?returnTo=/other/box", served)
 => kitchen
 ```

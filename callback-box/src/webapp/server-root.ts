@@ -315,7 +315,7 @@ export function registerSpaFallback(
    */
   const spaDocument = async (url: string): Promise<string> => {
     const html = fs.readFileSync(path.join(opts.frontendPath, "index.html"), "utf-8");
-    const slug = documentBoxSlug(url);
+    const slug = documentBoxSlug(url, opts.boxes.map((b) => b.slug));
     const box = slug === null ? undefined : opts.boxes.find((b) => b.slug === slug);
     if (box === undefined) return html;
     return stampBoxIdentity(html, await readBoxIdentity({ boxRoot: box.boxRoot, slug: box.slug }));

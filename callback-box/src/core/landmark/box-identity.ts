@@ -28,6 +28,33 @@ import * as fs from "node:fs/promises";
 import { readLandmarkCard } from "./card-cache.js";
 import { readLandmarkSymbol } from "./symbol.js";
 
+/**
+ * Which file is the root landmark, remembered per box root.
+ *
+ * This is on the path of every document request, and finding the card means
+ * listing the box root -- a directory that holds thousands of entries on a
+ * real box. The listing is memoized against the root directory's own mtime,
+ * which changes when an entry is added or removed, so the steady state is one
+ * `stat` and a discovery costs a `readdir` only after the root's contents
+ * change. Editing the card itself does not touch the directory's mtime, and
+ * does not need to: `readLandmarkCard` keys its parse on the file's identity.
+ */
+const discovered = new Map<string, { dirMtimeNs: bigint; cardName: string | null }>();
+
+/**
+ * The label every root landmark used to be scaffolded with, before the
+ * scaffold learned to name the box (`core/box/defaults.ts`).
+ *
+ * Boxes created before that carry it, and it is not a name -- it is the word
+ * "Box" on every box in the fleet, which in a tab strip is worse than the slug
+ * it replaced. So it reads as "unset" and the slug wins. A box that renames
+ * itself takes effect immediately; a box that genuinely wants to be called
+ * "Box" is the one case this gets wrong, and it gets the slug instead.
+ *
+ * Delete this when no box in the field still carries the stock label.
+ */
+const STOCK_LABEL = "Box";
+
 /** A box's display identity: what to call it, and what mark to show for it. */
 export interface BoxIdentity {
   /** Display name — the root landmark's label, falling back to the slug. */
@@ -54,19 +81,14 @@ export async function readBoxIdentity({
 }): Promise<BoxIdentity> {
   const bare: BoxIdentity = { name: slug, symbol: "", symbolSrc: null };
 
-  let entries: string[];
+  let cardName: string | null;
   try {
-    entries = await fs.readdir(boxRoot);
+    cardName = await rootLandmarkName(boxRoot);
   } catch (e) {
     console.warn(`box identity: could not read box root ${boxRoot}:`, e);
     return bare;
   }
-
-  // One landmark per directory by convention; sorted so a box that somehow has
-  // two picks the same one every time rather than alternating with readdir
-  // order. `landmarks.forDir` resolves the root the same way.
-  const cardName = entries.filter((n) => n.endsWith(".landmark.card")).toSorted()[0];
-  if (cardName === undefined) return bare;
+  if (cardName === null) return bare;
 
   let fields;
   try {
@@ -80,8 +102,27 @@ export async function readBoxIdentity({
   const label = fields.navigation?.label?.trim();
   const symbol = readLandmarkSymbol(fields.navigation, { landmarkPath: cardName });
   return {
-    name: label !== undefined && label !== "" ? label : slug,
+    name: label !== undefined && label !== "" && label !== STOCK_LABEL ? label : slug,
     symbol: symbol.text,
     symbolSrc: symbol.src,
   };
+}
+
+/**
+ * The root landmark's filename, from the memo when the box root is unchanged.
+ *
+ * One landmark per directory by convention; sorted so a box that somehow holds
+ * two picks the same one every time rather than alternating with `readdir`
+ * order -- a box must not change its name between requests.
+ * `landmarks.forDir` resolves the root the same way.
+ */
+async function rootLandmarkName(boxRoot: string): Promise<string | null> {
+  const stat = await fs.stat(boxRoot, { bigint: true });
+  const seen = discovered.get(boxRoot);
+  if (seen !== undefined && seen.dirMtimeNs === stat.mtimeNs) return seen.cardName;
+
+  const entries = await fs.readdir(boxRoot);
+  const cardName = entries.filter((n) => n.endsWith(".landmark.card")).toSorted()[0] ?? null;
+  discovered.set(boxRoot, { dirMtimeNs: stat.mtimeNs, cardName });
+  return cardName;
 }

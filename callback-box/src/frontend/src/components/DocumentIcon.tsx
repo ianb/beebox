@@ -32,18 +32,25 @@ import { apiFileUrl } from "../lib/view-url";
 import { trpc } from "../lib/trpc";
 
 /**
- * The icon link in the served document, and the href it arrived with.
+ * The icon link in the served document, and the app's OWN icon href.
  *
- * Captured once, before anything rewrites it, so leaving a box (to the login
- * page, say) can put the document back the way it came rather than stranding
- * one box's mark on a page that has no box. There is exactly one writer, so
- * "the original" is unambiguous — no stack, no restore ordering to get wrong.
+ * The default is not simply what the link said at module load: in production
+ * the box server has already stamped that link with the mark of the box that
+ * served the document, and switching boxes does not reload the page (so this
+ * module is not re-evaluated). Restoring to the stamped href would leave one
+ * box's mark on a box that has no mark of its own. The server records the
+ * built href in `data-cb-default-icon` when it stamps, and that is the
+ * default when present.
+ *
+ * There is exactly one writer, so "the default" is unambiguous: no stack,
+ * no restore ordering to get wrong.
  */
 const iconLink: HTMLLinkElement | null =
   typeof document === "undefined"
     ? null
     : document.head.querySelector<HTMLLinkElement>('link[rel="icon"]');
-const builtInHref: string | null = iconLink === null ? null : iconLink.href;
+const defaultHref: string | null =
+  iconLink === null ? null : iconLink.dataset["cbDefaultIcon"] || iconLink.href;
 
 function setIcon(href: string | null): void {
   if (iconLink === null || href === null) return;
@@ -80,8 +87,8 @@ export function DocumentIcon() {
   }
 
   useEffect(() => {
-    setIcon(href ?? builtInHref);
-    return () => { setIcon(builtInHref); };
+    setIcon(href ?? defaultHref);
+    return () => { setIcon(defaultHref); };
   }, [href]);
 
   return null;

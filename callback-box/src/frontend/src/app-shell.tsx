@@ -6,8 +6,9 @@
  * classes sit next to the logic. This file is routing glue.
  */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Outlet, useParams, useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { BrowsePage, type BrowseNavigateOptions } from "./pages/browse/BrowsePage";
 import { enableDebugLogCapture, DebugLogPanel, clearErrorCount } from "./components/DebugLog";
 import { SourceViewOverlay, useSourceView } from "./components/SourceViewOverlay";
@@ -77,6 +78,8 @@ export function AppLayout() {
   // Advertise the validated box to the callback-clerk extension.
   useBoxIdentityMeta(boxesState.boxes.find((b) => b.slug === boxSlug) ?? null);
 
+  useDropBoxScopedCache(boxSlug);
+
   return (
     // AppBarChromeProvider is OUTSIDE Column so the shell below it is a stable
     // `children` element: a page publishing its place / a chip slot mounting
@@ -103,6 +106,36 @@ export function AppLayout() {
       </ViewOverlayProvider>
     </AppBarChromeProvider>
   );
+}
+
+/**
+ * Drop every cached query when the box in the URL changes.
+ *
+ * Box-scoped procedures are keyed by their input alone -- `landmarks.forDir`
+ * asks for a directory, not a box -- while the request URL is rewritten from
+ * `window.location` at fetch time (`lib/trpc/index.ts`). The box a cache entry
+ * came from is therefore invisible in its key, so the same key means different
+ * data in different boxes.
+ *
+ * Most box switches are a full page load (the box selector at `/` is outside
+ * the box route tree), which is why this stayed hidden. But `BoxActionsTile`
+ * links between boxes with a router `Link`, so box A -> box B can happen
+ * client-side, and then A's answers are served for B -- briefly under the
+ * shared 5s `staleTime`, and longer than that as stale-while-revalidate.
+ *
+ * Clearing on the transition is one rule in one place; the alternative is
+ * teaching every box-scoped procedure to carry a slug it does not need. The
+ * first mount does not clear -- there is no previous box to have polluted it.
+ */
+function useDropBoxScopedCache(boxSlug: string | undefined): void {
+  const queryClient = useQueryClient();
+  const previous = useRef(boxSlug);
+
+  useEffect(() => {
+    if (previous.current === boxSlug) return;
+    previous.current = boxSlug;
+    queryClient.clear();
+  }, [boxSlug, queryClient]);
 }
 
 function BoxNotFound({ slug, boxes }: { slug: string; boxes: KnownBox[] }) {

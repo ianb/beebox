@@ -70,3 +70,16 @@ await box.write("Alpha.landmark.card", "---\nnavigation:\n  label: Alpha\n---\n"
 (await identity(box)).name
 => Alpha
 ```
+
+## The old scaffold's label is not a name
+
+Boxes created before the scaffold learned to name the box carry `label: Box` —
+the same word on every box in the fleet, which tells a tab strip less than the
+slug does. It reads as unset; the box's symbol still counts.
+
+```ts
+const box = await makeTmpBox();
+await box.write("Box.landmark.card", "---\nnavigation:\n  label: Box\n  symbol: 📦\n---\n");
+JSON.stringify(await identity(box))
+=> {"name":"kitchen-box","symbol":"📦","symbolSrc":null}
+```
