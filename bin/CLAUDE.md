@@ -382,6 +382,16 @@ through `bin/workstreams agent-liveness` and spares an agent-browser on
   (including `codex resume --last`); a live session writes a unique local file,
   focuses its tab when possible, and reports `manual forwarding required`.
   Use `--` before literal briefing text that begins with `-`.
+  **Claude continues its prior conversation** when the registry's `sessionId`
+  still has a transcript under `~/.claude/projects/*/` — the worktree is
+  recreated at the same path, and Claude Code keys transcripts by path, so the
+  history outlives a cull. The briefing (or the recreated-worktree note) is the
+  continued session's first message. It starts fresh on `--fresh`, with no
+  recorded id, or when the transcript is gone, and the launch line says which
+  and why. The transcript check happens before the tab opens: `--resume` with a
+  pruned id fails inside the tab, where there is no fallback left. Only the
+  recorded id is ever used — a project directory routinely holds several
+  transcripts, and the newest is not the one that did the work.
 - `bin/workstreams reset-test <name>` — hard-reset the isolated test1 clone to
   its `test-setup` branch
 - `bin/workstreams confirm-tested <issue-basename>` — clear a landed issue's
