@@ -47,6 +47,24 @@ Design questions (the reason for `needs: [design]`):
 - **Privacy/consent surface.** It's the boxholder's own box, but a family
   shares some boxes; per-user event attribution needs a decision.
 
+Boxholder refinements (2026-08-26, same session):
+
+- **Standard representations over standard infrastructure.** Prefer event
+  shapes an agent already understands from the wider world — the value is the
+  agent reading a familiar schema, not adopting an analytics vendor's
+  collection stack. If the standard tooling itself turns out useful, fine —
+  "who knows" — but it isn't the goal. Survey candidates at design time (e.g.
+  the self-describing web-analytics event schemas, OpenTelemetry-style event
+  records) and judge them by agent legibility, not ecosystem.
+- **Don't copy canonical data into the analytics store.** Chat logs and git
+  changes are already the box's canonical records; interleaving them into an
+  event stream would duplicate them non-canonically — an efficiency problem
+  and an ownership/privacy one (information stored where its owner doesn't
+  expect it, outliving its canonical copy's deletion). Analytics should hold
+  the events that have no other home (clicks, views, dwell) and *reference*
+  canonical records (a session id, a commit sha) rather than embed them. The
+  read side joins; the store does not.
+
 The self-optimization loop is the point: collection without a reader is
 telemetry theater. The first consumer should probably be named in the same
 plan that adds collection.
