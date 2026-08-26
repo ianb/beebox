@@ -17,6 +17,18 @@ A chat's **model** is a per-chat choice that can change mid-conversation. Its
 **engine** is whatever the box was set to when the chat started, and nothing
 offers a choice.
 
+> **Considered and deferred 2026-08-25** by the model/engine policy work
+> (`callback-box/docs/implemented-plans/model-engine-policy.md`), which shipped the
+> *model* half — a box default model that chat and the reactor both read, with a
+> per-chat override. This issue was carried as a fifth track and cut, because it
+> is a bigger mechanism than the "thread one existing parameter" the note below
+> suggests: `reserveSession` takes no engine
+> (`webapp/trpc/routers/chat-control-procedures.ts`), `registry.reserve` takes
+> none (`core/chat/session/registry.ts`), and coined ids are Claude-only by
+> contract (`core/chat/session/reserve.ts` returns `unsupported` for a codex
+> box). So offering the choice on a Codex box means changing how a chat is
+> *named*, not adding a menu. It wants its own plan.
+
 ## Where it stands today
 
 `core/chat/session/engine.ts:6-13` is the whole rule:
