@@ -1,8 +1,8 @@
 ---
 title: "Every page's browser title is just \"Callback Box\", so tabs and history are unidentifiable"
-workstream: unattached
+workstream: tab-identity
+resolution: implemented
 area: callback-box
-needs: [design]
 labels: [ui, navigation]
 filed-by: agent
 discovered-by: Ian
@@ -61,7 +61,7 @@ than invisible across nineteen.
 
 This is the third instance this month of a rule kept by discipline rather than
 by structure — see the
-[AGENTS.md pairing](../closed/bugs/2026-08-22-agents-md-missing-from-claude-md-special-cases.md)
+[AGENTS.md pairing](../bugs/2026-08-22-agents-md-missing-from-claude-md-special-cases.md)
 issue, which argued the same thing about filename constants. Whatever is chosen
 here, the test is: *when someone adds page twenty, what makes them supply a
 title?*
@@ -72,3 +72,23 @@ title?*
 that is invisible; with nineteen it becomes worth checking, since a restore can
 briefly reinstate a stale title during navigation, and nested callers make
 "previous" ambiguous. Route-owned titles would sidestep this entirely.
+
+## Resolved
+
+Titles are `<page> — <box>`, page first (browsers truncate tabs to about
+twenty characters) and no app name — it appears only where there is no box.
+The boxholder chose that shape over box-first and over keeping a
+`Callback Box` suffix, and declined a worktree/checkout marker.
+
+Structure rather than convention: `StaticDataRouteOption` is augmented with a
+required `title`, which makes TanStack Router's `staticData` mandatory on every
+route — route twenty does not typecheck until it says what it is called, and a
+route that names nothing says `title: null` out loud. Pages whose real name is
+data they load publish it through `usePageTitle`; the route's static title
+stands in until it arrives. `HeadContent` was considered and passed over: no
+route here uses a loader, so a route `head()` could not see a chat's label or
+the box's display name, and mixing it with a hook would have meant two writers
+of `document.title`.
+
+The save/restore this issue flagged is gone with the old hook — one writer,
+recomputing from the current route.
