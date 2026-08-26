@@ -153,6 +153,24 @@ async function runStep(step: Step, deps: StepDeps): Promise<void> {
       ctx.apply((prev) => ({ ...prev, chromePx: step.px }));
       await settle();
       return;
+    case "growTwiceInOnePass": {
+      // A one-shot observer created after the controller's runs after it in
+      // the same pass; a layout change made inside it is delivered in that
+      // pass's next iteration — before any scroll event.
+      const content = el.firstElementChild;
+      if (!content) throw new HarnessNotMountedError();
+      let fired = false;
+      const ro = new ResizeObserver(() => {
+        if (fired) return;
+        fired = true;
+        ro.disconnect();
+        flushApply(() => ctx.apply((prev) => growLast(prev, step.againPx)));
+      });
+      ro.observe(content);
+      ctx.apply((prev) => growLast(prev, step.px));
+      await settle();
+      return;
+    }
     case "imageDecode":
       ctx.apply((prev) => growAt(prev, { index: step.msgIndex, by: step.px }));
       await settle();
