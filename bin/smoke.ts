@@ -47,6 +47,8 @@ import { parseEnv } from "node:util";
 import { request as httpRequest } from "node:http";
 import { fileURLToPath } from "node:url";
 import { BrowseSession } from "../callback-box/test/tours/tour-lib/browse.js";
+import { VIEWPORTS } from "../callback-box/test/tours/tour-lib/types.js";
+import { invariant } from "../callback-box/src/lib/invariant.js";
 import {
   SmokeFailure,
   cardViewRendered,
@@ -461,6 +463,17 @@ function buildSteps(input: {
     id: "chat-shell",
     name: "the chat page renders its shell",
     run: async () => {
+      // The first real navigation after `restart`'s session.close() launches a
+      // fresh Chrome window at whatever size the browser defaults to, which is
+      // narrower than this app's desktop breakpoint — every step below reads
+      // the composer and app bar as they render on desktop. about:blank first,
+      // same as tour-lib's own runner, so the viewport applies before anything
+      // real ever paints.
+      const desktopViewport = VIEWPORTS.find((v) => v.name === "desktop");
+      invariant(desktopViewport !== undefined, "tour-lib dropped its desktop viewport spec");
+      await session.open("about:blank", { noWait: true });
+      await session.setViewport(desktopViewport.width, desktopViewport.height);
+
       await session.open(`${baseUrl}/chat`);
       const snapshot = await session.snapshot({ interactiveOnly: true });
       if (!hasDomId(snapshot, "cb-composer-input") || !hasDomId(snapshot, "cb-nav-place")) {
