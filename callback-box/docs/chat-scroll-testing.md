@@ -125,6 +125,24 @@ reports "history is in the DOM" from an effect that runs *before* the
 ResizeObserver cycle which measures it, so the hold lapses on a timer. A thread
 that lands at the top means the hold ended before the first content cycle.
 
+### 2.4b Opening a thread whose last turn carries images
+
+The boxholder's 2026-08-26 report: with images in the transcript the page
+opened above the bottom (web and iOS). An `<img>` has no height until its
+bytes land, so the last turn grows well after the first render; the open hold
+must outlast that. Use a session whose final reply embeds several images, and
+open it **cold** (a hard reload, so the images are fetched, not served from
+the memory cache):
+
+```bash
+bin/browse open "/chat?session=<session-with-images-in-the-last-reply>"
+sleep 4
+bin/browse eval '(()=>{const s=document.querySelector("[data-testid=chat-scroller]");const imgs=[...s.querySelectorAll("img")];return JSON.stringify({imgs:imgs.length,loaded:imgs.filter(i=>i.complete&&i.naturalHeight>0).length,fb:Math.round(s.scrollHeight-s.scrollTop-s.clientHeight),btn:!!document.querySelector("#cb-chat-scroll-latest")});})()'
+# expect loaded === imgs, fb ~0, btn:false
+```
+
+The harness scenario for this is `open-thread-late-image-at-bottom`.
+
 ### 2.5 Content loading above must not shift the view
 
 The regression for async-resizing embeds and for "load older". Scroll to the

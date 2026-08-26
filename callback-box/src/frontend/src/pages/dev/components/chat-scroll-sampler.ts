@@ -22,7 +22,7 @@ export interface RunContext {
   anchorSend: () => void;
   scrollToBottom: (opts?: { behavior?: ScrollBehavior }) => void;
   openThread: () => void;
-  settleOpen: () => void;
+  settleOpen: (opts?: { until?: Promise<void> }) => void;
   /** Programmatic writes the controller has made since the page loaded. */
   writeCount: () => number;
   apply: (fn: (prev: HarnessContent) => HarnessContent) => void;

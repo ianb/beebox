@@ -43,8 +43,6 @@ const MAX_LOG = 4000;
  * undoes the first user scroll, making a run depend on what ran before it.
  */
 const RESET_SETTLE_MS = 200;
-/** …and then let the controller's open-thread hold lapse before step one. */
-const OPEN_LAPSE_MS = 500;
 
 interface HarnessApi {
   scenarios: () => string[];
@@ -237,8 +235,11 @@ function HarnessFrame({ useController }: { useController: HarnessControllerHook 
     reset();
     await new Promise<void>((resolve) => window.setTimeout(resolve, RESET_SETTLE_MS));
     settleOpen();
-    await new Promise<void>((resolve) => window.setTimeout(resolve, OPEN_LAPSE_MS));
-  }, [reset, settleOpen]);
+    // End the open-thread hold the way a reader does — a button press — rather
+    // than waiting out its window, which is sized for a slow image fetch, not
+    // for a test loop. Scenarios that exercise the hold open a thread themselves.
+    toBottom();
+  }, [reset, settleOpen, toBottom]);
 
   useEffect(() => {
     window.__scrollHarness = {

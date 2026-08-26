@@ -41,8 +41,10 @@ export type Step =
   | { k: "button"; behavior: ScrollBehavior }
   /** Open a thread: empty the list and start the bounded open-phase hold. */
   | { k: "openThread" }
-  /** The first history render has landed — end the hold. */
-  | { k: "settleOpen" }
+  /** The first history render has landed — end the hold. With `awaitImage`,
+   *  the hold waits for the next `imageDecode` step first, the way the real
+   *  controller waits for the transcript's nearby images. */
+  | { k: "settleOpen"; awaitImage?: boolean }
   /** Mobile keyboard: shrink the frame, hold, restore. */
   | { k: "keyboardClamp"; px: number; holdMs: number }
   | { k: "wait"; ms: number };
@@ -292,6 +294,47 @@ export const SCENARIOS: Scenario[] = [
       { k: "append", px: 300, role: "assistant" },
       { k: "wait", ms: 120 },
       { k: "settleOpen" },
+      { k: "wait", ms: 200 },
+    ],
+    expect: {
+      finalAtBottom: true,
+      finalFromBottomAtMost: 4,
+      finalHasUnseenContent: false,
+    },
+  },
+  {
+    name: "open-thread-late-image-at-bottom",
+    description: "Rule 1 with images: the history lands and settles, then an image in the last message finishes fetching well after the settle window. The untouched reader is still at the bottom.",
+    steps: [
+      { k: "openThread" },
+      { k: "append", px: 420, role: "assistant" },
+      { k: "append", px: 60, role: "user" },
+      { k: "append", px: 120, role: "assistant" },
+      { k: "settleOpen", awaitImage: true },
+      { k: "wait", ms: 600 },
+      { k: "imageDecode", msgIndex: 2, px: 500 },
+      { k: "wait", ms: 200 },
+    ],
+    expect: {
+      finalAtBottom: true,
+      finalFromBottomAtMost: 4,
+      finalHasUnseenContent: false,
+    },
+  },
+  {
+    name: "reopen-before-images-land",
+    description: "A session switch while the previous thread's images are still loading. The stale thread's image lands after the new one opened; it must not end the new thread's hold, whose own image lands later.",
+    steps: [
+      { k: "openThread" },
+      { k: "append", px: 300, role: "assistant" },
+      { k: "settleOpen", awaitImage: true },
+      { k: "openThread" },
+      { k: "append", px: 420, role: "assistant" },
+      { k: "append", px: 120, role: "assistant" },
+      { k: "settleOpen", awaitImage: true },
+      { k: "imageDecode", msgIndex: 0, px: 40 },
+      { k: "wait", ms: 600 },
+      { k: "imageDecode", msgIndex: 1, px: 500 },
       { k: "wait", ms: 200 },
     ],
     expect: {
