@@ -36,7 +36,9 @@ export type ProbeVerdict =
   | { kind: "ok" }
   | { kind: "failed"; phase: string; message: string; stderr: string }
   | { kind: "unauthorized" }
-  | { kind: "unexpected"; status: number };
+  | { kind: "unexpected"; status: number }
+  /** 200, but not the backend's health payload — vite answered, Fastify did not. */
+  | { kind: "not-backend" };
 
 /** The router's failed-to-start page, which is HTML and says so in its title. */
 function isFailedStartPage(body: string): boolean {
@@ -90,6 +92,74 @@ export function readProbe(input: { status: number; body: string }): ProbeVerdict
   return { kind: "unexpected", status: input.status };
 }
 
+/**
+ * `readProbe` for `/api/health`, which is the only cheap request that crosses
+ * into the box's Fastify process: vite serves every non-API path itself, so a
+ * 200 on a page path proves only that vite is up. A 200 that is not a health
+ * payload is therefore not "ok" — it is the request having stopped short.
+ */
+export function readHealthProbe(input: { status: number; body: string }): ProbeVerdict {
+  const verdict = readProbe(input);
+  if (verdict.kind !== "ok") return verdict;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(input.body);
+  } catch (_e) {
+    return { kind: "not-backend" };
+  }
+  const status = typeof parsed === "object" && parsed !== null ? (parsed as { status?: unknown }).status : undefined;
+  return typeof status === "string" ? { kind: "ok" } : { kind: "not-backend" };
+}
+
+/**
+ * Whether a verdict is worth another poll while the box is still coming up.
+ * A rendered failed-to-start page is terminal (retrying re-reads the same
+ * captured error), and so is our own credential being refused. A 502, a
+ * timeout, or vite answering before Fastify is exactly what a box mid-boot
+ * looks like — and mid-reload too: the post-commit CLI rebuild makes running
+ * box children restart themselves, so a walk started right after a landing
+ * meets the same window.
+ */
+export function isRetryableVerdict(verdict: ProbeVerdict): boolean {
+  switch (verdict.kind) {
+    case "ok":
+    case "failed":
+    case "unauthorized":
+      return false;
+    case "unexpected":
+    case "not-backend":
+      return true;
+    default:
+      return neverProbe(verdict);
+  }
+}
+
+/**
+ * Poll `attempt` until it is `ok`, terminal, or the deadline passes. `attempt`
+ * returns null when the router refused the connection outright, which
+ * mid-restart it briefly does; only a refusal that outlasts the window is the
+ * router being down. Pure over its inputs so the retry policy is testable
+ * without a router.
+ */
+export async function pollUntilReady(input: {
+  attempt: () => Promise<ProbeVerdict | null>;
+  until: number;
+  now: () => number;
+  sleep: (ms: number) => Promise<void>;
+  pollMs: number;
+}): Promise<{ verdict: ProbeVerdict | null; timedOut: boolean }> {
+  let last: ProbeVerdict | null = null;
+  while (input.now() < input.until) {
+    const verdict = await input.attempt();
+    if (verdict !== null) {
+      if (!isRetryableVerdict(verdict)) return { verdict, timedOut: false };
+      last = verdict;
+    }
+    await input.sleep(input.pollMs);
+  }
+  return { verdict: last, timedOut: true };
+}
+
 /** The failure a probe verdict deserves; null when it passed. */
 export function probeFailure(input: {
   verdict: ProbeVerdict;
@@ -113,6 +183,11 @@ export function probeFailure(input: {
     case "unexpected":
       return new SmokeFailure(
         `${url} answered ${String(verdict.status)}, expected 200`,
+        input.body.slice(0, 2000),
+      );
+    case "not-backend":
+      return new SmokeFailure(
+        `${url} answered 200 but not with a health payload — the request did not reach the backend`,
         input.body.slice(0, 2000),
       );
     default:
