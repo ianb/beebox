@@ -13,6 +13,7 @@
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
+import { existsSync } from "node:fs";
 import { execa } from "execa";
 
 const TICK_LABEL = "com.callback-box.schedules";
@@ -28,7 +29,31 @@ function logFile(): string {
   return path.join(os.homedir(), "Library", "Logs", "callback-box-schedules.log");
 }
 
-function plistBody(input: { repoRoot: string; log: string }): string {
+/**
+ * launchd starts jobs with a PATH of `/usr/bin:/bin:/usr/sbin:/sbin` — no
+ * version-managed node, no `~/.local/bin` agent CLIs — and a cwd of `/`, where
+ * `--import tsx` resolves nothing (hence `WorkingDirectory`). Without these the tick
+ * died on `exec: node: not found` at every interval and nothing ever ran
+ * (found 2026-08-25, after the tick had "never" ticked). Baked at install from
+ * the node that ran `install` and the agent CLIs it can see; a node upgrade
+ * that moves the binary needs `bin/schedules install` again — `bin/doctor`'s
+ * stale-heartbeat check is what notices.
+ */
+export function tickPath(input: { execPath: string; env: NodeJS.ProcessEnv }): string {
+  const dirs = [path.dirname(input.execPath), path.join(os.homedir(), ".local", "bin")];
+  for (const cli of ["claude", "codex"]) {
+    const found = (input.env.PATH ?? "").split(":").find((d) => d !== "" && existsSync(path.join(d, cli)));
+    if (found !== undefined) dirs.push(found);
+  }
+  dirs.push("/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin", "/usr/sbin", "/sbin");
+  return [...new Set(dirs)].join(":");
+}
+
+function xmlEscape(value: string): string {
+  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;");
+}
+
+function plistBody(input: { repoRoot: string; log: string; pathEnv: string }): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -40,6 +65,9 @@ function plistBody(input: { repoRoot: string; log: string }): string {
     <string>${input.repoRoot}/bin/schedules</string>
     <string>tick</string>
   </array>
+  <key>WorkingDirectory</key><string>${input.repoRoot}</string>
+  <key>EnvironmentVariables</key>
+  <dict><key>PATH</key><string>${xmlEscape(input.pathEnv)}</string></dict>
   <key>StartInterval</key><integer>${String(TICK_INTERVAL_SECONDS)}</integer>
   <key>StandardOutPath</key><string>${input.log}</string>
   <key>StandardErrorPath</key><string>${input.log}</string>
@@ -112,7 +140,11 @@ export async function installTick(input: { repoRoot: string }): Promise<number> 
   const file = plistPath();
   await fs.mkdir(path.dirname(file), { recursive: true });
   await fs.mkdir(path.dirname(logFile()), { recursive: true });
-  await fs.writeFile(file, plistBody({ repoRoot: input.repoRoot, log: logFile() }), "utf8");
+  await fs.writeFile(file, plistBody({
+      repoRoot: input.repoRoot,
+      log: logFile(),
+      pathEnv: tickPath({ execPath: process.execPath, env: process.env }),
+    }), "utf8");
 
   // Boot the retired jobs out AND delete their plists. A booted-out label whose
   // file survives comes back at the next login — the plist is what launchd
