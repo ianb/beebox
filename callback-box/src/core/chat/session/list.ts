@@ -24,8 +24,8 @@ import { loadHistoryEntries } from "./history.js";
 import { resolveChatEngine } from "./engine.js";
 import { deriveTranscriptState, type TranscriptState } from "./availability.js";
 import { listCodexThreadMetadata, type CodexThreadMetadata } from "./codex-transcript.js";
+import { containedSessionCwd } from "./transcript-paths.js";
 import type { AgentEngine } from "../../box/config.js";
-import * as path from "node:path";
 
 /**
  * Chats resolved at once — see {@link mapInBatchesSettled}. `resolveSessionLabel`
@@ -146,9 +146,9 @@ async function enumerateChats(boxRoot: string): Promise<ChatEnumeration> {
   }));
   const codexCwds = husks
     .filter((husk) => engines.get(husk.session) === "codex")
-    .map((husk) => husk.contextDir === undefined || husk.contextDir === ""
-      ? boxRoot
-      : path.join(boxRoot, husk.contextDir));
+    // Contained, like every other resolution of a husk's `context-dir`: the
+    // field is a card value, and an escaping one reads from the box root.
+    .map((husk) => containedSessionCwd(boxRoot, husk.contextDir));
   const codexThreads = codexCwds.length === 0
     ? new Map<string, CodexThreadMetadata>()
     : await listCodexThreadMetadata(boxRoot, [...new Set(codexCwds)]);
