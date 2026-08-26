@@ -487,6 +487,7 @@ tests:
       content. Failure modes: pointing to raw JSONL files in ~/.claude, web UI
       navigation, or claiming no such command exists.
 
+  # Status (2026-08-26): 1/1 pass on first run (claude, 1 file read, 47k ctx).
   - id: chat-husk-rename-safe
     prompt: >
       This chat card under store/chat/web/ has a date-and-hex filename. I want
