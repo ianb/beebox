@@ -26,3 +26,9 @@ Probably function-shaped is the better default, with domain-shaped reserved for 
 - Tasks small enough that subagent spawning overhead exceeds the wall-clock savings.
 
 Connected concern: subagents in callback-box don't inherit CLAUDE.md or rules (per [Claude Code Memory Concerns](2026-03-04-claude-code-memory-concerns.md) entry), so any subagent strategy has to pass relevant context explicitly. This makes domain-shaped subagents harder to build well than the surface tip suggests.
+
+**2026-08-25 addendum.** OpenCode caps nesting with `subagent_depth` (default 1,
+enforced by walking `parentID` in `tool/task.ts`) and derives child permissions so
+subagents can't spawn subagents or write todos unless explicitly allowed. callback-box
+has no depth cap; whatever shape wins here should carry one, as a cost guard. See
+[research/opencode/inspiration.md](../../research/opencode/inspiration.md).
