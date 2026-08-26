@@ -7,10 +7,10 @@
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readdirSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
-import { buildGraphFrom, testEntrypoints, type GraphConfig } from "./test-graph.js";
+import { buildGraphCached, buildGraphFrom, testEntrypoints, type GraphConfig } from "./test-graph.js";
 import { scopedChanges, type TestGraph } from "./test-graph-query.js";
 
 interface Fixture {
@@ -230,4 +230,110 @@ test("test/manual is excluded, mirroring .taprc", async () => {
       assert.deepEqual([...graph.tests.keys()], ["pkg/test/a.doctest.md"]);
     },
   );
+});
+
+// ── the content-keyed cache ─────────────────────────────────────────────────
+
+/** A fixture plus a cache dir of its own, so runs cannot see each other's. */
+async function withCache(
+  files: Record<string, string>,
+  fn: (input: {
+    fx: Fixture;
+    cacheDir: string;
+    build: () => Promise<TestGraph>;
+    touch: (rel: string) => void;
+    write: (rel: string, contents: string) => void;
+  }) => Promise<void>,
+): Promise<void> {
+  const fx = fixture(files);
+  const cacheDir = join(fx.root, "cache");
+  const packageRoot = join(fx.root, "pkg");
+  try {
+    await fn({
+      fx,
+      cacheDir,
+      // Entrypoints are re-globbed per call, exactly as the real callers do.
+      build: () =>
+        buildGraphCached({ ...fx.config, entrypoints: testEntrypoints(packageRoot) }, { cacheDir }),
+      touch: (rel) => {
+        const now = new Date(Date.now() + 5000);
+        utimesSync(join(packageRoot, rel), now, now);
+      },
+      write: (rel, contents) => {
+        mkdirSync(dirname(join(packageRoot, rel)), { recursive: true });
+        writeFileSync(join(packageRoot, rel), contents);
+      },
+    });
+  } finally {
+    fx.cleanup();
+  }
+}
+
+/** Everything about a graph except where it came from and how long it took. */
+function shape(graph: TestGraph): unknown {
+  return {
+    tests: [...graph.tests].map(([e, deps]) => [e, [...deps].sort()]).sort(),
+    universe: [...graph.universe].sort(),
+    unresolved: [...graph.unresolved].sort(),
+    ambiguousEdges: graph.ambiguousEdges,
+  };
+}
+
+const CACHE_FILES = {
+  "test/a.doctest.md": [
+    "# a", "", "```ts setup", 'import { top } from "../src/top.js";', "```", "",
+    "```ts", "top()", "=> 1", "```", "",
+  ].join("\n"),
+  "src/top.ts": "export const top = () => 1;\n",
+};
+
+test("a second call reuses the cached graph rather than rebuilding", async () => {
+  await withCache(CACHE_FILES, async ({ build }) => {
+    const cold = await build();
+    const warm = await build();
+    assert.equal(cold.cached, false);
+    assert.equal(warm.cached, true);
+    assert.deepEqual(shape(warm), shape(cold));
+  });
+});
+
+test("touching a file in the universe invalidates the cache", async () => {
+  await withCache(CACHE_FILES, async ({ build, touch }) => {
+    await build();
+    touch("src/top.ts");
+    assert.equal((await build()).cached, false);
+  });
+});
+
+test("a new test entrypoint invalidates the cache", async () => {
+  // The gap this closes: a new file is in no cached universe, so only the
+  // re-globbed entrypoint list can notice it.
+  await withCache(CACHE_FILES, async ({ build, write }) => {
+    await build();
+    write("test/b.doctest.md", ["# b", "", "```ts", "1", "=> 1", "```", ""].join("\n"));
+    const rebuilt = await build();
+    assert.equal(rebuilt.cached, false);
+    assert.ok(rebuilt.tests.has("pkg/test/b.doctest.md"));
+  });
+});
+
+test("a corrupt cache file is rebuilt, not thrown", async () => {
+  await withCache(CACHE_FILES, async ({ build, cacheDir }) => {
+    const cold = await build();
+    const [name] = readdirSync(cacheDir);
+    assert.ok(name !== undefined, "expected the cold build to have written a cache file");
+    writeFileSync(join(cacheDir, name), "{not json");
+    const rebuilt = await build();
+    assert.equal(rebuilt.cached, false);
+    assert.deepEqual(shape(rebuilt), shape(cold));
+  });
+});
+
+test("--no-cache rebuilds even on a hit, and refreshes the cache", async () => {
+  await withCache(CACHE_FILES, async ({ fx, cacheDir }) => {
+    const config = { ...fx.config, entrypoints: testEntrypoints(join(fx.root, "pkg")) };
+    await buildGraphCached(config, { cacheDir });
+    assert.equal((await buildGraphCached(config, { cacheDir, cache: false })).cached, false);
+    assert.equal((await buildGraphCached(config, { cacheDir })).cached, true);
+  });
 });

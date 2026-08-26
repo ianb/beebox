@@ -18,6 +18,8 @@ export interface TestGraph {
   /** how many specifiers had more than one candidate (all were kept as edges) */
   ambiguousEdges: number;
   buildMs: number;
+  /** true when this graph came from the content-keyed cache rather than esbuild */
+  cached: boolean;
 }
 
 /**
