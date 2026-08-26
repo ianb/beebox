@@ -1,6 +1,6 @@
 ---
 title: "Chat backend port hygiene: keep SDK types inside the port, own our transcripts"
-workstream: backend-research
+workstream: chat-session-identity
 area: callback-box
 filed-by: agent
 discovered-in: worktree-backend-research — deep-pass backend-alternatives research

@@ -1,6 +1,6 @@
 ---
 title: "encodeProjectDir collapses `_` and `.`; Claude Code preserves them, so session discovery misses"
-workstream: unattached
+workstream: chat-session-identity
 area: callback-box
 priority: important
 filed-by: agent

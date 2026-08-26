@@ -1,6 +1,6 @@
 ---
 title: "Chat thread management: delete, rename, archive"
-workstream: open-source-readiness
+workstream: chat-session-identity
 area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — first-run UX audit for the soft launch

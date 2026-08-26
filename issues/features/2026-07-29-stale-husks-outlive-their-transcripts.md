@@ -1,6 +1,6 @@
 ---
 title: "Husks outlive their transcripts, and nothing handles the resulting husk graveyard"
-workstream: compacting
+workstream: chat-session-identity
 area: callback-box
 filed-by: agent
 discovered-in: worktree-compacting — eval'ing chat review against real boxes

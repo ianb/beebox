@@ -1,6 +1,6 @@
 ---
 title: "parseSessionLog silently truncates transcripts at 10,000 entries"
-workstream: compacting
+workstream: chat-session-identity
 area: callback-box
 filed-by: agent
 discovered-in: worktree-compacting — while designing chat review (docs/implemented-plans/chat-review.md)
