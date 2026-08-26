@@ -7,12 +7,22 @@ convention and a lookup hint, nothing more.
 `reconcileChatHusks` gives every history entry a husk, skipping ghosts
 whose transcript is gone.
 
+Creating a husk also stamps its **provenance**: which engine ran the chat, and
+which machine holds the transcript (`session/origin.ts`). Written at create
+only — a value already on a card is never restamped.
+
 ```ts setup
-import { mkdir, rename, writeFile, readFile as readFsFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { mkdir, mkdtemp, rename, writeFile, readFile as readFsFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { tmpdir } from "node:os";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { ensureChatHusk, findChatHuskEntry, reconcileChatHusks, listChatHusks } from "../../src/core/chat/husk.js";
 import { getSessionLogPath } from "../../src/core/chat/session/transcript-paths.js";
+import { localOrigin } from "../../src/core/chat/session/origin.js";
+
+// Every husk written here records this machine's origin id; point that at a
+// scratch file so a test run neither reads nor mints the real one.
+process.env["CB_ORIGIN_ID_FILE"] = join(await mkdtemp(join(tmpdir(), "cb-origin-")), "origin-id");
 ```
 
 ## ensure creates the husk, named by date + short session id
@@ -35,7 +45,15 @@ await box.read(path)
 => ---
 session: 59fc20dd-fe6d-45cb-8f37-f1508a5a0869
 context-dir: store/projects
+engine: claude
+origin: «*»
+origin-name: «*»
 ---
+
+const card = await box.read(path);
+const { id, name } = await localOrigin();
+card.includes(`origin: ${id}`) && card.includes(`origin-name: ${name}`)
+=> true
 ```
 
 ## ensure is idempotent on the `session` field
@@ -98,6 +116,9 @@ const titledHusk = await ensureChatHusk(box.root, { sessionId: titled, date: new
 await box.read(titledHusk)
 => ---
 session: cccc1111-2222-3333-4444-555566667777
+engine: claude
+origin: «*»
+origin-name: «*»
 title: Please reply with just the word ok.
 ---
 ```

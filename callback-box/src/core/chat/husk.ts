@@ -14,6 +14,8 @@ import { parse as parseYaml } from "yaml";
 import { splitCardContent } from "../../cards/index.js";
 import { createChatHuskTemplate } from "../../schemas/chat.js";
 import { loadHistoryEntries, resolveSessionLogPath } from "./session/history.js";
+import { localOrigin } from "./session/origin.js";
+import { loadAgentEngine, type AgentEngine } from "../box/config.js";
 import { extractSnippet } from "../../cli/lib/session-text.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 import { isRecord } from "../card-io.js";
@@ -96,17 +98,28 @@ async function readSnippetTitle(boxRoot: string, sessionId: string): Promise<str
  * (defaults to now; backfill passes the transcript mtime so old husks sort by
  * when the chat happened).
  */
-export async function ensureChatHusk(boxRoot: string, opts: { sessionId: string; contextDir?: string; date?: Date }): Promise<string> {
+export async function ensureChatHusk(boxRoot: string, opts: { sessionId: string; contextDir?: string; engine?: AgentEngine; date?: Date }): Promise<string> {
   const existing = await findChatHuskEntry(boxRoot, opts.sessionId);
   if (existing !== null) return existing.path;
 
   const title = await readSnippetTitle(boxRoot, opts.sessionId);
+  // Provenance is written at CREATE only. The transcript this husk points at
+  // is being written on this machine right now, so this is the one moment the
+  // origin is known without inference — and a value already on a card is never
+  // second-guessed (a resume from another checkout must not restamp it).
+  const origin = await localOrigin();
+  // Same fallback as `appendHistory` (`session/history.ts`), not a second
+  // default: an engine the caller didn't name is whatever the box runs now.
+  const engine = opts.engine ?? await loadAgentEngine(boxRoot);
   const relPath = `${CHAT_HUSK_DIR}/${huskFileName(opts.sessionId, opts.date ?? new Date())}`;
   const absPath = path.join(boxRoot, relPath);
   await fs.mkdir(path.dirname(absPath), { recursive: true });
   const content = createChatHuskTemplate({
     session: opts.sessionId,
     ...(opts.contextDir !== undefined ? { contextDir: opts.contextDir } : {}),
+    engine,
+    origin: origin.id,
+    originName: origin.name,
     ...(title !== null ? { title } : {}),
   });
   // `wx` so a concurrent ensure can't clobber; losing the race is success.
@@ -322,6 +335,7 @@ export async function reconcileChatHusks(boxRoot: string): Promise<void> {
     await ensureChatHusk(boxRoot, {
       sessionId: entry.id,
       ...(entry.contextDir !== undefined ? { contextDir: entry.contextDir } : {}),
+      engine: entry.engine,
       date: mtime,
     });
   }
