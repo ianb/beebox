@@ -1,6 +1,6 @@
 /**
  * One dead chat's row: a chat that exists as a card but has no transcript on
- * this machine (`docs/plans/chat-session-identity.md`, Track 3).
+ * this machine (`docs/implemented-plans/chat-session-identity.md`, Track 3).
  *
  * A sibling of `SessionRow` rather than a mode of it: every affordance on that
  * row — the label link, the resume — goes to `/chat?session=`, and there is

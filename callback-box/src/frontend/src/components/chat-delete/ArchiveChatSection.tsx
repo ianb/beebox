@@ -5,7 +5,7 @@
  * differently — the boxholder is looking at a chat they no longer want in
  * their lists — but it removes nothing: the card moves to
  * `store/chat/archive/`, which is enough to take it out of every list and out
- * of the review corpus (`docs/plans/chat-session-identity.md`, Track 3).
+ * of the review corpus (`docs/implemented-plans/chat-session-identity.md`, Track 3).
  *
  * Offered only for a chat whose transcript is gone. Archiving a live chat
  * would hide a conversation that can still be opened, so the state is read

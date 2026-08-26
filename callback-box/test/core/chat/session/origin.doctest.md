@@ -1,7 +1,7 @@
 # `localOrigin` — which machine holds a chat's transcript
 
 A transcript lives in one engine store on one machine. `localOrigin()` names
-that machine so a husk can record it (`docs/plans/chat-session-identity.md`,
+that machine so a husk can record it (`docs/implemented-plans/chat-session-identity.md`,
 Track 2): a stable UUID minted once at `~/.local/share/cb/origin-id`, plus the
 current hostname as a display label. The hostname is never the id — a laptop
 renames itself when its network location changes.

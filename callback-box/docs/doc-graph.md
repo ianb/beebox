@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-08-26T06:12:18Z
-Total documents: 306
+Generated: 2026-08-26T06:56:33Z
+Total documents: 308
 
 ## Issues
 
@@ -80,7 +80,7 @@ These references point to files that don't exist.
 
 #### CLAUDE.md
 
-Title: "Callback Box" | 183 lines
+Title: "Callback Box" | 184 lines
 
 Referenced by:
 - CLAUDE.md:9 (mention) — **Dev server** — one shared router serves every checkout at `http://localhost:3210/<main|worktree>/<box>/...` (lazy star
@@ -345,6 +345,7 @@ References:
 - → docs/plans/pdf-intake-design.md (mention)
 - → docs/plans/source-editor.md (mention)
 - → docs/plans/interface-as-cards.md (mention)
+- → docs/attribution.md (mention)
 - → docs/glossary.md (mention)
 - → code-style.md (at-include)
 
@@ -354,7 +355,7 @@ Title: "Code Style" | 118 lines
 
 Referenced by:
 - CLAUDE.md:123 (mention) — When you get corrected on a convention, pattern, or workflow that wasn't documented, update CLAUDE.md, code-style.md, fr
-- CLAUDE.md:182 (at-include) — @code-style.md
+- CLAUDE.md:183 (at-include) — @code-style.md
 - docs/engineering-principles.md:4 (link) — They sit above the mechanical rules: [`code-style.md`](../code-style.md) says
 - docs/implemented-plans/agent-applied-migrations.md:90 (mention) — - `callback-box/code-style.md` — max 2 positional params (named options), no
 - docs/implemented-plans/agent-field-tests.md:40 (mention) — - `callback-box/code-style.md` — mechanical rules for all new code.
@@ -473,7 +474,7 @@ References:
 
 #### frontend.md
 
-Title: "Frontend Conventions" | 142 lines
+Title: "Frontend Conventions" | 153 lines
 
 Referenced by:
 - CLAUDE.md:66 (mention) — src/components/ui/  Shared UI primitives (Button, Text, Stack, Image, ...) — see frontend.md
@@ -497,7 +498,7 @@ Referenced by:
 - docs/plans/invite-links-and-password-change.md:59 (mention) — - `frontend.md:32-85`: use existing primitives and cover loading, errors,
 - docs/plans/narration-mode.md:197 (mention) — Color and primitive choices follow the box's semantic palette (see `frontend.md`); the accent role is appropriate.
 - docs/plans/operator-member-password-reset.md:101 (mention) — - **Frontend primitives.** `frontend.md:32-43` requires existing `Button`,
-- frontend.md:141 (mention) — New primitives live in `components/ui/<Name>.tsx`, accept `className`, merge via `cn()`, and document their semantic rol
+- frontend.md:152 (mention) — New primitives live in `components/ui/<Name>.tsx`, accept `className`, merge via `cn()`, and document their semantic rol
 - ../.claude/skills/cb-frontend/SKILL.md:10 (mention) — semantic palette, the `className` rule — lives in **`callback-box/frontend.md`**;
 - ../issues/closed/bugs/2026-07-19-landmark-menu-overflows-mobile.md:72 (mention) — read `frontend.md` before reaching for utility classes.
 - ../issues/closed/bugs/2026-08-03-landmark-menu-items-too-tight-mobile.md:28 (mention) — (`restrict-component-classes`), not a wrapper — read `docs/frontend.md`. Verify on a
@@ -509,6 +510,7 @@ Referenced by:
 References:
 - → code-style.md (mention)
 - → docs/data-source-tagging.md (mention)
+- → docs/attribution.md (mention)
 - → frontend.md (mention)
 
 #### README.md
@@ -755,6 +757,14 @@ References:
 - → docs/implemented-plans/asset-manifests.md (link)
 - → docs/plans/asset-offbox-storage.md (link)
 
+#### docs/attribution.md
+
+Title: "Third-party assets and their attribution" | 32 lines
+
+Referenced by:
+- CLAUDE.md:179 (mention) — | Third-party asset attribution | `docs/attribution.md` |
+- frontend.md:40 (mention) — rejected; see `docs/attribution.md` for why the artwork is a dependency.
+
 #### docs/box-layout.md
 
 Title: "Box Layout" | 219 lines
@@ -864,15 +874,15 @@ References:
 
 #### docs/chat-review.md
 
-Title: "Chat review" | 154 lines
+Title: "Chat review" | 172 lines
 
 Referenced by:
 - CLAUDE.md:169 (mention) — | Chat review (nightly titles + summaries) | `docs/chat-review.md` |
-- ../issues/bugs/2026-07-28-renamed-husk-duplicates-on-backfill.md:71 (link) — [chat review](../../callback-box/docs/chat-review.md): its journal is keyed by
-- ../issues/bugs/2026-07-29-chat-review-journal-is-machine-local.md:10 (link) — [Chat review](../../callback-box/docs/chat-review.md) keeps two pieces of state
+- ../issues/closed/bugs/2026-07-28-renamed-husk-duplicates-on-backfill.md:82 (link) — [chat review](../../../callback-box/docs/chat-review.md): its journal is keyed by
+- ../issues/closed/bugs/2026-07-29-chat-review-journal-is-machine-local.md:12 (link) — [Chat review](../../../callback-box/docs/chat-review.md) keeps two pieces of state
 - ../issues/closed/bugs/2026-08-01-chat-review-capped-at-max-session-entries.md:41 (mention) — - Accept the cap and say so in `docs/chat-review.md`.
 - ../issues/closed/features/2026-05-19-overnight-session-compaction.md:11 (link) — See [docs/chat-review.md](../../../callback-box/docs/chat-review.md) for the
-- ../issues/features/2026-07-29-stale-husks-outlive-their-transcripts.md:77 (link) — - [Chat review](../../callback-box/docs/chat-review.md) skips it too (correctly —
+- ../issues/closed/features/2026-07-29-stale-husks-outlive-their-transcripts.md:79 (link) — - [Chat review](../../../callback-box/docs/chat-review.md) skips it too (correctly —
 
 References:
 - → docs/implemented-plans/chat-review.md (link)
@@ -1094,6 +1104,7 @@ Referenced by:
 - docs/implemented-plans/capture-mode.md:22 (mention) — - `docs/engineering-principles.md` — findings trace mostly to: **#3**
 - docs/implemented-plans/chat-header-chips.md:63 (mention) — - `docs/engineering-principles.md` — principle 2 (exhaustiveness; frontend
 - docs/implemented-plans/chat-review.md:42 (mention) — - **`docs/engineering-principles.md`** — findings trace to:
+- docs/implemented-plans/chat-session-identity.md:32 (mention) — - `docs/engineering-principles.md` #1 types are structure (`:12`) — transcript
 - docs/implemented-plans/codex-sdk-backend.md:44 (mention) — (`docs/engineering-principles.md:12`).
 - docs/implemented-plans/coined-chat-ids.md:41 (mention) — - `docs/engineering-principles.md` #2 (exhaustiveness is enforced, not hoped
 - docs/implemented-plans/commit-provenance-trailers.md:23 (mention) — - `callback-box/docs/engineering-principles.md` — #3 validate at boundaries
@@ -1200,7 +1211,7 @@ Referenced by:
 Title: "Glossary" | 57 lines
 
 Referenced by:
-- CLAUDE.md:179 (mention) — | Glossary | `docs/glossary.md` |
+- CLAUDE.md:180 (mention) — | Glossary | `docs/glossary.md` |
 - docs/design/trust.md:40 (mention) — how firmly an inferred belief is held (`../glossary.md`, retrospective).
 - docs/plans/design-reconciliation.md:25 (mention) — chat, connectors, hub), and recent decisions (`docs/glossary.md`,
 - docs/plans/docs-reorg.gap-analysis.md:146 (mention) — `docs/glossary.md:22` vs `:42` contradict each other about it.
@@ -1384,7 +1395,7 @@ References:
 
 #### docs/landmarks.md
 
-Title: "Landmarks" | 220 lines
+Title: "Landmarks" | 219 lines
 
 Referenced by:
 - CLAUDE.md:165 (mention) — | Landmarks (navigation surface) | `docs/landmarks.md` |
@@ -2652,7 +2663,7 @@ References:
 Title: "Bounded chat-history loading + fast stale-lock recovery" | 207 lines
 
 Referenced by:
-- ../issues/bugs/2026-07-28-parse-session-log-silent-page-truncation.md:42 (mention) — Track A of `docs/plans/chat-history-oom-mobile-lock.md` took option 1: the
+- ../issues/closed/bugs/2026-07-28-parse-session-log-silent-page-truncation.md:44 (mention) — Track A of `docs/plans/chat-history-oom-mobile-lock.md` took option 1: the
 - ../issues/closed/bugs/2026-08-01-chat-review-capped-at-max-session-entries.md:6 (mention) — discovered-in: worktree-chat-history-oom-mobile-lock — Track A of docs/plans/chat-history-oom-mobile-lock.md
 - ../issues/closed/bugs/2026-08-04-chat-history-parse-transient-oom.md:22 (mention) — (`docs/implemented-plans/chat-history-oom-mobile-lock.md`, `ac0d7d65`) is
 - ../issues/closed/code-quality/2026-08-05-strip-multi-mb-payloads-from-transcript-entries.md:88 (mention) — - The bounded-retention design: `callback-box/docs/implemented-plans/chat-history-oom-mobile-lock.md`.
@@ -2663,7 +2674,7 @@ Title: "Chat review: size-gated overnight compaction and generated titles" | 854
 
 Referenced by:
 - docs/chat-review.md:9 (link) — [docs/implemented-plans/chat-review.md](implemented-plans/chat-review.md).
-- ../issues/bugs/2026-07-28-parse-session-log-silent-page-truncation.md:6 (mention) — discovered-in: worktree-compacting — while designing chat review (docs/implemented-plans/chat-review.md)
+- ../issues/closed/bugs/2026-07-28-parse-session-log-silent-page-truncation.md:6 (mention) — discovered-in: worktree-compacting — while designing chat review (docs/implemented-plans/chat-review.md)
 - ../issues/closed/features/2026-05-19-overnight-session-compaction.md:4 (frontmatter) — design: ../../../callback-box/docs/implemented-plans/chat-review.md
 - ../issues/closed/features/2026-05-19-overnight-session-compaction.md:12 (link) — current reference and [the design doc](../../../callback-box/docs/implemented-plans/chat-review.md)
 
@@ -2693,6 +2704,30 @@ References:
 - → frontend.md (mention)
 - → code-style.md (mention)
 - → docs/testing.md (mention)
+
+#### docs/implemented-plans/chat-session-identity.md
+
+Title: "Chat session identity — one owned key, one recorded origin" | 384 lines
+
+Referenced by:
+- ../issues/bugs/2026-08-26-listsessionroots-contextdir-no-containment.md:8 (mention) — discovered-in: worktree-chat-session-identity — Track O review of chat-session-identity.md landing
+- ../issues/closed/bugs/2026-07-28-renamed-husk-duplicates-on-backfill.md:10 (link) — **Closed 2026-08-26** by [chat-session-identity](../../../callback-box/docs/implemented-plans/chat-session-identity.md) 
+- ../issues/closed/bugs/2026-07-29-chat-review-journal-is-machine-local.md:11 (link) — **Closed 2026-08-26** by [chat-session-identity](../../../callback-box/docs/implemented-plans/chat-session-identity.md) 
+- ../issues/closed/features/2026-07-20-chat-thread-management.md:12 (link) — **Closed 2026-08-26.** Delete shipped 2026-08-07; rename is safe (husk identity is the `session` field, [chat-session-id
+- ../issues/closed/features/2026-07-29-stale-husks-outlive-their-transcripts.md:11 (link) — **Closed 2026-08-26** by [chat-session-identity](../../../callback-box/docs/implemented-plans/chat-session-identity.md) 
+- ../issues/code-quality/2026-07-18-chat-backend-port-hygiene.md:37 (link) — ([plan](../../callback-box/docs/implemented-plans/chat-session-identity.md)); `contains-evidence`
+
+References:
+- → ../issues/closed/bugs/2026-08-25-encode-project-dir-underscore-mismatch.md (frontmatter)
+- → ../issues/closed/bugs/2026-07-28-renamed-husk-duplicates-on-backfill.md (frontmatter)
+- → ../issues/closed/features/2026-07-29-stale-husks-outlive-their-transcripts.md (frontmatter)
+- → ../issues/closed/bugs/2026-07-29-chat-review-journal-is-machine-local.md (frontmatter)
+- → ../issues/code-quality/2026-07-18-chat-backend-port-hygiene.md (frontmatter)
+- → ../issues/closed/features/2026-07-20-chat-thread-management.md (frontmatter)
+- → ../issues/closed/bugs/2026-07-28-parse-session-log-silent-page-truncation.md (frontmatter)
+- → ../issues/closed/bugs/2026-08-15-chat-husk-title-contains-raw-message-markup.md (frontmatter)
+- → docs/engineering-principles.md (mention)
+- → docs/plans/chat-session-delete.md (mention)
 
 #### docs/implemented-plans/chat-stream-finalize-unify.md
 
@@ -4298,11 +4333,12 @@ References:
 Title: "Chat Session Delete — Plan" | 772 lines
 
 Referenced by:
+- docs/implemented-plans/chat-session-identity.md:45 (mention) — - Precedent: `docs/plans/chat-session-delete.md` — validate `session` as the
 - docs/plans/chat-session-delete.review.md:4 (mention) — fenced to `chat-session-delete.md`, both linked issues, the installed SDK
 
 References:
-- → ../issues/features/2026-07-20-chat-thread-management.md (link)
-- → ../issues/features/2026-07-29-stale-husks-outlive-their-transcripts.md (link)
+- → ../issues/closed/features/2026-07-20-chat-thread-management.md (link)
+- → ../issues/closed/features/2026-07-29-stale-husks-outlive-their-transcripts.md (link)
 - → docs/engineering-principles.md (mention)
 - → code-style.md (mention)
 - → frontend.md (mention)

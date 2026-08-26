@@ -8,7 +8,7 @@ priority: backlog
 resolution: implemented
 ---
 
-**Closed 2026-08-26** by [chat-session-identity](../../../callback-box/docs/plans/chat-session-identity.md) Track 4 (`65f943555`): a machine reviews only sessions whose husk `origin` is its own (or unstamped ones whose transcript is present here), so the journal is now legitimately machine-local — the origin machine is the only one holding the whole transcript. Skipped sessions are counted in `cb chat review status`. Coverage for laptop-origin sessions requires running the schedule there (boxholder policy).
+**Closed 2026-08-26** by [chat-session-identity](../../../callback-box/docs/implemented-plans/chat-session-identity.md) Track 4 (`65f943555`): a machine reviews only sessions whose husk `origin` is its own (or unstamped ones whose transcript is present here), so the journal is now legitimately machine-local — the origin machine is the only one holding the whole transcript. Skipped sessions are counted in `cb chat review status`. Coverage for laptop-origin sessions requires running the schedule there (boxholder policy).
 [Chat review](../../../callback-box/docs/chat-review.md) keeps two pieces of state
 about a session, and they live on opposite sides of the sync boundary:
 

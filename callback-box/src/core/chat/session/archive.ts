@@ -1,6 +1,6 @@
 /**
  * Archiving a dead chat — filing away the card of a conversation that can no
- * longer be resumed (`docs/plans/chat-session-identity.md`, Track 3).
+ * longer be resumed (`docs/implemented-plans/chat-session-identity.md`, Track 3).
  *
  * Deliberately *not* delete's sibling in behaviour: nothing is removed, and
  * nothing about the chat's local state is touched, because there is no local

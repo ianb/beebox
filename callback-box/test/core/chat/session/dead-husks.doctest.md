@@ -4,7 +4,7 @@
 transcript is gone — so a chat whose transcript expired simply disappears from
 every list, and the boxholder never sees the state the box is in.
 `loadDeadHusks` is its sibling: the same husk-read-and-stat pass, reporting the
-other half of the answer (`docs/plans/chat-session-identity.md`, Track 3).
+other half of the answer (`docs/implemented-plans/chat-session-identity.md`, Track 3).
 
 ```ts setup
 import { mkdir, writeFile } from "node:fs/promises";

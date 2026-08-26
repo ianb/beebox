@@ -5,7 +5,7 @@
  * A transcript lives in one engine store on one machine and expires there, so
  * a husk whose transcript is absent is either expired or was never here. The
  * husk records which, by carrying the origin machine's id
- * (`docs/plans/chat-session-identity.md`, Track 2).
+ * (`docs/implemented-plans/chat-session-identity.md`, Track 2).
  *
  * The id is a UUID minted once at `~/.local/share/cb/origin-id`, because
  * `os.hostname()` is not stable on a laptop (a network location can rename

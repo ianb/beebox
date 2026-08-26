@@ -8,7 +8,7 @@ priority: normal
 resolution: implemented
 ---
 
-**Closed 2026-08-26** by [chat-session-identity](../../../callback-box/docs/plans/chat-session-identity.md) Tracks 2–3: husks record `engine`/`origin`/`origin-name` (backfilled on boot for transcripts present here), transcript availability is a typed state — present / expired / elsewhere (on <machine>) / unknown — shown in the history dropdown and landmark card, and a dead husk can be archived to `store/chat/archive/` (`chat.archive`). Not built, by decision: automatic GC/archive sweeps, a box-owned transcript (transcripts stay out of git).
+**Closed 2026-08-26** by [chat-session-identity](../../../callback-box/docs/implemented-plans/chat-session-identity.md) Tracks 2–3: husks record `engine`/`origin`/`origin-name` (backfilled on boot for transcripts present here), transcript availability is a typed state — present / expired / elsewhere (on <machine>) / unknown — shown in the history dropdown and landmark card, and a dead husk can be archived to `store/chat/archive/` (`chat.archive`). Not built, by decision: automatic GC/archive sweeps, a box-owned transcript (transcripts stay out of git).
 **Implementation update (2026-08-07):** `worktree-chat-session-delete` makes
 missing local transcripts an explicit unavailable state, disables the unsafe
 `Open chat` path, and guards bootstrap, raw-send, and schedule-resume paths.

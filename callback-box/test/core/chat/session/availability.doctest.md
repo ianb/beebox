@@ -3,7 +3,7 @@
 A chat's transcript lives in one engine store on one machine and expires there,
 so "the transcript isn't here" has three different meanings. The husk's
 `origin` field is the only durable record of which one applies
-(`docs/plans/chat-session-identity.md`, Track 3): compared against this
+(`docs/implemented-plans/chat-session-identity.md`, Track 3): compared against this
 machine's id, it separates *this machine's chat whose transcript aged out* from
 *a chat that ran somewhere else*, and its absence is reported as `unknown`
 rather than guessed at.

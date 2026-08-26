@@ -4,7 +4,7 @@ A chat whose transcript is gone can't be resumed, but its card is still a
 record worth keeping. Archiving moves that card from `store/chat/web/` to
 `store/chat/archive/` — and because `listChatHusks` reads `web/` only, that one
 move takes the chat out of every list and out of the review corpus without
-deleting anything (`docs/plans/chat-session-identity.md`, Track 3).
+deleting anything (`docs/implemented-plans/chat-session-identity.md`, Track 3).
 
 The eligibility rule is the whole point: a chat whose transcript is still here
 is refused. Archiving a live conversation would hide something the boxholder

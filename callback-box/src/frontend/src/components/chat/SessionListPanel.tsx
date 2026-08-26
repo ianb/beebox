@@ -126,7 +126,7 @@ export function SessionListPanel({ contextDir }: { contextDir: string | null }) 
 
 /**
  * The chats that no longer have a transcript here, after every live one and
- * under a heading saying why (`docs/plans/chat-session-identity.md`, Track 3).
+ * under a heading saying why (`docs/implemented-plans/chat-session-identity.md`, Track 3).
  * They were invisible before — a chat whose transcript expired simply left the
  * list, so the box looked like it had forgotten the conversation entirely.
  *

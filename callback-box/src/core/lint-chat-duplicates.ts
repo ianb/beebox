@@ -2,7 +2,7 @@
  * The one cross-file card-lint rule: two husks must never claim one chat.
  *
  * A husk's `session` field is its only identity — the filename is a naming
- * convention (`docs/plans/chat-session-identity.md`). `ensureChatHusk` is
+ * convention (`docs/implemented-plans/chat-session-identity.md`). `ensureChatHusk` is
  * idempotent on that field, so nothing *creates* a duplicate any more, but a
  * box can still hold one from before that fix, from a copied card, or from a
  * hand-edit. Nothing else would notice: both cards load, both appear in the

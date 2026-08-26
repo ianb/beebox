@@ -945,7 +945,7 @@ await box.cleanup();
 
 A husk's `session` field is the *only* thing that identifies which chat the
 card is about — the filename is a naming convention, and renaming a husk is
-encouraged (`docs/plans/chat-session-identity.md`). So it is validated as a
+encouraged (`docs/implemented-plans/chat-session-identity.md`). So it is validated as a
 UUID before anything keys on it or joins it into a path: Claude Agent SDK ids
 are UUIDv4, Codex thread ids UUIDv7, and one check covers both.
 

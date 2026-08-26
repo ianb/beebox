@@ -12,7 +12,7 @@ import { localOrigin } from "./origin.js";
  *
  * A transcript lives in one engine store on one machine and expires there, so
  * "not here" has three different meanings, and the husk's recorded origin
- * (`docs/plans/chat-session-identity.md`, Track 2) is what tells them apart.
+ * (`docs/implemented-plans/chat-session-identity.md`, Track 2) is what tells them apart.
  * A union rather than a bare "missing" reason so every surface has to say
  * which one it means.
  */

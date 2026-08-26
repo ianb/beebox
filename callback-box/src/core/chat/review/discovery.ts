@@ -132,7 +132,7 @@ function emptyResult(): DiscoveryResult {
  * machine that reviews a session it did not originate extends
  * `contains-evidence` from partial material — the origin machine is the only
  * one that can see the whole conversation
- * (`docs/plans/chat-session-identity.md`, Track 4).
+ * (`docs/implemented-plans/chat-session-identity.md`, Track 4).
  *
  * A husk with no `origin` predates the Track 2 stamp; it is claimed when its
  * transcript is here, which is the same evidence the backfill uses. Reconcile

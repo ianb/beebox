@@ -19,7 +19,7 @@ const chatFields = {
   /**
    * Engine session id — the pointer to the live session/transcript, and the
    * husk's only key (the filename is a naming convention; see
-   * docs/plans/chat-session-identity.md). Validated as the same strict UUID
+   * docs/implemented-plans/chat-session-identity.md). Validated as the same strict UUID
    * shape `chat.delete` parses before it builds a path, via the one
    * `sdkSessionIdSchema` definition: Claude Agent SDK ids are UUIDv4 and Codex
    * thread ids are UUIDv7, so a single UUID check covers both engines.
