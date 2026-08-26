@@ -1,6 +1,6 @@
 ---
 title: "A small-model slot for title, summary and chat-review passes"
-workstream: research-opencode
+workstream: model-engine-policy
 area: callback-box
 ---
 

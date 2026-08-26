@@ -1,6 +1,6 @@
 ---
 title: "Default chat model + a settings indicator when the model is non-default (smarter vs dumber)"
-workstream: unknown
+workstream: model-engine-policy
 needs: [design]
 area: callback-box
 filed-by: agent

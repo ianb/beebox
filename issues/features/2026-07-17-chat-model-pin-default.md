@@ -1,6 +1,6 @@
 ---
 title: "Pin a model as the box default in the chat selector; chats can follow the default"
-workstream: unknown
+workstream: model-engine-policy
 needs: [design]
 filed-by: agent
 discovered-in: main session — boxholder idea while thinking about the chat model selector

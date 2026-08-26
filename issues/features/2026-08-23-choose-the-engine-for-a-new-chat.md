@@ -1,6 +1,6 @@
 ---
 title: "No way to pick a chat's engine — models are switchable per chat, engines are box-wide"
-workstream: unattached
+workstream: model-engine-policy
 area: callback-box
 needs: [design]
 labels: [chat, codex, engines]
