@@ -75,7 +75,8 @@ Writes, exhaustively:
    following: it ends at the first paint with content — where "paint" has to
    include the transcript's images: an `<img>` reserves no height until its
    bytes arrive (the chat has no dimension metadata to reserve with), so the
-   hold waits for the images in and around the viewport to load or fail,
+   hold waits for the transcript's images to load or fail (lazy ones only
+   when near the viewport),
    capped at 8s, before its short lapse timer starts (2026-08-26; the fixed
    400ms it shipped with stranded a reader an image's height above the bottom
    on every open of an image-bearing thread). The reader's own action ends it
