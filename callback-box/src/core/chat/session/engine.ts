@@ -1,13 +1,37 @@
 /** Engine selection for fresh and engine-pinned resumed chats. */
 
-import { loadAgentEngine, type AgentEngine } from "../../box/config.js";
+import { loadAgentEngine } from "../../box/config.js";
+import type { AgentEngine } from "../../../shared/agent-models.js";
 import { loadHistoryEntries } from "./history.js";
+import { findChatHuskEntry, type ChatHuskEntry } from "../husk-read.js";
 
+/**
+ * Which engine a chat runs on. The one resolver — every consumer goes through
+ * it rather than re-deriving the order.
+ *
+ * The order is durability-first: the husk's own `engine` stamp travels with the
+ * card to every checkout, while the history entry is per-checkout state. A
+ * husk stamped `codex` and pulled onto a machine that never ran the session has
+ * no history entry at all, and reading it as Claude sends the resume down the
+ * wrong SDK. The box default answers only for a session nothing has recorded.
+ *
+ * `husk`/`historyEngine` are for callers that already hold the answer: `null`
+ * means "looked up, absent", an omitted key means "look it up here".
+ */
 export async function resolveChatEngine(
   boxRoot: string,
-  sessionId: string | null,
+  args: {
+    sessionId: string | null;
+    husk?: ChatHuskEntry | null;
+    historyEngine?: AgentEngine | null;
+  },
 ): Promise<AgentEngine> {
+  const { sessionId } = args;
   if (sessionId === null) return loadAgentEngine(boxRoot);
-  const entry = (await loadHistoryEntries(boxRoot)).find((candidate) => candidate.id === sessionId);
-  return entry?.engine ?? "claude";
+  const husk = args.husk === undefined ? await findChatHuskEntry(boxRoot, sessionId) : args.husk;
+  if (husk?.engine !== undefined) return husk.engine;
+  const historyEngine = args.historyEngine === undefined
+    ? (await loadHistoryEntries(boxRoot)).find((candidate) => candidate.id === sessionId)?.engine ?? null
+    : args.historyEngine;
+  return historyEngine ?? await loadAgentEngine(boxRoot);
 }

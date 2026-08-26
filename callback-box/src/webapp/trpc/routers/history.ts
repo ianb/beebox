@@ -150,7 +150,7 @@ export const historyRouter = router({
       })
     )
     .query(async ({ input, ctx }) => {
-      if (await resolveChatEngine(ctx.boxRoot, input.sessionId) === "codex") {
+      if (await resolveChatEngine(ctx.boxRoot, { sessionId: input.sessionId }) === "codex") {
         const found = await codexSessionExists(ctx.boxRoot, input.sessionId);
         if (!found) {
           return {

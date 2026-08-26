@@ -120,7 +120,7 @@ export async function buildBackendStartOptions(
     ? baseSystemPrompt + buildLandmarkSessionNote(contextDir)
     : baseSystemPrompt;
   const cwd = contextDir ? path.join(ctx.boxRoot, contextDir) : ctx.boxRoot;
-  const engine = await resolveChatEngine(ctx.boxRoot, ctx.sessionId);
+  const engine = await resolveChatEngine(ctx.boxRoot, { sessionId: ctx.sessionId });
   const baseEnv = await buildScriptEnv(ctx.boxRoot, {
     CLAUDECODE: undefined,
     // Only when a real id exists — a pending-new session must not advertise a

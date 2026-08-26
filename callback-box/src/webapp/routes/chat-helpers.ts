@@ -322,7 +322,7 @@ export async function readSessionLogTail(
   sessionId: string,
 ): Promise<string> {
   try {
-    if (await resolveChatEngine(boxRoot, sessionId) === "codex") {
+    if (await resolveChatEngine(boxRoot, { sessionId }) === "codex") {
       const { entries } = await loadSessionHistory(boxRoot, {
         sessionId,
         slice: { mode: "tail", tail: 100 },

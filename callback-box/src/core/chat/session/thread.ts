@@ -137,7 +137,7 @@ export class ChatThreadSession extends EventEmitter {
 
     // Preflight the real SDK backend's Claude login before we transition; a
     // missing one is emitted as "error" (→ turn buffer). Fakes skip it.
-    const engine = await resolveChatEngine(this.boxRoot, this.sessionId);
+    const engine = await resolveChatEngine(this.boxRoot, { sessionId: this.sessionId });
     if (!(await preflightChatBackend({ backend: this.backend, session: this, engine }))) return;
 
     this.state = nextLifecycle(this.state, { phase: "starting" });

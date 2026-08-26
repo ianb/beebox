@@ -51,7 +51,7 @@ export interface ChatSessionStatus {
  */
 export async function readSessionStatus(boxRoot: string, sessionId: string | null): Promise<ChatSessionStatus> {
   const { registry } = requireRuntime(boxRoot);
-  const engine = await resolveChatEngine(boxRoot, sessionId);
+  const engine = await resolveChatEngine(boxRoot, { sessionId });
   if (!sessionId) {
     return {
       sessionId: null,
@@ -173,7 +173,7 @@ export const chatControlProcedures = {
   // rather than 404'ing; the live subprocess is restarted so the next turn picks
   // up the new model (a live `set_model` control request isn't honored).
   setModel: publicProcedure.input(z.object({ session: z.string().min(1), model: z.string().nullable() })).mutation(async ({ input, ctx }) => {
-    const engine = await resolveChatEngine(ctx.boxRoot, input.session);
+    const engine = await resolveChatEngine(ctx.boxRoot, { sessionId: input.session });
     if (!isChatModelAllowed(engine, input.model)) {
       throw new TRPCError({
         code: "BAD_REQUEST",

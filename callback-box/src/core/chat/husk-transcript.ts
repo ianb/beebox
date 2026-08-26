@@ -11,7 +11,7 @@
 
 import * as path from "node:path";
 import { getSessionLogPath } from "./session/transcript-paths.js";
-import type { ChatHuskEntry } from "./husk.js";
+import type { ChatHuskEntry } from "./husk-read.js";
 
 /** Absolute path to the transcript a husk points at. */
 export function huskTranscriptPath(boxRoot: string, husk: ChatHuskEntry): string {

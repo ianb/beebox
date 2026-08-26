@@ -16,7 +16,7 @@ import { dirname } from "node:path";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { archiveChatSession } from "../../src/core/chat/session/archive.js";
 import { loadDeadHusks, listSessionEntries } from "../../src/core/chat/session/list.js";
-import { listChatHusks, listChatHusksUnder } from "../../src/core/chat/husk.js";
+import { listChatHusks, listChatHusksUnder } from "../../src/core/chat/husk-read.js";
 import { getSessionLogPath } from "../../src/core/chat/session/transcript-paths.js";
 import { localOrigin } from "../../src/core/chat/session/origin.js";
 

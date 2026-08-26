@@ -17,7 +17,7 @@
 
 import * as path from "node:path";
 import { executeMove } from "../../commands/move.js";
-import { findChatHuskEntry, listChatHusksUnder } from "../husk.js";
+import { findChatHuskEntry, listChatHusksUnder } from "../husk-read.js";
 import { acquireChatReviewLease } from "../review/lock.js";
 import { loadDeadHusks } from "./list.js";
 import { parseSdkSessionId } from "./session-id.js";

@@ -1,6 +1,6 @@
 import * as fs from "node:fs/promises";
 import { errnoCode } from "../../../lib/error-guards.js";
-import { findChatHuskEntry, type ChatHuskEntry } from "../husk.js";
+import { findChatHuskEntry, type ChatHuskEntry } from "../husk-read.js";
 import { resolveSessionLogPath } from "./history.js";
 import type { ChatSessionRegistry } from "./registry.js";
 import { resolveChatEngine } from "./engine.js";
@@ -81,11 +81,14 @@ export async function resolveSessionAvailability(args: { boxRoot: string; sessio
   // first send into a coined chat would 410. Checked after the deletion gates,
   // never before: a chat being deleted stays refused whatever else is true.
   if (args.registry.getReservation(args.sessionId) !== null) return { kind: "resumable" };
-  if (await resolveChatEngine(args.boxRoot, args.sessionId) === "codex") {
+  // The husk is read before the engine question, not after: it carries the
+  // `engine` stamp `resolveChatEngine` prefers, and both branches below want it.
+  const husk = await findChatHuskEntry(args.boxRoot, args.sessionId);
+  if (await resolveChatEngine(args.boxRoot, { sessionId: args.sessionId, husk }) === "codex") {
     if (await codexSessionExists(args.boxRoot, args.sessionId)) return { kind: "resumable" };
-    return missingTranscript(await findChatHuskEntry(args.boxRoot, args.sessionId));
+    return missingTranscript(husk);
   }
-  const [husk, logPath] = await Promise.all([findChatHuskEntry(args.boxRoot, args.sessionId), resolveSessionLogPath(args.boxRoot, args.sessionId)]);
+  const logPath = await resolveSessionLogPath(args.boxRoot, args.sessionId);
   try {
     await fs.access(logPath);
     return { kind: "resumable" };

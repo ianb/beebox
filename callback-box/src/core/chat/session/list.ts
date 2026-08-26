@@ -14,13 +14,14 @@
  */
 
 import * as fs from "node:fs/promises";
-import { findChatHuskEntry, listChatHusks, type ChatHuskEntry } from "../husk.js";
+import { findChatHuskEntry, listChatHusks, type ChatHuskEntry } from "../husk-read.js";
 import { huskTranscriptPath } from "../husk-transcript.js";
 import { resolveSessionLabel, type SessionLabelSource } from "../session-label.js";
 import { assertNever } from "../../../lib/invariant.js";
 import { errnoCode } from "../../../lib/error-guards.js";
 import { mapInBatches, mapInBatchesSettled } from "../../../lib/map-batched.js";
-import { loadHistoryEntries, type SessionHistoryEntry } from "./history.js";
+import { loadHistoryEntries } from "./history.js";
+import { resolveChatEngine } from "./engine.js";
 import { deriveTranscriptState, type TranscriptState } from "./availability.js";
 import { listCodexThreadMetadata, type CodexThreadMetadata } from "./codex-transcript.js";
 import type { AgentEngine } from "../../box/config.js";
@@ -132,8 +133,19 @@ export async function loadDeadHusks(boxRoot: string): Promise<DeadHuskEntry[]> {
 async function enumerateChats(boxRoot: string): Promise<ChatEnumeration> {
   const [husks, history] = await Promise.all([listChatHusks(boxRoot), loadHistoryEntries(boxRoot)]);
   const historyById = new Map(history.map((entry) => [entry.id, entry]));
+  // Resolved once per husk, up front: which engine ran a chat decides both
+  // which store to look in and whether its thread metadata has to be fetched,
+  // and `resolveChatEngine` is the only place that order is written down.
+  const engines = new Map(await mapInBatches(husks, {
+    size: READ_CONCURRENCY,
+    map: async (husk) => [husk.session, await resolveChatEngine(boxRoot, {
+      sessionId: husk.session,
+      husk,
+      historyEngine: historyById.get(husk.session)?.engine ?? null,
+    })] as const,
+  }));
   const codexCwds = husks
-    .filter((husk) => historyById.get(husk.session)?.engine === "codex")
+    .filter((husk) => engines.get(husk.session) === "codex")
     .map((husk) => husk.contextDir === undefined || husk.contextDir === ""
       ? boxRoot
       : path.join(boxRoot, husk.contextDir));
@@ -145,7 +157,7 @@ async function enumerateChats(boxRoot: string): Promise<ChatEnumeration> {
     map: (husk) => resolveHusk({
       boxRoot,
       husk,
-      history: historyById.get(husk.session),
+      engine: engines.get(husk.session) ?? "claude",
       codexMetadata: codexThreads.get(husk.session),
     }),
   });
@@ -296,11 +308,10 @@ async function deadHusk(husk: ChatHuskEntry): Promise<HuskResolution> {
 async function resolveHusk(options: {
   boxRoot: string;
   husk: ChatHuskEntry;
-  history: SessionHistoryEntry | undefined;
+  engine: AgentEngine;
   codexMetadata: CodexThreadMetadata | undefined;
 }): Promise<HuskResolution> {
-  const { boxRoot, husk, history, codexMetadata } = options;
-  const engine = history?.engine ?? "claude";
+  const { boxRoot, husk, engine, codexMetadata } = options;
   const logPath = huskTranscriptPath(boxRoot, husk);
   let mtime: Date;
   try {

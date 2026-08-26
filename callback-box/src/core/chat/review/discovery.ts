@@ -27,7 +27,7 @@ import {
   parseSessionLog,
 } from "../../../cli/lib/session.js";
 import { errnoCode } from "../../../lib/error-guards.js";
-import { listChatHusks, type ChatHuskEntry } from "../husk.js";
+import { listChatHusks, type ChatHuskEntry } from "../husk-read.js";
 import { localOrigin } from "../session/origin.js";
 import { huskTranscriptPath } from "../husk-transcript.js";
 import { METADATA_CONSUMER, sessionState, type ReviewState } from "./state.js";
@@ -199,7 +199,7 @@ async function qualifyHusk(
     return null;
   }
   const logPath = huskTranscriptPath(boxRoot, husk);
-  const engine = await resolveChatEngine(boxRoot, husk.session);
+  const engine = await resolveChatEngine(boxRoot, { sessionId: husk.session, husk });
 
   let mtime: Date;
   try {
