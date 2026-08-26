@@ -34,3 +34,6 @@ scratch/*
 # config and the reviewed ignore list are committed (see tools/slopo/).
 tools/slopo/slopo.db
 tools/slopo/slopo-report/
+
+# The suite's isolated Codex state (see test/helpers/isolate-codex-home.ts).
+.codex-test-home/

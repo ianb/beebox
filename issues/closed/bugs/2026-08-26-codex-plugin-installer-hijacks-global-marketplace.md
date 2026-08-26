@@ -1,13 +1,23 @@
 ---
 title: "Codex plugin installer points the user's global marketplace at whichever checkout ran last; a culled one breaks every codex box's chat list"
-workstream: unattached
+workstream: codex-plugin-registration
 area: callback-box
 priority: important
 labels: [codex, tests]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — the place-switch menu showed "Couldn't load landmarks — Retry" on a codex-engine box, hourly
+resolution: implemented
 ---
+
+Closed by `cfad83513`/`cf482a959`/`68e790070` (workstream
+`codex-plugin-registration`): tests isolate `CODEX_HOME`
+(`test/helpers/isolate-codex-home.ts`), the installer repairs a broken
+registration instead of throwing and leaves another checkout's valid one
+alone (`installCodexPlugin` in `ensure-codex-plugin.ts`), and
+`enumerateChats`/`resolveHusk` degrade a codex-metadata failure instead of
+failing the whole `chat.placeMenu` query. No divergence from what the issue
+proposed.
 
 `src/core/agent/ensure-codex-plugin.ts` registers the `callback-box` plugin
 marketplace in the user's global Codex state (`~/.codex`) with
