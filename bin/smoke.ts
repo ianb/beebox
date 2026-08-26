@@ -12,6 +12,12 @@
  *   bin/smoke                 # walk this worktree's box through the dev router
  *   bin/smoke --box <slug>    # a box other than test1
  *   bin/smoke --no-restart    # skip the cold start (debugging the walk itself)
+ *   bin/smoke --report        # what each step has caught, and what it costs
+ *
+ * Every run appends to a shared log beside the test ledger, and `--report`
+ * folds it into per-step counts. That exists to be acted on: a step that has
+ * never caught anything is paying rent out of a two-minute budget, and the
+ * report is what says so.
  *
  * It restarts the checkout's dev-server generation first, on purpose: the
  * router runs TypeScript straight off disk and nothing reloads it
@@ -23,7 +29,8 @@
  * on a model. Budget is a hard wall-clock kill, not a target.
  */
 
-import { readFileSync } from "node:fs";
+import { appendFileSync, readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { basename, join } from "node:path";
 import { homedir } from "node:os";
 import { parseEnv } from "node:util";
@@ -34,6 +41,9 @@ import {
   SmokeFailure,
   cardViewRendered,
   directoryRowCount,
+  formatSmokeReport,
+  smokeLogPath,
+  summarizeSmokeLog,
   firstCardRow,
   generationStartedAt,
   hasDomId,
@@ -43,6 +53,8 @@ import {
   readPlaceMenu,
   readProbe,
   refFor,
+  type SmokeRunRecord,
+  type SmokeStepRecord,
 } from "./smoke-lib.js";
 
 const REPO_ROOT = join(import.meta.dirname, "..");
@@ -61,13 +73,59 @@ const POLL_MS = 250;
 interface Options {
   box: string;
   restart: boolean;
+  report: boolean;
 }
 
 function parseArgs(argv: readonly string[]): Options {
   const boxIndex = argv.indexOf("--box");
   const box = boxIndex === -1 ? "test1" : argv[boxIndex + 1];
   if (box === undefined || box.startsWith("-")) throw new Error("--box needs a slug");
-  return { box, restart: !argv.includes("--no-restart") };
+  return {
+    box,
+    restart: !argv.includes("--no-restart"),
+    report: argv.includes("--report"),
+  };
+}
+
+function git(args: string[]): string {
+  const result = spawnSync("git", args, { cwd: REPO_ROOT, encoding: "utf-8" });
+  return result.status === 0 ? (result.stdout ?? "").trim() : "";
+}
+
+function logPath(): string {
+  const common = git(["rev-parse", "--git-common-dir"]);
+  // A path relative to the checkout is what `--git-common-dir` returns in the
+  // main checkout (a bare `.git`); resolve it so every worktree appends to the
+  // same file rather than to one of its own.
+  return smokeLogPath(common.startsWith("/") ? common : join(REPO_ROOT, common));
+}
+
+/**
+ * Append this run to the shared log.
+ *
+ * Never throws into the run's own verdict: a smoke walk that went green must
+ * not report red because bookkeeping failed, and one that went red must still
+ * say so. A failure to record is worth seeing, so it is printed.
+ */
+function record(entry: SmokeRunRecord): void {
+  try {
+    appendFileSync(logPath(), `${JSON.stringify(entry)}\n`);
+  } catch (e) {
+    process.stdout.write(
+      `smoke: could not append to the run log (${e instanceof Error ? e.message : String(e)})\n`,
+    );
+  }
+}
+
+function report(): number {
+  let lines: string[] = [];
+  try {
+    lines = readFileSync(logPath(), "utf-8").split("\n");
+  } catch {
+    // No log yet is a legitimate state, and summarize says so.
+  }
+  process.stdout.write(formatSmokeReport(summarizeSmokeLog(lines)));
+  return 0;
 }
 
 /**
@@ -291,6 +349,11 @@ async function waitForBox(url: string, key: string | null, budget: Budget): Prom
 }
 
 interface Step {
+  /**
+   * Stable across rewordings — the run log is keyed by this, so a renamed step
+   * keeps its history instead of looking like a new one with no data.
+   */
+  id: string;
   name: string;
   run: () => Promise<void>;
 }
@@ -313,6 +376,7 @@ function buildSteps(input: {
 
   if (options.restart) {
     steps.push({
+      id: "restart",
       name: "restart the dev-server generation",
       run: async () => {
         // A browser tab left open from an earlier walk keeps issuing HTTP, and
@@ -325,6 +389,7 @@ function buildSteps(input: {
   }
 
   steps.push({
+    id: "cold-start",
     name: "the box serves its root after a cold start",
     run: async () => {
       await waitForBox(`${baseUrl}/`, key, budget);
@@ -341,6 +406,7 @@ function buildSteps(input: {
   });
 
   steps.push({
+    id: "backend",
     name: "the box's backend answers",
     // `/api/…`, not a page path. Vite serves every non-API path itself, so a
     // 200 on `/chat` proves only that vite is up — it never reaches the box's
@@ -371,6 +437,7 @@ function buildSteps(input: {
   });
 
   steps.push({
+    id: "chat-shell",
     name: "the chat page renders its shell",
     run: async () => {
       await session.open(`${baseUrl}/chat`);
@@ -385,6 +452,7 @@ function buildSteps(input: {
   });
 
   steps.push({
+    id: "place-menu",
     name: "the place menu opens and lists landmarks",
     run: async () => {
       // The click's exit status means nothing — agent-browser dispatches a
@@ -398,6 +466,7 @@ function buildSteps(input: {
   });
 
   steps.push({
+    id: "browse-list",
     name: "browse lists the box's real content",
     run: async () => {
       await session.open(`${baseUrl}/browse`);
@@ -412,6 +481,7 @@ function buildSteps(input: {
   });
 
   steps.push({
+    id: "card-open",
     name: "a card opens and renders",
     run: async () => {
       const listing = await session.snapshot({ interactiveOnly: true });
@@ -442,6 +512,7 @@ function buildSteps(input: {
   });
 
   steps.push({
+    id: "page-errors",
     name: "the walk raised no uncaught page errors",
     run: async () => {
       const { stdout } = await session.run(["errors"]);
@@ -456,6 +527,7 @@ function buildSteps(input: {
 
 export async function main(argv: string[]): Promise<number> {
   const options = parseArgs(argv);
+  if (options.report) return report();
   const worktree = worktreeName();
   const baseUrl = `http://localhost:${routerPort()}/${worktree}/${options.box}`;
   const key = browseKey();
@@ -483,12 +555,34 @@ export async function main(argv: string[]): Promise<number> {
   });
 
   const steps = buildSteps({ baseUrl, key, worktree, budget, session, options });
+  // Seeded with every step as `not-run`, so a walk that stops early still
+  // records what it never reached rather than leaving those rows absent.
+  const outcomes = new Map<string, SmokeStepRecord>(
+    steps.map((step) => [step.id, { id: step.id, outcome: "not-run", ms: 0 }]),
+  );
+  const finish = (verdict: "green" | "red", failure?: { step: string; message: string }): void => {
+    record({
+      ts: new Date().toISOString(),
+      commit: git(["rev-parse", "HEAD"]),
+      branch: git(["rev-parse", "--abbrev-ref", "HEAD"]),
+      worktree,
+      box: options.box,
+      verdict,
+      ms: Date.now() - startedAt,
+      ...(failure === undefined
+        ? {}
+        : { failedStep: failure.step, failure: failure.message.split("\n")[0] ?? "" }),
+      steps: [...outcomes.values()],
+    });
+  };
+
   for (const step of steps) {
     budget.check(step.name);
     const at = Date.now();
     try {
       await budget.race(step.name, step.run());
     } catch (e) {
+      outcomes.set(step.id, { id: step.id, outcome: "fail", ms: Date.now() - at });
       const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1);
       process.stdout.write(`FAIL ${step.name} (${elapsed}s)\n`);
       const failure =
@@ -499,13 +593,16 @@ export async function main(argv: string[]): Promise<number> {
       if (failure.detail !== "") {
         process.stdout.write(`\n${indent(failure.detail)}\n`);
       }
+      finish("red", { step: step.id, message: failure.message });
       process.stdout.write(`\nSMOKE: red\n`);
       return 1;
     }
+    outcomes.set(step.id, { id: step.id, outcome: "ok", ms: Date.now() - at });
     process.stdout.write(
       `ok   ${step.name} (${((Date.now() - at) / 1000).toFixed(1)}s)\n`,
     );
   }
+  finish("green");
   process.stdout.write(`\nSMOKE: green (${((Date.now() - startedAt) / 1000).toFixed(1)}s)\n`);
   return 0;
 }

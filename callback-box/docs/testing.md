@@ -592,6 +592,19 @@ before the child is reached, so a URL probe answers 302 either way. It is not
 duplicated in the local walk: in dev, page requests are served by vite and
 never reach that handler at all.
 
+**Every run is logged, so the tier can be trimmed on evidence.** Each walk
+appends a line to `callback-smoke-log.jsonl` in the shared git dir (beside the
+test ledger, and shared by every worktree on the machine for the same reasons):
+the verdict, which step failed, and every step's outcome and duration.
+`bin/smoke --report` folds it into per-step counts — how often each step ran,
+how often it caught something, what it costs at p50. A step that has never
+failed across many runs is paying rent out of the budget, and the report names
+those once there are enough runs for a clean record to mean anything.
+
+Read `ran` as the denominator, not the run count: the walk stops at the first
+failure, so a late step has seen fewer runs than an early one. Steps are keyed
+by a stable id, not their printed name, so rewording a step keeps its history.
+
 **It is disruptive, on purpose.** The walk stops this checkout's dev-server
 generation and closes the shared browse session (tours and interactive
 `bin/browse` share one Chrome). If the boxholder has this worktree open in a

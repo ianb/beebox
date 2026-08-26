@@ -332,3 +332,178 @@ export function firstCardRow(snapshot: string): { role: "button"; name: string }
   const name = match?.[1];
   return name === undefined ? null : { role: "button", name };
 }
+
+// ── the run log ─────────────────────────────────────────────────────────────
+
+/**
+ * One step's outcome in one run.
+ *
+ * `not-run` is recorded, not omitted: the walk stops at the first failure, so a
+ * step late in the walk has a smaller denominator than an early one. Dropping
+ * those rows would make a late step look like it had passed every run it never
+ * saw — the exact reading that would get it trimmed for "never failing".
+ */
+export interface SmokeStepRecord {
+  id: string;
+  outcome: "ok" | "fail" | "not-run";
+  ms: number;
+}
+
+/** One run, appended as a line to the shared log. */
+export interface SmokeRunRecord {
+  ts: string;
+  commit: string;
+  branch: string;
+  worktree: string;
+  box: string;
+  verdict: "green" | "red";
+  ms: number;
+  /** The step that failed, when one did. */
+  failedStep?: string;
+  /** Its message, first line only — the log is a tally, not an error store. */
+  failure?: string;
+  steps: SmokeStepRecord[];
+}
+
+/**
+ * The log lives beside the test ledger, in the shared git dir, for the same
+ * reasons: every worktree on the machine is answering questions about the same
+ * tier, and a worktree cull must not take the history with it. Append-only, so
+ * two runs in different worktrees cannot lose each other's entries.
+ */
+export function smokeLogPath(gitCommonDir: string): string {
+  return `${gitCommonDir}/callback-smoke-log.jsonl`;
+}
+
+export interface StepStats {
+  id: string;
+  /** Runs in which this step actually executed. */
+  ran: number;
+  failed: number;
+  /** Median duration over the runs it executed, in seconds. */
+  medianSeconds: number;
+  /** ISO timestamp of the most recent failure, or null if it has never failed. */
+  lastFailure: string | null;
+}
+
+export interface SmokeSummary {
+  runs: number;
+  red: number;
+  steps: StepStats[];
+}
+
+function median(values: number[]): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  if (sorted.length % 2 === 1) return sorted[mid] ?? 0;
+  return ((sorted[mid - 1] ?? 0) + (sorted[mid] ?? 0)) / 2;
+}
+
+/**
+ * Fold the log into per-step counts.
+ *
+ * Steps are keyed by their stable `id`, never by the human-facing name — names
+ * get reworded and a rename must not silently restart a step's history at zero,
+ * which would read as "new step, no data yet" rather than "unchanged step, 200
+ * clean runs". Order follows first appearance, so the report reads in walk
+ * order. Unparseable lines are skipped rather than throwing: a truncated last
+ * line (a killed run mid-append) must not take the whole report with it.
+ */
+export function summarizeSmokeLog(lines: readonly string[]): SmokeSummary {
+  const order: string[] = [];
+  const ran = new Map<string, number[]>();
+  const failed = new Map<string, number>();
+  const lastFailure = new Map<string, string>();
+  let runs = 0;
+  let red = 0;
+
+  for (const line of lines) {
+    if (line.trim() === "") continue;
+    let record: SmokeRunRecord;
+    try {
+      record = JSON.parse(line) as SmokeRunRecord;
+    } catch {
+      continue;
+    }
+    if (!Array.isArray(record.steps)) continue;
+    runs += 1;
+    if (record.verdict === "red") red += 1;
+    for (const step of record.steps) {
+      if (typeof step?.id !== "string") continue;
+      if (!ran.has(step.id)) {
+        ran.set(step.id, []);
+        order.push(step.id);
+      }
+      if (step.outcome === "not-run") continue;
+      ran.get(step.id)?.push(typeof step.ms === "number" ? step.ms : 0);
+      if (step.outcome === "fail") {
+        failed.set(step.id, (failed.get(step.id) ?? 0) + 1);
+        if (typeof record.ts === "string") lastFailure.set(step.id, record.ts);
+      }
+    }
+  }
+
+  return {
+    runs,
+    red,
+    steps: order.map((id) => ({
+      id,
+      ran: ran.get(id)?.length ?? 0,
+      failed: failed.get(id) ?? 0,
+      medianSeconds: Math.round(median(ran.get(id) ?? []) / 100) / 10,
+      lastFailure: lastFailure.get(id) ?? null,
+    })),
+  };
+}
+
+/**
+ * How many runs a step must have survived before "it never fails" is evidence
+ * rather than noise. Below this the report shows the counts and says nothing
+ * about trimming — after one green run every step has a spotless record.
+ */
+export const TRIM_EVIDENCE_RUNS = 20;
+
+/**
+ * The report, written to answer one question: which steps are paying for
+ * themselves.
+ *
+ * It prints what a step COSTS next to how often it has caught something,
+ * because that is the trade — a step that has never failed in 200 runs and
+ * takes 5s is a different call from one that has never failed and takes 0.4s.
+ */
+export function formatSmokeReport(summary: SmokeSummary): string {
+  if (summary.runs === 0) {
+    return "smoke: no runs logged yet.\n";
+  }
+  const lines = [
+    `smoke: ${String(summary.runs)} run${summary.runs === 1 ? "" : "s"} logged,` +
+      ` ${String(summary.red)} red.`,
+    "",
+    `${"step".padEnd(14)}${"ran".padStart(6)}${"failed".padStart(8)}${"p50".padStart(8)}   last failure`,
+  ];
+  for (const step of summary.steps) {
+    const never = step.ran === 0 ? "never ran" : "never failed";
+    lines.push(
+      step.id.padEnd(14) +
+        String(step.ran).padStart(6) +
+        String(step.failed).padStart(8) +
+        `${step.medianSeconds.toFixed(1)}s`.padStart(8) +
+        `   ${step.lastFailure ?? never}`,
+    );
+  }
+  const idle = summary.steps.filter(
+    (step) => step.failed === 0 && step.ran >= TRIM_EVIDENCE_RUNS,
+  );
+  if (idle.length > 0) {
+    const seconds = idle.reduce((sum, step) => sum + step.medianSeconds, 0);
+    lines.push(
+      "",
+      `Never caught anything in ${String(TRIM_EVIDENCE_RUNS)}+ runs, costing` +
+        ` ${seconds.toFixed(1)}s of every walk: ${idle.map((step) => step.id).join(", ")}.`,
+      "Read `ran`, not the run count, as the denominator — the walk stops at the",
+      "first failure, so a late step has seen fewer runs than an early one.",
+    );
+  }
+  return `${lines.join("\n")}\n`;
+}

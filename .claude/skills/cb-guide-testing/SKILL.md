@@ -50,6 +50,9 @@ line (`docs/testing.md` opens with this).
   all. You do not usually invoke it; `/finish` runs it for any diff that
   touches a deployed path. Reach for it by hand when a change could
   break startup or the app bar and you want to know before landing.
+  `bin/smoke --report` says what each step has actually caught and what it
+  costs — the tier is meant to be trimmed when a step stops earning its
+  place.
 - **Frontend dev stubs** (`/fakestream`, `bin/browse`) — for frontend
   bugs that only manifest against real layout/measurement (scroll,
   virtualization, reflow); a dev stub makes the input deterministic

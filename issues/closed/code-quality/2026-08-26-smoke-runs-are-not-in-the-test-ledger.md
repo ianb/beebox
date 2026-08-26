@@ -4,9 +4,27 @@ workstream: unattached
 area: monorepo
 needs: [design]
 labels: [tests]
+resolution: implemented
 filed-by: agent
 discovered-by: agent
 discovered-in: building the merge-time smoke tier (2026-08-26)
+---
+
+**Closed 2026-08-26**, by the third option below rather than the first: smoke
+runs now append to `callback-smoke-log.jsonl` in the shared git dir, next to
+the test ledger and under the same append-only discipline, and `bin/smoke
+--report` folds it into per-step counts. The `LedgerRecord` schema was left
+alone — a smoke run has steps, not files, and the log answers the questions
+without bending a vocabulary another workstream owns.
+
+The boxholder's framing is why it is per-step rather than per-run: the point of
+recording is to find steps that never catch anything and delete them, so the
+unit has to be the step. Steps carry stable ids for that reason, and a step
+that never ran (the walk stops at the first failure) is recorded as such rather
+than omitted, so its denominator stays honest.
+
+Original report follows.
+
 ---
 
 `bin/smoke` prints its verdict and exits; nothing durable records that it ran.
