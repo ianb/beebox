@@ -3,7 +3,8 @@
  * capture mode auto-open (`?capture=1`), so this loads `/capture` and snapshots
  * the resulting full-screen capture overlay. The overlay reuses the same
  * viewport/controls, which need camera permissions to fully exercise; the
- * camera-off / tap-to-start state is what we capture here.
+ * camera-off / tap-to-start state is what we capture here. The way out of the
+ * overlay is "Exit capture" (renamed from "Cancel capture session", 2026-08).
  */
 
 import { tour } from "./tour-lib/index.js";
@@ -17,6 +18,7 @@ tour(
     await t.expect.heading("Capture", { level: 1 });
     await t.expect.button("Start camera");
     await t.expect.button("Upload file");
-    await t.expect.button("Cancel capture session");
+    await t.expect.button("Exit capture");
+    await t.expect.noPageErrors();
   },
 );

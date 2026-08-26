@@ -1,6 +1,6 @@
 ---
 title: "Repair the five tours so they all pass, then check them weekly — a walk nobody runs decays into nothing"
-workstream: unattached
+workstream: tour-health
 area: callback-box
 labels: [tests, tours, schedules]
 filed-by: agent
@@ -59,3 +59,21 @@ up.
 - **Relationship to the merge-time smoke tier.** That issue proposes a
   hard-fail gate at merge and post-deploy; this is the soft weekly instrument.
   They may share a walk definition, and should not become two divergent ones.
+
+## Resolved 2026-08-26 (tour-health)
+
+- All four tours walk clean (`browse-walk`, `capture`, `nav-pages`,
+  `new-chat`); `dashboard` was folded into `nav-pages` as a per-page
+  skeleton row — its click-through is what `bin/smoke` does at every merge.
+  Locators take a RegExp so box content never enters one; every checkpoint
+  also asserts `noPageErrors()`.
+- `schedules/tour-check/` runs them weekly in its own worktree against the
+  worktree's box clone. Its session **edits** a tour when a deliberate change
+  (a landing, a plan, or an issue naming that change) explains a miss, and
+  **files** everything else; it lands its own tour edits with `bin/land`.
+- Shared with the smoke tier: `tour-lib/browse.ts` only. Different failure
+  semantics, deliberately not one walk.
+- Standing findings from the first walk are filed:
+  `../bugs/2026-08-26-chat-load-logs-resumable-capture-list-error.md`,
+  `../bugs/2026-08-26-questions-page-heading-order.md`,
+  `../decisions/2026-08-26-axe-region-rule-on-floating-menus.md`.

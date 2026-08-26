@@ -73,13 +73,21 @@ export interface TourContext {
 
 export interface ClickLocator {
   role: "link" | "button";
-  name: string;
+  /**
+   * Accessible name. A string must match exactly; a RegExp is tested against
+   * the name — use one when part of the name is box content (item counts,
+   * card titles), which drifts as the box changes.
+   */
+  name: string | RegExp;
 }
 
 export interface ExpectAPI {
   heading: (name: string, opts?: { level?: number }) => Promise<void>;
   landmark: (name: string) => Promise<void>;
-  button: (name: string) => Promise<void>;
+  /** Exact name, or a RegExp when part of the accessible name is box content. */
+  button: (name: string | RegExp) => Promise<void>;
+  /** Fails when the app bar's debug-log badge reports client errors on this page. */
+  noPageErrors: () => Promise<void>;
   /** Free-form: predicate over the snapshot text; message describes the expectation. */
   custom: (message: string, predicate: (snapshot: string) => boolean) => Promise<void>;
 }

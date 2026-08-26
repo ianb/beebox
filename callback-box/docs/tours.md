@@ -6,14 +6,29 @@ review artifacts: screenshots at desktop (1280×800) and mobile
 and any soft-assertion findings the tour author wrote. Tours live in
 `test/tours/*.tour.ts`; the framework is `test/tours/tour-lib/`.
 
-**Tours are a review instrument, not a test gate.** Findings and axe
-violations never affect the exit code, artifacts are gitignored, and
-nothing in CI or pre-commit runs them. This is deliberate: the browser
-daemon is shared and occasionally flaky, and the output is judgment
-material (screenshots, a11y reports), not pass/fail facts. Do not wire
-tours into pre-commit or the test suite — a soft-finding instrument
-makes a permanently red gate. Behavior belongs in doctests
-([testing.md](testing.md)).
+**A tour is the app's walk, written down.** Writing the walk down is
+more solid than doing it by hand: the next person gets the walk instead
+of reinventing it. That value lasts only while the walk still runs, so
+**a weekly session runs every tour and keeps it true**
+(`schedules/tour-check/`). When a tour misses because the app changed
+deliberately — a landing on `main`, a plan, or a filed issue explains
+the new label or structure — the session edits the tour to describe the
+app as it now is. Anything else it finds (a miss nothing explains, an
+axe violation, a page error, visible breakage in a screenshot) it files
+as an issue and reports. Its report is the one thing that has to be
+read: a walk nobody runs rots, and a report nobody reads is the same
+failure one level up (three of five tours had been silently failing
+for months before this existed — 2026-08-26).
+
+**Tours are still not a test gate.** Findings and axe violations never
+affect the exit code, artifacts are gitignored, and neither CI nor
+pre-commit runs them. A gate has one response to intended UI change —
+go red — so a soft-finding instrument makes a permanently red gate that
+gets ignored; the weekly session asks the other question, *drift or new
+truth?*, which a gate cannot. Behavior belongs in doctests
+([testing.md](testing.md)); "does the app boot at all" is the smoke tier
+(`bin/smoke`, a merge gate — same browser library, different failure
+semantics, deliberately not the same walk).
 
 ## Running
 
@@ -96,16 +111,27 @@ loading-state screenshot or a fake "0 violations".
 
 ## Writing and organizing tours
 
-- **One tour per primary surface**, named for it (`dashboard`,
-  `capture`, …). Extend the surface's tour (or add a checkpoint) when
-  you add UI to it — the same duty as adding a doctest for a new
-  codepath.
+- **`nav-pages` is the skeleton sweep; the rest are journeys.**
+  `nav-pages` visits every route and asserts each page's h1/landmarks
+  — add a row there when you add a page. A journey tour (`browse-walk`,
+  `capture`, `new-chat`) clicks through one surface; write one when the
+  walk itself is what you want the next person to have. Extend the
+  surface's tour when you add UI to it — the same duty as adding a
+  doctest for a new codepath. A tour whose surface is gone gets deleted,
+  not repaired.
 - **Navigate by clicking** (`t.click({ role, name })`) so the tour
   exercises real navigation; use `t.go(path)` only when the deep link
   itself is the thing under review.
+- **Never put content in a locator.** Accessible names are the right
+  address, but a name that carries box content (`"box directory, 3357
+  items"`, a card title) breaks whenever the box changes. Match the
+  stable part with a RegExp (`name: /^box directory/`); the tours run
+  against whichever box clone the worktree has.
 - **Every checkpoint asserts something** — at least one
   `expect.heading` or `expect.landmark`, so a blank-page regression
-  fails loudly instead of producing a plausible-looking screenshot.
+  fails loudly instead of producing a plausible-looking screenshot —
+  and `expect.noPageErrors()`, which reads the app bar's debug-log
+  count, so a page that renders while throwing is a finding.
 - **The header comment states what the tour can and can't reach**
   (e.g. `capture.tour.ts` notes camera permissions limit it to the
   camera-off state). Reachability limits are content, not apology.
@@ -120,8 +146,8 @@ tour({ name, description }, async (t) => {
   await t.checkpoint("loaded");      // screenshot + AX + axe, both viewports
   await t.expect.heading("Dashboard", { level: 1 });  // soft assertion
   await t.expect.landmark("Primary");
-  await t.expect.button("+ Memo");
-  await t.click({ role: "link", name: "Browse" });    // accessible-name locator
+  await t.expect.noPageErrors();
+  await t.click({ role: "link", name: /^Browse/ });   // accessible-name locator; string = exact, RegExp = match
   await t.expect.custom("has rows", (ax) => ax.includes("row"));
 });
 ```

@@ -338,12 +338,14 @@ Two traps worth naming in the plan rather than discovering later:
   norm for every future agent in the repo, and a mocked test written by the
   author of a bug encodes the same wrong assumption that caused it. Say
   explicitly if a plan needs one.
-- **A tour is not a regression anchor.** Tours are a review instrument by
-  design (`callback-box/docs/tours.md`) — nothing runs them, so their value
-  is the pass you make while writing them. Verified 2026-08-26: three of the
-  five tours had been silently failing their own soft assertions for weeks.
-  Plan a tour for the look-once review it is, and put behaviour you need to
-  stay true in a doctest.
+- **A tour is not a regression anchor for behaviour.** A tour is the walk
+  written down (`callback-box/docs/tours.md`): a weekly session runs it and
+  amends it when the app changed deliberately, so what it holds is "the page
+  still renders its skeleton and the walk still describes the app" — with a
+  week's latency and a human reading the report. Before that session
+  existed, three of five tours had silently failed for months (2026-08-26).
+  Plan a tour when the next person should get the walk; put behaviour you
+  need to stay true in a doctest.
 
 ### Implementation order
 
