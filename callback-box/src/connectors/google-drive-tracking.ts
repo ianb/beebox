@@ -17,8 +17,29 @@ const DRIVE_CARD_IGNORE = [
   "procedure/runs/**",
 ];
 
+/**
+ * What a tracked card asks the connector to do. Derived from the card's type
+ * (its filename extension), never from a frontmatter field: the three kinds
+ * are three card types, so the sync dispatch is a closed union.
+ */
+export type DriveCardKind = "file" | "folder" | "link";
+
+/** Card type of a mirrored Drive folder — the card IS the mount. */
+export const GFOLDER_CARD_TYPE = "gfolder";
+/** Card type of a Drive pointer — metadata only, nothing copied. */
+export const GLINK_CARD_TYPE = "glink";
+
+/** Which kind a Drive card is, read off its card type. */
+export function driveCardKindOf(cardPath: string): DriveCardKind {
+  const basename = path.basename(cardPath);
+  if (basename.endsWith(`.${GFOLDER_CARD_TYPE}.card`)) return "folder";
+  if (basename.endsWith(`.${GLINK_CARD_TYPE}.card`)) return "link";
+  return "file";
+}
+
 export interface TrackedDriveCard {
   driveId: string;
+  kind: DriveCardKind;
   absPath: string;
   relPath: string;
   content: string;
@@ -75,8 +96,13 @@ function isWithin(parent: string, candidate: string): boolean {
 /** Find live Drive cards and the Drive IDs retained as trash tombstones. */
 export async function findDriveCardTracking(boxRoot: string): Promise<DriveCardTracking> {
   const matches = new Set<string>();
-  for (const handler of getAllDriveHandlers()) {
-    const paths = await glob(`**/*.${handler.cardType}.card`, {
+  const cardTypes = [
+    ...getAllDriveHandlers().map((handler) => handler.cardType),
+    GFOLDER_CARD_TYPE,
+    GLINK_CARD_TYPE,
+  ];
+  for (const cardType of cardTypes) {
+    const paths = await glob(`**/*.${cardType}.card`, {
       cwd: boxRoot,
       absolute: true,
       nodir: true,
@@ -112,7 +138,13 @@ export async function findDriveCardTracking(boxRoot: string): Promise<DriveCardT
       trashedDriveIds.add(driveId);
       continue;
     }
-    const card: TrackedDriveCard = { driveId, absPath, relPath, content };
+    const card: TrackedDriveCard = {
+      driveId,
+      kind: driveCardKindOf(absPath),
+      absPath,
+      relPath,
+      content,
+    };
     const existing = byDriveId.get(driveId);
     if (existing) existing.push(card);
     else byDriveId.set(driveId, [card]);

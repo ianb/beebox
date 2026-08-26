@@ -14,6 +14,7 @@ import { moveCardsToTrash } from "../../src/core/commands/trash.js";
 import { createCliContext } from "../../src/core/commands/index.js";
 import { createGsheetTemplate } from "../../src/schemas/gsheet.js";
 import { createGdocTemplate } from "../../src/schemas/gdoc.js";
+import { createGfolderTemplate } from "../../src/schemas/gfolder.js";
 import { runDriveStatus } from "../../src/cli/commands/drive.js";
 import { findDriveCardTracking } from "../../src/connectors/google-drive-tracking.js";
 import type { FakeSpreadsheet } from "../../src/services/google-drive.js";
@@ -59,6 +60,25 @@ function sheetFixture(opts: { id: string; name: string; parent?: string }): {
     sheets: [{ ref: "attach/Sheet1.json", title: "Sheet1", gid: "0" }],
   });
   return { file, spreadsheet, card };
+}
+
+/** A Drive folder entry for the fake — the remote side of a `.gfolder.card`. */
+function folderFixture(opts: { id: string; name: string }): {
+  id: string;
+  name: string;
+  mimeType: string;
+  modifiedTime: string;
+  trashed: boolean;
+  webViewLink: string;
+} {
+  return {
+    id: opts.id,
+    name: opts.name,
+    mimeType: "application/vnd.google-apps.folder",
+    modifiedTime: "2026-03-29T10:00:00Z",
+    trashed: false,
+    webViewLink: `https://drive.google.com/drive/folders/${opts.id}`,
+  };
 }
 
 async function captureLogs(fn: () => Promise<void>): Promise<string> {
@@ -360,7 +380,7 @@ await box.seed("store/drive/Trash-Me.attach/Sheet1.json", '[["Name"],["Alice"]]\
 box.commitAll("add drive card");
 
 const inner = createFakeGoogleDrive({
-  files: [fixture.file],
+  files: [folderFixture({ id: "folder-1", name: "Folder" }), fixture.file],
   spreadsheets: new Map([[fixture.file.id, fixture.spreadsheet]]),
 });
 let getFileCalls = 0;
@@ -420,9 +440,10 @@ again.
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
-await box.seed("config/connectors/google-drive.json", JSON.stringify({
-  folders: [{ driveFolderId: "folder-1", localPath: "store/drive/folder" }],
-}, null, 2));
+await box.seed(
+  "store/drive/folder/Folder.gfolder.card",
+  createGfolderTemplate({ driveId: "folder-1" }),
+);
 const fixture = sheetFixture({
   id: "sheet-folder-trash",
   name: "Folder Child",
@@ -431,7 +452,7 @@ const fixture = sheetFixture({
 box.commitAll("mount folder");
 
 const inner = createFakeGoogleDrive({
-  files: [fixture.file],
+  files: [folderFixture({ id: "folder-1", name: "Folder" }), fixture.file],
   spreadsheets: new Map([[fixture.file.id, fixture.spreadsheet]]),
 });
 let getFileCalls = 0;
@@ -455,6 +476,7 @@ JSON.stringify({
 
 Trash the previously synced card, so the connector retains both real transient
 hashes and a durable tombstone. It must neither sync nor rediscover the child.
+(The one `getFile` is the mount reading its own Drive folder, not the child.)
 
 ```ts continue
 const receipt = await moveCardsToTrash(
@@ -472,7 +494,7 @@ JSON.stringify({
   liveCardExists: (await box.list()).includes(liveCard),
   retainedHash: retainedState.files?.[fixture.file.id]?.contentHashes?.["Sheet1.json"] !== undefined,
 })
-=> {"getFileCalls":0,"created":0,"liveCardExists":false,"retainedHash":true}
+=> {"getFileCalls":1,"created":0,"liveCardExists":false,"retainedHash":true}
 ```
 
 Hard-deleting the complete tombstone allows the still-mounted folder to
@@ -491,7 +513,7 @@ JSON.stringify({
   createdAttachment: rediscovered.created.includes(liveSheet),
   attachmentExists: (await box.list()).includes(liveSheet),
 })
-=> {"getFileCalls":1,"createdCard":true,"createdAttachment":true,"attachmentExists":true}
+=> {"getFileCalls":2,"createdCard":true,"createdAttachment":true,"attachmentExists":true}
 ```
 
 ```ts cleanup
@@ -696,9 +718,10 @@ rather than leaving the remote child untracked forever.
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
-await box.seed("config/connectors/google-drive.json", JSON.stringify({
-  folders: [{ driveFolderId: "folder-1", localPath: "store/drive/folder" }],
-}, null, 2));
+await box.seed(
+  "store/drive/folder/Folder.gfolder.card",
+  createGfolderTemplate({ driveId: "folder-1" }),
+);
 
 const occupant = sheetFixture({ id: "sheet-occupant", name: "Shared Name" });
 const newcomer = sheetFixture({
@@ -710,7 +733,7 @@ await box.seed("store/drive/folder/Shared_Name.gsheet.card", occupant.card);
 box.commitAll("mount folder");
 
 const drive = createFakeGoogleDrive({
-  files: [occupant.file, newcomer.file],
+  files: [folderFixture({ id: "folder-1", name: "Folder" }), occupant.file, newcomer.file],
   spreadsheets: new Map([
     [occupant.file.id, occupant.spreadsheet],
     [newcomer.file.id, newcomer.spreadsheet],
@@ -763,9 +786,10 @@ Drive request, no recreated card, and the failure names the path.
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
-await box.seed("config/connectors/google-drive.json", JSON.stringify({
-  folders: [{ driveFolderId: "folder-1", localPath: "store/drive/folder" }],
-}, null, 2));
+await box.seed(
+  "store/drive/folder/Folder.gfolder.card",
+  createGfolderTemplate({ driveId: "folder-1" }),
+);
 const fixture = sheetFixture({
   id: "sheet-folder-unreadable",
   name: "Folder Child",
@@ -774,7 +798,7 @@ const fixture = sheetFixture({
 box.commitAll("mount folder");
 
 const inner = createFakeGoogleDrive({
-  files: [fixture.file],
+  files: [folderFixture({ id: "folder-1", name: "Folder" }), fixture.file],
   spreadsheets: new Map([[fixture.file.id, fixture.spreadsheet]]),
 });
 let getFileCalls = 0;

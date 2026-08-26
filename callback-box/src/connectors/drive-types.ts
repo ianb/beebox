@@ -103,9 +103,20 @@ export function getAllDriveHandlers(): DriveTypeHandler[] {
  * - https://docs.google.com/presentation/d/FILE_ID/edit
  * - https://drive.google.com/file/d/FILE_ID/view
  * - https://drive.google.com/open?id=FILE_ID
+ * - https://drive.google.com/drive/folders/FOLDER_ID (also /drive/u/0/folders/…)
  * - Bare file ID (alphanumeric + hyphens + underscores)
  */
 export function extractDriveFileId(input: string): string | null {
+  // Folder URL. Checked first because it shares no pattern with the others —
+  // a folder URL has no `/d/` segment, so before this it only resolved by
+  // accident when someone pasted a bare ID.
+  const folderPattern = /\/folders\/([\w-]+)/;
+  const folderMatch = input.match(folderPattern);
+  if (folderMatch) {
+    invariant(folderMatch[1] !== undefined, "capture group 1 is non-optional in folderPattern");
+    return folderMatch[1];
+  }
+
   // URL with /d/FILE_ID/ pattern
   const dPattern = /\/d\/([\w-]+)/;
   const dMatch = input.match(dPattern);
