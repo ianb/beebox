@@ -160,7 +160,7 @@ export async function loadSessionHistory(
     return { sessionId: null, entries: [], total: 0 };
   }
 
-  if (await resolveChatEngine(boxRoot, sessionId) === "codex") {
+  if (await resolveChatEngine(boxRoot, { sessionId }) === "codex") {
     const { entries, total } = await readCodexSessionHistory({ boxRoot, sessionId, slice });
     Object.freeze(entries);
     return { sessionId, entries, total };

@@ -11,9 +11,9 @@ import {
   loadSchedulerConfig,
   isBox,
   runScheduler,
-  LOG_DIR,
   type LogEntry,
 } from "../../core/schedule/scheduler.js";
+import { CB_STATE_DIR } from "../../lib/state-dir.js";
 import { errorMessage } from "../../lib/error-guards.js";
 import {
   loadBoxesConfig,
@@ -33,7 +33,7 @@ const PLIST_PATH = path.join(
   "Library/LaunchAgents",
   `${PLIST_LABEL}.plist`
 );
-const STDERR_LOG = path.join(LOG_DIR, "scheduler-stderr.log");
+const STDERR_LOG = path.join(CB_STATE_DIR, "scheduler-stderr.log");
 
 export const schedulerCommand = new Command("scheduler")
   .description("Manage the schedule runner daemon");
@@ -184,7 +184,7 @@ schedulerCommand
 </plist>
 `;
 
-    await fs.mkdir(LOG_DIR, { recursive: true });
+    await fs.mkdir(CB_STATE_DIR, { recursive: true });
     await fs.mkdir(path.dirname(PLIST_PATH), { recursive: true });
     await fs.writeFile(PLIST_PATH, plist);
     console.log(`Wrote ${PLIST_PATH}`);

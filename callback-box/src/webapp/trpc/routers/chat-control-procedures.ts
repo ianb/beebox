@@ -21,6 +21,7 @@ import type { AgentEngine } from "../../../core/box/config.js";
 import { isChatModelAllowed } from "../../../shared/chat-models.js";
 import { deleteChatSession, ChatSessionNotFoundError, SessionStorageContextMismatchError } from "../../../core/chat/session/delete.js";
 import { sdkSessionIdSchema } from "../../../core/chat/session/session-id.js";
+import { archiveChatSession } from "../../../core/chat/session/archive.js";
 import { SessionDeletingError } from "../../../core/chat/session/registry.js";
 import { LockHeldError } from "../../../core/chat/review/lock.js";
 import { resolveSessionAvailability } from "../../../core/chat/session/availability.js";
@@ -74,7 +75,7 @@ export interface ChatSessionStatus {
  */
 export async function readSessionStatus(boxRoot: string, sessionId: string | null): Promise<ChatSessionStatus> {
   const { registry } = requireRuntime(boxRoot);
-  const engine = await resolveChatEngine(boxRoot, sessionId);
+  const engine = await resolveChatEngine(boxRoot, { sessionId });
   const pinned = await loadBoxModel(boxRoot);
   const boxDefault = resolveBoxModelForEngine(engine, pinned);
   const target = sessionId === null ? undefined : registry.get(sessionId);
@@ -145,6 +146,27 @@ export const chatControlProcedures = {
     }
   }),
 
+  /**
+   * File a dead chat's card away under `store/chat/archive/`.
+   *
+   * Beside `deleteSession` because it is the same decision made differently:
+   * one removes the conversation, the other only stops listing it. Nothing is
+   * deleted here, so a failure is reported as an error rather than as a
+   * cleanup-required state — there is no half-done to recover from.
+   */
+  archive: ownerProcedure.input(z.object({ sessionId: sdkSessionIdSchema })).mutation(async ({ input, ctx }) => {
+    try {
+      const { registry } = requireRuntime(ctx.boxRoot);
+      return await archiveChatSession({ boxRoot: ctx.boxRoot, sessionId: input.sessionId, registry });
+    } catch (error) {
+      if (error instanceof LockHeldError) {
+        throw new TRPCError({ code: "CONFLICT", message: "Chat review is running; try again in a moment" });
+      }
+      console.error("chat-archive: mutation failed", { sessionId: input.sessionId, error });
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Could not archive the conversation" });
+    }
+  }),
+
   sessionAvailability: publicProcedure.input(z.object({ sessionId: z.string().min(1) })).query(async ({ input, ctx }) => {
     const { registry } = requireRuntime(ctx.boxRoot);
     return resolveSessionAvailability({
@@ -179,7 +201,7 @@ export const chatControlProcedures = {
   // rather than 404'ing; the live subprocess is restarted so the next turn picks
   // up the new model (a live `set_model` control request isn't honored).
   setModel: publicProcedure.input(z.object({ session: z.string().min(1), model: z.string().nullable() })).mutation(async ({ input, ctx }) => {
-    const engine = await resolveChatEngine(ctx.boxRoot, input.session);
+    const engine = await resolveChatEngine(ctx.boxRoot, { sessionId: input.session });
     if (!isChatModelAllowed(engine, input.model)) {
       throw new TRPCError({
         code: "BAD_REQUEST",

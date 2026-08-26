@@ -59,6 +59,8 @@ export interface RunSummary {
   missingTranscripts: number;
   deferredActive: number;
   belowThreshold: number;
+  /** Sessions this machine did not originate, so it does not review them. */
+  foreignOrigin: number;
   /** Qualified sessions beyond --max-sessions; they wait for the next run. */
   overflow: number;
   /**
@@ -80,6 +82,7 @@ function emptySummary(): RunSummary {
     missingTranscripts: 0,
     deferredActive: 0,
     belowThreshold: 0,
+    foreignOrigin: 0,
     overflow: 0,
   };
 }
@@ -262,6 +265,7 @@ export async function runChatReview(boxRoot: string, options: RunOptions): Promi
       summary.missingTranscripts = discovery.missingTranscripts;
       summary.deferredActive = discovery.deferredActive.length;
       summary.belowThreshold = discovery.belowThreshold;
+      summary.foreignOrigin = discovery.foreignOrigin;
 
       // One unreadable transcript or unwritable husk must not cost the night's
       // other sessions, nor the journal advances already earned.

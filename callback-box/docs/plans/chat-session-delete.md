@@ -7,9 +7,9 @@ issues: []
 # Chat Session Delete — Plan
 
 **Issues:**
-[chat thread management](../../../issues/features/2026-07-20-chat-thread-management.md)
+[chat thread management](../../../issues/closed/features/2026-07-20-chat-thread-management.md)
 (implements delete only) and
-[stale husks outlive transcripts](../../../issues/features/2026-07-29-stale-husks-outlive-their-transcripts.md)
+[stale husks outlive transcripts](../../../issues/closed/features/2026-07-29-stale-husks-outlive-their-transcripts.md)
 (guards the unsafe open/resume path, but does not solve the full husk-lifecycle
 policy).
 

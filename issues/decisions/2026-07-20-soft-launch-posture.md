@@ -143,7 +143,7 @@ to people; close when the soft launch happens. Builds on
 7. **First-hour experience** — reviewed, boxholder-flagged ("the
    dashboard is crap"): at minimum decide how much of
    [first-run-experience](../features/2026-07-20-first-run-experience.md)
-   and [chat-thread-management](../features/2026-07-20-chat-thread-management.md)
+   and [chat-thread-management](../closed/features/2026-07-20-chat-thread-management.md)
    (delete is the ask) lands pre-launch; the
    [day-to-day usage docs](../docs-and-chores/2026-07-20-day-to-day-usage-docs.md)
    are the docs half of the same gap.
@@ -176,7 +176,7 @@ Filed — features:
 [explicit-api-key-config](../features/2026-07-20-explicit-api-key-config.md),
 [export-md-agent-instructions](../features/2026-07-20-export-md-agent-instructions.md),
 [schedules-off-by-default](../features/2026-07-20-schedules-off-by-default.md),
-[chat-thread-management](../features/2026-07-20-chat-thread-management.md),
+[chat-thread-management](../closed/features/2026-07-20-chat-thread-management.md),
 [first-run-experience](../features/2026-07-20-first-run-experience.md),
 [agent-containment-allowed-directories](../features/2026-07-20-agent-containment-allowed-directories.md).
 

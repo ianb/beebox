@@ -76,6 +76,7 @@ export async function recordSessionStart(
     await ensureChatHusk(boxRoot, {
       sessionId,
       ...(contextDir !== undefined ? { contextDir } : {}),
+      ...(engine !== undefined ? { engine } : {}),
     });
   } catch (e) {
     log("session-start", `Chat husk write failed: ${e instanceof Error ? e.message : e}`);

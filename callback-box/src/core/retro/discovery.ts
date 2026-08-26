@@ -59,26 +59,34 @@ interface TranscriptCounts {
   userEntries: number;
   /** The subset carrying <typed>/<speech> tags. */
   tagged: number;
+  /** The transcript is longer than `limit`, so the counts are a floor. */
+  truncated: boolean;
 }
 
 /**
  * Count user messages in a transcript, or null when the file is gone
  * (user cleared `~/.claude` between listing and reading).
  *
- * Counts within the first {@link MAX_SESSION_ENTRIES} entries — this only
- * feeds "does this session have enough human turns to be worth observing"
- * thresholds, which any transcript that long has cleared many times over.
+ * Counts within the first `limit` entries — this only feeds "does this session
+ * have enough human turns to be worth observing" thresholds, which any
+ * transcript that long has cleared many times over. `truncated` says so
+ * anyway: a count silently capped at a constant is the kind of thing that
+ * reads as a real number years later (principle #4, never silent).
+ *
+ * `limit` is a parameter rather than a read of {@link MAX_SESSION_ENTRIES}
+ * here so the truncation branch is testable without a 5000-entry fixture.
  */
-async function countUserMessages(logPath: string): Promise<TranscriptCounts | null> {
+export async function countUserMessages(opts: { logPath: string; limit: number }): Promise<TranscriptCounts | null> {
   try {
-    const { entries } = await parseSessionLog({
-      logPath,
-      slice: { mode: "page", offset: 0, limit: MAX_SESSION_ENTRIES },
+    const { entries, total } = await parseSessionLog({
+      logPath: opts.logPath,
+      slice: { mode: "page", offset: 0, limit: opts.limit },
     });
     const userEntries = entries.filter((entry) => entry.type === "user");
     return {
       userEntries: userEntries.length,
       tagged: userEntries.filter(isRealUserMessage).length,
+      truncated: total > opts.limit,
     };
   } catch (e) {
     if (errnoCode(e) === "ENOENT") return null;
@@ -112,10 +120,16 @@ export async function discoverSessions(
       result.deferredActive.push(session.sessionId);
       continue;
     }
-    const counts = await countUserMessages(session.path);
+    const counts = await countUserMessages({ logPath: session.path, limit: MAX_SESSION_ENTRIES });
     if (counts === null) {
       result.missingTranscripts += 1;
       continue;
+    }
+    if (counts.truncated) {
+      console.warn(
+        `[retro] session ${session.sessionId}: transcript is longer than ${String(MAX_SESSION_ENTRIES)} entries; ` +
+        "user-message counts are a floor, not a total",
+      );
     }
     const inRegistry = registry.ids.has(session.sessionId);
     const userMessages = counts.tagged > 0 ? counts.tagged : counts.userEntries;

@@ -13,6 +13,7 @@ import { Text } from "../ui/Text";
 import type { RendererProps } from "../../renderers/index";
 import { trpc } from "../../lib/trpc";
 import { DeleteChatAction } from "../chat-delete/DeleteChatDialog";
+import { transcriptStateLabel } from "../../lib/transcript-state";
 
 export function ChatHuskView({ data }: RendererProps) {
   const { boxSlug } = useParams({ strict: false });
@@ -79,7 +80,9 @@ export function ChatHuskView({ data }: RendererProps) {
             </Text>
           ) : availability.data.kind === "unavailable" ? (
             <Text as="span" size="sm" tone="muted">
-              Not available on this machine
+              {availability.data.reason === "deletion-in-progress"
+                ? "Deletion in progress"
+                : transcriptStateLabel(availability.data.transcript)}
             </Text>
           ) : (
             <Link

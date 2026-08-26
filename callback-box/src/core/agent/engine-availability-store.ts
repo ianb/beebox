@@ -16,10 +16,10 @@
  */
 
 import * as fs from "node:fs/promises";
-import * as os from "node:os";
 import * as path from "node:path";
 import { z } from "zod";
 import { writeFileAtomic } from "../../lib/atomic-write.js";
+import { CB_STATE_DIR } from "../../lib/state-dir.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import type { EngineProvider, EngineUnavailability } from "./engine-unavailability.js";
 
@@ -55,7 +55,7 @@ export function engineAvailabilityFilePath(): string {
   // TODO(env-migration): test override; move into the typed env boundary.
   return (
     process.env.CB_ENGINE_AVAILABILITY_FILE ??
-    path.join(os.homedir(), ".local/share/cb/engine-availability.json")
+    path.join(CB_STATE_DIR, "engine-availability.json")
   );
 }
 

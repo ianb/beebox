@@ -30,9 +30,27 @@ Discovery is husk-first: `store/chat/web/*.chat.card` *is* the corpus, so a
 session with no husk is out of scope and a deleted husk is an editorial removal.
 A session qualifies when it is:
 
+- claimed by this machine (see below),
 - quiet for 30 minutes (don't summarize a conversation still happening),
 - at least 2 real user turns, and
 - its **unread span** renders to at least 6,000 characters.
+
+**A machine reviews only the sessions it originated.** The husk records the
+machine the chat ran on (`origin`, written at creation), and discovery skips
+any husk stamped with someone else's. Two checkouts share one box but hold
+different transcript subsets — a transcript lives in one engine store on one
+machine — so a machine reviewing a session it did not run would extend
+`contains-evidence` from whatever fragment it happens to hold, while the
+machine that *has* the whole conversation extends the same account from the
+whole thing. The origin machine is the only one that can see all of it. (A husk
+with no `origin` predates the field; it is claimed when its transcript is
+present here, and reconcile stamps it on the next boot, so that fallback
+decays.) The consequence is worth stating plainly: a session that ran on a
+laptop is reviewed only if the laptop runs the schedule. Today only prod does,
+so laptop chats expire unreviewed — which was already true, since prod never
+held their transcripts. `status` and `run --dry-run` print
+`N sessions originated on another machine (not reviewed here)` so the gap is
+counted rather than invisible; the sessions are never named.
 
 That last number is deliberately untuned — its job is to keep a nightly model
 call off trivial growth. Across a 775-transcript sample, any threshold between

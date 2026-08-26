@@ -1,7 +1,7 @@
 import { BOX_DIRS } from "../../../lib/paths.js";
 import type { commitTrashReceipt, moveCardsToTrash } from "../../commands/trash.js";
 import type { recoverTrashReceipt } from "../../commands/trash-recovery.js";
-import { listChatHusks, listChatHusksUnder, type ChatHuskEntry } from "../husk.js";
+import { listChatHusks, listChatHusksUnder, type ChatHuskEntry } from "../husk-read.js";
 import { acquireChatReviewLease } from "../review/lock.js";
 import { assertReviewStateReadableForDeletion, removeSessionFromReview, restoreSessionToReview, type ReviewSessionState } from "../review/state.js";
 import type { ChatScheduleManager, DetachedSchedulesReceipt } from "../schedules.js";

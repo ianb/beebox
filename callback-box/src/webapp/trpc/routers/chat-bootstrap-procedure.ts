@@ -20,7 +20,7 @@ import { getMostActive } from "../../../core/chat/session/history.js";
 import { historySliceSchema, loadHistoryForSession, type SessionHistory } from "./chat-session-procedures.js";
 import { readSessionStatus, type ChatSessionStatus } from "./chat-control-procedures.js";
 import { titleForSession } from "../../../core/chat/session/list.js";
-import { resolveSessionAvailability } from "../../../core/chat/session/availability.js";
+import { resolveSessionAvailability, type SessionAvailability } from "../../../core/chat/session/availability.js";
 import { getChatRuntime } from "../../chat-runtime.js";
 import { TRPCError } from "@trpc/server";
 
@@ -51,6 +51,18 @@ interface ChatBootstrapBase {
   pending: AcceptedMessage[];
 }
 
+/**
+ * The availability answer, minus its own `kind` (the bootstrap's `kind` says
+ * `"unavailable"` already). Distributed over the union member by member —
+ * a plain `Omit` would collapse the two arms into their common keys and lose
+ * `transcript` entirely, which is the distinction this carries.
+ */
+type UnavailableDetail = Extract<SessionAvailability, { kind: "unavailable" }> extends infer U
+  ? U extends { kind: "unavailable" }
+    ? Omit<U, "kind">
+    : never
+  : never;
+
 export type ChatBootstrap =
   | (ChatBootstrapBase & {
       kind: "empty";
@@ -63,12 +75,10 @@ export type ChatBootstrap =
       sessionId: string;
       history: SessionHistory;
     })
-  | (ChatBootstrapBase & {
+  | (ChatBootstrapBase & UnavailableDetail & {
       kind: "unavailable";
       sessionId: string;
       history: null;
-      reason: "missing-local-transcript" | "deletion-in-progress";
-      huskPath: string | null;
     });
 
 export const chatBootstrapProcedure = {
@@ -128,14 +138,16 @@ export const chatBootstrapProcedure = {
         registry: runtime.registry,
       });
       if (availability.kind === "unavailable") {
+        // Spread rather than restated field-by-field: the availability union
+        // carries `transcript` on one arm only, and a hand-copied literal here
+        // is exactly where that distinction gets flattened back to a string.
         return {
+          ...availability,
           kind: "unavailable",
           sessionId,
           history: null,
           label: await titleForSession(ctx.boxRoot, sessionId),
           status: await readSessionStatus(ctx.boxRoot, sessionId),
-          reason: availability.reason,
-          huskPath: availability.huskPath,
           pending: acceptedFor([]),
         };
       }

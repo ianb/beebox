@@ -6,55 +6,40 @@
  * backfilled once for pre-husk history. Activity/freshness deliberately
  * stays in runtime bookkeeping — the card never changes just because the
  * conversation continued.
+ *
+ * This is the writing half: creating a husk, stamping its provenance, and the
+ * boot-time reconcile. Reading one lives in `husk-read.ts`.
  */
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { parse as parseYaml } from "yaml";
-import { splitCardContent } from "../../cards/index.js";
+import { renderFrontmatterBlock, splitCardContent } from "../../cards/index.js";
 import { createChatHuskTemplate } from "../../schemas/chat.js";
-import { loadHistoryEntries, resolveSessionLogPath } from "./session/history.js";
+import { loadHistoryEntries, resolveSessionLogPath, type SessionHistoryEntry } from "./session/history.js";
+import { localOrigin, type LocalOrigin } from "./session/origin.js";
+import { withCardLock } from "../../lib/card-lock.js";
+import { loadAgentEngine, type AgentEngine } from "../box/config.js";
 import { extractSnippet } from "../../cli/lib/session-text.js";
-import { errnoCode, errorMessage } from "../../lib/error-guards.js";
-import { isRecord } from "../card-io.js";
-import { mapInBatchesSettled } from "../../lib/map-batched.js";
+import { errnoCode } from "../../lib/error-guards.js";
 import { readCodexSessionUpdatedAt } from "./session/codex-transcript.js";
 import { loadSessionHistory } from "./session/load-history.js";
+import { writeFileAtomic } from "../../lib/atomic-write.js";
+import {
+  CHAT_HUSK_DIR,
+  findChatHuskEntry,
+  groupHusksBySession,
+  listChatHusks,
+  parseHuskFrontmatter,
+  shortId,
+  type ChatHuskEntry,
+} from "./husk-read.js";
 
-/** Husk cards read at once — see {@link mapInBatchesSettled}. */
-const READ_CONCURRENCY = 64;
-
-const CHAT_HUSK_DIR = "store/chat/web";
 /** Keep husk titles bookmark-sized, not transcript-sized. */
 const TITLE_MAX_LEN = 80;
 
-function shortId(sessionId: string): string {
-  return sessionId.slice(0, 8);
-}
-
-/** `2026-07-02_59fc20dd.chat.card` — date names the file; the suffix is the idempotency key. */
+/** `2026-07-02_59fc20dd.chat.card` — date names the file, the suffix is a lookup hint. */
 function huskFileName(sessionId: string, date: Date): string {
   return `${date.toISOString().slice(0, 10)}_${shortId(sessionId)}.chat.card`;
-}
-
-/**
- * Find an existing husk for a session, by the `_<shortid>.chat.card`
- * filename suffix (rename-tolerant as long as the suffix survives; a
- * fully renamed husk is fine too — it just won't be found here, and
- * ensure would create a duplicate pointer, which validation of the
- * `session` field makes discoverable rather than harmful).
- */
-export async function findChatHusk(boxRoot: string, sessionId: string): Promise<string | null> {
-  const suffix = `_${shortId(sessionId)}.chat.card`;
-  let names: string[];
-  try {
-    names = await fs.readdir(path.join(boxRoot, CHAT_HUSK_DIR));
-  } catch (e) {
-    if (errnoCode(e) === "ENOENT") return null;
-    throw e;
-  }
-  const match = names.find((n) => n.endsWith(suffix));
-  return match === undefined ? null : `${CHAT_HUSK_DIR}/${match}`;
 }
 
 /** Best-effort title from the transcript's first user message; null when unavailable. */
@@ -87,20 +72,36 @@ async function readSnippetTitle(boxRoot: string, sessionId: string): Promise<str
 
 /**
  * Ensure a husk card exists for a session; returns its box-relative path.
- * Idempotent. `date` names the file (defaults to now; backfill passes the
- * transcript mtime so old husks sort by when the chat happened).
+ *
+ * Idempotent on the `session` field, not on the filename: a husk renamed to
+ * something without the `_<shortid>` suffix is still found, so resuming a
+ * renamed chat doesn't mint a second card pointing at the same session
+ * (`docs/implemented-plans/chat-session-identity.md`, Track 1). `date` names the file
+ * (defaults to now; backfill passes the transcript mtime so old husks sort by
+ * when the chat happened).
  */
-export async function ensureChatHusk(boxRoot: string, opts: { sessionId: string; contextDir?: string; date?: Date }): Promise<string> {
-  const existing = await findChatHusk(boxRoot, opts.sessionId);
-  if (existing !== null) return existing;
+export async function ensureChatHusk(boxRoot: string, opts: { sessionId: string; contextDir?: string; engine?: AgentEngine; date?: Date }): Promise<string> {
+  const existing = await findChatHuskEntry(boxRoot, opts.sessionId);
+  if (existing !== null) return existing.path;
 
   const title = await readSnippetTitle(boxRoot, opts.sessionId);
+  // Provenance is written at CREATE only. The transcript this husk points at
+  // is being written on this machine right now, so this is the one moment the
+  // origin is known without inference — and a value already on a card is never
+  // second-guessed (a resume from another checkout must not restamp it).
+  const origin = await localOrigin();
+  // Same fallback as `appendHistory` (`session/history.ts`), not a second
+  // default: an engine the caller didn't name is whatever the box runs now.
+  const engine = opts.engine ?? await loadAgentEngine(boxRoot);
   const relPath = `${CHAT_HUSK_DIR}/${huskFileName(opts.sessionId, opts.date ?? new Date())}`;
   const absPath = path.join(boxRoot, relPath);
   await fs.mkdir(path.dirname(absPath), { recursive: true });
   const content = createChatHuskTemplate({
     session: opts.sessionId,
     ...(opts.contextDir !== undefined ? { contextDir: opts.contextDir } : {}),
+    engine,
+    origin: origin.id,
+    originName: origin.name,
     ...(title !== null ? { title } : {}),
   });
   // `wx` so a concurrent ensure can't clobber; losing the race is success.
@@ -112,119 +113,83 @@ export async function ensureChatHusk(boxRoot: string, opts: { sessionId: string;
   return relPath;
 }
 
-/** Frontmatter mapping from a husk file, or null when the shape is wrong. */
-function parseHuskFrontmatter(content: string): Record<string, unknown> | null {
-  const split = splitCardContent(content);
-  if (!split.hasFrontmatter) return null;
-  let parsed: unknown;
+/**
+ * When this machine's copy of a session's transcript was last written, or null
+ * when it holds none. The one "is the transcript here?" check: reconcile skips
+ * ghost history entries with it, and the provenance backfill uses the same
+ * answer to decide whether this machine is the session's origin.
+ */
+async function transcriptMtime(boxRoot: string, opts: { sessionId: string; engine: AgentEngine }): Promise<Date | null> {
   try {
-    parsed = parseYaml(split.frontmatterText);
+    return opts.engine === "codex"
+      ? await readCodexSessionUpdatedAt(boxRoot, opts.sessionId)
+      : (await fs.stat(await resolveSessionLogPath(boxRoot, opts.sessionId))).mtime;
   } catch (_e) {
-    // Malformed YAML — reported by the caller as a skipped husk.
+    // Absent (or unreadable) transcript — the caller's whole question.
     return null;
   }
-  return isRecord(parsed) ? parsed : null;
-}
-
-export interface ChatHuskEntry {
-  /** Box-relative husk card path. */
-  path: string;
-  /** SDK session id (the `session` field). */
-  session: string;
-  contextDir?: string;
-  title?: string;
 }
 
 /**
- * All husk cards under store/chat/web — the enumeration source for
- * "which web chats exist" (the picker reads these, not the history
- * JSON, so deleting a husk is editorial removal from the picker).
- * Unparseable or session-less files are skipped with a warning.
- */
-export async function listChatHusks(boxRoot: string): Promise<ChatHuskEntry[]> {
-  return listChatHusksUnder(boxRoot, CHAT_HUSK_DIR);
-}
-
-/** Read chat cards directly under a box-relative directory (active or Trash). */
-export async function listChatHusksUnder(boxRoot: string, relDir: string): Promise<ChatHuskEntry[]> {
-  let names: string[];
-  try {
-    names = await fs.readdir(path.join(boxRoot, relDir));
-  } catch (e) {
-    if (errnoCode(e) === "ENOENT") return [];
-    throw e;
-  }
-  // Read concurrently: every chat list in the app waits on this, and the husks
-  // are independent files. Bounded, though — a box accumulates one husk per
-  // chat forever, so this list grows without limit and unbounded fan-out here
-  // would eventually exhaust file descriptors. `allSettled` per code-style: an
-  // unreadable husk is already a per-file skip and must not abandon the rest.
-  const settled = await mapInBatchesSettled(
-    names.filter((name) => name.endsWith(".chat.card")),
-    { size: READ_CONCURRENCY, map: (name) => readChatHusk(boxRoot, `${relDir}/${name}`) },
-  );
-  const out: ChatHuskEntry[] = [];
-  for (const outcome of settled) {
-    if (outcome.status === "rejected") {
-      console.warn(`chat-husk: skipping a card under ${relDir}:`, outcome.reason);
-      continue;
-    }
-    if (outcome.value !== null) out.push(outcome.value);
-  }
-  return out;
-}
-
-/**
- * Read one husk card into its entry, or null (with a warning) when it isn't a
- * usable husk. The per-file half of `listChatHusks`, split out so a single
- * session can be resolved without reading every husk in the box.
- */
-async function readChatHusk(boxRoot: string, relPath: string): Promise<ChatHuskEntry | null> {
-  let content: string;
-  try {
-    content = await fs.readFile(path.join(boxRoot, relPath), "utf-8");
-  } catch (e) {
-    console.warn(`chat-husk: skipping unreadable ${relPath}: ${errorMessage(e)}`);
-    return null;
-  }
-  const fm = parseHuskFrontmatter(content);
-  if (fm === null) {
-    console.warn(`chat-husk: skipping ${relPath}: no frontmatter mapping`);
-    return null;
-  }
-  const session = fm["session"];
-  if (typeof session !== "string" || session === "") {
-    console.warn(`chat-husk: skipping ${relPath}: no session field`);
-    return null;
-  }
-  const contextDir = fm["context-dir"];
-  const title = fm["title"];
-  return {
-    path: relPath,
-    session,
-    ...(typeof contextDir === "string" ? { contextDir } : {}),
-    ...(typeof title === "string" && title !== "" ? { title } : {}),
-  };
-}
-
-/**
- * The husk for one session, or null when it has none.
+ * Add the machine-owned provenance fields to an existing husk, frontmatter
+ * only — the body and every other field are carried through untouched.
+ * Returns whether anything was written.
  *
- * The `session` field is authoritative — a husk can be renamed freely, and the
- * card enumerations (`listChatHusks` and everything built on it) key on the
- * field, not the filename. So the filename convention is only a fast path
- * here: when it misses (or names a card whose `session` says otherwise), fall
- * back to reading the husks and matching the field, which is what the pickers
- * would have found.
+ * The card is re-read under `withCardLock` and re-checked for `origin`,
+ * because the snapshot the caller matched on was taken outside the lock and
+ * chat review writes to the same cards. The write is atomic because the target
+ * is a git-tracked card: `fs.writeFile` truncates first, so a crash mid-write
+ * would leave a truncated card in the working tree.
+ *
+ * Across processes this stays last-writer-wins with the nightly review, and
+ * that is accepted: the stamp is three fields, it is re-read immediately
+ * before the write, and the review re-reads the card under its own lock — so
+ * the most a lost write costs is one boot's provenance, which the next boot
+ * writes again.
  */
-export async function findChatHuskEntry(boxRoot: string, sessionId: string): Promise<ChatHuskEntry | null> {
-  const relPath = await findChatHusk(boxRoot, sessionId);
-  if (relPath !== null) {
-    const entry = await readChatHusk(boxRoot, relPath);
-    if (entry !== null && entry.session === sessionId) return entry;
+async function stampHuskProvenance(absPath: string, args: { engine: AgentEngine; origin: LocalOrigin }): Promise<boolean> {
+  return withCardLock(absPath, async () => {
+    const content = await fs.readFile(absPath, "utf-8");
+    const split = splitCardContent(content);
+    const fields = parseHuskFrontmatter(content);
+    // Unreadable frontmatter: `listChatHusks` already warned about it, and a
+    // rewrite would be guessing at what the file meant.
+    if (!split.hasFrontmatter || fields === null) return false;
+    if (fields["origin"] !== undefined) return false;
+    fields["origin"] = args.origin.id;
+    fields["origin-name"] = args.origin.name;
+    // An `engine` already on the card wins — reconcile records, never corrects.
+    if (fields["engine"] === undefined) fields["engine"] = args.engine;
+    await writeFileAtomic(absPath, { content: renderFrontmatterBlock(fields, split.body) });
+    return true;
+  });
+}
+
+/**
+ * Stamp `origin` on every pre-Track-2 husk whose transcript is on THIS
+ * machine, and return how many were written.
+ *
+ * The transcript is the proof: a session's engine store exists on exactly one
+ * machine, so two checkouts can never claim the same husk and the stamped sets
+ * cannot conflict on merge. A husk with no transcript here is left unset —
+ * "unknown" is honest, and inventing an origin would make an expired chat look
+ * like it lives somewhere it doesn't.
+ */
+async function backfillHuskProvenance(boxRoot: string, args: { husks: ChatHuskEntry[]; entries: SessionHistoryEntry[] }): Promise<number> {
+  const engineBySession = new Map(args.entries.map((entry) => [entry.id, entry.engine]));
+  let stamped = 0;
+  for (const husk of args.husks) {
+    if (husk.origin !== undefined) continue;
+    // The husk's own stamp first, then the history entry; no entry (the file is
+    // per-checkout, the husk is not) means `claude`, the same decode a history
+    // entry without an `engine` gets.
+    const engine = husk.engine ?? engineBySession.get(husk.session) ?? "claude";
+    const mtime = await transcriptMtime(boxRoot, { sessionId: husk.session, engine });
+    if (mtime === null) continue;
+    const origin = await localOrigin();
+    if (await stampHuskProvenance(path.join(boxRoot, husk.path), { engine, origin })) stamped += 1;
   }
-  const husks = await listChatHusks(boxRoot);
-  return husks.find((h) => h.session === sessionId) ?? null;
+  return stamped;
 }
 
 /**
@@ -242,25 +207,41 @@ export async function findChatHuskEntry(boxRoot: string, sessionId: string): Pro
  *
  * Cheap to repeat: one directory listing plus one history read, and per-session
  * work only for the sessions actually missing a husk.
+ *
+ * It is also where husks written before Track 2 acquire their provenance
+ * (`backfillHuskProvenance`): a boot on the machine that holds a session's
+ * transcript is exactly when its origin can be established from evidence.
  */
 export async function reconcileChatHusks(boxRoot: string): Promise<void> {
   const [entries, husks] = await Promise.all([loadHistoryEntries(boxRoot), listChatHusks(boxRoot)]);
-  const husked = new Set(husks.map((h) => h.session));
+  const bySession = groupHusksBySession(husks);
+  // Boot-time visibility for what card-lint reports at commit time. A duplicate
+  // is no longer created (ensure is idempotent on the field), but a box can
+  // still hold one from before that fix, from a copied card, or a hand-edit —
+  // and it would otherwise be silent until someone happened to lint. No repair:
+  // which husk to keep is editorial (`core/lint-chat-duplicates.ts`).
+  for (const [session, paths] of bySession) {
+    if (paths.length < 2) continue;
+    console.warn(
+      `chat-husk: ${String(paths.length)} husks claim session ${session} (${paths.join(", ")}) — ` +
+      "keep one and `cb trash` the others",
+    );
+  }
+
+  const stamped = await backfillHuskProvenance(boxRoot, { husks, entries });
+  // Routine and usually zero, so it says nothing when nothing changed; when it
+  // does, it dirtied git-tracked cards and that should be attributable.
+  if (stamped > 0) console.debug(`chat-husk: recorded origin on ${String(stamped)} husk(s)`);
 
   for (const entry of entries) {
-    if (husked.has(entry.id)) continue;
-    let mtime: Date;
-    try {
-      mtime = entry.engine === "codex"
-        ? await readCodexSessionUpdatedAt(boxRoot, entry.id)
-        : (await fs.stat(await resolveSessionLogPath(boxRoot, entry.id))).mtime;
-    } catch (_e) {
-      // Ghost entry — transcript gone; nothing to resume, so no husk.
-      continue;
-    }
+    if (bySession.has(entry.id)) continue;
+    const mtime = await transcriptMtime(boxRoot, { sessionId: entry.id, engine: entry.engine });
+    // Ghost entry — transcript gone; nothing to resume, so no husk.
+    if (mtime === null) continue;
     await ensureChatHusk(boxRoot, {
       sessionId: entry.id,
       ...(entry.contextDir !== undefined ? { contextDir: entry.contextDir } : {}),
+      engine: entry.engine,
       date: mtime,
     });
   }

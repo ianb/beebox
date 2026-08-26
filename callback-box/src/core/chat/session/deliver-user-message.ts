@@ -71,7 +71,7 @@ export async function userMessageAlreadyLanded(opts: {
   const { boxRoot, sessionId, docPath } = opts;
   const logPrefix = opts.logPrefix ?? "chat";
   if (sessionId === null) return false;
-  if (await resolveChatEngine(boxRoot, sessionId) === "codex") {
+  if (await resolveChatEngine(boxRoot, { sessionId }) === "codex") {
     try {
       const { entries } = await loadSessionHistory(boxRoot, {
         sessionId,

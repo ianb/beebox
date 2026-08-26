@@ -19,11 +19,17 @@ import { errnoCode } from "../../../lib/error-guards.js";
 import { containWithinBox } from "../../../lib/box-containment.js";
 
 /**
- * Encode a cwd into Claude Code's `~/.claude/projects/<dir>` key. The
- * SDK replaces every non-alphanumeric character with `-`, not just `/`
+ * Encode a cwd into Claude Code's `~/.claude/projects/<dir>` key. Claude
+ * Code replaces every non-alphanumeric character with `-`, not just `/`
  * — so paths with `_`, `.`, spaces, etc. all collapse to the same shape.
  * Match that here, otherwise `getSessionLogPath` mis-resolves for any
  * cwd containing non-`/` separators (e.g. landmark-session audits).
+ *
+ * Verified against the Claude Code 2.1.246 binary (`replace(/[^a-zA-Z0-9]/g,
+ * "-")`) on 2026-08-25. Every entry in a real store that keeps `_`/`.` was a
+ * symlink our own tooling planted, never a transcript dir. Not mirrored: since
+ * 2.1.239 a name over 200 characters is cut and suffixed `-<hash>`; no box
+ * path comes near that (longest observed: 152), so it is left as a known gap.
  */
 export function encodeProjectDir(cwd: string): string {
   return cwd.replace(/[^\dA-Za-z]/g, "-");

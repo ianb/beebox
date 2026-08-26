@@ -7,7 +7,6 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import * as os from "node:os";
 import { BOX_MARKER } from "../../lib/paths.js";
 import { runTick, type TickResult } from "../../cli/commands/tick.js";
 import { getStatus, isRepo } from "../../lib/git.js";
@@ -29,9 +28,6 @@ export type SchedulerConfig = BoxesConfig;
 /** Per-box log filename inside .callback-box/ */
 const SCHEDULER_LOG_FILENAME = "scheduler.jsonl";
 const MAX_LOG_BYTES = 1_000_000; // 1MB
-
-/** For backwards compat and the CLI status command */
-export const LOG_DIR = path.join(os.homedir(), ".local/share/cb");
 
 /**
  * Get the log file path for a specific box.

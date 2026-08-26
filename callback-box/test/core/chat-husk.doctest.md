@@ -1,17 +1,24 @@
 # Chat husks — a `chat` card per web chat session
 
 `ensureChatHusk` creates the session's card under `store/chat/web/`
-(docs/plans/chat-husks.md): identity + editorial only, with the
-`_<shortid>.chat.card` filename suffix as the idempotency key.
+(docs/plans/chat-husks.md): identity + editorial only, keyed on the
+`session` field — the `_<shortid>.chat.card` filename is a naming
+convention and a lookup hint, nothing more.
 `reconcileChatHusks` gives every history entry a husk, skipping ghosts
 whose transcript is gone.
 
+Creating a husk also stamps its **provenance**: which engine ran the chat, and
+which machine holds the transcript (`session/origin.ts`). Written at create
+only — a value already on a card is never restamped.
+
 ```ts setup
-import { mkdir, writeFile, readFile as readFsFile } from "node:fs/promises";
+import { mkdir, rename, writeFile, readFile as readFsFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { ensureChatHusk, findChatHusk, reconcileChatHusks, listChatHusks } from "../../src/core/chat/husk.js";
+import { ensureChatHusk, reconcileChatHusks } from "../../src/core/chat/husk.js";
+import { findChatHuskEntry, listChatHusks } from "../../src/core/chat/husk-read.js";
 import { getSessionLogPath } from "../../src/core/chat/session/transcript-paths.js";
+import { localOrigin } from "../../src/core/chat/session/origin.js";
 ```
 
 ## ensure creates the husk, named by date + short session id
@@ -34,12 +41,20 @@ await box.read(path)
 => ---
 session: 59fc20dd-fe6d-45cb-8f37-f1508a5a0869
 context-dir: store/projects
+engine: claude
+origin: «*»
+origin-name: «*»
 ---
+
+const card = await box.read(path);
+const { id, name } = await localOrigin();
+card.includes(`origin: ${id}`) && card.includes(`origin-name: ${name}`)
+=> true
 ```
 
-## ensure is idempotent — a later call finds the existing husk by suffix
+## ensure is idempotent on the `session` field
 
-Even with a different date: the suffix, not the full name, is the key.
+Even with a different date: the field, not the file name, is the key.
 
 ```ts continue
 await ensureChatHusk(box.root, {
@@ -48,11 +63,29 @@ await ensureChatHusk(box.root, {
 })
 => store/chat/web/2026-07-02_59fc20dd.chat.card
 
-await findChatHusk(box.root, "59fc20dd-fe6d-45cb-8f37-f1508a5a0869")
+(await findChatHuskEntry(box.root, "59fc20dd-fe6d-45cb-8f37-f1508a5a0869"))?.path ?? null
 => store/chat/web/2026-07-02_59fc20dd.chat.card
 
-await findChatHusk(box.root, "00000000-unknown")
+await findChatHuskEntry(box.root, "00000000-0000-4000-8000-000000000000")
 => null
+```
+
+Renaming the husk to a name with no `_<shortid>` suffix is safe — renaming is
+encouraged once a chat's topic is clear, and it used to mint a **second** card
+for the same session on the next resume after a server restart
+(`issues/bugs/2026-07-28-renamed-husk-duplicates-on-backfill.md`). The suffix is
+only a lookup hint; when it misses, the `session`-field scan finds the card.
+
+```ts continue
+await rename(box.path("store/chat/web/2026-07-02_59fc20dd.chat.card"), box.path("store/chat/web/Planning the trip.chat.card"));
+await ensureChatHusk(box.root, {
+  sessionId: "59fc20dd-fe6d-45cb-8f37-f1508a5a0869",
+  date: new Date("2026-08-01T12:00:00Z"),
+})
+=> store/chat/web/Planning the trip.chat.card
+
+(await listChatHusks(box.root)).length
+=> 1
 ```
 
 ## the snippet title strips every wrapper, not just `<chat-app>`
@@ -79,6 +112,9 @@ const titledHusk = await ensureChatHusk(box.root, { sessionId: titled, date: new
 await box.read(titledHusk)
 => ---
 session: cccc1111-2222-3333-4444-555566667777
+engine: claude
+origin: «*»
+origin-name: «*»
 title: Please reply with just the word ok.
 ---
 ```
@@ -123,11 +159,11 @@ await mkdir(dirname(logPath), { recursive: true });
 await writeFile(logPath, "{}\n");
 
 await reconcileChatHusks(box.root);
-const huskPath = await findChatHusk(box.root, live);
+const huskPath = (await findChatHuskEntry(box.root, live))?.path ?? null;
 huskPath !== null
 => true
 
-await findChatHusk(box.root, ghost)
+await findChatHuskEntry(box.root, ghost)
 => null
 
 (await readFsFile(box.path(huskPath ?? ""), "utf-8")).includes(`session: ${live}`)
@@ -150,7 +186,7 @@ await box.write(".callback-box/chat-session-history.json", JSON.stringify({
 }));
 
 await reconcileChatHusks(box.root);
-(await findChatHusk(box.root, late)) !== null
+(await findChatHuskEntry(box.root, late)) !== null
 => true
 ```
 
@@ -203,4 +239,100 @@ JSON.stringify(husks.map((h) => ({ session: h.session.slice(0, 8), title: h.titl
     "contextDir": null
   }
 ]
+```
+
+## reconcile warns about duplicate husks, and repairs nothing
+
+Two husks claiming one session is no longer *created* — ensure is idempotent on
+the field — but a box can still hold a pair from before that fix, from a copied
+card, or from a hand-edit. `cb validate` errors on it, which only helps at
+commit time; reconcile runs on every boot, so it says so once per duplicated
+session, naming the paths. It doesn't pick a winner: which husk keeps the
+chat's title and body is the boxholder's call.
+
+```ts
+const box = await makeTmpBox();
+const dup = "59fc20dd-fe6d-45cb-8f37-f1508a5a0869";
+await box.write("store/chat/web/2026-07-02_59fc20dd.chat.card", `---\nsession: ${dup}\n---\n`);
+await box.write("store/chat/web/Copied.chat.card", `---\nsession: ${dup}\n---\n`);
+await box.write("store/chat/web/2026-07-03_aaaa9999.chat.card",
+  "---\nsession: aaaa9999-fe6d-45cb-8f37-f1508a5a0869\n---\n");
+
+const warnings: string[] = [];
+const original = console.warn;
+console.warn = (msg: string) => { warnings.push(msg); };
+await reconcileChatHusks(box.root);
+console.warn = original;
+
+warnings.join("\n")
+=> chat-husk: 2 husks claim session 59fc20dd-fe6d-45cb-8f37-f1508a5a0869 (store/chat/web/2026-07-02_59fc20dd.chat.card, store/chat/web/Copied.chat.card) — keep one and `cb trash` the others
+
+(await listChatHusks(box.root)).length
+=> 3
+```
+
+## reconcile backfills provenance for husks written before it existed
+
+A husk from before `origin` existed gets it on the first boot of the machine
+that holds its transcript — the transcript IS the evidence, and a session's
+engine store exists on exactly one machine, so two checkouts can never stamp
+the same husk. `engine` comes from the history entry — this one has none, which
+decodes as `claude`, as everywhere else. The body, the title and every other field are
+carried through untouched, and a second pass writes nothing.
+
+```ts
+const box = await makeTmpBox();
+process.env["CB_CLAUDE_PROJECTS_DIR"] = box.path("projects");
+const here = "eeee1111-2222-3333-4444-555566667777";
+const away = "ffff1111-2222-3333-4444-555566667777";
+await box.write("store/chat/web/Kitchen redo.chat.card", `---
+session: ${here}
+title: Kitchen redo
+---
+Decided on the tile in this chat.
+`);
+await box.write("store/chat/web/Old trip.chat.card", `---
+session: ${away}
+title: Old trip
+---
+`);
+await box.write(".callback-box/chat-session-history.json", JSON.stringify({
+  sessions: [{ id: here }, { id: away }],
+  migrated: true,
+}));
+const hereLog = getSessionLogPath(box.root, here);
+await mkdir(dirname(hereLog), { recursive: true });
+await writeFile(hereLog, "{}\n");
+
+await reconcileChatHusks(box.root);
+await box.read("store/chat/web/Kitchen redo.chat.card")
+=> ---
+session: eeee1111-2222-3333-4444-555566667777
+title: Kitchen redo
+origin: «*»
+origin-name: «*»
+engine: claude
+---
+Decided on the tile in this chat.
+```
+
+The other husk's transcript is on some other machine (or expired), so it stays
+unstamped — "unknown" is honest, and a guessed origin would make an expired
+chat look like it lives somewhere it doesn't.
+
+```ts continue
+await box.read("store/chat/web/Old trip.chat.card")
+=> ---
+session: ffff1111-2222-3333-4444-555566667777
+title: Old trip
+---
+
+const stamped = await box.read("store/chat/web/Kitchen redo.chat.card");
+await reconcileChatHusks(box.root);
+(await box.read("store/chat/web/Kitchen redo.chat.card")) === stamped
+=> true
+```
+
+```ts cleanup
+delete process.env["CB_CLAUDE_PROJECTS_DIR"];
 ```

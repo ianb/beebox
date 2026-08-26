@@ -9,15 +9,17 @@
  * second caller (docs/implemented-plans/chat-review.md § Track A).
  */
 
-import * as path from "node:path";
-import { getSessionLogPath } from "./session/transcript-paths.js";
-import type { ChatHuskEntry } from "./husk.js";
+import { containedSessionCwd, getSessionLogPath } from "./session/transcript-paths.js";
+import type { ChatHuskEntry } from "./husk-read.js";
 
-/** Absolute path to the transcript a husk points at. */
+/**
+ * Absolute path to the transcript a husk points at.
+ *
+ * `context-dir` is a card field — hand-editable, and carried in from whatever
+ * checkout wrote the husk — so it goes through `containedSessionCwd` like every
+ * other box-path resolution: a value naming `../../elsewhere` reads from the
+ * box root (and warns) rather than pointing the encoder outside the box.
+ */
 export function huskTranscriptPath(boxRoot: string, husk: ChatHuskEntry): string {
-  const cwd =
-    husk.contextDir !== undefined && husk.contextDir !== ""
-      ? path.join(boxRoot, husk.contextDir)
-      : boxRoot;
-  return getSessionLogPath(cwd, husk.session);
+  return getSessionLogPath(containedSessionCwd(boxRoot, husk.contextDir), husk.session);
 }

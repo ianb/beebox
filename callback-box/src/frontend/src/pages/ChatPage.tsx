@@ -430,7 +430,7 @@ export function ChatPage() {
 
   const unavailable = bootstrap.data?.kind === "unavailable" && bootstrap.data.sessionId === rendered ? bootstrap.data : null;
   if (unavailable !== null) {
-    return <UnavailableChat boxSlug={boxSlug} sessionId={unavailable.sessionId} label={unavailable.label} huskPath={unavailable.huskPath} />;
+    return <UnavailableChat boxSlug={boxSlug} chat={unavailable} />;
   }
 
   // These three are only meaningful while the chat is still "new": once it has

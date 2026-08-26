@@ -9,6 +9,7 @@ scripted fake and no model.
 
 ```ts setup
 import { appendFile, mkdir, readFile, rm, utimes, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { dirname } from "node:path";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
@@ -44,11 +45,38 @@ function userEntry(uuid: string, text: string) {
   };
 }
 
+/**
+ * A readable fixture label as a stable UUID. The husk's `session` field is
+ * validated as a UUID (`schemas/chat.ts`), while the husk *filename* below
+ * keeps the label — the same split the schema enforces: the field is the key,
+ * the name is only a convention. `label`/`labelled` map back so the
+ * expectations stay readable.
+ */
+const idsByLabel = new Map<string, string>();
+const labelsById = new Map<string, string>();
+function sid(name: string): string {
+  const cached = idsByLabel.get(name);
+  if (cached !== undefined) return cached;
+  const h = createHash("sha256").update(name).digest("hex");
+  const id = `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-8${h.slice(17, 20)}-${h.slice(20, 32)}`;
+  idsByLabel.set(name, id);
+  labelsById.set(id, name);
+  return id;
+}
+function label(sessionId: string): string {
+  return labelsById.get(sessionId) ?? sessionId;
+}
+function labelled(text: string): string {
+  let out = text;
+  for (const [id, name] of labelsById) out = out.split(id).join(name);
+  return out;
+}
+
 /** Seed a husk card plus a backdated transcript big enough to clear the gate. */
 async function seed(box, opts: { sessionId: string; husk: string; entries: object[] }) {
   await box.write(`store/chat/web/2026-07-28_${opts.sessionId}.chat.card`,
-    `---\nsession: ${opts.sessionId}\n${opts.husk}---\n\n`);
-  const logPath = getSessionLogPath(box.root, opts.sessionId);
+    `---\nsession: ${sid(opts.sessionId)}\n${opts.husk}---\n\n`);
+  const logPath = getSessionLogPath(box.root, sid(opts.sessionId));
   await mkdir(dirname(logPath), { recursive: true });
   await writeFile(logPath, opts.entries.map((e) => JSON.stringify(e)).join("\n") + "\n");
   const when = new Date(NOW.getTime() - 5 * HOUR);
@@ -125,7 +153,7 @@ JSON.stringify({ reviewed: again.reviewed, calls: second.calls.length })
 ## Growth is an increment, and the previous account is the input
 
 ```ts continue
-const logPath = getSessionLogPath(box.root, "sess1234");
+const logPath = getSessionLogPath(box.root, sid("sess1234"));
 const grown = [bulk("u1"), userEntry("u2", "and another thing"), bulk("u3"), bulk("u4"), bulk("u5")];
 await writeFile(logPath, grown.map((e) => JSON.stringify(e)).join("\n") + "\n");
 const when = new Date(NOW.getTime() - 5 * HOUR);
@@ -179,7 +207,7 @@ await writeFile(box.path(huskPath),
   written.replace("title: Sorting out a recurring billing problem", "title: The Acme mess"));
 
 // More conversation arrives.
-const logPath = getSessionLogPath(box.root, "sess5678");
+const logPath = getSessionLogPath(box.root, sid("sess5678"));
 await writeFile(logPath, [bulk("v1"), bulk("v2"), bulk("v3"), bulk("v4")].map((e) => JSON.stringify(e)).join("\n") + "\n");
 const when = new Date(NOW.getTime() - 5 * HOUR);
 await utimes(logPath, when, when);
@@ -198,7 +226,7 @@ The ownership flag is recorded, so the decision survives a restart.
 
 ```ts continue
 const state = await loadReviewState(box.root);
-state.sessions["sess5678"].titleOwner
+state.sessions[sid("sess5678")].titleOwner
 => manual
 ```
 
@@ -234,7 +262,7 @@ The rest of the review still lands, and the field is marked `manual` from here o
 card.includes("contains: Working through a repeated billing error")
 => true
 
-(await loadReviewState(box.root)).sessions["sesspre"].titleOwner
+(await loadReviewState(box.root)).sessions[sid("sesspre")].titleOwner
 => manual
 ```
 
@@ -250,12 +278,12 @@ const husk2 = await seed(box2, {
 
 // The exact snippet ensureChatHusk would have written, derived the same way.
 const meta = await getSessionMetadata({
-  sessionId: "sesssnip",
-  logPath: getSessionLogPath(box2.root, "sesssnip"),
+  sessionId: sid("sesssnip"),
+  logPath: getSessionLogPath(box2.root, sid("sesssnip")),
   snippetMaxLen: 80,
 });
 await writeFile(box2.path(husk2),
-  `---\nsession: sesssnip\ntitle: ${meta.firstUserSnippet}\n---\n\n`);
+  `---\nsession: ${sid("sesssnip")}\ntitle: ${meta.firstUserSnippet}\n---\n\n`);
 await runChatReview(box2.root, {
   reviewer: fakeReviewer([OUTPUT]), maxSessions: 10, now: NOW, ownerEmail: null,
 });
@@ -293,7 +321,7 @@ const summary = await runChatReview(box.root, {
   }]),
   maxSessions: 10, now: NOW, ownerEmail: null,
 });
-summary.rejected.join(",")
+labelled(summary.rejected.join(","))
 => sess9999:title
 
 const card = await readFile(box.path(huskPath), "utf8");
@@ -379,7 +407,7 @@ nothing new either.
 => true
 
 const state = await loadReviewState(box.root);
-state.sessions["sesscrash"].applied["metadata"].endUuid
+state.sessions[sid("sesscrash")].applied["metadata"].endUuid
 => c2
 ```
 
@@ -402,7 +430,7 @@ JSON.stringify({ reviewed: summary.reviewed, failures: summary.reviewerFailures 
 => {"reviewed":0,"failures":1}
 
 const state = await loadReviewState(box.root);
-state.sessions["sessfail"].attempts
+state.sessions[sid("sessfail")].attempts
 => 1
 ```
 
@@ -424,7 +452,7 @@ process.env["CB_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 for (const [sessionId, agoHours] of [["sessnew", 5], ["sessold", 40], ["sessmid", 20]]) {
   await seed(box, { sessionId, husk: "", entries: [bulk(`${sessionId}1`), bulk(`${sessionId}2`)] });
   const when = new Date(NOW.getTime() - agoHours * HOUR);
-  await utimes(getSessionLogPath(box.root, sessionId), when, when);
+  await utimes(getSessionLogPath(box.root, sid(sessionId)), when, when);
 }
 
 const reviewer = fakeReviewer([OUTPUT]);
@@ -434,7 +462,7 @@ const summary = await runChatReview(box.root, {
 JSON.stringify({
   reviewed: summary.reviewed,
   overflow: summary.overflow,
-  asked: reviewer.calls.map((c) => c.sessionId),
+  asked: reviewer.calls.map((c) => label(c.sessionId)),
 })
 => {"reviewed":2,"overflow":1,"asked":["sessold","sessmid"]}
 ```
@@ -450,7 +478,7 @@ const rest = fakeReviewer([OUTPUT]);
 const second = await runChatReview(box.root, {
   reviewer: rest, maxSessions: 2, now: NOW, ownerEmail: null,
 });
-JSON.stringify({ reviewed: second.reviewed, asked: rest.calls.map((c) => c.sessionId) })
+JSON.stringify({ reviewed: second.reviewed, asked: rest.calls.map((c) => label(c.sessionId)) })
 => {"reviewed":1,"asked":["sessnew"]}
 ```
 
@@ -466,14 +494,14 @@ process.env["CB_CLAUDE_PROJECTS_DIR"] = box2.path("claude-projects");
 for (const [sessionId, agoHours] of [["sessfirst", 40], ["sessvanish", 20]]) {
   await seed(box2, { sessionId, husk: "", entries: [bulk(`${sessionId}1`), bulk(`${sessionId}2`)] });
   const when = new Date(NOW.getTime() - agoHours * HOUR);
-  await utimes(getSessionLogPath(box2.root, sessionId), when, when);
+  await utimes(getSessionLogPath(box2.root, sid(sessionId)), when, when);
 }
 
 const saboteur = {
   calls: [],
   async review(args) {
     this.calls.push(args);
-    await rm(getSessionLogPath(box2.root, "sessvanish"), { force: true });
+    await rm(getSessionLogPath(box2.root, sid("sessvanish")), { force: true });
     return OUTPUT;
   },
 };
@@ -483,7 +511,7 @@ const vanished = await runChatReview(box2.root, {
 JSON.stringify({
   reviewed: vanished.reviewed,
   missing: vanished.missingTranscripts,
-  asked: saboteur.calls.map((c) => c.sessionId),
+  asked: saboteur.calls.map((c) => label(c.sessionId)),
 })
 => {"reviewed":1,"missing":1,"asked":["sessfirst"]}
 
@@ -510,10 +538,10 @@ process.env["CB_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 for (const [sessionId, agoHours] of [["sessfirst", 40], ["sesslive", 20]]) {
   await seed(box, { sessionId, husk: "", entries: [bulk(`${sessionId}1`), bulk(`${sessionId}2`)] });
   const when = new Date(NOW.getTime() - agoHours * HOUR);
-  await utimes(getSessionLogPath(box.root, sessionId), when, when);
+  await utimes(getSessionLogPath(box.root, sid(sessionId)), when, when);
 }
 
-const liveLog = getSessionLogPath(box.root, "sesslive");
+const liveLog = getSessionLogPath(box.root, sid("sesslive"));
 const interrupting = {
   calls: [],
   async review(args) {
@@ -528,7 +556,7 @@ const summary = await runChatReview(box.root, {
 JSON.stringify({
   reviewed: summary.reviewed,
   deferredActive: summary.deferredActive,
-  asked: interrupting.calls.map((c) => c.sessionId),
+  asked: interrupting.calls.map((c) => label(c.sessionId)),
 })
 => {"reviewed":1,"deferredActive":1,"asked":["sessfirst"]}
 ```
@@ -540,7 +568,7 @@ reviews the whole conversation including the new material.
 const state = await loadReviewState(box.root);
 JSON.stringify({
   husk: (await readFile(box.path("store/chat/web/2026-07-28_sesslive.chat.card"), "utf8")).includes("title:"),
-  journal: "sesslive" in state.sessions,
+  journal: sid("sesslive") in state.sessions,
 })
 => {"husk":false,"journal":false}
 ```
@@ -561,7 +589,7 @@ const huskPath = await seed(box, {
   sessionId: "sessbody", husk: "", entries: [bulk("y1"), bulk("y2")],
 });
 await writeFile(box.path(huskPath),
-  `---\nsession: sessbody\n---\n\nMy own notes about this chat.\n`);
+  `---\nsession: ${sid("sessbody")}\n---\n\nMy own notes about this chat.\n`);
 
 await runChatReview(box.root, {
   reviewer: fakeReviewer([OUTPUT]), maxSessions: 10, now: NOW, ownerEmail: null,
@@ -594,7 +622,7 @@ const huskPath = await seed(box, {
 await runChatReview(box.root, {
   reviewer: fakeReviewer([OUTPUT]), maxSessions: 10, now: NOW, ownerEmail: null,
 });
-const journalled = (await loadReviewState(box.root)).sessions["sesscap"].applied["metadata"];
+const journalled = (await loadReviewState(box.root)).sessions[sid("sesscap")].applied["metadata"];
 JSON.stringify({ endUuid: journalled.endUuid, endIndex: journalled.endIndex })
 => {"endUuid":"cap-1","endIndex":1}
 ```
@@ -602,7 +630,7 @@ JSON.stringify({ endUuid: journalled.endUuid, endIndex: journalled.endIndex })
 Then the transcript grows by more than a whole read window.
 
 ```ts continue
-const logPath = getSessionLogPath(box.root, "sesscap");
+const logPath = getSessionLogPath(box.root, sid("sesscap"));
 // The last ten are bulky so the leftover span clears the size gate on its own.
 const grown = Array.from({ length: MAX_SESSION_ENTRIES + 10 },
   (_, i) => i < MAX_SESSION_ENTRIES ? userEntry(`cap-${String(i + 2)}`, `line ${String(i)}`) : bulk(`cap-${String(i + 2)}`));
@@ -614,7 +642,7 @@ const second = fakeReviewer([OUTPUT]);
 const summary = await runChatReview(box.root, {
   reviewer: second, maxSessions: 10, now: NOW, ownerEmail: null,
 });
-const advanced = (await loadReviewState(box.root)).sessions["sesscap"].applied["metadata"];
+const advanced = (await loadReviewState(box.root)).sessions[sid("sesscap")].applied["metadata"];
 JSON.stringify({
   reviewed: summary.reviewed,
   bootstrapped: summary.bootstrapped,
@@ -635,7 +663,7 @@ const third = fakeReviewer([OUTPUT]);
 const again = await runChatReview(box.root, {
   reviewer: third, maxSessions: 10, now: NOW, ownerEmail: null,
 });
-const final = (await loadReviewState(box.root)).sessions["sesscap"].applied["metadata"];
+const final = (await loadReviewState(box.root)).sessions[sid("sesscap")].applied["metadata"];
 JSON.stringify({ bootstrapped: again.bootstrapped, endUuid: final.endUuid, endIndex: final.endIndex })
 => {"bootstrapped":0,"endUuid":"cap-5011","endIndex":5011}
 ```
