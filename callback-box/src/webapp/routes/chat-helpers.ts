@@ -9,6 +9,7 @@
 import * as fs from "node:fs/promises";
 import type { IncomingHttpHeaders } from "node:http";
 import { z } from "zod";
+import { AGENT_ENGINES } from "../../shared/agent-models.js";
 import type { SessionUser } from "../auth.js";
 import { getLocalUser } from "../local-users.js";
 import { AuthStoreUnavailableError } from "../local-users-errors.js";
@@ -74,6 +75,19 @@ export const sendBodySchema = z.object({
    * first turn. Unknown features / invalid values are dropped server-side.
    */
   seedFeatures: z.record(z.string(), z.string()).optional(),
+  /**
+   * Engine and model chosen for a chat that does not exist yet. Honored only
+   * when `session === "new"` — a chat's engine is fixed once it starts, and its
+   * model is set through `chat.setModel` after that. Both are validated against
+   * the box's enabled engines and each engine's model registry; a rejected
+   * value fails the send rather than silently starting the wrong chat.
+   *
+   * Absent means the box's defaults, which is what every pre-picker client
+   * sends — including the iOS shell, whose native path posts `"new"` with no
+   * choice of its own.
+   */
+  engine: z.enum(AGENT_ENGINES).optional(),
+  model: z.string().optional(),
   /**
    * Box-relative path of the card open in the companion pane when this
    * message was sent, surfaced to the agent as the `open-card` snapshot

@@ -25,6 +25,7 @@ import { useDevWorktreeKeepalive } from "./hooks/useDevWorktreeKeepalive";
 import { useBoxIdentityMeta } from "./hooks/useBoxIdentityMeta";
 import { PageTitleProvider, usePageTitle } from "./components/DocumentTitle";
 import { DocumentIcon } from "./components/DocumentIcon";
+import { DocumentPlace } from "./components/DocumentPlace";
 import { useVisualViewportHeight } from "./hooks/useVisualViewportHeight";
 
 import { href, toSearch } from "./lib/routing";
@@ -88,6 +89,7 @@ export function AppLayout() {
     <AppBarChromeProvider>
       <ViewOverlayProvider>
         <DocumentIcon />
+        <DocumentPlace />
         <Column className="h-app">
           <AppNav
             onToggleDebugLog={() => { clearErrorCount(); setShowDebugLog((v) => !v); }}

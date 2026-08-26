@@ -14,6 +14,7 @@
 import { makeLog } from "./log.js";
 import { ChatSession, type ChatSessionOptions } from "./index.js";
 import type { ChatBackend, ChatBackendStartOptions } from "../../../services/claude-chat.js";
+import { resolveSessionModel } from "./model.js";
 
 const log = makeLog("ChatSessionRegistry");
 
@@ -39,7 +40,14 @@ async function probeStartOptions(opts: {
       : {}),
     ...(opts.contextDir !== undefined ? { contextDir: opts.contextDir } : {}),
   });
-  return probe.buildBackendStartOptions();
+  const start = await probe.buildBackendStartOptions();
+  // The model is not part of `buildBackendStartOptions` — `startRun` adds it
+  // when it opens the run — but `warmCompatible` compares it. Without this the
+  // warm slot of any box with a pinned model is discarded on every send, and
+  // the prewarm silently buys nothing. A prewarmed chat has made no choice of
+  // its own yet, so it follows the box default by definition.
+  const resolved = await resolveSessionModel(opts.boxRoot, { engine: start.engine ?? "claude", explicit: null });
+  return resolved.model === null ? start : { ...start, model: resolved.model };
 }
 
 /**

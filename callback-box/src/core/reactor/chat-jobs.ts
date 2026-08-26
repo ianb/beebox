@@ -24,6 +24,7 @@ import { computeTodoAmbientLine } from "../todo/ambient-summary.js";
 import { buildJobDescription } from "./batch-jobs.js";
 import { readCardFrontmatter, isRecord } from "../card-io.js";
 import { fmt } from "../../lib/format.js";
+import { loadEffectiveBoxModel } from "../model-policy.js";
 import type { ProcessJobsOptions } from "./types.js";
 
 /**
@@ -33,6 +34,10 @@ import type { ProcessJobsOptions } from "./types.js";
 export async function processChatJobs(opts: ProcessJobsOptions): Promise<boolean> {
   const { jobs, boxRoot, dryRun, onLog } = opts;
   const sessions = await loadChatSessions(boxRoot);
+  // One resolution for the whole cycle, so every thread in it runs the same
+  // model even if the box default changes partway (model-engine-policy).
+  const boxModel = await loadEffectiveBoxModel(boxRoot);
+  if (boxModel !== null) onLog?.(fmt.dim(`  Model: ${boxModel}\n`));
   let allSuccess = true;
 
   for (const job of jobs) {
@@ -72,6 +77,7 @@ export async function processChatJobs(opts: ProcessJobsOptions): Promise<boolean
       systemPrompt,
       prompt: userPrompt,
       maxTurns: 10,
+      ...(boxModel !== null && { model: boxModel }),
     });
 
     await ensureAgentCommitted({

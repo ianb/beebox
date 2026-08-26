@@ -22,7 +22,7 @@ Two questions, one note each:
 | `opencode export --sanitize` — structure-preserving redacted transcript | **adopt** | [issues/features/…session-export-sanitize](../../issues/features/2026-08-25-session-export-sanitize.md); boxholder rule that real-box material never reaches the public repo unvetted |
 | `CONTEXT.md` — Context Source / Epoch / mid-conversation system message | **adapt** the shape above the SDK | [issues/exploration/…mid-session-context-admission](../../issues/exploration/2026-08-25-mid-session-context-admission.md) |
 | `CONTEXT.md` — glossary form: `_Avoid_:` lines + invariant list | **adopt** | appended to `issues/docs-and-chores/2026-05-21-fill-out-the-glossary.md`; duplicate `asset` entry fixed in this pass |
-| `small_model` slot for title/summary/review passes | **adapt** | [issues/features/…small-model-slot](../../issues/features/2026-08-25-small-model-slot.md) |
+| `small_model` slot for title/summary/review passes | **adapt** | [issues/features/…small-model-slot](../../issues/closed/features/2026-08-25-small-model-slot.md) |
 | `subagent_depth` + child permission derivation | **adapt** | appended to `issues/exploration/2026-05-19-subagent-strategy.md` |
 | Plugin hook taxonomy (`session.idle`, `session.compacting`, `tool.definition`) | **later** — a gap list for when the Agent SDK exposes them | [inspiration.md §hooks](inspiration.md) |
 | Shadow git checkpoint via `objects/info/alternates` | **later** — reactor-turn undo, not filed | [inspiration.md](inspiration.md) |

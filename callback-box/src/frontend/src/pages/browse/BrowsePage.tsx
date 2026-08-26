@@ -130,6 +130,47 @@ function useBrowsePlace({ dirPath, currentPath }: { dirPath: string; currentPath
   });
 }
 
+/**
+ * What this page calls itself in the browser tab.
+ *
+ * A selected file is named by its card title, a directory by its landmark —
+ * the directory's own name for itself, and the one the app bar and the tab's
+ * mark already use. Preferring it keeps a tab from naming a place differently
+ * from the icon sitting beside it, which is what `store/recipes` titled
+ * "recipes" next to a 🍳 did.
+ */
+function useBrowseTitle({
+  dirPath,
+  selectedFilePath,
+  selectedCard,
+}: {
+  dirPath: string;
+  selectedFilePath: string | null;
+  selectedCard: { title?: string | null } | null;
+}): string {
+  // Same query key as the place pill's and the title mark's, so this is their
+  // cache entry rather than a third request.
+  const landmarkQuery = trpc.landmarks.forDir.useQuery({ dir: dirPath }, { enabled: !selectedFilePath });
+  const landmark = landmarkQuery.data?.landmark ?? null;
+
+  return useMemo(() => {
+    if (selectedFilePath !== null && selectedFilePath !== "") {
+      const cardTitle = selectedCard?.title?.trim();
+      if (cardTitle) return cardTitle;
+      const filename = selectedFilePath.split("/").pop() ?? selectedFilePath;
+      return basenameTitle(filename);
+    }
+    if (dirPath) {
+      const landmarkLabel = landmark?.label.trim();
+      if (landmarkLabel) return landmarkLabel;
+      const last = dirPath.split("/").pop() ?? dirPath;
+      // Inside a card's attach scope, title by the owning card, not `Foo.attach`.
+      return (attachDirOwnerBasename(last) ?? last).replace(/_/g, " ");
+    }
+    return "Browse";
+  }, [selectedFilePath, selectedCard, dirPath, landmark]);
+}
+
 export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePageProps) {
   const currentPath = currentPathArg ?? "";
   const { boxSlug } = useParams({ strict: false });
@@ -209,22 +250,7 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
 
   const hasDetail = Boolean(selectedFilePath);
 
-  const pageTitle = useMemo(() => {
-    if (selectedFilePath) {
-      const cardTitle = selectedCard?.title?.trim();
-      if (cardTitle) return cardTitle;
-      const filename = selectedFilePath.split("/").pop() ?? selectedFilePath;
-      return basenameTitle(filename);
-    }
-    if (dirPath) {
-      const last = dirPath.split("/").pop() ?? dirPath;
-      // Inside a card's attach scope, title by the owning card, not `Foo.attach`.
-      return (attachDirOwnerBasename(last) ?? last).replace(/_/g, " ");
-    }
-    return "Browse";
-  }, [selectedFilePath, selectedCard, dirPath]);
-
-  usePageTitle(pageTitle);
+  usePageTitle(useBrowseTitle({ dirPath, selectedFilePath, selectedCard }));
   useBrowsePlace({ dirPath, currentPath });
 
   const handleDelete = useCallback(async (path: string) => {

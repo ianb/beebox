@@ -119,6 +119,13 @@ export interface ChatContext {
    * session id is assigned (the backend has persisted them by then).
    */
   seedFeatures?: Record<string, string>;
+  /**
+   * Engine and model chosen before the chat exists. Folded into the first send
+   * of a `"new"` session, the only send that can carry them — a chat's engine
+   * is fixed once it starts.
+   */
+  startEngine?: string;
+  startModel?: string;
   /** Subprocess is alive (true once first send has started; stays true between turns). */
   processRunning: boolean;
   /** Subprocess is currently mid-turn — drives the "agent is processing" indicator. */
@@ -195,6 +202,12 @@ export interface ChatMachineInput {
    * the binding from `chat-session-history` on the backend).
    */
   contextDir?: string | undefined;
+  /**
+   * Engine and model chosen for a fresh chat before it exists. Only honored
+   * when `sessionInput === "new"` — a chat's engine is fixed once it starts.
+   */
+  startEngine?: string | undefined;
+  startModel?: string | undefined;
 }
 
 export interface SessionInput {

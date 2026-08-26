@@ -1,6 +1,7 @@
 ---
 title: "No box-level agent model: the reactor's model floats while chat's can be pinned"
-workstream: unknown
+workstream: model-engine-policy
+resolution: implemented
 area: callback-box
 filed-by: agent
 discovered-in: field-test Track 2 chunk 2 (cross-model review finding)
@@ -8,6 +9,8 @@ labels: [field-test-findings, code-error]
 needs: [design]
 priority: normal
 ---
+
+**Resolved 2026-08-26** by `docs/implemented-plans/model-engine-policy.md` (Track B, commit `4b953ffab`): the reactor now resolves and runs on the box's pinned `agentModel`, the same policy chat reads.
 
 A box can pin the model its **chat** agent uses (`.callback-box/chat-model.json`,
 read by `loadCurrentModel` against `DEFAULT_MODEL_FILE`,

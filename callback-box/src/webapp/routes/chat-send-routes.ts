@@ -77,6 +77,8 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
         contextDir,
         requestSeedFeatures: seedFeatures,
         exactSession: parsed.data.exactSession ?? false,
+        ...(parsed.data.engine !== undefined ? { engine: parsed.data.engine } : {}),
+        ...(parsed.data.model !== undefined ? { model: parsed.data.model } : {}),
       },
     });
     if (target === null) return;

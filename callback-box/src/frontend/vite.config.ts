@@ -139,6 +139,17 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: stripBase,
       },
+      // Per-box identity assets: /<base>/<box>/icon-<size>.png and
+      // /<base>/<box>/manifest.webmanifest. The backend renders these from the
+      // box's root landmark (routes/box-identity-assets.ts). Without this rule
+      // Vite answers them from its own static tree and a request for a PNG
+      // comes back as the SPA document, so dev would show a broken icon while
+      // prod showed the box's.
+      [`^${BASE_PREFIX}/[^/]+/(icon-\\d+\\.png|manifest\\.webmanifest)$`]: {
+        target: backendTarget,
+        changeOrigin: true,
+        rewrite: stripBase,
+      },
     },
   },
 });

@@ -7,6 +7,7 @@
  * existing importers are unaffected.
  */
 
+import type { AgentEngine } from "../../box/config.js";
 import type { ChatBackend } from "../../../services/claude-chat.js";
 
 /**
@@ -25,6 +26,12 @@ export interface ChatSessionOptions {
   sessionFile?: string | null;
   /** Path to the current-model pointer, relative to boxRoot. Default: .callback-box/chat-model.json. */
   modelFile?: string | null;
+  /**
+   * The engine this chat was created with, for the window before it has an id
+   * to record one against. Ignored once the chat has a history entry — an
+   * engine is fixed when a chat starts and never changes after.
+   */
+  engine?: AgentEngine | undefined;
   /** Select the model file once a native harness assigns a fresh session id. */
   modelFileForSession?: (sessionId: string) => string;
   /** Extra env vars merged into the SDK subprocess env. */

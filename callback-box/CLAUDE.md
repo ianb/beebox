@@ -165,6 +165,7 @@ The same duty applies at creation time: **new infrastructure isn't done until it
 | Landmarks (navigation surface) | `docs/landmarks.md` |
 | Client debug log | `docs/client-debug-log.md` |
 | Chat session lifecycle | `docs/chat-session-lifecycle.md` |
+| Which model a box thinks with | `docs/model-policy.md` |
 | Chat review (nightly titles + summaries) | `docs/chat-review.md` |
 | Content-Security-Policy | `docs/content-security-policy.md` |
 | Periodic maintenance | `docs/maintenance.md` |
@@ -175,6 +176,7 @@ The same duty applies at creation time: **new infrastructure isn't done until it
 | Interface-as-cards design | `docs/plans/interface-as-cards.md` |
 | Feature ideas & open issues | `/issues/` (monorepo root) |
 | OpenClaw/Hermes comparison & idea triage | `research/openclaw-hermes/README.md` |
+| Third-party asset attribution | `docs/attribution.md` |
 | Glossary | `docs/glossary.md` |
 | Example names for docs/tests | `docs/example-names.md` |
 

@@ -15,9 +15,9 @@ redirect). A page whose real name is data it loads — a chat's label, a card's
 title — publishes it with `usePageTitle` from `components/DocumentTitle.tsx`,
 and the route's static title stands in until it arrives.
 
-The composed title is `<page> — <box>`, page first because browsers truncate
-tabs hard; the app name appears only where there is no box. Nothing else
-writes `document.title`.
+The composed title is `<mark> <page> — <box>`, most-distinguishing first
+because browsers truncate tabs hard; the app name appears only where there is
+no box. Nothing else writes `document.title`.
 
 The **box half comes from the box itself** — the landmark card at the box root,
 whose `navigation.label` is the box's display name and whose `symbol` is its
@@ -25,14 +25,25 @@ mark (`core/landmark/box-identity.ts`). There is no separate box-name or
 box-icon store: an agent renames a box by editing that card, the same way it
 writes any other box fact.
 
-The **tab icon** follows the same rule one level down. `components/
-DocumentIcon.tsx` shows the landmark for the directory you are in, falling
-back to the box's own — landmark first, box second, matching the title's
-ordering. The box server also stamps the box's name and mark into the served
+**The icon says which box; the title says which place.** `components/
+DocumentIcon.tsx` shows the box's own mark, always, and `DocumentPlace.tsx`
+publishes the current directory's landmark emoji to lead the title
+(`🍳 Recipes — Kitchen`). The icon was landmark-first at one point and the cost
+was the thing a tab icon exists to prevent: two boxes' tabs wearing the same
+mark. A landmarked directory is titled by its landmark rather than its folder
+name, so the tab's two halves name the same place.
+
+Wherever a surface needs a real raster rather than a character — the Apple
+touch icon, the manifest icons, a notification — it comes from box-scoped
+routes that render the mark on demand (`webapp/routes/box-identity-assets.ts`,
+`core/box/box-icon.ts`). Rendering the emoji as *text* was measured and
+rejected; see `docs/attribution.md` for why the artwork is a dependency.
+
+The box server also stamps the box's name and mark into the served
 `index.html` (`webapp/index-html.ts`) so a tab is identifiable before React
 boots. That stamping happens only in the box server: **in local dev Vite
-serves the document**, so dev shows the built title and generic icon for the
-moment before the app takes over.
+serves the document**, so dev shows the built title for the moment before the
+app takes over.
 
 ## Frontend Color Palette
 

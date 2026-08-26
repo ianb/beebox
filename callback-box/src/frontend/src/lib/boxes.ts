@@ -14,6 +14,10 @@ import { withMobileAuth } from "./mobile-auth";
 export interface KnownBox {
   slug: string;
   name: string;
+  /** Symbol text (emoji); empty when the box uses an image or has no mark. */
+  symbol?: string;
+  /** Box-relative path to the symbol image, or null for a text symbol. */
+  symbolSrc?: string | null;
 }
 
 export interface BoxesResult {

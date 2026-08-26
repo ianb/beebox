@@ -496,7 +496,7 @@ apiBoxesResponse.status
 => 200
 
 JSON.stringify(await apiBoxesResponse.json())
-=> {"boxes":[{"slug":"test1","name":"test1"}]}
+=> {"boxes":[{"slug":"test1","name":"test1","symbol":"","symbolSrc":null}]}
 ```
 
 ## `/healthz` is diag-key-gated (it used to leak slugs/PIDs/ports publicly)

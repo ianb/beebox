@@ -88,11 +88,17 @@ export async function updateBoxConfigFields(options: {
   allowedEmails?: string[] | undefined;
   googleServices?: Partial<Record<"calendar" | "gmail" | "drive", boolean | undefined>> | undefined;
   agentEngine?: "claude" | "codex" | undefined;
+  /** The box's pinned model; `null` clears the pin (no policy). */
+  agentModel?: string | null | undefined;
+  /** Which engines the box may offer. The default engine is always kept. */
+  engines?: Partial<Record<"claude" | "codex", boolean | undefined>> | undefined;
 }): Promise<BoxConfigMutationResult> {
   const changed = [
     ...(options.allowedEmails === undefined ? [] : ["allowedEmails"]),
     ...(options.googleServices === undefined ? [] : ["googleServices"]),
     ...(options.agentEngine === undefined ? [] : ["agentEngine"]),
+    ...(options.agentModel === undefined ? [] : ["agentModel"]),
+    ...(options.engines === undefined ? [] : ["engines"]),
   ];
   return mutateConfig({
     boxRoot: options.boxRoot,
@@ -106,6 +112,19 @@ export async function updateBoxConfigFields(options: {
       }
       if (options.agentEngine !== undefined) {
         config.agentEngine = options.agentEngine;
+      }
+      if (options.engines !== undefined) {
+        // The default engine stays enabled whatever the caller sent: a box
+        // whose default engine is off cannot run, and the loader would
+        // override it anyway — better not to persist the contradiction.
+        const fallback = typeof config.agentEngine === "string" ? config.agentEngine : "claude";
+        config.engines = { ...options.engines, [fallback]: true };
+      }
+      if (options.agentModel !== undefined) {
+        // Clearing removes the key rather than storing null: "no policy" is the
+        // absence of the field, which is what every reader already looks for.
+        if (options.agentModel === null) delete config.agentModel;
+        else config.agentModel = options.agentModel;
       }
     },
   });

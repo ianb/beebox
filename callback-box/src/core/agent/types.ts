@@ -22,6 +22,18 @@ export interface AgentInvokeOptions {
   prompt: string;
   /** Model override (e.g., "claude-haiku-4-5-20251001"). */
   model?: string;
+  /**
+   * Whether this run loads the box's own agent context — CLAUDE.md, the
+   * generated agent guide, `.claude/rules/`. Defaults to true, which is right
+   * for anything doing the box's work.
+   *
+   * Set false for a small structured pass whose inputs are all in its prompt:
+   * on a real box that context is ~9,700 words on EVERY invocation
+   * (measured on the test box, 2026-08-26), and a judge emitting a verdict
+   * cannot use it. Claude-only — the Codex harness has no equivalent lever, so
+   * a Codex box still pays it.
+   */
+  loadBoxContext?: boolean;
   /** Maximum agent turns (default: 20). */
   maxTurns?: number;
   /**

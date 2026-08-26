@@ -116,6 +116,7 @@
     "@orama/plugin-data-persistence": "3.1.18",
     "@parcel/markdown-ansi": "^2.16.3",
     "@trpc/server": "^11.11.0",
+    "@twemoji/svg": "^15.0.0",
     "@types/better-sqlite3": "^7.6.13",
     "@types/ws": "^8.18.1",
     "ansi-to-html": "^0.7.2",

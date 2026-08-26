@@ -787,6 +787,14 @@ See §1.3 (full request/response/errors).
 
 ### 5.5 (web layer, for completeness) `POST /api/chat/send`
 
+> **A `"new"` send may now carry `engine` and `model`** — the engine and model
+> chosen in the web picker before a chat's first message
+> (`docs/model-policy.md`). Both are optional and absence means the box's
+> defaults, so the native path is unaffected: `ChatAPI.resolvedSession()` returns
+> a session id or the literal `"new"` and never sends a choice. A chat created by
+> a native-originated first message therefore takes the box defaults, which is
+> correct — no choice was made. The picker itself lives in the webview.
+
 - **Direction:** the webview's own JS → box, on every native emission (§4.1).
 - **Request:** `{ "Content-Type": "application/json", ...mobileAuthHeaders() }`; body
   `{ session, message, messageId, images?, contextDir?, seedFeatures?, openCard?, cardActivity?, cardState?, channel? }`.

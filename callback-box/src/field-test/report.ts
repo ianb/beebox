@@ -68,9 +68,8 @@ function renderHeader(result: FieldRunResult): string[] {
     "",
     `- **Operator model:** ${result.models.operator}`,
     `- **Chat model:** ${result.models.chat}`,
-    "- **Reactor model:** unpinned (SDK default) — intake, email→task and other" +
-      " reactor work is not pinned to a model; see" +
-      " issues/features/2026-08-08-reactor-agent-model-not-pinnable.md",
+    `- **Reactor model:** ${result.models.chat} — the box model policy pins chat` +
+      " and reactor work alike",
     `- **Started:** ${result.startedAt} (box clock ${result.boxTimeStart} → ${result.boxTimeEnd})`,
     `- **Wall time:** ${formatDuration(result.startedAt, result.finishedAt)}`,
     `- **Run directory:** \`${result.runDir}\``,

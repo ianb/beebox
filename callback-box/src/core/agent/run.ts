@@ -30,6 +30,8 @@ export interface RunAgentOptions {
   maxTurns?: number | undefined;
   maxBudgetUsd?: number | undefined;
   model?: string | undefined;
+  /** See {@link AgentInvokeOptions.loadBoxContext}. Defaults to true. */
+  loadBoxContext?: boolean | undefined;
   /** Resume an existing session by id. */
   resumeSessionId?: string | undefined;
   /**
@@ -63,7 +65,7 @@ interface RunContext {
 /**
  * Build the `options` object handed to the SDK's `query()` for a run.
  */
-function buildQueryOptions(
+export function buildQueryOptions(
   options: RunAgentOptions,
   context: RunContext,
 ): Record<string, unknown> {
@@ -94,7 +96,11 @@ function buildQueryOptions(
       skipMcpDiscovery: true,
     }],
     // settingSources defaults to ["user", "project"] which auto-loads
-    // CLAUDE.md, .claude/settings.json, .claude/rules/, etc.
+    // CLAUDE.md, .claude/settings.json, .claude/rules/, etc. An explicit empty
+    // list is how a small structured pass opts out of all of it; safe only
+    // because those passes emit structured output and touch no files, so the
+    // box hooks that ride `.claude/settings.json` have nothing to guard.
+    ...(options.loadBoxContext === false && { settingSources: [] }),
     ...(appendedSystem !== "" && {
       systemPrompt: {
         type: "preset" as const,

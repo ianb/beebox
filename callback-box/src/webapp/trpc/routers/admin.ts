@@ -16,6 +16,8 @@ import { googleAdminProcedures } from "./admin-google.js";
 import { errnoCode, errorMessage } from "../../../lib/error-guards.js";
 import { createRealTailscaleDeps, deriveTailscaleBaseUrl, parseServeConfig } from "../../../services/tailscale.js";
 import { normalizeAllowedEmails, updateBoxConfigFields } from "../../box-config-write.js";
+import { modelTier } from "../../../shared/agent-models.js";
+import { normalizeModelId } from "../../../shared/model-ids.js";
 import { canonicalizeEmail, getLocalUser } from "../../local-users.js";
 import { gmailAdminProcedures } from "./admin-gmail.js";
 import { inviteAdminProcedures } from "./admin-invites.js";
@@ -36,6 +38,13 @@ const googleServicesSchema = z.object({
 
 const boxConfigSchema = z.object({
   agentEngine: z.enum(["claude", "codex"]).default("claude"),
+  // Deliberately a plain string, not an enum over the model registry: this is
+  // a `parse` of the whole file, so a stale or hand-typed model would throw the
+  // entire admin page away. The resolver (`core/model-policy.ts`) is the
+  // boundary that rejects an unusable value; here it only needs to survive the
+  // trip so the UI can show it back as unrecognized.
+  agentModel: z.string().optional(),
+  engines: z.object({ claude: z.boolean().optional(), codex: z.boolean().optional() }).optional(),
   allowedEmails: z.array(z.string()).default([]),
   publicUrl: z.string().nullable().default(null),
   googleServices: googleServicesSchema.default({}),
@@ -210,6 +219,10 @@ export const adminRouter = router({
       googleLoginConfigured: (await getGoogleClientCreds(ctx.boxRoot)) !== null,
       googleServices: config.googleServices,
       agentEngine: config.agentEngine,
+      agentModel: config.agentModel ?? null,
+      // Absent means "only the default engine", the same rule loadEnabledEngines
+      // applies — resolved here so the UI never has to re-derive it.
+      engines: config.engines ?? { [config.agentEngine]: true },
     };
   }),
 
@@ -227,8 +240,19 @@ export const adminRouter = router({
           allowedEmails: z.array(z.string()).optional(),
           googleServices: googleServicesSchema.optional(),
           agentEngine: z.enum(["claude", "codex"]).optional(),
+          /**
+           * `null` clears the box's model policy. A model no engine offers is
+           * refused here rather than saved: the resolver would drop it on every
+           * read, so the box would report "Saved" and then quietly run the
+           * harness default forever.
+           */
+          agentModel: z.string()
+            .refine((m) => modelTier(normalizeModelId(m)) !== null, { message: "Unknown model id" })
+            .nullable()
+            .optional(),
+          engines: z.object({ claude: z.boolean().optional(), codex: z.boolean().optional() }).optional(),
         })
-        .refine((v) => v.allowedEmails !== undefined || v.googleServices !== undefined || v.agentEngine !== undefined, {
+        .refine((v) => v.allowedEmails !== undefined || v.googleServices !== undefined || v.agentEngine !== undefined || v.agentModel !== undefined || v.engines !== undefined, {
           message: "At least one box configuration field is required",
         }),
     )
@@ -238,6 +262,8 @@ export const adminRouter = router({
         ...(input.allowedEmails === undefined ? {} : { allowedEmails: input.allowedEmails }),
         ...(input.googleServices === undefined ? {} : { googleServices: input.googleServices }),
         ...(input.agentEngine === undefined ? {} : { agentEngine: input.agentEngine }),
+        ...(input.agentModel === undefined ? {} : { agentModel: input.agentModel }),
+        ...(input.engines === undefined ? {} : { engines: input.engines }),
       });
       if (result.commitError) {
         console.error(`[admin] box config was saved but its Git commit failed for ${ctx.boxRoot}:`, result.commitError);
@@ -249,6 +275,8 @@ export const adminRouter = router({
         allowedEmails: saved.allowedEmails,
         googleServices: saved.googleServices,
         agentEngine: saved.agentEngine,
+        agentModel: saved.agentModel ?? null,
+        engines: saved.engines ?? { [saved.agentEngine]: true },
       };
     }),
 

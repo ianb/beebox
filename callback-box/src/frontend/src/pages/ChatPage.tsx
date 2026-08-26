@@ -24,6 +24,56 @@ import { UnavailableChat } from "../components/chat-delete/UnavailableChat";
 import { useIdlePrefetch } from "../hooks/useIdlePrefetch";
 import { usePageTitle } from "../components/DocumentTitle";
 import { useCoinedChat } from "./chat-coin-session";
+import { parseChatAgentEngine, type ChatAgentEngine } from "@shared/chat-models.js";
+
+/**
+ * Whether a chat asked for on this engine may coin its own id.
+ *
+ * Only Claude accepts an id we chose, so a chat headed for any other engine
+ * must not coin — the reservation would pin it to the wrong harness. An absent
+ * choice means the box default, which may itself be Codex; that case is caught
+ * by the reservation answering `unsupported`.
+ */
+function canCoinFor(engine: string | undefined): boolean {
+  return engine === undefined || engine === "claude";
+}
+
+/** The engine a URL param names, or undefined when it names none we know. */
+function requestedEngine(engine: string | undefined): ChatAgentEngine | undefined {
+  return engine === undefined ? undefined : parseChatAgentEngine(engine) ?? undefined;
+}
+
+/** What to ask the box to reserve for a fresh chat, and whether to ask at all. */
+function coinRequest(opts: {
+  isFreshChat: boolean;
+  contextDir: string | undefined;
+  engine: string | undefined;
+  model: string | undefined;
+}): { enabled: boolean; contextDir: string | undefined; engine?: ChatAgentEngine; model?: string } {
+  const engine = requestedEngine(opts.engine);
+  return {
+    enabled: opts.isFreshChat && canCoinFor(opts.engine),
+    contextDir: opts.contextDir,
+    ...(engine !== undefined ? { engine } : {}),
+    ...(opts.model !== undefined ? { model: opts.model } : {}),
+  };
+}
+
+/**
+ * The props that only mean something while a chat is still `"new"`: its
+ * landmark binding, and the engine and model chosen before it existed. Once it
+ * has an id the box holds all three, and passing them again would let a stale
+ * URL param speak for a chat that has already started.
+ */
+function freshStartProps(opts: {
+  rendered: string;
+  contextDir: string | undefined;
+  startEngine: string | undefined;
+  startModel: string | undefined;
+}): { contextDir?: string; startEngine?: string; startModel?: string } {
+  const { rendered, ...rest } = opts;
+  return rendered === "new" ? rest : {};
+}
 
 interface ChatSearch {
   session?: string;
@@ -34,6 +84,14 @@ interface ChatSearch {
    * persisted to chat-session-history.
    */
   contextDir?: string;
+  /**
+   * Engine and model chosen in the model picker before a chat exists, carried
+   * here because choosing a different engine restarts the chat: the coined id
+   * is pinned to Claude at reservation time, so switching engines abandons it
+   * and comes back through `?session=new`. Only meaningful with `session=new`.
+   */
+  engine?: string;
+  model?: string;
   /**
    * A `view:` URL to open in the companion pane once the chat loads — set by
    * deep-links like the clerk extension's "comment on this page" flow.
@@ -228,7 +286,9 @@ export function ChatPage() {
   // addressable — by capture, by a bulk upload, by a second quick send —
   // before its first message exists. See `chat-coin-session.ts`; a box that
   // can't coin (Codex) reports `unavailable` and keeps the `"new"` path.
-  const coined = useCoinedChat({ enabled: isFreshChat, contextDir });
+  const startEngine = search.engine;
+  const startModel = search.model;
+  const coined = useCoinedChat(coinRequest({ isFreshChat, contextDir, engine: startEngine, model: startModel }));
   const bootstrap = trpc.chat.bootstrap.useQuery(
     {
       slice: chatTailSlice(),
@@ -373,8 +433,9 @@ export function ChatPage() {
     return <UnavailableChat boxSlug={boxSlug} chat={unavailable} />;
   }
 
-  // contextDir is only meaningful when starting a "new" chat; once the
-  // session is assigned, the dir is recorded server-side.
+  // These three are only meaningful while the chat is still "new": once it has
+  // an id, the box holds its landmark binding, its engine and its model.
+  const freshStart = freshStartProps({ rendered, contextDir, startEngine, startModel });
   return (
     <InteractiveChat
       key={keyState.epoch}
@@ -384,7 +445,7 @@ export function ChatPage() {
         data: bootstrap.data,
         error: bootstrap.error,
       })}
-      contextDir={rendered === "new" ? contextDir : undefined}
+      {...freshStart}
       companion={companion}
       card={card}
       emissionStore={emissionStore}

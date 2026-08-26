@@ -156,6 +156,9 @@ export async function evaluateInstructions(
       systemPrompt,
       prompt: "Evaluate the instructions against the diff and return your verdict.",
       model: modelId,
+      // The instructions, the whys and the diff are all in the system prompt.
+      // A verdict on them cannot use the box's cards guide.
+      loadBoxContext: false,
       maxTurns,
     });
   };

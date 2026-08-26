@@ -42,7 +42,7 @@ import { registerChatLastAudioRoutes } from "./chat-last-audio-routes.js";
 import { registerChatAudioReviewRoutes } from "./chat-audio-review-routes.js";
 import { registerChatScreenshotRoutes } from "./chat-screenshot-routes.js";
 import { registerChatUiRoutes } from "./chat-ui-routes.js";
-import { chatModelFileForSession, DEFAULT_MODEL_FILE } from "../../core/chat/session/state.js";
+import { chatModelFileForSession } from "../../core/chat/session/state.js";
 
 interface RegisterChatRoutesOptions {
   server: FastifyInstance;
@@ -97,9 +97,10 @@ export async function registerChatRoutes(options: RegisterChatRoutesOptions): Pr
     ...(chatBackend !== undefined ? { backend: chatBackend } : {}),
     buildSessionOptions: (sessionId) => ({
       includePartialMessages: true,
-      // A fresh session inherits the legacy default once (field tests use it),
-      // then promotes that value into its native session-specific file.
-      modelFile: sessionId === null ? DEFAULT_MODEL_FILE : chatModelFileForSession(sessionId),
+      // A session with no id yet has made no choice, so it has no file: it
+      // follows the box default until someone picks a model for it, and only
+      // then does it get a file of its own.
+      modelFile: sessionId === null ? null : chatModelFileForSession(sessionId),
       modelFileForSession: chatModelFileForSession,
     }),
   });
