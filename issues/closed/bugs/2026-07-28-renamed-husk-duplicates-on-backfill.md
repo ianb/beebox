@@ -4,15 +4,17 @@ workstream: chat-session-identity
 area: callback-box
 filed-by: agent
 discovered-in: worktree-compacting — while eval'ing chat review against real boxes
+resolution: implemented
 ---
 
+**Closed 2026-08-26** by [chat-session-identity](../../../callback-box/docs/plans/chat-session-identity.md) Track 1: `ensureChatHusk` is idempotent on the `session` field (`bde787e8f`); `session` is validated as a UUID; a card-lint rule errors on two husks sharing a session (`d7f893e87`) and `reconcileChatHusks` warns on boot (`c6588f411`).
 > **Checked 2026-08-26 — narrower still.** `session/state.ts:158`
 > (`captureAssignedSessionId`) returns early while a session is current, so a
 > plain resume no longer reaches `ensureChatHusk`. The path stays open on the
 > first resume after a server restart (no current session → `onAssigned` →
 > `ensureChatHusk` → suffix miss → duplicate) and on a coined chat's first run.
 > Fix is Track 1 of
-> [chat-session-identity](../../callback-box/docs/plans/chat-session-identity.md):
+> [chat-session-identity](../../../callback-box/docs/plans/chat-session-identity.md):
 > lookup by the `session` field, plus the duplicate-`session` lint rule.
 
 > **Checked 2026-08-14 — partly fixed, one recurrence path left.** Tagged
@@ -77,7 +79,7 @@ so nobody has renamed one yet. The bug is armed, not fired.
 ## Knock-on for chat review
 
 Two husks for one session interact badly with
-[chat review](../../callback-box/docs/chat-review.md): its journal is keyed by
+[chat review](../../../callback-box/docs/chat-review.md): its journal is keyed by
 **session id**, but `review-span` lives on the **husk**. The first husk gets
 reviewed and advances the journal; the second then resolves an empty span, falls
 below the size threshold, and is never reviewed — so it sits there permanently

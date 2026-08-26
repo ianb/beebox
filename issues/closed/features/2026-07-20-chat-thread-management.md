@@ -6,8 +6,10 @@ filed-by: agent
 discovered-in: worktree-open-source-readiness — first-run UX audit for the soft launch
 labels: [soft-launch]
 priority: important
+resolution: implemented
 ---
 
+**Closed 2026-08-26.** Delete shipped 2026-08-07; rename is safe (husk identity is the `session` field, [chat-session-identity](../../../callback-box/docs/plans/chat-session-identity.md) Track 1); archive shipped as `chat.archive` for dead husks (Track 3), offered in the delete confirmation. A rename affordance in the UI was not built — `cb mv`/the editor rename a husk safely now.
 **Implementation update (2026-08-07):** The permanent single-conversation
 DELETE slice is implemented by `worktree-chat-session-delete`, including the
 ordered lifecycle, confirmation disclosures, and missing-transcript guards.

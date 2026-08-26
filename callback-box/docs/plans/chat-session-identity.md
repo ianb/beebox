@@ -1,14 +1,14 @@
 ---
 title: "Chat session identity — one owned key, one recorded origin"
-status: draft
+status: implemented
 workstream: chat-session-identity
 issues:
   - ../../../issues/closed/bugs/2026-08-25-encode-project-dir-underscore-mismatch.md
-  - ../../../issues/bugs/2026-07-28-renamed-husk-duplicates-on-backfill.md
-  - ../../../issues/features/2026-07-29-stale-husks-outlive-their-transcripts.md
-  - ../../../issues/bugs/2026-07-29-chat-review-journal-is-machine-local.md
+  - ../../../issues/closed/bugs/2026-07-28-renamed-husk-duplicates-on-backfill.md
+  - ../../../issues/closed/features/2026-07-29-stale-husks-outlive-their-transcripts.md
+  - ../../../issues/closed/bugs/2026-07-29-chat-review-journal-is-machine-local.md
   - ../../../issues/code-quality/2026-07-18-chat-backend-port-hygiene.md
-  - ../../../issues/features/2026-07-20-chat-thread-management.md
+  - ../../../issues/closed/features/2026-07-20-chat-thread-management.md
   - ../../../issues/closed/bugs/2026-07-28-parse-session-log-silent-page-truncation.md
   - ../../../issues/closed/bugs/2026-08-15-chat-husk-title-contains-raw-message-markup.md
 ---
@@ -209,6 +209,16 @@ and bootstrap; an archive action for dead husks.
   present → `present`; missing and `origin === localOrigin()` → `expired`;
   missing and `origin` set → `elsewhere`; missing and unset → `unknown`.
   Replaces the bare `"missing-local-transcript"` reason (principle #1).
+- **As landed (Track 3):** `SessionAvailability`'s `unavailable` arm is a
+  union on `reason` — `deletion-in-progress` (no transcript claim) and
+  `missing-local-transcript` carrying `transcript`; the `elsewhere` member
+  carries `originName` (from `origin-name`, falling back to the id).
+  `loadChatLists` yields live and dead husks from one read-and-stat pass;
+  `loadDeadHusks` is the dead-only API used by archive. Archive results:
+  `archived` / `already-archived` / `refused` / `not-found`; it takes the
+  chat-review lease delete takes and commits through `executeMove`'s own
+  `commit: true`. The Landmarks page's own session sections still list live
+  chats only.
 - `loadAllSessions` keeps its contract — live, resumable chats only
   (`recent-landmark.ts:52` `isResumableSession` is literally `.some()` over
   it; `SessionRow.tsx:51` always links to `/chat?session=`). A second
@@ -292,6 +302,10 @@ None. A non-git durable transcript store would be one; it is out of scope.
 | Archive move fails after commit staging | reuse of `trash.ts` paths + its doctests | compensates like delete | clear |
 | Codex thread id not UUID-shaped, strict `session` check rejects valid husks | chunk-1 check | fix shape before landing | — |
 | `countUserMessages` truncated on a >5000-entry transcript | new doctest with a synthetic long log | notice logged | clear |
+| Two husks share a `session` (pre-existing) and both stay in the lists / review corpus | duplicate warning doctest | lint blocks the next commit; reconcile warns each boot; no auto-repair by design | clear |
+| Archive: `executeMove` succeeded, its commit failed | archive doctests cover refuse/idempotency, not commit failure | the mutation errors loudly; the moved card is ordinary uncommitted box state and lands with the next box commit; a retry reports `already-archived` | clear |
+| `~/.local/share/cb/origin-id` copied to a second machine (cloned home dir) | — | two machines claim one origin; review may double-extend as before this plan; visible only as `expired` labels on the wrong machine | silent — accepted, boxholder-caused |
+| Boot backfill vs nightly review writing the same husk from two processes | single-process doctest only | `withCardLock` is in-process; the stamp is re-read immediately before an atomic write; last writer wins on three fields | accepted |
 
 > No critical gap. The deleted-id row is accepted: deleting per-user state is
 > boxholder-caused, the effect is visible in every list, and the repair is
