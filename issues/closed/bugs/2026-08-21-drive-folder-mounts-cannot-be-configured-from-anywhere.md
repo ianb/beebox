@@ -4,7 +4,10 @@ workstream: drive-folder-mounts
 area: callback-box
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — user-story catalog verification
+resolution: implemented
 ---
+
+**Closed 2026-08-26:** implemented by the drive-folder-mounts workstream (commit 544fa0c96 and the `bin/land` merge that follows it; see `callback-box/docs/implemented-plans/drive-folder-mounts.md`). `drive.updateConfig` is gone; the tRPC `drive` router now exposes `mounts`/`mount`/`unmount`/`link`/`syncFolder`, `DriveSection.tsx` drives them from settings, and `cb drive mount`/`link`/`unmount` are real CLI commands. Folder mounts are `.gfolder.card`s, not config entries — `config/connectors/google-drive.json`'s `folders` array converts automatically on first sync. The user-story recheck this issue asks for (`connectors/configure-which-gmail-calendar-and-drive-content`) was NOT run — no Workflow tool was available in this finish session; the catalog is unchanged and still needs the recheck.
 
 The Gmail and Calendar connectors can be configured from the web UI; Google Drive cannot, and its backing mutation has no caller at all.
 
@@ -36,8 +39,8 @@ Read the router, the section component and the CLI command; grepped the frontend
 
 ## Updating the user-story catalog
 
-This issue is why [`connectors/configure-which-gmail-calendar-and-drive-content`](../../callback-box/user-stories/catalog/2026-08-21.md#flagged-worth-a-human-glance) is currently
-flagged ❌ in [the user-story catalog](../../callback-box/user-stories/catalog/2026-08-21.md) — a catalogue of what callback-box can
+This issue is why [`connectors/configure-which-gmail-calendar-and-drive-content`](../../../callback-box/user-stories/catalog/2026-08-21.md#flagged-worth-a-human-glance) is currently
+flagged ❌ in [the user-story catalog](../../../callback-box/user-stories/catalog/2026-08-21.md) — a catalogue of what callback-box can
 actually do, where every claim is checked against the source.
 
 **When you fix this, re-check that story so the catalog stops being wrong.** It is a
@@ -56,4 +59,4 @@ pnpm exec tsx callback-box/user-stories/pipeline/render.ts \
 The recheck is adversarial by design: it will not mark the story accurate just because
 this issue was closed — it re-reads the code. If it still refutes, that is worth knowing
 before you call the fix done. Details in
-[the pipeline README](../../callback-box/user-stories/README.md).
+[the pipeline README](../../../callback-box/user-stories/README.md).
