@@ -24,6 +24,7 @@ function sheetFixture(opts: { id: string; name: string; parent?: string }): {
     name: string;
     mimeType: string;
     modifiedTime: string;
+    trashed: boolean;
     owners: Array<{ emailAddress: string }>;
     parents?: string[];
     webViewLink: string;
@@ -36,6 +37,7 @@ function sheetFixture(opts: { id: string; name: string; parent?: string }): {
     name: opts.name,
     mimeType: "application/vnd.google-apps.spreadsheet",
     modifiedTime: "2026-03-29T10:00:00Z",
+    trashed: false,
     owners: [{ emailAddress: "test@example.com" }],
     ...(opts.parent ? { parents: [opts.parent] } : {}),
     webViewLink: `https://docs.google.com/spreadsheets/d/${opts.id}/edit`,
@@ -95,6 +97,7 @@ const drive = createFakeGoogleDrive({
     name: "Test Budget",
     mimeType: "application/vnd.google-apps.spreadsheet",
     modifiedTime: "2026-03-29T10:00:00Z",
+    trashed: false,
     owners: [{ emailAddress: "test@example.com" }],
     webViewLink: "https://docs.google.com/spreadsheets/d/sheet-abc123/edit",
   }],
@@ -157,6 +160,7 @@ const drive3 = createFakeGoogleDrive({
     name: "Expenses",
     mimeType: "application/vnd.google-apps.spreadsheet",
     modifiedTime: "2026-03-29T10:00:00Z",
+    trashed: false,
     owners: [{ emailAddress: "test@example.com" }],
     webViewLink: "https://docs.google.com/spreadsheets/d/sheet-push1/edit",
   }],
@@ -229,6 +233,7 @@ const drive4 = createFakeGoogleDrive({
     name: "Multi",
     mimeType: "application/vnd.google-apps.spreadsheet",
     modifiedTime: "2026-03-29T10:00:00Z",
+    trashed: false,
     owners: [{ emailAddress: "test@example.com" }],
     webViewLink: "https://docs.google.com/spreadsheets/d/sheet-multi/edit",
   }],
@@ -293,6 +298,7 @@ const drive5 = createFakeGoogleDrive({
     name: "Reviewed",
     mimeType: "application/vnd.google-apps.spreadsheet",
     modifiedTime: "2026-03-29T10:00:00Z",
+    trashed: false,
     owners: [{ emailAddress: "test@example.com" }],
     webViewLink: "https://docs.google.com/spreadsheets/d/sheet-comm/edit",
   }],

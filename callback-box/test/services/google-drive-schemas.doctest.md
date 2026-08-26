@@ -33,7 +33,7 @@ unknown keys are ignored.
 ```ts
 const file = {
   id: "f1", name: "Budget", mimeType: "application/vnd.google-apps.spreadsheet",
-  modifiedTime: "2026-03-29T10:00:00Z",
+  modifiedTime: "2026-03-29T10:00:00Z", trashed: false,
   owners: [{ emailAddress: "a@example.com", displayName: "A" }],
   webViewLink: "https://docs.google.com/x", capabilities: { canEdit: true },
 };
@@ -47,7 +47,7 @@ A file missing its `id` is real drift — a loud error naming service + operatio
 ```ts continue
 const bad = vErr({ name: "x", mimeType: "y", modifiedTime: "z" }, { schema: driveGetFileSchema, service: "drive", operation: "getFile" });
 JSON.stringify({ service: bad?.service, operation: bad?.operation, issues: bad?.issues })
-=> {"service":"drive","operation":"getFile","issues":["id: Invalid input: expected string, received undefined"]}
+=> {"service":"drive","operation":"getFile","issues":["id: Invalid input: expected string, received undefined","trashed: Invalid input: expected boolean, received undefined"]}
 ```
 
 ## File list, sheet values, spreadsheet metadata
