@@ -44,6 +44,7 @@ import { CaptureOverlay } from "../capture/CaptureOverlay";
 import { BulkUploadOverlay } from "../bulk-upload/BulkUploadOverlay";
 import { useScreenshotRequests } from "./screenshot-request-handler";
 import { useNativeBridges } from "./use-native-bridge";
+import { useWorking } from "../DocumentTitle";
 
 /**
  * Everything the chat derives from the directory it is bound to.
@@ -173,6 +174,11 @@ export function InteractiveChat({ sessionInput, contextDir, startEngine, startMo
   const { messages, pendingMessages, streamText, streamTools, error, sessionId, processRunning, processBusy, totalEntries, liveTurnId } = snapshot.context;
   const { contextDir: effectiveContextDir, openers } = useChatBinding({ sessionId, sessionInput, contextDir });
   const isStreaming = snapshot.matches("streaming") || snapshot.matches("refreshing"); const isLoading = snapshot.matches("loading");
+
+  // Put the turn in the tab title, so a chat left in a background tab says
+  // whether the box is still working on it. The deps are one boolean, so this
+  // publishes once per turn rather than once per streamed token.
+  useWorking(isStreaming);
   const currentUser = useCurrentUser();
   const { boxSlug } = useParams({ strict: false });
   const backgroundTasks = useBackgroundTasks(); const audioOverlayStore = useMemo(() => createAudioOverlayStore(), []); // see audio-overlay-store.ts

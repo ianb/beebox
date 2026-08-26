@@ -44,6 +44,7 @@ interface PageTitleWriters {
   clear: (owner: object) => void;
   publishMark: (owner: object, mark: string) => void;
   clearMark: (owner: object) => void;
+  setWorking: (owner: object, working: boolean) => void;
 }
 
 interface PageTitleValues {
@@ -51,9 +52,11 @@ interface PageTitleValues {
   title: string | null;
   /** The current landmark's emoji, led with in the composed title. */
   mark: string | null;
+  /** Whether anything on the page is working — see `useWorking`. */
+  working: boolean;
 }
 
-const PageTitleReadContext = createContext<PageTitleValues>({ title: null, mark: null });
+const PageTitleReadContext = createContext<PageTitleValues>({ title: null, mark: null, working: false });
 const PageTitleWriteContext = createContext<PageTitleWriters | null>(null);
 
 /**
@@ -97,6 +100,37 @@ export function usePlaceMark(mark: string | null | undefined): void {
 }
 
 /**
+ * Say that something on this page is working, which shows in the tab.
+ *
+ * ANY caller saying so is enough: this counts owners rather than keeping the
+ * last value, so two components working at once don't cancel each other when
+ * the first finishes. Today the only caller is the chat, while a turn is
+ * streaming — but the whole point of the shape is that the tab does not need
+ * to know what kind of work it is.
+ *
+ * **Presence is the signal, not the animation.** The glyph appears while
+ * something is working and vanishes when nothing is, which is a fact a browser
+ * cannot throttle away. The spin is decoration on top: a hidden tab throttles
+ * timers to about once a second, and Chrome slows them much further after a
+ * few minutes hidden — so an animation is exactly what stops being trustworthy
+ * in a long-running background turn, which is the case this exists to serve.
+ * Built the other way round — animation carrying the meaning — a frozen
+ * spinner would read as "stuck" at the precise moment the honest answer is
+ * "still going".
+ */
+export function useWorking(working: boolean): void {
+  const writers = useContext(PageTitleWriteContext);
+  const ownerRef = useRef<object>({});
+
+  useEffect(() => {
+    const owner = ownerRef.current;
+    if (writers === null) return;
+    writers.setWorking(owner, working);
+    return () => { writers.setWorking(owner, false); };
+  }, [writers, working]);
+}
+
+/**
  * Provides the publication channel and mounts the writer. Rendered by
  * `RootLayout` around the whole route tree, with `children` passed through so
  * a publication re-renders only this provider and the writer — never the
@@ -105,6 +139,9 @@ export function usePlaceMark(mark: string | null | undefined): void {
 export function PageTitleProvider({ children }: { children: ReactNode }) {
   const [published, setPublished] = useState<{ owner: object; title: string } | null>(null);
   const [mark, setMark] = useState<{ owner: object; mark: string } | null>(null);
+  // A SET of owners, not a boolean: "anyone working" is the question, and the
+  // first of two workers to finish must not answer it for the other.
+  const [workingOwners, setWorkingOwners] = useState<ReadonlySet<object>>(() => new Set());
   // Nested inside another provider (the error page mounts its own, and cannot
   // know whether the root layout survived the error), this is a pass-through:
   // two providers would mean two writers racing to set `document.title`.
@@ -116,13 +153,20 @@ export function PageTitleProvider({ children }: { children: ReactNode }) {
       clear: (owner) => setPublished((cur) => (cur !== null && cur.owner === owner ? null : cur)),
       publishMark: (owner, glyph) => setMark({ owner, mark: glyph }),
       clearMark: (owner) => setMark((cur) => (cur !== null && cur.owner === owner ? null : cur)),
+      setWorking: (owner, working) => setWorkingOwners((cur) => {
+        if (cur.has(owner) === working) return cur;
+        const next = new Set(cur);
+        if (working) next.add(owner);
+        else next.delete(owner);
+        return next;
+      }),
     }),
     [],
   );
 
   const values = useMemo<PageTitleValues>(
-    () => ({ title: published?.title ?? null, mark: mark?.mark ?? null }),
-    [published, mark],
+    () => ({ title: published?.title ?? null, mark: mark?.mark ?? null, working: workingOwners.size > 0 }),
+    [published, mark, workingOwners],
   );
 
   if (enclosing !== null) return children;
@@ -142,7 +186,8 @@ export function PageTitleProvider({ children }: { children: ReactNode }) {
  * and the current box. Renders nothing.
  */
 function DocumentTitleWriter() {
-  const { title: published, mark } = useContext(PageTitleReadContext);
+  const { title: published, mark, working } = useContext(PageTitleReadContext);
+  const spinner = useSpinnerFrame(working);
 
   // Selecting the string rather than the matches array keeps this a primitive
   // comparison, so an unrelated router state change doesn't re-render.
@@ -158,11 +203,38 @@ function DocumentTitleWriter() {
   // box -- which composes as absent.
   const { boxName } = useBoxName();
 
-  const title = composeDocumentTitle({ mark, page: published ?? routeTitle, box: boxName });
+  // Working displaces the landmark's mark rather than crowding in beside it:
+  // one glyph's worth of room, and while something is running that is the more
+  // urgent of the two. The place is still named in the title's text.
+  const title = composeDocumentTitle({ mark: spinner ?? mark, page: published ?? routeTitle, box: boxName });
 
   useEffect(() => {
     document.title = title;
   }, [title]);
 
   return null;
+}
+
+/** Frames of the working glyph, in order. */
+const SPINNER_FRAMES = ["\u25D0", "\u25D3", "\u25D1", "\u25D2"];
+const SPINNER_INTERVAL_MS = 400;
+
+/**
+ * The current working glyph, or null when nothing is working.
+ *
+ * The interval only exists while something is working, so an idle tab runs no
+ * timer at all. A hidden tab will animate slowly or barely — see `useWorking`
+ * for why that costs nothing: the glyph's presence is the message.
+ */
+function useSpinnerFrame(working: boolean): string | null {
+  const [frame, setFrame] = useState(0);
+
+  useEffect(() => {
+    if (!working) return;
+    const timer = window.setInterval(() => { setFrame((f) => f + 1); }, SPINNER_INTERVAL_MS);
+    return () => { window.clearInterval(timer); };
+  }, [working]);
+
+  if (!working) return null;
+  return SPINNER_FRAMES[frame % SPINNER_FRAMES.length] ?? SPINNER_FRAMES[0] ?? null;
 }
