@@ -317,6 +317,34 @@ completes. A never-run audit is unverified in both directions — the
 agent may fail it, or the audit itself may be broken. The agent-session
 cost is part of authoring, not a separate decision to defer.
 
+### What will hold this after it ships
+
+Not "will there be tests" — *which tier reaches this behaviour, and what
+does that tier cost to write*. Answer it at plan time, because the answer
+usually changes the design rather than following it.
+
+The move that pays: **when a decision is the risky part, extract it as a
+pure function so the existing doctest tiers reach it**, instead of reaching
+for a heavier tier to test it in place. "Which directory does the mark come
+from — the route's or the one the chat published?" is a decision; buried in
+a component it is untestable without a tier this repo deliberately does not
+have, and pulled out it is three doctest lines. Testing as forcing
+decomposition is the first purpose in `callback-box/docs/testing.md`, and
+this is what it looks like in practice.
+
+Two traps worth naming in the plan rather than discovering later:
+
+- **A new test tier is a bigger commitment than it looks.** It sets the
+  norm for every future agent in the repo, and a mocked test written by the
+  author of a bug encodes the same wrong assumption that caused it. Say
+  explicitly if a plan needs one.
+- **A tour is not a regression anchor.** Tours are a review instrument by
+  design (`callback-box/docs/tours.md`) — nothing runs them, so their value
+  is the pass you make while writing them. Verified 2026-08-26: three of the
+  five tours had been silently failing their own soft assertions for weeks.
+  Plan a tour for the look-once review it is, and put behaviour you need to
+  stay true in a doctest.
+
 ### Implementation order
 
 How the chunks land, in order. Each chunk is a commit (or a few
