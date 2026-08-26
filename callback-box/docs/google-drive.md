@@ -169,6 +169,12 @@ immediately:
 cb drive mount https://drive.google.com/drive/folders/FOLDER_ID store/drive/recipes
 ```
 
+The box's settings page runs the same operation over tRPC
+(`webapp/trpc/routers/drive.ts`, `components/settings/DriveSection.tsx`): it
+lists every mount with its status and child counts, and its "Mirror a folder" /
+"Add a pointer" forms are `mount` and `link` — so the page and the CLI cannot
+hold different ideas of what a mount is.
+
 ```
 store/drive/recipes/Recipes.gfolder.card      # the mount
 store/drive/recipes/Sourdough.gdoc.card       # a Doc child, synced two-way

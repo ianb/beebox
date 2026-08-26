@@ -2023,6 +2023,11 @@ tests:
 
   # === Google Drive / Mounts (folders, pointers) ===
   #
+  # Status (2026-08-26): 7/7 pass on first run, against the rewritten drive
+  # skill. Two of them (drive-mount-folder, drive-url-in-chat) answered with
+  # zero file reads and zero searches — the command is in the always-loaded
+  # skill, which is the point.
+  #
   # Added 2026-08-26 with the drive-folder-mounts plan (Track 3). These are
   # answerable from the drive skill alone — test1 has no Drive fixture (see the
   # BOX DRIFT note above), and deliberately so: what they check is whether the
