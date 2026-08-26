@@ -1,6 +1,6 @@
 ---
 title: "Drive mounts: pointers, synced files, synced folders"
-status: draft
+status: active
 workstream: drive-folder-mounts
 issues:
   - ../../../issues/bugs/2026-08-21-drive-folder-mounts-cannot-be-configured-from-anywhere.md
