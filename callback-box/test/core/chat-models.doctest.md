@@ -5,8 +5,8 @@ The model picker and mutation boundary share one engine-indexed registry.
 ```ts setup
 import { chatModelOptions, isChatModelAllowed, parseChatAgentEngine } from "../../src/shared/chat-models.js";
 import { modelTier, resolveProcedureModel, isProcedureModelName, PROCEDURE_MODEL_NAMES, TIER_RANK } from "../../src/shared/agent-models.js";
-import { liveModelState, resolveBoxModelForEngine, resolveEffectiveModel } from "../../src/core/model-policy.js";
-import { loadBoxModel } from "../../src/core/box/config.js";
+import { liveModelState, resolveBoxModelForEngine, resolveEffectiveModel, resolveSmallModelForEngine, loadEffectiveSmallModel } from "../../src/core/model-policy.js";
+import { loadBoxModel, clearBoxConfigCache } from "../../src/core/box/config.js";
 import { writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { chatModelFileForSession, loadCurrentModel, loadCurrentModelForEngine, saveCurrentModel } from "../../src/core/chat/session/state.js";
@@ -161,4 +161,51 @@ await loadBoxModel(policyBox.root)
 => null
 
 await policyBox.cleanup();
+```
+
+## The small-model slot
+
+Chat review, retro observation and triage are cheap structured passes. They get
+a model from the same policy as everything else, and — unlike the main policy —
+always get *some* concrete id: an unset slot means the `efficient` tier for
+whichever engine is running the pass.
+
+That default is the fix for a real defect. These passes used to name `"haiku"`,
+a provider-shaped nickname, which the Codex delegate forwards to the Codex SDK
+verbatim. **Nothing here can produce a name an engine does not know.**
+
+```ts
+JSON.stringify([
+  resolveSmallModelForEngine("claude", null),
+  resolveSmallModelForEngine("codex", null),
+  resolveSmallModelForEngine("codex", "claude-sonnet-5"),
+  resolveSmallModelForEngine("claude", "claude-fable-5"),
+])
+=> ["claude-haiku-4-5-20251001","gpt-5.6-luna","gpt-5.6-terra","claude-fable-5"]
+```
+
+A codex box never receives a Claude model id, whatever the box config says —
+including the nickname the old code hardcoded.
+
+```ts
+const smallBox = await makeTmpBox();
+await mkdir(join(smallBox.root, "config"), { recursive: true });
+const writeSmall = async (config: Record<string, unknown>) => {
+  await writeFile(join(smallBox.root, "config/box.json"), JSON.stringify(config));
+  clearBoxConfigCache(smallBox.root);
+};
+
+await writeSmall({ agentEngine: "codex" });
+await loadEffectiveSmallModel(smallBox.root)
+=> gpt-5.6-luna
+
+await writeSmall({ agentEngine: "codex", smallModel: "haiku" });
+await loadEffectiveSmallModel(smallBox.root)
+=> gpt-5.6-luna
+
+await writeSmall({ agentEngine: "codex", smallModel: "gpt-5.6-terra" });
+await loadEffectiveSmallModel(smallBox.root)
+=> gpt-5.6-terra
+
+await smallBox.cleanup();
 ```

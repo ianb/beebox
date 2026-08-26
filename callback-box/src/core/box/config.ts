@@ -21,6 +21,12 @@ export interface BoxConfig {
    * Missing means no policy: every run takes its harness's own default.
    */
   agentModel?: string;
+  /**
+   * The model the box's cheap structured passes use — chat review, retro
+   * observation, triage. Missing means the `efficient` tier for whichever
+   * engine the invocation runs on.
+   */
+  smallModel?: string;
   publicUrl?: string;
   allowedEmails?: string[];
   /** IANA timezone for this box (e.g. "America/Chicago"). Used in all agent prompts. */
@@ -134,12 +140,36 @@ export async function loadAgentEngine(boxRoot: string): Promise<AgentEngine> {
  * the harness default instead of failing.
  */
 export async function loadBoxModel(boxRoot: string): Promise<string | null> {
+  return readConfiguredModel(boxRoot, "agentModel");
+}
+
+/**
+ * Load the box's small-pass model, or null when unset. Null is not "no model"
+ * here — the caller falls back to the `efficient` tier — but it is still the
+ * honest answer to "did the boxholder choose one".
+ */
+export async function loadSmallModel(boxRoot: string): Promise<string | null> {
+  return readConfiguredModel(boxRoot, "smallModel");
+}
+
+/**
+ * Read one of the config's model fields, rejecting a value no engine offers.
+ *
+ * The rejection happens here rather than at a spawn boundary because that is
+ * where it would go silent: `isChatModelAllowed` would drop the value and the
+ * box would run a harness default while its config claimed otherwise. The
+ * loader caches by mtime, so the warning fires once per config load.
+ */
+async function readConfiguredModel(
+  boxRoot: string,
+  field: "agentModel" | "smallModel",
+): Promise<string | null> {
   const config = await loadBoxConfig(boxRoot);
-  const model = config.agentModel;
+  const model = config[field];
   if (model === undefined) return null;
   if (typeof model !== "string" || modelTier(normalizeModelId(model)) === null) {
     console.warn(
-      `Box config agentModel ${JSON.stringify(model)} is not a model any engine offers — ignoring it and using the harness default.`,
+      `Box config ${field} ${JSON.stringify(model)} is not a model any engine offers — ignoring it.`,
     );
     return null;
   }

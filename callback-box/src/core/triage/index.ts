@@ -27,6 +27,7 @@ import {
   type TriageDecision,
 } from "./routing.js";
 import { errnoCode } from "../../lib/error-guards.js";
+import { loadEffectiveSmallModel } from "../model-policy.js";
 
 class TriageAgentFailedError extends Error {
   readonly detail: string;
@@ -149,6 +150,10 @@ async function liveDecide(
     boxRoot,
     systemPrompt: buildTriageSystemPrompt(instructions),
     prompt: userPrompt(items),
+    // Triage is a cheap structured pass like chat review and retro
+    // observation, and named no model at all — so it ran on whatever the
+    // harness defaulted to that week.
+    model: await loadEffectiveSmallModel(boxRoot),
   });
   if (!result.success) {
     throw new TriageAgentFailedError(result.error);

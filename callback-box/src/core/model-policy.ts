@@ -11,7 +11,7 @@
 import { isChatModelAllowed } from "../shared/chat-models.js";
 import { modelTier, resolveProcedureModel, type AgentEngine } from "../shared/agent-models.js";
 import { normalizeModelId } from "../shared/model-ids.js";
-import { loadAgentEngine, loadBoxModel } from "./box/config.js";
+import { loadAgentEngine, loadBoxModel, loadSmallModel } from "./box/config.js";
 
 /** A chat's own model state: an explicit pick, or "whatever the box says". */
 export type ChatModelChoice =
@@ -88,4 +88,27 @@ export function liveModelState(
 export async function loadEffectiveBoxModel(boxRoot: string): Promise<string | null> {
   const engine = await loadAgentEngine(boxRoot);
   return resolveBoxModelForEngine(engine, await loadBoxModel(boxRoot));
+}
+
+/**
+ * The model the box's cheap structured passes run on — chat review, retro
+ * observation, triage.
+ *
+ * Unlike the main policy this never returns null: a small pass always has an
+ * answer, and the answer defaults to the `efficient` tier for whichever engine
+ * is running it. That default is the point. These passes used to name a
+ * provider-shaped nickname (`"haiku"`) which the Codex delegate forwarded to
+ * the Codex SDK verbatim — the same defect the procedure tiers closed for
+ * procedures (`issues/bugs/2026-08-25-haiku-nickname-reaches-codex-verbatim.md`).
+ * Nothing here can produce a name an engine does not know.
+ */
+export function resolveSmallModelForEngine(engine: AgentEngine, pinned: string | null): string {
+  const chosen = resolveBoxModelForEngine(engine, pinned);
+  return chosen ?? resolveProcedureModel(engine, "efficient");
+}
+
+/** The box's small-pass model for its own engine. One read, one concrete id. */
+export async function loadEffectiveSmallModel(boxRoot: string): Promise<string> {
+  const engine = await loadAgentEngine(boxRoot);
+  return resolveSmallModelForEngine(engine, await loadSmallModel(boxRoot));
 }

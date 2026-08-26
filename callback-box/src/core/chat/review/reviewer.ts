@@ -15,6 +15,7 @@
 
 import { z } from "zod";
 import { createAgent } from "../../agent/index.js";
+import { loadEffectiveSmallModel } from "../../model-policy.js";
 
 /** Husk titles stay bookmark-sized. Matches TITLE_MAX_LEN in core/chat/husk.ts. */
 const TITLE_MAX = 80;
@@ -68,8 +69,7 @@ export interface ChatReviewer {
   review(args: ReviewArgs): Promise<ReviewOutput>;
 }
 
-/** Cheap tier; quality is judged by reading real output, revisit if it under-performs. */
-const DEFAULT_REVIEWER_MODEL = "haiku";
+
 /** Hard per-session cost ceiling. */
 const MAX_BUDGET_USD = 0.25;
 
@@ -158,9 +158,11 @@ export function createSdkChatReviewer(options: {
   boxRoot: string;
   model?: string;
 }): ChatReviewer {
-  const model = options.model ?? DEFAULT_REVIEWER_MODEL;
   return {
     async review(args: ReviewArgs): Promise<ReviewOutput> {
+      // Resolved per run, not at construction: it is an engine-aware lookup,
+      // and the box's small-model slot is the only thing that may name it.
+      const model = options.model ?? await loadEffectiveSmallModel(options.boxRoot);
       const agent = createAgent({ name: `chat-review:${args.sessionId}` });
       const result = await agent.invokeStructured(ReviewOutputSchema, {
         boxRoot: options.boxRoot,
