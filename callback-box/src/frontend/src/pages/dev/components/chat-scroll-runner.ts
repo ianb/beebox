@@ -153,6 +153,17 @@ async function runStep(step: Step, deps: StepDeps): Promise<void> {
       ctx.apply((prev) => ({ ...prev, chromePx: step.px }));
       await settle();
       return;
+    case "growPerFrame": {
+      // Between frames — a task after the frame's resize pass — is when a
+      // decoded image's layout arrives: after the previous write, before the
+      // next frame delivers that write's scroll event.
+      for (let i = 0; i < step.frames; i++) {
+        await new Promise<void>((resolve) => requestAnimationFrame(() => window.setTimeout(resolve, 0)));
+        flushApply(() => ctx.apply((prev) => growLast(prev, step.px)));
+      }
+      await settle();
+      return;
+    }
     case "growTwiceInOnePass": {
       // A one-shot observer created after the controller's runs after it in
       // the same pass; a layout change made inside it is delivered in that

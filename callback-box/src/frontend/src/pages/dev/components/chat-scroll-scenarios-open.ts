@@ -77,7 +77,7 @@ export const OPEN_THREAD_SCENARIOS: Scenario[] = [
       { k: "append", px: 120, role: "assistant" },
       { k: "settleOpen" },
       { k: "wait", ms: 300 },
-      { k: "stream", chunks: 8, intervalMs: 90, chunkPx: 404 },
+      { k: "growPerFrame", frames: 40, px: 404 },
       { k: "wait", ms: 200 },
     ],
     expect: {
