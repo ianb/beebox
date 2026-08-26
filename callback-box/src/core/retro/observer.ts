@@ -71,6 +71,10 @@ export function createSdkRetroObserver(options: {
         systemPrompt: OBSERVER_SYSTEM_PROMPT,
         prompt: `Session ${args.sessionId}. Transcript follows.\n\n${args.transcript}`,
         model,
+        // Trimmed with the others. This is the one of the four where box
+        // vocabulary could plausibly have helped — it reads what the boxholder
+        // implicitly taught — so if observation quality drops, look here first.
+        loadBoxContext: false,
         maxTurns: 4,
         maxBudgetUsd: MAX_BUDGET_USD,
       });

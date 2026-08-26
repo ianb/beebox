@@ -154,6 +154,9 @@ async function liveDecide(
     // observation, and named no model at all — so it ran on whatever the
     // harness defaulted to that week.
     model: await loadEffectiveSmallModel(boxRoot),
+    // Its instructions are compiled into the system prompt above; nothing it
+    // classifies comes from the box's own agent context.
+    loadBoxContext: false,
   });
   if (!result.success) {
     throw new TriageAgentFailedError(result.error);

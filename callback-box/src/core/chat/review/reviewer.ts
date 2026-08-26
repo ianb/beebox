@@ -169,6 +169,9 @@ export function createSdkChatReviewer(options: {
         systemPrompt: REVIEWER_SYSTEM_PROMPT,
         prompt: buildReviewPrompt(args),
         model,
+        // The transcript is in the prompt; the box's CLAUDE.md is not an input
+        // to naming a conversation.
+        loadBoxContext: false,
         maxTurns: 4,
         maxBudgetUsd: MAX_BUDGET_USD,
       });
