@@ -120,12 +120,26 @@ export function registerCspReportingHeaders(
 }
 
 /**
+ * One box as `/api/boxes` describes it: how to reach it, what to call it, and
+ * the mark to show for it — all three from the box's own root landmark, so a
+ * box looks like itself in the switcher and the selector, not just in its tab.
+ */
+export interface BoxListing {
+  slug: string;
+  name: string;
+  /** Symbol text (emoji); empty when the box uses an image or has no mark. */
+  symbol: string;
+  /** Box-relative path to the symbol image, or null for a text symbol. */
+  symbolSrc: string | null;
+}
+
+/**
  * Build the box list visible to the requesting user (auth-filtered) in the
  * `/api/boxes` response shape. Exported so the hub's own `/api/boxes`
  * (`src/hub/hub-server.ts`) returns the identical shape from the identical
  * filter, instead of a second copy that could drift.
  */
-export async function listAccessibleBoxes(boxes: BoxSpec[], email: string): Promise<Array<{ slug: string; name: string }>> {
+export async function listAccessibleBoxes(boxes: BoxSpec[], email: string): Promise<BoxListing[]> {
   const ownerEmail = getOwnerEmail();
   const accessible = await filterAccessibleBoxes({ boxes, email, ownerEmail });
   return describeBoxes(accessible);
@@ -140,12 +154,12 @@ export async function listAccessibleBoxes(boxes: BoxSpec[], email: string): Prom
  * Names are read concurrently and each one degrades to the slug on its own,
  * so one unreadable box can't cost the others their names or fail the list.
  */
-export async function describeBoxes(boxes: BoxSpec[]): Promise<Array<{ slug: string; name: string }>> {
+export async function describeBoxes(boxes: BoxSpec[]): Promise<BoxListing[]> {
   return Promise.all(
-    boxes.map(async (b) => ({
-      slug: b.slug,
-      name: (await readBoxIdentity({ boxRoot: b.boxRoot, slug: b.slug })).name,
-    })),
+    boxes.map(async (b) => {
+      const { name, symbol, symbolSrc } = await readBoxIdentity({ boxRoot: b.boxRoot, slug: b.slug });
+      return { slug: b.slug, name, symbol, symbolSrc };
+    }),
   );
 }
 
@@ -377,7 +391,7 @@ export function registerSpaFallback(
 async function listMobileAuthorizedBoxes(opts: {
   boxes: BoxSpec[];
   headers: IncomingHttpHeaders;
-}): Promise<Array<{ slug: string; name: string }>> {
+}): Promise<BoxListing[]> {
   const checked = await Promise.all(
     opts.boxes.map(async (box) => ({ box, ok: await verifyMobileRequest(box.boxRoot, opts.headers) })),
   );

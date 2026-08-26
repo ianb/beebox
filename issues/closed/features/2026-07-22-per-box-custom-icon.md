@@ -1,11 +1,34 @@
 ---
 title: "Per-box custom icon (favicon, PWA install icon, tiles, notifications)"
-workstream: unknown
+workstream: tab-identity
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder wants a distinct icon per box
 priority: important
+resolution: implemented
 ---
+
+> **Closed 2026-08-26.** Implemented across two rounds (1373c9316 landing this
+> workstream's first round; 2734eef66..55313f2cf this second round). The favicon,
+> PWA manifest icons, apple-touch-icon, notification icon, and box-selector tiles
+> all now show the box's own mark, rendered server-side from the root landmark
+> card's `symbol` (`callback-box/src/core/box/box-icon.ts`,
+> `callback-box/src/webapp/routes/box-identity-assets.ts`) rather than a new
+> `config/box.json` field as this issue originally proposed — the design
+> question resolved by reusing the *existing* per-directory `symbol` on the
+> box's own root landmark, so there is no separate box-icon vocabulary.
+>
+> Two things this issue asked for are deliberately NOT covered:
+> - A box whose symbol is an **image** (`symbol: { src }`) falls back to the
+>   app's generic icon on the OS-facing surfaces (favicon PNG, manifest,
+>   apple-touch, notifications) — those routes sit partly outside the auth
+>   wall (see `box-identity-assets.ts`'s header) and must not turn box files
+>   into bytes an unauthenticated caller can fetch. An image symbol still
+>   renders correctly in-app (tab title's `mark` slot, selector tiles), just
+>   not on those external surfaces.
+> - The hub's own landing page (`src/hub/box-picker.ts`) still serves an
+>   unstamped document — no per-box icon there since it's fleet-wide, not
+>   scoped to one box.
 
 Each box should be able to define its own icon, used wherever a box is
 visually identified — favicon first, but also the installed-PWA icon, the
@@ -39,7 +62,7 @@ with how directories already get symbols.
 - **Favicon** — the browser tab. Needs the per-box icon injected where
   `index.html` currently hardcodes it.
 - **PWA install identity** — the installed home-screen icon. This is a **dynamic
-  per-box manifest**, which the [web-push work explicitly deferred](../code-quality/2026-07-04-web-push-followup-testing.md)
+  per-box manifest**, which the [web-push work explicitly deferred](../../code-quality/2026-07-04-web-push-followup-testing.md)
   ("Per-box PWA install identity — a dynamic per-box manifest so the installed
   icon opens straight to the box"). This issue subsumes that: a per-box icon and
   a per-box manifest are the same feature.

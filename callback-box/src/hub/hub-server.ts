@@ -53,7 +53,7 @@ import { registerBoxPicker } from "./box-picker.js";
 import { registerAuthSurface } from "../webapp/routes/auth.js";
 import { isPairingRedeemUrl } from "../webapp/routes/pairing.js";
 import { isApiUrl } from "../webapp/server-box-scope.js";
-import { listAccessibleBoxes, describeBoxes } from "../webapp/server-root.js";
+import { listAccessibleBoxes, describeBoxes, type BoxListing } from "../webapp/server-root.js";
 import { canAccessBox } from "../webapp/box-access.js";
 import { HASHED_ASSET_CACHE_OPTIONS } from "../webapp/static-cache.js";
 import { loginRedirect, injectBasePrefix } from "../webapp/base-prefix.js";
@@ -166,7 +166,7 @@ async function hasMobileAuth(opts: {
 async function listMobileAuthorizedBoxes(opts: {
   boxes: BoxSpec[];
   headers: http.IncomingHttpHeaders;
-}): Promise<Array<{ slug: string; name: string }>> {
+}): Promise<BoxListing[]> {
   const checked = await Promise.all(
     opts.boxes.map(async (box) => ({ box, ok: await verifyMobileRequest(box.boxRoot, opts.headers) })),
   );
@@ -182,7 +182,7 @@ async function respondHubBoxes(opts: {
   boxes: BoxSpec[];
   request: FastifyRequest;
   reply: FastifyReply;
-}): Promise<{ boxes: Array<{ slug: string; name: string }>; authRequired?: boolean } | FastifyReply> {
+}): Promise<{ boxes: BoxListing[]; authRequired?: boolean } | FastifyReply> {
   const { boxes, request, reply } = opts;
   if (request.server.openAccess) return { boxes: await describeBoxes(boxes) };
   // The local-dev browse key is machine-level rather than per-box (one dev

@@ -1,8 +1,8 @@
 # Stamping a box's identity into the served document
 
-`stampBoxIdentity` (`webapp/index-html.ts`) rewrites the built `index.html`
-so a tab is identifiable before React boots. The box server does this on the
-read it was already performing per request.
+`stampBoxIdentity` (`webapp/index-html.ts`) rewrites the built `index.html` so
+a tab — and an installed app — is identifiable before React boots. The box
+server does this on the read it was already performing per request.
 
 ```ts setup
 import { stampBoxIdentity, documentBoxSlug } from "../../src/webapp/index-html.js";
@@ -11,14 +11,18 @@ const DOC = [
   "<!doctype html>",
   "<html><head>",
   '<meta name="theme-color" content="#9B6BA6" />',
+  '<link rel="manifest" href="/manifest.webmanifest" />',
   "<title>Callback Box</title>",
   '<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />',
   '<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />',
   "</head><body><div id=\"root\"></div></body></html>",
 ].join("\n");
 
+const stamp = (identity, slug = "kitchen") => stampBoxIdentity(DOC, { slug, ...identity });
 const titleOf = (html: string) => /<title>([^<]*)<\/title>/.exec(html)?.[1] ?? "(none)";
-const iconOf = (html: string) => /<link rel="icon"[^>]*href="([^"]*)"/.exec(html)?.[1] ?? "(none)";
+const iconsOf = (html: string) => [...html.matchAll(/<link rel="icon"[^>]*href="([^"]*)"/g)].map((m) => m[1]);
+const tagOf = (html: string, rel: string) =>
+  new RegExp(`<link rel="${rel}"[^>]*>`).exec(html)?.[0] ?? "(none)";
 ```
 
 ## The title is the box name alone
@@ -27,38 +31,47 @@ The document is served before a route is resolved, so the page half genuinely
 isn't known yet — the client composes `<page> — <box>` once it boots.
 
 ```ts
-titleOf(stampBoxIdentity(DOC, { name: "Kitchen", symbol: "", symbolSrc: null }))
+titleOf(stamp({ name: "Kitchen", symbol: "", symbolSrc: null }))
 => Kitchen
 ```
 
-## A text symbol becomes a self-contained icon
+## A text symbol gets both an SVG and a PNG icon
 
-No file to serve and no box-scoped URL to spell — which matters because this
-runs in the one place that cannot reliably build a box-relative path.
-
-```ts
-const stamped = stampBoxIdentity(DOC, { name: "Kitchen", symbol: "🍳", symbolSrc: null });
-iconOf(stamped).startsWith("data:image/svg+xml,") && decodeURIComponent(iconOf(stamped)).includes("🍳")
-=> true
-```
-
-The apple-touch-icon link is left alone — only the `rel="icon"` link is the
-tab's.
-
-```ts continue
-stamped.includes('<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />')
-=> true
-```
-
-## An image symbol leaves the built icon in place
-
-`symbol: { src }` is a box-relative path, and the served document is the one
-place with no reliable way to make it absolute. The client swaps it in after
-boot, where the box base is known.
+The colour `data:` SVG is what a browser draws when it can. Safari gained
+SVG-favicon support only in version 26, so the box's own PNG is declared
+alongside it and `type=` lets each browser take the one it renders.
 
 ```ts
-iconOf(stampBoxIdentity(DOC, { name: "Kitchen", symbol: "", symbolSrc: "art/pan.png" }))
-=> /icons/icon-192.png
+const stamped = stamp({ name: "Kitchen", symbol: "🍳", symbolSrc: null });
+const icons = iconsOf(stamped);
+[icons[0].startsWith("data:image/svg+xml,"), decodeURIComponent(icons[0]).includes("🍳"), icons[1]].join(" | ")
+=> true | true | /kitchen/icon-192.png
+```
+
+## An image symbol uses the PNG route alone
+
+`symbol: { src }` has no `data:` form, so there is one icon link and it points
+at the box's own route, which resizes the box's file.
+
+```ts
+JSON.stringify(iconsOf(stamp({ name: "Kitchen", symbol: "", symbolSrc: "art/pan.png" })))
+=> ["/kitchen/icon-192.png"]
+```
+
+## The installed-app tags are pointed at the box too
+
+These were previously left alone, which is why every box's installed app and
+every notification wore the same generic mark and the name "Callback Box". The
+manifest link carries `crossorigin="use-credentials"` because a manifest is
+otherwise fetched with no cookies, and every route under `/<slug>` is behind
+the box's auth wall.
+
+```ts
+const stamped = stamp({ name: "Kitchen", symbol: "🍳", symbolSrc: null });
+[tagOf(stamped, "apple-touch-icon"), tagOf(stamped, "manifest")].join("\n")
+=>
+<link rel="apple-touch-icon" href="/kitchen/icon-180.png" />
+<link rel="manifest" href="/kitchen/manifest.webmanifest" crossorigin="use-credentials" />
 ```
 
 ## Names are escaped
@@ -66,7 +79,7 @@ iconOf(stampBoxIdentity(DOC, { name: "Kitchen", symbol: "", symbolSrc: "art/pan.
 A box's name comes from a card the boxholder edits, and lands in HTML.
 
 ```ts
-titleOf(stampBoxIdentity(DOC, { name: "Fish & <chips>", symbol: "", symbolSrc: null }))
+titleOf(stamp({ name: "Fish & <chips>", symbol: "", symbolSrc: null }))
 => Fish &amp; &lt;chips&gt;
 ```
 
@@ -74,9 +87,16 @@ An emoji field carrying markup can't break out of the SVG either — the icon
 stays a well-formed data URI with the markup escaped inside it.
 
 ```ts
-const nasty = iconOf(stampBoxIdentity(DOC, { name: "x", symbol: '"><script>', symbolSrc: null }));
+const nasty = iconsOf(stamp({ name: "x", symbol: '"><script>', symbolSrc: null }))[0];
 [nasty.startsWith("data:image/svg+xml,"), nasty.includes("<script>"), decodeURIComponent(nasty).includes("&lt;script&gt;")].join(" ")
 => true false true
+```
+
+A slug is a path segment in three hrefs, so it is encoded rather than trusted.
+
+```ts
+iconsOf(stamp({ name: "x", symbol: "", symbolSrc: null }, 'a"b'))[0]
+=> /a%22b/icon-192.png
 ```
 
 ## Which box a document request is for

@@ -57,6 +57,9 @@ const STOCK_LABEL = "Box";
 
 /** A box's display identity: what to call it, and what mark to show for it. */
 export interface BoxIdentity {
+  /** The box this identity belongs to — every consumer needs it to build a
+   *  box-scoped URL, and carrying it here keeps them from re-threading it. */
+  slug: string;
   /** Display name — the root landmark's label, falling back to the slug. */
   name: string;
   /** Symbol text (emoji or short text); empty when the box uses an image. */
@@ -79,7 +82,7 @@ export async function readBoxIdentity({
   boxRoot: string;
   slug: string;
 }): Promise<BoxIdentity> {
-  const bare: BoxIdentity = { name: slug, symbol: "", symbolSrc: null };
+  const bare: BoxIdentity = { slug, name: slug, symbol: "", symbolSrc: null };
 
   let cardName: string | null;
   try {
@@ -102,6 +105,7 @@ export async function readBoxIdentity({
   const label = fields.navigation?.label?.trim();
   const symbol = readLandmarkSymbol(fields.navigation, { landmarkPath: cardName });
   return {
+    slug,
     name: label !== undefined && label !== "" && label !== STOCK_LABEL ? label : slug,
     symbol: symbol.text,
     symbolSrc: symbol.src,

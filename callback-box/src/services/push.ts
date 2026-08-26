@@ -36,6 +36,14 @@ export interface PushPayload {
   /** Root-relative deep link opened on notificationclick (e.g. "/box/browse/x"). */
   url: string;
   tag?: string | undefined;
+  /**
+   * Root-relative icon for the notification. `sendPush` fills this in with the
+   * sending box's own mark, so a notification says which box is talking — the
+   * one surface where a box is identified with no other context on screen.
+   * Callers may set it to override; the service worker falls back to the
+   * shared app icon when it is absent.
+   */
+  icon?: string | undefined;
 }
 
 /** A send either delivered or the endpoint is gone and should be pruned. */
