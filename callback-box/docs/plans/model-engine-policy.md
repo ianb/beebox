@@ -6,7 +6,6 @@ issues:
   - ../../../issues/features/2026-07-17-chat-model-pin-default.md
   - ../../../issues/features/2026-08-03-default-model-and-non-default-indicator.md
   - ../../../issues/features/2026-08-08-reactor-agent-model-not-pinnable.md
-  - ../../../issues/features/2026-08-23-choose-the-engine-for-a-new-chat.md
 ---
 
 # Box model/engine policy
@@ -69,7 +68,8 @@ persistence shipped since:
 
 - `src/core/chat/session/state.ts:66`: *"export function chatModelFileForSession(sessionId: string): string {"* — each web chat already persists its own override under `.callback-box/chat-models/<id>.json`.
 - `src/webapp/routes/chat.ts:102`: *"modelFile: sessionId === null ? DEFAULT_MODEL_FILE : chatModelFileForSession(sessionId),"* — the box-wide file is only the seed for a session with no id yet.
-- Chat ids are coined by the client before the first send (`chat-control-procedures.ts` `reserveSession`), so the `sessionId === null` branch is effectively dead on the web path. **`.callback-box/chat-model.json` is vestigial.**
+- The `sessionId === null` branch is **not** dead, and the box-wide file is **not** vestigial. A modern web client coins its id, but `"new"` is still a live shape: `src/webapp/routes/chat-send-target.ts:19-22`: *"`\"new\"` is the legacy shape: a client that did not coin an id (an older build, the iOS app, a Codex box) asks the harness to name the chat."* Reservation refuses non-Claude boxes outright — `src/core/chat/session/reserve.ts:189`: *"if (engine !== \"claude\") return { kind: \"unsupported\" };"* — so on a **Codex box every chat takes that path**, and `.callback-box/chat-model.json` is its live per-box model source.
+- Worse for the plan's purposes, a fresh session then **promotes** the inherited value into its own file: `src/core/chat/session/index.ts:247`: *"if (this.modelFile !== null && this.currentModel !== null) saveCurrentModel(this.boxRoot, { modelFile: this.modelFile, model: this.currentModel });"* — so today a Codex box's chats are born *explicitly* pinned to the box value and would never follow a later change. Track C has to stop that promotion for a chat that made no choice.
 
 So the "core new storage" the issue asks for is already built. What is missing is
 the box-level pointer, the follow semantics, and the surfaces. Reuse, do not
@@ -151,6 +151,12 @@ export function resolveEffectiveModel(
 
 The ladder, in one place:
 
+0. **Normalize first.** Every id entering the ladder — the per-chat choice and
+   the box pin alike — passes through `normalizeModelId` (`src/shared/model-ids.ts:44`)
+   *before* validation or tier lookup. This is load-bearing: normalization today
+   happens only at the Claude spawn boundary (`src/core/agent/run.ts:78`), well
+   after `isChatModelAllowed` would have rejected a retired id and dropped it to
+   `null`. A pin of `claude-opus-4-8` must resolve, not vanish.
 1. `choice.kind === "explicit"` and `isChatModelAllowed(engine, choice.model)` → that model, `source: "explicit"`.
 2. Otherwise the box pin: if `isChatModelAllowed(engine, pinned)` → `pinned`; else `modelTier(pinned)` → `resolveProcedureModel(engine, tier)` → `source: "default"`.
 3. Otherwise `null`, `source: "none"` (the harness's own default).
@@ -181,18 +187,37 @@ resolver's cases in `test/core/chat-models.doctest.md`. No reader yet, no UI.
 
 ### Track B — the reactor and every other unpinned agent run
 
-**What.** `createAgent` fills `model` from the box policy when the caller did not
-name one.
+**What.** The reactor's agent runs pass the box policy's model. **Named call
+sites opt in; there is no blanket default inside `createAgent`.**
 
-**Why this needs to change.** See Track A. The seam is already there and already
-loads box config per invocation: `src/core/agent/index.ts:164`: *"resolving ??= loadAgentEngine(boxRoot).then((engine) => {"*.
+**Why this needs to change.** See Track A. The plumbing exists and is simply
+never filled: `src/core/reactor/batch-jobs.ts:59-65` invokes with `boxRoot`,
+`systemPrompt`, `prompt`, `maxTurns`, `maxBudgetUsd` and no `model`.
 
-**Direction.** In `createAgent`'s delegate wrapper, when `invokeOptions.model === undefined`, resolve `loadBoxModel(boxRoot)` through `resolveBoxModelForEngine(engine, pinned)` and pass the result. An explicit `model` from the caller always wins — which preserves `src/core/retro/observer.ts:65` (*"const model = options.model ?? DEFAULT_OBSERVER_MODEL;"*), `src/core/chat/review/reviewer.ts:161`, and every procedure step that names a tier (`src/core/procedure/engine-run-execute.ts:101`: *"resolveProcedureModel(engine, agentDef.model)"*).
+**Direction.** `batch-jobs.ts` and `chat-jobs.ts` resolve
+`resolveBoxModelForEngine(engine, await loadBoxModel(boxRoot))` once per reactor
+run and pass it as `model` when it is non-null. Nothing else changes.
 
-This is one rule at one seam (principle 8), and it deliberately covers more than
-the reactor: triage (`src/core/triage/index.ts:147`), the chat reviewer, the
-retro observer, and procedure steps that omit `model:` all become "the box's
-model" instead of "whatever the SDK defaults to".
+**Why not a blanket rule in `createAgent`.** An earlier draft put the fallback in
+`createAgent` so every unpinned run inherited the policy. That is the wrong
+seam, for two concrete reasons:
+
+- **It silently re-tiers procedure steps.** A step that omits `model:`
+  (`src/core/procedure/engine-run-execute.ts:100-102`) means "the harness
+  default" today. Under a blanket rule it would mean "whatever the box last
+  pinned", changing a box's authored procedures with no edit to the procedure.
+  A release note is not a substitute for a per-surface decision.
+- **It would move test-harness runs off their baseline.** The scenario validator
+  (`src/scenario/runner.ts:111`) and the knowledge-audit runner
+  (`src/dev/lib/test-runner.ts`) also go through `createAgent`; making their
+  model depend on a box's config makes runs non-comparable across boxes.
+
+Triage, the chat reviewer, the retro observer, and procedure steps keep today's
+behavior. Each is a one-line change if it is later wanted — the resolver stays
+the single ladder (principle 8); what is per-surface is *whether* to consult it.
+
+**Snapshot semantics.** `createAgent` resolves its engine delegate once and
+caches it (`src/core/agent/index.ts:162-166`: *"resolving ??= loadAgentEngine(boxRoot).then((engine) => {"*), so an Agent instance already snapshots box config at first invoke. The reactor resolves its model at the same altitude — once per run, before the agent is created — so a resumed per-thread chat job keeps one model for the whole run.
 
 **Announced behavior change.** A box that pins a model changes what runs on its
 nightly wakeup and inside its procedures. `issues/features/2026-08-08-reactor-agent-model-not-pinnable.md`
@@ -226,11 +251,18 @@ held for that subprocess's life.
   model mid-flight.
 - `setModel(null)` keeps deleting the per-session file; it now means "follow the
   box default" rather than "use the harness default".
-- **Retire `DEFAULT_MODEL_FILE`.** `src/webapp/routes/chat.ts:102`'s
-  `sessionId === null` seed and `src/core/chat/session/state.ts:63` go away;
-  `src/field-test/run-seed.ts:79` writes `agentModel` in `box.json` instead. A
-  one-shot migration folds any existing `.callback-box/chat-model.json` into
-  `box.json` and deletes it (see Rollout).
+- **A chat that made no choice never gets a file.** Today a fresh session
+  promotes its inherited model into its own file at `src/core/chat/session/index.ts:247`, which is what would make a `"new"`-shaped chat born explicitly pinned. Promotion now happens only when `explicitModel !== null` — a follower stays a follower across its whole life.
+- **Retire `DEFAULT_MODEL_FILE`, carefully.** It is a live path for `"new"`
+  sends — every chat on a Codex box (What already exists). Retiring it is
+  therefore a behavior-preserving *substitution*, not a dead-branch cleanup: the
+  fresh-session path stops reading the file and resolves the box policy instead,
+  and the migration (Rollout) copies the file's value into `agentModel` first, so
+  a Codex box's chats keep starting on the same model. After the substitution
+  those chats *follow* rather than freeze, which is the intended change and the
+  one to state in the release note. `src/webapp/routes/chat.ts:102`'s seed and
+  `src/core/chat/session/state.ts:63` go away; `src/field-test/run-seed.ts:79`
+  writes `agentModel` in `box.json` instead.
 - **Selecting still restarts; pinning never does.** `setModel` keeps its current
   behavior (`chat-control-procedures.ts:165-176`), including the deferred restart
   for a busy session — an explicit select is an instruction to *this*
@@ -264,6 +296,12 @@ box default; the chip button gains a smarter/dumber mark.
   `ownerProcedure` (`admin.ts:223`), so a non-owner must not see a control that
   can only 403. `trpc.admin.boxConfig` is itself owner-gated; the panel takes
   `canPin` from the chat page's existing owner signal rather than probing.
+- **The panel refetches status when it opens.** The chat's model state is read
+  once per `sessionId` today (`InteractiveChat-hooks.ts:129-139`), so a default
+  pinned in another tab — or from the admin page — would otherwise never reach an
+  already-open chat, and the panel would show a stale `Default · …` row. Opening
+  the sub-panel is the natural refetch point: it is the only moment the box
+  default is displayed, and it costs one query per open (principle 13).
 - The first row is **`Default · <resolved label>`** and is `✓` when the chat
   follows. Selecting it clears the chat's explicit model (today's `null` path).
   When no default is pinned it reads `Default` alone, exactly as now.
@@ -275,8 +313,12 @@ box default; the chip button gains a smarter/dumber mark.
   default, Opus 5"); the mark alone never carries the meaning.
 - The admin **Agent Engine** section becomes **Agent engine and model**: the
   engine radio plus a model select whose options are
-  `chatModelOptions(config.agentEngine)`. Same mutation
-  (`updateBoxConfigFields`), one more field. This is the surface for a boxholder
+  `chatModelOptions(config.agentEngine)`, with a first option for "no default"
+  and an unrecognized stored value shown as itself. Same mutation
+  (`updateBoxConfigFields`), one more field — **plus the `commitWarning` the
+  section currently drops** (`admin.ts:249` returns it; `AgentEngineSection.tsx:64-74`
+  renders only Saving / Saved / error), so a save whose git commit failed stops
+  being invisible. This is the surface for a boxholder
   who is not in a chat, and the place engine and model are visibly one policy.
 
 **Vocabulary lock-ins.** UI copy uses "box default" everywhere; the admin section
@@ -285,30 +327,6 @@ says "New chats and unpinned agent work use this model."
 **First implementation chunk.** The panel's two-action row plus the
 `setDefaultModel` wiring. The indicator is the second chunk; the admin section
 the third.
-
-### Track E — choosing the engine for a new chat
-
-**What.** Let a chat's engine be chosen before its first message, defaulting to
-the box's `agentEngine`.
-
-**Why this needs to change.** `issues/features/2026-08-23-choose-the-engine-for-a-new-chat.md` — a chat's engine is fixed at birth from the box setting and nothing offers the choice, while `src/core/chat/session/history.ts:240`: *"const entry: SessionHistoryEntry = { id: opts.sessionId, engine: opts.engine ?? await loadAgentEngine(boxRoot) };"* already accepts an explicit engine that no caller supplies. It is the engine half of "model/engine policy", and after Track D the model panel is exactly where a boxholder will look for it.
-
-**Why it is last, and droppable.** It is the only track not required by the
-model-policy story, and it carries its own UX question (the issue's "putting
-engine in the model menu may imply it can change"). If it threatens the plan's
-completion, cut it and leave the issue open — that is a smaller loss than a
-half-built engine picker.
-
-**Direction.** `reserveSession` accepts an optional `engine`, threads it to
-`registry.reserve` → the history record. The model panel's header line
-(`SessionChip-model-panel.tsx:26`, which already prints the engine) becomes a
-choice **only while the chat has no turns**, and reads as fixed after. Switching
-engine before the first message clears any explicit model, because
-`isChatModelAllowed` scopes models by engine.
-
-**First implementation chunk.** The `engine` parameter through
-`reserveSession`/`reserve`/history, with a doctest that a reserved chat records
-the requested engine and that an absent one still records the box default.
 
 ## Could this be simpler?
 
@@ -343,11 +361,10 @@ scope.
 
 ## Subplans
 
-None. Track E is the only sub-question with an open design decision of its own
-(where the engine choice lives), and it is small enough to settle inline in its
-Direction — it threads one existing parameter and changes one header line. If
-its UX question turns out to be larger than that, cut the track rather than
-promote it.
+None. The one candidate was per-chat engine choice
+(`issues/features/2026-08-23-choose-the-engine-for-a-new-chat.md`), and it is not
+a subplan either — it is deferred entirely (NOT in scope), because it is a
+separate mechanism rather than a sub-question of this one.
 
 ## Failure modes
 
@@ -358,25 +375,32 @@ promote it.
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| `agentModel` in `box.json` is a hand-edited string no engine knows | New — resolver doctest | Yes — `isChatModelAllowed` fails, `modelTier` returns `null`, resolution falls to `none` | Clear: `boxConfig` returns the raw value, the admin select shows it as unrecognized, and the resolver logs once per box load |
+| `agentModel` in `box.json` is a hand-edited string no engine knows | New — resolver doctest | Yes — the resolver rejects it (below); it never reaches a spawn | Clear: the resolver `console.warn`s once per config load, `boxConfig` returns the raw string, and the admin select renders it as an unrecognized value rather than silently showing "no default" |
 | `agentModel` belongs to the other engine (box switched harness) | New — resolver doctest | Yes — tier translation (Track A step 2) | Clear: status reports `source: "default"` with the *translated* model, and the panel marks the translated row |
-| Pin succeeds in `box.json` but the git commit fails | Existing — `box-config-write.ts` returns `commitError` | Yes — `admin.ts:243` logs and returns `commitWarning` | Clear: the existing warning path already surfaces it |
+| Pin succeeds in `box.json` but the git commit fails | Existing — `box-config-write.ts` returns `commitError` | Server-side yes (`admin.ts:242` logs and returns `commitWarning`); **client-side no** — `AgentEngineSection.tsx:64-74` renders Saving / Saved / error and drops `commitWarning` entirely | **Silent today.** D3 must render `commitWarning`; without that fix "saved but not committed" is invisible in the surface this plan reuses |
 | A non-owner clicks pin | New — a tRPC doctest asserting `ownerProcedure` rejects | Yes — `ownerProcedure` | Clear: 403; and the control is not rendered without `canPin` |
 | The default changes while a chat is warm; the chat keeps the old model | New — session doctest | Yes, by design — `resolvedModel` is fixed at spawn | Clear **only with `pendingModel`**: without it the panel would claim the new default while the subprocess runs the old one, which is principle 13's exact failure |
-| Two tabs pin different models at once | No — accepted | Yes — `withFileLock` + `withCardLock` in `mutateConfig` (`box-config-write.ts:63-64`) serialize the writes | Clear: last write wins, both tabs re-read on invalidate |
+| Two tabs pin different models at once | No — accepted | Yes — `withFileLock` + `withCardLock` in `mutateConfig` (`box-config-write.ts:63-64`) serialize the writes | Clear at the store; **stale in the other tab** — `InteractiveChat-hooks.ts:129-139` reads status only when `sessionId` changes, and `AgentEngineSection.tsx:25` invalidates only its own cache. Handled by D1's refetch-on-open (below), not by hoping |
 | Migration runs on a box whose `.callback-box/chat-model.json` holds a retired id | New — migration doctest | Yes — `normalizeModelId` at read (`model-ids.ts:44`) | Clear: the migrated `box.json` carries the current id |
 | Migration runs twice | New — migration doctest | Yes — idempotent: the file is gone after the first run, and an existing `agentModel` is never overwritten | Silent, and correctly so — a no-op needs no report |
 | A procedure card that omitted `model:` now inherits the box policy and behaves differently | Partly — existing procedure doctests pin tiers | Yes — explicit tiers still win (Track B) | **Clear only via the release note.** This is the announced change; nothing in code can distinguish "omitted on purpose" from "omitted by default" |
-| `createAgent` resolves policy on every invoke, adding a config read per agent run | No — accepted | Yes — `loadBoxConfig` caches by mtime (`config.ts:59`) | Silent, acceptable: it is the same read `loadAgentEngine` already does on that path |
+| A reactor run is in flight when the pin changes | New — reactor doctest | Yes, by design — the model is resolved once per run (Track B), so a run never changes model midway | Silent, and correctly so — matching chat's spawn-time rule |
 | Codex chat pinned to a Claude model, and vice versa | Existing (`chat-models.doctest.md`) + new | Yes — step 1 filters, then falls to the box pin | Clear: the panel shows the fallen-through choice, not a phantom `✓` |
 
 ## Agent-flow / user-flow edge cases
 
-- **Wrong tag / wrong field** — *ADDRESSED.* The analogue is an agent hand-editing
-  `box.json` and writing `agentModel: "sonnet"` (a tier alias) instead of a model
-  id. `modelTier` accepts only ids; the plan makes the config schema reject
-  unknown strings at parse (`boxConfigSchema`, principle 3), so the box surfaces
-  it rather than resolving to nothing.
+- **Wrong tag / wrong field** — *ADDRESSED, with one contract.* The analogue is
+  an agent hand-editing `box.json` to `agentModel: "sonnet"` (a tier alias, not
+  an id). Validation lives in **one** place, the resolver — not in the config
+  loader, which deliberately does no schema validation at all
+  (`src/core/box/config.ts:155`: *"const config: BoxConfig = JSON.parse(raw);"*),
+  and not as an enum in `boxConfigSchema` (`src/webapp/trpc/routers/admin.ts:37`),
+  which is a `parse` — a strict enum there would make one bad character throw the
+  whole admin page (`admin.ts:186-192` already turns an unreadable config into a
+  `PRECONDITION_FAILED`). So: `agentModel` is `z.string().optional()` in the
+  admin schema, the raw value reaches the UI to be shown as unrecognized, and the
+  resolver is the boundary that rejects it, loudly and once (principle 3, and
+  principle 4 — degrade visibly rather than throw the page away).
 - **Stale ref** — *ADDRESSED.* A pinned id that has since been retired resolves
   through `normalizeModelId` (`model-ids.ts:44`), which already carries
   `claude-opus-4-8` forward. The plan adds no second retirement table.
@@ -412,9 +436,18 @@ promote it.
   additive change, not a rework.
 - **Per-agent-kind policy** (triage vs retro vs procedure). Same reason; the
   callers that care already pass explicit models.
-- **Mid-chat engine conversion.** `2026-08-23` rules it out with reasons this
-  plan does not relitigate: transcripts live in different stores and models are
-  engine-scoped.
+- **Per-chat engine choice at all** — `issues/features/2026-08-23-choose-the-engine-for-a-new-chat.md`,
+  which an earlier draft carried as a fifth track. Deferred, because it is a
+  bigger mechanism than "thread one existing parameter": reservation takes no
+  engine (`chat-control-procedures.ts:230`), `registry.reserve` takes no engine
+  (`src/core/chat/session/registry.ts:136`), and coined ids are Claude-only by
+  contract (`src/core/chat/session/reserve.ts:189`), so offering the choice on a
+  Codex box means changing how a chat is named, not adding a menu. It is the
+  engine half of the workstream name and it deserves its own plan. The issue
+  stays open.
+- **Mid-chat engine conversion.** `2026-08-23` rules it out for its own reasons
+  this plan does not relitigate: transcripts live in different stores and models
+  are engine-scoped.
 - **Adopting the SDK's live `setModel`** in place of restarting on select. It is
   a real simplification (Prior art) but it is a change to how *today's* feature
   works, with its own cache-cost and Codex-parity questions. Filed as an open
@@ -446,11 +479,13 @@ promote it.
   undefined`. Settled enough to build; recorded here because `updateBoxConfigFields`
   currently has no "clear this field" idiom and one has to be chosen
   (`config.agentModel = undefined` vs `delete config.agentModel`).
-- **Track E's placement** — engine choice inside the model panel vs attached to
-  new-chat creation. **Lean: inside the panel, disabled after the first turn**,
-  because that is where the boxholder already goes and a disabled control with a
-  reason states the rule better than an absent one. Revisit if Track D's panel
-  gets crowded.
+- **Where does a `"new"`-shaped chat's follow-state live before it has an id?**
+  A Codex-box chat has no session id until the harness names it, so there is no
+  per-session file to be absent. **Lean:** absence is still the encoding —
+  a session with no id has no explicit model by construction, so it follows. The
+  question is only whether anything must be written at the moment the id arrives;
+  under "promotion only for an explicit choice" (Track C) the answer is no. Worth
+  one doctest rather than more design.
 
 ## Knowledge audits
 
@@ -485,11 +520,8 @@ UI and the resolver, not by agents recalling a convention.
    control gated on owner. *Depends on C1.*
 6. **D2** — off-default indicator on the chip button. *Depends on D1.*
 7. **D3** — admin section becomes engine + model. *Depends on A1; independent of D1.*
-8. **E1** — engine on `reserveSession` through to the history record.
-9. **E2** — engine choice in the panel header, disabled after the first turn.
-   *Depends on E1 and D1.*
-10. **Audits + docs** — the two knowledge-audit entries, run; reference docs
-    updated (below).
+8. **Audits + docs** — the two knowledge-audit entries, run; reference docs
+   updated (below).
 
 ## Rollout shape
 
@@ -502,10 +534,14 @@ of the design:
 - `test/core/chat-session-model.doctest.md` (new) — a session with no per-session
   file resolves the box pin at `startRun`; a warm session's resolved model does
   not change when the pin changes; `pendingModel` reports the difference;
-  `setModel(null)` returns the chat to following.
-- `test/core/agent-model-policy.doctest.md` (new) — `createAgent` passes the
-  policy model when the caller omits `model`, and the caller's model when it does
-  not (via `test/helpers/fake-agent.ts`).
+  `setModel(null)` returns the chat to following; and a `"new"`-shaped session
+  (no coined id — the Codex-box path) does **not** write a per-session file when
+  its id arrives, so it keeps following.
+- `test/core/reactor-model-policy.doctest.md` (new) — a reactor run passes the
+  policy model, resolves it once per run, and leaves a caller-supplied model
+  alone (via `test/helpers/fake-agent.ts`). Its companion assertion is the
+  negative one: an agent created outside the reactor still gets no model, so the
+  narrowed seam stays narrow.
 - `test/webapp/trpc-model-policy.doctest.md` (new) — `setDefaultModel` rejects a
   model outside the engine's registry, rejects a non-owner, and does not restart
   a running session.
