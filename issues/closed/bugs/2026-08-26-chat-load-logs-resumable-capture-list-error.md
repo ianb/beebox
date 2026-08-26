@@ -14,10 +14,15 @@ agent browsing as its owner", `docs/plans/agent-browsing-owner.md` →
 `docs/implemented-plans/`). The 401 came from the browse key carrying no
 identity on the box; `test1` now declares `agentBrowsing: "owner"`
 (`config/box.json`), and `resolveCaptureRequestOwner` resolves it to the box
-owner through the new `resolveBoxIdentity`. The capture-page error badge is
-gone in the tours. The status-code omission this issue also named is fixed at
+owner through the new `resolveBoxIdentity`. Both capture calls that gate on
+it — `POST /api/capture/sessions` (the second symptom's create-session 401)
+and `GET /api/capture/sessions/resumable` (the debug-log error) — share that
+one resolver, so both are fixed together; `bin/tour capture` after the change
+shows 0 findings. The status-code omission this issue also named is fixed at
 `src/frontend/src/pages/capture/capture-api.ts:157` (`ResumableCaptureListError`
-now carries the response status).
+now carries the response status). The bare-401-to-the-user framing the second
+symptom also raises is not addressed here — worth a follow-up if it recurs on
+a box without the opt-in.
 
 On the tour worktree's `test1` clone, opening `/chat` (and `/capture`, which
 redirects into it) puts one error in the app bar's debug-log button on every
