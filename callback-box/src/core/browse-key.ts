@@ -26,6 +26,14 @@
  * it on a publicly-reachable deployment hands whoever holds it the whole
  * fleet, so don't, unless that is exactly what you want.
  *
+ * **What the key means inside a box is the box's call.** By default it clears
+ * the auth wall and is nobody — `authed`, never a `user`. A box built for
+ * agent-driven browsing declares `agentBrowsing: "owner"` in its
+ * `config/box.json`, and inside that box the key resolves to the owner's
+ * identity (`webapp/box-identity.ts`). A box that never said so keeps the
+ * fence, so a machine-wide key does not silently become a person on a box
+ * somebody actually uses.
+ *
  * Accepted from a bearer header OR a cookie. The cookie is what a browser
  * needs: it rides every request to the origin including the WebSocket
  * upgrade, which an `Authorization` header does not. The header form is for

@@ -255,6 +255,17 @@ rmSync(join(content, ".callback-box", "active-chats"), { recursive: true, force:
 // to restore a valid skeleton without reintroducing anyone's data.
 execFileSync(join(MONO_ROOT, "callback-box", "bin", "cb"), ["init"], { cwd: content, stdio: "inherit" });
 
+// A journey box is built for an agent-driven browser, so it says so: with
+// `agentBrowsing: "owner"` the browse key acts as the box owner and the walker
+// reaches capture, Settings, and every owner-gated procedure
+// (`docs/plans/agent-browsing-owner.md`). The base box normally carries the field
+// already (test1 does); setting it here is what makes a journey box one even when
+// the base did not. A box a person actually uses must never have it.
+const boxConfigPath = join(content, "config", "box.json");
+const boxConfig: unknown = existsSync(boxConfigPath) ? JSON.parse(readFileSync(boxConfigPath, "utf8")) : {};
+if (!isRecord(boxConfig)) fail(`${boxConfigPath} is not a JSON object`);
+writeFileSync(boxConfigPath, `${JSON.stringify({ ...boxConfig, agentBrowsing: "owner" }, null, 2)}\n`);
+
 if (typeof journey.box.setup === "string" && journey.box.setup.trim() !== "") {
   try {
     execFileSync("bash", ["-euo", "pipefail", "-c", journey.box.setup], {
@@ -373,30 +384,6 @@ if (warnings.length > 0) {
 }
 
 // --- the before-snapshot --------------------------------------------------------
-/**
- * Warn when the walk will meet a login wall the walker cannot climb.
- *
- * Owner-gated surfaces — capture is the big one — resolve an identity from a
- * session cookie and answer 401 without one (`capture-request-owner.ts`). The
- * browse key is not the box owner, so a walk driven by the key alone finds
- * capture dead, its mic and finalize permanently disabled, and no explanation on
- * screen. The 2026-08-24 walker reported that as the product being broken.
- *
- * Auth is always on by design (`openAccess` throws on a listening server), so
- * the fix is a saved browse login, which needs a credential only the boxholder
- * can give. This does not invent one; it says the run will be blind to capture
- * so that nobody reads the resulting notes as a product finding.
- */
-const authProfiles = execFileSync(join(MONO_ROOT, "bin", "browse"), ["auth", "list"], { encoding: "utf8" });
-const captureBlind = authProfiles.includes("No auth profiles saved");
-if (captureBlind) {
-  console.log("");
-  console.log("! no browse login saved — this walk cannot reach capture or anything else owner-gated.");
-  console.log("  It will see 401s and disabled controls there, and those are NOT product findings.");
-  console.log("  To fix: bin/browse auth save <name> --url <box url> --username <email> --password <pw>");
-  console.log("");
-}
-
 const head = execFileSync("git", ["-C", boxDir, "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
 writeFileSync(join(runDir, "before.json"), `${JSON.stringify({
   journey: journey.id,
@@ -404,7 +391,6 @@ writeFileSync(join(runDir, "before.json"), `${JSON.stringify({
   box: boxDir,
   url: `http://localhost:3210/${WORKTREE}/${boxSlug}/`,
   headBefore: head,
-  captureBlind,
 }, null, 2)}\n`);
 
 // Boxes accumulate, one per run, and nothing prunes them — a past walk's box holds
