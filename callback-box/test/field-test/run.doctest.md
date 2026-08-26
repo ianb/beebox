@@ -16,6 +16,8 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execa } from "execa";
 import { createFakeChatBackend, type FakeChatBackend, type ChatBackend } from "../../src/services/claude-chat.js";
+import { MODEL_ID } from "../../src/shared/model-ids.js";
+import { loadBoxModel } from "../../src/core/box/config.js";
 import { runFieldScenario } from "../../src/field-test/run.js";
 import { createFieldBox } from "../../src/field-test/run-box.js";
 import { loadFieldScenario } from "../../src/field-test/scenario.js";
@@ -167,10 +169,10 @@ await seedFieldBox({ box: seedBox, scenario: seedScenario });
 await fileExists(join(seedBox.boxRoot, "config/connectors/gmail.json"))
 => true
 
-JSON.parse(await readFile(join(seedBox.boxRoot, ".callback-box/chat-model.json"), "utf-8")).model
-=> sonnet
+(await loadBoxModel(seedBox.boxRoot)) === MODEL_ID.sonnet
+=> true
 
-// The connector config is part of the committed baseline; the model file is not.
+// The connector config and the pinned model (config/box.json) are both part of the committed baseline.
 const seedStatus = await execa("git", ["status", "--porcelain"], { cwd: seedBox.packageRoot });
 seedStatus.stdout
 =>
@@ -339,8 +341,8 @@ run that dies part-way still leaves the completed items behind.
 
 ```ts continue
 const onDisk = JSON.parse(await readFile(join(result.runDir, "results.json"), "utf-8"));
-[onDisk.scenario, onDisk.items.length, onDisk.models.chat, String(onDisk.aborted)].join(" | ")
-=> loop-fixture | 4 | opus | null
+[onDisk.scenario, onDisk.items.length, onDisk.models.chat === MODEL_ID.opus, String(onDisk.aborted)].join(" | ")
+=> loop-fixture | 4 | true | null
 ```
 
 The run also writes `report.md` in the same `finally`, so a triage read never

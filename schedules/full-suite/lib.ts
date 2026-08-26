@@ -12,6 +12,7 @@
  * 2026-08-25, mechanism D.
  */
 
+import { homedir } from "node:os";
 import type { LedgerRecord } from "../../bin/test-ledger-lib.js";
 
 /** The `--source` value this schedule stamps on every record it produces. */
@@ -397,7 +398,10 @@ export function renderIssue(input: {
     "report.",
     "",
     "```",
-    input.excerpt,
+    // tap's YAML diagnostics name the runner's node binary and checkout under
+    // the home directory; path-leak-check rejects a real `/Users/<name>` in any
+    // tracked file, and a report the hook refuses is a report nobody reads.
+    input.excerpt.replaceAll(homedir(), "~"),
     "```",
     "",
     "Reproduce at the blamed landing:",
