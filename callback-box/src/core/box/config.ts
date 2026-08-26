@@ -7,6 +7,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { errnoCode } from "../../lib/error-guards.js";
+import { isRecord } from "../../lib/is-record.js";
 import { AGENT_ENGINES, modelTier, type AgentEngine } from "../../shared/agent-models.js";
 import { normalizeModelId } from "../../shared/model-ids.js";
 
@@ -62,6 +63,12 @@ export interface BoxConfig {
     /** Telegram chat id to send alerts to (the boxholder's DM chat). */
     telegramChat?: string;
   };
+  /**
+   * Agent browsing acts as the box owner. Set on boxes BUILT for agent-driven
+   * testing (test1 and its clones); absent, the browse key clears the wall and
+   * is nobody. A box a person actually uses must not set this.
+   */
+  agentBrowsing?: "owner";
 }
 
 class InvalidAgentEngineError extends Error {
@@ -77,6 +84,15 @@ class InvalidAgentEngineError extends Error {
 export type GoogleServiceName = "calendar" | "gmail" | "drive";
 
 const cache = new Map<string, { config: BoxConfig; mtime: number }>();
+
+/** Config paths already complained about, so a bad file warns once, not per read. */
+const warnedConfigPaths = new Set<string>();
+
+function warnOnce(configPath: string, message: string): void {
+  if (warnedConfigPaths.has(configPath)) return;
+  warnedConfigPaths.add(configPath);
+  console.warn(message);
+}
 
 /** Explicit invalidation after a same-process config mutation. */
 export function clearBoxConfigCache(boxRoot: string): void {
@@ -238,7 +254,16 @@ export async function loadBoxConfig(boxRoot: string): Promise<BoxConfig> {
 
   try {
     const raw = await fs.promises.readFile(configPath, "utf-8");
-    const config: BoxConfig = JSON.parse(raw);
+    // `JSON.parse` is a boundary: valid JSON that is not an object (`null`,
+    // `[]`, `"x"`) would otherwise flow out typed as BoxConfig and throw on the
+    // first field read. Treat it as no config, and say so once per path.
+    const parsed: unknown = JSON.parse(raw);
+    if (!isRecord(parsed)) {
+      warnOnce(configPath, `Box config at ${configPath} is not a JSON object, using defaults.`);
+      return {};
+    }
+    // eslint-disable-next-line no-restricted-syntax -- parse boundary: the guard above confirmed an object; each field is validated where it is read.
+    const config = parsed as BoxConfig;
     cache.set(boxRoot, { config, mtime });
     return config;
   } catch (e) {

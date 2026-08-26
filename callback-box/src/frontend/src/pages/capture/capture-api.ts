@@ -85,8 +85,8 @@ export interface ResumableCaptureResponse {
 }
 
 class ResumableCaptureListError extends Error {
-  constructor() {
-    super("List resumable capture sessions failed");
+  constructor(status: number) {
+    super(`List resumable capture sessions failed: ${status}`);
     this.name = "ResumableCaptureListError";
   }
 }
@@ -154,7 +154,7 @@ export async function listResumableCaptureSessions(
     withMobileAuth({ method: "GET" }),
   );
   if (!res.ok) {
-    throw new ResumableCaptureListError();
+    throw new ResumableCaptureListError(res.status);
   }
   return res.json();
 }

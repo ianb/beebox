@@ -61,6 +61,9 @@ export async function registerGoogleServicesCallback(server: FastifyInstance, { 
     // has nothing to bind to and falls through — nonce possession is the secret
     // there. The nonce is already consumed above, so a mismatch fails closed.
     if (consumed.createdBy) {
+      // Deliberately the base resolver, not `resolveBoxIdentity`: completing an
+      // OAuth grant is a real-session surface like a password change, so a
+      // browse-owner identity must not satisfy the initiator binding.
       const completingEmail = resolveRequestIdentity(request, { openAccess: request.server.openAccess }).email;
       if (completingEmail !== consumed.createdBy) {
         console.log("[google-oauth] OAuth state owner mismatch, rejecting");

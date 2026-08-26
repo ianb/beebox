@@ -13,7 +13,8 @@ import type { FastifyReply } from "fastify";
 import { errorMessage } from "../../lib/error-guards.js";
 import { getMostActive } from "../../core/chat/session/history.js";
 import { summarizeWhatsChanged } from "../../core/chat/whats-changed.js";
-import { getSessionUser } from "../auth.js";
+import type { SessionUser } from "../auth.js";
+import { resolveBoxIdentity } from "../box-identity.js";
 import type { ChatRoutesContext } from "./chat-context.js";
 import { resolveSendTargetForRoute } from "./chat-send-target.js";
 import { type TurnCapture, captureTurn, startAckedRun } from "./chat-send-run.js";
@@ -84,12 +85,18 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
     if (target === null) return;
     const { session: chatSession, id: knownId } = target;
 
-    // Identify the sender. A cookie session is the desktop/web path; a paired
+    // Identify the sender through the box's one identity resolver — a cookie or
+    // hub session is the desktop/web path, and on a box that opted into
+    // `agentBrowsing: "owner"` an agent-driven browser is the owner. A paired
     // mobile device authenticates with a bearer token or cb_mobile cookie and
-    // carries no cb_session, so fall back to its `createdBy` identity — without
-    // this, every native and mobile-web send is attributed to nobody. May be
-    // null when auth is disabled or a device was paired in open mode.
-    const user = getSessionUser(request) ?? (await resolveMobileSender(boxRoot, request.headers));
+    // carries neither, so fall back to its `createdBy` identity — without this,
+    // every native and mobile-web send is attributed to nobody. May be null when
+    // auth is disabled or a device was paired in open mode.
+    const identity = await resolveBoxIdentity({ boxRoot, request, openAccess: request.server.openAccess });
+    const user: SessionUser | null =
+      identity.email !== null
+        ? { email: identity.email, name: identity.name ?? identity.email }
+        : await resolveMobileSender(boxRoot, request.headers);
 
     // Slash commands (e.g. /compact) are parsed by the claude CLI when they
     // appear at the very start of the user text — any prefix/suffix would

@@ -309,6 +309,23 @@ function getSessionUserFromCookieHeader(cookieHeader: string | undefined): Sessi
   return verifySession(cookie);
 }
 
+/**
+ * Display name for an email from the local-user store, or `null` when there is
+ * no record or the store can't be read — the call site degrades to the email.
+ * Shared by the chat-send sender lookup and the browse-owner identity rung.
+ */
+export function localUserName(email: string): string | null {
+  try {
+    return getLocalUser(email)?.name ?? null;
+  } catch (e) {
+    if (e instanceof AuthStoreUnavailableError) {
+      console.warn(`[auth] could not resolve a display name for ${email} (auth store unavailable); using the email:`, e);
+      return null;
+    }
+    throw e;
+  }
+}
+
 let loggedAuthStoreUnavailable = false;
 
 /**
@@ -350,8 +367,16 @@ export function getOwnerEmail(): string | null {
  * consumer answers `503` for it — NEVER 401 (which would read as "just log in")
  * and never a fall-through to "no record" (which would fail OPEN for exactly the
  * sessions `gen`-revocation exists to kill).
+ *
+ * `"browse"` is the box-scoped rung `webapp/box-identity.ts` adds on top of this
+ * resolver: the machine-wide browse key, on a box whose `config/box.json` says
+ * `agentBrowsing: "owner"`. It carries the owner's email, so it is a person for
+ * box-scoped purposes — but it is still a machine credential, so a gate over the
+ * MACHINE-level secret store must exclude it explicitly (see
+ * `docs/plans/secret-custody.md`). `resolveRequestIdentity` itself never returns
+ * it.
  */
-export type IdentitySource = "hub" | "cookie" | "open" | "unavailable" | null;
+export type IdentitySource = "hub" | "cookie" | "open" | "unavailable" | "browse" | null;
 
 export interface RequestIdentity {
   email: string | null;
