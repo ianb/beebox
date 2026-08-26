@@ -25,25 +25,127 @@ break this repo — v2.1.218's worktree git isolation silently broke `/finish`'s
 merge step for days. Claude Code versions that move harness behavior get their
 own entries here, labeled as such, with no pin to apply.
 
-- **Current pin:** `0.3.241` (in `callback-box/package.json` — see the split-pin
+- **Current pin:** `0.3.243` (in `callback-box/package.json` — see the split-pin
   note below; the monorepo root still carries a second, unmanaged pin at
   `0.3.226`, which is why `pnpm update-agent-sdk` ends by printing
   "Now at 0.3.226" even when the managed pin moved)
-- **Latest reviewed upstream version:** `0.3.246` (SDK), `2.1.246` (Claude Code)
+- **Latest reviewed upstream version:** `0.3.247` (SDK), `2.1.247` (Claude Code)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** `0.3.242`, `0.3.243`, `0.3.245` and `0.3.246` are
-  all ahead of the pin and all inside the two-day window (the oldest, `0.3.242`,
-  was ~28h at this turn). None carries an act-now fix, so they take the settled
-  path — `0.3.243` becomes takeable next turn and carries the batch's only
-  runtime-visible behavior changes. Two issues were filed this turn: the
-  long-standing `encodeProjectDir` bug below is now
-  `issues/bugs/2026-08-25-encode-project-dir-underscore-mismatch.md`, and
-  `perTaskStopAffordance` (0.3.246) opened a chat-stop semantics decision,
-  `issues/decisions/2026-08-25-chat-stop-and-background-subagents.md`.
+- **Current recommendation:** `0.3.243` was taken this turn — it was the newest
+  version past the two-day window, and it carried the PDF-result shape change
+  and the MCP-reconnect fix recorded below. `0.3.245` (~42h), `0.3.246` (~28h)
+  and `0.3.247` (~5h) remain pending, none act-now; `0.3.245` and `0.3.246`
+  become takeable next turn. `0.3.247` is the one to take deliberately rather
+  than incidentally: its `ambient` flag is what
+  `issues/bugs/2026-08-26-chat-task-strip-edge-pairing-and-ambient.md` needs,
+  and Claude Code 2.1.247 fixes two hook-output failure modes this repo's hooks
+  could in principle reach.
 
 ## Release ledger
 
-### 0.3.246 — pending (published 2026-08-25T19:15Z, ~4h at this turn)
+### 0.3.247 — pending (published 2026-08-26T18:05Z, ~5h at this turn)
+
+- **Upstream:** Two items. An optional `ambient` flag on `task_started`,
+  `task_notification` and `background_tasks_changed` entries, "so hosts can
+  exclude housekeeping tasks from activity indicators". And a fix: the
+  `permissionMode` on per-turn `system/init` frames reported the mode at turn
+  start rather than the live mode, so a mode switch right after submitting sent
+  a stale value.
+- **Callback-box applicability (runtime):** The `ambient` flag lands squarely on
+  code callback-box already wrote, and reading the shipped types rather than the
+  changelog line is what made it assessable. Pulled `0.3.247`'s `sdk.d.ts`:
+  `ambient` is documented as "true for housekeeping tasks the CLI does not
+  surface as user work (**every `skip_transcript` task, plus auto-started
+  live-update watchers**)", and `skip_transcript` is still present alongside it.
+  So this is a **superset, not a rename** — nothing breaks, but
+  `adaptTaskMessage` (`src/core/chat/session/messages.ts:126,148`) filters on
+  `skip_transcript` alone, which means the watcher class reaches the chat
+  transcript and the live task strip dressed as user work.
+  Reading the same types surfaced a second thing the changelog does not mention:
+  `background_tasks_changed`'s documentation now spells out that consumers
+  needing only "is background work running" should replace their set with each
+  payload rather than pairing edges, "so a missed bookend cannot wedge a stale
+  running indicator". callback-box's strip
+  (`src/frontend/src/components/chat/background-tasks.ts`) pairs edges and
+  consumes `background_tasks_changed` nowhere, so a dropped `settled` — a parked
+  and resumed session, a CLI restart — leaves a task showing as running with no
+  event able to clear it. Both are filed as one item:
+  `issues/bugs/2026-08-26-chat-task-strip-edge-pairing-and-ambient.md`.
+  The `permissionMode` fix does not apply: `src/core/agent/run.ts` sets
+  `permissionMode: "bypassPermissions"` once and never switches mid-session.
+- **Callback-box applicability (harness):** None from the SDK side.
+- **Action:** Settled path — nothing act-now. Takeable 2026-08-28, and worth
+  taking deliberately: the filed issue needs `ambient`.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03247)
+
+### Claude Code 2.1.247 — harness only (no SDK pin of its own; bundled by 0.3.247)
+
+Note for future turns: 2.1.247's section was **not in `main`'s `CHANGELOG.md`**
+at review time — `main` still started at 2.1.246. It was read from the tagged
+`v2.1.247` copy instead
+(`raw.githubusercontent.com/anthropics/claude-code/v2.1.247/CHANGELOG.md`). A
+missing section on `main` is not evidence of an unitemized release; check the
+tag before recording one as opaque.
+
+~33 items. What touches this repo:
+
+- **Two hook-output failure modes, both fixed.** *"Fixed a hook or background
+  agent that printed megabytes of error output being able to overflow the
+  conversation and wedge the session on 'Prompt is too long'"* and *"Fixed
+  unbounded memory growth when a hook's or background task's output file could
+  not be written; the file now notes where output was lost."* Every session here
+  runs hooks that can fail loudly — `vibe-check lint --hook` on `Edit|Write`,
+  `cb validate --hook` from the `callback-box-claude` plugin that box agents
+  load, plus the SessionStart/SessionEnd/Worktree hooks. Checked how much they
+  can actually emit: the shell hooks print single-line status messages, and the
+  two validators print per-file diagnostics — a wall of ESLint errors is tens of
+  KB, not the megabytes the overflow needs. So this is a real hazard class for
+  this repo that this repo has not been observed to reach; welcome, not act-now.
+- **Subagents no longer die on a first-call model 404.** They now fall back
+  through the session's model chain, and the error handed to the parent includes
+  error type, status, request id and model. This repo passes explicit model
+  overrides when spinning up workers (`launch-worktree-session --model`), and
+  callback-box passes `model: normalizeModelId(...)` into `query()` — a typo or
+  a retired id used to kill the subagent outright with little to go on.
+- **Sonnet 5's default auto-compact window moves to its full 1M context**
+  (~967K rather than ~934K). Long box agent sessions on Sonnet get slightly more
+  room before compaction; the note matters mainly as the explanation if
+  compaction timing looks different.
+- **Checked and clear — `~/.claude/settings.json`.** *"Fixed the Bash sandbox's
+  after-command cleanup deleting a dotfile-managed `~/.claude/settings.json`
+  symlink (nix/home-manager, stow) when it is repointed outside the sandbox's
+  writable area."* A settings-deleting bug is worth confirming rather than
+  assuming: on this machine that path is a regular file (`-rw-------`), not a
+  symlink, so the sandbox cleanup had nothing to unlink.
+- **Checked and clear — `--agent`.** *"Fixed `/compact` and 'Summarize from
+  here' in sessions started with `--agent` summarizing under the default system
+  prompt instead of the conversation's own."* This looks like a direct hit and
+  is not one: `--agent` in this repo is `bin/launch-worktree-session`'s and
+  `bin/workstreams resume`'s **own** flag selecting the CLI (`claude` vs
+  `codex`), never Claude Code's `--agent <name>`. No session here is started
+  that way, so no worker session has been compacting under the wrong prompt.
+- **Background sessions that lost their host.** *"Fixed a background session
+  showing 'opening…' forever in `claude agents` after its terminal host process
+  died; the row now fails within seconds with the reason, and Enter restarts
+  it."* Alongside 2.1.246's 45-second startup fix, this is the second release in
+  a row repairing background-session startup visibility — the failure shape that
+  reads here as a scheduled run that simply never reported.
+- **Not applicable, checked:** the MCP-failure disclosure improvement is scoped
+  to Bedrock/Vertex/Foundry sessions and sessions with telemetry disabled —
+  neither applies here (no telemetry-disabling env or setting in `bin/`,
+  `.claude/`, or `deploy/`). Plugin marketplace hardening is for
+  marketplace-installed plugins; callback-box's is a local path plugin.
+  Terminal-hyperlink hardening, Zed `/terminal-setup`, Cyrillic Ctrl shortcuts,
+  mouse-report escapes and the arrow-key/Enter race are all interactive-terminal
+  concerns no headless session touches.
+- **New surface worth knowing:** the `SendFeedback` tool, which lets Claude
+  draft a feedback report for review at `/feedback` (disable via the
+  `feedbackDrafts` setting). It is draft-only and human-gated, so a box agent
+  cannot send anything, but it is a new tool present in every session.
+- **Action:** Nothing to adjust. Arrives with `0.3.247`.
+- **Sources:** [Claude Code 2.1.247](https://github.com/anthropics/claude-code/blob/v2.1.247/CHANGELOG.md#21247)
+
+### 0.3.246 — pending (published 2026-08-25T19:15Z, ~28h at this turn)
 
 - **Upstream:** Four additions, no fixes. Optional `user_message_uuid` on error
   result messages and on the first assistant message or `stream_event` of each
@@ -170,7 +272,7 @@ Both were pulled before or shortly after publish. Nothing to review, and
 never try to install it. Noted only so a future turn does not go looking for a
 missing version.
 
-### 0.3.243 — pending (published 2026-08-24T23:07Z, ~24h at this turn)
+### 0.3.243 — APPLIED 2026-08-26 (published 2026-08-24T23:07Z)
 
 - **Upstream:** Four itemized changes plus parity with 2.1.243. Optional
   `queued_turn_count` on result messages (how many queued user sends were still
@@ -216,12 +318,14 @@ missing version.
   never recovering after a dropped connection"* — the harness-side half of the
   SDK's `mcp_status` fix, and it applies to scheduled runs, which are exactly
   the long-lived non-interactive sessions where a connection has time to drop.
-- **Action:** Settled path. The PDF shape change and the MCP reconnect fix are
-  behavior changes rather than act-now correctness fixes for callback-box, so
-  `0.3.243` waits out its window; it becomes takeable 2026-08-26.
+- **Action:** Applied 2026-08-26 on the settled path (~48h old) — the newest
+  version past the window, ahead of the equally-settled `0.3.242`.
+  `pnpm -C callback-box test`: **8,235 pass, 0 fail** — the 27 webapp failures
+  recorded against the `0.3.241` bump were pre-existing and have since been
+  fixed on `main`. `sdk-steering-probe`: all four steering behaviors pass.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03243), [Claude Code 2.1.243](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21243)
 
-### 0.3.242 — pending, nothing relevant (parity with Claude Code 2.1.242)
+### 0.3.242 — superseded, nothing relevant (parity with Claude Code 2.1.242)
 
 - **Upstream:** SDK says only "parity with Claude Code v2.1.242", and **2.1.242
   has no changelog section at all** — Claude Code's changelog jumps 2.1.243 →
@@ -229,7 +333,9 @@ missing version.
   anywhere, the third such pin in a short run (2.1.240 and 2.1.241 both said
   only "bug fixes and reliability improvements").
 - **Callback-box applicability:** Nothing assessable on either channel.
-- **Action:** Settled path; takeable 2026-08-26.
+- **Action:** Never installed on its own — `0.3.243` settled in the same turn
+  and the updater takes the newest settled version, so the pin stepped straight
+  over it. Its (undocumented) contents are included in the current pin.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03242)
 
 ### 0.3.241 — APPLIED 2026-08-25 (parity with Claude Code 2.1.241)

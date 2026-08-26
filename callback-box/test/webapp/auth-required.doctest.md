@@ -10,6 +10,9 @@ diagnostic-bypass batch-URL fix, and the two root-route edges (`/auth/me` open
 shape, `/api/push/resubscribe` behind the wall).
 
 ```ts setup
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { resolveRequestIdentity, isDiagnosticBypassRequest } from "../../src/webapp/auth.js";
 import { assertOpenAccessNotListening, startServer } from "../../src/webapp/server.js";
 import { makeTestServer } from "../helpers/doctest-server.js";
@@ -140,6 +143,65 @@ resubRequired.statusCode
 => 401
 
 await authServer.cleanup();
+```
+
+## The browse key in the tRPC context: an owner on an opted-in box, `authed` elsewhere
+
+`createContext` (`server-box-scope.ts`) resolves identity through
+`resolveBoxIdentity`, so on a box that declares `agentBrowsing: "owner"` the
+machine-wide browse key arrives as a `user` and clears `ownerProcedure`. The one
+owner surface it must NOT clear is the machine-level secret store: its grants are
+shared across every box on the machine, so one test box's opt-in cannot unlock
+them (`docs/plans/secret-custody.md`) — `authenticatedOwnerProcedure` excludes
+`source: "browse"`.
+
+```ts
+const BROWSE_KEY = "browse-key-for-auth-required-doctest";
+const ORIGINAL_OWNER = process.env.CB_OWNER_EMAIL;
+process.env.CB_BROWSE_API_KEY = BROWSE_KEY;
+process.env.CB_OWNER_EMAIL = "owner@example.com";
+// Keep the owner's display-name lookup off the machine's real ~/.cb-auth.json.
+const authDir = await mkdtemp(join(tmpdir(), "cb-auth-required-browse-"));
+process.env.CB_AUTH_FILE = join(authDir, "no-such-auth.json");
+const browseHeaders = { authorization: `Bearer ${BROWSE_KEY}` };
+
+const optedIn = await makeTestServer({ openAccess: false });
+await optedIn.seed("config/box.json", JSON.stringify({ agentBrowsing: "owner" }));
+
+const asOwner = await optedIn.request({ method: "GET", url: "/api/trpc/pairing.devices", headers: browseHeaders });
+const atSecrets = await optedIn.request({ method: "GET", url: "/api/trpc/secrets.formatHints", headers: browseHeaders });
+
+print(`ownerProcedure: ${asOwner.statusCode}`);
+print(`authenticatedOwnerProcedure: ${atSecrets.statusCode} ${atSecrets.body.error.data.code}`);
+=>
+ownerProcedure: 200
+authenticatedOwnerProcedure: 403 FORBIDDEN
+```
+
+On a box that never opted in, the key means what it always did: it clears the
+wall and reaches an authenticated procedure, and nothing owner-gated.
+
+```ts continue
+const plain = await makeTestServer({ openAccess: false });
+
+const authedCall = await plain.request({ method: "GET", url: "/api/trpc/inventory.summary", headers: browseHeaders });
+const ownerCall = await plain.request({ method: "GET", url: "/api/trpc/pairing.devices", headers: browseHeaders });
+
+print(`authedProcedure: ${authedCall.statusCode}`);
+print(`ownerProcedure: ${ownerCall.statusCode} ${ownerCall.body.error.data.code}`);
+=>
+authedProcedure: 200
+ownerProcedure: 403 FORBIDDEN
+```
+
+```ts cleanup
+await optedIn.cleanup();
+await plain.cleanup();
+await rm(authDir, { recursive: true, force: true });
+delete process.env.CB_BROWSE_API_KEY;
+delete process.env.CB_AUTH_FILE;
+if (ORIGINAL_OWNER === undefined) delete process.env.CB_OWNER_EMAIL;
+else process.env.CB_OWNER_EMAIL = ORIGINAL_OWNER;
 ```
 
 ```ts cleanup

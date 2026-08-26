@@ -16,6 +16,11 @@ interface ExpectContext {
   pushFinding: (f: Finding) => void;
 }
 
+/** Render a locator name for a finding message: exact strings stay quoted, patterns show as regex literals. */
+function describe(name: string | RegExp): string {
+  return typeof name === "string" ? `"${name}"` : String(name);
+}
+
 function record(ctx: ExpectContext, { severity, message }: { severity: Severity; message: string }): void {
   ctx.pushFinding({ severity, checkpoint: ctx.checkpointName(), viewport: ctx.viewport, message });
 }
@@ -47,7 +52,21 @@ export function buildExpectAPI(ctx: ExpectContext): ExpectAPI {
     async button(name) {
       const ref = await ctx.session.findRef("button", name);
       if (ref === null) {
-        record(ctx, { severity: "fail", message: `expected button "${name}" not found in interactive snapshot` });
+        record(ctx, { severity: "fail", message: `expected button ${describe(name)} not found in interactive snapshot` });
+      }
+    },
+    async noPageErrors() {
+      // The app bar renders an error badge only when the client debug log has
+      // entries; its accessible name carries the count (AppNav ErrorBadge).
+      const snap = await ctx.session.snapshot({ interactiveOnly: true });
+      const m = snap.match(/Open debug log \((\d+) errors?\)/);
+      if (m === null) return;
+      const count = Number(m[1]);
+      if (count > 0) {
+        record(ctx, {
+          severity: "fail",
+          message: `page reported ${count} client error${count === 1 ? "" : "s"} (app-bar debug log badge)`,
+        });
       }
     },
     async custom(message, predicate) {

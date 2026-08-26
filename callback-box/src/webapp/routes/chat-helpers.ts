@@ -10,9 +10,7 @@ import * as fs from "node:fs/promises";
 import type { IncomingHttpHeaders } from "node:http";
 import { z } from "zod";
 import { AGENT_ENGINES } from "../../shared/agent-models.js";
-import type { SessionUser } from "../auth.js";
-import { getLocalUser } from "../local-users.js";
-import { AuthStoreUnavailableError } from "../local-users-errors.js";
+import { localUserName, type SessionUser } from "../auth.js";
 import { resolveMobileRequestAuth } from "../../core/mobile/request-auth.js";
 import { resolveSessionLogPath } from "../../core/chat/session/history.js";
 import { resolveChatEngine } from "../../core/chat/session/engine.js";
@@ -242,19 +240,6 @@ export async function resolveMobileSender(boxRoot: string, headers: IncomingHttp
   return { email, name: localUserName(email) ?? email };
 }
 
-/** Display name for an email from the local-user store, or null when there is
- *  no record or the store can't be read (degrade to the email at the call site). */
-function localUserName(email: string): string | null {
-  try {
-    return getLocalUser(email)?.name ?? null;
-  } catch (e) {
-    if (e instanceof AuthStoreUnavailableError) {
-      console.warn(`[chat] could not resolve a display name for ${email} (auth store unavailable); using the email:`, e);
-      return null;
-    }
-    throw e;
-  }
-}
 
 /**
  * Inject user="Name" into the opening <typed> or <speech> tag of a message.

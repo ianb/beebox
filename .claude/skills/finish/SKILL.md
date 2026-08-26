@@ -50,11 +50,14 @@ only dispatches and relays the result. **Only invoke when the human asks for it.
        as a recommendation, not a ritual sign-off.
      - If work remains, end with that useful continuation point. If nothing needs
        saying, stop after the landing result; do not manufacture a next step.
-     - If the report carries a **`NEW ISSUES:`** block (a spun-out scope gap, a
-       Track O finding), surface it **prominently at the end**, each as its
-       `issues/…` path + title — the human often continues by fixing exactly
-       these. Don't fold them into the prose. A named flake is not an issue;
-       `callback-box/test/careful.txt` is that channel.
+     - If the report carries a **`NEW ISSUES:`** block (issues this workstream
+       filed — a spun-out scope gap, a Track O finding, anything found along the
+       way), surface it **prominently at the end**, each as its `issues/…` path +
+       title, and **offer to fix them in this session** — they are this
+       workstream's own finds, and it is their default owner; there is no
+       someone-else they fall to. Offer, don't start. Don't fold them into the
+       prose. A named flake is not an issue; `callback-box/test/careful.txt` is
+       that channel.
    - **`RESULT: BLOCKED`** → it hit something needing a human call (on `main`, a
      merge conflict, a real test failure, ambiguous uncommitted files, missing
      info). Surface exactly what it reported, resolve it with the human here, then

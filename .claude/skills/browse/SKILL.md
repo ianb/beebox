@@ -178,34 +178,33 @@ Note `/<wt>/dev/docs/…` is a 301 to `/workstreams/browse?file=…` — the doc
 
 A navigation denied at the owner-only rows returns 401, which the router renders as the login page — so "I got the login page" does not by itself mean your key is wrong.
 
-### The key is not the box owner
+### The key is the owner only on a box that says so
 
-The browse key clears the auth wall. It does **not** make you the owner, and a
-surprising amount of the app is owner-gated: device pairing, parts of Settings, the
-Secrets panel, anything behind `ownerProcedure`. Those answer **403 "Owner access
-required"** — a different failure from the 401 above, and one no amount of key-fixing
-will change.
+The browse key clears the auth wall. What it *means* inside a box is the box's
+call: a box whose `config/box.json` has `"agentBrowsing": "owner"` treats the key
+as the box owner — capture, device pairing, Settings, anything behind
+`ownerProcedure`, and chat sends attributed to the owner. `test1` sets it, so
+every worktree clone and journey box built from it does too. The one exception
+is the Secrets panel (`authenticatedOwnerProcedure`): the secret store is
+machine-level, so no box's opt-in reaches it.
 
-This is worth recognising rather than working around, because it silently shrinks what a
-check can see. An audit of the app in 2026-08 ended with 57 of 168 in-app checks
-"inconclusive", most of them here, and two journey walkthroughs hit 401s on capture for
-the same reason.
-
-When you need owner surfaces, log in as a person instead of using the key:
+On a box **without** the field — `personal-test`, any box a person uses — the
+key is nobody: you get **403 "Owner access required"** on owner surfaces and
+**401** on capture. That is the fence working, not a key problem. Do not add
+the field to such a box to get past it; if a check genuinely needs the owner
+there, log in as a person:
 
 ```bash
 bin/browse auth save owner --url /auth/login --username <email> --password-stdin
 bin/browse auth login owner
 ```
 
-`auth save` stores a profile; `auth login` drives the real login form, so the session is
-an ordinary owner session with none of the key's limits. **Ask the boxholder for the
-credential** — do not invent one, and do not reach for `cb auth set-password`, which
-rewrites a machine-global credential store and revokes live sessions
-(`callback-box/CLAUDE.md`).
+**Ask the boxholder for the credential** — do not invent one, and do not reach for
+`cb auth set-password`, which rewrites a machine-global credential store and revokes
+live sessions (`callback-box/CLAUDE.md`). If you cannot get one, say which findings
+were unreachable rather than reporting them as absent features.
 
-If you cannot get one, say which findings were unreachable rather than reporting them as
-absent features.
+Mechanism: `callback-box/docs/plans/agent-browsing-owner.md`.
 
 **3. Is the key live in the running router?** One probe answers it, and it must use the **cookie** form against a **box route**:
 

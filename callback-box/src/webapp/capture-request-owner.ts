@@ -1,6 +1,6 @@
 import type { FastifyRequest } from "fastify";
 import { resolveMobileBearerIdentity } from "../core/mobile/pairing.js";
-import { resolveRequestIdentity } from "./auth.js";
+import { resolveBoxIdentity } from "./box-identity.js";
 
 export type CaptureRequestOwner =
   | { status: "ok"; email: string | null }
@@ -12,12 +12,16 @@ export type CaptureOwnerAuthorization =
   | { status: "ok" }
   | { status: "rejected"; statusCode: 401 | 403 | 503; error: string };
 
-/** Resolve cookie/hub and paired-device credentials to one capture owner. */
+/** Resolve cookie/hub, browse-owner and paired-device credentials to one capture owner. */
 export async function resolveCaptureRequestOwner(opts: {
   boxRoot: string;
   request: FastifyRequest;
 }): Promise<CaptureRequestOwner> {
-  const requestIdentity = resolveRequestIdentity(opts.request, { openAccess: opts.request.server.openAccess });
+  const requestIdentity = await resolveBoxIdentity({
+    boxRoot: opts.boxRoot,
+    request: opts.request,
+    openAccess: opts.request.server.openAccess,
+  });
   if (requestIdentity.email) {
     return { status: "ok", email: requestIdentity.email };
   }

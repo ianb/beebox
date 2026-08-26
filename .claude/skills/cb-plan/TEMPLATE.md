@@ -130,8 +130,9 @@ reads the frontmatter `issues:` list to close them; one left off is forgotten.
      function so the doctest tiers reach it, instead of a heavier tier to test
      it in place. Two traps: a new test tier is a norm for every future agent
      and a mock written by the bug's author encodes the bug — say explicitly
-     if one is needed; a tour is a review instrument, not a regression anchor
-     (docs/tours.md) — put behaviour that must stay true in a doctest. -->
+     if one is needed; a tour is the walk written down and kept true weekly
+     (docs/tours.md), not a regression anchor for behaviour — put behaviour
+     that must stay true in a doctest. -->
 
 ## Implementation order
 

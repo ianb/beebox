@@ -27,10 +27,10 @@ import { appRouter } from "./trpc/router.js";
 import type { TrpcContext } from "./trpc/context.js";
 import {
   isHubMode,
-  resolveRequestIdentity,
   getOwnerEmail,
   isDiagnosticBypassRequest,
 } from "./auth.js";
+import { resolveBoxIdentity } from "./box-identity.js";
 import { verifyAgentBearer } from "../core/agent/token.js";
 import { verifyBrowseKey } from "../core/browse-key.js";
 import { resolveMobileRequestAuth } from "../core/mobile/request-auth.js";
@@ -107,7 +107,11 @@ function addBoxAuthHook(instance: FastifyInstance, box: BoxSpec): void {
       renewMobileSessionCookie(reply, { boxRoot: box.boxRoot, boxSlug: box.slug, auth: mobileAuth });
       return;
     }
-    const identity = resolveRequestIdentity(request, { openAccess: instance.openAccess });
+    const identity = await resolveBoxIdentity({
+      boxRoot: box.boxRoot,
+      request,
+      openAccess: instance.openAccess,
+    });
     switch (identity.source) {
       case "unavailable":
         // The credential store is corrupt/unreadable: fail CLOSED and DISTINCTLY
@@ -116,8 +120,12 @@ function addBoxAuthHook(instance: FastifyInstance, box: BoxSpec): void {
         return reply.status(503).send({ error: "Authentication temporarily unavailable" });
       case "open":
         return; // hub-wide (or standalone opt-out) auth is off
+      // `browse` is unreachable here (the browse-key bypass above already
+      // returned), but it answers the same way the others do: a browse identity
+      // carries the owner's email, so it goes through the access check below.
       case "hub":
       case "cookie":
+      case "browse":
       case null:
         break; // fall through to the email-based access check below
       default:
@@ -209,14 +217,21 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
       // unauthorized requests before this runs when auth is enabled; we
       // recompute here to fail closed rather than assume it ran (e.g. the
       // WS upgrade path shares this same createContext).
-      const identity = resolveRequestIdentity(req, { openAccess: instance.openAccess });
+      const identity = await resolveBoxIdentity({
+        boxRoot: box.boxRoot,
+        request: req,
+        openAccess: instance.openAccess,
+      });
       const bearerOk = verifyAgentBearer(box.boxRoot, req.headers["authorization"]);
       const mobileOk = (await resolveMobileRequestAuth(box.boxRoot, req.headers)) !== null;
       // The browse key must be recognized HERE too, not only in the preHandler:
       // a request it let through would otherwise reach a protected procedure
       // with `authed: false`, so the credential would open every public read
       // and nothing else — and the WS path has no preHandler at all, so this is
-      // the only place it can be checked there.
+      // the only place it can be checked there. On a box that opted in, the
+      // resolver above already turned it into a `user`; this flag is what keeps
+      // the OTHER box — the one that never opted in — reaching `authed`, and
+      // what carries it past a credential-store outage below.
       const browseOk = verifyBrowseKey(req.headers);
       // Fail closed on a corrupt/unreadable credential store (Track D): never
       // build an authed context off an auth store we couldn't verify against.
@@ -239,15 +254,19 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
         eventBus,
         services: options.services ?? {},
         user,
-        // `browseOk` grants `authed`, never `user`/`isOwner`: the key is a
-        // machine credential, not a person, so it must not impersonate the
-        // owner. Same treatment as the agent bearer and mobile auth beside it.
+        // The browse key still grants bare `authed` on a box that did NOT opt
+        // in — it is a machine credential there, not a person. On a box that
+        // did, the resolver already produced `user`, so it arrives as an
+        // identity like any other.
         authed: identityIsOpen || user !== null || bearerOk || mobileOk || browseOk,
         isOwner: identityIsOpen || (user !== null && user.email === getOwnerEmail()),
-        // Deliberately NOT folding in open access: the machine-level secret
-        // store is the one owner surface where "the box opted out of the auth
-        // wall" must not read as "the boxholder is here" (secret-custody plan).
-        isAuthenticatedOwner: user !== null && user.email === getOwnerEmail(),
+        // Deliberately NOT folding in open access, and deliberately excluding
+        // `source: "browse"`: the machine-level secret store is shared across
+        // every box on the machine, so neither "this box opted out of the auth
+        // wall" nor "this box lets agent browsing act as its owner" may read as
+        // "the boxholder is here" (`docs/plans/secret-custody.md`).
+        isAuthenticatedOwner:
+          user !== null && identity.source !== "browse" && user.email === getOwnerEmail(),
       };
     },
   };

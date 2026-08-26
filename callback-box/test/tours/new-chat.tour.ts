@@ -20,6 +20,7 @@ tour(
 
     await t.expect.heading("Chat", { level: 1 });
     await t.expect.button("Add");
+    await t.expect.noPageErrors();
 
     // The sentinel is gone from the URL by the time the chat renders: the page
     // holds its shell until the reservation settles, then navigates to the
