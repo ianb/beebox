@@ -34,6 +34,7 @@ import { InventoryPage } from "./pages/inventory/InventoryPage";
 // --- Root route ---
 
 const rootRoute = createRootRoute({
+  staticData: { title: null },
   component: RootLayout,
   // Without this the router logs "The following error wasn't caught by any
   // route!" and renders nothing, so a thrown render turns into a blank page.
@@ -43,12 +44,14 @@ const rootRoute = createRootRoute({
 // --- Top-level routes (no boxSlug) ---
 
 const indexRoute = createRoute({
+  staticData: { title: null },
   getParentRoute: () => rootRoute,
   path: "/",
   component: BoxRedirect,
 });
 
 const loginRoute = createRoute({
+  staticData: { title: "Sign in" },
   getParentRoute: () => rootRoute,
   path: "/auth/login",
   component: LoginPage,
@@ -58,6 +61,7 @@ const loginRoute = createRoute({
 });
 
 const setupRoute = createRoute({
+  staticData: { title: "Set up" },
   getParentRoute: () => rootRoute,
   path: "/auth/setup",
   component: SetupPage,
@@ -69,6 +73,7 @@ const setupRoute = createRoute({
 // --- Box layout (nav wrapper) ---
 
 const boxLayoutRoute = createRoute({
+  staticData: { title: null },
   getParentRoute: () => rootRoute,
   path: "/$boxSlug",
   component: AppLayout,
@@ -82,6 +87,7 @@ const boxLayoutRoute = createRoute({
 // the resolved session there), so a root-mounted chat would immediately
 // navigate away from itself.
 const boxIndexRoute = createRoute({
+  staticData: { title: null },
   getParentRoute: () => boxLayoutRoute,
   path: "/",
   beforeLoad: ({ params }) => {
@@ -90,18 +96,21 @@ const boxIndexRoute = createRoute({
 });
 
 const dashboardRoute = createRoute({
+  staticData: { title: "Dashboard" },
   getParentRoute: () => boxLayoutRoute,
   path: "/dashboard",
   component: DashboardPage,
 });
 
 const inventoryRoute = createRoute({
+  staticData: { title: "Inventory" },
   getParentRoute: () => boxLayoutRoute,
   path: "/inventory",
   component: InventoryPage,
 });
 
 const chatRoute = createRoute({
+  staticData: { title: "Chat" },
   getParentRoute: () => boxLayoutRoute,
   path: "/chat",
   component: ChatPage,
@@ -125,12 +134,14 @@ const chatRoute = createRoute({
 });
 
 const questionsRoute = createRoute({
+  staticData: { title: "Questions" },
   getParentRoute: () => boxLayoutRoute,
   path: "/questions",
   component: QuestionsPage,
 });
 
 const browseRoute = createRoute({
+  staticData: { title: "Browse" },
   getParentRoute: () => boxLayoutRoute,
   path: "/browse/$",
   component: BrowsePageWrapper,
@@ -146,6 +157,7 @@ const historySearchSchema = z.object({
 });
 
 const historyRoute = createRoute({
+  staticData: { title: "History" },
   getParentRoute: () => boxLayoutRoute,
   path: "/history",
   component: HistoryPage,
@@ -153,6 +165,7 @@ const historyRoute = createRoute({
 });
 
 const historyDetailRoute = createRoute({
+  staticData: { title: "History" },
   getParentRoute: () => boxLayoutRoute,
   path: "/history/$hash",
   component: HistoryPage,
@@ -160,18 +173,21 @@ const historyDetailRoute = createRoute({
 });
 
 const captureRoute = createRoute({
+  staticData: { title: "Capture" },
   getParentRoute: () => boxLayoutRoute,
   path: "/capture",
   component: CapturePage,
 });
 
 const settingsRoute = createRoute({
+  staticData: { title: "Settings" },
   getParentRoute: () => boxLayoutRoute,
   path: "/settings",
   component: SettingsPage,
 });
 
 const adminRoute = createRoute({
+  staticData: { title: "Admin" },
   getParentRoute: () => boxLayoutRoute,
   path: "/admin",
   component: AdminPage,
@@ -183,24 +199,28 @@ const adminRoute = createRoute({
 });
 
 const cardRoute = createRoute({
+  staticData: { title: "Card" },
   getParentRoute: () => boxLayoutRoute,
   path: "/card/$",
   component: CardViewPage,
 });
 
 const viewRoute = createRoute({
+  staticData: { title: "Card" },
   getParentRoute: () => boxLayoutRoute,
   path: "/views/$",
   component: ViewPage,
 });
 
 const landmarksRoute = createRoute({
+  staticData: { title: "Landmarks" },
   getParentRoute: () => boxLayoutRoute,
   path: "/landmarks",
   component: LandmarksPage,
 });
 
 const chatsRoute = createRoute({
+  staticData: { title: null },
   getParentRoute: () => boxLayoutRoute,
   path: "/chats",
   component: ChatsPage,
@@ -208,6 +228,7 @@ const chatsRoute = createRoute({
 
 // Dev-only test harness for the speech replay menu (see SpeechTestHarness).
 const devSpeechRoute = createRoute({
+  staticData: { title: "Speech test" },
   getParentRoute: () => boxLayoutRoute,
   path: "/dev/speech",
   component: SpeechTestPage,
@@ -215,6 +236,7 @@ const devSpeechRoute = createRoute({
 
 // Dev-only gallery of composer visual states (see ComposerStatesHarness).
 const devComposerStatesRoute = createRoute({
+  staticData: { title: "Composer states" },
   getParentRoute: () => boxLayoutRoute,
   path: "/dev/composer-states",
   component: ComposerStatesPage,
@@ -222,6 +244,7 @@ const devComposerStatesRoute = createRoute({
 
 // Dev-only harness for capture mode (overlay + pending bubble + chip).
 const devCaptureModeRoute = createRoute({
+  staticData: { title: "Capture mode" },
   getParentRoute: () => boxLayoutRoute,
   path: "/dev/capture-mode",
   component: CaptureModePage,
@@ -229,6 +252,7 @@ const devCaptureModeRoute = createRoute({
 
 // Dev-only harness for the chat scroll controller (isolated, scripted).
 const devChatScrollRoute = createRoute({
+  staticData: { title: "Chat scroll" },
   getParentRoute: () => boxLayoutRoute,
   path: "/dev/chat-scroll",
   component: ChatScrollPage,
@@ -236,6 +260,7 @@ const devChatScrollRoute = createRoute({
 
 // Catch-all for unknown paths under a box
 const boxCatchAllRoute = createRoute({
+  staticData: { title: null },
   getParentRoute: () => boxLayoutRoute,
   path: "/$",
   beforeLoad: ({ params }) => {
@@ -303,5 +328,17 @@ export function createAppRouter(opts?: { history?: Parameters<typeof createRoute
 declare module "@tanstack/react-router" {
   interface Register {
     router: ReturnType<typeof createAppRouter>;
+  }
+
+  /**
+   * Every route must name itself for the browser tab (`components/
+   * DocumentTitle.tsx`). Declaring a required field here makes TanStack
+   * Router's `staticData` mandatory on every route in the tree, so a new
+   * page cannot be added without deciding what its tab says — the
+   * enforcement that a convention couldn't provide. `null` is the explicit
+   * "this route names nothing", for layouts and redirect-only routes.
+   */
+  interface StaticDataRouteOption {
+    title: string | null;
   }
 }

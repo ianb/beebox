@@ -22,6 +22,7 @@ import { useBoxes } from "./hooks/useBoxes";
 import type { KnownBox } from "./lib/boxes";
 import { useDevWorktreeKeepalive } from "./hooks/useDevWorktreeKeepalive";
 import { useBoxIdentityMeta } from "./hooks/useBoxIdentityMeta";
+import { PageTitleProvider } from "./components/DocumentTitle";
 import { useVisualViewportHeight } from "./hooks/useVisualViewportHeight";
 
 import { href, toSearch } from "./lib/routing";
@@ -35,11 +36,19 @@ enableDebugLogCapture();
 /**
  * Root-level layout, above the route tree's `Outlet`. The place for global,
  * page-agnostic chrome that must show on `/`, `/auth/login`, and `/auth/setup`
- * as well as box routes (which `AppLayout` alone wraps). Currently a
- * pass-through — kept as the seam for such chrome.
+ * as well as box routes (which `AppLayout` alone wraps).
+ *
+ * `PageTitleProvider` lives here rather than in `AppLayout` because the
+ * login and setup pages need a tab title too; it is the app's only writer
+ * of `document.title`. Otherwise this stays a pass-through, the seam for
+ * global chrome.
  */
 export function RootLayout() {
-  return <Outlet />;
+  return (
+    <PageTitleProvider>
+      <Outlet />
+    </PageTitleProvider>
+  );
 }
 
 /**

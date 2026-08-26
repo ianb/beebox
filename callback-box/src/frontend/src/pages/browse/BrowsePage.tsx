@@ -20,7 +20,7 @@ import { Row } from "../../components/ui/Row";
 import { Column } from "../../components/ui/Column";
 import { Text } from "../../components/ui/Text";
 import { BrowseSidebarBody } from "./components/BrowseSidebarBody";
-import { useDocumentTitle } from "../../hooks/useDocumentTitle";
+import { usePageTitle } from "../../components/DocumentTitle";
 import { useUrlView } from "../../hooks/useUrlView";
 import { RequestError } from "../../lib/errors";
 import { attachDirOwnerBasename, isAttachDirName } from "@shared/attach-path";
@@ -224,7 +224,7 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
     return "Browse";
   }, [selectedFilePath, selectedCard, dirPath]);
 
-  useDocumentTitle(pageTitle);
+  usePageTitle(pageTitle);
   useBrowsePlace({ dirPath, currentPath });
 
   const handleDelete = useCallback(async (path: string) => {

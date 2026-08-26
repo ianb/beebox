@@ -46,6 +46,7 @@ import { ExternalIconLink } from "./ui/ExternalIconLink";
 import { OpenInPanelButton } from "./ui/OpenInPanelButton";
 import { StatusBadge } from "./ui/StatusBadge";
 import { CardActions } from "./card-actions/CardActions";
+import { usePageTitle } from "./DocumentTitle";
 import { MissingCardState } from "./card-actions/MissingCardState";
 
 export type FileViewMode = "page" | "chat" | "companion" | "embed";
@@ -308,6 +309,10 @@ function PageHeader({
   onTrashed?: (() => void) | undefined;
 }) {
   const status = typeof data.frontmatter?.status === "string" ? data.frontmatter.status : null;
+  // The heading and the tab say the same thing. PageHeader renders only in
+  // `page` mode -- the /card and /views routes -- so no embedded, companion,
+  // or overlaid card can reach this and retitle the tab.
+  usePageTitle(cardTitle(data) ?? displayName(data.path));
   return (
     <div className="p-4 pb-0">
       <div className="flex items-center justify-between mb-2 gap-4">
