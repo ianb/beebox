@@ -16,12 +16,13 @@ import { invariant } from "../lib/invariant.js";
 import { stageAndCommitPaths } from "../lib/git.js";
 import { commitTrashReceipt, moveCardsToTrash } from "../core/commands/trash.js";
 import { createCliContext } from "../core/command-runner.js";
-import type { GoogleDriveService } from "../services/google-drive.js";
+import type { DriveFile, GoogleDriveService } from "../services/google-drive.js";
 import { extractDriveFileId } from "./drive-types.js";
 import { writeGfolderCard, writeGlinkCard } from "./drive-card-stamp.js";
 import { DRIVE_FOLDER_MIME } from "./drive-folder-plan.js";
 import { gfolderCardsIn } from "./drive-folder-cards.js";
 import { mirrorFolderOnce } from "./drive-mount-sync.js";
+import { withDriveMirrorLock } from "./drive-lock.js";
 import { resolveMountTarget } from "./drive-mount-path.js";
 import { safeFilename } from "./chat-utils.js";
 import {
@@ -116,9 +117,26 @@ export async function mountDriveFolder(options: {
   if (file.mimeType !== DRIVE_FOLDER_MIME) {
     throw new NotADriveFolderError({ name: file.name, mimeType: file.mimeType });
   }
+  const mountDir = resolveMountTarget(boxRoot, { raw: dir, label: "The target directory" });
+  // The claim check, the card write, the first mirror pass, and the commit are
+  // one Drive-writer span — a wakeup sync landing in the middle would mirror
+  // the same folder into the same directory from another process. Reentrant,
+  // so `mirrorFolderOnce` inside just passes through. The git commit nests
+  // INSIDE this lock, which is the safe order (see drive-lock.ts).
+  return withDriveMirrorLock(boxRoot, () =>
+    mountUnderLock({ boxRoot, service, folder: { file, driveId, mountDir } }),
+  );
+}
+
+async function mountUnderLock(options: {
+  boxRoot: string;
+  service: GoogleDriveService;
+  folder: { file: DriveFile; driveId: string; mountDir: string };
+}): Promise<MountFolderResult> {
+  const { boxRoot, service } = options;
+  const { file, driveId, mountDir } = options.folder;
   await refuseIfClaimed({ boxRoot, driveId });
 
-  const mountDir = resolveMountTarget(boxRoot, { raw: dir, label: "The target directory" });
   const occupants = await gfolderCardsIn(mountDir);
   if (occupants.length > 0) {
     throw new DirectoryAlreadyMountedError({

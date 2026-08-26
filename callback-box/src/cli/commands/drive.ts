@@ -23,6 +23,8 @@ import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths.js";
 import { extractDriveFileId } from "../../connectors/drive-types.js";
 import { requireDriveService } from "./drive-service.js";
+import type { DriveFile, GoogleDriveService } from "../../services/google-drive.js";
+import { DriveIdClaimedError } from "../../connectors/drive-mount-errors.js";
 import {
   driveLinkCommand,
   driveMountCommand,
@@ -31,16 +33,18 @@ import {
 import { stageAndCommitPaths } from "../../lib/git.js";
 import { attachDirFor } from "../../shared/attach-path.js";
 import { updateTransientState } from "../../connectors/transient-state.js";
+import { withDriveMirrorLock } from "../../connectors/drive-lock.js";
 
 // Ensure handlers are registered
 import "../../connectors/drive-handler-sheets.js";
 import "../../connectors/drive-handler-docs.js";
-import { getHandlerForMimeType } from "../../connectors/drive-types.js";
+import { getHandlerForMimeType, type DriveTypeHandler } from "../../connectors/drive-types.js";
 import {
   createGoogleDriveConnector,
   emptyFileState,
   type DriveTransientState,
 } from "../../connectors/google-drive.js";
+import { DEFAULT_DRIVE_STATE } from "../../connectors/google-drive-state.js";
 import {
   driveCardSummary,
   findDriveCardTracking,
@@ -214,60 +218,85 @@ driveCommand
       // any failure to access means there's nothing to collide with, so proceed.
     }
 
-    // A second card for the same Drive ID is never a valid mount: transient
-    // state is keyed by Drive ID while attachments are per-card, so the two
-    // working copies overwrite each other upstream. Refuse at creation.
-    const tracking = await findDriveCardTracking(boxRoot);
-    const claimedBy = [
-      ...tracking.liveCards.filter((card) => card.driveId === fileId).map((card) => card.relPath),
-      ...tracking.duplicates
-        .filter((duplicate) => duplicate.driveId === fileId)
-        .flatMap((duplicate) => duplicate.relPaths),
-    ];
-    if (claimedBy.length > 0) {
-      console.error(`Drive file ${fileId} is already mounted at: ${claimedBy.join(", ")}`);
-      console.error("Move or delete that card to mount it elsewhere.");
+    // Everything from here is one Drive writer's span: the claim check, the
+    // pull, and the state write. A connector sync in another process would
+    // otherwise pull this same file between the check and the write. The lock
+    // is taken OUTSIDE the git commit below — see connectors/drive-lock.ts for
+    // why that is the only safe order.
+    let written: string[];
+    try {
+      written = await withDriveMirrorLock(boxRoot, () =>
+        addDriveFileUnderLock({ boxRoot, service, card: { file, handler, cardPath } }),
+      );
+    } catch (e) {
+      if (!(e instanceof DriveIdClaimedError)) throw e;
+      console.error(e.message);
       process.exit(1);
     }
 
-    // Delegate first-time creation to the handler's pull(): it knows
-    // how to write the card and the type-specific local files (JSON tabs
-    // for sheets, sibling .md for docs). Empty state means "fresh sync".
-    // localDir must match the connector's attach scope (`<basename>.attach/`)
-    // so the card's `attach/` refs resolve to the files written here.
-    const localDir = attachDirFor(cardPath);
-    await fs.mkdir(path.dirname(cardPath), { recursive: true });
-
-    const fileState = emptyFileState();
-    const result = await handler.pull({
-      file, localDir, cardPath, boxRoot, service, state: fileState,
-    });
-
-    // Persist the per-file state into the connector's transient state file so
-    // future `cb drive sync` runs see this file as already-synced. Delta-merge
-    // under the serialized RMW lock: add ONLY this new file's entry to
-    // freshly-loaded state, so a concurrent server `sync()` writing the same
-    // file (from another process) isn't clobbered.
-    await updateTransientState<DriveTransientState>({
-      boxRoot,
-      connectorName: "google-drive",
-      defaultValue: { files: {} },
-      update: (fresh) => ({ files: { ...fresh.files, [fileId]: fileState } }),
-    });
-
-    await stageAndCommitPaths(boxRoot, {
-      paths: result.written,
-      message: `Add Drive ${handler.cardType}: ${file.name}`,
-    });
-
     console.log(`Created ${path.relative(boxRoot, cardPath)}`);
     console.log(`  "${file.name}" (${handler.cardType})`);
-    for (const written of result.written) {
-      if (written !== path.relative(boxRoot, cardPath)) {
-        console.log(`  → ${written}`);
-      }
+    for (const item of written) {
+      if (item !== path.relative(boxRoot, cardPath)) console.log(`  → ${item}`);
     }
   });
+
+/** `cb drive add`'s write span: claim check, first pull, state, commit. */
+async function addDriveFileUnderLock(opts: {
+  boxRoot: string;
+  service: GoogleDriveService;
+  card: { file: DriveFile; handler: DriveTypeHandler; cardPath: string };
+}): Promise<string[]> {
+  const { boxRoot, service } = opts;
+  const { file, handler, cardPath } = opts.card;
+  const fileId = file.id;
+
+  // A second card for the same Drive ID is never a valid mount: transient
+  // state is keyed by Drive ID while attachments are per-card, so the two
+  // working copies overwrite each other upstream. Refuse at creation.
+  const tracking = await findDriveCardTracking(boxRoot);
+  const claimedBy = [
+    ...tracking.liveCards.filter((card) => card.driveId === fileId).map((card) => card.relPath),
+    ...tracking.duplicates
+      .filter((duplicate) => duplicate.driveId === fileId)
+      .flatMap((duplicate) => duplicate.relPaths),
+  ];
+  // Thrown rather than exited: `process.exit` inside the lock would skip the
+  // release and leave the box's Drive lock held until it went stale.
+  if (claimedBy.length > 0) throw new DriveIdClaimedError({ driveId: fileId, claimedBy });
+
+  // Delegate first-time creation to the handler's pull(): it knows
+  // how to write the card and the type-specific local files (JSON tabs
+  // for sheets, sibling .md for docs). Empty state means "fresh sync".
+  // localDir must match the connector's attach scope (`<basename>.attach/`)
+  // so the card's `attach/` refs resolve to the files written here.
+  const localDir = attachDirFor(cardPath);
+  await fs.mkdir(path.dirname(cardPath), { recursive: true });
+
+  const fileState = emptyFileState();
+  const result = await handler.pull({
+    file, localDir, cardPath, boxRoot, service, state: fileState,
+  });
+
+  // Persist the per-file state into the connector's transient state file so
+  // future `cb drive sync` runs see this file as already-synced. Delta-merge
+  // under the serialized RMW lock: add ONLY this new file's entry to
+  // freshly-loaded state, so a concurrent server `sync()` writing the same
+  // file (from another process) isn't clobbered.
+  await updateTransientState<DriveTransientState>({
+    boxRoot,
+    connectorName: "google-drive",
+    defaultValue: DEFAULT_DRIVE_STATE,
+    update: (fresh) => ({ ...fresh, files: { ...fresh.files, [fileId]: fileState } }),
+  });
+
+  await stageAndCommitPaths(boxRoot, {
+    paths: result.written,
+    message: `Add Drive ${handler.cardType}: ${file.name}`,
+  });
+
+  return result.written;
+}
 
 driveCommand
   .command("sync")

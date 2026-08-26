@@ -17,6 +17,7 @@ import { parseFrontmatterObject } from "../cards/frontmatter.js";
 import { errnoCode } from "../lib/error-guards.js";
 import type { GoogleDriveService } from "../services/google-drive.js";
 import { syncFolderCard } from "./drive-folder-sync.js";
+import { withDriveMirrorLock } from "./drive-lock.js";
 import type { FolderSyncResult } from "./drive-folder-types.js";
 import { createFolderSyncDeps } from "./drive-sync-deps.js";
 import { NotAFolderMountError } from "./drive-mount-errors.js";
@@ -39,6 +40,18 @@ import {
  * next wakeup would show an empty directory and no status for hours.
  */
 export async function mirrorFolderOnce(opts: {
+  boxRoot: string;
+  service: GoogleDriveService;
+  driveId: string;
+  cardPath: string;
+}): Promise<FolderSyncResult> {
+  // One Drive writer per box: a wakeup sync in another process would otherwise
+  // be discovering and pushing the same children this pass is. Reentrant, so
+  // `syncFolderMount` and `cb drive mount` can hold it around this call too.
+  return withDriveMirrorLock(opts.boxRoot, () => mirrorUnderLock(opts));
+}
+
+async function mirrorUnderLock(opts: {
   boxRoot: string;
   service: GoogleDriveService;
   driveId: string;
@@ -83,6 +96,20 @@ export async function syncFolderMount(options: {
   if (!cardPath.endsWith(`.${GFOLDER_CARD_TYPE}.card`)) {
     throw new NotAFolderMountError(relCard);
   }
+
+  // The card read, the mirror, and the commit are one span: an unmount landing
+  // between the read and the mirror would otherwise have this pass re-create
+  // what it just trashed.
+  return withDriveMirrorLock(boxRoot, () => syncMountUnderLock({ boxRoot, service, cardPath }));
+}
+
+async function syncMountUnderLock(opts: {
+  boxRoot: string;
+  service: GoogleDriveService;
+  cardPath: string;
+}): Promise<SyncFolderMountResult> {
+  const { boxRoot, service, cardPath } = opts;
+  const relCard = path.relative(boxRoot, cardPath);
 
   let content: string;
   try {

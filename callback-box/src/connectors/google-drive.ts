@@ -37,6 +37,7 @@ import { syncDriveFile } from "./drive-file-sync.js";
 import { syncFolderCard } from "./drive-folder-sync.js";
 import { createFolderSyncDeps } from "./drive-sync-deps.js";
 import { assertNever } from "../lib/invariant.js";
+import { withDriveMirrorLock } from "./drive-lock.js";
 
 // Ensure handlers are registered
 
@@ -76,6 +77,15 @@ class GoogleDriveConnector implements Connector {
   }
 
   async sync(): Promise<SyncResult> {
+    // One writer at a time over the whole mirror span: `cb drive mount` from a
+    // chat agent runs in another process and would otherwise discover, create,
+    // and push the same newly-listed child this pass is handling. Taken here,
+    // outside everything, so the git commits below nest INSIDE it — that
+    // ordering is the one the two locks are safe in (see drive-lock.ts).
+    return withDriveMirrorLock(this.boxRoot, () => this.syncUnderLock());
+  }
+
+  private async syncUnderLock(): Promise<SyncResult> {
     // Skip policy check when a fake service is injected (tests)
     if (!this.injectedService) {
       const allowed = await isGoogleServiceAllowed(this.boxRoot, "drive");
