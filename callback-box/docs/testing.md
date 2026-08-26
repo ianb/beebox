@@ -583,11 +583,20 @@ A failing test file gets a flake re-run; the smoke walk does not. It boots one
 real box and either that works or it does not.
 
 **Post-deploy**, `deploy/deploy.sh` runs the server-side half: hub `/healthz`,
-a `/healthz/canary` that cold-starts one real box, and a page-navigation check
-that fails if a deep box route 404s. That last one is deliberately not
-duplicated in the local walk — in dev, page requests are served by vite, so the
-SPA fallback this catches (registered only when `src/frontend/dist` exists)
-never runs locally.
+a `/healthz/canary` that cold-starts one real box, and an assertion that the
+shipped `src/frontend/dist/index.html` exists. That last one is the condition
+`registerSpaFallback` branches on — without the build, every page navigation
+404s while both health checks stay green. It asserts the file rather than
+probing a URL because the hub redirects an unauthenticated navigation to login
+before the child is reached, so a URL probe answers 302 either way. It is not
+duplicated in the local walk: in dev, page requests are served by vite and
+never reach that handler at all.
+
+**It is disruptive, on purpose.** The walk stops this checkout's dev-server
+generation and closes the shared browse session (tours and interactive
+`bin/browse` share one Chrome). If the boxholder has this worktree open in a
+browser, their tab reloads. That is the cost of testing the code that is about
+to land rather than whatever was running.
 
 **Known gap.** A change confined to `bin/` gets no smoke walk, because `bin/`
 ships nothing and the "code-related" rule is deliberately the deploy hook's. A

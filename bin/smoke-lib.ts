@@ -178,16 +178,25 @@ export function generationStartedAt(statusJson: unknown, name: string): number |
 }
 
 /**
- * Is the generation now serving the one this run started?
+ * Is the generation now serving a different one from the generation this run
+ * replaced?
  *
- * `null` (the router reports no start time) fails closed: an unproven
- * generation is exactly the stale read this check exists to catch.
+ * Identity, not clock ordering. Comparing `startedAt` against the moment the
+ * stop returned looks equivalent and is not: the router unlinks a handle before
+ * tearing it down, so any request arriving during teardown lazy-starts a
+ * replacement whose `startedAt` predates the stop's return. That replacement is
+ * running the same on-disk source we are testing and is perfectly good — timing
+ * it out would be a false red that wedges a landing for no reason.
+ *
+ * `null` now fails closed: the router reporting no start time is not proof of
+ * anything, least of all freshness.
  */
 export function isFreshGeneration(input: {
-  startedAt: number | null;
-  stoppedAt: number;
+  before: number | null;
+  now: number | null;
 }): boolean {
-  return input.startedAt !== null && input.startedAt >= input.stoppedAt;
+  if (input.now === null) return false;
+  return input.now !== input.before;
 }
 
 // ── reading accessibility snapshots ─────────────────────────────────────────
@@ -304,6 +313,17 @@ export function hasDomId(snapshot: string, domId: string): boolean {
  */
 export function directoryRowCount(snapshot: string): number {
   return [...snapshot.matchAll(/\bbutton\s+"[^"]* directory(?:,[^"]*)?"/g)].length;
+}
+
+/**
+ * Did the card detail pane actually render the card, or just its frame?
+ *
+ * The open-card link exists as soon as the pane mounts, so asserting on it
+ * alone passes for a card whose body failed to load. A rendered card also
+ * carries its own title as a heading.
+ */
+export function cardViewRendered(snapshot: string): boolean {
+  return /\bheading\s+"[^"]+"\s+\[level=2/.test(snapshot);
 }
 
 /** The first card row in the browse sidebar, as a role + name pair to click. */

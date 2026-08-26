@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   MENU_ERROR_TEXT,
   SmokeFailure,
+  cardViewRendered,
   directoryRowCount,
   expandedState,
   firstCardRow,
@@ -85,13 +86,20 @@ test("worktreeState: known states pass through, anything else is unknown", () =>
   assert.equal(worktreeState(null, "a"), "unknown");
 });
 
-test("generationStartedAt / isFreshGeneration: a generation older than the restart is stale", () => {
+test("generationStartedAt / isFreshGeneration: freshness is identity, not clock order", () => {
   const status = { worktrees: { w: { state: "ready", startedAt: 1000 } } };
   assert.equal(generationStartedAt(status, "w"), 1000);
-  assert.equal(isFreshGeneration({ startedAt: 1000, stoppedAt: 900 }), true);
-  assert.equal(isFreshGeneration({ startedAt: 800, stoppedAt: 900 }), false);
-  // Fails closed: no reported start time is not proof of freshness.
-  assert.equal(isFreshGeneration({ startedAt: null, stoppedAt: 900 }), false);
+  assert.equal(isFreshGeneration({ before: 1000, now: 1500 }), true);
+  assert.equal(isFreshGeneration({ before: 1000, now: 1000 }), false);
+  // A replacement started DURING teardown has an earlier timestamp than the
+  // stop's return and is still a different, perfectly good generation. Ordering
+  // by clock would call this stale and fail a landing for nothing.
+  assert.equal(isFreshGeneration({ before: 1000, now: 900 }), true);
+  // Nothing was running before: any generation now is one this run started.
+  assert.equal(isFreshGeneration({ before: null, now: 900 }), true);
+  // Fails closed: the router reporting no start time proves nothing.
+  assert.equal(isFreshGeneration({ before: 1000, now: null }), false);
+  assert.equal(isFreshGeneration({ before: null, now: null }), false);
 });
 
 const MENU_SNAPSHOT = `- navigation "Primary" [ref=e1]
@@ -163,6 +171,13 @@ const BROWSE_SNAPSHOT = `- button "/" [ref=e26, id=cb-browse-crumb-root]
 - button "Box, landmark card" [ref=e18]
 - button "briefing card" [ref=e19]
 - button "AGENTS.md" [ref=e20]`;
+
+test("cardViewRendered: a mounted frame with no card in it is not a rendered card", () => {
+  assert.equal(cardViewRendered('- heading "Box" [level=2, ref=e26]'), true);
+  assert.equal(cardViewRendered('- link "Open full view →" [ref=e27, id=cb-browse-open-card]'), false);
+  // The page's own h1 is not the card's title.
+  assert.equal(cardViewRendered('- heading "Browse" [level=1, ref=e3]'), false);
+});
 
 test("directoryRowCount / firstCardRow: counted rows come from real box content", () => {
   assert.equal(directoryRowCount(BROWSE_SNAPSHOT), 2);

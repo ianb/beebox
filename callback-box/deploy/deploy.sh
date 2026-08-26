@@ -690,8 +690,9 @@ REMOTE
 TOOLCHECK
 
   echo "Verifying hub health + box canary..."
-  ssh "root@$SERVER_IP" bash -s <<'HEALTHCHECK'
+  ssh "root@$SERVER_IP" bash -s "$INSTALL_DIR" <<'HEALTHCHECK'
     set -euo pipefail
+    install_dir="$1"
     KEY=$(grep -E '^CB_DIAG_API_KEY=' /home/callback/.env 2>/dev/null | cut -d= -f2- || true)
     # Fail closed: a deploy that can't verify anything must not report success
     # (the whole point of this check). If a server legitimately has no key,
@@ -741,7 +742,6 @@ TOOLCHECK
       -H "Authorization: Bearer $KEY" \
       http://localhost:3210/healthz/canary 2>/dev/null || echo "000")
     cstatus=$(node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync("/tmp/canary.out","utf8")).status)' 2>/dev/null || echo "unparseable")
-    cslug=$(node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync("/tmp/canary.out","utf8")).slug ?? "")' 2>/dev/null || echo "")
     if [ "$ccode" != "200" ] || [ "$cstatus" != "ok" ]; then
       echo "  Box canary FAILED (code: $ccode, status: $cstatus) — a box could not start and serve:"
       [ -f /tmp/canary.out ] && cat /tmp/canary.out
@@ -757,38 +757,29 @@ TOOLCHECK
     echo "  Box canary OK: $(cat /tmp/canary.out)"
     rm -f /tmp/canary.out
 
-    # (3) SPA fallback: a page navigation to a deep box route must be SERVED,
-    # not 404'd. `registerSpaFallback` is registered ONLY when the frontend
-    # build exists (src/webapp/server.ts) — so a deploy that shipped without
-    # src/frontend/dist answers every page navigation 404 while /healthz and
-    # the canary above both stay green. That is the 2026-08-25 escape verbatim
+    # (3) SPA fallback: the frontend build has to be ON the server.
+    # `registerSpaFallback` is installed ONLY when src/frontend/dist/index.html
+    # exists (callback-box/src/webapp/server.ts) — without it every page
+    # navigation 404s while /healthz and the canary above both stay green. That
+    # is the 2026-08-25 escape verbatim
     # (issues/exploration/2026-08-26-post-test-economics-retro.md, incident 3),
-    # and it is the half of the smoke tier the dev-router walk structurally
-    # cannot see: in dev, page requests are served by vite, never by this
-    # handler.
+    # and it is the half of the smoke tier the local dev-router walk
+    # structurally cannot see: in dev, page requests are served by vite and
+    # never reach this handler.
     #
-    # Unauthenticated in hub mode the fallback answers 401 ("Not authenticated")
-    # — a real answer from a registered handler, which is all this asserts. Only
-    # 404 (no handler), 000 (no answer) and 5xx are failures; anything else is
-    # the fallback doing its job under whatever auth mode this server runs.
-    if [ -z "$cslug" ]; then
-      echo "  SPA fallback check SKIPPED: the canary named no box slug."
-    else
-      scode=$($CURL -o /dev/null -w '%{http_code}' \
-        "http://localhost:3210/$cslug/browse/deploy-smoke-check" 2>/dev/null || echo "000")
-      case "$scode" in
-        404|000|5??)
-          echo "  SPA fallback FAILED (code: $scode) for /$cslug/browse/deploy-smoke-check"
-          echo "  A page navigation is not being served. The usual cause is a deploy"
-          echo "  with no frontend build: src/frontend/dist/index.html decides whether"
-          echo "  registerSpaFallback is installed at all."
-          exit 1
-          ;;
-        *)
-          echo "  SPA fallback OK (page navigation answered $scode, not 404)"
-          ;;
-      esac
+    # This asserts the file rather than probing a URL on purpose. An
+    # unauthenticated page navigation is redirected to login by the HUB before
+    # it ever reaches the child (hub-server.ts's `/*` gate), so a URL probe
+    # answers 302 whether or not the child has a fallback — a check that cannot
+    # fail for the right reason. The file IS the condition the code branches on.
+    spa_index="$install_dir/callback-box/src/frontend/dist/index.html"
+    if [ ! -s "$spa_index" ]; then
+      echo "  SPA fallback FAILED: $spa_index is missing or empty."
+      echo "  Every page navigation on this server will 404 — the frontend build"
+      echo "  did not ship. /healthz and the box canary cannot see this."
+      exit 1
     fi
+    echo "  SPA fallback OK: frontend build present ($(wc -c < "$spa_index") bytes)"
 HEALTHCHECK
 fi
 

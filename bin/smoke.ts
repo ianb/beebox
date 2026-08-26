@@ -32,6 +32,7 @@ import { fileURLToPath } from "node:url";
 import { BrowseSession } from "../callback-box/test/tours/tour-lib/browse.js";
 import {
   SmokeFailure,
+  cardViewRendered,
   directoryRowCount,
   firstCardRow,
   generationStartedAt,
@@ -175,6 +176,34 @@ class Budget {
       );
     }
   }
+
+  /**
+   * Fail a step that outruns the budget instead of waiting on it.
+   *
+   * Checking the clock only between steps bounds nothing: every browser call
+   * spawns `bin/browse`, and a hung Chrome would block one step forever. That
+   * is worse here than anywhere else, because `bin/finish-verify` runs its
+   * commands with `spawnSync` and no timeout — a smoke walk that never returns
+   * hangs the whole landing with no verdict printed at all.
+   */
+  async race<T>(step: string, work: Promise<T>): Promise<T> {
+    let timer: NodeJS.Timeout | undefined;
+    const expiry = new Promise<never>((_resolve, reject) => {
+      timer = setTimeout(() => {
+        reject(
+          new SmokeFailure(
+            `"${step}" did not finish within the remaining budget` +
+              ` (${String(BUDGET_MS / 1000)}s total)`,
+          ),
+        );
+      }, Math.max(this.remaining(), 0));
+    });
+    try {
+      return await Promise.race([work, expiry]);
+    } finally {
+      if (timer !== undefined) clearTimeout(timer);
+    }
+  }
 }
 
 interface Probe {
@@ -200,26 +229,28 @@ function routerDownFailure(url: string, cause: unknown): SmokeFailure {
 
 /**
  * Replace the running generation through the router's own control plane, and
- * report the instant the old one was gone.
+ * report the identity of the one that was replaced.
  *
  * `retry` first: it clears a parked `failed` entry, without which every later
- * request is answered from the cached error and the tier stays red after the
- * bug is fixed. Then `stop`, which the router performs and awaits — the handle
- * is unlinked before teardown, so once it answers, nothing can still be served
- * by the generation we replaced. The returned timestamp is what the cold-start
- * step checks the new generation against.
+ * request is answered from the cached error and the tier stays red even after
+ * the bug is fixed. Then `stop`, which the router performs and awaits.
  */
-async function restartGeneration(name: string, budget: Budget): Promise<number> {
-  const timeoutMs = Math.min(TEARDOWN_MS, Math.max(budget.remaining(), 1_000));
-  await control({ path: `/__router/retry/${name}`, method: "POST", timeoutMs });
-  const stopped = await control({ path: `/__router/stop/${name}`, method: "POST", timeoutMs });
+async function restartGeneration(name: string, budget: Budget): Promise<number | null> {
+  const before = await generationAge(name);
+  const timeoutMs = () => Math.min(TEARDOWN_MS, Math.max(budget.remaining(), 1_000));
+  await control({ path: `/__router/retry/${name}`, method: "POST", timeoutMs: timeoutMs() });
+  const stopped = await control({
+    path: `/__router/stop/${name}`,
+    method: "POST",
+    timeoutMs: timeoutMs(),
+  });
   if (stopped.status !== 200) {
     throw new SmokeFailure(
       `the router refused to stop ${name} (${String(stopped.status)})`,
       stopped.body.slice(0, 2000),
     );
   }
-  return Date.now();
+  return before;
 }
 
 /** The router's start time for this worktree, or null if it reports none. */
@@ -275,10 +306,10 @@ function buildSteps(input: {
   const { baseUrl, key, worktree, budget, session, options } = input;
   const steps: Step[] = [];
 
-  // Set by the restart step and read by the cold-start step, which is how the
-  // second one can prove the generation answering it is the one the first
-  // asked for.
-  let stoppedAt: number | null = null;
+  // Recorded by the restart step and read by the cold-start step, which is how
+  // the second one proves the generation answering it is not the one the first
+  // replaced. `undefined` means the restart step did not run.
+  let replaced: { before: number | null } | undefined;
 
   if (options.restart) {
     steps.push({
@@ -288,7 +319,7 @@ function buildSteps(input: {
         // every request lazy-starts the worktree again — so the browser goes
         // away before the teardown, not after it.
         await session.close();
-        stoppedAt = await restartGeneration(worktree, budget);
+        replaced = { before: await restartGeneration(worktree, budget) };
       },
     });
   }
@@ -297,22 +328,26 @@ function buildSteps(input: {
     name: "the box serves its root after a cold start",
     run: async () => {
       await waitForBox(`${baseUrl}/`, key, budget);
-      if (stoppedAt === null) return;
-      const startedAt = await generationAge(worktree);
-      if (!isFreshGeneration({ startedAt, stoppedAt })) {
+      if (replaced === undefined) return;
+      const now = await generationAge(worktree);
+      if (!isFreshGeneration({ before: replaced.before, now })) {
         throw new SmokeFailure(
-          `the box served, but the router reports a generation that predates this run's restart` +
-            ` — it is running older source than the code under test`,
-          `stopped at ${String(stoppedAt)}, generation started at ${String(startedAt)}`,
+          "the box served, but the router still reports the generation this run replaced" +
+            " — it is running older source than the code under test",
+          `generation before: ${String(replaced.before)}, now: ${String(now)}`,
         );
       }
     },
   });
 
   steps.push({
-    name: "the backend answers behind the frontend",
+    name: "the box's backend answers",
+    // `/api/…`, not a page path. Vite serves every non-API path itself, so a
+    // 200 on `/chat` proves only that vite is up — it never reaches the box's
+    // Fastify process. `/api/health` is proxied through to the backend, so it
+    // is the cheapest request that actually crosses into the app.
     run: async () => {
-      const url = `${baseUrl}/chat`;
+      const url = `${baseUrl}/api/health`;
       const result = await probe(url, key, Math.min(30_000, budget.remaining())).catch(
         (e: unknown) => {
           throw routerDownFailure(url, e);
@@ -320,6 +355,18 @@ function buildSteps(input: {
       );
       const failure = probeFailure({ verdict: readProbe(result), url, body: result.body });
       if (failure !== null) throw failure;
+      // The verdict itself is deliberately not asserted: a real box reports
+      // "degraded" for ordinary content reasons, and failing a landing over the
+      // state of someone's test box would be a false red. That the backend
+      // composed and returned its own health payload is the assertion.
+      const parsed: unknown = JSON.parse(result.body);
+      const status = (parsed as { status?: unknown }).status;
+      if (typeof status !== "string") {
+        throw new SmokeFailure(
+          `${url} answered 200 but not with a health payload — the request did not reach the backend`,
+          result.body.slice(0, 2000),
+        );
+      }
     },
   });
 
@@ -385,6 +432,12 @@ function buildSteps(input: {
           snapshot,
         );
       }
+      if (!cardViewRendered(snapshot)) {
+        throw new SmokeFailure(
+          `the card view for "${row.name}" mounted but rendered no card — its content did not load`,
+          snapshot,
+        );
+      }
     },
   });
 
@@ -410,6 +463,18 @@ export async function main(argv: string[]): Promise<number> {
   const session = new BrowseSession("smoke");
   const startedAt = Date.now();
 
+  // Last resort. `race` above fails the step, but a spawned `bin/browse` that
+  // never exits keeps the event loop alive and this process with it — so the
+  // deadline is also enforced by leaving. `unref` so a normal run is not held
+  // open by the timer itself.
+  const killer = setTimeout(() => {
+    process.stdout.write(
+      `\nFAIL smoke exceeded its ${String(BUDGET_MS / 1000)}s budget and was killed\n\nSMOKE: red\n`,
+    );
+    process.exit(1);
+  }, BUDGET_MS + 5_000);
+  killer.unref();
+
   process.stdout.write(`smoke: ${baseUrl}\n`);
   // Page errors accumulate per session; clear first so the last step reports
   // this walk's errors rather than whatever an earlier browse left behind.
@@ -422,7 +487,7 @@ export async function main(argv: string[]): Promise<number> {
     budget.check(step.name);
     const at = Date.now();
     try {
-      await step.run();
+      await budget.race(step.name, step.run());
     } catch (e) {
       const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1);
       process.stdout.write(`FAIL ${step.name} (${elapsed}s)\n`);
