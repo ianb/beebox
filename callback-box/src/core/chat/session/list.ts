@@ -129,6 +129,35 @@ export async function loadDeadHusks(boxRoot: string): Promise<DeadHuskEntry[]> {
   return (await enumerateChats(boxRoot)).dead;
 }
 
+/**
+ * Codex's view of its own threads, or `null` when Codex couldn't answer.
+ *
+ * A degradation rather than a failure. For a codex chat this metadata is not
+ * decoration — it carries the chat's existence as well as its date, so losing
+ * it means losing those chats from the listing entirely, counts included. That
+ * is still the better trade: when the Codex CLI is broken (the plugin
+ * marketplace pointing at a deleted checkout is the case that prompted this),
+ * the honest answer is that those chats are unavailable — not that the whole
+ * enumeration failed, which took the app bar's place menu down with it.
+ *
+ * The catch is deliberately wide. "Codex couldn't answer" is one recoverable
+ * class from the caller's side whether the CLI is missing, its registration is
+ * broken, or its reply no longer matches the schema — the listing can do
+ * nothing about any of them, and the warning names the cause either way.
+ */
+async function readCodexThreads(
+  boxRoot: string,
+  cwds: string[],
+): Promise<Map<string, CodexThreadMetadata> | null> {
+  if (cwds.length === 0) return new Map();
+  try {
+    return await listCodexThreadMetadata(boxRoot, [...new Set(cwds)]);
+  } catch (error) {
+    console.warn("[chat] codex thread metadata unavailable; omitting this box's codex chats:", error);
+    return null;
+  }
+}
+
 /** The single husk-read-and-stat pass behind both enumerations. */
 async function enumerateChats(boxRoot: string): Promise<ChatEnumeration> {
   const [husks, history] = await Promise.all([listChatHusks(boxRoot), loadHistoryEntries(boxRoot)]);
@@ -149,16 +178,15 @@ async function enumerateChats(boxRoot: string): Promise<ChatEnumeration> {
     // Contained, like every other resolution of a husk's `context-dir`: the
     // field is a card value, and an escaping one reads from the box root.
     .map((husk) => containedSessionCwd(boxRoot, husk.contextDir));
-  const codexThreads = codexCwds.length === 0
-    ? new Map<string, CodexThreadMetadata>()
-    : await listCodexThreadMetadata(boxRoot, [...new Set(codexCwds)]);
+  const codexThreads = await readCodexThreads(boxRoot, codexCwds);
   const settled = await mapInBatchesSettled(husks, {
     size: READ_CONCURRENCY,
     map: (husk) => resolveHusk({
       boxRoot,
       husk,
       engine: engines.get(husk.session) ?? "claude",
-      codexMetadata: codexThreads.get(husk.session),
+      codexMetadata: codexThreads?.get(husk.session),
+      codexAvailable: codexThreads !== null,
     }),
   });
   const live: ChatSessionEntry[] = [];
@@ -310,12 +338,18 @@ async function resolveHusk(options: {
   husk: ChatHuskEntry;
   engine: AgentEngine;
   codexMetadata: CodexThreadMetadata | undefined;
+  /** False when Codex itself couldn't be asked — see `readCodexThreads`. */
+  codexAvailable: boolean;
 }): Promise<HuskResolution> {
-  const { boxRoot, husk, engine, codexMetadata } = options;
+  const { boxRoot, husk, engine, codexMetadata, codexAvailable } = options;
   const logPath = huskTranscriptPath(boxRoot, husk);
   let mtime: Date;
   try {
     if (engine === "codex") {
+      // "Codex couldn't be asked" and "Codex has no such thread" are different
+      // facts: the second is a dead husk, the first is one we can't classify,
+      // so it goes in neither list rather than being reported as expired.
+      if (!codexAvailable) return { kind: "unreadable" };
       if (codexMetadata === undefined) return await deadHusk(husk);
       mtime = codexMetadata.updatedAt;
     } else {
