@@ -9,8 +9,11 @@ discovered-by: Ian
 discovered-in: main session — "seems like we might be missing a standard smoke test to be run on merge?"
 ---
 
-Not scheduled — the boxholder wants to see how change-based selection settles
-first (2026-08-26). Parked here so the shape isn't lost.
+Unparked the same day: after the retro
+(`2026-08-26-post-test-economics-retro`) the boxholder's position is that
+**every code-related merge to main should run a smoke test.** Docs-only
+landings are exempt (the deploy hook's "deployed paths" rule is the precedent
+for that distinction).
 
 Two escapes on 2026-08-25/26 passed every existing gate because the code was
 right and the *state* was wrong: the SPA fallback that only installs when a

@@ -46,21 +46,23 @@ someone's worktree.
    filing against a real tap excerpt; carry known-red files forward so a new
    landing is not blamed for an inherited failure; route "cannot start / cannot
    file" through a channel that depends on neither the store nor a git commit.
-2. **Inventory the world state tests can touch; isolate each.** `.taprc`
-   already isolates secrets and origin-id; add `CODEX_HOME` (in flight), audit
-   `~/.claude`, `~/.config/cb`, launchd, build artifacts. A test that needs a
-   real-world thing declares it. Fewer runs make environment drift surface
-   later, so this matters more under selection, not less.
+2. ~~Inventory the world state tests can touch; isolate each.~~ Boxholder
+   (2026-08-26): this has come up once, essentially; `CODEX_HOME` isolation
+   (in flight) is enough. Not a program.
 3. **Close the selection blind spot with data.** Implicated careful-tier tests
    run pre-merge (only unimplicated ones defer). The ledger's "missed" class
    becomes proposed spawner edges automatically.
-4. **Degrade, don't die, at external boundaries.** Exhaustive switch WITH a
-   default that skips and warns once; UI keeps the streamed bubble when the
-   authoritative entry never arrives; error copy names the layer that failed
-   (the menu said "landmarks" for a Codex plugin failure).
+4. **Be defensive around the Codex SDK specifically.** Its `ThreadItem` union
+   is not what the binary emits (boxholder: "not as well typed as they say").
+   Every switch over an SDK type carries a default that skips and warns once;
+   treat SDK-shaped input as parse-boundary data. Not a general boundary
+   program — one library. Separately: UI keeps the streamed bubble when the
+   authoritative entry never arrives, and error copy names the layer that
+   failed (the menu said "landmarks" for a Codex plugin failure).
 5. **Process.** Launcher now refuses options after the name; `cb-pick-issues`
    bare invocation stops to ask; briefings carry understanding. Add: a subagent
    that cites `file:line` must have opened the file.
 
-The parked smoke tier (`2026-08-26-merge-time-smoke-tier`) would have caught
-3, 4 and 7 within the hour; revisit once 1–2 land.
+**Decision (2026-08-26): every code-related merge to main runs a smoke test**
+— `2026-08-26-merge-time-smoke-tier`, unparked. It would have caught 3, 4
+and 7 within the hour.
