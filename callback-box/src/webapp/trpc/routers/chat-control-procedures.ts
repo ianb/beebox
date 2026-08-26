@@ -129,7 +129,8 @@ export const chatControlProcedures = {
    */
   archive: ownerProcedure.input(z.object({ sessionId: sdkSessionIdSchema })).mutation(async ({ input, ctx }) => {
     try {
-      return await archiveChatSession({ boxRoot: ctx.boxRoot, sessionId: input.sessionId });
+      const { registry } = requireRuntime(ctx.boxRoot);
+      return await archiveChatSession({ boxRoot: ctx.boxRoot, sessionId: input.sessionId, registry });
     } catch (error) {
       if (error instanceof LockHeldError) {
         throw new TRPCError({ code: "CONFLICT", message: "Chat review is running; try again in a moment" });

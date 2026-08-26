@@ -21,7 +21,8 @@ import { findChatHuskEntry, listChatHusksUnder } from "../husk-read.js";
 import { acquireChatReviewLease } from "../review/lock.js";
 import { loadDeadHusks } from "./list.js";
 import { parseSdkSessionId } from "./session-id.js";
-import type { TranscriptState } from "./availability.js";
+import { resolveSessionAvailability, type TranscriptState } from "./availability.js";
+import type { ChatSessionRegistry } from "./registry.js";
 
 /** Where archived husks live. Outside `store/chat/web/`, which is the point. */
 const CHAT_ARCHIVE_DIR = "store/chat/archive";
@@ -39,10 +40,16 @@ export type ArchiveChatResult =
   | { status: "already-archived"; sessionId: string; huskPath: string }
   /** The transcript is still here; the chat can be opened, so it is not filed away. */
   | { status: "refused"; sessionId: string; reason: "transcript-present"; huskPath: string }
+  /**
+   * The session is live in this server — assigned or reserved — even though no
+   * transcript file has appeared yet. Filing it away would hide a conversation
+   * the boxholder is in the middle of.
+   */
+  | { status: "refused"; sessionId: string; reason: "session-live"; huskPath: string | null }
   | { status: "not-found"; sessionId: string };
 
 /** File a dead chat's card away under `store/chat/archive/`. */
-export async function archiveChatSession(options: { boxRoot: string; sessionId: string }): Promise<ArchiveChatResult> {
+export async function archiveChatSession(options: { boxRoot: string; sessionId: string; registry: ChatSessionRegistry }): Promise<ArchiveChatResult> {
   const sessionId = parseSdkSessionId(options.sessionId);
   // The same lease delete takes: archiving removes a session from the review
   // corpus, and a review pass mid-move would extend an account for a card that
@@ -53,12 +60,35 @@ export async function archiveChatSession(options: { boxRoot: string; sessionId: 
     const already = archived.find((husk) => husk.session === sessionId);
     if (already !== undefined) return { status: "already-archived", sessionId, huskPath: already.path };
 
-    // Membership in the dead list *is* the eligibility test — one definition of
-    // "there is nothing left to resume", shared with what the lists display.
+    // Membership in the dead list is the *disk* half of the eligibility test —
+    // one definition of "there is nothing left to resume", shared with what the
+    // lists display.
     const target = (await loadDeadHusks(options.boxRoot)).find((husk) => husk.sessionId === sessionId);
+    // The server half. A chat is resumable from the moment its id is reserved
+    // or assigned, which is before the engine has written a byte — so a chat
+    // the boxholder is in the middle of sits in the dead list exactly like an
+    // expired one, and archiving it would file away an open conversation.
+    // `resolveSessionAvailability` is the one definition of "still open", the
+    // same one the chat page gates its resume on.
+    const availability = await resolveSessionAvailability({
+      boxRoot: options.boxRoot,
+      sessionId,
+      registry: options.registry,
+    });
+    if (availability.kind === "resumable") {
+      // Both refusals mean "still openable"; which one it is comes from the
+      // dead list, since that is what says whether a transcript exists on disk.
+      const huskPath = target?.huskPath ?? (await findChatHuskEntry(options.boxRoot, sessionId))?.path ?? null;
+      if (target !== undefined) return { status: "refused", sessionId, reason: "session-live", huskPath };
+      if (huskPath === null) return { status: "not-found", sessionId };
+      return { status: "refused", sessionId, reason: "transcript-present", huskPath };
+    }
     if (target === undefined) {
       const active = await findChatHuskEntry(options.boxRoot, sessionId);
       if (active === null) return { status: "not-found", sessionId };
+      // Not resumable and no husk in the dead list: a chat mid-deletion, whose
+      // card is on its way out. Reported as present rather than archived — the
+      // deletion owns the card now.
       return { status: "refused", sessionId, reason: "transcript-present", huskPath: active.path };
     }
 
