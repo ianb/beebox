@@ -1,64 +1,18 @@
-import { z } from "zod";
 import { router, publicProcedure } from "../trpc.js";
 import { TRPCError } from "@trpc/server";
-import { getGoogleAuth } from "../../../connectors/google-auth.js";
-import { isGoogleServiceAllowed } from "../../../core/box/config.js";
-import { loadDriveConfig, saveDriveConfig } from "../../../connectors/drive-config.js";
-import { stageAndCommitPaths } from "../../../lib/git.js";
-import { createGoogleAuthService } from "../../../services/google-auth.js";
-import { createGoogleDriveService } from "../../../services/google-drive.js";
-import type { GoogleDriveService } from "../../../services/google-drive.js";
-
-async function getDriveService(boxRoot: string, injected?: GoogleDriveService): Promise<GoogleDriveService> {
-  if (injected) return injected;
-
-  const auth = await getGoogleAuth(boxRoot);
-  if (!auth) {
-    throw new TRPCError({
-      code: "PRECONDITION_FAILED",
-      message: "Google auth not configured. Run: cb google-auth",
-    });
-  }
-  const authService = createGoogleAuthService(auth, { boxRoot });
-  return createGoogleDriveService(authService);
-}
+import { loadDriveConfig } from "../../../connectors/drive-config.js";
 
 export const driveRouter = router({
+  /**
+   * The connector config. Only the legacy `folders` array lives there now, and
+   * only until the next sync converts it into `.gfolder.card` mounts — a Drive
+   * mount is a card, so there is nothing here to write.
+   */
   config: publicProcedure.query(async ({ ctx }) => {
-    return loadDriveConfig(ctx.boxRoot);
-  }),
-
-  available: publicProcedure.query(async ({ ctx }) => {
-    if (!ctx.services.drive) {
-      const allowed = await isGoogleServiceAllowed(ctx.boxRoot, "drive");
-      if (!allowed) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Drive service not enabled for this box. Enable it in box settings.",
-        });
-      }
+    const config = await loadDriveConfig(ctx.boxRoot);
+    if (!config.ok) {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: config.error });
     }
-
-    const service = await getDriveService(ctx.boxRoot, ctx.services.drive);
-    return service.listSpreadsheets();
+    return config.value;
   }),
-
-  updateConfig: publicProcedure
-    .input(
-      z.object({
-        folders: z.array(z.object({
-          driveFolderId: z.string(),
-          localPath: z.string(),
-        })).optional(),
-      })
-    )
-    .mutation(async ({ input, ctx }) => {
-      const config = input.folders ? { folders: input.folders } : {};
-      await saveDriveConfig(ctx.boxRoot, config);
-      await stageAndCommitPaths(ctx.boxRoot, {
-        paths: ["config/connectors/google-drive.json"],
-        message: "Update Drive sync config",
-      });
-      return { success: true };
-    }),
 });
