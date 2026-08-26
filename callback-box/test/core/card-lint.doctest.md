@@ -966,3 +966,54 @@ JSON.stringify({
 })
 => {"ok":0,"bad":1,"says":true}
 ```
+
+## Chat husks: two cards must never claim one chat
+
+The `session` field is the husk's identity, so a second card carrying it means
+two husks for one conversation — both appear in the picker, and chat review
+would extend two separate accounts from the same transcript. This is card-lint's
+only cross-file rule: the `store/chat/**` index is built once per
+`lintCardsDispatch` run and memoized on that run's options, not rescanned per
+card. Repair is editorial — which title and body do you keep? — so the rule
+names both paths and stops there.
+
+```ts
+const box = await makeTmpBox();
+await box.write("store/chat/web/2026-08-26_59fc20dd.chat.card",
+  "---\nsession: 59fc20dd-fe6d-45cb-8f37-f1508a5a0869\ntitle: The Acme mess\n---\n");
+await box.write("store/chat/web/Copied.chat.card",
+  "---\nsession: 59fc20dd-fe6d-45cb-8f37-f1508a5a0869\n---\n");
+await box.write("store/chat/web/2026-08-26_aaaa9999.chat.card",
+  "---\nsession: aaaa9999-fe6d-45cb-8f37-f1508a5a0869\n---\n");
+const result = await lintCardsDispatch(
+  [
+    box.path("store/chat/web/2026-08-26_59fc20dd.chat.card"),
+    box.path("store/chat/web/Copied.chat.card"),
+    box.path("store/chat/web/2026-08-26_aaaa9999.chat.card"),
+  ],
+  { boxRoot: box.root, ctx },
+);
+JSON.stringify({ errors: result.totalErrors, unique: result.results[2]!.errors.length })
+=> {"errors":2,"unique":0}
+
+result.results[0]!.errors[0]!.message
+=> Duplicate chat session 59fc20dd-fe6d-45cb-8f37-f1508a5a0869: store/chat/web/2026-08-26_59fc20dd.chat.card and store/chat/web/Copied.chat.card are husks for one chat. Keep whichever card you want the chat to be, and `cb trash` the other.
+```
+
+A husk filed outside `store/chat/web/` counts too — the index walks the whole
+`store/chat/**` tree, so moving one of the pair out of the picker's directory
+doesn't make the collision go away.
+
+```ts continue
+const box2 = await makeTmpBox();
+await box2.write("store/chat/web/2026-08-26_59fc20dd.chat.card",
+  "---\nsession: 59fc20dd-fe6d-45cb-8f37-f1508a5a0869\n---\n");
+await box2.write("store/chat/archive/2026-01-01_59fc20dd.chat.card",
+  "---\nsession: 59fc20dd-fe6d-45cb-8f37-f1508a5a0869\n---\n");
+const moved = await lintCardsDispatch(
+  [box2.path("store/chat/web/2026-08-26_59fc20dd.chat.card")],
+  { boxRoot: box2.root, ctx },
+);
+moved.results[0]!.errors[0]!.message.includes("store/chat/archive/2026-01-01_59fc20dd.chat.card")
+=> true
+```

@@ -25,6 +25,8 @@ import { loadSessionHistory } from "./session/load-history.js";
 const READ_CONCURRENCY = 64;
 
 const CHAT_HUSK_DIR = "store/chat/web";
+/** Everything chat-shaped: the active husks, plus whatever sits beside them. */
+const CHAT_DIR = "store/chat";
 /** Keep husk titles bookmark-sized, not transcript-sized. */
 const TITLE_MAX_LEN = 80;
 
@@ -158,19 +160,46 @@ export async function listChatHusksUnder(boxRoot: string, relDir: string): Promi
     if (errnoCode(e) === "ENOENT") return [];
     throw e;
   }
-  // Read concurrently: every chat list in the app waits on this, and the husks
-  // are independent files. Bounded, though — a box accumulates one husk per
-  // chat forever, so this list grows without limit and unbounded fan-out here
-  // would eventually exhaust file descriptors. `allSettled` per code-style: an
-  // unreadable husk is already a per-file skip and must not abandon the rest.
+  const chatCards = names.filter((name) => name.endsWith(".chat.card"));
+  return readHusks(boxRoot, chatCards.map((name) => `${relDir}/${name}`));
+}
+
+/**
+ * Every husk anywhere under `store/chat/**` — the whole-tree counterpart to
+ * `listChatHusks`, which is deliberately only the active `web/` directory.
+ * Used by the duplicate-`session` lint, which has to see a renamed or
+ * hand-filed husk wherever it landed, not just the ones the pickers enumerate.
+ */
+export async function listChatHusksTree(boxRoot: string): Promise<ChatHuskEntry[]> {
+  let names: string[];
+  try {
+    names = await fs.readdir(path.join(boxRoot, CHAT_DIR), { recursive: true });
+  } catch (e) {
+    if (errnoCode(e) === "ENOENT") return [];
+    throw e;
+  }
+  const chatCards = names.filter((name) => name.endsWith(".chat.card"));
+  return readHusks(boxRoot, chatCards.map((name) => `${CHAT_DIR}/${name.split(path.sep).join("/")}`));
+}
+
+/**
+ * Read a set of husk paths into entries, skipping the unusable ones.
+ *
+ * Concurrent: every chat list in the app waits on this, and the husks are
+ * independent files. Bounded, though — a box accumulates one husk per chat
+ * forever, so this list grows without limit and unbounded fan-out here would
+ * eventually exhaust file descriptors. `allSettled` per code-style: an
+ * unreadable husk is already a per-file skip and must not abandon the rest.
+ */
+async function readHusks(boxRoot: string, relPaths: string[]): Promise<ChatHuskEntry[]> {
   const settled = await mapInBatchesSettled(
-    names.filter((name) => name.endsWith(".chat.card")),
-    { size: READ_CONCURRENCY, map: (name) => readChatHusk(boxRoot, `${relDir}/${name}`) },
+    relPaths,
+    { size: READ_CONCURRENCY, map: (relPath) => readChatHusk(boxRoot, relPath) },
   );
   const out: ChatHuskEntry[] = [];
   for (const outcome of settled) {
     if (outcome.status === "rejected") {
-      console.warn(`chat-husk: skipping a card under ${relDir}:`, outcome.reason);
+      console.warn("chat-husk: skipping a chat card:", outcome.reason);
       continue;
     }
     if (outcome.value !== null) out.push(outcome.value);
