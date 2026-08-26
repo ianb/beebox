@@ -702,9 +702,13 @@ schedule runs, and an agent reaching for it should say why.
   two importers ran 12 files in 72 s against the 627-file suite; a `bin/`-only
   change ran nothing in 4–10 s. **The graph build is 6–17 s, not Track 1's
   1.8 s** — 627 entrypoints now, cold esbuild — and it is the floor under every
-  `test:changed`, including the empty one. Track 1's "no cache" holds until
-  that floor is what an agent waits on; the cache key would be the
-  (path, mtime, size) of every file in the graph's universe.
+  `test:changed`, including the empty one. **The cache landed 2026-08-25**
+  (`bin/test-graph-cache.ts`), keyed as anticipated on the (path, mtime, size)
+  of every file in the graph's universe plus the entrypoints, `.taprc`, and the
+  builder's own sources. Entrypoints are re-globbed every run, never cached, so
+  a new test file is a miss. Measured on 632 entrypoints / 1,780 universe
+  files: cold `test-select` 3.0s, warm 0.37s (the stat sweep is ~20ms of it);
+  `pnpm test:changed` with nothing selected went 3.3s -> 0.85s.
 - **C** landed (`callback-box/test/careful.txt`, `bin/test-tiers.ts`). An
   appended tier that resolves to zero files is refused (a bare `tap` would
   run everything). Five members; the report's candidate block showed the
