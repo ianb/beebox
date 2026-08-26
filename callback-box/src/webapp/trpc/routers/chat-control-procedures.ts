@@ -16,6 +16,7 @@ import type { AgentEngine } from "../../../core/box/config.js";
 import { chatModelForEngine, isChatModelAllowed } from "../../../shared/chat-models.js";
 import { deleteChatSession, ChatSessionNotFoundError, SessionStorageContextMismatchError } from "../../../core/chat/session/delete.js";
 import { sdkSessionIdSchema } from "../../../core/chat/session/session-id.js";
+import { archiveChatSession } from "../../../core/chat/session/archive.js";
 import { SessionDeletingError } from "../../../core/chat/session/registry.js";
 import { LockHeldError } from "../../../core/chat/review/lock.js";
 import { resolveSessionAvailability } from "../../../core/chat/session/availability.js";
@@ -115,6 +116,26 @@ export const chatControlProcedures = {
         code: "INTERNAL_SERVER_ERROR",
         message: "Could not delete the conversation",
       });
+    }
+  }),
+
+  /**
+   * File a dead chat's card away under `store/chat/archive/`.
+   *
+   * Beside `deleteSession` because it is the same decision made differently:
+   * one removes the conversation, the other only stops listing it. Nothing is
+   * deleted here, so a failure is reported as an error rather than as a
+   * cleanup-required state — there is no half-done to recover from.
+   */
+  archive: ownerProcedure.input(z.object({ sessionId: sdkSessionIdSchema })).mutation(async ({ input, ctx }) => {
+    try {
+      return await archiveChatSession({ boxRoot: ctx.boxRoot, sessionId: input.sessionId });
+    } catch (error) {
+      if (error instanceof LockHeldError) {
+        throw new TRPCError({ code: "CONFLICT", message: "Chat review is running; try again in a moment" });
+      }
+      console.error("chat-archive: mutation failed", { sessionId: input.sessionId, error });
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Could not archive the conversation" });
     }
   }),
 
