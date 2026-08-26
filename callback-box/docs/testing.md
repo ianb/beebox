@@ -605,6 +605,16 @@ Read `ran` as the denominator, not the run count: the walk stops at the first
 failure, so a late step has seen fewer runs than an early one. Steps are keyed
 by a stable id, not their printed name, so rewording a step keeps its history.
 
+**A weekly schedule reviews the tier's shape** (`schedules/smoke-review/`). It
+gathers the log, the window's failures, and the bugs filed that week, then hands
+them to a session that asks two questions: is every step still earning its
+place, and is there something the walk should be checking that it isn't. The
+second half is necessarily after-the-fact — a bug that reached `main` and was
+only visible on a running box is what "the walk has a hole" looks like, and the
+hourly full-suite run's own issues are the sharpest evidence for it. The session
+files an issue; it does not edit the tier, because trimming a step or adding one
+belongs to a session that can run the walk and see what happens.
+
 **It is disruptive, on purpose.** The walk stops this checkout's dev-server
 generation and closes the shared browse session (tours and interactive
 `bin/browse` share one Chrome). If the boxholder has this worktree open in a

@@ -371,6 +371,52 @@ export interface SmokeRunRecord {
  * tier, and a worktree cull must not take the history with it. Append-only, so
  * two runs in different worktrees cannot lose each other's entries.
  */
+/**
+ * One log line as a record, or null if it is not one.
+ *
+ * The single parse boundary for the log: readers get a validated record and
+ * never a cast. A line that does not parse (a run killed mid-append leaves a
+ * truncated one) is null rather than an exception — a partial write must not
+ * take a whole report with it.
+ */
+export function parseRunRecord(line: string): SmokeRunRecord | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(line);
+  } catch {
+    return null;
+  }
+  if (typeof parsed !== "object" || parsed === null) return null;
+  const record: Record<string, unknown> = { ...parsed };
+  const { ts, verdict, steps } = record;
+  if (typeof ts !== "string") return null;
+  if (verdict !== "green" && verdict !== "red") return null;
+  if (!Array.isArray(steps)) return null;
+  return {
+    ts,
+    verdict,
+    commit: typeof record["commit"] === "string" ? record["commit"] : "",
+    branch: typeof record["branch"] === "string" ? record["branch"] : "",
+    worktree: typeof record["worktree"] === "string" ? record["worktree"] : "",
+    box: typeof record["box"] === "string" ? record["box"] : "",
+    ms: typeof record["ms"] === "number" ? record["ms"] : 0,
+    ...(typeof record["failedStep"] === "string" ? { failedStep: record["failedStep"] } : {}),
+    ...(typeof record["failure"] === "string" ? { failure: record["failure"] } : {}),
+    steps: steps.filter(isStepRecord),
+  };
+}
+
+function isStepRecord(value: unknown): value is SmokeStepRecord {
+  if (typeof value !== "object" || value === null) return false;
+  const step: Record<string, unknown> = { ...value };
+  const outcome = step["outcome"];
+  return (
+    typeof step["id"] === "string" &&
+    (outcome === "ok" || outcome === "fail" || outcome === "not-run") &&
+    typeof step["ms"] === "number"
+  );
+}
+
 export function smokeLogPath(gitCommonDir: string): string {
   return `${gitCommonDir}/callback-smoke-log.jsonl`;
 }
@@ -407,8 +453,7 @@ function median(values: number[]): number {
  * get reworded and a rename must not silently restart a step's history at zero,
  * which would read as "new step, no data yet" rather than "unchanged step, 200
  * clean runs". Order follows first appearance, so the report reads in walk
- * order. Unparseable lines are skipped rather than throwing: a truncated last
- * line (a killed run mid-append) must not take the whole report with it.
+ * order. {@link parseRunRecord} drops anything that is not a record.
  */
 export function summarizeSmokeLog(lines: readonly string[]): SmokeSummary {
   const order: string[] = [];
@@ -419,27 +464,20 @@ export function summarizeSmokeLog(lines: readonly string[]): SmokeSummary {
   let red = 0;
 
   for (const line of lines) {
-    if (line.trim() === "") continue;
-    let record: SmokeRunRecord;
-    try {
-      record = JSON.parse(line) as SmokeRunRecord;
-    } catch {
-      continue;
-    }
-    if (!Array.isArray(record.steps)) continue;
+    const record = parseRunRecord(line);
+    if (record === null) continue;
     runs += 1;
     if (record.verdict === "red") red += 1;
     for (const step of record.steps) {
-      if (typeof step?.id !== "string") continue;
       if (!ran.has(step.id)) {
         ran.set(step.id, []);
         order.push(step.id);
       }
       if (step.outcome === "not-run") continue;
-      ran.get(step.id)?.push(typeof step.ms === "number" ? step.ms : 0);
+      ran.get(step.id)?.push(step.ms);
       if (step.outcome === "fail") {
         failed.set(step.id, (failed.get(step.id) ?? 0) + 1);
-        if (typeof record.ts === "string") lastFailure.set(step.id, record.ts);
+        lastFailure.set(step.id, record.ts);
       }
     }
   }
