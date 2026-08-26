@@ -14,10 +14,12 @@ agent/browse/mobile credential). `admin.*`, `pairing.*`, and
 `scanTokens.*` are owner-gated. Several other state-changing or
 code-executing procedures are not:
 
-- `drive.updateConfig` and `calendar.updateConfig`
-  (`src/webapp/trpc/routers/drive.ts`, `calendar.ts`) — any member can
-  rewrite which Drive folders / calendars sync, unlike the equivalent
-  owner-gated config writes in `admin.ts`.
+- `drive.mount` / `drive.unmount` / `drive.link` / `drive.syncFolder` and
+  `calendar.updateConfig` (`src/webapp/trpc/routers/drive.ts`,
+  `calendar.ts`) — any member can change which Drive folders / calendars
+  sync, unlike the equivalent owner-gated config writes in `admin.ts`.
+  (Was `drive.updateConfig` until 2026-08-26, when folder mounts became
+  cards; the population question is unchanged.)
 - `scheduler.trigger` (`src/webapp/trpc/routers/scheduler.ts`) — runs a
   scheduled script card's shell command immediately via
   `execWithTimeout`. The strongest code-execution surface in the tRPC
