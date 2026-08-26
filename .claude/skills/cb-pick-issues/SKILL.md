@@ -23,6 +23,9 @@ requires a new instruction from them — you never promote yourself.
 | "propose", "what would you do", "make a plan for", "pick one", "which of these" | **Propose** | everything above, plus one ranked recommendation with the issue set, the kind of session it deserves, and a draft briefing | launching; setting `priority:`; closing or merging issues |
 | "do it", "launch", "start a worktree on X", "go" — naming a specific item or approving a specific proposal | **Act** | launch via the `launch-worktree-session` skill (which still asks about model when unsure), passing `--issue <path>` for the issue the workstream takes responsibility for and listing the rest of the cluster in the briefing; amend the chosen issues per `issues/CLAUDE.md` | widening to a second item, cluster, or session without a fresh "go" |
 
+A bare `/cb-pick-issues` — no words at all — is **Propose**: survey, one
+recommendation, then stop and ask. Silence is never a "go".
+
 Rules that come from real failures:
 
 - **One instruction, one action.** "Look for another cluster" is one
