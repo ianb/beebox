@@ -22,10 +22,15 @@ import { fileURLToPath } from "node:url";
 import { candidateFiles, isRelative } from "../agent-doctest/src/resolve-rules.ts";
 import {
   cacheFile,
+  changedBetween,
   defaultCacheDir,
-  graphKey,
-  readCachedGraph,
+  keyOf,
+  keyPaths,
+  readStoredGraph,
+  stampPaths,
+  storedToGraph,
   writeCachedGraph,
+  type KeyInputs,
 } from "./test-graph-cache.js";
 import type { TestGraph } from "./test-graph-query.js";
 import { taprcTestFiles } from "./test-tiers.js";
@@ -295,19 +300,44 @@ export async function buildGraphCached(
     packageRoot: config.packageRoot,
     aliases: config.aliases,
   });
-  const key = (universe: Iterable<string>): string => graphKey({ ...config, universe });
+  const inputsFor = (universe: Iterable<string>): KeyInputs => ({ ...config, universe });
+  const keyWith = (paths: string[], stamps: Map<string, string>): string =>
+    keyOf({ aliases: config.aliases, entrypoints: config.entrypoints, paths, stamps });
 
-  if (options.cache !== false) {
-    const hit = readCachedGraph({ path, key });
-    if (hit !== null) return hit;
+  // Read even when caching is off: the stored universe is what the pre-build
+  // stamp below can cover, and a rebuild should still leave a sound cache.
+  const stored = readStoredGraph(path);
+
+  if (options.cache !== false && stored !== null) {
+    const paths = keyPaths(inputsFor(stored.universe));
+    const stamps = stampPaths(paths);
+    if (stamps !== null && keyWith(paths, stamps) === stored.key) return storedToGraph(stored);
   }
+
+  // Guard against a file saved DURING the build. The key is necessarily
+  // computed afterwards, so a mid-build write would be stored as the stamp of
+  // edges that predate it — a hit that stays stale until something else moves.
+  // Stamping the known keyed set first and refusing to write when any of it
+  // moved costs one extra sweep and makes that impossible. What no cache
+  // exists for (a first run's universe) cannot be covered; the next run's
+  // rebuild is the recourse.
+  const beforePaths = keyPaths(inputsFor(stored?.universe ?? []));
+  const beforeStamps = stampPaths(beforePaths);
+
   const graph = await buildGraphFrom(config);
+
   // A build that produced nothing is a hard failure, not a graph. Its universe
   // is empty, so its key would depend on almost nothing and it would stick
   // around long after the cause was fixed.
-  if (graph.tests.size > 0 || config.entrypoints.length === 0) {
-    writeCachedGraph({ path, key: key(graph.universe), graph });
-  }
+  if (graph.tests.size === 0 && config.entrypoints.length > 0) return graph;
+
+  const afterPaths = keyPaths(inputsFor(graph.universe));
+  const afterStamps = stampPaths([...new Set([...beforePaths, ...afterPaths])].sort());
+  if (beforeStamps === null || afterStamps === null) return graph;
+  const moved = changedBetween({ paths: beforePaths, before: beforeStamps, after: afterStamps });
+  if (moved.length > 0) return graph;
+
+  writeCachedGraph({ path, key: keyWith(afterPaths, afterStamps), graph });
   return graph;
 }
 

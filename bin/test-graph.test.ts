@@ -10,8 +10,15 @@ import { test } from "node:test";
 import { mkdtempSync, mkdirSync, readdirSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
-import { buildGraphCached, buildGraphFrom, testEntrypoints, type GraphConfig } from "./test-graph.js";
+import {
+  buildGraphCached,
+  buildGraphFrom,
+  testEntrypoints,
+  REPO_ROOT,
+  type GraphConfig,
+} from "./test-graph.js";
 import { scopedChanges, type TestGraph } from "./test-graph-query.js";
+import { changedBetween, keyOf, keyPaths, stampPaths } from "./test-graph-cache.js";
 
 interface Fixture {
   root: string;
@@ -336,4 +343,78 @@ test("--no-cache rebuilds even on a hit, and refreshes the cache", async () => {
     assert.equal((await buildGraphCached(config, { cacheDir, cache: false })).cached, false);
     assert.equal((await buildGraphCached(config, { cacheDir })).cached, true);
   });
+});
+
+test("a file saved DURING the build is not cached against the old edges", async () => {
+  // The key can only be computed after the build, so a mid-build write would
+  // be stored as the stamp of edges that predate it — a hit that stays stale
+  // until something else moves. The guard is a pre-build stamp of the same
+  // set, which is only possible for a universe an earlier run established.
+  await withCache(CACHE_FILES, async ({ build, touch }) => {
+    await build();
+    touch("test/a.doctest.md"); // force the next call to rebuild
+    // Fires as soon as the event loop turns, well inside the esbuild pass.
+    setTimeout(() => touch("src/top.ts"), 0);
+    assert.equal((await build()).cached, false);
+    // The guard refused to write, so the next call has to build again.
+    assert.equal((await build()).cached, false);
+    // And once nothing is moving, caching resumes.
+    assert.equal((await build()).cached, true);
+  });
+});
+
+test("changedBetween names exactly what moved between two sweeps", () => {
+  assert.deepEqual(
+    changedBetween({
+      paths: ["a", "b", "c"],
+      before: new Map([["a", "1 2"], ["b", "3 4"], ["c", "absent"]]),
+      after: new Map([["a", "1 2"], ["b", "9 4"], ["c", "5 6"]]),
+    }),
+    ["b", "c"],
+  );
+});
+
+test("the entrypoint list is keyed as membership, not only as stamps", () => {
+  // Dropping an entrypoint whose file still exists changes no stamp in the
+  // set, so only the list itself can carry the difference.
+  const shared = {
+    aliases: {},
+    paths: ["/x/a.test.ts"],
+    stamps: new Map([["/x/a.test.ts", "1 2"]]),
+  };
+  assert.notEqual(
+    keyOf({ ...shared, entrypoints: ["/x/a.test.ts", "/x/b.test.ts"] }),
+    keyOf({ ...shared, entrypoints: ["/x/a.test.ts"] }),
+  );
+  // Order is not membership.
+  assert.equal(
+    keyOf({ ...shared, entrypoints: ["/x/b.test.ts", "/x/a.test.ts"] }),
+    keyOf({ ...shared, entrypoints: ["/x/a.test.ts", "/x/b.test.ts"] }),
+  );
+});
+
+test("the key covers the config inputs, not just the graph's files", () => {
+  const fx = fixture({ "tsconfig.json": "{}\n" });
+  try {
+    const paths = keyPaths({ ...fx.config, universe: [] });
+    const packageRoot = join(fx.root, "pkg");
+    for (const expected of [
+      join(packageRoot, "tsconfig.json"),
+      join(packageRoot, ".taprc"),
+      join(REPO_ROOT, "agent-doctest/package.json"),
+      join(REPO_ROOT, "node_modules/esbuild/package.json"),
+      join(REPO_ROOT, "bin/test-graph.ts"),
+    ]) {
+      assert.ok(paths.includes(expected), `expected ${expected} in the keyed set`);
+    }
+  } finally {
+    fx.cleanup();
+  }
+});
+
+test("a stat that fails for a reason other than absence poisons the key", () => {
+  // An absent file is a fact (it stamps as `absent`); an unreadable one is an
+  // unknown, and guessing there is how a stale graph becomes permanent.
+  assert.deepEqual(stampPaths(["/definitely/not/here.ts"]), new Map([["/definitely/not/here.ts", "absent"]]));
+  assert.equal(stampPaths(["/bad\0path.ts"]), null);
 });
