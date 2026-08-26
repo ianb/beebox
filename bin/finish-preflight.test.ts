@@ -84,6 +84,7 @@ test("a nested package owns its own paths, and its parent still owns the rest", 
     [
       "pnpm --dir callback-box/pub-worker test",
       "pnpm --dir callback-box/pub-worker typecheck",
+      "bin/smoke",
       "pnpm lint:changed",
     ],
   );
@@ -98,7 +99,12 @@ test("callback-box runs the selected set, not the whole suite", () => {
   });
   assert.deepEqual(
     commands.map((c) => c.command),
-    ["pnpm --dir callback-box test:changed", "pnpm --dir callback-box typecheck", "pnpm lint:changed"],
+    [
+      "pnpm --dir callback-box test:changed",
+      "pnpm --dir callback-box typecheck",
+      "bin/smoke",
+      "pnpm lint:changed",
+    ],
   );
   assert.ok(commands[0]?.isolate?.argv.includes("../bin/test-ledger.ts"));
 });
@@ -257,4 +263,37 @@ test("trailers are read off whole commit messages, deduped and sorted", () => {
   ]);
   assert.deepEqual(trailers.issues, ["2026-08-08-run-less-of-the-test-suite"]);
   assert.deepEqual(trailers.plans, ["change-based-test-selection"]);
+});
+
+// ── the smoke tier ──────────────────────────────────────────────────────────
+
+test("a code-related diff gets a smoke walk; a diff that ships nothing does not", () => {
+  const smokeFor = (paths: string[]): boolean =>
+    verificationCommands({
+      paths,
+      workspacePackages: PACKAGES,
+      hasScript: allScripts(),
+      skipTypecheckLint: NO_SKIP,
+    }).some((command) => command.kind === "smoke");
+
+  assert.equal(smokeFor(["callback-box/src/core/box.ts"]), true);
+  assert.equal(smokeFor(["pnpm-lock.yaml"]), true);
+  // bin/ and issues/ change nothing a running box would show, and neither
+  // ships — the deploy hook's rule and this one are deliberately identical.
+  assert.equal(smokeFor(["bin/router.ts"]), false);
+  assert.equal(smokeFor(["issues/bugs/x.md"]), false);
+});
+
+test("a docs-only diff names the smoke walk as skipped rather than dropping it", () => {
+  // Same reason the other commands are listed-and-skipped: a sheet that simply
+  // omits a step reads as "this diff never needed one".
+  const commands = verificationCommands({
+    paths: ["callback-box/docs/testing.md"],
+    workspacePackages: PACKAGES,
+    hasScript: allScripts(),
+    skipTypecheckLint: NO_SKIP,
+  });
+  const smoke = commands.find((command) => command.kind === "smoke");
+  assert.equal(smoke?.command, "bin/smoke");
+  assert.equal(smoke?.skip, "docs-only diff");
 });

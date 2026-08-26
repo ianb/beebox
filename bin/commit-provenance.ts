@@ -147,13 +147,20 @@ export function miscasedKeys(parsed: string): string[] {
 }
 
 /**
- * Every issue basename (without `.md`) under `issues/`, `closed/` included.
+ * Every issue, as basename (without `.md`) -> path relative to `issuesDir`.
+ *
  * Only real issue files count — `issues/<category>/<name>.md` and
  * `issues/closed/<category>/<name>.md` — so the queue's own prose
- * (`issues/CLAUDE.md`, `issues/closed/README.md`) can never be cited as an issue.
+ * (`issues/CLAUDE.md`, `issues/closed/README.md`) can never be cited as an
+ * issue.
+ *
+ * The basename IS an issue's identity, repo-wide: `issues/CLAUDE.md` requires
+ * it to be unique, which is why an `Issue:` trailer names one bare and why a
+ * `git mv` into `closed/` does not break a citation. That makes this map the
+ * way to find where an issue lives NOW, given only its name.
  */
-export function issueBasenames(issuesDir: string): string[] {
-  const out: string[] = [];
+export function issueFiles(issuesDir: string): Map<string, string> {
+  const out = new Map<string, string>();
   const isIssuePath = (rel: string): boolean => {
     const parts = rel.split(path.sep);
     if (parts.length === 2) return parts[0] !== "closed"; // issues/<category>/<name>.md
@@ -170,13 +177,19 @@ export function issueBasenames(issuesDir: string): string[] {
     for (const entry of entries) {
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) walk(full);
-      else if (entry.isFile() && entry.name.endsWith(".md") && isIssuePath(path.relative(issuesDir, full))) {
-        out.push(entry.name.slice(0, -3));
+      else if (entry.isFile() && entry.name.endsWith(".md")) {
+        const rel = path.relative(issuesDir, full);
+        if (isIssuePath(rel)) out.set(entry.name.slice(0, -3), rel);
       }
     }
   };
   walk(issuesDir);
   return out;
+}
+
+/** Every issue basename, `closed/` included. See {@link issueFiles}. */
+export function issueBasenames(issuesDir: string): string[] {
+  return [...issueFiles(issuesDir).keys()];
 }
 
 /** Up to three known basenames sharing the longest prefix with `name`. */

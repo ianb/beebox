@@ -32,7 +32,14 @@ about it.
 
 ## 3. Verify — `bin/finish-verify`
 Runs what the sheet named, captures output outside the worktree, re-runs each
-failing test file once in isolation, ends with `VERDICT: green|red`. **green** →
+failing test file once in isolation, ends with `VERDICT: green|red`. A
+code-related diff (the deploy hook's "deployed paths" rule) also runs
+`bin/smoke`: a real box boots and is walked in a browser, ~30s, no model turns.
+It is not flake-forgiven and there is no way to wave it through — a red smoke
+means the app does not run, which is exactly what the other tiers cannot see.
+If it reports the dev router is not answering, that is BLOCKED for the
+boxholder to start (`pnpm dev` in the main checkout), not something to work
+around. **green** →
 proceed; a named flake (fail, then pass alone at the same content hash) is green
 — name it in the report, and file no flake issue
 (`callback-box/test/careful.txt` curation is that channel). **red** → every
@@ -106,7 +113,7 @@ The workstream's isolated test1 clone: if its `keep` branch has commits the
 source test1 lacks, merge them into the source test1's `main` and push. Conflict
 → BLOCKED, both left intact. `test-setup` is disposable and never merged.
 All must hold: `git status --porcelain` empty; every post-green commit re-verified
-(`bin/finish-verify --only tests|typecheck|lint`, or a full `bin/finish-verify`
+(`bin/finish-verify --only tests|typecheck|lint|smoke`, or a full `bin/finish-verify`
 after a semantic code change; a docs-only commit needs only the pre-commit
 `doc-check`); and, private leg only, `git -C private-issues status --porcelain`
 empty (deletions count) plus the private PRIMARY checkout (`repo=` in the sheet)
