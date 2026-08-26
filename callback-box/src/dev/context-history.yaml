@@ -3919,6 +3919,62 @@ test1:
       peak: 48335
       added: 1445
       turns: 3
+  drive-three-kinds:
+    - date: 2026-08-26T22:54:09.620Z
+      boxCommit: 29c5e8307e504774ca84ab824e779848fcbe1f2a
+      repoCommit: f80e129357ba840db84358de52160e8f515dce00
+      initial: 46994
+      peak: 50721
+      added: 3727
+      turns: 3
+  drive-mount-folder:
+    - date: 2026-08-26T22:54:09.620Z
+      boxCommit: 29c5e8307e504774ca84ab824e779848fcbe1f2a
+      repoCommit: f80e129357ba840db84358de52160e8f515dce00
+      initial: 46974
+      peak: 48449
+      added: 1475
+      turns: 3
+  drive-pointer-for-pdf:
+    - date: 2026-08-26T22:54:09.620Z
+      boxCommit: 29c5e8307e504774ca84ab824e779848fcbe1f2a
+      repoCommit: f80e129357ba840db84358de52160e8f515dce00
+      initial: 46986
+      peak: 49884
+      added: 2898
+      turns: 4
+  drive-unmount-keeps-children:
+    - date: 2026-08-26T22:54:09.620Z
+      boxCommit: 29c5e8307e504774ca84ab824e779848fcbe1f2a
+      repoCommit: f80e129357ba840db84358de52160e8f515dce00
+      initial: 46980
+      peak: 49207
+      added: 2227
+      turns: 4
+  drive-url-in-chat:
+    - date: 2026-08-26T22:54:09.620Z
+      boxCommit: 29c5e8307e504774ca84ab824e779848fcbe1f2a
+      repoCommit: f80e129357ba840db84358de52160e8f515dce00
+      initial: 47015
+      peak: 49001
+      added: 1986
+      turns: 5
+  drive-link-in-chat:
+    - date: 2026-08-26T22:54:09.620Z
+      boxCommit: 29c5e8307e504774ca84ab824e779848fcbe1f2a
+      repoCommit: f80e129357ba840db84358de52160e8f515dce00
+      initial: 47021
+      peak: 51725
+      added: 4704
+      turns: 17
+  drive-trashed-child:
+    - date: 2026-08-26T22:54:09.620Z
+      boxCommit: 29c5e8307e504774ca84ab824e779848fcbe1f2a
+      repoCommit: f80e129357ba840db84358de52160e8f515dce00
+      initial: 46985
+      peak: 48284
+      added: 1299
+      turns: 5
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

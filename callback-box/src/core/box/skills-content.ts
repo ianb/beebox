@@ -303,35 +303,41 @@ END:VCALENDAR
 /** The `drive` skill: reading/editing/syncing Google Drive sheets and docs. */
 export const DRIVE_SKILL = `---
 name: drive
-description: Work with Google Drive files synced into the box — read, edit, or sync spreadsheets (.gsheet.card) and documents (.gdoc.card), or run cb drive commands. Use when a task involves a Drive-synced spreadsheet or Google Doc.
+description: Work with Google Drive content in the box — mirror a folder, sync a spreadsheet (.gsheet.card) or document (.gdoc.card), or keep a pointer to a file. Use when a task involves a Drive link, a Drive-synced file, or cb drive commands.
 ---
 
 # Google Drive
 
-Google Drive content syncs **two-way** into \`store/drive/\` (or wherever you place the card). A Drive card keeps all its data in its own **attach scope** (\`<basename>.attach/\`), so \`cb mv\` moves the card and everything with it in one step — the \`drive-id\` in the card keeps the upstream link. Don't move the pieces by hand.
+## Three kinds of Drive card
 
-## Stop or resume syncing
+- **Pointer** (\`.glink.card\`) — "this Drive item exists, here is where, here is what it's for." Nothing is copied. \`name\`/\`link\`/\`mime\` are connector-stamped; the body is yours for purpose notes.
+- **Synced file** (\`.gdoc.card\`, \`.gsheet.card\`) — content mirrored **two-way**, kept in the card's attach scope (\`<basename>.attach/\`). \`cb mv\` moves the card and everything with it; the \`drive-id\` keeps the upstream link. Don't move the pieces by hand.
+- **Mirrored folder** (\`.gfolder.card\`) — the directory the card sits in mirrors the Drive folder. Docs and Sheets become synced files, subfolders become subdirectories with their own folder card, and **every other child becomes a pointer** — a PDF, a Slides deck, an image is never copied.
 
-- **Stop one file without deleting it remotely:** run \`cb rm <card-path>\`. The card and attach scope move to \`store/trash/\`, which is a durable untracking tombstone. A folder mount will not re-create a trashed child.
-- **Resume:** restore the card and attach scope from trash, or run \`cb drive add\` for the Drive file again.
-- **Folder-mounted files:** raw hard deletion does not override the configured folder mount; the next sync discovers that child again. Use \`cb rm\` for one child, or remove the folder entry from \`config/connectors/google-drive.json\` to stop the whole folder.
+## Setting one up: the boxholder pastes a Drive link in chat
 
-## Spreadsheets (\`.gsheet.card\`)
+That is the normal path (the settings page is the other one). Use \`cb drive list <folder-url>\` to see what a folder holds before mirroring it, then:
 
-- **Find:** the card lists the title, Google link, and its tabs.
-- **Read:** each tab is a JSON file in the card's attach scope (referenced from the card). Plain cells are bare values; formula cells are \`{"f": "=SUM(A1:B1)", "v": "$42.00"}\` — both the formula and the computed result.
-- **Edit:** edit the tab's JSON and commit (for a formula cell, edit the \`f\` field). The next sync pushes to Google Sheets.
-- **Comments:** if the spreadsheet has comments, a \`<basename>.comments.json\` sidecar in the attach scope holds the full thread (referenced by \`comments.ref:\`). Read-only context.
+- "mirror this" / "keep this folder in the box" → \`cb drive mount <folder-url> <dir>\`. **There is no default directory** — propose one that fits how the box is organized and say why; if you can't tell where it belongs, ask.
+- "keep a pointer to this" / "just remember this exists" → \`cb drive link <url> <path>\`
+- one Doc or Sheet, synced two-way → \`cb drive add <url> <path>\`
 
-## Documents (\`.gdoc.card\`)
+## The directory IS the mount
 
-- **Find:** the card carries only metadata; the document body is markdown at \`attach/<basename>.md\` in its attach scope.
-- **Read / edit:** open and edit \`attach/<basename>.md\`, then commit. The next sync converts the markdown to Doc format and pushes it.
-- **Comments:** collaborative feedback is captured read-only as a \`<basename>.comments.json\` sidecar in the attach scope (content, author, timestamps, resolved status, anchored text, replies). Editing/pushing the \`.md\` does NOT write comments back upstream — a push may even orphan the upstream anchors. Read it to understand reviewer feedback; don't expect it to round-trip.
-- **Lossy content:** the card's \`lossy:\` frontmatter lists upstream features that don't survive markdown export (footnotes, embedded images, equations, suggestions, complex tables). When it's non-empty, pushing local edits will destroy them — surface the loss to the user before encouraging a push.
-- **Conflicts:** if both local and remote changed since the last sync, the card status flips to \`conflict\` and the upstream content is written to \`attach/<basename>.remote.md\`. Resolve by merging the two, deleting \`.remote.md\`, and committing.
+There is no config file — the folder card's own location is the configuration. \`cb mv\` on the card re-homes the mirror: the next sync mirrors into its new directory and the children left behind stay as ordinary cards. Move the whole *directory* and the mount travels with its children, which is usually what you want.
 
-CLI: \`cb drive inspect <url>\`, \`cb drive add <url> <path>\`, \`cb drive sync\`, \`cb drive status\`.
+- **Unmount:** \`cb drive unmount <dir-or-card>\`. Discovery stops; every child stays exactly where it is, synced ones still syncing. Nothing is deleted.
+- **Stop one file:** \`cb rm <card-path>\` — the card and attach scope move to \`store/trash/\`, a durable tombstone a mirror will not undo. Restore from trash, or \`cb drive add\` again, to resume. A child **trashed on Drive** lands there too, and the sync says so; a child *moved out* of the folder is left alone and keeps syncing.
+
+## Inside a synced file
+
+- **Sheet tabs:** each tab is a JSON file in the attach scope, referenced from the card. Plain cells are bare values; formula cells are \`{"f": "=SUM(A1:B1)", "v": "$42.00"}\` — formula and computed result. Edit the JSON (for a formula cell, the \`f\` field) and commit; the next sync pushes it.
+- **Doc body:** markdown at \`attach/<basename>.md\`. Edit it and commit, and the next sync converts and pushes it.
+- **Comments:** a \`<basename>.comments.json\` sidecar in the attach scope holds the full threads (author, timestamps, resolved status, anchored text, replies), read-only. Editing and pushing a Doc's \`.md\` does NOT write comments back upstream — a push may even orphan the upstream anchors.
+- **Lossy content:** a Doc card's \`lossy:\` frontmatter lists upstream features that don't survive markdown export (footnotes, embedded images, equations, suggestions, complex tables). When it's non-empty, pushing local edits will destroy them — surface the loss before encouraging a push.
+- **Conflicts:** when both sides changed, the card status flips to \`conflict\` and the upstream content is written to \`attach/<basename>.remote.md\`. Merge the two, delete \`.remote.md\`, commit.
+
+Also: \`cb drive inspect <url>\` (preview one item), \`cb drive sync\` (all Drive cards), \`cb drive status\` (what this box has mounted).
 `;
 
 /**

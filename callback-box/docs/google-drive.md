@@ -1,6 +1,15 @@
 # Google Drive Integration
 
-Sync Google Sheets with the box as CSV files. Two-way sync: pull from Drive, push local edits back.
+Three kinds of Drive card, three promises:
+
+- **Synced file** (`.gdoc.card` / `.gsheet.card`) -- content mirrored two-way:
+  pull from Drive, push local edits back.
+- **Mirrored folder** (`.gfolder.card`) -- the directory the card sits in
+  mirrors the Drive folder's membership.
+- **Pointer** (`.glink.card`) -- "this Drive item exists, here is where, here is
+  what it is for." Nothing is copied.
+
+Every one of them is a card; there is no mount config to edit.
 
 ## Prerequisites
 
@@ -25,6 +34,12 @@ cb drive status
 
 # Browse your spreadsheets
 cb drive list
+
+# Mirror a whole Drive folder into a directory
+cb drive mount https://drive.google.com/drive/folders/1xyz... store/drive/recipes
+
+# Keep a pointer to something the box should know about but not copy
+cb drive link https://drive.google.com/file/d/1pdf.../view store/drive/Lease
 ```
 
 ## How It Works
@@ -124,43 +139,110 @@ Edit the JSON file directly and commit. For plain cells, change the value. For f
 
 | Command | Description |
 |---------|-------------|
-| `cb drive inspect <url-or-id>` | Preview file metadata (title, tabs, owner) |
-| `cb drive add <url-or-id> <path>` | Mount a spreadsheet at a local path |
-| `cb drive sync` | Sync all mounted files |
-| `cb drive status` | Show all mounts and their state |
+| `cb drive inspect <url-or-id>` | Preview Drive metadata (title, tabs, owner) |
+| `cb drive add <url-or-id> <path>` | Sync a Doc or Sheet at a local path |
+| `cb drive mount <url-or-id> <dir>` | Mirror a Drive folder into a directory |
+| `cb drive link <url-or-id> <path>` | Keep a pointer to any Drive item |
+| `cb drive unmount <dir-or-card>` | Stop mirroring a folder (children stay) |
+| `cb drive sync` | Sync every Drive card |
+| `cb drive status` | Show every Drive card, its kind, and its state |
 | `cb drive list [folder-url]` | Browse spreadsheets (or files in a folder) |
+
+`cb drive status` names each card's kind -- `file` (synced two-way), `folder`
+(mirrored), or `link` (a pointer, nothing copied) -- and for a folder mount also
+prints its last sync outcome and time.
 
 The `<url-or-id>` argument accepts:
 - Full Google Sheets URL: `https://docs.google.com/spreadsheets/d/FILE_ID/edit`
 - Full Drive URL: `https://drive.google.com/file/d/FILE_ID/view`
+- Drive folder URL: `https://drive.google.com/drive/folders/FOLDER_ID`
 - Drive open URL: `https://drive.google.com/open?id=FILE_ID`
 - Bare file ID
 
 ## Folder Mounts
 
-To auto-sync all spreadsheets in a Drive folder, add a folder mount to `config/connectors/google-drive.json`:
+A folder mount is a **card**, not config. `cb drive mount <folder-url> <dir>`
+writes a `.gfolder.card` inside `<dir>` and mirrors the Drive folder there
+immediately:
 
-```json
-{
-  "folders": [
-    { "driveFolderId": "FOLDER_ID", "localPath": "store/drive/shared" }
-  ]
-}
+```bash
+cb drive mount https://drive.google.com/drive/folders/FOLDER_ID store/drive/recipes
 ```
 
-New spreadsheets appearing in the folder are automatically pulled on sync.
+The box's settings page runs the same operation over tRPC
+(`webapp/trpc/routers/drive.ts`, `components/settings/DriveSection.tsx`): it
+lists every mount with its status and child counts, and its "Mirror a folder" /
+"Add a pointer" forms are `mount` and `link` — so the page and the CLI cannot
+hold different ideas of what a mount is.
+
+```
+store/drive/recipes/Recipes.gfolder.card      # the mount
+store/drive/recipes/Sourdough.gdoc.card       # a Doc child, synced two-way
+store/drive/recipes/Scan_2024.glink.card      # a PDF child, pointed at
+store/drive/recipes/desserts/Desserts.gfolder.card   # a subfolder, mirrored
+```
+
+**The directory is the mount.** There is no mount table -- the card's own
+location is the configuration. `<dir>` is required and never guessed. One
+directory holds one mount; a second `mount` into the same directory is refused,
+as is mounting a folder some other live card already claims. `cb mv` of the
+directory moves the mount with its children; `cb mv` of the card alone re-homes
+the mirror to the card's new directory.
+
+**What the mirror promises.** Membership follows Drive one-way, on every sync:
+Docs and Sheets become synced cards, subfolders become subdirectories with their
+own `.gfolder.card`, shortcuts resolve to their target, and everything else --
+PDFs, Slides, images -- becomes a `.glink.card` **pointer**: name, mime type,
+and link, with nothing copied and a body for whoever wants to write down what it
+is for. Recursion is bounded (8 levels, 500 folders per pass) and the folder
+card carries `status` / `last-sync` / `error` from the last pass.
+
+**Pointers on their own.** `cb drive link <url> <path>` writes a pointer to any
+Drive item -- folders included -- with `origin: manual` (a mirror's pointers
+carry `origin: mirror`). The path gets `.glink.card` appended if you leave it
+off. The connector re-stamps a pointer's Drive metadata on each sync and never
+touches its body.
+
+**Unmounting.** `cb drive unmount <dir-or-card>` is exactly `cb rm` on the mount
+card: it moves to `store/trash/` and **every child stays where it is** -- synced
+cards keep syncing on their own, pointers keep pointing, nothing is deleted. The
+trashed card also acts as a tombstone, so a parent mirror will not re-create the
+mount. Pass either the mount directory or the card itself; a directory holding
+two mount cards is refused rather than guessed at.
+
+**A child trashed on Drive** has its card moved to `store/trash/` too. A child
+that merely left the folder (moved elsewhere, or access lost) is left alone and
+keeps syncing; the sync reports it as `not-in-folder`.
+
+### Automatic conversion from the old config
+
+Boxes set up before folder mounts were cards carry a `folders` array in
+`config/connectors/google-drive.json`. The **first sync converts it**: each entry
+becomes a `.gfolder.card` in its `localPath` (mirrored on the same pass), and the
+config is rewritten without the entry, in the same commit. It is idempotent, and
+nothing needs to be run by hand.
+
+One case is refused rather than converted: an entry whose `localPath` already
+holds a `.gfolder.card` for a *different* Drive folder. That entry is logged and
+left in the config -- converting it would put two mirrors in one directory --
+until someone trashes the card or repoints the entry.
 
 ## Architecture
 
 The connector uses a **type handler registry** (`drive-types.ts`) so new file types can be added later (Google Docs as markdown, regular file downloads, etc.) without changing the core connector logic.
 
 Current handlers:
-- **Sheets** (`drive-handler-sheets.ts`) -- exports as CSV with formulas
+- **Sheets** (`drive-handler-sheets.ts`) -- exports as JSON per tab, with formulas
+- **Docs** (`drive-handler-docs.ts`) -- exports as markdown
+
+A Drive item with no handler is not an error: the folder mirror emits a
+`.glink.card` pointer for it (`schemas/glink.tsx`), and a folder mount itself is
+a `.gfolder.card` (`schemas/gfolder.ts`) driven by `drive-folder-sync.ts`.
 
 ## Limitations
 
-- **Google Docs** not yet supported (planned: export as markdown)
-- **Regular files** (PDFs, images) not yet supported (planned: direct download)
+- **Regular files** (PDFs, images) are pointed at, not downloaded -- a
+  `.glink.card` records what and where, and nothing is copied
 - **No new file creation** -- the connector only syncs existing Drive files
 - **Export size** -- Google Sheets API has a 10MB response limit per request
 - **Comments/formatting** -- JSON export preserves computed values but not formatting or comments. Edit in Google Sheets for formatting; edit JSON for data.

@@ -78,14 +78,16 @@ export function createFakeGoogleDrive(
     },
 
     async listFiles(folderId) {
+      // Mirrors the real query's `trashed = false`: a trashed child drops out
+      // of its folder listing while `getFile` still reports it.
       return fake.files.filter(
-        (f) => f.parents && f.parents.includes(folderId),
+        (f) => !f.trashed && f.parents !== undefined && f.parents.includes(folderId),
       );
     },
 
     async listSpreadsheets() {
       return fake.files.filter(
-        (f) => f.mimeType === "application/vnd.google-apps.spreadsheet",
+        (f) => !f.trashed && f.mimeType === "application/vnd.google-apps.spreadsheet",
       );
     },
 
@@ -153,7 +155,15 @@ export function createFakeGoogleDrive(
       const lines: string[] = [];
       lines.push("files:");
       for (const file of fake.files.toSorted((a, b) => a.id.localeCompare(b.id))) {
-        lines.push(`  ${file.id} "${file.name}" ${file.mimeType} modified=${file.modifiedTime}`);
+        const flags = [
+          ...(file.trashed ? ["trashed"] : []),
+          ...(file.parents ? [`parents=${file.parents.join(",")}`] : []),
+          ...(file.shortcutDetails ? [`shortcutTo=${file.shortcutDetails.targetId}`] : []),
+        ];
+        const suffix = flags.length > 0 ? ` ${flags.join(" ")}` : "";
+        lines.push(
+          `  ${file.id} "${file.name}" ${file.mimeType} modified=${file.modifiedTime}${suffix}`,
+        );
       }
       lines.push("spreadsheets:");
       for (const [id, sheet] of [...fake.spreadsheets].toSorted(([a], [b]) => a.localeCompare(b))) {

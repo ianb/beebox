@@ -1,9 +1,14 @@
-# Connector config mutations: calendar / drive / gmail
+# Connector config mutations: calendar / gmail, and Drive's absent one
 
-Three config-write mutations that persist a connector's JSON config and commit
-it: `calendar.updateConfig`, `drive.updateConfig`, and `admin.updateGmailConfig`.
-Each writes the file, commits exactly that path via `stageAndCommitPaths`, and
-returns the saved shape. Gmail is an `ownerProcedure`; the others are public.
+Two config-write mutations that persist a connector's JSON config and commit it:
+`calendar.updateConfig` and `admin.updateGmailConfig`. Each writes the file,
+commits exactly that path via `stageAndCommitPaths`, and returns the saved
+shape. Gmail is an `ownerProcedure`; calendar is public.
+
+Drive has no such mutation, on purpose — a Drive mount is a card, so there is no
+config for a settings page to write. The Drive section here pins that; the
+mount-writing procedures that DO exist are covered in
+`trpc-drive-mounts.doctest.md`.
 
 ```ts setup
 import { appRouter } from "../../src/webapp/trpc/router.js";
@@ -80,37 +85,42 @@ JSON.stringify((await simpleGit(box.root).status()).not_added)
 await box.cleanup();
 ```
 
-## drive.updateConfig persists folder mounts, and empty input clears them
+## drive has a config reader and no config writer
 
-Passing `folders` stores them; passing nothing writes an empty config (no folder
-mounts). A folder mount missing `localPath` is rejected by Zod.
+A Drive mount is a `.gdoc.card` / `.gsheet.card` / `.gfolder.card` /
+`.glink.card` — the card's existence is the configuration. `drive.config` still
+reads the connector file, because a box set up before folder mounts were cards
+carries a legacy `folders` array there until its next sync converts it; but
+there is nothing to write, so `drive.updateConfig` does not exist.
 
 ```ts
 const box = await makeTmpBox({ git: true });
 const c = caller(box.root);
 
-const res = await c.drive.updateConfig({ folders: [{ driveFolderId: "abc", localPath: "sheets/x" }] });
-JSON.stringify(res)
-=> {"success":true}
-
-JSON.stringify(await readJson(box, "config/connectors/google-drive.json"))
+await box.write(
+  "config/connectors/google-drive.json",
+  JSON.stringify({ folders: [{ driveFolderId: "abc", localPath: "sheets/x" }] }),
+);
+JSON.stringify(await c.drive.config())
 => {"folders":[{"driveFolderId":"abc","localPath":"sheets/x"}]}
-
-(await getLog(box.root, 1))[0].subject
-=> Update Drive sync config
 ```
 
-```ts continue
-// No folders → empty config object.
-await c.drive.updateConfig({});
-JSON.stringify(await readJson(box, "config/connectors/google-drive.json"))
-=> {}
-```
+A config file that exists but does not parse is an error, never an empty
+config — reading it as "no folder mounts" would silently drop the mounts still
+owed a conversion.
 
 ```ts continue
-// A malformed folder mount (missing localPath) is refused at input validation.
-await code(c.drive.updateConfig({ folders: [{ driveFolderId: "x" }] }))
-=> BAD_REQUEST
+await box.write("config/connectors/google-drive.json", "{oops");
+await code(c.drive.config())
+=> INTERNAL_SERVER_ERROR
+```
+
+The router writes mounts — as cards, through the same operations `cb drive
+mount` / `link` / `unmount` use — but it never writes connector config.
+
+```ts continue
+JSON.stringify(Object.keys(appRouter._def.procedures).filter((name) => name.startsWith("drive.")).sort())
+=> ["drive.config","drive.link","drive.mount","drive.mounts","drive.syncFolder","drive.unmount"]
 ```
 
 ```ts cleanup

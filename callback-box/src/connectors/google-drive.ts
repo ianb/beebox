@@ -1,41 +1,44 @@
 /**
- * Google Drive connector — syncs Drive files with the box filesystem.
+ * Google Drive connector — syncs Drive with the box filesystem.
  *
- * Two sync sources:
- * 1. Card-based: globs for *.gsheet.card (and future types) anywhere in the box.
- *    The card's drive-id attribute IS the config — no separate mapping needed.
- * 2. Folder mounts: config/connectors/google-drive.json lists Drive folders to auto-sync.
- *    New files in mounted folders get cards created automatically.
+ * Everything is card-based: a card's `drive-id` IS the configuration, and its
+ * card type says what the box promises about the Drive item. Three kinds,
+ * dispatched on in `sync()`:
+ *
+ * - **file** (`.gdoc.card` / `.gsheet.card`) — content mirrored two-way.
+ * - **folder** (`.gfolder.card`) — the directory the card sits in mirrors the
+ *   Drive folder's membership (`drive-folder-sync.ts`).
+ * - **link** (`.glink.card`) — a pointer; only its Drive metadata is re-stamped.
  *
  * Does NOT create new documents on Drive — only pulls and pushes edits.
  */
 
-import * as fs from "node:fs/promises";
-import * as path from "node:path";
-import { errnoCode, errorMessage } from "../lib/error-guards.js";
+import { errorMessage } from "../lib/error-guards.js";
 import type { Connector, SyncResult } from "./index.js";
 import { registerConnector } from "./index.js";
 import { getGoogleAuth } from "./google-auth.js";
 import { isGoogleServiceAllowed } from "../core/box/config.js";
 import { loadDriveConfig } from "./drive-config.js";
-import { loadTransientState } from "./transient-state.js";
+import { convertConfigFolders } from "./drive-folder-convert.js";
 import {
-  DEFAULT_DRIVE_STATE,
   commitDriveStateDelta,
+  loadDriveState,
   type DriveTransientState,
 } from "./google-drive-state.js";
 import { stageAndCommitPaths } from "../lib/git.js";
 import { createGoogleAuthService } from "../services/google-auth.js";
 import { createGoogleDriveService } from "../services/google-drive.js";
 import type { GoogleDriveService } from "../services/google-drive.js";
-import { getHandlerForMimeType, getAllDriveHandlers } from "./drive-types.js";
-import { safeFilename } from "./chat-utils.js";
-import { attachDirFor } from "../shared/attach-path.js";
-import { driveIdFromCardContent, findDriveCardTracking } from "./google-drive-tracking.js";
+import { getAllDriveHandlers } from "./drive-types.js";
+import { findDriveCardTracking, type TrackedDriveCard } from "./google-drive-tracking.js";
+import { stampGlinkCard } from "./drive-card-stamp.js";
+import { syncDriveFile } from "./drive-file-sync.js";
+import { syncFolderCard } from "./drive-folder-sync.js";
+import { createFolderSyncDeps } from "./drive-sync-deps.js";
+import { assertNever } from "../lib/invariant.js";
+import { withDriveMirrorLock } from "./drive-lock.js";
 
 // Ensure handlers are registered
-import "./drive-handler-sheets.js";
-import "./drive-handler-docs.js";
 
 // State types + the delta-merging state writer live in the sibling state-IO
 // module; re-export the surface CLI callers (`cli/commands/drive.ts`) import.
@@ -43,16 +46,6 @@ export {
   emptyFileState,
   type DriveTransientState,
 } from "./google-drive-state.js";
-
-/** Read a file, or `null` when it does not exist. Other errors propagate. */
-async function readIfPresent(filePath: string): Promise<string | null> {
-  try {
-    return await fs.readFile(filePath, "utf-8");
-  } catch (error: unknown) {
-    if (errnoCode(error) === "ENOENT") return null;
-    throw error;
-  }
-}
 
 // ─── Connector ──────────────────────────────────────────────────────────────
 
@@ -83,6 +76,15 @@ class GoogleDriveConnector implements Connector {
   }
 
   async sync(): Promise<SyncResult> {
+    // One writer at a time over the whole mirror span: `cb drive mount` from a
+    // chat agent runs in another process and would otherwise discover, create,
+    // and push the same newly-listed child this pass is handling. Taken here,
+    // outside everything, so the git commits below nest INSIDE it — that
+    // ordering is the one the two locks are safe in (see drive-lock.ts).
+    return withDriveMirrorLock(this.boxRoot, () => this.syncUnderLock());
+  }
+
+  private async syncUnderLock(): Promise<SyncResult> {
     // Skip policy check when a fake service is injected (tests)
     if (!this.injectedService) {
       const allowed = await isGoogleServiceAllowed(this.boxRoot, "drive");
@@ -101,11 +103,7 @@ class GoogleDriveConnector implements Connector {
       };
     }
 
-    const state = await loadTransientState<DriveTransientState>({
-      boxRoot: this.boxRoot,
-      connectorName: "google-drive",
-      defaultValue: DEFAULT_DRIVE_STATE,
-    });
+    const state = await loadDriveState(this.boxRoot);
     // Baseline for the end-of-sync delta merge: which files THIS sync changed
     // is `state` (mutated in place below) diffed against this snapshot. Deep
     // copy so the in-place mutation doesn't move the baseline underneath us.
@@ -119,7 +117,23 @@ class GoogleDriveConnector implements Connector {
     // so a failure that never lands here is a silent failure.
     const failures: string[] = [];
 
-    // 1. Find live cards plus the Drive IDs retained by committed trash cards.
+    // 1. Convert any legacy `folders` config into mount cards FIRST, so a
+    //    converted mount is scanned and mirrored on this same pass.
+    const configPaths: string[] = [];
+    const config = await loadDriveConfig(this.boxRoot);
+    if (config.ok) {
+      const conversion = await convertConfigFolders({ boxRoot: this.boxRoot, config: config.value });
+      created.push(...conversion.created);
+      if (conversion.configPath !== null) configPaths.push(conversion.configPath);
+    } else {
+      // A config file that exists but does not parse is never read as "no
+      // folder mounts": that would silently drop the mounts it still owes a
+      // conversion, and the box would look correctly empty while it wasn't.
+      console.error(`[google-drive] ${config.error}`);
+      failures.push(config.error);
+    }
+
+    // 2. Find live cards plus the Drive IDs retained by committed trash cards.
     const tracking = await findDriveCardTracking(this.boxRoot);
 
     // Two cards claiming one Drive ID are an ambiguous working copy: state is
@@ -132,30 +146,48 @@ class GoogleDriveConnector implements Connector {
       );
     }
 
-    // 2. Sync each card
+    // 3. Sync each tracked card, dispatching on which kind of Drive card it
+    //    is. Folder cards are collected rather than synced here: a mirror pass
+    //    descends into subfolders itself, and the whole pass shares one
+    //    cycle guard and recursion budget.
+    const folderCards: TrackedDriveCard[] = [];
     for (const card of tracking.liveCards) {
       try {
-        const result = await this.syncFile({
-          driveId: card.driveId,
-          cardPath: card.absPath,
-          service,
-          state,
-        });
-        created.push(...result.created);
-        updated.push(...result.updated);
-        pushed.push(...result.pushed);
+        switch (card.kind) {
+          case "file": {
+            const result = await syncDriveFile({
+              driveId: card.driveId,
+              cardPath: card.absPath,
+              boxRoot: this.boxRoot,
+              service,
+              state,
+            });
+            created.push(...result.created);
+            updated.push(...result.updated);
+            pushed.push(...result.pushed);
+            break;
+          }
+          case "link": {
+            const file = await service.getFile(card.driveId);
+            if (await stampGlinkCard(card.absPath, file)) updated.push(card.relPath);
+            break;
+          }
+          case "folder":
+            folderCards.push(card);
+            break;
+          default:
+            assertNever(card.kind);
+        }
       } catch (err) {
         failures.push(`Sync failed for ${card.relPath}: ${errorMessage(err)}`);
       }
     }
 
-    // 3. Folder mounts — discover new files
-    const config = await loadDriveConfig(this.boxRoot);
-    const claimedDriveIds = new Set([
-      ...tracking.liveCards.map((card) => card.driveId),
-      ...tracking.duplicates.map((duplicate) => duplicate.driveId),
-      ...tracking.trashedDriveIds,
-    ]);
+    // 4. Folder mounts — every `.gfolder.card`, mirroring into its own
+    // directory, which is read from where the card sits when its turn comes. A
+    // card moved by `cb mv` mid-pass therefore mirrors into one directory this
+    // pass and another the next; the children left behind are ordinary synced
+    // cards and pointers, so the box is never wrong, only briefly untidy.
     // A card we could not read may be the trash tombstone that suppresses a
     // folder child. Discovery would recreate the deleted card AND wipe its
     // retained hashes, so it fails closed while any local identity is unknown.
@@ -163,21 +195,23 @@ class GoogleDriveConnector implements Connector {
       failures.push(
         `Unreadable Drive card(s), folder discovery skipped: ${tracking.unreadable.join(", ")}`,
       );
-    } else if (config.folders) {
-      for (const folder of config.folders) {
+    } else {
+      const deps = createFolderSyncDeps({ boxRoot: this.boxRoot, service, state, tracking });
+      for (const card of folderCards) {
         try {
-          const newFiles = await this.syncFolder({
-            folder,
-            existingDriveIds: claimedDriveIds,
-            service,
-            state,
-          });
-          created.push(...newFiles.created);
-          updated.push(...newFiles.updated);
-          pushed.push(...newFiles.pushed);
-          failures.push(...newFiles.failures);
+          const folder = await syncFolderCard(
+            { driveId: card.driveId, cardPath: card.absPath, depth: 0 },
+            deps,
+          );
+          created.push(...folder.created);
+          updated.push(...folder.updated);
+          pushed.push(...folder.pushed);
+          failures.push(...folder.failures);
+          // Not failures — a child that left the mirror, or a recursion cap.
+          // Absorbing them silently is exactly what the mirror must not do.
+          for (const note of folder.notes) console.warn(`[google-drive] ${card.relPath}: ${note}`);
         } catch (err) {
-          failures.push(`Folder sync failed for ${folder.localPath}: ${errorMessage(err)}`);
+          failures.push(`Folder sync failed for ${card.relPath}: ${errorMessage(err)}`);
         }
       }
     }
@@ -195,7 +229,8 @@ class GoogleDriveConnector implements Connector {
     // Stage and commit if anything changed — scoped to exactly the paths this
     // sync produced (never a bare commit that could sweep a concurrent
     // mutator's staged files).
-    const allChanged = [...created, ...updated, ...pushed];
+    // The rewritten config rides in the same commit as the cards it became.
+    const allChanged = [...new Set([...created, ...updated, ...pushed, ...configPaths])];
     if (allChanged.length > 0) {
       const parts: string[] = [];
       if (created.length > 0) parts.push(`${created.length} new`);
@@ -214,130 +249,6 @@ class GoogleDriveConnector implements Connector {
       ...(pushed.length > 0 ? { pushed } : {}),
       ...(failures.length > 0 ? { error: failures.join("; ") } : {}),
     };
-  }
-
-  private async syncFile(opts: {
-    driveId: string;
-    cardPath: string;
-    service: GoogleDriveService;
-    state: DriveTransientState;
-  }): Promise<{ created: string[]; updated: string[]; pushed: string[] }> {
-    const { driveId, cardPath, service, state } = opts;
-
-    const file = await service.getFile(driveId);
-    const handler = getHandlerForMimeType(file.mimeType);
-    if (!handler) {
-      console.warn(`[google-drive] No handler for ${file.mimeType} (${file.name})`);
-      return { created: [], updated: [], pushed: [] };
-    }
-
-    // Initialize state for this file
-    if (!state.files[driveId]) {
-      state.files[driveId] = {
-        contentHashes: {},
-        lastModified: "",
-        extra: {},
-      };
-    }
-    const fileState = state.files[driveId];
-
-    const localDir = attachDirFor(cardPath);
-
-    const isNew = fileState.lastModified === "";
-
-    // Push local changes first
-    const pushResult = await handler.push({
-      file, localDir, cardPath, boxRoot: this.boxRoot, service, state: fileState,
-    });
-
-    // Then pull remote changes
-    const pullResult = await handler.pull({
-      file, localDir, cardPath, boxRoot: this.boxRoot, service, state: fileState,
-    });
-
-    const created = isNew && pullResult.changed ? pullResult.written : [];
-    const updated = !isNew && pullResult.changed ? pullResult.written : [];
-
-    return {
-      created,
-      updated,
-      pushed: pushResult.pushed,
-    };
-  }
-
-  private async syncFolder(opts: {
-    folder: { driveFolderId: string; localPath: string };
-    existingDriveIds: Set<string>;
-    service: GoogleDriveService;
-    state: DriveTransientState;
-  }): Promise<{
-    created: string[];
-    updated: string[];
-    pushed: string[];
-    failures: string[];
-  }> {
-    const { folder, existingDriveIds, service, state } = opts;
-
-    const files = await service.listFiles(folder.driveFolderId);
-    const created: string[] = [];
-    const updated: string[] = [];
-    const pushed: string[] = [];
-    const failures: string[] = [];
-
-    for (const file of files) {
-      // Skip files we already have cards for
-      if (existingDriveIds.has(file.id)) continue;
-
-      const handler = getHandlerForMimeType(file.mimeType);
-      if (!handler) continue;
-
-      // Create card for new file
-      const safeName = safeFilename(file.name);
-      const cardPath = path.join(
-        this.boxRoot,
-        folder.localPath,
-        `${safeName}.${handler.cardType}.card`,
-      );
-
-      // A card may already occupy the derived path. Two remote children can
-      // share one safe name, so "occupied" is not necessarily "already mine":
-      // compare the occupant's Drive ID before assuming anything.
-      const occupant = await readIfPresent(cardPath);
-      if (occupant !== null) {
-        const occupantId = driveIdFromCardContent(occupant);
-        if (occupantId === file.id) {
-          // Benign re-mount: the same file, already carded at this path.
-          existingDriveIds.add(file.id);
-          continue;
-        }
-        const relCardPath = path.relative(this.boxRoot, cardPath);
-        failures.push(
-          occupantId === null
-            ? `Drive file ${file.id} ("${file.name}") maps to ${relCardPath}, which holds a card with no readable drive-id`
-            : `Drive file ${file.id} ("${file.name}") maps to ${relCardPath}, already claimed by drive-id ${occupantId}`,
-        );
-        continue;
-      }
-
-      // Discovery after a hard delete is a fresh mount. Retained transient
-      // hashes describe attachment files that no longer exist; keeping them
-      // would make the handlers mistake the missing files for local edits and
-      // recreate only the card with dangling attach refs.
-      delete state.files[file.id];
-      const result = await this.syncFile({
-        driveId: file.id,
-        cardPath,
-        service,
-        state,
-      });
-
-      created.push(...result.created);
-      updated.push(...result.updated);
-      pushed.push(...result.pushed);
-      existingDriveIds.add(file.id);
-    }
-
-    return { created, updated, pushed, failures };
   }
 }
 

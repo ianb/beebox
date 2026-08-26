@@ -8,6 +8,13 @@
 import ky, { type KyInstance } from "ky";
 import type { GoogleAuthService } from "./google-auth.js";
 import { validateResponse } from "./connector-response.js";
+import type {
+  DriveComment,
+  DriveFile,
+  DocumentStructure,
+  GoogleDriveService,
+  SpreadsheetMetadata,
+} from "./google-drive-types.js";
 import {
   driveGetFileSchema,
   driveFileListSchema,
@@ -19,116 +26,41 @@ import {
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
-export interface DriveFile {
-  id: string;
-  name: string;
-  mimeType: string;
-  modifiedTime: string;
-  owners?: Array<{ emailAddress: string; displayName?: string }>;
-  parents?: string[];
-  webViewLink?: string;
-}
-
-export interface SheetProperties {
-  sheetId: number;
-  title: string;
-}
-
-export interface SpreadsheetMetadata {
-  spreadsheetId: string;
-  properties: { title: string };
-  sheets: Array<{ properties: SheetProperties }>;
-}
-
-export interface DriveComment {
-  id: string;
-  content: string;
-  author?: { displayName?: string; emailAddress?: string };
-  resolved?: boolean;
-}
-
-/**
- * Narrow shape of the Google Docs API document resource.
- *
- * Only the fields we actually inspect for lossy-content detection.
- * `body.content` is recursive — `table` and `tableOfContents` can themselves
- * contain structural elements — but we only walk the top-level paragraphs
- * for the features we care about (text run equations, suggestion ranges).
- * Other lossy features (footnotes, inline objects) are exposed as keyed
- * dictionaries at the document root.
- */
-export interface DocumentTextRun {
-  content?: string;
-  textStyle?: Record<string, unknown>;
-  suggestedInsertionIds?: string[];
-  suggestedDeletionIds?: string[];
-}
-
-export interface DocumentParagraphElement {
-  equation?: unknown;
-  inlineObjectElement?: { inlineObjectId: string };
-  footnoteReference?: { footnoteId: string };
-  textRun?: DocumentTextRun;
-}
-
-export interface DocumentStructuralElement {
-  paragraph?: { elements?: DocumentParagraphElement[] };
-  table?: unknown;
-}
-
-export interface DocumentStructure {
-  documentId: string;
-  title: string;
-  revisionId: string;
-  body?: { content?: DocumentStructuralElement[] };
-  inlineObjects?: Record<string, unknown>;
-  footnotes?: Record<string, unknown>;
-}
-
-// ─── Service interface ──────────────────────────────────────────────────────
-
-export interface GoogleDriveService {
-  /** Get file metadata from Drive API */
-  getFile(fileId: string): Promise<DriveFile>;
-
-  /** List files in a folder */
-  listFiles(folderId: string): Promise<DriveFile[]>;
-
-  /** List spreadsheets accessible to the user */
-  listSpreadsheets(): Promise<DriveFile[]>;
-
-  /** Get spreadsheet metadata (title, sheet tabs) */
-  getSpreadsheet(fileId: string): Promise<SpreadsheetMetadata>;
-
-  /** Get cell values from a sheet tab (with formulas by default) */
-  getSheetValues(fileId: string, opts: {
-    sheetTitle: string;
-    valueRenderOption?: string;
-  }): Promise<string[][]>;
-
-  /** Update cell values in a sheet tab */
-  updateSheetValues(fileId: string, opts: {
-    sheetTitle: string;
-    values: string[][];
-  }): Promise<void>;
-
-  /** Export a Drive file as a given mimeType (e.g. text/markdown for a Doc) */
-  exportFile(fileId: string, mimeType: string): Promise<string>;
-
-  /** Replace the content of a Drive file via media upload (auto-converts mimeType) */
-  updateFileContent(fileId: string, opts: {
-    mimeType: string;
-    content: string;
-  }): Promise<void>;
-
-  /** Fetch the structured Docs API representation of a Google Doc */
-  getDocument(fileId: string): Promise<DocumentStructure>;
-
-  /** List comments on a Drive file */
-  listComments(fileId: string): Promise<DriveComment[]>;
-}
+// The data shapes and the service interface live in the leaf module both this
+// real implementation and the in-memory fake import; re-exported here so the
+// long-standing `services/google-drive.js` import path keeps working.
+export type {
+  DriveFile,
+  SheetProperties,
+  SpreadsheetMetadata,
+  DriveComment,
+  DriveCommentReply,
+  DocumentTextRun,
+  DocumentParagraphElement,
+  DocumentStructuralElement,
+  DocumentStructure,
+  GoogleDriveService,
+} from "./google-drive-types.js";
 
 // ─── Real implementation ────────────────────────────────────────────────────
+
+/**
+ * The `files` resource fields every Drive read here asks for. Requested
+ * explicitly because Drive returns only what is named — an unrequested
+ * `trashed` comes back absent, not `false`.
+ */
+const DRIVE_FILE_FIELDS =
+  "id,name,mimeType,modifiedTime,trashed,owners(emailAddress,displayName),parents,webViewLink," +
+  "shortcutDetails(targetId,targetMimeType)";
+
+/**
+ * Shared-drive params. Without them a file or folder that lives on a shared
+ * drive is invisible: `getFile` 404s and `listFiles` returns an empty page —
+ * a silent wrong answer, not an error.
+ * https://developers.google.com/workspace/drive/api/guides/enable-shareddrives
+ */
+const SHARED_DRIVE_GET = { supportsAllDrives: "true" };
+const SHARED_DRIVE_LIST = { supportsAllDrives: "true", includeItemsFromAllDrives: "true" };
 
 function createAuthedApi(prefixUrl: string, auth: GoogleAuthService): KyInstance {
   return ky.create({
@@ -155,9 +87,7 @@ export function createGoogleDriveService(auth: GoogleAuthService): GoogleDriveSe
     async getFile(fileId) {
       const data = await driveApi
         .get(`files/${encodeURIComponent(fileId)}`, {
-          searchParams: {
-            fields: "id,name,mimeType,modifiedTime,owners(emailAddress,displayName),parents,webViewLink",
-          },
+          searchParams: { fields: DRIVE_FILE_FIELDS, ...SHARED_DRIVE_GET },
         })
         .json<DriveFile>();
       validateResponse(data, { schema: driveGetFileSchema, service: "drive", operation: "getFile" });
@@ -170,8 +100,9 @@ export function createGoogleDriveService(auth: GoogleAuthService): GoogleDriveSe
       do {
         const searchParams: Record<string, string> = {
           q: `'${folderId}' in parents and trashed = false`,
-          fields: "nextPageToken,files(id,name,mimeType,modifiedTime,owners(emailAddress,displayName),parents,webViewLink)",
+          fields: `nextPageToken,files(${DRIVE_FILE_FIELDS})`,
           pageSize: "100",
+          ...SHARED_DRIVE_LIST,
         };
         if (pageToken) searchParams["pageToken"] = pageToken;
         const data = await driveApi
@@ -190,8 +121,9 @@ export function createGoogleDriveService(auth: GoogleAuthService): GoogleDriveSe
       do {
         const searchParams: Record<string, string> = {
           q: "mimeType='application/vnd.google-apps.spreadsheet' and trashed = false",
-          fields: "nextPageToken,files(id,name,mimeType,modifiedTime,owners(emailAddress,displayName),parents,webViewLink)",
+          fields: `nextPageToken,files(${DRIVE_FILE_FIELDS})`,
           pageSize: "100",
+          ...SHARED_DRIVE_LIST,
         };
         if (pageToken) searchParams["pageToken"] = pageToken;
         const data = await driveApi

@@ -11,9 +11,21 @@ export interface DriveFile {
   name: string;
   mimeType: string;
   modifiedTime: string;
+  /**
+   * Whether Drive has this item in the owner's trash. `listFiles` filters
+   * `trashed = false`, so a child that vanishes from a folder listing is only
+   * distinguishable from a *moved* child by a `getFile` that reports this.
+   */
+  trashed: boolean;
   owners?: Array<{ emailAddress: string; displayName?: string }>;
   parents?: string[];
   webViewLink?: string;
+  /**
+   * Present only on `application/vnd.google-apps.shortcut` items. A folder
+   * listing returns the shortcut, never the target, so a consumer that means
+   * the target has to follow this itself.
+   */
+  shortcutDetails?: { targetId: string; targetMimeType?: string };
 }
 
 export interface SheetProperties {
