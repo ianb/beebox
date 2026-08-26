@@ -5,7 +5,21 @@ area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder wants a steady session-on indicator
 priority: normal
+resolution: superseded
 ---
+
+## Closed (2026-08-26)
+
+Superseded by `de518be54`, which added a general `useWorking` hook to
+`DocumentTitle.tsx` — the tab title now shows a spinning glyph while anything
+(today: the chat's `isStreaming`) is working. That covers exactly the one
+window this issue's 2026-08-26 update narrowed things down to: mic released,
+agent thinking, no TTS yet. The original "listening" framing was already
+judged redundant with the browser's own mic/speaker indicators (see the
+2026-08-26 note above); the remaining "session is working" gap is now
+covered, from a general-purpose hook rather than the voice-specific one this
+issue imagined.
+
 
 > **Job to be done:** *When I've got the box open in a background tab and it's
 > actively listening (voice input) or talking (TTS), I want a steady at-a-glance
@@ -67,3 +81,36 @@ question attached (mic armed? turn streaming? voice mode on at all?), and the
 whole point of the issue is that the answer must not flicker. Nothing about
 titling constrains it, so bundling it in would have meant guessing the
 semantics.
+
+## The premise is mostly wrong (2026-08-26)
+
+Checked against the code and the browser rather than the original assumption.
+The boxholder's objection — "if it's actually recording, we don't need
+anything" — holds, and Chrome shows TTS in the same tab-strip spot as the mic.
+So for both states the issue names, the browser already answers, on the tab,
+in one place, which is exactly the background-tab case. A "listening" marker of
+our own would duplicate it.
+
+The issue's stated reason for building one — that the indicators *flicker*
+between modalities — is not a good reason either. They alternate because the
+mic really is released while the box talks: `composerMachine`'s
+`pausedForSpeech` cancels the mic and resumes it on `SPEECH_DONE`, and
+`lib/audio/recorder.ts` stops the tracks, so `getUserMedia` genuinely ends.
+Chrome is reporting the truth.
+
+**What is left is a different feature.** There is one window neither indicator
+covers: mic released, agent thinking, TTS not started yet. Nothing shows, and
+that is precisely when you would wonder whether it heard you. That is a
+*session-is-working* signal, not a listening one — and whether it earns a place
+in the title depends on how long that gap actually feels in use.
+
+If it is ever built, the hard half is already done: `voiceModeActive`
+(`components/chat/InteractiveChat-voice.ts:342`) is the steady
+"voice conversation in progress" boolean this issue asks someone to derive, and
+it already drives the wake lock for the same reason — mic-active alone doesn't
+capture the TTS window. Feeding it to the title is small: the composer has a
+leading slot (`lib/document-title.ts`) and a publication channel
+(`usePlaceMark`'s sibling, `usePageTitle`).
+
+Left open only for that narrowed question. If the thinking gap doesn't bother
+the boxholder in practice, this should be closed as wontfix rather than built.
