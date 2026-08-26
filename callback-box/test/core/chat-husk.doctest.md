@@ -12,17 +12,12 @@ which machine holds the transcript (`session/origin.ts`). Written at create
 only — a value already on a card is never restamped.
 
 ```ts setup
-import { mkdir, mkdtemp, rename, writeFile, readFile as readFsFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
-import { tmpdir } from "node:os";
+import { mkdir, rename, writeFile, readFile as readFsFile } from "node:fs/promises";
+import { dirname } from "node:path";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { ensureChatHusk, findChatHuskEntry, reconcileChatHusks, listChatHusks } from "../../src/core/chat/husk.js";
 import { getSessionLogPath } from "../../src/core/chat/session/transcript-paths.js";
 import { localOrigin } from "../../src/core/chat/session/origin.js";
-
-// Every husk written here records this machine's origin id; point that at a
-// scratch file so a test run neither reads nor mints the real one.
-process.env["CB_ORIGIN_ID_FILE"] = join(await mkdtemp(join(tmpdir(), "cb-origin-")), "origin-id");
 ```
 
 ## ensure creates the husk, named by date + short session id
