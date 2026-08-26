@@ -4,6 +4,11 @@ The model picker and mutation boundary share one engine-indexed registry.
 
 ```ts setup
 import { chatModelOptions, isChatModelAllowed, parseChatAgentEngine } from "../../src/shared/chat-models.js";
+import { modelTier, resolveProcedureModel, PROCEDURE_MODEL_NAMES, TIER_RANK } from "../../src/shared/agent-models.js";
+import { resolveBoxModelForEngine, resolveEffectiveModel } from "../../src/core/model-policy.js";
+import { loadBoxModel } from "../../src/core/box/config.js";
+import { writeFile, mkdir } from "node:fs/promises";
+import { join } from "node:path";
 import { chatModelFileForSession, loadCurrentModel, loadCurrentModelForEngine, saveCurrentModel } from "../../src/core/chat/session/state.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 ```
@@ -44,4 +49,90 @@ JSON.stringify([
 => ["gpt-5.6-sol",null]
 
 await box.cleanup();
+```
+
+## The box model policy
+
+Every model id an engine offers belongs to a tier, and a tier round-trips back
+to a model that engine can run. Codex flattens `strong`/`strongest` onto Sol, so
+the reverse of Sol is the lower of the two — the round-trip is by model, not by
+tier name.
+
+```ts setup
+import type { AgentEngine } from "../../src/shared/agent-models.js";
+
+const ENGINES: AgentEngine[] = ["claude", "codex"];
+
+/** Does every model this engine offers reverse to a tier selecting that same model? */
+function tiersRoundTrip(engine: AgentEngine): boolean {
+  return PROCEDURE_MODEL_NAMES.every((name) => {
+    const model = resolveProcedureModel(engine, name);
+    const tier = modelTier(model);
+    return tier !== null && resolveProcedureModel(engine, tier) === model;
+  });
+}
+```
+
+```ts
+JSON.stringify([modelTier("claude-fable-5"), modelTier("gpt-5.6-sol"), modelTier("not-a-model")])
+=> ["strongest","strong",null]
+
+JSON.stringify(ENGINES.map(tiersRoundTrip))
+=> [true,true]
+
+TIER_RANK.efficient < TIER_RANK.balanced && TIER_RANK.balanced < TIER_RANK.strong && TIER_RANK.strong < TIER_RANK.strongest
+=> true
+```
+
+An engine that offers the pinned model runs it exactly; one that does not gets
+the same tier instead of nothing. A retired id is carried forward before the
+registry check, so it resolves rather than reading as "no policy".
+
+```ts
+JSON.stringify([
+  resolveBoxModelForEngine("claude", "claude-sonnet-5"),
+  resolveBoxModelForEngine("codex", "claude-sonnet-5"),
+  resolveBoxModelForEngine("claude", "claude-opus-4-8"),
+  resolveBoxModelForEngine("claude", "not-a-model"),
+  resolveBoxModelForEngine("claude", null),
+])
+=> ["claude-sonnet-5","gpt-5.6-terra","claude-opus-5",null,null]
+```
+
+A chat's own pick wins; a chat that follows takes the box pin; a pick belonging
+to the other engine falls through to the pin rather than to nothing.
+
+```ts
+const pinned = "claude-sonnet-5";
+JSON.stringify([
+  resolveEffectiveModel({ engine: "claude", pinned }, { kind: "explicit", model: "claude-fable-5" }),
+  resolveEffectiveModel({ engine: "claude", pinned }, { kind: "follow" }),
+  resolveEffectiveModel({ engine: "claude", pinned: null }, { kind: "follow" }),
+  resolveEffectiveModel({ engine: "claude", pinned }, { kind: "explicit", model: "gpt-5.6-sol" }),
+])
+=> [{"model":"claude-fable-5","source":"explicit"},{"model":"claude-sonnet-5","source":"default"},{"model":null,"source":"none"},{"model":"claude-sonnet-5","source":"default"}]
+```
+
+A hand-edited `agentModel` that no engine offers is rejected at the config
+boundary, so it never reaches a spawn.
+
+```ts
+const policyBox = await makeTmpBox();
+await mkdir(join(policyBox.root, "config"), { recursive: true });
+const writeConfig = async (config: Record<string, unknown>) =>
+  writeFile(join(policyBox.root, "config/box.json"), JSON.stringify(config));
+
+await writeConfig({ agentModel: "claude-sonnet-5" });
+await loadBoxModel(policyBox.root)
+=> claude-sonnet-5
+
+await writeConfig({ agentModel: "sonnet" });
+await loadBoxModel(policyBox.root)
+=> null
+
+await writeConfig({});
+await loadBoxModel(policyBox.root)
+=> null
+
+await policyBox.cleanup();
 ```

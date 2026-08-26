@@ -7,13 +7,20 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { errnoCode } from "../../lib/error-guards.js";
-import type { AgentEngine } from "../../shared/agent-models.js";
+import { modelTier, type AgentEngine } from "../../shared/agent-models.js";
+import { normalizeModelId } from "../../shared/model-ids.js";
 
 export type { AgentEngine } from "../../shared/agent-models.js";
 
 export interface BoxConfig {
   /** Native agent harness used for new box jobs and chats. Missing means Claude. */
   agentEngine?: AgentEngine;
+  /**
+   * The box's pinned model — a concrete id from one engine's registry. Chats
+   * that made no choice of their own follow it, and the reactor runs on it.
+   * Missing means no policy: every run takes its harness's own default.
+   */
+  agentModel?: string;
   publicUrl?: string;
   allowedEmails?: string[];
   /** IANA timezone for this box (e.g. "America/Chicago"). Used in all agent prompts. */
@@ -116,6 +123,27 @@ export async function loadAgentEngine(boxRoot: string): Promise<AgentEngine> {
   if (engine === undefined) return "claude";
   if (engine === "claude" || engine === "codex") return engine;
   throw new InvalidAgentEngineError(engine);
+}
+
+/**
+ * Load the box's pinned model, or null when no policy is set.
+ *
+ * A hand-edited value that no engine offers is rejected here rather than
+ * carried to a spawn boundary that would silently drop it: the warning fires
+ * once per config load (the loader caches by mtime), and the box falls back to
+ * the harness default instead of failing.
+ */
+export async function loadBoxModel(boxRoot: string): Promise<string | null> {
+  const config = await loadBoxConfig(boxRoot);
+  const model = config.agentModel;
+  if (model === undefined) return null;
+  if (typeof model !== "string" || modelTier(normalizeModelId(model)) === null) {
+    console.warn(
+      `Box config agentModel ${JSON.stringify(model)} is not a model any engine offers — ignoring it and using the harness default.`,
+    );
+    return null;
+  }
+  return normalizeModelId(model);
 }
 
 /**

@@ -56,3 +56,35 @@ const PROCEDURE_MODELS: Record<AgentEngine, Record<ProcedureModelTier, string>> 
 export function resolveProcedureModel(engine: AgentEngine, model: ProcedureModelName): string {
   return PROCEDURE_MODELS[engine][LEGACY_TIER[model]];
 }
+
+/**
+ * Tier of a concrete model id — the reverse of {@link PROCEDURE_MODELS}, used to
+ * translate a box's pinned model for an engine that cannot run it and to rank
+ * one model against another (smarter/dumber).
+ *
+ * The reverse is lossy where the forward table is: Codex's `strong` and
+ * `strongest` both select Sol, so Sol reverses to the lower of the two. That
+ * flattening is deliberate and visible here rather than inferred at a call site.
+ */
+const MODEL_TIERS: Record<string, ProcedureModelTier> = {
+  [MODEL_ID.haiku]: "efficient",
+  [MODEL_ID.sonnet]: "balanced",
+  [MODEL_ID.opus]: "strong",
+  [MODEL_ID.fable]: "strongest",
+  [MODEL_ID.luna]: "efficient",
+  [MODEL_ID.terra]: "balanced",
+  [MODEL_ID.sol]: "strong",
+};
+
+/** Capability order over tiers. Only the relative order is meaningful. */
+export const TIER_RANK: Record<ProcedureModelTier, number> = {
+  efficient: 0,
+  balanced: 1,
+  strong: 2,
+  strongest: 3,
+};
+
+/** The tier a concrete model id belongs to, or null if no engine offers it. */
+export function modelTier(model: string): ProcedureModelTier | null {
+  return MODEL_TIERS[model] ?? null;
+}
