@@ -141,7 +141,8 @@ async function runStep(step: Step, deps: StepDeps): Promise<void> {
       await settle();
       return;
     case "finalize":
-      ctx.apply((prev) => growLast(prev, -step.shrinkBy));
+      // The reply is complete: the last-turn spacer goes with the shrink.
+      ctx.apply((prev) => ({ ...growLast(prev, -step.shrinkBy), lastTurnSpacer: false }));
       await settle();
       return;
     case "prepend":

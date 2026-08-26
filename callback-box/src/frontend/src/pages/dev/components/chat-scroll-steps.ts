@@ -12,7 +12,8 @@ export type Step =
   | { k: "send"; px: number }
   /** Grow the last message `chunks` times by `chunkPx`, every `intervalMs`. */
   | { k: "stream"; chunks: number; intervalMs: number; chunkPx: number }
-  /** Replace the streamed message with a shorter final one. */
+  /** Replace the streamed message with a shorter final one; the last-turn
+   *  spacer goes with it (the reply is complete). */
   | { k: "finalize"; shrinkBy: number }
   /** Load `count` older messages above (captureForPrepend runs first). */
   | { k: "prepend"; count: number }
