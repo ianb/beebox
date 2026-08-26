@@ -5,13 +5,16 @@
 // finish-preflight) and because root `pnpm test` is what runs bin/ tooling
 // tests. See bin/CLAUDE.md's note on the doctest-first rule.
 import assert from "node:assert/strict";
+import { join } from "node:path";
 import test from "node:test";
 
 import { dispatchPlan, packageOf, splitCallbackBoxTargets } from "./lint-changed.js";
+import { packageOwnerDirs } from "./workspace-packages.js";
 
+// What `packageOwnerDirs` returns for this repo: workspace packages minus the
+// frontend, which callback-box's own scripts cover.
 const PACKAGE_DIRS = [
   "callback-box",
-  "callback-box/src/frontend",
   "callback-box/pub-worker",
   "site",
   "personal-vibe-check",
@@ -44,6 +47,15 @@ test("paths no lint script covers are dropped rather than handed to eslint", () 
     "site/src/index.ts",
   ]);
   assert.deepEqual(split, { backend: [], frontend: [] });
+});
+
+test("the workspace list resolves nested packages and drops the frontend", () => {
+  const dirs = packageOwnerDirs(join(import.meta.dirname, ".."));
+  assert.ok(dirs.includes("callback-box/pub-worker"));
+  // A package with no scripts of its own is not an owner: `browse` checks it.
+  assert.ok(dirs.includes("browse"));
+  assert.ok(!dirs.includes("browse/packages/agent-browser-typed"));
+  assert.ok(!dirs.includes("callback-box/src/frontend"));
 });
 
 test("the frontend package is never its own lint run — callback-box covers it", () => {
