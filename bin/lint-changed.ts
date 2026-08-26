@@ -28,6 +28,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { changedPaths } from "./test-git.js";
+import { packageOwnerDirs } from "./workspace-packages.js";
 
 const REPO_ROOT = join(import.meta.dirname, "..");
 
@@ -97,7 +98,7 @@ export interface LintCommand {
 
 export interface DispatchInput {
   paths: string[];
-  /** Top-level directory of every pnpm workspace entry, plus nested ones. */
+  /** Every workspace package directory, from {@link packageOwnerDirs}. */
   packageDirs: string[];
   /** Does `<dir>/package.json` define this script? */
   hasScript: (dir: string, script: string) => boolean;
@@ -108,12 +109,12 @@ export interface DispatchInput {
  *
  * `callback-box/src/frontend` is its own workspace package but never its own
  * lint run: root `pnpm lint` filters it out precisely because callback-box's
- * `lint:frontend` already covers it, and `lint:changed` inherits that.
+ * `lint:frontend` already covers it. {@link packageOwnerDirs} leaves it out of
+ * the list for that reason, so a frontend path lands on callback-box here.
  */
 export function packageOf(path: string, packageDirs: string[]): string | null {
   let best: string | null = null;
   for (const dir of packageDirs) {
-    if (dir === FRONTEND_DIR) continue;
     if (!path.startsWith(`${dir}/`)) continue;
     if (best === null || dir.length > best.length) best = dir;
   }
@@ -169,24 +170,6 @@ function parseArgs(argv: string[]): Args {
 /** Deleted paths are still "changed"; there is nothing left on disk to lint. */
 function existing(paths: string[]): string[] {
   return paths.filter((path) => existsSync(join(REPO_ROOT, path)));
-}
-
-function workspacePackageDirs(): string[] {
-  const raw = readFileSync(join(REPO_ROOT, "pnpm-workspace.yaml"), "utf-8");
-  const dirs: string[] = [];
-  let inPackages = false;
-  for (const line of raw.split("\n")) {
-    if (/^packages:\s*$/.test(line)) {
-      inPackages = true;
-      continue;
-    }
-    if (inPackages) {
-      const match = /^\s+-\s*"?([^"\s]+)"?\s*$/.exec(line);
-      if (match?.[1] === undefined) break;
-      dirs.push(match[1]);
-    }
-  }
-  return dirs;
 }
 
 function hasScript(dir: string, script: string): boolean {
@@ -263,7 +246,7 @@ function main(argv: string[]): number {
   const args = parseArgs(argv);
   const paths = existing(changedPaths({ base: args.base, cwd: REPO_ROOT }));
   const commands = args.root
-    ? dispatchPlan({ paths, packageDirs: workspacePackageDirs(), hasScript })
+    ? dispatchPlan({ paths, packageDirs: packageOwnerDirs(REPO_ROOT), hasScript })
     : callbackBoxCommands(paths);
   if (commands.length === 0) {
     console.log("lint-changed: nothing lintable changed");

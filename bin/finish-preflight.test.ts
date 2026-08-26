@@ -20,7 +20,13 @@ import {
   verificationCommands,
 } from "./finish-preflight-lib.js";
 
-const PACKAGES = new Set(["callback-box", "site", "agent-doctest", "canvas-loop"]);
+const PACKAGES = new Set([
+  "callback-box",
+  "callback-box/pub-worker",
+  "site",
+  "agent-doctest",
+  "canvas-loop",
+]);
 const NO_SKIP = { value: false, reason: "the merge of main brought code in" };
 
 /** Every package in these tests has the full script trio unless stated. */
@@ -59,6 +65,28 @@ test("paths group by package, with bin/ and root files on the root scripts", () 
   assert.deepEqual(grouped.unknown, ["weird-new-dir"]);
   assert.deepEqual(grouped.groups["(none)"], ["issues/bugs/x.md"]);
   assert.deepEqual(grouped.groups["(root)"], ["bin/router.ts", "package.json"]);
+});
+
+test("a nested package owns its own paths, and its parent still owns the rest", () => {
+  const grouped = groupPaths(
+    ["callback-box/pub-worker/src/x.ts", "callback-box/src/x.ts"],
+    PACKAGES,
+  );
+  assert.deepEqual(grouped.packages, ["callback-box", "callback-box/pub-worker"]);
+  const commands = verificationCommands({
+    paths: ["callback-box/pub-worker/src/x.ts"],
+    workspacePackages: PACKAGES,
+    hasScript: allScripts(),
+    skipTypecheckLint: NO_SKIP,
+  });
+  assert.deepEqual(
+    commands.map((command) => command.command),
+    [
+      "pnpm --dir callback-box/pub-worker test",
+      "pnpm --dir callback-box/pub-worker typecheck",
+      "pnpm lint:changed",
+    ],
+  );
 });
 
 test("callback-box runs the selected set, not the whole suite", () => {

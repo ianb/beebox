@@ -16,6 +16,33 @@ What tests are NOT for: validating types (the type system does that), achieving 
 - **TAP over fancy test runners.** TAP's text protocol is agent-readable and zero-dependency.
 - **Doctests are the default.** If it can be explained with examples in markdown, it should be a doctest. Traditional `.test.ts` files are for things that genuinely need complex setup or meta-testing.
 
+## The tap plugin set is built at install time
+
+`.taprc` disables `@tapjs/typescript` (`plugin: - "!@tapjs/typescript"`) because
+tsx and the doctest loader resolve TypeScript here, and the typescript plugin's
+loader runs ahead of them and cannot resolve an extensionless directory import
+(`ERR_UNSUPPORTED_DIR_IMPORT` on `src/frontend/src/lib/trpc`).
+
+That configured set only takes effect after `tap build`, which regenerates the
+Test class in `node_modules/@tapjs/test/test-built/`. tap does rebuild by
+itself when the built set differs from the configured one — but it computes the
+child processes' `--import` arguments from the *already loaded* class before it
+rebuilds, so the run that triggers the rebuild still spawns its children with
+the default plugins. Every `pnpm install` re-links `@tapjs/test` from the store
+and restores the shipped default build, so "the first tap run after an install
+uses the wrong loaders" is deterministic, not a flake.
+
+The monorepo root's `postinstall` therefore runs `tap build` (~3s) after
+`patch-package`, so every workspace install builds it — a fresh worktree, a
+detached checkout, a deploy. It lives at the root rather than in
+`callback-box`'s own `postinstall` because `callback-box` is packed and
+installed as a tarball dependency by v2 boxes: a `postinstall` there would run
+in a consumer install that has no `tap` (a devDependency) and fail it.
+`tap plugin list` prints the *configured* set and never shows this; the built
+set is what `tap versions` lists under `plugins:`.
+
+See issues/closed/bugs/2026-08-25-fresh-checkout-tap-default-plugins.md.
+
 ## 1. Doctests
 
 **Location:** `test/*.doctest.md`

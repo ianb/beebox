@@ -62,7 +62,7 @@ and `finish-preflight`'s lint entry collapsed to a single root `pnpm
 lint:changed`, which is the fan-out and so also covers a `schedules/`-only
 change that no per-package lint reaches. It also found that `groupOf` attributes
 a nested workspace package's paths to its parent — filed separately as
-[nested workspace packages](../../code-quality/2026-08-25-nested-workspace-packages-misclassified.md),
+[nested workspace packages](2026-08-25-nested-workspace-packages-misclassified.md),
 since it predates this work.
 
 The cross-file escape is accepted and stated, the same posture the plan takes
