@@ -36,8 +36,12 @@ export function useEmissionDispatch(opts: {
   resetSelections: () => void;
   /** Clears pending images/files after a stop-and-send sweeps them (revokes object URLs too). */
   resetAttachments: () => void;
+  /** Every user send goes through here — the scroll controller's send anchor
+   *  (rule 2, chat-scroll.ts) hangs off this, not off the composer button, so a
+   *  voice segment, a stop-and-send and a native send anchor the same way. */
+  onSent: () => void;
 }) {
-  const { send, captureCardSend, boxSlug, activeView, messages, emissionStore, selections, resetSelections, resetAttachments } = opts;
+  const { send, captureCardSend, boxSlug, activeView, messages, emissionStore, selections, resetSelections, resetAttachments, onSent } = opts;
 
   // Frame state at the moment of sending, as plain values — consumed by the
   // chat-target assembler (input/targets/chat-assemble.ts).
@@ -66,6 +70,7 @@ export function useEmissionDispatch(opts: {
     (emission: Emission, restoreRejected: boolean): Promise<Receipt> => {
       void refreshLocationIfStale(boxSlug); // best-effort stale-fix refresh; no-op unless the user opted in
       const cardFields = captureCardSend();
+      onSent();
       return acceptEmission(emission, { witness: getWitness(), cardFields, send }).then((receipt) => {
         observeChatSendReceipt({ emissionId: receipt.emissionId, disposition: receipt.disposition,
           ...(receipt.disposition === "rejected" ? { reasonKind: chatSendReasonKind(receipt.reason) } : {}) });
@@ -79,7 +84,7 @@ export function useEmissionDispatch(opts: {
         return receipt;
       });
     },
-    [send, captureCardSend, boxSlug, getWitness, emissionStore]
+    [send, captureCardSend, boxSlug, getWitness, emissionStore, onSent]
   );
   const dispatchEmission = useCallback(
     (emission: Emission): Promise<Receipt> => dispatchWithRestorePolicy(emission, true),
