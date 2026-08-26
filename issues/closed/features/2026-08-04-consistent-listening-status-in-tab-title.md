@@ -5,7 +5,21 @@ area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder wants a steady session-on indicator
 priority: normal
+resolution: superseded
 ---
+
+## Closed (2026-08-26)
+
+Superseded by `de518be54`, which added a general `useWorking` hook to
+`DocumentTitle.tsx` — the tab title now shows a spinning glyph while anything
+(today: the chat's `isStreaming`) is working. That covers exactly the one
+window this issue's 2026-08-26 update narrowed things down to: mic released,
+agent thinking, no TTS yet. The original "listening" framing was already
+judged redundant with the browser's own mic/speaker indicators (see the
+2026-08-26 note above); the remaining "session is working" gap is now
+covered, from a general-purpose hook rather than the voice-specific one this
+issue imagined.
+
 
 > **Job to be done:** *When I've got the box open in a background tab and it's
 > actively listening (voice input) or talking (TTS), I want a steady at-a-glance
