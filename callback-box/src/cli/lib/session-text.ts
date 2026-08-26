@@ -43,6 +43,11 @@ export function stripSpeechWrappers(text: string): string {
   out = out.replace(/<(?:send-message|send-close-message|cancel-message|mic-off|erase-message)\b[^>]*\/>/g, "");
   // Drop the <chat-app …> snapshot tag prepended to every user message
   out = stripChatAppTags(out);
+  // Drop <user-selection …>…</user-selection> whole: the inner text is a
+  // quote from a document the user attached, not the user's own words, so a
+  // snippet or husk title built from it would read as the document, not the
+  // question asked about it.
+  out = out.replace(/<user-selection\b[^>]*>[\S\s]*?<\/user-selection>/g, "");
   // Unwrap outer <speech>/<typed> shells, keeping their text content
   out = out.replace(/<\/?(?:speech|typed)\b[^>]*>/g, "");
   // Unwrap <unsure>word</unsure> low-confidence marks (Track 4,
