@@ -35,7 +35,7 @@ export async function createCheckout(commit: string): Promise<Checkout> {
   await git(["worktree", "add", "--detach", dir, commit]);
   checkedOut = commit;
   await installDeps(dir);
-  await buildTap(dir);
+  await assertTapPlugins(dir);
   await buildCli(dir);
   return { dir, parent };
 }
@@ -152,25 +152,32 @@ export async function runFileAlone(input: { checkout: Checkout; file: string }):
   return { output: result.all ?? "", exitCode: result.exitCode ?? null };
 }
 
-/** Move the worktree to a commit, reinstalling only when the lockfile differs. */
 /**
- * tap compiles its plugin set into gitignored `.tap/`; a fresh checkout has
- * none, and the 2026-08-25 baseline ran with tap's DEFAULT plugins — including
- * `@tapjs/typescript`, which `.taprc` disables — so every `test/frontend/*`
- * file died on `ERR_UNSUPPORTED_DIR_IMPORT` (22 files, read as "environment").
- * Build explicitly and check the result rather than trust the auto-rebuild.
- * See issues/bugs/2026-08-25-fresh-checkout-tap-default-plugins.md.
+ * The plugin set tap will actually run with, checked rather than assumed.
+ *
+ * The monorepo root's `postinstall` runs `tap build`, so every install in this
+ * worktree leaves the `.taprc` set built. This is the assertion that it did:
+ * `tap plugin list` prints the CONFIGURED set (a guard against a `.taprc`
+ * regression), and `tap versions` lists the BUILT one under `plugins:` — the
+ * set the 2026-08-25 baseline actually ran with, when 22 `test/frontend/*`
+ * files died on `ERR_UNSUPPORTED_DIR_IMPORT` under the default
+ * `@tapjs/typescript` loader and the whole batch was read as "environment".
+ * See issues/closed/bugs/2026-08-25-fresh-checkout-tap-default-plugins.md.
  */
-async function buildTap(dir: string): Promise<void> {
+async function assertTapPlugins(dir: string): Promise<void> {
   const pkg = path.join(dir, "callback-box");
-  const build = await execa("pnpm", ["--dir", pkg, "exec", "tap", "build"], { reject: false, all: true });
-  if (build.exitCode !== 0) refuse(`tap build failed in the detached worktree:\n${build.all ?? ""}`);
-  const list = await execa("pnpm", ["--dir", pkg, "exec", "tap", "plugin", "list"], { reject: false, all: true });
-  if (list.exitCode !== 0 || (list.all ?? "").includes("@tapjs/typescript")) {
-    refuse(`tap plugin set is not what .taprc configures (typescript plugin present):\n${list.all ?? ""}`);
+  for (const args of [["plugin", "list"], ["versions"]]) {
+    const result = await execa("pnpm", ["--dir", pkg, "exec", "tap", ...args], {
+      reject: false,
+      all: true,
+    });
+    if (result.exitCode !== 0 || (result.all ?? "").includes("@tapjs/typescript")) {
+      refuse(`tap ${args.join(" ")} is not what .taprc configures:\n${result.all ?? ""}`);
+    }
   }
 }
 
+/** Move the worktree to a commit, reinstalling only when the lockfile differs. */
 export async function checkoutCommit(input: { checkout: Checkout; commit: string }): Promise<void> {
   if (checkedOut === input.commit) return;
   const before = checkedOut;
@@ -178,7 +185,7 @@ export async function checkoutCommit(input: { checkout: Checkout; commit: string
   checkedOut = input.commit;
   if (before === null || (await lockfileHash(before)) !== (await lockfileHash(input.commit))) {
     await installDeps(input.checkout.dir);
-    await buildTap(input.checkout.dir);
+    await assertTapPlugins(input.checkout.dir);
   }
   // Unconditional: the sources the CLI is built from change at every landing,
   // whether or not the lockfile did.
