@@ -18,6 +18,13 @@
  * already has an `agentModel` keeps it rather than being overwritten by a
  * staler pointer. A box that never had the file is untouched.
  *
+ * The config write happens BEFORE the delete, and that order matters under
+ * `cb migrate --sweep`: if the sweep's commit fails, the manifest entry is
+ * rolled back but the (gitignored) legacy file is already gone. The next sweep
+ * re-runs this migration, finds nothing to carry, and exits clean — while the
+ * `agentModel` it wrote is still in the working tree waiting to be committed.
+ * Reversing the two steps would lose the value instead.
+ *
  * Usage (invoked by `cb migrate`):
  *   pnpm exec tsx scripts/migrate/chat-model-to-box-config.ts <boxRoot> --apply
  */

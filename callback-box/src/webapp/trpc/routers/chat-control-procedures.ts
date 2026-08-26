@@ -12,7 +12,7 @@ import { ownerProcedure, publicProcedure } from "../trpc.js";
 import { getChatRuntime, type ChatRuntime } from "../../chat-runtime.js";
 import { chatModelFileForSession, loadCurrentModel } from "../../../core/chat/session/state.js";
 import { loadBoxModel } from "../../../core/box/config.js";
-import { resolveBoxModelForEngine, resolveEffectiveModel, type ModelSource } from "../../../core/model-policy.js";
+import { liveModelState, resolveBoxModelForEngine, resolveEffectiveModel, type ModelSource } from "../../../core/model-policy.js";
 import { updateBoxConfigFields } from "../../box-config-write.js";
 import { resolveChatEngine } from "../../../core/chat/session/engine.js";
 import { loadAgentEngine } from "../../../core/box/config.js";
@@ -82,14 +82,19 @@ export async function readSessionStatus(boxRoot: string, sessionId: string | nul
     state.explicit === null ? { kind: "follow" } : { kind: "explicit", model: state.explicit },
   );
   const running = target?.isRunning() ?? false;
+  // `source` describes the model this call REPORTS, which for a live session is
+  // the one its subprocess is running — not the one a restart would pick. The
+  // two diverge whenever the box default or this chat's pick changed under a
+  // warm session, and `pendingModel` is where that shows up.
+  const live = liveModelState(state);
   return {
     sessionId: target?.getSessionId() ?? sessionId,
     running,
     busy: target?.isBusy() ?? false,
-    model: running ? state.resolved : wouldUse.model,
-    source: wouldUse.source,
+    model: running ? live.model : wouldUse.model,
+    source: running ? live.source : wouldUse.source,
     boxDefault,
-    pendingModel: running && state.resolved !== wouldUse.model ? wouldUse.model : null,
+    pendingModel: running && live.model !== wouldUse.model ? wouldUse.model : null,
     engine,
   };
 }

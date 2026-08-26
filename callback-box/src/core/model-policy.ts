@@ -66,6 +66,21 @@ export function resolveEffectiveModel(
 }
 
 /**
+ * Describe the model a live subprocess is running — the one a status read must
+ * report, rather than the one a restart would pick.
+ *
+ * A chat whose own pick is what is running is `explicit`; anything else it is
+ * running came from the box default at the moment it started cold, even if the
+ * default has since changed.
+ */
+export function liveModelState(
+  { explicit, resolved }: { explicit: string | null; resolved: string | null },
+): ResolvedModel {
+  if (resolved === null) return { model: null, source: "none" };
+  return { model: resolved, source: resolved === explicit ? "explicit" : "default" };
+}
+
+/**
  * The box's pinned model as the box's own engine can run it, or null when no
  * policy is set. The form agent runs outside chat want: one read, one answer,
  * resolved once at the top of a run so nothing changes model midway.

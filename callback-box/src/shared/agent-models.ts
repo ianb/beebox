@@ -52,6 +52,12 @@ const PROCEDURE_MODELS: Record<AgentEngine, Record<ProcedureModelTier, string>> 
   },
 };
 
+/** Narrow an untrusted string to a portable tier (or legacy alias). */
+export function isProcedureModelName(value: string): value is ProcedureModelName {
+  const names: readonly string[] = PROCEDURE_MODEL_NAMES;
+  return names.includes(value);
+}
+
 /** Resolve a portable procedure tier (or legacy alias) for one native engine. */
 export function resolveProcedureModel(engine: AgentEngine, model: ProcedureModelName): string {
   return PROCEDURE_MODELS[engine][LEGACY_TIER[model]];

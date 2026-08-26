@@ -57,6 +57,14 @@ await caller(server).chat.setDefaultModel({ model: "gpt-5.6-sol" }).catch((e) =>
 => Model gpt-5.6-sol is unavailable for claude chats
 ```
 
+A model no engine offers is refused by the settings path too, rather than being
+saved and then dropped on every read.
+
+```ts continue
+await caller(server).admin.updateBoxConfig({ agentModel: "sonnet" }).catch((e) => e.message.includes("Unknown model id"))
+=> true
+```
+
 Pinning is the owner's call.
 
 ```ts continue

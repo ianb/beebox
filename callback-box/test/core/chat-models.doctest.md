@@ -4,8 +4,8 @@ The model picker and mutation boundary share one engine-indexed registry.
 
 ```ts setup
 import { chatModelOptions, isChatModelAllowed, parseChatAgentEngine } from "../../src/shared/chat-models.js";
-import { modelTier, resolveProcedureModel, PROCEDURE_MODEL_NAMES, TIER_RANK } from "../../src/shared/agent-models.js";
-import { resolveBoxModelForEngine, resolveEffectiveModel } from "../../src/core/model-policy.js";
+import { modelTier, resolveProcedureModel, isProcedureModelName, PROCEDURE_MODEL_NAMES, TIER_RANK } from "../../src/shared/agent-models.js";
+import { liveModelState, resolveBoxModelForEngine, resolveEffectiveModel } from "../../src/core/model-policy.js";
 import { loadBoxModel } from "../../src/core/box/config.js";
 import { writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
@@ -49,6 +49,17 @@ JSON.stringify([
 => ["gpt-5.6-sol",null]
 
 await box.cleanup();
+```
+
+## Tier names are not model ids
+
+A scenario or procedure card names a *tier*; the box model policy holds an *id*.
+The guard is what keeps a tier name from being written where an id belongs and
+silently resolving to nothing.
+
+```ts
+JSON.stringify([isProcedureModelName("opus"), isProcedureModelName("balanced"), isProcedureModelName("claude-opus-5")])
+=> [true,true,false]
 ```
 
 ## The box model policy
@@ -111,6 +122,21 @@ JSON.stringify([
   resolveEffectiveModel({ engine: "claude", pinned }, { kind: "explicit", model: "gpt-5.6-sol" }),
 ])
 => [{"model":"claude-fable-5","source":"explicit"},{"model":"claude-sonnet-5","source":"default"},{"model":null,"source":"none"},{"model":"claude-sonnet-5","source":"default"}]
+```
+
+What a *running* chat reports is the model its subprocess started with, whatever
+the box default has become since. Reporting the pending model instead would tell
+the boxholder their conversation had already moved — the state the system
+intends, not the one it is in.
+
+```ts
+JSON.stringify([
+  liveModelState({ explicit: "claude-fable-5", resolved: "claude-fable-5" }),
+  liveModelState({ explicit: null, resolved: "claude-sonnet-5" }),
+  liveModelState({ explicit: "claude-fable-5", resolved: "claude-sonnet-5" }),
+  liveModelState({ explicit: null, resolved: null }),
+])
+=> [{"model":"claude-fable-5","source":"explicit"},{"model":"claude-sonnet-5","source":"default"},{"model":"claude-sonnet-5","source":"default"},{"model":null,"source":"none"}]
 ```
 
 A hand-edited `agentModel` that no engine offers is rejected at the config
