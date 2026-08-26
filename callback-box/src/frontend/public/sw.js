@@ -37,7 +37,13 @@ self.addEventListener("push", (event) => {
       body: payload.body || "",
       data: { url: payload.url || "/" },
       tag: payload.tag,
-      icon: "/icons/icon-192.png",
+      // The sending box's own mark when the payload carries one (sendPush
+      // fills it in), so a notification says which box is talking. Falls back
+      // to the shared app icon for an older payload or a box with no mark.
+      icon: payload.icon || "/icons/icon-192.png",
+      // NOT the box mark: `badge` is the small status-bar representation,
+      // which Android masks to a silhouette. A full-colour emoji through that
+      // mask is a shapeless blob, so the badge stays the app's own.
       badge: "/icons/icon-192.png",
     }),
   );

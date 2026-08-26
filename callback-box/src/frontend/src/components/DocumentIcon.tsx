@@ -1,33 +1,27 @@
 /**
- * The browser tab's icon, following the place you're in.
+ * The browser tab's icon: the box's own mark.
  *
- * The served document already carries the box's own mark, stamped in by the
- * box server (`webapp/index-html.ts`). This is the other half: once the app is
- * running, the icon tracks the landmark for the directory you're actually in,
- * and falls back to the box's own when that directory has none.
+ * The served document already carries it, stamped in by the box server
+ * (`webapp/index-html.ts`). This is the other half — keeping it right once the
+ * app is running, including in dev, where Vite serves the document unstamped.
  *
- * Landmark first, box second — the same ordering as the tab title, and for the
- * same reason: within one box the place is what distinguishes two tabs. The
- * cost is real and worth naming, because unlike the title there is no room for
- * both: a tab deep in a landmarked directory shows that landmark's mark, not
- * the box's, so two boxes' tabs can wear the same icon.
+ * **The icon says which box; the title says which place.** A tab's box is the
+ * thing that stays true for the tab's whole life, and the icon is the single
+ * glyph a tab strip shows, so that is what it should carry. The landmark for
+ * the directory you are in goes in the title instead
+ * (`lib/document-title.ts`), where it has room for a name.
  *
- * Both marks come from the same `landmarks.forDir` query the app bar's place
- * pill already runs, so the current directory's lookup is a react-query cache
- * hit rather than a second request. Only the box-root lookup is extra, and it
- * is one small query per session.
+ * This was the other way round at first — landmark icon, box only as a
+ * fallback — and the cost was the one thing a tab icon exists to prevent: two
+ * boxes' tabs wearing the same mark, with nothing left saying which box you
+ * were looking at.
  *
- * A landmark with an image symbol wins over its own emoji -- the card author
- * chose a real mark. A landmark carrying NO symbol is skipped rather than
- * honoured: it is saying nothing about marks, so the box's own is the better
- * answer, and relying on the document's stamped icon for that would behave
- * differently in dev (where the document is served by Vite, unstamped).
+ * An image symbol wins over an emoji: the card's author chose a real mark.
  */
 
 import { useEffect } from "react";
-import { useParams, useRouterState } from "@tanstack/react-router";
+import { useParams } from "@tanstack/react-router";
 import { emojiFaviconUri } from "@shared/favicon";
-import { placeLabel } from "../lib/place-label";
 import { apiFileUrl } from "../lib/view-url";
 import { trpc } from "../lib/trpc";
 
@@ -60,30 +54,23 @@ function setIcon(href: string | null): void {
 /** Renders nothing; owns `<link rel="icon">` for as long as a box is open. */
 export function DocumentIcon() {
   const { boxSlug } = useParams({ strict: false });
-  const pathname = useRouterState({ select: (state) => state.location.pathname });
 
-  const place = placeLabel({ pathname, boxSlug: boxSlug ?? "" });
-  const dir = place.dir;
-
-  // Same query key as the place pill's, so this is its cache entry.
-  const hereQuery = trpc.landmarks.forDir.useQuery(
-    { dir: dir ?? "" },
-    { enabled: boxSlug !== undefined && dir !== null },
-  );
+  // The box's own landmark, not the current directory's. Which box a tab
+  // belongs to is the thing that stays true for a tab's whole life, and the
+  // icon is the one glyph a tab strip shows -- so the icon carries the box and
+  // the title carries the place (`lib/document-title.ts`). Landmark-first
+  // icons were the other way round and cost exactly this: two boxes' tabs
+  // could wear the same mark while neither said which box it was.
   const boxQuery = trpc.landmarks.forDir.useQuery(
     { dir: "" },
     { enabled: boxSlug !== undefined },
   );
 
-  const here = dir === null ? null : hereQuery.data?.landmark ?? null;
-  const box = boxQuery.data?.landmark ?? null;
-  // First one that actually carries a mark, nearest place first.
-  const marked = [here, box].filter((l) => l !== null);
-  const mark = marked.find((l) => l.symbolSrc !== null || l.symbol !== "") ?? null;
-
+  const mark = boxQuery.data?.landmark ?? null;
   let href: string | null = null;
   if (mark !== null && boxSlug !== undefined) {
-    href = mark.symbolSrc !== null ? apiFileUrl(boxSlug, mark.symbolSrc) : emojiFaviconUri(mark.symbol);
+    if (mark.symbolSrc !== null) href = apiFileUrl(boxSlug, mark.symbolSrc);
+    else if (mark.symbol !== "") href = emojiFaviconUri(mark.symbol);
   }
 
   useEffect(() => {

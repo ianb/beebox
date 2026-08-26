@@ -17,6 +17,7 @@ import { registerChatRoutes } from "./routes/chat.js";
 import { registerTelegramRoutes } from "./routes/telegram.js";
 import { registerViewRoutes } from "./routes/views.js";
 import { registerFigureRoutes } from "./routes/figure.js";
+import { registerBoxIdentityAssetRoutes } from "./routes/box-identity-assets.js";
 import { registerCaptureRoutes } from "./routes/capture.js";
 import { registerSecretsRoutes } from "./routes/secrets.js";
 import { registerBulkUploadRoutes } from "./routes/bulk-upload.js";
@@ -276,6 +277,9 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
   await registerBulkUploadRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
   await registerViewRoutes({ server: instance, boxRoot: box.boxRoot });
   registerFigureRoutes({ server: instance, boxRoot: box.boxRoot });
+  // The box's own icon and manifest, ahead of the static mount below so the
+  // fleet-wide files don't shadow them.
+  registerBoxIdentityAssetRoutes(instance, { boxRoot: box.boxRoot, boxSlug: box.slug, frontendPath });
 
   // Serve static frontend files within this prefix
   if (frontendExists) {

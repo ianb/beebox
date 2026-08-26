@@ -63,8 +63,13 @@ export function documentBoxSlug(url: string, knownSlugs: readonly string[]): str
  * (`frontend/src/lib/document-title.ts`). The client refines it to
  * `<page> — <box>` on boot.
  *
- * Returns the html unchanged when there is nothing to say (no name and no text
- * symbol), and leaves the built icon link in place for an image symbol.
+ * The three icon-bearing tags are pointed at the box's own, box-scoped routes
+ * (`routes/box-identity-assets.ts`), which render its mark on demand: the tab
+ * icon, the Apple touch icon an installed app draws, and the manifest that
+ * names the installed app. The manifest link gains
+ * `crossorigin="use-credentials"`, because a manifest is otherwise fetched
+ * with no cookies and every route under `/<slug>` is behind the box's auth
+ * wall.
  */
 export function stampBoxIdentity(html: string, identity: BoxIdentity): string {
   const titleRe = /<title>[^<]*<\/title>/;
@@ -75,22 +80,36 @@ export function stampBoxIdentity(html: string, identity: BoxIdentity): string {
   // document, which looks exactly like the bug this exists to fix. Say so
   // once rather than never.
   if (!titleRe.test(html)) warnOnce("title", "no <title> tag matched");
-  if (identity.symbol !== "" && !iconRe.test(html)) warnOnce("icon", "no <link rel=\"icon\"> matched");
+  if (!iconRe.test(html)) warnOnce("icon", "no <link rel=\"icon\"> matched");
 
   let out = html.replace(titleRe, `<title>${escapeHtml(identity.name)}</title>`);
-  if (identity.symbol !== "") {
+
+  const base = `/${encodeURIComponent(identity.slug)}`;
+  out = out.replace(iconRe, (link) => {
     // The built href is kept in `data-cb-default-icon`. Without it the client
     // has no way to tell the app's own icon from the mark of whichever box
     // happened to serve the document, and "this box has no mark" would show
     // the previous box's (`frontend/src/components/DocumentIcon.tsx`).
-    out = out.replace(iconRe, (link) => {
-      const built = /href="([^"]*)"/.exec(link)?.[1] ?? "";
-      return (
-        `<link rel="icon" href="${emojiFaviconUri(identity.symbol)}"` +
-        ` data-cb-default-icon="${escapeHtml(built)}" />`
-      );
-    });
-  }
+    const built = /href="([^"]*)"/.exec(link)?.[1] ?? "";
+    const png =
+      `<link rel="icon" type="image/png" href="${base}/icon-192.png"` +
+      ` data-cb-default-icon="${escapeHtml(built)}" />`;
+    if (identity.symbol === "") return png;
+    // SVG first: a browser that understands it picks it and never fetches the
+    // PNG; one that does not ignores the type it cannot render and takes the
+    // PNG. Safari gained SVG-favicon support only in 26, so this is live.
+    return `<link rel="icon" type="image/svg+xml" href="${emojiFaviconUri(identity.symbol)}" />` + png;
+  });
+
+  out = out.replace(
+    /<link rel="apple-touch-icon"[^>]*>/,
+    `<link rel="apple-touch-icon" href="${base}/icon-180.png" />`,
+  );
+  out = out.replace(
+    /<link rel="manifest"[^>]*>/,
+    `<link rel="manifest" href="${base}/manifest.webmanifest" crossorigin="use-credentials" />`,
+  );
+
   return out;
 }
 

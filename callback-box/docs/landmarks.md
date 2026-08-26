@@ -176,25 +176,24 @@ The unified app bar (`docs/implemented-plans/top-nav-ia.md`) is the compact surf
   files. Links open in the companion pane on chat, and navigate normally
   elsewhere.
 
-### The browser tab
+### The browser tab, and everywhere else a box is drawn
 
-The tab's icon is the landmark's `symbol` for the directory you are in — an
-emoji becomes an SVG `data:` URI, an image symbol is served from its box path
-(`frontend/src/components/DocumentIcon.tsx`, `shared/favicon.ts`).
+A landmark's `symbol` for the directory you are in leads the **tab title**
+(`frontend/src/components/DocumentPlace.tsx`), while the **tab icon** is the
+box's own mark. Splitting them that way lets a tab say both which box it
+belongs to and which place inside it you are looking at; an icon that followed
+the landmark instead meant two boxes' tabs could wear the same mark.
 
 **The box root's landmark is the box's own identity.** Its `label` is the box's
 display name in every `/api/boxes` listing — the box switcher, the dashboard
 header, and the `<page> — <box>` tab title — and its `symbol` is the box's
-mark, which the box server stamps into the served document so a tab is
-identifiable before the app boots (`core/landmark/box-identity.ts`,
-`webapp/index-html.ts`). A box had no display name before this; it answered
+mark — drawn on the tab, on the box selector, on a notification, and on the
+installed app's icon. The box server stamps it into the served document so a
+tab is identifiable before the app boots, and renders it as a PNG for the
+surfaces that require one (`core/landmark/box-identity.ts`,
+`webapp/index-html.ts`, `webapp/routes/box-identity-assets.ts`). A box had no display name before this; it answered
 with its slug. Renaming a box is editing that card, which is why there is no
 box-name setting anywhere.
-
-Landmark first, box second: a tab deep in a landmarked directory wears that
-landmark's mark rather than the box's, on the same reasoning as the title
-(within one box, the place is what tells two tabs apart). Unlike the title,
-there is no room for both.
 
 ## Implementation outline
 
