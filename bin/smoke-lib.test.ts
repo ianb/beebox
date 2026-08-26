@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  type ProbeVerdict,
+  isRetryableVerdict,
+  pollUntilReady,
+  readHealthProbe,
   MENU_ERROR_TEXT,
   SmokeFailure,
   cardViewRendered,
@@ -307,4 +311,66 @@ test("formatSmokeReport: forced failures are shown, and never counted as caught"
   // cold-start fired only on demand, so it still reads as never having caught
   // anything — which is the honest thing for a trim decision to see.
   assert.match(report, /Never caught anything in 20\+ runs[\s\S]*cold-start/);
+});
+
+test("readHealthProbe: only a health payload is ok; vite's HTML is not the backend", () => {
+  assert.deepEqual(readHealthProbe({ status: 200, body: '{"status":"degraded"}' }), { kind: "ok" });
+  assert.deepEqual(readHealthProbe({ status: 200, body: "<!doctype html><title>Chat</title>" }), { kind: "not-backend" });
+  assert.deepEqual(readHealthProbe({ status: 200, body: '{"ok":true}' }), { kind: "not-backend" });
+  assert.deepEqual(readHealthProbe({ status: 502, body: "upstream closed" }), { kind: "unexpected", status: 502 });
+  assert.equal(readHealthProbe({ status: 502, body: FAILED_PAGE }).kind, "failed");
+});
+
+test("isRetryableVerdict: a box mid-boot is retried, a verdict is not", () => {
+  assert.equal(isRetryableVerdict({ kind: "unexpected", status: 502 }), true);
+  assert.equal(isRetryableVerdict({ kind: "not-backend" }), true);
+  assert.equal(isRetryableVerdict({ kind: "ok" }), false);
+  assert.equal(isRetryableVerdict({ kind: "unauthorized" }), false);
+  assert.equal(isRetryableVerdict({ kind: "failed", phase: "waitForHttp", message: "", stderr: "" }), false);
+});
+
+test("pollUntilReady: 502s while the backend boots become ok within the window", async () => {
+  // The 2026-08-26 shape: vite up, Fastify still starting (or reloading after
+  // a post-commit CLI rebuild), then the health payload arrives.
+  const answers: readonly (ProbeVerdict | null)[] = [
+    null,
+    { kind: "unexpected", status: 502 },
+    { kind: "not-backend" },
+    { kind: "ok" },
+  ];
+  let i = 0;
+  let clock = 0;
+  const result = await pollUntilReady({
+    attempt: async () => answers[Math.min(i++, answers.length - 1)] ?? null,
+    until: 10_000,
+    now: () => clock,
+    sleep: async (ms) => { clock += ms; },
+    pollMs: 250,
+  });
+  assert.deepEqual(result, { verdict: { kind: "ok" }, timedOut: false });
+  assert.equal(i, 4);
+});
+
+test("pollUntilReady: a failed-to-start page stops the poll at once; a deadline reports the last verdict", async () => {
+  const failed = { kind: "failed", phase: "waitForHttp", message: "boom", stderr: "" } as const;
+  let calls = 0;
+  const terminal = await pollUntilReady({
+    attempt: async () => { calls++; return failed; },
+    until: 10_000,
+    now: () => 0,
+    sleep: async () => {},
+    pollMs: 250,
+  });
+  assert.deepEqual(terminal, { verdict: failed, timedOut: false });
+  assert.equal(calls, 1);
+
+  let clock = 0;
+  const expired = await pollUntilReady({
+    attempt: async () => ({ kind: "unexpected", status: 502 }),
+    until: 1_000,
+    now: () => clock,
+    sleep: async (ms) => { clock += ms; },
+    pollMs: 250,
+  });
+  assert.deepEqual(expired, { verdict: { kind: "unexpected", status: 502 }, timedOut: true });
 });

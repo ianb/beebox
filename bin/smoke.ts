@@ -61,7 +61,9 @@ import {
   hasDomId,
   isFreshGeneration,
   placeMenuFailure,
+  pollUntilReady,
   probeFailure,
+  readHealthProbe,
   readPlaceMenu,
   readProbe,
   refFor,
@@ -340,35 +342,51 @@ async function generationAge(name: string): Promise<number | null> {
   return generationStartedAt(JSON.parse(status.body) as unknown, name);
 }
 
-/** Poll the box root until it serves, or until it answers with a real verdict. */
+/**
+ * Wait until the box's BACKEND answers, or until it answers with a real verdict.
+ *
+ * `/api/health`, not the root: vite serves every non-API path itself, so the
+ * root is up seconds before the box's Fastify process is, and a walk that
+ * started on the root's say-so met a 502 on its first real request
+ * (2026-08-26, right after a landing — the post-commit CLI rebuild had the box
+ * child mid-reload). The verdict itself is deliberately not asserted: a real
+ * box reports "degraded" for ordinary content reasons, and failing a landing
+ * over the state of someone's test box would be a false red. That the backend
+ * composed and returned its own health payload is the readiness signal.
+ */
 async function waitForBox(url: string, key: string | null, budget: Budget): Promise<void> {
-  const until = Date.now() + Math.min(COLD_START_MS, budget.remaining());
-  let last: SmokeFailure | null = null;
-  while (Date.now() < until) {
-    let result: Probe;
-    try {
-      result = await probe(url, key, 5_000);
-    } catch (e) {
-      // Mid-restart the router briefly refuses; only a persistent refusal is
-      // the router being down, which the timeout below reports.
-      last = routerDownFailure(url, e);
-      await sleep(POLL_MS);
-      continue;
-    }
-    const verdict = readProbe(result);
-    // A rendered failed-to-start page is terminal: retrying re-reads the same
-    // captured error. Everything else gets the rest of the window.
-    if (verdict.kind === "failed" || verdict.kind === "unauthorized") {
-      throw probeFailure({ verdict, url, body: result.body }) ?? new Error("unreachable");
-    }
-    if (verdict.kind === "ok") return;
-    last = probeFailure({ verdict, url, body: result.body });
-    await sleep(POLL_MS);
+  let refused: SmokeFailure | null = null;
+  let lastBody = "";
+  const { verdict, timedOut } = await pollUntilReady({
+    attempt: async () => {
+      try {
+        const result = await probe(url, key, 5_000);
+        lastBody = result.body;
+        return readHealthProbe(result);
+      } catch (e) {
+        refused = routerDownFailure(url, e);
+        return null;
+      }
+    },
+    until: Date.now() + Math.min(COLD_START_MS, budget.remaining()),
+    now: Date.now,
+    sleep,
+    pollMs: POLL_MS,
+  });
+  if (verdict !== null && !timedOut) {
+    const failure = probeFailure({ verdict, url, body: lastBody });
+    if (failure !== null) throw failure;
+    return;
   }
-  throw (
-    last ??
-    new SmokeFailure(`${url} did not serve within ${String(COLD_START_MS / 1000)}s of the restart`)
-  );
+  if (verdict !== null) {
+    const failure = probeFailure({ verdict, url, body: lastBody });
+    invariant(failure !== null, "a retryable verdict is never ok");
+    throw new SmokeFailure(
+      `${failure.message} — still, ${String(COLD_START_MS / 1000)}s after the restart`,
+      failure.detail,
+    );
+  }
+  throw refused ?? new SmokeFailure(`${url} did not answer within ${String(COLD_START_MS / 1000)}s of the restart`);
 }
 
 interface Step {
@@ -413,9 +431,9 @@ function buildSteps(input: {
 
   steps.push({
     id: "cold-start",
-    name: "the box serves its root after a cold start",
+    name: "the box's backend answers after a cold start",
     run: async () => {
-      await waitForBox(`${baseUrl}/`, key, budget);
+      await waitForBox(`${baseUrl}/api/health`, key, budget);
       if (replaced === undefined) return;
       const now = await generationAge(worktree);
       if (!isFreshGeneration({ before: replaced.before, now })) {
@@ -423,37 +441,6 @@ function buildSteps(input: {
           "the box served, but the router still reports the generation this run replaced" +
             " — it is running older source than the code under test",
           `generation before: ${String(replaced.before)}, now: ${String(now)}`,
-        );
-      }
-    },
-  });
-
-  steps.push({
-    id: "backend",
-    name: "the box's backend answers",
-    // `/api/…`, not a page path. Vite serves every non-API path itself, so a
-    // 200 on `/chat` proves only that vite is up — it never reaches the box's
-    // Fastify process. `/api/health` is proxied through to the backend, so it
-    // is the cheapest request that actually crosses into the app.
-    run: async () => {
-      const url = `${baseUrl}/api/health`;
-      const result = await probe(url, key, Math.min(30_000, budget.remaining())).catch(
-        (e: unknown) => {
-          throw routerDownFailure(url, e);
-        },
-      );
-      const failure = probeFailure({ verdict: readProbe(result), url, body: result.body });
-      if (failure !== null) throw failure;
-      // The verdict itself is deliberately not asserted: a real box reports
-      // "degraded" for ordinary content reasons, and failing a landing over the
-      // state of someone's test box would be a false red. That the backend
-      // composed and returned its own health payload is the assertion.
-      const parsed: unknown = JSON.parse(result.body);
-      const status = (parsed as { status?: unknown }).status;
-      if (typeof status !== "string") {
-        throw new SmokeFailure(
-          `${url} answered 200 but not with a health payload — the request did not reach the backend`,
-          result.body.slice(0, 2000),
         );
       }
     },
