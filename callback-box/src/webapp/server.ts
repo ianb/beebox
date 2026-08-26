@@ -216,7 +216,9 @@ export async function createServer(options?: InternalServerOptions): Promise<Fas
   // import.meta.dirname: the prod bundle lives at dist/cli.mjs (one level down)
   // while tsx runs this from src/webapp/ (two levels), so a hardcoded `../..`
   // overshoots under the bundle and the frontend silently never loads.
-  const frontendPath = path.join(PACKAGE_ROOT, "src/frontend/dist");
+  // (A test overrides this with `frontendPath` so it doesn't depend on whether
+  // the checkout has run a frontend build — see server-types.ts.)
+  const frontendPath = options.frontendPath ?? path.join(PACKAGE_ROOT, "src/frontend/dist");
   const frontendExists = fs.existsSync(path.join(frontendPath, "index.html"));
 
   // Serve static frontend assets at root level (for the box selector page at /)

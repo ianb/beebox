@@ -30,6 +30,18 @@ import { makeBoxAnnexShaped } from "./annex-box.js";
 
 export const TEST_SLUG = "test";
 
+/**
+ * The stand-in for a built frontend that test servers are pointed at.
+ *
+ * The real one (`src/frontend/dist`) is a gitignored build artifact, so a
+ * server built against it serves the SPA fallback — and therefore documents,
+ * and therefore the login redirect that only exists alongside them — only in
+ * checkouts that happen to have run `build:frontend`. Tests construct the
+ * built-frontend shape explicitly instead. Also passed by hand to tests that
+ * register `registerSpaFallback` themselves.
+ */
+export const TEST_FRONTEND_PATH = join(import.meta.dirname, "../fixtures/frontend-dist");
+
 export interface TestServerContext {
   server: FastifyInstance;
   boxRoot: string;
@@ -178,6 +190,7 @@ export async function createTestServer(opts?: TestServerOptions): Promise<TestSe
     services: opts?.services,
     openAccess: opts?.openAccess ?? true,
     devSurfaces: opts?.devSurfaces === true,
+    frontendPath: TEST_FRONTEND_PATH,
     ...(opts?.chatBackend !== undefined ? { chatBackend: opts.chatBackend } : {}),
   });
 
