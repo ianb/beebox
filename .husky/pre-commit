@@ -32,8 +32,9 @@ run_pair() {
   echo "[pre-commit] $dir: $a  ||  $b"
   (cd "$REPO_DIR/$dir" && eval "$a") >"$out_a" 2>&1 & pid_a=$!
   (cd "$REPO_DIR/$dir" && eval "$b") >"$out_b" 2>&1 & pid_b=$!
-  wait "$pid_a"; rc_a=$?
-  wait "$pid_b"; rc_b=$?
+  # `|| rc=$?` keeps `set -e` from aborting before the captured output prints.
+  rc_a=0; wait "$pid_a" || rc_a=$?
+  rc_b=0; wait "$pid_b" || rc_b=$?
   cat "$out_a" "$out_b"; rm -f "$out_a" "$out_b"
   [ "$rc_a" -eq 0 ] && [ "$rc_b" -eq 0 ]
 }
