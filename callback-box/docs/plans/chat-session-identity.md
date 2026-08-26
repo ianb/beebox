@@ -150,8 +150,9 @@ and `origin-name: <hostname at write time>`, a display label only.
 
 **Machine id.** `os.hostname()` is not stable on a laptop (network-location
 renames), so it is never a decision key. The id is a UUID created once at
-`~/.local/share/cb/origin-id` (the existing per-user state dir:
-`src/core/schedule/scheduler.ts:34`, `src/core/push-subscriptions.ts:72`),
+`~/.local/share/cb/origin-id` (the per-user state dir, now defined once as
+`CB_STATE_DIR` in `src/lib/state-dir.ts`; the four copies of the path string
+were consolidated in `30d95116a`),
 read by one helper `localOrigin()` in `src/core/chat/session/origin.ts`, which
 also returns the current hostname for the label. `CB_ORIGIN_ID_FILE` overrides
 the path for doctests. Deleting the file makes the machine a new origin — its
@@ -166,14 +167,20 @@ records the machine.
 - `schemas/chat.ts`: `engine: z.enum(["claude","codex"]).optional()`,
   `origin: z.string().optional()`, `origin-name: z.string().optional()`.
   Instructions: machine-owned, leave alone.
-- `createChatHuskTemplate` takes all three; `ensureChatHusk` writes them on
-  create. `recordSessionStart` passes `engine` (it has it) and the origin pair
-  from `localOrigin()` (single definition, principle #8).
+- `createChatHuskTemplate` takes all three. `ensureChatHusk` calls
+  `localOrigin()` itself on the create path (origin is only correct at
+  creation, and only `ensureChatHusk` knows whether it is creating);
+  `recordSessionStart` passes `engine`, and a missing engine resolves through
+  the same `loadAgentEngine` that `appendHistory` uses — no second default
+  (principle #8).
 - Backfill in `reconcileChatHusks`: a husk with no `origin` whose transcript
   exists here gets the origin pair and `engine` from the history entry
   (default `claude`). A husk with no `origin` and no transcript stays unset —
-  `unknown` is honest. Each write goes through `withCardLock`
-  (`src/lib/card-lock.ts:123`) and rewrites frontmatter only. Logged as a count.
+  `unknown` is honest. Each write is `stampHuskProvenance` (husk.ts): the
+  split → parse → merge → `renderFrontmatterBlock` idiom under `withCardLock`
+  (`src/lib/card-lock.ts:123`), re-checking `origin` inside the lock;
+  `review/husk-write.ts` has no general frontmatter writer to reuse (it goes
+  through the `contains`-specific `setDerivedContains`). Logged as a count.
   **This dirties git-tracked cards on boot**, as reconcile's husk creation
   already does (`webapp/routes/chat.ts:75` starts it in the background). Two
   checkouts never stamp the same husk: a transcript exists on exactly one
