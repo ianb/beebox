@@ -75,10 +75,11 @@ Writes, exhaustively:
    following: it ends at the first paint with content — where "paint" has to
    include the transcript's images: an `<img>` reserves no height until its
    bytes arrive (the chat has no dimension metadata to reserve with), so the
-   hold outlives the first render by a window sized for a slow fetch (8s as
-   shipped, 2026-08-26; the 400ms it shipped with stranded a reader an image's
-   height above the bottom on every open of an image-bearing thread). The
-   reader's own action ends it early.
+   hold waits for the images in and around the viewport to load or fail,
+   capped at 8s, before its short lapse timer starts (2026-08-26; the fixed
+   400ms it shipped with stranded a reader an image's height above the bottom
+   on every open of an image-bearing thread). The reader's own action ends it
+   early.
 2. **Send a message** → scroll so the new user message sits at the top of the
    viewport. The reply streams in below it and fills the screen without any
    scrolling. If the reply outgrows the screen, it continues below the fold;

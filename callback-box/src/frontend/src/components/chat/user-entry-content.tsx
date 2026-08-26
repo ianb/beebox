@@ -30,7 +30,7 @@ import { UserMessageText } from "./user-message-text";
  * costs a photo at a time and the ones never reached cost nothing.
  */
 function MessageImage({ src, alt }: { src: string; alt: string }) {
-  return <Image src={src} alt={alt} size="sm" lightbox bordered className="my-1" />;
+  return <Image src={src} alt={alt} size="sm" lightbox bordered className="my-1" loading="lazy" />;
 }
 
 /**

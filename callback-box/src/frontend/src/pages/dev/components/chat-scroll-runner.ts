@@ -71,6 +71,9 @@ function growLast(prev: HarnessContent, by: number): HarnessContent {
 interface StepDeps {
   ctx: RunContext;
   sampler: Sampler;
+  /** The settles' image waits, oldest first — pushed by `settleOpen
+   *  { awaitImage }`, the oldest fired by each `imageDecode`. */
+  imageLanded: Array<() => void>;
 }
 
 class HarnessNotMountedError extends Error {
@@ -111,7 +114,12 @@ async function runStep(step: Step, deps: StepDeps): Promise<void> {
       await settle();
       return;
     case "settleOpen":
-      ctx.settleOpen();
+      if (step.awaitImage) {
+        const until = new Promise<void>((resolve) => { deps.imageLanded.push(resolve); });
+        ctx.settleOpen({ until });
+      } else {
+        ctx.settleOpen();
+      }
       await settle();
       return;
     case "fling":
@@ -148,6 +156,7 @@ async function runStep(step: Step, deps: StepDeps): Promise<void> {
     case "imageDecode":
       ctx.apply((prev) => growAt(prev, { index: step.msgIndex, by: step.px }));
       await settle();
+      deps.imageLanded.shift()?.();
       return;
     case "userWheel":
       // A real wheel does both: the input event the controller listens for AND
@@ -268,7 +277,8 @@ export async function runScenario(scenario: Scenario, ctx: RunContext): Promise<
   ctx.log("scenario-start", { name: scenario.name });
   sampler.start();
   try {
-    for (const step of scenario.steps) await runStep(step, { ctx, sampler });
+    const imageLanded: StepDeps["imageLanded"] = [];
+    for (const step of scenario.steps) await runStep(step, { ctx, sampler, imageLanded });
     await settle();
   } finally {
     sampler.stop();
