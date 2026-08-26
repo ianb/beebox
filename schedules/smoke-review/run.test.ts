@@ -50,7 +50,9 @@ test("hasSomethingToReview: either half can be the whole product", () => {
   );
   // No smoke runs at all, but bugs were filed — the gap half still has work.
   assert.equal(
-    hasSomethingToReview(evidence({ bugs: [{ path: "issues/bugs/x.md", title: "t" }] })),
+    hasSomethingToReview(
+      evidence({ bugs: [{ path: "issues/bugs/x.md", title: "t", closed: false }] }),
+    ),
     true,
   );
 });
@@ -81,7 +83,7 @@ test("formatBriefing: evidence and provenance, with no verdict of its own", () =
       failures: [
         { ts: "2026-08-24T10:00:00.000Z", step: "cold-start", message: "the box failed to start", commit: "deadbeefcafe" },
       ],
-      bugs: [{ path: "issues/bugs/2026-08-24-thing.md", title: "The menu dies" }],
+      bugs: [{ path: "issues/bugs/2026-08-24-thing.md", title: "The menu dies", closed: false }],
     }),
   );
   assert.match(briefing, /cold-start/);
@@ -94,8 +96,8 @@ test("formatBriefing: evidence and provenance, with no verdict of its own", () =
 
 test("partitionBugs: the hourly run's own issues lead, everything else follows", () => {
   const bugs = [
-    { path: "a.md", title: "Full-suite red after feat(chat): x: 2 test files failing" },
-    { path: "b.md", title: "A pasted WebP was rejected" },
+    { path: "a.md", title: "Full-suite red after feat(chat): x: 2 test files failing", closed: true },
+    { path: "b.md", title: "A pasted WebP was rejected", closed: false },
   ];
   const { regressions, others } = partitionBugs(bugs);
   assert.deepEqual(regressions.map((b) => b.path), ["a.md"]);
@@ -105,7 +107,7 @@ test("partitionBugs: the hourly run's own issues lead, everything else follows",
 test("partitionBugs: a renamed full-suite title degrades to `others`, never vanishes", () => {
   // The match is on a title another schedule writes. If that wording changes,
   // the row must lose its prominence, not its existence.
-  const bugs = [{ path: "a.md", title: "Suite went red after feat(chat): x" }];
+  const bugs = [{ path: "a.md", title: "Suite went red after feat(chat): x", closed: false }];
   const { regressions, others } = partitionBugs(bugs);
   assert.equal(regressions.length, 0);
   assert.deepEqual(others.map((b) => b.path), ["a.md"]);

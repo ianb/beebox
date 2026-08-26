@@ -47,8 +47,11 @@ export interface Landing {
 }
 
 export interface FiledIssue {
+  /** Where it lives now, which is not always where it was filed. */
   path: string;
   title: string;
+  /** Already closed — someone has explained it. */
+  closed: boolean;
 }
 
 export interface Evidence {
@@ -120,6 +123,11 @@ export function windowStart(input: {
  */
 export function hasSomethingToReview(evidence: Evidence): boolean {
   return evidence.window.runs > 0 || evidence.bugs.length > 0;
+}
+
+/** One issue row. `closed` is marked because it is evidence, not bookkeeping. */
+function bugLine(bug: FiledIssue): string {
+  return `- \`${bug.path}\`${bug.closed ? " *(closed)*" : ""} — ${bug.title}`;
 }
 
 function stepTable(summary: SmokeSummary): string[] {
@@ -198,7 +206,7 @@ export function formatBriefing(evidence: Evidence): string {
     "",
     ...(regressions.length === 0
       ? ["None.", ""]
-      : [...regressions.map((b) => `- \`${b.path}\` — ${b.title}`), ""]),
+      : [...regressions.map(bugLine), ""]),
     `## Other bug issues filed in this window (${String(others.length)})`,
     "",
     "Weaker evidence — most will predate any gate, or be invisible to a browser",
@@ -206,7 +214,7 @@ export function formatBriefing(evidence: Evidence): string {
     "",
     ...(others.length === 0
       ? ["None.", ""]
-      : [...others.map((b) => `- \`${b.path}\` — ${b.title}`), ""]),
+      : [...others.map(bugLine), ""]),
   );
 
   return lines.join("\n");

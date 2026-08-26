@@ -20,6 +20,7 @@ import {
   checkIssueTrailers,
   filterByTrailer,
   issueBasenames,
+  issueFiles,
   miscasedKeys,
   nearestIssues,
   resolvePlan,
@@ -154,6 +155,20 @@ test("issueBasenames takes only category-dir issues — the queue's own prose is
   write(path.join(dir, "issues/closed/README.md"), "x");
   assert.deepEqual(issueBasenames(path.join(dir, "issues")).sort(), ["2026-01-01-a", "2026-01-02-b"]);
   assert.deepEqual(issueBasenames(path.join(dir, "nope")), []);
+});
+
+test("issueFiles maps a basename to where the issue lives NOW", () => {
+  // The basename is an issue's identity repo-wide, and closing one is a
+  // `git mv` — so a lookup by name has to answer with the current directory,
+  // which is also how a reader learns the issue is closed.
+  const dir = tmpDir("issues-now");
+  write(path.join(dir, "issues/bugs/2026-01-01-a.md"), "x");
+  write(path.join(dir, "issues/closed/features/2026-01-02-b.md"), "x");
+  write(path.join(dir, "issues/CLAUDE.md"), "x");
+  const files = issueFiles(path.join(dir, "issues"));
+  assert.equal(files.get("2026-01-01-a"), path.join("bugs", "2026-01-01-a.md"));
+  assert.equal(files.get("2026-01-02-b"), path.join("closed", "features", "2026-01-02-b.md"));
+  assert.equal(files.has("CLAUDE"), false);
 });
 
 test("filterByTrailer keeps only commits whose parsed trailers hold the value", () => {

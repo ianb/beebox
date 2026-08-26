@@ -13,6 +13,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { execa } from "execa";
+import { issueFiles } from "../../bin/commit-provenance.ts";
 import { parseRunRecord, smokeLogPath, summarizeSmokeLog } from "../../bin/smoke-lib.ts";
 import { formatBriefing, hasSomethingToReview, parseBaseline, windowStart, type Baseline, type Evidence, type FiledIssue, type Landing } from "./lib.ts";
 
@@ -88,37 +89,57 @@ async function landingsSince(start: string): Promise<Landing[]> {
  * full of files whose mtime is the day it was cloned, and a worktree schedule
  * gets a fresh one whenever its branch is rebuilt.
  */
+/**
+ * Bug issues added in the window, resolved to where they live NOW.
+ *
+ * Git says which issues were filed (by mtime a checkout is useless — a worktree
+ * schedule gets a fresh one whenever its branch is rebuilt). But an issue's
+ * basename is its identity repo-wide, unique by convention and relied on by
+ * the `Issue:` trailer, so the current file is a map lookup rather than an
+ * archaeology dig through the commit that added it.
+ *
+ * Reading the file where it sits now beats reading the blob as filed: the title
+ * is whatever it has been sharpened to since, and the directory says whether
+ * anyone has closed it — which is real signal for the gap half, since a bug
+ * still open a week later is one nobody has explained yet.
+ */
 async function bugsSince(start: string): Promise<FiledIssue[]> {
-  const output = await git([
+  const added = await git([
     "log", "--first-parent", "main", `--since=${start}`,
     "--diff-filter=A", "--name-only", "--format=",
     "--", "issues/bugs", "issues/closed/bugs",
   ]);
-  const paths = [...new Set(output.split("\n").filter((line) => line.endsWith(".md")))];
+  const filed = [
+    ...new Set(
+      added
+        .split("\n")
+        .filter((line) => line.endsWith(".md"))
+        .map((line) => path.basename(line, ".md")),
+    ),
+  ];
+  const current = issueFiles(path.join(REPO_ROOT, "issues"));
   const bugs: FiledIssue[] = [];
-  for (const filePath of paths) {
-    bugs.push({ path: filePath, title: await titleOf(filePath) });
+  for (const name of filed) {
+    const rel = current.get(name);
+    if (rel === undefined) {
+      // Filed and then deleted outright rather than closed — rare, and worth
+      // showing as itself rather than dropping.
+      bugs.push({ path: `issues/**/${name}.md`, title: "(no longer in the queue)", closed: false });
+      continue;
+    }
+    const full = path.join(REPO_ROOT, "issues", rel);
+    const text = await fs.readFile(full, "utf8").catch(() => "");
+    bugs.push({
+      path: `issues/${rel}`,
+      title: titleIn(text),
+      closed: rel.startsWith("closed/"),
+    });
   }
   return bugs;
 }
 
-/**
- * An issue's title, read from the commit that ADDED it.
- *
- * Not from `main`: closing an issue is a `git mv` into `issues/closed/`, so by
- * the time a weekly review runs, most of the week's issues are no longer at the
- * path they were added under. Reading `main:<path>` returned "unreadable" for
- * two thirds of them.
- */
-async function titleOf(filePath: string): Promise<string> {
-  const addedIn = await git([
-    "log", "--first-parent", "main", "--diff-filter=A", "-1", "--format=%H", "--", filePath,
-  ]);
-  if (addedIn === "") return "(title unreadable — no commit adds this path)";
-  const text = await execa("git", ["show", `${addedIn}:${filePath}`], {
-    cwd: REPO_ROOT,
-    reject: false,
-  }).then((r) => (r.exitCode === 0 ? r.stdout : ""));
+/** The `title:` line of an issue's frontmatter, unquoted. */
+function titleIn(text: string): string {
   const raw = /^title:\s*(.*?)\s*$/m.exec(text)?.[1];
   if (raw === undefined) return "(no title in frontmatter)";
   // YAML-quoted, so a title containing a quote arrives escaped.
@@ -164,14 +185,22 @@ async function recordBaseline(): Promise<void> {
   await fs.writeFile(baselineFile, `${JSON.stringify(next, null, 2)}\n`, "utf8");
 }
 
-const briefing = formatBriefing(evidence);
-console.log(briefing);
 await recordBaseline();
 
 if (!hasSomethingToReview(evidence)) {
   // No smoke runs and no bugs filed: nothing happened, so nothing is said.
   process.exit(0);
 }
+
+// One line to the run log, not the briefing: the handoff carries that, and the
+// runner echoes it — printing both put the same 150 lines in the log twice.
+console.log(
+  `[smoke-review] ${start} → ${windowEnd}: ${String(evidence.window.runs)} smoke run(s),` +
+    ` ${String(evidence.failures.length)} failure(s), ${String(evidence.bugs.length)} bug(s) filed,` +
+    ` ${String(evidence.landings.length)} landing(s).`,
+);
+
+const briefing = formatBriefing(evidence);
 
 if (dryRun) {
   console.log("[smoke-review] dry run: the handoff below is printed, not recorded.");
