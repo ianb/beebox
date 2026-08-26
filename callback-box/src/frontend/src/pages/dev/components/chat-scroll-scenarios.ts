@@ -15,6 +15,7 @@
  */
 
 import type { Step, Expectation } from "./chat-scroll-steps";
+import { OPEN_THREAD_SCENARIOS } from "./chat-scroll-scenarios-open";
 
 export type { Step, Expectation } from "./chat-scroll-steps";
 
@@ -27,7 +28,7 @@ export interface Scenario {
 
 const STREAM_CHUNK_PX = 26;
 
-export const SCENARIOS: Scenario[] = [
+const SCENARIOS_MAIN: Scenario[] = [
   {
     name: "follow-while-streaming",
     description: "At the bottom, an ordinary streamed reply. Under the write-on-user-action model the view must NOT follow: fromBottom grows, the badge lights, and the controller writes nothing.",
@@ -225,88 +226,9 @@ export const SCENARIOS: Scenario[] = [
       driftWhileAwayAtMost: 8,
     },
   },
-  {
-    name: "open-thread-lands-at-bottom",
-    description: "Rule 1: a thread opens empty and its history lands in several async chunks. Every chunk keeps the bottom until the first render has settled.",
-    steps: [
-      { k: "openThread" },
-      { k: "wait", ms: 80 },
-      { k: "append", px: 420, role: "assistant" },
-      { k: "wait", ms: 80 },
-      { k: "append", px: 60, role: "user" },
-      { k: "append", px: 380, role: "assistant" },
-      { k: "wait", ms: 120 },
-      { k: "append", px: 300, role: "assistant" },
-      { k: "wait", ms: 120 },
-      { k: "settleOpen" },
-      { k: "wait", ms: 200 },
-    ],
-    expect: {
-      finalAtBottom: true,
-      finalFromBottomAtMost: 4,
-      finalHasUnseenContent: false,
-    },
-  },
-  {
-    name: "open-thread-late-image-at-bottom",
-    description: "Rule 1 with images: the history lands and settles, then an image in the last message finishes fetching well after the settle window. The untouched reader is still at the bottom.",
-    steps: [
-      { k: "openThread" },
-      { k: "append", px: 420, role: "assistant" },
-      { k: "append", px: 60, role: "user" },
-      { k: "append", px: 120, role: "assistant" },
-      { k: "settleOpen", awaitImage: true },
-      { k: "wait", ms: 600 },
-      { k: "imageDecode", msgIndex: 2, px: 500 },
-      { k: "wait", ms: 200 },
-    ],
-    expect: {
-      finalAtBottom: true,
-      finalFromBottomAtMost: 4,
-      finalHasUnseenContent: false,
-    },
-  },
-  {
-    name: "open-thread-growth-before-scroll-event",
-    description: "Open a thread whose history lands in two growths within one resize pass. The hold's own write is followed by growth before its scroll event arrives; that event reads off-bottom but the reader did nothing, so the hold must survive it.",
-    steps: [
-      { k: "openThread" },
-      { k: "append", px: 420, role: "assistant" },
-      { k: "growTwiceInOnePass", px: 300, againPx: 92 },
-      { k: "wait", ms: 100 },
-      { k: "append", px: 200, role: "assistant" },
-      { k: "settleOpen" },
-      { k: "wait", ms: 200 },
-    ],
-    expect: {
-      finalAtBottom: true,
-      finalFromBottomAtMost: 4,
-      finalHasUnseenContent: false,
-    },
-  },
-  {
-    name: "reopen-before-images-land",
-    description: "A session switch while the previous thread's images are still loading. The stale thread's image lands after the new one opened; it must not end the new thread's hold, whose own image lands later.",
-    steps: [
-      { k: "openThread" },
-      { k: "append", px: 300, role: "assistant" },
-      { k: "settleOpen", awaitImage: true },
-      { k: "openThread" },
-      { k: "append", px: 420, role: "assistant" },
-      { k: "append", px: 120, role: "assistant" },
-      { k: "settleOpen", awaitImage: true },
-      { k: "imageDecode", msgIndex: 0, px: 40 },
-      { k: "wait", ms: 600 },
-      { k: "imageDecode", msgIndex: 1, px: 500 },
-      { k: "wait", ms: 200 },
-    ],
-    expect: {
-      finalAtBottom: true,
-      finalFromBottomAtMost: 4,
-      finalHasUnseenContent: false,
-    },
-  },
 ];
+
+export const SCENARIOS: Scenario[] = [...SCENARIOS_MAIN, ...OPEN_THREAD_SCENARIOS];
 
 export function findScenario(name: string): Scenario | null {
   return SCENARIOS.find((s) => s.name === name) ?? null;

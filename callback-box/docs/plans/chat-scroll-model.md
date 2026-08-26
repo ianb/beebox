@@ -77,7 +77,9 @@ Writes, exhaustively:
    bytes arrive (the chat has no dimension metadata to reserve with), so the
    hold waits for the transcript's images to load or fail (lazy ones only
    when near the viewport),
-   capped at 8s, before its short lapse timer starts (2026-08-26; the fixed
+   then ends after a short quiet period with no content growth (a cached
+   image is `complete` before it is decoded and laid out), all under an 8s
+   cap (2026-08-26; the fixed
    400ms it shipped with stranded a reader an image's height above the bottom
    on every open of an image-bearing thread). The reader's own action ends it
    early.
