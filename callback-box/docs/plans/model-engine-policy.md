@@ -1,11 +1,15 @@
 ---
 title: "Box model/engine policy"
-status: implemented
+status: partial
 workstream: model-engine-policy
 issues:
   - ../../../issues/features/2026-07-17-chat-model-pin-default.md
   - ../../../issues/features/2026-08-03-default-model-and-non-default-indicator.md
   - ../../../issues/features/2026-08-08-reactor-agent-model-not-pinnable.md
+  - ../../../issues/features/2026-08-23-choose-the-engine-for-a-new-chat.md
+  - ../../../issues/features/2026-08-25-small-model-slot.md
+  - ../../../issues/bugs/2026-08-25-haiku-nickname-reaches-codex-verbatim.md
+  - ../../../issues/code-quality/2026-07-30-structured-output-passes-load-full-box-context.md
 ---
 
 # Box model/engine policy
@@ -15,6 +19,28 @@ It cannot say which model it thinks with. This plan gives a box one **model
 policy** — a pinned model that chat, the reactor, and every other unpinned agent
 run read — plus the per-chat override, the pin affordance, and the off-default
 indicator that make the policy visible where the boxholder already looks.
+
+## The question this plan answers
+
+**"Which engine, which model, and how much context does *this* agent invocation
+get?"** Nothing answers it today. Each surface answers locally and differently:
+chat persists native model ids per session; procedures use portable tiers
+through `resolveProcedureModel(engine, tier)` (`src/shared/agent-models.ts:56`);
+the reactor passes nothing; the chat reviewer and retro observer pass the
+provider-shaped nickname `"haiku"`; all read the engine from
+`loadAgentEngine(boxRoot)`. The tier resolver was built for procedures alone by
+`issues/closed/bugs/2026-08-23-procedure-model-pins-are-claude-only.md` (commit
+`8a7dced6`), which deliberately left the other callers where they were.
+
+The goal is **one policy with no unfilled corner cases** — every invocation path
+gets engine + model + context from the same answer, rather than a patch per
+caller.
+
+**Tracks A–D have shipped** (commits `3471fa65f`…`d61bb7ec0`): the `agentModel`
+field, the resolution ladder, the reactor reading it, per-chat
+follow-vs-explicit, the pin affordance, the off-default indicator, and the
+migration off `.callback-box/chat-model.json`. Tracks E–H below are the rest of
+the cluster and are **not** built.
 
 ## Job to be done
 
@@ -328,6 +354,129 @@ says "New chats and unpinned agent work use this model."
 `setDefaultModel` wiring. The indicator is the second chunk; the admin section
 the third.
 
+### Track E — enabled engines
+
+**What.** `engines: { claude: boolean; codex: boolean }` in `config/box.json`:
+which engines this box may offer at all. Set in Settings beside the default-engine
+radio.
+
+**Why this needs to change.** A box may have no Codex subscription. Nothing
+records that, so a picker offering both engines would let someone start a chat
+that fails at its first message. The one thing that does exist —
+`engine-availability-store.ts` — is a different fact: machine-level, *quota
+exhausted until `retryAt`*, advisory and self-expiring. It answers "not right
+now", never "not on this box". Detection was considered and rejected as the
+gate: there is no Codex login probe (only `checkClaudeAuth`), it would cost
+latency every time the picker opens, and the Claude probe already returns
+inconclusive often enough to need a retry (`auth-preflight.ts:41-49`).
+
+**Direction.** Absent `engines` means *only the box's `agentEngine` is enabled* —
+conservative, and it keeps every existing box exactly as it behaves now. The
+box's default engine may never be disabled: Settings refuses it, because a box
+whose default engine is off cannot run. Enablement gates what the picker
+*offers*; the run-path auth preflight still catches an engine that is enabled but
+not logged in, with its actionable message. The transient quota store composes on
+top: an enabled engine that is out of quota shows as such rather than disappearing.
+
+**First implementation chunk.** The config field + `loadEnabledEngines`, the
+Settings checkboxes with the can't-disable-the-default rule, and doctests for the
+absent-field default and the refusal.
+
+### Track F — the chat-start picker: engine and model together
+
+**What.** Before a chat's first message, the model panel lists **every enabled
+engine's models under its own heading**, box-default engine first, using each
+engine's own model names. Picking a model picks the engine with it. After the
+first message the chat's engine is fixed and only its own models are offered.
+
+**Why this needs to change.** Two gaps meet here.
+`issues/features/2026-08-23-choose-the-engine-for-a-new-chat.md`: a new chat
+silently takes the box engine and nothing offers a choice. And the model choice
+itself is unavailable before the first message — Track D shipped a panel that
+opens pre-session with its rows disabled, which is the wrong half of the
+boxholder's decision ("choose the model at the very beginning of a chat").
+
+**Direction.**
+
+- **The panel's shape.** A `Default · <resolved label>` row on top (follow the
+  box policy, ✓ when following), then one section per enabled engine. A disabled
+  engine keeps its heading and says *not enabled for this box → Settings*, so the
+  absence is explained rather than silent. After the first turn, the chat's own
+  engine section is the only one with models; the other keeps its heading and
+  reads *fixed when this chat started*. **A grayed heading, not a grayed list**:
+  three unusable model rows are noise, and the heading already carries the fact.
+- **Engine is fixed at birth, deliberately** — the boxholder's rule, and the
+  reason `2026-08-23` gives: transcripts live in different stores and models are
+  engine-scoped, so a mid-chat conversion would silently change two things at
+  once. The panel states it rather than leaving the control mysteriously absent.
+- **Carrying the choice to a chat that does not exist yet.** A choice made before
+  the first message has nowhere to persist — there is no session id and so no
+  model file. It rides the same way seed features do. `reserveSession` already
+  carries `contextDir` and `seedFeatures` and already records an engine
+  (`registry.ts:250-253` → `recordSessionStart({ engine })` → `history.ts:240`),
+  so it takes `engine` and `model` too.
+- **Coin only for Claude.** `reserve.ts:189` refuses a coined id on a non-Claude
+  box, and that is not an obstacle: a Codex chat takes the `"new"` path, which is
+  what every Codex chat does today. So the client coins an id when the chosen
+  engine is Claude and sends `"new"` with the choice otherwise. This was the
+  reason an earlier draft cut this track; it was wrong.
+- **Pinning stays inside the box's default engine.** The pin writes `agentModel`,
+  which the resolver translates across engines by tier — so pinning Luna on a
+  Claude box would quietly mean "Haiku for every Claude chat". Rather than
+  explain that, the pin is offered only in the default engine's section; changing
+  which engine the box defaults to is a Settings decision.
+
+**Vocabulary lock-ins.** Model rows use each engine's own names (Haiku 4.5,
+Sonnet 5, Opus 5, Fable 5; Sol, Terra, Luna) — never a tier name. Tiers are the
+translation layer, not a thing the boxholder picks in chat.
+
+**First implementation chunk.** `engine` + `model` through `reserveSession` →
+`registry.reserve` → the history record and the chat's model file, with the
+client coining only for Claude. UI second.
+
+### Track G — the small-model slot
+
+**What.** One declared slot for the cheap passes — chat review, retro
+observation, triage, the procedure judge — resolved engine-aware like everything
+else.
+
+**Why this needs to change.** It is a live defect, not a preference:
+`reviewer.ts:72` and `observer.ts:27` hold `const DEFAULT_..._MODEL = "haiku"`, a
+provider-shaped nickname, and `codex-agent.ts:45` forwards `invoke.model`
+verbatim — so a Codex box asks the Codex SDK for `haiku`
+(`issues/bugs/2026-08-25-haiku-nickname-reaches-codex-verbatim.md`). This is the
+same class the procedure fix closed for procedures alone. `triage/index.ts:147`
+passes nothing at all, so it runs on whatever the SDK defaults to.
+
+**Direction.** A box-level `smallModel` beside `agentModel`, defaulting to the
+`efficient` tier resolved for the box's engine, and the four call sites ask the
+resolver for it rather than naming a string. One knob, static, no routing — which
+is what `2026-08-25-small-model-slot.md` argues for. The per-engine-vs-one-value
+question it leaves open is answered by the tier translation already in place: one
+box-level value, resolved per engine.
+
+**First implementation chunk.** The slot in the resolver + the four call sites,
+with a doctest asserting a Codex box never receives a Claude nickname.
+
+### Track H — context for the structured passes
+
+**What.** The four small passes stop loading the full box context.
+
+**Why this needs to change.**
+`issues/code-quality/2026-07-30-structured-output-passes-load-full-box-context.md`:
+each of them loads the box CLAUDE.md and the generated agent guide to answer a
+narrow structured question. They pay for context they cannot use, on the tier
+least able to use it.
+
+**Direction.** The same slot Track G introduces carries a context setting, so
+"which model and how much context" is one answer per invocation kind rather than
+two mechanisms. The SDK's `settingSources` is the lever; the measurement of what
+each pass actually needs comes first, because trimming context on a judgment pass
+is exactly where a silent quality regression hides.
+
+**First implementation chunk.** Measure: log the assembled prompt size for each
+of the four passes before changing anything. The trim lands only against numbers.
+
 ## Could this be simpler?
 
 **The simplest version that could plausibly work:** keep `.callback-box/chat-model.json`
@@ -436,15 +585,11 @@ separate mechanism rather than a sub-question of this one.
   additive change, not a rework.
 - **Per-agent-kind policy** (triage vs retro vs procedure). Same reason; the
   callers that care already pass explicit models.
-- **Per-chat engine choice at all** — `issues/features/2026-08-23-choose-the-engine-for-a-new-chat.md`,
-  which an earlier draft carried as a fifth track. Deferred, because it is a
-  bigger mechanism than "thread one existing parameter": reservation takes no
-  engine (`chat-control-procedures.ts:230`), `registry.reserve` takes no engine
-  (`src/core/chat/session/registry.ts:136`), and coined ids are Claude-only by
-  contract (`src/core/chat/session/reserve.ts:189`), so offering the choice on a
-  Codex box means changing how a chat is named, not adding a menu. It is the
-  engine half of the workstream name and it deserves its own plan. The issue
-  stays open.
+- **Mid-chat engine conversion** — see below. (An earlier draft deferred
+  per-chat engine choice *entirely*, reading `reserve.ts:189`'s refusal of
+  coined ids on a non-Claude box as "this changes how a chat is named". That was
+  wrong: a Codex chat simply does not coin, which is what every Codex chat does
+  today. Track F builds it.)
 - **Mid-chat engine conversion.** `2026-08-23` rules it out for its own reasons
   this plan does not relitigate: transcripts live in different stores and models
   are engine-scoped.
@@ -479,6 +624,12 @@ separate mechanism rather than a sub-question of this one.
   undefined`. Settled enough to build; recorded here because `updateBoxConfigFields`
   currently has no "clear this field" idiom and one has to be chosen
   (`config.agentModel = undefined` vs `delete config.agentModel`).
+- **Does the small slot want its own enablement?** A box with Codex enabled but
+  Claude as its default runs its small passes on Codex's cheap tier. **Lean:
+  yes, that is right** — the small model follows the invocation's engine, not a
+  second engine choice. Recorded because it is the first place someone will ask
+  for a cross-engine exception ("summarize on Haiku even though the box is
+  Codex"), and the answer should be no until there is a reason.
 - **Where does a `"new"`-shaped chat's follow-state live before it has an id?**
   A Codex-box chat has no session id until the harness names it, so there is no
   per-session file to be absent. **Lean:** absence is still the encoding —
@@ -520,8 +671,19 @@ the wrong reason. The human-facing reference is `docs/model-policy.md`.
    control gated on owner. *Depends on C1.*
 6. **D2** — off-default indicator on the chip button. *Depends on D1.*
 7. **D3** — admin section becomes engine + model. *Depends on A1; independent of D1.*
-8. **Audits + docs** — the two knowledge-audit entries, run; reference docs
-   updated (below).
+8. **Docs** — `docs/model-policy.md` (done).
+
+Remaining, in dependency order:
+
+9. **E1** — `engines` in box config + `loadEnabledEngines` + Settings checkboxes.
+10. **G1** — the small-model slot and its four call sites. *Independent of E/F;
+    closes a live defect, so it lands early.*
+11. **F1** — `engine` + `model` through `reserveSession` → history + model file;
+    client coins only for Claude. *Depends on E1.*
+12. **F2** — the picker: per-engine sections, default engine first, disabled and
+    fixed states, pin confined to the default engine. *Depends on F1.*
+13. **H1** — measure the four passes' assembled context, then trim against the
+    numbers. *Depends on G1.*
 
 ## Rollout shape
 
