@@ -1,0 +1,93 @@
+# Choosing a chat's engine and model before it exists
+
+A chat's engine is fixed when it starts and never changes after — transcripts
+live in different stores per engine, and models are engine-scoped, so a
+mid-chat switch would silently change two things at once. That makes the moment
+*before* the first message the only moment the choice can be made, and it is a
+moment when the chat has no id, no history entry and no model file.
+
+Two carriers, decided by whether the harness will accept an id we chose:
+
+- **Claude** takes a coined id, so the choice rides the reservation.
+- **Anything else** cannot, so the choice rides the `"new"` send — which is how
+  every Codex chat is created already.
+
+```ts setup
+import { resolveChatEngine, resolveStartEngine } from "../../src/core/chat/session/engine.js";
+import { reserveChatSession, ChatReservationStore } from "../../src/core/chat/session/reserve.js";
+import { clearBoxConfigCache } from "../../src/core/box/config.js";
+import { recordSessionStart } from "../../src/core/chat/session/session-start-record.js";
+import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { randomUUID } from "node:crypto";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+
+async function configure(boxRoot: string, config: Record<string, unknown>): Promise<void> {
+  await fs.mkdir(path.join(boxRoot, "config"), { recursive: true });
+  await fs.writeFile(path.join(boxRoot, "config/box.json"), JSON.stringify(config));
+  clearBoxConfigCache(boxRoot);
+}
+```
+
+A chat with no id takes the requested engine; the box default answers when
+nothing was requested.
+
+```ts
+const box = await makeTmpBox();
+await configure(box.root, { agentEngine: "claude", engines: { claude: true, codex: true } });
+
+JSON.stringify([
+  await resolveStartEngine(box.root, { sessionId: null, requested: null }),
+  await resolveStartEngine(box.root, { sessionId: null, requested: "codex" }),
+  await resolveChatEngine(box.root, null),
+])
+=> ["claude","codex","claude"]
+```
+
+Once the chat has a recorded engine, that is the answer — a request cannot
+change it. This is the "fixed at birth" rule, enforced where it is read rather
+than trusted to the UI.
+
+```ts continue
+const sessionId = randomUUID();
+await recordSessionStart(box.root, { sessionId, engine: "codex" });
+
+JSON.stringify([
+  await resolveChatEngine(box.root, sessionId),
+  await resolveStartEngine(box.root, { sessionId, requested: "claude" }),
+])
+=> ["codex","codex"]
+```
+
+A reservation carries the chosen model, and refuses a non-Claude engine —
+`unsupported`, not an error, because the client's answer to it is to send
+`"new"` instead.
+
+```ts continue
+const store = new ChatReservationStore(() => Date.now());
+const coined = randomUUID();
+const reserved = await reserveChatSession({
+  boxRoot: box.root,
+  store,
+  sessionId: coined,
+  contextDir: null,
+  seedFeatures: {},
+  model: "claude-fable-5",
+});
+
+JSON.stringify([reserved.kind, store.get(coined)?.model, store.get(coined)?.engine])
+=> ["reserved","claude-fable-5","claude"]
+
+const codexReserved = await reserveChatSession({
+  boxRoot: box.root,
+  store,
+  sessionId: randomUUID(),
+  contextDir: null,
+  seedFeatures: {},
+  requestedEngine: "codex",
+});
+codexReserved.kind
+=> unsupported
+
+await box.cleanup();
+```

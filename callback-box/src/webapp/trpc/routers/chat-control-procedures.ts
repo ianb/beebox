@@ -15,7 +15,8 @@ import { loadBoxModel } from "../../../core/box/config.js";
 import { liveModelState, resolveBoxModelForEngine, resolveEffectiveModel, type ModelSource } from "../../../core/model-policy.js";
 import { updateBoxConfigFields } from "../../box-config-write.js";
 import { resolveChatEngine } from "../../../core/chat/session/engine.js";
-import { loadAgentEngine } from "../../../core/box/config.js";
+import { loadAgentEngine, loadEnabledEngines } from "../../../core/box/config.js";
+import { AGENT_ENGINES } from "../../../shared/agent-models.js";
 import type { AgentEngine } from "../../../core/box/config.js";
 import { isChatModelAllowed } from "../../../shared/chat-models.js";
 import { deleteChatSession, ChatSessionNotFoundError, SessionStorageContextMismatchError } from "../../../core/chat/session/delete.js";
@@ -278,7 +279,17 @@ export const chatControlProcedures = {
    * the same chat.
    */
   reserveSession: publicProcedure
-    .input(z.object({ sessionId: sdkSessionIdSchema, contextDir: z.string().optional() }))
+    .input(z.object({
+      sessionId: sdkSessionIdSchema,
+      contextDir: z.string().optional(),
+      /**
+       * Engine and model chosen before the first message. A non-Claude engine
+       * comes back `unsupported` — not an error: the client then sends `"new"`,
+       * which is how every Codex chat is created.
+       */
+      engine: z.enum(AGENT_ENGINES).optional(),
+      model: z.string().optional(),
+    }))
     .mutation(async ({ input, ctx }): Promise<ReserveResult> => {
       const { registry } = requireRuntime(ctx.boxRoot);
       // `""` is kept, not collapsed to null: it is the box-root landmark, a
@@ -288,10 +299,21 @@ export const chatControlProcedures = {
       // Landmark feature defaults are captured now because nothing else will:
       // they only ever ride a `"new"` send, and a coined chat never sends one.
       const landmark = contextDir !== null ? await readLandmarkFeaturesForDir(ctx.boxRoot, contextDir) : null;
+      if (input.engine !== undefined && !(await loadEnabledEngines(ctx.boxRoot)).includes(input.engine)) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: `${input.engine} is not enabled for this box` });
+      }
+      if (input.model !== undefined && !isChatModelAllowed(input.engine ?? "claude", input.model)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Model ${input.model} is unavailable for ${input.engine ?? "claude"} chats`,
+        });
+      }
       return registry.reserve({
         sessionId: input.sessionId,
         contextDir,
         seedFeatures: mergeSeedFeatures({ landmark, request: undefined }),
+        ...(input.engine !== undefined ? { requestedEngine: input.engine } : {}),
+        ...(input.model !== undefined ? { model: input.model } : {}),
       });
     }),
 

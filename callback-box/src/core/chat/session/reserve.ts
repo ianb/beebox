@@ -40,6 +40,8 @@ export interface ChatReservation {
    * id to Claude.
    */
   engine: AgentEngine;
+  /** Model chosen before the first message, applied when the session is created. */
+  model?: string | undefined;
   /**
    * Landmark binding captured at reserve time. `""` is the box-root landmark
    * — a real binding, distinguished from `null` (a chat opened from nowhere),
@@ -181,13 +183,21 @@ export async function reserveChatSession(opts: {
   sessionId: string;
   contextDir: string | null;
   seedFeatures: Record<string, string>;
+  /** Engine the client chose for this chat; absent means the box default. */
+  requestedEngine?: AgentEngine | undefined;
+  /** Model the client chose for this chat; applied when the session is created. */
+  model?: string | undefined;
 }): Promise<ReserveResult> {
-  const { boxRoot, store, sessionId, contextDir, seedFeatures } = opts;
+  const { boxRoot, store, sessionId, contextDir, seedFeatures, model } = opts;
   if (!isCoinedIdShape(sessionId)) return { kind: "taken" };
   if (store.has(sessionId)) return { kind: "reserved", sessionId };
-  const engine = await loadAgentEngine(boxRoot);
+  // A coined id is a Claude-only affordance: the harness must accept an id we
+  // chose, and only Claude does. A chat on any other engine is `unsupported`
+  // here and takes the `"new"` path instead, which is what every Codex chat
+  // already does — so this is a routing answer, not a refusal of the choice.
+  const engine = opts.requestedEngine ?? await loadAgentEngine(boxRoot);
   if (engine !== "claude") return { kind: "unsupported" };
   if (await chatIdIsTaken(boxRoot, { sessionId, contextDir })) return { kind: "taken" };
-  store.set({ sessionId, engine, contextDir, seedFeatures });
+  store.set({ sessionId, engine, contextDir, seedFeatures, ...(model !== undefined ? { model } : {}) });
   return { kind: "reserved", sessionId };
 }
