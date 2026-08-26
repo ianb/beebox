@@ -40,7 +40,7 @@ health) are already landed and are the precedent this plan builds on.
 |---|---|---|
 | **Pointer** | `.glink.card` | "This Drive item exists, here is where, here is what it is for." Nothing is copied. The agent reads it on demand via `cb drive inspect` / the Drive URL. |
 | **Synced file** | `.gdoc.card` / `.gsheet.card` (exists) | Content mirrored two-way; the box owns the card; conflicts surface as `status: conflict`. |
-| **Synced folder** | `.gfolder.card` | The directory the card lives in mirrors the Drive folder's membership: Docs and Sheets become synced files, other children are reported as unsupported (or become pointers — open question), subfolders become subdirectories with their own `.gfolder.card`. Membership follows Drive one-way; content of synced children is two-way as today. |
+| **Synced folder** | `.gfolder.card` | The directory the card lives in mirrors the Drive folder's membership: Docs and Sheets become synced files, every other child becomes a pointer, subfolders become subdirectories with their own `.gfolder.card`. Membership follows Drive one-way; content of synced children is two-way as today. |
 
 The folder card is landmark-like on purpose: it lives *inside* the directory
 it describes, the same convention as `.landmark.card`
@@ -193,18 +193,20 @@ Drive cards; no separate membership table. Per folder:
    synced on this same pass (depth-first, cycle-guarded by Drive ID).
 4. Child that is a shortcut → resolve `shortcutDetails.targetId` and treat
    as the target; the card's `drive-id` is the target's.
-5. Any other child → if pointer emission is on (Open design question),
-   ensure `<dir>/<safeName>.glink.card` with `origin: mirror`, body empty;
-   otherwise count it as `unsupported` in the sync report.
+5. Any other child → ensure `<dir>/<safeName>.glink.card` with
+   `origin: mirror`, body empty (the boxholder or agent adds purpose notes;
+   the connector never touches the body).
 6. Children with a live card in the directory whose Drive ID is no longer
-   listed are **left alone in v1** and counted in the sync report as
-   `not-in-folder` (surfaced by the folder card's `status` summary and by
-   `cb drive status`, which gains that column). Nothing is trashed by the
-   connector. `listFiles` filters `trashed = false`
+   listed: `getFile` each one. `listFiles` filters `trashed = false`
    (`services/google-drive.ts:171`) and `DriveFile` has no `trashed` field
-   (`:22`), so distinguishing "moved" from "trashed" needs a `getFile` per
-   absent child and a schema change; that is the Open design question, not
-   a v1 rule.
+   (`:22`), so `DriveFile` gains `trashed: boolean` (zod schema + fake).
+   Trashed on Drive → the card and its attach scope move to `store/trash/`
+   (the existing tombstone path; local edits survive there and in git
+   history) and the sync report lists it. Not trashed (moved to another
+   folder, or access lost → 404) → left in place, still syncing, counted
+   as `not-in-folder` in the report, the folder card's `status` summary,
+   and a new `cb drive status` column. Boxholder decision 2026-08-26:
+   "definitely trash the box card (it's in history anyway)".
 7. Failures on one child never abort the folder; the folder card gets
    `status: error` + `error:` only when the listing itself fails.
 
@@ -227,10 +229,10 @@ unmount` (alias of `cb rm` on the folder card, for discoverability).
 
 **First implementation chunk.** Schemas + registry entries + zod tests;
 tracking gains `kind` and `sync()` dispatches on it; `extractDriveFileId`
-accepts `/folders/<id>`; fake service gains folder and shortcut fixtures;
-`syncFolder` reads from cards instead of config and recurses one level per
-pass with a cycle guard. `glink` emission for unsupported children waits
-on the Open design question and is not in this chunk.
+accepts `/folders/<id>`; `DriveFile` gains `trashed`; fake service gains
+folder, shortcut, and trashed fixtures; `syncFolder` reads from cards
+instead of config, emits `glink` for unsupported children, trashes
+Drive-trashed children, recurses one level per pass with a cycle guard.
 Doctest: `test/connectors/connector-drive-folder.doctest.md`.
 
 ### Track 2 — CLI plumbing and migration
@@ -242,10 +244,12 @@ Doctest: `test/connectors/connector-drive-folder.doctest.md`.
 
 **Why.** Cards need a writer the agent and the settings page share.
 
-**Direction.** `mount` resolves the id, `getFile`s it, refuses non-folders
-and already-mounted IDs (same guard style as `add`, `drive.ts:172-260`),
-writes the card, runs one folder sync, commits. `link` works for any mime
-including folders; writes `origin: manual`. Migration: `cb drive
+**Direction.** `mount <url> <dir>` resolves the id, `getFile`s it, refuses
+non-folders and already-mounted IDs (same guard style as `add`,
+`drive.ts:172-260`), writes the card, runs one folder sync, commits. The
+directory is always explicit — no default (boxholder, 2026-08-26); in chat
+the agent proposes one and asks if unsure. `link <url> <path>` works for
+any mime including folders; writes `origin: manual`. Migration: `cb drive
 migrate-folders` is NOT added; instead `sync()` converts each `folders`
 entry into a card on first run, then rewrites the config without `folders`
 and logs it. Two things this is not free on: `loadDriveConfig` is
@@ -273,10 +277,13 @@ three commands.
 **Why.** The boxholder's surfaces are settings and chat
 (`feedback_cli_not_a_user_surface`).
 
-**Direction.** Settings: list of mounts (name → directory, last sync,
-status, "open" link to the card), a "Mount a folder" form (folder URL, target
-directory with default `store/drive/<Drive name>`), "Add a pointer" form
-(URL, path). Errors from the mutation render inline (Calendar precedent
+**Direction.** The primary path is chat: the boxholder pastes a Drive URL
+and says what they want ("mirror this", "keep a pointer to this for the
+tax stuff"), and the agent runs `cb drive mount` or `cb drive link`. The
+skill text says so, with the "ask for a directory if unsure" rule.
+Settings is the second path: list of mounts (name → directory, last sync,
+status, "open" link to the card), a "Mount a folder" form (folder URL,
+target directory, required), "Add a pointer" form (URL, path). Errors from the mutation render inline (Calendar precedent
 shows only the mutation error state; do the same). Chat: the skill text
 gains a "Three kinds of Drive card" section and the mount/link/unmount
 lines; the agent runs the CLI. Knowledge audits below.
@@ -333,7 +340,9 @@ design questions for the boxholder's veto.
 | Two children with the same safe name | yes (`connector-drive.doctest.md`, occupant check) | refuse + report | clear |
 | Subfolder cycle via shortcut (A → shortcut to A) | no → Track 1 doctest | cycle guard by Drive ID per pass | clear (logged) |
 | Shared-drive folder returns empty listing | no → Track 1 doctest (fake flag) | add `supportsAllDrives`+`includeItemsFromAllDrives` to `getFile`/`listFiles` params (`services/google-drive.ts:155-185`; not present today) | silent without the flag — **this is why the flag is in chunk 1** |
-| Drive-side child trashed or moved out | no → Track 1 doctest | left in place, keeps syncing (a trashed Doc still exports); reported as `not-in-folder` in the sync report, folder card `status`, and a new `cb drive status` column | clear |
+| Drive-side child trashed | no → Track 1 doctest | `getFile` per absent child; trashed → card + attach to `store/trash/`, reported | clear |
+| Drive-side child moved out (or access lost) | no → Track 1 doctest | left in place, keeps syncing; `not-in-folder` in report, folder `status`, `cb drive status` column | clear |
+| `getFile` on an absent child fails transiently | no → doctest | child left in place this pass, counted as `unknown`; never trashed on an error | clear |
 | Folder card hand-edited to a different `drive-id` | no → doctest | treated as a new mount; old children stay | clear via `status` |
 | Config `folders` entry whose localPath now has a `.gfolder.card` with a different id | no → Track 2 doctest | conversion refuses that entry, logs, keeps it in config | clear |
 | Deep tree (hundreds of subfolders) on daily wakeup | no → doctest for the cap | recursion capped at depth 8 and 500 folders per pass; folder card `status: error` names the cap | clear |
@@ -379,24 +388,15 @@ No critical gap: every silent row above has handling in chunk 1.
 
 ## Open design questions
 
-- Drive-side *trash* of a child: v1 only reports `not-in-folder`. Should
-  a later pass trash the box card (edits preserved in `store/trash/`)?
-  Lean: yes, once `DriveFile` carries `trashed` and the fake can model it —
-  a mirror that keeps deleted members is not a mirror. Needs a `getFile`
-  per absent child to tell moved from trashed.
-- Should a mirrored folder emit `.glink.card` pointers for children it
-  cannot sync (PDF, Slides, images), so the box knows the folder's full
-  membership? Lean: yes — it is what makes "pointer" and "mirrored folder"
-  one system, and the folder view is otherwise lying by omission
-  (principle 13). Cost: `glink` cards multiply in media-heavy folders and
-  the connector stamps cards the boxholder never asked for. If no, `glink`
-  stays manual-only (`cb drive link`) and the folder view lists unsupported
-  children from the listing without cards.
+- Settled 2026-08-26 by the boxholder: pointer emission for unsyncable
+  children is on; Drive-side trash trashes the box card; no default mount
+  directory. Recorded in Direction.
 - Should a mirrored subfolder be a `gfolder` card of its own (this plan:
   yes, so it can be unmounted or given purpose notes independently), or an
   implicit part of the parent? Lean: own card.
-- Default target directory for `mount`: `store/drive/<name>` (this plan) or
-  ask every time in the settings form? Lean: default, editable.
+- Whether `not-in-folder` children should eventually be re-homed
+  automatically when they reappear in another mirrored folder. Lean: no;
+  `cb mv` is enough.
 
 ## Knowledge audits
 
@@ -404,7 +404,12 @@ Add to `src/dev/knowledge-audits.yaml`, tag `drive`:
 `drive-three-kinds` (knows_directly: pointer vs synced file vs mirrored
 folder), `drive-mount-folder` (knows_directly: `cb drive mount`),
 `drive-pointer-for-pdf` (knows_directly: a PDF in a mirrored folder is a
-`.glink.card`, not synced), `drive-unmount-keeps-children`. Run with
+`.glink.card`, not synced), `drive-unmount-keeps-children`,
+`drive-url-in-chat` (knows_directly: given a folder URL and "mirror this",
+run `cb drive mount <url> <dir>`, choosing or asking for the directory),
+`drive-link-in-chat` (knows_directly: "keep a pointer to this" →
+`cb drive link`), `drive-trashed-child` (knows_about: a child trashed on
+Drive ends up in `store/trash/`). Run with
 `pnpm knowledge-audit run --box <abs test1 path> --filter drive-` and
 record status comments. Note the existing BOX DRIFT comment
 (`knowledge-audits.yaml:1988`) — test1 has no Drive fixture; the new audits
