@@ -42,3 +42,26 @@ page that throws on every load with nothing wrong is what the debug-log
 count is supposed to catch. The tours now assert `expect.noPageErrors()`,
 so this stays a ❌ finding in the weekly tour check until it is fixed or
 shown to be environmental.
+
+## Second symptom: a visible 401 banner in the capture overlay (2026-08-26, weekly tour check)
+
+The scheduled `tour-check` run (`20260826-172841`) reproduced the debug-log
+error and found a second, user-visible face of the same dev-auth shape. Opening
+`/capture` renders the full-screen capture overlay with a red banner across the
+top:
+
+```
+Session creation failed: Create session failed: 401
+```
+
+Seen at both viewports in two tours:
+
+- `test/tours/.artifacts/capture/2026-08-26T22-32-45-624Z/camera-off.{desktop,mobile}.png`
+- `test/tours/.artifacts/nav-pages/2026-08-26T22-34-08-864Z/capture.{desktop,mobile}.png`
+
+So the capture routes reject the cookie-less tour session on two calls, not
+one: `GET /capture/sessions/resumable` (silent, debug-log only) and the
+create-session POST (loud, banner). The banner also shows a bare HTTP status
+to the user, which says nothing about what to do — if the answer here is
+"capture needs a signed-in owner", the overlay should say that instead of
+`401`.
