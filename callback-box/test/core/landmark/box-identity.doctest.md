@@ -19,7 +19,7 @@ const identity = (box) => readBoxIdentity({ boxRoot: box.root, slug: "kitchen-bo
 const box = await makeTmpBox();
 await box.write("Kitchen.landmark.card", "---\nnavigation:\n  label: Kitchen\n  symbol: 🍳\n---\n");
 JSON.stringify(await identity(box))
-=> {"name":"Kitchen","symbol":"🍳","symbolSrc":null}
+=> {"slug":"kitchen-box","name":"Kitchen","symbol":"🍳","symbolSrc":null}
 ```
 
 ## An image symbol comes back as a box-relative path
@@ -31,7 +31,7 @@ stays inside the box rather than becoming a filesystem path.
 const box = await makeTmpBox();
 await box.write("Box.landmark.card", "---\nnavigation:\n  label: Kitchen\n  symbol:\n    src: /art/pan.png\n---\n");
 JSON.stringify(await identity(box))
-=> {"name":"Kitchen","symbol":"","symbolSrc":"art/pan.png"}
+=> {"slug":"kitchen-box","name":"Kitchen","symbol":"","symbolSrc":"art/pan.png"}
 ```
 
 ## Every failure degrades to the slug
@@ -54,7 +54,7 @@ JSON.stringify([
   await identity(unlabelled),
   (await identity(broken)).name,
 ])
-=> ["kitchen-box",{"name":"kitchen-box","symbol":"📦","symbolSrc":null},"kitchen-box"]
+=> ["kitchen-box",{"slug":"kitchen-box","name":"kitchen-box","symbol":"📦","symbolSrc":null},"kitchen-box"]
 ```
 
 ## One landmark per directory, chosen stably
@@ -81,5 +81,5 @@ slug does. It reads as unset; the box's symbol still counts.
 const box = await makeTmpBox();
 await box.write("Box.landmark.card", "---\nnavigation:\n  label: Box\n  symbol: 📦\n---\n");
 JSON.stringify(await identity(box))
-=> {"name":"kitchen-box","symbol":"📦","symbolSrc":null}
+=> {"slug":"kitchen-box","name":"kitchen-box","symbol":"📦","symbolSrc":null}
 ```

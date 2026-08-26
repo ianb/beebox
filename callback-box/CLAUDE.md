@@ -175,6 +175,7 @@ The same duty applies at creation time: **new infrastructure isn't done until it
 | Interface-as-cards design | `docs/plans/interface-as-cards.md` |
 | Feature ideas & open issues | `/issues/` (monorepo root) |
 | OpenClaw/Hermes comparison & idea triage | `research/openclaw-hermes/README.md` |
+| Third-party asset attribution | `docs/attribution.md` |
 | Glossary | `docs/glossary.md` |
 | Example names for docs/tests | `docs/example-names.md` |
 
