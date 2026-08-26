@@ -1,9 +1,9 @@
 ---
 title: "Agent browsing as the owner: a box opts in, the browse key becomes a person"
-status: draft
+status: implemented
 workstream: tour-health
 issues:
-  - ../../../issues/bugs/2026-08-26-chat-load-logs-resumable-capture-list-error.md
+  - ../../../issues/closed/bugs/2026-08-26-chat-load-logs-resumable-capture-list-error.md
 ---
 # Agent browsing as the owner: a box opts in, the browse key becomes a person
 
