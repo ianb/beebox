@@ -181,7 +181,7 @@ const boxesWithMobileAuth = await fetch(`${hubBase}/api/boxes`, {
   headers: { authorization: `Bearer ${mobileToken}` },
 });
 JSON.stringify(await boxesWithMobileAuth.json())
-=> {"boxes":[{"slug":"test1","name":"test1"}]}
+=> {"boxes":[{"slug":"test1","name":"test1","symbol":"","symbolSrc":null}]}
 ```
 
 ## Unauthenticated mobile pairing redemption proxies to the box

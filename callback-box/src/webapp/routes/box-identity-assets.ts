@@ -22,7 +22,7 @@
 
 import type { FastifyInstance } from "fastify";
 import { renderBoxIcon } from "../../core/box/box-icon.js";
-import { readBoxIdentity } from "../../core/landmark/box-identity.js";
+import { readBoxIdentity, type BoxIdentity } from "../../core/landmark/box-identity.js";
 
 /**
  * The sizes a surface can ask for. An allowlist rather than an open integer:
@@ -66,30 +66,41 @@ export function registerBoxIdentityAssetRoutes(
 
   server.get("/manifest.webmanifest", async (_request, reply) => {
     const identity = await readBoxIdentity({ boxRoot, slug: boxSlug });
-    const base = `/${boxSlug}`;
-
-    // `start_url` is the box's own root, so an installed app opens into the
-    // box it was installed from rather than the fleet's box picker — the whole
-    // reason a per-box manifest is worth serving.
-    const manifest = {
-      name: identity.name,
-      short_name: identity.name,
-      start_url: `${base}/`,
-      scope: `${base}/`,
-      display: "standalone",
-      background_color: "#ffffff",
-      theme_color: "#9B6BA6",
-      icons: [192, 512].map((size) => ({
-        src: `${base}/icon-${String(size)}.png`,
-        sizes: `${String(size)}x${String(size)}`,
-        type: "image/png",
-        purpose: "any",
-      })),
-    };
-
     return reply
       .header("Cache-Control", "no-cache")
       .type("application/manifest+json")
-      .send(manifest);
+      .send(boxManifest(identity));
   });
+}
+
+/**
+ * The web-app manifest for one box.
+ *
+ * `start_url` and `scope` are the box's own root, so an installed app opens
+ * into the box it was installed from rather than the fleet's box picker —
+ * which is most of why a per-box manifest is worth serving at all. The name is
+ * the box's, so an installed app is called `Kitchen` rather than the fourth
+ * copy of `Callback Box` on someone's home screen.
+ *
+ * Icons are PNG rather than the SVG a Chromium browser would accept: these are
+ * the sizes an OS draws for an installed app, and an install captures them
+ * once, so the format with no support question attached is the right one here.
+ */
+export function boxManifest(identity: BoxIdentity): Record<string, unknown> {
+  const base = `/${identity.slug}`;
+  return {
+    name: identity.name,
+    short_name: identity.name,
+    start_url: `${base}/`,
+    scope: `${base}/`,
+    display: "standalone",
+    background_color: "#ffffff",
+    theme_color: "#9B6BA6",
+    icons: [192, 512].map((size) => ({
+      src: `${base}/icon-${String(size)}.png`,
+      sizes: `${String(size)}x${String(size)}`,
+      type: "image/png",
+      purpose: "any",
+    })),
+  };
 }

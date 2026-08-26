@@ -6,10 +6,43 @@
 
 import { Link } from "@tanstack/react-router";
 import { href, toSearch } from "../lib/routing";
+import { apiFileUrl } from "../lib/view-url";
 
 interface Box {
   slug: string;
   name: string;
+  symbol?: string;
+  symbolSrc?: string | null;
+}
+
+/**
+ * The box's own mark, beside its name.
+ *
+ * This is the selector: the one screen whose whole job is telling boxes
+ * apart, and until now it told them apart by name alone. The mark is the same
+ * one the box's tab and its notifications carry, so a box looks like itself
+ * everywhere.
+ *
+ * A box with no mark renders nothing rather than a placeholder — an empty
+ * slot beside a name reads as "no icon yet", which is true, while a generic
+ * glyph on every box would read as a mark that happens to be identical.
+ */
+function BoxMark({ box }: { box: Box }) {
+  if (box.symbolSrc !== undefined && box.symbolSrc !== null) {
+    return (
+      <img
+        src={apiFileUrl(box.slug, box.symbolSrc)}
+        alt=""
+        className="w-6 h-6 object-contain flex-shrink-0"
+      />
+    );
+  }
+  if (box.symbol !== undefined && box.symbol !== "") {
+    // Decorative: the name beside it already identifies the box, so a screen
+    // reader announcing the emoji's CLDR name would only repeat it noisily.
+    return <span aria-hidden="true" className="text-lg leading-none flex-shrink-0">{box.symbol}</span>;
+  }
+  return null;
 }
 
 /**
@@ -43,7 +76,10 @@ export function BoxActionsTile({ box }: { box: Box }) {
         to={href(`/${box.slug}/`)}
         className="block px-6 py-3 hover:bg-warm-50 active:bg-warm-100"
       >
-        <span className="text-lg font-medium text-primary">{box.name}</span>
+        <span className="flex items-center gap-2">
+          <BoxMark box={box} />
+          <span className="text-lg font-medium text-primary">{box.name}</span>
+        </span>
       </Link>
       <div className="border-t border-warm-200">
         <Link

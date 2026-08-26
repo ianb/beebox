@@ -77,8 +77,12 @@ export async function sendPush(
   boxRoot: string,
   opts: { payload: PushPayload; push?: PushService | undefined },
 ): Promise<SendPushResult> {
-  const { payload } = opts;
   const boxSlug = await resolveBoxSlug(boxRoot);
+  // The sending box's own mark, unless a caller chose one. Filled in here
+  // rather than at each call site: a caller knows what it is announcing, not
+  // which box's icon should carry it. The route falls back to the shared icon
+  // for a box with no mark, so this is safe to set unconditionally.
+  const payload: PushPayload = { icon: `/${boxSlug}/icon-192.png`, ...opts.payload };
   const forceFake = process.env.CB_PUSH_FAKE === "1";
   const push = opts.push ?? (forceFake ? createFakePush() : realPushFromEnv());
 

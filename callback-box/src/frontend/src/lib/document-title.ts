@@ -6,7 +6,7 @@
  * and browsers truncate tabs to roughly the first twenty characters — so the
  * most distinguishing text goes first and the least goes last:
  *
- *     <page> — <box>          "Grocery planning — Notes"
+ *     <mark> <page> — <box>    "⚗️ Acids & Bases — Notes"
  *
  * The app name is not in it. The favicon already says which app this is, and
  * a third segment is never visible in a real tab strip. `Callback Box` shows
@@ -15,6 +15,13 @@
  * `page` is the leaf route's `staticData.title` unless the page publishes a
  * better one (a chat's label, a card's title) via `usePageTitle` — see
  * `components/DocumentTitle.tsx`.
+ *
+ * `mark` is the emoji of the landmark for the directory you are in, and leads
+ * because the front of a title is the part a tab strip actually shows. It is
+ * the *landmark's* mark, not the box's — the box's is the favicon
+ * (`components/DocumentIcon.tsx`). Between them a tab says which box it
+ * belongs to and which place inside it you are looking at, and neither has to
+ * give up its slot to the other.
  */
 
 const APP_NAME = "Callback Box";
@@ -27,15 +34,19 @@ const APP_NAME = "Callback Box";
  * value, which counts as absent.
  */
 export function composeDocumentTitle({
+  mark,
   page,
   box,
 }: {
+  /** The current landmark's emoji, led with so it survives truncation. */
+  mark?: string | null | undefined;
   page: string | null | undefined;
   box: string | null | undefined;
 }): string {
+  const markGlyph = mark?.trim() || null;
   const pageName = page?.trim() || null;
   const boxName = box?.trim() || null;
 
-  if (pageName === null) return boxName ?? APP_NAME;
-  return `${pageName} — ${boxName ?? APP_NAME}`;
+  const named = pageName === null ? (boxName ?? APP_NAME) : `${pageName} — ${boxName ?? APP_NAME}`;
+  return markGlyph === null ? named : `${markGlyph} ${named}`;
 }

@@ -37,8 +37,11 @@ self.addEventListener("push", (event) => {
       body: payload.body || "",
       data: { url: payload.url || "/" },
       tag: payload.tag,
-      icon: "/icons/icon-192.png",
-      badge: "/icons/icon-192.png",
+      // The sending box's own mark when the payload carries one (sendPush
+      // fills it in), so a notification says which box is talking. Falls back
+      // to the shared app icon for an older payload or a box with no mark.
+      icon: payload.icon || "/icons/icon-192.png",
+      badge: payload.icon || "/icons/icon-192.png",
     }),
   );
 });

@@ -42,9 +42,18 @@ import { useBoxName } from "../hooks/useBoxName";
 interface PageTitleWriters {
   publish: (owner: object, title: string) => void;
   clear: (owner: object) => void;
+  publishMark: (owner: object, mark: string) => void;
+  clearMark: (owner: object) => void;
 }
 
-const PageTitleReadContext = createContext<string | null>(null);
+interface PageTitleValues {
+  /** A page's own name for itself, overriding its route's static title. */
+  title: string | null;
+  /** The current landmark's emoji, led with in the composed title. */
+  mark: string | null;
+}
+
+const PageTitleReadContext = createContext<PageTitleValues>({ title: null, mark: null });
 const PageTitleWriteContext = createContext<PageTitleWriters | null>(null);
 
 /**
@@ -67,6 +76,27 @@ export function usePageTitle(title: string | null | undefined): void {
 }
 
 /**
+ * Publish the current landmark's emoji, which leads the title.
+ *
+ * A separate slot from `usePageTitle` on purpose: the place you are in and the
+ * name of what you are looking at are different facts, published by different
+ * components, and sharing one slot would make them race for it.
+ */
+export function usePlaceMark(mark: string | null | undefined): void {
+  const writers = useContext(PageTitleWriteContext);
+  const ownerRef = useRef<object>({});
+  const value = mark?.trim() || null;
+
+  useEffect(() => {
+    const owner = ownerRef.current;
+    if (writers === null) return;
+    if (value === null) writers.clearMark(owner);
+    else writers.publishMark(owner, value);
+    return () => { writers.clearMark(owner); };
+  }, [writers, value]);
+}
+
+/**
  * Provides the publication channel and mounts the writer. Rendered by
  * `RootLayout` around the whole route tree, with `children` passed through so
  * a publication re-renders only this provider and the writer — never the
@@ -74,6 +104,7 @@ export function usePageTitle(title: string | null | undefined): void {
  */
 export function PageTitleProvider({ children }: { children: ReactNode }) {
   const [published, setPublished] = useState<{ owner: object; title: string } | null>(null);
+  const [mark, setMark] = useState<{ owner: object; mark: string } | null>(null);
   // Nested inside another provider (the error page mounts its own, and cannot
   // know whether the root layout survived the error), this is a pass-through:
   // two providers would mean two writers racing to set `document.title`.
@@ -83,15 +114,22 @@ export function PageTitleProvider({ children }: { children: ReactNode }) {
     () => ({
       publish: (owner, title) => setPublished({ owner, title }),
       clear: (owner) => setPublished((cur) => (cur !== null && cur.owner === owner ? null : cur)),
+      publishMark: (owner, glyph) => setMark({ owner, mark: glyph }),
+      clearMark: (owner) => setMark((cur) => (cur !== null && cur.owner === owner ? null : cur)),
     }),
     [],
+  );
+
+  const values = useMemo<PageTitleValues>(
+    () => ({ title: published?.title ?? null, mark: mark?.mark ?? null }),
+    [published, mark],
   );
 
   if (enclosing !== null) return children;
 
   return (
     <PageTitleWriteContext.Provider value={writers}>
-      <PageTitleReadContext.Provider value={published === null ? null : published.title}>
+      <PageTitleReadContext.Provider value={values}>
         <DocumentTitleWriter />
         {children}
       </PageTitleReadContext.Provider>
@@ -104,7 +142,7 @@ export function PageTitleProvider({ children }: { children: ReactNode }) {
  * and the current box. Renders nothing.
  */
 function DocumentTitleWriter() {
-  const published = useContext(PageTitleReadContext);
+  const { title: published, mark } = useContext(PageTitleReadContext);
 
   // Selecting the string rather than the matches array keeps this a primitive
   // comparison, so an unrelated router state change doesn't re-render.
@@ -120,7 +158,7 @@ function DocumentTitleWriter() {
   // box -- which composes as absent.
   const { boxName } = useBoxName();
 
-  const title = composeDocumentTitle({ page: published ?? routeTitle, box: boxName });
+  const title = composeDocumentTitle({ mark, page: published ?? routeTitle, box: boxName });
 
   useEffect(() => {
     document.title = title;
