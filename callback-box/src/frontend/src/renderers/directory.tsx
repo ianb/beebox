@@ -48,7 +48,11 @@ function CardAccordion({
   hasAttachments?: boolean;
   boxSlug: string | undefined;
   onNavigate: RendererProps["onNavigate"];
-  /** Extra chrome in the accordion title — the Drive state column, today. */
+  /**
+   * Replaces the card's own status badge — the Drive state column, today. A
+   * column that says "conflict" beside a status badge saying "conflict" is one
+   * badge too many, and the column is the more specific of the two.
+   */
   annotation?: ReactNode;
 }) {
   // Card-as-directory: when a card has its own attach scope, expose a link to
@@ -59,8 +63,7 @@ function CardAccordion({
     <Row gap="sm">
       <Text size="sm" weight="medium" tone="emphasis">{name}</Text>
       <Text size="xs" tone="muted">.{type}.card</Text>
-      {status ? <Badge size="sm">{status}</Badge> : null}
-      {annotation}
+      {annotation ?? (status ? <Badge size="sm">{status}</Badge> : null)}
       {attachPath && boxSlug ? (
         <TextLink to={href(`/${boxSlug}/browse/${attachPath}`)}>
           <Text size="xs" tone="muted">contents →</Text>
@@ -110,7 +113,10 @@ export interface DirectoryListingProps {
   dirPath: string;
   boxSlug: string | undefined;
   onNavigate: RendererProps["onNavigate"];
-  /** Extra chrome per card row — the `gfolder` view's Drive state column. */
+  /**
+   * Per card row, a badge shown INSTEAD of the card's own status — the
+   * `gfolder` view's Drive state column.
+   */
   annotate?: (card: BrowseCardEntry) => ReactNode;
   /**
    * A card to leave out. The `gfolder` view omits the mount card itself: it

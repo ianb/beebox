@@ -52,14 +52,16 @@ function GlinkView({ data, onNavigate }: RendererProps) {
           <Badge tone="neutral">{driveMimeLabel(mime ?? "")}</Badge>
           <OriginBadge origin={origin} />
         </Row>
-        <Text size="sm" tone="muted">
+        <Text as="p" size="sm" tone="muted">
           Not copied into the box — the card records where this lives and what it is for.
         </Text>
-        {link === null ? (
-          <Text size="sm" tone="danger">No Drive link on this card yet.</Text>
-        ) : (
-          <ExternalLink href={link} id="cb-glink-open-in-drive">Open in Drive</ExternalLink>
-        )}
+        <Row gap="sm" align="center" wrap>
+          {link === null ? (
+            <Text size="sm" tone="danger">No Drive link on this card yet.</Text>
+          ) : (
+            <ExternalLink href={link} id="cb-glink-open-in-drive">Open in Drive</ExternalLink>
+          )}
+        </Row>
       </Stack>
 
       <Stack gap="xs">
