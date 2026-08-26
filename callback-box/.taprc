@@ -11,6 +11,9 @@ node-arg:
   # a test resolves or writes can reach the developer's real
   # ~/.config/cb/secrets.json. See the module for why this is process-level.
   - --import=./test/helpers/isolate-secret-store.ts
+  # Same for the machine-level credential store (~/.cb-auth.json) and the
+  # persisted session secret; see the helper's header.
+  - --import=./test/helpers/isolate-auth-file.ts
   # Same reason, for the machine's origin id: every husk a test creates records
   # it, so an unisolated run would mint or read ~/.local/share/cb/origin-id.
   - --import=./test/helpers/isolate-origin-id.ts
