@@ -1,6 +1,6 @@
 ---
 title: "Drive folder mounts cannot be configured from anywhere a boxholder actually uses"
-workstream: unattached
+workstream: drive-folder-mounts
 area: callback-box
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — user-story catalog verification

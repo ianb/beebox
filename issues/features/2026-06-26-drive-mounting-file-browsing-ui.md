@@ -1,6 +1,6 @@
 ---
 title: "drive mounting file browsing ui"
-workstream: unknown
+workstream: drive-folder-mounts
 needs: [decision]
 area: callback-box
 ---
@@ -27,3 +27,9 @@ Maintainer hasn't experimented with Drive mounting at all, so this is explorator
 — start with the CLI command if/when there's a real need, promote to UI later.
 Resolve the dead `inspect` endpoint as part of whichever path is taken (wire it
 up or delete it).
+
+**Amended 2026-08-26:** the tRPC router never had an `inspect` procedure — only
+the CLI `cb drive inspect` exists (and works); the "dead endpoint" line above
+is stale. The rest stands. Superseded in direction by
+`callback-box/docs/plans/drive-folder-mounts.md`, which makes a folder mount a
+card (`.gfolder.card`) rather than a config entry.
