@@ -19,6 +19,7 @@ function evidence(over: Partial<Evidence>): Evidence {
     allTime: EMPTY,
     window: EMPTY,
     failures: [],
+    injected: [],
     landings: [],
     bugs: [],
     ...over,
@@ -45,7 +46,7 @@ test("windowStart: with no baseline, one cadence — not all of history", () => 
 test("hasSomethingToReview: either half can be the whole product", () => {
   assert.equal(hasSomethingToReview(evidence({})), false);
   assert.equal(
-    hasSomethingToReview(evidence({ window: { runs: 3, red: 0, steps: [] } })),
+    hasSomethingToReview(evidence({ window: { runs: 3, red: 0, injectedRuns: 0, steps: [] } })),
     true,
   );
   // No smoke runs at all, but bugs were filed — the gap half still has work.
@@ -79,7 +80,7 @@ test("parseBaseline: a malformed baseline is absent, not fatal", () => {
 test("formatBriefing: evidence and provenance, with no verdict of its own", () => {
   const briefing = formatBriefing(
     evidence({
-      window: { runs: 5, red: 1, steps: [] },
+      window: { runs: 5, red: 1, injectedRuns: 0, steps: [] },
       failures: [
         { ts: "2026-08-24T10:00:00.000Z", step: "cold-start", message: "the box failed to start", commit: "deadbeefcafe" },
       ],

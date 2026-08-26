@@ -601,6 +601,20 @@ how often it caught something, what it costs at p50. A step that has never
 failed across many runs is paying rent out of the budget, and the report names
 those once there are enough runs for a clean record to mean anything.
 
+**Breaking it on purpose: declare it.** Proving the tier can still go red means
+breaking something, and the resulting red is indistinguishable in the log from
+one the tier caught for real — the first weekly review duly read one as an
+intermittent worth watching. So say what you broke:
+
+```
+CB_SMOKE_FAULT_INJECTION="hub throws at import" bin/smoke
+```
+
+The reason is stamped on the run, the walk says so loudly while it runs, and
+every count in `--report` and in the weekly review excludes it. A step's
+`forced` column counts these separately from `failed`: firing on demand proves
+the step is wired up, never that it has caught anything.
+
 Read `ran` as the denominator, not the run count: the walk stops at the first
 failure, so a late step has seen fewer runs than an early one. Steps are keyed
 by a stable id, not their printed name, so rewording a step keeps its history.

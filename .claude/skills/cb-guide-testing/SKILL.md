@@ -52,7 +52,9 @@ line (`docs/testing.md` opens with this).
   break startup or the app bar and you want to know before landing.
   `bin/smoke --report` says what each step has actually caught and what it
   costs — the tier is meant to be trimmed when a step stops earning its
-  place.
+  place. Breaking something to prove the tier still fails loudly? Declare
+  it with `CB_SMOKE_FAULT_INJECTION="<what you broke>"` so the run is
+  excluded from every count.
 - **Frontend dev stubs** (`/fakestream`, `bin/browse`) — for frontend
   bugs that only manifest against real layout/measurement (scroll,
   virtualization, reflow); a dev stub makes the input deterministic
