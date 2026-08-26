@@ -20,14 +20,12 @@ import { errnoCode, errorMessage } from "../lib/error-guards.js";
 import { ok, err, type Result } from "../lib/result.js";
 
 /** A pre-card folder mount. Legacy input only — see the module comment. */
-export const DriveFolderMountSchema = z.object({
+const DriveFolderMountSchema = z.object({
   driveFolderId: z.string().min(1),
   localPath: z.string().min(1),
 });
 
-export type DriveFolderMount = z.infer<typeof DriveFolderMountSchema>;
-
-export const DriveConfigSchema = z.object({
+const DriveConfigSchema = z.object({
   folders: z.array(DriveFolderMountSchema).optional(),
 });
 

@@ -12,7 +12,6 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { errnoCode } from "../lib/error-guards.js";
 import { invariant } from "../lib/invariant.js";
 import { stageAndCommitPaths } from "../lib/git.js";
 import { commitTrashReceipt, moveCardsToTrash } from "../core/commands/trash.js";
@@ -82,10 +81,9 @@ function resolveInBox(boxRoot: string, target: string): string {
 async function refuseIfExists(opts: { boxRoot: string; cardPath: string }): Promise<void> {
   try {
     await fs.access(opts.cardPath);
-  } catch (e) {
-    // Absent is the state we want. An unreadable path is not something we
-    // would be overwriting either, and the write below reports it properly.
-    if (errnoCode(e) === "ENOENT") return;
+  } catch (_e) {
+    // Absent is the state we want, and an unreadable path is not a card we
+    // would be overwriting either — the write below reports it properly.
     return;
   }
   throw new DriveCardExistsError(path.relative(opts.boxRoot, opts.cardPath));

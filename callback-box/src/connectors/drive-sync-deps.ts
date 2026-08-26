@@ -17,7 +17,7 @@ import type { DriveCardTracking } from "./google-drive-tracking.js";
 import type { DriveTransientState } from "./google-drive-state.js";
 
 /** Every Drive ID some card on the box already speaks for. */
-export function claimedDriveIds(tracking: DriveCardTracking): Set<string> {
+function claimedDriveIds(tracking: DriveCardTracking): Set<string> {
   return new Set([
     ...tracking.liveCards.map((card) => card.driveId),
     ...tracking.duplicates.map((duplicate) => duplicate.driveId),
