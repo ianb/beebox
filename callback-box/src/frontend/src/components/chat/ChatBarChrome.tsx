@@ -54,6 +54,11 @@ export interface ChatBarChromeProps {
   hqInFlight: boolean;
   onNewSession: () => void;
   selectedModel: string | null;
+  modelInForce: string | null;
+  boxDefault: string | null;
+  canPin: boolean;
+  onPinModel: (model: string | null) => void;
+  onOpenModelPanel: () => void;
   agentEngine: ChatAgentEngine | null;
   onSelectModel: (model: string | null) => void;
   onStopProcess: () => void;
@@ -73,7 +78,8 @@ export function ChatBarChrome(props: ChatBarChromeProps) {
     contextDir, boxSlug, sessionLabel, messages, onZoomView,
     muted, onToggleMute, narrationEnabled, onToggleNarration,
     hqDictationEnabled, onToggleHqDictation, hqInFlight,
-    onNewSession, selectedModel, agentEngine, onSelectModel, onStopProcess, onRestartProcess, onCompactSession,
+    onNewSession, selectedModel, modelInForce, boxDefault, canPin, onPinModel, onOpenModelPanel,
+    agentEngine, onSelectModel, onStopProcess, onRestartProcess, onCompactSession,
     sessionId, running, busy, debugView, setDebugView, showDebugLog, setShowDebugLog,
   } = props;
 
@@ -118,6 +124,11 @@ export function ChatBarChrome(props: ChatBarChromeProps) {
         contextDir={contextDir}
         onNewSession={onNewSession}
         selectedModel={selectedModel}
+        modelInForce={modelInForce}
+        boxDefault={boxDefault}
+        canPin={canPin}
+        onPinModel={onPinModel}
+        onOpenModelPanel={onOpenModelPanel}
         agentEngine={agentEngine}
         onSelectModel={onSelectModel}
         onStopProcess={onStopProcess}

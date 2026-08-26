@@ -97,9 +97,29 @@ export interface SessionEntry {
 /** A client-created entry tracked until authoritative history echoes it. */
 export type PendingSessionEntry = SessionEntry & { reconcileKnownUuids: string[] };
 
-export async function getChatStatus(params: { sessionId: string | null }): Promise<{ sessionId: string | null; running: boolean; busy: boolean; model: string | null; engine: ChatAgentEngine | null }> {
+export interface ChatStatus {
+  sessionId: string | null;
+  running: boolean;
+  busy: boolean;
+  /** The model in force — what a live run is using, else what the next one would. */
+  model: string | null;
+  /** Whether `model` is this chat's own pick, the box default, or neither. */
+  source: "explicit" | "default" | "none";
+  /** The box default as this chat's engine runs it. */
+  boxDefault: string | null;
+  /** What a restart would switch this chat to, when that differs from `model`. */
+  pendingModel: string | null;
+  engine: ChatAgentEngine | null;
+}
+
+export async function getChatStatus(params: { sessionId: string | null }): Promise<ChatStatus> {
   const status = await trpcClient.chat.status.query({ session: params.sessionId ?? undefined });
   return { ...status, engine: parseChatAgentEngine(status.engine) };
+}
+
+/** Pin the box default — the model every chat that has not chosen follows. */
+export async function setDefaultChatModel(params: { model: string | null }): Promise<{ ok: boolean; model: string | null; commitWarning: string | null }> {
+  return trpcClient.chat.setDefaultModel.mutate({ model: params.model });
 }
 
 export async function setChatModel(params: { sessionId: string; model: string | null }): Promise<{ ok: boolean; model: string | null }> {

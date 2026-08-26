@@ -22,6 +22,7 @@ import { ScreenshotRequestUI } from "./ScreenshotRequestUI";
 import { useChatAttachmentValues } from "./InteractiveChat-attachments";
 import { useCompanionSelection } from "./use-companion-selection";
 import type { ChatBodyProps } from "./InteractiveChat-body-props";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
 
 
 /**
@@ -36,7 +37,11 @@ function BarChromeRegion(props: ChatBodyProps) {
     sessionId, processRunning, isStreaming, debugView, setDebugView, showDebugLog, setShowDebugLog,
   } = props;
   const { onZoomView } = tabs;
-  const { agentEngine, selectedModel, narrationEnabled, handleToggleNarration, hqDictationEnabled, handleToggleHqDictation, handleSelectModel } = model;
+  const { agentEngine, selectedModel, modelInForce, boxDefault, handlePinModel, handleOpenModelPanel, narrationEnabled, handleToggleNarration, hqDictationEnabled, handleToggleHqDictation, handleSelectModel } = model;
+  // Open-access boxes have no signed-in user and pass the server's owner gate,
+  // so only a known non-owner hides the pin — matching `ownerProcedure`.
+  const currentUser = useCurrentUser();
+  const canPin = currentUser === null || currentUser.isOwner;
   return (
     <ChatBarChrome
       contextDir={effectiveContextDir}
@@ -53,6 +58,11 @@ function BarChromeRegion(props: ChatBodyProps) {
       hqInFlight={voice.hqInFlight}
       onNewSession={actions.handleNewSession}
       selectedModel={selectedModel}
+      modelInForce={modelInForce}
+      boxDefault={boxDefault}
+      canPin={canPin}
+      onPinModel={handlePinModel}
+      onOpenModelPanel={handleOpenModelPanel}
       agentEngine={agentEngine}
       onSelectModel={handleSelectModel}
       onStopProcess={actions.handleStopProcess}

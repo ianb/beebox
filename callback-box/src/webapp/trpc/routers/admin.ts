@@ -36,6 +36,12 @@ const googleServicesSchema = z.object({
 
 const boxConfigSchema = z.object({
   agentEngine: z.enum(["claude", "codex"]).default("claude"),
+  // Deliberately a plain string, not an enum over the model registry: this is
+  // a `parse` of the whole file, so a stale or hand-typed model would throw the
+  // entire admin page away. The resolver (`core/model-policy.ts`) is the
+  // boundary that rejects an unusable value; here it only needs to survive the
+  // trip so the UI can show it back as unrecognized.
+  agentModel: z.string().optional(),
   allowedEmails: z.array(z.string()).default([]),
   publicUrl: z.string().nullable().default(null),
   googleServices: googleServicesSchema.default({}),
@@ -210,6 +216,7 @@ export const adminRouter = router({
       googleLoginConfigured: (await getGoogleClientCreds(ctx.boxRoot)) !== null,
       googleServices: config.googleServices,
       agentEngine: config.agentEngine,
+      agentModel: config.agentModel ?? null,
     };
   }),
 
@@ -227,8 +234,10 @@ export const adminRouter = router({
           allowedEmails: z.array(z.string()).optional(),
           googleServices: googleServicesSchema.optional(),
           agentEngine: z.enum(["claude", "codex"]).optional(),
+          /** `null` clears the box's model policy. */
+          agentModel: z.string().nullable().optional(),
         })
-        .refine((v) => v.allowedEmails !== undefined || v.googleServices !== undefined || v.agentEngine !== undefined, {
+        .refine((v) => v.allowedEmails !== undefined || v.googleServices !== undefined || v.agentEngine !== undefined || v.agentModel !== undefined, {
           message: "At least one box configuration field is required",
         }),
     )
@@ -238,6 +247,7 @@ export const adminRouter = router({
         ...(input.allowedEmails === undefined ? {} : { allowedEmails: input.allowedEmails }),
         ...(input.googleServices === undefined ? {} : { googleServices: input.googleServices }),
         ...(input.agentEngine === undefined ? {} : { agentEngine: input.agentEngine }),
+        ...(input.agentModel === undefined ? {} : { agentModel: input.agentModel }),
       });
       if (result.commitError) {
         console.error(`[admin] box config was saved but its Git commit failed for ${ctx.boxRoot}:`, result.commitError);
@@ -249,6 +259,7 @@ export const adminRouter = router({
         allowedEmails: saved.allowedEmails,
         googleServices: saved.googleServices,
         agentEngine: saved.agentEngine,
+        agentModel: saved.agentModel ?? null,
       };
     }),
 
