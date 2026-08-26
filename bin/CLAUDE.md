@@ -391,7 +391,10 @@ through `bin/workstreams agent-liveness` and spares an agent-browser on
   and why. The transcript check happens before the tab opens: `--resume` with a
   pruned id fails inside the tab, where there is no fallback left. Only the
   recorded id is ever used — a project directory routinely holds several
-  transcripts, and the newest is not the one that did the work.
+  transcripts, and the newest is not the one that did the work. The id shape
+  this decision accepts is the shape `launch_session_build`'s own guard
+  demands, because that guard runs after `resume` has committed to continuing:
+  a disagreement between them is no session at all, not a fresh one.
 - `bin/workstreams reset-test <name>` — hard-reset the isolated test1 clone to
   its `test-setup` branch
 - `bin/workstreams confirm-tested <issue-basename>` — clear a landed issue's

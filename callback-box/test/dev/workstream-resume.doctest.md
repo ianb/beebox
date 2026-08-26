@@ -99,7 +99,26 @@ JSON.stringify([
   await mode("codex", false, { sessionId: kept }, projectsRoot),
   await mode("claude", false, { sessionId: "../../etc/passwd" }, projectsRoot),
 ])
-=> ["continue 40009a22-c9b5-49f8-b166-f16937403e8d","fresh forced","fresh transcript-missing","fresh no-recorded-session","fresh agent-not-claude","fresh transcript-missing"]
+=> ["continue 40009a22-c9b5-49f8-b166-f16937403e8d","fresh forced","fresh transcript-missing","fresh no-recorded-session","fresh agent-not-claude","fresh invalid-session-id"]
+```
+
+An id this decision accepts is one `launch_session_build` will also accept — its
+uuid guard runs after `resume` has committed to continuing, so a disagreement
+between them would mean no session at all rather than a fresh one. A recorded id
+that is not a uuid falls to fresh here even when a file with that name exists.
+And a transcript must be non-empty: a zero-byte one is a session killed before
+it wrote anything, and `--resume` on it fails inside the tab.
+
+```ts continue
+const malformed = "not-a-uuid";
+const emptied = "7c1f0f5a-1111-4222-8333-444455556666";
+await writeFile(`${projectsRoot}/-Users-someone-src-worktrees-chat-scroll/${malformed}.jsonl`, "{}\n");
+await writeFile(`${projectsRoot}/-Users-someone-src-worktrees-chat-scroll/${emptied}.jsonl`, "");
+JSON.stringify([
+  await mode("claude", false, { sessionId: malformed }, projectsRoot),
+  await mode("claude", false, { sessionId: emptied }, projectsRoot),
+])
+=> ["fresh invalid-session-id","fresh transcript-missing"]
 ```
 
 A transcript is found by id across every project directory, not by the one

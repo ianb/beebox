@@ -40,15 +40,28 @@ workstream_recovery_sha() {
   printf '%s' "$1" | jq -r '.removed.finalSha // .culled.finalSha // empty' 2>/dev/null || true
 }
 
+# A Claude session id. Deliberately the same shape `launch_session_build` will
+# demand later: a record that passes here and is refused there would mean no
+# session at all, since the refusal happens after `resume` has already committed
+# to continuing. Two checks rather than one shared helper because the launcher
+# guards a different surface — anything that sets LS_CLAUDE_RESUME_SESSION —
+# and that one stands in front of an unquoted interpolation.
+workstream_is_session_id() {
+  [[ "$1" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]]
+}
+
 # Where Claude keeps a conversation's transcript. Every project directory is
 # searched rather than the one encoding this worktree's path, so a transcript
 # still resolves when the recorded session was started somewhere else.
+#
+# Non-empty, not merely present: a zero-byte `.jsonl` is a session killed before
+# it wrote anything, and `--resume` on one fails inside the Terminal tab, where
+# there is nothing left to fall back to.
 workstream_claude_transcript() {
   local session_id="$1" projects_root="${2:-$HOME/.claude/projects}" candidate
-  [ -n "$session_id" ] || return 1
-  case "$session_id" in *[!0-9a-fA-F-]*|"") return 1 ;; esac
+  workstream_is_session_id "$session_id" || return 1
   for candidate in "$projects_root"/*/"$session_id.jsonl"; do
-    [ -f "$candidate" ] || continue
+    [ -s "$candidate" ] || continue
     printf '%s\n' "$candidate"
     return 0
   done
@@ -69,6 +82,7 @@ workstream_resume_session_mode() {
   if [ "$fresh" = true ]; then printf 'fresh forced\n'; return 0; fi
   session_id=$(printf '%s' "$record" | jq -r '.sessionId // empty' 2>/dev/null || true)
   if [ -z "$session_id" ]; then printf 'fresh no-recorded-session\n'; return 0; fi
+  if ! workstream_is_session_id "$session_id"; then printf 'fresh invalid-session-id\n'; return 0; fi
   if ! workstream_claude_transcript "$session_id" ${projects_root:+"$projects_root"} >/dev/null; then
     printf 'fresh transcript-missing\n'
     return 0

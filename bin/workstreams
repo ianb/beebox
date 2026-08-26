@@ -524,6 +524,7 @@ case "$cmd" in
       case "$session_mode" in
         "fresh forced") session_note="fresh session (--fresh)" ;;
         "fresh no-recorded-session") session_note="fresh session (no recorded session id)" ;;
+        "fresh invalid-session-id") session_note="fresh session (recorded session id is malformed)" ;;
         "fresh transcript-missing") session_note="fresh session (recorded transcript is gone)" ;;
         *) session_note="fresh session" ;;
       esac
