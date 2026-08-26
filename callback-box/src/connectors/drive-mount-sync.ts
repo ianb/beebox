@@ -20,6 +20,7 @@ import { syncFolderCard } from "./drive-folder-sync.js";
 import type { FolderSyncResult } from "./drive-folder-types.js";
 import { createFolderSyncDeps } from "./drive-sync-deps.js";
 import { NotAFolderMountError } from "./drive-mount-errors.js";
+import { resolveMountTarget } from "./drive-mount-path.js";
 import {
   driveIdFromCardContent,
   findDriveCardTracking,
@@ -77,7 +78,7 @@ export async function syncFolderMount(options: {
   target: string;
 }): Promise<SyncFolderMountResult> {
   const { boxRoot, service, target } = options;
-  const cardPath = path.isAbsolute(target) ? target : path.join(boxRoot, target);
+  const cardPath = resolveMountTarget(boxRoot, { raw: target, label: "The mount card" });
   const relCard = path.relative(boxRoot, cardPath);
   if (!cardPath.endsWith(`.${GFOLDER_CARD_TYPE}.card`)) {
     throw new NotAFolderMountError(relCard);

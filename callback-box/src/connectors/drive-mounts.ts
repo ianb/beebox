@@ -22,6 +22,7 @@ import { writeGfolderCard, writeGlinkCard } from "./drive-card-stamp.js";
 import { DRIVE_FOLDER_MIME } from "./drive-folder-plan.js";
 import { gfolderCardsIn } from "./drive-folder-cards.js";
 import { mirrorFolderOnce } from "./drive-mount-sync.js";
+import { resolveMountTarget } from "./drive-mount-path.js";
 import { safeFilename } from "./chat-utils.js";
 import {
   AmbiguousFolderMountError,
@@ -65,10 +66,6 @@ async function refuseIfClaimed(opts: { boxRoot: string; driveId: string }): Prom
   if (claimedBy.length > 0) {
     throw new DriveIdClaimedError({ driveId: opts.driveId, claimedBy });
   }
-}
-
-function resolveInBox(boxRoot: string, target: string): string {
-  return path.isAbsolute(target) ? target : path.join(boxRoot, target);
 }
 
 async function refuseIfExists(opts: { boxRoot: string; cardPath: string }): Promise<void> {
@@ -121,7 +118,7 @@ export async function mountDriveFolder(options: {
   }
   await refuseIfClaimed({ boxRoot, driveId });
 
-  const mountDir = resolveInBox(boxRoot, dir);
+  const mountDir = resolveMountTarget(boxRoot, { raw: dir, label: "The target directory" });
   const occupants = await gfolderCardsIn(mountDir);
   if (occupants.length > 0) {
     throw new DirectoryAlreadyMountedError({
@@ -174,7 +171,7 @@ export async function linkDriveItem(options: {
   const file = await service.getFile(driveId);
   await refuseIfClaimed({ boxRoot, driveId });
 
-  const resolved = resolveInBox(boxRoot, target);
+  const resolved = resolveMountTarget(boxRoot, { raw: target, label: "The pointer path" });
   const cardPath = resolved.endsWith(`.${GLINK_CARD_TYPE}.card`)
     ? resolved
     : `${resolved}.${GLINK_CARD_TYPE}.card`;
@@ -212,7 +209,7 @@ export async function unmountDriveFolder(options: {
   target: string;
 }): Promise<UnmountResult> {
   const { boxRoot, target } = options;
-  const resolved = resolveInBox(boxRoot, target);
+  const resolved = resolveMountTarget(boxRoot, { raw: target, label: "The mount card" });
   const cardPath = resolved.endsWith(`.${GFOLDER_CARD_TYPE}.card`)
     ? resolved
     : await onlyMountIn({ boxRoot, dir: resolved });

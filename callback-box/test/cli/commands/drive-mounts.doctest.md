@@ -499,3 +499,117 @@ JSON.stringify({
 ```ts cleanup
 await box.cleanup();
 ```
+
+## conversion refuses a directory holding two mounts, and a target outside the box
+
+Two `.gfolder.card`s in one directory are already an unresolved question about
+which mirror owns it. Converting would add a third answer, so the entry stays
+in the config.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+await box.seed("store/drive/recipes/One.gfolder.card", createGfolderTemplate({ driveId: "folder-8" }));
+await box.seed("store/drive/recipes/Two.gfolder.card", createGfolderTemplate({ driveId: "folder-9" }));
+await saveDriveConfig(box.root, {
+  folders: [{ driveFolderId: "folder-1", localPath: "store/drive/recipes" }],
+});
+box.commitAll("a config entry pointing at a doubly-mounted directory");
+
+const drive = recipesDrive();
+drive.files.push(driveFile({ id: "folder-8", name: "One", mimeType: FOLDER_MIME }));
+drive.files.push(driveFile({ id: "folder-9", name: "Two", mimeType: FOLDER_MIME }));
+const connector = createGoogleDriveConnector(box.root, drive);
+const log = await captureLogs(async () => { await connector.sync(); });
+log.includes("already holds 2 folder mounts (One.gfolder.card, Two.gfolder.card)")
+=> true
+
+JSON.stringify(await loadDriveConfig(box.root))
+=> {"ok":true,"value":{"folders":[{"driveFolderId":"folder-1","localPath":"store/drive/recipes"}]}}
+```
+
+A legacy config could name any filesystem path. One that climbs out of the box
+is refused the same way — the entry is kept, and nothing is written outside.
+
+```ts continue
+await saveDriveConfig(box.root, {
+  folders: [{ driveFolderId: "folder-1", localPath: "../escaped" }],
+});
+const escape = await captureLogs(async () => { await connector.sync(); });
+escape.includes("The mount directory must be a path inside the box: ../escaped")
+=> true
+
+JSON.stringify(await loadDriveConfig(box.root))
+=> {"ok":true,"value":{"folders":[{"driveFolderId":"folder-1","localPath":"../escaped"}]}}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## every mount target is resolved inside the box, or refused
+
+`mount`, `link`, and `unmount` all resolve their target through
+`shared/ref-path.ts`, which fails closed: a `..` that climbs out and a
+filesystem-absolute path are both refused before anything is written. A leading
+`/` is box-root-absolute rather than filesystem-absolute, so `/etc` names a
+directory *in the box*; the box root itself is not a target at all.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+const drive = recipesDrive();
+
+const refusal = async (op: Promise<unknown>): Promise<string> => {
+  try {
+    await op;
+    return "no refusal";
+  } catch (e) {
+    return e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+  }
+};
+
+await refusal(mountDriveFolder({
+  boxRoot: box.root, service: drive, input: FOLDER_URL("folder-1"), dir: "../outside",
+}))
+=> PathOutsideBoxError: The target directory must be a path inside the box: ../outside
+
+await refusal(mountDriveFolder({
+  boxRoot: box.root, service: drive, input: FOLDER_URL("folder-1"), dir: "store/../..",
+}))
+=> PathOutsideBoxError: The target directory must be a path inside the box: store/../..
+
+await refusal(mountDriveFolder({
+  boxRoot: box.root, service: drive, input: FOLDER_URL("folder-1"), dir: ".",
+}))
+=> PathOutsideBoxError: The target directory must be a path inside the box: .
+
+await refusal(linkDriveItem({
+  boxRoot: box.root, service: drive, input: FILE_URL("pdf-1"), target: "../outside/Scan",
+}))
+=> PathOutsideBoxError: The pointer path must be a path inside the box: ../outside/Scan
+
+await refusal(unmountDriveFolder({ boxRoot: box.root, target: "../../etc" }))
+=> PathOutsideBoxError: The mount card must be a path inside the box: ../../etc
+```
+
+Nothing was created outside the box, and the box itself is untouched.
+
+```ts continue
+JSON.stringify(cardsIn(await box.list(), "store/"))
+=> []
+```
+
+A box-root-absolute target still mounts, at the path it names inside the box.
+
+```ts continue
+const mounted = await mountDriveFolder({
+  boxRoot: box.root, service: drive, input: FOLDER_URL("folder-1"), dir: "/store/drive/recipes",
+});
+mounted.cardPath
+=> store/drive/recipes/Recipes.gfolder.card
+```
+
+```ts cleanup
+await box.cleanup();
+```

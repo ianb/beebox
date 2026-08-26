@@ -9,6 +9,11 @@
  * Idempotent by construction: an entry whose target directory already holds a
  * `.gfolder.card` for the same folder is dropped from the config without a
  * write, and once the config has no `folders` key there is nothing left to do.
+ *
+ * An entry it will not convert stays in the config rather than being dropped:
+ * a target outside the box, or a directory that already holds more than one
+ * mount card. Both are the boxholder's to resolve, and a silently dropped entry
+ * would be a mount that stopped existing without anyone being told.
  */
 
 import * as fs from "node:fs/promises";
@@ -16,6 +21,8 @@ import * as path from "node:path";
 import { createGfolderTemplate } from "../schemas/gfolder.js";
 import { safeFilename } from "./chat-utils.js";
 import { gfolderCardsIn } from "./drive-folder-cards.js";
+import { DriveMountError } from "./drive-mount-errors.js";
+import { resolveMountTarget } from "./drive-mount-path.js";
 import { GFOLDER_CARD_TYPE } from "./google-drive-tracking.js";
 import { DRIVE_CONFIG_REL, saveDriveConfig, type DriveConfig } from "./drive-config.js";
 
@@ -46,10 +53,32 @@ export async function convertConfigFolders(options: {
   const converted: string[] = [];
 
   for (const entry of entries) {
-    const dir = path.isAbsolute(entry.localPath)
-      ? entry.localPath
-      : path.join(boxRoot, entry.localPath);
+    let dir: string;
+    try {
+      dir = resolveMountTarget(boxRoot, { raw: entry.localPath, label: "The mount directory" });
+    } catch (e) {
+      // A legacy config could name any filesystem path, and converting one into
+      // a mount card would mirror Drive outside the box. The entry stays in the
+      // config so the boxholder can repoint it; the rest still convert.
+      if (!(e instanceof DriveMountError)) throw e;
+      console.error(`[google-drive] ${e.message} — legacy config entry NOT converted.`);
+      kept.push(entry);
+      continue;
+    }
     const existing = await gfolderCardsIn(dir);
+
+    if (existing.length > 1) {
+      // One directory is one mount. Which of the cards already there should own
+      // it is the boxholder's call, and converting would add a third.
+      console.error(
+        `[google-drive] ${entry.localPath} already holds ${String(existing.length)} folder mounts `
+          + `(${existing.map((card) => path.basename(card.cardPath)).join(", ")}) — legacy config `
+          + `entry for ${entry.driveFolderId} NOT converted, and left in ${DRIVE_CONFIG_REL}. `
+          + "Trash all but one of those cards first.",
+      );
+      kept.push(entry);
+      continue;
+    }
 
     const sameFolder = existing.find((card) => card.driveId === entry.driveFolderId);
     if (sameFolder !== undefined) {

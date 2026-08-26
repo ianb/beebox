@@ -5,16 +5,17 @@
  * The procedures are thin — every one of them delegates to the same
  * `connectors/drive-mounts.ts` operations `cb drive mount` / `link` /
  * `unmount` call, so the settings page and the agent cannot drift apart. What
- * lives here is the boundary work: box-relative paths validated through
- * `shared/ref-path.ts`, and a refusal (`DriveMountError` — a bad URL, an
- * occupied directory) rendered as BAD_REQUEST while a Drive outage or a disk
- * error stays a 500.
+ * lives here is one piece of boundary work: a refusal (`DriveMountError` — a
+ * bad URL, an occupied directory, a path that climbs out of the box) rendered
+ * as BAD_REQUEST while a Drive outage or a disk error stays a 500. Path
+ * containment is NOT re-checked here: the mount operations resolve every target
+ * through `connectors/drive-mount-path.ts` themselves, so a second check here
+ * would be a second place for the rule to drift from.
  */
 
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure } from "../trpc.js";
-import { resolveRefPath } from "../../../shared/ref-path.js";
 import { getGoogleAuth } from "../../../connectors/google-auth.js";
 import { isGoogleServiceAllowed } from "../../../core/box/config.js";
 import { createGoogleAuthService } from "../../../services/google-auth.js";
@@ -34,25 +35,6 @@ import {
 interface DriveCtx {
   boxRoot: string;
   services: { drive?: GoogleDriveService | undefined };
-}
-
-/**
- * A box-relative path the caller typed, or a refusal naming it.
- *
- * `resolveRefPath` is the box's one path algebra: it canonicalizes separators,
- * collapses `.`/`..`, and returns null for anything that climbs out of the box
- * or names the root. `write-target` is the kind for a path being created — no
- * `attach/` form, containment is the whole point.
- */
-function boxPath(input: { raw: string; label: string }): string {
-  const resolved = resolveRefPath({ fromPath: undefined, ref: input.raw, kind: "write-target" });
-  if (resolved === null) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: `${input.label} must be a path inside the box: ${input.raw}`,
-    });
-  }
-  return resolved;
 }
 
 /**
@@ -134,19 +116,19 @@ export const driveRouter = router({
   mount: publicProcedure
     .input(z.object({ url: z.string().min(1), dir: z.string().min(1) }))
     .mutation(async ({ input, ctx }) => {
-      const dir = boxPath({ raw: input.dir, label: "The target directory" });
       const service = await driveService(ctx);
-      return mountWrite(mountDriveFolder({ boxRoot: ctx.boxRoot, service, input: input.url, dir }));
+      return mountWrite(
+        mountDriveFolder({ boxRoot: ctx.boxRoot, service, input: input.url, dir: input.dir }),
+      );
     }),
 
   /** Write a pointer to any Drive item at `path`. Nothing is copied. */
   link: publicProcedure
     .input(z.object({ url: z.string().min(1), path: z.string().min(1) }))
     .mutation(async ({ input, ctx }) => {
-      const target = boxPath({ raw: input.path, label: "The pointer path" });
       const service = await driveService(ctx);
       return mountWrite(
-        linkDriveItem({ boxRoot: ctx.boxRoot, service, input: input.url, target }),
+        linkDriveItem({ boxRoot: ctx.boxRoot, service, input: input.url, target: input.path }),
       );
     }),
 
@@ -157,16 +139,16 @@ export const driveRouter = router({
   unmount: publicProcedure
     .input(z.object({ cardPath: z.string().min(1) }))
     .mutation(async ({ input, ctx }) => {
-      const target = boxPath({ raw: input.cardPath, label: "The mount card" });
-      return mountWrite(unmountDriveFolder({ boxRoot: ctx.boxRoot, target }));
+      return mountWrite(unmountDriveFolder({ boxRoot: ctx.boxRoot, target: input.cardPath }));
     }),
 
   /** Mirror one mount now, rather than waiting for the next wakeup sync. */
   syncFolder: publicProcedure
     .input(z.object({ cardPath: z.string().min(1) }))
     .mutation(async ({ input, ctx }) => {
-      const target = boxPath({ raw: input.cardPath, label: "The mount card" });
       const service = await driveService(ctx);
-      return mountWrite(syncFolderMount({ boxRoot: ctx.boxRoot, service, target }));
+      return mountWrite(
+        syncFolderMount({ boxRoot: ctx.boxRoot, service, target: input.cardPath }),
+      );
     }),
 });

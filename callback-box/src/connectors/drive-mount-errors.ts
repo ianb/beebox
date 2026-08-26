@@ -25,6 +25,20 @@ export class UnreadableDriveInputError extends DriveMountError {
   }
 }
 
+/**
+ * A target that does not name a path inside the box — a `..` that climbs out, a
+ * filesystem-absolute path, or the box root itself. Refused before anything is
+ * written, so the box never mirrors Drive into someone's home directory.
+ */
+export class PathOutsideBoxError extends DriveMountError {
+  readonly input: string;
+  constructor(options: { raw: string; label: string }) {
+    super(`${options.label} must be a path inside the box: ${options.raw}`);
+    this.name = "PathOutsideBoxError";
+    this.input = options.raw;
+  }
+}
+
 export class NotADriveFolderError extends DriveMountError {
   readonly mimeType: string;
   constructor(options: { name: string; mimeType: string }) {
