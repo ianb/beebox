@@ -53,7 +53,7 @@ import { registerBoxPicker } from "./box-picker.js";
 import { registerAuthSurface } from "../webapp/routes/auth.js";
 import { isPairingRedeemUrl } from "../webapp/routes/pairing.js";
 import { isApiUrl } from "../webapp/server-box-scope.js";
-import { listAccessibleBoxes } from "../webapp/server-root.js";
+import { listAccessibleBoxes, describeBoxes } from "../webapp/server-root.js";
 import { canAccessBox } from "../webapp/box-access.js";
 import { HASHED_ASSET_CACHE_OPTIONS } from "../webapp/static-cache.js";
 import { loginRedirect, injectBasePrefix } from "../webapp/base-prefix.js";
@@ -170,7 +170,7 @@ async function listMobileAuthorizedBoxes(opts: {
   const checked = await Promise.all(
     opts.boxes.map(async (box) => ({ box, ok: await verifyMobileRequest(box.boxRoot, opts.headers) })),
   );
-  return checked.filter((c) => c.ok).map(({ box }) => ({ slug: box.slug, name: box.slug }));
+  return describeBoxes(checked.filter((c) => c.ok).map(({ box }) => box));
 }
 
 /**
@@ -184,14 +184,14 @@ async function respondHubBoxes(opts: {
   reply: FastifyReply;
 }): Promise<{ boxes: Array<{ slug: string; name: string }>; authRequired?: boolean } | FastifyReply> {
   const { boxes, request, reply } = opts;
-  if (request.server.openAccess) return { boxes: boxes.map((b) => ({ slug: b.slug, name: b.slug })) };
+  if (request.server.openAccess) return { boxes: await describeBoxes(boxes) };
   // The local-dev browse key is machine-level rather than per-box (one dev
   // router fronts every box), so it lists them all. This gate is separate from
   // the proxy gate on purpose, and the SPA depends on it: it resolves the box
   // in the URL against this list, and an empty list renders "Box not found"
   // even though every other request authenticates fine.
   if (verifyBrowseKey(request.headers)) {
-    return { boxes: boxes.map((b) => ({ slug: b.slug, name: b.slug })) };
+    return { boxes: await describeBoxes(boxes) };
   }
   const mobileBoxes = await listMobileAuthorizedBoxes({ boxes, headers: request.headers });
   if (mobileBoxes.length > 0) return { boxes: mobileBoxes };

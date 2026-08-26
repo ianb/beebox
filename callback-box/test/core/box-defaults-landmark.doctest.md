@@ -12,7 +12,7 @@ import { stageFiles, commitPaths } from "../../src/lib/git.js";
 import { mkdtemp, writeFile, readFile, readdir } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, basename } from "node:path";
 
 async function rootLabel(dir) {
   const f = (await readdir(dir)).find((n) => n.endsWith(".landmark.card"));
@@ -29,7 +29,10 @@ function gitInit(dir) {
 ```
 
 A box root with no landmark gets one installed (returns its path so the caller
-can commit it; label + symbol present):
+can commit it; label + symbol present). The label is the box's OWN name, not a
+fixed word: this card's label is the box's display name everywhere a box is
+named — the switcher, the dashboard header, the browser tab — so a fleet
+scaffolded with one hardcoded label would be a fleet of identical-looking tabs.
 
 ```ts
 const A = await mkdtemp(join(tmpdir(), "lm-a-"));
@@ -38,8 +41,8 @@ rA
 => Box.landmark.card
 
 const lA = await rootLabel(A);
-lA
-=> Box
+lA === basename(A)
+=> true
 ```
 
 An inert root landmark — here the legacy XML-body shape, which the frontmatter
@@ -54,8 +57,8 @@ rB
 => Box.landmark.card
 
 const lB = await rootLabel(B);
-lB
-=> Box
+lB === basename(B)
+=> true
 ```
 
 A real landmark (it has a navigation role) is left untouched — returns null, the

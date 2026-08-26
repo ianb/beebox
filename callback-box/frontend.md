@@ -6,6 +6,34 @@ UI palette, primitives, and the `className` rule. Backend code never needs to lo
 
 UI elements that display data from a known source (card, commit, session, etc.) must be tagged with `data-cb-source` attributes for traceability. Use the `cbSource()` and `cbSourceItem()` helpers from `src/frontend/src/lib/source-tag.ts`. Tag the outermost meaningful data boundary — not every inner element. See `docs/data-source-tagging.md` for the full convention.
 
+## Browser Tab Titles
+
+Every route declares its tab title in `staticData`, and the augmented
+`StaticDataRouteOption` in `router.tsx` makes that mandatory: a new route does
+not typecheck until it says what it is called (`title: null` for a layout or a
+redirect). A page whose real name is data it loads — a chat's label, a card's
+title — publishes it with `usePageTitle` from `components/DocumentTitle.tsx`,
+and the route's static title stands in until it arrives.
+
+The composed title is `<page> — <box>`, page first because browsers truncate
+tabs hard; the app name appears only where there is no box. Nothing else
+writes `document.title`.
+
+The **box half comes from the box itself** — the landmark card at the box root,
+whose `navigation.label` is the box's display name and whose `symbol` is its
+mark (`core/landmark/box-identity.ts`). There is no separate box-name or
+box-icon store: an agent renames a box by editing that card, the same way it
+writes any other box fact.
+
+The **tab icon** follows the same rule one level down. `components/
+DocumentIcon.tsx` shows the landmark for the directory you are in, falling
+back to the box's own — landmark first, box second, matching the title's
+ordering. The box server also stamps the box's name and mark into the served
+`index.html` (`webapp/index-html.ts`) so a tab is identifiable before React
+boots. That stamping happens only in the box server: **in local dev Vite
+serves the document**, so dev shows the built title and generic icon for the
+moment before the app takes over.
+
 ## Frontend Color Palette
 
 Components reach for **semantic color roles**, not brand names. Defined in `src/frontend/tailwind.config.js`.

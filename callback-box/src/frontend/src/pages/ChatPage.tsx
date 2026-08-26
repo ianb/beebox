@@ -22,6 +22,7 @@ import { href, toSearch } from "../lib/routing";
 import { carriesFreshChatMachine, createSessionAssignmentLatch } from "./chat-session-transition";
 import { UnavailableChat } from "../components/chat-delete/UnavailableChat";
 import { useIdlePrefetch } from "../hooks/useIdlePrefetch";
+import { usePageTitle } from "../components/DocumentTitle";
 import { useCoinedChat } from "./chat-coin-session";
 
 interface ChatSearch {
@@ -352,6 +353,12 @@ export function ChatPage() {
     carried: keyState.carried,
     bootstrapped: bootstrap.data,
   });
+
+  // A chat's label is the best thing a tab can say. It is null until the label
+  // query settles, and stays null for a chat nobody has named -- both fall back
+  // to the route's static "Chat". Published here rather than in InteractiveChat
+  // so the loading and unavailable branches below keep it too.
+  usePageTitle(sessionLabel);
 
   // Hold the shell while the reservation is in flight. Mounting the chat as
   // `"new"` in that window would let a fast send start a chat the harness names

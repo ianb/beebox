@@ -25,6 +25,7 @@ import {
 } from "../install-template-file.js";
 import { TEMPLATE_STOCK_HASHES } from "../template-stock-hashes.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
+import { boxSlug } from "../../lib/box-slug.js";
 
 /**
  * Translate a single-template install result into the legacy `installed[]`
@@ -191,7 +192,12 @@ export async function installRootLandmark(boxRoot: string): Promise<string | nul
     console.warn(`Could not read box root ${boxRoot} for landmark check:`, e);
     return null;
   }
-  const templateContent = createLandmarkTemplate({ label: "Box", symbol: "📦" });
+  // Named for the box, not the literal word "Box": this label is the box's
+  // display name everywhere it is named -- the box switcher, the dashboard
+  // header, the browser tab -- so a fleet scaffolded with one hardcoded label
+  // is a fleet whose boxes all look alike in a tab strip. The boxholder
+  // renames it by editing the card, like any other box fact.
+  const templateContent = createLandmarkTemplate({ label: await boxSlug(boxRoot), symbol: "📦" });
   const existing = entries.find((name) => name.endsWith(".landmark.card"));
   if (existing !== undefined) {
     let hasRole: boolean;
