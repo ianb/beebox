@@ -8,12 +8,20 @@
  * it, which is why they are worth serving per box at all.
  *
  * Nothing is stored. The mark comes from the box's root landmark card, the
- * same one that names the box, and is rendered on demand:
+ * same one that names the box, and is rendered on demand.
  *
- *   - a **text symbol** renders from Twemoji's artwork for that emoji
- *     (`lib/twemoji.ts`), which is shapes rather than glyphs — no font on the
- *     server, and full colour;
- *   - an **image symbol** (`symbol: { src }`) is the box's own file, resized.
+ * **Only a text symbol renders here**, from Twemoji's artwork for that emoji
+ * (`lib/twemoji.ts`) — shapes rather than glyphs, so no font on the server and
+ * full colour. An image symbol (`symbol: { src }`) deliberately does NOT
+ * render: the box child's auth hook waves through any URL ending in an asset
+ * extension, so this is reachable unauthenticated on a standalone server, and
+ * a route in that position must not turn box files into bytes it hands out.
+ * The caller sends an image symbol to the box's own authenticated file route
+ * instead (`routes/box-identity-assets.ts`).
+ *
+ * That also bounds the work: the only thing ever decoded is one of a few
+ * thousand small bundled SVGs at one of three sizes, rather than whatever
+ * dimensions a file in the box happens to have.
  *
  * There is no per-box asset, no build step, and nothing to regenerate when the
  * boxholder edits the card: the next request renders the new mark.
@@ -27,7 +35,6 @@ import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { readBoxIdentity } from "../landmark/box-identity.js";
 import { twemojiSvgPath } from "../../lib/twemoji.js";
-import { resolveRefPath } from "../../shared/ref-path.js";
 
 /** A rendered mark: the PNG bytes plus an ETag identifying what produced it. */
 export interface BoxIconPng {
@@ -68,7 +75,7 @@ export async function renderBoxIcon({
 }): Promise<BoxIconPng | null> {
   const identity = await readBoxIdentity({ boxRoot, slug });
 
-  const source = await readIconSource({ boxRoot, identity });
+  const source = await readIconSource({ identity });
   if (source === null) return null;
 
   const etag = `"${createHash("sha256").update(source).update(`:${size}`).digest("hex").slice(0, 32)}"`;
@@ -81,15 +88,16 @@ export async function renderBoxIcon({
   let png: Buffer;
   try {
     png = await sharp(source)
-      // `contain` rather than `cover`: a mark is not a photograph, and
-      // cropping one to a square would cut the glyph. Transparent padding
-      // keeps a non-square image symbol whole.
+      // `contain` on a transparent ground: Twemoji artwork is already square,
+      // so this is a scale, and padding rather than cropping keeps any
+      // future non-square source whole instead of trimming the glyph.
       .resize(size, size, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
       .png()
       .toBuffer();
   } catch (e) {
-    // An unreadable or non-image symbol is the boxholder's data, not a broken
-    // server: log it and let the caller serve the app's own icon.
+    // Bundled artwork that will not rasterize means a broken or mismatched
+    // dependency, not bad box data — worth saying loudly, but not worth
+    // failing the request over when a shared icon will do.
     console.warn(`box icon: could not render the mark for box ${slug}:`, e);
     return null;
   }
@@ -100,30 +108,15 @@ export async function renderBoxIcon({
   return result;
 }
 
-/**
- * The bytes to render: Twemoji artwork for a text symbol, or the box's own
- * image file for an image symbol.
- */
+/** Twemoji artwork for the box's emoji, or null when there is none to draw. */
 async function readIconSource({
-  boxRoot,
   identity,
 }: {
-  boxRoot: string;
   identity: { symbol: string; symbolSrc: string | null };
 }): Promise<Buffer | null> {
-  if (identity.symbolSrc !== null) {
-    // Already resolved inside the box by `readLandmarkSymbol`; re-resolving
-    // through the same ref algebra is what keeps that guarantee true here
-    // rather than assumed.
-    const resolved = resolveRefPath({ fromPath: "", ref: identity.symbolSrc, kind: "card" });
-    if (resolved === null) return null;
-    try {
-      return await readFile(`${boxRoot}/${resolved}`);
-    } catch (e) {
-      console.warn(`box icon: could not read the image symbol ${identity.symbolSrc}:`, e);
-      return null;
-    }
-  }
+  // An image symbol is box content; see the file header for why it does not
+  // render here.
+  if (identity.symbolSrc !== null) return null;
 
   const artwork = twemojiSvgPath(identity.symbol);
   if (artwork === null) return null;

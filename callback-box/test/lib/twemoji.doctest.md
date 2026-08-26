@@ -39,6 +39,16 @@ fileFor("👩‍🍳")
 => 1f469-200d-1f373.svg exists
 ```
 
+Twemoji's own filenames disagree with each other about this: the rainbow flag
+keeps its VS16 while the cook drops it. So both spellings are tried, and an
+emoji typed with the selector its file omits still resolves rather than
+silently falling back to the generic icon.
+
+```ts continue
+[fileFor("🏳️‍🌈"), fileFor("👩‍🍳".replace("\u{1f469}", "\u{1f469}\uFE0F"))].join(" | ")
+=> 1f3f3-fe0f-200d-1f308.svg exists | 1f469-200d-1f373.svg exists
+```
+
 ## Symbols with no artwork answer null, and that is ordinary
 
 A symbol is free text from a card — it can be a letter, a word, or an emoji

@@ -279,7 +279,7 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
   registerFigureRoutes({ server: instance, boxRoot: box.boxRoot });
   // The box's own icon and manifest, ahead of the static mount below so the
   // fleet-wide files don't shadow them.
-  registerBoxIdentityAssetRoutes(instance, { boxRoot: box.boxRoot, boxSlug: box.slug });
+  registerBoxIdentityAssetRoutes(instance, { boxRoot: box.boxRoot, boxSlug: box.slug, frontendPath });
 
   // Serve static frontend files within this prefix
   if (frontendExists) {
