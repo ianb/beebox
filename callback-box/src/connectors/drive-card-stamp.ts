@@ -15,6 +15,7 @@ import { isRecord } from "../lib/is-record.js";
 import { createGlinkTemplate, type GlinkOriginType } from "../schemas/glink.js";
 import { createGfolderTemplate } from "../schemas/gfolder.js";
 import type { DriveFile } from "../services/google-drive.js";
+import type { FolderProblemCounts } from "./drive-folder-types.js";
 
 /** Existing frontmatter as a mutable bag, plus the body to write back. */
 interface CardParts {
@@ -39,6 +40,13 @@ export interface FolderStamp {
   link: string | null;
   lastSync: string;
   error: string | null;
+  /**
+   * Children the pass could not account for. A pass that listed the folder
+   * knows both numbers and stamps them (writing neither when both are zero, so
+   * a healthy mount stays quiet); a pass that never got a listing passes null
+   * and the last known counts stay put rather than being reset to zero.
+   */
+  problems: FolderProblemCounts | null;
 }
 
 /** Re-stamp a folder card's Drive metadata and last-sync outcome. */
@@ -48,9 +56,19 @@ export async function stampGfolderCard(cardPath: string, stamp: FolderStamp): Pr
   if (stamp.link !== null) parts.fields["link"] = stamp.link;
   parts.fields["status"] = stamp.error === null ? "ok" : "error";
   parts.fields["last-sync"] = stamp.lastSync;
+  if (stamp.problems !== null) {
+    stampCount(parts.fields, { key: "not-in-folder", count: stamp.problems.notInFolder });
+    stampCount(parts.fields, { key: "unknown", count: stamp.problems.unknown });
+  }
   if (stamp.error === null) delete parts.fields["error"];
   else parts.fields["error"] = stamp.error;
   await writeCardParts(cardPath, parts);
+}
+
+/** A count worth reporting is written; zero removes the field entirely. */
+function stampCount(fields: Record<string, unknown>, entry: { key: string; count: number }): void {
+  if (entry.count === 0) delete fields[entry.key];
+  else fields[entry.key] = entry.count;
 }
 
 /**

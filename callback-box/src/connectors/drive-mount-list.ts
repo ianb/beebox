@@ -12,6 +12,7 @@
 import * as path from "node:path";
 import { parseFrontmatterObject } from "../cards/frontmatter.js";
 import { findDriveCardTracking, type DriveCardKind } from "./google-drive-tracking.js";
+import type { FolderProblemCounts } from "./drive-folder-types.js";
 
 export interface FolderMountChildCounts {
   /** Synced children in the mount directory (`.gdoc.card` / `.gsheet.card`). */
@@ -35,6 +36,8 @@ export interface FolderMountSummary {
   /** Present only alongside `status: "error"`. */
   error: string | null;
   children: FolderMountChildCounts;
+  /** Children the last pass could not account for; zero when all is well. */
+  problems: FolderProblemCounts;
 }
 
 /** The value of a frontmatter field, when it is a non-empty string. */
@@ -47,6 +50,27 @@ function field(fields: Record<string, unknown> | null, key: string): string | nu
 function dirOf(relPath: string): string {
   const dir = path.dirname(relPath);
   return dir === "." ? "" : dir;
+}
+
+/**
+ * The `not-in-folder` / `unknown` counts a mount card carries.
+ *
+ * Shared with `cb drive status` rather than re-read there: both surfaces
+ * promise the same two numbers, and a mount that reads differently in the CLI
+ * than in settings is worse than one that reads nowhere.
+ */
+export function folderProblemCounts(content: string): FolderProblemCounts {
+  const fields = parseFrontmatterObject(content);
+  return {
+    notInFolder: count(fields, "not-in-folder"),
+    unknown: count(fields, "unknown"),
+  };
+}
+
+/** A non-negative whole number from frontmatter, or 0. */
+function count(fields: Record<string, unknown> | null, key: string): number {
+  const value = fields?.[key];
+  return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : 0;
 }
 
 function statusOf(fields: Record<string, unknown> | null): "ok" | "error" | null {
@@ -96,6 +120,7 @@ export async function listFolderMounts(boxRoot: string): Promise<FolderMountSumm
       lastSync: field(fields, "last-sync"),
       error: field(fields, "error"),
       children: countsByDir.get(dir) ?? { files: 0, links: 0 },
+      problems: folderProblemCounts(card.content),
     });
   }
   return mounts;

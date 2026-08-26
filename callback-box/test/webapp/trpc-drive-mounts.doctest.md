@@ -131,9 +131,10 @@ JSON.stringify(listed.mounts.map((m) => ({
   name: m.name,
   status: m.status,
   children: m.children,
+  problems: m.problems,
   error: m.error,
 })))
-=> [{"cardPath":"store/drive/recipes/Recipes.gfolder.card","dir":"store/drive/recipes","driveId":"folder-1","name":"Recipes","status":"ok","children":{"files":1,"links":1},"error":null}]
+=> [{"cardPath":"store/drive/recipes/Recipes.gfolder.card","dir":"store/drive/recipes","driveId":"folder-1","name":"Recipes","status":"ok","children":{"files":1,"links":1},"problems":{"notInFolder":0,"unknown":0},"error":null}]
 ```
 
 An injected service is a connected one: the page shows the mount manager, not

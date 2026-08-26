@@ -34,6 +34,25 @@ function field(fm: Record<string, unknown>, key: string): string | null {
   return typeof value === "string" && value !== "" ? value : null;
 }
 
+/** A frontmatter count, when it is a positive whole number. */
+function count(fm: Record<string, unknown>, key: string): number {
+  const value = fm[key];
+  return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : 0;
+}
+
+/**
+ * Children the last pass could not account for — still on disk, no longer
+ * covered by the mirror. Quiet when there are none.
+ */
+function problemSummary(frontmatter: Record<string, unknown>): string | null {
+  const parts: string[] = [];
+  const notInFolder = count(frontmatter, "not-in-folder");
+  const unknown = count(frontmatter, "unknown");
+  if (notInFolder > 0) parts.push(`${String(notInFolder)} not in folder`);
+  if (unknown > 0) parts.push(`${String(unknown)} unknown`);
+  return parts.length === 0 ? null : parts.join(", ");
+}
+
 /** The box-relative directory a card sits in ("" at the box root). */
 function dirOf(cardPath: string): string {
   const cut = cardPath.lastIndexOf("/");
@@ -68,6 +87,7 @@ function MountHeader({ path, frontmatter }: { path: string; frontmatter: Record<
       </Row>
       <Text size="sm" tone="muted">
         mirrors into {dirOf(path) === "" ? "the box root" : dirOf(path)}
+        {problemSummary(frontmatter) === null ? null : <>{" · "}{problemSummary(frontmatter)}</>}
         {lastSync === null ? null : <>{" · last sync "}<FriendlyDate iso={lastSync} /></>}
         {driveId === null ? null : <>{" · "}<Text size="xs" mono tone="muted">{driveId}</Text></>}
       </Text>

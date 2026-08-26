@@ -29,6 +29,10 @@ export const GfolderSchema = cardSchema("gfolder", {
     status: z.enum(["ok", "error"]).optional(),
     "last-sync": z.string().optional(),
     error: z.string().optional(),
+    // Children the last pass could not account for. Omitted when zero, so a
+    // healthy mount carries neither.
+    "not-in-folder": z.number().optional(),
+    unknown: z.number().optional(),
   },
   instructions: `# Gfolder Cards
 
@@ -78,7 +82,9 @@ Membership follows Drive one-way, on each sync:
 
 Connector-managed — do not hand-edit. \`name\` and \`link\` are re-stamped from
 Drive on every sync, and \`status\` / \`last-sync\` / \`error\` record the last
-outcome (\`error\` is present only when \`status: error\`). The one field worth
+outcome (\`error\` is present only when \`status: error\`). \`not-in-folder\` and
+\`unknown\` count children still on disk that the last pass could not account
+for — the two cases described above — and are absent when there are none. The one field worth
 setting yourself is \`drive-id\`, when you are creating a mount by hand;
 prefer \`cb drive mount <folder-url> <dir>\`.
 

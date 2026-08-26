@@ -71,10 +71,12 @@ export async function resolveChildren(
  * `getFile` that says `trashed` justifies trashing the box card; a moved-out
  * child and an unreadable one are both left exactly where they are.
  */
+export type AbsentOutcome = "trashed" | "not-in-folder" | "unknown";
+
 export async function probeAbsent(
   entry: { cardPath: string; driveId: string },
   deps: FolderSyncDeps,
-): Promise<{ updated: string[]; notes: string[] }> {
+): Promise<{ updated: string[]; notes: string[]; outcome: AbsentOutcome }> {
   const relPath = path.relative(deps.boxRoot, entry.cardPath);
   let file: DriveFile;
   try {
@@ -83,18 +85,21 @@ export async function probeAbsent(
     return {
       updated: [],
       notes: [`unknown: ${relPath} — Drive ${entry.driveId} could not be read (${errorMessage(err)}); left in place`],
+      outcome: "unknown",
     };
   }
   if (!file.trashed) {
     return {
       updated: [],
       notes: [`not-in-folder: ${relPath} — Drive ${entry.driveId} is no longer in this folder; left in place and still syncing`],
+      outcome: "not-in-folder",
     };
   }
   const moved = await deps.trashCard({ cardPath: relPath, driveId: entry.driveId });
   return {
     updated: moved,
     notes: [`trashed: ${relPath} — Drive ${entry.driveId} is in the Drive trash; moved to store/trash/`],
+    outcome: "trashed",
   };
 }
 

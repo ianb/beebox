@@ -21,7 +21,14 @@ import {
 } from "./drive-card-stamp.js";
 import { mountEntries, planFolderSync } from "./drive-folder-plan.js";
 import { claimPath, probeAbsent, resolveChildren } from "./drive-folder-steps.js";
-import type { FolderMount, FolderSyncDeps, FolderSyncResult } from "./drive-folder-types.js";
+import { assertNever } from "../lib/invariant.js";
+import type { AbsentEntry } from "./drive-folder-plan.js";
+import type {
+  FolderMount,
+  FolderProblemCounts,
+  FolderSyncDeps,
+  FolderSyncResult,
+} from "./drive-folder-types.js";
 
 const empty = (): FolderSyncResult => ({
   created: [], updated: [], pushed: [], failures: [], notes: [],
@@ -58,7 +65,10 @@ export async function syncFolderCard(
       // an untrash on Drive puts the mount straight back.
       const message = "folder is in Drive trash";
       result.notes.push(`${relCard}: ${message}`);
-      await stampOutcome({ mount, name: folder.name, link: null, error: message }, deps);
+      await stampOutcome(
+        { mount, name: folder.name, link: null, error: message, problems: null },
+        deps,
+      );
       result.updated.push(relCard);
       return result;
     }
@@ -66,7 +76,7 @@ export async function syncFolderCard(
   } catch (err) {
     const message = errorMessage(err);
     result.failures.push(`Folder sync failed for ${relCard}: ${message}`);
-    await stampOutcome({ mount, name: null, link: null, error: message }, deps);
+    await stampOutcome({ mount, name: null, link: null, error: message, problems: null }, deps);
     result.updated.push(relCard);
     return result;
   }
@@ -145,21 +155,22 @@ export async function syncFolderCard(
     result.notes.push(...nested.notes);
   }
 
-  for (const entry of plan.absent) {
-    const absent = await probeAbsent(
-      { cardPath: path.join(mountDir, entry.cardPath), driveId: entry.driveId },
-      deps,
-    );
-    result.updated.push(...absent.updated);
-    result.notes.push(...absent.notes);
-  }
+  const probed = await probeAbsentees({ absent: plan.absent, mountDir }, deps);
+  result.updated.push(...probed.updated);
+  result.notes.push(...probed.notes);
 
   // A cycle is ordinary Drive shape and stays a note; a cap means part of the
   // tree really is unmirrored, so the card says so until it isn't.
   const caps = plan.refusals.filter((refusal) => refusal.reason !== "cycle");
   const capError = caps.length > 0 ? caps.map((refusal) => refusal.message).join("; ") : null;
   await stampOutcome(
-    { mount, name: folder.name, link: folder.webViewLink ?? driveFolderLink(folder.id), error: capError },
+    {
+      mount,
+      name: folder.name,
+      link: folder.webViewLink ?? driveFolderLink(folder.id),
+      error: capError,
+      problems: probed.problems,
+    },
     deps,
   );
   result.updated.push(relCard);
@@ -175,8 +186,51 @@ function claimCreated(driveId: string, deps: FolderSyncDeps): void {
   deps.forgetDriveTrash(driveId);
 }
 
+/**
+ * Probe every card whose Drive ID left the listing, and count what the probes
+ * found. `trashed` needs no count — the card is gone, which is visible on its
+ * own; the other two leave a card in place that the mirror is no longer
+ * accounting for, so the mount card carries the number.
+ */
+async function probeAbsentees(
+  opts: { absent: AbsentEntry[]; mountDir: string },
+  deps: FolderSyncDeps,
+): Promise<{ updated: string[]; notes: string[]; problems: FolderProblemCounts }> {
+  const updated: string[] = [];
+  const notes: string[] = [];
+  const problems: FolderProblemCounts = { notInFolder: 0, unknown: 0 };
+  for (const entry of opts.absent) {
+    const absent = await probeAbsent(
+      { cardPath: path.join(opts.mountDir, entry.cardPath), driveId: entry.driveId },
+      deps,
+    );
+    updated.push(...absent.updated);
+    notes.push(...absent.notes);
+    switch (absent.outcome) {
+      case "not-in-folder":
+        problems.notInFolder += 1;
+        break;
+      case "unknown":
+        problems.unknown += 1;
+        break;
+      case "trashed":
+        break;
+      default:
+        assertNever(absent.outcome);
+    }
+  }
+  return { updated, notes, problems };
+}
+
 async function stampOutcome(
-  outcome: { mount: FolderMount; name: string | null; link: string | null; error: string | null },
+  outcome: {
+    mount: FolderMount;
+    name: string | null;
+    link: string | null;
+    error: string | null;
+    /** Null when the pass never listed the folder — leave the last counts alone. */
+    problems: FolderProblemCounts | null;
+  },
   deps: FolderSyncDeps,
 ): Promise<void> {
   await stampGfolderCard(outcome.mount.cardPath, {
@@ -184,5 +238,6 @@ async function stampOutcome(
     link: outcome.link,
     lastSync: getBoxTimeISO(deps.boxRoot),
     error: outcome.error,
+    problems: outcome.problems,
   });
 }

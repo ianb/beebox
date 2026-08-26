@@ -23,6 +23,7 @@ import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths.js";
 import { extractDriveFileId } from "../../connectors/drive-types.js";
 import { requireDriveService } from "./drive-service.js";
+import { folderProblemCounts } from "../../connectors/drive-mount-list.js";
 import type { DriveFile, GoogleDriveService } from "../../services/google-drive.js";
 import { DriveIdClaimedError } from "../../connectors/drive-mount-errors.js";
 import {
@@ -81,6 +82,15 @@ export async function runDriveStatus(boxRoot: string): Promise<void> {
     if (summary.modified !== null) console.log(`    Last synced: ${summary.modified}`);
     if (summary.status !== null && summary.status !== "synced") {
       console.log(`    Status: ${summary.status}`);
+    }
+    if (card.kind === "folder") {
+      const problems = folderProblemCounts(card.content);
+      if (problems.notInFolder > 0) {
+        console.log(`    Not in folder: ${String(problems.notInFolder)} (still syncing on their own)`);
+      }
+      if (problems.unknown > 0) {
+        console.log(`    Unknown: ${String(problems.unknown)} (Drive could not be read)`);
+      }
     }
     if (summary.tabs.length > 0) {
       console.log(`    Tabs: ${summary.tabs.join(", ")}`);

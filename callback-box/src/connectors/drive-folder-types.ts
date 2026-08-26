@@ -48,6 +48,19 @@ export interface FolderSyncDeps {
   forgetDriveTrash(driveId: string): void;
 }
 
+/**
+ * Children a pass could not account for, counted per mount. Both are ordinary
+ * Drive shape rather than failures, and both mean the mirror is not the whole
+ * folder — so they are stamped on the mount card and shown wherever a mount is
+ * shown, not left to a console warning nobody reads.
+ */
+export interface FolderProblemCounts {
+  /** Listed nowhere in this folder any more, but alive on Drive: left syncing. */
+  notInFolder: number;
+  /** `getFile` failed, so nothing is known: left exactly where it is. */
+  unknown: number;
+}
+
 export interface FolderMount {
   driveId: string;
   /** Absolute path of the `.gfolder.card`. Its directory is the mount. */

@@ -23,6 +23,7 @@ import {
   unmountDriveFolder,
 } from "../../../src/connectors/drive-mounts.js";
 import { loadDriveConfig, saveDriveConfig } from "../../../src/connectors/drive-config.js";
+import { syncFolderMount } from "../../../src/connectors/drive-mount-sync.js";
 import { createGfolderTemplate } from "../../../src/schemas/gfolder.js";
 import { runDriveStatus } from "../../../src/cli/commands/drive.js";
 
@@ -363,6 +364,30 @@ JSON.stringify({
   folderSynced: /Last synced: 20\d\d-/.test(output),
 })
 => {"count":true,"folder":true,"file":true,"link":true,"folderName":true,"folderStatus":true,"folderSynced":true}
+```
+
+A healthy mount says nothing about children it could not account for. Move the
+Sheet out of the Drive folder and the next pass stamps the count, which status
+then shows — the mirror is no longer the whole folder, and that is a fact about
+the mount, not a line in a log.
+
+```ts continue
+const quiet = await captureLogs(() => runDriveStatus(box.root));
+quiet.includes("Not in folder:")
+=> false
+
+const sheet = drive.files.find((f) => f.id === "sheet-1");
+if (sheet) sheet.parents = ["folder-other"];
+await captureLogs(async () => {
+  await syncFolderMount({
+    boxRoot: box.root,
+    service: drive,
+    target: "store/drive/recipes/Recipes.gfolder.card",
+  });
+});
+const noted = await captureLogs(() => runDriveStatus(box.root));
+noted.includes("Not in folder: 1 (still syncing on their own)")
+=> true
 ```
 
 ```ts cleanup

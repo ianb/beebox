@@ -35,6 +35,18 @@ function childSummary(children: DriveMount["children"]): string {
   return parts.join(", ");
 }
 
+/**
+ * Children the last pass could not account for. Not an error — they are still
+ * on disk and a `not-in-folder` child is still syncing — but the mirror is not
+ * the whole folder any more, and that only shows if it is said.
+ */
+function problemSummary(problems: DriveMount["problems"]): string | null {
+  const parts: string[] = [];
+  if (problems.notInFolder > 0) parts.push(`${String(problems.notInFolder)} not in folder`);
+  if (problems.unknown > 0) parts.push(`${String(problems.unknown)} unknown`);
+  return parts.length === 0 ? null : parts.join(", ");
+}
+
 export interface UnmountControlProps {
   driveId: string;
   /** True once the boxholder has asked to unmount and is being asked again. */
@@ -143,6 +155,7 @@ export function DriveMountRow({ mount }: { mount: DriveMount }) {
 
       <Text size="sm" tone="muted">
         mirrors into {mount.dir === "" ? "the box root" : mount.dir} · {childSummary(mount.children)}
+        {problemSummary(mount.problems) === null ? null : <>{" · "}{problemSummary(mount.problems)}</>}
         {mount.lastSync === null ? null : (
           <>
             {" · last sync "}

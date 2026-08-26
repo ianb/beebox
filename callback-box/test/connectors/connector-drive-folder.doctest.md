@@ -584,6 +584,20 @@ JSON.stringify({
 => {"cards":["store/drive/recipes/Recipes.gfolder.card","store/drive/recipes/Wanderer.gsheet.card"],"trashed":true,"trashNote":true,"movedNote":true}
 ```
 
+The mount card carries the count, so a child the mirror no longer accounts for
+is visible on the mount itself rather than only in a console warning. `trashed`
+needs no count — that card is gone.
+
+```ts continue
+const stamped = await box.read("store/drive/recipes/Recipes.gfolder.card");
+JSON.stringify({
+  notInFolder: /not-in-folder: (\d+)/.exec(stamped)?.[1],
+  unknown: /^unknown: (\d+)/m.exec(stamped)?.[1],
+  status: /status: (\S+)/.exec(stamped)?.[1],
+})
+=> {"notInFolder":"1","status":"ok"}
+```
+
 A child whose `getFile` fails is left exactly where it is — an error is not
 evidence that anything was removed.
 
@@ -598,6 +612,19 @@ JSON.stringify({
   unknownNote: failing.some((l) => l.includes("unknown: store/drive/recipes/Wanderer.gsheet.card")),
 })
 => {"stillThere":true,"inTrash":false,"unknownNote":true}
+```
+
+The stamp follows the pass: the child is now `unknown` rather than
+`not-in-folder`, and the count that no longer applies is removed outright — a
+stale number is worse than none.
+
+```ts continue
+const restamped = await box.read("store/drive/recipes/Recipes.gfolder.card");
+JSON.stringify({
+  notInFolder: /not-in-folder: (\d+)/.exec(restamped)?.[1],
+  unknown: /^unknown: (\d+)/m.exec(restamped)?.[1],
+})
+=> {"unknown":"1"}
 ```
 
 ```ts cleanup
