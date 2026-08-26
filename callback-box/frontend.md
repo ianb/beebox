@@ -33,6 +33,21 @@ was the thing a tab icon exists to prevent: two boxes' tabs wearing the same
 mark. A landmarked directory is titled by its landmark rather than its folder
 name, so the tab's two halves name the same place.
 
+**A working indicator rides in the same slot.** `useWorking(true)` from
+anywhere puts a spinning glyph at the front of the title; the chat calls it
+while a turn streams, so a chat left in a background tab says whether the box
+is still going. Any caller is enough — the provider counts owners, so one
+finishing does not answer for another.
+
+**Presence is the signal; the spin is decoration.** A hidden tab throttles
+timers to once a second, and Chrome drops that to once a MINUTE once a silent
+page has been hidden five minutes (developer.chrome.com/blog/timer-throttling-in-chrome-88).
+So the animation is exactly what stops being trustworthy during a long
+background turn — which is the case the indicator exists for. The glyph's
+presence carries the meaning and no throttle can take it away; built the other
+way round, a frozen spinner would read as "stuck" at the moment the honest
+answer is "still going".
+
 Wherever a surface needs a real raster rather than a character — the Apple
 touch icon, the manifest icons, a notification — it comes from box-scoped
 routes that render the mark on demand (`webapp/routes/box-identity-assets.ts`,
