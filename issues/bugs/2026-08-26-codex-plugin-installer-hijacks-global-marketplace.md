@@ -1,6 +1,6 @@
 ---
 title: "Codex plugin installer points the user's global marketplace at whichever checkout ran last; a culled one breaks every codex box's chat list"
-workstream: unattached
+workstream: codex-plugin-registration
 area: callback-box
 priority: important
 labels: [codex, tests]

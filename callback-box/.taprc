@@ -14,6 +14,10 @@ node-arg:
   # Same reason, for the machine's origin id: every husk a test creates records
   # it, so an unisolated run would mint or read ~/.local/share/cb/origin-id.
   - --import=./test/helpers/isolate-origin-id.ts
+  # Same reason, for the machine's Codex state: one test starts a codex-engine
+  # chat, and the plugin installer behind it re-points the GLOBAL `callback-box`
+  # marketplace at whichever checkout is running. See the module.
+  - --import=./test/helpers/isolate-codex-home.ts
 include:
   - test/**/*.test.ts
   - test/**/*.doctest.md
