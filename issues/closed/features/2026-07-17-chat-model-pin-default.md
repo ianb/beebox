@@ -1,11 +1,14 @@
 ---
 title: "Pin a model as the box default in the chat selector; chats can follow the default"
 workstream: model-engine-policy
+resolution: implemented
 needs: [design]
 filed-by: agent
 discovered-in: main session — boxholder idea while thinking about the chat model selector
 area: callback-box
 ---
+
+**Resolved 2026-08-26** by `docs/implemented-plans/model-engine-policy.md` (Track D, commit `ba5f53255`): the chat model selector pins the box default and a chat without its own pick follows it.
 
 > **Checked 2026-08-14 — not a duplicate.** Tagged `duplicate`; nothing
 > subsumes this, so the tag is removed and the issue stays open. Two neighbours

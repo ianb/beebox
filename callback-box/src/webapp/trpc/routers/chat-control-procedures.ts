@@ -212,7 +212,7 @@ export const chatControlProcedures = {
    * Deliberately restarts nothing. A pin is a statement about the box, not an
    * instruction to any conversation: live chats keep the model their
    * subprocess started with and pick the new default up when they next start
-   * cold (`docs/plans/model-engine-policy.md`).
+   * cold (`docs/implemented-plans/model-engine-policy.md`).
    *
    * Owner-gated, unlike `setModel` — this writes box configuration, and the
    * write is committed to the box's git history.

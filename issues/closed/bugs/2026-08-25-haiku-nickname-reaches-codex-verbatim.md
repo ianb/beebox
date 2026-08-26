@@ -1,12 +1,15 @@
 ---
 title: "\"haiku\" from the chat reviewer and retro observer reaches the Codex SDK verbatim"
 workstream: model-engine-policy
+resolution: implemented
 area: callback-box
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-model-engine-policy — cluster survey for the model/engine policy work
 labels: [codex, engines]
 ---
+
+**Resolved 2026-08-26** by `docs/implemented-plans/model-engine-policy.md` (commit `d61bb7ec0`, found in cross-model review of the implementation): the chat reviewer and retro observer now resolve their nickname through the engine-aware ladder instead of passing it to Codex verbatim.
 
 Two small passes name their model as a bare provider-shaped nickname:
 
@@ -19,7 +22,7 @@ passes `model: invoke.model` into the Codex run. So a Codex box asks the Codex
 SDK for `haiku`.
 
 This is the same defect class that
-[procedure model pins are Claude-only](../closed/bugs/2026-08-23-procedure-model-pins-are-claude-only.md)
+[procedure model pins are Claude-only](2026-08-23-procedure-model-pins-are-claude-only.md)
 closed for procedures (commit `8a7dced6`). That fix introduced the portable tier
 vocabulary and `resolveProcedureModel(engine, tier)`
 (`src/shared/agent-models.ts:56`) and deliberately left other callers alone;

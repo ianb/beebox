@@ -132,7 +132,7 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // Fold the legacy box-wide chat model pointer (.callback-box/chat-model.json)
   // into the box model policy (`agentModel` in config/box.json), which chat and
   // the reactor both read. Configuration, not card data — like annex-config
-  // above. See docs/plans/model-engine-policy.md.
+  // above. See docs/implemented-plans/model-engine-policy.md.
   { name: "chat-model-to-box-config", script: "scripts/migrate/chat-model-to-box-config.ts" },
 ];
 

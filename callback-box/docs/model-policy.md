@@ -38,7 +38,7 @@ default changes what every unopinionated chat starts on.
 Everything else is unchanged: a caller that names a model still gets that model,
 and a procedure step that omits `model:` still means "the harness default" — the
 policy is read at the call sites above, not inside `createAgent`. (Why:
-`docs/plans/model-engine-policy.md`.)
+`docs/implemented-plans/model-engine-policy.md`.)
 
 The small passes used to name `"haiku"`, a Claude nickname the Codex harness
 forwarded to the Codex SDK verbatim. Nothing names a model as a bare string any

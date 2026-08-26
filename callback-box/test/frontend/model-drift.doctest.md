@@ -2,7 +2,7 @@
 
 The session chip marks a chat that is running something other than the box
 default — one mark for stronger, another for weaker
-(`docs/plans/model-engine-policy.md`). The comparison is by *tier*, so it
+(`docs/implemented-plans/model-engine-policy.md`). The comparison is by *tier*, so it
 survives a model-id bump and says something true across engines.
 
 The mark exists to be noticed, which means it must not appear when there is

@@ -51,7 +51,7 @@ export async function processBatchJobs(opts: ProcessJobsOptions): Promise<boolea
   }
 
   // Resolved once for the whole run: a pin that lands mid-run does not switch
-  // the model out from under the agent (docs/plans/model-engine-policy.md).
+  // the model out from under the agent (docs/implemented-plans/model-engine-policy.md).
   const boxModel = await loadEffectiveBoxModel(boxRoot);
   if (boxModel !== null) onLog?.(fmt.dim(`  Model: ${boxModel}\n`));
 

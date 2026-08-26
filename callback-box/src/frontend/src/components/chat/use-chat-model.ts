@@ -2,7 +2,7 @@
  * The chat's model and feature state — split out of `InteractiveChat-hooks.ts`
  * to keep that file under the line cap when the model half grew a second
  * level (this chat's pick vs the box default; see
- * `docs/plans/model-engine-policy.md`).
+ * `docs/implemented-plans/model-engine-policy.md`).
  */
 
 import { useState, useEffect, useRef, useCallback, type Dispatch, type SetStateAction } from "react";

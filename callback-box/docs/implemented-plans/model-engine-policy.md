@@ -3,13 +3,13 @@ title: "Box model/engine policy"
 status: implemented
 workstream: model-engine-policy
 issues:
-  - ../../../issues/features/2026-07-17-chat-model-pin-default.md
-  - ../../../issues/features/2026-08-03-default-model-and-non-default-indicator.md
-  - ../../../issues/features/2026-08-08-reactor-agent-model-not-pinnable.md
-  - ../../../issues/features/2026-08-23-choose-the-engine-for-a-new-chat.md
-  - ../../../issues/features/2026-08-25-small-model-slot.md
-  - ../../../issues/bugs/2026-08-25-haiku-nickname-reaches-codex-verbatim.md
-  - ../../../issues/code-quality/2026-07-30-structured-output-passes-load-full-box-context.md
+  - ../../../issues/closed/features/2026-07-17-chat-model-pin-default.md
+  - ../../../issues/closed/features/2026-08-03-default-model-and-non-default-indicator.md
+  - ../../../issues/closed/features/2026-08-08-reactor-agent-model-not-pinnable.md
+  - ../../../issues/closed/features/2026-08-23-choose-the-engine-for-a-new-chat.md
+  - ../../../issues/closed/features/2026-08-25-small-model-slot.md
+  - ../../../issues/closed/bugs/2026-08-25-haiku-nickname-reaches-codex-verbatim.md
+  - ../../../issues/closed/code-quality/2026-07-30-structured-output-passes-load-full-box-context.md
 ---
 
 # Box model/engine policy

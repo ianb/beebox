@@ -1,12 +1,15 @@
 ---
 title: "Default chat model + a settings indicator when the model is non-default (smarter vs dumber)"
 workstream: model-engine-policy
+resolution: implemented
 needs: [design]
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder wants to see at a glance when a chat is off-default
 priority: normal
 ---
+
+**Resolved 2026-08-26** by `docs/implemented-plans/model-engine-policy.md` (Track D, commit `ba5f53255`): the settings button shows an off-default indicator (`model-drift.ts`) whenever the active chat's model differs in tier from the box default.
 
 Give the chat two related things: a **user-settable "default model"**, and an
 **indicator on the settings button when the active chat model is not the default** —

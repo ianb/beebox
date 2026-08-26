@@ -7,7 +7,7 @@ work as it does for chat.
 
 The seam is deliberately narrow: the reactor asks for the policy, rather than
 `createAgent` silently supplying it to every unpinned agent run in the system
-(`docs/plans/model-engine-policy.md`, Track B).
+(`docs/implemented-plans/model-engine-policy.md`, Track B).
 
 ```ts setup
 import { processBatchJobs } from "../../src/core/reactor/batch-jobs.js";
