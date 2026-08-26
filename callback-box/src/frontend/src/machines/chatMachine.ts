@@ -11,6 +11,7 @@
 import { setup, assign, enqueueActions } from "xstate";
 import { invariant } from "@shared/invariant";
 import { buildOptimisticContent, mergeAcceptedIntoPending } from "./chat-shared";
+import { initialChatContext } from "./chat-machine-context";
 import {
   chatTailSlice,
   logFsm,
@@ -76,28 +77,7 @@ export const chatMachine = setup({
 }).createMachine({
   id: "chat",
   initial: "loading",
-  context: ({ input }) => ({
-    messages: [],
-    pendingMessages: [],
-    streamText: "",
-    streamTools: [],
-    streamNeedsSeparator: false,
-    error: null,
-    interrupting: false,
-    sessionInput: input.sessionInput,
-    sessionId: input.sessionInput === "new" ? null : input.sessionInput,
-    ...(input.sessionInput === "new" && input.contextDir !== undefined
-      ? { contextDir: input.contextDir }
-      : {}),
-    processRunning: false,
-    processBusy: false,
-    totalEntries: 0,
-    refreshCause: "resync" as const,
-    liveTurnId: null,
-    // Consumed by `loading` below and cleared on the way out, so nothing can
-    // replay a stale preload if `loading` is ever re-entered.
-    initial: input.initial,
-  }),
+  context: ({ input }) => initialChatContext(input),
   on: {
     // Global handler: directly set messages from any state (used by server-push updates)
     SET_MESSAGES: {
@@ -254,6 +234,8 @@ export const chatMachine = setup({
               ? { contextDir: context.contextDir }
               : {}),
             ...(context.sessionInput === "new" && context.seedFeatures ? { seedFeatures: context.seedFeatures } : {}),
+            ...(context.sessionInput === "new" && context.startEngine !== undefined ? { engine: context.startEngine } : {}),
+            ...(context.sessionInput === "new" && context.startModel !== undefined ? { model: context.startModel } : {}),
             ...cardFieldsFromEvent(event),
           };
         },

@@ -7,27 +7,38 @@
  * their mail last month. So the connector config is written here, committed
  * with the baseline, and the operator never touches a settings screen.
  *
- * The chat model is seeded here too, and for a different reason: the persisted
- * chat model is opaque and letting it float would make two weekly runs
- * incomparable.
+ * The model is seeded here too, and for a different reason: letting it float
+ * would make two weekly runs incomparable.
  *
- * **`models.chat` pins CHAT ONLY** — and the vocabulary now says so. The
- * reactor's agent invocations go through `runAgent`, which takes a model nobody
- * passes it, so reactor work — intake, the email→task step this tier exists to
- * watch — runs on the SDK default. The report states the reactor model is
- * unpinned rather than claiming a `box:` model that was only ever chat's. A
- * box-level agent model the reactor honors is a product feature tracked
- * separately in
- * `issues/features/2026-08-08-reactor-agent-model-not-pinnable.md`.
+ * `models.chat` now writes the box's model policy (`agentModel` in
+ * `config/box.json`), so it pins CHAT AND THE REACTOR — intake, the email→task
+ * step this tier exists to watch, and every other reactor invocation. The
+ * scenario field keeps its old name for now; renaming it to `models.box` is
+ * tracked separately.
  */
 
 import * as path from "node:path";
-import { mkdir } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
+import { isRecord } from "../lib/is-record.js";
+import { clearBoxConfigCache } from "../core/box/config.js";
+import { errnoCode } from "../lib/error-guards.js";
 import { writeFileAtomic } from "../lib/atomic-write.js";
 import { commit, getStatus, stageAll } from "../lib/git.js";
-import { DEFAULT_MODEL_FILE } from "../core/chat/session/state.js";
 import type { FieldBox } from "./run-box.js";
 import type { FieldScenario } from "./scenario.js";
+
+/** The box's existing config, or an empty one when the box has none yet. */
+async function readBoxConfigJson(configPath: string): Promise<Record<string, unknown>> {
+  try {
+    const parsed: unknown = JSON.parse(await readFile(configPath, "utf-8"));
+    return isRecord(parsed) ? parsed : {};
+  } catch (e) {
+    if (errnoCode(e) !== "ENOENT") {
+      console.warn(`Field-test seed could not read ${configPath}; rewriting it from scratch:`, e);
+    }
+    return {};
+  }
+}
 
 /**
  * The seeded Gmail config: one rule that tracks everything in the inbox.
@@ -73,14 +84,14 @@ export async function seedFieldBox(options: SeedFieldBoxOptions): Promise<void> 
     });
   }
 
-  // Gitignored, so it is not part of the committed baseline — which is what we
-  // want: a `reset` must not rewind the box agent onto a different model than
-  // the run started with.
-  const modelFile = path.join(box.boxRoot, DEFAULT_MODEL_FILE);
-  await mkdir(path.dirname(modelFile), { recursive: true });
-  await writeFileAtomic(modelFile, {
-    content: `${JSON.stringify({ model: scenario.models.chat }, null, 2)}\n`,
+  // Part of the committed baseline, so a `reset` mid-run rewinds onto the same
+  // model the run started with rather than dropping the pin.
+  const configPath = path.join(box.boxRoot, "config/box.json");
+  await mkdir(path.dirname(configPath), { recursive: true });
+  await writeFileAtomic(configPath, {
+    content: `${JSON.stringify({ ...(await readBoxConfigJson(configPath)), agentModel: scenario.models.chat }, null, 2)}\n`,
   });
+  clearBoxConfigCache(box.boxRoot);
 
   const status = await getStatus(box.packageRoot);
   if (status.clean) return;

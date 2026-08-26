@@ -31,6 +31,7 @@ import { href, toSearch } from "../../lib/routing";
 import { ModelPanel } from "./SessionChip-model-panel";
 import { SessionListPanel } from "./SessionListPanel";
 import { chatModelOptions, type ChatAgentEngine } from "@shared/chat-models.js";
+import { modelDrift } from "./model-drift";
 
 // Single-panel submenu pattern: the dropdown swaps which set of rows it
 // renders rather than spawning a flyout. Better on touch and avoids
@@ -119,6 +120,13 @@ interface SessionChipBodyProps {
   modelSelectionDisabled: boolean;
   onOpenModel: () => void;
   selectedModel: string | null;
+  boxDefault: string | null;
+  canPin: boolean;
+  canChooseEngine: boolean;
+  enabledEngines: ChatAgentEngine[];
+  boxEngine: ChatAgentEngine | null;
+  onChooseStart: (choice: { engine: ChatAgentEngine; model: string }) => void;
+  onPinModel: (model: string | null) => void;
   agentEngine: ChatAgentEngine | null;
   onSelectModel: (model: string | null) => void;
   onOpenAdvanced: () => void;
@@ -133,14 +141,28 @@ interface SessionChipBodyProps {
  * `SessionChipPanel` member at compile time without one).
  */
 function SessionChipBody(props: SessionChipBodyProps): ReactNode {
-  const { panel, onNewSession, contextDir, onOpenSessions, currentModelLabel, modelSelectionDisabled, onOpenModel, selectedModel, agentEngine, onSelectModel, onOpenAdvanced, onBackToRoot, advancedProps } = props;
+  const { panel, onNewSession, contextDir, onOpenSessions, currentModelLabel, modelSelectionDisabled, onOpenModel, selectedModel, boxDefault, canPin, canChooseEngine, enabledEngines, boxEngine, onChooseStart, onPinModel, agentEngine, onSelectModel, onOpenAdvanced, onBackToRoot, advancedProps } = props;
   switch (panel) {
     case "root":
       return <RootPanel onNewSession={onNewSession} onOpenSessions={onOpenSessions} currentModelLabel={currentModelLabel} modelSelectionDisabled={modelSelectionDisabled} onOpenModel={onOpenModel} onOpenAdvanced={onOpenAdvanced} />;
     case "sessions":
       return <SessionsPanel onBack={onBackToRoot} contextDir={contextDir} />;
     case "model":
-      return agentEngine === null ? null : <ModelPanel onBack={onBackToRoot} selectedModel={selectedModel} agentEngine={agentEngine} onSelectModel={onSelectModel} />;
+      return agentEngine === null || boxEngine === null ? null : (
+        <ModelPanel
+          onBack={onBackToRoot}
+          selectedModel={selectedModel}
+          boxDefault={boxDefault}
+          canPin={canPin}
+          canChooseEngine={canChooseEngine}
+          enabledEngines={enabledEngines}
+          boxEngine={boxEngine}
+          onChooseStart={onChooseStart}
+          onPinModel={onPinModel}
+          agentEngine={agentEngine}
+          onSelectModel={onSelectModel}
+        />
+      );
     case "advanced":
       return <AdvancedPanel onBack={onBackToRoot} {...advancedProps} />;
   }
@@ -153,6 +175,17 @@ export interface SessionChipProps {
   contextDir: string | null;
   onNewSession: () => void;
   selectedModel: string | null;
+  /** The model actually in force — this chat's pick, or the box default it follows. */
+  modelInForce: string | null;
+  boxDefault: string | null;
+  canPin: boolean;
+  /** True until this chat's first message — after that its engine is fixed. */
+  canChooseEngine: boolean;
+  enabledEngines: ChatAgentEngine[];
+  boxEngine: ChatAgentEngine | null;
+  onChooseStart: (choice: { engine: ChatAgentEngine; model: string }) => void;
+  onPinModel: (model: string | null) => void;
+  onOpenModelPanel: () => void;
   agentEngine: ChatAgentEngine | null;
   onSelectModel: (model: string | null) => void;
   onStopProcess: () => void;
@@ -173,6 +206,15 @@ export const SessionChip = memo(function SessionChip(props: SessionChipProps) {
     contextDir,
     onNewSession,
     selectedModel,
+    modelInForce,
+    boxDefault,
+    canPin,
+    canChooseEngine,
+    enabledEngines,
+    boxEngine,
+    onChooseStart,
+    onPinModel,
+    onOpenModelPanel,
     agentEngine,
     onSelectModel,
     onStopProcess,
@@ -192,13 +234,17 @@ export const SessionChip = memo(function SessionChip(props: SessionChipProps) {
   const { boxSlug } = useParams({ strict: false });
   const currentModelLabel = agentEngine === null
     ? "Unavailable"
-    : chatModelOptions(agentEngine).find((o) => o.model === selectedModel)?.label ?? "Unavailable";
+    : chatModelOptions(agentEngine).find((o) => o.model === modelInForce)?.label ?? "Unavailable";
+  const drift = modelDrift({ model: modelInForce, boxDefault });
   // Editorial title or nothing: `label` is the husk's `title` (null until
   // the nightly chat review or a hand edit names the session). With no real
   // title the face is the sliders icon at every width — never a fabricated
   // name (boxholder call, 2026-08-03).
   const titled = label !== null && label !== "";
-  const accessibleName = titled ? `Session: ${label}` : "Session menu";
+  // The mark is decoration; the meaning is in the name, so a screen reader
+  // hears "below the box default" rather than a triangle.
+  const driftPhrase = drift === null ? "" : ` — ${drift === "above" ? "above" : "below"} the box default`;
+  const accessibleName = `${titled ? `Session: ${label}` : "Session menu"} · ${currentModelLabel}${driftPhrase}`;
 
   return (
     <>
@@ -225,6 +271,9 @@ export const SessionChip = memo(function SessionChip(props: SessionChipProps) {
             <span className={titled ? "sm:hidden" : ""}>
               <SlidersIcon />
             </span>
+            {drift === null ? null : (
+              <span aria-hidden="true" className="text-[0.65rem] leading-none opacity-90">{drift === "above" ? "▲" : "▼"}</span>
+            )}
             {titled ? (
               <>
                 <span className="hidden sm:inline max-w-[11rem] truncate">{label}</span>
@@ -242,9 +291,18 @@ export const SessionChip = memo(function SessionChip(props: SessionChipProps) {
           contextDir={contextDir}
           onOpenSessions={() => setPanel("sessions")}
           currentModelLabel={currentModelLabel}
-          modelSelectionDisabled={sessionId === null || agentEngine === null}
-          onOpenModel={() => setPanel("model")}
+          // A chat with no id yet cannot set a model of its own, but the panel
+          // is also where the box default is pinned and shown — so it opens.
+          modelSelectionDisabled={agentEngine === null}
+          onOpenModel={() => { onOpenModelPanel(); setPanel("model"); }}
           selectedModel={selectedModel}
+          boxDefault={boxDefault}
+          canPin={canPin}
+          canChooseEngine={canChooseEngine}
+          enabledEngines={enabledEngines}
+          boxEngine={boxEngine}
+          onChooseStart={onChooseStart}
+          onPinModel={onPinModel}
           agentEngine={agentEngine}
           onSelectModel={onSelectModel}
           onOpenAdvanced={() => setPanel("advanced")}

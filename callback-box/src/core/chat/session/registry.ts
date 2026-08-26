@@ -137,6 +137,8 @@ export class ChatSessionRegistry extends EventEmitter {
     sessionId: string;
     contextDir: string | null;
     seedFeatures: Record<string, string>;
+    requestedEngine?: AgentEngine | undefined;
+    model?: string | undefined;
   }): Promise<ReserveResult> {
     this.noteActivity();
     return reserveAndWarm({
@@ -259,6 +261,10 @@ export class ChatSessionRegistry extends EventEmitter {
         chained: baseOpts.onSessionIdAssigned,
       }),
     });
+    // A model chosen before the first message rides the reservation; the id
+    // already exists here, so the choice persists to the chat's own file the
+    // moment it is applied.
+    if (reservation?.model !== undefined) session.setModel(reservation.model);
     this.entries.set(sessionId, {
       session,
       lastActivity: this.now(),
@@ -279,10 +285,17 @@ export class ChatSessionRegistry extends EventEmitter {
    * association is persisted to `chat-session-history` once the session id
    * is assigned, so resumes (here or on a fresh server boot) reapply it.
    */
-  createNew(opts?: { contextDir?: string; seedFeatures?: Record<string, string> }): ChatSession {
+  createNew(opts?: {
+    contextDir?: string;
+    seedFeatures?: Record<string, string>;
+    /** Engine chosen for this chat before it has an id to record one against. */
+    engine?: AgentEngine;
+    /** Model chosen for this chat; persisted once the harness names it. */
+    model?: string;
+  }): ChatSession {
     opts = opts ?? {};
     this.noteActivity();
-    const { contextDir, seedFeatures } = opts;
+    const { contextDir, seedFeatures, engine, model } = opts;
     const baseOpts = this.buildSessionOptions(null);
     const session = new ChatSession(this.boxRoot, {
       ...baseOpts,
@@ -290,13 +303,19 @@ export class ChatSessionRegistry extends EventEmitter {
       sessionFile: null,
       ...(contextDir !== undefined ? { contextDir } : {}),
       ...(seedFeatures !== undefined ? { seedFeatures } : {}),
+      ...(engine !== undefined ? { engine } : {}),
       onSessionIdAssigned: this.makeOnAssigned({
         knownId: null,
         chained: baseOpts.onSessionIdAssigned,
         contextDir,
         seedFeatures,
+        engine,
       }),
     });
+    // The chat has no model file until the harness names it; `setModel`
+    // records the choice in memory and the promotion at first message writes
+    // it once there is a file to write (`ChatSession.handleMessage`).
+    if (model !== undefined) session.setModel(model);
     this.pending.add(session);
     const seedSummary = seedFeatures && Object.keys(seedFeatures).length > 0 ? `, seedFeatures=${JSON.stringify(seedFeatures)}` : "";
     log("create-new", `Pending new session created (pending=${this.pending.size}${contextDir ? `, contextDir=${contextDir}` : ""}${seedSummary})`);
@@ -313,12 +332,14 @@ export class ChatSessionRegistry extends EventEmitter {
     chained?: ((sessionId: string) => Promise<void> | void) | undefined;
     contextDir?: string | undefined;
     seedFeatures?: Record<string, string> | undefined;
+    engine?: AgentEngine | undefined;
   }): (sessionId: string) => Promise<void> {
-    const { knownId, chained, contextDir, seedFeatures } = params;
+    const { knownId, chained, contextDir, seedFeatures, engine } = params;
     return async (sessionId: string): Promise<void> => {
       await this.recordSessionStart(sessionId, {
         ...(contextDir !== undefined ? { contextDir } : {}),
         ...(seedFeatures !== undefined ? { seedFeatures } : {}),
+        ...(engine !== undefined ? { engine } : {}),
       });
 
       // Re-key pending "new" sessions into the entries map under the real id.

@@ -1,8 +1,11 @@
 ---
 title: "A small-model slot for title, summary and chat-review passes"
-workstream: research-opencode
+workstream: model-engine-policy
+resolution: implemented
 area: callback-box
 ---
+
+**Resolved 2026-08-26** by `docs/implemented-plans/model-engine-policy.md` (Track G, commit `42c930165`): title/summary/chat-review/procedure-judge passes resolve through a declared `smallModel` slot, no routing/fallback logic.
 
 Chat-review, title and summary passes run on the box's main model. OpenCode's
 `small_model` config key routes exactly those passes (title, summary, compaction) to a
@@ -14,4 +17,4 @@ operational simplicity over per-call cost — which argues *for* one config knob
 small model) or one box-level value that `normalizeModelId` (`src/core/agent/run.ts`)
 maps per engine.
 
-Source: [research/opencode/inspiration.md](../../research/opencode/inspiration.md).
+Source: [research/opencode/inspiration.md](../../../research/opencode/inspiration.md).

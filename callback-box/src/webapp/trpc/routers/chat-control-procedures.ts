@@ -10,10 +10,15 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { ownerProcedure, publicProcedure } from "../trpc.js";
 import { getChatRuntime, type ChatRuntime } from "../../chat-runtime.js";
-import { chatModelFileForSession, loadCurrentModelForEngine } from "../../../core/chat/session/state.js";
+import { chatModelFileForSession, loadCurrentModel } from "../../../core/chat/session/state.js";
+import { loadBoxModel } from "../../../core/box/config.js";
+import { liveModelState, resolveBoxModelForEngine, resolveEffectiveModel, type ModelSource } from "../../../core/model-policy.js";
+import { updateBoxConfigFields } from "../../box-config-write.js";
 import { resolveChatEngine } from "../../../core/chat/session/engine.js";
+import { loadAgentEngine, loadEnabledEngines } from "../../../core/box/config.js";
+import { AGENT_ENGINES } from "../../../shared/agent-models.js";
 import type { AgentEngine } from "../../../core/box/config.js";
-import { chatModelForEngine, isChatModelAllowed } from "../../../shared/chat-models.js";
+import { isChatModelAllowed } from "../../../shared/chat-models.js";
 import { deleteChatSession, ChatSessionNotFoundError, SessionStorageContextMismatchError } from "../../../core/chat/session/delete.js";
 import { sdkSessionIdSchema } from "../../../core/chat/session/session-id.js";
 import { SessionDeletingError } from "../../../core/chat/session/registry.js";
@@ -38,44 +43,66 @@ export interface ChatSessionStatus {
   sessionId: string | null;
   running: boolean;
   busy: boolean;
+  /** The model in force: what a live subprocess is running, else what it would resolve to. */
   model: string | null;
+  /** Whether `model` came from this chat's own pick, the box default, or neither. */
+  source: ModelSource;
+  /** The box's pinned model as this chat's engine can run it. */
+  boxDefault: string | null;
+  /**
+   * The model this chat would use if it restarted now — non-null only when
+   * that differs from what its live subprocess is running, which happens when
+   * the box default changed under a warm chat.
+   */
+  pendingModel: string | null;
+  /** This chat's engine — recorded at its birth, and never changed after. */
   engine: AgentEngine;
+  /** Engines this box may offer a NEW chat, and which of them it defaults to. */
+  enabledEngines: AgentEngine[];
+  boxEngine: AgentEngine;
 }
 
 /**
  * A session's live status (running/busy/model), or the idle shape when there
- * is no session id or the id isn't live. Model comes from the persisted file
- * so an idle-evicted session still reports its pinned model. Shared by
- * `chat.status` and `chat.bootstrap`.
+ * is no session id or the id isn't live. Shared by `chat.status` and
+ * `chat.bootstrap`.
+ *
+ * The reported model is the one actually in force, never the one that will
+ * apply later: a warm chat that follows a box default which has since changed
+ * reports the model its subprocess is running, and names the newer one in
+ * `pendingModel` (engineering-principles.md 13).
  */
 export async function readSessionStatus(boxRoot: string, sessionId: string | null): Promise<ChatSessionStatus> {
   const { registry } = requireRuntime(boxRoot);
   const engine = await resolveChatEngine(boxRoot, sessionId);
-  if (!sessionId) {
-    return {
-      sessionId: null,
-      running: false,
-      busy: false,
-      model: null,
-      engine,
-    };
-  }
-  const target = registry.get(sessionId);
-  if (!target) {
-    return {
-      sessionId,
-      running: false,
-      busy: false,
-      model: loadCurrentModelForEngine(boxRoot, { modelFile: chatModelFileForSession(sessionId), engine }),
-      engine,
-    };
-  }
+  const pinned = await loadBoxModel(boxRoot);
+  const boxDefault = resolveBoxModelForEngine(engine, pinned);
+  const target = sessionId === null ? undefined : registry.get(sessionId);
+  // An evicted session is not in the registry, so its choice comes off disk —
+  // the same value it would load back with.
+  const state = target?.modelState()
+    ?? { explicit: sessionId === null ? null : loadCurrentModel(boxRoot, chatModelFileForSession(sessionId)), resolved: null };
+  const wouldUse = resolveEffectiveModel(
+    { engine, pinned },
+    state.explicit === null ? { kind: "follow" } : { kind: "explicit", model: state.explicit },
+  );
+  const running = target?.isRunning() ?? false;
+  // `source` describes the model this call REPORTS, which for a live session is
+  // the one its subprocess is running — not the one a restart would pick. The
+  // two diverge whenever the box default or this chat's pick changed under a
+  // warm session, and `pendingModel` is where that shows up.
+  const live = liveModelState(state);
   return {
-    sessionId: target.getSessionId(),
-    running: target.isRunning(),
-    busy: target.isBusy(),
-    model: chatModelForEngine(engine, target.getCurrentModel()),
+    sessionId: target?.getSessionId() ?? sessionId,
+    running,
+    busy: target?.isBusy() ?? false,
+    model: running ? live.model : wouldUse.model,
+    source: running ? live.source : wouldUse.source,
+    boxDefault,
+    pendingModel: running && live.model !== wouldUse.model ? wouldUse.model : null,
     engine,
+    enabledEngines: await loadEnabledEngines(boxRoot),
+    boxEngine: await loadAgentEngine(boxRoot),
   };
 }
 
@@ -175,7 +202,38 @@ export const chatControlProcedures = {
         restarted = true;
       }
     }
-    return { ok: true, model: target.getCurrentModel(), restarted };
+    return { ok: true, model: target.modelState().explicit, restarted };
+  }),
+
+  /**
+   * Pin the box's default model — the model every chat that made no choice of
+   * its own uses, and the model the reactor runs on.
+   *
+   * Deliberately restarts nothing. A pin is a statement about the box, not an
+   * instruction to any conversation: live chats keep the model their
+   * subprocess started with and pick the new default up when they next start
+   * cold (`docs/implemented-plans/model-engine-policy.md`).
+   *
+   * Owner-gated, unlike `setModel` — this writes box configuration, and the
+   * write is committed to the box's git history.
+   */
+  setDefaultModel: ownerProcedure.input(z.object({ model: z.string().nullable() })).mutation(async ({ input, ctx }) => {
+    const engine = await loadAgentEngine(ctx.boxRoot);
+    if (input.model !== null && !isChatModelAllowed(engine, input.model)) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: `Model ${input.model} is unavailable for ${engine} chats`,
+      });
+    }
+    const result = await updateBoxConfigFields({ boxRoot: ctx.boxRoot, agentModel: input.model });
+    if (result.commitError) {
+      console.error(`[chat] the box model was saved but its Git commit failed for ${ctx.boxRoot}:`, result.commitError);
+    }
+    return {
+      ok: true,
+      model: input.model,
+      commitWarning: result.commitError === null ? null : "Saved, but the Git commit failed.",
+    };
   }),
 
   // Read a session's feature map (validated + resolved) and change a flag.
@@ -227,7 +285,17 @@ export const chatControlProcedures = {
    * the same chat.
    */
   reserveSession: publicProcedure
-    .input(z.object({ sessionId: sdkSessionIdSchema, contextDir: z.string().optional() }))
+    .input(z.object({
+      sessionId: sdkSessionIdSchema,
+      contextDir: z.string().optional(),
+      /**
+       * Engine and model chosen before the first message. A non-Claude engine
+       * comes back `unsupported` — not an error: the client then sends `"new"`,
+       * which is how every Codex chat is created.
+       */
+      engine: z.enum(AGENT_ENGINES).optional(),
+      model: z.string().optional(),
+    }))
     .mutation(async ({ input, ctx }): Promise<ReserveResult> => {
       const { registry } = requireRuntime(ctx.boxRoot);
       // `""` is kept, not collapsed to null: it is the box-root landmark, a
@@ -237,10 +305,21 @@ export const chatControlProcedures = {
       // Landmark feature defaults are captured now because nothing else will:
       // they only ever ride a `"new"` send, and a coined chat never sends one.
       const landmark = contextDir !== null ? await readLandmarkFeaturesForDir(ctx.boxRoot, contextDir) : null;
+      if (input.engine !== undefined && !(await loadEnabledEngines(ctx.boxRoot)).includes(input.engine)) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: `${input.engine} is not enabled for this box` });
+      }
+      if (input.model !== undefined && !isChatModelAllowed(input.engine ?? "claude", input.model)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Model ${input.model} is unavailable for ${input.engine ?? "claude"} chats`,
+        });
+      }
       return registry.reserve({
         sessionId: input.sessionId,
         contextDir,
         seedFeatures: mergeSeedFeatures({ landmark, request: undefined }),
+        ...(input.engine !== undefined ? { requestedEngine: input.engine } : {}),
+        ...(input.model !== undefined ? { model: input.model } : {}),
       });
     }),
 

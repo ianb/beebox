@@ -7,13 +7,33 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { errnoCode } from "../../lib/error-guards.js";
-import type { AgentEngine } from "../../shared/agent-models.js";
+import { AGENT_ENGINES, modelTier, type AgentEngine } from "../../shared/agent-models.js";
+import { normalizeModelId } from "../../shared/model-ids.js";
 
 export type { AgentEngine } from "../../shared/agent-models.js";
 
 export interface BoxConfig {
   /** Native agent harness used for new box jobs and chats. Missing means Claude. */
   agentEngine?: AgentEngine;
+  /**
+   * The box's pinned model — a concrete id from one engine's registry. Chats
+   * that made no choice of their own follow it, and the reactor runs on it.
+   * Missing means no policy: every run takes its harness's own default.
+   */
+  agentModel?: string;
+  /**
+   * The model the box's cheap structured passes use — chat review, retro
+   * observation, triage. Missing means the `efficient` tier for whichever
+   * engine the invocation runs on.
+   */
+  smallModel?: string;
+  /**
+   * Which native harnesses this box may offer at all — a box with no Codex
+   * subscription should not be offered Codex chats. Missing means only
+   * {@link BoxConfig.agentEngine} is enabled, which is how every box behaved
+   * before the field existed.
+   */
+  engines?: Partial<Record<AgentEngine, boolean>>;
   publicUrl?: string;
   allowedEmails?: string[];
   /** IANA timezone for this box (e.g. "America/Chicago"). Used in all agent prompts. */
@@ -116,6 +136,72 @@ export async function loadAgentEngine(boxRoot: string): Promise<AgentEngine> {
   if (engine === undefined) return "claude";
   if (engine === "claude" || engine === "codex") return engine;
   throw new InvalidAgentEngineError(engine);
+}
+
+/**
+ * Load the box's pinned model, or null when no policy is set.
+ *
+ * A hand-edited value that no engine offers is rejected here rather than
+ * carried to a spawn boundary that would silently drop it: the warning fires
+ * once per config load (the loader caches by mtime), and the box falls back to
+ * the harness default instead of failing.
+ */
+export async function loadBoxModel(boxRoot: string): Promise<string | null> {
+  return readConfiguredModel(boxRoot, "agentModel");
+}
+
+/**
+ * Load the box's small-pass model, or null when unset. Null is not "no model"
+ * here — the caller falls back to the `efficient` tier — but it is still the
+ * honest answer to "did the boxholder choose one".
+ */
+export async function loadSmallModel(boxRoot: string): Promise<string | null> {
+  return readConfiguredModel(boxRoot, "smallModel");
+}
+
+/**
+ * Read one of the config's model fields, rejecting a value no engine offers.
+ *
+ * The rejection happens here rather than at a spawn boundary because that is
+ * where it would go silent: `isChatModelAllowed` would drop the value and the
+ * box would run a harness default while its config claimed otherwise. The
+ * loader caches by mtime, so the warning fires once per config load.
+ */
+async function readConfiguredModel(
+  boxRoot: string,
+  field: "agentModel" | "smallModel",
+): Promise<string | null> {
+  const config = await loadBoxConfig(boxRoot);
+  const model = config[field];
+  if (model === undefined) return null;
+  if (typeof model !== "string" || modelTier(normalizeModelId(model)) === null) {
+    console.warn(
+      `Box config ${field} ${JSON.stringify(model)} is not a model any engine offers — ignoring it.`,
+    );
+    return null;
+  }
+  return normalizeModelId(model);
+}
+
+/**
+ * The engines this box may offer, always including its default.
+ *
+ * Absent config means "just the default engine" rather than "both": a box that
+ * has never said anything about Codex should not be offered it. The default
+ * engine is always in the result even when the config disables it — a box whose
+ * default engine is off cannot run, so that combination is a configuration
+ * mistake to report, not a state to honor.
+ */
+export async function loadEnabledEngines(boxRoot: string): Promise<AgentEngine[]> {
+  const config = await loadBoxConfig(boxRoot);
+  const fallback = await loadAgentEngine(boxRoot);
+  if (config.engines === undefined) return [fallback];
+  if (config.engines[fallback] === false) {
+    console.warn(
+      `Box config disables its own default engine (${fallback}); treating it as enabled, since nothing could run otherwise.`,
+    );
+  }
+  return AGENT_ENGINES.filter((engine) => engine === fallback || config.engines?.[engine] === true);
 }
 
 /**

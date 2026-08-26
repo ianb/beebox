@@ -7,6 +7,7 @@
  */
 
 import { createAgent } from "../agent/index.js";
+import { loadEffectiveSmallModel } from "../model-policy.js";
 import {
   ObserverOutputSchema,
   type SessionObservation,
@@ -23,9 +24,7 @@ export interface RetroObserver {
   observe(args: ObserveArgs): Promise<SessionObservation[]>;
 }
 
-/** Default model for observation passes — cheap tier; quality is judged
- * by reading run reports, revisit if it under-extracts. */
-const DEFAULT_OBSERVER_MODEL = "haiku";
+
 /** Hard per-session cost ceiling. */
 const MAX_BUDGET_USD = 0.25;
 
@@ -62,15 +61,20 @@ export function createSdkRetroObserver(options: {
   boxRoot: string;
   model?: string;
 }): RetroObserver {
-  const model = options.model ?? DEFAULT_OBSERVER_MODEL;
   return {
     async observe(args: ObserveArgs): Promise<SessionObservation[]> {
+      // Per run: an engine-aware lookup, same as the chat reviewer's.
+      const model = options.model ?? await loadEffectiveSmallModel(options.boxRoot);
       const agent = createAgent({ name: `retro-observer:${args.sessionId}` });
       const result = await agent.invokeStructured(ObserverOutputSchema, {
         boxRoot: options.boxRoot,
         systemPrompt: OBSERVER_SYSTEM_PROMPT,
         prompt: `Session ${args.sessionId}. Transcript follows.\n\n${args.transcript}`,
         model,
+        // Trimmed with the others. This is the one of the four where box
+        // vocabulary could plausibly have helped — it reads what the boxholder
+        // implicitly taught — so if observation quality drops, look here first.
+        loadBoxContext: false,
         maxTurns: 4,
         maxBudgetUsd: MAX_BUDGET_USD,
       });
