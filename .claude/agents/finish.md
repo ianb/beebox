@@ -153,5 +153,8 @@ FAILED — run: git -C <priv> push <remote> main` | `MERGE FAILED — branch
 worktree-<name> preserved; run: git -C <priv> merge worktree-<name>`. `RESULT:
 MERGED` still stands when the public merge landed.
 
-Issues you FILED during this finish get a `NEW ISSUES:` block as the LAST thing in the
-report, one `issues/<category>/<file>.md — <title>` per line; omit if none.
+Issues this WORKSTREAM filed — during this finish or earlier on the branch (added
+under `issues/` in `git diff main...HEAD`, excluding `closed/`) — get a `NEW ISSUES:`
+block as the LAST thing in the report, one `issues/<category>/<file>.md — <title>`
+per line; omit if none. These are this workstream's own finds and it is their
+default owner.
