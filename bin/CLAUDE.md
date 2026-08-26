@@ -251,8 +251,19 @@ and rechecks it at most every 5s on the request path; a mismatch is reported as
 activity signal is HTTP, so a chat streaming over a WebSocket is
 indistinguishable from an idle worktree and there is no moment it can prove is
 safe to cut. `bin/workstreams down <name>` is the fix, and it is the human's
-call. The box-child half of this is separately solved through
-`CB_DEV_BUNDLE_ID`, which drains before re-execing.
+call.
+
+The box-child half is solved end to end. A child stamps its bundle's stat
+identity (`CB_DEV_BUNDLE_ID`), polls it once a second, and drains before
+re-execing on exit 75 — but nothing used to WRITE a new bundle, so that poll
+had no producer and fired only when someone happened to run `cb` or `pnpm test`
+for an unrelated reason. `callback-box/scripts/auto-build-cli.sh` is the
+producer: the root post-commit/post-merge hooks call it in every checkout, and
+it rebuilds `dist/cli.mjs` (~250ms, esbuild only) when the commit or merge
+moved an actual bundle input. It gates on paths because rewriting the bundle
+cycles every box child in the checkout, and a docs-only merge must not do that.
+So a merge now reaches the running box child on its own; the hub above it still
+does not.
 
 ## Orphan resistance
 
