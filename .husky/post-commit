@@ -68,7 +68,12 @@ else
   echo "[post-commit] Skip deploy: branch is '$BRANCH' (deploys only run from 'main')"
 fi
 
-# 2. Clean up .bak.png files for architecture-doc images that were just committed.
+# 2. Rebuild this checkout's CLI bundle if the commit moved a bundle input.
+# Every branch: a worktree's own dev server runs its own bundle, and a session
+# testing its own uncommitted-then-committed work wants it fresh too.
+"$REPO_DIR/callback-box/scripts/auto-build-cli.sh" || true
+
+# 3. Clean up .bak.png files for architecture-doc images that were just committed.
 committed_images=$(git -C "$REPO_DIR" diff-tree --no-commit-id --name-only -r HEAD -- 'callback-box/docs/architecture/images/*.png' | grep -v '\.bak\.png$' || true)
 if [ -n "$committed_images" ]; then
   for img in $committed_images; do
@@ -81,7 +86,7 @@ if [ -n "$committed_images" ]; then
   done
 fi
 
-# 3. Let git-lfs do its post-commit work (cleans up pointer-tracking state).
+# 4. Let git-lfs do its post-commit work (cleans up pointer-tracking state).
 if command -v git-lfs >/dev/null 2>&1; then
   git lfs post-commit "$@" || true
 else
