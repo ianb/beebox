@@ -8,7 +8,7 @@ Run checks after writing code. The build tool (esbuild) does NOT do type checkin
 
 ```bash
 pnpm typecheck    # TypeScript errors
-pnpm lint         # ESLint errors
+pnpm lint:changed # ESLint over your diff (iteration); `pnpm lint` is the whole tree
 pnpm lint:oxlint  # Supplemental linter (fast, catches patterns ESLint misses)
 pnpm lint:knip    # Dead code detector — run from the MONOREPO ROOT (see docs/maintenance.md)
 pnpm lint:circular  # Circular dependency detector (madge)

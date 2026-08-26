@@ -21,6 +21,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { appendFileSync, readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { signalNumber, terminateChild } from "./child-signals.js";
 import { changedPaths, git, gitCommonDir, treeHash } from "./test-git.js";
 import { buildGraph } from "./test-graph.js";
 import { implicatedTests, isAccounted } from "./test-graph-query.js";
@@ -158,39 +159,6 @@ async function holdSlot(tier: Tier): Promise<Held | null> {
 /** The tap child, so a signal handler can pass the signal on and wait for it. */
 let activeChild: ChildProcess | null = null;
 
-/** How long a signalled child gets to exit on its own before SIGKILL. */
-export const CHILD_EXIT_GRACE_MS = 10_000;
-
-/**
- * Pass a signal to a running child and wait for it to actually go.
- *
- * Bounded twice over: SIGKILL after the grace period, and giving up on the
- * wait shortly after that. A signal handler that never returns is a process
- * that never dies, which is worse than a slot released a moment early.
- */
-export async function terminateChild(input: {
-  child: ChildProcess;
-  signal: NodeJS.Signals;
-  graceMs?: number;
-}): Promise<void> {
-  const { child } = input;
-  if (child.exitCode !== null || child.signalCode !== null) return;
-  const graceMs = input.graceMs ?? CHILD_EXIT_GRACE_MS;
-  child.kill(input.signal);
-  await new Promise<void>((resolve) => {
-    const forced = setTimeout(() => child.kill("SIGKILL"), graceMs);
-    const abandoned = setTimeout(() => {
-      clearTimeout(forced);
-      resolve();
-    }, graceMs * 2);
-    child.once("close", () => {
-      clearTimeout(forced);
-      clearTimeout(abandoned);
-      resolve();
-    });
-  });
-}
-
 /**
  * A killed run must still give its slot back; the stale rules bound the damage
  * when it cannot (SIGKILL), but they take two hours to do it.
@@ -288,14 +256,6 @@ async function withTimeout(ms: number, fn: () => Promise<void>): Promise<void> {
   } finally {
     if (timer !== undefined) clearTimeout(timer);
   }
-}
-
-function signalNumber(signal: NodeJS.Signals): number {
-  const known: Partial<Record<NodeJS.Signals, number>> = {
-    SIGHUP: 1, SIGINT: 2, SIGQUIT: 3, SIGABRT: 6, SIGKILL: 9,
-    SIGALRM: 14, SIGTERM: 15,
-  };
-  return known[signal] ?? 0;
 }
 
 interface StreamResult {

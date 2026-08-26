@@ -70,7 +70,7 @@ test("callback-box runs the selected set, not the whole suite", () => {
   });
   assert.deepEqual(
     commands.map((c) => c.command),
-    ["pnpm --dir callback-box test:changed", "pnpm --dir callback-box typecheck", "pnpm --dir callback-box lint"],
+    ["pnpm --dir callback-box test:changed", "pnpm --dir callback-box typecheck", "pnpm lint:changed"],
   );
   assert.ok(commands[0]?.isolate?.argv.includes("../bin/test-ledger.ts"));
 });
@@ -118,7 +118,7 @@ test("a bin/ change runs the root suite and typecheck, and lints nothing", () =>
   );
 });
 
-test("two changed packages coalesce onto the one workspace lint gate", () => {
+test("lint is one root fan-out entry however many packages changed", () => {
   const commands = verificationCommands({
     paths: ["callback-box/src/x.ts", "site/src/y.ts"],
     workspacePackages: PACKAGES,
@@ -128,10 +128,26 @@ test("two changed packages coalesce onto the one workspace lint gate", () => {
   const lint = commands.filter((c) => c.kind === "lint");
   assert.deepEqual(
     lint.map((c) => c.command),
-    ["pnpm lint"],
+    ["pnpm lint:changed"],
   );
   // Tests and typechecks never coalesce.
   assert.equal(commands.filter((c) => c.kind === "typecheck").length, 2);
+});
+
+// `bin/schedules lint` is the only check over schedules/*.ts, and no package's
+// lint reaches it. Root `pnpm lint:changed` is what runs it.
+// See issues/closed/code-quality/2026-08-25-lint-runs-contend-like-tests.md.
+test("a schedules-only change still gets a lint entry", () => {
+  const commands = verificationCommands({
+    paths: ["schedules/full-suite/run.ts"],
+    workspacePackages: PACKAGES,
+    hasScript: allScripts(),
+    skipTypecheckLint: NO_SKIP,
+  });
+  assert.deepEqual(
+    commands.map((c) => c.command),
+    ["pnpm test", "pnpm typecheck", "pnpm lint:changed"],
+  );
 });
 
 test("a package without a script contributes no command for it", () => {
