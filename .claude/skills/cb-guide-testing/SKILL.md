@@ -45,6 +45,11 @@ line (`docs/testing.md` opens with this).
 - **Card validator hook** (`src/core/sdk-hooks.ts`) — not a test tier
   you write; a live `PostToolUse` hook that lints `.card` writes/edits
   during agent sessions and feeds issues back as `additionalContext`.
+- **Smoke tier** (`bin/smoke`) — the merge gate that boots a real box
+  and walks it in a browser (~30s, no model turns): does the app run at
+  all. You do not usually invoke it; `/finish` runs it for any diff that
+  touches a deployed path. Reach for it by hand when a change could
+  break startup or the app bar and you want to know before landing.
 - **Frontend dev stubs** (`/fakestream`, `bin/browse`) — for frontend
   bugs that only manifest against real layout/measurement (scroll,
   virtualization, reflow); a dev stub makes the input deterministic

@@ -1,6 +1,6 @@
 ---
 title: "A smoke tier at merge and deploy: boot a real box and click, because two of today's escapes were state bugs no unit tier can see"
-workstream: unattached
+workstream: smoke-tier
 area: callback-box
 needs: [design]
 labels: [tests]

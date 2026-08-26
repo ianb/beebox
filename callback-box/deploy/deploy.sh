@@ -741,6 +741,7 @@ TOOLCHECK
       -H "Authorization: Bearer $KEY" \
       http://localhost:3210/healthz/canary 2>/dev/null || echo "000")
     cstatus=$(node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync("/tmp/canary.out","utf8")).status)' 2>/dev/null || echo "unparseable")
+    cslug=$(node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync("/tmp/canary.out","utf8")).slug ?? "")' 2>/dev/null || echo "")
     if [ "$ccode" != "200" ] || [ "$cstatus" != "ok" ]; then
       echo "  Box canary FAILED (code: $ccode, status: $cstatus) — a box could not start and serve:"
       [ -f /tmp/canary.out ] && cat /tmp/canary.out
@@ -755,6 +756,39 @@ TOOLCHECK
     fi
     echo "  Box canary OK: $(cat /tmp/canary.out)"
     rm -f /tmp/canary.out
+
+    # (3) SPA fallback: a page navigation to a deep box route must be SERVED,
+    # not 404'd. `registerSpaFallback` is registered ONLY when the frontend
+    # build exists (src/webapp/server.ts) — so a deploy that shipped without
+    # src/frontend/dist answers every page navigation 404 while /healthz and
+    # the canary above both stay green. That is the 2026-08-25 escape verbatim
+    # (issues/exploration/2026-08-26-post-test-economics-retro.md, incident 3),
+    # and it is the half of the smoke tier the dev-router walk structurally
+    # cannot see: in dev, page requests are served by vite, never by this
+    # handler.
+    #
+    # Unauthenticated in hub mode the fallback answers 401 ("Not authenticated")
+    # — a real answer from a registered handler, which is all this asserts. Only
+    # 404 (no handler), 000 (no answer) and 5xx are failures; anything else is
+    # the fallback doing its job under whatever auth mode this server runs.
+    if [ -z "$cslug" ]; then
+      echo "  SPA fallback check SKIPPED: the canary named no box slug."
+    else
+      scode=$($CURL -o /dev/null -w '%{http_code}' \
+        "http://localhost:3210/$cslug/browse/deploy-smoke-check" 2>/dev/null || echo "000")
+      case "$scode" in
+        404|000|5??)
+          echo "  SPA fallback FAILED (code: $scode) for /$cslug/browse/deploy-smoke-check"
+          echo "  A page navigation is not being served. The usual cause is a deploy"
+          echo "  with no frontend build: src/frontend/dist/index.html decides whether"
+          echo "  registerSpaFallback is installed at all."
+          exit 1
+          ;;
+        *)
+          echo "  SPA fallback OK (page navigation answered $scode, not 404)"
+          ;;
+      esac
+    fi
 HEALTHCHECK
 fi
 

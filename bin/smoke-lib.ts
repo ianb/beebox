@@ -1,0 +1,314 @@
+/**
+ * The parts of the smoke tier that are decisions rather than effects: how a
+ * pidfile becomes a restart plan, what a router response means, and what an
+ * accessibility snapshot has to contain for a step to pass.
+ *
+ * Pure — no fs, no network, no child processes — so every verdict here is unit
+ * tested (bin/smoke-lib.test.ts) instead of being reachable only by breaking a
+ * real box on purpose. bin/smoke.ts owns the I/O and calls into this.
+ *
+ * See issues/exploration/2026-08-26-merge-time-smoke-tier.md.
+ */
+
+/** A step that failed, with enough context to act on without re-running. */
+export class SmokeFailure extends Error {
+  /** The page/HTTP evidence, printed under the message. Empty when there is none. */
+  readonly detail: string;
+
+  constructor(message: string, detail = "") {
+    super(message);
+    this.name = "SmokeFailure";
+    this.detail = detail;
+  }
+}
+
+// ── the router's answers ────────────────────────────────────────────────────
+
+/**
+ * What a response to `GET /<worktree>/<box>/` actually tells us.
+ *
+ * These are three different bugs and the tier must not blur them: `failed` is
+ * the app refusing to boot (the failure this tier exists for, which the router
+ * renders as an HTML page — bin/router.ts `renderFailedPage`); `unauthorized`
+ * is our own credential missing; `unexpected` is anything else.
+ */
+export type ProbeVerdict =
+  | { kind: "ok" }
+  | { kind: "failed"; phase: string; message: string; stderr: string }
+  | { kind: "unauthorized" }
+  | { kind: "unexpected"; status: number };
+
+/** The router's failed-to-start page, which is HTML and says so in its title. */
+function isFailedStartPage(body: string): boolean {
+  return /<title>Worktree .* — failed to start<\/title>/.test(body);
+}
+
+/** How much of a child's captured output a failure report carries. */
+const STDERR_TAIL_LINES = 30;
+
+/**
+ * What the failed-to-start page says, so a red smoke names the cause instead of
+ * only the symptom.
+ *
+ * The router's own message is usually the timeout, not the bug — the bug is in
+ * the child's captured output, which the page renders in `<pre>` blocks. Taking
+ * the tail of those is the difference between "did not respond within 30s" and
+ * the actual thrown error. Restyled markup degrades to "unknown"/empty rather
+ * than throwing: a failure report that itself fails is worthless.
+ */
+export function parseFailedPage(body: string): {
+  phase: string;
+  message: string;
+  stderr: string;
+} {
+  const phase = /Phase: <code>([^<]*)<\/code>/.exec(body)?.[1] ?? "unknown";
+  const message = /<div class="err">([\s\S]*?)<\/div>/.exec(body)?.[1]?.trim() ?? "";
+  const blocks = [...body.matchAll(/<pre>([\s\S]*?)<\/pre>/g)]
+    .map((match) => unescapeHtml(match[1] ?? "").trim())
+    .filter((text) => text !== "");
+  const stderr = blocks
+    .map((block) => block.split("\n").slice(-STDERR_TAIL_LINES).join("\n"))
+    .join("\n\n");
+  return { phase, message: unescapeHtml(message), stderr };
+}
+
+function unescapeHtml(text: string): string {
+  return text
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&#39;", "'")
+    .replaceAll("&amp;", "&");
+}
+
+export function readProbe(input: { status: number; body: string }): ProbeVerdict {
+  if (input.status === 200) return { kind: "ok" };
+  if (input.status === 401) return { kind: "unauthorized" };
+  if (isFailedStartPage(input.body)) {
+    return { kind: "failed", ...parseFailedPage(input.body) };
+  }
+  return { kind: "unexpected", status: input.status };
+}
+
+/** The failure a probe verdict deserves; null when it passed. */
+export function probeFailure(input: {
+  verdict: ProbeVerdict;
+  url: string;
+  body: string;
+}): SmokeFailure | null {
+  const { verdict, url } = input;
+  switch (verdict.kind) {
+    case "ok":
+      return null;
+    case "failed":
+      return new SmokeFailure(
+        `the box failed to start (router phase: ${verdict.phase}) — ${url}`,
+        [verdict.message, verdict.stderr].filter((part) => part !== "").join("\n\n"),
+      );
+    case "unauthorized":
+      return new SmokeFailure(
+        `the router refused our credential at ${url}` +
+          " — CB_BROWSE_API_KEY is missing or stale in callback-box/.env",
+      );
+    case "unexpected":
+      return new SmokeFailure(
+        `${url} answered ${String(verdict.status)}, expected 200`,
+        input.body.slice(0, 2000),
+      );
+    default:
+      return neverProbe(verdict);
+  }
+}
+
+function neverProbe(verdict: never): never {
+  throw new Error(`unhandled probe verdict: ${JSON.stringify(verdict)}`);
+}
+
+// ── the router's own view of a generation ───────────────────────────────────
+
+/**
+ * A worktree's state in `GET /__router/status`. Only the fields this tier
+ * reads; the router publishes more.
+ */
+export type WorktreeState = "cold" | "starting" | "ready" | "failed" | "unknown";
+
+/**
+ * What the router says about one worktree.
+ *
+ * `unknown` covers both "the router has never heard of this name" and a state
+ * string a newer router introduced — the caller treats both as "not running",
+ * which is the safe reading for a tier whose next move is to start it.
+ */
+export function worktreeState(statusJson: unknown, name: string): WorktreeState {
+  if (typeof statusJson !== "object" || statusJson === null) return "unknown";
+  const worktrees = (statusJson as { worktrees?: unknown }).worktrees;
+  if (typeof worktrees !== "object" || worktrees === null) return "unknown";
+  const entry = (worktrees as Record<string, unknown>)[name];
+  if (typeof entry !== "object" || entry === null) return "unknown";
+  const state = (entry as { state?: unknown }).state;
+  switch (state) {
+    case "cold":
+    case "starting":
+    case "ready":
+    case "failed":
+      return state;
+    default:
+      return "unknown";
+  }
+}
+
+/**
+ * When the running generation started, per the router; null unless it is up.
+ *
+ * This is how the tier proves it is looking at the code that is about to land
+ * rather than at whatever was on disk when the generation happened to start.
+ * Waiting for the worktree to go `cold` instead does not work: any open browser
+ * tab keeps issuing HTTP, and the router lazy-starts on every request, so a
+ * stopped worktree is `starting` again within milliseconds. Identity, not
+ * absence.
+ */
+export function generationStartedAt(statusJson: unknown, name: string): number | null {
+  if (typeof statusJson !== "object" || statusJson === null) return null;
+  const worktrees = (statusJson as { worktrees?: unknown }).worktrees;
+  if (typeof worktrees !== "object" || worktrees === null) return null;
+  const entry = (worktrees as Record<string, unknown>)[name];
+  if (typeof entry !== "object" || entry === null) return null;
+  const startedAt = (entry as { startedAt?: unknown }).startedAt;
+  return typeof startedAt === "number" ? startedAt : null;
+}
+
+/**
+ * Is the generation now serving the one this run started?
+ *
+ * `null` (the router reports no start time) fails closed: an unproven
+ * generation is exactly the stale read this check exists to catch.
+ */
+export function isFreshGeneration(input: {
+  startedAt: number | null;
+  stoppedAt: number;
+}): boolean {
+  return input.startedAt !== null && input.startedAt >= input.stoppedAt;
+}
+
+// ── reading accessibility snapshots ─────────────────────────────────────────
+
+/**
+ * A `[ref=eN]` for a role + accessible name in an agent-browser snapshot.
+ *
+ * Duplicated intent with tour-lib's `findRef`, but not its implementation: this
+ * one is given the snapshot text rather than fetching it, which is what makes
+ * it testable and lets one snapshot answer several questions without a second
+ * browser round-trip (the tier's whole time budget is round-trips).
+ */
+export function refFor(snapshot: string, role: string, name: string): string | null {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(`\\b${role}\\s+"${escaped}"\\s+\\[(?:[^\\]]*?,\\s*)?ref=(e\\d+)`);
+  return pattern.exec(snapshot)?.[1] ?? null;
+}
+
+/** Every `menuitem "…"` name in a snapshot, in document order. */
+export function menuItemNames(snapshot: string): string[] {
+  return [...snapshot.matchAll(/\bmenuitem\s+"([^"]*)"/g)].map((m) => m[1] ?? "");
+}
+
+/** Is the element carrying this DOM id expanded? Null when it is not present. */
+export function expandedState(snapshot: string, domId: string): boolean | null {
+  const line = snapshot
+    .split("\n")
+    .find((candidate) => candidate.includes(`id=${domId}`));
+  if (line === undefined) return null;
+  return /\bexpanded=true\b/.test(line);
+}
+
+/**
+ * The place menu's fixed rows (bin-independent: they carry stable DOM ids in
+ * PlacePill-panels.tsx). Landmark rows are everything else, and "at least one
+ * landmark row" is the assertion that the menu's data actually resolved.
+ */
+const FIXED_MENU_IDS = [
+  "cb-switch-menu-box",
+  "cb-switch-menu-landmarks",
+  "cb-switch-menu-recent-files",
+];
+
+/** The exact copy the menu shows when its landmark query failed (Retry row). */
+export const MENU_ERROR_TEXT = "Couldn’t load this menu";
+
+export interface PlaceMenuReading {
+  expanded: boolean;
+  fixedRowsPresent: boolean;
+  landmarkNames: string[];
+  errored: boolean;
+}
+
+export function readPlaceMenu(snapshot: string): PlaceMenuReading {
+  const fixedNames = new Set(
+    FIXED_MENU_IDS.map((id) => nameForId(snapshot, id)).filter(
+      (name): name is string => name !== null,
+    ),
+  );
+  return {
+    expanded: expandedState(snapshot, "cb-nav-place") === true,
+    fixedRowsPresent: fixedNames.size === FIXED_MENU_IDS.length,
+    landmarkNames: menuItemNames(snapshot).filter((name) => !fixedNames.has(name)),
+    // The apostrophe is a typographic one in the JSX and renders as such;
+    // accept the ASCII spelling too rather than let a copy edit blind us.
+    errored:
+      snapshot.includes(MENU_ERROR_TEXT) || snapshot.includes("Couldn't load this menu"),
+  };
+}
+
+function nameForId(snapshot: string, domId: string): string | null {
+  const line = snapshot.split("\n").find((candidate) => candidate.includes(`id=${domId}`));
+  if (line === undefined) return null;
+  return /"([^"]*)"/.exec(line)?.[1] ?? null;
+}
+
+/** The failure the place-menu reading deserves; null when it passed. */
+export function placeMenuFailure(reading: PlaceMenuReading, snapshot: string): SmokeFailure | null {
+  if (reading.errored) {
+    return new SmokeFailure(
+      "the place menu opened but could not load its landmarks" +
+        " — the menu is showing its error row, not a list",
+      snapshot,
+    );
+  }
+  if (!reading.expanded) {
+    return new SmokeFailure(
+      "clicking the place pill did not open the menu (#cb-nav-place is still collapsed)",
+      snapshot,
+    );
+  }
+  if (!reading.fixedRowsPresent) {
+    return new SmokeFailure("the place menu is missing its fixed rows", snapshot);
+  }
+  if (reading.landmarkNames.length === 0) {
+    return new SmokeFailure(
+      "the place menu lists no landmarks — the box has none, or the query returned empty",
+      snapshot,
+    );
+  }
+  return null;
+}
+
+/** Does the snapshot contain an element carrying this DOM id? */
+export function hasDomId(snapshot: string, domId: string): boolean {
+  return snapshot.includes(`id=${domId}`);
+}
+
+/**
+ * Directory rows in the browse sidebar, which the box's real content produces
+ * (`button "store directory, 46 items"`). Counting them is how this tier
+ * checks that a card read reached the browser: an empty list is what a backend
+ * that answered but returned nothing looks like.
+ */
+export function directoryRowCount(snapshot: string): number {
+  return [...snapshot.matchAll(/\bbutton\s+"[^"]* directory(?:,[^"]*)?"/g)].length;
+}
+
+/** The first card row in the browse sidebar, as a role + name pair to click. */
+export function firstCardRow(snapshot: string): { role: "button"; name: string } | null {
+  const match = /\bbutton\s+"([^"]* card)"\s+\[/.exec(snapshot);
+  const name = match?.[1];
+  return name === undefined ? null : { role: "button", name };
+}

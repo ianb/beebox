@@ -552,6 +552,47 @@ history has no such turn), so sample while it streams, not after.
 The stub is gated purely on the message prefix, so it ships harmlessly — a real
 message never starts with `/fakestream`.
 
+## Smoke Tier (a real box boots and is walked — a merge gate)
+
+**Run:** `bin/smoke` (add `--box <slug>`; `--no-restart` when debugging the
+walk itself). ~30s, hard-fails, never selected by the test graph.
+
+The only tier that answers "does the app actually run". It restarts this
+checkout's dev-server generation through the router's control socket, waits for
+the box to serve, then walks it in a browser: the chat page renders its shell,
+the app bar's place menu opens and lists landmarks, `/browse` lists the box's
+real content, a card opens and renders, and the page raised no uncaught errors.
+No model turns — nothing that spends tokens or waits on an agent.
+
+It exists because three escapes on 2026-08-25/26 passed typecheck, lint and
+their selected tests while the app was broken: the code was right and the
+*state* was wrong (a missing frontend build, broken global `~/.codex` state, an
+SDK item outside its own union). Only a real box on the real machine shows
+those.
+
+**Where it runs.** `/finish` names it on the decision sheet for any diff that
+touches a deployed path (`bin/deployed-paths.ts` — the same rule the deploy
+hook uses to decide whether a commit ships), and `bin/finish-verify` runs it
+*before* `bin/land`. It is a gate, not a post-merge alarm, because the router
+runs TypeScript straight off disk and never reloads it: after the merge, the
+main checkout's running generation is still the old source, so there would be
+nothing correct to point at. The worktree at that moment already contains main
+and is byte-identical to what lands.
+
+A failing test file gets a flake re-run; the smoke walk does not. It boots one
+real box and either that works or it does not.
+
+**Post-deploy**, `deploy/deploy.sh` runs the server-side half: hub `/healthz`,
+a `/healthz/canary` that cold-starts one real box, and a page-navigation check
+that fails if a deep box route 404s. That last one is deliberately not
+duplicated in the local walk — in dev, page requests are served by vite, so the
+SPA fallback this catches (registered only when `src/frontend/dist` exists)
+never runs locally.
+
+**Known gap.** A change confined to `bin/` gets no smoke walk, because `bin/`
+ships nothing and the "code-related" rule is deliberately the deploy hook's. A
+`bin/router.ts` change that breaks the dev router is therefore not gated here.
+
 ## Tours (rendering + a11y review — not a gate)
 
 Scripted browser walks (`bin/tour <name>`, scripts in `test/tours/`)
@@ -613,6 +654,7 @@ run never auto-files.
 | Did the CLI tools help or hinder the agent? | Session critique |
 | Does a card validate after agent edits? | Card validator (automatic) |
 | Does the streaming UI scroll/reflow correctly? | Frontend dev stub (`/fakestream` + `bin/browse`) |
+| Does the app still boot and work at all? | Smoke tier (`bin/smoke` — runs automatically at `/finish` for a code change) |
 | Does this page render sane at both viewports / pass axe? | Tour (`bin/tour <name>` — see [tours.md](tours.md); review instrument, not a gate) |
 | Is every state of this component reachable and right? | Dev harness route (`/dev/…`, real components over injected fakes) |
 | Is this realistically discoverable/usable end-to-end, through the real UI? | Field test (`cb field-test run <scenario>` — expensive, weekly/manual, never a gate) |
