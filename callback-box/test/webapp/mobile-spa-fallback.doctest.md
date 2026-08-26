@@ -12,11 +12,10 @@ upgrade, which the browser API cannot attach headers to).
 
 ```ts setup
 import Fastify from "fastify";
-import path from "node:path";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { createMobilePairingTicket, redeemMobilePairingTicket } from "../../src/core/mobile/pairing.js";
 import { MOBILE_COOKIE_NAME, MOBILE_SESSION_TTL_MS, signMobileSession } from "../../src/core/mobile/mobile-session.js";
-import { PACKAGE_ROOT } from "../../src/lib/package-root.js";
+import { TEST_FRONTEND_PATH } from "../helpers/test-server.js";
 import { registerSpaFallback } from "../../src/webapp/server-root.js";
 
 const ORIGINAL_HUB_SECRET = process.env.CB_HUB_SECRET;
@@ -31,7 +30,9 @@ process.env.GOOGLE_OAUTH_CLIENT_SECRET = "test-google-secret-for-mobile-spa-fall
 const box = await makeTmpBox();
 const server = Fastify();
 registerSpaFallback(server, {
-  frontendPath: path.join(PACKAGE_ROOT, "src/frontend/dist"),
+  // A tracked stand-in for the gitignored build artifact, so the fallback
+  // serves a document in every checkout (test/helpers/test-server.ts).
+  frontendPath: TEST_FRONTEND_PATH,
   boxes: [{ slug: "test", boxRoot: box.root }],
 });
 

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!--
+      A stand-in for the built SPA document (src/frontend/dist/index.html),
+      which is a gitignored build artifact a fresh checkout does not have.
+      Tests that exercise the document-serving paths (the SPA fallback, the
+      login redirect that only exists when the fallback is installed) point
+      the server here instead, so they assert against a server shape they
+      construct rather than one the machine happens to have built.
+
+      Keep the <title> and <link rel="icon"> tags: webapp/index-html.ts
+      rewrites both per request to stamp the box's identity, and warns when
+      either stops matching.
+    -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <title>Callback Box</title>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
