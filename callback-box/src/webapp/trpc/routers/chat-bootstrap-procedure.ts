@@ -14,7 +14,7 @@
  */
 
 import { z } from "zod";
-import { readAcceptedMessages, type AcceptedMessage } from "../../../core/chat/session/accepted-messages.js";
+import { readAcceptedMessages, type AcceptedMessage, type HistoryMarker } from "../../../core/chat/session/accepted-messages.js";
 import { publicProcedure } from "../trpc.js";
 import { getMostActive } from "../../../core/chat/session/history.js";
 import { historySliceSchema, loadHistoryForSession, type SessionHistory } from "./chat-session-procedures.js";
@@ -100,15 +100,18 @@ export const chatBootstrapProcedure = {
       // it means "none", not a session named "".
       const sessionId = resolved === "" ? null : resolved;
       // The acceptance record is read against whatever history goes back with
-      // it: the entries already there are each accepted message's
-      // reconciliation baseline, so an old turn repeating the same words cannot
-      // stand in for the echo it is still waiting for.
-      const acceptedFor = (knownUuids: string[]): AcceptedMessage[] =>
+      // it: the entries that already existed when a message was accepted are
+      // that message's reconciliation baseline, so an old turn repeating the
+      // same words cannot stand in for the echo it is still waiting for — and,
+      // because the baseline is dated per message rather than being the whole
+      // returned list, the message's own echo is never blacklisted along with
+      // them when the transcript has already caught up.
+      const acceptedFor = (history: HistoryMarker[]): AcceptedMessage[] =>
         readAcceptedMessages(ctx.eventBus, {
           sessionId,
           now: new Date(),
           viewerEmail: ctx.user?.email ?? null,
-          knownUuids,
+          history,
         });
       if (sessionId === null) {
         // "No session" is the reload that loses the most: a first message is
@@ -158,7 +161,7 @@ export const chatBootstrapProcedure = {
         history,
         label,
         status: await readSessionStatus(ctx.boxRoot, sessionId),
-        pending: acceptedFor(history.entries.map((entry) => entry.uuid)),
+        pending: acceptedFor(history.entries.map((entry) => ({ uuid: entry.uuid, timestamp: entry.timestamp }))),
       };
     }),
 };
