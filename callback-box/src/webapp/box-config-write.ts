@@ -88,11 +88,14 @@ export async function updateBoxConfigFields(options: {
   allowedEmails?: string[] | undefined;
   googleServices?: Partial<Record<"calendar" | "gmail" | "drive", boolean | undefined>> | undefined;
   agentEngine?: "claude" | "codex" | undefined;
+  /** The box's pinned model; `null` clears the pin (no policy). */
+  agentModel?: string | null | undefined;
 }): Promise<BoxConfigMutationResult> {
   const changed = [
     ...(options.allowedEmails === undefined ? [] : ["allowedEmails"]),
     ...(options.googleServices === undefined ? [] : ["googleServices"]),
     ...(options.agentEngine === undefined ? [] : ["agentEngine"]),
+    ...(options.agentModel === undefined ? [] : ["agentModel"]),
   ];
   return mutateConfig({
     boxRoot: options.boxRoot,
@@ -106,6 +109,12 @@ export async function updateBoxConfigFields(options: {
       }
       if (options.agentEngine !== undefined) {
         config.agentEngine = options.agentEngine;
+      }
+      if (options.agentModel !== undefined) {
+        // Clearing removes the key rather than storing null: "no policy" is the
+        // absence of the field, which is what every reader already looks for.
+        if (options.agentModel === null) delete config.agentModel;
+        else config.agentModel = options.agentModel;
       }
     },
   });
