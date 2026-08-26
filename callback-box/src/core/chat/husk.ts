@@ -23,6 +23,7 @@ import { extractSnippet } from "../../cli/lib/session-text.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { readCodexSessionUpdatedAt } from "./session/codex-transcript.js";
 import { loadSessionHistory } from "./session/load-history.js";
+import { writeFileAtomic } from "../../lib/atomic-write.js";
 import {
   CHAT_HUSK_DIR,
   findChatHuskEntry,
@@ -136,7 +137,15 @@ async function transcriptMtime(boxRoot: string, opts: { sessionId: string; engin
  *
  * The card is re-read under `withCardLock` and re-checked for `origin`,
  * because the snapshot the caller matched on was taken outside the lock and
- * chat review writes to the same cards.
+ * chat review writes to the same cards. The write is atomic because the target
+ * is a git-tracked card: `fs.writeFile` truncates first, so a crash mid-write
+ * would leave a truncated card in the working tree.
+ *
+ * Across processes this stays last-writer-wins with the nightly review, and
+ * that is accepted: the stamp is three fields, it is re-read immediately
+ * before the write, and the review re-reads the card under its own lock — so
+ * the most a lost write costs is one boot's provenance, which the next boot
+ * writes again.
  */
 async function stampHuskProvenance(absPath: string, args: { engine: AgentEngine; origin: LocalOrigin }): Promise<boolean> {
   return withCardLock(absPath, async () => {
@@ -151,7 +160,7 @@ async function stampHuskProvenance(absPath: string, args: { engine: AgentEngine;
     fields["origin-name"] = args.origin.name;
     // An `engine` already on the card wins — reconcile records, never corrects.
     if (fields["engine"] === undefined) fields["engine"] = args.engine;
-    await fs.writeFile(absPath, renderFrontmatterBlock(fields, split.body));
+    await writeFileAtomic(absPath, { content: renderFrontmatterBlock(fields, split.body) });
     return true;
   });
 }
