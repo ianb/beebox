@@ -10,7 +10,7 @@ renames itself when its network location changes.
 import * as os from "node:os";
 import { readFile, writeFile } from "node:fs/promises";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
-import { localOrigin } from "../../../../src/core/chat/session/origin.js";
+import { localOrigin, readOrCreateOriginId } from "../../../../src/core/chat/session/origin.js";
 ```
 
 ## the first read mints the id; later reads return the same one
@@ -40,6 +40,32 @@ second.id === first.id
 
 ```ts cleanup
 delete process.env["CB_ORIGIN_ID_FILE"];
+await box.cleanup();
+```
+
+## two first runs at once converge on one id
+
+Nothing serializes the very first read: a boot and a chat send can both find no
+file and both mint. Creation is exclusive, so one of them wins and the other
+reads the winner's id — the alternative (each writing its own) would leave the
+two halves of one machine stamping husks with different origins.
+
+`readOrCreateOriginId` rather than `localOrigin` because the memo would hand
+the second caller the first one's promise, and the race would never happen.
+
+```ts
+const box = await makeTmpBox();
+const idFile = box.path("state/origin-id");
+const [a, b] = await Promise.all([readOrCreateOriginId(idFile), readOrCreateOriginId(idFile)]);
+
+a === b
+=> true
+
+a === (await readFile(idFile, "utf-8")).trim()
+=> true
+```
+
+```ts cleanup
 await box.cleanup();
 ```
 

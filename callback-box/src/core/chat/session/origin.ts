@@ -22,7 +22,6 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { z } from "zod";
-import { writeFileAtomic } from "../../../lib/atomic-write.js";
 import { errnoCode } from "../../../lib/error-guards.js";
 import { CB_STATE_DIR } from "../../../lib/state-dir.js";
 
@@ -57,19 +56,45 @@ function parseOriginId(raw: string, filePath: string): string {
   return parsed.data;
 }
 
-async function readOrCreateOriginId(filePath: string): Promise<string> {
+/**
+ * The unmemoized read — mint on first run, otherwise read what is there.
+ *
+ * Create-exclusive (`wx`), not write-then-read: a rename over the target would
+ * let two processes minting at the same moment each stamp their own UUID, and
+ * whichever landed second would silently re-origin every husk the first had
+ * already stamped. With `wx` exactly one creator wins and the loser reads the
+ * winner's id, so concurrent first runs converge.
+ *
+ * Exported for the doctest that runs two first calls at once — `localOrigin`
+ * memoizes per path, so there is no other way to reach the race.
+ */
+export async function readOrCreateOriginId(filePath: string): Promise<string> {
   let raw: string;
   try {
     raw = await fs.readFile(filePath, "utf-8");
   } catch (e) {
     if (errnoCode(e) !== "ENOENT") throw e;
     // Missing is the ordinary first-run case, not a corruption.
-    await writeFileAtomic(filePath, { content: `${randomUUID()}\n` });
-    // Read back rather than trusting the value just generated: two processes
-    // starting at once both write, and the file on disk is the one that counts.
-    raw = await fs.readFile(filePath, "utf-8");
+    raw = await mintOriginId(filePath);
   }
   return parseOriginId(raw, filePath);
+}
+
+/** Create the id file if nobody else has; return what the file ends up holding. */
+async function mintOriginId(filePath: string): Promise<string> {
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  let handle: fs.FileHandle | undefined;
+  try {
+    handle = await fs.open(filePath, "wx");
+    await handle.writeFile(`${randomUUID()}\n`);
+  } catch (e) {
+    // Lost the race: another process created the file between our read and our
+    // open. Its id is the one on disk, and the one on disk is the one that counts.
+    if (errnoCode(e) !== "EEXIST") throw e;
+  } finally {
+    await handle?.close();
+  }
+  return fs.readFile(filePath, "utf-8");
 }
 
 /** Keyed by path so an override still takes effect within one process. */
