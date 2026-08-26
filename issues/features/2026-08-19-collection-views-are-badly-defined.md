@@ -148,7 +148,10 @@ hypertext from HTML", "Xanadu?") is well-founded. Four strands worth reading:
   links** (a link from a string *wherever it appears*) and **computed links**
   (content-based retrieval), with all link information held in a separate link
   service while documents stay in their native formats. A link that is a query,
-  built and shipped thirty years ago.
+  built and shipped thirty years ago. Technical overview (architecture, the
+  three link kinds, their own open problems): Davis, Heath, Hill & Wilkins,
+  [MICROCOSM: An Open Hypermedia Environment for Information Integration](https://eprints.soton.ac.uk/250713/3/index.html)
+  (1992).
 - **[TiddlyWiki filters](https://tiddlywiki.com/static/Filters.html) with the
   [list widget](https://tiddlywiki.com/static/ListWidget.html) and
   [transclusion](https://tiddlywiki.com/static/TranscludeWidget.html)** — the
