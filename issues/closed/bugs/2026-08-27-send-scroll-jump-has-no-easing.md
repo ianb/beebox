@@ -6,7 +6,13 @@ labels: [ui, chat]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "when a new user message comes in it scrolls to the top… without any ease or animation and it's abrupt"
+resolution: implemented
 ---
+
+> Fixed same day: `chat-scroll-ease.ts` — a ~200ms per-frame convergence on the
+> anchored message (re-aimed each frame so growth during the ease is absorbed),
+> cancelled by any other programmatic write or the reader grabbing the scroller;
+> `prefers-reduced-motion` keeps the snap. Compensation writes stay instant.
 
 When a new user message lands, the chat scrolls to anchor it (top of the
 viewport) instantly — no easing, an abrupt snap.
