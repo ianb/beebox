@@ -59,6 +59,22 @@ JSON.stringify([
 => ["codex","codex"]
 ```
 
+A COINED id is not yet a record: the id exists from the first request, before
+any husk or history entry does. The picker's request must win there — falling
+through to the box default sent a `?engine=claude` coined start on a
+codex-default box into the coined-must-be-Claude invariant (a 500,
+2026-08-27). Recorded > requested > box default.
+
+```ts continue
+const coinedFresh = randomUUID();
+JSON.stringify([
+  await resolveStartEngine(box.root, { sessionId: coinedFresh, requested: "claude" }),
+  await resolveStartEngine(box.root, { sessionId: coinedFresh, requested: null }),
+])
+// this box's default is claude; the second entry is the default answering
+=> ["claude","claude"]
+```
+
 A reservation carries the chosen model, and refuses a non-Claude engine —
 `unsupported`, not an error, because the client's answer to it is to send
 `"new"` instead.
