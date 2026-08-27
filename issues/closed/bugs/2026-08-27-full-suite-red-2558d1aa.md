@@ -5,7 +5,10 @@ area: callback-box
 priority: important
 filed-by: agent
 discovered-by: agent
+resolution: superseded
 ---
+
+> Closed 2026-08-27: another hourly duplicate of [the first report](2026-08-27-full-suite-red-drive-folder-mounts-1ae39b40.md); loop filed as 2026-08-27-full-suite-report-loop-blames-its-own-commits. Underlying failure fixed in d15a73be.
 
 The hourly batched full-suite run (`schedules/full-suite/`) went red on `main` at
 `2558d1aa`. Bisecting the landings since the last tested
