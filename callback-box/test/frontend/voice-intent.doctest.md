@@ -9,7 +9,55 @@ freeze boundary means composer state added after the snapshot was taken
 never appears here — it belongs to the next message instead.
 
 ```ts setup
+import { routeComposerSend } from "../../src/frontend/src/components/chat/InteractiveChat-helpers.js";
 import { buildVoiceSubmitEmission, prepareVoiceSubmitEmission } from "../../src/frontend/src/input/voice-intent.js";
+```
+
+## A live manual send always finalizes audio
+
+The desktop and mobile Send buttons share this decision. A live voice segment
+must enter `submitSegment` whether HQ dictation is enabled or not: finalization
+is what produces the audio blob retained for `cb chat get-last-audio`; HQ is a
+later, independent decision about whether to re-transcribe that blob. The
+settled fallback exists only for the narrow race where the segment became idle
+before the click handler ran.
+
+```ts
+const calls: string[] = [];
+routeComposerSend({
+  isTranscribing: true,
+  submitSegment: () => { calls.push("finalize"); return true; },
+  sendTyped: () => calls.push("typed"),
+  sendSettledVoice: () => calls.push("settled"),
+})
+=> finalizing
+
+calls.join(",")
+=> finalize
+
+const settledCalls: string[] = [];
+routeComposerSend({
+  isTranscribing: true,
+  submitSegment: () => false,
+  sendTyped: () => settledCalls.push("typed"),
+  sendSettledVoice: () => settledCalls.push("settled"),
+})
+=> settled
+
+settledCalls.join(",")
+=> settled
+
+const typedCalls: string[] = [];
+routeComposerSend({
+  isTranscribing: false,
+  submitSegment: () => { typedCalls.push("finalize"); return true; },
+  sendTyped: () => typedCalls.push("typed"),
+  sendSettledVoice: () => typedCalls.push("settled"),
+})
+=> typed
+
+typedCalls.join(",")
+=> typed
 ```
 
 ## Prior composer text folds in ahead of the new utterance

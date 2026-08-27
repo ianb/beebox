@@ -72,6 +72,27 @@ export interface VoiceSegmentMeta {
 /** Shared shape for every `onVoiceSegmentSend`-style prop (composer, mobile row). */
 export type VoiceSegmentSend = (text: string, meta: VoiceSegmentMeta) => void;
 
+/**
+ * Route one composer Send press without making audio retention depend on HQ.
+ * A live voice segment always finalizes first: that is what produces the Blob
+ * retained for later audio questions. `sendSettledVoice` is only the idle-race
+ * fallback where the segment settled before the handler could park it.
+ */
+export function routeComposerSend(opts: {
+  isTranscribing: boolean;
+  submitSegment: () => boolean;
+  sendTyped: () => void;
+  sendSettledVoice: () => void;
+}): "typed" | "finalizing" | "settled" {
+  if (!opts.isTranscribing) {
+    opts.sendTyped();
+    return "typed";
+  }
+  if (opts.submitSegment()) return "finalizing";
+  opts.sendSettledVoice();
+  return "settled";
+}
+
 // Minted at SEND-dispatch time and threaded through to /chat/send so the
 // backend's processedMessageIds dedupe (chat.ts:269-284) catches the case
 // where the streamActor body runs twice for one logical send (StrictMode
