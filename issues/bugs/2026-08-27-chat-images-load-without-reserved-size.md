@@ -1,6 +1,6 @@
 ---
 title: "Chat images load without reserved dimensions, so late decodes still jank the scroll"
-workstream: unattached
+workstream: chat-image-dimensions
 area: callback-box
 labels: [ui, chat]
 filed-by: agent
