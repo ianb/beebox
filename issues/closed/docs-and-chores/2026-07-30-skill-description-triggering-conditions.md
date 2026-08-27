@@ -4,7 +4,12 @@ workstream: elixir-skills-review
 area: docs
 filed-by: agent
 discovered-in: worktree-elixir-skills-review — reviewing claude-elixir-phoenix
+resolution: superseded
 ---
+
+> Superseded 2026-08-27: consolidated into
+> [run-skill-trigger-evals](../../docs-and-chores/2026-07-30-run-skill-trigger-evals.md),
+> which now owns the eval run, the description rewrite, and the auto-fire question.
 
 A `description` that *summarizes what the skill does* gets acted on **instead of**
 the skill body being loaded. The model has enough from the listing to answer, so

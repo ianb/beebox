@@ -4,7 +4,12 @@ workstream: elixir-skills-review
 area: docs
 filed-by: agent
 discovered-in: worktree-elixir-skills-review — reviewing claude-elixir-phoenix
+resolution: superseded
 ---
+
+> Superseded 2026-08-27: consolidated into
+> [run-skill-trigger-evals](../../docs-and-chores/2026-07-30-run-skill-trigger-evals.md),
+> which now owns the eval run, the description rewrite, and the auto-fire question.
 
 We write skill descriptions as if the model reads them and decides to load the
 skill on its own. We have never checked whether that happens.
