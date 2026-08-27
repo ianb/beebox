@@ -1,12 +1,16 @@
 ---
 title: "full-suite files a fresh red report every hour for the same failure, each blaming its own previous report commit"
-workstream: unattached
+workstream: full-suite-report-loop
 area: monorepo
 labels: [tests, schedules]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "there were failing schedules again…?" turned up 13 reports for one failure
+resolution: implemented
 ---
+
+> Closed 2026-08-27: `c6be8b524` carries completed-run known-red state, rejects
+> non-deployed bisect results, and names reports for their failing files.
 
 Overnight 2026-08-26→27 one real failure (`annotations.doctest.md`, broken by
 the `drive-folder-mounts` landing `1ae39b40`) produced THIRTEEN issues and
