@@ -32,6 +32,13 @@ AND still means the right thing*. So:
 If you're changing on-disk shape and *any* box already holds the old form, you
 need a migration. New boxes are seeded all-applied by `cb init`, so they skip it.
 
+**The compatibility horizon is short (as of 2026-08).** Every box in existence
+lives on the development machine or the production server. Once those are
+migrated, nothing old remains: no back-compat reads, no dual-format loaders, no
+"support the old shape for a while." Migrate everything, then delete the old
+path in the same plan. (This changes if boxes ever run on machines we don't
+control — revisit this note then, not before.)
+
 ## Which kind — script (default) or agent-applied
 
 - **Script migration** (`scripts/migrate/<name>.ts`) — the default for anything
