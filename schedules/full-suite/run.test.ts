@@ -299,6 +299,7 @@ test("renderIssue names the landing, the workstream, the files and the excerpt",
   assert.match(text, /^discovered-in: worktree-scanner-ingest — /mu);
   assert.match(text, /abcdef12/u);
   assert.match(text, /test\/core\/box\/file-watcher\.doctest\.md/u);
+  assert.match(text, /^title: "Full-suite red: test\/core\/box\/file-watcher\.doctest\.md"$/mu);
   assert.match(text, /not ok 12/u);
   // The excerpt's home paths are written as `~`, or path-leak-check refuses the report.
   assert.match(text, /command: ~\/\.nvm\/bin\/node/u);
