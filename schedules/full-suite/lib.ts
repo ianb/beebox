@@ -372,7 +372,7 @@ export function renderIssue(input: {
   const plural = input.files.length === 1 ? "" : "s";
   const frontmatter = [
     "---",
-    `title: "Full-suite red after ${input.landing.subject}: ${String(input.files.length)} test file${plural} failing"`,
+    `title: "Full-suite red: ${input.files.join(", ")}"`,
     `workstream: ${workstream ?? "unattached"}`,
     "area: callback-box",
     "priority: important",
