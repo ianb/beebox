@@ -38,6 +38,7 @@
 
 import { useRef, useState, useCallback, useEffect } from "react";
 import type { MutableRefObject } from "react";
+import { easeOrSnapToTop, anchorOffset } from "./chat-scroll-ease.js";
 import { decideReconcile, type ReconcileAction } from "./scroll-reconcile";
 import { recordScrollTrace } from "../../lib/scroll-diagnostics";
 
@@ -77,7 +78,7 @@ const OPEN_SETTLE_MS = 400;
  */
 const OPEN_MAX_MS = 8000;
 
-interface Anchor { el: Element; top: number }
+export interface Anchor { el: Element; top: number }
 
 /**
  * The anchor that holds the view steady when content above it resizes: the
@@ -116,12 +117,6 @@ function anchorChild(scroller: HTMLDivElement | null, content: HTMLDivElement | 
   // everywhere else. There is no better ruler when no item starts on screen.
   if (!last) return null;
   return { el: last, top: last.getBoundingClientRect().top - scTop };
-}
-
-/** The anchor's live offset from the scroller's top edge, or null if it is gone. */
-function anchorOffset(anchor: Anchor | null, scroller: HTMLDivElement): number | null {
-  if (!anchor || !anchor.el.isConnected) return null;
-  return anchor.el.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
 }
 
 /**
@@ -359,9 +354,11 @@ export function useChatScroll(): ChatScroll {
     return fromBottom;
   }, [setAtBottomFlag, setUnseen]);
 
+  const anchorEaseCancelRef = useRef<(() => void) | null>(null);
   const writeTop = useCallback((top: number, behavior: ScrollBehavior) => {
     const el = scrollerElRef.current;
     if (!el) return;
+    anchorEaseCancelRef.current?.(); // any other write supersedes the send ease
     recordScrollTrace("write", { top: Math.round(top), b: behavior });
     el.scrollTo({ top, behavior });
   }, []);
@@ -386,10 +383,12 @@ export function useChatScroll(): ChatScroll {
     if (!el || !target) return;
     endOpenPhase("send");
     setUnseen(false);
-    const offset = target.getBoundingClientRect().top - el.getBoundingClientRect().top;
-    writeTop(el.scrollTop + offset, "instant");
-    anchorRef.current = anchorChild(el, contentElRef.current);
-    measure(el);
+    // The one user-initiated jump gets the quick ease (chat-scroll-ease.ts);
+    // compensation writes stay instant — animating them fights the RO loop.
+    recordScrollTrace("write", { top: -1, b: "anchor-ease" });
+    const onDone = (): void => { anchorRef.current = anchorChild(el, contentElRef.current); measure(el); };
+    const writeInstant = (top: number): void => { writeTop(top, "instant"); };
+    easeOrSnapToTop({ el, target, writeInstant, cancelRef: anchorEaseCancelRef, onDone });
   }, [endOpenPhase, setUnseen, writeTop, measure]);
 
   const captureForPrepend = useCallback(() => {
