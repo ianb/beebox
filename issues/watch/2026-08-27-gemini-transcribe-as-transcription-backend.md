@@ -28,6 +28,14 @@ Watch-triggers before evaluating seriously:
 - Pricing published, and general availability past "public preview".
 - A plain API path (AI Studio / Gemini API), not just Antigravity/Enterprise.
 
+Checked 2026-08-27 (ai.google.dev/gemini-api/docs/transcribe): **word-level
+timestamps yes** (`timestamp_granularities: ["word"]` → `start_offset`/
+`end_offset` per word; pre-recorded path; 30-min cap with the feature on;
+Google warns it "may degrade overall transcription accuracy" and it is
+incompatible with smart-transcription mode). **Confidence scores: not
+documented at any granularity** — a gap for the transcript-confidence work
+(the `<unsure>` marks need exactly that signal). Re-check both at trigger time.
+
 When triggered, the evaluation is: WER on the boxholder's actual audio vs
 Voxtral (the retranscribe/ask-about-audio machinery keeps real samples),
 streaming latency on the transcribe-ws path, and whether "smart transcription"
