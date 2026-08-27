@@ -6,7 +6,10 @@ priority: important
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-drive-folder-mounts — the hourly full-suite run on main
+resolution: implemented
 ---
+
+> Closed 2026-08-27: real failure, correctly blamed. DriveSection.tsx authored `cb-settings-drive-connect-google` in two mutually-exclusive branches; the error branch now has its own id. The twelve hourly duplicates that followed closed as superseded into this one.
 
 The hourly batched full-suite run (`schedules/full-suite/`) went red on `main` at
 `78470b9b`. Bisecting the landings since the last tested

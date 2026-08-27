@@ -5,7 +5,10 @@ area: callback-box
 priority: important
 filed-by: agent
 discovered-by: agent
+resolution: superseded
 ---
+
+> Closed 2026-08-27: one of twelve hourly duplicates of [the first report](2026-08-27-full-suite-red-drive-folder-mounts-1ae39b40.md) — the schedule re-bisected the same annotations.doctest.md failure each hour and blamed its own previous report commit. The loop is filed as 2026-08-27-full-suite-report-loop-blames-its-own-commits.
 
 The hourly batched full-suite run (`schedules/full-suite/`) went red on `main` at
 `f45c7f1c`. Bisecting the landings since the last tested
