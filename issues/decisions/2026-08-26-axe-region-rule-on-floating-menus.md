@@ -18,5 +18,5 @@ portal root in a landmark, or add `region` to `SUPPRESS_RULES` in
 `test/tours/tour-lib/axe.ts` with the reason). Decide once rather than
 letting the weekly tour check re-report it; it is the only standing axe
 finding besides
-[the /questions heading-order](../bugs/2026-08-26-questions-page-heading-order.md)
+[the /questions heading-order](../closed/bugs/2026-08-26-questions-page-heading-order.md)
 one.

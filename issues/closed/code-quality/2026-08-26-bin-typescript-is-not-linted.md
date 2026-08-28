@@ -1,6 +1,7 @@
 ---
 title: "bin/*.ts is linted by nothing — the root eslint config covers only schedules/"
-workstream: unattached
+workstream: tour-health
+resolution: implemented
 area: router
 labels: [lint, bin]
 filed-by: agent
@@ -24,6 +25,8 @@ eslint config's roots alongside `schedules/`, then burn down whatever it finds
 budget, per `code-style.md`, so expect justified exceptions there).
 
 ## Resolved — 2026-08-28
+
+Commit 206144c2e.
 
 `bin/` is in the root eslint config's `roots` alongside `schedules/`, under the
 same reviewed personal-vibe-check ruleset every package uses. Because `bin/` is

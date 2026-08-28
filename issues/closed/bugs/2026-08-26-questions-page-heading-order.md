@@ -1,6 +1,7 @@
 ---
 title: "/questions fails axe heading-order — an h3 with no h2 above it"
-workstream: unattached
+workstream: tour-health
+resolution: implemented
 area: callback-box
 labels: [a11y, tours]
 filed-by: agent
@@ -16,6 +17,8 @@ The question cards render their title as `h3` under the page's `h1` with no
 `h2`. Small; the weekly tour check will keep reporting it until fixed.
 
 ## Resolved (2026-08-28)
+
+Commit 02347dbee.
 
 Fixed: the question-card title (`components/questions/QuestionForm.tsx`'s
 `QuestionContext`) was an `h3` rendered directly under the page's `h1` with
