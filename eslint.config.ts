@@ -1,25 +1,28 @@
-// Flat config for monorepo-root files. Only `schedules/**/*.ts` is linted.
+// Flat config for monorepo-root files: `schedules/**` and `bin/**`, both held
+// to the same reviewed personal-vibe-check ruleset every package uses.
 //
-// bin/ and dev/ stay unlinted, by decision: the PostToolUse vibe-check hook
-// runs eslint from the nearest-package.json directory — for bin/ files that's
-// this root — and ESLint v9 resolves flat config from the cwd UPWARD, so a
-// config inside bin/ was never found (this file used to live there and
-// silenced nothing; every bin/ edit got a hard "couldn't find an
-// eslint.config" error from the hook). This file existed to answer that hook
-// with an empty ruleset. Subprojects are unaffected: their hook cwd is their
-// own directory, where their own configs shadow this one. Whether bin/ should
-// get real linting is a separate decision (scheduled-workstreams.md, Track E,
-// "Subplans"), deliberately not taken here.
+// Neither is a workspace package, so root `pnpm lint`'s `-r` fan-out cannot
+// reach them. Each has its own root-level command instead: `bin/schedules lint`
+// (eslint plus the schedule-specific checks) and `pnpm lint:bin` (plain eslint),
+// and `pnpm lint` runs the latter before fanning out. `bin/lint-changed.ts`
+// dispatches both.
 //
-// The scheduled-jobs directory IS linted, because `bin/schedules lint` (and
-// the pre-commit hook behind it) is what stands between a broken schedule and
-// a 03:00 failure nobody watches. The global-ignore entry below is what keeps
-// that from leaking onto bin/: vibeCheck's underlying eslint-config-agent
-// contributes rule entries with no `files` key of their own, which would
-// otherwise apply to every root file the hook hands eslint.
+// The scheduled-jobs directory is linted because `bin/schedules lint` (and the
+// pre-commit hook behind it) is what stands between a broken schedule and a
+// 03:00 failure nobody watches. `bin/` is linted because it is the dev router,
+// the worktree tooling and the test selector — real TypeScript that used to
+// pass pre-commit on typecheck alone (issues/code-quality/2026-08-26-bin-typescript-is-not-linted.md).
+//
+// The global-ignore entry below still matters: vibeCheck's underlying
+// eslint-config-agent contributes rule entries with no `files` key of their
+// own, which would otherwise apply to every root file the PostToolUse hook
+// hands eslint — including `dev/`, which stays unlinted by decision (its pages
+// are deliberately casual; see workstreams-app/docs/exhibits.md). Subprojects
+// are unaffected: their hook cwd is their own directory, where their own
+// configs shadow this one.
 import { vibeCheck } from "@ianbicking/personal-vibe-check/eslint";
 
 export default [
-  { ignores: ["**/*", "!schedules/**"] },
-  ...vibeCheck({ react: false, roots: ["schedules"] }),
+  { ignores: ["**/*", "!schedules/**", "!bin/**"] },
+  ...vibeCheck({ react: false, roots: ["schedules", "bin"] }),
 ];

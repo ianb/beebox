@@ -43,7 +43,9 @@ async function exists(p: string): Promise<boolean> {
   try {
     await fs.access(p);
     return true;
-  } catch {
+  } catch (_e) {
+    // `access` rejects for every reason a path is unusable — absent, or a
+    // component we cannot traverse. Both answer this question the same way.
     return false;
   }
 }
@@ -83,15 +85,36 @@ export async function resolveBoxEntry(entry: string): Promise<ResolvedBoxEntry> 
   return { contentDir: resolved, slug: path.basename(resolved) };
 }
 
-async function readShapeVersion(boxRoot: string): Promise<number> {
-  try {
-    const raw = await fs.readFile(path.join(boxRoot, ".cb-box"), "utf-8");
-    if (raw.trim() === "") return 1;
-    const marker = JSON.parse(raw) as { shapeVersion?: number };
-    return marker.shapeVersion ?? 1;
-  } catch {
-    return 1;
+/** A `.cb-box` marker that exists but cannot be read as one. */
+export class BoxMarkerError extends Error {
+  constructor(markerPath: string, problem: string) {
+    super(`${markerPath}: ${problem}`);
+    this.name = "BoxMarkerError";
   }
+}
+
+/**
+ * The marker's `shapeVersion`. An EMPTY marker is the pre-JSON convention and
+ * means legacy (1); a marker without the field means legacy too. A marker that
+ * is present but malformed — unparseable JSON, or a `shapeVersion` that is not
+ * a number — throws rather than guessing: a guess of "legacy" would re-derive
+ * the slug from the wrong directory and route the box under the wrong name.
+ */
+async function readShapeVersion(boxRoot: string): Promise<number> {
+  const markerPath = path.join(boxRoot, ".cb-box");
+  const raw = await fs.readFile(markerPath, "utf-8");
+  if (raw.trim() === "") return 1;
+  let marker: unknown;
+  try {
+    marker = JSON.parse(raw);
+  } catch (e) {
+    throw new BoxMarkerError(markerPath, `not JSON (${e instanceof Error ? e.message : String(e)})`);
+  }
+  if (typeof marker !== "object" || marker === null || !("shapeVersion" in marker)) return 1;
+  if (typeof marker.shapeVersion !== "number") {
+    throw new BoxMarkerError(markerPath, `shapeVersion is ${JSON.stringify(marker.shapeVersion)}, expected a number`);
+  }
+  return marker.shapeVersion;
 }
 
 /** `resolveBoxEntry` over a whole BOXES list, in order. */

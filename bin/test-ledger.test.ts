@@ -312,10 +312,9 @@ test("a record written before the semaphore, with no tier or concurrency, still 
   // The semaphore added `tier`/`concurrency` (bin/test-locks.ts); the sixteen
   // days of records that motivated it have neither, and voiding them would
   // throw away the denominator the whole instrument exists to hold.
-  const old = { ...rec({}) } as Record<string, unknown>;
-  delete old.tier;
-  delete old.concurrency;
-  const parsed = JSON.parse(JSON.stringify(old)) as LedgerRecord;
+  const parsed: LedgerRecord = { ...rec({}) };
+  delete parsed.tier;
+  delete parsed.concurrency;
   assert.equal(parsed.tier, undefined);
   assert.equal(summarize({ records: [parsed], filesets: FILESETS }).get("test/a.doctest.md")?.runs, 1);
 });

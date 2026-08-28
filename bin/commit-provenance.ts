@@ -121,7 +121,7 @@ const KEYS = ["Workstream", "Plan", "Issue"];
 function parsedTrailers(parsed: string): Array<[string, string]> {
   const out: Array<[string, string]> = [];
   for (const line of parsed.split("\n")) {
-    const match = /^([\w-]+):[ \t]*(.*)$/.exec(line);
+    const match = /^([\w-]+):[\t ]*(.*)$/.exec(line);
     if (match !== null) out.push([match[1]!, match[2]!.trim()]);
   }
   return out;
@@ -275,14 +275,14 @@ export function filterByTrailer(records: string, value: string): string[] {
     if (record === "") continue;
     const [oneline, values] = record.split("\0");
     if (oneline === undefined || values === undefined) continue;
-    if (values.split("\u001f").map((v) => v.trim()).includes(value)) out.push(oneline);
+    if (values.split("\u001F").map((v) => v.trim()).includes(value)) out.push(oneline);
   }
   return out;
 }
 
 function query(params: { key: string; value: string; mainOnly: boolean }): void {
   const { key, value, mainOnly } = params;
-  const pattern = `^${key}: ${value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`;
+  const pattern = `^${key}: ${value.replace(/[$()*+.?[\\\]^{|}]/g, "\\$&")}$`;
   const format = `--format=%h %s%x00%(trailers:key=${key},valueonly,unfold,separator=%x1f)`;
   const args = ["log", "--extended-regexp", `--grep=${pattern}`, format];
   args.push(mainOnly ? "main" : "--all");

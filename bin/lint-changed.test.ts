@@ -89,14 +89,33 @@ test("the frontend package is never its own lint run — callback-box covers it"
 
 test("the root fan-out reduces to the packages the change touched", () => {
   const plan = dispatchPlan({
-    paths: ["callback-box/src/core/box.ts", "site/src/index.ts", "schedules/nightly/run.ts"],
+    paths: [
+      "callback-box/src/core/box.ts",
+      "site/src/index.ts",
+      "schedules/nightly/run.ts",
+      "bin/router.ts",
+    ],
     packageDirs: PACKAGE_DIRS,
     hasScript: (dir, script) => (dir === "callback-box" ? true : script === "lint"),
   });
   assert.deepEqual(
     plan.map((c) => c.label),
-    ["pnpm --dir callback-box lint:changed", "pnpm --dir site lint", "bin/schedules lint"],
+    [
+      "pnpm --dir callback-box lint:changed",
+      "pnpm --dir site lint",
+      "bin/schedules lint",
+      "pnpm lint:bin",
+    ],
   );
+});
+
+test("bin/ is linted from the root, and only for the files eslint reads there", () => {
+  const plan = (paths: string[]): string[] =>
+    dispatchPlan({ paths, packageDirs: PACKAGE_DIRS, hasScript: () => true }).map((c) => c.label);
+  assert.deepEqual(plan(["bin/lib/schedules-store.ts"]), ["pnpm lint:bin"]);
+  assert.deepEqual(plan(["bin/router.test.ts"]), ["pnpm lint:bin"]);
+  // `bin/land` and `bin/schedules` are shell; `bin/CLAUDE.md` is prose.
+  assert.deepEqual(plan(["bin/land", "bin/CLAUDE.md"]), []);
 });
 
 test("a package with no lint script contributes nothing", () => {

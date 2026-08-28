@@ -19,7 +19,19 @@ import * as path from "node:path";
 import { execa } from "execa";
 import { z } from "zod";
 
-import { ScheduleError, loadSchedules, type ScheduleEntry } from "./schedules.js";
+import { errnoCode } from "../../callback-box/src/lib/error-guards.js";
+
+import { loadSchedules, type ScheduleEntry } from "./schedules.js";
+import {
+  EslintNotScopedError,
+  LinterFailedError,
+  LinterOutputNotJsonError,
+  LinterOutputShapeError,
+} from "./schedules-errors.js";
+
+
+
+
 
 /** One thing wrong with one file, rendered as `schedules/<name>/<file>: <message>`. */
 export interface LintFinding {
@@ -106,7 +118,7 @@ async function readIfPresent(filePath: string): Promise<string | null> {
   try {
     return await fs.readFile(filePath, "utf8");
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return null;
+    if (errnoCode(e) === "ENOENT") return null;
     throw e;
   }
 }
@@ -116,7 +128,7 @@ async function isExecutable(filePath: string): Promise<boolean> {
     const stat = await fs.stat(filePath);
     return stat.isFile() && (stat.mode & 0o111) !== 0;
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return false;
+    if (errnoCode(e) === "ENOENT") return false;
     throw e;
   }
 }
@@ -129,13 +141,13 @@ async function sourceFiles(dir: string): Promise<string[]> {
   try {
     entries = await fs.readdir(dir, { withFileTypes: true, recursive: true });
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
+    if (errnoCode(e) === "ENOENT") return [];
     throw e;
   }
   return entries
     .filter((entry) => entry.isFile() && (entry.name.endsWith(".ts") || entry.name.endsWith(".sh")))
     .map((entry) => path.relative(dir, path.join(entry.parentPath, entry.name)))
-    .sort();
+    .toSorted();
 }
 
 /**
@@ -165,7 +177,7 @@ function parseJson(input: { tool: string; text: string }): unknown {
   try {
     return JSON.parse(input.text);
   } catch (e) {
-    throw new ScheduleError(`${input.tool} did not print JSON (${e instanceof Error ? e.message : String(e)}): ${input.text.slice(0, 200)}`);
+    throw new LinterOutputNotJsonError({ tool: input.tool, reason: e instanceof Error ? e.message : String(e), text: input.text });
   }
 }
 
@@ -205,10 +217,10 @@ async function shellcheckFindings(input: { repoRoot: string; scripts: ScriptFile
     env: SHELLCHECK_ENV,
   });
   if (result.exitCode !== 0 && result.exitCode !== 1) {
-    throw new ScheduleError(`shellcheck failed (exit ${String(result.exitCode)}): ${result.stderr || result.stdout}`);
+    throw new LinterFailedError({ tool: "shellcheck", exitCode: result.exitCode, output: result.stderr || result.stdout });
   }
   const parsed = shellcheckSchema.safeParse(parseJson({ tool: "shellcheck", text: result.stdout }));
-  if (!parsed.success) throw new ScheduleError(`shellcheck output was not the expected JSON: ${result.stdout.slice(0, 200)}`);
+  if (!parsed.success) throw new LinterOutputShapeError({ tool: "shellcheck", output: result.stdout });
   const findings: LintFinding[] = [];
   for (const comment of parsed.data.comments) {
     const script = byPath.get(path.resolve(input.repoRoot, comment.file));
@@ -248,10 +260,10 @@ async function runEslint(input: { repoRoot: string; args: string[]; stdin: strin
     ...(input.stdin === null ? {} : { input: input.stdin }),
   });
   if (result.exitCode !== 0 && result.exitCode !== 1) {
-    throw new ScheduleError(`eslint failed (exit ${String(result.exitCode)}): ${result.stderr || result.stdout}`);
+    throw new LinterFailedError({ tool: "eslint", exitCode: result.exitCode, output: result.stderr || result.stdout });
   }
   const parsed = eslintSchema.safeParse(parseJson({ tool: "eslint", text: result.stdout }));
-  if (!parsed.success) throw new ScheduleError(`eslint output was not the expected JSON: ${result.stdout.slice(0, 200)}`);
+  if (!parsed.success) throw new LinterOutputShapeError({ tool: "eslint", output: result.stdout });
   const byFile = new Map<string, { line: number | null; ruleId: string | null; message: string }[]>();
   for (const file of parsed.data) {
     for (const message of file.messages) {
@@ -259,7 +271,7 @@ async function runEslint(input: { repoRoot: string; args: string[]; stdin: strin
       // cover schedules/ any more. Left as a warning it would read as a clean
       // schedule, which is the one wrong answer this command can give.
       if (message.ruleId === null && message.message.startsWith("File ignored")) {
-        throw new ScheduleError(`eslint does not lint ${file.filePath} — the root eslint.config.ts no longer scopes schedules/**/*.ts (${message.message})`);
+        throw new EslintNotScopedError(file.filePath, message.message);
       }
     }
     byFile.set(file.filePath, file.messages);
@@ -335,7 +347,7 @@ async function readScripts(input: { name: string; dir: string }): Promise<Script
 }
 
 function orderFindings(findings: LintFinding[]): LintFinding[] {
-  return [...findings].sort((left, right) => {
+  return findings.toSorted((left, right) => {
     if (left.schedule !== right.schedule) return left.schedule < right.schedule ? -1 : 1;
     if (left.file !== right.file) return left.file < right.file ? -1 : 1;
     return left.message < right.message ? -1 : left.message === right.message ? 0 : 1;

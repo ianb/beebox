@@ -42,6 +42,7 @@ import { z } from "zod";
 // (`callback-box/code-style.md`). bin/ already imports from callback-box —
 // see bin/router-auth.ts.
 import { errnoCode, errorMessage } from "../../callback-box/src/lib/error-guards.js";
+import { InvalidCommentPathError } from "./comments-store-errors.js";
 // The canonical cross-process lock. Its docblock is explicit: "This is the
 // canonical lock for the project... Don't add a new lock surface elsewhere —
 // extend or wrap this instead."
@@ -97,12 +98,7 @@ export type Subject =
   | { scope: "tracked"; relPath: string }
   | { scope: "worktree"; worktree: string; relPath: string };
 
-class InvalidCommentPathError extends Error {
-  constructor(detail: string) {
-    super(`invalid comment path: ${detail}`);
-    this.name = "InvalidCommentPathError";
-  }
-}
+
 
 class UninitializedCommentStoreError extends Error {
   constructor(public readonly storeRoot: string) {
@@ -132,16 +128,16 @@ function validWorktreeName(name: string): boolean {
  * joined to a root. An unchecked `..` here is a write outside the store.
  */
 function assertRelPath(relPath: string): void {
-  if (relPath === "") throw new InvalidCommentPathError("empty path");
-  if (path.isAbsolute(relPath)) throw new InvalidCommentPathError(`absolute path: ${relPath}`);
+  if (relPath === "") throw new InvalidCommentPathError({ kind: "empty" });
+  if (path.isAbsolute(relPath)) throw new InvalidCommentPathError({ kind: "absolute", relPath });
   const normalized = path.normalize(relPath);
   // A SEGMENT of `..`, not a `..` prefix: `..notes.md` is a legal filename and
   // rejecting it would refuse a real document.
   if (normalized.split(path.sep).includes("..")) {
-    throw new InvalidCommentPathError(`path escapes the repository: ${relPath}`);
+    throw new InvalidCommentPathError({ kind: "escapes", relPath });
   }
   if (normalized !== relPath) {
-    throw new InvalidCommentPathError(`path is not normalized: ${relPath}`);
+    throw new InvalidCommentPathError({ kind: "unnormalized", relPath });
   }
 }
 
@@ -152,7 +148,7 @@ export function subjectKey(subject: Subject): string {
     return path.join("tracked", `${subject.relPath}${COMMENTS_SUFFIX}`);
   }
   if (!validWorktreeName(subject.worktree)) {
-    throw new InvalidCommentPathError(`not a worktree name: ${subject.worktree}`);
+    throw new InvalidCommentPathError({ kind: "bad-worktree-name", worktree: subject.worktree });
   }
   return path.join("worktree", subject.worktree, `${subject.relPath}${COMMENTS_SUFFIX}`);
 }
@@ -167,7 +163,7 @@ export function commentsFilePath(storeRoot: string, subject: Subject): string {
   const resolved = path.resolve(root, subjectKey(subject));
   const relative = path.relative(root, resolved);
   if (relative === "" || relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
-    throw new InvalidCommentPathError(`resolves outside the store: ${subject.relPath}`);
+    throw new InvalidCommentPathError({ kind: "outside-store", relPath: subject.relPath });
   }
   return resolved;
 }
@@ -212,7 +208,7 @@ async function assertNoSymlinkedAncestor(storeRoot: string, file: string): Promi
     current = path.join(current, segment);
     const isLink = await fs.lstat(current).then((stats) => stats.isSymbolicLink(), () => false);
     if (isLink) {
-      throw new InvalidCommentPathError(`${current} is a symlink; refusing to follow it out of the store`);
+      throw new InvalidCommentPathError({ kind: "symlinked-ancestor", at: current });
     }
   }
 }
@@ -296,7 +292,7 @@ function withFileLock<T>(file: string, fn: () => Promise<T>): Promise<T> {
     );
   const previous = writeChains.get(file) ?? Promise.resolve();
   const next = previous.then(guarded, guarded);
-  writeChains.set(file, next.catch(() => undefined));
+  writeChains.set(file, next.catch(() => {}));
   return next;
 }
 
@@ -329,9 +325,7 @@ export async function appendComment(
   await withFileLock(file, async () => {
     const current = await readComments(storeRoot, params.subject);
     if (current.problem !== null) {
-      throw new InvalidCommentPathError(
-        `refusing to append over an unreadable file — ${current.problem}`,
-      );
+      throw new InvalidCommentPathError({ kind: "unreadable-append", problem: current.problem });
     }
     await writeFileAtomic(file, serialize([...current.comments, parsedComment]));
   });
@@ -352,7 +346,7 @@ export async function clearComments(
   return withFileLock(file, async () => {
     const current = await readComments(storeRoot, params.subject);
     if (current.problem !== null) {
-      throw new InvalidCommentPathError(`refusing to clear an unreadable file — ${current.problem}`);
+      throw new InvalidCommentPathError({ kind: "unreadable-clear", problem: current.problem });
     }
     const { id } = params;
     if (id === undefined) {
@@ -427,7 +421,7 @@ function subjectFromStorePath(storeRelative: string): Subject | null {
   if (candidate === null) return null;
   try {
     return subjectKey(candidate) === storeRelative ? candidate : null;
-  } catch {
+  } catch (_e) {
     // subjectKey validates; a throw here means the path was never a subject.
     return null;
   }
@@ -452,7 +446,7 @@ export async function listAll(storeRoot: string): Promise<StoreEntry[]> {
   const files: string[] = [];
   await walkCommentFiles(root, files);
   const entries: StoreEntry[] = [];
-  for (const file of files.sort()) {
+  for (const file of files.toSorted()) {
     const storePath = path.relative(root, file);
     const subject = subjectFromStorePath(storePath);
     if (subject === null) {
@@ -466,10 +460,12 @@ export async function listAll(storeRoot: string): Promise<StoreEntry[]> {
     }
     // One malformed file must not take the listing down with it — the other
     // documents' comments are still readable and still waiting.
-    const read = await readComments(root, subject).catch((e: unknown) => ({
-      comments: [] as Comment[],
-      problem: errorMessage(e),
-    }));
+    const read = await readComments(root, subject).catch(
+      (e: unknown): { comments: Comment[]; problem: string | null } => ({
+        comments: [],
+        problem: errorMessage(e),
+      }),
+    );
     if (read.comments.length === 0 && read.problem === null) continue;
     entries.push({ subject, storePath, comments: read.comments, problem: read.problem });
   }
@@ -478,7 +474,7 @@ export async function listAll(storeRoot: string): Promise<StoreEntry[]> {
 
 /** Newest first, by `at`. The order both readings of the store want. */
 export function byNewest(comments: Comment[]): Comment[] {
-  return [...comments].sort((a, b) => b.at.localeCompare(a.at));
+  return comments.toSorted((a, b) => b.at.localeCompare(a.at));
 }
 
 /** A short, collision-resistant id. Not a UUID — these are read aloud in terminals. */

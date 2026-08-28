@@ -16,7 +16,6 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { changedPaths, git } from "./test-git.js";
 import { packageOwnerDirs } from "./workspace-packages.js";
 import {
@@ -70,9 +69,11 @@ function hasScriptIn(root: string): (pkg: string, script: string) => boolean {
       const parsed: unknown = existsSync(file) ? JSON.parse(readFileSync(file, "utf-8")) : {};
       const raw =
         typeof parsed === "object" && parsed !== null && "scripts" in parsed
-          ? (parsed as { scripts?: Record<string, string> }).scripts
+          ? parsed.scripts
           : undefined;
-      scripts = new Set(Object.keys(raw ?? {}));
+      scripts = new Set(
+        typeof raw === "object" && raw !== null ? Object.keys(raw) : [],
+      );
       cache.set(pkg, scripts);
     }
     return scripts.has(script);
@@ -85,6 +86,30 @@ class PreflightError extends Error {
     super(message);
     this.name = "PreflightError";
     this.exitCode = exitCode;
+  }
+}
+
+class PrivateMountUnhealthyError extends PreflightError {
+  constructor(readonly state: string) {
+    super(`private-issues mount is ${state} — heal it or return BLOCKED`, 2);
+    this.name = "PrivateMountUnhealthyError";
+  }
+}
+
+class MergeConflictError extends PreflightError {
+  constructor(readonly detail: { conflicted: string; stdout: string; stderr: string }) {
+    super(
+      `git merge main conflicted:\n${detail.conflicted}\n${detail.stdout}${detail.stderr}`,
+      3,
+    );
+    this.name = "MergeConflictError";
+  }
+}
+
+class NotAWorktreeBranchError extends PreflightError {
+  constructor(readonly branch: string) {
+    super(`on '${branch}' — /finish is for worktree branches only`, 2);
+    this.name = "NotAWorktreeBranchError";
   }
 }
 
@@ -102,7 +127,7 @@ function privateLeg(root: string): Sheet["privateLeg"] {
   if (state === "no-repo") return { active: false, state, repo: null };
   if (state === "valid") return { active: true, state, repo };
   // relink / invalid / anything else is a human decision, not an opt-out.
-  throw new PreflightError(`private-issues mount is ${state} — heal it or return BLOCKED`, 2);
+  throw new PrivateMountUnhealthyError(state);
 }
 
 function mergeMain(root: string): Sheet["merge"] {
@@ -110,10 +135,11 @@ function mergeMain(root: string): Sheet["merge"] {
   const result = spawnSync("git", ["merge", "main"], { cwd: root, encoding: "utf-8" });
   if (result.status !== 0) {
     const conflicted = git(["diff", "--name-only", "--diff-filter=U"], root);
-    throw new PreflightError(
-      `git merge main conflicted:\n${conflicted}\n${result.stdout}${result.stderr}`,
-      3,
-    );
+    throw new MergeConflictError({
+      conflicted,
+      stdout: result.stdout,
+      stderr: result.stderr,
+    });
   }
   const after = git(["rev-parse", "HEAD"], root);
   if (before === after) return { status: "up-to-date", broughtPaths: [] };
@@ -146,7 +172,13 @@ function planDocs(root: string, workstream: string): string[] {
   return listed.filter((file) => {
     if (!file.endsWith(".md")) return false;
     const head = readFileSync(join(root, file), "utf-8").slice(0, 2000);
-    return new RegExp(`^workstream:\\s*${workstream}\\s*$`, "m").test(head);
+    return head
+      .split("\n")
+      .some(
+        (line) =>
+          line.startsWith("workstream:") &&
+          line.slice("workstream:".length).trim() === workstream,
+      );
   });
 }
 
@@ -177,7 +209,7 @@ export function buildSheet(input: { merge: boolean }): Sheet {
   const branch = git(["rev-parse", "--abbrev-ref", "HEAD"], root);
   const worktree = basename(root);
   if (branch === "main" || branch === "HEAD") {
-    throw new PreflightError(`on '${branch}' — /finish is for worktree branches only`, 2);
+    throw new NotAWorktreeBranchError(branch);
   }
   const workstream = branch.replace(/^worktree-/, "");
   const leg = privateLeg(root);
@@ -286,7 +318,7 @@ export function main(argv: string[]): number {
   return 0;
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (process.argv[1] === import.meta.filename) {
   try {
     process.exitCode = main(process.argv.slice(2));
   } catch (e) {

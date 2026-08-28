@@ -55,15 +55,15 @@ export interface StaleProbe {
  * is debris whatever the pid table says. Same hardening as `bin/schedules`'
  * run lock (bin/lib/schedules-store.ts).
  */
-export function isLockStale(held: LockRecord, probe: StaleProbe): boolean {
+export function isLockStale(held: LockRecord, staleProbe: StaleProbe): boolean {
   const atMs = Date.parse(held.at);
   if (Number.isNaN(atMs)) return true;
-  if (probe.bootTimeMs !== null) {
-    if (held.bootTimeMs !== null && held.bootTimeMs !== probe.bootTimeMs) return true;
-    if (atMs < probe.bootTimeMs) return true;
+  if (staleProbe.bootTimeMs !== null) {
+    if (held.bootTimeMs !== null && held.bootTimeMs !== staleProbe.bootTimeMs) return true;
+    if (atMs < staleProbe.bootTimeMs) return true;
   }
-  if (probe.nowMs - atMs >= LOCK_STALE_MS) return true;
-  return !probe.isProcessAlive(held.pid);
+  if (staleProbe.nowMs - atMs >= LOCK_STALE_MS) return true;
+  return !staleProbe.isProcessAlive(held.pid);
 }
 
 export interface SlotState {
@@ -109,21 +109,33 @@ export function chooseSlots(input: {
   return { take: [first], concurrency, blockedBy: null };
 }
 
+/** The parse boundary: a lock file may hold anything, including half a write. */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+/** The `code` of a caught filesystem error, when it carries one. */
+function errorCode(e: unknown): string | undefined {
+  return isRecord(e) && typeof e.code === "string" ? e.code : undefined;
+}
+
 /** Parses a lock file's contents; null when it is unreadable or the wrong shape. */
 export function parseLockRecord(raw: string): LockRecord | null {
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
-  } catch {
+  } catch (_e) {
+    // Absorbs a lock file caught mid-write by a concurrent claim: the reader
+    // sees a truncated object. Unparseable reads as debris, which the caller
+    // then reclaims.
     return null;
   }
-  if (typeof parsed !== "object" || parsed === null) return null;
-  const record = parsed as Partial<LockRecord>;
-  if (typeof record.pid !== "number" || typeof record.branch !== "string") return null;
-  if (typeof record.at !== "string") return null;
-  const boot = record.bootTimeMs;
+  if (!isRecord(parsed)) return null;
+  const { pid, branch, at, bootTimeMs: boot } = parsed;
+  if (typeof pid !== "number" || typeof branch !== "string") return null;
+  if (typeof at !== "string") return null;
   if (typeof boot !== "number" && boot !== null && boot !== undefined) return null;
-  return { pid: record.pid, branch: record.branch, at: record.at, bootTimeMs: boot ?? null };
+  return { pid, branch, at, bootTimeMs: boot ?? null };
 }
 
 /** `kill(pid, 0)`: EPERM means it exists and belongs to somebody else. */
@@ -132,7 +144,7 @@ export function isProcessAlive(pid: number): boolean {
     process.kill(pid, 0);
     return true;
   } catch (e) {
-    return (e as NodeJS.ErrnoException).code === "EPERM";
+    return errorCode(e) === "EPERM";
   }
 }
 
@@ -142,7 +154,9 @@ export function bootTimeMs(): number | null {
   let raw: string;
   try {
     raw = execFileSync("/usr/sbin/sysctl", ["-n", "kern.boottime"], { encoding: "utf-8" });
-  } catch {
+  } catch (_e) {
+    // No `sysctl` to ask, or a kernel that answers differently. Boot time is an
+    // extra staleness signal, not a required one: the age and pid checks stand.
     return null;
   }
   const match = /sec\s*=\s*(\d+)/u.exec(raw);
@@ -170,7 +184,7 @@ function readLive(path: string, staleProbe: StaleProbe): LockRecord | null {
   try {
     raw = readFileSync(path, "utf-8");
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return null;
+    if (errorCode(e) === "ENOENT") return null;
     throw e;
   }
   const held = parseLockRecord(raw);
@@ -178,8 +192,9 @@ function readLive(path: string, staleProbe: StaleProbe): LockRecord | null {
   // Debris: a killed run, a pre-boot leftover, or a half-written file.
   try {
     unlinkSync(path);
-  } catch {
-    // Someone else reclaimed it first; either way it is no longer ours to mind.
+  } catch (_e) {
+    // Absorbs the race where a sibling run reclaimed the same debris between
+    // our stat-and-read and this unlink; either way it is no longer ours to mind.
   }
   return null;
 }
@@ -190,7 +205,9 @@ function claim(path: string, record: LockRecord): boolean {
   try {
     fd = openSync(path, "wx");
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "EEXIST") return false;
+    // EEXIST is a concurrent claim winning the slot, not a failure: that is the
+    // mutex working. Anything else is a real filesystem problem.
+    if (errorCode(e) === "EEXIST") return false;
     throw e;
   }
   try {
@@ -207,8 +224,9 @@ function releaseOwn(path: string, pid: number): void {
     const held = parseLockRecord(readFileSync(path, "utf-8"));
     if (held !== null && held.pid !== pid) return;
     unlinkSync(path);
-  } catch {
-    // Already gone (reclaimed as stale, or released twice). Nothing to undo.
+  } catch (_e) {
+    // Absorbs a lock file removed by a sibling between this read and the unlink
+    // (reclaimed as stale, or released twice). Nothing to undo.
   }
 }
 

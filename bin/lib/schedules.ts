@@ -17,14 +17,37 @@ import * as path from "node:path";
 import * as YAML from "yaml";
 import { z } from "zod";
 
-/** A refusal this module raises for input it will not guess about. */
+import { errnoCode } from "../../callback-box/src/lib/error-guards.js";
+
+/** A refusal this module raises for input it will not guess about. The base of
+ *  every schedule failure, so `instanceof ScheduleError` still catches them all. */
 export class ScheduleError extends Error {
-  override name = "ScheduleError";
+  constructor(message: string) {
+    super(message);
+    this.name = "ScheduleError";
+  }
+}
+
+/** A cadence string that does not match `<n>h|d|w`. */
+class NotADurationError extends ScheduleError {
+  constructor(readonly text: string) {
+    super(`not a duration: '${text}' (use <n>h, <n>d or <n>w)`);
+    this.name = "NotADurationError";
+  }
+}
+
+/** The regex matched but handed back no groups — a broken invariant, kept as a
+ *  refusal rather than an undefined multiplication. */
+class UnreadableDurationError extends ScheduleError {
+  constructor(readonly text: string) {
+    super(`not a duration: '${text}'`);
+    this.name = "UnreadableDurationError";
+  }
 }
 
 // ─── Durations ────────────────────────────────────────────────────────────
 
-const DURATION_PATTERN = /^([1-9][0-9]*)([hdw])$/;
+const DURATION_PATTERN = /^([1-9]\d*)([dhw])$/;
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 const WEEK_MS = 7 * DAY_MS;
@@ -33,9 +56,9 @@ const WEEK_MS = 7 * DAY_MS;
  *  gains nothing from wall-clock expressions (the plan's "not added" list). */
 export function parseDuration(text: string): number {
   const match = DURATION_PATTERN.exec(text);
-  if (match === null) throw new ScheduleError(`not a duration: '${text}' (use <n>h, <n>d or <n>w)`);
+  if (match === null) throw new NotADurationError(text);
   const [, count, unit] = match;
-  if (count === undefined || unit === undefined) throw new ScheduleError(`not a duration: '${text}'`);
+  if (count === undefined || unit === undefined) throw new UnreadableDurationError(text);
   const amount = Number(count);
   if (unit === "h") return amount * HOUR_MS;
   if (unit === "d") return amount * DAY_MS;
@@ -151,7 +174,7 @@ async function readIfPresent(filePath: string): Promise<string | null> {
   try {
     return await fs.readFile(filePath, "utf8");
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return null;
+    if (errnoCode(e) === "ENOENT") return null;
     throw e;
   }
 }
@@ -164,7 +187,7 @@ async function isExecutable(filePath: string): Promise<boolean> {
     const stat = await fs.stat(filePath);
     return stat.isFile() && (stat.mode & 0o111) !== 0;
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return false;
+    if (errnoCode(e) === "ENOENT") return false;
     throw e;
   }
 }
@@ -227,9 +250,9 @@ export async function loadSchedules(root: string): Promise<ScheduleEntry[]> {
   let names: string[];
   try {
     const entries = await fs.readdir(root, { withFileTypes: true });
-    names = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort();
+    names = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name).toSorted();
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
+    if (errnoCode(e) === "ENOENT") return [];
     throw e;
   }
   const loaded: ScheduleEntry[] = [];

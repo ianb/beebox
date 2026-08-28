@@ -40,11 +40,11 @@ export const ALLOWED_NAMES = new Set([
 
 // Files exempt entirely (path relative to repo root). Prefer scrubbing a leak
 // to `~`/placeholder over adding an entry here; keep this near-empty.
-export const ALLOWED_FILES = new Set<string>([]);
+export const ALLOWED_FILES = new Set<string>();
 
 // A real home path: `/Users/<name>/` or `/home/<name>/`, capturing the name.
 // Requires the trailing slash so a bare web route like `/home` never matches.
-const HOME_PATH = /\/(?:Users|home)\/([A-Za-z0-9][\w.-]*)\//g;
+const HOME_PATH = /\/(?:Users|home)\/([\dA-Za-z][\w.-]*)\//g;
 
 // The `git grep` prefilter: any line mentioning either home prefix. Precise
 // matching + allowlisting happens in findLeaks so it stays pure and testable.
@@ -72,6 +72,12 @@ export function findLeaks(grepOutput: string): string[] {
   return problems;
 }
 
+/** The `status` a failed `execFileSync` carries, when it carries one. */
+function exitStatusOf(e: unknown): number | undefined {
+  if (typeof e !== "object" || e === null || !("status" in e)) return undefined;
+  return typeof e.status === "number" ? e.status : undefined;
+}
+
 function main(): void {
   const repoRoot = execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim();
 
@@ -85,8 +91,7 @@ function main(): void {
       maxBuffer: 64 * 1024 * 1024,
     });
   } catch (e) {
-    const status = (e as { status?: number }).status;
-    if (status !== 1) throw e; // 1 = no matches; anything else is a real failure
+    if (exitStatusOf(e) !== 1) throw e; // 1 = no matches; anything else is a real failure
   }
 
   const problems = findLeaks(raw);

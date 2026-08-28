@@ -15,10 +15,9 @@
  * (one broken import marks its own entrypoints, never the whole suite).
  */
 
-import { build, type Metafile, type BuildFailure } from "esbuild";
+import { build, type Metafile, type BuildFailure, type Plugin, type PluginBuild } from "esbuild";
 import { readFileSync } from "node:fs";
 import { relative, resolve, dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { candidateFiles, isRelative } from "../agent-doctest/src/resolve-rules.ts";
 import {
   cacheFile,
@@ -84,10 +83,10 @@ interface GraphInternals {
   ambiguousEdges: number;
 }
 
-function doctestPlugin(generateTestSource: (md: string, path: string) => string) {
+function doctestPlugin(generateTestSource: (md: string, path: string) => string): Plugin {
   return {
     name: "doctest",
-    setup(builder: { onResolve: Function; onLoad: Function }): void {
+    setup(builder: PluginBuild): void {
       builder.onResolve({ filter: /\.doctest\.md$/ }, (args: { path: string; importer: string }) => ({
         path: args.importer ? resolve(dirname(args.importer), args.path) : args.path,
         namespace: "file",
@@ -111,10 +110,10 @@ function doctestPlugin(generateTestSource: (md: string, path: string) => string)
   };
 }
 
-function resolutionPlugin(internals: GraphInternals, config: GraphConfig) {
+function resolutionPlugin(internals: GraphInternals, config: GraphConfig): Plugin {
   return {
     name: "tsx-resolution",
-    setup(builder: { onResolve: Function }): void {
+    setup(builder: PluginBuild): void {
       builder.onResolve({ filter: /^(\.\.?\/|@)/ }, (args: { path: string; importer: string }) => {
         // The filter has to admit `@` to catch alias prefixes, which also
         // catches scoped npm packages (`@tapjs/core`). Those are not ours:
@@ -125,7 +124,8 @@ function resolutionPlugin(internals: GraphInternals, config: GraphConfig) {
 
         const importerDir = args.importer ? dirname(args.importer) : config.packageRoot;
         const candidates = candidateFiles(args.path, { importerDir, aliases: config.aliases });
-        if (candidates.length === 0) {
+        const first = candidates[0];
+        if (first === undefined) {
           // Per-entrypoint fail-open. Letting esbuild error here would abort
           // the whole pass, dumping all 484 entrypoints into `unresolved` and
           // forcing the full suite for everyone over one typo. Marking it
@@ -144,7 +144,7 @@ function resolutionPlugin(internals: GraphInternals, config: GraphConfig) {
           for (const extra of candidates.slice(1)) extras.add(extra);
           internals.extraEdges.set(args.importer, extras);
         }
-        return { path: candidates[0] };
+        return { path: first };
       });
     },
   };
@@ -154,11 +154,30 @@ function isBuildFailure(e: unknown): e is BuildFailure {
   return typeof e === "object" && e !== null && "errors" in e;
 }
 
+/** The one thing this module needs from `agent-doctest`'s hooks module. */
+interface DoctestHooks {
+  generateTestSource: (md: string, path: string) => string;
+}
+
+function isDoctestHooks(module: unknown): module is DoctestHooks {
+  if (typeof module !== "object" || module === null) return false;
+  return "generateTestSource" in module && typeof module.generateTestSource === "function";
+}
+
+/** The doctest hooks module loaded, but without the transform the graph needs. */
+class DoctestHooksUnavailableError extends Error {
+  constructor(readonly path: string) {
+    super(`no generateTestSource export in ${path}`);
+    this.name = "DoctestHooksUnavailableError";
+  }
+}
+
 
 export async function buildGraphFrom(config: GraphConfig): Promise<TestGraph> {
-  const { generateTestSource } = (await import(
-    join(REPO_ROOT, "agent-doctest/src/doctest-hooks.ts")
-  )) as { generateTestSource: (md: string, path: string) => string };
+  const hooksPath = join(REPO_ROOT, "agent-doctest/src/doctest-hooks.ts");
+  const hooks: unknown = await import(hooksPath);
+  if (!isDoctestHooks(hooks)) throw new DoctestHooksUnavailableError(hooksPath);
+  const { generateTestSource } = hooks;
 
   const entrypoints = config.entrypoints;
   const internals: GraphInternals = {
@@ -291,9 +310,9 @@ export interface CacheOptions {
  */
 export async function buildGraphCached(
   config: GraphConfig,
-  options: CacheOptions = {},
+  options?: CacheOptions,
 ): Promise<TestGraph> {
-  const cacheDir = options.cacheDir ?? defaultCacheDir(config.repoRoot);
+  const cacheDir = options?.cacheDir ?? defaultCacheDir(config.repoRoot);
   const path = cacheFile({
     cacheDir,
     repoRoot: config.repoRoot,
@@ -308,7 +327,7 @@ export async function buildGraphCached(
   // stamp below can cover, and a rebuild should still leave a sound cache.
   const stored = readStoredGraph(path);
 
-  if (options.cache !== false && stored !== null) {
+  if (options?.cache !== false && stored !== null) {
     const paths = keyPaths(inputsFor(stored.universe));
     const stamps = stampPaths(paths);
     if (stamps !== null && keyWith(paths, stamps) === stored.key) return storedToGraph(stored);
@@ -332,7 +351,7 @@ export async function buildGraphCached(
   if (graph.tests.size === 0 && config.entrypoints.length > 0) return graph;
 
   const afterPaths = keyPaths(inputsFor(graph.universe));
-  const afterStamps = stampPaths([...new Set([...beforePaths, ...afterPaths])].sort());
+  const afterStamps = stampPaths([...new Set([...beforePaths, ...afterPaths])].toSorted());
   if (beforeStamps === null || afterStamps === null) return graph;
   const moved = changedBetween({ paths: beforePaths, before: beforeStamps, after: afterStamps });
   if (moved.length > 0) return graph;
@@ -342,7 +361,7 @@ export async function buildGraphCached(
 }
 
 /** The callback-box graph. */
-export async function buildGraph(options: CacheOptions = {}): Promise<TestGraph> {
+export async function buildGraph(options?: CacheOptions): Promise<TestGraph> {
   return buildGraphCached(callbackBoxConfig(), options);
 }
 
@@ -389,7 +408,7 @@ async function main(): Promise<void> {
     const importers = [...graph.tests]
       .filter(([, deps]) => deps.has(needle))
       .map(([test]) => test)
-      .sort();
+      .toSorted();
     if (importers.length === 0) {
       console.log(`no test imports ${needle}`);
       console.log(
@@ -411,6 +430,6 @@ async function main(): Promise<void> {
   );
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (process.argv[1] === import.meta.filename) {
   await main();
 }

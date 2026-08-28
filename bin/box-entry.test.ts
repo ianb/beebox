@@ -8,7 +8,7 @@ import { test } from "node:test";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { resolveBoxEntry, boxEntryToArg } from "./box-entry.js";
+import { resolveBoxEntry, boxEntryToArg, BoxMarkerError } from "./box-entry.js";
 
 async function makeFixtureDir(): Promise<string> {
   return fs.mkdtemp(path.join(os.tmpdir(), "box-entry-test-"));
@@ -73,6 +73,23 @@ test("boxEntryToArg formats the server-main.ts argv entry", async () => {
     await fs.writeFile(path.join(boxDir, ".cb-box"), "");
     const resolved = await resolveBoxEntry(boxDir);
     assert.equal(boxEntryToArg(resolved), `test1=${boxDir}`);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("resolveBoxEntry: a present but malformed .cb-box marker fails closed", async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "box-entry-"));
+  try {
+    const contentDir = path.join(dir, "pkg", "content");
+    await fs.mkdir(contentDir, { recursive: true });
+    await fs.writeFile(path.join(contentDir, ".cb-box"), JSON.stringify({ shapeVersion: "2" }));
+    await assert.rejects(resolveBoxEntry(contentDir), BoxMarkerError);
+    await fs.writeFile(path.join(contentDir, ".cb-box"), "{not json");
+    await assert.rejects(resolveBoxEntry(contentDir), BoxMarkerError);
+    // The empty marker is the pre-JSON convention and still means legacy.
+    await fs.writeFile(path.join(contentDir, ".cb-box"), "");
+    assert.equal((await resolveBoxEntry(contentDir)).slug, "content");
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }

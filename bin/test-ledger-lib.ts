@@ -196,7 +196,7 @@ export function deriveFlakeEvents(input: {
 
   for (const [index, record] of records.entries()) {
     const key = `${record.commit}\u0000${record.treeHash}`;
-    const ran = new Set(filesets[record.ranFiles] ?? []);
+    const ran = new Set(filesets[record.ranFiles]);
     const failing = new Set(record.failures.map((f) => f.file));
     const previouslyFailed = failedAt.get(key) ?? new Set<string>();
 
@@ -279,7 +279,7 @@ export function summarize(input: {
 
   const stats = new Map<string, FileStats>();
   for (const [file, count] of runs) {
-    const list = (times.get(file) ?? []).sort((a, b) => a - b);
+    const list = (times.get(file) ?? []).toSorted((a, b) => a - b);
     stats.set(file, {
       runs: count,
       failures: failures.get(file) ?? 0,
@@ -315,16 +315,17 @@ export function foldFilesets(lines: string[]): Record<string, string[]> {
 
 function isFilesetEntry(value: unknown): value is { hash: string; files: string[] } {
   if (typeof value !== "object" || value === null) return false;
-  const entry = value as { hash?: unknown; files?: unknown };
+  const files = "files" in value ? value.files : undefined;
   return (
-    typeof entry.hash === "string" &&
-    Array.isArray(entry.files) &&
-    entry.files.every((f) => typeof f === "string")
+    "hash" in value &&
+    typeof value.hash === "string" &&
+    Array.isArray(files) &&
+    files.every((f) => typeof f === "string")
   );
 }
 
 export function hashFileset(files: string[]): string {
-  const sorted = [...files].sort();
+  const sorted = files.toSorted();
   return `sha256:${createHash("sha256").update(sorted.join("\n")).digest("hex").slice(0, 16)}`;
 }
 
@@ -411,6 +412,6 @@ export function carefulCandidates(input: {
     .filter((file) => !isMember.has(file))
     .map(share)
     .filter((s) => s.share > threshold)
-    .sort((a, b) => b.share - a.share);
+    .toSorted((a, b) => b.share - a.share);
   return { candidates, members: input.careful.map(share) };
 }

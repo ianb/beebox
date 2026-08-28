@@ -153,7 +153,10 @@ test("issueBasenames takes only category-dir issues — the queue's own prose is
   write(path.join(dir, "issues/closed/features/2026-01-02-b.md"), "x");
   write(path.join(dir, "issues/CLAUDE.md"), "x"); // conventions doc, not an issue
   write(path.join(dir, "issues/closed/README.md"), "x");
-  assert.deepEqual(issueBasenames(path.join(dir, "issues")).sort(), ["2026-01-01-a", "2026-01-02-b"]);
+  assert.deepEqual(issueBasenames(path.join(dir, "issues")).toSorted(), [
+    "2026-01-01-a",
+    "2026-01-02-b",
+  ]);
   assert.deepEqual(issueBasenames(path.join(dir, "nope")), []);
 });
 
@@ -172,7 +175,7 @@ test("issueFiles maps a basename to where the issue lives NOW", () => {
 });
 
 test("filterByTrailer keeps only commits whose parsed trailers hold the value", () => {
-  const records = "abc123 fix: real\u0000x\u001fy\ndef456 fix: prose only\u0000\n789abc fix: two\u0000 x \n";
+  const records = "abc123 fix: real\u0000x\u001Fy\ndef456 fix: prose only\u0000\n789abc fix: two\u0000 x \n";
   assert.deepEqual(filterByTrailer(records, "x"), ["abc123 fix: real", "789abc fix: two"]);
   assert.deepEqual(filterByTrailer("", "x"), []);
 });

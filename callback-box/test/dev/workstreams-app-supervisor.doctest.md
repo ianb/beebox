@@ -130,7 +130,7 @@ function makeEffects() {
       };
     },
     fingerprint: async () => fingerprint,
-    watch: (_root, onChange) => {
+    watch: (_root, { onChange }) => {
       watchChange = onChange;
       return { close: () => { watchChange = null; } };
     },

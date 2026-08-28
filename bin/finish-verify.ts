@@ -20,9 +20,36 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 import type { Sheet } from "./finish-preflight.js";
 import type { VerificationCommand } from "./finish-preflight-lib.js";
+
+class EmptyCommandError extends Error {
+  constructor() {
+    super("empty command");
+    this.name = "EmptyCommandError";
+  }
+}
+
+class MissingSheetFileError extends Error {
+  constructor() {
+    super("--sheet needs a file");
+    this.name = "MissingSheetFileError";
+  }
+}
+
+class PreflightFailedError extends Error {
+  constructor(readonly detail: { status: number | null; stderr: string }) {
+    super(`finish-preflight exited ${String(detail.status)}:\n${detail.stderr}`);
+    this.name = "PreflightFailedError";
+  }
+}
+
+class BadOnlyKindError extends Error {
+  constructor() {
+    super("--only takes tests, typecheck, lint or smoke");
+    this.name = "BadOnlyKindError";
+  }
+}
 
 export interface FileOutcome {
   file: string;
@@ -68,7 +95,7 @@ export function formatResult(result: CommandResult): string[] {
         : `     real  ${file.file} → ${file.outputPath ?? result.outputPath}`,
     );
   }
-  if (result.unattributed) lines.push(`     no failing file identified — treated as real`);
+  if (result.unattributed) lines.push("     no failing file identified — treated as real");
   return lines;
 }
 
@@ -97,7 +124,7 @@ interface RunOutput {
 
 function run(input: { argv: string[]; cwd: string }): RunOutput {
   const [command, ...args] = input.argv;
-  if (command === undefined) throw new Error("empty command");
+  if (command === undefined) throw new EmptyCommandError();
   const result = spawnSync(command, args, {
     cwd: input.cwd,
     encoding: "utf-8",
@@ -111,8 +138,9 @@ function readSheet(argv: string[]): Sheet {
   const index = argv.indexOf("--sheet");
   if (index !== -1) {
     const path = argv[index + 1];
-    if (path === undefined) throw new Error("--sheet needs a file");
-    return JSON.parse(readFileSync(path, "utf-8")) as Sheet;
+    if (path === undefined) throw new MissingSheetFileError();
+    const parsed: Sheet = JSON.parse(readFileSync(path, "utf-8"));
+    return parsed;
   }
   const preflight = spawnSync(
     process.execPath,
@@ -120,9 +148,10 @@ function readSheet(argv: string[]): Sheet {
     { encoding: "utf-8", maxBuffer: 64 * 1024 * 1024 },
   );
   if (preflight.status !== 0) {
-    throw new Error(`finish-preflight exited ${String(preflight.status)}:\n${preflight.stderr}`);
+    throw new PreflightFailedError({ status: preflight.status, stderr: preflight.stderr });
   }
-  return JSON.parse(preflight.stdout) as Sheet;
+  const parsed: Sheet = JSON.parse(preflight.stdout);
+  return parsed;
 }
 
 function runCommand(input: {
@@ -151,16 +180,16 @@ function runCommand(input: {
       existsRelative({ packageDir: join(root, isolate.packageDir), path, root }),
     );
     if (failing.length === 0) unattributed = true;
-    failing.forEach((file, position) => {
+    for (const [position, file] of failing.entries()) {
       const rerun = run({ argv: [...isolate.argv, file], cwd: isolateCwd });
       if (rerun.status === 0) {
         files.push({ file, outcome: "flake" });
-        return;
+        continue;
       }
       const path = join(outDir, `${String(input.index)}-real-${String(position)}.log`);
       writeFileSync(path, rerun.text);
       files.push({ file, outcome: "real", outputPath: path });
-    });
+    }
   } else if (command.kind === "tests") {
     unattributed = true;
   }
@@ -185,7 +214,7 @@ export function main(argv: string[]): number {
   const onlyIndex = argv.indexOf("--only");
   const only = onlyIndex === -1 ? null : argv[onlyIndex + 1];
   if (only !== null && !["tests", "typecheck", "lint", "smoke"].includes(only ?? "")) {
-    throw new Error("--only takes tests, typecheck, lint or smoke");
+    throw new BadOnlyKindError();
   }
   const outDir = mkdtempSync(join(tmpdir(), "finish-verify-"));
   const results: CommandResult[] = [];
@@ -208,7 +237,7 @@ export function main(argv: string[]): number {
   return green ? 0 : 1;
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (process.argv[1] === import.meta.filename) {
   try {
     process.exitCode = main(process.argv.slice(2));
   } catch (e) {

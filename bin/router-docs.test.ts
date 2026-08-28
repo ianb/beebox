@@ -7,15 +7,8 @@ import { test } from "node:test";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import http from "node:http";
-import {
-  appendClosedIssuePills,
-  findClosedIssueLinkHrefs,
-  readDevTools,
-  renderMarkdownToHtml,
-  renderWorktreeToolCards,
-  serveDev,
-} from "./router-docs.js";
+import { readDevTools, renderWorktreeToolCards, serveDev, type DevResponse } from "./router-docs.js";
+import { appendClosedIssuePills, findClosedIssueLinkHrefs, renderMarkdownToHtml } from "./router-markdown.js";
 
 test("closed issue links in docs receive a status pill", () => {
   const markdown =
@@ -44,7 +37,7 @@ async function mkDevRoot(toolsJson?: string): Promise<string> {
 // Minimal ServerResponse stand-in that records the final Content-Security-Policy
 // (setHeader value survives writeHead in real Node unless writeHead re-sets it,
 // which serveDev never does for CSP — so last setHeader wins).
-function fakeRes(): { csp: () => string | undefined; codes: number[]; res: http.ServerResponse } {
+function fakeRes(): { csp: () => string | undefined; codes: number[]; res: DevResponse } {
   const headers: Record<string, string> = {};
   const codes: number[] = [];
   const res = {
@@ -53,7 +46,7 @@ function fakeRes(): { csp: () => string | undefined; codes: number[]; res: http.
     writeHead(c: number, h?: Record<string, string>) { codes.push(c); if (h) for (const [k, v] of Object.entries(h)) headers[k.toLowerCase()] = v; return this; },
     end() {},
   };
-  return { csp: () => headers["content-security-policy"], codes, res: res as unknown as http.ServerResponse };
+  return { csp: () => headers["content-security-policy"], codes, res };
 }
 
 // A worktree with an interactive-looking app dir and a sibling payload.html,

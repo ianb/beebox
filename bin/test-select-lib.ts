@@ -75,8 +75,8 @@ export function selectTests(input: {
   }
 
   return {
-    selected: [...selected].sort(),
-    implicated: [...implicated].sort(),
+    selected: [...selected].toSorted(),
+    implicated: [...implicated].toSorted(),
     scoped,
   };
 }
@@ -94,7 +94,7 @@ const SPAWN_CALL = /\b(?:spawnSync|spawn|execFileSync|execFile|fork\()|\bexec\(/
 
 /** A string literal naming repo source, or the bundled CLI a test may exec. */
 const SOURCE_LITERAL =
-  /(['"`])([^'"`\n]*?(?:src\/[A-Za-z0-9_./-]+\.(?:ts|tsx|mjs|js|jsx)|dist\/cli\.mjs)[^'"`\n]*?)\1/g;
+  /(["'`])([^\n"'`]*?(?:src\/[\w./-]+\.(?:ts|tsx|mjs|js|jsx)|dist\/cli\.mjs)[^\n"'`]*?)\1/g;
 
 /**
  * An import/export statement's specifier is not a spawn argument.
@@ -105,7 +105,7 @@ const SOURCE_LITERAL =
  * spawner entrypoints instead of 10. A type-only import is the sharp case —
  * it leaves no graph edge, so it looks exactly like an uncovered reference.
  */
-const IMPORT_LINE = /^\s*(?:import|export)\b[^\n]*?(?:from\s*)?['"][^'"]+['"]/;
+const IMPORT_LINE = /^\s*(?:import|export)\b[^\n]*?(?:from\s*)?["'][^"']+["']/;
 
 /** The build artifact a test execs instead of importing the CLI. */
 const CLI_BUNDLE = "dist/cli.mjs";

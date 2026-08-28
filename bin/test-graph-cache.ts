@@ -37,6 +37,15 @@ import { globSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync 
 import { dirname, join, resolve } from "node:path";
 import type { TestGraph } from "./test-graph-query.js";
 
+/** The parse boundary: a cache file or a package.json may hold anything. */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((x) => typeof x === "string");
+}
+
 /** Where a cached graph lives — gitignored, per-worktree, disposable. */
 export function defaultCacheDir(repoRoot: string): string {
   return join(repoRoot, "node_modules/.cache/test-graph");
@@ -71,9 +80,9 @@ function esbuildVersion(): string {
     const pkg: unknown = JSON.parse(
       readFileSync(join(CHECKOUT_ROOT, "node_modules/esbuild/package.json"), "utf-8"),
     );
-    const version = (pkg as { version?: unknown }).version;
+    const version = isRecord(pkg) ? pkg.version : undefined;
     return typeof version === "string" ? version : "unknown";
-  } catch {
+  } catch (_e) {
     // The package.json is stamped as a file too, so an unreadable one still
     // moves the key when it changes.
     return "unreadable";
@@ -95,7 +104,10 @@ function tsconfigChain(packageRoot: string): string[] {
     let text: string;
     try {
       text = readFileSync(path, "utf-8");
-    } catch {
+    } catch (_e) {
+      // A tsconfig named by an `extends` that is not installed (or a chain that
+      // walks off the tree). What cannot be read cannot be stamped; the chain
+      // stops here rather than failing the run.
       break;
     }
     const target = /"extends"\s*:\s*"([^"]+)"/.exec(text)?.[1];
@@ -125,7 +137,7 @@ export function keyPaths(inputs: KeyInputs): string[] {
   for (const path of tsconfigChain(inputs.packageRoot)) files.add(path);
   for (const entry of inputs.entrypoints) files.add(resolve(inputs.repoRoot, entry));
   for (const rel of inputs.universe) files.add(resolve(inputs.repoRoot, rel));
-  return [...files].sort();
+  return [...files].toSorted();
 }
 
 /**
@@ -139,7 +151,7 @@ export function stampPaths(paths: string[]): Map<string, string> | null {
       const s = statSync(path);
       stamps.set(path, `${s.mtimeMs} ${s.size}`);
     } catch (e) {
-      const code = (e as NodeJS.ErrnoException).code;
+      const code = isRecord(e) && typeof e.code === "string" ? e.code : undefined;
       if (code !== "ENOENT" && code !== "ENOTDIR") return null;
       stamps.set(path, "absent");
     }
@@ -162,7 +174,7 @@ export function keyOf(input: {
 }): string {
   const hash = createHash("sha256");
   hash.update(JSON.stringify(input.aliases));
-  hash.update(JSON.stringify([...input.entrypoints].sort()));
+  hash.update(JSON.stringify(input.entrypoints.toSorted()));
   hash.update(esbuildVersion());
   for (const path of input.paths) hash.update(` ${path} ${input.stamps.get(path) ?? "?"}`);
   return hash.digest("hex");
@@ -192,15 +204,13 @@ export interface StoredGraph {
 }
 
 function isStoredGraph(value: unknown): value is StoredGraph {
-  if (typeof value !== "object" || value === null) return false;
-  const v = value as Partial<StoredGraph>;
-  if (typeof v.key !== "string") return false;
-  if (typeof v.tests !== "object" || v.tests === null) return false;
-  if (typeof v.ambiguousEdges !== "number" || typeof v.buildMs !== "number") return false;
-  const stringArray = (a: unknown): boolean =>
-    Array.isArray(a) && a.every((x) => typeof x === "string");
-  if (!stringArray(v.universe) || !stringArray(v.unresolved)) return false;
-  return Object.values(v.tests).every(stringArray);
+  if (!isRecord(value)) return false;
+  if (typeof value.key !== "string") return false;
+  const tests = value.tests;
+  if (!isRecord(tests)) return false;
+  if (typeof value.ambiguousEdges !== "number" || typeof value.buildMs !== "number") return false;
+  if (!isStringArray(value.universe) || !isStringArray(value.unresolved)) return false;
+  return Object.values(tests).every(isStringArray);
 }
 
 /**
@@ -215,7 +225,9 @@ export function readStoredGraph(path: string): StoredGraph | null {
   try {
     const parsed: unknown = JSON.parse(readFileSync(path, "utf-8"));
     return isStoredGraph(parsed) ? parsed : null;
-  } catch {
+  } catch (_e) {
+    // Absorbs a cache file that is missing, or caught mid-rename by a
+    // concurrent writer. Either way the answer is "no cached graph".
     return null;
   }
 }
@@ -247,7 +259,7 @@ export function writeCachedGraph(input: { path: string; key: string; graph: Test
     const temporary = `${input.path}.${process.pid}.tmp`;
     writeFileSync(temporary, JSON.stringify(stored));
     renameSync(temporary, input.path);
-  } catch {
+  } catch (_e) {
     // A cache that cannot be written is a slow run, not a failed one.
   }
 }

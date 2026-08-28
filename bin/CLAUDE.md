@@ -139,17 +139,28 @@ opt into this dev behavior. A standalone foreground `cb serve`/scheduler has no
 safe owner to replace it and exits or remains visible rather than self-spawning
 an overlapping successor.
 
-`router.ts` holds the process-supervision/proxying machinery only; the
-`/<worktree>/dev/` HTML rendering (manifest, markdown doc browser, static
-artifact serving) lives in the sibling `router-docs.ts`, imported one-way
-(`router.ts` → `router-docs.ts`, never back) to avoid a value-import cycle.
+`router.ts` is the composition root: it wires the two gated servers and runs
+the boot + signal-handler sequence, and holds nothing else (2026-08-28 size
+split). The machinery lives in `router-*.ts` siblings it imports — the worktree
+lifecycle in `router-core.ts` + `router-worktree-start.ts` +
+`router-worktree-teardown.ts` over the state model in `router-lifecycle.ts`, the
+injected effects in `router-effects.ts`/`router-real-effects.ts`, the pidfile
+store in `router-pidfile.ts`, the proxy in `router-proxy.ts`, per-request
+dispatch in `router-dispatch.ts`, the WS upgrade in `router-upgrade.ts`, the
+router's own pages in `router-pages.ts`, and shared config/logging in
+`router-config.ts`. The `/<worktree>/dev/` HTML rendering (manifest, markdown
+doc browser, static artifact serving) lives in `router-docs.ts` (+
+`router-markdown.ts` and `router-doc-browser.ts`), reached from
+`router-dispatch.ts`; it imports none of the lifecycle modules, so the
+dependency runs one way and there is no value-import cycle.
 
 **Before changing worktree lifecycle code** (`ensureRunning`, `startWorktree`,
-`stopWorktree`, `onChildExit`, `removePidFile`, the PID-file or `worktrees`-map
-shapes), read `bin/docs/router-protocol.md` — it promotes four incident-derived
-concurrency invariants (each has a pointing comment at its code site in
-`router.ts`) out of inline comments into one durable place, so they survive
-future edits instead of being easy to read past or accidentally undo.
+`stopWorktree`, `onChildExit`, the pidfile store, the PID-file or
+`worktrees`-map shapes), read `bin/docs/router-protocol.md` — it promotes six
+incident-derived concurrency invariants (each has a pointing comment at its code
+site, and the doc names the module each one now lives in) out of inline comments
+into one durable place, so they survive future edits instead of being easy to
+read past or accidentally undo.
 URL-prefixed serving uses Vite's `base` option; HMR, API calls, and the
 tRPC WebSocket all flow through the router.
 
@@ -199,7 +210,7 @@ runs in prod. Full design and rationale:
 Each checkout's `callback-box/.env` (gitignored) is parsed with Node's own
 `util.parseEnv` and merged into the environment of the children the router
 spawns for that worktree — Vite, `cb hub`, and every `cb serve` below it
-(`bin/router-core.ts` `readEnvFile`). A real exported variable wins over the
+(`bin/router-effects.ts` `readEnvFile`). A real exported variable wins over the
 file, so `FOO=x pnpm dev` still overrides. **It is a real env file now, not just
 the `BOXES=` line the router greps out of it** — a stray `PATH=` or
 `NODE_OPTIONS=` in there reaches every dev process.
@@ -708,8 +719,14 @@ and a `tick` raises one `important` alert per broken schedule — latched on tha
 alert staying open, so a schedule left broken is one record rather than one
 every fifteen minutes.
 
-`schedules/**/*.ts` is the only root path the root `eslint.config.ts` lints;
-`bin/` and `dev/` stay unlinted by decision (the comment in that file says why).
+`schedules/**/*.ts` and `bin/**/*.ts` are the two root paths the root
+`eslint.config.ts` lints, both under the same reviewed personal-vibe-check
+ruleset every package uses. Neither is a workspace package, so root `pnpm lint`
+cannot reach them through its `-r` fan-out: `bin/schedules lint` covers the
+first, `pnpm lint:bin` the second (and `pnpm lint` runs it before fanning out).
+`pnpm lint:changed --root` dispatches both, and pre-commit runs each when its
+directory is staged. `dev/` stays unlinted by decision — its pages are
+deliberately casual.
 
 ## Document comments (`bin/comments`)
 

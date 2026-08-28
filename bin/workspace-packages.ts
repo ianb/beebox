@@ -46,20 +46,17 @@ function verifiesItself(root: string, dir: string): boolean {
   const file = join(root, dir, "package.json");
   if (!existsSync(file)) return false;
   const parsed: unknown = JSON.parse(readFileSync(file, "utf-8"));
-  const scripts =
-    typeof parsed === "object" && parsed !== null && "scripts" in parsed
-      ? (parsed as { scripts?: Record<string, string> }).scripts
-      : undefined;
-  return VERIFICATION_SCRIPTS.some((script) => scripts?.[script] !== undefined);
+  const scripts: unknown =
+    typeof parsed === "object" && parsed !== null && "scripts" in parsed ? parsed.scripts : undefined;
+  if (typeof scripts !== "object" || scripts === null) return false;
+  return VERIFICATION_SCRIPTS.some((script) => Object.hasOwn(scripts, script));
 }
 
 /** The `packages:` entries of `pnpm-workspace.yaml`, as written. */
 function workspaceEntries(root: string): string[] {
   const parsed: unknown = parse(readFileSync(join(root, "pnpm-workspace.yaml"), "utf-8"));
-  const packages =
-    typeof parsed === "object" && parsed !== null && "packages" in parsed
-      ? (parsed as { packages?: unknown }).packages
-      : undefined;
+  const packages: unknown =
+    typeof parsed === "object" && parsed !== null && "packages" in parsed ? parsed.packages : undefined;
   return (Array.isArray(packages) ? packages : []).map((entry) => String(entry));
 }
 
@@ -87,5 +84,5 @@ export function packageOwnerDirs(root: string): string[] {
       if (verifiesItself(root, dir)) dirs.add(dir);
     }
   }
-  return [...dirs].filter((dir) => !excluded.has(dir)).sort();
+  return [...dirs].filter((dir) => !excluded.has(dir)).toSorted();
 }

@@ -11,107 +11,18 @@
 
 import assert from "node:assert/strict";
 import { promises as fs } from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
 import { createFakeEmbeddings } from "../callback-box/src/services/openai-embeddings.js";
 import {
   deriveDate, deriveDiscoveredInWorkstream, emptyFilters, filterIssues, groupIssues,
-  loadIssueEntries, normalizeWorkstreamName, type IssueEntry,
+  loadIssueEntries, normalizeWorkstreamName,
 } from "../workstreams-app/src/server/issue-search-model.js";
 import { indexDirectory, refreshIndex } from "../workstreams-app/src/server/issue-index.js";
 import { issueDocument } from "../workstreams-app/src/server/issue-index-documents.js";
 import { runSearch } from "../workstreams-app/src/server/issue-index-query.js";
-
-// ─── Fixtures ────────────────────────────────────────────────────────────────
-
-interface Fixture {
-  category: string;
-  name: string;
-  frontmatter: string;
-  body?: string;
-}
-
-const FIXTURES: Fixture[] = [
-  {
-    category: "bugs",
-    name: "2026-01-05-calendar-drops-events.md",
-    frontmatter: [
-      'title: "Calendar drops events on resync"',
-      "workstream: calendar-sync",
-      "area: callback-box",
-      "labels: [soft-launch, field-test-findings]",
-      "needs: [manual-testing]",
-      "priority: important",
-      "discovered-in: worktree-user-stories-refresh — while walking the capture flow",
-    ].join("\n"),
-    body: "A resync deletes local events.\n\n## Research (incomplete)\n",
-  },
-  {
-    category: "bugs",
-    name: "2026-02-10-composer-splices-drafts.md",
-    frontmatter: [
-      'title: "Composer splices a draft into another message"',
-      "workstream: unattached",
-      "area: callback-box",
-      "labels: [soft-launch]",
-      "next-action: reconfirm",
-      "discovered-in: worktree-user-stories-refresh — while testing the composer",
-    ].join("\n"),
-    body: "Typing in one thread lands text in another.\n",
-  },
-  {
-    category: "features",
-    name: "2026-03-01-search-the-queue.md",
-    frontmatter: [
-      'title: "Search the issue queue semantically"',
-      "workstream: issue-selection",
-      "area: router",
-      "needs: [design, decision]",
-      "discovered-in: worktree-issue-selection — while surveying the queue",
-    ].join("\n"),
-    body: "Grep does not find near-duplicates.\n\n## Research (2026-03-02)\n\nOrama does hybrid.\n",
-  },
-  {
-    category: "exploration",
-    name: "undated-idea.md",
-    frontmatter: ['title: "An idea filed before the date convention"', "workstream: unattached"].join("\n"),
-    body: "No date prefix on this one.\n",
-  },
-  {
-    category: "closed/bugs",
-    name: "2026-01-20-router-404.md",
-    frontmatter: [
-      'title: "Router 404s a worktree prefix"',
-      "workstream: calendar-sync",
-      "area: router",
-      "resolution: implemented",
-    ].join("\n"),
-    body: "Closed already.\n",
-  },
-];
-
-async function writeFixtures(root: string, fixtures: Fixture[] = FIXTURES): Promise<void> {
-  for (const fixture of fixtures) {
-    const directory = path.join(root, "issues", fixture.category);
-    await fs.mkdir(directory, { recursive: true });
-    await fs.writeFile(
-      path.join(directory, fixture.name),
-      `---\n${fixture.frontmatter}\n---\n\n${fixture.body ?? "Body.\n"}`,
-    );
-  }
-}
-
-async function makeRepo(): Promise<string> {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), "issues-cli-"));
-  await writeFixtures(root);
-  return root;
-}
-
-function byPath(entries: IssueEntry[]): Map<string, IssueEntry> {
-  return new Map(entries.map((entry) => [entry.path, entry]));
-}
+import { byPath, makeRepo } from "./issues-test-fixtures.js";
 
 // ─── Derivation ──────────────────────────────────────────────────────────────
 
@@ -130,7 +41,7 @@ void test("discoveredInWorkstream takes the worktree token, not the prose after 
   // No em dash, and a name containing dashes: still just the token.
   assert.equal(deriveDiscoveredInWorkstream("worktree-user-stories-refresh"), "user-stories-refresh");
   assert.equal(deriveDiscoveredInWorkstream("a hallway conversation"), null);
-  assert.equal(deriveDiscoveredInWorkstream(undefined), null);
+  assert.equal(deriveDiscoveredInWorkstream(), null);
 });
 
 void test("a workstream filter accepts either spelling of the name", () => {
@@ -173,7 +84,7 @@ async function filtered(root: string, apply: (f: ReturnType<typeof emptyFilters>
 void test("status defaults to open; --closed and --all select the rest", async () => {
   const root = await makeRepo();
   assert.deepEqual(
-    (await filtered(root, () => undefined)).toSorted(),
+    (await filtered(root, () => {})).toSorted(),
     ["2026-01-05-calendar-drops-events", "2026-02-10-composer-splices-drafts", "2026-03-01-search-the-queue", "undated-idea"],
   );
   assert.deepEqual(await filtered(root, (f) => { f.status = "closed"; }), ["2026-01-20-router-404"]);
