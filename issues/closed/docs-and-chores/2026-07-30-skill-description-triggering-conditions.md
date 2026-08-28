@@ -17,9 +17,9 @@ it never opens the file — and the checklists, gotchas and decision rules in th
 SKILL.md never reach context. A description's job is to say *when to load this*,
 not *what it says*.
 
-Sourced from [research/claude-elixir-phoenix](../../research/claude-elixir-phoenix/authoring-craft.md),
+Sourced from [research/claude-elixir-phoenix](../../../research/claude-elixir-phoenix/authoring-craft.md),
 which credits the finding to a review of the *Superpowers* project. Not verified
-on our corpus — see [run-skill-trigger-evals](2026-07-30-run-skill-trigger-evals.md),
+on our corpus — see [run-skill-trigger-evals](../../docs-and-chores/2026-07-30-run-skill-trigger-evals.md),
 which is how we'd actually measure it.
 
 ## Where we do the anti-pattern
