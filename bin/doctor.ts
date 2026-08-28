@@ -29,6 +29,9 @@
  *   - The Agent SDK resolves a bundled Claude Code binary for this platform
  *     (`callback-box/src/core/sdk-binary-path.ts`, imported directly — the
  *     workspace import works cleanly from a root tsx script; see below).
+ *   - Free space on the deployed host, against the same threshold the hub's own
+ *     health route uses (`callback-box/src/hub/disk-health.ts`) — a full
+ *     production disk truncated every large response with nothing saying so.
  *   - The scheduler heartbeat (`<store>/state.json`) is under an hour old and
  *     the `com.callback-box.schedules` launchd job is loaded — the anti-silence
  *     check for callback-box/docs/plans/scheduled-workstreams.md.
@@ -79,6 +82,7 @@ import {
   checkNativeSqlite,
   checkNodeVersion,
   checkPnpm,
+  checkProductionDisk,
   checkSchedulesTick,
   checkSdkBinary,
   checkWorkspaceInstalled,
@@ -97,6 +101,7 @@ export async function runChecks(deps: DoctorDeps): Promise<CheckResult[]> {
       checkClaudeAuth(deps),
     ]);
   const deployResult = await checkDeployCurrency(deps);
+  const diskResult = await checkProductionDisk(deps);
   const schedulesResult = await checkSchedulesTick(deps);
   return [
     checkNodeVersion(deps),
@@ -109,6 +114,7 @@ export async function runChecks(deps: DoctorDeps): Promise<CheckResult[]> {
     checkSdkBinary(deps),
     checkFrontendBuild(deps),
     deployResult,
+    diskResult,
     schedulesResult,
   ];
 }

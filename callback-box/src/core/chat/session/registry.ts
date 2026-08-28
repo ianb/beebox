@@ -247,6 +247,12 @@ export class ChatSessionRegistry extends EventEmitter {
       ...(reservation !== null
         ? {
             coinedSessionId: sessionId,
+            // The reservation's engine must reach the run's options, not only
+            // the first-run record: start.ts resolves the engine from
+            // options.engine, and without it a coined ?engine=claude start on
+            // a codex-default box fell to the box default and tripped the
+            // coined-must-be-Claude invariant (500, 2026-08-27).
+            engine: reservation.engine,
             ...(reservation.contextDir !== null ? { contextDir: reservation.contextDir } : {}),
             ...(Object.keys(reservation.seedFeatures).length > 0 ? { seedFeatures: reservation.seedFeatures } : {}),
             onFirstRunStart: (id: string) => this.recordSessionStart(id, {

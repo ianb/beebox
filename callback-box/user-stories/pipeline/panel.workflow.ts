@@ -392,7 +392,9 @@ callback-box can actually do, where every claim is checked against the source.
 **When you fix this, re-check that story so the catalog stops being wrong.** It is a short agent
 run over just the affected stories, not the full regeneration:
 
-    Workflow({scriptPath: "callback-box/user-stories/pipeline/recheck.workflow.mjs",
+    pnpm --dir callback-box build:workflows   # the .mjs is generated
+
+    Workflow({scriptPath: "callback-box/dist/workflows/recheck.workflow.mjs",
               args: {root: "<repo root>", date: "<DATE>", ids: ["<STORY-ID>"]}})
 
     pnpm exec tsx callback-box/user-stories/pipeline/apply-recheck.ts <DATE>

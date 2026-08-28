@@ -1,12 +1,19 @@
 ---
 title: "The smoke walk opens the place menu but never selects a landmark — it stops one click short of the surface that broke"
-workstream: smoke-review
+workstream: smoke-tier
 area: callback-box
 labels: [smoke-tier]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-smoke-review — weekly smoke-tier shape review, run 20260826-140915
+resolution: implemented
 ---
+
+Resolved by `worktree-smoke-tier` (`15b8aaa00`, `c56cae8a4`): a `place-switch`
+step now runs after `place-menu`, selects a landmark by ref, and asserts the
+consequence — the URL changed and the place pill names the target — via
+`switchTarget`/`placeSwitchFailure` in `bin/smoke-lib.ts`. No divergence from
+what this issue proposed.
 
 The `place-menu` step clicks `#cb-nav-place`, then asserts the menu is
 expanded, carries its fixed rows, shows no error row, and lists at least one
@@ -18,7 +25,7 @@ That is where the window's bug was.
 
 ## Evidence
 
-[Stuck in one landmark](../closed/bugs/2026-08-20-cannot-switch-landmarks-from-chat.md) — the place menu
+[Stuck in one landmark](../bugs/2026-08-20-cannot-switch-landmarks-from-chat.md) — the place menu
 listed all 7 landmarks correctly, `chat.placeMenu` returned `problems: []`, and
 selecting one did not move you. Every assertion the current step makes would
 have passed on that box. The cause was server-side and shared, not iOS-only as
@@ -28,7 +35,7 @@ uncommitted reservation coined a fresh chat each time. Fixed 2026-08-25 in
 `8d80ef30`.
 
 Supporting, outside this window and outside the walk's reach:
-[iOS: selecting a landmark starts a NEW chat](../closed/bugs/2026-08-04-ios-landmark-opens-new-session-not-most-recent.md) — a
+[iOS: selecting a landmark starts a NEW chat](../bugs/2026-08-04-ios-landmark-opens-new-session-not-most-recent.md) — a
 second defect in the same click, resumed correctly on web, so a browser walk
 would not have caught that one. It is here to say the click has a history, not
 as a second gate failure.
@@ -49,7 +56,7 @@ landmark by ref and assert the consequence — the chat page is now bound to tha
 landmark's directory and the place pill names it. Assert on the resulting state,
 never on the click's exit status; `bin/browse click` dispatches a mouse event
 at the box centre and reports success either way (see
-[browse click does not dispatch](../closed/bugs/2026-08-21-browse-click-on-a-ref-does-not-dispatch.md)).
+[browse click does not dispatch](../bugs/2026-08-21-browse-click-on-a-ref-does-not-dispatch.md)).
 
 Costs to weigh against the 120s budget: a navigation plus a snapshot, on the
 order of the existing `card-open` step (5.3s p50). Current whole-walk times are
@@ -72,4 +79,4 @@ page-errors        4       0    0.5s   never failed
 Do not read those as a record for or against any step. All five runs are from
 2026-08-26 between 18:37 and 19:06, on the branch that built the tier.
 
-Related: [A smoke tier at merge and deploy](../closed/exploration/2026-08-26-merge-time-smoke-tier.md).
+Related: [A smoke tier at merge and deploy](../exploration/2026-08-26-merge-time-smoke-tier.md).

@@ -10,6 +10,7 @@
 
 import * as path from "node:path";
 import { isRecord } from "../callback-box/src/lib/is-record.js";
+import { diskHealthFromBytes } from "../callback-box/src/hub/disk-health.js";
 import { schedulesStoreRoot, storeStateSchema } from "./lib/schedules.js";
 import { fail, pass, satisfiesRange, type CheckResult, type DoctorDeps } from "./doctor-lib.js";
 
@@ -231,6 +232,59 @@ export async function checkDeployCurrency(deps: Pick<DoctorDeps, "run" | "fileEx
     remedy:
       "re-run `callback-box/deploy/deploy.sh --ref $(git rev-parse main)` from the main checkout, then check deploy/.last-deploy.log",
   });
+}
+
+/**
+ * Free space on the deployed host, against the threshold the hub itself uses.
+ *
+ * A full production disk truncated every large response with nothing saying so
+ * (issues/closed/bugs/2026-08-28-disk-full-truncated-every-large-response.md).
+ * The threshold comes from `callback-box/src/hub/disk-health.ts` so the doctor
+ * and the hub's own health route cannot disagree about what "low" means.
+ *
+ * Skips machines with no deploy marker, same as `checkDeployCurrency`.
+ */
+export async function checkProductionDisk(
+  deps: Pick<DoctorDeps, "run" | "fileExists">,
+): Promise<CheckResult> {
+  const name = "Production disk";
+  const common = await deps.run("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"]);
+  if (!common.spawned || common.stdout.trim() === "") return pass(name, "not a git checkout — skipped");
+  const marker = path.join(path.dirname(common.stdout.trim()), "callback-box", "deploy", "server-ip");
+  if (!deps.fileExists(marker)) return pass(name, "this checkout does not deploy — skipped");
+
+  const serverIp = (await deps.run("cat", [marker])).stdout.trim();
+  if (serverIp === "") {
+    return fail(name, {
+      detail: `${marker} is empty`,
+      remedy: "restore the production server IP in deploy/server-ip",
+    });
+  }
+  const disk = await deps.run("ssh", [
+    "-o", "BatchMode=yes",
+    "-o", "ConnectTimeout=5",
+    `root@${serverIp}`,
+    "df", "-Pk", "/",
+  ]);
+  if (!disk.spawned || disk.code !== 0) {
+    return fail(name, {
+      detail: "could not query free space on production /",
+      remedy: `check SSH access to root@${serverIp}, then rerun bin/doctor`,
+    });
+  }
+  const fields = disk.stdout.trim().split("\n").at(-1)?.trim().split(/\s+/);
+  const totalKib = Number(fields?.[1]);
+  const freeKib = Number(fields?.[3]);
+  if (!Number.isFinite(totalKib) || !Number.isFinite(freeKib)) {
+    return fail(name, {
+      detail: "production df output was unparseable",
+      remedy: `run \`ssh root@${serverIp} df -Pk /\` and inspect the output`,
+    });
+  }
+  const health = diskHealthFromBytes(freeKib * 1024, totalKib * 1024);
+  const detail = `${health.freeGiB.toFixed(1)} GiB free on / (threshold: ${health.thresholdGiB.toFixed(1)} GiB)`;
+  if (health.status === "ok") return pass(name, detail);
+  return fail(name, { detail, remedy: "free production disk space before the next deploy" });
 }
 
 /**

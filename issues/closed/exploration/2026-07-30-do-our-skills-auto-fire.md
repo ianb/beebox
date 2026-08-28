@@ -4,7 +4,12 @@ workstream: elixir-skills-review
 area: docs
 filed-by: agent
 discovered-in: worktree-elixir-skills-review — reviewing claude-elixir-phoenix
+resolution: superseded
 ---
+
+> Superseded 2026-08-27: consolidated into
+> [run-skill-trigger-evals](../../docs-and-chores/2026-07-30-run-skill-trigger-evals.md),
+> which now owns the eval run, the description rewrite, and the auto-fire question.
 
 We write skill descriptions as if the model reads them and decides to load the
 skill on its own. We have never checked whether that happens.
@@ -15,7 +20,7 @@ that CLAUDE.md prose routing measured "~0% firing across 400 sessions" — which
 why they moved intent detection into a `UserPromptSubmit` hook. **Their
 measurement system is real and present in their tree; the measurement result is
 not** (no metrics file, no report artifact ships). See
-[research/claude-elixir-phoenix](../../research/claude-elixir-phoenix/measurement.md).
+[research/claude-elixir-phoenix](../../../research/claude-elixir-phoenix/measurement.md).
 Credible hypothesis, unverified number. Worth testing on our own corpus rather
 than believing or dismissing.
 

@@ -167,7 +167,6 @@ function StateBlock({ spec }: { spec: Spec }) {
       onEnterCapture={noop}
       captureEnabled
       narrationEnabled={spec.narrationEnabled}
-      hqDictationEnabled={false}
     />
   );
   const mobileRow = (
@@ -180,7 +179,6 @@ function StateBlock({ spec }: { spec: Spec }) {
       clearDraft={noop}
       onStopDictation={noop}
       onVoiceSegmentSend={noop}
-      hqDictationEnabled={false}
     />
   );
   const targetStrip = (

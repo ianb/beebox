@@ -58,10 +58,42 @@ notify() {  # $1=title  $2=message
     terminal-notifier -title "$1" -message "$2" -group callback-deploy >/dev/null 2>&1 || true
 }
 # The trap also releases the deploy lock (LOCK_HELD is set only after shlock
-# succeeds, further below). On a FAILED run the lock is released but any newer
-# request recorded during the run is deliberately NOT chained — the failure
-# notification tells the human, and the next commit (or a manual run) redeploys.
-trap 'rc=$?; [ -n "${LOCK_HELD:-}" ] && rm -f "${LOCK_FILE:-}"; if [ "$rc" -ne 0 ]; then echo "Deploy failed (exit $rc)"; notify "❌ callback-box deploy FAILED" "exit $rc — see $LOG_HINT"; fi' EXIT
+# succeeds, further below). If a held deploy fails after a newer request was
+# recorded, it still hands off to that request: otherwise the non-blocking lock
+# loser has already exited successfully and nobody remains to deploy the newest
+# ref. The failed attempt remains explicit before the chained attempt begins.
+deploy_exit() {
+  local rc=$?
+  trap - EXIT
+  local held="${LOCK_HELD:-}"
+  if [ -n "$held" ]; then
+    rm -f "${LOCK_FILE:-}"
+    LOCK_HELD=""
+  fi
+  if [ "$rc" -eq 0 ]; then
+    return
+  fi
+
+  echo "Deploy failed (exit $rc)"
+  notify "❌ callback-box deploy FAILED" "exit $rc — see $LOG_HINT"
+
+  local newer=""
+  if [ -n "$held" ] && [ -n "${REQUESTED_FILE:-}" ] && [ -n "${SHA:-}" ]; then
+    newer="$(cat "$REQUESTED_FILE" 2>/dev/null || true)"
+  fi
+  # Signal-style exits mean an operator or supervisor deliberately stopped the
+  # run. Do not turn Ctrl-C/SIGTERM into a fresh full deploy behind their back.
+  if [ "$rc" -lt 128 ] && [ -n "$newer" ] && [ "$newer" != "$SHA" ]; then
+    echo "Deploy superseded by $newer — chaining after failed attempt."
+    if [ -t 1 ]; then
+      "$0" --ref "$newer" --chained || true
+    else
+      "$0" --ref "$newer" --chained >>"$SCRIPT_DIR/.last-deploy.log" 2>&1 || true
+    fi
+  fi
+  exit "$rc"
+}
+trap deploy_exit EXIT
 
 # The deploy target IP lives in a gitignored file; a repo move or fresh clone
 # leaves it behind — which is exactly how a run of silent no-op deploys just
@@ -96,10 +128,15 @@ fi
 RAW_REF="HEAD"          # the ref as requested, recorded verbatim in deploy-info
 SKIP_RESTART=false
 CHAINED=false           # internal: set by the end-of-run chain re-exec, never by hand
+REQUEST_RECORDED=false  # internal: the main hook already stamped latest intent
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --chained)
       CHAINED=true
+      shift
+      ;;
+    --request-recorded)
+      REQUEST_RECORDED=true
       shift
       ;;
     --ref)
@@ -175,11 +212,11 @@ checkout_belongs_to_repo() {
 # only relays whatever is currently requested. (If it re-stamped, a stale sha
 # read just before the re-exec could clobber a newer concurrent request and the
 # final deployed state would silently regress.)
-if [[ "$CHAINED" != true ]]; then
+if [[ "$CHAINED" != true && "$REQUEST_RECORDED" != true ]]; then
   echo "$SHA" > "$REQUESTED_FILE"
 fi
 if ! shlock -f "$LOCK_FILE" -p $$; then
-  echo "Another deploy holds $LOCK_FILE — requested $SHA recorded; the running deploy will chain to it."
+  echo "Deploy superseded: $SHA queued; another deploy holds $LOCK_FILE and will chain to it."
   exit 0
 fi
 LOCK_HELD=1
@@ -195,6 +232,47 @@ if [[ -n "$REQUESTED" && "$REQUESTED" != "$SHA" ]]; then
 fi
 
 echo "Deploying ref '$RAW_REF' ($SHA) from build checkout $CHECKOUT"
+
+# First reclaim deploy-owned caches so a previous accumulation cannot lock out
+# the cleanup that repairs it. Best-effort here: the hard post-install prune
+# below is authoritative, while this recovery pass may be running on a full
+# filesystem with partially broken tools.
+echo "Pruning deploy package caches before disk gate..."
+ssh "root@$SERVER_IP" bash -s <<'PREFLIGHTCLEAN'
+pnpm store prune || echo "  WARNING: root pnpm store preflight prune failed" >&2
+sudo -u callback -H bash -lc 'cd /home/callback && pnpm store prune' \
+  || echo "  WARNING: callback pnpm store preflight prune failed" >&2
+if sudo -u callback -H bash -lc 'command -v uv >/dev/null 2>&1'; then
+  sudo -u callback -H bash -lc 'cd /home/callback && uv cache clean' \
+    || echo "  WARNING: callback uv cache preflight clean failed" >&2
+fi
+PREFLIGHTCLEAN
+
+# Refuse to make a low-disk incident worse. This runs before either local or
+# remote installs. The 15%-free entry gate stays meaningful across differently
+# sized hosts; its 3 GiB floor preserves minimum package/temp/write headroom.
+echo "Checking server disk headroom..."
+ssh "root@$SERVER_IP" bash -s <<'DISKCHECK'
+set -euo pipefail
+read -r total_kib free_kib < <(df -Pk / | awk 'NR == 2 { print $2, $4 }')
+if [[ ! "$total_kib" =~ ^[0-9]+$ || ! "$free_kib" =~ ^[0-9]+$ ]]; then
+  echo "  FAILED: could not determine free disk space for /" >&2
+  exit 1
+fi
+threshold_kib=$((total_kib * 15 / 100))
+floor_kib=$((3 * 1024 * 1024))
+(( threshold_kib < floor_kib )) && threshold_kib=$floor_kib
+if (( free_kib < threshold_kib )); then
+  free_gib=$(awk -v kib="$free_kib" 'BEGIN { printf "%.1f", kib / 1024 / 1024 }')
+  threshold_gib=$(awk -v kib="$threshold_kib" 'BEGIN { printf "%.1f", kib / 1024 / 1024 }')
+  echo "  FAILED: only ${free_gib} GiB free on /; deploy requires ${threshold_gib} GiB (15% capacity, 3 GiB minimum)." >&2
+  echo "  Free disk space, then rerun the deploy." >&2
+  exit 1
+fi
+free_gib=$(awk -v kib="$free_kib" 'BEGIN { printf "%.1f", kib / 1024 / 1024 }')
+threshold_gib=$(awk -v kib="$threshold_kib" 'BEGIN { printf "%.1f", kib / 1024 / 1024 }')
+echo "  Disk headroom OK: ${free_gib} GiB free (deploy threshold: ${threshold_gib} GiB)."
+DISKCHECK
 
 # --- Build-checkout lifecycle (persistent local --shared clone) -------------
 # `.deploy-checkout` is a SEPARATE local clone, NOT a git worktree — deliberately.
@@ -492,6 +570,21 @@ ssh "root@$SERVER_IP" bash -s <<'REMOTE'
     fi
   done
 REMOTE
+
+# Deploy installs are what grow both caches. Prune only after the root workspace
+# and callback-owned box installs have finished, so this cannot evict entries a
+# later install in the same deploy still needs. Start callback-user cleanup in
+# its home so upward config discovery cannot reach /root/uv.toml; `-H`
+# separately gives HOME-based tools the callback user's home.
+echo "Pruning deploy package caches..."
+ssh "root@$SERVER_IP" bash -s <<'CACHECLEAN'
+set -euo pipefail
+pnpm store prune
+sudo -u callback -H bash -lc 'cd /home/callback && pnpm store prune'
+if sudo -u callback -H bash -lc 'command -v uv >/dev/null 2>&1'; then
+  sudo -u callback -H bash -lc 'cd /home/callback && uv cache clean'
+fi
+CACHECLEAN
 
 # Write deploy info (git hashes + timestamp).
 # Build the JSON via node so JSON.stringify escapes subjects correctly —

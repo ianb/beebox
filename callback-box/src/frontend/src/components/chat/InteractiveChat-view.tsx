@@ -228,7 +228,6 @@ function ComposerRegion(props: ChatBodyProps) {
           captureEnabled={captureEnabled}
           captureDisabledReason={captureDisabledReason}
           narrationEnabled={model.narrationEnabled}
-          hqDictationEnabled={model.hqDictationEnabled}
         />
       }
       mobileRow={
@@ -243,7 +242,6 @@ function ComposerRegion(props: ChatBodyProps) {
           onVoiceSegmentSend={onVoiceSegmentSend}
           onPaste={handlePaste}
           onDrop={handleDrop}
-          hqDictationEnabled={model.hqDictationEnabled}
         />
       }
     />

@@ -73,18 +73,17 @@ import { invariant } from "../lib/invariant.js";
 import type { HubVerdict } from "./hub-health.js";
 import { registerHealthRoutes } from "./hub-health-routes.js";
 import { registerHubErrorHandler } from "./hub-http-error.js";
+import type { DiskHealth } from "./disk-health.js";
 
 export interface HubHealth {
-  /** Derived in `cli/commands/hub.ts` via `hubVerdict()` — `"unhealthy"`
-   *  (served as HTTP 503) if any box is crash-looping or has latched
-   *  unhealthy, else `"ok"` (200). See `hub-health.ts`. */
+  /** `"unhealthy"` (HTTP 503) if any box is crash-looping/latched; else `"ok"`. */
   status: HubVerdict;
   boxes: BoxRuntimeStatus[];
 }
-
 export interface HubServerOptions {
   endpoints: EndpointProvider;
   getHealth: () => HubHealth;
+  getDiskHealth?: () => DiskHealth;
   /** Per-boot secret (see `cli/commands/hub.ts`), shared with every
    *  supervised child's env -- the gate a box uses to trust the identity
    *  headers this module injects. See `src/webapp/auth.ts`'s `isHubMode`. */
@@ -301,8 +300,7 @@ function decideHubAuth({
  * `.on("upgrade")`) `cli/commands/hub.ts` and the doctests already use.
  */
 export async function createHubServer(options: HubServerOptions): Promise<http.Server> {
-  const { endpoints, getHealth, hubSecret, boxes, baseUrl } = options;
-  const openAccess = options.openAccess ?? false;
+  const { endpoints, getHealth, getDiskHealth, hubSecret, boxes, baseUrl, openAccess = false } = options;
   const app: FastifyInstance = Fastify({ logger: false, trustProxy: true });
   const boxRootBySlug = new Map(boxes.map((box) => [box.slug, box.boxRoot]));
 
@@ -331,7 +329,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
 
   // Health surface: passive verdict (`/healthz`) + active canary
   // (`/healthz/canary`), both diag-key-gated. See `hub-health-routes.ts`.
-  registerHealthRoutes(app, { endpoints, getHealth });
+  registerHealthRoutes(app, { endpoints, getHealth, getDiskHealth });
 
   // Login lives at the hub for the whole fleet (Track D, chunk D2) --
   // reuses the SAME routes a standalone box server registers, so there's
@@ -384,7 +382,10 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
       const root = path.join(frontendDist, dir);
       if (fs.existsSync(root)) await app.register(fastifyStatic, { root, prefix: `/${dir}/`, decorateReply: false });
     }
-    for (const file of ["manifest.webmanifest", "sw.js"]) {
+    // probe-boot.html: the field probe for boot-sequence stalls (content-free
+    // static diagnostics; see its own header comment). Root files are an
+    // allowlist, so it is named here or it is a 404.
+    for (const file of ["manifest.webmanifest", "sw.js", "probe-boot.html"]) {
       if (fs.existsSync(path.join(frontendDist, file))) {
         app.get(`/${file}`, (_request, reply) => reply.sendFile(file, frontendDist));
       }

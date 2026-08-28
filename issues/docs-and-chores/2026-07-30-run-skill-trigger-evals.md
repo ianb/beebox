@@ -9,13 +9,35 @@ discovered-in: worktree-elixir-skills-review — reviewing claude-elixir-phoenix
 We have 16 skills in `.claude/skills/` and **zero evidence any of them fire when
 intended**. Nothing measures it.
 
-We also already own the tooling. `.claude/skills/skill-creator/` (vendored from
+We also already own the tooling. `.agents/skills/skill-creator/` (vendored from
 Anthropic) ships `scripts/run_eval.py`, `scripts/improve_description.py`,
 `scripts/aggregate_benchmark.py`, a grader subagent, an analyst pass that flags
 non-discriminating and high-variance assertions, and a trigger-eval query
 generator. None of it has been run here.
 
 So this is a **routine to adopt, not code to write**.
+
+## Consolidated (2026-08-27)
+
+This item now owns the whole causal chain; two siblings from the same review
+closed as superseded into it:
+
+- *Do our skills ever auto-fire, or only via the slash command?*
+  (`closed/exploration/2026-07-30-do-our-skills-auto-fire.md`) — the research
+  question. The eval run below is its answer.
+- *Skill descriptions should be triggering conditions, not workflow summaries*
+  (`closed/docs-and-chores/2026-07-30-skill-description-triggering-conditions.md`)
+  — the fix the eval validates. The `cb-guide-*` descriptions are the named
+  offenders (verified still true 2026-08-27: `cb-guide-api`'s description
+  summarizes the decision and points at the doc — the model answers from the
+  listing and never opens the skill). A judgment call rides along: whether the
+  `cb-guide-*` trio should be skills at all or fold into their target docs.
+
+**Deferred until Claude quota resets (Fri 2026-08-29 PM):** the eval drives
+`claude -p` per query, and the fix must be validated on BOTH engines — a
+codex-only window can't test it. Path fixed above: the harness lives at
+`.agents/skills/skill-creator/scripts/` (the old `.claude/skills/skill-creator/`
+reference was stale).
 
 ## What "trigger eval" means concretely
 
@@ -43,7 +65,7 @@ Our skills overlap by design in ways an eval would stress: `cb-debug` vs
 `cb-guide-testing` vs `cb-debug`; the three `cb-guide-*` against each other. Some
 of those boundaries are stated in the descriptions and have never been checked.
 
-Pairs with [skill-description-triggering-conditions](2026-07-30-skill-description-triggering-conditions.md)
+Pairs with [skill-description-triggering-conditions](../closed/docs-and-chores/2026-07-30-skill-description-triggering-conditions.md)
 — that item asserts a fix; this one is how we'd know whether it was needed and
 whether it worked.
 

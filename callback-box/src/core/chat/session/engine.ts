@@ -1,6 +1,7 @@
 /** Engine selection for fresh and engine-pinned resumed chats. */
 
 import { loadAgentEngine } from "../../box/config.js";
+import { coinedEngineFor } from "./coined-engines.js";
 import type { AgentEngine } from "../../../shared/agent-models.js";
 import { loadHistoryEntries } from "./history.js";
 import { findChatHuskEntry, type ChatHuskEntry } from "../husk-read.js";
@@ -33,21 +34,29 @@ export async function resolveChatEngine(
   const historyEngine = args.historyEngine === undefined
     ? (await loadHistoryEntries(boxRoot)).find((candidate) => candidate.id === sessionId)?.engine ?? null
     : args.historyEngine;
-  return historyEngine ?? await loadAgentEngine(boxRoot);
+  // A coined-but-unstarted chat's engine lives in its reservation, not yet in
+  // history — see coined-engines.ts for the 500s this ordering fixes.
+  return historyEngine ?? coinedEngineFor(sessionId) ?? await loadAgentEngine(boxRoot);
 }
 
 /**
  * The engine a chat starts on, honoring a choice made before it existed.
  *
- * A recorded engine always wins: a chat's engine is fixed when it starts, so
- * `requested` can only ever answer for a chat that has no id yet. Keeping that
- * rule inside one function is what stops a picker from appearing to offer a
- * switch that the read path would then ignore.
+ * A recorded engine always wins: a chat's engine is fixed when it starts.
+ * But an id alone is not a record — a COINED session carries its id from the
+ * first request, before any husk or history entry exists, and treating the id
+ * as a record dropped the picker's `requested` on the floor: the coined start
+ * fell through to the box default and tripped the coined-must-be-Claude
+ * invariant on a codex box (2026-08-27, ?engine=claude on a codex-default
+ * box → 500). Order: recorded (husk, then history) > requested > box default.
  */
 export async function resolveStartEngine(
   boxRoot: string,
   { sessionId, requested }: { sessionId: string | null; requested: AgentEngine | null },
 ): Promise<AgentEngine> {
-  if (sessionId !== null) return resolveChatEngine(boxRoot, { sessionId });
-  return requested ?? loadAgentEngine(boxRoot);
+  if (sessionId === null) return requested ?? loadAgentEngine(boxRoot);
+  const husk = await findChatHuskEntry(boxRoot, sessionId);
+  if (husk?.engine !== undefined) return husk.engine;
+  const recorded = (await loadHistoryEntries(boxRoot)).find((candidate) => candidate.id === sessionId)?.engine ?? null;
+  return recorded ?? coinedEngineFor(sessionId) ?? requested ?? await loadAgentEngine(boxRoot);
 }

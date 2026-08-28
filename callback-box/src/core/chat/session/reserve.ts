@@ -23,6 +23,7 @@
  */
 
 import { loadHistoryEntries } from "./history.js";
+import { recordCoinedEngine, forgetCoinedEngine } from "./coined-engines.js";
 import { transcriptExistsForContext } from "./transcript-paths.js";
 import { loadAgentEngine, type AgentEngine } from "../../box/config.js";
 import { sdkSessionIdSchema } from "./session-id.js";
@@ -81,6 +82,7 @@ export class ChatReservationStore {
     if (record === undefined) return null;
     if (this.now() - record.createdAt > RESERVATION_TTL_MS) {
       this.records.delete(sessionId);
+      forgetCoinedEngine(sessionId);
       return null;
     }
     return record;
@@ -97,6 +99,7 @@ export class ChatReservationStore {
     if (existing !== null) return existing;
     const stored: ChatReservation = { ...record, createdAt: this.now() };
     this.records.set(record.sessionId, stored);
+    recordCoinedEngine(stored.sessionId, stored.engine);
     return stored;
   }
 
@@ -106,6 +109,7 @@ export class ChatReservationStore {
    */
   release(sessionId: string): void {
     this.records.delete(sessionId);
+    forgetCoinedEngine(sessionId);
   }
 
   /**
@@ -118,6 +122,7 @@ export class ChatReservationStore {
     for (const [id, record] of this.records) {
       if (record.createdAt > cutoff) continue;
       this.records.delete(id);
+      forgetCoinedEngine(id);
       expired.push(id);
     }
     return expired;

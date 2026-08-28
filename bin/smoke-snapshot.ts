@@ -13,6 +13,8 @@ import {
   PlaceMenuErroredError,
   PlaceMenuMissingFixedRowsError,
   PlaceMenuNoLandmarksError,
+  PlaceSwitchDidNotNavigateError,
+  PlaceSwitchDidNotTakeError,
   type SmokeFailureError,
 } from "./smoke-errors.js";
 
@@ -83,34 +85,95 @@ const FIXED_MENU_IDS = [
 /** The exact copy the menu shows when its landmark query failed (Retry row). */
 export const MENU_ERROR_TEXT = "Couldn’t load this menu";
 
+/** A bare `StaticText "…"` row, which is how a section header renders. */
+const STATIC_TEXT_ROW = /^\s*-?\s*StaticText\s+"([^"]*)"\s*$/;
+
+/**
+ * The header the menu renders above its landmark list. It is uppercased by CSS
+ * and the accessibility tree reflects that, so the comparison is case-folded.
+ */
+const SWITCH_SECTION_TEXT = "switch to";
+
+function isSwitchSectionHeader(line: string): boolean {
+  return STATIC_TEXT_ROW.exec(line)?.[1]?.toLowerCase() === SWITCH_SECTION_TEXT;
+}
+
+export interface LandmarkRow {
+  /** The row's accessible name with the menu's own decorations removed. */
+  label: string;
+  /** As rendered, decorations included — what a ref lookup has to match. */
+  rawName: string;
+  /** The row the menu marks as where you already are. */
+  current: boolean;
+}
+
+/**
+ * Strip what the menu adds to a landmark's own label.
+ *
+ * The active row carries an sr-only `(current)`, and any row with unread items
+ * carries a bare count that is not aria-hidden
+ * (`PlacePill-panels.tsx`, `FreshCount`). Both land in the accessible name, so
+ * a healthy row reads `Acids & Bases 2` or `Box (current)`. Comparing those
+ * against the place pill's label — which carries neither — fails a working box.
+ */
+export function stripRowDecorations(name: string): string {
+  // Rendered order is label, ✓ (aria-hidden), sr-only "(current)", count — so
+  // the count is stripped first and the pair is looped until stable rather than
+  // assuming which of the two a given row carries.
+  let out = name.trim();
+  for (;;) {
+    const next = out.replace(/\s+\d+$/, "").replace(/\s*\(current\)$/i, "").trim();
+    if (next === out) return out;
+    out = next;
+  }
+}
+
 export interface PlaceMenuReading {
   expanded: boolean;
   fixedRowsPresent: boolean;
-  landmarkNames: string[];
+  landmarks: LandmarkRow[];
   errored: boolean;
 }
 
+/**
+ * Read the open menu, from a FULL accessibility snapshot.
+ *
+ * Not the interactive-only view: the only thing separating landmark rows from
+ * the nav-card rows above them is a `StaticText` section header, which that
+ * view drops. Given an interactive snapshot this returns no landmarks, which
+ * `placeMenuFailure` reports as an empty menu — loudly wrong rather than
+ * quietly permissive.
+ *
+ * Landmark rows are the menuitems BELOW the "Switch to" header, not "every
+ * menuitem that is not one of the three fixed ids". A box with nav cards
+ * renders those as plain menuitems above that header
+ * (`PlacePill-panels.tsx`, `NavCardRows`), and counting them as landmarks
+ * meant the walk could try to switch to a route.
+ */
 export function readPlaceMenu(snapshot: string): PlaceMenuReading {
-  const fixedNames = new Set(
-    FIXED_MENU_IDS.map((id) => nameForId(snapshot, id)).filter(
-      (name): name is string => name !== null,
-    ),
-  );
+  const lines = snapshot.split("\n");
+  const start = lines.findIndex((line) => isSwitchSectionHeader(line));
+  const landmarks: LandmarkRow[] = [];
+  if (start !== -1) {
+    for (const line of lines.slice(start + 1)) {
+      const rawName = /\bmenuitem\s+"([^"]*)"/.exec(line)?.[1];
+      if (rawName === undefined) continue;
+      landmarks.push({
+        label: stripRowDecorations(rawName),
+        rawName,
+        current: /\(current\)/i.test(rawName),
+      });
+    }
+  }
   return {
     expanded: expandedState(snapshot, "cb-nav-place") === true,
-    fixedRowsPresent: fixedNames.size === FIXED_MENU_IDS.length,
-    landmarkNames: menuItemNames(snapshot).filter((name) => !fixedNames.has(name)),
+    fixedRowsPresent: FIXED_MENU_IDS.every((id) => hasDomId(snapshot, id)),
+    landmarks,
     // The apostrophe is a typographic one in the JSX and renders as such;
     // accept the ASCII spelling too rather than let a copy edit blind us.
     errored:
       snapshot.includes(MENU_ERROR_TEXT) || snapshot.includes("Couldn't load this menu"),
   };
-}
-
-function nameForId(snapshot: string, domId: string): string | null {
-  const line = snapshot.split("\n").find((candidate) => candidate.includes(`id=${domId}`));
-  if (line === undefined) return null;
-  return /"([^"]*)"/.exec(line)?.[1] ?? null;
 }
 
 /** The failure the place-menu reading deserves; null when it passed. */
@@ -124,8 +187,92 @@ export function placeMenuFailure(reading: PlaceMenuReading, snapshot: string): S
   if (!reading.fixedRowsPresent) {
     return new PlaceMenuMissingFixedRowsError(snapshot);
   }
-  if (reading.landmarkNames.length === 0) {
+  if (reading.landmarks.length === 0) {
     return new PlaceMenuNoLandmarksError(snapshot);
+  }
+  return null;
+}
+
+/**
+ * The landmark the place pill currently names, or null if it is not rendered.
+ *
+ * The pill's accessible name is `Place: <label>` (PlacePill.tsx), and that
+ * label is the user-visible answer to "where am I" — which makes it the thing
+ * to assert a switch against.
+ */
+export function currentPlaceLabel(snapshot: string): string | null {
+  const line = snapshot.split("\n").find((candidate) => candidate.includes("id=cb-nav-place"));
+  if (line === undefined) return null;
+  return /"Place:\s*([^"]*)"/.exec(line)?.[1]?.trim() ?? null;
+}
+
+/**
+ * A landmark worth switching TO — one the menu does not mark as current.
+ *
+ * Identity comes from the menu's own `(current)` marker, not from comparing the
+ * row's label against the place pill's. The pill shows an undecorated label
+ * while the row may carry a fresh count, so a name comparison picks the row you
+ * are already standing in and then fails when selecting it does not move you —
+ * a false red on a perfectly healthy box.
+ *
+ * The pill label is still used as a fallback for boxes that render no current
+ * marker (you are in no landmark at all, which is where a fresh chat starts).
+ */
+export function switchTarget(input: {
+  landmarks: readonly LandmarkRow[];
+  current: string | null;
+}): LandmarkRow | null {
+  return input.landmarks.find((row) => !row.current && row.label !== input.current) ?? null;
+}
+
+/**
+ * Did selecting a landmark actually take us there?
+ *
+ * Asserts the consequence, never the click: `bin/browse click` dispatches a
+ * mouse event at the element's box centre and reports success whether or not
+ * anything happened (issues/closed/bugs/2026-08-21-browse-click-on-a-ref-does-not-dispatch.md).
+ *
+ * Both conditions matter and they fail differently. The pill still naming the
+ * old place is the 2026-08-20 bug's shape — the menu worked, the selection did
+ * not move you. An unchanged URL is a click that never navigated at all.
+ */
+export function placeSwitchFailure(input: {
+  /** The target's label with the menu's decorations removed. */
+  target: string;
+  /** The target's name exactly as the row rendered it. */
+  targetRaw: string;
+  urlBefore: string;
+  urlAfter: string;
+  labelAfter: string | null;
+  /** Did the app report itself settled after the click? */
+  settled: boolean;
+  snapshot: string;
+}): SmokeFailureError | null {
+  // A timed-out readiness wait does not fail the step by itself — the
+  // assertions below are the verdict — but it changes what a failure means,
+  // and "we may have looked too early" is the first thing to check.
+  const slow = input.settled
+    ? ""
+    : " (the app never reported itself settled after the click, so this may be slowness rather than a dead switch)";
+  if (input.urlAfter === input.urlBefore) {
+    return new PlaceSwitchDidNotNavigateError({
+      target: input.target,
+      url: input.urlAfter,
+      slow,
+      snapshot: input.snapshot,
+    });
+  }
+  // Accept the row's name with decorations stripped OR exactly as rendered: a
+  // landmark legitimately called "Chapter 3" is indistinguishable from
+  // "Chapter" carrying three fresh items, and guessing wrong either way fails a
+  // healthy box. Both readings are the same landmark; neither is the wrong one.
+  if (input.labelAfter !== input.target && input.labelAfter !== input.targetRaw) {
+    return new PlaceSwitchDidNotTakeError({
+      target: input.target,
+      labelAfter: input.labelAfter,
+      slow,
+      snapshot: input.snapshot,
+    });
   }
   return null;
 }

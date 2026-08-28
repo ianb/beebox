@@ -112,6 +112,63 @@ export class PlaceMenuNoLandmarksError extends SmokeFailureError {
   }
 }
 
+/**
+ * The click on a landmark row changed nothing about the URL.
+ *
+ * Asserts the consequence, never the click: `bin/browse click` dispatches a
+ * mouse event at the element's box centre and reports success whether or not
+ * anything happened (issues/closed/bugs/2026-08-21-browse-click-on-a-ref-does-not-dispatch.md).
+ */
+export class PlaceSwitchDidNotNavigateError extends SmokeFailureError {
+  constructor(input: { target: string; url: string; slow: string; snapshot: string }) {
+    super(
+      `selecting the landmark "${input.target}" did not navigate — the URL is unchanged` +
+        ` (${input.url})${input.slow}`,
+      input.snapshot,
+    );
+    this.name = "PlaceSwitchDidNotNavigateError";
+  }
+}
+
+/**
+ * The page moved but the place pill still names the old place — the 2026-08-20
+ * bug's exact shape, which a URL check alone passes.
+ */
+export class PlaceSwitchDidNotTakeError extends SmokeFailureError {
+  constructor(input: { target: string; labelAfter: string | null; slow: string; snapshot: string }) {
+    super(
+      `selected the landmark "${input.target}" and the page moved, but the place pill still names` +
+        ` "${input.labelAfter ?? "nothing"}" — the switch did not take${input.slow}`,
+      input.snapshot,
+    );
+    this.name = "PlaceSwitchDidNotTakeError";
+  }
+}
+
+/**
+ * Every landmark the menu lists is the one we are standing in, so the switch
+ * cannot be walked. A failure rather than a skip: a gate that quietly tests
+ * nothing is the failure mode this whole tier exists against.
+ */
+export class NoLandmarkToSwitchToError extends SmokeFailureError {
+  constructor(input: { current: string | null; snapshot: string }) {
+    super(
+      "the box offers nowhere to switch to — it lists no landmark other than the one" +
+        ` we are already in ("${input.current ?? "unknown"}"), so the switch cannot be walked.` +
+        " A box used for smoke needs at least two landmarks.",
+      input.snapshot,
+    );
+    this.name = "NoLandmarkToSwitchToError";
+  }
+}
+
+export class LandmarkRefUnresolvedError extends SmokeFailureError {
+  constructor(input: { name: string; snapshot: string }) {
+    super(`could not resolve a ref for the landmark "${input.name}"`, input.snapshot);
+    this.name = "LandmarkRefUnresolvedError";
+  }
+}
+
 // ── the harness (bin/smoke-harness.ts) ──────────────────────────────────────
 
 export class MissingBoxSlugError extends Error {
