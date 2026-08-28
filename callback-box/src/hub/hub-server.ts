@@ -384,7 +384,10 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
       const root = path.join(frontendDist, dir);
       if (fs.existsSync(root)) await app.register(fastifyStatic, { root, prefix: `/${dir}/`, decorateReply: false });
     }
-    for (const file of ["manifest.webmanifest", "sw.js"]) {
+    // probe-boot.html: the field probe for boot-sequence stalls (content-free
+    // static diagnostics; see its own header comment). Root files are an
+    // allowlist, so it is named here or it is a 404.
+    for (const file of ["manifest.webmanifest", "sw.js", "probe-boot.html"]) {
       if (fs.existsSync(path.join(frontendDist, file))) {
         app.get(`/${file}`, (_request, reply) => reply.sendFile(file, frontendDist));
       }
