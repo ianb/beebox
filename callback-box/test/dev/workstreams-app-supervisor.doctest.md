@@ -12,11 +12,9 @@ import path from "node:path";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 import { classifyRouterRoute } from "../../../bin/router-auth.js";
-import {
-  prepareWorkstreamsAppHeaders,
-  renderWorkstreamsAppFallback,
-  writeDeny,
-} from "../../../bin/router.js";
+import { prepareWorkstreamsAppHeaders } from "../../../bin/router-proxy.js";
+import { renderWorkstreamsAppFallback } from "../../../bin/router-pages.js";
+import { writeDeny } from "../../../bin/router.js";
 import {
   EXHIBITS_DEFAULT_PORT,
   createWorkstreamsAppSupervisor,
@@ -196,20 +194,22 @@ assert.deepEqual(
 const redirect = { status: 0, location: "" };
 writeDeny(
   { url: "/workstreams/issues/", headers: { accept: "text/html" } } as IncomingMessage,
-  // Test-only structural response double implements every method writeDeny uses.
   {
-    writeHead: (status: number, headers: Record<string, string>) => {
-      redirect.status = status;
-      redirect.location = headers.location ?? "";
+    // Test-only structural response double implements every method writeDeny uses.
+    res: {
+      writeHead: (status: number, headers: Record<string, string>) => {
+        redirect.status = status;
+        redirect.location = headers.location ?? "";
+      },
+      end: () => {},
+    } as unknown as ServerResponse,
+    decision: {
+      allow: false,
+      status: 401,
+      reason: "dev-read-auth-required",
+      redirectToLogin: true,
+      route: { kind: "dev-read" },
     },
-    end: () => {},
-  } as unknown as ServerResponse,
-  {
-    allow: false,
-    status: 401,
-    reason: "dev-read-auth-required",
-    redirectToLogin: true,
-    route: { kind: "dev-read" },
   },
 );
 assert.equal(redirect.status, 302);
