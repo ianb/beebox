@@ -5,6 +5,7 @@ import {
   copyFileSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -113,4 +114,34 @@ test("a signal-style failure does not start a chained deploy", () => {
 
   assert.equal(result.status, 130);
   assert.doesNotMatch(result.stdout, /chaining after failed attempt/);
+});
+
+test("deploy hooks persist intent before starting a detached child", () => {
+  for (const hook of ["post-commit", "post-merge"]) {
+    const source = readFileSync(join(ROOT, ".husky", hook), "utf8");
+    const stamp = source.indexOf('echo "$SHA" > "$REPO_DIR/.deploy-requested"');
+    const launch = source.indexOf('nohup "$REPO_DIR/callback-box/deploy/deploy.sh"');
+    assert.notEqual(stamp, -1, `${hook} must stamp the requested ref`);
+    assert.notEqual(launch, -1, `${hook} must detach the deploy child`);
+    assert.ok(stamp < launch, `${hook} must stamp intent before launching`);
+    assert.match(source, /nohup .* >>"\$LOG_FILE" 2>&1 <\/dev\/null &/);
+    assert.match(source, /deploy\.sh" --ref "\$SHA" --request-recorded/);
+  }
+});
+
+test("a hook-recorded request cannot be overwritten by a delayed child", () => {
+  const f = fixture();
+  fakeCommand(join(f.fakeBin, "shlock"), "exit 1");
+  writeFileSync(join(f.root, ".deploy-requested"), `${f.second}\n`);
+  const result = spawnSync(
+    join(f.deployDir, "deploy.sh"),
+    ["--ref", f.first, "--request-recorded"],
+    {
+      encoding: "utf8",
+      env: { ...process.env, PATH: `${f.fakeBin}:${process.env.PATH}` },
+    },
+  );
+
+  assert.equal(result.status, 0);
+  assert.equal(readFileSync(join(f.root, ".deploy-requested"), "utf8"), `${f.second}\n`);
 });

@@ -128,10 +128,15 @@ fi
 RAW_REF="HEAD"          # the ref as requested, recorded verbatim in deploy-info
 SKIP_RESTART=false
 CHAINED=false           # internal: set by the end-of-run chain re-exec, never by hand
+REQUEST_RECORDED=false  # internal: the main hook already stamped latest intent
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --chained)
       CHAINED=true
+      shift
+      ;;
+    --request-recorded)
+      REQUEST_RECORDED=true
       shift
       ;;
     --ref)
@@ -207,7 +212,7 @@ checkout_belongs_to_repo() {
 # only relays whatever is currently requested. (If it re-stamped, a stale sha
 # read just before the re-exec could clobber a newer concurrent request and the
 # final deployed state would silently regress.)
-if [[ "$CHAINED" != true ]]; then
+if [[ "$CHAINED" != true && "$REQUEST_RECORDED" != true ]]; then
   echo "$SHA" > "$REQUESTED_FILE"
 fi
 if ! shlock -f "$LOCK_FILE" -p $$; then
