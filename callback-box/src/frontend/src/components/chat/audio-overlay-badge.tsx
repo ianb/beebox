@@ -23,7 +23,7 @@ export function TranscriptionProvenanceBadge({ provenance }: { provenance: Trans
       role="img"
       aria-label={label}
       title={label}
-      className="inline-flex items-center justify-center h-[18px] rounded-full bg-info text-white ring-1 ring-warm-50 px-1.5 text-[9px] font-semibold tracking-wide"
+      className="inline-flex items-center px-1 py-px rounded-sm bg-white/20 text-white/60 text-[9px] font-medium leading-none tracking-wide"
     >
       HQ
     </span>
